@@ -428,7 +428,7 @@ The 60 generated files still partition into 44 mapped and 16 abstained files.
 The census remains 7,685 regular Go sources and 11 explicitly inventoried
 Go-suffixed symlinks. Each individual interface has its own span and service;
 file aggregates cannot substitute for interface units. Recall samples remain
-97 per nonempty stratum or a smaller full census (`etcd-io/etcd:mock` has 76).
+97 per nonempty stratum or a smaller full census (`etcd-io/etcd:mock` has 75).
 The schema-v2 plan records counts and digest references, with populations
 stored once. Gzip members have zero timestamps and compressed-byte digests.
 Three consecutive universe/frame generations are byte-identical.

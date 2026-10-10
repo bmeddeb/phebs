@@ -375,6 +375,21 @@ class TestFrames(SyntheticRepoCase):
             with self.subTest(mutation=mutation), self.assertRaises((frames.FramesError, label_protocol.LabelProtocolError, ValueError)):
                 frames.project_candidate_frames(e, {"sites": self.result["sites"]})
 
+    def test_raw_duplicate_lineage_and_role_conflicts_refuse(self):
+        for field, bad in (("lineage", "provisional_repo_path_v1_" + "b" * 64),
+                           ("code_role", "vendor")):
+            env = self.envelope()
+            env["bundle"]["assertions"].append({**env["bundle"]["assertions"][0],
+                                              "id": "second", field: bad})
+            with self.subTest(field=field), self.assertRaises(frames.FramesError):
+                frames.project_candidate_frames(env, {"sites": self.result["sites"]})
+
+    def test_identical_raw_duplicate_claims_collapse_once(self):
+        env = self.envelope()
+        env["bundle"]["assertions"].append({**env["bundle"]["assertions"][0], "id": "second"})
+        out = frames.project_candidate_frames(env, {"sites": self.result["sites"]})
+        self.assertEqual(out["precision"]["population"], 1)
+
     def test_census_and_draw_mechanics_use_synthetic_seed_only(self):
         sizes = frames.frame_strata_sizes({"s": ["a", "b"]}, 97)
         self.assertEqual(sizes["s"], {"population": 2, "sample_size": 2, "census": True})

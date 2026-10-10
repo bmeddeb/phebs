@@ -25,6 +25,18 @@ real-round score or external publication.
 | 8 · pooled outcomes conceal a failed stratum | Explicit repo/commit/path outcomes reconcile every source and gate each repository×role. A 95-analyzed/5-failed synthetic corpus fails in the smaller wholly failed stratum. |
 | 9 · empty/corrupt bundles appear complete | Require the entire preparation structure; validate all nested digests without skipping subtrees; verify current source/member/provenance bytes at assembly. Missing fields, malformed digests, stale missing lists, changed members and invalid paths/counts/skeletons refuse. |
 
+## First independent correction review
+
+Review of exact `7909a52c40038b2f6f70cfbf5ffc1dcb58263bc9` recorded critical 0,
+high 0, medium 1, low 1. The adapter now validates every supporting source
+occurrence, role and canonical predicate/operation/lineage/reason claim before
+the frozen harness can discard a raw duplicate. Same-object/different-lineage
+and different-role assertions refuse; identical duplicates collapse once.
+The low finding corrected the mock recall count to 75 (76 universe sites minus
+one excluded import). The independently reproduced populations stay unchanged;
+only source-provenance/plan/bundle identities regenerate. Exact corrected
+commit re-review remains pending until recorded below.
+
 ## Regenerated artifacts
 
 Schema-v2 universe: 499,771 sites across 11 repository×role strata — 493,003
@@ -37,7 +49,7 @@ hashes and avoid duplicate populations in the small plan.
 The 60 generated files (44 mapped / 16 abstained files) contain 74 individual
 service-client interfaces and 390 operations. All four interface strata are
 censused. Recall still uses 97 sites per stratum or the complete smaller census;
-`etcd-io/etcd:mock` contains 76. The source census remains 7,685 regular Go sources
+`etcd-io/etcd:mock` contains 75. The source census remains 7,685 regular Go sources
 plus the explicitly inventoried 11 Go-suffixed symlinks.
 
 Three consecutive universe/frame generations match every output byte. Three
@@ -48,7 +60,7 @@ fields remain null (25 explicit missing paths). No known digest is null.
 
 ## Gates
 
-- `python3 -m unittest spike.t472.test_universe_frames` — 39/39 pass,
+- `python3 -m unittest spike.t472.test_universe_frames` — 41/41 pass,
   synthetic regression data only.
 - `python3 -m unittest discover -s spike/t472/derivation -p 'test_*.py'` —
   inherited 3/3 pass.

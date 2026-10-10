@@ -161,7 +161,7 @@
  "provenance": {
   "corpus_lock_sha256": "sha256:e387449369b91013bbddf0cae3cd4ee6f91365ee2aa3d5362d7a1e48574e5a69",
   "enumerate_universe_sha256": "sha256:e22c67f527d1970ff3a14809edb63316bb170ccc24f4b33a5759f6ded7369278",
-  "frames_py_sha256": "sha256:a52fb52dcef43bdad82b3e7904b6f27a91ed87e7fa120fa5e58405f970cd4e50",
+  "frames_py_sha256": "sha256:66837b89ea1b3319f4ae350d8e67ff742148e521c23f034ea512cb5886af680a",
   "parameters_sha256": "sha256:3396a4b15358683e2a714ca1992a69d065169b96c20099d8d3b7d2de98a0b9fe",
   "source_census_sha256": "sha256:51b9274f3f536b9076800195dfcc3154aecaa6ac08bee4e5f2d454662c264ab5",
   "universe_declarations_sha256": "sha256:3d94d4fe493f46af8be50efb512e65a66b00abe35f00a63c5c37706cef624d04",

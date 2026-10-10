@@ -176,9 +176,20 @@ def frame_strata_sizes(strata: Mapping[str, Sequence[str]], sites_per_stratum: i
 def project_candidate_frames(envelope: Mapping, universe: Mapping,
                              sites_per_stratum: int = 97) -> dict[str, dict]:
     """Adapt production caller facts, preserving source identities and declaration lineage."""
+    citations = {}
+    for site in universe["sites"]:
+        if not recall_eligibility(site)[0]:
+            continue
+        prefix = f"{site['repository']}@{site['commit']}:{site['path']}:"
+        for start, end in site["citation_spans"]:
+            raw = prefix + f"{start}-{end}"
+            if raw in citations and citations[raw]["site_id"] != site["site_id"]:
+                raise FramesError("ambiguous source citation coordinate")
+            citations[raw] = site
     bundle = envelope["bundle"]
     assertions = []
     reasons = {}
+    claims = {}
     evidence = {(e["repository"], e["run_id"], e["atom"]["id"]): e
                 for e in bundle["evidence"]}
     declaration_predicates = {"DECLARES_FIELD", "DECLARES_MESSAGE", "DECLARES_SERVICE", "DECLARES_OPERATION"}
@@ -207,40 +218,32 @@ def project_candidate_frames(envelope: Mapping, universe: Mapping,
             atom = e["atom"]
             for occurrence in e["occurrences"]:
                 raw = f"{a['repo']}@{occurrence['commit']}:{occurrence['path']}:{atom['start_byte']}-{atom['end_byte']}"
+                source = citations.get(raw)
+                if source is None:
+                    raise FramesError(f"candidate citation is outside the exact source universe: {raw}")
+                if a.get("code_role") != source["code_role"]:
+                    raise FramesError("candidate code role disagrees with independent source role")
+                claim = (predicate, adapted["object"], a.get("lineage", ""), reason)
+                canonical_id = source["site_id"]
+                # The frozen harness drops raw duplicates before comparing role/lineage.
+                if canonical_id in claims and claims[canonical_id] != claim:
+                    raise FramesError("conflicting claims at one caller site")
+                claims[canonical_id] = claim
                 key = (raw, adapted["predicate"], adapted["object"], a.get("lineage", ""))
-                if key in reasons and reasons[key] != reason:
-                    raise FramesError("conflicting unresolved reasons")
                 reasons[key] = reason
     rows = pilot_harness.candidate_rows({"bundle": {**bundle, "assertions": assertions}})
-    citations = {}
-    for site in universe["sites"]:
-        if not recall_eligibility(site)[0]:
-            continue
-        prefix = f"{site['repository']}@{site['commit']}:{site['path']}:"
-        for start, end in site["citation_spans"]:
-            raw = prefix + f"{start}-{end}"
-            if raw in citations and citations[raw]["site_id"] != site["site_id"]:
-                raise FramesError("ambiguous source citation coordinate")
-            citations[raw] = site
     projected = {name: [] for name in CANDIDATE_PREDICATES.values()}
-    seen = {}
+    seen = set()
     for row in rows:
-        source = citations.get(row["site_id"])
-        if source is None:
-            raise FramesError(f"candidate citation is outside the exact source universe: {row['site_id']}")
-        if row["code_role"] != source["code_role"]:
-            raise FramesError("candidate code role disagrees with independent source role")
+        source = citations[row["site_id"]]
         predicate = "UNRESOLVED_CALLER" if row["predicate"] == "UNRESOLVED_GRPC_CALL" else row["predicate"]
         canonical = {**row, "site_id": source["site_id"], "source_citation": row["site_id"],
                      "predicate": predicate, "stratum": source["stratum"],
                      "unresolved_reason": reasons[(row["site_id"], row["predicate"], row["object"], row["lineage"])]}
         key = source["site_id"]
-        claim = (predicate, row["object"], row["lineage"], canonical["unresolved_reason"])
         if key in seen:
-            if seen[key] != claim:
-                raise FramesError("conflicting claims at one caller site")
             continue
-        seen[key] = claim
+        seen.add(key)
         projected[CANDIDATE_PREDICATES[predicate]].append(canonical)
     frames = {}
     for name, members in projected.items():
