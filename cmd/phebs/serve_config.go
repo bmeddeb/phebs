@@ -12,6 +12,8 @@ import (
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/extract"
+	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
+	"github.com/bmeddeb/phebs/internal/extract/extractors/protodecl"
 	"github.com/bmeddeb/phebs/internal/packrelease"
 	"github.com/bmeddeb/phebs/internal/resolvermaterialize"
 )
@@ -295,4 +297,32 @@ func mergeExtractors(dark, released []extract.Extractor) []extract.Extractor {
 		merged = append(merged, extractor)
 	}
 	return merged
+}
+
+// callerMapPackID is the stable pack identity of the Caller Map recipe frozen
+// by T47.2a: `phebs.grpc.caller.go` in docs/PROTO_GRPC_PACK_CARDS.md ("Exact
+// Go gRPC callers"), grpc-caller 1.5.0, schema t20-caller-v1. T47.5 signs the
+// first caller-specific released record against exactly this identity and, in
+// the same PR, binds callerMapRecipe into packRecipes above.
+const callerMapPackID = "phebs.grpc.caller.go"
+
+// callerMapRecipe is the fixed in-tree extractor set implementing the T47.2a
+// frozen Go/gRPC-Protobuf recipe. The declaration extractor travels with the
+// caller extractor on purpose: resolved callers are attributed through
+// repository-committed declaration lineage, so the recipe names every
+// extractor the product reads. A released Caller Map therefore admits its
+// necessary declaration discovery because this recipe carries it, never
+// because the experimental protobuf umbrella happened to be switched on.
+//
+// The recipe is deliberately NOT registered in packRecipes in this build:
+// binding it would assert a released authorization that does not exist until a
+// signed record for callerMapPackID passes verification (T47.5's promotion).
+// Until then a configured selection naming this pack refuses startup as an
+// unbound release, so Caller Map cannot reach ordinary activation without its
+// release record and its binding landing together.
+func callerMapRecipe() []extract.Extractor {
+	return []extract.Extractor{
+		protodecl.New(),
+		gocaller.NewGRPC(),
+	}
 }

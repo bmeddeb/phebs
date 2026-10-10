@@ -150,8 +150,9 @@ func TestT2014ScaleFailureAndEndToEndClosure(t *testing.T) {
 	visible := true
 	opts := api.Options{
 		Store: st, Evidence: st, CallerMapEnabled: true,
-		Principal:             func(context.Context) string { return "user:t20-closure" },
-		AuthorizationProvider: "t20-closure-permissions-v1",
+		CallerComparisonEnabled: true,
+		Principal:               func(context.Context) string { return "user:t20-closure" },
+		AuthorizationProvider:   "t20-closure-permissions-v1",
 		Visible: func(context.Context) func(store.Repo) bool {
 			return func(store.Repo) bool { return visible }
 		},

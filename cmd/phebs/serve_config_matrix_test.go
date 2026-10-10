@@ -518,11 +518,10 @@ func startupCallerMapDiscovery(t *testing.T, deps *serveDeps) (service, capabili
 // API and on MCP across all sixteen provisional switch combinations under four
 // real startup shapes: no selection, a released declaration admitted, a
 // released declaration and caller admitted together, and a suspended
-// declaration withdrawn. The surface needs a provisional caller switch and an
-// enabled caller registry. Admission never flips it today, because a switch
-// always admits its own caller domain, a released pack only replaces a dark
-// extractor within the same domain, and withdrawal never removes a dark one. A
-// released caller pair alone enables caller execution but is not discoverable.
+// declaration withdrawn. The surface follows the admitted caller registry:
+// a provisional caller switch or an admitted released caller pair enables it.
+// A released declaration alone leaves it dark, and withdrawal never removes
+// a caller admitted independently by a provisional switch.
 func TestCallerMapDiscoveryAcrossAdmissionShapes(t *testing.T) {
 	// A withdrawn pack is withdrawn visibly: the startup log names it exactly.
 	withdrawnLog := "pack release selection: 1 configured pack(s) not admitted: phebs.proto.contract=suspended\n"
@@ -608,19 +607,19 @@ func TestCallerMapDiscoveryAcrossAdmissionShapes(t *testing.T) {
 					t.Fatalf("released identities = %v (domains %v), want %v",
 						got, extractorDomains(deps.exs), shape.wantReleased)
 				}
-				switchOn := proto || thrift
-				if got, want := deps.callerRegistry.Enabled(), switchOn || shape.callerPack; got != want {
+				wantDiscovery := proto || thrift || shape.callerPack
+				if got, want := deps.callerRegistry.Enabled(), wantDiscovery; got != want {
 					t.Fatalf("caller registry Enabled = %v, want %v", got, want)
 				}
 				service, capability, tools := startupCallerMapDiscovery(t, deps)
-				if service != switchOn {
-					t.Fatalf("API Caller Map service constructed = %v, want %v", service, switchOn)
+				if service != wantDiscovery {
+					t.Fatalf("API Caller Map service constructed = %v, want %v", service, wantDiscovery)
 				}
-				if capability != switchOn {
-					t.Fatalf("/api/version lists contract-caller-map = %v, want %v", capability, switchOn)
+				if capability != wantDiscovery {
+					t.Fatalf("/api/version lists contract-caller-map = %v, want %v", capability, wantDiscovery)
 				}
-				if tools != switchOn {
-					t.Fatalf("MCP lists Caller Map tools = %v, want %v", tools, switchOn)
+				if tools != wantDiscovery {
+					t.Fatalf("MCP lists Caller Map tools = %v, want %v", tools, wantDiscovery)
 				}
 			})
 		}

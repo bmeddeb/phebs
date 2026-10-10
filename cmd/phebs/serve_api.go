@@ -177,14 +177,20 @@ func openServeSearcher(d *serveDeps) error {
 	return nil
 }
 
-// callerMapDiscoverable is the provisional-switch half of the Caller Map
-// discovery gate. The surface is offered only when this holds and the admitted
-// caller registry is enabled (bindServeCallerReader). The released selection
-// never sets this half, so a released pack alone cannot make the surface
-// discoverable.
-func callerMapDiscoverable(cfg *config.Config) bool {
-	return cfg.Experimental.ProvisionalProtoExtraction ||
-		cfg.Experimental.ProvisionalThriftExtraction
+// experimentalProofBundles returns the proof-bundle store only while a
+// provisional extraction switch is on. The proof service behind it serves the
+// experimental evidence products (proof bundles, Contract Impact, Thrift-field
+// references, Kafka topic usage and compatibility) on HTTP and MCP, and those
+// switches are their only admission. A released recipe admits its own product
+// and never these, so a released Caller Map alone leaves them dark. Without a
+// released pack this is exactly the store the extraction pipeline installed.
+func experimentalProofBundles(cfg *config.Config, proofBundles store.ProofBundleStore) store.ProofBundleStore {
+	experimental := cfg.Experimental
+	if experimental.ProvisionalProtoExtraction || experimental.ProvisionalThriftExtraction ||
+		experimental.ProvisionalThriftFieldExtraction || experimental.ProvisionalKafkaExtraction {
+		return proofBundles
+	}
+	return nil
 }
 
 // newServeAPIOptions assembles the API options: search/code-navigation
@@ -228,8 +234,10 @@ func newServeAPIOptions(d *serveDeps) (api.Options, error) {
 			return ok && principal.IsAdmin
 		},
 		AuditRecord: d.auditRecord, AuditLog: st, Analytics: st,
-		Evidence: d.evidenceView, ProofBundles: d.proofBundles,
-		CallerMapEnabled:     callerMapDiscoverable(cfg),
+		Evidence: d.evidenceView, ProofBundles: experimentalProofBundles(cfg, d.proofBundles),
+		CallerMapEnabled: d.callerRegistry.Enabled(),
+		CallerComparisonEnabled: cfg.Experimental.ProvisionalProtoExtraction ||
+			cfg.Experimental.ProvisionalThriftExtraction,
 		CallerReader:         d.callerReader,
 		ProofBundleRetention: cfg.ProofBundles.RetentionFor(),
 		Compatibility:        d.compatibility, Visible: d.visibleFor,

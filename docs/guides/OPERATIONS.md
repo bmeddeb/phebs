@@ -3662,16 +3662,16 @@ one pack. The bounded startup error names what to repair: the pack for a
 missing recipe, and the release record file for a missing or unmatched load
 binding. The correction is that binding or recipe, never a looser gate.
 
-**Discovery needs a provisional switch.** The Caller Map API routes, the
-`contract-caller-map` capability on `/api/version` and the MCP tools are
-offered only when the proto or Thrift provisional switch is on and
-the admitted caller registry is enabled, because the Caller Map publication
-reader exists only with that registry. Admission and withdrawal never flip
-discovery today: a switch always admits its own caller domain, a released pack
-replaces a dark extractor only within its own domain, and withdrawal never
-removes a dark extractor. A released caller pair admitted with every switch off
-runs caller execution but is not discoverable; making discovery
-selection-aware is a separate decision.
+**Discovery follows the admitted caller registry.** The Caller Map API routes,
+the `contract-caller-map` capability on `/api/version` and the MCP tools are
+offered when the admitted caller registry is enabled and its publication
+reader exists. A provisional proto or Thrift switch admits its own caller
+domain; an admitted released caller recipe also enables discovery with every
+switch off. A released declaration alone leaves Caller Map dark. Withdrawal
+removes the released recipe at the next startup but never removes an
+independently admitted dark extractor. Caller comparison keeps its separate
+proto-or-Thrift provisional gate; a released Caller Map alone also leaves
+proof bundles, Impact, Thrift-field, Kafka and compatibility dark.
 
 **Mixed-provenance caution.** With the proto (or Thrift) switch on, a
 provisional declaration extractor registers the declaration domain even while
