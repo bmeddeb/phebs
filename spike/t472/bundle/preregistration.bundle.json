@@ -2,6 +2,8 @@
  "candidate_identities": {
   "NIST beacon pulse and derived 64-hex seed for the sample draw": null,
   "frozen blind label document per frame (Ben, sole owner/reviewer)": null,
+  "independent declaration-citation ledger sha256": null,
+  "independent expected-resolution ledger sha256": null,
   "phebs complete candidate ledger identity and sha256 (abstention frame)": null,
   "phebs eligible-unit outcome receipt for the processing-state ledger": null,
   "protocol digest after the section 10 sealing checklist completes": null,
@@ -41,7 +43,7 @@
      "pulse_timestamp": null
     },
     "kind": "nist_beacon_reference",
-    "schema": "t111-github-initial-gist-receipt-v1",
+    "schema": "t472-nist-pulse-reference-v1",
     "status": "skeleton_local_only"
    }
   ],
@@ -55,24 +57,45 @@
    "abstention",
    "unresolved"
   ],
+  "members": {
+   "frames.attribution.jsonl": {
+    "rows": 74,
+    "sha256": "sha256:1bb0bb1337837f893b7a75f427c658f649833752ac1fc8818073a3e978f4001e"
+   },
+   "frames.excluded.json": {
+    "sha256": "sha256:f56b6f5d583f33839114b0cd695070630e2f305a9906a0b27248ab0d243454b0"
+   },
+   "frames.recall.jsonl.gz": {
+    "rows": 498793,
+    "sha256": "sha256:a0093197fab61517daf02b21c6153c84445d1714dbd8fd73167f3610c05f1c87"
+   }
+  },
   "path": "spike/t472/frames/frames.plan.json",
-  "sha256": "sha256:d2d2b17b8899d643ae3729a0e3ed5c1d9a41e0923b1801bea5a363cecaf519c9"
+  "sha256": "sha256:0a0515ebe07aef117ec13af3fdeeec5f6e00bacb89b6259e8788716a4f9a59e9"
  },
  "frozen_machinery_unedited": true,
  "harness_schema": "pilot-accuracy-gold-harness-v1",
  "label_commitment_schema": "t111-label-commitment-v1",
  "machinery": {
+  "binding_bundle": {
+   "path": "spike/t472/binding_bundle.py",
+   "sha256": "sha256:c2ae3ff8119144329af65839e1418e474c2505747e744fde7c4a515ea0d36708"
+  },
   "caller_scoring": {
    "path": "spike/t472/caller_scoring.py",
-   "sha256": "sha256:4aefb64ea91b375f745fde44a452ca41a24f860020911cc986ca46ab25b4be5c"
+   "sha256": "sha256:e290cfb1ef3fc979e0d5966b3e82ea15562b6f6e8ae049894608cb4909c42351"
   },
   "enumerate_universe": {
    "path": "spike/t472/enumerate_universe.py",
-   "sha256": "sha256:b78ec9296749ef8cda7a2f0468c10d0dcc7409c8d082ba67b2cffb5d15c757f8"
+   "sha256": "sha256:e22c67f527d1970ff3a14809edb63316bb170ccc24f4b33a5759f6ded7369278"
   },
   "frames": {
    "path": "spike/t472/frames.py",
-   "sha256": "sha256:0c6b9fa40d90832c4f3739f6ab4c3bffdb61c3d5ce2c302c48fb063212cd1043"
+   "sha256": "sha256:a52fb52dcef43bdad82b3e7904b6f27a91ed87e7fa120fa5e58405f970cd4e50"
+  },
+  "go_source_parser": {
+   "path": "spike/t472/gosites/main.go",
+   "sha256": "sha256:6782c56c7e8fff3a4f365322a105ca9fa79d764424bdce263c6be044c73f80da"
   },
   "label_protocol": {
    "path": "spike/t111/label_protocol.py",
@@ -84,17 +107,14 @@
   }
  },
  "missing_bindings": [
-  "bundle.candidate_identities.sealed proof-bundle-v1 envelope identity and sha256 (precision, unresolved frames)",
-  "bundle.candidate_identities.phebs complete candidate ledger identity and sha256 (abstention frame)",
   "bundle.candidate_identities.NIST beacon pulse and derived 64-hex seed for the sample draw",
   "bundle.candidate_identities.frozen blind label document per frame (Ben, sole owner/reviewer)",
+  "bundle.candidate_identities.independent declaration-citation ledger sha256",
+  "bundle.candidate_identities.independent expected-resolution ledger sha256",
+  "bundle.candidate_identities.phebs complete candidate ledger identity and sha256 (abstention frame)",
   "bundle.candidate_identities.phebs eligible-unit outcome receipt for the processing-state ledger",
   "bundle.candidate_identities.protocol digest after the section 10 sealing checklist completes",
-  "bundle.randomness_commitment_sequence[0].binding",
-  "bundle.randomness_commitment_sequence[1].binding",
-  "bundle.randomness_commitment_sequence[2].binding",
-  "bundle.randomness_commitment_sequence[3].binding",
-  "bundle.randomness_commitment_sequence[4].binding",
+  "bundle.candidate_identities.sealed proof-bundle-v1 envelope identity and sha256 (precision, unresolved frames)",
   "bundle.external_publication.prepared_payloads[0].fields.adjudication",
   "bundle.external_publication.prepared_payloads[0].fields.artifact_manifest_sha256",
   "bundle.external_publication.prepared_payloads[0].fields.committed_at",
@@ -104,9 +124,14 @@
   "bundle.external_publication.prepared_payloads[0].fields.reviewer_assignment_sha256",
   "bundle.external_publication.prepared_payloads[0].fields.schema",
   "bundle.external_publication.prepared_payloads[0].fields.site_ids_sha256",
-  "bundle.external_publication.prepared_payloads[1].fields.pulse",
   "bundle.external_publication.prepared_payloads[1].fields.output_value",
-  "bundle.external_publication.prepared_payloads[1].fields.pulse_timestamp"
+  "bundle.external_publication.prepared_payloads[1].fields.pulse",
+  "bundle.external_publication.prepared_payloads[1].fields.pulse_timestamp",
+  "bundle.randomness_commitment_sequence[0].binding",
+  "bundle.randomness_commitment_sequence[1].binding",
+  "bundle.randomness_commitment_sequence[2].binding",
+  "bundle.randomness_commitment_sequence[3].binding",
+  "bundle.randomness_commitment_sequence[4].binding"
  ],
  "parameters": {
   "path": "spike/t472/validation.parameters.json",
@@ -116,7 +141,7 @@
  "predictions_disclosed": false,
  "protocol_doc": {
   "path": "docs/CALLER_QUALITY_PROTOCOL.md",
-  "sha256": "sha256:1edb685892cca4669071fd98ed90fe499ac1b3c70fc6359d4768202852e84c54"
+  "sha256": "sha256:412da365ad6dd1dacf1bf953f6361d897b695ae1f870a35b78694f4280a9dc37"
  },
  "quality_scored": false,
  "randomness_commitment_sequence": [
@@ -146,31 +171,31 @@
    "step": 5
   }
  ],
- "schema": "t472-preregistration-bundle-v1",
+ "schema": "t472-preregistration-bundle-v2",
  "source_census": {
   "path": "spike/t472/source.census.json",
   "sha256": "sha256:51b9274f3f536b9076800195dfcc3154aecaa6ac08bee4e5f2d454662c264ab5"
  },
  "universe": {
-  "declarations_sha256": "sha256:e7b667dfd0b9f6451df25257df07ae96a73a2df161f7a17a3cbfc1b934ccd23f",
+  "declarations_sha256": "sha256:3d94d4fe493f46af8be50efb512e65a66b00abe35f00a63c5c37706cef624d04",
   "dir": "spike/t472/universe",
   "sites": {
-   "universe.sites.containerd.jsonl": {
-    "path": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/universe/universe.sites.containerd.jsonl",
-    "rows": 14816,
-    "sha256": "sha256:f6b1a91de1ba1b425948a213a5c292b4c8a7005b5fe461066dd8a5ef8708e704"
+   "universe.sites.containerd.jsonl.gz": {
+    "file": "universe.sites.containerd.jsonl.gz",
+    "rows": 340299,
+    "sha256": "sha256:c93164842e492a75f1ecfef3c535594fd08430def8b228e8a1875a61d015b599"
    },
-   "universe.sites.etcd.jsonl": {
-    "path": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/universe/universe.sites.etcd.jsonl",
-    "rows": 4888,
-    "sha256": "sha256:f275fdbf3ee8c3f898f5316b7c898c57ee40d508e29fcfbc46e11be07ae056b5"
+   "universe.sites.etcd.jsonl.gz": {
+    "file": "universe.sites.etcd.jsonl.gz",
+    "rows": 73039,
+    "sha256": "sha256:b31bbbd2191455b76391c5e5f03ebab104f8c034256fa18a97128a82e4fa7d77"
    },
-   "universe.sites.grpc-go.jsonl": {
-    "path": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/universe/universe.sites.grpc-go.jsonl",
-    "rows": 4517,
-    "sha256": "sha256:0577470a9dc6286e0e30efb4fa4c52f85025af1c43b751b0ba245b0bcd6e047a"
+   "universe.sites.grpc-go.jsonl.gz": {
+    "file": "universe.sites.grpc-go.jsonl.gz",
+    "rows": 86433,
+    "sha256": "sha256:ab5be4e5385a7c13064d78b8e2384b059cb42ac138e5dd668d1335306f22336a"
    }
   },
-  "summary_sha256": "sha256:de49605866d0d4f10fb34ee6c553b90829faed88a48d169467df35ad04d91329"
+  "summary_sha256": "sha256:d908eaeaedf6d684297972ffc4a5ab889475dc36cbc9b66c2c23b1b0c6e024f4"
  }
 }

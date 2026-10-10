@@ -3,22 +3,11 @@
 Builds the preregistered frames from committed, source-derived artifacts
 only. No Phebs prediction, label, score or seed value is consumed here.
 
-Frames:
-  recall       source-based; population from the universe enumeration
-               (kinds constructor_call, full_method_string, and
-               client_aware operation_invocation). Bare method-name tokens
-               in files that reference no committed generated client, and
-               client imports alone, are accounted in an excluded ledger
-               with an explicit reason instead of being sampled or dropped.
-  attribution  one unit per committed generated client (mapped or
-               abstained); the unit coordinate is the generated file's
-               constructor-backed client-interface span. The frozen t111
-               schema labels these registration yes/no + canonical service,
-               so an abstained client is truthfully registration=no.
-  precision, abstention, unresolved
-               candidate-derived; projected from one sealed proof-bundle-v1
-               envelope through the frozen pilot harness at sealing time.
-               Their identities are recorded as missing bindings here.
+Frames are source recall (all call expressions, admitted method references,
+full-method strings), a source declaration-interface census, and pending
+candidate precision/abstention/unresolved frames. Imports alone are the sole
+excluded evidence kind. Interface labels support the independent citation
+ledger; they do not substitute for call-site attributed-edge metrics.
 
 Sample sizes come from the approved parameters file (97 per frame stratum,
 complete census for smaller strata). The seed-dependent draw is a separate
@@ -28,7 +17,7 @@ function invoked only after the sealed randomness commitment exists.
 from __future__ import annotations
 
 import argparse
-import hashlib
+import gzip
 import json
 import re
 import sys
@@ -44,28 +33,31 @@ for _extra in ("../t111", "../../pilot/validation"):
 import label_protocol as protocol  # noqa: E402
 import harness as pilot_harness  # noqa: E402
 
-FRAMES_PLAN_SCHEMA = "t472-frames-plan-v1"
-RECALL_FRAME_SCHEMA = "t472-recall-frame-v1"
-ATTRIBUTION_FRAME_SCHEMA = "t472-attribution-frame-v1"
-CANDIDATE_FRAME_SCHEMA = "t472-candidate-frame-v1"
+FRAMES_PLAN_SCHEMA = "t472-frames-plan-v2"
+RECALL_FRAME_SCHEMA = "t472-recall-frame-v2"
+ATTRIBUTION_FRAME_SCHEMA = "t472-attribution-frame-v2"
+CANDIDATE_FRAME_SCHEMA = "t472-candidate-frame-v2"
 
-RECALL_ELIGIBLE_KINDS = frozenset({"constructor_call", "full_method_string"})
-EXCLUDED_REASONS = {
-    "import_reference": ("import of a generated client path alone is not call "
-                         "evidence; dynamic/aliased construction cannot be tied "
-                         "to the frozen client inventory from the import"),
-    "operation_invocation_not_client_aware": ("bare method-name token in a file "
-                                              "referencing no committed generated "
-                                              "client; cannot be distinguished from "
-                                              "same-name methods on unrelated types"),
-}
-SITE_ID_RE = re.compile(
-    r"\A(?P<repo>[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)@(?P<commit>[0-9a-f]{40}):"
-    r"(?P<path>[^\s:]+):(?P<start>[0-9]+)-(?P<end>[0-9]+)\Z"
-)
+RECALL_ELIGIBLE_KINDS = frozenset({"constructor_call", "operation_invocation",
+                                    "indirect_or_other_call", "operation_reference",
+                                    "full_method_string"})
+EXCLUDED_REASONS = {"import_reference": "an import alone is not an invocation; every call and admitted method reference remains eligible"}
+QUALITY_FRAMES = {"caller_precision": "precision", "caller_recall": "recall",
+                  "attributed_edge_precision": "precision", "attributed_edge_recall": "recall",
+                  "unresolved_accuracy": "unresolved"}
+MISSING_BINDINGS = [
+    "sealed proof-bundle-v1 envelope identity and sha256 (precision, unresolved frames)",
+    "phebs complete candidate ledger identity and sha256 (abstention frame)",
+    "NIST beacon pulse and derived 64-hex seed for the sample draw",
+    "frozen blind label document per frame (Ben, sole owner/reviewer)",
+    "independent expected-resolution ledger sha256",
+    "independent declaration-citation ledger sha256",
+    "phebs eligible-unit outcome receipt for the processing-state ledger",
+    "protocol digest after the section 10 sealing checklist completes",
+]
 CANDIDATE_PREDICATES = {
     "CALLS_OPERATION": "precision",
-    "UNRESOLVED_GRPC_CALL": "unresolved",
+    "UNRESOLVED_CALLER": "unresolved",
 }
 
 
@@ -78,22 +70,33 @@ def sha256_file(path: Path) -> str:
 
 
 def load_jsonl(path: Path) -> list[dict]:
-    with path.open() as f:
+    opener = gzip.open if path.suffix == ".gz" else open
+    with opener(path, "rt", encoding="utf-8") as f:
         return [json.loads(line) for line in f if line.strip()]
 
 
 def load_universe(universe_dir: Path) -> dict:
-    sites: list[dict] = []
-    site_files = {}
-    for f in sorted(universe_dir.glob("universe.sites.*.jsonl")):
+    summary = json.loads((universe_dir / "universe.json").read_text())
+    if summary.get("schema") != "t472-universe-v2":
+        raise FramesError("universe schema must be t472-universe-v2")
+    sites, site_files = [], {}
+    for name, expected in sorted(summary["sites"]["sha256"].items()):
+        if Path(name).name != name:
+            raise FramesError("universe member is not a flat file name")
+        f = universe_dir / name
+        if sha256_file(f) != expected:
+            raise FramesError(f"{name}: universe member digest mismatch")
         rows = load_jsonl(f)
         sites.extend(rows)
-        site_files[f.name] = {"path": str(f), "rows": len(rows), "sha256": sha256_file(f)}
-    declarations = load_jsonl(universe_dir / "universe.declarations.jsonl")
-    summary = json.loads((universe_dir / "universe.json").read_text())
+        site_files[name] = {"file": name, "rows": len(rows), "sha256": expected}
+    decl_path = universe_dir / "universe.declarations.jsonl"
+    declarations = load_jsonl(decl_path)
+    if sha256_file(decl_path) != summary["declarations"]["sha256"]:
+        raise FramesError("declaration ledger digest mismatch")
+    if len(sites) != summary["sites"]["total"] or len(declarations) != summary["declarations"]["generated_files"]:
+        raise FramesError("universe populations do not reconcile")
     return {"sites": sites, "declarations": declarations, "summary": summary,
-            "site_files": site_files,
-            "declarations_sha256": sha256_file(universe_dir / "universe.declarations.jsonl"),
+            "site_files": site_files, "declarations_sha256": sha256_file(decl_path),
             "summary_sha256": sha256_file(universe_dir / "universe.json")}
 
 
@@ -102,10 +105,6 @@ def recall_eligibility(row: Mapping) -> tuple[bool, str | None]:
     kind = row.get("kind")
     if kind in RECALL_ELIGIBLE_KINDS:
         return True, None
-    if kind == "operation_invocation":
-        if row.get("client_aware"):
-            return True, None
-        return False, "operation_invocation_not_client_aware"
     if kind == "import_reference":
         return False, "import_reference"
     raise FramesError(f"unknown universe site kind: {kind!r}")
@@ -137,23 +136,24 @@ def build_recall_frame(sites: Sequence[dict]) -> tuple[list[dict], dict]:
 
 
 def build_attribution_frame(declarations: Sequence[dict]) -> list[dict]:
-    """One attribution unit per committed generated client."""
-    units: list[dict] = []
+    """One exact source unit per constructor-backed service-client interface."""
+    units = []
     for d in declarations:
-        start, end = d["interface_start_byte"], d["interface_end_byte"]
-        if not isinstance(start, int) or not isinstance(end, int) or start < 0 or end <= start:
-            raise FramesError(f"{d['generated_path']}: interface span is inconsistent")
-        site_id = f"{d['repository']}@{d['commit']}:{d['generated_path']}:{start}-{end}"
-        units.append({
-            "site_id": site_id, "stratum": d["repository"], "schema": ATTRIBUTION_FRAME_SCHEMA,
-            "generated_path": d["generated_path"], "import_path": d["import_path"],
-            "mapped": d["mapped"], "vendored": d["vendored"],
-            "abstention_reason": d.get("abstention_reason"),
-            "operations": len(d["operations"]),
-        })
-    ids = [u["site_id"] for u in units]
-    if len(set(ids)) != len(ids):
-        raise FramesError("attribution frame contains duplicate site IDs")
+        for interface in d["interfaces"]:
+            start, end = interface["start_byte"], interface["end_byte"]
+            if type(start) is not int or type(end) is not int or start < 0 or end <= start:
+                raise FramesError(f"{d['generated_path']}: invalid interface span")
+            units.append({
+                "site_id": f"{d['repository']}@{d['commit']}:{d['generated_path']}:{start}-{end}",
+                "stratum": f"{d['repository']}:{interface['code_role']}",
+                "schema": ATTRIBUTION_FRAME_SCHEMA, "service": interface["service"],
+                "generated_path": d["generated_path"], "import_path": d["import_path"],
+                "mapped": d["mapped"], "vendored": d["vendored"],
+                "abstention_reason": d.get("abstention_reason"),
+                "operations": sum(o["service"] == interface["service"] for o in d["operations"]),
+            })
+    if len({u["site_id"] for u in units}) != len(units):
+        raise FramesError("duplicate attribution interface coordinate")
     return units
 
 
@@ -173,46 +173,148 @@ def frame_strata_sizes(strata: Mapping[str, Sequence[str]], sites_per_stratum: i
     return sizes
 
 
-def project_candidate_frames(envelope: Mapping, corpus_commits: set[str]) -> dict[str, dict]:
-    """Project one sealed proof-bundle-v1 envelope into candidate frames.
-
-    Uses the frozen pilot harness candidate_rows. Every projected site ID
-    must parse and name a corpus derived commit, and candidate-derived
-    frames must stay blind: this function reads predictions, never labels.
-    """
-    rows = pilot_harness.candidate_rows(envelope)
-    frames: dict[str, dict] = {}
+def project_candidate_frames(envelope: Mapping, universe: Mapping,
+                             sites_per_stratum: int = 97) -> dict[str, dict]:
+    """Adapt production caller facts, preserving source identities and declaration lineage."""
+    bundle = envelope["bundle"]
+    assertions = []
+    reasons = {}
+    evidence = {(e["repository"], e["run_id"], e["atom"]["id"]): e
+                for e in bundle["evidence"]}
+    declaration_predicates = {"DECLARES_FIELD", "DECLARES_MESSAGE", "DECLARES_SERVICE", "DECLARES_OPERATION"}
+    for a in bundle["assertions"]:
+        predicate = a["predicate"]
+        if predicate in declaration_predicates:
+            continue  # declaration facts are source-ledger inputs, not caller predictions
+        if predicate not in CANDIDATE_PREDICATES:
+            raise FramesError(f"unsupported caller predicate: {predicate}")
+        obj = a["object"]
+        if not isinstance(obj, str) or not re.fullmatch(r"/[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)+/[A-Za-z_]\w*", obj):
+            raise FramesError("caller object must be /package.Service/Method")
+        detail = json.loads(a["detail"])
+        if detail.get("schema") != "go-caller-detail-v1" or detail.get("protocol") != "grpc":
+            raise FramesError("candidate is not a grpc-caller fact")
+        reason = detail.get("unresolved_reason", "")
+        if (predicate == "UNRESOLVED_CALLER") != bool(reason):
+            raise FramesError("caller resolution and reason disagree")
+        if predicate == "CALLS_OPERATION" and not a.get("lineage"):
+            raise FramesError("resolved caller has no declaration lineage")
+        adapted = {**a, "object": obj[1:],
+                   "predicate": "UNRESOLVED_GRPC_CALL" if predicate == "UNRESOLVED_CALLER" else predicate}
+        assertions.append(adapted)
+        for atom_id in a["supporting"]:
+            e = evidence[(a["repo"], a["run_id"], atom_id)]
+            atom = e["atom"]
+            for occurrence in e["occurrences"]:
+                raw = f"{a['repo']}@{occurrence['commit']}:{occurrence['path']}:{atom['start_byte']}-{atom['end_byte']}"
+                key = (raw, adapted["predicate"], adapted["object"], a.get("lineage", ""))
+                if key in reasons and reasons[key] != reason:
+                    raise FramesError("conflicting unresolved reasons")
+                reasons[key] = reason
+    rows = pilot_harness.candidate_rows({"bundle": {**bundle, "assertions": assertions}})
+    citations = {}
+    for site in universe["sites"]:
+        if not recall_eligibility(site)[0]:
+            continue
+        prefix = f"{site['repository']}@{site['commit']}:{site['path']}:"
+        for start, end in site["citation_spans"]:
+            raw = prefix + f"{start}-{end}"
+            if raw in citations and citations[raw]["site_id"] != site["site_id"]:
+                raise FramesError("ambiguous source citation coordinate")
+            citations[raw] = site
+    projected = {name: [] for name in CANDIDATE_PREDICATES.values()}
+    seen = {}
     for row in rows:
-        match = SITE_ID_RE.match(row["site_id"])
-        if not match:
-            raise FramesError(f"candidate site_id is not a canonical coordinate: {row['site_id']}")
-        if match.group("commit") not in corpus_commits:
-            raise FramesError(f"candidate site_id names a commit outside the corpus: {row['site_id']}")
-        if int(match.group("start")) >= int(match.group("end")):
-            raise FramesError(f"candidate site_id span is inconsistent: {row['site_id']}")
-    for predicate, frame_name in CANDIDATE_PREDICATES.items():
-        ids = sorted({r["site_id"] for r in rows if r["predicate"] == predicate})
-        frames[frame_name] = {"schema": CANDIDATE_FRAME_SCHEMA, "predicate": predicate,
-                              "site_ids": ids, "population": len(ids)}
+        source = citations.get(row["site_id"])
+        if source is None:
+            raise FramesError(f"candidate citation is outside the exact source universe: {row['site_id']}")
+        if row["code_role"] != source["code_role"]:
+            raise FramesError("candidate code role disagrees with independent source role")
+        predicate = "UNRESOLVED_CALLER" if row["predicate"] == "UNRESOLVED_GRPC_CALL" else row["predicate"]
+        canonical = {**row, "site_id": source["site_id"], "source_citation": row["site_id"],
+                     "predicate": predicate, "stratum": source["stratum"],
+                     "unresolved_reason": reasons[(row["site_id"], row["predicate"], row["object"], row["lineage"])]}
+        key = source["site_id"]
+        claim = (predicate, row["object"], row["lineage"], canonical["unresolved_reason"])
+        if key in seen:
+            if seen[key] != claim:
+                raise FramesError("conflicting claims at one caller site")
+            continue
+        seen[key] = claim
+        projected[CANDIDATE_PREDICATES[predicate]].append(canonical)
+    frames = {}
+    for name, members in projected.items():
+        strata = stratify_population(members)
+        frames[name] = {"schema": CANDIDATE_FRAME_SCHEMA, "rows": members,
+                        "site_ids": sorted(r["site_id"] for r in members), "population": len(members),
+                        "strata": {s: {"site_ids": ids, **frame_strata_sizes({s: ids}, sites_per_stratum)[s]}
+                                   for s, ids in strata.items()}}
     return frames
 
 
-def draw_samples(plan: Mapping, seed_hex: str) -> dict[str, list[str]]:
-    """Seed-dependent per-stratum draw through the frozen harness.
+def load_frame_populations(plan: Mapping, frames_dir: Path) -> dict:
+    populations = {}
+    for frame in plan["frames"]:
+        if "file" not in frame:
+            continue
+        if Path(frame["file"]).name != frame["file"]:
+            raise FramesError("frame member must be a flat filename")
+        path = frames_dir / frame["file"]
+        if sha256_file(path) != frame["sha256"]:
+            raise FramesError("frame population digest mismatch")
+        populations[frame["frame_id"]] = load_jsonl(path)
+    return populations
 
-    Invoked only after the sealed randomness commitment exists; identical
-    inputs always select identical samples so a third party can re-derive.
-    """
+
+def _planned_strata(frame: Mapping, populations: Mapping) -> dict:
+    if frame["frame_id"] not in populations:
+        raise FramesError("frame population is missing")
+    strata = stratify_population(populations[frame["frame_id"]])
+    if set(strata) != set(frame["strata"]) or sum(map(len, strata.values())) != frame["population"]:
+        raise FramesError("frame population does not reconcile to the plan")
+    all_ids = [site_id for ids in strata.values() for site_id in ids]
+    if len(set(all_ids)) != len(all_ids):
+        raise FramesError("frame population has duplicate coordinates")
+    for stratum, ids in strata.items():
+        if len(ids) != frame["strata"][stratum]["population"]:
+            raise FramesError("stratum population disagrees with the plan")
+    return strata
+
+
+def draw_samples(plan: Mapping, seed_hex: str, populations: Mapping) -> dict:
+    """Draw from digest-bound populations only after the real sealed seed exists."""
     if not re.fullmatch(r"[0-9a-f]{64}", seed_hex or ""):
         raise FramesError("seed must be 64 lowercase hex characters")
-    drawn: dict[str, list[str]] = {}
+    drawn = {}
     for frame in plan["frames"]:
         if "strata" not in frame:
-            continue  # candidate-derived frames draw only after their envelope seals
-        strata = {name: pop["site_ids"] for name, pop in frame["strata"].items()}
-        sizes = {name: pop["sample_size"] for name, pop in frame["strata"].items()}
+            continue
+        strata = _planned_strata(frame, populations)
+        sizes = {name: p["sample_size"] for name, p in frame["strata"].items()}
         drawn[frame["frame_id"]] = pilot_harness.stratified_sample(strata, sizes, seed_hex)
     return drawn
+
+
+def quality_samples(plan: Mapping, drawn: Mapping, populations: Mapping) -> dict:
+    """Reconcile the sealed draw with every approved quality family's frame."""
+    if plan.get("quality_frames") != QUALITY_FRAMES:
+        raise FramesError("quality-family frame mapping is incomplete")
+    frame_by_id = {f["frame_id"]: f for f in plan["frames"]}
+    required = {}
+    for family, frame_id in QUALITY_FRAMES.items():
+        frame = frame_by_id[frame_id]
+        if frame.get("pending") or "strata" not in frame or frame_id not in drawn:
+            raise FramesError("candidate frame or planned draw is still missing")
+        population = _planned_strata(frame, populations)
+        draw = drawn[frame_id]
+        if set(draw) != set(frame["strata"]):
+            raise FramesError("draw omits or adds a planned stratum")
+        for stratum, ids in draw.items():
+            if len(ids) != frame["strata"][stratum]["sample_size"] or len(set(ids)) != len(ids) \
+                    or not set(ids) <= set(population[stratum]):
+                raise FramesError("draw does not complete the planned sample/census")
+        required[family] = draw
+    return required
 
 
 def write_frames(repo_root: Path, universe_dir: Path, out_dir: Path,
@@ -238,19 +340,19 @@ def write_frames(repo_root: Path, universe_dir: Path, out_dir: Path,
         body = b"".join(json.dumps(dict(r), ensure_ascii=False, allow_nan=False,
                                    sort_keys=True, separators=(",", ":")).encode("utf-8") + b"\n"
                         for r in rows)
-        (out_dir / name).write_bytes(body)
-        return {"file": name, "rows": len(rows), "sha256": protocol.sha256_bytes(body)}
+        (out_dir / name).write_bytes(gzip.compress(body, mtime=0) if name.endswith(".gz") else body)
+        return {"file": name, "rows": len(rows), "sha256": sha256_file(out_dir / name)}
 
     recall_strata_pop = {
-        name: {"site_ids": ids, **frame_strata_sizes({name: ids}, sites_per_stratum)[name]}
+        name: frame_strata_sizes({name: ids}, sites_per_stratum)[name]
         for name, ids in recall_strata.items()
     }
     attribution_strata_pop = {
-        name: {"site_ids": ids, **frame_strata_sizes({name: ids}, sites_per_stratum)[name]}
+        name: frame_strata_sizes({name: ids}, sites_per_stratum)[name]
         for name, ids in attribution_strata.items()
     }
 
-    recall_ref = dump_jsonl("frames.recall.jsonl", recall_population)
+    recall_ref = dump_jsonl("frames.recall.jsonl.gz", recall_population)
     attribution_ref = dump_jsonl("frames.attribution.jsonl", attribution_units)
     (out_dir / "frames.excluded.json").write_text(json.dumps(
         {"schema": "t472-excluded-ledger-v1", **excluded}, indent=1, sort_keys=True) + "\n")
@@ -261,19 +363,14 @@ def write_frames(repo_root: Path, universe_dir: Path, out_dir: Path,
             {
                 "frame_id": "recall", "claim_family": "caller_sites",
                 "frame_schema": RECALL_FRAME_SCHEMA, "label_fields": ["invocation", "operation"],
-                "population_rule": ("universe kinds constructor_call and full_method_string, plus "
-                                    "operation_invocation rows whose file references a committed "
-                                    "generated client (client_aware); excluded kinds are accounted "
-                                    "in frames.excluded.json, never sampled and never dropped silently"),
+                "population_rule": "every Go call expression, admitted method reference and full-method string; imports alone stay in the excluded ledger",
                 "strata": recall_strata_pop, "population": len(recall_population),
                 **{k: recall_ref[k] for k in ("file", "rows", "sha256")},
             },
             {
                 "frame_id": "attribution", "claim_family": "declaration_attribution",
                 "frame_schema": ATTRIBUTION_FRAME_SCHEMA, "label_fields": ["registration", "service"],
-                "population_rule": ("one unit per committed generated client at its "
-                                    "constructor-backed client-interface span; mapped and abstained "
-                                    "clients both populate the frame"),
+                "population_rule": ("one unit per exact constructor-backed service-client interface; repository x code_role strata; this source census supports the independent declaration-citation ledger"),
                 "strata": attribution_strata_pop, "population": len(attribution_units),
                 **{k: attribution_ref[k] for k in ("file", "rows", "sha256")},
             },
@@ -295,13 +392,13 @@ def write_frames(repo_root: Path, universe_dir: Path, out_dir: Path,
             {
                 "frame_id": "unresolved", "claim_family": "caller_sites",
                 "frame_schema": CANDIDATE_FRAME_SCHEMA, "label_fields": ["invocation", "operation"],
-                "population_rule": "projected from the sealed envelope, predicate UNRESOLVED_GRPC_CALL",
+                "population_rule": "projected from the sealed envelope, predicate UNRESOLVED_CALLER via the caller-specific adapter",
                 "pending": True,
             },
         ],
         "sampling": {"sites_per_frame_stratum": sites_per_stratum,
                      "smaller_strata": parameters["sampling"]["smaller_strata"],
-                     "draw": "draw_samples(plan, sealed seed) via frozen harness.stratified_sample; "
+                     "draw": "draw_samples(plan, sealed seed, digest-bound populations) via frozen harness.stratified_sample; "
                              "not executed before the randomness commitment"},
         "provenance": {
             "universe_sites": universe["site_files"],
@@ -315,20 +412,11 @@ def write_frames(repo_root: Path, universe_dir: Path, out_dir: Path,
         },
         "corpus_derived_commits": sorted(corpus_commits),
         "candidate_blind_source_labels": True,
-        "missing_bindings": [
-            "sealed proof-bundle-v1 envelope identity and sha256 (precision, unresolved frames)",
-            "phebs complete candidate ledger identity and sha256 (abstention frame)",
-            "NIST beacon pulse and derived 64-hex seed for the sample draw",
-            "frozen blind label document per frame (Ben, sole owner/reviewer)",
-            "phebs eligible-unit outcome receipt for the processing-state ledger",
-            "protocol digest after the section 10 sealing checklist completes",
-        ],
+        "quality_frames": QUALITY_FRAMES,
+        "missing_bindings": MISSING_BINDINGS,
         "review_required": [
-            ("confirm the recall exclusion rules: bare method-name tokens in files referencing no "
-             "committed generated client, and client imports alone, stay out of recall sampling "
-             "(aliases, wrappers, dynamic paths and same-name methods cannot be resolved to the "
-             "frozen client inventory from source alone)"),
-            "confirm attribution units use the whole constructor-backed interface span as the coordinate",
+            "confirm source-only recall labeling over every Go call expression and inventoried method reference, with imports alone excluded",
+            "confirm exact individual service-client interface coordinates for the declaration-citation source census",
         ],
         "labels_committed": False, "seed_committed": False, "quality_scored": False,
     }

@@ -9,6 +9,8 @@ round data, labels, seeds or predictions are touched.
 from __future__ import annotations
 
 import json
+import gzip
+import copy
 import subprocess
 import sys
 import tempfile
@@ -224,275 +226,411 @@ class SyntheticRepoCase(unittest.TestCase):
 
 
 class TestEnumeration(SyntheticRepoCase):
-    def test_role_classification(self) -> None:
+    def test_roles_and_source_census(self):
         self.assertEqual(self.result["units"]["by_role"],
-                         {"generated": 1, "mock": 1, "production": 3, "test": 1,
-                          "vendor": 1})
+                         {"generated": 1, "mock": 1, "production": 3, "test": 1, "vendor": 1})
+        self.assertEqual(sum(len(p) for p in self.result["eligible_units"]["by_role"].values()), 7)
+        self.assertEqual(self.result["nonregular"]["link_targets"], {"link.go": "main.go"})
 
-    def test_declarations(self) -> None:
-        decls = {d["generated_path"]: d for d in self.result["declarations"]}
-        client = decls["api/v1/greeter_grpc.pb.go"]
+    def test_client_interfaces_and_operations(self):
+        client = self.result["declarations"][0]
+        self.assertEqual(client["interfaces"][0]["client_type"], "GreeterClient")
+        self.assertEqual(client["operations"][0]["full_method"], "/greeter.v1.Greeter/SayHello")
         self.assertTrue(client["mapped"])
-        self.assertEqual(client["operations"][0]["full_method"],
-                         "/greeter.v1.Greeter/SayHello")
-        self.assertEqual(client["operations"][0]["full_method_source"],
-                         "full_method_constant")
-        self.assertEqual(client["operations"][0]["declaration_service"], "Greeter")
         self.assertIsNotNone(client["operations"][0]["declaration_start_byte"])
-        vendored = decls["vendor/example.com/mini/api/v1/greeter_grpc.pb.go"]
-        self.assertTrue(vendored["vendored"])
-        self.assertGreater(vendored["interface_end_byte"],
-                           vendored["interface_start_byte"])
 
-    def test_caller_sites(self) -> None:
-        main = self.sites_by("main.go")
-        self.assertEqual({r["symbol"] for r in main["constructor_call"]}, {"NewGreeterClient"})
-        invocations = main["operation_invocation"]
-        self.assertEqual({r["symbol"] for r in invocations}, {"SayHello"})
-        self.assertTrue(all(r["client_aware"] for r in invocations))
-        self.assertEqual(main["import_reference"][0]["symbol"], "example.com/mini/api/v1")
-        self.assertEqual(main["import_reference"][0]["code_role"], "production")
-        for kind, rows in main.items():
-            for row in rows:
-                self.assertTrue(row["site_id"].startswith(f"example/mini@{self.commit}:main.go:"))
+    def test_bare_method_remains_recall_eligible(self):
+        row = self.sites_by("bare.go")["operation_invocation"][0]
+        self.assertFalse(row["client_aware"])
+        self.assertTrue(frames.recall_eligibility(row)[0])
 
-    def test_non_aware_invocation_stays_visible(self) -> None:
-        bare = self.sites_by("bare.go")
-        self.assertEqual({r["symbol"] for r in bare["operation_invocation"]}, {"SayHello"})
-        self.assertFalse(bare["operation_invocation"][0]["client_aware"])
-        self.assertNotIn("import_reference", bare)
+    def test_every_call_is_inventoried(self):
+        kinds = self.sites_by("main.go")
+        self.assertEqual({r["symbol"] for r in kinds["constructor_call"]}, {"NewGreeterClient"})
+        self.assertTrue({"Dial", "Background"} <= {r["symbol"] for r in kinds["indirect_or_other_call"]})
 
-    def test_import_only_file(self) -> None:
-        rows = self.sites_by("importonly.go")
-        self.assertEqual(list(rows), ["import_reference"])
+    def test_import_alone_is_explicitly_excluded(self):
+        row = self.sites_by("importonly.go")["import_reference"][0]
+        self.assertEqual(frames.recall_eligibility(row), (False, "import_reference"))
 
-    def test_full_method_string(self) -> None:
-        client = self.sites_by("api/v1/greeter_grpc.pb.go")
-        strings = client.get("full_method_string", [])
-        self.assertTrue(any(r["symbol"] == "/greeter.v1.Greeter/SayHello" for r in strings))
+    def test_full_method_strings(self):
+        rows = self.sites_by("api/v1/greeter_grpc.pb.go")["full_method_string"]
+        self.assertEqual(rows[0]["symbol"], "/greeter.v1.Greeter/SayHello")
 
-    def test_symlink_reconciled_and_targeted(self) -> None:
-        self.assertEqual(self.result["nonregular"]["link_targets"],
-                         {"link.go": "main.go"})
+    def test_old_generator(self):
+        client = eu.extract_client("x/greeter_grpc.pb.go", OLD_CLIENT, {"x": "example.com/mini"})
+        self.assertIsNone(client["operations"][0]["full_method"])
 
-    def test_old_generator_without_constants(self) -> None:
-        client = eu.extract_client("x/greeter_grpc.pb.go", OLD_CLIENT,
-                                   {"x": "example.com/mini"})
-        self.assertEqual(client["operations"][0]["full_method"], None)
-        self.assertEqual(client["operations"][0]["source"], "client_interface")
+    def test_exact_tree_and_census_refusal(self):
+        for commit, census, mappings in [
+            ("f" * 40, self.census, self.mappings),
+            (self.commit, {**self.census, "regular_go_sources": 9}, self.mappings),
+            (self.commit, self.census, {**self.mappings, "clients": 3}),
+        ]:
+            with self.subTest(commit=commit, census=census), self.assertRaises(eu.UniverseError):
+                eu.enumerate_repo("example/mini", self.clone, commit, census, mappings)
+
+
+class TestSourceScanner(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.scanner = eu.SourceScanner()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.scanner.close()
+
+    def scan(self, body):
+        return eu.enumerate_sites("example/mini", "a" * 40, "x.go", body, "production",
+                                  ["SayHello"], ["NewGreeterClient"], {}, {"example.com/pb"}, self.scanner)[0]
+
+    def test_cross_file_interface_alias_and_method_value(self):
+        body = b"package p\nfunc f(w Wrapper){ call := w.SayHello; call(nil); w.SayHello(nil) }\n"
+        rows = self.scan(body)
+        self.assertEqual([r["symbol"] for r in rows], ["SayHello", "call", "SayHello"])
+        self.assertTrue(all(frames.recall_eligibility(r)[0] for r in rows))
+
+    def test_dynamic_factory_and_reflection_calls(self):
+        rows = self.scan(b'package p\nfunc f(){ factory()(nil); v.MethodByName("SayHello").Call(nil) }')
+        self.assertEqual(len(rows), 4)
+        self.assertEqual(len({r["site_id"] for r in rows}), 4)
+
+    def test_generics_and_unicode_byte_positions(self):
+        body = 'package p\n// café\nfunc f(){ generic[int](nil); c.SayHello(nil) }'.encode()
+        rows = self.scan(body)
+        for r in rows:
+            self.assertTrue(body[r["start_byte"]:r["end_byte"]])
+        self.assertEqual(body[rows[-1]["start_byte"]:rows[-1]["end_byte"]], b"SayHello")
+
+    def test_comment_and_string_text_are_not_calls(self):
+        rows = self.scan(b'package p\n// c.SayHello(nil)\nvar s = "call(nil)"')
+        self.assertEqual(rows, [])
+
+    def test_parse_failure_refuses(self):
+        with self.assertRaises(eu.UniverseError):
+            self.scan(b"package p\nfunc broken( {")
 
 
 class TestFrames(SyntheticRepoCase):
-    @classmethod
-    def setUpClass(cls) -> None:
-        super().setUpClass()
-        cls.recall, cls.excluded = frames.build_recall_frame(cls.result["sites"])
-        cls.attribution = frames.build_attribution_frame(cls.result["declarations"])
-
-    def test_recall_excluded_reconciles_to_universe(self) -> None:
-        self.assertEqual(len(self.recall) + self.excluded["excluded_total"],
-                         len(self.result["sites"]))
-
-    def test_exclusion_reasons(self) -> None:
-        reasons = set(self.excluded["excluded_kinds"])
-        self.assertEqual(reasons, {"import_reference",
-                                   "operation_invocation_not_client_aware"})
-
-    def test_attribution_units(self) -> None:
-        self.assertEqual(len(self.attribution), 2)
-        for unit in self.attribution:
-            label_protocol.validate_labels([], [])  # schema import sanity
-            self.assertTrue(unit["site_id"].startswith(
-                f"example/mini@{self.commit}:{unit['generated_path']}:"))
-
-    def test_plan_census_flags(self) -> None:
-        with tempfile.TemporaryDirectory() as td:
-            out = Path(td)
-            for name, rows in (("universe.sites.mini.jsonl", self.result["sites"]),):
-                (out / name).write_text("".join(
-                    json.dumps(r, sort_keys=True) + "\n" for r in rows))
-            (out / "universe.declarations.jsonl").write_text("".join(
-                json.dumps(d, sort_keys=True) + "\n" for d in self.result["declarations"]))
-            summary = {"repositories": [{
-                "repo": "example/mini", "derived_commit": self.commit,
-                "eligible_units": {"regular_go_source_paths": ["main.go"]},
-                "units": {"regular_go_sources": 1}}]}
-            (out / "universe.json").write_text(json.dumps(summary))
-            (out / "validation.parameters.json").write_text(json.dumps({
-                "schema": "t472-quality-parameters-v1",
-                "sampling": {"sites_per_frame_stratum": 5, "smaller_strata": "complete census"}}))
-            (out / "source.census.json").write_text("{}")
-            (out / "corpus.lock.json").write_text(json.dumps(
-                {"repos": [{"derived": {"derived_commit": self.commit,
-                                        "corpus_admitted": True}}]}))
-            plan = frames.write_frames(out, out, out / "plan",
-                                       out / "validation.parameters.json",
-                                       out / "source.census.json",
-                                       out / "corpus.lock.json")
-            recall = next(f for f in plan["frames"] if f["frame_id"] == "recall")
-            for stratum in recall["strata"].values():
-                self.assertLessEqual(stratum["sample_size"], 5)
-                self.assertEqual(stratum["census"], stratum["population"] <= 5)
-
-    def test_draw_is_deterministic_and_seed_checked(self) -> None:
-        plan = {"frames": [{"frame_id": "recall", "strata": {
-            "s1": {"site_ids": [f"id{i}" for i in range(20)], "sample_size": 5}}}]}
-        seed = "ab" * 32
-        a = frames.draw_samples(plan, seed)
-        b = frames.draw_samples(plan, seed)
-        self.assertEqual(a, b)
-        self.assertEqual(len(a["recall"]["s1"]), 5)
+    def test_recall_accounting(self):
+        pop, excluded = frames.build_recall_frame(self.result["sites"])
+        self.assertEqual(len(pop) + excluded["excluded_total"], len(self.result["sites"]))
+        self.assertEqual(set(excluded["excluded_kinds"]), {"import_reference"})
         with self.assertRaises(frames.FramesError):
-            frames.draw_samples(plan, "not-hex")
+            frames.build_recall_frame([{ "kind": "invented"}])
 
-    def test_candidate_projection_validates_commits(self) -> None:
-        good_commit = self.commit
+    def test_multiservice_interface_units_and_roles(self):
+        decl = copy.deepcopy(self.result["declarations"][0])
+        interface = {**decl["interfaces"][0], "service": "Other", "client_type": "OtherClient",
+                     "start_byte": 1000, "end_byte": 1100}
+        decl["interfaces"].append(interface)
+        units = frames.build_attribution_frame([decl])
+        self.assertEqual(len(units), 2)
+        self.assertEqual({u["service"] for u in units}, {"Greeter", "Other"})
+        self.assertTrue(all(u["stratum"] == "example/mini:generated" for u in units))
+        self.assertEqual(units[1]["site_id"].split(":")[-1], "1000-1100")
 
-        def envelope(commit: str) -> dict:
-            atom = {"id": "a1", "start_byte": 10, "end_byte": 20}
-            return {"bundle": {
-                "evidence": [{"atom": atom, "repository": "example/mini",
-                              "run_id": "r1",
-                              "occurrences": [{"repo": "example/mini", "run_id": "r1",
-                                               "commit": commit, "path": "main.go",
-                                               "start_line": 1, "end_line": 2}]}],
-                "assertions": [{"id": "x", "predicate": "CALLS_OPERATION",
-                                "repo": "example/mini", "run_id": "r1",
-                                "supporting": ["a1"], "object": "greeter.v1.Greeter/SayHello"}]}}
+    def envelope(self, predicate="CALLS_OPERATION", lineage=None):
+        source = self.sites_by("main.go")["operation_invocation"][0]
+        start, end = source["citation_spans"][0]
+        return {"bundle": {
+            "evidence": [{"atom": {"id": "a1", "start_byte": start, "end_byte": end},
+                          "repository": "example/mini", "run_id": "r1",
+                          "occurrences": [{"repo": "example/mini", "run_id": "r1", "commit": self.commit,
+                                           "path": "main.go", "start_line": 1, "end_line": 1}]}],
+            "assertions": [{"id": "claim", "predicate": predicate, "repo": "example/mini", "run_id": "r1",
+                            "supporting": ["a1"], "object": "/greeter.v1.Greeter/SayHello",
+                            "code_role": "production", "lineage": lineage or "provisional_repo_path_v1_" + "a" * 64,
+                            "detail": json.dumps({"schema": "go-caller-detail-v1", "protocol": "grpc",
+                                                  "unresolved_reason": "missing_declaration" if predicate == "UNRESOLVED_CALLER" else ""})}]}}
 
-        projected = frames.project_candidate_frames(envelope(good_commit), {good_commit})
-        self.assertEqual(projected["precision"]["population"], 1)
+    def test_production_coordinate_predicate_and_operation_adapter(self):
+        env = self.envelope()
+        out = frames.project_candidate_frames(env, {"sites": self.result["sites"]})
+        row = out["precision"]["rows"][0]
+        source = self.sites_by("main.go")["operation_invocation"][0]
+        self.assertEqual(row["site_id"], source["site_id"])
+        self.assertNotEqual(row["source_citation"], row["site_id"])
+        self.assertEqual(row["object"], "greeter.v1.Greeter/SayHello")
+        result = caller_scoring.score_recall("caller_recall", [row["site_id"]],
+                 [label_row(row["site_id"], "yes", row["object"])], {row["site_id"]},
+                 {row["site_id"]: row["stratum"]}, 1.96)
+        self.assertEqual(result[0]["proportion"], 1)
+        unresolved = self.envelope("UNRESOLVED_CALLER")
+        unresolved["bundle"]["assertions"][0]["lineage"] = ""
+        out = frames.project_candidate_frames(unresolved, {"sites": self.result["sites"]})
+        self.assertEqual(out["unresolved"]["rows"][0]["unresolved_reason"], "missing_declaration")
+
+    def test_candidate_source_fences_and_conflicts(self):
+        mutations = [
+            lambda e: e["bundle"]["evidence"][0]["occurrences"][0].update(commit="f" * 40),
+            lambda e: e["bundle"]["evidence"][0]["occurrences"][0].update(repo="another/repo"),
+            lambda e: e["bundle"]["assertions"][0].update(code_role="vendor"),
+            lambda e: e["bundle"]["assertions"][0].update(object="greeter.v1.Greeter/SayHello"),
+            lambda e: e["bundle"]["assertions"][0].update(predicate="UNRESOLVED_GRPC_CALL"),
+            lambda e: e["bundle"]["assertions"].append({**e["bundle"]["assertions"][0], "object": "/greeter.v1.Other/SayHello"}),
+        ]
+        for mutation in mutations:
+            e = self.envelope(); mutation(e)
+            with self.subTest(mutation=mutation), self.assertRaises((frames.FramesError, label_protocol.LabelProtocolError, ValueError)):
+                frames.project_candidate_frames(e, {"sites": self.result["sites"]})
+
+    def test_census_and_draw_mechanics_use_synthetic_seed_only(self):
+        sizes = frames.frame_strata_sizes({"s": ["a", "b"]}, 97)
+        self.assertEqual(sizes["s"], {"population": 2, "sample_size": 2, "census": True})
+        plan = {"frames": [{"frame_id": "recall", "population": 2, "strata": {"s": {"population": 2, "sample_size": 2}}}]}
+        populations = {"recall": [{"site_id": i, "stratum": "s"} for i in ["a", "b"]]}
+        self.assertEqual(frames.draw_samples(plan, "a" * 64, populations), frames.draw_samples(plan, "a" * 64, populations))
         with self.assertRaises(frames.FramesError):
-            frames.project_candidate_frames(envelope("f" * 40), {good_commit})
+            frames.draw_samples(plan, "fake", populations)
 
 
-def label_row(site_id: str, invocation: str, operation: str | None = None,
-              registration: str = "no", service: str | None = None) -> dict:
+    def test_quality_samples_require_all_frames_and_the_complete_draw(self):
+        frames_in = [{"frame_id": f, "population": 2,
+                      "strata": {"s": {"population": 2, "sample_size": 2}}}
+                     for f in {"recall", "precision", "unresolved"}]
+        plan = {"quality_frames": frames.QUALITY_FRAMES, "frames": frames_in}
+        populations = {f["frame_id"]: [{"site_id": i, "stratum": "s"} for i in ("a", "b")]
+                       for f in frames_in}
+        drawn = {f: {"s": ["a", "b"]} for f in populations}
+        self.assertEqual(set(frames.quality_samples(plan, drawn, populations)), caller_scoring.QUALITY_FAMILIES)
+        with self.assertRaises(frames.FramesError):
+            frames.quality_samples(plan, {"recall": drawn["recall"]}, populations)
+        drawn["precision"]["s"].pop()
+        with self.assertRaises(frames.FramesError):
+            frames.quality_samples(plan, drawn, populations)
+
+
+def label_row(site_id, invocation, operation=None, role="production"):
     return {"site_id": site_id, "invocation": invocation, "operation": operation,
-            "registration": registration, "service": service,
-            "expected_code_role": "production", "rationale": "synthetic test",
-            "evidence": "synthetic test"}
+            "registration": "no", "service": None, "expected_code_role": role,
+            "rationale": "synthetic source judgment", "evidence": "synthetic source"}
+
+
+def declaration_record(site_id, state="resolved", path="api/greeter.proto"):
+    repo_commit = site_id.split(":", 1)[0]
+    repo = repo_commit.split("@")[0]
+    lineage = "provisional_repo_path_v1_" + eu.hashlib.sha256((repo + "\0" + path).encode()).hexdigest()
+    return {"site_id": site_id, "state": state, "operation": "greeter.v1.Greeter/SayHello" if state == "resolved" else None,
+            "lineage": lineage if state == "resolved" else None,
+            "declaration_site_id": repo_commit + ":" + path + ":1-9" if state == "resolved" else None,
+            "rationale": "synthetic independent citation"}
 
 
 class TestScoring(unittest.TestCase):
-    params = caller_scoring.load_parameters(
-        SPIKE / "validation.parameters.json")
+    params = caller_scoring.load_parameters(SPIKE / "validation.parameters.json")
+    s1 = "example/mini@" + "a" * 40 + ":main.go:10-18"
+    s2 = "example/mini@" + "a" * 40 + ":main.go:30-38"
+    operation = "greeter.v1.Greeter/SayHello"
 
-    def test_missing_labels_invalidate(self) -> None:
-        with self.assertRaises(label_protocol.LabelProtocolError):
-            caller_scoring.score_recall("caller_recall", ["s1"], [], set(), {}, 1.96)
+    def test_missing_surplus_and_wrong_role_labels_refuse(self):
+        for labels in ([], [label_row(self.s2, "no")], [label_row(self.s1, "no", role="vendor")]):
+            with self.subTest(labels=labels), self.assertRaises(ValueError):
+                caller_scoring.score_recall("caller_recall", [self.s1], labels, set(), {self.s1: "example/mini:production"}, 1.96)
 
-    def test_all_unsure_stratum_is_unavailable(self) -> None:
-        labels = [label_row("s1", "unsure")]
-        results = caller_scoring.score_recall("caller_recall", ["s1"], labels, set(), {"s1": "a"}, 1.96)
-        self.assertTrue(results[0]["unavailable"])
-        gate = caller_scoring.gate_quality(results, self.params)
-        self.assertEqual(gate["round"], "unavailable")
+    def test_recall_keeps_negative_sample_count(self):
+        labels = [label_row(self.s1, "yes", self.operation), label_row(self.s2, "no")]
+        result = caller_scoring.score_recall("caller_recall", [self.s1, self.s2], labels,
+                  {self.s1}, {s: "example/mini:production" for s in (self.s1, self.s2)}, 1.96)[0]
+        self.assertEqual((result["sampled"], result["decided"], result["nonpositive"]), (2, 1, 1))
+        self.assertEqual(result["proportion"], 1)
 
-    def test_recall_join(self) -> None:
-        labels = [label_row("s1", "yes", "greeter.v1.Greeter/SayHello"),
-                  label_row("s2", "yes", "greeter.v1.Greeter/SayHello"),
-                  label_row("s3", "no"),
-                  label_row("s4", "yes", "greeter.v1.Greeter/SayHello")]
-        strata = {s: "repo:production" for s in ("s1", "s2", "s3", "s4")}
-        results = caller_scoring.score_recall("caller_recall", ["s1", "s2", "s3", "s4"],
-                                              labels, {"s1", "s4"}, strata, 1.96)
-        r = results[0]
-        self.assertEqual((r["yes"], r["no"], r["decided"]), (2, 1, 3))
-        self.assertAlmostEqual(r["proportion"], 2 / 3)
+    def test_declaration_precision_and_recall_require_exact_lineage(self):
+        ids = [self.s1, self.s2]
+        labels = [label_row(s, "yes", self.operation) for s in ids]
+        truth = [declaration_record(s) for s in ids]
+        strata = {s: "example/mini:production" for s in ids}
+        operations = {s: self.operation for s in ids}
+        lineages = {self.s1: truth[0]["lineage"], self.s2: "wrong_lineage"}
+        precision = caller_scoring.score_precision_family("attributed_edge_precision", ids, labels,
+                     strata, 1.96, operations, lineages, truth)[0]
+        recall = caller_scoring.score_recall("attributed_edge_recall", ids, labels, set(ids),
+                  strata, 1.96, operations, lineages, truth)[0]
+        self.assertEqual((precision["yes"], precision["no"]), (1, 1))
+        self.assertEqual((recall["yes"], recall["no"]), (1, 1))
+        self.assertEqual(precision["threshold_family"], "attributed_edge_precision")
+        self.assertEqual(recall["threshold_family"], "attributed_edge_recall")
 
-    def test_attributed_edge_requires_operation_match(self) -> None:
-        labels = [label_row("s1", "yes", "greeter.v1.Greeter/SayHello"),
-                  label_row("s2", "yes", "greeter.v1.Greeter/Other")]
-        strata = {"s1": "a", "s2": "a"}
-        wrong = {"s1": "greeter.v1.Greeter/Wrong", "s2": "greeter.v1.Greeter/Other"}
-        results = caller_scoring.score_precision_family(
-            "attributed_edge_precision", ["s1", "s2"], labels, strata, 1.96, wrong)
-        self.assertEqual((results[0]["yes"], results[0]["no"]), (1, 1))
-        recall = caller_scoring.score_recall("attributed_edge_recall", ["s1", "s2"],
-                                             labels, {"s1", "s2"}, strata, 1.96, wrong)
-        self.assertEqual((recall[0]["yes"], recall[0]["no"]), (1, 1))
+    def test_attribution_has_no_true_negative_rescue(self):
+        labels = [label_row(self.s1, "no")]
+        truth = [declaration_record(self.s1, "not_call")]
+        result = caller_scoring.score_recall("attributed_edge_recall", [self.s1], labels, set(),
+                  {self.s1: "example/mini:production"}, 1.96, {}, {}, truth)[0]
+        self.assertTrue(result["unavailable"])
+        self.assertEqual(result["decided"], 0)
 
-    def test_declaration_attribution(self) -> None:
-        labels = [label_row("m1", "no", None, "yes", "greeter.v1.Greeter"),
-                  label_row("m2", "no", None, "yes", "greeter.v1.Other"),
-                  label_row("a1", "no", None, "no", None)]
-        strata = {s: "example/mini" for s in ("m1", "m2", "a1")}
-        predicted = {"m1": "greeter.v1.Greeter", "m2": "greeter.v1.Greeter"}
-        results = caller_scoring.score_declaration_attribution(
-            ["m1", "m2", "a1"], labels, predicted, strata, 1.96)
-        r = results[0]
-        self.assertEqual((r["yes"], r["no"]), (2, 1))
-        self.assertEqual(r["threshold_family"], "attributed_edge")
+    def test_attribution_requires_independent_citations(self):
+        for family in ("attributed_edge_recall", "attributed_edge_precision"):
+            with self.subTest(family=family), self.assertRaises(caller_scoring.ScoringError):
+                if family.endswith("recall"):
+                    caller_scoring.score_recall(family, [self.s1], [label_row(self.s1, "yes", self.operation)],
+                                               set(), {self.s1: "example/mini:production"}, 1.96)
+                else:
+                    caller_scoring.score_precision_family(family, [self.s1], [label_row(self.s1, "yes", self.operation)],
+                                                         {self.s1: "example/mini:production"}, 1.96)
+
+    def test_declaration_ledger_scope_and_identity_refuse(self):
+        for field, bad in (("declaration_site_id", "other/repo@" + "a" * 40 + ":x.proto:1-9"),
+                           ("lineage", "wrong"), ("operation", "other.Service/Wrong")):
+            truth = declaration_record(self.s1); truth[field] = bad
+            with self.subTest(field=field), self.assertRaises(caller_scoring.ScoringError):
+                caller_scoring.score_precision_family("attributed_edge_precision", [self.s1],
+                   [label_row(self.s1, "yes", self.operation)], {self.s1: "example/mini:production"},
+                   1.96, {self.s1: self.operation}, {self.s1: "anything"}, [truth])
+
+    def test_wrong_abstention_fails_and_correct_abstention_passes(self):
+        ids = [self.s1, self.s2]
+        truth = [{"site_id": self.s1, "state": "resolved", "reason": "", "rationale": "synthetic"},
+                 {"site_id": self.s2, "state": "unresolved", "reason": "missing_declaration", "rationale": "synthetic"}]
+        result = caller_scoring.score_unresolved(ids, [label_row(s, "yes", self.operation) for s in ids],
+                 {s: "missing_declaration" for s in ids}, {s: "example/mini:production" for s in ids}, 1.96, truth)[0]
+        self.assertEqual((result["yes"], result["no"]), (1, 1))
         with self.assertRaises(caller_scoring.ScoringError):
-            caller_scoring.score_declaration_attribution(
-                ["m1"], labels[:1], {"m1": "not canonical!"}, {"m1": "example/mini"}, 1.96)
+            caller_scoring.score_precision_family("unresolved_accuracy", [], [], {}, 1.96)
 
-    def test_threshold_gate(self) -> None:
-        labels = [label_row("s1", "yes", "greeter.v1.Greeter/SayHello"),
-                  label_row("s2", "no")]
-        strata = {"s1": "a", "s2": "a"}
-        results = caller_scoring.score_precision_family(
-            "caller_precision", ["s1", "s2"], labels, strata, 1.96)
-        gate = caller_scoring.gate_quality(results, self.params)
+    def test_missing_resolution_ledger_refuses(self):
+        with self.assertRaises(caller_scoring.ScoringError):
+            caller_scoring.score_unresolved([self.s1], [label_row(self.s1, "yes", self.operation)],
+                {self.s1: "missing_declaration"}, {self.s1: "example/mini:production"}, 1.96, [])
+
+    def gate_fixture(self, yes=10, unsure=0):
+        ids = [self.s1 + f"-{n}" for n in range(yes + unsure)]
+        labels = [label_row(s, "yes", self.operation) for s in ids[:yes]] + [label_row(s, "unsure") for s in ids[yes:]]
+        strata = {s: "example/mini:production" for s in ids}
+        base = caller_scoring.score_precision_family("caller_precision", ids, labels, strata, 1.96)[0]
+        results = [{**base, "threshold_family": f} for f in caller_scoring.QUALITY_FAMILIES]
+        required = {f: {"example/mini:production": ids} for f in caller_scoring.QUALITY_FAMILIES}
+        return results, required
+
+    def test_quality_gate_uncertainty_cap_and_all_unsure(self):
+        results, required = self.gate_fixture(1, 9)
+        self.assertEqual(caller_scoring.gate_quality(results, self.params, required)["round"], "fail")
+        results, required = self.gate_fixture(0, 10)
+        self.assertEqual(caller_scoring.gate_quality(results, self.params, required)["round"], "invalid")
+        results, required = self.gate_fixture(9, 1)
+        self.assertEqual(caller_scoring.gate_quality(results, self.params, required)["round"], "pass")
+
+    def test_quality_gate_requires_full_planned_families_and_samples(self):
+        results, required = self.gate_fixture()
+        for bad, plan in (([], required), (results[:-1], required),
+                          (results + results[:1], required), (results, {})):
+            with self.subTest(bad=bad), self.assertRaises(caller_scoring.ScoringError):
+                caller_scoring.gate_quality(bad, self.params, plan)
+        changed = copy.deepcopy(results); changed[0]["sample_site_ids"] = ["other"]
+        with self.assertRaises(caller_scoring.ScoringError):
+            caller_scoring.gate_quality(changed, self.params, required)
+
+    def test_zero_positive_denominator_remains_unavailable(self):
+        result = caller_scoring.score_recall("caller_recall", [self.s1], [label_row(self.s1, "no")],
+                                             set(), {self.s1: "example/mini:production"}, 1.96)[0]
+        self.assertTrue(result["unavailable"])
+        self.assertNotIn("invalid", result)
+
+
+class TestProcessing(unittest.TestCase):
+    params = TestScoring.params
+
+    def universe(self):
+        return {"repositories": [
+            {"repo": "example/large", "derived_commit": "a" * 40, "units": {"regular_go_sources": 95},
+             "eligible_units": {"regular_go_source_paths": [f"f{i}.go" for i in range(95)],
+                                "by_role": {"production": [f"f{i}.go" for i in range(95)]}}},
+            {"repo": "example/small", "derived_commit": "b" * 40, "units": {"regular_go_sources": 5},
+             "eligible_units": {"regular_go_source_paths": [f"f{i}.go" for i in range(5)],
+                                "by_role": {"test": [f"f{i}.go" for i in range(5)]}}}]}
+
+    def records(self, small="failed"):
+        return [{"repository": r["repo"], "commit": r["derived_commit"], "path": p,
+                 "state": "analyzed" if r["repo"] == "example/large" else small}
+                for r in self.universe()["repositories"] for p in r["eligible_units"]["regular_go_source_paths"]]
+
+    def test_smaller_failed_stratum_cannot_be_pooled_away(self):
+        u = self.universe()
+        ledger = caller_scoring.eligible_unit_ledger(self.records(), u)
+        gate = caller_scoring.gate_processing_state(ledger, u, self.params)
         self.assertEqual(gate["round"], "fail")
-        self.assertEqual(gate["failures"][0]["floor_percent"], 95)
+        self.assertEqual(gate["failures"][0]["stratum"], "example/small:test")
+        good = caller_scoring.eligible_unit_ledger(self.records("analyzed"), u)
+        self.assertEqual(caller_scoring.gate_processing_state(good, u, self.params)["round"], "pass")
 
-    def test_ledger_refuses_unknown_duplicate_and_incomplete(self) -> None:
-        universe = {"repositories": [{
-            "repo": "example/mini", "units": {"regular_go_sources": 2},
-            "eligible_units": {"regular_go_source_paths": ["a.go", "b.go"]}}]}
-        good = [{"path": "a.go", "state": "analyzed"},
-                {"path": "b.go", "state": "failed"}]
-        ledger = caller_scoring.eligible_unit_ledger(good, universe)
-        self.assertEqual(ledger["total"], 2)
-        for bad in ([{"path": "nope.go", "state": "analyzed"}],
-                    good + good[:1],
-                    [{"path": "a.go", "state": "analyzed"}],
-                    [{"path": "a.go", "state": "read"}],
-                    [{"path": "a.go", "state": "analyzed"},
-                     {"path": "b.go", "state": "analyzed"},
-                     {"path": "a.go", "state": "analyzed"}]):
-            with self.assertRaises(caller_scoring.ScoringError):
-                caller_scoring.eligible_unit_ledger(bad, universe)
+    def test_receipts_require_exact_repo_commit_and_terminal_outcome(self):
+        good = self.records()
+        bads = [good[:-1], good + good[:1]]
+        for field, bad in (("repository", "other/repo"), ("commit", "c" * 40), ("state", "read"), ("path", "unknown.go")):
+            records = copy.deepcopy(good); records[0][field] = bad; bads.append(records)
+        for records in bads:
+            with self.subTest(records=records[:1]), self.assertRaises(caller_scoring.ScoringError):
+                caller_scoring.eligible_unit_ledger(records, self.universe())
 
-    def test_processing_state_gates(self) -> None:
-        universe = {"repositories": [{
-            "repo": "example/mini", "units": {"regular_go_sources": 100},
-            "eligible_units": {"regular_go_source_paths": [f"f{i}.go" for i in range(100)]}}]}
-        records = [{"path": f"f{i}.go", "state": "analyzed"} for i in range(92)]
-        records += [{"path": "f92.go", "state": "partial"},
-                    {"path": "f93.go", "state": "failed"}]
-        records += [{"path": f"f{i}.go", "state": "excluded"} for i in range(94, 100)]
-        ledger = caller_scoring.eligible_unit_ledger(records, universe)
-        gate = caller_scoring.gate_processing_state(ledger, universe, self.params)
-        self.assertEqual(gate["round"], "pass")
-        weak = [{"path": f"f{i}.go", "state": "analyzed"} for i in range(85)] + \
-               [{"path": f"f{i}.go", "state": "excluded"} for i in range(85, 100)]
-        gate = caller_scoring.gate_processing_state(
-            caller_scoring.eligible_unit_ledger(weak, universe), universe, self.params)
-        self.assertEqual(gate["round"], "fail")
-        self.assertEqual(gate["failures"][0]["gate"], "analyzed_min")
+    def test_ledger_totals_and_role_census_cannot_drift(self):
+        u = self.universe()
+        ledger = caller_scoring.eligible_unit_ledger(self.records(), u)
+        ledger["by_stratum"]["example/large:production"]["analyzed"] += 1
+        with self.assertRaises(caller_scoring.ScoringError):
+            caller_scoring.gate_processing_state(ledger, u, self.params)
+        u["repositories"][0]["eligible_units"]["by_role"]["production"].pop()
+        with self.assertRaises(caller_scoring.ScoringError):
+            caller_scoring.eligible_unit_ledger(self.records(), u)
+
 
 class TestBindingBundle(unittest.TestCase):
-    def test_committed_bundle_validates_with_named_missing(self) -> None:
-        bundle = json.loads((SPIKE / "bundle" / "preregistration.bundle.json").read_text())
-        missing = binding_bundle.validate_bundle(bundle)
-        self.assertIn("bundle.candidate_identities."
-                      "sealed proof-bundle-v1 envelope identity and sha256 "
-                      "(precision, unresolved frames)", missing)
-        self.assertTrue(bundle["external_publication"]["published"] is False)
-        self.assertTrue(bundle["quality_scored"] is False)
-        self.assertTrue(bundle["predictions_disclosed"] is False)
-        self.assertEqual(bundle["label_commitment_schema"],
-                         label_protocol.LABEL_COMMITMENT_SCHEMA)
+    def bundle(self):
+        return json.loads((SPIKE / "bundle/preregistration.bundle.json").read_text())
 
-    def test_malformed_digest_refuses(self) -> None:
-        bundle = binding_bundle.build_bundle(
-            SPIKE.parents[1], SPIKE / "frames")
-        bundle["parameters"]["sha256"] = "sha256:not-hex"
+    def test_committed_bundle_has_named_missing_and_no_authority(self):
+        b = self.bundle()
+        missing = binding_bundle.validate_bundle(b)
+        self.assertTrue(any("independent expected-resolution" in m for m in missing))
+        self.assertFalse(b["external_publication"]["published"])
+        self.assertFalse(b["quality_scored"])
+
+    def test_missing_structure_and_required_subtree_refuse(self):
         with self.assertRaises(binding_bundle.BundleError):
-            binding_bundle.validate_bundle(bundle)
+            binding_bundle.validate_bundle({})
+        for key in self.bundle():
+            if key == "missing_bindings":
+                continue
+            b = self.bundle(); del b[key]
+            with self.subTest(key=key), self.assertRaises(binding_bundle.BundleError):
+                binding_bundle.validate_bundle(b)
+        b = self.bundle(); del b["frames_plan"]["members"]["frames.excluded.json"]
+        with self.assertRaises(binding_bundle.BundleError):
+            binding_bundle.validate_bundle(b)
+
+    def test_all_digest_shapes_and_stale_missing_list_refuse(self):
+        mutations = [lambda b: b["parameters"].update(sha256="sha256:bad"),
+                     lambda b: b["universe"].update(summary_sha256="sha256:bad"),
+                     lambda b: b["universe"].update(declarations_sha256=None),
+                     lambda b: b["machinery"]["frames"].update(sha256="anything"),
+                     lambda b: b.update(missing_bindings=[])]
+        for mutate in mutations:
+            b = self.bundle(); mutate(b)
+            with self.subTest(mutate=mutate), self.assertRaises(binding_bundle.BundleError):
+                binding_bundle.validate_bundle(b)
+
+    def test_identity_paths_counts_and_skeletons_refuse(self):
+        mutations = [lambda b: b["parameters"].update(path="wrong.json"),
+                     lambda b: b["frames_plan"]["members"]["frames.recall.jsonl.gz"].update(rows=-1),
+                     lambda b: b["external_publication"]["prepared_payloads"][1].update(schema="invented")]
+        for mutate in mutations:
+            b = self.bundle(); mutate(b)
+            with self.subTest(mutate=mutate), self.assertRaises(binding_bundle.BundleError):
+                binding_bundle.validate_bundle(b)
+
+    def test_builder_refuses_a_changed_frame_member(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            for name in ("frames.plan.json", "frames.recall.jsonl.gz", "frames.attribution.jsonl", "frames.excluded.json"):
+                (out / name).write_bytes((SPIKE / "frames" / name).read_bytes())
+            with (out / "frames.attribution.jsonl").open("ab") as f:
+                f.write(b"{}\n")
+            with self.assertRaisesRegex(binding_bundle.BundleError, "frame member identity mismatch"):
+                binding_bundle.build_bundle(SPIKE.parents[1], out)
+
+    def test_valid_digest_does_not_skip_other_required_fields(self):
+        b = self.bundle(); b["parameters"]["status"] = None
+        with self.assertRaises(binding_bundle.BundleError):
+            binding_bundle.validate_bundle(b)
 
 
 if __name__ == "__main__":

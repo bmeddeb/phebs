@@ -22,8 +22,12 @@ for _extra in ("../t111", "../../pilot/validation"):
 
 import label_protocol as protocol  # noqa: E402
 import harness as pilot_harness  # noqa: E402
+try:
+    from . import frames
+except ImportError:
+    import frames
 
-BUNDLE_SCHEMA = "t472-preregistration-bundle-v1"
+BUNDLE_SCHEMA = "t472-preregistration-bundle-v2"
 _SHA_RE = re.compile(r"\Asha256:[0-9a-f]{64}\Z")
 
 MACHINERY = {
@@ -32,6 +36,8 @@ MACHINERY = {
     "enumerate_universe": "spike/t472/enumerate_universe.py",
     "frames": "spike/t472/frames.py",
     "caller_scoring": "spike/t472/caller_scoring.py",
+    "go_source_parser": "spike/t472/gosites/main.go",
+    "binding_bundle": "spike/t472/binding_bundle.py",
 }
 
 
@@ -46,9 +52,39 @@ def sha256_file(path: Path) -> str:
 def build_bundle(repo_root: Path, frames_dir: Path) -> dict:
     spike = repo_root / "spike" / "t472"
     plan = json.loads((frames_dir / "frames.plan.json").read_text())
-    if plan.get("schema") != "t472-frames-plan-v1":
-        raise BundleError("frames plan is not t472-frames-plan-v1")
+    if plan.get("schema") != "t472-frames-plan-v2":
+        raise BundleError("frames plan is not t472-frames-plan-v2")
     lock = json.loads((spike / "corpus.lock.json").read_text())
+    universe = frames.load_universe(spike / "universe")
+    scanner = universe["summary"]["source_scanner"]
+    if scanner["path"] != MACHINERY["go_source_parser"] or scanner["sha256"] != sha256_file(repo_root / scanner["path"]):
+        raise BundleError("source parser provenance is stale")
+    expected_provenance = {
+        "universe_summary_sha256": universe["summary_sha256"],
+        "universe_declarations_sha256": universe["declarations_sha256"],
+        "universe_sites": universe["site_files"],
+        "parameters_sha256": sha256_file(spike / "validation.parameters.json"),
+        "source_census_sha256": sha256_file(spike / "source.census.json"),
+        "corpus_lock_sha256": sha256_file(spike / "corpus.lock.json"),
+        "enumerate_universe_sha256": sha256_file(spike / "enumerate_universe.py"),
+        "frames_py_sha256": sha256_file(spike / "frames.py"),
+    }
+    if plan["provenance"] != expected_provenance or plan["missing_bindings"] != frames.MISSING_BINDINGS:
+        raise BundleError("frames provenance is stale or incomplete")
+    commits = sorted(r["derived"]["derived_commit"] for r in lock["repos"] if r["derived"].get("corpus_admitted"))
+    if plan["corpus_derived_commits"] != commits or sorted(r["derived_commit"] for r in universe["summary"]["repositories"]) != commits:
+        raise BundleError("universe or frame commits disagree with the admitted lock")
+    members = {}
+    for f in plan["frames"]:
+        if "file" in f:
+            if Path(f["file"]).name != f["file"] or sha256_file(frames_dir / f["file"]) != f["sha256"]:
+                raise BundleError("frame member identity mismatch")
+            members[f["file"]] = {"sha256": f["sha256"], "rows": f["rows"]}
+    members["frames.excluded.json"] = {"sha256": sha256_file(frames_dir / "frames.excluded.json")}
+    frozen = {"label_protocol": "sha256:bcafdee6cab0b4ddd98ddbd56896546a47abe2c164be955ace28542686f329ee",
+              "pilot_harness": "sha256:3a8dcc9ecb26588dcb1d53c32761fe15fdd964b592cdc30fdac09fd4d9ce3b69"}
+    if any(sha256_file(repo_root / MACHINERY[name]) != digest for name, digest in frozen.items()):
+        raise BundleError("frozen machinery changed")
 
     bundle = {
         "schema": BUNDLE_SCHEMA,
@@ -67,7 +103,7 @@ def build_bundle(repo_root: Path, frames_dir: Path) -> dict:
                      "declarations_sha256": plan["provenance"]["universe_declarations_sha256"]},
         "frames_plan": {"path": str(frames_dir.relative_to(repo_root)) + "/frames.plan.json",
                         "sha256": sha256_file(frames_dir / "frames.plan.json"),
-                        "frames": [f["frame_id"] for f in plan["frames"]]},
+                        "frames": [f["frame_id"] for f in plan["frames"]], "members": members},
         "machinery": {name: {"path": rel, "sha256": sha256_file(repo_root / rel)}
                       for name, rel in MACHINERY.items()},
         "frozen_machinery_unedited": True,
@@ -91,7 +127,7 @@ def build_bundle(repo_root: Path, frames_dir: Path) -> dict:
                  "schema": protocol.LABEL_COMMITMENT_SCHEMA, "status": "skeleton_local_only",
                  "fields": {k: None for k in sorted(protocol.LABEL_COMMITMENT_FIELDS)}},
                 {"kind": "nist_beacon_reference",
-                 "schema": protocol.GITHUB_GIST_RECEIPT_SCHEMA, "status": "skeleton_local_only",
+                 "schema": "t472-nist-pulse-reference-v1", "status": "skeleton_local_only",
                  "fields": {"pulse": None, "output_value": None, "pulse_timestamp": None}},
             ],
         },
@@ -102,34 +138,115 @@ def build_bundle(repo_root: Path, frames_dir: Path) -> dict:
 
 
 def validate_bundle(bundle: dict) -> list[str]:
-    """Fail-closed completeness walk: every binding is a digest or None.
+    """Validate required preparation structure and every digest; report named nulls."""
+    def fields(value, required, trail):
+        if not isinstance(value, dict) or set(value) != set(required):
+            raise BundleError(f"{trail}: missing or unknown required fields")
 
-    Returns the list of still-missing binding names; raises on malformed
-    values so a partially-filled or corrupted bundle cannot pass as ready.
-    """
-    missing: list[str] = []
+    top = {"schema", "protocol_doc", "parameters", "source_census", "corpus_lock", "universe",
+           "frames_plan", "machinery", "frozen_machinery_unedited", "label_commitment_schema",
+           "harness_schema", "corpus_derived_commits", "candidate_identities",
+           "randomness_commitment_sequence", "external_publication", "quality_scored", "predictions_disclosed"}
+    fields({k: v for k, v in bundle.items() if k != "missing_bindings"}, top, "bundle")
+    if bundle["schema"] != BUNDLE_SCHEMA or bundle["label_commitment_schema"] != protocol.LABEL_COMMITMENT_SCHEMA \
+            or bundle["harness_schema"] != pilot_harness.HARNESS_SCHEMA:
+        raise BundleError("bundle schema or frozen machinery schema mismatch")
+    if bundle["frozen_machinery_unedited"] is not True or bundle["quality_scored"] is not False \
+            or bundle["predictions_disclosed"] is not False:
+        raise BundleError("preparation bundle has inconsistent authority flags")
+    for key, path in (("protocol_doc", "docs/CALLER_QUALITY_PROTOCOL.md"),
+                      ("source_census", "spike/t472/source.census.json"),
+                      ("corpus_lock", "spike/t472/corpus.lock.json")):
+        fields(bundle[key], {"path", "sha256"}, key)
+        if bundle[key]["path"] != path:
+            raise BundleError("known preparation path changed")
+    fields(bundle["parameters"], {"path", "sha256", "status"}, "parameters")
+    if bundle["parameters"]["status"] != "approved_not_sealed" or bundle["parameters"]["path"] != "spike/t472/validation.parameters.json":
+        raise BundleError("preparation parameters must remain approved_not_sealed")
+    fields(bundle["universe"], {"dir", "summary_sha256", "sites", "declarations_sha256"}, "universe")
+    if bundle["universe"]["dir"] != "spike/t472/universe":
+        raise BundleError("universe directory changed")
+    if not isinstance(bundle["universe"]["sites"], dict) or not bundle["universe"]["sites"]:
+        raise BundleError("universe site members are missing")
+    for name, member in bundle["universe"]["sites"].items():
+        if Path(name).name != name:
+            raise BundleError("universe member path is invalid")
+        fields(member, {"file", "rows", "sha256"}, name)
+        if member["file"] != name or type(member["rows"]) is not int or member["rows"] < 0:
+            raise BundleError("universe member metadata is invalid")
+    fields(bundle["frames_plan"], {"path", "sha256", "frames", "members"}, "frames_plan")
+    if bundle["frames_plan"]["frames"] != ["recall", "attribution", "precision", "abstention", "unresolved"]:
+        raise BundleError("required frames are missing or reordered")
+    if bundle["frames_plan"]["path"] != "spike/t472/frames/frames.plan.json":
+        raise BundleError("frames plan path changed")
+    frame_members = bundle["frames_plan"]["members"]
+    fields(frame_members, {"frames.recall.jsonl.gz", "frames.attribution.jsonl", "frames.excluded.json"}, "frame members")
+    for name, member in frame_members.items():
+        fields(member, {"sha256"} if name == "frames.excluded.json" else {"sha256", "rows"}, name)
+        if name != "frames.excluded.json" and (type(member["rows"]) is not int or member["rows"] < 0):
+            raise BundleError("frame row count is invalid")
+    fields(bundle["machinery"], MACHINERY, "machinery")
+    for name, rel in MACHINERY.items():
+        fields(bundle["machinery"][name], {"path", "sha256"}, name)
+        if bundle["machinery"][name]["path"] != rel:
+            raise BundleError("machinery path changed")
+    fields(bundle["candidate_identities"], frames.MISSING_BINDINGS, "candidate identities")
+    for value in bundle["candidate_identities"].values():
+        if value is not None:
+            fields(value, {"identity", "sha256"}, "candidate binding")
+            if not isinstance(value["identity"], str) or not value["identity"].strip():
+                raise BundleError("candidate identity is invalid")
+    commits = bundle["corpus_derived_commits"]
+    if not isinstance(commits, list) or not commits or commits != sorted(set(commits)) \
+            or any(not isinstance(c, str) or not re.fullmatch(r"[0-9a-f]{40}", c) for c in commits):
+        raise BundleError("corpus commits are invalid")
+    steps = bundle["randomness_commitment_sequence"]
+    if not isinstance(steps, list) or len(steps) != 5:
+        raise BundleError("randomness commitment sequence is incomplete")
+    for index, step in enumerate(steps, 1):
+        fields(step, {"step", "action", "binding"}, "randomness step")
+        if step["step"] != index or not isinstance(step["action"], str) or not step["action"]:
+            raise BundleError("randomness step is invalid")
+        if step["binding"] is not None and (not isinstance(step["binding"], str) or not _SHA_RE.fullmatch(step["binding"])):
+            raise BundleError("randomness binding must be a digest or an explicit missing input")
+    publication = bundle["external_publication"]
+    fields(publication, {"published", "prepared_payloads"}, "external publication")
+    if publication["published"] is not False or len(publication["prepared_payloads"]) != 2:
+        raise BundleError("preparation publication must remain local")
+    for payload, (kind, schema, expected) in zip(publication["prepared_payloads"],
+            [("github_gist_label_commitment", protocol.LABEL_COMMITMENT_SCHEMA, protocol.LABEL_COMMITMENT_FIELDS),
+             ("nist_beacon_reference", "t472-nist-pulse-reference-v1", {"pulse", "output_value", "pulse_timestamp"})]):
+        fields(payload, {"kind", "schema", "status", "fields"}, "publication payload")
+        fields(payload["fields"], expected, "publication fields")
+        if (payload["kind"], payload["schema"], payload["status"]) != (kind, schema, "skeleton_local_only"):
+            raise BundleError("publication skeleton identity is invalid")
+    missing = []
 
-    def walk(value: object, trail: str) -> None:
-        if isinstance(value, dict):
-            if "sha256" in value:
-                if not _SHA_RE.match(value["sha256"]):
-                    raise BundleError(f"{trail}: malformed sha256 {value['sha256']!r}")
-                return
-            for key, item in value.items():
-                walk(item, f"{trail}.{key}")
+    def walk(value, trail, key=""):
+        if value is None:
+            missing.append(trail)
+        elif key == "sha256" or key.endswith("_sha256"):
+            if not isinstance(value, str) or not _SHA_RE.fullmatch(value):
+                raise BundleError(f"{trail}: malformed or absent required digest")
+        elif isinstance(value, dict):
+            for name, item in value.items():
+                walk(item, f"{trail}.{name}", name)
         elif isinstance(value, list):
             for i, item in enumerate(value):
                 walk(item, f"{trail}[{i}]")
-        elif value is None:
-            missing.append(trail)
-        elif isinstance(value, str) and value == "approved_not_sealed":
-            pass
-        elif isinstance(value, (str, bool, int)):
-            pass
-        else:
-            raise BundleError(f"{trail}: unexpected binding value {value!r}")
+        elif not isinstance(value, (str, bool, int)):
+            raise BundleError(f"{trail}: unsupported binding value")
 
-    walk(bundle, "bundle")
+    # Null skeleton fields are expressly missing; known digest records must never be null.
+    known = {k: v for k, v in bundle.items() if k not in {"missing_bindings", "external_publication", "candidate_identities", "randomness_commitment_sequence"}}
+    walk(known, "bundle")
+    if missing:
+        raise BundleError("known preparation binding is null")
+    for key in ("candidate_identities", "randomness_commitment_sequence", "external_publication"):
+        walk(bundle[key], "bundle." + key)
+    missing.sort()
+    if "missing_bindings" in bundle and bundle["missing_bindings"] != missing:
+        raise BundleError("recorded missing-binding list is stale")
     return missing
 
 

@@ -2,7 +2,7 @@
 
 Source-based, independent of phebs output: reads only the three admitted
 derived commits through git plumbing, assigns grpc-caller's exact code roles
-(internal/extract/extractors/gocaller.go classifyRole), inventories the
+(internal/extract/extractors/gocaller/gocaller.go classifyRole), inventories the
 checked-in generated clients and their declaration operations, and enumerates
 candidate call-site evidence with immutable byte coordinates.
 
@@ -13,13 +13,15 @@ still requires blind human labeling under the sealed protocol.
 
 Outputs (under --out-dir):
   universe.json            eligible-unit census, reconciliation, tallies
-  universe.sites.<repo>.jsonl   one row per enumerated evidence site
+  universe.sites.<repo>.jsonl.gz one row per enumerated evidence site
   universe.declarations.jsonl   declaration-citation ledger rows
 """
 
 from __future__ import annotations
 
 import argparse
+import base64
+import gzip
 import hashlib
 import json
 import re
@@ -36,9 +38,6 @@ INTERFACE_RE = re.compile(rb"(?ms)^type (\w+)Client interface \{(.*?)^\}")
 INTERFACE_METHOD_RE = re.compile(rb"(?m)^\t(\w+)\(ctx context\.Context")
 CONSTRUCTOR_RE = re.compile(rb"func New(\w+)Client\(cc grpc\.ClientConnInterface\)")
 FULL_METHOD_RE = re.compile(rb'(?m)^\t(\w+)_(\w+)_FullMethodName\s*=\s*"([^"]+)"')
-IMPORT_BLOCK_RE = re.compile(r'(?ms)^import\s*\((.*?)\)')
-IMPORT_SINGLE_RE = re.compile(r'(?m)^import\s+(?:[\w.]+\s+|\.\s+|_\s+)?"([^"]+)"')
-IMPORT_LINE_RE = re.compile(r'(?m)^\s*(?:[\w.]+\s+|_\s+)?"([^"]+)"')
 PROTO_SERVICE_RE = re.compile(r"(?m)^service\s+(\w+)\s*\{")
 PROTO_RPC_RE = re.compile(r"(?m)^\s*rpc\s+(\w+)\s*\(")
 PROTO_PACKAGE_RE = re.compile(r"(?m)^package\s+([A-Za-z0-9_.]+)\s*;")
@@ -46,9 +45,9 @@ FULL_METHOD_SHAPE_RE = re.compile(rb'"/([A-Za-z0-9_.]+)/([A-Za-z0-9_]+)"')
 GO_MODULE_RE = re.compile(r"(?m)^module\s+(\S+)")
 
 CODE_ROLES = ("production", "test", "generated", "mock", "vendor")
-UNIVERSE_SCHEMA = "t472-universe-v1"
-SITES_SCHEMA = "t472-universe-sites-v1"
-DECLARATIONS_SCHEMA = "t472-declaration-ledger-v1"
+UNIVERSE_SCHEMA = "t472-universe-v2"
+SITES_SCHEMA = "t472-universe-sites-v2"
+DECLARATIONS_SCHEMA = "t472-declaration-ledger-v2"
 
 
 class UniverseError(ValueError):
@@ -124,7 +123,6 @@ class BlobReader:
             ["git", "-C", str(clone), "cat-file", "--batch"],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE,
         )
-        self._pending: dict[str, bytes] = {}
 
     def read(self, sha: str) -> bytes:
         assert self._proc.stdin is not None and self._proc.stdout is not None
@@ -143,6 +141,8 @@ class BlobReader:
             self._proc.stdin.close()
         self._proc.terminate()
         self._proc.wait()
+        if self._proc.stdout:
+            self._proc.stdout.close()
 
 
 # --- module and client inventory ---
@@ -155,7 +155,7 @@ def module_paths(tree: list[tuple[str, str, str]], reader: BlobReader) -> tuple[
     """Return (directory -> module path, module root dir -> module path)."""
     go_mods: dict[str, str] = {}
     for mode, path, sha in tree:
-        if mode == "100644" and path.endswith("/go.mod") or path == "go.mod":
+        if mode == "100644" and (path.endswith("/go.mod") or path == "go.mod"):
             match = GO_MODULE_RE.search(reader.read(sha).decode(errors="replace"))
             if not match:
                 raise UniverseError(f"{path}: no module clause")
@@ -232,16 +232,18 @@ def extract_client(path: str, content: bytes, go_mods: dict[str, str]) -> dict:
 
 def extract_proto_operations(content: bytes) -> list[dict]:
     """Service and rpc statements with byte coordinates, in file order."""
-    services = [(m.start(), m.group(1)) for m in PROTO_SERVICE_RE.finditer(content.decode(errors="replace"))]
+    text = content.decode("utf-8")
+    services = [(m.start(), m.group(1)) for m in PROTO_SERVICE_RE.finditer(text)]
     ops = []
-    for match in PROTO_RPC_RE.finditer(content.decode(errors="replace")):
+    for match in PROTO_RPC_RE.finditer(text):
         # attribute the rpc to the nearest enclosing service by statement offset
         service = None
         for start, name in services:
             if start < match.start():
                 service = name
         ops.append({"service": service, "method": match.group(1),
-                    "start_byte": match.start(), "end_byte": match.end()})
+                    "start_byte": len(text[:match.start()].encode("utf-8")),
+                    "end_byte": len(text[:match.end()].encode("utf-8"))})
     return ops
 
 
@@ -262,50 +264,83 @@ def _line_number(offsets: list[int], pos: int) -> int:
     return lo + 1
 
 
+class SourceScanner:
+    """One standard-library Go parser child; source bytes arrive from Git."""
+
+    def __init__(self) -> None:
+        self._proc = subprocess.Popen(
+            ["go", "run", str(Path(__file__).parent / "gosites" / "main.go")],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+        )
+
+    def scan(self, path: str, content: bytes, methods: list[str], constructors: list[str]) -> dict:
+        request = {"path": path, "content": base64.b64encode(content).decode(),
+                   "methods": methods, "constructors": constructors}
+        self._proc.stdin.write(json.dumps(request).encode() + b"\n")
+        self._proc.stdin.flush()
+        line = self._proc.stdout.readline()
+        if not line:
+            raise UniverseError(f"{path}: source parser exited without a result")
+        result = json.loads(line)
+        if result.get("error"):
+            raise UniverseError(result["error"])
+        return result
+
+    def close(self) -> None:
+        self._proc.stdin.close()
+        try:
+            self._proc.wait(timeout=10)
+        finally:
+            if self._proc.poll() is None:
+                self._proc.kill()
+                self._proc.wait()
+            self._proc.stdout.close()
+
+
 def enumerate_sites(repo: str, commit: str, path: str, content: bytes, role: str,
                     method_names: list[str], constructor_names: list[str],
-                    full_methods: dict[str, dict], client_imports: set[str]) -> tuple[list[dict], set[str]]:
-    """Scan one regular Go source for constructor, operation, full-method and import evidence."""
-    imports: set[str] = set()
-    for block in IMPORT_BLOCK_RE.finditer(content.decode(errors="replace")):
-        imports.update(IMPORT_LINE_RE.findall(block.group(1)))
-    imports.update(IMPORT_SINGLE_RE.findall(content.decode(errors="replace")))
+                    full_methods: dict[str, dict], client_imports: set[str],
+                    scanner: SourceScanner) -> tuple[list[dict], set[str]]:
+    """Inventory every call expression and admitted method reference, without filtering."""
+    parsed = scanner.scan(path, content, method_names, constructor_names)
+    imports = set(parsed["imports"])
     client_aware = bool(imports & client_imports)
-
     rows: list[dict] = []
-    seen: set[tuple[str, str, int]] = set()
     offsets = _line_offsets(content)
 
-    def add(kind: str, symbol: str, start: int, end: int) -> None:
-        key = (kind, symbol, start)
-        if key in seen:
-            return
-        seen.add(key)
+    def add(kind: str, symbol: str, start: int, end: int, citation: tuple[int, int]) -> None:
+        spans = {tuple(citation), (start, end)}
+        # Typed Caller Map citations expand only an identifier/dot receiver chain.
+        typed_start = start
+        if start > 0 and content[start - 1:start] == b".":
+            typed_start -= 1
+            while typed_start > 0 and content[typed_start - 1] in b"_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.":
+                typed_start -= 1
+            spans.add((typed_start, end))
         rows.append({
             "site_id": f"{repo}@{commit}:{path}:{start}-{end}",
             "repository": repo, "commit": commit, "path": path,
             "start_byte": start, "end_byte": end,
-            "start_line": _line_number(offsets, start), "end_line": _line_number(offsets, max(start, end - 1)),
+            "start_line": _line_number(offsets, start), "end_line": _line_number(offsets, end - 1),
             "kind": kind, "symbol": symbol, "code_role": role,
             "client_aware": client_aware, "stratum": f"{repo}:{role}",
+            "citation_spans": [list(span) for span in sorted(spans)],
         })
 
-    ctor_alt = b"|".join(c.encode() for c in constructor_names)
-    for match in re.finditer(rb"\b(" + ctor_alt + rb")\s*\(", content):
-        add("constructor_call", match.group(1).decode(), match.start(1), match.end(1))
-        client_aware = True
-    method_alt = b"|".join(m.encode() for m in method_names)
-    for match in re.finditer(rb"\b(" + method_alt + rb")\s*\(", content):
-        add("operation_invocation", match.group(1).decode(), match.start(1), match.end(1))
+    for site in parsed["sites"]:
+        add(site["kind"], site["symbol"], site["start"], site["end"],
+            (site["citation_start"], site["citation_end"]))
     for match in FULL_METHOD_SHAPE_RE.finditer(content):
         symbol = "/" + match.group(1).decode() + "/" + match.group(2).decode()
         if symbol in full_methods:
-            add("full_method_string", symbol, match.start() + 1, match.end() - 1)
-    import_alt = b"|".join(re.escape(i).encode() for i in sorted(client_imports))
-    if import_alt:
-        for match in re.finditer(rb'"(?:' + import_alt + rb')"', content):
-            add("import_reference", match.group(0)[1:-1].decode(),
-                match.start() + 1, match.end() - 1)
+            add("full_method_string", symbol, match.start() + 1, match.end() - 1,
+                (match.start() + 1, match.end() - 1))
+    for match in re.finditer(rb'"([^"\n]+)"', content):
+        symbol = match.group(1).decode(errors="replace")
+        if symbol in imports & client_imports:
+            add("import_reference", symbol, match.start(1), match.end(1),
+                (match.start(1), match.end(1)))
+    rows.sort(key=lambda r: (r["start_byte"], r["end_byte"], r["kind"]))
     return rows, imports
 
 
@@ -322,6 +357,7 @@ def enumerate_repo(repo_name: str, clone: Path, expected_commit: str,
 
     tree = ls_tree(clone)
     reader = BlobReader(clone)
+    scanner = SourceScanner()
     try:
         modules, go_mods = module_paths(tree, reader)
         blobs = {path: sha for mode, path, sha in tree}
@@ -350,9 +386,8 @@ def enumerate_repo(repo_name: str, clone: Path, expected_commit: str,
         for entry in mappings.get("abstentions", []):
             declared[entry["generated_path"]] = {"generated_path": entry["generated_path"],
                                                  "declaration_path": None, "vendored": False}
-        missing = sorted(set(clients) - set(declared))
-        if missing:
-            raise UniverseError(f"{repo_name}: generated clients missing from lock mappings: {missing}")
+        if set(clients) != set(declared):
+            raise UniverseError(f"{repo_name}: generated clients do not exactly match lock mappings")
 
         method_names = sorted({op["method"] for c in clients.values() for op in c["operations"]})
         if not method_names:
@@ -375,9 +410,12 @@ def enumerate_repo(repo_name: str, clone: Path, expected_commit: str,
                 "declaration_path": declaration_path,
                 "mapped": declaration_path is not None,
             }
-            spans = list(client["interface_spans"].values())
-            entry["interface_start_byte"] = min(s[0] for s in spans)
-            entry["interface_end_byte"] = max(s[1] for s in spans)
+            entry["interfaces"] = [
+                {"service": service, "client_type": service + "Client",
+                 "start_byte": span[0], "end_byte": span[1],
+                 "code_role": roles[path]}
+                for service, span in sorted(client["interface_spans"].items())]
+            entry["code_role"] = roles[path]
             if declaration_path is None:
                 entry["abstention_reason"] = abstention_by_path.get(path, {}).get("reason", "not_in_mappings")
             proto_ops = []
@@ -421,11 +459,14 @@ def enumerate_repo(repo_name: str, clone: Path, expected_commit: str,
         for path in regular:
             rows, imports = enumerate_sites(
                 repo_name, head, path, contents[path], roles[path],
-                method_names, constructor_names, full_methods, client_imports)
+                method_names, constructor_names, full_methods, client_imports, scanner)
             sites.extend(rows)
             all_imports[path] = imports
     finally:
-        reader.close()
+        try:
+            scanner.close()
+        finally:
+            reader.close()
 
     role_units = {role: sorted(p for p in regular if roles[p] == role) for role in CODE_ROLES}
     link_targets = {}
@@ -436,7 +477,8 @@ def enumerate_repo(repo_name: str, clone: Path, expected_commit: str,
         "repo": repo_name, "derived_commit": head,
         "units": {"regular_go_sources": len(regular), "by_role": {r: len(v) for r, v in role_units.items()},
                   "roles_digest_files": {r: sha256_bytes("".join(role_units[r]).encode()) for r in CODE_ROLES}},
-        "eligible_units": {"regular_go_source_paths": sorted(regular)},
+        "eligible_units": {"regular_go_source_paths": sorted(regular),
+                           "by_role": role_units},
         "nonregular": {"paths": nonregular, "git_modes": {p: modes[p] for p in nonregular},
                        "link_targets": link_targets},
         "clients": {"count": len(clients), "mapped": sum(1 for d in declarations if d["mapped"]),
@@ -460,7 +502,6 @@ def main() -> int:
     mappings = {m["repo"]: m for m in
                 (json.loads((t472 / "derivation" / "mappings" / f.name).read_text())
                  for f in sorted((t472 / "derivation" / "mappings").glob("*.json")))}
-    census_by_repo = {r["repo"]: r for r in census["repositories"]}
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
     repos_out = []
@@ -484,8 +525,10 @@ def main() -> int:
     for short, sites in all_sites.items():
         body = "".join(json.dumps(s, ensure_ascii=False, allow_nan=False, sort_keys=True,
                                   separators=(",", ":")) + "\n" for s in sites).encode()
-        sites_digests[short] = sha256_bytes(body)
-        (args.out_dir / f"universe.sites.{short}.jsonl").write_bytes(body)
+        compressed = gzip.compress(body, mtime=0)
+        filename = f"universe.sites.{short}.jsonl.gz"
+        sites_digests[filename] = sha256_bytes(compressed)
+        (args.out_dir / filename).write_bytes(compressed)
 
     decl_body = "".join(json.dumps(d, ensure_ascii=False, allow_nan=False, sort_keys=True,
                                    separators=(",", ":")) + "\n" for d in all_declarations).encode()
@@ -501,8 +544,8 @@ def main() -> int:
     universe = {
         "schema": UNIVERSE_SCHEMA,
         "method": "git ls-tree/cat-file at each exact derived commit; grpc-caller classifyRole path+header rules; "
-                  "protoc-gen-go-grpc client interface/constructor/FullMethodName inventory; token scan for "
-                  "constructor calls, operation invocations, full-method strings and client imports",
+                  "protoc-gen-go-grpc client interface/constructor/FullMethodName inventory; standard Go parser scan for "
+                  "every Go call expression, admitted method references, full-method strings and client imports",
         "independent_of_phebs_output": True,
         "true_call_frame": False,
         "processing_quality_scored": False,
@@ -513,12 +556,16 @@ def main() -> int:
                   "by_stratum": dict(sorted(stratum_tally.items())),
                   "sha256": sites_digests,
                   "file_schema": SITES_SCHEMA},
-        "declarations": {"clients": len(all_declarations),
+        "declarations": {"generated_files": len(all_declarations),
+                         "clients": sum(len(d["interfaces"]) for d in all_declarations),
                          "mapped": sum(1 for d in all_declarations if d["mapped"]),
                          "abstained": sum(1 for d in all_declarations if not d["mapped"]),
                          "operations": sum(len(d["operations"]) for d in all_declarations),
                          "sha256": sha256_bytes(decl_body), "file_schema": DECLARATIONS_SCHEMA},
         "census_reconciled": True,
+        "source_scanner": {"path": "spike/t472/gosites/main.go",
+                           "sha256": sha256_bytes((t472 / "gosites/main.go").read_bytes()),
+                           "go_version": subprocess.check_output(["go", "version"], text=True).strip()},
     }
     (args.out_dir / "universe.json").write_text(json.dumps(universe, indent=1, sort_keys=True) + "\n")
     print(json.dumps({"universe": universe["sites"]["total"],

@@ -180,6 +180,20 @@ attribution coordinate await Ben's confirmation in the plan's
 receipt remain unbound. No sample drawn, no label manufactured, no score
 produced, nothing published; T47.4/T47.5 stay separate.
 
+
+**Preparation correction (2026-10-10):** the nine review findings supersede
+the preparation counts and rules above. Every Go call expression remains in
+the source-only recall population (498,793 sites; 978 imports explicitly
+excluded), and 74 individual client interfaces retain four repository×role
+strata. Candidate citation/predicate/operation joins, independent unresolved
+truth and declaration-lineage edge scoring, complete-family uncertainty
+gates, per-stratum processing gates and strict artifact/bundle validation
+are corrected without changing the approved parameters. Regenerated
+schema-v2 artifacts and the exact fresh review/gate record live in
+`spike/t472/REVIEW_PACKET.md`. Ben's source confirmations, candidate frames,
+genuine beacon/seed, blind labels and receipts remain unbound; the branch
+adds no merge, seal, score, activation or release authority.
+
 **Independent production promotions (2026-10-09, Ben-directed):** Epics 48–58
 give every current experimental evidence pack and composed product surface a
 named production path. Epic 48 implements the currently design-only signed

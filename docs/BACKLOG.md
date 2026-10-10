@@ -17067,6 +17067,28 @@ pass. No sample drawn, no label manufactured, no prediction disclosed, no
 score produced, nothing published; source/code review, Ben's confirmations,
 blind labels, sealing and T47.4/T47.5 remain separate.*
 
+
+*Correction of the nine preparation-review findings (2026-10-10): the
+schema-v2 source universe retains every Go call expression plus inventoried
+method references and full-method strings: 499,771 sites, recall 498,793,
+with only 978 import-only sites excluded. Source/parser errors refuse and
+canonical coordinates bind accepted production citation spans. The 60
+generated files contain 74 individual client interfaces, retained across
+four repository×role attribution strata. The caller adapter handles the
+recipe's unresolved predicate and canonical operation spelling; attributed
+precision/recall require exact operation and declaration-lineage joins against
+an independent citation ledger, and unresolved accuracy requires independent
+resolution/reason truth. The uncertainty cap uses every sampled label; all
+five quality families and complete planned samples are mandatory. Processing
+gates apply to every repository×role over the unchanged full census. Bundle
+assembly checks current file identities and complete required structure,
+including every nested digest. This supersedes the earlier preparation
+counts and exclusion/scoring rules above, without changing the approved
+parameters or frozen machinery. Artifacts, repeatability, gates and fresh
+independent review are recorded in `spike/t472/REVIEW_PACKET.md`. Candidate
+frames, Ben's source confirmations, blind labels, genuine seed/receipts and
+sealing remain separate; no merge, seal or real-round score is authorized.*
+
 **T47.3 · Ordinary production configuration and registration** *(needs the
 T47.2 supported recipe contract; activation remains gated until T47.5)* —
 introduce the stable Caller Map configuration/recipe selection, wire the

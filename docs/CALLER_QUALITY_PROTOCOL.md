@@ -67,7 +67,7 @@ recipe and needs its own preregistration.
 |---|---|---|---|---|
 | Resolved caller | declaration-lineage-resolved `CALLS_OPERATION` | precision | sealed precision frame (§5) | `invocation` |
 | Caller recall | resolution over the independent positive frame | recall | independently enumerated true call sites | `invocation` |
-| Abstention correctness | explicit unresolved caller evidence | declared-unresolved accuracy | sampled abstention frame | independent expected-resolution ledger |
+| Abstention correctness | explicit unresolved caller evidence | declared-unresolved accuracy | sampled declared-unresolved frame | independent expected-resolution ledger |
 | Processing state | per-unit terminal state | analyzed / excluded / partial + failed rates | independently enumerated eligible units | outcome ledger reconciled to the source census |
 | Declaration attribution | resolved caller joined to its declaration | attributed-edge precision/recall | that frame's own precision and recall-positive frames | `operation` plus independent declaration-citation ledger |
 | End-to-end service edge | unavailable in this round | unavailable | no `unit-snapshot.json` | unavailable |
@@ -86,8 +86,33 @@ caller-specific projection must bind the separate expected-resolution and
 declaration-citation ledgers and eligible-unit/outcome census by digest and
 define the exact numerator comparisons. Their Bernoulli counts use the
 unchanged Wilson helper; they are never passed to `score_claim` as invented
-fields. This projection is a remaining preparation gate, not a new claim
-that the old harness already measures these families.
+fields. The corrected projection is preparation machinery, not a claim that the old
+harness already measures these families. Each sampled site receives an
+independently committed expected-resolution record (`resolved`, `unresolved`,
+`not_call` or `unsure`, with a source rationale and a reason for abstention)
+and, for attribution, an independently committed declaration-citation record.
+A resolved declaration record binds the canonical operation, provisional
+repo/path lineage and same-repository, same-commit `.proto` citation.
+Caller recall uses true invocation labels. Attributed-edge recall uses true
+independently resolvable declaration edges and requires both operation and
+lineage equality; attributed-edge precision uses all decided claimed sites
+and the same equality. Correct negative abstentions never enter either
+edge numerator. Missing declarations remain in caller recall and the
+resolution/outcome accounting; a zero true-edge denominator is unavailable.
+Unresolved accuracy compares the candidate's unresolved decision and reason
+with the expected-resolution ledger, never invocation truth alone.
+
+The 74 individual service-client interface coordinates are source census
+units for preparing and checking the declaration-citation ledger. They retain
+repository×code_role strata and the unchanged registration/service label
+fields, and do not replace the call-site attributed-edge precision/recall
+metrics. Every family/stratum result must match its entire preregistered draw;
+all five quality families must be present, including explicit empty-family
+unavailability. The uncertainty denominator is the entire sampled sheet before
+negative/unsure exclusions. An all-unsure stratum invalidates the round;
+missing results refuse. Processing outcomes identify repository, commit and
+path explicitly and gate the complete census within each repository×role
+stratum; whole-corpus totals cannot rescue a failing stratum.
 
 The approved relaxed thresholds use observed point estimates. Wilson 95% intervals
 are reported alongside them; passing does not assert that a confidence bound
@@ -121,21 +146,36 @@ the universe and outcome accounting; they cannot be removed to improve a rate.
 
 The target population is the frozen corpus's source occurrences under the §2
 tuple, enumerated **without consulting phebs output** by the committed tool
-`spike/t472/enumerate_universe.py`: at each exact derived commit it reads the
-git tree (`ls-tree`/`cat-file`), applies the grpc-caller `classifyRole`
-path-and-header rules (production / test / mock / generated / vendor),
-inventories every checked-in `protoc-gen-go-grpc` client (constructor-backed
-`<Service>Client` interfaces, `New<Service>Client` constructors,
-`FullMethodName` constants, with the proto `package` clause supplying the
-full method for older generator output), and scans every regular Go source
-for four byte-coordinated evidence kinds: constructor calls, operation
-invocations, full-method strings, and generated-client imports. Aliases,
-wrappers, interfaces and dynamic paths are handled by the explicit
-`client_aware` provenance flag and the excluded-kinds ledger, never by
-silent attribution. Its committed outputs live under
-[`spike/t472/universe/`](../spike/t472/universe/) (`universe.json`,
-`universe.sites.*.jsonl`, `universe.declarations.jsonl`; 24,221 sites,
-60 clients, 390 operations, reconciled fail-closed to the source census).
+`spike/t472/enumerate_universe.py`. At each exact derived commit, Git supplies
+every regular Go blob to the standard-library parser in
+`spike/t472/gosites/main.go`. It inventories **every Go call expression**,
+including bare aliases, wrappers, interface calls, factories and dynamic or
+reflected calls, plus references to inventoried RPC methods, full-method
+strings and generated-client imports. No import, constructor, method-name or
+`client_aware` test excludes a call from recall. Imports alone are explicitly
+accounted non-call evidence; all other enumerated kinds remain eligible for
+blind source judgment. Parse errors refuse enumeration before publication.
+
+Site IDs use the callee's method/identifier token for ordinary selectors and
+bare calls, and the whole callee expression for complex calls. Each source row
+also freezes its accepted production citation spans: the token, AST callee
+span and typed identifier/dot selector spelling. The caller adapter must join
+an exact span in the exact repository/commit/path, preserve code role and
+declaration lineage, and normalize `/package.Service/Method` to the unchanged
+label spelling `package.Service/Method`. Conflicting claims refuse rather
+than being silently collapsed. `UNRESOLVED_CALLER` is the supported recipe's
+unresolved predicate; adapting it for the frozen harness does not change the
+harness bytes or reinterpret the older consumer recipe.
+
+The corrected unsealed outputs in [`spike/t472/universe/`](../spike/t472/universe/)
+contain **499,771 sites**, **60 generated files / 74 service-client interfaces**
+and **390 operations**. The recall population is **498,793** across all eleven
+repository×role strata; only **978 imports** are excluded. These are potential
+sites, not manufactured true-call labels. Precision, unresolved and withheld
+candidate populations remain pending. Gzip members use zero timestamps, with
+exact compressed-byte digests; populations live once in their frame members,
+while the plan records counts and digest references.
+
 Every unit receives exactly one terminal processing state; the
 analyzed / excluded / partial / failed rates use this denominator. The corpus
 repositories, their pinned commits and their license/provenance records are
@@ -153,8 +193,8 @@ silently treating them as parsed Go source or removing them from accounting.
 ## 5. Sampling frames
 
 - **Precision frame** — the candidate's emitted resolved assertions for the
-  claim family, projected from the sealed proof bundle; site identity is the
-  immutable citation coordinate `repository@commit:path:startByte-endByte`.
+  claim family, projected from the sealed proof bundle and joined to the
+  source-only canonical coordinate; site identity is `repository@commit:path:startByte-endByte`.
 - **Recall-positive frame** — true caller sites constructed independently of
   the candidate from the §4 enumeration, covering direct calls,
   imports/aliases, wrappers/interfaces and acknowledged dynamic paths.
@@ -274,6 +314,9 @@ result; it becomes release input only through T47.5.
    [`spike/t472/caller_scoring.py`](../spike/t472/caller_scoring.py) and
    exercised by
    [`spike/t472/test_universe_frames.py`](../spike/t472/test_universe_frames.py);
+   the resolution and declaration-citation ledgers remain named missing inputs,
+   and the bundle refuses missing structure, malformed digests and stale
+   file/provenance identities;
    the eligible-unit ledger consumes only explicit per-source outcome records
    from the sealed run receipt and reconciles fail-closed to the committed
    universe census. The projection is prepared, not executed.
