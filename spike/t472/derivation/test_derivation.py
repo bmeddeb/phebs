@@ -5,9 +5,18 @@ import unittest
 
 from fill_lock import update_lock
 from modules import enclosing_module
+from commit_derived import commit_date
 
 
 class DerivationTests(unittest.TestCase):
+    def test_date_uses_the_pinned_object_without_parent_traversal(self):
+        self.assertEqual(commit_date('tree missing\nparent missing\ncommitter A <a@b> 0 +0130\n\nmessage'),
+                         '1970-01-01T01:30:00+01:30')
+        self.assertEqual(commit_date('committer A <a@b> 0 -0200\n\nmessage'),
+                         '1969-12-31T22:00:00-02:00')
+        with self.assertRaises(ValueError):
+            commit_date('tree missing\n\nno committer')
+
     def test_innermost_module_owns_sources(self):
         self.assertEqual(enclosing_module('api/v1/client.go', ['', 'api', 'api/v1']), 'api/v1')
         self.assertEqual(enclosing_module('api2/client.go', ['', 'api']), '')

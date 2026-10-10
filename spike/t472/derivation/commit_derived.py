@@ -13,6 +13,7 @@ derived commit SHA is reproducible from the same three files.
 """
 
 import hashlib
+from datetime import datetime, timedelta, timezone
 import json
 import os
 import subprocess
@@ -73,6 +74,17 @@ def rels_for(repo):
 
 def other_paths(merge):
     return sorted(p for run in merge["runs"] for p in run["out_of_tree_other"] or [])
+
+
+def commit_date(raw):
+    # Read only the pinned commit; incomplete historical parents are irrelevant.
+    for line in raw.split("\n\n", 1)[0].splitlines():
+        if line.startswith("committer "):
+            _, stamp, offset = line.rsplit(" ", 2)
+            minutes = int(offset[1:3]) * 60 + int(offset[3:])
+            zone = timezone(timedelta(minutes=minutes if offset[0] == "+" else -minutes))
+            return datetime.fromtimestamp(int(stamp), zone).isoformat()
+    raise ValueError("pinned commit has no committer date")
 
 
 def main():
@@ -173,11 +185,11 @@ spike/t472/corpus.lock.json.
             BOUND_FILES, snap["max_blob_path"], snap["max_blob_bytes"],
         )
 
+        date = commit_date(run(["git", "cat-file", "commit", pin], cwd=clone))
         run(["git", "add", "--"] + DERIVED_PATHS, cwd=clone)
         staged = run(["git", "diff", "--cached", "--name-only"], cwd=clone).split()
         if sorted(staged) != sorted(DERIVED_PATHS):
             raise SystemExit("%s: staged set %s != %s" % (repo, staged, DERIVED_PATHS))
-        date = run(["git", "show", "-s", "--format=%cI", pin], cwd=clone).strip()
         env = dict(os.environ,
                    GIT_AUTHOR_NAME=DERIVED_IDENTITY[0], GIT_AUTHOR_EMAIL=DERIVED_IDENTITY[1],
                    GIT_COMMITTER_NAME=DERIVED_IDENTITY[0], GIT_COMMITTER_EMAIL=DERIVED_IDENTITY[1],
