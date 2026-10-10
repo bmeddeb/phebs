@@ -17225,6 +17225,48 @@ absent/one-pack/mixed-pack startup and API/MCP discovery matrix; T48.4c supplies
 the machine-derived referenced-artifact census and running implementation
 identity that make the bindings bindable.*
 
+*Slice b landed 2026-10-09: `cmd/phebs/serve_config_matrix_test.go` pins the
+absent/one-pack/mixed-pack startup and API/MCP discovery matrix by driving the
+real `newServeExtractionRegistries` admission boundary rather than a
+re-implementation — thirteen table scenarios over an absent selection (no read,
+nothing admitted, both downstream registries' `Enabled()` false), the proto
+switch alone admitting exactly the four experimental-dark domains, one released
+declaration pack governing only its own domain (the "one released component
+does not activate another" AC), a released caller pack without its declaration
+refusing with the resolver's exact `resolver caller %q requires declaration
+domain %q` message, a released declaration and caller admitted together when
+both records name one running binding and refusing as `digest_mismatch` when
+they do not, suspended, revoked and expired declarations each withdrawing
+instead of satisfying that caller, the suspended declaration beside the
+provisional switch admitting the released caller against the dark declaration
+(pinning the mixed-provenance join), an all-withdrawn directory admitting
+nothing, and both refusal shapes of an unbound release (no recipe; no load
+bindings as `ReasonUnresolvedReference`). Released stub recipes carry a version
+no dark extractor reports and every admitted scenario asserts the exact
+released `domain@version` set. `TestCallerMapDiscoveryAcrossAdmissionShapes`
+holds the API service, the `/api/version` `contract-caller-map` capability and
+the real MCP tool listing across all sixteen provisional-switch combinations
+and four startup shapes, through the production `newServeAPIOptions` plus
+`bindServeCallerReader` and `newServeMCPServer`, both extracted
+behavior-preserving: discovery needs a provisional switch and an enabled caller
+registry, and admission and withdrawal never flip it. `docs/guides/OPERATIONS.md`
+gains the "Startup and discovery matrix" subsection: the five shapes, one
+running binding per selection, whole-startup refusal versus per-pack
+withdrawal, discovery's two gates, the mixed-provenance caution whose
+disposition is owned by T47.3, and that withdrawal changes derived state at the
+next startup rather than recalling evidence. Tests and documentation plus three
+behavior-preserving extractions: no runtime behavior change,
+`packRecipes`/`releaseLoadBindings` still empty and the dark startup
+byte-for-byte unchanged. Independent review of `9daf1afb` reported
+critical/high/medium/low `0/1/4/4`; the high (two released packs naming
+different bindings refuse startup, never exercised) is pinned and routed to
+T48.4c, which supplies the running implementation identity, and every other
+finding is corrected on the branch; delta re-review of `342ae911` found the
+discovery helper still reconstructed the API/MCP options, and it now drives the
+production assembly. T48.4c still supplies the machine-derived
+referenced-artifact census and running implementation identity that make the
+bindings bindable.*
+
 ## Epic 49 · Contract Atlas and declaration production readiness
 
 Own `phebs.protobuf.contract` and `phebs.thrift.contract` separately, plus

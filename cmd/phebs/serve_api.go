@@ -19,6 +19,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/auth"
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/codenav"
+	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/extract"
 	"github.com/bmeddeb/phebs/internal/lifecycle"
 	phebsmcp "github.com/bmeddeb/phebs/internal/mcp"
@@ -176,6 +177,16 @@ func openServeSearcher(d *serveDeps) error {
 	return nil
 }
 
+// callerMapDiscoverable is the provisional-switch half of the Caller Map
+// discovery gate. The surface is offered only when this holds and the admitted
+// caller registry is enabled (bindServeCallerReader). The released selection
+// never sets this half, so a released pack alone cannot make the surface
+// discoverable.
+func callerMapDiscoverable(cfg *config.Config) bool {
+	return cfg.Experimental.ProvisionalProtoExtraction ||
+		cfg.Experimental.ProvisionalThriftExtraction
+}
+
 // newServeAPIOptions assembles the API options: search/code-navigation
 // services, fixture bindings, and catalog/caller/relationship services.
 func newServeAPIOptions(d *serveDeps) (api.Options, error) {
@@ -218,8 +229,7 @@ func newServeAPIOptions(d *serveDeps) (api.Options, error) {
 		},
 		AuditRecord: d.auditRecord, AuditLog: st, Analytics: st,
 		Evidence: d.evidenceView, ProofBundles: d.proofBundles,
-		CallerMapEnabled: cfg.Experimental.ProvisionalProtoExtraction ||
-			cfg.Experimental.ProvisionalThriftExtraction,
+		CallerMapEnabled:     callerMapDiscoverable(cfg),
 		CallerReader:         d.callerReader,
 		ProofBundleRetention: cfg.ProofBundles.RetentionFor(),
 		Compatibility:        d.compatibility, Visible: d.visibleFor,
@@ -325,10 +335,10 @@ func newServeFinalAuthorityReads(d *serveDeps) (t421ExactFinalAuthorityRead, t42
 	return finalAuthority, tailReadiness, nil
 }
 
-// newServeHTTPHandlers assembles the API, MCP, and UI handlers into the final
-// HTTP handler chain.
-func newServeHTTPHandlers(d *serveDeps, apiOpts api.Options, finalAuthority, tailReadiness t421ExactFinalAuthorityRead) (http.Handler, error) {
-	apiHandler := api.New(apiOpts)
+// newServeMCPServer assembles the read-only MCP tool registry from the API
+// options, so MCP advertises exactly the proof, compatibility, Contract Atlas,
+// Caller Map and comparison services the API constructed.
+func newServeMCPServer(d *serveDeps, apiOpts api.Options) *mcpsdk.Server {
 	var mcpProofs phebsmcp.ProofQueries
 	var mcpCompatibility phebsmcp.CompatibilityQueries
 	if proofService := api.NewProofService(apiOpts); proofService != nil {
@@ -354,7 +364,14 @@ func newServeHTTPHandlers(d *serveDeps, apiOpts api.Options, finalAuthority, tai
 		ObservationProgress: apiOpts.ObservationProgress,
 		Relationships:       apiOpts.Relationships,
 	}
-	mcpServer := phebsmcp.NewServer(mcpOpts)
+	return phebsmcp.NewServer(mcpOpts)
+}
+
+// newServeHTTPHandlers assembles the API, MCP, and UI handlers into the final
+// HTTP handler chain.
+func newServeHTTPHandlers(d *serveDeps, apiOpts api.Options, finalAuthority, tailReadiness t421ExactFinalAuthorityRead) (http.Handler, error) {
+	apiHandler := api.New(apiOpts)
+	mcpServer := newServeMCPServer(d, apiOpts)
 	// Stateless (T10.3): in stateful mode every tool call runs with the
 	// session INITIATOR's context, so one user's session smears their
 	// permissions onto whoever posts to it (the SDK's hijack guard is inert
