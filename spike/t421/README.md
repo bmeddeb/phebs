@@ -2059,3 +2059,14 @@ freeze. It contains no admitted host/tool/execution-profile identity, freeze
 signature, selected ceremony ordinal, operational custody, or authorization to
 execute a ceremony. Those bindings belong to the post-integration authenticated
 freeze and its independent review.
+
+**Frozen-plan review package (2026-10-09).**
+[FROZEN_PLAN_REVIEW.md](./FROZEN_PLAN_REVIEW.md) assembles the prospective
+frozen-plan review procedure and the executable-today evidence: fresh V1/V2/V4
+digest checks against the recorded values and compiled-in pins, a linux/amd64
+cross-host re-author replay of the exact V4 seal at `f0809ebb` producing the
+byte-identical 171,630-byte artifact, the freeze-envelope and signer contract
+inventory with reviewer commands, the eight-noun absence checklist, the
+custody/expiry handoff checklist, and the ledger of the six open T42.2o
+bindings. It creates no freeze, selects no identifier, and authorizes no
+execution.

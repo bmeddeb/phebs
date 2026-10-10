@@ -15156,6 +15156,23 @@ record, exact-main preflight, live host/tool/profile admission, authenticated
 freeze/signature replay, custody/expiry handoff, and frozen-plan review remain
 open. No execution, Epic closure, release or scale/SLO claim follows.
 
+**T42.2o frozen-plan review package, 2026-10-09:** `spike/t421/FROZEN_PLAN_REVIEW.md`
+assembles the prospective frozen-plan review for the future post-integration
+authenticated freeze. It re-binds the recorded V1/V2/V4 artifact bytes and
+digests against fresh `sha256sum`/`wc -c` runs and the compiled-in
+`retainedPlanSHA256`/`retainedPlanV2SHA256` pins; replays the exact V4 seal at
+`f0809ebbeee70c8a1fc8df67c7cb253224120c18` on this linux/amd64 host to the
+byte-identical 171,630-byte artifact with an untouched worktree and removed
+private root; inventories the freeze-envelope, signer, host, pressure, and
+source-bearing-refusal contracts with independent reviewer commands, naming
+the `freeze.go:509–510` non-Darwin host refusal that gates any Linux freeze on
+T42.H2's remaining pressure-filesystem and Linux-bound plan work; and records
+the eight-noun absence checklist, the custody/expiry handoff checklist, and
+the ledger of the six open bindings in the 2026-09-21 record above. The seal
+commit `61d3c9d1` is an ancestor of `origin/main` at `55a962e9`. No freeze,
+identifier selection, ceremony execution, Epic closure, release or scale/SLO
+claim follows; all six T42.2o bindings remain open.
+
 **T42.3 · Scale posture decision and neutral product closure** — independently
 review the T42.2 receipt, replay representative All code → service →
 relationship → Workbench → proof → MCP flows, and record one decision:
