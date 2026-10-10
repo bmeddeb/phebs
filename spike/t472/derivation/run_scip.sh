@@ -46,23 +46,30 @@ sha="$(sha256sum "$SCIPGO" | cut -d' ' -f1)"
 [ "$sha" = "$SCIPGO_SHA_PIN" ] || fail "scip-go sha256 $sha != pinned $SCIPGO_SHA_PIN"
 [ -f "$MODULES_JSON" ] || fail "missing $MODULES_JSON"
 env GOTOOLCHAIN="$GO_TOOLCHAIN" go env -json GOVERSION GOFLAGS CGO_ENABLED GOOS GOARCH \
-  GOPROXY GONOSUMDB GOCACHE GOMODCACHE > "$OUT/go_env.json" || fail "cannot record go env"
+  GOPROXY GONOSUMDB GOCACHE GOMODCACHE GOENV GOEXPERIMENT GOTOOLCHAIN \
+  > "$OUT/go_env.json.tmp" || fail "cannot record go env"
+if [ -f "$OUT/go_env.json" ]; then
+  cmp -s "$OUT/go_env.json" "$OUT/go_env.json.tmp" || fail "Go environment changed before resume"
+  rm "$OUT/go_env.json.tmp"
+else
+  mv "$OUT/go_env.json.tmp" "$OUT/go_env.json"
+fi
 
-declare -A PIN=(
-  [containerd]=3ea5bdbfbd9f25dd1720dd28552510c50bc85ca9
-  [etcd]=f061acd0902d489041448cdd19d71a345d27b9f5
-  [grpc-go]=5f1ccf56ea5ec964bbf447a10b561214f86387a6
-  [vitess]=0ee525542d4157460b40af0951016236fc213afd
-  [istio]=d501e135abadd7492774f428e0873f7d16494d41
-)
-declare -A REMOTE=(
-  [containerd]=github.com/containerd/containerd
-  [etcd]=github.com/etcd-io/etcd
-  [grpc-go]=github.com/grpc/grpc-go
-  [vitess]=github.com/vitessio/vitess
-  [istio]=github.com/istio/istio
-)
-ORDER="containerd etcd grpc-go vitess istio"
+# The recorded option-A disposition excludes the two refused repositories.
+python3 - "$REPO_ROOT/spike/t472/corpus.lock.json" > "$OUT/corpus_plan.tsv" <<'PY'
+import json, sys
+lock = json.load(open(sys.argv[1]))
+for repo in sorted(lock["repos"], key=lambda r: r["name"]):
+    if repo["derived"]["corpus_admitted"]:
+        print(repo["name"].split("/")[1], repo["commit"], "github.com/" + repo["name"], sep="\t")
+PY
+declare -A PIN=() REMOTE=()
+ORDER=""
+while IFS=$'\t' read -r repo pin remote; do
+  PIN[$repo]="$pin"; REMOTE[$repo]="$remote"
+  ORDER="${ORDER:+$ORDER }$repo"
+done < "$OUT/corpus_plan.tsv"
+[ -n "$ORDER" ] || fail "no admitted corpus repositories"
 
 for repo in $ORDER; do
   clone="$CORPUS_DIR/$repo"
@@ -106,14 +113,22 @@ while IFS=$'\t' read -r repo rel gofiles; do
   log="$OUT/$repo/$sub.log"
   timef="$OUT/$repo/$sub.time"
   mkdir -p "$OUT/$repo"
+  envf="$OUT/$repo/$sub.go-env.json"
+  ( cd "$moddir" && env GOTOOLCHAIN="$GO_TOOLCHAIN" go env -json \
+      GOVERSION GOFLAGS CGO_ENABLED GOOS GOARCH GOPROXY GONOSUMDB GOCACHE GOMODCACHE \
+      GOENV GOEXPERIMENT GOTOOLCHAIN GOMOD GOWORK ) > "$envf.tmp"
+  if [ -f "$envf" ]; then
+    cmp -s "$envf" "$envf.tmp" || fail "$repo $sub: Go environment changed before resume"
+    rm "$envf.tmp"
+  else
+    mv "$envf.tmp" "$envf"
+  fi
   recorded="$(awk -F'\t' -v r="$repo" -v s="$sub" \
-    '($1 == "OK" || $1 == "pre") && $2 == r && $3 == s { print $1 "\t" $6 }' "$STATUS" | tail -n 1)"
+    '$1 == "OK" && $2 == r && $3 == s { print $1 "\t" $6 }' "$STATUS" | tail -n 1)"
   if [ -n "$recorded" ]; then
-    if [ "${recorded%%$'\t'*}" = "OK" ]; then
-      want="${recorded#*$'\t'}"
-      [ -f "$out" ] && [ "$(sha256sum "$out" | cut -d' ' -f1)" = "$want" ] ||
-        fail "$repo $sub: recorded output is missing or no longer matches $want"
-    fi
+    want="${recorded#*$'\t'}"
+    [ -f "$out" ] && [ "$(sha256sum "$out" | cut -d' ' -f1)" = "$want" ] ||
+      fail "$repo $sub: recorded output is missing or no longer matches $want"
     echo "skip (already recorded): $repo $sub"
     continue
   fi

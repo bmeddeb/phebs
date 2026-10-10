@@ -16989,6 +16989,18 @@ guessed canonical lineage; no release follows from synthetic correctness tests
 alone and an unfilled gate leaves that recipe unavailable; T47.3 activation,
 T47.4 operating acceptance and T47.5 promotion remain separate.
 
+*Corrected derivation slice (2026-10-10): only the three option-A admitted
+repositories run, at their frozen pins in new local clones. The runner records
+central and per-module Go environments and refuses changed resume inputs;
+committed resolution tables and actual helper digests bind the snapshots and
+local derived commits. The merge reports aggregate test-main drops, and the
+lock updater preserves the original disposition, all rejected records and
+earlier admitted measurements. Meaningful helper and machine checks plus a
+fresh run are required; source review, the cross-module binding decision,
+independent human labels, thresholds and sealing remain separate. No Phebs
+prediction or quality score is produced. Cost: offline serial derivation only;
+no production steady-state work changes.*
+
 **T47.3 · Ordinary production configuration and registration** *(needs the
 T47.2 supported recipe contract; activation remains gated until T47.5)* —
 introduce the stable Caller Map configuration/recipe selection, wire the

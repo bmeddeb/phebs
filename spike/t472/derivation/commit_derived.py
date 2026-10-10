@@ -20,16 +20,12 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DER = os.environ.get("T472_ROOT", "/home/ben/phebs-rehearsals/t472-derivation")
-CORPUS = os.path.normpath(os.path.join(HERE, "..", "corpus"))
+CORPUS = os.environ.get("CORPUS_DIR", os.path.normpath(os.path.join(HERE, "..", "corpus")))
 LOCK = os.path.normpath(os.path.join(HERE, "..", "corpus.lock.json"))
 DERIVED_IDENTITY = ("phebs t472 derivation", "t472-derivation@phebs.invalid")
 
 SCIP_GO_SHA = "31bf2f3bbbcb25efd4bba6964e08971a9c9c2fba745db4345c0d438ef28b93c4"
 SCIP_GO_BYTES = 18104856
-SCIPMERGE_SHA = "4c22c00f3ed7a17097da5fa32c55561703394a8f8bf80a2400c3c169e3324cce"
-SCIPMERGE_BYTES = 6807487
-SNAPSHOTS_SHA = "8bd8fd8c4924b4ab9839acd1632b98b8648796431f88895b6f24200c8d534a2f"
-SNAPSHOTS_BYTES = 4163718
 GOTOOLCHAIN = "go1.27.1"
 BOUND_INDEX_BYTES = 64 << 20
 BOUND_BLOB_BYTES = 10 << 20
@@ -81,6 +77,13 @@ def other_paths(merge):
 
 def main():
     remote_of = remotes()
+    merge_tool = os.path.join(DER, "tool", "bin", "scipmerge")
+    snapshot_tool = os.path.join(DER, "tool", "bin", "t472snapshots")
+    merge_sha, merge_bytes = sha256(merge_tool), os.path.getsize(merge_tool)
+    snapshot_sha, snapshot_bytes = sha256(snapshot_tool), os.path.getsize(snapshot_tool)
+    scip_tool = os.path.join(DER, "tool", "bin", "scip-go")
+    if sha256(scip_tool) != SCIP_GO_SHA or os.path.getsize(scip_tool) != SCIP_GO_BYTES:
+        raise SystemExit("scip-go no longer matches the frozen tool pin")
     facts = {}
     for repo in IN_BOUND:
         clone = os.path.join(CORPUS, repo)
@@ -90,6 +93,9 @@ def main():
         pin = merge["pin"]
         if snap["commit"] != pin:
             raise SystemExit("%s: snapshot commit %s != merge pin %s" % (repo, snap["commit"], pin))
+        table = os.path.join(HERE, "mappings", repo + ".json")
+        if sha256(table) != snap["mapping_table_sha256"]:
+            raise SystemExit("%s: committed resolution table no longer matches snapshot stats" % repo)
         head = run(["git", "rev-parse", "HEAD"], cwd=clone).strip()
         if head != pin:
             raise SystemExit("%s: clone HEAD %s != pin %s" % (repo, head, pin))
@@ -116,7 +122,7 @@ def main():
             raise SystemExit("%s: index.scip over the frozen 64 MiB bound" % repo)
         if snap["max_blob_bytes"] > BOUND_BLOB_BYTES:
             raise SystemExit("%s: over-bound blob %s" % (repo, snap["max_blob_path"]))
-        if snap["regular_files"] > BOUND_FILES:
+        if snap["regular_files"] + len(DERIVED_PATHS) > BOUND_FILES:
             raise SystemExit("%s: corpus over the frozen file bound" % repo)
 
         rels_text = ", ".join("`%s`" % ("." if r == "." else r) for r in rels)
@@ -159,11 +165,11 @@ spike/t472/corpus.lock.json.
             merge["external_symbols_dropped"], merge["round_trip_unstable_docs"],
             merge["version_skew_references"],
             SCIP_GO_SHA, SCIP_GO_BYTES, GOTOOLCHAIN, remote, pin[:12], rels_text,
-            SCIPMERGE_SHA, SCIPMERGE_BYTES,
+            merge_sha, merge_bytes,
             snap["layout_bytes"], snap["layout_sha256"], snap["roots"], snap["regular_files"],
             snap["generated_from_bytes"], snap["generated_from_sha256"],
             snap["clients"], snap["mapped"], snap["abstained"],
-            snap["mapping_table_sha256"], SNAPSHOTS_SHA, SNAPSHOTS_BYTES,
+            snap["mapping_table_sha256"], snapshot_sha, snapshot_bytes,
             BOUND_FILES, snap["max_blob_path"], snap["max_blob_bytes"],
         )
 

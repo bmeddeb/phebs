@@ -109,6 +109,7 @@ type report struct {
 	Pin                    string     `json:"pin"`
 	Docs                   int        `json:"docs"`
 	OutOfTreeDropped       int        `json:"out_of_tree_dropped"`
+	OutOfTreeTestmain      int        `json:"out_of_tree_testmain"`
 	Occurrences            int64      `json:"occurrences"`
 	Symbols                int64      `json:"symbols"`
 	ExternalSymbolsDropped int        `json:"external_symbols_dropped"`
@@ -474,6 +475,7 @@ func main() {
 		docs = append(docs, d...)
 		rep.ExternalSymbolsDropped += st.ExternalSymbols
 		rep.OutOfTreeDropped += st.OutOfTreeDropped
+		rep.OutOfTreeTestmain += st.OutOfTreeTestmain
 		rep.RoundTripUnstableDocs += st.RoundTripUnstable
 		rep.Runs = append(rep.Runs, st)
 	}
