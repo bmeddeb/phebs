@@ -48,6 +48,7 @@ def update_lock(lock, facts, receipt, repos=None):
             "derived_tree": f["derived_tree"],
             "parent_commits": f["derived_parents"],
             "files": f["files"],
+            "clone": f.get("clone", old.get("clone")),
         })
         m = f["merge"]
         old["index"] = {

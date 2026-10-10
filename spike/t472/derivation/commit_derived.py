@@ -240,6 +240,7 @@ spike/t472/corpus.lock.json.
         facts[repo] = {
             "name": remote_of[repo],
             "pin": pin,
+            "clone": clone,
             "derived_commit": derived,
             "derived_tree": tree,
             "derived_parents": parents,

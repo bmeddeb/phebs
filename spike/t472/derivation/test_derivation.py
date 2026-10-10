@@ -22,7 +22,7 @@ def facts_for(lock, shorts=None):
         facts[short] = {
             'pin': repo['commit'], 'derived_parents': [repo['commit']],
             'derived_commit': d['derived_commit'], 'derived_tree': d['derived_tree'],
-            'files': d['files'],
+            'files': d['files'], 'clone': 'clone/' + short,
             'merge': {'docs': i['documents'], 'occurrences': i['occurrences'], 'symbols': i['symbols'],
                       'out_of_tree_dropped': i['out_of_tree_build_cache_documents_dropped'],
                       'out_of_tree_testmain': 0, 'out_of_tree_other': [], 'version_skew_references': 7,
@@ -90,6 +90,9 @@ class DerivationTests(unittest.TestCase):
                 self.assertEqual(after['derived']['derived_utc'], '2026-10-11')
                 self.assertEqual(after['derived']['previous_derived'], before['derived'])
                 self.assertEqual(after['derived']['derived_commit'], facts['etcd']['derived_commit'])
+                self.assertEqual(after['derived']['clone'], 'clone/etcd')
+                self.assertEqual(after['derived']['previous_derived']['clone'],
+                                 before['derived']['clone'])
                 self.assertEqual(after['derived']['index']['alias_documents_dropped'],
                                  facts['etcd']['merge']['alias_documents_dropped'])
             else:
