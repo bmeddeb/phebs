@@ -155,6 +155,27 @@ cursor fence. No snapshot causes
 phebs to run a build, generator, plugin, binary, or catalog client, and the
 current adapter performs no external lookup.
 
+Caller Map's ordinary activation is a startup property of that same extractor
+set, never a request or a query: it is enabled exactly when a caller-adapter
+domain is registered, whether through the experimental-dark switches or
+through a verified released recipe admitted by `release_selection`. The frozen
+T47.2a Go/gRPC recipe `phebs.grpc.caller.go` carries its protobuf declaration
+discovery with the caller extractor, so a released Caller Map never depends
+on the experimental protobuf umbrella being switched on, and enabling Caller
+Map enables only Caller Map — Thrift-field extraction, Kafka evidence, Impact,
+and caller comparison keep their own admission and comparison never follows.
+In this build the recipe is compiled but deliberately not bound for ordinary
+activation until T47.5 signs its first caller-specific record and binds it in
+the same change, so a configured selection naming it refuses startup as an
+unbound release rather than activating a partially supported recipe. Operator
+withdrawal reuses the release lifecycle: revoking the `release_id` through
+`release_selection.revoked`, or a suspension or expiry, withdraws the pack
+with the bounded `pack_id=cause` startup log line, and a restart revalidates
+from the directory; no older record replaces a withdrawn one, so the caller
+surface stays visibly unavailable instead of silently reverting. The
+configuration decision and its steady-state cost are recorded in
+[Configuration](./CONFIGURATION.md#caller-map-activation-and-recipe-admission-t473).
+
 The default-dark Caller Map read service is now available at
 `GET /api/contract_callers`. It requires the complete declaration identity:
 `protocol`, declaration `repository`, declaration `lineage`, and canonical

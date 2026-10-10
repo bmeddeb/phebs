@@ -218,7 +218,8 @@ func newServeAPIOptions(d *serveDeps) (api.Options, error) {
 		},
 		AuditRecord: d.auditRecord, AuditLog: st, Analytics: st,
 		Evidence: d.evidenceView, ProofBundles: d.proofBundles,
-		CallerMapEnabled: cfg.Experimental.ProvisionalProtoExtraction ||
+		CallerMapEnabled: d.callerRegistry.Enabled(),
+		CallerComparisonEnabled: cfg.Experimental.ProvisionalProtoExtraction ||
 			cfg.Experimental.ProvisionalThriftExtraction,
 		CallerReader:         d.callerReader,
 		ProofBundleRetention: cfg.ProofBundles.RetentionFor(),

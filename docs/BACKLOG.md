@@ -17004,7 +17004,32 @@ configuration has an explicit compatibility/migration decision, not a silent
 reinterpretation as released authority. Provide rollback and revalidation
 behavior. Update the configuration/workflow guide in the same implementation
 PR; enumerate query, tick, startup/restart, no-op/retry, publication, locks,
-cache invalidation and bounded memory/disk/child costs.
+cache invalidation and bounded memory/disk/child costs. *Implementation landed
+2026-10-09: Caller Map's ordinary activation now follows the merged extractor
+set — `CallerMapEnabled` projects the already-constructed caller registry, so
+a caller-adapter domain admitted either by the experimental switches or by a
+released recipe enables the surface — and a separate
+`CallerComparisonEnabled` means exactly
+`experimental.provisional_proto_extraction ||
+experimental.provisional_thrift_extraction`, never Caller Map's activation, so
+enabling Caller Map enables only Caller Map and Epic 50 owns comparison's
+production promotion. The frozen `phebs.grpc.caller.go` recipe
+(`callerMapRecipe()`: the `proto-contract` 3.0.0 declaration extractor beside
+`grpc-caller` 1.5.0) carries the necessary declaration discovery with the
+caller extractor and stays deliberately unbound from `packRecipes`: activation
+remains gated until T47.5 binds it in the same change as its first signed
+released record, and a selection naming the pack refuses startup as an unbound
+release. HTTP and read-only MCP construct and consume the identical service
+instances; the authorization-first reads, source/generation fences, exact
+publication, cursor invalidation and citations are untouched, with zero
+steady-state cost. Existing provisional configuration keeps exactly its
+meaning — nothing is silently reinterpreted as released authority — and
+rollback/revalidation reuse the release lifecycle: `release_selection.revoked`,
+suspension or expiry withdraw the pack with the bounded `pack_id=cause`
+startup log line, restart revalidates, no older record replaces a withdrawn
+one, and the dark path stays. Missing, stale and failed input keeps its
+visibly unavailable read states. T47.4 operating acceptance and T47.5
+promotion remain separate.*
 
 **T47.4 · Current-host operating, security and lifecycle acceptance** *(needs
 T47.2 and the T47.3 candidate)* — run the real ordinary binary on this Linux

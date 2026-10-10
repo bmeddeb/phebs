@@ -32,7 +32,7 @@ type CallerComparisonService struct {
 }
 
 func NewCallerComparisonService(opts Options) *CallerComparisonService {
-	if !opts.CallerMapEnabled ||
+	if !opts.CallerComparisonEnabled || !opts.CallerMapEnabled ||
 		opts.Store == nil || opts.Evidence == nil || opts.Principal == nil ||
 		opts.CallerReader == nil || strings.TrimSpace(opts.DataDir) == "" {
 		return nil
@@ -50,7 +50,7 @@ func NewCallerComparisonService(opts Options) *CallerComparisonService {
 // NewLegacyCallerComparisonService retains the pre-T30.6k evidence-backed
 // comparison solely for historical acceptance fixtures.
 func NewLegacyCallerComparisonService(opts Options) *CallerComparisonService {
-	if !opts.CallerMapEnabled ||
+	if !opts.CallerComparisonEnabled || !opts.CallerMapEnabled ||
 		opts.Store == nil || opts.Evidence == nil || opts.Principal == nil {
 		return nil
 	}

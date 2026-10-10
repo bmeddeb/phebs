@@ -573,6 +573,73 @@ refuses startup today with an unresolved-reference cause. The gate is
 implemented and dark, not absent.
 
 
+### Caller Map activation and recipe admission (T47.3)
+
+Caller Map has its own stable ordinary configuration. Its recipe identity is
+`phebs.grpc.caller.go` ("Exact Go gRPC callers" in
+[PROTO_GRPC_PACK_CARDS.md](../PROTO_GRPC_PACK_CARDS.md)): the frozen T47.2a
+Go / gRPC-Protobuf caller tuple, extractor `grpc-caller` 1.5.0, schema
+`t20-caller-v1`. The recipe's fixed in-tree extractor set carries protobuf
+declaration discovery with the caller extractor, because resolved callers are
+attributed through repository-committed declaration lineage; a released
+Caller Map therefore does not depend on the experimental protobuf umbrella
+being switched on.
+
+Activation follows the exact registered extractor set, never a request or a
+query: Caller Map is enabled exactly when at least one caller-adapter domain
+is registered, whether admitted through the experimental-dark switches or
+through a verified signed record under `release_selection`. Enabling Caller
+Map enables only Caller Map — Thrift-field extraction, Kafka evidence,
+Impact, and caller comparison each keep their own admission, comparison
+never follows Caller Map's ordinary activation, and
+[Epic 50](../BACKLOG.md) owns comparison's production promotion.
+
+The compatibility decision for existing configuration is that nothing is
+silently reinterpreted as released authority:
+
+- The `experimental.provisional_*` switches keep exactly their current
+  meaning: they register experimental-dark extractors, never released ones.
+- When a released record later governs a domain one of those switches
+  registered, the released recipe replaces the dark registration for that
+  domain; no configuration key is renamed, deprecated, or promoted.
+- `release_selection` remains the only path into released admission.
+
+Ordinary activation is gated in this build: the recipe is compiled but
+deliberately not bound into the in-tree recipe registry until T47.5 signs the
+first caller-specific record and binds it in the same change, so a selection
+naming `phebs.grpc.caller.go` refuses startup as an unbound release.
+Unsupported or unvalidated recipes cannot reach ordinary activation, refusal
+is whole-startup rather than a partial capability surface, and until T47.5
+the provisional switches remain the only way to run Caller Map.
+
+Rollback and revalidation reuse the release lifecycle exactly: the operator
+revokes a `release_id` through `release_selection.revoked`, or a suspension
+or expiry withdraws the pack, and the bounded `pack_id=cause` startup log
+line documented in
+[Pack-release status, expiry, suspension and rollback](./OPERATIONS.md#pack-release-status-expiry-suspension-and-rollback-t484)
+makes the withdrawal observable. Restart revalidates from the directory, no
+older record replaces a withdrawn one, and the dark path stays available for
+development. Missing, stale, or failed generation input keeps its visibly
+unavailable read states described in
+[Product workflows](./WORKFLOWS.md#evaluating-a-separated-idlsource-monorepo).
+
+The declaration identity follows the T49.1 contract: Caller Map matches the
+frozen single-declaration-repository lineage family of
+[PROTOBUF_DECLARATION_IDENTITY.md](../PROTOBUF_DECLARATION_IDENTITY.md) §7,
+and a canonical identity is a prefix-disjoint family owned by a separate
+ticket — Caller Map never silently reinterprets one family as the other.
+
+Steady-state cost: zero additional work per query, request, sync tick,
+retry/no-op, or publication transition — the extraction, resolver, caller
+and publication services and the exact readers, cursors, citations, and
+source/generation fences are unchanged. Startup and restart add one boolean
+projection of the already-constructed registry and one closed OR of two
+existing configuration booleans: no new lock, no cache-invalidation path,
+no file read, hashing, child process, or bounded memory and disk cost.
+Activation remains gated until T47.5 promotion, with the T47.4 operating
+acceptance separate.
+
+
 ### Authentication
 
 Authentication is always required for the UI, application API, and MCP. A

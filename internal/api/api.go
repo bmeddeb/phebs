@@ -97,10 +97,18 @@ type Options struct {
 	// nil store leaves the route unregistered so the dark-launch default has
 	// no discoverable read surface.
 	Evidence store.EvidenceStore
-	// CallerMapEnabled records that at least one protocol caller extractor is
-	// configured. Evidence alone is insufficient because Kafka- or field-only
-	// deployments must not advertise an unreachable Caller Map.
+	// CallerMapEnabled records that the running extractor set registered at
+	// least one caller-adapter domain, whether admitted through the ordinary
+	// signed release path or the experimental-dark switches. Evidence alone is
+	// insufficient because Kafka- or field-only deployments must not advertise
+	// an unreachable Caller Map.
 	CallerMapEnabled bool
+	// CallerComparisonEnabled records that caller comparison is explicitly
+	// admitted. It never follows Caller Map's ordinary activation: a released
+	// Caller Map recipe enables Caller Map alone, and the experimental
+	// protobuf/Thrift switches are its only present admission (Epic 50 owns
+	// comparison promotion through its own release).
+	CallerComparisonEnabled bool
 	// CallerReader is the sole T30.6j product read boundary over an exact
 	// complete caller-generation publication. Serve shares its underlying
 	// publication registry with the worker and lifecycle reconcilers so an
