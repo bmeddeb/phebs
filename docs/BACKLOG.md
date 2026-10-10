@@ -17167,6 +17167,43 @@ persistent work, and no per-query/request, sync, retry/no-op or publication
 cost. No label, prediction, score, seal or merge; slice C and the fresh
 candidate run remain separate.*
 
+*Slice C — prospective extension declaration evidence without extendee lineage
+(2026-10-10): `protodecl` advances to `4.0.0` and emits every plain extension
+field (`ExtendNode`, file top level or inside a message body) as
+`DECLARES_EXTENSION` with the declaration-local object
+`joinFullName(scope, name)#<tag>`, rule `proto-extension-v1` and schema
+`proto-extension-detail-v1`: the extending namespace — package or enclosing
+message — plus the extension field name and number, never a field position on
+the extendee whose descriptor slot only linking can prove. The raw extendee is
+a `typeReferenceDetail` with an explicit resolution state under the existing
+message-only lookup (`same_file` to a message declaration before or after the
+extend, `intrinsic` for a scalar-keyword name, or `unresolved` with
+`AMBIGUOUS_SAME_FILE_DECLARATION`, `INVALID_DECLARATION_KIND`,
+`DECLARATION_NOT_FOUND` or `IMPORT_LINKING_UNAVAILABLE`); field type
+references reuse the unchanged machinery and no extension ever emits an
+ordinary `DECLARES_FIELD`. Duplicates are emitted, not merged. Malformed and
+unsupported required semantics still refuse: an extension group fails closed
+("extension groups require descriptor linking for their synthetic message")
+and a map field in an extension body stays a parser-level whole-file refusal.
+The frozen contract is amended in the same PR as the code
+(`docs/PROTOBUF_DECLARATION_IDENTITY.md` §5/§6, `docs/guides/OPERATIONS.md`,
+`docs/PROTO_GRPC_PACK_CARDS.md`), the five version pins move to `4.0.0`, and
+tests cover file-level and nested extends, relative and qualified names,
+imported, absent, ambiguous, enum, scalar and declare-after extendees,
+same-name-different-scope and duplicate collisions with distinct spans, both
+malformed refusals, and the pinned absence of any `DECLARES_FIELD` for an
+extension file. `TestProtoDeclEndToEnd` verifies the persisted publication and
+evidence path for the new representation (worker→store→published assertion→
+pinned span and exact detail), and the consumer survey finds every downstream
+reader selects explicit predicates, so the new predicate is inert there. Full
+descriptor linking remains a separate effort. Steady-state cost: one
+additional emission per extension field already visited by the existing body
+walk through the existing parser, declaration index and resolution; no added
+read, blob fetch, child, lock, cache, timer, goroutine, store/schema or
+persistent work, and no per-query/request, sync, retry/no-op or publication
+cost. No label, prediction, score, seal or merge; the regenerated bindings and
+the fresh candidate run remain separate.*
+
 **T47.3 · Ordinary production configuration and registration** *(needs the
 T47.2 supported recipe contract; activation remains gated until T47.5)* —
 introduce the stable Caller Map configuration/recipe selection, wire the
