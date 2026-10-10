@@ -17108,9 +17108,10 @@ regular, alias, canonical and unexpected paths; focused normal/race, vet,
 Python lock-updater tests, docs, glossary and whitespace gates pass.
 Custody/receipts: `/home/ben/phebs-rehearsals/t472-alias-derivation-20261010`
 (receipt `4fcc0832…`; lock `8c534042…`). The census keeps 7,685 regular
-sources and all 11 nonregular paths; its etcd derived-commit binding is
-rebound with the regenerated preparation (item 4). No label, prediction,
-score or seal; slices B/C and the fresh candidate run remain separate.*
+sources and all 11 nonregular paths; the census, universe, frames and bundle
+artifacts that bind `75771dd7…` are rebound with the regenerated preparation
+(item 4). No label, prediction, score or seal; slices B/C and the fresh
+candidate run remain separate.*
 
 **T47.3 · Ordinary production configuration and registration** *(needs the
 T47.2 supported recipe contract; activation remains gated until T47.5)* —

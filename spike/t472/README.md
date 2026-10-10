@@ -336,9 +336,9 @@ the pin, cross-checked byte-identical against both retained clones; receipt
 `4fcc083243174fa122252c405af4cc9ed514c975dae5b34a851b915bf978a7f9`; lock
 `8c5340427010c3ca86d2a038d88ff6d23ade76c04ba2e9bcd49d579237762168`). The
 source census still records 7,685 regular Go sources and the 11 etcd
-nonregular Go paths; its etcd derived-commit binding still names
-`75771dd7…` and is rebound with the regenerated preparation, not silently
-reinterpreted here.
+nonregular Go paths; the census, universe, frames and bundle artifacts still
+bind `75771dd7…` and are rebound with the regenerated preparation, not
+silently reinterpreted here.
 
 ### Exact run inputs and measured host
 
