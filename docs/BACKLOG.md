@@ -17225,6 +17225,24 @@ absent/one-pack/mixed-pack startup and API/MCP discovery matrix; T48.4c supplies
 the machine-derived referenced-artifact census and running implementation
 identity that make the bindings bindable.*
 
+*Slice c landed 2026-10-09: `cmd/phebs/release_identity.go` supplies the
+machine-derived load bindings and `releaseLoadBindings` is wired in
+`serve_config.go` with `func(context.Context, string)` receiving the configured
+`release_selection.artifacts_path`. Every value comes from present fact at the
+same once-per-startup boundary: the running binary's embedded 40-hex
+`vcs.revision` (refused for a modified tree), the executable digest, the
+toolchain digest, and the content digest of the in-tree `packRecipes` registry;
+`artifacts_path` supplies the referenced-artifacts root and resolver from one
+bounded census, re-landed byte-for-byte from the unmerged slice-2 local rework
+`e0f7b46d` with its `internal/packrelease/artifacts.go` tests intact. An empty
+artifacts path stays unbound before any fact is read, so an unbound governing
+record still refuses as `ReasonUnresolvedReference`; a record signed for another
+binary, toolchain or artifact set refuses as `digest_mismatch`. `packRecipes`
+still ships empty, so the gate stays dark and no product is released. Tests:
+synthetic build-metadata refusal table, pinned digest formulas, census identity
+and stability refusals, end-to-end admission of a record bound to derived
+facts, and refusal of a record for another binary.*
+
 ## Epic 49 · Contract Atlas and declaration production readiness
 
 Own `phebs.protobuf.contract` and `phebs.thrift.contract` separately, plus

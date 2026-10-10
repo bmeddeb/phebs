@@ -118,7 +118,7 @@ service_catalogs:
 | `revisions`                                 | `{}`             | repo name → `rev:` selector → full `refs/heads/*` or `refs/tags/*`; at most 7 additional refs per repo (8 including implicit HEAD)                              |
 | `analysis_units`                            | `{}`             | repo name → one strict service scope; omitted repositories keep whole-repository behavior; restart after changing it                                           |
 | `service_catalogs`                          | `{}`             | repo name → one explicit normalized `committed` or `operator` catalog file; exact replacement is reconciled at startup and after indexing; see [Service catalogs](#service-catalogs) |
-| `release_selection`                         | *(empty)*        | directory of signed `PackRelease` records plus their ed25519 trust anchor and operator revocations; the only path into the ordinary/released admission set, read once at startup; see [Signed pack-release selection](#signed-pack-release-selection-t482-t484) |
+| `release_selection`                         | *(empty)*        | directory of signed `PackRelease` records plus their ed25519 trust anchor, the artifact directory they reference, and operator revocations; the only path into the ordinary/released admission set, read once at startup; see [Signed pack-release selection](#signed-pack-release-selection-t482-t484) |
 
 ### Historical publication retention
 
@@ -518,6 +518,7 @@ later governs and replaces rather than joins.
 ```yaml
 release_selection:
   path: /etc/phebs/pack-releases
+  artifacts_path: /etc/phebs/pack-artifacts
   keys:
     - id: release-signer
       public_key: "base64-ed25519-public-key"
@@ -533,6 +534,16 @@ record's own key material. `revoked` is the operator's suspension and rollback
 control, documented under
 [Pack-release status, expiry, suspension and rollback](./OPERATIONS.md#pack-release-status-expiry-suspension-and-rollback-t484).
 
+`artifacts_path` is the directory holding the card, manifest and validation
+artifacts the admitted records reference. It must be absolute, clean and
+unpadded, and a non-empty `path` requires it. At the same startup boundary it
+is censused once — one flat directory of regular files, at most 1,024 entries,
+at most 1 MiB per artifact and 64 MiB in total — and the referenced-artifacts
+root digest and the resolver each record is checked against are derived from
+the bytes actually present, never from an asserted value. The field is inert
+while `path` is empty, so an artifact directory can be staged before its
+release records arrive.
+
 Strict parsing refuses an unstable or half-configured gate before startup ever
 reaches it:
 
@@ -540,6 +551,8 @@ reaches it:
 | --- | --- |
 | `path` relative, `.`/`..`-bearing, or padded | it would resolve against the process working directory |
 | `path` set with an empty `keys` | no record could ever be admitted, so the gate is configured but inert |
+| `path` set with an empty `artifacts_path` | no load could ever be bound to the artifact bytes actually present |
+| `artifacts_path` relative, `.`/`..`-bearing, or padded | it would resolve against the process working directory |
 | `keys[i].id` empty, outside the identifier grammar, or duplicated | the trust anchor would not be a stable identity |
 | `keys[i].public_key` not base64, or not 32 bytes | not an ed25519 verification key |
 | `revoked[i]` empty, outside the identifier grammar, or duplicated | a revocation must name something a signed record's `release_id` could actually carry |
@@ -567,10 +580,17 @@ superseded record's expiry has no effect. See
 [Pack-release status, expiry, suspension and rollback](./OPERATIONS.md#pack-release-status-expiry-suspension-and-rollback-t484)
 for the statuses, what each permits, and how a withdrawal is observed.
 
-This build binds no recipe and cannot yet bind a released record to its own
-binary, toolchain and referenced artifacts, so any governing `released` record
-refuses startup today with an unresolved-reference cause. The gate is
-implemented and dark, not absent.
+The load bindings are never asserted by a record or by configuration: at the
+same admitted boundary phebs derives them from present fact. The running binary
+contributes its exact 40-hex source commit, its executable digest, its
+toolchain digest, and the content digest of its in-tree pack-recipe registry;
+`artifacts_path` contributes the referenced-artifacts root and the artifact
+resolver, both computed from the bytes actually present. A governing `released`
+record must name exactly those values; a record signed for another binary,
+toolchain or artifact set refuses startup with an unresolved-reference or
+digest-mismatch cause rather than loading approximately. The in-tree recipe
+registry still ships empty, so no released record has yet earned a bound recipe
+and the gate stays dark: implemented, not absent.
 
 
 ### Authentication

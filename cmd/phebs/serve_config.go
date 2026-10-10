@@ -139,13 +139,15 @@ var packRecipes = map[string]func() []extract.Extractor{}
 
 // releaseLoadBindings supplies what a released record must match before it may
 // load: the artifact resolver, the running implementation identity and the
-// present referenced-artifacts root. It ships unset on purpose, because this
-// build cannot yet derive them, so a governing released record refuses startup
-// (unresolved_reference) instead of loading without a binding. The slice that
-// binds the first recipe also supplies these.
-var releaseLoadBindings = func(context.Context) (packrelease.Options, error) {
-	return packrelease.Options{}, nil
-}
+// present referenced-artifacts root. Production derives all three from present
+// fact (release_identity.go): the running binary, toolchain and
+// pack-implementation identity are machine-derived, and the
+// referenced-artifacts root and resolver come from one census of the configured
+// artifact directory. It stays a variable only so tests can substitute a
+// fixture build's bindings. With no artifacts directory configured it returns
+// unbound options, so a governing released record refuses startup
+// (unresolved_reference) instead of loading without a binding.
+var releaseLoadBindings = deriveReleaseLoadBindings
 
 // releasedExtractors computes the ordinary/released admission set from the
 // verified signed PackRelease records named by cfg.ReleaseSelection. It is the
@@ -154,8 +156,8 @@ var releaseLoadBindings = func(context.Context) (packrelease.Options, error) {
 //
 //   - An empty Path admits nothing, performs no read, and adds no pack work.
 //   - A configured Path whose records fail verification refuses startup, and a
-//     governing released record refuses it until releaseLoadBindings can bind
-//     it to this binary and its artifacts.
+//     governing released record refuses it unless releaseLoadBindings actually
+//     binds it to this binary and its artifacts.
 //   - A pack whose governing record is suspended, retired, design, shadow or
 //     experimental-dark, has expired or is not yet approved, or whose
 //     release_id the operator revoked, is withdrawn rather than refused: it is
@@ -173,7 +175,7 @@ func releasedExtractors(ctx context.Context, cfg *config.Config) ([]extract.Extr
 	if err != nil {
 		return nil, err
 	}
-	opts, err := releaseLoadBindings(ctx)
+	opts, err := releaseLoadBindings(ctx, cfg.ReleaseSelection.ArtifactsPath)
 	if err != nil {
 		return nil, fmt.Errorf("pack release selection bindings: %w", err)
 	}

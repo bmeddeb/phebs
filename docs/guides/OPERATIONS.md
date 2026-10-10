@@ -3624,12 +3624,16 @@ recipe, and a released pack replaces the experimental-dark extractor for its
 own domain rather than widening any other domain's registration.
 
 **Current posture.** This gate ships dark. No pack recipe is bound in this
-binary, and this build cannot yet bind a released record to its own binary,
-toolchain, and referenced artifacts. Any governing `released` record therefore
-refuses startup with an unresolved-reference cause until the owning epic
-supplies both its recipe and its first passing quality and operating record.
+binary, so a verified released record still refuses startup for its missing
+recipe. The load bindings themselves are no longer the missing half: at the
+same admitted boundary startup derives the running implementation identity
+(exact source commit, executable, toolchain, and in-tree pack-recipe-registry
+digests) and censuses `artifacts_path` for the referenced-artifacts root and
+resolver, so a governing `released` record must name exactly those values or
+it refuses startup with an unresolved-reference or digest-mismatch cause.
 Suspension, revocation, expiry, and withdrawal are implemented and observable
-today; admission is not yet reachable.
+today; admission activates once the owning epic supplies a pack's fixed recipe
+and its first passing quality and operating record.
 
 ### Source-free service-directory walkthrough
 

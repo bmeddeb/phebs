@@ -45,11 +45,12 @@ func (r releaseArtifacts) Resolve(_ context.Context, id string) (string, bool, e
 }
 
 // bindReleaseLoad makes releaseLoadBindings supply exactly the implementation,
-// artifact root and artifacts the record names, for the rest of the test.
+// artifact root and artifacts the record names, for the rest of the test,
+// whatever artifact directory the caller passes.
 func bindReleaseLoad(t *testing.T, release *packrelease.PackRelease) {
 	t.Helper()
 	restore := releaseLoadBindings
-	releaseLoadBindings = func(context.Context) (packrelease.Options, error) {
+	releaseLoadBindings = func(context.Context, string) (packrelease.Options, error) {
 		implementation := release.Implementation
 		return packrelease.Options{
 			Implementation:                &implementation,
@@ -128,8 +129,9 @@ func TestReleasedExtractorsRefusesWithoutLoadBindings(t *testing.T) {
 	cfg.ReleaseSelection.Path = dir
 	cfg.ReleaseSelection.Keys = []config.ReleaseKey{{ID: "key-1", PublicKey: public}}
 
-	// releaseLoadBindings ships unset, so a governing released record cannot be
-	// bound to this binary and must refuse startup.
+	// With no artifacts directory configured the production bindings are
+	// unbound, so a governing released record cannot be bound to this binary and
+	// must refuse startup.
 	_, err := releasedExtractors(context.Background(), cfg)
 	if reason, _ := packrelease.ReasonOf(err); reason != packrelease.ReasonUnresolvedReference {
 		t.Fatalf("reason = %q (%v), want %q", reason, err, packrelease.ReasonUnresolvedReference)
