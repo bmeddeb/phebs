@@ -575,24 +575,42 @@ implemented and dark, not absent.
 
 ### Caller Map activation and recipe admission (T47.3)
 
-Caller Map has its own stable ordinary configuration. Its recipe identity is
-`phebs.grpc.caller.go` ("Exact Go gRPC callers" in
-[PROTO_GRPC_PACK_CARDS.md](../PROTO_GRPC_PACK_CARDS.md)): the frozen T47.2a
-Go / gRPC-Protobuf caller tuple, extractor `grpc-caller` 1.5.0, schema
-`t20-caller-v1`. The recipe's fixed in-tree extractor set carries protobuf
-declaration discovery with the caller extractor, because resolved callers are
-attributed through repository-committed declaration lineage; a released
-Caller Map therefore does not depend on the experimental protobuf umbrella
-being switched on.
+Caller Map's ordinary configuration is a signed `release_selection` record for
+its recipe identity `phebs.grpc.caller.go` ("Exact Go gRPC callers" in
+[PROTO_GRPC_PACK_CARDS.md](../PROTO_GRPC_PACK_CARDS.md)); it has no separate
+configuration key. The recipe is the frozen T47.2a Go / gRPC-Protobuf caller
+tuple, extractor `grpc-caller` 1.5.0, schema `t20-caller-v1`. Its fixed in-tree
+extractor set carries protobuf declaration discovery with the caller
+extractor, because resolved callers are attributed through
+repository-committed declaration lineage, so a released Caller Map does not
+depend on the experimental protobuf umbrella being switched on.
 
 Activation follows the exact registered extractor set, never a request or a
 query: Caller Map is enabled exactly when at least one caller-adapter domain
 is registered, whether admitted through the experimental-dark switches or
-through a verified signed record under `release_selection`. Enabling Caller
-Map enables only Caller Map — Thrift-field extraction, Kafka evidence,
-Impact, and caller comparison each keep their own admission, comparison
-never follows Caller Map's ordinary activation, and
-[Epic 50](../BACKLOG.md) owns comparison's production promotion.
+through a verified signed record under `release_selection`. This supersedes
+the T48.4b startup-matrix statement that Caller Map discovery needs a
+provisional switch.
+
+What a released Caller Map serves, and what it does not:
+
+- **Caller Map** and the **Contract Atlas** discovery it is selected through
+  (`contract-caller-map`, `contract-atlas`, and the MCP operation-search and
+  caller tools). The Atlas surface is not yet narrowed to the operations
+  Caller Map needs: a released Caller Map exposes the whole declaration
+  catalog its declaration extractor produces. Narrowing it to the necessary
+  discovery subset is owned by Epic 49, whose Atlas-wide promotion stays
+  independent.
+- **Not** the experimental evidence products. Proof bundles, Contract Impact,
+  Thrift-field references, Kafka topic usage and compatibility are served
+  only while a provisional extraction switch is on, because those switches
+  are their only admission.
+- **Not** caller comparison. Comparison is admitted only by the protobuf or
+  Thrift provisional switch, and never by Caller Map's activation. Once
+  admitted, it compares whichever caller adapters are registered, so either
+  switch beside a released Caller Map also compares the released gRPC
+  callers. [Epic 50](../BACKLOG.md) owns comparison's production promotion
+  and any narrowing.
 
 The compatibility decision for existing configuration is that nothing is
 silently reinterpreted as released authority:
@@ -603,6 +621,14 @@ silently reinterpreted as released authority:
   registered, the released recipe replaces the dark registration for that
   domain; no configuration key is renamed, deprecated, or promoted.
 - `release_selection` remains the only path into released admission.
+- Published caller generations are not reinterpreted either. The released
+  recipe reuses the experimental extractors' exact identities, and a caller
+  generation records only extractor domain, version and leaf adapter, never
+  how that extractor was admitted. A generation published under the
+  provisional switches is therefore indistinguishable from a released one.
+  Promotion must not serve it as released evidence: T47.5 either starts from
+  caller generations derived after the release record, or binds admission
+  provenance into the generation identity first.
 
 Ordinary activation is gated in this build: the recipe is compiled but
 deliberately not bound into the in-tree recipe registry until T47.5 signs the
@@ -633,12 +659,12 @@ Steady-state cost: zero additional work per query, request, sync tick,
 retry/no-op, or publication transition — the extraction, resolver, caller
 and publication services and the exact readers, cursors, citations, and
 source/generation fences are unchanged. Startup and restart add one boolean
-projection of the already-constructed registry and one closed OR of two
-existing configuration booleans: no new lock, no cache-invalidation path,
-no file read, hashing, child process, or bounded memory and disk cost.
-Activation remains gated until T47.5 promotion, with the T47.4 operating
-acceptance separate.
-
+projection of the already-constructed registry, one closed OR of two
+existing configuration booleans for comparison, and one closed OR of the four
+provisional switches for the proof service: no new lock, no
+cache-invalidation path, no file read, hashing, child process, or bounded
+memory and disk cost. Activation remains gated until T47.5 promotion, with
+the T47.4 operating acceptance separate.
 
 ### Authentication
 

@@ -19,6 +19,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/auth"
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/codenav"
+	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/extract"
 	"github.com/bmeddeb/phebs/internal/lifecycle"
 	phebsmcp "github.com/bmeddeb/phebs/internal/mcp"
@@ -176,6 +177,22 @@ func openServeSearcher(d *serveDeps) error {
 	return nil
 }
 
+// experimentalProofBundles returns the proof-bundle store only while a
+// provisional extraction switch is on. The proof service behind it serves the
+// experimental evidence products (proof bundles, Contract Impact, Thrift-field
+// references, Kafka topic usage and compatibility) on HTTP and MCP, and those
+// switches are their only admission. A released recipe admits its own product
+// and never these, so a released Caller Map alone leaves them dark. Without a
+// released pack this is exactly the store the extraction pipeline installed.
+func experimentalProofBundles(cfg *config.Config, proofBundles store.ProofBundleStore) store.ProofBundleStore {
+	experimental := cfg.Experimental
+	if experimental.ProvisionalProtoExtraction || experimental.ProvisionalThriftExtraction ||
+		experimental.ProvisionalThriftFieldExtraction || experimental.ProvisionalKafkaExtraction {
+		return proofBundles
+	}
+	return nil
+}
+
 // newServeAPIOptions assembles the API options: search/code-navigation
 // services, fixture bindings, and catalog/caller/relationship services.
 func newServeAPIOptions(d *serveDeps) (api.Options, error) {
@@ -217,7 +234,7 @@ func newServeAPIOptions(d *serveDeps) (api.Options, error) {
 			return ok && principal.IsAdmin
 		},
 		AuditRecord: d.auditRecord, AuditLog: st, Analytics: st,
-		Evidence: d.evidenceView, ProofBundles: d.proofBundles,
+		Evidence: d.evidenceView, ProofBundles: experimentalProofBundles(cfg, d.proofBundles),
 		CallerMapEnabled: d.callerRegistry.Enabled(),
 		CallerComparisonEnabled: cfg.Experimental.ProvisionalProtoExtraction ||
 			cfg.Experimental.ProvisionalThriftExtraction,
@@ -326,10 +343,10 @@ func newServeFinalAuthorityReads(d *serveDeps) (t421ExactFinalAuthorityRead, t42
 	return finalAuthority, tailReadiness, nil
 }
 
-// newServeHTTPHandlers assembles the API, MCP, and UI handlers into the final
-// HTTP handler chain.
-func newServeHTTPHandlers(d *serveDeps, apiOpts api.Options, finalAuthority, tailReadiness t421ExactFinalAuthorityRead) (http.Handler, error) {
-	apiHandler := api.New(apiOpts)
+// newServeMCPServer assembles the read-only MCP tool registry from the API
+// options, so MCP advertises exactly the proof, compatibility, Contract Atlas,
+// Caller Map and comparison services the API constructed.
+func newServeMCPServer(d *serveDeps, apiOpts api.Options) *mcpsdk.Server {
 	var mcpProofs phebsmcp.ProofQueries
 	var mcpCompatibility phebsmcp.CompatibilityQueries
 	if proofService := api.NewProofService(apiOpts); proofService != nil {
@@ -355,7 +372,14 @@ func newServeHTTPHandlers(d *serveDeps, apiOpts api.Options, finalAuthority, tai
 		ObservationProgress: apiOpts.ObservationProgress,
 		Relationships:       apiOpts.Relationships,
 	}
-	mcpServer := phebsmcp.NewServer(mcpOpts)
+	return phebsmcp.NewServer(mcpOpts)
+}
+
+// newServeHTTPHandlers assembles the API, MCP, and UI handlers into the final
+// HTTP handler chain.
+func newServeHTTPHandlers(d *serveDeps, apiOpts api.Options, finalAuthority, tailReadiness t421ExactFinalAuthorityRead) (http.Handler, error) {
+	apiHandler := api.New(apiOpts)
+	mcpServer := newServeMCPServer(d, apiOpts)
 	// Stateless (T10.3): in stateful mode every tool call runs with the
 	// session INITIATOR's context, so one user's session smears their
 	// permissions onto whoever posts to it (the SDK's hijack guard is inert

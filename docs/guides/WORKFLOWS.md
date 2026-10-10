@@ -161,9 +161,12 @@ domain is registered, whether through the experimental-dark switches or
 through a verified released recipe admitted by `release_selection`. The frozen
 T47.2a Go/gRPC recipe `phebs.grpc.caller.go` carries its protobuf declaration
 discovery with the caller extractor, so a released Caller Map never depends
-on the experimental protobuf umbrella being switched on, and enabling Caller
-Map enables only Caller Map — Thrift-field extraction, Kafka evidence, Impact,
-and caller comparison keep their own admission and comparison never follows.
+on the experimental protobuf umbrella being switched on. A released Caller Map
+serves Caller Map and the Contract Atlas discovery it is selected through;
+proof bundles, Contract Impact, Thrift-field references, Kafka topic usage and
+caller comparison stay admitted only by the provisional switches, and
+promotion must not serve caller generations published under those switches as
+released evidence.
 In this build the recipe is compiled but deliberately not bound for ordinary
 activation until T47.5 signs its first caller-specific record and binds it in
 the same change, so a configured selection naming it refuses startup as an

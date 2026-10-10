@@ -17011,9 +17011,8 @@ a caller-adapter domain admitted either by the experimental switches or by a
 released recipe enables the surface — and a separate
 `CallerComparisonEnabled` means exactly
 `experimental.provisional_proto_extraction ||
-experimental.provisional_thrift_extraction`, never Caller Map's activation, so
-enabling Caller Map enables only Caller Map and Epic 50 owns comparison's
-production promotion. The frozen `phebs.grpc.caller.go` recipe
+experimental.provisional_thrift_extraction`, never Caller Map's activation,
+and Epic 50 owns comparison's production promotion. The frozen `phebs.grpc.caller.go` recipe
 (`callerMapRecipe()`: the `proto-contract` 3.0.0 declaration extractor beside
 `grpc-caller` 1.5.0) carries the necessary declaration discovery with the
 caller extractor and stays deliberately unbound from `packRecipes`: activation
@@ -17028,7 +17027,20 @@ rollback/revalidation reuse the release lifecycle: `release_selection.revoked`,
 suspension or expiry withdraw the pack with the bounded `pack_id=cause`
 startup log line, restart revalidates, no older record replaces a withdrawn
 one, and the dark path stays. Missing, stale and failed input keeps its
-visibly unavailable read states. T47.4 operating acceptance and T47.5
+visibly unavailable read states. Review correction: independent review of
+`9b0c0bef` found that a released Caller Map alone would also have served the
+proof service (proof bundles, Contract Impact, Thrift-field references, Kafka
+topic usage and compatibility); `newServeAPIOptions` now passes the
+proof-bundle store only while a provisional extraction switch is on, so a
+released Caller Map serves Caller Map and the Contract Atlas discovery it is
+selected through and nothing else. The Atlas surface is not yet narrowed to
+Caller Map's operations (Epic 49), admitted comparison compares every
+registered caller adapter including a released one (Epic 50), and caller
+generations published under the provisional switches are indistinguishable
+from released ones, so T47.5 must not serve them as released evidence. This
+supersedes T48.4b's statement that Caller Map discovery needs a provisional
+switch. `TestCallerMapOrdinarySurfaceFollowsProductionAssembly` now drives the
+production API and MCP assembly. T47.4 operating acceptance and T47.5
 promotion remain separate.*
 
 **T47.4 · Current-host operating, security and lifecycle acceptance** *(needs
@@ -17061,7 +17073,11 @@ rewriting historical records or releasing another pack. Ordinary startup and
 the authenticated discovery-to-Caller-Map-to-citation UI/API/MCP flow are
 demoable with real source via `make dev`; supported and unsupported states,
 configuration, operations, bounded limits and suspension behavior agree across
-guides and surfaces. Any change to UI or DESIGN_CHARTER requires Ben's routed
+guides and surfaces. Caller generations published under the provisional
+switches are never served as released evidence: promotion starts from
+generations derived after the release record, or first binds admission
+provenance into the caller generation identity *(T47.3 review, 2026-10-09)*.
+Any change to UI or DESIGN_CHARTER requires Ben's routed
 presentation handoff; backend planning does not cross that boundary. Preserve
 large-monorepo and separate pilot/SCIP-evidence gates. Integrating a passing
 ticket still requires Ben's explicit merge request; no merge or current

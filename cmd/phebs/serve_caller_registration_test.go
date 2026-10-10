@@ -2,11 +2,20 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
+	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
+
+	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/callerexecute"
 	"github.com/bmeddeb/phebs/internal/config"
+	"github.com/bmeddeb/phebs/internal/extract"
 )
 
 // TestCallerMapPackIdentityAndRecipeFrozen pins the exact T47.2a frozen tuple:
@@ -121,29 +130,49 @@ func TestCallerMapRegistrationFollowsExtractorSet(t *testing.T) {
 	}
 }
 
+// releasedRecipeMark wraps a recipe extractor so a test can tell the released
+// instance from the dark one: callerMapRecipe deliberately reuses the dark
+// constructors, so both report the identical domain@version.
+type releasedRecipeMark struct{ extract.Extractor }
+
 // TestMergeExtractorsCallerMapRecipeGovernsMixedProvenance proves the
 // mixed-provenance answer for the T48.4b finding: when the experimental
 // protobuf umbrella and the released caller-map recipe both name the
-// declaration and caller domains, the released recipe governs and the merged
-// set carries exactly one extractor per domain. A single caller adapter means a
-// single expected pair per candidate leaf: no duplicate generation identity and
-// no mixed dark/released evidence plane.
+// declaration and caller domains, the released instances govern both domains
+// and the merged set carries exactly one extractor per domain, so the caller
+// registry holds a single adapter. The plane is still mixed for every other
+// domain the umbrella admits: grpc-consumer and scip-proto-field stay
+// experimental-dark beside the released pair.
 func TestMergeExtractorsCallerMapRecipeGovernsMixedProvenance(t *testing.T) {
-	dark := evidenceExtractors(true, false, false, false)
-	merged := mergeExtractors(dark, callerMapRecipe())
+	recipe := callerMapRecipe()
+	marked := make([]extract.Extractor, 0, len(recipe))
+	for _, extractor := range recipe {
+		marked = append(marked, releasedRecipeMark{extractor})
+	}
+	merged := mergeExtractors(evidenceExtractors(true, false, false, false), marked)
 	counts := map[string]int{}
-	versions := map[string]string{}
+	released := map[string]bool{}
 	for _, extractor := range merged {
 		counts[extractor.Domain()]++
-		versions[extractor.Domain()] = extractor.Version()
+		_, isReleased := extractor.(releasedRecipeMark)
+		released[extractor.Domain()] = isReleased
 	}
-	if counts["proto-contract"] != 1 || versions["proto-contract"] != "3.0.0" {
-		t.Fatalf("proto-contract = %d at %q, want exactly one at 3.0.0 (merged %v)",
-			counts["proto-contract"], versions["proto-contract"], merged)
+	for _, test := range []struct {
+		domain   string
+		released bool
+	}{
+		{"proto-contract", true},
+		{"grpc-caller", true},
+		{"grpc-consumer", false},
+		{"scip-proto-field", false},
+	} {
+		if counts[test.domain] != 1 || released[test.domain] != test.released {
+			t.Fatalf("%s: count %d released %v, want exactly one with released %v (merged %v)",
+				test.domain, counts[test.domain], released[test.domain], test.released, merged)
+		}
 	}
-	if counts["grpc-caller"] != 1 || versions["grpc-caller"] != "1.5.0" {
-		t.Fatalf("grpc-caller = %d at %q, want exactly one at 1.5.0 (merged %v)",
-			counts["grpc-caller"], versions["grpc-caller"], merged)
+	if len(merged) != len(counts) {
+		t.Fatalf("merged set has %d extractors over %d domains, want one per domain", len(merged), len(counts))
 	}
 	registry, err := callerexecute.NewRegistry(merged)
 	if err != nil {
@@ -154,5 +183,188 @@ func TestMergeExtractorsCallerMapRecipeGovernsMixedProvenance(t *testing.T) {
 		Domain: "grpc-caller", Version: "1.5.0", Protocol: "grpc",
 	}) {
 		t.Fatalf("mixed adapters = %+v, want exactly grpc-caller@1.5.0/grpc", adapters)
+	}
+}
+
+// servedCallerSurfaces is what one admitted startup serves: the sorted
+// /api/version capabilities and whether MCP lists the Caller Map, comparison
+// and proof tools.
+type servedCallerSurfaces struct {
+	capabilities      []string
+	callerMapTool     bool
+	comparisonTool    bool
+	proofTool         bool
+	callerMapEnabled  bool
+	callerMapServiced bool
+}
+
+// serveCallerSurfaces drives one startup through the production assembly and
+// reports what it serves: newServeExtractionRegistries admits the extractor
+// set, bindServeCallerReader binds the caller publication reader,
+// newServeAPIOptions assembles the API options, api.New serves /api/version,
+// and newServeMCPServer builds the MCP tool registry from those same options.
+// The store is never opened: a nil *store.Surreal stands in for it, so every
+// presence check sees a store and nothing on this path reads it. Two
+// stand-ins remain, each named where it is set.
+func serveCallerSurfaces(t *testing.T, cfg *config.Config) servedCallerSurfaces {
+	t.Helper()
+	t.Setenv("PHEBS_CONTRACT_ATLAS_FIXTURE", "")
+	deps := &serveDeps{ctx: context.Background(), cfg: cfg}
+	if err := newServeExtractionRegistries(deps); err != nil {
+		t.Fatalf("newServeExtractionRegistries: %v", err)
+	}
+	if err := bindServeCallerReader(deps); err != nil {
+		t.Fatalf("bindServeCallerReader: %v", err)
+	}
+	// startServeExtractionPipeline installs the store as both the evidence
+	// view and the proof-bundle store whenever any extractor is admitted; it
+	// also starts workers, so it is not run here.
+	if len(deps.exs) > 0 {
+		deps.evidenceView, deps.proofBundles = deps.st, deps.st
+	}
+	apiOpts, err := newServeAPIOptions(deps)
+	if err != nil {
+		t.Fatalf("newServeAPIOptions: %v", err)
+	}
+	served := servedCallerSurfaces{
+		callerMapEnabled:  apiOpts.CallerMapEnabled,
+		callerMapServiced: apiOpts.CallerMap != nil,
+	}
+
+	// /api/version lists capabilities only to an authenticated caller, whose
+	// principal only the auth middleware can establish; that caller is stood
+	// in for. No service constructor reads the principal's value.
+	versionOpts := apiOpts
+	versionOpts.Principal = func(context.Context) string { return "user:t47.3" }
+	recorder := httptest.NewRecorder()
+	api.New(versionOpts).ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/api/version", nil))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("GET /api/version = %d: %s", recorder.Code, recorder.Body)
+	}
+	var version struct {
+		Capabilities []string `json:"capabilities"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &version); err != nil {
+		t.Fatalf("decode /api/version: %v", err)
+	}
+	served.capabilities = append([]string{}, version.Capabilities...)
+	slices.Sort(served.capabilities)
+
+	serverTransport, clientTransport := mcpsdk.NewInMemoryTransports()
+	server := newServeMCPServer(deps, apiOpts)
+	go func() {
+		_, _ = server.Connect(t.Context(), serverTransport, nil)
+	}()
+	client := mcpsdk.NewClient(&mcpsdk.Implementation{Name: "t47.3-surfaces", Version: "1"}, nil)
+	session, err := client.Connect(t.Context(), clientTransport, nil)
+	if err != nil {
+		t.Fatalf("connect MCP client: %v", err)
+	}
+	defer func() { _ = session.Close() }()
+	listed, err := session.ListTools(t.Context(), nil)
+	if err != nil {
+		t.Fatalf("list MCP tools: %v", err)
+	}
+	for _, tool := range listed.Tools {
+		switch tool.Name {
+		case "list_operation_callers":
+			served.callerMapTool = true
+		case "compare_operation_callers":
+			served.comparisonTool = true
+		case "find_operation_consumers":
+			served.proofTool = true
+		}
+	}
+	return served
+}
+
+// TestCallerMapOrdinarySurfaceFollowsProductionAssembly pins what an ordinary
+// startup serves, through the production assembly, for the experimental-dark
+// baselines and for the released Caller Map recipe. The recipe is bound only
+// inside the released cases, the way T47.5 will bind it. A released Caller
+// Map alone serves Caller Map and the Contract Atlas discovery it is selected
+// through. Proof bundles, Contract Impact, Thrift-field references and Kafka
+// topic usage (the proof service), and caller comparison, stay admitted only by
+// the experimental switches.
+func TestCallerMapOrdinarySurfaceFollowsProductionAssembly(t *testing.T) {
+	everyProduct := []string{
+		"contract-atlas", "contract-caller-comparison", "contract-caller-map",
+		"contract-impact-report", "kafka-topic-usage", "service-catalog-v2",
+	}
+	tests := []struct {
+		name      string
+		released  bool
+		configure func(*config.Config)
+		want      servedCallerSurfaces
+	}{
+		{
+			name:      "every switch off and no selection",
+			configure: func(*config.Config) {},
+			want:      servedCallerSurfaces{capabilities: []string{"service-catalog-v2"}},
+		},
+		{
+			name:      "the proto switch alone keeps its experimental surface",
+			configure: func(cfg *config.Config) { cfg.Experimental.ProvisionalProtoExtraction = true },
+			want: servedCallerSurfaces{
+				capabilities:  everyProduct,
+				callerMapTool: true, comparisonTool: true, proofTool: true,
+				callerMapEnabled: true, callerMapServiced: true,
+			},
+		},
+		{
+			name:      "the kafka switch alone serves no Caller Map",
+			configure: func(cfg *config.Config) { cfg.Experimental.ProvisionalKafkaExtraction = true },
+			want: servedCallerSurfaces{
+				capabilities: []string{
+					"contract-atlas", "contract-impact-report", "kafka-topic-usage", "service-catalog-v2",
+				},
+				proofTool: true,
+			},
+		},
+		{
+			name:      "a released Caller Map alone serves only Caller Map and its discovery",
+			released:  true,
+			configure: func(*config.Config) {},
+			want: servedCallerSurfaces{
+				capabilities:  []string{"contract-atlas", "contract-caller-map", "service-catalog-v2"},
+				callerMapTool: true, callerMapEnabled: true, callerMapServiced: true,
+			},
+		},
+		{
+			// Comparison follows the experimental switches, not the protocol of
+			// the caller adapters it reads; Epic 50 owns narrowing it.
+			name:      "a released Caller Map beside the thrift switch",
+			released:  true,
+			configure: func(cfg *config.Config) { cfg.Experimental.ProvisionalThriftExtraction = true },
+			want: servedCallerSurfaces{
+				capabilities:  everyProduct,
+				callerMapTool: true, comparisonTool: true, proofTool: true,
+				callerMapEnabled: true, callerMapServiced: true,
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cfg := &config.Config{}
+			cfg.Server.DataDir = t.TempDir()
+			test.configure(cfg)
+			if test.released {
+				restore := packRecipes
+				packRecipes = map[string]func() []extract.Extractor{callerMapPackID: callerMapRecipe}
+				t.Cleanup(func() { packRecipes = restore })
+				dir := t.TempDir()
+				public, release := writeReleasedRecord(t, dir, callerMapPackID, "key-1")
+				bindReleaseLoad(t, release)
+				cfg.ReleaseSelection.Path = dir
+				cfg.ReleaseSelection.Keys = []config.ReleaseKey{{ID: "key-1", PublicKey: public}}
+			}
+			got := serveCallerSurfaces(t, cfg)
+			if !slices.Equal(got.capabilities, test.want.capabilities) {
+				t.Fatalf("/api/version capabilities = %v, want %v", got.capabilities, test.want.capabilities)
+			}
+			if !reflect.DeepEqual(got, test.want) {
+				t.Fatalf("served = %+v, want %+v", got, test.want)
+			}
+		})
 	}
 }
