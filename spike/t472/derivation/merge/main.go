@@ -22,6 +22,12 @@
 //   - Documents are emitted sorted by relative path, duplicates refused;
 //     external symbols are dropped and counted (the pinned recipe passes
 //     --skip-implementations, so zero are expected).
+//   - Every document path is validated against the pinned Git tree in
+//     --clone: only regular files (100644/100755) are admissible documents.
+//     A document at a committed symlink path (120000) is a nonregular alias
+//     document: it is dropped and inventoried in the report with its path,
+//     mode and target. A document path absent from the tree, at a gitlink
+//     (160000), or at any other mode is refused.
 //   - The report counts references named with an in-repo symbol's
 //     version-less identity but a different module version: gocaller binds
 //     by exact symbol string, so those references cannot join.
@@ -40,6 +46,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path"
 	"sort"
 	"strings"
@@ -105,19 +112,21 @@ type runStats struct {
 }
 
 type report struct {
-	Repo                   string     `json:"repo"`
-	Pin                    string     `json:"pin"`
-	Docs                   int        `json:"docs"`
-	OutOfTreeDropped       int        `json:"out_of_tree_dropped"`
-	OutOfTreeTestmain      int        `json:"out_of_tree_testmain"`
-	Occurrences            int64      `json:"occurrences"`
-	Symbols                int64      `json:"symbols"`
-	ExternalSymbolsDropped int        `json:"external_symbols_dropped"`
-	RoundTripUnstableDocs  int        `json:"round_trip_unstable_docs"`
-	VersionSkewReferences  int        `json:"version_skew_references"`
-	VersionSkewSample      []string   `json:"version_skew_sample"`
-	Bytes                  int64      `json:"bytes"`
-	Runs                   []runStats `json:"runs"`
+	Repo                   string          `json:"repo"`
+	Pin                    string          `json:"pin"`
+	Docs                   int             `json:"docs"`
+	OutOfTreeDropped       int             `json:"out_of_tree_dropped"`
+	OutOfTreeTestmain      int             `json:"out_of_tree_testmain"`
+	AliasDocumentsDropped  int             `json:"alias_documents_dropped"`
+	AliasDocuments         []aliasDocument `json:"alias_documents"`
+	Occurrences            int64           `json:"occurrences"`
+	Symbols                int64           `json:"symbols"`
+	ExternalSymbolsDropped int             `json:"external_symbols_dropped"`
+	RoundTripUnstableDocs  int             `json:"round_trip_unstable_docs"`
+	VersionSkewReferences  int             `json:"version_skew_references"`
+	VersionSkewSample      []string        `json:"version_skew_sample"`
+	Bytes                  int64           `json:"bytes"`
+	Runs                   []runStats      `json:"runs"`
 }
 
 // readUvarint reads one unsigned varint with a bounded number of bytes.
@@ -333,6 +342,95 @@ func checkDocumentPaths(docs []*scip.Document) error {
 	return nil
 }
 
+// treeEntry is one non-directory entry of the pinned Git tree.
+type treeEntry struct {
+	mode string
+	sha  string
+}
+
+// aliasDocument inventories one dropped nonregular alias document: a
+// committed symlink path that scip-go followed. Path, mode and target are
+// read from the pinned tree itself, never guessed.
+type aliasDocument struct {
+	Path   string `json:"path"`
+	Mode   string `json:"mode"`
+	Target string `json:"target"`
+
+	sha string
+}
+
+// loadTree lists every non-directory entry of the pinned tree of the clone:
+// one "MODE TYPE SHA\tPATH" record per entry. Documents are classified by
+// Git mode; symlink targets are resolved by blob id later, and only for the
+// aliases actually dropped.
+func loadTree(clone, commit string) (map[string]treeEntry, error) {
+	cmd := exec.Command("git", "ls-tree", "-r", "-z", "--full-tree", commit)
+	cmd.Dir = clone
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("git ls-tree %s: %w", commit, err)
+	}
+	tree := make(map[string]treeEntry)
+	for _, record := range strings.Split(string(out), "\x00") {
+		if record == "" {
+			continue
+		}
+		meta, filePath, ok := strings.Cut(record, "\t")
+		if !ok {
+			return nil, fmt.Errorf("unrecognized tree record %q", record)
+		}
+		fields := strings.Fields(meta)
+		if len(fields) != 3 {
+			return nil, fmt.Errorf("unrecognized tree record metadata %q", meta)
+		}
+		if _, dup := tree[filePath]; dup {
+			return nil, fmt.Errorf("duplicate tree path %q", filePath)
+		}
+		tree[filePath] = treeEntry{mode: fields[0], sha: fields[2]}
+	}
+	return tree, nil
+}
+
+// classifyDocuments checks every document path against the pinned tree. A
+// regular file (100644/100755) is kept; a committed symlink (120000) is a
+// nonregular alias document, dropped and inventoried; a path absent from the
+// tree, a gitlink (160000), or any other mode is a refusal: the corpus may
+// only contain documents whose exact regular path is committed at the pin.
+func classifyDocuments(docs []*scip.Document, tree map[string]treeEntry) ([]*scip.Document, []aliasDocument, error) {
+	kept := make([]*scip.Document, 0, len(docs))
+	aliases := []aliasDocument{}
+	for _, d := range docs {
+		entry, ok := tree[d.RelativePath]
+		if !ok {
+			return nil, nil, fmt.Errorf("document %q is absent from the pinned tree", d.RelativePath)
+		}
+		switch entry.mode {
+		case "100644", "100755":
+			kept = append(kept, d)
+		case "120000":
+			aliases = append(aliases, aliasDocument{Path: d.RelativePath, Mode: entry.mode, sha: entry.sha})
+		default:
+			return nil, nil, fmt.Errorf("document %q has nonregular tree mode %s", d.RelativePath, entry.mode)
+		}
+	}
+	return kept, aliases, nil
+}
+
+// resolveAliasTargets reads the symlink target of each dropped alias from the
+// clone; the number of reads is bounded by the alias inventory.
+func resolveAliasTargets(clone string, aliases []aliasDocument) error {
+	for i := range aliases {
+		cmd := exec.Command("git", "cat-file", "blob", aliases[i].sha)
+		cmd.Dir = clone
+		out, err := cmd.Output()
+		if err != nil {
+			return fmt.Errorf("git cat-file blob %s (%s): %w", aliases[i].sha, aliases[i].Path, err)
+		}
+		aliases[i].Target = string(out)
+	}
+	return nil
+}
+
 func statsOnly(file string) error {
 	f, err := os.Open(file)
 	if err != nil {
@@ -409,13 +507,14 @@ func statsOnly(file string) error {
 
 func main() {
 	var runs multiFlag
-	var repo, remote, pin, out string
+	var repo, remote, pin, out, clone string
 	var maxBytes int64
 	var statsFile string
 	flag.StringVar(&repo, "repo", "", "repository name (e.g. containerd)")
 	flag.StringVar(&remote, "remote", "", "repository remote (e.g. github.com/containerd/containerd)")
 	flag.StringVar(&pin, "pin", "", "pinned commit (full or 12-hex prefix)")
 	flag.StringVar(&out, "out", "", "output path for the merged index.scip")
+	flag.StringVar(&clone, "clone", "", "clone of the repository at --pin; every document path is validated against its pinned tree")
 	flag.StringVar(&statsFile, "stats", "", "inspect one scip-go output file and exit")
 	flag.Int64Var(&maxBytes, "max-bytes", base2Bytes, "refuse output larger than this many bytes")
 	flag.Var(&runs, "run", "RELLPATH=path: one scip-go output per module, in run order; REL is the module dir relative to the repo root (empty for the root module)")
@@ -428,8 +527,8 @@ func main() {
 		}
 		return
 	}
-	if repo == "" || remote == "" || pin == "" || out == "" || len(runs) == 0 {
-		fmt.Fprintln(os.Stderr, "merge: --repo, --remote, --pin, --out, and at least one --run are required")
+	if repo == "" || remote == "" || pin == "" || out == "" || clone == "" || len(runs) == 0 {
+		fmt.Fprintln(os.Stderr, "merge: --repo, --remote, --pin, --out, --clone, and at least one --run are required")
 		os.Exit(2)
 	}
 
@@ -510,6 +609,25 @@ func main() {
 			runRels[i] = "."
 		}
 	}
+
+	tree, err := loadTree(clone, pin)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "merge:", err)
+		os.Exit(1)
+	}
+	kept, aliases, err := classifyDocuments(docs, tree)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "merge:", err)
+		os.Exit(1)
+	}
+	if err := resolveAliasTargets(clone, aliases); err != nil {
+		fmt.Fprintln(os.Stderr, "merge:", err)
+		os.Exit(1)
+	}
+	sort.Slice(aliases, func(i, j int) bool { return aliases[i].Path < aliases[j].Path })
+	rep.AliasDocumentsDropped = len(aliases)
+	rep.AliasDocuments = aliases
+	docs = kept
 	rep.VersionSkewReferences, rep.VersionSkewSample = versionSkew(docs)
 
 	tmp := out + ".tmp"

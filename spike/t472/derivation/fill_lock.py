@@ -3,6 +3,9 @@
 
 This records derivation only. It creates no labels, prediction, score or seal.
 The earlier admitted measurements and recipe remain beside the corrected run.
+A receipt may name the repositories it covers (run-receipt.json
+"repositories"); only those records change, and each updated record keeps its
+whole previous input as previous_derived, chained across successive runs.
 """
 import copy
 import json
@@ -14,13 +17,19 @@ DER = Path(os.environ.get("T472_ROOT", "/home/ben/phebs-rehearsals/t472-derivati
 LOCK = HERE.parent / "corpus.lock.json"
 
 
-def update_lock(lock, facts, receipt):
+def update_lock(lock, facts, receipt, repos=None):
     out = copy.deepcopy(lock)
     admitted = [r for r in out["repos"] if r["derived"]["corpus_admitted"]]
-    if set(facts) != {r["name"].split("/")[1] for r in admitted}:
-        raise ValueError("facts must cover exactly the admitted repositories")
+    shorts = {r["name"].split("/")[1] for r in admitted}
+    selected = shorts if repos is None else set(repos)
+    if not selected <= shorts:
+        raise ValueError("repos must name admitted repositories")
+    if set(facts) != selected:
+        raise ValueError("facts must cover exactly the selected repositories")
     for repo in admitted:
         short = repo["name"].split("/")[1]
+        if short not in selected:
+            continue
         f = facts[short]
         if f["pin"] != repo["commit"] or f["derived_parents"] != [repo["commit"]]:
             raise ValueError(short + ": wrong pin or derived parents")
@@ -32,7 +41,7 @@ def update_lock(lock, facts, receipt):
         if s["regular_files"] + 3 > 200_000 or s["max_blob_bytes"] > 10 << 20:
             raise ValueError(short + ": source exceeds frozen bound")
         old = repo["derived"]
-        previous = old.get("previous_derived", copy.deepcopy(old))
+        previous = copy.deepcopy(old)
         old.update({
             "derived_utc": receipt["executed_utc"],
             "derived_commit": f["derived_commit"],
@@ -46,6 +55,8 @@ def update_lock(lock, facts, receipt):
             "out_of_tree_build_cache_documents_dropped": m["out_of_tree_dropped"],
             "out_of_tree_testmain_documents": m["out_of_tree_testmain"],
             "out_of_tree_other_documents": m["out_of_tree_other"],
+            "alias_documents_dropped": m["alias_documents_dropped"],
+            "alias_documents": m["alias_documents"],
             "version_skew_references": m["version_skew_references"],
             "version_skew_sample": m["version_skew_sample"],
             "external_symbols_dropped": m["external_symbols_dropped"],
@@ -65,6 +76,9 @@ def update_lock(lock, facts, receipt):
         old["bounds"]["index_scip_bytes"].update(measured=m["bytes"], within=True)
         old["previous_derived"] = previous
     der = out["derivation"]
+    der["previous_runs"] = der.get("previous_runs", [])
+    if "corrected_run" in der:
+        der["previous_runs"].append(der["corrected_run"])
     der["corrected_run"] = receipt
     der["admitted_totals"] = {
         "repositories": len(admitted),
@@ -81,9 +95,10 @@ def update_lock(lock, facts, receipt):
 
 
 def main():
+    receipt = json.loads((DER / "run-receipt.json").read_text())
     out = update_lock(json.loads(LOCK.read_text()),
                       json.loads((DER / "derived_facts.json").read_text()),
-                      json.loads((DER / "run-receipt.json").read_text()))
+                      receipt, repos=receipt.get("repositories"))
     temp = LOCK.with_suffix(".json.tmp")
     temp.write_text(json.dumps(out, indent=2, ensure_ascii=False) + "\n")
     temp.replace(LOCK)
