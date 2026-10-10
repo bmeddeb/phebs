@@ -325,7 +325,9 @@ func TestArtifactOpenRefusesFIFOAndSymlink(t *testing.T) {
 			if kind == "fifo" {
 				err = unix.Mkfifo(path, 0o600)
 			} else {
-				err = os.Symlink(filepath.Join(t.TempDir(), "absent"), path)
+				outside := t.TempDir()
+				writeArtifact(t, outside, "target")
+				err = os.Symlink(filepath.Join(outside, "target"), path)
 			}
 			if err != nil {
 				t.Fatal(err)
@@ -334,5 +336,30 @@ func TestArtifactOpenRefusesFIFOAndSymlink(t *testing.T) {
 				t.Fatal("a FIFO or symlink must refuse without being read")
 			}
 		})
+	}
+}
+
+func TestArtifactRefusesSameSizeRewriteWithRestoredMtime(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "artifact")
+	if err := os.WriteFile(path, []byte("old"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = file.Close() }()
+	before, err := file.Stat()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("new"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chtimes(path, before.ModTime(), before.ModTime()); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := hashOpenedArtifact(file, before, maxArtifactTotalBytes); err == nil {
+		t.Fatal("a same-size rewrite with restored mtime must still refuse")
 	}
 }

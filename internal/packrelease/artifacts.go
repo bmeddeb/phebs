@@ -209,5 +209,6 @@ func hashOpenedArtifact(file *os.File, before os.FileInfo, remaining int64) (str
 
 func sameArtifact(before, after os.FileInfo) bool {
 	return os.SameFile(before, after) && before.Mode() == after.Mode() &&
-		before.Size() == after.Size() && before.ModTime().Equal(after.ModTime())
+		before.Size() == after.Size() && before.ModTime().Equal(after.ModTime()) &&
+		artifactChangeTimeEqual(before, after)
 }
