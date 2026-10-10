@@ -322,7 +322,7 @@ func TestEvidencePartitionExecutorKeepsFileLocalProtoAndThriftGapsSettled(t *tes
 	}{
 		{
 			name: "unresolved protobuf declaration", domain: "proto-contract",
-			version: "3.0.0", suffix: ".proto",
+			version: "4.0.0", suffix: ".proto",
 			content: `syntax = "proto3"; message Fixture { Missing value = 1; }` + "\n",
 			marker:  "DECLARATION_NOT_FOUND", extractor: protodecl.New(),
 		},

@@ -53,6 +53,14 @@ type decodedFieldDetail struct {
 	Oneof       string                `json:"oneof"`
 }
 
+type decodedExtensionDetail struct {
+	Schema      string               `json:"schema"`
+	Name        string               `json:"name"`
+	Extendee    decodedTypeReference `json:"extendee"`
+	Type        decodedTypeReference `json:"type"`
+	Cardinality string               `json:"cardinality"`
+}
+
 type memoryCorpus struct {
 	repo, commit string
 	files        map[string]string
@@ -254,7 +262,7 @@ message EmptyMessage {}
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := protodecl.New().Version(), "3.0.0"; got != want {
+	if got, want := protodecl.New().Version(), "4.0.0"; got != want {
 		t.Fatalf("extractor version = %q, want %q", got, want)
 	}
 	for _, fact := range facts {
@@ -736,19 +744,281 @@ func TestDeclaredProtoRoleClassification(t *testing.T) {
 	}
 }
 
-func TestRelativeExtensionFailsClosed(t *testing.T) {
-	for _, extendee := range []string{"Base", ".demo.Base"} {
-		content := `syntax = "proto2"; package demo; message Base { extensions 100 to max; }
-extend ` + extendee + ` { optional string ambiguous = 100; }`
-		_, coverage, err := extractFacts(t, memoryCorpus{
-			repo: "r", commit: "c", files: map[string]string{"extension.proto": content},
+func TestExtensionDeclarationsResolveWithoutExtendeeLineage(t *testing.T) {
+	content := `syntax = "proto2";
+package demo;
+
+enum Kind {
+  KIND_UNSPECIFIED = 0;
+}
+
+message Base {
+  extensions 100 to max;
+  optional string name = 1;
+}
+
+extend Base {
+  optional string relative = 100;
+  optional .demo.Base absolute = 101;
+  optional Kind enumerated = 102;
+  optional int32 scalarish = 103;
+  optional Missing absent = 104;
+  required string mandated = 105;
+  repeated string listed = 106;
+}
+
+message Nested {
+  extend Base {
+    optional string inner = 107;
+    optional string relative = 108;
+  }
+}
+
+extend .demo.Base {
+  optional string extra = 109;
+}
+
+extend Base {
+  optional string relative = 100;
+}
+`
+	facts, _, err := extractFacts(t, memoryCorpus{
+		repo: "r", commit: "c", files: map[string]string{"extension.proto": content},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// No fact may claim an ordinary field slot on an extendee the parser
+	// cannot link; extensions surface only under their own predicate.
+	fieldObjects := map[string]int{}
+	var duplicates []sdk.Fact
+	for _, fact := range facts {
+		switch fact.Assertion.Predicate {
+		case "DECLARES_FIELD":
+			fieldObjects[fact.Assertion.Object]++
+		case "DECLARES_EXTENSION":
+			if fact.Assertion.Object == "demo.relative#100" {
+				duplicates = append(duplicates, fact)
+			}
+		}
+	}
+	if len(fieldObjects) != 1 || fieldObjects["demo.Base#1"] != 1 {
+		t.Fatalf("ordinary field objects = %v, want only demo.Base#1", fieldObjects)
+	}
+
+	extensionDetail := func(object string) decodedExtensionDetail {
+		t.Helper()
+		return decodeDetail[decodedExtensionDetail](
+			t, findPredicateFact(t, facts, "DECLARES_EXTENSION", object),
+		)
+	}
+
+	relative := extensionDetail("demo.relative#100")
+	if relative.Schema != "proto-extension-detail-v1" || relative.Name != "relative" ||
+		relative.Cardinality != "optional" ||
+		relative.Extendee.Raw != "Base" || relative.Extendee.Resolution != "same_file" ||
+		relative.Extendee.Declaration != "demo.Base" ||
+		relative.Type.Raw != "string" || relative.Type.Kind != "scalar" ||
+		relative.Type.Resolution != "intrinsic" {
+		t.Fatalf("relative extension detail = %+v", relative)
+	}
+
+	// A qualified field type stays qualified while the relative extendee
+	// resolves through the declaring package scope.
+	absolute := extensionDetail("demo.absolute#101")
+	if absolute.Type.Raw != ".demo.Base" || absolute.Type.Resolution != "same_file" ||
+		absolute.Type.Declaration != "demo.Base" ||
+		absolute.Extendee.Raw != "Base" || absolute.Extendee.Resolution != "same_file" {
+		t.Fatalf("qualified extension type = %+v", absolute)
+	}
+
+	extra := extensionDetail("demo.extra#109")
+	if extra.Extendee.Raw != ".demo.Base" || extra.Extendee.Resolution != "same_file" ||
+		extra.Extendee.Declaration != "demo.Base" {
+		t.Fatalf("qualified extendee = %+v", extra)
+	}
+
+	enumerated := extensionDetail("demo.enumerated#102")
+	if enumerated.Type.Raw != "Kind" || enumerated.Type.Kind != "enum" ||
+		enumerated.Type.Resolution != "same_file" ||
+		enumerated.Type.Declaration != "demo.Kind" {
+		t.Fatalf("enum-typed extension = %+v", enumerated)
+	}
+
+	if scalarish := extensionDetail("demo.scalarish#103"); scalarish.Type.Raw != "int32" ||
+		scalarish.Type.Resolution != "intrinsic" {
+		t.Fatalf("scalar-typed extension = %+v", scalarish)
+	}
+
+	absent := extensionDetail("demo.absent#104")
+	if absent.Type.Resolution != "unresolved" || absent.Type.Reason != "DECLARATION_NOT_FOUND" {
+		t.Fatalf("absent-typed extension = %+v", absent)
+	}
+
+	if mandated := extensionDetail("demo.mandated#105"); mandated.Cardinality != "required" {
+		t.Fatalf("required extension = %+v", mandated)
+	}
+	if listed := extensionDetail("demo.listed#106"); listed.Cardinality != "repeated" {
+		t.Fatalf("repeated extension = %+v", listed)
+	}
+
+	// A nested extend resolves its extendee from the enclosing message scope.
+	nested := extensionDetail("demo.Nested.inner#107")
+	if nested.Extendee.Raw != "Base" || nested.Extendee.Resolution != "same_file" ||
+		nested.Extendee.Declaration != "demo.Base" {
+		t.Fatalf("nested extension extendee = %+v", nested)
+	}
+	// Same field name in two declaring scopes stays two separable objects.
+	if nestedRelative := extensionDetail("demo.Nested.relative#108"); nestedRelative.Name != "relative" {
+		t.Fatalf("nested same-name extension = %+v", nestedRelative)
+	}
+
+	// A duplicate declaration is emitted, not merged: the same object appears
+	// twice with distinct spans and the same fingerprint.
+	if len(duplicates) != 2 {
+		t.Fatalf("duplicate extension facts = %d, want 2", len(duplicates))
+	}
+	for _, fact := range duplicates {
+		if fact.Atom.FactFingerprint != "DECLARES_EXTENSION|demo.relative#100" ||
+			fact.Atom.RuleID != "proto-extension-v1" || fact.Assertion.Tier != "exact" {
+			t.Fatalf("duplicate extension fact = %+v", fact)
+		}
+		assertFactSpan(t, content, fact, "optional string relative = 100;")
+	}
+	if duplicates[0].Atom.StartByte == duplicates[1].Atom.StartByte {
+		t.Fatal("duplicate declarations collapsed into one span")
+	}
+
+	assertFactSpan(
+		t, content,
+		findPredicateFact(t, facts, "DECLARES_EXTENSION", "demo.Nested.inner#107"),
+		"optional string inner = 107;",
+	)
+
+	if len(facts) != 14 {
+		t.Fatalf("extension fixture emitted %d facts, want 14", len(facts))
+	}
+}
+
+func TestExtensionExtendeeResolutionStates(t *testing.T) {
+	tests := []struct {
+		name, content, raw, resolution, reason string
+	}{
+		{
+			name: "imported extendee", raw: "External", resolution: "unresolved",
+			reason: "IMPORT_LINKING_UNAVAILABLE",
+			content: `syntax = "proto2";
+package demo;
+import "base.proto";
+extend External { optional string x = 1; }`,
+		},
+		{
+			name: "absent extendee", raw: "Absent", resolution: "unresolved",
+			reason: "DECLARATION_NOT_FOUND",
+			content: `syntax = "proto2"; package demo;
+extend Absent { optional string x = 1; }`,
+		},
+		{
+			name: "ambiguous extendee", raw: "Double", resolution: "unresolved",
+			reason: "AMBIGUOUS_SAME_FILE_DECLARATION",
+			content: `syntax = "proto2"; package demo;
+message Double {}
+message Double {}
+extend Double { optional string x = 1; }`,
+		},
+		{
+			name: "non-message extendee", raw: "NotMessage", resolution: "unresolved",
+			reason: "INVALID_DECLARATION_KIND",
+			content: `syntax = "proto2"; package demo;
+enum NotMessage { UNKNOWN = 0; }
+extend NotMessage { optional string x = 1; }`,
+		},
+		{
+			name: "scalar extendee", raw: "int32", resolution: "intrinsic",
+			content: `syntax = "proto2"; package demo;
+extend int32 { optional string x = 1; }`,
+		},
+		{
+			name: "declare-after extendee", raw: "Late", resolution: "same_file",
+			content: `syntax = "proto2"; package demo;
+extend Late { optional string x = 1; }
+message Late {}`,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			facts, _, err := extractFacts(t, memoryCorpus{
+				repo: "r", commit: "c", files: map[string]string{"extendee.proto": test.content},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			detail := decodeDetail[decodedExtensionDetail](
+				t, findPredicateFact(t, facts, "DECLARES_EXTENSION", "demo.x#1"),
+			)
+			if detail.Extendee.Raw != test.raw ||
+				detail.Extendee.Resolution != test.resolution ||
+				detail.Extendee.Reason != test.reason {
+				t.Fatalf("extendee detail = %+v, want raw=%q resolution=%q reason=%q",
+					detail.Extendee, test.raw, test.resolution, test.reason)
+			}
+			switch test.name {
+			case "imported extendee":
+				if detail.Extendee.Imports == nil || detail.Extendee.Imports.Count != 1 ||
+					len(detail.Extendee.Imports.Paths) != 1 ||
+					detail.Extendee.Imports.Paths[0] != "base.proto" {
+					t.Fatalf("imported extendee context = %+v", detail.Extendee)
+				}
+			case "non-message extendee":
+				if detail.Extendee.Kind != "enum" ||
+					detail.Extendee.Declaration != "demo.NotMessage" {
+					t.Fatalf("non-message extendee detail = %+v", detail.Extendee)
+				}
+			case "scalar extendee":
+				if detail.Extendee.Kind != "scalar" {
+					t.Fatalf("scalar extendee detail = %+v", detail.Extendee)
+				}
+			case "declare-after extendee":
+				if detail.Extendee.Declaration != "demo.Late" {
+					t.Fatalf("declare-after extendee detail = %+v", detail.Extendee)
+				}
+			}
 		})
-		if err == nil || !strings.Contains(err.Error(), "require descriptor linking") {
-			t.Fatalf("extension %q error = %v", extendee, err)
-		}
-		if len(coverage.Protocols) != 0 {
-			t.Fatalf("failed extraction returned successful coverage: %+v", coverage)
-		}
+	}
+}
+
+func TestExtensionUnsupportedAndMalformedConstructsFailClosed(t *testing.T) {
+	tests := []struct {
+		name, content, want string
+	}{
+		{
+			name: "extension group needs descriptor linking",
+			content: `syntax = "proto2"; package demo;
+message Base { extensions 100 to max; }
+extend Base { optional group Grp = 100 { optional string x = 1; } }`,
+			want: "extension groups require descriptor linking",
+		},
+		{
+			name: "map field in extension body",
+			content: `syntax = "proto2"; package demo;
+message Base { extensions 100 to max; }
+extend Base { map<string, string> m = 100; }`,
+			want: "parse:",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, coverage, err := extractFacts(t, memoryCorpus{
+				repo: "r", commit: "c", files: map[string]string{"extension.proto": test.content},
+			})
+			if err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("extension refusal error = %v, want %q", err, test.want)
+			}
+			if len(coverage.Protocols) != 0 {
+				t.Fatalf("failed extraction returned successful coverage: %+v", coverage)
+			}
+		})
 	}
 }
 
@@ -792,7 +1062,8 @@ func TestFrozenDeclarationContract(t *testing.T) {
 		repo: "example/repo", commit: "c", files: map[string]string{
 			"api/v1/service.proto": `syntax = "proto3"; package demo;
 service S { rpc Get(M) returns (M); }
-message M { string a = 1; }`,
+message M { string a = 1; extensions 100 to max; }
+extend M { string x = 100; }`,
 		},
 	})
 	if err != nil {
@@ -803,6 +1074,7 @@ message M { string a = 1; }`,
 		"DECLARES_OPERATION": {"proto-rpc-v3", "proto-operation-detail-v1"},
 		"DECLARES_MESSAGE":   {"proto-message-v3", "proto-message-detail-v1"},
 		"DECLARES_FIELD":     {"proto-field-v3", "proto-field-detail-v2"},
+		"DECLARES_EXTENSION": {"proto-extension-v1", "proto-extension-detail-v1"},
 	}
 	seen := map[string]bool{}
 	for _, fact := range facts {

@@ -9,6 +9,15 @@ identity token, no schema, and no published assertion. `GATE2-V2` remains
 `experimental-dark` per [PROTO_GRPC_PACK_CARDS.md](./PROTO_GRPC_PACK_CARDS.md),
 and nothing here reopens, retries, or reinterprets that closed campaign.*
 
+**T47.2e amendment (2026-10-10).** `protodecl` `4.0.0` adds the
+declaration-local extension surface to §5 and narrows the §6 refusal to
+unsupported or malformed extension constructs, superseding the T49.1a
+extension-refusal wording prospectively. The identity gate (§4), the shared
+join contract (§7), the unsealed scoring shape (§8), and every other frozen
+constant are unchanged, and this amendment seals nothing: extension
+declarations are emitted without extendee lineage, and no pack, release,
+`GATE2-V2` posture, or validation state moves.
+
 The identity resolution (§4), the shared join contract (§7) and the scorable
 surface (§5, §6) are **frozen** by T49.1a. Independent scoring (§8) is **not**
 sealed; it is T49.1b:
@@ -55,7 +64,7 @@ must be introduced without corrupting the present one.
 
 The authoritative implementation is
 [`internal/extract/extractors/protodecl/protodecl.go`](../internal/extract/extractors/protodecl/protodecl.go)
-(domain `proto-contract`, version `3.0.0`, schema `t17-v1`). Where this document
+(domain `proto-contract`, version `4.0.0`, schema `t17-v1`). Where this document
 and the code disagree, the code wins and this document is corrected in the same
 PR; the frozen constants in §5 are quoted from source, not paraphrased, and a
 change to a pinned rule ID, detail schema or lineage token fails the pin tests
@@ -226,11 +235,26 @@ half-open byte span `[StartByte, EndByte)` derived from the parser's exact
 | `DECLARES_OPERATION` | `<serviceFQN>/<rpcName>` | `proto-rpc-v3` | `proto-operation-detail-v1` | request/response type references (§6), `ClientStreaming`, `ServerStreaming` |
 | `DECLARES_MESSAGE` | fully-qualified message name | `proto-message-v3` | `proto-message-detail-v1` | schema, name |
 | `DECLARES_FIELD` | `<messageFQN>#<tag>` | `proto-field-v3` | `proto-field-detail-v2` | schema, name, type reference or `map{key,value}`, cardinality, `oneof` |
+| `DECLARES_EXTENSION` | `joinFullName(scope, name)#<tag>` | `proto-extension-v1` | `proto-extension-detail-v1` | schema, name, extendee type reference (§6), field type reference, cardinality |
 
 A proto2 `group` emits **both** a `DECLARES_FIELD` (field name lower-cased, per the
 descriptor convention) and a `DECLARES_MESSAGE` for the synthetic nested message.
 Field cardinality is one of `repeated`, `required`, `optional`, `singular`
 (`fieldCardinality`).
+
+An extension declaration (`ExtendNode`, at file top level or inside a message
+body) emits exactly one `DECLARES_EXTENSION` per extension field. The object is
+**declaration-local**: `scope` is the extending namespace — the package for a
+file-level `extend`, the enclosing message for a nested one — joined with the
+extension field name and number. It never claims a field position on the
+extendee, because the exact descriptor slot an extension occupies is provable
+only through import and descriptor linking, which the pure reader does not
+perform. The extendee is carried as a raw type reference with an explicit
+resolution state, resolved with message-only lookup: the same `intrinsic` (a
+name that lexes as a scalar keyword), `same_file`, and `unresolved` states and
+reasons as §6. Duplicate extension declarations with one object are emitted, not merged,
+matching the field surface, and the extension's presence is never emitted as a
+`DECLARES_FIELD`.
 
 **Not emitted.** Enum declarations and enum values, `reserved` ranges, extension
 ranges and options produce no fact. Enums are indexed only so that a type
@@ -263,10 +287,10 @@ compilation, no code execution, and no Buf invocation.
 **Fail-closed, never partial.** Any candidate read, parse, tree-walk, span, or
 complexity failure aborts the whole staged run: `Extract` returns an empty
 `Coverage` and the error, because "returning successful partial coverage would
-replace known evidence with a subset." A malformed declaration, or one that needs
-linking (an extension, §6), is therefore a run failure, never a silent empty
-contract. The kinds listed under **Not emitted** are a declared scope limit, not a
-failure.
+replace known evidence with a subset." A malformed declaration, or an
+extension construct whose semantics need descriptor linking (§6), is therefore a
+run failure, never a silent empty contract. The kinds listed under **Not
+emitted** are a declared scope limit, not a failure.
 
 ## 6. Type-reference resolution states and the explicit gap taxonomy
 
@@ -280,7 +304,7 @@ a scoring round must count, and they are the precise pressure point of the §2 g
 | `intrinsic` | — | scalar/built-in type; nothing to link |
 | `same_file` | — | resolved to exactly one declaration in the same file |
 | `unresolved` | `AMBIGUOUS_SAME_FILE_DECLARATION` | more than one same-file candidate for the name |
-| `unresolved` | `INVALID_DECLARATION_KIND` | resolved to a non-message where a message was required (only an RPC request/response requires one) |
+| `unresolved` | `INVALID_DECLARATION_KIND` | resolved to a non-message where a message was required (an RPC request/response or an extension extendee requires one) |
 | `unresolved` | `DECLARATION_NOT_FOUND` | no same-file candidate and the file declares no imports |
 | `unresolved` | `IMPORT_LINKING_UNAVAILABLE` | no same-file candidate **and** the file imports something — the reference may resolve through an import the pure reader does not link |
 
@@ -297,12 +321,22 @@ manifest's unresolved count stays 0. A scoring round counts these states by
 reading `type`, `map.key`/`map.value`, or `request`/`response` from the Detail,
 and counts them against references, never against the declaration denominator.
 
-Beyond type references, the extractor fails closed (whole-run error, §5) on:
-extension fields (`ExtendNode`, at file top level or inside a message body) with
-"extension fields require descriptor linking for extendee lineage"; a missing
-name/tag/type on any service, rpc, message, field, oneof, group, or map; an
-invalid parser span or a parser-text/source mismatch; and any input exceeding the
-§3 complexity ceilings.
+The extendee of every `DECLARES_EXTENSION` (§5) is recorded in these same
+states: `same_file` to a message declaration (before or after the `extend` in
+the file — resolution is order-independent), or `unresolved` with
+`AMBIGUOUS_SAME_FILE_DECLARATION`, `INVALID_DECLARATION_KIND`,
+`DECLARATION_NOT_FOUND`, or `IMPORT_LINKING_UNAVAILABLE` under the same rules,
+with message-only lookup.
+
+Beyond type references and extendees, the extractor fails closed (whole-run
+error, §5) on: an extension group ("extension groups require descriptor linking
+for their synthetic message" — the group also declares a synthetic nested
+message and an extendee-positioned field, both unprovable without linking); a
+map field in an extension body (a parser-level error; the grammar admits only
+fields and groups there); a missing name/tag/type on any service, rpc, message,
+field, oneof, group, map, or extension field; an invalid parser span or a
+parser-text/source mismatch; and any input exceeding the §3 complexity
+ceilings.
 
 ## 7. Shared identity/input contract with T47.2 (the exact Caller Map join)
 

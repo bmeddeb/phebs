@@ -4762,10 +4762,12 @@ Declaration and T13.1 operation-consumer lineage is deliberately machine-labeled
 `provisional_repo_path_v1_<sha256>` and separates repository paths instead of
 guessing descriptor identity. It prevents name-only cross-repository merges,
 but a file move fragments lineage and an unrelated contract replacing the
-same path can reuse it. The parser does not resolve imports, module roots, or
-extensions; extension declarations fail closed. These facts must not drive
-compatibility, migration, or negative-proof conclusions as though canonical
-lineage had been established.
+same path can reuse it. The parser does not resolve imports or module roots,
+and extension declarations are emitted declaration-locally with an explicit
+extendee resolution state instead of guessed extendee lineage; extension
+groups and malformed extension constructs still fail closed. These facts must
+not drive compatibility, migration, or negative-proof conclusions as though
+canonical lineage had been established.
 
 The candidate manifest permits a complete streamed census beyond the old
 200,000-file/16 MiB retained-tree ceiling, but one extractor still admits at

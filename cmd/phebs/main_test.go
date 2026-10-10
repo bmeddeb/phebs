@@ -2358,7 +2358,7 @@ func TestEvidenceExtractorsRemainValidationGated(t *testing.T) {
 		t.Fatalf("default extractor registry = %d entries, want disabled", len(got))
 	}
 	got := evidenceExtractors(true, false, false, false)
-	// T17.2: the registry pins the shape-aware protodecl v3 alongside the
+	// T17.2: the registry pins the shape-aware protodecl v4 alongside the
 	// T13.1/T13.2 readers behind the proto experimental flag; default runtime
 	// activation remains disabled.
 	if len(got) != 4 || got[0].Domain() != "proto-contract" ||
@@ -2366,7 +2366,7 @@ func TestEvidenceExtractorsRemainValidationGated(t *testing.T) {
 		got[1].Version() != "1.2.0" ||
 		got[2].Domain() != "scip-proto-field" || got[2].Version() != "1.4.0" ||
 		got[3].Domain() != "grpc-caller" || got[3].Version() != "1.5.0" ||
-		got[0].Version() != "3.0.0" {
+		got[0].Version() != "4.0.0" {
 		t.Fatalf("proto-only extractor registry = %#v", got)
 	}
 	// T19.2/T19.3: the Thrift packs ride their own dark flag and compose with

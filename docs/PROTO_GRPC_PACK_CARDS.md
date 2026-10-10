@@ -16,9 +16,9 @@ or released use and do not change the default-off production registration.
 |---|---|
 | Pack ID | `phebs.protobuf.contract` |
 | Status | `experimental-dark` |
-| Predicate(s) | Protobuf file/package/message/field/service/operation declarations and explicit extraction gaps |
+| Predicate(s) | Protobuf file/package/message/field/service/operation declarations, declaration-local extension declarations, and explicit extraction gaps |
 | Language/framework | `.proto` source accepted by the bounded in-process declaration parser |
-| Pack version | `3.0.0` (`proto-contract` extractor) |
+| Pack version | `4.0.0` (`proto-contract` extractor) |
 | Extractor artifact | in-tree `internal/extract/extractors/protodecl`; the phebs release binary digest governs |
 | Schema version | `t17-v1` |
 | Release binding | none — no PackRelease exists |

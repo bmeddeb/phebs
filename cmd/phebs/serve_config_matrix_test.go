@@ -22,7 +22,7 @@ import (
 
 // releasedStubVersion is the version every released stub recipe reports. No
 // dark extractor reports it (the real proto-contract and grpc-caller report
-// "3.0.0" and "1.5.0"), so an admitted domain@version carrying it can only come
+// "4.0.0" and "1.5.0"), so an admitted domain@version carrying it can only come
 // from a signed released pack, never from the switch-gated dark extractor that
 // shares its domain.
 const releasedStubVersion = "9.9.9"

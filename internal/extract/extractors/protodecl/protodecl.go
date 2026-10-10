@@ -1,6 +1,7 @@
 // Package protodecl extracts source-declared protobuf services, messages,
-// operations, and field shapes. It parses each bounded regular .proto blob
-// independently and performs no import resolution or cross-file linking.
+// operations, field shapes, and extension declarations. It parses each
+// bounded regular .proto blob independently and performs no import
+// resolution or cross-file linking.
 package protodecl
 
 import (
@@ -24,7 +25,7 @@ import (
 
 const (
 	domain        = "proto-contract"
-	version       = "3.0.0"
+	version       = "4.0.0"
 	schemaVersion = "t17-v1"
 
 	// parser.Parse is in-process and does not accept a context. Preflight the
@@ -104,6 +105,17 @@ type fieldDetail struct {
 	Cardinality string               `json:"cardinality"`
 	Map         *mapShapeDetail      `json:"map,omitempty"`
 	Oneof       string               `json:"oneof,omitempty"`
+}
+
+// extensionDetail is the proto-extension-detail-v1 payload. The extendee is
+// carried as raw source text with an explicit resolution state; it is never
+// extended into lineage the parser cannot prove.
+type extensionDetail struct {
+	Schema      string              `json:"schema"`
+	Name        string              `json:"name"`
+	Extendee    typeReferenceDetail `json:"extendee"`
+	Type        typeReferenceDetail `json:"type"`
+	Cardinality string              `json:"cardinality"`
 }
 
 // lineageID is explicitly provisional and file-scoped. Parser-only extraction
@@ -470,6 +482,55 @@ func fileFacts(ctx context.Context, corpus sdk.Corpus, relPath string, blob sdk.
 			node,
 		)
 	}
+	// emitExtension records one extension declaration without descriptor
+	// linking. The object is declaration-local — the extending scope plus the
+	// extension field name and number — so no fact claims a field position on
+	// the extendee whose exact descriptor slot only linking can establish. The
+	// extendee itself stays a raw reference with an explicit resolution state.
+	emitExtension := func(scope string, extend *ast.ExtendNode) error {
+		if extend.Extendee == nil {
+			return errors.New("extension is missing extendee type")
+		}
+		extendee := resolveTypeReference(
+			string(extend.Extendee.AsIdentifier()), scope,
+			declarations, imports, true,
+		)
+		for _, element := range extend.Decls {
+			switch field := element.(type) {
+			case *ast.FieldNode:
+				if field.Name == nil || field.Tag == nil || field.FldType == nil {
+					return errors.New("extension field is missing name, number, or type")
+				}
+				name := string(field.Name.AsIdentifier())
+				detail, err := detailJSON(extensionDetail{
+					Schema:   "proto-extension-detail-v1",
+					Name:     name,
+					Extendee: extendee,
+					Type: resolveTypeReference(
+						string(field.FldType.AsIdentifier()), scope,
+						declarations, imports, false,
+					),
+					Cardinality: fieldCardinality(field.Label),
+				})
+				if err != nil {
+					return err
+				}
+				if err := emitNode(
+					"DECLARES_EXTENSION",
+					fmt.Sprintf("%s#%d", joinFullName(scope, name), field.Tag.Val),
+					"proto-extension-v1", detail, field,
+				); err != nil {
+					return err
+				}
+			case *ast.GroupNode:
+				// An extension group also declares a synthetic nested message
+				// and an extendee-positioned group field; both need descriptor
+				// linking, so the construct refuses rather than guessing.
+				return errors.New("extension groups require descriptor linking for their synthetic message")
+			}
+		}
+		return nil
+	}
 
 	var walkBody func(messageFullName string, declarations []ast.MessageElement) error
 	var walkMessage func(parentScope string, message *ast.MessageNode) error
@@ -601,7 +662,9 @@ func fileFacts(ctx context.Context, corpus sdk.Corpus, relPath string, blob sdk.
 					return err
 				}
 			case *ast.ExtendNode:
-				return errors.New("extension fields require descriptor linking for extendee lineage")
+				if err := emitExtension(messageFullName, field); err != nil {
+					return err
+				}
 			}
 		}
 		return nil
@@ -657,7 +720,9 @@ func fileFacts(ctx context.Context, corpus sdk.Corpus, relPath string, blob sdk.
 				return err
 			}
 		case *ast.ExtendNode:
-			return errors.New("extension fields require descriptor linking for extendee lineage")
+			if err := emitExtension(pkg, node); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
