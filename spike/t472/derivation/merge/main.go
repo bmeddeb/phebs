@@ -314,9 +314,8 @@ func canonicalMetadata(version, repo, remote, pin string, rels []string) *scip.M
 			Version: version,
 			Arguments: []string{
 				"t472-merge",
-				"--repository-remote", remote,
-				"--module-version", pin,
-				"--skip-implementations",
+				"--remote", remote,
+				"--pin", pin,
 				"--module-rels", strings.Join(rels, ","),
 			},
 		},

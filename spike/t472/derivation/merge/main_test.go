@@ -1,10 +1,19 @@
 package main
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/scip-code/scip/bindings/go/scip"
 )
+
+func TestMergedMetadataNamesTheMergePin(t *testing.T) {
+	meta := canonicalMetadata("v0.2.7", "example", "github.com/example/repo", "full-commit", []string{".", "api"})
+	want := []string{"t472-merge", "--remote", "github.com/example/repo", "--pin", "full-commit", "--module-rels", ".,api"}
+	if !slices.Equal(meta.GetToolInfo().GetArguments(), want) {
+		t.Fatalf("merged metadata arguments = %q, want %q", meta.GetToolInfo().GetArguments(), want)
+	}
+}
 
 func TestVersionSkewCountsOnlyUnboundInRepoReferences(t *testing.T) {
 	const (
