@@ -32,9 +32,9 @@ type releaseFacts struct {
 // purpose, so a governing released record refuses startup (unresolved_reference)
 // instead of loading without a binding.
 //
-// It performs no cancellation-dependent work: the census and the executable
-// digest are each one bounded pass, and it never runs on a request, sync, or
-// per-query path.
+// The selection calls this only after an authenticated governing release
+// survives withdrawal and time checks. The census and executable digest are
+// each one bounded pass, never on a request, sync, or per-query path.
 func deriveReleaseLoadBindings(_ context.Context, artifactsPath string) (packrelease.Options, error) {
 	if artifactsPath == "" {
 		return packrelease.Options{}, nil
@@ -46,8 +46,8 @@ func deriveReleaseLoadBindings(_ context.Context, artifactsPath string) (packrel
 	return releaseLoadBindingsFor(artifactsPath, facts)
 }
 
-// readReleaseBuildFacts reads the ambient facts of the running binary: its
-// embedded build metadata and its executable path.
+// readReleaseBuildFacts reads embedded build metadata, a diagnostic executable
+// path and the digest of a descriptor verified to name the running image.
 func readReleaseBuildFacts() (releaseFacts, error) {
 	info, ok := debug.ReadBuildInfo()
 	if !ok {
