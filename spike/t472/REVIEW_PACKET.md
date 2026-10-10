@@ -2,8 +2,10 @@
 
 Branch: `hp/t47.2b-corrected-derivation`. Original reviewed HEAD:
 `b2ffd4806c6ed2f3116d42dcfec676a3e557bb23` (preparation source `13b28e70`).
-The corrected immutable source commit and fresh independent review are recorded
-here after dispatch. Until that record is added, independent review is pending.
+Final reviewed source: `1b9afefcfa47f94d49e87cbd64eb5192d7b1f6df`.
+Fresh independent code/security review recorded critical 0, high 0, medium 0,
+low 0; all nine original findings and the connected corrections are closed.
+The exact-source report is [`INDEPENDENT_REVIEW.md`](INDEPENDENT_REVIEW.md).
 
 ## Scope and nine corrections
 
@@ -34,8 +36,8 @@ the frozen harness can discard a raw duplicate. Same-object/different-lineage
 and different-role assertions refuse; identical duplicates collapse once.
 The low finding corrected the mock recall count to 75 (76 universe sites minus
 one excluded import). The independently reproduced populations stay unchanged;
-only source-provenance/plan/bundle identities regenerate. Exact corrected
-commit re-review remains pending until recorded below.
+only source-provenance/plan/bundle identities regenerate. The subsequent reviews
+and final closure are recorded below.
 
 ## Connected production ambiguity correction
 
@@ -52,8 +54,26 @@ input order cannot select a favorable reason. Source/uncertainty denominators,
 approved thresholds and frozen machinery stay exact. New synthetic regressions
 cover both production ambiguity classes, mixed reasons, ordering, incomplete/
 mispaired sets and malformed input. Corrected candidate rows and scoring use
-v3 schemas; existing source populations remain v2 and unchanged. Exact final
-source re-review remains pending until recorded below.
+v3 schemas; existing source populations remain v2 and unchanged.
+
+## Final independent source review
+
+Fresh review of exact `1b9afefcfa47f94d49e87cbd64eb5192d7b1f6df` recorded
+critical 0, high 0, medium 0, low 0. The reviewer independently exercised a
+three-operation mixed-reason case under all six assertion orders: one source
+sampling row and identical projected output. Full alternative sets score
+correctly; missing, extra and incorrectly paired alternatives score wrong.
+Same-operation lineage/reason conflicts, wrong roles, conflicting resolved
+operations and resolved/unresolved mixtures still refuse before deduplication.
+
+The reviewer passed 46 source/frame/scoring/bundle tests, 3 derivation tests,
+additional synthetic probes, the uncached production ambiguity fixture and
+docs/glossary/whitespace gates. Fresh generation reproduced all four frame
+files and the bundle byte-for-byte; all actual binding digests matched.
+Approved scope, parameters, universe/frame populations, corpus/census, frozen
+machinery, production code and Go build inputs remained unchanged. The complete
+report records cost and verification limits. This review-record-only commit
+requires a final-HEAD preservation check before push.
 
 ## Regenerated artifacts
 
@@ -116,7 +136,8 @@ Ben's two source confirmations remain in `frames.plan.json`: source-only
 labeling over every call and inventoried method reference with imports alone
 excluded, and exact individual client-interface coordinates. The protocol
 already names Ben as sole human reviewer; extra independent human staffing is
-not required for this round. Independent code/security review remains required.
+not required for this round. Independent code/security review of the final
+preparation source passed as recorded above; this is not human label review.
 
 Precision, withheld-candidate and unresolved populations remain pending until
 the real sealed envelope/complete candidate ledger exists. Genuine NIST pulse
