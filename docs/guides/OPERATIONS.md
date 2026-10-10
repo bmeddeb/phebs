@@ -3649,9 +3649,10 @@ checked against the same running implementation identity (source commit,
 binary, pack-implementation and toolchain digests) and the same
 referenced-artifacts root. Two released records that name different
 pack-implementation digests or roots cannot both bind: startup refuses with
-`digest_mismatch` instead of admitting the record that matches. How a record
-names the running identity, and so whether independently released packs can
-share one selection, is decided by T48.4c, which supplies that identity.
+`digest_mismatch` instead of admitting the record that matches. T48.4c derives
+one identity for the running binary and its complete in-tree recipe registry,
+and one root for the configured artifacts directory. Independently signed
+records can share a selection only when each names all those same bindings.
 
 **Refusal is whole-startup; withdrawal is per-pack.** A suspended, revoked or
 expired pack withdraws cleanly and never refuses an otherwise healthy startup,
@@ -3694,13 +3695,41 @@ pending deletion tombstones are completed and none is read. Published evidence r
 version, not a release identifier, so nothing in the store marks it as
 released-pack evidence or lets a later startup recall it by release.
 
+**Load-binding census.** Build facts and artifact bytes are read only when an
+authenticated governing release survives withdrawal and clock checks. A
+selection containing only suspended, retired, revoked or expired records
+continues without an artifact directory or executable build facts. An eligible
+release shares one derived binding with every other eligible release.
+
+Artifacts live in one flat, non-symlink directory. Names use the bounded release
+identifier grammar restricted to one segment, excluding spaces, newlines and
+path separators. Enumeration accepts at most 1,024 entries plus one overflow
+sentinel. Opened regular files are read through enforced 1 MiB per-file and
+64 MiB aggregate limits, each with one overflow byte for refusal; symlink or
+FIFO substitution cannot be followed or block an open. Descriptor metadata and
+the directory entry are rechecked after hashing. The census streams content,
+retains bounded names and digests, and holds at most three descriptors; later
+reference resolution reads nothing.
+
+The binary digest names the executed image. Linux opens `/proc/self/exe`;
+Darwin checks the opened file against its executable mapping's vnode identity.
+A symlink launch is supported and a replacement at the launch pathname cannot
+supply another image's digest. If the Darwin image's vnode path cannot be
+opened, release binding refuses. The executable hash is bounded at 2 GiB plus
+one overflow byte. These are startup/restart costs only, with no request, sync,
+retry/no-op, publication, lock, persistent-cache, disk-write or child work.
+
 **Current posture.** This gate ships dark. No pack recipe is bound in this
-binary, and this build cannot yet bind a released record to its own binary,
-toolchain, and referenced artifacts. Any governing `released` record therefore
-refuses startup with an unresolved-reference cause until the owning epic
-supplies both its recipe and its first passing quality and operating record.
+binary, so a verified released record still refuses startup for its missing
+recipe. The load bindings themselves are no longer the missing half: at the
+same admitted boundary startup derives the running implementation identity
+(exact source commit, executable, toolchain, and in-tree pack-recipe-registry
+digests) and censuses `artifacts_path` for the referenced-artifacts root and
+resolver, so a governing `released` record must name exactly those values or
+it refuses startup with an unresolved-reference or digest-mismatch cause.
 Suspension, revocation, expiry, and withdrawal are implemented and observable
-today; admission is not yet reachable.
+today; admission activates once the owning epic supplies a pack's fixed recipe
+and its first passing quality and operating record.
 
 ### Source-free service-directory walkthrough
 

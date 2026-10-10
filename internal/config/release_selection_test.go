@@ -18,7 +18,8 @@ func validPublicKey(t *testing.T) string {
 }
 
 func TestReleaseSelectionValidKeysPass(t *testing.T) {
-	in := "release_selection:\n  path: /var/lib/phebs/releases\n  keys:\n    - {id: key-1, public_key: '" + validPublicKey(t) + "'}\n"
+	in := "release_selection:\n  path: /var/lib/phebs/releases\n  artifacts_path: /var/lib/phebs/artifacts\n" +
+		"  keys:\n    - {id: key-1, public_key: '" + validPublicKey(t) + "'}\n"
 	if _, err := Parse([]byte(in)); err != nil {
 		t.Fatalf("Parse() unexpected error: %v", err)
 	}
@@ -51,10 +52,12 @@ func TestReleaseSelectionRejectsMalformedKey(t *testing.T) {
 }
 
 // selectionWithPath renders a release_selection block carrying one valid trust
-// anchor beside the path under test, so each case isolates that field.
+// anchor and artifact directory beside the path under test, so each case
+// isolates that field.
 func selectionWithPath(t *testing.T, path string) string {
 	t.Helper()
 	return "release_selection:\n  path: " + path +
+		"\n  artifacts_path: /var/lib/phebs/artifacts" +
 		"\n  keys:\n    - {id: key-1, public_key: '" + validPublicKey(t) + "'}\n"
 }
 
@@ -71,7 +74,8 @@ func TestReleaseSelectionRejectsUnstablePath(t *testing.T) {
 		"trailing separator": selectionWithPath(t, "/var/lib/phebs/pack-releases/"),
 		// A configured directory is an operator intent to admit released packs,
 		// so the key ring that makes any record verifiable must ship with it.
-		"path without a key": "release_selection:\n  path: /var/lib/phebs/pack-releases\n",
+		"path without a key": "release_selection:\n  path: /var/lib/phebs/pack-releases\n" +
+			"  artifacts_path: /var/lib/phebs/artifacts\n",
 	}
 	for name, in := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -80,6 +84,49 @@ func TestReleaseSelectionRejectsUnstablePath(t *testing.T) {
 				t.Fatalf("Parse() err = %v, want a release_selection: path refusal", err)
 			}
 		})
+	}
+}
+
+// TestReleaseSelectionRejectsUnstableArtifactsPath pins that the artifact
+// directory is a stable absolute path and that a configured selection directory
+// without one is refused: every admitted record's load is bound to the
+// artifacts actually present, so a half-configured gate that could never bind a
+// load must not reach startup.
+func TestReleaseSelectionRejectsUnstableArtifactsPath(t *testing.T) {
+	withArtifacts := func(artifactsPath string) string {
+		return "release_selection:\n  path: /var/lib/phebs/pack-releases" +
+			"\n  artifacts_path: " + artifactsPath +
+			"\n  keys:\n    - {id: key-1, public_key: '" + validPublicKey(t) + "'}\n"
+	}
+	cases := map[string]string{
+		"relative artifacts_path":        withArtifacts("artifacts"),
+		"unclean artifacts_path":         withArtifacts("/var/lib/phebs/../artifacts"),
+		"padded artifacts_path":          withArtifacts(`"/var/lib/phebs/artifacts "`),
+		"trailing separator":             withArtifacts("/var/lib/phebs/artifacts/"),
+		"path without artifacts_path":    "release_selection:\n  path: /var/lib/phebs/pack-releases\n  keys:\n    - {id: key-1, public_key: '" + validPublicKey(t) + "'}\n",
+		"path without keys or artifacts": "release_selection:\n  path: /var/lib/phebs/pack-releases\n",
+	}
+	for name, in := range cases {
+		t.Run(name, func(t *testing.T) {
+			_, err := Parse([]byte(in))
+			if err == nil || !strings.Contains(err.Error(), "artifacts_path") {
+				t.Fatalf("Parse() err = %v, want an artifacts_path refusal", err)
+			}
+		})
+	}
+}
+
+// TestReleaseSelectionAcceptsStagedArtifactsPath pins that an artifact
+// directory alone is inert: like a staged revocation it can be configured
+// before the release records that reference it arrive, and it survives the
+// round trip.
+func TestReleaseSelectionAcceptsStagedArtifactsPath(t *testing.T) {
+	cfg, err := Parse([]byte("release_selection:\n  artifacts_path: /var/lib/phebs/artifacts\n"))
+	if err != nil {
+		t.Fatalf("Parse() unexpected error: %v", err)
+	}
+	if got := cfg.ReleaseSelection.ArtifactsPath; got != "/var/lib/phebs/artifacts" {
+		t.Fatalf("ArtifactsPath = %q, want the staged directory", got)
 	}
 }
 
@@ -121,8 +168,9 @@ func TestReleaseSelectionAcceptsAStagedRevocation(t *testing.T) {
 			want: []string{"rel-0001", "phebs.protobuf.contract/1.2.0"},
 		},
 		{
-			name: "configured beside a path and key",
+			name: "configured beside a path, key and artifact directory",
 			in: "release_selection:\n  path: /var/lib/phebs/pack-releases\n" +
+				"  artifacts_path: /var/lib/phebs/artifacts\n" +
 				"  keys:\n    - {id: key-1, public_key: '" + validPublicKey(t) + "'}\n" +
 				"  revoked:\n    - rel-0002\n",
 			want: []string{"rel-0002"},
@@ -144,7 +192,8 @@ func TestReleaseSelectionAcceptsAStagedRevocation(t *testing.T) {
 // TestReleaseSelectionDocumentedExampleParses keeps the commented example in
 // docs/config.example.yaml loadable once uncommented.
 func TestReleaseSelectionDocumentedExampleParses(t *testing.T) {
-	in := "release_selection:\n  path: /etc/phebs/pack-releases\n  keys:\n" +
+	in := "release_selection:\n  path: /etc/phebs/pack-releases\n" +
+		"  artifacts_path: /etc/phebs/pack-artifacts\n  keys:\n" +
 		"    - id: release-signer\n      public_key: \"" + validPublicKey(t) + "\"\n" +
 		"  revoked:\n    - \"phebs.protobuf.contract/1.2.0\"\n"
 	if _, err := Parse([]byte(in)); err != nil {

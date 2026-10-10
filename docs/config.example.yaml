@@ -258,9 +258,19 @@ service_catalogs: {}
 # pack at the same release_version refuses startup. Per pack, the record with
 # the highest release_version governs, so a later signed suspension withdraws an
 # older release, and an expired governing record withdraws its pack; a
-# superseded record's expiry has no effect. This build cannot yet bind a released record to
-# its own binary and artifacts, so any governing released record refuses
-# startup until a later slice supplies those bindings.
+# superseded record's expiry has no effect.
+#
+# `artifacts_path` is the directory holding the card, manifest and validation
+# artifacts the admitted records reference. It is censused once at the same
+# startup boundary, it must be absolute, clean and unpadded, and a non-empty
+# `path` requires it: the referenced-artifacts root and the resolver a record is
+# checked against are derived from the bytes actually present, never asserted.
+# A governing released record must also name this binary's own machine-derived
+# implementation identity (source commit, executable digest, toolchain and
+# in-tree pack-implementation digests); a record signed for another binary or
+# another artifact set refuses startup rather than loading approximately. The
+# field is inert while `path` is empty, so an artifact directory can be staged
+# before its release records arrive.
 #
 # `revoked` is the operator's suspension and rollback control: it lists
 # release_ids withdrawn out of band. Listing the record that governs its pack
@@ -274,10 +284,12 @@ service_catalogs: {}
 # selection directory is configured.
 release_selection:
   path: ""
+  artifacts_path: ""
   keys: []
   revoked: []
 # release_selection:
 #   path: /etc/phebs/pack-releases
+#   artifacts_path: /etc/phebs/pack-artifacts
 #   keys:
 #     - id: release-signer
 #       public_key: "base64-ed25519-public-key"
