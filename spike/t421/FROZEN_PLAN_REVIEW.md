@@ -7,7 +7,10 @@ plan artifact, no freeze envelope, no freeze signature, and no selected
 ceremony identifier. Nothing here is, or substitutes for, the authenticated
 freeze or its independent review. Sections 1–2 bind what is executable today;
 sections 4–6 are the procedure a future freeze must pass; section 7 is the
-ledger of open bindings; section 8 lists the nonclaims.
+ledger of open bindings; section 8 lists the nonclaims. A 2026-10-10
+correction applies the independent review's findings on this package
+(0 critical, 0 high, 1 medium, 3 low); the standing nonclaims and every
+open-binding status are unchanged.
 
 The governing acceptance contract (`docs/BACKLOG.md`, T42.2o ticket row,
 verbatim):
@@ -198,12 +201,12 @@ The freeze envelope (`spike/t421/freeze.go`):
 
 - Wire schema field and byte bound: envelope `Schema` must equal the plan's
   declared freeze schema, `MaxExecutionFreezeBytes = 64 << 10`
-  (`freeze.go:19`; enforced on build at `freeze.go:203`, and on both decode
-  paths at `freeze.go:365,431`).
+  (`freeze.go:19`; enforced on candidate build at `freeze.go:203`, on
+  canonical encoding at `freeze.go:365`, and on decode at `freeze.go:431`).
 - Fields: `ExecutionFreeze{Schema, PlanSHA256, SignerFingerprint,
   SignerNamespaceSHA256, Commits, DigestAlgorithm, Tools, Host, Profile,
   Pressure}` (`freeze.go:29–40`, source-free by construction). Commits carry
-  the six ancestry/cleanliness facts (`freeze.go:44–52`) — the envelope cannot
+  the seven ancestry/cleanliness facts (`freeze.go:45–51`) — the envelope cannot
   authorize its own Git ancestry: `CheckoutAdmissionBinding`'s fields are
   private and verified elsewhere (`freeze.go:71–75`).
 - Tool identities: `ExecutionToolIdentity` (`freeze.go:54–66`) with the
@@ -233,15 +236,16 @@ The freeze envelope (`spike/t421/freeze.go`):
   redundant by design — "every derived scalar is retained so independent
   review can recompute the admission decision exactly" (`freeze.go:99`).
   `expectedExecutionPressureGeometry` (`freeze.go:546–625`) requires the plan's
-  targets exactly `[80, 90, 75]` percent (`freeze.go:552`), actions
+  targets exactly `[80, 90, 75]` percent (`freeze.go:551`), actions
   `add`/`remove` (`freeze.go:571,573`), dispositions `collect`/`refuse`
   (`freeze.go:577,579`), and recovery `remove` at maximum used percent 74
   (`freeze.go:618`).
 - Source-bearing refusal: the closed fragment list in
   `sourceOrWorkspaceFragment` (`freeze.go:729–741`) forbids `.go`, `.proto`,
-  `.thrift`, `services/`, `structural/`, `package `, `func `, `/users/`,
-  `/home/`, `/private/`, `/tmp/`, `/volumes/`, `../`, `./`, `~/`, `$home/`,
-  `${HOME}/`, `file://` in retained envelope strings.
+  `.thrift`, `services/`, `structural/`, `example.invalid/`, `package `,
+  `func `, `syntax =`, `/users/`, `/home/`, `/private/`, `/tmp/`, `/volumes/`,
+  `../`, `./`, `~/`, `$home/`, `${home}/`, `file://` in retained envelope
+  strings.
 - Candidate vs authority: `assembleExecutionFreezeCandidate`
   (`freeze.go:169–208`) returns canonical, detached, non-authoritative bytes;
   `BuildExecutionFreeze` (`freeze.go:139–163`) performs no filesystem or
@@ -299,7 +303,10 @@ freeze-envelope, signer, pressure, and expiry-contract regression set.
 
 ### 4.3 Review-time suite
 
-Executed 2026-10-09 at this branch tip on the baseline host. The explicit
+First executed 2026-10-09 at this branch tip on the baseline host; re-executed
+2026-10-10 after the review correction added
+`TestDecodeExecutionFreezeRejectsNoncanonicalAndSourceBearing` (the mechanical
+proof cited in 4.2(a)) to the pattern. The explicit
 `-timeout=60m` matches the repository's CI allowance (`ci-go`); the Go default
 10-minute timeout was observed insufficient on this host (600.135 s expiry
 inside the heavy combined-corpus freeze fixture), so reviewers should keep the
@@ -307,36 +314,37 @@ explicit bound:
 
 ```bash
 cd /home/ben/phebs
-go test ./spike/t421 -count=1 -v -timeout=60m -run 'TestCorrectionPreservesRetainedV1BytesAndValidation|TestAccountingV3RetainsHistoricalCanonicalBytes|TestAccountingV3NormalLifecyclePolicy|TestSelectorHandoffCleanupOmissionRetainsHistoricalPlans|TestSelectedCleanupWorkDerivation|TestExecutionFreeze|TestExecutionSignerSealsCandidateAndIssuesAdmission|TestExecutionFreezeReceiptBindingRechecksSignerNamespace|TestBindExecutionFreezeForReceiptOwnsAndValidatesFreeze|TestPressureContinuity|TestExecutionFinalAdmissionDeadlineAnchorsAtFirstVerification'
+go test ./spike/t421 -count=1 -v -timeout=60m -run 'TestCorrectionPreservesRetainedV1BytesAndValidation|TestAccountingV3RetainsHistoricalCanonicalBytes|TestAccountingV3NormalLifecyclePolicy|TestSelectorHandoffCleanupOmissionRetainsHistoricalPlans|TestSelectedCleanupWorkDerivation|TestExecutionFreeze|TestDecodeExecutionFreezeRejectsNoncanonicalAndSourceBearing|TestExecutionSignerSealsCandidateAndIssuesAdmission|TestExecutionFreezeReceiptBindingRechecksSignerNamespace|TestBindExecutionFreezeForReceiptOwnsAndValidatesFreeze|TestPressureContinuity|TestExecutionFinalAdmissionDeadlineAnchorsAtFirstVerification'
 ```
 
-Captured result (executed 2026-10-09 at this branch tip on the baseline
+Captured result (re-executed 2026-10-10 at this branch tip on the baseline
 host; exit 0, zero failures):
 
 ```text
 --- PASS: TestAccountingV3RetainsHistoricalCanonicalBytes (0.02s)
---- PASS: TestAccountingV3NormalLifecyclePolicy (0.38s)
+--- PASS: TestAccountingV3NormalLifecyclePolicy (0.26s)
 --- PASS: TestSelectedCleanupWorkDerivation (0.03s)
---- PASS: TestCorrectionPreservesRetainedV1BytesAndValidation (61.37s)
+--- PASS: TestCorrectionPreservesRetainedV1BytesAndValidation (37.91s)
 --- PASS: TestExecutionFinalAdmissionDeadlineAnchorsAtFirstVerification (0.00s)
---- PASS: TestExecutionFreezeIsCanonicalBoundedAndExact (123.97s)
---- PASS: TestExecutionFreezeCandidateIsCanonicalDetachedAndNonauthoritative (110.63s)
---- PASS: TestExecutionFreezeCandidateRejectsInputMutations (0.42s)
---- PASS: TestExecutionFreezeCandidateFullPathRefusals (335.24s)
---- PASS: TestExecutionFreezeCandidateRejectsMutatedWireBytes (166.53s)
---- PASS: TestExecutionFreezeCandidatePreservesPublicLegacyConstruction (186.99s)
---- PASS: TestPressureContinuityV4DerivationIsNarrow (0.14s)
---- PASS: TestPressureContinuityV4RequiresCompleteV3 (0.32s)
---- PASS: TestPressureContinuityV4GeometryAndHistoricalOmission (0.10s)
---- PASS: TestPressureContinuityV4CanonicalArtifactRouting (0.00s)
---- PASS: TestPressureContinuityV4FullFrozenRoundTrip (113.36s)
---- PASS: TestPressureContinuityCanonicalFreezeVersioning (410.73s)
---- PASS: TestPressureContinuityV4CandidateFreezeRoundTrip (106.09s)
---- PASS: TestBindExecutionFreezeForReceiptOwnsAndValidatesFreeze (157.53s)
+--- PASS: TestExecutionFreezeIsCanonicalBoundedAndExact (112.53s)
+--- PASS: TestDecodeExecutionFreezeRejectsNoncanonicalAndSourceBearing (75.34s)
+--- PASS: TestExecutionFreezeCandidateIsCanonicalDetachedAndNonauthoritative (101.90s)
+--- PASS: TestExecutionFreezeCandidateRejectsInputMutations (0.32s)
+--- PASS: TestExecutionFreezeCandidateFullPathRefusals (344.66s)
+--- PASS: TestExecutionFreezeCandidateRejectsMutatedWireBytes (158.31s)
+--- PASS: TestExecutionFreezeCandidatePreservesPublicLegacyConstruction (200.90s)
+--- PASS: TestPressureContinuityV4DerivationIsNarrow (0.21s)
+--- PASS: TestPressureContinuityV4RequiresCompleteV3 (0.45s)
+--- PASS: TestPressureContinuityV4GeometryAndHistoricalOmission (0.14s)
+--- PASS: TestPressureContinuityV4CanonicalArtifactRouting (0.01s)
+--- PASS: TestPressureContinuityV4FullFrozenRoundTrip (161.30s)
+--- PASS: TestPressureContinuityCanonicalFreezeVersioning (373.15s)
+--- PASS: TestPressureContinuityV4CandidateFreezeRoundTrip (91.55s)
+--- PASS: TestBindExecutionFreezeForReceiptOwnsAndValidatesFreeze (70.81s)
 --- PASS: TestSelectorHandoffCleanupOmissionRetainsHistoricalPlans (0.15s)
---- PASS: TestExecutionFreezeReceiptBindingRechecksSignerNamespace (159.06s)
---- PASS: TestExecutionSignerSealsCandidateAndIssuesAdmission (107.04s)
-ok  	github.com/bmeddeb/phebs/spike/t421	2040.279s
+--- PASS: TestExecutionFreezeReceiptBindingRechecksSignerNamespace (163.10s)
+--- PASS: TestExecutionSignerSealsCandidateAndIssuesAdmission (103.50s)
+ok  	github.com/bmeddeb/phebs/spike/t421	1996.692s
 ```
 
 ## 5. Absence-proof checklist
@@ -344,7 +352,8 @@ ok  	github.com/bmeddeb/phebs/spike/t421	2040.279s
 The T40 precedent proves, as a separate read-only step before acceptance, "no
 surviving process, listener, holder, mount, custody, supervision, driver, or
 bootstrap" plus a re-proof of the frozen plan digest and signature
-(`docs/BACKLOG.md`, T40 records). A T42 freeze review repeats the same eight
+(`AGENTS.md`, the T40.13u closure and neutral-40 custody records). A T42
+freeze review repeats the same eight
 nouns on this Linux host, with bounded observations:
 
 1. **process** — a bounded process observation (for example `pgrep -af` over
@@ -361,8 +370,9 @@ nouns on this Linux host, with bounded observations:
    simulated Execute return; the review re-verifies on the live host (T40
    precedent lock name `.t4013-operation.lock`; T42's custody names its own).
 4. **mount** — no rehearsal pressure volume remains mounted beneath the
-   ceremony root (`findmnt`/`mount`). Darwin precedent: a ~9.16-GiB sparse
-   APFS image on its own device. The Linux substitute primitive is owned by
+   ceremony root (`findmnt`/`mount`). Darwin precedent: the exact 96-GiB
+   sparse APFS pressure image named by the V4 plan's preparation string
+   (`plan.go:1086`). The Linux substitute primitive is owned by
    T42.H2's remaining pressure-filesystem slice; this package does not invent
    it, and the review checks whatever custody the frozen plan names.
 5. **custody** — derived/scratch custody is absent, or retained and named with
@@ -377,7 +387,7 @@ nouns on this Linux host, with bounded observations:
 8. **bootstrap** — no bootstrap process survives.
 9. **clean checkout** — the frozen source checkout is porcelain-empty at the
    exact commit, and every ancestry fact carried in `ExecutionCommits`
-   (`freeze.go:44–52`) re-proves mechanically (`git merge-base
+   (`freeze.go:45–51`) re-proves mechanically (`git merge-base
    --is-ancestor`, tree hashes, clean-tree proof).
 
 ## 6. Custody/expiry handoff checklist
@@ -429,7 +439,7 @@ closing owner as of 2026-10-09:
 | --- | --- | --- | --- |
 | 1 | Reviewed integration of this record | Artifact and record observable in integration history: seal commit `61d3c9d1` (parent `f0809ebb`) is an ancestor of `origin/main` `55a962e9` (verified; section 1). The clause is ticked again mechanically at freeze time (section 5 item 9) rather than by trusting this note. | T42.2o continuing step; reviewer re-proves ancestry |
 | 2 | Exact-main preflight | Open; not attempted for T42 on this host. T40 precedent shape: clean-checkout, toolchain, memory, ports, and module checks against the exact committed-and-pushed main to be frozen (T40 also projected the frozen pressure minimum against available space — the T42 projection derives from the frozen V5 contract and is not predicted here). | T42.2o continuing step on exact main |
-| 3 | Live host/tool/profile admission | Open, with code-level blockers named: `validateExecutionHost` refuses non-Darwin hosts (`freeze.go:509–510`) and the V4 inventory is Darwin-bound (`hdiutil`, `plan.go:1086,1097`). T42.H2 owns the port: integrated slices H2a (native process accounting), H2b (sealed direct-input custody), H2c (direct-tool custody and object binding), H2d (signer and namespace custody), H2e (shared Git/Go child-probe observation), H2f (session and descendant hard-death supervision), H2g (Git exec-path helper manifest and Go SDK location recipes); remaining per the ticket: "isolated pressure filesystem/allocation/restore semantics; then prospective Linux-bound plan construction, validation, admission, and readiness replay" — "a new version records the changed Linux execution semantics" (T42.H2, `docs/BACKLOG.md:3090–3091,3100–3102`). | T42.H2 remaining slices |
+| 3 | Live host/tool/profile admission | Open, with code-level blockers named: `validateExecutionHost` refuses non-Darwin hosts (`freeze.go:509–510`) and the V4 inventory is Darwin-bound (`hdiutil`, `plan.go:1086,1097`). T42.H2 owns the port: integrated slices H2a (native process accounting), H2b (sealed direct-input custody), H2c (direct-tool custody and object binding), H2d (signer and namespace custody), H2e (shared Git/Go child-probe observation), H2f (session and descendant hard-death supervision), H2g (Git exec-path helper manifest and Go SDK location recipes); remaining per the H2g status row: "The Linux immutable-flag input-custody model, isolated pressure/allocation/restore adapters, new Linux-bound plan versions and aggregate physical/effective-cgroup resource admission remain H2 prerequisites before complete readiness, freeze or execution" (`docs/BACKLOG.md:3796–3800`; the same list recurs through the H2 ladder at `3416–3419`, `3481–3485`, `3597–3602`). The parent ticket's work plan reads "isolated pressure filesystem/allocation/restore semantics; then prospective Linux-bound plan construction, validation, admission, and readiness replay" — "a new version records the changed Linux execution semantics" (T42.H2, `docs/BACKLOG.md:3090–3091,3100–3102`). | T42.H2 remaining slices |
 | 4 | Authenticated freeze/signature replay | Open. Prerequisites per BACKLOG rows: T42.2l (real author/executor, full private admission), T42.2m (signed launcher, custody closure), T42.2p (signed V4 pressure-interphase allowance, no carry-forward), renewed T42.2n (exact-tree acceptance). Then the V5 author/seal, freeze build, and signer seal per sections 3–4, replayed with the reviewer commands in 4.2. | T42.2o after 1–3 and the l/m/p/n chain |
 | 5 | Custody/expiry handoff | Open. Procedure pinned in section 6; executed only when the freeze exists. | T42.2o execution-time step |
 | 6 | Frozen-plan review | Procedure ready: this package supplies the envelope procedure (4), the absence checklist (5), the handoff checklist (6), and today-bindable identities (1–2). The review itself requires the freeze inputs (frozen plan digest, envelope, signature, signer fingerprint), which do not exist yet. | Independent reviewer after 3–5 |

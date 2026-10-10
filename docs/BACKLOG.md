@@ -15166,12 +15166,40 @@ byte-identical 171,630-byte artifact with an untouched worktree and removed
 private root; inventories the freeze-envelope, signer, host, pressure, and
 source-bearing-refusal contracts with independent reviewer commands, naming
 the `freeze.go:509–510` non-Darwin host refusal that gates any Linux freeze on
-T42.H2's remaining pressure-filesystem and Linux-bound plan work; and records
+T42.H2's four remaining prerequisites — the Linux immutable-flag input-custody
+model, isolated pressure/allocation/restore adapters, new Linux-bound plan
+versions, and aggregate physical/effective-cgroup resource admission; and records
 the eight-noun absence checklist, the custody/expiry handoff checklist, and
 the ledger of the six open bindings in the 2026-09-21 record above. The seal
 commit `61d3c9d1` is an ancestor of `origin/main` at `55a962e9`. No freeze,
 identifier selection, ceremony execution, Epic closure, release or scale/SLO
 claim follows; all six T42.2o bindings remain open.
+
+**T42.2o frozen-plan review correction, 2026-10-10:** the independent review
+of the 2026-10-09 package (`9610de11`, documentation only) reported critical 0,
+high 0, medium 1, low 3. The medium correction names all four T42.H2
+prerequisites that gate any Linux freeze behind the `freeze.go:509–510`
+non-Darwin host refusal — the Linux immutable-flag input-custody model,
+isolated pressure/allocation/restore adapters, new Linux-bound plan versions,
+and aggregate physical/effective-cgroup resource admission (`docs/BACKLOG.md`,
+T42.H2/H2g status rows) — both in binding 3 of the package's section 7 and in
+the record above. The three lows add `example.invalid/` and `syntax =` to the
+section 4.1 source-bearing fragment list, add
+`TestDecodeExecutionFreezeRejectsNoncanonicalAndSourceBearing` to the section
+4.3 review-time suite pattern, and correct the citations: seven
+`ExecutionCommits` ancestry/cleanliness facts (`freeze.go:45–51`), the
+64-KiB bound's encode-side check at `freeze.go:365` distinguished from the
+decode-side check at `freeze.go:431`, the `[80, 90, 75]` targets check at
+`freeze.go:551`, the eight-noun absence quote re-attributed to `AGENTS.md`,
+and the unsourced ~9.16-GiB figure replaced by the plan's exact 96-GiB sparse
+APFS pressure contract (`plan.go:1086`). The corrected suite re-executed
+2026-10-10 at this branch tip on the baseline host: exit 0, 23 top-level
+passes including the added decode test (75.34s), `ok
+github.com/bmeddeb/phebs/spike/t421 1996.692s`. Documentation, glossary, and
+whitespace gates pass. No code, retained artifact, sealed byte, or open
+binding changed; no freeze, identifier selection, ceremony execution, Epic
+closure, release or scale/SLO claim follows; all six T42.2o bindings remain
+open.
 
 **T42.3 · Scale posture decision and neutral product closure** — independently
 review the T42.2 receipt, replay representative All code → service →
