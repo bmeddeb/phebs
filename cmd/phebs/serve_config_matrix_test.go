@@ -3,8 +3,11 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
+	"net/http/httptest"
 	"slices"
 	"strings"
 	"testing"
@@ -12,12 +15,9 @@ import (
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/bmeddeb/phebs/internal/api"
-	"github.com/bmeddeb/phebs/internal/callerexecute"
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/extract"
-	phebsmcp "github.com/bmeddeb/phebs/internal/mcp"
 	"github.com/bmeddeb/phebs/internal/packrelease"
-	"github.com/bmeddeb/phebs/internal/store"
 )
 
 // releasedStubVersion is the version every released stub recipe reports. No
@@ -446,38 +446,55 @@ func TestStartupAdmissionAndDiscoveryMatrix(t *testing.T) {
 	}
 }
 
-// startupCallerMapDiscovery reports whether the admitted deps would offer the
-// Caller Map surface on the API and on MCP. It composes the production gates in
-// production order: the caller publication reader the admitted caller registry
-// permits (newServeCallerReader), the provisional-switch half
-// (callerMapDiscoverable), the API service constructors, and the
-// nil-preserving MCP conversion; it then lists the tools a real MCP server
-// registers from them. Stubs stand in for a fully wired store, and nothing on
-// this path calls them.
-func startupCallerMapDiscovery(t *testing.T, deps *serveDeps) (apiOffered, mcpOffered bool) {
+// startupCallerMapDiscovery reports whether the admitted deps offer the Caller
+// Map surface through the production assembly: bindServeCallerReader sets the
+// reader the admitted caller registry permits, newServeAPIOptions assembles the
+// API options, api.New serves /api/version and its capability list, and
+// newServeMCPServer builds the MCP tool registry from those same options. The
+// store is never opened: a nil *store.Surreal stands in for it, so every
+// presence check sees a store and nothing on this path reads it. Two stand-ins
+// remain outside production assembly, each named where it is set: the
+// evidence view the extraction pipeline installs, and an authenticated
+// principal for the version request.
+func startupCallerMapDiscovery(t *testing.T, deps *serveDeps) (service, capability, tools bool) {
 	t.Helper()
-	reader, err := newServeCallerReader(deps, struct {
-		callerexecute.PublicationReadStore
-	}{})
+	t.Setenv("PHEBS_CONTRACT_ATLAS_FIXTURE", "")
+	if err := bindServeCallerReader(deps); err != nil {
+		t.Fatalf("bindServeCallerReader: %v", err)
+	}
+	// startServeExtractionPipeline installs the store as the evidence view
+	// whenever any extractor is admitted; it also starts workers, so it is not
+	// run here.
+	if len(deps.exs) > 0 {
+		deps.evidenceView = deps.st
+	}
+	apiOpts, err := newServeAPIOptions(deps)
 	if err != nil {
-		t.Fatalf("newServeCallerReader: %v", err)
+		t.Fatalf("newServeAPIOptions: %v", err)
 	}
-	opts := api.Options{
-		Store:            struct{ store.Store }{},
-		Evidence:         struct{ store.EvidenceStore }{},
-		Principal:        func(context.Context) string { return "" },
-		DataDir:          deps.cfg.Server.DataDir,
-		CallerMapEnabled: callerMapDiscoverable(deps.cfg),
-		CallerReader:     reader,
+	service = apiOpts.CallerMap != nil
+
+	// The production principal reads the context only the auth middleware
+	// establishes, and /api/version lists capabilities only to an
+	// authenticated caller, so that caller is stood in for. No service
+	// constructor reads the principal's value.
+	versionOpts := apiOpts
+	versionOpts.Principal = func(context.Context) string { return "user:t48.4b" }
+	recorder := httptest.NewRecorder()
+	api.New(versionOpts).ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/api/version", nil))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("GET /api/version = %d: %s", recorder.Code, recorder.Body)
 	}
-	callerMap := api.NewCallerMapService(opts)
-	catalogQueries, callerMapQueries, _ := mcpCallerMapServices(
-		api.NewContractCatalogService(opts), callerMap, nil,
-	)
-	server := phebsmcp.NewServer(phebsmcp.Options{
-		Version: "test", ContractCatalog: catalogQueries, CallerMap: callerMapQueries,
-	})
+	var version struct {
+		Capabilities []string `json:"capabilities"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &version); err != nil {
+		t.Fatalf("decode /api/version: %v", err)
+	}
+	capability = slices.Contains(version.Capabilities, "contract-caller-map")
+
 	serverTransport, clientTransport := mcpsdk.NewInMemoryTransports()
+	server := newServeMCPServer(deps, apiOpts)
 	go func() {
 		_, _ = server.Connect(t.Context(), serverTransport, nil)
 	}()
@@ -491,10 +508,10 @@ func startupCallerMapDiscovery(t *testing.T, deps *serveDeps) (apiOffered, mcpOf
 	if err != nil {
 		t.Fatalf("list MCP tools: %v", err)
 	}
-	mcpOffered = slices.ContainsFunc(listed.Tools, func(tool *mcpsdk.Tool) bool {
+	tools = slices.ContainsFunc(listed.Tools, func(tool *mcpsdk.Tool) bool {
 		return tool.Name == "list_operation_callers"
 	})
-	return callerMap != nil, mcpOffered
+	return service, capability, tools
 }
 
 // TestCallerMapDiscoveryAcrossAdmissionShapes holds Caller Map discovery on the
@@ -595,12 +612,15 @@ func TestCallerMapDiscoveryAcrossAdmissionShapes(t *testing.T) {
 				if got, want := deps.callerRegistry.Enabled(), switchOn || shape.callerPack; got != want {
 					t.Fatalf("caller registry Enabled = %v, want %v", got, want)
 				}
-				apiOffered, mcpOffered := startupCallerMapDiscovery(t, deps)
-				if apiOffered != switchOn {
-					t.Fatalf("API Caller Map offered = %v, want %v", apiOffered, switchOn)
+				service, capability, tools := startupCallerMapDiscovery(t, deps)
+				if service != switchOn {
+					t.Fatalf("API Caller Map service constructed = %v, want %v", service, switchOn)
 				}
-				if mcpOffered != switchOn {
-					t.Fatalf("MCP Caller Map tools offered = %v, want %v", mcpOffered, switchOn)
+				if capability != switchOn {
+					t.Fatalf("/api/version lists contract-caller-map = %v, want %v", capability, switchOn)
+				}
+				if tools != switchOn {
+					t.Fatalf("MCP lists Caller Map tools = %v, want %v", tools, switchOn)
 				}
 			})
 		}

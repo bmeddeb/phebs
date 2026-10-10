@@ -3662,8 +3662,9 @@ one pack. The bounded startup error names what to repair: the pack for a
 missing recipe, and the release record file for a missing or unmatched load
 binding. The correction is that binding or recipe, never a looser gate.
 
-**Discovery needs a provisional switch.** The Caller Map API routes and MCP
-tools are offered only when the proto or Thrift provisional switch is on and
+**Discovery needs a provisional switch.** The Caller Map API routes, the
+`contract-caller-map` capability on `/api/version` and the MCP tools are
+offered only when the proto or Thrift provisional switch is on and
 the admitted caller registry is enabled, because the Caller Map publication
 reader exists only with that registry. Admission and withdrawal never flip
 discovery today: a switch always admits its own caller domain, a released pack

@@ -17244,23 +17244,26 @@ nothing, and both refusal shapes of an unbound release (no recipe; no load
 bindings as `ReasonUnresolvedReference`). Released stub recipes carry a version
 no dark extractor reports and every admitted scenario asserts the exact
 released `domain@version` set. `TestCallerMapDiscoveryAcrossAdmissionShapes`
-holds the API service and the real MCP tool listing across all sixteen
-provisional-switch combinations and four startup shapes, through
-`callerMapDiscoverable` and `newServeCallerReader`, both extracted
+holds the API service, the `/api/version` `contract-caller-map` capability and
+the real MCP tool listing across all sixteen provisional-switch combinations
+and four startup shapes, through the production `newServeAPIOptions` plus
+`bindServeCallerReader` and `newServeMCPServer`, both extracted
 behavior-preserving: discovery needs a provisional switch and an enabled caller
 registry, and admission and withdrawal never flip it. `docs/guides/OPERATIONS.md`
 gains the "Startup and discovery matrix" subsection: the five shapes, one
 running binding per selection, whole-startup refusal versus per-pack
 withdrawal, discovery's two gates, the mixed-provenance caution whose
 disposition is owned by T47.3, and that withdrawal changes derived state at the
-next startup rather than recalling evidence. Tests and documentation plus two
+next startup rather than recalling evidence. Tests and documentation plus three
 behavior-preserving extractions: no runtime behavior change,
 `packRecipes`/`releaseLoadBindings` still empty and the dark startup
 byte-for-byte unchanged. Independent review of `9daf1afb` reported
 critical/high/medium/low `0/1/4/4`; the high (two released packs naming
 different bindings refuse startup, never exercised) is pinned and routed to
 T48.4c, which supplies the running implementation identity, and every other
-finding is corrected on the branch. T48.4c still supplies the machine-derived
+finding is corrected on the branch; delta re-review of `342ae911` found the
+discovery helper still reconstructed the API/MCP options, and it now drives the
+production assembly. T48.4c still supplies the machine-derived
 referenced-artifact census and running implementation identity that make the
 bindings bindable.*
 
