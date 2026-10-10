@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/bmeddeb/phebs/internal/callerexecute"
@@ -51,8 +52,14 @@ func TestCallerMapRecipeStaysUnboundUntilReleased(t *testing.T) {
 	cfg := &config.Config{}
 	cfg.ReleaseSelection.Path = dir
 	cfg.ReleaseSelection.Keys = []config.ReleaseKey{{ID: "key-1", PublicKey: public}}
-	if _, err := releasedExtractors(context.Background(), cfg); err == nil {
+	_, err := releasedExtractors(context.Background(), cfg)
+	if err == nil {
 		t.Fatal("a verified released caller-map record without its in-tree binding must refuse startup")
+	}
+	if !strings.Contains(err.Error(), "has no fixed in-tree recipe") ||
+		!strings.Contains(err.Error(), callerMapPackID) {
+		t.Fatalf("unbound release refusal = %v, want the missing in-tree recipe cause for %q",
+			err, callerMapPackID)
 	}
 }
 

@@ -22,8 +22,21 @@ func TestCallerMapActivationDoesNotPromoteComparison(t *testing.T) {
 	if api.NewLegacyCallerComparisonService(opts) != nil {
 		t.Fatal("legacy comparison admitted without CallerComparisonEnabled")
 	}
-	if api.NewCallerComparisonService(opts) != nil {
+	// The exact production constructor also requires its reader binding;
+	// callerMapOptions leaves CallerReader and DataDir unset, so nil there
+	// would prove nothing. Bind the real exact-reader fixture, satisfying
+	// every other precondition, so CallerComparisonEnabled is the only
+	// variable: the identical options refuse unset and admit set.
+	exact := newExactCallerAPIFixture(t, 1)
+	exactOpts := exact.serviceOptions()
+	exactOpts.CallerReader = exact.reader
+	exactOpts.CallerComparisonEnabled = false
+	if api.NewCallerComparisonService(exactOpts) != nil {
 		t.Fatal("exact comparison admitted without CallerComparisonEnabled")
+	}
+	exactOpts.CallerComparisonEnabled = true
+	if api.NewCallerComparisonService(exactOpts) == nil {
+		t.Fatal("exact comparison refused despite CallerComparisonEnabled and a bound reader")
 	}
 	handler := api.New(opts)
 	_, version := catalogHTTP(t, handler, "/api/version", nil)
