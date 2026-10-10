@@ -359,8 +359,9 @@ parent content was invented. The original records and inputs remain retained.
 Ben's sole-reviewer amendment and proposed thresholds are in the prospective
 [`CALLER_QUALITY_PROTOCOL.md`](../../docs/CALLER_QUALITY_PROTOCOL.md).
 Independent source/frame enumeration, the caller-specific scoring projection,
-source review, approved thresholds, artifact commitments and Ben's blind
-labels remain before sealing/scoring. No independent-human validation,
+source review, approved thresholds and artifact bindings remain before protocol
+sealing. Ben then labels the sealed sample from source and commits those labels
+before prediction disclosure and scoring. No independent-human validation,
 accuracy or release claim follows from this input derivation.
 
 ### Verification of this slice

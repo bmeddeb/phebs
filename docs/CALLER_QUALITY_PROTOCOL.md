@@ -202,8 +202,9 @@ deterministic and third-party reproducible.
 
 ## 9. Scoring and reporting
 
-Every reported number carries: count, denominator, point estimate, Wilson
-bounds, stratum breakdown, and the error-taxonomy tally — same-name unrelated
+Every reported rate carries: count, denominator, point estimate, Wilson
+bounds where the denominator is positive (otherwise unavailable), stratum
+breakdown, and the error-taxonomy tally — same-name unrelated
 methods, imports/aliases, wrappers/interfaces, dynamic paths,
 generated/vendored/test code, excluded/failed paths, ambiguous/missing
 attribution. Results bind card, manifest, implementation/binary, input and

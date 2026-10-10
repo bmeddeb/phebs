@@ -76,7 +76,7 @@ def update_lock(lock, facts, receipt):
         "out_of_tree_testmain_documents": sum(r["derived"]["index"]["out_of_tree_testmain_documents"] for r in admitted),
         "out_of_tree_other_documents": sum(len(r["derived"]["index"]["out_of_tree_other_documents"]) for r in admitted),
     }
-    der["rederivation_required"] = "corrected inputs recorded; source review, independent universe, approved thresholds and Ben's blind labels remain before sealing/scoring"
+    der["rederivation_required"] = "corrected inputs recorded; source review, independent universe and approved thresholds remain before sealing; Ben's blind labels remain before scoring"
     return out
 
 
