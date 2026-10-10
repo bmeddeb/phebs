@@ -201,9 +201,11 @@ spike/t472/corpus.lock.json.
 
         derived = run(["git", "rev-parse", "HEAD"], cwd=clone).strip()
         tree = run(["git", "rev-parse", "HEAD^{tree}"], cwd=clone).strip()
-        parents = run(["git", "rev-list", "--parents", "-n", "1", "HEAD"], cwd=clone).split()
-        if parents[1:] != [pin]:
-            raise SystemExit("%s: derived commit parents %s != [%s]" % (repo, parents[1:], pin))
+        raw_commit = run(["git", "cat-file", "commit", derived], cwd=clone)
+        parents = [line.removeprefix("parent ") for line in raw_commit.split("\n\n", 1)[0].splitlines()
+                   if line.startswith("parent ")]
+        if parents != [pin]:
+            raise SystemExit("%s: derived commit parents %s != [%s]" % (repo, parents, pin))
         after = run(["git", "status", "--porcelain"], cwd=clone)
         if after.strip():
             raise SystemExit("%s: clone not clean after commit:\n%s" % (repo, after))
@@ -219,14 +221,14 @@ spike/t472/corpus.lock.json.
                 raise SystemExit("%s: committed %s digest != measured working-tree digest" % (repo, rel))
             if len(p.stdout) != files[rel]["bytes"]:
                 raise SystemExit("%s: committed %s bytes != measured working-tree bytes" % (repo, rel))
-        shown = run(["git", "show", "--stat", "--oneline", "-s", "HEAD"], cwd=clone).strip()
+        shown = derived[:12] + " " + raw_commit.split("\n\n", 1)[1].splitlines()[0]
 
         facts[repo] = {
             "name": remote_of[repo],
             "pin": pin,
             "derived_commit": derived,
             "derived_tree": tree,
-            "derived_parents": parents[1:],
+            "derived_parents": parents,
             "files": {rel: dict(files[rel], git_blob_sha1=blobs[rel]) for rel in DERIVED_PATHS},
             "merge": {
                 "docs": merge["docs"],
