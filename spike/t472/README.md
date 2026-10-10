@@ -301,6 +301,45 @@ the independent recall population. No `unit-snapshot.json` was added; Ben
 selected call-site and declaration attribution claims, with service edges
 unavailable.
 
+### Tree-validated merge and the etcd symbol-alias correction (T47.2c)
+
+The merge helper now validates every merged document path against the pinned
+Git tree read from its `--clone` instead of dropping by basename: regular
+documents (mode 100644/100755) are kept, mode-120000 documents are dropped
+only as explicitly inventoried alias entries carrying path, mode and target,
+and an absent path or any other mode refuses the merge. Both production scope
+guards are unchanged. The etcd input was re-derived from the retained
+per-module SCIP outputs after re-verifying all 26 recorded run identities;
+grpc-go and containerd regenerate byte-identical under the new helper
+(regenerated digests equal the recorded digests above), so only the etcd
+derived commit advances:
+
+| Repository | Pin → derived commit | `index.scip` bytes · SHA-256 | module runs | version-skew references |
+|---|---|---|---|---:|
+| etcd-io/etcd | `f061acd0902d489041448cdd19d71a345d27b9f5` → `f9ecd8dcecc18b7559c0e3c0c264477c6ab9ddc1` | 33,320,501 · `9b0b13ed12244e04ee05cff274a244ed61bea2944c4d1f0eec2d05e603e79177` | 14 | 0 |
+
+The 11 dropped documents are the committed `client/v3` example-file symlink
+aliases into `tests/integration/clientv3` (2,424 occurrences, 282 symbols);
+each alias target remains as its own canonical regular document, the retained
+set is exactly the previous set minus those aliases, and every retained
+document is regular at the pin. The previous input (derived commit
+`75771dd76dd9a6d7048ae48793b806b1cbec0c22`, 33,498,138 bytes,
+`41f32f8d058c4375dcd037f85fdbf10bbf17f319f3a73abb659555e881308570`) is
+preserved intact as `previous_derived` and at its three retained copies. The
+admitted totals are unchanged (26 module runs, 60 generated clients, 44
+mapped declarations, 16 abstentions). The new merge helper is
+`537312c0ba3b2fa7a6210bd55d047f2bae687b0d5608b066596685d50cce3c61` at
+7,076,139 bytes (the table in "Exact run inputs" above keeps the historical
+R1 tool identity); `scip-go` and `t472snapshots` are unchanged. Custody is
+`/home/ben/phebs-rehearsals/t472-alias-derivation-20261010` (fresh clone at
+the pin, cross-checked byte-identical against both retained clones; receipt
+`4fcc083243174fa122252c405af4cc9ed514c975dae5b34a851b915bf978a7f9`; lock
+`8c5340427010c3ca86d2a038d88ff6d23ade76c04ba2e9bcd49d579237762168`). The
+source census still records 7,685 regular Go sources and the 11 etcd
+nonregular Go paths; its etcd derived-commit binding still names
+`75771dd7…` and is rebound with the regenerated preparation, not silently
+reinterpreted here.
+
 ### Exact run inputs and measured host
 
 The runner was source `bcfaaca5503888a89d8947bcb77749105588e04a`; the merge

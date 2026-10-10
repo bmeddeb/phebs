@@ -19,9 +19,9 @@
         "status": "committed",
         "corpus_admitted": true,
         "derived_utc": "2026-10-10",
-        "clone": "spike/t472/corpus/etcd",
-        "derived_commit": "75771dd76dd9a6d7048ae48793b806b1cbec0c22",
-        "derived_tree": "14c7ec3d9d5cf9c46242b6b9db6575f477eb9d3f",
+        "clone": "/home/ben/phebs-rehearsals/t472-alias-derivation-20261010/clone/etcd",
+        "derived_commit": "f9ecd8dcecc18b7559c0e3c0c264477c6ab9ddc1",
+        "derived_tree": "308666984a2e26e83175c79e31dd5595327612a4",
         "parent_commits": [
           "f061acd0902d489041448cdd19d71a345d27b9f5"
         ],
@@ -33,9 +33,9 @@
             "sha256": "6bd76e59f1764deb648d3f941733735cfad6b8bc71c74eaad78f35ae6fda405a"
           },
           "index.scip": {
-            "bytes": 33498138,
-            "git_blob_sha1": "27fce4e34166a678df74406ba54fe370b8d92d27",
-            "sha256": "41f32f8d058c4375dcd037f85fdbf10bbf17f319f3a73abb659555e881308570"
+            "bytes": 33320501,
+            "git_blob_sha1": "cdf2d13061687620c5d54b76b8d1c4934fb51f6c",
+            "sha256": "9b0b13ed12244e04ee05cff274a244ed61bea2944c4d1f0eec2d05e603e79177"
           },
           "layout-snapshot.json": {
             "bytes": 830,
@@ -44,9 +44,9 @@
           }
         },
         "index": {
-          "documents": 1076,
-          "occurrences": 395236,
-          "symbols": 63330,
+          "documents": 1065,
+          "occurrences": 392812,
+          "symbols": 63048,
           "out_of_tree_build_cache_documents_dropped": 101,
           "out_of_tree_testmain_documents": 0,
           "out_of_tree_other_documents": [
@@ -152,11 +152,69 @@
             "../../../../../../../../.cache/go-build/ae/ae64842bfc32132f8cf088769a46f58217666559723dc524ddb2e46773e5fc09-d",
             "../../../../../../../../.cache/go-build/bf/bfd050b4c991d07dfecc4891a3b52fbe0dca4ba410c9faa97a991478c73a3bbc-d"
           ],
+          "alias_documents_dropped": 11,
+          "alias_documents": [
+            {
+              "mode": "120000",
+              "path": "client/v3/concurrency/example_election_test.go",
+              "target": "../../../tests/integration/clientv3/concurrency/example_election_test.go"
+            },
+            {
+              "mode": "120000",
+              "path": "client/v3/concurrency/example_mutex_test.go",
+              "target": "../../../tests/integration/clientv3/concurrency/example_mutex_test.go"
+            },
+            {
+              "mode": "120000",
+              "path": "client/v3/concurrency/example_stm_test.go",
+              "target": "../../../tests/integration/clientv3/concurrency/example_stm_test.go"
+            },
+            {
+              "mode": "120000",
+              "path": "client/v3/example_auth_test.go",
+              "target": "../../tests/integration/clientv3/examples/example_auth_test.go"
+            },
+            {
+              "mode": "120000",
+              "path": "client/v3/example_cluster_test.go",
+              "target": "../../tests/integration/clientv3/examples/example_cluster_test.go"
+            },
+            {
+              "mode": "120000",
+              "path": "client/v3/example_kv_test.go",
+              "target": "../../tests/integration/clientv3/examples/example_kv_test.go"
+            },
+            {
+              "mode": "120000",
+              "path": "client/v3/example_lease_test.go",
+              "target": "../../tests/integration/clientv3/examples/example_lease_test.go"
+            },
+            {
+              "mode": "120000",
+              "path": "client/v3/example_maintenance_test.go",
+              "target": "../../tests/integration/clientv3/examples/example_maintenance_test.go"
+            },
+            {
+              "mode": "120000",
+              "path": "client/v3/example_metrics_test.go",
+              "target": "../../tests/integration/clientv3/examples/example_metrics_test.go"
+            },
+            {
+              "mode": "120000",
+              "path": "client/v3/example_test.go",
+              "target": "../../tests/integration/clientv3/examples/example_test.go"
+            },
+            {
+              "mode": "120000",
+              "path": "client/v3/example_watch_test.go",
+              "target": "../../tests/integration/clientv3/examples/example_watch_test.go"
+            }
+          ],
           "version_skew_references": 0,
           "version_skew_sample": [],
           "external_symbols_dropped": 0,
           "round_trip_unstable_documents": 0,
-          "bytes": 33498138,
+          "bytes": 33320501,
           "module_runs": 14,
           "module_rels": [
             ".",
@@ -220,7 +278,7 @@
             "over_bound": []
           },
           "index_scip_bytes": {
-            "measured": 33498138,
+            "measured": 33320501,
             "max": 67108864,
             "within": true
           }
@@ -228,29 +286,29 @@
         "previous_derived": {
           "status": "committed",
           "corpus_admitted": true,
-          "derived_utc": "2026-10-09",
+          "derived_utc": "2026-10-10",
           "clone": "spike/t472/corpus/etcd",
-          "derived_commit": "b0e608e23027ab640ed336f4318a8fa804819bff",
-          "derived_tree": "ec2081df4f6bcfe53a757bf59e1ccbd2fdc175ef",
+          "derived_commit": "75771dd76dd9a6d7048ae48793b806b1cbec0c22",
+          "derived_tree": "14c7ec3d9d5cf9c46242b6b9db6575f477eb9d3f",
           "parent_commits": [
             "f061acd0902d489041448cdd19d71a345d27b9f5"
           ],
           "pushed": false,
           "files": {
+            "generated-from-snapshot.json": {
+              "bytes": 710,
+              "git_blob_sha1": "d4ecf6ae7eaa6765db3a8e9be611e0130d209257",
+              "sha256": "6bd76e59f1764deb648d3f941733735cfad6b8bc71c74eaad78f35ae6fda405a"
+            },
             "index.scip": {
-              "sha256": "65de33afb042b96c742fd2ca5ef2df5ee5f4ba06a59cdc43b21f4bfe6bdac3d9",
-              "bytes": 33498092,
-              "git_blob_sha1": "0900f8f2a43974930e7f38636f4be26cb399bc98"
+              "bytes": 33498138,
+              "git_blob_sha1": "27fce4e34166a678df74406ba54fe370b8d92d27",
+              "sha256": "41f32f8d058c4375dcd037f85fdbf10bbf17f319f3a73abb659555e881308570"
             },
             "layout-snapshot.json": {
-              "sha256": "21cf18371cb980d6ded5fd3c769543aa339ff5ecbbffcb11341d83f585a40da1",
               "bytes": 830,
-              "git_blob_sha1": "246a0b3f4e200b43dbfb4d66aaef3f7088571df6"
-            },
-            "generated-from-snapshot.json": {
-              "sha256": "6bd76e59f1764deb648d3f941733735cfad6b8bc71c74eaad78f35ae6fda405a",
-              "bytes": 710,
-              "git_blob_sha1": "d4ecf6ae7eaa6765db3a8e9be611e0130d209257"
+              "git_blob_sha1": "246a0b3f4e200b43dbfb4d66aaef3f7088571df6",
+              "sha256": "21cf18371cb980d6ded5fd3c769543aa339ff5ecbbffcb11341d83f585a40da1"
             }
           },
           "index": {
@@ -258,9 +316,115 @@
             "occurrences": 395236,
             "symbols": 63330,
             "out_of_tree_build_cache_documents_dropped": 101,
+            "out_of_tree_testmain_documents": 0,
+            "out_of_tree_other_documents": [
+              "../../../../../../../../../../.cache/go-build/02/029777b8d525a272476725f99949754fd7f16404e0e56f621eadea9db028abe2-d",
+              "../../../../../../../../../../.cache/go-build/03/03d8342ebebfb28d216038490dbfe8c86284d315041914a2b8af2d69b8b01e15-d",
+              "../../../../../../../../../../.cache/go-build/06/064dedaea7cf166521fc1f04fe4121f1603d39980d452b35ac40a5abbd201fc9-d",
+              "../../../../../../../../../../.cache/go-build/07/07f2457ed33f8eca87ba0c134478718117c1ae5444ffe8915fff4a83045b72f6-d",
+              "../../../../../../../../../../.cache/go-build/26/26f153c0c2d9783642a6912709d95e889763be6c88e0ddaec5564b83260ccdee-d",
+              "../../../../../../../../../../.cache/go-build/35/35d1a31962847c91cdcf396de6582e797a6aa00abc4d51afe2b07d12ef6c0001-d",
+              "../../../../../../../../../../.cache/go-build/37/3728b4b5e03e420f4e7ee5ea44da92edd77c832a5276a25d23ae4a0d132d87f0-d",
+              "../../../../../../../../../../.cache/go-build/3b/3bb87fae75d3d96bc2ce1f9376b2d1b335b611ea12320ffe5309ecf536339f52-d",
+              "../../../../../../../../../../.cache/go-build/5e/5e4aca43675840c7cd6295374d05eef0cd8755ef454fcbeefa17f304a91b3b91-d",
+              "../../../../../../../../../../.cache/go-build/5e/5edf8e01ab7af74acbabda4052339f9ab2a9869fa80edbc46fd39cbf4f018cd9-d",
+              "../../../../../../../../../../.cache/go-build/75/75b849c8ad02a4c541d0dd2f55dc7696b1fa4d3ec45616565be35926b6fe285e-d",
+              "../../../../../../../../../../.cache/go-build/8b/8ba03526bb921a00734e6f24d6ca56dadc4555ec2f6f32aa975f1ce240315c8e-d",
+              "../../../../../../../../../../.cache/go-build/a7/a7497ad8000f44155242854f52d42ff74a05afacbd407b79c17ac841f9be0396-d",
+              "../../../../../../../../../../.cache/go-build/bc/bc21fff15beafcec8c8ceca442e670385550180f9693f8e3d81dfa18155305eb-d",
+              "../../../../../../../../../../.cache/go-build/c8/c8884a5358cf308713b37931709b266c415ee824be78507f2d766357ca537ab2-d",
+              "../../../../../../../../../../.cache/go-build/e4/e4ddfe35485dc100044eef5c7a509a57d164e526b8c11696305c13a04065f186-d",
+              "../../../../../../../../../../.cache/go-build/f0/f0839b25fde79903347234e06987bbdaf9bfecb6dd0ef08e1e88f68a61468ae9-d",
+              "../../../../../../../../../../.cache/go-build/f5/f5c69440d986b9d9e79e33c75ad303ae38316af8f0aeed500588bafda0fec4c4-d",
+              "../../../../../../../../../.cache/go-build/01/0189bf16bfda1272701996630d306ca36c5d5246583e71173dae9727da9755ef-d",
+              "../../../../../../../../../.cache/go-build/07/07dcb87dfb9a7bd1263287067ababa24b86ef1a5e20b94b39c4464d8f3321e71-d",
+              "../../../../../../../../../.cache/go-build/08/089953c4455a57d2f1784b56d14fd1e7d8682a8860f34abe4835457cf9c99ac0-d",
+              "../../../../../../../../../.cache/go-build/0c/0c589de12d322eecf766a24792b3cc163105c3393b1a29fd4d1f44be87ceef90-d",
+              "../../../../../../../../../.cache/go-build/13/13816c7a88411349ae7735e64d834bf7d5ee128f84dda333f1a32cbbaa2e93bf-d",
+              "../../../../../../../../../.cache/go-build/20/20c31831e1bde7e8db2e255df303974ddcf86bdcd60ae2e2682c379e80fe10dc-d",
+              "../../../../../../../../../.cache/go-build/2a/2ab7927153ed2c84cc9466208aa0ccd93e846ed56355bf2c1b73e1ea2599e206-d",
+              "../../../../../../../../../.cache/go-build/2c/2c6c03f00fc5227bed3c2c0495941f3a9ecba244be37732aa2d2d9d44b51560d-d",
+              "../../../../../../../../../.cache/go-build/32/32c3c74d87d7b5f9f04699e271e49ddebbfc6dede3cecff17636d122e5a210b9-d",
+              "../../../../../../../../../.cache/go-build/35/35981e808ce927886828255bc05be3f3380f4890f2249ab85324052f153a6c1f-d",
+              "../../../../../../../../../.cache/go-build/36/36e92ca35d1430680ca5f3e9cd67a6640cf542447ec722633d5b7b4537e3d2f0-d",
+              "../../../../../../../../../.cache/go-build/39/391bf7701b7324e0b50a0393fbbbd2cfc34856a16bc62fc3ce6d93fafa368014-d",
+              "../../../../../../../../../.cache/go-build/3f/3ffb5673edeebe521a0246b6a807500da1997106cc8609f8052e5466cd664da6-d",
+              "../../../../../../../../../.cache/go-build/42/4235c81af4bdbff07fae6cdbd05df9bd7485de97add9ee756fd3327f1a2e240a-d",
+              "../../../../../../../../../.cache/go-build/43/43e588d654710023d3f32817ec7a7cad1ae056aa4ebc39bc33872487ce3fd0a8-d",
+              "../../../../../../../../../.cache/go-build/49/494ac8c9a6d28b24dfe157eab20df00e518b7ed11362dab593ffe03f652c8c22-d",
+              "../../../../../../../../../.cache/go-build/4a/4ad9b5c413518d23b599798f4b520cf36035b9ef9ae083bd0596a2f669952b77-d",
+              "../../../../../../../../../.cache/go-build/4c/4ce040b257fbaa689c71b8f882af7c2e2b188bdca250033fbd23aec32a4ba0c5-d",
+              "../../../../../../../../../.cache/go-build/4e/4e9cd88d550583cd5a9e9e987a87b03238d4fe33db884e1773419a196db23a23-d",
+              "../../../../../../../../../.cache/go-build/50/50c59fc2fb5d403fef4bab06fe346fc1f92b334f5f90a94e8f4b2ae1af684ec6-d",
+              "../../../../../../../../../.cache/go-build/52/522387c54257bafd6def79130eac53ec88fafbe08b11b5b8f3d54ecc29ce811b-d",
+              "../../../../../../../../../.cache/go-build/53/53b8ed969f7b2f276eea498b3adcd957a1cab7a360d7e8ed9e4b74c349073821-d",
+              "../../../../../../../../../.cache/go-build/56/5686bf338e2136086424439c5dc3fb8255e9f7563c839afb3543ea614892973c-d",
+              "../../../../../../../../../.cache/go-build/59/597b533d076ef37ae7e3daaedfb64b95fa5f801f24418209db7b98592f3b6edb-d",
+              "../../../../../../../../../.cache/go-build/5b/5b6c51f725dd9d3b136bb4ce7bba0b22895816e79aa7f1a21bb1391d52c8c064-d",
+              "../../../../../../../../../.cache/go-build/5e/5e7d4f39523d6c687ff158ce65ea49541016e17febbbd61afda8c49a5de184a9-d",
+              "../../../../../../../../../.cache/go-build/5f/5f36ca242dda100e667a78b845244de5d01bdfdb83418e4882d3fa266b8b7424-d",
+              "../../../../../../../../../.cache/go-build/61/619fb41afef1401f4cc34e989bf44437735bd036c060c0a202fa68f2237685e0-d",
+              "../../../../../../../../../.cache/go-build/64/6457ff003302bc2d878dfd99a34c011c19d28ac051917f1973347cfcc789c86d-d",
+              "../../../../../../../../../.cache/go-build/66/66c8bca4e979712d2e4ed42314a005a85b4a1b8e6dd571ceed64ca1c1dd2e6c7-d",
+              "../../../../../../../../../.cache/go-build/69/69703a3706276f827dd353bcfef77436bec2cced501d741434c65125d2b1d812-d",
+              "../../../../../../../../../.cache/go-build/6b/6b4273201afc6d3b6f6568d91bc77e12d3e7682db17c8db8b1f3fb89649c99e6-d",
+              "../../../../../../../../../.cache/go-build/6f/6f5b7c3cd679712b133c9d63181b9d0024f360c9e83c1f5cf0af35ef0a169afb-d",
+              "../../../../../../../../../.cache/go-build/75/757517ba0513ecabef760a6d419175fdc4173afce41cb976dad9d231a37e1c90-d",
+              "../../../../../../../../../.cache/go-build/79/79d0a927fbdeaecd75ca9b86e732cda246cb2f0e9276a99c14bf11bacc7021da-d",
+              "../../../../../../../../../.cache/go-build/7b/7b53dd82c7242b97d990269bceaadc6ce9bb91ff246483ce958cdc0063e7a8b8-d",
+              "../../../../../../../../../.cache/go-build/7b/7b6a898dbbf8018f178f18f9717beed0dd9debcd65482d11eaf529fad08d43b8-d",
+              "../../../../../../../../../.cache/go-build/7c/7c1baac2fbd30f91a8a436461e0fcda0efea848a6355f89f7c3213e46025227d-d",
+              "../../../../../../../../../.cache/go-build/7c/7cab72b4e18a8edf4ccfd2fc215e77f0c2fc1b41f69ffab75631eaffca7133c0-d",
+              "../../../../../../../../../.cache/go-build/80/80e378314df18cebf86d928c87e8c0da29034f43c5afab514914d999f642eec9-d",
+              "../../../../../../../../../.cache/go-build/83/83582a0c3404f71684b1b6fc8df0f2b05451ba536f34e721d4d3634a789a37f7-d",
+              "../../../../../../../../../.cache/go-build/85/85dfc452073966ee0981a89f00c38a3ef9279b8842f0538416d76975af264f7a-d",
+              "../../../../../../../../../.cache/go-build/86/863a870419d816f1a048919b0c4a8736928f4dbe948f01dcc9e2d06c01b41abd-d",
+              "../../../../../../../../../.cache/go-build/88/885b1a03ea92c01adeac15a154bc591a59f989b1ac9f507f5922d91eddc2339b-d",
+              "../../../../../../../../../.cache/go-build/89/89723efb5a919becbae27b1b0e97b381e239bc02fc293906b14b7b9408260dc3-d",
+              "../../../../../../../../../.cache/go-build/8d/8db18b89ff8e32b2be6bad161edbe0311875cbecc97065d3ea6d8e0213bd658c-d",
+              "../../../../../../../../../.cache/go-build/96/966f29ed6b75b295b4da4d6500fa81d26a172d0a5e5481317fcc75f39218ecea-d",
+              "../../../../../../../../../.cache/go-build/96/96960405df9c5cb0d9ff206b69ac20b533649e068c418f4f4dfa7448395c3465-d",
+              "../../../../../../../../../.cache/go-build/9b/9b79914f0c2ea94a57013a6f44dbe12dea346746c348600bec3b7525e461bfac-d",
+              "../../../../../../../../../.cache/go-build/a6/a66418c63ecf7719e86a82dc6da0851f289ca7fe3df273297afb99c80a296961-d",
+              "../../../../../../../../../.cache/go-build/a7/a765b3c4eda69b6205dc1eccde37820db83a1fc6007827aa79b046935a092763-d",
+              "../../../../../../../../../.cache/go-build/a9/a9353a02bb02dd12774446d9f7f7cb043d5cb4f03b404c415d525fe9bbe7b1f3-d",
+              "../../../../../../../../../.cache/go-build/a9/a9545da1308482c6829924b70884a9b0fceb12c7d34215e16598eedeb23a5153-d",
+              "../../../../../../../../../.cache/go-build/ad/ad6c60b48ea18df403e93c05b792076aca3f922fb747dff39139f13c4e678307-d",
+              "../../../../../../../../../.cache/go-build/ae/ae20e182d4b34a54e19e8bc543f60b584b407ae500042ec811f78d5144a73e5f-d",
+              "../../../../../../../../../.cache/go-build/b0/b0a772dc226bffc9b2668e80e01ab626178c76c28d38b96bb2c35a1c577f2848-d",
+              "../../../../../../../../../.cache/go-build/b1/b1d805765a0d6ce7127ccfb91d8f080b617ac0bcbdf7a0ded9d214dc587b272d-d",
+              "../../../../../../../../../.cache/go-build/b3/b3d8688b37350fd800240ea370c616e1dd19cf07ef557f49ad1cd31ba7702e4a-d",
+              "../../../../../../../../../.cache/go-build/bc/bc83650ae0fe0f8a2b9b68c014b3156a84b37df7174520e35ae8ccd094262ffb-d",
+              "../../../../../../../../../.cache/go-build/bc/bc9522c5b67a91104411a32f7f279360cbd12c915a22f62a91cdc77167b8a114-d",
+              "../../../../../../../../../.cache/go-build/c5/c5e2476cd8b0ac6614daf838b75908f37ae1b4ba4707280b71d637e6261fa16a-d",
+              "../../../../../../../../../.cache/go-build/c6/c6d67cfa9cb8893ffdce5a55eccd79b760a45fe1f826fad9d19d58fa0e31dd04-d",
+              "../../../../../../../../../.cache/go-build/ca/cae81d04470233b83b8e7d41eb3456d167c7133e5e8cc5023a9d025f4ed3fb50-d",
+              "../../../../../../../../../.cache/go-build/cd/cd6f5d7a5535c6e06aea415ae63e6fc00eed8827d0f6560fef2c4e64e7432dc0-d",
+              "../../../../../../../../../.cache/go-build/d2/d2f75d1973563b659ade08f5b3aed4ae13ee9bf00b4f49ce918578ed4c60a859-d",
+              "../../../../../../../../../.cache/go-build/d3/d357a914681d075fa12ab913dc0267aed5b61a8dea0f3d5520f659dc01b87722-d",
+              "../../../../../../../../../.cache/go-build/d6/d699c8021dc827dbd68a223e4f9d96be96a16f6d49aad6f778e8be42c79bc4a4-d",
+              "../../../../../../../../../.cache/go-build/d9/d948d9c3e9ef9243e3e6b7ae09073db6aed1580c3841a80b6b602eb2aef7a2a3-d",
+              "../../../../../../../../../.cache/go-build/d9/d9bc48beb311a59a1ec5e36906d812ab259966398668d0d368842fc021ac5fda-d",
+              "../../../../../../../../../.cache/go-build/dc/dcb6a7ca7ab0c94fd5e2a34cb8fab1363f56d4df3f7f25d8e9ceb379c4038a7f-d",
+              "../../../../../../../../../.cache/go-build/e0/e026081368e822856349dd3dc46c67358faf6972766c2ec3cb872be72a9e259e-d",
+              "../../../../../../../../../.cache/go-build/e3/e3fa45ee418ff86a18318478b2ab58562644a7260cbc6055ce0f713808457cd5-d",
+              "../../../../../../../../../.cache/go-build/e6/e6282fa366d148be453f31dc6faf0acc5d7f4578010da3415414219a89b5c4a4-d",
+              "../../../../../../../../../.cache/go-build/e9/e9be77d7de66ce59842a8f975d3daeb2ec7f45a0a2176f127ece25697049faa0-d",
+              "../../../../../../../../../.cache/go-build/eb/eb0ed867b74c8311259b1f36a6886c27a35f106a45dd3a931ca47dc65a49a345-d",
+              "../../../../../../../../../.cache/go-build/ef/ef2494f01c3c38adc0e81f22ae16825057a3932e7cea1ffc9a9dd5f4da6a71c7-d",
+              "../../../../../../../../../.cache/go-build/f1/f1d34a53e7c2e3f8e766448d1091edf8144a636b347c8eed68a3215e8345d44b-d",
+              "../../../../../../../../../.cache/go-build/f7/f7e09ade043614f6f7ad023bd8da43846b49661ea263786a53634f496341dcd9-d",
+              "../../../../../../../../../.cache/go-build/fc/fca4e4f7ab3ab1192d426ea2291b1a50fea53c902ddfbfa62222f5ebcd259d2c-d",
+              "../../../../../../../../../.cache/go-build/fd/fd26a2dcb3f1e03fcb45c939957e47f37f0aa531faf96e620fe8b8d4b00eb8e3-d",
+              "../../../../../../../../../.cache/go-build/ff/ff9fb9badd26f80c6f5407593df609e4078fb30aea1e3cd44fed3b27176500f5-d",
+              "../../../../../../../../.cache/go-build/ae/ae64842bfc32132f8cf088769a46f58217666559723dc524ddb2e46773e5fc09-d",
+              "../../../../../../../../.cache/go-build/bf/bfd050b4c991d07dfecc4891a3b52fbe0dca4ba410c9faa97a991478c73a3bbc-d"
+            ],
+            "version_skew_references": 0,
+            "version_skew_sample": [],
             "external_symbols_dropped": 0,
             "round_trip_unstable_documents": 0,
-            "bytes": 33498092,
+            "bytes": 33498138,
             "module_runs": 14,
             "module_rels": [
               ".",
@@ -308,11 +472,12 @@
               "grpc_generator_relative_path_suffix",
               "protocol_derives_grpc",
               "layout_coverage_generated_idl_grpc"
-            ]
+            ],
+            "mapping_table_sha256": "9dd8d3c653af126e7adc21edaf3f91c0c158e6ef3a04f218d2d8f9a771996a30"
           },
           "bounds": {
             "corpus_files": {
-              "measured": 1493,
+              "measured": 1496,
               "max": 200000,
               "within": true
             },
@@ -323,9 +488,113 @@
               "over_bound": []
             },
             "index_scip_bytes": {
-              "measured": 33498092,
+              "measured": 33498138,
               "max": 67108864,
               "within": true
+            }
+          },
+          "previous_derived": {
+            "status": "committed",
+            "corpus_admitted": true,
+            "derived_utc": "2026-10-09",
+            "clone": "spike/t472/corpus/etcd",
+            "derived_commit": "b0e608e23027ab640ed336f4318a8fa804819bff",
+            "derived_tree": "ec2081df4f6bcfe53a757bf59e1ccbd2fdc175ef",
+            "parent_commits": [
+              "f061acd0902d489041448cdd19d71a345d27b9f5"
+            ],
+            "pushed": false,
+            "files": {
+              "index.scip": {
+                "sha256": "65de33afb042b96c742fd2ca5ef2df5ee5f4ba06a59cdc43b21f4bfe6bdac3d9",
+                "bytes": 33498092,
+                "git_blob_sha1": "0900f8f2a43974930e7f38636f4be26cb399bc98"
+              },
+              "layout-snapshot.json": {
+                "sha256": "21cf18371cb980d6ded5fd3c769543aa339ff5ecbbffcb11341d83f585a40da1",
+                "bytes": 830,
+                "git_blob_sha1": "246a0b3f4e200b43dbfb4d66aaef3f7088571df6"
+              },
+              "generated-from-snapshot.json": {
+                "sha256": "6bd76e59f1764deb648d3f941733735cfad6b8bc71c74eaad78f35ae6fda405a",
+                "bytes": 710,
+                "git_blob_sha1": "d4ecf6ae7eaa6765db3a8e9be611e0130d209257"
+              }
+            },
+            "index": {
+              "documents": 1076,
+              "occurrences": 395236,
+              "symbols": 63330,
+              "out_of_tree_build_cache_documents_dropped": 101,
+              "external_symbols_dropped": 0,
+              "round_trip_unstable_documents": 0,
+              "bytes": 33498092,
+              "module_runs": 14,
+              "module_rels": [
+                ".",
+                "api",
+                "cache",
+                "client/pkg",
+                "client/v3",
+                "etcdctl",
+                "etcdutl",
+                "pkg",
+                "server",
+                "tests",
+                "tests/antithesis/pkg",
+                "tools/mod",
+                "tools/rw-heatmaps",
+                "tools/testgrid-analysis"
+              ]
+            },
+            "snapshots": {
+              "clients": 3,
+              "mapped": 3,
+              "abstained": 0,
+              "mappings": 3,
+              "layout_roots": 6,
+              "layout_roots_deduped": 0,
+              "regular_files": 1493,
+              "gitlinks": 0,
+              "symlinks": 11,
+              "max_blob_path": "Documentation/etcd-internals/diagrams/write_workflow_follower.png",
+              "max_blob_bytes": 630280,
+              "vendored_mapped": 0,
+              "nonvendored_mapped": 3,
+              "abstentions": [],
+              "gates_passed": [
+                "decode_layout_production_decoder",
+                "decode_generated_from_production_decoder",
+                "layout_root_limit",
+                "generated_mapping_limit",
+                "invocation_limit_empty",
+                "known_kinds_and_protocols",
+                "source_protocol_empty",
+                "roots_match_regular_files",
+                "roots_pairwise_non_overlapping",
+                "mapping_paths_valid_and_regular",
+                "grpc_generator_relative_path_suffix",
+                "protocol_derives_grpc",
+                "layout_coverage_generated_idl_grpc"
+              ]
+            },
+            "bounds": {
+              "corpus_files": {
+                "measured": 1493,
+                "max": 200000,
+                "within": true
+              },
+              "max_blob_bytes": {
+                "measured": 630280,
+                "max": 10485760,
+                "within": true,
+                "over_bound": []
+              },
+              "index_scip_bytes": {
+                "measured": 33498092,
+                "max": 67108864,
+                "within": true
+              }
             }
           }
         }
@@ -1593,26 +1862,16 @@
       "out_of_tree_other_documents": 373
     },
     "corrected_run": {
-      "build_cache_source_classification": {
-        "all_dropped_documents_classified": true,
-        "counts": {
-          "containerd": {
-            "synthesized_go_test_main": 116
-          },
-          "etcd": {
-            "synthesized_go_test_main": 101
-          },
-          "grpc-go": {
-            "synthesized_go_test_main": 156
-          }
-        },
-        "in_tree_sources_excluded_by_these_drops": 0,
-        "path": "spike/t472/build-cache-classification.json",
-        "sha256": "daff4c4bcf0dc6cce489867d42bd1bc3f916c1513893688f6807f98fe754314b"
+      "census": {
+        "etcd_derived_commit_binding_pending_item_4": "75771dd76dd9a6d7048ae48793b806b1cbec0c22",
+        "etcd_nonregular_go_paths": 11,
+        "schema": "t472-source-census-v1",
+        "total_go_paths": 7696,
+        "total_regular_go_sources": 7685
       },
       "cgroup_memory_limits": [
         {
-          "path": "/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/app.slice/app-org.chromium.Chromium-1181355.scope/memory.max",
+          "path": "/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/app.slice/app-qoder-1155236.scope/memory.max",
           "value": "max"
         },
         {
@@ -1632,9 +1891,444 @@
           "value": "max"
         }
       ],
-      "cross_module_binding_decision": "Ben, 2026-10-10: keep exact symbols; measure resulting caller gaps without excluding them. Version-skew references are across all indexed symbol kinds, not a missed-RPC count.",
-      "derived_commit_authoring_source_commit": "ab364938c7aae783a88f08fe32a41eb0391be04c",
-      "derived_facts_sha256": "d9fd0c9a84b5fbedbbfb56877997d0eb9845106038c15af986c877f976fceb52",
+      "clone": {
+        "commit": "f061acd0902d489041448cdd19d71a345d27b9f5",
+        "ls_tree_sha256": "d9bc73a5230daf1ce996cbf6d285ea6507c02da6109141e7aac45d6057f0f650",
+        "method": "fresh full clone of the canonical remote, detached at the pin; verified by content-addressed equality with both retained pinned clones",
+        "path": "/home/ben/phebs-rehearsals/t472-alias-derivation-20261010/clone/etcd",
+        "remote": "https://github.com/etcd-io/etcd.git",
+        "retained_cross_checks": {
+          "containerd": {
+            "clone": "/home/ben/phebs-rehearsals/t472-merged-preparation-840359b2/corpus/containerd",
+            "derived_head_present": "e0f9f8ac24f21a3703f94bb09817b699a1446af0",
+            "ls_tree_sha256": "c5efe4b8a9b648290e414a9dc015ff73be83f02d191443adc34a5672eb4db405",
+            "path": "/home/ben/phebs-rehearsals/t472-candidate-run-20261010/corpus/containerd",
+            "tree": "7af400e54a007804b50d615cfba5102ab1131c83"
+          },
+          "etcd": {
+            "clone": "/home/ben/phebs-rehearsals/t472-alias-derivation-20261010/clone/etcd",
+            "derived_head_present": "75771dd76dd9a6d7048ae48793b806b1cbec0c22",
+            "ls_tree_sha256": "d9bc73a5230daf1ce996cbf6d285ea6507c02da6109141e7aac45d6057f0f650",
+            "path": "/home/ben/phebs-rehearsals/t472-candidate-run-20261010/corpus/etcd",
+            "tree": "2b7de469684ad545d095fd520593282cd699e62e"
+          },
+          "grpc-go": {
+            "clone": "/home/ben/phebs-rehearsals/t472-merged-preparation-840359b2/corpus/grpc-go",
+            "derived_head_present": "f40347859c3380f5c409f153ab79d4b8e724abd3",
+            "ls_tree_sha256": "dfc505b074f0064f0905d6b35b40ebc5ae1fd769c0b799398f4848623058114d",
+            "path": "/home/ben/phebs-rehearsals/t472-candidate-run-20261010/corpus/grpc-go",
+            "tree": "a3ad653297541df3c0c403c5150c180a318ca38a"
+          }
+        },
+        "tree": "2b7de469684ad545d095fd520593282cd699e62e",
+        "upstream_head_at_clone": "f061acd0902d489041448cdd19d71a345d27b9f5"
+      },
+      "cross_module_binding_decision": "pending before sealing; exact symbols retained unchanged",
+      "derived_facts_sha256": "2c2c6562a504e39c7036d644035a6e9827d4cfed93a69a5177f6a6e673ed560f",
+      "equality_runs": {
+        "containerd": {
+          "alias_documents_dropped": 0,
+          "bytes": 38653435,
+          "clone": "/home/ben/phebs-rehearsals/t472-merged-preparation-840359b2/corpus/containerd",
+          "clone_tree": "7af400e54a007804b50d615cfba5102ab1131c83",
+          "expected_index_sha256": "314b80cf75ddad67c71696cbaef3c4f30dfd5a19066fb5ab6e07fe5826a1d680",
+          "fields_equal": true,
+          "regenerated_index_sha256": "314b80cf75ddad67c71696cbaef3c4f30dfd5a19066fb5ab6e07fe5826a1d680"
+        },
+        "grpc-go": {
+          "alias_documents_dropped": 0,
+          "bytes": 51916232,
+          "clone": "/home/ben/phebs-rehearsals/t472-merged-preparation-840359b2/corpus/grpc-go",
+          "clone_tree": "a3ad653297541df3c0c403c5150c180a318ca38a",
+          "expected_index_sha256": "3fa1d7a5b00102dbe751d537f9f2379734cffd1d4b785c294a894924119b506d",
+          "fields_equal": true,
+          "regenerated_index_sha256": "3fa1d7a5b00102dbe751d537f9f2379734cffd1d4b785c294a894924119b506d"
+        }
+      },
+      "evidence": {
+        "derived_commit": {
+          "clone": "/home/ben/phebs-rehearsals/t472-alias-derivation-20261010/clone/etcd",
+          "derived_commit": "f9ecd8dcecc18b7559c0e3c0c264477c6ab9ddc1",
+          "derived_parents": [
+            "f061acd0902d489041448cdd19d71a345d27b9f5"
+          ],
+          "derived_tree": "308666984a2e26e83175c79e31dd5595327612a4",
+          "files": {
+            "generated-from-snapshot.json": {
+              "bytes": 710,
+              "git_blob_sha1": "d4ecf6ae7eaa6765db3a8e9be611e0130d209257",
+              "sha256": "6bd76e59f1764deb648d3f941733735cfad6b8bc71c74eaad78f35ae6fda405a"
+            },
+            "index.scip": {
+              "bytes": 33320501,
+              "git_blob_sha1": "cdf2d13061687620c5d54b76b8d1c4934fb51f6c",
+              "sha256": "9b0b13ed12244e04ee05cff274a244ed61bea2944c4d1f0eec2d05e603e79177"
+            },
+            "layout-snapshot.json": {
+              "bytes": 830,
+              "git_blob_sha1": "246a0b3f4e200b43dbfb4d66aaef3f7088571df6",
+              "sha256": "21cf18371cb980d6ded5fd3c769543aa339ff5ecbbffcb11341d83f585a40da1"
+            }
+          },
+          "index": {
+            "alias_documents": [
+              {
+                "mode": "120000",
+                "path": "client/v3/concurrency/example_election_test.go",
+                "target": "../../../tests/integration/clientv3/concurrency/example_election_test.go"
+              },
+              {
+                "mode": "120000",
+                "path": "client/v3/concurrency/example_mutex_test.go",
+                "target": "../../../tests/integration/clientv3/concurrency/example_mutex_test.go"
+              },
+              {
+                "mode": "120000",
+                "path": "client/v3/concurrency/example_stm_test.go",
+                "target": "../../../tests/integration/clientv3/concurrency/example_stm_test.go"
+              },
+              {
+                "mode": "120000",
+                "path": "client/v3/example_auth_test.go",
+                "target": "../../tests/integration/clientv3/examples/example_auth_test.go"
+              },
+              {
+                "mode": "120000",
+                "path": "client/v3/example_cluster_test.go",
+                "target": "../../tests/integration/clientv3/examples/example_cluster_test.go"
+              },
+              {
+                "mode": "120000",
+                "path": "client/v3/example_kv_test.go",
+                "target": "../../tests/integration/clientv3/examples/example_kv_test.go"
+              },
+              {
+                "mode": "120000",
+                "path": "client/v3/example_lease_test.go",
+                "target": "../../tests/integration/clientv3/examples/example_lease_test.go"
+              },
+              {
+                "mode": "120000",
+                "path": "client/v3/example_maintenance_test.go",
+                "target": "../../tests/integration/clientv3/examples/example_maintenance_test.go"
+              },
+              {
+                "mode": "120000",
+                "path": "client/v3/example_metrics_test.go",
+                "target": "../../tests/integration/clientv3/examples/example_metrics_test.go"
+              },
+              {
+                "mode": "120000",
+                "path": "client/v3/example_test.go",
+                "target": "../../tests/integration/clientv3/examples/example_test.go"
+              },
+              {
+                "mode": "120000",
+                "path": "client/v3/example_watch_test.go",
+                "target": "../../tests/integration/clientv3/examples/example_watch_test.go"
+              }
+            ],
+            "alias_documents_dropped": 11,
+            "bytes": 33320501,
+            "docs": 1065,
+            "external_symbols_dropped": 0,
+            "module_rels": [
+              ".",
+              "api",
+              "cache",
+              "client/pkg",
+              "client/v3",
+              "etcdctl",
+              "etcdutl",
+              "pkg",
+              "server",
+              "tests",
+              "tests/antithesis/pkg",
+              "tools/mod",
+              "tools/rw-heatmaps",
+              "tools/testgrid-analysis"
+            ],
+            "occurrences": 392812,
+            "out_of_tree_dropped": 101,
+            "out_of_tree_other": [
+              "../../../../../../../../../../.cache/go-build/02/029777b8d525a272476725f99949754fd7f16404e0e56f621eadea9db028abe2-d",
+              "../../../../../../../../../../.cache/go-build/03/03d8342ebebfb28d216038490dbfe8c86284d315041914a2b8af2d69b8b01e15-d",
+              "../../../../../../../../../../.cache/go-build/06/064dedaea7cf166521fc1f04fe4121f1603d39980d452b35ac40a5abbd201fc9-d",
+              "../../../../../../../../../../.cache/go-build/07/07f2457ed33f8eca87ba0c134478718117c1ae5444ffe8915fff4a83045b72f6-d",
+              "../../../../../../../../../../.cache/go-build/26/26f153c0c2d9783642a6912709d95e889763be6c88e0ddaec5564b83260ccdee-d",
+              "../../../../../../../../../../.cache/go-build/35/35d1a31962847c91cdcf396de6582e797a6aa00abc4d51afe2b07d12ef6c0001-d",
+              "../../../../../../../../../../.cache/go-build/37/3728b4b5e03e420f4e7ee5ea44da92edd77c832a5276a25d23ae4a0d132d87f0-d",
+              "../../../../../../../../../../.cache/go-build/3b/3bb87fae75d3d96bc2ce1f9376b2d1b335b611ea12320ffe5309ecf536339f52-d",
+              "../../../../../../../../../../.cache/go-build/5e/5e4aca43675840c7cd6295374d05eef0cd8755ef454fcbeefa17f304a91b3b91-d",
+              "../../../../../../../../../../.cache/go-build/5e/5edf8e01ab7af74acbabda4052339f9ab2a9869fa80edbc46fd39cbf4f018cd9-d",
+              "../../../../../../../../../../.cache/go-build/75/75b849c8ad02a4c541d0dd2f55dc7696b1fa4d3ec45616565be35926b6fe285e-d",
+              "../../../../../../../../../../.cache/go-build/8b/8ba03526bb921a00734e6f24d6ca56dadc4555ec2f6f32aa975f1ce240315c8e-d",
+              "../../../../../../../../../../.cache/go-build/a7/a7497ad8000f44155242854f52d42ff74a05afacbd407b79c17ac841f9be0396-d",
+              "../../../../../../../../../../.cache/go-build/bc/bc21fff15beafcec8c8ceca442e670385550180f9693f8e3d81dfa18155305eb-d",
+              "../../../../../../../../../../.cache/go-build/c8/c8884a5358cf308713b37931709b266c415ee824be78507f2d766357ca537ab2-d",
+              "../../../../../../../../../../.cache/go-build/e4/e4ddfe35485dc100044eef5c7a509a57d164e526b8c11696305c13a04065f186-d",
+              "../../../../../../../../../../.cache/go-build/f0/f0839b25fde79903347234e06987bbdaf9bfecb6dd0ef08e1e88f68a61468ae9-d",
+              "../../../../../../../../../../.cache/go-build/f5/f5c69440d986b9d9e79e33c75ad303ae38316af8f0aeed500588bafda0fec4c4-d",
+              "../../../../../../../../../.cache/go-build/01/0189bf16bfda1272701996630d306ca36c5d5246583e71173dae9727da9755ef-d",
+              "../../../../../../../../../.cache/go-build/07/07dcb87dfb9a7bd1263287067ababa24b86ef1a5e20b94b39c4464d8f3321e71-d",
+              "../../../../../../../../../.cache/go-build/08/089953c4455a57d2f1784b56d14fd1e7d8682a8860f34abe4835457cf9c99ac0-d",
+              "../../../../../../../../../.cache/go-build/0c/0c589de12d322eecf766a24792b3cc163105c3393b1a29fd4d1f44be87ceef90-d",
+              "../../../../../../../../../.cache/go-build/13/13816c7a88411349ae7735e64d834bf7d5ee128f84dda333f1a32cbbaa2e93bf-d",
+              "../../../../../../../../../.cache/go-build/20/20c31831e1bde7e8db2e255df303974ddcf86bdcd60ae2e2682c379e80fe10dc-d",
+              "../../../../../../../../../.cache/go-build/2a/2ab7927153ed2c84cc9466208aa0ccd93e846ed56355bf2c1b73e1ea2599e206-d",
+              "../../../../../../../../../.cache/go-build/2c/2c6c03f00fc5227bed3c2c0495941f3a9ecba244be37732aa2d2d9d44b51560d-d",
+              "../../../../../../../../../.cache/go-build/32/32c3c74d87d7b5f9f04699e271e49ddebbfc6dede3cecff17636d122e5a210b9-d",
+              "../../../../../../../../../.cache/go-build/35/35981e808ce927886828255bc05be3f3380f4890f2249ab85324052f153a6c1f-d",
+              "../../../../../../../../../.cache/go-build/36/36e92ca35d1430680ca5f3e9cd67a6640cf542447ec722633d5b7b4537e3d2f0-d",
+              "../../../../../../../../../.cache/go-build/39/391bf7701b7324e0b50a0393fbbbd2cfc34856a16bc62fc3ce6d93fafa368014-d",
+              "../../../../../../../../../.cache/go-build/3f/3ffb5673edeebe521a0246b6a807500da1997106cc8609f8052e5466cd664da6-d",
+              "../../../../../../../../../.cache/go-build/42/4235c81af4bdbff07fae6cdbd05df9bd7485de97add9ee756fd3327f1a2e240a-d",
+              "../../../../../../../../../.cache/go-build/43/43e588d654710023d3f32817ec7a7cad1ae056aa4ebc39bc33872487ce3fd0a8-d",
+              "../../../../../../../../../.cache/go-build/49/494ac8c9a6d28b24dfe157eab20df00e518b7ed11362dab593ffe03f652c8c22-d",
+              "../../../../../../../../../.cache/go-build/4a/4ad9b5c413518d23b599798f4b520cf36035b9ef9ae083bd0596a2f669952b77-d",
+              "../../../../../../../../../.cache/go-build/4c/4ce040b257fbaa689c71b8f882af7c2e2b188bdca250033fbd23aec32a4ba0c5-d",
+              "../../../../../../../../../.cache/go-build/4e/4e9cd88d550583cd5a9e9e987a87b03238d4fe33db884e1773419a196db23a23-d",
+              "../../../../../../../../../.cache/go-build/50/50c59fc2fb5d403fef4bab06fe346fc1f92b334f5f90a94e8f4b2ae1af684ec6-d",
+              "../../../../../../../../../.cache/go-build/52/522387c54257bafd6def79130eac53ec88fafbe08b11b5b8f3d54ecc29ce811b-d",
+              "../../../../../../../../../.cache/go-build/53/53b8ed969f7b2f276eea498b3adcd957a1cab7a360d7e8ed9e4b74c349073821-d",
+              "../../../../../../../../../.cache/go-build/56/5686bf338e2136086424439c5dc3fb8255e9f7563c839afb3543ea614892973c-d",
+              "../../../../../../../../../.cache/go-build/59/597b533d076ef37ae7e3daaedfb64b95fa5f801f24418209db7b98592f3b6edb-d",
+              "../../../../../../../../../.cache/go-build/5b/5b6c51f725dd9d3b136bb4ce7bba0b22895816e79aa7f1a21bb1391d52c8c064-d",
+              "../../../../../../../../../.cache/go-build/5e/5e7d4f39523d6c687ff158ce65ea49541016e17febbbd61afda8c49a5de184a9-d",
+              "../../../../../../../../../.cache/go-build/5f/5f36ca242dda100e667a78b845244de5d01bdfdb83418e4882d3fa266b8b7424-d",
+              "../../../../../../../../../.cache/go-build/61/619fb41afef1401f4cc34e989bf44437735bd036c060c0a202fa68f2237685e0-d",
+              "../../../../../../../../../.cache/go-build/64/6457ff003302bc2d878dfd99a34c011c19d28ac051917f1973347cfcc789c86d-d",
+              "../../../../../../../../../.cache/go-build/66/66c8bca4e979712d2e4ed42314a005a85b4a1b8e6dd571ceed64ca1c1dd2e6c7-d",
+              "../../../../../../../../../.cache/go-build/69/69703a3706276f827dd353bcfef77436bec2cced501d741434c65125d2b1d812-d",
+              "../../../../../../../../../.cache/go-build/6b/6b4273201afc6d3b6f6568d91bc77e12d3e7682db17c8db8b1f3fb89649c99e6-d",
+              "../../../../../../../../../.cache/go-build/6f/6f5b7c3cd679712b133c9d63181b9d0024f360c9e83c1f5cf0af35ef0a169afb-d",
+              "../../../../../../../../../.cache/go-build/75/757517ba0513ecabef760a6d419175fdc4173afce41cb976dad9d231a37e1c90-d",
+              "../../../../../../../../../.cache/go-build/79/79d0a927fbdeaecd75ca9b86e732cda246cb2f0e9276a99c14bf11bacc7021da-d",
+              "../../../../../../../../../.cache/go-build/7b/7b53dd82c7242b97d990269bceaadc6ce9bb91ff246483ce958cdc0063e7a8b8-d",
+              "../../../../../../../../../.cache/go-build/7b/7b6a898dbbf8018f178f18f9717beed0dd9debcd65482d11eaf529fad08d43b8-d",
+              "../../../../../../../../../.cache/go-build/7c/7c1baac2fbd30f91a8a436461e0fcda0efea848a6355f89f7c3213e46025227d-d",
+              "../../../../../../../../../.cache/go-build/7c/7cab72b4e18a8edf4ccfd2fc215e77f0c2fc1b41f69ffab75631eaffca7133c0-d",
+              "../../../../../../../../../.cache/go-build/80/80e378314df18cebf86d928c87e8c0da29034f43c5afab514914d999f642eec9-d",
+              "../../../../../../../../../.cache/go-build/83/83582a0c3404f71684b1b6fc8df0f2b05451ba536f34e721d4d3634a789a37f7-d",
+              "../../../../../../../../../.cache/go-build/85/85dfc452073966ee0981a89f00c38a3ef9279b8842f0538416d76975af264f7a-d",
+              "../../../../../../../../../.cache/go-build/86/863a870419d816f1a048919b0c4a8736928f4dbe948f01dcc9e2d06c01b41abd-d",
+              "../../../../../../../../../.cache/go-build/88/885b1a03ea92c01adeac15a154bc591a59f989b1ac9f507f5922d91eddc2339b-d",
+              "../../../../../../../../../.cache/go-build/89/89723efb5a919becbae27b1b0e97b381e239bc02fc293906b14b7b9408260dc3-d",
+              "../../../../../../../../../.cache/go-build/8d/8db18b89ff8e32b2be6bad161edbe0311875cbecc97065d3ea6d8e0213bd658c-d",
+              "../../../../../../../../../.cache/go-build/96/966f29ed6b75b295b4da4d6500fa81d26a172d0a5e5481317fcc75f39218ecea-d",
+              "../../../../../../../../../.cache/go-build/96/96960405df9c5cb0d9ff206b69ac20b533649e068c418f4f4dfa7448395c3465-d",
+              "../../../../../../../../../.cache/go-build/9b/9b79914f0c2ea94a57013a6f44dbe12dea346746c348600bec3b7525e461bfac-d",
+              "../../../../../../../../../.cache/go-build/a6/a66418c63ecf7719e86a82dc6da0851f289ca7fe3df273297afb99c80a296961-d",
+              "../../../../../../../../../.cache/go-build/a7/a765b3c4eda69b6205dc1eccde37820db83a1fc6007827aa79b046935a092763-d",
+              "../../../../../../../../../.cache/go-build/a9/a9353a02bb02dd12774446d9f7f7cb043d5cb4f03b404c415d525fe9bbe7b1f3-d",
+              "../../../../../../../../../.cache/go-build/a9/a9545da1308482c6829924b70884a9b0fceb12c7d34215e16598eedeb23a5153-d",
+              "../../../../../../../../../.cache/go-build/ad/ad6c60b48ea18df403e93c05b792076aca3f922fb747dff39139f13c4e678307-d",
+              "../../../../../../../../../.cache/go-build/ae/ae20e182d4b34a54e19e8bc543f60b584b407ae500042ec811f78d5144a73e5f-d",
+              "../../../../../../../../../.cache/go-build/b0/b0a772dc226bffc9b2668e80e01ab626178c76c28d38b96bb2c35a1c577f2848-d",
+              "../../../../../../../../../.cache/go-build/b1/b1d805765a0d6ce7127ccfb91d8f080b617ac0bcbdf7a0ded9d214dc587b272d-d",
+              "../../../../../../../../../.cache/go-build/b3/b3d8688b37350fd800240ea370c616e1dd19cf07ef557f49ad1cd31ba7702e4a-d",
+              "../../../../../../../../../.cache/go-build/bc/bc83650ae0fe0f8a2b9b68c014b3156a84b37df7174520e35ae8ccd094262ffb-d",
+              "../../../../../../../../../.cache/go-build/bc/bc9522c5b67a91104411a32f7f279360cbd12c915a22f62a91cdc77167b8a114-d",
+              "../../../../../../../../../.cache/go-build/c5/c5e2476cd8b0ac6614daf838b75908f37ae1b4ba4707280b71d637e6261fa16a-d",
+              "../../../../../../../../../.cache/go-build/c6/c6d67cfa9cb8893ffdce5a55eccd79b760a45fe1f826fad9d19d58fa0e31dd04-d",
+              "../../../../../../../../../.cache/go-build/ca/cae81d04470233b83b8e7d41eb3456d167c7133e5e8cc5023a9d025f4ed3fb50-d",
+              "../../../../../../../../../.cache/go-build/cd/cd6f5d7a5535c6e06aea415ae63e6fc00eed8827d0f6560fef2c4e64e7432dc0-d",
+              "../../../../../../../../../.cache/go-build/d2/d2f75d1973563b659ade08f5b3aed4ae13ee9bf00b4f49ce918578ed4c60a859-d",
+              "../../../../../../../../../.cache/go-build/d3/d357a914681d075fa12ab913dc0267aed5b61a8dea0f3d5520f659dc01b87722-d",
+              "../../../../../../../../../.cache/go-build/d6/d699c8021dc827dbd68a223e4f9d96be96a16f6d49aad6f778e8be42c79bc4a4-d",
+              "../../../../../../../../../.cache/go-build/d9/d948d9c3e9ef9243e3e6b7ae09073db6aed1580c3841a80b6b602eb2aef7a2a3-d",
+              "../../../../../../../../../.cache/go-build/d9/d9bc48beb311a59a1ec5e36906d812ab259966398668d0d368842fc021ac5fda-d",
+              "../../../../../../../../../.cache/go-build/dc/dcb6a7ca7ab0c94fd5e2a34cb8fab1363f56d4df3f7f25d8e9ceb379c4038a7f-d",
+              "../../../../../../../../../.cache/go-build/e0/e026081368e822856349dd3dc46c67358faf6972766c2ec3cb872be72a9e259e-d",
+              "../../../../../../../../../.cache/go-build/e3/e3fa45ee418ff86a18318478b2ab58562644a7260cbc6055ce0f713808457cd5-d",
+              "../../../../../../../../../.cache/go-build/e6/e6282fa366d148be453f31dc6faf0acc5d7f4578010da3415414219a89b5c4a4-d",
+              "../../../../../../../../../.cache/go-build/e9/e9be77d7de66ce59842a8f975d3daeb2ec7f45a0a2176f127ece25697049faa0-d",
+              "../../../../../../../../../.cache/go-build/eb/eb0ed867b74c8311259b1f36a6886c27a35f106a45dd3a931ca47dc65a49a345-d",
+              "../../../../../../../../../.cache/go-build/ef/ef2494f01c3c38adc0e81f22ae16825057a3932e7cea1ffc9a9dd5f4da6a71c7-d",
+              "../../../../../../../../../.cache/go-build/f1/f1d34a53e7c2e3f8e766448d1091edf8144a636b347c8eed68a3215e8345d44b-d",
+              "../../../../../../../../../.cache/go-build/f7/f7e09ade043614f6f7ad023bd8da43846b49661ea263786a53634f496341dcd9-d",
+              "../../../../../../../../../.cache/go-build/fc/fca4e4f7ab3ab1192d426ea2291b1a50fea53c902ddfbfa62222f5ebcd259d2c-d",
+              "../../../../../../../../../.cache/go-build/fd/fd26a2dcb3f1e03fcb45c939957e47f37f0aa531faf96e620fe8b8d4b00eb8e3-d",
+              "../../../../../../../../../.cache/go-build/ff/ff9fb9badd26f80c6f5407593df609e4078fb30aea1e3cd44fed3b27176500f5-d",
+              "../../../../../../../../.cache/go-build/ae/ae64842bfc32132f8cf088769a46f58217666559723dc524ddb2e46773e5fc09-d",
+              "../../../../../../../../.cache/go-build/bf/bfd050b4c991d07dfecc4891a3b52fbe0dca4ba410c9faa97a991478c73a3bbc-d"
+            ],
+            "out_of_tree_testmain": 0,
+            "round_trip_unstable_docs": 0,
+            "runs": 14,
+            "symbols": 63048,
+            "version_skew_references": 0,
+            "version_skew_sample": []
+          }
+        },
+        "etcd_merge": {
+          "alias_documents": [
+            {
+              "mode": "120000",
+              "path": "client/v3/concurrency/example_election_test.go",
+              "target": "../../../tests/integration/clientv3/concurrency/example_election_test.go"
+            },
+            {
+              "mode": "120000",
+              "path": "client/v3/concurrency/example_mutex_test.go",
+              "target": "../../../tests/integration/clientv3/concurrency/example_mutex_test.go"
+            },
+            {
+              "mode": "120000",
+              "path": "client/v3/concurrency/example_stm_test.go",
+              "target": "../../../tests/integration/clientv3/concurrency/example_stm_test.go"
+            },
+            {
+              "mode": "120000",
+              "path": "client/v3/example_auth_test.go",
+              "target": "../../tests/integration/clientv3/examples/example_auth_test.go"
+            },
+            {
+              "mode": "120000",
+              "path": "client/v3/example_cluster_test.go",
+              "target": "../../tests/integration/clientv3/examples/example_cluster_test.go"
+            },
+            {
+              "mode": "120000",
+              "path": "client/v3/example_kv_test.go",
+              "target": "../../tests/integration/clientv3/examples/example_kv_test.go"
+            },
+            {
+              "mode": "120000",
+              "path": "client/v3/example_lease_test.go",
+              "target": "../../tests/integration/clientv3/examples/example_lease_test.go"
+            },
+            {
+              "mode": "120000",
+              "path": "client/v3/example_maintenance_test.go",
+              "target": "../../tests/integration/clientv3/examples/example_maintenance_test.go"
+            },
+            {
+              "mode": "120000",
+              "path": "client/v3/example_metrics_test.go",
+              "target": "../../tests/integration/clientv3/examples/example_metrics_test.go"
+            },
+            {
+              "mode": "120000",
+              "path": "client/v3/example_test.go",
+              "target": "../../tests/integration/clientv3/examples/example_test.go"
+            },
+            {
+              "mode": "120000",
+              "path": "client/v3/example_watch_test.go",
+              "target": "../../tests/integration/clientv3/examples/example_watch_test.go"
+            }
+          ],
+          "alias_documents_dropped": 11,
+          "bytes": 33320501,
+          "documents": 1065,
+          "every_retained_document_regular_at_pin": true,
+          "module_rels": [
+            ".",
+            "api",
+            "cache",
+            "client/pkg",
+            "client/v3",
+            "etcdctl",
+            "etcdutl",
+            "pkg",
+            "server",
+            "tests",
+            "tests/antithesis/pkg",
+            "tools/mod",
+            "tools/rw-heatmaps",
+            "tools/testgrid-analysis"
+          ],
+          "occurrences": 392812,
+          "out_sha256": "9b0b13ed12244e04ee05cff274a244ed61bea2944c4d1f0eec2d05e603e79177",
+          "retained_is_previous_minus_aliases": true,
+          "symbols": 63048
+        },
+        "etcd_snapshots": {
+          "abstained": 0,
+          "clients": 3,
+          "generated_from_bytes": 710,
+          "generated_from_sha256": "6bd76e59f1764deb648d3f941733735cfad6b8bc71c74eaad78f35ae6fda405a",
+          "gitlinks": 0,
+          "layout_bytes": 830,
+          "layout_sha256": "21cf18371cb980d6ded5fd3c769543aa339ff5ecbbffcb11341d83f585a40da1",
+          "mapped": 3,
+          "mapping_table_sha256": "9dd8d3c653af126e7adc21edaf3f91c0c158e6ef3a04f218d2d8f9a771996a30",
+          "max_blob_bytes": 630280,
+          "max_blob_path": "Documentation/etcd-internals/diagrams/write_workflow_follower.png",
+          "regular_files": 1493,
+          "reproduced_previous_bytes": true,
+          "roots": 6,
+          "roots_deduped": 0,
+          "symlinks": 11
+        },
+        "previous_stream": {
+          "alias_documents": {
+            "client/v3/concurrency/example_election_test.go": {
+              "canonical": "tests/integration/clientv3/concurrency/example_election_test.go",
+              "canonical_in_previous_index": true,
+              "target": "../../../tests/integration/clientv3/concurrency/example_election_test.go"
+            },
+            "client/v3/concurrency/example_mutex_test.go": {
+              "canonical": "tests/integration/clientv3/concurrency/example_mutex_test.go",
+              "canonical_in_previous_index": true,
+              "target": "../../../tests/integration/clientv3/concurrency/example_mutex_test.go"
+            },
+            "client/v3/concurrency/example_stm_test.go": {
+              "canonical": "tests/integration/clientv3/concurrency/example_stm_test.go",
+              "canonical_in_previous_index": true,
+              "target": "../../../tests/integration/clientv3/concurrency/example_stm_test.go"
+            },
+            "client/v3/example_auth_test.go": {
+              "canonical": "tests/integration/clientv3/examples/example_auth_test.go",
+              "canonical_in_previous_index": true,
+              "target": "../../tests/integration/clientv3/examples/example_auth_test.go"
+            },
+            "client/v3/example_cluster_test.go": {
+              "canonical": "tests/integration/clientv3/examples/example_cluster_test.go",
+              "canonical_in_previous_index": true,
+              "target": "../../tests/integration/clientv3/examples/example_cluster_test.go"
+            },
+            "client/v3/example_kv_test.go": {
+              "canonical": "tests/integration/clientv3/examples/example_kv_test.go",
+              "canonical_in_previous_index": true,
+              "target": "../../tests/integration/clientv3/examples/example_kv_test.go"
+            },
+            "client/v3/example_lease_test.go": {
+              "canonical": "tests/integration/clientv3/examples/example_lease_test.go",
+              "canonical_in_previous_index": true,
+              "target": "../../tests/integration/clientv3/examples/example_lease_test.go"
+            },
+            "client/v3/example_maintenance_test.go": {
+              "canonical": "tests/integration/clientv3/examples/example_maintenance_test.go",
+              "canonical_in_previous_index": true,
+              "target": "../../tests/integration/clientv3/examples/example_maintenance_test.go"
+            },
+            "client/v3/example_metrics_test.go": {
+              "canonical": "tests/integration/clientv3/examples/example_metrics_test.go",
+              "canonical_in_previous_index": true,
+              "target": "../../tests/integration/clientv3/examples/example_metrics_test.go"
+            },
+            "client/v3/example_test.go": {
+              "canonical": "tests/integration/clientv3/examples/example_test.go",
+              "canonical_in_previous_index": true,
+              "target": "../../tests/integration/clientv3/examples/example_test.go"
+            },
+            "client/v3/example_watch_test.go": {
+              "canonical": "tests/integration/clientv3/examples/example_watch_test.go",
+              "canonical_in_previous_index": true,
+              "target": "../../tests/integration/clientv3/examples/example_watch_test.go"
+            }
+          },
+          "alias_occurrences": 2424,
+          "alias_symbols": 282,
+          "bytes": 33498138,
+          "documents": 1076,
+          "occurrences": 395236,
+          "sha256": "41f32f8d058c4375dcd037f85fdbf10bbf17f319f3a73abb659555e881308570",
+          "symbols": 63330
+        }
+      },
       "executed_utc": "2026-10-10",
       "go_environment": {
         "CGO_ENABLED": "1",
@@ -1650,27 +2344,14 @@
         "GOTOOLCHAIN": "go1.27.1",
         "GOVERSION": "go1.27.1"
       },
-      "gomaxprocs": 2,
-      "helper_source_binding": "build invocation recorded by operator; helper BuildInfo has no embedded vcs.revision",
-      "helper_source_commit": "ecf3ab968163d9839832c648d483d9666c2271e8",
+      "gomaxprocs": null,
+      "helper_source_commit": "1aa6883442fe311606b5c29402a5923c7dce32e4",
       "licenses_at_pin": {
-        "containerd": {
-          "bytes": 10765,
-          "path": "LICENSE",
-          "pin": "3ea5bdbfbd9f25dd1720dd28552510c50bc85ca9",
-          "sha256": "4bbe3b885e8cd1907ab4cf9a41e862e74e24b5422297a4f2fe524e6a30ada2b4"
-        },
         "etcd": {
           "bytes": 11347,
           "path": "LICENSE",
           "pin": "f061acd0902d489041448cdd19d71a345d27b9f5",
           "sha256": "43ca1b4bbf462789ba15b28373e0c536e510f49e4d05d85a7690cfee94de6f49"
-        },
-        "grpc-go": {
-          "bytes": 11358,
-          "path": "LICENSE",
-          "pin": "5f1ccf56ea5ec964bbf447a10b561214f86387a6",
-          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
         }
       },
       "module_environment": {
@@ -2170,90 +2851,33 @@
         }
       },
       "module_inventory_sha256": "73e4bd11e9e49643b37da384bc1b7e894042ee0398fbe92dcf62441e8d4f1f9d",
-      "operator_incidents": [
-        "Initial authoring used git show on an incomplete historical parent graph and failed before committing; corrected to read the pinned commit object directly.",
-        "A post-commit ancestry check failed on the same historical graph; corrected to verify only the derived commit object and its immediate parent. No indexing invocation failed."
-      ],
       "physical_memory_bytes": 15991762944,
       "predictions_unsealed": false,
-      "prior_corpus_lock_sha256": "348450bbd7f9fdbc114995bc72c6d0c4c85c70004c20b9989b1f06a80a1a8e1a",
+      "previous_input": {
+        "derived_commit": "75771dd76dd9a6d7048ae48793b806b1cbec0c22",
+        "documents": 1076,
+        "index_bytes": 33498138,
+        "index_sha256": "41f32f8d058c4375dcd037f85fdbf10bbf17f319f3a73abb659555e881308570",
+        "retained_copies": [
+          "/home/ben/phebs-rehearsals/t472-rederivation-20261010/merged/etcd/index.scip",
+          "/home/ben/phebs-rehearsals/t472-merged-preparation-840359b2/corpus/etcd/index.scip",
+          "/home/ben/phebs-rehearsals/t472-candidate-run-20261010/corpus/etcd/index.scip"
+        ]
+      },
+      "prior_corpus_lock_sha256": "e387449369b91013bbddf0cae3cd4ee6f91365ee2aa3d5362d7a1e48574e5a69",
       "protocol_sealed": false,
       "quality_scored": false,
+      "repositories": [
+        "etcd"
+      ],
       "run_ledger_sha256": "0da7c00cf32d3dcb0ac6e500bda7738bed063a51693c55f425391596637932b6",
-      "run_output_sha256": "8cb9a179d46948ae8ec6d9478430bdd0480ba70afa46b06e9eac5455ac5365da",
       "run_plan_sha256": "9da6c76f43b0c9618f5356f3fc901b03637da5bf8ab584dd0c5c7232590aaf71",
-      "runner_source_commit": "bcfaaca5503888a89d8947bcb77749105588e04a",
-      "schema": "t472-corrected-derivation-receipt-v1",
-      "step_timing_note": "merge/snapshot wall timings were not persisted before the authoring failure; no timing is inferred. Indexer GNU time records remain in the run ledger.",
+      "schema": "t472-alias-derivation-receipt-v1",
+      "scope": "t47.2c slice A: etcd re-derivation with the tree-validating scipmerge; the 11 committed symlink-alias documents dropped and inventoried; grpc-go and containerd re-merged read-only as equality evidence",
       "steps": [
         {
           "argv": [
-            "/home/ben/phebs-rehearsals/t472-rederivation-20261010/tool/bin/scipmerge",
-            "--repo",
-            "etcd",
-            "--remote",
-            "github.com/etcd-io/etcd",
-            "--pin",
-            "f061acd0902d489041448cdd19d71a345d27b9f5",
-            "--out",
-            "/home/ben/phebs-rehearsals/t472-rederivation-20261010/merged/etcd/index.scip",
-            "--run",
-            "=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/etcd/root.scip",
-            "--run",
-            "api=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/etcd/api.scip",
-            "--run",
-            "cache=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/etcd/cache.scip",
-            "--run",
-            "client/pkg=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/etcd/client-pkg.scip",
-            "--run",
-            "client/v3=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/etcd/client-v3.scip",
-            "--run",
-            "etcdctl=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/etcd/etcdctl.scip",
-            "--run",
-            "etcdutl=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/etcd/etcdutl.scip",
-            "--run",
-            "pkg=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/etcd/pkg.scip",
-            "--run",
-            "server=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/etcd/server.scip",
-            "--run",
-            "tests=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/etcd/tests.scip",
-            "--run",
-            "tests/antithesis/pkg=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/etcd/tests-antithesis-pkg.scip",
-            "--run",
-            "tools/mod=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/etcd/tools-mod.scip",
-            "--run",
-            "tools/rw-heatmaps=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/etcd/tools-rw-heatmaps.scip",
-            "--run",
-            "tools/testgrid-analysis=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/etcd/tools-testgrid-analysis.scip"
-          ],
-          "repo": "etcd",
-          "report_sha256": "df31dc22e7117c87e239ebdbfece2cb9cad8df9d628461a1a6f12925f20da0d0",
-          "step": "merge",
-          "wall_s": null
-        },
-        {
-          "argv": [
-            "/home/ben/phebs-rehearsals/t472-rederivation-20261010/tool/bin/t472snapshots",
-            "--repo",
-            "etcd",
-            "--mappings",
-            "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/derivation/mappings",
-            "--out",
-            "/home/ben/phebs-rehearsals/t472-rederivation-20261010/snapshots",
-            "--clone",
-            "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/etcd",
-            "--commit",
-            "f061acd0902d489041448cdd19d71a345d27b9f5"
-          ],
-          "mapping_table_sha256": "9dd8d3c653af126e7adc21edaf3f91c0c158e6ef3a04f218d2d8f9a771996a30",
-          "repo": "etcd",
-          "stats_sha256": "6322bc553c0db022542de25b229050a0ed5e1033883c80fb5c593a1f6495eaf9",
-          "step": "snapshots",
-          "wall_s": null
-        },
-        {
-          "argv": [
-            "/home/ben/phebs-rehearsals/t472-rederivation-20261010/tool/bin/scipmerge",
+            "/home/ben/phebs-rehearsals/t472-alias-derivation-20261010/tool/bin/scipmerge",
             "--repo",
             "grpc-go",
             "--remote",
@@ -2261,7 +2885,9 @@
             "--pin",
             "5f1ccf56ea5ec964bbf447a10b561214f86387a6",
             "--out",
-            "/home/ben/phebs-rehearsals/t472-rederivation-20261010/merged/grpc-go/index.scip",
+            "/home/ben/phebs-rehearsals/t472-alias-derivation-20261010/merged/grpc-go/index.scip",
+            "--clone",
+            "/home/ben/phebs-rehearsals/t472-merged-preparation-840359b2/corpus/grpc-go",
             "--run",
             "=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/grpc-go/root.scip",
             "--run",
@@ -2283,34 +2909,14 @@
             "--run",
             "test/tools=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/grpc-go/test-tools.scip"
           ],
-          "repo": "grpc-go",
-          "report_sha256": "2167d3e4146f30548c7a25902fffe97003f0eb4338bb37fb10333ad6890f7f47",
-          "step": "merge",
-          "wall_s": null
+          "out_bytes": 51916232,
+          "out_sha256": "3fa1d7a5b00102dbe751d537f9f2379734cffd1d4b785c294a894924119b506d",
+          "step": "merge grpc-go",
+          "wall_s": 1.7481647270033136
         },
         {
           "argv": [
-            "/home/ben/phebs-rehearsals/t472-rederivation-20261010/tool/bin/t472snapshots",
-            "--repo",
-            "grpc-go",
-            "--mappings",
-            "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/derivation/mappings",
-            "--out",
-            "/home/ben/phebs-rehearsals/t472-rederivation-20261010/snapshots",
-            "--clone",
-            "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/grpc-go",
-            "--commit",
-            "5f1ccf56ea5ec964bbf447a10b561214f86387a6"
-          ],
-          "mapping_table_sha256": "c68ad5e3b687428aa9546c2b56181f8ecb72aa5ded79a59c9dc3238ee13d9c58",
-          "repo": "grpc-go",
-          "stats_sha256": "04a76b82043efa3b698c149e0df97f94005175ae3d1600c2803a45916e8a0c00",
-          "step": "snapshots",
-          "wall_s": null
-        },
-        {
-          "argv": [
-            "/home/ben/phebs-rehearsals/t472-rederivation-20261010/tool/bin/scipmerge",
+            "/home/ben/phebs-rehearsals/t472-alias-derivation-20261010/tool/bin/scipmerge",
             "--repo",
             "containerd",
             "--remote",
@@ -2318,58 +2924,893 @@
             "--pin",
             "3ea5bdbfbd9f25dd1720dd28552510c50bc85ca9",
             "--out",
-            "/home/ben/phebs-rehearsals/t472-rederivation-20261010/merged/containerd/index.scip",
+            "/home/ben/phebs-rehearsals/t472-alias-derivation-20261010/merged/containerd/index.scip",
+            "--clone",
+            "/home/ben/phebs-rehearsals/t472-merged-preparation-840359b2/corpus/containerd",
             "--run",
             "=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/containerd/root.scip",
             "--run",
             "api=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/containerd/api.scip"
           ],
-          "repo": "containerd",
-          "report_sha256": "b8c39aef07b2fb3871bfeb99ebc47ee81d934e6af7eea41b84c5c656ba6f3c60",
-          "step": "merge",
-          "wall_s": null
+          "out_bytes": 38653435,
+          "out_sha256": "314b80cf75ddad67c71696cbaef3c4f30dfd5a19066fb5ab6e07fe5826a1d680",
+          "step": "merge containerd",
+          "wall_s": 1.3370387940085493
         },
         {
           "argv": [
-            "/home/ben/phebs-rehearsals/t472-rederivation-20261010/tool/bin/t472snapshots",
+            "/home/ben/phebs-rehearsals/t472-alias-derivation-20261010/tool/bin/scipmerge",
             "--repo",
-            "containerd",
-            "--mappings",
-            "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/derivation/mappings",
+            "etcd",
+            "--remote",
+            "github.com/etcd-io/etcd",
+            "--pin",
+            "f061acd0902d489041448cdd19d71a345d27b9f5",
             "--out",
-            "/home/ben/phebs-rehearsals/t472-rederivation-20261010/snapshots",
+            "/home/ben/phebs-rehearsals/t472-alias-derivation-20261010/merged/etcd/index.scip",
             "--clone",
-            "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/containerd",
-            "--commit",
-            "3ea5bdbfbd9f25dd1720dd28552510c50bc85ca9"
+            "/home/ben/phebs-rehearsals/t472-alias-derivation-20261010/clone/etcd",
+            "--run",
+            "=/home/ben/phebs-rehearsals/t472-alias-derivation-20261010/scip/etcd/root.scip",
+            "--run",
+            "api=/home/ben/phebs-rehearsals/t472-alias-derivation-20261010/scip/etcd/api.scip",
+            "--run",
+            "cache=/home/ben/phebs-rehearsals/t472-alias-derivation-20261010/scip/etcd/cache.scip",
+            "--run",
+            "client/pkg=/home/ben/phebs-rehearsals/t472-alias-derivation-20261010/scip/etcd/client-pkg.scip",
+            "--run",
+            "client/v3=/home/ben/phebs-rehearsals/t472-alias-derivation-20261010/scip/etcd/client-v3.scip",
+            "--run",
+            "etcdctl=/home/ben/phebs-rehearsals/t472-alias-derivation-20261010/scip/etcd/etcdctl.scip",
+            "--run",
+            "etcdutl=/home/ben/phebs-rehearsals/t472-alias-derivation-20261010/scip/etcd/etcdutl.scip",
+            "--run",
+            "pkg=/home/ben/phebs-rehearsals/t472-alias-derivation-20261010/scip/etcd/pkg.scip",
+            "--run",
+            "server=/home/ben/phebs-rehearsals/t472-alias-derivation-20261010/scip/etcd/server.scip",
+            "--run",
+            "tests=/home/ben/phebs-rehearsals/t472-alias-derivation-20261010/scip/etcd/tests.scip",
+            "--run",
+            "tests/antithesis/pkg=/home/ben/phebs-rehearsals/t472-alias-derivation-20261010/scip/etcd/tests-antithesis-pkg.scip",
+            "--run",
+            "tools/mod=/home/ben/phebs-rehearsals/t472-alias-derivation-20261010/scip/etcd/tools-mod.scip",
+            "--run",
+            "tools/rw-heatmaps=/home/ben/phebs-rehearsals/t472-alias-derivation-20261010/scip/etcd/tools-rw-heatmaps.scip",
+            "--run",
+            "tools/testgrid-analysis=/home/ben/phebs-rehearsals/t472-alias-derivation-20261010/scip/etcd/tools-testgrid-analysis.scip"
           ],
-          "mapping_table_sha256": "4db3bc963a88ec12eb9504c5294d97d36afa7e5a8548e9cf18a277fce470f317",
-          "repo": "containerd",
-          "stats_sha256": "36277ac979a5027a6daee6fb2b8aef39d94d4a607dfb612b89d500c4c7fcb800",
-          "step": "snapshots",
-          "wall_s": null
+          "out_bytes": 33320501,
+          "out_sha256": "9b0b13ed12244e04ee05cff274a244ed61bea2944c4d1f0eec2d05e603e79177",
+          "step": "merge etcd",
+          "wall_s": 1.273283614020329
+        },
+        {
+          "argv": [
+            "/home/ben/phebs-rehearsals/t472-alias-derivation-20261010/tool/bin/t472snapshots",
+            "--repo",
+            "etcd",
+            "--mappings",
+            "/home/ben/.codex/worktrees/t47-2c-scip-tree-validation/spike/t472/derivation/mappings",
+            "--out",
+            "/home/ben/phebs-rehearsals/t472-alias-derivation-20261010/snapshots",
+            "--clone",
+            "/home/ben/phebs-rehearsals/t472-alias-derivation-20261010/clone/etcd",
+            "--commit",
+            "f061acd0902d489041448cdd19d71a345d27b9f5"
+          ],
+          "step": "snapshots etcd",
+          "wall_s": 0.02751542502664961
+        },
+        {
+          "stdout": [
+            "== etcd derived commit f9ecd8dcecc18b7559c0e3c0c264477c6ab9ddc1 (parent f061acd0902d)",
+            "   index.scip 33320501 bytes 9b0b13ed12244e04ee05cff274a244ed61bea2944c4d1f0eec2d05e603e79177",
+            "wrote /home/ben/phebs-rehearsals/t472-alias-derivation-20261010/derived_facts.json"
+          ],
+          "step": "commit derived etcd",
+          "wall_s": 1.2372153179894667
         }
       ],
       "tools": {
         "scip-go": {
           "bytes": 18104856,
-          "go_build_metadata": "/home/ben/phebs-rehearsals/t472-rederivation-20261010/tool/bin/scip-go: go1.25.0\n\tpath\tgithub.com/scip-code/scip-go/cmd/scip-go\n\tmod\tgithub.com/scip-code/scip-go\t(devel)\t\n\tdep\tgithub.com/alecthomas/kong\tv1.15.0\th1:BVJstKbpO73zKpmIu+m/aLRrNmWwxXPIGTNin9VmLVI=\n\tdep\tgithub.com/scip-code/scip/bindings/go/scip\tv0.7.1\th1:x2QVP2nO09TFUGVrNJ+8XakD45KyXn/tSalzAELcB3Q=\n\tdep\tgithub.com/sourcegraph/beaut\tv0.0.0-20240611013027-627e4c25335a\th1:j/CQ27s679M9wRGBRJYyXGrfkYuQA6VMnD7R08mHD9c=\n\tdep\tgolang.org/x/mod\tv0.36.0\th1:JJjpVx6myfUsUdAzZuOSTTmRE0PfZeNWzzvKrP7amb4=\n\tdep\tgolang.org/x/sync\tv0.20.0\th1:e0PTpb7pjO8GAtTs2dQ6jYa5BWYlMuX047Dco/pItO4=\n\tdep\tgolang.org/x/sys\tv0.44.0\th1:ildZl3J4uzeKP07r2F++Op7E9B29JRUy+a27EibtBTQ=\n\tdep\tgolang.org/x/tools\tv0.45.0\th1:18qN3FAooORvApf5XjCXgsuayZOEtXf6JK18I3+ONa8=\n\tdep\tgolang.org/x/tools/go/vcs\tv0.1.0-deprecated\th1:cOIJqWBl99H1dH5LWizPa+0ImeeJq3t3cJjaeOWUAL4=\n\tdep\tgoogle.golang.org/protobuf\tv1.36.11\th1:fV6ZwhNocDyBLK0dj+fg8ektcVegBBuEolpbTQyBNVE=\n\tbuild\t-buildmode=exe\n\tbuild\t-compiler=gc\n\tbuild\t-trimpath=true\n\tbuild\tCGO_ENABLED=0\n\tbuild\tGOARCH=amd64\n\tbuild\tGOOS=linux\n\tbuild\tGOAMD64=v1\n",
+          "go_build_metadata": "/home/ben/phebs-rehearsals/t472-alias-derivation-20261010/tool/bin/scip-go: go1.25.0\n\tpath\tgithub.com/scip-code/scip-go/cmd/scip-go\n\tmod\tgithub.com/scip-code/scip-go\t(devel)\t\n\tdep\tgithub.com/alecthomas/kong\tv1.15.0\th1:BVJstKbpO73zKpmIu+m/aLRrNmWwxXPIGTNin9VmLVI=\n\tdep\tgithub.com/scip-code/scip/bindings/go/scip\tv0.7.1\th1:x2QVP2nO09TFUGVrNJ+8XakD45KyXn/tSalzAELcB3Q=\n\tdep\tgithub.com/sourcegraph/beaut\tv0.0.0-20240611013027-627e4c25335a\th1:j/CQ27s679M9wRGBRJYyXGrfkYuQA6VMnD7R08mHD9c=\n\tdep\tgolang.org/x/mod\tv0.36.0\th1:JJjpVx6myfUsUdAzZuOSTTmRE0PfZeNWzzvKrP7amb4=\n\tdep\tgolang.org/x/sync\tv0.20.0\th1:e0PTpb7pjO8GAtTs2dQ6jYa5BWYlMuX047Dco/pItO4=\n\tdep\tgolang.org/x/sys\tv0.44.0\th1:ildZl3J4uzeKP07r2F++Op7E9B29JRUy+a27EibtBTQ=\n\tdep\tgolang.org/x/tools\tv0.45.0\th1:18qN3FAooORvApf5XjCXgsuayZOEtXf6JK18I3+ONa8=\n\tdep\tgolang.org/x/tools/go/vcs\tv0.1.0-deprecated\th1:cOIJqWBl99H1dH5LWizPa+0ImeeJq3t3cJjaeOWUAL4=\n\tdep\tgoogle.golang.org/protobuf\tv1.36.11\th1:fV6ZwhNocDyBLK0dj+fg8ektcVegBBuEolpbTQyBNVE=\n\tbuild\t-buildmode=exe\n\tbuild\t-compiler=gc\n\tbuild\t-trimpath=true\n\tbuild\tCGO_ENABLED=0\n\tbuild\tGOARCH=amd64\n\tbuild\tGOOS=linux\n\tbuild\tGOAMD64=v1\n",
           "sha256": "31bf2f3bbbcb25efd4bba6964e08971a9c9c2fba745db4345c0d438ef28b93c4"
         },
         "scipmerge": {
-          "bytes": 6863311,
-          "go_build_metadata": "/home/ben/phebs-rehearsals/t472-rederivation-20261010/tool/bin/scipmerge: go1.26.5\n\tpath\tgithub.com/bmeddeb/phebs/spike/t472/derivation/merge\n\tmod\tgithub.com/bmeddeb/phebs\t(devel)\t\n\tdep\tgithub.com/scip-code/scip/bindings/go/scip\tv0.9.0\th1:C0LVhTl9Gw+2UC4d7RZdvB0iWUkaOyRA1fQW1CrhsMA=\n\tdep\tgithub.com/sourcegraph/beaut\tv0.0.0-20240611013027-627e4c25335a\th1:j/CQ27s679M9wRGBRJYyXGrfkYuQA6VMnD7R08mHD9c=\n\tdep\tgoogle.golang.org/protobuf\tv1.36.11\th1:fV6ZwhNocDyBLK0dj+fg8ektcVegBBuEolpbTQyBNVE=\n\tbuild\t-buildmode=exe\n\tbuild\t-compiler=gc\n\tbuild\t-trimpath=true\n\tbuild\tCGO_ENABLED=1\n\tbuild\tGOARCH=amd64\n\tbuild\tGOOS=linux\n\tbuild\tGOAMD64=v1\n",
-          "sha256": "131ab8632552d6538bd5f1e671ded45633437fb79833dab82ecf92a5faeedab5"
+          "bytes": 7076139,
+          "go_build_metadata": "/home/ben/phebs-rehearsals/t472-alias-derivation-20261010/tool/bin/scipmerge: go1.26.5\n\tpath\tgithub.com/bmeddeb/phebs/spike/t472/derivation/merge\n\tmod\tgithub.com/bmeddeb/phebs\t(devel)\t\n\tdep\tgithub.com/scip-code/scip/bindings/go/scip\tv0.9.0\th1:C0LVhTl9Gw+2UC4d7RZdvB0iWUkaOyRA1fQW1CrhsMA=\n\tdep\tgithub.com/sourcegraph/beaut\tv0.0.0-20240611013027-627e4c25335a\th1:j/CQ27s679M9wRGBRJYyXGrfkYuQA6VMnD7R08mHD9c=\n\tdep\tgoogle.golang.org/protobuf\tv1.36.11\th1:fV6ZwhNocDyBLK0dj+fg8ektcVegBBuEolpbTQyBNVE=\n\tbuild\t-buildmode=exe\n\tbuild\t-compiler=gc\n\tbuild\t-trimpath=true\n\tbuild\tCGO_ENABLED=1\n\tbuild\tGOARCH=amd64\n\tbuild\tGOOS=linux\n\tbuild\tGOAMD64=v1\n",
+          "sha256": "537312c0ba3b2fa7a6210bd55d047f2bae687b0d5608b066596685d50cce3c61"
         },
         "t472snapshots": {
           "bytes": 4163766,
-          "go_build_metadata": "/home/ben/phebs-rehearsals/t472-rederivation-20261010/tool/bin/t472snapshots: go1.26.5\n\tpath\tgithub.com/bmeddeb/phebs/spike/t472/derivation/snapshots\n\tmod\tgithub.com/bmeddeb/phebs\t(devel)\t\n\tdep\tgolang.org/x/mod\tv0.38.0\th1:MECBjubtXD7yj4HrhIUcywNaGeNVUdfVnxmPajOk4yk=\n\tbuild\t-buildmode=exe\n\tbuild\t-compiler=gc\n\tbuild\t-trimpath=true\n\tbuild\tCGO_ENABLED=1\n\tbuild\tGOARCH=amd64\n\tbuild\tGOOS=linux\n\tbuild\tGOAMD64=v1\n",
+          "go_build_metadata": "/home/ben/phebs-rehearsals/t472-alias-derivation-20261010/tool/bin/t472snapshots: go1.26.5\n\tpath\tgithub.com/bmeddeb/phebs/spike/t472/derivation/snapshots\n\tmod\tgithub.com/bmeddeb/phebs\t(devel)\t\n\tdep\tgolang.org/x/mod\tv0.38.0\th1:MECBjubtXD7yj4HrhIUcywNaGeNVUdfVnxmPajOk4yk=\n\tbuild\t-buildmode=exe\n\tbuild\t-compiler=gc\n\tbuild\t-trimpath=true\n\tbuild\tCGO_ENABLED=1\n\tbuild\tGOARCH=amd64\n\tbuild\tGOOS=linux\n\tbuild\tGOAMD64=v1\n",
           "sha256": "99ab48dd91d86f6231124394d1ee8d7aa63d5f80cecb8d166b8da981dd2e841b"
         }
       },
-      "unit_snapshot": "absent; Ben, 2026-10-10: call sites and declaration attribution only; service-to-operation edge family unavailable",
-      "validation_owner": "Ben Meddeb; sole human label reviewer, source-blind to Phebs predictions; no independent-human validation claim",
-      "workspace": "/home/ben/phebs-rehearsals/t472-rederivation-20261010"
-    }
+      "unit_snapshot": "absent; service-to-operation claim scope remains pending before sealing",
+      "workspace": "/home/ben/phebs-rehearsals/t472-alias-derivation-20261010"
+    },
+    "previous_runs": [
+      {
+        "build_cache_source_classification": {
+          "all_dropped_documents_classified": true,
+          "counts": {
+            "containerd": {
+              "synthesized_go_test_main": 116
+            },
+            "etcd": {
+              "synthesized_go_test_main": 101
+            },
+            "grpc-go": {
+              "synthesized_go_test_main": 156
+            }
+          },
+          "in_tree_sources_excluded_by_these_drops": 0,
+          "path": "spike/t472/build-cache-classification.json",
+          "sha256": "daff4c4bcf0dc6cce489867d42bd1bc3f916c1513893688f6807f98fe754314b"
+        },
+        "cgroup_memory_limits": [
+          {
+            "path": "/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/app.slice/app-org.chromium.Chromium-1181355.scope/memory.max",
+            "value": "max"
+          },
+          {
+            "path": "/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/app.slice/memory.max",
+            "value": "max"
+          },
+          {
+            "path": "/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/memory.max",
+            "value": "max"
+          },
+          {
+            "path": "/sys/fs/cgroup/user.slice/user-1000.slice/memory.max",
+            "value": "max"
+          },
+          {
+            "path": "/sys/fs/cgroup/user.slice/memory.max",
+            "value": "max"
+          }
+        ],
+        "cross_module_binding_decision": "Ben, 2026-10-10: keep exact symbols; measure resulting caller gaps without excluding them. Version-skew references are across all indexed symbol kinds, not a missed-RPC count.",
+        "derived_commit_authoring_source_commit": "ab364938c7aae783a88f08fe32a41eb0391be04c",
+        "derived_facts_sha256": "d9fd0c9a84b5fbedbbfb56877997d0eb9845106038c15af986c877f976fceb52",
+        "executed_utc": "2026-10-10",
+        "go_environment": {
+          "CGO_ENABLED": "1",
+          "GOARCH": "amd64",
+          "GOCACHE": "/home/ben/.cache/go-build",
+          "GOENV": "/home/ben/.config/go/env",
+          "GOEXPERIMENT": "",
+          "GOFLAGS": "-p=2",
+          "GOMODCACHE": "/home/ben/go/pkg/mod",
+          "GONOSUMDB": "",
+          "GOOS": "linux",
+          "GOPROXY": "https://proxy.golang.org,direct",
+          "GOTOOLCHAIN": "go1.27.1",
+          "GOVERSION": "go1.27.1"
+        },
+        "gomaxprocs": 2,
+        "helper_source_binding": "build invocation recorded by operator; helper BuildInfo has no embedded vcs.revision",
+        "helper_source_commit": "ecf3ab968163d9839832c648d483d9666c2271e8",
+        "licenses_at_pin": {
+          "containerd": {
+            "bytes": 10765,
+            "path": "LICENSE",
+            "pin": "3ea5bdbfbd9f25dd1720dd28552510c50bc85ca9",
+            "sha256": "4bbe3b885e8cd1907ab4cf9a41e862e74e24b5422297a4f2fe524e6a30ada2b4"
+          },
+          "etcd": {
+            "bytes": 11347,
+            "path": "LICENSE",
+            "pin": "f061acd0902d489041448cdd19d71a345d27b9f5",
+            "sha256": "43ca1b4bbf462789ba15b28373e0c536e510f49e4d05d85a7690cfee94de6f49"
+          },
+          "grpc-go": {
+            "bytes": 11358,
+            "path": "LICENSE",
+            "pin": "5f1ccf56ea5ec964bbf447a10b561214f86387a6",
+            "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+          }
+        },
+        "module_environment": {
+          "containerd/api": {
+            "sha256": "dfe8af3666525d0d31f7a40e2692d4c4261a34e54ae93fe122023cc3ce08cf3a",
+            "values": {
+              "CGO_ENABLED": "1",
+              "GOARCH": "amd64",
+              "GOCACHE": "/home/ben/.cache/go-build",
+              "GOENV": "/home/ben/.config/go/env",
+              "GOEXPERIMENT": "",
+              "GOFLAGS": "-p=2",
+              "GOMOD": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/containerd/api/go.mod",
+              "GOMODCACHE": "/home/ben/go/pkg/mod",
+              "GONOSUMDB": "",
+              "GOOS": "linux",
+              "GOPROXY": "https://proxy.golang.org,direct",
+              "GOTOOLCHAIN": "go1.27.1",
+              "GOVERSION": "go1.27.1",
+              "GOWORK": ""
+            }
+          },
+          "containerd/root": {
+            "sha256": "d17f97708f249a418a7774e4fcaaab98d3e4a4f4ee26ec8d2e75af08992658f6",
+            "values": {
+              "CGO_ENABLED": "1",
+              "GOARCH": "amd64",
+              "GOCACHE": "/home/ben/.cache/go-build",
+              "GOENV": "/home/ben/.config/go/env",
+              "GOEXPERIMENT": "",
+              "GOFLAGS": "-p=2",
+              "GOMOD": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/containerd/go.mod",
+              "GOMODCACHE": "/home/ben/go/pkg/mod",
+              "GONOSUMDB": "",
+              "GOOS": "linux",
+              "GOPROXY": "https://proxy.golang.org,direct",
+              "GOTOOLCHAIN": "go1.27.1",
+              "GOVERSION": "go1.27.1",
+              "GOWORK": ""
+            }
+          },
+          "etcd/api": {
+            "sha256": "fc5200bd8211e40d08a3a861dbfeb34a616203840361d0800d5a0028f1f6e359",
+            "values": {
+              "CGO_ENABLED": "1",
+              "GOARCH": "amd64",
+              "GOCACHE": "/home/ben/.cache/go-build",
+              "GOENV": "/home/ben/.config/go/env",
+              "GOEXPERIMENT": "",
+              "GOFLAGS": "-p=2",
+              "GOMOD": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/etcd/api/go.mod",
+              "GOMODCACHE": "/home/ben/go/pkg/mod",
+              "GONOSUMDB": "",
+              "GOOS": "linux",
+              "GOPROXY": "https://proxy.golang.org,direct",
+              "GOTOOLCHAIN": "go1.27.1",
+              "GOVERSION": "go1.27.1",
+              "GOWORK": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/etcd/go.work"
+            }
+          },
+          "etcd/cache": {
+            "sha256": "26843d8305a9bc24ee98f2b825b6af20fc1d1754471c8be98645d9d843c48770",
+            "values": {
+              "CGO_ENABLED": "1",
+              "GOARCH": "amd64",
+              "GOCACHE": "/home/ben/.cache/go-build",
+              "GOENV": "/home/ben/.config/go/env",
+              "GOEXPERIMENT": "",
+              "GOFLAGS": "-p=2",
+              "GOMOD": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/etcd/cache/go.mod",
+              "GOMODCACHE": "/home/ben/go/pkg/mod",
+              "GONOSUMDB": "",
+              "GOOS": "linux",
+              "GOPROXY": "https://proxy.golang.org,direct",
+              "GOTOOLCHAIN": "go1.27.1",
+              "GOVERSION": "go1.27.1",
+              "GOWORK": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/etcd/go.work"
+            }
+          },
+          "etcd/client-pkg": {
+            "sha256": "a56faa4e53458ba51dacf662cfe08bf5574ef6b81d9f734220bda4a927f86bf3",
+            "values": {
+              "CGO_ENABLED": "1",
+              "GOARCH": "amd64",
+              "GOCACHE": "/home/ben/.cache/go-build",
+              "GOENV": "/home/ben/.config/go/env",
+              "GOEXPERIMENT": "",
+              "GOFLAGS": "-p=2",
+              "GOMOD": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/etcd/client/pkg/go.mod",
+              "GOMODCACHE": "/home/ben/go/pkg/mod",
+              "GONOSUMDB": "",
+              "GOOS": "linux",
+              "GOPROXY": "https://proxy.golang.org,direct",
+              "GOTOOLCHAIN": "go1.27.1",
+              "GOVERSION": "go1.27.1",
+              "GOWORK": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/etcd/go.work"
+            }
+          },
+          "etcd/client-v3": {
+            "sha256": "8d664012f575a73bef92aa776faf42cf452c336b4ea3a4d03a8b9eb4e4c243d5",
+            "values": {
+              "CGO_ENABLED": "1",
+              "GOARCH": "amd64",
+              "GOCACHE": "/home/ben/.cache/go-build",
+              "GOENV": "/home/ben/.config/go/env",
+              "GOEXPERIMENT": "",
+              "GOFLAGS": "-p=2",
+              "GOMOD": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/etcd/client/v3/go.mod",
+              "GOMODCACHE": "/home/ben/go/pkg/mod",
+              "GONOSUMDB": "",
+              "GOOS": "linux",
+              "GOPROXY": "https://proxy.golang.org,direct",
+              "GOTOOLCHAIN": "go1.27.1",
+              "GOVERSION": "go1.27.1",
+              "GOWORK": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/etcd/go.work"
+            }
+          },
+          "etcd/etcdctl": {
+            "sha256": "0639c7489e8bc2c0436c808870a4c3545b6df0acb11f8b21b2583958c0fadc4e",
+            "values": {
+              "CGO_ENABLED": "1",
+              "GOARCH": "amd64",
+              "GOCACHE": "/home/ben/.cache/go-build",
+              "GOENV": "/home/ben/.config/go/env",
+              "GOEXPERIMENT": "",
+              "GOFLAGS": "-p=2",
+              "GOMOD": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/etcd/etcdctl/go.mod",
+              "GOMODCACHE": "/home/ben/go/pkg/mod",
+              "GONOSUMDB": "",
+              "GOOS": "linux",
+              "GOPROXY": "https://proxy.golang.org,direct",
+              "GOTOOLCHAIN": "go1.27.1",
+              "GOVERSION": "go1.27.1",
+              "GOWORK": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/etcd/go.work"
+            }
+          },
+          "etcd/etcdutl": {
+            "sha256": "f7bc6ffbef897e6cdd0f50bac771393a5e7ffd6c9262e7a47659023a9c2d5339",
+            "values": {
+              "CGO_ENABLED": "1",
+              "GOARCH": "amd64",
+              "GOCACHE": "/home/ben/.cache/go-build",
+              "GOENV": "/home/ben/.config/go/env",
+              "GOEXPERIMENT": "",
+              "GOFLAGS": "-p=2",
+              "GOMOD": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/etcd/etcdutl/go.mod",
+              "GOMODCACHE": "/home/ben/go/pkg/mod",
+              "GONOSUMDB": "",
+              "GOOS": "linux",
+              "GOPROXY": "https://proxy.golang.org,direct",
+              "GOTOOLCHAIN": "go1.27.1",
+              "GOVERSION": "go1.27.1",
+              "GOWORK": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/etcd/go.work"
+            }
+          },
+          "etcd/pkg": {
+            "sha256": "b3962e54472206928b9bf83305b691dddce4b99116e199539f9e9c2708f2ac11",
+            "values": {
+              "CGO_ENABLED": "1",
+              "GOARCH": "amd64",
+              "GOCACHE": "/home/ben/.cache/go-build",
+              "GOENV": "/home/ben/.config/go/env",
+              "GOEXPERIMENT": "",
+              "GOFLAGS": "-p=2",
+              "GOMOD": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/etcd/pkg/go.mod",
+              "GOMODCACHE": "/home/ben/go/pkg/mod",
+              "GONOSUMDB": "",
+              "GOOS": "linux",
+              "GOPROXY": "https://proxy.golang.org,direct",
+              "GOTOOLCHAIN": "go1.27.1",
+              "GOVERSION": "go1.27.1",
+              "GOWORK": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/etcd/go.work"
+            }
+          },
+          "etcd/root": {
+            "sha256": "1a16ad9d33f0e66c94bcfbfd4663469390a4c94e40549510cef70339d61c297a",
+            "values": {
+              "CGO_ENABLED": "1",
+              "GOARCH": "amd64",
+              "GOCACHE": "/home/ben/.cache/go-build",
+              "GOENV": "/home/ben/.config/go/env",
+              "GOEXPERIMENT": "",
+              "GOFLAGS": "-p=2",
+              "GOMOD": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/etcd/go.mod",
+              "GOMODCACHE": "/home/ben/go/pkg/mod",
+              "GONOSUMDB": "",
+              "GOOS": "linux",
+              "GOPROXY": "https://proxy.golang.org,direct",
+              "GOTOOLCHAIN": "go1.27.1",
+              "GOVERSION": "go1.27.1",
+              "GOWORK": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/etcd/go.work"
+            }
+          },
+          "etcd/server": {
+            "sha256": "2aa2316f2540b8c3d2e6bd13b1c8adfce30c65298d44093ab7625f703a386769",
+            "values": {
+              "CGO_ENABLED": "1",
+              "GOARCH": "amd64",
+              "GOCACHE": "/home/ben/.cache/go-build",
+              "GOENV": "/home/ben/.config/go/env",
+              "GOEXPERIMENT": "",
+              "GOFLAGS": "-p=2",
+              "GOMOD": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/etcd/server/go.mod",
+              "GOMODCACHE": "/home/ben/go/pkg/mod",
+              "GONOSUMDB": "",
+              "GOOS": "linux",
+              "GOPROXY": "https://proxy.golang.org,direct",
+              "GOTOOLCHAIN": "go1.27.1",
+              "GOVERSION": "go1.27.1",
+              "GOWORK": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/etcd/go.work"
+            }
+          },
+          "etcd/tests": {
+            "sha256": "ea5655c2b22214f41d2ee52cf40a947ed60c91319600858568dadb801c0d6de7",
+            "values": {
+              "CGO_ENABLED": "1",
+              "GOARCH": "amd64",
+              "GOCACHE": "/home/ben/.cache/go-build",
+              "GOENV": "/home/ben/.config/go/env",
+              "GOEXPERIMENT": "",
+              "GOFLAGS": "-p=2",
+              "GOMOD": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/etcd/tests/go.mod",
+              "GOMODCACHE": "/home/ben/go/pkg/mod",
+              "GONOSUMDB": "",
+              "GOOS": "linux",
+              "GOPROXY": "https://proxy.golang.org,direct",
+              "GOTOOLCHAIN": "go1.27.1",
+              "GOVERSION": "go1.27.1",
+              "GOWORK": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/etcd/go.work"
+            }
+          },
+          "etcd/tests-antithesis-pkg": {
+            "sha256": "aeb0568bc574482c23bc6544e34f1882fba478c3349b38ecf4cba8ea59d52631",
+            "values": {
+              "CGO_ENABLED": "1",
+              "GOARCH": "amd64",
+              "GOCACHE": "/home/ben/.cache/go-build",
+              "GOENV": "/home/ben/.config/go/env",
+              "GOEXPERIMENT": "",
+              "GOFLAGS": "-p=2",
+              "GOMOD": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/etcd/tests/antithesis/pkg/go.mod",
+              "GOMODCACHE": "/home/ben/go/pkg/mod",
+              "GONOSUMDB": "",
+              "GOOS": "linux",
+              "GOPROXY": "https://proxy.golang.org,direct",
+              "GOTOOLCHAIN": "go1.27.1",
+              "GOVERSION": "go1.27.1",
+              "GOWORK": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/etcd/go.work"
+            }
+          },
+          "etcd/tools-mod": {
+            "sha256": "a8cae60e188b11229fd2cb0b7480f117394983662917f94c454f529fcc360bf4",
+            "values": {
+              "CGO_ENABLED": "1",
+              "GOARCH": "amd64",
+              "GOCACHE": "/home/ben/.cache/go-build",
+              "GOENV": "/home/ben/.config/go/env",
+              "GOEXPERIMENT": "",
+              "GOFLAGS": "-p=2",
+              "GOMOD": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/etcd/tools/mod/go.mod",
+              "GOMODCACHE": "/home/ben/go/pkg/mod",
+              "GONOSUMDB": "",
+              "GOOS": "linux",
+              "GOPROXY": "https://proxy.golang.org,direct",
+              "GOTOOLCHAIN": "go1.27.1",
+              "GOVERSION": "go1.27.1",
+              "GOWORK": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/etcd/go.work"
+            }
+          },
+          "etcd/tools-rw-heatmaps": {
+            "sha256": "dfbab6303417e4fd1bf7337c17dd9fd6bf2fc4812efac2abf36d4bf0bc31d3d4",
+            "values": {
+              "CGO_ENABLED": "1",
+              "GOARCH": "amd64",
+              "GOCACHE": "/home/ben/.cache/go-build",
+              "GOENV": "/home/ben/.config/go/env",
+              "GOEXPERIMENT": "",
+              "GOFLAGS": "-p=2",
+              "GOMOD": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/etcd/tools/rw-heatmaps/go.mod",
+              "GOMODCACHE": "/home/ben/go/pkg/mod",
+              "GONOSUMDB": "",
+              "GOOS": "linux",
+              "GOPROXY": "https://proxy.golang.org,direct",
+              "GOTOOLCHAIN": "go1.27.1",
+              "GOVERSION": "go1.27.1",
+              "GOWORK": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/etcd/go.work"
+            }
+          },
+          "etcd/tools-testgrid-analysis": {
+            "sha256": "3f468822de6b78f52bc0a591129c9823f40453e6a671a236f2af326d1c56b8b5",
+            "values": {
+              "CGO_ENABLED": "1",
+              "GOARCH": "amd64",
+              "GOCACHE": "/home/ben/.cache/go-build",
+              "GOENV": "/home/ben/.config/go/env",
+              "GOEXPERIMENT": "",
+              "GOFLAGS": "-p=2",
+              "GOMOD": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/etcd/tools/testgrid-analysis/go.mod",
+              "GOMODCACHE": "/home/ben/go/pkg/mod",
+              "GONOSUMDB": "",
+              "GOOS": "linux",
+              "GOPROXY": "https://proxy.golang.org,direct",
+              "GOTOOLCHAIN": "go1.27.1",
+              "GOVERSION": "go1.27.1",
+              "GOWORK": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/etcd/go.work"
+            }
+          },
+          "grpc-go/cmd-protoc-gen-go-grpc": {
+            "sha256": "8bd75405c5d2cff07fb517434be9fb908768b46b9addf4769c46854caec3126b",
+            "values": {
+              "CGO_ENABLED": "1",
+              "GOARCH": "amd64",
+              "GOCACHE": "/home/ben/.cache/go-build",
+              "GOENV": "/home/ben/.config/go/env",
+              "GOEXPERIMENT": "",
+              "GOFLAGS": "-p=2",
+              "GOMOD": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/grpc-go/cmd/protoc-gen-go-grpc/go.mod",
+              "GOMODCACHE": "/home/ben/go/pkg/mod",
+              "GONOSUMDB": "",
+              "GOOS": "linux",
+              "GOPROXY": "https://proxy.golang.org,direct",
+              "GOTOOLCHAIN": "go1.27.1",
+              "GOVERSION": "go1.27.1",
+              "GOWORK": ""
+            }
+          },
+          "grpc-go/examples": {
+            "sha256": "7a64293f8ae1bd77e9d162b846365285db5c4e4333f51c830de2890211664d2f",
+            "values": {
+              "CGO_ENABLED": "1",
+              "GOARCH": "amd64",
+              "GOCACHE": "/home/ben/.cache/go-build",
+              "GOENV": "/home/ben/.config/go/env",
+              "GOEXPERIMENT": "",
+              "GOFLAGS": "-p=2",
+              "GOMOD": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/grpc-go/examples/go.mod",
+              "GOMODCACHE": "/home/ben/go/pkg/mod",
+              "GONOSUMDB": "",
+              "GOOS": "linux",
+              "GOPROXY": "https://proxy.golang.org,direct",
+              "GOTOOLCHAIN": "go1.27.1",
+              "GOVERSION": "go1.27.1",
+              "GOWORK": ""
+            }
+          },
+          "grpc-go/gcp-observability": {
+            "sha256": "0442c95f2e97bc0316dadaa2a6b43b6ea03356480a1dcb0dd2925a84007b7c53",
+            "values": {
+              "CGO_ENABLED": "1",
+              "GOARCH": "amd64",
+              "GOCACHE": "/home/ben/.cache/go-build",
+              "GOENV": "/home/ben/.config/go/env",
+              "GOEXPERIMENT": "",
+              "GOFLAGS": "-p=2",
+              "GOMOD": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/grpc-go/gcp/observability/go.mod",
+              "GOMODCACHE": "/home/ben/go/pkg/mod",
+              "GONOSUMDB": "",
+              "GOOS": "linux",
+              "GOPROXY": "https://proxy.golang.org,direct",
+              "GOTOOLCHAIN": "go1.27.1",
+              "GOVERSION": "go1.27.1",
+              "GOWORK": ""
+            }
+          },
+          "grpc-go/interop-observability": {
+            "sha256": "983859def2ff5ea56328a87baf631a6e1c3dc3bdacd0d0f1233f95436ae724d3",
+            "values": {
+              "CGO_ENABLED": "1",
+              "GOARCH": "amd64",
+              "GOCACHE": "/home/ben/.cache/go-build",
+              "GOENV": "/home/ben/.config/go/env",
+              "GOEXPERIMENT": "",
+              "GOFLAGS": "-p=2",
+              "GOMOD": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/grpc-go/interop/observability/go.mod",
+              "GOMODCACHE": "/home/ben/go/pkg/mod",
+              "GONOSUMDB": "",
+              "GOOS": "linux",
+              "GOPROXY": "https://proxy.golang.org,direct",
+              "GOTOOLCHAIN": "go1.27.1",
+              "GOVERSION": "go1.27.1",
+              "GOWORK": ""
+            }
+          },
+          "grpc-go/interop-xds": {
+            "sha256": "0f7af3f2f5825bc5f3ecbe6d1fd34314c18abf160f46b5386b43e8ffc3cf3bdf",
+            "values": {
+              "CGO_ENABLED": "1",
+              "GOARCH": "amd64",
+              "GOCACHE": "/home/ben/.cache/go-build",
+              "GOENV": "/home/ben/.config/go/env",
+              "GOEXPERIMENT": "",
+              "GOFLAGS": "-p=2",
+              "GOMOD": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/grpc-go/interop/xds/go.mod",
+              "GOMODCACHE": "/home/ben/go/pkg/mod",
+              "GONOSUMDB": "",
+              "GOOS": "linux",
+              "GOPROXY": "https://proxy.golang.org,direct",
+              "GOTOOLCHAIN": "go1.27.1",
+              "GOVERSION": "go1.27.1",
+              "GOWORK": ""
+            }
+          },
+          "grpc-go/root": {
+            "sha256": "5f0c1db408e986e8d4ccc9ed9db0550d539533b488cc869e356133a298a79cfa",
+            "values": {
+              "CGO_ENABLED": "1",
+              "GOARCH": "amd64",
+              "GOCACHE": "/home/ben/.cache/go-build",
+              "GOENV": "/home/ben/.config/go/env",
+              "GOEXPERIMENT": "",
+              "GOFLAGS": "-p=2",
+              "GOMOD": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/grpc-go/go.mod",
+              "GOMODCACHE": "/home/ben/go/pkg/mod",
+              "GONOSUMDB": "",
+              "GOOS": "linux",
+              "GOPROXY": "https://proxy.golang.org,direct",
+              "GOTOOLCHAIN": "go1.27.1",
+              "GOVERSION": "go1.27.1",
+              "GOWORK": ""
+            }
+          },
+          "grpc-go/security-advancedtls": {
+            "sha256": "3e4bc56101764aa5895bd57603b6431177c1c500c0626d267197129c900c0a13",
+            "values": {
+              "CGO_ENABLED": "1",
+              "GOARCH": "amd64",
+              "GOCACHE": "/home/ben/.cache/go-build",
+              "GOENV": "/home/ben/.config/go/env",
+              "GOEXPERIMENT": "",
+              "GOFLAGS": "-p=2",
+              "GOMOD": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/grpc-go/security/advancedtls/go.mod",
+              "GOMODCACHE": "/home/ben/go/pkg/mod",
+              "GONOSUMDB": "",
+              "GOOS": "linux",
+              "GOPROXY": "https://proxy.golang.org,direct",
+              "GOTOOLCHAIN": "go1.27.1",
+              "GOVERSION": "go1.27.1",
+              "GOWORK": ""
+            }
+          },
+          "grpc-go/security-advancedtls-examples": {
+            "sha256": "4573e0855da14dcb9f494551d82662b31afa6334803e098a84e09eb76331e24f",
+            "values": {
+              "CGO_ENABLED": "1",
+              "GOARCH": "amd64",
+              "GOCACHE": "/home/ben/.cache/go-build",
+              "GOENV": "/home/ben/.config/go/env",
+              "GOEXPERIMENT": "",
+              "GOFLAGS": "-p=2",
+              "GOMOD": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/grpc-go/security/advancedtls/examples/go.mod",
+              "GOMODCACHE": "/home/ben/go/pkg/mod",
+              "GONOSUMDB": "",
+              "GOOS": "linux",
+              "GOPROXY": "https://proxy.golang.org,direct",
+              "GOTOOLCHAIN": "go1.27.1",
+              "GOVERSION": "go1.27.1",
+              "GOWORK": ""
+            }
+          },
+          "grpc-go/stats-opencensus": {
+            "sha256": "f3bd224ca64b76516519438bbae4f0c518b94d85a070bdc394f3911223160df7",
+            "values": {
+              "CGO_ENABLED": "1",
+              "GOARCH": "amd64",
+              "GOCACHE": "/home/ben/.cache/go-build",
+              "GOENV": "/home/ben/.config/go/env",
+              "GOEXPERIMENT": "",
+              "GOFLAGS": "-p=2",
+              "GOMOD": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/grpc-go/stats/opencensus/go.mod",
+              "GOMODCACHE": "/home/ben/go/pkg/mod",
+              "GONOSUMDB": "",
+              "GOOS": "linux",
+              "GOPROXY": "https://proxy.golang.org,direct",
+              "GOTOOLCHAIN": "go1.27.1",
+              "GOVERSION": "go1.27.1",
+              "GOWORK": ""
+            }
+          },
+          "grpc-go/test-tools": {
+            "sha256": "136977e87dbb1c4b7bc743f92d975ec9849e60416283e03a2ba796cd4f8fe1fa",
+            "values": {
+              "CGO_ENABLED": "1",
+              "GOARCH": "amd64",
+              "GOCACHE": "/home/ben/.cache/go-build",
+              "GOENV": "/home/ben/.config/go/env",
+              "GOEXPERIMENT": "",
+              "GOFLAGS": "-p=2",
+              "GOMOD": "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/grpc-go/test/tools/go.mod",
+              "GOMODCACHE": "/home/ben/go/pkg/mod",
+              "GONOSUMDB": "",
+              "GOOS": "linux",
+              "GOPROXY": "https://proxy.golang.org,direct",
+              "GOTOOLCHAIN": "go1.27.1",
+              "GOVERSION": "go1.27.1",
+              "GOWORK": ""
+            }
+          }
+        },
+        "module_inventory_sha256": "73e4bd11e9e49643b37da384bc1b7e894042ee0398fbe92dcf62441e8d4f1f9d",
+        "operator_incidents": [
+          "Initial authoring used git show on an incomplete historical parent graph and failed before committing; corrected to read the pinned commit object directly.",
+          "A post-commit ancestry check failed on the same historical graph; corrected to verify only the derived commit object and its immediate parent. No indexing invocation failed."
+        ],
+        "physical_memory_bytes": 15991762944,
+        "predictions_unsealed": false,
+        "prior_corpus_lock_sha256": "348450bbd7f9fdbc114995bc72c6d0c4c85c70004c20b9989b1f06a80a1a8e1a",
+        "protocol_sealed": false,
+        "quality_scored": false,
+        "run_ledger_sha256": "0da7c00cf32d3dcb0ac6e500bda7738bed063a51693c55f425391596637932b6",
+        "run_output_sha256": "8cb9a179d46948ae8ec6d9478430bdd0480ba70afa46b06e9eac5455ac5365da",
+        "run_plan_sha256": "9da6c76f43b0c9618f5356f3fc901b03637da5bf8ab584dd0c5c7232590aaf71",
+        "runner_source_commit": "bcfaaca5503888a89d8947bcb77749105588e04a",
+        "schema": "t472-corrected-derivation-receipt-v1",
+        "step_timing_note": "merge/snapshot wall timings were not persisted before the authoring failure; no timing is inferred. Indexer GNU time records remain in the run ledger.",
+        "steps": [
+          {
+            "argv": [
+              "/home/ben/phebs-rehearsals/t472-rederivation-20261010/tool/bin/scipmerge",
+              "--repo",
+              "etcd",
+              "--remote",
+              "github.com/etcd-io/etcd",
+              "--pin",
+              "f061acd0902d489041448cdd19d71a345d27b9f5",
+              "--out",
+              "/home/ben/phebs-rehearsals/t472-rederivation-20261010/merged/etcd/index.scip",
+              "--run",
+              "=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/etcd/root.scip",
+              "--run",
+              "api=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/etcd/api.scip",
+              "--run",
+              "cache=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/etcd/cache.scip",
+              "--run",
+              "client/pkg=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/etcd/client-pkg.scip",
+              "--run",
+              "client/v3=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/etcd/client-v3.scip",
+              "--run",
+              "etcdctl=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/etcd/etcdctl.scip",
+              "--run",
+              "etcdutl=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/etcd/etcdutl.scip",
+              "--run",
+              "pkg=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/etcd/pkg.scip",
+              "--run",
+              "server=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/etcd/server.scip",
+              "--run",
+              "tests=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/etcd/tests.scip",
+              "--run",
+              "tests/antithesis/pkg=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/etcd/tests-antithesis-pkg.scip",
+              "--run",
+              "tools/mod=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/etcd/tools-mod.scip",
+              "--run",
+              "tools/rw-heatmaps=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/etcd/tools-rw-heatmaps.scip",
+              "--run",
+              "tools/testgrid-analysis=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/etcd/tools-testgrid-analysis.scip"
+            ],
+            "repo": "etcd",
+            "report_sha256": "df31dc22e7117c87e239ebdbfece2cb9cad8df9d628461a1a6f12925f20da0d0",
+            "step": "merge",
+            "wall_s": null
+          },
+          {
+            "argv": [
+              "/home/ben/phebs-rehearsals/t472-rederivation-20261010/tool/bin/t472snapshots",
+              "--repo",
+              "etcd",
+              "--mappings",
+              "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/derivation/mappings",
+              "--out",
+              "/home/ben/phebs-rehearsals/t472-rederivation-20261010/snapshots",
+              "--clone",
+              "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/etcd",
+              "--commit",
+              "f061acd0902d489041448cdd19d71a345d27b9f5"
+            ],
+            "mapping_table_sha256": "9dd8d3c653af126e7adc21edaf3f91c0c158e6ef3a04f218d2d8f9a771996a30",
+            "repo": "etcd",
+            "stats_sha256": "6322bc553c0db022542de25b229050a0ed5e1033883c80fb5c593a1f6495eaf9",
+            "step": "snapshots",
+            "wall_s": null
+          },
+          {
+            "argv": [
+              "/home/ben/phebs-rehearsals/t472-rederivation-20261010/tool/bin/scipmerge",
+              "--repo",
+              "grpc-go",
+              "--remote",
+              "github.com/grpc/grpc-go",
+              "--pin",
+              "5f1ccf56ea5ec964bbf447a10b561214f86387a6",
+              "--out",
+              "/home/ben/phebs-rehearsals/t472-rederivation-20261010/merged/grpc-go/index.scip",
+              "--run",
+              "=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/grpc-go/root.scip",
+              "--run",
+              "cmd/protoc-gen-go-grpc=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/grpc-go/cmd-protoc-gen-go-grpc.scip",
+              "--run",
+              "examples=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/grpc-go/examples.scip",
+              "--run",
+              "gcp/observability=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/grpc-go/gcp-observability.scip",
+              "--run",
+              "interop/observability=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/grpc-go/interop-observability.scip",
+              "--run",
+              "interop/xds=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/grpc-go/interop-xds.scip",
+              "--run",
+              "security/advancedtls=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/grpc-go/security-advancedtls.scip",
+              "--run",
+              "security/advancedtls/examples=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/grpc-go/security-advancedtls-examples.scip",
+              "--run",
+              "stats/opencensus=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/grpc-go/stats-opencensus.scip",
+              "--run",
+              "test/tools=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/grpc-go/test-tools.scip"
+            ],
+            "repo": "grpc-go",
+            "report_sha256": "2167d3e4146f30548c7a25902fffe97003f0eb4338bb37fb10333ad6890f7f47",
+            "step": "merge",
+            "wall_s": null
+          },
+          {
+            "argv": [
+              "/home/ben/phebs-rehearsals/t472-rederivation-20261010/tool/bin/t472snapshots",
+              "--repo",
+              "grpc-go",
+              "--mappings",
+              "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/derivation/mappings",
+              "--out",
+              "/home/ben/phebs-rehearsals/t472-rederivation-20261010/snapshots",
+              "--clone",
+              "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/grpc-go",
+              "--commit",
+              "5f1ccf56ea5ec964bbf447a10b561214f86387a6"
+            ],
+            "mapping_table_sha256": "c68ad5e3b687428aa9546c2b56181f8ecb72aa5ded79a59c9dc3238ee13d9c58",
+            "repo": "grpc-go",
+            "stats_sha256": "04a76b82043efa3b698c149e0df97f94005175ae3d1600c2803a45916e8a0c00",
+            "step": "snapshots",
+            "wall_s": null
+          },
+          {
+            "argv": [
+              "/home/ben/phebs-rehearsals/t472-rederivation-20261010/tool/bin/scipmerge",
+              "--repo",
+              "containerd",
+              "--remote",
+              "github.com/containerd/containerd",
+              "--pin",
+              "3ea5bdbfbd9f25dd1720dd28552510c50bc85ca9",
+              "--out",
+              "/home/ben/phebs-rehearsals/t472-rederivation-20261010/merged/containerd/index.scip",
+              "--run",
+              "=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/containerd/root.scip",
+              "--run",
+              "api=/home/ben/phebs-rehearsals/t472-rederivation-20261010/scip/containerd/api.scip"
+            ],
+            "repo": "containerd",
+            "report_sha256": "b8c39aef07b2fb3871bfeb99ebc47ee81d934e6af7eea41b84c5c656ba6f3c60",
+            "step": "merge",
+            "wall_s": null
+          },
+          {
+            "argv": [
+              "/home/ben/phebs-rehearsals/t472-rederivation-20261010/tool/bin/t472snapshots",
+              "--repo",
+              "containerd",
+              "--mappings",
+              "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/derivation/mappings",
+              "--out",
+              "/home/ben/phebs-rehearsals/t472-rederivation-20261010/snapshots",
+              "--clone",
+              "/home/ben/.codex/worktrees/t47-2b-corrected-derivation/phebs/spike/t472/corpus/containerd",
+              "--commit",
+              "3ea5bdbfbd9f25dd1720dd28552510c50bc85ca9"
+            ],
+            "mapping_table_sha256": "4db3bc963a88ec12eb9504c5294d97d36afa7e5a8548e9cf18a277fce470f317",
+            "repo": "containerd",
+            "stats_sha256": "36277ac979a5027a6daee6fb2b8aef39d94d4a607dfb612b89d500c4c7fcb800",
+            "step": "snapshots",
+            "wall_s": null
+          }
+        ],
+        "tools": {
+          "scip-go": {
+            "bytes": 18104856,
+            "go_build_metadata": "/home/ben/phebs-rehearsals/t472-rederivation-20261010/tool/bin/scip-go: go1.25.0\n\tpath\tgithub.com/scip-code/scip-go/cmd/scip-go\n\tmod\tgithub.com/scip-code/scip-go\t(devel)\t\n\tdep\tgithub.com/alecthomas/kong\tv1.15.0\th1:BVJstKbpO73zKpmIu+m/aLRrNmWwxXPIGTNin9VmLVI=\n\tdep\tgithub.com/scip-code/scip/bindings/go/scip\tv0.7.1\th1:x2QVP2nO09TFUGVrNJ+8XakD45KyXn/tSalzAELcB3Q=\n\tdep\tgithub.com/sourcegraph/beaut\tv0.0.0-20240611013027-627e4c25335a\th1:j/CQ27s679M9wRGBRJYyXGrfkYuQA6VMnD7R08mHD9c=\n\tdep\tgolang.org/x/mod\tv0.36.0\th1:JJjpVx6myfUsUdAzZuOSTTmRE0PfZeNWzzvKrP7amb4=\n\tdep\tgolang.org/x/sync\tv0.20.0\th1:e0PTpb7pjO8GAtTs2dQ6jYa5BWYlMuX047Dco/pItO4=\n\tdep\tgolang.org/x/sys\tv0.44.0\th1:ildZl3J4uzeKP07r2F++Op7E9B29JRUy+a27EibtBTQ=\n\tdep\tgolang.org/x/tools\tv0.45.0\th1:18qN3FAooORvApf5XjCXgsuayZOEtXf6JK18I3+ONa8=\n\tdep\tgolang.org/x/tools/go/vcs\tv0.1.0-deprecated\th1:cOIJqWBl99H1dH5LWizPa+0ImeeJq3t3cJjaeOWUAL4=\n\tdep\tgoogle.golang.org/protobuf\tv1.36.11\th1:fV6ZwhNocDyBLK0dj+fg8ektcVegBBuEolpbTQyBNVE=\n\tbuild\t-buildmode=exe\n\tbuild\t-compiler=gc\n\tbuild\t-trimpath=true\n\tbuild\tCGO_ENABLED=0\n\tbuild\tGOARCH=amd64\n\tbuild\tGOOS=linux\n\tbuild\tGOAMD64=v1\n",
+            "sha256": "31bf2f3bbbcb25efd4bba6964e08971a9c9c2fba745db4345c0d438ef28b93c4"
+          },
+          "scipmerge": {
+            "bytes": 6863311,
+            "go_build_metadata": "/home/ben/phebs-rehearsals/t472-rederivation-20261010/tool/bin/scipmerge: go1.26.5\n\tpath\tgithub.com/bmeddeb/phebs/spike/t472/derivation/merge\n\tmod\tgithub.com/bmeddeb/phebs\t(devel)\t\n\tdep\tgithub.com/scip-code/scip/bindings/go/scip\tv0.9.0\th1:C0LVhTl9Gw+2UC4d7RZdvB0iWUkaOyRA1fQW1CrhsMA=\n\tdep\tgithub.com/sourcegraph/beaut\tv0.0.0-20240611013027-627e4c25335a\th1:j/CQ27s679M9wRGBRJYyXGrfkYuQA6VMnD7R08mHD9c=\n\tdep\tgoogle.golang.org/protobuf\tv1.36.11\th1:fV6ZwhNocDyBLK0dj+fg8ektcVegBBuEolpbTQyBNVE=\n\tbuild\t-buildmode=exe\n\tbuild\t-compiler=gc\n\tbuild\t-trimpath=true\n\tbuild\tCGO_ENABLED=1\n\tbuild\tGOARCH=amd64\n\tbuild\tGOOS=linux\n\tbuild\tGOAMD64=v1\n",
+            "sha256": "131ab8632552d6538bd5f1e671ded45633437fb79833dab82ecf92a5faeedab5"
+          },
+          "t472snapshots": {
+            "bytes": 4163766,
+            "go_build_metadata": "/home/ben/phebs-rehearsals/t472-rederivation-20261010/tool/bin/t472snapshots: go1.26.5\n\tpath\tgithub.com/bmeddeb/phebs/spike/t472/derivation/snapshots\n\tmod\tgithub.com/bmeddeb/phebs\t(devel)\t\n\tdep\tgolang.org/x/mod\tv0.38.0\th1:MECBjubtXD7yj4HrhIUcywNaGeNVUdfVnxmPajOk4yk=\n\tbuild\t-buildmode=exe\n\tbuild\t-compiler=gc\n\tbuild\t-trimpath=true\n\tbuild\tCGO_ENABLED=1\n\tbuild\tGOARCH=amd64\n\tbuild\tGOOS=linux\n\tbuild\tGOAMD64=v1\n",
+            "sha256": "99ab48dd91d86f6231124394d1ee8d7aa63d5f80cecb8d166b8da981dd2e841b"
+          }
+        },
+        "unit_snapshot": "absent; Ben, 2026-10-10: call sites and declaration attribution only; service-to-operation edge family unavailable",
+        "validation_owner": "Ben Meddeb; sole human label reviewer, source-blind to Phebs predictions; no independent-human validation claim",
+        "workspace": "/home/ben/phebs-rehearsals/t472-rederivation-20261010"
+      }
+    ]
   }
 }

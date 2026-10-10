@@ -17089,6 +17089,29 @@ independent review are recorded in `spike/t472/REVIEW_PACKET.md`. Candidate
 frames, Ben's source confirmations, blind labels, genuine seed/receipts and
 sealing remain separate; no merge, seal or real-round score is authorized.*
 
+*Slice A — tree-validated SCIP merge and etcd alias correction (2026-10-10):
+`spike/t472/derivation/merge` now reads the pinned tree from its `--clone`,
+keeps only regular (100644/100755) documents, drops at most explicitly
+inventoried mode-120000 alias documents (path/mode/target recorded in the
+merge report and the lock) and refuses absent paths or any other mode; both
+production scope guards are unchanged. The etcd input was rebuilt from the
+retained per-module SCIP outputs only after re-verifying all 26 recorded run
+identities: derived commit `f9ecd8dcecc18b7559c0e3c0c264477c6ab9ddc1` (parent
+`f061acd0…`) carries 1,065 documents / 392,812 occurrences / 63,048 symbols —
+the previous 1,076 / 395,236 / 63,330 minus exactly the 11 committed
+`client/v3` symlink aliases, each target retained as its own canonical
+regular document. The previous input `75771dd7…` (33,498,138 bytes,
+`41f32f8d…`) is preserved intact as `previous_derived`; grpc-go and
+containerd regenerate byte-identical under the new helper, so the admitted
+totals stay 26 runs / 60 clients / 44 mapped / 16 abstained. Tests cover
+regular, alias, canonical and unexpected paths; focused normal/race, vet,
+Python lock-updater tests, docs, glossary and whitespace gates pass.
+Custody/receipts: `/home/ben/phebs-rehearsals/t472-alias-derivation-20261010`
+(receipt `4fcc0832…`; lock `8c534042…`). The census keeps 7,685 regular
+sources and all 11 nonregular paths; its etcd derived-commit binding is
+rebound with the regenerated preparation (item 4). No label, prediction,
+score or seal; slices B/C and the fresh candidate run remain separate.*
+
 **T47.3 · Ordinary production configuration and registration** *(needs the
 T47.2 supported recipe contract; activation remains gated until T47.5)* —
 introduce the stable Caller Map configuration/recipe selection, wire the
