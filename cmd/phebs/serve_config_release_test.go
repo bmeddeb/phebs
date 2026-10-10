@@ -44,21 +44,25 @@ func (r releaseArtifacts) Resolve(_ context.Context, id string) (string, bool, e
 	return digest, ok, nil
 }
 
-// bindReleaseLoad makes releaseLoadBindings supply exactly the implementation,
-// artifact root and artifacts the record names, for the rest of the test.
-func bindReleaseLoad(t *testing.T, release *packrelease.PackRelease) {
+// bindReleaseLoad makes releaseLoadBindings supply exactly the implementation
+// and artifact root the first record names, and every artifact each record
+// names, for the rest of the test. The selection has one running binding, so a
+// later record whose implementation or root differs from the first's refuses.
+func bindReleaseLoad(t *testing.T, release *packrelease.PackRelease, more ...*packrelease.PackRelease) {
 	t.Helper()
+	artifacts := releaseArtifacts{}
+	for _, named := range append([]*packrelease.PackRelease{release}, more...) {
+		artifacts[named.Card.ArtifactID] = named.Card.Digest
+		artifacts[named.Manifest.ArtifactID] = named.Manifest.Digest
+		artifacts[named.Validation.ArtifactID] = named.Validation.Digest
+	}
 	restore := releaseLoadBindings
 	releaseLoadBindings = func(context.Context) (packrelease.Options, error) {
 		implementation := release.Implementation
 		return packrelease.Options{
 			Implementation:                &implementation,
 			ReferencedArtifactsRootDigest: release.ReferencedArtifactsRootDigest,
-			Resolver: releaseArtifacts{
-				release.Card.ArtifactID:       release.Card.Digest,
-				release.Manifest.ArtifactID:   release.Manifest.Digest,
-				release.Validation.ArtifactID: release.Validation.Digest,
-			},
+			Resolver:                      artifacts,
 		}, nil
 	}
 	t.Cleanup(func() { releaseLoadBindings = restore })
@@ -67,6 +71,28 @@ func bindReleaseLoad(t *testing.T, release *packrelease.PackRelease) {
 // writeReleasedRecord signs a well-formed released PackRelease for packID into
 // dir and returns the base64 public key that admits it and the record.
 func writeReleasedRecord(t *testing.T, dir, packID, keyID string) (string, *packrelease.PackRelease) {
+	t.Helper()
+	return writeStatusRecord(t, dir, packID, keyID, packrelease.StatusReleased)
+}
+
+// writeStatusRecord signs a well-formed PackRelease for packID carrying status
+// into dir and returns the base64 public key that admits it and the record. A
+// non-released status (for example a suspension) still verifies against the
+// trust anchors; it withdraws its pack instead of admitting it.
+func writeStatusRecord(t *testing.T, dir, packID, keyID string, status string) (string, *packrelease.PackRelease) {
+	t.Helper()
+	return writeShapedRecord(t, dir, packID, keyID, func(release *packrelease.PackRelease) {
+		release.DerivedStatus = status
+	})
+}
+
+// writeShapedRecord signs a well-formed released PackRelease for packID into
+// dir after shape adjusts it, and returns the base64 public key that admits it
+// and the record. shape may change any field Sign still accepts, such as the
+// lifecycle status, the validation clock or the implementation identity.
+func writeShapedRecord(
+	t *testing.T, dir, packID, keyID string, shape func(*packrelease.PackRelease),
+) (string, *packrelease.PackRelease) {
 	t.Helper()
 	public, private, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
@@ -97,6 +123,7 @@ func writeReleasedRecord(t *testing.T, dir, packID, keyID string) (string, *pack
 		ApprovedAt:      "2026-07-17T20:00:00Z",
 		ApprovalRecords: []string{"approval-" + packID},
 	}
+	shape(release)
 	if err := packrelease.Sign(release, keyID, private); err != nil {
 		t.Fatalf("Sign: %v", err)
 	}
@@ -159,13 +186,9 @@ func TestReleasedExtractorsResolvesBoundRecipe(t *testing.T) {
 	cfg.ReleaseSelection.Path = dir
 	cfg.ReleaseSelection.Keys = []config.ReleaseKey{{ID: "key-1", PublicKey: public}}
 
-	restore := packRecipes
-	packRecipes = map[string]func() []extract.Extractor{
-		"phebs.bound.pack": func() []extract.Extractor {
-			return []extract.Extractor{stubExtractor{domain: "bound", version: "1"}}
-		},
-	}
-	t.Cleanup(func() { packRecipes = restore })
+	bindRecipes(t, map[string][]extract.Extractor{
+		"phebs.bound.pack": {stubExtractor{domain: "bound", version: "1"}},
+	})
 
 	extractors, err := releasedExtractors(context.Background(), cfg)
 	if err != nil {

@@ -3623,6 +3623,77 @@ admitted only through its own governing record bound to its own fixed in-tree
 recipe, and a released pack replaces the experimental-dark extractor for its
 own domain rather than widening any other domain's registration.
 
+**Startup and discovery matrix.** Table-driven tests pin the observable
+startup shapes over the real admission boundary:
+
+1. **Absent selection** — no read, no pack admitted, and only the
+   provisional-dark set registers (nothing when every switch is off).
+2. **One released pack** — admitted only through its own bound recipe, it
+   governs only its own domain. A released declaration pack with every switch
+   off leaves the downstream resolver and caller-execute registries disabled;
+   a released caller pack needs its declaration domain admitted beside it, or
+   startup refuses.
+3. **Released dependency pair** — a released declaration and a released
+   caller are admitted together, and enable both registries, only when both
+   records name the same running binding (see the next paragraph).
+4. **Withdrawn dependency** — a suspended, revoked or expired declaration
+   withdraws, is named in the startup log, and never satisfies a released
+   caller; with every switch off that caller then refuses startup for lack of
+   its declaration domain.
+5. **Mixed released and provisional** — a released pack replaces the
+   experimental-dark extractor for its own domain, while every other domain
+   keeps its switch-gated admission.
+
+**One running binding per selection.** Every governing released record is
+checked against the same running implementation identity (source commit,
+binary, pack-implementation and toolchain digests) and the same
+referenced-artifacts root. Two released records that name different
+pack-implementation digests or roots cannot both bind: startup refuses with
+`digest_mismatch` instead of admitting the record that matches. How a record
+names the running identity, and so whether independently released packs can
+share one selection, is decided by T48.4c, which supplies that identity.
+
+**Refusal is whole-startup; withdrawal is per-pack.** A suspended, revoked or
+expired pack withdraws cleanly and never refuses an otherwise healthy startup,
+but a released record that verifies and cannot be bound — no load bindings, a
+binding it does not match, or no fixed in-tree recipe — refuses the whole
+startup rather than being skipped: one unbound release blocks the server, not
+one pack. The bounded startup error names what to repair: the pack for a
+missing recipe, and the release record file for a missing or unmatched load
+binding. The correction is that binding or recipe, never a looser gate.
+
+**Discovery follows the admitted caller registry.** The Caller Map API routes,
+the `contract-caller-map` capability on `/api/version` and the MCP tools are
+offered when the admitted caller registry is enabled and its publication
+reader exists. A provisional proto or Thrift switch admits its own caller
+domain; an admitted released caller recipe also enables discovery with every
+switch off. A released declaration alone leaves Caller Map dark. Withdrawal
+removes the released recipe at the next startup but never removes an
+independently admitted dark extractor. Caller comparison keeps its separate
+proto-or-Thrift provisional gate; a released Caller Map alone also leaves
+proof bundles, Impact, Thrift-field, Kafka and compatibility dark.
+
+**Mixed-provenance caution.** With the proto (or Thrift) switch on, a
+provisional declaration extractor registers the declaration domain even while
+the signed declaration record for it is suspended, revoked or expired. A
+released caller pack can therefore stay admitted structurally against an
+experimental-dark declaration the signed record never named. The startup
+matrix pins this joined behavior as today's exact contract — the released path
+never consults the provisional switches for its own admission, and the gate
+does not refuse the join — and the disposition of that mixed provenance is
+owned by the caller-quality follow-up T47.3, not decided here.
+
+**Withdrawal changes derived state at the next startup.** Withdrawal changes
+the admitted extractor set, and each startup reconciles derived publications
+against the registries that set produces before any worker or reader starts.
+A resolver-catalog publication whose resolver packs no longer match the
+admitted registry is retired: its pointer is cleared, a replacement is queued
+and its files are removed. Caller publications are reconciled against the
+admitted caller registry while it is enabled; while it is disabled only
+pending deletion tombstones are completed and none is read. Published evidence records extractor domain and
+version, not a release identifier, so nothing in the store marks it as
+released-pack evidence or lets a later startup recall it by release.
+
 **Current posture.** This gate ships dark. No pack recipe is bound in this
 binary, and this build cannot yet bind a released record to its own binary,
 toolchain, and referenced artifacts. Any governing `released` record therefore

@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"log"
 	"reflect"
 	"strings"
 	"testing"
@@ -11,21 +9,11 @@ import (
 	"github.com/bmeddeb/phebs/internal/packrelease"
 )
 
-// captureWithdrawalLog redirects the standard logger for one call and returns
-// exactly what logWithdrawnSelection wrote, so the operator-facing line is
-// pinned byte for byte rather than only exercised.
+// captureWithdrawalLog returns exactly what logWithdrawnSelection wrote, so
+// the operator-facing line is pinned byte for byte rather than only exercised.
 func captureWithdrawalLog(t *testing.T, withdrawn []packrelease.Withdrawal) string {
 	t.Helper()
-	var output bytes.Buffer
-	previousWriter, previousFlags := log.Writer(), log.Flags()
-	log.SetOutput(&output)
-	log.SetFlags(0)
-	t.Cleanup(func() {
-		log.SetOutput(previousWriter)
-		log.SetFlags(previousFlags)
-	})
-	logWithdrawnSelection(withdrawn)
-	return output.String()
+	return captureLogDuring(t, func() { logWithdrawnSelection(withdrawn) })
 }
 
 // TestRevokedReleaseIDsKeepsTheDarkDefaultAllocationFree pins that an absent
