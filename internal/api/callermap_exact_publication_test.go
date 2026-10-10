@@ -1397,7 +1397,11 @@ func (fixture *exactCallerAPIFixture) serviceOptions() api.Options {
 	return api.Options{
 		Version: "test", Store: fixture.store, Evidence: fixture.store,
 		DataDir: fixture.dataDir, CallerMapEnabled: true,
-		Principal: func(context.Context) string { return fixture.principal },
+		// Comparison admission is explicit since the T47.3 split; fixtures
+		// that build the shared comparison engine through this builder opt in
+		// here, mirroring serve's umbrella-only admission.
+		CallerComparisonEnabled: true,
+		Principal:               func(context.Context) string { return fixture.principal },
 		Visible: func(context.Context) func(store.Repo) bool {
 			return func(repository store.Repo) bool {
 				fixture.visibilityChecks++

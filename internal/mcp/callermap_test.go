@@ -1016,7 +1016,8 @@ func callerToolFixture(
 	st.runs[sourceRunKey] = sourceRun
 	opts := api.Options{
 		Store: st, Evidence: st, CallerMapEnabled: true,
-		Principal: func(context.Context) string { return "user:agent" },
+		CallerComparisonEnabled: true,
+		Principal:               func(context.Context) string { return "user:agent" },
 		Visible: func(context.Context) func(store.Repo) bool {
 			return func(repo store.Repo) bool {
 				return repo.Name != callerToolHidden

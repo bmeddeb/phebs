@@ -403,9 +403,15 @@ func TestReleasedExtractorsWithdrawalNeedsNoBuildOrArtifactFacts(t *testing.T) {
 				return packrelease.Options{}, fmt.Errorf("unavailable build and artifact facts")
 			}
 			t.Cleanup(func() { releaseLoadBindings = restore })
-			extractors, err := releasedExtractors(t.Context(), cfg)
+			var extractors []extract.Extractor
+			var err error
+			output := captureLogDuring(t, func() { extractors, err = releasedExtractors(t.Context(), cfg) })
 			if err != nil || len(extractors) != 0 {
 				t.Fatalf("withdrawal = %v, %v; want no admission and no refusal", extractors, err)
+			}
+			want := "pack release selection: 1 configured pack(s) not admitted: phebs.withdrawn=" + tc.cause + "\n"
+			if output != want {
+				t.Fatalf("withdrawal log = %q, want %q", output, want)
 			}
 		})
 	}

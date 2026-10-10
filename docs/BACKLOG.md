@@ -17004,7 +17004,44 @@ configuration has an explicit compatibility/migration decision, not a silent
 reinterpretation as released authority. Provide rollback and revalidation
 behavior. Update the configuration/workflow guide in the same implementation
 PR; enumerate query, tick, startup/restart, no-op/retry, publication, locks,
-cache invalidation and bounded memory/disk/child costs.
+cache invalidation and bounded memory/disk/child costs. *Implementation landed
+2026-10-09: Caller Map's ordinary activation now follows the merged extractor
+set — `CallerMapEnabled` projects the already-constructed caller registry, so
+a caller-adapter domain admitted either by the experimental switches or by a
+released recipe enables the surface — and a separate
+`CallerComparisonEnabled` means exactly
+`experimental.provisional_proto_extraction ||
+experimental.provisional_thrift_extraction`, never Caller Map's activation,
+and Epic 50 owns comparison's production promotion. The frozen `phebs.grpc.caller.go` recipe
+(`callerMapRecipe()`: the `proto-contract` 3.0.0 declaration extractor beside
+`grpc-caller` 1.5.0) carries the necessary declaration discovery with the
+caller extractor and stays deliberately unbound from `packRecipes`: activation
+remains gated until T47.5 binds it in the same change as its first signed
+released record, and a selection naming the pack refuses startup as an unbound
+release. HTTP and read-only MCP construct and consume the identical service
+instances; the authorization-first reads, source/generation fences, exact
+publication, cursor invalidation and citations are untouched, with zero
+steady-state cost. Existing provisional configuration keeps exactly its
+meaning — nothing is silently reinterpreted as released authority — and
+rollback/revalidation reuse the release lifecycle: `release_selection.revoked`,
+suspension or expiry withdraw the pack with the bounded `pack_id=cause`
+startup log line, restart revalidates, no older record replaces a withdrawn
+one, and the dark path stays. Missing, stale and failed input keeps its
+visibly unavailable read states. Review correction: independent review of
+`9b0c0bef` found that a released Caller Map alone would also have served the
+proof service (proof bundles, Contract Impact, Thrift-field references, Kafka
+topic usage and compatibility); `newServeAPIOptions` now passes the
+proof-bundle store only while a provisional extraction switch is on, so a
+released Caller Map serves Caller Map and the Contract Atlas discovery it is
+selected through and nothing else. The Atlas surface is not yet narrowed to
+Caller Map's operations (Epic 49), admitted comparison compares every
+registered caller adapter including a released one (Epic 50), and caller
+generations published under the provisional switches are indistinguishable
+from released ones, so T47.5 must not serve them as released evidence. This
+supersedes T48.4b's statement that Caller Map discovery needs a provisional
+switch. `TestCallerMapOrdinarySurfaceFollowsProductionAssembly` now drives the
+production API and MCP assembly. T47.4 operating acceptance and T47.5
+promotion remain separate.*
 
 **T47.4 · Current-host operating, security and lifecycle acceptance** *(needs
 T47.2 and the T47.3 candidate)* — run the real ordinary binary on this Linux
@@ -17036,7 +17073,11 @@ rewriting historical records or releasing another pack. Ordinary startup and
 the authenticated discovery-to-Caller-Map-to-citation UI/API/MCP flow are
 demoable with real source via `make dev`; supported and unsupported states,
 configuration, operations, bounded limits and suspension behavior agree across
-guides and surfaces. Any change to UI or DESIGN_CHARTER requires Ben's routed
+guides and surfaces. Caller generations published under the provisional
+switches are never served as released evidence: promotion starts from
+generations derived after the release record, or first binds admission
+provenance into the caller generation identity *(T47.3 review, 2026-10-09)*.
+Any change to UI or DESIGN_CHARTER requires Ben's routed
 presentation handoff; backend planning does not cross that boundary. Preserve
 large-monorepo and separate pilot/SCIP-evidence gates. Integrating a passing
 ticket still requires Ben's explicit merge request; no merge or current
@@ -17224,6 +17265,48 @@ drops the revocation example from the refusal list. T48.4b pins the
 absent/one-pack/mixed-pack startup and API/MCP discovery matrix; T48.4c supplies
 the machine-derived referenced-artifact census and running implementation
 identity that make the bindings bindable.*
+
+*Slice b landed 2026-10-09: `cmd/phebs/serve_config_matrix_test.go` pins the
+absent/one-pack/mixed-pack startup and API/MCP discovery matrix by driving the
+real `newServeExtractionRegistries` admission boundary rather than a
+re-implementation — thirteen table scenarios over an absent selection (no read,
+nothing admitted, both downstream registries' `Enabled()` false), the proto
+switch alone admitting exactly the four experimental-dark domains, one released
+declaration pack governing only its own domain (the "one released component
+does not activate another" AC), a released caller pack without its declaration
+refusing with the resolver's exact `resolver caller %q requires declaration
+domain %q` message, a released declaration and caller admitted together when
+both records name one running binding and refusing as `digest_mismatch` when
+they do not, suspended, revoked and expired declarations each withdrawing
+instead of satisfying that caller, the suspended declaration beside the
+provisional switch admitting the released caller against the dark declaration
+(pinning the mixed-provenance join), an all-withdrawn directory admitting
+nothing, and both refusal shapes of an unbound release (no recipe; no load
+bindings as `ReasonUnresolvedReference`). Released stub recipes carry a version
+no dark extractor reports and every admitted scenario asserts the exact
+released `domain@version` set. `TestCallerMapDiscoveryAcrossAdmissionShapes`
+holds the API service, the `/api/version` `contract-caller-map` capability and
+the real MCP tool listing across all sixteen provisional-switch combinations
+and four startup shapes, through the production `newServeAPIOptions` plus
+`bindServeCallerReader` and `newServeMCPServer`, both extracted
+behavior-preserving. After T47.3 integration, discovery follows the admitted
+caller registry: a released caller pair enables it with every switch off,
+while a declaration alone stays dark. `docs/guides/OPERATIONS.md`
+gains the "Startup and discovery matrix" subsection: the five shapes, one
+running binding per selection, whole-startup refusal versus per-pack
+withdrawal, registry-based discovery, the mixed-provenance caution whose
+disposition is owned by T47.3, and that withdrawal changes derived state at the
+next startup rather than recalling evidence. Tests and documentation plus three
+behavior-preserving extractions: no runtime behavior change,
+`packRecipes` still unbound and the dark startup byte-for-byte unchanged;
+T48.4c subsequently supplies the machine-derived load bindings. Independent review of `9daf1afb` reported
+critical/high/medium/low `0/1/4/4`; the high (two released packs naming
+different bindings refuse startup, never exercised) is pinned and routed to
+T48.4c, which supplies the running implementation identity, and every other
+finding is corrected on the branch; delta re-review of `342ae911` found the
+discovery helper still reconstructed the API/MCP options, and it now drives the
+production assembly. T48.4c supplies the machine-derived referenced-artifact census and running
+implementation identity that make the bindings bindable.*
 
 *Slice c landed 2026-10-09: `cmd/phebs/release_identity.go` supplies the
 machine-derived load bindings and `releaseLoadBindings` is wired in

@@ -289,6 +289,7 @@ func legacyCallerComparisonHandler(
 	visible *map[string]bool,
 ) http.Handler {
 	opts := callerMapOptions(st, principal, visible)
+	opts.CallerComparisonEnabled = true
 	opts.CallerComparison = api.NewLegacyCallerComparisonService(opts)
 	return api.New(opts)
 }

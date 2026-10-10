@@ -560,7 +560,8 @@ func TestExactCallerComparisonFencesIndependentSidesAndAuthorizesBothFirst(
 	opts := api.Options{
 		Version: "test", Store: state, Evidence: state, DataDir: dataDir,
 		CallerMapEnabled: true, CallerReader: reader,
-		Principal: func(context.Context) string { return "user:comparison-member" },
+		CallerComparisonEnabled: true,
+		Principal:               func(context.Context) string { return "user:comparison-member" },
 		Visible: func(context.Context) func(store.Repo) bool {
 			return func(repository store.Repo) bool { return visible[repository.Name] }
 		},

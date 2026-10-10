@@ -121,10 +121,20 @@ func openServeStore(d *serveDeps) error {
 	d.deferFunc(func(retErr *error) {
 		*retErr = errors.Join(*retErr, st.Close(context.Background()))
 	})
+	return bindServeCallerReader(d)
+}
+
+// bindServeCallerReader sets d.callerReader to the caller publication reader
+// over d.st, or to none when the admitted caller registry is disabled. The
+// Caller Map API service and MCP tools exist only with this reader, so their
+// discovery depends on the admitted extractor set as well as on the
+// provisional switches.
+func bindServeCallerReader(d *serveDeps) error {
 	var callerReader *callerexecute.PublicationReader
 	if d.callerRegistry.Enabled() {
+		var err error
 		callerReader, err = callerexecute.NewPublicationReader(
-			cfg.Server.DataDir, st, d.callerRegistry, d.callerPublications,
+			d.cfg.Server.DataDir, d.st, d.callerRegistry, d.callerPublications,
 		)
 		if err != nil {
 			return fmt.Errorf("configure caller publication reader: %w", err)
