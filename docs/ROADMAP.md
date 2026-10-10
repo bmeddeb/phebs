@@ -152,6 +152,16 @@ does not change through this planning decision. Epic 42 continues as the
 separate Linux/scale track, and the retained pilot, generated-SCIP evidence
 hold and unrelated experimental packs retain their own authority and gates.
 
+**Caller-quality amendment (2026-10-10, Ben-directed):** the corrected T47.2b
+three-repository derivation passed all 26 module runs and preserves exact
+symbols, including version-skew caller gaps. Ben is the sole human validation
+owner/reviewer for this prospective round; results will disclose that limit.
+Call sites and declaration attribution are in scope; logical-service edges
+are unavailable without a unit snapshot. Relaxed thresholds and sampling are
+drafted for Ben's approval before sealing. Source enumeration, scoring
+projection, commitment and blind labels remain; T47.4/T47.5 are separate.
+T48.4c's already-merged artifact bindings require no replacement implementation.
+
 **Independent production promotions (2026-10-09, Ben-directed):** Epics 48–58
 give every current experimental evidence pack and composed product surface a
 named production path. Epic 48 implements the currently design-only signed

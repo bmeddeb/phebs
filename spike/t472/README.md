@@ -268,3 +268,117 @@ in the lock names the obligation, and nothing below is sealed or scored.
   its module runs instead of a single `scip-go` invocation that never ran.
 
 Re-derivation re-records every digest, derived commit and count in the lock.
+
+## Corrected admitted derivation (2026-10-10)
+
+This prospective run closes the input re-derivation obligation above for the
+three option-A admitted repositories. It uses new local clones and new
+rehearsal custody at
+`/home/ben/phebs-rehearsals/t472-rederivation-20261010`; the original clones,
+`/home/ben/phebs-rehearsals/t472-derivation`, refused Vitess/Istio inputs and
+initial measurements are preserved. The lock keeps each admitted repository's
+initial `previous_derived`, the original recipe/totals, disposition and
+refusal records. Its `derivation.corrected_run` records the current tools,
+module environments, license blobs, commands and receipt digests, and
+`derivation.admitted_totals` records the corrected population. No prediction,
+human label, quality score or protocol seal was produced.
+
+| Repository | Pin → corrected local derived commit | `index.scip` bytes · SHA-256 | module runs | version-skew references |
+|---|---|---|---|---:|
+| etcd-io/etcd | `f061acd0902d489041448cdd19d71a345d27b9f5` → `75771dd76dd9a6d7048ae48793b806b1cbec0c22` | 33,498,138 · `41f32f8d058c4375dcd037f85fdbf10bbf17f319f3a73abb659555e881308570` | 14 | 0 |
+| containerd/containerd | `3ea5bdbfbd9f25dd1720dd28552510c50bc85ca9` → `e0f9f8ac24f21a3703f94bb09817b699a1446af0` | 38,653,435 · `314b80cf75ddad67c71696cbaef3c4f30dfd5a19066fb5ab6e07fe5826a1d680` | 2 | 6,047 |
+| grpc/grpc-go | `5f1ccf56ea5ec964bbf447a10b561214f86387a6` → `f40347859c3380f5c409f153ab79d4b8e724abd3` | 51,916,232 · `3fa1d7a5b00102dbe751d537f9f2379734cffd1d4b785c294a894924119b506d` | 10 | 162 |
+
+All 26 fresh module indexer invocations passed. Source inventory and largest
+blob bounds remain within §2, and every derived commit has exactly its frozen
+pin as parent and changes only the three derived input paths. Each committed
+blob digest and the clean clone states were verified directly. There are still
+60 generated clients, 44 mapped declarations and 16 explicit attribution
+abstentions. The 6,209 version-skewed references span **all indexed symbol
+kinds**, not a count of missed RPC callers. Ben selected exact symbols on
+2026-10-10: no normalization and no exclusion of resulting caller gaps from
+the independent recall population. No `unit-snapshot.json` was added; Ben
+selected call-site and declaration attribution claims, with service edges
+unavailable.
+
+### Exact run inputs and measured host
+
+The runner was source `bcfaaca5503888a89d8947bcb77749105588e04a`; the merge
+and snapshot helpers were built clean at
+`ecf3ab968163d9839832c648d483d9666c2271e8` using Go 1.26.5 and `-trimpath`.
+Their BuildInfo has no embedded `vcs.revision`; this source binding records
+the operator's build invocation rather than claiming an embedded revision.
+Derived-commit authoring used
+`ab364938c7aae783a88f08fe32a41eb0391be04c`. Later docs, receipt and Python
+lock-updater edits do not retroactively rename those tool identities.
+
+| Tool | SHA-256 | Bytes |
+|---|---|---:|
+| `scip-go` v0.2.7 | `31bf2f3bbbcb25efd4bba6964e08971a9c9c2fba745db4345c0d438ef28b93c4` | 18,104,856 |
+| `scipmerge` | `131ab8632552d6538bd5f1e671ded45633437fb79833dab82ecf92a5faeedab5` | 6,863,311 |
+| `t472snapshots` | `99ab48dd91d86f6231124394d1ee8d7aa63d5f80cecb8d166b8da981dd2e841b` | 4,163,766 |
+
+Indexing used Linux/amd64, Go 1.27.1, `CGO_ENABLED=1`, `GOFLAGS=-p=2` and
+`GOMAXPROCS=2`, one native indexer at a time. Root and all 26 per-module
+effective Go environments are recorded, including module/workspace paths,
+proxy and cache locations. Resolution tables now live in
+[`derivation/mappings`](derivation/mappings), and snapshot digests bind those
+exact table bytes. The merge metadata names `t472-merge`, its full `--pin`
+and module roots rather than claiming one indexer invocation.
+
+Live physical memory was 15,991,762,944 bytes; all observed cgroup
+`memory.max` ancestors were `max`. Swap was not counted as physical memory.
+Indexer GNU time records retain per-invocation wall/user/system/max-RSS
+facts; they are not aggregate descendant accounting or a production operating
+envelope. Merge/snapshot wall timings were lost before the initial authoring
+failure and are explicitly unavailable, never reconstructed. The owning cost
+is offline serial indexing, three merges, three snapshot passes, classification
+and three local commits; no production query, sync, startup, retry/no-op or
+publication cost changes.
+
+### Build-cache classification and operator corrections
+
+The merge's basename-only detector reported zero named `_testmain.go`
+documents and listed all 373 remaining drops (101 etcd, 116 containerd,
+156 grpc-go). Every listed hashed-cache source was read and retained; all
+373 carry the exact `go test` generated header, `package main`,
+`testing/internal/testdeps`, a main function and `testing.MainStart`.
+[`build-cache-classification.json`](build-cache-classification.json) records
+the method, raw document path, module, source digest/size and retained source
+path for every drop. These synthesized test mains are outside the pinned
+Git trees and exclude no eligible in-tree source. This source classification
+does not rewrite the merge's measured basename counters or input bytes.
+
+Initial commit authoring used `git show` and later an ancestry query against
+incomplete historical parent graphs; both failed despite available pinned
+commit objects. The corrected author reads the pinned date and derived
+immediate parent directly with `git cat-file commit`, fixes identity/dates,
+and verifies committed blobs. No indexer invocation failed and no historical
+parent content was invented. The original records and inputs remain retained.
+
+Ben's sole-reviewer amendment and proposed thresholds are in the prospective
+[`CALLER_QUALITY_PROTOCOL.md`](../../docs/CALLER_QUALITY_PROTOCOL.md).
+Independent source/frame enumeration, the caller-specific scoring projection,
+source review, approved thresholds, artifact commitments and Ben's blind
+labels remain before sealing/scoring. No independent-human validation,
+accuracy or release claim follows from this input derivation.
+
+### Verification of this slice
+
+The meaningful Python derivation tests, complete merge normal/race tests,
+snapshot compilation, shell syntax, scoped Go vet and repository-pinned lint
+pass. Complete `internal/packrelease`, `internal/executableidentity` and
+`internal/config` normal/race packages pass. Focused `cmd/phebs` normal/race
+checks cover build-fact and artifact binding derivation/refusal, wrong-binary
+admission, withdrawal without artifact reads and ordinary Caller Map
+startup/API/MCP discovery. T48.4c is already merged on base
+`bee6ebfd5379c1948602ec2548cf627a91c2d8a6`; this slice changes none of its
+implementation. Its fixed recipe registry remains empty and releases nothing.
+`make docs-check`, `make verify-glossary` and whitespace checks pass, including
+the exact retained T11.1 tree. Preservation checks compare the initial recipe,
+totals, option-A disposition, refusal records and previous admitted
+measurements, and rehash all 373 retained classified sources.
+
+No full-repository/store, operating-envelope or non-Linux native replay was
+run for this offline derivation/docs slice. No independent code review or
+human quality labels are claimed; this ticket branch is unmerged.

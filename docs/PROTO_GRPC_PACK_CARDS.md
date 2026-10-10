@@ -81,7 +81,7 @@ oversized, and unsupported inputs remain unresolved or gaps.
 | Schema version | `t20-caller-v1` |
 | Release binding | none — no PackRelease exists |
 | Owner | Ben Meddeb |
-| Independent validation owner | none assigned; release-blocking |
+| Validation owner / label reviewer | Ben Meddeb, sole human reviewer for the prospective T47.2b round (2026-10-10); no independent-human validation claim |
 | Validation | not measured under a sealed protocol; T39.4 call-site and end-to-end gates `not_run` |
 | Current decision | dark; no shadow, advisory, or release authority |
 

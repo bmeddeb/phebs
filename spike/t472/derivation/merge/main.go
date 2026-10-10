@@ -94,8 +94,8 @@ type runStats struct {
 	Docs              int    `json:"docs"`
 	OutOfTreeDropped  int    `json:"out_of_tree_dropped"`
 	OutOfTreeTestmain int    `json:"out_of_tree_testmain"`
-	// OutOfTreeOther lists every dropped build-cache document that is not a
-	// synthesized test main: an in-tree source left without a document.
+	// OutOfTreeOther lists drops not named _testmain.go; hashed cache paths
+	// need source-byte classification before any in-tree exclusion is claimed.
 	OutOfTreeOther    []string `json:"out_of_tree_other"`
 	Occurrences       int64    `json:"occurrences"`
 	Symbols           int64    `json:"symbols"`

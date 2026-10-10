@@ -17001,6 +17001,27 @@ independent human labels, thresholds and sealing remain separate. No Phebs
 prediction or quality score is produced. Cost: offline serial derivation only;
 no production steady-state work changes.*
 
+*Corrected derivation execution and prospective validation amendment
+(Ben, 2026-10-10): all 26 admitted module runs passed in new retained custody;
+three exact derived commits and their input/tool/environment digests are
+recorded in `spike/t472/corpus.lock.json`, with previous admitted measurements,
+option A and both refusal records preserved. The 373 listed hashed build-cache
+sources are independently classified from their bytes as synthesized `go
+test` mains; the record retains every source digest and excludes no in-tree
+source unit. The 6,209 version-skewed references span all indexed symbol kinds,
+not a missed-RPC count. Ben selected exact symbols with resulting caller gaps
+kept in the measured population, call-site/declaration attribution claims and
+no service-edge claim. Ben is the sole validation owner and human label
+reviewer; the prospective two-reviewer/separate-adjudicator requirement is
+superseded for this round, with no independent-human validation claim. The
+protocol drafts relaxed thresholds and a 97-site-per-stratum/small-census rule
+for Ben's approval. Independent source enumeration, caller-specific scoring
+projection/ledgers, immutable artifact/frame bindings, randomness and external
+commitments, blind human labels and scoring still remain. The source/code
+review and T47.4/T47.5 gates are not waived. T48.4c is already merged; its
+artifact bindings are verified rather than reimplemented here. No seal,
+production activation or quality result follows from derivation.*
+
 **T47.3 · Ordinary production configuration and registration** *(needs the
 T47.2 supported recipe contract; activation remains gated until T47.5)* —
 introduce the stable Caller Map configuration/recipe selection, wire the
