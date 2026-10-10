@@ -1,0 +1,106 @@
+{
+  "attribution_frame": false,
+  "method": "git ls-tree -r -z at each exact derived commit; classify all Go-suffixed paths by Git mode independently of Phebs predictions",
+  "processing_quality_scored": false,
+  "repositories": [
+    {
+      "derived_commit": "75771dd76dd9a6d7048ae48793b806b1cbec0c22",
+      "go_paths": 1105,
+      "nonregular_go_paths": [
+        {
+          "git_object": "a76f0a7f4ef484f95ae75295ed3aedca7cf41e46",
+          "kind": "blob",
+          "mode": "120000",
+          "path": "client/v3/concurrency/example_election_test.go"
+        },
+        {
+          "git_object": "053eb74ad6a648f2b1415b2c5ef953f37ad6afc6",
+          "kind": "blob",
+          "mode": "120000",
+          "path": "client/v3/concurrency/example_mutex_test.go"
+        },
+        {
+          "git_object": "d63639ecc6876c8908d79e8522c48abe5902a8a4",
+          "kind": "blob",
+          "mode": "120000",
+          "path": "client/v3/concurrency/example_stm_test.go"
+        },
+        {
+          "git_object": "7a25cc2a0333be8d69284ae0ee45e74dce9642bd",
+          "kind": "blob",
+          "mode": "120000",
+          "path": "client/v3/example_auth_test.go"
+        },
+        {
+          "git_object": "302451f8113a1585e8d9622363b475e730cced29",
+          "kind": "blob",
+          "mode": "120000",
+          "path": "client/v3/example_cluster_test.go"
+        },
+        {
+          "git_object": "0b3bd875e9297e62ab4723f15101af7b838e11cb",
+          "kind": "blob",
+          "mode": "120000",
+          "path": "client/v3/example_kv_test.go"
+        },
+        {
+          "git_object": "d1cf744bb6d35f677e77381131594d8d1aff0b78",
+          "kind": "blob",
+          "mode": "120000",
+          "path": "client/v3/example_lease_test.go"
+        },
+        {
+          "git_object": "d8bcb642a24f2e34dac0951cd13a44f79333edc2",
+          "kind": "blob",
+          "mode": "120000",
+          "path": "client/v3/example_maintenance_test.go"
+        },
+        {
+          "git_object": "a363c3c4fe0836ee00e4a8edc982257afb3be6fe",
+          "kind": "blob",
+          "mode": "120000",
+          "path": "client/v3/example_metrics_test.go"
+        },
+        {
+          "git_object": "ddacab0d6c4f225ae32cb2229814c643687ed022",
+          "kind": "blob",
+          "mode": "120000",
+          "path": "client/v3/example_test.go"
+        },
+        {
+          "git_object": "fb748bed55d512cf40fccd91b7963e71828164b2",
+          "kind": "blob",
+          "mode": "120000",
+          "path": "client/v3/example_watch_test.go"
+        }
+      ],
+      "nonregular_treatment": "explicit source-kind inventory; never treated as parsed Go source or silently removed from later universe accounting",
+      "regular_go_sources": 1094,
+      "repo": "etcd-io/etcd",
+      "upstream_pin": "f061acd0902d489041448cdd19d71a345d27b9f5"
+    },
+    {
+      "derived_commit": "f40347859c3380f5c409f153ab79d4b8e724abd3",
+      "go_paths": 1083,
+      "nonregular_go_paths": [],
+      "nonregular_treatment": "explicit source-kind inventory; never treated as parsed Go source or silently removed from later universe accounting",
+      "regular_go_sources": 1083,
+      "repo": "grpc/grpc-go",
+      "upstream_pin": "5f1ccf56ea5ec964bbf447a10b561214f86387a6"
+    },
+    {
+      "derived_commit": "e0f9f8ac24f21a3703f94bb09817b699a1446af0",
+      "go_paths": 5508,
+      "nonregular_go_paths": [],
+      "nonregular_treatment": "explicit source-kind inventory; never treated as parsed Go source or silently removed from later universe accounting",
+      "regular_go_sources": 5508,
+      "repo": "containerd/containerd",
+      "upstream_pin": "3ea5bdbfbd9f25dd1720dd28552510c50bc85ca9"
+    }
+  ],
+  "schema": "t472-source-census-v1",
+  "source_only": true,
+  "total_go_paths": 7696,
+  "total_regular_go_sources": 7685,
+  "true_call_frame": false
+}

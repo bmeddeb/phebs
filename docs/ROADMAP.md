@@ -162,6 +162,11 @@ drafted for Ben's approval before sealing. Source enumeration, scoring
 projection, commitment and blind labels remain; T47.4/T47.5 are separate.
 T48.4c's already-merged artifact bindings require no replacement implementation.
 
+Ben approved the unchanged quality bar and 97-site/small-census sampling rule
+on 2026-10-10. Approval fixes this prospective round's parameters before any
+scoring; enumeration, projection, artifact/seed bindings and source review
+still precede sealing, and Ben's blind labels precede prediction disclosure.
+
 **Independent production promotions (2026-10-09, Ben-directed):** Epics 48–58
 give every current experimental evidence pack and composed product surface a
 named production path. Epic 48 implements the currently design-only signed

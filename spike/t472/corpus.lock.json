@@ -1581,7 +1581,7 @@
       ],
       "post_decision": "the §6 strata and §3 denominators are re-recorded against the three-repository admitted corpus before sealing; the dropped repositories' refusal evidence (retained unrenamed .tmp merged streams, raw root indexes, authored-unplaced gate-passed snapshots) is preserved and their clones remain at their pins with clean working trees; the frozen §2 bound is unchanged"
     },
-    "rederivation_required": "corrected inputs recorded; source review, independent universe and approved thresholds remain before sealing; Ben's blind labels remain before scoring",
+    "rederivation_required": "corrected inputs recorded; thresholds and sampling approved by Ben on 2026-10-10; source review, independent universe, projection and artifact/seed bindings remain before sealing; Ben's blind labels remain before scoring",
     "admitted_totals": {
       "repositories": 3,
       "module_runs": 26,

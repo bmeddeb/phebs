@@ -3,7 +3,7 @@
 *Draft artifact for T47.2a. This document grants nothing: no release, no
 evidence-status change, no production registration, no Thrift equivalence and
 no scale or SLO claim. It becomes binding only when every placeholder is
-filled, the proposed thresholds and sampling rule are approved, the protocol
+filled, the approved thresholds and sampling rule are bound, the protocol
 digest is recorded and Ben Meddeb seals it. It reuses the mechanical label
 and statistics machinery of the statistical accuracy-gold protocol and no pilot, employer or
 retained-authorization input: the validation population is personal/public
@@ -37,8 +37,12 @@ The admitted population is the three option-A repositories in
 symbols are retained, including version skew; affected caller sites stay in
 the recall population. This round measures call sites and declaration
 attribution. It has no `unit-snapshot.json` and makes no logical-service edge
-claim. The numerical thresholds and sampling rule below are **proposed,
-awaiting Ben's approval before sealing or scoring**.
+claim. **Ben approved the numerical thresholds and sampling rule below on
+2026-10-10 before scoring.** This approval fixes the bar for this prospective
+round; it is not a protocol seal, a passing result or release authorization.
+The approved numerical inputs are recorded in
+[`spike/t472/validation.parameters.json`](../spike/t472/validation.parameters.json)
+for the later immutable preregistration binding; this file contains no score.
 
 ## 2. Frozen supported tuple (T47.2a)
 
@@ -85,7 +89,7 @@ unchanged Wilson helper; they are never passed to `score_claim` as invented
 fields. This projection is a remaining preparation gate, not a new claim
 that the old harness already measures these families.
 
-Proposed relaxed thresholds use observed point estimates. Wilson 95% intervals
+The approved relaxed thresholds use observed point estimates. Wilson 95% intervals
 are reported alongside them; passing does not assert that a confidence bound
 meets the threshold. Every applicable measure must pass; a conditional result
 requires a new remediation round and grants no release authority. Gates apply
@@ -124,6 +128,14 @@ analyzed / excluded / partial / failed rates use this denominator. The corpus
 repositories, their pinned commits and their license/provenance records are
 frozen, and the universe file is committed before any phebs prediction is
 unsealed.
+
+The preliminary source-kind census is recorded in
+[`spike/t472/source.census.json`](../spike/t472/source.census.json): 7,685
+regular Go sources and 11 Go-suffixed symlinks, reconciled directly to the
+three exact derived trees. This records source kinds only; it is neither the
+true-call frame nor a terminal-state measurement. The enumeration and outcome
+rules must account explicitly for the listed nonregular paths rather than
+silently treating them as parsed Go source or removing them from accounting.
 
 ## 5. Sampling frames
 
@@ -181,7 +193,7 @@ deterministic and third-party reproducible.
 
 - Confidence method: two-sided **Wilson score interval**, `z = 1.96` (95%),
   as implemented in `harness.wilson_interval`.
-- Proposed sampling rule: `harness.minimum_sample_size(margin=0.10,
+- Approved sampling rule (Ben, 2026-10-10): `harness.minimum_sample_size(margin=0.10,
   proportion=0.5, z=1.96)` gives **97 sites per nonempty stratum per frame**.
   Larger strata sample 97; smaller strata use a complete census. This is a
   planning margin, not a guarantee about a near-threshold result. A small
@@ -211,14 +223,16 @@ attribution. Results bind card, manifest, implementation/binary, input and
 validation digests, and the admitted recipe is recorded as a caller-specific
 result; it becomes release input only through T47.5.
 
-## 10. Open items that block sealing
+## 10. Sealing checklist
 
 1. The frozen corpus with license/provenance records, and the independent
    universe enumeration (§4) — T47.2b.
 2. Every remaining `<T47.2b>` placeholder, exact frame count and stratum size;
    missing sealing inputs block sealing and scoring.
-3. Ben's approval of the proposed §3 thresholds and §8 sampling rule. Ben is
-   the sole assigned owner/reviewer; no additional human reviewer is requested.
+3. Approval is complete: Ben approved §3 thresholds and §8 sampling on
+   2026-10-10. Bind those exact parameters into the preregistration record;
+   do not adjust them after results. Ben is the sole assigned owner/reviewer;
+   no additional human label reviewer is requested.
 4. Machinery digests, public randomness seed and card/manifest/binary/input
    digests recorded in the commitment record.
 5. A corpus derivation that passes the T47.2b re-derivation checks in

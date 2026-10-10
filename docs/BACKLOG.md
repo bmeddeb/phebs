@@ -17022,6 +17022,24 @@ review and T47.4/T47.5 gates are not waived. T48.4c is already merged; its
 artifact bindings are verified rather than reimplemented here. No seal,
 production activation or quality result follows from derivation.*
 
+*Threshold/sampling approval (Ben, 2026-10-10): Ben approved the proposed
+per-nonempty-stratum point-estimate bar unchanged: caller/declaration precision
+at least 95%, recall at least 80%, unresolved accuracy at least 85%, analyzed
+at least 90%, partial+failed at most 5%, and excluded/unsure each at most 10%.
+Draw 97 sites per frame/stratum or census smaller strata; retain Wilson 95%
+interval reporting. Bind the approved parameters before sealing; neither
+results nor sample choices may relax them. This closes the numerical-bar
+decision only; source enumeration, scoring projection, artifact/seed bindings,
+source review and protocol sealing still remain. Ben's blind labels and their
+commitment follow the sealed protocol before prediction disclosure/scoring.*
+
+*Source/frame preparation: the independent derived-tree source-kind census
+records 7,685 regular Go sources and all 11 Go-suffixed etcd symlinks in
+`spike/t472/source.census.json`. The 7,696-path module inventory reconciles
+exactly when those source kinds are distinguished. This is no true-call,
+attribution or terminal-state frame and excludes nothing silently; later
+enumeration/outcome rules must account for the nonregular paths explicitly.*
+
 **T47.3 · Ordinary production configuration and registration** *(needs the
 T47.2 supported recipe contract; activation remains gated until T47.5)* —
 introduce the stable Caller Map configuration/recipe selection, wire the

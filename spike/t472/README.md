@@ -356,13 +356,25 @@ immediate parent directly with `git cat-file commit`, fixes identity/dates,
 and verifies committed blobs. No indexer invocation failed and no historical
 parent content was invented. The original records and inputs remain retained.
 
-Ben's sole-reviewer amendment and proposed thresholds are in the prospective
+Ben's sole-reviewer amendment and approved thresholds are in the prospective
 [`CALLER_QUALITY_PROTOCOL.md`](../../docs/CALLER_QUALITY_PROTOCOL.md).
 Independent source/frame enumeration, the caller-specific scoring projection,
-source review, approved thresholds and artifact bindings remain before protocol
+source review and artifact/parameter bindings remain before protocol
 sealing. Ben then labels the sealed sample from source and commits those labels
 before prediction disclosure and scoring. No independent-human validation,
 accuracy or release claim follows from this input derivation.
+
+Ben approved the thresholds and 97-site/small-census rule on 2026-10-10;
+that decision is complete. The recorded module inventory covers 7,696
+Go-suffixed paths. A direct derived-tree reconciliation records 7,685 regular
+Go sources (etcd 1,094; containerd 5,508; grpc-go 1,083) and all 11 etcd
+Go-suffixed symlinks in [`source.census.json`](source.census.json). This is
+a source-kind census, not a true-call or attribution frame and not a
+processing-quality result; nonregular paths remain explicit for later
+universe/outcome accounting.
+The approved machine-readable bar lives in
+[`validation.parameters.json`](validation.parameters.json); it contains no
+labels, seed, score or seal. Preregistration will bind its exact digest.
 
 ### Verification of this slice
 

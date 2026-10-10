@@ -1,0 +1,67 @@
+{
+  "all_unsure_stratum": "invalidate round",
+  "approval": {
+    "approved_date": "2026-10-10",
+    "basis": "Ben approved the proposed bar and sampling in this chat before any quality scoring",
+    "owner": "Ben Meddeb"
+  },
+  "candidate_blind_source_labels": true,
+  "claims": [
+    "caller_sites",
+    "declaration_attribution"
+  ],
+  "code_roles": [
+    "production",
+    "test",
+    "generated",
+    "mock",
+    "vendor"
+  ],
+  "confidence_reporting": {
+    "gates_on_confidence_bounds": false,
+    "level_percent": 95,
+    "method": "Wilson two-sided",
+    "small_census_wider_inference": false,
+    "z": 1.96
+  },
+  "exact_symbols_preserved": true,
+  "gates_use": "unrounded observed point estimates in each nonempty stratum; no pooling rescue",
+  "human_reviewers": [
+    "Ben Meddeb"
+  ],
+  "missing_labels": "invalidate round",
+  "pass_thresholds_percent": {
+    "analyzed_min": 90,
+    "attributed_edge_precision_min": 95,
+    "attributed_edge_recall_min": 80,
+    "caller_precision_min": 95,
+    "caller_recall_min": 80,
+    "excluded_max": 10,
+    "partial_plus_failed_max": 5,
+    "unresolved_accuracy_min": 85,
+    "unsure_max": 10
+  },
+  "post_result_threshold_changes": "forbidden for this round",
+  "processing_state_denominator": "complete independently enumerated eligible-unit census; not a 97-unit sample",
+  "protocol_sealed": false,
+  "quality_scored": false,
+  "release_authorized": false,
+  "sampling": {
+    "planning_margin": 0.1,
+    "planning_proportion": 0.5,
+    "sites_per_frame_stratum": 97,
+    "smaller_strata": "complete census",
+    "z": 1.96
+  },
+  "schema": "t472-quality-parameters-v1",
+  "status": "approved_not_sealed",
+  "strata": [
+    "repository",
+    "code_role"
+  ],
+  "unavailable_claims": [
+    "logical_service_operation_edges"
+  ],
+  "version_skew_caller_gaps_remain_in_scope": true,
+  "zero_denominator": "unavailable; never a 100 percent pass"
+}
