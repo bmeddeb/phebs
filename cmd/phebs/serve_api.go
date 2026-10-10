@@ -177,11 +177,11 @@ func openServeSearcher(d *serveDeps) error {
 	return nil
 }
 
-// callerMapDiscoverable reports whether the Caller Map discovery surface is
-// offered at startup. Discovery follows the provisional extraction switches
-// alone: admitting a pack through the ordinary/released selection never flips
-// it, because one released component must not make another surface
-// discoverable, and withdrawal changes only admission, never discovery.
+// callerMapDiscoverable is the provisional-switch half of the Caller Map
+// discovery gate. The surface is offered only when this holds and the admitted
+// caller registry is enabled (newServeCallerReader). The released selection
+// never sets this half, so a released pack alone cannot make the surface
+// discoverable.
 func callerMapDiscoverable(cfg *config.Config) bool {
 	return cfg.Experimental.ProvisionalProtoExtraction ||
 		cfg.Experimental.ProvisionalThriftExtraction

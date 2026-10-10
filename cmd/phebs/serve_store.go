@@ -121,17 +121,31 @@ func openServeStore(d *serveDeps) error {
 	d.deferFunc(func(retErr *error) {
 		*retErr = errors.Join(*retErr, st.Close(context.Background()))
 	})
-	var callerReader *callerexecute.PublicationReader
-	if d.callerRegistry.Enabled() {
-		callerReader, err = callerexecute.NewPublicationReader(
-			cfg.Server.DataDir, st, d.callerRegistry, d.callerPublications,
-		)
-		if err != nil {
-			return fmt.Errorf("configure caller publication reader: %w", err)
-		}
+	callerReader, err := newServeCallerReader(d, st)
+	if err != nil {
+		return err
 	}
 	d.callerReader = callerReader
 	return nil
+}
+
+// newServeCallerReader builds the caller publication reader over st, or none
+// when the admitted caller registry is disabled. The Caller Map API service and
+// MCP tools exist only with this reader, so their discovery depends on the
+// admitted extractor set as well as on the provisional switches.
+func newServeCallerReader(
+	d *serveDeps, st callerexecute.PublicationReadStore,
+) (*callerexecute.PublicationReader, error) {
+	if !d.callerRegistry.Enabled() {
+		return nil, nil
+	}
+	callerReader, err := callerexecute.NewPublicationReader(
+		d.cfg.Server.DataDir, st, d.callerRegistry, d.callerPublications,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("configure caller publication reader: %w", err)
+	}
+	return callerReader, nil
 }
 
 // wireServeLifecycle builds the capacity gate, lifecycle owners, publication
