@@ -17040,6 +17040,33 @@ exactly when those source kinds are distinguished. This is no true-call,
 attribution or terminal-state frame and excludes nothing silently; later
 enumeration/outcome rules must account for the nonregular paths explicitly.*
 
+*Enumeration, frames, scoring projection and binding bundle (2026-10-10):
+`spike/t472/enumerate_universe.py` enumerates the §4 universe from the exact
+derived commits with no phebs consultation — grpc-caller role rules,
+constructor-backed generated-client inventory and four byte-coordinated
+evidence kinds — reconciled fail-closed to the census and lock mappings
+(three consecutive runs byte-identical). Committed `spike/t472/universe/`
+holds 24,221 sites over 11 repository×role strata, 60 clients (44 mapped, 16
+abstained) and 390 operations. `spike/t472/frames.py` authors
+`spike/t472/frames/`: recall population 11,376 (97 per stratum;
+`etcd-io/etcd:mock` at 15 and all three attribution strata censused), an
+excluded-kinds ledger accounting for all 12,845 non-sampled sites with
+reasons, and a plan whose `review_required` names the two source judgments
+Ben must confirm (recall exclusions for non-client-aware tokens and bare
+imports; interface-span attribution coordinate). `spike/t472/caller_scoring.py`
+implements the tested §3 numerator/denominator projection, invalidation rules
+and the eligible-unit ledger that accepts only explicit outcome records and
+reconciles to the 7,685-source census. `spike/t472/binding_bundle.py` assembles
+`spike/t472/bundle/preregistration.bundle.json`, binding every known identity
+by sha256 — including the unedited frozen t111/pilot machinery — and naming
+every missing one: sealed proof-bundle envelope, complete candidate ledger,
+beacon pulse/seed, frozen blind labels, run-outcome receipt and protocol
+digest; external-publication payloads stay local unpublished skeletons.
+Twenty-four unittest cases pass; docs-check, glossary and whitespace gates
+pass. No sample drawn, no label manufactured, no prediction disclosed, no
+score produced, nothing published; source/code review, Ben's confirmations,
+blind labels, sealing and T47.4/T47.5 remain separate.*
+
 **T47.3 · Ordinary production configuration and registration** *(needs the
 T47.2 supported recipe contract; activation remains gated until T47.5)* —
 introduce the stable Caller Map configuration/recipe selection, wire the

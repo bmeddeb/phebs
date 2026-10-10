@@ -1,0 +1,38 @@
+{
+ "excluded_kinds": {
+  "import_reference": {
+   "by_stratum": {
+    "containerd/containerd:production": 205,
+    "containerd/containerd:test": 108,
+    "containerd/containerd:vendor": 23,
+    "etcd-io/etcd:generated": 6,
+    "etcd-io/etcd:mock": 1,
+    "etcd-io/etcd:production": 100,
+    "etcd-io/etcd:test": 93,
+    "grpc/grpc-go:production": 174,
+    "grpc/grpc-go:test": 268
+   },
+   "reason": "import of a generated client path alone is not call evidence; dynamic/aliased construction cannot be tied to the frozen client inventory from the import",
+   "total": 978
+  },
+  "operation_invocation_not_client_aware": {
+   "by_stratum": {
+    "containerd/containerd:generated": 445,
+    "containerd/containerd:production": 1807,
+    "containerd/containerd:test": 1572,
+    "containerd/containerd:vendor": 5825,
+    "etcd-io/etcd:generated": 2,
+    "etcd-io/etcd:mock": 3,
+    "etcd-io/etcd:production": 837,
+    "etcd-io/etcd:test": 1192,
+    "grpc/grpc-go:generated": 10,
+    "grpc/grpc-go:production": 100,
+    "grpc/grpc-go:test": 74
+   },
+   "reason": "bare method-name token in a file referencing no committed generated client; cannot be distinguished from same-name methods on unrelated types",
+   "total": 11867
+  }
+ },
+ "excluded_total": 12845,
+ "schema": "t472-excluded-ledger-v1"
+}

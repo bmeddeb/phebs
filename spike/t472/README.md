@@ -395,3 +395,93 @@ measurements, and rehash all 373 retained classified sources.
 No full-repository/store, operating-envelope or non-Linux native replay was
 run for this offline derivation/docs slice. No independent code review or
 human quality labels are claimed; this ticket branch is unmerged.
+
+## Source enumeration, frames, scoring projection and binding bundle (2026-10-10)
+
+This section prepares the T47.2b sealing inputs that do not need a live phebs
+run: the §4 universe enumeration, the §5–§6 sampling frames, the §3 scoring
+projection and ledgers, and the §10 preregistration binding bundle. Nothing
+here is a label, a sample draw, a score or a seal; the seed, the candidate
+identities, the blind label documents and the run-outcome receipt remain
+explicit missing bindings.
+
+### §4 universe enumeration (`enumerate_universe.py` → `universe/`)
+
+Source-based and independent of phebs output: git tree reads at each exact
+derived commit, grpc-caller `classifyRole` rules, constructor-backed
+protoc-gen-go-grpc client inventory, and a four-kind byte-coordinated site
+scan. Fail-closed reconciliation to `source.census.json` and the lock mappings
+runs before anything is written; three consecutive runs produced byte-identical
+outputs. Committed outputs:
+
+| File | Rows / shape | SHA-256 |
+|---|---|---|
+| `universe/universe.json` | per-repo units, eligible-unit path list, clients, tallies | `de49605866d0d4f10fb34ee6c553b90829faed88a48d169467df35ad04d91329` |
+| `universe/universe.sites.etcd.jsonl` | 4,888 sites | `f275fdbf3ee8c3f898f5316b7c898c57ee40d508e29fcfbc46e11be07ae056b5` |
+| `universe/universe.sites.containerd.jsonl` | 14,816 sites | `f6b1a91de1ba1b425948a213a5c292b4c8a7005b5fe461066dd8a5ef8708e704` |
+| `universe/universe.sites.grpc-go.jsonl` | 4,517 sites | `0577470a9dc6286e0e30efb4fa4c52f85025af1c43b751b0ba245b0bcd6e047a` |
+| `universe/universe.declarations.jsonl` | 60 clients, 390 operations | `e7b667dfd0b9f6451df25257df07ae96a73a2df161f7a17a3cbfc1b934ccd23f` |
+
+Totals: 24,221 sites (21,665 operation invocations, 843 full-method strings,
+735 constructor calls, 978 client imports), 11 strata over 3 repositories × 5
+code roles, 60 clients (44 mapped, 16 abstained), 390 operations (159
+full-method constants, 231 proto-package-derived for older generator output).
+This is candidate evidence inventory, not a true-call frame: the 11 etcd Go
+symlinks are inventoried with targets and never parsed as source.
+
+### §5–§6 frames (`frames.py` → `frames/`)
+
+`frames.plan.json` (schema `t472-frames-plan-v1`) records: recall population
+11,376 across 11 strata (97 per stratum; `etcd-io/etcd:mock` at 15 is a
+complete census); attribution population 60 across 3 repository strata (all
+census). The excluded-kinds ledger accounts for the remaining 12,845 universe
+sites with explicit reasons: bare method-name tokens in files referencing no
+committed generated client (11,867) and client imports alone (978) are not
+recall-sampled; they stay visible, never silently dropped. Precision,
+abstention and unresolved frames stay pending until the sealed proof bundle
+and phebs's complete candidate ledger bind their identities. Two source
+judgments are flagged for Ben's confirmation in the plan's `review_required`:
+the recall exclusion rules, and the interface-span coordinate for attribution
+units. The seed-dependent draw (`draw_samples`) wraps the frozen pilot harness
+and has not been executed.
+
+### §3 scoring projection and ledgers (`caller_scoring.py`)
+
+Exact per-stratum numerator/denominator rules for caller and attributed-edge
+recall/precision, unresolved accuracy and declaration attribution
+(mapped clients must be `registration=yes` with the predicted service;
+abstained clients must be `registration=no`), reusing the frozen t111 label
+validation and pilot Wilson machinery without editing them. Invalidation
+follows the approved parameters: missing/surplus labels refuse, all-unsure
+strata refuse, zero decided denominators are unavailable — never a 100 percent
+pass. The eligible-unit ledger accepts only explicit per-source outcome
+records, reconciles them fail-closed to the committed universe census
+(7,685 regular sources), and applies the `analyzed ≥ 90`, `partial+failed ≤ 5`,
+`excluded ≤ 10` gates over the whole census, not a 97-unit sample. A file read
+is never inferred as `analyzed`.
+
+### §10 binding bundle (`binding_bundle.py` → `bundle/`)
+
+`preregistration.bundle.json` (schema `t472-preregistration-bundle-v1`) binds
+by sha256: this protocol doc, the approved parameters, the source census, the
+corpus lock, the universe outputs, the frames plan, and the five machinery
+files (frozen `spike/t111/label_protocol.py` and `pilot/validation/harness.py`
+plus the three new tools). Every not-yet-known binding — sealed proof-bundle
+envelope, complete candidate ledger, beacon pulse and seed, frozen label
+documents, run-outcome receipt, protocol digest — is named with a `null`
+value; the completeness walk refuses malformed digests. External-publication
+payloads (label commitment, beacon reference) exist only as local unpublished
+skeletons; `published: false`.
+
+### Gates for this section
+
+`python3 -m unittest spike.t472.test_universe_frames` — 24 tests: synthetic
+git-repository enumeration end-to-end (roles, clients, proto mapping, symlink
+reconciliation, old-generator shape), frame population/census rules, draw
+determinism and seed refusal, candidate projection commit validation, scoring
+joins and invalidation, ledger refusal paths, and bundle completeness. No Go
+production code changed. `make docs-check`, `make verify-glossary` and
+whitespace checks pass. Cost: enumeration is a one-shot offline read of the
+three derived trees through one `git cat-file --batch` per repository;
+frames/scoring/bundle are single-pass in-memory JSONL processing; none of this
+runs in any production request, sync tick or startup path.

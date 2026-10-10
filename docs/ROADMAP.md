@@ -167,6 +167,19 @@ on 2026-10-10. Approval fixes this prospective round's parameters before any
 scoring; enumeration, projection, artifact/seed bindings and source review
 still precede sealing, and Ben's blind labels precede prediction disclosure.
 
+**Sealing-input preparation (2026-10-10):** the §4 source enumeration
+(`spike/t472/universe/`, 24,221 byte-coordinated sites over the frozen derived
+commits, reconciled to the census), the §5–§6 frames plan (recall 11,376 in 11
+strata, attribution 60 in 3 strata, excluded-kinds ledger accounting for all
+non-sampled sites) and the §3 scoring projection and eligible-unit ledger
+(`spike/t472/caller_scoring.py`) are implemented and tested, with the §10
+preregistration binding bundle naming every still-missing identity
+(`spike/t472/bundle/`). Two recall-exclusion source judgments and the
+attribution coordinate await Ben's confirmation in the plan's
+`review_required`; the seed, candidate identities, blind labels and run
+receipt remain unbound. No sample drawn, no label manufactured, no score
+produced, nothing published; T47.4/T47.5 stay separate.
+
 **Independent production promotions (2026-10-09, Ben-directed):** Epics 48–58
 give every current experimental evidence pack and composed product surface a
 named production path. Epic 48 implements the currently design-only signed

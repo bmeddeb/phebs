@@ -120,10 +120,23 @@ the universe and outcome accounting; they cannot be removed to improve a rate.
 ## 4. Eligible universe (independent of the candidate)
 
 The target population is the frozen corpus's source occurrences under the §2
-tuple, enumerated **without consulting phebs output** by
-`<T47.2b: enumeration method — e.g. exhaustive scan for uses of admitted
-generated clients plus declaration operation inventory, tools and versions
-pinned>`. Every unit receives exactly one terminal processing state; the
+tuple, enumerated **without consulting phebs output** by the committed tool
+`spike/t472/enumerate_universe.py`: at each exact derived commit it reads the
+git tree (`ls-tree`/`cat-file`), applies the grpc-caller `classifyRole`
+path-and-header rules (production / test / mock / generated / vendor),
+inventories every checked-in `protoc-gen-go-grpc` client (constructor-backed
+`<Service>Client` interfaces, `New<Service>Client` constructors,
+`FullMethodName` constants, with the proto `package` clause supplying the
+full method for older generator output), and scans every regular Go source
+for four byte-coordinated evidence kinds: constructor calls, operation
+invocations, full-method strings, and generated-client imports. Aliases,
+wrappers, interfaces and dynamic paths are handled by the explicit
+`client_aware` provenance flag and the excluded-kinds ledger, never by
+silent attribution. Its committed outputs live under
+[`spike/t472/universe/`](../spike/t472/universe/) (`universe.json`,
+`universe.sites.*.jsonl`, `universe.declarations.jsonl`; 24,221 sites,
+60 clients, 390 operations, reconciled fail-closed to the source census).
+Every unit receives exactly one terminal processing state; the
 analyzed / excluded / partial / failed rates use this denominator. The corpus
 repositories, their pinned commits and their license/provenance records are
 frozen, and the universe file is committed before any phebs prediction is
@@ -228,7 +241,13 @@ result; it becomes release input only through T47.5.
 1. The frozen corpus with license/provenance records, and the independent
    universe enumeration (§4) — T47.2b.
 2. Every remaining `<T47.2b>` placeholder, exact frame count and stratum size;
-   missing sealing inputs block sealing and scoring.
+   missing sealing inputs block sealing and scoring. The §4 enumeration
+   placeholder is filled by the committed enumeration (see §4); frame counts
+   and stratum sizes are recorded in
+   [`spike/t472/frames/frames.plan.json`](../spike/t472/frames/frames.plan.json),
+   and every not-yet-known sealing input is named in
+   [`spike/t472/bundle/preregistration.bundle.json`](../spike/t472/bundle/preregistration.bundle.json)
+   as an explicit missing binding.
 3. Approval is complete: Ben approved §3 thresholds and §8 sampling on
    2026-10-10. Bind those exact parameters into the preregistration record;
    do not adjust them after results. Ben is the sole assigned owner/reviewer;
@@ -250,7 +269,14 @@ result; it becomes release input only through T47.5.
    the exact validated artifact; an unfilled gate leaves this recipe
    unavailable.
 7. The caller-specific label projection, resolution/attribution ledgers and
-   state census of §3, including tested numerator and denominator rules.
+   state census of §3, including tested numerator and denominator rules —
+   implemented in
+   [`spike/t472/caller_scoring.py`](../spike/t472/caller_scoring.py) and
+   exercised by
+   [`spike/t472/test_universe_frames.py`](../spike/t472/test_universe_frames.py);
+   the eligible-unit ledger consumes only explicit per-source outcome records
+   from the sealed run receipt and reconciles fail-closed to the committed
+   universe census. The projection is prepared, not executed.
 
 ## 11. What this protocol can and cannot produce
 
