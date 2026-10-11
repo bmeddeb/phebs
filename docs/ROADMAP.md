@@ -152,6 +152,48 @@ does not change through this planning decision. Epic 42 continues as the
 separate Linux/scale track, and the retained pilot, generated-SCIP evidence
 hold and unrelated experimental packs retain their own authority and gates.
 
+**Caller-quality amendment (2026-10-10, Ben-directed):** the corrected T47.2b
+three-repository derivation passed all 26 module runs and preserves exact
+symbols, including version-skew caller gaps. Ben is the sole human validation
+owner/reviewer for this prospective round; results will disclose that limit.
+Call sites and declaration attribution are in scope; logical-service edges
+are unavailable without a unit snapshot. Relaxed thresholds and sampling are
+drafted for Ben's approval before sealing. Source enumeration, scoring
+projection, commitment and blind labels remain; T47.4/T47.5 are separate.
+T48.4c's already-merged artifact bindings require no replacement implementation.
+
+Ben approved the unchanged quality bar and 97-site/small-census sampling rule
+on 2026-10-10. Approval fixes this prospective round's parameters before any
+scoring; enumeration, projection, artifact/seed bindings and source review
+still precede sealing, and Ben's blind labels precede prediction disclosure.
+
+**Sealing-input preparation (2026-10-10):** the §4 source enumeration
+(`spike/t472/universe/`, 24,221 byte-coordinated sites over the frozen derived
+commits, reconciled to the census), the §5–§6 frames plan (recall 11,376 in 11
+strata, attribution 60 in 3 strata, excluded-kinds ledger accounting for all
+non-sampled sites) and the §3 scoring projection and eligible-unit ledger
+(`spike/t472/caller_scoring.py`) are implemented and tested, with the §10
+preregistration binding bundle naming every still-missing identity
+(`spike/t472/bundle/`). Two recall-exclusion source judgments and the
+attribution coordinate await Ben's confirmation in the plan's
+`review_required`; the seed, candidate identities, blind labels and run
+receipt remain unbound. No sample drawn, no label manufactured, no score
+produced, nothing published; T47.4/T47.5 stay separate.
+
+
+**Preparation correction (2026-10-10):** the nine review findings supersede
+the preparation counts and rules above. Every Go call expression remains in
+the source-only recall population (498,793 sites; 978 imports explicitly
+excluded), and 74 individual client interfaces retain four repository×role
+strata. Candidate citation/predicate/operation joins, independent unresolved
+truth and declaration-lineage edge scoring, complete-family uncertainty
+gates, per-stratum processing gates and strict artifact/bundle validation
+are corrected without changing the approved parameters. Regenerated
+schema-v2 artifacts and the exact fresh review/gate record live in
+`spike/t472/REVIEW_PACKET.md`. Ben's source confirmations, candidate frames,
+genuine beacon/seed, blind labels and receipts remain unbound; the branch
+adds no merge, seal, score, activation or release authority.
+
 **Independent production promotions (2026-10-09, Ben-directed):** Epics 48–58
 give every current experimental evidence pack and composed product surface a
 named production path. Epic 48 implements the currently design-only signed
@@ -166,12 +208,13 @@ fields (52), RPC syntactic consumer/registration evidence (58), Kafka producer
 composes only admitted Kafka planes. A producer result never promotes the
 consumer. The first tickets landed: T47.2a, T49.1a and both T48.2 slices froze
 their contracts and built the shared release verifier and startup admission
-gate; T48.4a/b documented the shared operating surface and pinned the
-absent/one-pack/mixed-pack startup and discovery matrix. T47.3 built the
-ordinary Caller Map configuration and registration path, with activation
-gated until T47.5. The next are T48.3, T48.4c and T49.1b; prepare independent
-contracts/corpora while shared runtime enforcement is built, but serialize
-expensive host execution and Git/spine edits. Production support starts inside
+gate; T48.4a/b/c documented the shared operating surface, pinned the startup
+and discovery matrix, and supplied the machine-derived release load bindings.
+T47.3 built the ordinary Caller Map configuration and registration path,
+with activation gated until T47.5. The next are T48.3 and T49.1b; prepare
+independent contracts/corpora while shared runtime enforcement is built, but
+serialize expensive host execution and Git/spine edits. Production support
+starts inside
 measured limits with headroom; existing safety ceilings alone are not an
 operating result. No capability waits on an unrelated pack or an unclaimed
 large-scale workflow, and no new status is granted by this plan. The full

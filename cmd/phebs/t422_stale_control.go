@@ -47,6 +47,7 @@ type t422StaleControl struct {
 	cancel                                context.CancelFunc
 	launch                                *t422SemanticLaunch
 	reconciler                            *extractionpublication.Reconciler
+	typedScopeReservations                bool
 	sink                                  func([]byte) error
 	workspacePreparation                  func(context.Context) (*t422WorkspaceSampleResponse, error)
 	mu                                    sync.Mutex
@@ -75,7 +76,8 @@ func newT422StaleControl(ctx context.Context, launch *t422SemanticLaunch, reconc
 	}
 	lifetime, cancel := context.WithCancel(ctx)
 	control := &t422StaleControl{ctx: lifetime, cancel: cancel, launch: launch, reconciler: reconciler,
-		sink: t4013ExactReportSink("exact stale preparation: "), requeued: make(chan struct{}), diagnose: true}
+		typedScopeReservations: reconciler.TypedScopeReservations,
+		sink:                   t4013ExactReportSink("exact stale preparation: "), requeued: make(chan struct{}), diagnose: true}
 	for _, barrier := range []*t422StaleBarrier{&control.hit, &control.recovered} {
 		barrier.ready, barrier.release = make(chan struct{}), make(chan struct{})
 	}
@@ -112,7 +114,7 @@ func (control *t422StaleControl) captureFinal(ctx context.Context, state candida
 	if !control.current(ctx, current.Phase, true, true) {
 		return control.stop(errT422StaleControl)
 	}
-	value, err := t422StaleFinalSnapshot(state, response)
+	value, err := t422StaleFinalSnapshot(state, response, control.typedScopeReservations)
 	if err != nil {
 		return control.stop(err)
 	}
@@ -136,9 +138,13 @@ func (control *t422StaleControl) captureFinal(ctx context.Context, state candida
 	return nil
 }
 
-func t422StaleFinalSnapshot(state candidate.State, response t421FinalAuthorityResponse) (t422StaleFinal, error) {
+func t422StaleFinalSnapshot(
+	state candidate.State,
+	response t421FinalAuthorityResponse,
+	typedScopeReservations bool,
+) (t422StaleFinal, error) {
 	var value t422StaleFinal
-	policy, err := candidate.ExtractionPolicyDigest(state.PolicyDigest, true)
+	policy, err := candidate.ExtractionPolicyDigest(state.PolicyDigest, true, typedScopeReservations)
 	if err != nil || response.Schema != t421FinalAuthoritySchema || !response.Authority.Current || len(response.ExtractionRoots) != len(value.roots) ||
 		state.GenerationDigest != response.Authority.CandidateGenerationSHA256 || state.Commit != response.Authority.PhysicalCommit ||
 		!t422SemanticDigest(state.ManifestDigest) || !t422SemanticDigest(response.Authority.SourceGenerationSHA256) ||

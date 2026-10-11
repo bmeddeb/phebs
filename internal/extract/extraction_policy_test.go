@@ -102,7 +102,7 @@ func TestEvidencePartitionVersionedGrouping(t *testing.T) {
 
 func TestVersionedPartialChunkIdentity(t *testing.T) {
 	policy := "sha256:" + strings.Repeat("a", 64)
-	selected, err := candidate.ExtractionPolicyDigest(policy, true)
+	selected, err := candidate.ExtractionPolicyDigest(policy, true, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,5 +111,50 @@ func TestVersionedPartialChunkIdentity(t *testing.T) {
 	accounted := buildFactChunkForNamespace(0, facts, selected+":0")
 	if ordinary.ID == accounted.ID || accounted.ID != buildFactChunkForNamespace(0, facts, selected+":0").ID {
 		t.Fatal("partial chunk identity does not bind policy namespace")
+	}
+}
+
+func TestEvidencePartitionTypedScopeReservationFence(t *testing.T) {
+	const content = "message Fixture {}\n"
+	plan, path, commit := partitionExecutorPlanForModes(t, "proto-contract", "partition-test-v1", ".proto", content, false, true)
+	historical, err := candidate.ExtractionPolicyDigest(plan.CandidatePolicyDigest, false, false)
+	if err != nil || plan.ExtractionPolicyDigest == historical || plan.ExtractionPolicyDigest == plan.CandidatePolicyDigest {
+		t.Fatalf("typed-scope plan identity not separated: %s vs %s, %v", plan.ExtractionPolicyDigest, historical, err)
+	}
+	evidence := newMemoryEvidence()
+	run, err := evidence.BeginExtractionRun(t.Context(), store.ExtractionScope{Repository: plan.Repository, Commit: commit, Domain: plan.Domain}, plan.ExtractorVersion)
+	if err != nil {
+		t.Fatal(err)
+	}
+	extractor := unitExtractor{
+		domain: plan.Domain, version: plan.ExtractorVersion,
+		candidate: func(candidatePath string) bool { return strings.HasSuffix(candidatePath, ".proto") },
+		extract: func(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) (sdk.Coverage, error) {
+			blob, err := corpus.Read(ctx, path)
+			if err != nil {
+				return sdk.Coverage{}, err
+			}
+			return sdk.Coverage{}, emit(sdk.Fact{
+				Path: path, StartLine: 1, EndLine: 1,
+				Atom:      sdk.AtomInput{SchemaVersion: "partition-v1", BlobDigest: blob.Digest, EndByte: len(blob.Content), RuleID: "partition-rule", AdapterConfigDigest: "none", FactFingerprint: "fact-fence"},
+				Assertion: sdk.AssertionInput{Predicate: "DECLARES", Subject: path, Object: "FenceObject", Tier: store.TierExact, CodeRole: "production"},
+			})
+		},
+	}
+	lease := partitionExecutorLease{corpus: partitionExecutorCorpus{repository: plan.Repository, commit: commit, path: path, content: content}, records: 1, memberBytes: int64(len(content)), members: 1}
+	executor := EvidencePartitionExecutor{Evidence: evidence, Extractors: []Extractor{extractor}, TypedScopeReservations: true}
+	if _, err := executor.ExecutePartition(t.Context(), plan, 0, lease, run.ID); err != nil {
+		t.Fatalf("typed-scope plan refused under its own policy mode: %v", err)
+	}
+	executor.TypedScopeReservations = false
+	before := evidence.batchCount
+	if _, err := executor.ExecutePartition(t.Context(), plan, 0, lease, run.ID); !errors.Is(err, extractionpublication.ErrStale) || evidence.batchCount != before {
+		t.Fatalf("typed-scope plan reached inventory under the historical mode: %v", err)
+	}
+	historicalPlan, _, _ := partitionExecutorPlanForAccounting(t, "proto-contract", "partition-test-v1", ".proto", content, false)
+	executor.TypedScopeReservations = true
+	before = evidence.batchCount
+	if _, err := executor.ExecutePartition(t.Context(), historicalPlan, 0, partitionExecutorLease{}, run.ID); !errors.Is(err, extractionpublication.ErrStale) || evidence.batchCount != before {
+		t.Fatalf("historical plan reached inventory under the typed-scope mode: %v", err)
 	}
 }

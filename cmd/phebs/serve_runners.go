@@ -729,6 +729,7 @@ func startServeExtractionPipeline(d *serveDeps) error {
 		Root: d.partitionPublicationRoot, Store: st,
 		Executor: &extract.EvidencePartitionExecutor{
 			Evidence: st, Extractors: d.exs, StoreAccounting: semanticLaunch != nil,
+			TypedScopeReservations: cfg.Experimental.TypedScopeReservations,
 		},
 		Publisher:   extractionpublication.StorePublisher{Store: st},
 		Diagnostics: cfg.Diagnostics.Extraction,
@@ -753,7 +754,10 @@ func startServeExtractionPipeline(d *serveDeps) error {
 		if authorityErr != nil {
 			return false
 		}
-		extractionPolicy, policyErr := candidate.ExtractionPolicyDigest(candidateState.PolicyDigest, semanticLaunch != nil)
+		extractionPolicy, policyErr := candidate.ExtractionPolicyDigest(
+			candidateState.PolicyDigest, semanticLaunch != nil,
+			cfg.Experimental.TypedScopeReservations,
+		)
 		if policyErr != nil {
 			return false
 		}
@@ -808,9 +812,10 @@ func startServeExtractionPipeline(d *serveDeps) error {
 		Root: d.partitionPublicationRoot, CandidateRoot: candidatejob.CandidateRoot(cfg.Server.DataDir),
 		Runtime: partitionRuntime, Evidence: st,
 		OpenCandidate: openPartitionCandidate, Authority: readPartitionAuthority,
-		CandidateReference: readPartitionCandidateReference,
-		AuthorityReference: readPartitionFenceAuthority,
-		StoreAccounting:    semanticLaunch != nil,
+		CandidateReference:     readPartitionCandidateReference,
+		AuthorityReference:     readPartitionFenceAuthority,
+		StoreAccounting:        semanticLaunch != nil,
+		TypedScopeReservations: cfg.Experimental.TypedScopeReservations,
 	}
 	openPartitionDomain = partitionReconciler.OpenDomain
 	partitionRuntime.Source = extractionpublication.GitSparseSource{
@@ -824,7 +829,10 @@ func startServeExtractionPipeline(d *serveDeps) error {
 				return fenceErr
 			}
 			state := publication.State()
-			policy, policyErr := candidate.ExtractionPolicyDigest(state.PolicyDigest, semanticLaunch != nil)
+			policy, policyErr := candidate.ExtractionPolicyDigest(
+				state.PolicyDigest, semanticLaunch != nil,
+				cfg.Experimental.TypedScopeReservations,
+			)
 			if policyErr != nil || policy != plan.ExtractionPolicyDigest {
 				return errors.Join(policyErr, extractionpublication.ErrStale)
 			}

@@ -1,0 +1,21 @@
+{
+ "excluded_kinds": {
+  "import_reference": {
+   "by_stratum": {
+    "containerd/containerd:production": 205,
+    "containerd/containerd:test": 108,
+    "containerd/containerd:vendor": 23,
+    "etcd-io/etcd:generated": 6,
+    "etcd-io/etcd:mock": 1,
+    "etcd-io/etcd:production": 100,
+    "etcd-io/etcd:test": 93,
+    "grpc/grpc-go:production": 174,
+    "grpc/grpc-go:test": 268
+   },
+   "reason": "an import alone is not an invocation; every call and admitted method reference remains eligible",
+   "total": 978
+  }
+ },
+ "excluded_total": 978,
+ "schema": "t472-excluded-ledger-v1"
+}

@@ -1,0 +1,3377 @@
+{
+  "classified_utc": "2026-10-10",
+  "counts": {
+    "containerd": {
+      "synthesized_go_test_main": 116
+    },
+    "etcd": {
+      "synthesized_go_test_main": 101
+    },
+    "grpc-go": {
+      "synthesized_go_test_main": 156
+    }
+  },
+  "documents": [
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/3a/3a02781029ed6abe08e7eeb776c80046ad40794e95850da3d982c3be7e168bb2-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/3a02781029ed6abe08e7eeb776c80046ad40794e95850da3d982c3be7e168bb2-d",
+      "source_bytes": 702,
+      "source_sha256": "3a02781029ed6abe08e7eeb776c80046ad40794e95850da3d982c3be7e168bb2"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/55/55df8f55049087176c846b4d36b8ed2770ff3a07dec84fa1cde01c37fffcf693-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/55df8f55049087176c846b4d36b8ed2770ff3a07dec84fa1cde01c37fffcf693-d",
+      "source_bytes": 768,
+      "source_sha256": "55df8f55049087176c846b4d36b8ed2770ff3a07dec84fa1cde01c37fffcf693"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/c8/c8df6c3145ed0da7570006964bbd7f6e211313d656247598d11ac1c645658a5a-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/c8df6c3145ed0da7570006964bbd7f6e211313d656247598d11ac1c645658a5a-d",
+      "source_bytes": 1000,
+      "source_sha256": "c8df6c3145ed0da7570006964bbd7f6e211313d656247598d11ac1c645658a5a"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/9a/9aa0c52026079fd33ac809377689fcf34f081aa80ae3451d28cc2a025f424b84-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/9aa0c52026079fd33ac809377689fcf34f081aa80ae3451d28cc2a025f424b84-d",
+      "source_bytes": 740,
+      "source_sha256": "9aa0c52026079fd33ac809377689fcf34f081aa80ae3451d28cc2a025f424b84"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/a0/a099a30cfbc4c3e0ddbdf83aabe0ea9cc08500daeffbbcdfb249b4ca04038d02-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/a099a30cfbc4c3e0ddbdf83aabe0ea9cc08500daeffbbcdfb249b4ca04038d02-d",
+      "source_bytes": 736,
+      "source_sha256": "a099a30cfbc4c3e0ddbdf83aabe0ea9cc08500daeffbbcdfb249b4ca04038d02"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/68/68012c1cb94563b8e41888c067a7b0c208d85c75ab415f7fb76aeb1ceaa92083-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/68012c1cb94563b8e41888c067a7b0c208d85c75ab415f7fb76aeb1ceaa92083-d",
+      "source_bytes": 1232,
+      "source_sha256": "68012c1cb94563b8e41888c067a7b0c208d85c75ab415f7fb76aeb1ceaa92083"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/fb/fb1f3e0506ceb72bbdcce18d5399980f9161f2c9b471626c13152db1a706a6f4-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/fb1f3e0506ceb72bbdcce18d5399980f9161f2c9b471626c13152db1a706a6f4-d",
+      "source_bytes": 2038,
+      "source_sha256": "fb1f3e0506ceb72bbdcce18d5399980f9161f2c9b471626c13152db1a706a6f4"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/86/865c16abcb41086de2ea225aada0b3ee02dcadf565ac64dd29dd1a0817376093-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/865c16abcb41086de2ea225aada0b3ee02dcadf565ac64dd29dd1a0817376093-d",
+      "source_bytes": 978,
+      "source_sha256": "865c16abcb41086de2ea225aada0b3ee02dcadf565ac64dd29dd1a0817376093"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/e2/e2d0e6e13bd294b45328956f64f1f3036724e6f98dbf9a1bea50133f61078b8c-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/e2d0e6e13bd294b45328956f64f1f3036724e6f98dbf9a1bea50133f61078b8c-d",
+      "source_bytes": 746,
+      "source_sha256": "e2d0e6e13bd294b45328956f64f1f3036724e6f98dbf9a1bea50133f61078b8c"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/c3/c31d2a74d570d49ed5cd04655917eb908fb96ee8f33b1ebd4752d8c737b9c73d-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/c31d2a74d570d49ed5cd04655917eb908fb96ee8f33b1ebd4752d8c737b9c73d-d",
+      "source_bytes": 972,
+      "source_sha256": "c31d2a74d570d49ed5cd04655917eb908fb96ee8f33b1ebd4752d8c737b9c73d"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/cf/cffc35e55580492eb57ddebe39857e0f48a647cc1f1d7b4f93ae525ef2bd7ad8-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/cffc35e55580492eb57ddebe39857e0f48a647cc1f1d7b4f93ae525ef2bd7ad8-d",
+      "source_bytes": 754,
+      "source_sha256": "cffc35e55580492eb57ddebe39857e0f48a647cc1f1d7b4f93ae525ef2bd7ad8"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/52/5273fb173e5a6db1d668373ee2111506b1217713dd9e517da43dcc7637ec0fd9-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/5273fb173e5a6db1d668373ee2111506b1217713dd9e517da43dcc7637ec0fd9-d",
+      "source_bytes": 832,
+      "source_sha256": "5273fb173e5a6db1d668373ee2111506b1217713dd9e517da43dcc7637ec0fd9"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/ab/ab7d7a0deb308c02bf08340a4710d9a062306dc49064705490684ed00b676be8-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/ab7d7a0deb308c02bf08340a4710d9a062306dc49064705490684ed00b676be8-d",
+      "source_bytes": 1278,
+      "source_sha256": "ab7d7a0deb308c02bf08340a4710d9a062306dc49064705490684ed00b676be8"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/d0/d0f8b59846e5680cef2c772b5e30fc283b6dfbb19af1c042974b31050fd18408-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/d0f8b59846e5680cef2c772b5e30fc283b6dfbb19af1c042974b31050fd18408-d",
+      "source_bytes": 840,
+      "source_sha256": "d0f8b59846e5680cef2c772b5e30fc283b6dfbb19af1c042974b31050fd18408"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/56/561249ecf49b265d89dcf9ce3954c7f3dc53c9f4afa31f976ed74ef70f7f5d79-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/561249ecf49b265d89dcf9ce3954c7f3dc53c9f4afa31f976ed74ef70f7f5d79-d",
+      "source_bytes": 730,
+      "source_sha256": "561249ecf49b265d89dcf9ce3954c7f3dc53c9f4afa31f976ed74ef70f7f5d79"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/62/62b572bae83d04e243aa506ca5d04b34bf66d67b048cbf92081b86afbdcad027-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/62b572bae83d04e243aa506ca5d04b34bf66d67b048cbf92081b86afbdcad027-d",
+      "source_bytes": 948,
+      "source_sha256": "62b572bae83d04e243aa506ca5d04b34bf66d67b048cbf92081b86afbdcad027"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/73/732f7a3a90f1e94f423d4e01935b6f8066dc0fa2ba5a944c57f073cfe791daa9-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/732f7a3a90f1e94f423d4e01935b6f8066dc0fa2ba5a944c57f073cfe791daa9-d",
+      "source_bytes": 706,
+      "source_sha256": "732f7a3a90f1e94f423d4e01935b6f8066dc0fa2ba5a944c57f073cfe791daa9"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/2f/2f2683bc8f322589730e14b6cad8c5363f1f5c424bb73c911914be9640f5e404-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/2f2683bc8f322589730e14b6cad8c5363f1f5c424bb73c911914be9640f5e404-d",
+      "source_bytes": 834,
+      "source_sha256": "2f2683bc8f322589730e14b6cad8c5363f1f5c424bb73c911914be9640f5e404"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/63/63fe86cf87e5abe4aa73a4f29ac430ac9ce2db088cacd8ca848d4f2ef544197e-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/63fe86cf87e5abe4aa73a4f29ac430ac9ce2db088cacd8ca848d4f2ef544197e-d",
+      "source_bytes": 2300,
+      "source_sha256": "63fe86cf87e5abe4aa73a4f29ac430ac9ce2db088cacd8ca848d4f2ef544197e"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/c5/c57ca2dbb73b3868d45516fd70fe1010854904c3aec33391a5f5a47b6224fa41-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/c57ca2dbb73b3868d45516fd70fe1010854904c3aec33391a5f5a47b6224fa41-d",
+      "source_bytes": 714,
+      "source_sha256": "c57ca2dbb73b3868d45516fd70fe1010854904c3aec33391a5f5a47b6224fa41"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/1e/1e59f425e2c1bfc27321497472524e357b01fd904967a1357c44404af37d592d-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/1e59f425e2c1bfc27321497472524e357b01fd904967a1357c44404af37d592d-d",
+      "source_bytes": 690,
+      "source_sha256": "1e59f425e2c1bfc27321497472524e357b01fd904967a1357c44404af37d592d"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/10/10415a29cbba5b6ecb50848fcb98c83c7ea43d4ef050fbd0a2e3874e1c7f11ca-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/10415a29cbba5b6ecb50848fcb98c83c7ea43d4ef050fbd0a2e3874e1c7f11ca-d",
+      "source_bytes": 2347,
+      "source_sha256": "10415a29cbba5b6ecb50848fcb98c83c7ea43d4ef050fbd0a2e3874e1c7f11ca"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/1e/1e011efb373313a842fc961abf4d32e906b052883344c22da94d6371e9516073-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/1e011efb373313a842fc961abf4d32e906b052883344c22da94d6371e9516073-d",
+      "source_bytes": 726,
+      "source_sha256": "1e011efb373313a842fc961abf4d32e906b052883344c22da94d6371e9516073"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/b2/b23fb94c74d710de46879c0b824a2dcfac9053d6748a827e283be882fc844de8-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/b23fb94c74d710de46879c0b824a2dcfac9053d6748a827e283be882fc844de8-d",
+      "source_bytes": 2554,
+      "source_sha256": "b23fb94c74d710de46879c0b824a2dcfac9053d6748a827e283be882fc844de8"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/cc/cc886f65891011be62f3a6bb55484e74c27bd7a0fe07ba0f67446fe4dd7c2567-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/cc886f65891011be62f3a6bb55484e74c27bd7a0fe07ba0f67446fe4dd7c2567-d",
+      "source_bytes": 2014,
+      "source_sha256": "cc886f65891011be62f3a6bb55484e74c27bd7a0fe07ba0f67446fe4dd7c2567"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/db/dbffa5cde9f9af4dc1e0919426b7920e1d2e13e8b2aa71bd49792721ab7ecbaf-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/dbffa5cde9f9af4dc1e0919426b7920e1d2e13e8b2aa71bd49792721ab7ecbaf-d",
+      "source_bytes": 790,
+      "source_sha256": "dbffa5cde9f9af4dc1e0919426b7920e1d2e13e8b2aa71bd49792721ab7ecbaf"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/0f/0f1b6c902dac5d1569b20bf8fe65337439d9f780e4b749580dbace87fdc307c2-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/0f1b6c902dac5d1569b20bf8fe65337439d9f780e4b749580dbace87fdc307c2-d",
+      "source_bytes": 5434,
+      "source_sha256": "0f1b6c902dac5d1569b20bf8fe65337439d9f780e4b749580dbace87fdc307c2"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/7c/7cd76b7b5e7a93bf82515893cdf292eb66f9f9e0c51b7171403f3e47ea4ba59a-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/7cd76b7b5e7a93bf82515893cdf292eb66f9f9e0c51b7171403f3e47ea4ba59a-d",
+      "source_bytes": 910,
+      "source_sha256": "7cd76b7b5e7a93bf82515893cdf292eb66f9f9e0c51b7171403f3e47ea4ba59a"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/a2/a2940649d17ca07f63b1e9f16e8d9043c3e22484f8912c4919640cc9611dd9de-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/a2940649d17ca07f63b1e9f16e8d9043c3e22484f8912c4919640cc9611dd9de-d",
+      "source_bytes": 988,
+      "source_sha256": "a2940649d17ca07f63b1e9f16e8d9043c3e22484f8912c4919640cc9611dd9de"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/4f/4fd13bb23422248a993c5cc5401710a15dcd02275fccc37827484f55fc64cafb-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/4fd13bb23422248a993c5cc5401710a15dcd02275fccc37827484f55fc64cafb-d",
+      "source_bytes": 854,
+      "source_sha256": "4fd13bb23422248a993c5cc5401710a15dcd02275fccc37827484f55fc64cafb"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/6a/6ac2504af0152327436fcd5a944d428540075623a8922e96143becc86608dcd2-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/6ac2504af0152327436fcd5a944d428540075623a8922e96143becc86608dcd2-d",
+      "source_bytes": 1682,
+      "source_sha256": "6ac2504af0152327436fcd5a944d428540075623a8922e96143becc86608dcd2"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/24/24cb71837387142adedceb39ebd8dd5320283a61ed0a9bc8938247eef8c45756-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/24cb71837387142adedceb39ebd8dd5320283a61ed0a9bc8938247eef8c45756-d",
+      "source_bytes": 742,
+      "source_sha256": "24cb71837387142adedceb39ebd8dd5320283a61ed0a9bc8938247eef8c45756"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/37/37e83756b60a30b53fb45ed4477ee1d59a2bc56c9513832ddae00ff7f92649b2-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/37e83756b60a30b53fb45ed4477ee1d59a2bc56c9513832ddae00ff7f92649b2-d",
+      "source_bytes": 696,
+      "source_sha256": "37e83756b60a30b53fb45ed4477ee1d59a2bc56c9513832ddae00ff7f92649b2"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/59/59b608845637724db8f369206bbffd5629b6352096f3d028eeb2dddee7929867-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/59b608845637724db8f369206bbffd5629b6352096f3d028eeb2dddee7929867-d",
+      "source_bytes": 826,
+      "source_sha256": "59b608845637724db8f369206bbffd5629b6352096f3d028eeb2dddee7929867"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/7b/7b8a345578ce5cd6c07997a6e359cac2625d2b0484a931fa7dacdd513f8108eb-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/7b8a345578ce5cd6c07997a6e359cac2625d2b0484a931fa7dacdd513f8108eb-d",
+      "source_bytes": 788,
+      "source_sha256": "7b8a345578ce5cd6c07997a6e359cac2625d2b0484a931fa7dacdd513f8108eb"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/ee/eec7be2bd00d909b2fc04ea77846cde892381ee3e5b765c7f0d247e438a787bd-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/eec7be2bd00d909b2fc04ea77846cde892381ee3e5b765c7f0d247e438a787bd-d",
+      "source_bytes": 754,
+      "source_sha256": "eec7be2bd00d909b2fc04ea77846cde892381ee3e5b765c7f0d247e438a787bd"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/53/5391ae5b10c6c980525d2b15ab50e3cd4fa897f08f4336c49027e857e2d6280d-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/5391ae5b10c6c980525d2b15ab50e3cd4fa897f08f4336c49027e857e2d6280d-d",
+      "source_bytes": 730,
+      "source_sha256": "5391ae5b10c6c980525d2b15ab50e3cd4fa897f08f4336c49027e857e2d6280d"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/69/69599e252e6cd4cdf12bda8e6371b9268607e024208ef8255f683f1ef10f0969-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/69599e252e6cd4cdf12bda8e6371b9268607e024208ef8255f683f1ef10f0969-d",
+      "source_bytes": 732,
+      "source_sha256": "69599e252e6cd4cdf12bda8e6371b9268607e024208ef8255f683f1ef10f0969"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/2a/2a5b7d57a31a12d4cab7d0c9fc96cf68002e45a99edd0c9dacc577234f0be358-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/2a5b7d57a31a12d4cab7d0c9fc96cf68002e45a99edd0c9dacc577234f0be358-d",
+      "source_bytes": 726,
+      "source_sha256": "2a5b7d57a31a12d4cab7d0c9fc96cf68002e45a99edd0c9dacc577234f0be358"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/82/82592712f7c4f43f1b5b3c7370d1d9a4d8b7e08b8c83f04d5343778fff1b54b9-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/82592712f7c4f43f1b5b3c7370d1d9a4d8b7e08b8c83f04d5343778fff1b54b9-d",
+      "source_bytes": 842,
+      "source_sha256": "82592712f7c4f43f1b5b3c7370d1d9a4d8b7e08b8c83f04d5343778fff1b54b9"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/0b/0b5fc20980b819b198e4813ac47d44d27e306cfea1e98fe1d6b0634f0c79198d-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/0b5fc20980b819b198e4813ac47d44d27e306cfea1e98fe1d6b0634f0c79198d-d",
+      "source_bytes": 1483,
+      "source_sha256": "0b5fc20980b819b198e4813ac47d44d27e306cfea1e98fe1d6b0634f0c79198d"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/91/912a8543c2682d1237036b525dd2b0e7db6caa97da945a49ddaf4f90ad83ca4b-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/912a8543c2682d1237036b525dd2b0e7db6caa97da945a49ddaf4f90ad83ca4b-d",
+      "source_bytes": 7380,
+      "source_sha256": "912a8543c2682d1237036b525dd2b0e7db6caa97da945a49ddaf4f90ad83ca4b"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/65/65d5d55e58003bb8ac1a859e72d37ba0bb7269f3b3837f3fc8cae9cadceb0c79-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/65d5d55e58003bb8ac1a859e72d37ba0bb7269f3b3837f3fc8cae9cadceb0c79-d",
+      "source_bytes": 7670,
+      "source_sha256": "65d5d55e58003bb8ac1a859e72d37ba0bb7269f3b3837f3fc8cae9cadceb0c79"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/3d/3da2bd8d022601f7839f5070ab2ddf1b8f5e3355ce8d1a35f2d62541c71f02a8-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/3da2bd8d022601f7839f5070ab2ddf1b8f5e3355ce8d1a35f2d62541c71f02a8-d",
+      "source_bytes": 768,
+      "source_sha256": "3da2bd8d022601f7839f5070ab2ddf1b8f5e3355ce8d1a35f2d62541c71f02a8"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/4e/4e219d27de3a4a922e67e19146fc9a3aeb276a7f3c44e45260424afcd22e0101-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/4e219d27de3a4a922e67e19146fc9a3aeb276a7f3c44e45260424afcd22e0101-d",
+      "source_bytes": 684,
+      "source_sha256": "4e219d27de3a4a922e67e19146fc9a3aeb276a7f3c44e45260424afcd22e0101"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/de/deece32bb3de1507c71ba2fa088f495c1f3b8b03caf32e5fd709d666d7c4e87b-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/deece32bb3de1507c71ba2fa088f495c1f3b8b03caf32e5fd709d666d7c4e87b-d",
+      "source_bytes": 1170,
+      "source_sha256": "deece32bb3de1507c71ba2fa088f495c1f3b8b03caf32e5fd709d666d7c4e87b"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/19/19385b5582b7c9e76c5a00566cbc6586552e34294bdd69491ce525151288e89b-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/19385b5582b7c9e76c5a00566cbc6586552e34294bdd69491ce525151288e89b-d",
+      "source_bytes": 702,
+      "source_sha256": "19385b5582b7c9e76c5a00566cbc6586552e34294bdd69491ce525151288e89b"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/33/33cde157e38de3eb79f306c39eebd2b3b4edbcfe067b3d591bb4bd295686171e-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/33cde157e38de3eb79f306c39eebd2b3b4edbcfe067b3d591bb4bd295686171e-d",
+      "source_bytes": 782,
+      "source_sha256": "33cde157e38de3eb79f306c39eebd2b3b4edbcfe067b3d591bb4bd295686171e"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/3a/3a289180bb8a4735bed983a1856243dbafe42d36fa9c5a97dce3c355fe30a17a-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/3a289180bb8a4735bed983a1856243dbafe42d36fa9c5a97dce3c355fe30a17a-d",
+      "source_bytes": 900,
+      "source_sha256": "3a289180bb8a4735bed983a1856243dbafe42d36fa9c5a97dce3c355fe30a17a"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/f4/f4a3a86a23514ad32bde706115849e1fd72f179b5bdf39aad5e51b7ff6137988-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/f4a3a86a23514ad32bde706115849e1fd72f179b5bdf39aad5e51b7ff6137988-d",
+      "source_bytes": 7700,
+      "source_sha256": "f4a3a86a23514ad32bde706115849e1fd72f179b5bdf39aad5e51b7ff6137988"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/13/1363d4e295be8fb8c4d51a905c577ab58a98a536fce114a2aec910c965a11a5b-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/1363d4e295be8fb8c4d51a905c577ab58a98a536fce114a2aec910c965a11a5b-d",
+      "source_bytes": 796,
+      "source_sha256": "1363d4e295be8fb8c4d51a905c577ab58a98a536fce114a2aec910c965a11a5b"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/a6/a6a4ae235aa226f3a99f052c02cb22918cb75bf1fe01ca9e2b038e5d960a671a-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/a6a4ae235aa226f3a99f052c02cb22918cb75bf1fe01ca9e2b038e5d960a671a-d",
+      "source_bytes": 1760,
+      "source_sha256": "a6a4ae235aa226f3a99f052c02cb22918cb75bf1fe01ca9e2b038e5d960a671a"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/6f/6fbce2eb7e30aa0569b32861ebeae99e842befc1c9899a7fea8b9242214b38a0-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/6fbce2eb7e30aa0569b32861ebeae99e842befc1c9899a7fea8b9242214b38a0-d",
+      "source_bytes": 1652,
+      "source_sha256": "6fbce2eb7e30aa0569b32861ebeae99e842befc1c9899a7fea8b9242214b38a0"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/99/9958f6504e5e0ff28b4cf789447a1d5c708cecd42cabe9b1bf1885fdd0bf1c9c-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/9958f6504e5e0ff28b4cf789447a1d5c708cecd42cabe9b1bf1885fdd0bf1c9c-d",
+      "source_bytes": 742,
+      "source_sha256": "9958f6504e5e0ff28b4cf789447a1d5c708cecd42cabe9b1bf1885fdd0bf1c9c"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/a6/a624fdd5b16eee5c81a7f5e2ab4ca41990dc500d77fb305a2c35382dcac67691-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/a624fdd5b16eee5c81a7f5e2ab4ca41990dc500d77fb305a2c35382dcac67691-d",
+      "source_bytes": 834,
+      "source_sha256": "a624fdd5b16eee5c81a7f5e2ab4ca41990dc500d77fb305a2c35382dcac67691"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/db/db6d305ad36abeb39ba269f3c0925496c21d5693ea2226166185e6ea8a4da1ba-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/db6d305ad36abeb39ba269f3c0925496c21d5693ea2226166185e6ea8a4da1ba-d",
+      "source_bytes": 1088,
+      "source_sha256": "db6d305ad36abeb39ba269f3c0925496c21d5693ea2226166185e6ea8a4da1ba"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/fb/fb3ac4227ddb38ec80bbdbcc7c355fa824f53c504cf9f4f4f0be4d586c2f52ef-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/fb3ac4227ddb38ec80bbdbcc7c355fa824f53c504cf9f4f4f0be4d586c2f52ef-d",
+      "source_bytes": 838,
+      "source_sha256": "fb3ac4227ddb38ec80bbdbcc7c355fa824f53c504cf9f4f4f0be4d586c2f52ef"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/65/65e8977326c5c1ca3801818f24113a399f499ebf8bc279dd016f2f957cc82805-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/65e8977326c5c1ca3801818f24113a399f499ebf8bc279dd016f2f957cc82805-d",
+      "source_bytes": 762,
+      "source_sha256": "65e8977326c5c1ca3801818f24113a399f499ebf8bc279dd016f2f957cc82805"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/de/defcf86f19b2b70cab6036ef4bac89e4ced783e4249911fa7fe35daab21d71da-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/defcf86f19b2b70cab6036ef4bac89e4ced783e4249911fa7fe35daab21d71da-d",
+      "source_bytes": 898,
+      "source_sha256": "defcf86f19b2b70cab6036ef4bac89e4ced783e4249911fa7fe35daab21d71da"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/c9/c91db639473eceeee8435ab47ed5a0a408da0a7f46e1312ed1c2007c056abb6c-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/c91db639473eceeee8435ab47ed5a0a408da0a7f46e1312ed1c2007c056abb6c-d",
+      "source_bytes": 728,
+      "source_sha256": "c91db639473eceeee8435ab47ed5a0a408da0a7f46e1312ed1c2007c056abb6c"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/b3/b30fb4642dc69084b3636ccc6bc445f53bbffced204fc470811dc4a4f1b33a18-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/b30fb4642dc69084b3636ccc6bc445f53bbffced204fc470811dc4a4f1b33a18-d",
+      "source_bytes": 1224,
+      "source_sha256": "b30fb4642dc69084b3636ccc6bc445f53bbffced204fc470811dc4a4f1b33a18"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/13/13466939d904bee0acd5de6c813540165b705657beaffc1f22add937583d1647-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/13466939d904bee0acd5de6c813540165b705657beaffc1f22add937583d1647-d",
+      "source_bytes": 1972,
+      "source_sha256": "13466939d904bee0acd5de6c813540165b705657beaffc1f22add937583d1647"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/73/735b3e7fbf3858cc151ef99fe8306393c8ba0911677d2d5cf5e1344c24531b27-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/735b3e7fbf3858cc151ef99fe8306393c8ba0911677d2d5cf5e1344c24531b27-d",
+      "source_bytes": 888,
+      "source_sha256": "735b3e7fbf3858cc151ef99fe8306393c8ba0911677d2d5cf5e1344c24531b27"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/e0/e05f4dd1d8bfd575b75d1984537f24832969d0f9ff5065f6975e9f8248b57aef-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/e05f4dd1d8bfd575b75d1984537f24832969d0f9ff5065f6975e9f8248b57aef-d",
+      "source_bytes": 782,
+      "source_sha256": "e05f4dd1d8bfd575b75d1984537f24832969d0f9ff5065f6975e9f8248b57aef"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/5b/5b5d5b8a3fbffb0b8a52fa496bc9b0bfcd71fd008e868d16d478ff5cdf4ba038-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/5b5d5b8a3fbffb0b8a52fa496bc9b0bfcd71fd008e868d16d478ff5cdf4ba038-d",
+      "source_bytes": 1006,
+      "source_sha256": "5b5d5b8a3fbffb0b8a52fa496bc9b0bfcd71fd008e868d16d478ff5cdf4ba038"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/e2/e2e4d06a58fa088e84a7a1f7b1ac0c85b4796c29d2024600ca9b430e05a06965-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/e2e4d06a58fa088e84a7a1f7b1ac0c85b4796c29d2024600ca9b430e05a06965-d",
+      "source_bytes": 744,
+      "source_sha256": "e2e4d06a58fa088e84a7a1f7b1ac0c85b4796c29d2024600ca9b430e05a06965"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/c1/c11360b9ea5f0ba01419ea218ffa96397df331a4c139ceb4ec892223125c6d9b-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/c11360b9ea5f0ba01419ea218ffa96397df331a4c139ceb4ec892223125c6d9b-d",
+      "source_bytes": 784,
+      "source_sha256": "c11360b9ea5f0ba01419ea218ffa96397df331a4c139ceb4ec892223125c6d9b"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/7f/7f1b7770c52b752f66bbc1d224e6bb460b92bd111619973c4e7a2069947dd4bb-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/7f1b7770c52b752f66bbc1d224e6bb460b92bd111619973c4e7a2069947dd4bb-d",
+      "source_bytes": 736,
+      "source_sha256": "7f1b7770c52b752f66bbc1d224e6bb460b92bd111619973c4e7a2069947dd4bb"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/6a/6a4fe4d5791dd87d5a61b38e6ce3dad0e195903a2bf6335e340dee636a0bc1d6-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/6a4fe4d5791dd87d5a61b38e6ce3dad0e195903a2bf6335e340dee636a0bc1d6-d",
+      "source_bytes": 2069,
+      "source_sha256": "6a4fe4d5791dd87d5a61b38e6ce3dad0e195903a2bf6335e340dee636a0bc1d6"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/00/00f579d29db7ffb990348c22b3ea20e7b6d802c0e86f0144c49c53b96dbda88f-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/00f579d29db7ffb990348c22b3ea20e7b6d802c0e86f0144c49c53b96dbda88f-d",
+      "source_bytes": 866,
+      "source_sha256": "00f579d29db7ffb990348c22b3ea20e7b6d802c0e86f0144c49c53b96dbda88f"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/0b/0ba981aa2dc872b3b77b4c40bcf9308665e43864a1c1d501c9b1e65d4439cb15-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/0ba981aa2dc872b3b77b4c40bcf9308665e43864a1c1d501c9b1e65d4439cb15-d",
+      "source_bytes": 708,
+      "source_sha256": "0ba981aa2dc872b3b77b4c40bcf9308665e43864a1c1d501c9b1e65d4439cb15"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/06/06a4c7bc67baf4c44c4a1784059290c39d534de8e1681e4feb0ff67846c56784-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/06a4c7bc67baf4c44c4a1784059290c39d534de8e1681e4feb0ff67846c56784-d",
+      "source_bytes": 986,
+      "source_sha256": "06a4c7bc67baf4c44c4a1784059290c39d534de8e1681e4feb0ff67846c56784"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/21/21def9f5e969eed695e8eb7492c592e2a04b49c3487d3f9f99c3eb9f15be34e4-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/21def9f5e969eed695e8eb7492c592e2a04b49c3487d3f9f99c3eb9f15be34e4-d",
+      "source_bytes": 760,
+      "source_sha256": "21def9f5e969eed695e8eb7492c592e2a04b49c3487d3f9f99c3eb9f15be34e4"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/1c/1cc692e2e7bbd4b83dd4cedc5c232625660749a1bcea733d6887412256e12b72-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/1cc692e2e7bbd4b83dd4cedc5c232625660749a1bcea733d6887412256e12b72-d",
+      "source_bytes": 702,
+      "source_sha256": "1cc692e2e7bbd4b83dd4cedc5c232625660749a1bcea733d6887412256e12b72"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/08/085386c4f01bfefce387e2a5a7a34800e8089c138c788f771d0bf2917157594d-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/085386c4f01bfefce387e2a5a7a34800e8089c138c788f771d0bf2917157594d-d",
+      "source_bytes": 862,
+      "source_sha256": "085386c4f01bfefce387e2a5a7a34800e8089c138c788f771d0bf2917157594d"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/bd/bd50303ad54192a16a32109c9f7f09fdef2c3fd545989c8c6bb2ec94e463fe83-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/bd50303ad54192a16a32109c9f7f09fdef2c3fd545989c8c6bb2ec94e463fe83-d",
+      "source_bytes": 1504,
+      "source_sha256": "bd50303ad54192a16a32109c9f7f09fdef2c3fd545989c8c6bb2ec94e463fe83"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/36/368f156e78eb80ee9da120ab83e26c76f54d32c1a4177733abdf1dba25bc962c-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/368f156e78eb80ee9da120ab83e26c76f54d32c1a4177733abdf1dba25bc962c-d",
+      "source_bytes": 1290,
+      "source_sha256": "368f156e78eb80ee9da120ab83e26c76f54d32c1a4177733abdf1dba25bc962c"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/fe/fe4c3d0e31b9c4d3cda80803f97775401ddb790aa033a9d7522a18e4e2489c6d-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/fe4c3d0e31b9c4d3cda80803f97775401ddb790aa033a9d7522a18e4e2489c6d-d",
+      "source_bytes": 740,
+      "source_sha256": "fe4c3d0e31b9c4d3cda80803f97775401ddb790aa033a9d7522a18e4e2489c6d"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/af/af7232fccd284ebce96500a9193c585308c1af38dc02e556d22894ccf44eb615-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/af7232fccd284ebce96500a9193c585308c1af38dc02e556d22894ccf44eb615-d",
+      "source_bytes": 958,
+      "source_sha256": "af7232fccd284ebce96500a9193c585308c1af38dc02e556d22894ccf44eb615"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/0f/0fa826ef8ff3b0bc9800bedc4de1e326d8d4d7b82940f41b405cb6a7a6d298a1-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/0fa826ef8ff3b0bc9800bedc4de1e326d8d4d7b82940f41b405cb6a7a6d298a1-d",
+      "source_bytes": 1220,
+      "source_sha256": "0fa826ef8ff3b0bc9800bedc4de1e326d8d4d7b82940f41b405cb6a7a6d298a1"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/bc/bc9d834eb46f5bcc26f415c04b66e025ead38d710a358f8ec79d17a2ba6682e1-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/bc9d834eb46f5bcc26f415c04b66e025ead38d710a358f8ec79d17a2ba6682e1-d",
+      "source_bytes": 696,
+      "source_sha256": "bc9d834eb46f5bcc26f415c04b66e025ead38d710a358f8ec79d17a2ba6682e1"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/95/957dddb5df0cd721d8fe253295eb92f7ae09075cf8f38fae3e35074cea07c891-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/957dddb5df0cd721d8fe253295eb92f7ae09075cf8f38fae3e35074cea07c891-d",
+      "source_bytes": 824,
+      "source_sha256": "957dddb5df0cd721d8fe253295eb92f7ae09075cf8f38fae3e35074cea07c891"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/42/4287f378de2058ca469467174124bcc056f20c326d5edd659670d95ff47bff25-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/4287f378de2058ca469467174124bcc056f20c326d5edd659670d95ff47bff25-d",
+      "source_bytes": 790,
+      "source_sha256": "4287f378de2058ca469467174124bcc056f20c326d5edd659670d95ff47bff25"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/bd/bd4d707ca56a828d1b85b436236db70f4ec139322d9215d538733e389415f291-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/bd4d707ca56a828d1b85b436236db70f4ec139322d9215d538733e389415f291-d",
+      "source_bytes": 770,
+      "source_sha256": "bd4d707ca56a828d1b85b436236db70f4ec139322d9215d538733e389415f291"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/a8/a8ad9b9383af9c16846096e45af7b88468ae133845bd9bd81267930361a9a8c0-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/a8ad9b9383af9c16846096e45af7b88468ae133845bd9bd81267930361a9a8c0-d",
+      "source_bytes": 730,
+      "source_sha256": "a8ad9b9383af9c16846096e45af7b88468ae133845bd9bd81267930361a9a8c0"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/70/70a75c7cbb91021be9934dfaecf9ee38a49c085db960fd26a186f3416c815fee-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/70a75c7cbb91021be9934dfaecf9ee38a49c085db960fd26a186f3416c815fee-d",
+      "source_bytes": 1038,
+      "source_sha256": "70a75c7cbb91021be9934dfaecf9ee38a49c085db960fd26a186f3416c815fee"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/0c/0c6b5101b3542505b5149856fba810aee49ff69221bdd39be71fb1efa40cab46-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/0c6b5101b3542505b5149856fba810aee49ff69221bdd39be71fb1efa40cab46-d",
+      "source_bytes": 818,
+      "source_sha256": "0c6b5101b3542505b5149856fba810aee49ff69221bdd39be71fb1efa40cab46"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/1a/1a3d6988e502d4ca3c46bf749d780ba97aa9676833a4f80984b4ef8bcda27a96-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/1a3d6988e502d4ca3c46bf749d780ba97aa9676833a4f80984b4ef8bcda27a96-d",
+      "source_bytes": 822,
+      "source_sha256": "1a3d6988e502d4ca3c46bf749d780ba97aa9676833a4f80984b4ef8bcda27a96"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/2e/2e3c2a1b92acf943e7237f073ab640b332c0e7e2425cdc6c3e3636ff7c100485-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/2e3c2a1b92acf943e7237f073ab640b332c0e7e2425cdc6c3e3636ff7c100485-d",
+      "source_bytes": 868,
+      "source_sha256": "2e3c2a1b92acf943e7237f073ab640b332c0e7e2425cdc6c3e3636ff7c100485"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/b2/b2d04bc39dbacebc44a012f88b096ccd6cd6ad4d17069d39f380969a09bd3c6e-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/b2d04bc39dbacebc44a012f88b096ccd6cd6ad4d17069d39f380969a09bd3c6e-d",
+      "source_bytes": 4574,
+      "source_sha256": "b2d04bc39dbacebc44a012f88b096ccd6cd6ad4d17069d39f380969a09bd3c6e"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/83/83971a90eff3024270fe7037432544a01d34d90c4098a8ad36b698a0b9748cda-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/83971a90eff3024270fe7037432544a01d34d90c4098a8ad36b698a0b9748cda-d",
+      "source_bytes": 704,
+      "source_sha256": "83971a90eff3024270fe7037432544a01d34d90c4098a8ad36b698a0b9748cda"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/37/377bd914cd6bab1bd5a9d0b590feecad1588ac2574d6040ec408fd51d6e07117-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/377bd914cd6bab1bd5a9d0b590feecad1588ac2574d6040ec408fd51d6e07117-d",
+      "source_bytes": 1102,
+      "source_sha256": "377bd914cd6bab1bd5a9d0b590feecad1588ac2574d6040ec408fd51d6e07117"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/7d/7ded839e693dffdf825d57d368266bf7f1d63223a67a29ed97b3dd56b76224a4-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/7ded839e693dffdf825d57d368266bf7f1d63223a67a29ed97b3dd56b76224a4-d",
+      "source_bytes": 712,
+      "source_sha256": "7ded839e693dffdf825d57d368266bf7f1d63223a67a29ed97b3dd56b76224a4"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/a2/a260f8f73144344b5543048efbc5d1e47f344e3865add6380bb87278d10c56fa-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/a260f8f73144344b5543048efbc5d1e47f344e3865add6380bb87278d10c56fa-d",
+      "source_bytes": 1168,
+      "source_sha256": "a260f8f73144344b5543048efbc5d1e47f344e3865add6380bb87278d10c56fa"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/45/45a830e85ce4d15034e11fc3940ea28a1e860926f755d1978cd0942f69bbd0c4-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/45a830e85ce4d15034e11fc3940ea28a1e860926f755d1978cd0942f69bbd0c4-d",
+      "source_bytes": 686,
+      "source_sha256": "45a830e85ce4d15034e11fc3940ea28a1e860926f755d1978cd0942f69bbd0c4"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/58/58c16089aecb5e89a4515810d8e62ca9bc127ef4b39e198b72b031574f016ade-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/58c16089aecb5e89a4515810d8e62ca9bc127ef4b39e198b72b031574f016ade-d",
+      "source_bytes": 878,
+      "source_sha256": "58c16089aecb5e89a4515810d8e62ca9bc127ef4b39e198b72b031574f016ade"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/3b/3bc2341f9ac44dd8333dcca19c6d1c62dc88ec94cc4ab698e8311d9de27bce77-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/3bc2341f9ac44dd8333dcca19c6d1c62dc88ec94cc4ab698e8311d9de27bce77-d",
+      "source_bytes": 1250,
+      "source_sha256": "3bc2341f9ac44dd8333dcca19c6d1c62dc88ec94cc4ab698e8311d9de27bce77"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/21/217f8bf15f473710aabf59c3a9da7c27d59fa502fbb26c9a11358a8f85034e17-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/217f8bf15f473710aabf59c3a9da7c27d59fa502fbb26c9a11358a8f85034e17-d",
+      "source_bytes": 798,
+      "source_sha256": "217f8bf15f473710aabf59c3a9da7c27d59fa502fbb26c9a11358a8f85034e17"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/b0/b0e5d9544817223dc91b5ec7dfdcb391f985cc621520881b54ec0011a787462f-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/b0e5d9544817223dc91b5ec7dfdcb391f985cc621520881b54ec0011a787462f-d",
+      "source_bytes": 808,
+      "source_sha256": "b0e5d9544817223dc91b5ec7dfdcb391f985cc621520881b54ec0011a787462f"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/13/13e77d671b33ce79c891cca5179bb7de19dbbe85c4a49fdb2ea52736b9d60a3d-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/13e77d671b33ce79c891cca5179bb7de19dbbe85c4a49fdb2ea52736b9d60a3d-d",
+      "source_bytes": 802,
+      "source_sha256": "13e77d671b33ce79c891cca5179bb7de19dbbe85c4a49fdb2ea52736b9d60a3d"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/e4/e4599bcf4a085124bb35862b9c1893d0aecf341c2bfcdcdbf34dc5ae60b95095-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/e4599bcf4a085124bb35862b9c1893d0aecf341c2bfcdcdbf34dc5ae60b95095-d",
+      "source_bytes": 844,
+      "source_sha256": "e4599bcf4a085124bb35862b9c1893d0aecf341c2bfcdcdbf34dc5ae60b95095"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/2f/2f920199dccb2b29e0e1e65e73d3971fd022726d965337bb325f10dfc3362a93-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/2f920199dccb2b29e0e1e65e73d3971fd022726d965337bb325f10dfc3362a93-d",
+      "source_bytes": 840,
+      "source_sha256": "2f920199dccb2b29e0e1e65e73d3971fd022726d965337bb325f10dfc3362a93"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/5a/5acbabbaeac7c9266316b7258d35304fc35272a3e64f0068c25825e43cdfe7e1-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/5acbabbaeac7c9266316b7258d35304fc35272a3e64f0068c25825e43cdfe7e1-d",
+      "source_bytes": 854,
+      "source_sha256": "5acbabbaeac7c9266316b7258d35304fc35272a3e64f0068c25825e43cdfe7e1"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/a5/a500abcd1ed7eb2dbed2ad9595cad0bb5d1e17eb24975932ba221e5c95cc18c4-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/a500abcd1ed7eb2dbed2ad9595cad0bb5d1e17eb24975932ba221e5c95cc18c4-d",
+      "source_bytes": 766,
+      "source_sha256": "a500abcd1ed7eb2dbed2ad9595cad0bb5d1e17eb24975932ba221e5c95cc18c4"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/6e/6e2917fe5dfd3a45b20243db84b74f01be74c8a369f974293972095bfd4b8045-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/6e2917fe5dfd3a45b20243db84b74f01be74c8a369f974293972095bfd4b8045-d",
+      "source_bytes": 1006,
+      "source_sha256": "6e2917fe5dfd3a45b20243db84b74f01be74c8a369f974293972095bfd4b8045"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/8c/8c202cd7fb56df8c6ded0287af8a25e3fcdacb4f141c01f80859c3da51bc768f-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/8c202cd7fb56df8c6ded0287af8a25e3fcdacb4f141c01f80859c3da51bc768f-d",
+      "source_bytes": 720,
+      "source_sha256": "8c202cd7fb56df8c6ded0287af8a25e3fcdacb4f141c01f80859c3da51bc768f"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/59/593f6f563b0a975ac1ebf15d0b70af51a413b802c46893bd13287d21de775a03-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/593f6f563b0a975ac1ebf15d0b70af51a413b802c46893bd13287d21de775a03-d",
+      "source_bytes": 750,
+      "source_sha256": "593f6f563b0a975ac1ebf15d0b70af51a413b802c46893bd13287d21de775a03"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/92/928ea95f0e81e1986075a5ad47d7b73c051d530abd7640480cf6a7c0ce680efc-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/928ea95f0e81e1986075a5ad47d7b73c051d530abd7640480cf6a7c0ce680efc-d",
+      "source_bytes": 2076,
+      "source_sha256": "928ea95f0e81e1986075a5ad47d7b73c051d530abd7640480cf6a7c0ce680efc"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/c2/c2dbb2f664b6e2cf13535650cdc062899c5c92b8e5181e4f467127ec6c54d683-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/c2dbb2f664b6e2cf13535650cdc062899c5c92b8e5181e4f467127ec6c54d683-d",
+      "source_bytes": 732,
+      "source_sha256": "c2dbb2f664b6e2cf13535650cdc062899c5c92b8e5181e4f467127ec6c54d683"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/fc/fcdfb72b3c8e9f9f865607a44c9c74d7fd90d1a7899ea41a63aed35b7d9c1048-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/fcdfb72b3c8e9f9f865607a44c9c74d7fd90d1a7899ea41a63aed35b7d9c1048-d",
+      "source_bytes": 2628,
+      "source_sha256": "fcdfb72b3c8e9f9f865607a44c9c74d7fd90d1a7899ea41a63aed35b7d9c1048"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/b4/b45be2fbe712f3e74af9a2835407d79b1c698db639fa938ba06a8fe2f8ad93e5-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/b45be2fbe712f3e74af9a2835407d79b1c698db639fa938ba06a8fe2f8ad93e5-d",
+      "source_bytes": 748,
+      "source_sha256": "b45be2fbe712f3e74af9a2835407d79b1c698db639fa938ba06a8fe2f8ad93e5"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/38/38e192a684e659d208e89f787bd3611b37db1a4b8027ad58d9f89127c100208f-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/38e192a684e659d208e89f787bd3611b37db1a4b8027ad58d9f89127c100208f-d",
+      "source_bytes": 708,
+      "source_sha256": "38e192a684e659d208e89f787bd3611b37db1a4b8027ad58d9f89127c100208f"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/1f/1f39e3b7c741b4fb944c350a774674c3872ab26e17107a49a4f546dbc6678fc6-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/1f39e3b7c741b4fb944c350a774674c3872ab26e17107a49a4f546dbc6678fc6-d",
+      "source_bytes": 806,
+      "source_sha256": "1f39e3b7c741b4fb944c350a774674c3872ab26e17107a49a4f546dbc6678fc6"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/f9/f9417729dbfcbf277422ea40f75a8d642ff5dee7f2aa9a36ff2f58b6e4590231-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/f9417729dbfcbf277422ea40f75a8d642ff5dee7f2aa9a36ff2f58b6e4590231-d",
+      "source_bytes": 1038,
+      "source_sha256": "f9417729dbfcbf277422ea40f75a8d642ff5dee7f2aa9a36ff2f58b6e4590231"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/2b/2b227a33a47402ab5e14ebb4bb3d89ec500e09230c494cb938a446705ffed476-d",
+      "module_rel": ".",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/2b227a33a47402ab5e14ebb4bb3d89ec500e09230c494cb938a446705ffed476-d",
+      "source_bytes": 880,
+      "source_sha256": "2b227a33a47402ab5e14ebb4bb3d89ec500e09230c494cb938a446705ffed476"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/f6/f6f56b0652a8b62791daeb0532899aa5a5f41b7a0c6f47d2358eb70f6a422e43-d",
+      "module_rel": "api",
+      "repo": "containerd",
+      "retained_source": "build-cache-source/containerd/f6f56b0652a8b62791daeb0532899aa5a5f41b7a0c6f47d2358eb70f6a422e43-d",
+      "source_bytes": 1019,
+      "source_sha256": "f6f56b0652a8b62791daeb0532899aa5a5f41b7a0c6f47d2358eb70f6a422e43"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/bf/bfd050b4c991d07dfecc4891a3b52fbe0dca4ba410c9faa97a991478c73a3bbc-d",
+      "module_rel": ".",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/bfd050b4c991d07dfecc4891a3b52fbe0dca4ba410c9faa97a991478c73a3bbc-d",
+      "source_bytes": 671,
+      "source_sha256": "bfd050b4c991d07dfecc4891a3b52fbe0dca4ba410c9faa97a991478c73a3bbc"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/ae/ae64842bfc32132f8cf088769a46f58217666559723dc524ddb2e46773e5fc09-d",
+      "module_rel": ".",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/ae64842bfc32132f8cf088769a46f58217666559723dc524ddb2e46773e5fc09-d",
+      "source_bytes": 717,
+      "source_sha256": "ae64842bfc32132f8cf088769a46f58217666559723dc524ddb2e46773e5fc09"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/8d/8db18b89ff8e32b2be6bad161edbe0311875cbecc97065d3ea6d8e0213bd658c-d",
+      "module_rel": "api",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/8db18b89ff8e32b2be6bad161edbe0311875cbecc97065d3ea6d8e0213bd658c-d",
+      "source_bytes": 724,
+      "source_sha256": "8db18b89ff8e32b2be6bad161edbe0311875cbecc97065d3ea6d8e0213bd658c"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/c5/c5e2476cd8b0ac6614daf838b75908f37ae1b4ba4707280b71d637e6261fa16a-d",
+      "module_rel": "api",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/c5e2476cd8b0ac6614daf838b75908f37ae1b4ba4707280b71d637e6261fa16a-d",
+      "source_bytes": 651,
+      "source_sha256": "c5e2476cd8b0ac6614daf838b75908f37ae1b4ba4707280b71d637e6261fa16a"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/d9/d9bc48beb311a59a1ec5e36906d812ab259966398668d0d368842fc021ac5fda-d",
+      "module_rel": "api",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/d9bc48beb311a59a1ec5e36906d812ab259966398668d0d368842fc021ac5fda-d",
+      "source_bytes": 651,
+      "source_sha256": "d9bc48beb311a59a1ec5e36906d812ab259966398668d0d368842fc021ac5fda"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/86/863a870419d816f1a048919b0c4a8736928f4dbe948f01dcc9e2d06c01b41abd-d",
+      "module_rel": "cache",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/863a870419d816f1a048919b0c4a8736928f4dbe948f01dcc9e2d06c01b41abd-d",
+      "source_bytes": 2439,
+      "source_sha256": "863a870419d816f1a048919b0c4a8736928f4dbe948f01dcc9e2d06c01b41abd"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../../.cache/go-build/c8/c8884a5358cf308713b37931709b266c415ee824be78507f2d766357ca537ab2-d",
+      "module_rel": "client/pkg",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/c8884a5358cf308713b37931709b266c415ee824be78507f2d766357ca537ab2-d",
+      "source_bytes": 1496,
+      "source_sha256": "c8884a5358cf308713b37931709b266c415ee824be78507f2d766357ca537ab2"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../../.cache/go-build/75/75b849c8ad02a4c541d0dd2f55dc7696b1fa4d3ec45616565be35926b6fe285e-d",
+      "module_rel": "client/pkg",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/75b849c8ad02a4c541d0dd2f55dc7696b1fa4d3ec45616565be35926b6fe285e-d",
+      "source_bytes": 808,
+      "source_sha256": "75b849c8ad02a4c541d0dd2f55dc7696b1fa4d3ec45616565be35926b6fe285e"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../../.cache/go-build/3b/3bb87fae75d3d96bc2ce1f9376b2d1b335b611ea12320ffe5309ecf536339f52-d",
+      "module_rel": "client/pkg",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/3bb87fae75d3d96bc2ce1f9376b2d1b335b611ea12320ffe5309ecf536339f52-d",
+      "source_bytes": 678,
+      "source_sha256": "3bb87fae75d3d96bc2ce1f9376b2d1b335b611ea12320ffe5309ecf536339f52"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../../.cache/go-build/8b/8ba03526bb921a00734e6f24d6ca56dadc4555ec2f6f32aa975f1ce240315c8e-d",
+      "module_rel": "client/pkg",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/8ba03526bb921a00734e6f24d6ca56dadc4555ec2f6f32aa975f1ce240315c8e-d",
+      "source_bytes": 758,
+      "source_sha256": "8ba03526bb921a00734e6f24d6ca56dadc4555ec2f6f32aa975f1ce240315c8e"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../../.cache/go-build/03/03d8342ebebfb28d216038490dbfe8c86284d315041914a2b8af2d69b8b01e15-d",
+      "module_rel": "client/pkg",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/03d8342ebebfb28d216038490dbfe8c86284d315041914a2b8af2d69b8b01e15-d",
+      "source_bytes": 742,
+      "source_sha256": "03d8342ebebfb28d216038490dbfe8c86284d315041914a2b8af2d69b8b01e15"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../../.cache/go-build/e4/e4ddfe35485dc100044eef5c7a509a57d164e526b8c11696305c13a04065f186-d",
+      "module_rel": "client/pkg",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/e4ddfe35485dc100044eef5c7a509a57d164e526b8c11696305c13a04065f186-d",
+      "source_bytes": 880,
+      "source_sha256": "e4ddfe35485dc100044eef5c7a509a57d164e526b8c11696305c13a04065f186"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../../.cache/go-build/07/07f2457ed33f8eca87ba0c134478718117c1ae5444ffe8915fff4a83045b72f6-d",
+      "module_rel": "client/pkg",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/07f2457ed33f8eca87ba0c134478718117c1ae5444ffe8915fff4a83045b72f6-d",
+      "source_bytes": 2254,
+      "source_sha256": "07f2457ed33f8eca87ba0c134478718117c1ae5444ffe8915fff4a83045b72f6"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../../.cache/go-build/26/26f153c0c2d9783642a6912709d95e889763be6c88e0ddaec5564b83260ccdee-d",
+      "module_rel": "client/pkg",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/26f153c0c2d9783642a6912709d95e889763be6c88e0ddaec5564b83260ccdee-d",
+      "source_bytes": 1660,
+      "source_sha256": "26f153c0c2d9783642a6912709d95e889763be6c88e0ddaec5564b83260ccdee"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../../.cache/go-build/02/029777b8d525a272476725f99949754fd7f16404e0e56f621eadea9db028abe2-d",
+      "module_rel": "client/v3",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/029777b8d525a272476725f99949754fd7f16404e0e56f621eadea9db028abe2-d",
+      "source_bytes": 5569,
+      "source_sha256": "029777b8d525a272476725f99949754fd7f16404e0e56f621eadea9db028abe2"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../../.cache/go-build/35/35d1a31962847c91cdcf396de6582e797a6aa00abc4d51afe2b07d12ef6c0001-d",
+      "module_rel": "client/v3",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/35d1a31962847c91cdcf396de6582e797a6aa00abc4d51afe2b07d12ef6c0001-d",
+      "source_bytes": 664,
+      "source_sha256": "35d1a31962847c91cdcf396de6582e797a6aa00abc4d51afe2b07d12ef6c0001"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../../.cache/go-build/37/3728b4b5e03e420f4e7ee5ea44da92edd77c832a5276a25d23ae4a0d132d87f0-d",
+      "module_rel": "client/v3",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/3728b4b5e03e420f4e7ee5ea44da92edd77c832a5276a25d23ae4a0d132d87f0-d",
+      "source_bytes": 1338,
+      "source_sha256": "3728b4b5e03e420f4e7ee5ea44da92edd77c832a5276a25d23ae4a0d132d87f0"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../../.cache/go-build/5e/5e4aca43675840c7cd6295374d05eef0cd8755ef454fcbeefa17f304a91b3b91-d",
+      "module_rel": "client/v3",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/5e4aca43675840c7cd6295374d05eef0cd8755ef454fcbeefa17f304a91b3b91-d",
+      "source_bytes": 670,
+      "source_sha256": "5e4aca43675840c7cd6295374d05eef0cd8755ef454fcbeefa17f304a91b3b91"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../../.cache/go-build/f0/f0839b25fde79903347234e06987bbdaf9bfecb6dd0ef08e1e88f68a61468ae9-d",
+      "module_rel": "client/v3",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/f0839b25fde79903347234e06987bbdaf9bfecb6dd0ef08e1e88f68a61468ae9-d",
+      "source_bytes": 744,
+      "source_sha256": "f0839b25fde79903347234e06987bbdaf9bfecb6dd0ef08e1e88f68a61468ae9"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../../.cache/go-build/5e/5edf8e01ab7af74acbabda4052339f9ab2a9869fa80edbc46fd39cbf4f018cd9-d",
+      "module_rel": "client/v3",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/5edf8e01ab7af74acbabda4052339f9ab2a9869fa80edbc46fd39cbf4f018cd9-d",
+      "source_bytes": 1276,
+      "source_sha256": "5edf8e01ab7af74acbabda4052339f9ab2a9869fa80edbc46fd39cbf4f018cd9"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../../.cache/go-build/bc/bc21fff15beafcec8c8ceca442e670385550180f9693f8e3d81dfa18155305eb-d",
+      "module_rel": "client/v3",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/bc21fff15beafcec8c8ceca442e670385550180f9693f8e3d81dfa18155305eb-d",
+      "source_bytes": 778,
+      "source_sha256": "bc21fff15beafcec8c8ceca442e670385550180f9693f8e3d81dfa18155305eb"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../../.cache/go-build/a7/a7497ad8000f44155242854f52d42ff74a05afacbd407b79c17ac841f9be0396-d",
+      "module_rel": "client/v3",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/a7497ad8000f44155242854f52d42ff74a05afacbd407b79c17ac841f9be0396-d",
+      "source_bytes": 664,
+      "source_sha256": "a7497ad8000f44155242854f52d42ff74a05afacbd407b79c17ac841f9be0396"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../../.cache/go-build/f5/f5c69440d986b9d9e79e33c75ad303ae38316af8f0aeed500588bafda0fec4c4-d",
+      "module_rel": "client/v3",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/f5c69440d986b9d9e79e33c75ad303ae38316af8f0aeed500588bafda0fec4c4-d",
+      "source_bytes": 700,
+      "source_sha256": "f5c69440d986b9d9e79e33c75ad303ae38316af8f0aeed500588bafda0fec4c4"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../../.cache/go-build/06/064dedaea7cf166521fc1f04fe4121f1603d39980d452b35ac40a5abbd201fc9-d",
+      "module_rel": "client/v3",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/064dedaea7cf166521fc1f04fe4121f1603d39980d452b35ac40a5abbd201fc9-d",
+      "source_bytes": 654,
+      "source_sha256": "064dedaea7cf166521fc1f04fe4121f1603d39980d452b35ac40a5abbd201fc9"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/e6/e6282fa366d148be453f31dc6faf0acc5d7f4578010da3415414219a89b5c4a4-d",
+      "module_rel": "etcdctl",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/e6282fa366d148be453f31dc6faf0acc5d7f4578010da3415414219a89b5c4a4-d",
+      "source_bytes": 1197,
+      "source_sha256": "e6282fa366d148be453f31dc6faf0acc5d7f4578010da3415414219a89b5c4a4"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/4e/4e9cd88d550583cd5a9e9e987a87b03238d4fe33db884e1773419a196db23a23-d",
+      "module_rel": "etcdutl",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/4e9cd88d550583cd5a9e9e987a87b03238d4fe33db884e1773419a196db23a23-d",
+      "source_bytes": 721,
+      "source_sha256": "4e9cd88d550583cd5a9e9e987a87b03238d4fe33db884e1773419a196db23a23"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/83/83582a0c3404f71684b1b6fc8df0f2b05451ba536f34e721d4d3634a789a37f7-d",
+      "module_rel": "etcdutl",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/83582a0c3404f71684b1b6fc8df0f2b05451ba536f34e721d4d3634a789a37f7-d",
+      "source_bytes": 997,
+      "source_sha256": "83582a0c3404f71684b1b6fc8df0f2b05451ba536f34e721d4d3634a789a37f7"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/69/69703a3706276f827dd353bcfef77436bec2cced501d741434c65125d2b1d812-d",
+      "module_rel": "pkg",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/69703a3706276f827dd353bcfef77436bec2cced501d741434c65125d2b1d812-d",
+      "source_bytes": 1484,
+      "source_sha256": "69703a3706276f827dd353bcfef77436bec2cced501d741434c65125d2b1d812"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/56/5686bf338e2136086424439c5dc3fb8255e9f7563c839afb3543ea614892973c-d",
+      "module_rel": "pkg",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/5686bf338e2136086424439c5dc3fb8255e9f7563c839afb3543ea614892973c-d",
+      "source_bytes": 627,
+      "source_sha256": "5686bf338e2136086424439c5dc3fb8255e9f7563c839afb3543ea614892973c"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/2c/2c6c03f00fc5227bed3c2c0495941f3a9ecba244be37732aa2d2d9d44b51560d-d",
+      "module_rel": "pkg",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/2c6c03f00fc5227bed3c2c0495941f3a9ecba244be37732aa2d2d9d44b51560d-d",
+      "source_bytes": 1183,
+      "source_sha256": "2c6c03f00fc5227bed3c2c0495941f3a9ecba244be37732aa2d2d9d44b51560d"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/7b/7b6a898dbbf8018f178f18f9717beed0dd9debcd65482d11eaf529fad08d43b8-d",
+      "module_rel": "pkg",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/7b6a898dbbf8018f178f18f9717beed0dd9debcd65482d11eaf529fad08d43b8-d",
+      "source_bytes": 1125,
+      "source_sha256": "7b6a898dbbf8018f178f18f9717beed0dd9debcd65482d11eaf529fad08d43b8"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/2a/2ab7927153ed2c84cc9466208aa0ccd93e846ed56355bf2c1b73e1ea2599e206-d",
+      "module_rel": "pkg",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/2ab7927153ed2c84cc9466208aa0ccd93e846ed56355bf2c1b73e1ea2599e206-d",
+      "source_bytes": 1369,
+      "source_sha256": "2ab7927153ed2c84cc9466208aa0ccd93e846ed56355bf2c1b73e1ea2599e206"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/ad/ad6c60b48ea18df403e93c05b792076aca3f922fb747dff39139f13c4e678307-d",
+      "module_rel": "pkg",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/ad6c60b48ea18df403e93c05b792076aca3f922fb747dff39139f13c4e678307-d",
+      "source_bytes": 647,
+      "source_sha256": "ad6c60b48ea18df403e93c05b792076aca3f922fb747dff39139f13c4e678307"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/a7/a765b3c4eda69b6205dc1eccde37820db83a1fc6007827aa79b046935a092763-d",
+      "module_rel": "pkg",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/a765b3c4eda69b6205dc1eccde37820db83a1fc6007827aa79b046935a092763-d",
+      "source_bytes": 779,
+      "source_sha256": "a765b3c4eda69b6205dc1eccde37820db83a1fc6007827aa79b046935a092763"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/cd/cd6f5d7a5535c6e06aea415ae63e6fc00eed8827d0f6560fef2c4e64e7432dc0-d",
+      "module_rel": "pkg",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/cd6f5d7a5535c6e06aea415ae63e6fc00eed8827d0f6560fef2c4e64e7432dc0-d",
+      "source_bytes": 1045,
+      "source_sha256": "cd6f5d7a5535c6e06aea415ae63e6fc00eed8827d0f6560fef2c4e64e7432dc0"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/c6/c6d67cfa9cb8893ffdce5a55eccd79b760a45fe1f826fad9d19d58fa0e31dd04-d",
+      "module_rel": "pkg",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/c6d67cfa9cb8893ffdce5a55eccd79b760a45fe1f826fad9d19d58fa0e31dd04-d",
+      "source_bytes": 1001,
+      "source_sha256": "c6d67cfa9cb8893ffdce5a55eccd79b760a45fe1f826fad9d19d58fa0e31dd04"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/f1/f1d34a53e7c2e3f8e766448d1091edf8144a636b347c8eed68a3215e8345d44b-d",
+      "module_rel": "pkg",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/f1d34a53e7c2e3f8e766448d1091edf8144a636b347c8eed68a3215e8345d44b-d",
+      "source_bytes": 653,
+      "source_sha256": "f1d34a53e7c2e3f8e766448d1091edf8144a636b347c8eed68a3215e8345d44b"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/d2/d2f75d1973563b659ade08f5b3aed4ae13ee9bf00b4f49ce918578ed4c60a859-d",
+      "module_rel": "pkg",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/d2f75d1973563b659ade08f5b3aed4ae13ee9bf00b4f49ce918578ed4c60a859-d",
+      "source_bytes": 1005,
+      "source_sha256": "d2f75d1973563b659ade08f5b3aed4ae13ee9bf00b4f49ce918578ed4c60a859"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/d9/d948d9c3e9ef9243e3e6b7ae09073db6aed1580c3841a80b6b602eb2aef7a2a3-d",
+      "module_rel": "pkg",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/d948d9c3e9ef9243e3e6b7ae09073db6aed1580c3841a80b6b602eb2aef7a2a3-d",
+      "source_bytes": 2007,
+      "source_sha256": "d948d9c3e9ef9243e3e6b7ae09073db6aed1580c3841a80b6b602eb2aef7a2a3"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/88/885b1a03ea92c01adeac15a154bc591a59f989b1ac9f507f5922d91eddc2339b-d",
+      "module_rel": "pkg",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/885b1a03ea92c01adeac15a154bc591a59f989b1ac9f507f5922d91eddc2339b-d",
+      "source_bytes": 781,
+      "source_sha256": "885b1a03ea92c01adeac15a154bc591a59f989b1ac9f507f5922d91eddc2339b"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/01/0189bf16bfda1272701996630d306ca36c5d5246583e71173dae9727da9755ef-d",
+      "module_rel": "pkg",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/0189bf16bfda1272701996630d306ca36c5d5246583e71173dae9727da9755ef-d",
+      "source_bytes": 649,
+      "source_sha256": "0189bf16bfda1272701996630d306ca36c5d5246583e71173dae9727da9755ef"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/52/522387c54257bafd6def79130eac53ec88fafbe08b11b5b8f3d54ecc29ce811b-d",
+      "module_rel": "pkg",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/522387c54257bafd6def79130eac53ec88fafbe08b11b5b8f3d54ecc29ce811b-d",
+      "source_bytes": 655,
+      "source_sha256": "522387c54257bafd6def79130eac53ec88fafbe08b11b5b8f3d54ecc29ce811b"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/36/36e92ca35d1430680ca5f3e9cd67a6640cf542447ec722633d5b7b4537e3d2f0-d",
+      "module_rel": "pkg",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/36e92ca35d1430680ca5f3e9cd67a6640cf542447ec722633d5b7b4537e3d2f0-d",
+      "source_bytes": 741,
+      "source_sha256": "36e92ca35d1430680ca5f3e9cd67a6640cf542447ec722633d5b7b4537e3d2f0"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/fc/fca4e4f7ab3ab1192d426ea2291b1a50fea53c902ddfbfa62222f5ebcd259d2c-d",
+      "module_rel": "pkg",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/fca4e4f7ab3ab1192d426ea2291b1a50fea53c902ddfbfa62222f5ebcd259d2c-d",
+      "source_bytes": 1013,
+      "source_sha256": "fca4e4f7ab3ab1192d426ea2291b1a50fea53c902ddfbfa62222f5ebcd259d2c"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/49/494ac8c9a6d28b24dfe157eab20df00e518b7ed11362dab593ffe03f652c8c22-d",
+      "module_rel": "server",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/494ac8c9a6d28b24dfe157eab20df00e518b7ed11362dab593ffe03f652c8c22-d",
+      "source_bytes": 3044,
+      "source_sha256": "494ac8c9a6d28b24dfe157eab20df00e518b7ed11362dab593ffe03f652c8c22"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/3f/3ffb5673edeebe521a0246b6a807500da1997106cc8609f8052e5466cd664da6-d",
+      "module_rel": "server",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/3ffb5673edeebe521a0246b6a807500da1997106cc8609f8052e5466cd664da6-d",
+      "source_bytes": 1008,
+      "source_sha256": "3ffb5673edeebe521a0246b6a807500da1997106cc8609f8052e5466cd664da6"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/d6/d699c8021dc827dbd68a223e4f9d96be96a16f6d49aad6f778e8be42c79bc4a4-d",
+      "module_rel": "server",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/d699c8021dc827dbd68a223e4f9d96be96a16f6d49aad6f778e8be42c79bc4a4-d",
+      "source_bytes": 2138,
+      "source_sha256": "d699c8021dc827dbd68a223e4f9d96be96a16f6d49aad6f778e8be42c79bc4a4"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/75/757517ba0513ecabef760a6d419175fdc4173afce41cb976dad9d231a37e1c90-d",
+      "module_rel": "server",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/757517ba0513ecabef760a6d419175fdc4173afce41cb976dad9d231a37e1c90-d",
+      "source_bytes": 1596,
+      "source_sha256": "757517ba0513ecabef760a6d419175fdc4173afce41cb976dad9d231a37e1c90"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/bc/bc9522c5b67a91104411a32f7f279360cbd12c915a22f62a91cdc77167b8a114-d",
+      "module_rel": "server",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/bc9522c5b67a91104411a32f7f279360cbd12c915a22f62a91cdc77167b8a114-d",
+      "source_bytes": 3376,
+      "source_sha256": "bc9522c5b67a91104411a32f7f279360cbd12c915a22f62a91cdc77167b8a114"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/7b/7b53dd82c7242b97d990269bceaadc6ce9bb91ff246483ce958cdc0063e7a8b8-d",
+      "module_rel": "server",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/7b53dd82c7242b97d990269bceaadc6ce9bb91ff246483ce958cdc0063e7a8b8-d",
+      "source_bytes": 1448,
+      "source_sha256": "7b53dd82c7242b97d990269bceaadc6ce9bb91ff246483ce958cdc0063e7a8b8"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/ef/ef2494f01c3c38adc0e81f22ae16825057a3932e7cea1ffc9a9dd5f4da6a71c7-d",
+      "module_rel": "server",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/ef2494f01c3c38adc0e81f22ae16825057a3932e7cea1ffc9a9dd5f4da6a71c7-d",
+      "source_bytes": 708,
+      "source_sha256": "ef2494f01c3c38adc0e81f22ae16825057a3932e7cea1ffc9a9dd5f4da6a71c7"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/7c/7cab72b4e18a8edf4ccfd2fc215e77f0c2fc1b41f69ffab75631eaffca7133c0-d",
+      "module_rel": "server",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/7cab72b4e18a8edf4ccfd2fc215e77f0c2fc1b41f69ffab75631eaffca7133c0-d",
+      "source_bytes": 2302,
+      "source_sha256": "7cab72b4e18a8edf4ccfd2fc215e77f0c2fc1b41f69ffab75631eaffca7133c0"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/bc/bc83650ae0fe0f8a2b9b68c014b3156a84b37df7174520e35ae8ccd094262ffb-d",
+      "module_rel": "server",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/bc83650ae0fe0f8a2b9b68c014b3156a84b37df7174520e35ae8ccd094262ffb-d",
+      "source_bytes": 3236,
+      "source_sha256": "bc83650ae0fe0f8a2b9b68c014b3156a84b37df7174520e35ae8ccd094262ffb"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/20/20c31831e1bde7e8db2e255df303974ddcf86bdcd60ae2e2682c379e80fe10dc-d",
+      "module_rel": "server",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/20c31831e1bde7e8db2e255df303974ddcf86bdcd60ae2e2682c379e80fe10dc-d",
+      "source_bytes": 756,
+      "source_sha256": "20c31831e1bde7e8db2e255df303974ddcf86bdcd60ae2e2682c379e80fe10dc"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/d3/d357a914681d075fa12ab913dc0267aed5b61a8dea0f3d5520f659dc01b87722-d",
+      "module_rel": "server",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/d357a914681d075fa12ab913dc0267aed5b61a8dea0f3d5520f659dc01b87722-d",
+      "source_bytes": 686,
+      "source_sha256": "d357a914681d075fa12ab913dc0267aed5b61a8dea0f3d5520f659dc01b87722"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/6b/6b4273201afc6d3b6f6568d91bc77e12d3e7682db17c8db8b1f3fb89649c99e6-d",
+      "module_rel": "server",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/6b4273201afc6d3b6f6568d91bc77e12d3e7682db17c8db8b1f3fb89649c99e6-d",
+      "source_bytes": 3816,
+      "source_sha256": "6b4273201afc6d3b6f6568d91bc77e12d3e7682db17c8db8b1f3fb89649c99e6"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/e0/e026081368e822856349dd3dc46c67358faf6972766c2ec3cb872be72a9e259e-d",
+      "module_rel": "server",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/e026081368e822856349dd3dc46c67358faf6972766c2ec3cb872be72a9e259e-d",
+      "source_bytes": 964,
+      "source_sha256": "e026081368e822856349dd3dc46c67358faf6972766c2ec3cb872be72a9e259e"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/5f/5f36ca242dda100e667a78b845244de5d01bdfdb83418e4882d3fa266b8b7424-d",
+      "module_rel": "server",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/5f36ca242dda100e667a78b845244de5d01bdfdb83418e4882d3fa266b8b7424-d",
+      "source_bytes": 952,
+      "source_sha256": "5f36ca242dda100e667a78b845244de5d01bdfdb83418e4882d3fa266b8b7424"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/89/89723efb5a919becbae27b1b0e97b381e239bc02fc293906b14b7b9408260dc3-d",
+      "module_rel": "server",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/89723efb5a919becbae27b1b0e97b381e239bc02fc293906b14b7b9408260dc3-d",
+      "source_bytes": 1032,
+      "source_sha256": "89723efb5a919becbae27b1b0e97b381e239bc02fc293906b14b7b9408260dc3"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/a6/a66418c63ecf7719e86a82dc6da0851f289ca7fe3df273297afb99c80a296961-d",
+      "module_rel": "server",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/a66418c63ecf7719e86a82dc6da0851f289ca7fe3df273297afb99c80a296961-d",
+      "source_bytes": 1628,
+      "source_sha256": "a66418c63ecf7719e86a82dc6da0851f289ca7fe3df273297afb99c80a296961"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/32/32c3c74d87d7b5f9f04699e271e49ddebbfc6dede3cecff17636d122e5a210b9-d",
+      "module_rel": "server",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/32c3c74d87d7b5f9f04699e271e49ddebbfc6dede3cecff17636d122e5a210b9-d",
+      "source_bytes": 814,
+      "source_sha256": "32c3c74d87d7b5f9f04699e271e49ddebbfc6dede3cecff17636d122e5a210b9"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/96/96960405df9c5cb0d9ff206b69ac20b533649e068c418f4f4dfa7448395c3465-d",
+      "module_rel": "server",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/96960405df9c5cb0d9ff206b69ac20b533649e068c418f4f4dfa7448395c3465-d",
+      "source_bytes": 1080,
+      "source_sha256": "96960405df9c5cb0d9ff206b69ac20b533649e068c418f4f4dfa7448395c3465"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/43/43e588d654710023d3f32817ec7a7cad1ae056aa4ebc39bc33872487ce3fd0a8-d",
+      "module_rel": "server",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/43e588d654710023d3f32817ec7a7cad1ae056aa4ebc39bc33872487ce3fd0a8-d",
+      "source_bytes": 1364,
+      "source_sha256": "43e588d654710023d3f32817ec7a7cad1ae056aa4ebc39bc33872487ce3fd0a8"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/53/53b8ed969f7b2f276eea498b3adcd957a1cab7a360d7e8ed9e4b74c349073821-d",
+      "module_rel": "server",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/53b8ed969f7b2f276eea498b3adcd957a1cab7a360d7e8ed9e4b74c349073821-d",
+      "source_bytes": 1564,
+      "source_sha256": "53b8ed969f7b2f276eea498b3adcd957a1cab7a360d7e8ed9e4b74c349073821"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/e3/e3fa45ee418ff86a18318478b2ab58562644a7260cbc6055ce0f713808457cd5-d",
+      "module_rel": "server",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/e3fa45ee418ff86a18318478b2ab58562644a7260cbc6055ce0f713808457cd5-d",
+      "source_bytes": 2086,
+      "source_sha256": "e3fa45ee418ff86a18318478b2ab58562644a7260cbc6055ce0f713808457cd5"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/07/07dcb87dfb9a7bd1263287067ababa24b86ef1a5e20b94b39c4464d8f3321e71-d",
+      "module_rel": "server",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/07dcb87dfb9a7bd1263287067ababa24b86ef1a5e20b94b39c4464d8f3321e71-d",
+      "source_bytes": 840,
+      "source_sha256": "07dcb87dfb9a7bd1263287067ababa24b86ef1a5e20b94b39c4464d8f3321e71"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/a9/a9545da1308482c6829924b70884a9b0fceb12c7d34215e16598eedeb23a5153-d",
+      "module_rel": "server",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/a9545da1308482c6829924b70884a9b0fceb12c7d34215e16598eedeb23a5153-d",
+      "source_bytes": 824,
+      "source_sha256": "a9545da1308482c6829924b70884a9b0fceb12c7d34215e16598eedeb23a5153"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/b1/b1d805765a0d6ce7127ccfb91d8f080b617ac0bcbdf7a0ded9d214dc587b272d-d",
+      "module_rel": "server",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/b1d805765a0d6ce7127ccfb91d8f080b617ac0bcbdf7a0ded9d214dc587b272d-d",
+      "source_bytes": 742,
+      "source_sha256": "b1d805765a0d6ce7127ccfb91d8f080b617ac0bcbdf7a0ded9d214dc587b272d"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/e9/e9be77d7de66ce59842a8f975d3daeb2ec7f45a0a2176f127ece25697049faa0-d",
+      "module_rel": "server",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/e9be77d7de66ce59842a8f975d3daeb2ec7f45a0a2176f127ece25697049faa0-d",
+      "source_bytes": 646,
+      "source_sha256": "e9be77d7de66ce59842a8f975d3daeb2ec7f45a0a2176f127ece25697049faa0"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/08/089953c4455a57d2f1784b56d14fd1e7d8682a8860f34abe4835457cf9c99ac0-d",
+      "module_rel": "server",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/089953c4455a57d2f1784b56d14fd1e7d8682a8860f34abe4835457cf9c99ac0-d",
+      "source_bytes": 3433,
+      "source_sha256": "089953c4455a57d2f1784b56d14fd1e7d8682a8860f34abe4835457cf9c99ac0"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/4a/4ad9b5c413518d23b599798f4b520cf36035b9ef9ae083bd0596a2f669952b77-d",
+      "module_rel": "server",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/4ad9b5c413518d23b599798f4b520cf36035b9ef9ae083bd0596a2f669952b77-d",
+      "source_bytes": 919,
+      "source_sha256": "4ad9b5c413518d23b599798f4b520cf36035b9ef9ae083bd0596a2f669952b77"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/b0/b0a772dc226bffc9b2668e80e01ab626178c76c28d38b96bb2c35a1c577f2848-d",
+      "module_rel": "server",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/b0a772dc226bffc9b2668e80e01ab626178c76c28d38b96bb2c35a1c577f2848-d",
+      "source_bytes": 7606,
+      "source_sha256": "b0a772dc226bffc9b2668e80e01ab626178c76c28d38b96bb2c35a1c577f2848"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/7c/7c1baac2fbd30f91a8a436461e0fcda0efea848a6355f89f7c3213e46025227d-d",
+      "module_rel": "server",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/7c1baac2fbd30f91a8a436461e0fcda0efea848a6355f89f7c3213e46025227d-d",
+      "source_bytes": 1604,
+      "source_sha256": "7c1baac2fbd30f91a8a436461e0fcda0efea848a6355f89f7c3213e46025227d"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/fd/fd26a2dcb3f1e03fcb45c939957e47f37f0aa531faf96e620fe8b8d4b00eb8e3-d",
+      "module_rel": "server",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/fd26a2dcb3f1e03fcb45c939957e47f37f0aa531faf96e620fe8b8d4b00eb8e3-d",
+      "source_bytes": 3676,
+      "source_sha256": "fd26a2dcb3f1e03fcb45c939957e47f37f0aa531faf96e620fe8b8d4b00eb8e3"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/0c/0c589de12d322eecf766a24792b3cc163105c3393b1a29fd4d1f44be87ceef90-d",
+      "module_rel": "server",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/0c589de12d322eecf766a24792b3cc163105c3393b1a29fd4d1f44be87ceef90-d",
+      "source_bytes": 766,
+      "source_sha256": "0c589de12d322eecf766a24792b3cc163105c3393b1a29fd4d1f44be87ceef90"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/9b/9b79914f0c2ea94a57013a6f44dbe12dea346746c348600bec3b7525e461bfac-d",
+      "module_rel": "tests",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/9b79914f0c2ea94a57013a6f44dbe12dea346746c348600bec3b7525e461bfac-d",
+      "source_bytes": 6361,
+      "source_sha256": "9b79914f0c2ea94a57013a6f44dbe12dea346746c348600bec3b7525e461bfac"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/39/391bf7701b7324e0b50a0393fbbbd2cfc34856a16bc62fc3ce6d93fafa368014-d",
+      "module_rel": "tests",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/391bf7701b7324e0b50a0393fbbbd2cfc34856a16bc62fc3ce6d93fafa368014-d",
+      "source_bytes": 16625,
+      "source_sha256": "391bf7701b7324e0b50a0393fbbbd2cfc34856a16bc62fc3ce6d93fafa368014"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/5e/5e7d4f39523d6c687ff158ce65ea49541016e17febbbd61afda8c49a5de184a9-d",
+      "module_rel": "tests",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/5e7d4f39523d6c687ff158ce65ea49541016e17febbbd61afda8c49a5de184a9-d",
+      "source_bytes": 743,
+      "source_sha256": "5e7d4f39523d6c687ff158ce65ea49541016e17febbbd61afda8c49a5de184a9"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/dc/dcb6a7ca7ab0c94fd5e2a34cb8fab1363f56d4df3f7f25d8e9ceb379c4038a7f-d",
+      "module_rel": "tests",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/dcb6a7ca7ab0c94fd5e2a34cb8fab1363f56d4df3f7f25d8e9ceb379c4038a7f-d",
+      "source_bytes": 751,
+      "source_sha256": "dcb6a7ca7ab0c94fd5e2a34cb8fab1363f56d4df3f7f25d8e9ceb379c4038a7f"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/59/597b533d076ef37ae7e3daaedfb64b95fa5f801f24418209db7b98592f3b6edb-d",
+      "module_rel": "tests",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/597b533d076ef37ae7e3daaedfb64b95fa5f801f24418209db7b98592f3b6edb-d",
+      "source_bytes": 11917,
+      "source_sha256": "597b533d076ef37ae7e3daaedfb64b95fa5f801f24418209db7b98592f3b6edb"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/64/6457ff003302bc2d878dfd99a34c011c19d28ac051917f1973347cfcc789c86d-d",
+      "module_rel": "tests",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/6457ff003302bc2d878dfd99a34c011c19d28ac051917f1973347cfcc789c86d-d",
+      "source_bytes": 4835,
+      "source_sha256": "6457ff003302bc2d878dfd99a34c011c19d28ac051917f1973347cfcc789c86d"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/66/66c8bca4e979712d2e4ed42314a005a85b4a1b8e6dd571ceed64ca1c1dd2e6c7-d",
+      "module_rel": "tests",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/66c8bca4e979712d2e4ed42314a005a85b4a1b8e6dd571ceed64ca1c1dd2e6c7-d",
+      "source_bytes": 1627,
+      "source_sha256": "66c8bca4e979712d2e4ed42314a005a85b4a1b8e6dd571ceed64ca1c1dd2e6c7"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/eb/eb0ed867b74c8311259b1f36a6886c27a35f106a45dd3a931ca47dc65a49a345-d",
+      "module_rel": "tests",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/eb0ed867b74c8311259b1f36a6886c27a35f106a45dd3a931ca47dc65a49a345-d",
+      "source_bytes": 3902,
+      "source_sha256": "eb0ed867b74c8311259b1f36a6886c27a35f106a45dd3a931ca47dc65a49a345"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/5b/5b6c51f725dd9d3b136bb4ce7bba0b22895816e79aa7f1a21bb1391d52c8c064-d",
+      "module_rel": "tests",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/5b6c51f725dd9d3b136bb4ce7bba0b22895816e79aa7f1a21bb1391d52c8c064-d",
+      "source_bytes": 3352,
+      "source_sha256": "5b6c51f725dd9d3b136bb4ce7bba0b22895816e79aa7f1a21bb1391d52c8c064"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/b3/b3d8688b37350fd800240ea370c616e1dd19cf07ef557f49ad1cd31ba7702e4a-d",
+      "module_rel": "tests",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/b3d8688b37350fd800240ea370c616e1dd19cf07ef557f49ad1cd31ba7702e4a-d",
+      "source_bytes": 2216,
+      "source_sha256": "b3d8688b37350fd800240ea370c616e1dd19cf07ef557f49ad1cd31ba7702e4a"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/96/966f29ed6b75b295b4da4d6500fa81d26a172d0a5e5481317fcc75f39218ecea-d",
+      "module_rel": "tests",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/966f29ed6b75b295b4da4d6500fa81d26a172d0a5e5481317fcc75f39218ecea-d",
+      "source_bytes": 5233,
+      "source_sha256": "966f29ed6b75b295b4da4d6500fa81d26a172d0a5e5481317fcc75f39218ecea"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/f7/f7e09ade043614f6f7ad023bd8da43846b49661ea263786a53634f496341dcd9-d",
+      "module_rel": "tests",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/f7e09ade043614f6f7ad023bd8da43846b49661ea263786a53634f496341dcd9-d",
+      "source_bytes": 1142,
+      "source_sha256": "f7e09ade043614f6f7ad023bd8da43846b49661ea263786a53634f496341dcd9"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/6f/6f5b7c3cd679712b133c9d63181b9d0024f360c9e83c1f5cf0af35ef0a169afb-d",
+      "module_rel": "tests",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/6f5b7c3cd679712b133c9d63181b9d0024f360c9e83c1f5cf0af35ef0a169afb-d",
+      "source_bytes": 797,
+      "source_sha256": "6f5b7c3cd679712b133c9d63181b9d0024f360c9e83c1f5cf0af35ef0a169afb"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/61/619fb41afef1401f4cc34e989bf44437735bd036c060c0a202fa68f2237685e0-d",
+      "module_rel": "tests",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/619fb41afef1401f4cc34e989bf44437735bd036c060c0a202fa68f2237685e0-d",
+      "source_bytes": 4827,
+      "source_sha256": "619fb41afef1401f4cc34e989bf44437735bd036c060c0a202fa68f2237685e0"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/ff/ff9fb9badd26f80c6f5407593df609e4078fb30aea1e3cd44fed3b27176500f5-d",
+      "module_rel": "tests",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/ff9fb9badd26f80c6f5407593df609e4078fb30aea1e3cd44fed3b27176500f5-d",
+      "source_bytes": 1030,
+      "source_sha256": "ff9fb9badd26f80c6f5407593df609e4078fb30aea1e3cd44fed3b27176500f5"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/13/13816c7a88411349ae7735e64d834bf7d5ee128f84dda333f1a32cbbaa2e93bf-d",
+      "module_rel": "tests",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/13816c7a88411349ae7735e64d834bf7d5ee128f84dda333f1a32cbbaa2e93bf-d",
+      "source_bytes": 801,
+      "source_sha256": "13816c7a88411349ae7735e64d834bf7d5ee128f84dda333f1a32cbbaa2e93bf"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/42/4235c81af4bdbff07fae6cdbd05df9bd7485de97add9ee756fd3327f1a2e240a-d",
+      "module_rel": "tests",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/4235c81af4bdbff07fae6cdbd05df9bd7485de97add9ee756fd3327f1a2e240a-d",
+      "source_bytes": 937,
+      "source_sha256": "4235c81af4bdbff07fae6cdbd05df9bd7485de97add9ee756fd3327f1a2e240a"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/ca/cae81d04470233b83b8e7d41eb3456d167c7133e5e8cc5023a9d025f4ed3fb50-d",
+      "module_rel": "tests",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/cae81d04470233b83b8e7d41eb3456d167c7133e5e8cc5023a9d025f4ed3fb50-d",
+      "source_bytes": 3814,
+      "source_sha256": "cae81d04470233b83b8e7d41eb3456d167c7133e5e8cc5023a9d025f4ed3fb50"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/80/80e378314df18cebf86d928c87e8c0da29034f43c5afab514914d999f642eec9-d",
+      "module_rel": "tests",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/80e378314df18cebf86d928c87e8c0da29034f43c5afab514914d999f642eec9-d",
+      "source_bytes": 825,
+      "source_sha256": "80e378314df18cebf86d928c87e8c0da29034f43c5afab514914d999f642eec9"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/79/79d0a927fbdeaecd75ca9b86e732cda246cb2f0e9276a99c14bf11bacc7021da-d",
+      "module_rel": "tests",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/79d0a927fbdeaecd75ca9b86e732cda246cb2f0e9276a99c14bf11bacc7021da-d",
+      "source_bytes": 697,
+      "source_sha256": "79d0a927fbdeaecd75ca9b86e732cda246cb2f0e9276a99c14bf11bacc7021da"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/ae/ae20e182d4b34a54e19e8bc543f60b584b407ae500042ec811f78d5144a73e5f-d",
+      "module_rel": "tests",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/ae20e182d4b34a54e19e8bc543f60b584b407ae500042ec811f78d5144a73e5f-d",
+      "source_bytes": 884,
+      "source_sha256": "ae20e182d4b34a54e19e8bc543f60b584b407ae500042ec811f78d5144a73e5f"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/35/35981e808ce927886828255bc05be3f3380f4890f2249ab85324052f153a6c1f-d",
+      "module_rel": "tests",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/35981e808ce927886828255bc05be3f3380f4890f2249ab85324052f153a6c1f-d",
+      "source_bytes": 1357,
+      "source_sha256": "35981e808ce927886828255bc05be3f3380f4890f2249ab85324052f153a6c1f"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/50/50c59fc2fb5d403fef4bab06fe346fc1f92b334f5f90a94e8f4b2ae1af684ec6-d",
+      "module_rel": "tests",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/50c59fc2fb5d403fef4bab06fe346fc1f92b334f5f90a94e8f4b2ae1af684ec6-d",
+      "source_bytes": 755,
+      "source_sha256": "50c59fc2fb5d403fef4bab06fe346fc1f92b334f5f90a94e8f4b2ae1af684ec6"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/4c/4ce040b257fbaa689c71b8f882af7c2e2b188bdca250033fbd23aec32a4ba0c5-d",
+      "module_rel": "tests",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/4ce040b257fbaa689c71b8f882af7c2e2b188bdca250033fbd23aec32a4ba0c5-d",
+      "source_bytes": 1033,
+      "source_sha256": "4ce040b257fbaa689c71b8f882af7c2e2b188bdca250033fbd23aec32a4ba0c5"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/a9/a9353a02bb02dd12774446d9f7f7cb043d5cb4f03b404c415d525fe9bbe7b1f3-d",
+      "module_rel": "tests",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/a9353a02bb02dd12774446d9f7f7cb043d5cb4f03b404c415d525fe9bbe7b1f3-d",
+      "source_bytes": 665,
+      "source_sha256": "a9353a02bb02dd12774446d9f7f7cb043d5cb4f03b404c415d525fe9bbe7b1f3"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../.cache/go-build/85/85dfc452073966ee0981a89f00c38a3ef9279b8842f0538416d76975af264f7a-d",
+      "module_rel": "tests",
+      "repo": "etcd",
+      "retained_source": "build-cache-source/etcd/85dfc452073966ee0981a89f00c38a3ef9279b8842f0538416d76975af264f7a-d",
+      "source_bytes": 1239,
+      "source_sha256": "85dfc452073966ee0981a89f00c38a3ef9279b8842f0538416d76975af264f7a"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/10/104401e6f2ec8fcc91bde1a713ab5d7f0fb73dff96857c509b6eecea0d98ac1f-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/104401e6f2ec8fcc91bde1a713ab5d7f0fb73dff96857c509b6eecea0d98ac1f-d",
+      "source_bytes": 1573,
+      "source_sha256": "104401e6f2ec8fcc91bde1a713ab5d7f0fb73dff96857c509b6eecea0d98ac1f"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/ff/ff8beae8bcf53fe93a9e2f13c4e5a12131763492c6853b6bcb2290238da1bb12-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/ff8beae8bcf53fe93a9e2f13c4e5a12131763492c6853b6bcb2290238da1bb12-d",
+      "source_bytes": 689,
+      "source_sha256": "ff8beae8bcf53fe93a9e2f13c4e5a12131763492c6853b6bcb2290238da1bb12"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/21/21eca88f47b68eb51de7a60f843587de1372d5393f40dc1cd957a0941dafa6fb-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/21eca88f47b68eb51de7a60f843587de1372d5393f40dc1cd957a0941dafa6fb-d",
+      "source_bytes": 708,
+      "source_sha256": "21eca88f47b68eb51de7a60f843587de1372d5393f40dc1cd957a0941dafa6fb"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/c9/c9f2be09d4678e64059c7ff347f30fb74422814511df5b1f3dbadf11030053b2-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/c9f2be09d4678e64059c7ff347f30fb74422814511df5b1f3dbadf11030053b2-d",
+      "source_bytes": 1478,
+      "source_sha256": "c9f2be09d4678e64059c7ff347f30fb74422814511df5b1f3dbadf11030053b2"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/1e/1e6a5794e039c75d324909b2765ff0294652a0b13341c9f0bc9539518d06c806-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/1e6a5794e039c75d324909b2765ff0294652a0b13341c9f0bc9539518d06c806-d",
+      "source_bytes": 719,
+      "source_sha256": "1e6a5794e039c75d324909b2765ff0294652a0b13341c9f0bc9539518d06c806"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/eb/eb9a0174c389c6bb9cb267f1bbbc396d0e287b5a2d0dcbcdeb569047f66f8ab8-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/eb9a0174c389c6bb9cb267f1bbbc396d0e287b5a2d0dcbcdeb569047f66f8ab8-d",
+      "source_bytes": 679,
+      "source_sha256": "eb9a0174c389c6bb9cb267f1bbbc396d0e287b5a2d0dcbcdeb569047f66f8ab8"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/ec/ec8ee3a35eb8aecfb4ba03fe34c070314ec2cad5f6b0d2165990d9ed2e646195-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/ec8ee3a35eb8aecfb4ba03fe34c070314ec2cad5f6b0d2165990d9ed2e646195-d",
+      "source_bytes": 645,
+      "source_sha256": "ec8ee3a35eb8aecfb4ba03fe34c070314ec2cad5f6b0d2165990d9ed2e646195"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/67/6738a81a203bc8b0ba6f39a5bbff7e8d94469748d547d619b1f3659a90b89f4d-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/6738a81a203bc8b0ba6f39a5bbff7e8d94469748d547d619b1f3659a90b89f4d-d",
+      "source_bytes": 625,
+      "source_sha256": "6738a81a203bc8b0ba6f39a5bbff7e8d94469748d547d619b1f3659a90b89f4d"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/1b/1b80cced3a2cda6b8c14af5082ebe872e685ea9488b2405c24dde6f1328aeab6-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/1b80cced3a2cda6b8c14af5082ebe872e685ea9488b2405c24dde6f1328aeab6-d",
+      "source_bytes": 801,
+      "source_sha256": "1b80cced3a2cda6b8c14af5082ebe872e685ea9488b2405c24dde6f1328aeab6"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/a3/a31cff07761b1de17174ac5ce763c5aeac2bd51d6145b4fa7dab2496d7da5efd-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/a31cff07761b1de17174ac5ce763c5aeac2bd51d6145b4fa7dab2496d7da5efd-d",
+      "source_bytes": 693,
+      "source_sha256": "a31cff07761b1de17174ac5ce763c5aeac2bd51d6145b4fa7dab2496d7da5efd"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/b8/b8954a011eb6ce035836064ea79faeb98823ddbb6c269b7d20f27d077293ce99-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/b8954a011eb6ce035836064ea79faeb98823ddbb6c269b7d20f27d077293ce99-d",
+      "source_bytes": 749,
+      "source_sha256": "b8954a011eb6ce035836064ea79faeb98823ddbb6c269b7d20f27d077293ce99"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/e8/e8f1b1652813c9fcc137685b45b1d5179aebe989d2dcc2674aaa0c4891863855-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/e8f1b1652813c9fcc137685b45b1d5179aebe989d2dcc2674aaa0c4891863855-d",
+      "source_bytes": 639,
+      "source_sha256": "e8f1b1652813c9fcc137685b45b1d5179aebe989d2dcc2674aaa0c4891863855"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/c5/c530e0e041079be983a1d83c36cf174f363f51fe74d88177101a20a428b64b61-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/c530e0e041079be983a1d83c36cf174f363f51fe74d88177101a20a428b64b61-d",
+      "source_bytes": 685,
+      "source_sha256": "c530e0e041079be983a1d83c36cf174f363f51fe74d88177101a20a428b64b61"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/f6/f69198493c751c7ca59c202d182da679009ac6f04143e7c066012546e6a5e611-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/f69198493c751c7ca59c202d182da679009ac6f04143e7c066012546e6a5e611-d",
+      "source_bytes": 651,
+      "source_sha256": "f69198493c751c7ca59c202d182da679009ac6f04143e7c066012546e6a5e611"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/80/80fd8f2a9f867222ffc48dd49a760a9b4b62d4f1089cf89f85db02ff2a549689-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/80fd8f2a9f867222ffc48dd49a760a9b4b62d4f1089cf89f85db02ff2a549689-d",
+      "source_bytes": 728,
+      "source_sha256": "80fd8f2a9f867222ffc48dd49a760a9b4b62d4f1089cf89f85db02ff2a549689"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/cf/cfb79d8750c7c4be117e32b706917282893c68ae00eaceeab4ac93b5f1fcb07d-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/cfb79d8750c7c4be117e32b706917282893c68ae00eaceeab4ac93b5f1fcb07d-d",
+      "source_bytes": 659,
+      "source_sha256": "cfb79d8750c7c4be117e32b706917282893c68ae00eaceeab4ac93b5f1fcb07d"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/7d/7dd9536169bce8babd63aef601d06b3b6c9674f1ecc5bbf58db7632990f35c43-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/7dd9536169bce8babd63aef601d06b3b6c9674f1ecc5bbf58db7632990f35c43-d",
+      "source_bytes": 725,
+      "source_sha256": "7dd9536169bce8babd63aef601d06b3b6c9674f1ecc5bbf58db7632990f35c43"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/ea/ead427980f6865deb20acdc18d9233a54d7178b29636168fc6b1bf34de3a86d3-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/ead427980f6865deb20acdc18d9233a54d7178b29636168fc6b1bf34de3a86d3-d",
+      "source_bytes": 699,
+      "source_sha256": "ead427980f6865deb20acdc18d9233a54d7178b29636168fc6b1bf34de3a86d3"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/db/db4bbc7436d118879a888b90b86016c04c69d9969c53a1848bb5235c73c5c892-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/db4bbc7436d118879a888b90b86016c04c69d9969c53a1848bb5235c73c5c892-d",
+      "source_bytes": 861,
+      "source_sha256": "db4bbc7436d118879a888b90b86016c04c69d9969c53a1848bb5235c73c5c892"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/74/74c089d4690b8238b068522825194f362b66dbf544039b3b875ca49af7153170-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/74c089d4690b8238b068522825194f362b66dbf544039b3b875ca49af7153170-d",
+      "source_bytes": 985,
+      "source_sha256": "74c089d4690b8238b068522825194f362b66dbf544039b3b875ca49af7153170"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/93/93f8fcab8d3ca2741e5e949052f172f674c615d003191d11d1518e0a6473e475-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/93f8fcab8d3ca2741e5e949052f172f674c615d003191d11d1518e0a6473e475-d",
+      "source_bytes": 755,
+      "source_sha256": "93f8fcab8d3ca2741e5e949052f172f674c615d003191d11d1518e0a6473e475"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/c5/c5796afa9ddbf4000108fb45a7191e1ccc766aca9bab895f9715002a3eaae4aa-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/c5796afa9ddbf4000108fb45a7191e1ccc766aca9bab895f9715002a3eaae4aa-d",
+      "source_bytes": 655,
+      "source_sha256": "c5796afa9ddbf4000108fb45a7191e1ccc766aca9bab895f9715002a3eaae4aa"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/0e/0eb04055dbfa0bf8551544f4d55bf54ad978dca44d07f769b62861775078e3ba-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/0eb04055dbfa0bf8551544f4d55bf54ad978dca44d07f769b62861775078e3ba-d",
+      "source_bytes": 639,
+      "source_sha256": "0eb04055dbfa0bf8551544f4d55bf54ad978dca44d07f769b62861775078e3ba"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/c2/c29484147892771c348b4fc90da7bce92a254ff358b21c3728d9b59e825d25c3-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/c29484147892771c348b4fc90da7bce92a254ff358b21c3728d9b59e825d25c3-d",
+      "source_bytes": 643,
+      "source_sha256": "c29484147892771c348b4fc90da7bce92a254ff358b21c3728d9b59e825d25c3"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/c2/c25b181654f375cd9b6a51f92eb7c87f8e0a56edd602e23019251bd66a8f0a89-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/c25b181654f375cd9b6a51f92eb7c87f8e0a56edd602e23019251bd66a8f0a89-d",
+      "source_bytes": 3844,
+      "source_sha256": "c25b181654f375cd9b6a51f92eb7c87f8e0a56edd602e23019251bd66a8f0a89"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/13/136eb4909ffbba7e9df71837a83584ff6c0aeaca7445d6a1cf1f68f19e7fa9f8-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/136eb4909ffbba7e9df71837a83584ff6c0aeaca7445d6a1cf1f68f19e7fa9f8-d",
+      "source_bytes": 673,
+      "source_sha256": "136eb4909ffbba7e9df71837a83584ff6c0aeaca7445d6a1cf1f68f19e7fa9f8"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/cc/cc7335ce2853ab628d902977f6a05c83d5fe78f3f303e148d0ffaba2970b0822-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/cc7335ce2853ab628d902977f6a05c83d5fe78f3f303e148d0ffaba2970b0822-d",
+      "source_bytes": 641,
+      "source_sha256": "cc7335ce2853ab628d902977f6a05c83d5fe78f3f303e148d0ffaba2970b0822"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/81/81412046bd6e579d18e91ca02547106fca36fc3c1550fa6c01c5463561b50cc8-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/81412046bd6e579d18e91ca02547106fca36fc3c1550fa6c01c5463561b50cc8-d",
+      "source_bytes": 619,
+      "source_sha256": "81412046bd6e579d18e91ca02547106fca36fc3c1550fa6c01c5463561b50cc8"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/43/436bc6cf15ad620c9d3009a988b92683f1fd7d9507c6a7b5e6f6276dc7d357c2-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/436bc6cf15ad620c9d3009a988b92683f1fd7d9507c6a7b5e6f6276dc7d357c2-d",
+      "source_bytes": 707,
+      "source_sha256": "436bc6cf15ad620c9d3009a988b92683f1fd7d9507c6a7b5e6f6276dc7d357c2"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/af/af0e4e8930d44f045888375506f7786da5db933f5d0a43b163812f9933380140-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/af0e4e8930d44f045888375506f7786da5db933f5d0a43b163812f9933380140-d",
+      "source_bytes": 641,
+      "source_sha256": "af0e4e8930d44f045888375506f7786da5db933f5d0a43b163812f9933380140"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/85/855cd121fe3c55194df452e467c2b2581e6fe6ab23a355122665607f60268f20-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/855cd121fe3c55194df452e467c2b2581e6fe6ab23a355122665607f60268f20-d",
+      "source_bytes": 677,
+      "source_sha256": "855cd121fe3c55194df452e467c2b2581e6fe6ab23a355122665607f60268f20"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/64/642b54b29e7225429934f455dd4130b538c2f4cadabc24ac60489a8399848685-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/642b54b29e7225429934f455dd4130b538c2f4cadabc24ac60489a8399848685-d",
+      "source_bytes": 857,
+      "source_sha256": "642b54b29e7225429934f455dd4130b538c2f4cadabc24ac60489a8399848685"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/07/078171e053b02bc771172f7b41a00a0ec8c2d8de757aa71ac260f685e41b8f2a-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/078171e053b02bc771172f7b41a00a0ec8c2d8de757aa71ac260f685e41b8f2a-d",
+      "source_bytes": 681,
+      "source_sha256": "078171e053b02bc771172f7b41a00a0ec8c2d8de757aa71ac260f685e41b8f2a"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/fe/fed80490f4862828735ec5582889ecb328cb699987d24ad3bfb1b22e859c91ce-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/fed80490f4862828735ec5582889ecb328cb699987d24ad3bfb1b22e859c91ce-d",
+      "source_bytes": 697,
+      "source_sha256": "fed80490f4862828735ec5582889ecb328cb699987d24ad3bfb1b22e859c91ce"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/6a/6ae5fc971315ce3f29fdffb8f2867719be10e9bc8e52edc066176a9c9fd34b47-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/6ae5fc971315ce3f29fdffb8f2867719be10e9bc8e52edc066176a9c9fd34b47-d",
+      "source_bytes": 810,
+      "source_sha256": "6ae5fc971315ce3f29fdffb8f2867719be10e9bc8e52edc066176a9c9fd34b47"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/fb/fb4dbf33fbe3299919df64748b02a4aeed1f346b9542868b03186f0b77fc1915-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/fb4dbf33fbe3299919df64748b02a4aeed1f346b9542868b03186f0b77fc1915-d",
+      "source_bytes": 1178,
+      "source_sha256": "fb4dbf33fbe3299919df64748b02a4aeed1f346b9542868b03186f0b77fc1915"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/f4/f41dea6f5371903be9cad2da2aa8001815c3bf1e94e73c33f5d1fa104fd43f3b-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/f41dea6f5371903be9cad2da2aa8001815c3bf1e94e73c33f5d1fa104fd43f3b-d",
+      "source_bytes": 643,
+      "source_sha256": "f41dea6f5371903be9cad2da2aa8001815c3bf1e94e73c33f5d1fa104fd43f3b"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/38/3814c6944733ac397bcda85a5a5aee618a87c42538c92451c5149aeec2ba3d31-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/3814c6944733ac397bcda85a5a5aee618a87c42538c92451c5149aeec2ba3d31-d",
+      "source_bytes": 697,
+      "source_sha256": "3814c6944733ac397bcda85a5a5aee618a87c42538c92451c5149aeec2ba3d31"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/d6/d66553d613210e653ed5ea2f1c37953953119209218aead78eea3c1c576e99c3-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/d66553d613210e653ed5ea2f1c37953953119209218aead78eea3c1c576e99c3-d",
+      "source_bytes": 639,
+      "source_sha256": "d66553d613210e653ed5ea2f1c37953953119209218aead78eea3c1c576e99c3"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/ce/ce46a9851fb0b5ba9c7bdec75405a23ae446234f321bc2b8a292a77257486752-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/ce46a9851fb0b5ba9c7bdec75405a23ae446234f321bc2b8a292a77257486752-d",
+      "source_bytes": 665,
+      "source_sha256": "ce46a9851fb0b5ba9c7bdec75405a23ae446234f321bc2b8a292a77257486752"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/45/45b747d06c64a7a45885f434b8e5fca72626cf5688cf8dfa44862b9579d7d743-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/45b747d06c64a7a45885f434b8e5fca72626cf5688cf8dfa44862b9579d7d743-d",
+      "source_bytes": 727,
+      "source_sha256": "45b747d06c64a7a45885f434b8e5fca72626cf5688cf8dfa44862b9579d7d743"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/42/429571eb2f2993e11f2009a715ff83b5d7f81615e289ec78c06dc65cd7db4830-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/429571eb2f2993e11f2009a715ff83b5d7f81615e289ec78c06dc65cd7db4830-d",
+      "source_bytes": 639,
+      "source_sha256": "429571eb2f2993e11f2009a715ff83b5d7f81615e289ec78c06dc65cd7db4830"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/c0/c0cd71daf844dd8824ff681ff9518384d1bae7fe88a07cd35b120a17e4046a83-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/c0cd71daf844dd8824ff681ff9518384d1bae7fe88a07cd35b120a17e4046a83-d",
+      "source_bytes": 670,
+      "source_sha256": "c0cd71daf844dd8824ff681ff9518384d1bae7fe88a07cd35b120a17e4046a83"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/42/42cbf71d16e153a3d1b30666a9b60a7839bac954629e91e618704d651b5decc8-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/42cbf71d16e153a3d1b30666a9b60a7839bac954629e91e618704d651b5decc8-d",
+      "source_bytes": 691,
+      "source_sha256": "42cbf71d16e153a3d1b30666a9b60a7839bac954629e91e618704d651b5decc8"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/b9/b97dced6f54400d99ec708b1d053aa57232dd6eccdcd56a72aabfaa6321a44b2-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/b97dced6f54400d99ec708b1d053aa57232dd6eccdcd56a72aabfaa6321a44b2-d",
+      "source_bytes": 682,
+      "source_sha256": "b97dced6f54400d99ec708b1d053aa57232dd6eccdcd56a72aabfaa6321a44b2"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/00/00ff24dd40cd5f004f996139b081edfae89770021cfe766f2d36b896cdcb9752-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/00ff24dd40cd5f004f996139b081edfae89770021cfe766f2d36b896cdcb9752-d",
+      "source_bytes": 736,
+      "source_sha256": "00ff24dd40cd5f004f996139b081edfae89770021cfe766f2d36b896cdcb9752"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/ab/ab3680bc61b3d42078cc21fe33370c5351f6ff2631cf69fdfd3455d3c6c7a8cd-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/ab3680bc61b3d42078cc21fe33370c5351f6ff2631cf69fdfd3455d3c6c7a8cd-d",
+      "source_bytes": 730,
+      "source_sha256": "ab3680bc61b3d42078cc21fe33370c5351f6ff2631cf69fdfd3455d3c6c7a8cd"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/13/135301d025267bdc44fb248e7ad3904b132c0248fd5cff6e3f8424e7b25701a4-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/135301d025267bdc44fb248e7ad3904b132c0248fd5cff6e3f8424e7b25701a4-d",
+      "source_bytes": 746,
+      "source_sha256": "135301d025267bdc44fb248e7ad3904b132c0248fd5cff6e3f8424e7b25701a4"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/32/323fbf8d8167735a0885f3633d9bd9a2bc26e4b51266304568cf9257dbf44140-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/323fbf8d8167735a0885f3633d9bd9a2bc26e4b51266304568cf9257dbf44140-d",
+      "source_bytes": 675,
+      "source_sha256": "323fbf8d8167735a0885f3633d9bd9a2bc26e4b51266304568cf9257dbf44140"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/b1/b1bffaf8d1e3911ad21ca0b637735e23ae4a63a089454ebf8ea8ecb1d3462143-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/b1bffaf8d1e3911ad21ca0b637735e23ae4a63a089454ebf8ea8ecb1d3462143-d",
+      "source_bytes": 736,
+      "source_sha256": "b1bffaf8d1e3911ad21ca0b637735e23ae4a63a089454ebf8ea8ecb1d3462143"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/cb/cb32f6cff00909ac8c1e7c11e422e9037cf2dbf27d861c838417cb27c4ac1f02-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/cb32f6cff00909ac8c1e7c11e422e9037cf2dbf27d861c838417cb27c4ac1f02-d",
+      "source_bytes": 645,
+      "source_sha256": "cb32f6cff00909ac8c1e7c11e422e9037cf2dbf27d861c838417cb27c4ac1f02"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/e8/e8703286fe55c3d08152a428434585c2f0d5fabdfd2868f82316f1ac6c1671ef-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/e8703286fe55c3d08152a428434585c2f0d5fabdfd2868f82316f1ac6c1671ef-d",
+      "source_bytes": 1053,
+      "source_sha256": "e8703286fe55c3d08152a428434585c2f0d5fabdfd2868f82316f1ac6c1671ef"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/00/006e228b83d869e5891db1667b76413a6d8ffda52fe74db1387c4274dd0567c0-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/006e228b83d869e5891db1667b76413a6d8ffda52fe74db1387c4274dd0567c0-d",
+      "source_bytes": 692,
+      "source_sha256": "006e228b83d869e5891db1667b76413a6d8ffda52fe74db1387c4274dd0567c0"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/aa/aa288edc70a3e7147daef24e35b7016a8c921a96da975e855e6f6212bb15c235-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/aa288edc70a3e7147daef24e35b7016a8c921a96da975e855e6f6212bb15c235-d",
+      "source_bytes": 673,
+      "source_sha256": "aa288edc70a3e7147daef24e35b7016a8c921a96da975e855e6f6212bb15c235"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/11/1187996e84f4f1f4b4d387d0c7a918dcdc5b8656d6fe18cd658a3610f8971b07-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/1187996e84f4f1f4b4d387d0c7a918dcdc5b8656d6fe18cd658a3610f8971b07-d",
+      "source_bytes": 712,
+      "source_sha256": "1187996e84f4f1f4b4d387d0c7a918dcdc5b8656d6fe18cd658a3610f8971b07"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/cd/cd679b7883d169e196859ae83c8533cda87a64e0f89f999a97306921bc0436a5-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/cd679b7883d169e196859ae83c8533cda87a64e0f89f999a97306921bc0436a5-d",
+      "source_bytes": 645,
+      "source_sha256": "cd679b7883d169e196859ae83c8533cda87a64e0f89f999a97306921bc0436a5"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/f8/f8922705648f73e7fe7a0ff2346acaf3b39d583e0a78fc6797c60052d150252b-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/f8922705648f73e7fe7a0ff2346acaf3b39d583e0a78fc6797c60052d150252b-d",
+      "source_bytes": 639,
+      "source_sha256": "f8922705648f73e7fe7a0ff2346acaf3b39d583e0a78fc6797c60052d150252b"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/a3/a36b828b252402be462ae92a1e76b0487730c22b86f108d6fbaafb8260e1dbe6-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/a36b828b252402be462ae92a1e76b0487730c22b86f108d6fbaafb8260e1dbe6-d",
+      "source_bytes": 637,
+      "source_sha256": "a36b828b252402be462ae92a1e76b0487730c22b86f108d6fbaafb8260e1dbe6"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/17/177d10a8625160f5adf20f7c4fce180177ae54ab96273adfe3ed70c1ddebf475-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/177d10a8625160f5adf20f7c4fce180177ae54ab96273adfe3ed70c1ddebf475-d",
+      "source_bytes": 697,
+      "source_sha256": "177d10a8625160f5adf20f7c4fce180177ae54ab96273adfe3ed70c1ddebf475"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/52/52ef8b587e1b4120248367c8b3af4cfc47c210f59b45819940c527bf8f6fa345-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/52ef8b587e1b4120248367c8b3af4cfc47c210f59b45819940c527bf8f6fa345-d",
+      "source_bytes": 649,
+      "source_sha256": "52ef8b587e1b4120248367c8b3af4cfc47c210f59b45819940c527bf8f6fa345"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/93/93bb78e0a92f0a17230b89ac261896c00e7e7b5960d21af9a905af63e34fec0e-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/93bb78e0a92f0a17230b89ac261896c00e7e7b5960d21af9a905af63e34fec0e-d",
+      "source_bytes": 1143,
+      "source_sha256": "93bb78e0a92f0a17230b89ac261896c00e7e7b5960d21af9a905af63e34fec0e"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/da/da886ebe4b52c9a40a8b0f9b17ece242a1bf5bd1aba34d00a41e9b06fb139daa-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/da886ebe4b52c9a40a8b0f9b17ece242a1bf5bd1aba34d00a41e9b06fb139daa-d",
+      "source_bytes": 657,
+      "source_sha256": "da886ebe4b52c9a40a8b0f9b17ece242a1bf5bd1aba34d00a41e9b06fb139daa"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/2d/2d17f8cb098938c62dd6307f0d0203e4e45a82b1565baf51d0ba0357bffbdb15-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/2d17f8cb098938c62dd6307f0d0203e4e45a82b1565baf51d0ba0357bffbdb15-d",
+      "source_bytes": 645,
+      "source_sha256": "2d17f8cb098938c62dd6307f0d0203e4e45a82b1565baf51d0ba0357bffbdb15"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/74/741a126cd02563164455fe3cf90eab01736a026c2c751cc1d1bc5e3102e007fa-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/741a126cd02563164455fe3cf90eab01736a026c2c751cc1d1bc5e3102e007fa-d",
+      "source_bytes": 677,
+      "source_sha256": "741a126cd02563164455fe3cf90eab01736a026c2c751cc1d1bc5e3102e007fa"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/c5/c522b1861df8bd3680a1a94bbe40f4bcd3c62f519c44d8eb33a9ce989b956286-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/c522b1861df8bd3680a1a94bbe40f4bcd3c62f519c44d8eb33a9ce989b956286-d",
+      "source_bytes": 643,
+      "source_sha256": "c522b1861df8bd3680a1a94bbe40f4bcd3c62f519c44d8eb33a9ce989b956286"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/d9/d9935447afef0a65560fce8110299da6fc6af75eb7afc45341c6db7cc6103387-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/d9935447afef0a65560fce8110299da6fc6af75eb7afc45341c6db7cc6103387-d",
+      "source_bytes": 785,
+      "source_sha256": "d9935447afef0a65560fce8110299da6fc6af75eb7afc45341c6db7cc6103387"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/f2/f2d13f28474107a3fca4f0a4a546d69a4cd6f786038ddab502ad970357f88216-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/f2d13f28474107a3fca4f0a4a546d69a4cd6f786038ddab502ad970357f88216-d",
+      "source_bytes": 835,
+      "source_sha256": "f2d13f28474107a3fca4f0a4a546d69a4cd6f786038ddab502ad970357f88216"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/cf/cfc7807b5b0caf5073e72def7b49c9270dc82d1eae5812444cd88781bdf34c86-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/cfc7807b5b0caf5073e72def7b49c9270dc82d1eae5812444cd88781bdf34c86-d",
+      "source_bytes": 851,
+      "source_sha256": "cfc7807b5b0caf5073e72def7b49c9270dc82d1eae5812444cd88781bdf34c86"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/1a/1a4f5956ac7d94ebf1f526134f1477fd225153095fa90727efefc0fa7f0a3d8e-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/1a4f5956ac7d94ebf1f526134f1477fd225153095fa90727efefc0fa7f0a3d8e-d",
+      "source_bytes": 713,
+      "source_sha256": "1a4f5956ac7d94ebf1f526134f1477fd225153095fa90727efefc0fa7f0a3d8e"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/85/85315e62872d69a8392448fa63fcd1ed0aa7db1472be7c82f903b25cb5eaffd6-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/85315e62872d69a8392448fa63fcd1ed0aa7db1472be7c82f903b25cb5eaffd6-d",
+      "source_bytes": 911,
+      "source_sha256": "85315e62872d69a8392448fa63fcd1ed0aa7db1472be7c82f903b25cb5eaffd6"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/58/588135dd03e486b658b86c1cec90f497ef51a2a61ef34640a07f7e3f54006705-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/588135dd03e486b658b86c1cec90f497ef51a2a61ef34640a07f7e3f54006705-d",
+      "source_bytes": 928,
+      "source_sha256": "588135dd03e486b658b86c1cec90f497ef51a2a61ef34640a07f7e3f54006705"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/7f/7fd9d941ad200945bdbed6923686924d4026a822d733957f1d55d23a0dfe7452-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/7fd9d941ad200945bdbed6923686924d4026a822d733957f1d55d23a0dfe7452-d",
+      "source_bytes": 719,
+      "source_sha256": "7fd9d941ad200945bdbed6923686924d4026a822d733957f1d55d23a0dfe7452"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/f2/f293a858806a102ad9b4faf7ae5d363a989f692317dd3f3faae1b16db1db7534-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/f293a858806a102ad9b4faf7ae5d363a989f692317dd3f3faae1b16db1db7534-d",
+      "source_bytes": 697,
+      "source_sha256": "f293a858806a102ad9b4faf7ae5d363a989f692317dd3f3faae1b16db1db7534"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/50/506600d6340990f93eac91c5a5bc5cb8921bbca159d749d10a30697ae24a5107-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/506600d6340990f93eac91c5a5bc5cb8921bbca159d749d10a30697ae24a5107-d",
+      "source_bytes": 697,
+      "source_sha256": "506600d6340990f93eac91c5a5bc5cb8921bbca159d749d10a30697ae24a5107"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/09/09abf32323162979062788e93572b97b64f620e2519c9ec5525469cb63ab4b37-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/09abf32323162979062788e93572b97b64f620e2519c9ec5525469cb63ab4b37-d",
+      "source_bytes": 721,
+      "source_sha256": "09abf32323162979062788e93572b97b64f620e2519c9ec5525469cb63ab4b37"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/cf/cf23a5e739dc73665eed7b6536656885957134b044bcf194d7e3cd44db585ccb-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/cf23a5e739dc73665eed7b6536656885957134b044bcf194d7e3cd44db585ccb-d",
+      "source_bytes": 657,
+      "source_sha256": "cf23a5e739dc73665eed7b6536656885957134b044bcf194d7e3cd44db585ccb"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/4b/4b0d6b899837a384dd4d77a024d36ce61531127a41e26ac86c64a6c3f4a31c34-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/4b0d6b899837a384dd4d77a024d36ce61531127a41e26ac86c64a6c3f4a31c34-d",
+      "source_bytes": 643,
+      "source_sha256": "4b0d6b899837a384dd4d77a024d36ce61531127a41e26ac86c64a6c3f4a31c34"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/07/07d2bcd3f5dc1e95edc85f67286d7e6711106c67a61e9c0079aaaff881edc796-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/07d2bcd3f5dc1e95edc85f67286d7e6711106c67a61e9c0079aaaff881edc796-d",
+      "source_bytes": 782,
+      "source_sha256": "07d2bcd3f5dc1e95edc85f67286d7e6711106c67a61e9c0079aaaff881edc796"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/50/50679466b40471120ee24e290ea2fb6a2302e5cd57d785c8cf238d9deaa3149a-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/50679466b40471120ee24e290ea2fb6a2302e5cd57d785c8cf238d9deaa3149a-d",
+      "source_bytes": 709,
+      "source_sha256": "50679466b40471120ee24e290ea2fb6a2302e5cd57d785c8cf238d9deaa3149a"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/bf/bf2a8188464899d2247ca421f2b17bf0d267db22a4cbc2adad5ae69f3fe0ee08-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/bf2a8188464899d2247ca421f2b17bf0d267db22a4cbc2adad5ae69f3fe0ee08-d",
+      "source_bytes": 855,
+      "source_sha256": "bf2a8188464899d2247ca421f2b17bf0d267db22a4cbc2adad5ae69f3fe0ee08"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/9d/9d77ada68ada04bebe8e46278e95fe485870a23e50fd5aa386698ddde8a0d6c8-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/9d77ada68ada04bebe8e46278e95fe485870a23e50fd5aa386698ddde8a0d6c8-d",
+      "source_bytes": 688,
+      "source_sha256": "9d77ada68ada04bebe8e46278e95fe485870a23e50fd5aa386698ddde8a0d6c8"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/93/933b57c37b76758a12993a630afca288f2e56c004aef5de43202cac99e505d05-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/933b57c37b76758a12993a630afca288f2e56c004aef5de43202cac99e505d05-d",
+      "source_bytes": 719,
+      "source_sha256": "933b57c37b76758a12993a630afca288f2e56c004aef5de43202cac99e505d05"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/06/06e06974ea8cf76f9d32f19ddb89f540a483d4f6a1366770ef49b5f36496bc2f-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/06e06974ea8cf76f9d32f19ddb89f540a483d4f6a1366770ef49b5f36496bc2f-d",
+      "source_bytes": 728,
+      "source_sha256": "06e06974ea8cf76f9d32f19ddb89f540a483d4f6a1366770ef49b5f36496bc2f"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/a4/a4068ad2a1fcd7d0ba977b4f0ff12c325ac86e3118e914dbec039b00f68a3fdb-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/a4068ad2a1fcd7d0ba977b4f0ff12c325ac86e3118e914dbec039b00f68a3fdb-d",
+      "source_bytes": 1054,
+      "source_sha256": "a4068ad2a1fcd7d0ba977b4f0ff12c325ac86e3118e914dbec039b00f68a3fdb"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/c2/c2e9f3321df14ceef09c4923fa7036525babbd815e88a556f148653a0733db03-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/c2e9f3321df14ceef09c4923fa7036525babbd815e88a556f148653a0733db03-d",
+      "source_bytes": 736,
+      "source_sha256": "c2e9f3321df14ceef09c4923fa7036525babbd815e88a556f148653a0733db03"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/48/48fe2c440848dd271d91592804ba721804707453fc6f30dba484ca06a446dcc3-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/48fe2c440848dd271d91592804ba721804707453fc6f30dba484ca06a446dcc3-d",
+      "source_bytes": 693,
+      "source_sha256": "48fe2c440848dd271d91592804ba721804707453fc6f30dba484ca06a446dcc3"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/c6/c6542a1947137a4e6d995baeb8ce6480ef0c50a1b2ed3e8e08bb5015338dfb0d-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/c6542a1947137a4e6d995baeb8ce6480ef0c50a1b2ed3e8e08bb5015338dfb0d-d",
+      "source_bytes": 703,
+      "source_sha256": "c6542a1947137a4e6d995baeb8ce6480ef0c50a1b2ed3e8e08bb5015338dfb0d"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/4b/4b07f63d5e54e2b364edad57203a5b4b427df9e597952b9d58ca2ce2d7c020bb-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/4b07f63d5e54e2b364edad57203a5b4b427df9e597952b9d58ca2ce2d7c020bb-d",
+      "source_bytes": 675,
+      "source_sha256": "4b07f63d5e54e2b364edad57203a5b4b427df9e597952b9d58ca2ce2d7c020bb"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/29/29b668af87fc184eca9471561899aa3bdd868c388b3c3988bccd3625a7bb18ce-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/29b668af87fc184eca9471561899aa3bdd868c388b3c3988bccd3625a7bb18ce-d",
+      "source_bytes": 700,
+      "source_sha256": "29b668af87fc184eca9471561899aa3bdd868c388b3c3988bccd3625a7bb18ce"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/50/505b5b89844320d6d987ba633e5cc36671c3db08f607d140b5997a31c6cea6e1-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/505b5b89844320d6d987ba633e5cc36671c3db08f607d140b5997a31c6cea6e1-d",
+      "source_bytes": 675,
+      "source_sha256": "505b5b89844320d6d987ba633e5cc36671c3db08f607d140b5997a31c6cea6e1"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/ae/aefe9d262d773bd5a1d0417e94abefcb987452a29ef331ec09ac723c5dcbef02-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/aefe9d262d773bd5a1d0417e94abefcb987452a29ef331ec09ac723c5dcbef02-d",
+      "source_bytes": 694,
+      "source_sha256": "aefe9d262d773bd5a1d0417e94abefcb987452a29ef331ec09ac723c5dcbef02"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/92/92fc78acf1dc52eb3728ffde743e6ea7b27947f1ecfa66923483f85ed03fc6a0-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/92fc78acf1dc52eb3728ffde743e6ea7b27947f1ecfa66923483f85ed03fc6a0-d",
+      "source_bytes": 681,
+      "source_sha256": "92fc78acf1dc52eb3728ffde743e6ea7b27947f1ecfa66923483f85ed03fc6a0"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/b4/b4a5a60f61bd2b87e97e00511cbb45518a51c4af695c94add00165448c171b63-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/b4a5a60f61bd2b87e97e00511cbb45518a51c4af695c94add00165448c171b63-d",
+      "source_bytes": 706,
+      "source_sha256": "b4a5a60f61bd2b87e97e00511cbb45518a51c4af695c94add00165448c171b63"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/f7/f73cb49e9284502dc08476afc2cec343efb19105895f18b4e2149df0ae384db7-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/f73cb49e9284502dc08476afc2cec343efb19105895f18b4e2149df0ae384db7-d",
+      "source_bytes": 1008,
+      "source_sha256": "f73cb49e9284502dc08476afc2cec343efb19105895f18b4e2149df0ae384db7"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/ba/bac27dae93ebe3b5b4f860d043b42a5a0b42ac956687b3e1f4c948455e0c4d1c-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/bac27dae93ebe3b5b4f860d043b42a5a0b42ac956687b3e1f4c948455e0c4d1c-d",
+      "source_bytes": 710,
+      "source_sha256": "bac27dae93ebe3b5b4f860d043b42a5a0b42ac956687b3e1f4c948455e0c4d1c"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/ac/acd8d9aa0460754104aceaadcf765be638bc5cbd34ef725cb91ac6de4722effc-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/acd8d9aa0460754104aceaadcf765be638bc5cbd34ef725cb91ac6de4722effc-d",
+      "source_bytes": 715,
+      "source_sha256": "acd8d9aa0460754104aceaadcf765be638bc5cbd34ef725cb91ac6de4722effc"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/ad/ad8ec2a522130f070d339dd0afd9aa321c8f2a0266cd75ef68ebffefda50d6e4-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/ad8ec2a522130f070d339dd0afd9aa321c8f2a0266cd75ef68ebffefda50d6e4-d",
+      "source_bytes": 675,
+      "source_sha256": "ad8ec2a522130f070d339dd0afd9aa321c8f2a0266cd75ef68ebffefda50d6e4"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/b6/b6e82846ffa8199ceb68b36dba5c9d2cbf0eb510daa66a5c2e41669ada196661-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/b6e82846ffa8199ceb68b36dba5c9d2cbf0eb510daa66a5c2e41669ada196661-d",
+      "source_bytes": 777,
+      "source_sha256": "b6e82846ffa8199ceb68b36dba5c9d2cbf0eb510daa66a5c2e41669ada196661"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/b3/b318f1802304706656e434cfdd769fe5b73e3fef33af9e48f355b5c02f5e72f7-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/b318f1802304706656e434cfdd769fe5b73e3fef33af9e48f355b5c02f5e72f7-d",
+      "source_bytes": 671,
+      "source_sha256": "b318f1802304706656e434cfdd769fe5b73e3fef33af9e48f355b5c02f5e72f7"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/fe/fed5b3fab16d7ff7f8d9539c673dc7df410a7dda4274862b7241e5ebcd6c114f-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/fed5b3fab16d7ff7f8d9539c673dc7df410a7dda4274862b7241e5ebcd6c114f-d",
+      "source_bytes": 767,
+      "source_sha256": "fed5b3fab16d7ff7f8d9539c673dc7df410a7dda4274862b7241e5ebcd6c114f"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/8b/8b83b9aeed4e64675b251cb59002cedd96be055544ff6a20a3e5f071e160ba01-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/8b83b9aeed4e64675b251cb59002cedd96be055544ff6a20a3e5f071e160ba01-d",
+      "source_bytes": 926,
+      "source_sha256": "8b83b9aeed4e64675b251cb59002cedd96be055544ff6a20a3e5f071e160ba01"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/3e/3e92db1c859abebb836354db8862b27c4658e0e1aeba67ef10aceab4c2b6a981-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/3e92db1c859abebb836354db8862b27c4658e0e1aeba67ef10aceab4c2b6a981-d",
+      "source_bytes": 667,
+      "source_sha256": "3e92db1c859abebb836354db8862b27c4658e0e1aeba67ef10aceab4c2b6a981"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/f8/f8c838aeeec57c8467520fc2afb45dcb1091347eb1774f33c98e30b617b42cd5-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/f8c838aeeec57c8467520fc2afb45dcb1091347eb1774f33c98e30b617b42cd5-d",
+      "source_bytes": 681,
+      "source_sha256": "f8c838aeeec57c8467520fc2afb45dcb1091347eb1774f33c98e30b617b42cd5"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/9e/9eedd06500c315dccf1a024fe698af2c07f4a4ab442e388bdbe6895af91f9ddb-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/9eedd06500c315dccf1a024fe698af2c07f4a4ab442e388bdbe6895af91f9ddb-d",
+      "source_bytes": 685,
+      "source_sha256": "9eedd06500c315dccf1a024fe698af2c07f4a4ab442e388bdbe6895af91f9ddb"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/89/89e88cf2775a894da69c73cce5d18650b25d96cb84ed46b5f16c050e90ab3948-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/89e88cf2775a894da69c73cce5d18650b25d96cb84ed46b5f16c050e90ab3948-d",
+      "source_bytes": 1068,
+      "source_sha256": "89e88cf2775a894da69c73cce5d18650b25d96cb84ed46b5f16c050e90ab3948"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/39/39b67c95274eeaaea1dbc4756069bf0f0ff62a2ddb3ec7866f8bdcd0f511441d-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/39b67c95274eeaaea1dbc4756069bf0f0ff62a2ddb3ec7866f8bdcd0f511441d-d",
+      "source_bytes": 669,
+      "source_sha256": "39b67c95274eeaaea1dbc4756069bf0f0ff62a2ddb3ec7866f8bdcd0f511441d"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/3a/3aa9657fbe498c89c1eb871a5a0d644588120b0cdfc5300084f01169a1215bd9-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/3aa9657fbe498c89c1eb871a5a0d644588120b0cdfc5300084f01169a1215bd9-d",
+      "source_bytes": 686,
+      "source_sha256": "3aa9657fbe498c89c1eb871a5a0d644588120b0cdfc5300084f01169a1215bd9"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/e8/e815fd7e00c844403ea88d368d5e88f4c2a116bd3e5cbef61e315657efbbed41-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/e815fd7e00c844403ea88d368d5e88f4c2a116bd3e5cbef61e315657efbbed41-d",
+      "source_bytes": 675,
+      "source_sha256": "e815fd7e00c844403ea88d368d5e88f4c2a116bd3e5cbef61e315657efbbed41"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/ed/ed887e4735bf793da3ee86bd12bfa32c6a9f4948759a15ed411b9e7a11c3bebd-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/ed887e4735bf793da3ee86bd12bfa32c6a9f4948759a15ed411b9e7a11c3bebd-d",
+      "source_bytes": 718,
+      "source_sha256": "ed887e4735bf793da3ee86bd12bfa32c6a9f4948759a15ed411b9e7a11c3bebd"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/70/702bd50a3100758846e132f13a733c0a796fb3e268d05e8c84b717f7717c6cd4-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/702bd50a3100758846e132f13a733c0a796fb3e268d05e8c84b717f7717c6cd4-d",
+      "source_bytes": 657,
+      "source_sha256": "702bd50a3100758846e132f13a733c0a796fb3e268d05e8c84b717f7717c6cd4"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/3d/3d2e95044bbdcc2a26b0bbd310a23ce57f047b4dd80173bcc4d330f2493c41e7-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/3d2e95044bbdcc2a26b0bbd310a23ce57f047b4dd80173bcc4d330f2493c41e7-d",
+      "source_bytes": 655,
+      "source_sha256": "3d2e95044bbdcc2a26b0bbd310a23ce57f047b4dd80173bcc4d330f2493c41e7"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/cc/cc1fc47227f7db1c6214b2caae7e6ca9bdd53353ca363d6aead3bfd7946188c5-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/cc1fc47227f7db1c6214b2caae7e6ca9bdd53353ca363d6aead3bfd7946188c5-d",
+      "source_bytes": 675,
+      "source_sha256": "cc1fc47227f7db1c6214b2caae7e6ca9bdd53353ca363d6aead3bfd7946188c5"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/cc/cc8470cc663dcc074b30886cb54c2df824e74689bf44a6848ec6958281e10997-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/cc8470cc663dcc074b30886cb54c2df824e74689bf44a6848ec6958281e10997-d",
+      "source_bytes": 767,
+      "source_sha256": "cc8470cc663dcc074b30886cb54c2df824e74689bf44a6848ec6958281e10997"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/7e/7ee2cb5d1b7ed6d1ddbc37e8dec97637deba96e2deaab3012859619c3495ad13-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/7ee2cb5d1b7ed6d1ddbc37e8dec97637deba96e2deaab3012859619c3495ad13-d",
+      "source_bytes": 667,
+      "source_sha256": "7ee2cb5d1b7ed6d1ddbc37e8dec97637deba96e2deaab3012859619c3495ad13"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/bd/bdf086b46302088045cd6317e7a938a96f379361563cee8b731cc16059bc3252-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/bdf086b46302088045cd6317e7a938a96f379361563cee8b731cc16059bc3252-d",
+      "source_bytes": 773,
+      "source_sha256": "bdf086b46302088045cd6317e7a938a96f379361563cee8b731cc16059bc3252"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/60/609e0af63968a98fd18c36ddafdd31cdb9ca53434a549a232bdfdc0edea15834-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/609e0af63968a98fd18c36ddafdd31cdb9ca53434a549a232bdfdc0edea15834-d",
+      "source_bytes": 665,
+      "source_sha256": "609e0af63968a98fd18c36ddafdd31cdb9ca53434a549a232bdfdc0edea15834"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/64/64631280f7f70f9d6964e090c08488416baaad327dfcacfd63f821128ca7c782-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/64631280f7f70f9d6964e090c08488416baaad327dfcacfd63f821128ca7c782-d",
+      "source_bytes": 1269,
+      "source_sha256": "64631280f7f70f9d6964e090c08488416baaad327dfcacfd63f821128ca7c782"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/72/7274fdde4c9ca5eccd6132e120eccd0ac67f489fe5c7ed86aa23eab66492a808-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/7274fdde4c9ca5eccd6132e120eccd0ac67f489fe5c7ed86aa23eab66492a808-d",
+      "source_bytes": 755,
+      "source_sha256": "7274fdde4c9ca5eccd6132e120eccd0ac67f489fe5c7ed86aa23eab66492a808"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/b5/b553ff6bd0112489e459b54ad4930e5e83744a588a0bfaf1c0df8bc40ef5ab70-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/b553ff6bd0112489e459b54ad4930e5e83744a588a0bfaf1c0df8bc40ef5ab70-d",
+      "source_bytes": 737,
+      "source_sha256": "b553ff6bd0112489e459b54ad4930e5e83744a588a0bfaf1c0df8bc40ef5ab70"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/06/061f4691689b9101c4e0240fddc445daf4fe8775a741c3d66e00e19abd62754f-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/061f4691689b9101c4e0240fddc445daf4fe8775a741c3d66e00e19abd62754f-d",
+      "source_bytes": 647,
+      "source_sha256": "061f4691689b9101c4e0240fddc445daf4fe8775a741c3d66e00e19abd62754f"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/e3/e3fcbcf2fc718beaec73aa47e5d62b65ac1e485f87184d555a5f9b3b6cd76bd6-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/e3fcbcf2fc718beaec73aa47e5d62b65ac1e485f87184d555a5f9b3b6cd76bd6-d",
+      "source_bytes": 707,
+      "source_sha256": "e3fcbcf2fc718beaec73aa47e5d62b65ac1e485f87184d555a5f9b3b6cd76bd6"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/d6/d6961fc37b33d5f5d2e9c170f88b0e85dd623efd9232a586177743b843849920-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/d6961fc37b33d5f5d2e9c170f88b0e85dd623efd9232a586177743b843849920-d",
+      "source_bytes": 677,
+      "source_sha256": "d6961fc37b33d5f5d2e9c170f88b0e85dd623efd9232a586177743b843849920"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/67/6771cab149f4427bd69bcfe12dba6466e46e3d7dabac1310f50465e353c9d4fc-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/6771cab149f4427bd69bcfe12dba6466e46e3d7dabac1310f50465e353c9d4fc-d",
+      "source_bytes": 740,
+      "source_sha256": "6771cab149f4427bd69bcfe12dba6466e46e3d7dabac1310f50465e353c9d4fc"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/61/61bb46b142b8f2c68e13e3b46a351e62369f251a9d2261577fbfd118affa374e-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/61bb46b142b8f2c68e13e3b46a351e62369f251a9d2261577fbfd118affa374e-d",
+      "source_bytes": 670,
+      "source_sha256": "61bb46b142b8f2c68e13e3b46a351e62369f251a9d2261577fbfd118affa374e"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/6b/6b9bd11b0c58bda3078049514a1b07fe538d1ac4568b33561e4222cc27704938-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/6b9bd11b0c58bda3078049514a1b07fe538d1ac4568b33561e4222cc27704938-d",
+      "source_bytes": 672,
+      "source_sha256": "6b9bd11b0c58bda3078049514a1b07fe538d1ac4568b33561e4222cc27704938"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/e0/e02ec5485d7f3db8c4b055ec5661ba092a78c08146f9b9d5f9891e407b09a9b0-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/e02ec5485d7f3db8c4b055ec5661ba092a78c08146f9b9d5f9891e407b09a9b0-d",
+      "source_bytes": 690,
+      "source_sha256": "e02ec5485d7f3db8c4b055ec5661ba092a78c08146f9b9d5f9891e407b09a9b0"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/72/72680146f41ae7f31bdf328b4c51f7242c499953fc3c155d85709f1fa575ec98-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/72680146f41ae7f31bdf328b4c51f7242c499953fc3c155d85709f1fa575ec98-d",
+      "source_bytes": 754,
+      "source_sha256": "72680146f41ae7f31bdf328b4c51f7242c499953fc3c155d85709f1fa575ec98"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/97/97f9c61510376c500e6e2c1d7e81202756be1a91740c4432093e0fe53cda452f-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/97f9c61510376c500e6e2c1d7e81202756be1a91740c4432093e0fe53cda452f-d",
+      "source_bytes": 791,
+      "source_sha256": "97f9c61510376c500e6e2c1d7e81202756be1a91740c4432093e0fe53cda452f"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/81/81fa11da4674760d42860e523eae1346b1112b51e5ee0cd09cb999c253b3868e-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/81fa11da4674760d42860e523eae1346b1112b51e5ee0cd09cb999c253b3868e-d",
+      "source_bytes": 696,
+      "source_sha256": "81fa11da4674760d42860e523eae1346b1112b51e5ee0cd09cb999c253b3868e"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/a0/a02205d4a93c932447b8031cf9b2d9a873de8ab27c1fa890c3bf4cd799776412-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/a02205d4a93c932447b8031cf9b2d9a873de8ab27c1fa890c3bf4cd799776412-d",
+      "source_bytes": 712,
+      "source_sha256": "a02205d4a93c932447b8031cf9b2d9a873de8ab27c1fa890c3bf4cd799776412"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/16/1682c20875d6177713327ca6655994d6cb2103ea908bfbe302936ee68b1bb4aa-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/1682c20875d6177713327ca6655994d6cb2103ea908bfbe302936ee68b1bb4aa-d",
+      "source_bytes": 623,
+      "source_sha256": "1682c20875d6177713327ca6655994d6cb2103ea908bfbe302936ee68b1bb4aa"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/23/23b8d65ad114b2c1e761015c8dc6df53f08b9256dfc560819c94a06a4dab7056-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/23b8d65ad114b2c1e761015c8dc6df53f08b9256dfc560819c94a06a4dab7056-d",
+      "source_bytes": 867,
+      "source_sha256": "23b8d65ad114b2c1e761015c8dc6df53f08b9256dfc560819c94a06a4dab7056"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/26/26689cf85a99dbe69b41d4179db26a1eda7388ac598175fb901d147e1c4260ca-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/26689cf85a99dbe69b41d4179db26a1eda7388ac598175fb901d147e1c4260ca-d",
+      "source_bytes": 1257,
+      "source_sha256": "26689cf85a99dbe69b41d4179db26a1eda7388ac598175fb901d147e1c4260ca"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/3c/3c1e977f3d6b356d3359327ac1b3b0188bfc71e773d9b5f64348e606009e0468-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/3c1e977f3d6b356d3359327ac1b3b0188bfc71e773d9b5f64348e606009e0468-d",
+      "source_bytes": 686,
+      "source_sha256": "3c1e977f3d6b356d3359327ac1b3b0188bfc71e773d9b5f64348e606009e0468"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/40/40d84932504ac3867aa150facc223ce1471a3692f0cf825e6f1b0baabec76c8f-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/40d84932504ac3867aa150facc223ce1471a3692f0cf825e6f1b0baabec76c8f-d",
+      "source_bytes": 641,
+      "source_sha256": "40d84932504ac3867aa150facc223ce1471a3692f0cf825e6f1b0baabec76c8f"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/96/969d1726126aeecce380420b43320fb15098292dee1e92036283d4b18cf717e2-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/969d1726126aeecce380420b43320fb15098292dee1e92036283d4b18cf717e2-d",
+      "source_bytes": 646,
+      "source_sha256": "969d1726126aeecce380420b43320fb15098292dee1e92036283d4b18cf717e2"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/26/26aa74f467d771ff1183d67a21d8cfa3c2cebcb5dd98a6993f75437955fa9a68-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/26aa74f467d771ff1183d67a21d8cfa3c2cebcb5dd98a6993f75437955fa9a68-d",
+      "source_bytes": 681,
+      "source_sha256": "26aa74f467d771ff1183d67a21d8cfa3c2cebcb5dd98a6993f75437955fa9a68"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/a7/a7a226f43b3c1a45f3897639cb4f39240ccb06e5c3aa83df4b2709185f656240-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/a7a226f43b3c1a45f3897639cb4f39240ccb06e5c3aa83df4b2709185f656240-d",
+      "source_bytes": 707,
+      "source_sha256": "a7a226f43b3c1a45f3897639cb4f39240ccb06e5c3aa83df4b2709185f656240"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/96/96e7bbfbb91c6e63c77bcb9d5d8dfc5e6a6638b621a5210c0c43c0860439992f-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/96e7bbfbb91c6e63c77bcb9d5d8dfc5e6a6638b621a5210c0c43c0860439992f-d",
+      "source_bytes": 661,
+      "source_sha256": "96e7bbfbb91c6e63c77bcb9d5d8dfc5e6a6638b621a5210c0c43c0860439992f"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/9b/9b3d8bdc0f9e683268f28b3178570e098811a96b009c37621ec9e368e041953a-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/9b3d8bdc0f9e683268f28b3178570e098811a96b009c37621ec9e368e041953a-d",
+      "source_bytes": 731,
+      "source_sha256": "9b3d8bdc0f9e683268f28b3178570e098811a96b009c37621ec9e368e041953a"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/ea/ead574911d2fd13176fb125e1a5cd607adca53b1c0d7f0819cc481480f0c900d-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/ead574911d2fd13176fb125e1a5cd607adca53b1c0d7f0819cc481480f0c900d-d",
+      "source_bytes": 655,
+      "source_sha256": "ead574911d2fd13176fb125e1a5cd607adca53b1c0d7f0819cc481480f0c900d"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/74/74d73ee4a06e6b9754951d7ff69a43bb73db8b854b8a46242b8e212e14dafc0f-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/74d73ee4a06e6b9754951d7ff69a43bb73db8b854b8a46242b8e212e14dafc0f-d",
+      "source_bytes": 681,
+      "source_sha256": "74d73ee4a06e6b9754951d7ff69a43bb73db8b854b8a46242b8e212e14dafc0f"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/f8/f8b767fb71204ae87799b37e7d0c44e4a6d65ea1a548afb7dd8e91f53f70104b-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/f8b767fb71204ae87799b37e7d0c44e4a6d65ea1a548afb7dd8e91f53f70104b-d",
+      "source_bytes": 692,
+      "source_sha256": "f8b767fb71204ae87799b37e7d0c44e4a6d65ea1a548afb7dd8e91f53f70104b"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/8e/8ea0a54a82b0272a1af25c36a2f82cba0c372cd8654cb010048e3160d66aff23-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/8ea0a54a82b0272a1af25c36a2f82cba0c372cd8654cb010048e3160d66aff23-d",
+      "source_bytes": 617,
+      "source_sha256": "8ea0a54a82b0272a1af25c36a2f82cba0c372cd8654cb010048e3160d66aff23"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/fb/fb70a152b07c10ef858167c3d227fddbc850851a505218a830cae1f26d78aef4-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/fb70a152b07c10ef858167c3d227fddbc850851a505218a830cae1f26d78aef4-d",
+      "source_bytes": 633,
+      "source_sha256": "fb70a152b07c10ef858167c3d227fddbc850851a505218a830cae1f26d78aef4"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/10/10885c133f6085f619540a1dfe388840fd8fd413dd2b2060e4f5c8a640658d34-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/10885c133f6085f619540a1dfe388840fd8fd413dd2b2060e4f5c8a640658d34-d",
+      "source_bytes": 632,
+      "source_sha256": "10885c133f6085f619540a1dfe388840fd8fd413dd2b2060e4f5c8a640658d34"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/30/30ee645ebc377713ff1db2e2e413a74d1b13d75ed0190d681887cdea8c8710fb-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/30ee645ebc377713ff1db2e2e413a74d1b13d75ed0190d681887cdea8c8710fb-d",
+      "source_bytes": 683,
+      "source_sha256": "30ee645ebc377713ff1db2e2e413a74d1b13d75ed0190d681887cdea8c8710fb"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/b1/b19d72bc0174d777b3f12a7db41166675ef76cba7dd41ef92fee13139b737e96-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/b19d72bc0174d777b3f12a7db41166675ef76cba7dd41ef92fee13139b737e96-d",
+      "source_bytes": 837,
+      "source_sha256": "b19d72bc0174d777b3f12a7db41166675ef76cba7dd41ef92fee13139b737e96"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/cc/ccedcfd34069d38968ee825d29140a6f46483f4b90219590dcebc1b9a6d09f85-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/ccedcfd34069d38968ee825d29140a6f46483f4b90219590dcebc1b9a6d09f85-d",
+      "source_bytes": 670,
+      "source_sha256": "ccedcfd34069d38968ee825d29140a6f46483f4b90219590dcebc1b9a6d09f85"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/61/61d0fa41d587d1786813433ae183e5b1c94ea8466b9715a42c30a74c5474c7b2-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/61d0fa41d587d1786813433ae183e5b1c94ea8466b9715a42c30a74c5474c7b2-d",
+      "source_bytes": 649,
+      "source_sha256": "61d0fa41d587d1786813433ae183e5b1c94ea8466b9715a42c30a74c5474c7b2"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../.cache/go-build/70/70543bf245d25821ecdc9727dd4899a7f780deae4b61ac0f6f8b67695a794842-d",
+      "module_rel": ".",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/70543bf245d25821ecdc9727dd4899a7f780deae4b61ac0f6f8b67695a794842-d",
+      "source_bytes": 632,
+      "source_sha256": "70543bf245d25821ecdc9727dd4899a7f780deae4b61ac0f6f8b67695a794842"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../../.cache/go-build/39/3935f6189cb5175fd0a422af38eb0e60c8b42b42117497bfa790405c1145f2f8-d",
+      "module_rel": "cmd/protoc-gen-go-grpc",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/3935f6189cb5175fd0a422af38eb0e60c8b42b42117497bfa790405c1145f2f8-d",
+      "source_bytes": 779,
+      "source_sha256": "3935f6189cb5175fd0a422af38eb0e60c8b42b42117497bfa790405c1145f2f8"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../../.cache/go-build/3a/3a41e663a9a693657ab6bed3125db0e900861b1d49a0344dd230facb29a1edb3-d",
+      "module_rel": "gcp/observability",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/3a41e663a9a693657ab6bed3125db0e900861b1d49a0344dd230facb29a1edb3-d",
+      "source_bytes": 661,
+      "source_sha256": "3a41e663a9a693657ab6bed3125db0e900861b1d49a0344dd230facb29a1edb3"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../../.cache/go-build/ca/cae1bec37d15a968d932013882931b4d3469b4be82a796ed6f3de3bd01de1747-d",
+      "module_rel": "interop/xds",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/cae1bec37d15a968d932013882931b4d3469b4be82a796ed6f3de3bd01de1747-d",
+      "source_bytes": 643,
+      "source_sha256": "cae1bec37d15a968d932013882931b4d3469b4be82a796ed6f3de3bd01de1747"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../../.cache/go-build/55/55612042080f552e8c1ecc705f42589790ab2e50a1f1ee2e366604bfba36f026-d",
+      "module_rel": "security/advancedtls",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/55612042080f552e8c1ecc705f42589790ab2e50a1f1ee2e366604bfba36f026-d",
+      "source_bytes": 930,
+      "source_sha256": "55612042080f552e8c1ecc705f42589790ab2e50a1f1ee2e366604bfba36f026"
+    },
+    {
+      "classification": "synthesized_go_test_main",
+      "document_path": "../../../../../../../../../../.cache/go-build/53/53bb99be5da80dfa303e81253d28a7b760045637c628054f45b15d4d732bfffa-d",
+      "module_rel": "stats/opencensus",
+      "repo": "grpc-go",
+      "retained_source": "build-cache-source/grpc-go/53bb99be5da80dfa303e81253d28a7b760045637c628054f45b15d4d732bfffa-d",
+      "source_bytes": 658,
+      "source_sha256": "53bb99be5da80dfa303e81253d28a7b760045637c628054f45b15d4d732bfffa"
+    }
+  ],
+  "method": "Read every listed hashed cache source independently of Phebs predictions. Require the exact go test generated header, package main, testing/internal/testdeps import, main function and testing.MainStart call; otherwise retain unclassified.",
+  "schema": "t472-build-cache-source-classification-v1",
+  "scope": "These sources are outside the pinned Git trees, so they are not eligible source units. This does not exclude any in-tree caller site or change the merged indexes. Merge basename-only testmain counters remain as measured (zero).",
+  "source_custody_root": "/home/ben/phebs-rehearsals/t472-rederivation-20261010"
+}

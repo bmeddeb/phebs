@@ -81,6 +81,16 @@ type ReleaseSelection struct {
 	// Keys is the ed25519 trust anchor. A record signed by a key absent here is
 	// refused. The ring is never populated from a record's own key material.
 	Keys []ReleaseKey `yaml:"keys"`
+	// ArtifactsPath is the directory holding the card, manifest and validation
+	// artifacts the admitted records reference. Startup censuses it once at the
+	// admitted boundary: the bytes present derive the referenced-artifacts root
+	// digest each record must name and the resolver its references are checked
+	// against, while the running implementation identity is derived from the
+	// binary itself. Required whenever Path is set, so a load is always bound
+	// to the artifacts actually present rather than to an asserted root. The
+	// field is inert while Path is empty, so an artifact directory can be
+	// staged before its release records arrive.
+	ArtifactsPath string `yaml:"artifacts_path"`
 	// Revoked lists release_ids withdrawn by operator decision: a suspension,
 	// revocation or supersession recorded out of band. Listing the record that
 	// governs its pack withdraws that pack, which is the supported suspension
@@ -148,6 +158,14 @@ type Experimental struct {
 	// T11.1 remains STOP/not established and its repo/path lineage is not the
 	// canonical descriptor/module lineage required to complete T12.3.
 	ProvisionalProtoExtraction bool `yaml:"provisional_proto_extraction"`
+	// TypedScopeReservations selects the corrected typed-partition reservation
+	// policy: a typed partition's weight is its validated TypedScope.Records
+	// with a minimum of one instead of the historical zero-record weight-one
+	// sliver. It layers a distinct policy identity onto plans, bindings and the
+	// execution gate, so plans allocated under the historical policy are never
+	// silently reused; off (the default) reconstructs historical identities
+	// byte-exactly. The T47.2 candidate run enables it explicitly.
+	TypedScopeReservations bool `yaml:"typed_scope_reservations"`
 	// ProvisionalThriftExtraction enables the T19 Thrift protocol pack
 	// (thrift-contract declarations and thrift-consumer Go evidence). Rule
 	// validation is the T19.1 spike; the same provisional repo/path lineage
@@ -1034,14 +1052,24 @@ func (c *Config) validate(lines []int) error {
 		errs = append(errs, fmt.Errorf(
 			"release_selection: path must be absolute, clean, and unpadded, got %q", c.ReleaseSelection.Path))
 	}
+	if c.ReleaseSelection.ArtifactsPath != "" && !validAbsoluteConfigPath(c.ReleaseSelection.ArtifactsPath) {
+		errs = append(errs, fmt.Errorf(
+			"release_selection: artifacts_path must be absolute, clean, and unpadded, got %q",
+			c.ReleaseSelection.ArtifactsPath))
+	}
 	// A configured selection directory is an operator intent to admit released
-	// packs, so the trust anchor that makes any record verifiable must be
-	// present with it. Refusing here keeps a half-configured gate from reaching
-	// startup, where every record would fail closed anyway but only after the
-	// directory had been read.
+	// packs, so the trust anchor that makes any record verifiable and the
+	// artifact directory the admitted load is bound to must be present with it.
+	// Refusing here keeps a half-configured gate from reaching startup, where
+	// every record would fail closed anyway but only after the directory had
+	// been read.
 	if c.ReleaseSelection.Path != "" && len(c.ReleaseSelection.Keys) == 0 {
 		errs = append(errs, errors.New(
 			"release_selection: path is set but keys is empty, so no record could ever be admitted"))
+	}
+	if c.ReleaseSelection.Path != "" && c.ReleaseSelection.ArtifactsPath == "" {
+		errs = append(errs, errors.New(
+			"release_selection: path is set but artifacts_path is empty, so no load could ever be bound"))
 	}
 
 	seenReleaseIDs := map[string]bool{}
@@ -1063,8 +1091,9 @@ func (c *Config) validate(lines []int) error {
 
 // validAbsoluteConfigPath reports whether value is a stable operator-supplied
 // filesystem path: absolute, already clean, unpadded and free of control
-// characters. Both a committed service catalog and the signed-release selection
-// directory use it, so neither resolves against the process working directory.
+// characters. A committed service catalog, the signed-release selection
+// directory and its artifacts directory all use it, so none resolves against
+// the process working directory.
 func validAbsoluteConfigPath(value string) bool {
 	if value == "" || !filepath.IsAbs(value) || filepath.Clean(value) != value ||
 		strings.TrimSpace(value) != value {

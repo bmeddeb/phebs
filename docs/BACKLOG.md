@@ -17047,6 +17047,246 @@ guessed canonical lineage; no release follows from synthetic correctness tests
 alone and an unfilled gate leaves that recipe unavailable; T47.3 activation,
 T47.4 operating acceptance and T47.5 promotion remain separate.
 
+*Corrected derivation slice (2026-10-10): only the three option-A admitted
+repositories run, at their frozen pins in new local clones. The runner records
+central and per-module Go environments and refuses changed resume inputs;
+committed resolution tables and actual helper digests bind the snapshots and
+local derived commits. The merge reports aggregate test-main drops, and the
+lock updater preserves the original disposition, all rejected records and
+earlier admitted measurements. Meaningful helper and machine checks plus a
+fresh run are required; source review, the cross-module binding decision,
+independent human labels, thresholds and sealing remain separate. No Phebs
+prediction or quality score is produced. Cost: offline serial derivation only;
+no production steady-state work changes.*
+
+*Corrected derivation execution and prospective validation amendment
+(Ben, 2026-10-10): all 26 admitted module runs passed in new retained custody;
+three exact derived commits and their input/tool/environment digests are
+recorded in `spike/t472/corpus.lock.json`, with previous admitted measurements,
+option A and both refusal records preserved. The 373 listed hashed build-cache
+sources are independently classified from their bytes as synthesized `go
+test` mains; the record retains every source digest and excludes no in-tree
+source unit. The 6,209 version-skewed references span all indexed symbol kinds,
+not a missed-RPC count. Ben selected exact symbols with resulting caller gaps
+kept in the measured population, call-site/declaration attribution claims and
+no service-edge claim. Ben is the sole validation owner and human label
+reviewer; the prospective two-reviewer/separate-adjudicator requirement is
+superseded for this round, with no independent-human validation claim. The
+protocol drafts relaxed thresholds and a 97-site-per-stratum/small-census rule
+for Ben's approval. Independent source enumeration, caller-specific scoring
+projection/ledgers, immutable artifact/frame bindings, randomness and external
+commitments, blind human labels and scoring still remain. The source/code
+review and T47.4/T47.5 gates are not waived. T48.4c is already merged; its
+artifact bindings are verified rather than reimplemented here. No seal,
+production activation or quality result follows from derivation.*
+
+*Threshold/sampling approval (Ben, 2026-10-10): Ben approved the proposed
+per-nonempty-stratum point-estimate bar unchanged: caller/declaration precision
+at least 95%, recall at least 80%, unresolved accuracy at least 85%, analyzed
+at least 90%, partial+failed at most 5%, and excluded/unsure each at most 10%.
+Draw 97 sites per frame/stratum or census smaller strata; retain Wilson 95%
+interval reporting. Bind the approved parameters before sealing; neither
+results nor sample choices may relax them. This closes the numerical-bar
+decision only; source enumeration, scoring projection, artifact/seed bindings,
+source review and protocol sealing still remain. Ben's blind labels and their
+commitment follow the sealed protocol before prediction disclosure/scoring.*
+
+*Source/frame preparation: the independent derived-tree source-kind census
+records 7,685 regular Go sources and all 11 Go-suffixed etcd symlinks in
+`spike/t472/source.census.json`. The 7,696-path module inventory reconciles
+exactly when those source kinds are distinguished. This is no true-call,
+attribution or terminal-state frame and excludes nothing silently; later
+enumeration/outcome rules must account for the nonregular paths explicitly.*
+
+*Enumeration, frames, scoring projection and binding bundle (2026-10-10):
+`spike/t472/enumerate_universe.py` enumerates the §4 universe from the exact
+derived commits with no phebs consultation — grpc-caller role rules,
+constructor-backed generated-client inventory and four byte-coordinated
+evidence kinds — reconciled fail-closed to the census and lock mappings
+(three consecutive runs byte-identical). Committed `spike/t472/universe/`
+holds 24,221 sites over 11 repository×role strata, 60 clients (44 mapped, 16
+abstained) and 390 operations. `spike/t472/frames.py` authors
+`spike/t472/frames/`: recall population 11,376 (97 per stratum;
+`etcd-io/etcd:mock` at 15 and all three attribution strata censused), an
+excluded-kinds ledger accounting for all 12,845 non-sampled sites with
+reasons, and a plan whose `review_required` names the two source judgments
+Ben must confirm (recall exclusions for non-client-aware tokens and bare
+imports; interface-span attribution coordinate). `spike/t472/caller_scoring.py`
+implements the tested §3 numerator/denominator projection, invalidation rules
+and the eligible-unit ledger that accepts only explicit outcome records and
+reconciles to the 7,685-source census. `spike/t472/binding_bundle.py` assembles
+`spike/t472/bundle/preregistration.bundle.json`, binding every known identity
+by sha256 — including the unedited frozen t111/pilot machinery — and naming
+every missing one: sealed proof-bundle envelope, complete candidate ledger,
+beacon pulse/seed, frozen blind labels, run-outcome receipt and protocol
+digest; external-publication payloads stay local unpublished skeletons.
+Twenty-four unittest cases pass; docs-check, glossary and whitespace gates
+pass. No sample drawn, no label manufactured, no prediction disclosed, no
+score produced, nothing published; source/code review, Ben's confirmations,
+blind labels, sealing and T47.4/T47.5 remain separate.*
+
+
+*Correction of the nine preparation-review findings (2026-10-10): the
+schema-v2 source universe retains every Go call expression plus inventoried
+method references and full-method strings: 499,771 sites, recall 498,793,
+with only 978 import-only sites excluded. Source/parser errors refuse and
+canonical coordinates bind accepted production citation spans. The 60
+generated files contain 74 individual client interfaces, retained across
+four repository×role attribution strata. The caller adapter handles the
+recipe's unresolved predicate and canonical operation spelling; attributed
+precision/recall require exact operation and declaration-lineage joins against
+an independent citation ledger, and unresolved accuracy requires independent
+resolution/reason truth. The uncertainty cap uses every sampled label; all
+five quality families and complete planned samples are mandatory. Processing
+gates apply to every repository×role over the unchanged full census. Bundle
+assembly checks current file identities and complete required structure,
+including every nested digest. This supersedes the earlier preparation
+counts and exclusion/scoring rules above, without changing the approved
+parameters or frozen machinery. Artifacts, repeatability, gates and fresh
+independent review are recorded in `spike/t472/REVIEW_PACKET.md`. Candidate
+frames, Ben's source confirmations, blind labels, genuine seed/receipts and
+sealing remain separate; no merge, seal or real-round score is authorized.*
+
+*Slice A — tree-validated SCIP merge and etcd alias correction (2026-10-10):
+`spike/t472/derivation/merge` now reads the pinned tree from its `--clone`,
+keeps only regular (100644/100755) documents, drops at most explicitly
+inventoried mode-120000 alias documents (path/mode/target recorded in the
+merge report and the lock) and refuses absent paths or any other mode; both
+production scope guards are unchanged. The etcd input was rebuilt from the
+retained per-module SCIP outputs only after re-verifying all 26 recorded run
+identities: derived commit `f9ecd8dcecc18b7559c0e3c0c264477c6ab9ddc1` (parent
+`f061acd0…`) carries 1,065 documents / 392,812 occurrences / 63,048 symbols —
+the previous 1,076 / 395,236 / 63,330 minus exactly the 11 committed
+`client/v3` symlink aliases, each target retained as its own canonical
+regular document. The previous input `75771dd7…` (33,498,138 bytes,
+`41f32f8d…`) is preserved intact as `previous_derived`; grpc-go and
+containerd regenerate byte-identical under the new helper, so the admitted
+totals stay 26 runs / 60 clients / 44 mapped / 16 abstained. Tests cover
+regular, alias, canonical and unexpected paths; focused normal/race, vet,
+Python lock-updater tests, docs, glossary and whitespace gates pass.
+Custody/receipts: `/home/ben/phebs-rehearsals/t472-alias-derivation-20261010`
+(receipt `4fcc0832…`; lock `8c534042…`). The census keeps 7,685 regular
+sources and all 11 nonregular paths; the census, universe, frames and bundle
+artifacts that bind `75771dd7…` are rebound with the regenerated preparation
+(item 4). No label, prediction, score or seal; slices B/C and the fresh
+candidate run remain separate.*
+
+*Slice B — typed-scope partition reservations under a new policy identity
+(2026-10-10): the reserved-plan allocator weights a typed partition by its
+validated `TypedScope.Records` with a floor of one, instead of the historical
+weight-one sliver that treated the typed partition's zero `AdmittedRecords` as
+weight one; member partitions keep their admitted-record weight and the
+aggregate ceilings (facts 49,152 / rows 98,304 / references 98,304 / canonical
+and encoded 64 MiB), per-partition caps (facts 12,500 / rows 25,000 /
+references 20,000), the member-byte bound, deterministic largest-remainder
+allocation and the fail-closed sink are unchanged.
+`candidate.ExtractionPolicyDigest` composes a second versioned layer
+`phebs-extraction-typed-scope-reservations-v1` over the store-accounting layer;
+the composed digest flows into the plan, the authority/reuse binding and the
+executor staleness gate, so historical plans, bindings and generations
+reconstruct byte-exactly with both layers off and a corrected allocation can
+never silently share a generation or reuse authority with a historical plan.
+The new `experimental.typed_scope_reservations` switch (default false) gates
+the layer and is documented in `docs/config.example.yaml` and
+`docs/guides/CONFIGURATION.md`. Tests cover mixed member/typed plans, empty
+scopes, rounding, caps, arithmetic boundaries and deterministic replay
+(`TestReservationWeightsTypedScopePolicy`,
+`TestAssignReservedRoundingCapsAndBoundaries`,
+`TestReservedPlanTypedScopeWeightsAndPolicyIdentity`,
+`TestEvidencePartitionTypedScopeReservationFence`). All four executable typed
+partitions of the retained refused run were then executed under the corrected
+allocation with the production extractors and in-memory evidence, read-only,
+with historical rebuilds byte-matching every recorded plan digest
+(`T472D-MEASUREMENT-20261010.md` in the run root carries the full table):
+grpc-go grpc-caller@1.5.0 ord4 (`sha256:47973e82…` → `sha256:efda0ef2…`,
+success) reserved facts 47→12,500 / rows 96→25,000 / references
+18,304→20,000 / canonical and encoded 61,230→33,554,434 and observed
+960 / 1,920 / 960 / 1,122,711; grpc-go scip-proto-field@1.4.0 ord1
+(`0fafea45…` → `3e8d0fa6…`, success) with encoded 61,174→33,554,432 observed
+440 / 880 / 440 / 390,756; containerd scip-proto-field@1.4.0 ord2
+(`b3e0a221…` → `2cbc92ef…`, success) with encoded 11,947→33,554,433 observed
+873 / 1,746 / 873 / 791,981; containerd grpc-caller@1.5.0 ord4
+(`e7379bb9…` → `f27c386d…`, disposition empty) with facts 8→12,500 and encoded
+12,172→33,554,434 observed 0 throughout. The diagnosis receipts (facts 48>47;
+encoded 229,542>61,174 and 228,952>11,947) were refusal-point truncations, not
+complete emissions; the measured emissions leave at least 11,540 reserved
+facts and 30.9 MiB of reserved encoded bytes unused, which measures these four
+partitions only and is not a general sufficiency claim. In-memory accounting
+charges every submitted association and assertion (rows = 2×facts,
+references = facts, canonical == encoded), a conservative upper bound versus a
+deduplicating store. Etcd's typed partitions remain slice-A-blocked on the
+retained old `index.scip` and are measured only in the fresh candidate run
+against derived commit `f9ecd8dc…`. Steady-state cost: O(partitions)
+arithmetic over `TypedScope.Records` metadata already read and validated for
+the plan, inside the existing startup/restart/reconcile plan builds, plus one
+two-layer digest composition per plan build; no additional corpus read, blob
+fetch, child process, lock, cache, timer, goroutine, store/schema or
+persistent work, and no per-query/request, sync, retry/no-op or publication
+cost. No label, prediction, score, seal or merge; slice C and the fresh
+candidate run remain separate.*
+
+*Slice C — prospective extension declaration evidence without extendee lineage
+(2026-10-10): `protodecl` advances to `4.0.0` and emits every plain extension
+field (`ExtendNode`, file top level or inside a message body) as
+`DECLARES_EXTENSION` with the declaration-local object
+`joinFullName(scope, name)#<tag>`, rule `proto-extension-v1` and schema
+`proto-extension-detail-v1`: the extending namespace — package or enclosing
+message — plus the extension field name and number, never a field position on
+the extendee whose descriptor slot only linking can prove. The raw extendee is
+a `typeReferenceDetail` with an explicit resolution state under the existing
+message-only lookup (`same_file` to a message declaration before or after the
+extend, `intrinsic` for a scalar-keyword name, or `unresolved` with
+`AMBIGUOUS_SAME_FILE_DECLARATION`, `INVALID_DECLARATION_KIND`,
+`DECLARATION_NOT_FOUND` or `IMPORT_LINKING_UNAVAILABLE`); field type
+references reuse the unchanged machinery and no extension ever emits an
+ordinary `DECLARES_FIELD`. Duplicates are emitted, not merged. Malformed and
+unsupported required semantics still refuse: an extension group fails closed
+("extension groups require descriptor linking for their synthetic message")
+and a map field in an extension body stays a parser-level whole-file refusal.
+The frozen contract is amended in the same PR as the code
+(`docs/PROTOBUF_DECLARATION_IDENTITY.md` §5/§6, `docs/guides/OPERATIONS.md`,
+`docs/PROTO_GRPC_PACK_CARDS.md`), the five version pins move to `4.0.0`, and
+tests cover file-level and nested extends, relative and qualified names,
+imported, absent, ambiguous, enum, scalar and declare-after extendees,
+same-name-different-scope and duplicate collisions with distinct spans, both
+malformed refusals, and the pinned absence of any `DECLARES_FIELD` for an
+extension file. `TestProtoDeclEndToEnd` verifies the persisted publication and
+evidence path for the new representation (worker→store→published assertion→
+pinned span and exact detail), and the consumer survey finds every downstream
+reader selects explicit predicates, so the new predicate is inert there. Full
+descriptor linking remains a separate effort. Steady-state cost: one
+additional emission per extension field already visited by the existing body
+walk through the existing parser, declaration index and resolution; no added
+read, blob fetch, child, lock, cache, timer, goroutine, store/schema or
+persistent work, and no per-query/request, sync, retry/no-op or publication
+cost. No label, prediction, score, seal or merge; the regenerated bindings and
+the fresh candidate run remain separate.*
+
+*Rebinding of the preparation under the corrected etcd derivation (T47.2f,
+2026-10-10): slice A's corrected etcd derived commit `f9ecd8dc…` and lock
+`8c534042…` left the committed preparation provably stale — its plan and
+bundle still bound `75771dd7…` and the pre-slice-A lock digest `e3874493…`,
+so `binding_bundle.py`'s freshness predicate refused against the committed
+bytes. The census's single etcd line moves to `f9ecd8dc…` after reconciling
+the corrected tree (1,105 Go paths = 1,094 regular + the same 11 nonregular
+objects; totals unchanged) and the three offline generators regenerate five
+universe files, four frame files and the bundle. Counts are unchanged
+(499,771 sites / 498,793 recall / 74 interfaces / 978 excluded / 73,039 etcd
+rows; 60 files / 44 mapped / 16 abstained / 390 operations); grpc-go and
+containerd site members and the excluded ledger keep exact bytes; every
+changed line differs only by the etcd commit identity; the plan now binds the
+actual lock and the bundle the actual plan. Two full regenerations are
+byte-identical to the committed set, and
+`test_committed_preparation_rebuilds_byte_exactly` rebuilds the committed
+bundle from the committed inputs so any future stale pairing refuses in the
+suite. Custody: `GIT_OPTIONAL_LOCKS=0` reads on the slice-A etcd clone;
+gitignored `--local` clones for grpc-go/containerd inside the ticket
+worktree; neither custody written. Gates: 47/47 + 4/4 Python tests, gosites
+test/vet, docs-check, glossary, whitespace; fresh independent review of exact
+`8fcb532f` is 0/0/0/0 (recorded in `spike/t472/INDEPENDENT_REVIEW.md` and
+`spike/t472/REVIEW_PACKET.md`). No label, prediction, score, seal or
+reinterpretation; the fresh candidate run remains separate.*
+
 **T47.3 · Ordinary production configuration and registration** *(needs the
 T47.2 supported recipe contract; activation remains gated until T47.5)* —
 introduce the stable Caller Map configuration/recipe selection, wire the
@@ -17356,16 +17596,48 @@ withdrawal, registry-based discovery, the mixed-provenance caution whose
 disposition is owned by T47.3, and that withdrawal changes derived state at the
 next startup rather than recalling evidence. Tests and documentation plus three
 behavior-preserving extractions: no runtime behavior change,
-`packRecipes`/`releaseLoadBindings` still empty and the dark startup
-byte-for-byte unchanged. Independent review of `9daf1afb` reported
+`packRecipes` still unbound and the dark startup byte-for-byte unchanged;
+T48.4c subsequently supplies the machine-derived load bindings. Independent review of `9daf1afb` reported
 critical/high/medium/low `0/1/4/4`; the high (two released packs naming
 different bindings refuse startup, never exercised) is pinned and routed to
 T48.4c, which supplies the running implementation identity, and every other
 finding is corrected on the branch; delta re-review of `342ae911` found the
 discovery helper still reconstructed the API/MCP options, and it now drives the
-production assembly. T48.4c still supplies the machine-derived
-referenced-artifact census and running implementation identity that make the
-bindings bindable.*
+production assembly. T48.4c supplies the machine-derived referenced-artifact census and running
+implementation identity that make the bindings bindable.*
+
+*Slice c landed 2026-10-09: `cmd/phebs/release_identity.go` supplies the
+machine-derived load bindings and `releaseLoadBindings` is wired in
+`serve_config.go` with `func(context.Context, string)` receiving the
+configured `release_selection.artifacts_path`. Every value comes from present
+fact at the same once-per-startup boundary: the running binary's embedded
+40-hex `vcs.revision` (refused for a modified tree), the executable digest,
+the toolchain digest, and the content digest of the in-tree `packRecipes`
+registry; `artifacts_path` supplies the referenced-artifacts root and resolver
+from one bounded descriptor-anchored census with its
+`internal/packrelease/artifacts.go` tests intact. An empty artifacts path
+stays unbound before any fact is read, so an unbound governing record still
+refuses as `ReasonUnresolvedReference`; a record signed for another binary,
+toolchain or artifact set refuses as `digest_mismatch`. `packRecipes` still
+ships empty, so the gate stays dark and no product is released. Tests:
+synthetic build-metadata refusal table, pinned digest formulas, census
+identity and stability refusals, end-to-end admission of a record bound to
+derived facts, and refusal of a record for another binary. Review correction:
+artifact names use the bounded release identifier grammar without path or
+root-row separators; descriptor-relative no-follow/nonblocking opens,
+opened-file size checks, limited reads and identity/metadata rechecks enforce
+the actual byte bounds. The census enumerates only 1,024 entries plus an
+overflow sentinel and streams at most 64 MiB plus one overflow byte, with a
+per-file 1 MiB plus one-byte bound and at most three simultaneous descriptors.
+Load binding derivation runs at most once only after an authenticated
+governing release survives withdrawal and clock checks; all-withdrawn
+selections do no build-fact or artifact work. The running-image digest uses
+`/proc/self/exe` on Linux and mapping-vnode identity on Darwin, so symlink
+launches work and deployment replacements cannot supply another image's
+digest. An unavailable Darwin vnode path refuses. The artifacts-path ADR now
+matches parsing: `path` requires `artifacts_path`, while `artifacts_path`
+alone can be staged. Query/request, sync, retry/no-op, publication, lock,
+persistent-cache, corpus/shard, disk-write and child costs remain unchanged.*
 
 ## Epic 49 · Contract Atlas and declaration production readiness
 

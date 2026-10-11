@@ -1,0 +1,201 @@
+{
+ "candidate_identities": {
+  "NIST beacon pulse and derived 64-hex seed for the sample draw": null,
+  "frozen blind label document per frame (Ben, sole owner/reviewer)": null,
+  "independent declaration-citation ledger sha256": null,
+  "independent expected-resolution ledger sha256": null,
+  "phebs complete candidate ledger identity and sha256 (abstention frame)": null,
+  "phebs eligible-unit outcome receipt for the processing-state ledger": null,
+  "protocol digest after the section 10 sealing checklist completes": null,
+  "sealed proof-bundle-v1 envelope identity and sha256 (precision, unresolved frames)": null
+ },
+ "corpus_derived_commits": [
+  "e0f9f8ac24f21a3703f94bb09817b699a1446af0",
+  "f40347859c3380f5c409f153ab79d4b8e724abd3",
+  "f9ecd8dcecc18b7559c0e3c0c264477c6ab9ddc1"
+ ],
+ "corpus_lock": {
+  "path": "spike/t472/corpus.lock.json",
+  "sha256": "sha256:8c5340427010c3ca86d2a038d88ff6d23ade76c04ba2e9bcd49d579237762168"
+ },
+ "external_publication": {
+  "prepared_payloads": [
+   {
+    "fields": {
+     "adjudication": null,
+     "artifact_manifest_sha256": null,
+     "committed_at": null,
+     "input_binding": null,
+     "label_count": null,
+     "labels_sha256": null,
+     "reviewer_assignment_sha256": null,
+     "schema": null,
+     "site_ids_sha256": null
+    },
+    "kind": "github_gist_label_commitment",
+    "schema": "t111-label-commitment-v1",
+    "status": "skeleton_local_only"
+   },
+   {
+    "fields": {
+     "output_value": null,
+     "pulse": null,
+     "pulse_timestamp": null
+    },
+    "kind": "nist_beacon_reference",
+    "schema": "t472-nist-pulse-reference-v1",
+    "status": "skeleton_local_only"
+   }
+  ],
+  "published": false
+ },
+ "frames_plan": {
+  "frames": [
+   "recall",
+   "attribution",
+   "precision",
+   "abstention",
+   "unresolved"
+  ],
+  "members": {
+   "frames.attribution.jsonl": {
+    "rows": 74,
+    "sha256": "sha256:2ddd62cbfa913a7c463cf3a4c380a6eae49093325b86e27054cbafdac7ac508b"
+   },
+   "frames.excluded.json": {
+    "sha256": "sha256:f56b6f5d583f33839114b0cd695070630e2f305a9906a0b27248ab0d243454b0"
+   },
+   "frames.recall.jsonl.gz": {
+    "rows": 498793,
+    "sha256": "sha256:c89238bfd34358636657795e4dcfe7a4f5f3e7e23f55c3b732769071715021ae"
+   }
+  },
+  "path": "spike/t472/frames/frames.plan.json",
+  "sha256": "sha256:0c60125b1cdf1ebd54a0aec726e744720d8e31078f2a90cee6b2f0b04452fa60"
+ },
+ "frozen_machinery_unedited": true,
+ "harness_schema": "pilot-accuracy-gold-harness-v1",
+ "label_commitment_schema": "t111-label-commitment-v1",
+ "machinery": {
+  "binding_bundle": {
+   "path": "spike/t472/binding_bundle.py",
+   "sha256": "sha256:c2ae3ff8119144329af65839e1418e474c2505747e744fde7c4a515ea0d36708"
+  },
+  "caller_scoring": {
+   "path": "spike/t472/caller_scoring.py",
+   "sha256": "sha256:c3bab8f918a40b3400bad73d75c8a130b5d62f4553e033b3ba71e929638d3d83"
+  },
+  "enumerate_universe": {
+   "path": "spike/t472/enumerate_universe.py",
+   "sha256": "sha256:e22c67f527d1970ff3a14809edb63316bb170ccc24f4b33a5759f6ded7369278"
+  },
+  "frames": {
+   "path": "spike/t472/frames.py",
+   "sha256": "sha256:db8970f86482de4a899f9a003812abbe088a9629161e096c748446d4cf8227fe"
+  },
+  "go_source_parser": {
+   "path": "spike/t472/gosites/main.go",
+   "sha256": "sha256:6782c56c7e8fff3a4f365322a105ca9fa79d764424bdce263c6be044c73f80da"
+  },
+  "label_protocol": {
+   "path": "spike/t111/label_protocol.py",
+   "sha256": "sha256:bcafdee6cab0b4ddd98ddbd56896546a47abe2c164be955ace28542686f329ee"
+  },
+  "pilot_harness": {
+   "path": "pilot/validation/harness.py",
+   "sha256": "sha256:3a8dcc9ecb26588dcb1d53c32761fe15fdd964b592cdc30fdac09fd4d9ce3b69"
+  }
+ },
+ "missing_bindings": [
+  "bundle.candidate_identities.NIST beacon pulse and derived 64-hex seed for the sample draw",
+  "bundle.candidate_identities.frozen blind label document per frame (Ben, sole owner/reviewer)",
+  "bundle.candidate_identities.independent declaration-citation ledger sha256",
+  "bundle.candidate_identities.independent expected-resolution ledger sha256",
+  "bundle.candidate_identities.phebs complete candidate ledger identity and sha256 (abstention frame)",
+  "bundle.candidate_identities.phebs eligible-unit outcome receipt for the processing-state ledger",
+  "bundle.candidate_identities.protocol digest after the section 10 sealing checklist completes",
+  "bundle.candidate_identities.sealed proof-bundle-v1 envelope identity and sha256 (precision, unresolved frames)",
+  "bundle.external_publication.prepared_payloads[0].fields.adjudication",
+  "bundle.external_publication.prepared_payloads[0].fields.artifact_manifest_sha256",
+  "bundle.external_publication.prepared_payloads[0].fields.committed_at",
+  "bundle.external_publication.prepared_payloads[0].fields.input_binding",
+  "bundle.external_publication.prepared_payloads[0].fields.label_count",
+  "bundle.external_publication.prepared_payloads[0].fields.labels_sha256",
+  "bundle.external_publication.prepared_payloads[0].fields.reviewer_assignment_sha256",
+  "bundle.external_publication.prepared_payloads[0].fields.schema",
+  "bundle.external_publication.prepared_payloads[0].fields.site_ids_sha256",
+  "bundle.external_publication.prepared_payloads[1].fields.output_value",
+  "bundle.external_publication.prepared_payloads[1].fields.pulse",
+  "bundle.external_publication.prepared_payloads[1].fields.pulse_timestamp",
+  "bundle.randomness_commitment_sequence[0].binding",
+  "bundle.randomness_commitment_sequence[1].binding",
+  "bundle.randomness_commitment_sequence[2].binding",
+  "bundle.randomness_commitment_sequence[3].binding",
+  "bundle.randomness_commitment_sequence[4].binding"
+ ],
+ "parameters": {
+  "path": "spike/t472/validation.parameters.json",
+  "sha256": "sha256:3396a4b15358683e2a714ca1992a69d065169b96c20099d8d3b7d2de98a0b9fe",
+  "status": "approved_not_sealed"
+ },
+ "predictions_disclosed": false,
+ "protocol_doc": {
+  "path": "docs/CALLER_QUALITY_PROTOCOL.md",
+  "sha256": "sha256:0b8859fc5d4426887fdcb22d370994af8a8cae5bb5ba60c70f1b364599ca8361"
+ },
+ "quality_scored": false,
+ "randomness_commitment_sequence": [
+  {
+   "action": "record NIST beacon pulse",
+   "binding": null,
+   "step": 1
+  },
+  {
+   "action": "derive 64-hex seed from pulse",
+   "binding": null,
+   "step": 2
+  },
+  {
+   "action": "draw per-stratum samples from sealed frames plan",
+   "binding": null,
+   "step": 3
+  },
+  {
+   "action": "Ben freezes blind labels (t111 freeze_labels, O_EXCL)",
+   "binding": null,
+   "step": 4
+  },
+  {
+   "action": "build label commitment (t111 schema) and publish receipt",
+   "binding": null,
+   "step": 5
+  }
+ ],
+ "schema": "t472-preregistration-bundle-v2",
+ "source_census": {
+  "path": "spike/t472/source.census.json",
+  "sha256": "sha256:2aa22d7a6b77c24f2239067b49f9edaa3524900b86f4f2a7a27c495cac197394"
+ },
+ "universe": {
+  "declarations_sha256": "sha256:c5879fd7d751b644519025228362b9dde202be43a4c1820ea4e061a6721b6228",
+  "dir": "spike/t472/universe",
+  "sites": {
+   "universe.sites.containerd.jsonl.gz": {
+    "file": "universe.sites.containerd.jsonl.gz",
+    "rows": 340299,
+    "sha256": "sha256:c93164842e492a75f1ecfef3c535594fd08430def8b228e8a1875a61d015b599"
+   },
+   "universe.sites.etcd.jsonl.gz": {
+    "file": "universe.sites.etcd.jsonl.gz",
+    "rows": 73039,
+    "sha256": "sha256:0ece1506145953cae54865f31a1e49ddae73568eb1a2c98c36af39f0181f9d65"
+   },
+   "universe.sites.grpc-go.jsonl.gz": {
+    "file": "universe.sites.grpc-go.jsonl.gz",
+    "rows": 86433,
+    "sha256": "sha256:ab5be4e5385a7c13064d78b8e2384b059cb42ac138e5dd668d1335306f22336a"
+   }
+  },
+  "summary_sha256": "sha256:46f6a02c92414845ccc460619b92d1c681b40e23a636d334cce668c9363f80d3"
+ }
+}

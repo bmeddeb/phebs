@@ -1,0 +1,391 @@
+{
+ "abstained": 5,
+ "abstentions": [
+  {
+   "generated_header": true,
+   "generated_path": "vendor/go.opentelemetry.io/proto/otlp/collector/trace/v1/trace_service_grpc.pb.go",
+   "reason": "declaration_not_found",
+   "source_line": "opentelemetry/proto/collector/trace/v1/trace_service.proto",
+   "vendored": true
+  },
+  {
+   "generated_header": true,
+   "generated_path": "vendor/google.golang.org/grpc/health/grpc_health_v1/health_grpc.pb.go",
+   "reason": "declaration_not_found",
+   "source_line": "grpc/health/v1/health.proto",
+   "vendored": true
+  },
+  {
+   "generated_header": true,
+   "generated_path": "vendor/google.golang.org/grpc/reflection/grpc_reflection_v1/reflection_grpc.pb.go",
+   "reason": "declaration_not_found",
+   "source_line": "grpc/reflection/v1/reflection.proto",
+   "vendored": true
+  },
+  {
+   "generated_header": true,
+   "generated_path": "vendor/google.golang.org/grpc/reflection/grpc_reflection_v1alpha/reflection_grpc.pb.go",
+   "reason": "no_source_line",
+   "vendored": true
+  },
+  {
+   "generated_header": true,
+   "generated_path": "vendor/k8s.io/cri-api/pkg/apis/runtime/v1/api_grpc.pb.go",
+   "reason": "declaration_not_found",
+   "source_line": "staging/src/k8s.io/cri-api/pkg/apis/runtime/v1/api.proto",
+   "vendored": true
+  }
+ ],
+ "clients": 40,
+ "mapped": 35,
+ "mappings": [
+  {
+   "colocated_share": 4,
+   "declaration_path": "api/runtime/sandbox/v1/sandbox.proto",
+   "generated_path": "api/runtime/sandbox/v1/sandbox_grpc.pb.go",
+   "generator_relative_path": "runtime/sandbox/v1/sandbox.proto",
+   "resolved_over": [
+    "vendor/github.com/containerd/containerd/api/runtime/sandbox/v1/sandbox.proto"
+   ],
+   "vendored": false
+  },
+  {
+   "colocated_share": 4,
+   "declaration_path": "api/runtime/task/v3/shim.proto",
+   "generated_path": "api/runtime/task/v3/shim_grpc.pb.go",
+   "generator_relative_path": "runtime/task/v3/shim.proto",
+   "resolved_over": [
+    "vendor/github.com/containerd/containerd/api/runtime/task/v3/shim.proto"
+   ],
+   "vendored": false
+  },
+  {
+   "colocated_share": 4,
+   "declaration_path": "api/services/containers/v1/containers.proto",
+   "generated_path": "api/services/containers/v1/containers_grpc.pb.go",
+   "generator_relative_path": "services/containers/v1/containers.proto",
+   "resolved_over": [
+    "vendor/github.com/containerd/containerd/api/services/containers/v1/containers.proto"
+   ],
+   "vendored": false
+  },
+  {
+   "colocated_share": 4,
+   "declaration_path": "api/services/content/v1/content.proto",
+   "generated_path": "api/services/content/v1/content_grpc.pb.go",
+   "generator_relative_path": "services/content/v1/content.proto",
+   "resolved_over": [
+    "vendor/github.com/containerd/containerd/api/services/content/v1/content.proto"
+   ],
+   "vendored": false
+  },
+  {
+   "colocated_share": 4,
+   "declaration_path": "api/services/diff/v1/diff.proto",
+   "generated_path": "api/services/diff/v1/diff_grpc.pb.go",
+   "generator_relative_path": "services/diff/v1/diff.proto",
+   "resolved_over": [
+    "vendor/github.com/containerd/containerd/api/services/diff/v1/diff.proto"
+   ],
+   "vendored": false
+  },
+  {
+   "colocated_share": 4,
+   "declaration_path": "api/services/events/v1/events.proto",
+   "generated_path": "api/services/events/v1/events_grpc.pb.go",
+   "generator_relative_path": "services/events/v1/events.proto",
+   "resolved_over": [
+    "vendor/github.com/containerd/containerd/api/services/events/v1/events.proto"
+   ],
+   "vendored": false
+  },
+  {
+   "colocated_share": 4,
+   "declaration_path": "api/services/images/v1/images.proto",
+   "generated_path": "api/services/images/v1/images_grpc.pb.go",
+   "generator_relative_path": "services/images/v1/images.proto",
+   "resolved_over": [
+    "vendor/github.com/containerd/containerd/api/services/images/v1/images.proto"
+   ],
+   "vendored": false
+  },
+  {
+   "colocated_share": 4,
+   "declaration_path": "api/services/introspection/v1/introspection.proto",
+   "generated_path": "api/services/introspection/v1/introspection_grpc.pb.go",
+   "generator_relative_path": "services/introspection/v1/introspection.proto",
+   "resolved_over": [
+    "vendor/github.com/containerd/containerd/api/services/introspection/v1/introspection.proto"
+   ],
+   "vendored": false
+  },
+  {
+   "colocated_share": 4,
+   "declaration_path": "api/services/leases/v1/leases.proto",
+   "generated_path": "api/services/leases/v1/leases_grpc.pb.go",
+   "generator_relative_path": "services/leases/v1/leases.proto",
+   "resolved_over": [
+    "vendor/github.com/containerd/containerd/api/services/leases/v1/leases.proto"
+   ],
+   "vendored": false
+  },
+  {
+   "colocated_share": 4,
+   "declaration_path": "api/services/mounts/v1/mounts.proto",
+   "generated_path": "api/services/mounts/v1/mounts_grpc.pb.go",
+   "generator_relative_path": "services/mounts/v1/mounts.proto",
+   "resolved_over": [
+    "vendor/github.com/containerd/containerd/api/services/mounts/v1/mounts.proto"
+   ],
+   "vendored": false
+  },
+  {
+   "colocated_share": 4,
+   "declaration_path": "api/services/namespaces/v1/namespace.proto",
+   "generated_path": "api/services/namespaces/v1/namespace_grpc.pb.go",
+   "generator_relative_path": "services/namespaces/v1/namespace.proto",
+   "resolved_over": [
+    "vendor/github.com/containerd/containerd/api/services/namespaces/v1/namespace.proto"
+   ],
+   "vendored": false
+  },
+  {
+   "colocated_share": 4,
+   "declaration_path": "api/services/sandbox/v1/sandbox.proto",
+   "generated_path": "api/services/sandbox/v1/sandbox_grpc.pb.go",
+   "generator_relative_path": "services/sandbox/v1/sandbox.proto",
+   "resolved_over": [
+    "vendor/github.com/containerd/containerd/api/services/sandbox/v1/sandbox.proto"
+   ],
+   "vendored": false
+  },
+  {
+   "colocated_share": 4,
+   "declaration_path": "api/services/snapshots/v1/snapshots.proto",
+   "generated_path": "api/services/snapshots/v1/snapshots_grpc.pb.go",
+   "generator_relative_path": "services/snapshots/v1/snapshots.proto",
+   "resolved_over": [
+    "vendor/github.com/containerd/containerd/api/services/snapshots/v1/snapshots.proto"
+   ],
+   "vendored": false
+  },
+  {
+   "colocated_share": 4,
+   "declaration_path": "api/services/streaming/v1/streaming.proto",
+   "generated_path": "api/services/streaming/v1/streaming_grpc.pb.go",
+   "generator_relative_path": "services/streaming/v1/streaming.proto",
+   "resolved_over": [
+    "vendor/github.com/containerd/containerd/api/services/streaming/v1/streaming.proto"
+   ],
+   "vendored": false
+  },
+  {
+   "colocated_share": 4,
+   "declaration_path": "api/services/tasks/v1/tasks.proto",
+   "generated_path": "api/services/tasks/v1/tasks_grpc.pb.go",
+   "generator_relative_path": "services/tasks/v1/tasks.proto",
+   "resolved_over": [
+    "vendor/github.com/containerd/containerd/api/services/tasks/v1/tasks.proto"
+   ],
+   "vendored": false
+  },
+  {
+   "colocated_share": 4,
+   "declaration_path": "api/services/transfer/v1/transfer.proto",
+   "generated_path": "api/services/transfer/v1/transfer_grpc.pb.go",
+   "generator_relative_path": "services/transfer/v1/transfer.proto",
+   "resolved_over": [
+    "vendor/github.com/containerd/containerd/api/services/transfer/v1/transfer.proto"
+   ],
+   "vendored": false
+  },
+  {
+   "colocated_share": 4,
+   "declaration_path": "api/services/version/v1/version.proto",
+   "generated_path": "api/services/version/v1/version_grpc.pb.go",
+   "generator_relative_path": "services/version/v1/version.proto",
+   "resolved_over": [
+    "vendor/github.com/containerd/containerd/api/services/version/v1/version.proto"
+   ],
+   "vendored": false
+  },
+  {
+   "colocated_share": 8,
+   "declaration_path": "vendor/github.com/containerd/containerd/api/runtime/sandbox/v1/sandbox.proto",
+   "generated_path": "vendor/github.com/containerd/containerd/api/runtime/sandbox/v1/sandbox_grpc.pb.go",
+   "generator_relative_path": "runtime/sandbox/v1/sandbox.proto",
+   "resolved_over": [
+    "api/runtime/sandbox/v1/sandbox.proto"
+   ],
+   "vendored": true
+  },
+  {
+   "colocated_share": 8,
+   "declaration_path": "vendor/github.com/containerd/containerd/api/runtime/task/v3/shim.proto",
+   "generated_path": "vendor/github.com/containerd/containerd/api/runtime/task/v3/shim_grpc.pb.go",
+   "generator_relative_path": "runtime/task/v3/shim.proto",
+   "resolved_over": [
+    "api/runtime/task/v3/shim.proto"
+   ],
+   "vendored": true
+  },
+  {
+   "colocated_share": 8,
+   "declaration_path": "vendor/github.com/containerd/containerd/api/services/containers/v1/containers.proto",
+   "generated_path": "vendor/github.com/containerd/containerd/api/services/containers/v1/containers_grpc.pb.go",
+   "generator_relative_path": "services/containers/v1/containers.proto",
+   "resolved_over": [
+    "api/services/containers/v1/containers.proto"
+   ],
+   "vendored": true
+  },
+  {
+   "colocated_share": 8,
+   "declaration_path": "vendor/github.com/containerd/containerd/api/services/content/v1/content.proto",
+   "generated_path": "vendor/github.com/containerd/containerd/api/services/content/v1/content_grpc.pb.go",
+   "generator_relative_path": "services/content/v1/content.proto",
+   "resolved_over": [
+    "api/services/content/v1/content.proto"
+   ],
+   "vendored": true
+  },
+  {
+   "colocated_share": 8,
+   "declaration_path": "vendor/github.com/containerd/containerd/api/services/diff/v1/diff.proto",
+   "generated_path": "vendor/github.com/containerd/containerd/api/services/diff/v1/diff_grpc.pb.go",
+   "generator_relative_path": "services/diff/v1/diff.proto",
+   "resolved_over": [
+    "api/services/diff/v1/diff.proto"
+   ],
+   "vendored": true
+  },
+  {
+   "colocated_share": 8,
+   "declaration_path": "vendor/github.com/containerd/containerd/api/services/events/v1/events.proto",
+   "generated_path": "vendor/github.com/containerd/containerd/api/services/events/v1/events_grpc.pb.go",
+   "generator_relative_path": "services/events/v1/events.proto",
+   "resolved_over": [
+    "api/services/events/v1/events.proto"
+   ],
+   "vendored": true
+  },
+  {
+   "colocated_share": 8,
+   "declaration_path": "vendor/github.com/containerd/containerd/api/services/images/v1/images.proto",
+   "generated_path": "vendor/github.com/containerd/containerd/api/services/images/v1/images_grpc.pb.go",
+   "generator_relative_path": "services/images/v1/images.proto",
+   "resolved_over": [
+    "api/services/images/v1/images.proto"
+   ],
+   "vendored": true
+  },
+  {
+   "colocated_share": 8,
+   "declaration_path": "vendor/github.com/containerd/containerd/api/services/introspection/v1/introspection.proto",
+   "generated_path": "vendor/github.com/containerd/containerd/api/services/introspection/v1/introspection_grpc.pb.go",
+   "generator_relative_path": "services/introspection/v1/introspection.proto",
+   "resolved_over": [
+    "api/services/introspection/v1/introspection.proto"
+   ],
+   "vendored": true
+  },
+  {
+   "colocated_share": 8,
+   "declaration_path": "vendor/github.com/containerd/containerd/api/services/leases/v1/leases.proto",
+   "generated_path": "vendor/github.com/containerd/containerd/api/services/leases/v1/leases_grpc.pb.go",
+   "generator_relative_path": "services/leases/v1/leases.proto",
+   "resolved_over": [
+    "api/services/leases/v1/leases.proto"
+   ],
+   "vendored": true
+  },
+  {
+   "colocated_share": 8,
+   "declaration_path": "vendor/github.com/containerd/containerd/api/services/mounts/v1/mounts.proto",
+   "generated_path": "vendor/github.com/containerd/containerd/api/services/mounts/v1/mounts_grpc.pb.go",
+   "generator_relative_path": "services/mounts/v1/mounts.proto",
+   "resolved_over": [
+    "api/services/mounts/v1/mounts.proto"
+   ],
+   "vendored": true
+  },
+  {
+   "colocated_share": 8,
+   "declaration_path": "vendor/github.com/containerd/containerd/api/services/namespaces/v1/namespace.proto",
+   "generated_path": "vendor/github.com/containerd/containerd/api/services/namespaces/v1/namespace_grpc.pb.go",
+   "generator_relative_path": "services/namespaces/v1/namespace.proto",
+   "resolved_over": [
+    "api/services/namespaces/v1/namespace.proto"
+   ],
+   "vendored": true
+  },
+  {
+   "colocated_share": 8,
+   "declaration_path": "vendor/github.com/containerd/containerd/api/services/sandbox/v1/sandbox.proto",
+   "generated_path": "vendor/github.com/containerd/containerd/api/services/sandbox/v1/sandbox_grpc.pb.go",
+   "generator_relative_path": "services/sandbox/v1/sandbox.proto",
+   "resolved_over": [
+    "api/services/sandbox/v1/sandbox.proto"
+   ],
+   "vendored": true
+  },
+  {
+   "colocated_share": 8,
+   "declaration_path": "vendor/github.com/containerd/containerd/api/services/snapshots/v1/snapshots.proto",
+   "generated_path": "vendor/github.com/containerd/containerd/api/services/snapshots/v1/snapshots_grpc.pb.go",
+   "generator_relative_path": "services/snapshots/v1/snapshots.proto",
+   "resolved_over": [
+    "api/services/snapshots/v1/snapshots.proto"
+   ],
+   "vendored": true
+  },
+  {
+   "colocated_share": 8,
+   "declaration_path": "vendor/github.com/containerd/containerd/api/services/streaming/v1/streaming.proto",
+   "generated_path": "vendor/github.com/containerd/containerd/api/services/streaming/v1/streaming_grpc.pb.go",
+   "generator_relative_path": "services/streaming/v1/streaming.proto",
+   "resolved_over": [
+    "api/services/streaming/v1/streaming.proto"
+   ],
+   "vendored": true
+  },
+  {
+   "colocated_share": 8,
+   "declaration_path": "vendor/github.com/containerd/containerd/api/services/tasks/v1/tasks.proto",
+   "generated_path": "vendor/github.com/containerd/containerd/api/services/tasks/v1/tasks_grpc.pb.go",
+   "generator_relative_path": "services/tasks/v1/tasks.proto",
+   "resolved_over": [
+    "api/services/tasks/v1/tasks.proto"
+   ],
+   "vendored": true
+  },
+  {
+   "colocated_share": 8,
+   "declaration_path": "vendor/github.com/containerd/containerd/api/services/transfer/v1/transfer.proto",
+   "generated_path": "vendor/github.com/containerd/containerd/api/services/transfer/v1/transfer_grpc.pb.go",
+   "generator_relative_path": "services/transfer/v1/transfer.proto",
+   "resolved_over": [
+    "api/services/transfer/v1/transfer.proto"
+   ],
+   "vendored": true
+  },
+  {
+   "colocated_share": 8,
+   "declaration_path": "vendor/github.com/containerd/containerd/api/services/version/v1/version.proto",
+   "generated_path": "vendor/github.com/containerd/containerd/api/services/version/v1/version_grpc.pb.go",
+   "generator_relative_path": "services/version/v1/version.proto",
+   "resolved_over": [
+    "api/services/version/v1/version.proto"
+   ],
+   "vendored": true
+  },
+  {
+   "declaration_path": "vendor/github.com/containers/ocicrypt/utils/keyprovider/keyprovider.proto",
+   "generated_path": "vendor/github.com/containers/ocicrypt/utils/keyprovider/keyprovider_grpc.pb.go",
+   "generator_relative_path": "keyprovider.proto",
+   "vendored": true
+  }
+ ],
+ "repo": "containerd",
+ "roots": 70
+}

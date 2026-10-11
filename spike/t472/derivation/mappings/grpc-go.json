@@ -1,0 +1,123 @@
+{
+ "abstained": 11,
+ "abstentions": [
+  {
+   "generated_header": true,
+   "generated_path": "balancer/grpclb/grpc_lb_v1/load_balancer_grpc.pb.go",
+   "reason": "declaration_not_found",
+   "source_line": "grpc/lb/v1/load_balancer.proto",
+   "vendored": false
+  },
+  {
+   "generated_header": true,
+   "generated_path": "channelz/grpc_channelz_v1/channelz_grpc.pb.go",
+   "reason": "declaration_not_found",
+   "source_line": "grpc/channelz/v1/channelz.proto",
+   "vendored": false
+  },
+  {
+   "generated_header": true,
+   "generated_path": "credentials/alts/internal/proto/grpc_gcp/handshaker_grpc.pb.go",
+   "reason": "declaration_not_found",
+   "source_line": "grpc/gcp/handshaker.proto",
+   "vendored": false
+  },
+  {
+   "generated_header": true,
+   "generated_path": "health/grpc_health_v1/health_grpc.pb.go",
+   "reason": "declaration_not_found",
+   "source_line": "grpc/health/v1/health.proto",
+   "vendored": false
+  },
+  {
+   "generated_header": true,
+   "generated_path": "internal/proto/grpc_lookup_v1/rls_grpc.pb.go",
+   "reason": "declaration_not_found",
+   "source_line": "grpc/lookup/v1/rls.proto",
+   "vendored": false
+  },
+  {
+   "generated_header": true,
+   "generated_path": "interop/grpc_testing/benchmark_service_grpc.pb.go",
+   "reason": "declaration_not_found",
+   "source_line": "grpc/testing/benchmark_service.proto",
+   "vendored": false
+  },
+  {
+   "generated_header": true,
+   "generated_path": "interop/grpc_testing/report_qps_scenario_service_grpc.pb.go",
+   "reason": "declaration_not_found",
+   "source_line": "grpc/testing/report_qps_scenario_service.proto",
+   "vendored": false
+  },
+  {
+   "generated_header": true,
+   "generated_path": "interop/grpc_testing/test_grpc.pb.go",
+   "reason": "declaration_not_found",
+   "source_line": "grpc/testing/test.proto",
+   "vendored": false
+  },
+  {
+   "generated_header": true,
+   "generated_path": "interop/grpc_testing/worker_service_grpc.pb.go",
+   "reason": "declaration_not_found",
+   "source_line": "grpc/testing/worker_service.proto",
+   "vendored": false
+  },
+  {
+   "generated_header": true,
+   "generated_path": "reflection/grpc_reflection_v1/reflection_grpc.pb.go",
+   "reason": "declaration_not_found",
+   "source_line": "grpc/reflection/v1/reflection.proto",
+   "vendored": false
+  },
+  {
+   "generated_header": true,
+   "generated_path": "reflection/grpc_reflection_v1alpha/reflection_grpc.pb.go",
+   "reason": "no_source_line",
+   "vendored": false
+  }
+ ],
+ "clients": 17,
+ "mapped": 6,
+ "mappings": [
+  {
+   "declaration_path": "examples/features/proto/echo/echo.proto",
+   "generated_path": "examples/features/proto/echo/echo_grpc.pb.go",
+   "generator_relative_path": "examples/features/proto/echo/echo.proto",
+   "vendored": false
+  },
+  {
+   "declaration_path": "examples/helloworld/helloworld/helloworld.proto",
+   "generated_path": "examples/helloworld/helloworld/helloworld_grpc.pb.go",
+   "generator_relative_path": "examples/helloworld/helloworld/helloworld.proto",
+   "vendored": false
+  },
+  {
+   "declaration_path": "examples/route_guide/routeguide/route_guide.proto",
+   "generated_path": "examples/route_guide/routeguide/route_guide_grpc.pb.go",
+   "generator_relative_path": "examples/route_guide/routeguide/route_guide.proto",
+   "vendored": false
+  },
+  {
+   "declaration_path": "interop/stress/grpc_testing/metrics.proto",
+   "generated_path": "interop/stress/grpc_testing/metrics_grpc.pb.go",
+   "generator_relative_path": "interop/stress/grpc_testing/metrics.proto",
+   "vendored": false
+  },
+  {
+   "declaration_path": "profiling/proto/service.proto",
+   "generated_path": "profiling/proto/service_grpc.pb.go",
+   "generator_relative_path": "profiling/proto/service.proto",
+   "vendored": false
+  },
+  {
+   "declaration_path": "reflection/grpc_testing/test.proto",
+   "generated_path": "reflection/grpc_testing/test_grpc.pb.go",
+   "generator_relative_path": "reflection/grpc_testing/test.proto",
+   "vendored": false
+  }
+ ],
+ "repo": "grpc-go",
+ "roots": 12
+}

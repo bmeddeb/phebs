@@ -146,6 +146,13 @@ experimental:
   # provisional repo/path lineage posture; rule validation is the T23.1
   # spike, and the packs are abstention-dominant by design.
   provisional_kafka_extraction: false
+  # T47.2d corrected typed-scope partition reservations. Layers a distinct
+  # extraction policy identity over the same durable controls and weighs each
+  # typed partition by its validated typed-scope record count (minimum one)
+  # instead of the historical weight-one sliver. Leaving it false
+  # reconstructs historical identities byte-exactly; the T47.2 candidate run
+  # enables it explicitly.
+  typed_scope_reservations: false
 
 # Permission-aware search (T10.3). PRESENCE of this block turns enforcement
 # on: non-administrators then see only public repos, repos their mapped
@@ -258,9 +265,19 @@ service_catalogs: {}
 # pack at the same release_version refuses startup. Per pack, the record with
 # the highest release_version governs, so a later signed suspension withdraws an
 # older release, and an expired governing record withdraws its pack; a
-# superseded record's expiry has no effect. This build cannot yet bind a released record to
-# its own binary and artifacts, so any governing released record refuses
-# startup until a later slice supplies those bindings.
+# superseded record's expiry has no effect.
+#
+# `artifacts_path` is the directory holding the card, manifest and validation
+# artifacts the admitted records reference. It is censused once at the same
+# startup boundary, it must be absolute, clean and unpadded, and a non-empty
+# `path` requires it: the referenced-artifacts root and the resolver a record is
+# checked against are derived from the bytes actually present, never asserted.
+# A governing released record must also name this binary's own machine-derived
+# implementation identity (source commit, executable digest, toolchain and
+# in-tree pack-implementation digests); a record signed for another binary or
+# another artifact set refuses startup rather than loading approximately. The
+# field is inert while `path` is empty, so an artifact directory can be staged
+# before its release records arrive.
 #
 # `revoked` is the operator's suspension and rollback control: it lists
 # release_ids withdrawn out of band. Listing the record that governs its pack
@@ -274,10 +291,12 @@ service_catalogs: {}
 # selection directory is configured.
 release_selection:
   path: ""
+  artifacts_path: ""
   keys: []
   revoked: []
 # release_selection:
 #   path: /etc/phebs/pack-releases
+#   artifacts_path: /etc/phebs/pack-artifacts
 #   keys:
 #     - id: release-signer
 #       public_key: "base64-ed25519-public-key"

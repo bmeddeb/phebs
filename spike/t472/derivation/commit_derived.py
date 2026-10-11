@@ -10,9 +10,13 @@ Nothing here is pushed. The clones are detached at their pins, so each commit is
 a local derived commit whose only parent is the pinned upstream commit. The
 commit identity and both dates are fixed (the pin's committer date), so the
 derived commit SHA is reproducible from the same three files.
+
+Merge reports must come from the tree-validating scipmerge; each report is
+required to carry the symlink-alias inventory (count, paths, modes, targets).
 """
 
 import hashlib
+from datetime import datetime, timedelta, timezone
 import json
 import os
 import subprocess
@@ -20,16 +24,12 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DER = os.environ.get("T472_ROOT", "/home/ben/phebs-rehearsals/t472-derivation")
-CORPUS = os.path.normpath(os.path.join(HERE, "..", "corpus"))
+CORPUS = os.environ.get("CORPUS_DIR", os.path.normpath(os.path.join(HERE, "..", "corpus")))
 LOCK = os.path.normpath(os.path.join(HERE, "..", "corpus.lock.json"))
 DERIVED_IDENTITY = ("phebs t472 derivation", "t472-derivation@phebs.invalid")
 
 SCIP_GO_SHA = "31bf2f3bbbcb25efd4bba6964e08971a9c9c2fba745db4345c0d438ef28b93c4"
 SCIP_GO_BYTES = 18104856
-SCIPMERGE_SHA = "4c22c00f3ed7a17097da5fa32c55561703394a8f8bf80a2400c3c169e3324cce"
-SCIPMERGE_BYTES = 6807487
-SNAPSHOTS_SHA = "8bd8fd8c4924b4ab9839acd1632b98b8648796431f88895b6f24200c8d534a2f"
-SNAPSHOTS_BYTES = 4163718
 GOTOOLCHAIN = "go1.27.1"
 BOUND_INDEX_BYTES = 64 << 20
 BOUND_BLOB_BYTES = 10 << 20
@@ -37,6 +37,13 @@ BOUND_FILES = 200_000
 
 IN_BOUND = ["etcd", "containerd", "grpc-go"]
 DERIVED_PATHS = ["index.scip", "layout-snapshot.json", "generated-from-snapshot.json"]
+
+# T472_ONLY bounds one invocation to an explicit subset of the in-bound
+# repositories; every other recorded repository is left untouched.
+ONLY = [r for r in os.environ.get("T472_ONLY", "").split(",") if r]
+if len(set(ONLY)) != len(ONLY) or set(ONLY) - set(IN_BOUND):
+    raise SystemExit("T472_ONLY must be a duplicate-free subset of %s" % IN_BOUND)
+TARGETS = ONLY or IN_BOUND
 
 
 def run(cmd, cwd=None):
@@ -79,10 +86,28 @@ def other_paths(merge):
     return sorted(p for run in merge["runs"] for p in run["out_of_tree_other"] or [])
 
 
+def commit_date(raw):
+    # Read only the pinned commit; incomplete historical parents are irrelevant.
+    for line in raw.split("\n\n", 1)[0].splitlines():
+        if line.startswith("committer "):
+            _, stamp, offset = line.rsplit(" ", 2)
+            minutes = int(offset[1:3]) * 60 + int(offset[3:])
+            zone = timezone(timedelta(minutes=minutes if offset[0] == "+" else -minutes))
+            return datetime.fromtimestamp(int(stamp), zone).isoformat()
+    raise ValueError("pinned commit has no committer date")
+
+
 def main():
     remote_of = remotes()
+    merge_tool = os.path.join(DER, "tool", "bin", "scipmerge")
+    snapshot_tool = os.path.join(DER, "tool", "bin", "t472snapshots")
+    merge_sha, merge_bytes = sha256(merge_tool), os.path.getsize(merge_tool)
+    snapshot_sha, snapshot_bytes = sha256(snapshot_tool), os.path.getsize(snapshot_tool)
+    scip_tool = os.path.join(DER, "tool", "bin", "scip-go")
+    if sha256(scip_tool) != SCIP_GO_SHA or os.path.getsize(scip_tool) != SCIP_GO_BYTES:
+        raise SystemExit("scip-go no longer matches the frozen tool pin")
     facts = {}
-    for repo in IN_BOUND:
+    for repo in TARGETS:
         clone = os.path.join(CORPUS, repo)
         merge = json.load(open(os.path.join(DER, "merged", "%s.merge.json" % repo)))
         snap = json.load(open(os.path.join(DER, "snapshots", "%s.stats.json" % repo)))
@@ -90,6 +115,9 @@ def main():
         pin = merge["pin"]
         if snap["commit"] != pin:
             raise SystemExit("%s: snapshot commit %s != merge pin %s" % (repo, snap["commit"], pin))
+        table = os.path.join(HERE, "mappings", repo + ".json")
+        if sha256(table) != snap["mapping_table_sha256"]:
+            raise SystemExit("%s: committed resolution table no longer matches snapshot stats" % repo)
         head = run(["git", "rev-parse", "HEAD"], cwd=clone).strip()
         if head != pin:
             raise SystemExit("%s: clone HEAD %s != pin %s" % (repo, head, pin))
@@ -116,7 +144,7 @@ def main():
             raise SystemExit("%s: index.scip over the frozen 64 MiB bound" % repo)
         if snap["max_blob_bytes"] > BOUND_BLOB_BYTES:
             raise SystemExit("%s: over-bound blob %s" % (repo, snap["max_blob_path"]))
-        if snap["regular_files"] > BOUND_FILES:
+        if snap["regular_files"] + len(DERIVED_PATHS) > BOUND_FILES:
             raise SystemExit("%s: corpus over the frozen file bound" % repo)
 
         rels_text = ", ".join("`%s`" % ("." if r == "." else r) for r in rels)
@@ -129,14 +157,17 @@ file is modified.
 
 index.scip \u2014 root merged SCIP index, %d bytes, sha256 %s, %d documents,
 %d occurrences, %d symbols, %d out-of-tree build-cache documents dropped (%d
-synthesized test mains, %d other), %d external symbols dropped, %d
-round-trip-unstable documents, %d version-skewed in-repo references. Built with
-scip-go v0.2.7 (sha256 %s, %d bytes) under GOTOOLCHAIN=%s, one run per Go
-module with --skip-implementations, --repository-remote %s and
---module-version %s, over module roots: %s. The runs were canonicalized and
-merged by the T47.2b scipmerge tool (sha256 %s, %d bytes), which enforces
-sorted unique document paths, one tool version, canonical field order and the
-frozen 64 MiB output bound.
+synthesized test mains, %d other), %d symlink-alias documents dropped (paths,
+modes and targets inventoried in the merge report), %d external symbols
+dropped, %d round-trip-unstable documents, %d version-skewed in-repo
+references. Built with scip-go v0.2.7 (sha256 %s, %d bytes) under
+GOTOOLCHAIN=%s, one run per Go module with --skip-implementations,
+--repository-remote %s and --module-version %s, over module roots: %s. The
+runs were canonicalized and merged by the T47.2b scipmerge tool (sha256 %s,
+%d bytes), which validates every document path against the pinned Git tree,
+drops only inventoried nonregular alias documents, enforces sorted unique
+document paths, one tool version, canonical field order and the frozen 64 MiB
+output bound.
 
 layout-snapshot.json \u2014 t20-layout-snapshot-v1, %d bytes, sha256 %s, %d roots
 over %d regular corpus files.
@@ -156,22 +187,23 @@ spike/t472/corpus.lock.json.
             merge["bytes"], files["index.scip"]["sha256"], merge["docs"],
             merge["occurrences"], merge["symbols"], merge["out_of_tree_dropped"],
             merge["out_of_tree_testmain"], len(other_paths(merge)),
+            merge["alias_documents_dropped"],
             merge["external_symbols_dropped"], merge["round_trip_unstable_docs"],
             merge["version_skew_references"],
             SCIP_GO_SHA, SCIP_GO_BYTES, GOTOOLCHAIN, remote, pin[:12], rels_text,
-            SCIPMERGE_SHA, SCIPMERGE_BYTES,
+            merge_sha, merge_bytes,
             snap["layout_bytes"], snap["layout_sha256"], snap["roots"], snap["regular_files"],
             snap["generated_from_bytes"], snap["generated_from_sha256"],
             snap["clients"], snap["mapped"], snap["abstained"],
-            snap["mapping_table_sha256"], SNAPSHOTS_SHA, SNAPSHOTS_BYTES,
+            snap["mapping_table_sha256"], snapshot_sha, snapshot_bytes,
             BOUND_FILES, snap["max_blob_path"], snap["max_blob_bytes"],
         )
 
+        date = commit_date(run(["git", "cat-file", "commit", pin], cwd=clone))
         run(["git", "add", "--"] + DERIVED_PATHS, cwd=clone)
         staged = run(["git", "diff", "--cached", "--name-only"], cwd=clone).split()
         if sorted(staged) != sorted(DERIVED_PATHS):
             raise SystemExit("%s: staged set %s != %s" % (repo, staged, DERIVED_PATHS))
-        date = run(["git", "show", "-s", "--format=%cI", pin], cwd=clone).strip()
         env = dict(os.environ,
                    GIT_AUTHOR_NAME=DERIVED_IDENTITY[0], GIT_AUTHOR_EMAIL=DERIVED_IDENTITY[1],
                    GIT_COMMITTER_NAME=DERIVED_IDENTITY[0], GIT_COMMITTER_EMAIL=DERIVED_IDENTITY[1],
@@ -183,9 +215,11 @@ spike/t472/corpus.lock.json.
 
         derived = run(["git", "rev-parse", "HEAD"], cwd=clone).strip()
         tree = run(["git", "rev-parse", "HEAD^{tree}"], cwd=clone).strip()
-        parents = run(["git", "rev-list", "--parents", "-n", "1", "HEAD"], cwd=clone).split()
-        if parents[1:] != [pin]:
-            raise SystemExit("%s: derived commit parents %s != [%s]" % (repo, parents[1:], pin))
+        raw_commit = run(["git", "cat-file", "commit", derived], cwd=clone)
+        parents = [line.removeprefix("parent ") for line in raw_commit.split("\n\n", 1)[0].splitlines()
+                   if line.startswith("parent ")]
+        if parents != [pin]:
+            raise SystemExit("%s: derived commit parents %s != [%s]" % (repo, parents, pin))
         after = run(["git", "status", "--porcelain"], cwd=clone)
         if after.strip():
             raise SystemExit("%s: clone not clean after commit:\n%s" % (repo, after))
@@ -201,14 +235,15 @@ spike/t472/corpus.lock.json.
                 raise SystemExit("%s: committed %s digest != measured working-tree digest" % (repo, rel))
             if len(p.stdout) != files[rel]["bytes"]:
                 raise SystemExit("%s: committed %s bytes != measured working-tree bytes" % (repo, rel))
-        shown = run(["git", "show", "--stat", "--oneline", "-s", "HEAD"], cwd=clone).strip()
+        shown = derived[:12] + " " + raw_commit.split("\n\n", 1)[1].splitlines()[0]
 
         facts[repo] = {
             "name": remote_of[repo],
             "pin": pin,
+            "clone": clone,
             "derived_commit": derived,
             "derived_tree": tree,
-            "derived_parents": parents[1:],
+            "derived_parents": parents,
             "files": {rel: dict(files[rel], git_blob_sha1=blobs[rel]) for rel in DERIVED_PATHS},
             "merge": {
                 "docs": merge["docs"],
@@ -217,6 +252,8 @@ spike/t472/corpus.lock.json.
                 "out_of_tree_dropped": merge["out_of_tree_dropped"],
                 "out_of_tree_testmain": merge["out_of_tree_testmain"],
                 "out_of_tree_other": other_paths(merge),
+                "alias_documents_dropped": merge["alias_documents_dropped"],
+                "alias_documents": merge["alias_documents"],
                 "version_skew_references": merge["version_skew_references"],
                 "version_skew_sample": merge["version_skew_sample"],
                 "external_symbols_dropped": merge["external_symbols_dropped"],

@@ -36,10 +36,27 @@ message HelloReply {
 }
 `
 
+// The extension fixture drives the declaration-local extension surface: one
+// extendee and one extension field, no ordinary field, so any DECLARES_FIELD
+// for this file would be a guessed extendee lineage.
+const demoExtProto = `syntax = "proto2";
+
+package demoext;
+
+message Base {
+  extensions 100 to max;
+}
+
+extend Base {
+  optional string version_tag = 100;
+}
+`
+
 // This covers the persisted pinned-span path for the provisional reader: on a
-// real mirror, each service, message, operation, and field becomes an assertion
-// whose evidence atom resolves to the pinned commit and exact span. Canonical
-// descriptor-derived lineage remains intentionally unclaimed.
+// real mirror, each service, message, operation, field, and extension
+// declaration becomes an assertion whose evidence atom resolves to the pinned
+// commit and exact span. Canonical descriptor-derived lineage remains
+// intentionally unclaimed.
 func TestProtoDeclEndToEnd(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
@@ -69,6 +86,9 @@ func TestProtoDeclEndToEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(src, "api", "v1", "demo.proto"), []byte(demoProto), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(src, "api", "v1", "extension.proto"), []byte(demoExtProto), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	// This legal Git filename is deliberately outside the harness's readable
@@ -111,8 +131,9 @@ func TestProtoDeclEndToEnd(t *testing.T) {
 	if run.Commit != head {
 		t.Fatalf("run pinned to %s, want %s", run.Commit, head)
 	}
-	if run.Coverage.CorpusFileCount != 2 || run.Coverage.CandidateFileCount != 1 ||
-		run.Coverage.ReadFileCount != 1 || run.Coverage.ReadBytes != int64(len(demoProto)) ||
+	if run.Coverage.CorpusFileCount != 3 || run.Coverage.CandidateFileCount != 2 ||
+		run.Coverage.ReadFileCount != 2 ||
+		run.Coverage.ReadBytes != int64(len(demoProto)+len(demoExtProto)) ||
 		len(run.Coverage.SourceScopeDigest) != len("sha256:")+64 ||
 		!strings.HasPrefix(run.Coverage.SourceScopeDigest, "sha256:") {
 		t.Fatalf("source coverage = %+v", run.Coverage)
@@ -145,6 +166,16 @@ func TestProtoDeclEndToEnd(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list fields: %v", err)
 	}
+	extensions, err := s.ListAssertions(ctx, store.AssertionQuery{
+		Repo: repoName, RunID: run.ID, Predicate: "DECLARES_EXTENSION",
+	})
+	if err != nil {
+		t.Fatalf("list extensions: %v", err)
+	}
+	if len(extensions) != 1 || extensions[0].Object != "demoext.version_tag#100" ||
+		extensions[0].Lineage == "" || extensions[0].Tier != store.TierExact {
+		t.Fatalf("extension declarations = %+v", extensions)
+	}
 	wantOps := map[string]bool{"demo.Greeter/SayHello": true, "demo.Greeter/SayGoodbye": true}
 	for _, a := range ops {
 		delete(wantOps, a.Object)
@@ -161,6 +192,9 @@ func TestProtoDeclEndToEnd(t *testing.T) {
 	}
 	for _, a := range fields {
 		delete(wantFields, a.Object)
+		if a.Subject == "api/v1/extension.proto" {
+			t.Fatalf("extension file emitted an ordinary field assertion: %+v", a)
+		}
 	}
 	if len(wantFields) != 0 {
 		t.Fatalf("missing fields: %v", wantFields)
@@ -168,7 +202,7 @@ func TestProtoDeclEndToEnd(t *testing.T) {
 	if len(services) != 1 || services[0].Object != "demo.Greeter" {
 		t.Fatalf("service declarations = %+v", services)
 	}
-	if len(messages) != 2 {
+	if len(messages) != 3 {
 		t.Fatalf("message declarations = %+v", messages)
 	}
 
@@ -183,8 +217,10 @@ func TestProtoDeclEndToEnd(t *testing.T) {
 	allAssertions = append(allAssertions, messages...)
 	allAssertions = append(allAssertions, ops...)
 	allAssertions = append(allAssertions, fields...)
+	allAssertions = append(allAssertions, extensions...)
 	foundRetries := false
 	foundMultilineRPC := false
+	foundExtension := false
 	for _, assertion := range allAssertions {
 		if assertion.RunID != run.ID || len(assertion.Supporting) != 1 {
 			t.Fatalf("assertion has invalid run/support binding: %+v", assertion)
@@ -240,6 +276,15 @@ func TestProtoDeclEndToEnd(t *testing.T) {
 				}
 				foundMultilineRPC = true
 			}
+			if assertion.Object == "demoext.version_tag#100" {
+				if source != "optional string version_tag = 100;" {
+					t.Fatalf("extension span slices to %q", source)
+				}
+				if assertion.Detail != `{"schema":"proto-extension-detail-v1","name":"version_tag","extendee":{"raw":"Base","kind":"message","resolution":"same_file","declaration":"demoext.Base"},"type":{"raw":"string","kind":"scalar","resolution":"intrinsic"},"cardinality":"optional"}` {
+					t.Fatalf("extension detail = %q", assertion.Detail)
+				}
+				foundExtension = true
+			}
 		}
 		if !matchedSubject {
 			t.Fatalf("no occurrence for assertion subject %s", assertion.Subject)
@@ -250,6 +295,9 @@ func TestProtoDeclEndToEnd(t *testing.T) {
 	}
 	if !foundMultilineRPC {
 		t.Fatal("stored multiline RPC evidence not found")
+	}
+	if !foundExtension {
+		t.Fatal("stored extension evidence not found")
 	}
 
 	// Determinism: re-running the worker on the same commit short-circuits

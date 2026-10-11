@@ -92,7 +92,8 @@ func newT422CheckpointRecoveryControl(ctx context.Context, launch *t422SemanticL
 	}
 	lifetime, cancel := context.WithCancel(ctx)
 	base := &t422StaleControl{ctx: lifetime, cancel: cancel, launch: launch, reconciler: reconciler,
-		phaseEnd: time.Now().Add(t422StaleMaximum), requeued: make(chan struct{})}
+		typedScopeReservations: reconciler.TypedScopeReservations,
+		phaseEnd:               time.Now().Add(t422StaleMaximum), requeued: make(chan struct{})}
 	base.recovered.ready, base.recovered.release = make(chan struct{}), make(chan struct{})
 	return &t422CheckpointRecoveryControl{t422StaleControl: base, input: *launch.request.CheckpointRecovery, readerReady: make(chan context.Context, 1)}, nil
 }
@@ -311,7 +312,7 @@ func (control *t422CheckpointRecoveryControl) captureFinal(ctx context.Context, 
 	if !control.current(ctx, true, true) {
 		return control.stop(errT422StaleControl)
 	}
-	value, err := t422StaleFinalSnapshot(state, response)
+	value, err := t422StaleFinalSnapshot(state, response, control.typedScopeReservations)
 	control.mu.Lock()
 	valid := err == nil && control.err == nil && control.recovered.reported && !control.finalSeen &&
 		value.final == control.input.Prior && value.generation == control.input.Hit.TargetGeneration && value.roots == control.input.Roots

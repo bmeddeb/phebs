@@ -30,7 +30,7 @@ func TestCallerMapPackIdentityAndRecipeFrozen(t *testing.T) {
 	}
 	recipe := callerMapRecipe()
 	want := []struct{ domain, version string }{
-		{"proto-contract", "3.0.0"},
+		{"proto-contract", "4.0.0"},
 		{"grpc-caller", "1.5.0"},
 	}
 	if len(recipe) != len(want) {
@@ -95,8 +95,8 @@ func TestCallerMapRegistrationFollowsExtractorSet(t *testing.T) {
 	domains := released.CandidateDomains()
 	if len(domains) != 2 ||
 		domains[0].Domain != "grpc-caller" || domains[0].Version != "1.5.0" ||
-		domains[1].Domain != "proto-contract" || domains[1].Version != "3.0.0" {
-		t.Fatalf("released candidate domains = %+v, want grpc-caller@1.5.0 then proto-contract@3.0.0", domains)
+		domains[1].Domain != "proto-contract" || domains[1].Version != "4.0.0" {
+		t.Fatalf("released candidate domains = %+v, want grpc-caller@1.5.0 then proto-contract@4.0.0", domains)
 	}
 
 	for _, testCase := range []struct {

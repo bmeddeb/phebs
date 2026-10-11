@@ -176,7 +176,7 @@ func seedT422PreparationNative(t *testing.T, ctx context.Context, data string, s
 				return err
 			}
 			source, observation, err := readAuthority(operation, state)
-			policy, policyErr := candidate.ExtractionPolicyDigest(state.PolicyDigest, true)
+			policy, policyErr := candidate.ExtractionPolicyDigest(state.PolicyDigest, true, false)
 			if err != nil {
 				return err
 			}
@@ -261,7 +261,7 @@ func seedT422PreparationNative(t *testing.T, ctx context.Context, data string, s
 			CandidateGenerationSHA256: selected.GenerationDigest, SourceGenerationSHA256: sourceDigest,
 			ObservationGenerationSHA256: observationDigest, ApplicablePartitions: uint64(len(actual.Plan.Expected))})
 	}
-	prior, err := t422StaleFinalSnapshot(selected, response)
+	prior, err := t422StaleFinalSnapshot(selected, response, false)
 	if err != nil {
 		t.Fatal("actual preparation inventory", err)
 	}

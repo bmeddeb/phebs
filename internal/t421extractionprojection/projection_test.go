@@ -281,7 +281,7 @@ func newProjectionFixture(t *testing.T) projectionFixture {
 		ObservationGenerationDigest: "sha256:" + strings.Repeat("4", 64),
 		ExtractorVersion:            "1",
 		ExtractionPolicyDigest:      "sha256:" + strings.Repeat("5", 64),
-	})
+	}, false)
 	if err != nil {
 		t.Fatal(err)
 	}

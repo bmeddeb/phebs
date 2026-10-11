@@ -26,6 +26,10 @@ type EvidencePartitionExecutor struct {
 	Extractors []Extractor
 	// StoreAccounting selects only plans carrying the versioned 169-fact policy.
 	StoreAccounting bool
+	// TypedScopeReservations selects only plans carrying the corrected
+	// typed-scope reservation policy identity; adjusted Reservation shares
+	// alone never satisfy the gate.
+	TypedScopeReservations bool
 }
 
 func (executor *EvidencePartitionExecutor) ExecutePartition(
@@ -63,7 +67,9 @@ func (executor *EvidencePartitionExecutor) ExecutePartition(
 	if err := candidate.ValidateDomainResultPlanControl(plan); err != nil {
 		return candidate.PartitionResultSpec{}, err
 	}
-	policy, err := candidate.ExtractionPolicyDigest(plan.CandidatePolicyDigest, executor.StoreAccounting)
+	policy, err := candidate.ExtractionPolicyDigest(
+		plan.CandidatePolicyDigest, executor.StoreAccounting, executor.TypedScopeReservations,
+	)
 	if err != nil || policy != plan.ExtractionPolicyDigest {
 		return candidate.PartitionResultSpec{}, errors.Join(err, extractionpublication.ErrStale)
 	}

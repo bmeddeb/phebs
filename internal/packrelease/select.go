@@ -107,6 +107,17 @@ func (s Selection) Released(packID string) (*PackRelease, bool) {
 //     implementation identity and the present artifact root, and the record
 //     must match them.
 func LoadSelection(ctx context.Context, dir string, opts Options) (Selection, error) {
+	return LoadSelectionWithBindings(ctx, dir, opts, nil)
+}
+
+// LoadSelectionWithBindings derives load bindings at most once, after an
+// authenticated governing record passes the withdrawal and time gates. A
+// wholly withdrawn selection never needs executable facts or artifact I/O.
+// Only the three load bindings are taken from bind; trust, revocation and time
+// remain the caller's original options. A nil bind uses opts directly.
+func LoadSelectionWithBindings(
+	ctx context.Context, dir string, opts Options, bind func(context.Context) (Options, error),
+) (Selection, error) {
 	selection := Selection{released: map[string]*PackRelease{}}
 	if dir == "" {
 		return selection, nil
@@ -203,6 +214,16 @@ func LoadSelection(ctx context.Context, dir string, opts Options) (Selection, er
 			}
 			selection.withdrawn = append(selection.withdrawn, Withdrawal{PackID: packID, Cause: string(reason)})
 			continue
+		}
+		if bind != nil {
+			bindings, err := bind(ctx)
+			if err != nil {
+				return selection, fmt.Errorf("release record %q load bindings: %w", winner.name, err)
+			}
+			opts.Implementation = bindings.Implementation
+			opts.ReferencedArtifactsRootDigest = bindings.ReferencedArtifactsRootDigest
+			opts.Resolver = bindings.Resolver
+			bind = nil
 		}
 		if err := requireLoadBindings(opts); err != nil {
 			return selection, fmt.Errorf("release record %q: %w", winner.name, err)

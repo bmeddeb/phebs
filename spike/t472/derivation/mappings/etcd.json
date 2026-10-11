@@ -1,0 +1,28 @@
+{
+ "abstained": 0,
+ "abstentions": [],
+ "clients": 3,
+ "mapped": 3,
+ "mappings": [
+  {
+   "declaration_path": "api/etcdserverpb/rpc.proto",
+   "generated_path": "api/etcdserverpb/rpc_grpc.pb.go",
+   "generator_relative_path": "rpc.proto",
+   "vendored": false
+  },
+  {
+   "declaration_path": "server/etcdserver/api/v3election/v3electionpb/v3election.proto",
+   "generated_path": "server/etcdserver/api/v3election/v3electionpb/v3election_grpc.pb.go",
+   "generator_relative_path": "v3election.proto",
+   "vendored": false
+  },
+  {
+   "declaration_path": "server/etcdserver/api/v3lock/v3lockpb/v3lock.proto",
+   "generated_path": "server/etcdserver/api/v3lock/v3lockpb/v3lock_grpc.pb.go",
+   "generator_relative_path": "v3lock.proto",
+   "vendored": false
+  }
+ ],
+ "repo": "etcd",
+ "roots": 6
+}

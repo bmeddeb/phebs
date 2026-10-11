@@ -411,3 +411,25 @@ func TestLoadSelectionExpiryWithdraws(t *testing.T) {
 		})
 	}
 }
+
+func TestLoadSelectionDerivesBindingsOnceAndKeepsTrustOptions(t *testing.T) {
+	dir := t.TempDir()
+	public, private := testKey(t)
+	for _, id := range []string{"phebs.a", "phebs.b"} {
+		writeSigned(t, dir, id+".json", "key-1", private, func(r *PackRelease) { r.PackID = id })
+	}
+	opts := loadOptions(public)
+	unbound := Options{Keys: opts.Keys, Now: opts.Now}
+	calls := 0
+	selection, err := LoadSelectionWithBindings(t.Context(), dir, unbound, func(context.Context) (Options, error) {
+		calls++
+		// An unrelated revocation supplied by the binding must not replace
+		// the operator's trust/lifecycle configuration for the second pack.
+		bound := opts
+		bound.Revoked = map[string]struct{}{validRelease().ReleaseID: {}}
+		return bound, nil
+	})
+	if err != nil || selection.Count() != 2 || calls != 1 {
+		t.Fatalf("selection count = %d, calls = %d, error = %v", selection.Count(), calls, err)
+	}
+}

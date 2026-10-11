@@ -268,3 +268,338 @@ in the lock names the obligation, and nothing below is sealed or scored.
   its module runs instead of a single `scip-go` invocation that never ran.
 
 Re-derivation re-records every digest, derived commit and count in the lock.
+
+## Corrected admitted derivation (2026-10-10)
+
+This prospective run closes the input re-derivation obligation above for the
+three option-A admitted repositories. It uses new local clones and new
+rehearsal custody at
+`/home/ben/phebs-rehearsals/t472-rederivation-20261010`; the original clones,
+`/home/ben/phebs-rehearsals/t472-derivation`, refused Vitess/Istio inputs and
+initial measurements are preserved. The lock keeps each admitted repository's
+initial `previous_derived`, the original recipe/totals, disposition and
+refusal records. Its `derivation.corrected_run` records the current tools,
+module environments, license blobs, commands and receipt digests, and
+`derivation.admitted_totals` records the corrected population. No prediction,
+human label, quality score or protocol seal was produced.
+
+| Repository | Pin → corrected local derived commit | `index.scip` bytes · SHA-256 | module runs | version-skew references |
+|---|---|---|---|---:|
+| etcd-io/etcd | `f061acd0902d489041448cdd19d71a345d27b9f5` → `75771dd76dd9a6d7048ae48793b806b1cbec0c22` | 33,498,138 · `41f32f8d058c4375dcd037f85fdbf10bbf17f319f3a73abb659555e881308570` | 14 | 0 |
+| containerd/containerd | `3ea5bdbfbd9f25dd1720dd28552510c50bc85ca9` → `e0f9f8ac24f21a3703f94bb09817b699a1446af0` | 38,653,435 · `314b80cf75ddad67c71696cbaef3c4f30dfd5a19066fb5ab6e07fe5826a1d680` | 2 | 6,047 |
+| grpc/grpc-go | `5f1ccf56ea5ec964bbf447a10b561214f86387a6` → `f40347859c3380f5c409f153ab79d4b8e724abd3` | 51,916,232 · `3fa1d7a5b00102dbe751d537f9f2379734cffd1d4b785c294a894924119b506d` | 10 | 162 |
+
+All 26 fresh module indexer invocations passed. Source inventory and largest
+blob bounds remain within §2, and every derived commit has exactly its frozen
+pin as parent and changes only the three derived input paths. Each committed
+blob digest and the clean clone states were verified directly. There are still
+60 generated clients, 44 mapped declarations and 16 explicit attribution
+abstentions. The 6,209 version-skewed references span **all indexed symbol
+kinds**, not a count of missed RPC callers. Ben selected exact symbols on
+2026-10-10: no normalization and no exclusion of resulting caller gaps from
+the independent recall population. No `unit-snapshot.json` was added; Ben
+selected call-site and declaration attribution claims, with service edges
+unavailable.
+
+### Tree-validated merge and the etcd symbol-alias correction (T47.2c)
+
+The merge helper now validates every merged document path against the pinned
+Git tree read from its `--clone` instead of dropping by basename: regular
+documents (mode 100644/100755) are kept, mode-120000 documents are dropped
+only as explicitly inventoried alias entries carrying path, mode and target,
+and an absent path or any other mode refuses the merge. Both production scope
+guards are unchanged. The etcd input was re-derived from the retained
+per-module SCIP outputs after re-verifying all 26 recorded run identities;
+grpc-go and containerd regenerate byte-identical under the new helper
+(regenerated digests equal the recorded digests above), so only the etcd
+derived commit advances:
+
+| Repository | Pin → derived commit | `index.scip` bytes · SHA-256 | module runs | version-skew references |
+|---|---|---|---|---:|
+| etcd-io/etcd | `f061acd0902d489041448cdd19d71a345d27b9f5` → `f9ecd8dcecc18b7559c0e3c0c264477c6ab9ddc1` | 33,320,501 · `9b0b13ed12244e04ee05cff274a244ed61bea2944c4d1f0eec2d05e603e79177` | 14 | 0 |
+
+The 11 dropped documents are the committed `client/v3` example-file symlink
+aliases into `tests/integration/clientv3` (2,424 occurrences, 282 symbols);
+each alias target remains as its own canonical regular document, the retained
+set is exactly the previous set minus those aliases, and every retained
+document is regular at the pin. The previous input (derived commit
+`75771dd76dd9a6d7048ae48793b806b1cbec0c22`, 33,498,138 bytes,
+`41f32f8d058c4375dcd037f85fdbf10bbf17f319f3a73abb659555e881308570`) is
+preserved intact as `previous_derived` and at its three retained copies. The
+admitted totals are unchanged (26 module runs, 60 generated clients, 44
+mapped declarations, 16 abstentions). The new merge helper is
+`537312c0ba3b2fa7a6210bd55d047f2bae687b0d5608b066596685d50cce3c61` at
+7,076,139 bytes (the table in "Exact run inputs" above keeps the historical
+R1 tool identity); `scip-go` and `t472snapshots` are unchanged. Custody is
+`/home/ben/phebs-rehearsals/t472-alias-derivation-20261010` (fresh clone at
+the pin, cross-checked byte-identical against both retained clones; receipt
+`4fcc083243174fa122252c405af4cc9ed514c975dae5b34a851b915bf978a7f9`; lock
+`8c5340427010c3ca86d2a038d88ff6d23ade76c04ba2e9bcd49d579237762168`). The
+source census still records 7,685 regular Go sources and the 11 etcd
+nonregular Go paths; the census, universe, frames and bundle artifacts that
+still bound `75771dd7…` were rebound with the regenerated preparation under
+T47.2f (recorded in "Rebound preparation" at the end of this file), never
+silently reinterpreted here.
+
+### Exact run inputs and measured host
+
+The runner was source `bcfaaca5503888a89d8947bcb77749105588e04a`; the merge
+and snapshot helpers were built clean at
+`ecf3ab968163d9839832c648d483d9666c2271e8` using Go 1.26.5 and `-trimpath`.
+Their BuildInfo has no embedded `vcs.revision`; this source binding records
+the operator's build invocation rather than claiming an embedded revision.
+Derived-commit authoring used
+`ab364938c7aae783a88f08fe32a41eb0391be04c`. Later docs, receipt and Python
+lock-updater edits do not retroactively rename those tool identities.
+
+| Tool | SHA-256 | Bytes |
+|---|---|---:|
+| `scip-go` v0.2.7 | `31bf2f3bbbcb25efd4bba6964e08971a9c9c2fba745db4345c0d438ef28b93c4` | 18,104,856 |
+| `scipmerge` | `131ab8632552d6538bd5f1e671ded45633437fb79833dab82ecf92a5faeedab5` | 6,863,311 |
+| `t472snapshots` | `99ab48dd91d86f6231124394d1ee8d7aa63d5f80cecb8d166b8da981dd2e841b` | 4,163,766 |
+
+Indexing used Linux/amd64, Go 1.27.1, `CGO_ENABLED=1`, `GOFLAGS=-p=2` and
+`GOMAXPROCS=2`, one native indexer at a time. Root and all 26 per-module
+effective Go environments are recorded, including module/workspace paths,
+proxy and cache locations. Resolution tables now live in
+[`derivation/mappings`](derivation/mappings), and snapshot digests bind those
+exact table bytes. The merge metadata names `t472-merge`, its full `--pin`
+and module roots rather than claiming one indexer invocation.
+
+Live physical memory was 15,991,762,944 bytes; all observed cgroup
+`memory.max` ancestors were `max`. Swap was not counted as physical memory.
+Indexer GNU time records retain per-invocation wall/user/system/max-RSS
+facts; they are not aggregate descendant accounting or a production operating
+envelope. Merge/snapshot wall timings were lost before the initial authoring
+failure and are explicitly unavailable, never reconstructed. The owning cost
+is offline serial indexing, three merges, three snapshot passes, classification
+and three local commits; no production query, sync, startup, retry/no-op or
+publication cost changes.
+
+### Build-cache classification and operator corrections
+
+The merge's basename-only detector reported zero named `_testmain.go`
+documents and listed all 373 remaining drops (101 etcd, 116 containerd,
+156 grpc-go). Every listed hashed-cache source was read and retained; all
+373 carry the exact `go test` generated header, `package main`,
+`testing/internal/testdeps`, a main function and `testing.MainStart`.
+[`build-cache-classification.json`](build-cache-classification.json) records
+the method, raw document path, module, source digest/size and retained source
+path for every drop. These synthesized test mains are outside the pinned
+Git trees and exclude no eligible in-tree source. This source classification
+does not rewrite the merge's measured basename counters or input bytes.
+
+Initial commit authoring used `git show` and later an ancestry query against
+incomplete historical parent graphs; both failed despite available pinned
+commit objects. The corrected author reads the pinned date and derived
+immediate parent directly with `git cat-file commit`, fixes identity/dates,
+and verifies committed blobs. No indexer invocation failed and no historical
+parent content was invented. The original records and inputs remain retained.
+
+Ben's sole-reviewer amendment and approved thresholds are in the prospective
+[`CALLER_QUALITY_PROTOCOL.md`](../../docs/CALLER_QUALITY_PROTOCOL.md).
+Independent source/frame enumeration, the caller-specific scoring projection,
+source review and artifact/parameter bindings remain before protocol
+sealing. Ben then labels the sealed sample from source and commits those labels
+before prediction disclosure and scoring. No independent-human validation,
+accuracy or release claim follows from this input derivation.
+
+Ben approved the thresholds and 97-site/small-census rule on 2026-10-10;
+that decision is complete. The recorded module inventory covers 7,696
+Go-suffixed paths. A direct derived-tree reconciliation records 7,685 regular
+Go sources (etcd 1,094; containerd 5,508; grpc-go 1,083) and all 11 etcd
+Go-suffixed symlinks in [`source.census.json`](source.census.json). This is
+a source-kind census, not a true-call or attribution frame and not a
+processing-quality result; nonregular paths remain explicit for later
+universe/outcome accounting.
+The approved machine-readable bar lives in
+[`validation.parameters.json`](validation.parameters.json); it contains no
+labels, seed, score or seal. Preregistration will bind its exact digest.
+
+### Verification of this slice
+
+The meaningful Python derivation tests, complete merge normal/race tests,
+snapshot compilation, shell syntax, scoped Go vet and repository-pinned lint
+pass. Complete `internal/packrelease`, `internal/executableidentity` and
+`internal/config` normal/race packages pass. Focused `cmd/phebs` normal/race
+checks cover build-fact and artifact binding derivation/refusal, wrong-binary
+admission, withdrawal without artifact reads and ordinary Caller Map
+startup/API/MCP discovery. T48.4c is already merged on base
+`bee6ebfd5379c1948602ec2548cf627a91c2d8a6`; this slice changes none of its
+implementation. Its fixed recipe registry remains empty and releases nothing.
+`make docs-check`, `make verify-glossary` and whitespace checks pass, including
+the exact retained T11.1 tree. Preservation checks compare the initial recipe,
+totals, option-A disposition, refusal records and previous admitted
+measurements, and rehash all 373 retained classified sources.
+
+No full-repository/store, operating-envelope or non-Linux native replay was
+run for this offline derivation/docs slice. No independent code review or
+human quality labels are claimed; this ticket branch is unmerged.
+
+## Corrected source enumeration, frames, scoring and binding (2026-10-10)
+
+The nine findings against `b2ffd480` are corrected without narrowing Ben's
+approved call-site/declaration-attribution scope. The three derived commits,
+parameters, corpus lock, source census, exact symbols and frozen t111/pilot
+machinery retain their bytes. Everything here is unsealed preparation;
+precision/abstention/unresolved candidates, genuine beacon/seed, blind labels,
+independent resolution/citation ledgers and outcomes remain explicit inputs.
+
+### Source universe and frames
+
+`enumerate_universe.py` supplies every regular Go blob at the exact derived
+commits to the standard-library parser in `gosites/main.go`. Every call
+expression remains eligible: bare aliases, interfaces, wrappers, factories,
+generics and dynamic/reflected calls. Inventoried method references and
+full-method strings are also retained. Import provenance never removes a
+call. Parse errors refuse the run. Canonical source coordinates freeze the
+callee token (or complex expression), together with exact accepted production
+citation spans for the adapter's join.
+
+| Artifact | Population |
+|---|---:|
+| `universe/universe.sites.*.jsonl.gz` | 499,771 sites across 11 repository×role strata |
+| `universe/universe.declarations.jsonl` | 60 generated files, 74 individual service-client interfaces, 390 operations |
+| `frames/frames.recall.jsonl.gz` | 498,793 potential recall sites |
+| `frames/frames.attribution.jsonl` | 74 interfaces in 4 repository×role strata, all census |
+| `frames/frames.excluded.json` | all 978 import-only exclusions |
+
+The 60 generated files still partition into 44 mapped and 16 abstained files.
+The census remains 7,685 regular Go sources and 11 explicitly inventoried
+Go-suffixed symlinks. Each individual interface has its own span and service;
+file aggregates cannot substitute for interface units. Recall samples remain
+97 per nonempty stratum or a smaller full census (`etcd-io/etcd:mock` has 75).
+The schema-v2 plan records counts and digest references, with populations
+stored once. Gzip members have zero timestamps and compressed-byte digests.
+Three consecutive universe/frame generations are byte-identical.
+
+### Candidate adapter and scoring
+
+`frames.project_candidate_frames` accepts this recipe's `CALLS_OPERATION`
+and `UNRESOLVED_CALLER`, normalizes leading-slash operations for the unchanged
+label schema, preserves reason/lineage/role, and joins exact production spans
+to independent source IDs. Unsupported predicates, wrong source fences,
+role disagreement, inconsistent same-operation claims and conflicting
+resolution decisions refuse. Distinct unresolved operations remain a
+complete deterministic alternative set at one sampled source site, including
+per-binding reasons and lineages; they are never chosen by assertion order. Frozen `candidate_rows`
+is reused through this adapter; its old unresolved predicate is not rewritten.
+
+`caller_scoring.py` keeps the entire sampled sheet for uncertainty accounting.
+All five approved quality families must have their complete planned results;
+missing labels/results refuse, an all-unsure stratum invalidates, uncertainty
+above 10% fails, and zero denominators are unavailable. Unresolved accuracy
+compares independent resolution and the complete operation/reason alternative
+set, rather than invocation alone or a scalar reason.
+Attributed precision/recall compare canonical operation and exact declaration
+lineage against an independently committed citation ledger. Correct negative
+abstentions cannot raise edge recall. The source interface census supports
+that ledger; it does not substitute for call-site edge metrics.
+
+`quality_samples(plan, drawn, populations)` checks every sealed quality frame
+and draw before constructing the gate's required sample mapping. Real draws
+and scores have not run. The outcome ledger requires explicit repository,
+commit, path and terminal state for every eligible source, and applies
+analyzed≥90 / partial+failed≤5 / excluded≤10 to every repository×role stratum.
+Whole-corpus totals cannot conceal a failing stratum.
+
+### Bundle and review
+
+The schema-v2 preregistration bundle requires its complete structure and
+validates every digest field recursively. Assembly rehashes actual universe
+and frame members, matches lock/census/parameters/parser provenance, and checks
+the frozen machinery digests. Missing preparation fields, malformed nested
+digests and stale artifacts refuse. Independent resolution and declaration
+ledgers are named missing bindings. Both publication payloads remain local
+skeletons with `published: false`; no sample, label, prediction or score is
+supplied. The exact independent review and gate record is in
+[`REVIEW_PACKET.md`](REVIEW_PACKET.md).
+
+### Offline cost and verification boundaries
+
+No production query/request, sync tick, startup/restart, retry/no-op or
+publication transition invokes these tools. They add no production locks,
+cache invalidation, persistent state or children. Enumeration reads each
+regular source once per run (68,011,219 source bytes overall), retains source
+bytes per repository and all site records for deterministic output, and uses
+one serial Git batch reader plus one `go run` parser launcher/helper pair per
+repository; short metadata/symlink Git reads and Go compilation may also spawn
+children. No indexer, live phebs or external publication runs. Frames and
+bundle assembly re-read and hash the committed populations; cost is O(source
+bytes + sites), with O(sites) in-memory records and temporary JSON/gzip buffers.
+The retained frame plan adds no duplicate half-million-ID ledger.
+
+On this Linux amd64 host, GNU time reported enumeration at 20.10s / 1,408,524
+KiB maximum RSS and frame generation at 13.79s / 1,770,528 KiB maximum RSS.
+These command measurements are not aggregate concurrent-descendant RSS or a
+production operating envelope. Largest retained source set is containerd's
+49,592,668 bytes. Replays repeat those full reads; there is no cache.
+
+The meaningful Python source/frame/scoring/refusal tests, inherited derivation
+tests, parser compilation/vet/pinned lint, unchanged gocaller normal/race
+package, docs/glossary and whitespace gates are recorded in the packet. No
+full-repository/store, live extraction, operating-envelope or non-Linux replay
+is claimed. Ben's two source confirmations and genuine sealing inputs remain;
+no merge, seal, labels, real-round scores, activation or release follows.
+
+## Rebound preparation (T47.2f, 2026-10-10)
+
+Slice A corrected etcd's derived commit to `f9ecd8dc…` and updated the lock
+(`8c534042…`), which left the committed preparation provably stale: its plan
+and bundle still bound `75771dd7…` (the plan's `corpus_derived_commits`) and
+the pre-slice-A lock digest `e3874493…`, so `binding_bundle.py`'s freshness
+predicate refused against the committed bytes. This section records the
+rebinding; nothing is sealed, labeled or scored, and no identity is silently
+reinterpreted.
+
+The census's single etcd line moves to `f9ecd8dc…` after reconciling the
+corrected tree directly: 1,105 Go-suffixed paths = 1,094 regular sources plus
+the same 11 nonregular `client/v3` symlink objects (identical mode, object and
+path), so `go_paths`, `regular_go_sources` and both file totals are unchanged.
+`enumerate_universe.py`, `frames.py` and `binding_bundle.py` then regenerated
+five universe files, four frame files and the bundle; the bundle's machinery
+table remains exact (machinery bytes unchanged).
+
+| Artifact | `d9646ef8` | `8fcb532f` |
+|---|---|---|
+| `source.census.json` | `51b9274f…` | `2aa22d7a…` |
+| `universe/universe.json` | `d908eaea…` | `46f6a02c…` |
+| `universe/universe.declarations.jsonl` | `3d94d4fe…` | `c5879fd7…` |
+| `universe/universe.sites.etcd.jsonl.gz` | `b31bbbd2…` | `0ece1506…` |
+| `frames/frames.recall.jsonl.gz` | `a0093197…` | `c89238bf…` |
+| `frames/frames.attribution.jsonl` | `1bb0bb13…` | `2ddd62cb…` |
+| `frames/frames.plan.json` | `51271057…` | `0c60125b…` |
+| `bundle/preregistration.bundle.json` | `ffbfebc7…` | `b0744184…` |
+
+Populations are unchanged: 499,771 sites in 11 repository×role strata (73,039
+etcd rows, all at `f9ecd8dc…`), recall 498,793, attribution 74 interfaces in
+4 strata (8 etcd units), excluded ledger 978, declarations 60 files / 44
+mapped / 16 abstained / 390 operations. Wherever no etcd identity appears the
+bytes are stable — `universe.sites.grpc-go.jsonl.gz` (`ab5be4e5…`),
+`universe.sites.containerd.jsonl.gz` (`c9316484…`) and
+`frames.excluded.json` (`f56b6f5d…`) are byte-identical to `d9646ef8` — and
+every changed line in the regenerated text files differs only by the etcd
+commit identity (independently reproduced line normalization, zero other
+diffs). The plan now binds the actual lock (`8c534042…`) and the bundle binds
+the actual plan (`0c60125b…`).
+
+Two complete regenerations reproduce the committed files byte-for-byte, and
+`test_committed_preparation_rebuilds_byte_exactly` now rebuilds the committed
+bundle from the committed census/lock/universe/frames, so a future stale
+pairing — including a machinery change without regeneration — refuses in the
+test suite instead of surfacing at sealing.
+
+Custody: the etcd clone was read with `GIT_OPTIONAL_LOCKS=0`; grpc-go and
+containerd were re-staged as gitignored `git clone --local` copies of the
+candidate-run custody clones under `spike/t472/corpus/` (ignored, never
+committed). Neither custody tree was written. New GNU time measurements on
+this host: enumeration 31.25s / 1,408,840 KiB max RSS; frames 20.95s /
+1,768,868 KiB; bundle 8.36s / 1,218,444 KiB; command measurements only, not
+an operating envelope. Gates: 47/47 module tests (46 at the reviewed commit
+plus the new pin), derivation 4/4, `go test`/`go vet ./spike/t472/gosites`,
+`make docs-check`, `make verify-glossary` and whitespace pass. Fresh
+independent review of exact `8fcb532f` recorded critical/high/medium/low
+0/0/0/0 ([`INDEPENDENT_REVIEW.md`](INDEPENDENT_REVIEW.md)); the artifact,
+gate and cost record is in [`REVIEW_PACKET.md`](REVIEW_PACKET.md). Ben's two
+source confirmations, blind labels, beacon/seed, scoring and sealing remain
+untouched; the fresh candidate run is the remaining remediation step.
