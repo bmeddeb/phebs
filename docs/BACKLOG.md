@@ -15206,12 +15206,13 @@ delta review of the 2026-10-10 correction (`cfb5f03c`, documentation only)
 reported critical 0, high 0, medium 0, low 1: binding 3's recurrence citation
 overstated. The H2 ladder's other prerequisite rows carry only the three-item
 tail, with minor wording drift (`3417–3419` reading "new Linux plan versions",
-`3483–3485`, `3599–3602`), the immutable-flag input-custody item itself occurring only in
-the row quoted there (3797) and the record entries, and the previously cited
-`3597–3602` span began one line early. The correction narrows binding 3's
-citation to the tail spans and names the item's actual recurrence; all other
-delta-review checks passed. Documentation only; no code, retained artifact,
-sealed byte, or open binding changed.
+`3483–3485`, `3599–3602`), the immutable-flag input-custody item itself
+occurring only in the row quoted there (3797) and the record entries, and the
+previously cited `3597–3602` span began one line early. The correction narrows
+binding 3's citation to the tail spans and names the item's actual recurrence;
+all other delta-review checks passed. A focused re-review of the correction at
+`47767fad` reported critical 0, high 0, medium 0, low 0. Documentation only;
+no code, retained artifact, sealed byte, or open binding changed.
 
 **T42.3 · Scale posture decision and neutral product closure** — independently
 review the T42.2 receipt, replay representative All code → service →

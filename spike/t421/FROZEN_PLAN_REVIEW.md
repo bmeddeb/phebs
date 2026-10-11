@@ -10,9 +10,10 @@ sections 4–6 are the procedure a future freeze must pass; section 7 is the
 ledger of open bindings; section 8 lists the nonclaims. A 2026-10-10
 correction applies the independent review's findings on this package
 (0 critical, 0 high, 1 medium, 3 low); its same-day delta review reported
-0 critical, 0 high, 0 medium, 1 low (an overstated recurrence citation in
-section 7 binding 3, corrected in place); the standing nonclaims and every
-open-binding status are unchanged.
+0 critical, 0 high, 0 medium, 1 low — an overstated recurrence citation in
+section 7 binding 3, corrected in place and re-reviewed clean (critical 0,
+high 0, medium 0, low 0); the standing nonclaims and every open-binding
+status are unchanged.
 
 The governing acceptance contract (`docs/BACKLOG.md`, T42.2o ticket row,
 verbatim):
