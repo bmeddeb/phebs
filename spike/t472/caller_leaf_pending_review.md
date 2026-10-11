@@ -19,8 +19,10 @@ indefinitely and silently:
   missing, zero outcome rows, all extraction-partitions schedules settled.
 - `buildPartitionedAuthority` treats absent domains as pending and joins
   `ErrPartitionedCallerPending` (`internal/callerexecute/worker.go:34`,
-  `1144-1147`); stale version and candidate mismatch join the same marker
-  (`worker.go:1116`, `1153`).
+  `1144-1147`); a missing observation inventory (`worker.go:1114-1117`), a
+  stale candidate authority (`worker.go:1061-1065`), a stale domain version
+  (`worker.go:1153`) and a stale domain authority (`worker.go:1155-1162`)
+  join the same marker.
 - Both caller-leaf authority checks convert that marker into
   `store.WithDeferral` (`worker.go:242-244`, `329-331`). The runner's
   deferral case preserves the attempt and re-paces the job at the worker
