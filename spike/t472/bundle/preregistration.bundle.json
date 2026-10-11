@@ -141,7 +141,7 @@
  "predictions_disclosed": false,
  "protocol_doc": {
   "path": "docs/CALLER_QUALITY_PROTOCOL.md",
-  "sha256": "sha256:0b8859fc5d4426887fdcb22d370994af8a8cae5bb5ba60c70f1b364599ca8361"
+  "sha256": "sha256:70c7e4bc5b086192bdca9ee454a5beee342cea0ee4555ebcccd67b4de7893fc9"
  },
  "quality_scored": false,
  "randomness_commitment_sequence": [

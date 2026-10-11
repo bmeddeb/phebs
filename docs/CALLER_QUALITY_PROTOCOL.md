@@ -44,6 +44,12 @@ The approved numerical inputs are recorded in
 [`spike/t472/validation.parameters.json`](../spike/t472/validation.parameters.json)
 for the later immutable preregistration binding; this file contains no score.
 
+**Prospective amendment (Ben, 2026-10-11).** The §2 extractor identity
+advances `grpc-caller` 1.5.0 → 1.6.0, the T47.2i deterministic-ownership
+correction Ben integrated at `e3a89970`; the blind round measures 1.6.0
+behavior. Thresholds, sampling rule, corpus, universe, frames and machinery
+digests are unchanged, and no historical record is re-scored or relabelled.
+
 ## 2. Frozen supported tuple (T47.2a)
 
 | Input | Value |
@@ -52,7 +58,7 @@ for the later immutable preregistration binding; this file contains no score.
 | Generated client | Checked-in `*_grpc.pb.go` with the unique `Code generated ... DO NOT EDIT` header; mock and vendored copies follow §6 |
 | Declaration identity | The repository/path declaration lineage defined by [PROTOBUF_DECLARATION_IDENTITY.md](./PROTOBUF_DECLARATION_IDENTITY.md) §7, within its single-declaration-repository scope: a caller joins only a `.proto` declaration committed in the same repository. It is not canonical descriptor or module lineage, which is not guessed here |
 | Input format | Repository-committed at the exact commit: root `index.scip` (≤ 64 MiB), `layout-snapshot.json` (`t20-layout-snapshot-v1`), `generated-from-snapshot.json` (`t20-generated-from-v1`), optionally `unit-snapshot.json` (`t20-unit-snapshot-v1`), plus the checked-in declarations and generated clients; corpus inventory ≤ 200,000 files and every source blob ≤ 10 MiB, measured on the tree phebs reads (`index.scip` is bounded separately) |
-| Extractor | `grpc-caller` 1.5.0, schema `t20-caller-v1`; a resolved occurrence requires the SCIP call edge, generated-client wire operation and declaration attribution to agree on exactly one lineage and operation |
+| Extractor | `grpc-caller` 1.6.0, schema `t20-caller-v1`; a resolved occurrence requires the SCIP call edge, generated-client wire operation and declaration attribution to agree on exactly one lineage and operation |
 | Managed-generated inputs | Not consumed. The committed-index recipe reads only repository-committed bytes; a recipe that consumes managed-generated SCIP evidence would require its prospective T45.9 admission and a same-change PLAN decision before it may be scored. When the validation corpus's committed index is evaluator-derived (T47.2b), it stands in for an owner-committed index and is admissible only with its complete recipe, Go environment, tool digests and input tables recorded |
 
 The declaration token follows the T49.1 contract: a canonical
