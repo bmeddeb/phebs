@@ -153,6 +153,11 @@ class QualityRowTest(unittest.TestCase):
     def test_refusal_cases(self) -> None:
         cases = {
             "unknown outcome": (score(), parameters(), "perhaps"),
+            "positive denominator without proportion": (
+                {k: v for k, v in score().items() if k not in ("proportion", "wilson_low", "wilson_high")},
+                parameters(),
+                "success",
+            ),
             "claim without sealed threshold": (score(field="other"), parameters(), "success"),
             "wrong schema": ({**score(), "schema": "other"}, parameters(), "success"),
             "decided disagrees": ({**score(), "decided": 9}, parameters(), "success"),

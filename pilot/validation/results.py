@@ -67,8 +67,15 @@ def _validated_row(value: Any, outcome: str) -> dict:
     if decided == 0:
         if value["estimate"] is not None or value["wilson_low"] is not None or value["wilson_high"] is not None:
             raise ResultError(f"{value['claim']}: a zero denominator carries no estimate or interval")
-    elif not isinstance(value["estimate"], (int, float)) or isinstance(value["estimate"], bool):
-        raise ResultError(f"{value['claim']}: a measured row carries its estimate")
+    else:
+        for field in ("estimate", "wilson_low", "wilson_high"):
+            number = value[field]
+            if isinstance(number, bool) or not isinstance(number, (int, float)):
+                raise ResultError(f"{value['claim']}: a measured row carries a numeric {field}")
+        if not 0.0 <= value["wilson_low"] <= value["estimate"] <= value["wilson_high"] <= 1.0:
+            raise ResultError(
+                f"{value['claim']}: interval must satisfy 0 <= wilson_low <= estimate <= wilson_high <= 1"
+            )
     if outcome not in scoring.OUTCOMES:
         raise ResultError(f"outcome must be one of {scoring.OUTCOMES}")
     if value["result"] not in scoring.RESULTS:

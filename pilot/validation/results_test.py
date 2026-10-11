@@ -267,6 +267,18 @@ class ValidatePackResultTest(unittest.TestCase):
             "outcome without rows changing": {**good, "outcome": "not_run"},
             "empty rows": {**good, "quality": {**good["quality"], "rows": []}},
             "duplicate claims": {**good, "quality": {**good["quality"], "rows": [row, dict(row)]}},
+            "interval not numeric": {
+                **good,
+                "quality": {**good["quality"], "rows": [{**row, "wilson_low": "x"}, good["quality"]["rows"][1]]},
+            },
+            "interval inverted": {
+                **good,
+                "quality": {**good["quality"], "rows": [{**row, "wilson_low": 0.99}, good["quality"]["rows"][1]]},
+            },
+            "interval missing": {
+                **good,
+                "quality": {**good["quality"], "rows": [{**row, "wilson_high": None}, good["quality"]["rows"][1]]},
+            },
             "unbound receipt": {
                 **good,
                 "operating": {**good["operating"], "receipts": [{**good["operating"]["receipts"][0], "run_binding_sha256": None}]},

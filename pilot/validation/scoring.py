@@ -144,6 +144,8 @@ def _validated_score(score: Any) -> dict:
         raise ScoringError("score.decided must equal yes + no")
     if sampled != decided_count + unsure:
         raise ScoringError("score.sampled must equal decided + unsure")
+    if decided_count > 0 and "proportion" not in score:
+        raise ScoringError("a positive denominator carries its proportion and interval")
     if decided_count > 0:
         proportion = _number(score["proportion"], "score.proportion")
         low = _number(score["wilson_low"], "score.wilson_low")

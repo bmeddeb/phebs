@@ -137,6 +137,43 @@ class BoundedStepTest(unittest.TestCase):
         self.assertTrue(all(entry["reason"] == "entry_cap" for entry in omitted))
         self.assertEqual(len(omitted), count - receipts.RETAINED_ENTRY_CAP)
 
+    def test_stale_retained_custody_refuses_retry(self) -> None:
+        root = RunRoot(self).root
+        script = "import sys; open('left.txt','w').write('x'); sys.exit(1)"
+        receipts.run_bounded_step(root, "stale", [sys.executable, "-c", script], 30)
+        # Simulate the crash window: custody retained, receipt never written.
+        (root / receipts.RECEIPTS_DIR / "stale.json").unlink()
+        with self.assertRaises(receipts.ReceiptError):
+            receipts.run_bounded_step(root, "stale", [sys.executable, "-c", "pass"], 30)
+        self.assertTrue((root / "retained" / "stale" / "left.txt").exists())
+
+    def test_marker_name_collision_is_named(self) -> None:
+        root = RunRoot(self).root
+        script = "open('TRUNCATED.json','w').write('mine')\nimport sys\nsys.exit(1)"
+        receipt = receipts.run_bounded_step(root, "marker", [sys.executable, "-c", script], 30)
+        self.assertEqual(receipt["retained"], ["retained/marker/TRUNCATED.json"])
+        marker = json.loads((root / "retained" / "marker" / "TRUNCATED.json").read_text())
+        self.assertEqual(marker["schema"], receipts.TRUNCATION_SCHEMA)
+        self.assertEqual(marker["omitted"], [{"path": "TRUNCATED.json", "reason": "marker_conflict"}])
+
+    def test_total_budget_omissions_are_named(self) -> None:
+        root = RunRoot(self).root
+        script = (
+            "open('a.bin','wb').write(b'x' * (4 * 1024 * 1024))\n"
+            "open('b.bin','wb').write(b'x' * (3 * 1024 * 1024))\n"
+            "import sys\nsys.exit(1)"
+        )
+        original = receipts.RETAINED_TOTAL_CAP
+        receipts.RETAINED_TOTAL_CAP = 6 * 1024 * 1024
+        try:
+            receipt = receipts.run_bounded_step(root, "budget", [sys.executable, "-c", script], 60)
+        finally:
+            receipts.RETAINED_TOTAL_CAP = original
+        omitted = json.loads((root / "retained" / "budget" / "TRUNCATED.json").read_text())["omitted"]
+        self.assertEqual(omitted, [{"path": "b.bin", "reason": "budget_cap", "bytes": 3 * 1024 * 1024}])
+        self.assertIn("retained/budget/a.bin", receipt["retained"])
+        self.assertNotIn("retained/budget/b.bin", receipt["retained"])
+
     def test_timeout_kills_the_session_and_joins_descendants(self) -> None:
         root = RunRoot(self).root
         script = (

@@ -41,6 +41,7 @@ RETAINED_FILE_CAP = 4 * 1024 * 1024
 RETAINED_TOTAL_CAP = 16 * 1024 * 1024
 RETAINED_ENTRY_CAP = 512
 POLL_SECONDS = 0.02
+REAP_SECONDS = 5.0
 GROUP_DRAIN_SECONDS = 2.0
 OUTCOMES = ("success", "failed", "stop")
 TEARDOWNS = ("clean", "killed_stray_members", "unclean")
@@ -161,6 +162,9 @@ class SerialRunLock:
 
 
 def _drain_group(pid: int, timed_out: bool) -> str:
+    """Classify the group drain. "killed_stray_members" means the timed-out
+    group was group-killed and is now empty, whether or not a stray existed;
+    a recycled pgid inside this window only misreports "unclean" (fail-safe)."""
     limit = time.monotonic() + GROUP_DRAIN_SECONDS
     while True:
         try:
@@ -182,7 +186,11 @@ def _max_rss_kib(rusage: os.struct_rusage) -> int:
 
 
 def _retain_workspace(workspace: Path, dest: Path, run_root: Path) -> list[str]:
-    """Bounded copy of a failed workspace; every omission is named in a marker."""
+    """Bounded copy of a failed workspace; every omission is named in a marker.
+
+    The marker name is reserved: a workspace file already called
+    TRUNCATED.json is omitted as a conflict instead of being overwritten.
+    """
     dest.mkdir(parents=True, exist_ok=True)
     retained: list[str] = []
     omitted: list[dict] = []
@@ -190,6 +198,9 @@ def _retain_workspace(workspace: Path, dest: Path, run_root: Path) -> list[str]:
     count = 0
     for entry in sorted(workspace.rglob("*")):
         relative = entry.relative_to(workspace)
+        if str(relative) == "TRUNCATED.json":
+            omitted.append({"path": "TRUNCATED.json", "reason": "marker_conflict"})
+            continue
         if entry.is_symlink():
             omitted.append({"path": str(relative), "reason": "symlink"})
             continue
@@ -200,8 +211,11 @@ def _retain_workspace(workspace: Path, dest: Path, run_root: Path) -> list[str]:
         if count > RETAINED_ENTRY_CAP:
             omitted.append({"path": str(relative), "reason": "entry_cap", "bytes": size})
             continue
-        if size > RETAINED_FILE_CAP or size > budget:
+        if size > RETAINED_FILE_CAP:
             omitted.append({"path": str(relative), "reason": "size_cap", "bytes": size})
+            continue
+        if size > budget:
+            omitted.append({"path": str(relative), "reason": "budget_cap", "bytes": size})
             continue
         target = dest / relative
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -255,6 +269,9 @@ def run_bounded_step(
     workspace = root / SCRATCH_DIR / step
     if workspace.exists():
         raise ReceiptError(f"workspace for step {step!r} already exists; refusing to reuse custody")
+    retained_dir = root / RETAINED_DIR / step
+    if retained_dir.exists():
+        raise ReceiptError(f"retained custody for step {step!r} already exists; refusing to merge it")
     workspace.mkdir(parents=True)
 
     started = utc_now()
@@ -268,26 +285,36 @@ def run_bounded_step(
         except BaseException:
             os._exit(127)
     timed_out = False
+    reaped = False
     while True:
         done, status, rusage = os.wait4(pid, os.WNOHANG)
         if done == pid:
+            reaped = True
             break
         if time.monotonic() - clock > timeout_s:
             timed_out = True
             os.killpg(pid, signal.SIGKILL)
-            done, status, rusage = os.wait4(pid, 0)
+            # Bounded reap: a SIGKILL-immune child (e.g. D state) must not make
+            # the step block forever; its zeros are marked by teardown "unclean".
+            reap_limit = time.monotonic() + REAP_SECONDS
+            while time.monotonic() <= reap_limit:
+                done, status, rusage = os.wait4(pid, os.WNOHANG)
+                if done == pid:
+                    reaped = True
+                    break
+                time.sleep(POLL_SECONDS)
             break
         time.sleep(POLL_SECONDS)
     wall_seconds = round(time.monotonic() - clock, 3)
     finished = utc_now()
 
-    if os.WIFEXITED(status):
+    if reaped and os.WIFEXITED(status):
         exit_code: int | None = os.WEXITSTATUS(status)
         signal_number: int | None = None
-    elif os.WIFSIGNALED(status):
+    elif reaped and os.WIFSIGNALED(status):
         exit_code = None
         signal_number = os.WTERMSIG(status)
-    else:  # pragma: no cover - wait4 reports only exits and signals
+    else:  # not reaped within the bounded window; only the timeout path
         exit_code = None
         signal_number = None
     if timed_out or signal_number is not None:
@@ -308,7 +335,7 @@ def run_bounded_step(
 
     retained: list[str] = []
     if outcome != "success":
-        retained = _retain_workspace(workspace, root / RETAINED_DIR / step, root)
+        retained = _retain_workspace(workspace, retained_dir, root)
     shutil.rmtree(workspace)
 
     receipt = {
