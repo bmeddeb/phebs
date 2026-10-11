@@ -71,11 +71,19 @@ func (e extractor) emitSyntaxFallback(
 	if err != nil {
 		return 0, fmt.Errorf("read module identity: %w", err)
 	}
-	index, err := e.buildGeneratedSyntaxIndex(
-		ctx, corpus, paths, modules, attribution,
-	)
-	if err != nil {
-		return 0, err
+	// Under suppression the generated index has no consumer — scanSyntaxFile
+	// is skipped below — and the index build's reads are generated files, all
+	// *.go, which the sweep below re-reads, so skipping it loses no required
+	// read. readModulePaths above still runs: it performs the go.mod reads
+	// the verified corpus requires, even though the module map is then unused.
+	var index generatedSyntaxIndex
+	if !suppressEmissions {
+		index, err = e.buildGeneratedSyntaxIndex(
+			ctx, corpus, paths, modules, attribution,
+		)
+		if err != nil {
+			return 0, err
+		}
 	}
 
 	filePaths := make([]string, 0, len(paths))

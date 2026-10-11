@@ -254,12 +254,14 @@ func (e extractor) Extract(
 	// The typed partition runs the same whole-scope fallback with its own
 	// typedSpans suppression, so proven-overlapping occurrences stay single-owned
 	// and only syntax-only calls and explicit gaps are added. A member partition
-	// of a typed domain keeps the fallback's full read sweep — module files,
-	// generated files, and every claimed .go candidate — because the verified
-	// corpus requires each admitted candidate to be read, but suppresses every
-	// emission: the typed partition enumerates the same source scope and owns
-	// each claim once, so any member emission would restage the same assertion
-	// identity with a different detail and collide in the store.
+	// of a typed domain keeps the fallback's required reads — module files and
+	// every claimed .go candidate, generated files included — because the
+	// verified corpus requires each admitted candidate to be read, but
+	// suppresses every emission and skips the generated-index build, whose only
+	// consumer is the suppressed scan: the typed partition enumerates the same
+	// source scope and owns each claim once, so any member emission would
+	// restage the same assertion identity with a different detail and collide
+	// in the store.
 	fallbackUnresolved, fallbackErr := e.emitSyntaxFallback(
 		ctx, corpus, paths, typedSpans, attribution, attributionDigest,
 		domainTyped && !typedPartition, emit,
