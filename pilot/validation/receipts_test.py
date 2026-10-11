@@ -156,6 +156,28 @@ class BoundedStepTest(unittest.TestCase):
         self.assertEqual(marker["schema"], receipts.TRUNCATION_SCHEMA)
         self.assertEqual(marker["omitted"], [{"path": "TRUNCATED.json", "reason": "marker_conflict"}])
 
+    def test_marker_directory_collision_cannot_shadow_the_marker(self) -> None:
+        root = RunRoot(self).root
+        script = (
+            "import os, sys\n"
+            "os.mkdir('TRUNCATED.json')\n"
+            "open('TRUNCATED.json/inner.txt','w').write('inner')\n"
+            "sys.exit(1)"
+        )
+        receipt = receipts.run_bounded_step(root, "marker-dir", [sys.executable, "-c", script], 30)
+        self.assertEqual(receipt["retained"], ["retained/marker-dir/TRUNCATED.json"])
+        marker_path = root / "retained" / "marker-dir" / "TRUNCATED.json"
+        self.assertTrue(marker_path.is_file())
+        marker = json.loads(marker_path.read_text())
+        self.assertEqual(marker["schema"], receipts.TRUNCATION_SCHEMA)
+        self.assertEqual(
+            marker["omitted"],
+            [
+                {"path": "TRUNCATED.json", "reason": "marker_conflict"},
+                {"path": "TRUNCATED.json/inner.txt", "reason": "marker_conflict"},
+            ],
+        )
+
     def test_total_budget_omissions_are_named(self) -> None:
         root = RunRoot(self).root
         script = (

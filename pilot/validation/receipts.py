@@ -198,8 +198,10 @@ def _retain_workspace(workspace: Path, dest: Path, run_root: Path) -> list[str]:
     count = 0
     for entry in sorted(workspace.rglob("*")):
         relative = entry.relative_to(workspace)
-        if str(relative) == "TRUNCATED.json":
-            omitted.append({"path": "TRUNCATED.json", "reason": "marker_conflict"})
+        if relative.parts[0] == "TRUNCATED.json":
+            # The marker name is reserved for the file and its whole subtree,
+            # so a directory of that name can never shadow the marker write.
+            omitted.append({"path": str(relative), "reason": "marker_conflict"})
             continue
         if entry.is_symlink():
             omitted.append({"path": str(relative), "reason": "symlink"})
@@ -351,7 +353,10 @@ def run_bounded_step(
         "started_utc": started,
         "finished_utc": finished,
         "wall_seconds": wall_seconds,
-        "max_rss_kib": _max_rss_kib(rusage),
+        # A never-reaped child has no kernel-provided rusage; record the
+        # observed amount as zero beside teardown "unclean" rather than
+        # trusting the uncopied wait4 struct.
+        "max_rss_kib": _max_rss_kib(rusage) if reaped else 0,
         "host": host_facts(),
         "teardown": teardown,
         "outputs": declared,
