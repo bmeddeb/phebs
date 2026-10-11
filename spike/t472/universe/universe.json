@@ -7,7 +7,7 @@
   "generated_files": 60,
   "mapped": 44,
   "operations": 390,
-  "sha256": "sha256:3d94d4fe493f46af8be50efb512e65a66b00abe35f00a63c5c37706cef624d04"
+  "sha256": "sha256:c5879fd7d751b644519025228362b9dde202be43a4c1820ea4e061a6721b6228"
  },
  "independent_of_phebs_output": true,
  "method": "git ls-tree/cat-file at each exact derived commit; grpc-caller classifyRole path+header rules; protoc-gen-go-grpc client interface/constructor/FullMethodName inventory; standard Go parser scan for every Go call expression, admitted method references, full-method strings and client imports",
@@ -21,7 +21,7 @@
     "operations": 49,
     "vendored": 0
    },
-   "derived_commit": "75771dd76dd9a6d7048ae48793b806b1cbec0c22",
+   "derived_commit": "f9ecd8dcecc18b7559c0e3c0c264477c6ab9ddc1",
    "eligible_units": {
     "by_role": {
      "generated": [
@@ -16358,7 +16358,7 @@
   },
   "sha256": {
    "universe.sites.containerd.jsonl.gz": "sha256:c93164842e492a75f1ecfef3c535594fd08430def8b228e8a1875a61d015b599",
-   "universe.sites.etcd.jsonl.gz": "sha256:b31bbbd2191455b76391c5e5f03ebab104f8c034256fa18a97128a82e4fa7d77",
+   "universe.sites.etcd.jsonl.gz": "sha256:0ece1506145953cae54865f31a1e49ddae73568eb1a2c98c36af39f0181f9d65",
    "universe.sites.grpc-go.jsonl.gz": "sha256:ab5be4e5385a7c13064d78b8e2384b059cb42ac138e5dd668d1335306f22336a"
   },
   "total": 499771

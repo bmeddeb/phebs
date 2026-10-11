@@ -4,7 +4,7 @@
   "processing_quality_scored": false,
   "repositories": [
     {
-      "derived_commit": "75771dd76dd9a6d7048ae48793b806b1cbec0c22",
+      "derived_commit": "f9ecd8dcecc18b7559c0e3c0c264477c6ab9ddc1",
       "go_paths": 1105,
       "nonregular_go_paths": [
         {

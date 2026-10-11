@@ -1,9 +1,9 @@
 {
  "candidate_blind_source_labels": true,
  "corpus_derived_commits": [
-  "75771dd76dd9a6d7048ae48793b806b1cbec0c22",
   "e0f9f8ac24f21a3703f94bb09817b699a1446af0",
-  "f40347859c3380f5c409f153ab79d4b8e724abd3"
+  "f40347859c3380f5c409f153ab79d4b8e724abd3",
+  "f9ecd8dcecc18b7559c0e3c0c264477c6ab9ddc1"
  ],
  "frames": [
   {
@@ -18,7 +18,7 @@
    "population": 498793,
    "population_rule": "every Go call expression, admitted method reference and full-method string; imports alone stay in the excluded ledger",
    "rows": 498793,
-   "sha256": "sha256:a0093197fab61517daf02b21c6153c84445d1714dbd8fd73167f3610c05f1c87",
+   "sha256": "sha256:c89238bfd34358636657795e4dcfe7a4f5f3e7e23f55c3b732769071715021ae",
    "strata": {
     "containerd/containerd:generated": {
      "census": false,
@@ -89,7 +89,7 @@
    "population": 74,
    "population_rule": "one unit per exact constructor-backed service-client interface; repository x code_role strata; this source census supports the independent declaration-citation ledger",
    "rows": 74,
-   "sha256": "sha256:1bb0bb1337837f893b7a75f427c658f649833752ac1fc8818073a3e978f4001e",
+   "sha256": "sha256:2ddd62cbfa913a7c463cf3a4c380a6eae49093325b86e27054cbafdac7ac508b",
    "strata": {
     "containerd/containerd:generated": {
      "census": true,
@@ -159,12 +159,12 @@
   "protocol digest after the section 10 sealing checklist completes"
  ],
  "provenance": {
-  "corpus_lock_sha256": "sha256:e387449369b91013bbddf0cae3cd4ee6f91365ee2aa3d5362d7a1e48574e5a69",
+  "corpus_lock_sha256": "sha256:8c5340427010c3ca86d2a038d88ff6d23ade76c04ba2e9bcd49d579237762168",
   "enumerate_universe_sha256": "sha256:e22c67f527d1970ff3a14809edb63316bb170ccc24f4b33a5759f6ded7369278",
   "frames_py_sha256": "sha256:db8970f86482de4a899f9a003812abbe088a9629161e096c748446d4cf8227fe",
   "parameters_sha256": "sha256:3396a4b15358683e2a714ca1992a69d065169b96c20099d8d3b7d2de98a0b9fe",
-  "source_census_sha256": "sha256:51b9274f3f536b9076800195dfcc3154aecaa6ac08bee4e5f2d454662c264ab5",
-  "universe_declarations_sha256": "sha256:3d94d4fe493f46af8be50efb512e65a66b00abe35f00a63c5c37706cef624d04",
+  "source_census_sha256": "sha256:2aa22d7a6b77c24f2239067b49f9edaa3524900b86f4f2a7a27c495cac197394",
+  "universe_declarations_sha256": "sha256:c5879fd7d751b644519025228362b9dde202be43a4c1820ea4e061a6721b6228",
   "universe_sites": {
    "universe.sites.containerd.jsonl.gz": {
     "file": "universe.sites.containerd.jsonl.gz",
@@ -174,7 +174,7 @@
    "universe.sites.etcd.jsonl.gz": {
     "file": "universe.sites.etcd.jsonl.gz",
     "rows": 73039,
-    "sha256": "sha256:b31bbbd2191455b76391c5e5f03ebab104f8c034256fa18a97128a82e4fa7d77"
+    "sha256": "sha256:0ece1506145953cae54865f31a1e49ddae73568eb1a2c98c36af39f0181f9d65"
    },
    "universe.sites.grpc-go.jsonl.gz": {
     "file": "universe.sites.grpc-go.jsonl.gz",
@@ -182,7 +182,7 @@
     "sha256": "sha256:ab5be4e5385a7c13064d78b8e2384b059cb42ac138e5dd668d1335306f22336a"
    }
   },
-  "universe_summary_sha256": "sha256:d908eaeaedf6d684297972ffc4a5ab889475dc36cbc9b66c2c23b1b0c6e024f4"
+  "universe_summary_sha256": "sha256:46f6a02c92414845ccc460619b92d1c681b40e23a636d334cce668c9363f80d3"
  },
  "quality_frames": {
   "attributed_edge_precision": "precision",
