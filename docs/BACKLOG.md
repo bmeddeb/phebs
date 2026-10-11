@@ -17404,7 +17404,13 @@ focused normal 25.953s / race 8.679s and full normal 464.150s,
 `internal/extractionpublication` normal 7.793s / race 12.814s,
 `internal/callerexecute` normal 0.491s / race 3.196s, `cmd/phebs` 254.775s,
 `internal/relationshippublication` 74.601s, repository build, scoped vet and
-pinned golangci-lint (0 issues) pass. Independent review: pending. Steady-state
+pinned golangci-lint (0 issues) pass. Independent review of exact `1be1de2f`
+found two lows — a pointer-absent retire-race comment overstatement and an
+overread restart/reuse re-settle wording — corrected in `e0a36382`; focused
+re-reviews of `e0a36382`, `69348104` and `bbee6a37` found one, two and one
+further comment lows, each corrected in the next commit (`69348104`,
+`bbee6a37`, `47975f5d`), and re-review of exact `47975f5d` returned
+critical/high/medium/low 0/0/0/0. Steady-state
 cost: the success publication path is byte-identical; a refusal adds one fence
 acquisition and one upsert with no pointer write and no added reader work; the
 caller settle adds one pointer read and, for an obsolete pointer only, one
