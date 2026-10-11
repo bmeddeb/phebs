@@ -17340,7 +17340,10 @@ operator-visible outcome row, unavailable-settle path unreachable); the fix
 decision is routed to Ben and nothing was implemented. Gates: affected
 `internal/extract` and `internal/extractionpublication` normal 27.144s /
 7.286s and race 166.748s / 14.368s, repository build, scoped vet, pinned
-golangci-lint 2.12.2 (0 issues). Steady-state cost: one bounded string
+golangci-lint 2.12.2 (0 issues). Independent review of exact `19aff722` found
+one low — a mislabeled pending-marker citation in the review doc — corrected
+docs-only in `4caa9b72`, which passed focused re-review with
+critical/high/medium/low 0/0/0/0. Steady-state cost: one bounded string
 composition on the terminal-refusal path only; no added read, lock, child,
 goroutine, cache or persistent work, and accepted results stay byte-identical.
 No label, prediction, score, seal or merge; the fresh candidate run remains
