@@ -26,7 +26,7 @@ const exactAuthorityTestLineage = "provisional_repo_path_v1_" +
 func exactCallerCensusPublication() *store.CallerGenerationPublication {
 	pair := store.CallerGenerationPairPublication{
 		Pair: store.CallerLeafPair{
-			Domain: "grpc-caller", ExtractorVersion: "1.5.0",
+			Domain: "grpc-caller", ExtractorVersion: "1.6.0",
 			LeafAdapterVersion: callerleaf.LeafAdapterV1,
 			LeafOrdinal:        0, LeafPrefix: "00", LeafPrefixBits: 2,
 			CandidateMemberName:    "candidate-caller-000000.ndjson",

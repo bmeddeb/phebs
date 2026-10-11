@@ -35,6 +35,12 @@ type typedPartitionCorpus struct{ memoryCorpus }
 
 func (typedPartitionCorpus) SCIPTypedPartition() bool { return true }
 
+// domainTypedCorpus models an ordinary member partition of a domain whose
+// typed-input partition owns the whole source scope.
+type domainTypedCorpus struct{ memoryCorpus }
+
+func (domainTypedCorpus) SCIPTypedDomain() bool { return true }
+
 func (c scopedCorpus) SCIPDocumentInScope(filePath string) bool {
 	return c.inScope[filePath]
 }
@@ -798,6 +804,10 @@ func Shadow(ctx any, client orders.OrdersClient) {
 		)
 	}
 
+	// The typed partition owns the whole-source fallback with its own
+	// typedSpans suppression: it must reproduce the whole-corpus result
+	// byte-for-byte, adding only syntax-only calls and gaps while never
+	// duplicating a typed span as syntax.
 	var typedPartitionFacts []sdk.Fact
 	coverage, err := gocaller.NewGRPC().Extract(
 		context.Background(), typedPartitionCorpus{memoryCorpus: corpus},
@@ -809,13 +819,12 @@ func Shadow(ctx any, client orders.OrdersClient) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, fact := range typedPartitionFacts {
-		if strings.Contains(fact.Assertion.Detail, `"resolution":"syntax"`) {
-			t.Fatalf("typed partition repeated syntax fallback: %+v", fact)
-		}
-	}
-	if coverage.UnresolvedCount != 0 {
-		t.Fatalf("typed-only coverage = %+v", coverage)
+	if !reflect.DeepEqual(typedPartitionFacts, firstFacts) ||
+		coverage.UnresolvedCount != firstCoverage.UnresolvedCount {
+		t.Fatalf(
+			"typed partition ownership mismatch: whole=%+v typed=%+v coverage=%+v",
+			firstFacts, typedPartitionFacts, coverage,
+		)
 	}
 
 	withoutIndex := cloneFiles(files)
@@ -845,6 +854,29 @@ func Shadow(ctx any, client orders.OrdersClient) {
 	if resolvedSyntax != 6 || coverage.UnresolvedCount != 7 ||
 		!slicesContain(coverage.Protocols, "scip-index-absent") {
 		t.Fatalf("fallback without SCIP = %d / %+v", resolvedSyntax, coverage)
+	}
+
+	// An ordinary member partition of a typed domain has no typed input of its
+	// own and must leave every claim to the typed partition: it emits nothing
+	// instead of repeating syntax claims that would collide in the shared run.
+	var memberFacts []sdk.Fact
+	memberCoverage, err := gocaller.NewGRPC().Extract(
+		context.Background(),
+		domainTypedCorpus{memoryCorpus: memoryCorpus{
+			repo: corpus.repo, commit: corpus.commit, files: withoutIndex,
+			attribution: attribution,
+		}},
+		func(fact sdk.Fact) error {
+			memberFacts = append(memberFacts, fact)
+			return nil
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(memberFacts) != 0 || memberCoverage.UnresolvedCount != 0 ||
+		!slicesContain(memberCoverage.Protocols, "scip-index-absent") {
+		t.Fatalf("typed-domain member emitted %d facts / %+v", len(memberFacts), memberCoverage)
 	}
 }
 

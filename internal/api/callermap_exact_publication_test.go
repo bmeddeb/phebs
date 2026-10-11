@@ -442,7 +442,7 @@ func newExactCallerAPIFixtureConfigured(
 		t.Fatal(err)
 	}
 	pair, err := callerleaf.NewPairIdentity(
-		semantic, "grpc-caller", "1.5.0", callerleaf.LeafDescriptor{
+		semantic, "grpc-caller", "1.6.0", callerleaf.LeafDescriptor{
 			Name: "candidate-caller-000000.ndjson", Ordinal: 0,
 			Prefix: "00", PrefixBits: 2, RecordCount: 1,
 			DeclaredBytes: int64(len(fixture.source)),

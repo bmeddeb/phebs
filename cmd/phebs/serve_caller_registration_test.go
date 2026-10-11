@@ -31,7 +31,7 @@ func TestCallerMapPackIdentityAndRecipeFrozen(t *testing.T) {
 	recipe := callerMapRecipe()
 	want := []struct{ domain, version string }{
 		{"proto-contract", "4.0.0"},
-		{"grpc-caller", "1.5.0"},
+		{"grpc-caller", "1.6.0"},
 	}
 	if len(recipe) != len(want) {
 		t.Fatalf("caller map recipe has %d extractors, want %d", len(recipe), len(want))
@@ -88,15 +88,15 @@ func TestCallerMapRegistrationFollowsExtractorSet(t *testing.T) {
 	}
 	adapters := released.Adapters()
 	if len(adapters) != 1 || adapters[0] != (callerexecute.Adapter{
-		Domain: "grpc-caller", Version: "1.5.0", Protocol: "grpc",
+		Domain: "grpc-caller", Version: "1.6.0", Protocol: "grpc",
 	}) {
-		t.Fatalf("released adapters = %+v, want grpc-caller@1.5.0/grpc", adapters)
+		t.Fatalf("released adapters = %+v, want grpc-caller@1.6.0/grpc", adapters)
 	}
 	domains := released.CandidateDomains()
 	if len(domains) != 2 ||
-		domains[0].Domain != "grpc-caller" || domains[0].Version != "1.5.0" ||
+		domains[0].Domain != "grpc-caller" || domains[0].Version != "1.6.0" ||
 		domains[1].Domain != "proto-contract" || domains[1].Version != "4.0.0" {
-		t.Fatalf("released candidate domains = %+v, want grpc-caller@1.5.0 then proto-contract@4.0.0", domains)
+		t.Fatalf("released candidate domains = %+v, want grpc-caller@1.6.0 then proto-contract@4.0.0", domains)
 	}
 
 	for _, testCase := range []struct {
@@ -180,9 +180,9 @@ func TestMergeExtractorsCallerMapRecipeGovernsMixedProvenance(t *testing.T) {
 	}
 	adapters := registry.Adapters()
 	if len(adapters) != 1 || adapters[0] != (callerexecute.Adapter{
-		Domain: "grpc-caller", Version: "1.5.0", Protocol: "grpc",
+		Domain: "grpc-caller", Version: "1.6.0", Protocol: "grpc",
 	}) {
-		t.Fatalf("mixed adapters = %+v, want exactly grpc-caller@1.5.0/grpc", adapters)
+		t.Fatalf("mixed adapters = %+v, want exactly grpc-caller@1.6.0/grpc", adapters)
 	}
 }
 

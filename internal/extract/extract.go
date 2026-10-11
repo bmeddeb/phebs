@@ -2003,6 +2003,19 @@ func (c *verifiedCorpus) SCIPTypedPartition() bool {
 	return !c.closed && c.inventoryComplete && c.typedPartition
 }
 
+// SCIPTypedDomain delegates the domain-level typed-input ownership flag so
+// built-in extractors can suppress member-partition fallback that the typed
+// partition's whole-scope enumeration already owns.
+func (c *verifiedCorpus) SCIPTypedDomain() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.closed || !c.inventoryComplete {
+		return false
+	}
+	typed, ok := c.inner.(sdk.SCIPTypedDomain)
+	return ok && typed.SCIPTypedDomain()
+}
+
 func (c *verifiedCorpus) AttributionSource(ctx context.Context) (sdk.AttributionSource, error) {
 	// A hash partition cannot validate repository-wide snapshot mappings whose
 	// source and declaration paths intentionally live in other partitions.

@@ -60,6 +60,14 @@ type SCIPTypedPartition interface {
 	SCIPTypedPartition() bool
 }
 
+// SCIPTypedDomain identifies a corpus whose domain also owns a typed-input
+// partition. Built-in extractors use it to suppress ordinary syntax fallback
+// in member partitions: the typed partition enumerates the same source scope
+// and owns every claim once, so member fallback would only duplicate it.
+type SCIPTypedDomain interface {
+	SCIPTypedDomain() bool
+}
+
 // SCIPDocumentFilter is the optional focused-evidence lane filter paired with
 // SCIPDocumentScope. Built-in SCIP readers first validate that every canonical
 // document is in scope and globally safety-account its occurrences, then call

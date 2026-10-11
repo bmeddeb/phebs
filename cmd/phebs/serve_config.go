@@ -301,7 +301,7 @@ func mergeExtractors(dark, released []extract.Extractor) []extract.Extractor {
 
 // callerMapPackID is the stable pack identity of the Caller Map recipe frozen
 // by T47.2a: `phebs.grpc.caller.go` in docs/PROTO_GRPC_PACK_CARDS.md ("Exact
-// Go gRPC callers"), grpc-caller 1.5.0, schema t20-caller-v1. T47.5 signs the
+// Go gRPC callers"), grpc-caller 1.6.0, schema t20-caller-v1. T47.5 signs the
 // first caller-specific released record against exactly this identity and, in
 // the same PR, binds callerMapRecipe into packRecipes above.
 const callerMapPackID = "phebs.grpc.caller.go"

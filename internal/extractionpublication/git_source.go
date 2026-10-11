@@ -47,6 +47,13 @@ func (source GitSparseSource) AcquirePartition(
 		return nil, invalid("git sparse source partition authority")
 	}
 	partition := partitions[ordinal]
+	domainTyped := false
+	for _, domainPartition := range partitions {
+		if domainPartition.Kind == candidate.PartitionKindTypedInput {
+			domainTyped = true
+			break
+		}
+	}
 	records := make([]candidate.Record, 0, partition.AdmittedRecords)
 	var typed *candidate.SparseTypedInput
 	var typedScope *candidate.SparseTypedSourceScope
@@ -98,7 +105,7 @@ func (source GitSparseSource) AcquirePartition(
 		return nil, err
 	}
 	corpus, err := newObjectCorpus(
-		plan.Repository, domain.Commit(), records, typed, typedScope, reader,
+		plan.Repository, domain.Commit(), records, typed, typedScope, domainTyped, reader,
 	)
 	if err != nil {
 		_ = reader.Close()
@@ -131,6 +138,7 @@ type objectCorpus struct {
 	objects            map[string]selectedObject
 	typed              *candidate.SparseTypedInput
 	typedScope         *candidate.SparseTypedSourceScope
+	domainTyped        bool
 	reader             *gitobj.BatchBlobReader
 }
 
@@ -139,6 +147,7 @@ func newObjectCorpus(
 	records []candidate.Record,
 	typed *candidate.SparseTypedInput,
 	typedScope *candidate.SparseTypedSourceScope,
+	domainTyped bool,
 	reader *gitobj.BatchBlobReader,
 ) (*objectCorpus, error) {
 	if reader == nil {
@@ -147,7 +156,7 @@ func newObjectCorpus(
 	corpus := &objectCorpus{
 		repository: repository, commit: commit,
 		paths: make([]string, 0, len(records)), objects: make(map[string]selectedObject, len(records)),
-		typed: typed, typedScope: typedScope, reader: reader,
+		typed: typed, typedScope: typedScope, domainTyped: domainTyped, reader: reader,
 	}
 	if (typed == nil) != (typedScope == nil) {
 		return nil, invalid("git sparse typed source scope")
@@ -187,6 +196,8 @@ func (corpus *objectCorpus) WalkFiles(ctx context.Context, visit func(string) er
 }
 
 func (corpus *objectCorpus) SCIPTypedPartition() bool { return corpus.typedScope != nil }
+
+func (corpus *objectCorpus) SCIPTypedDomain() bool { return corpus.domainTyped }
 
 func (corpus *objectCorpus) Read(ctx context.Context, path string) (sdk.Blob, error) {
 	object, present := corpus.objects[path]

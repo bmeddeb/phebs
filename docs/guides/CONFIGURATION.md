@@ -603,7 +603,7 @@ Caller Map's ordinary configuration is a signed `release_selection` record for
 its recipe identity `phebs.grpc.caller.go` ("Exact Go gRPC callers" in
 [PROTO_GRPC_PACK_CARDS.md](../PROTO_GRPC_PACK_CARDS.md)); it has no separate
 configuration key. The recipe is the frozen T47.2a Go / gRPC-Protobuf caller
-tuple, extractor `grpc-caller` 1.5.0, schema `t20-caller-v1`. Its fixed in-tree
+tuple, extractor `grpc-caller` 1.6.0, schema `t20-caller-v1`. Its fixed in-tree
 extractor set carries protobuf declaration discovery with the caller
 extractor, because resolved callers are attributed through
 repository-committed declaration lineage, so a released Caller Map does not

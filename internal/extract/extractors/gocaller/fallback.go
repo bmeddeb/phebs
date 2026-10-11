@@ -64,6 +64,7 @@ func (e extractor) emitSyntaxFallback(
 	typedSpans map[string]map[byteRange]struct{},
 	attribution attributionLookup,
 	attributionDigest string,
+	suppressEmissions bool,
 	emit sdk.Emit,
 ) (int, error) {
 	modules, err := readModulePaths(ctx, corpus, paths)
@@ -89,16 +90,17 @@ func (e extractor) emitSyntaxFallback(
 		if err := ctx.Err(); err != nil {
 			return len(unresolved), err
 		}
-		// Read even when no generated methods were indexed: Candidate() claims
-		// every .go file, and the verified corpus rejects the whole run if a
-		// claimed candidate was never read.
+		// Read even when no generated methods were indexed — and, for a member
+		// partition of a typed domain, even when every emission is suppressed:
+		// Candidate() claims every .go file, and the verified corpus rejects
+		// the whole run if a claimed candidate was never read.
 		blob, err := corpus.Read(ctx, filePath)
 		if err != nil {
 			return len(unresolved), fmt.Errorf(
 				"read syntax-fallback document %q: %w", filePath, err,
 			)
 		}
-		if len(index.methods) == 0 {
+		if suppressEmissions || len(index.methods) == 0 {
 			continue
 		}
 		if len(blob.Content) > maxSourceBytes || !utf8.ValidString(blob.Content) {

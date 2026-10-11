@@ -32,7 +32,7 @@ import (
 const (
 	grpcDomain   = "grpc-caller"
 	thriftDomain = "thrift-caller"
-	version      = "1.5.0"
+	version      = "1.6.0"
 	indexPath    = "index.scip" // legacy whole-repository test fixture path
 
 	schemaVersion       = "t20-caller-v1"
@@ -143,6 +143,16 @@ func (e extractor) Extract(
 	if typed, ok := corpus.(sdk.SCIPTypedPartition); ok {
 		typedPartition = typed.SCIPTypedPartition()
 	}
+	// A member partition of a domain that also owns a typed-input partition
+	// must not emit syntax fallback claims: the typed partition enumerates the
+	// same source scope and owns every claim once, so repeating it would stage
+	// the same assertion identity with a different detail and collide in the
+	// store. The member partition still performs the fallback's read sweep so
+	// every admitted candidate is read (see the emission suppression below).
+	domainTyped := false
+	if typed, ok := corpus.(sdk.SCIPTypedDomain); ok {
+		domainTyped = typed.SCIPTypedDomain()
+	}
 	coverage := sdk.Coverage{Protocols: []string{
 		e.protocol, "generated-from-snapshot-v1", "resolution-scip-v1",
 		"resolution-syntax-v1", "scip",
@@ -241,14 +251,22 @@ func (e extractor) Extract(
 		return coverage, err
 	}
 	coverage.UnresolvedCount += unresolved
-	if !typedPartition {
-		fallbackUnresolved, fallbackErr := e.emitSyntaxFallback(
-			ctx, corpus, paths, typedSpans, attribution, attributionDigest, emit,
-		)
-		coverage.UnresolvedCount += fallbackUnresolved
-		if fallbackErr != nil {
-			return coverage, fallbackErr
-		}
+	// The typed partition runs the same whole-scope fallback with its own
+	// typedSpans suppression, so proven-overlapping occurrences stay single-owned
+	// and only syntax-only calls and explicit gaps are added. A member partition
+	// of a typed domain keeps the fallback's full read sweep — module files,
+	// generated files, and every claimed .go candidate — because the verified
+	// corpus requires each admitted candidate to be read, but suppresses every
+	// emission: the typed partition enumerates the same source scope and owns
+	// each claim once, so any member emission would restage the same assertion
+	// identity with a different detail and collide in the store.
+	fallbackUnresolved, fallbackErr := e.emitSyntaxFallback(
+		ctx, corpus, paths, typedSpans, attribution, attributionDigest,
+		domainTyped && !typedPartition, emit,
+	)
+	coverage.UnresolvedCount += fallbackUnresolved
+	if fallbackErr != nil {
+		return coverage, fallbackErr
 	}
 	sort.Strings(coverage.Protocols)
 	return coverage, nil

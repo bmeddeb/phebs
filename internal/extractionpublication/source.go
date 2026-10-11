@@ -42,6 +42,13 @@ func (source SparseSource) AcquirePartition(
 		return nil, invalid("sparse source partition authority")
 	}
 	partition := partitions[ordinal]
+	domainTyped := false
+	for _, domainPartition := range partitions {
+		if domainPartition.Kind == candidate.PartitionKindTypedInput {
+			domainTyped = true
+			break
+		}
+	}
 	paths := make([]string, 0, partition.AdmittedRecords)
 	var typed *candidate.SparseTypedInput
 	var typedScope *candidate.SparseTypedSourceScope
@@ -88,7 +95,7 @@ func (source SparseSource) AcquirePartition(
 	return &sparseLease{
 		corpus: &partitionCorpus{
 			inner: corpus, paths: paths, allowed: slicesToSet(paths), typed: typed,
-			typedScope: typedScope,
+			typedScope: typedScope, domainTyped: domainTyped,
 		},
 		candidateRecords: len(paths), typedSourceRecords: typedScopeRecords(typedScope),
 		typed: typed, memberBytes: memberBytes, members: members,
@@ -137,11 +144,12 @@ func (lease *sparseLease) Members() int64     { return lease.members }
 func (lease *sparseLease) Release()           { lease.once.Do(lease.release) }
 
 type partitionCorpus struct {
-	inner      sdk.Corpus
-	paths      []string
-	allowed    map[string]struct{}
-	typed      *candidate.SparseTypedInput
-	typedScope *candidate.SparseTypedSourceScope
+	inner       sdk.Corpus
+	paths       []string
+	allowed     map[string]struct{}
+	typed       *candidate.SparseTypedInput
+	typedScope  *candidate.SparseTypedSourceScope
+	domainTyped bool
 }
 
 func (corpus *partitionCorpus) RepoName() string { return corpus.inner.RepoName() }
@@ -166,6 +174,8 @@ func (corpus *partitionCorpus) WalkFiles(ctx context.Context, visit func(string)
 }
 
 func (corpus *partitionCorpus) SCIPTypedPartition() bool { return corpus.typedScope != nil }
+
+func (corpus *partitionCorpus) SCIPTypedDomain() bool { return corpus.domainTyped }
 
 func (corpus *partitionCorpus) Read(ctx context.Context, path string) (sdk.Blob, error) {
 	_, allowed := corpus.allowed[path]

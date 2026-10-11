@@ -76,7 +76,7 @@ oversized, and unsupported inputs remain unresolved or gaps.
 | Status | `experimental-dark` |
 | Predicate(s) | declaration-lineage-resolved `CALLS_OPERATION` and explicit unresolved caller evidence |
 | Language/framework | Go SCIP occurrences joined to checked-in generated gRPC clients and exact declaration attribution |
-| Pack version | `1.5.0` (`grpc-caller` extractor) |
+| Pack version | `1.6.0` (`grpc-caller` extractor; T47.2i restored deterministic whole-scope ownership across typed-domain partitions) |
 | Extractor artifact | in-tree `internal/extract/extractors/gocaller`; the phebs release binary digest governs |
 | Schema version | `t20-caller-v1` |
 | Release binding | none — no PackRelease exists |
