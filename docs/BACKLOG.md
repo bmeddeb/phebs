@@ -17287,6 +17287,37 @@ test/vet, docs-check, glossary, whitespace; fresh independent review of exact
 `spike/t472/REVIEW_PACKET.md`). No label, prediction, score, seal or
 reinterpretation; the fresh candidate run remains separate.*
 
+*Candidate run terminal stop — cause unavailable (2026-10-10): the fresh run
+`phebs-rehearsals/t472-candidate-run-20261010b` (source `9aac84cd…`) met
+acceptance nowhere. Its first executable grpc-go work — the `grpc-caller@1.5.0`
+typed-input partition (ordinal 4, source 1095→1095, plan
+`sha256:cec71426…`, partition `sha256:6207aa64…`, schedule chunk
+`generation_schedule_chunk:zth0qx8i0duob5qr9tbq`) — refused terminally 2.3 s
+into its first attempt (`terminal: partition terminal refusal`, no retry); all
+extraction-partitions schedules settled, the domain root was assembled on disk
+as `terminal_refusal`/`deterministic_refusal` (5/5 results, root
+`sha256:da41f3ac…`, result record `sha256:64cd84b0…`) and was never bound as
+current authority, leaving the fresh store at 11 generation roots (grpc-go
+`grpc-caller` missing) and zero outcome rows. The specific stage-tagged cause
+is not retained anywhere: extraction diagnostics are off in this run, so only
+the generic refusal reason survives. This attempt is recorded as a **terminal
+stop with cause unavailable** and is not retried; the monitor's later 6 h
+TIMEOUT is absence of settlement only, with the earlier terminal refusal
+preserved separately in the schedule/root/result records. A bounded
+single-partition reproduction then re-executed exactly this partition afresh
+(never re-enqueued, because the refused result would bypass the executor)
+against the digest-verified plan/manifest/source/observation inputs with the
+same implementation and executor flags: it did **not** reproduce the refusal —
+`success`, 1.27 s, 960 facts / 1,920 rows / 960 references / 1,122,711
+canonical = encoded bytes, content `sha256:2650958d…` (record
+`phebs-rehearsals/t472b-repro-20261010/T472B-REPRODUCTION-RECORD.md`), which
+does not explain or clear the original refusal. Both runs stay preserved
+read-only. Source-free stop record:
+`spike/t472/candidate_run_stop_20261010b.json`. Prospective durable bounded
+refusal attribution (diagnostics off, across restart/reuse) plus the
+caller-leaf pending review are the smallest correction path and precede
+another full candidate run; T47.2b stays open.*
+
 **T47.3 · Ordinary production configuration and registration** *(needs the
 T47.2 supported recipe contract; activation remains gated until T47.5)* —
 introduce the stable Caller Map configuration/recipe selection, wire the

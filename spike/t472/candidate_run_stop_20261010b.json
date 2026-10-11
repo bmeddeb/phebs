@@ -1,0 +1,59 @@
+{
+  "schema": "t472b-candidate-run-stop-v1",
+  "run_root": "phebs-rehearsals/t472-candidate-run-20261010b",
+  "launched": "2026-10-10",
+  "source_commit": "9aac84cdfc34602d8a68ed39ed06fea11e39041d",
+  "result": "terminal_stop",
+  "acceptance_met": false,
+  "cause": "unavailable",
+  "refused_work": {
+    "repository": "grpc/grpc-go",
+    "domain": "grpc-caller",
+    "extractor_version": "1.5.0",
+    "kind": "typed_input",
+    "ordinal": 4,
+    "source_range": [1095, 1095],
+    "schedule_chunk": "generation_schedule_chunk:zth0qx8i0duob5qr9tbq",
+    "claim_error": "terminal: partition terminal refusal",
+    "attempts": 0,
+    "refusal_seconds": 2.3,
+    "plan_digest": "sha256:cec7142639d42e08d7ece9e405626a632c2c85542b4c97083640efb01fdb4899",
+    "partition_digest": "sha256:6207aa6416bda15f7ca45ceef1e20da58a37b6fad50c5e34e7fae28d2b9f9bc9"
+  },
+  "retained_refusal": {
+    "domain_root_directory": "bd66e79ba64174ef91d1fe7230c3a970da83cb79739d449c6f8579cdf4e812b6",
+    "disposition": "terminal_refusal",
+    "reason": "deterministic_refusal",
+    "result_count": 5,
+    "root_digest": "sha256:da41f3ac04054cc25f98410bf72c2613aeb725940e561338f9e0c3ca83003308",
+    "result_record_digest": "sha256:64cd84b0191e8234295cf1cc3c33006cfa917e898ad6c1ca69020a4adf58b9c5",
+    "bound_as_current_authority": false
+  },
+  "store_state": {
+    "generation_roots": 11,
+    "missing_domain": "grpc/grpc-go grpc-caller",
+    "outcome_rows": 0,
+    "schedules": "all extraction-partitions schedules settled"
+  },
+  "cause_unavailable": "extraction diagnostics are off in this run, so no partition timing report was emitted; the schedule chunk error, domain root, partition result and store carry only the generic terminal refusal.",
+  "monitor": "the later six-hour monitor TIMEOUT is absence of settlement only; the earlier terminal refusal is preserved separately in the schedule/root/result records above.",
+  "reproduction": {
+    "record": "phebs-rehearsals/t472b-repro-20261010/T472B-REPRODUCTION-RECORD.md",
+    "conclusion": "not_reproduced_success",
+    "disposition": "success",
+    "elapsed_seconds": 1.271601333,
+    "totals": {
+      "facts": 960,
+      "rows": 1920,
+      "references": 960,
+      "canonical_bytes": 1122711,
+      "encoded_bytes": 1122711
+    },
+    "content_digest": "sha256:2650958d5f1a842d8ccde78d0ad1c9b874c5fe2f185950b99a8824a3e98f4e25",
+    "executed_at": "2026-10-11T02:08:31Z",
+    "note": "bounded fresh re-execution of exactly this partition (no re-enqueue of the refused chunk) with the same implementation and executor flags; it does not explain or clear the original refusal."
+  },
+  "preserved": "both runs untouched read-only; this attempt is not retried",
+  "next": "prospective durable bounded refusal attribution (diagnostics off, across restart/reuse) and the caller-leaf pending review precede another full candidate run",
+  "ticket": "T47.2b stays open"
+}
