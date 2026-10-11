@@ -1796,10 +1796,15 @@ func (worker *Worker) settleRefusedGeneration(
 	))
 	pointer, err := worker.store.GetCallerGenerationPublication(ctx, repository)
 	if errors.Is(err, store.ErrNotFound) {
-		// No stored pointer to condition on. A generation published between
-		// this read and the retire cannot lose durability: its own post-commit
-		// lost-authority check returns a successor retry, so the worst case is
-		// one spurious retry, never a silent loss.
+		// No stored pointer to condition on, so nothing here clears durable
+		// authority. A generation committed between this read and the retire
+		// converges through its own checks: if the retire outruns its
+		// publication lease, its open/acquire step fails closed and costs one
+		// successor retry; if the retire lands while the lease is pinned,
+		// removal defers to lease release, which deletes files the publisher's
+		// final files-and-pointer checks already accepted, and that
+		// generation's reads fail closed until the ordinary pipeline
+		// republishes a newer one.
 		if err := worker.publications.Retire(ctx, repository); err != nil {
 			return err
 		}
