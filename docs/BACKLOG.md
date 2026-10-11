@@ -17652,6 +17652,21 @@ measured rather than multiplied from component metrics; no code paths label
 historical `not_run` or capacity STOP as PASS; each run is exact-source/input
 bound and each pack gets its own quality and operating result. Expensive runs
 are serial with retained failure custody, joined children and real teardown.
+*Slice 1 landed 2026-10-10: `pilot/validation/` gains the shared substrate
+beside the frozen harness — `corpus.py` (one sealed corpus lock per round,
+fail-closed post-seal divergence, exact run binding), `custody.py` (ordered
+drafted→scored round state with per-transition artifact digests, label/
+prediction path separation, t111 digest reuse only), `scoring.py` (sealed
+thresholds exactly covering claims, zero denominator and non-success always
+`not_measured`, direct-measurement-only composition), `receipts.py` (serial
+run-root lock, forked session-leader steps joined via `wait4` with timeout
+group-kill, `harness-cost-receipt-v1` with closed host facts and declared
+output digests, capped retained failure custody with truncation markers,
+write-once receipts) and `results.py` (`harness-pack-result-v1` per pack and
+run, rows exactly covering the sealed claims, receipts bound to the run,
+unmeasured operating envelopes explained). 58 unittests pass and the frozen
+t111/pilot machinery stays byte-identical. Authorization/lifecycle
+real-binary drivers and consumer adoption remain in this ticket.*
 
 **T48.4 · Shared release operations and qualification** — document stable
 configuration, supported status, validation expiry, suspension, rollback and
