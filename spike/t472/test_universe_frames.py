@@ -670,6 +670,15 @@ class TestBindingBundle(unittest.TestCase):
         self.assertFalse(b["external_publication"]["published"])
         self.assertFalse(b["quality_scored"])
 
+    def test_committed_preparation_rebuilds_byte_exactly(self):
+        # A committed bundle must equal a fresh build over the committed
+        # census, lock, universe and frames: any stale pairing (e.g. a
+        # provenance digest that no longer matches its file) refuses here.
+        fresh = binding_bundle.build_bundle(SPIKE.parents[1], SPIKE / "frames")
+        fresh["missing_bindings"] = binding_bundle.validate_bundle(fresh)
+        rendered = json.dumps(fresh, indent=1, sort_keys=True) + "\n"
+        self.assertEqual(rendered, (SPIKE / "bundle/preregistration.bundle.json").read_text())
+
     def test_missing_structure_and_required_subtree_refuse(self):
         with self.assertRaises(binding_bundle.BundleError):
             binding_bundle.validate_bundle({})
