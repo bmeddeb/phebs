@@ -153,18 +153,22 @@ type deadlineExecutor struct {
 	present  bool
 }
 
-type terminalExecutor struct{}
+type terminalExecutor struct{ reason string }
 
-func (terminalExecutor) ExecutePartition(
+func (executor terminalExecutor) ExecutePartition(
 	context.Context,
 	candidate.DomainResultPlan,
 	int,
 	PartitionLease,
 	string,
 ) (candidate.PartitionResultSpec, error) {
+	reason := executor.reason
+	if reason == "" {
+		reason = "deterministic_refusal"
+	}
 	return candidate.PartitionResultSpec{
 		Disposition: candidate.PartitionResultTerminalRefusal,
-		Reason:      "deterministic_refusal",
+		Reason:      reason,
 	}, store.WithTerminal(errors.New("private deterministic detail"))
 }
 
@@ -763,6 +767,31 @@ func TestRuntimeInstallsTerminalExecutorResultBeforeTerminalSettlement(t *testin
 		timing.RefusalClassification != pipelinerefusal.ClassificationUnknown ||
 		timing.RefusalDimension != pipelinerefusal.DimensionUnknown {
 		t.Fatalf("terminal timing = %+v", timing)
+	}
+}
+
+func TestRuntimeKeepsDurablePartitionRefusalAttributionAcrossReuse(t *testing.T) {
+	plan := buildTestPlan(t, "sha256:"+strings.Repeat("e", 64), true)
+	runtime, state, source, _, _, _, domain := newRuntimeFixture(t, plan)
+	const reason = "deterministic_refusal:stage=evidence_staging:generation=extraction_domain:classification=limit:dimension=staged_rows:observed=1859:limit=1858"
+	runtime.Executor = terminalExecutor{reason: reason}
+	if _, err := runtime.Reconcile(t.Context(), plan.Repository, []DomainPlan{domain}); err != nil {
+		t.Fatal(err)
+	}
+	chunk := currentChunk(t, state, plan.Repository, 0)
+	chunk.Identity = "sha256:" + strings.Repeat("c", 64)
+	err := runtime.Handle(t.Context(), chunk)
+	if !store.IsTerminal(err) || !strings.Contains(err.Error(), reason) {
+		t.Fatalf("first refusal error = %v", err)
+	}
+	reused := currentChunk(t, state, plan.Repository, 0)
+	reused.Identity = "sha256:" + strings.Repeat("d", 64)
+	reuseErr := runtime.Handle(t.Context(), reused)
+	if reuseErr == nil || reuseErr.Error() != err.Error() {
+		t.Fatalf("reuse refusal error = %v, want %v", reuseErr, err)
+	}
+	if acquired, released := source.counts(); acquired != 1 || released != 1 {
+		t.Fatalf("refusal content work = source %d/%d, want one released lease", acquired, released)
 	}
 }
 

@@ -50,7 +50,7 @@ func (executor *EvidencePartitionExecutor) ExecutePartition(
 		}
 		result = candidate.PartitionResultSpec{
 			Disposition: candidate.PartitionResultTerminalRefusal,
-			Reason:      "deterministic_refusal",
+			Reason:      partitionRefusalReason(resultErr),
 		}
 		if !store.IsTerminal(resultErr) {
 			resultErr = store.WithTerminal(resultErr)
@@ -223,6 +223,30 @@ func partitionBoundaryFailure(
 		return failure
 	}
 	return extractionBoundaryFailure(failure, stage)
+}
+
+// partitionRefusalReason composes the durable result reason from the validated
+// refusal receipt so restart and reuse surface the owning stage without
+// diagnostics. Closed enums plus the explicit bound keep it within candidate's
+// 256-byte control-token budget; anything unvalidated degrades to the
+// historical opaque reason.
+func partitionRefusalReason(err error) string {
+	const fallback = "deterministic_refusal"
+	receipt, ok := pipelinerefusal.From(err)
+	if !ok || pipelinerefusal.Validate(receipt) != nil {
+		return fallback
+	}
+	reason := fmt.Sprintf(
+		"deterministic_refusal:stage=%s:generation=%s:classification=%s:dimension=%s",
+		receipt.Stage, receipt.GenerationKind, receipt.Classification, receipt.Dimension,
+	)
+	if receipt.Classification == pipelinerefusal.ClassificationLimit {
+		reason = fmt.Sprintf("%s:observed=%d:limit=%d", reason, receipt.Observed, receipt.Limit)
+	}
+	if len(reason) > 256 {
+		return fallback
+	}
+	return reason
 }
 
 func (executor *EvidencePartitionExecutor) extractor(domain, version string) (registeredExtractor, error) {

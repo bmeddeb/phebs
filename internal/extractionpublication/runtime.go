@@ -970,7 +970,7 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 	}
 	if result.Disposition == candidate.PartitionResultTerminalRefusal {
 		timing.Outcome = "terminal_refusal"
-		return store.WithTerminal(errors.New("partition terminal refusal"))
+		return store.WithTerminal(fmt.Errorf("partition terminal refusal: %s", result.Reason))
 	}
 	return nil
 }

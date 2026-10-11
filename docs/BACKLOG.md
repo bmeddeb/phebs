@@ -17318,6 +17318,34 @@ refusal attribution (diagnostics off, across restart/reuse) plus the
 caller-leaf pending review are the smallest correction path and precede
 another full candidate run; T47.2b stays open.*
 
+*Durable bounded refusal attribution (T47.2g, 2026-10-10): the 20261010b
+stop retained only the generic refusal reason, so the terminal path no longer
+drops the stage. `EvidencePartitionExecutor`'s deferred handler now composes
+the durable result reason from the validated pipeline-refusal receipt
+(`deterministic_refusal:stage=…:generation=…:classification=…:dimension=…`,
+plus `:observed=…:limit=…` for measured limits; the historical opaque reason
+remains the fallback for absent, unvalidated or oversized receipts, bounded
+by the same 256-byte control token), and `Runtime.Handle` surfaces it in the
+terminal error (`partition terminal refusal: <reason>`) so the owning stage
+survives restart and result-file reuse with diagnostics off. Regressions:
+`TestRuntimeKeepsDurablePartitionRefusalAttributionAcrossReuse` (diagnostics
+off; the reused result re-returns the identical error with one released lease
+and no second executor call),
+`TestPartitionRefusalReasonComposesValidatedReceipts`, and the updated
+closed-terminal-result assertion. The routed caller-leaf review
+(`spike/t472/caller_leaf_pending_review.md`) finds that a permanently refused
+domain never binds store-visible authority, so its caller job defers
+indefinitely (attempt-preserving paced deferrals, no settlement, no
+operator-visible outcome row, unavailable-settle path unreachable); the fix
+decision is routed to Ben and nothing was implemented. Gates: affected
+`internal/extract` and `internal/extractionpublication` normal 27.144s /
+7.286s and race 166.748s / 14.368s, repository build, scoped vet, pinned
+golangci-lint 2.12.2 (0 issues). Steady-state cost: one bounded string
+composition on the terminal-refusal path only; no added read, lock, child,
+goroutine, cache or persistent work, and accepted results stay byte-identical.
+No label, prediction, score, seal or merge; the fresh candidate run remains
+separate and T47.2b stays open.*
+
 **T47.3 · Ordinary production configuration and registration** *(needs the
 T47.2 supported recipe contract; activation remains gated until T47.5)* —
 introduce the stable Caller Map configuration/recipe selection, wire the

@@ -279,7 +279,8 @@ func TestEvidencePartitionExecutorReturnsClosedTerminalResult(t *testing.T) {
 	executor := &EvidencePartitionExecutor{Evidence: evidence, Extractors: []Extractor{extractor}}
 	result, err := executor.ExecutePartition(t.Context(), plan, 0, lease, run.ID)
 	if !store.IsTerminal(err) || result.Disposition != candidate.PartitionResultTerminalRefusal ||
-		result.Reason != "deterministic_refusal" || result.Totals != (candidate.DomainResultTotals{}) {
+		result.Reason != "deterministic_refusal:stage=extractor_execution:generation=extraction_domain:classification=unknown:dimension=unknown" ||
+		result.Totals != (candidate.DomainResultTotals{}) {
 		t.Fatalf("terminal executor result = %+v, %v", result, err)
 	}
 	if receipt, ok := pipelinerefusal.From(err); !ok ||
@@ -310,6 +311,48 @@ func TestPartitionBoundaryFailurePreservesMeasuredStagingLimits(t *testing.T) {
 				receipt.Classification != pipelinerefusal.ClassificationLimit ||
 				receipt.Dimension != test.dimension || receipt.Observed != 2 || receipt.Limit != 1 {
 				t.Fatalf("partition refusal = %+v, found=%t error=%v", receipt, ok, err)
+			}
+		})
+	}
+}
+
+func TestPartitionRefusalReasonComposesValidatedReceipts(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want string
+	}{
+		{
+			name: "terminal error without a receipt keeps the historical reason",
+			err:  store.WithTerminal(errors.New("private deterministic detail")),
+			want: "deterministic_refusal",
+		},
+		{
+			name: "unknown refusal names its owning stage",
+			err: partitionBoundaryFailure(
+				t.Context(), errors.New("private deterministic detail"),
+				pipelinerefusal.StageDomainInventory,
+			),
+			want: "deterministic_refusal:stage=domain_inventory:generation=extraction_domain:classification=unknown:dimension=unknown",
+		},
+		{
+			name: "measured staging limit keeps its exact scalars",
+			err: partitionBoundaryFailure(
+				t.Context(),
+				pipelinerefusal.Measure(
+					errors.New("private deterministic detail"),
+					pipelinerefusal.DimensionStagedRows, 1859, 1858,
+				),
+				pipelinerefusal.StageEvidenceStaging,
+			),
+			want: "deterministic_refusal:stage=evidence_staging:generation=extraction_domain:classification=limit:dimension=staged_rows:observed=1859:limit=1858",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			reason := partitionRefusalReason(test.err)
+			if reason != test.want || len(reason) > 256 {
+				t.Fatalf("partition refusal reason = %q, want %q", reason, test.want)
 			}
 		})
 	}
