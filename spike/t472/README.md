@@ -618,3 +618,19 @@ scoring machinery and historical stop records are unchanged. The prospective
 preparation bundle adds the reconciler digest and updates its builder digest;
 all 25 missing bindings remain explicit. A fresh capture
 must supply genuine processing decisions; this slice never invents run e's.
+
+
+T47.2l's fresh run g at exact main `f0da8d18` retained the processing decisions
+run e lacked. Its
+[`operational summary`](candidate_run_processing_20261011g.json) records 141.2s
+convergence, twelve successful current roots, 33 done extraction chunks,
+18 done caller jobs and fifteen private partition receipts. The exact join
+reconciles all 7,685 regular Go sources as analyzed, with zero missing,
+duplicate, unknown, partial, failed or excluded rows; eleven Go symlinks remain
+separately inventoried. Counts and digest bindings are public here; the full
+source ledger and controls remain in private run-g custody. An invalid run-f
+preparation retained detached clone HEADs and stopped before indexing or
+extraction; the replacement verifies symbolic `derived` HEADs at unchanged
+commits. Earlier runs stay untouched, and g remains live. This closes the
+capture prerequisite, not caller-quality acceptance: blind labels, remaining
+bindings, scoring, sealing and operating/release gates stay separate.

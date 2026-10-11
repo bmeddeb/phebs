@@ -1,0 +1,237 @@
+{
+  "acceptance_met": false,
+  "artifact_sha256": {
+    "LAUNCH.json": "sha256:eaa9e88ecf2da40692894ad7d37a6d397818c9777c0e4586fd108e8acb55e2c0",
+    "PROVENANCE_CLARIFICATION.json": "sha256:4b2df3f6ad579d28945f35ce0484828122012dd0a0fc7377c97770feac96abb4",
+    "RUN_IDENTITY.md": "sha256:6f6b6d807ad4de4e598cbd42035c6a6e16cc085d353099e65f80fbf0052f0122",
+    "convergence.json": "sha256:90c03a7efd27663b21a102501e3d5ed4c8be8356f9aadca808e74974bc15e799",
+    "phebs.yaml": "sha256:e2a3d0a31ed23620564d23b9763fe62e13d58b94fa55a311d9e0bd8f9f2fa8d7",
+    "source-outcomes.json": "sha256:8a22ac5a3cdc6ab6e8f76c61cb7b036a5f4d4085cc7ecabc4c103c5e1572deef"
+  },
+  "binary_sha256": {
+    "bin/buf": "sha256:08a358a01357819e2fbce2247ebd44909d224fbcdd4d6be515108d3c57686d7a",
+    "bin/phebs-focused-index": "sha256:5486be1ff26201234aae8651625c728e54f29c3682246b4692d3fce0fe792f89",
+    "bin/zoekt-git-index": "sha256:ca8fcd21c2a5c5c1eb85e0d354cec9d97f01412faaaa18cd170509badfbb550b",
+    "phebs": "sha256:1798b7c8803d80ccacb58771efc0c42f76f940797f0142b590738e13bfb1d3fd"
+  },
+  "boundaries": {
+    "labels_produced": false,
+    "operating_acceptance_established": false,
+    "predictions_disclosed": false,
+    "quality_scored": false,
+    "release_granted": false,
+    "sealed": false
+  },
+  "caller_publications": 3,
+  "capture_enabled": true,
+  "confirmation": {
+    "later_exact_authority_reinspection": "unchanged",
+    "observer_duration_seconds": 141.2,
+    "unchanged_terminal_counts_seconds": 10
+  },
+  "current_domain_roots": 12,
+  "custody": {
+    "active_run": "retained live",
+    "private_receipts": "mode 0600; no incomplete dot-files",
+    "private_root": "/home/ben/phebs-rehearsals/t472-candidate-run-20261011g",
+    "retained_runs_a_to_e": "untouched",
+    "serve_pid": 1766481,
+    "surreal_pid": 1766512
+  },
+  "extractor": {
+    "name": "grpc-caller",
+    "version": "1.6.0"
+  },
+  "ledger": {
+    "by_stratum": {
+      "containerd/containerd:generated": {
+        "analyzed": 87,
+        "excluded": 0,
+        "failed": 0,
+        "partial": 0
+      },
+      "containerd/containerd:production": {
+        "analyzed": 930,
+        "excluded": 0,
+        "failed": 0,
+        "partial": 0
+      },
+      "containerd/containerd:test": {
+        "analyzed": 365,
+        "excluded": 0,
+        "failed": 0,
+        "partial": 0
+      },
+      "containerd/containerd:vendor": {
+        "analyzed": 4126,
+        "excluded": 0,
+        "failed": 0,
+        "partial": 0
+      },
+      "etcd-io/etcd:generated": {
+        "analyzed": 18,
+        "excluded": 0,
+        "failed": 0,
+        "partial": 0
+      },
+      "etcd-io/etcd:mock": {
+        "analyzed": 8,
+        "excluded": 0,
+        "failed": 0,
+        "partial": 0
+      },
+      "etcd-io/etcd:production": {
+        "analyzed": 576,
+        "excluded": 0,
+        "failed": 0,
+        "partial": 0
+      },
+      "etcd-io/etcd:test": {
+        "analyzed": 492,
+        "excluded": 0,
+        "failed": 0,
+        "partial": 0
+      },
+      "grpc/grpc-go:generated": {
+        "analyzed": 49,
+        "excluded": 0,
+        "failed": 0,
+        "partial": 0
+      },
+      "grpc/grpc-go:production": {
+        "analyzed": 630,
+        "excluded": 0,
+        "failed": 0,
+        "partial": 0
+      },
+      "grpc/grpc-go:test": {
+        "analyzed": 404,
+        "excluded": 0,
+        "failed": 0,
+        "partial": 0
+      }
+    },
+    "schema": "t472-eligible-unit-ledger-v2",
+    "total": 7685
+  },
+  "machinery_sha256": {
+    "bundle/preregistration.bundle.json": "sha256:5e603089ca144cf98f19234178aad6af75c88005027058eb54f741f67e0339c0",
+    "caller_scoring.py": "sha256:c3bab8f918a40b3400bad73d75c8a130b5d62f4553e033b3ba71e929638d3d83",
+    "corpus.lock.json": "sha256:8c5340427010c3ca86d2a038d88ff6d23ade76c04ba2e9bcd49d579237762168",
+    "source.census.json": "sha256:2aa22d7a6b77c24f2239067b49f9edaa3524900b86f4f2a7a27c495cac197394",
+    "source_outcomes.py": "sha256:aa9f6c2692261a22d51863439901bf3a03eba4b83dd381ad8c08f4a1dbd41da8",
+    "universe/universe.json": "sha256:46f6a02c92414845ccc460619b92d1c681b40e23a636d334cce668c9363f80d3"
+  },
+  "missing_regular_sources": 0,
+  "nonregular_go_paths": 11,
+  "observed_at": "2026-10-11T23:22:26.114487+00:00",
+  "preparation_stop": {
+    "cause": "detached clone HEAD prevented default-branch discovery before indexing/extraction",
+    "replacement": "fresh clones with symbolic derived HEADs at unchanged commits",
+    "replacement_clone_origin": "Retained run-f fresh copies; original derivation origins are recorded in RUN_IDENTITY.md and the additional immediate hop is explicit in PROVENANCE_CLARIFICATION.json.",
+    "result": "invalid_launch_preparation",
+    "run": "t472-candidate-run-20261011f",
+    "serve_and_store_joined": true,
+    "stop_receipt_sha256": "sha256:eb1ac9187227835402295f2d3bbad1a17ce255631eb115db26fe7a5f2d35c102"
+  },
+  "processing_reasons": {
+    "source_scan_complete": 7685
+  },
+  "queues": {
+    "caller_leaf_job": {
+      "done": 18
+    },
+    "generation_schedule_chunk": {
+      "done": 33
+    }
+  },
+  "receipt_bytes": 1549582,
+  "receipt_file_count": 15,
+  "receipt_files": [
+    {
+      "name": "b5b20451dde92a82aa5b96df6688f88f00b7b7977b1cae19d4b20ed9e60cfc11.jsonl",
+      "sha256": "sha256:c1a5cb1589f1207724d8761c2c34db65888aeb26403a33711e435aa62c7638b9"
+    },
+    {
+      "name": "fd1ca5cb9cf06eca681edeb959dab818c18f530cb3e3655dfb7576bb532872a9.jsonl",
+      "sha256": "sha256:d83452c3c1c5f5ddabb63d003237b851efd089c991ae6976592bc8a9b3c17c72"
+    },
+    {
+      "name": "b20f12883bd6e05e44f81da3b44a1a0d2ad6b7e3b0490ed8301e869295fdf09f.jsonl",
+      "sha256": "sha256:9e4bde9746f83007a7b92afe9ed16138ef4ee629b838a5980801c349571025a2"
+    },
+    {
+      "name": "aa8af6622cf41a7b8831a1f0fb841f837f3ae321da04776356f0342c189ac82c.jsonl",
+      "sha256": "sha256:6b21db786de2a9431d3c7537008a53a0a4d508630c8261212276076e8dfff357"
+    },
+    {
+      "name": "bbd952bb8f794d3413bca3074a5d451f267f1d3f172b1aa481fd5b3c98ed3247.jsonl",
+      "sha256": "sha256:47b8b9d28044d96fc37673b37c784ff9c965e9f10c89275ac44bdebaea7a8ec3"
+    },
+    {
+      "name": "e6aaa5719f757b212539ab5effb95ef021e3f658989c7cc8a2f87b2aa5896b8f.jsonl",
+      "sha256": "sha256:7c37fe5ede4b5f7da3112799e2b07da1913fde951b7f5bd718dcb8e24849977c"
+    },
+    {
+      "name": "2a3433de46bebf3036f523ed01c7c86cd620fb9c6eda9f32c0e6cc0329e3e494.jsonl",
+      "sha256": "sha256:072912b9cecb150e15d6ce1ec6d3037ca96b7210039dacfa8ea9c8b82d46d768"
+    },
+    {
+      "name": "5d629a04238b2746957ab4bc35f4842cae77fa2d4450140fb81a9e3d52bab9db.jsonl",
+      "sha256": "sha256:2ac37739146f5541a2ccfcc0c3a47cc57137fa78188de1a76a1881ff616467ec"
+    },
+    {
+      "name": "d8db7cfac3bd6b8fd9561546d7b7c81bccf9576d655b25fbda1f77027b89fca5.jsonl",
+      "sha256": "sha256:a4ad2852f07cc0cafcf3bc7df5dfa5042bff0fb99a9d10624031a036c39db44d"
+    },
+    {
+      "name": "eb48690708c09a5e8ff99fc10210cdf1fba3b3add4924e30964f5fda65d628b0.jsonl",
+      "sha256": "sha256:9df2f0f2eff6fce2f96f753f56bf4672602b369f89dde2900a947a101ea8657b"
+    },
+    {
+      "name": "62562e0bf51173a4ed0a63d4b88525a1430f02cb99c045d7bfd2dba32aa71f3a.jsonl",
+      "sha256": "sha256:1bfaef22281e73f5cba3a40472030fc6d233c51f275623721e63b6832c2c88b9"
+    },
+    {
+      "name": "d820e1ced64ff7b5518fcbdd077981dc32df82a91891eb009f30e5be0eb77336.jsonl",
+      "sha256": "sha256:2f3cb55da6c259421d6b9a55ca951726d31bbea87d6a1ecae098e5549dd3db9f"
+    },
+    {
+      "name": "70d27a5091dfcda67f0099995e096144d003bb06388e01f358960930a9f769f4.jsonl",
+      "sha256": "sha256:c35baef35f3eff8bf1453401515f4e757c4a97010b111ad1ae7149117b7d3fd3"
+    },
+    {
+      "name": "0fd27d46af7d5357f44a222f6f9b86a1d30ff3721354cd3fa7204000879b5bb2.jsonl",
+      "sha256": "sha256:80fd6572dfa8b5feb01a1308d9e9575e3b99f17149ded789ef7a480011216bc8"
+    },
+    {
+      "name": "558fd3a35017df15fd04f4f8773a2b34e1214c9add394b8b8c379cef49cb36e9.jsonl",
+      "sha256": "sha256:a5cd1a81623c28e761e3b140de3c9de0d218a12916eaf566973cd8488bbad3b3"
+    }
+  ],
+  "repositories": [
+    {
+      "commit": "f9ecd8dcecc18b7559c0e3c0c264477c6ab9ddc1",
+      "regular_sources": 1094,
+      "repository": "etcd-io/etcd"
+    },
+    {
+      "commit": "f40347859c3380f5c409f153ab79d4b8e724abd3",
+      "regular_sources": 1083,
+      "repository": "grpc/grpc-go"
+    },
+    {
+      "commit": "e0f9f8ac24f21a3703f94bb09817b699a1446af0",
+      "regular_sources": 5508,
+      "repository": "containerd/containerd"
+    }
+  ],
+  "resolver_publications": 3,
+  "result": "converged_and_reconciled",
+  "run_root": "t472-candidate-run-20261011g",
+  "schema": "t472-source-processing-run-v1",
+  "scope": "Completed parsing/caller scanning establishes processing state only; correctness, recall, attribution and end-to-end acceptance remain unmeasured.",
+  "source_commit": "f0da8d1843aab5b9b819c48d8ca58145ce34406c",
+  "ticket": "T47.2l",
+  "unknown_or_duplicate_sources": 0
+}

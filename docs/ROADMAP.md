@@ -194,6 +194,15 @@ schema-v2 artifacts and the exact fresh review/gate record live in
 genuine beacon/seed, blind labels and receipts remain unbound; the branch
 adds no merge, seal, score, activation or release authority.
 
+**Source-processing capture (2026-10-11):** T47.2k's integrated optional
+receipts were exercised by T47.2l's fresh run g at `f0da8d18`. It converged
+and reconciled all 7,685 regular Go sources from explicit completed-scan
+outcomes, with eleven Go symlinks accounted separately. The narrow operational
+summary is in `spike/t472/candidate_run_processing_20261011g.json`; private
+source receipts and the live custody are retained. This closes the missing
+processing-ledger prerequisite from run e. T47.2b's blind labels, remaining
+preregistration bindings, scoring and seal, plus T47.4/T47.5, remain open.
+
 **Independent production promotions (2026-10-09, Ben-directed):** Epics 48–58
 give every current experimental evidence pack and composed product surface a
 named production path. Epic 48 implements the currently design-only signed

@@ -17494,6 +17494,62 @@ concurrency remains bounded by the existing runner and source leases. The opt-in
 an incomplete dot-file, which the reconciler ignores. Existing settled results
 are never replayed merely because capture was enabled later.
 
+**T47.2l · Fresh source-processing capture and census reconciliation
+(2026-10-11).** After T47.2k integration, Ben requests the next ticket.
+Execute one fresh candidate at exact main `f0da8d18` with the unchanged
+three-repository derived commits, grpc-caller 1.6.0 and run-e flags, adding
+only the opt-in private source-receipt directory. This closes the operational
+capture prerequisite within T47.2b; it does not bypass blind labels, remaining
+preregistration bindings, quality scoring, T47.4 or release gates.
+
+AC: verify symbolic `derived` HEADs and exact input commits before launch;
+retain implementation, binaries, configuration, host admission and capture
+identity; observe successful current roots and terminal queues directly;
+join only matching successful partition receipts to all 7,685 regular sources,
+with eleven Go symlinks accounted outside that population. Missing, duplicate,
+stale or incomplete receipts stop this slice. Preserve earlier custodies and
+withhold predictions. The operational observation has a 30-minute deadline
+and a ten-second unchanged terminal-count confirmation; live WAL activity is
+not a convergence oracle. No automatic full rerun follows a pipeline refusal.
+
+Run g at `f0da8d18` converged and reconciled in 141.2 seconds: 12 successful
+current roots, 33 done extraction chunks, 18 done caller jobs and three current
+caller/resolver publications each. Fifteen complete mode-0600 partition
+receipts (1,549,582 bytes) bind the actual processing decisions to their exact
+successful results. All 7,685 census sources are explicitly `analyzed` via
+`source_scan_complete`, with zero excluded, partial, failed, missing, unknown
+or duplicate rows; eleven Go symlinks remain outside the regular population.
+A later exact authority reinspection and repeated receipt join were unchanged.
+The public summary
+[`candidate_run_processing_20261011g.json`](../spike/t472/candidate_run_processing_20261011g.json)
+retains per-stratum counts and implementation/input/configuration/binary/tool
+and private-receipt hashes, without predictions or per-source contents.
+The full control and source ledger remain in private run-g custody. This
+closes T47.2l's operational prerequisite; T47.2b acceptance stays unestablished.
+
+An initial preparation-only launch (run f) preserved detached HEADs in its
+fresh local clones, so default-branch discovery refused before indexing or
+extraction. Only its newly owned serve and store child were joined; its stop
+record is retained. Replacement run g explicitly attaches `derived` at the
+identical commits before launch. This changes no source bytes, input identity,
+product implementation or older custody. Run g's serve 1766481 and supervised
+store 1766512 remain live. No earlier custody or process was modified.
+
+Validation: real-store convergence/control validation, repeat exact current
+bindings, complete census join, receipt privacy/completeness and source-state
+reason checks pass. All 51 preparation/reconciliation tests pass in 13.597s;
+`make docs-check` (1.055s), `make verify-glossary` and whitespace pass (rc=0).
+No implementation or fixture changed, so heavy Go normal/race suites were not
+repeated. No independent review, merge, quality score or seal is claimed.
+
+Steady-state cost: no production code change. This one offline execution uses
+the existing ordinary bounded workers and T47.2k capture, with three fresh
+clones and one serve plus its supervised store/index children. The observer
+reads three bounded operational count queries every ten seconds; at convergence
+it performs one exact control/pointer read and one bounded receipt join.
+No new product request, sync, retry, publication, lock, cache or retention work
+is introduced. Raw logs, credentials and per-source custody remain private.
+
 **T47.3 · Ordinary production configuration and registration** *(needs the
 T47.2 supported recipe contract; activation remains gated until T47.5)* —
 introduce the stable Caller Map configuration/recipe selection, wire the
