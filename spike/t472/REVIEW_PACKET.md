@@ -145,3 +145,48 @@ and seed, blind labels, independent resolution/citation ledgers, outcome receipt
 protocol digest and external publication remain unbound. No live phebs run,
 full-repository/store suite, operating-envelope or non-Linux replay is claimed.
 No preparation result authorizes sealing, scoring, activation or release.
+
+## T47.2f rebinding (2026-10-10)
+
+The preparation was rebound to slice A's corrected etcd derivation. Before
+the rebinding, the committed plan and bundle at `d9646ef8` bound
+`75771dd7…` and the pre-slice-A lock digest `e3874493…` while the committed
+lock already hashed to `8c534042…`, so the bundle freshness predicate refused
+against the committed bytes. Commit `8fcb532f` moves the census's single etcd
+`derived_commit` line to `f9ecd8dc…` (tree reconciliation: 1,105 Go paths =
+1,094 regular + the same 11 nonregular objects; totals unchanged) and
+regenerates the preparation; `6c917a8f` adds the byte-exact committed-rebuild
+pin. Both commits change no Go, protocol, parameter, threshold or machinery
+byte.
+
+| Artifact | `d9646ef8` | `8fcb532f` |
+|---|---|---|
+| `source.census.json` | `51b9274f3f536b9076800195dfcc3154aecaa6ac08bee4e5f2d454662c264ab5` | `2aa22d7a6b77c24f2239067b49f9edaa3524900b86f4f2a7a27c495cac197394` |
+| `universe/universe.json` | `d908eaeaedf6d684297972ffc4a5ab889475dc36cbc9b66c2c23b1b0c6e024f4` | `46f6a02c92414845ccc460619b92d1c681b40e23a636d334cce668c9363f80d3` |
+| `universe/universe.declarations.jsonl` | `3d94d4fe493f46af8be50efb512e65a66b00abe35f00a63c5c37706cef624d04` | `c5879fd7d751b644519025228362b9dde202be43a4c1820ea4e061a6721b6228` |
+| `universe/universe.sites.etcd.jsonl.gz` | `b31bbbd2191455b76391c5e5f03ebab104f8c034256fa18a97128a82e4fa7d77` | `0ece1506145953cae54865f31a1e49ddae73568eb1a2c98c36af39f0181f9d65` |
+| `frames/frames.recall.jsonl.gz` | `a0093197fab61517daf02b21c6153c84445d1714dbd8fd73167f3610c05f1c87` | `c89238bfd34358636657795e4dcfe7a4f5f3e7e23f55c3b732769071715021ae` |
+| `frames/frames.attribution.jsonl` | `1bb0bb1337837f893b7a75f427c658f649833752ac1fc8818073a3e978f4001e` | `2ddd62cbfa913a7c463cf3a4c380a6eae49093325b86e27054cbafdac7ac508b` |
+| `frames/frames.plan.json` | `5127105799646f34c772a311ce0f4d7c7a5439d86c8e9f704835ed7429747fcb` | `0c60125b1cdf1ebd54a0aec726e744720d8e31078f2a90cee6b2f0b04452fa60` |
+| `bundle/preregistration.bundle.json` | `ffbfebc74c1821b6d678a7431bc903bcfe85e443cb4138b0e99e01992c3e6fc3` | `b0744184cfe1decaf4e41fb44072a4fb2742c23722af739bfb95b3fa2dba51a5` |
+
+Byte-stable members (unchanged between the two commits):
+`universe.sites.grpc-go.jsonl.gz` `ab5be4e5…`,
+`universe.sites.containerd.jsonl.gz` `c9316484…`,
+`frames.excluded.json` `f56b6f5d…`. All changed text lines differ only by the
+etcd commit identity; counts, strata, parameters, thresholds, protocol,
+census totals and the seven machinery digests are exact (the bundle's
+machinery table matches the current files).
+
+Evidence: two full regenerations (each rc=0, bundle `missing=25`)
+reproduced the committed files byte-for-byte and each other; the freshness
+predicate refusal at `d9646ef8` was independently reproduced; 47/47 module
+tests (46 at the reviewed commit plus the new committed-rebuild pin), 4/4
+derivation tests, `go test`/`go vet ./spike/t472/gosites`, `make docs-check`,
+`make verify-glossary` and whitespace gates pass. Cost (GNU time, offline
+serial, this host): enumeration 31.25s / 1,408,840 KiB max RSS; frames 20.95s
+/ 1,768,868 KiB; bundle 8.36s / 1,218,444 KiB — command measurements only.
+Fresh independent review of exact `8fcb532f`: critical 0, high 0, medium 0,
+low 0; report in [`INDEPENDENT_REVIEW.md`](INDEPENDENT_REVIEW.md). This
+record changes no preparation byte; a final-HEAD preservation check precedes
+push. No label, prediction, score, seal, activation or release.

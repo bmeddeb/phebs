@@ -17204,6 +17204,31 @@ persistent work, and no per-query/request, sync, retry/no-op or publication
 cost. No label, prediction, score, seal or merge; the regenerated bindings and
 the fresh candidate run remain separate.*
 
+*Rebinding of the preparation under the corrected etcd derivation (T47.2f,
+2026-10-10): slice A's corrected etcd derived commit `f9ecd8dc…` and lock
+`8c534042…` left the committed preparation provably stale — its plan and
+bundle still bound `75771dd7…` and the pre-slice-A lock digest `e3874493…`,
+so `binding_bundle.py`'s freshness predicate refused against the committed
+bytes. The census's single etcd line moves to `f9ecd8dc…` after reconciling
+the corrected tree (1,105 Go paths = 1,094 regular + the same 11 nonregular
+objects; totals unchanged) and the three offline generators regenerate five
+universe files, four frame files and the bundle. Counts are unchanged
+(499,771 sites / 498,793 recall / 74 interfaces / 978 excluded / 73,039 etcd
+rows; 60 files / 44 mapped / 16 abstained / 390 operations); grpc-go and
+containerd site members and the excluded ledger keep exact bytes; every
+changed line differs only by the etcd commit identity; the plan now binds the
+actual lock and the bundle the actual plan. Two full regenerations are
+byte-identical to the committed set, and
+`test_committed_preparation_rebuilds_byte_exactly` rebuilds the committed
+bundle from the committed inputs so any future stale pairing refuses in the
+suite. Custody: `GIT_OPTIONAL_LOCKS=0` reads on the slice-A etcd clone;
+gitignored `--local` clones for grpc-go/containerd inside the ticket
+worktree; neither custody written. Gates: 47/47 + 4/4 Python tests, gosites
+test/vet, docs-check, glossary, whitespace; fresh independent review of exact
+`8fcb532f` is 0/0/0/0 (recorded in `spike/t472/INDEPENDENT_REVIEW.md` and
+`spike/t472/REVIEW_PACKET.md`). No label, prediction, score, seal or
+reinterpretation; the fresh candidate run remains separate.*
+
 **T47.3 · Ordinary production configuration and registration** *(needs the
 T47.2 supported recipe contract; activation remains gated until T47.5)* —
 introduce the stable Caller Map configuration/recipe selection, wire the

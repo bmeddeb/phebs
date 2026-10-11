@@ -336,8 +336,9 @@ the pin, cross-checked byte-identical against both retained clones; receipt
 `4fcc083243174fa122252c405af4cc9ed514c975dae5b34a851b915bf978a7f9`; lock
 `8c5340427010c3ca86d2a038d88ff6d23ade76c04ba2e9bcd49d579237762168`). The
 source census still records 7,685 regular Go sources and the 11 etcd
-nonregular Go paths; the census, universe, frames and bundle artifacts still
-bind `75771dd7…` and are rebound with the regenerated preparation, not
+nonregular Go paths; the census, universe, frames and bundle artifacts that
+still bound `75771dd7…` were rebound with the regenerated preparation under
+T47.2f (recorded in "Rebound preparation" at the end of this file), never
 silently reinterpreted here.
 
 ### Exact run inputs and measured host
@@ -540,3 +541,65 @@ package, docs/glossary and whitespace gates are recorded in the packet. No
 full-repository/store, live extraction, operating-envelope or non-Linux replay
 is claimed. Ben's two source confirmations and genuine sealing inputs remain;
 no merge, seal, labels, real-round scores, activation or release follows.
+
+## Rebound preparation (T47.2f, 2026-10-10)
+
+Slice A corrected etcd's derived commit to `f9ecd8dc…` and updated the lock
+(`8c534042…`), which left the committed preparation provably stale: its plan
+and bundle still bound `75771dd7…` (the plan's `corpus_derived_commits`) and
+the pre-slice-A lock digest `e3874493…`, so `binding_bundle.py`'s freshness
+predicate refused against the committed bytes. This section records the
+rebinding; nothing is sealed, labeled or scored, and no identity is silently
+reinterpreted.
+
+The census's single etcd line moves to `f9ecd8dc…` after reconciling the
+corrected tree directly: 1,105 Go-suffixed paths = 1,094 regular sources plus
+the same 11 nonregular `client/v3` symlink objects (identical mode, object and
+path), so `go_paths`, `regular_go_sources` and both file totals are unchanged.
+`enumerate_universe.py`, `frames.py` and `binding_bundle.py` then regenerated
+five universe files, four frame files and the bundle; the bundle's machinery
+table remains exact (machinery bytes unchanged).
+
+| Artifact | `d9646ef8` | `8fcb532f` |
+|---|---|---|
+| `source.census.json` | `51b9274f…` | `2aa22d7a…` |
+| `universe/universe.json` | `d908eaea…` | `46f6a02c…` |
+| `universe/universe.declarations.jsonl` | `3d94d4fe…` | `c5879fd7…` |
+| `universe/universe.sites.etcd.jsonl.gz` | `b31bbbd2…` | `0ece1506…` |
+| `frames/frames.recall.jsonl.gz` | `a0093197…` | `c89238bf…` |
+| `frames/frames.attribution.jsonl` | `1bb0bb13…` | `2ddd62cb…` |
+| `frames/frames.plan.json` | `51271057…` | `0c60125b…` |
+| `bundle/preregistration.bundle.json` | `ffbfebc7…` | `b0744184…` |
+
+Populations are unchanged: 499,771 sites in 11 repository×role strata (73,039
+etcd rows, all at `f9ecd8dc…`), recall 498,793, attribution 74 interfaces in
+4 strata (8 etcd units), excluded ledger 978, declarations 60 files / 44
+mapped / 16 abstained / 390 operations. Wherever no etcd identity appears the
+bytes are stable — `universe.sites.grpc-go.jsonl.gz` (`ab5be4e5…`),
+`universe.sites.containerd.jsonl.gz` (`c9316484…`) and
+`frames.excluded.json` (`f56b6f5d…`) are byte-identical to `d9646ef8` — and
+every changed line in the regenerated text files differs only by the etcd
+commit identity (independently reproduced line normalization, zero other
+diffs). The plan now binds the actual lock (`8c534042…`) and the bundle binds
+the actual plan (`0c60125b…`).
+
+Two complete regenerations reproduce the committed files byte-for-byte, and
+`test_committed_preparation_rebuilds_byte_exactly` now rebuilds the committed
+bundle from the committed census/lock/universe/frames, so a future stale
+pairing — including a machinery change without regeneration — refuses in the
+test suite instead of surfacing at sealing.
+
+Custody: the etcd clone was read with `GIT_OPTIONAL_LOCKS=0`; grpc-go and
+containerd were re-staged as gitignored `git clone --local` copies of the
+candidate-run custody clones under `spike/t472/corpus/` (ignored, never
+committed). Neither custody tree was written. New GNU time measurements on
+this host: enumeration 31.25s / 1,408,840 KiB max RSS; frames 20.95s /
+1,768,868 KiB; bundle 8.36s / 1,218,444 KiB; command measurements only, not
+an operating envelope. Gates: 47/47 module tests (46 at the reviewed commit
+plus the new pin), derivation 4/4, `go test`/`go vet ./spike/t472/gosites`,
+`make docs-check`, `make verify-glossary` and whitespace pass. Fresh
+independent review of exact `8fcb532f` recorded critical/high/medium/low
+0/0/0/0 ([`INDEPENDENT_REVIEW.md`](INDEPENDENT_REVIEW.md)); the artifact,
+gate and cost record is in [`REVIEW_PACKET.md`](REVIEW_PACKET.md). Ben's two
+source confirmations, blind labels, beacon/seed, scoring and sealing remain
+untouched; the fresh candidate run is the remaining remediation step.
