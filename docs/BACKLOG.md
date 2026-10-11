@@ -17349,6 +17349,70 @@ goroutine, cache or persistent work, and accepted results stay byte-identical.
 No label, prediction, score, seal or merge; the fresh candidate run remains
 separate and T47.2b stays open.*
 
+*Exact-generation refusal binding and terminal caller settlement (T47.2h,
+2026-10-10): the routed caller-leaf review found the unavailable-settle path
+unreachable because a permanently refused domain could never bind
+store-visible authority, so its caller job deferred indefinitely with no
+operator-visible outcome. T47.2h binds each terminally refused partitioned
+extraction domain as exact, store-visible authority and gives the refusing
+caller leaf a durable terminal settlement. The store's new
+`PublishPartitionedExtractionDomainRefusal` is a sibling of the success write
+with every success predicate byte-identical except the staged `$counts_ok`
+accounting: staged counters must equal the run's chunk sums, the assertion
+plus association counts must equal staged rows and the reference count staged
+references, and the published facts/rows/references must fit inside the
+staged counters and the frozen partition limits — the success path keeps its
+exact staged/root equality, never weakened, and the store accounting-source
+census accounts the second writer (12 `storeQuery` calls in
+`partitioned_evidence.go`). The refused row lands in the same
+latest-only `extraction_domain_root` table with counts equal to the root
+totals, so every read-side equality check is unchanged; the refused run is
+sealed and rooted, and `markRunDeletingSQL`'s unsealed/unrooted precondition
+keeps it doubly protected from the retention sweep. A refusal deliberately
+writes no filesystem current pointer — it is authority about what could not
+be published, not readable content — while a corrected generation still
+converges later: the successor success carries the prior run/plan/root
+digests, and `ReleaseOneUnrootedPartitionRun`'s one-deep rollback floor holds
+the refused run until its successor supersedes it before ordinary sweep.
+The runtime publishes terminal-refusal roots through `publishRefusedRoot`
+under the same short `FenceDomain` as a success, resolves the exhausted
+remainder through an ordinary retryable result so the domain root still
+assembles once, and re-settles a refusal through `reactivateComplete` on
+restart/reuse without content work. The caller leaf's new
+`settleRefusedGeneration` settles terminally (`caller generation upstream
+refused: <reason>`) when no pointer exists, or when the generation-conditional
+`ClearCallerGenerationPublicationForGeneration` (a `DELETE` fenced on the
+stored generation digest plus one repository unavailable-transition bump)
+removed the obsolete pointer; it keeps an ordinary deferral while the stored
+pointer is still current so a corrected extraction can converge it, and when
+the clear lost a concurrent replacement it defers instead of retiring the
+newer generation. Consumers: the resolver declaration reader already settles
+refused roots (existing regression), relationship publication already
+degrades through `RequireUsable` → `MarkUnavailable`, and restore reuses
+`reactivateComplete`'s idempotent re-settlement. Regressions: store
+staged-accounting admission including over-staged and desynchronized counters,
+refusal→success convergence with the rollback floor and release into the
+ordinary sweep, and stale-candidate replay refusal; conditional-clear
+matching/mismatched/absent behavior with the repository revision; runtime
+install-then-publish under the fence without a pointer, restart/reuse
+re-settlement without content work, exhausted-remainder single settlement,
+partial-domain non-publication, and both real `StorePublisher` refusal routes
+counted once each under the observation fence; worker settle scenarios
+(absent → terminal, current → deferral, obsolete → conditional clear +
+terminal, concurrent replacement → deferral). Gates: `internal/store`
+focused normal 25.953s / race 8.679s and full normal 464.150s,
+`internal/extractionpublication` normal 7.793s / race 12.814s,
+`internal/callerexecute` normal 0.491s / race 3.196s, `cmd/phebs` 254.775s,
+`internal/relationshippublication` 74.601s, repository build, scoped vet and
+pinned golangci-lint (0 issues) pass. Independent review: pending. Steady-state
+cost: the success publication path is byte-identical; a refusal adds one fence
+acquisition and one upsert with no pointer write and no added reader work; the
+caller settle adds one pointer read and, for an obsolete pointer only, one
+conditional delete on the terminal path; restart/reuse adds one refusal
+re-settle per refused generation. No new lock class, child, goroutine, cache,
+schema, timer or persistent work. No label, prediction, score, seal or merge;
+the fresh candidate run remains separate and T47.2b stays open.*
+
 **T47.3 · Ordinary production configuration and registration** *(needs the
 T47.2 supported recipe contract; activation remains gated until T47.5)* —
 introduce the stable Caller Map configuration/recipe selection, wire the

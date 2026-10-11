@@ -243,11 +243,7 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 		return store.WithDeferral(err)
 	}
 	if errors.Is(err, ErrPartitionedCallerUnavailable) {
-		if clearErr := worker.store.ClearCallerGenerationPublication(preflightCtx, job.Target); clearErr != nil &&
-			!errors.Is(clearErr, store.ErrNotFound) {
-			return clearErr
-		}
-		return worker.publications.Retire(preflightCtx, job.Target)
+		return worker.settleRefusedGeneration(preflightCtx, job.Target, err)
 	}
 	if err != nil {
 		return err
@@ -330,11 +326,7 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 		return store.WithDeferral(err)
 	}
 	if errors.Is(err, ErrPartitionedCallerUnavailable) {
-		if clearErr := worker.store.ClearCallerGenerationPublication(workCtx, job.Target); clearErr != nil &&
-			!errors.Is(clearErr, store.ErrNotFound) {
-			return clearErr
-		}
-		return worker.publications.Retire(workCtx, job.Target)
+		return worker.settleRefusedGeneration(workCtx, job.Target, err)
 	}
 	if err != nil {
 		return err
@@ -1784,6 +1776,56 @@ func (worker *Worker) retireUnavailablePublication(
 		return nil
 	}
 	return worker.publications.Retire(ctx, repository)
+}
+
+// settleRefusedGeneration gives a durable, operator-visible outcome to an
+// exact-generation upstream refusal: the refused domain root is store-visible
+// authority, so the caller leaf settles terminally instead of pending forever,
+// and the files of any obsolete generation are retired. The clear is
+// generation-conditional and the job defers rather than retiring a newer
+// generation that replaced the pointer concurrently. A still-current published
+// generation also defers: it remains the store's served authority, and a
+// corrected extraction must still be able to converge it later.
+func (worker *Worker) settleRefusedGeneration(
+	ctx context.Context,
+	repository string,
+	cause error,
+) error {
+	terminal := store.WithTerminal(fmt.Errorf(
+		"caller generation upstream refused: %w", cause,
+	))
+	pointer, err := worker.store.GetCallerGenerationPublication(ctx, repository)
+	if errors.Is(err, store.ErrNotFound) {
+		if err := worker.publications.Retire(ctx, repository); err != nil {
+			return err
+		}
+		return terminal
+	}
+	if err != nil {
+		return err
+	}
+	current, err := worker.store.CallerGenerationPublicationCurrent(ctx, *pointer)
+	if err != nil {
+		return err
+	}
+	if current {
+		return store.WithDeferral(cause)
+	}
+	cleared, err := worker.store.ClearCallerGenerationPublicationForGeneration(
+		ctx, repository, pointer.Generation.Digest,
+	)
+	if err != nil {
+		return err
+	}
+	if !cleared {
+		// The pointer changed or vanished after the availability check.
+		// Re-evaluate against the new authority instead of retiring it.
+		return store.WithDeferral(cause)
+	}
+	if err := worker.publications.Retire(ctx, repository); err != nil {
+		return err
+	}
+	return terminal
 }
 
 func (worker *Worker) resolverFor(

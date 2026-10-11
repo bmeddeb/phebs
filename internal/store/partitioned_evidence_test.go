@@ -556,3 +556,217 @@ func TestPartitionedV3BoundRunStagesThroughExactBinding(t *testing.T) {
 		t.Fatalf("v3-bound chunk accounting = %+v, %v", receipt, err)
 	}
 }
+
+// T47.2h fixtures: a terminally refused domain publishes the same latest-only
+// root row under staged-evidence accounting instead of success equality.
+
+type partitionedRefusalFixture struct {
+	store      *Surreal
+	repository string
+	commit     string
+	domain     string
+	candidate  CandidateManifestPublication
+}
+
+func newPartitionedRefusalFixture(t *testing.T, suffix string) *partitionedRefusalFixture {
+	t.Helper()
+	s := newRetentionTestStore(t)
+	ctx := t.Context()
+	fixture := &partitionedRefusalFixture{
+		store: s, repository: "synthetic.invalid/t472h-refusal-" + suffix,
+		commit: "cccccccccccccccccccccccccccccccccccccccc",
+		domain: "grpc-caller",
+	}
+	if err := s.UpsertRepo(ctx, Repo{
+		Name: fixture.repository, CloneURL: "https://example.invalid/t472h.git",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetRepoIndexed(ctx, fixture.repository, fixture.commit, time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+	fixture.candidate = CandidateManifestPublication{
+		Repository: fixture.repository, HeadCommit: fixture.commit,
+		PolicyDigest:     "sha256:" + strings.Repeat("1", 64),
+		ManifestDigest:   "sha256:" + strings.Repeat("2", 64),
+		GenerationDigest: "sha256:" + strings.Repeat("3", 64),
+		ManifestPath:     candidateid.ManifestName(fixture.repository),
+	}
+	if err := s.PublishCandidateManifest(ctx, fixture.candidate); err != nil {
+		t.Fatal(err)
+	}
+	return fixture
+}
+
+func (fixture *partitionedRefusalFixture) beginRun(t *testing.T, planFill string) *ExtractionRun {
+	t.Helper()
+	run, err := fixture.store.BeginPartitionedExtractionRun(t.Context(), ExtractionScope{
+		Repository: fixture.repository, Commit: fixture.commit, Domain: fixture.domain,
+	}, "t472h-refusal-v1", "sha256:"+strings.Repeat(planFill, 64),
+		fixture.candidate.ManifestDigest, "", PartitionedExtractionRunLimits{
+			Facts: MaxPartitionedFacts, Rows: MaxPartitionedRows, References: MaxPartitionedReferences,
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return run
+}
+
+func (fixture *partitionedRefusalFixture) stageChunk(
+	t *testing.T, run *ExtractionRun, chunkFill string, index int,
+) {
+	t.Helper()
+	atoms, associations, assertions := t407Batch(fixture.repository, fixture.commit, index)
+	if err := fixture.store.AddEvidenceChunk(t.Context(), run.ID,
+		"sha256:"+strings.Repeat(chunkFill, 64), 1, atoms, associations, assertions,
+	); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func (fixture *partitionedRefusalFixture) refusal(
+	run *ExtractionRun, planFill, rootFill string, facts, rows, references int64,
+) PartitionedExtractionDomain {
+	return PartitionedExtractionDomain{
+		Schema:     PartitionedExtractionDomainSchema,
+		Repository: fixture.repository, Domain: fixture.domain, RunID: run.ID,
+		PlanDigest:        "sha256:" + strings.Repeat(planFill, 64),
+		RootDigest:        "sha256:" + strings.Repeat(rootFill, 64),
+		CandidateDigest:   fixture.candidate.ManifestDigest,
+		SourceDigest:      "sha256:" + strings.Repeat("5", 64),
+		ObservationDigest: "sha256:" + strings.Repeat("6", 64),
+		Facts:             facts, Rows: rows, References: references,
+		Plan: `{"refusal":"` + planFill + `"}`, Root: `{"refusal":"` + rootFill + `"}`,
+	}
+}
+
+func (fixture *partitionedRefusalFixture) success(
+	run *ExtractionRun, planFill, rootFill string, facts, rows, references int64,
+) PartitionedExtractionDomain {
+	publication := fixture.refusal(run, planFill, rootFill, facts, rows, references)
+	publication.Plan = `{"success":"` + planFill + `"}`
+	publication.Root = `{"success":"` + rootFill + `"}`
+	return publication
+}
+
+// TestPartitionedEvidenceRefusalBindsStagedAccounting proves the refusal
+// sibling of the success publication: root totals at or below the staged
+// population are admitted (refused partitions keep their staged evidence
+// accounted), totals above it or desynchronized staged counters are refused,
+// the sealed and rooted run survives the ordinary sweep as durable
+// attribution, and stale candidate authority cannot re-confirm it.
+func TestPartitionedEvidenceRefusalBindsStagedAccounting(t *testing.T) {
+	fixture := newPartitionedRefusalFixture(t, "staged")
+	ctx := t.Context()
+	run := fixture.beginRun(t, "a")
+	fixture.stageChunk(t, run, "8", 0)
+
+	above := fixture.refusal(run, "a", "9", 2, 0, 0)
+	if err := fixture.store.PublishPartitionedExtractionDomainRefusal(ctx, above); !errors.Is(err, ErrConflict) {
+		t.Fatalf("root totals above staged evidence = %v, want conflict", err)
+	}
+	active, err := fixture.store.getRun(ctx, run.ID)
+	if err != nil || !active.PartitionActive || active.PartitionSealed {
+		t.Fatalf("run changed by refused accounting = %+v, %v", active, err)
+	}
+	setStagedFactCount(t, fixture.store, ctx, run.ID, 5)
+	lying := fixture.refusal(run, "a", "9", 1, 2, 1)
+	if err := fixture.store.PublishPartitionedExtractionDomainRefusal(ctx, lying); !errors.Is(err, ErrConflict) {
+		t.Fatalf("desynchronized staged counters = %v, want conflict", err)
+	}
+	setStagedFactCount(t, fixture.store, ctx, run.ID, 1)
+
+	publication := fixture.refusal(run, "a", "9", 0, 0, 0)
+	if err := fixture.store.PublishPartitionedExtractionDomainRefusal(ctx, publication); err != nil {
+		t.Fatal(err)
+	}
+	sealed, err := fixture.store.getRun(ctx, run.ID)
+	if err != nil || sealed.PartitionActive || !sealed.PartitionSealed {
+		t.Fatalf("sealed refusal run = %+v, %v", sealed, err)
+	}
+	stored, err := fixture.store.GetPartitionedExtractionDomain(ctx, fixture.repository, fixture.domain)
+	if err != nil || !samePartitionedDomain(*stored, publication) {
+		t.Fatalf("stored refusal = %+v, %v", stored, err)
+	}
+	reference, err := fixture.store.GetPartitionedExtractionDomainReference(ctx, fixture.repository, fixture.domain)
+	if err != nil || reference.RunID != run.ID || reference.RootDigest != publication.RootDigest {
+		t.Fatalf("refusal reference = %+v, %v", reference, err)
+	}
+	if err := fixture.store.PublishPartitionedExtractionDomainRefusal(ctx, publication); err != nil {
+		t.Fatalf("exact refusal replay: %v", err)
+	}
+	atoms, associations, assertions := t407Batch(fixture.repository, fixture.commit, 1)
+	secondChunk := "sha256:" + strings.Repeat("7", 64)
+	if err := fixture.store.AddEvidenceChunk(ctx, run.ID, secondChunk, 1, atoms, associations, assertions); !errors.Is(err, ErrConflict) {
+		t.Fatalf("append after refusal seal = %v, want conflict", err)
+	}
+	progress, err := fixture.store.SweepEvidence(ctx, time.Now().UTC().Add(48*time.Hour), 24*time.Hour)
+	if err != nil || progress.RunsMarkedDeleting != 0 {
+		t.Fatalf("rooted refusal sweep = %+v, %v", progress, err)
+	}
+	replacement := fixture.candidate
+	replacement.PolicyDigest = "sha256:" + strings.Repeat("b", 64)
+	replacement.ManifestDigest = "sha256:" + strings.Repeat("c", 64)
+	replacement.GenerationDigest = "sha256:" + strings.Repeat("d", 64)
+	if err := fixture.store.PublishCandidateManifest(ctx, replacement); err != nil {
+		t.Fatal(err)
+	}
+	if err := fixture.store.PublishPartitionedExtractionDomainRefusal(ctx, publication); !errors.Is(err, ErrConflict) {
+		t.Fatalf("stale candidate refusal replay = %v, want conflict", err)
+	}
+}
+
+// TestPartitionedEvidenceRefusalConvergesToSuccess proves the refusal is not
+// terminal for the domain: a corrected generation publishes the ordinary
+// success row over it, the refusal stays as the one-deep rollback floor, and
+// a later generation releases it into the ordinary retention sweep.
+func TestPartitionedEvidenceRefusalConvergesToSuccess(t *testing.T) {
+	fixture := newPartitionedRefusalFixture(t, "converge")
+	ctx := t.Context()
+	runA := fixture.beginRun(t, "a")
+	fixture.stageChunk(t, runA, "8", 0)
+	refused := fixture.refusal(runA, "a", "7", 0, 0, 0)
+	if err := fixture.store.PublishPartitionedExtractionDomainRefusal(ctx, refused); err != nil {
+		t.Fatal(err)
+	}
+	// started_at has second precision, so crossing a second boundary keeps runA
+	// the strictly oldest candidate; the sweep otherwise tiebreaks by random
+	// record id and can starve on the newer sealed runs it must skip.
+	time.Sleep(1100 * time.Millisecond)
+	runB := fixture.beginRun(t, "b")
+	fixture.stageChunk(t, runB, "6", 1)
+	corrected := fixture.success(runB, "b", "5", 1, 2, 1)
+	if err := fixture.store.PublishPartitionedExtractionDomain(ctx, corrected); err != nil {
+		t.Fatalf("corrected generation publish: %v", err)
+	}
+	stored, err := fixture.store.GetPartitionedExtractionDomain(ctx, fixture.repository, fixture.domain)
+	if err != nil || !samePartitionedDomain(*stored, corrected) ||
+		stored.PriorRunID != runA.ID || stored.PriorPlanDigest != refused.PlanDigest ||
+		stored.PriorRootDigest != refused.RootDigest {
+		t.Fatalf("corrected row = %+v, %v", stored, err)
+	}
+	reference, err := fixture.store.GetPartitionedExtractionDomainReference(ctx, fixture.repository, fixture.domain)
+	if err != nil || reference.RunID != runB.ID || reference.RootDigest != corrected.RootDigest {
+		t.Fatalf("corrected reference = %+v, %v", reference, err)
+	}
+	if released, err := fixture.store.ReleaseOneUnrootedPartitionRun(ctx); err != nil || released {
+		t.Fatalf("refusal rollback floor release = %t, %v", released, err)
+	}
+	runC := fixture.beginRun(t, "c")
+	fixture.stageChunk(t, runC, "4", 2)
+	newer := fixture.success(runC, "c", "3", 1, 2, 1)
+	if err := fixture.store.PublishPartitionedExtractionDomain(ctx, newer); err != nil {
+		t.Fatal(err)
+	}
+	if released, err := fixture.store.ReleaseOneUnrootedPartitionRun(ctx); err != nil || !released {
+		t.Fatalf("superseded refusal release = %t, %v", released, err)
+	}
+	releasedA, err := fixture.store.getRun(ctx, runA.ID)
+	if err != nil || releasedA.PartitionSealed {
+		t.Fatalf("released refusal run = %+v, %v", releasedA, err)
+	}
+	progress, err := fixture.store.SweepEvidence(ctx, time.Now().UTC().Add(48*time.Hour), 24*time.Hour)
+	if err != nil || progress.RunsMarkedDeleting != 1 {
+		t.Fatalf("superseded refusal sweep = %+v, %v", progress, err)
+	}
+}

@@ -1377,6 +1377,21 @@ documented below. Before this repair a deferral reported success without
 preserving work, and downstream authority could stay stale until restart or an
 unrelated later event.
 
+Since T47.2h, a required partition domain that is terminal for its exact
+generation is no longer indistinguishable from one still converging. A
+terminally refused domain is persisted as the store's exact current authority
+— the same latest-only domain row, identity-bound to its candidate, source,
+observation, policy, and extractor identities, with no filesystem current
+pointer — so the caller turn that needs it settles terminally with
+operator-visible attribution (`caller generation upstream refused: …`,
+naming the refusing domain and its disposition) instead of deferring
+indefinitely. When a superseded caller publication still names the refused
+generation, the settle clears only that exact generation before retiring its
+files; a still-current publication keeps serving and the turn defers so a
+corrected extraction can converge it, and a concurrent replacement generation
+is never retired by a stale refusal. Missing or still-converging partition
+authority keeps the ordinary deferral above.
+
 The five-minute caller execution deadline starts only after the repository
 mirror lock is acquired. Pointer/control preflight has its own at-most-five-
 minute context; waiting behind fetch, indexing, candidate planning, or

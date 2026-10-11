@@ -424,6 +424,88 @@ func TestCallerGenerationPublicationRevisionLifecycle(t *testing.T) {
 	}
 }
 
+// TestClearCallerGenerationPublicationForGenerationIsConditional proves the
+// refused-settlement clear: only the exact stored generation is retired; a
+// mismatched or absent pointer leaves the row and repository revision
+// untouched; and clearing the exact row advances the repository's
+// unavailable-transition revision exactly once.
+func TestClearCallerGenerationPublicationForGenerationIsConditional(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	fixture := newCallerPublicationFixture(
+		t, s, "github.com/acme/caller-conditional-clear",
+	)
+	if err := s.PublishCallerGeneration(
+		ctx, *fixture.job, fixture.publication,
+	); err != nil {
+		t.Fatalf("publish: %v", err)
+	}
+	published, err := s.GetCallerGenerationPublication(ctx, fixture.repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	before, err := s.GetRepo(ctx, fixture.repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// A digest that does not describe the stored pointer must not retire it.
+	mismatch := candidateDigest('f')
+	if mismatch == published.Generation.Digest {
+		mismatch = candidateDigest('e')
+	}
+	if cleared, err := s.ClearCallerGenerationPublicationForGeneration(
+		ctx, fixture.repository, mismatch,
+	); err != nil || cleared {
+		t.Fatalf("mismatched conditional clear = %t, %v", cleared, err)
+	}
+	held, err := s.GetCallerGenerationPublication(ctx, fixture.repository)
+	if err != nil || held.Generation.Digest != published.Generation.Digest ||
+		held.PublicationRevision != published.PublicationRevision {
+		t.Fatalf("pointer after mismatched clear = %+v, %v", held, err)
+	}
+	afterMismatch, err := s.GetRepo(ctx, fixture.repository)
+	if err != nil || afterMismatch.CallerPublicationRevision !=
+		before.CallerPublicationRevision {
+		t.Fatalf("revision after mismatched clear = %+v, %v", afterMismatch, err)
+	}
+	if _, err := s.ClearCallerGenerationPublicationForGeneration(
+		ctx, fixture.repository, "",
+	); err == nil {
+		t.Fatal("empty generation digest was accepted")
+	}
+
+	// The exact stored generation clears and advances the unavailable
+	// transition revision.
+	if cleared, err := s.ClearCallerGenerationPublicationForGeneration(
+		ctx, fixture.repository, published.Generation.Digest,
+	); err != nil || !cleared {
+		t.Fatalf("exact conditional clear = %t, %v", cleared, err)
+	}
+	if _, err := s.GetCallerGenerationPublication(
+		ctx, fixture.repository,
+	); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("cleared pointer = %v", err)
+	}
+	afterClear, err := s.GetRepo(ctx, fixture.repository)
+	if err != nil || afterClear.CallerPublicationRevision !=
+		before.CallerPublicationRevision+1 {
+		t.Fatalf("revision after exact clear = %+v, %v", afterClear, err)
+	}
+
+	// An absent pointer is not a second retirement.
+	if cleared, err := s.ClearCallerGenerationPublicationForGeneration(
+		ctx, fixture.repository, published.Generation.Digest,
+	); err != nil || cleared {
+		t.Fatalf("absent conditional clear = %t, %v", cleared, err)
+	}
+	afterAbsent, err := s.GetRepo(ctx, fixture.repository)
+	if err != nil || afterAbsent.CallerPublicationRevision !=
+		afterClear.CallerPublicationRevision {
+		t.Fatalf("revision after absent clear = %+v, %v", afterAbsent, err)
+	}
+}
+
 func TestCallerGenerationPublicationAcceptsCanonicalV2UpstreamAuthority(t *testing.T) {
 	testCallerGenerationPublicationAcceptsUpstreamAuthority(t, authorityvalidate.Schema, false)
 }

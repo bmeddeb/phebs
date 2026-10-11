@@ -153,8 +153,17 @@ type Executor interface {
 // Publisher performs the authoritative evidence/root transition. The call is
 // idempotent for an exact plan/root/run triple and must refuse a stale upstream
 // generation. Filesystem current.json is written only after this succeeds.
+// PublishRefusal settles a terminally refused domain under the same exact
+// binding, with staged-evidence accounting instead of success equality; a
+// refusal deliberately has no current.json.
 type Publisher interface {
 	PublishDomain(
+		context.Context,
+		candidate.DomainResultPlan,
+		candidate.DomainResultRoot,
+		string,
+	) error
+	PublishRefusal(
 		context.Context,
 		candidate.DomainResultPlan,
 		candidate.DomainResultRoot,

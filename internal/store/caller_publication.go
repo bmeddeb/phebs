@@ -143,6 +143,7 @@ type CallerGenerationPublicationStore interface {
 	CallerGenerationPublicationSummariesAuthorityCurrent(context.Context, []CallerGenerationPublicationSummary) (bool, error)
 	CallerGenerationPublicationSummaryCurrent(context.Context, CallerGenerationPublicationSummary) (bool, error)
 	ClearCallerGenerationPublication(context.Context, string) error
+	ClearCallerGenerationPublicationForGeneration(context.Context, string, string) (bool, error)
 	ClearAllCallerPublicationStateForRestore(context.Context) error
 }
 
@@ -167,6 +168,10 @@ type callerGenerationPublicationSummaryRec struct {
 type callerGenerationCurrentResult struct {
 	Current            bool `json:"current"`
 	PairPayloadInvalid bool `json:"pair_payload_invalid"`
+}
+
+type callerGenerationClearResult struct {
+	Cleared bool `json:"cleared"`
 }
 
 type callerGenerationSummaryAuthorityBinding struct {
@@ -1611,6 +1616,61 @@ COMMIT;`, map[string]any{
 			}
 		}
 		return nil
+	}
+}
+
+// ClearCallerGenerationPublicationForGeneration removes the stored pointer
+// only while it still describes the expected caller generation, and reports
+// whether exactly that row was cleared. An absent or already-replaced pointer
+// is left untouched, so a concurrent newer generation is never retired.
+func (s *Surreal) ClearCallerGenerationPublicationForGeneration(
+	ctx context.Context,
+	repository,
+	generationDigest string,
+) (bool, error) {
+	if err := reponame.Validate(repository); err != nil {
+		return false, fmt.Errorf("clear caller generation for generation: %w", err)
+	}
+	if !validSHA256Digest(generationDigest) {
+		return false, errors.New("clear caller generation for generation: invalid generation digest")
+	}
+	for attempt := 0; ; attempt++ {
+		results, err := storeQuery[[]callerGenerationClearResult](ctx, s.accounting, s.db, `
+BEGIN;
+LET $writer_ok = array::len(SELECT id FROM $migration_rid
+	WHERE version = $migration_version LIMIT 1) = 1;
+IF $writer_ok = false {
+	THROW 'phebs-permanent: caller-generation publication writer is not active'
+};
+LET $current = DELETE $rid WHERE generation_digest = $generation_digest RETURN BEFORE;
+IF array::len($current) = 1 {
+	UPDATE $repo_rid SET caller_publication_revision =
+		(caller_publication_revision ?? 0) + 1 RETURN NONE
+};
+RETURN [{ cleared: array::len($current) = 1 }];
+COMMIT;`, map[string]any{
+			"migration_rid":     callerGenerationPublicationMigrationID(),
+			"migration_version": callerGenerationPublicationMigrationVersion,
+			"rid":               callerGenerationPublicationID(repository),
+			"repo_rid":          repoID(repository),
+			"generation_digest": generationDigest,
+		}, storeWrite(2))
+		if err != nil {
+			if isRetryable(err) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
+				continue
+			}
+			return false, fmt.Errorf("clear caller generation for generation: %w", err)
+		}
+		for index, result := range *results {
+			if result.Error != nil {
+				return false, fmt.Errorf("clear caller generation for generation statement %d: %s", index, result.Error.Message)
+			}
+		}
+		rows := firstDomainRows(results)
+		if len(rows) != 1 {
+			return false, errors.New("clear caller generation for generation: empty result")
+		}
+		return rows[0].Cleared, nil
 	}
 }
 

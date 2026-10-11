@@ -768,9 +768,10 @@ func startServeExtractionPipeline(d *serveDeps) error {
 				domainCtx context.Context, domain string,
 			) (candidate.DownstreamDomainAuthority, error) {
 				// Store publication is the downstream authority for every
-				// settled disposition, including explicit empty, terminal,
-				// and retryable domain roots that intentionally have no
-				// successful filesystem current pointer.
+				// settled disposition: explicit empty and terminal-refusal
+				// domain roots are durable store rows that intentionally have
+				// no successful filesystem current pointer, and a retryable
+				// root has neither and keeps this check false.
 				return extractionpublication.CurrentDomainAuthority(
 					domainCtx, st, repository, domain,
 				)

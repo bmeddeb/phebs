@@ -259,6 +259,7 @@ type testPublisher struct {
 	calls     int
 	failures  int
 	published map[string]candidate.DomainResultRoot
+	refused   map[string]candidate.DomainResultRoot
 	before    func(candidate.DomainResultRoot)
 }
 
@@ -282,6 +283,29 @@ func (publisher *testPublisher) PublishDomain(
 		publisher.published = map[string]candidate.DomainResultRoot{}
 	}
 	publisher.published[plan.Domain] = root
+	return nil
+}
+
+func (publisher *testPublisher) PublishRefusal(
+	_ context.Context,
+	plan candidate.DomainResultPlan,
+	root candidate.DomainResultRoot,
+	_ string,
+) error {
+	publisher.mu.Lock()
+	defer publisher.mu.Unlock()
+	publisher.calls++
+	if publisher.before != nil {
+		publisher.before(root)
+	}
+	if publisher.failures > 0 {
+		publisher.failures--
+		return errors.New("publish unavailable")
+	}
+	if publisher.refused == nil {
+		publisher.refused = map[string]candidate.DomainResultRoot{}
+	}
+	publisher.refused[plan.Domain] = root
 	return nil
 }
 
@@ -731,10 +755,15 @@ func TestRuntimeCancellationAndLostLeaseInstallNoResult(t *testing.T) {
 
 func TestRuntimeInstallsTerminalExecutorResultBeforeTerminalSettlement(t *testing.T) {
 	plan := buildTestPlan(t, "sha256:"+strings.Repeat("8", 64), true)
-	runtime, state, _, _, publisher, _, domain := newRuntimeFixture(t, plan)
+	runtime, state, _, _, publisher, fence, domain := newRuntimeFixture(t, plan)
 	var timing PartitionTimingReport
 	runtime.TimingReports = func(raw []byte) error { return json.Unmarshal(raw, &timing) }
 	runtime.Executor = terminalExecutor{}
+	publisher.before = func(root candidate.DomainResultRoot) {
+		if root.Disposition != candidate.PartitionResultTerminalRefusal || !fence.active() {
+			t.Errorf("refusal publication outside its fence: %+v, held=%t", root, fence.active())
+		}
+	}
 	generation, err := runtime.Reconcile(t.Context(), plan.Repository, []DomainPlan{domain})
 	if err != nil {
 		t.Fatal(err)
@@ -751,8 +780,14 @@ func TestRuntimeInstallsTerminalExecutorResultBeforeTerminalSettlement(t *testin
 		status.Domains[0].Disposition != candidate.PartitionResultTerminalRefusal {
 		t.Fatalf("terminal status = %+v, %v", status, statusErr)
 	}
-	if publisher.calls != 0 {
-		t.Fatalf("terminal root publication calls = %d", publisher.calls)
+	// The refusal itself is the durable terminal authority: it is published
+	// under the same fence as a success and never writes a current pointer.
+	if publisher.calls != 1 ||
+		publisher.refused[plan.Domain].Disposition != candidate.PartitionResultTerminalRefusal {
+		t.Fatalf("terminal refusal publication = %d, %+v", publisher.calls, publisher.refused)
+	}
+	if _, statErr := os.Lstat(runtime.currentPath(plan.Repository, plan.Domain)); !errors.Is(statErr, os.ErrNotExist) {
+		t.Fatalf("refusal wrote a current pointer: %v", statErr)
 	}
 	for range 50 {
 		if timing.Outcome != "" {
@@ -792,6 +827,112 @@ func TestRuntimeKeepsDurablePartitionRefusalAttributionAcrossReuse(t *testing.T)
 	}
 	if acquired, released := source.counts(); acquired != 1 || released != 1 {
 		t.Fatalf("refusal content work = source %d/%d, want one released lease", acquired, released)
+	}
+}
+
+// TestRuntimeReuseResettlesRefusedGenerationWithoutPointer proves restart and
+// reuse re-settle a refused generation through ordinary reconciliation: the
+// durable rejection is republished under a fresh fence, the downstream settle
+// callback recovers without content work, and no readable current pointer
+// appears.
+func TestRuntimeReuseResettlesRefusedGenerationWithoutPointer(t *testing.T) {
+	plan := buildTestPlan(t, "sha256:"+strings.Repeat("b", 64), true)
+	runtime, state, source, _, publisher, fence, domain := newRuntimeFixture(t, plan)
+	settles := 0
+	runtime.OnSettled = func(context.Context, string) error {
+		settles++
+		return nil
+	}
+	publisher.before = func(root candidate.DomainResultRoot) {
+		if root.Disposition != candidate.PartitionResultTerminalRefusal || !fence.active() {
+			t.Errorf("refusal publication outside its fence: %+v, held=%t", root, fence.active())
+		}
+	}
+	runtime.Executor = terminalExecutor{}
+	generation, err := runtime.Reconcile(t.Context(), plan.Repository, []DomainPlan{domain})
+	if err != nil {
+		t.Fatal(err)
+	}
+	chunk := currentChunk(t, state, plan.Repository, 0)
+	chunk.Identity = "sha256:" + strings.Repeat("c", 64)
+	if err := runtime.Handle(t.Context(), chunk); !store.IsTerminal(err) {
+		t.Fatalf("terminal handle = %v", err)
+	}
+	if publisher.calls != 1 || settles != 1 {
+		t.Fatalf("first refusal publication = %d calls, %d settles", publisher.calls, settles)
+	}
+
+	restarted := &Runtime{
+		Root: runtime.Root, Store: state, Source: source,
+		Executor: runtime.Executor, Publisher: publisher, Fence: fence,
+	}
+	restarted.OnSettled = runtime.OnSettled
+	again, err := restarted.Reconcile(t.Context(), plan.Repository, []DomainPlan{domain})
+	if err != nil || again != generation {
+		t.Fatalf("restart reconcile = %q, %v, want %q", again, err, generation)
+	}
+	if publisher.calls != 2 || settles != 2 {
+		t.Fatalf("re-settled refusal = %d calls, %d settles", publisher.calls, settles)
+	}
+	if acquired, released := source.counts(); acquired != 1 || released != 1 {
+		t.Fatalf("reuse repeated content work: source %d/%d", acquired, released)
+	}
+	if _, statErr := os.Lstat(runtime.currentPath(plan.Repository, plan.Domain)); !errors.Is(statErr, os.ErrNotExist) {
+		t.Fatalf("refused generation wrote a current pointer: %v", statErr)
+	}
+}
+
+// TestRuntimeExhaustedRemainderSettlesRefusedDomainOnce proves the refusing
+// partition stays install-only until the domain completes: the exhaustion path
+// for the remaining partition assembles the complete root, publishes one
+// identity-bound refusal under the fence, and performs no extra content work.
+func TestRuntimeExhaustedRemainderSettlesRefusedDomainOnce(t *testing.T) {
+	plan := buildTestPlanForDomainAndTyped(
+		t, "sha256:"+strings.Repeat("f", 64), true,
+		"proto-contract", ".proto", true,
+	)
+	if len(plan.Expected) != 2 {
+		t.Fatalf("two-partition plan has %d expectations", len(plan.Expected))
+	}
+	runtime, state, source, _, publisher, fence, domain := newRuntimeFixture(t, plan)
+	settles := 0
+	runtime.OnSettled = func(context.Context, string) error {
+		settles++
+		return nil
+	}
+	publisher.before = func(root candidate.DomainResultRoot) {
+		if root.Disposition != candidate.PartitionResultTerminalRefusal || !fence.active() {
+			t.Errorf("refusal publication outside its fence: %+v, held=%t", root, fence.active())
+		}
+	}
+	runtime.Executor = terminalExecutor{}
+	if _, err := runtime.Reconcile(t.Context(), plan.Repository, []DomainPlan{domain}); err != nil {
+		t.Fatal(err)
+	}
+	refusing := currentChunk(t, state, plan.Repository, 0)
+	refusing.Identity = "sha256:" + strings.Repeat("c", 64)
+	if err := runtime.Handle(t.Context(), refusing); !store.IsTerminal(err) {
+		t.Fatalf("refusing partition = %v", err)
+	}
+	if publisher.calls != 0 {
+		t.Fatalf("partial domain published %d roots", publisher.calls)
+	}
+	state.settle(plan.Repository, 1)
+	exhausted := currentChunk(t, state, plan.Repository, 1)
+	exhausted.Identity = "sha256:" + strings.Repeat("d", 64)
+	if err := runtime.OnExhausted(t.Context(), exhausted, errors.New("transient")); err != nil {
+		t.Fatal(err)
+	}
+	if publisher.calls != 1 || settles != 1 ||
+		publisher.refused[plan.Domain].Disposition != candidate.PartitionResultTerminalRefusal {
+		t.Fatalf("exhausted refusal settlement = %d calls, %d settles, %+v",
+			publisher.calls, settles, publisher.refused)
+	}
+	if acquired, released := source.counts(); acquired != 1 || released != 1 {
+		t.Fatalf("exhausted refusal content work = source %d/%d", acquired, released)
+	}
+	if _, statErr := os.Lstat(runtime.currentPath(plan.Repository, plan.Domain)); !errors.Is(statErr, os.ErrNotExist) {
+		t.Fatalf("refused domain wrote a current pointer: %v", statErr)
 	}
 }
 

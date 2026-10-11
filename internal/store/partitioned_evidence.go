@@ -86,6 +86,7 @@ type PartitionedExtractionDomainReference struct {
 
 type PartitionedEvidenceStore interface {
 	PublishPartitionedExtractionDomain(context.Context, PartitionedExtractionDomain) error
+	PublishPartitionedExtractionDomainRefusal(context.Context, PartitionedExtractionDomain) error
 	GetPartitionedExtractionDomain(context.Context, string, string) (*PartitionedExtractionDomain, error)
 	PinPartitionedExtractionRun(context.Context, string, string) error
 	UnpinPartitionedExtractionRun(context.Context, string, string) error
@@ -378,6 +379,81 @@ LET $published = IF array::len($marked) = 1 AND !$same THEN
 RETURN $published;
 COMMIT;`
 
+// The refusal sibling keeps every success predicate except the accounting:
+// a terminally refused domain may leave staged evidence while its root
+// totals cover only the partitions that succeeded, so the row must prove the
+// staged population is completely accounted and at least equal to the
+// published totals instead of exactly equal to them. The success SQL above
+// stays byte-identical: an ordinary publication still proves exact equality.
+const publishPartitionedExtractionDomainRefusalSQL = `
+BEGIN;
+LET $existing = (SELECT * FROM $root_rid LIMIT 1)[0];
+LET $run = (SELECT * FROM $run_rid WHERE run_id = $run_id
+	AND run_id = record::id(id) AND repo = $repository AND domain = $domain
+	AND store_schema_version = $store_schema_version
+	AND evidence_format_version = $evidence_format_version
+	AND evidence_migration_version = $evidence_migration_version
+	AND retention_quarantined = false AND published_key = NONE
+	AND status = 'staged' LIMIT 1)[0];
+LET $candidate = (SELECT repository, head_commit, unit_digest, manifest_digest
+	FROM $candidate_rid LIMIT 1)[0];
+LET $current_ok = $candidate != NONE
+	AND $candidate.repository = $repository
+	AND $candidate.manifest_digest = $candidate_digest
+	AND $run != NONE AND $run.commit = $candidate.head_commit
+	AND ($run.unit_digest ?? '') = ($candidate.unit_digest ?? '');
+LET $chunk_totals = (SELECT count() AS chunks, math::sum(fact_count) AS facts,
+	math::sum(row_delta) AS rows, math::sum(reference_delta) AS references
+	FROM evidence_chunk WHERE run_id = $run_id GROUP ALL)[0];
+LET $assertion_count = array::len(SELECT VALUE assertion_id FROM assertion WHERE run_id = $run_id);
+LET $association_count = array::len(SELECT VALUE occurrence_id FROM snapshot_evidence WHERE run_id = $run_id);
+LET $reference_count = array::len(array::flatten(SELECT VALUE supporting FROM assertion WHERE run_id = $run_id))
+	+ array::len(array::flatten(SELECT VALUE contradicting FROM assertion WHERE run_id = $run_id));
+LET $counts_ok = $run != NONE
+	AND ($run.staged_fact_count ?? -1) = ($chunk_totals.facts ?? 0)
+	AND ($run.staged_row_count ?? -1) = ($chunk_totals.rows ?? 0)
+	AND ($run.staged_reference_count ?? -1) = ($chunk_totals.references ?? 0)
+	AND $assertion_count + $association_count = ($run.staged_row_count ?? -1)
+	AND $reference_count = ($run.staged_reference_count ?? -1)
+	AND $facts <= ($run.staged_fact_count ?? -1)
+	AND $rows <= ($run.staged_row_count ?? -1)
+	AND $references <= ($run.staged_reference_count ?? -1)
+	AND ($run.staged_fact_count ?? -1) <= ($run.partition_fact_limit ?? -1)
+	AND ($run.staged_row_count ?? -1) <= ($run.partition_row_limit ?? -1)
+	AND ($run.staged_reference_count ?? -1) <= ($run.partition_reference_limit ?? -1);
+LET $same = $existing != NONE AND $run != NONE
+	AND $existing.run_id = $run_id AND $existing.plan_digest = $plan_digest
+	AND $existing.root_digest = $root_digest AND $existing.root = $root
+	AND $existing.plan = $plan;
+
+LET $run_owned = $run != NONE AND $run.partition_plan_digest = $plan_digest
+	AND $run.partition_candidate_digest = $candidate_digest
+	AND (($run.partition_active ?? false) = true OR ($run.partition_sealed ?? false) = true)
+	AND (($run.partition_root_digest ?? $root_digest) = $root_digest);
+LET $ready = $current_ok AND $counts_ok AND $run_owned;
+LET $sealed = $run != NONE AND (($run.partition_sealed ?? false) = true);
+LET $marked = IF $ready AND !$same AND !$sealed THEN
+	(UPDATE $run_rid SET partition_active = false, partition_sealed = true,
+		partition_plan_digest = $plan_digest,
+		partition_root_digest = $root_digest WHERE status = 'staged'
+			AND ((partition_sealed ?? false) = false) RETURN AFTER)
+	ELSE IF $ready AND ($same OR $sealed) THEN [$run] ELSE [] END;
+LET $published = IF array::len($marked) = 1 AND !$same THEN
+	(UPSERT $root_rid CONTENT {
+		schema: $schema, repository: $repository, domain: $domain,
+		run_id: $run_id, plan_digest: $plan_digest, root_digest: $root_digest,
+		candidate_digest: $candidate_digest, source_digest: $source_digest,
+		observation_digest: $observation_digest, facts: $facts, rows: $rows,
+		references: $references, plan: $plan, root: $root,
+		prior_run_id: IF $existing != NONE AND $existing.run_id != $run_id THEN $existing.run_id ELSE $existing.prior_run_id ?? NONE END,
+		prior_plan_digest: IF $existing != NONE AND $existing.run_id != $run_id THEN $existing.plan_digest ELSE $existing.prior_plan_digest ?? NONE END,
+		prior_root_digest: IF $existing != NONE AND $existing.run_id != $run_id THEN $existing.root_digest ELSE $existing.prior_root_digest ?? NONE END,
+		published_at: time::now()
+	} RETURN AFTER)
+	ELSE IF $ready AND $same THEN [$existing] ELSE [] END;
+RETURN $published;
+COMMIT;`
+
 func (s *Surreal) PublishPartitionedExtractionDomain(
 	ctx context.Context,
 	publication PartitionedExtractionDomain,
@@ -410,6 +486,48 @@ func (s *Surreal) PublishPartitionedExtractionDomain(
 	stored := rows[0].publication()
 	if !samePartitionedDomain(stored, publication) {
 		return fmt.Errorf("publish partitioned extraction domain: immutable collision: %w", ErrConflict)
+	}
+	return nil
+}
+
+// PublishPartitionedExtractionDomainRefusal installs the same latest-only
+// root row for a terminally refused domain, under the refusal accounting: the
+// run's staged evidence must be completely accounted and cover the published
+// totals. Sealing the run both freezes its staged evidence and roots it, so
+// the refusal survives restart, reuse, and the ordinary retention sweep as
+// the attributable record of the refusal.
+func (s *Surreal) PublishPartitionedExtractionDomainRefusal(
+	ctx context.Context,
+	publication PartitionedExtractionDomain,
+) error {
+	if err := publication.Validate(); err != nil {
+		return fmt.Errorf("publish partitioned extraction domain refusal: %w", err)
+	}
+	variables := map[string]any{
+		"root_rid": partitionedDomainID(publication.Repository, publication.Domain),
+		"run_rid":  extractionRunID(publication.RunID), "run_id": publication.RunID,
+		"candidate_rid": candidateManifestPublicationID(publication.Repository),
+		"schema":        publication.Schema, "repository": publication.Repository,
+		"domain": publication.Domain, "plan_digest": publication.PlanDigest,
+		"root_digest": publication.RootDigest, "candidate_digest": publication.CandidateDigest,
+		"source_digest": publication.SourceDigest, "observation_digest": publication.ObservationDigest,
+		"facts": publication.Facts, "rows": publication.Rows, "references": publication.References,
+		"plan": publication.Plan, "root": publication.Root,
+		"store_schema_version":       evidenceStoreSchemaVersion,
+		"evidence_format_version":    evidenceFormatVersion,
+		"evidence_migration_version": evidenceMigrationVersion,
+	}
+	results, err := storeQuery[[]partitionedDomainRec](ctx, s.accounting, s.db, publishPartitionedExtractionDomainRefusalSQL, variables, storeWrite(2))
+	if err != nil {
+		return fmt.Errorf("publish partitioned extraction domain refusal: %w", err)
+	}
+	rows := firstPartitionedDomainRows(results)
+	if len(rows) != 1 {
+		return fmt.Errorf("publish partitioned extraction domain refusal: run, staged accounting, or candidate authority changed: %w", ErrConflict)
+	}
+	stored := rows[0].publication()
+	if !samePartitionedDomain(stored, publication) {
+		return fmt.Errorf("publish partitioned extraction domain refusal: immutable collision: %w", ErrConflict)
 	}
 	return nil
 }

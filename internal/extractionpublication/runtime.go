@@ -1251,8 +1251,16 @@ func (runtime *Runtime) publishRoot(
 	domain DomainPlan,
 	root candidate.DomainResultRoot,
 ) error {
-	if root.Disposition == candidate.PartitionResultTerminalRefusal ||
-		root.Disposition == candidate.PartitionResultRetryable {
+	if root.Disposition == candidate.PartitionResultTerminalRefusal {
+		if err := runtime.publishRefusedRoot(ctx, chunk, domain, root); err != nil {
+			return err
+		}
+		if runtime.OnSettled != nil {
+			return runtime.OnSettled(ctx, domain.Plan.Repository)
+		}
+		return nil
+	}
+	if root.Disposition == candidate.PartitionResultRetryable {
 		if runtime.OnSettled != nil {
 			return runtime.OnSettled(ctx, domain.Plan.Repository)
 		}
@@ -1295,6 +1303,32 @@ func (runtime *Runtime) publishRoot(
 	return nil
 }
 
+// publishRefusedRoot binds a terminally refused domain to its exact candidate,
+// source, observation, policy, and extractor identities under the same short
+// publication fence as a success, then settles the refusal in the store. No
+// current pointer is written: a refusal is durable authority about what could
+// not be published, not readable content.
+func (runtime *Runtime) publishRefusedRoot(
+	ctx context.Context,
+	chunk store.GenerationChunk,
+	domain DomainPlan,
+	root candidate.DomainResultRoot,
+) error {
+	releaseFence, err := runtime.Fence.FenceDomain(ctx, FenceRequest{Chunk: chunk, Plan: domain.Plan})
+	if err != nil {
+		return classifyAuthorityFenceError(ctx, err)
+	}
+	if releaseFence == nil {
+		return invalid("publication fence returned no release")
+	}
+	if err := runtime.Publisher.PublishRefusal(ctx, domain.Plan, root, domain.RunID); err != nil {
+		releaseFence()
+		return err
+	}
+	releaseFence()
+	return nil
+}
+
 func (runtime *Runtime) finalizeZeroDomains(ctx context.Context, generation Generation, directory string) error {
 	for _, descriptor := range generation.Domains {
 		if descriptor.StartOrdinal != descriptor.EndOrdinal {
@@ -1324,7 +1358,16 @@ func (runtime *Runtime) reactivateComplete(ctx context.Context, generation Gener
 		if err != nil || !present {
 			continue
 		}
-		if root.Disposition == candidate.PartitionResultTerminalRefusal || root.Disposition == candidate.PartitionResultRetryable {
+		if root.Disposition == candidate.PartitionResultRetryable {
+			continue
+		}
+		if root.Disposition == candidate.PartitionResultTerminalRefusal {
+			// Re-settle the refusal so restart and reuse keep the durable,
+			// identity-bound record and recover the downstream settle it owed.
+			if err := runtime.publishRefusedRoot(ctx, store.GenerationChunk{}, domain, root); err != nil {
+				return err
+			}
+			settled = true
 			continue
 		}
 		releaseFence, err := runtime.Fence.FenceDomain(ctx, FenceRequest{Plan: domain.Plan})

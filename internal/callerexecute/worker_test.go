@@ -418,6 +418,19 @@ func (state *workerTestStore) ClearCallerGenerationPublication(
 	return nil
 }
 
+func (state *workerTestStore) ClearCallerGenerationPublicationForGeneration(
+	_ context.Context,
+	_ string,
+	generationDigest string,
+) (bool, error) {
+	if state.publication == nil || state.publication.Generation.Digest != generationDigest {
+		return false, nil
+	}
+	state.events = append(state.events, "clear-publication")
+	state.publication = nil
+	return true, nil
+}
+
 func (state *workerTestStore) ClearAllCallerPublicationStateForRestore(
 	context.Context,
 ) error {
@@ -1736,6 +1749,121 @@ func TestPartitionedAuthorityClassifiesDependencyState(t *testing.T) {
 				t.Fatalf("usable authority = %+v, err=%v", upstream, err)
 			}
 		})
+	}
+}
+
+// replacedClearStore simulates a concurrent newer caller generation replacing
+// the stored pointer between the availability check and the conditional clear.
+type replacedClearStore struct {
+	*workerTestStore
+	replacement *store.CallerGenerationPublication
+}
+
+func (state *replacedClearStore) ClearCallerGenerationPublicationForGeneration(
+	context.Context, string, string,
+) (bool, error) {
+	if state.replacement != nil {
+		state.publication = state.replacement
+	}
+	return false, nil
+}
+
+func TestSettleRefusedGenerationSettlesWithoutPublication(t *testing.T) {
+	harness := newWorkerHarness(t, 1)
+	err := harness.worker.settleRefusedGeneration(
+		t.Context(), harness.state.repo.Name, ErrPartitionedCallerUnavailable,
+	)
+	if !store.IsTerminal(err) || store.IsDeferral(err) ||
+		!errors.Is(err, ErrPartitionedCallerUnavailable) ||
+		!strings.Contains(err.Error(), "caller generation upstream refused") {
+		t.Fatalf("settled refusal = %v", err)
+	}
+	if len(harness.state.events) != 0 || harness.state.publication != nil {
+		t.Fatalf("settled refusal mutated publication state: %v, %+v",
+			harness.state.events, harness.state.publication)
+	}
+}
+
+func TestSettleRefusedGenerationDefersOnCurrentPublication(t *testing.T) {
+	harness := newWorkerHarness(t, 1)
+	harness.settle(t)
+	pointer, err := harness.state.GetCallerGenerationPublication(
+		t.Context(), harness.state.repo.Name,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	current, err := harness.state.CallerGenerationPublicationCurrent(t.Context(), *pointer)
+	if err != nil || !current {
+		t.Fatalf("settled publication current = %t, %v", current, err)
+	}
+	harness.state.events = nil
+	err = harness.worker.settleRefusedGeneration(
+		t.Context(), harness.state.repo.Name, ErrPartitionedCallerUnavailable,
+	)
+	if !store.IsDeferral(err) || store.IsTerminal(err) ||
+		!errors.Is(err, ErrPartitionedCallerUnavailable) {
+		t.Fatalf("current-publication refusal = %v", err)
+	}
+	if len(harness.state.events) != 0 || harness.state.publication == nil {
+		t.Fatalf("current publication was retired: %v, %+v",
+			harness.state.events, harness.state.publication)
+	}
+}
+
+func TestSettleRefusedGenerationRetiresObsoletePublication(t *testing.T) {
+	harness := newWorkerHarness(t, 1)
+	harness.settle(t)
+	// The caller generation no longer matches live upstream control authority:
+	// the stored publication is obsolete and must be conditioned away.
+	harness.state.candidate.ControlRevision++
+	harness.state.events = nil
+	err := harness.worker.settleRefusedGeneration(
+		t.Context(), harness.state.repo.Name, ErrPartitionedCallerUnavailable,
+	)
+	if !store.IsTerminal(err) || store.IsDeferral(err) ||
+		!errors.Is(err, ErrPartitionedCallerUnavailable) ||
+		!strings.Contains(err.Error(), "caller generation upstream refused") {
+		t.Fatalf("obsolete-publication refusal = %v", err)
+	}
+	if got, want := harness.state.events, []string{"clear-publication"}; !slices.Equal(got, want) {
+		t.Fatalf("obsolete-publication clear order = %v, want %v", got, want)
+	}
+	if harness.state.publication != nil {
+		t.Fatalf("obsolete publication survived: %+v", harness.state.publication)
+	}
+}
+
+func TestSettleRefusedGenerationDefersOnConcurrentReplacement(t *testing.T) {
+	harness := newWorkerHarness(t, 1)
+	harness.settle(t)
+	pointer, err := harness.state.GetCallerGenerationPublication(
+		t.Context(), harness.state.repo.Name,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	replacement := *pointer
+	replacement.Generation.Digest = "sha256:" + strings.Repeat("4", 64)
+	replacement.PublicationRevision++
+	harness.state.candidate.ControlRevision++
+	harness.worker.store = &replacedClearStore{
+		workerTestStore: harness.state, replacement: &replacement,
+	}
+	harness.state.events = nil
+	err = harness.worker.settleRefusedGeneration(
+		t.Context(), harness.state.repo.Name, ErrPartitionedCallerUnavailable,
+	)
+	if !store.IsDeferral(err) || store.IsTerminal(err) ||
+		!errors.Is(err, ErrPartitionedCallerUnavailable) {
+		t.Fatalf("concurrently replaced refusal = %v", err)
+	}
+	if len(harness.state.events) != 0 {
+		t.Fatalf("replacement was cleared: %v", harness.state.events)
+	}
+	if harness.state.publication == nil ||
+		harness.state.publication.Generation.Digest != replacement.Generation.Digest {
+		t.Fatalf("newer generation was retired: %+v", harness.state.publication)
 	}
 }
 

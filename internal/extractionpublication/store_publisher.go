@@ -33,15 +33,53 @@ func (publisher StorePublisher) PublishDomain(
 		candidate.ValidateDomainResultRoot(root, plan) != nil {
 		return errors.New("partition store publisher received invalid authority")
 	}
-	planRaw, err := canonical(plan)
+	publication, err := partitionPublication(plan, root, runID)
 	if err != nil {
 		return err
+	}
+	return publisher.Store.PublishPartitionedExtractionDomain(ctx, publication)
+}
+
+// PublishRefusal settles one terminally refused domain under the same exact
+// authority binding as a success, with staged-evidence accounting instead of
+// the success equality. The refused run is sealed and rooted by the store,
+// which retains it as the attributable record of the refusal.
+func (publisher StorePublisher) PublishRefusal(
+	ctx context.Context,
+	plan candidate.DomainResultPlan,
+	root candidate.DomainResultRoot,
+	runID string,
+) error {
+	if err := dispatchadmission.ObserveProductionPublication(ctx); err != nil {
+		return err
+	}
+	if publisher.Store == nil || runID == "" ||
+		candidate.ValidateDomainResultPlanControl(plan) != nil ||
+		candidate.ValidateDomainResultRoot(root, plan) != nil ||
+		root.Disposition != candidate.PartitionResultTerminalRefusal {
+		return errors.New("partition store publisher received invalid refusal authority")
+	}
+	publication, err := partitionPublication(plan, root, runID)
+	if err != nil {
+		return err
+	}
+	return publisher.Store.PublishPartitionedExtractionDomainRefusal(ctx, publication)
+}
+
+func partitionPublication(
+	plan candidate.DomainResultPlan,
+	root candidate.DomainResultRoot,
+	runID string,
+) (store.PartitionedExtractionDomain, error) {
+	planRaw, err := canonical(plan)
+	if err != nil {
+		return store.PartitionedExtractionDomain{}, err
 	}
 	rootRaw, err := canonical(root)
 	if err != nil {
-		return err
+		return store.PartitionedExtractionDomain{}, err
 	}
-	return publisher.Store.PublishPartitionedExtractionDomain(ctx, store.PartitionedExtractionDomain{
+	return store.PartitionedExtractionDomain{
 		Schema:     store.PartitionedExtractionDomainSchema,
 		Repository: plan.Repository, Domain: plan.Domain, RunID: runID,
 		PlanDigest: plan.Digest, RootDigest: root.Digest,
@@ -51,7 +89,7 @@ func (publisher StorePublisher) PublishDomain(
 		Facts:             root.Totals.Facts, Rows: root.Totals.Rows,
 		References: root.Totals.References,
 		Plan:       string(planRaw), Root: string(rootRaw),
-	})
+	}, nil
 }
 
 var _ Publisher = StorePublisher{}
