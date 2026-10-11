@@ -1798,13 +1798,12 @@ func (worker *Worker) settleRefusedGeneration(
 	if errors.Is(err, store.ErrNotFound) {
 		// No stored pointer to condition on, so nothing here clears durable
 		// authority. A generation committed between this read and the retire
-		// resolves through its own checks: it re-observes cleanly when the
-		// retire lands before its Observe, otherwise its open/acquire fails
-		// closed with one successor retry — except while its lease is pinned,
-		// when removal defers to lease release and deletes files the
-		// publisher's final files-and-pointer checks already accepted. Either
-		// removal leaves that store-current generation's reads failing closed
-		// until the successor recovery or ordinary pipeline republishes it.
+		// either keeps or re-establishes registry authority and proceeds, or
+		// fails closed into one successor retry — except while its lease is
+		// pinned, when removal defers to lease release and can delete files
+		// the publisher's final files-and-pointer checks already accepted.
+		// Whenever removal wins that race, its reads fail closed until the
+		// successor recovery or ordinary pipeline republishes it.
 		if err := worker.publications.Retire(ctx, repository); err != nil {
 			return err
 		}
