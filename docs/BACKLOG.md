@@ -17408,8 +17408,8 @@ pinned golangci-lint (0 issues) pass. Independent review: pending. Steady-state
 cost: the success publication path is byte-identical; a refusal adds one fence
 acquisition and one upsert with no pointer write and no added reader work; the
 caller settle adds one pointer read and, for an obsolete pointer only, one
-conditional delete on the terminal path; restart/reuse adds one refusal
-re-settle per refused generation. No new lock class, child, goroutine, cache,
+conditional delete on the terminal path; restart/reuse re-settles a refused
+generation only when reuse actually reactivates it. No new lock class, child, goroutine, cache,
 schema, timer or persistent work. No label, prediction, score, seal or merge;
 the fresh candidate run remains separate and T47.2b stays open.*
 

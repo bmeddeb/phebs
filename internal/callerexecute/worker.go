@@ -1796,6 +1796,10 @@ func (worker *Worker) settleRefusedGeneration(
 	))
 	pointer, err := worker.store.GetCallerGenerationPublication(ctx, repository)
 	if errors.Is(err, store.ErrNotFound) {
+		// No stored pointer to condition on. A generation published between
+		// this read and the retire cannot lose durability: its own post-commit
+		// lost-authority check returns a successor retry, so the worst case is
+		// one spurious retry, never a silent loss.
 		if err := worker.publications.Retire(ctx, repository); err != nil {
 			return err
 		}
