@@ -18,6 +18,8 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -577,9 +579,37 @@ func TestPartitionedCallerOwnershipSequentialOrders(t *testing.T) {
 		recorder := &stagedRecorder{Surreal: backing}
 		run := newTypedOwnershipRun(t, recorder, fixture)
 		executor := newTypedOwnershipExecutor(recorder)
+		executor.SourceOutcomeRoot = t.TempDir()
 		specs := make(map[int]candidate.PartitionResultSpec)
 		for _, ordinal := range order {
 			specs[ordinal] = executeTypedOwnershipPartition(t, recorder, executor, fixture, run.ID, ordinal)
+		}
+		for ordinal, spec := range specs {
+			result, err := candidate.BuildPartitionResult(fixture.plan, ordinal, spec)
+			if err != nil {
+				t.Fatal(err)
+			}
+			data, err := os.ReadFile(filepath.Join(executor.SourceOutcomeRoot, strings.TrimPrefix(result.Digest, "sha256:")+".jsonl"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+			wantRows := 0
+			if ordinal == fixture.typedOrdinal {
+				wantRows = 2
+			}
+			if len(lines) != wantRows+2 {
+				t.Fatalf("partition %d has %d outcome rows, want %d", ordinal, len(lines)-2, wantRows)
+			}
+			for _, line := range lines[1 : len(lines)-1] {
+				var outcome sdk.SourceOutcome
+				if err := json.Unmarshal([]byte(line), &outcome); err != nil {
+					t.Fatal(err)
+				}
+				if outcome.State != "analyzed" {
+					t.Fatalf("source was not scanned: %+v", outcome)
+				}
+			}
 		}
 		assertTypedOwnershipMemberQuiet(t, specs[fixture.memberOrdinal], recorder.stagedAsserts(fixture.memberOrdinal))
 		typed := specs[fixture.typedOrdinal]
@@ -694,5 +724,58 @@ func TestPartitionedCallerOwnershipSyntaxOnlyDomain(t *testing.T) {
 	if resolutions["SayHello"] != "syntax" || resolutions["SayHelloAgain"] != "syntax" {
 		t.Fatalf("syntax-only resolutions = %+v, want both syntax (staged %+v)",
 			resolutions, recorder.stagedAsserts(fixture.memberOrdinal))
+	}
+}
+
+// A delayed final chunk append must not leave a completed processing receipt.
+type sourceOutcomeStagingFailure struct{ *stagedRecorder }
+
+func (sourceOutcomeStagingFailure) AddEvidenceChunk(context.Context, string, string, int, []store.EvidenceAtom, []store.SnapshotEvidence, []store.Assertion) error {
+	return errors.New("injected final staging failure")
+}
+
+func TestPartitionSourceOutcomeStagingFailureLeavesNoReceipt(t *testing.T) {
+	if _, err := exec.LookPath("surreal"); err != nil {
+		t.Skip("surreal binary not installed")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+	backing, err := store.OpenLocalMemory(ctx, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = backing.Close(context.Background()) })
+	root := t.TempDir()
+	fixture := buildTypedOwnershipFixture(t, filepath.Join(root, "repository"), filepath.Join(root, "candidate"), filepath.Join(root, "sparse"), true)
+	recorder := &stagedRecorder{Surreal: backing}
+	run := newTypedOwnershipRun(t, recorder, fixture)
+	executor := newTypedOwnershipExecutor(recorder)
+	executor.SourceOutcomeRoot = t.TempDir()
+	executor.Evidence = sourceOutcomeStagingFailure{recorder}
+	lease, err := fixture.source().AcquirePartition(t.Context(), fixture.plan, fixture.typedOrdinal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lease.Release()
+	spec, err := executor.ExecutePartition(t.Context(), fixture.plan, fixture.typedOrdinal, lease, run.ID)
+	if err == nil || spec.Disposition != candidate.PartitionResultTerminalRefusal {
+		t.Fatalf("staging failure = %+v, %v", spec, err)
+	}
+	files, err := os.ReadDir(executor.SourceOutcomeRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) != 0 {
+		t.Fatalf("failed staging left %d receipt files", len(files))
+	}
+	blockedRoot := filepath.Join(t.TempDir(), "file-not-directory")
+	if err := os.WriteFile(blockedRoot, []byte("owned fixture"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	executor.Evidence, executor.SourceOutcomeRoot = recorder, blockedRoot
+	spec, err = executor.ExecutePartition(t.Context(), fixture.plan, fixture.typedOrdinal, lease, run.ID)
+	if err == nil || !store.IsTerminal(err) || spec.Disposition != candidate.PartitionResultTerminalRefusal ||
+		!strings.Contains(spec.Reason, "stage=extractor_execution") {
+		t.Fatalf("receipt failure did not settle through the existing terminal boundary: %+v, %v", spec, err)
 	}
 }

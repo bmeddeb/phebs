@@ -420,7 +420,7 @@ func ScanDirectSyntaxFile(
 	}
 	e := extractor{protocol: request.Protocol}
 	_, err := e.scanSyntaxFile(
-		request.Path, request.Blob, nil, resolver.index,
+		ctx, request.Path, request.Blob, nil, resolver.index,
 		directAttribution{consumer: request.ConsumerUnits},
 		request.ResolverCatalogDigest, "direct-syntax", wrappedEmit,
 	)

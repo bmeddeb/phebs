@@ -603,3 +603,18 @@ independent review of exact `8fcb532f` recorded critical/high/medium/low
 gate and cost record is in [`REVIEW_PACKET.md`](REVIEW_PACKET.md). Ben's two
 source confirmations, blind labels, beacon/seed, scoring and sealing remain
 untouched; the fresh candidate run is the remaining remediation step.
+
+
+T47.2k records run e's successful operational convergence at
+`candidate_run_convergence_20261011e.json`, with no prediction contents. The
+receipt also records zero retained per-source outcomes: 7,685 census rows are
+missing, so it is not a processing or overall acceptance pass. The optional
+production capture and `source_outcomes.py` join are documented in the
+OPERATIONS guide. `python3 -m unittest discover -s spike/t472 -p
+'test_source_outcomes.py'` exercises the complete fixed census with synthetic
+rows and rejects missing, duplicate, unknown and stale receipts; it produces
+no real-round outcomes or scores. Existing protocol, census, universe,
+scoring machinery and historical stop records are unchanged. The prospective
+preparation bundle adds the reconciler digest and updates its builder digest;
+all 25 missing bindings remain explicit. A fresh capture
+must supply genuine processing decisions; this slice never invents run e's.

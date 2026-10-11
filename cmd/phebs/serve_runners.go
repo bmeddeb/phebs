@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 	"sort"
 	"time"
@@ -730,6 +731,7 @@ func startServeExtractionPipeline(d *serveDeps) error {
 		Executor: &extract.EvidencePartitionExecutor{
 			Evidence: st, Extractors: d.exs, StoreAccounting: semanticLaunch != nil,
 			TypedScopeReservations: cfg.Experimental.TypedScopeReservations,
+			SourceOutcomeRoot:      os.Getenv("PHEBS_T472_SOURCE_OUTCOME_ROOT"),
 		},
 		Publisher:   extractionpublication.StorePublisher{Store: st},
 		Diagnostics: cfg.Diagnostics.Extraction,

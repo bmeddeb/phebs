@@ -79,7 +79,7 @@
  "machinery": {
   "binding_bundle": {
    "path": "spike/t472/binding_bundle.py",
-   "sha256": "sha256:c2ae3ff8119144329af65839e1418e474c2505747e744fde7c4a515ea0d36708"
+   "sha256": "sha256:5ddcb31475392e0eb2b34a12b93f91ad9eac7a021aca20bf2722a594823759c6"
   },
   "caller_scoring": {
    "path": "spike/t472/caller_scoring.py",
@@ -104,6 +104,10 @@
   "pilot_harness": {
    "path": "pilot/validation/harness.py",
    "sha256": "sha256:3a8dcc9ecb26588dcb1d53c32761fe15fdd964b592cdc30fdac09fd4d9ce3b69"
+  },
+  "source_outcomes": {
+   "path": "spike/t472/source_outcomes.py",
+   "sha256": "sha256:aa9f6c2692261a22d51863439901bf3a03eba4b83dd381ad8c08f4a1dbd41da8"
   }
  },
  "missing_bindings": [

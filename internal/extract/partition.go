@@ -30,6 +30,8 @@ type EvidencePartitionExecutor struct {
 	// typed-scope reservation policy identity; adjusted Reservation shares
 	// alone never satisfy the gate.
 	TypedScopeReservations bool
+	// SourceOutcomeRoot opts grpc-caller into private, non-authoritative receipts.
+	SourceOutcomeRoot string
 }
 
 func (executor *EvidencePartitionExecutor) ExecutePartition(
@@ -156,6 +158,15 @@ func (executor *EvidencePartitionExecutor) ExecutePartition(
 		sink.Close()
 		verified.Close()
 	}()
+	var outcomes *partitionSourceOutcomes
+	if executor.SourceOutcomeRoot != "" && plan.Domain == "grpc-caller" {
+		outcomes, err = beginPartitionSourceOutcomes(executor.SourceOutcomeRoot, verified, plan, ordinal, runID)
+		if err != nil {
+			return candidate.PartitionResultSpec{}, partitionBoundaryFailure(ctx, err, pipelinerefusal.StageExtractorExecution)
+		}
+		defer outcomes.close()
+		ctx = sdk.WithSourceOutcomes(ctx, outcomes.append)
+	}
 	coverage, extractErr := callExtractor(ctx, extractor.extractor, verified, sink.Emit)
 	if extractErr != nil {
 		if sinkErr := sink.failure(); sinkErr != nil {
@@ -193,12 +204,19 @@ func (executor *EvidencePartitionExecutor) ExecutePartition(
 		MemberBytes: lease.MemberBytes(), Members: lease.Members(),
 	}
 	if totals == (candidate.DomainResultTotals{}) {
-		return candidate.PartitionResultSpec{Disposition: candidate.PartitionResultEmpty}, nil
+		result = candidate.PartitionResultSpec{Disposition: candidate.PartitionResultEmpty}
+	} else {
+		result = candidate.PartitionResultSpec{
+			Disposition: candidate.PartitionResultSuccess, Totals: totals,
+			ContentDigest: partitionContentDigest(sink.stagedChunkIDs),
+		}
 	}
-	return candidate.PartitionResultSpec{
-		Disposition: candidate.PartitionResultSuccess, Totals: totals,
-		ContentDigest: partitionContentDigest(sink.stagedChunkIDs),
-	}, nil
+	if outcomes != nil {
+		if err := outcomes.finish(ctx, plan, ordinal, result); err != nil {
+			return candidate.PartitionResultSpec{}, partitionBoundaryFailure(ctx, err, pipelinerefusal.StageExtractorExecution)
+		}
+	}
+	return result, nil
 }
 
 func deterministicPartitionFailure(ctx context.Context, err error) error {

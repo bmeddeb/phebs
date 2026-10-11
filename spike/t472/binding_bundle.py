@@ -36,6 +36,7 @@ MACHINERY = {
     "enumerate_universe": "spike/t472/enumerate_universe.py",
     "frames": "spike/t472/frames.py",
     "caller_scoring": "spike/t472/caller_scoring.py",
+    "source_outcomes": "spike/t472/source_outcomes.py",
     "go_source_parser": "spike/t472/gosites/main.go",
     "binding_bundle": "spike/t472/binding_bundle.py",
 }

@@ -1392,6 +1392,44 @@ corrected extraction can converge it, and a concurrent replacement generation
 is never retired by a stale refusal. Missing or still-converging partition
 authority keeps the ordinary deferral above.
 
+T47.2 source-processing acceptance needs explicit outcomes for each of the
+7,685 regular Go sources. Done jobs, successful domain roots and source reads
+do not supply that ledger. Run e converged without it; its retained receipt
+records all 7,685 outcomes as missing. Partition-published extraction runs
+remain `staged` with `partition_sealed=true` and `partition_active=false`;
+that legacy status alone does not mean publication is incomplete.
+
+For a separately authorized fresh candidate run, set
+`PHEBS_T472_SOURCE_OUTCOME_ROOT` to an absolute, fresh, private directory
+outside product data. The optional grpc-caller capture writes source paths,
+blob digests and processing decisions, without source contents or predictions.
+The directory belongs to the operator and must be retained with the run
+identity, including its implementation and capture setting. Capture failures
+fail closed through the existing terminal extractor boundary; complete files are mode 0600 and at most 8 MiB per partition.
+Incomplete dot-files from interruption cannot prove processing. Enabling
+capture on an already settled run does not create receipts or replay work.
+Record controls and reconcile them with the frozen source universe:
+
+```sh
+python3 spike/t472/source_outcomes.py --output /private/run/convergence.json \
+  record --run-root /private/run --source-commit <exact-implementation-commit>
+python3 spike/t472/source_outcomes.py --output /private/run/source-outcomes.json \
+  reconcile --convergence /private/run/convergence.json \
+  --capture-root /private/run/source-receipts
+```
+
+The record command reads only store controls and current root files; output
+creation is exclusive and cannot replace an earlier receipt. The reconciler
+requires each installed successful caller partition's exact receipt, rejects
+missing or duplicate census rows and stale bindings, and preserves the
+source-only inventory of eleven Go symlinks outside the regular-source
+population. A completed zero-match scan is analyzed; no-method, size and
+encoding skips are excluded, parser errors failed, and incomplete typed or
+source processing partial. These processing states do not imply caller
+correctness or quality acceptance. Bind the actual capture and reconciliation
+bytes under the existing blind-label protocol before sealing; no score or
+seal is produced by these commands.
+
 The five-minute caller execution deadline starts only after the repository
 mirror lock is acquired. Pointer/control preflight has its own at-most-five-
 minute context; waiting behind fetch, indexing, candidate planning, or

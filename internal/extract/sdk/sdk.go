@@ -9,6 +9,37 @@ package sdk
 
 import "context"
 
+// SourceOutcome records processing, independently of whether any fact matched.
+type SourceOutcome struct {
+	Path       string `json:"path"`
+	State      string `json:"state"`
+	Reason     string `json:"reason"`
+	BlobDigest string `json:"blob_digest"`
+}
+
+type sourceOutcomeContextKey struct{}
+
+// WithSourceOutcomes enables an optional, fail-closed receipt sink.
+func WithSourceOutcomes(ctx context.Context, sink func(SourceOutcome) error) context.Context {
+	return context.WithValue(ctx, sourceOutcomeContextKey{}, sink)
+}
+
+func SourceOutcomesEnabled(ctx context.Context) bool {
+	sink, _ := ctx.Value(sourceOutcomeContextKey{}).(func(SourceOutcome) error)
+	return sink != nil
+}
+
+func ReportSourceOutcome(ctx context.Context, outcome SourceOutcome) error {
+	sink, _ := ctx.Value(sourceOutcomeContextKey{}).(func(SourceOutcome) error)
+	if sink == nil {
+		return nil
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return sink(outcome)
+}
+
 type diagnosticContextKey struct{}
 
 // WithDiagnosticCounters asks an extractor to return its fixed aggregate

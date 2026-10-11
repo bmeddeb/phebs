@@ -108,14 +108,32 @@ func (e extractor) emitSyntaxFallback(
 				"read syntax-fallback document %q: %w", filePath, err,
 			)
 		}
-		if suppressEmissions || len(index.methods) == 0 {
+		if suppressEmissions {
 			continue
 		}
-		if len(blob.Content) > maxSourceBytes || !utf8.ValidString(blob.Content) {
+		reason := ""
+		switch {
+		case len(index.methods) == 0:
+			reason = "no_generated_methods"
+		case len(blob.Content) > maxSourceBytes:
+			reason = "source_byte_limit"
+		case !utf8.ValidString(blob.Content):
+			reason = "source_invalid_utf8"
+		}
+		if reason != "" {
+			state := "excluded"
+			if len(typedSpans[filePath]) != 0 {
+				state = "partial"
+			}
+			if err := sdk.ReportSourceOutcome(ctx, sdk.SourceOutcome{
+				Path: filePath, State: state, Reason: reason, BlobDigest: blob.Digest,
+			}); err != nil {
+				return len(unresolved), err
+			}
 			continue
 		}
 		count, err := e.scanSyntaxFile(
-			filePath, blob, typedSpans[filePath], index, attribution,
+			ctx, filePath, blob, typedSpans[filePath], index, attribution,
 			attributionDigest, "syntax", emit,
 		)
 		if err != nil {
@@ -448,6 +466,7 @@ func syntaxFallbackKey(importPath, method string) string {
 }
 
 func (e extractor) scanSyntaxFile(
+	ctx context.Context,
 	filePath string,
 	blob sdk.Blob,
 	typed map[byteRange]struct{},
@@ -462,7 +481,13 @@ func (e extractor) scanSyntaxFile(
 		fset, filePath, blob.Content, parser.SkipObjectResolution,
 	)
 	if err != nil {
-		return nil, nil
+		state := "failed"
+		if len(typed) != 0 {
+			state = "partial"
+		}
+		return nil, sdk.ReportSourceOutcome(ctx, sdk.SourceOutcome{
+			Path: filePath, State: state, Reason: "source_parse_failed", BlobDigest: blob.Digest,
+		})
 	}
 	tokenFile := fset.File(file.Pos())
 	model := buildSourceFileModel(file, index)
@@ -528,7 +553,9 @@ func (e extractor) scanSyntaxFile(
 			return unresolved, err
 		}
 	}
-	return unresolved, nil
+	return unresolved, sdk.ReportSourceOutcome(ctx, sdk.SourceOutcome{
+		Path: filePath, State: "analyzed", Reason: "source_scan_complete", BlobDigest: blob.Digest,
+	})
 }
 
 func buildSourceFileModel(

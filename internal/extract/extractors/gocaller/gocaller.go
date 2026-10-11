@@ -164,6 +164,7 @@ func (e extractor) Extract(
 	}); err != nil {
 		return coverage, err
 	}
+	incompleteTyped := false
 	var documents []indexedDocument
 	indexCorpus, ok := corpus.(sdk.SCIPCorpus)
 	if !ok {
@@ -198,6 +199,7 @@ func (e extractor) Extract(
 					return coverage, err
 				}
 				coverage.UnresolvedCount = 1
+				incompleteTyped = true
 				documents = nil
 			} else {
 				for _, document := range documents {
@@ -211,6 +213,7 @@ func (e extractor) Extract(
 						return coverage, err
 					}
 					coverage.UnresolvedCount = 1
+					incompleteTyped = true
 					documents = nil
 					break
 				}
@@ -262,6 +265,15 @@ func (e extractor) Extract(
 	// source scope and owns each claim once, so any member emission would
 	// restage the same assertion identity with a different detail and collide
 	// in the store.
+	if incompleteTyped && sdk.SourceOutcomesEnabled(ctx) {
+		parent := ctx
+		ctx = sdk.WithSourceOutcomes(ctx, func(outcome sdk.SourceOutcome) error {
+			if outcome.State == "analyzed" {
+				outcome.State, outcome.Reason = "partial", "typed_input_invalid"
+			}
+			return sdk.ReportSourceOutcome(parent, outcome)
+		})
+	}
 	fallbackUnresolved, fallbackErr := e.emitSyntaxFallback(
 		ctx, corpus, paths, typedSpans, attribution, attributionDigest,
 		domainTyped && !typedPartition, emit,
