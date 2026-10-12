@@ -18828,6 +18828,32 @@ admitted protobuf input identity once Epic 49's declaration recipe is admitted.
 Steady-state cost: none in production. The golden test runs 26 sandboxed Buf
 checks in about 2.3 s.*
 
+*Slice 2 (2026-10-12, Claude lead): a cardinality truth record. The truth for
+`FIELD_WIRE_COMPATIBLE_CARDINALITY` comes from protobuf's own "Updating A
+Message Type" rules (protobuf.dev proto3 guide), written before running Buf:
+
+- string and message fields: singular↔repeated is wire-compatible, because a
+  singular reader keeps the last element or merges the messages;
+- numeric fields: singular↔repeated breaks, because proto3 packs repeated
+  numerics by default.
+
+Three goldens were added, so there are now 29, and `not_asserted` is empty.
+Buf agrees on int32. It disagrees on string and message: Buf 1.72.0 WIRE
+reports every singular↔repeated change as breaking.
+
+That is a conservative disagreement. A client may be told a change breaks
+when it does not, but never told a breaking change is compatible. The two
+cases keep the independent truth (`expect`) and pin Buf's actual output in
+`engine_conservative`. The test admits a recorded disagreement only in that
+direction: a false "compatible" fails the test and blocks release. If Buf
+changes its behavior, the pin fails and the record must be revisited.
+
+T53.3 must publish this as a known limit of the verdict. `internal/compat`
+passes normally and under race, and pinned lint reports 0 issues.
+
+Still open in T53.1: binding the admitted protobuf input identity once
+Epic 49's declaration recipe is admitted.*
+
 **T53.2 · Stable sandboxed compatibility registration** — retain bounded
 closed execution, no source escape/network discovery, exact digest-bound
 result and authorization; optional unreleased field evidence stays unavailable.

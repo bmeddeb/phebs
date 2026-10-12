@@ -21,6 +21,13 @@ type goldenChanges struct {
 			Compatible bool     `json:"compatible"`
 			Rules      []string `json:"rules"`
 		} `json:"expect"`
+		// EngineConservative pins a recorded disagreement where Buf reports a break the
+		// independent truth calls compatible. Only this direction is admissible: a false
+		// "compatible" would be a release blocker, not a record.
+		EngineConservative *struct {
+			Rules  []string `json:"rules"`
+			Reason string   `json:"reason"`
+		} `json:"engine_conservative"`
 	} `json:"cases"`
 	NotAsserted map[string]string `json:"not_asserted"`
 }
@@ -56,10 +63,17 @@ func TestGoldenWireChanges(t *testing.T) {
 			}
 			sort.Strings(rules)
 			want := append([]string{}, c.Expect.Rules...)
+			wantCompatible := c.Expect.Compatible
+			if c.EngineConservative != nil {
+				if !c.Expect.Compatible || len(c.Expect.Rules) != 0 || len(c.EngineConservative.Rules) == 0 || c.EngineConservative.Reason == "" {
+					t.Fatal("an engine disagreement may only record a conservative break against a compatible truth")
+				}
+				want, wantCompatible = append([]string{}, c.EngineConservative.Rules...), false
+			}
 			sort.Strings(want)
-			if result.Compatible != c.Expect.Compatible || !slices.Equal(rules, want) {
+			if result.Compatible != wantCompatible || !slices.Equal(rules, want) {
 				t.Fatalf("%s\ngot compatible=%v rules=%v, want compatible=%v rules=%v",
-					c.Rationale, result.Compatible, rules, c.Expect.Compatible, want)
+					c.Rationale, result.Compatible, rules, wantCompatible, want)
 			}
 		})
 		for _, rule := range c.Expect.Rules {

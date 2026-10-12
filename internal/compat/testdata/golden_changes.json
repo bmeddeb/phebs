@@ -315,13 +315,58 @@
    "id": "comment-only",
    "path": "shop/v1/shop.proto",
    "rationale": "comments never reach the wire."
+  },
+  {
+   "after": "syntax = \"proto3\";\npackage shop.v1;\nmessage M { repeated string a = 1; }\n",
+   "before": "syntax = \"proto3\";\npackage shop.v1;\nmessage M { string a = 1; }\n",
+   "engine_conservative": {
+    "reason": "Buf 1.72.0 WIRE reports every singular<->repeated change; protobuf documents string, bytes and message as wire-compatible. Conservative: a client may see a break that is not one, never the reverse.",
+    "rules": [
+     "FIELD_WIRE_COMPATIBLE_CARDINALITY"
+    ]
+   },
+   "expect": {
+    "compatible": true,
+    "rules": []
+   },
+   "id": "cardinality-string-singular-to-repeated",
+   "path": "shop/v1/shop.proto",
+   "rationale": "string singular<->repeated is wire-compatible: a singular reader keeps the last element (protobuf.dev proto3 guide, Updating A Message Type)."
+  },
+  {
+   "after": "syntax = \"proto3\";\npackage shop.v1;\nmessage N { string s = 1; }\nmessage M { repeated N n = 1; }\n",
+   "before": "syntax = \"proto3\";\npackage shop.v1;\nmessage N { string s = 1; }\nmessage M { N n = 1; }\n",
+   "engine_conservative": {
+    "reason": "Buf 1.72.0 WIRE reports every singular<->repeated change; protobuf documents string, bytes and message as wire-compatible. Conservative: a client may see a break that is not one, never the reverse.",
+    "rules": [
+     "FIELD_WIRE_COMPATIBLE_CARDINALITY"
+    ]
+   },
+   "expect": {
+    "compatible": true,
+    "rules": []
+   },
+   "id": "cardinality-message-singular-to-repeated",
+   "path": "shop/v1/shop.proto",
+   "rationale": "message singular<->repeated is wire-compatible: a singular reader merges the elements (protobuf.dev proto3 guide, Updating A Message Type)."
+  },
+  {
+   "after": "syntax = \"proto3\";\npackage shop.v1;\nmessage M { repeated int32 n = 1; }\n",
+   "before": "syntax = \"proto3\";\npackage shop.v1;\nmessage M { int32 n = 1; }\n",
+   "expect": {
+    "compatible": false,
+    "rules": [
+     "FIELD_WIRE_COMPATIBLE_CARDINALITY"
+    ]
+   },
+   "id": "cardinality-int32-singular-to-repeated",
+   "path": "shop/v1/shop.proto",
+   "rationale": "proto3 repeated numerics are packed by default, which a singular numeric reader cannot parse (protobuf.dev proto3 guide, Updating A Message Type)."
   }
  ],
  "derivation": "Expected verdicts come from each pinned WIRE rule purpose (buf config ls-breaking-rules) and protobuf wire-format semantics, authored without running Buf and without reading Buf test data.",
  "engine": "buf 1.72.0",
- "not_asserted": {
-  "FIELD_WIRE_COMPATIBLE_CARDINALITY": "Its stated purpose does not fix which singular/repeated/map transitions it reports; no golden asserts it until an independent truth is recorded."
- },
+ "not_asserted": {},
  "policy": "WIRE",
  "schema": "t53.1-golden-changes-v1",
  "unsupported_inputs": "Path, encoding, size and count refusals are fenced by TestCheckerRejectsUnsafeOrUnboundedInputsBeforeExec; a source that fails to compile is a request error, never a verdict."

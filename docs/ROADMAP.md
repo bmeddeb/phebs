@@ -277,8 +277,15 @@ and who owns each.
   - Remaining, Ben: seal T49.1b (gist) and label the oracle sample; then
     compare and adjudicate. Release selection (T49.3 remainder) and T49.4
     follow a passing round.
-- **Compatibility (Epic 53).** T53.2 fixed the Linux sandbox, so Buf now runs
-  on this host. The T53.1 contract and golden changes are next.
+- **Compatibility (Epic 53).**
+  - Done: T53.2 fixed the Linux sandbox. T53.1 has 29 independent goldens
+    covering all 15 WIRE rules.
+  - Finding: Buf reports string and message singular↔repeated changes as
+    breaking, although protobuf documents them as wire-compatible. Buf errs
+    only in the safe direction (it never calls a break compatible), and the
+    disagreement is pinned in the goldens.
+  - Remaining: bind the input identity after Epic 49, then the T53.3 measured
+    promotion.
 
 Everything human-gated is listed above. Agent work proceeds on ungated
 tickets in the meantime.
