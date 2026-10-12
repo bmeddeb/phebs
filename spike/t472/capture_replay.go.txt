@@ -1,0 +1,169 @@
+// Offline observational replay. Run only via capture_replay.py's Go overlay.
+package extract
+
+import (
+	"bytes"
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/bmeddeb/phebs/internal/candidate"
+	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
+	"github.com/bmeddeb/phebs/internal/extractionpublication"
+	"github.com/bmeddeb/phebs/internal/store"
+)
+
+type t472CaptureStore struct {
+	*store.Surreal
+	encoder     *json.Encoder
+	repository  string
+	originalRun string
+	ordinal     int
+}
+
+func (capture *t472CaptureStore) AddEvidenceChunk(ctx context.Context, runID, chunkID string, count int, atoms []store.EvidenceAtom, associations []store.SnapshotEvidence, assertions []store.Assertion) error {
+	if err := capture.Surreal.AddEvidenceChunk(ctx, runID, chunkID, count, atoms, associations, assertions); err != nil {
+		return err
+	}
+	for i := range assertions {
+		assertions[i].ID = store.ComputeAssertionID(assertions[i])
+		assertions[i].RunID = capture.originalRun
+	}
+	for i := range associations {
+		associations[i].RunID = capture.originalRun
+	}
+	return capture.encoder.Encode(map[string]any{"kind": "chunk", "repository": capture.repository, "ordinal": capture.ordinal, "chunk_id": chunkID, "fact_count": count, "assertions": assertions, "atoms": atoms, "occurrences": associations})
+}
+
+func TestT472CaptureReplay(t *testing.T) {
+	root, output := os.Getenv("PHEBS_T472_RUN_ROOT"), os.Getenv("PHEBS_T472_CAPTURE_ROOT")
+	if root == "" || output == "" {
+		t.Skip("private replay custody not selected")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Minute)
+	defer cancel()
+	raw, err := os.ReadFile(filepath.Join(output, "selected-controls.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var selected []struct {
+		Repository, RunID string
+		Plan              json.RawMessage
+	}
+	if err = json.Unmarshal(raw, &selected); err != nil {
+		t.Fatal(err)
+	}
+	if len(selected) != 3 {
+		t.Fatal("expected three exact caller domains")
+	}
+	if err := os.Mkdir(filepath.Join(output, "scratch-db"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	backing, err := store.OpenLocal(ctx, filepath.Join(output, "scratch-db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := backing.Close(context.Background()); err != nil {
+			t.Error(err)
+		}
+	}()
+	file, err := os.OpenFile(filepath.Join(output, "replay.jsonl"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+	capture := &t472CaptureStore{Surreal: backing, encoder: json.NewEncoder(file)}
+	for _, control := range selected {
+		plan, err := candidate.DecodeDomainResultPlanControl(bytes.NewReader(control.Plan))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if plan.Domain != "grpc-caller" || plan.ExtractorVersion != "1.6.0" || plan.Repository != control.Repository {
+			t.Fatal("caller plan mismatch")
+		}
+		capture.repository, capture.originalRun = plan.Repository, control.RunID
+		if err = os.Setenv("PHEBS_T472_TRACE_REPOSITORY", plan.Repository); err != nil {
+			t.Fatal(err)
+		}
+		name := candidate.ManifestName(plan.Repository)
+		raw, err := os.ReadFile(filepath.Join(root, "data/candidates", name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var state candidate.State
+		if err = json.Unmarshal(raw, &state); err != nil {
+			t.Fatal(err)
+		}
+		state.Schema = candidate.StateSchema
+		state.Manifest = name
+		// The candidate publication has manifest fields; State names its digest explicitly.
+		var scalar struct {
+			Digest string `json:"digest"`
+		}
+		if err = json.Unmarshal(raw, &scalar); err != nil {
+			t.Fatal(err)
+		}
+		state.ManifestDigest = scalar.Digest
+		if state.Repository != plan.Repository || state.ManifestDigest != plan.CandidateManifestDigest || state.GenerationDigest != plan.CandidateGenerationDigest {
+			t.Fatal("manifest binding mismatch")
+		}
+		// The directory namespace is sha256(repository), independent of runtime alias interpretation.
+		key := sha256.Sum256([]byte(plan.Repository))
+		repositoryKey := hex.EncodeToString(key[:])
+		sparse, err := candidate.OpenSparse(ctx, filepath.Join(root, "data/extraction-publications/candidates", repositoryKey, strings.TrimPrefix(plan.CandidateGenerationDigest, "sha256:")), filepath.Join(root, "data/candidates"), state, plan.CandidatePartitionRootDigest, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		domain, err := sparse.OpenDomain(ctx, plan.Domain, plan.Version)
+		if err != nil {
+			t.Fatal(err)
+		}
+		policy, err := candidate.ExtractionPolicyDigest(plan.CandidatePolicyDigest, false, true)
+		if err != nil || policy != plan.ExtractionPolicyDigest {
+			t.Fatal("policy is not retained typed-scope policy")
+		}
+		rebuilt, err := extractionpublication.BuildReservedPlan(domain, candidate.DomainResultAuthority{SourceGenerationDigest: plan.SourceGenerationDigest, ObservationGenerationDigest: plan.ObservationGenerationDigest, ExtractorVersion: plan.ExtractorVersion, ExtractionPolicyDigest: plan.ExtractionPolicyDigest}, true)
+		if err != nil || rebuilt.Digest != plan.Digest {
+			t.Fatal("reserved plan mismatch")
+		}
+		source := extractionpublication.GitSparseSource{DataDir: filepath.Join(root, "data"), OpenDomain: func(ctx context.Context, requested candidate.DomainResultPlan) (*candidate.SparseDomain, error) {
+			if requested.Digest != plan.Digest {
+				return nil, fmt.Errorf("plan mismatch")
+			}
+			return sparse.OpenDomain(ctx, requested.Domain, requested.Version)
+		}}
+		run, err := backing.BeginPartitionedExtractionRun(ctx, store.ExtractionScope{Repository: plan.Repository, Commit: state.Commit, UnitDigest: state.UnitDigest, Domain: plan.Domain}, plan.ExtractorVersion, plan.Digest, plan.CandidateManifestDigest, plan.Schema, store.PartitionedExtractionRunLimits{Facts: plan.Reserved.Facts, Rows: plan.Reserved.Rows, References: plan.Reserved.References})
+		if err != nil {
+			t.Fatal(err)
+		}
+		executor := &EvidencePartitionExecutor{Evidence: capture, Extractors: []Extractor{gocaller.NewGRPC()}, TypedScopeReservations: true}
+		for ordinal := range plan.Expected {
+			capture.ordinal = ordinal
+			lease, err := source.AcquirePartition(ctx, plan, ordinal)
+			if err != nil {
+				t.Fatal(err)
+			}
+			execution, cancelExecution := context.WithTimeout(ctx, time.Duration(plan.Expected[ordinal].Quotas.DeadlineMilliseconds)*time.Millisecond)
+			spec, executeErr := executor.ExecutePartition(execution, plan, ordinal, lease, run.ID)
+			cancelExecution()
+			lease.Release()
+			if executeErr != nil {
+				t.Fatalf("replay failed: %v", executeErr)
+			}
+			if err = capture.encoder.Encode(map[string]any{"kind": "result", "repository": plan.Repository, "ordinal": ordinal, "spec": spec}); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	if err = file.Sync(); err != nil {
+		t.Fatal(err)
+	}
+}

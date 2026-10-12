@@ -654,3 +654,31 @@ source scan completion cannot supply the missing call-site decisions. Candidate
 export/capture, genuine randomness, the actual sealed draw, independent truth,
 blind labels and commitments remain necessary. No predictions were read or
 disclosed, and no sample, label, score, external publication or seal was made.
+
+
+T47.2n's [`candidate binding receipt`](candidate_bindings_20261011g.json)
+and [`new round bundle`](bundle/preregistration.candidate-bound.run-g.bundle.json)
+fill the genuine proof and complete candidate-ledger identities, leaving 22
+missing preregistration fields. All candidate values remain in the receipt's
+private root; only identities, digests and execution controls are committed.
+Native proof bytes retain runtime repository identities and semantic lineage.
+The explicit alias and native-atom adapters operate on a copy for the frozen
+frame projector. Legacy work counters are flagged unavailable.
+
+The offline recipe reuses `candidate_export.read_export`, `native_proof` and
+`project_native`; the Go `proofbundle` program canonicalizes the native model.
+`capture_replay.prepare_overlay` maps only private copies of the two observation
+points and the replay test into a Go `-overlay` file. Supply the private run,
+capture and trace paths through `PHEBS_T472_RUN_ROOT`,
+`PHEBS_T472_CAPTURE_ROOT` and `PHEBS_T472_TRACE`, and run only
+`TestT472CaptureReplay` under that overlay. It drives all three selected
+caller plans against one fresh real-store scratch child, then joins it.
+`reconcile_replay` refuses changed chunks, result specs or assertion attributes.
+Only after equality does `decision_ledger` classify every eligible site,
+explicitly distinguishing unvisited sites from considered-but-withheld sites.
+Do not replace this observation with inference from an absent fact.
+
+The original run lacks visit telemetry, so this ledger is explicitly a matching
+replay. The private overlay's additional I/O is not a production cost or timing
+measurement. No sample, label, seed, score, protocol seal or external publication
+was created; frame/randomness and independent truth preparation remain next.

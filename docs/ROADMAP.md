@@ -213,6 +213,16 @@ current roots and source-scan outcomes cannot substitute for them. Those
 candidate artifacts precede complete frame/seed preparation and blind labeling.
 T47.2b acceptance, T47.4 and T47.5 remain separate.
 
+**Candidate bindings (2026-10-11):** T47.2m was integrated/pushed at Ben's
+request. T47.2n exports run g's exact caller proof privately and binds a
+complete 498,793-site decision ledger from a real-store replay whose chunks,
+results and assertion attributes match run g. The ledger distinguishes
+unvisited sites from observed withholding. A new bundle retains 22 missing
+fields; private candidate frame/ledger material stays separate from labels.
+Legacy work counters remain explicitly unavailable and no proof-store write
+occurs. Frame/randomness preparation, human truth, commitments, protocol seal,
+scoring and T47.2b acceptance remain open; no further integration follows.
+
 **Independent production promotions (2026-10-09, Ben-directed):** Epics 48–58
 give every current experimental evidence pack and composed product surface a
 named production path. Epic 48 implements the currently design-only signed

@@ -1442,6 +1442,18 @@ caller proof export, and a completed source scan is not a call-site
 considered/withheld decision ledger. Their missing bindings must remain
 explicit before the genuine draw, commitments or protocol seal can proceed.
 
+T47.2n's `spike/t472/candidate_bindings_20261011g.json` binds the separate
+private candidate export and matching-replay ledger. An offline proof export
+from exact current partition roots does not promote staged extraction runs or
+write proof-store pins. Its legacy work counters are explicitly unavailable.
+Keep its assertions, candidate frame membership and decision states out of
+blind source sheets. The ledger's `withheld` state requires observed
+consideration in a replay matching every retained chunk and result;
+`not_considered` is a separate state. Preserve the explicit runtime repository
+alias map when constructing independent declaration citations: semantic
+lineage tokens are not silently renamed. These bindings still grant no draw,
+truth label, external commitment, score or protocol seal.
+
 The five-minute caller execution deadline starts only after the repository
 mirror lock is acquired. Pointer/control preflight has its own at-most-five-
 minute context; waiting behind fetch, indexing, candidate planning, or
