@@ -1,0 +1,37 @@
+{
+ "breaking_truth": 104,
+ "checks": {
+  "breaking_truth": true,
+  "judged_unreadable": true,
+  "parity": true,
+  "pending": true,
+  "permissive": true,
+  "undisclosed_error_rate": true
+ },
+ "classes": {
+  "agree": 1466,
+  "conservative": 4,
+  "disclosed_conservative": 55
+ },
+ "judged_units": 1525,
+ "listed": {
+  "conservative": [
+   "istio/istio@8d9c7c922efb48da79ddfc92cc250c6d2029e2ac:operator/pkg/apis/istio/v1alpha1/values_types.proto",
+   "vitessio/vitess@1e594086c1c84219b6fead8ae77279fee5f96ebc:proto/vtctldata.proto",
+   "vitessio/vitess@a7e7a5f41219cb0e165a4dbef46710a275086da8:proto/vtrpc.proto",
+   "vitessio/vitess@f91a867f04055a0662a4b940439ec2ba1c6805d8:proto/vtrpc.proto"
+  ]
+ },
+ "parity_failures": [],
+ "passed": true,
+ "permissive_rate_upper_95": 0.02885,
+ "schema": "t533-wire-round-v2",
+ "thresholds": {
+  "breaking_truth_min": 50,
+  "judged_unreadable_max": 0,
+  "pending_max": 0,
+  "permissive_max": 0,
+  "undisclosed_error_rate_max": 0.01
+ },
+ "undisclosed_error_rate": 0.00262
+}

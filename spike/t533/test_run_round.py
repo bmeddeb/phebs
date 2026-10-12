@@ -27,6 +27,9 @@ class ClassifyTest(unittest.TestCase):
                 self.assertEqual(r.classify(product, truth, findings), want)
         self.assertEqual(r.classify({'product': 'breaking', 'rules': ['FIELD_WIRE_COMPATIBLE_CARDINALITY']},
                                     'compatible', [], disclosed=True), 'disclosed_conservative')
+        # An adjudication without the disclosed flag stays undisclosed whatever the oracle noted.
+        self.assertEqual(r.classify({'product': 'breaking', 'rules': ['FIELD_WIRE_COMPATIBLE_TYPE']},
+                                    'compatible', [], disclosed=False), 'conservative')
 
 
 if __name__ == '__main__':

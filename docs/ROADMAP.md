@@ -296,9 +296,12 @@ and who owns each.
     - 9 misses were a `COMPILE` pass-through defect, now fixed.
     - 11 come from Buf comparing message types by name. A post-fix
       diagnostic reaches 98.06%, still below the bar.
-  - Remaining, Ben: choose the next claim, for example a narrower
-    no-false-compatible claim with disclosed conservative classes, which
-    needs a new protocol and a fresh population.
+  - T53.3 round 2 **passed** the narrower no-false-compatible claim on a
+    fresh vitess/istio population: 1,525 units, 0 permissive over 104 real
+    breaks, 0.33% undisclosed errors, and parity on every unit.
+  - Remaining, agent: real-binary authorization, the operating envelope,
+    and the claim binding.
+  - Remaining, Ben: the signing key for the release record.
   - Remaining, agent: bind the input identity after Epic 49.
 
 Everything human-gated is listed above. Agent work proceeds on ungated

@@ -18980,6 +18980,30 @@ conservative classes, under a new protocol and a fresh population.
 `internal/compat`, `internal/api` and `internal/mcp` pass, compat under race
 too, and lint reports 0 issues.*
 
+*Slice 3 (2026-10-12): round 2, the narrower claim. **Passes.** Ben chose
+the claim "never reports a wire-breaking change as compatible", with two
+disclosed conservative classes (singular↔repeated, and message renames with
+an identical layout), and a fresh population.
+
+- **Population.** vitess and istio, at their lock-pinned selection commits:
+  1,525 judged units. istio's `common-protos/` is excluded as vendored.
+- **Oracle.** Round 1's gaps are closed: rpc types and custom options must
+  resolve, and message type changes are decided by wire layout.
+- **Thresholds, frozen for this claim.** 0 permissive, 0 judged-unreadable,
+  0 pending, undisclosed errors ≤ 1%, at least 50 real breaks, and parity.
+- **Seal.** Commit `7484c0c4` plus a public gist.
+- **Run.** The real binary took 7 m 31 s, with parity on every unit.
+- **Score.** 1,466 agree, 54 disclosed conservative, 5 conservative and 0
+  permissive over 104 real breaks (95% upper bound 2.9%). Undisclosed errors
+  are 0.33%.
+- **Post-seal scorer correction (disclosed).** Adjudicated units no longer
+  take the oracle's disclosure note. The as-sealed score (0.26%) is kept and
+  also passes.
+
+Protocol §10 lists the 5 undisclosed errors and the remaining release gates:
+a signed record binding the claim with Ben's key, real-binary
+authorization, the operating envelope, and owner/expiry.*
+
 ## Epic 54 · Contract Impact production readiness
 
 **T54.1 · Supported report contract and direct end-to-end quality** — freeze

@@ -1,0 +1,81 @@
+{
+ "adjudicator": "Claude (named by Ben, 2026-10-12)",
+ "schema": "t533-wire-adjudications-v2",
+ "units": {
+  "istio/istio@1ca0759367d9743488e0fa374c8add40b73e9c32:operator/pkg/apis/istio/v1alpha1/values_types.proto": {
+   "note": "google.protobuf.Struct and the Kubernetes messages have conflicting layouts: a Struct entry string key would be decoded as a nested message",
+   "truth": "breaking"
+  },
+  "istio/istio@2e4455337603e1f85af190d8ba18ee60b1a7639c:pkg/workloadapi/workload.proto": {
+   "note": "Buf flags the Protocol -> TunnelProtocol enum change (an enum moving to another enum stays varint-encoded, and protobuf.dev documents enums as wire-compatible with int32/int64/uint32/uint64; unknown numbers survive in open enums) and bytes repeated -> message singular (bytes<->message and singular<->repeated are protobuf.dev compatible); the enum and bytes<->message parts are not disclosed classes",
+   "truth": "compatible"
+  },
+  "istio/istio@81b94388d68360b0c8c492df33ede43e85e34dae:operator/pkg/apis/values_types.proto": {
+   "note": "google.protobuf.Struct and the Kubernetes messages have conflicting layouts: a Struct entry string key would be decoded as a nested message",
+   "truth": "breaking"
+  },
+  "istio/istio@8d9c7c922efb48da79ddfc92cc250c6d2029e2ac:operator/pkg/apis/istio/v1alpha1/values_types.proto": {
+   "note": "TypeMapStringInterface is an empty message; TracerStackdriverConfig only adds fields, which old empty messages never carry; not a disclosed class (the layout is not identical)",
+   "truth": "compatible"
+  },
+  "istio/istio@cbc7db7e5073f3a5e6b2835cd89de19582e16949:pkg/workloadapi/workload.proto": {
+   "note": "presence change only (explicit <-> implicit); set values encode identically, only zero-value presence differs",
+   "truth": "compatible"
+  },
+  "vitessio/vitess@08649bc1558961a7274dd0bfdd0a8bffc674cc43:proto/query.proto": {
+   "note": "topo.TabletType -> topodata.TabletType: an enum moving to another enum stays varint-encoded, and protobuf.dev documents enums as wire-compatible with int32/int64/uint32/uint64; unknown numbers survive in open enums",
+   "truth": "compatible"
+  },
+  "vitessio/vitess@08649bc1558961a7274dd0bfdd0a8bffc674cc43:proto/vtgate.proto": {
+   "disclosed": true,
+   "note": "Buf flags only topo.KeyRange -> topodata.KeyRange, which has an identical layout (disclosed class 2); the enum renames are compatible (an enum moving to another enum stays varint-encoded, and protobuf.dev documents enums as wire-compatible with int32/int64/uint32/uint64; unknown numbers survive in open enums)",
+   "truth": "compatible"
+  },
+  "vitessio/vitess@08649bc1558961a7274dd0bfdd0a8bffc674cc43:proto/vtgateservice.proto": {
+   "disclosed": true,
+   "note": "Buf flags only topo.KeyRange -> topodata.KeyRange, which has an identical layout (disclosed class 2); the enum renames are compatible (an enum moving to another enum stays varint-encoded, and protobuf.dev documents enums as wire-compatible with int32/int64/uint32/uint64; unknown numbers survive in open enums)",
+   "truth": "compatible"
+  },
+  "vitessio/vitess@1e594086c1c84219b6fead8ae77279fee5f96ebc:proto/vtctldata.proto": {
+   "note": "bool -> enum: protobuf.dev lists int32/uint32/int64/uint64/bool as compatible, and enums are compatible with int32; not a disclosed class",
+   "truth": "compatible"
+  },
+  "vitessio/vitess@638053b1e232cf5343707b9aaac0f682e3a4370c:proto/vtctldata.proto": {
+   "note": "presence change only (explicit <-> implicit); set values encode identically, only zero-value presence differs",
+   "truth": "compatible"
+  },
+  "vitessio/vitess@646bfd41c1fdfd52c79bc6ce31f6d42c94069e36:proto/tabletmanagerdata.proto": {
+   "note": "presence change only (explicit <-> implicit); set values encode identically, only zero-value presence differs",
+   "truth": "compatible"
+  },
+  "vitessio/vitess@86634c74694384e2b581eeb1880d3b1c4ba20d4a:proto/query.proto": {
+   "note": "BindVariable to Value drops field 3 (repeated values) without reserving it",
+   "truth": "breaking"
+  },
+  "vitessio/vitess@a7e7a5f41219cb0e165a4dbef46710a275086da8:proto/vtrpc.proto": {
+   "note": "an enum moving to another enum stays varint-encoded, and protobuf.dev documents enums as wire-compatible with int32/int64/uint32/uint64; unknown numbers survive in open enums; not a disclosed class",
+   "truth": "compatible"
+  },
+  "vitessio/vitess@c077204ac7d553914905c204b34a6e30febab9d7:proto/tabletmanager.proto": {
+   "disclosed": true,
+   "note": "queryservice.QueryResult -> query.QueryResult: identical layout, including nested Field and Row and their enum values (disclosed class 2; the oracle could not see through nested enum renames)",
+   "truth": "compatible"
+  },
+  "vitessio/vitess@c0c4842d4aaeeb6b0830e38fd5a3b3289b0aefbb:proto/query.proto": {
+   "note": "bytes to string: protobuf.dev allows it only when the bytes are valid UTF-8, and old writers may emit any bytes, which a proto3 string reader rejects (the oracle treats string/bytes as symmetric; corrected here)",
+   "truth": "breaking"
+  },
+  "vitessio/vitess@f19f4656e7c14c57ae8dd538285ce698999f2b6d:proto/tabletmanager.proto": {
+   "note": "presence change only (explicit <-> implicit); set values encode identically, only zero-value presence differs",
+   "truth": "compatible"
+  },
+  "vitessio/vitess@f19f4656e7c14c57ae8dd538285ce698999f2b6d:proto/vtctl.proto": {
+   "note": "presence change only (explicit <-> implicit); set values encode identically, only zero-value presence differs",
+   "truth": "compatible"
+  },
+  "vitessio/vitess@f91a867f04055a0662a4b940439ec2ba1c6805d8:proto/vtrpc.proto": {
+   "note": "an enum moving to another enum stays varint-encoded, and protobuf.dev documents enums as wire-compatible with int32/int64/uint32/uint64; unknown numbers survive in open enums; not a disclosed class",
+   "truth": "compatible"
+  }
+ }
+}

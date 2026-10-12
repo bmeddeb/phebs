@@ -198,7 +198,7 @@ it stays experimental-dark. Its safety property held throughout: no unit was
 called compatible when it breaks. Any new claim needs a new protocol and a
 fresh population, because this population has now been seen.
 
-## 9. Round 2: the narrower claim (frozen for sealing, 2026-10-12)
+## 9. Round 2: the narrower claim (sealed 2026-10-12; result in §10)
 
 Ben chose the narrower claim and a fresh population after round 1 failed.
 Claude remains the sole adjudicator.
@@ -281,3 +281,79 @@ published, but they are not errors under this claim.
 
 **Seal.** The round-2 commit, the `population-r2` digest, the three tool
 digests and these thresholds go in a public gist before `run`.
+
+## 10. Round 2 result (2026-10-12): passes
+
+**Seal.** Commit `7484c0c4` was pushed to the public repository, and the seal
+values were published at
+<https://gist.github.com/Blandt/f2becbe05317959b48800dd8c07f2931> before the
+run. The receipts are in `spike/t533/round2/`.
+
+**Run.** The real binary, built at the seal commit, judged all 1,525 closed
+units in 7 m 31 s:
+
+- 1,362 compatible and 163 breaking, all HTTP 200, with no refusals;
+- HTTP/MCP parity held on every unit;
+- peak RSS was 121 MiB, and the server stopped cleanly.
+
+**Adjudication.** Claude judged 18 units: 16 undetermined truths plus 2
+oracle disagreements. Buf's violation locations were read for the units
+mixing disclosed and undisclosed changes, from a diagnostic re-query of the
+same sealed binary on those units only. Each note is in
+`round2/adjudications.json`.
+
+**Score.**
+
+| Class | Units |
+|---|---|
+| agree | 1,466 |
+| disclosed_conservative | 54 |
+| conservative | 5 |
+| permissive | 0 |
+| judged_unreadable | 0 |
+| pending | 0 |
+
+- Real breaks judged: 104. With none called compatible, the rule-of-three
+  95% upper bound on the permissive rate is 2.9%.
+- Undisclosed error rate: **0.33%** (5/1,525), against ≤ 1.0%.
+- Parity: every unit.
+- **Every frozen check passes.**
+
+**Post-seal scoring correction (disclosed).** As sealed, `score` still let
+the oracle's `disclosed_cardinality` note count for an adjudicated unit.
+Unit istio `2e445533…:workload.proto` was adjudicated as undisclosed (an
+enum rename plus bytes↔message), but scored as disclosed. That contradicts
+§4 and §9, where an adjudication decides the unit outright.
+
+`run_round.py` now ignores oracle notes on adjudicated units, and a test pins
+this. The sealed scorer's output is kept as `round2/score-as-sealed.json`:
+1,466 / 55 / 4, 0.26%, also passing. The corrected score above is the
+result. The pass does not depend on the correction.
+
+**What the 5 undisclosed conservative errors are.** All 5 are Buf's
+`FIELD_WIRE_COMPATIBLE_TYPE` on changes protobuf documents as compatible:
+
+- two enum renames (vitess `vtrpc`);
+- `bool` → enum (vitess `vtctldata`);
+- an enum rename plus bytes→message (istio `workload`);
+- an empty message → a message with added fields (istio `values_types`).
+
+They remain below the bar and are published with the claim.
+
+**Oracle limits seen in adjudication.** The oracle treats string/bytes as
+symmetric, but bytes→string is breaking unless the bytes are valid UTF-8. It
+also cannot compare layouts through nested enum renames. Adjudication
+corrected both, on one unit each.
+
+**Remaining for release (T53.3 → T48).** The common bar's other gates still
+apply to this stateless surface:
+
+- ordinary startup admission by a signed release record, which binds the
+  claim, with Ben's key;
+- authorization on the real binary;
+- an operating envelope: one sandboxed Buf child per request, at 2.0 to 4.6
+  units per second in this run and 124 MiB peak RSS;
+- owner, reviewer, expiry and suspension.
+
+Backup/restore and generation gates do not apply, because the surface stores
+nothing.

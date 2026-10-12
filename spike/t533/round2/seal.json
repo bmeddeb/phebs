@@ -1,0 +1,14 @@
+{
+ "schema": "t533-wire-round2-seal-v1",
+ "protocol": "docs/WIRE_COMPATIBILITY_PROTOCOL.md section 9",
+ "claim": "never reports a wire-breaking change as compatible; conservative only in two disclosed classes; undisclosed errors <= 1%",
+ "commit": "7484c0c4d5f027066ff957ced89d2fad9b7f5243",
+ "repository": "https://github.com/bmeddeb/phebs",
+ "population_r2_units_sha256": "sha256:b7003682efa80098bbed6c064f480d4827a1b23894a003366149d7792e70d9fc",
+ "enumerate_changes_sha256": "c78e87f150c9fcef094dd1bc40bb1bae67800c335ccf197c5fee4359d9993608",
+ "wire_oracle_sha256": "f7253738e5c18b5cc1b9f5aea06c903a3a00e30f4283013beac6c3dfb3cda578",
+ "run_round_sha256": "b726a6afbfb0af68d2283c7884fe64c51c8484b59d8ba8d3b9785569b300e8c2",
+ "thresholds": {"permissive_max": 0, "judged_unreadable_max": 0, "pending_max": 0, "undisclosed_error_rate_max": 0.01, "breaking_truth_min": 50, "parity": "every unit"},
+ "adjudicator": "Claude (named by Ben, 2026-10-12)",
+ "sealed_utc": "2026-10-12"
+}

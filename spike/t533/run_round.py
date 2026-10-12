@@ -164,8 +164,9 @@ def score(history: Path, population: Path, results: Path, adjudications: Path | 
         judged = wire_oracle.judge(*contents(history, unit))
         truth, findings, disclosed = judged['verdict'], judged['findings'], False
         if unit['unit_id'] in adjudicated:
+            # The adjudication decides the unit outright, disclosure included (post-seal fix, protocol §10).
             entry = adjudicated[unit['unit_id']]
-            truth, disclosed = entry['truth'], entry.get('disclosed', False)
+            truth, findings, disclosed = entry['truth'], [], entry.get('disclosed', False)
         kind = classify(product, truth, findings, disclosed)
         # A disagreement the oracle decided alone is adjudicated before it counts.
         if kind in ('conservative', 'permissive', 'refused_readable', 'judged_unreadable') and unit['unit_id'] not in adjudicated:
