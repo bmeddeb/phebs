@@ -228,7 +228,7 @@ func TestSandboxCommandPinsIsolationAndResourceGuards(t *testing.T) {
 			}
 		}
 	} else {
-		for _, required := range []string{"--unshare-all", "--ro-bind", "ulimit -v 524288"} {
+		for _, required := range []string{"--unshare-all", "--ro-bind", "ulimit -d 524288"} {
 			if !strings.Contains(joined, required) {
 				t.Fatalf("bubblewrap command lacks %q: %s", required, joined)
 			}

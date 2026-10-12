@@ -171,7 +171,7 @@ func sandboxCommand(root, bin string, arguments []string) (*exec.Cmd, error) {
 	}
 	// The child sees only its static Buf executable and the sanitized tree.
 	// User, PID, IPC, UTS, cgroup, and network namespaces are isolated; the
-	// shell applies hard CPU and virtual-memory rlimits before bwrap starts.
+	// shell applies hard CPU and data-segment rlimits before bwrap starts.
 	bwrapArgs := []string{
 		"--unshare-all", "--die-with-parent", "--new-session",
 		"--ro-bind", bin, "/phebs-buf", "--bind", root, "/work",
@@ -182,7 +182,10 @@ func sandboxCommand(root, bin string, arguments []string) (*exec.Cmd, error) {
 		"/phebs-buf",
 	}
 	bwrapArgs = append(bwrapArgs, arguments...)
-	args := []string{"-c", `ulimit -t 10 || exit 125; ulimit -v 524288 || exit 125; exec "$@"`, "phebs-buf", bwrap}
+	// RLIMIT_DATA, not RLIMIT_AS: the Go runtime in Buf reserves address space
+	// it never commits (PROT_NONE page summaries) and aborts at startup under a
+	// 512-MiB RLIMIT_AS. RLIMIT_DATA still bounds committed private memory.
+	args := []string{"-c", `ulimit -t 10 || exit 125; ulimit -d 524288 || exit 125; exec "$@"`, "phebs-buf", bwrap}
 	args = append(args, bwrapArgs...)
 	return exec.Command("/bin/sh", args...), nil
 }

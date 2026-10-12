@@ -18680,6 +18680,26 @@ verdict covers those bytes, not runtime or deployment compatibility.
 **T53.2 · Stable sandboxed compatibility registration** — retain bounded
 closed execution, no source escape/network discovery, exact digest-bound
 result and authorization; optional unreleased field evidence stays unavailable.
+*Linux sandbox correction (2026-10-12, found during T47.4 groundwork):
+contract compatibility could never start on this Linux host. The bubblewrap
+path applied `ulimit -v 524288` (RLIMIT_AS). The Go runtime inside Buf
+reserves address space it never commits, so it aborted at start with "failed
+to reserve page summary memory". Validation then reported
+`execute buf --version`, every startup logged compatibility as disabled, and
+`TestCheckerReportsWireBreakWithStableFieldIdentity` and
+`TestCheckerAcceptsWireCompatibleRename` failed on this host. Darwin applies
+only the CPU limit, which kept the defect out of earlier Darwin runs.
+
+The sandbox now applies `ulimit -d 524288` (RLIMIT_DATA) with the same
+512-MiB value. RLIMIT_DATA counts committed private writable memory but not
+`PROT_NONE` reservations. A scratch probe confirmed three things in the exact
+bwrap invocation: Buf fails under `-v`, it starts under `-d`, and a 2-GiB
+allocation is still refused under `-d`. All other isolation (namespaces,
+read-only Buf, a single writable tree, cleared environment, CPU limit) is
+unchanged. All 7 top-level `internal/compat` tests now pass normally and under
+race, and the pinned sandbox test now requires `ulimit -d 524288`.
+Steady-state cost: none. This is the same single sandboxed child per
+compatibility request.*
 
 **T53.3 · Measured compatibility promotion** — satisfy the common bar for
 the standalone WIRE verdict and separately qualify any enrichment it claims.
