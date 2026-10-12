@@ -1,0 +1,27 @@
+{
+  "confirmation_source": "Direct answers in this Codex conversation: Confirm this scope; Confirm these coordinates.",
+  "frames_plan_sha256": "sha256:0c60125b1cdf1ebd54a0aec726e744720d8e31078f2a90cee6b2f0b04452fa60",
+  "judgments": [
+    {
+      "eligible_sites": 498793,
+      "id": "recall_scope",
+      "import_only_exclusions": 978,
+      "rule": "Every Go call expression and inventoried method reference stays eligible, including aliases, wrappers, interface/dynamic and same-name unrelated calls; full-method strings remain eligible. Imports alone are excluded. Eligibility is not an RPC truth label.",
+      "status": "confirmed"
+    },
+    {
+      "generated_files": 60,
+      "id": "declaration_census_coordinates",
+      "interfaces": 74,
+      "rule": "One exact source span per individual service-client interface, retaining repository \u00d7 code-role strata; this source census supports the independent declaration-citation ledger and does not replace call-site attributed-edge precision/recall denominators.",
+      "status": "confirmed"
+    }
+  ],
+  "labels_produced": false,
+  "owner": "Ben Meddeb",
+  "protocol_sealed": false,
+  "quality_scored": false,
+  "recorded_at": "2026-10-11T23:57:32Z",
+  "schema": "t472-source-frame-judgments-v1",
+  "universe_sha256": "sha256:46f6a02c92414845ccc460619b92d1c681b40e23a636d334cce668c9363f80d3"
+}

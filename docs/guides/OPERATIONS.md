@@ -1430,6 +1430,18 @@ correctness or quality acceptance. Bind the actual capture and reconciliation
 bytes under the existing blind-label protocol before sealing; no score or
 seal is produced by these commands.
 
+T47.2m's run-g round bundle in `spike/t472/bundle/` binds the verified source
+outcomes, and `spike/t472/source_frame_judgments_20261011.json` records Ben's
+two source/frame confirmations against unchanged file hashes. The separate
+`spike/t472/artifact_bindings_20261011g.json` identifies the private source-only
+labeling preparation: instructions, unfilled row templates and the 74-interface
+reference census. These files are not a seeded sample or completed human
+labels. Keep actual labels/source notes outside the candidate worktree and
+predictions in separate custody. A successful domain root is not the required
+caller proof export, and a completed source scan is not a call-site
+considered/withheld decision ledger. Their missing bindings must remain
+explicit before the genuine draw, commitments or protocol seal can proceed.
+
 The five-minute caller execution deadline starts only after the repository
 mirror lock is acquired. Pointer/control preflight has its own at-most-five-
 minute context; waiting behind fetch, indexing, candidate planning, or

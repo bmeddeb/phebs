@@ -17550,6 +17550,72 @@ it performs one exact control/pointer read and one bounded receipt join.
 No new product request, sync, retry, publication, lock, cache or retention work
 is introduced. Raw logs, credentials and per-source custody remain private.
 
+**T47.2m · Run-g artifact binding and blind-label preparation (2026-10-11).**
+Ben requests available artifact bindings and source-only labeling preparation,
+and directly confirms both source/frame judgments: every Go call expression
+and inventoried method reference stays eligible (imports alone excluded), and
+individual service-client interface spans retain repository×role strata for
+the declaration-citation census. The source-bound confirmation record is
+[`source_frame_judgments_20261011.json`](../spike/t472/source_frame_judgments_20261011.json).
+It closes those two judgments without changing a frame, threshold or truth label.
+
+The round-specific
+[`preregistration.run-g.bundle.json`](../spike/t472/bundle/preregistration.run-g.bundle.json)
+binds the exact private source-outcome reconciliation receipt; the reusable
+unfilled preparation template remains byte-exact. Existing validators accept
+24 named missing fields in the round bundle, versus 25 in the template.
+The binding was made only after retained artifact/machinery hashes, the
+complete repeated receipt join and live current-root/downstream bindings
+matched run g's committed control receipt. Binary, implementation, corpus,
+card, recipe-source and packet identities are recorded in
+[`artifact_bindings_20261011g.json`](../spike/t472/artifact_bindings_20261011g.json).
+Recipe-source bytes are a dark implementation binding, not a released manifest.
+
+Private preparation lives at
+`/home/ben/phebs-rehearsals/t472-label-preparation-20261011g`, outside the
+candidate worktree and retained run custody. Its label directory contains
+reviewer instructions, blank eight-field label / expected-resolution /
+declaration-citation row templates and 74 exact source interface spans from
+60 pinned generated files. Every source excerpt was read from the frozen
+commit with `GIT_OPTIONAL_LOCKS=0`; coordinates and blob hashes are checked.
+This full reference census is neither a random sample nor human truth.
+The frozen validator rejects the unfilled label template. Candidate custody
+remains separate. No sample, human label, beacon/seed, external publication,
+protocol seal, prediction disclosure or score is produced.
+
+The metadata-only proof census found zero retained proof bundles. Successful
+partition roots and completed source scans are neither the required caller
+proof export nor a complete considered/withheld call-site decision ledger;
+the executor's file-level abstentions and compact coverage describe a different
+population (`internal/callerexecute/execute.go`, `internal/callerleaf/model.go`).
+No complete call-site decision ledger has been exported, verified and bound
+for this round. Their bindings stay null. Actual candidate capture/export must
+supply those inputs before complete frame counts and a blind seeded sample can be frozen. Independent
+resolution/declaration truth, labels, beacon/seed, protocol digest and external
+commitment fields also remain explicit missing inputs. This preparation
+closes the available-binding and reviewer-readiness slice, not T47.2b acceptance.
+
+AC: validate genuine outcomes against the retained controls and committed
+run-g summary; bind both direct human confirmations to unchanged frames;
+retain separate source-only blank material and candidate custody; refuse
+invented samples/truth and preserve every missing required binding; pass
+preparation, artifact privacy/identity and documentation checks. All 53 Python
+preparation tests passed (16.849s); docs-check (1.025s), glossary, whitespace
+and private artifact identity/permissions checks returned zero. No compiled
+input changed, so Go package/race gates were not repeated. No production code
+or fixture changes, candidate rerun or merge follows this slice.
+
+Steady-state cost: zero production query, sync-tick, startup/restart,
+retry/no-op, publication, lock, cache or child changes. One offline preparation
+reuses the existing full universe/frame/bundle builder and bounded outcome
+reconciler, reads and hashes retained controls/receipts, reinspects exact live
+controls once, and performs one metadata-only proof count query. It opens up
+to 60 serial Git blob readers, caching those fixed generated files (each at
+most 10 MiB) and writes a source-only reference packet plus small JSON and
+instructions. Existing builder memory is O(the 499,771-site population);
+source cache has an additional fixed worst-case 60×10-MiB bound. No persistent
+observer, store write, prediction read, new schema or production lock is added.
+
 **T47.3 · Ordinary production configuration and registration** *(needs the
 T47.2 supported recipe contract; activation remains gated until T47.5)* —
 introduce the stable Caller Map configuration/recipe selection, wire the

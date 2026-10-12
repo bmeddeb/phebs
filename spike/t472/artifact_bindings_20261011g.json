@@ -1,0 +1,98 @@
+{
+  "binary_sha256": {
+    "bin/buf": "sha256:08a358a01357819e2fbce2247ebd44909d224fbcdd4d6be515108d3c57686d7a",
+    "bin/phebs-focused-index": "sha256:5486be1ff26201234aae8651625c728e54f29c3682246b4692d3fce0fe792f89",
+    "bin/zoekt-git-index": "sha256:ca8fcd21c2a5c5c1eb85e0d354cec9d97f01412faaaa18cd170509badfbb550b",
+    "phebs": "sha256:1798b7c8803d80ccacb58771efc0c42f76f940797f0142b590738e13bfb1d3fd"
+  },
+  "candidate_decision_ledger": "not exported, verified and bound for this round; file-level abstentions, compact coverage and scan completion cannot prove every considered or withheld call-site decision",
+  "external_publication": false,
+  "input_commits": [
+    {
+      "commit": "f9ecd8dcecc18b7559c0e3c0c264477c6ab9ddc1",
+      "regular_sources": 1094,
+      "repository": "etcd-io/etcd"
+    },
+    {
+      "commit": "f40347859c3380f5c409f153ab79d4b8e724abd3",
+      "regular_sources": 1083,
+      "repository": "grpc/grpc-go"
+    },
+    {
+      "commit": "e0f9f8ac24f21a3703f94bb09817b699a1446af0",
+      "regular_sources": 5508,
+      "repository": "containerd/containerd"
+    }
+  ],
+  "labels_produced": false,
+  "machinery_sha256": {
+    "bundle/preregistration.bundle.json": "sha256:5e603089ca144cf98f19234178aad6af75c88005027058eb54f741f67e0339c0",
+    "caller_scoring.py": "sha256:c3bab8f918a40b3400bad73d75c8a130b5d62f4553e033b3ba71e929638d3d83",
+    "corpus.lock.json": "sha256:8c5340427010c3ca86d2a038d88ff6d23ade76c04ba2e9bcd49d579237762168",
+    "prepare.py": "sha256:0b04bdb8de921a9a4a0d47eb6acb27d0ab2d27f2d77130ce1442338383aca305",
+    "source.census.json": "sha256:2aa22d7a6b77c24f2239067b49f9edaa3524900b86f4f2a7a27c495cac197394",
+    "source_outcomes.py": "sha256:aa9f6c2692261a22d51863439901bf3a03eba4b83dd381ad8c08f4a1dbd41da8",
+    "universe/universe.json": "sha256:46f6a02c92414845ccc460619b92d1c681b40e23a636d334cce668c9363f80d3"
+  },
+  "missing_bindings": [
+    "bundle.candidate_identities.NIST beacon pulse and derived 64-hex seed for the sample draw",
+    "bundle.candidate_identities.frozen blind label document per frame (Ben, sole owner/reviewer)",
+    "bundle.candidate_identities.independent declaration-citation ledger sha256",
+    "bundle.candidate_identities.independent expected-resolution ledger sha256",
+    "bundle.candidate_identities.phebs complete candidate ledger identity and sha256 (abstention frame)",
+    "bundle.candidate_identities.protocol digest after the section 10 sealing checklist completes",
+    "bundle.candidate_identities.sealed proof-bundle-v1 envelope identity and sha256 (precision, unresolved frames)",
+    "bundle.external_publication.prepared_payloads[0].fields.adjudication",
+    "bundle.external_publication.prepared_payloads[0].fields.artifact_manifest_sha256",
+    "bundle.external_publication.prepared_payloads[0].fields.committed_at",
+    "bundle.external_publication.prepared_payloads[0].fields.input_binding",
+    "bundle.external_publication.prepared_payloads[0].fields.label_count",
+    "bundle.external_publication.prepared_payloads[0].fields.labels_sha256",
+    "bundle.external_publication.prepared_payloads[0].fields.reviewer_assignment_sha256",
+    "bundle.external_publication.prepared_payloads[0].fields.schema",
+    "bundle.external_publication.prepared_payloads[0].fields.site_ids_sha256",
+    "bundle.external_publication.prepared_payloads[1].fields.output_value",
+    "bundle.external_publication.prepared_payloads[1].fields.pulse",
+    "bundle.external_publication.prepared_payloads[1].fields.pulse_timestamp",
+    "bundle.randomness_commitment_sequence[0].binding",
+    "bundle.randomness_commitment_sequence[1].binding",
+    "bundle.randomness_commitment_sequence[2].binding",
+    "bundle.randomness_commitment_sequence[3].binding",
+    "bundle.randomness_commitment_sequence[4].binding"
+  ],
+  "pack_card_sha256": "sha256:2d60486b99284318a39fb06672e5ae21fddccab1a8ec4dfb355bd81b446c5d63",
+  "predictions_disclosed": false,
+  "prepared_files_sha256": {
+    "candidate/preregistration.run-g.bundle.json": "sha256:65decd015fef7e4b482179960f45f566a48ef168c8c229ececcf78f97f8eecf9",
+    "labels/README.md": "sha256:bd91f0b42674987cf323eb9d351edb8ea774d7d8cb62c83ef18ce18f212d00df",
+    "labels/declaration-census.source.jsonl": "sha256:eb983c00db009163de0a78c20688cc10ea8b754e680ac78047caddaff129ae48",
+    "labels/declaration-citation.row-template.json": "sha256:3e20c618f1d3e45d5f97ca82b248d76b7097b7859d3b7c11331453d9c33228b2",
+    "labels/expected-resolution.row-template.json": "sha256:cd7941697209dc3e3479c06b2da627f975da72cec54ed66632fd58343d8a5770",
+    "labels/label.row-template.json": "sha256:5cb760f00e061dc3daee64f415f0381dbe452954ad0848a7daab6a3da506358c"
+  },
+  "private_preparation_root": "/home/ben/phebs-rehearsals/t472-label-preparation-20261011g",
+  "proof_bundles_retained": 0,
+  "protocol_sealed": false,
+  "quality_scored": false,
+  "recipe_implementation_source": {
+    "meaning": "In-tree dark recipe source; not a released executable pack manifest.",
+    "path": "cmd/phebs/serve_config.go",
+    "sha256": "sha256:3ffe1aca52e002491d6f9d93c0acb6456d1f87a005c81ab5f52cd694ebb559a3"
+  },
+  "retained_artifact_sha256": {
+    "LAUNCH.json": "sha256:eaa9e88ecf2da40692894ad7d37a6d397818c9777c0e4586fd108e8acb55e2c0",
+    "PROVENANCE_CLARIFICATION.json": "sha256:4b2df3f6ad579d28945f35ce0484828122012dd0a0fc7377c97770feac96abb4",
+    "RUN_IDENTITY.md": "sha256:6f6b6d807ad4de4e598cbd42035c6a6e16cc085d353099e65f80fbf0052f0122",
+    "convergence.json": "sha256:90c03a7efd27663b21a102501e3d5ed4c8be8356f9aadca808e74974bc15e799",
+    "phebs.yaml": "sha256:e2a3d0a31ed23620564d23b9763fe62e13d58b94fa55a311d9e0bd8f9f2fa8d7",
+    "source-outcomes.json": "sha256:8a22ac5a3cdc6ab6e8f76c61cb7b036a5f4d4085cc7ecabc4c103c5e1572deef"
+  },
+  "round": "t472-candidate-run-20261011g",
+  "run_summary_sha256": "sha256:88d1b2d5ace6caa10985ee308059ef22e56dedc11078910c631bfd72114a6f68",
+  "sample_drawn": false,
+  "schema": "t472-label-preparation-bindings-v1",
+  "source_census_reference_files": 60,
+  "source_census_reference_units": 74,
+  "source_commit": "f0da8d1843aab5b9b819c48d8ca58145ce34406c",
+  "source_frame_judgments_sha256": "sha256:fc4ac53449a17ceeaf2741196cfef064c5766846d2545f8acc5c6e078d33a8ac"
+}

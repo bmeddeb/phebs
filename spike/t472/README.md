@@ -634,3 +634,23 @@ extraction; the replacement verifies symbolic `derived` HEADs at unchanged
 commits. Earlier runs stay untouched, and g remains live. This closes the
 capture prerequisite, not caller-quality acceptance: blind labels, remaining
 bindings, scoring, sealing and operating/release gates stay separate.
+
+T47.2m records Ben's two confirmed source/frame judgments in
+[`source_frame_judgments_20261011.json`](source_frame_judgments_20261011.json),
+bound to the unchanged recall and interface-census files. The run-specific
+[`preregistration bundle`](bundle/preregistration.run-g.bundle.json) fills only
+the verified run-g source-outcome binding, with 24 remaining missing fields;
+the reusable preparation template stays exact with 25. The
+[`artifact manifest`](artifact_bindings_20261011g.json) binds the retained run,
+private packet, approved judgments and preparation machinery.
+
+Private source-only instructions, blank row templates and all 74 interface
+spans from 60 generated files live in the manifest's label directory. They
+are preparation/reference material, not selected sites or completed labels.
+Zero proof bundles were retained in run g. No complete considered/withheld
+call-site decision ledger has been exported, verified and bound for this round.
+File-level abstentions and compact coverage cover a different population;
+source scan completion cannot supply the missing call-site decisions. Candidate
+export/capture, genuine randomness, the actual sealed draw, independent truth,
+blind labels and commitments remain necessary. No predictions were read or
+disclosed, and no sample, label, score, external publication or seal was made.

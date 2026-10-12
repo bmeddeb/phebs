@@ -203,6 +203,16 @@ source receipts and the live custody are retained. This closes the missing
 processing-ledger prerequisite from run e. T47.2b's blind labels, remaining
 preregistration bindings, scoring and seal, plus T47.4/T47.5, remain open.
 
+**Blind-label preparation (2026-10-11):** Ben confirmed both remaining
+source/frame judgments; T47.2m binds them to the unchanged source populations
+and supplies a private source-only reference packet and blank row templates.
+The round-specific run-g bundle binds genuine processing outcomes and retains
+24 missing fields. No actual draw or human truth was produced. A real caller
+proof export and complete considered/withheld call-site ledger remain unbound;
+current roots and source-scan outcomes cannot substitute for them. Those
+candidate artifacts precede complete frame/seed preparation and blind labeling.
+T47.2b acceptance, T47.4 and T47.5 remain separate.
+
 **Independent production promotions (2026-10-09, Ben-directed):** Epics 48–58
 give every current experimental evidence pack and composed product surface a
 named production path. Epic 48 implements the currently design-only signed
