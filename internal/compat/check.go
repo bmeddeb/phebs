@@ -236,7 +236,14 @@ type Checker struct {
 	bin            string
 	expectedSHA256 string
 	tempDir        string
+	// slots bounds concurrent checks: each runs one sandboxed Buf child of up to
+	// 512 MiB data, so the bound caps the host commitment at MaxConcurrentChecks
+	// children. A check beyond it is refused at once as retryable, never queued.
+	slots chan struct{}
 }
+
+// MaxConcurrentChecks is the T53.3 operating bound on simultaneous Buf children.
+const MaxConcurrentChecks = 4
 
 // FindBinary locates Buf using the same deployment pattern as the zoekt child:
 // an explicit override, beside phebs, under its bin directory, then PATH.
@@ -289,7 +296,7 @@ func New(bin string) (*Checker, error) {
 	if err := executableidentity.Verify(resolved, expected); err != nil {
 		return nil, fmt.Errorf("%w: verify buf identity: %v", ErrUnavailable, err)
 	}
-	return &Checker{bin: resolved, expectedSHA256: expected}, nil
+	return &Checker{bin: resolved, expectedSHA256: expected, slots: make(chan struct{}, MaxConcurrentChecks)}, nil
 }
 
 // Validate performs the same sandboxed version probe used by Check. Servers
@@ -322,6 +329,12 @@ func (c *Checker) Validate(ctx context.Context) error {
 func (c *Checker) Check(ctx context.Context, request Request) (*CompatibilityResult, error) {
 	if c == nil || c.bin == "" {
 		return nil, fmt.Errorf("%w: no configured checker", ErrUnavailable)
+	}
+	select {
+	case c.slots <- struct{}{}:
+		defer func() { <-c.slots }()
+	default:
+		return nil, fmt.Errorf("%w: %d compatibility checks already running; retry", ErrUnavailable, MaxConcurrentChecks)
 	}
 	ctx, cancel := context.WithTimeout(ctx, checkTimeout)
 	defer cancel()

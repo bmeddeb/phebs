@@ -336,6 +336,8 @@ func runPhebs(args []string) (code int, retErr error) {
 		err = restore(ctx, args[1:])
 	case "version":
 		err = printVersion(args[1:], os.Stdout)
+	case "release-sign":
+		err = releaseSign(ctx, args[1:])
 	case t422RuntimeFactsCommand:
 		err = writeT422RuntimeFacts(context.Background(), args[1:], os.Stdout, lifetime)
 	default:
@@ -354,6 +356,7 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  phebs backup [-config phebs.yaml] -output /path/to/backup")
 	fmt.Fprintln(os.Stderr, "  phebs restore [-config phebs.yaml] -backup /path/to/backup")
 	fmt.Fprintln(os.Stderr, "  phebs version")
+	fmt.Fprintln(os.Stderr, "  phebs release-sign -template t.json -key key.pem -key-id ID -artifacts DIR -out DIR/release.json")
 }
 
 func printVersion(args []string, output io.Writer) error {

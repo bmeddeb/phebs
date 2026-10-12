@@ -246,3 +246,19 @@ func TestCheckerValidationRejectsUnpinnedBinary(t *testing.T) {
 		t.Fatalf("validation error = %v, want unavailable", err)
 	}
 }
+
+// TestCheckRefusesBeyondTheConcurrencyBound pins the T53.3 operating bound: with
+// every slot held, a check is refused at once as retryable and starts no child.
+func TestCheckRefusesBeyondTheConcurrencyBound(t *testing.T) {
+	checker := &Checker{bin: "/nonexistent/buf", slots: make(chan struct{}, MaxConcurrentChecks)}
+	for range MaxConcurrentChecks {
+		checker.slots <- struct{}{}
+	}
+	_, err := checker.Check(context.Background(), Request{Lineage: "busy"})
+	if !errors.Is(err, ErrUnavailable) || !strings.Contains(err.Error(), "already running") {
+		t.Fatalf("err = %v, want a retryable busy refusal", err)
+	}
+	if len(checker.slots) != MaxConcurrentChecks {
+		t.Fatal("a refused check must not take or release a slot")
+	}
+}

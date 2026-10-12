@@ -97,7 +97,7 @@ func TestDeriveReleaseLoadBindingsUnboundWithoutArtifactsPath(t *testing.T) {
 // globally sorted) and its order- and content-sensitivity.
 func TestPackImplementationDigestIsContentIdentity(t *testing.T) {
 	swapPackRecipes(t, nil)
-	empty := packImplementationDigest(packRecipes)
+	empty := packImplementationDigest(packRecipes, nil)
 	if empty != testReleaseDigest("") {
 		t.Fatalf("empty registry digest = %s, want the zero-row digest", empty)
 	}
@@ -119,12 +119,19 @@ func TestPackImplementationDigestIsContentIdentity(t *testing.T) {
 	want := testReleaseDigest("phebs.alpha.pack a@1\nphebs.beta.pack b@2\n" +
 		"phebs.gamma.pack c@1\nphebs.gamma.pack c@3\n")
 	for i := 0; i < 20; i++ {
-		if got := packImplementationDigest(packRecipes); got != want {
+		if got := packImplementationDigest(packRecipes, nil); got != want {
 			t.Fatalf("digest %d = %s, want %s (one sorted row per extractor)", i, got, want)
 		}
 	}
 	if empty == want {
 		t.Fatal("binding a recipe must change the digest a release has to name")
+	}
+	// A released verdict claim is one row of its own beside the recipe rows.
+	claims := map[string]string{"phebs.delta.claim": "check@1"}
+	withClaim := testReleaseDigest("phebs.alpha.pack a@1\nphebs.beta.pack b@2\n" +
+		"phebs.delta.claim check@1\nphebs.gamma.pack c@1\nphebs.gamma.pack c@3\n")
+	if got := packImplementationDigest(packRecipes, claims); got != withClaim {
+		t.Fatalf("digest with a claim = %s, want %s", got, withClaim)
 	}
 }
 
@@ -192,8 +199,9 @@ func TestReleaseLoadBindingsForDerivesEveryField(t *testing.T) {
 	if want := testReleaseDigest("go-toolchain go1.26.1\n"); opts.Implementation.ToolchainDigest != want {
 		t.Fatalf("ToolchainDigest = %s, want %s", opts.Implementation.ToolchainDigest, want)
 	}
-	if want := testReleaseDigest(""); opts.Implementation.PackImplementationDigest != want {
-		t.Fatalf("PackImplementationDigest = %s, want the empty-registry digest %s", opts.Implementation.PackImplementationDigest, want)
+	// No recipe is bound; the T53.3 Buf WIRE claim is the registry's one row.
+	if want := testReleaseDigest("phebs.protobuf.wire.buf check_wire_compatibility@buf-1.72.0-WIRE\n"); opts.Implementation.PackImplementationDigest != want {
+		t.Fatalf("PackImplementationDigest = %s, want the bound-claim digest %s", opts.Implementation.PackImplementationDigest, want)
 	}
 	if want := censusRootDigest(); opts.ReferencedArtifactsRootDigest != want {
 		t.Fatalf("ReferencedArtifactsRootDigest = %s, want %s", opts.ReferencedArtifactsRootDigest, want)
@@ -332,7 +340,7 @@ func TestReleasedExtractorsAdmitsRecordBoundToPresentFacts(t *testing.T) {
 	cfg.ReleaseSelection.ArtifactsPath = artifactsPath
 	cfg.ReleaseSelection.Keys = []config.ReleaseKey{{ID: "key-1", PublicKey: public}}
 
-	extractors, err := releasedExtractors(context.Background(), cfg)
+	extractors, _, err := releasedExtractors(context.Background(), cfg)
 	if err != nil {
 		t.Fatalf("releasedExtractors: %v", err)
 	}
@@ -364,7 +372,7 @@ func TestReleasedExtractorsRefusesRecordForAnotherBinary(t *testing.T) {
 	cfg.ReleaseSelection.ArtifactsPath = artifactsPath
 	cfg.ReleaseSelection.Keys = []config.ReleaseKey{{ID: "key-1", PublicKey: public}}
 
-	_, err := releasedExtractors(context.Background(), cfg)
+	_, _, err := releasedExtractors(context.Background(), cfg)
 	if reason, _ := packrelease.ReasonOf(err); reason != packrelease.ReasonDigestMismatch {
 		t.Fatalf("reason = %q (%v), want %q", reason, err, packrelease.ReasonDigestMismatch)
 	}
@@ -405,7 +413,7 @@ func TestReleasedExtractorsWithdrawalNeedsNoBuildOrArtifactFacts(t *testing.T) {
 			t.Cleanup(func() { releaseLoadBindings = restore })
 			var extractors []extract.Extractor
 			var err error
-			output := captureLogDuring(t, func() { extractors, err = releasedExtractors(t.Context(), cfg) })
+			output := captureLogDuring(t, func() { extractors, _, err = releasedExtractors(t.Context(), cfg) })
 			if err != nil || len(extractors) != 0 {
 				t.Fatalf("withdrawal = %v, %v; want no admission and no refusal", extractors, err)
 			}

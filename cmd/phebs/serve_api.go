@@ -192,12 +192,12 @@ func experimentalProofBundles(cfg *config.Config, proofBundles store.ProofBundle
 	return nil
 }
 
-// experimentalWireCompatibility admits the standalone Buf WIRE verdict (T53.2)
-// under the same dark switches as the proof-enriched check. No released record
-// admits it yet: T53.3 binds a signed claim in the same change as its passing
-// result, and until then a selection naming it refuses startup as unbound.
-func experimentalWireCompatibility(cfg *config.Config, checker compat.Service) compat.Service {
-	if provisionalExtractionOn(cfg) {
+// admittedWireCompatibility admits the standalone Buf WIRE verdict (T53.2)
+// under the same dark switches as the proof-enriched check, or ordinarily when
+// a verified released record selects its claim (T53.3). A released claim never
+// admits the proof service, Impact or field evidence.
+func admittedWireCompatibility(cfg *config.Config, released map[string]bool, checker compat.Service) compat.Service {
+	if provisionalExtractionOn(cfg) || released[wireCompatibilityPackID] {
 		return checker
 	}
 	return nil
@@ -257,7 +257,7 @@ func newServeAPIOptions(d *serveDeps) (api.Options, error) {
 		CallerReader:         d.callerReader,
 		ProofBundleRetention: cfg.ProofBundles.RetentionFor(),
 		Compatibility:        d.compatibility, Visible: d.visibleFor,
-		WireCompatibility: experimentalWireCompatibility(cfg, d.compatibility),
+		WireCompatibility: admittedWireCompatibility(cfg, d.releasedClaims, d.compatibility),
 		Principal: func(ctx context.Context) string {
 			principal, ok := auth.PrincipalFromContext(ctx)
 			if !ok {

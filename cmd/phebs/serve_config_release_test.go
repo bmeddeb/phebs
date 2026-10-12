@@ -139,7 +139,7 @@ func writeShapedRecord(
 
 func TestReleasedExtractorsEmptyPathAdmitsNothing(t *testing.T) {
 	cfg := &config.Config{}
-	extractors, err := releasedExtractors(context.Background(), cfg)
+	extractors, _, err := releasedExtractors(context.Background(), cfg)
 	if err != nil {
 		t.Fatalf("releasedExtractors: %v", err)
 	}
@@ -158,7 +158,7 @@ func TestReleasedExtractorsRefusesWithoutLoadBindings(t *testing.T) {
 	// With no artifacts directory configured the production bindings are
 	// unbound, so a governing released record cannot be bound to this binary and
 	// must refuse startup.
-	_, err := releasedExtractors(context.Background(), cfg)
+	_, _, err := releasedExtractors(context.Background(), cfg)
 	if reason, _ := packrelease.ReasonOf(err); reason != packrelease.ReasonUnresolvedReference {
 		t.Fatalf("reason = %q (%v), want %q", reason, err, packrelease.ReasonUnresolvedReference)
 	}
@@ -174,7 +174,7 @@ func TestReleasedExtractorsRefusesUnboundReleasedPack(t *testing.T) {
 
 	// packRecipes ships empty, so a verified released pack has no in-tree recipe
 	// and must refuse startup rather than silently admit nothing.
-	if _, err := releasedExtractors(context.Background(), cfg); err == nil {
+	if _, _, err := releasedExtractors(context.Background(), cfg); err == nil {
 		t.Fatal("a released pack with no fixed in-tree recipe must refuse startup")
 	}
 }
@@ -191,7 +191,7 @@ func TestReleasedExtractorsResolvesBoundRecipe(t *testing.T) {
 		"phebs.bound.pack": {stubExtractor{domain: "bound", version: "1"}},
 	})
 
-	extractors, err := releasedExtractors(context.Background(), cfg)
+	extractors, _, err := releasedExtractors(context.Background(), cfg)
 	if err != nil {
 		t.Fatalf("releasedExtractors: %v", err)
 	}
@@ -206,7 +206,7 @@ func TestReleasedExtractorsRefusesMalformedKey(t *testing.T) {
 	cfg := &config.Config{}
 	cfg.ReleaseSelection.Path = dir
 	cfg.ReleaseSelection.Keys = []config.ReleaseKey{{ID: "key-1", PublicKey: "not-base64!"}}
-	if _, err := releasedExtractors(context.Background(), cfg); err == nil {
+	if _, _, err := releasedExtractors(context.Background(), cfg); err == nil {
 		t.Fatal("a malformed trust-anchor key must refuse startup")
 	}
 }

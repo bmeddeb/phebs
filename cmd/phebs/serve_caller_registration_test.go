@@ -62,7 +62,7 @@ func TestCallerMapRecipeStaysUnboundUntilReleased(t *testing.T) {
 	cfg := &config.Config{}
 	cfg.ReleaseSelection.Path = dir
 	cfg.ReleaseSelection.Keys = []config.ReleaseKey{{ID: "key-1", PublicKey: public}}
-	_, err := releasedExtractors(context.Background(), cfg)
+	_, _, err := releasedExtractors(context.Background(), cfg)
 	if err == nil {
 		t.Fatal("a verified released caller-map record without its in-tree binding must refuse startup")
 	}
@@ -300,6 +300,7 @@ func TestCallerMapOrdinarySurfaceFollowsProductionAssembly(t *testing.T) {
 	tests := []struct {
 		name      string
 		released  bool
+		claim     bool // a signed record selecting the T53.3 Buf WIRE claim
 		configure func(*config.Config)
 		want      servedCallerSurfaces
 	}{
@@ -338,6 +339,15 @@ func TestCallerMapOrdinarySurfaceFollowsProductionAssembly(t *testing.T) {
 			},
 		},
 		{
+			name:      "a released Buf WIRE claim alone serves only the wire verdict",
+			claim:     true,
+			configure: func(*config.Config) {},
+			want: servedCallerSurfaces{
+				capabilities: []string{"service-catalog-v2", "wire-compatibility"},
+				wireTool:     true,
+			},
+		},
+		{
 			// Comparison follows the experimental switches, not the protocol of
 			// the caller adapters it reads; Epic 50 owns narrowing it.
 			name:      "a released Caller Map beside the thrift switch",
@@ -355,6 +365,13 @@ func TestCallerMapOrdinarySurfaceFollowsProductionAssembly(t *testing.T) {
 			cfg := &config.Config{}
 			cfg.Server.DataDir = t.TempDir()
 			test.configure(cfg)
+			if test.claim {
+				dir := t.TempDir()
+				public, release := writeReleasedRecord(t, dir, wireCompatibilityPackID, "key-1")
+				bindReleaseLoad(t, release)
+				cfg.ReleaseSelection.Path = dir
+				cfg.ReleaseSelection.Keys = []config.ReleaseKey{{ID: "key-1", PublicKey: public}}
+			}
 			if test.released {
 				restore := packRecipes
 				packRecipes = map[string]func() []extract.Extractor{callerMapPackID: callerMapRecipe}

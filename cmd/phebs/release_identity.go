@@ -136,7 +136,7 @@ func releaseLoadBindingsFor(artifactsPath string, facts releaseFacts) (packrelea
 	implementation := packrelease.Implementation{
 		PhebsSourceCommit:        facts.sourceCommit,
 		PhebsBinaryDigest:        binaryDigest,
-		PackImplementationDigest: packImplementationDigest(packRecipes),
+		PackImplementationDigest: packImplementationDigest(packRecipes, releasedClaims),
 		ToolchainDigest:          toolchainDigest(facts.goVersion),
 	}
 	directory, err := packrelease.OpenArtifactDirectory(artifactsPath)
@@ -150,18 +150,22 @@ func releaseLoadBindingsFor(artifactsPath string, facts releaseFacts) (packrelea
 	}, nil
 }
 
-// packImplementationDigest is the content identity of the in-tree recipe
-// registry: every pack this binary could implement, paired with the extractor
-// domain@version set its recipe contributes, as globally sorted rows. The
+// packImplementationDigest is the content identity of the in-tree recipe and
+// claim registries: every pack this binary could implement, paired with the
+// extractor domain@version set its recipe contributes or its claim's
+// implementation identity, as globally sorted rows. The
 // empty registry digests zero rows, which every release must then name
 // explicitly. A registry binding or dropping a recipe changes the digest, so a
 // release signed for a different implementation set cannot load this binary.
-func packImplementationDigest(recipes map[string]func() []extract.Extractor) string {
-	rows := make([]string, 0, len(recipes))
+func packImplementationDigest(recipes map[string]func() []extract.Extractor, claims map[string]string) string {
+	rows := make([]string, 0, len(recipes)+len(claims))
 	for packID, recipe := range recipes {
 		for _, extractor := range recipe() {
 			rows = append(rows, packID+" "+extractor.Domain()+"@"+extractor.Version())
 		}
+	}
+	for packID, implementation := range claims {
+		rows = append(rows, packID+" "+implementation)
 	}
 	sort.Strings(rows)
 	var payload []byte

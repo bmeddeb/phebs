@@ -9,6 +9,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/callerexecute"
 	"github.com/bmeddeb/phebs/internal/callerpublication"
+	"github.com/bmeddeb/phebs/internal/compat"
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/extract"
@@ -109,10 +110,11 @@ func newServeExtractionRegistries(d *serveDeps) error {
 		cfg.Experimental.ProvisionalThriftFieldExtraction,
 		cfg.Experimental.ProvisionalKafkaExtraction,
 	)
-	released, err := releasedExtractors(d.ctx, cfg)
+	released, claims, err := releasedExtractors(d.ctx, cfg)
 	if err != nil {
 		return err
 	}
+	d.releasedClaims = claims
 	d.exs = mergeExtractors(dark, released)
 	resolverRegistry, err := resolvermaterialize.NewRegistry(d.exs)
 	if err != nil {
@@ -138,6 +140,20 @@ func newServeExtractionRegistries(d *serveDeps) error {
 // third-party loader and no manifest-selected arbitrary code: a released pack
 // resolves only through this exact in-tree registry.
 var packRecipes = map[string]func() []extract.Extractor{}
+
+// releasedClaims is the fixed in-tree registry of released product claims that
+// are verdict services rather than extractor recipes, mapping each pack
+// identifier to the implementation identity a release binds. Like packRecipes
+// it is the sole path a verified record admits a claim through: the Buf WIRE
+// claim (T53.3) is bound here in the same change as its first signed record.
+var releasedClaims = map[string]string{
+	wireCompatibilityPackID: "check_wire_compatibility@buf-" + compat.Version + "-" + compat.Policy,
+}
+
+// wireCompatibilityPackID is the T53.3 claim card in
+// docs/WIRE_COMPATIBILITY_PROTOCOL.md §9: never report a wire-breaking change
+// as compatible, conservative only in the two disclosed classes.
+const wireCompatibilityPackID = "phebs.protobuf.wire.buf"
 
 // releaseLoadBindings supplies what a released record must match before it may
 // load: the artifact resolver, the running implementation identity and the
@@ -169,13 +185,13 @@ var releaseLoadBindings = deriveReleaseLoadBindings
 //   - A verified released pack with no fixed in-tree recipe is an unresolved
 //     release inconsistency and refuses startup rather than silently admitting
 //     nothing, so a released authorization can never outrun its implementation.
-func releasedExtractors(ctx context.Context, cfg *config.Config) ([]extract.Extractor, error) {
+func releasedExtractors(ctx context.Context, cfg *config.Config) ([]extract.Extractor, map[string]bool, error) {
 	if cfg.ReleaseSelection.Path == "" {
-		return nil, nil
+		return nil, nil, nil
 	}
 	keys, err := releaseKeyRing(cfg.ReleaseSelection.Keys)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	opts := packrelease.Options{Keys: keys, Revoked: revokedReleaseIDs(cfg.ReleaseSelection.Revoked)}
 	selection, err := packrelease.LoadSelectionWithBindings(ctx, cfg.ReleaseSelection.Path, opts,
@@ -183,27 +199,32 @@ func releasedExtractors(ctx context.Context, cfg *config.Config) ([]extract.Extr
 			return releaseLoadBindings(ctx, cfg.ReleaseSelection.ArtifactsPath)
 		})
 	if err != nil {
-		return nil, fmt.Errorf("pack release selection: %w", err)
+		return nil, nil, fmt.Errorf("pack release selection: %w", err)
 	}
 	// Named before the empty-selection return: a directory holding only
 	// suspended or revoked records admits nothing, which is exactly when the
 	// operator needs to see that the withdrawal took effect.
 	logWithdrawnSelection(selection.Withdrawn())
 	if selection.Empty() {
-		return nil, nil
+		return nil, nil, nil
 	}
 	released := make([]extract.Extractor, 0, selection.Count())
+	claims := map[string]bool{}
 	for _, packID := range selection.PackIDs() {
+		if _, claim := releasedClaims[packID]; claim {
+			claims[packID] = true
+			continue
+		}
 		recipe, ok := packRecipes[packID]
 		if !ok {
-			return nil, fmt.Errorf(
+			return nil, nil, fmt.Errorf(
 				"pack release selection: released pack %q has no fixed in-tree recipe; "+
 					"refusing to admit an unbound release", packID,
 			)
 		}
 		released = append(released, recipe()...)
 	}
-	return released, nil
+	return released, claims, nil
 }
 
 // releaseKeyRing builds the operator-controlled ed25519 trust anchor from the
