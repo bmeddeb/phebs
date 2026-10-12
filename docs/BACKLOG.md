@@ -18052,8 +18052,14 @@ over the measurement:
 - Caller Map read p95 ≤ 250 ms and p99 ≤ 500 ms;
 - caller content byte-identical across fresh stores.
 
-Still unexercised for T47.4 acceptance: pressure, collection, and the
-ordinary (released) path. The last waits on T47.5's binding.*
+Still unexercised for T47.4 acceptance: memory/disk pressure, and the
+ordinary (released) path. The latter waits on T47.5's binding. Collection was
+observed in the extended run's pre-restore store: after the `grpc-go`
+update, every caller overlay held exactly one complete generation (1
+manifest, 4 leaf artifacts, nothing else), and the resolver catalogs held
+exactly one generation per repository (3 × 3 files). The superseded caller
+and resolver generations were therefore collected inside the observation
+window. A measured collection latency remains for acceptance.*
 
 *Groundwork, permission change (2026-10-12, exploratory):
 `caller_operating.py --permissions` ran on binary `sha256:c7e9d316…`
