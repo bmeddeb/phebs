@@ -1,7 +1,9 @@
 # Protobuf declaration quality protocol — T49.1b machine-oracle round
 
-Status: **unsealed draft**. It becomes the round's protocol only when Ben
-Meddeb seals it through the ceremony in §8. The sealed bytes are the protocol,
+Status: **frozen for sealing** (2026-10-12). Ben set the §1 thresholds and is
+the sole reviewer who labels the oracle sample. On his delegation Claude, as
+lead, performs the §8 ceremony; the draw is fixed by the NIST beacon, not by
+the sealer. The sealed bytes are the protocol,
 and a different byte is a different protocol. It inherits the identity and
 scorable surface frozen by
 [PROTOBUF_DECLARATION_IDENTITY.md](./PROTOBUF_DECLARATION_IDENTITY.md) §5–§6
@@ -105,8 +107,8 @@ retained discipline.
 
 [`seal_round.py`](../spike/t491/README.md) `seal` writes a canonical document
 binding this protocol, the universe, the candidate export digest, every tool
-digest, the thresholds, the sample plan and an activation time. Ben publishes
-it unedited as a single-file gist whose initial revision predates activation.
+digest, the thresholds, the sample plan and an activation time. Claude
+publishes it unedited as a single-file gist whose initial revision predates activation.
 `seed` verifies the gist, fetches the first NIST Beacon 2.0 pulse strictly
 after the activation minute, checks it at its canonical URI, and derives the
 seed. There is no fallback pulse. `draw` and `sheet` produce the sample and

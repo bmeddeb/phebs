@@ -2,7 +2,7 @@
 
 The seal document binds the protocol, the oracle universe and references, the
 private candidate export digest, every tool digest, the approved thresholds,
-the sample plan and an activation time. Ben publishes it as a single-file gist
+the sample plan and an activation time. It is published as a single-file gist
 before activation. The seed then comes from the first NIST pulse after the
 activation minute through T47.2's verified `seal.seed`. The draw samples
 oracle claims for Ben to validate from source (97 per declaration predicate
@@ -63,7 +63,7 @@ def seal_document(repo_root: Path, universe_dir: Path, candidate_export: Path, a
     summary, declarations, references = load_universe(universe_dir)
     protocol = repo_root / 'docs' / 'DECLARATION_QUALITY_PROTOCOL.md'
     return {
-        'schema': SCHEMA, 'sealed_by': 'Ben Meddeb', 'activation_at': activation_at,
+        'schema': SCHEMA, 'sealed_by': 'Claude (lead, delegated by Ben Meddeb, who is the sole reviewer)', 'activation_at': activation_at,
         'protocol': {'path': 'docs/DECLARATION_QUALITY_PROTOCOL.md', 'sha256': seal.sha(protocol.read_bytes())},
         'universe': {'summary_sha256': seal.sha((universe_dir / 'universe.json').read_bytes()),
                      'members_sha256': summary['members_sha256'], 'references_sha256': summary['references_sha256'],

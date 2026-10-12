@@ -43,7 +43,7 @@ into private custody, reading the store twice and requiring equality.
 `oracle_compare.py` implements §5. `seal_round.py` provides the
 `seal`, `seed`, `draw` and `sheet` commands.
 
-The ceremony, which Ben must perform, has three steps:
+The ceremony (performed by Claude on Ben's delegation; Ben labels) has three steps:
 
 1. Seal:
 
