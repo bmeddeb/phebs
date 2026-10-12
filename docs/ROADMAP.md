@@ -252,6 +252,35 @@ reproduced the sealed counts. Ben now labels 1,583 blind, source-only units
 and builds the independent resolution and declaration ledgers. Then come the
 label commitment, unsealing and scoring.
 
+**Production path status (2026-10-12, Claude lead):** this records the
+remaining gates from experimental-dark to production for the first products,
+and who owns each.
+
+- **Caller Map (Epic 47).**
+  - Done: the T47.2 round is sealed and drawn; T47.3 provides ordinary
+    registration; T47.4 exploratory groundwork covers cold start, restarts,
+    hard death, interruption recovery, an incremental update under concurrent
+    paging, backup/restore, collection and member denial on the real binary;
+    T48.3 supplies the drivers.
+  - Remaining, Ben: label the 1,583 blind units and commit the labels; then
+    unseal and score.
+  - Remaining, Ben: freeze the proposed T47.4 operating class.
+  - Remaining, agent: the T47.4 acceptance run (pressure is the remaining
+    exercise) and the T47.5 signed release, which needs Ben's signing key and
+    the validation result.
+- **Atlas declaration discovery (Epic 49).**
+  - Done: T49.3 gives Atlas exact partitioned reads, with denial proven on the
+    real binary; T49.1b has the independent universe, oracle, protocol and
+    tooling.
+  - Remaining, Ben: seal T49.1b (gist) and label the oracle sample; then
+    compare and adjudicate. Release selection (T49.3 remainder) and T49.4
+    follow a passing round.
+- **Compatibility (Epic 53).** T53.2 fixed the Linux sandbox, so Buf now runs
+  on this host. The T53.1 contract and golden changes are next.
+
+Everything human-gated is listed above. Agent work proceeds on ungated
+tickets in the meantime.
+
 **Independent production promotions (2026-10-09, Ben-directed):** Epics 48–58
 give every current experimental evidence pack and composed product surface a
 named production path. Epic 48 implements the currently design-only signed
