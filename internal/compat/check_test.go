@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bmeddeb/phebs/internal/idlpreflight"
 )
@@ -248,8 +249,11 @@ func TestCheckerValidationRejectsUnpinnedBinary(t *testing.T) {
 }
 
 // TestCheckRefusesBeyondTheConcurrencyBound pins the T53.3 operating bound: with
-// every slot held, a check is refused at once as retryable and starts no child.
+// every slot held past slotWait, a check is refused as retryable and starts no child.
 func TestCheckRefusesBeyondTheConcurrencyBound(t *testing.T) {
+	restore := slotWait
+	slotWait = 20 * time.Millisecond
+	t.Cleanup(func() { slotWait = restore })
 	checker := &Checker{bin: "/nonexistent/buf", slots: make(chan struct{}, MaxConcurrentChecks)}
 	for range MaxConcurrentChecks {
 		checker.slots <- struct{}{}
@@ -260,5 +264,11 @@ func TestCheckRefusesBeyondTheConcurrencyBound(t *testing.T) {
 	}
 	if len(checker.slots) != MaxConcurrentChecks {
 		t.Fatal("a refused check must not take or release a slot")
+	}
+	// A slot freed within the wait is taken: the check proceeds past the gate.
+	go func() { time.Sleep(5 * time.Millisecond); <-checker.slots }()
+	if _, err := checker.Check(context.Background(), Request{Lineage: "queued"}); err != nil &&
+		strings.Contains(err.Error(), "already running") {
+		t.Fatalf("a check that could take a freed slot was refused: %v", err)
 	}
 }

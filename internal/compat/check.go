@@ -238,12 +238,16 @@ type Checker struct {
 	tempDir        string
 	// slots bounds concurrent checks: each runs one sandboxed Buf child of up to
 	// 512 MiB data, so the bound caps the host commitment at MaxConcurrentChecks
-	// children. A check beyond it is refused at once as retryable, never queued.
+	// children. A check beyond it waits up to slotWait, then is refused as retryable.
 	slots chan struct{}
 }
 
 // MaxConcurrentChecks is the T53.3 operating bound on simultaneous Buf children.
 const MaxConcurrentChecks = 4
+
+// slotWait bounds how long a check waits for a free slot before it is refused
+// as retryable, so a short burst queues instead of failing (a var for tests).
+var slotWait = 5 * time.Second
 
 // FindBinary locates Buf using the same deployment pattern as the zoekt child:
 // an explicit override, beside phebs, under its bin directory, then PATH.
@@ -330,11 +334,15 @@ func (c *Checker) Check(ctx context.Context, request Request) (*CompatibilityRes
 	if c == nil || c.bin == "" {
 		return nil, fmt.Errorf("%w: no configured checker", ErrUnavailable)
 	}
+	wait := time.NewTimer(slotWait)
+	defer wait.Stop()
 	select {
 	case c.slots <- struct{}{}:
 		defer func() { <-c.slots }()
-	default:
+	case <-wait.C:
 		return nil, fmt.Errorf("%w: %d compatibility checks already running; retry", ErrUnavailable, MaxConcurrentChecks)
+	case <-ctx.Done():
+		return nil, fmt.Errorf("%w: %v", ErrUnavailable, ctx.Err())
 	}
 	ctx, cancel := context.WithTimeout(ctx, checkTimeout)
 	defer cancel()
