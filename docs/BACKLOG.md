@@ -18466,6 +18466,41 @@ T47.2. The round uses the machine-oracle design: the independent enumerator is
 the complete oracle, and Ben validates a seeded oracle sample and adjudicates
 every oracle/candidate disagreement. Thresholds remain open for Ben.*
 
+*Thresholds (Ben, 2026-10-12): declaration agreement ≥ 99.5%, reference-state
+agreement ≥ 99.5%, oracle-sample correctness ≥ 99%, and every disagreement
+adjudicated with none `unsure`.*
+
+*Slice 2 (2026-10-12): protocol and tooling up to the seal.
+[`DECLARATION_QUALITY_PROTOCOL.md`](./DECLARATION_QUALITY_PROTOCOL.md)
+fixes the roles, the frozen tuple, the oracle's explicit resolution rule (its
+own reading of §6), the order of work (oracle-sample labels are published
+before any comparison), the measures and pass rule, a sample of 97 per
+predicate or reference state, the label rows, the gist-plus-NIST ceremony
+and the stop rules.
+
+- The oracle now also resolves 5,197 type references (2,969 intrinsic,
+  1,686 same-file, 542 import-linking-unavailable); the declaration members
+  are byte-identical to slice 1.
+- `export_candidate.py` reads run g's three `proto-contract` partitioned
+  roots twice, requires equality, and writes the private export
+  (`sha256:40c0c26f…`).
+- `oracle_compare.py` compares key by key and scores against the thresholds.
+- `seal_round.py` reuses T47.2's verified gist and NIST seed (`seal.seed`
+  gained a backward-compatible `schema` argument) and the frozen stratified
+  draw.
+
+Disclosure, recorded in the protocol: while exporting, the agent saw the
+three roots' fact totals (522 + 5,444 + 115 = 6,081), which equal the oracle
+total. No per-item comparison was made. The frozen t111 label schema cannot
+express declaration correctness, so oracle labels use a declaration-specific
+row, while Wilson and sampling stay byte-for-byte. That deviation is Ben's to
+accept at the seal.
+
+All 11 T49.1b tests and every T47.2 preparation test pass. Next is Ben's
+seal and gist; the commands are in `spike/t491/README.md`. Steady-state cost:
+none in production. The export makes two bounded store reads per root, and
+the oracle runs over 131 blobs in under a second.*
+
 **T49.2 · Thrift declaration identity and validation contract** — independently
 freeze namespace/include/generator lineage and declarations, ambiguity,
 missing/unsupported input and gap accounting; protobuf results grant no Thrift

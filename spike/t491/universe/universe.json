@@ -26,7 +26,7 @@
   "grpc/grpc-go:test:DECLARES_SERVICE": 2
  },
  "duplicate_object_keys": 0,
- "enumerator_sha256": "sha256:6805acb5fdd927f1dabe1c70afbba886909868f68777b243e422e2af9a42ef2b",
+ "enumerator_sha256": "sha256:c6cbfc780bb289b14f5fce2236a22afe57e46e4fa698d64f38b2b6986f6166dc",
  "failures": [],
  "files": [
   {
@@ -822,6 +822,13 @@
   "extensions": 1,
   "reserved": 4
  },
+ "references_by_state": {
+  "intrinsic": 2969,
+  "same_file": 1686,
+  "unresolved:IMPORT_LINKING_UNAVAILABLE": 542
+ },
+ "references_sha256": "sha256:12313c49dd6d00911454c9913b390a827170e4a781a572946ce4bc53d27826e8",
+ "references_total": 5197,
  "repositories": {
   "containerd/containerd": {
    "commit": "e0f9f8ac24f21a3703f94bb09817b699a1446af0",

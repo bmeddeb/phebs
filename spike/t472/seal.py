@@ -103,9 +103,9 @@ def first_pulse_time(activation_at: str) -> dt.datetime:
 
 
 def seed(document_raw: bytes, gist_api_url: str, gist_fetcher=protocol.github_json_fetcher,
-         nist_fetcher=protocol.nist_beacon_json_fetcher) -> dict:
+         nist_fetcher=protocol.nist_beacon_json_fetcher, schema: str = SEAL_SCHEMA) -> dict:
     document = json.loads(document_raw)
-    require(document_raw == canonical_document(document) and document.get('schema') == SEAL_SCHEMA,
+    require(document_raw == canonical_document(document) and document.get('schema') == schema,
             'seal document is not the canonical t472 seal document')
     receipt = protocol.build_github_initial_gist_receipt(gist_api_url, document_raw, gist_fetcher)
     require(utc(receipt['created_at']) < utc(document['activation_at']),

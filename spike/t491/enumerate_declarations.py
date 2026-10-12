@@ -32,6 +32,8 @@ _TOKEN = re.compile(rb'''
   | (?P<punct>[{}()\[\];=<>,:.\-+/])
 ''', re.S | re.X)
 LABELS = {'optional', 'required', 'repeated'}
+SCALARS = {'double', 'float', 'int32', 'int64', 'uint32', 'uint64', 'sint32', 'sint64', 'fixed32', 'fixed64',
+           'sfixed32', 'sfixed64', 'bool', 'string', 'bytes'}
 
 
 class ProtoError(ValueError):
@@ -68,6 +70,10 @@ class Reader:
         self.package = ''
         self.facts: list[dict] = []
         self.out_of_scope: dict[str, int] = {}
+        self.imports = 0
+        self.extendees: list[str] = []
+        self.types: dict[str, list[str]] = {}  # fully-qualified name -> kinds declared in this file
+        self.references: list[dict] = []
 
     def peek(self, offset: int = 0) -> bytes | None:
         j = self.i + offset
@@ -125,6 +131,7 @@ class Reader:
             word = self.peek()
             start = self.toks[self.i][2]
             if word in (b'syntax', b'edition', b'import', b'option'):
+                self.imports += word == b'import'
                 self.skip_statement()
             elif word == b'package':
                 self.take()
@@ -133,7 +140,7 @@ class Reader:
             elif word == b'message':
                 self.message(self.package, start)
             elif word == b'enum':
-                self.enum()
+                self.enum(self.package)
             elif word == b'service':
                 self.service(start)
             elif word == b'extend':
@@ -143,9 +150,9 @@ class Reader:
             else:
                 raise ProtoError(f'unexpected top-level token {word!r}')
 
-    def enum(self) -> None:
+    def enum(self, scope: str) -> None:
         self.take(b'enum')
-        self.ident()
+        self.types.setdefault(self.scoped(scope, self.ident()), []).append('enum')
         self.out_of_scope['enum'] = self.out_of_scope.get('enum', 0) + 1
         self.skip_balanced(b'{', b'}')
 
@@ -153,6 +160,7 @@ class Reader:
         self.take(b'message')
         name = self.ident()
         fqn = self.scoped(scope, name)
+        self.types.setdefault(fqn, []).append('message')
         self.take(b'{')
         self.body(fqn)
         end = self.take(b'}')[3]
@@ -165,7 +173,7 @@ class Reader:
             if word == b'message':
                 self.message(fqn, start)
             elif word == b'enum':
-                self.enum()
+                self.enum(fqn)
             elif word == b'extend':
                 self.extend(fqn)
             elif word == b'oneof':
@@ -194,9 +202,14 @@ class Reader:
     def field(self, fqn: str, start: int, extension_scope: str | None = None) -> None:
         if self.peek() in {l.encode() for l in LABELS}:
             self.take()
+        refs = []
         if self.peek() == b'map':
             self.take()
-            self.skip_balanced(b'<', b'>')
+            self.take(b'<')
+            refs.append(('map.key', self.ident()))
+            self.take(b',')
+            refs.append(('map.value', self.ident()))
+            self.take(b'>')
             name = self.ident()
         elif self.peek() == b'group':
             self.take()
@@ -208,28 +221,34 @@ class Reader:
             group_fqn = self.scoped(fqn if extension_scope is None else extension_scope, name)
             if extension_scope is not None:
                 raise ProtoError('extension groups need descriptor linking')
-            group_start = self.toks[self.i][2]
+            self.types.setdefault(group_fqn, []).append('message')
             self.take(b'{')
             self.body(group_fqn)
             end = self.take(b'}')[3]
             self.emit('DECLARES_FIELD', f'{fqn}#{tag}', start, end)
             self.emit('DECLARES_MESSAGE', group_fqn, start, end)
-            del group_start
+            self.reference(f'{fqn}#{tag}', 'type', '.' + group_fqn, fqn, message_only=False)
             return
         else:
-            self.ident()  # type
+            refs.append(('type', self.ident()))
             name = self.ident()
         self.take(b'=')
         tag = int(self.take()[1], 0)
         end = self.skip_statement()
         if extension_scope is None:
-            self.emit('DECLARES_FIELD', f'{fqn}#{tag}', start, end)
+            obj = f'{fqn}#{tag}'
+            self.emit('DECLARES_FIELD', obj, start, end)
         else:
-            self.emit('DECLARES_EXTENSION', f'{self.scoped(extension_scope, name)}#{tag}', start, end)
+            obj = f'{self.scoped(extension_scope, name)}#{tag}'
+            self.emit('DECLARES_EXTENSION', obj, start, end)
+            for extendee in self.extendees[-1:]:
+                self.reference(obj, 'extendee', extendee, fqn, message_only=True)
+        for slot, raw in refs:
+            self.reference(obj, slot, raw, fqn, message_only=False)
 
     def extend(self, scope: str) -> None:
         self.take(b'extend')
-        self.ident()  # extendee
+        self.extendees.append(self.ident())
         self.take(b'{')
         while self.peek() != b'}':
             if self.peek() == b';':
@@ -239,6 +258,7 @@ class Reader:
                 raise ProtoError('map fields are invalid in an extension body')
             self.field(scope, self.toks[self.i][2], extension_scope=scope)
         self.take(b'}')
+        self.extendees.pop()
 
     def service(self, start: int) -> None:
         self.take(b'service')
@@ -251,11 +271,12 @@ class Reader:
             if word == b'rpc':
                 self.take()
                 rpc = self.ident()
+                types = []
                 for _ in range(2):
                     self.take(b'(')
                     if self.peek() == b'stream' and self.peek(1) != b')':
                         self.take()
-                    self.ident()
+                    types.append(self.ident())
                     self.take(b')')
                     if self.peek() == b'returns':
                         self.take()
@@ -263,6 +284,8 @@ class Reader:
                 if self.peek() == b';':
                     self.take()
                 self.emit('DECLARES_OPERATION', f'{fqn}/{rpc}', rpc_start, end)
+                for slot, raw in zip(('request', 'response'), types):
+                    self.reference(f'{fqn}/{rpc}', slot, raw, self.package, message_only=True)
             elif word == b'option':
                 self.skip_statement()
             elif word == b';':
@@ -273,10 +296,48 @@ class Reader:
         self.emit('DECLARES_SERVICE', fqn, start, end)
 
 
+    def reference(self, obj: str, slot: str, raw: str, scope: str, message_only: bool) -> None:
+        self.references.append({'object': obj, 'slot': slot, 'raw': raw, 'scope': scope, 'message_only': message_only})
+
+    def resolve(self, ref: dict) -> dict:
+        """Oracle rule: protobuf innermost-scope-outward lookup over this file's own declarations only.
+
+        A leading '.' is fully qualified. Otherwise each enclosing scope is tried from the innermost
+        outward (then the root), and the first scope level with any match decides. One match is
+        same_file; several declarations of that exact name are ambiguous; none falls back to
+        IMPORT_LINKING_UNAVAILABLE when the file imports anything, else DECLARATION_NOT_FOUND. A
+        request, response or extendee that resolves to a non-message is INVALID_DECLARATION_KIND.
+        """
+        raw, out = ref['raw'], {k: ref[k] for k in ('object', 'slot', 'raw')}
+        if raw in SCALARS:
+            return {**out, 'resolution': 'intrinsic', 'reason': ''}
+        if raw.startswith('.'):
+            candidates = [raw[1:]]
+        else:
+            parts = ref['scope'].split('.') if ref['scope'] else []
+            candidates = ['.'.join(parts[:i] + [raw]) for i in range(len(parts), -1, -1)]
+        for name in candidates:
+            kinds = self.types.get(name)
+            if not kinds:
+                continue
+            if len(kinds) > 1:
+                return {**out, 'resolution': 'unresolved', 'reason': 'AMBIGUOUS_SAME_FILE_DECLARATION'}
+            if ref['message_only'] and kinds[0] != 'message':
+                return {**out, 'resolution': 'unresolved', 'reason': 'INVALID_DECLARATION_KIND'}
+            return {**out, 'resolution': 'same_file', 'reason': '', 'target': name}
+        reason = 'IMPORT_LINKING_UNAVAILABLE' if self.imports else 'DECLARATION_NOT_FOUND'
+        return {**out, 'resolution': 'unresolved', 'reason': reason}
+
+
 def enumerate_file(content: bytes) -> tuple[list[dict], dict]:
+    facts, skipped, _ = enumerate_file_with_references(content)
+    return facts, skipped
+
+
+def enumerate_file_with_references(content: bytes) -> tuple[list[dict], dict, list[dict]]:
     reader = Reader(content)
     reader.parse()
-    return reader.facts, reader.out_of_scope
+    return reader.facts, reader.out_of_scope, [reader.resolve(r) for r in reader.references]
 
 
 def git(repo: Path, *args: str) -> bytes:
@@ -286,7 +347,7 @@ def git(repo: Path, *args: str) -> bytes:
 
 def build(corpus: Path, repositories: dict[str, dict]) -> dict:
     """repositories: census name -> {'dir': clone directory name, 'commit': exact commit}."""
-    rows, files, failures, out_of_scope = [], [], [], {}
+    rows, files, failures, out_of_scope, references = [], [], [], {}, []
     for name, spec in sorted(repositories.items()):
         repo = corpus / spec['dir']
         listing = git(repo, 'ls-tree', '-r', '-z', '--full-tree', spec['commit']).split(b'\0')
@@ -304,20 +365,22 @@ def build(corpus: Path, repositories: dict[str, dict]) -> dict:
             content = git(repo, 'cat-file', 'blob', oid.decode())
             digest = 'sha256:' + hashlib.sha256(content).hexdigest()
             try:
-                facts, skipped = enumerate_file(content)
+                facts, skipped, refs = enumerate_file_with_references(content)
             except (ProtoError, ValueError) as error:
                 failures.append({'repository': name, 'path': path, 'reason': str(error), 'blob_sha256': digest})
                 continue
             files.append({'repository': name, 'path': path, 'blob_sha256': digest, 'declarations': len(facts)})
             for kind_name, count in skipped.items():
                 out_of_scope[kind_name] = out_of_scope.get(kind_name, 0) + count
+            references += [{'repository': name, 'commit': spec['commit'], 'path': path, **r} for r in refs]
             for fact in facts:
                 rows.append({'site_id': f"{name}@{spec['commit']}:{path}:{fact['start_byte']}-{fact['end_byte']}",
                              'repository': name, 'commit': spec['commit'], 'path': path, **fact,
                              'stratum': f"{name}:{role(path)}:{fact['predicate']}"})
     rows.sort(key=lambda r: (r['repository'], r['path'], r['start_byte'], r['predicate'], r['object']))
     keys = [(r['repository'], r['path'], r['predicate'], r['object']) for r in rows]
-    return {'rows': rows, 'files': files, 'failures': failures, 'out_of_scope': out_of_scope,
+    references.sort(key=lambda r: (r['repository'], r['path'], r['object'], r['slot']))
+    return {'rows': rows, 'references': references, 'files': files, 'failures': failures, 'out_of_scope': out_of_scope,
             'duplicate_object_keys': len(keys) - len(set(keys))}
 
 
@@ -338,6 +401,12 @@ def main() -> None:
     args.out_dir.mkdir(parents=True, exist_ok=True)
     body = b''.join(json.dumps(r, sort_keys=True, separators=(',', ':')).encode() + b'\n' for r in universe['rows'])
     (args.out_dir / 'declarations.jsonl.gz').write_bytes(gzip.compress(body, mtime=0))
+    ref_body = b''.join(json.dumps(r, sort_keys=True, separators=(',', ':')).encode() + b'\n' for r in universe['references'])
+    (args.out_dir / 'references.jsonl.gz').write_bytes(gzip.compress(ref_body, mtime=0))
+    states: dict[str, int] = {}
+    for ref in universe['references']:
+        key = ref['resolution'] + (':' + ref['reason'] if ref['reason'] else '')
+        states[key] = states.get(key, 0) + 1
     counts: dict[str, int] = {}
     for row in universe['rows']:
         counts[row['stratum']] = counts.get(row['stratum'], 0) + 1
@@ -346,6 +415,8 @@ def main() -> None:
                'duplicate_object_keys': universe['duplicate_object_keys'], 'total': len(universe['rows']),
                'by_stratum': dict(sorted(counts.items())),
                'members_sha256': 'sha256:' + hashlib.sha256((args.out_dir / 'declarations.jsonl.gz').read_bytes()).hexdigest(),
+               'references_total': len(universe['references']), 'references_by_state': dict(sorted(states.items())),
+               'references_sha256': 'sha256:' + hashlib.sha256((args.out_dir / 'references.jsonl.gz').read_bytes()).hexdigest(),
                'enumerator_sha256': 'sha256:' + hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
     (args.out_dir / 'universe.json').write_text(json.dumps(summary, indent=1, sort_keys=True) + '\n')
     print(json.dumps({k: summary[k] for k in ('total', 'failures', 'out_of_scope', 'duplicate_object_keys')}, indent=1))

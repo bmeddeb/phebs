@@ -449,6 +449,10 @@ round. Blind labeling, custody, commitment, and external receipting happen
 [PILOT_PREREQS.md](./PILOT_PREREQS.md). Results would bind into
 [DECISION_RECORDS.md](./DECISION_RECORDS.md).
 
+The concrete T49.1b round now lives in
+[DECLARATION_QUALITY_PROTOCOL.md](./DECLARATION_QUALITY_PROTOCOL.md). Ben chose the
+machine-oracle design and the sole-reviewer roles on 2026-10-12.
+
 ## 9. Sealing blockers (non-fabricable)
 
 A round under §8 becomes real only when every `<Gate 0>` placeholder is filled and

@@ -81,6 +81,8 @@ replace the user manual.
   pack cards.
 - [CALLER_QUALITY_PROTOCOL.md](./CALLER_QUALITY_PROTOCOL.md) — prospective
   caller-quality preregistration draft for the Epic 47 Caller Map recipe.
+- [DECLARATION_QUALITY_PROTOCOL.md](./DECLARATION_QUALITY_PROTOCOL.md) — T49.1b
+  machine-oracle protobuf declaration round (unsealed draft until Ben seals it).
 
 These packs remain experimental-dark unless the manual and capability response
 explicitly say otherwise. Their retained validation result is not an accuracy

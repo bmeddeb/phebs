@@ -59,6 +59,26 @@ class ReaderTests(unittest.TestCase):
             with self.subTest(bad=bad), self.assertRaises(ValueError):
                 e.enumerate_file(bad)
 
+    def test_type_references_follow_the_oracle_resolution_rule(self):
+        _, _, refs = e.enumerate_file_with_references(PROTO)
+        got = {(r['object'], r['slot']): (r['resolution'], r['reason']) for r in refs}
+        self.assertEqual(got[('acme.v1.Outer#1', 'type')], ('intrinsic', ''))
+        self.assertEqual(got[('acme.v1.Outer#2', 'map.value')], ('same_file', ''))   # Inner, nested in Outer
+        self.assertEqual(got[('acme.v1.Outer#4', 'type')], ('same_file', ''))
+        self.assertEqual(got[('acme.v1.Outer#5', 'type')], ('same_file', ''))         # group message
+        self.assertEqual(got[('acme.v1.Outer.nested_ext#120', 'extendee')], ('unresolved', 'IMPORT_LINKING_UNAVAILABLE'))
+        self.assertEqual(got[('acme.v1.top_ext#150', 'extendee')], ('same_file', ''))
+        self.assertEqual(got[('acme.v1.Store/Get', 'request')], ('same_file', ''))
+        no_import = b'package p; enum E { A = 0; } message M { E e = 1; Missing m = 2; } service S { rpc R (E) returns (M); }'
+        _, _, refs = e.enumerate_file_with_references(no_import)
+        got = {(r['object'], r['slot']): (r['resolution'], r['reason']) for r in refs}
+        self.assertEqual(got[('p.M#1', 'type')], ('same_file', ''))                    # a field may name an enum
+        self.assertEqual(got[('p.M#2', 'type')], ('unresolved', 'DECLARATION_NOT_FOUND'))
+        self.assertEqual(got[('p.S/R', 'request')], ('unresolved', 'INVALID_DECLARATION_KIND'))
+        twice = b'package p; message A {} message B { A a = 1; } message A {}'
+        _, _, refs = e.enumerate_file_with_references(twice)
+        self.assertEqual((refs[0]['resolution'], refs[0]['reason']), ('unresolved', 'AMBIGUOUS_SAME_FILE_DECLARATION'))
+
     def test_role_strata_follow_the_declared_precedence(self):
         self.assertEqual(e.role('vendor/x/tests/a.proto'), 'vendor')
         self.assertEqual(e.role('a/testdata/b.proto'), 'test')
