@@ -1,7 +1,8 @@
 # T47.2b run-g sealing packet
 
 Prepared by T47.2q on 2026-10-11 for Ben Meddeb, the sole owner, reviewer and
-sealer. It covers what the seal binds, the protocol §10 checklist status, and
+sealer. **Executed 2026-10-12 (T47.2r/T47.2s):** sealed, seeded from NIST pulse
+1979674, drawn, and blind sheets built; see the backlog. It covers what the seal binds, the protocol §10 checklist status, and
 the exact ceremony. Nothing here is sealed, drawn, labeled, published or
 scored yet. Any refusal stops the round. A stopped round never re-rolls: no
 other pulse is chosen and no sample is redrawn.

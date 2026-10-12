@@ -1,0 +1,17 @@
+{
+ "derivation": "t472-caller-quality-seed-v1",
+ "gist_receipt": {
+  "api_url": "https://api.github.com/gists/c4d1eb6cf62bbc853bce31a5ee91905a",
+  "created_at": "2026-10-12T02:50:39Z",
+  "document_sha256": "sha256:46fac5515190ccaa43b23d3f9b49cc2290569911f31ea58dbfa427ef483d9237",
+  "revision": "26c9eaefa7f65e14e8ff17edd78b72243a0308a7",
+  "schema": "t111-github-initial-gist-receipt-v1"
+ },
+ "output_value": "0a250457f308c1baafaf520fcf3f5c7d8c1fbbaf6ee8ee5dcede95fd7d3f71306a96d4608756e035592cd42cdd1d8fc87f4aa2d270c89694c76a74c23cb6c43a",
+ "pulse_payload_sha256": "sha256:6a94a5a4fc4a22667599a2e86aa26c9d5dbb8e75e3ca3e212568744ca9f24d9f",
+ "pulse_timestamp": "2026-10-12T03:11:00.000Z",
+ "pulse_uri": "https://beacon.nist.gov/beacon/2.0/chain/2/pulse/1979674",
+ "schema": "t472-seed-record-v1",
+ "seal_document_sha256": "sha256:46fac5515190ccaa43b23d3f9b49cc2290569911f31ea58dbfa427ef483d9237",
+ "seed_hex": "4b220e87ff5e1218f8bdb997246244e791c3b3689b2583d2b41e88c3616110c9"
+}
