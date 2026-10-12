@@ -351,8 +351,10 @@ apply to this stateless surface:
 - ordinary startup admission by a signed release record, which binds the
   claim, with Ben's key;
 - authorization on the real binary;
-- an operating envelope: one sandboxed Buf child per request, at 2.0 to 4.6
-  units per second in this run and 124 MiB peak RSS;
+- an operating envelope: one sandboxed Buf child per request. Measured so
+  far: about 3.4 units per second here (1,525 in 451 s) and 4.7 in round 1
+  (571 in 121 s), each unit being one HTTP plus one MCP check, at 121 MiB
+  peak RSS;
 - owner, reviewer, expiry and suspension.
 
 Backup/restore and generation gates do not apply, because the surface stores
