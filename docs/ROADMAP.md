@@ -265,9 +265,11 @@ and who owns each.
   - Remaining, Ben: label the 1,583 blind units and commit the labels; then
     unseal and score.
   - Remaining, Ben: freeze the proposed T47.4 operating class.
-  - Remaining, agent: the T47.4 acceptance run (pressure is the remaining
-    exercise) and the T47.5 signed release, which needs Ben's signing key and
-    the validation result.
+  - Remaining, agent: the T47.4 acceptance run and the T47.5 signed release,
+    which needs Ben's signing key and the validation result. The groundwork
+    now also covers memory pressure (a 400 MB cgroup) and a parent-only hard
+    death. The latter exposed a stranded-store release blocker, fixed on
+    2026-10-12 by binding the store child to phebs on Linux.
 - **Atlas declaration discovery (Epic 49).**
   - Done: T49.3 gives Atlas exact partitioned reads, with denial proven on the
     real binary; T49.1b has the independent universe, oracle, protocol and
