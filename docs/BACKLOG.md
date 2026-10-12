@@ -18052,10 +18052,34 @@ over the measurement:
 - Caller Map read p95 ≤ 250 ms and p99 ≤ 500 ms;
 - caller content byte-identical across fresh stores.
 
-Still unexercised for T47.4 acceptance: incremental source updates,
-concurrent publication with paging, permission changes, backup/restore,
-pressure, collection, and the ordinary (released) path. The last waits on
+Still unexercised for T47.4 acceptance: pressure, collection, a Caller
+Map-specific permission change (denial is proven generically by T48.3 and
+for Atlas by T49.3), and the ordinary (released) path. The last waits on
 T47.5's binding.*
+
+*Groundwork, extended (2026-10-12, exploratory):
+`caller_operating.py --extended` ran on fresh clones of the frozen corpus,
+with local connections set to `watch: true`. Local repositories re-sync only
+on watched HEAD moves or restart; the cadence covers remote connections. The
+first attempt omitted `watch` and timed out waiting for the update, which is
+documented behavior and not a defect. The receipt is
+[`operating_lifecycle_20261012.json`](../spike/t474/operating_lifecycle_20261012.json).
+
+| Exercise | Result |
+|---|---|
+| Cold start | current after 145 s |
+| Non-source commit to `grpc-go` | converged in 62 s with identical caller counts |
+| Other repositories during that update | not republished |
+| Concurrent paging (page size 5, every endpoint) | 1,229 complete traversals, zero mixed generations, zero errors |
+| Online `phebs backup` | 422 MB |
+| Restore into the same configured data path | 51 s |
+| Restart after restore | ready in 1.5 s; Caller Map current after 102 s |
+
+After restore, startup re-fences the derived caller publications and rebuilds
+them (new upstream run ids). The rebuilt caller content is byte-identical,
+but Caller Map is unavailable for about 100 s after a restore. Operators
+should expect that, and the proposed class adds restore-to-current
+≤ 300 s.*
 
 **T47.5 · Exact Caller Map promotion and supported product closure** *(needs
 T47.2–T47.4; presentation-track handoff for any UI change)* — release only

@@ -1,0 +1,38 @@
+{
+ "binary_sha256": "sha256:551053e638d26d81707db7c3ba92fe12a1b7c5ba838f1d77b6db630426913b53",
+ "exploratory": true,
+ "phases": {
+  "backup-restore": {
+   "backup_bytes": 421584906,
+   "derived_rebuilt_after_restore": true,
+   "identical_caller_content": true,
+   "ready_seconds": 1.506,
+   "receipt": {
+    "outcome": "success",
+    "teardown": "clean",
+    "wall_seconds": 103.474
+   },
+   "restore_seconds": 51.136,
+   "seconds_to_current": 101.514
+  },
+  "update-under-paging": {
+   "cold_seconds_to_current": 145.329,
+   "other_repositories_unchanged": true,
+   "paging": {
+    "complete_traversals": 1229,
+    "conflicts_409": 0,
+    "errors": 0
+   },
+   "receipt": {
+    "outcome": "success",
+    "teardown": "clean",
+    "wall_seconds": 247.017
+   },
+   "update_seconds_to_current": 62.078,
+   "updated_repository_counts_unchanged": true
+  }
+ },
+ "run_root": "/home/ben/phebs-rehearsals/t474b-lifecycle-20261012T075204Z",
+ "schema": "t47.4-operating-lifecycle-v1",
+ "source_commit": "f00d34fea715d3ff6ffc96cd000412b01eefd16e"
+}

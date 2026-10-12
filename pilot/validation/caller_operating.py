@@ -96,9 +96,12 @@ def percentiles(values: list[float]) -> dict:
             'p99_ms': round(pick(0.99) * 1000, 2), 'max_ms': round(ordered[-1] * 1000, 2)}
 
 
-def write_config(run_root: Path, data: Path, corpus: Path, port: int, key: str, repositories: list[str]) -> Path:
+def write_config(run_root: Path, data: Path, corpus: Path, port: int, key: str, repositories: list[str],
+                 watch: bool = False) -> Path:
     config = run_root / f'phebs-{data.name}.yaml'
-    connections = ''.join(f'  - name: {name}\n    type: git\n    url: "{corpus / name}"\n' for name in repositories)
+    # Local connections only re-sync on HEAD moves when watched (the cadence covers remotes).
+    connections = ''.join(f'  - name: {name}\n    type: git\n    url: "{corpus / name}"\n'
+                          + ('    watch: true\n' if watch else '') for name in repositories)
     config.write_text(f'server:\n  addr: "127.0.0.1:{port}"\n  data_dir: "{data}"\n'
                       f'auth:\n  api_key: "{key}"\n  cookie_secure: false\n  session_lifetime: 12h\n'
                       f'sync:\n  cleanup_orphans: false\n  poll_interval: 15s\n  resync_interval: 1h\n'
@@ -214,6 +217,172 @@ def rehearse(binary: Path, helpers: Path, corpus: Path, run_root: Path, reposito
     return result
 
 
+class PagingReader:
+    """Continuously pages every endpoint with small pages; counts complete, conflicted and broken traversals."""
+
+    def __init__(self, base: str, key: str, endpoints: list[tuple[str, str, str]], page_size: int = 5):
+        self.base, self.key, self.endpoints, self.page_size = base, key, endpoints, page_size
+        self.complete = self.conflicts = 0
+        self.errors: list[str] = []
+        self._stop = threading.Event()
+        self._thread = threading.Thread(target=self._run, daemon=True)
+
+    def traverse(self, repository: str, lineage: str, operation: str) -> str:
+        params = {'protocol': 'protobuf', 'repository': repository, 'lineage': lineage, 'operation': operation,
+                  'resolution': 'any', 'page_size': self.page_size}
+        generation = None
+        while True:
+            status, body = serve.http_get(self.base, '/api/contract_callers', params, token=self.key)
+            if status == 409:
+                return 'conflict'
+            if status != 200:
+                return f'status {status}'
+            page = json.loads(body)
+            digest = (page.get('generation') or {}).get('generation_digest')
+            if generation is None:
+                generation = digest
+            elif digest != generation:
+                return 'mixed generations within one traversal'
+            if page['pagination']['complete']:
+                return 'complete'
+            params['cursor'] = page['pagination']['next_cursor']
+
+    def _run(self):
+        while not self._stop.is_set():
+            for repository, lineage, operation in self.endpoints:
+                if self._stop.is_set():
+                    return
+                try:
+                    outcome = self.traverse(repository, lineage, operation)
+                except (OSError, ValueError) as error:
+                    outcome = f'exception {type(error).__name__}'
+                if outcome == 'complete':
+                    self.complete += 1
+                elif outcome == 'conflict':
+                    self.conflicts += 1
+                elif outcome != 'status 404':  # an endpoint absent from a moved generation is honest
+                    self.errors.append(outcome)
+
+    def __enter__(self):
+        self._thread.start()
+        return self
+
+    def __exit__(self, *exc):
+        self._stop.set()
+        self._thread.join()
+
+
+def clone_corpus(source: Path, target: Path, repositories: list[str]) -> None:
+    target.mkdir(parents=True)
+    for name in repositories:
+        subprocess.run(['git', 'clone', '-q', '--no-hardlinks', '-b', 'derived', str(source / name), str(target / name)],
+                       check=True, env={**os.environ, 'GIT_OPTIONAL_LOCKS': '0'})
+
+
+def commit_update(repo: Path) -> str:
+    env = {**os.environ, 'GIT_AUTHOR_NAME': 't47.4', 'GIT_AUTHOR_EMAIL': 't47.4@localhost',
+           'GIT_COMMITTER_NAME': 't47.4', 'GIT_COMMITTER_EMAIL': 't47.4@localhost'}
+    (repo / 'T47_4_UPDATE.md').write_text('incremental source update (no Go or .proto change)\n')
+    subprocess.run(['git', 'add', 'T47_4_UPDATE.md'], cwd=repo, check=True, env=env)
+    subprocess.run(['git', 'commit', '-q', '-m', 't47.4 incremental update'], cwd=repo, check=True, env=env)
+    return subprocess.run(['git', 'rev-parse', 'HEAD'], cwd=repo, check=True, capture_output=True, text=True).stdout.strip()
+
+
+def lifecycle_extended(binary: Path, helpers: Path, source_corpus: Path, run_root: Path, repositories: list[str],
+                       updated: str = 'grpc-go', deadline_s: float = 900) -> dict:
+    """Incremental update under concurrent paging, then online backup and restore."""
+    run_root.mkdir(parents=True)
+    corpus = run_root / 'corpus'
+    clone_corpus(source_corpus, corpus, repositories)
+    env = {**os.environ, 'PHEBS_ZOEKT_GIT_INDEX': str(helpers / 'zoekt-git-index'),
+           'PHEBS_FOCUSED_INDEX': str(helpers / 'phebs-focused-index'), 'PHEBS_BUF': str(helpers / 'buf')}
+    names = ['local' + str(corpus / name) for name in repositories]
+    key, harness, data = secrets.token_hex(24), run_root / 'harness', run_root / 'data'
+    port = serve_rehearsal.free_port()
+    config = write_config(run_root, data, corpus, port, key, repositories, watch=True)
+    base = f'http://127.0.0.1:{port}'
+    api = caller_map_export.Api(base, key)
+    result: dict = {'schema': 't47.4-operating-lifecycle-v1', 'exploratory': True,
+                    'binary_sha256': serve.receipts.sha256_file(binary), 'phases': {}}
+    session = serve.ServeSession(harness, 'update-under-paging', [str(binary), 'serve', '-config', str(config)], base,
+                                 env=env, ready_timeout_s=300, stop_timeout_s=60)
+    session.start()
+    try:
+        cold_seconds, before = wait_current(api, names, deadline_s)
+        endpoints = []
+        for control in before:
+            manifest, _ = caller_map_export.publication_facts(data, control)
+            endpoints += [(control['repository'], lineage, op) for lineage, op in caller_map_export.declared_endpoints(
+                data, control, manifest['generation']['resolver_generation_digest'])]
+        by_repo = {c['repository']: c for c in before}
+        target = 'local' + str(corpus / updated)
+        with PagingReader(base, key, endpoints) as reader:
+            time.sleep(10)
+            new_head = commit_update(corpus / updated)
+            started = time.monotonic()
+            while True:
+                try:
+                    after = caller_map_export.generation_controls(api, names)
+                    moved = {c['repository']: c for c in after}
+                    if moved[target]['commit'] == new_head:
+                        break
+                except (ValueError, OSError, KeyError):
+                    pass
+                if time.monotonic() - started > deadline_s:
+                    raise serve.ServeError('the incremental update did not converge before the deadline')
+                time.sleep(2)
+            update_seconds = time.monotonic() - started
+            time.sleep(10)
+        if reader.errors or reader.complete == 0:
+            raise serve.ServeError(f'paging during publication broke: {reader.errors[:5]} complete={reader.complete}')
+        for repository, control in by_repo.items():
+            now = moved[repository]
+            if repository == target:
+                if (now['result_count'], now['abstention_count']) != (control['result_count'], control['abstention_count']):
+                    raise serve.ServeError('a non-source update changed caller counts')
+            elif now['generation_digest'] != control['generation_digest']:
+                raise serve.ServeError('an update to one repository republished another')
+        result['phases']['update-under-paging'] = {
+            'cold_seconds_to_current': round(cold_seconds, 3), 'update_seconds_to_current': round(update_seconds, 3),
+            'paging': {'complete_traversals': reader.complete, 'conflicts_409': reader.conflicts, 'errors': 0},
+            'updated_repository_counts_unchanged': True, 'other_repositories_unchanged': True}
+        backup = run_root / 'backup'
+        completed = subprocess.run([str(binary), 'backup', '-config', str(config), '-output', str(backup)],
+                                   env=env, capture_output=True, text=True, timeout=1800)
+        if completed.returncode != 0:
+            raise serve.ServeError(f'online backup failed: {completed.stderr[-400:]}')
+    except BaseException:
+        session.stop('hard_kill', reason='update or backup probe failed')
+        raise
+    receipt = session.stop('graceful')
+    result['phases']['update-under-paging']['receipt'] = {k: receipt[k] for k in ('outcome', 'teardown', 'wall_seconds')}
+    os.rename(data, run_root / 'data-before-restore')
+    started = time.monotonic()
+    completed = subprocess.run([str(binary), 'restore', '-config', str(config), '-backup', str(backup)],
+                               env=env, capture_output=True, text=True, timeout=1800)
+    if completed.returncode != 0:
+        raise serve.ServeError(f'restore failed: {completed.stderr[-400:]}')
+    restore_seconds = time.monotonic() - started
+    restored = serve.ServeSession(harness, 'after-restore', [str(binary), 'serve', '-config', str(config)], base,
+                                  env=env, ready_timeout_s=300, stop_timeout_s=60)
+    ready = restored.start()
+    try:
+        current_seconds, after_restore = wait_current(api, names, deadline_s)
+        # Restore re-fences derived publications and rebuilds them (new upstream run ids); content must match.
+        if content_identity(data, after_restore) != content_identity(run_root / 'data-before-restore', after):
+            raise serve.ServeError('restore did not reproduce the exact caller content')
+    except BaseException:
+        restored.stop('hard_kill', reason='restore probe failed')
+        raise
+    receipt = restored.stop('graceful')
+    result['phases']['backup-restore'] = {
+        'backup_bytes': directory_bytes(backup), 'restore_seconds': round(restore_seconds, 3),
+        'ready_seconds': ready, 'seconds_to_current': round(current_seconds, 3), 'identical_caller_content': True,
+        'derived_rebuilt_after_restore': identities(after_restore) != identities(after),
+        'receipt': {k: receipt[k] for k in ('outcome', 'teardown', 'wall_seconds')}}
+    return result
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('--binary', type=Path, required=True)
@@ -221,7 +390,14 @@ def main() -> None:
     parser.add_argument('--corpus', type=Path, required=True)
     parser.add_argument('--run-root', type=Path, required=True)
     parser.add_argument('--repositories', nargs='+', default=['etcd', 'grpc-go', 'containerd'])
+    parser.add_argument('--extended', action='store_true', help='incremental update, paging, backup/restore')
     args = parser.parse_args()
+    if args.extended:
+        result = lifecycle_extended(args.binary.resolve(), args.helpers.resolve(), args.corpus.resolve(),
+                                    args.run_root.resolve(), args.repositories)
+        (args.run_root / 'operating-lifecycle.json').write_text(json.dumps(result, indent=1, sort_keys=True) + '\n')
+        print(json.dumps(result, indent=1, sort_keys=True))
+        return
     result = rehearse(args.binary.resolve(), args.helpers.resolve(), args.corpus.resolve(), args.run_root.resolve(),
                       args.repositories)
     (args.run_root / 'operating-groundwork.json').write_text(json.dumps(result, indent=1, sort_keys=True) + '\n')
