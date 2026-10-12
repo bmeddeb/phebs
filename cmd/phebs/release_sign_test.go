@@ -83,6 +83,18 @@ func TestSignReleaseDerivesBindingsAndSelfVerifies(t *testing.T) {
 	if _, err := signRelease(t.Context(), facts, write(template), keyPath, "key-test", artifacts, out); err == nil {
 		t.Fatal("an existing record was overwritten")
 	}
+	future := template
+	future.ReleaseID, future.ApprovedAt = "rel-wire-3", "2999-01-01T00:00:00Z"
+	futureOut := filepath.Join(tmp, "future", "release.json")
+	if err := os.MkdirAll(filepath.Dir(futureOut), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := signRelease(t.Context(), facts, write(future), keyPath, "key-test", artifacts, futureOut); err == nil {
+		t.Fatal("a record the loader withdraws was reported as signed")
+	}
+	if _, err := os.Stat(futureOut); !os.IsNotExist(err) {
+		t.Fatal("an unadmitted record was left in the selection directory")
+	}
 	missing := template
 	missing.ReleaseID, missing.Manifest.ArtifactID = "rel-wire-2", "absent.json"
 	if _, err := signRelease(t.Context(), facts, write(missing), keyPath, "key-test", artifacts, filepath.Join(tmp, "other.json")); err == nil {

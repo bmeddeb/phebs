@@ -118,9 +118,11 @@ func signRelease(ctx context.Context, facts releaseFacts, templatePath, keyPath,
 		packrelease.Options{Keys: packrelease.KeyRing{keyID: public}},
 		func(context.Context) (packrelease.Options, error) { return bindings, nil })
 	if err != nil {
+		_ = os.Remove(out) // never leave an unadmitted record in a selection directory
 		return nil, fmt.Errorf("signed record does not load: %w", err)
 	}
 	if !slices.Contains(selection.PackIDs(), release.PackID) {
+		_ = os.Remove(out)
 		return nil, fmt.Errorf("signed record for %s is not admitted (withdrawn: %v)", release.PackID, selection.Withdrawn())
 	}
 	return public, nil
