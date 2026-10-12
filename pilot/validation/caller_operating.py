@@ -383,6 +383,99 @@ def lifecycle_extended(binary: Path, helpers: Path, source_corpus: Path, run_roo
     return result
 
 
+def permission_change(binary: Path, helpers: Path, source_corpus: Path, run_root: Path, repository: str = 'grpc-go',
+                      deadline_s: float = 900) -> dict:
+    """Caller Map denial for an ordinary member, then a permission grant through config and restart."""
+    run_root.mkdir(parents=True)
+    corpus = run_root / 'corpus'
+    clone_corpus(source_corpus, corpus, [repository])
+    name, absent = 'local' + str(corpus / repository), 'local' + str(corpus / 'no-such-repository')
+    env = {**os.environ, 'PHEBS_ZOEKT_GIT_INDEX': str(helpers / 'zoekt-git-index'),
+           'PHEBS_FOCUSED_INDEX': str(helpers / 'phebs-focused-index'), 'PHEBS_BUF': str(helpers / 'buf')}
+    key, harness, data = secrets.token_hex(24), run_root / 'harness', run_root / 'data'
+    port, issuer_port = serve_rehearsal.free_port(), serve_rehearsal.free_port()
+    secret_file = run_root / 'oidc-client-secret'
+    secret_file.write_text(secrets.token_hex(24))
+    os.chmod(secret_file, 0o600)
+    member = 'member@t47.test'
+    base = f'http://127.0.0.1:{port}'
+
+    def config(visible: list[str]) -> Path:
+        path = write_config(run_root, data, corpus, port, key, [repository])
+        text = path.read_text().replace('  session_lifetime: 12h\n', '  session_lifetime: 12h\n  oidc:\n'
+            f'    issuer_url: "http://127.0.0.1:{issuer_port}"\n    client_id: "phebs-t47"\n'
+            f'    client_secret: "{secret_file.read_text()}"\n'
+            f'    redirect_url: "http://127.0.0.1:{port}/api/auth/oidc/callback"\n')
+        text += f'permissions:\n  users:\n    {member}: []\n  always_visible: {json.dumps(visible)}\n'
+        path.write_text(text)
+        return path
+
+    identities_json = json.dumps([{'sub': 'owner', 'email': 'owner@t47.test', 'name': 'Owner'},
+                                  {'sub': 'member', 'email': member, 'name': 'Member'}])
+    issuer = serve.ServeSession(harness, 'oidc-issuer', [sys.executable, str(Path(__file__).with_name('oidc_issuer.py')),
+                                '--port', str(issuer_port), '--client-id', 'phebs-t47', '--client-secret-file',
+                                str(secret_file), '--identities', identities_json],
+                                f'http://127.0.0.1:{issuer_port}', ready_timeout_s=30)
+    issuer.start()
+    result: dict = {'schema': 't47.4-permission-change-v1', 'exploratory': True,
+                    'binary_sha256': serve.receipts.sha256_file(binary)}
+    try:
+        denied = serve.ServeSession(harness, 'member-denied', [str(binary), 'serve', '-config', str(config([]))], base,
+                                    env=env, ready_timeout_s=300, stop_timeout_s=60)
+        denied.start()
+        try:
+            api = caller_map_export.Api(base, key)
+            _, controls = wait_current(api, [name], deadline_s)
+            manifest, _ = caller_map_export.publication_facts(data, controls[0])
+            endpoints = caller_map_export.declared_endpoints(data, controls[0], manifest['generation']['resolver_generation_digest'])
+            _, token = serve.oidc_login(base, 'owner')
+            user, token = serve.oidc_login(base, 'member')
+            if user.get('is_admin'):
+                raise serve.ServeError('member principal is an administrator')
+            checked = 0
+            for lineage, operation in endpoints:
+                params = {'protocol': 'protobuf', 'lineage': lineage, 'operation': operation, 'resolution': 'any'}
+                serve.undisclosed(serve.http_get(base, '/api/contract_callers', {'repository': name, **params}, token=token),
+                                  serve.http_get(base, '/api/contract_callers', {'repository': absent, **params}, token=token),
+                                  name, absent)
+                checked += 1
+            serve.undisclosed(serve.http_get(base, '/api/caller-generation-progress', {'repository': name}, token=token),
+                              serve.http_get(base, '/api/caller-generation-progress', {'repository': absent}, token=token),
+                              name, absent)
+        except BaseException:
+            denied.stop('hard_kill', reason='denied probe failed')
+            raise
+        result['denied'] = {'endpoints_undisclosed': checked, 'progress_undisclosed': True,
+                            'receipt': denied.stop('graceful')['outcome']}
+        granted = serve.ServeSession(harness, 'member-granted', [str(binary), 'serve', '-config', str(config([name]))],
+                                     base, env=env, ready_timeout_s=300, stop_timeout_s=60)
+        granted.start()
+        try:
+            _, after = wait_current(api, [name], deadline_s)
+            if identities(after) != identities(controls):
+                raise serve.ServeError('a permission change republished the caller generation')
+            same = 0
+            for lineage, operation in endpoints:
+                params = {'protocol': 'protobuf', 'repository': name, 'lineage': lineage, 'operation': operation,
+                          'resolution': 'any', 'page_size': 100}
+                admin_rows = serve.strip_volatile(json.loads(serve.http_get(base, '/api/contract_callers', params, token=key)[1]),
+                                                  serve_rehearsal.VOLATILE)
+                status, body = serve.http_get(base, '/api/contract_callers', params, token=token)
+                member_rows = serve.strip_volatile(json.loads(body), serve_rehearsal.VOLATILE) if status == 200 else None
+                if status != 200 or member_rows.get('rows') != admin_rows.get('rows'):
+                    raise serve.ServeError(f'granted member does not see the administrator rows (status {status})')
+                same += 1
+        except BaseException:
+            granted.stop('hard_kill', reason='granted probe failed')
+            raise
+        result['granted'] = {'endpoints_equal_to_admin': same, 'generation_unchanged': True,
+                             'receipt': granted.stop('graceful')['outcome']}
+    finally:
+        if issuer.pid:
+            issuer.stop('graceful')
+    return result
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('--binary', type=Path, required=True)
@@ -391,7 +484,13 @@ def main() -> None:
     parser.add_argument('--run-root', type=Path, required=True)
     parser.add_argument('--repositories', nargs='+', default=['etcd', 'grpc-go', 'containerd'])
     parser.add_argument('--extended', action='store_true', help='incremental update, paging, backup/restore')
+    parser.add_argument('--permissions', action='store_true', help='Caller Map member denial then grant')
     args = parser.parse_args()
+    if args.permissions:
+        result = permission_change(args.binary.resolve(), args.helpers.resolve(), args.corpus.resolve(), args.run_root.resolve())
+        (args.run_root / 'permission-change.json').write_text(json.dumps(result, indent=1, sort_keys=True) + '\n')
+        print(json.dumps(result, indent=1, sort_keys=True))
+        return
     if args.extended:
         result = lifecycle_extended(args.binary.resolve(), args.helpers.resolve(), args.corpus.resolve(),
                                     args.run_root.resolve(), args.repositories)

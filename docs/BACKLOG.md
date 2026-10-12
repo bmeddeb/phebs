@@ -18052,10 +18052,24 @@ over the measurement:
 - Caller Map read p95 ≤ 250 ms and p99 ≤ 500 ms;
 - caller content byte-identical across fresh stores.
 
-Still unexercised for T47.4 acceptance: pressure, collection, a Caller
-Map-specific permission change (denial is proven generically by T48.3 and
-for Atlas by T49.3), and the ordinary (released) path. The last waits on
-T47.5's binding.*
+Still unexercised for T47.4 acceptance: pressure, collection, and the
+ordinary (released) path. The last waits on T47.5's binding.*
+
+*Groundwork, permission change (2026-10-12, exploratory):
+`caller_operating.py --permissions` ran on binary `sha256:c7e9d316…`
+(`main` with the T53.2 fix) against a fresh one-repository `grpc-go`
+instance, using the test OIDC issuer.
+
+- While `always_visible` was empty, the ordinary member's
+  `/api/contract_callers` for all 18 declared endpoints, and its
+  `/api/caller-generation-progress`, were byte-identical to an absent
+  repository's, apart from the name.
+- After a configuration grant and a restart, the caller generation was
+  unchanged, and the member saw exactly the administrator's rows on all 18
+  endpoints.
+
+The receipt is
+[`permission_change_20261012.json`](../spike/t474/permission_change_20261012.json).*
 
 *Groundwork, extended (2026-10-12, exploratory):
 `caller_operating.py --extended` ran on fresh clones of the frozen corpus,

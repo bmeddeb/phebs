@@ -1,0 +1,17 @@
+{
+ "binary_sha256": "sha256:c7e9d316502dd578eab4425b5fd708bbf66fc11feb1ff790deccc05b6bf10872",
+ "denied": {
+  "endpoints_undisclosed": 18,
+  "progress_undisclosed": true,
+  "receipt": "success"
+ },
+ "exploratory": true,
+ "granted": {
+  "endpoints_equal_to_admin": 18,
+  "generation_unchanged": true,
+  "receipt": "success"
+ },
+ "run_root": "/home/ben/phebs-rehearsals/t474c-permissions-20261012T080028Z",
+ "schema": "t47.4-permission-change-v1",
+ "source_commit": "7a85b82216eb5c045f1dbfa7cc69538d51f38de0"
+}
