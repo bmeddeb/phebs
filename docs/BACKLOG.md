@@ -18519,6 +18519,24 @@ Remaining in T49.3: T48 release selection for admitted declaration recipes
 (the pack stays experimental-dark), and a denied-principal Atlas rehearsal
 with the slice-3 OIDC driver.
 
+*Slice 2 (2026-10-12): denied-principal Atlas on the real binary
+`sha256:551053e6…`. `serve_rehearsal.py atlas-authorization` boots two
+partitioned `.proto` repositories with a `permissions:` block whose
+`always_visible` names only one, and logs in an OIDC owner and then an
+ordinary member.
+
+- The administrator sees both exact roots.
+- The member's list names only the visible root, with no trace of the hidden
+  repository or package, and equals MCP `search_contract_operations`.
+- The member's operation detail and repository-scoped list for the hidden
+  repository are byte-identical to those for an absent one, apart from the
+  name; the administrator's control detail returns 200.
+- The server and issuer both ended cleanly
+  (`/home/ben/phebs-rehearsals/t493b-atlas-authz-20261012T053831Z`).
+
+Only release selection remains in T49.3. It needs an admitted declaration
+recipe, so it waits on T49.1b's sealed result.*
+
 Steady-state cost: each Atlas request adds, per visible repository and
 declaration domain without a legacy run, two point reads (root reference and
 candidate pointer) and one one-row fenced probe, on both build and confirm.

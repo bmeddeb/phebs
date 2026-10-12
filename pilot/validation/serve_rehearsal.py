@@ -270,6 +270,96 @@ def atlas(binary: Path, helpers: Path, run_root: Path, deadline_s: float = 300) 
             'receipt': {k: receipt[k] for k in ('outcome', 'stop_mode', 'ready_seconds', 'exit_code', 'teardown')}}
 
 
+def atlas_authorization(binary: Path, helpers: Path, run_root: Path, deadline_s: float = 300) -> dict:
+    """An ordinary member's Atlas shows only visible declarations; a hidden repository equals an absent one."""
+    run_root.mkdir(parents=True)
+    env_git = {**os.environ, 'GIT_AUTHOR_NAME': 't49.3', 'GIT_AUTHOR_EMAIL': 't49.3@localhost',
+               'GIT_COMMITTER_NAME': 't49.3', 'GIT_COMMITTER_EMAIL': 't49.3@localhost'}
+    repos = {}
+    for label, package in (('visible', 'shown.v1'), ('hidden', 'secret.v1')):
+        repo = run_root / f'contracts-{label}'
+        (repo / 'api').mkdir(parents=True)
+        (repo / 'api' / 'catalog.proto').write_text(ATLAS_PROTO.replace('demo.v1', package))
+        for argv in (['git', 'init', '-q', '-b', 'main'], ['git', 'add', '.'], ['git', 'commit', '-q', '-m', 'fixture']):
+            subprocess.run(argv, cwd=repo, env=env_git, check=True)
+        repos[label] = repo
+    visible_name, hidden_name = 'local' + str(repos['visible']), 'local' + str(repos['hidden'])
+    absent_name = 'local' + str(run_root / 'contracts-absent')
+    port, issuer_port, key = free_port(), free_port(), secrets.token_hex(24)
+    secret_file = run_root / 'oidc-client-secret'
+    secret_file.write_text(secrets.token_hex(24))
+    os.chmod(secret_file, 0o600)
+    member = 'member@t49.test'
+    config = run_root / 'phebs.yaml'
+    config.write_text(
+        f'server:\n  addr: "127.0.0.1:{port}"\n  data_dir: "{run_root / "data"}"\n'
+        f'auth:\n  api_key: "{key}"\n  cookie_secure: false\n  oidc:\n'
+        f'    issuer_url: "http://127.0.0.1:{issuer_port}"\n    client_id: "phebs-t49"\n'
+        f'    client_secret: "{secret_file.read_text()}"\n'
+        f'    redirect_url: "http://127.0.0.1:{port}/api/auth/oidc/callback"\n'
+        f'permissions:\n  users:\n    {member}: []\n  always_visible: ["{visible_name}"]\n'
+        f'experimental:\n  provisional_proto_extraction: true\n  typed_scope_reservations: true\n'
+        f'sync:\n  poll_interval: 15s\n  resync_interval: 1h\n'
+        f'connections:\n  - name: visible\n    type: git\n    url: "{repos["visible"]}"\n'
+        f'  - name: hidden\n    type: git\n    url: "{repos["hidden"]}"\n')
+    os.chmod(config, 0o600)
+    harness = run_root / 'harness'
+    base = f'http://127.0.0.1:{port}'
+    identities = json.dumps([{'sub': 'owner', 'email': 'owner@t49.test', 'name': 'Owner'},
+                             {'sub': 'member', 'email': member, 'name': 'Member'}])
+    issuer = serve.ServeSession(harness, 'oidc-issuer', [sys.executable, str(Path(__file__).with_name('oidc_issuer.py')),
+                                '--port', str(issuer_port), '--client-id', 'phebs-t49',
+                                '--client-secret-file', str(secret_file), '--identities', identities],
+                                f'http://127.0.0.1:{issuer_port}', ready_timeout_s=30)
+    issuer.start()
+    env = {**os.environ, 'PHEBS_ZOEKT_GIT_INDEX': str(helpers / 'zoekt-git-index'),
+           'PHEBS_FOCUSED_INDEX': str(helpers / 'phebs-focused-index'), 'PHEBS_BUF': str(helpers / 'buf')}
+    server = serve.ServeSession(harness, 'atlas-authorization', [str(binary), 'serve', '-config', str(config)], base,
+                                env=env, ready_timeout_s=120)
+    try:
+        server.start()
+        deadline = time.monotonic() + deadline_s
+        while True:
+            page = json.loads(serve.http_get(base, '/api/contract_atlas', {'page_size': 100}, token=key)[1])
+            if len(page.get('exact_authorities') or []) == 2:
+                break
+            if time.monotonic() > deadline:
+                raise serve.ServeError('both partitioned roots did not appear before the deadline')
+            time.sleep(2)
+        _, token = serve.oidc_login(base, 'owner')
+        user, token = serve.oidc_login(base, 'member')
+        if user.get('is_admin'):
+            raise serve.ServeError('member principal is an administrator')
+        status, body = serve.http_get(base, '/api/contract_atlas', {'page_size': 100}, token=token)
+        member_page = json.loads(body)
+        names = {a['repository'] for a in member_page.get('exact_authorities') or []}
+        if status != 200 or names != {visible_name} or hidden_name.encode() in body or b'secret.v1' in body:
+            raise serve.ServeError('the member Atlas list disclosed the hidden repository')
+        serve.parity(body, serve.mcp_call(base, 'search_contract_operations', {'page_size': 100}, token=token), VOLATILE)
+        hidden_item = next(i for i in page['items'] if i.get('operation') and i['repository'] == hidden_name)
+        params = {'lineage': hidden_item['declaration_lineage'], 'operation': hidden_item['operation']}
+        admin = serve.http_get(base, '/api/contract_atlas/operation', {'repository': hidden_name, **params}, token=key)
+        if admin[0] != 200:
+            raise serve.ServeError(f'administrator control detail returned {admin[0]}')
+        serve.undisclosed(serve.http_get(base, '/api/contract_atlas/operation', {'repository': hidden_name, **params}, token=token),
+                          serve.http_get(base, '/api/contract_atlas/operation', {'repository': absent_name, **params}, token=token),
+                          hidden_name, absent_name)
+        serve.undisclosed(serve.http_get(base, '/api/contract_atlas', {'repository': hidden_name}, token=token),
+                          serve.http_get(base, '/api/contract_atlas', {'repository': absent_name}, token=token),
+                          hidden_name, absent_name)
+    except BaseException:
+        if server.pid:
+            server.stop('hard_kill', reason='atlas authorization probe failed')
+        issuer.stop('hard_kill', reason='atlas authorization probe failed')
+        raise
+    receipts_out = {'server': server.stop('graceful'), 'issuer': issuer.stop('graceful')}
+    return {'schema': 't49.3-atlas-authorization-rehearsal-v1', 'binary_sha256': serve.receipts.sha256_file(binary),
+            'admin_authorities': 2, 'member_authorities': sorted(names) == [visible_name],
+            'member_list_hides_hidden': True, 'member_http_mcp_parity': True,
+            'hidden_detail_equals_absent': True, 'hidden_scope_list_equals_absent': True,
+            'receipts': {k: {f: v[f] for f in ('outcome', 'stop_mode', 'exit_code', 'teardown')} for k, v in receipts_out.items()}}
+
+
 def callers(base: str, key: str, endpoints: list[dict], absent_repository: str) -> dict:
     pages = 0
     for endpoint in endpoints:
@@ -304,6 +394,10 @@ def main() -> None:
     auth.add_argument('--binary', type=Path, required=True)
     auth.add_argument('--zoekt', type=Path, required=True)
     auth.add_argument('--run-root', type=Path, required=True)
+    aa = sub.add_parser('atlas-authorization')
+    aa.add_argument('--binary', type=Path, required=True)
+    aa.add_argument('--helpers', type=Path, required=True)
+    aa.add_argument('--run-root', type=Path, required=True)
     at = sub.add_parser('atlas')
     at.add_argument('--binary', type=Path, required=True)
     at.add_argument('--helpers', type=Path, required=True)
@@ -316,6 +410,8 @@ def main() -> None:
     args = parser.parse_args()
     if args.command == 'lifecycle':
         result = lifecycle(args.binary.resolve(), args.zoekt.resolve(), args.run_root.resolve())
+    elif args.command == 'atlas-authorization':
+        result = atlas_authorization(args.binary.resolve(), args.helpers.resolve(), args.run_root.resolve())
     elif args.command == 'atlas':
         result = atlas(args.binary.resolve(), args.helpers.resolve(), args.run_root.resolve())
     elif args.command == 'authorization':
