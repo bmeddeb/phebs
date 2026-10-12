@@ -4983,7 +4983,12 @@ session or Bearer <redacted> key.
 
 SIGINT/SIGTERM drains gracefully: the HTTP server stops, claimed/running work
 is released to `pending` without consuming an attempt, and the SurrealDB child
-is stopped. Kill -9 remains covered by the stale-heartbeat reaper.
+is stopped. Kill -9 remains covered by the stale-heartbeat reaper. On Linux
+the SurrealDB child is bound to the phebs process with a parent-death signal.
+If phebs alone is killed (`kill -9`, or the kernel OOM killer choosing phebs),
+the child is killed too, so the next `phebs serve` reclaims the data directory
+instead of refusing with "another live server owns the data directory". On
+Darwin, stop a stray child yourself after a hard kill.
 
 ## Troubleshooting
 

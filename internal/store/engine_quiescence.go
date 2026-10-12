@@ -24,6 +24,9 @@ type localEngine struct {
 	stopped       bool
 	paused        bool
 	removeRuntime func()
+	// release frees the thread that started the child; call it only after Wait
+	// has joined the child, because on Linux that thread's exit kills the child.
+	release func()
 }
 
 func (engine *localEngine) stop() {
@@ -45,7 +48,13 @@ func (engine *localEngine) stopLocked() {
 	}
 	_ = engine.process.Signal(os.Interrupt)
 	done := make(chan struct{})
-	go func() { _ = engine.handle.Wait(); close(done) }()
+	go func() {
+		_ = engine.handle.Wait()
+		if engine.release != nil {
+			engine.release()
+		}
+		close(done)
+	}()
 	select {
 	case <-done:
 	case <-time.After(localEngineStopTimeout):

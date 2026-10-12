@@ -842,14 +842,16 @@ func startOwnedEngine(ctx context.Context, engine string) (runtime LocalRuntime,
 	}
 	cmd.Stderr = os.Stderr
 	cmd.Cancel = func() error { return cmd.Process.Signal(os.Interrupt) }
-	handle, err := dispatchadmission.StartProductionWithEnv(
-		ctx, dispatchadmission.SiteSurrealEngine, cmd,
-		extraEnv,
-	)
+	handle, release, err := startBoundToParent(cmd, func() (dispatchadmission.Handle, error) {
+		return dispatchadmission.StartProductionWithEnv(
+			ctx, dispatchadmission.SiteSurrealEngine, cmd,
+			extraEnv,
+		)
+	})
 	if err != nil {
 		return LocalRuntime{}, nil, fmt.Errorf("start surreal child: %w", err)
 	}
-	owned = &localEngine{process: cmd.Process, handle: handle}
+	owned = &localEngine{process: cmd.Process, handle: handle, release: release}
 
 	if err := waitHealthy(ctx, addr); err != nil {
 		owned.stop()

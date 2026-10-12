@@ -18112,6 +18112,30 @@ ceremony-audited `dispatchadmission` path:
 
 T47.4 acceptance cannot pass its hard-death item until one lands.*
 
+*Resolved with option (a) (2026-10-12, Claude lead; Ben may still overrule
+the choice). `internal/store` now starts the SurrealDB child through
+`startBoundToParent`.
+
+- On Linux it sets `Pdeathsig: SIGKILL` and performs the unchanged
+  `dispatchadmission.StartProductionWithEnv` start on a dedicated locked OS
+  thread. That thread stays parked until `localEngine.stopLocked` has joined
+  the child through its single `Wait`, and only then is it released.
+- Darwin uses a pass-through variant.
+- `dispatchadmission` itself is untouched.
+
+`TestStoreChildDiesWithItsParent` re-executes the test binary as a helper that
+owns a real store child, SIGKILLs only the helper, and requires the child to
+die. It passes with the change and fails without it. The real-binary
+`serve_rehearsal.py orphan` on `sha256:1948c722…` leaves no survivor, and the
+next serve is ready in 1.25 s with a working listing
+(`/home/ben/phebs-rehearsals/t474f-orphan-20261012T083102Z`). The operations
+guide records the behavior. Steady-state cost: one parked OS thread per
+running store child, with no work on any request, tick or publication path.
+Gates: `internal/store` passes normally (452.8 s) and under race (836.8 s,
+with `-timeout 60m`; the default 10-minute limit stops the race run in an
+unrelated test). `cmd/phebs` passes (148.8 s). Vet is clean on Linux and
+Darwin, and pinned lint reports 0 issues.*
+
 *Groundwork, permission change (2026-10-12, exploratory):
 `caller_operating.py --permissions` ran on binary `sha256:c7e9d316…`
 (`main` with the T53.2 fix) against a fresh one-repository `grpc-go`
