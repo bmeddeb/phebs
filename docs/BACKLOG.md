@@ -17787,6 +17787,11 @@ blob (6,479, serial, each at most 4 MiB). It holds an in-memory visit trace
 capped at 2,097,152 entries (344,973 used), and took about 13 seconds. Python
 memory is O(universe sites + trace + 969 records).
 
+*Ben's decision (2026-10-11): the proof slot binding the served `caller-map-v2`
+export, and test-lane call sites recorded as `not_considered`, are accepted.
+At Ben's request T47.2n and T47.2o were fast-forward integrated and pushed
+without a separate independent review of `b23d4169`.*
+
 **T47.3 · Ordinary production configuration and registration** *(needs the
 T47.2 supported recipe contract; activation remains gated until T47.5)* —
 introduce the stable Caller Map configuration/recipe selection, wire the
