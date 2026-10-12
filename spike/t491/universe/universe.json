@@ -1,0 +1,841 @@
+{
+ "by_stratum": {
+  "containerd/containerd:production:DECLARES_EXTENSION": 2,
+  "containerd/containerd:production:DECLARES_FIELD": 740,
+  "containerd/containerd:production:DECLARES_MESSAGE": 300,
+  "containerd/containerd:production:DECLARES_OPERATION": 133,
+  "containerd/containerd:production:DECLARES_SERVICE": 20,
+  "containerd/containerd:vendor:DECLARES_EXTENSION": 2,
+  "containerd/containerd:vendor:DECLARES_FIELD": 3094,
+  "containerd/containerd:vendor:DECLARES_MESSAGE": 928,
+  "containerd/containerd:vendor:DECLARES_OPERATION": 199,
+  "containerd/containerd:vendor:DECLARES_SERVICE": 26,
+  "etcd-io/etcd:production:DECLARES_EXTENSION": 4,
+  "etcd-io/etcd:production:DECLARES_FIELD": 327,
+  "etcd-io/etcd:production:DECLARES_MESSAGE": 134,
+  "etcd-io/etcd:production:DECLARES_OPERATION": 49,
+  "etcd-io/etcd:production:DECLARES_SERVICE": 8,
+  "grpc/grpc-go:production:DECLARES_EXTENSION": 5,
+  "grpc/grpc-go:production:DECLARES_FIELD": 41,
+  "grpc/grpc-go:production:DECLARES_MESSAGE": 25,
+  "grpc/grpc-go:production:DECLARES_OPERATION": 15,
+  "grpc/grpc-go:production:DECLARES_SERVICE": 6,
+  "grpc/grpc-go:test:DECLARES_FIELD": 11,
+  "grpc/grpc-go:test:DECLARES_MESSAGE": 7,
+  "grpc/grpc-go:test:DECLARES_OPERATION": 3,
+  "grpc/grpc-go:test:DECLARES_SERVICE": 2
+ },
+ "duplicate_object_keys": 0,
+ "enumerator_sha256": "sha256:6805acb5fdd927f1dabe1c70afbba886909868f68777b243e422e2af9a42ef2b",
+ "failures": [],
+ "files": [
+  {
+   "blob_sha256": "sha256:0106f24c56a6e3acd3b8ee678313606aed7b909d9f837d5653b8cfdaf316251a",
+   "declarations": 14,
+   "path": "api/events/container.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:4979bc9fcf694ea5897f734a7925c03a7fc51d3b98502028b7e2ecf088917604",
+   "declarations": 6,
+   "path": "api/events/content.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:e9da32bfd0d7ab1902f1e3f4cf4c8df217d623b10822d997f7d3c227a3b33829",
+   "declarations": 8,
+   "path": "api/events/image.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:2c3104024710fe427dfe8ae9c7ced792155883e7f6745e4785893005d93becf4",
+   "declarations": 8,
+   "path": "api/events/namespace.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:21b5b239d0ae161e3159717d05e3aa75cad0d312af82e9b0b56ba02454878ad8",
+   "declarations": 8,
+   "path": "api/events/sandbox.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:58618f37d5f973680a509de7a81b0e0d7f29f2958d61d4a64f0cb39aad1d5e80",
+   "declarations": 11,
+   "path": "api/events/snapshot.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:3b64bce433a1d3ec9f8143dae3c751195ebff3c7fde28dab80a975917448469a",
+   "declarations": 43,
+   "path": "api/events/task.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:b88a640d161d85e726b3568c96c95342b51375923c34cb85363d9d939dc54cf5",
+   "declarations": 19,
+   "path": "api/runtime/bootstrap/v1/bootstrap.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:739652beea3e4710ced643ceb392cf57b077b81f1f850a4f9bc81b951bf2cb3e",
+   "declarations": 66,
+   "path": "api/runtime/sandbox/v1/sandbox.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:de5c8f0016f31ed3adef174e256cc5d050694c01991b01d31de55bda190bf5c1",
+   "declarations": 116,
+   "path": "api/runtime/task/v2/shim.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:6a3a8c4113287b6500390a3cd15c129859b6db1817d30841921068f4aede6d94",
+   "declarations": 116,
+   "path": "api/runtime/task/v3/shim.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:2b45c8f670571a67201a58119b500c5dff3eccc6f24b69ce366d403a55f86f4f",
+   "declarations": 43,
+   "path": "api/services/containers/v1/containers.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:70aadb447ff3157da276afecc355a5a58ef2e322eb7530d5c2868734d626eea8",
+   "declarations": 70,
+   "path": "api/services/content/v1/content.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:df4f55e2be211e6bb12e84ad55a97df1417046ca35b59e57c323744715ec6687",
+   "declarations": 19,
+   "path": "api/services/diff/v1/diff.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:09840875124e493535c31f873870e1b12c87c7bf4b59383b308c0bc59bb8f39b",
+   "declarations": 11,
+   "path": "api/services/events/v1/events.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:f7943198b308917555040e524251f06d9262b917f856a771159253c51635b056",
+   "declarations": 35,
+   "path": "api/services/images/v1/images.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:f1b041ab3fcb58422f9817fcc5446efcf1868d56eb9676ae65e8116fb105ad68",
+   "declarations": 32,
+   "path": "api/services/introspection/v1/introspection.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:2d8b433d0f5880ba0d6835b520ccca5a8b6a8b7b69a2ba7d6fd6b89eab5250d9",
+   "declarations": 36,
+   "path": "api/services/leases/v1/leases.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:22f406ba24038cc6745ba38966cf9099edcfc3e2025b3d8bf2d8198f0a218761",
+   "declarations": 28,
+   "path": "api/services/mounts/v1/mounts.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:bc67b4c86ecf7f8e0e537a28bfefca056715e9fbcc890002270719be06525a53",
+   "declarations": 28,
+   "path": "api/services/namespaces/v1/namespace.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:05d12707d76d2ec4de1c66eb8b309586c487715cd0dcf001c07223b2f4309ffb",
+   "declarations": 102,
+   "path": "api/services/sandbox/v1/sandbox.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:6e23ec19b971e1088f3984b7a07ee4238d6ad56b85173750c38b0c911803bc23",
+   "declarations": 70,
+   "path": "api/services/snapshots/v1/snapshots.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:2d6f3a6b6426193b083ae688a0600703428632f1ef2b24ad5aff11b73754c319",
+   "declarations": 4,
+   "path": "api/services/streaming/v1/streaming.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:c40768f92ffca0b7c80b8caa93e6575bcb87ec4fc591f1099c8b793cf6a98242",
+   "declarations": 108,
+   "path": "api/services/tasks/v1/tasks.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:f86bd8b28678f8cf7e7dc81047c43723cea568d09df47d60cba972bb5c2297ee",
+   "declarations": 8,
+   "path": "api/services/transfer/v1/transfer.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:e458ddb35af6ab0b5c473e0e504982eb677c22f3227b12dc71484cec2a347940",
+   "declarations": 4,
+   "path": "api/services/ttrpc/events/v1/events.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:af5b20416a24c374e0eb71b20608beba31c58703d24016542fc9d9fc8959a1f8",
+   "declarations": 5,
+   "path": "api/services/version/v1/version.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:f98bec409b5e535e2a8d81dacc549180e1dadb31bd6ac46f7aedc6ab0020e447",
+   "declarations": 5,
+   "path": "api/types/descriptor.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:396ccee3451dfae1a1e3a1efc3ac4e0f00c552973eebd12859429fe7ef9f1de6",
+   "declarations": 5,
+   "path": "api/types/event.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:1b392b883989aca375245b74f0161b8227e8bb3c51a26922ff23864028f4c0d7",
+   "declarations": 2,
+   "path": "api/types/fieldpath.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:8280fb8346e2807e8b998be7b869762727e64fc5c8f9ec7779aa844c70dd7406",
+   "declarations": 12,
+   "path": "api/types/introspection.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:3356f446ee0e7f41b69fac7f70dbf7c545bc915d3550241e48c11a90de6cd664",
+   "declarations": 4,
+   "path": "api/types/metrics.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:bc2723f2f7f8d98e58de8832ce64c66093064b16d85fc808880cf81411e58809",
+   "declarations": 18,
+   "path": "api/types/mount.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:b648d50a7309c7ae400931bff32b38389ea2f0365cca37c85c0ef19313a1b911",
+   "declarations": 6,
+   "path": "api/types/platform.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:e8efa03333a25b7fc93914bdddf5d24b5aabf300335832b943536f825508e065",
+   "declarations": 26,
+   "path": "api/types/runc/options/oci.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:b0e63f36ec136dd9b0bc4304f9b41f6051138c3f9ac3ca58f8c14aeadf1743df",
+   "declarations": 4,
+   "path": "api/types/runtimeoptions/v1/api.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:98a41057aa2c27a18c27591027778b1eb6059f08d3585365e3e11667f270aa9e",
+   "declarations": 12,
+   "path": "api/types/sandbox.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:c05245dcad502ec63a9cf8296b973f300fba3a61d38acd621048849227873253",
+   "declarations": 14,
+   "path": "api/types/task/task.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:ade5a54765ab562415741cbc8f77dc7c3918c478fcde534e9e9680f34ea54398",
+   "declarations": 5,
+   "path": "api/types/transfer/container.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:736a163e130b6c0fbb4bc82b5215cabb84ea2f0c3b5e96ae79d6599ca4a9c685",
+   "declarations": 17,
+   "path": "api/types/transfer/imagestore.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:a2defa33bcf1ac215110e526685d2988dd4b15ac24b5465b034510d3382df0fc",
+   "declarations": 11,
+   "path": "api/types/transfer/importexport.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:4fd5463485bc1f3063b27b9f5226a93331c0a85aab72a2c90269ebe2a8045c87",
+   "declarations": 7,
+   "path": "api/types/transfer/progress.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:615283f9a9bdf88b64884c343e1b2f928e268ea5e9addeb7bfd24ea472bc7506",
+   "declarations": 19,
+   "path": "api/types/transfer/registry.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:62381c7b0136e13f686ffd02a8cb183a5d42e06c70e3ebf72219ba41be7bc596",
+   "declarations": 10,
+   "path": "api/types/transfer/streaming.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:e1b1a451ad212cd5b23276fd9f7d93793cfd479368fceed7537c74ec4750aedd",
+   "declarations": 31,
+   "path": "vendor/github.com/Microsoft/hcsshim/cmd/containerd-shim-runhcs-v1/options/runhcs.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:3f33e611a26eda1980cc99e152f9879804ed15c37628bf13b649e8bad9b341f0",
+   "declarations": 41,
+   "path": "vendor/github.com/Microsoft/hcsshim/cmd/containerd-shim-runhcs-v1/stats/stats.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:aea0b058f5747476a251494e5ab951a9166a082a4b24abe7668ab78bb064b05f",
+   "declarations": 131,
+   "path": "vendor/github.com/checkpoint-restore/go-criu/v7/rpc/rpc.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:f326ce05b3b3bacef9ddf042baf79aaf1128c1de01e1c8d74d23eabb69e88218",
+   "declarations": 24,
+   "path": "vendor/github.com/checkpoint-restore/go-criu/v7/stats/stats.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:9d803f5e1cfd6cdeb8b127cb880bd56ccc8a8c2c6efbfa501312d91b1dfd6097",
+   "declarations": 114,
+   "path": "vendor/github.com/containerd/cgroups/v3/cgroup1/stats/metrics.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:cb9a068a59e8b847b272257ab48b12eb262646082228a27cc40a9d54306123fe",
+   "declarations": 108,
+   "path": "vendor/github.com/containerd/cgroups/v3/cgroup2/stats/metrics.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:0106f24c56a6e3acd3b8ee678313606aed7b909d9f837d5653b8cfdaf316251a",
+   "declarations": 14,
+   "path": "vendor/github.com/containerd/containerd/api/events/container.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:4979bc9fcf694ea5897f734a7925c03a7fc51d3b98502028b7e2ecf088917604",
+   "declarations": 6,
+   "path": "vendor/github.com/containerd/containerd/api/events/content.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:e9da32bfd0d7ab1902f1e3f4cf4c8df217d623b10822d997f7d3c227a3b33829",
+   "declarations": 8,
+   "path": "vendor/github.com/containerd/containerd/api/events/image.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:2c3104024710fe427dfe8ae9c7ced792155883e7f6745e4785893005d93becf4",
+   "declarations": 8,
+   "path": "vendor/github.com/containerd/containerd/api/events/namespace.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:21b5b239d0ae161e3159717d05e3aa75cad0d312af82e9b0b56ba02454878ad8",
+   "declarations": 8,
+   "path": "vendor/github.com/containerd/containerd/api/events/sandbox.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:58618f37d5f973680a509de7a81b0e0d7f29f2958d61d4a64f0cb39aad1d5e80",
+   "declarations": 11,
+   "path": "vendor/github.com/containerd/containerd/api/events/snapshot.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:3b64bce433a1d3ec9f8143dae3c751195ebff3c7fde28dab80a975917448469a",
+   "declarations": 43,
+   "path": "vendor/github.com/containerd/containerd/api/events/task.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:b88a640d161d85e726b3568c96c95342b51375923c34cb85363d9d939dc54cf5",
+   "declarations": 19,
+   "path": "vendor/github.com/containerd/containerd/api/runtime/bootstrap/v1/bootstrap.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:739652beea3e4710ced643ceb392cf57b077b81f1f850a4f9bc81b951bf2cb3e",
+   "declarations": 66,
+   "path": "vendor/github.com/containerd/containerd/api/runtime/sandbox/v1/sandbox.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:de5c8f0016f31ed3adef174e256cc5d050694c01991b01d31de55bda190bf5c1",
+   "declarations": 116,
+   "path": "vendor/github.com/containerd/containerd/api/runtime/task/v2/shim.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:6a3a8c4113287b6500390a3cd15c129859b6db1817d30841921068f4aede6d94",
+   "declarations": 116,
+   "path": "vendor/github.com/containerd/containerd/api/runtime/task/v3/shim.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:2b45c8f670571a67201a58119b500c5dff3eccc6f24b69ce366d403a55f86f4f",
+   "declarations": 43,
+   "path": "vendor/github.com/containerd/containerd/api/services/containers/v1/containers.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:70aadb447ff3157da276afecc355a5a58ef2e322eb7530d5c2868734d626eea8",
+   "declarations": 70,
+   "path": "vendor/github.com/containerd/containerd/api/services/content/v1/content.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:df4f55e2be211e6bb12e84ad55a97df1417046ca35b59e57c323744715ec6687",
+   "declarations": 19,
+   "path": "vendor/github.com/containerd/containerd/api/services/diff/v1/diff.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:09840875124e493535c31f873870e1b12c87c7bf4b59383b308c0bc59bb8f39b",
+   "declarations": 11,
+   "path": "vendor/github.com/containerd/containerd/api/services/events/v1/events.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:f7943198b308917555040e524251f06d9262b917f856a771159253c51635b056",
+   "declarations": 35,
+   "path": "vendor/github.com/containerd/containerd/api/services/images/v1/images.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:f1b041ab3fcb58422f9817fcc5446efcf1868d56eb9676ae65e8116fb105ad68",
+   "declarations": 32,
+   "path": "vendor/github.com/containerd/containerd/api/services/introspection/v1/introspection.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:2d8b433d0f5880ba0d6835b520ccca5a8b6a8b7b69a2ba7d6fd6b89eab5250d9",
+   "declarations": 36,
+   "path": "vendor/github.com/containerd/containerd/api/services/leases/v1/leases.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:22f406ba24038cc6745ba38966cf9099edcfc3e2025b3d8bf2d8198f0a218761",
+   "declarations": 28,
+   "path": "vendor/github.com/containerd/containerd/api/services/mounts/v1/mounts.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:bc67b4c86ecf7f8e0e537a28bfefca056715e9fbcc890002270719be06525a53",
+   "declarations": 28,
+   "path": "vendor/github.com/containerd/containerd/api/services/namespaces/v1/namespace.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:05d12707d76d2ec4de1c66eb8b309586c487715cd0dcf001c07223b2f4309ffb",
+   "declarations": 102,
+   "path": "vendor/github.com/containerd/containerd/api/services/sandbox/v1/sandbox.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:6e23ec19b971e1088f3984b7a07ee4238d6ad56b85173750c38b0c911803bc23",
+   "declarations": 70,
+   "path": "vendor/github.com/containerd/containerd/api/services/snapshots/v1/snapshots.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:2d6f3a6b6426193b083ae688a0600703428632f1ef2b24ad5aff11b73754c319",
+   "declarations": 4,
+   "path": "vendor/github.com/containerd/containerd/api/services/streaming/v1/streaming.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:c40768f92ffca0b7c80b8caa93e6575bcb87ec4fc591f1099c8b793cf6a98242",
+   "declarations": 108,
+   "path": "vendor/github.com/containerd/containerd/api/services/tasks/v1/tasks.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:f86bd8b28678f8cf7e7dc81047c43723cea568d09df47d60cba972bb5c2297ee",
+   "declarations": 8,
+   "path": "vendor/github.com/containerd/containerd/api/services/transfer/v1/transfer.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:e458ddb35af6ab0b5c473e0e504982eb677c22f3227b12dc71484cec2a347940",
+   "declarations": 4,
+   "path": "vendor/github.com/containerd/containerd/api/services/ttrpc/events/v1/events.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:af5b20416a24c374e0eb71b20608beba31c58703d24016542fc9d9fc8959a1f8",
+   "declarations": 5,
+   "path": "vendor/github.com/containerd/containerd/api/services/version/v1/version.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:f98bec409b5e535e2a8d81dacc549180e1dadb31bd6ac46f7aedc6ab0020e447",
+   "declarations": 5,
+   "path": "vendor/github.com/containerd/containerd/api/types/descriptor.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:396ccee3451dfae1a1e3a1efc3ac4e0f00c552973eebd12859429fe7ef9f1de6",
+   "declarations": 5,
+   "path": "vendor/github.com/containerd/containerd/api/types/event.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:1b392b883989aca375245b74f0161b8227e8bb3c51a26922ff23864028f4c0d7",
+   "declarations": 2,
+   "path": "vendor/github.com/containerd/containerd/api/types/fieldpath.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:8280fb8346e2807e8b998be7b869762727e64fc5c8f9ec7779aa844c70dd7406",
+   "declarations": 12,
+   "path": "vendor/github.com/containerd/containerd/api/types/introspection.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:3356f446ee0e7f41b69fac7f70dbf7c545bc915d3550241e48c11a90de6cd664",
+   "declarations": 4,
+   "path": "vendor/github.com/containerd/containerd/api/types/metrics.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:bc2723f2f7f8d98e58de8832ce64c66093064b16d85fc808880cf81411e58809",
+   "declarations": 18,
+   "path": "vendor/github.com/containerd/containerd/api/types/mount.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:b648d50a7309c7ae400931bff32b38389ea2f0365cca37c85c0ef19313a1b911",
+   "declarations": 6,
+   "path": "vendor/github.com/containerd/containerd/api/types/platform.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:e8efa03333a25b7fc93914bdddf5d24b5aabf300335832b943536f825508e065",
+   "declarations": 26,
+   "path": "vendor/github.com/containerd/containerd/api/types/runc/options/oci.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:b0e63f36ec136dd9b0bc4304f9b41f6051138c3f9ac3ca58f8c14aeadf1743df",
+   "declarations": 4,
+   "path": "vendor/github.com/containerd/containerd/api/types/runtimeoptions/v1/api.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:98a41057aa2c27a18c27591027778b1eb6059f08d3585365e3e11667f270aa9e",
+   "declarations": 12,
+   "path": "vendor/github.com/containerd/containerd/api/types/sandbox.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:c05245dcad502ec63a9cf8296b973f300fba3a61d38acd621048849227873253",
+   "declarations": 14,
+   "path": "vendor/github.com/containerd/containerd/api/types/task/task.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:ade5a54765ab562415741cbc8f77dc7c3918c478fcde534e9e9680f34ea54398",
+   "declarations": 5,
+   "path": "vendor/github.com/containerd/containerd/api/types/transfer/container.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:736a163e130b6c0fbb4bc82b5215cabb84ea2f0c3b5e96ae79d6599ca4a9c685",
+   "declarations": 17,
+   "path": "vendor/github.com/containerd/containerd/api/types/transfer/imagestore.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:a2defa33bcf1ac215110e526685d2988dd4b15ac24b5465b034510d3382df0fc",
+   "declarations": 11,
+   "path": "vendor/github.com/containerd/containerd/api/types/transfer/importexport.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:4fd5463485bc1f3063b27b9f5226a93331c0a85aab72a2c90269ebe2a8045c87",
+   "declarations": 7,
+   "path": "vendor/github.com/containerd/containerd/api/types/transfer/progress.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:615283f9a9bdf88b64884c343e1b2f928e268ea5e9addeb7bfd24ea472bc7506",
+   "declarations": 19,
+   "path": "vendor/github.com/containerd/containerd/api/types/transfer/registry.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:62381c7b0136e13f686ffd02a8cb183a5d42e06c70e3ebf72219ba41be7bc596",
+   "declarations": 10,
+   "path": "vendor/github.com/containerd/containerd/api/types/transfer/streaming.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:02fbd236a5e3a8f077b7c56fcb240fc611a2b337dcb46670a00ff3831e248faf",
+   "declarations": 23,
+   "path": "vendor/github.com/containerd/continuity/proto/manifest.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:b0dd9ea3b722e6e4a8d626a5164d4dfc1e72ffd176e7633cff3a70fd061cbc09",
+   "declarations": 361,
+   "path": "vendor/github.com/containerd/nri/pkg/api/api.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:d3a794508bd91e4563e54ce17591548be459e958b146ee670f115f189347bcdf",
+   "declarations": 7,
+   "path": "vendor/github.com/containerd/otelttrpc/internal/test.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:6e634a90a5ecc654b85c9bd492ae8d3e2458ce3141f6aade8302b501a18fe7db",
+   "declarations": 14,
+   "path": "vendor/github.com/containerd/ttrpc/request.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:9cc99f5292d66c2b734fef96b9ba4996ab097871bc8fc80ed9778f0a1dea8aca",
+   "declarations": 7,
+   "path": "vendor/github.com/containers/ocicrypt/utils/keyprovider/keyprovider.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:fa79488e86ac6e10eee7d15a5d7a98d4e7a28eaf213bb9791f69bddb6d7fb35d",
+   "declarations": 1280,
+   "path": "vendor/k8s.io/api/core/v1/generated.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:78274163443c9942fd5cfd41d2c0cb6d5bb06ff109f37c33be23147dcf63771a",
+   "declarations": 4,
+   "path": "vendor/k8s.io/apimachinery/pkg/api/resource/generated.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:852ca832d77f5c9281034f9f1ae3ae581dc77a069ee0c0f5db2832002655ee83",
+   "declarations": 197,
+   "path": "vendor/k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:65aaf6e591ce90732d184ff893c807cf54e2e6ef8640260837614ee5ccf2b329",
+   "declarations": 10,
+   "path": "vendor/k8s.io/apimachinery/pkg/runtime/generated.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:f6c8cc582d36e639e022c9edc2faf213ab16fe07045fabf54f5edc2241eda3e5",
+   "declarations": 0,
+   "path": "vendor/k8s.io/apimachinery/pkg/runtime/schema/generated.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:3595eaaeb57a233568c50c9e16d81efa50238f63e9f7d8d00f18b188fa8fdcb2",
+   "declarations": 4,
+   "path": "vendor/k8s.io/apimachinery/pkg/util/intstr/generated.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:381aab5cf67425b3c90ab016489de661ccb83ed9f21204066dc5df83b9b83360",
+   "declarations": 698,
+   "path": "vendor/k8s.io/cri-api/pkg/apis/runtime/v1/api.proto",
+   "repository": "containerd/containerd"
+  },
+  {
+   "blob_sha256": "sha256:b10ca65b012299f4fb87d9b0ef3e134149ce310dd48be07fccc7b965c36138fb",
+   "declarations": 14,
+   "path": "api/authpb/auth.proto",
+   "repository": "etcd-io/etcd"
+  },
+  {
+   "blob_sha256": "sha256:b967aa882b9c01c35a9f022808ce162d03ca69a6051299b18d13b02b818d6655",
+   "declarations": 3,
+   "path": "api/etcdserverpb/etcdserver.proto",
+   "repository": "etcd-io/etcd"
+  },
+  {
+   "blob_sha256": "sha256:aac8f3243cd7b02867de3488471a23f23ab1922755198cfb1efee441648d604c",
+   "declarations": 42,
+   "path": "api/etcdserverpb/raft_internal.proto",
+   "repository": "etcd-io/etcd"
+  },
+  {
+   "blob_sha256": "sha256:af096df9608d7b77a9245351071ef4c6b978bf6a0606927efde88d69ab18b879",
+   "declarations": 366,
+   "path": "api/etcdserverpb/rpc.proto",
+   "repository": "etcd-io/etcd"
+  },
+  {
+   "blob_sha256": "sha256:ce9e8deeaf2de5c915396856b443753ebac9b73016a2891a0f602984bb12572d",
+   "declarations": 18,
+   "path": "api/membershippb/membership.proto",
+   "repository": "etcd-io/etcd"
+  },
+  {
+   "blob_sha256": "sha256:fa1da1204a680c5c8f3043edb77b9d5895a16a5b5ccb64b438ae1a65ab2f169c",
+   "declarations": 11,
+   "path": "api/mvccpb/kv.proto",
+   "repository": "etcd-io/etcd"
+  },
+  {
+   "blob_sha256": "sha256:bfad8707459d304930a71261d6343005380c33bbcacb36b21c604fef1c8b43b2",
+   "declarations": 4,
+   "path": "api/versionpb/version.proto",
+   "repository": "etcd-io/etcd"
+  },
+  {
+   "blob_sha256": "sha256:e0fcf5227322686bc1b097934384197375b542d71d6b73265860009555d80eb1",
+   "declarations": 3,
+   "path": "server/etcdserver/api/snap/snappb/snap.proto",
+   "repository": "etcd-io/etcd"
+  },
+  {
+   "blob_sha256": "sha256:aa7dbe529d28ab9dba1b001c3a14989bb191c3b724c0d22cb6a46c95698cfcba",
+   "declarations": 32,
+   "path": "server/etcdserver/api/v3election/v3electionpb/v3election.proto",
+   "repository": "etcd-io/etcd"
+  },
+  {
+   "blob_sha256": "sha256:22c346b01a877318cbbe2f0c0072100c11545026ced0bbceaad261029fff6f3f",
+   "declarations": 13,
+   "path": "server/etcdserver/api/v3lock/v3lockpb/v3lock.proto",
+   "repository": "etcd-io/etcd"
+  },
+  {
+   "blob_sha256": "sha256:d5fe883ea5400e07cd367121621203d9ce3fa59c71edbd0fa6e60167fa5c04b8",
+   "declarations": 8,
+   "path": "server/lease/leasepb/lease.proto",
+   "repository": "etcd-io/etcd"
+  },
+  {
+   "blob_sha256": "sha256:43fd111b959d9d2ba0567e13adab1e61b1ccc0bdbd93ba5d279ba620faf73b45",
+   "declarations": 8,
+   "path": "server/storage/wal/walpb/record.proto",
+   "repository": "etcd-io/etcd"
+  },
+  {
+   "blob_sha256": "sha256:e1eb8e11c7c1b273a7c025eedb88064b40c11517b3413d364893e0e4df4fed83",
+   "declarations": 9,
+   "path": "examples/features/proto/echo/echo.proto",
+   "repository": "grpc/grpc-go"
+  },
+  {
+   "blob_sha256": "sha256:0e59e0b552d35f8b801e02811c3fcd3dd45dbf1a593c5ff6f2f679863219b257",
+   "declarations": 6,
+   "path": "examples/helloworld/helloworld/helloworld.proto",
+   "repository": "grpc/grpc-go"
+  },
+  {
+   "blob_sha256": "sha256:55fe031dc7698a3702201ca00db3ffc0b2feae46c1f365723a106cf4a21e9698",
+   "declarations": 22,
+   "path": "examples/route_guide/routeguide/route_guide.proto",
+   "repository": "grpc/grpc-go"
+  },
+  {
+   "blob_sha256": "sha256:c625391d9e77d0382654e62a8ff5defba9f3aaf76720208a2cec4cf1255578dc",
+   "declarations": 11,
+   "path": "interop/stress/grpc_testing/metrics.proto",
+   "repository": "grpc/grpc-go"
+  },
+  {
+   "blob_sha256": "sha256:507248b8ad414be8dd76bd409c79d22e0a003d8c994b35a80963250fa19e5416",
+   "declarations": 20,
+   "path": "profiling/proto/service.proto",
+   "repository": "grpc/grpc-go"
+  },
+  {
+   "blob_sha256": "sha256:105f1ccfeba6401e571339a468fd26471a06331cba799af4d066cbc9cc728092",
+   "declarations": 2,
+   "path": "reflection/grpc_testing/proto2.proto",
+   "repository": "grpc/grpc-go"
+  },
+  {
+   "blob_sha256": "sha256:ad5808f30d3b18cc50f5ea6845277aaa6f8269552eb2e16f78cae54a19cda99e",
+   "declarations": 5,
+   "path": "reflection/grpc_testing/proto2_ext.proto",
+   "repository": "grpc/grpc-go"
+  },
+  {
+   "blob_sha256": "sha256:1ee381a58c030fd0e6cabfa0a34bb377339fc02af997d925c13e9b5268374937",
+   "declarations": 4,
+   "path": "reflection/grpc_testing/proto2_ext2.proto",
+   "repository": "grpc/grpc-go"
+  },
+  {
+   "blob_sha256": "sha256:fa34ad7654e3a35e6d86b37b6c2f0a290358dd10961bd5332e51d475ee43156e",
+   "declarations": 11,
+   "path": "reflection/grpc_testing/test.proto",
+   "repository": "grpc/grpc-go"
+  },
+  {
+   "blob_sha256": "sha256:9fa7703f170731a0fd3c38b1eeffbe5a193c608c2d90343d10d0e270895bec9c",
+   "declarations": 2,
+   "path": "test/codec_perf/perf.proto",
+   "repository": "grpc/grpc-go"
+  },
+  {
+   "blob_sha256": "sha256:eabce2a16255aff725f56fb1aa54e5ef6194cc5f2b5f5d794133244ec3f5f2cb",
+   "declarations": 4,
+   "path": "testdata/grpc_testing_not_regenerated/dynamic.proto",
+   "repository": "grpc/grpc-go"
+  },
+  {
+   "blob_sha256": "sha256:6f13164b3df4c007b8d60daecb96e48a3b84ccf0c0480ecf8bd31f959ae66cc9",
+   "declarations": 2,
+   "path": "testdata/grpc_testing_not_regenerated/simple.proto",
+   "repository": "grpc/grpc-go"
+  },
+  {
+   "blob_sha256": "sha256:bcba79d611f668592ae03387b559a69a5341797cf1a1642e45ae89b5160aacab",
+   "declarations": 17,
+   "path": "testdata/grpc_testing_not_regenerated/testv3.proto",
+   "repository": "grpc/grpc-go"
+  }
+ ],
+ "members_sha256": "sha256:47bacb99e83c454790a69d9eb044ecdb255cc358fe96214d5fab679753281088",
+ "out_of_scope": {
+  "enum": 52,
+  "extensions": 1,
+  "reserved": 4
+ },
+ "repositories": {
+  "containerd/containerd": {
+   "commit": "e0f9f8ac24f21a3703f94bb09817b699a1446af0",
+   "dir": "containerd"
+  },
+  "etcd-io/etcd": {
+   "commit": "f9ecd8dcecc18b7559c0e3c0c264477c6ab9ddc1",
+   "dir": "etcd"
+  },
+  "grpc/grpc-go": {
+   "commit": "f40347859c3380f5c409f153ab79d4b8e724abd3",
+   "dir": "grpc-go"
+  }
+ },
+ "schema": "t491-declaration-universe-v1",
+ "total": 6081
+}

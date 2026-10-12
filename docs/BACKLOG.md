@@ -18424,6 +18424,43 @@ filled by real humans and a real beacon pulse (none fabricated); non-emitted
 kinds are never counted as misses; one sealed round, no interim looks; no
 release or status change follows from the score alone.
 
+*Slice 1 (2026-10-12, Claude lead): the independent universe.
+[`spike/t491/enumerate_declarations.py`](../spike/t491/README.md) is a
+standalone lexer and recursive-descent reader, written independently of
+phebs's protocompile-based `protodecl` and consulting no phebs code or output.
+It enumerates the §5 frozen surface over the T47.2 frozen corpus at its three
+admitted derived commits. All 131 `.proto` blobs parse, giving 6,081
+declarations across 24 repository × role × predicate strata (sha256
+`47bacb99…` members), with no failures and no duplicate object keys. Enums,
+reserved ranges and extension ranges are counted out of scope (52/4/1). Its
+four synthetic tests fence nesting, oneof, map, group and extension objects,
+whole-statement spans, braces inside comments, strings and options, and
+refusal of the linking-dependent constructs that `protodecl` also fails
+closed on. No candidate was compared.
+
+**Product gap found while scoping (new work, routed to Ben):** Contract Atlas
+(`/api/contract_atlas`, `/api/contract_atlas/operation`, MCP
+`search_contract_operations` and `get_contract_operation`) reads only
+legacy-published declaration runs. Under the partitioned extraction every
+current run uses, run g's live Atlas lists zero declarations, while exact
+Caller Map reads find the same declarations through
+`ListPartitionedAssertions`. The declaration identity/discovery subset of
+Atlas that the roadmap pairs with Caller Map needs an exact partitioned reader
+before any Atlas promotion. Scoring the declaration extractor itself is not
+blocked: its partitioned extraction roots are its exact output.
+
+**Decisions for Ben before a protocol can be drafted and sealed:**
+
+1. Roles: Ben as sole owner and reviewer, as amended for T47.2, versus §9's
+   two blind reviewers plus an adjudicator.
+2. Design. A T47.2-style sampled round needs about 1,002 recall labels at
+   97 per stratum, plus precision and gap-classification frames. Proposed
+   instead: use the independent enumerator as a complete machine oracle for
+   precision and recall over the whole population. Humans then validate a
+   seeded oracle sample and adjudicate every oracle/candidate disagreement.
+3. Thresholds, the sampling rule, and reuse of the T47.2 corpus and its seal
+   discipline.*
+
 **T49.2 · Thrift declaration identity and validation contract** — independently
 freeze namespace/include/generator lineage and declarations, ambiguity,
 missing/unsupported input and gap accounting; protobuf results grant no Thrift
