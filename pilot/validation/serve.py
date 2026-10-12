@@ -93,7 +93,21 @@ def parity(http_body: bytes, mcp_result: dict, volatile: frozenset[str]) -> None
     left = strip_volatile(json.loads(http_body), volatile)
     right = strip_volatile(mcp_result.get('structuredContent'), volatile)
     if left != right:
-        raise ServeError('HTTP and MCP results differ')
+        raise ServeError('HTTP and MCP results differ at ' + ', '.join(_differences(left, right)[:5]))
+
+
+def _differences(left, right, path: str = '$') -> list[str]:
+    if isinstance(left, dict) and isinstance(right, dict):
+        out = []
+        for key in sorted(set(left) | set(right)):
+            if key not in left or key not in right:
+                out.append(f'{path}.{key} (only in {"HTTP" if key in left else "MCP"})')
+            else:
+                out += _differences(left[key], right[key], f'{path}.{key}')
+        return out
+    if isinstance(left, list) and isinstance(right, list) and len(left) == len(right):
+        return [d for i, (l, r) in enumerate(zip(left, right)) for d in _differences(l, r, f'{path}[{i}]')]
+    return [] if left == right else [path]
 
 
 def undisclosed(denied: tuple[int, bytes], absent: tuple[int, bytes], denied_name: str, absent_name: str) -> None:

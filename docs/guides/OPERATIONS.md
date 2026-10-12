@@ -4770,6 +4770,22 @@ projection. A concurrent publication is retried or returns `409`; revisions
 are never mixed. Unknown, hidden, and deleting repository scopes all return
 the same `404` before evidence is read.
 
+Partitioned declaration roots (T49.3). Every current extraction mode
+publishes declarations as an exact partitioned root, not as a legacy published
+run, so the certificate shows those runs as `unpublished`. When a repository
+has no legacy published declaration run, Atlas reads that domain's current
+partitioned root instead, but only if the store's own fence proves it current.
+The root's candidate manifest must match the repository's published candidate
+pointer, indexed commit and analysis unit, and the run must be the sealed
+staged root. Every page and source locator re-checks that fence. Each response
+names the roots it read in `exact_authorities` (list) or `exact_authority`
+(detail): repository, domain, run id, commit, plan digest and root digest.
+The certificate is never rewritten to call them published. Cursors and the
+confirm-after-build check bind those roots. A root that changes mid-request
+retries or returns `409`. A stale or foreign root leaves that repository
+unavailable rather than partially listed. Registrations and callers from
+consumer domains still come only from legacy published runs.
+
 The catalog certificate covers every registered declaration and consumer
 domain, even when a query filters to one protocol. Adding a dark pack therefore
 adds honest no-run coverage rows and changes the certificate digest. Protobuf

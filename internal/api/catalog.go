@@ -233,7 +233,10 @@ type ContractCatalogList struct {
 	Pagination     ContractCatalogPagination   `json:"pagination"`
 	CoverageDigest string                      `json:"coverage_digest"`
 	Coverage       extract.CoverageCertificate `json:"coverage"`
-	Caveat         string                      `json:"caveat"`
+	// ExactAuthorities lists the current partitioned declaration roots served
+	// here; the coverage certificate describes legacy published runs only.
+	ExactAuthorities []ContractCatalogAuthority `json:"exact_authorities,omitempty"`
+	Caveat           string                     `json:"caveat"`
 }
 
 type ContractCatalogImportContext struct {
@@ -326,7 +329,11 @@ type ContractCatalogOperation struct {
 	ShapeTruncated          bool                               `json:"shape_truncated"`
 	CoverageDigest          string                             `json:"coverage_digest"`
 	Coverage                extract.CoverageCertificate        `json:"coverage"`
-	Caveat                  string                             `json:"caveat"`
+	// ExactAuthority names the partitioned declaration root this detail was
+	// read from; absent for a legacy published run described by Coverage.
+	ExactAuthority *ContractCatalogAuthority `json:"exact_authority,omitempty"`
+	Caveat         string                    `json:"caveat"`
+	domain         string
 }
 
 type catalogCursor struct {
@@ -395,7 +402,15 @@ func (s *ContractCatalogService) List(
 			return nil, huma.Error500InternalServerError("build contract catalog coverage", err)
 		}
 		binding := visibilityContext(ctx, s.opts, certificate)
-		position, err := decodeCatalogCursor(cursor, queryDigest, binding, certificate.Digest)
+		sources, err := selectCatalogSources(ctx, s.opts.Evidence, certificate, visible)
+		if err != nil {
+			if errors.Is(err, store.ErrConflict) {
+				continue
+			}
+			return nil, huma.Error500InternalServerError("select contract catalog sources", err)
+		}
+		stateDigest := sources.stateDigest(certificate.Digest)
+		position, err := decodeCatalogCursor(cursor, queryDigest, binding, stateDigest)
 		if err != nil {
 			return nil, err
 		}
@@ -405,7 +420,7 @@ func (s *ContractCatalogService) List(
 			return nil, huma.Error409Conflict("contract catalog cursor is no longer valid")
 		}
 		items, next, collectErr := collectCatalogList(
-			ctx, s.opts.Evidence, scope, query, pageSize, position,
+			ctx, sources, scope, query, pageSize, position,
 		)
 		confirmedVisible, visibleErr := visibleRepositories(ctx, s.opts)
 		if visibleErr != nil {
@@ -420,7 +435,12 @@ func (s *ContractCatalogService) List(
 		if confirmErr != nil {
 			return nil, huma.Error500InternalServerError("confirm contract catalog coverage", confirmErr)
 		}
-		if confirmed.Digest != certificate.Digest {
+		confirmedSources, confirmSourcesErr := selectCatalogSources(ctx, s.opts.Evidence, confirmed, confirmedVisible)
+		if confirmSourcesErr != nil && !errors.Is(confirmSourcesErr, store.ErrConflict) {
+			return nil, huma.Error500InternalServerError("confirm contract catalog sources", confirmSourcesErr)
+		}
+		if confirmSourcesErr != nil || confirmed.Digest != certificate.Digest ||
+			confirmedSources.stateDigest(confirmed.Digest) != stateDigest {
 			if cursor != "" {
 				return nil, huma.Error409Conflict("contract catalog cursor is no longer valid")
 			}
@@ -438,7 +458,7 @@ func (s *ContractCatalogService) List(
 
 		pagination := ContractCatalogPagination{Complete: true}
 		if next != nil {
-			encoded, err := encodeCatalogCursor(queryDigest, binding, certificate.Digest, *next)
+			encoded, err := encodeCatalogCursor(queryDigest, binding, stateDigest, *next)
 			if err != nil {
 				return nil, huma.Error500InternalServerError("encode contract catalog cursor", err)
 			}
@@ -450,7 +470,8 @@ func (s *ContractCatalogService) List(
 			SchemaVersion: contractCatalogSchemaVersion, Query: query,
 			Items: items, Pagination: pagination,
 			CoverageDigest: certificate.Digest, Coverage: *certificate,
-			Caveat: contractCatalogCaveat,
+			ExactAuthorities: sources.authorities(),
+			Caveat:           contractCatalogCaveat,
 		}, nil
 	}
 	return nil, huma.Error409Conflict("evidence changed while building the contract catalog; retry")
@@ -525,8 +546,15 @@ func (s *ContractCatalogService) operation(
 			return nil, huma.Error500InternalServerError("build contract catalog coverage", err)
 		}
 		binding := visibilityContext(ctx, s.opts, certificate)
+		sources, err := selectCatalogSources(ctx, s.opts.Evidence, certificate, visible)
+		if err != nil {
+			if errors.Is(err, store.ErrConflict) {
+				continue
+			}
+			return nil, huma.Error500InternalServerError("select contract catalog sources", err)
+		}
 		detail, collectErr := collectCatalogOperation(
-			ctx, s.opts.Evidence, certificate, protocol,
+			ctx, s.opts.Evidence, sources, certificate, protocol,
 			repository, lineage, operation,
 		)
 		confirmedVisible, visibleErr := visibleRepositories(ctx, s.opts)
@@ -542,7 +570,12 @@ func (s *ContractCatalogService) operation(
 		if confirmErr != nil {
 			return nil, huma.Error500InternalServerError("confirm contract catalog coverage", confirmErr)
 		}
-		if confirmed.Digest != certificate.Digest {
+		confirmedSources, confirmSourcesErr := selectCatalogSources(ctx, s.opts.Evidence, confirmed, confirmedVisible)
+		if confirmSourcesErr != nil && !errors.Is(confirmSourcesErr, store.ErrConflict) {
+			return nil, huma.Error500InternalServerError("confirm contract catalog sources", confirmSourcesErr)
+		}
+		if confirmSourcesErr != nil || confirmed.Digest != certificate.Digest ||
+			confirmedSources.stateDigest(confirmed.Digest) != sources.stateDigest(certificate.Digest) {
 			continue
 		}
 		if collectErr != nil {
@@ -559,6 +592,9 @@ func (s *ContractCatalogService) operation(
 		}
 		detail.CoverageDigest = certificate.Digest
 		detail.Coverage = *certificate
+		if source, ok := sources.lookup(repository, detail.domain); ok && source.authority != nil {
+			detail.ExactAuthority = source.authority
+		}
 		return detail, nil
 	}
 	return nil, huma.Error409Conflict("evidence changed while building the contract catalog; retry")
@@ -566,7 +602,7 @@ func (s *ContractCatalogService) operation(
 
 func collectCatalogList(
 	ctx context.Context,
-	source store.EvidenceStore,
+	sources catalogSources,
 	repositories []extract.CertificateRepository,
 	query ContractCatalogQuery,
 	pageSize int,
@@ -592,12 +628,13 @@ func collectCatalogList(
 		}
 		for repositoryIndex < len(repositories) {
 			repository := repositories[repositoryIndex]
-			run, ok := certificateRun(repository, pack.declarationDomain)
-			if !ok || run.Status != "published" {
+			selected, ok := sources.lookup(repository.Repository, pack.declarationDomain)
+			if !ok {
 				repositoryIndex++
 				after = nil
 				continue
 			}
+			run, source := selected.run, selected.evidence
 			remainingScan := catalogAssertionScanLimit - scanned
 			if remainingScan <= 0 {
 				return items, &catalogPosition{
@@ -657,7 +694,7 @@ func collectCatalogList(
 							after: after, reason: "page_size",
 						}, nil
 					}
-					if next := nextCatalogPosition(repositories, query, packIndex, repositoryIndex+1); next != nil {
+					if next := nextCatalogPosition(sources, repositories, query, packIndex, repositoryIndex+1); next != nil {
 						next.reason = "page_size"
 						return items, next, nil
 					}
@@ -683,6 +720,7 @@ func collectCatalogList(
 // nextCatalogPosition finds the next (pack, repository) pair that can hold
 // declaration rows, so a full page never emits a dead continuation cursor.
 func nextCatalogPosition(
+	sources catalogSources,
 	repositories []extract.CertificateRepository,
 	query ContractCatalogQuery,
 	packIndex, repositoryStart int,
@@ -694,8 +732,7 @@ func nextCatalogPosition(
 			continue
 		}
 		for index := repositoryStart; index < len(repositories); index++ {
-			run, ok := certificateRun(repositories[index], pack.declarationDomain)
-			if ok && run.Status == "published" && run.AssertionCount > 0 {
+			if selected, ok := sources.lookup(repositories[index].Repository, pack.declarationDomain); ok && selected.nonEmpty {
 				return &catalogPosition{packIndex: packIndex, repositoryIndex: index}
 			}
 		}
@@ -706,7 +743,8 @@ func nextCatalogPosition(
 
 func collectCatalogOperation(
 	ctx context.Context,
-	source store.EvidenceStore,
+	relationshipSource store.EvidenceStore,
+	sources catalogSources,
 	certificate *extract.CoverageCertificate,
 	protocol, repository, lineage, operation string,
 ) (*ContractCatalogOperation, error) {
@@ -722,17 +760,19 @@ func collectCatalogOperation(
 	storedOperation := strings.TrimPrefix(operation, "/")
 	var pack protocolPack
 	var run extract.CertificateRun
+	var source store.EvidenceStore
 	var assertion store.Assertion
 	found := false
 	for _, candidate := range protocolPacks {
 		if protocol != "" && candidate.protocol != protocol {
 			continue
 		}
-		candidateRun, ok := certificateRun(repositoryCoverage, candidate.declarationDomain)
-		if !ok || candidateRun.Status != "published" {
+		selected, ok := sources.lookup(repositoryCoverage.Repository, candidate.declarationDomain)
+		if !ok {
 			continue
 		}
-		assertions, err := source.ListAssertions(ctx, store.AssertionQuery{
+		candidateRun := selected.run
+		assertions, err := selected.evidence.ListAssertions(ctx, store.AssertionQuery{
 			Repo: repository, RunID: candidateRun.RunID, Predicate: "DECLARES_OPERATION",
 			Object: storedOperation, Lineage: lineage, Limit: 1,
 		})
@@ -742,7 +782,7 @@ func collectCatalogOperation(
 		if len(assertions) != 1 {
 			continue
 		}
-		pack, run, assertion, found = candidate, candidateRun, assertions[0], true
+		pack, run, source, assertion, found = candidate, candidateRun, selected.evidence, assertions[0], true
 		break
 	}
 	if !found {
@@ -779,7 +819,7 @@ func collectCatalogOperation(
 		return nil, err
 	}
 	implementations, callers, unresolved, relationshipsTruncated, err :=
-		collectCatalogRelationships(ctx, source, certificate, pack, lineage, service, method)
+		collectCatalogRelationships(ctx, relationshipSource, certificate, pack, lineage, service, method)
 	if err != nil {
 		return nil, err
 	}
@@ -801,6 +841,7 @@ func collectCatalogOperation(
 		}(),
 		ShapeTruncated: request.Truncated || response.Truncated,
 		Caveat:         contractCatalogCaveat,
+		domain:         pack.declarationDomain,
 	}, nil
 }
 

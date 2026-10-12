@@ -18461,6 +18461,11 @@ blocked: its partitioned extraction roots are its exact output.
 3. Thresholds, the sampling rule, and reuse of the T47.2 corpus and its seal
    discipline.*
 
+*Ben's decisions (2026-10-12): Ben is the sole owner and reviewer, as for
+T47.2. The round uses the machine-oracle design: the independent enumerator is
+the complete oracle, and Ben validates a seeded oracle sample and adjudicates
+every oracle/candidate disagreement. Thresholds remain open for Ben.*
+
 **T49.2 · Thrift declaration identity and validation contract** — independently
 freeze namespace/include/generator lineage and declarations, ambiguity,
 missing/unsupported input and gap accounting; protobuf results grant no Thrift
@@ -18470,6 +18475,55 @@ support.
 release selection for only admitted declaration recipes; prove real source,
 authorization, paging/currentness and immutable citations; unrelated
 implementation/consumer evidence remains unavailable unless separately released.
+*Slice 1 (2026-10-12, Claude lead, Ben's "go ahead with T49.3"): exact
+partitioned discovery and detail. Every current extraction mode publishes
+declarations as partitioned roots, and Atlas read only legacy published runs.
+Run g's live Atlas, and a fresh fixture on the pre-fix `main` binary
+(`sha256:7964d311…`, nothing listed after 120 s), therefore listed zero
+declarations even though Caller Map reads them. `internal/api/catalog_partitioned.go`
+selects one exact source per repository and declaration domain:
+
+- a legacy published run when present;
+- otherwise the current partitioned root. It is found from the bounded root
+  reference (no plan or root bytes transferred) plus the candidate pointer's
+  policy digest, and admitted only after a one-row probe passes the store's
+  existing fence.
+
+`ListAssertions` and `ResolveEvidence` route through
+`ListPartitionedAssertions` and `ResolvePartitionedEvidence` for that root,
+so the existing list, detail, shape and claim code runs unchanged. Responses
+add `exact_authorities` (list) and `exact_authority` (detail). The
+certificate keeps describing legacy runs only. Cursors and the
+confirm-after-build check bind the certificate digest plus those roots, and
+legacy cursors are byte-identical when no root is read. A compile-time
+assertion keeps the production store a full native source. MCP strict output
+schemas admit the two fields, and their deliberately pinned digests move.
+
+Tests: four new fake-store tests cover current-root service with native
+locators only; stale, foreign, moved and absent roots left unavailable (404
+detail); legacy preference; and cursor and retry binding (409 on a moved
+root). Gates: `internal/api` normal and race (63.8 s), `internal/mcp` normal
+and race, `cmd/phebs` (158.8 s), vet and pinned lint (0 issues).
+
+Real binary `sha256:551053e6…` on a fresh one-`.proto` instance with
+partitioned extraction: Atlas listed both declarations with exactly one
+`proto-contract` authority, and the legacy certificate stayed unpublished.
+HTTP equals MCP for `search_contract_operations` and for
+`get_contract_operation`'s detail, the detail named the same root digest,
+anonymous requests got 401, and teardown was clean
+(`/home/ben/phebs-rehearsals/t493-atlas-20261012T053350Z`). The rehearsal
+lives in `pilot/validation/serve_rehearsal.py atlas`, and `serve.parity` now
+reports the first differing JSON paths.
+
+Remaining in T49.3: T48 release selection for admitted declaration recipes
+(the pack stays experimental-dark), and a denied-principal Atlas rehearsal
+with the slice-3 OIDC driver.
+
+Steady-state cost: each Atlas request adds, per visible repository and
+declaration domain without a legacy run, two point reads (root reference and
+candidate pointer) and one one-row fenced probe, on both build and confirm.
+Pages and locators reuse the store fence. No new lock, cache, schema, child or
+background work is added, and legacy-only stores take no new reads.*
 
 **T49.4 · Measured Atlas promotion and product closure** — satisfy the common
 promotion bar for each selected protocol and the declared UI/HTTP/MCP surface.

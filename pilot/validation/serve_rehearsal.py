@@ -191,6 +191,85 @@ def authorization(binary: Path, zoekt: Path, run_root: Path, index_deadline_s: f
                          for k, v in receipts_out.items()}}
 
 
+ATLAS_PROTO = """syntax = "proto3";
+package demo.v1;
+
+service Catalog {
+  rpc Get (GetRequest) returns (GetResponse);
+}
+
+message GetRequest { string id = 1; }
+message GetResponse { string name = 1; }
+"""
+
+
+def atlas(binary: Path, helpers: Path, run_root: Path, deadline_s: float = 300) -> dict:
+    """Contract Atlas serves a partitioned declaration root exactly, and HTTP equals MCP."""
+    run_root.mkdir(parents=True)
+    repo = run_root / 'contracts'
+    (repo / 'api' / 'v1').mkdir(parents=True)
+    (repo / 'api' / 'v1' / 'catalog.proto').write_text(ATLAS_PROTO)
+    env_git = {**os.environ, 'GIT_AUTHOR_NAME': 't49.3', 'GIT_AUTHOR_EMAIL': 't49.3@localhost',
+               'GIT_COMMITTER_NAME': 't49.3', 'GIT_COMMITTER_EMAIL': 't49.3@localhost'}
+    for argv in (['git', 'init', '-q', '-b', 'main'], ['git', 'add', '.'], ['git', 'commit', '-q', '-m', 'fixture']):
+        subprocess.run(argv, cwd=repo, env=env_git, check=True)
+    name = 'local' + str(repo)
+    port, key = free_port(), secrets.token_hex(24)
+    config = run_root / 'phebs.yaml'
+    config.write_text(f'server:\n  addr: "127.0.0.1:{port}"\n  data_dir: "{run_root / "data"}"\n'
+                      f'auth:\n  api_key: "{key}"\n  cookie_secure: false\n'
+                      f'experimental:\n  provisional_proto_extraction: true\n  typed_scope_reservations: true\n'
+                      f'sync:\n  poll_interval: 15s\n  resync_interval: 1h\n'
+                      f'connections:\n  - name: contracts\n    type: git\n    url: "{repo}"\n')
+    os.chmod(config, 0o600)
+    env = {**os.environ, 'PHEBS_ZOEKT_GIT_INDEX': str(helpers / 'zoekt-git-index'),
+           'PHEBS_FOCUSED_INDEX': str(helpers / 'phebs-focused-index'), 'PHEBS_BUF': str(helpers / 'buf')}
+    base = f'http://127.0.0.1:{port}'
+    session = serve.ServeSession(run_root / 'harness', 'atlas', [str(binary), 'serve', '-config', str(config)], base,
+                                 env=env, ready_timeout_s=120)
+    session.start()
+    try:
+        deadline = time.monotonic() + deadline_s
+        while True:
+            status, body = serve.http_get(base, '/api/contract_atlas', {'page_size': 100}, token=key)
+            page = json.loads(body) if status == 200 else {}
+            if page.get('items'):
+                break
+            if time.monotonic() > deadline:
+                raise serve.ServeError(f'Atlas listed no declaration before the deadline (last status {status})')
+            time.sleep(2)
+        authorities = page.get('exact_authorities') or []
+        if len(authorities) != 1 or authorities[0]['repository'] != name or authorities[0]['domain'] != 'proto-contract':
+            raise serve.ServeError(f'Atlas did not name the exact partitioned root: {authorities}')
+        legacy = [r for repo_cov in page['coverage']['repositories'] for r in repo_cov['runs']
+                  if r['domain'] == 'proto-contract' and r['status'] == 'published']
+        if legacy:
+            raise serve.ServeError('the fixture used a legacy published run, so the partitioned path was not exercised')
+        serve.parity(body, serve.mcp_call(base, 'search_contract_operations', {'page_size': 100}, token=key), VOLATILE)
+        item = next(i for i in page['items'] if i.get('operation'))
+        params = {'repository': name, 'lineage': item['declaration_lineage'], 'operation': item['operation']}
+        status, detail = serve.http_get(base, '/api/contract_atlas/operation', params, token=key)
+        if status != 200 or json.loads(detail).get('exact_authority', {}).get('root_digest') != authorities[0]['root_digest']:
+            raise serve.ServeError(f'Atlas operation detail did not come from the exact root (status {status})')
+        mcp_args = {'protocol': item.get('protocol', 'protobuf'), 'repository': name,
+                    'declaration_lineage': item['declaration_lineage'], 'operation': item['operation']}
+        mcp_detail = serve.mcp_call(base, 'get_contract_operation', mcp_args, token=key)
+        if mcp_detail.get('isError'):
+            raise serve.ServeError(f"MCP detail failed: {mcp_detail.get('content')}")
+        # MCP wraps the same detail with an echo of the requested endpoint.
+        serve.parity(detail, {'structuredContent': (mcp_detail.get('structuredContent') or {}).get('detail')}, VOLATILE)
+        anonymous = serve.http_get(base, '/api/contract_atlas')[0]
+    except BaseException:
+        session.stop('hard_kill', reason='atlas probe failed')
+        raise
+    receipt = session.stop('graceful')
+    return {'schema': 't49.3-atlas-rehearsal-v1', 'binary_sha256': serve.receipts.sha256_file(binary),
+            'items': len(page['items']), 'exact_authority': {k: authorities[0][k] for k in ('domain', 'run_id', 'root_digest')},
+            'legacy_certificate_unpublished': True, 'http_mcp_list_parity': True, 'http_mcp_detail_parity': True,
+            'anonymous_status': anonymous,
+            'receipt': {k: receipt[k] for k in ('outcome', 'stop_mode', 'ready_seconds', 'exit_code', 'teardown')}}
+
+
 def callers(base: str, key: str, endpoints: list[dict], absent_repository: str) -> dict:
     pages = 0
     for endpoint in endpoints:
@@ -225,6 +304,10 @@ def main() -> None:
     auth.add_argument('--binary', type=Path, required=True)
     auth.add_argument('--zoekt', type=Path, required=True)
     auth.add_argument('--run-root', type=Path, required=True)
+    at = sub.add_parser('atlas')
+    at.add_argument('--binary', type=Path, required=True)
+    at.add_argument('--helpers', type=Path, required=True)
+    at.add_argument('--run-root', type=Path, required=True)
     call = sub.add_parser('callers')
     call.add_argument('--base', required=True)
     call.add_argument('--key-file', type=Path, required=True, help='operator config holding auth.api_key')
@@ -233,6 +316,8 @@ def main() -> None:
     args = parser.parse_args()
     if args.command == 'lifecycle':
         result = lifecycle(args.binary.resolve(), args.zoekt.resolve(), args.run_root.resolve())
+    elif args.command == 'atlas':
+        result = atlas(args.binary.resolve(), args.helpers.resolve(), args.run_root.resolve())
     elif args.command == 'authorization':
         result = authorization(args.binary.resolve(), args.zoekt.resolve(), args.run_root.resolve())
     else:

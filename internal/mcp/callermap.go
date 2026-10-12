@@ -223,7 +223,9 @@ func contractCatalogListOutputSchema() map[string]any {
 			"pagination":      map[string]any{"type": "object"},
 			"coverage_digest": map[string]any{"type": "string"},
 			"coverage":        map[string]any{"type": "object"},
-			"caveat":          map[string]any{"type": "string"},
+			// T49.3: current partitioned declaration roots this page read.
+			"exact_authorities": objectArraySchema(),
+			"caveat":            map[string]any{"type": "string"},
 		},
 	)
 }
@@ -480,6 +482,7 @@ func contractOperationOutputSchema() map[string]any {
 					"shape_truncated":           map[string]any{"type": "boolean"},
 					"coverage_digest":           stringProperty,
 					"coverage":                  objectProperty,
+					"exact_authority":           objectProperty,
 					"caveat":                    stringProperty,
 				},
 			},
