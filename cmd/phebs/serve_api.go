@@ -19,6 +19,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/auth"
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/codenav"
+	"github.com/bmeddeb/phebs/internal/compat"
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/extract"
 	"github.com/bmeddeb/phebs/internal/lifecycle"
@@ -185,12 +186,27 @@ func openServeSearcher(d *serveDeps) error {
 // and never these, so a released Caller Map alone leaves them dark. Without a
 // released pack this is exactly the store the extraction pipeline installed.
 func experimentalProofBundles(cfg *config.Config, proofBundles store.ProofBundleStore) store.ProofBundleStore {
-	experimental := cfg.Experimental
-	if experimental.ProvisionalProtoExtraction || experimental.ProvisionalThriftExtraction ||
-		experimental.ProvisionalThriftFieldExtraction || experimental.ProvisionalKafkaExtraction {
+	if provisionalExtractionOn(cfg) {
 		return proofBundles
 	}
 	return nil
+}
+
+// experimentalWireCompatibility admits the standalone Buf WIRE verdict (T53.2)
+// under the same dark switches as the proof-enriched check. No released record
+// admits it yet: T53.3 binds a signed claim in the same change as its passing
+// result, and until then a selection naming it refuses startup as unbound.
+func experimentalWireCompatibility(cfg *config.Config, checker compat.Service) compat.Service {
+	if provisionalExtractionOn(cfg) {
+		return checker
+	}
+	return nil
+}
+
+func provisionalExtractionOn(cfg *config.Config) bool {
+	experimental := cfg.Experimental
+	return experimental.ProvisionalProtoExtraction || experimental.ProvisionalThriftExtraction ||
+		experimental.ProvisionalThriftFieldExtraction || experimental.ProvisionalKafkaExtraction
 }
 
 // newServeAPIOptions assembles the API options: search/code-navigation
@@ -241,6 +257,7 @@ func newServeAPIOptions(d *serveDeps) (api.Options, error) {
 		CallerReader:         d.callerReader,
 		ProofBundleRetention: cfg.ProofBundles.RetentionFor(),
 		Compatibility:        d.compatibility, Visible: d.visibleFor,
+		WireCompatibility: experimentalWireCompatibility(cfg, d.compatibility),
 		Principal: func(ctx context.Context) string {
 			principal, ok := auth.PrincipalFromContext(ctx)
 			if !ok {
@@ -365,6 +382,7 @@ func newServeMCPServer(d *serveDeps, apiOpts api.Options) *mcpsdk.Server {
 		DataDir: d.cfg.Server.DataDir,
 		CodeNav: d.codeNavigation, Visible: d.visibleFor, Proofs: mcpProofs,
 		Compatibility:       mcpCompatibility,
+		WireCompatibility:   apiOpts.WireCompatibility,
 		ContractCatalog:     catalogQueries,
 		CallerMap:           callerMapQueries,
 		CallerComparison:    comparisonQueries,

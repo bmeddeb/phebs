@@ -284,8 +284,13 @@ and who owns each.
     breaking, although protobuf documents them as wire-compatible. Buf errs
     only in the safe direction (it never calls a break compatible), and the
     disagreement is pinned in the goldens.
+  - Done: T53.2 adds a standalone verdict surface
+    (`check_wire_compatibility`, HTTP and MCP). It carries no field
+    evidence and is admitted only by the dark switches until T53.3 binds the
+    claim.
   - Remaining: bind the input identity after Epic 49, then the T53.3 measured
-    promotion.
+    promotion. It needs a WIRE claim card and a preregistered change
+    population; the agent can do both.
 
 Everything human-gated is listed above. Agent work proceeds on ungated
 tickets in the meantime.

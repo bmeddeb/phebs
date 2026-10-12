@@ -300,16 +300,7 @@ func (s *ProofService) CheckContractCompatibility(ctx context.Context, request c
 	}
 	result, err := s.opts.Compatibility.Check(ctx, request)
 	if err != nil {
-		switch {
-		case errors.Is(err, compat.ErrInvalidInput):
-			return nil, huma.Error400BadRequest(err.Error())
-		case errors.Is(err, compat.ErrLimit):
-			return nil, huma.Error422UnprocessableEntity(err.Error())
-		case errors.Is(err, compat.ErrUnavailable):
-			return nil, huma.Error503ServiceUnavailable(err.Error())
-		default:
-			return nil, huma.Error422UnprocessableEntity("compatibility engine could not produce a verdict", err)
-		}
+		return nil, compatibilityCheckError(err)
 	}
 	filters := make([]assertionFilter, 0, len(result.AffectedFields))
 	for _, field := range result.AffectedFields {

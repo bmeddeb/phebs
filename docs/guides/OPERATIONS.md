@@ -4631,6 +4631,17 @@ succeeds (the first five remain available when compatibility is unavailable):
   `before`/`after` arrays of `{path,content}` `.proto` files. It runs Buf's
   `WIRE` policy and joins affected field identities to visible
   `REFERENCES_PROTO_FIELD` evidence.
+- `POST /api/check_wire_compatibility` (MCP `check_wire_compatibility`,
+  capability `wire-compatibility`) accepts the same request and returns only
+  the Buf verdict: violations, affected field identities, the before/after
+  input digests and the run provenance. It reads no store, repository,
+  field-reference evidence or proof bundle, so any authenticated caller sees
+  only what its own request supplied. It runs in the same single sandboxed Buf
+  child per request, with the same input limits and refusal statuses. Only the
+  provisional extraction switches admit it today; a released record cannot
+  admit it until T53.3 binds the claim. Known limit: Buf reports every
+  singular↔repeated change as breaking, including string and message changes
+  that protobuf documents as wire-compatible.
 
 The same opt-in registers the read-only contract-impact report surface and
 advertises `contract-impact-report` in `/api/version`'s `capabilities` array

@@ -56,6 +56,9 @@ type Options struct {
 	// Compatibility enables T14.3 only after the pinned Buf checker and its
 	// host sandbox have initialized successfully.
 	Compatibility CompatibilityQueries
+	// WireCompatibility enables the standalone Buf WIRE verdict tool (T53.2):
+	// the verdict alone, with no proof bundle or field-reference evidence.
+	WireCompatibility compat.Service
 	// ContractCatalog and CallerMap enable T20.11's three read-only discovery
 	// tools only as one complete annex. CallerComparison adds T20.13's fourth
 	// workflow tool only when the same annex and shared comparison service are
@@ -176,6 +179,7 @@ func NewServer(opts Options) *sdk.Server {
 	registerCodeNavigationTools(s, opts)
 	registerHistoryTools(s, opts, history)
 	registerProofTools(s, opts)
+	registerWireCompatibilityTool(s, opts)
 	registerCallerMapTools(s, opts)
 	registerCallerComparisonTool(s, opts)
 	registerServiceDirectoryTools(s, opts)
@@ -290,6 +294,22 @@ func registerProofTools(s *sdk.Server, opts Options) {
 		result, err := opts.Compatibility.CheckContractCompatibilityMCP(ctx, in)
 		if err != nil {
 			return nil, investigation.Envelope{}, err
+		}
+		return nil, *result, nil
+	})
+}
+
+func registerWireCompatibilityTool(s *sdk.Server, opts Options) {
+	if opts.WireCompatibility == nil {
+		return
+	}
+	sdk.AddTool(s, &sdk.Tool{
+		Name:        "check_wire_compatibility",
+		Description: "Run the pinned Buf WIRE policy over bounded before/after protobuf source sets and return only its verdict, violations, affected field identities, input digests and run provenance. It reads no repository evidence; the verdict covers the supplied bytes, not runtime or deployment compatibility.",
+	}, func(ctx context.Context, _ *sdk.CallToolRequest, in compat.Request) (*sdk.CallToolResult, compat.CompatibilityResult, error) {
+		result, err := opts.WireCompatibility.Check(ctx, in)
+		if err != nil {
+			return nil, compat.CompatibilityResult{}, err
 		}
 		return nil, *result, nil
 	})

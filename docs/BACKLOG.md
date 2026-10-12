@@ -18848,7 +18848,8 @@ cases keep the independent truth (`expect`) and pin Buf's actual output in
 direction: a false "compatible" fails the test and blocks release. If Buf
 changes its behavior, the pin fails and the record must be revisited.
 
-T53.3 must publish this as a known limit of the verdict. `internal/compat`
+T53.3 must publish this as a known limit of the verdict (OPERATIONS.md now
+states it). `internal/compat`
 passes normally and under race, and pinned lint reports 0 issues.
 
 Still open in T53.1: binding the admitted protobuf input identity once
@@ -18877,6 +18878,35 @@ unchanged. All 7 top-level `internal/compat` tests now pass normally and under
 race, and the pinned sandbox test now requires `ulimit -d 524288`.
 Steady-state cost: none. This is the same single sandboxed child per
 compatibility request.*
+*Slice 2 (2026-10-12, Claude lead): a standalone verdict surface.
+Compatibility used to be reachable only through the experimental proof
+service. That service needs the proof-bundle store and joins
+`scip-proto-field` evidence, which Epic 51 has not released. So it could not
+be the released WIRE claim.
+
+`POST /api/check_wire_compatibility` and the MCP tool
+`check_wire_compatibility` (capability `wire-compatibility`) now return only
+the pinned Buf verdict: violations, affected field identities, the
+before/after input digests and the run provenance.
+
+- It reads no store, repository, field evidence or proof bundle. Its
+  authorization is therefore the authenticated caller plus its own supplied
+  bytes. Unreleased field evidence stays unavailable by construction.
+- The proof-enriched check and the standalone surface share one refusal
+  mapping (`compatibilityCheckError`): 400 invalid, 422 limit or no verdict,
+  503 unavailable.
+- Admission today: the same provisional extraction switches as the proof
+  service (`experimentalWireCompatibility`). A released Caller Map alone
+  still serves no compatibility surface, which the production-assembly test
+  now pins with a stand-in checker.
+- No released record admits it yet. T53.3 adds the claim binding in the same
+  change as its signed passing result. Until then, a selection naming it
+  refuses startup as an unbound release, through the existing
+  `releasedExtractors` refusal.
+
+Bounded closed execution, the sandbox and the input limits are unchanged.
+Steady-state cost: none when not admitted. When admitted, it is the same
+single sandboxed Buf child per request, with no persistence.*
 
 **T53.3 · Measured compatibility promotion** — satisfy the common bar for
 the standalone WIRE verdict and separately qualify any enrichment it claims.

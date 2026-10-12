@@ -155,6 +155,10 @@ type Options struct {
 	// Compatibility supplies the pinned, sandboxed Buf checker. Nil keeps the
 	// HTTP operation and corresponding MCP capability undiscoverable.
 	Compatibility compat.Service
+	// WireCompatibility admits the standalone Buf WIRE verdict (T53.2): the
+	// same checker without proof bundles or field-reference enrichment. Nil
+	// keeps it undiscoverable; the caller decides admission.
+	WireCompatibility compat.Service
 	// Principal returns the stable authenticated subject recorded in a bundle.
 	// AuthorizationProvider names the visibility policy generation.
 	Principal             func(context.Context) string
@@ -187,6 +191,9 @@ func apiCapabilities(opts Options) []string {
 	}
 	if opts.CallerComparison != nil || NewCallerComparisonService(opts) != nil {
 		capabilities = append(capabilities, callerComparisonCapability)
+	}
+	if opts.WireCompatibility != nil {
+		capabilities = append(capabilities, "wire-compatibility")
 	}
 	slices.Sort(capabilities)
 	return capabilities
@@ -477,6 +484,7 @@ func New(opts Options) http.Handler {
 	registerObservationProgressAPI(api, opts)
 	registerExtractionProgressAPI(api, opts)
 	registerRelationshipAPI(api, opts)
+	registerWireCompatibilityAPI(api, opts)
 
 	// raw handler, not huma: HMAC over the exact body bytes is the auth
 	if opts.WebhookSecret != "" {

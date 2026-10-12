@@ -1380,6 +1380,7 @@ by omitting `auth.api_key`. Always open: `/api/health`, `/api/version`,
 | `/api/find_kafka_topic_usage?topic=`                                | GET             | experimental permission-scoped Kafka topic-usage proof bundle with an always-present unresolved census |
 | `/api/get_extraction_coverage?domains=`                             | GET             | experimental assertion-free extraction-coverage proof bundle                                   |
 | `/api/check_contract_compatibility`                                 | POST            | experimental Buf WIRE verdict enriched with permission-scoped affected field references         |
+| `/api/check_wire_compatibility`                                     | POST            | experimental standalone Buf WIRE verdict only: no repository evidence, no proof bundle          |
 | `/api/proof_bundles/{id}`                                           | GET             | reauthorized immutable proof-bundle read; an ID is not a bearer credential                     |
 | `/api/contract_impact_report?operation=`                            | GET             | experimental bounded operation-impact report                                                   |
 | `/api/contract_impact_report?lineage=&message=&field_number=`       | GET             | experimental bounded stable-field impact report                                                |
@@ -1485,6 +1486,7 @@ Caller Map, comparison, proof, search, SCIP, and history reads.
 | `find_kafka_topic_usage` | MCP envelope v1.0 for one Kafka topic spelling; facts are producer/consumer evidence rows, the persisted bundle carries the per-shape-class unresolved census, and the answer is never a completeness claim |
 | `get_extraction_coverage` | envelope containing the assertion-free coverage certificate over requested extractor domains, or every provisional domain when omitted |
 | `check_contract_compatibility` | envelope containing the pinned Buf `WIRE` conclusion plus stable affected-field identities, visible field-reference evidence, exact proof references, coverage, and invocation provenance |
+| `check_wire_compatibility` | the standalone pinned Buf `WIRE` verdict: violations, affected field identities, before/after input digests and run provenance; it reads no repository evidence |
 | `search_contract_operations` | bounded Contract Atlas discovery page with complete selectable protocol/repository/declaration-lineage/operation identities, coverage, and continuation cursor |
 | `get_contract_operation` | one protocol-qualified exact operation with request/response shapes, immutable declaration citation, related evidence, and coverage |
 | `list_operation_callers` | one authorized repository's exact complete-generation Caller Map page with active focused/whole scope, repository-overlay plane, durable partition progress, base/`go_test` record counts when current, typed unavailable states, source/unit ordering, direct-syntax rows and abstentions, exact totals, opaque citations, and revision-bound cursor |

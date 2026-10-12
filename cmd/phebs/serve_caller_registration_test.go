@@ -14,6 +14,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/callerexecute"
+	"github.com/bmeddeb/phebs/internal/compat"
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/extract"
 )
@@ -194,6 +195,7 @@ type servedCallerSurfaces struct {
 	callerMapTool     bool
 	comparisonTool    bool
 	proofTool         bool
+	wireTool          bool
 	callerMapEnabled  bool
 	callerMapServiced bool
 }
@@ -209,7 +211,9 @@ type servedCallerSurfaces struct {
 func serveCallerSurfaces(t *testing.T, cfg *config.Config) servedCallerSurfaces {
 	t.Helper()
 	t.Setenv("PHEBS_CONTRACT_ATLAS_FIXTURE", "")
-	deps := &serveDeps{ctx: context.Background(), cfg: cfg}
+	// A validated Buf checker is stood in for, so admission alone decides
+	// whether the compatibility surfaces appear; nothing here calls it.
+	deps := &serveDeps{ctx: context.Background(), cfg: cfg, compatibility: stubCompatibility{}}
 	if err := newServeExtractionRegistries(deps); err != nil {
 		t.Fatalf("newServeExtractionRegistries: %v", err)
 	}
@@ -273,6 +277,8 @@ func serveCallerSurfaces(t *testing.T, cfg *config.Config) servedCallerSurfaces 
 			served.comparisonTool = true
 		case "find_operation_consumers":
 			served.proofTool = true
+		case "check_wire_compatibility":
+			served.wireTool = true
 		}
 	}
 	return served
@@ -288,8 +294,8 @@ func serveCallerSurfaces(t *testing.T, cfg *config.Config) servedCallerSurfaces 
 // the experimental switches.
 func TestCallerMapOrdinarySurfaceFollowsProductionAssembly(t *testing.T) {
 	everyProduct := []string{
-		"contract-atlas", "contract-caller-comparison", "contract-caller-map",
-		"contract-impact-report", "kafka-topic-usage", "service-catalog-v2",
+		"contract-atlas", "contract-caller-comparison", "contract-caller-map", "contract-compatibility",
+		"contract-impact-report", "kafka-topic-usage", "service-catalog-v2", "wire-compatibility",
 	}
 	tests := []struct {
 		name      string
@@ -307,7 +313,7 @@ func TestCallerMapOrdinarySurfaceFollowsProductionAssembly(t *testing.T) {
 			configure: func(cfg *config.Config) { cfg.Experimental.ProvisionalProtoExtraction = true },
 			want: servedCallerSurfaces{
 				capabilities:  everyProduct,
-				callerMapTool: true, comparisonTool: true, proofTool: true,
+				callerMapTool: true, comparisonTool: true, proofTool: true, wireTool: true,
 				callerMapEnabled: true, callerMapServiced: true,
 			},
 		},
@@ -316,9 +322,10 @@ func TestCallerMapOrdinarySurfaceFollowsProductionAssembly(t *testing.T) {
 			configure: func(cfg *config.Config) { cfg.Experimental.ProvisionalKafkaExtraction = true },
 			want: servedCallerSurfaces{
 				capabilities: []string{
-					"contract-atlas", "contract-impact-report", "kafka-topic-usage", "service-catalog-v2",
+					"contract-atlas", "contract-compatibility", "contract-impact-report", "kafka-topic-usage",
+					"service-catalog-v2", "wire-compatibility",
 				},
-				proofTool: true,
+				proofTool: true, wireTool: true,
 			},
 		},
 		{
@@ -338,7 +345,7 @@ func TestCallerMapOrdinarySurfaceFollowsProductionAssembly(t *testing.T) {
 			configure: func(cfg *config.Config) { cfg.Experimental.ProvisionalThriftExtraction = true },
 			want: servedCallerSurfaces{
 				capabilities:  everyProduct,
-				callerMapTool: true, comparisonTool: true, proofTool: true,
+				callerMapTool: true, comparisonTool: true, proofTool: true, wireTool: true,
 				callerMapEnabled: true, callerMapServiced: true,
 			},
 		},
@@ -367,4 +374,10 @@ func TestCallerMapOrdinarySurfaceFollowsProductionAssembly(t *testing.T) {
 			}
 		})
 	}
+}
+
+type stubCompatibility struct{}
+
+func (stubCompatibility) Check(context.Context, compat.Request) (*compat.CompatibilityResult, error) {
+	return nil, compat.ErrUnavailable
 }
