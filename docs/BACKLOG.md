@@ -18011,6 +18011,52 @@ static and required machine checks pass; no native prerequisite silently skips.
 No 5,000/10,000-service, 12-GB, freshness-under-cadence or general release claim
 is inferred from this smaller workload.
 
+*Groundwork (2026-10-12, exploratory, not acceptance).
+`pilot/validation/caller_operating.py` adopts the T48.3 drivers for Caller Map
+on the exact current binary `sha256:551053e6…` (source `b30a22c8`). It used
+the T47.2 workload (three frozen derived repositories) and run g's
+configuration, including the provisional switches, because T47.3 keeps the
+recipe unbound until T47.5. A whole-session RSS sampler reads every process
+in the serve's session from `/proc`. The receipt is
+[`operating_groundwork_20261012.json`](../spike/t474/operating_groundwork_20261012.json).
+
+| Phase | Ready | Current after | Peak session RSS | Teardown |
+|---|---|---|---|---|
+| Cold, fresh store | 2.3 s | 91 s | 846 MB, 4 processes | clean |
+| Warm restart, then planned hard death | 1.5 s | immediately, same generation | 240 MB | group-killed |
+| Restart after hard death | 1.5 s | immediately, same generation | 238 MB | clean |
+| Second fresh store, hard-killed mid-generation at about 45 s | 2.5 s | — | 787 MB | group-killed |
+| Recovery of that store | 5.3 s | 56 s | 609 MB | clean |
+
+- The data directory, including bare repositories and indexes, is 850 MB.
+- Across 1,197 Caller Map reads (399 endpoints × 3), latency is p50 48 ms,
+  p95 52 ms, p99 55 ms and max 117 ms.
+- Within one store the generation identity is unchanged across every restart.
+  Across the two fresh stores, every caller leaf artifact and every count is
+  byte-identical. The generation identities differ only by each store's
+  random upstream `run_id` and the provenance digest over it, which is store
+  provenance by design and not a content difference.
+- The first attempt compared whole generation identities across stores and
+  stopped on exactly that difference; its custody is retained under
+  `/home/ben/phebs-rehearsals/t474a-operating-20261012T065…`.
+
+**Proposed operating class for Ben to freeze before acceptance:** one node on
+this host (14.89 GiB), with the three-repository T47.2 workload (7,685 Go
+sources and 131 `.proto` files). Each threshold leaves at least 3× headroom
+over the measurement:
+
+- cold to current ≤ 300 s, and recovery after interruption ≤ 300 s;
+- warm restart ready ≤ 30 s, with an unchanged generation;
+- peak whole-session RSS ≤ 2.5 GiB;
+- data ≤ 3 GiB;
+- Caller Map read p95 ≤ 250 ms and p99 ≤ 500 ms;
+- caller content byte-identical across fresh stores.
+
+Still unexercised for T47.4 acceptance: incremental source updates,
+concurrent publication with paging, permission changes, backup/restore,
+pressure, collection, and the ordinary (released) path. The last waits on
+T47.5's binding.*
+
 **T47.5 · Exact Caller Map promotion and supported product closure** *(needs
 T47.2–T47.4; presentation-track handoff for any UI change)* — release only
 the validated Caller Map artifact and selected recipes through a

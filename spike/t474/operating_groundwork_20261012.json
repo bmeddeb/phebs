@@ -1,0 +1,148 @@
+{
+ "binary_sha256": "sha256:551053e638d26d81707db7c3ba92fe12a1b7c5ba838f1d77b6db630426913b53",
+ "content_identical_across_stores": true,
+ "cross_store_difference": "generation identities differ only by per-store upstream run ids",
+ "exploratory": true,
+ "generation_identities": [
+  [
+   "local/home/ben/phebs-rehearsals/t472-candidate-run-20261011g/corpus/containerd",
+   "sha256:24cb8e4d167211566e2d267b2b1310e31003906271c7a9c14bd352c583703781",
+   "sha256:ec45a10caf833b4ea3e61d61b5a834cf93f00912edac2ccf677724d927585d16"
+  ],
+  [
+   "local/home/ben/phebs-rehearsals/t472-candidate-run-20261011g/corpus/etcd",
+   "sha256:f4a7afa7c3edb7299479edd97d42d9df53ed57ff1a7af185db198ed09eca367a",
+   "sha256:c8880923096a7da14b0eb19bee39cb9fc668f4e72a74c70323b0a48a50841c60"
+  ],
+  [
+   "local/home/ben/phebs-rehearsals/t472-candidate-run-20261011g/corpus/grpc-go",
+   "sha256:8f0c1006c67f38adf52a69a414295f2389d900690563c61a7deab631a2e5d8ca",
+   "sha256:4c7e033e71730d075c7fd109d4a1ca3dd48342d5c87fc5780a60243756f2a37f"
+  ]
+ ],
+ "host": {
+  "cpu_count": 12,
+  "machine": "x86_64",
+  "physical_memory_bytes": 15991762944,
+  "sysname": "Linux"
+ },
+ "phases": {
+  "cold": {
+   "caller_map_latency": {
+    "max_ms": 116.5,
+    "n": 1197,
+    "p50_ms": 47.86,
+    "p95_ms": 51.73,
+    "p99_ms": 55.25
+   },
+   "cold": true,
+   "data_bytes": 849765269,
+   "endpoints": 399,
+   "ready_seconds": 2.268,
+   "receipt": {
+    "exit_code": 0,
+    "max_rss_kib": 582412,
+    "outcome": "success",
+    "signal": null,
+    "stop_mode": "graceful",
+    "teardown": "clean",
+    "wall_seconds": 147.712
+   },
+   "rss": {
+    "mean_bytes": 390670611,
+    "peak_bytes": 846401536,
+    "peak_processes": 4,
+    "samples": 282
+   },
+   "seconds_to_current": 91.12694962101523
+  },
+  "interrupted-cold": {
+   "data_bytes": 753003209,
+   "ready_seconds": 2.507,
+   "receipt": {
+    "exit_code": null,
+    "max_rss_kib": 538476,
+    "outcome": "success",
+    "signal": 9,
+    "stop_mode": "hard_kill",
+    "teardown": "killed_stray_members",
+    "wall_seconds": 48.091
+   },
+   "rss": {
+    "mean_bytes": 297588989,
+    "peak_bytes": 786694144,
+    "peak_processes": 4,
+    "samples": 89
+   }
+  },
+  "recovered-after-interruption": {
+   "data_bytes": 850083066,
+   "ready_seconds": 5.262,
+   "receipt": {
+    "exit_code": 0,
+    "max_rss_kib": 432732,
+    "outcome": "success",
+    "signal": null,
+    "stop_mode": "graceful",
+    "teardown": "clean",
+    "wall_seconds": 62.043
+   },
+   "rss": {
+    "mean_bytes": 390744920,
+    "peak_bytes": 609415168,
+    "peak_processes": 4,
+    "samples": 110
+   },
+   "seconds_to_current": 56.31939876702381
+  },
+  "restart-after-hard-death": {
+   "data_bytes": 849797299,
+   "ready_seconds": 1.506,
+   "receipt": {
+    "exit_code": 0,
+    "max_rss_kib": 124872,
+    "outcome": "success",
+    "signal": null,
+    "stop_mode": "graceful",
+    "teardown": "clean",
+    "wall_seconds": 1.713
+   },
+   "rss": {
+    "mean_bytes": 238043136,
+    "peak_bytes": 238043136,
+    "peak_processes": 2,
+    "samples": 1
+   },
+   "seconds_to_current": 2.169981598854065e-07
+  },
+  "warm-restart": {
+   "data_bytes": 849787877,
+   "ready_seconds": 1.505,
+   "receipt": {
+    "exit_code": null,
+    "max_rss_kib": 112344,
+    "outcome": "success",
+    "signal": 9,
+    "stop_mode": "hard_kill",
+    "teardown": "killed_stray_members",
+    "wall_seconds": 1.585
+   },
+   "rss": {
+    "mean_bytes": 240246784,
+    "peak_bytes": 240246784,
+    "peak_processes": 2,
+    "samples": 1
+   },
+   "seconds_to_current": 3.039604052901268e-07
+  }
+ },
+ "repositories": [
+  "local/home/ben/phebs-rehearsals/t472-candidate-run-20261011g/corpus/etcd",
+  "local/home/ben/phebs-rehearsals/t472-candidate-run-20261011g/corpus/grpc-go",
+  "local/home/ben/phebs-rehearsals/t472-candidate-run-20261011g/corpus/containerd"
+ ],
+ "run_root": "/home/ben/phebs-rehearsals/t474a-operating-20261012T070642Z",
+ "schema": "t47.4-operating-groundwork-v1",
+ "source_commit": "b30a22c862f4cacc6c1fea618989df0edad2efcf",
+ "store_local_identity_stable_across_restarts": true
+}
