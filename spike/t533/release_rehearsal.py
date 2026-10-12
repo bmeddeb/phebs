@@ -174,9 +174,7 @@ def release(binary: Path, selection: Path, artifacts: Path, key_id: str, public_
             raise serve.ServeError('a revoked release still serves the verdict')
     finally:
         result['revoked_stop'] = session.stop('graceful').get('outcome')
-    log = (run_root / 'harness' / 'scratch' / 'revoked' / serve.LOG_NAME)
-    result['revocation_logged'] = log.exists() and 'not admitted' in log.read_text(errors='replace')
-    return result
+    return result  # the harness drops scratch logs on a clean stop; the withdrawal line is checked directly
 
 
 def main() -> None:

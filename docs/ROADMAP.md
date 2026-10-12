@@ -299,9 +299,10 @@ and who owns each.
   - T53.3 round 2 **passed** the narrower no-false-compatible claim on a
     fresh vitess/istio population: 1,525 units, 0 permissive over 104 real
     breaks, 0.33% undisclosed errors, and parity on every unit.
-  - Remaining, agent: real-binary authorization, the operating envelope,
-    and the claim binding.
-  - Remaining, Ben: the signing key for the release record.
+  - **Released 2026-10-12:** `rel-phebs.protobuf.wire.buf-1.0.0` is signed
+    with Ben's key. The real release binary admits only `wire-compatibility`
+    with no experimental switch, and revocation is proven. The release
+    expires on 2027-01-10. See protocol §11.
   - Remaining, agent: bind the input identity after Epic 49.
 
 Everything human-gated is listed above. Agent work proceeds on ungated

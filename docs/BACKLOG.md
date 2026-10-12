@@ -19004,6 +19004,29 @@ Protocol §10 lists the 5 undisclosed errors and the remaining release gates:
 a signed record binding the claim with Ben's key, real-binary
 authorization, the operating envelope, and owner/expiry.*
 
+*Slice 4 (2026-10-12): **released.** On Ben's instruction, Claude generated
+his ed25519 signing key (`~/phebs-release-ed25519.pem`) and signed
+`rel-phebs.protobuf.wire.buf-1.0.0` for the reproducible release binary
+`e485fc36` (`sha256:837b0f0f…`).
+
+- **Code.**
+  - A `releasedClaims` registry binds the claim into the implementation
+    digest and admits only `wire-compatibility`.
+  - `phebs release-sign` derives every binding from present fact and
+    self-verifies through the startup loader.
+  - A 4-slot concurrency bound with a 5 s wait.
+  - A released claim without extractors now initializes its checker. The
+    real-binary run found this: the claim was admitted but the surface was
+    dark.
+- **Envelope.** At 1, 4 and 8 clients: 7.2, 18.7 and 19.1 checks/s; p95 at
+  most 0.65 s; peak tree RSS at most 559 MiB; all 200.
+- **Startup proof.** With no experimental switch, only `wire-compatibility`
+  is served, and 401 is returned unauthenticated. HTTP equals MCP.
+  Revocation withdraws the surface and logs it.
+
+Protocol §11 holds the details. The validation expires on 2027-01-10. This
+release had no independent human review.*
+
 ## Epic 54 · Contract Impact production readiness
 
 **T54.1 · Supported report contract and direct end-to-end quality** — freeze

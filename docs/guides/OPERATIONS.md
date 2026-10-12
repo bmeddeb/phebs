@@ -4643,6 +4643,30 @@ succeeds (the first five remain available when compatibility is unavailable):
   singular↔repeated change as breaking, including string and message changes
   that protobuf documents as wire-compatible.
 
+  **Released admission (T53.3, release 1.0.0).** The surface can run with no
+  experimental switch, admitted by its signed record:
+
+  ```yaml
+  release_selection:
+    path: "<repo>/spike/t533/release/selection"
+    artifacts_path: "<repo>/spike/t533/release/artifacts"
+    keys:
+      - id: "ben-phebs-release-2026-10"
+        public_key: "S1sOhc+R4AZVKlmSMWfSYmZWhPcvD9KcTUfrGzf1sqE="
+  ```
+
+  - **Binary.** The record admits only the binary built from commit
+    `e485fc36` with `go build -trimpath` from a clean clone
+    (`sha256:837b0f0f…`). Any other build refuses startup.
+  - **Concurrency.** At most 4 checks run at once, and others wait up to
+    5 s before a retryable 503.
+  - **Suspension.** Add `rel-phebs.protobuf.wire.buf-1.0.0` under
+    `release_selection.revoked` and restart.
+  - **Expiry.** The release expires on 2027-01-10. Revalidate it on any Buf,
+    `WIRE` policy, verdict-code or input-limit change.
+  - **Signing.** New records are signed with `phebs release-sign`, run by the
+    binary being released.
+
 The same opt-in registers the read-only contract-impact report surface and
 advertises `contract-impact-report` in `/api/version`'s `capabilities` array
 to authenticated callers. `/api/version` remains always-open for deployment

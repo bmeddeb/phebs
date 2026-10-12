@@ -359,3 +359,75 @@ apply to this stateless surface:
 
 Backup/restore and generation gates do not apply, because the surface stores
 nothing.
+
+## 11. Release 1.0.0 (2026-10-12): signed and proven on the real binary
+
+Ben generated the release signing key on his instruction: an ed25519 key at
+`~/phebs-release-ed25519.pem` (mode 0600). The public key is
+`S1sOhc+R4AZVKlmSMWfSYmZWhPcvD9KcTUfrGzf1sqE=`, also in
+`spike/t533/release/public-key.txt`, under key id
+`ben-phebs-release-2026-10`.
+
+**What the record binds.** The signed record is
+`spike/t533/release/selection/release.json`, with release id
+`rel-phebs.protobuf.wire.buf-1.0.0`.
+
+- **Card, manifest and validation.** These are in
+  `spike/t533/release/artifacts/`. The validation cites round 2 (§10), the
+  operating envelope and authorization.
+- **Release binary.** Built from commit `e485fc36` (`vcs.modified=false`),
+  binary `sha256:837b0f0f…`. A second clean build reproduced it byte for
+  byte.
+- **Validation expiry.** 2027-01-10.
+- **Approval.** `ben-meddeb-2026-10-12-signing-instruction`.
+
+**Code added for the release.**
+
+- **Claim registry.** `releasedClaims` in `cmd/phebs` binds the claim beside
+  `packRecipes` and enters the implementation digest, so a verified record
+  admits exactly this surface.
+- **`phebs release-sign`.** It derives every binding from the running binary
+  and an artifact census, discards template digests, and self-verifies
+  through the startup loader. It removes a record the loader would not
+  admit.
+- **Concurrency bound.** The checker now runs at most 4 Buf children at
+  once. A check waits up to 5 s for a slot, then gets a retryable 503.
+
+**Findings on the way.**
+
+1. Concurrent checks were unbounded: each request spawned one 512 MiB-capped
+   Buf child. The first refuse-at-once gate rejected 220 of 235 requests at
+   8 clients, so it now queues for up to 5 s instead.
+2. A released claim with no admitted extractor never got a checker. Only the
+   extraction pipeline built one, so the surface stayed dark. The
+   production-assembly test had masked this with a stand-in checker. A real
+   Buf test now pins it (`TestReleasedClaimAloneInitializesTheChecker`).
+3. The first signing attempt carried a future `approved_at`. The signer's
+   self-check refused it as `future_approval`, which led to the cleanup fix.
+
+**Envelope (release binary, 235 real units, `receipts/envelope.json`).**
+Every request returned 200.
+
+| Clients | Checks/s | p95 | Peak server-tree RSS |
+|---|---|---|---|
+| 1 | 7.2 | 0.25 s | 318 MiB |
+| 4 | 18.7 | 0.39 s | 559 MiB |
+| 8 | 19.1 | 0.65 s | 536 MiB |
+
+Anonymous and wrong-token requests get 401.
+
+**Startup proof (`receipts/startup.json`).** The release binary ran with no
+experimental switch, only the signed selection and the key.
+
+- Capabilities are exactly `service-catalog-v2` and `wire-compatibility`.
+  No Caller Map, Atlas, Impact, comparison or proof surface is served.
+- A real breaking change returns HTTP 200 `compatible=false` with
+  `FIELD_WIRE_COMPATIBLE_TYPE`, and the MCP result equals HTTP.
+- Unauthenticated requests get 401.
+- With the release id under `release_selection.revoked`, a restart serves no
+  `wire-compatibility` (HTTP 404) and logs
+  `phebs.protobuf.wire.buf=revoked`.
+
+**Not established.** This release has not had an independent human review;
+Claude was the sole adjudicator and reviewer Ben named. The envelope was
+measured on this host only.

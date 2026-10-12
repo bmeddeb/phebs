@@ -1,0 +1,36 @@
+{
+ "admission": "cmd/phebs releasedClaims registry; a verified released record for this pack_id admits only this surface",
+ "concurrency": {
+  "beyond": "HTTP 503 retryable",
+  "max_concurrent_checks": 4,
+  "slot_wait_s": 5
+ },
+ "engine": {
+  "engine": "buf",
+  "max_file_bytes": 4194304,
+  "max_files_per_snapshot": 256,
+  "max_input_bytes": 33554432,
+  "policy": "WIRE",
+  "version": "1.72.0"
+ },
+ "implementation_row": "phebs.protobuf.wire.buf check_wire_compatibility@buf-1.72.0-WIRE",
+ "pack_claim_version": "1.0.0",
+ "pack_id": "phebs.protobuf.wire.buf",
+ "refusals": {
+  "invalid_or_uncompilable": 400,
+  "limit": 422,
+  "unavailable_or_busy": 503
+ },
+ "sandbox": {
+  "bubblewrap": true,
+  "network": false,
+  "rlimit_cpu_s": 10,
+  "rlimit_data_kib": 524288
+ },
+ "schema": "phebs-verdict-claim-manifest-v1",
+ "surfaces": {
+  "capability": "wire-compatibility",
+  "http": "POST /api/check_wire_compatibility",
+  "mcp_tool": "check_wire_compatibility"
+ }
+}
