@@ -17692,6 +17692,101 @@ memory is O(498,793 eligible sites + exported evidence + trace). Native proof
 canonicalization caps input at 64 MiB; no persistent observer or store proof
 write is added. Private raw store/runtime material is never committed.
 
+*Independent review and supersession (2026-10-11): Claude's review of exact
+commit `65b62aaa` first recorded critical/high/medium/low `0/0/2/5`, and Ben
+ruled the slice a success. While scoping the next slice Claude found a missed
+high, so the corrected count is `0/1/2/5`. The export reads the grpc-caller
+extraction-domain roots, whose 4,057 assertions are all `UNRESOLVED_CALLER`
+base-lane placeholders with reason `no_attribution_snapshot`. The product's
+exact Caller Map (`caller-map-v2`, plane `repository-overlay`) serves only the
+caller-leaf complete publication, which in run g holds 231 lineage-resolved
+`CALLS_OPERATION` records and 738 call-site unresolved records. The bound proof
+therefore has an empty precision frame, its unresolved frame measures
+placeholders, and its ledger observes the extraction scan rather than the leaf
+scan. T47.2o supersedes both candidate identities; T47.2n's bytes, receipt and
+bundle remain history. The mediums were the uncommitted export driver and the
+every-call consideration point, which Ben accepted. The lows were the unrecorded
+gofmt step in the compiled overlay, untested export fences, uncommitted
+visit-set and trace-match checks, hard-coded proof coverage fields, and an
+observer that reassigned the walk's shared `err`.*
+
+**T47.2o · Caller Map export and leaf-lane decision ledger (2026-10-11).**
+Ben made Claude the lead and approved this correction of T47.2n. The committed
+driver is `spike/t472/caller_map_export.py`; the byte-identity leaf replay is
+`spike/t472/leafreplay/` (build tag `t472replay`, overlay from
+`capture_replay.prepare_leaf_overlay`). No production source changes.
+
+Candidate population: the live run-g serve's own `/api/contract_callers` read.
+Each repository's generation must be `current`, plane `repository-overlay`,
+with complete partition progress and zero refusals; the same controls are read
+again after the leaf replay and must be unchanged. Endpoints are every resolved
+grpc `declaration_operation` in the generation's exact resolver catalog, whose
+authority digest must equal the generation's `resolver_manifest_digest` and
+whose member digest is verified. All 399 endpoints were paged with resolution
+`any`; every page must name the same generation and complete-manifest digests.
+The 1,423 served rows (including repeats across endpoints) dedupe to 969
+records, which join one-to-one to the digest-verified fact-bearing records of
+the complete publication: 231 `CALLS_OPERATION` and 738 `UNRESOLVED_CALLER`.
+Zero publication facts are unserved. Repeated rows differ only in their
+five-minute request citation token, which is excluded from record identity.
+The frozen projector, given these facts on census repository names, yields a
+231-site precision frame and a 708-site unresolved frame (several
+unresolved records are alternatives at one site).
+
+Decision ledger: every source file the 12 retained leaf artifacts record as
+scanned (6,479 files, exactly each pair's `source_blob_reads`) is re-read from
+the run's bare repository and rescanned by the production
+`ScanDirectSyntaxFile` with the same compiled resolver, opened read-only from
+the retained catalog. Each file's facts must be byte-identical to the retained
+records, `no_direct_caller` files must replay zero facts, and per-pair read
+counts and bytes must equal the receipts; all hold. The observation point is
+the one Ben accepted for T47.2n (every call expression the shared syntax walk
+visits), now on the leaf lane, with a sticky in-memory observer that never
+touches the walk's `err`. 344,973 visits all match universe citation spans.
+Of the 498,793 eligible sites, 939 are `reported`, 344,034 `withheld` and
+153,820 `not_considered`. The product excludes the Go test lane from leaf
+scanning (`excluded_go_test`), so test-file call sites are honestly
+`not_considered`. Two independent executions produced identical digests for
+every artifact.
+
+Bindings: the safe receipt is
+[`caller_map_bindings_20261011g.json`](../spike/t472/caller_map_bindings_20261011g.json),
+and the new
+[`Caller Map run-g bundle`](../spike/t472/bundle/preregistration.caller-map.run-g.bundle.json)
+fills the proof and ledger slots on top of T47.2m's run-g bundle, leaving 22
+named missing fields. The proof slot's wording names a sealed proof-bundle-v1
+envelope. Caller Map serves no proof bundle for partitioned caller
+publications, so the slot binds the product-served `caller-map-v2` export
+reconciled to its complete publication, and the receipt records this. Private
+custody is `/home/ben/phebs-rehearsals/t472-caller-map-bindings-20261011g`.
+No draw, label, seed, score, protocol seal, prediction disclosure or external
+publication is produced.
+
+AC: live product read under before/after generation controls; every declared
+endpoint paged to completion; one-to-one reconciliation with zero unserved
+facts; byte-identical leaf replay matching every pair receipt; ledger covering
+every eligible site exactly once with explicit `not_considered`; committed
+driver and synthetic failure tests; artifact identity and documentation
+checks. Validation: all 66 Python preparation tests pass (9.816s), including
+reconciliation, control, endpoint-digest, projector-envelope, overlay-anchor
+and bundle-diff fences. The replay vets under its overlay with the tag, and
+untagged `go vet` plus pinned golangci-lint 2.12.2 report zero issues.
+golangci-lint cannot load an overlay, so the tagged program reports only an
+overlay-symbol typecheck error there. Documentation, glossary and whitespace
+checks pass. No production package changed, so heavy host and store suites
+are not repeated.
+
+Steady-state cost: no production request, sync tick, startup/restart,
+retry/no-op, publication, schema, lock, cache or child change. The offline
+export issues six progress reads and about 400 bounded Caller Map list reads
+(16-MiB response cap, 1,000-page cap per endpoint) against the operator's own
+live serve. These use that serve's existing exact-index cache and binding
+limits; the first read per generation pays the index build. The leaf replay
+opens each resolver catalog once and starts one `git cat-file` per scanned
+blob (6,479, serial, each at most 4 MiB). It holds an in-memory visit trace
+capped at 2,097,152 entries (344,973 used), and took about 13 seconds. Python
+memory is O(universe sites + trace + 969 records).
+
 **T47.3 · Ordinary production configuration and registration** *(needs the
 T47.2 supported recipe contract; activation remains gated until T47.5)* —
 introduce the stable Caller Map configuration/recipe selection, wire the

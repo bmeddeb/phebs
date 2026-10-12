@@ -1454,6 +1454,16 @@ alias map when constructing independent declaration citations: semantic
 lineage tokens are not silently renamed. These bindings still grant no draw,
 truth label, external commitment, score or protocol seal.
 
+T47.2o supersedes those candidate identities with
+`spike/t472/caller_map_bindings_20261011g.json`. The candidate population is
+what the exact Caller Map serves: the caller-leaf complete publication, read
+through `/api/contract_callers` and reconciled to the publication's own
+records. Extraction base-lane caller claims (`no_attribution_snapshot`) are not
+Caller Map predictions and must not feed quality frames. A Caller Map citation
+token is request-bound and expires; never treat it as record identity. Keep
+the export, frames and ledger in private candidate custody, out of blind source
+sheets.
+
 The five-minute caller execution deadline starts only after the repository
 mirror lock is acquired. Pointer/control preflight has its own at-most-five-
 minute context; waiting behind fetch, indexing, candidate planning, or

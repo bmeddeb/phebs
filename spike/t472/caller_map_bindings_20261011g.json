@@ -1,0 +1,81 @@
+{
+ "acceptance_met": false,
+ "artifacts_sha256": {
+  "call-site-decisions.jsonl": "sha256:ed9a2c8bfc18e9806412d952ad47d7d434522a26127d540e6d4ba3ed63b75706",
+  "caller-map-export.json": "sha256:74ec65d1de24e64b0496d55d2d233a2279e8c0fdef91cf783bdd9bfc60169fbe",
+  "candidate-frames.json": "sha256:dca576c7faddb4ddd86e792bc5622ed13f8854d5dfc397b9c4083a03fb83e4b4",
+  "generation-controls.json": "sha256:d29f1ece8b21acc41276ae9f04f04129793cc55f9c97222fc1fe9dfbc589471d",
+  "leaf-replay/leaf-replay-summary.json": "sha256:dcf78463db49b61a5ecda162240cfb9a8dd0d3d7cac96f4226839e26fa20d789",
+  "leaf-replay/leaf-trace.jsonl": "sha256:a6c154550d3018618c358564a0b60cce45642f2af5347fbec7df2ade275b8cd5"
+ },
+ "controls_unchanged_after_export": true,
+ "decision_ledger_population": 498793,
+ "decision_ledger_states": {
+  "not_considered": 153820,
+  "reported": 939,
+  "withheld": 344034
+ },
+ "declared_endpoints_queried": 399,
+ "external_publication": false,
+ "frame_populations": {
+  "precision": 231,
+  "unresolved": 708
+ },
+ "generation_controls": [
+  {
+   "abstention_count": 5552,
+   "commit": "e0f9f8ac24f21a3703f94bb09817b699a1446af0",
+   "generation_digest": "sha256:24cb8e4d167211566e2d267b2b1310e31003906271c7a9c14bd352c583703781",
+   "manifest_digest": "sha256:49912ff89ed299a7be8d85465bd65521bb3bd6e376a9f997c2e240318d5f1f01",
+   "repository": "local/home/ben/phebs-rehearsals/t472-candidate-run-20261011g/corpus/containerd",
+   "resolver_manifest_digest": "sha256:a9202975372a2178e3f8195e62df049be02a58fab63212b36da16a4c74b8ad6f",
+   "result_count": 2
+  },
+  {
+   "abstention_count": 917,
+   "commit": "f9ecd8dcecc18b7559c0e3c0c264477c6ab9ddc1",
+   "generation_digest": "sha256:f4a7afa7c3edb7299479edd97d42d9df53ed57ff1a7af185db198ed09eca367a",
+   "manifest_digest": "sha256:d5b7b71d9d4f1d26b1b1346d7a50204f956428a009bd9ce22dff973376ed722e",
+   "repository": "local/home/ben/phebs-rehearsals/t472-candidate-run-20261011g/corpus/etcd",
+   "resolver_manifest_digest": "sha256:58df9d07bd665b63768dcb24fd1abff5d4d51cb9a8953c02b211f53846440e2c",
+   "result_count": 173
+  },
+  {
+   "abstention_count": 657,
+   "commit": "f40347859c3380f5c409f153ab79d4b8e724abd3",
+   "generation_digest": "sha256:8f0c1006c67f38adf52a69a414295f2389d900690563c61a7deab631a2e5d8ca",
+   "manifest_digest": "sha256:017a92ea4855a5d1abab165bd74d80471a81b633e2992e095c8fc6e317552703",
+   "repository": "local/home/ben/phebs-rehearsals/t472-candidate-run-20261011g/corpus/grpc-go",
+   "resolver_manifest_digest": "sha256:e5577ca42967dedff90c0bdba5018ff0ec3f18638d2766a95192441f1e11a00e",
+   "result_count": 56
+  }
+ ],
+ "labels_produced": false,
+ "leaf_replay": "every scanned file reproduces its retained facts byte-for-byte; per-pair reads and bytes equal the receipts",
+ "leaf_visits": 344973,
+ "leaf_visits_outside_universe": 0,
+ "overlay_sha256": {
+  "fallback.go": "sha256:726f45c2a68ad51a668a8ecbd7693e6ef8ceb716e8e17c225e28b96b124e907b",
+  "fallback.go.original": "sha256:b89c7a0d5da87d6817df2159ec5d67cc0d6d41febf0e723368c2b469de3c025f",
+  "observer.go": "sha256:1302a1bb6a2c8410ccd3f5debea083f5e99903248bceff2e610af17457dc29fc",
+  "overlay.json": "sha256:64dff704976fe2b49ffe9cc9c28b015d4bc9cf92591f240e92ce338dfcaf6167"
+ },
+ "predictions_disclosed": false,
+ "private_root": "/home/ben/phebs-rehearsals/t472-caller-map-bindings-20261011g",
+ "proof_slot_note": "The bundle slot names a sealed proof-bundle-v1 envelope; Caller Map serves no proof bundle for partitioned caller publications, so the slot binds the product-served caller-map-v2 export reconciled to its complete publication.",
+ "protocol_sealed": false,
+ "quality_scored": false,
+ "recipe_sha256": {
+  "spike/t472/caller_map_export.py": "sha256:418bf53d1e2614168842ad95e057f4099b9c24983396571d285a008348a906df",
+  "spike/t472/candidate_export.py": "sha256:7e2928ffbefbe5e11c81b45caad9ff301d48321b3f8b0ab726d8ae5b5a9c4f72",
+  "spike/t472/capture_replay.py": "sha256:ede1ff4f3b306e9b4a126280c7d12b5fe87a15981b1e945fb133901d8ecb3438",
+  "spike/t472/leafreplay/main.go": "sha256:b1f0032ecd1a15e3a93ab1d1344d04fd3477a593717a4cd22455e33b914dd637"
+ },
+ "round": "t472-candidate-run-20261011g",
+ "sample_drawn": false,
+ "schema": "t472-caller-map-bindings-v1",
+ "served_records": 969,
+ "served_rows_including_repeats": 1423,
+ "supersedes": "spike/t472/candidate_bindings_20261011g.json (T47.2n extraction base lane)",
+ "unserved_publication_facts": 0
+}

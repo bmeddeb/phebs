@@ -682,3 +682,25 @@ The original run lacks visit telemetry, so this ledger is explicitly a matching
 replay. The private overlay's additional I/O is not a production cost or timing
 measurement. No sample, label, seed, score, protocol seal or external publication
 was created; frame/randomness and independent truth preparation remain next.
+
+T47.2o supersedes T47.2n's candidate identities, which came from extraction
+base-lane placeholders. Run the committed driver against a live, converged
+candidate run:
+
+```bash
+python3 spike/t472/caller_map_export.py --run-root <run> --private-root <new private dir> \
+  --aliases <runtime-to-census map> --receipt <receipt.json> --bundle <bundle.json>
+```
+
+It pages `/api/contract_callers` for every resolved declared grpc operation
+under unchanged generation controls, and joins served rows one-to-one to the
+digest-verified complete publication. Unserved facts are reported, never
+dropped. It then runs `leafreplay` under `capture_replay.prepare_leaf_overlay`.
+That replay rescans exactly the files each retained leaf artifact records as
+scanned, and refuses unless facts are byte-identical and reads equal the pair
+receipts. The receipt
+[`caller_map_bindings_20261011g.json`](caller_map_bindings_20261011g.json)
+and the
+[`Caller Map bundle`](bundle/preregistration.caller-map.run-g.bundle.json)
+bind the results, with 22 missing fields. No sample, label, seed, score,
+protocol seal or external publication was created.

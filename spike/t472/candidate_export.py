@@ -138,7 +138,8 @@ def reconcile_replay(export: dict, replay: list[dict], results: dict) -> None:
     outcomes.require(original == emitted, 'replay assertion attributes differ from retained run')
 
 
-def decision_ledger(universe: dict, projected: dict, trace: list[dict], aliases: dict) -> list[dict]:
+def decision_ledger(universe: dict, projected: dict, trace: list[dict], aliases: dict,
+                    basis: str = 'matching_partition_replay_observed_ast_call_or_bound_scip_reference') -> list[dict]:
     citations = {}
     for site in universe['sites']:
         if frames.recall_eligibility(site)[0]:
@@ -152,5 +153,5 @@ def decision_ledger(universe: dict, projected: dict, trace: list[dict], aliases:
     outcomes.require(set(reported)<=considered, 'reported site missing an observed consideration')
     return [{'site_id':s['site_id'],'stratum':s['stratum'],
              'state':'reported' if s['site_id'] in reported else 'withheld' if s['site_id'] in considered else 'not_considered',
-             'basis':'matching_partition_replay_observed_ast_call_or_bound_scip_reference' if s['site_id'] in considered else 'outside_observed_consideration_set'}
+             'basis':basis if s['site_id'] in considered else 'outside_observed_consideration_set'}
             for s in sorted(universe['sites'],key=lambda r:r['site_id']) if frames.recall_eligibility(s)[0]]

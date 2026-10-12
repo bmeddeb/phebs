@@ -223,6 +223,16 @@ Legacy work counters remain explicitly unavailable and no proof-store write
 occurs. Frame/randomness preparation, human truth, commitments, protocol seal,
 scoring and T47.2b acceptance remain open; no further integration follows.
 
+**Caller Map bindings (2026-10-11):** review found that T47.2n bound the
+extraction base lane (zero resolved callers) rather than what Caller Map
+serves. T47.2o binds the live Caller Map read of every declared operation,
+reconciled one-to-one to the complete caller-leaf publication: 231 resolved
+and 708 unresolved candidate sites. The decision ledger comes from a
+byte-identical replay of the leaf scan: 939 reported, 344,034 withheld and
+153,820 not considered. The new bundle keeps 22 missing fields. Frame and
+randomness preparation, human truth, commitments, seal, scoring and T47.2b
+acceptance remain open.
+
 **Independent production promotions (2026-10-09, Ben-directed):** Epics 48–58
 give every current experimental evidence pack and composed product surface a
 named production path. Epic 48 implements the currently design-only signed
