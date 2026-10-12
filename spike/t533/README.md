@@ -31,3 +31,14 @@ python3 spike/t533/run_round.py score --history /home/ben/phebs-rehearsals/t533-
 ```
 
 Tests: `cd spike/t533 && python3 -m unittest test_enumerate_changes test_wire_oracle test_run_round`.
+
+## Round 2 (narrower claim, protocol §9)
+
+```bash
+B=/home/ben/phebs-rehearsals/t533r2-history-20261012; mkdir -p $B
+git clone --bare https://github.com/vitessio/vitess.git $B/vitess
+git clone --bare https://github.com/istio/istio.git $B/istio
+python3 spike/t533/enumerate_changes.py --corpus $B --lock spike/t472/corpus.lock.json --pinned vitessio/vitess --pinned istio/istio --out-dir spike/t533/population-r2
+python3 spike/t533/run_round.py run --binary bin/phebs --helpers bin --history $B --population spike/t533/population-r2 --run-root /home/ben/phebs-rehearsals/t533r2-round-<stamp>
+python3 spike/t533/run_round.py score --history $B --population spike/t533/population-r2 --results <run-root>/results.jsonl.gz --adjudications <adjudications.json>
+```

@@ -197,3 +197,87 @@ pinned: **98.06%**. It still fails, and only on the Buf type-name class.
 it stays experimental-dark. Its safety property held throughout: no unit was
 called compatible when it breaks. Any new claim needs a new protocol and a
 fresh population, because this population has now been seen.
+
+## 9. Round 2: the narrower claim (frozen for sealing, 2026-10-12)
+
+Ben chose the narrower claim and a fresh population after round 1 failed.
+Claude remains the sole adjudicator.
+
+**Claim card, revised (`phebs.protobuf.wire.buf`).** For a supported input,
+`check_wire_compatibility` never reports a change that breaks protobuf wire
+compatibility as compatible. A "breaking" verdict is conservative in two
+disclosed classes; outside them, it agrees with the wire truth at least 99% of
+the time:
+
+1. string, bytes or message singular↔repeated
+   (`FIELD_WIRE_COMPATIBLE_CARDINALITY`);
+2. a field whose message type changes name while keeping an identical wire
+   layout, compared field by field and recursively, with a map counting as
+   its repeated entry message (`FIELD_WIRE_COMPATIBLE_TYPE`).
+
+A source that does not compile is refused, never judged. The non-claims of
+§1 stand.
+
+**Population (fresh).** The population covers vitess and istio. Both are in
+`spike/t472/corpus.lock.json`, pinned at their selection commits
+(`0ee52554`, `d501e135`), and neither was seen in round 1. They are read from
+full-history bare clones in `phebs-rehearsals/t533r2-history-20261012`.
+
+- `enumerate_changes.py --pinned` yields 1,911 units, 1,525 of them closed:
+  952 vitess and 573 istio.
+- istio's vendored `common-protos/` joined the excluded third-party
+  prefixes. Round 1's population is byte-identical under the change.
+
+The frozen files are `spike/t533/population-r2/`.
+
+**Truth (revised oracle).** The oracle closes round 1's three gaps:
+
+- rpc request and response types must resolve;
+- custom options must resolve to a declared extension;
+- message type changes are decided by wire layout: equivalent is compatible
+  with a `disclosed_type_equivalent` note, a conflicting shared number is
+  breaking, and added or removed numbers are undetermined. string ↔ message
+  is breaking, which was round 1's adjudication rule.
+
+Singular↔repeated of string, bytes and message carries a
+`disclosed_cardinality` note. The revised oracle passes these checks:
+
+- it reproduces all 29 goldens;
+- it matches round 1's Buf refusals exactly (12/12);
+- it contradicts none of round 1's 33 adjudications.
+
+Its pre-seal distribution over the fresh 1,525 units is 1,409 compatible, 100
+breaking, 16 undetermined and 0 unreadable. Buf has not seen these units.
+
+**Classes (`run_round.py`, schema v2).**
+
+| Class | Meaning |
+|---|---|
+| `agree` | Same verdict, or a refusal of an unreadable source. |
+| `disclosed_conservative` | The product says breaking and the truth says compatible; Buf's rules lie within the two disclosed rules and the truth carries a disclosed note. |
+| `conservative` | Any other breaking-versus-compatible disagreement. |
+| `refused_readable` | The product refused a compilable source. |
+| `judged_unreadable` | The product judged a source that does not compile. |
+| `permissive` | The product said compatible, but the change breaks. |
+| `pending` | Not yet adjudicated. |
+
+A disagreement the oracle decided alone, and every undetermined truth, is
+adjudicated before it counts.
+
+**Thresholds (frozen for the narrower claim).**
+
+| Check | Bar |
+|---|---|
+| `permissive` | 0 |
+| `judged_unreadable` | 0 |
+| `pending` | 0 |
+| (`conservative` + `refused_readable`) / judged units | ≤ 1.0% |
+| breaking-truth units judged | ≥ 50 |
+| HTTP/MCP parity | on every unit |
+
+The score reports the rule-of-three 95% upper bound on the permissive rate,
+3/n over the n real breaks. Disclosed conservative units are counted and
+published, but they are not errors under this claim.
+
+**Seal.** The round-2 commit, the `population-r2` digest, the three tool
+digests and these thresholds go in a public gist before `run`.

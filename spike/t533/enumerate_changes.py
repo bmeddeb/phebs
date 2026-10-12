@@ -32,7 +32,7 @@ SCHEMA = 't533-change-population-v1'
 LINEAGE = 'contract_t533_population'
 # The checker's own input ceilings (internal/compat/check.go, idlpreflight).
 MAX_FILES, MAX_FILE_BYTES, MAX_INPUT_BYTES = 256, 1 << 20, 32 << 20
-EXCLUDED_PREFIXES = ('vendor/', 'third_party/', 'Godeps/')
+EXCLUDED_PREFIXES = ('vendor/', 'third_party/', 'Godeps/', 'common-protos/')
 
 
 def vendored(path: str) -> bool:
@@ -182,10 +182,18 @@ def main() -> None:
     parser.add_argument('--corpus', type=Path, required=True)
     parser.add_argument('--lock', type=Path, required=True, help='spike/t472/corpus.lock.json')
     parser.add_argument('--out-dir', type=Path, required=True)
+    parser.add_argument('--pinned', action='append', default=[], metavar='OWNER/NAME',
+                        help='use this lock entry at its pinned selection commit instead of the admitted corpus')
     args = parser.parse_args()
     lock = json.loads(args.lock.read_text())
-    repositories = {r['name']: {'dir': r['name'].rsplit('/', 1)[1], 'commit': r['derived']['derived_commit']}
-                    for r in lock['repos'] if r['derived'].get('corpus_admitted')}
+    if args.pinned:
+        repositories = {r['name']: {'dir': r['name'].rsplit('/', 1)[1], 'commit': r['commit']}
+                        for r in lock['repos'] if r['name'] in args.pinned}
+        if len(repositories) != len(args.pinned):
+            raise SystemExit('a --pinned repository is not in the lock')
+    else:
+        repositories = {r['name']: {'dir': r['name'].rsplit('/', 1)[1], 'commit': r['derived']['derived_commit']}
+                        for r in lock['repos'] if r['derived'].get('corpus_admitted')}
     population = build(args.corpus, repositories)
     args.out_dir.mkdir(parents=True, exist_ok=True)
     body = ''.join(json.dumps(u, sort_keys=True, separators=(',', ':')) + '\n' for u in population['units']).encode()

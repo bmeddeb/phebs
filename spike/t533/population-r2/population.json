@@ -1,0 +1,35 @@
+{
+ "by_stratum": {
+  "istio/istio:ambiguous_import": 117,
+  "istio/istio:changed_file_moved": 1,
+  "istio/istio:closed": 573,
+  "istio/istio:unreadable": 19,
+  "istio/istio:unresolved_import": 241,
+  "vitessio/vitess:changed_file_moved": 8,
+  "vitessio/vitess:closed": 952
+ },
+ "census": {
+  "istio/istio:A": 349,
+  "istio/istio:D": 342,
+  "istio/istio:M": 951,
+  "istio/istio:excluded_path": 1701,
+  "vitessio/vitess:A": 39,
+  "vitessio/vitess:D": 15,
+  "vitessio/vitess:M": 960
+ },
+ "enumerator_sha256": "sha256:c78e87f150c9fcef094dd1bc40bb1bae67800c335ccf197c5fee4359d9993608",
+ "lineage": "contract_t533_population",
+ "repositories": {
+  "istio/istio": {
+   "commit": "d501e135abadd7492774f428e0873f7d16494d41",
+   "dir": "istio"
+  },
+  "vitessio/vitess": {
+   "commit": "0ee525542d4157460b40af0951016236fc213afd",
+   "dir": "vitess"
+  }
+ },
+ "schema": "t533-change-population-v1",
+ "total": 1911,
+ "units_sha256": "sha256:b7003682efa80098bbed6c064f480d4827a1b23894a003366149d7792e70d9fc"
+}

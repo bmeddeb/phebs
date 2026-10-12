@@ -34,11 +34,41 @@ class RuleTest(unittest.TestCase):
         self.assertEqual(judge(p2 + 'message M { optional int32 n = 1; }',
                                p2 + 'message M { repeated int32 n = 1 [packed = true]; }')['verdict'], 'breaking')
 
-    def test_a_different_message_type_is_undetermined_and_enum_to_int_is_compatible(self):
-        self.assertEqual(judge(H + 'message A {} message B {} message M { A a = 1; }',
-                               H + 'message A {} message B {} message M { B a = 1; }')['verdict'], 'undetermined')
+    def test_message_type_changes_are_decided_by_wire_layout(self):
+        same = judge(H + 'message A { string s = 1; } message B { string t = 1; } message M { A a = 1; }',
+                     H + 'message A { string s = 1; } message B { string t = 1; } message M { B a = 1; }')
+        self.assertEqual(same['verdict'], 'compatible')
+        self.assertEqual([f['rule'] for f in same['findings']], ['disclosed_type_equivalent'])
+        self.assertEqual(judge(H + 'message A { string s = 1; } message B { int64 s = 1; } message M { A a = 1; }',
+                               H + 'message A { string s = 1; } message B { int64 s = 1; } message M { B a = 1; }')['verdict'],
+                         'breaking')
+        self.assertEqual(judge(H + 'message A {} message B { int32 n = 1; } message M { A a = 1; }',
+                               H + 'message A {} message B { int32 n = 1; } message M { B a = 1; }')['verdict'],
+                         'undetermined')
+        self.assertEqual(judge(H + 'message M { map<string, string> o = 1; }',
+                               H + 'import "google/protobuf/any.proto";\nmessage M { google.protobuf.Any o = 1; }')['verdict'],
+                         'compatible')
+        self.assertEqual(judge(H + 'message A {} message M { A a = 1; }', H + 'message A {} message M { string a = 1; }')['verdict'],
+                         'breaking')
         self.assertEqual(judge(H + 'enum E { Z = 0; } message M { E e = 1; }',
                                H + 'enum E { Z = 0; } message M { int32 e = 1; }')['verdict'], 'compatible')
+
+    def test_disclosed_cardinality_is_noted_not_judged(self):
+        got = judge(H + 'message M { string s = 1; }', H + 'message M { repeated string s = 1; }')
+        self.assertEqual((got['verdict'], [f['rule'] for f in got['findings']]), ('compatible', ['disclosed_cardinality']))
+
+    def test_custom_options_must_resolve_to_a_declared_extension(self):
+        gogo = ('syntax = "proto2";\npackage gogoproto;\nimport "google/protobuf/descriptor.proto";\n'
+                'extend google.protobuf.FieldOptions { optional string customname = 65001; }\n')
+        use = H + 'import "gogoproto/gogo.proto";\nmessage M { string id = 1 [(gogoproto.customname) = "ID"]; }\n'
+        files = [('gogoproto/gogo.proto', gogo.encode()), ('p/x.proto', use.encode())]
+        self.assertEqual(w.judge(files, files)['verdict'], 'compatible')
+        self.assertEqual(judge(H + 'message M { string id = 1; }',
+                               H + 'message M { string id = 1 [(gogoproto.customname) = "ID"]; }')['verdict'], 'unreadable')
+        self.assertEqual(judge(H + 'option (x.file_opt) = true;\n', H)['verdict'], 'unreadable')
+
+    def test_unresolved_rpc_types_are_unreadable(self):
+        self.assertEqual(judge(H + 'service S { rpc G (Missing) returns (Missing); }', H)['verdict'], 'unreadable')
 
     def test_nested_scopes_maps_groups_and_rpc_options_read(self):
         before = ('syntax = "proto2";\npackage p;\nimport "google/protobuf/empty.proto";\n'

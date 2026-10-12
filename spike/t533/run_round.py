@@ -30,14 +30,18 @@ import serve  # noqa: E402
 import wire_oracle  # noqa: E402
 from enumerate_changes import LINEAGE  # noqa: E402
 
-SCHEMA = 't533-wire-round-v1'
-# Frozen by Ben on 2026-10-12 (docs/WIRE_COMPATIBILITY_PROTOCOL.md §6).
+SCHEMA = 't533-wire-round-v2'
+# Round 2, the narrower claim (docs/WIRE_COMPATIBILITY_PROTOCOL.md §9). Round 1's frozen v1
+# thresholds live at the seal commit d88a6c97.
 THRESHOLDS = {
-    'permissive_max': 0,           # a "compatible" verdict on a truly breaking change fails the round
-    'pending_max': 0,              # every disagreement and undetermined truth is adjudicated
-    'agreement_min': 0.99,         # over judged units, excluding the disclosed pinned class
+    'permissive_max': 0,             # the claim: never call a breaking change compatible
+    'judged_unreadable_max': 0,      # a source that does not compile is refused, never judged
+    'pending_max': 0,                # every undetermined truth and every disagreement is adjudicated
+    'undisclosed_error_rate_max': 0.01,  # conservative or refused-readable outside the disclosed classes
+    'breaking_truth_min': 50,        # enough real breaks for the zero-permissive result to mean something
 }
-PINNED_RULES = {'FIELD_WIRE_COMPATIBLE_CARDINALITY'}
+DISCLOSED_RULES = {'FIELD_WIRE_COMPATIBLE_CARDINALITY', 'FIELD_WIRE_COMPATIBLE_TYPE'}
+DISCLOSED_NOTES = {'disclosed_cardinality', 'disclosed_type_equivalent'}
 
 
 def units(population: Path):
@@ -130,58 +134,63 @@ def free_port() -> int:
         return s.getsockname()[1]
 
 
-def classify(product: dict, truth: str, findings: list[dict]) -> str:
+def classify(product: dict, truth: str, findings: list[dict], disclosed: bool = False) -> str:
     """One unit's scoring class. truth is compatible, breaking, unreadable or undetermined."""
     p = product['product']
     if truth == 'undetermined':
         return 'pending'
     if truth == 'unreadable':
-        return 'agree' if p == 'refused' else 'pending'
+        return 'agree' if p == 'refused' else 'judged_unreadable'
     if p == truth:
         return 'agree'
     if p == 'refused':
-        return 'pending'
+        return 'refused_readable'
     if p == 'breaking':
-        oracle_breaks = any(f['outcome'] == 'break' for f in findings)
-        return 'pinned_conservative' if set(product['rules']) <= PINNED_RULES and not oracle_breaks else 'pending'
-    return 'pending'  # a compatible verdict against a breaking truth: adjudicate before it counts as permissive
+        noted = disclosed or any(f['outcome'] == 'note' and f['rule'] in DISCLOSED_NOTES for f in findings)
+        return 'disclosed_conservative' if noted and set(product['rules']) <= DISCLOSED_RULES else 'conservative'
+    return 'permissive'
 
 
 def score(history: Path, population: Path, results: Path, adjudications: Path | None) -> dict:
     rows = {r['unit_id']: r for r in map(json.loads, gzip.open(results))}
     adjudicated = json.loads(adjudications.read_text())['units'] if adjudications else {}
     classes: dict[str, int] = {}
-    pending, permissive, parity_failures = [], [], []
+    listed: dict[str, list] = {}
+    parity_failures, breaking_truth = [], 0
     for unit in units(population):
         product = rows[unit['unit_id']]
         if not product['parity']:
             parity_failures.append(unit['unit_id'])
+        judged = wire_oracle.judge(*contents(history, unit))
+        truth, findings, disclosed = judged['verdict'], judged['findings'], False
         if unit['unit_id'] in adjudicated:
-            truth, findings = adjudicated[unit['unit_id']]['truth'], []
-            # An adjudicated truth decides the unit outright, including whether a disagreement is permissive.
-            if product['product'] == truth or (truth == 'unreadable' and product['product'] == 'refused'):
-                kind = 'agree'
-            elif product['product'] == 'compatible' and truth == 'breaking':
-                kind = 'permissive'
-            elif product['product'] == 'breaking' and truth == 'compatible':
-                kind = 'conservative'
-            else:
-                kind = 'disagree'
-        else:
-            judged = wire_oracle.judge(*contents(history, unit))
-            kind = classify(product, judged['verdict'], judged['findings'])
+            entry = adjudicated[unit['unit_id']]
+            truth, disclosed = entry['truth'], entry.get('disclosed', False)
+        kind = classify(product, truth, findings, disclosed)
+        # A disagreement the oracle decided alone is adjudicated before it counts.
+        if kind in ('conservative', 'permissive', 'refused_readable', 'judged_unreadable') and unit['unit_id'] not in adjudicated:
+            kind = 'pending'
+        breaking_truth += truth == 'breaking' and kind != 'pending'
         classes[kind] = classes.get(kind, 0) + 1
-        if kind == 'pending':
-            pending.append(unit['unit_id'])
-        if kind == 'permissive':
-            permissive.append(unit['unit_id'])
-    judged_units = sum(classes.values()) - classes.get('pending', 0) - classes.get('pinned_conservative', 0)
-    agreement = classes.get('agree', 0) / judged_units if judged_units else 0.0
-    passed = (len(permissive) <= THRESHOLDS['permissive_max'] and len(pending) <= THRESHOLDS['pending_max']
-              and agreement >= THRESHOLDS['agreement_min'] and not parity_failures)
-    return {'schema': SCHEMA, 'classes': dict(sorted(classes.items())), 'agreement': round(agreement, 5),
-            'thresholds': THRESHOLDS, 'pending': pending, 'permissive': permissive,
-            'parity_failures': parity_failures, 'passed': passed}
+        if kind not in ('agree', 'disclosed_conservative'):
+            listed.setdefault(kind, []).append(unit['unit_id'])
+    judged_units = sum(classes.values()) - classes.get('pending', 0)
+    undisclosed = classes.get('conservative', 0) + classes.get('refused_readable', 0)
+    rate = undisclosed / judged_units if judged_units else 1.0
+    checks = {
+        'permissive': classes.get('permissive', 0) <= THRESHOLDS['permissive_max'],
+        'judged_unreadable': classes.get('judged_unreadable', 0) <= THRESHOLDS['judged_unreadable_max'],
+        'pending': classes.get('pending', 0) <= THRESHOLDS['pending_max'],
+        'undisclosed_error_rate': rate <= THRESHOLDS['undisclosed_error_rate_max'],
+        'breaking_truth': breaking_truth >= THRESHOLDS['breaking_truth_min'],
+        'parity': not parity_failures,
+    }
+    return {'schema': SCHEMA, 'classes': dict(sorted(classes.items())), 'judged_units': judged_units,
+            'breaking_truth': breaking_truth, 'undisclosed_error_rate': round(rate, 5),
+            # Rule of three: with zero permissive among n real breaks, the 95% upper bound is about 3/n.
+            'permissive_rate_upper_95': round(3 / breaking_truth, 5) if breaking_truth else None,
+            'thresholds': THRESHOLDS, 'checks': checks, 'listed': listed,
+            'parity_failures': parity_failures, 'passed': all(checks.values())}
 
 
 def main() -> None:

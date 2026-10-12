@@ -78,6 +78,7 @@ class Model:
     enums: dict = field(default_factory=dict)
     rpcs: dict = field(default_factory=dict)  # 'svc.fqn/Method' -> (in, out, client_stream, server_stream, idempotency)
     extensions: dict = field(default_factory=dict)  # (extendee, number) -> Field
+    option_refs: list = field(default_factory=list)  # custom option names, e.g. '(gogoproto.customname)'
 
 
 class Reader:
@@ -150,10 +151,20 @@ class Reader:
         self.take(b'[')
         while True:
             name = self.option_name()
+            self.note_option(name)
             self.take(b'=')
             options[name] = self.option_value()
             if self.take() == b']':
                 return options
+
+    def note_option(self, name: str) -> None:
+        if name.startswith('('):
+            self.model.option_refs.append(name[1:name.index(')')].lstrip('.'))
+
+    def option_statement(self) -> None:
+        self.take(b'option')
+        self.note_option(self.option_name())
+        self.skip_statement()
 
     def parse(self) -> None:
         while self.peek() is not None:
@@ -169,8 +180,10 @@ class Reader:
                 self.take()
                 self.package = self.word()
                 self.take(b';')
-            elif word in (b'import', b'option'):
+            elif word == b'import':
                 self.skip_statement()
+            elif word == b'option':
+                self.option_statement()
             elif word == b'message':
                 self.take()
                 self.message(self.scoped(self.package, self.word()))
@@ -245,7 +258,7 @@ class Reader:
                 message.has_extensions = True
                 self.skip_statement()
             elif word in (b'option', b';'):
-                self.skip_statement() if word == b'option' else self.take()
+                self.option_statement() if word == b'option' else self.take()
             else:
                 f = self.field(fqn)
                 f.oneof = oneof
@@ -310,7 +323,7 @@ class Reader:
                 enum.reserved_ranges += ranges
                 enum.reserved_names |= names
             elif word in (b'option', b';'):
-                self.skip_statement() if word == b'option' else self.take()
+                self.option_statement() if word == b'option' else self.take()
             else:
                 name = self.word()
                 self.take(b'=')
@@ -326,7 +339,7 @@ class Reader:
         self.take(b'{')
         while (word := self.peek()) != b'}':
             if word != b'rpc':
-                self.skip_statement() if word == b'option' else self.take()
+                self.option_statement() if word == b'option' else self.take()
                 continue
             self.take()
             method = self.word()
@@ -344,6 +357,7 @@ class Reader:
                     if self.peek() == b'option':
                         self.take()
                         name = self.option_name()
+                        self.note_option(name)
                         self.take(b'=')
                         value = self.option_value()
                         self.take(b';')
@@ -390,12 +404,18 @@ def load(files: list[tuple[str, bytes]]) -> Model:
         reader = Reader(content, model, path)
         reader.parse()
         pending += reader.scoped_fields
+    declared = {f'{scope}.{f.name}' if scope else f.name for (scope, _, _), f in model.extensions.items()}
+    for ref in model.option_refs:
+        if ref not in declared and not any(name.endswith('.' + ref) for name in declared):
+            raise OracleError(f'unresolved custom option ({ref})')  # round 1 missed this (4d1a30ff)
     for scope, item in pending:
         if isinstance(item, tuple):
             _, key, request, response, client, server, idempotency = item
             package_scope = scope.rsplit('.', 1)[0] if '.' in scope else ''
-            model.rpcs[key] = (resolve(model, package_scope, request) or request,
-                               resolve(model, package_scope, response) or response, client, server, idempotency)
+            resolved = [resolve(model, package_scope, name) for name in (request, response)]
+            if None in resolved:
+                raise OracleError(f'unresolved rpc type in {key}')  # round 1 missed this (24c28108 shim.proto)
+            model.rpcs[key] = (*resolved, client, server, idempotency)
             continue
         type_name = getattr(item, 'map_value', None) or item.type_name
         if type_name in SCALARS:
@@ -419,7 +439,10 @@ def compatible_types(before: Field, after: Field) -> str:
     if before.is_map or after.is_map:
         if before.is_map and after.is_map and before.type_name.split(',')[0] == after.type_name.split(',')[0]:
             return compatible_types(map_value(before), map_value(after))
-        return 'undetermined'
+        other = before if after.is_map else after
+        if other.is_map or other.kind in ('message', 'bytes', 'group'):
+            return 'undetermined'  # a map is a repeated entry message: decided by layout (compare)
+        return 'break'  # a map against a scalar or string
     a, b = before.kind, after.kind
     if a == b and before.resolved == after.resolved:
         return 'same'
@@ -429,11 +452,68 @@ def compatible_types(before: Field, after: Field) -> str:
         return 'undetermined'  # a different named type: wire type alike, contents not fixed by the rules
     if any(a in g and b in g for g in COMPATIBLE_GROUPS):
         return 'compatible'
+    if {a, b} == {'string', 'message'}:
+        return 'break'  # not a protobuf.dev compatible pair; round 1 adjudicated every such exchange as breaking
     if {a, b} == {'bytes', 'message'}:
         return 'compatible'  # protobuf.dev: embedded messages are compatible with bytes holding an encoding
     if WIRE_TYPE[a] != WIRE_TYPE[b]:
         return 'break'
     return 'undetermined'  # same wire type, value interpretation not fixed (e.g. float<->fixed32)
+
+
+WKT_SOURCE = b'''syntax = "proto3"; package google.protobuf;
+message Timestamp { int64 seconds = 1; int32 nanos = 2; }
+message Duration { int64 seconds = 1; int32 nanos = 2; }
+message Any { string type_url = 1; bytes value = 2; }
+message Empty {}
+message FieldMask { repeated string paths = 1; }
+message DoubleValue { double value = 1; } message FloatValue { float value = 1; }
+message Int64Value { int64 value = 1; } message UInt64Value { uint64 value = 1; }
+message Int32Value { int32 value = 1; } message UInt32Value { uint32 value = 1; }
+message BoolValue { bool value = 1; } message StringValue { string value = 1; }
+message BytesValue { bytes value = 1; }
+'''
+_wkt: Model | None = None
+
+
+def layout(model: Model, f: Field) -> Message | None:
+    """The message a message-like field carries: its type, or a map's synthetic entry."""
+    global _wkt
+    if f.is_map:
+        entry = Message()
+        key = f.type_name[4:].split(',')[0]
+        entry.fields[1] = Field('key', 1, '', key, kind=key, resolved=key)
+        entry.fields[2] = map_value(f)
+        entry.fields[2].number, entry.fields[2].label = 2, ''
+        return entry
+    if f.kind != 'message':
+        return None
+    if f.resolved in model.messages:
+        return model.messages[f.resolved]
+    if _wkt is None:
+        _wkt = load([('google/protobuf/wkt.proto', WKT_SOURCE)])
+    return _wkt.messages.get(f.resolved)
+
+
+def same_layout(mb: Model, x: Message, ma: Model, y: Message, seen: set) -> str:
+    """'equivalent', 'break' (a shared number conflicts) or 'differs' (numbers added or removed)."""
+    if (id(x), id(y)) in seen:
+        return 'equivalent'
+    seen.add((id(x), id(y)))
+    outcome = 'equivalent' if set(x.fields) == set(y.fields) else 'differs'
+    for number in sorted(set(x.fields) & set(y.fields)):
+        f, g = x.fields[number], y.fields[number]
+        if (f.label == 'repeated') != (g.label == 'repeated') and not ({f.kind, g.kind} <= {'string', 'bytes', 'message', 'map'}):
+            return 'break'
+        verdict = compatible_types(f, g)
+        if verdict == 'undetermined':
+            lx, ly = layout(mb, f), layout(ma, g)
+            verdict = 'undetermined' if lx is None or ly is None else same_layout(mb, lx, ma, ly, seen)
+        if verdict == 'break':
+            return 'break'
+        if verdict in ('undetermined', 'differs'):
+            outcome = 'differs'
+    return outcome
 
 
 def map_value(f: Field) -> Field:
@@ -489,13 +569,23 @@ def compare(before: Model, after: Model) -> list[dict]:
                     add('break', 'field_deleted_unreserved', where, 'a field number was deleted without reserving it')
                 continue
             verdict = compatible_types(f, g)
+            why = f'{f.kind}:{f.resolved} -> {g.kind}:{g.resolved}'
+            if verdict == 'undetermined':
+                lf, lg = layout(before, f), layout(after, g)
+                shape = same_layout(before, lf, after, lg, set()) if lf is not None and lg is not None else None
+                if shape == 'equivalent':
+                    verdict = 'compatible'
+                    add('note', 'disclosed_type_equivalent', where, why + ' (identical wire layout)')
+                elif shape == 'break':
+                    verdict = 'break'
             if verdict in ('break', 'undetermined'):
-                add(verdict, 'field_type', where, f'{f.kind}:{f.resolved} -> {g.kind}:{g.resolved}')
+                add(verdict, 'field_type', where, why)
             if (f.label == 'repeated') != (g.label == 'repeated') and not (f.is_map or g.is_map):
                 repeated, kinds = (g if g.label == 'repeated' else f), {f.kind, g.kind}
                 syntax = syntax_new if g.label == 'repeated' else syntax_old
                 if kinds <= {'string', 'bytes', 'message'}:
-                    pass  # protobuf.dev: singular<->repeated is compatible for string, bytes and message
+                    # protobuf.dev: compatible for string, bytes and message; Buf reports it (disclosed limit)
+                    add('note', 'disclosed_cardinality', where, f'{f.kind} singular<->repeated')
                 elif kinds & ({'enum'} | NUMERIC) and packed(repeated, syntax):
                     add('break', 'cardinality', where, 'a packed repeated numeric meets a singular reader')
                 elif kinds & ({'enum'} | NUMERIC):
@@ -540,7 +630,7 @@ def compare(before: Model, after: Model) -> list[dict]:
 
 
 def verdict(findings: list[dict]) -> str:
-    outcomes = {f['outcome'] for f in findings}
+    outcomes = {f['outcome'] for f in findings} - {'note'}
     return 'breaking' if 'break' in outcomes else 'undetermined' if outcomes else 'compatible'
 
 
