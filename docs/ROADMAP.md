@@ -246,6 +246,12 @@ T47.2q records that in the protocol and plan, adds `seal.py` (seal, gist-bound
 NIST seed, frozen draw), and prepares `spike/t472/SEALING_PACKET.md`. Ben's
 seal, gist publication and the beacon ceremony come next.
 
+**Sealed and drawn (2026-10-12):** the run-g protocol is sealed. The gist
+predates activation, and the seed came from NIST pulse 1979674. The draw
+reproduced the sealed counts. Ben now labels 1,583 blind, source-only units
+and builds the independent resolution and declaration ledgers. Then come the
+label commitment, unsealing and scoring.
+
 **Independent production promotions (2026-10-09, Ben-directed):** Epics 48–58
 give every current experimental evidence pack and composed product surface a
 named production path. Epic 48 implements the currently design-only signed

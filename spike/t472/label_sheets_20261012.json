@@ -1,0 +1,19 @@
+{
+ "blind": "no frame, predicate, resolution, lineage, operation or score appears in the sheet",
+ "call_sites": 1509,
+ "interfaces": 74,
+ "membership_dir": "/home/ben/phebs-rehearsals/t472-candidate-membership-20261012",
+ "membership_sha256": "sha256:a3d0e9df8453026cdfee3c2f21339d5d2a5ab384975b15421b191e7dcf617dd1",
+ "sample_sha256": "sha256:f98dd6d04ac4e9092a4b15b5ba405e6b9c15b7a606ed16f75874e470758f9e43",
+ "schema": "t472-blind-sheet-manifest-v1",
+ "seal_document_sha256": "sha256:46fac5515190ccaa43b23d3f9b49cc2290569911f31ea58dbfa427ef483d9237",
+ "sheet_dir": "/home/ben/phebs-rehearsals/t472-label-sheets-20261012",
+ "sheet_sha256": {
+  "declaration-citation.jsonl": "sha256:4ffccea42edbb094ba545493f0797e2e125e9af9941fa4e348378a2f90d24c5e",
+  "expected-resolution.jsonl": "sha256:e5c324050ed763802a3ef000e8dc96f33a4bf4d4fbdedfe8639c80345b0582a6",
+  "labels.jsonl": "sha256:aa1a24dfe910db9392af1894dced7966426f64338f117f9e1032d4ad1c860605",
+  "review.md": "sha256:610599c635eac74ed43a97b4a142c1856c42aae956e8b108953a7ea44bd3bdef",
+  "sites.jsonl": "sha256:c2256f6b446238c4611fa03ac6836d1be2002fb989ab7897a89d07605c6c1670"
+ },
+ "units": 1583
+}

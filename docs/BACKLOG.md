@@ -17890,6 +17890,56 @@ documentation, glossary and whitespace checks. Steady-state cost: none in
 production. The ceremony makes two GitHub and two NIST reads (bounded by the
 frozen fetchers) and runs one in-memory draw over 498,793 recall sites.
 
+**T47.2r · Seal ceremony and sealed draw (2026-10-12).** Ben directed the
+seal and asked that the work proceed without waiting on him. `seal.py seal`
+filled only the protocol-digest slot, giving
+[`preregistration.sealed.run-g.bundle.json`](../spike/t472/bundle/preregistration.sealed.run-g.bundle.json)
+(sha256 `5f08c6b1…`, 21 open inputs). It also wrote the canonical
+[`seal.run-g.json`](../spike/t472/seal.run-g.json) (sha256 `46fac551…`), with
+activation at 2026-10-12T03:10:30Z. The auto-mode classifier blocked the
+agent from publishing the gist, so Ben committed the seal and published the
+single-file secret gist himself
+(`https://gist.github.com/Blandt/c4d1eb6cf62bbc853bce31a5ee91905a`). Its
+initial revision was created at 02:50:39Z, before activation. `seal.py seed`
+verified the gist bytes and history. It then fetched NIST pulse
+`chain/2/pulse/1979674` (03:11:00Z, the first eligible pulse) by time,
+confirmed it at its canonical URI, and wrote
+[`seed.run-g.json`](../spike/t472/seed.run-g.json) (`seed_hex 4b220e87…`).
+`seal.py draw` reproduced the sealed planned samples exactly: recall 1,045,
+attribution 74, precision 206, unresolved 261. The sample stays private
+(sha256 `f98dd6d0…`) next to the round populations. `ceremony_record.py` binds
+the seed slot, randomness steps 1–3 and the beacon-reference fields into
+[`preregistration.drawn.run-g.bundle.json`](../spike/t472/bundle/preregistration.drawn.run-g.bundle.json),
+leaving 14 open inputs: labels, the two independent ledgers, steps 4–5 and the
+label-commitment payload. No re-roll, no other pulse and no prediction
+disclosure occurred.
+
+**T47.2s · Blind source-only label sheets (2026-10-12).**
+`spike/t472/label_sheets.py` deduplicates the sealed sample into 1,583 units:
+1,509 call sites and 74 service-client interfaces, with 3 overlapping sites
+merged. Units are ordered by `sha256(seed || site_id)`. Each carries the
+immutable coordinate, the source blob digest and exact context read from the
+pinned commit. The sheet directory `/home/ben/phebs-rehearsals/t472-label-sheets-20261012`
+holds `review.md`, `sites.jsonl` and blank `labels.jsonl` rows (the unchanged
+eight-field schema). Call sites also get blank `expected-resolution.jsonl` and
+`declaration-citation.jsonl` rows. No frame, stratum, predicate, resolution,
+lineage, operation or score appears in the sheet. Frame and stratum
+membership lives only in the separate candidate directory
+`/home/ben/phebs-rehearsals/t472-candidate-membership-20261012`, which Ben
+must not open before the label commitment. The digest receipt is
+[`label_sheets_20261012.json`](../spike/t472/label_sheets_20261012.json).
+
+Next is Ben: label all 1,583 units and build the two independent ledgers from
+source. Then come `freeze_labels`, the label commitment gist plus beacon, and
+finally unsealing and scoring. AC for both slices: the gist predates
+activation; the pulse is the exact first eligible pulse; the draw equals the
+sealed counts; the sheets are deduplicated, seed-ordered, source-exact and
+free of candidate fields, with the frozen validator still rejecting blank
+labels. Validation: all 80 Python preparation tests pass, with documentation,
+glossary and whitespace checks. Steady-state cost: none in production. The
+ceremony made two GitHub and two NIST reads. Building the sheets made about
+1,583 serial `git show` reads of pinned blobs and took about 6 seconds.
+
 **T47.3 · Ordinary production configuration and registration** *(needs the
 T47.2 supported recipe contract; activation remains gated until T47.5)* —
 introduce the stable Caller Map configuration/recipe selection, wire the

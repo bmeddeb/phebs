@@ -725,3 +725,9 @@ Its population stays bound for the record only. The slice also adds
 `seal.py` (seal, seed, draw) and the
 [`sealing packet`](SEALING_PACKET.md), which lists every digest the seal binds
 and the exact ceremony.
+
+T47.2r executed the ceremony: seal, gist, NIST pulse 1979674, seed and the
+exact sealed draw, bound by `ceremony_record.py` into
+[`preregistration.drawn.run-g.bundle.json`](bundle/preregistration.drawn.run-g.bundle.json).
+T47.2s's `label_sheets.py` builds the 1,583-unit blind, source-only sheets.
+Frame membership stays in separate candidate custody.
