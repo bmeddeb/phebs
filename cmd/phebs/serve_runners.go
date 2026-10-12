@@ -620,11 +620,30 @@ func startServeObservationSchedulers(d *serveDeps) error {
 	return nil
 }
 
+// initializeReleasedClaimServices gives a released verdict claim its service
+// when no extractor is admitted, so no extraction pipeline would otherwise
+// construct it (T53.3: the Buf checker for phebs.protobuf.wire.buf). A checker
+// that cannot start logs the ordinary warning and leaves the surface dark.
+func initializeReleasedClaimServices(d *serveDeps) {
+	if !d.releasedClaims[wireCompatibilityPackID] {
+		return
+	}
+	checker, err := initializeCompatibilityForLaunch(d.ctx, d.semanticLaunch)
+	if err != nil {
+		log.Printf("WARNING: %v", err)
+	}
+	d.compatibility = checker
+}
+
 // startServeExtractionPipeline wires the candidate/extraction/partition
 // pipeline: compatibility selection, candidate worker, partitioned extraction
 // runtime and reconciler, epoch-gated stale/checkpoint controls, and the
 // resolver/caller downstream runners.
 func startServeExtractionPipeline(d *serveDeps) error {
+	if len(d.exs) == 0 {
+		initializeReleasedClaimServices(d)
+		return nil
+	}
 	ctx := d.ctx
 	cfg := d.cfg
 	st := d.st
@@ -641,9 +660,6 @@ func startServeExtractionPipeline(d *serveDeps) error {
 	var openPartitionDomain func(
 		context.Context, candidate.DomainResultPlan,
 	) (*candidate.SparseDomain, error)
-	if len(d.exs) == 0 {
-		return nil
-	}
 	if cfg.Experimental.ProvisionalProtoExtraction {
 		log.Print("WARNING: experimental provisional protobuf extraction enabled; T11.1/T12.3 validation is not established")
 	}
