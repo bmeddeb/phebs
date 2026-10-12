@@ -234,3 +234,42 @@ def validate_serve_receipt(value: object) -> dict:
         if value['stop_mode'] == 'hard_kill' and value['signal'] != signal.SIGKILL:
             raise ServeError('a successful hard-kill phase ends by SIGKILL')
     return dict(value)
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *args, **kwargs):
+        return None
+
+
+def oidc_login(base: str, key_name: str, timeout: float = 30) -> tuple[dict, str]:
+    """Complete one browser-style OIDC login and mint that user's own API key.
+
+    Redirects are followed by hand so each hop is checked: phebs -> issuer
+    authorize -> phebs callback -> session. Returns (status user, bearer token).
+    """
+    import http.cookiejar
+    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()), _NoRedirect)
+
+    def hop(url: str, expect: int) -> str:
+        try:
+            opener.open(url, timeout=timeout)
+            raise ServeError(f'{url} did not redirect')
+        except urllib.error.HTTPError as error:
+            if error.code != expect:
+                raise ServeError(f'{urllib.parse.urlsplit(url).path} returned {error.code}, not {expect}') from None
+            return urllib.parse.urljoin(url, error.headers['Location'])
+
+    authorize = hop(base + '/api/auth/oidc/start', 302)
+    callback = hop(authorize, 302)
+    if not callback.startswith(base + '/api/auth/oidc/callback'):
+        raise ServeError('issuer redirected outside the configured callback')
+    hop(callback, 303)
+    with opener.open(base + '/api/auth/status', timeout=timeout) as r:
+        status = json.loads(r.read(MAX_RESPONSE))
+    if not status.get('authenticated') or not status.get('csrf_token'):
+        raise ServeError('OIDC login did not establish a session')
+    request = urllib.request.Request(base + '/api/auth/keys', data=json.dumps({'name': key_name}).encode(),
+                                     headers={'Content-Type': 'application/json', 'X-CSRF-Token': status['csrf_token']})
+    with opener.open(request, timeout=timeout) as r:
+        token = json.loads(r.read(MAX_RESPONSE))['token']
+    return status['user'], token

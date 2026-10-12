@@ -18232,6 +18232,39 @@ harness unittests pass (7 modules). Steady-state cost: none in production.
 A rehearsal costs one serve plus its SurrealDB child per phase, 399×2
 bounded reads against the operator's own live serve, and capped retention of
 any non-success or hard-killed phase.*
+*Slice 3 landed 2026-10-12: undisclosed denial is now proven for an
+authenticated non-admin principal on the real binary.
+`pilot/validation/oidc_issuer.py` is a loopback-only test issuer. It serves
+discovery and JWKS, and its authorize endpoint redirects with a one-time code.
+Its token endpoint checks the client secret, the redirect URI and the PKCE
+S256 verifier, then issues RS256 ID tokens with a verified email to the
+configured identities in order. phebs makes the first user ever created its
+administrator, so the rehearsal logs in an owner first and then an ordinary
+member. `serve.oidc_login` follows the browser flow hop by hop
+(start → authorize → callback → session) and mints that user's own API key
+with the session CSRF token.
+
+`serve_rehearsal.py authorization` ran the exact binary
+`sha256:c8d9c7c5…16aa` with a `permissions:` block whose `always_visible` names
+one of two local fixtures. Each fixture contains a distinct needle. For the
+member:
+
+- the listing holds only the visible fixture, while the admin sees both;
+- the source, folder_contents, tree, commits and blame reads of the hidden
+  fixture are byte-identical, apart from the name, to reads of an absent
+  repository, and each has a 200 admin control read;
+- search finds the visible needle but never the hidden one, which the admin
+  finds;
+- MCP `list_repos` omits the hidden fixture.
+
+The server and issuer both ended gracefully and cleanly (receipts under
+`/home/ben/phebs-rehearsals/t483c-authz-20261012T032852Z`). All 8 harness
+unittest modules pass, including the issuer's PKCE, code-reuse, client and
+signature fences. T48.3's shared substrate and real-binary drivers are
+complete. Each consuming ticket adopts them for its own pack: T47.4 first
+(Caller Map endpoints, permission changes, restart and hard death).
+Steady-state cost: none in production. A rehearsal runs one issuer and one
+serve with its SurrealDB child, and indexes two one-file fixtures.*
 
 **T48.4 · Shared release operations and qualification** — document stable
 configuration, supported status, validation expiry, suspension, rollback and

@@ -18,6 +18,7 @@ import os
 import secrets
 import socket
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -32,10 +33,10 @@ def free_port() -> int:
         return s.getsockname()[1]
 
 
-def fixture_repository(root: Path) -> Path:
-    repo = root / 'fixture'
+def fixture_repository(root: Path, name: str = 'fixture', token: str = 't48.3') -> Path:
+    repo = root / name
     repo.mkdir(parents=True)
-    (repo / 'main.go').write_text('package main\n\nfunc main() { println("t48.3") }\n')
+    (repo / 'main.go').write_text(f'package main\n\nfunc main() {{ println("{token}") }}\n')
     env = {**os.environ, 'GIT_AUTHOR_NAME': 't48.3', 'GIT_AUTHOR_EMAIL': 't48.3@localhost',
            'GIT_COMMITTER_NAME': 't48.3', 'GIT_COMMITTER_EMAIL': 't48.3@localhost',
            'GIT_AUTHOR_DATE': '2026-10-12T00:00:00Z', 'GIT_COMMITTER_DATE': '2026-10-12T00:00:00Z'}
@@ -105,6 +106,91 @@ def lifecycle(binary: Path, zoekt: Path, run_root: Path, index_deadline_s: float
             'listing_identical_across_phases': True, 'anonymous_refused_every_phase': True}
 
 
+REPO_READS = (('/api/source', {'path': 'main.go'}), ('/api/folder_contents', {}), ('/api/tree', {}),
+              ('/api/commits', {}), ('/api/blame', {'path': 'main.go'}))
+
+
+def authorization(binary: Path, zoekt: Path, run_root: Path, index_deadline_s: float = 180) -> dict:
+    """A non-admin OIDC principal sees the visible repository and cannot tell the hidden one from an absent one."""
+    run_root.mkdir(parents=True)
+    visible = fixture_repository(run_root, 'fixture-visible', 't48visibleNeedle')
+    hidden = fixture_repository(run_root, 'fixture-hidden', 't48hiddenNeedle')
+    visible_name, hidden_name = 'local' + str(visible), 'local' + str(hidden)
+    absent_name = 'local' + str(run_root / 'fixture-absent')
+    port, issuer_port, key = free_port(), free_port(), secrets.token_hex(24)
+    secret_file = run_root / 'oidc-client-secret'
+    secret_file.write_text(secrets.token_hex(24))
+    os.chmod(secret_file, 0o600)
+    member = 'member@t48.test'
+    identities = json.dumps([{'sub': 'owner', 'email': 'owner@t48.test', 'name': 'Owner'},
+                             {'sub': 'member', 'email': member, 'name': 'Member'}])
+    config = run_root / 'phebs.yaml'
+    config.write_text(
+        f'server:\n  addr: "127.0.0.1:{port}"\n  data_dir: "{run_root / "data"}"\n'
+        f'auth:\n  api_key: "{key}"\n  cookie_secure: false\n  oidc:\n'
+        f'    issuer_url: "http://127.0.0.1:{issuer_port}"\n    client_id: "phebs-t48"\n'
+        f'    client_secret: "{secret_file.read_text()}"\n'
+        f'    redirect_url: "http://127.0.0.1:{port}/api/auth/oidc/callback"\n'
+        f'permissions:\n  users:\n    {member}: []\n  always_visible: ["{visible_name}"]\n'
+        f'sync:\n  poll_interval: 15s\n  resync_interval: 1h\n'
+        f'connections:\n  - name: visible\n    type: git\n    url: "{visible}"\n'
+        f'  - name: hidden\n    type: git\n    url: "{hidden}"\n')
+    os.chmod(config, 0o600)
+    harness = run_root / 'harness'
+    base = f'http://127.0.0.1:{port}'
+    issuer = serve.ServeSession(harness, 'oidc-issuer', [sys.executable, str(Path(__file__).with_name('oidc_issuer.py')),
+                                '--port', str(issuer_port), '--client-id', 'phebs-t48',
+                                '--client-secret-file', str(secret_file), '--identities', identities],
+                                f'http://127.0.0.1:{issuer_port}', ready_timeout_s=30)
+    issuer.start()
+    server = serve.ServeSession(harness, 'authorization', [str(binary), 'serve', '-config', str(config)], base,
+                                env={**os.environ, 'PHEBS_ZOEKT_GIT_INDEX': str(zoekt)}, ready_timeout_s=120)
+    try:
+        server.start()
+        deadline = time.monotonic() + index_deadline_s
+        while not (len(rows := listing(base, key)) == 2 and all(r.get('indexed_commit_hash') for r in rows)):
+            if time.monotonic() > deadline:
+                raise serve.ServeError('fixtures were not indexed before the deadline')
+            time.sleep(1)
+        owner, _ = serve.oidc_login(base, 'owner')
+        user, token = serve.oidc_login(base, 'member')
+        if not owner.get('is_admin') or user.get('is_admin') or user.get('email') != member:
+            raise serve.ServeError('OIDC did not yield one administrator and one ordinary member')
+        names = lambda rows: sorted(r['name'] for r in rows)  # noqa: E731
+        if names(listing(base, token)) != [visible_name] or names(listing(base, key)) != sorted([visible_name, hidden_name]):
+            raise serve.ServeError('repository listings do not reflect the permission block')
+        checked = []
+        for path, extra in REPO_READS:
+            admin = serve.http_get(base, path, {'repo': hidden_name, **extra}, token=key)
+            if admin[0] != 200:
+                raise serve.ServeError(f'administrator control read of {path} returned {admin[0]}')
+            serve.undisclosed(serve.http_get(base, path, {'repo': hidden_name, **extra}, token=token),
+                              serve.http_get(base, path, {'repo': absent_name, **extra}, token=token),
+                              hidden_name, absent_name)
+            checked.append(path)
+        def hits(principal, needle):
+            status, body = serve.http_get(base, '/api/search', {'q': needle}, token=principal)
+            if status != 200:
+                raise serve.ServeError(f'search returned {status}')
+            return body.count(needle.encode())
+        if hits(key, 't48hiddenNeedle') == 0 or hits(token, 't48hiddenNeedle') != 0 or hits(token, 't48visibleNeedle') == 0:
+            raise serve.ServeError('search visibility does not follow the permission block')
+        mcp = json.dumps(serve.mcp_call(base, 'list_repos', {}, token=token))
+        if hidden_name in mcp or visible_name not in mcp:
+            raise serve.ServeError('MCP list_repos does not follow the permission block')
+    except BaseException:
+        if server.pid:
+            server.stop('hard_kill', reason='authorization probe failed')
+        issuer.stop('hard_kill', reason='authorization probe failed')
+        raise
+    receipts_out = {'server': server.stop('graceful'), 'issuer': issuer.stop('graceful')}
+    return {'schema': 't48.3-authorization-rehearsal-v1', 'binary_sha256': serve.receipts.sha256_file(binary),
+            'ordinary_principal': 'OIDC member, not administrator', 'undisclosed_reads': checked,
+            'search_hidden': True, 'mcp_list_hidden': True,
+            'receipts': {k: {f: v[f] for f in ('outcome', 'stop_mode', 'ready_seconds', 'exit_code', 'teardown')}
+                         for k, v in receipts_out.items()}}
+
+
 def callers(base: str, key: str, endpoints: list[dict], absent_repository: str) -> dict:
     pages = 0
     for endpoint in endpoints:
@@ -135,6 +221,10 @@ def main() -> None:
     life.add_argument('--binary', type=Path, required=True)
     life.add_argument('--zoekt', type=Path, required=True)
     life.add_argument('--run-root', type=Path, required=True)
+    auth = sub.add_parser('authorization')
+    auth.add_argument('--binary', type=Path, required=True)
+    auth.add_argument('--zoekt', type=Path, required=True)
+    auth.add_argument('--run-root', type=Path, required=True)
     call = sub.add_parser('callers')
     call.add_argument('--base', required=True)
     call.add_argument('--key-file', type=Path, required=True, help='operator config holding auth.api_key')
@@ -143,6 +233,8 @@ def main() -> None:
     args = parser.parse_args()
     if args.command == 'lifecycle':
         result = lifecycle(args.binary.resolve(), args.zoekt.resolve(), args.run_root.resolve())
+    elif args.command == 'authorization':
+        result = authorization(args.binary.resolve(), args.zoekt.resolve(), args.run_root.resolve())
     else:
         import re
         key = re.search(r'^\s*api_key:\s*"?([^"\s]+)"?\s*$', args.key_file.read_text(), re.M).group(1)
