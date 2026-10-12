@@ -288,9 +288,12 @@ and who owns each.
     (`check_wire_compatibility`, HTTP and MCP). It carries no field
     evidence and is admitted only by the dark switches until T53.3 binds the
     claim.
-  - Remaining: bind the input identity after Epic 49, then the T53.3 measured
-    promotion. It needs a WIRE claim card and a preregistered change
-    population; the agent can do both.
+  - Done: T53.3 slice 1. The claim card, the real-history population (571
+    judged units), the independent oracle, the runner and the protocol are
+    built and unsealed.
+  - Remaining, Ben: freeze the T53.3 thresholds, publish the seal gist and
+    confirm the adjudicator. Then the agent runs, adjudicates and scores.
+  - Remaining, agent: bind the input identity after Epic 49.
 
 Everything human-gated is listed above. Agent work proceeds on ungated
 tickets in the meantime.

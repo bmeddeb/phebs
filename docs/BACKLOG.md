@@ -18911,6 +18911,48 @@ single sandboxed Buf child per request, with no persistence.*
 **T53.3 · Measured compatibility promotion** — satisfy the common bar for
 the standalone WIRE verdict and separately qualify any enrichment it claims.
 Thrift has no Buf WIRE support by implication.
+*Slice 1 (2026-10-12, Claude lead): the round is built and unsealed.
+[`docs/WIRE_COMPATIBILITY_PROTOCOL.md`](WIRE_COMPATIBILITY_PROTOCOL.md) holds
+the claim card (`phebs.protobuf.wire.buf`: claims, non-claims, supported
+input and the pinned conservative limit), the population, the truth,
+adjudication, measurement, the proposed thresholds and the seal.
+
+- **Population.** It is real `.proto` history from the frozen T47.2 corpus:
+  1,015 modified-file units, 571 of which form a compilable closure and are
+  judged.
+  - The other 444 keep a stated reason: 353 import an absent external
+    dependency, 51 have an ambiguous import, and 40 moved the changed
+    file's import name.
+  - The run-g containerd and grpc-go clones were missing historical blobs
+    (136,394 and 43,282 broken links), so the population reads full-history
+    bare clones in `phebs-rehearsals/t533-history-20261012`. Each was
+    fetched from the public upstream, plus the locked derived commit from
+    the corpus. Every blob is checked against its frozen digest when the
+    round reads it.
+- **Truth.** `spike/t533/wire_oracle.py` is an independent reader and rule
+  set from protobuf's documented update rules. It uses no Buf and no phebs
+  code. Its findings are break or undetermined; undetermined and unreadable
+  units go to hand adjudication. It reproduces all 29 T53.1 golden truths.
+  - Pre-seal oracle-only distribution: 486 compatible, 52 breaking, 24
+    undetermined and 9 unreadable.
+  - Running it on the population fixed three reader defects before any
+    product run: vendored `Godeps/_workspace` copies, extension additions,
+    and descriptor custom options.
+- **Runner.** `run_round.py run` drives the real binary over HTTP and MCP
+  with a parity check. Its smoke run on synthetic history (not the
+  population) passed end to end on the real binary: 2 agree, 1 pinned
+  conservative, parity on all three. The smoke run surfaced Huma's
+  HTTP-only `$schema` link as the one excluded parity field. `score`
+  classifies each unit as agree, pinned_conservative, conservative,
+  permissive, disagree or pending.
+- **Proposed thresholds.** Zero permissive, zero pending, agreement ≥ 99%
+  excluding the pinned class, and parity on every unit.
+
+Buf has not seen the population. Remaining, Ben: freeze the thresholds,
+publish the seal gist (README lists the values), and confirm the
+adjudicator. Then the agent runs, adjudicates and scores.
+
+Python tests: 9 pass. Steady-state cost: none. These are spike tools only.*
 
 ## Epic 54 · Contract Impact production readiness
 

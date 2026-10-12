@@ -1,0 +1,46 @@
+{
+ "by_stratum": {
+  "containerd/containerd:ambiguous_import": 48,
+  "containerd/containerd:changed_file_moved": 37,
+  "containerd/containerd:closed": 480,
+  "containerd/containerd:unresolved_import": 26,
+  "etcd-io/etcd:closed": 9,
+  "etcd-io/etcd:unresolved_import": 324,
+  "grpc/grpc-go:ambiguous_import": 3,
+  "grpc/grpc-go:changed_file_moved": 3,
+  "grpc/grpc-go:closed": 82,
+  "grpc/grpc-go:unresolved_import": 3
+ },
+ "census": {
+  "containerd/containerd:A": 116,
+  "containerd/containerd:D": 72,
+  "containerd/containerd:M": 591,
+  "containerd/containerd:excluded_path": 595,
+  "etcd-io/etcd:A": 40,
+  "etcd-io/etcd:D": 28,
+  "etcd-io/etcd:M": 333,
+  "etcd-io/etcd:excluded_path": 233,
+  "grpc/grpc-go:A": 55,
+  "grpc/grpc-go:D": 45,
+  "grpc/grpc-go:M": 91
+ },
+ "enumerator_sha256": "sha256:29a485078332de09fa5112e95b97af74cf68533ae4cf9e1b171d8c204a795c4f",
+ "lineage": "contract_t533_population",
+ "repositories": {
+  "containerd/containerd": {
+   "commit": "e0f9f8ac24f21a3703f94bb09817b699a1446af0",
+   "dir": "containerd"
+  },
+  "etcd-io/etcd": {
+   "commit": "f9ecd8dcecc18b7559c0e3c0c264477c6ab9ddc1",
+   "dir": "etcd"
+  },
+  "grpc/grpc-go": {
+   "commit": "f40347859c3380f5c409f153ab79d4b8e724abd3",
+   "dir": "grpc-go"
+  }
+ },
+ "schema": "t533-change-population-v1",
+ "total": 1015,
+ "units_sha256": "sha256:3b65a451a50a6935ab55ca34e5102f89a674154c1a449df70676602c3412dbcb"
+}
