@@ -1,8 +1,8 @@
 # T53.3 Buf WIRE compatibility quality protocol
 
-Status: **frozen for sealing** (2026-10-12). Ben froze the §6 thresholds as
-proposed and named Claude as the sole adjudicator. Nothing in §5 runs
-before the seal in §7.
+Status: **sealed and scored: the round fails** (2026-10-12). Ben froze the
+§6 thresholds as proposed and named Claude as the sole adjudicator. The
+results are in §8.
 
 ## 1. Claim card (`phebs.protobuf.wire.buf`)
 
@@ -130,3 +130,70 @@ The seal publishes, in a public gist created before `run`:
 
 There is no sampling, so no beacon draw is needed. The whole closed
 population is scored.
+
+## 8. Result (2026-10-12)
+
+**Seal.** Commit `d88a6c97` was pushed to the public repository. The seal
+values were published at
+<https://gist.github.com/Blandt/74dda9b6e7d8a90df884fefb91d4813f> before the
+run. The receipts are in `spike/t533/round/`.
+
+**Run.** The real binary, built at the seal commit, judged all 571 closed
+units in 2 m 1 s:
+
+- 486 compatible, 73 breaking (HTTP 200) and 12 refused (HTTP 400);
+- HTTP/MCP parity held on all 571 units;
+- peak RSS was 118 MiB, and the server stopped cleanly.
+
+**Scored (sealed binary): fails.**
+
+| Class | Units |
+|---|---|
+| agree | 548 |
+| pinned_conservative | 3 |
+| conservative | 11 |
+| disagree | 9 |
+| permissive | 0 |
+| pending | 0 |
+
+Agreement is **96.48%** (548/568), against the 99.0% threshold. The zero
+permissive, zero pending and parity thresholds pass.
+
+1. **9 disagreements are a product defect.** Buf reports a source that fails
+   to compile semantically (an unresolved type, or an unknown option
+   extension) as a `COMPILE` annotation with its breaking exit status 100.
+   The checker passed that through as a 200 "breaking" verdict on a source
+   that does not compile. The claim forbids this: it must be refused.
+   - The sources: 6 etcd `Documentation/rfc/v3api.proto` revisions
+     (`storagepb.KeyValue` never imported), 2 containerd files using gogo
+     options with no imports, and 1 containerd `shim.proto` whose rpc types
+     were never imported.
+   - The last was first scored `agree` by coincidence: the oracle does not
+     validate rpc type names. It was adjudicated after scoring, once the fix
+     exposed it.
+2. **11 conservative errors are Buf comparing message types by name.**
+   `FIELD_WIRE_COMPATIBLE_TYPE` fires when a field's message type moves to a
+   differently named message with an identical wire structure, checked field
+   by field and recursively.
+   - 7 units: containerd `containerd.v1.types.*` → `containerd.types.*`, the
+     containerd ttrpc `Envelope`, and grpc-go's `grpc.lb.v1.Timestamp` and
+     `Duration` → the well-known types.
+   - 4 units are a judgment call: containerd `map<string,string> options` →
+     `google.protobuf.Any`, which is wire-equivalent field by field. Even
+     adjudicated as breaking, agreement stays below 99% (98.77% after the
+     fix).
+
+Every adjudication note is in `round/adjudications.json`. The 13 adjudicated
+agreements include real breaks: renumbered fields, `uint32` → map, and
+string ↔ message exchanges.
+
+**Fix and diagnostic (not a sealed result).** The checker now refuses any
+`COMPILE` annotation as invalid input, and `TestGoldenUncompilableSourceIsRefusedNotJudged`
+covers semantic failures on both sides. A diagnostic rerun of the fixed binary
+over the same, now-seen population scores 557 agree, 11 conservative and 3
+pinned: **98.06%**. It still fails, and only on the Buf type-name class.
+
+**Consequence.** The standalone WIRE verdict does not meet the frozen bar, so
+it stays experimental-dark. Its safety property held throughout: no unit was
+called compatible when it breaks. Any new claim needs a new protocol and a
+fresh population, because this population has now been seen.

@@ -3,6 +3,7 @@ package compat
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"slices"
 	"sort"
@@ -94,14 +95,26 @@ func TestGoldenWireChanges(t *testing.T) {
 	}
 }
 
+// TestGoldenUncompilableSourceIsRefusedNotJudged covers a syntax error and the
+// semantic failures Buf reports as a COMPILE annotation with its breaking exit
+// status (T53.3 found 8 real-history units judged "breaking" that way).
 func TestGoldenUncompilableSourceIsRefusedNotJudged(t *testing.T) {
 	checker := requireChecker(t)
-	_, err := checker.Check(context.Background(), Request{
-		Lineage: "contract_golden_uncompilable",
-		Before:  []File{{Path: "shop/v1/shop.proto", Content: "syntax = \"proto3\";\npackage shop.v1;\nmessage M { string a = 1; }\n"}},
-		After:   []File{{Path: "shop/v1/shop.proto", Content: "syntax = \"proto3\";\npackage shop.v1;\nmessage M { string a = ; }\n"}},
-	})
-	if err == nil {
-		t.Fatal("a source that does not compile produced a verdict")
+	good := "syntax = \"proto3\";\npackage shop.v1;\nmessage M { string a = 1; }\n"
+	for name, broken := range map[string]string{
+		"syntax":          "syntax = \"proto3\";\npackage shop.v1;\nmessage M { string a = ; }\n",
+		"unresolved type": "syntax = \"proto3\";\npackage shop.v1;\nmessage M { other.Missing a = 1; }\n",
+		"unknown option":  "syntax = \"proto3\";\npackage shop.v1;\nmessage M { string a = 1 [(gogoproto.customname) = \"A\"]; }\n",
+	} {
+		for side, request := range map[string]Request{
+			"after":  {Before: []File{{Path: "shop/v1/shop.proto", Content: good}}, After: []File{{Path: "shop/v1/shop.proto", Content: broken}}},
+			"before": {Before: []File{{Path: "shop/v1/shop.proto", Content: broken}}, After: []File{{Path: "shop/v1/shop.proto", Content: good}}},
+		} {
+			request.Lineage = "contract_golden_uncompilable"
+			result, err := checker.Check(context.Background(), request)
+			if !errors.Is(err, ErrInvalidInput) {
+				t.Errorf("%s in %s: got result %+v, err %v; want an invalid-input refusal", name, side, result, err)
+			}
+		}
 	}
 }

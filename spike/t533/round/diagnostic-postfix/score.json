@@ -1,0 +1,18 @@
+{
+ "agreement": 0.98063,
+ "classes": {
+  "agree": 557,
+  "conservative": 11,
+  "pinned_conservative": 3
+ },
+ "parity_failures": [],
+ "passed": false,
+ "pending": [],
+ "permissive": [],
+ "schema": "t533-wire-round-v1",
+ "thresholds": {
+  "agreement_min": 0.99,
+  "pending_max": 0,
+  "permissive_max": 0
+ }
+}

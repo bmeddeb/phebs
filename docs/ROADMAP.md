@@ -291,8 +291,14 @@ and who owns each.
   - Done: T53.3 slice 1. The claim card, the real-history population (571
     judged units), the independent oracle, the runner and the protocol are
     built and unsealed.
-  - Remaining, Ben: freeze the T53.3 thresholds, publish the seal gist and
-    confirm the adjudicator. Then the agent runs, adjudicates and scores.
+  - T53.3 sealed round **failed** at 96.48% agreement, against 99%. It
+    had zero permissive verdicts and full parity.
+    - 9 misses were a `COMPILE` pass-through defect, now fixed.
+    - 11 come from Buf comparing message types by name. A post-fix
+      diagnostic reaches 98.06%, still below the bar.
+  - Remaining, Ben: choose the next claim, for example a narrower
+    no-false-compatible claim with disclosed conservative classes, which
+    needs a new protocol and a fresh population.
   - Remaining, agent: bind the input identity after Epic 49.
 
 Everything human-gated is listed above. Agent work proceeds on ungated

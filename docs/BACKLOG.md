@@ -18954,6 +18954,32 @@ adjudicator. Then the agent runs, adjudicates and scores.
 
 Python tests: 9 pass. Steady-state cost: none. These are spike tools only.*
 
+*Slice 2 (2026-10-12): sealed, run, adjudicated and scored. **The round
+fails.** Ben froze the thresholds and named Claude as adjudicator. The seal
+was commit `d88a6c97` plus a public gist (protocol §8).
+
+- **Run.** The real binary judged all 571 units in 2 m 1 s, with HTTP/MCP
+  parity on every unit.
+- **Score.** 548 agree, 3 pinned conservative, 11 conservative, 9 disagree,
+  0 permissive and 0 pending. Agreement is **96.48%** against the 99% bar.
+- **The 9 disagreements: a product defect, now fixed.** Buf reports semantic
+  compile failures as `COMPILE` annotations with exit 100, and the checker
+  returned them as 200 "breaking" verdicts. It now refuses them as invalid
+  input, and the golden test covers both sides. One of the 9 had scored
+  `agree` by coincidence: the oracle skips rpc type validation. It was
+  adjudicated after scoring.
+- **The 11 conservative errors: Buf's own behavior.** Buf compares message
+  types by name. 7 are renames to wire-identical messages; 4 are a
+  `map<string,string>` → `Any` judgment call.
+- **Diagnostic rerun after the fix (unsealed, same seen population).**
+  98.06%, still failing, and only on the type-name class.
+
+The standalone verdict stays experimental-dark. Ben decides the next claim:
+for example a narrower "never calls a break compatible" claim with disclosed
+conservative classes, under a new protocol and a fresh population.
+`internal/compat`, `internal/api` and `internal/mcp` pass, compat under race
+too, and lint reports 0 issues.*
+
 ## Epic 54 · Contract Impact production readiness
 
 **T54.1 · Supported report contract and direct end-to-end quality** — freeze

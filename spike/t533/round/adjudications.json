@@ -1,0 +1,138 @@
+{
+ "adjudicator": "Claude (named by Ben, 2026-10-12)",
+ "schema": "t533-wire-adjudications-v1",
+ "units": {
+  "containerd/containerd@1a49f5ea794695e439e67f61c0bfd1c3767204d0:api/services/containers/v1/containers.proto": {
+   "note": "fields renumbered: field 7 changes from Timestamp to string, so old bytes are read under a different field",
+   "truth": "breaking"
+  },
+  "containerd/containerd@24c2810899af4f20d0b4ede81f271423788ccd48:api/shim/shim.proto": {
+   "note": "found after scoring, not pending: the before side references CreateRequest, ExecRequest and others without importing their file, so it does not compile; the oracle accepted it because it does not validate rpc type names, and the sealed product \"breaking\" was only a COMPILE annotation, so the earlier agree was coincidental",
+   "truth": "unreadable"
+  },
+  "containerd/containerd@4d1a30ff41b72cb505bb67d88fc749afacea1474:api/container/container.proto": {
+   "note": "the after source uses (gogoproto.customname) options with no imports, so it does not compile",
+   "truth": "unreadable"
+  },
+  "containerd/containerd@4d1a30ff41b72cb505bb67d88fc749afacea1474:api/registry/registry.proto": {
+   "note": "the after source uses (gogoproto.customname) options with no imports, so it does not compile",
+   "truth": "unreadable"
+  },
+  "containerd/containerd@51195ad099bc07ad529542a923d7ae9226f4c7d1:api/runtime/sandbox/v1/sandbox.proto": {
+   "note": "uint32 field 4 becomes a map (varint vs length-delimited); field 6 Any becomes the structurally different Timestamp",
+   "truth": "breaking"
+  },
+  "containerd/containerd@51195ad099bc07ad529542a923d7ae9226f4c7d1:api/services/sandbox/v1/sandbox.proto": {
+   "note": "uint32 field 4 becomes a map (varint vs length-delimited); field 6 Any becomes the structurally different Timestamp",
+   "truth": "breaking"
+  },
+  "containerd/containerd@6ad3ba739ed3766cf19aec053b536c6333dc53ee:api/services/diff/v1/diff.proto": {
+   "note": "the field type moves to a different message name with an identical wire structure (checked field by field, recursively); names never reach the wire",
+   "truth": "compatible"
+  },
+  "containerd/containerd@6ad3ba739ed3766cf19aec053b536c6333dc53ee:api/services/images/v1/images.proto": {
+   "note": "the field type moves to a different message name with an identical wire structure (checked field by field, recursively); names never reach the wire",
+   "truth": "compatible"
+  },
+  "containerd/containerd@6ad3ba739ed3766cf19aec053b536c6333dc53ee:api/services/shim/v1/shim.proto": {
+   "note": "the field type moves to a different message name with an identical wire structure (checked field by field, recursively); names never reach the wire",
+   "truth": "compatible"
+  },
+  "containerd/containerd@6ad3ba739ed3766cf19aec053b536c6333dc53ee:api/services/snapshot/v1/snapshots.proto": {
+   "note": "the field type moves to a different message name with an identical wire structure (checked field by field, recursively); names never reach the wire",
+   "truth": "compatible"
+  },
+  "containerd/containerd@6ad3ba739ed3766cf19aec053b536c6333dc53ee:api/services/tasks/v1/tasks.proto": {
+   "note": "the field type moves to a different message name with an identical wire structure (checked field by field, recursively); names never reach the wire",
+   "truth": "compatible"
+  },
+  "containerd/containerd@6fbe4bd568ffdfcfcf61cfab8949cdedbb9bd18e:api/types/event/container.proto": {
+   "note": "a string field and a message field are exchanged: not a protobuf compatible pair, and the bytes are reinterpreted",
+   "truth": "breaking"
+  },
+  "containerd/containerd@834f55df78e0cec92b11c9a31a1f02de8ee2087b:api/services/events/v1/events.proto": {
+   "note": "a string field and a message field are exchanged: not a protobuf compatible pair, and the bytes are reinterpreted",
+   "truth": "breaking"
+  },
+  "containerd/containerd@8c3158bf5f70542d6ce770649ddb299830be0df3:api/shim/shim.proto": {
+   "note": "a string field and a message field are exchanged: not a protobuf compatible pair, and the bytes are reinterpreted",
+   "truth": "breaking"
+  },
+  "containerd/containerd@96bf529cbf55940ddb96bb8adc8be51b11922ebb:api/services/ttrpc/events/v1/events.proto": {
+   "note": "the field type moves to a different message name with an identical wire structure (checked field by field, recursively); names never reach the wire",
+   "truth": "compatible"
+  },
+  "containerd/containerd@b84817a29c730a0c6feaad63ebec57f473a7e99a:api/services/events/v1/events.proto": {
+   "note": "a string field and a message field are exchanged: not a protobuf compatible pair, and the bytes are reinterpreted",
+   "truth": "breaking"
+  },
+  "containerd/containerd@c00d731cc21326cfd03e2d427f8d48f597908971:api/services/images/images.proto": {
+   "note": "a string field and a message field are exchanged: not a protobuf compatible pair, and the bytes are reinterpreted",
+   "truth": "breaking"
+  },
+  "containerd/containerd@e7ba3fb60037c3907ee5ad2fbd0af217d19f670c:api/services/containers/v1/containers.proto": {
+   "note": "judgment call: map<string,string> becomes google.protobuf.Any; entry {1:string,2:string} is wire-equivalent to Any {1:string,2:bytes} and repeated->singular message merges; meaning changes but no field value is misdecoded",
+   "truth": "compatible"
+  },
+  "containerd/containerd@e7ba3fb60037c3907ee5ad2fbd0af217d19f670c:api/services/events/v1/container.proto": {
+   "note": "judgment call: map<string,string> becomes google.protobuf.Any; entry {1:string,2:string} is wire-equivalent to Any {1:string,2:bytes} and repeated->singular message merges; meaning changes but no field value is misdecoded",
+   "truth": "compatible"
+  },
+  "containerd/containerd@e7ba3fb60037c3907ee5ad2fbd0af217d19f670c:api/services/tasks/v1/tasks.proto": {
+   "note": "judgment call: map<string,string> becomes google.protobuf.Any; entry {1:string,2:string} is wire-equivalent to Any {1:string,2:bytes} and repeated->singular message merges; meaning changes but no field value is misdecoded",
+   "truth": "compatible"
+  },
+  "containerd/containerd@e7ba3fb60037c3907ee5ad2fbd0af217d19f670c:linux/shim/v1/shim.proto": {
+   "note": "judgment call: map<string,string> becomes google.protobuf.Any; entry {1:string,2:string} is wire-equivalent to Any {1:string,2:bytes} and repeated->singular message merges; meaning changes but no field value is misdecoded",
+   "truth": "compatible"
+  },
+  "etcd-io/etcd@2f2b084ab577371087233c354b44d01fe4d00c42:Documentation/rfc/v3api.proto": {
+   "note": "the file references storagepb.KeyValue without importing it, so it does not compile",
+   "truth": "unreadable"
+  },
+  "etcd-io/etcd@616078dc1b79149f694c3d2e5917cbe5c82011fb:Documentation/rfc/v3api.proto": {
+   "note": "the file references storagepb.KeyValue without importing it, so it does not compile",
+   "truth": "unreadable"
+  },
+  "etcd-io/etcd@778f8d8fea4594bfe53ddcfe66fdc5678c87f4e3:Documentation/rfc/v3api.proto": {
+   "note": "the file references storagepb.KeyValue without importing it, so it does not compile",
+   "truth": "unreadable"
+  },
+  "etcd-io/etcd@d9d7137ea3997a028239e489680537d1ca51de3f:Documentation/rfc/v3api.proto": {
+   "note": "the file references storagepb.KeyValue without importing it, so it does not compile",
+   "truth": "unreadable"
+  },
+  "etcd-io/etcd@e3ef1d363a4a9ea2f499e445ef7bfcb78e5625fa:Documentation/rfc/v3api.proto": {
+   "note": "the file references storagepb.KeyValue without importing it, so it does not compile",
+   "truth": "unreadable"
+  },
+  "etcd-io/etcd@f6b097c0ccff78e93698541f6dbf1b3de1bfa8de:Documentation/rfc/v3api.proto": {
+   "note": "the file references storagepb.KeyValue without importing it, so it does not compile",
+   "truth": "unreadable"
+  },
+  "grpc/grpc-go@5131c1f0966401e7074ebe74336ce41aedfee0a6:interop/grpc_testing/test.proto": {
+   "note": "proto2 to proto3 with no explicit defaults, no required fields and only message-typed repeated fields; enums stay varint",
+   "truth": "compatible"
+  },
+  "grpc/grpc-go@5131c1f0966401e7074ebe74336ce41aedfee0a6:test/codec_perf/perf.proto": {
+   "note": "proto2 to proto3 with no explicit defaults, no required fields and only message-typed repeated fields; enums stay varint",
+   "truth": "compatible"
+  },
+  "grpc/grpc-go@5131c1f0966401e7074ebe74336ce41aedfee0a6:test/grpc_testing/test.proto": {
+   "note": "proto2 to proto3 with no explicit defaults, no required fields and only message-typed repeated fields; enums stay varint",
+   "truth": "compatible"
+  },
+  "grpc/grpc-go@70e9c28461932c8a1f94799d43aa541e684d293f:grpclb/grpc_lb_v1/messages/messages.proto": {
+   "note": "the field type moves to a different message name with an identical wire structure (checked field by field, recursively); names never reach the wire",
+   "truth": "compatible"
+  },
+  "grpc/grpc-go@933601d8cd6418a8a891bd9075a7161b0a67badb:benchmark/grpc_testing/test.proto": {
+   "note": "proto3 explicit optional to implicit presence: identical encoding of set values; only zero-value presence is lost",
+   "truth": "compatible"
+  },
+  "grpc/grpc-go@98e5deebae600b6cd50d2f41bcb5155f8471d53f:examples/route_guide/routeguide/route_guide.proto": {
+   "note": "proto3 to edition 2023 with field_presence IMPLICIT: the same presence, packing and enum defaults as proto3",
+   "truth": "compatible"
+  }
+ }
+}

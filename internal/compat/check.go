@@ -596,6 +596,11 @@ func parseViolations(raw string, declarations []fieldDeclaration, lineage string
 			finding.EndLine == finding.StartLine && finding.EndColumn < finding.StartColumn {
 			return nil, fmt.Errorf("%w: Buf returned an invalid structured finding", ErrCheckFailed)
 		}
+		// Buf reports a semantic compile failure as a COMPILE annotation with its
+		// breaking exit status; that is a refusal of the input, never a verdict.
+		if finding.Type == "COMPILE" {
+			return nil, fmt.Errorf("%w: %s source %s does not compile", ErrInvalidInput, snapshot, filePath)
+		}
 		violation := Violation{
 			Snapshot: snapshot, Path: filePath,
 			StartLine: finding.StartLine, StartColumn: finding.StartColumn,
