@@ -18188,6 +18188,50 @@ run, rows exactly covering the sealed claims, receipts bound to the run,
 unmeasured operating envelopes explained). 58 unittests pass and the frozen
 t111/pilot machinery stays byte-identical. Authorization/lifecycle
 real-binary drivers and consumer adoption remain in this ticket.*
+*Slice 2 landed 2026-10-12 (Claude lead; Ben: "pick up the next ticket").
+`pilot/validation/serve.py` adds the real-binary drivers T47.4 needs:
+
+- `ServeSession` forks one long-lived server as a session leader with its log
+  in the step workspace and waits for `/api/health`. It ends the phase either
+  gracefully (SIGTERM, bounded wait, then group kill) or by a planned hard
+  death (immediate group SIGKILL).
+- Each phase writes a write-once `harness-serve-receipt-v1`: readiness latency,
+  exit/signal, `wait4` peak RSS, closed host facts, group-drain teardown, the
+  log digest and bounded retention.
+- A hard kill is a success only as a planned phase end. An abort forced by a
+  failed probe or readiness deadline is a `stop`, a rule the first rehearsal
+  exposed.
+- `http_get` and the stateless streamable-HTTP `mcp_call`, plus `parity`
+  (exact equality after dropping declared request-bound keys) and
+  `undisclosed` (a denied repository answers byte-identically to an absent
+  one, names aside).
+
+`serve_rehearsal.py` exercised the exact binary
+`sha256:c8d9c7c5796bdd7f90d2956d142c647f2fad76cfc2489f28e7eb2abef41716aa`
+(built at this slice's base) on a fresh one-repository instance. The phases
+were cold start (ready in 2.519 s, fixture indexed, graceful exit 0,
+127,828 KiB peak RSS), warm restart ending in a planned group SIGKILL (the
+SurrealDB child drained, `killed_stray_members`), and recovery after the hard
+death (ready in 1.256 s, clean exit). The authenticated repository listing was
+identical in every phase, anonymous reads returned 401 in every phase, and no
+process survived. The first attempt's 180-second index wait keyed the wrong
+listing field; its stop is retained under
+`/home/ben/phebs-rehearsals/t483b-lifecycle-20261012T032118Z`. The passing
+run is `…-20261012T032441Z`.
+
+Read-only against the live run-g Caller Map, all 399 declared endpoints'
+first pages agree exactly between `/api/contract_callers` and MCP
+`list_operation_callers`, ignoring `$schema`, `citation` and `next_cursor`.
+An anonymous read of a real repository equals that of an absent one (401).
+
+Remaining in this ticket: a denied-but-authenticated principal. Local setup
+creates only an administrator and non-admin principals arrive only through
+OIDC, so proving undisclosed denial on the real binary needs a local test
+OIDC issuer; that is the next slice. Consumer adoption by T47.4 follows. All
+harness unittests pass (7 modules). Steady-state cost: none in production.
+A rehearsal costs one serve plus its SurrealDB child per phase, 399×2
+bounded reads against the operator's own live serve, and capped retention of
+any non-success or hard-killed phase.*
 
 **T48.4 · Shared release operations and qualification** — document stable
 configuration, supported status, validation expiry, suspension, rollback and
