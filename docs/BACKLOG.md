@@ -18720,6 +18720,38 @@ recipes; satisfy the common bar for each. Either generator may release alone.
 pinned Buf/tool/config/source bytes, WIRE-only semantics and positive/negative/
 unsupported IDL changes; depend on admitted protobuf input identity. The
 verdict covers those bytes, not runtime or deployment compatibility.
+*Slice 1 (2026-10-12, Claude lead): independent golden changes, run against
+the real sandboxed checker. This became possible on this host only after the
+T53.2 Linux sandbox fix. The pinned Buf 1.72.0 lists 15 WIRE rules
+(`buf config ls-breaking-rules`).
+[`internal/compat/testdata/golden_changes.json`](../internal/compat/testdata/golden_changes.json)
+holds 26 goldens:
+
+- 15 breaking cases cover 14 rules: one per rule, plus two wire-type cases
+  for `FIELD_WIRE_COMPATIBLE_TYPE` (varint↔length-delimited and zigzag↔plain
+  varint);
+- 11 compatible near misses: field rename, field add, reserved field
+  deletion, enum value add, reserved enum deletion, int32→int64,
+  string→bytes, fixed32→sfixed32, json_name, rpc add, and a comment-only
+  change.
+
+Each expected verdict is derived from the rule's stated purpose and protobuf
+wire semantics, authored without running Buf and without reading Buf's test
+data, and each case carries its rationale. `FIELD_WIRE_COMPATIBLE_CARDINALITY`
+is recorded as not asserted, because its purpose text does not fix which
+singular/repeated/map transitions it reports. The test also requires every
+WIRE rule to have a golden or a recorded reason.
+
+`TestGoldenWireChanges` requires the exact verdict and rule set for each
+golden: all 26 agree on the first run. `TestGoldenUncompilableSourceIsRefusedNotJudged`
+fences the unsupported-input class beside the existing preflight refusals.
+`internal/compat` passes normally and under race; vet and pinned lint report
+0 issues.
+
+Still open in T53.1: a truth record for the cardinality rule, and binding the
+admitted protobuf input identity once Epic 49's declaration recipe is admitted.
+Steady-state cost: none in production. The golden test runs 26 sandboxed Buf
+checks in about 2.3 s.*
 
 **T53.2 · Stable sandboxed compatibility registration** — retain bounded
 closed execution, no source escape/network discovery, exact digest-bound

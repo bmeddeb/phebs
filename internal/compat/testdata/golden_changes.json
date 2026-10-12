@@ -1,0 +1,328 @@
+{
+ "cases": [
+  {
+   "after": "syntax = \"proto2\";\npackage shop.v1;\nmessage M { optional int32 n = 1 [default = 2]; }\n",
+   "before": "syntax = \"proto2\";\npackage shop.v1;\nmessage M { optional int32 n = 1 [default = 1]; }\n",
+   "expect": {
+    "compatible": false,
+    "rules": [
+     "FIELD_SAME_DEFAULT"
+    ]
+   },
+   "id": "field-same-default",
+   "path": "shop/v1/shop.proto",
+   "rationale": "proto2 explicit default changed: a reader of absent data sees a different value."
+  },
+  {
+   "after": "syntax = \"proto3\";\npackage shop.v1;\nmessage M { oneof c { string a = 1; string b = 2; } }\n",
+   "before": "syntax = \"proto3\";\npackage shop.v1;\nmessage M { string a = 1; string b = 2; }\n",
+   "expect": {
+    "compatible": false,
+    "rules": [
+     "FIELD_SAME_ONEOF"
+    ]
+   },
+   "id": "field-same-oneof",
+   "path": "shop/v1/shop.proto",
+   "rationale": "a field moved into a oneof changes its last-one-wins grouping."
+  },
+  {
+   "after": "syntax = \"proto3\";\npackage shop.v2;\nmessage M { string a = 1; }\n",
+   "before": "syntax = \"proto3\";\npackage shop.v1;\nmessage M { string a = 1; }\n",
+   "expect": {
+    "compatible": false,
+    "rules": [
+     "FILE_SAME_PACKAGE"
+    ]
+   },
+   "id": "file-same-package",
+   "path": "shop/v1/shop.proto",
+   "rationale": "the package qualifies every type name on the wire for Any and rpc paths."
+  },
+  {
+   "after": "syntax = \"proto2\";\npackage shop.v1;\nmessage M { optional string a = 1; required string b = 2; }\n",
+   "before": "syntax = \"proto2\";\npackage shop.v1;\nmessage M { optional string a = 1; }\n",
+   "expect": {
+    "compatible": false,
+    "rules": [
+     "MESSAGE_SAME_REQUIRED_FIELDS"
+    ]
+   },
+   "id": "message-same-required-fields",
+   "path": "shop/v1/shop.proto",
+   "rationale": "adding a proto2 required field makes old messages fail to parse."
+  },
+  {
+   "after": "syntax = \"proto3\";\npackage shop.v1;\nenum E { E_UNSPECIFIED = 0; }\n",
+   "before": "syntax = \"proto3\";\npackage shop.v1;\nenum E { E_UNSPECIFIED = 0; reserved 5; }\n",
+   "expect": {
+    "compatible": false,
+    "rules": [
+     "RESERVED_ENUM_NO_DELETE"
+    ]
+   },
+   "id": "reserved-enum-no-delete",
+   "path": "shop/v1/shop.proto",
+   "rationale": "dropping a reserved enum number reopens it for reuse."
+  },
+  {
+   "after": "syntax = \"proto3\";\npackage shop.v1;\nmessage M { string a = 1; }\n",
+   "before": "syntax = \"proto3\";\npackage shop.v1;\nmessage M { string a = 1; reserved 9; }\n",
+   "expect": {
+    "compatible": false,
+    "rules": [
+     "RESERVED_MESSAGE_NO_DELETE"
+    ]
+   },
+   "id": "reserved-message-no-delete",
+   "path": "shop/v1/shop.proto",
+   "rationale": "dropping a reserved field number reopens it for reuse."
+  },
+  {
+   "after": "syntax = \"proto3\";\npackage shop.v1;\nmessage A { string id = 1; }\nmessage B { string id = 1; }\nservice S { rpc Get (stream A) returns (B); }\n",
+   "before": "syntax = \"proto3\";\npackage shop.v1;\nmessage A { string id = 1; }\nmessage B { string id = 1; }\nservice S { rpc Get (A) returns (B); }\n",
+   "expect": {
+    "compatible": false,
+    "rules": [
+     "RPC_SAME_CLIENT_STREAMING"
+    ]
+   },
+   "id": "rpc-same-client-streaming",
+   "path": "shop/v1/shop.proto",
+   "rationale": "a unary request becoming a stream changes the call protocol."
+  },
+  {
+   "after": "syntax = \"proto3\";\npackage shop.v1;\nmessage A { string id = 1; }\nmessage B { string id = 1; }\nservice S { rpc Get (A) returns (stream B); }\n",
+   "before": "syntax = \"proto3\";\npackage shop.v1;\nmessage A { string id = 1; }\nmessage B { string id = 1; }\nservice S { rpc Get (A) returns (B); }\n",
+   "expect": {
+    "compatible": false,
+    "rules": [
+     "RPC_SAME_SERVER_STREAMING"
+    ]
+   },
+   "id": "rpc-same-server-streaming",
+   "path": "shop/v1/shop.proto",
+   "rationale": "a unary response becoming a stream changes the call protocol."
+  },
+  {
+   "after": "syntax = \"proto3\";\npackage shop.v1;\nmessage A { string id = 1; }\nmessage B { string id = 1; }\nservice S { rpc Get (B) returns (B); }\n",
+   "before": "syntax = \"proto3\";\npackage shop.v1;\nmessage A { string id = 1; }\nmessage B { string id = 1; }\nservice S { rpc Get (A) returns (B); }\n",
+   "expect": {
+    "compatible": false,
+    "rules": [
+     "RPC_SAME_REQUEST_TYPE"
+    ]
+   },
+   "id": "rpc-same-request-type",
+   "path": "shop/v1/shop.proto",
+   "rationale": "the request message type changed."
+  },
+  {
+   "after": "syntax = \"proto3\";\npackage shop.v1;\nmessage A { string id = 1; }\nmessage B { string id = 1; }\nservice S { rpc Get (A) returns (A); }\n",
+   "before": "syntax = \"proto3\";\npackage shop.v1;\nmessage A { string id = 1; }\nmessage B { string id = 1; }\nservice S { rpc Get (A) returns (B); }\n",
+   "expect": {
+    "compatible": false,
+    "rules": [
+     "RPC_SAME_RESPONSE_TYPE"
+    ]
+   },
+   "id": "rpc-same-response-type",
+   "path": "shop/v1/shop.proto",
+   "rationale": "the response message type changed."
+  },
+  {
+   "after": "syntax = \"proto3\";\npackage shop.v1;\nmessage A { string id = 1; }\nmessage B { string id = 1; }\nservice S { rpc Get (A) returns (B) { option idempotency_level = IDEMPOTENT; } }\n",
+   "before": "syntax = \"proto3\";\npackage shop.v1;\nmessage A { string id = 1; }\nmessage B { string id = 1; }\nservice S { rpc Get (A) returns (B) { option idempotency_level = NO_SIDE_EFFECTS; } }\n",
+   "expect": {
+    "compatible": false,
+    "rules": [
+     "RPC_SAME_IDEMPOTENCY_LEVEL"
+    ]
+   },
+   "id": "rpc-same-idempotency-level",
+   "path": "shop/v1/shop.proto",
+   "rationale": "the declared idempotency level is part of the rpc contract."
+  },
+  {
+   "after": "syntax = \"proto3\";\npackage shop.v1;\nenum E { E_UNSPECIFIED = 0; }\n",
+   "before": "syntax = \"proto3\";\npackage shop.v1;\nenum E { E_UNSPECIFIED = 0; E_ONE = 1; }\n",
+   "expect": {
+    "compatible": false,
+    "rules": [
+     "ENUM_VALUE_NO_DELETE_UNLESS_NUMBER_RESERVED"
+    ]
+   },
+   "id": "enum-value-delete-unreserved",
+   "path": "shop/v1/shop.proto",
+   "rationale": "deleting an enum value without reserving its number allows unsafe reuse."
+  },
+  {
+   "after": "syntax = \"proto3\";\npackage shop.v1;\nmessage M { string a = 1; }\n",
+   "before": "syntax = \"proto3\";\npackage shop.v1;\nmessage M { string a = 1; string b = 2; }\n",
+   "expect": {
+    "compatible": false,
+    "rules": [
+     "FIELD_NO_DELETE_UNLESS_NUMBER_RESERVED"
+    ]
+   },
+   "id": "field-delete-unreserved",
+   "path": "shop/v1/shop.proto",
+   "rationale": "deleting a field without reserving its number allows unsafe reuse."
+  },
+  {
+   "after": "syntax = \"proto3\";\npackage shop.v1;\nmessage M { string n = 1; }\n",
+   "before": "syntax = \"proto3\";\npackage shop.v1;\nmessage M { int32 n = 1; }\n",
+   "expect": {
+    "compatible": false,
+    "rules": [
+     "FIELD_WIRE_COMPATIBLE_TYPE"
+    ]
+   },
+   "id": "field-type-varint-to-length-delimited",
+   "path": "shop/v1/shop.proto",
+   "rationale": "int32 (varint) and string (length-delimited) use different wire types."
+  },
+  {
+   "after": "syntax = \"proto3\";\npackage shop.v1;\nmessage M { int32 n = 1; }\n",
+   "before": "syntax = \"proto3\";\npackage shop.v1;\nmessage M { sint32 n = 1; }\n",
+   "expect": {
+    "compatible": false,
+    "rules": [
+     "FIELD_WIRE_COMPATIBLE_TYPE"
+    ]
+   },
+   "id": "field-type-zigzag-to-plain-varint",
+   "path": "shop/v1/shop.proto",
+   "rationale": "sint32 zigzag encoding is not interchangeable with int32 varints."
+  },
+  {
+   "after": "syntax = \"proto3\";\npackage shop.v1;\nmessage M { string renamed = 1; }\n",
+   "before": "syntax = \"proto3\";\npackage shop.v1;\nmessage M { string a = 1; }\n",
+   "expect": {
+    "compatible": true,
+    "rules": []
+   },
+   "id": "field-rename",
+   "path": "shop/v1/shop.proto",
+   "rationale": "field names never appear on the wire."
+  },
+  {
+   "after": "syntax = \"proto3\";\npackage shop.v1;\nmessage M { string a = 1; int64 b = 2; }\n",
+   "before": "syntax = \"proto3\";\npackage shop.v1;\nmessage M { string a = 1; }\n",
+   "expect": {
+    "compatible": true,
+    "rules": []
+   },
+   "id": "field-add",
+   "path": "shop/v1/shop.proto",
+   "rationale": "a new field number is ignored by old readers."
+  },
+  {
+   "after": "syntax = \"proto3\";\npackage shop.v1;\nmessage M { string a = 1; reserved 2; }\n",
+   "before": "syntax = \"proto3\";\npackage shop.v1;\nmessage M { string a = 1; string b = 2; }\n",
+   "expect": {
+    "compatible": true,
+    "rules": []
+   },
+   "id": "field-delete-reserved",
+   "path": "shop/v1/shop.proto",
+   "rationale": "deleting a field whose number is reserved is the safe deletion."
+  },
+  {
+   "after": "syntax = \"proto3\";\npackage shop.v1;\nenum E { E_UNSPECIFIED = 0; E_TWO = 2; }\n",
+   "before": "syntax = \"proto3\";\npackage shop.v1;\nenum E { E_UNSPECIFIED = 0; }\n",
+   "expect": {
+    "compatible": true,
+    "rules": []
+   },
+   "id": "enum-value-add",
+   "path": "shop/v1/shop.proto",
+   "rationale": "a new enum number is additive."
+  },
+  {
+   "after": "syntax = \"proto3\";\npackage shop.v1;\nenum E { E_UNSPECIFIED = 0; reserved 1; }\n",
+   "before": "syntax = \"proto3\";\npackage shop.v1;\nenum E { E_UNSPECIFIED = 0; E_ONE = 1; }\n",
+   "expect": {
+    "compatible": true,
+    "rules": []
+   },
+   "id": "enum-value-delete-reserved",
+   "path": "shop/v1/shop.proto",
+   "rationale": "deleting an enum value whose number is reserved is the safe deletion."
+  },
+  {
+   "after": "syntax = \"proto3\";\npackage shop.v1;\nmessage M { int64 n = 1; }\n",
+   "before": "syntax = \"proto3\";\npackage shop.v1;\nmessage M { int32 n = 1; }\n",
+   "expect": {
+    "compatible": true,
+    "rules": []
+   },
+   "id": "field-type-int32-to-int64",
+   "path": "shop/v1/shop.proto",
+   "rationale": "int32, int64, uint32, uint64 and bool share the varint wire type."
+  },
+  {
+   "after": "syntax = \"proto3\";\npackage shop.v1;\nmessage M { bytes s = 1; }\n",
+   "before": "syntax = \"proto3\";\npackage shop.v1;\nmessage M { string s = 1; }\n",
+   "expect": {
+    "compatible": true,
+    "rules": []
+   },
+   "id": "field-type-string-to-bytes",
+   "path": "shop/v1/shop.proto",
+   "rationale": "string and bytes share the length-delimited wire type."
+  },
+  {
+   "after": "syntax = \"proto3\";\npackage shop.v1;\nmessage M { sfixed32 n = 1; }\n",
+   "before": "syntax = \"proto3\";\npackage shop.v1;\nmessage M { fixed32 n = 1; }\n",
+   "expect": {
+    "compatible": true,
+    "rules": []
+   },
+   "id": "field-type-fixed32-to-sfixed32",
+   "path": "shop/v1/shop.proto",
+   "rationale": "fixed32 and sfixed32 share the 32-bit wire type."
+  },
+  {
+   "after": "syntax = \"proto3\";\npackage shop.v1;\nmessage M { string a = 1 [json_name = \"alpha\"]; }\n",
+   "before": "syntax = \"proto3\";\npackage shop.v1;\nmessage M { string a = 1 [json_name = \"a\"]; }\n",
+   "expect": {
+    "compatible": true,
+    "rules": []
+   },
+   "id": "json-name-change",
+   "path": "shop/v1/shop.proto",
+   "rationale": "json_name affects JSON only; WIRE does not check it."
+  },
+  {
+   "after": "syntax = \"proto3\";\npackage shop.v1;\nmessage A { string id = 1; }\nmessage B { string id = 1; }\nservice S { rpc Get (A) returns (B);\n  rpc List (A) returns (B); }\n",
+   "before": "syntax = \"proto3\";\npackage shop.v1;\nmessage A { string id = 1; }\nmessage B { string id = 1; }\nservice S { rpc Get (A) returns (B); }\n",
+   "expect": {
+    "compatible": true,
+    "rules": []
+   },
+   "id": "rpc-add",
+   "path": "shop/v1/shop.proto",
+   "rationale": "a new rpc is additive."
+  },
+  {
+   "after": "syntax = \"proto3\";\npackage shop.v1;\n// documented\nmessage M {\n  // the a field\n  string a = 1;\n}\n",
+   "before": "syntax = \"proto3\";\npackage shop.v1;\nmessage M { string a = 1; }\n",
+   "expect": {
+    "compatible": true,
+    "rules": []
+   },
+   "id": "comment-only",
+   "path": "shop/v1/shop.proto",
+   "rationale": "comments never reach the wire."
+  }
+ ],
+ "derivation": "Expected verdicts come from each pinned WIRE rule purpose (buf config ls-breaking-rules) and protobuf wire-format semantics, authored without running Buf and without reading Buf test data.",
+ "engine": "buf 1.72.0",
+ "not_asserted": {
+  "FIELD_WIRE_COMPATIBLE_CARDINALITY": "Its stated purpose does not fix which singular/repeated/map transitions it reports; no golden asserts it until an independent truth is recorded."
+ },
+ "policy": "WIRE",
+ "schema": "t53.1-golden-changes-v1",
+ "unsupported_inputs": "Path, encoding, size and count refusals are fenced by TestCheckerRejectsUnsafeOrUnboundedInputsBeforeExec; a source that fails to compile is a request error, never a verdict."
+}
