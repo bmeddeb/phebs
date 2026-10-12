@@ -23,6 +23,8 @@ class LabelPreparationTests(unittest.TestCase):
         })
         expected = copy.deepcopy(template)
         expected["candidate_identities"][key] = round_bundle["candidate_identities"][key]
+        # The retained round bundle binds the builder bytes current when it was made (pre-T47.2p).
+        expected["machinery"]["binding_bundle"] = round_bundle["machinery"]["binding_bundle"]
         expected.pop("missing_bindings")
         expected["missing_bindings"] = binding_bundle.validate_bundle(expected)
         self.assertEqual(round_bundle, expected)

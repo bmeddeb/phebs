@@ -1,0 +1,327 @@
+{
+ "candidate_blind_source_labels": true,
+ "corpus_derived_commits": [
+  "e0f9f8ac24f21a3703f94bb09817b699a1446af0",
+  "f40347859c3380f5c409f153ab79d4b8e724abd3",
+  "f9ecd8dcecc18b7559c0e3c0c264477c6ab9ddc1"
+ ],
+ "frames": [
+  {
+   "claim_family": "caller_sites",
+   "file": "frames.recall.jsonl.gz",
+   "frame_id": "recall",
+   "frame_schema": "t472-recall-frame-v2",
+   "label_fields": [
+    "invocation",
+    "operation"
+   ],
+   "population": 498793,
+   "population_rule": "every Go call expression, admitted method reference and full-method string; imports alone stay in the excluded ledger",
+   "rows": 498793,
+   "sha256": "sha256:c89238bfd34358636657795e4dcfe7a4f5f3e7e23f55c3b732769071715021ae",
+   "strata": {
+    "containerd/containerd:generated": {
+     "census": false,
+     "population": 5751,
+     "sample_size": 97
+    },
+    "containerd/containerd:production": {
+     "census": false,
+     "population": 33944,
+     "sample_size": 97
+    },
+    "containerd/containerd:test": {
+     "census": false,
+     "population": 29168,
+     "sample_size": 97
+    },
+    "containerd/containerd:vendor": {
+     "census": false,
+     "population": 271100,
+     "sample_size": 97
+    },
+    "etcd-io/etcd:generated": {
+     "census": false,
+     "population": 4843,
+     "sample_size": 97
+    },
+    "etcd-io/etcd:mock": {
+     "census": true,
+     "population": 75,
+     "sample_size": 75
+    },
+    "etcd-io/etcd:production": {
+     "census": false,
+     "population": 24146,
+     "sample_size": 97
+    },
+    "etcd-io/etcd:test": {
+     "census": false,
+     "population": 43775,
+     "sample_size": 97
+    },
+    "grpc/grpc-go:generated": {
+     "census": false,
+     "population": 3433,
+     "sample_size": 97
+    },
+    "grpc/grpc-go:production": {
+     "census": false,
+     "population": 22719,
+     "sample_size": 97
+    },
+    "grpc/grpc-go:test": {
+     "census": false,
+     "population": 59839,
+     "sample_size": 97
+    }
+   }
+  },
+  {
+   "claim_family": "declaration_attribution",
+   "file": "frames.attribution.jsonl",
+   "frame_id": "attribution",
+   "frame_schema": "t472-attribution-frame-v2",
+   "label_fields": [
+    "registration",
+    "service"
+   ],
+   "population": 74,
+   "population_rule": "one unit per exact constructor-backed service-client interface; repository x code_role strata; this source census supports the independent declaration-citation ledger",
+   "rows": 74,
+   "sha256": "sha256:2ddd62cbfa913a7c463cf3a4c380a6eae49093325b86e27054cbafdac7ac508b",
+   "strata": {
+    "containerd/containerd:generated": {
+     "census": true,
+     "population": 18,
+     "sample_size": 18
+    },
+    "containerd/containerd:vendor": {
+     "census": true,
+     "population": 25,
+     "sample_size": 25
+    },
+    "etcd-io/etcd:generated": {
+     "census": true,
+     "population": 8,
+     "sample_size": 8
+    },
+    "grpc/grpc-go:generated": {
+     "census": true,
+     "population": 23,
+     "sample_size": 23
+    }
+   }
+  },
+  {
+   "claim_family": "caller_sites",
+   "file": "frames.precision.jsonl",
+   "frame_id": "precision",
+   "frame_schema": "t472-candidate-frame-v3",
+   "label_fields": [
+    "invocation",
+    "operation"
+   ],
+   "population": 231,
+   "population_rule": "projected from the sealed proof-bundle-v1 envelope via pilot harness candidate_rows, predicate CALLS_OPERATION",
+   "rows": 231,
+   "sha256": "sha256:dd9b3c85b611d1dfe037ed1d625b43ad55790f02aeb2b15e812f38462169eaca",
+   "strata": {
+    "containerd/containerd:vendor": {
+     "census": true,
+     "population": 2,
+     "sample_size": 2
+    },
+    "etcd-io/etcd:generated": {
+     "census": true,
+     "population": 51,
+     "sample_size": 51
+    },
+    "etcd-io/etcd:production": {
+     "census": false,
+     "population": 122,
+     "sample_size": 97
+    },
+    "grpc/grpc-go:production": {
+     "census": true,
+     "population": 56,
+     "sample_size": 56
+    }
+   }
+  },
+  {
+   "claim_family": "caller_sites",
+   "file": "frames.abstention.jsonl.gz",
+   "frame_id": "abstention",
+   "frame_schema": "t472-candidate-frame-v3",
+   "label_fields": [
+    "invocation",
+    "operation"
+   ],
+   "population": 344034,
+   "population_rule": "units phebs considered but did not report as call sites (its complete candidate ledger, reported plus withheld); not derivable from proof-bundle assertions alone, so its population binds with the sealed run receipt",
+   "rows": 344034,
+   "sha256": "sha256:bff509c97697653738c03fa4979a53adc27d59e5858242940806e98438e14749",
+   "strata": {
+    "containerd/containerd:generated": {
+     "census": false,
+     "population": 3905,
+     "sample_size": 97
+    },
+    "containerd/containerd:production": {
+     "census": false,
+     "population": 29741,
+     "sample_size": 97
+    },
+    "containerd/containerd:test": {
+     "census": true,
+     "population": 83,
+     "sample_size": 83
+    },
+    "containerd/containerd:vendor": {
+     "census": false,
+     "population": 254101,
+     "sample_size": 97
+    },
+    "etcd-io/etcd:generated": {
+     "census": false,
+     "population": 3740,
+     "sample_size": 97
+    },
+    "etcd-io/etcd:mock": {
+     "census": true,
+     "population": 73,
+     "sample_size": 73
+    },
+    "etcd-io/etcd:production": {
+     "census": false,
+     "population": 22974,
+     "sample_size": 97
+    },
+    "etcd-io/etcd:test": {
+     "census": false,
+     "population": 4487,
+     "sample_size": 97
+    },
+    "grpc/grpc-go:generated": {
+     "census": false,
+     "population": 2847,
+     "sample_size": 97
+    },
+    "grpc/grpc-go:production": {
+     "census": false,
+     "population": 22012,
+     "sample_size": 97
+    },
+    "grpc/grpc-go:test": {
+     "census": true,
+     "population": 71,
+     "sample_size": 71
+    }
+   }
+  },
+  {
+   "claim_family": "caller_sites",
+   "file": "frames.unresolved.jsonl",
+   "frame_id": "unresolved",
+   "frame_schema": "t472-candidate-frame-v3",
+   "label_fields": [
+    "invocation",
+    "operation"
+   ],
+   "population": 708,
+   "population_rule": "projected from the sealed envelope, predicate UNRESOLVED_CALLER via the caller-specific adapter",
+   "rows": 708,
+   "sha256": "sha256:df1b084664facb426626e1fe7542b3e1f6989de9be157a86d65becc964a58195",
+   "strata": {
+    "containerd/containerd:production": {
+     "census": false,
+     "population": 424,
+     "sample_size": 97
+    },
+    "etcd-io/etcd:generated": {
+     "census": true,
+     "population": 47,
+     "sample_size": 47
+    },
+    "etcd-io/etcd:production": {
+     "census": false,
+     "population": 217,
+     "sample_size": 97
+    },
+    "etcd-io/etcd:test": {
+     "census": true,
+     "population": 18,
+     "sample_size": 18
+    },
+    "grpc/grpc-go:production": {
+     "census": true,
+     "population": 2,
+     "sample_size": 2
+    }
+   }
+  }
+ ],
+ "labels_committed": false,
+ "missing_bindings": [
+  "NIST beacon pulse and derived 64-hex seed for the sample draw",
+  "frozen blind label document per frame (Ben, sole owner/reviewer)",
+  "independent expected-resolution ledger sha256",
+  "independent declaration-citation ledger sha256",
+  "protocol digest after the section 10 sealing checklist completes"
+ ],
+ "provenance": {
+  "corpus_lock_sha256": "sha256:8c5340427010c3ca86d2a038d88ff6d23ade76c04ba2e9bcd49d579237762168",
+  "enumerate_universe_sha256": "sha256:e22c67f527d1970ff3a14809edb63316bb170ccc24f4b33a5759f6ded7369278",
+  "frames_py_sha256": "sha256:db8970f86482de4a899f9a003812abbe088a9629161e096c748446d4cf8227fe",
+  "parameters_sha256": "sha256:3396a4b15358683e2a714ca1992a69d065169b96c20099d8d3b7d2de98a0b9fe",
+  "source_census_sha256": "sha256:2aa22d7a6b77c24f2239067b49f9edaa3524900b86f4f2a7a27c495cac197394",
+  "universe_declarations_sha256": "sha256:c5879fd7d751b644519025228362b9dde202be43a4c1820ea4e061a6721b6228",
+  "universe_sites": {
+   "universe.sites.containerd.jsonl.gz": {
+    "file": "universe.sites.containerd.jsonl.gz",
+    "rows": 340299,
+    "sha256": "sha256:c93164842e492a75f1ecfef3c535594fd08430def8b228e8a1875a61d015b599"
+   },
+   "universe.sites.etcd.jsonl.gz": {
+    "file": "universe.sites.etcd.jsonl.gz",
+    "rows": 73039,
+    "sha256": "sha256:0ece1506145953cae54865f31a1e49ddae73568eb1a2c98c36af39f0181f9d65"
+   },
+   "universe.sites.grpc-go.jsonl.gz": {
+    "file": "universe.sites.grpc-go.jsonl.gz",
+    "rows": 86433,
+    "sha256": "sha256:ab5be4e5385a7c13064d78b8e2384b059cb42ac138e5dd668d1335306f22336a"
+   }
+  },
+  "universe_summary_sha256": "sha256:46f6a02c92414845ccc460619b92d1c681b40e23a636d334cce668c9363f80d3"
+ },
+ "quality_frames": {
+  "attributed_edge_precision": "precision",
+  "attributed_edge_recall": "recall",
+  "caller_precision": "precision",
+  "caller_recall": "recall",
+  "unresolved_accuracy": "unresolved"
+ },
+ "quality_scored": false,
+ "review_required": [
+  "confirm source-only recall labeling over every Go call expression and inventoried method reference, with imports alone excluded",
+  "confirm exact individual service-client interface coordinates for the declaration-citation source census"
+ ],
+ "round": {
+  "candidate_bundle_sha256": "sha256:86ab27fae7146899b8324fc0b33aa4d532dfa857575068595e6a4cb3ca604ed8",
+  "candidate_receipt_sha256": "sha256:83979104b0be6081094d51250192a18d3c8d93876003ac85559602bd28f034d0",
+  "name": "t472-candidate-run-20261011g",
+  "population_root": "/home/ben/phebs-rehearsals/t472-round-frames-20261011g",
+  "population_rule": "site coordinates only; membership is the candidate signal and stays private",
+  "round_frames_py_sha256": "sha256:4358891670f32b7e56c32e74b3f68f529d6657aa22badf74fc2776061824179b",
+  "template_plan_sha256": "sha256:0c60125b1cdf1ebd54a0aec726e744720d8e31078f2a90cee6b2f0b04452fa60"
+ },
+ "sampling": {
+  "draw": "draw_samples(plan, sealed seed, digest-bound populations) via frozen harness.stratified_sample; not executed before the randomness commitment",
+  "sites_per_frame_stratum": 97,
+  "smaller_strata": "complete census"
+ },
+ "schema": "t472-frames-plan-v2",
+ "seed_committed": false
+}

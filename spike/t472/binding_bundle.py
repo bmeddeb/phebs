@@ -29,6 +29,8 @@ except ImportError:
 
 BUNDLE_SCHEMA = "t472-preregistration-bundle-v2"
 _SHA_RE = re.compile(r"\Asha256:[0-9a-f]{64}\Z")
+_ROUND_PLAN_RE = re.compile(r"\Aspike/t472/frames/frames\.plan\.[a-z0-9-]+\.json\Z")
+ROUND_CANDIDATE_MEMBERS = {"frames.precision.jsonl", "frames.abstention.jsonl.gz", "frames.unresolved.jsonl"}
 
 MACHINERY = {
     "label_protocol": "spike/t111/label_protocol.py",
@@ -178,10 +180,15 @@ def validate_bundle(bundle: dict) -> list[str]:
     fields(bundle["frames_plan"], {"path", "sha256", "frames", "members"}, "frames_plan")
     if bundle["frames_plan"]["frames"] != ["recall", "attribution", "precision", "abstention", "unresolved"]:
         raise BundleError("required frames are missing or reordered")
-    if bundle["frames_plan"]["path"] != "spike/t472/frames/frames.plan.json":
+    # A round plan (T47.2p) also binds the private candidate populations it fills.
+    plan_path = bundle["frames_plan"]["path"]
+    expected_members = {"frames.recall.jsonl.gz", "frames.attribution.jsonl", "frames.excluded.json"}
+    if _ROUND_PLAN_RE.fullmatch(plan_path):
+        expected_members |= ROUND_CANDIDATE_MEMBERS
+    elif plan_path != "spike/t472/frames/frames.plan.json":
         raise BundleError("frames plan path changed")
     frame_members = bundle["frames_plan"]["members"]
-    fields(frame_members, {"frames.recall.jsonl.gz", "frames.attribution.jsonl", "frames.excluded.json"}, "frame members")
+    fields(frame_members, expected_members, "frame members")
     for name, member in frame_members.items():
         fields(member, {"sha256"} if name == "frames.excluded.json" else {"sha256", "rows"}, name)
         if name != "frames.excluded.json" and (type(member["rows"]) is not int or member["rows"] < 0):

@@ -79,7 +79,7 @@
  "machinery": {
   "binding_bundle": {
    "path": "spike/t472/binding_bundle.py",
-   "sha256": "sha256:5ddcb31475392e0eb2b34a12b93f91ad9eac7a021aca20bf2722a594823759c6"
+   "sha256": "sha256:0c9b9bb3baaefbc4540e82a3c9c5326ee6928f124a9c35bf115193b4b2c6cb9f"
   },
   "caller_scoring": {
    "path": "spike/t472/caller_scoring.py",

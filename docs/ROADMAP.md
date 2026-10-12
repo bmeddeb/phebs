@@ -233,6 +233,14 @@ byte-identical replay of the leaf scan: 939 reported, 344,034 withheld and
 randomness preparation, human truth, commitments, seal, scoring and T47.2b
 acceptance remain open.
 
+**Round frames plan (2026-10-11):** T47.2p records the exact candidate frame
+counts and stratum sizes for run g. The planned samples are precision 206,
+unresolved 261 and abstention 1,003, alongside the unchanged recall 1,045 and
+attribution 74. Populations stay private and digest-bound, and the frames
+bundle keeps 22 missing fields. Ben's seal, the beacon draw, blind labels,
+independent ledgers, commitments and scoring remain. Ben decides whether the
+unscored abstention frame is labeled.
+
 **Independent production promotions (2026-10-09, Ben-directed):** Epics 48–58
 give every current experimental evidence pack and composed product surface a
 named production path. Epic 48 implements the currently design-only signed

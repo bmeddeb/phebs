@@ -704,3 +704,18 @@ and the
 [`Caller Map bundle`](bundle/preregistration.caller-map.run-g.bundle.json)
 bind the results, with 22 missing fields. No sample, label, seed, score,
 protocol seal or external publication was created.
+
+T47.2p fills the template plan's three pending candidate frames for run g. Use:
+
+```bash
+python3 spike/t472/round_frames.py --candidate-root <T47.2o private root> \
+  --private-out <new private dir> --plan-out spike/t472/frames/frames.plan.run-g.json \
+  --bundle-in spike/t472/bundle/preregistration.caller-map.run-g.bundle.json \
+  --bundle-out spike/t472/bundle/preregistration.frames.run-g.bundle.json
+```
+
+Populations hold source coordinates only and stay private. The committed
+[`round plan`](frames/frames.plan.run-g.json) holds counts, sample sizes,
+census flags and digests. After the sealed seed exists, `frames.draw_samples`
+needs every population by digest: the candidate files from the private
+directory, and recall and attribution from `spike/t472/frames`.
