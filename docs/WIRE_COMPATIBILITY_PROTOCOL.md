@@ -1,7 +1,8 @@
 # T53.3 Buf WIRE compatibility quality protocol
 
-Status: **unsealed draft** (2026-10-12, Claude lead). The thresholds in §6
-are proposed and Ben freezes them. Nothing in §5 runs before the seal in §7.
+Status: **frozen for sealing** (2026-10-12). Ben froze the §6 thresholds as
+proposed and named Claude as the sole adjudicator. Nothing in §5 runs
+before the seal in §7.
 
 ## 1. Claim card (`phebs.protobuf.wire.buf`)
 
@@ -83,7 +84,7 @@ the population.
 
 ## 4. Adjudication
 
-One reviewer adjudicates by reading both sides' sources. They judge every
+Claude, the sole adjudicator Ben named, adjudicates by reading both sides' sources. They judge every
 `undetermined` unit, every unit where the product disagrees with the oracle
 (outside the pinned class), and every product refusal of a readable unit.
 
@@ -110,7 +111,7 @@ parity. `run_round.py score` classifies each unit:
 | `disagree` | Adjudicated other mismatch: a refusal against a verdict, or the reverse. |
 | `pending` | Not yet adjudicated. |
 
-## 6. Thresholds (proposed; Ben freezes)
+## 6. Thresholds (frozen by Ben, 2026-10-12)
 
 - `permissive` = 0. One confirmed permissive verdict fails the round.
 - `pending` = 0. Every undetermined truth and every disagreement is

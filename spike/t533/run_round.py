@@ -31,7 +31,7 @@ import wire_oracle  # noqa: E402
 from enumerate_changes import LINEAGE  # noqa: E402
 
 SCHEMA = 't533-wire-round-v1'
-# Proposed; Ben freezes them before sealing (docs/WIRE_COMPATIBILITY_PROTOCOL.md).
+# Frozen by Ben on 2026-10-12 (docs/WIRE_COMPATIBILITY_PROTOCOL.md §6).
 THRESHOLDS = {
     'permissive_max': 0,           # a "compatible" verdict on a truly breaking change fails the round
     'pending_max': 0,              # every disagreement and undetermined truth is adjudicated
