@@ -92,7 +92,7 @@
    }
   },
   "path": "spike/t472/frames/frames.plan.run-g.json",
-  "sha256": "sha256:f47c4c9a15a8e38e41d64a0ae629167dfd19eef7645a52df5741475aa79bd741"
+  "sha256": "sha256:d712b3e01978d1a4f1b102a8c6742e0de9386ccac8b04b36bfdc87da43b9093f"
  },
  "frozen_machinery_unedited": true,
  "harness_schema": "pilot-accuracy-gold-harness-v1",
@@ -163,7 +163,7 @@
  "predictions_disclosed": false,
  "protocol_doc": {
   "path": "docs/CALLER_QUALITY_PROTOCOL.md",
-  "sha256": "sha256:70c7e4bc5b086192bdca9ee454a5beee342cea0ee4555ebcccd67b4de7893fc9"
+  "sha256": "sha256:febd797b4d566a4324766d1b06dcf9e3a79f3d2ac0c0a7e19748b68e54f74868"
  },
  "quality_scored": false,
  "randomness_commitment_sequence": [

@@ -719,3 +719,9 @@ Populations hold source coordinates only and stay private. The committed
 census flags and digests. After the sealed seed exists, `frames.draw_samples`
 needs every population by digest: the candidate files from the private
 directory, and recall and attribution from `spike/t472/frames`.
+
+T47.2q drops the unscored abstention frame from the draw (Ben, 2026-10-11).
+Its population stays bound for the record only. The slice also adds
+`seal.py` (seal, seed, draw) and the
+[`sealing packet`](SEALING_PACKET.md), which lists every digest the seal binds
+and the exact ceremony.

@@ -241,6 +241,11 @@ bundle keeps 22 missing fields. Ben's seal, the beacon draw, blind labels,
 independent ledgers, commitments and scoring remain. Ben decides whether the
 unscored abstention frame is labeled.
 
+**Sealing packet (2026-10-11):** Ben dropped the unscored abstention frame.
+T47.2q records that in the protocol and plan, adds `seal.py` (seal, gist-bound
+NIST seed, frozen draw), and prepares `spike/t472/SEALING_PACKET.md`. Ben's
+seal, gist publication and the beacon ceremony come next.
+
 **Independent production promotions (2026-10-09, Ben-directed):** Epics 48–58
 give every current experimental evidence pack and composed product surface a
 named production path. Epic 48 implements the currently design-only signed

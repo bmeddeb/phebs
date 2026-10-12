@@ -60,6 +60,10 @@ class CommittedRoundTests(unittest.TestCase):
                 self.assertEqual(before, after)
                 continue
             self.assertNotIn('pending', after)
+            if before['frame_id'] in round_frames.DROPPED_FRAMES:
+                self.assertNotIn('strata', after)
+                self.assertEqual(after['dropped'], round_frames.DROPPED_FRAMES[before['frame_id']])
+                continue
             self.assertEqual(sum(s['population'] for s in after['strata'].values()), after['population'])
             for sizes in after['strata'].values():
                 self.assertEqual(sizes['sample_size'], min(97, sizes['population']))
@@ -74,6 +78,8 @@ class CommittedRoundTests(unittest.TestCase):
         expected = copy.deepcopy(source)
         expected['frames_plan'] = bundle['frames_plan']
         expected['machinery']['binding_bundle'] = bundle['machinery']['binding_bundle']
+        expected['protocol_doc'] = bundle['protocol_doc']
+        self.assertEqual(bundle['protocol_doc']['sha256'], frames.sha256_file(ROOT.parents[1] / 'docs/CALLER_QUALITY_PROTOCOL.md'))
         expected.pop('missing_bindings')
         expected['missing_bindings'] = binding_bundle.validate_bundle(expected)
         self.assertEqual(bundle, expected)

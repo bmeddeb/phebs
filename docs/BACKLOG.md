@@ -17849,6 +17849,47 @@ private ledger and the recall frame once (memory O(498,793 sites)), writes
 about 5 MB of private populations and one plan, and re-reads them once by
 digest.
 
+**T47.2q · Abstention-frame drop and sealing packet (2026-10-11).** After
+T47.2p was merged and pushed, Ben directed two things: drop the abstention
+frame and prepare the sealing packet.
+
+The protocol gains a dated prospective amendment. `frames.py`'s
+considered-but-not-reported `abstention` frame maps to no §3 claim family, so
+none of its sites is sampled or labeled. Its 344,034-site population stays
+digest-bound for the record. §5's declared-unresolved frame, which feeds
+abstention accuracy through the `unresolved` frame, is unchanged.
+`round_frames.py` records the drop as a `dropped` block with no strata, which
+the frozen `draw_samples` skips. The round plan, frames bundle and template
+bundle are regenerated, and the bundles rebind the amended protocol digest.
+The retained T47.2m bundle keeps its historical protocol bytes. Planned
+labels are now recall 1,045, attribution 74, precision 206 and unresolved 261.
+
+`spike/t472/seal.py` implements the retained gist-plus-beacon discipline on
+the frozen `label_protocol` helpers:
+
+- `seal` fills only the protocol-digest slot and writes the canonical seal
+  document. It needs an activation time at least five minutes ahead.
+- `seed` verifies that the single-file gist's initial revision predates
+  activation. It then fetches the first pulse after the activation minute by
+  time, checks it against the canonical URI, and derives `seed_hex`. There is
+  no fallback pulse.
+- `draw` runs `frames.draw_samples` and `quality_samples` on digest-verified
+  public and private populations. It refuses unless the counts equal the
+  sealed planned samples.
+
+[`SEALING_PACKET.md`](../spike/t472/SEALING_PACKET.md) lists every bound
+digest, the §10 checklist status and the ceremony commands. No seal, gist,
+pulse, seed, draw, label or score is produced: all of those need Ben.
+
+AC: the drop is recorded in the protocol and plan without changing any other
+frame; the regenerated bundles validate; seal, seed and draw refuse a near
+activation, a late gist, a non-first pulse, disagreeing beacon lookups, a
+noncanonical document, an already-sealed bundle, changed populations and a
+foreign seed. Validation: all 75 Python preparation tests pass, with
+documentation, glossary and whitespace checks. Steady-state cost: none in
+production. The ceremony makes two GitHub and two NIST reads (bounded by the
+frozen fetchers) and runs one in-memory draw over 498,793 recall sites.
+
 **T47.3 · Ordinary production configuration and registration** *(needs the
 T47.2 supported recipe contract; activation remains gated until T47.5)* —
 introduce the stable Caller Map configuration/recipe selection, wire the

@@ -23,6 +23,9 @@ import frames
 POPULATION_FILES = {'precision': 'frames.precision.jsonl', 'abstention': 'frames.abstention.jsonl.gz',
                     'unresolved': 'frames.unresolved.jsonl'}
 BOUND_SLOTS = (caller_map_export.PROOF_SLOT, caller_map_export.LEDGER_SLOT)
+# Ben, 2026-10-11 (T47.2q): no claim family; the population stays bound, never drawn.
+DROPPED_FRAMES = {'abstention': {'by': 'Ben Meddeb', 'date': '2026-10-11', 'ticket': 'T47.2q',
+                                 'reason': 'maps to no scored claim family; not sampled or labeled'}}
 
 
 class RoundFramesError(ValueError):
@@ -76,9 +79,12 @@ def round_plan(template: dict, populations: dict, sites_per_stratum: int, round_
         require(frame.get('pending') is True, 'template candidate frame is not pending')
         frame.pop('pending')
         strata = frames.stratify_population(populations[name])
-        frame.update(strata={s: frames.frame_strata_sizes({s: ids}, sites_per_stratum)[s] for s, ids in strata.items()},
-                     population=len(populations[name]), file=POPULATION_FILES[name],
+        frame.update(population=len(populations[name]), file=POPULATION_FILES[name],
                      rows=len(populations[name]), sha256=digests[POPULATION_FILES[name]])
+        if name in DROPPED_FRAMES:
+            frame['dropped'] = DROPPED_FRAMES[name]  # no strata: draw_samples skips it
+        else:
+            frame['strata'] = {s: frames.frame_strata_sizes({s: ids}, sites_per_stratum)[s] for s, ids in strata.items()}
     plan['round'] = round_block
     plan['missing_bindings'] = [m for m in template['missing_bindings'] if filled.get(m) is None]
     return plan
@@ -129,7 +135,7 @@ def run(repo_root: Path, candidate_root: Path, private_out: Path, plan_out: Path
     os.chmod(private_out / plan_out.name, 0o600)
     loaded = frames.load_frame_populations({'frames': [f for f in plan['frames'] if f['frame_id'] in POPULATION_FILES]}, private_out)
     for frame in plan['frames']:
-        if frame['frame_id'] in POPULATION_FILES:
+        if frame['frame_id'] in POPULATION_FILES and 'strata' in frame:
             frames._planned_strata(frame, loaded)
 
     members = dict(bundle['frames_plan']['members'])
@@ -137,6 +143,8 @@ def run(repo_root: Path, candidate_root: Path, private_out: Path, plan_out: Path
     bundle['frames_plan'] = {'path': str(plan_out.relative_to(repo_root)), 'sha256': sha(plan_raw),
                              'frames': bundle['frames_plan']['frames'], 'members': members}
     bundle['machinery']['binding_bundle']['sha256'] = sha((spike / 'binding_bundle.py').read_bytes())
+    # Prospective protocol amendments (e.g. T47.2q) rebind the unsealed protocol digest.
+    bundle['protocol_doc']['sha256'] = sha((repo_root / bundle['protocol_doc']['path']).read_bytes())
     bundle.pop('missing_bindings')
     bundle['missing_bindings'] = binding_bundle.validate_bundle(bundle)
     bundle_out.write_text(json.dumps(bundle, indent=1, sort_keys=True) + '\n')
@@ -155,6 +163,9 @@ def main() -> None:
     root = args.repo_root.resolve()
     plan = run(root, args.candidate_root, args.private_out, args.plan_out.resolve(), args.bundle_in, args.bundle_out)
     for frame in plan['frames']:
+        if 'dropped' in frame:
+            print(f"{frame['frame_id']}: population={frame['population']} dropped (not drawn)")
+            continue
         sizes = frame['strata']
         print(f"{frame['frame_id']}: population={frame['population']} strata={len(sizes)} "
               f"planned_sample={sum(s['sample_size'] for s in sizes.values())}")

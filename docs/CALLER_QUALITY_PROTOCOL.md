@@ -50,6 +50,16 @@ correction Ben integrated at `e3a89970`; the blind round measures 1.6.0
 behavior. Thresholds, sampling rule, corpus, universe, frames and machinery
 digests are unchanged, and no historical record is re-scored or relabelled.
 
+**Prospective amendment (Ben, 2026-10-11, T47.2q).** The preparation frame
+named `abstention` in `spike/t472/frames.py` holds sites Phebs considered but
+did not report (the withheld state of the complete candidate ledger). It maps
+to no §3 claim family, so Ben dropped it from the draw: none of its sites is
+sampled or labeled. Its 344,034-site run-g population stays digest-bound for
+the record only. This is not the §5 abstention frame, which is the
+declared-unresolved frame scored as abstention accuracy through the
+`unresolved` preparation frame, and which is unchanged. Thresholds, the
+sampling rule, the corpus, the universe and every other frame are unchanged.
+
 ## 2. Frozen supported tuple (T47.2a)
 
 | Input | Value |

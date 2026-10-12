@@ -151,6 +151,12 @@
   },
   {
    "claim_family": "caller_sites",
+   "dropped": {
+    "by": "Ben Meddeb",
+    "date": "2026-10-11",
+    "reason": "maps to no scored claim family; not sampled or labeled",
+    "ticket": "T47.2q"
+   },
    "file": "frames.abstention.jsonl.gz",
    "frame_id": "abstention",
    "frame_schema": "t472-candidate-frame-v3",
@@ -161,64 +167,7 @@
    "population": 344034,
    "population_rule": "units phebs considered but did not report as call sites (its complete candidate ledger, reported plus withheld); not derivable from proof-bundle assertions alone, so its population binds with the sealed run receipt",
    "rows": 344034,
-   "sha256": "sha256:bff509c97697653738c03fa4979a53adc27d59e5858242940806e98438e14749",
-   "strata": {
-    "containerd/containerd:generated": {
-     "census": false,
-     "population": 3905,
-     "sample_size": 97
-    },
-    "containerd/containerd:production": {
-     "census": false,
-     "population": 29741,
-     "sample_size": 97
-    },
-    "containerd/containerd:test": {
-     "census": true,
-     "population": 83,
-     "sample_size": 83
-    },
-    "containerd/containerd:vendor": {
-     "census": false,
-     "population": 254101,
-     "sample_size": 97
-    },
-    "etcd-io/etcd:generated": {
-     "census": false,
-     "population": 3740,
-     "sample_size": 97
-    },
-    "etcd-io/etcd:mock": {
-     "census": true,
-     "population": 73,
-     "sample_size": 73
-    },
-    "etcd-io/etcd:production": {
-     "census": false,
-     "population": 22974,
-     "sample_size": 97
-    },
-    "etcd-io/etcd:test": {
-     "census": false,
-     "population": 4487,
-     "sample_size": 97
-    },
-    "grpc/grpc-go:generated": {
-     "census": false,
-     "population": 2847,
-     "sample_size": 97
-    },
-    "grpc/grpc-go:production": {
-     "census": false,
-     "population": 22012,
-     "sample_size": 97
-    },
-    "grpc/grpc-go:test": {
-     "census": true,
-     "population": 71,
-     "sample_size": 71
-    }
-   }
+   "sha256": "sha256:bff509c97697653738c03fa4979a53adc27d59e5858242940806e98438e14749"
   },
   {
    "claim_family": "caller_sites",
@@ -312,9 +261,9 @@
   "candidate_bundle_sha256": "sha256:86ab27fae7146899b8324fc0b33aa4d532dfa857575068595e6a4cb3ca604ed8",
   "candidate_receipt_sha256": "sha256:83979104b0be6081094d51250192a18d3c8d93876003ac85559602bd28f034d0",
   "name": "t472-candidate-run-20261011g",
-  "population_root": "/home/ben/phebs-rehearsals/t472-round-frames-20261011g",
+  "population_root": "/home/ben/phebs-rehearsals/t472-round-frames-20261011g-r2",
   "population_rule": "site coordinates only; membership is the candidate signal and stays private",
-  "round_frames_py_sha256": "sha256:4358891670f32b7e56c32e74b3f68f529d6657aa22badf74fc2776061824179b",
+  "round_frames_py_sha256": "sha256:142a3ecde7b92e3d7df3f1adb8bc855dbe2f3c184ab6e9ccbb86a235953fcb3b",
   "template_plan_sha256": "sha256:0c60125b1cdf1ebd54a0aec726e744720d8e31078f2a90cee6b2f0b04452fa60"
  },
  "sampling": {
