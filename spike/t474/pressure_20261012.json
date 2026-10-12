@@ -1,0 +1,42 @@
+{
+ "binary_sha256": "sha256:c7e9d316502dd578eab4425b5fd708bbf66fc11feb1ff790deccc05b6bf10872",
+ "constrained": {
+  "converged": false,
+  "health_checks": {
+   "200": 119
+  },
+  "memory_events": {
+   "high": 0,
+   "low": 0,
+   "max": 337,
+   "oom": 2,
+   "oom_group_kill": 0,
+   "oom_kill": 2,
+   "sock_throttled": 4
+  },
+  "receipt": {
+   "exit_code": 0,
+   "outcome": "success",
+   "signal": null,
+   "teardown": "clean"
+  },
+  "rss": {
+   "mean_bytes": 276786114,
+   "peak_bytes": 544952320,
+   "peak_processes": 4,
+   "samples": 698
+  },
+  "seconds": 360.2
+ },
+ "exploratory": true,
+ "limit_mb": 400,
+ "recovered": {
+  "matches_reference_store": true,
+  "receipt": {
+   "outcome": "success",
+   "teardown": "clean"
+  },
+  "seconds_to_current": 104.3
+ },
+ "schema": "t47.4-pressure-v1"
+}

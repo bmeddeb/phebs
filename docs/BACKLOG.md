@@ -18061,6 +18061,57 @@ exactly one generation per repository (3 × 3 files). The superseded caller
 and resolver generations were therefore collected inside the observation
 window. A measured collection latency remains for acceptance.*
 
+*Groundwork, pressure and parent-only hard death (2026-10-12, exploratory,
+binary `sha256:c7e9d316…`).
+
+**Pressure.** `caller_operating.py --pressure-mb 400` ran a cold generation
+inside a user cgroup scope with `MemoryMax=400M`, no swap and
+`OOMPolicy=continue` (the measured unconstrained peak is 846 MB).
+
+- The kernel OOM-killed two `zoekt-git-index` children.
+- The server and its SurrealDB child stayed up: 119/119 health checks
+  returned 200 over 6 minutes.
+- Each affected index job stayed `pending` with a classified
+  `oom: … zoekt-git-index: signal` error and retry.
+- etcd converged; `grpc-go` and `containerd` honestly reported `missing`,
+  never partial.
+- Restarted without the limit, the same store was current after 104 s, with
+  caller content byte-identical to the unconstrained groundwork store.
+- Under systemd's default `OOMPolicy=stop`, the unit is stopped instead. phebs
+  then shuts down gracefully, so operators should choose the policy
+  deliberately.
+
+The receipt is [`pressure_20261012.json`](../spike/t474/pressure_20261012.json).
+
+**Release blocker found: parent-only hard death strands the store.**
+`serve_rehearsal.py orphan` SIGKILLs only the phebs process, as the kernel OOM
+killer or `kill -9` would, not its process group.
+
+- The supervised SurrealDB child (no `Pdeathsig`, same process group)
+  survives as an orphan.
+- The next `phebs serve` on that data directory refuses with "another live
+  server owns the data directory", because the runtime descriptor's PID is
+  the live orphan.
+- Recovery needs an operator to find and kill the orphan; the rehearsal killed
+  it so nothing leaked.
+
+The earlier hard-death phases killed the whole group and so masked this. The
+same leak class appears on this host: an in-memory SurrealDB orphaned for
+about 28 hours by an earlier killed `go test ./internal/store`. Five older
+rehearsal serves and their stores from runs b–e are also still running; they
+were left untouched as retained custody.
+
+Two fix options, routed to Ben because the store child starts through the
+ceremony-audited `dispatchadmission` path:
+
+- (a) bind the child to the parent with Linux `Pdeathsig: SIGKILL` from a
+  dedicated locked OS thread for the child's lifetime, the pattern
+  `internal/typedsandbox` uses, without double-waiting the dispatch handle;
+- (b) let startup reclaim a descriptor child whose recorded server has died.
+  This needs the server PID in the descriptor, so it is a schema change.
+
+T47.4 acceptance cannot pass its hard-death item until one lands.*
+
 *Groundwork, permission change (2026-10-12, exploratory):
 `caller_operating.py --permissions` ran on binary `sha256:c7e9d316…`
 (`main` with the T53.2 fix) against a fresh one-repository `grpc-go`

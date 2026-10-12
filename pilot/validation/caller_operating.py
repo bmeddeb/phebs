@@ -476,6 +476,91 @@ def permission_change(binary: Path, helpers: Path, source_corpus: Path, run_root
     return result
 
 
+def controls_from_disk(data: Path) -> list[dict]:
+    """Caller controls of a stopped store, from its single complete manifest per repository."""
+    controls = []
+    for overlay in sorted((data / 'caller-leaves').iterdir()):
+        manifests = sorted(overlay.glob('complete-v1-*.manifest.json'))
+        if len(manifests) != 1:
+            raise serve.ServeError(f'{overlay.name} does not hold exactly one complete generation')
+        m = json.loads(manifests[0].read_text())
+        controls.append({'repository': m['generation']['repository'], 'generation_digest': m['generation']['digest'],
+                         'manifest_digest': m['digest'], 'result_count': m['aggregate']['result_count']})
+    return controls
+
+
+def scope_memory_events(pid: int) -> dict:
+    """memory.events of the cgroup holding pid (oom / oom_kill counts)."""
+    try:
+        group = Path(f'/proc/{pid}/cgroup').read_text().strip().split('::', 1)[1]
+        text = Path('/sys/fs/cgroup' + group, 'memory.events').read_text()
+    except (OSError, IndexError):
+        return {}
+    return {k: int(v) for k, v in (line.split() for line in text.splitlines())}
+
+
+def pressure(binary: Path, helpers: Path, corpus: Path, run_root: Path, repositories: list[str],
+             reference_data: Path, limit_mb: int = 400, constrained_s: float = 360, deadline_s: float = 900) -> dict:
+    """Cold generation under a cgroup memory ceiling, then unconstrained recovery to the reference content."""
+    run_root.mkdir(parents=True)
+    env = {**os.environ, 'PHEBS_ZOEKT_GIT_INDEX': str(helpers / 'zoekt-git-index'),
+           'PHEBS_FOCUSED_INDEX': str(helpers / 'phebs-focused-index'), 'PHEBS_BUF': str(helpers / 'buf')}
+    names = ['local' + str(corpus / name) for name in repositories]
+    key, harness, data = secrets.token_hex(24), run_root / 'harness', run_root / 'data'
+    port = serve_rehearsal.free_port()
+    config = write_config(run_root, data, corpus, port, key, repositories)
+    base = f'http://127.0.0.1:{port}'
+    api = caller_map_export.Api(base, key)
+    # OOMPolicy=continue: observe phebs's own supervision, not systemd stopping the unit.
+    argv = ['systemd-run', '--user', '--scope', '-q', '-p', f'MemoryMax={limit_mb}M', '-p', 'MemorySwapMax=0',
+            '-p', 'OOMPolicy=continue',
+            str(binary), 'serve', '-config', str(config)]
+    result: dict = {'schema': 't47.4-pressure-v1', 'exploratory': True, 'limit_mb': limit_mb,
+                    'binary_sha256': serve.receipts.sha256_file(binary)}
+    constrained = serve.ServeSession(harness, 'constrained-cold', argv, base, env=env, ready_timeout_s=300, stop_timeout_s=60)
+    constrained.start()
+    health: dict[str, int] = {}
+    events: dict = {}
+    with SessionRSS(constrained.pid) as rss:
+        started, converged = time.monotonic(), False
+        while time.monotonic() - started < constrained_s:
+            events = scope_memory_events(constrained.pid) or events
+            try:
+                caller_map_export.generation_controls(api, names)
+                converged = True
+                break
+            except (ValueError, OSError, KeyError):
+                pass
+            try:
+                outcome = str(serve.http_get(base, '/api/health', timeout=10)[0])
+            except OSError as error:
+                outcome = type(error).__name__
+            health[outcome] = health.get(outcome, 0) + 1
+            time.sleep(3)
+        log = constrained.workspace / serve.LOG_NAME
+        if log.is_file():
+            (run_root / 'constrained-serve.log').write_bytes(log.read_bytes())
+        receipt = constrained.stop('graceful')
+    result['constrained'] = {'converged': converged, 'health_checks': health,
+                             'seconds': round(time.monotonic() - started, 1), 'memory_events': events,
+                             'rss': rss.summary(), 'receipt': {k: receipt[k] for k in ('outcome', 'exit_code', 'signal', 'teardown')}}
+    recovered = serve.ServeSession(harness, 'unconstrained-recovery', [str(binary), 'serve', '-config', str(config)], base,
+                                   env=env, ready_timeout_s=300, stop_timeout_s=60)
+    recovered.start()
+    try:
+        seconds, controls = wait_current(api, names, deadline_s)
+        ours = content_identity(data, controls)
+        if ours != content_identity(reference_data, controls_from_disk(reference_data)):
+            raise serve.ServeError('recovery after pressure converged to different caller content')
+    except BaseException:
+        recovered.stop('hard_kill', reason='recovery probe failed')
+        raise
+    receipt = recovered.stop('graceful')
+    result['recovered'] = {'seconds_to_current': round(seconds, 1), 'matches_reference_store': True,
+                           'receipt': {k: receipt[k] for k in ('outcome', 'teardown')}}
+    return result
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('--binary', type=Path, required=True)
@@ -485,7 +570,15 @@ def main() -> None:
     parser.add_argument('--repositories', nargs='+', default=['etcd', 'grpc-go', 'containerd'])
     parser.add_argument('--extended', action='store_true', help='incremental update, paging, backup/restore')
     parser.add_argument('--permissions', action='store_true', help='Caller Map member denial then grant')
+    parser.add_argument('--pressure-mb', type=int, help='cold generation under this cgroup memory ceiling')
+    parser.add_argument('--reference-data', type=Path, help='unconstrained store whose content recovery must match')
     args = parser.parse_args()
+    if args.pressure_mb:
+        result = pressure(args.binary.resolve(), args.helpers.resolve(), args.corpus.resolve(), args.run_root.resolve(),
+                          args.repositories, args.reference_data, args.pressure_mb)
+        (args.run_root / 'pressure.json').write_text(json.dumps(result, indent=1, sort_keys=True) + '\n')
+        print(json.dumps(result, indent=1, sort_keys=True))
+        return
     if args.permissions:
         result = permission_change(args.binary.resolve(), args.helpers.resolve(), args.corpus.resolve(), args.run_root.resolve())
         (args.run_root / 'permission-change.json').write_text(json.dumps(result, indent=1, sort_keys=True) + '\n')

@@ -360,6 +360,64 @@ def atlas_authorization(binary: Path, helpers: Path, run_root: Path, deadline_s:
             'receipts': {k: {f: v[f] for f in ('outcome', 'stop_mode', 'exit_code', 'teardown')} for k, v in receipts_out.items()}}
 
 
+def session_children(session_id: int) -> list[tuple[int, str]]:
+    out = []
+    for entry in os.scandir('/proc'):
+        if not entry.name.isdigit():
+            continue
+        try:
+            stat = Path(entry.path, 'stat').read_text()
+            fields = stat[stat.rindex(')') + 2:].split()
+            if int(fields[3]) == session_id and int(entry.name) != session_id:
+                out.append((int(entry.name), Path(entry.path, 'comm').read_text().strip()))
+        except (OSError, ValueError, IndexError):
+            continue
+    return out
+
+
+def orphan(binary: Path, zoekt: Path, run_root: Path) -> dict:
+    """SIGKILL only the phebs process (not its group): does the store child outlive it, and can a restart recover?"""
+    import signal as signals
+    run_root.mkdir(parents=True)
+    repo = fixture_repository(run_root)
+    port, key = free_port(), secrets.token_hex(24)
+    config = run_root / 'phebs.yaml'
+    config.write_text(f'server:\n  addr: "127.0.0.1:{port}"\n  data_dir: "{run_root / "data"}"\n'
+                      f'auth:\n  api_key: "{key}"\n  cookie_secure: false\n'
+                      f'connections:\n  - name: fixture\n    type: git\n    url: "{repo}"\n')
+    os.chmod(config, 0o600)
+    env, base = {**os.environ, 'PHEBS_ZOEKT_GIT_INDEX': str(zoekt)}, f'http://127.0.0.1:{port}'
+    first = serve.ServeSession(run_root / 'harness', 'parent-only-kill', [str(binary), 'serve', '-config', str(config)],
+                               base, env=env, ready_timeout_s=120)
+    first.start()
+    deadline = time.monotonic() + 120
+    while not any(r.get('indexed_commit_hash') for r in listing(base, key)):
+        if time.monotonic() > deadline:
+            first.stop('hard_kill', reason='fixture not indexed')
+            raise serve.ServeError('fixture not indexed')
+        time.sleep(1)
+    children = session_children(first.pid)
+    os.kill(first.pid, signals.SIGKILL)  # the parent alone, as an OOM killer or kill -9 would
+    os.waitpid(first.pid, 0)
+    time.sleep(3)
+    survivors = [(pid, comm) for pid, comm in children if Path(f'/proc/{pid}').exists()]
+    first.pid = None
+    result = {'schema': 't47.4-parent-only-kill-v1', 'binary_sha256': serve.receipts.sha256_file(binary),
+              'children_before_kill': children, 'survivors_after_parent_kill': survivors}
+    second = serve.ServeSession(run_root / 'harness', 'restart-with-survivors', [str(binary), 'serve', '-config', str(config)],
+                                base, env=env, ready_timeout_s=60)
+    try:
+        result['restart_ready_seconds'] = second.start()
+        result['restart_listing_ok'] = bool(listing(base, key))
+        result['restart_receipt'] = second.stop('graceful')['outcome']
+    except serve.ServeError as error:
+        result['restart_error'] = str(error)
+    result['survivors_at_end'] = [(pid, comm) for pid, comm in survivors if Path(f'/proc/{pid}').exists()]
+    for pid, _ in result['survivors_at_end']:  # leave no leaked child behind this rehearsal
+        os.kill(pid, signals.SIGKILL)
+    return result
+
+
 def callers(base: str, key: str, endpoints: list[dict], absent_repository: str) -> dict:
     pages = 0
     for endpoint in endpoints:
@@ -398,6 +456,10 @@ def main() -> None:
     aa.add_argument('--binary', type=Path, required=True)
     aa.add_argument('--helpers', type=Path, required=True)
     aa.add_argument('--run-root', type=Path, required=True)
+    orp = sub.add_parser('orphan')
+    orp.add_argument('--binary', type=Path, required=True)
+    orp.add_argument('--zoekt', type=Path, required=True)
+    orp.add_argument('--run-root', type=Path, required=True)
     at = sub.add_parser('atlas')
     at.add_argument('--binary', type=Path, required=True)
     at.add_argument('--helpers', type=Path, required=True)
@@ -410,6 +472,8 @@ def main() -> None:
     args = parser.parse_args()
     if args.command == 'lifecycle':
         result = lifecycle(args.binary.resolve(), args.zoekt.resolve(), args.run_root.resolve())
+    elif args.command == 'orphan':
+        result = orphan(args.binary.resolve(), args.zoekt.resolve(), args.run_root.resolve())
     elif args.command == 'atlas-authorization':
         result = atlas_authorization(args.binary.resolve(), args.helpers.resolve(), args.run_root.resolve())
     elif args.command == 'atlas':
