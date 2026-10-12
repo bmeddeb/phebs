@@ -1,0 +1,27 @@
+{
+  "activation_at": "2026-10-12T03:10:30Z",
+  "dropped_frames": [
+    "abstention"
+  ],
+  "frames_plan": {
+    "path": "spike/t472/frames/frames.plan.run-g.json",
+    "sha256": "sha256:d712b3e01978d1a4f1b102a8c6742e0de9386ccac8b04b36bfdc87da43b9093f"
+  },
+  "planned_samples": {
+    "attribution": 74,
+    "precision": 206,
+    "recall": 1045,
+    "unresolved": 261
+  },
+  "protocol": {
+    "path": "docs/CALLER_QUALITY_PROTOCOL.md",
+    "sha256": "sha256:febd797b4d566a4324766d1b06dcf9e3a79f3d2ac0c0a7e19748b68e54f74868"
+  },
+  "randomness_rule": "first NIST Beacon 2.0 pulse strictly after the activation minute; no fallback",
+  "schema": "t472-seal-commitment-v1",
+  "sealed_bundle": {
+    "path": "spike/t472/bundle/preregistration.sealed.run-g.bundle.json",
+    "sha256": "sha256:5f08c6b1efbc8f445916baf466e5940391471319cdb5886a3e815ccf4b82dc93"
+  },
+  "sealed_by": "Ben Meddeb"
+}
