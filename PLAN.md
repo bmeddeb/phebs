@@ -11069,3 +11069,54 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   ticket's scope and neither file is touched here. No UI, quality, coverage,
   release, scale or SLO claim follows, and the Topics product is still not
   promoted — T57.3 owns that.
+
+- **2026-10-13 — T57R.1 repairs the three inherited red gates found while
+  landing Epic 57.** None of the three is in Epic 57's scope; all three were
+  reproduced unchanged at the exact base commit before being touched, and each
+  repair is scoped to the finding rather than to the code around it.
+
+  `make docs-check` failed `TestDocumentationMapReachesTrackedDocs` because
+  `docs/README.md` never linked `docs/KAFKA_PRODUCER_QUALITY_PROTOCOL.md` or
+  `docs/KAFKA_CONSUMER_QUALITY_PROTOCOL.md`, added by T55.1/T56.1. The map now
+  lists both beside the other quality protocols. This was a documentation-map
+  gap, not a reachability change: both documents were already sealed and scored,
+  and no protocol text is edited.
+
+  `internal/investigation`'s `TestCheckedInSchemasMatchGenerator` failed because
+  it globbed `schemas/*.json` and compared the result to its own
+  `SchemaFilenames()`, while `schemas/pack-release-v1.0.json` — added by
+  `0768ff9e` (T48.2) — belongs to `internal/packrelease` and is pinned against
+  its record struct by that package's own `TestSchemaMatchesStruct`. The glob is
+  scoped to `schemas/mcp-*.json`, which is exactly the set this generator
+  produces. The alternative, registering a foreign schema in `schemaFilenames`,
+  was rejected: it would have made the T16.6 envelope generator claim ownership
+  of a document it does not generate and would have advertised it through
+  `EnvelopeOutputSchema`. The check still fails if an MCP schema is added,
+  removed or left stale, so narrowing the glob weakens nothing it was meant to
+  catch.
+
+  Repository-wide lint retained one staticcheck `SA1019` at
+  `internal/typedbazel/provider/input_worker_test.go:404` for the deprecated
+  `scip.Occurrence.Range` field. The fixture is not wrong and is deliberately
+  unchanged: the pinned scip-go emits legacy ranges and
+  `internal/typedindex/canonical.go` validates both representations, so rewriting
+  the occurrence to `single_line_range` would stop exercising the path under
+  test. The site gains a `//nolint:staticcheck` carrying that reason, matching
+  the existing directive on `canonicalOccurrences` itself. No production code,
+  fixture data or assertion changes.
+
+  **Steady-state cost.** None. Two test-or-documentation edits and one comment;
+  no runtime path, schema document, query, lock, child or durable state changes.
+
+  **Validation posture.** `make docs-check` now passes all three of its tests,
+  including the link-resolution and sealed-T11.1-digest checks that were already
+  green. `internal/investigation`, `internal/packrelease`, all three
+  `internal/typedbazel` packages and `scripts` pass. Repository-wide
+  `golangci-lint run` reports 0 issues for the first time since `0768ff9e`, and
+  whole-repository build, gofmt, glossary verification and whitespace checks
+  pass. The three `cmd/phebs` `TestT422Workspace*NativeComposition` failures
+  reported during T57.1 are a separate question — they expired at their own
+  internal deadlines with `zoekt-git-index unavailable` because `bin/` was not
+  staged — and are neither claimed fixed nor attributed here. No quality,
+  coverage, release, scale or SLO claim follows, and no Epic 57 behavior
+  changes.

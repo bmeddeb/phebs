@@ -401,6 +401,11 @@ func TestImportDefinitionOccurrencesBindCommit(t *testing.T) {
 				d := index.Documents[0]
 				d.Symbols = nil
 				d.Occurrences[0].Symbol = tc.scheme + " " + tc.manager + " example.test/root " + tc.version + " Foo."
+				// The legacy range field is the point of this occurrence: the
+				// pinned scip-go emits it and typedindex.canonicalOccurrences
+				// validates both representations, so rewriting the fixture to
+				// single_line_range would stop exercising the path under test.
+				//nolint:staticcheck // deliberate legacy SCIP range, as in canonical.go
 				d.Occurrences = append(d.Occurrences, &scip.Occurrence{Range: []int32{1, 8, 11}, Symbol: "scip-go gomod example.test/dependency v1.0.0 Bar."})
 			})
 			executeInputFixture(t, &f)

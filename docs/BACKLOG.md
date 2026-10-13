@@ -19464,6 +19464,50 @@ follows, and the Topics product is still not promoted.*
 producer-only, consumer-only or combined product; none implies runtime topic
 activity, complete topology or equality across broker environments.
 
+**T57R.1 · Inherited gate repairs** *(cross-cutting; found while landing Epic
+57)* — return `make docs-check`, repository-wide lint and
+`internal/investigation` to green without touching the code those findings sit
+beside.
+
+*T57R.1 (2026-10-13, Qoder lead): **all three inherited red gates repaired.**
+Each was reproduced unchanged at the exact base commit before being touched, and
+none is Epic 57 code.
+
+- **docs-check.** `docs/README.md` never linked
+  `KAFKA_PRODUCER_QUALITY_PROTOCOL.md` or `KAFKA_CONSUMER_QUALITY_PROTOCOL.md`,
+  which T55.1/T56.1 added, so `TestDocumentationMapReachesTrackedDocs` failed on
+  every ticket after them. Both are now listed beside the other quality
+  protocols. A map gap only: both documents were already sealed and scored and no
+  protocol text is edited.
+- **Schema registry.** `TestCheckedInSchemasMatchGenerator` globbed
+  `schemas/*.json` against its own `SchemaFilenames()`, while
+  `pack-release-v1.0.json` — added by `0768ff9e` (T48.2) — belongs to
+  `internal/packrelease` and is pinned by that package's own
+  `TestSchemaMatchesStruct`. The glob is scoped to `schemas/mcp-*.json`, exactly
+  what this generator produces. Registering the foreign schema instead was
+  rejected: it would make the T16.6 envelope generator own a document it does not
+  generate and advertise it through `EnvelopeOutputSchema`. The check still fails
+  on an added, removed or stale MCP schema, so nothing it was meant to catch is
+  weakened.
+- **Lint.** One staticcheck `SA1019` for the deprecated `scip.Occurrence.Range`
+  at `internal/typedbazel/provider/input_worker_test.go:404`. The fixture is
+  deliberate and unchanged: the pinned scip-go emits legacy ranges and
+  `internal/typedindex/canonical.go` validates both representations, so
+  rewriting the occurrence to `single_line_range` would stop exercising the path
+  under test. The site gains a `//nolint:staticcheck` with that reason, matching
+  the existing directive on `canonicalOccurrences`. No production code, fixture
+  data or assertion changes.
+
+Steady-state cost: none — two test-or-documentation edits and one comment, with no
+runtime path, schema document, query, lock, child or durable state change.
+`make docs-check` passes all three of its tests; `internal/investigation`,
+`internal/packrelease`, all three `internal/typedbazel` packages and `scripts`
+pass; repository-wide `golangci-lint run` reports 0 issues for the first time
+since `0768ff9e`; build, gofmt, glossary and whitespace pass. The three
+`cmd/phebs` `TestT422Workspace*NativeComposition` failures reported during T57.1
+are a separate prerequisite question and are neither claimed fixed nor attributed
+here. No quality, coverage, release, scale or SLO claim follows.*
+
 ## Epic 58 · Go RPC syntactic consumer and registration production readiness
 
 This owns the existing consumer/registration cards independently from exact

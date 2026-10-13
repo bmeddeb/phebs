@@ -83,6 +83,13 @@ replace the user manual.
   caller-quality preregistration draft for the Epic 47 Caller Map recipe.
 - [DECLARATION_QUALITY_PROTOCOL.md](./DECLARATION_QUALITY_PROTOCOL.md) — T49.1b
   machine-oracle protobuf declaration round (unsealed draft until Ben seals it).
+- [KAFKA_PRODUCER_QUALITY_PROTOCOL.md](./KAFKA_PRODUCER_QUALITY_PROTOCOL.md) —
+  T55.1 producer site-coverage round, sealed and passing; §9 records the signed
+  `rel-phebs.kafka.producer` release result.
+- [KAFKA_CONSUMER_QUALITY_PROTOCOL.md](./KAFKA_CONSUMER_QUALITY_PROTOCOL.md) —
+  T56.1 consumer site-coverage round, sealed and passing independently of the
+  producer number; §9 records the signed `rel-phebs.kafka.consumer` release
+  result.
 
 These packs remain experimental-dark unless the manual and capability response
 explicitly say otherwise. Their retained validation result is not an accuracy

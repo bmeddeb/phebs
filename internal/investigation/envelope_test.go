@@ -219,7 +219,12 @@ func TestTruncatedResultIsIrreversibleAndAbsenceBlocking(t *testing.T) {
 func TestCheckedInSchemasMatchGenerator(t *testing.T) {
 	t.Parallel()
 	documents := SchemaDocuments()
-	entries, err := filepath.Glob("../../schemas/*.json")
+	// Scoped to the envelope schemas this package generates. schemas/ also holds
+	// documents owned elsewhere — pack-release-v1.0.json belongs to
+	// internal/packrelease, which pins it against its own record struct in
+	// TestSchemaMatchesStruct — so a whole-directory glob would fail on a
+	// neighbour's file this generator has never produced.
+	entries, err := filepath.Glob("../../schemas/mcp-*.json")
 	if err != nil {
 		t.Fatalf("glob checked-in schemas: %v", err)
 	}
