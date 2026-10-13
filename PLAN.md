@@ -10913,9 +10913,13 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   `TestT422WorkspaceNativeComposition`, each expiring at its own 600.02s,
   600.02s and 180.02s internal deadline. The same three, at the same durations,
   reproduce at the exact base commit `ccbcd8c2` under an identical command
-  (1381.110s), and the log names the missing prerequisite —
-  `zoekt-git-index unavailable`, because `bin/` was not staged — so this is
-  inherited host-prerequisite red, not a T57.1 regression. No `internal/api` or
+  (1381.110s). Staging `bin/zoekt-git-index` and `bin/phebs-focused-index`
+  removes the `zoekt-git-index unavailable` warning but not the failures: the
+  same three expire at the same deadlines (1380.846s), so the missing `bin/`
+  prerequisite is withdrawn as their cause (see T57r1). Each server accepts the
+  lifecycle-measurement control request and runs lifecycle turns but never emits
+  `measured_and_resumed` before the test deadline; why is open. This is
+  inherited red, not a T57.1 regression. No `internal/api` or
   T57.1 path failed, and no test process, SurrealDB child or port-65499
   listener survives this ticket's runs. The composition is not routed, so no
   served surface,
@@ -11115,8 +11119,17 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   `golangci-lint run` reports 0 issues for the first time since `0768ff9e`, and
   whole-repository build, gofmt, glossary verification and whitespace checks
   pass. The three `cmd/phebs` `TestT422Workspace*NativeComposition` failures
-  reported during T57.1 are a separate question — they expired at their own
-  internal deadlines with `zoekt-git-index unavailable` because `bin/` was not
-  staged — and are neither claimed fixed nor attributed here. No quality,
+  reported during T57.1 are a separate question and are neither claimed fixed
+  nor attributed here. *Correction:* an earlier version of this entry blamed an
+  unstaged `bin/`. That is withdrawn: with `bin/zoekt-git-index` and
+  `bin/phebs-focused-index` built, the warning disappears and the same three
+  still expire at 600.02s, 600.02s and 180.02s (1380.846s versus 1381.110s
+  unstaged). Each native server accepts the lifecycle-measurement control
+  request and runs its lifecycle turns, but never emits `measured_and_resumed`
+  before the test's deadline: `failServer` fires at
+  `t422_backup_retirement_test.go:1246` with a nil cause, no server output
+  lines and a nil pipe error, and each run retains its diagnostic under the
+  fixture root logged at line 433. The cause is open. Inheritance still holds,
+  because the same three reproduce at the exact base commit `ccbcd8c2`. No quality,
   coverage, release, scale or SLO claim follows, and no Epic 57 behavior
   changes.

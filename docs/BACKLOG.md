@@ -19323,10 +19323,10 @@ ticket's scope. A complete `cmd/phebs` package run (1771.702s) is red only on
 `TestT422WorkspaceAllOwnersNativeComposition` and
 `TestT422WorkspaceNativeComposition`, each expiring at its own 600.02s, 600.02s
 and 180.02s internal deadline; the same three at the same durations reproduce at
-the exact base commit `ccbcd8c2` under an identical command (1381.110s), and the
-log names the missing prerequisite (`zoekt-git-index unavailable`, `bin/` not
-staged), so this is inherited host-prerequisite red rather than a T57.1
-regression. No `internal/api` or T57.1 path failed, and no test process,
+the exact base commit `ccbcd8c2` under an identical command (1381.110s), so this
+is inherited red rather than a T57.1 regression. The missing-`bin/` cause
+first recorded here is withdrawn (see T57r1): with `bin/` staged the same three
+still expire at the same deadlines, never receiving `measured_and_resumed`. No `internal/api` or T57.1 path failed, and no test process,
 SurrealDB child or port-65499 listener survives this ticket's runs. No served
 surface, quality, coverage, release, scale or SLO
 claim follows, and the two released planes' own evidence is unchanged.*
@@ -19505,8 +19505,15 @@ runtime path, schema document, query, lock, child or durable state change.
 pass; repository-wide `golangci-lint run` reports 0 issues for the first time
 since `0768ff9e`; build, gofmt, glossary and whitespace pass. The three
 `cmd/phebs` `TestT422Workspace*NativeComposition` failures reported during T57.1
-are a separate prerequisite question and are neither claimed fixed nor attributed
-here. No quality, coverage, release, scale or SLO claim follows.*
+are a separate question and are neither claimed fixed nor attributed here.
+*Correction:* the unstaged-`bin/` prerequisite first recorded for them is
+withdrawn. With `bin/zoekt-git-index` and `bin/phebs-focused-index` built, the
+same three still expire at 600.02s, 600.02s and 180.02s (1380.846s versus
+1381.110s unstaged): each native server accepts the lifecycle-measurement
+request and runs its turns but never emits `measured_and_resumed`, so
+`failServer` fires at `t422_backup_retirement_test.go:1246` with a nil cause.
+Diagnostics are retained under each run's fixture root. The cause is open; the
+same three reproduce at base `ccbcd8c2`, so inheritance holds. No quality, coverage, release, scale or SLO claim follows.*
 
 ## Epic 58 · Go RPC syntactic consumer and registration production readiness
 
