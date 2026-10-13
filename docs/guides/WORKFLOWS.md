@@ -1378,6 +1378,8 @@ by omitting `auth.api_key`. Always open: `/api/health`, `/api/version`,
 | `/api/find_proto_field_references?lineage=&message=&field_number=`  | GET             | experimental permission-scoped protobuf-field-reference proof bundle                           |
 | `/api/find_field_references?lineage=&message=&field_number=`        | GET             | experimental permission-scoped protocol-neutral field-reference proof bundle                    |
 | `/api/find_kafka_topic_usage?topic=`                                | GET             | experimental permission-scoped Kafka topic-usage proof bundle with an always-present unresolved census |
+| `/api/list_kafka_topics`                                            | GET             | experimental composed Kafka topic inventory across the admitted planes, as one immutable proof bundle |
+| `/api/topic_inventory/{id}?page_size=&cursor=`                      | GET             | experimental reauthorized page of that inventory, with separate per-plane publication, coverage and quality state |
 | `/api/get_extraction_coverage?domains=`                             | GET             | experimental assertion-free extraction-coverage proof bundle                                   |
 | `/api/check_contract_compatibility`                                 | POST            | experimental Buf WIRE verdict enriched with permission-scoped affected field references         |
 | `/api/check_wire_compatibility`                                     | POST            | experimental standalone Buf WIRE verdict only: no repository evidence, no proof bundle          |
@@ -1484,6 +1486,8 @@ Caller Map, comparison, proof, search, SCIP, and history reads.
 | `find_proto_field_references` | MCP envelope v1.0 for `(lineage, message, field_number)`; field names remain versioned attributes rather than identity |
 | `find_field_references` | MCP envelope v1.0 for one protocol-neutral `(lineage, message, field_number)`; facts retain `proto_field` or `thrift_field` identity and exact citations, and field 0 is valid |
 | `find_kafka_topic_usage` | MCP envelope v1.0 for one Kafka topic spelling; facts are producer/consumer evidence rows, the persisted bundle carries the per-shape-class unresolved census, and the answer is never a completeness claim |
+| `list_kafka_topics` | composes the source-spelled topic inventory across the admitted Kafka planes and returns its first page, with each plane's separate publication, coverage and quality state; answers which topics exist, which `find_kafka_topic_usage` cannot because it needs a spelling you already know |
+| `read_topic_inventory` | one reauthorized page of an already-composed immutable inventory by `bundle_id`, with `page_size` and an opaque `cursor`; re-checks visibility and canonical bytes per call, so losing access to a cited repository returns not-found rather than its rows |
 | `get_extraction_coverage` | envelope containing the assertion-free coverage certificate over requested extractor domains, or every provisional domain when omitted |
 | `check_contract_compatibility` | envelope containing the pinned Buf `WIRE` conclusion plus stable affected-field identities, visible field-reference evidence, exact proof references, coverage, and invocation provenance |
 | `check_wire_compatibility` | the standalone pinned Buf `WIRE` verdict: violations, affected field identities, before/after input digests and run provenance; it reads no repository evidence |

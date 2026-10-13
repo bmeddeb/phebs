@@ -78,6 +78,13 @@ type Options struct {
 	ObservationProgress ObservationProgressQueries
 	// Relationships is the same bounded T37.5 service supplied to Huma.
 	Relationships RelationshipQueries
+	// TopicInventory is the composed Topics overview boundary (T57.2), the same
+	// proof service instance Huma uses. It is a separate field from Proofs so a
+	// released-Kafka-plane admission, which restricts the proof tools through
+	// KafkaTopicUsageOnly, can never advertise the inventory: the composed
+	// product has no measured claim of its own until T57.3. Nil keeps both
+	// tools undiscoverable.
+	TopicInventory TopicInventoryQueries
 	// Visible resolves the caller's repo visibility (T10.3); nil disables
 	// permission filtering. search_code is covered inside the searcher; this
 	// hook gates the tools that bypass it (read_file, list_repos, SCIP,
@@ -189,6 +196,7 @@ func NewServer(opts Options) *sdk.Server {
 	registerServiceDirectoryTools(s, opts)
 	registerObservationProgressTool(s, opts)
 	registerRelationshipTools(s, opts)
+	registerTopicInventoryTools(s, opts)
 
 	return s
 }

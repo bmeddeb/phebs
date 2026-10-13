@@ -129,8 +129,11 @@ type TopicPlaneState struct {
 	Plane    string `json:"plane"`
 	Domain   string `json:"domain"`
 	Released bool   `json:"released"`
-	// State is served for an admitted plane and unavailable for a plane no
-	// admitted recipe publishes.
+	// State is served for an admitted plane with at least one published run,
+	// unpublished for an admitted plane nothing has published, and unavailable
+	// for a plane no admitted recipe publishes. The last two stay distinct
+	// because extraction alone can make an unpublished plane served, while an
+	// unavailable one needs a release.
 	State         string             `json:"state"`
 	Quality       *TopicPlaneQuality `json:"quality,omitempty"`
 	PublishedRuns int                `json:"published_runs"`
@@ -156,12 +159,14 @@ type TopicCitation struct {
 	Sites       int    `json:"sites"`
 }
 
-// TopicRowPlane is one plane's contribution to one inventory row. State
-// separates a measured zero from an unmeasured one: none means the plane is
-// admitted and found no site for this spelling, while unavailable means the
-// plane is not admitted at all and its zero is not a measurement.
+// TopicRowPlane is one plane's contribution to one inventory row. State keeps
+// three kinds of zero apart: none means the plane is admitted and published and
+// found no site for this spelling, a measured zero; unpublished means the plane
+// is admitted but nothing published it, so its zero is not a measurement yet
+// could become one; unavailable means no admitted recipe publishes the plane at
+// all, so its zero needs a release, not a run.
 type TopicRowPlane struct {
-	State string `json:"state"` // served | none | unavailable
+	State string `json:"state"` // served | none | unpublished | unavailable
 	Sites int    `json:"sites"`
 	Files int    `json:"files"`
 	// Citations is a bounded prefix of the row's exact assertion identities,
@@ -398,6 +403,10 @@ func collectTopicInventory(
 	// byTopic accumulates per spelling before the sorted composition, keyed by
 	// topic then plane so both planes land in one row.
 	byTopic := map[string]map[string]*topicRowAccumulator{}
+	// rowStates carries each plane's resolved state into the row composition,
+	// so a row can tell a measured zero on a published plane from an
+	// unmeasured one on a plane nothing has published.
+	rowStates := make(map[string]string, len(topicPlanes))
 	admittedPlanes := make(map[string]topicPlane, len(admitted))
 	for _, plane := range admitted {
 		admittedPlanes[plane.plane] = plane
@@ -410,10 +419,10 @@ func collectTopicInventory(
 			CoverageRows: []ImpactCoverageRow{},
 		}
 		if !ok {
+			rowStates[plane.plane] = state.State
 			inventory.Planes = append(inventory.Planes, state)
 			continue
 		}
-		state.State = "served"
 		state.Quality = &TopicPlaneQuality{
 			Card: selected.card, Claim: topicQualityClaim, Protocol: selected.protocol,
 			Measured:   slices.Clone(topicQualityMeasured),
@@ -478,6 +487,14 @@ func collectTopicInventory(
 			}
 		}
 		state.TopicCount = len(perPlane)
+		// Admission alone is not publication. A plane whose domain nothing has
+		// published reports unpublished, so its zeros are never read as the
+		// measured zeros of a plane that ran and found nothing.
+		state.State = "unpublished"
+		if state.PublishedRuns > 0 {
+			state.State = "served"
+		}
+		rowStates[plane.plane] = state.State
 		for topic, accumulator := range perPlane {
 			byPlane, seen := byTopic[topic]
 			if !seen {
@@ -489,7 +506,7 @@ func collectTopicInventory(
 		inventory.Planes = append(inventory.Planes, state)
 	}
 	inventory.Topics, inventory.TopicCount = composeTopicRows(
-		byTopic, admittedPlanes, &inventory.Complete, &inventory.Truncated,
+		byTopic, rowStates, &inventory.Complete, &inventory.Truncated,
 	)
 	// One marker per cause: several repositories can clip the same plane's
 	// scan, and the marker names the plane, not the repository.
@@ -548,10 +565,11 @@ func (accumulator *topicRowAccumulator) add(assertion store.Assertion, commit st
 
 // composeTopicRows renders the accumulated per-plane evidence as one sorted
 // row per spelling, with an explicit state for a plane that is admitted but
-// found nothing and for a plane that is not admitted at all.
+// found nothing, a plane nothing has published, and a plane that is not
+// admitted at all.
 func composeTopicRows(
 	rows map[string]map[string]*topicRowAccumulator,
-	admitted map[string]topicPlane,
+	planeStates map[string]string,
 	complete *bool,
 	truncated *[]string,
 ) ([]TopicInventoryRow, int) {
@@ -568,21 +586,30 @@ func composeTopicRows(
 	composed := make([]TopicInventoryRow, 0, len(topics))
 	for _, topic := range topics {
 		row := TopicInventoryRow{Topic: topic}
-		row.Producer = renderTopicRowPlane(rows[topic]["producer"], admitted["producer"])
-		row.Consumer = renderTopicRowPlane(rows[topic]["consumer"], admitted["consumer"])
+		row.Producer = renderTopicRowPlane(rows[topic]["producer"], planeStates["producer"])
+		row.Consumer = renderTopicRowPlane(rows[topic]["consumer"], planeStates["consumer"])
 		composed = append(composed, row)
 	}
 	return composed, len(composed)
 }
 
-func renderTopicRowPlane(accumulator *topicRowAccumulator, plane topicPlane) TopicRowPlane {
-	if plane.plane == "" {
-		return TopicRowPlane{State: "unavailable"}
+func renderTopicRowPlane(accumulator *topicRowAccumulator, planeState string) TopicRowPlane {
+	if planeState == "" {
+		// The plane vocabulary is closed and always resolved before
+		// composition, so this is a guard against ever emitting an empty
+		// state on the wire rather than a reachable path.
+		planeState = "unavailable"
+	}
+	// Only a plane that actually published can contribute a count. An
+	// unadmitted or unpublished plane reports which it is and never a number.
+	if planeState != "served" {
+		return TopicRowPlane{State: planeState}
 	}
 	if accumulator == nil {
-		// The plane is admitted and reported no site for this spelling: a
-		// measured zero, distinct from an unadmitted plane's unmeasured one.
-		// State carries that distinction, so the row needs no empty slices.
+		// The plane published and reported no site for this spelling: a
+		// measured zero, distinct from an unpublished or unadmitted plane's
+		// unmeasured one. State carries that distinction, so the row needs no
+		// empty slices.
 		return TopicRowPlane{State: "none"}
 	}
 	// The retained citations are already in the store's stable scan order, so

@@ -395,10 +395,19 @@ func newServeFinalAuthorityReads(d *serveDeps) (t421ExactFinalAuthorityRead, t42
 func newServeMCPServer(d *serveDeps, apiOpts api.Options) *mcpsdk.Server {
 	var mcpProofs phebsmcp.ProofQueries
 	var mcpCompatibility phebsmcp.CompatibilityQueries
+	var mcpTopicInventory phebsmcp.TopicInventoryQueries
 	if proofService := api.NewProofService(apiOpts); proofService != nil {
 		mcpProofs = proofService
 		if proofService.CompatibilityAvailable() && len(apiOpts.KafkaReleasedPlanes) == 0 {
 			mcpCompatibility = proofService
+		}
+		// The composed Topics inventory is admitted on exactly the boundary its
+		// HTTP routes use: the experimental proof surface alone. A released
+		// Kafka plane keeps listing only find_kafka_topic_usage, so the
+		// T55.3/T56.3 release evidence still describes what that binary serves
+		// and T57.3 stays the place the composed product earns its own claim.
+		if len(apiOpts.KafkaReleasedPlanes) == 0 {
+			mcpTopicInventory = proofService
 		}
 	}
 	catalogQueries, callerMapQueries, comparisonQueries := mcpCallerMapServices(
@@ -419,6 +428,7 @@ func newServeMCPServer(d *serveDeps, apiOpts api.Options) *mcpsdk.Server {
 		ServiceDirectory:    apiOpts.ServiceDirectory,
 		ObservationProgress: apiOpts.ObservationProgress,
 		Relationships:       apiOpts.Relationships,
+		TopicInventory:      mcpTopicInventory,
 	}
 	return phebsmcp.NewServer(mcpOpts)
 }

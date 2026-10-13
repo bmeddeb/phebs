@@ -4651,8 +4651,18 @@ succeeds (the first five remain available when compatibility is unavailable):
   switches: a binary admitted solely by released Kafka planes still serves
   exactly `find_kafka_topic_usage` and bundle reads, so the T55.3/T56.3 release
   evidence keeps describing what that binary serves, and T57.3 owns promoting
-  the inventory onto its own measured Topics claim. There is no MCP tool and no
-  UI for the inventory yet.
+  the inventory onto its own measured Topics claim.
+- MCP `list_kafka_topics` and `read_topic_inventory` expose the same composition
+  on the same admission boundary. Both return one bounded report page rather than
+  the raw bundle, because an agent's context window is better served by at most
+  100 rows plus the content address and cursor needed to continue:
+  `list_kafka_topics` composes the inventory and returns its first page, and
+  `read_topic_inventory` pages an already-composed one by `bundle_id`. The
+  paging tool is annotated read-only; the composing tool is not, because it
+  persists one immutable bundle. Neither is listed under a released-Kafka-plane
+  admission, and registration refuses them even if a caller supplies the
+  boundary alongside that restriction. There is no UI for the inventory yet:
+  that needs Ben's routed presentation handoff.
 - `GET /api/get_extraction_coverage?domains=<comma-separated-domains>` returns
   coverage only; omitted domains select these ten domains: `grpc-caller`, `grpc-consumer`,
   `kafka-consumer`, `kafka-producer`, `proto-contract`, `scip-proto-field`,

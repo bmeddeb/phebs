@@ -19390,6 +19390,76 @@ MCP tool,
 UI, quality, coverage, release, scale or SLO claim follows, and this slice does
 not promote the Topics product — T57.3 does.*
 
+*T57.2 slice 2 (2026-10-13, Qoder lead): **MCP exposure, and a corrected
+plane-state vocabulary.**
+
+- **Tools.** `list_kafka_topics` composes the inventory and returns its first
+  page; `read_topic_inventory` pages an already-composed one by `bundle_id` with
+  `page_size` and `cursor`. Both return one bounded `TopicInventoryReport` rather
+  than the raw bundle, since an agent's context window is better served by at
+  most 100 rows plus the address and cursor needed to continue; HTTP keeps the
+  two-step bundle-then-page shape for clients wanting the exact persisted bytes.
+  The paging tool is annotated read-only, the composing tool is not, because
+  composing persists one immutable bundle.
+- **The safety boundary is the interface split.** The tools are reached through a
+  dedicated `TopicInventoryQueries` option, not by extending `ProofQueries`. A
+  released Kafka plane restricts the proof tools through `KafkaTopicUsageOnly`,
+  so sharing that interface would have advertised an unmeasured product on a
+  binary whose T55.3/T56.3 release evidence does not describe it. `cmd/phebs`
+  supplies the boundary only when no plane is released, and registration
+  independently refuses under `KafkaTopicUsageOnly`, so the restriction wins even
+  if a future caller supplies both. No existing MCP tool count, name list or
+  schema digest moved: the proof, caller-map, comparison, dark-registration and
+  microservice-parity pins are byte-identical, and only the production-assembly
+  surface pin gained two flags.
+- **A T57.1 honesty defect, found by exposing it and corrected here.** A plane
+  the experimental switch admits but nothing has published reported `served` with
+  zero published runs, and its row contribution reported `none` — a measured zero
+  — when nothing had measured anything. This was reachable, not hypothetical: any
+  provisional extraction switch admits the whole experimental proof surface, so a
+  proto-only deployment served an inventory claiming both Kafka planes were
+  served. Both vocabularies gain `unpublished`, distinct from `unavailable`
+  because running extraction alone can make an unpublished plane served while an
+  unavailable one needs a release. An admitted plane keeps its frozen quality
+  card either way, since that card describes what the released recipe measured
+  independently, not what this deployment published.
+- **Tests.** Three MCP tests: a four-case registration matrix (absent boundary,
+  experimental boundary, supplied boundary beside `KafkaTopicUsageOnly`, proof
+  tools alone), each also asserting `find_kafka_topic_usage` is undisturbed; both
+  tools' input/output schema digests plus the composed-contract fields in the
+  output schema and the source-spelling / `unavailable` / `unpublished` /
+  not-proven-absent vocabulary in both descriptions; and a call test proving both
+  reach the same api boundary HTTP uses, pass `bundle_id`, `page_size` and
+  `cursor` through unchanged, carry the unpublished state over the wire, and
+  surface a composition or cursor refusal as a tool error rather than an empty
+  answer reading as no topics. Two new api tests pin the corrected vocabulary for
+  one unpublished plane and for neither published. Both corrections are
+  mutation-controlled: restoring the unconditional `served` fails the two new api
+  tests and prints exactly `State:served` with `PublishedRuns:0`, and removing the
+  released-plane gate fails exactly the two released-Kafka-plane assembly cases
+  with both tool flags true.
+- **Docs.** `docs/guides/WORKFLOWS.md` gains both routes to its canonical route
+  table — slice 1 documented only OPERATIONS and missed it — and both tools to
+  its MCP table; OPERATIONS now documents the tools instead of stating there were
+  none. Still no UI: that needs Ben's routed presentation handoff.
+
+Steady-state cost: with no boundary supplied, registration performs one nil check
+and adds nothing, so ordinary startup is unchanged. When admitted, startup adds
+two fixed MCP tool descriptors and no route beyond slice 1's. One list call costs
+the T57.1 composition plus one bundle persist and one page presentation; each
+page call costs one bundle read, one canonical re-encoding check, one visibility
+re-check and an in-memory slice. The vocabulary correction adds one integer
+comparison per plane per composition. No new query, lock, child, cache or durable
+state. `internal/api` passes normally (19.064s) and under race (54.654s),
+`internal/mcp` normally (4.747s) and under race (12.092s), and the
+production-assembly and discovery pins pass (1.149s); gofmt, vet, pinned lint on
+all three changed packages (0 issues), glossary, whitespace and whole-repository
+compilation pass. A third inherited finding is recorded beside the T57.1 two:
+`internal/investigation`'s `TestCheckedInSchemasMatchGenerator` fails at base
+because `schemas/pack-release-v1.0.json` was added by `0768ff9e` (T48.2) without
+a `schemaFilenames` entry. No UI, quality, coverage, release, scale or SLO claim
+follows, and the Topics product is still not promoted.*
+
 **T57.3 · Measured Topics promotion** — satisfy the common bar for the stated
 producer-only, consumer-only or combined product; none implies runtime topic
 activity, complete topology or equality across broker environments.

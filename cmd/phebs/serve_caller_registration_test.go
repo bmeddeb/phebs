@@ -243,6 +243,8 @@ type servedCallerSurfaces struct {
 	proofTool         bool
 	topicTool         bool
 	wireTool          bool
+	listTopicsTool    bool
+	readInventoryTool bool
 	callerMapEnabled  bool
 	callerMapServiced bool
 }
@@ -328,6 +330,10 @@ func serveCallerSurfaces(t *testing.T, cfg *config.Config) servedCallerSurfaces 
 			served.wireTool = true
 		case "find_kafka_topic_usage":
 			served.topicTool = true
+		case "list_kafka_topics":
+			served.listTopicsTool = true
+		case "read_topic_inventory":
+			served.readInventoryTool = true
 		}
 	}
 	return served
@@ -367,6 +373,7 @@ func TestCallerMapOrdinarySurfaceFollowsProductionAssembly(t *testing.T) {
 			want: servedCallerSurfaces{
 				capabilities:  everyProduct,
 				callerMapTool: true, comparisonTool: true, proofTool: true, topicTool: true, wireTool: true,
+				listTopicsTool: true, readInventoryTool: true,
 				callerMapEnabled: true, callerMapServiced: true,
 			},
 		},
@@ -380,6 +387,7 @@ func TestCallerMapOrdinarySurfaceFollowsProductionAssembly(t *testing.T) {
 					"wire-compatibility",
 				},
 				proofTool: true, topicTool: true, wireTool: true,
+				listTopicsTool: true, readInventoryTool: true,
 			},
 		},
 		{
@@ -393,6 +401,9 @@ func TestCallerMapOrdinarySurfaceFollowsProductionAssembly(t *testing.T) {
 		},
 		{
 			// T56.2: the consumer plane alone, independent of the producer release.
+			// T57.2: the composed inventory stays unlisted, so listTopicsTool and
+			// readInventoryTool are false here by omission — a released plane has
+			// no measured Topics claim until T57.3.
 			name:      "a released Kafka consumer alone serves only consumer topic usage",
 			consumer:  true,
 			configure: func(*config.Config) {},
@@ -429,6 +440,7 @@ func TestCallerMapOrdinarySurfaceFollowsProductionAssembly(t *testing.T) {
 			want: servedCallerSurfaces{
 				capabilities:  everyProduct,
 				callerMapTool: true, comparisonTool: true, proofTool: true, topicTool: true, wireTool: true,
+				listTopicsTool: true, readInventoryTool: true,
 				callerMapEnabled: true, callerMapServiced: true,
 			},
 		},

@@ -812,6 +812,88 @@ func TestTopicInventoryRespectsRepositoryVisibility(t *testing.T) {
 	}
 }
 
+// TestTopicInventoryNamesUnpublishedPlanes pins the distinction that keeps an
+// unrun plane honest: a plane the experimental switch admits but nothing has
+// published is unpublished, not served, and its contribution to a row is not a
+// measured zero. Before this the row reported none, which reads as "we looked
+// and found nothing" when nothing looked at all.
+func TestTopicInventoryNamesUnpublishedPlanes(t *testing.T) {
+	const repo = "github.com/allowed/kafka"
+	producerRun := proofRun(repo, "kafka-producer", "run-kafka-producer")
+	produced, _ := topicAssertion(
+		repo, producerRun.ID, "produce-a", "PRODUCES_TO_TOPIC", "orders-v1", 2, "segmentio/kafka-go",
+	)
+	st := &proofAPIStore{
+		repos: []store.Repo{{Name: repo, IndexedCommitHash: producerRun.Commit}},
+		runs: map[string]store.ExtractionRun{
+			proofScope(repo, "kafka-producer"): producerRun,
+		},
+		assertions: map[string][]store.Assertion{repo: {produced}},
+	}
+	_, report := topicInventory(t, topicService(st, nil))
+
+	producer := planeState(report, "producer")
+	consumer := planeState(report, "consumer")
+	if producer.State != "served" || producer.PublishedRuns != 1 || producer.Repositories != 1 {
+		t.Fatalf("producer plane = %+v", producer)
+	}
+	if consumer.State != "unpublished" || consumer.PublishedRuns != 0 || consumer.Repositories != 0 {
+		t.Fatalf("consumer plane = %+v", consumer)
+	}
+	if consumer.Released {
+		t.Fatalf("an experimental admission must not claim a release: %+v", consumer)
+	}
+	// The card describes what the released recipe measured independently, so an
+	// admitted plane keeps it even before this deployment published anything.
+	if consumer.Quality == nil || consumer.Quality.Card != "phebs.kafka.consumer" {
+		t.Fatalf("an admitted plane lost its frozen card: %+v", consumer.Quality)
+	}
+	row, found := topicRow(report, "orders-v1")
+	if !found {
+		t.Fatalf("no orders-v1 row: %+v", report.Topics)
+	}
+	if row.Consumer.State != "unpublished" || row.Consumer.Sites != 0 || row.Consumer.Files != 0 {
+		t.Fatalf("an unpublished plane must not report a measured zero: %+v", row.Consumer)
+	}
+	if row.Producer.State != "served" || row.Producer.Sites != 2 {
+		t.Fatalf("producer row plane = %+v", row.Producer)
+	}
+}
+
+// TestTopicInventoryWithNothingPublished pins that an inventory composed while
+// neither Kafka domain has published is visibly empty rather than silently
+// reading as a measured absence of topics.
+func TestTopicInventoryWithNothingPublished(t *testing.T) {
+	const repo = "github.com/allowed/kafka"
+	unrelated := proofRun(repo, "grpc-consumer", "run-unrelated")
+	st := &proofAPIStore{
+		repos: []store.Repo{{Name: repo, IndexedCommitHash: unrelated.Commit}},
+		runs: map[string]store.ExtractionRun{
+			proofScope(repo, "grpc-consumer"): unrelated,
+		},
+		assertions: map[string][]store.Assertion{repo: {}},
+	}
+	_, report := topicInventory(t, topicService(st, nil))
+
+	if len(report.Topics) != 0 || report.Pagination.Total != 0 {
+		t.Fatalf("an inventory with nothing published returned rows: %+v", report.Topics)
+	}
+	for _, plane := range report.Planes {
+		if plane.State != "unpublished" {
+			t.Fatalf("plane %s = %q, want unpublished", plane.Plane, plane.State)
+		}
+		if plane.TopicCount != 0 || plane.SiteCount != 0 || plane.PublishedRuns != 0 {
+			t.Fatalf("plane %s counts something it never read: %+v", plane.Plane, plane)
+		}
+	}
+	// Complete describes clipping only; the plane states carry the fact that
+	// nothing was published, and the caveat still forbids reading an empty
+	// inventory as proven absence.
+	if !report.Pagination.Complete || report.Caveat == "" || report.Census == nil {
+		t.Fatalf("empty inventory lost its honesty signals: %+v", report.Pagination)
+	}
+}
+
 // statusIs reads the HTTP status a composition refusal carries. The transport
 // is T57.2's, but the status is part of the contract these tests pin.
 func statusIs(err error, status int) bool {

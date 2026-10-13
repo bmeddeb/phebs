@@ -342,16 +342,24 @@ and who owns each.
     — admitted only by the provisional extraction switches. A binary admitted
     solely by released Kafka planes still serves only `find_kafka_topic_usage`,
     so the T55.3/T56.3 release evidence keeps describing the served surface.
-  - Remaining, agent: T57.2's MCP tool, which needs a third payload contract
-    because the proof-envelope projection is assertion-driven and an inventory
-    bundle carries no assertions.
+  - Done: T57.2 slice 2 exposes the same composition over MCP as
+    `list_kafka_topics` and `read_topic_inventory`, through a dedicated option
+    rather than the proof interface, so a released Kafka plane cannot list them.
+    No third payload contract was needed: the house pattern for a composed,
+    non-assertion read is a bespoke typed output like the relationship and
+    catalog tools, not an `investigation.Envelope`.
+  - Done: correcting that exposure found a T57.1 honesty defect. An admitted
+    plane nothing had published reported `served`, and its rows reported a
+    measured zero, so a proto-only deployment claimed both Kafka planes were
+    served. Both vocabularies now carry `unpublished`, distinct from
+    `unavailable`.
   - Remaining, Ben: the routed presentation handoff for any Topics UI change;
     the existing page still gates on `kafka-topic-usage`.
   - Remaining, agent: T57.3 is the measured promotion for the stated
     producer-only, consumer-only or combined product.
-  - Not claimed: the inventory is served dark, so this grants no quality,
-    coverage, runtime topic activity, complete topology, release or scale
-    result.
+  - Not claimed: the inventory is served dark over HTTP and MCP, so this grants
+    no quality, coverage, runtime topic activity, complete topology, release or
+    scale result.
 
 Everything human-gated is listed above. Agent work proceeds on ungated
 tickets in the meantime.
