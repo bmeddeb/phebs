@@ -1,0 +1,13 @@
+{
+ "schema": "t561-consumer-adjudications-v1",
+ "adjudicator": "Claude (named by Ben, 2026-10-13)",
+ "units": {
+  "Trendyol/kafka-konsumer@28c2937f7fcdcea39f54ac2af206ba8e01ddde5e:612-635": {
+   "truth": [
+    "unresolved",
+    "selector-expr"
+   ],
+   "note": "GroupTopics: kafkaConsumerCfg.Topics. KD6 classes abstentions by expression syntax, and the extractor itself classes a non-literal Consume topics argument by syntax (110 call-expr agreements); the extractor labels this non-literal GroupTopics value non-literal-expr instead. Product class inconsistency, minor."
+  }
+ }
+}

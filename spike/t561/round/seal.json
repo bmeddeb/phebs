@@ -1,0 +1,21 @@
+{
+ "schema": "t561-consumer-round-seal-v1",
+ "protocol": "docs/KAFKA_CONSUMER_QUALITY_PROTOCOL.md",
+ "commit": "3cc2dc5e805ce858e96c6893f332b55b722d668b",
+ "repository": "https://github.com/bmeddeb/phebs",
+ "population_units_sha256": "sha256:c6ca32e1823099f503b53db56cb52c9d8d4f72bb26d61ac3833b4ce20157723f",
+ "plane": "consumer",
+ "oracle_main_sha256": "06cbd2046cb0250bb40c06732c31ad4224e7271bb2441f514e385ec95b0197a5",
+ "export_main_sha256": "46a848d0fefe61c1371fef04aecf372d14a459c7c6d5ccca3a37c3e890871651",
+ "scorer_sha256": "2bcf9c643ceb0c9bbde2ba42c27a5af291033df0e3cbe6c6ffc48dfb0f3beb0a",
+ "thresholds": {
+  "coverage_min": 0.99,
+  "class_agreement_min": 0.99,
+  "wrong_topic_max": 0,
+  "extra_rate_max": 0.01,
+  "pending_max": 0,
+  "scored_sites_min": 300
+ },
+ "adjudicator": "Claude (named by Ben, 2026-10-13)",
+ "sealed_utc": "2026-10-13"
+}

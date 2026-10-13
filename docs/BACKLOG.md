@@ -19149,6 +19149,23 @@ Details are in `docs/KAFKA_PRODUCER_QUALITY_PROTOCOL.md` §9. Expires
 supported Go client and subscription/expression shapes, consumer-specific
 precision/recall and unresolved/gap population; producer quality is not reuse.
 
+*T56.1 (2026-10-13, Claude lead): **consumer site-coverage round passes.**
+
+- **Setup.** The same 2,790-unit production population, and the T55.1
+  oracle extended with `-plane consumer` from KD4/KD6/KD7/KD9. Ben froze the
+  T55.1 thresholds.
+- **Seal.** Commit `3cc2dc5e` plus gist `Blandt/004c9c2e…`.
+- **Result.** 640/640 consumer sites covered, 0 extra rows, 0 wrong topics,
+  class agreement 639/640.
+- **The one adjudicated disagreement.** A non-literal `GroupTopics`
+  (`cfg.Topics`) is labelled `non-literal-expr` rather than `selector-expr`:
+  a minor kafkago inconsistency, recorded for a later version that re-signs
+  both planes.
+- **Limits.** No literal consumer topic exists in the population. The
+  served path is T56.2/T56.3.
+
+Details are in `docs/KAFKA_CONSUMER_QUALITY_PROTOCOL.md` §8.*
+
 **T56.2 · Independent stable consumer registration** — select only admitted
 consumer recipes; missing publication never appears as a measured zero and
 topic-dependent rows stay separate from topic-independent abstention census.

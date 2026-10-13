@@ -316,6 +316,11 @@ and who owns each.
     backup/restore. Member scope and revocation are proven. Topic usage now
     reads partitioned production roots. See protocol §9.
 
+- **Kafka consumer (Epic 56).**
+  - Done: T56.1 site coverage passes (640/640 production sites).
+  - Next: T56.2/T56.3. These are the consumer registration, mirroring T55.2,
+    and its release.
+
 Everything human-gated is listed above. Agent work proceeds on ungated
 tickets in the meantime.
 

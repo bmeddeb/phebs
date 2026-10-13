@@ -1,0 +1,33 @@
+{
+ "checks": {
+  "class_agreement": true,
+  "coverage": true,
+  "extra_rate": true,
+  "pending": true,
+  "scored_sites": true,
+  "wrong_topic": true
+ },
+ "class_agreement": 0.99844,
+ "classes": {
+  "covered_agree": 639,
+  "covered_disagree": 1,
+  "duplicate": 0,
+  "missed": 0
+ },
+ "coverage": 1.0,
+ "extra": 0,
+ "extra_confirmed": 0,
+ "passed": true,
+ "pending": [],
+ "schema": "t551-producer-score-v1",
+ "scored_sites": 640,
+ "thresholds": {
+  "class_agreement_min": 0.99,
+  "coverage_min": 0.99,
+  "extra_rate_max": 0.01,
+  "pending_max": 0,
+  "scored_sites_min": 300,
+  "wrong_topic_max": 0
+ },
+ "wrong_topic": []
+}
