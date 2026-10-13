@@ -1,4 +1,8 @@
-"""T55.3 release gates for phebs.kafka.producer on the real binary.
+"""T55.3/T56.3 release gates for the released Kafka planes on the real binary.
+
+`--planes` names the released planes (default producer, as in T55.3); every
+census check runs per released plane, and every other plane must be named
+unavailable.
 
 The real `phebs serve` runs with no experimental switch. Only the signed
 selection admits the producer plane. The repositories are seven T55.1 corpus
@@ -37,6 +41,7 @@ import serve_rehearsal  # noqa: E402
 
 REPOS = ('goka', 'kafka-pixy', 'watermill-kafka', 'Burrow', 'go-dnscollector', 'plugins', 'tiflow')
 MEMBER_REPO = 'goka'
+PLANES = ['producer']  # set from --planes
 CLASSES = ('selector-expr', 'call-expr', 'unresolved-ident', 'non-literal-expr', 'invalid-topic-literal',
            'ambiguous-library-import')
 
@@ -52,19 +57,31 @@ def prepare(history: Path, lock: dict, work: Path) -> dict[str, Path]:
     return paths
 
 
-def expected(oracle: Path, paths: dict[str, Path]) -> dict[str, dict[str, int]]:
-    """Per repository: unresolved-site counts by class, from the independent oracle."""
-    out = {}
-    for name, path in paths.items():
-        rows = [json.loads(line) for line in subprocess.run([str(oracle), '-repo', str(path), '-name', name],
-                                                            check=True, capture_output=True, text=True).stdout.splitlines()]
-        counts = collections.Counter(r['class'] for r in rows if r['state'] == 'unresolved')
-        out[name] = {c: counts.get(c, 0) for c in CLASSES}
+def expected(oracle: Path, paths: dict[str, Path]) -> dict[str, dict[str, dict[str, int]]]:
+    """Per released plane and repository: unresolved-site counts by class, from the independent oracle."""
+    out: dict = {}
+    for plane in PLANES:
+        out[plane] = {}
+        for name, path in paths.items():
+            rows = [json.loads(line) for line in subprocess.run(
+                [str(oracle), '-plane', plane, '-repo', str(path), '-name', name],
+                check=True, capture_output=True, text=True).stdout.splitlines()]
+            counts = collections.Counter(r['class'] for r in rows if r['state'] == 'unresolved')
+            out[plane][name] = {c: counts.get(c, 0) for c in CLASSES}
     return out
 
 
-def total(expected_counts: dict[str, dict[str, int]], names) -> dict[str, int]:
-    return {c: sum(expected_counts[n][c] for n in names) for c in CLASSES}
+def total(expected_counts: dict, names) -> dict[str, dict[str, int]]:
+    return {plane: {c: sum(by_repo[n][c] for n in names) for c in CLASSES} for plane, by_repo in expected_counts.items()}
+
+
+def unavailable() -> list[str]:
+    return [p for p in ('consumer', 'producer') if p not in PLANES]
+
+
+def matches(served: dict, want: dict, published: int | None = None) -> bool:
+    return (all(served[p] == want[p] for p in PLANES) and (served.get('unavailable_planes') or []) == unavailable()
+            and (published is None or all(served[f'{p}_published_runs'] == published for p in PLANES)))
 
 
 def census(base: str, token: str, topic: str = 'orders') -> tuple[dict, str]:
@@ -76,7 +93,8 @@ def census(base: str, token: str, topic: str = 'orders') -> tuple[dict, str]:
 
 
 def comparable(value: dict) -> dict:
-    return {k: value.get(k) for k in ('producer', 'producer_published_runs', 'unavailable_planes', 'truncated')}
+    return {k: value.get(k) for k in ('producer', 'producer_published_runs', 'consumer', 'consumer_published_runs',
+                                      'unavailable_planes', 'truncated')}
 
 
 def wait_published(base: str, key: str, repos: int, deadline_s: float) -> tuple[float, dict]:
@@ -84,13 +102,13 @@ def wait_published(base: str, key: str, repos: int, deadline_s: float) -> tuple[
     while True:
         try:
             now, _ = census(base, key)
-            if now['producer_published_runs'] == repos and last == comparable(now):
+            if all(now[f'{p}_published_runs'] == repos for p in PLANES) and last == comparable(now):
                 return time.monotonic() - started, now
             last = comparable(now)
         except (serve.ServeError, OSError, KeyError):
             last = None
         if time.monotonic() - started > deadline_s:
-            raise serve.ServeError(f'producer runs did not all publish before the deadline (last {last})')
+            raise serve.ServeError(f'released plane runs did not all publish before the deadline (last {last})')
         time.sleep(3)
 
 
@@ -136,7 +154,7 @@ def rehearse(binary: Path, history: Path, lock_path: Path, oracle: Path, selecti
                                 f'http://127.0.0.1:{issuer_port}', ready_timeout_s=30)
     issuer.start()
     admin_want = total(want, REPOS)
-    result = {'schema': 't553-producer-release-rehearsal-v1', 'binary_sha256': serve.receipts.sha256_file(binary),
+    result = {'schema': 't553-kafka-release-rehearsal-v2', 'planes': PLANES, 'binary_sha256': serve.receipts.sha256_file(binary),
               'repositories': {n: names[n] for n in REPOS}, 'expected_by_repository': want,
               'expected_total': admin_want, 'phases': {}}
     data = run_root / 'data'
@@ -152,7 +170,7 @@ def rehearse(binary: Path, history: Path, lock_path: Path, oracle: Path, selecti
             with caller_operating.SessionRSS(os.getsid(session.pid)) as rss:
                 seconds, admin = wait_published(base, key, len(REPOS), deadline_s)
                 record['seconds_to_published'] = round(seconds, 3)
-                if admin['producer'] != admin_want or admin.get('unavailable_planes') != ['consumer']:
+                if not matches(admin, admin_want):
                     raise serve.ServeError(f'{step}: served census {admin} differs from the oracle {admin_want}')
                 if reference is not None and comparable(admin) != reference:
                     raise serve.ServeError(f'{step}: census changed across the lifecycle')
@@ -161,7 +179,7 @@ def rehearse(binary: Path, history: Path, lock_path: Path, oracle: Path, selecti
                     status, body = serve.http_get(base, '/api/version', token=key)
                     record['capabilities'] = sorted(json.loads(body).get('capabilities', []))
                     if record['capabilities'] != ['kafka-topic-usage', 'service-catalog-v2']:
-                        raise serve.ServeError(f"released producer exposed {record['capabilities']}")
+                        raise serve.ServeError(f"released Kafka planes exposed {record['capabilities']}")
                     record['anonymous'] = serve.http_get(base, '/api/find_kafka_topic_usage', {'topic': 'orders'})[0]
                     if record['anonymous'] != 401:
                         raise serve.ServeError('anonymous topic usage was not refused')
@@ -174,7 +192,7 @@ def rehearse(binary: Path, history: Path, lock_path: Path, oracle: Path, selecti
                         raise serve.ServeError(f'member repository listing is {listed}')
                     member_census, _ = census(base, token)
                     member_want = total(want, [MEMBER_REPO])
-                    if member_census['producer'] != member_want or member_census['producer_published_runs'] != 1:
+                    if not matches(member_census, member_want, published=1):
                         raise serve.ServeError(f'member census {member_census} is not limited to {MEMBER_REPO} ({member_want})')
                     _, admin_bundle = census(base, key)
                     record['member_reads_admin_bundle'] = serve.http_get(base, f'/api/proof_bundles/{admin_bundle}', token=token)[0]
@@ -226,8 +244,10 @@ def rehearse(binary: Path, history: Path, lock_path: Path, oracle: Path, selecti
 
 
 def final(binary: Path, history: Path, lock_path: Path, oracle: Path, selection: Path, artifacts: Path,
-          key_id: str, public_key: str, release_id: str, run_root: Path, deadline_s: float = 900) -> dict:
-    """The signed record itself: release-only admission with census parity, then revocation."""
+          key_id: str, public_key: str, revoke: list[str], run_root: Path, deadline_s: float = 900) -> dict:
+    """The signed records: release-only admission with census parity, then revoking `revoke`
+    (`release_id=plane` pairs) withdraws exactly those planes and leaves the rest served."""
+    global PLANES
     run_root.mkdir(parents=True)
     paths = prepare(history, json.loads(lock_path.read_text()), run_root / 'corpus')
     want = total(expected(oracle, paths), REPOS)
@@ -236,8 +256,13 @@ def final(binary: Path, history: Path, lock_path: Path, oracle: Path, selection:
     helpers = binary.parent
     env = {**os.environ, 'PHEBS_ZOEKT_GIT_INDEX': str(helpers / 'zoekt-git-index'),
            'PHEBS_FOCUSED_INDEX': str(helpers / 'phebs-focused-index'), 'PHEBS_BUF': str(helpers / 'buf')}
-    base, result = f'http://127.0.0.1:{port}', {'expected_total': want}
-    for step, revoked in (('signed', ''), ('revoked', f'  revoked:\n    - "{release_id}"\n')):
+    base, result = f'http://127.0.0.1:{port}', {'planes': list(PLANES), 'expected_total': want}
+    released = list(PLANES)
+    revoked_ids = [pair.split('=')[0] for pair in revoke]
+    revoked_planes = [pair.split('=')[1] for pair in revoke]
+    for step, ids in (('signed', []), ('revoked', revoked_ids)):
+        PLANES = released if step == 'signed' else [p for p in released if p not in revoked_planes]
+        revoked = ('  revoked:\n' + ''.join(f'    - "{i}"\n' for i in ids)) if ids else ''
         cfg = run_root / f'{step}.yaml'
         cfg.write_text(f'server:\n  addr: "127.0.0.1:{port}"\n  data_dir: "{run_root / "data"}"\n'
                        f'auth:\n  api_key: "{key}"\n  cookie_secure: false\n'
@@ -251,21 +276,23 @@ def final(binary: Path, history: Path, lock_path: Path, oracle: Path, selection:
         try:
             status, body = serve.http_get(base, '/api/version', token=key)
             capabilities = sorted(json.loads(body).get('capabilities', []))
-            if step == 'signed':
+            if PLANES:
                 seconds, served = wait_published(base, key, len(REPOS), deadline_s)
-                if capabilities != ['kafka-topic-usage', 'service-catalog-v2'] or served['producer'] != want:
-                    raise serve.ServeError(f'signed admission: {capabilities} {served}')
-                result['signed'] = {'capabilities': capabilities, 'seconds_to_published': round(seconds, 3),
-                                    'census_matches_oracle': True, 'unavailable_planes': served.get('unavailable_planes')}
+                if capabilities != ['kafka-topic-usage', 'service-catalog-v2'] or not matches(served, want):
+                    raise serve.ServeError(f'{step}: {capabilities} {served}')
+                result[step] = {'capabilities': capabilities, 'served_planes': list(PLANES),
+                                'seconds_to_published': round(seconds, 3), 'census_matches_oracle': True,
+                                'unavailable_planes': served.get('unavailable_planes')}
             else:
                 status = serve.http_get(base, '/api/find_kafka_topic_usage', {'topic': 'orders'}, token=key)[0]
                 if 'kafka-topic-usage' in capabilities or status == 200:
-                    raise serve.ServeError('a revoked producer release still serves topic usage')
-                result['revoked'] = {'capabilities': capabilities, 'topic_usage_status': status}
+                    raise serve.ServeError('revoked Kafka releases still serve topic usage')
+                result[step] = {'capabilities': capabilities, 'topic_usage_status': status}
         except BaseException:
             session.stop('hard_kill', reason=f'{step} probe failed')
             raise
         session.stop('graceful')
+    PLANES = released
     return result
 
 
@@ -275,11 +302,15 @@ def main() -> None:
         parser.add_argument(flag, type=Path, required=True)
     parser.add_argument('--key-id', required=True)
     parser.add_argument('--public-key', required=True)
-    parser.add_argument('--final-release-id', help='run the final signed-record proof instead of the rehearsal')
+    parser.add_argument('--planes', default='producer', help='comma-separated released planes')
+    parser.add_argument('--final-revoke', action='append', default=[], metavar='RELEASE_ID=PLANE',
+                        help='run the final signed-record proof, then revoke these releases')
     args = parser.parse_args()
-    if args.final_release_id:
+    global PLANES
+    PLANES = sorted(args.planes.split(','))
+    if args.final_revoke:
         print(json.dumps(final(args.binary.resolve(), args.history, args.lock, args.oracle.resolve(), args.selection.resolve(),
-                               args.artifacts.resolve(), args.key_id, args.public_key, args.final_release_id,
+                               args.artifacts.resolve(), args.key_id, args.public_key, args.final_revoke,
                                args.run_root.resolve()), indent=1, sort_keys=True))
         return
     print(json.dumps(rehearse(args.binary.resolve(), args.history, args.lock, args.oracle.resolve(),

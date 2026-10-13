@@ -96,16 +96,16 @@ func TestKafkaProducerRecipeIsProducerOnlyAndBound(t *testing.T) {
 	}
 }
 
-// TestKafkaConsumerRecipeIsConsumerOnlyAndUnbound pins T56.2: the recipe is the
-// consumer plane alone, and a released record for it refuses startup until
-// T56.3 binds it beside its first signed record.
-func TestKafkaConsumerRecipeIsConsumerOnlyAndUnbound(t *testing.T) {
+// TestKafkaConsumerRecipeIsConsumerOnlyAndBound pins T56.2/T56.3: the recipe is
+// the consumer plane alone, it is bound, and a verified released record admits
+// exactly the kafka-consumer extractor.
+func TestKafkaConsumerRecipeIsConsumerOnlyAndBound(t *testing.T) {
 	recipe := kafkaConsumerRecipe()
 	if len(recipe) != 1 || recipe[0].Domain() != "kafka-consumer" {
 		t.Fatalf("consumer recipe = %v, want the kafka-consumer extractor alone", recipe)
 	}
-	if _, bound := packRecipes[kafkaConsumerPackID]; bound {
-		t.Fatal("kafkaConsumerRecipe must not be bound before its first released record (T56.3 owns the binding)")
+	if _, bound := packRecipes[kafkaConsumerPackID]; !bound {
+		t.Fatal("kafkaConsumerRecipe must be bound now that T56.3 records its released record")
 	}
 	dir := t.TempDir()
 	public, release := writeReleasedRecord(t, dir, kafkaConsumerPackID, "key-1")
@@ -113,9 +113,9 @@ func TestKafkaConsumerRecipeIsConsumerOnlyAndUnbound(t *testing.T) {
 	cfg := &config.Config{}
 	cfg.ReleaseSelection.Path = dir
 	cfg.ReleaseSelection.Keys = []config.ReleaseKey{{ID: "key-1", PublicKey: public}}
-	if _, _, err := releasedExtractors(context.Background(), cfg); err == nil ||
-		!strings.Contains(err.Error(), "has no fixed in-tree recipe") {
-		t.Fatalf("unbound consumer release = %v, want the missing in-tree recipe refusal", err)
+	extractors, _, err := releasedExtractors(context.Background(), cfg)
+	if err != nil || len(extractors) != 1 || extractors[0].Domain() != "kafka-consumer" {
+		t.Fatalf("released consumer = %v, %v; want the kafka-consumer extractor alone", extractors, err)
 	}
 }
 

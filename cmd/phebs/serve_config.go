@@ -145,6 +145,7 @@ func newServeExtractionRegistries(d *serveDeps) error {
 // resolves only through this exact in-tree registry.
 var packRecipes = map[string]func() []extract.Extractor{
 	kafkaProducerPackID: kafkaProducerRecipe, // T55.3: bound beside its first signed record
+	kafkaConsumerPackID: kafkaConsumerRecipe, // T56.3: bound beside its first signed record
 }
 
 // releasedClaims is the fixed in-tree registry of released product claims that
@@ -170,8 +171,7 @@ func kafkaProducerRecipe() []extract.Extractor {
 
 // kafkaConsumerPackID is the T56.1 site-coverage card
 // (docs/KAFKA_CONSUMER_QUALITY_PROTOCOL.md): the kafka-consumer plane alone.
-// T56.3 binds kafkaConsumerRecipe into packRecipes with its first signed
-// record; until then a selection naming it refuses startup as unbound.
+// T56.3 bound kafkaConsumerRecipe into packRecipes with its first signed record.
 const kafkaConsumerPackID = "phebs.kafka.consumer"
 
 // kafkaConsumerRecipe is the consumer plane only; it never brings the
