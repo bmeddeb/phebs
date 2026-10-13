@@ -1,8 +1,8 @@
 # T55.1 Kafka producer site-coverage quality protocol
 
-Status: **frozen for sealing** (2026-10-13). Ben chose the site-coverage
-claim and froze the §6 thresholds as proposed. Claude seals, adjudicates and
-scores. Nothing in §5 runs before the seal in §7.
+Status: **sealed and scored: passes** (2026-10-13). Ben chose the
+site-coverage claim and froze the §6 thresholds as proposed. Claude sealed,
+adjudicated and scored. The result is in §8.
 
 ## 1. Claim card (`phebs.kafka.producer`, site coverage)
 
@@ -95,3 +95,46 @@ unit's exact blob, through the `sdk.Corpus` interface the worker uses.
 The commit holding this protocol, the population digest, the oracle, export,
 enumerator and scorer digests, and the frozen thresholds are published in a
 public gist before `export` runs on the population.
+
+## 8. Result (2026-10-13): passes
+
+**Seal.** Commit `814fc0e2` was pushed to the public repository. The seal
+values were published at
+<https://gist.github.com/Blandt/78a8678412666759038795eb854f16e9> before the
+extractor ran on the population. The receipts are in `spike/t551/round/`.
+
+**Run.** The extractor ran over all 2,790 units in 5.4 s and emitted 762
+rows: 4 `PRODUCES_TO_TOPIC` (`topic:important`, `topic:access_log`) and 758
+`UNRESOLVED_KAFKA_PRODUCER`. By class, the unresolved rows are:
+
+| Class | Rows |
+|---|---|
+| selector-expr | 402 |
+| unresolved-ident | 341 |
+| call-expr | 13 |
+| non-literal-expr | 2 |
+
+**Score.** Every check passes:
+
+- 762 scored sites: 762 covered with the right state and object or class;
+- 0 missed, 0 duplicated, 0 differently classed;
+- 0 extra rows and 0 wrong topics;
+- coverage and class agreement are both 100%;
+- nothing needed adjudication, so pending is 0.
+
+With zero misses over 762 sites, the 95% upper bound on the per-site miss
+rate is about 0.4% (rule of three).
+
+**What it does and does not show.**
+
+- It shows that the extractor finds every KD4 producer site in real
+  production code and classifies it correctly. That is the "where does this
+  code produce to Kafka" claim.
+- It does not show topic precision. Only 4 sites name a literal topic, which
+  confirms KD10: production topics are configuration-driven.
+- The 111 sites with no Topic key (the topic is chosen per message) are
+  outside the claim, and the extractor reports none of them.
+- The measurement is at the extractor. The served `find_kafka_topic_usage`
+  path and its unresolved census are T55.2/T55.3 scope.
+- The oracle and the extractor implement the same frozen KD table. A
+  misreading shared by both would not show up here.

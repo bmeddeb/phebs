@@ -19065,6 +19065,23 @@ supported Go client versions and literal/constant expression shapes, plus
 dynamic/ambiguous/import and extraction-gap denominators; retain static
 source-spelled topic evidence, not a runtime broker identity.
 
+*T55.1 (2026-10-13, Claude lead): **site-coverage round passes.** Ben chose
+the site-coverage claim, because production code almost never names a topic
+literally.
+
+- **Population.** Real history from 17 pre-registered production
+  repositories: 2,790 distinct file versions.
+- **Truth.** An independent stdlib Go oracle written from KD1–KD10 found
+  762 scored producer sites.
+- **Seal.** Commit `814fc0e2` plus gist `Blandt/78a86784…`.
+- **Result.** The extractor covers all 762 with the right state and class:
+  0 misses, 0 extra rows, 0 wrong topics, nothing to adjudicate.
+- **Limits.** Only 4 sites were literal topics, so topic precision is
+  unmeasured. Sites with no Topic key are outside the claim. The served
+  path is T55.2/T55.3.
+
+Details are in `docs/KAFKA_PRODUCER_QUALITY_PROTOCOL.md` §8.*
+
 **T55.2 · Independent stable producer registration** — select only admitted
 producer recipes and publication; do not enable consumers through the existing
 shared provisional Kafka switch. Preserve first-class unresolved census.

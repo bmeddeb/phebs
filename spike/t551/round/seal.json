@@ -1,0 +1,22 @@
+{
+ "schema": "t551-producer-round-seal-v1",
+ "protocol": "docs/KAFKA_PRODUCER_QUALITY_PROTOCOL.md",
+ "commit": "814fc0e20e4e6c36b2f9c7a5ac3c7d5d45620d64",
+ "repository": "https://github.com/bmeddeb/phebs",
+ "population_units_sha256": "sha256:c6ca32e1823099f503b53db56cb52c9d8d4f72bb26d61ac3833b4ce20157723f",
+ "population_units": 2790,
+ "oracle_main_sha256": "e94471f9671da41754877f680919778d7dffac889038677744722c4f3d2d6d0c",
+ "export_main_sha256": "51738abbfc38debc8ab6420a7a37c1172cc110e89182f4a734ae4775a66257a9",
+ "enumerator_sha256": "3042bcea65e52229da4684f9a3559a34b6f2a13a4aed2c833ba1e980e2bdae60",
+ "scorer_sha256": "bbe3df1dfec0c55c679b51dde7fdf8a19c2cb3e72faa53b7716827e243abc051",
+ "thresholds": {
+  "coverage_min": 0.99,
+  "class_agreement_min": 0.99,
+  "wrong_topic_max": 0,
+  "extra_rate_max": 0.01,
+  "pending_max": 0,
+  "scored_sites_min": 300
+ },
+ "adjudicator": "Claude (named by Ben, 2026-10-13)",
+ "sealed_utc": "2026-10-13"
+}
