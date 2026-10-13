@@ -165,7 +165,13 @@ def rehearse(binary: Path, history: Path, lock_path: Path, oracle: Path, selecti
                     record['anonymous'] = serve.http_get(base, '/api/find_kafka_topic_usage', {'topic': 'orders'})[0]
                     if record['anonymous'] != 401:
                         raise serve.ServeError('anonymous topic usage was not refused')
-                    _, token = serve.oidc_login(base, 'member')
+                    owner, _ = serve.oidc_login(base, 'owner')  # the first OIDC login becomes the administrator
+                    user, token = serve.oidc_login(base, 'member')
+                    if not owner.get('is_admin') or user.get('is_admin'):
+                        raise serve.ServeError('OIDC did not yield one administrator and one ordinary member')
+                    listed = sorted(r['name'] for r in serve_rehearsal.listing(base, token))
+                    if listed != [names[MEMBER_REPO]]:
+                        raise serve.ServeError(f'member repository listing is {listed}')
                     member_census, _ = census(base, token)
                     member_want = total(want, [MEMBER_REPO])
                     if member_census['producer'] != member_want or member_census['producer_published_runs'] != 1:

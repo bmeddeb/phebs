@@ -4643,6 +4643,17 @@ succeeds (the first five remain available when compatibility is unavailable):
   singular↔repeated change as breaking, including string and message changes
   that protobuf documents as wire-compatible.
 
+  **Released Kafka producer (T55.3, release 1.0.0).** Point
+  `release_selection` at `spike/t553/release/{selection,artifacts}` with the
+  same key. The record admits only the binary built from `71924817` with
+  `go build -trimpath` (`sha256:8c02e391…`).
+
+  - The server then serves `find_kafka_topic_usage` over the
+    `kafka-producer` plane only, with the consumer plane named unavailable,
+    plus `proof_bundles/{id}` reads.
+  - Revoke `rel-phebs.kafka.producer-1.0.0` to suspend it.
+  - It expires on 2027-01-11.
+
   **Released admission (T53.3, release 1.0.0).** The surface can run with no
   experimental switch, admitted by its signed record:
 

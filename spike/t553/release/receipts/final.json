@@ -1,0 +1,27 @@
+{
+ "expected_total": {
+  "ambiguous-library-import": 0,
+  "call-expr": 0,
+  "invalid-topic-literal": 0,
+  "non-literal-expr": 0,
+  "selector-expr": 1,
+  "unresolved-ident": 17
+ },
+ "revoked": {
+  "capabilities": [
+   "service-catalog-v2"
+  ],
+  "topic_usage_status": 404
+ },
+ "signed": {
+  "capabilities": [
+   "kafka-topic-usage",
+   "service-catalog-v2"
+  ],
+  "census_matches_oracle": true,
+  "seconds_to_published": 61.262,
+  "unavailable_planes": [
+   "consumer"
+  ]
+ }
+}

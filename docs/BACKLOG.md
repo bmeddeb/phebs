@@ -19125,6 +19125,24 @@ query and census as the experimental surface, over one domain.*
 **T55.3 · Measured producer promotion** — satisfy the common bar, explicit
 library/version/topic-expression scope and bounded topic query/citation costs.
 
+*Released 2026-10-13: `rel-phebs.kafka.producer-1.0.0` is signed with Ben's
+key for reproducible binary `71924817` (`sha256:8c02e391…`).
+
+- **Finding and fix.** Topic usage could not read partitioned production
+  publications. It now reads the fenced current partitioned root, as T49.3
+  does for Atlas.
+- **Rehearsal on the release-only real binary.** Across 7 repositories the
+  served census equalled the independent oracle in every phase: cold
+  (49 s to published), restart, SIGKILL recovery and backup/restore.
+- **Authorization.** Anonymous gets 401. An OIDC member's census is limited
+  to its visible repository, and it gets 404 on a wider bundle.
+- **Envelope.** Query p95 114 ms; peak RSS 509 MiB.
+- **Final proof with Ben's key.** Admission and parity hold, and
+  revocation withdraws the surface.
+
+Details are in `docs/KAFKA_PRODUCER_QUALITY_PROTOCOL.md` §9. Expires
+2027-01-11. No independent human review.*
+
 ## Epic 56 · Kafka consumer-evidence production readiness
 
 **T56.1 · Consumer subscription identity and independent quality** — freeze

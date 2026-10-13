@@ -138,3 +138,56 @@ rate is about 0.4% (rule of three).
   path and its unresolved census are T55.2/T55.3 scope.
 - The oracle and the extractor implement the same frozen KD table. A
   misreading shared by both would not show up here.
+
+## 9. Release 1.0.0 (2026-10-13): signed and proven on the real binary
+
+The signed record is `spike/t553/release/selection/release.json`
+(`rel-phebs.kafka.producer-1.0.0`, key `ben-phebs-release-2026-10`). It binds:
+
+- the card, manifest and validation in `spike/t553/release/artifacts/`;
+- release binary commit `71924817` (`sha256:8c02e391…`, reproduced byte for
+  byte by a second clean build);
+- validation expiry 2027-01-11.
+
+**Code added.** The recipe is bound in `packRecipes`. The real-binary run
+then found that topic usage read legacy runs only, while production
+extraction publishes partitioned roots. The census reported 0 published
+runs over live producer data. Topic usage and its census now read each
+repository's legacy published run, or else its fenced current partitioned
+root, as T49.3 does for Atlas. Bundles name the roots in
+`exact_authorities`, a root that moves forces a retry, and a stale root is
+unavailable, never partial.
+
+**Rehearsal (`receipts/rehearsal.json`).** This ran on the identical binary
+and code path with a throwaway signing key, because the record's validation
+had to contain these results. It used seven T55.1 corpus repositories at
+their locked commits, release-only, with no experimental switch. In every
+phase the served census equalled the independent oracle's per-class counts
+(selector-expr 1, unresolved-ident 17).
+
+| Phase | Ready | To published | Peak session RSS |
+|---|---|---|---|
+| Cold | 2.5 s | 48.8 s | 509 MiB |
+| Restart | 1.5 s | 3.3 s | 248 MiB |
+| Hard death (SIGKILL of the session) | 1.3 s | 3.3 s | 238 MiB |
+| Backup → restore (backup 165 MiB, restore 29.8 s) | 1.5 s | 55.5 s | 250 MiB |
+
+The cold phase also checked:
+
+- capabilities are exactly `kafka-topic-usage` and the service catalog;
+- anonymous requests get 401;
+- an OIDC member's census is limited to its one visible repository and
+  matches the oracle there;
+- the member gets 404 on an admin bundle covering hidden repositories;
+- MCP works;
+- topic query latency is p50 108 ms and p95 114 ms.
+
+**Final proof with Ben's key (`receipts/final.json`).** A release-only
+start served exactly `kafka-topic-usage` plus the service catalog, the
+census equalled the oracle, and the consumer plane was named unavailable.
+With the release id revoked, the surface was gone (404).
+
+**Not established.** No independent human review; Claude was the
+adjudicator and reviewer Ben named. Topic-name precision (only 4 literal
+sites were measured). The consumer plane. The envelope covers this host and
+seven repositories only.

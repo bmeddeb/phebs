@@ -310,8 +310,11 @@ and who owns each.
   - Done: T55.1 site coverage passes (762/762 production sites). T55.2
     registers the producer plane on its own: a released producer serves only
     producer topic usage, with the consumer plane named unavailable.
-  - Remaining, agent: T55.3, which binds the recipe, proves the served path
-    on the real binary, measures the envelope and signs.
+  - **Released 2026-10-13:** `rel-phebs.kafka.producer-1.0.0` is signed with
+    Ben's key. On the release-only real binary the served census equals the
+    independent oracle through cold start, restart, hard death and
+    backup/restore. Member scope and revocation are proven. Topic usage now
+    reads partitioned production roots. See protocol §9.
 
 Everything human-gated is listed above. Agent work proceeds on ungated
 tickets in the meantime.

@@ -1,0 +1,114 @@
+{
+ "authorization": {
+  "anonymous": 401,
+  "member_census_limited_to_visible_repository": true,
+  "member_reads_admin_bundle": 404
+ },
+ "not_established": [
+  "independent human review",
+  "consumer plane (Epic 56)",
+  "topic-name precision (4 literal sites measured)"
+ ],
+ "pack_claim_version": "1.0.0",
+ "pack_id": "phebs.kafka.producer",
+ "quality": {
+  "covered_agree": 762,
+  "extra": 0,
+  "miss_rate_upper_95": 0.0039,
+  "protocol": "docs/KAFKA_PRODUCER_QUALITY_PROTOCOL.md section 8",
+  "scored_sites": 762,
+  "seal_commit": "814fc0e20e4e6c36b2f9c7a5ac3c7d5d45620d64",
+  "seal_gist": "https://gist.github.com/Blandt/78a8678412666759038795eb854f16e9",
+  "wrong_topic": 0
+ },
+ "release_binary": {
+  "source_commit": "71924817f6aea1019036c63db1b04e369a63957d"
+ },
+ "reviewer": "Claude, named by Ben (not an independent human review)",
+ "schema": "phebs-extractor-pack-validation-v1",
+ "served_path": {
+  "census_matched_oracle_every_phase": true,
+  "data_bytes": 494939788,
+  "expected_census_from_independent_oracle": {
+   "ambiguous-library-import": 0,
+   "call-expr": 0,
+   "invalid-topic-literal": 0,
+   "non-literal-expr": 0,
+   "selector-expr": 1,
+   "unresolved-ident": 17
+  },
+  "phases": {
+   "backup-restore": {
+    "census_matches_oracle": true,
+    "ready_seconds": 1.506,
+    "rss_peak_bytes": 262205440,
+    "seconds_to_published": 55.451,
+    "stop": {
+     "outcome": "success",
+     "stop_mode": "graceful",
+     "wall_seconds": 57.098
+    }
+   },
+   "cold": {
+    "anonymous": 401,
+    "capabilities": [
+     "kafka-topic-usage",
+     "service-catalog-v2"
+    ],
+    "census_matches_oracle": true,
+    "member_census_matches": true,
+    "member_reads_admin_bundle": 404,
+    "query_latency": {
+     "max_ms": 116.51,
+     "n": 60,
+     "p50_ms": 107.87,
+     "p95_ms": 114.22,
+     "p99_ms": 116.51
+    },
+    "ready_seconds": 2.508,
+    "rss_peak_bytes": 533352448,
+    "seconds_to_published": 48.828,
+    "stop": {
+     "outcome": "success",
+     "stop_mode": "graceful",
+     "wall_seconds": 58.258
+    }
+   },
+   "hard-death": {
+    "census_matches_oracle": true,
+    "ready_seconds": 1.254,
+    "rss_peak_bytes": 249696256,
+    "seconds_to_published": 3.292,
+    "stop": {
+     "outcome": "success",
+     "stop_mode": "graceful",
+     "wall_seconds": 4.687
+    }
+   },
+   "restart": {
+    "backup_bytes": 173460307,
+    "census_matches_oracle": true,
+    "ready_seconds": 1.505,
+    "rss_peak_bytes": 259710976,
+    "seconds_to_published": 3.295,
+    "stop": {
+     "outcome": "success",
+     "stop_mode": "hard_kill",
+     "wall_seconds": 11.817
+    }
+   }
+  },
+  "rehearsal_key": "a throwaway key over the identical binary and code path; the signed record is proven separately",
+  "rehearsal_sha256": "sha256:eadd5aabff85a8b11f537d7aa3c6789839e39172f3a31c4cd478ea75457802c5",
+  "repositories": [
+   "Burrow",
+   "go-dnscollector",
+   "goka",
+   "kafka-pixy",
+   "plugins",
+   "tiflow",
+   "watermill-kafka"
+  ],
+  "restore_seconds": 29.822
+ }
+}

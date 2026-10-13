@@ -36,6 +36,22 @@ consumer plane as unavailable.
 production history (17 repositories, 2,790 file versions) were covered with
 the right state and class. There were 0 extra rows and 0 wrong topics.
 
+**Operating envelope (this host: 12 CPUs, 16 GB; 7 repositories).**
+
+| Measure | Value |
+|---|---|
+| Cold start to every producer run published | 49 s |
+| Restart, or recovery after SIGKILL, to published | 3.3 s |
+| Online backup | 165 MiB |
+| Restore | 30 s |
+| Data dir | 472 MiB |
+| Topic query p95 | 114 ms |
+| Peak session RSS | 509 MiB |
+
+**Authorization.** Anonymous requests are refused (401). A member's census
+covers only its visible repositories, and a bundle covering repositories it
+cannot see is not readable to it (404).
+
 **Owner.** Ben Meddeb, with Claude as lead implementer.
 
 **Reviewer and adjudicator.** Claude, as named by Ben. This is not an

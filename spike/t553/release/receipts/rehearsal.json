@@ -1,0 +1,162 @@
+{
+ "binary_sha256": "sha256:8c02e391be5a102e57ad575d3dd4c829cd84d10a00301bed24fe60ff4c80459f",
+ "data_bytes": 494939788,
+ "expected_by_repository": {
+  "Burrow": {
+   "ambiguous-library-import": 0,
+   "call-expr": 0,
+   "invalid-topic-literal": 0,
+   "non-literal-expr": 0,
+   "selector-expr": 0,
+   "unresolved-ident": 0
+  },
+  "go-dnscollector": {
+   "ambiguous-library-import": 0,
+   "call-expr": 0,
+   "invalid-topic-literal": 0,
+   "non-literal-expr": 0,
+   "selector-expr": 1,
+   "unresolved-ident": 0
+  },
+  "goka": {
+   "ambiguous-library-import": 0,
+   "call-expr": 0,
+   "invalid-topic-literal": 0,
+   "non-literal-expr": 0,
+   "selector-expr": 0,
+   "unresolved-ident": 2
+  },
+  "kafka-pixy": {
+   "ambiguous-library-import": 0,
+   "call-expr": 0,
+   "invalid-topic-literal": 0,
+   "non-literal-expr": 0,
+   "selector-expr": 0,
+   "unresolved-ident": 2
+  },
+  "plugins": {
+   "ambiguous-library-import": 0,
+   "call-expr": 0,
+   "invalid-topic-literal": 0,
+   "non-literal-expr": 0,
+   "selector-expr": 0,
+   "unresolved-ident": 4
+  },
+  "tiflow": {
+   "ambiguous-library-import": 0,
+   "call-expr": 0,
+   "invalid-topic-literal": 0,
+   "non-literal-expr": 0,
+   "selector-expr": 0,
+   "unresolved-ident": 8
+  },
+  "watermill-kafka": {
+   "ambiguous-library-import": 0,
+   "call-expr": 0,
+   "invalid-topic-literal": 0,
+   "non-literal-expr": 0,
+   "selector-expr": 0,
+   "unresolved-ident": 1
+  }
+ },
+ "expected_total": {
+  "ambiguous-library-import": 0,
+  "call-expr": 0,
+  "invalid-topic-literal": 0,
+  "non-literal-expr": 0,
+  "selector-expr": 1,
+  "unresolved-ident": 17
+ },
+ "phases": {
+  "backup-restore": {
+   "census_matches_oracle": true,
+   "ready_seconds": 1.506,
+   "rss": {
+    "mean_bytes": 233553920,
+    "peak_bytes": 262205440,
+    "peak_processes": 3,
+    "samples": 109
+   },
+   "seconds_to_published": 55.451,
+   "stop": {
+    "outcome": "success",
+    "stop_mode": "graceful",
+    "wall_seconds": 57.098
+   }
+  },
+  "cold": {
+   "anonymous": 401,
+   "capabilities": [
+    "kafka-topic-usage",
+    "service-catalog-v2"
+   ],
+   "census_matches_oracle": true,
+   "member_census_matches": true,
+   "member_reads_admin_bundle": 404,
+   "query_latency": {
+    "max_ms": 116.51,
+    "n": 60,
+    "p50_ms": 107.87,
+    "p95_ms": 114.22,
+    "p99_ms": 116.51
+   },
+   "ready_seconds": 2.508,
+   "rss": {
+    "mean_bytes": 250169437,
+    "peak_bytes": 533352448,
+    "peak_processes": 3,
+    "samples": 109
+   },
+   "seconds_to_published": 48.828,
+   "stop": {
+    "outcome": "success",
+    "stop_mode": "graceful",
+    "wall_seconds": 58.258
+   }
+  },
+  "hard-death": {
+   "census_matches_oracle": true,
+   "ready_seconds": 1.254,
+   "rss": {
+    "mean_bytes": 248582144,
+    "peak_bytes": 249696256,
+    "peak_processes": 2,
+    "samples": 7
+   },
+   "seconds_to_published": 3.292,
+   "stop": {
+    "outcome": "success",
+    "stop_mode": "graceful",
+    "wall_seconds": 4.687
+   }
+  },
+  "restart": {
+   "backup_bytes": 173460307,
+   "census_matches_oracle": true,
+   "ready_seconds": 1.505,
+   "rss": {
+    "mean_bytes": 255747803,
+    "peak_bytes": 259710976,
+    "peak_processes": 2,
+    "samples": 21
+   },
+   "seconds_to_published": 3.295,
+   "stop": {
+    "outcome": "success",
+    "stop_mode": "hard_kill",
+    "wall_seconds": 11.817
+   }
+  }
+ },
+ "repositories": {
+  "Burrow": "local/home/ben/phebs-rehearsals/t553-release-20261013/rehearsal/corpus/Burrow",
+  "go-dnscollector": "local/home/ben/phebs-rehearsals/t553-release-20261013/rehearsal/corpus/go-dnscollector",
+  "goka": "local/home/ben/phebs-rehearsals/t553-release-20261013/rehearsal/corpus/goka",
+  "kafka-pixy": "local/home/ben/phebs-rehearsals/t553-release-20261013/rehearsal/corpus/kafka-pixy",
+  "plugins": "local/home/ben/phebs-rehearsals/t553-release-20261013/rehearsal/corpus/plugins",
+  "tiflow": "local/home/ben/phebs-rehearsals/t553-release-20261013/rehearsal/corpus/tiflow",
+  "watermill-kafka": "local/home/ben/phebs-rehearsals/t553-release-20261013/rehearsal/corpus/watermill-kafka"
+ },
+ "restore_seconds": 29.822,
+ "schema": "t553-producer-release-rehearsal-v1"
+}
