@@ -10810,3 +10810,114 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   checks pass. No installed-generation PASS, host image, offline bundle,
   privilege, review, merge, scale, release, or ceremony claim follows from
   this handoff.
+
+- **2026-10-13 — T57.1 composed Topics inventory contract.** Epic 57's first
+  slice composes the two independently released Kafka planes (T55.3 producer,
+  T56.3 consumer) into one topic overview. The released per-spelling detail
+  cannot answer that question: `find_kafka_topic_usage` requires its caller to
+  already know the spelling, so before this there was no way to discover which
+  source-spelled topics exist in scope. The composition is an immutable
+  `list_kafka_topics` proof bundle carrying a new omitempty `topic_inventory`
+  annex, so retained v1 bundle bytes and digests are unchanged and one content
+  address names the exact inventory, plane states and coverage a page was cut
+  from. Paging reads the persisted bundle rather than the corpus, so a later
+  page costs one reauthorized bundle read.
+
+  Both planes are always reported, in the closed canonical order the census and
+  the released-plane admission already use. An unadmitted plane is `unavailable`
+  at its plane row, on the shared census and on every topic row; an admitted
+  plane that found nothing for one spelling is `none`, a measured zero. The two
+  are never collapsed, so a producer-only release cannot make consumer zeros
+  read as measurements. Each admitted plane carries its own frozen quality card
+  naming `site-coverage` as the claim and `topic-precision`, `broker-identity`,
+  `environment-identity`, `runtime-activity` and `topology-completeness` as
+  unmeasured, because both released cards scored site coverage (762/762
+  producer, 640/640 consumer) and only 4 of the 762 producer sites spelled a
+  topic literally. An unadmitted plane carries no quality card and never borrows
+  the other plane's. Per-repository publication state reuses Contract Impact's
+  coverage rows and `impactCoverageState` instead of inventing a second state
+  machine, so one repository's failed extraction cannot flatten into another's
+  covered count.
+
+  The inventory deliberately carries no assertions and no evidence atoms. An
+  overview row names a topic, not a source site, so its citations are exact
+  assertion identities plus the pinned evidence commit — never a mutable HEAD
+  link — and the per-site spans a click-through needs stay with the detail
+  bundle that already resolves one spelling at a time. Each citation's commit is
+  taken from the exact run the read was fenced to — for a partitioned source
+  that is the fenced current root T55.3 selects, which the coverage
+  certificate's own run entry need not describe — and a run whose commit cannot
+  be re-identified from that selection fails the inventory rather than emitting
+  an unpinnable citation. A row the composition
+  cannot honestly label (no supporting site, a contradicted row, an
+  out-of-bounds, empty or reserved spelling, or a foreign repository) fails the
+  whole inventory rather than being skipped, because a silent skip would
+  understate that plane's coverage.
+
+  **Steady-state cost.** With no admitted plane the composition is unreachable
+  and adds no work; ordinary startup, query, sync, retry/no-op, publication,
+  lock, cache and child costs are unchanged. One inventory bundle adds exactly
+  one bounded prefix query per published plane and run (`ObjectPrefix:
+  "topic:"`, limit 5000, `AllowTruncate`) — the same shape the unresolved
+  census already pays — and resolves no evidence atoms at all, so its four
+  bounded queries across two planes match what one topic detail query already
+  performs. Composition is in memory over at most 5000 rows per plane per
+  repository, clipped deterministically to the first 2000 sorted spellings; a
+  clipped scan or a clipped row list marks the inventory incomplete and names
+  what clipped, so no lower bound is presented as a corpus total. Each row
+  retains at most eight citations, bounded at accumulation rather than after an
+  unbounded list is built, so a spelling mentioned in a hundred thousand files
+  costs what one mentioned in ten does; its file and site totals stay exact and
+  the omitted count names the remainder. The row deliberately renders no
+  client-library list: that would need either an unbounded distinct set or an
+  omitted count whose meaning depended on scan order, and the detail bundle
+  already names libraries exactly per assertion. No new lock, child,
+  cache, durable state or persistent payload is added beyond the existing
+  proof-bundle retention. No HTTP, MCP, UI, configuration or glossary surface is
+  registered: T57.2 owns routing and the presentation handoff, and T57.3 owns
+  the measured promotion. The released `find_kafka_topic_usage` answer keeps its
+  exact bytes and content address — the new annex is omitempty and only a
+  `list_kafka_topics` bundle sets it — so this slice does not re-shape a surface
+  whose T55.3/T56.3 release evidence it did not re-run.
+
+  **Validation posture.** Ten table-driven composition tests validate the
+  composed inventory directly, bypassing every transport: both-plane
+  composition and its measured-zero/`unavailable` distinction, released-plane
+  scoping for producer-alone, consumer-alone and both, a complete paged walk
+  with foreign/tampered/malformed cursor and page-bound refusals, refusal to
+  read another bundle kind plus a pin that the released detail bundle gains no
+  annex key, overview-versus-detail agreement as the drift pin on both planes'
+  domain and predicate literals, both ceilings, the per-row citation bound and
+  its scan-order prefix, that the overview reads no per-assertion detail, six
+  inconsistent-row refusals, and repository visibility — an invisible
+  repository contributes no topic, citation or count, its name never reaches the
+  persisted bytes, and losing visibility withdraws an already-composed page.
+  That last test was mutation-controlled: widening the visibility set makes the
+  denied repository's topic appear and the test fail, so it is not passing
+  vacuously. The `internal/api` package passes
+  completely normally (23.195s) and under race instrumentation (78.186s), as do
+  the dependent `internal/mcp` (7.966s), `internal/auth` (4.864s) and
+  `internal/extractionpublication` (48.573s) packages; gofmt, vet,
+  repository-pinned golangci-lint on the changed package (0 issues), glossary
+  verification, whitespace and whole-repository compilation pass. Two findings
+  are inherited and reproduce unchanged at the exact base commit `ccbcd8c2`:
+  `make docs-check` fails `TestDocumentationMapReachesTrackedDocs` because
+  `docs/README.md` does not reach the two Kafka quality protocols added by
+  T55.1/T56.1, and repository-wide lint retains one staticcheck `SA1019`
+  deprecation in the untouched
+  `internal/typedbazel/provider/input_worker_test.go`. Both are recorded rather
+  than repaired here, since `docs/README.md` is shared spine and neither file is
+  in this ticket's scope. A complete `cmd/phebs` package run (1771.702s) is red
+  only on `TestT422WorkspaceCleanupNativeComposition`,
+  `TestT422WorkspaceAllOwnersNativeComposition` and
+  `TestT422WorkspaceNativeComposition`, each expiring at its own 600.02s,
+  600.02s and 180.02s internal deadline. The same three, at the same durations,
+  reproduce at the exact base commit `ccbcd8c2` under an identical command
+  (1381.110s), and the log names the missing prerequisite —
+  `zoekt-git-index unavailable`, because `bin/` was not staged — so this is
+  inherited host-prerequisite red, not a T57.1 regression. No `internal/api` or
+  T57.1 path failed, and no test process, SurrealDB child or port-65499
+  listener survives this ticket's runs. The composition is not routed, so no
+  served surface,
+  quality, coverage, release, scale or SLO claim follows, and the two released
+  Kafka planes' own evidence is unchanged.

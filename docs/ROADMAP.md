@@ -325,6 +325,24 @@ and who owns each.
     equals the oracle through the lifecycle, and revoking the consumer alone
     leaves the producer served. See consumer protocol §9.
 
+- **Topics (Epic 57).**
+  - Done: T57.1 composes the two released planes into one topic inventory,
+    which the per-spelling detail could not answer because it requires the
+    caller to already know the spelling. Both planes are always reported
+    separately: an unadmitted plane is `unavailable` at the plane row, on the
+    census and on every topic row, while an admitted plane that found nothing
+    is `none`, a measured zero. Each admitted plane names its own frozen
+    site-coverage card and its explicit non-claims.
+  - The composition is an immutable `list_kafka_topics` bundle with an
+    omitempty annex, paged over the persisted bundle, so a later page costs one
+    reauthorized bundle read and never a corpus rescan. Retained v1 bundle bytes
+    are unchanged.
+  - Remaining, agent: T57.2 routes it over HTTP/MCP and receives the
+    presentation handoff for any UI change; T57.3 is the measured promotion for
+    the stated producer-only, consumer-only or combined product.
+  - Not claimed: nothing is served yet, so this grants no quality, coverage,
+    runtime topic activity, complete topology, release or scale result.
+
 Everything human-gated is listed above. Agent work proceeds on ungated
 tickets in the meantime.
 

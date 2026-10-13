@@ -19219,6 +19219,118 @@ Details are in `docs/KAFKA_CONSUMER_QUALITY_PROTOCOL.md` §9. Expires
 released Kafka planes, with separate per-plane publication/coverage/quality
 state; directly validate the composed topic inventory and paging/citations.
 
+*T57.1 (2026-10-13, Qoder lead): **composed Topics inventory contract.**
+Unblocked by T55.3 and T56.3: with both planes released, this epic's stated
+dependency ("one or both independently released Kafka planes, with the other
+explicitly unavailable") is satisfied.
+
+- **The gap it closes.** `find_kafka_topic_usage` requires its caller to already
+  know a spelling, so there was no way to discover which source-spelled topics
+  exist in scope. The composition enumerates them.
+- **Shape.** An immutable `list_kafka_topics` proof bundle carrying a new
+  omitempty `topic_inventory` annex, presented as a deterministic paged report
+  over the persisted bundle (the `ContractImpactReport` model). Retained v1
+  bundle bytes and digests are unchanged, and one content address names the
+  exact inventory, plane states and coverage a page was cut from.
+- **Per-plane state, never merged.** Both planes are always reported, in the
+  closed canonical order the census and the released-plane admission already
+  use. An unadmitted plane is `unavailable` at its plane row, on the shared
+  census and on every topic row; an admitted plane that found nothing for one
+  spelling is `none`, a measured zero. The two are never collapsed, so a
+  producer-only release cannot make consumer zeros read as measurements, and an
+  unadmitted plane carries no quality card and never borrows the other plane's.
+- **Quality state.** Each admitted plane names its own frozen card
+  (`phebs.kafka.producer` / `phebs.kafka.consumer`), the `site-coverage` claim,
+  its protocol document, and `topic-precision`, `broker-identity`,
+  `environment-identity`, `runtime-activity` and `topology-completeness` as
+  explicitly unmeasured — both cards scored site coverage (762/762 producer,
+  640/640 consumer) and only 4 of the 762 producer sites spelled a topic
+  literally. Per-repository publication and coverage state reuse Contract
+  Impact's coverage rows and `impactCoverageState` rather than a second state
+  machine, so one repository's failed extraction cannot flatten into another's
+  covered count.
+- **Citations.** An overview row names a topic, not a source site, so the bundle
+  carries no assertions and no evidence atoms: citations are exact assertion
+  identities plus the pinned evidence commit, never a mutable HEAD link, and the
+  per-site spans a click-through needs stay with the detail bundle that already
+  resolves one spelling at a time. Each citation's commit comes from the exact
+  run the read was fenced to — for a partitioned source, the fenced current root
+  T55.3 selects, which the coverage certificate's own run entry need not
+  describe — and a run whose commit cannot be re-identified from that selection
+  fails the inventory rather than emitting an unpinnable citation. A row the
+  composition cannot honestly label
+  (no supporting site, contradicted, an out-of-bounds, empty or reserved
+  spelling, a foreign repository) fails the whole inventory instead of
+  being skipped, because a silent skip would understate that plane's coverage.
+- **Ceilings.** One bounded prefix query per published plane and run
+  (`ObjectPrefix: "topic:"`, limit 5000, `AllowTruncate`) — the shape the
+  unresolved census already pays — composed in memory and clipped
+  deterministically to the first 2000 sorted spellings. A clipped scan or a
+  clipped row list marks the inventory incomplete and names what clipped, so no
+  lower bound is presented as a corpus total. Each row retains at most eight
+  citations, bounded at accumulation rather than after an unbounded list is
+  built, so a spelling mentioned in a hundred thousand files costs what one
+  mentioned in ten does; its file and site totals stay exact and the omitted
+  count names the remainder. The row renders no client-library list: that would
+  need either an unbounded distinct set or an omitted count whose meaning
+  depended on scan order, and the detail bundle already names libraries exactly
+  per assertion. Page size defaults to 50 and is bounded at 100;
+  the cursor is checksummed and bound to its own bundle.
+- **Tests.** Ten table-driven composition tests validate the inventory
+  directly, bypassing every transport: both-plane composition with the
+  measured-zero/`unavailable` distinction; released-plane scoping for
+  producer-alone, consumer-alone and both; a complete paged walk with foreign,
+  tampered and malformed cursor plus page-bound refusals; refusal to read
+  another bundle kind, with a pin that the released detail bundle gains no
+  annex key; overview-versus-detail agreement as the drift pin on both planes'
+  domain and predicate literals; both ceilings; the per-row citation bound and
+  its scan-order prefix; that the overview reads no per-assertion detail; six
+  inconsistent-row refusals; and repository visibility, where an invisible
+  repository contributes no topic, citation or count, its name never reaches the
+  persisted bytes, and losing visibility withdraws an already-composed page. The
+  inventory is asserted to resolve zero evidence atoms, and the visibility test
+  was mutation-controlled — widening the visibility set makes the denied
+  repository's topic appear and the test fail, so it is not passing vacuously.
+- **Not in this slice.** No HTTP, MCP, UI, configuration or glossary surface is
+  registered, so no operating guide changes: T57.2 owns routing, the
+  unavailable-plane wording and the presentation handoff. No new lock, child,
+  cache or durable state is added beyond the existing proof-bundle retention.
+  The released `find_kafka_topic_usage` bundle bytes are deliberately
+  unchanged: the new annex is omitempty and only a `list_kafka_topics` bundle
+  sets it, so the T55.3/T56.3-released detail answer keeps its exact content
+  address and its already per-plane census. The overview carries the new
+  per-plane quality and coverage state and is pinned to agree with the detail,
+  rather than re-shaping a released surface this ticket did not re-validate.
+
+Steady-state cost: none when no plane is admitted; when admitted, one inventory
+bundle adds one bounded prefix query per published plane and run and resolves no
+atoms, so its four bounded queries across two planes match what one existing
+topic detail query already performs. Later pages re-read the persisted bundle
+instead of rescanning the corpus. `internal/api` passes completely normally
+(23.195s) and under race instrumentation (78.186s), as do the dependent
+`internal/mcp` (7.966s), `internal/auth` (4.864s) and
+`internal/extractionpublication` (48.573s) packages; gofmt, vet,
+repository-pinned lint on the changed package (0 issues), glossary verification,
+whitespace and whole-repository compilation pass. Two findings are inherited and
+reproduce unchanged at the exact base commit `ccbcd8c2`: `make docs-check` fails
+`TestDocumentationMapReachesTrackedDocs` because `docs/README.md` does not reach
+the two Kafka quality protocols added by T55.1/T56.1, and repository-wide lint
+retains one staticcheck `SA1019` deprecation in the untouched
+`internal/typedbazel/provider/input_worker_test.go`. Both are recorded rather
+than repaired here: `docs/README.md` is shared spine and neither file is in this
+ticket's scope. A complete `cmd/phebs` package run (1771.702s) is red only on
+`TestT422WorkspaceCleanupNativeComposition`,
+`TestT422WorkspaceAllOwnersNativeComposition` and
+`TestT422WorkspaceNativeComposition`, each expiring at its own 600.02s, 600.02s
+and 180.02s internal deadline; the same three at the same durations reproduce at
+the exact base commit `ccbcd8c2` under an identical command (1381.110s), and the
+log names the missing prerequisite (`zoekt-git-index unavailable`, `bin/` not
+staged), so this is inherited host-prerequisite red rather than a T57.1
+regression. No `internal/api` or T57.1 path failed, and no test process,
+SurrealDB child or port-65499 listener survives this ticket's runs. No served
+surface, quality, coverage, release, scale or SLO
+claim follows, and the two released planes' own evidence is unchanged.*
+
 **T57.2 · Stable Topics UI/HTTP/MCP exposure** — route only admitted evidence,
 keep unsupported/unreleased planes explicitly unavailable, retain the complete
 unresolved census, and receive the presentation handoff for any UI change.

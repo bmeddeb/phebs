@@ -90,7 +90,11 @@ type ProofBundle struct {
 	// RelationshipCoverage is an optional T37.5 annex. Omitempty preserves
 	// byte-for-byte canonical re-encoding of retained v1 proof bundles.
 	RelationshipCoverage *RelationshipProofCoverage `json:"relationship_coverage,omitempty"`
-	Caveat               string                     `json:"caveat"`
+	// TopicInventory is the optional T57.1 composed-Topics annex, present only
+	// on a list_kafka_topics bundle. Omitempty preserves byte-for-byte
+	// canonical re-encoding of retained v1 proof bundles.
+	TopicInventory *TopicInventoryContent `json:"topic_inventory,omitempty"`
+	Caveat         string                 `json:"caveat"`
 
 	// visibilityReceipt is a request-local result fence. It is deliberately
 	// excluded from canonical proof JSON and persisted bundle identity.
@@ -958,6 +962,13 @@ func digestJSON(value any) string {
 	data, _ := json.Marshal(value)
 	sum := sha256.Sum256(data)
 	return "sha256:" + hex.EncodeToString(sum[:])
+}
+
+// isProofRetryable names the two store conditions that mean "the evidence
+// moved under this build" rather than "this build failed": the whole
+// coverage-digest sandwich is retried from the top for either one.
+func isProofRetryable(err error) bool {
+	return errors.Is(err, store.ErrConflict) || errors.Is(err, store.ErrNotFound)
 }
 
 func readProofBundle(ctx context.Context, opts Options, id string) (*ProofBundleEnvelope, error) {
