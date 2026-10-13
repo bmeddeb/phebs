@@ -435,6 +435,7 @@ func registerProofAPI(api huma.API, opts Options) {
 
 	registerProofBundleReadAPI(api, opts)
 	registerContractImpactAPI(api, opts, service)
+	registerTopicInventoryAPI(api, service)
 }
 
 func registerKafkaTopicUsageAPI(api huma.API, service *ProofService) {

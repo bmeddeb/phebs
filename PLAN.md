@@ -10921,3 +10921,69 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   served surface,
   quality, coverage, release, scale or SLO claim follows, and the two released
   Kafka planes' own evidence is unchanged.
+
+- **2026-10-13 — T57.2 slice 1 serves the composed Topics inventory over HTTP,
+  dark only.** Two routes join the experimental proof surface:
+  `GET /api/list_kafka_topics`, which composes and returns the immutable
+  inventory bundle, and `GET /api/topic_inventory/{id}`, which presents one
+  reauthorized page of it. A new `kafka-topic-inventory` capability advertises
+  them to authenticated callers, and `/api/version` stays always-open with its
+  anonymous response still omitting the whole capabilities array.
+
+  The deliberate boundary is admission. Both routes are registered only in the
+  experimental branch of `registerProofAPI`; the released-Kafka-plane branch
+  returns early exactly as before, so a binary admitted solely by a signed
+  `phebs.kafka.producer` or `phebs.kafka.consumer` record still serves only
+  `find_kafka_topic_usage` and bundle reads, still advertises only
+  `kafka-topic-usage`, and still lists the same MCP tools. That is what keeps the
+  T55.3/T56.3 release evidence describing the served surface: widening it here
+  would have made a released binary serve a product whose quality claim nobody
+  has measured. This follows T53.2, which admitted the standalone Buf WIRE
+  verdict under the dark switches until T53.3 bound its claim; T57.3 is the
+  corresponding measured Topics promotion.
+
+  Two parts of T57.2 stay open rather than being approximated. MCP needs a third
+  payload contract: only `mcp-payload-contract-edges-v1.0.json` and
+  `mcp-payload-coverage-v1.0.json` exist, and the proof-envelope projection is
+  assertion-driven — it refuses a bundle whose assertions lack their atoms —
+  while an inventory bundle carries no assertions by design, so projecting it
+  would yield an envelope with no facts. Serving the composed rows over MCP is a
+  payload-contract decision, not a routing one. The UI needs Ben's routed
+  presentation handoff, since backend work owns no UI change. The existing
+  Topics page still gates on `kafka-topic-usage` and is untouched.
+
+  **Steady-state cost.** No route is registered and no capability is added when
+  the proof service is absent, so an ordinary startup with the provisional
+  switches off performs no new work and allocates nothing. When admitted, one
+  `list_kafka_topics` request costs the T57.1 composition — one bounded prefix
+  query per published plane and run plus the census's own two, no
+  `ResolveEvidence` — and one existing bundle persist. Each later page costs one
+  `GetProofBundle` read of the exact stored bytes, one canonical re-encoding
+  check, one visibility re-check and an in-memory slice: no corpus rescan, no new
+  lock, cache, child or durable state. Query, sync, retry/no-op, publication and
+  startup costs are otherwise unchanged, and the released-plane path adds no
+  branch and no lookup.
+
+  **Validation posture.** Four transport tests pin the slice: both routes serve
+  and a report survives the JSON round trip with every plane's quality state
+  intact; all three released-plane admissions answer 404 on both routes while
+  still serving `find_kafka_topic_usage` and still advertising
+  `kafka-topic-usage`, so the negative is not vacuous; HTTP paging walks every
+  row through the query-string cursor, the route schema refuses `page_size=101`,
+  a foreign cursor is refused over the wire and an unknown content address is a
+  plain 404; and losing visibility of a cited repository turns a previously
+  readable page into a 404. The capability is asserted present for an
+  authenticated experimental caller and absent for a dark server and an
+  anonymous one. `internal/api` passes normally (12.597s) and under race
+  (41.772s), as do `internal/mcp` (3.481s), `internal/auth` (2.506s) and
+  `internal/extractionpublication` (35.085s); the production-assembly surface
+  pin `TestCallerMapOrdinarySurfaceFollowsProductionAssembly` passes with the two
+  experimental capability lists updated and every released-plane expectation left
+  byte-identical. gofmt, vet, pinned lint on the changed packages (0 issues) and
+  whole-repository compilation pass, and `docs/guides/OPERATIONS.md` documents
+  both routes beside the detail endpoint; `make docs-check` still fails only the
+  inherited `TestDocumentationMapReachesTrackedDocs`, with link resolution and
+  the sealed T11.1 digest both green. The T57.1 inherited findings are
+  unchanged and still reproduce at base. No MCP tool, UI, quality, coverage,
+  release, scale or SLO claim follows, and nothing here promotes the Topics
+  product.

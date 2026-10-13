@@ -19335,6 +19335,61 @@ claim follows, and the two released planes' own evidence is unchanged.*
 keep unsupported/unreleased planes explicitly unavailable, retain the complete
 unresolved census, and receive the presentation handoff for any UI change.
 
+*T57.2 slice 1 (2026-10-13, Qoder lead): **HTTP exposure, dark only.** Ben
+chose the HTTP-first slice and dark-switch-only admission.
+
+- **Routes.** `GET /api/list_kafka_topics` composes and returns the immutable
+  inventory bundle; `GET /api/topic_inventory/{id}` presents one page of it with
+  `page_size` (default 50, bound 100) and a checksummed `cursor`. A new
+  `kafka-topic-inventory` capability advertises both to authenticated callers,
+  and the anonymous `/api/version` response still omits the whole capabilities
+  array.
+- **The admission boundary is the point.** Both routes are registered only in the
+  experimental branch of `registerProofAPI`; the released-Kafka-plane branch
+  returns early exactly as before. A binary admitted solely by a signed
+  `phebs.kafka.producer` or `phebs.kafka.consumer` record still serves only
+  `find_kafka_topic_usage` and bundle reads, still advertises only
+  `kafka-topic-usage`, and still lists the same MCP tools — so the T55.3/T56.3
+  release evidence keeps describing the served surface. Widening it here would
+  have made a released binary serve a product whose quality nobody has measured.
+  This follows T53.2, which admitted the standalone Buf WIRE verdict dark until
+  T53.3 bound its claim.
+- **Planes stay explicit.** The served report keeps T57.1's per-plane
+  publication, coverage and quality state, the complete unresolved census, and
+  the `unavailable` / `none` distinction, so an unreleased plane's zeros never
+  read as measured over the wire either.
+- **Deferred, not approximated.** MCP needs a third payload contract: only
+  `mcp-payload-contract-edges-v1.0.json` and `mcp-payload-coverage-v1.0.json`
+  exist, and the proof-envelope projection is assertion-driven (it refuses a
+  bundle whose assertions lack their atoms) while an inventory bundle carries no
+  assertions by design, so projecting it would yield an envelope with no facts.
+  The UI needs Ben's routed presentation handoff; the existing Topics page still
+  gates on `kafka-topic-usage` and is untouched.
+
+Steady-state cost: no route is registered and no capability added when the proof
+service is absent, so an ordinary startup with the provisional switches off does
+no new work. When admitted, one list request costs the T57.1 composition plus one
+existing bundle persist; each later page costs one bundle read of the exact stored
+bytes, one canonical re-encoding check, one visibility re-check and an in-memory
+slice — no corpus rescan, no new lock, cache, child or durable state. The
+released-plane path adds no branch and no lookup. Four transport tests pin the
+slice, including that all three released-plane admissions 404 on both routes
+while still serving topic usage, that a foreign cursor is refused over the wire,
+and that losing visibility of a cited repository turns a readable page into a
+404. `internal/api` passes normally (12.597s) and under race (41.772s), as do
+`internal/mcp` (3.481s), `internal/auth` (2.506s) and
+`internal/extractionpublication` (35.085s);
+`TestCallerMapOrdinarySurfaceFollowsProductionAssembly` passes with the two
+experimental capability lists updated and every released-plane expectation left
+byte-identical. gofmt, vet, pinned lint on the changed packages (0 issues) and
+whole-repository compilation pass, and `docs/guides/OPERATIONS.md` documents
+both routes beside the detail endpoint; `make docs-check` still fails only the
+inherited `TestDocumentationMapReachesTrackedDocs`, with link resolution and the
+sealed T11.1 digest both green. The T57.1 inherited findings are unchanged. No
+MCP tool,
+UI, quality, coverage, release, scale or SLO claim follows, and this slice does
+not promote the Topics product — T57.3 does.*
+
 **T57.3 · Measured Topics promotion** — satisfy the common bar for the stated
 producer-only, consumer-only or combined product; none implies runtime topic
 activity, complete topology or equality across broker environments.

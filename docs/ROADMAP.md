@@ -337,11 +337,21 @@ and who owns each.
     omitempty annex, paged over the persisted bundle, so a later page costs one
     reauthorized bundle read and never a corpus rescan. Retained v1 bundle bytes
     are unchanged.
-  - Remaining, agent: T57.2 routes it over HTTP/MCP and receives the
-    presentation handoff for any UI change; T57.3 is the measured promotion for
-    the stated producer-only, consumer-only or combined product.
-  - Not claimed: nothing is served yet, so this grants no quality, coverage,
-    runtime topic activity, complete topology, release or scale result.
+  - Done: T57.2 slice 1 serves it over HTTP — `GET /api/list_kafka_topics` and
+    `GET /api/topic_inventory/{id}` with the `kafka-topic-inventory` capability
+    — admitted only by the provisional extraction switches. A binary admitted
+    solely by released Kafka planes still serves only `find_kafka_topic_usage`,
+    so the T55.3/T56.3 release evidence keeps describing the served surface.
+  - Remaining, agent: T57.2's MCP tool, which needs a third payload contract
+    because the proof-envelope projection is assertion-driven and an inventory
+    bundle carries no assertions.
+  - Remaining, Ben: the routed presentation handoff for any Topics UI change;
+    the existing page still gates on `kafka-topic-usage`.
+  - Remaining, agent: T57.3 is the measured promotion for the stated
+    producer-only, consumer-only or combined product.
+  - Not claimed: the inventory is served dark, so this grants no quality,
+    coverage, runtime topic activity, complete topology, release or scale
+    result.
 
 Everything human-gated is listed above. Agent work proceeds on ungated
 tickets in the meantime.

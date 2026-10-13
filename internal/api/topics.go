@@ -604,6 +604,40 @@ func renderTopicRowPlane(accumulator *topicRowAccumulator, plane topicPlane) Top
 	}
 }
 
+// registerTopicInventoryAPI serves the composed Topics overview (T57.2). It is
+// registered only on the experimental proof surface, never on the
+// released-Kafka-plane surface: a released plane still serves exactly
+// find_kafka_topic_usage and bundle reads, so the T55.3/T56.3 release evidence
+// continues to describe what a released binary actually serves. T57.3 owns
+// promoting the inventory onto its own measured claim.
+func registerTopicInventoryAPI(api huma.API, service *ProofService) {
+	type proofOut struct{ Body ProofBundleEnvelope }
+	huma.Get(api, "/api/list_kafka_topics", func(ctx context.Context, _ *struct{}) (*proofOut, error) {
+		envelope, err := service.ListKafkaTopics(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return &proofOut{Body: *envelope}, nil
+	})
+
+	type inventoryOut struct{ Body TopicInventoryReport }
+	type inventoryIn struct {
+		ID string `path:"id" minLength:"67" maxLength:"67" doc:"the content address returned by /api/list_kafka_topics"`
+		// PageSize zero means the server default; the bound is validated again
+		// inside the composition so the contract does not depend on the
+		// transport's own validation.
+		PageSize int    `query:"page_size" minimum:"0" maximum:"100" doc:"rows per page, 1 through 100; 0 selects the default of 50"`
+		Cursor   string `query:"cursor" maxLength:"4096" doc:"opaque continuation from a previous page of this same inventory"`
+	}
+	huma.Get(api, "/api/topic_inventory/{id}", func(ctx context.Context, in *inventoryIn) (*inventoryOut, error) {
+		report, err := service.BuildTopicInventory(ctx, in.ID, in.PageSize, in.Cursor)
+		if err != nil {
+			return nil, err
+		}
+		return &inventoryOut{Body: *report}, nil
+	})
+}
+
 // validKafkaTopicSpelling applies the same KD2 identity bounds the topic detail
 // path enforces, so a composed row can never carry a spelling the detail query
 // would refuse.

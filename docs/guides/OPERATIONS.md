@@ -4622,6 +4622,37 @@ succeeds (the first five remain available when compatibility is unavailable):
   topic cannot be matched to any literal — while whole-file extraction gaps
   remain in the coverage certificate. The endpoint never makes a completeness
   claim.
+- `GET /api/list_kafka_topics` (capability `kafka-topic-inventory`) composes the
+  topic overview the per-spelling query cannot: it enumerates every distinct
+  source-spelled topic in scope across the admitted Kafka planes and returns one
+  immutable `list_kafka_topics` proof bundle whose `topic_inventory` annex holds
+  the composed rows plus each plane's separate publication, coverage and quality
+  state. The bundle carries no assertions and no evidence atoms, because an
+  overview row names a topic rather than a source site, so its citations are
+  exact assertion identities plus the pinned evidence commit and the per-site
+  spans stay with `find_kafka_topic_usage`. A plane no admitted recipe publishes
+  is `unavailable` at its plane row, on the census and on every topic row, while
+  an admitted plane that found nothing for one spelling is `none`, a measured
+  zero; the two are never collapsed, so a producer-only admission cannot make
+  consumer zeros read as measurements. Each admitted plane names its own frozen
+  site-coverage card and what that card leaves unmeasured. One bounded prefix
+  query per published plane and run feeds the composition, and a clipped scan or
+  a clipped row list marks the inventory incomplete and names what clipped, so no
+  lower bound reads as a corpus total.
+- `GET /api/topic_inventory/{id}?page_size=<1-100>&cursor=<opaque>` presents one
+  page of that immutable bundle. `id` is the content address
+  `list_kafka_topics` returned, `page_size` defaults to 50 and is bounded at
+  100, and `cursor` is the checksummed continuation from the previous page of
+  the same inventory. Every page re-authorizes the repositories the bundle cites
+  and re-verifies its canonical bytes, so a caller that lost access to a cited
+  repository gets a 404 rather than its rows, and a cursor minted for another
+  inventory is refused. Paging re-reads the persisted bundle and never rescans
+  the corpus. Both routes are admitted only by the provisional extraction
+  switches: a binary admitted solely by released Kafka planes still serves
+  exactly `find_kafka_topic_usage` and bundle reads, so the T55.3/T56.3 release
+  evidence keeps describing what that binary serves, and T57.3 owns promoting
+  the inventory onto its own measured Topics claim. There is no MCP tool and no
+  UI for the inventory yet.
 - `GET /api/get_extraction_coverage?domains=<comma-separated-domains>` returns
   coverage only; omitted domains select these ten domains: `grpc-caller`, `grpc-consumer`,
   `kafka-consumer`, `kafka-producer`, `proto-contract`, `scip-proto-field`,

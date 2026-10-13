@@ -344,7 +344,8 @@ func serveCallerSurfaces(t *testing.T, cfg *config.Config) servedCallerSurfaces 
 func TestCallerMapOrdinarySurfaceFollowsProductionAssembly(t *testing.T) {
 	everyProduct := []string{
 		"contract-atlas", "contract-caller-comparison", "contract-caller-map", "contract-compatibility",
-		"contract-impact-report", "kafka-topic-usage", "service-catalog-v2", "wire-compatibility",
+		"contract-impact-report", "kafka-topic-inventory", "kafka-topic-usage", "service-catalog-v2",
+		"wire-compatibility",
 	}
 	tests := []struct {
 		name      string
@@ -374,8 +375,9 @@ func TestCallerMapOrdinarySurfaceFollowsProductionAssembly(t *testing.T) {
 			configure: func(cfg *config.Config) { cfg.Experimental.ProvisionalKafkaExtraction = true },
 			want: servedCallerSurfaces{
 				capabilities: []string{
-					"contract-atlas", "contract-compatibility", "contract-impact-report", "kafka-topic-usage",
-					"service-catalog-v2", "wire-compatibility",
+					"contract-atlas", "contract-compatibility", "contract-impact-report",
+					"kafka-topic-inventory", "kafka-topic-usage", "service-catalog-v2",
+					"wire-compatibility",
 				},
 				proofTool: true, topicTool: true, wireTool: true,
 			},

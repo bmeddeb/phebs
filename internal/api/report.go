@@ -30,7 +30,11 @@ func proofCapabilities(opts Options) []string {
 	if len(opts.KafkaReleasedPlanes) > 0 {
 		return []string{"kafka-topic-usage"}
 	}
-	capabilities := []string{"contract-impact-report", "kafka-topic-usage"}
+	// The composed inventory is advertised only here, on the experimental
+	// surface that actually serves it (T57.2). A released Kafka plane keeps
+	// returning kafka-topic-usage alone, so its capability list still
+	// describes exactly what that released binary serves.
+	capabilities := []string{"contract-impact-report", "kafka-topic-inventory", "kafka-topic-usage"}
 	if service.CompatibilityAvailable() {
 		capabilities = append(capabilities, "contract-compatibility")
 	}

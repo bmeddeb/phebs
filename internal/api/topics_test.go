@@ -2,9 +2,11 @@ package api_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"slices"
 	"strconv"
 	"strings"
@@ -815,4 +817,246 @@ func TestTopicInventoryRespectsRepositoryVisibility(t *testing.T) {
 func statusIs(err error, status int) bool {
 	var coded huma.StatusError
 	return errors.As(err, &coded) && coded.GetStatus() == status
+}
+
+func getInventory(
+	t *testing.T,
+	handler http.Handler,
+	target string,
+) (int, string, api.TopicInventoryReport) {
+	t.Helper()
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, target, nil))
+	var report api.TopicInventoryReport
+	if recorder.Code == http.StatusOK {
+		if err := json.Unmarshal(recorder.Body.Bytes(), &report); err != nil {
+			t.Fatalf("decoding %s: %v", target, err)
+		}
+	}
+	return recorder.Code, recorder.Body.String(), report
+}
+
+func versionBody(t *testing.T, handler http.Handler) string {
+	t.Helper()
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/api/version", nil))
+	return recorder.Body.String()
+}
+
+// topicHTTPFixture is one repository with both planes published and two
+// spellings, shared by the T57.2 transport tests.
+func topicHTTPFixture(t *testing.T) *proofAPIStore {
+	t.Helper()
+	const repo = "github.com/allowed/kafka"
+	fixture := newTopicFixture(repo)
+	first, firstEvidence := topicAssertion(
+		repo, fixture.producerRun.ID, "produce-a", "PRODUCES_TO_TOPIC", "orders-v1", 2, "segmentio/kafka-go",
+	)
+	second, secondEvidence := topicAssertion(
+		repo, fixture.producerRun.ID, "produce-b", "PRODUCES_TO_TOPIC", "payments", 1, "segmentio/kafka-go",
+	)
+	consumed, consumedEvidence := topicAssertion(
+		repo, fixture.consumerRun.ID, "consume-a", "CONSUMES_FROM_TOPIC", "orders-v1", 1, "segmentio/kafka-go",
+	)
+	fixture.add(first, firstEvidence)
+	fixture.add(second, secondEvidence)
+	fixture.add(consumed, consumedEvidence)
+	return fixture.store()
+}
+
+// TestTopicInventoryHTTPExposure pins T57.2's first slice: the experimental
+// proof surface serves the composed inventory and its paged presentation, the
+// report survives a JSON round trip with its per-plane state intact, and the
+// new capability is advertised to an authenticated caller only.
+func TestTopicInventoryHTTPExposure(t *testing.T) {
+	st := topicHTTPFixture(t)
+	handler := proofHandler(st, "user:member", nil)
+
+	code, body, envelope := getProof(t, handler, "/api/list_kafka_topics")
+	if code != http.StatusOK {
+		t.Fatalf("list_kafka_topics = %d %s", code, body)
+	}
+	if envelope.Bundle.Query.Kind != topicInventoryKind || envelope.Bundle.TopicInventory == nil {
+		t.Fatalf("inventory bundle = %+v", envelope.Bundle.Query)
+	}
+	// The bundle read route still serves it, so a client can re-fetch the exact
+	// content address it was given.
+	if code, _, reread := getProof(t, handler, "/api/proof_bundles/"+envelope.ID); code != http.StatusOK ||
+		reread.ID != envelope.ID || reread.Bundle.TopicInventory == nil {
+		t.Fatalf("bundle re-read = %d", code)
+	}
+
+	code, body, report := getInventory(t, handler, "/api/topic_inventory/"+envelope.ID)
+	if code != http.StatusOK {
+		t.Fatalf("topic_inventory = %d %s", code, body)
+	}
+	if report.BundleID != envelope.ID || report.SchemaVersion == "" || report.Caveat == "" {
+		t.Fatalf("report is not bound to its bundle: %+v", report)
+	}
+	if len(report.Topics) != 2 || report.Topics[0].Topic != "orders-v1" || report.Topics[1].Topic != "payments" {
+		t.Fatalf("composed rows did not survive the wire: %+v", report.Topics)
+	}
+	if len(report.Planes) != 2 {
+		t.Fatalf("plane rows did not survive the wire: %+v", report.Planes)
+	}
+	for _, plane := range report.Planes {
+		if plane.Quality == nil || plane.Quality.Claim != "site-coverage" ||
+			len(plane.Quality.Unmeasured) == 0 {
+			t.Fatalf("plane %s lost its quality state on the wire: %+v", plane.Plane, plane.Quality)
+		}
+	}
+	if report.Census == nil || report.Pagination.Total != 2 || !report.Pagination.Complete {
+		t.Fatalf("report lost its census or pagination: %+v", report.Pagination)
+	}
+
+	if got := versionBody(t, handler); !strings.Contains(got, "kafka-topic-inventory") {
+		t.Fatalf("an authenticated experimental caller is not told the inventory exists: %s", got)
+	}
+	// Dark and anonymous callers learn nothing about it.
+	if got := versionBody(t, api.New(api.Options{Version: "test", Store: st})); strings.Contains(got, "kafka-topic-inventory") {
+		t.Fatalf("a dark server advertised the inventory: %s", got)
+	}
+	if got := versionBody(t, proofHandler(st, "", nil)); strings.Contains(got, "kafka-topic-inventory") {
+		t.Fatalf("an anonymous caller was advertised the inventory: %s", got)
+	}
+}
+
+// TestTopicInventoryRoutesStayDarkUnderReleasedPlanes is the pin that protects
+// the T55.3/T56.3 release evidence: a binary admitted only by released Kafka
+// planes still serves exactly find_kafka_topic_usage and bundle reads, and
+// never the composed inventory, which has no measured Topics claim of its own
+// until T57.3.
+func TestTopicInventoryRoutesStayDarkUnderReleasedPlanes(t *testing.T) {
+	for _, planes := range [][]string{{"producer"}, {"consumer"}, {"consumer", "producer"}} {
+		t.Run(strings.Join(planes, "+"), func(t *testing.T) {
+			st := topicHTTPFixture(t)
+			handler := api.New(api.Options{
+				Version: "test", Store: st, Evidence: st, ProofBundles: st,
+				KafkaReleasedPlanes:   planes,
+				Visible:               func(context.Context) func(store.Repo) bool { return nil },
+				Principal:             func(context.Context) string { return "user:member" },
+				AuthorizationProvider: "test-permissions-v1",
+			})
+			// The released detail surface still works, so this is not a
+			// vacuous pass over a broken handler.
+			if code, body, _ := getProof(t, handler, "/api/find_kafka_topic_usage?topic=orders-v1"); code != http.StatusOK {
+				t.Fatalf("released topic usage = %d %s", code, body)
+			}
+			code, body, _ := getProof(t, handler, "/api/list_kafka_topics")
+			if code != http.StatusNotFound {
+				t.Fatalf("list_kafka_topics answered %d under a released admission: %s", code, body)
+			}
+			// Even a bundle ID composed elsewhere is not readable here: the
+			// presentation route is not registered at all.
+			if code, _, _ := getInventory(t, handler, "/api/topic_inventory/pb_"+strings.Repeat("0", 64)); code != http.StatusNotFound {
+				t.Fatalf("topic_inventory answered %d under a released admission", code)
+			}
+			if got := versionBody(t, handler); strings.Contains(got, "kafka-topic-inventory") {
+				t.Fatalf("a released plane advertised the inventory: %s", got)
+			}
+			if got := versionBody(t, handler); !strings.Contains(got, "kafka-topic-usage") {
+				t.Fatalf("a released plane lost its own capability: %s", got)
+			}
+		})
+	}
+}
+
+// TestTopicInventoryHTTPPagingAndValidation pins the transport's paging and its
+// input bounds: a cursor round-trips through the query string, the page bound
+// is enforced by the route schema, and an unknown content address is a plain
+// miss rather than an error about inventory internals.
+func TestTopicInventoryHTTPPagingAndValidation(t *testing.T) {
+	const repo = "github.com/allowed/kafka"
+	fixture := newTopicFixture(repo)
+	for index := range 5 {
+		assertion, evidence := topicAssertion(
+			repo, fixture.producerRun.ID, "produce-"+strconv.Itoa(index),
+			"PRODUCES_TO_TOPIC", "topic-"+strconv.Itoa(index), 1, "segmentio/kafka-go",
+		)
+		fixture.add(assertion, evidence)
+	}
+	handler := proofHandler(fixture.store(), "user:member", nil)
+	code, body, envelope := getProof(t, handler, "/api/list_kafka_topics")
+	if code != http.StatusOK {
+		t.Fatalf("list_kafka_topics = %d %s", code, body)
+	}
+
+	base := "/api/topic_inventory/" + envelope.ID
+	var walked []string
+	cursor := ""
+	for page := 0; page < 10; page++ {
+		target := base + "?page_size=2"
+		if cursor != "" {
+			target += "&cursor=" + cursor
+		}
+		code, body, report := getInventory(t, handler, target)
+		if code != http.StatusOK {
+			t.Fatalf("page %d = %d %s", page, code, body)
+		}
+		for _, row := range report.Topics {
+			walked = append(walked, row.Topic)
+		}
+		if report.Pagination.NextCursor == "" {
+			break
+		}
+		cursor = report.Pagination.NextCursor
+	}
+	want := []string{"topic-0", "topic-1", "topic-2", "topic-3", "topic-4"}
+	if !slices.Equal(walked, want) {
+		t.Fatalf("HTTP paged walk = %+v, want %+v", walked, want)
+	}
+
+	// The route schema rejects an out-of-bound page before the composition runs.
+	if code, _, _ := getInventory(t, handler, base+"?page_size=101"); code != http.StatusUnprocessableEntity &&
+		code != http.StatusBadRequest {
+		t.Fatalf("page_size=101 = %d, want a 4xx refusal", code)
+	}
+	// A cursor is bound to its own inventory, over the wire as well.
+	_, _, first := getInventory(t, handler, base+"?page_size=2")
+	other := newTopicFixture(repo)
+	assertion, evidence := topicAssertion(
+		repo, other.producerRun.ID, "produce-solo", "PRODUCES_TO_TOPIC", "solo", 1, "segmentio/kafka-go",
+	)
+	other.add(assertion, evidence)
+	otherHandler := proofHandler(other.store(), "user:member", nil)
+	_, otherBody, otherEnvelope := getProof(t, otherHandler, "/api/list_kafka_topics")
+	if otherEnvelope.ID == envelope.ID {
+		t.Fatalf("the second inventory reused a content address: %s", otherBody)
+	}
+	if code, _, _ := getInventory(
+		t, otherHandler,
+		"/api/topic_inventory/"+otherEnvelope.ID+"?page_size=2&cursor="+first.Pagination.NextCursor,
+	); code != http.StatusBadRequest {
+		t.Fatalf("a foreign cursor over HTTP = %d, want 400", code)
+	}
+	if code, _, _ := getInventory(t, handler, "/api/topic_inventory/pb_"+strings.Repeat("0", 64)); code != http.StatusNotFound {
+		t.Fatalf("an unknown content address = %d, want 404", code)
+	}
+}
+
+// TestTopicInventoryHTTPVisibilityFence pins that authorization is re-checked
+// on every page rather than only when the inventory was composed: a caller who
+// loses access to a cited repository gets a plain miss, not the rows.
+func TestTopicInventoryHTTPVisibilityFence(t *testing.T) {
+	st := topicHTTPFixture(t)
+	const repo = "github.com/allowed/kafka"
+	visible := map[string]bool{repo: true}
+	handler := proofHandler(st, "user:member", &visible)
+
+	code, body, envelope := getProof(t, handler, "/api/list_kafka_topics")
+	if code != http.StatusOK {
+		t.Fatalf("list_kafka_topics = %d %s", code, body)
+	}
+	if code, _, report := getInventory(t, handler, "/api/topic_inventory/"+envelope.ID); code != http.StatusOK ||
+		len(report.Topics) != 2 {
+		t.Fatalf("visible read = %d %+v", code, report.Topics)
+	}
+
+	delete(visible, repo)
+	if code, body, _ := getProof(t, handler, "/api/list_kafka_topics"); code != http.StatusOK {
+		t.Fatalf("composing with nothing visible = %d %s", code, body)
+	}
+	if code, _, _ := getInventory(t, handler, "/api/topic_inventory/"+envelope.ID); code != http.StatusNotFound {
+		t.Fatalf("reading a cited-but-no-longer-visible inventory = %d, want 404", code)
+	}
 }
