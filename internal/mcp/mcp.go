@@ -56,10 +56,10 @@ type Options struct {
 	// Compatibility enables T14.3 only after the pinned Buf checker and its
 	// host sandbox have initialized successfully.
 	Compatibility CompatibilityQueries
-	// KafkaProducerOnly restricts the proof tools to find_kafka_topic_usage,
-	// matching an HTTP proof service admitted only by a released producer
-	// plane (T55.2).
-	KafkaProducerOnly bool
+	// KafkaTopicUsageOnly restricts the proof tools to find_kafka_topic_usage,
+	// matching an HTTP proof service admitted only by released Kafka planes
+	// (T55.2/T56.2).
+	KafkaTopicUsageOnly bool
 	// WireCompatibility enables the standalone Buf WIRE verdict tool (T53.2):
 	// the verdict alone, with no proof bundle or field-reference evidence.
 	WireCompatibility compat.Service
@@ -197,7 +197,7 @@ func registerProofTools(s *sdk.Server, opts Options) {
 	if opts.Proofs == nil {
 		return
 	}
-	if opts.KafkaProducerOnly {
+	if opts.KafkaTopicUsageOnly {
 		registerKafkaTopicUsageTool(s, opts)
 		return
 	}

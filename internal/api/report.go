@@ -27,7 +27,7 @@ func proofCapabilities(opts Options) []string {
 	if service == nil {
 		return nil
 	}
-	if opts.KafkaProducerOnly {
+	if len(opts.KafkaReleasedPlanes) > 0 {
 		return []string{"kafka-topic-usage"}
 	}
 	capabilities := []string{"contract-impact-report", "kafka-topic-usage"}

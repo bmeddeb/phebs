@@ -75,14 +75,14 @@ type BundleEvidence struct {
 // ProofBundle is canonical content. Its ID is sha256 over the JSON encoding
 // of this value and therefore lives only in ProofBundleEnvelope.
 type ProofBundle struct {
-	SchemaVersion     string                      `json:"schema_version"`
-	Query             ProofQuery                  `json:"query"`
-	Assertions        []store.Assertion           `json:"assertions"`
-	Evidence          []BundleEvidence            `json:"evidence"`
-	UnresolvedCensus  *KafkaTopicCensus           `json:"unresolved_census,omitempty"`
+	SchemaVersion    string            `json:"schema_version"`
+	Query            ProofQuery        `json:"query"`
+	Assertions       []store.Assertion `json:"assertions"`
+	Evidence         []BundleEvidence  `json:"evidence"`
+	UnresolvedCensus *KafkaTopicCensus `json:"unresolved_census,omitempty"`
 	// ExactAuthorities names the partitioned roots a topic-usage bundle read
 	// in place of legacy runs (T55.3); empty for every other bundle.
-	ExactAuthorities []ContractCatalogAuthority `json:"exact_authorities,omitempty"`
+	ExactAuthorities  []ContractCatalogAuthority  `json:"exact_authorities,omitempty"`
 	Coverage          extract.CoverageCertificate `json:"coverage"`
 	ExtractorVersions []BundleExtractor           `json:"extractor_versions"`
 	VisibilityContext VisibilityContext           `json:"visibility_context"`
@@ -115,7 +115,7 @@ type KafkaTopicCensus struct {
 	ProducerPublishedRuns int `json:"producer_published_runs"`
 	ConsumerPublishedRuns int `json:"consumer_published_runs"`
 	// UnavailablePlanes names planes no admitted recipe publishes, so their
-	// zeros can never read as measured (T55.2: a released producer alone).
+	// zeros can never read as measured (T55.2/T56.2: one released plane alone).
 	UnavailablePlanes []string `json:"unavailable_planes,omitempty"`
 	// Truncated lists "plane:class" entries whose counts are lower bounds:
 	// one repository exceeded the bounded per-plane query limit. All classes
@@ -257,8 +257,14 @@ func (s *ProofService) FindKafkaTopicUsage(ctx context.Context, topic string) (*
 		{Domain: "kafka-producer", Predicate: "PRODUCES_TO_TOPIC", Object: "topic:" + topic},
 		{Domain: "kafka-consumer", Predicate: "CONSUMES_FROM_TOPIC", Object: "topic:" + topic},
 	}
-	if s.opts.KafkaProducerOnly {
-		query.Domains, filters = []string{"kafka-producer"}, filters[:1]
+	if released := s.opts.KafkaReleasedPlanes; len(released) > 0 {
+		query.Domains, filters = nil, slices.DeleteFunc(filters, func(f assertionFilter) bool {
+			return !slices.Contains(released, strings.TrimPrefix(f.Domain, "kafka-"))
+		})
+		for _, filter := range filters {
+			query.Domains = append(query.Domains, filter.Domain)
+		}
+		slices.Sort(query.Domains)
 	}
 	return buildProofBundleWithCensus(ctx, s.opts, query, filters, nil, true)
 }
@@ -335,7 +341,7 @@ func registerProofAPI(api huma.API, opts Options) {
 	if service == nil {
 		return
 	}
-	if opts.KafkaProducerOnly {
+	if len(opts.KafkaReleasedPlanes) > 0 {
 		registerKafkaTopicUsageAPI(api, service)
 		registerProofBundleReadAPI(api, opts)
 		return
@@ -534,8 +540,12 @@ func buildProofBundleValue(
 		var census *KafkaTopicCensus
 		if withCensus {
 			census, err = collectKafkaTopicCensus(ctx, opts.Evidence, certificate, sources)
-			if err == nil && opts.KafkaProducerOnly {
-				census.UnavailablePlanes = []string{"consumer"}
+			if err == nil && len(opts.KafkaReleasedPlanes) > 0 {
+				for _, plane := range []string{"consumer", "producer"} {
+					if !slices.Contains(opts.KafkaReleasedPlanes, plane) {
+						census.UnavailablePlanes = append(census.UnavailablePlanes, plane)
+					}
+				}
 			}
 			if err != nil {
 				if errors.Is(err, store.ErrConflict) || errors.Is(err, store.ErrNotFound) {
@@ -599,7 +609,7 @@ func buildProofBundleValue(
 		bundle := ProofBundle{
 			SchemaVersion: proofBundleSchemaVersion, Query: query,
 			Assertions: assertions, Evidence: evidence, UnresolvedCensus: census,
-			ExactAuthorities: nonEmptyAuthorities(sources),
+			ExactAuthorities:  nonEmptyAuthorities(sources),
 			Coverage:          *certificate,
 			ExtractorVersions: certificateExtractors(certificate),
 			VisibilityContext: visibilityContext(ctx, opts, certificate),

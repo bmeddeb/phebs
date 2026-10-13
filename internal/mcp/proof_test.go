@@ -775,7 +775,7 @@ func TestProofEnvelopeQualificationIsServerRendered(t *testing.T) {
 // compatibility tool.
 func TestKafkaProducerOnlyListsOnlyTopicUsage(t *testing.T) {
 	ctx := t.Context()
-	s := NewServer(Options{Version: "test", Proofs: schemaProofQueries{}, KafkaProducerOnly: true})
+	s := NewServer(Options{Version: "test", Proofs: schemaProofQueries{}, KafkaTopicUsageOnly: true})
 	serverTransport, clientTransport := sdk.NewInMemoryTransports()
 	go func() { _, _ = s.Connect(ctx, serverTransport, nil) }()
 	session, err := sdk.NewClient(&sdk.Implementation{Name: "t", Version: "0"}, nil).Connect(ctx, clientTransport, nil)

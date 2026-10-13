@@ -93,7 +93,7 @@ func TestKafkaTopicUsageReadsTheCurrentPartitionedRoot(t *testing.T) {
 		},
 	}
 	handler := api.New(api.Options{
-		Version: "test", Store: st, Evidence: st, ProofBundles: st, KafkaProducerOnly: true,
+		Version: "test", Store: st, Evidence: st, ProofBundles: st, KafkaReleasedPlanes: []string{"producer"},
 		Visible:               func(context.Context) func(store.Repo) bool { return nil },
 		Principal:             func(context.Context) string { return "user:member" },
 		AuthorizationProvider: "test-permissions-v1",

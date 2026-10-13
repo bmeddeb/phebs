@@ -159,12 +159,12 @@ type Options struct {
 	// only for a released recipe with no declaration domain (T55.2: a released
 	// Kafka producer must not expose Atlas, which Epic 49 owns).
 	ContractCatalogUnadmitted bool
-	// KafkaProducerOnly marks a proof service admitted solely by a released
-	// Kafka producer plane (T55.2). It then serves topic usage over the
-	// kafka-producer domain and bundle reads, names the consumer plane as
-	// unavailable in the census, and registers no other proof, Impact or
-	// compatibility surface.
-	KafkaProducerOnly bool
+	// KafkaReleasedPlanes, when non-empty, marks a proof service admitted
+	// solely by released Kafka planes ("producer", "consumer"; T55.2/T56.2). It
+	// then serves topic usage over exactly those planes' domains and bundle
+	// reads, names every other plane unavailable in the census, and registers
+	// no other proof, Impact or compatibility surface.
+	KafkaReleasedPlanes []string
 	// WireCompatibility admits the standalone Buf WIRE verdict (T53.2): the
 	// same checker without proof bundles or field-reference enrichment. Nil
 	// keeps it undiscoverable; the caller decides admission.

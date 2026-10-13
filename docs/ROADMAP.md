@@ -318,8 +318,10 @@ and who owns each.
 
 - **Kafka consumer (Epic 56).**
   - Done: T56.1 site coverage passes (640/640 production sites).
-  - Next: T56.2/T56.3. These are the consumer registration, mirroring T55.2,
-    and its release.
+  - Done: T56.2 independent consumer registration. Released Kafka planes
+    are served on their own, and each unreleased plane is named unavailable.
+  - Next: T56.3, the consumer release. It re-signs the producer record for
+    the same binary.
 
 Everything human-gated is listed above. Agent work proceeds on ungated
 tickets in the meantime.

@@ -96,6 +96,29 @@ func TestKafkaProducerRecipeIsProducerOnlyAndBound(t *testing.T) {
 	}
 }
 
+// TestKafkaConsumerRecipeIsConsumerOnlyAndUnbound pins T56.2: the recipe is the
+// consumer plane alone, and a released record for it refuses startup until
+// T56.3 binds it beside its first signed record.
+func TestKafkaConsumerRecipeIsConsumerOnlyAndUnbound(t *testing.T) {
+	recipe := kafkaConsumerRecipe()
+	if len(recipe) != 1 || recipe[0].Domain() != "kafka-consumer" {
+		t.Fatalf("consumer recipe = %v, want the kafka-consumer extractor alone", recipe)
+	}
+	if _, bound := packRecipes[kafkaConsumerPackID]; bound {
+		t.Fatal("kafkaConsumerRecipe must not be bound before its first released record (T56.3 owns the binding)")
+	}
+	dir := t.TempDir()
+	public, release := writeReleasedRecord(t, dir, kafkaConsumerPackID, "key-1")
+	bindReleaseLoad(t, release)
+	cfg := &config.Config{}
+	cfg.ReleaseSelection.Path = dir
+	cfg.ReleaseSelection.Keys = []config.ReleaseKey{{ID: "key-1", PublicKey: public}}
+	if _, _, err := releasedExtractors(context.Background(), cfg); err == nil ||
+		!strings.Contains(err.Error(), "has no fixed in-tree recipe") {
+		t.Fatalf("unbound consumer release = %v, want the missing in-tree recipe refusal", err)
+	}
+}
+
 // TestCallerMapRegistrationFollowsExtractorSet pins the T47.3 registration
 // semantics at the exact registry boundary: the Caller Map surface is enabled
 // by whichever admission supplied a caller-adapter domain — the released
@@ -328,6 +351,7 @@ func TestCallerMapOrdinarySurfaceFollowsProductionAssembly(t *testing.T) {
 		released  bool
 		claim     bool // a signed record selecting the T53.3 Buf WIRE claim
 		producer  bool // a signed record selecting the T55.2 producer recipe, bound as T55.3 will
+		consumer  bool // a signed record selecting the T56.2 consumer recipe, bound as T56.3 will
 		configure func(*config.Config)
 		want      servedCallerSurfaces
 	}{
@@ -363,6 +387,16 @@ func TestCallerMapOrdinarySurfaceFollowsProductionAssembly(t *testing.T) {
 			want: servedCallerSurfaces{
 				capabilities:  []string{"contract-atlas", "contract-caller-map", "service-catalog-v2"},
 				callerMapTool: true, callerMapEnabled: true, callerMapServiced: true,
+			},
+		},
+		{
+			// T56.2: the consumer plane alone, independent of the producer release.
+			name:      "a released Kafka consumer alone serves only consumer topic usage",
+			consumer:  true,
+			configure: func(*config.Config) {},
+			want: servedCallerSurfaces{
+				capabilities: []string{"kafka-topic-usage", "service-catalog-v2"},
+				topicTool:    true,
 			},
 		},
 		{
@@ -408,6 +442,16 @@ func TestCallerMapOrdinarySurfaceFollowsProductionAssembly(t *testing.T) {
 				t.Cleanup(func() { packRecipes = restore })
 				dir := t.TempDir()
 				public, release := writeReleasedRecord(t, dir, kafkaProducerPackID, "key-1")
+				bindReleaseLoad(t, release)
+				cfg.ReleaseSelection.Path = dir
+				cfg.ReleaseSelection.Keys = []config.ReleaseKey{{ID: "key-1", PublicKey: public}}
+			}
+			if test.consumer {
+				restore := packRecipes
+				packRecipes = map[string]func() []extract.Extractor{kafkaConsumerPackID: kafkaConsumerRecipe}
+				t.Cleanup(func() { packRecipes = restore })
+				dir := t.TempDir()
+				public, release := writeReleasedRecord(t, dir, kafkaConsumerPackID, "key-1")
 				bindReleaseLoad(t, release)
 				cfg.ReleaseSelection.Path = dir
 				cfg.ReleaseSelection.Keys = []config.ReleaseKey{{ID: "key-1", PublicKey: public}}

@@ -168,6 +168,18 @@ func kafkaProducerRecipe() []extract.Extractor {
 	return []extract.Extractor{kafkago.NewProducer()}
 }
 
+// kafkaConsumerPackID is the T56.1 site-coverage card
+// (docs/KAFKA_CONSUMER_QUALITY_PROTOCOL.md): the kafka-consumer plane alone.
+// T56.3 binds kafkaConsumerRecipe into packRecipes with its first signed
+// record; until then a selection naming it refuses startup as unbound.
+const kafkaConsumerPackID = "phebs.kafka.consumer"
+
+// kafkaConsumerRecipe is the consumer plane only; it never brings the
+// producer extractor, which has its own release (T55.3).
+func kafkaConsumerRecipe() []extract.Extractor {
+	return []extract.Extractor{kafkago.NewConsumer()}
+}
+
 // wireCompatibilityPackID is the T53.3 claim card in
 // docs/WIRE_COMPATIBILITY_PROTOCOL.md §9: never report a wire-breaking change
 // as compatible, conservative only in the two disclosed classes.

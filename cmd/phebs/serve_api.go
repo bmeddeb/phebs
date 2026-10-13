@@ -193,19 +193,29 @@ func experimentalProofBundles(cfg *config.Config, proofBundles store.ProofBundle
 }
 
 // admittedProofBundles is the proof-bundle store for the experimental proof
-// service, or for a released Kafka producer plane, which serves only topic
-// usage through it (T55.2).
+// service, or for released Kafka planes, which serve only topic usage through
+// it (T55.2/T56.2).
 func admittedProofBundles(cfg *config.Config, released map[string]bool, proofBundles store.ProofBundleStore) store.ProofBundleStore {
-	if bundles := experimentalProofBundles(cfg, proofBundles); bundles != nil || !released["kafka-producer"] {
+	if bundles := experimentalProofBundles(cfg, proofBundles); bundles != nil || len(releasedKafkaPlanes(cfg, released)) == 0 {
 		return bundles
 	}
 	return proofBundles
 }
 
-// kafkaProducerOnly reports a proof service admitted solely by a released
-// producer plane; the provisional switches keep the full experimental service.
-func kafkaProducerOnly(cfg *config.Config, released map[string]bool) bool {
-	return !provisionalExtractionOn(cfg) && released["kafka-producer"]
+// releasedKafkaPlanes names the Kafka planes a proof service is admitted for
+// solely through released recipes; the provisional switches keep the full
+// experimental service, so they return none.
+func releasedKafkaPlanes(cfg *config.Config, released map[string]bool) []string {
+	if provisionalExtractionOn(cfg) {
+		return nil
+	}
+	var planes []string
+	for _, plane := range []string{"consumer", "producer"} {
+		if released["kafka-"+plane] {
+			planes = append(planes, plane)
+		}
+	}
+	return planes
 }
 
 // admittedWireCompatibility admits the standalone Buf WIRE verdict (T53.2)
@@ -267,7 +277,7 @@ func newServeAPIOptions(d *serveDeps) (api.Options, error) {
 		},
 		AuditRecord: d.auditRecord, AuditLog: st, Analytics: st,
 		Evidence: d.evidenceView, ProofBundles: admittedProofBundles(cfg, d.releasedDomains, d.proofBundles),
-		KafkaProducerOnly: kafkaProducerOnly(cfg, d.releasedDomains),
+		KafkaReleasedPlanes: releasedKafkaPlanes(cfg, d.releasedDomains),
 		ContractCatalogUnadmitted: !provisionalExtractionOn(cfg) &&
 			!d.releasedDomains["proto-contract"] && !d.releasedDomains["thrift-contract"],
 		CallerMapEnabled: d.callerRegistry.Enabled(),
@@ -387,7 +397,7 @@ func newServeMCPServer(d *serveDeps, apiOpts api.Options) *mcpsdk.Server {
 	var mcpCompatibility phebsmcp.CompatibilityQueries
 	if proofService := api.NewProofService(apiOpts); proofService != nil {
 		mcpProofs = proofService
-		if proofService.CompatibilityAvailable() && !apiOpts.KafkaProducerOnly {
+		if proofService.CompatibilityAvailable() && len(apiOpts.KafkaReleasedPlanes) == 0 {
 			mcpCompatibility = proofService
 		}
 	}
@@ -401,7 +411,7 @@ func newServeMCPServer(d *serveDeps, apiOpts api.Options) *mcpsdk.Server {
 		DataDir: d.cfg.Server.DataDir,
 		CodeNav: d.codeNavigation, Visible: d.visibleFor, Proofs: mcpProofs,
 		Compatibility:       mcpCompatibility,
-		KafkaProducerOnly:   apiOpts.KafkaProducerOnly,
+		KafkaTopicUsageOnly: len(apiOpts.KafkaReleasedPlanes) > 0,
 		WireCompatibility:   apiOpts.WireCompatibility,
 		ContractCatalog:     catalogQueries,
 		CallerMap:           callerMapQueries,

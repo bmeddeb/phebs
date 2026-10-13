@@ -19170,6 +19170,30 @@ Details are in `docs/KAFKA_CONSUMER_QUALITY_PROTOCOL.md` §8.*
 consumer recipes; missing publication never appears as a measured zero and
 topic-dependent rows stay separate from topic-independent abstention census.
 
+*T56.2 (2026-10-13, Claude lead): **independent consumer registration.**
+
+- **Recipe.** `phebs.kafka.consumer` is a fixed in-tree recipe
+  (`kafkaConsumerRecipe`) holding the `kafka-consumer` extractor alone,
+  unbound until T56.3.
+- **Generalized scope.** The T55.2 producer-only scope is now
+  `KafkaReleasedPlanes` in the API (`KafkaTopicUsageOnly` in MCP). Whichever
+  Kafka planes are released alone (producer, consumer or both) are served
+  through topic usage over exactly their domains, plus bundle reads. Every
+  unreleased plane is named in `unavailable_planes`, so its zeros never read
+  as measured. Topic-dependent rows and the topic-independent census stay
+  separate, as before.
+- **Experimental bundles unchanged.** With the provisional switches on, the
+  full experimental service and its bundles stay byte-identical (the filter
+  order is unchanged).
+- **Tests.** A released consumer alone serves only `kafka-topic-usage`
+  (production assembly). API tests cover consumer-only and both-planes
+  domains and unavailable planes, with Impact 404. The consumer recipe
+  stays unbound, and the producer cases are unchanged.
+- **Operating note for T56.3.** A release record binds one exact binary.
+  The producer record (`71924817`) cannot load on any later build, so T56.3
+  must re-sign the producer record for the same release binary and ship
+  both records in one selection.*
+
 **T56.3 · Measured consumer promotion** — satisfy the common bar independently
 of Epic 55, including exact source, permission, recovery and per-plane costs.
 
