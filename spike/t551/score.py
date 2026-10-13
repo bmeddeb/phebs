@@ -39,12 +39,17 @@ def load(path: Path) -> list[dict]:
         return [json.loads(line) for line in f if line.strip()]
 
 
+EVIDENCE = {'PRODUCES_TO_TOPIC', 'CONSUMES_FROM_TOPIC'}
+UNRESOLVED = {'UNRESOLVED_KAFKA_PRODUCER', 'UNRESOLVED_KAFKA_CONSUMER'}
+
+
 def candidate_state(row: dict) -> tuple[str, str | None]:
-    """The T23.2 contract: evidence objects are `topic:<literal>`, abstention
-    objects `unresolved:<shape-class>` from the frozen six-class vocabulary."""
-    if row['predicate'] == 'PRODUCES_TO_TOPIC':
+    """The T23.2 contract, for either plane: evidence objects are
+    `topic:<literal>`, abstention objects `unresolved:<shape-class>` from the
+    frozen six-class vocabulary."""
+    if row['predicate'] in EVIDENCE:
         return 'resolved', row['object']
-    if row['predicate'] == 'UNRESOLVED_KAFKA_PRODUCER':
+    if row['predicate'] in UNRESOLVED:
         return 'unresolved', row['object'].removeprefix('unresolved:')
     return 'gap', None
 

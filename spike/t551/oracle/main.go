@@ -33,6 +33,8 @@ import (
 	"strings"
 )
 
+var consumerPlane bool
+
 var (
 	saramaPaths  = map[string]string{"github.com/Shopify/sarama": "Shopify", "github.com/IBM/sarama": "IBM"}
 	segmentio    = "github.com/segmentio/kafka-go"
@@ -60,7 +62,9 @@ func main() {
 	name := flag.String("name", "", "repository name")
 	units := flag.String("units", "", "population units.jsonl.gz; each unit's blob is read from -history")
 	history := flag.String("history", "", "directory of bare history clones, one per unit dir")
+	plane := flag.String("plane", "producer", "producer (T55.1) or consumer (T56.1)")
 	flag.Parse()
+	consumerPlane = *plane == "consumer"
 	if *units != "" {
 		scanUnits(*units, *history)
 		return
@@ -176,6 +180,9 @@ func scan(content []byte) []site {
 	if len(aliases) == 0 {
 		return nil
 	}
+	if consumerPlane {
+		return scanConsumer(fset, file, aliases)
+	}
 	direct := map[*ast.CompositeLit]bool{} // Message composites passed straight to .WriteMessages
 	ast.Inspect(file, func(n ast.Node) bool {
 		call, ok := n.(*ast.CallExpr)
@@ -232,6 +239,87 @@ func scan(content []byte) []site {
 			}
 		}
 		sites = append(sites, s)
+		return true
+	})
+	return sites
+}
+
+// scanConsumer lists KD4's consumer sites: a segmentio ReaderConfig's Topic
+// and each GroupTopics element (an expression list is one site per element,
+// any other GroupTopics value one site), and the receiver-untyped sarama
+// shapes .Consume(ctx, topics, handler) (each element of a literal list, else
+// the topics argument) and .ConsumePartition(topic, partition, offset). The
+// receiver-untyped shapes count only in files importing sarama, and a file
+// importing both sarama eras abstains ambiguous-library-import on them (KD6).
+func scanConsumer(fset *token.FileSet, file *ast.File, aliases map[string]string) []site {
+	eras := map[string]bool{}
+	for _, library := range aliases {
+		if strings.HasPrefix(library, "sarama") {
+			eras[library] = true
+		}
+	}
+	saramaLibrary := ""
+	for era := range eras {
+		saramaLibrary = era
+	}
+	if len(eras) > 1 {
+		saramaLibrary = "sarama-ambiguous"
+	}
+	var sites []site
+	add := func(shape, library string, expr ast.Expr) {
+		s := site{Shape: shape, Library: library, StartByte: fset.Position(expr.Pos()).Offset,
+			EndByte: fset.Position(expr.End()).Offset, StartLine: fset.Position(expr.Pos()).Line}
+		if library == "sarama-ambiguous" {
+			s.State, s.Class = "unresolved", "ambiguous-library-import"
+		} else {
+			classify(&s, expr)
+		}
+		sites = append(sites, s)
+	}
+	each := func(shape, library string, expr ast.Expr) {
+		if list, ok := expr.(*ast.CompositeLit); ok {
+			for _, element := range list.Elts {
+				add(shape, library, element)
+			}
+			return
+		}
+		add(shape, library, expr)
+	}
+	ast.Inspect(file, func(n ast.Node) bool {
+		switch node := n.(type) {
+		case *ast.CompositeLit:
+			sel, ok := node.Type.(*ast.SelectorExpr)
+			if !ok {
+				return true
+			}
+			pkg, ok := sel.X.(*ast.Ident)
+			if !ok || aliases[pkg.Name] != "segmentio" || sel.Sel.Name != "ReaderConfig" {
+				return true
+			}
+			for _, elt := range node.Elts {
+				kv, ok := elt.(*ast.KeyValueExpr)
+				if !ok {
+					continue
+				}
+				switch key, _ := kv.Key.(*ast.Ident); {
+				case key != nil && key.Name == "Topic":
+					add("ReaderConfig.Topic", "segmentio", kv.Value)
+				case key != nil && key.Name == "GroupTopics":
+					each("ReaderConfig.GroupTopics", "segmentio", kv.Value)
+				}
+			}
+		case *ast.CallExpr:
+			sel, ok := node.Fun.(*ast.SelectorExpr)
+			if !ok || saramaLibrary == "" || len(node.Args) != 3 {
+				return true
+			}
+			switch sel.Sel.Name {
+			case "Consume":
+				each("Consume", saramaLibrary, node.Args[1])
+			case "ConsumePartition":
+				add("ConsumePartition", saramaLibrary, node.Args[0])
+			}
+		}
 		return true
 	})
 	return sites

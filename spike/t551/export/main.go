@@ -24,6 +24,8 @@ import (
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
 )
 
+var newExtractor = kafkago.NewProducer
+
 type checkout struct {
 	dir, name, commit string
 	files             []string
@@ -98,7 +100,7 @@ func exportUnits(unitsPath, history string) {
 	defer raw.Close()
 	zr, err := gzip.NewReader(raw)
 	check(err)
-	extractor := kafkago.NewProducer()
+	extractor := newExtractor()
 	enc := json.NewEncoder(os.Stdout)
 	dec := json.NewDecoder(zr)
 	for dec.More() {
@@ -124,7 +126,11 @@ func main() {
 	name := flag.String("name", "", "repository name")
 	units := flag.String("units", "", "population units.jsonl.gz; each unit's blob is read from -history")
 	history := flag.String("history", "", "directory of bare history clones")
+	plane := flag.String("plane", "producer", "producer (T55.1) or consumer (T56.1)")
 	flag.Parse()
+	if *plane == "consumer" {
+		newExtractor = kafkago.NewConsumer
+	}
 	if *units != "" {
 		exportUnits(*units, *history)
 		return
@@ -133,7 +139,7 @@ func main() {
 	check(err)
 	listed, err := exec.Command("git", "-C", *dir, "ls-files", "-z", "--", "*.go").Output()
 	check(err)
-	extractor := kafkago.NewProducer()
+	extractor := newExtractor()
 	c := checkout{dir: *dir, name: *name, commit: strings.TrimSpace(string(head))}
 	for _, f := range strings.Split(string(listed), "\x00") {
 		if f != "" && extractor.Candidate(f) {
