@@ -1,0 +1,71 @@
+{
+  "activation_at": "2026-10-13T00:11:00Z",
+  "candidate_export_sha256": "sha256:40c0c26f0c5fb9531a3c0d31f8c5d150aabe15124961572f6d03ac663aabe15b",
+  "protocol": {
+    "path": "docs/DECLARATION_QUALITY_PROTOCOL.md",
+    "sha256": "sha256:aba7d7735f65dd130c62b8993b73371fbe4165ea2c1cdb0fafdd584bdcaaa75a"
+  },
+  "randomness_rule": "first NIST Beacon 2.0 pulse strictly after the activation minute; no fallback",
+  "sample_plan": {
+    "declaration:DECLARES_EXTENSION": {
+      "census": true,
+      "population": 13,
+      "sample_size": 13
+    },
+    "declaration:DECLARES_FIELD": {
+      "census": false,
+      "population": 4213,
+      "sample_size": 97
+    },
+    "declaration:DECLARES_MESSAGE": {
+      "census": false,
+      "population": 1394,
+      "sample_size": 97
+    },
+    "declaration:DECLARES_OPERATION": {
+      "census": false,
+      "population": 399,
+      "sample_size": 97
+    },
+    "declaration:DECLARES_SERVICE": {
+      "census": true,
+      "population": 62,
+      "sample_size": 62
+    },
+    "reference:intrinsic": {
+      "census": false,
+      "population": 2969,
+      "sample_size": 97
+    },
+    "reference:same_file": {
+      "census": false,
+      "population": 1686,
+      "sample_size": 97
+    },
+    "reference:unresolved:IMPORT_LINKING_UNAVAILABLE": {
+      "census": false,
+      "population": 542,
+      "sample_size": 97
+    }
+  },
+  "schema": "t491-seal-commitment-v1",
+  "sealed_by": "Claude (lead, delegated by Ben Meddeb, who is the sole reviewer)",
+  "thresholds": {
+    "declaration_agreement": 0.995,
+    "oracle_sample_correct": 0.99,
+    "reference_agreement": 0.995
+  },
+  "tools_sha256": {
+    "enumerate_declarations.py": "sha256:c6cbfc780bb289b14f5fce2236a22afe57e46e4fa698d64f38b2b6986f6166dc",
+    "export_candidate.py": "sha256:6e9cd97d090276c9a54c4c1466f30072389b89923699f52c5843f02bb3c29732",
+    "oracle_compare.py": "sha256:5a72b5ccaf39dc1896068be69c4351b377830671469c19e09035b8115b67f9ab",
+    "seal_round.py": "sha256:01b1c4d0c8ac544f3daebf6f29392831f7829a21dc738415df01c8dcbbf26f68"
+  },
+  "universe": {
+    "declarations": 6081,
+    "members_sha256": "sha256:47bacb99e83c454790a69d9eb044ecdb255cc358fe96214d5fab679753281088",
+    "references": 5197,
+    "references_sha256": "sha256:12313c49dd6d00911454c9913b390a827170e4a781a572946ce4bc53d27826e8",
+    "summary_sha256": "sha256:6701ea97cd131b66610ec344e96f477b07855022f04710f0c20bc8940c1c55fe"
+  }
+}

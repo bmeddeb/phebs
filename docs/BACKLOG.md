@@ -18666,6 +18666,21 @@ seal and gist; the commands are in `spike/t491/README.md`. Steady-state cost:
 none in production. The export makes two bounded store reads per root, and
 the oracle runs over 131 blobs in under a second.*
 
+*Seal (2026-10-13, Claude on Ben's delegation): the protocol was frozen
+(`docs/DECLARATION_QUALITY_PROTOCOL.md`) and sealed with activation 00:11Z.
+
+- The seal is published as gist `Blandt/1eafb6d5…` (created 23:51Z, before
+  activation).
+- The seed comes from NIST pulse 1980935 (00:12:00Z, the first after
+  activation): `afeea090…`.
+- The draw is 657 units across 8 strata. Records are in
+  `spike/t491/{seal,seed,sample}.json`.
+- The review sheet is at `/home/ben/phebs-rehearsals/t491-oracle-sheet/`
+  (`review.md`, `labels.jsonl`).
+
+Remaining, Ben (sole reviewer): label the 657 units. Then comes adjudication
+and scoring against the thresholds he set (≥ 99.5%, ≥ 99.5%, ≥ 99%).*
+
 **T49.2 · Thrift declaration identity and validation contract** — independently
 freeze namespace/include/generator lineage and declarations, ambiguity,
 missing/unsupported input and gap accounting; protobuf results grant no Thrift

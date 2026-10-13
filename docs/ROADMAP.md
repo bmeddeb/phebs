@@ -274,8 +274,9 @@ and who owns each.
   - Done: T49.3 gives Atlas exact partitioned reads, with denial proven on the
     real binary; T49.1b has the independent universe, oracle, protocol and
     tooling.
-  - Remaining, Ben: seal T49.1b (gist) and label the oracle sample; then
-    compare and adjudicate. Release selection (T49.3 remainder) and T49.4
+  - T49.1b is sealed and drawn (2026-10-13): 657 units on Ben's review
+    sheet.
+  - Remaining, Ben: label them. Then the agent compares and adjudicates. Release selection (T49.3 remainder) and T49.4
     follow a passing round.
 - **Compatibility (Epic 53).**
   - Done: T53.2 fixed the Linux sandbox. T53.1 has 29 independent goldens
