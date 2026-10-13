@@ -199,7 +199,7 @@ func TestReleaseLoadBindingsForDerivesEveryField(t *testing.T) {
 	if want := testReleaseDigest("go-toolchain go1.26.1\n"); opts.Implementation.ToolchainDigest != want {
 		t.Fatalf("ToolchainDigest = %s, want %s", opts.Implementation.ToolchainDigest, want)
 	}
-	// No recipe is bound; the T53.3 Buf WIRE claim is the registry's one row.
+	// The test swaps the recipes out; the T53.3 Buf WIRE claim is the remaining row.
 	if want := testReleaseDigest("phebs.protobuf.wire.buf check_wire_compatibility@buf-1.72.0-WIRE\n"); opts.Implementation.PackImplementationDigest != want {
 		t.Fatalf("PackImplementationDigest = %s, want the bound-claim digest %s", opts.Implementation.PackImplementationDigest, want)
 	}

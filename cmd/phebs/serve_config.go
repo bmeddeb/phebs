@@ -138,13 +138,14 @@ func newServeExtractionRegistries(d *serveDeps) error {
 }
 
 // packRecipes is the fixed in-tree registry mapping a canonical pack identifier
-// to the extractors that implement it. It ships EMPTY on purpose: no pack has
-// yet earned a signed released PackRelease, so binding a recipe now would assert
-// an authorization that does not exist. Each owning epic binds its recipe here in
-// the same PR that records its first passing released record. There is no
+// to the extractors that implement it. A recipe is bound only in the same change
+// that records its first passing released record (the Kafka producer, T55.3);
+// binding one earlier would assert an authorization that does not exist. There is no
 // third-party loader and no manifest-selected arbitrary code: a released pack
 // resolves only through this exact in-tree registry.
-var packRecipes = map[string]func() []extract.Extractor{}
+var packRecipes = map[string]func() []extract.Extractor{
+	kafkaProducerPackID: kafkaProducerRecipe, // T55.3: bound beside its first signed record
+}
 
 // releasedClaims is the fixed in-tree registry of released product claims that
 // are verdict services rather than extractor recipes, mapping each pack
@@ -157,8 +158,7 @@ var releasedClaims = map[string]string{
 
 // kafkaProducerPackID is the T55.1 site-coverage card
 // (docs/KAFKA_PRODUCER_QUALITY_PROTOCOL.md): the kafka-producer plane alone.
-// T55.3 binds kafkaProducerRecipe into packRecipes in the same change as its
-// first signed record; until then a selection naming it refuses as unbound.
+// T55.3 bound kafkaProducerRecipe into packRecipes with its first signed record.
 const kafkaProducerPackID = "phebs.kafka.producer"
 
 // kafkaProducerRecipe is the producer plane only. It never brings the
