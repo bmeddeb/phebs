@@ -1,0 +1,25 @@
+{
+ "by_repository": {
+  "ThreeDotsLabs/watermill-kafka": 60,
+  "Trendyol/kafka-konsumer": 198,
+  "argoproj/argo-events": 134,
+  "cadence-workflow/cadence": 98,
+  "cloudevents/sdk-go": 127,
+  "dapr/components-contrib": 204,
+  "dmachard/go-dnscollector": 49,
+  "go-micro/plugins": 27,
+  "gofr-dev/gofr": 59,
+  "influxdata/telegraf": 226,
+  "linkedin/Burrow": 74,
+  "lovoo/goka": 330,
+  "mailgun/kafka-pixy": 241,
+  "minio/minio": 83,
+  "openimsdk/open-im-server": 257,
+  "pingcap/tiflow": 470,
+  "segmentio/topicctl": 153
+ },
+ "enumerator_sha256": "sha256:3042bcea65e52229da4684f9a3559a34b6f2a13a4aed2c833ba1e980e2bdae60",
+ "schema": "t551-producer-population-v1",
+ "total": 2790,
+ "units_sha256": "sha256:c6ca32e1823099f503b53db56cb52c9d8d4f72bb26d61ac3833b4ce20157723f"
+}

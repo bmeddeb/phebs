@@ -1,0 +1,133 @@
+{
+ "schema": "t551-producer-corpus-lock-v1",
+ "selected_utc": "2026-10-13",
+ "selection_rule": "Public Go repositories whose non-test code produces to Kafka through a round-one library (sarama under Shopify or IBM import paths, or segmentio/kafka-go), chosen by name before any phebs or oracle output was seen, excluding the four T23.1 tuning pins (jaeger v1.57.0, IBM/sarama, segmentio/kafka-go, zeromicro/go-queue). Pinned at the default-branch HEAD of a depth-1 clone on the selection date.",
+ "repos": [
+  {
+   "name": "influxdata/telegraf",
+   "dir": "telegraf",
+   "git_url": "https://github.com/influxdata/telegraf.git",
+   "commit": "48f9c24cfd58f386ebbce6b604ff86de38acdc90"
+  },
+  {
+   "name": "dapr/components-contrib",
+   "dir": "components-contrib",
+   "git_url": "https://github.com/dapr/components-contrib.git",
+   "commit": "2f17b2d696f2090d2d40222b92e624818263e05e"
+  },
+  {
+   "name": "lovoo/goka",
+   "dir": "goka",
+   "git_url": "https://github.com/lovoo/goka.git",
+   "commit": "e7949756f1fbd4c4765cf39c1515374becc151f6"
+  },
+  {
+   "name": "ThreeDotsLabs/watermill-kafka",
+   "dir": "watermill-kafka",
+   "git_url": "https://github.com/ThreeDotsLabs/watermill-kafka.git",
+   "commit": "e6efa6d252b7eea46d7766df9e704b5e55551b79"
+  },
+  {
+   "name": "cloudevents/sdk-go",
+   "dir": "sdk-go",
+   "git_url": "https://github.com/cloudevents/sdk-go.git",
+   "commit": "f1fc33fb02e04b70842c8c9640f5a0780eb1b91f"
+  },
+  {
+   "name": "linkedin/Burrow",
+   "dir": "Burrow",
+   "git_url": "https://github.com/linkedin/Burrow.git",
+   "commit": "66bdb0566fdeb14251a53eb7f6cb4ed4036d16ed"
+  },
+  {
+   "name": "pingcap/tiflow",
+   "dir": "tiflow",
+   "git_url": "https://github.com/pingcap/tiflow.git",
+   "commit": "4e37e157a4f81a6eda261d4abd352abe7c6906db"
+  },
+  {
+   "name": "mailgun/kafka-pixy",
+   "dir": "kafka-pixy",
+   "git_url": "https://github.com/mailgun/kafka-pixy.git",
+   "commit": "46483ae7d9d5a86d53257f4fa30dd660f5cb7886"
+  },
+  {
+   "name": "go-micro/plugins",
+   "dir": "plugins",
+   "git_url": "https://github.com/go-micro/plugins.git",
+   "commit": "be3f35ce64647f8712cd0578b1e27c879467cb71"
+  },
+  {
+   "name": "Trendyol/kafka-konsumer",
+   "dir": "kafka-konsumer",
+   "git_url": "https://github.com/Trendyol/kafka-konsumer.git",
+   "commit": "055595218bb0d7bd99f45bdafc7b5cbe39dbf639"
+  },
+  {
+   "name": "cadence-workflow/cadence",
+   "dir": "cadence",
+   "git_url": "https://github.com/cadence-workflow/cadence.git",
+   "commit": "c66d2917ea4c5ae7ebdf7ee1dfebb53001b0ec22",
+   "added": "second pre-registration after Ben chose the site-coverage claim, before any phebs output"
+  },
+  {
+   "name": "dmachard/go-dnscollector",
+   "dir": "go-dnscollector",
+   "git_url": "https://github.com/dmachard/go-dnscollector.git",
+   "commit": "f4ecc305507f3c3d949079d029525fdec635ada0",
+   "added": "second pre-registration after Ben chose the site-coverage claim, before any phebs output"
+  },
+  {
+   "name": "minio/minio",
+   "dir": "minio",
+   "git_url": "https://github.com/minio/minio.git",
+   "commit": "7aac2a2c5b7c882e68c1ce017d8256be2feea27f",
+   "added": "second pre-registration after Ben chose the site-coverage claim, before any phebs output"
+  },
+  {
+   "name": "argoproj/argo-events",
+   "dir": "argo-events",
+   "git_url": "https://github.com/argoproj/argo-events.git",
+   "commit": "2707f827c05804efea377b6b8a8e12696faa8d3b",
+   "added": "second pre-registration after Ben chose the site-coverage claim, before any phebs output"
+  },
+  {
+   "name": "openimsdk/open-im-server",
+   "dir": "open-im-server",
+   "git_url": "https://github.com/openimsdk/open-im-server.git",
+   "commit": "7788c8672143e4f3d10f38a0c24058fc9520af1e",
+   "added": "second pre-registration after Ben chose the site-coverage claim, before any phebs output"
+  },
+  {
+   "name": "gofr-dev/gofr",
+   "dir": "gofr",
+   "git_url": "https://github.com/gofr-dev/gofr.git",
+   "commit": "6ce72f9f8036570b50148655aa49df56967e2e08",
+   "added": "second pre-registration after Ben chose the site-coverage claim, before any phebs output"
+  },
+  {
+   "name": "segmentio/topicctl",
+   "dir": "topicctl",
+   "git_url": "https://github.com/segmentio/topicctl.git",
+   "commit": "9c1f75cc8e306e86bb426f638a5fa24260f0836c",
+   "added": "second pre-registration after Ben chose the site-coverage claim, before any phebs output"
+  }
+ ],
+ "dropped": [
+  {
+   "name": "elastic/beats",
+   "commit": "0ac58af7e77930f5118bf350de00636ea8b024ec",
+   "reason": "no non-test file imports a round-one library at HEAD"
+  },
+  {
+   "name": "open-telemetry/opentelemetry-collector-contrib",
+   "commit": "be4fde21112daa37137c7315231155dbba05745e",
+   "reason": "no non-test file imports a round-one library at HEAD"
+  },
+  {
+   "name": "mostafa/xk6-kafka",
+   "commit": "cab4c9daf746f51f0d5877295d96b577ea41eabe",
+   "reason": "no non-test file imports a round-one library at HEAD"
+  }
+ ]
+}
