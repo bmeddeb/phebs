@@ -168,7 +168,7 @@ type ContractCatalogService struct {
 
 func NewContractCatalogService(opts Options) *ContractCatalogService {
 	if opts.Store == nil || opts.Principal == nil ||
-		opts.Evidence == nil && opts.ContractCatalogFixture == nil {
+		(opts.Evidence == nil || opts.ContractCatalogUnadmitted) && opts.ContractCatalogFixture == nil {
 		return nil
 	}
 	return &ContractCatalogService{opts: opts}

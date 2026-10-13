@@ -192,6 +192,22 @@ func experimentalProofBundles(cfg *config.Config, proofBundles store.ProofBundle
 	return nil
 }
 
+// admittedProofBundles is the proof-bundle store for the experimental proof
+// service, or for a released Kafka producer plane, which serves only topic
+// usage through it (T55.2).
+func admittedProofBundles(cfg *config.Config, released map[string]bool, proofBundles store.ProofBundleStore) store.ProofBundleStore {
+	if bundles := experimentalProofBundles(cfg, proofBundles); bundles != nil || !released["kafka-producer"] {
+		return bundles
+	}
+	return proofBundles
+}
+
+// kafkaProducerOnly reports a proof service admitted solely by a released
+// producer plane; the provisional switches keep the full experimental service.
+func kafkaProducerOnly(cfg *config.Config, released map[string]bool) bool {
+	return !provisionalExtractionOn(cfg) && released["kafka-producer"]
+}
+
 // admittedWireCompatibility admits the standalone Buf WIRE verdict (T53.2)
 // under the same dark switches as the proof-enriched check, or ordinarily when
 // a verified released record selects its claim (T53.3). A released claim never
@@ -250,7 +266,10 @@ func newServeAPIOptions(d *serveDeps) (api.Options, error) {
 			return ok && principal.IsAdmin
 		},
 		AuditRecord: d.auditRecord, AuditLog: st, Analytics: st,
-		Evidence: d.evidenceView, ProofBundles: experimentalProofBundles(cfg, d.proofBundles),
+		Evidence: d.evidenceView, ProofBundles: admittedProofBundles(cfg, d.releasedDomains, d.proofBundles),
+		KafkaProducerOnly: kafkaProducerOnly(cfg, d.releasedDomains),
+		ContractCatalogUnadmitted: !provisionalExtractionOn(cfg) &&
+			!d.releasedDomains["proto-contract"] && !d.releasedDomains["thrift-contract"],
 		CallerMapEnabled: d.callerRegistry.Enabled(),
 		CallerComparisonEnabled: cfg.Experimental.ProvisionalProtoExtraction ||
 			cfg.Experimental.ProvisionalThriftExtraction,
@@ -368,7 +387,7 @@ func newServeMCPServer(d *serveDeps, apiOpts api.Options) *mcpsdk.Server {
 	var mcpCompatibility phebsmcp.CompatibilityQueries
 	if proofService := api.NewProofService(apiOpts); proofService != nil {
 		mcpProofs = proofService
-		if proofService.CompatibilityAvailable() {
+		if proofService.CompatibilityAvailable() && !apiOpts.KafkaProducerOnly {
 			mcpCompatibility = proofService
 		}
 	}
@@ -382,6 +401,7 @@ func newServeMCPServer(d *serveDeps, apiOpts api.Options) *mcpsdk.Server {
 		DataDir: d.cfg.Server.DataDir,
 		CodeNav: d.codeNavigation, Visible: d.visibleFor, Proofs: mcpProofs,
 		Compatibility:       mcpCompatibility,
+		KafkaProducerOnly:   apiOpts.KafkaProducerOnly,
 		WireCompatibility:   apiOpts.WireCompatibility,
 		ContractCatalog:     catalogQueries,
 		CallerMap:           callerMapQueries,

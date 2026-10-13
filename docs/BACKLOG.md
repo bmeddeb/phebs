@@ -19086,6 +19086,42 @@ Details are in `docs/KAFKA_PRODUCER_QUALITY_PROTOCOL.md` §8.*
 producer recipes and publication; do not enable consumers through the existing
 shared provisional Kafka switch. Preserve first-class unresolved census.
 
+*T55.2 (2026-10-13, Claude lead): **independent producer registration.**
+
+- **Recipe.** `phebs.kafka.producer` is a fixed in-tree recipe
+  (`kafkaProducerRecipe`) holding the `kafka-producer` extractor alone. It
+  never brings `kafka-consumer`, which the shared provisional Kafka switch
+  admits with it. It stays unbound until T55.3 binds it beside its first
+  signed record, and until then a selection naming it refuses startup.
+- **Surface.** Startup records released domains. When a released producer
+  plane is the only proof admission, the proof service runs in
+  `KafkaProducerOnly` scope:
+  - HTTP serves only `find_kafka_topic_usage` (over `kafka-producer` alone)
+    and `proof_bundles/{id}` reads. MCP lists only `find_kafka_topic_usage`.
+  - Capabilities show only `kafka-topic-usage`.
+  - Impact, operation consumers, field references, coverage and both
+    compatibility surfaces stay unregistered.
+  - The census adds `unavailable_planes: ["consumer"]`, so consumer zeros
+    never read as measured, even if a consumer run exists.
+- **Atlas.** A released recipe without a declaration domain no longer turns
+  on Contract Atlas (`ContractCatalogUnadmitted`). Before this, any released
+  extractor would have exposed Atlas. The synthetic Atlas fixture is
+  unaffected.
+- **Tests.**
+  - The production assembly serves exactly `kafka-topic-usage` plus the
+    service catalog for a released producer.
+  - An API test shows producer-only domains, the unavailable consumer
+    plane, bundle reads, and 404 on Impact, consumers, coverage and
+    compatibility.
+  - MCP lists 11 tools.
+  - The recipe stays unbound.
+- **UI.** It already says consumer zeros are not meaningful when no
+  consumer run published. A "not released" wording would need the
+  presentation handoff.
+
+Steady-state cost: none when not admitted; when admitted, the same topic
+query and census as the experimental surface, over one domain.*
+
 **T55.3 · Measured producer promotion** — satisfy the common bar, explicit
 library/version/topic-expression scope and bounded topic query/citation costs.
 

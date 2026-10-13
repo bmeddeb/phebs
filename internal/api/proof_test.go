@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -1723,5 +1724,59 @@ func TestRetainedV1ProofBundleScopePostureRemainsReadable(t *testing.T) {
 			"retained v1 canonical bytes changed\n got: %s\nwant: %s",
 			roundTrip, legacyRecord.Content,
 		)
+	}
+}
+
+// TestKafkaProducerOnlyServesOnlyProducerTopicUsage pins T55.2: a proof service
+// admitted solely by a released producer plane answers topic usage over the
+// kafka-producer domain only, names the consumer plane unavailable even when a
+// consumer run exists, and registers no other proof, Impact or compatibility
+// route.
+func TestKafkaProducerOnlyServesOnlyProducerTopicUsage(t *testing.T) {
+	const repo = "github.com/allowed/kafka"
+	producerRun := proofRun(repo, "kafka-producer", "run-kafka-producer")
+	consumerRun := proofRun(repo, "kafka-consumer", "run-kafka-consumer")
+	produces, producesResolution := proofAssertion(repo, producerRun.ID, "produces", "PRODUCES_TO_TOPIC", "topic:orders-v1", "provisional_repo_path_v1_"+strings.Repeat("a", 64), "orders")
+	consumes, consumesResolution := proofAssertion(repo, consumerRun.ID, "consumes", "CONSUMES_FROM_TOPIC", "topic:orders-v1", "provisional_repo_path_v1_"+strings.Repeat("c", 64), "reader")
+	st := &proofAPIStore{
+		repos: []store.Repo{{Name: repo, IndexedCommitHash: producerRun.Commit}},
+		runs: map[string]store.ExtractionRun{
+			proofScope(repo, "kafka-producer"): producerRun,
+			proofScope(repo, "kafka-consumer"): consumerRun,
+		},
+		assertions: map[string][]store.Assertion{repo: {produces, consumes}},
+		resolutions: map[string]store.EvidenceResolution{
+			proofEvidenceScope(repo, producerRun.ID, produces.Supporting[0]): producesResolution,
+			proofEvidenceScope(repo, consumerRun.ID, consumes.Supporting[0]): consumesResolution,
+		},
+	}
+	handler := api.New(api.Options{
+		Version: "test", Store: st, Evidence: st, ProofBundles: st, KafkaProducerOnly: true,
+		Compatibility:         &fixedCompatibility{},
+		Visible:               func(context.Context) func(store.Repo) bool { return nil },
+		Principal:             func(context.Context) string { return "user:member" },
+		AuthorizationProvider: "test-permissions-v1",
+	})
+	code, body, envelope := getProof(t, handler, "/api/find_kafka_topic_usage?topic=orders-v1")
+	census := envelope.Bundle.UnresolvedCensus
+	if code != http.StatusOK || len(envelope.Bundle.Assertions) != 1 || envelope.Bundle.Assertions[0].Predicate != "PRODUCES_TO_TOPIC" ||
+		!slices.Equal(envelope.Bundle.Query.Domains, []string{"kafka-producer"}) ||
+		census == nil || !slices.Equal(census.UnavailablePlanes, []string{"consumer"}) || census.ConsumerPublishedRuns != 0 {
+		t.Fatalf("producer-only topic usage = %d %s", code, body)
+	}
+	if code, _, read := getProof(t, handler, "/api/proof_bundles/"+envelope.ID); code != http.StatusOK || read.ID != envelope.ID {
+		t.Fatalf("bundle read = %d", code)
+	}
+	for _, path := range []string{
+		"/api/find_operation_consumers?operation=/shop.Cart/Get",
+		"/api/contract_impact_report?operation=/shop.Cart/Get",
+		"/api/get_extraction_coverage",
+	} {
+		if code, _, _ := getProof(t, handler, path); code != http.StatusNotFound {
+			t.Fatalf("%s answered %d under a producer-only admission", path, code)
+		}
+	}
+	if code, _, _ := postCompatibility(t, handler, compat.Request{Lineage: "x"}); code != http.StatusNotFound {
+		t.Fatalf("contract compatibility answered %d under a producer-only admission", code)
 	}
 }

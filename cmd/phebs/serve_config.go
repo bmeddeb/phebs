@@ -14,6 +14,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"github.com/bmeddeb/phebs/internal/extract"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
+	"github.com/bmeddeb/phebs/internal/extract/extractors/kafkago"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/protodecl"
 	"github.com/bmeddeb/phebs/internal/packrelease"
 	"github.com/bmeddeb/phebs/internal/resolvermaterialize"
@@ -115,6 +116,10 @@ func newServeExtractionRegistries(d *serveDeps) error {
 		return err
 	}
 	d.releasedClaims = claims
+	d.releasedDomains = make(map[string]bool, len(released))
+	for _, extractor := range released {
+		d.releasedDomains[extractor.Domain()] = true
+	}
 	d.exs = mergeExtractors(dark, released)
 	resolverRegistry, err := resolvermaterialize.NewRegistry(d.exs)
 	if err != nil {
@@ -148,6 +153,19 @@ var packRecipes = map[string]func() []extract.Extractor{}
 // claim (T53.3) is bound here in the same change as its first signed record.
 var releasedClaims = map[string]string{
 	wireCompatibilityPackID: "check_wire_compatibility@buf-" + compat.Version + "-" + compat.Policy,
+}
+
+// kafkaProducerPackID is the T55.1 site-coverage card
+// (docs/KAFKA_PRODUCER_QUALITY_PROTOCOL.md): the kafka-producer plane alone.
+// T55.3 binds kafkaProducerRecipe into packRecipes in the same change as its
+// first signed record; until then a selection naming it refuses as unbound.
+const kafkaProducerPackID = "phebs.kafka.producer"
+
+// kafkaProducerRecipe is the producer plane only. It never brings the
+// kafka-consumer extractor, which the shared provisional Kafka switch admits
+// together with it; Epic 56 releases the consumer plane on its own result.
+func kafkaProducerRecipe() []extract.Extractor {
+	return []extract.Extractor{kafkago.NewProducer()}
 }
 
 // wireCompatibilityPackID is the T53.3 claim card in

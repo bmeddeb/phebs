@@ -768,3 +768,36 @@ func TestProofEnvelopeQualificationIsServerRendered(t *testing.T) {
 		t.Fatal("tool accepted client-supplied qualification text")
 	}
 }
+
+// TestKafkaProducerOnlyListsOnlyTopicUsage pins T55.2's MCP side: a proof
+// service admitted solely by a released producer plane adds exactly the
+// find_kafka_topic_usage tool to the dark registry, and no other proof or
+// compatibility tool.
+func TestKafkaProducerOnlyListsOnlyTopicUsage(t *testing.T) {
+	ctx := t.Context()
+	s := NewServer(Options{Version: "test", Proofs: schemaProofQueries{}, KafkaProducerOnly: true})
+	serverTransport, clientTransport := sdk.NewInMemoryTransports()
+	go func() { _, _ = s.Connect(ctx, serverTransport, nil) }()
+	session, err := sdk.NewClient(&sdk.Implementation{Name: "t", Version: "0"}, nil).Connect(ctx, clientTransport, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = session.Close() }()
+	listed, err := session.ListTools(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := map[string]bool{}
+	for _, tool := range listed.Tools {
+		found[tool.Name] = true
+	}
+	if len(found) != 11 || !found["find_kafka_topic_usage"] {
+		t.Fatalf("producer-only tools = %v, want the 10 dark tools plus find_kafka_topic_usage", found)
+	}
+	for _, name := range []string{"find_operation_consumers", "find_proto_field_references", "find_field_references",
+		"get_extraction_coverage", "check_contract_compatibility"} {
+		if found[name] {
+			t.Fatalf("producer-only admission listed %s", name)
+		}
+	}
+}

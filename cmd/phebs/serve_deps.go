@@ -38,6 +38,8 @@ type serveDeps struct {
 	cancel context.CancelFunc
 	// releasedClaims names the verdict claims verified released records admit.
 	releasedClaims map[string]bool
+	// releasedDomains names the extractor domains verified released records admit.
+	releasedDomains map[string]bool
 	// deferred holds every deferred shutdown action in registration order.
 	// runDeferred drains it LIFO when serve returns, exactly matching the
 	// ordering the inline defers had.

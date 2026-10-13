@@ -56,6 +56,10 @@ type Options struct {
 	// Compatibility enables T14.3 only after the pinned Buf checker and its
 	// host sandbox have initialized successfully.
 	Compatibility CompatibilityQueries
+	// KafkaProducerOnly restricts the proof tools to find_kafka_topic_usage,
+	// matching an HTTP proof service admitted only by a released producer
+	// plane (T55.2).
+	KafkaProducerOnly bool
 	// WireCompatibility enables the standalone Buf WIRE verdict tool (T53.2):
 	// the verdict alone, with no proof bundle or field-reference evidence.
 	WireCompatibility compat.Service
@@ -193,6 +197,10 @@ func registerProofTools(s *sdk.Server, opts Options) {
 	if opts.Proofs == nil {
 		return
 	}
+	if opts.KafkaProducerOnly {
+		registerKafkaTopicUsageTool(s, opts)
+		return
+	}
 
 	type operationIn struct {
 		Operation string `json:"operation" jsonschema:"canonical fully-qualified RPC operation /scope.Service/method (gRPC or Thrift)"`
@@ -253,20 +261,7 @@ func registerProofTools(s *sdk.Server, opts Options) {
 		return nil, *result, nil
 	})
 
-	type topicIn struct {
-		Topic string `json:"topic" jsonschema:"one Kafka topic spelling, 1 through 249 characters of [a-zA-Z0-9._-]"`
-	}
-	sdk.AddTool(s, &sdk.Tool{
-		Name:         "find_kafka_topic_usage",
-		Description:  "Find evidence-derived producers and consumers of one Kafka topic spelling. Returns envelope v1.0 with permission-scoped facts and exact proof references. The topic is a source spelling with no cluster or environment identity; production Kafka topics are overwhelmingly configuration-driven, so unresolved sites dominate by design — they are counted per shape class in the persisted bundle's census, and this list is never a completeness claim.",
-		OutputSchema: proofEnvelopeSchema("mcp-payload-contract-edges-v1.0.json"),
-	}, func(ctx context.Context, _ *sdk.CallToolRequest, in topicIn) (*sdk.CallToolResult, investigation.Envelope, error) {
-		result, err := opts.Proofs.FindKafkaTopicUsageMCP(ctx, in.Topic)
-		if err != nil {
-			return nil, investigation.Envelope{}, err
-		}
-		return nil, *result, nil
-	})
+	registerKafkaTopicUsageTool(s, opts)
 
 	type coverageIn struct {
 		Domains []string `json:"domains,omitempty" jsonschema:"extractor domains; omit for grpc-caller, grpc-consumer, kafka-consumer, kafka-producer, proto-contract, scip-proto-field, scip-thrift-field, thrift-caller, thrift-consumer, and thrift-contract"`
@@ -310,6 +305,23 @@ func registerWireCompatibilityTool(s *sdk.Server, opts Options) {
 		result, err := opts.WireCompatibility.Check(ctx, in)
 		if err != nil {
 			return nil, compat.CompatibilityResult{}, err
+		}
+		return nil, *result, nil
+	})
+}
+
+func registerKafkaTopicUsageTool(s *sdk.Server, opts Options) {
+	type topicIn struct {
+		Topic string `json:"topic" jsonschema:"one Kafka topic spelling, 1 through 249 characters of [a-zA-Z0-9._-]"`
+	}
+	sdk.AddTool(s, &sdk.Tool{
+		Name:         "find_kafka_topic_usage",
+		Description:  "Find evidence-derived producers and consumers of one Kafka topic spelling. Returns envelope v1.0 with permission-scoped facts and exact proof references. The topic is a source spelling with no cluster or environment identity; production Kafka topics are overwhelmingly configuration-driven, so unresolved sites dominate by design — they are counted per shape class in the persisted bundle's census, and this list is never a completeness claim.",
+		OutputSchema: proofEnvelopeSchema("mcp-payload-contract-edges-v1.0.json"),
+	}, func(ctx context.Context, _ *sdk.CallToolRequest, in topicIn) (*sdk.CallToolResult, investigation.Envelope, error) {
+		result, err := opts.Proofs.FindKafkaTopicUsageMCP(ctx, in.Topic)
+		if err != nil {
+			return nil, investigation.Envelope{}, err
 		}
 		return nil, *result, nil
 	})

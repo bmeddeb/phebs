@@ -73,6 +73,29 @@ func TestCallerMapRecipeStaysUnboundUntilReleased(t *testing.T) {
 	}
 }
 
+// TestKafkaProducerRecipeIsProducerOnlyAndUnbound pins T55.2: the recipe is the
+// producer plane alone, and a released record for it refuses startup until
+// T55.3 binds the recipe beside its first signed record.
+func TestKafkaProducerRecipeIsProducerOnlyAndUnbound(t *testing.T) {
+	recipe := kafkaProducerRecipe()
+	if len(recipe) != 1 || recipe[0].Domain() != "kafka-producer" {
+		t.Fatalf("producer recipe = %v, want the kafka-producer extractor alone", recipe)
+	}
+	if _, bound := packRecipes[kafkaProducerPackID]; bound {
+		t.Fatal("kafkaProducerRecipe must not be bound before its first released record (T55.3 owns the binding)")
+	}
+	dir := t.TempDir()
+	public, release := writeReleasedRecord(t, dir, kafkaProducerPackID, "key-1")
+	bindReleaseLoad(t, release)
+	cfg := &config.Config{}
+	cfg.ReleaseSelection.Path = dir
+	cfg.ReleaseSelection.Keys = []config.ReleaseKey{{ID: "key-1", PublicKey: public}}
+	if _, _, err := releasedExtractors(context.Background(), cfg); err == nil ||
+		!strings.Contains(err.Error(), "has no fixed in-tree recipe") {
+		t.Fatalf("unbound producer release = %v, want the missing in-tree recipe refusal", err)
+	}
+}
+
 // TestCallerMapRegistrationFollowsExtractorSet pins the T47.3 registration
 // semantics at the exact registry boundary: the Caller Map surface is enabled
 // by whichever admission supplied a caller-adapter domain — the released
@@ -195,6 +218,7 @@ type servedCallerSurfaces struct {
 	callerMapTool     bool
 	comparisonTool    bool
 	proofTool         bool
+	topicTool         bool
 	wireTool          bool
 	callerMapEnabled  bool
 	callerMapServiced bool
@@ -279,6 +303,8 @@ func serveCallerSurfaces(t *testing.T, cfg *config.Config) servedCallerSurfaces 
 			served.proofTool = true
 		case "check_wire_compatibility":
 			served.wireTool = true
+		case "find_kafka_topic_usage":
+			served.topicTool = true
 		}
 	}
 	return served
@@ -301,6 +327,7 @@ func TestCallerMapOrdinarySurfaceFollowsProductionAssembly(t *testing.T) {
 		name      string
 		released  bool
 		claim     bool // a signed record selecting the T53.3 Buf WIRE claim
+		producer  bool // a signed record selecting the T55.2 producer recipe, bound as T55.3 will
 		configure func(*config.Config)
 		want      servedCallerSurfaces
 	}{
@@ -314,7 +341,7 @@ func TestCallerMapOrdinarySurfaceFollowsProductionAssembly(t *testing.T) {
 			configure: func(cfg *config.Config) { cfg.Experimental.ProvisionalProtoExtraction = true },
 			want: servedCallerSurfaces{
 				capabilities:  everyProduct,
-				callerMapTool: true, comparisonTool: true, proofTool: true, wireTool: true,
+				callerMapTool: true, comparisonTool: true, proofTool: true, topicTool: true, wireTool: true,
 				callerMapEnabled: true, callerMapServiced: true,
 			},
 		},
@@ -326,7 +353,7 @@ func TestCallerMapOrdinarySurfaceFollowsProductionAssembly(t *testing.T) {
 					"contract-atlas", "contract-compatibility", "contract-impact-report", "kafka-topic-usage",
 					"service-catalog-v2", "wire-compatibility",
 				},
-				proofTool: true, wireTool: true,
+				proofTool: true, topicTool: true, wireTool: true,
 			},
 		},
 		{
@@ -336,6 +363,16 @@ func TestCallerMapOrdinarySurfaceFollowsProductionAssembly(t *testing.T) {
 			want: servedCallerSurfaces{
 				capabilities:  []string{"contract-atlas", "contract-caller-map", "service-catalog-v2"},
 				callerMapTool: true, callerMapEnabled: true, callerMapServiced: true,
+			},
+		},
+		{
+			// T55.2: the producer plane alone, never the consumer or any other proof surface.
+			name:      "a released Kafka producer alone serves only producer topic usage",
+			producer:  true,
+			configure: func(*config.Config) {},
+			want: servedCallerSurfaces{
+				capabilities: []string{"kafka-topic-usage", "service-catalog-v2"},
+				topicTool:    true,
 			},
 		},
 		{
@@ -355,7 +392,7 @@ func TestCallerMapOrdinarySurfaceFollowsProductionAssembly(t *testing.T) {
 			configure: func(cfg *config.Config) { cfg.Experimental.ProvisionalThriftExtraction = true },
 			want: servedCallerSurfaces{
 				capabilities:  everyProduct,
-				callerMapTool: true, comparisonTool: true, proofTool: true, wireTool: true,
+				callerMapTool: true, comparisonTool: true, proofTool: true, topicTool: true, wireTool: true,
 				callerMapEnabled: true, callerMapServiced: true,
 			},
 		},
@@ -365,6 +402,16 @@ func TestCallerMapOrdinarySurfaceFollowsProductionAssembly(t *testing.T) {
 			cfg := &config.Config{}
 			cfg.Server.DataDir = t.TempDir()
 			test.configure(cfg)
+			if test.producer {
+				restore := packRecipes
+				packRecipes = map[string]func() []extract.Extractor{kafkaProducerPackID: kafkaProducerRecipe}
+				t.Cleanup(func() { packRecipes = restore })
+				dir := t.TempDir()
+				public, release := writeReleasedRecord(t, dir, kafkaProducerPackID, "key-1")
+				bindReleaseLoad(t, release)
+				cfg.ReleaseSelection.Path = dir
+				cfg.ReleaseSelection.Keys = []config.ReleaseKey{{ID: "key-1", PublicKey: public}}
+			}
 			if test.claim {
 				dir := t.TempDir()
 				public, release := writeReleasedRecord(t, dir, wireCompatibilityPackID, "key-1")

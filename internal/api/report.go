@@ -27,6 +27,9 @@ func proofCapabilities(opts Options) []string {
 	if service == nil {
 		return nil
 	}
+	if opts.KafkaProducerOnly {
+		return []string{"kafka-topic-usage"}
+	}
 	capabilities := []string{"contract-impact-report", "kafka-topic-usage"}
 	if service.CompatibilityAvailable() {
 		capabilities = append(capabilities, "contract-compatibility")

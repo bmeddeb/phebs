@@ -306,6 +306,13 @@ and who owns each.
     expires on 2027-01-10. See protocol §11.
   - Remaining, agent: bind the input identity after Epic 49.
 
+- **Kafka producer (Epic 55).**
+  - Done: T55.1 site coverage passes (762/762 production sites). T55.2
+    registers the producer plane on its own: a released producer serves only
+    producer topic usage, with the consumer plane named unavailable.
+  - Remaining, agent: T55.3, which binds the recipe, proves the served path
+    on the real binary, measures the envelope and signs.
+
 Everything human-gated is listed above. Agent work proceeds on ungated
 tickets in the meantime.
 

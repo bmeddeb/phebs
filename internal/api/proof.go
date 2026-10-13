@@ -111,6 +111,9 @@ type KafkaTopicCensus struct {
 	PublishedRuns         int `json:"published_runs"`
 	ProducerPublishedRuns int `json:"producer_published_runs"`
 	ConsumerPublishedRuns int `json:"consumer_published_runs"`
+	// UnavailablePlanes names planes no admitted recipe publishes, so their
+	// zeros can never read as measured (T55.2: a released producer alone).
+	UnavailablePlanes []string `json:"unavailable_planes,omitempty"`
 	// Truncated lists "plane:class" entries whose counts are lower bounds:
 	// one repository exceeded the bounded per-plane query limit. All classes
 	// in that plane are then marked conservatively. The census never fails
@@ -247,10 +250,14 @@ func (s *ProofService) FindKafkaTopicUsage(ctx context.Context, topic string) (*
 		Kind: "find_kafka_topic_usage", Topic: topic,
 		Domains: []string{"kafka-consumer", "kafka-producer"},
 	}
-	return buildProofBundleWithCensus(ctx, s.opts, query, []assertionFilter{
+	filters := []assertionFilter{
 		{Domain: "kafka-producer", Predicate: "PRODUCES_TO_TOPIC", Object: "topic:" + topic},
 		{Domain: "kafka-consumer", Predicate: "CONSUMES_FROM_TOPIC", Object: "topic:" + topic},
-	}, nil, true)
+	}
+	if s.opts.KafkaProducerOnly {
+		query.Domains, filters = []string{"kafka-producer"}, filters[:1]
+	}
+	return buildProofBundleWithCensus(ctx, s.opts, query, filters, nil, true)
 }
 
 // validateKafkaTopic applies the KD2 identity bounds — Kafka's own topic
@@ -325,6 +332,11 @@ func registerProofAPI(api huma.API, opts Options) {
 	if service == nil {
 		return
 	}
+	if opts.KafkaProducerOnly {
+		registerKafkaTopicUsageAPI(api, service)
+		registerProofBundleReadAPI(api, opts)
+		return
+	}
 
 	type operationIn struct {
 		Operation string `query:"operation" required:"true" minLength:"1" maxLength:"1024" example:"/shop.Cart/Get"`
@@ -374,16 +386,7 @@ func registerProofAPI(api huma.API, opts Options) {
 		return &proofOut{Body: *envelope}, nil
 	})
 
-	type topicIn struct {
-		Topic string `query:"topic" required:"true" minLength:"1" maxLength:"249" example:"orders-v1" doc:"one Kafka topic spelling; the answer is source evidence only and never a completeness claim"`
-	}
-	huma.Get(api, "/api/find_kafka_topic_usage", func(ctx context.Context, in *topicIn) (*proofOut, error) {
-		envelope, err := service.FindKafkaTopicUsage(ctx, in.Topic)
-		if err != nil {
-			return nil, err
-		}
-		return &proofOut{Body: *envelope}, nil
-	})
+	registerKafkaTopicUsageAPI(api, service)
 
 	type coverageIn struct {
 		Domains string `query:"domains" doc:"comma-separated extractor domains; defaults to all provisional domains" example:"grpc-consumer,scip-proto-field"`
@@ -417,6 +420,26 @@ func registerProofAPI(api huma.API, opts Options) {
 		})
 	}
 
+	registerProofBundleReadAPI(api, opts)
+	registerContractImpactAPI(api, opts, service)
+}
+
+func registerKafkaTopicUsageAPI(api huma.API, service *ProofService) {
+	type proofOut struct{ Body ProofBundleEnvelope }
+	type topicIn struct {
+		Topic string `query:"topic" required:"true" minLength:"1" maxLength:"249" example:"orders-v1" doc:"one Kafka topic spelling; the answer is source evidence only and never a completeness claim"`
+	}
+	huma.Get(api, "/api/find_kafka_topic_usage", func(ctx context.Context, in *topicIn) (*proofOut, error) {
+		envelope, err := service.FindKafkaTopicUsage(ctx, in.Topic)
+		if err != nil {
+			return nil, err
+		}
+		return &proofOut{Body: *envelope}, nil
+	})
+}
+
+func registerProofBundleReadAPI(api huma.API, opts Options) {
+	type proofOut struct{ Body ProofBundleEnvelope }
 	type bundleIn struct {
 		ID string `path:"id" minLength:"67" maxLength:"67"`
 	}
@@ -427,7 +450,6 @@ func registerProofAPI(api huma.API, opts Options) {
 		}
 		return &proofOut{Body: *envelope}, nil
 	})
-	registerContractImpactAPI(api, opts, service)
 }
 
 func createProofBundle(ctx context.Context, opts Options, query ProofQuery, filter assertionFilter) (*ProofBundleEnvelope, error) {
@@ -499,6 +521,9 @@ func buildProofBundleValue(
 		var census *KafkaTopicCensus
 		if withCensus {
 			census, err = collectKafkaTopicCensus(ctx, opts.Evidence, certificate)
+			if err == nil && opts.KafkaProducerOnly {
+				census.UnavailablePlanes = []string{"consumer"}
+			}
 			if err != nil {
 				if errors.Is(err, store.ErrConflict) || errors.Is(err, store.ErrNotFound) {
 					continue
