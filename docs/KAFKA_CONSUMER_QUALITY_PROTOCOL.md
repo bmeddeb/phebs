@@ -122,3 +122,54 @@ emits no spurious sites over this population.
 - Topic precision: no consumer site in this population names a literal
   topic.
 - The served path. That is T56.2/T56.3.
+
+## 9. Release (2026-10-13): consumer 1.0.0 and producer 1.0.1, signed and proven on the real binary
+
+The selection is `spike/t563/release/selection/` and holds two records, both
+signed with key `ben-phebs-release-2026-10`:
+
+- `rel-phebs.kafka.consumer-1.0.0`;
+- `rel-phebs.kafka.producer-1.0.1`. It re-binds the unchanged producer claim
+  to this binary, because a record admits one exact binary and producer
+  1.0.0 is bound to `71924817`.
+
+Both records bind the artifacts in `spike/t563/release/artifacts/`, release
+binary commit `41da6187` (`sha256:9dc0ad09…`, reproduced byte for byte by a
+second clean build), and validation expiry 2027-01-11.
+
+**Code added.** The consumer recipe is bound, and the release rehearsal
+driver takes `--planes` and revokes per plane.
+
+**Rehearsal (`receipts/rehearsal.json`).** Both planes were released, under
+a throwaway key over the identical binary. It used the seven T55.1 corpus
+repositories at their locked commits, release-only. In every phase each
+plane's served census equalled the independent oracle: consumer
+selector-expr 4 and unresolved-ident 12; producer selector-expr 1 and
+unresolved-ident 17.
+
+| Phase | Ready | To published | Peak RSS |
+|---|---|---|---|
+| Cold | 2.5 s | 59.1 s | 516 MiB |
+| Restart | 1.8 s | 3.6 s | 250 MiB |
+| Hard death (SIGKILL) | 1.5 s | 3.6 s | 247 MiB |
+| Backup → restore (backup 166 MiB, restore 29.8 s) | 1.8 s | 47.1 s | 253 MiB |
+
+The cold phase also checked:
+
+- capabilities are exactly `kafka-topic-usage` and the service catalog;
+- anonymous requests get 401;
+- an OIDC member's census is limited, per plane, to its visible
+  repository;
+- the member gets 404 on a wider bundle;
+- MCP works;
+- topic query p95 is 236 ms, against 114 ms with one plane, because the
+  query now covers two planes.
+
+**Final proof with Ben's key (`receipts/final.json`).** With both records,
+both planes were served and each census equalled the oracle. With only
+`rel-phebs.kafka.consumer-1.0.0` revoked, the producer plane kept serving
+(census exact) and `unavailable_planes` was `["consumer"]`. Each plane
+withdraws independently.
+
+**Not established.** No independent human review. Topic-name precision.
+The envelope covers this host and seven repositories only.

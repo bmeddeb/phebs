@@ -1,0 +1,236 @@
+{
+ "binary_sha256": "sha256:9dc0ad09440f40b6fcb8b3b9490a7479ab4b8f1b593b466a7c61a85c1420e2ff",
+ "data_bytes": 495614780,
+ "expected_by_repository": {
+  "consumer": {
+   "Burrow": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 2,
+    "unresolved-ident": 0
+   },
+   "go-dnscollector": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 0,
+    "unresolved-ident": 0
+   },
+   "goka": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 1,
+    "unresolved-ident": 1
+   },
+   "kafka-pixy": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 1,
+    "unresolved-ident": 2
+   },
+   "plugins": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 0,
+    "unresolved-ident": 4
+   },
+   "tiflow": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 0,
+    "unresolved-ident": 3
+   },
+   "watermill-kafka": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 0,
+    "unresolved-ident": 2
+   }
+  },
+  "producer": {
+   "Burrow": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 0,
+    "unresolved-ident": 0
+   },
+   "go-dnscollector": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 1,
+    "unresolved-ident": 0
+   },
+   "goka": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 0,
+    "unresolved-ident": 2
+   },
+   "kafka-pixy": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 0,
+    "unresolved-ident": 2
+   },
+   "plugins": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 0,
+    "unresolved-ident": 4
+   },
+   "tiflow": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 0,
+    "unresolved-ident": 8
+   },
+   "watermill-kafka": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 0,
+    "unresolved-ident": 1
+   }
+  }
+ },
+ "expected_total": {
+  "consumer": {
+   "ambiguous-library-import": 0,
+   "call-expr": 0,
+   "invalid-topic-literal": 0,
+   "non-literal-expr": 0,
+   "selector-expr": 4,
+   "unresolved-ident": 12
+  },
+  "producer": {
+   "ambiguous-library-import": 0,
+   "call-expr": 0,
+   "invalid-topic-literal": 0,
+   "non-literal-expr": 0,
+   "selector-expr": 1,
+   "unresolved-ident": 17
+  }
+ },
+ "phases": {
+  "backup-restore": {
+   "census_matches_oracle": true,
+   "ready_seconds": 1.756,
+   "rss": {
+    "mean_bytes": 232491470,
+    "peak_bytes": 265269248,
+    "peak_processes": 4,
+    "samples": 93
+   },
+   "seconds_to_published": 47.079,
+   "stop": {
+    "outcome": "success",
+    "stop_mode": "graceful",
+    "wall_seconds": 48.977
+   }
+  },
+  "cold": {
+   "anonymous": 401,
+   "capabilities": [
+    "kafka-topic-usage",
+    "service-catalog-v2"
+   ],
+   "census_matches_oracle": true,
+   "member_census_matches": true,
+   "member_reads_admin_bundle": 404,
+   "query_latency": {
+    "max_ms": 239.61,
+    "n": 60,
+    "p50_ms": 227.96,
+    "p95_ms": 235.91,
+    "p99_ms": 239.61
+   },
+   "ready_seconds": 2.507,
+   "rss": {
+    "mean_bytes": 247958442,
+    "peak_bytes": 541114368,
+    "peak_processes": 4,
+    "samples": 144
+   },
+   "seconds_to_published": 59.074,
+   "stop": {
+    "outcome": "success",
+    "stop_mode": "graceful",
+    "wall_seconds": 75.909
+   }
+  },
+  "hard-death": {
+   "census_matches_oracle": true,
+   "ready_seconds": 1.505,
+   "rss": {
+    "mean_bytes": 256534820,
+    "peak_bytes": 258965504,
+    "peak_processes": 2,
+    "samples": 7
+   },
+   "seconds_to_published": 3.56,
+   "stop": {
+    "outcome": "success",
+    "stop_mode": "graceful",
+    "wall_seconds": 5.207
+   }
+  },
+  "restart": {
+   "backup_bytes": 173600759,
+   "census_matches_oracle": true,
+   "ready_seconds": 1.755,
+   "rss": {
+    "mean_bytes": 259112179,
+    "peak_bytes": 262160384,
+    "peak_processes": 2,
+    "samples": 21
+   },
+   "seconds_to_published": 3.558,
+   "stop": {
+    "outcome": "success",
+    "stop_mode": "hard_kill",
+    "wall_seconds": 12.289
+   }
+  }
+ },
+ "planes": [
+  "consumer",
+  "producer"
+ ],
+ "repositories": {
+  "Burrow": "local/home/ben/phebs-rehearsals/t563-release-20261013/rehearsal/corpus/Burrow",
+  "go-dnscollector": "local/home/ben/phebs-rehearsals/t563-release-20261013/rehearsal/corpus/go-dnscollector",
+  "goka": "local/home/ben/phebs-rehearsals/t563-release-20261013/rehearsal/corpus/goka",
+  "kafka-pixy": "local/home/ben/phebs-rehearsals/t563-release-20261013/rehearsal/corpus/kafka-pixy",
+  "plugins": "local/home/ben/phebs-rehearsals/t563-release-20261013/rehearsal/corpus/plugins",
+  "tiflow": "local/home/ben/phebs-rehearsals/t563-release-20261013/rehearsal/corpus/tiflow",
+  "watermill-kafka": "local/home/ben/phebs-rehearsals/t563-release-20261013/rehearsal/corpus/watermill-kafka"
+ },
+ "restore_seconds": 29.839,
+ "schema": "t553-kafka-release-rehearsal-v2"
+}

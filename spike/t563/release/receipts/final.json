@@ -1,0 +1,51 @@
+{
+ "expected_total": {
+  "consumer": {
+   "ambiguous-library-import": 0,
+   "call-expr": 0,
+   "invalid-topic-literal": 0,
+   "non-literal-expr": 0,
+   "selector-expr": 4,
+   "unresolved-ident": 12
+  },
+  "producer": {
+   "ambiguous-library-import": 0,
+   "call-expr": 0,
+   "invalid-topic-literal": 0,
+   "non-literal-expr": 0,
+   "selector-expr": 1,
+   "unresolved-ident": 17
+  }
+ },
+ "planes": [
+  "consumer",
+  "producer"
+ ],
+ "revoked": {
+  "capabilities": [
+   "kafka-topic-usage",
+   "service-catalog-v2"
+  ],
+  "census_matches_oracle": true,
+  "seconds_to_published": 40.228,
+  "served_planes": [
+   "producer"
+  ],
+  "unavailable_planes": [
+   "consumer"
+  ]
+ },
+ "signed": {
+  "capabilities": [
+   "kafka-topic-usage",
+   "service-catalog-v2"
+  ],
+  "census_matches_oracle": true,
+  "seconds_to_published": 66.115,
+  "served_planes": [
+   "consumer",
+   "producer"
+  ],
+  "unavailable_planes": null
+ }
+}

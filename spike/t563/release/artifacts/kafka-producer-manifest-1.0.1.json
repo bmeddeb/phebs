@@ -1,0 +1,31 @@
+{
+ "census": {
+  "schema": "kafka-topic-census-v1",
+  "unavailable_planes": [
+   "consumer"
+  ]
+ },
+ "excluded": [
+  "kafka-consumer (its own release, phebs.kafka.consumer)",
+  "franz-go",
+  "confluent-kafka-go"
+ ],
+ "pack_claim_version": "1.0.1",
+ "pack_id": "phebs.kafka.producer",
+ "recipe": {
+  "extractors": [
+   "kafka-producer@1.2.0"
+  ],
+  "registry": "cmd/phebs packRecipes"
+ },
+ "schema": "phebs-extractor-pack-manifest-v1",
+ "scope": "KafkaReleasedPlanes: topic usage over released planes only; no Impact, operation consumers, field references, coverage, compatibility or Atlas",
+ "surfaces": {
+  "capability": "kafka-topic-usage",
+  "http": [
+   "GET /api/find_kafka_topic_usage",
+   "GET /api/proof_bundles/{id}"
+  ],
+  "mcp_tool": "find_kafka_topic_usage"
+ }
+}

@@ -320,8 +320,10 @@ and who owns each.
   - Done: T56.1 site coverage passes (640/640 production sites).
   - Done: T56.2 independent consumer registration. Released Kafka planes
     are served on their own, and each unreleased plane is named unavailable.
-  - Next: T56.3, the consumer release. It re-signs the producer record for
-    the same binary.
+  - **Released 2026-10-13:** `rel-phebs.kafka.consumer-1.0.0` and producer
+    1.0.1 ship as one selection for binary `41da6187`. Each plane's census
+    equals the oracle through the lifecycle, and revoking the consumer alone
+    leaves the producer served. See consumer protocol §9.
 
 Everything human-gated is listed above. Agent work proceeds on ungated
 tickets in the meantime.

@@ -1,0 +1,108 @@
+{
+ "authorization": {
+  "anonymous": 401,
+  "member_census_limited_to_visible_repository": true,
+  "member_reads_admin_bundle": 404
+ },
+ "not_established": [
+  "independent human review",
+  "topic-name precision (4 literal sites measured)"
+ ],
+ "pack_claim_version": "1.0.1",
+ "pack_id": "phebs.kafka.producer",
+ "quality": {
+  "covered_agree": 762,
+  "extra": 0,
+  "miss_rate_upper_95": 0.0039,
+  "protocol": "docs/KAFKA_PRODUCER_QUALITY_PROTOCOL.md section 8",
+  "scored_sites": 762,
+  "seal_commit": "814fc0e20e4e6c36b2f9c7a5ac3c7d5d45620d64",
+  "seal_gist": "https://gist.github.com/Blandt/78a8678412666759038795eb854f16e9",
+  "wrong_topic": 0
+ },
+ "release_binary": {
+  "source_commit": "41da6187d6a7bea46864925d9ecd4d456555a265"
+ },
+ "reviewer": "Claude, named by Ben (not an independent human review)",
+ "schema": "phebs-extractor-pack-validation-v1",
+ "served_path": {
+  "census_matched_oracle_every_phase_for_every_plane": true,
+  "data_bytes": 495614780,
+  "expected_census_from_independent_oracle": {
+   "consumer": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 4,
+    "unresolved-ident": 12
+   },
+   "producer": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 1,
+    "unresolved-ident": 17
+   }
+  },
+  "phases": {
+   "backup-restore": {
+    "census_matches_oracle": true,
+    "ready_seconds": 1.756,
+    "rss_peak_bytes": 265269248,
+    "seconds_to_published": 47.079
+   },
+   "cold": {
+    "anonymous": 401,
+    "capabilities": [
+     "kafka-topic-usage",
+     "service-catalog-v2"
+    ],
+    "census_matches_oracle": true,
+    "member_census_matches": true,
+    "member_reads_admin_bundle": 404,
+    "query_latency": {
+     "max_ms": 239.61,
+     "n": 60,
+     "p50_ms": 227.96,
+     "p95_ms": 235.91,
+     "p99_ms": 239.61
+    },
+    "ready_seconds": 2.507,
+    "rss_peak_bytes": 541114368,
+    "seconds_to_published": 59.074
+   },
+   "hard-death": {
+    "census_matches_oracle": true,
+    "ready_seconds": 1.505,
+    "rss_peak_bytes": 258965504,
+    "seconds_to_published": 3.56
+   },
+   "restart": {
+    "backup_bytes": 173600759,
+    "census_matches_oracle": true,
+    "ready_seconds": 1.755,
+    "rss_peak_bytes": 262160384,
+    "seconds_to_published": 3.558
+   }
+  },
+  "rehearsal_key": "a throwaway key over the identical binary and code path; the signed records are proven separately",
+  "rehearsal_sha256": "sha256:9ce9e03c4faa439de239f800f3163c47422413b4d8ecda3686fa4f398d9ccbce",
+  "released_planes": [
+   "consumer",
+   "producer"
+  ],
+  "repositories": [
+   "Burrow",
+   "go-dnscollector",
+   "goka",
+   "kafka-pixy",
+   "plugins",
+   "tiflow",
+   "watermill-kafka"
+  ],
+  "restore_seconds": 29.839
+ },
+ "supersedes": "rel-phebs.kafka.producer-1.0.0 (binary 71924817); same claim, re-bound to the T56.3 binary"
+}

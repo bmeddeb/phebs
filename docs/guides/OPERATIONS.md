@@ -4643,6 +4643,16 @@ succeeds (the first five remain available when compatibility is unavailable):
   singular↔repeated change as breaking, including string and message changes
   that protobuf documents as wire-compatible.
 
+  **Released Kafka planes (T56.3, current).** Use
+  `spike/t563/release/{selection,artifacts}`. The selection holds consumer
+  1.0.0 and producer 1.0.1, and admits only the binary built from `41da6187`
+  (`sha256:9dc0ad09…`). It supersedes the T55.3 producer-only selection,
+  which loads only on `71924817`.
+
+  - Revoking one release id withdraws only that plane. The other keeps
+    serving, and the census names the withdrawn plane unavailable.
+  - Both expire on 2027-01-11.
+
   **Released Kafka producer (T55.3, release 1.0.0).** Point
   `release_selection` at `spike/t553/release/{selection,artifacts}` with the
   same key. The record admits only the binary built from `71924817` with

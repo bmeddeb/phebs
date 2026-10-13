@@ -19197,6 +19197,22 @@ topic-dependent rows stay separate from topic-independent abstention census.
 **T56.3 · Measured consumer promotion** — satisfy the common bar independently
 of Epic 55, including exact source, permission, recovery and per-plane costs.
 
+*Released 2026-10-13: `rel-phebs.kafka.consumer-1.0.0`, with
+`rel-phebs.kafka.producer-1.0.1` re-signed for the same binary (a record
+binds one exact binary). Both are signed with Ben's key for reproducible
+binary `41da6187` (`sha256:9dc0ad09…`); selection `spike/t563/release/`.
+
+- **Two-plane rehearsal on the release-only real binary.** Each plane's
+  served census equalled the independent oracle through cold start,
+  restart, SIGKILL recovery and backup/restore. Member scope holds per
+  plane, anonymous gets 401, and a wider bundle gets 404. Topic query p95
+  is 236 ms; peak RSS is 516 MiB.
+- **Final proof.** Both planes are admitted. Revoking only the consumer
+  leaves the producer served, with consumer named unavailable.
+
+Details are in `docs/KAFKA_CONSUMER_QUALITY_PROTOCOL.md` §9. Expires
+2027-01-11. No independent human review.*
+
 ## Epic 57 · Topics product production readiness
 
 **T57.1 · Topic overview/detail composition contract** — consume one or both
