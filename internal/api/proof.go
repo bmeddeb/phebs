@@ -80,6 +80,9 @@ type ProofBundle struct {
 	Assertions        []store.Assertion           `json:"assertions"`
 	Evidence          []BundleEvidence            `json:"evidence"`
 	UnresolvedCensus  *KafkaTopicCensus           `json:"unresolved_census,omitempty"`
+	// ExactAuthorities names the partitioned roots a topic-usage bundle read
+	// in place of legacy runs (T55.3); empty for every other bundle.
+	ExactAuthorities []ContractCatalogAuthority `json:"exact_authorities,omitempty"`
 	Coverage          extract.CoverageCertificate `json:"coverage"`
 	ExtractorVersions []BundleExtractor           `json:"extractor_versions"`
 	VisibilityContext VisibilityContext           `json:"visibility_context"`
@@ -508,7 +511,17 @@ func buildProofBundleValue(
 		if err != nil {
 			return nil, huma.Error500InternalServerError("build extraction coverage", err)
 		}
-		assertions, evidence, err := collectProofEvidence(ctx, opts.Evidence, certificate, filters)
+		var sources catalogSources
+		if withCensus {
+			sources, err = selectExactSources(ctx, opts.Evidence, certificate, visible, query.Domains)
+			if err != nil {
+				if errors.Is(err, store.ErrConflict) || errors.Is(err, store.ErrNotFound) {
+					continue
+				}
+				return nil, huma.Error500InternalServerError("select topic usage sources", err)
+			}
+		}
+		assertions, evidence, err := collectProofEvidence(ctx, opts.Evidence, certificate, filters, sources)
 		if err != nil {
 			if errors.Is(err, store.ErrConflict) || errors.Is(err, store.ErrNotFound) {
 				continue
@@ -520,7 +533,7 @@ func buildProofBundleValue(
 		}
 		var census *KafkaTopicCensus
 		if withCensus {
-			census, err = collectKafkaTopicCensus(ctx, opts.Evidence, certificate)
+			census, err = collectKafkaTopicCensus(ctx, opts.Evidence, certificate, sources)
 			if err == nil && opts.KafkaProducerOnly {
 				census.UnavailablePlanes = []string{"consumer"}
 			}
@@ -542,6 +555,12 @@ func buildProofBundleValue(
 		}
 		if confirmed.Digest != certificate.Digest {
 			continue
+		}
+		if withCensus {
+			reselected, err := selectExactSources(ctx, opts.Evidence, confirmed, visible, query.Domains)
+			if err != nil || !slices.Equal(reselected.authorities(), sources.authorities()) {
+				continue // a partitioned root moved while the bundle was built
+			}
 		}
 		confirmedVisible, err := visibleRepositories(ctx, opts)
 		if err != nil {
@@ -580,6 +599,7 @@ func buildProofBundleValue(
 		bundle := ProofBundle{
 			SchemaVersion: proofBundleSchemaVersion, Query: query,
 			Assertions: assertions, Evidence: evidence, UnresolvedCensus: census,
+			ExactAuthorities: nonEmptyAuthorities(sources),
 			Coverage:          *certificate,
 			ExtractorVersions: certificateExtractors(certificate),
 			VisibilityContext: visibilityContext(ctx, opts, certificate),
@@ -680,8 +700,28 @@ func buildAndPersistProofBundle(
 	)
 }
 
-func collectProofEvidence(ctx context.Context, source store.EvidenceStore, certificate *extract.CoverageCertificate, filters []assertionFilter) ([]store.Assertion, []BundleEvidence, error) {
+// proofSource is the evidence reader and run for one repository/domain: the
+// legacy published run, or (when sources were selected) the exact source.
+func proofSource(source store.EvidenceStore, sources catalogSources, repository extract.CertificateRepository, domain string) (store.EvidenceStore, string, bool) {
+	if sources != nil {
+		selected, ok := sources.lookup(repository.Repository, domain)
+		return selected.evidence, selected.run.RunID, ok
+	}
+	run, ok := certificateRun(repository, domain)
+	return source, run.RunID, ok && run.Status == "published"
+}
+
+func nonEmptyAuthorities(sources catalogSources) []ContractCatalogAuthority {
+	if authorities := sources.authorities(); len(authorities) > 0 {
+		return authorities
+	}
+	return nil
+}
+
+func collectProofEvidence(ctx context.Context, source store.EvidenceStore, certificate *extract.CoverageCertificate, filters []assertionFilter, sources catalogSources) ([]store.Assertion, []BundleEvidence, error) {
 	assertions := make([]store.Assertion, 0)
+	type runKey struct{ repo, runID string }
+	readers := map[runKey]store.EvidenceStore{}
 	domains := make(map[string]struct{}, len(certificate.Domains))
 	for _, domain := range certificate.Domains {
 		domains[domain] = struct{}{}
@@ -694,19 +734,20 @@ func collectProofEvidence(ctx context.Context, source store.EvidenceStore, certi
 			return nil, nil, errors.New("proof assertion filter domain is absent from coverage")
 		}
 		for _, repository := range certificate.Repositories {
-			run, ok := certificateRun(repository, filter.Domain)
-			if !ok || run.Status != "published" {
+			reader, runID, ok := proofSource(source, sources, repository, filter.Domain)
+			if !ok {
 				continue
 			}
-			rows, err := source.ListAssertions(ctx, store.AssertionQuery{
+			readers[runKey{repository.Repository, runID}] = reader
+			rows, err := reader.ListAssertions(ctx, store.AssertionQuery{
 				Predicate: filter.Predicate, Object: filter.Object, Lineage: filter.Lineage,
-				Repo: repository.Repository, RunID: run.RunID, Limit: proofQueryAssertionLimit,
+				Repo: repository.Repository, RunID: runID, Limit: proofQueryAssertionLimit,
 			})
 			if err != nil {
 				return nil, nil, err
 			}
 			for _, assertion := range rows {
-				if assertion.Repo != repository.Repository || assertion.RunID != run.RunID ||
+				if assertion.Repo != repository.Repository || assertion.RunID != runID ||
 					assertion.Predicate != filter.Predicate || assertion.Object != filter.Object ||
 					filter.Lineage != "" && assertion.Lineage != filter.Lineage {
 					return nil, nil, errors.New("proof query returned an inconsistent assertion")
@@ -745,7 +786,11 @@ func collectProofEvidence(ctx context.Context, source store.EvidenceStore, certi
 	})
 	evidence := make([]BundleEvidence, 0, len(ordered))
 	for _, key := range ordered {
-		resolved, err := source.ResolveEvidence(ctx, key.repo, key.runID, key.atomID)
+		reader := readers[runKey{key.repo, key.runID}]
+		if reader == nil {
+			reader = source
+		}
+		resolved, err := reader.ResolveEvidence(ctx, key.repo, key.runID, key.atomID)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -772,7 +817,7 @@ func collectProofEvidence(ctx context.Context, source store.EvidenceStore, certi
 // present even at zero. One bounded prefix query per published plane/run
 // replaces the former six exact-object round trips; returned rows remain
 // authorization-scoped by the certificate's exact repository and run.
-func collectKafkaTopicCensus(ctx context.Context, source store.EvidenceStore, certificate *extract.CoverageCertificate) (*KafkaTopicCensus, error) {
+func collectKafkaTopicCensus(ctx context.Context, source store.EvidenceStore, certificate *extract.CoverageCertificate, sources catalogSources) (*KafkaTopicCensus, error) {
 	census := &KafkaTopicCensus{
 		SchemaVersion: "kafka-topic-census-v1",
 		Producer:      make(map[string]int, len(kafkaAbstentionClasses)),
@@ -793,15 +838,15 @@ func collectKafkaTopicCensus(ctx context.Context, source store.EvidenceStore, ce
 			plane.counts[class] = 0
 		}
 		for _, repository := range certificate.Repositories {
-			run, ok := certificateRun(repository, plane.domain)
-			if !ok || run.Status != "published" {
+			reader, runID, ok := proofSource(source, sources, repository, plane.domain)
+			if !ok {
 				continue
 			}
 			(*plane.published)++
 			census.PublishedRuns++
-			rows, err := source.ListAssertions(ctx, store.AssertionQuery{
+			rows, err := reader.ListAssertions(ctx, store.AssertionQuery{
 				Predicate: plane.predicate, ObjectPrefix: "unresolved:",
-				Repo: repository.Repository, RunID: run.RunID,
+				Repo: repository.Repository, RunID: runID,
 				Limit: proofQueryAssertionLimit, AllowTruncate: true,
 			})
 			if err != nil {
@@ -813,7 +858,7 @@ func collectKafkaTopicCensus(ctx context.Context, source store.EvidenceStore, ce
 			}
 			for _, assertion := range rows {
 				class, found := strings.CutPrefix(assertion.Object, "unresolved:")
-				if assertion.Repo != repository.Repository || assertion.RunID != run.RunID ||
+				if assertion.Repo != repository.Repository || assertion.RunID != runID ||
 					assertion.Predicate != plane.predicate || !found ||
 					!slices.Contains(kafkaAbstentionClasses, class) ||
 					len(assertion.Supporting) == 0 || len(assertion.Contradicting) != 0 {

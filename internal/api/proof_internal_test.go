@@ -20,7 +20,7 @@ func TestCollectProofEvidenceBindsEveryFilterToAnExplicitCoverageDomain(t *testi
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			certificate := &extract.CoverageCertificate{Domains: test.domains}
-			_, _, err := collectProofEvidence(context.Background(), nil, certificate, []assertionFilter{test.filter})
+			_, _, err := collectProofEvidence(context.Background(), nil, certificate, []assertionFilter{test.filter}, nil)
 			if err == nil || !strings.Contains(err.Error(), "domain") {
 				t.Fatalf("domains %v: %v", test.domains, err)
 			}
@@ -29,7 +29,7 @@ func TestCollectProofEvidenceBindsEveryFilterToAnExplicitCoverageDomain(t *testi
 	certificate := &extract.CoverageCertificate{Domains: []string{"one", "two"}}
 	if _, _, err := collectProofEvidence(context.Background(), nil, certificate, []assertionFilter{{
 		Domain: "two", Predicate: "CALLS_OPERATION",
-	}}); err != nil {
+	}}, nil); err != nil {
 		t.Fatalf("explicit filter domain was rejected: %v", err)
 	}
 }

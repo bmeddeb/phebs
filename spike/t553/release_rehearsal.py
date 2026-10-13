@@ -105,7 +105,7 @@ def rehearse(binary: Path, history: Path, lock_path: Path, oracle: Path, selecti
     secret_file.write_text(secrets.token_hex(24))
     os.chmod(secret_file, 0o600)
     member = 'member@t553.test'
-    connections = ''.join(f'  - name: {n}\n    type: git\n    url: "{p}"\n' for n, p in paths.items())
+    connections = ''.join(f'  - name: {n.lower()}\n    type: git\n    url: "{p}"\n' for n, p in paths.items())
 
     def config(data: Path) -> Path:
         path = run_root / f'phebs-{data.name}.yaml'
@@ -219,13 +219,63 @@ def rehearse(binary: Path, history: Path, lock_path: Path, oracle: Path, selecti
     return result
 
 
+def final(binary: Path, history: Path, lock_path: Path, oracle: Path, selection: Path, artifacts: Path,
+          key_id: str, public_key: str, release_id: str, run_root: Path, deadline_s: float = 900) -> dict:
+    """The signed record itself: release-only admission with census parity, then revocation."""
+    run_root.mkdir(parents=True)
+    paths = prepare(history, json.loads(lock_path.read_text()), run_root / 'corpus')
+    want = total(expected(oracle, paths), REPOS)
+    port, key = serve_rehearsal.free_port(), secrets.token_hex(24)
+    connections = ''.join(f'  - name: {n.lower()}\n    type: git\n    url: "{p}"\n' for n, p in paths.items())
+    helpers = binary.parent
+    env = {**os.environ, 'PHEBS_ZOEKT_GIT_INDEX': str(helpers / 'zoekt-git-index'),
+           'PHEBS_FOCUSED_INDEX': str(helpers / 'phebs-focused-index'), 'PHEBS_BUF': str(helpers / 'buf')}
+    base, result = f'http://127.0.0.1:{port}', {'expected_total': want}
+    for step, revoked in (('signed', ''), ('revoked', f'  revoked:\n    - "{release_id}"\n')):
+        cfg = run_root / f'{step}.yaml'
+        cfg.write_text(f'server:\n  addr: "127.0.0.1:{port}"\n  data_dir: "{run_root / "data"}"\n'
+                       f'auth:\n  api_key: "{key}"\n  cookie_secure: false\n'
+                       f'release_selection:\n  path: "{selection}"\n  artifacts_path: "{artifacts}"\n'
+                       f'  keys:\n    - id: "{key_id}"\n      public_key: "{public_key}"\n{revoked}'
+                       f'sync:\n  poll_interval: 15s\n  resync_interval: 1h\nconnections:\n{connections}')
+        os.chmod(cfg, 0o600)
+        session = serve.ServeSession(run_root / 'harness', step, [str(binary), 'serve', '-config', str(cfg)], base,
+                                     env=env, ready_timeout_s=300, stop_timeout_s=60)
+        session.start()
+        try:
+            status, body = serve.http_get(base, '/api/version', token=key)
+            capabilities = sorted(json.loads(body).get('capabilities', []))
+            if step == 'signed':
+                seconds, served = wait_published(base, key, len(REPOS), deadline_s)
+                if capabilities != ['kafka-topic-usage', 'service-catalog-v2'] or served['producer'] != want:
+                    raise serve.ServeError(f'signed admission: {capabilities} {served}')
+                result['signed'] = {'capabilities': capabilities, 'seconds_to_published': round(seconds, 3),
+                                    'census_matches_oracle': True, 'unavailable_planes': served.get('unavailable_planes')}
+            else:
+                status = serve.http_get(base, '/api/find_kafka_topic_usage', {'topic': 'orders'}, token=key)[0]
+                if 'kafka-topic-usage' in capabilities or status == 200:
+                    raise serve.ServeError('a revoked producer release still serves topic usage')
+                result['revoked'] = {'capabilities': capabilities, 'topic_usage_status': status}
+        except BaseException:
+            session.stop('hard_kill', reason=f'{step} probe failed')
+            raise
+        session.stop('graceful')
+    return result
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     for flag in ('--binary', '--history', '--lock', '--oracle', '--selection', '--artifacts', '--run-root'):
         parser.add_argument(flag, type=Path, required=True)
     parser.add_argument('--key-id', required=True)
     parser.add_argument('--public-key', required=True)
+    parser.add_argument('--final-release-id', help='run the final signed-record proof instead of the rehearsal')
     args = parser.parse_args()
+    if args.final_release_id:
+        print(json.dumps(final(args.binary.resolve(), args.history, args.lock, args.oracle.resolve(), args.selection.resolve(),
+                               args.artifacts.resolve(), args.key_id, args.public_key, args.final_release_id,
+                               args.run_root.resolve()), indent=1, sort_keys=True))
+        return
     print(json.dumps(rehearse(args.binary.resolve(), args.history, args.lock, args.oracle.resolve(),
                               args.selection.resolve(), args.artifacts.resolve(), args.key_id, args.public_key,
                               args.run_root.resolve()), indent=1, sort_keys=True))

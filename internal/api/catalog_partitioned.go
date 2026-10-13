@@ -95,6 +95,23 @@ func selectCatalogSources(
 	certificate *extract.CoverageCertificate,
 	visible []store.Repo,
 ) (catalogSources, error) {
+	domains := make([]string, 0, len(protocolPacks))
+	for _, pack := range protocolPacks {
+		domains = append(domains, pack.declarationDomain)
+	}
+	return selectExactSources(ctx, evidence, certificate, visible, domains)
+}
+
+// selectExactSources is the T49.3 selection for any domains: a legacy
+// published run, else the fenced current partitioned root (T55.3 reuses it for
+// Kafka topic usage, whose production publications are partitioned).
+func selectExactSources(
+	ctx context.Context,
+	evidence store.EvidenceStore,
+	certificate *extract.CoverageCertificate,
+	visible []store.Repo,
+	domains []string,
+) (catalogSources, error) {
 	sources := make(catalogSources)
 	native, partitioned := evidence.(partitionedCatalogStore)
 	repos := make(map[string]store.Repo, len(visible))
@@ -102,9 +119,9 @@ func selectCatalogSources(
 		repos[repo.Name] = repo
 	}
 	for _, repository := range certificate.Repositories {
-		for _, pack := range protocolPacks {
-			key := catalogSourceKey{repository.Repository, pack.declarationDomain}
-			if run, ok := certificateRun(repository, pack.declarationDomain); ok && run.Status == "published" {
+		for _, domain := range domains {
+			key := catalogSourceKey{repository.Repository, domain}
+			if run, ok := certificateRun(repository, domain); ok && run.Status == "published" {
 				sources[key] = catalogSource{run: run, evidence: evidence, nonEmpty: run.AssertionCount > 0}
 				continue
 			}
@@ -112,7 +129,7 @@ func selectCatalogSources(
 			if !partitioned || !ok || repo.IndexedCommitHash == "" {
 				continue
 			}
-			source, err := partitionedCatalogSource(ctx, evidence, native, repo, pack.declarationDomain)
+			source, err := partitionedCatalogSource(ctx, evidence, native, repo, domain)
 			if errors.Is(err, store.ErrNotFound) {
 				continue
 			}
