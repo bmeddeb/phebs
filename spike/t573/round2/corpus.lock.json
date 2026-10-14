@@ -1,0 +1,68 @@
+{
+ "schema": "t573r2-topics-corpus-lock-v1",
+ "selected_utc": "2026-10-13",
+ "selection_rule": "docs/TOPICS_QUALITY_PROTOCOL.md section 8 (sealed e2f6e67b): first 10 eligible candidates of the four frozen gh code searches",
+ "member": "OsmanPL__sopes1-proyecto2",
+ "repos": [
+  {
+   "name": "OsmanPL/sopes1-proyecto2",
+   "dir": "OsmanPL__sopes1-proyecto2",
+   "git_url": "https://github.com/OsmanPL/sopes1-proyecto2.git",
+   "commit": "8a45dbf15625b3b2e0e6ff27fc01c58061f88acc"
+  },
+  {
+   "name": "Cris1928/SO1_1S2024_202107190",
+   "dir": "Cris1928__SO1_1S2024_202107190",
+   "git_url": "https://github.com/Cris1928/SO1_1S2024_202107190.git",
+   "commit": "9123392764e313adea5eb4dee658b201507e702e"
+  },
+  {
+   "name": "SidIvan/MtsFinalProject",
+   "dir": "SidIvan__MtsFinalProject",
+   "git_url": "https://github.com/SidIvan/MtsFinalProject.git",
+   "commit": "9e2e92987f790498aa7f71b4404cf2077be88576"
+  },
+  {
+   "name": "swiggy-2022-bootcamp/training-i-plus-plus",
+   "dir": "swiggy-2022-bootcamp__training-i-plus-plus",
+   "git_url": "https://github.com/swiggy-2022-bootcamp/training-i-plus-plus.git",
+   "commit": "8e3b9502d6d7b678a52abc1c93295f0feea1982a"
+  },
+  {
+   "name": "xhuniktzi/SO1_1S2024_201900462",
+   "dir": "xhuniktzi__SO1_1S2024_201900462",
+   "git_url": "https://github.com/xhuniktzi/SO1_1S2024_201900462.git",
+   "commit": "68846a9e625bb5965894d36a5a46b36b8122b2c6"
+  },
+  {
+   "name": "dakhipp/graphql-services",
+   "dir": "dakhipp__graphql-services",
+   "git_url": "https://github.com/dakhipp/graphql-services.git",
+   "commit": "21807da982824cebdb9bd67a304161f4ead226a1"
+  },
+  {
+   "name": "Nahua-Foundation/ragota",
+   "dir": "Nahua-Foundation__ragota",
+   "git_url": "https://github.com/Nahua-Foundation/ragota.git",
+   "commit": "14532ba3ec171034bcb92094ed21d26b7411ac2b"
+  },
+  {
+   "name": "kartikey09/IIITB-SPE-Major-Project",
+   "dir": "kartikey09__IIITB-SPE-Major-Project",
+   "git_url": "https://github.com/kartikey09/IIITB-SPE-Major-Project.git",
+   "commit": "21148278d5fc1c5cf5d8024943b68846ea4e3ef0"
+  },
+  {
+   "name": "sat3en/crosspoint2.0",
+   "dir": "sat3en__crosspoint2.0",
+   "git_url": "https://github.com/sat3en/crosspoint2.0.git",
+   "commit": "0dd7bc5a173456774bd2245fdd762944b90d0932"
+  },
+  {
+   "name": "wangzhongyang007/goframe-shop-v2",
+   "dir": "wangzhongyang007__goframe-shop-v2",
+   "git_url": "https://github.com/wangzhongyang007/goframe-shop-v2.git",
+   "commit": "c1b85451c883879bebcb4d4bf8307cc8c6071fe5"
+  }
+ ]
+}

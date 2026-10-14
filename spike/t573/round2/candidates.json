@@ -1,0 +1,310 @@
+[
+ {
+  "name": "dougdalo/sftp2kafka",
+  "drop": null
+ },
+ {
+  "name": "OsmanPL/sopes1-proyecto2",
+  "drop": null
+ },
+ {
+  "name": "Cris1928/SO1_1S2024_202107190",
+  "drop": null
+ },
+ {
+  "name": "Jpanaza1906/SO1_1S2024_202111478",
+  "drop": null
+ },
+ {
+  "name": "SidIvan/MtsFinalProject",
+  "drop": null
+ },
+ {
+  "name": "swiggy-2022-bootcamp/training-i-plus-plus",
+  "drop": null
+ },
+ {
+  "name": "rytsh/krabby",
+  "drop": null
+ },
+ {
+  "name": "Trendyol/kafka-konsumer",
+  "drop": "excluded: T55.1 corpus or T23.1 pin"
+ },
+ {
+  "name": "Ankushryuga/Engineering-Lens",
+  "drop": null
+ },
+ {
+  "name": "huyhuynh12hhk/agent-expr-sample1",
+  "drop": null
+ },
+ {
+  "name": "Toinhonasc/pge-desafio-dados-2",
+  "drop": null
+ },
+ {
+  "name": "Prototype-1/freelanceX_message.notification_service",
+  "drop": null
+ },
+ {
+  "name": "xhuniktzi/SO1_1S2024_201900462",
+  "drop": null
+ },
+ {
+  "name": "karfianto/kdns",
+  "drop": null
+ },
+ {
+  "name": "libsv/go-bdd-common",
+  "drop": null
+ },
+ {
+  "name": "Nihar4/CMPE-282_Term_Project",
+  "drop": null
+ },
+ {
+  "name": "huyhuynh12hhk/agent-expr",
+  "drop": null
+ },
+ {
+  "name": "dakhipp/graphql-services",
+  "drop": null
+ },
+ {
+  "name": "Nahua-Foundation/ragota",
+  "drop": null
+ },
+ {
+  "name": "kartikey09/IIITB-SPE-Major-Project",
+  "drop": null
+ },
+ {
+  "name": "AroundUPlatform/aroundu-backend-go",
+  "drop": null
+ },
+ {
+  "name": "sat3en/crosspoint2.0",
+  "drop": null
+ },
+ {
+  "name": "FastResidentialGateway/fastrg-controller",
+  "drop": null
+ },
+ {
+  "name": "liemle3893/go-tryve",
+  "drop": null
+ },
+ {
+  "name": "slash3b/tickets",
+  "drop": null
+ },
+ {
+  "name": "IBM/sarama",
+  "drop": "excluded: T55.1 corpus or T23.1 pin"
+ },
+ {
+  "name": "AliwareMQ/aliware-kafka-demos",
+  "drop": null
+ },
+ {
+  "name": "TremblingV5/DouTok",
+  "drop": null
+ },
+ {
+  "name": "TIBCOSoftware/flogo-contrib",
+  "drop": null
+ },
+ {
+  "name": "wangzhongyang007/goframe-shop-v2",
+  "drop": null
+ },
+ {
+  "name": "tomatool/tomato",
+  "drop": null
+ },
+ {
+  "name": "ds-voix/VX-PBX",
+  "drop": null
+ },
+ {
+  "name": "cockroachdb/sarama",
+  "drop": null
+ },
+ {
+  "name": "pi-rate14/media-search-engine",
+  "drop": null
+ },
+ {
+  "name": "rtreffer/k2k",
+  "drop": null
+ },
+ {
+  "name": "Pragma-Innovation/ingest-voice-net",
+  "drop": null
+ },
+ {
+  "name": "antonio-alexander/go-bludgeon",
+  "drop": null
+ },
+ {
+  "name": "nicexiaonie/gkafka",
+  "drop": null
+ },
+ {
+  "name": "deepin-community/golang-github-shopify-sarama",
+  "drop": null
+ },
+ {
+  "name": "infinivision/filesyncer",
+  "drop": null
+ },
+ {
+  "name": "128technology/sarama",
+  "drop": null
+ },
+ {
+  "name": "Shuimo03/Minerva",
+  "drop": null
+ },
+ {
+  "name": "pitimon/kafka-mylab-noted",
+  "drop": null
+ },
+ {
+  "name": "venicegeo/dg-pz-workflow",
+  "drop": null
+ },
+ {
+  "name": "fakeNetflix/Shopify-repo-sarama",
+  "drop": null
+ },
+ {
+  "name": "carlos-loya/sarama",
+  "drop": null
+ },
+ {
+  "name": "hangtiancheng/yukino-code",
+  "drop": null
+ },
+ {
+  "name": "weiluoyan/Golang",
+  "drop": null
+ },
+ {
+  "name": "afsheenb/logger_example",
+  "drop": null
+ },
+ {
+  "name": "zhwei820/kafka-desktop",
+  "drop": null
+ },
+ {
+  "name": "tarmalonchik/golibs",
+  "drop": null
+ },
+ {
+  "name": "jezrsmith/flogo-activities",
+  "drop": null
+ },
+ {
+  "name": "RenanMafort/Estudos",
+  "drop": null
+ },
+ {
+  "name": "chicknsoup/kafka-exporter",
+  "drop": null
+ },
+ {
+  "name": "Divisekara/kafka-practice",
+  "drop": null
+ },
+ {
+  "name": "kangyanf2008/go-demo",
+  "drop": null
+ },
+ {
+  "name": "resulguldibi/consumer-dispatcher",
+  "drop": null
+ },
+ {
+  "name": "purnama354/cli-tool",
+  "drop": null
+ },
+ {
+  "name": "tmrwh/sarama",
+  "drop": null
+ },
+ {
+  "name": "qieangel2013/SqlReview",
+  "drop": null
+ },
+ {
+  "name": "andeya/pholcus_dependent",
+  "drop": null
+ },
+ {
+  "name": "deepin-community/golang-github-ibm-sarama",
+  "drop": null
+ },
+ {
+  "name": "gqcn/gkafka",
+  "drop": null
+ },
+ {
+  "name": "azusachino/maackia",
+  "drop": null
+ },
+ {
+  "name": "FKLostLand/DKSpider",
+  "drop": null
+ },
+ {
+  "name": "germanramos/kafka-console-consumer",
+  "drop": null
+ },
+ {
+  "name": "ZandUY/zhang-project",
+  "drop": null
+ },
+ {
+  "name": "Kalladin/traceExample",
+  "drop": null
+ },
+ {
+  "name": "supereagle/kafka-goclient-perf-test",
+  "drop": null
+ },
+ {
+  "name": "jerryChu2002/kafka-priority",
+  "drop": null
+ },
+ {
+  "name": "godtimi/miniTiktok",
+  "drop": null
+ },
+ {
+  "name": "Tracy-coder/go-social-network",
+  "drop": null
+ },
+ {
+  "name": "Tracy-coder/e-mall",
+  "drop": null
+ },
+ {
+  "name": "mtorre-iot/flogo-contrib",
+  "drop": null
+ },
+ {
+  "name": "gridgentoo/sarama",
+  "drop": null
+ },
+ {
+  "name": "s1377427321/stock_project",
+  "drop": null
+ },
+ {
+  "name": "signmem/sarama",
+  "drop": null
+ }
+]

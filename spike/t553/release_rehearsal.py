@@ -27,6 +27,7 @@ import argparse
 import collections
 import json
 import os
+import re
 import secrets
 import subprocess
 import sys
@@ -133,6 +134,11 @@ def total(expected_counts: dict, names) -> dict[str, dict[str, int]]:
     return {plane: {c: sum(by_repo[n][c] for n in names) for c in CLASSES} for plane, by_repo in expected_counts.items()}
 
 
+def connection_name(name: str) -> str:
+    """A corpus directory as a valid connection name ([a-z0-9-]+); T55.1 names are unchanged."""
+    return re.sub(r'[^a-z0-9-]+', '-', name.lower())
+
+
 def capabilities_want() -> list[str]:
     return (['kafka-topic-inventory'] if TOPICS else []) + ['kafka-topic-usage', 'service-catalog-v2']
 
@@ -186,7 +192,7 @@ def rehearse(binary: Path, history: Path, lock_path: Path, oracle: Path, selecti
     secret_file.write_text(secrets.token_hex(24))
     os.chmod(secret_file, 0o600)
     member = 'member@t553.test'
-    connections = ''.join(f'  - name: {n.lower()}\n    type: git\n    url: "{p}"\n' for n, p in paths.items())
+    connections = ''.join(f'  - name: {connection_name(n)}\n    type: git\n    url: "{p}"\n' for n, p in paths.items())
 
     def config(data: Path) -> Path:
         path = run_root / f'phebs-{data.name}.yaml'
@@ -339,7 +345,7 @@ def final(binary: Path, history: Path, lock_path: Path, oracle: Path, selection:
     rows = oracle_rows(oracle, paths)
     want = total(expected(rows), REPOS)
     port, key = serve_rehearsal.free_port(), secrets.token_hex(24)
-    connections = ''.join(f'  - name: {n.lower()}\n    type: git\n    url: "{p}"\n' for n, p in paths.items())
+    connections = ''.join(f'  - name: {connection_name(n)}\n    type: git\n    url: "{p}"\n' for n, p in paths.items())
     helpers = binary.parent
     env = {**os.environ, 'PHEBS_ZOEKT_GIT_INDEX': str(helpers / 'zoekt-git-index'),
            'PHEBS_FOCUSED_INDEX': str(helpers / 'phebs-focused-index'), 'PHEBS_BUF': str(helpers / 'buf')}
@@ -406,9 +412,13 @@ def main() -> None:
                         help='run the final signed-record proof, then revoke these releases '
                              '(with --topics, one at a time; PLANE "topics" names the Topics release)')
     parser.add_argument('--topics', action='store_true', help='the T57.3 Topics claim is selected beside both planes')
+    parser.add_argument('--repos', help='comma-separated corpus directories (default: the seven T55.1 repositories)')
+    parser.add_argument('--member', help='the member-visible repository (default: goka)')
     args = parser.parse_args()
-    global PLANES, TOPICS
+    global PLANES, TOPICS, REPOS, MEMBER_REPO
     PLANES, TOPICS = sorted(args.planes.split(',')), args.topics
+    REPOS = tuple(args.repos.split(',')) if args.repos else REPOS
+    MEMBER_REPO = args.member or MEMBER_REPO
     if args.final_revoke:
         print(json.dumps(final(args.binary.resolve(), args.history, args.lock, args.oracle.resolve(), args.selection.resolve(),
                                args.artifacts.resolve(), args.key_id, args.public_key, args.final_revoke,

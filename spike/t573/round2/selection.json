@@ -1,0 +1,482 @@
+{
+ "selected_utc": "2026-10-13",
+ "records": [
+  {
+   "name": "dougdalo/sftp2kafka",
+   "dir": "dougdalo__sftp2kafka",
+   "commit": "70528433788cc2a58e6b5844a71fa1d3777c6044",
+   "mib": 1,
+   "go_files": 1,
+   "oracle_states": {
+    "producer": {
+     "unresolved": 1,
+     "no_topic_field": 1
+    },
+    "consumer": {}
+   },
+   "oracle_topics": 0,
+   "drop": "no resolved topic in either plane"
+  },
+  {
+   "name": "OsmanPL/sopes1-proyecto2",
+   "dir": "OsmanPL__sopes1-proyecto2",
+   "commit": "8a45dbf15625b3b2e0e6ff27fc01c58061f88acc",
+   "mib": 24,
+   "go_files": 1091,
+   "oracle_states": {
+    "producer": {
+     "resolved": 1,
+     "no_topic_field": 1
+    },
+    "consumer": {
+     "resolved": 1
+    }
+   },
+   "oracle_topics": 1,
+   "eligible": 1
+  },
+  {
+   "name": "Cris1928/SO1_1S2024_202107190",
+   "dir": "Cris1928__SO1_1S2024_202107190",
+   "commit": "9123392764e313adea5eb4dee658b201507e702e",
+   "mib": 25,
+   "go_files": 15,
+   "oracle_states": {
+    "producer": {
+     "resolved": 1,
+     "no_topic_field": 1
+    },
+    "consumer": {
+     "resolved": 1
+    }
+   },
+   "oracle_topics": 1,
+   "eligible": 2
+  },
+  {
+   "name": "Jpanaza1906/SO1_1S2024_202111478",
+   "dir": "Jpanaza1906__SO1_1S2024_202111478",
+   "commit": "c29b19f537a95ca538a104ee856db87cddc3228a",
+   "mib": 746,
+   "go_files": 17,
+   "drop": "exceeds host envelope"
+  },
+  {
+   "name": "SidIvan/MtsFinalProject",
+   "dir": "SidIvan__MtsFinalProject",
+   "commit": "9e2e92987f790498aa7f71b4404cf2077be88576",
+   "mib": 1,
+   "go_files": 53,
+   "oracle_states": {
+    "producer": {
+     "resolved": 1,
+     "no_topic_field": 2,
+     "unresolved": 1
+    },
+    "consumer": {
+     "unresolved": 1
+    }
+   },
+   "oracle_topics": 1,
+   "eligible": 3
+  },
+  {
+   "name": "swiggy-2022-bootcamp/training-i-plus-plus",
+   "dir": "swiggy-2022-bootcamp__training-i-plus-plus",
+   "commit": "8e3b9502d6d7b678a52abc1c93295f0feea1982a",
+   "mib": 132,
+   "go_files": 2453,
+   "oracle_states": {
+    "producer": {
+     "resolved": 40,
+     "no_topic_field": 54,
+     "unresolved": 13
+    },
+    "consumer": {
+     "resolved": 48,
+     "unresolved": 10
+    }
+   },
+   "oracle_topics": 27,
+   "eligible": 4
+  },
+  {
+   "name": "rytsh/krabby",
+   "dir": "rytsh__krabby",
+   "commit": "704701b2306f3410d2f79148681f5c336313353b",
+   "mib": 5,
+   "go_files": 318,
+   "oracle_states": {
+    "producer": {},
+    "consumer": {}
+   },
+   "oracle_topics": 0,
+   "drop": "no resolved topic in either plane"
+  },
+  {
+   "name": "Trendyol/kafka-konsumer",
+   "drop": "excluded: T55.1 corpus or T23.1 pin"
+  },
+  {
+   "name": "Ankushryuga/Engineering-Lens",
+   "dir": "Ankushryuga__Engineering-Lens",
+   "commit": "e3ac64f74eaa15051f25c25693f40f409170edba",
+   "mib": 7,
+   "go_files": 27,
+   "oracle_states": {
+    "producer": {
+     "unresolved": 2,
+     "no_topic_field": 2
+    },
+    "consumer": {
+     "unresolved": 2
+    }
+   },
+   "oracle_topics": 0,
+   "drop": "no resolved topic in either plane"
+  },
+  {
+   "name": "huyhuynh12hhk/agent-expr-sample1",
+   "dir": "huyhuynh12hhk__agent-expr-sample1",
+   "commit": "8246ef96e68dbe7e4a0fe2ec7ebee1ff21dbc0b6",
+   "mib": 1,
+   "go_files": 1,
+   "oracle_states": {
+    "producer": {},
+    "consumer": {
+     "unresolved": 1
+    }
+   },
+   "oracle_topics": 0,
+   "drop": "no resolved topic in either plane"
+  },
+  {
+   "name": "Toinhonasc/pge-desafio-dados-2",
+   "dir": "Toinhonasc__pge-desafio-dados-2",
+   "commit": "c4e3088207d7c2c049cc1031ffaf211d5405ab0e",
+   "mib": 1,
+   "go_files": 1,
+   "oracle_states": {
+    "producer": {},
+    "consumer": {
+     "unresolved": 1
+    }
+   },
+   "oracle_topics": 0,
+   "drop": "no resolved topic in either plane"
+  },
+  {
+   "name": "Prototype-1/freelanceX_message.notification_service",
+   "dir": "Prototype-1__freelanceX_message.notification_service",
+   "commit": "d8b941a5c855affb4740690691ef5125e8ecb629",
+   "mib": 1,
+   "go_files": 20,
+   "oracle_states": {
+    "producer": {},
+    "consumer": {
+     "unresolved": 3
+    }
+   },
+   "oracle_topics": 0,
+   "drop": "no resolved topic in either plane"
+  },
+  {
+   "name": "xhuniktzi/SO1_1S2024_201900462",
+   "dir": "xhuniktzi__SO1_1S2024_201900462",
+   "commit": "68846a9e625bb5965894d36a5a46b36b8122b2c6",
+   "mib": 5,
+   "go_files": 12,
+   "oracle_states": {
+    "producer": {
+     "resolved": 1,
+     "no_topic_field": 1
+    },
+    "consumer": {
+     "unresolved": 1
+    }
+   },
+   "oracle_topics": 1,
+   "eligible": 5
+  },
+  {
+   "name": "karfianto/kdns",
+   "dir": "karfianto__kdns",
+   "commit": "7bd7b1813efcf189275831ce7289087b87686703",
+   "mib": 1,
+   "go_files": 1,
+   "oracle_states": {
+    "producer": {
+     "unresolved": 1,
+     "no_topic_field": 1
+    },
+    "consumer": {
+     "unresolved": 1
+    }
+   },
+   "oracle_topics": 0,
+   "drop": "no resolved topic in either plane"
+  },
+  {
+   "name": "libsv/go-bdd-common",
+   "dir": "libsv__go-bdd-common",
+   "commit": "b1768dad9a5a9ec709b73bc8832a2babe09823c3",
+   "mib": 33,
+   "go_files": 1770,
+   "oracle_states": {
+    "producer": {
+     "no_topic_field": 1,
+     "unresolved": 1
+    },
+    "consumer": {
+     "unresolved": 1
+    }
+   },
+   "oracle_topics": 0,
+   "drop": "no resolved topic in either plane"
+  },
+  {
+   "name": "Nihar4/CMPE-282_Term_Project",
+   "dir": "Nihar4__CMPE-282_Term_Project",
+   "commit": "0186a90d770c68504c913e84c2511d547f6f590c",
+   "mib": 22,
+   "go_files": 7,
+   "oracle_states": {
+    "producer": {
+     "no_topic_field": 3,
+     "unresolved": 3
+    },
+    "consumer": {
+     "unresolved": 2
+    }
+   },
+   "oracle_topics": 0,
+   "drop": "no resolved topic in either plane"
+  },
+  {
+   "name": "huyhuynh12hhk/agent-expr",
+   "dir": "huyhuynh12hhk__agent-expr",
+   "commit": "b42da1a7f2f5d2b770cb60c90b77986efc077324",
+   "mib": 1,
+   "go_files": 1,
+   "oracle_states": {
+    "producer": {},
+    "consumer": {
+     "unresolved": 1
+    }
+   },
+   "oracle_topics": 0,
+   "drop": "no resolved topic in either plane"
+  },
+  {
+   "name": "dakhipp/graphql-services",
+   "dir": "dakhipp__graphql-services",
+   "commit": "21807da982824cebdb9bd67a304161f4ead226a1",
+   "mib": 1,
+   "go_files": 26,
+   "oracle_states": {
+    "producer": {},
+    "consumer": {
+     "resolved": 2
+    }
+   },
+   "oracle_topics": 2,
+   "eligible": 6
+  },
+  {
+   "name": "Nahua-Foundation/ragota",
+   "dir": "Nahua-Foundation__ragota",
+   "commit": "14532ba3ec171034bcb92094ed21d26b7411ac2b",
+   "mib": 6,
+   "go_files": 314,
+   "oracle_states": {
+    "producer": {
+     "resolved": 1,
+     "no_topic_field": 1
+    },
+    "consumer": {}
+   },
+   "oracle_topics": 1,
+   "eligible": 7
+  },
+  {
+   "name": "kartikey09/IIITB-SPE-Major-Project",
+   "dir": "kartikey09__IIITB-SPE-Major-Project",
+   "commit": "21148278d5fc1c5cf5d8024943b68846ea4e3ef0",
+   "mib": 19,
+   "go_files": 3,
+   "oracle_states": {
+    "producer": {
+     "resolved": 2,
+     "no_topic_field": 2
+    },
+    "consumer": {
+     "resolved": 2
+    }
+   },
+   "oracle_topics": 2,
+   "eligible": 8
+  },
+  {
+   "name": "AroundUPlatform/aroundu-backend-go",
+   "dir": "AroundUPlatform__aroundu-backend-go",
+   "commit": "41095810479112855d0b823257404d4d647d44b8",
+   "mib": 3,
+   "go_files": 68,
+   "oracle_states": {
+    "producer": {
+     "unresolved": 1,
+     "no_topic_field": 1
+    },
+    "consumer": {
+     "unresolved": 1
+    }
+   },
+   "oracle_topics": 0,
+   "drop": "no resolved topic in either plane"
+  },
+  {
+   "name": "sat3en/crosspoint2.0",
+   "dir": "sat3en__crosspoint2.0",
+   "commit": "0dd7bc5a173456774bd2245fdd762944b90d0932",
+   "mib": 118,
+   "go_files": 35,
+   "oracle_states": {
+    "producer": {
+     "no_topic_field": 7,
+     "unresolved": 3,
+     "resolved": 4
+    },
+    "consumer": {
+     "resolved": 1,
+     "unresolved": 2
+    }
+   },
+   "oracle_topics": 4,
+   "eligible": 9
+  },
+  {
+   "name": "FastResidentialGateway/fastrg-controller",
+   "dir": "FastResidentialGateway__fastrg-controller",
+   "commit": "95bf363e0d227102012de14d3a273b7e54ee1b3a",
+   "mib": 2,
+   "go_files": 95,
+   "oracle_states": {
+    "producer": {
+     "unresolved": 2,
+     "no_topic_field": 1
+    },
+    "consumer": {
+     "unresolved": 1
+    }
+   },
+   "oracle_topics": 0,
+   "drop": "no resolved topic in either plane"
+  },
+  {
+   "name": "liemle3893/go-tryve",
+   "dir": "liemle3893__go-tryve",
+   "commit": "73edbe6edf11f67a11ed6ea417f0b1d37f31c92e",
+   "mib": 2,
+   "go_files": 98,
+   "oracle_states": {
+    "producer": {
+     "unresolved": 1
+    },
+    "consumer": {
+     "unresolved": 1
+    }
+   },
+   "oracle_topics": 0,
+   "drop": "no resolved topic in either plane"
+  },
+  {
+   "name": "slash3b/tickets",
+   "dir": "slash3b__tickets",
+   "commit": "aaf9e3a9dbfaab5aedfa1a5a93dd980f513cf235",
+   "mib": 3,
+   "go_files": 91,
+   "oracle_states": {
+    "producer": {
+     "no_topic_field": 1,
+     "unresolved": 2
+    },
+    "consumer": {
+     "unresolved": 1
+    }
+   },
+   "oracle_topics": 0,
+   "drop": "no resolved topic in either plane"
+  },
+  {
+   "name": "IBM/sarama",
+   "drop": "excluded: T55.1 corpus or T23.1 pin"
+  },
+  {
+   "name": "AliwareMQ/aliware-kafka-demos",
+   "dir": "AliwareMQ__aliware-kafka-demos",
+   "commit": "6813283f82301b5997d6275ec58b93ab4113896a",
+   "mib": 36,
+   "go_files": 402,
+   "oracle_states": {
+    "producer": {
+     "no_topic_field": 1
+    },
+    "consumer": {
+     "unresolved": 2
+    }
+   },
+   "oracle_topics": 0,
+   "drop": "no resolved topic in either plane"
+  },
+  {
+   "name": "TremblingV5/DouTok",
+   "dir": "TremblingV5__DouTok",
+   "commit": "033d0fda37c104f07495028b44799a79280010b0",
+   "mib": 14,
+   "go_files": 394,
+   "oracle_states": {
+    "producer": {
+     "unresolved": 6
+    },
+    "consumer": {
+     "unresolved": 5
+    }
+   },
+   "oracle_topics": 0,
+   "drop": "no resolved topic in either plane"
+  },
+  {
+   "name": "TIBCOSoftware/flogo-contrib",
+   "dir": "TIBCOSoftware__flogo-contrib",
+   "commit": "cac6fa934f08f597f846db8b83eaeeba3ac3d777",
+   "mib": 2,
+   "go_files": 180,
+   "oracle_states": {
+    "producer": {
+     "unresolved": 1
+    },
+    "consumer": {
+     "unresolved": 1
+    }
+   },
+   "oracle_topics": 0,
+   "drop": "no resolved topic in either plane"
+  },
+  {
+   "name": "wangzhongyang007/goframe-shop-v2",
+   "dir": "wangzhongyang007__goframe-shop-v2",
+   "commit": "c1b85451c883879bebcb4d4bf8307cc8c6071fe5",
+   "mib": 16,
+   "go_files": 293,
+   "oracle_states": {
+    "producer": {
+     "unresolved": 1,
+     "resolved": 1
+    },
+    "consumer": {}
+   },
+   "oracle_topics": 1,
+   "eligible": 10
+  }
+ ]
+}
