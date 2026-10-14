@@ -19797,6 +19797,63 @@ machine tracks subsequently assigned these three darwin tests to the Mac track, 
 the open cause belongs to this track and not to the Linux T42.2 ceremony line; it
 remains outside Epic 57 and outside T58.1. No quality, coverage, release, scale or SLO claim follows.*
 
+*Cause determined (2026-10-14, Qoder lead, Mac track): the "cause is open"
+statement immediately above is superseded. The three failures are **host
+filesystem state, not a code defect and not a hang**, and no tree change can fix
+them. Measured directly with `lifecycle.NewGate(dir).Check(ctx, 0)` against the
+fixture volume: `pressure="refuse"`, `used_percent=93`, error `lifecycle hard disk
+watermark reached`, with total 494,384,795,648 bytes, available 34,926,792,704 and
+used 459,458,002,944 — 92.94% against `HardWatermarkPercent` 90. Crossing the hard
+watermark **latches** the gate, and it clears only at `ResumeWatermarkPercent` 75,
+so this host needs **115.1 GiB available** (123,596,198,912 bytes) to return to
+`PressureNormal` and has 32.5 GiB. The mechanism is then short:
+`internal/lifecycle/cycle_observation.go:399` discards the cycle on *every*
+observation that is not exactly `PressureNormal` — it sets `cycleValid = false` and
+truncates `readyCycle` — so a complete drained normal cycle can never be recorded;
+`internal/lifecycle/runner.go` keeps `pressureRecoveryCycle` set because
+`pressureAccelerated` is true for `PressureRefuse`, clamping `state.delay` to
+`DefaultPressureRecoveryDelay` (250ms) indefinitely; the cycle-observation read
+therefore never returns, the native helper never reaches its
+`measured_and_resumed` print at `t422_workspace_native_test.go:442`, and the parent
+blocks on `output.Scan()` at `t422_backup_retirement_test.go:1245` until
+`fixtureLimit` — 3 minutes, or 10 when `cleanupWorkspace` — kills the child's
+process session. `failServer` reports a nil cause because the *write* succeeded and
+the failure is the EOF on scan, which is exactly the symptom recorded above.
+Corroborated for free from the 33 retained fixture roots, 3 with a non-empty
+`server-diagnostic.log`, all three agreeing: pooled across them, 1,941 turn intervals
+run min 258.8ms, median 265.0ms, p90 268.7ms, p99 296.9ms and max 380.0ms, with 17
+above 300ms and **none** above one second — the 250ms clamp plus roughly 15ms of
+work, and never the ordinary five-second cadence; spans of 171–173s
+against the 180s deadline; owners `test-owner-00` through `test-owner-14` at 43–44
+turns each, matching the modeled fixture's `fmt.Sprintf("test-owner-%02d", index)`
+at `t422_workspace_native_test.go:166`, which identifies the runs as the base
+`TestT422WorkspaceNativeComposition`; and `total_deleted` reaching **651** when the
+base path wants only `wantTurns = wantDeleted = 15` (`t422LifecycleOwners`), which
+proves the read never completed rather than the fixture being too large.
+`server-output.log` is 0 bytes with zero panics and zero errors, consistent with
+never reaching the print. It also explains why only these three fail: the passing
+siblings call `testT422ArchiveRetiredNativeEndpointFailure` and assert a *bounded
+failure*, so they never need a normal-capacity drained cycle. Remedies measured
+rather than assumed: the deficit is about 82.6 GiB, the Go build cache is 21 GiB so
+cleaning it alone reaches roughly 53.5 GiB available and is **insufficient**, and
+raising `fixtureLimit` achieves nothing at all since 651 turns in 172s extrapolates
+to about 2,250 in 600s while still rotating. Largest measured consumers are
+`~/.codex/worktrees` at 181 GiB (other agents', untouched), `~/Library/Caches`
+25 GiB, `~/stratus` 43 GiB, `~/stratus-wt` 25 GiB, `~/.codex/sessions` 4.8 GiB,
+`~/.codex/tmp` 3.8 GiB, `~/.codex/artifacts` 3.7 GiB, `~/phebs-t581-corpus` 1.7 GiB
+and the 33 retained fixture roots at only 70 MB. Injecting a capacity probe through
+`lifecycle.NewGateWithProbe` in the harness is Mac-track code but would convert a
+deliberately real component into a modeled one — the fixture's own comment says the
+cursor store, filesystem capacity and SDK reads are real — so it trades away part of
+what the test proves and is **not adopted here**; it needs Ben's routing. This
+generalizes beyond these three tests: anything on this host that requires
+`PressureNormal`, including ceremony preflight and capacity-exact lifecycle gates,
+fails the same way while the volume is above 90%, so disk should be checked before
+code is blamed. Not claimed: no repair, no code change, and no rerun of the three —
+a rerun while the gate reads `refuse` would prove nothing. The investigation was
+read-only apart from one throwaway probe program that was removed, and it changes
+no steady-state cost. No quality, coverage, release, scale or SLO claim follows.*
+
 ## Epic 58 · Go RPC syntactic consumer and registration production readiness
 
 This owns the existing consumer/registration cards independently from exact

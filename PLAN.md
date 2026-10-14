@@ -11728,3 +11728,63 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   append-only spine documents: this bullet is added at the end of the ADR list and the
   guide section is inserted inside the existing "Partitioned extraction execution"
   boundary, reflowing no other track's text.
+
+- **2026-10-14 — The three `TestT422Workspace*NativeComposition` darwin failures are a
+  host-capacity precondition, not a code defect: diagnose the pressure gate before
+  spending fixture time, and repair nothing in the tree.** These three have been carried
+  as inherited red with an explicitly open cause since T57.1. The cause is now measured,
+  and the earlier "cause is open" record is superseded in `docs/BACKLOG.md`. On this host
+  `lifecycle.NewGate(dir).Check(ctx, 0)` returns `pressure="refuse"`, `used_percent=93`
+  and `lifecycle hard disk watermark reached` — 459,458,002,944 of 494,384,795,648 bytes
+  used, 92.94%, against `HardWatermarkPercent` 90, with only 34,926,792,704 bytes
+  available.
+
+  The decision is to treat this as an environment precondition rather than a defect, and
+  to record the mechanism so no future ticket re-diagnoses it. Crossing the hard
+  watermark **latches** the gate, and it clears only at `ResumeWatermarkPercent` 75, so
+  the host needs 115.1 GiB available to reach `PressureNormal` again. While it reads
+  `refuse`, `cycle_observation.go:399` discards every cycle — `cycleValid = false` and
+  `readyCycle` truncated — so a complete drained normal cycle is unrecordable, and
+  `runner.go` keeps `pressureRecoveryCycle` set because `pressureAccelerated` is true for
+  `PressureRefuse`, clamping the delay to `DefaultPressureRecoveryDelay` (250ms) forever.
+  The cycle-observation read never returns, the helper never reaches its
+  `measured_and_resumed` print, and the parent blocks on `output.Scan()` until
+  `fixtureLimit` — 3 minutes, or 10 with `cleanupWorkspace` — kills the child session.
+  `failServer` then reports a nil cause because the write succeeded and the failure is the
+  EOF on scan, which is exactly the symptom that made this look like a hang.
+
+  **The evidence that settles it is free, and that is the reusable part.** The 33 retained
+  fixture roots already contained the answer: three non-empty `server-diagnostic.log` files
+  agree that, pooled across them, 1,941 turn intervals run min 258.8ms, median 265.0ms,
+  p90 268.7ms, p99 296.9ms and max 380.0ms, with 17 above 300ms and none above one second —
+  the 250ms clamp plus about 15ms of work, never the ordinary five-second cadence —
+  on spans of 171–173s against the 180s deadline, on owners `test-owner-00`…`test-owner-14`
+  matching the modeled fixture's `fmt.Sprintf("test-owner-%02d", index)`, and on
+  `total_deleted` reaching 651 when the base path wants only `wantTurns = wantDeleted = 15`.
+  That last ratio is the decisive measurement: the read never completed, so this was never
+  a fixture-too-large or turn-budget problem. Zero panics, zero errors, 0-byte
+  `server-output.log`. It also explains the selectivity — the passing siblings call
+  `testT422ArchiveRetiredNativeEndpointFailure` and assert a bounded failure, so they never
+  need a normal-capacity drained cycle. **Probe the gate before running these:** a rerun
+  while it reads `refuse` costs about 23 minutes and proves nothing.
+
+  **No repair is adopted, and the two candidate repairs are recorded with their costs.**
+  Freeing the deficit needs about 82.6 GiB; the Go build cache is 21 GiB, so cleaning it
+  alone reaches roughly 53.5 GiB available and is insufficient, and raising `fixtureLimit`
+  achieves nothing because 651 turns in 172s extrapolates to about 2,250 in 600s while still
+  rotating. The largest measured consumer is `~/.codex/worktrees` at 181 GiB, which belongs
+  to other agents and is untouched. Injecting a capacity probe through
+  `lifecycle.NewGateWithProbe` in the harness would make the fixture host-independent, but
+  the fixture's own contract says the cursor store, filesystem capacity and SDK reads are
+  real, so modeling capacity trades away part of what the test proves; it needs Ben's
+  routing and is deliberately not done here.
+
+  **Steady-state cost.** None. This is a diagnosis and a record: no production path, test,
+  schema, receipt, lock, child or durable state changes. The only executed artifact was a
+  throwaway probe program, since removed.
+
+  **Scope this reaches beyond the three tests.** Any path on this host that requires
+  `PressureNormal` — ceremony preflight, lifecycle recovery, capacity-exact gates — fails
+  the same way while the volume is above 90%, so host capacity is now a precondition to
+  check before attributing a lifecycle or capacity failure to code. No quality, coverage,
+  release, scale or SLO claim follows, and the three tests remain red.
