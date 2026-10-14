@@ -90,6 +90,9 @@ replace the user manual.
   T56.1 consumer site-coverage round, sealed and passing independently of the
   producer number; §9 records the signed `rel-phebs.kafka.consumer` release
   result.
+- [GRPC_IDENTITY_QUALITY_PROTOCOL.md](./GRPC_IDENTITY_QUALITY_PROTOCOL.md) — T58.3a
+  Go gRPC identity round: grpcgo's emitted operations against a go/types
+  oracle, frozen before selection.
 - [THRIFT_DECLARATION_QUALITY_PROTOCOL.md](./THRIFT_DECLARATION_QUALITY_PROTOCOL.md) —
   T49.2 Thrift declaration identity round against the pinned Apache Thrift
   reference compiler, frozen before selection.
