@@ -394,9 +394,28 @@ and who owns each.
     deadline-sensitive T42.2 work, and the Ubuntu baseline mandate covers
     rehearsals, ceremonies and historical reruns rather than an offline quality
     measurement. The draft's earlier 30–60 GiB figure is withdrawn.
-  - Remaining, Ben: approve the named population list, choose the
-    oracle-independence posture, and freeze the thresholds. Remaining, agent:
-    `spike/t581/` and the oracle's pre-seal pass.
+  - Done: Ben approved and closed the 18-name population list on 2026-10-14,
+    including `etcd-io/etcd` with its T47.2 `grpc-caller` overlap disclosed and
+    accepted, so any etcd result must be restated as not independent of Epic 47's
+    caller corpus. `spike/t581/lock_corpus.py` clones it at depth 1 under the one
+    pre-declared drop rule and writes the lock, running no phebs code, extractor
+    or oracle, so the lock precedes measurement. The lock holds **13 members and
+    5 drops** at exact commits, 225 stubs, 43 symlinks inventoried and never
+    parsed, 1.7 GiB total on this macOS host.
+  - Finding: the 5 drops split into two **structural blind spots** of the domain,
+    not bad luck in the list. `thanos-io/thanos` and `argoproj/argo-cd` do carry
+    real gRPC stubs, but in the older combined `*.pb.go` form; GD1 recognizes only
+    the `_grpc.pb.go` suffix, so such a repository indexes nothing and every call
+    site in it is silently out of domain — no row, no gap, no abstention.
+    `tikv/client-go`, `goharbor/harbor` and `projectcontour/contour` keep their
+    contracts in external modules, which the repository-scoped index cannot see.
+    §1's non-claims now state that a passing score is scoped to repositories
+    vendoring modern split stubs in-tree and says nothing about the rest. The
+    characterization came after the mechanical drop, changed no selection, and
+    re-added nothing.
+  - Remaining, Ben: choose the oracle-independence posture and freeze the
+    thresholds. Remaining, agent: the rest of `spike/t581/` and the oracle's
+    pre-seal pass.
   - Not claimed: nothing is enumerated, scored, sealed or predicted, so this
     grants no quality, coverage, release or scale result, and it is not a T11.1
     retry — that round stays terminally closed with `GATE2-V2 NOT_ESTABLISHED`.

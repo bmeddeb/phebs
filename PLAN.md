@@ -11249,10 +11249,23 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   expressions, though it does not pin the exact whole-`CallExpr` byte boundary this
   protocol freezes. Nothing in that suite pins GD9's registration-before-call
   precedence, which §3 already flags; the independently authored oracle is what will
-  exercise it. **Blocked on Ben**
-  for the §2 named list and whether `etcd-io/etcd` stays given its presence in
-  T47.2's `grpc-caller` universe, the §3 oracle-independence posture, and the §6
-  thresholds including whether per-role floors are scored or only disclosed.
+  exercise it. **Blocked on Ben** for the §3 oracle-independence posture and the
+  §6 thresholds including whether per-role floors are scored or only disclosed.
+
+  **The population list is frozen.** Ben approved the 18 names on 2026-10-14 and
+  chose to include `etcd-io/etcd` with its T47.2 `grpc-caller` overlap disclosed
+  beforehand and accepted, so the overlap is a known property of this population
+  and any etcd result must be restated as not independent of Epic 47's caller
+  corpus. The list is closed to amendment: a member leaves only through the single
+  pre-declared drop rule — no same-repository `*_grpc.pb.go` stub at the pinned
+  HEAD — recorded verbatim in the lock, and no result, score, site count or oracle
+  disagreement may retire one. `spike/t581/lock_corpus.py` clones the list at
+  depth 1, applies only that rule, inventories symlinks without following or
+  parsing them per the T47.2 etcd lesson, enforces a 40 GiB free-space floor and
+  aborts cleanly recording where it stopped, and returns nonzero on a partial lock
+  so a truncated population can never be scored as the frozen one. It runs no
+  phebs code, no extractor and no oracle, and reads no Go file's contents, so the
+  lock precedes measurement as §7 requires.
 
   **The execution host is decided, on measurement rather than estimate.** Ben
   delegated the choice. The round runs on the macOS development host over depth-1
@@ -11276,8 +11289,42 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   and is never committed, the cloner aborts cleanly below a 40 GiB free-space
   floor and records where it stopped, symlinks are inventoried and never parsed
   per the T47.2 etcd lesson, and no expensive Go test run is concurrent with
-  cloning or exporting. Only after Ben's three remaining decisions does the
-  agent write `spike/t581/` and run the oracle's pre-seal pass. No quality,
+  cloning or exporting.
+
+  **The population is locked.** `spike/t581/lock_corpus.py` cloned the approved
+  list at depth 1 and wrote `spike/t581/corpus.lock.json`
+  (`t581-grpc-consumer-corpus-lock-v1`) with **13 members and 5 drops** at exact
+  commits, 225 stub files, 43 symlinks inventoried and never parsed, no stub-named
+  symlink, and 1.7 GiB total against 92.9 GiB free at start with the 40 GiB floor
+  never approached. Host facts are in the lock: Darwin arm64, go1.26.5,
+  `stopped_before: null`. The tool returns nonzero on a partial lock so a truncated
+  population can never be scored as the frozen one, and it runs no phebs code, no
+  extractor and no oracle and reads no Go file's contents, so the lock precedes
+  measurement as §7 requires. `etcd-io/etcd` shows 3 stubs and 11 symlinks,
+  matching the 11 etcd Go symlinks T47.2 inventoried. The §2 estimate of 4–8 GiB
+  was again high — the actual corpus is 1.7 GiB — and the enforced floor is why
+  the over-estimate cost nothing.
+
+  **The drops expose two structural blind spots, disclosed rather than acted on.**
+  `thanos-io/thanos` (9 files) and `argoproj/argo-cd` (17 files) do carry real gRPC
+  stubs with `RegisterXServer` and `grpc.ServiceDesc`, but in the older combined
+  `*.pb.go` form emitted before the gRPC plugin was split into
+  `protoc-gen-go-grpc`. GD1 recognizes only the `_grpc.pb.go` suffix, so such a
+  repository contributes zero index entries and every call site in it falls through
+  GD10 as silently out of domain — no row, no gap, no abstention.
+  `tikv/client-go`, `goharbor/harbor` and `projectcontour/contour` have no
+  same-repository `.pb.go` at all, their contracts living in external modules that
+  GD6's repository-scoped index cannot see by construction. The characterization
+  was determined *after* the mechanical drop and changed no selection: the list
+  stays closed, nothing was re-added, and re-scoping a population after learning
+  something about it is what §2 forbids. §1's non-claims therefore now state that
+  the locked population is biased toward repositories vendoring modern split stubs
+  in-tree, so a passing score is scoped to that class and says nothing about Go
+  gRPC code outside it.
+
+  Only after Ben's two remaining decisions — the oracle-independence posture and
+  the thresholds — does the agent write the rest of `spike/t581/` and run the
+  oracle's pre-seal pass. No quality,
   coverage, release, scale or SLO claim follows.
 
 - **2026-10-13 — T48.5 makes every proof surface read the exact source.**

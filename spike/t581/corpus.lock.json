@@ -1,0 +1,189 @@
+{
+  "schema": "t581-grpc-consumer-corpus-lock-v1",
+  "selected_utc": "2026-10-14",
+  "selection_rule": "Public Go repositories whose non-test code contains at least one same-repository generated *_grpc.pb.go stub and at least one call or registration site against it, chosen by name from prior knowledge before any phebs, extractor or oracle output was seen. Approved and closed by Ben on 2026-10-13, including etcd-io/etcd with its T47.2 grpc-caller overlap disclosed and accepted. Pinned at the default-branch HEAD of a depth-1 clone on the selection date; the population is one commit per repository and is not history-expanded. A member is dropped only for the pre-declared reason 'no same-repository *_grpc.pb.go stub at the pinned HEAD'; no result, score, site count or oracle disagreement may retire one.",
+  "protocol": "docs/GRPC_CONSUMER_QUALITY_PROTOCOL.md",
+  "claim": "site-coverage",
+  "unit": "one repository at one pinned commit; whole .go tree per unit",
+  "history_expanded": false,
+  "host": {
+    "system": "Darwin",
+    "machine": "arm64",
+    "release": "25.6.0",
+    "go": "go version go1.26.5 darwin/arm64",
+    "free_bytes_at_start": 99730579456,
+    "floor_bytes": 42949672960
+  },
+  "stopped_before": null,
+  "repos": [
+    {
+      "name": "containerd/containerd",
+      "dir": "containerd__containerd",
+      "git_url": "https://github.com/containerd/containerd.git",
+      "commit": "2467f228a02a8cce1786f495fffe4816b0afa70c",
+      "stub_files": 40,
+      "symlinks_inventoried": 2,
+      "stub_named_symlinks": []
+    },
+    {
+      "name": "etcd-io/etcd",
+      "dir": "etcd-io__etcd",
+      "git_url": "https://github.com/etcd-io/etcd.git",
+      "commit": "d3c8a155909211c6681f3075802a4aacf11528b4",
+      "stub_files": 3,
+      "symlinks_inventoried": 11,
+      "stub_named_symlinks": []
+    },
+    {
+      "name": "spiffe/spire",
+      "dir": "spiffe__spire",
+      "git_url": "https://github.com/spiffe/spire.git",
+      "commit": "6d10e93a4eef9b270cba5dc6082f1c3c5bd99879",
+      "stub_files": 1,
+      "symlinks_inventoried": 5,
+      "stub_named_symlinks": []
+    },
+    {
+      "name": "hyperledger/fabric",
+      "dir": "hyperledger__fabric",
+      "git_url": "https://github.com/hyperledger/fabric.git",
+      "commit": "5c15e378cd41386337f6cdb1064d8ab238070ad2",
+      "stub_files": 15,
+      "symlinks_inventoried": 0,
+      "stub_named_symlinks": []
+    },
+    {
+      "name": "vitessio/vitess",
+      "dir": "vitessio__vitess",
+      "git_url": "https://github.com/vitessio/vitess.git",
+      "commit": "5b4886b7fc1cb172b9298da23455119496bb2f00",
+      "stub_files": 8,
+      "symlinks_inventoried": 6,
+      "stub_named_symlinks": []
+    },
+    {
+      "name": "moby/buildkit",
+      "dir": "moby__buildkit",
+      "git_url": "https://github.com/moby/buildkit.git",
+      "commit": "91a2a09307783475f03812c0f423a389a63d451e",
+      "stub_files": 31,
+      "symlinks_inventoried": 0,
+      "stub_named_symlinks": []
+    },
+    {
+      "name": "grpc-ecosystem/grpc-gateway",
+      "dir": "grpc-ecosystem__grpc-gateway",
+      "git_url": "https://github.com/grpc-ecosystem/grpc-gateway.git",
+      "commit": "a62432a2b97eb5e313d77a1118b5ee4a66d9d4fd",
+      "stub_files": 23,
+      "symlinks_inventoried": 0,
+      "stub_named_symlinks": []
+    },
+    {
+      "name": "hashicorp/nomad",
+      "dir": "hashicorp__nomad",
+      "git_url": "https://github.com/hashicorp/nomad.git",
+      "commit": "bf24b0dd97430d3b364b68b1f7375e85e585778f",
+      "stub_files": 6,
+      "symlinks_inventoried": 0,
+      "stub_named_symlinks": []
+    },
+    {
+      "name": "hashicorp/go-plugin",
+      "dir": "hashicorp__go-plugin",
+      "git_url": "https://github.com/hashicorp/go-plugin.git",
+      "commit": "fa60f8a91608db94647a9dc739b3a33634d35163",
+      "stub_files": 7,
+      "symlinks_inventoried": 0,
+      "stub_named_symlinks": []
+    },
+    {
+      "name": "grafana/loki",
+      "dir": "grafana__loki",
+      "git_url": "https://github.com/grafana/loki.git",
+      "commit": "9cef7b9f77239e94858ebf70b1b2705e33c0e883",
+      "stub_files": 25,
+      "symlinks_inventoried": 14,
+      "stub_named_symlinks": []
+    },
+    {
+      "name": "kubevirt/kubevirt",
+      "dir": "kubevirt__kubevirt",
+      "git_url": "https://github.com/kubevirt/kubevirt.git",
+      "commit": "929a456d5db4a5e346ac31a88ff3075d2050c26e",
+      "stub_files": 4,
+      "symlinks_inventoried": 3,
+      "stub_named_symlinks": []
+    },
+    {
+      "name": "temporalio/temporal",
+      "dir": "temporalio__temporal",
+      "git_url": "https://github.com/temporalio/temporal.git",
+      "commit": "2ac4e9b64260a835a938dd379b18bcecfad13d4e",
+      "stub_files": 8,
+      "symlinks_inventoried": 2,
+      "stub_named_symlinks": []
+    },
+    {
+      "name": "envoyproxy/go-control-plane",
+      "dir": "envoyproxy__go-control-plane",
+      "git_url": "https://github.com/envoyproxy/go-control-plane.git",
+      "commit": "61b175b5f524e91141ee5fa551a14282269b1883",
+      "stub_files": 54,
+      "symlinks_inventoried": 0,
+      "stub_named_symlinks": []
+    }
+  ],
+  "dropped": [
+    {
+      "name": "thanos-io/thanos",
+      "dir": "thanos-io__thanos",
+      "git_url": "https://github.com/thanos-io/thanos.git",
+      "commit": "f1e0bbc906c54ca138466bd3095c3f61bf31368d",
+      "stub_files": 0,
+      "symlinks_inventoried": 0,
+      "stub_named_symlinks": [],
+      "reason": "no same-repository *_grpc.pb.go stub at the pinned HEAD"
+    },
+    {
+      "name": "argoproj/argo-cd",
+      "dir": "argoproj__argo-cd",
+      "git_url": "https://github.com/argoproj/argo-cd.git",
+      "commit": "6e7006b1a1dcf25265a587a1d5df1c7c23a12dfa",
+      "stub_files": 0,
+      "symlinks_inventoried": 24,
+      "stub_named_symlinks": [],
+      "reason": "no same-repository *_grpc.pb.go stub at the pinned HEAD"
+    },
+    {
+      "name": "tikv/client-go",
+      "dir": "tikv__client-go",
+      "git_url": "https://github.com/tikv/client-go.git",
+      "commit": "6a6e26b50af442e33fdaf139e5df796fce3c26c1",
+      "stub_files": 0,
+      "symlinks_inventoried": 0,
+      "stub_named_symlinks": [],
+      "reason": "no same-repository *_grpc.pb.go stub at the pinned HEAD"
+    },
+    {
+      "name": "goharbor/harbor",
+      "dir": "goharbor__harbor",
+      "git_url": "https://github.com/goharbor/harbor.git",
+      "commit": "35dd9e4337ca6857deffab19d28cc43df596f328",
+      "stub_files": 0,
+      "symlinks_inventoried": 0,
+      "stub_named_symlinks": [],
+      "reason": "no same-repository *_grpc.pb.go stub at the pinned HEAD"
+    },
+    {
+      "name": "projectcontour/contour",
+      "dir": "projectcontour__contour",
+      "git_url": "https://github.com/projectcontour/contour.git",
+      "commit": "7c1d4fc5be6483b40000f2b75fce98641b00194e",
+      "stub_files": 0,
+      "symlinks_inventoried": 0,
+      "stub_named_symlinks": [],
+      "reason": "no same-repository *_grpc.pb.go stub at the pinned HEAD"
+    }
+  ]
+}

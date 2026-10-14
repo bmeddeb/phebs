@@ -19700,6 +19700,52 @@ three decisions does the agent write
 `spike/t581/` and run the oracle's pre-seal pass. No quality, coverage, release,
 scale or SLO claim follows, and no measurement is authorized by this draft.*
 
+*T58.1 population lock (2026-10-14, Qoder lead): **the frozen list is approved,
+cloned and locked; two structural blind spots are now disclosed.** Ben approved
+the 18 names and chose to include `etcd-io/etcd` with its T47.2 `grpc-caller`
+overlap disclosed beforehand and accepted, so any etcd result must be restated as
+not independent of Epic 47's caller corpus. The list is closed to amendment.
+
+- **Lock.** `spike/t581/lock_corpus.py` clones each name at depth 1, applies only
+  the pre-declared drop rule, inventories symlinks without following or parsing
+  them, enforces a 40 GiB free-space floor, and returns nonzero on a partial lock
+  so a truncated population can never be scored as the frozen one. It runs no
+  phebs code, no extractor and no oracle and reads no Go file's contents, so the
+  lock precedes measurement as §7 requires. `spike/t581/corpus.lock.json`
+  (`t581-grpc-consumer-corpus-lock-v1`) records **13 members and 5 drops** at
+  exact commits, 225 stub files, 43 symlinks inventoried and no stub-named
+  symlink, 1.7 GiB total, with host facts (Darwin arm64, go1.26.5, 92.9 GiB free
+  at start, `stopped_before: null`). `etcd-io/etcd` shows 3 stubs and 11 symlinks,
+  matching the 11 etcd Go symlinks T47.2 inventoried.
+- **The drops split into two causes, and both are structural limits of the domain
+  rather than bad luck in the list.** `thanos-io/thanos` (9 files) and
+  `argoproj/argo-cd` (17 files) *do* carry real gRPC stubs with `RegisterXServer`
+  and `grpc.ServiceDesc`, but in the older combined `*.pb.go` form emitted before
+  the gRPC plugin was split out; GD1 recognizes only the `_grpc.pb.go` suffix, so
+  such a repository contributes zero index entries and every call site in it falls
+  through GD10 as silently out of domain — no row, no gap, no abstention.
+  `tikv/client-go`, `goharbor/harbor` and `projectcontour/contour` have no
+  same-repository `.pb.go` at all, their contracts living in external modules that
+  GD6's repository-scoped index cannot see by construction.
+- **Recorded as a limit on what a pass means, not acted on.** The characterization
+  was determined *after* the mechanical drop and did not influence selection; the
+  list stays closed and no dropped repository is re-added, because re-scoping a
+  population after learning something about it is exactly what §2 forbids. §1's
+  non-claims now state that the locked population is biased toward repositories
+  vendoring modern split stubs in-tree, so a passing score is scoped to that class
+  and says nothing about Go gRPC code outside it.
+- **The estimate was wrong again, in the same direction.** §2 predicted 4–8 GiB for
+  18 depth-1 clones; the actual corpus is 1.7 GiB for 18. The floor was never
+  approached. The guard was enforced rather than trusted, which is why the
+  over-estimate cost nothing.
+
+Still no oracle, no enumerator, no exporter, no scorer, no site enumeration, no
+score and no seal. `make docs-check` passes all three of its tests, and whitespace
+and glossary checks pass; this change is documentation plus an offline one-shot
+lock tool that touches no production path, so there is no steady-state cost.
+**Blocked on Ben** for the §3 oracle-independence posture and the §6 thresholds.
+No quality, coverage, release, scale or SLO claim follows.*
+
 **T58.2 · Go Thrift syntactic consumer/registration quality** — independently
 freeze thriftgo/other admitted generator/library shapes and input identity;
 measure unsupported/dynamic/ambiguous cases and registration claims separately.
