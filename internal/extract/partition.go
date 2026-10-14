@@ -6,7 +6,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log"
 	"math"
+	"os"
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/candidate"
@@ -15,6 +17,15 @@ import (
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/store"
 )
+
+// partitionFailureDiagnostics retains the private error chain at the partition
+// boundary for bounded diagnostics reruns (T47.2b); absent by default, it
+// changes no classification, retry, or refusal behavior.
+var partitionFailureDiagnostics = os.Getenv("PHEBS_PARTITION_FAILURE_DIAGNOSTICS") == "1"
+
+// partitionFailureDiagnosticLimit bounds one retained chain so a store
+// diagnostic embedded in an error cannot grow the serve log without limit.
+const partitionFailureDiagnosticLimit = 2048
 
 // EvidencePartitionExecutor is the production T40.7 staging adapter. The
 // supplied corpus is already restricted by the source owner to one T40.8
@@ -239,6 +250,16 @@ func partitionBoundaryFailure(
 	if failure == nil || ctx.Err() != nil || errors.Is(failure, context.Canceled) ||
 		errors.Is(failure, context.DeadlineExceeded) {
 		return failure
+	}
+	if partitionFailureDiagnostics {
+		// Log before the refusal receipt closes over the raw chain: the receipt
+		// projection deliberately keeps child diagnostics out of the durable
+		// job error, which is why run c retained classification=unknown only.
+		chain := failure.Error()
+		if len(chain) > partitionFailureDiagnosticLimit {
+			chain = chain[:partitionFailureDiagnosticLimit]
+		}
+		log.Printf("partition diagnostics: stage=%s failure=%s", stage, chain)
 	}
 	return extractionBoundaryFailure(failure, stage)
 }

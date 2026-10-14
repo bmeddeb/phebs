@@ -793,6 +793,14 @@ export interface components {
             commit: components["schemas"]["GitCommit"];
             revision: string;
         };
+        ContractCatalogAuthority: {
+            commit: string;
+            domain: string;
+            plan_digest: string;
+            repository: string;
+            root_digest: string;
+            run_id: string;
+        };
         ContractCatalogClaim: {
             assertion_id: string;
             code_role?: string;
@@ -849,6 +857,7 @@ export interface components {
             caveat: string;
             coverage: components["schemas"]["CoverageCertificate"];
             coverage_digest: string;
+            exact_authorities?: components["schemas"]["ContractCatalogAuthority"][] | null;
             items: components["schemas"]["ContractCatalogItem"][] | null;
             pagination: components["schemas"]["ContractCatalogPagination"];
             query: components["schemas"]["ContractCatalogQuery"];
@@ -883,6 +892,7 @@ export interface components {
             coverage_digest: string;
             declaration: components["schemas"]["ContractCatalogClaim"];
             declaration_lineage: string;
+            exact_authority?: components["schemas"]["ContractCatalogAuthority"];
             fact_detail: components["schemas"]["ContractCatalogOperationFactDetail"];
             implementations: components["schemas"]["ContractCatalogRelationship"][] | null;
             method: string;
@@ -895,6 +905,7 @@ export interface components {
             schema_version: string;
             service_fqn: string;
             shape_truncated: boolean;
+            unavailable_relationships?: string[] | null;
             unresolved_candidates: components["schemas"]["ContractCatalogRelationship"][] | null;
         };
         ContractCatalogOperationFactDetail: {

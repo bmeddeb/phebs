@@ -164,7 +164,7 @@ export default function App() {
   else if (path.startsWith('/callers')) page = gate(callerMapAvailable, 'The caller map', () => <CallerMapPage params={params} comparisonAvailable={callerComparisonAvailable} />)
   else if (path.startsWith('/compare-callers')) page = gate(callerComparisonAvailable, 'Caller comparison', () => <CallerComparisonPage params={params} />)
   else if (path.startsWith('/impact')) page = gate(impactAvailable, 'The impact report', () => <ImpactPage params={params} compatibilityAvailable={compatibilityAvailable} capabilities={capabilities} />)
-  else if (path.startsWith('/topics')) page = gate(topicsAvailable, 'Kafka topic usage', () => <KafkaTopicsPage params={params} />)
+  else if (path.startsWith('/topics')) page = gate(topicsAvailable, 'Kafka topic usage', () => <KafkaTopicsPage params={params} inventoryAvailable={capabilities.includes('kafka-topic-inventory')} />)
   else if (path.startsWith('/settings')) page = <SettingsPage isAdmin={status.user?.is_admin === true} />
   else page = <SearchPage params={params} />
 

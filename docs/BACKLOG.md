@@ -18880,6 +18880,69 @@ producer 1.0.3, consumer 1.0.2 and Topics 1.0.1 re-bound** (Thrift protocol
 promotion bar for each selected protocol and the declared UI/HTTP/MCP surface.
 One protocol may release while the other remains explicitly unavailable.
 
+**T49R.1 · Inherited generated-client drift** *(cross-cutting; found while
+reviewing PRs #75 and #76, Mac track)* — regenerate `ui/openapi.json` and
+`ui/src/api.generated.ts` from the Go spec so `npm run gen:api:check` and
+`make ci-ui` are green again, without touching the contract-catalog code the
+drift sits beside.
+
+*T49R.1 (2026-10-14, Qoder lead, Mac track): **repaired; `make ci-ui` is green.**
+Reproduced unchanged at exact base `d103bb68` before anything was touched.
+
+- **Cause.** `b5b74c7a` (T49.3 slice 1, exact partitioned Contract Atlas
+  discovery and detail) added `ContractCatalogAuthority` and three optional
+  properties to the emitted OpenAPI document through `internal/api/catalog.go`
+  and `internal/mcp/callermap.go`, and did not regenerate the committed client.
+  The two derived files were last regenerated at `3a9bf00c` (T45.8b), so every
+  ticket since then inherited a red `gen:api:check`.
+- **Why nothing caught it.** `gen:api:check` runs only under `make ci-ui`, and
+  the hosted `ci` workflow has never executed: `.github/workflows/ci.yml` is
+  `state: active` with `total_count: 0` runs across 1,755 commits on
+  `origin/main`, re-measured 2026-10-14. The gate exists and is correct; no
+  runner invokes it. This repair does not make hosted CI run.
+- **The repair is derived, not authored.** `npm run gen:api:full` was run under
+  the pinned toolchain — Node `24.18.0` from `.node-version`, downloaded from
+  nodejs.org and checksum-verified against its published `SHASUMS256.txt`
+  (`e1a97e14c99c803e96c7339403282ea05a499c32f8d83defe9ef5ec66f979ed1`), and Go
+  `1.26.5` from `.go-version`, both confirmed by `make verify-node` and
+  `make verify-go`. Two independent regenerations are byte-identical:
+  `ui/openapi.json`
+  `sha256:d063be9d10eb4663bdc8a07ea860e45a3cac325a4b3a4747a4df550f0f151c52`
+  and `ui/src/api.generated.ts`
+  `sha256:0535191c3b7a6fbfc3450cf97425168362195d0871d35a7ef341f6e3b6f73c03`.
+  No hand edit was made to either file, and `ui/src/api.ts` is untouched.
+- **Purely additive, verified structurally rather than by eye.** Comparing the
+  committed document against the regenerated one node by node: one schema added
+  (`ContractCatalogAuthority`), `exact_authorities` added to
+  `ContractCatalogList`, `exact_authority` and `unavailable_relationships` added
+  to `ContractCatalogOperation`; zero schemas removed, zero properties removed,
+  zero new required fields, zero API paths added or removed, and 27 added
+  structural nodes against 0 removed. Every new field is optional, so no
+  existing consumer can break on it.
+- **Gates.** Full `make ci-ui` passes under the pinned toolchain:
+  `gen:api:check`, 43 test files / 747 tests, oxlint 0 warnings 0 errors,
+  `vite build`, `go build -tags ui ./...` and
+  `node spike/t459/settings_driver_test.cjs`. `make docs-check`,
+  `make verify-glossary` and `git diff --check` pass.
+- **Track crossing, recorded per the machine-track rule.** The omission is
+  Linux-track (`internal/api/catalog.go`, `internal/mcp/callermap.go`); the
+  derived files are Mac-track-owned `ui/`. Ben flagged the crossing in chat on
+  2026-10-14 ("fix the api drift first"). No Linux-track source is edited here,
+  and the underlying Go contract is unchanged — only the committed copy of what
+  it already emits.
+- **No PLAN ADR bullet, deliberately.** AGENTS.md lands *decisions* as ADR
+  bullets; this records no new decision. The contract it catches up to is
+  already decided and recorded under T49.3, and the same-PR regeneration
+  obligation is already enforced by `gen:api:check`. Matches the T57R.1
+  precedent for inherited gate repairs.
+
+Steady-state cost: none. Two derived files change; no runtime path, schema
+document, query, lock, cache, child, publication, authority, capability or
+durable state changes, and the OpenAPI document the server emits is byte-for-byte
+what it already emitted. Not claimed here: hosted CI execution, the PR #75
+receipt-baseline gap, and the three `TestT422Workspace*NativeComposition` darwin
+failures.*
+
 ## Epic 50 · Caller comparison production readiness
 
 **T50.1 · Exact old/replacement comparison contract and gold cases** — depends
@@ -19630,6 +19693,53 @@ Linux host and were not run (see T57R.1).*
 released inventory only after Ben's routed presentation handoff. The existing
 page still gates on `kafka-topic-usage`. Keep per-plane states and the
 not-proven-absent caveat visible.
+
+*T57.4 (2026-10-13, Claude lead, under Ben's flagged handoff "flagged, do it
+here"): **inventory view on `/topics`; screenshot baselines pending CI.**
+
+- **Surface.** The inventory is shown only when `/api/version` lists
+  `kafka-topic-inventory`; without it the page is unchanged. A bare `/topics`
+  composes once, then addresses the immutable bundle from the URL
+  (`?inventory=<id>&cursor=<c>`), so reload and back/forward replay the same
+  inventory. "Recompose from current evidence" builds a new one, and each row
+  links to the per-spelling detail.
+- **Truth constraints held:**
+  - the four plane states are distinct words and tones, at plane level and
+    on every row (a measured zero reads "none · measured zero");
+  - the server caveat is shown verbatim;
+  - an empty inventory says it is not an absence claim, and the census
+    follows it;
+  - citations pin the commit and count omitted ones;
+  - truncation is stated as lower bounds;
+  - quality is shown per plane, with its unmeasured list.
+- **Fail-closed.** An answer that is crossed (wrong bundle), off-schema,
+  miscounted, or that counts sites on an unserved plane renders a bounded
+  error with a retry, never partial rows.
+- **Found and fixed during browser QA:**
+  - leaving a topic for `/topics` kept that topic's answer on screen, which
+    is now cleared;
+  - the 64-character bundle ID in caveat summaries overflowed 390 px on both
+    views, so it moved into the expanded caveat as identity text;
+  - long citation links now wrap.
+  - Charter §3 already said digests never lead.
+
+Gates:
+- 10 KafkaTopicsPage tests pass; the stale-answer test fails with the fix
+  reverted.
+- tsc and oxlint are clean, and the chunk is 16.29 kB (5.19 kB gzip).
+- In the full vitest run, two unrelated paging tests (CallerComparison,
+  CallerMap) time out under parallel load here, identically on the base code,
+  and pass alone.
+- Browser QA used the signed release binary on the round 2 data: 41 rows,
+  both planes served. It showed no document overflow at 390 px on either
+  view, a clean console, light and dark themes, and keyboard Enter opening a
+  topic.
+
+Not done: the four `kafka-topics` receipt baselines change, because `/topics`
+now renders the inventory. This host's Chromium does not reproduce the
+committed baselines (login differs by 1,874 px of glyph antialiasing; the
+cohort's caller job did not settle in 10 minutes), so the new baselines must
+come from the pinned CI image.*
 
 **T57R.1 · Inherited gate repairs** *(cross-cutting; found while landing Epic
 57)* — return `make docs-check`, repository-wide lint and
