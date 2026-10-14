@@ -11208,9 +11208,15 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
 
   **Validation posture.** `make docs-check` passes all three of its tests with the
   new protocol linked and reachable from the documentation map, and whitespace is
-  clean. Every GD rule was verified against the shipped recognition code before
-  freezing, and the existing `grpcgo` suite independently corroborates the span,
-  role-precedence, gap, collision and package-less-service rules. **Blocked on Ben**
+  clean. Every GD rule was read out of the shipped recognition code before being
+  frozen rather than inferred from the pack card. The existing `grpcgo` suite
+  corroborates most of them directly — role precedence, the oversized and
+  unparseable gap counts, registration-name collision, duplicate full names across
+  lineages, and package-less service resolution — and confirms that spans cite call
+  expressions, though it does not pin the exact whole-`CallExpr` byte boundary this
+  protocol freezes. Nothing in that suite pins GD9's registration-before-call
+  precedence, which §3 already flags; the independently authored oracle is what will
+  exercise it. **Blocked on Ben**
   for the §2 named list and whether `etcd-io/etcd` stays given its presence in
   T47.2's `grpc-caller` universe, the §3 oracle-independence posture, the §6
   thresholds including whether per-role floors are scored or only disclosed, and

@@ -225,6 +225,13 @@ noise:
   resolved to out of domain, which looks like a coverage miss rather than a rule
   disagreement.
 
+One boundary is frozen here more tightly than the existing extractor suite pins
+it: `TestSpansCiteExactSource` confirms a span cites a call expression, but does
+not pin that the span is the **whole** `CallExpr` from the start of its function
+expression to its closing parenthesis. The oracle must implement the whole-node
+boundary, so a one-sided disagreement there is a real finding about which
+boundary the product should cite, not a scoring artifact.
+
 ### Row identity used for scoring
 
 | Field | Value |
