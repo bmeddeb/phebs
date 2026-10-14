@@ -1,11 +1,14 @@
 # T58.1 Go gRPC syntactic consumer/registration site-coverage quality protocol
 
-Status: **unsealed draft — nothing enumerated, scored, sealed or predicted.**
-Ben chose the site-coverage claim, a fresh blind population, the frozen
-filename-convention identity and observed-corpus version recording on
-2026-10-13. §2's named list, §3's oracle-independence posture and §6's
-thresholds are **proposed and not yet frozen**; §9 lists what blocks the seal.
-No result exists and this document authorizes no measurement.
+Status: **unsealed draft — the corpus is locked; no site has been enumerated,
+scored, sealed or predicted.** Ben chose the site-coverage claim, a fresh blind
+population, the frozen filename-convention identity and observed-corpus version
+recording on 2026-10-13, and on 2026-10-14 approved and closed the 18-name list,
+which `spike/t581/corpus.lock.json` then pinned at 13 members and 5 drops. §3's
+oracle-independence posture and §6's thresholds remain **proposed and not yet
+frozen**; §9 lists what blocks the seal. No oracle has run, no extractor has been
+run over the population, no result exists, and this document authorizes no
+measurement.
 
 ## 1. Claim card (`phebs.grpc.consumer.go`, site coverage)
 
@@ -51,11 +54,20 @@ round's scope makes explicit:
   dynamically constructed registrations are outside the shapes entirely.
 - No generated-symbol provenance, runtime invocation, deployment, ownership or
   completeness.
+- **A pass does not generalize to Go gRPC code at large.** The locked population
+  is necessarily biased toward repositories that vendor modern split
+  `*_grpc.pb.go` stubs in-tree, because that suffix is GD1's entire notion of stub
+  identity. §2's lock result records two structural blind spots — combined-style
+  `*.pb.go` stubs, and stubs living in external modules — and in both cases the
+  affected call sites are *silently* out of domain rather than abstentions, so
+  nothing in the evidence reports them as missing. The claim is therefore scoped to
+  repositories whose gRPC stubs are same-repository split-generated files, and a
+  passing score says nothing about code outside that class.
 - No exact-caller identity: `grpc-consumer` is syntactic and Epic 47's
   `grpc-caller` domain owns resolved callers. Nothing in this round promotes,
   renames or relabels a name match as an exact caller.
 
-## 2. Population (PROPOSED — pending Ben's approval)
+## 2. Population (list FROZEN by Ben, 2026-10-14)
 
 **Unit.** One unit is **one repository at one pinned commit**, not one file
 blob. This differs from T55.1 and is forced by the extractor's shape: pass 1
@@ -73,9 +85,12 @@ pinned HEAD", and every drop is recorded in the lock with that reason. Pinned at
 the default-branch HEAD of a depth-1 clone on the selection date, recorded as an
 exact commit.
 
-**Proposed named list (18).** Nothing has been run against any of these; they
-are named from prior knowledge and are subject to Ben's approval before the lock
-is written.
+**Frozen named list (18) — approved by Ben, 2026-10-14.** These names were
+chosen from prior knowledge before any phebs, extractor or oracle output was seen,
+and the list is now **closed**: it may not be amended, extended or re-scoped for
+this round. A repository leaves it only through the pre-declared drop rule below,
+recorded in the lock with its reason. If the round fails its §2 stop rule, the
+replacement round requires a newly pre-declared list frozen before enumeration.
 
 `containerd/containerd`, `etcd-io/etcd`, `spiffe/spire`, `hyperledger/fabric`,
 `vitessio/vitess`, `thanos-io/thanos`, `argoproj/argo-cd`, `moby/buildkit`,
@@ -83,19 +98,59 @@ is written.
 `hashicorp/go-plugin`, `grafana/loki`, `goharbor/harbor`, `projectcontour/contour`,
 `kubevirt/kubevirt`, `temporalio/temporal`, `envoyproxy/go-control-plane`
 
+**Pre-declared drop rule.** A named repository is dropped only if, at its pinned
+HEAD, it contains no same-repository `*_grpc.pb.go` stub. The reason is recorded
+verbatim in the lock's `dropped` array. No other reason may retire a member, and
+in particular no result, score, site count or oracle disagreement may.
+
 **Independence disclosures on that list.**
 
 - All 17 T55.1 Kafka repositories are deliberately excluded, so the Kafka and
   gRPC populations share no member.
 - `etcd-io/etcd` appears in T47.2's `grpc-caller` universe (PLAN records its 11
-  Go symlinks), so it is **not** independent of Epic 47's population. Drop it if
-  strict independence from Epic 47 is required.
+  Go symlinks), so it is **not** independent of Epic 47's population. This was
+  disclosed before approval and **Ben chose to include it anyway** on 2026-10-14.
+  The overlap is therefore a known, accepted property of this population and must
+  be restated in any result: an etcd-site number is not independent of Epic 47's
+  caller corpus. Its 11 Go symlinks are inventoried and never parsed, per §2's
+  host and clone discipline.
 - `vitessio/vitess` was in T53.3 round 2's Buf WIRE population — a different
   domain and extractor. `istio/istio`, the other member of that population, is
   not listed.
 - No real-repository tuning set exists for `grpcgo`: its unit suite uses a
   synthetic in-memory corpus, and `spike/t111` names no GitHub repository. So
   there is no tuning pin to exclude, unlike the four T23.1 Kafka pins.
+
+**Lock result (2026-10-14).** `spike/t581/corpus.lock.json`
+(`t581-grpc-consumer-corpus-lock-v1`) records **13 members and 5 drops**, pinned
+at exact commits, with 225 `*_grpc.pb.go` stub files and 43 symlinks inventoried
+and never parsed (no stub-named symlink exists, so no member's stub count depends
+on a link). The whole corpus is 1.7 GiB at depth 1 — well inside both the 4–8 GiB
+estimate and the 40 GiB floor, which was never approached. Host facts are recorded
+in the lock: Darwin arm64, go1.26.5, 92.9 GiB free at start, `stopped_before:
+null`. `etcd-io/etcd` shows 3 stubs and 11 symlinks, matching the 11 etcd Go
+symlinks T47.2 inventoried.
+
+The five drops split into two causes, and both are **structural limits of this
+domain that the round must disclose rather than let a passing score conceal**:
+
+- **Combined-style stubs are invisible (2 drops).** `thanos-io/thanos` (9 files)
+  and `argoproj/argo-cd` (17 files) *do* carry real gRPC service stubs with
+  `RegisterXServer` functions and `grpc.ServiceDesc` literals — but in the older
+  combined `*.pb.go` form that `protoc-gen-go` emitted before the gRPC plugin was
+  split into `protoc-gen-go-grpc`. GD1 recognizes only the `_grpc.pb.go` suffix, so
+  such a repository contributes **zero index entries**, and every call site in it
+  falls through GD10 as silently out of domain: no row, no gap, no abstention.
+- **Cross-module stubs are invisible (3 drops).** `tikv/client-go`,
+  `goharbor/harbor` and `projectcontour/contour` have no same-repository `.pb.go`
+  at all; their contracts live in external modules, which GD6's
+  repository-scoped index cannot see by construction.
+
+**This characterization was determined after the mechanical drop and did not
+influence selection.** The list is closed and no dropped repository is re-added:
+the drop rule was pre-declared, structural and applied blind, and re-scoping the
+population after learning anything about it is exactly what §2 forbids. The
+consequence is recorded instead as a limit on what a pass means — see §1.
 
 **Sizing and stop rule.** One unit per repository at its pinned HEAD; the
 population is not expanded by history. If the scored-site count falls below the
@@ -109,6 +164,61 @@ versions observable at the pinned commit, plus the Go toolchain used for the run
 These describe the measured population only. The extractor inspects none of them:
 stub identity is the `_grpc.pb.go` filename convention alone (GD1), so no
 generator version gates recognition at runtime and none is added by this ticket.
+
+### Host and clone discipline (DECIDED 2026-10-13)
+
+The round runs on the **macOS arm64 development host**, not the Ubuntu Linux
+ceremony host. This is now governed by policy as well as measurement: the
+2026-10-13 machine tracks in AGENTS.md assign **T58.1 to the Mac track**, and
+assign the Linux track the rehearsal corpora, release signing and Epic 58's
+T58.3 registration. Ben delegated the choice before that policy landed and the
+measurement below independently reached the same place.
+
+**Track crossing, recorded as the policy requires.** T58.1 is Mac-track work that
+writes into `spike/`, a Linux-track-owned directory. The crossing is authorized by
+the policy naming T58.1 as Mac-track and by Ben flagging the ticket in chat, and
+is recorded here and in the owning BACKLOG ticket. `spike/t581/` is offline
+one-shot measurement tooling: it touches no `internal/`, `cmd/`, store schema,
+`Makefile` or `go.mod` path the Linux track owns, and T58.3's registration and
+release work stays with the Linux track.
+
+- **Depth-1 clones only.** §2 pins one commit per repository and forbids history
+  expansion, so no full-history clone is needed. Measured depth-1 sizes on four
+  large Go repositories *outside* the proposed population, used only as
+  calibration: `hashicorp/consul` 136 MiB, `moby/moby` 159 MiB, `pingcap/tidb`
+  217 MiB, `kubernetes/kubernetes` 396 MiB. Eighteen list members therefore cost
+  roughly 4–8 GiB, against 93 GiB free at decision time. An earlier figure of
+  30–60 GiB in this document's draft is **withdrawn**: it assumed full-history
+  clones, which this round does not use.
+- **Not the Linux host.** The 2026-10-13 machine tracks give the Linux track the
+  rehearsal corpora, release signing and Epic 58's T58.3 registration, and give
+  T58.1 to the Mac track, so this corpus belongs here. AGENTS.md also requires
+  serializing expensive host execution rather than running two heavy workloads at
+  once; when the host choice was made Ben had T42.2 lifecycle work in progress on
+  another machine, and no expensive Go run is concurrent with cloning or exporting
+  here. An earlier draft of this section justified the choice by claiming clone I/O
+  would perturb T42.2 deadline measurements *on the Linux host*; that premise is
+  **withdrawn** as an unverified inference, because the same policy assigns the
+  `TestT422Workspace*NativeComposition` tests to darwin and they were observed
+  failing on this Mac, not there. The conclusion is unchanged and now rests on the
+  track assignment and the measurement below.
+- **The Linux ceremony baseline does not govern this round.** AGENTS.md's
+  Ubuntu-amd64 mandate covers rehearsals, ceremonies and reruns of historical
+  workloads. T58.1 is an offline quality measurement producing no signed custody,
+  ceremony receipt or scale claim. If T58.3's release later needs a real-binary
+  rehearsal, that is a separate decision carrying its own host facts.
+- **Host-independence of the result.** The round is pure Go over pinned Git
+  objects — `git ls-tree -r`, `git cat-file --batch`, `go/parser` — with no
+  platform-specific custody, process or filesystem behavior, so the measured
+  outcome is reproducible from the recorded commits on any host. The execution
+  host identity and Go toolchain are still recorded in the round artifacts, so
+  the result stays attributable.
+- **Guards enforced rather than assumed.** The corpus lives outside the repository
+  at `~/phebs-t581-corpus/` and is never committed. The cloner checks free space
+  before each repository and aborts cleanly, recording where it stopped, if free
+  space would fall below a 40 GiB floor. Symlinks are inventoried and never
+  parsed, per the T47.2 etcd-symlink lesson. No expensive Go test run is
+  concurrent with cloning or exporting.
 
 ## 3. Truth (GD1–GD16)
 
@@ -318,21 +428,34 @@ recorded, no score exists and nothing is sealed.
 
 ## 9. Open decisions blocking the seal
 
-1. **Ben:** approve, amend or replace the §2 named list, and decide whether
-   `etcd-io/etcd` stays given its presence in T47.2's `grpc-caller` universe.
-2. **Ben:** choose the §3 oracle-independence posture — a separate agent authoring
+1. **Ben:** choose the §3 oracle-independence posture — a separate agent authoring
    the oracle from this document alone, or spec-conformance accepted without that
    separation.
-3. **Ben:** freeze the §6 thresholds, including whether the per-role floors are
+2. **Ben:** freeze the §6 thresholds, including whether the per-role floors are
    scored or only disclosed.
-4. **Ben:** decide where the round runs. It needs bare clones of the approved
-   list; T55.1's corpus lives on the Linux host at `/home/ben/phebs-rehearsals`,
-   which is currently occupied by T42.2 work, and this macOS host has ~89 GiB free
-   against an estimated 30–60 GiB for 18 full clones.
-5. **Agent, after 1–4:** write `spike/t581/{corpus.lock.json, enumerate_population.py,
-   oracle, export, score.py, test_score.py, README.md}`, add this document to
-   `docs/README.md`, and run the oracle's pre-seal pass to publish the state table
-   and scored-site count in §3 before any extractor run.
+3. **Agent, after 1–2:** write `spike/t581/{enumerate_population.py, oracle,
+   export, score.py, test_score.py, README.md}` and run the oracle's pre-seal pass
+   to publish the state table and scored-site count in §3 before any extractor
+   run. This document is already linked from `docs/README.md`.
+
+**Decided, no longer open:**
+
+- **The population list.** Ben approved the 18 frozen names on 2026-10-14 and
+  chose to include `etcd-io/etcd` with its T47.2 `grpc-caller` overlap disclosed
+  and accepted. §2 records the closure, the single pre-declared drop rule, and the
+  requirement that any result restate the etcd overlap. `spike/t581/lock_corpus.py`
+  clones the list at depth 1, applies only that drop rule, inventories symlinks
+  without parsing them, enforces the free-space floor, and writes
+  `spike/t581/corpus.lock.json`. It runs no phebs code, no extractor and no
+  oracle, and reads no Go file's contents, so the lock precedes measurement as §7
+  requires.
+- **The execution host.** Ben delegated it and §2's host
+  and clone discipline records the decision: the round runs on the macOS
+  development host over depth-1 clones, because the measured cost is roughly 4–8
+  GiB against 93 GiB free, while the Linux ceremony host is occupied by
+  deadline-sensitive T42.2 work and this round is not a rehearsal, ceremony or
+  historical rerun that the Linux baseline governs. The draft's earlier 30–60 GiB
+  estimate is withdrawn there with the measurement that replaced it.
 
 ## 10. Relationship to prior gRPC measurement
 
