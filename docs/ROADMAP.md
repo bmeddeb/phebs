@@ -421,9 +421,42 @@ and who owns each.
     vendoring modern split stubs in-tree and says nothing about the rest. The
     characterization came after the mechanical drop, changed no selection, and
     re-added nothing.
-  - Remaining, Ben: choose the oracle-independence posture and freeze the
-    thresholds. Remaining, agent: the rest of `spike/t581/` and the oracle's
-    pre-seal pass.
+  - Done: preregistration is complete — Ben chose the separate-author oracle and
+    froze the thresholds before any count was seen, so no open decision remains.
+    The lead-owned machinery is built: the enumerator (13 units, 53,721 `.go`
+    files, 225 stubs), the exporter (one row per fact, never per assertion, with a
+    seal guard that refuses to touch the population before §7), and the scorer
+    with 22 cases. Production-role agreement is scored, not merely disclosed; the
+    oracle classifies no roles, so per-role figures inherit the extractor's own
+    labels and say so.
+  - Done: the separate author delivered the oracle, and the separation immediately
+    earned its cost — it caught a defect in the frozen spec, where GD4's pattern had
+    a capturing inner group so "the second capture" denoted the dot segment rather
+    than the method. Nine ambiguities are adopted as §3 amendments before scoring,
+    and generic method instantiation becomes the third named blind spot beside
+    combined-style stubs and external-module contracts. Out-of-domain candidates are
+    aggregated per unit rather than enumerated, since GD7+GD10 would otherwise emit
+    millions of rows for a count §6 is the only consumer of.
+  - Done: the oracle's pre-seal pass ran over the locked population without the
+    extractor — **34,089 scored sites**, 114 times the frozen 300 floor, so §2's
+    stop rule does not fire. It also quantified the blind spot: 2,870,212
+    out-of-domain candidates, **84.2 for every scored site**, and four members
+    supplying 78.9% of scored sites while `kubevirt/kubevirt` contributes 12 from
+    9,680 files with zero resolved calls. Both are disclosed in §3.
+  - **Sealed and scored 2026-10-14: passes.** Public gist
+    `3579639d9dae054906b5f5cac236752f`, published before the export ran.
+    **34,089 of 34,089** scored sites — 100% coverage, 100% state agreement, zero
+    inversions, zero call/registration swaps, zero spurious rows, zero misses, and
+    every one of the five code roles at 100%, so nothing needed adjudicating. The
+    scorer was mutation-controlled before the result was believed: a one-byte span
+    shift gave 1 miss + 1 spurious, a flipped predicate gave 1 swap and failed the
+    round, and a deleted row gave 1 miss.
+  - What it does not establish: GD1–GD16 were authored from the shipped
+    implementation, so this is **spec conformance, not accuracy** — a perfect score
+    is what a faithful implementation of a faithful transcription is expected to
+    produce. Identities were recorded but not scored, the three structural blind
+    spots stay unmeasured, and the disclosed pre-seal breach travels with the
+    result. T58.3 owns registration and any measured promotion.
   - Not claimed: nothing is enumerated, scored, sealed or predicted, so this
     grants no quality, coverage, release or scale result, and it is not a T11.1
     retry — that round stays terminally closed with `GATE2-V2 NOT_ESTABLISHED`.

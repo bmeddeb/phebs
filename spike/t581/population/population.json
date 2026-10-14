@@ -1,0 +1,97 @@
+{
+  "by_repository": {
+    "containerd/containerd": {
+      "go_files": 5508,
+      "go_gitlinks": 0,
+      "go_symlinks": 0,
+      "stub_files": 40
+    },
+    "envoyproxy/go-control-plane": {
+      "go_files": 2263,
+      "go_gitlinks": 0,
+      "go_symlinks": 0,
+      "stub_files": 54
+    },
+    "etcd-io/etcd": {
+      "go_files": 1094,
+      "go_gitlinks": 0,
+      "go_symlinks": 11,
+      "stub_files": 3
+    },
+    "grafana/loki": {
+      "go_files": 13856,
+      "go_gitlinks": 0,
+      "go_symlinks": 0,
+      "stub_files": 25
+    },
+    "grpc-ecosystem/grpc-gateway": {
+      "go_files": 429,
+      "go_gitlinks": 0,
+      "go_symlinks": 0,
+      "stub_files": 23
+    },
+    "hashicorp/go-plugin": {
+      "go_files": 81,
+      "go_gitlinks": 0,
+      "go_symlinks": 0,
+      "stub_files": 7
+    },
+    "hashicorp/nomad": {
+      "go_files": 2150,
+      "go_gitlinks": 0,
+      "go_symlinks": 0,
+      "stub_files": 6
+    },
+    "hyperledger/fabric": {
+      "go_files": 4892,
+      "go_gitlinks": 0,
+      "go_symlinks": 0,
+      "stub_files": 15
+    },
+    "kubevirt/kubevirt": {
+      "go_files": 9680,
+      "go_gitlinks": 0,
+      "go_symlinks": 0,
+      "stub_files": 4
+    },
+    "moby/buildkit": {
+      "go_files": 6268,
+      "go_gitlinks": 0,
+      "go_symlinks": 0,
+      "stub_files": 31
+    },
+    "spiffe/spire": {
+      "go_files": 1233,
+      "go_gitlinks": 0,
+      "go_symlinks": 0,
+      "stub_files": 1
+    },
+    "temporalio/temporal": {
+      "go_files": 3022,
+      "go_gitlinks": 0,
+      "go_symlinks": 0,
+      "stub_files": 8
+    },
+    "vitessio/vitess": {
+      "go_files": 3245,
+      "go_gitlinks": 0,
+      "go_symlinks": 1,
+      "stub_files": 8
+    }
+  },
+  "enumerator_sha256": "sha256:5e403718cec6e58eebbf75aff29d6d9c3dcbcb823103ad000924bd24edf7fea0",
+  "lock": "spike/t581/corpus.lock.json",
+  "lock_schema": "t581-grpc-consumer-corpus-lock-v1",
+  "protocol": "docs/GRPC_CONSUMER_QUALITY_PROTOCOL.md",
+  "schema": "t581-grpc-consumer-population-v1",
+  "selected_utc": "2026-10-14",
+  "total": 13,
+  "total_go_files": 53721,
+  "total_go_gitlinks": 0,
+  "total_go_symlinks": 12,
+  "total_stub_files": 225,
+  "unit": "one repository at one pinned commit; whole .go tree per unit",
+  "unit_schema": "t581-unit-v1",
+  "units_sha256": "sha256:95cc4cb4ca92dcd72551c40ccd6556d059ee5a9196ccca46e9112ac2b5ef5c62",
+  "units_uncompressed_sha256": "sha256:69ca41e40315e43026c09c58c66f4f516442cd15e7b651fe342967834cff064b"
+}
