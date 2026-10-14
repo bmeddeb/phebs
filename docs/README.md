@@ -90,6 +90,9 @@ replace the user manual.
   T56.1 consumer site-coverage round, sealed and passing independently of the
   producer number; §9 records the signed `rel-phebs.kafka.consumer` release
   result.
+- [TOPICS_QUALITY_PROTOCOL.md](./TOPICS_QUALITY_PROTOCOL.md) — T57.3 combined
+  Topics composition round: the served inventory against the union of both
+  planes' independent oracles, frozen before scoring.
 
 These packs remain experimental-dark unless the manual and capability response
 explicitly say otherwise. Their retained validation result is not an accuracy
