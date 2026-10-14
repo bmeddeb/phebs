@@ -640,12 +640,23 @@ What this did and did not compromise:
   Two rows out of an expected tens of thousands is negligible as information, but
   it is not zero and it is not the lead's to excuse.
 
-**Disposition is Ben's, not the lead's.** The options are to seal with this breach
-disclosed beside the result, or to require a replacement round on a newly
-pre-declared population under §2. The lead recommends the former only because
-every input was already frozen and committed and nothing was tuned, and records
-that recommendation as interested. Until Ben decides, no seal exists and the
-exporter must not run.
+**Disposition — decided by Ben, 2026-10-14: seal with the breach disclosed.** The
+round proceeds on its already-frozen rules, population, thresholds and tools, and
+this section travels beside any result so a reader sees the breach and its limits
+without having to ask. The lead's recommendation in favour of that course is
+recorded as **interested**: it was the lead whose test caused the breach, so its
+view that the breach is immaterial is exactly the view that should not be taken on
+trust. The alternative — a replacement round on a newly pre-declared population
+under §2 — remains available to Ben if the disclosed result is ever load-bearing
+for a release, and §10's bar on citing superseded numbers applies to any result
+produced here.
+
+Two consequences are binding. No extractor output seen during the breach may be
+used to amend §3, adjust a threshold, re-scope the population or interpret a
+disagreement; the two rows are treated as unseen for every purpose except this
+disclosure. And the seal must be published before `export` runs, as §7 has always
+required — the breach is disclosed, not retroactively legalized, so a second
+unsealed run would be a fresh violation rather than a continuation.
 
 **Corrective action taken.** The guard no longer accepts a placeholder: the gist
 must match `^https://gist\.github\.com/<user>/<16-64 hex>$`, the seal date must be
