@@ -128,6 +128,13 @@ func TestTopicInventoryToolRegistration(t *testing.T) {
 			opts: Options{Version: "test", TopicInventory: stub, KafkaTopicUsageOnly: true},
 		},
 		{
+			// T57.3: cmd/phebs sets this only for a verified phebs.kafka.topics
+			// record with both planes released.
+			name: "a released Topics claim lists both beside the restriction",
+			opts: Options{Version: "test", TopicInventory: stub, KafkaTopicUsageOnly: true, KafkaTopicInventoryReleased: true},
+			want: true,
+		},
+		{
 			name: "proof tools alone never bring the inventory",
 			opts: Options{Version: "test", Proofs: schemaProofQueries{}},
 		},

@@ -1006,8 +1006,7 @@ func TestTopicInventoryHTTPExposure(t *testing.T) {
 // TestTopicInventoryRoutesStayDarkUnderReleasedPlanes is the pin that protects
 // the T55.3/T56.3 release evidence: a binary admitted only by released Kafka
 // planes still serves exactly find_kafka_topic_usage and bundle reads, and
-// never the composed inventory, which has no measured Topics claim of its own
-// until T57.3.
+// never the composed inventory unless its own T57.3 claim is also released.
 func TestTopicInventoryRoutesStayDarkUnderReleasedPlanes(t *testing.T) {
 	for _, planes := range [][]string{{"producer"}, {"consumer"}, {"consumer", "producer"}} {
 		t.Run(strings.Join(planes, "+"), func(t *testing.T) {
@@ -1040,6 +1039,46 @@ func TestTopicInventoryRoutesStayDarkUnderReleasedPlanes(t *testing.T) {
 				t.Fatalf("a released plane lost its own capability: %s", got)
 			}
 		})
+	}
+}
+
+// TestTopicInventoryReleasedClaimServesBesideBothPlanes pins T57.3: a released
+// phebs.kafka.topics claim adds exactly the inventory routes and capability to
+// the released-plane surface, composes over both released planes, and leaves
+// every other proof surface dark.
+func TestTopicInventoryReleasedClaimServesBesideBothPlanes(t *testing.T) {
+	st := topicHTTPFixture(t)
+	handler := api.New(api.Options{
+		Version: "test", Store: st, Evidence: st, ProofBundles: st,
+		KafkaReleasedPlanes: []string{"consumer", "producer"}, KafkaTopicInventoryReleased: true,
+		Visible:               func(context.Context) func(store.Repo) bool { return nil },
+		Principal:             func(context.Context) string { return "user:member" },
+		AuthorizationProvider: "test-permissions-v1",
+	})
+	code, body, envelope := getProof(t, handler, "/api/list_kafka_topics")
+	if code != http.StatusOK {
+		t.Fatalf("list_kafka_topics = %d %s", code, body)
+	}
+	code, body, report := getInventory(t, handler, "/api/topic_inventory/"+envelope.ID)
+	if code != http.StatusOK || len(report.Topics) == 0 || len(report.Planes) != 2 {
+		t.Fatalf("topic_inventory = %d %s", code, body)
+	}
+	for _, plane := range report.Planes {
+		if !plane.Released || plane.State != "served" {
+			t.Fatalf("plane %s is not a served released plane: %+v", plane.Plane, plane)
+		}
+	}
+	if got := versionBody(t, handler); !strings.Contains(got, `"kafka-topic-inventory","kafka-topic-usage"`) {
+		t.Fatalf("released Topics capabilities = %s", got)
+	}
+	for _, path := range []string{
+		"/api/find_operation_consumers?operation=/shop.Cart/Get",
+		"/api/contract_impact_report?operation=/shop.Cart/Get",
+		"/api/get_extraction_coverage",
+	} {
+		if code, _, _ := getProof(t, handler, path); code != http.StatusNotFound {
+			t.Fatalf("%s answered %d under the released Topics claim", path, code)
+		}
 	}
 }
 

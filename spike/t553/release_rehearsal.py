@@ -42,6 +42,7 @@ import serve_rehearsal  # noqa: E402
 REPOS = ('goka', 'kafka-pixy', 'watermill-kafka', 'Burrow', 'go-dnscollector', 'plugins', 'tiflow')
 MEMBER_REPO = 'goka'
 PLANES = ['producer']  # set from --planes
+TOPICS = False  # --topics: the T57.3 combined Topics claim is selected beside both planes
 CLASSES = ('selector-expr', 'call-expr', 'unresolved-ident', 'non-literal-expr', 'invalid-topic-literal',
            'ambiguous-library-import')
 
@@ -57,22 +58,83 @@ def prepare(history: Path, lock: dict, work: Path) -> dict[str, Path]:
     return paths
 
 
-def expected(oracle: Path, paths: dict[str, Path]) -> dict[str, dict[str, dict[str, int]]]:
+def oracle_rows(oracle: Path, paths: dict[str, Path]) -> dict[str, dict[str, list[dict]]]:
+    """Per released plane and repository: the independent oracle's site rows."""
+    return {plane: {name: [json.loads(line) for line in subprocess.run(
+        [str(oracle), '-plane', plane, '-repo', str(path), '-name', name],
+        check=True, capture_output=True, text=True).stdout.splitlines()] for name, path in paths.items()}
+        for plane in PLANES}
+
+
+def expected(rows: dict) -> dict[str, dict[str, dict[str, int]]]:
     """Per released plane and repository: unresolved-site counts by class, from the independent oracle."""
     out: dict = {}
-    for plane in PLANES:
+    for plane, by_repo in rows.items():
         out[plane] = {}
-        for name, path in paths.items():
-            rows = [json.loads(line) for line in subprocess.run(
-                [str(oracle), '-plane', plane, '-repo', str(path), '-name', name],
-                check=True, capture_output=True, text=True).stdout.splitlines()]
-            counts = collections.Counter(r['class'] for r in rows if r['state'] == 'unresolved')
+        for name, sites in by_repo.items():
+            counts = collections.Counter(r['class'] for r in sites if r['state'] == 'unresolved')
             out[plane][name] = {c: counts.get(c, 0) for c in CLASSES}
     return out
 
 
+def expected_topics(rows: dict, names) -> dict[str, dict[str, dict[str, int]]]:
+    """TOPICS_QUALITY_PROTOCOL §3: topic -> plane -> resolved sites and distinct files, over `names`."""
+    sites: dict = collections.defaultdict(lambda: collections.defaultdict(list))
+    for plane, by_repo in rows.items():
+        for name in names:
+            for r in by_repo[name]:
+                if r['state'] == 'resolved' and r.get('object', '').startswith('topic:'):
+                    sites[r['object'][len('topic:'):]][plane].append((name, r['path']))
+    return {topic: {plane: {'sites': len(found), 'files': len(set(found))} for plane, found in by_plane.items()}
+            for topic, by_plane in sites.items()}
+
+
+def inventory(base: str, token: str) -> tuple[dict, dict, list]:
+    """The served composed inventory, every page: topic -> plane -> sites/files for served rows, the
+    first page's report, and that page's rows."""
+    status, body = serve.http_get(base, '/api/list_kafka_topics', token=token)
+    if status != 200:
+        raise serve.ServeError(f'list_kafka_topics answered {status}: {body[:300]!r}')
+    bundle, cursor, first, out = json.loads(body)['id'], '', None, {}
+    while True:
+        query = {'page_size': '100', **({'cursor': cursor} if cursor else {})}
+        status, body = serve.http_get(base, f'/api/topic_inventory/{bundle}', query, token=token)
+        if status != 200:
+            raise serve.ServeError(f'topic_inventory answered {status}: {body[:300]!r}')
+        report = json.loads(body)
+        first = first or report
+        if report.get('truncated') or any(not p['released'] or p['state'] != 'served' for p in report['planes']):
+            raise serve.ServeError(f"inventory is truncated or a plane is not served: {report['planes']} {report.get('truncated')}")
+        for row in report['topics']:
+            if row['topic'] in out:
+                raise serve.ServeError(f"topic {row['topic']!r} repeats across pages")
+            out[row['topic']] = {p: {'sites': row[p]['sites'], 'files': row[p]['files']}
+                                 for p in PLANES if row[p]['state'] == 'served' and row[p]['sites'] > 0}
+        cursor = report['pagination'].get('next_cursor', '')
+        if not cursor:
+            if not report['pagination']['complete'] or len(out) != report['pagination']['total']:
+                raise serve.ServeError(f"inventory pagination ended incomplete: {report['pagination']}")
+            return out, first, first['topics']
+
+
+def check_topics(base: str, token: str, want: dict, census_want: dict, published: int) -> dict:
+    served, first, _ = inventory(base, token)
+    if served != want:
+        missing, extra = sorted(set(want) - set(served)), sorted(set(served) - set(want))
+        wrong = sorted(t for t in set(want) & set(served) if want[t] != served[t])
+        raise serve.ServeError(f'inventory differs from the oracle union: missing {missing[:10]} extra {extra[:10]} '
+                               f'wrong {[(t, served[t], want[t]) for t in wrong[:5]]}')
+    if not matches(first['unresolved_census'], census_want, published=published):
+        raise serve.ServeError(f"inventory census {first['unresolved_census']} differs from the oracle {census_want}")
+    return {'topics': len(served), 'inventory_matches_oracle': True}
+
+
 def total(expected_counts: dict, names) -> dict[str, dict[str, int]]:
     return {plane: {c: sum(by_repo[n][c] for n in names) for c in CLASSES} for plane, by_repo in expected_counts.items()}
+
+
+def capabilities_want() -> list[str]:
+    return (['kafka-topic-inventory'] if TOPICS else []) + ['kafka-topic-usage', 'service-catalog-v2']
 
 
 def unavailable() -> list[str]:
@@ -116,7 +178,8 @@ def rehearse(binary: Path, history: Path, lock_path: Path, oracle: Path, selecti
              key_id: str, public_key: str, run_root: Path, deadline_s: float = 900) -> dict:
     run_root.mkdir(parents=True)
     paths = prepare(history, json.loads(lock_path.read_text()), run_root / 'corpus')
-    want = expected(oracle, paths)
+    rows = oracle_rows(oracle, paths)
+    want = expected(rows)
     names = {name: 'local' + str(path) for name, path in paths.items()}
     port, issuer_port, key = serve_rehearsal.free_port(), serve_rehearsal.free_port(), secrets.token_hex(24)
     secret_file = run_root / 'oidc-client-secret'
@@ -157,6 +220,9 @@ def rehearse(binary: Path, history: Path, lock_path: Path, oracle: Path, selecti
     result = {'schema': 't553-kafka-release-rehearsal-v2', 'planes': PLANES, 'binary_sha256': serve.receipts.sha256_file(binary),
               'repositories': {n: names[n] for n in REPOS}, 'expected_by_repository': want,
               'expected_total': admin_want, 'phases': {}}
+    if TOPICS:
+        topics_want = expected_topics(rows, REPOS)
+        result['schema'], result['expected_topics'] = 't573-topics-release-rehearsal-v1', len(topics_want)
     data = run_root / 'data'
     reference = None
 
@@ -175,10 +241,12 @@ def rehearse(binary: Path, history: Path, lock_path: Path, oracle: Path, selecti
                 if reference is not None and comparable(admin) != reference:
                     raise serve.ServeError(f'{step}: census changed across the lifecycle')
                 reference = comparable(admin)
+                if TOPICS:
+                    record['topics'] = check_topics(base, key, topics_want, admin_want, len(REPOS))
                 if cold:
                     status, body = serve.http_get(base, '/api/version', token=key)
                     record['capabilities'] = sorted(json.loads(body).get('capabilities', []))
-                    if record['capabilities'] != ['kafka-topic-usage', 'service-catalog-v2']:
+                    if record['capabilities'] != capabilities_want():
                         raise serve.ServeError(f"released Kafka planes exposed {record['capabilities']}")
                     record['anonymous'] = serve.http_get(base, '/api/find_kafka_topic_usage', {'topic': 'orders'})[0]
                     if record['anonymous'] != 401:
@@ -198,6 +266,24 @@ def rehearse(binary: Path, history: Path, lock_path: Path, oracle: Path, selecti
                     record['member_reads_admin_bundle'] = serve.http_get(base, f'/api/proof_bundles/{admin_bundle}', token=token)[0]
                     if record['member_reads_admin_bundle'] != 404:
                         raise serve.ServeError('a member read a bundle covering repositories it cannot see')
+                    if TOPICS:
+                        record['member_topics'] = check_topics(base, token, expected_topics(rows, [MEMBER_REPO]),
+                                                               member_want, 1)
+                        record['anonymous_inventory'] = serve.http_get(base, '/api/list_kafka_topics')[0]
+                        if record['anonymous_inventory'] != 401:
+                            raise serve.ServeError('anonymous inventory was not refused')
+                        _, _, page = inventory(base, key)
+                        listed = serve.mcp_call(base, 'list_kafka_topics', {'page_size': 100}, token=key)
+                        mcp_rows = (listed.get('structuredContent') or {}).get('topics')
+                        if listed.get('isError') or mcp_rows != page:
+                            raise serve.ServeError('MCP list_kafka_topics differs from the HTTP first page')
+                        record['mcp_inventory_matches_http'] = True
+                        latencies = []
+                        for _ in range(20):
+                            started = time.monotonic()
+                            inventory(base, key)
+                            latencies.append(time.monotonic() - started)
+                        record['inventory_latency'] = caller_operating.percentiles(latencies)
                     mcp = serve.mcp_call(base, 'find_kafka_topic_usage', {'topic': 'orders'}, token=key)
                     if mcp.get('isError'):
                         raise serve.ServeError(f'MCP topic usage failed: {mcp}')
@@ -250,7 +336,8 @@ def final(binary: Path, history: Path, lock_path: Path, oracle: Path, selection:
     global PLANES
     run_root.mkdir(parents=True)
     paths = prepare(history, json.loads(lock_path.read_text()), run_root / 'corpus')
-    want = total(expected(oracle, paths), REPOS)
+    rows = oracle_rows(oracle, paths)
+    want = total(expected(rows), REPOS)
     port, key = serve_rehearsal.free_port(), secrets.token_hex(24)
     connections = ''.join(f'  - name: {n.lower()}\n    type: git\n    url: "{p}"\n' for n, p in paths.items())
     helpers = binary.parent
@@ -258,10 +345,16 @@ def final(binary: Path, history: Path, lock_path: Path, oracle: Path, selection:
            'PHEBS_FOCUSED_INDEX': str(helpers / 'phebs-focused-index'), 'PHEBS_BUF': str(helpers / 'buf')}
     base, result = f'http://127.0.0.1:{port}', {'planes': list(PLANES), 'expected_total': want}
     released = list(PLANES)
-    revoked_ids = [pair.split('=')[0] for pair in revoke]
-    revoked_planes = [pair.split('=')[1] for pair in revoke]
-    for step, ids in (('signed', []), ('revoked', revoked_ids)):
-        PLANES = released if step == 'signed' else [p for p in released if p not in revoked_planes]
+    global TOPICS
+    topics_selected = TOPICS
+    steps = [('signed', [])] + [(f'revoked-{pair.split("=")[1]}', [pair.split('=')[0]]) for pair in revoke]
+    if not topics_selected:  # T55.3/T56.3 shape: one step revoking every named release
+        steps = [('signed', []), ('revoked', [pair.split('=')[0] for pair in revoke])]
+    for step, ids in steps:
+        revoked_planes = [pair.split('=')[1] for pair in revoke if pair.split('=')[0] in ids]
+        PLANES = [p for p in released if p not in revoked_planes]
+        # Topics serves only while its own record and both planes stand (releasedKafkaTopics).
+        TOPICS = topics_selected and 'topics' not in revoked_planes and len(PLANES) == 2
         revoked = ('  revoked:\n' + ''.join(f'    - "{i}"\n' for i in ids)) if ids else ''
         cfg = run_root / f'{step}.yaml'
         cfg.write_text(f'server:\n  addr: "127.0.0.1:{port}"\n  data_dir: "{run_root / "data"}"\n'
@@ -278,11 +371,17 @@ def final(binary: Path, history: Path, lock_path: Path, oracle: Path, selection:
             capabilities = sorted(json.loads(body).get('capabilities', []))
             if PLANES:
                 seconds, served = wait_published(base, key, len(REPOS), deadline_s)
-                if capabilities != ['kafka-topic-usage', 'service-catalog-v2'] or not matches(served, want):
+                if capabilities != capabilities_want() or not matches(served, want):
                     raise serve.ServeError(f'{step}: {capabilities} {served}')
                 result[step] = {'capabilities': capabilities, 'served_planes': list(PLANES),
                                 'seconds_to_published': round(seconds, 3), 'census_matches_oracle': True,
                                 'unavailable_planes': served.get('unavailable_planes')}
+                if TOPICS:
+                    result[step]['topics'] = check_topics(base, key, expected_topics(rows, REPOS), want, len(REPOS))
+                elif topics_selected:
+                    result[step]['inventory_status'] = serve.http_get(base, '/api/list_kafka_topics', token=key)[0]
+                    if result[step]['inventory_status'] != 404:
+                        raise serve.ServeError(f'{step}: withdrawn Topics still serves the inventory')
             else:
                 status = serve.http_get(base, '/api/find_kafka_topic_usage', {'topic': 'orders'}, token=key)[0]
                 if 'kafka-topic-usage' in capabilities or status == 200:
@@ -292,7 +391,7 @@ def final(binary: Path, history: Path, lock_path: Path, oracle: Path, selection:
             session.stop('hard_kill', reason=f'{step} probe failed')
             raise
         session.stop('graceful')
-    PLANES = released
+    PLANES, TOPICS = released, topics_selected
     return result
 
 
@@ -304,10 +403,12 @@ def main() -> None:
     parser.add_argument('--public-key', required=True)
     parser.add_argument('--planes', default='producer', help='comma-separated released planes')
     parser.add_argument('--final-revoke', action='append', default=[], metavar='RELEASE_ID=PLANE',
-                        help='run the final signed-record proof, then revoke these releases')
+                        help='run the final signed-record proof, then revoke these releases '
+                             '(with --topics, one at a time; PLANE "topics" names the Topics release)')
+    parser.add_argument('--topics', action='store_true', help='the T57.3 Topics claim is selected beside both planes')
     args = parser.parse_args()
-    global PLANES
-    PLANES = sorted(args.planes.split(','))
+    global PLANES, TOPICS
+    PLANES, TOPICS = sorted(args.planes.split(',')), args.topics
     if args.final_revoke:
         print(json.dumps(final(args.binary.resolve(), args.history, args.lock, args.oracle.resolve(), args.selection.resolve(),
                                args.artifacts.resolve(), args.key_id, args.public_key, args.final_revoke,

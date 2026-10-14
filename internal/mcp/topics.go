@@ -12,11 +12,11 @@ import (
 //
 // It is deliberately not folded into ProofQueries. A released Kafka plane
 // restricts the proof tools to find_kafka_topic_usage through
-// KafkaTopicUsageOnly, and the composed inventory has no measured Topics claim
-// of its own until T57.3, so sharing the proof interface would advertise it on
-// a released binary whose T55.3/T56.3 release evidence does not describe it.
-// Callers supply this only on the experimental surface, mirroring the HTTP
-// registration boundary in registerTopicInventoryAPI.
+// KafkaTopicUsageOnly, and the composed inventory has its own measured claim
+// (T57.3), so sharing the proof interface would advertise it on a released
+// binary whose plane releases alone do not describe it. Callers supply this on
+// the experimental surface or beside a released phebs.kafka.topics claim,
+// mirroring the HTTP registration boundary in registerTopicInventoryAPI.
 type TopicInventoryQueries interface {
 	ListKafkaTopics(ctx context.Context) (*api.ProofBundleEnvelope, error)
 	BuildTopicInventory(
@@ -38,7 +38,7 @@ func registerTopicInventoryTools(server *sdk.Server, opts Options) {
 	// KafkaTopicUsageOnly is checked here as well as at the wiring boundary
 	// that leaves TopicInventory nil, so a released-plane admission cannot
 	// reach these tools even if a future caller supplies both.
-	if opts.TopicInventory == nil || opts.KafkaTopicUsageOnly {
+	if opts.TopicInventory == nil || opts.KafkaTopicUsageOnly && !opts.KafkaTopicInventoryReleased {
 		return
 	}
 	type listInput struct {

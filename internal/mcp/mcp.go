@@ -60,6 +60,10 @@ type Options struct {
 	// matching an HTTP proof service admitted only by released Kafka planes
 	// (T55.2/T56.2).
 	KafkaTopicUsageOnly bool
+	// KafkaTopicInventoryReleased lets TopicInventory register beside
+	// KafkaTopicUsageOnly: a verified phebs.kafka.topics record with both
+	// planes released (T57.3).
+	KafkaTopicInventoryReleased bool
 	// WireCompatibility enables the standalone Buf WIRE verdict tool (T53.2):
 	// the verdict alone, with no proof bundle or field-reference evidence.
 	WireCompatibility compat.Service
@@ -81,9 +85,9 @@ type Options struct {
 	// TopicInventory is the composed Topics overview boundary (T57.2), the same
 	// proof service instance Huma uses. It is a separate field from Proofs so a
 	// released-Kafka-plane admission, which restricts the proof tools through
-	// KafkaTopicUsageOnly, can never advertise the inventory: the composed
-	// product has no measured claim of its own until T57.3. Nil keeps both
-	// tools undiscoverable.
+	// KafkaTopicUsageOnly, advertises the inventory only when
+	// KafkaTopicInventoryReleased says its own T57.3 claim is released. Nil
+	// keeps both tools undiscoverable.
 	TopicInventory TopicInventoryQueries
 	// Visible resolves the caller's repo visibility (T10.3); nil disables
 	// permission filtering. search_code is covered inside the searcher; this

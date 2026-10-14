@@ -348,6 +348,9 @@ func registerProofAPI(api huma.API, opts Options) {
 	if len(opts.KafkaReleasedPlanes) > 0 {
 		registerKafkaTopicUsageAPI(api, service)
 		registerProofBundleReadAPI(api, opts)
+		if opts.KafkaTopicInventoryReleased {
+			registerTopicInventoryAPI(api, service)
+		}
 		return
 	}
 

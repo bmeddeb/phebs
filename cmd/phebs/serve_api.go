@@ -218,6 +218,22 @@ func releasedKafkaPlanes(cfg *config.Config, released map[string]bool) []string 
 	return planes
 }
 
+// releasedKafkaTopics admits the composed inventory beside the released planes
+// only when a verified phebs.kafka.topics record selects it and both planes are
+// themselves released: the combined claim measured nothing else. Revoking
+// either plane withdraws Topics too, and that withdrawal is logged once.
+func releasedKafkaTopics(claims map[string]bool, planes []string) bool {
+	if !claims[kafkaTopicsPackID] {
+		return false
+	}
+	if len(planes) != 2 {
+		log.Printf("release selection: %s withdrawn: its combined claim needs both Kafka planes released, have %v",
+			kafkaTopicsPackID, planes)
+		return false
+	}
+	return true
+}
+
 // admittedWireCompatibility admits the standalone Buf WIRE verdict (T53.2)
 // under the same dark switches as the proof-enriched check, or ordinarily when
 // a verified released record selects its claim (T53.3). A released claim never
@@ -278,6 +294,8 @@ func newServeAPIOptions(d *serveDeps) (api.Options, error) {
 		AuditRecord: d.auditRecord, AuditLog: st, Analytics: st,
 		Evidence: d.evidenceView, ProofBundles: admittedProofBundles(cfg, d.releasedDomains, d.proofBundles),
 		KafkaReleasedPlanes: releasedKafkaPlanes(cfg, d.releasedDomains),
+		KafkaTopicInventoryReleased: releasedKafkaTopics(
+			d.releasedClaims, releasedKafkaPlanes(cfg, d.releasedDomains)),
 		ContractCatalogUnadmitted: !provisionalExtractionOn(cfg) &&
 			!d.releasedDomains["proto-contract"] && !d.releasedDomains["thrift-contract"],
 		CallerMapEnabled: d.callerRegistry.Enabled(),
@@ -402,11 +420,10 @@ func newServeMCPServer(d *serveDeps, apiOpts api.Options) *mcpsdk.Server {
 			mcpCompatibility = proofService
 		}
 		// The composed Topics inventory is admitted on exactly the boundary its
-		// HTTP routes use: the experimental proof surface alone. A released
-		// Kafka plane keeps listing only find_kafka_topic_usage, so the
-		// T55.3/T56.3 release evidence still describes what that binary serves
-		// and T57.3 stays the place the composed product earns its own claim.
-		if len(apiOpts.KafkaReleasedPlanes) == 0 {
+		// HTTP routes use: the experimental proof surface, or released planes
+		// beside the released T57.3 Topics claim. Released planes alone keep
+		// listing only find_kafka_topic_usage.
+		if len(apiOpts.KafkaReleasedPlanes) == 0 || apiOpts.KafkaTopicInventoryReleased {
 			mcpTopicInventory = proofService
 		}
 	}
@@ -419,16 +436,17 @@ func newServeMCPServer(d *serveDeps, apiOpts api.Options) *mcpsdk.Server {
 		Version: version, Store: d.st, Search: d.searcher, ScopedSearch: d.runtimeScopedSearch,
 		DataDir: d.cfg.Server.DataDir,
 		CodeNav: d.codeNavigation, Visible: d.visibleFor, Proofs: mcpProofs,
-		Compatibility:       mcpCompatibility,
-		KafkaTopicUsageOnly: len(apiOpts.KafkaReleasedPlanes) > 0,
-		WireCompatibility:   apiOpts.WireCompatibility,
-		ContractCatalog:     catalogQueries,
-		CallerMap:           callerMapQueries,
-		CallerComparison:    comparisonQueries,
-		ServiceDirectory:    apiOpts.ServiceDirectory,
-		ObservationProgress: apiOpts.ObservationProgress,
-		Relationships:       apiOpts.Relationships,
-		TopicInventory:      mcpTopicInventory,
+		Compatibility:               mcpCompatibility,
+		KafkaTopicUsageOnly:         len(apiOpts.KafkaReleasedPlanes) > 0,
+		KafkaTopicInventoryReleased: apiOpts.KafkaTopicInventoryReleased,
+		WireCompatibility:           apiOpts.WireCompatibility,
+		ContractCatalog:             catalogQueries,
+		CallerMap:                   callerMapQueries,
+		CallerComparison:            comparisonQueries,
+		ServiceDirectory:            apiOpts.ServiceDirectory,
+		ObservationProgress:         apiOpts.ObservationProgress,
+		Relationships:               apiOpts.Relationships,
+		TopicInventory:              mcpTopicInventory,
 	}
 	return phebsmcp.NewServer(mcpOpts)
 }

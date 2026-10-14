@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -17,6 +18,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/compat"
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/extract"
+	"github.com/bmeddeb/phebs/internal/packrelease"
 )
 
 // TestCallerMapPackIdentityAndRecipeFrozen pins the exact T47.2a frozen tuple:
@@ -356,9 +358,10 @@ func TestCallerMapOrdinarySurfaceFollowsProductionAssembly(t *testing.T) {
 	tests := []struct {
 		name      string
 		released  bool
-		claim     bool // a signed record selecting the T53.3 Buf WIRE claim
-		producer  bool // a signed record selecting the T55.2 producer recipe, bound as T55.3 will
-		consumer  bool // a signed record selecting the T56.2 consumer recipe, bound as T56.3 will
+		claim     bool     // a signed record selecting the T53.3 Buf WIRE claim
+		producer  bool     // a signed record selecting the T55.2 producer recipe, bound as T55.3 will
+		consumer  bool     // a signed record selecting the T56.2 consumer recipe, bound as T56.3 will
+		kafka     []string // T57.3: one selection of these Kafka packs sharing one binding
 		configure func(*config.Config)
 		want      servedCallerSurfaces
 	}{
@@ -402,8 +405,8 @@ func TestCallerMapOrdinarySurfaceFollowsProductionAssembly(t *testing.T) {
 		{
 			// T56.2: the consumer plane alone, independent of the producer release.
 			// T57.2: the composed inventory stays unlisted, so listTopicsTool and
-			// readInventoryTool are false here by omission — a released plane has
-			// no measured Topics claim until T57.3.
+			// readInventoryTool are false here by omission — only the released
+			// T57.3 Topics claim beside both planes lists it.
 			name:      "a released Kafka consumer alone serves only consumer topic usage",
 			consumer:  true,
 			configure: func(*config.Config) {},
@@ -416,6 +419,26 @@ func TestCallerMapOrdinarySurfaceFollowsProductionAssembly(t *testing.T) {
 			// T55.2: the producer plane alone, never the consumer or any other proof surface.
 			name:      "a released Kafka producer alone serves only producer topic usage",
 			producer:  true,
+			configure: func(*config.Config) {},
+			want: servedCallerSurfaces{
+				capabilities: []string{"kafka-topic-usage", "service-catalog-v2"},
+				topicTool:    true,
+			},
+		},
+		{
+			// T57.3: the combined claim adds exactly the composed inventory.
+			name:      "released Kafka planes with the Topics claim serve the composed inventory",
+			kafka:     []string{kafkaProducerPackID, kafkaConsumerPackID, kafkaTopicsPackID},
+			configure: func(*config.Config) {},
+			want: servedCallerSurfaces{
+				capabilities: []string{"kafka-topic-inventory", "kafka-topic-usage", "service-catalog-v2"},
+				topicTool:    true, listTopicsTool: true, readInventoryTool: true,
+			},
+		},
+		{
+			// The combined claim measured both planes; one alone withdraws it.
+			name:      "the Topics claim beside one released plane is withdrawn",
+			kafka:     []string{kafkaProducerPackID, kafkaTopicsPackID},
 			configure: func(*config.Config) {},
 			want: servedCallerSurfaces{
 				capabilities: []string{"kafka-topic-usage", "service-catalog-v2"},
@@ -469,6 +492,21 @@ func TestCallerMapOrdinarySurfaceFollowsProductionAssembly(t *testing.T) {
 				bindReleaseLoad(t, release)
 				cfg.ReleaseSelection.Path = dir
 				cfg.ReleaseSelection.Keys = []config.ReleaseKey{{ID: "key-1", PublicKey: public}}
+			}
+			if len(test.kafka) > 0 {
+				restore := packRecipes
+				packRecipes = map[string]func() []extract.Extractor{
+					kafkaProducerPackID: kafkaProducerRecipe, kafkaConsumerPackID: kafkaConsumerRecipe,
+				}
+				t.Cleanup(func() { packRecipes = restore })
+				selection := newReleasedSelection(t)
+				first := selection.admit(t, test.kafka[0], "key-0", packrelease.StatusReleased)
+				var more []*packrelease.PackRelease
+				for index, packID := range test.kafka[1:] {
+					more = append(more, selection.admitShaped(t, packID, fmt.Sprintf("key-%d", index+1), sharingBinding(first)))
+				}
+				bindReleaseLoad(t, first, more...)
+				selection.bind(cfg)
 			}
 			if test.claim {
 				dir := t.TempDir()

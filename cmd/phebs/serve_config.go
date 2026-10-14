@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/callerexecute"
 	"github.com/bmeddeb/phebs/internal/callerpublication"
 	"github.com/bmeddeb/phebs/internal/compat"
@@ -155,6 +156,7 @@ var packRecipes = map[string]func() []extract.Extractor{
 // claim (T53.3) is bound here in the same change as its first signed record.
 var releasedClaims = map[string]string{
 	wireCompatibilityPackID: "check_wire_compatibility@buf-" + compat.Version + "-" + compat.Policy,
+	kafkaTopicsPackID:       "list_kafka_topics@" + api.TopicInventorySchemaVersion, // T57.3
 }
 
 // kafkaProducerPackID is the T55.1 site-coverage card
@@ -184,6 +186,11 @@ func kafkaConsumerRecipe() []extract.Extractor {
 // docs/WIRE_COMPATIBILITY_PROTOCOL.md §9: never report a wire-breaking change
 // as compatible, conservative only in the two disclosed classes.
 const wireCompatibilityPackID = "phebs.protobuf.wire.buf"
+
+// kafkaTopicsPackID is the T57.3 combined Topics claim
+// (docs/TOPICS_QUALITY_PROTOCOL.md): the composed inventory over both released
+// Kafka planes. It admits nothing alone; see releasedKafkaTopics.
+const kafkaTopicsPackID = "phebs.kafka.topics"
 
 // releaseLoadBindings supplies what a released record must match before it may
 // load: the artifact resolver, the running implementation identity and the

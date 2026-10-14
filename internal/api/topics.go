@@ -41,7 +41,7 @@ const (
 	// about one known spelling.
 	topicInventoryQueryKind = "list_kafka_topics"
 
-	topicInventorySchemaVersion = "kafka-topic-inventory-v1"
+	topicInventorySchemaVersion = TopicInventorySchemaVersion
 	topicInventoryCursorSchema  = "phebs-topic-inventory-cursor-v1"
 
 	topicInventoryDefaultPage = 50
@@ -631,12 +631,16 @@ func renderTopicRowPlane(accumulator *topicRowAccumulator, planeState string) To
 	}
 }
 
+// TopicInventorySchemaVersion names the composed inventory's content schema.
+// A T57.3 release binds it as the claim's implementation identity, so a
+// schema change invalidates that release.
+const TopicInventorySchemaVersion = "kafka-topic-inventory-v1"
+
 // registerTopicInventoryAPI serves the composed Topics overview (T57.2). It is
-// registered only on the experimental proof surface, never on the
-// released-Kafka-plane surface: a released plane still serves exactly
-// find_kafka_topic_usage and bundle reads, so the T55.3/T56.3 release evidence
-// continues to describe what a released binary actually serves. T57.3 owns
-// promoting the inventory onto its own measured claim.
+// registered on the experimental proof surface, and on the released-Kafka-plane
+// surface only beside a released phebs.kafka.topics claim (T57.3): released
+// planes alone still serve exactly find_kafka_topic_usage and bundle reads, so
+// their own release evidence keeps describing what that binary serves.
 func registerTopicInventoryAPI(api huma.API, service *ProofService) {
 	type proofOut struct{ Body ProofBundleEnvelope }
 	huma.Get(api, "/api/list_kafka_topics", func(ctx context.Context, _ *struct{}) (*proofOut, error) {

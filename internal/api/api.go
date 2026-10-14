@@ -165,6 +165,10 @@ type Options struct {
 	// reads, names every other plane unavailable in the census, and registers
 	// no other proof, Impact or compatibility surface.
 	KafkaReleasedPlanes []string
+	// KafkaTopicInventoryReleased additionally admits the composed Topics
+	// inventory on that released surface: a verified phebs.kafka.topics record
+	// with both planes released (T57.3). It has no effect without them.
+	KafkaTopicInventoryReleased bool
 	// WireCompatibility admits the standalone Buf WIRE verdict (T53.2): the
 	// same checker without proof bundles or field-reference enrichment. Nil
 	// keeps it undiscoverable; the caller decides admission.
