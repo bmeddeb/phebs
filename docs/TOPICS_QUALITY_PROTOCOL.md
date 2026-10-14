@@ -124,3 +124,51 @@ receipt is `spike/t573/release/receipts/rehearsal.json`.
 Per §5 nothing fails, but the claim in §1 is not established on rows. No
 record is signed with Ben's key on this result. The next step is Ben's call:
 a fresh population with literal topics, or a narrower census-only claim.
+
+## 8. Round 2: a fresh literal-topic population (frozen by Ben's choice, 2026-10-13)
+
+Ben chose a fresh population after §7. The claim (§1), truth (§3),
+measurement (§4) and thresholds (§5) are unchanged. Only the population
+changes, and one power floor is added. This section is frozen before any
+candidate is selected, and the corpus lock that follows it is committed
+before phebs runs on any candidate.
+
+**Selection, run once.** `gh search code` with `--language go --limit 100`
+for each of these queries, in this order:
+
+1. `"kafka.WriterConfig" "Topic:"`
+2. `"kafka.ReaderConfig" "Topic:"`
+3. `"sarama.ProducerMessage" "Topic:"`
+4. `"ConsumePartition(\""`
+
+Candidates are repositories in order of first appearance across the four
+result lists. Excluded:
+
+- the 17 T55.1 corpus repositories;
+- the T23.1 tuning pins: jaegertracing/jaeger, IBM/sarama, Shopify/sarama,
+  segmentio/kafka-go and zeromicro/go-queue;
+- forks and archived repositories.
+
+**Pinning.** Each candidate is pinned at the default-branch HEAD of a depth-1
+clone on the selection date.
+
+**Eligibility, applied in candidate order.** A candidate is dropped, with the
+reason recorded, when:
+
+- its checkout exceeds 200 MiB or 5,000 `.go` files (this host's envelope);
+- or the truth side (the T55.1/T56.1 oracles) finds no resolved topic in
+  either plane at the pinned commit.
+
+No phebs output on any candidate is consulted. The first 10 eligible
+candidates are the population, and the first of them is the member
+repository.
+
+**Power floor.** The oracle union over the population must hold at least 20
+topics. Below that, the round is underpowered and is recorded as not
+established, never as a pass.
+
+**Result rule.** §5 applies unchanged: any single difference fails. Because
+the rows now carry literal spellings, a served topic absent from the oracle,
+or a mismatched per-plane count, is also the planes' first topic-name
+precision evidence. It is reported as such, without re-scoring their sealed
+site results.
