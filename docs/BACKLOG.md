@@ -18178,6 +18178,40 @@ but Caller Map is unavailable for about 100 s after a restore. Operators
 should expect that, and the proposed class adds restore-to-current
 ≤ 300 s.*
 
+*T47.4 acceptance (2026-10-14, Claude lead, Linux track): **the operating
+class is frozen by Ben and the acceptance run passes every limit**, on binary
+`9781c3cc` (`sha256:cde820be…`). The receipt is
+[`acceptance_20261014.json`](../spike/t474/acceptance_20261014.json).
+
+| Limit | Frozen | Measured | Headroom |
+|---|---|---|---|
+| Cold to current | ≤ 300 s | 109 s | 2.75× |
+| Recovery after interruption | ≤ 300 s | 59 s | 5.1× |
+| Warm restart ready | ≤ 30 s | 1.5 s | 19.9× |
+| Peak whole-session RSS | ≤ 2.5 GiB | 785 MiB | 3.3× |
+| Data | ≤ 3 GiB | 811 MiB | 3.8× |
+| Caller Map read p95 | ≤ 250 ms | 47 ms | 5.3× |
+| Caller Map read p99 | ≤ 500 ms | 49 ms | 10.2× |
+
+Also passing:
+- the generation is unchanged across warm restart and hard death;
+- caller content is byte-identical across fresh stores, including an
+  interrupted one;
+- **HTTP equals MCP on all 399 declared endpoints**;
+- paging during a live incremental update had no errors;
+- backup and restore reproduce identical caller content.
+
+**Collection.** The superseded generation was already gone when the update
+was first observed current, within the 2 s poll interval.
+
+**Disclosed.** Cold start's 2.75× headroom is below the proposal's aim of at
+least 3×, but within the frozen limit. Pressure, parent-only hard death and
+permission change were covered by the 2026-10-12 groundwork on earlier
+binaries and were not re-run here.
+
+**Not established.** The released (ordinary-selection) path, which waits on
+T47.5's binding and therefore on Ben's T47.2 labels.*
+
 **T47.5 · Exact Caller Map promotion and supported product closure** *(needs
 T47.2–T47.4; presentation-track handoff for any UI change)* — release only
 the validated Caller Map artifact and selected recipes through a
@@ -20330,6 +20364,13 @@ repositories and 153 resolved registration sites (powered).
 Both identity rounds point the same way: a name-based pure reader cannot
 carry an identity claim. Epic 58's gRPC release stays blocked; Ben chooses
 the next path.*
+
+*Epic 58 gRPC decision (Ben, 2026-10-14): **defer to Caller Map.**
+`grpc-consumer` stays dark for lookup-by-operation; exact operation identity
+is Epic 47's Caller Map. T58.1's site-coverage result stands as evidence.
+No further identity rounds are planned, and Epic 58's gRPC release is closed
+as not releasable on the name-based reader. T58.2 (Thrift) would face the same
+limit and is not started.*
 
 ## Epic 25 · Embedded documentation browser *(drafted 2026-07-27 · unscheduled nice-to-have)*
 

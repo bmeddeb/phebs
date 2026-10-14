@@ -139,6 +139,36 @@ def read_latency(api: caller_map_export.Api, data: Path, controls: list[dict], p
     return percentiles(timings), len(endpoints)
 
 
+def mcp_parity(base: str, key: str, data: Path, controls: list[dict]) -> int:
+    """Every declared endpoint's first Caller Map page is identical over HTTP and MCP (T47.4)."""
+    checked = 0
+    for control in controls:
+        manifest, _ = caller_map_export.publication_facts(data, control)
+        for lineage, operation in caller_map_export.declared_endpoints(
+                data, control, manifest['generation']['resolver_generation_digest']):
+            params = {'protocol': caller_map_export.API_PROTOCOL, 'repository': control['repository'], 'lineage': lineage,
+                      'operation': operation, 'resolution': 'any', 'page_size': 100}
+            status, body = serve.http_get(base, '/api/contract_callers', params, token=key)
+            if status != 200:
+                raise serve.ServeError(f'contract_callers answered {status}')
+            mcp = serve.mcp_call(base, 'list_operation_callers', {
+                'protocol': params['protocol'], 'repository': params['repository'], 'declaration_lineage': lineage,
+                'operation': operation, 'resolution': 'any', 'page_size': 100}, token=key)
+            serve.parity(body, mcp, serve_rehearsal.VOLATILE)
+            checked += 1
+    return checked
+
+
+def overlay_generations(data: Path, repository: str) -> int:
+    """Complete caller generations held for one repository across its overlays."""
+    held = 0
+    for overlay in sorted((data / 'caller-leaves').iterdir()):
+        for manifest in overlay.glob('complete-v1-*.manifest.json'):
+            if json.loads(manifest.read_text())['generation']['repository'] == repository:
+                held += 1
+    return held
+
+
 def identities(controls: list[dict]) -> list[tuple]:
     """Store-local identity: a generation embeds its store's random run ids."""
     return sorted((c['repository'], c['generation_digest'], c['manifest_digest']) for c in controls)
@@ -186,6 +216,7 @@ def rehearse(binary: Path, helpers: Path, corpus: Path, run_root: Path, reposito
                     record['seconds_to_current'], controls = wait_current(api, names, deadline_s)
                     if latency:
                         record['caller_map_latency'], record['endpoints'] = read_latency(api, data, controls, passes)
+                        record['mcp_parity_endpoints'] = mcp_parity(base, key, data, controls)
             except BaseException:
                 session.stop('hard_kill', reason=f'{step} probe failed')
                 raise
@@ -332,6 +363,12 @@ def lifecycle_extended(binary: Path, helpers: Path, source_corpus: Path, run_roo
                     raise serve.ServeError('the incremental update did not converge before the deadline')
                 time.sleep(2)
             update_seconds = time.monotonic() - started
+            collected = time.monotonic()
+            while overlay_generations(data, target) != 1:
+                if time.monotonic() - collected > deadline_s:
+                    raise serve.ServeError('the superseded caller generation was never collected')
+                time.sleep(0.5)
+            collection_seconds = time.monotonic() - collected
             time.sleep(10)
         if reader.errors or reader.complete == 0:
             raise serve.ServeError(f'paging during publication broke: {reader.errors[:5]} complete={reader.complete}')
@@ -344,6 +381,7 @@ def lifecycle_extended(binary: Path, helpers: Path, source_corpus: Path, run_roo
                 raise serve.ServeError('an update to one repository republished another')
         result['phases']['update-under-paging'] = {
             'cold_seconds_to_current': round(cold_seconds, 3), 'update_seconds_to_current': round(update_seconds, 3),
+            'collection_seconds_after_current': round(collection_seconds, 3),
             'paging': {'complete_traversals': reader.complete, 'conflicts_409': reader.conflicts, 'errors': 0},
             'updated_repository_counts_unchanged': True, 'other_repositories_unchanged': True}
         backup = run_root / 'backup'

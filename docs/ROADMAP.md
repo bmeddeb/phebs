@@ -264,7 +264,9 @@ and who owns each.
     T48.3 supplies the drivers.
   - Remaining, Ben: label the 1,583 blind units and commit the labels; then
     unseal and score.
-  - Remaining, Ben: freeze the proposed T47.4 operating class.
+  - Done 2026-10-14: Ben froze the T47.4 operating class, and acceptance passes
+    every limit on binary `9781c3cc`, with HTTP equal to MCP on all 399
+    endpoints.
   - Remaining, agent: the T47.4 acceptance run and the T47.5 signed release,
     which needs Ben's signing key and the validation result. The groundwork
     now also covers memory pressure (a 400 MB cgroup) and a parent-only hard
