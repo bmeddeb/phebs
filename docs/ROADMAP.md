@@ -390,10 +390,11 @@ and who owns each.
     not the Linux ceremony host. §2's no-history-expansion rule means no
     full-history clone is needed; measured depth-1 sizes on four large Go
     repositories outside the population are 136–396 MiB, putting eighteen
-    members at roughly 4–8 GiB against 93 GiB free. The Linux host is running
-    deadline-sensitive T42.2 work, and the Ubuntu baseline mandate covers
-    rehearsals, ceremonies and historical reruns rather than an offline quality
-    measurement. The draft's earlier 30–60 GiB figure is withdrawn.
+    members at roughly 4–8 GiB against 93 GiB free. The 2026-10-13 machine tracks
+    settle it: T58.1 is Mac-track work, while the Linux track owns the rehearsal
+    corpora, release signing and T58.3. The draft's earlier 30–60 GiB figure is
+    withdrawn, and so is its later claim that Linux-hosted T42.2 measurements
+    needed protecting — that policy assigns those darwin tests to this machine.
   - Done: Ben approved and closed the 18-name population list on 2026-10-14,
     including `etcd-io/etcd` with its T47.2 `grpc-caller` overlap disclosed and
     accepted, so any etcd result must be restated as not independent of Epic 47's

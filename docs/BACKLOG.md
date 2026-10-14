@@ -19606,7 +19606,10 @@ same three still expire at 600.02s, 600.02s and 180.02s (1380.846s versus
 request and runs its turns but never emits `measured_and_resumed`, so
 `failServer` fires at `t422_backup_retirement_test.go:1246` with a nil cause.
 Diagnostics are retained under each run's fixture root. The cause is open; the
-same three reproduce at base `ccbcd8c2`, so inheritance holds. No quality, coverage, release, scale or SLO claim follows.*
+same three reproduce at base `ccbcd8c2`, so inheritance holds. The 2026-10-13
+machine tracks subsequently assigned these three darwin tests to the Mac track, so
+the open cause belongs to this track and not to the Linux T42.2 ceremony line; it
+remains outside Epic 57 and outside T58.1. No quality, coverage, release, scale or SLO claim follows.*
 
 ## Epic 58 · Go RPC syntactic consumer and registration production readiness
 
@@ -19686,12 +19689,16 @@ no-history-expansion rule means no full-history clone is needed, and measured
 depth-1 sizes on four large Go repositories *outside* the proposed population
 (`hashicorp/consul` 136 MiB, `moby/moby` 159 MiB, `pingcap/tidb` 217 MiB,
 `kubernetes/kubernetes` 396 MiB) put eighteen members at roughly 4–8 GiB against
-93 GiB free. The Linux ceremony host is deliberately not used: it is running
-T42.2 work whose tests fail at deadline boundaries, so clone and whole-tree
-extraction I/O there could perturb already deadline-sensitive measurements, and
-AGENTS.md requires serializing expensive host execution. The Linux baseline
-mandate covers rehearsals, ceremonies and historical reruns, not an offline
-quality measurement producing no signed custody. The draft's earlier 30–60 GiB
+93 GiB free. The Linux host is not used because the 2026-10-13 machine tracks
+assign T58.1 to the Mac track and give the Linux track the rehearsal corpora,
+release signing and Epic 58's T58.3 registration; AGENTS.md also requires
+serializing expensive host execution. An earlier claim that clone I/O would
+perturb deadline-sensitive T42.2 measurements on the Linux host is **withdrawn**
+as an unverified inference — the same policy assigns the
+`TestT422Workspace*NativeComposition` tests to darwin and they were observed
+failing on this Mac. The Linux baseline mandate covers rehearsals, ceremonies and
+historical reruns, not an offline quality measurement producing no signed
+custody. The draft's earlier 30–60 GiB
 figure is **withdrawn** — it assumed full-history clones this round does not use.
 The corpus lives outside the repository at `~/phebs-t581-corpus/`, is never
 committed, and the cloner enforces a 40 GiB free-space floor, aborting cleanly and
@@ -19706,6 +19713,16 @@ the 18 names and chose to include `etcd-io/etcd` with its T47.2 `grpc-caller`
 overlap disclosed beforehand and accepted, so any etcd result must be restated as
 not independent of Epic 47's caller corpus. The list is closed to amendment.
 
+- **Track crossing, recorded as the 2026-10-13 machine-track policy requires.**
+  T58.1 is Mac-track work — the policy names it explicitly — but it writes into
+  `spike/`, which the Linux track owns. The crossing is authorized by that naming
+  plus Ben flagging the ticket in chat, and the branch carries the Mac-track
+  `mac/t*` prefix. `spike/t581/` is offline one-shot measurement tooling: it
+  touches no `internal/`, `cmd/`, store schema, `Makefile` or `go.mod` path the
+  Linux track owns, and T58.3's registration, release signing and rehearsal-corpus
+  work stay with the Linux track. Shared spine edits here remain append-only, and
+  this track merged second so it reran `make docs-check` and
+  `make verify-glossary`.
 - **Lock.** `spike/t581/lock_corpus.py` clones each name at depth 1, applies only
   the pre-declared drop rule, inventories symlinks without following or parsing
   them, enforces a 40 GiB free-space floor, and returns nonzero on a partial lock

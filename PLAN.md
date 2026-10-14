@@ -11130,7 +11130,10 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   `t422_backup_retirement_test.go:1246` with a nil cause, no server output
   lines and a nil pipe error, and each run retains its diagnostic under the
   fixture root logged at line 433. The cause is open. Inheritance still holds,
-  because the same three reproduce at the exact base commit `ccbcd8c2`. No quality,
+  because the same three reproduce at the exact base commit `ccbcd8c2`. The
+  2026-10-13 machine tracks subsequently assigned these three darwin tests to the
+  Mac track, so the open cause belongs to this track and not to the Linux T42.2
+  ceremony line; it remains outside Epic 57 and outside T58.1. No quality,
   coverage, release, scale or SLO claim follows, and no Epic 57 behavior
   changes.
 
@@ -11274,11 +11277,16 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   proposed population — `hashicorp/consul` 136 MiB, `moby/moby` 159 MiB,
   `pingcap/tidb` 217 MiB, `kubernetes/kubernetes` 396 MiB — put eighteen members
   at roughly 4–8 GiB against 93 GiB free. The draft's earlier 30–60 GiB figure is
-  withdrawn as a full-history assumption this round does not have. The Linux
-  ceremony host is deliberately not used: it is running T42.2 work whose tests
-  fail at deadline boundaries, so clone and whole-tree extraction I/O there could
-  perturb already deadline-sensitive measurements, and AGENTS.md requires
-  serializing expensive host execution. The Ubuntu-amd64 baseline mandate covers
+  withdrawn as a full-history assumption this round does not have. The Linux host
+  is not used because the 2026-10-13 machine tracks assign T58.1 to the Mac track
+  and give the Linux track the rehearsal corpora, release signing and Epic 58's
+  T58.3 registration; AGENTS.md also requires serializing expensive host
+  execution. An earlier version of this entry justified the choice by claiming
+  that clone I/O would perturb deadline-sensitive T42.2 measurements on the Linux
+  host, and that premise is **withdrawn** as an unverified inference: the same
+  policy assigns the `TestT422Workspace*NativeComposition` tests to darwin, and
+  they were observed failing on this Mac rather than there. The Ubuntu-amd64
+  baseline mandate covers
   rehearsals, ceremonies and reruns of historical workloads, not an offline
   quality measurement that produces no signed custody, ceremony receipt or scale
   claim; a T58.3 release rehearsal would be a separate decision with its own host

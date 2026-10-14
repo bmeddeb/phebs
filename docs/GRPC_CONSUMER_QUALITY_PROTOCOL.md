@@ -168,8 +168,19 @@ generator version gates recognition at runtime and none is added by this ticket.
 ### Host and clone discipline (DECIDED 2026-10-13)
 
 The round runs on the **macOS arm64 development host**, not the Ubuntu Linux
-ceremony host. Ben delegated the choice and it was decided on measurement rather
-than estimate.
+ceremony host. This is now governed by policy as well as measurement: the
+2026-10-13 machine tracks in AGENTS.md assign **T58.1 to the Mac track**, and
+assign the Linux track the rehearsal corpora, release signing and Epic 58's
+T58.3 registration. Ben delegated the choice before that policy landed and the
+measurement below independently reached the same place.
+
+**Track crossing, recorded as the policy requires.** T58.1 is Mac-track work that
+writes into `spike/`, a Linux-track-owned directory. The crossing is authorized by
+the policy naming T58.1 as Mac-track and by Ben flagging the ticket in chat, and
+is recorded here and in the owning BACKLOG ticket. `spike/t581/` is offline
+one-shot measurement tooling: it touches no `internal/`, `cmd/`, store schema,
+`Makefile` or `go.mod` path the Linux track owns, and T58.3's registration and
+release work stays with the Linux track.
 
 - **Depth-1 clones only.** §2 pins one commit per repository and forbids history
   expansion, so no full-history clone is needed. Measured depth-1 sizes on four
@@ -179,11 +190,18 @@ than estimate.
   roughly 4–8 GiB, against 93 GiB free at decision time. An earlier figure of
   30–60 GiB in this document's draft is **withdrawn**: it assumed full-history
   clones, which this round does not use.
-- **Not the Linux host, deliberately.** That host is running T42.2 lifecycle work
-  whose tests fail at *deadline* boundaries (600.02s / 600.02s / 180.02s), so
-  adding clone and whole-tree extraction I/O there could perturb measurements
-  that are already deadline-sensitive. AGENTS.md also requires serializing
-  expensive host execution rather than running two heavy workloads at once.
+- **Not the Linux host.** The 2026-10-13 machine tracks give the Linux track the
+  rehearsal corpora, release signing and Epic 58's T58.3 registration, and give
+  T58.1 to the Mac track, so this corpus belongs here. AGENTS.md also requires
+  serializing expensive host execution rather than running two heavy workloads at
+  once; when the host choice was made Ben had T42.2 lifecycle work in progress on
+  another machine, and no expensive Go run is concurrent with cloning or exporting
+  here. An earlier draft of this section justified the choice by claiming clone I/O
+  would perturb T42.2 deadline measurements *on the Linux host*; that premise is
+  **withdrawn** as an unverified inference, because the same policy assigns the
+  `TestT422Workspace*NativeComposition` tests to darwin and they were observed
+  failing on this Mac, not there. The conclusion is unchanged and now rests on the
+  track assignment and the measurement below.
 - **The Linux ceremony baseline does not govern this round.** AGENTS.md's
   Ubuntu-amd64 mandate covers rehearsals, ceremonies and reruns of historical
   workloads. T58.1 is an offline quality measurement producing no signed custody,
