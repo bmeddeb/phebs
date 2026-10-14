@@ -1,0 +1,136 @@
+{
+ "authorization": {
+  "anonymous": 401,
+  "wrong_token": 401
+ },
+ "not_applicable": [
+  "backup/restore",
+  "generation fencing",
+  "cursor/citation"
+ ],
+ "operating_envelope": {
+  "levels": {
+   "1": {
+    "checks_per_second": 7.19,
+    "max_s": 0.2745,
+    "p50_s": 0.122,
+    "p95_s": 0.2508,
+    "p99_s": 0.2644,
+    "peak_tree_rss_mib": 318.0,
+    "seconds": 32.66,
+    "statuses": {
+     "200": 235
+    }
+   },
+   "4": {
+    "checks_per_second": 18.72,
+    "max_s": 0.4447,
+    "p50_s": 0.1846,
+    "p95_s": 0.3878,
+    "p99_s": 0.4386,
+    "peak_tree_rss_mib": 559.4,
+    "seconds": 12.55,
+    "statuses": {
+     "200": 235
+    }
+   },
+   "8": {
+    "checks_per_second": 19.14,
+    "max_s": 0.7767,
+    "p50_s": 0.3804,
+    "p95_s": 0.6458,
+    "p99_s": 0.7397,
+    "peak_tree_rss_mib": 536.1,
+    "seconds": 12.28,
+    "statuses": {
+     "200": 235
+    }
+   }
+  },
+  "units": 235
+ },
+ "pack_claim_version": "1.0.2",
+ "pack_id": "phebs.protobuf.wire.buf",
+ "quality": {
+  "adjudications_sha256": "sha256:8e02d7436744366f5a3679db56c14f74f11d921a3d3534c321680c66b51ecca6",
+  "population_units_sha256": "sha256:b7003682efa80098bbed6c064f480d4827a1b23894a003366149d7792e70d9fc",
+  "post_seal_correction": "adjudicated units no longer take the oracle disclosure note (protocol section 10)",
+  "protocol": "docs/WIRE_COMPATIBILITY_PROTOCOL.md sections 9-10",
+  "results_sha256": "sha256:d1fc2a8778211dd6f97faf3cfeee08ff82d8014bdd8ac820b558a3a9a9d254da",
+  "score": {
+   "breaking_truth": 104,
+   "checks": {
+    "breaking_truth": true,
+    "judged_unreadable": true,
+    "parity": true,
+    "pending": true,
+    "permissive": true,
+    "undisclosed_error_rate": true
+   },
+   "classes": {
+    "agree": 1466,
+    "conservative": 5,
+    "disclosed_conservative": 54
+   },
+   "judged_units": 1525,
+   "passed": true,
+   "permissive_rate_upper_95": 0.02885,
+   "undisclosed_error_rate": 0.00328
+  },
+  "score_as_sealed": {
+   "classes": {
+    "agree": 1466,
+    "conservative": 4,
+    "disclosed_conservative": 55
+   },
+   "passed": true,
+   "undisclosed_error_rate": 0.00262
+  },
+  "seal_commit": "7484c0c4d5f027066ff957ced89d2fad9b7f5243",
+  "seal_gist": "https://gist.github.com/Blandt/f2becbe05317959b48800dd8c07f2931"
+ },
+ "rebind": {
+  "denial": {
+   "anonymous": 401,
+   "wrong_token": 401
+  },
+  "envelope": {
+   "1": {
+    "checks_per_second": 7.39,
+    "p95_s": 0.2501,
+    "peak_tree_rss_mib": 317.8,
+    "statuses": {
+     "200": 235
+    }
+   },
+   "4": {
+    "checks_per_second": 19.92,
+    "p95_s": 0.3583,
+    "peak_tree_rss_mib": 510.4,
+    "statuses": {
+     "200": 235
+    }
+   },
+   "8": {
+    "checks_per_second": 20.33,
+    "p95_s": 0.6128,
+    "peak_tree_rss_mib": 568.4,
+    "statuses": {
+     "200": 235
+    }
+   }
+  },
+  "envelope_receipt_sha256": "sha256:960f1feb3d28b30f640b68bfdccf62279402241934bd84c82a0876058b68c228",
+  "from_binary_commit": "e485fc36 (claim); 2467bd17 (1.0.1)",
+  "unchanged_paths": [
+   "internal/compat",
+   "cmd/phebs/serve_runners.go",
+   "go.mod buf/protocompile pins"
+  ]
+ },
+ "release_binary": {
+  "source_commit": "758036415c61f22a9d295e586f4a3c8a1b2715b1"
+ },
+ "reviewer": "Claude, sole adjudicator named by Ben (not an independent human review)",
+ "schema": "phebs-verdict-claim-validation-v1"
+}

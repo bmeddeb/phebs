@@ -1,0 +1,318 @@
+{
+ "binary_sha256": "sha256:e6987616fd6780ccb2c62d650bbd91c37a63c293b9d223e37bce3a72ec8e40aa",
+ "data_bytes": 374909883,
+ "expected_by_repository": {
+  "consumer": {
+   "Cris1928__SO1_1S2024_202107190": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 0,
+    "unresolved-ident": 0
+   },
+   "Nahua-Foundation__ragota": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 0,
+    "unresolved-ident": 0
+   },
+   "OsmanPL__sopes1-proyecto2": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 0,
+    "unresolved-ident": 0
+   },
+   "SidIvan__MtsFinalProject": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 1,
+    "unresolved-ident": 0
+   },
+   "dakhipp__graphql-services": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 0,
+    "unresolved-ident": 0
+   },
+   "kartikey09__IIITB-SPE-Major-Project": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 0,
+    "unresolved-ident": 0
+   },
+   "sat3en__crosspoint2.0": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 1,
+    "unresolved-ident": 1
+   },
+   "swiggy-2022-bootcamp__training-i-plus-plus": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 1,
+    "selector-expr": 0,
+    "unresolved-ident": 9
+   },
+   "wangzhongyang007__goframe-shop-v2": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 0,
+    "unresolved-ident": 0
+   },
+   "xhuniktzi__SO1_1S2024_201900462": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 0,
+    "unresolved-ident": 1
+   }
+  },
+  "producer": {
+   "Cris1928__SO1_1S2024_202107190": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 0,
+    "unresolved-ident": 0
+   },
+   "Nahua-Foundation__ragota": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 0,
+    "unresolved-ident": 0
+   },
+   "OsmanPL__sopes1-proyecto2": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 0,
+    "unresolved-ident": 0
+   },
+   "SidIvan__MtsFinalProject": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 1,
+    "unresolved-ident": 0
+   },
+   "dakhipp__graphql-services": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 0,
+    "unresolved-ident": 0
+   },
+   "kartikey09__IIITB-SPE-Major-Project": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 0,
+    "unresolved-ident": 0
+   },
+   "sat3en__crosspoint2.0": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 0,
+    "unresolved-ident": 3
+   },
+   "swiggy-2022-bootcamp__training-i-plus-plus": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 2,
+    "selector-expr": 0,
+    "unresolved-ident": 11
+   },
+   "wangzhongyang007__goframe-shop-v2": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 1,
+    "unresolved-ident": 0
+   },
+   "xhuniktzi__SO1_1S2024_201900462": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 0,
+    "selector-expr": 0,
+    "unresolved-ident": 0
+   }
+  }
+ },
+ "expected_topics": 41,
+ "expected_total": {
+  "consumer": {
+   "ambiguous-library-import": 0,
+   "call-expr": 0,
+   "invalid-topic-literal": 0,
+   "non-literal-expr": 1,
+   "selector-expr": 2,
+   "unresolved-ident": 11
+  },
+  "producer": {
+   "ambiguous-library-import": 0,
+   "call-expr": 0,
+   "invalid-topic-literal": 0,
+   "non-literal-expr": 2,
+   "selector-expr": 2,
+   "unresolved-ident": 14
+  }
+ },
+ "phases": {
+  "backup-restore": {
+   "census_matches_oracle": true,
+   "ready_seconds": 1.255,
+   "rss": {
+    "mean_bytes": 225773874,
+    "peak_bytes": 316026880,
+    "peak_processes": 7,
+    "samples": 127
+   },
+   "seconds_to_published": 64.022,
+   "stop": {
+    "outcome": "success",
+    "stop_mode": "graceful",
+    "wall_seconds": 65.851
+   },
+   "topics": {
+    "inventory_matches_oracle": true,
+    "topics": 41
+   }
+  },
+  "cold": {
+   "anonymous": 401,
+   "anonymous_inventory": 401,
+   "capabilities": [
+    "kafka-topic-inventory",
+    "kafka-topic-usage",
+    "service-catalog-v2"
+   ],
+   "census_matches_oracle": true,
+   "inventory_latency": {
+    "max_ms": 346.83,
+    "n": 20,
+    "p50_ms": 334.15,
+    "p95_ms": 346.83,
+    "p99_ms": 346.83
+   },
+   "mcp_inventory_matches_http": true,
+   "member_census_matches": true,
+   "member_reads_admin_bundle": 404,
+   "member_topics": {
+    "inventory_matches_oracle": true,
+    "topics": 1
+   },
+   "query_latency": {
+    "max_ms": 379.33,
+    "n": 60,
+    "p50_ms": 324.21,
+    "p95_ms": 333.03,
+    "p99_ms": 379.33
+   },
+   "ready_seconds": 2.256,
+   "rss": {
+    "mean_bytes": 241000999,
+    "peak_bytes": 370364416,
+    "peak_processes": 7,
+    "samples": 141
+   },
+   "seconds_to_published": 43.831,
+   "stop": {
+    "outcome": "success",
+    "stop_mode": "graceful",
+    "wall_seconds": 74.246
+   },
+   "topics": {
+    "inventory_matches_oracle": true,
+    "topics": 41
+   }
+  },
+  "hard-death": {
+   "census_matches_oracle": true,
+   "ready_seconds": 1.505,
+   "rss": {
+    "mean_bytes": 243336988,
+    "peak_bytes": 247353344,
+    "peak_processes": 2,
+    "samples": 9
+   },
+   "seconds_to_published": 3.831,
+   "stop": {
+    "outcome": "success",
+    "stop_mode": "graceful",
+    "wall_seconds": 5.876
+   },
+   "topics": {
+    "inventory_matches_oracle": true,
+    "topics": 41
+   }
+  },
+  "restart": {
+   "backup_bytes": 144446578,
+   "census_matches_oracle": true,
+   "ready_seconds": 1.505,
+   "rss": {
+    "mean_bytes": 237468402,
+    "peak_bytes": 248176640,
+    "peak_processes": 2,
+    "samples": 19
+   },
+   "seconds_to_published": 3.857,
+   "stop": {
+    "outcome": "success",
+    "stop_mode": "hard_kill",
+    "wall_seconds": 10.924
+   },
+   "topics": {
+    "inventory_matches_oracle": true,
+    "topics": 41
+   }
+  }
+ },
+ "planes": [
+  "consumer",
+  "producer"
+ ],
+ "repositories": {
+  "Cris1928__SO1_1S2024_202107190": "local/home/ben/phebs-rehearsals/t494-release-20261014/kafka-rehearsal/corpus/Cris1928__SO1_1S2024_202107190",
+  "Nahua-Foundation__ragota": "local/home/ben/phebs-rehearsals/t494-release-20261014/kafka-rehearsal/corpus/Nahua-Foundation__ragota",
+  "OsmanPL__sopes1-proyecto2": "local/home/ben/phebs-rehearsals/t494-release-20261014/kafka-rehearsal/corpus/OsmanPL__sopes1-proyecto2",
+  "SidIvan__MtsFinalProject": "local/home/ben/phebs-rehearsals/t494-release-20261014/kafka-rehearsal/corpus/SidIvan__MtsFinalProject",
+  "dakhipp__graphql-services": "local/home/ben/phebs-rehearsals/t494-release-20261014/kafka-rehearsal/corpus/dakhipp__graphql-services",
+  "kartikey09__IIITB-SPE-Major-Project": "local/home/ben/phebs-rehearsals/t494-release-20261014/kafka-rehearsal/corpus/kartikey09__IIITB-SPE-Major-Project",
+  "sat3en__crosspoint2.0": "local/home/ben/phebs-rehearsals/t494-release-20261014/kafka-rehearsal/corpus/sat3en__crosspoint2.0",
+  "swiggy-2022-bootcamp__training-i-plus-plus": "local/home/ben/phebs-rehearsals/t494-release-20261014/kafka-rehearsal/corpus/swiggy-2022-bootcamp__training-i-plus-plus",
+  "wangzhongyang007__goframe-shop-v2": "local/home/ben/phebs-rehearsals/t494-release-20261014/kafka-rehearsal/corpus/wangzhongyang007__goframe-shop-v2",
+  "xhuniktzi__SO1_1S2024_201900462": "local/home/ben/phebs-rehearsals/t494-release-20261014/kafka-rehearsal/corpus/xhuniktzi__SO1_1S2024_201900462"
+ },
+ "restore_seconds": 27.276,
+ "schema": "t573-topics-release-rehearsal-v1"
+}

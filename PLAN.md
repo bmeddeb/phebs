@@ -11788,3 +11788,17 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   the same way while the volume is above 90%, so host capacity is now a precondition to
   check before attributing a lifecycle or capacity failure to code. No quality, coverage,
   release, scale or SLO claim follows, and the three tests remain red.
+
+- **2026-10-14 — T49.4 serves Contract Atlas over MCP with Atlas alone.**
+  - **Annex narrowed.** T20.11 registered the Atlas discovery tools only as
+    an all-or-none annex with Caller Map. That predates Atlas having a
+    release of its own, and it left the released Thrift Atlas HTTP-only.
+    `search_contract_operations` and `get_contract_operation` now register
+    whenever Atlas is admitted. `list_operation_callers` and the citation
+    tool still require Caller Map, and comparison still requires the full
+    set. This supersedes T20.11 for the two Atlas tools only.
+  - **Defect found.** Serving MCP exposed a T49.3 strict-schema defect:
+    `unavailable_relationships` was typed as objects. It is fixed, with a
+    test.
+  - **Cost.** Two tool descriptors at startup when Atlas is admitted. There
+    is no new query, lock or state.

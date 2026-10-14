@@ -283,8 +283,10 @@ and who owns each.
     1.1.2), measured against the pinned Apache Thrift compiler. Round 3:
     declarations 100%, field IDs 100%, reference state 99.86%.
   - It serves Contract Atlas over HTTP and UI; consumer and caller sections
-    are named unavailable. Atlas MCP stays annexed to Caller Map. See the
-    Thrift protocol §13.
+    are named unavailable. See the Thrift protocol §13.
+  - 2026-10-14: 1.0.2 serves Atlas over MCP as well, with MCP equal to HTTP,
+    in the five-release selection `spike/t494/release` for binary
+    `75803641`.
 - **Compatibility (Epic 53).**
   - Done: T53.2 fixed the Linux sandbox. T53.1 has 29 independent goldens
     covering all 15 WIRE rules.

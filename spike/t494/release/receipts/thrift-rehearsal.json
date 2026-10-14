@@ -1,0 +1,138 @@
+{
+ "binary_sha256": "sha256:e6987616fd6780ccb2c62d650bbd91c37a63c293b9d223e37bce3a72ec8e40aa",
+ "data_bytes": 555045716,
+ "expected": {
+  "AlibabaResearch__DAMO-ConvAI": {
+   "operations": 4,
+   "services": 1
+  },
+  "HartLuk__CCS": {
+   "operations": 8,
+   "services": 1
+  },
+  "StrikeW__aicampf2": {
+   "operations": 2,
+   "services": 1
+  },
+  "Xavier2323__Distributed-File-System": {
+   "operations": 11,
+   "services": 2
+  },
+  "Xavier2323__Distributed-ML-System": {
+   "operations": 4,
+   "services": 2
+  },
+  "cloudwego__kitex-examples": {
+   "operations": 44,
+   "services": 18
+  },
+  "matiasfha__cvnodestreaming": {
+   "operations": 34,
+   "services": 5
+  },
+  "myntra__golimit": {
+   "operations": 4,
+   "services": 1
+  },
+  "osquery__osquery-go": {
+   "operations": 9,
+   "services": 2
+  }
+ },
+ "phases": {
+  "backup-restore": {
+   "atlas_equals_oracle": true,
+   "ready_seconds": 1.255,
+   "rss": {
+    "mean_bytes": 227635417,
+    "peak_bytes": 334790656,
+    "peak_processes": 7,
+    "samples": 132
+   },
+   "seconds_to_oracle_equal": 67.073,
+   "stop": {
+    "outcome": "success",
+    "stop_mode": "graceful",
+    "wall_seconds": 68.469
+   }
+  },
+  "cold": {
+   "anonymous": 401,
+   "atlas_equals_oracle": true,
+   "atlas_latency": {
+    "max_ms": 1102.06,
+    "n": 20,
+    "p50_ms": 1055.28,
+    "p95_ms": 1102.06,
+    "p99_ms": 1102.06
+   },
+   "capabilities": [
+    "contract-atlas",
+    "service-catalog-v2"
+   ],
+   "mcp_matches_http": true,
+   "member_atlas_limited_to": "HartLuk__CCS",
+   "operation_details_checked": 9,
+   "ready_seconds": 2.506,
+   "rss": {
+    "mean_bytes": 253794503,
+    "peak_bytes": 760180736,
+    "peak_processes": 7,
+    "samples": 144
+   },
+   "seconds_to_oracle_equal": 47.415,
+   "stop": {
+    "outcome": "success",
+    "stop_mode": "graceful",
+    "wall_seconds": 76.297
+   }
+  },
+  "hard-death": {
+   "atlas_equals_oracle": true,
+   "ready_seconds": 1.505,
+   "rss": {
+    "mean_bytes": 246539605,
+    "peak_bytes": 255377408,
+    "peak_processes": 2,
+    "samples": 3
+   },
+   "seconds_to_oracle_equal": 1.487,
+   "stop": {
+    "outcome": "success",
+    "stop_mode": "graceful",
+    "wall_seconds": 3.134
+   }
+  },
+  "restart": {
+   "atlas_equals_oracle": true,
+   "backup_bytes": 233046693,
+   "ready_seconds": 1.504,
+   "rss": {
+    "mean_bytes": 241331593,
+    "peak_bytes": 255418368,
+    "peak_processes": 2,
+    "samples": 13
+   },
+   "seconds_to_oracle_equal": 1.496,
+   "stop": {
+    "outcome": "success",
+    "stop_mode": "hard_kill",
+    "wall_seconds": 8.042
+   }
+  }
+ },
+ "repositories": {
+  "AlibabaResearch__DAMO-ConvAI": "local/home/ben/phebs-rehearsals/t494-release-20261014/thrift-rehearsal/corpus/AlibabaResearch__DAMO-ConvAI",
+  "HartLuk__CCS": "local/home/ben/phebs-rehearsals/t494-release-20261014/thrift-rehearsal/corpus/HartLuk__CCS",
+  "StrikeW__aicampf2": "local/home/ben/phebs-rehearsals/t494-release-20261014/thrift-rehearsal/corpus/StrikeW__aicampf2",
+  "TCKnickerbocker__DHT_based_Federated_Learning_System": "local/home/ben/phebs-rehearsals/t494-release-20261014/thrift-rehearsal/corpus/TCKnickerbocker__DHT_based_Federated_Learning_System",
+  "Xavier2323__Distributed-File-System": "local/home/ben/phebs-rehearsals/t494-release-20261014/thrift-rehearsal/corpus/Xavier2323__Distributed-File-System",
+  "Xavier2323__Distributed-ML-System": "local/home/ben/phebs-rehearsals/t494-release-20261014/thrift-rehearsal/corpus/Xavier2323__Distributed-ML-System",
+  "cloudwego__kitex-examples": "local/home/ben/phebs-rehearsals/t494-release-20261014/thrift-rehearsal/corpus/cloudwego__kitex-examples",
+  "matiasfha__cvnodestreaming": "local/home/ben/phebs-rehearsals/t494-release-20261014/thrift-rehearsal/corpus/matiasfha__cvnodestreaming",
+  "myntra__golimit": "local/home/ben/phebs-rehearsals/t494-release-20261014/thrift-rehearsal/corpus/myntra__golimit",
+  "osquery__osquery-go": "local/home/ben/phebs-rehearsals/t494-release-20261014/thrift-rehearsal/corpus/osquery__osquery-go"
+ },
+ "restore_seconds": 25.51,
+ "schema": "t493-thrift-atlas-rehearsal-v1"
+}

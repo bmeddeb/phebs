@@ -1,0 +1,71 @@
+{
+ "expected_total": {
+  "consumer": {
+   "ambiguous-library-import": 0,
+   "call-expr": 0,
+   "invalid-topic-literal": 0,
+   "non-literal-expr": 1,
+   "selector-expr": 2,
+   "unresolved-ident": 11
+  },
+  "producer": {
+   "ambiguous-library-import": 0,
+   "call-expr": 0,
+   "invalid-topic-literal": 0,
+   "non-literal-expr": 2,
+   "selector-expr": 2,
+   "unresolved-ident": 14
+  }
+ },
+ "planes": [
+  "consumer",
+  "producer"
+ ],
+ "revoked-consumer": {
+  "capabilities": [
+   "kafka-topic-usage",
+   "service-catalog-v2"
+  ],
+  "census_matches_oracle": true,
+  "inventory_status": 404,
+  "seconds_to_published": 31.247,
+  "served_planes": [
+   "producer"
+  ],
+  "unavailable_planes": [
+   "consumer"
+  ]
+ },
+ "revoked-topics": {
+  "capabilities": [
+   "kafka-topic-usage",
+   "service-catalog-v2"
+  ],
+  "census_matches_oracle": true,
+  "inventory_status": 404,
+  "seconds_to_published": 3.829,
+  "served_planes": [
+   "consumer",
+   "producer"
+  ],
+  "unavailable_planes": null
+ },
+ "signed": {
+  "capabilities": [
+   "kafka-topic-inventory",
+   "kafka-topic-usage",
+   "service-catalog-v2"
+  ],
+  "census_matches_oracle": true,
+  "seconds_to_published": 62.589,
+  "served_planes": [
+   "consumer",
+   "producer"
+  ],
+  "topics": {
+   "inventory_matches_oracle": true,
+   "topics": 41
+  },
+  "unavailable_planes": null
+ }
+}

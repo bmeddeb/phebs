@@ -4748,7 +4748,17 @@ succeeds (the first five remain available when compatibility is unavailable):
   singular↔repeated change as breaking, including string and message changes
   that protobuf documents as wire-compatible.
 
-  **Five released claims for one binary (T53.3 re-bind, current).** Use
+  **Five released claims with Atlas MCP (T49.4, current).** Use
+  `spike/t494/release/{selection,artifacts}`. The selection holds Thrift
+  contract 1.0.2, producer 1.0.5, consumer 1.0.4, Topics 1.0.3 and Buf
+  WIRE 1.0.2, and admits only the binary built from `75803641`
+  (`sha256:e6987616…`).
+
+  - Contract Atlas is now served over MCP as well
+    (`search_contract_operations`, `get_contract_operation`).
+  - This selection supersedes the T53.3 re-bind selection.
+
+  **Five released claims for one binary (T53.3 re-bind).** Use
   `spike/t533r/release/{selection,artifacts}`. The selection holds Thrift
   contract 1.0.1, producer 1.0.4, consumer 1.0.3, Topics 1.0.2 and Buf WIRE
   1.0.1, and admits only the binary built from `2467bd17`

@@ -446,3 +446,39 @@ every phase, with member scoping, and MCP equal to HTTP.
 **Not established.** No independent human review. Atlas MCP discovery,
 which is annexed to Caller Map. Protobuf declarations. The envelope covers
 only this host and this population.
+
+## 14. Release 1.0.2 (2026-10-14): Contract Atlas over MCP too (T49.4)
+
+1.0.0 and 1.0.1 served Atlas over HTTP and the UI only. Atlas's MCP tools
+registered only as an annex with Caller Map (T20.11), which a Thrift-only
+release does not admit.
+
+**Change.** `search_contract_operations` and `get_contract_operation` now
+register whenever Atlas is admitted; the caller tools still need Caller Map.
+The production-assembly test pins MCP parity with the `contract-atlas`
+capability in every case.
+
+**Defect found.** The rehearsal's new HTTP/MCP parity check found a T49.3
+bug: the strict `get_contract_operation` output schema declared
+`unavailable_relationships` as an array of objects, so every release-scoped
+detail failed MCP validation. It is fixed, and a test drives a
+release-scoped detail through the strict schema and fails with the old
+declaration.
+
+**Selection.** `spike/t494/release/` holds five records signed with
+`ben-phebs-release-2026-10` for binary `75803641` (`sha256:e6987616…`,
+reproduced):
+
+- Thrift contract 1.0.2;
+- producer 1.0.5, consumer 1.0.4 and Topics 1.0.3;
+- Buf WIRE 1.0.2.
+
+**Rehearsal on that binary** (`receipts/thrift-rehearsal.json`). Atlas
+equalled the round-3 oracle in every phase, and **MCP equalled HTTP** for
+the listing and for all nine operation details. Kafka and Topics were 41/41
+in every phase, and every WIRE check answered 200.
+
+**Final proofs with Ben's key.** Capabilities are exactly the five released
+surfaces. Revoking Thrift removes only Atlas, and revoking WIRE leaves Atlas
+exact. The Kafka records serve 41/41 and withdraw Topics and the consumer
+exactly.

@@ -18878,6 +18878,22 @@ producer 1.0.3, consumer 1.0.2 and Topics 1.0.1 re-bound** (Thrift protocol
   lint reports 0 issues, and the new Atlas test fails under mutation.
 - **Release selection for protobuf** still waits on T49.1b's labels.*
 
+*T49.4 slice a (2026-10-14, Claude lead, Linux track): **Thrift Atlas is
+now served over MCP, released as 1.0.2 in a five-release selection for
+binary `75803641`** (Thrift protocol §14).
+
+- **Change.** The two Atlas MCP tools need only Atlas, which supersedes
+  T20.11's all-or-none annex for those two tools; the caller tools still
+  need Caller Map.
+- **Defect found.** The rehearsal's parity check found a strict-schema bug
+  (`unavailable_relationships` declared as objects), now fixed with a
+  regression test.
+- **Evidence.** MCP equals HTTP for the listing and every operation detail
+  in the rehearsal. The final proofs with Ben's key show each release
+  revoking only its own surface.
+- **Remaining for T49.4.** Protobuf Atlas, which waits on T49.1b's labels;
+  the UI is the Mac track's.*
+
 **T49.4 · Measured Atlas promotion and product closure** — satisfy the common
 promotion bar for each selected protocol and the declared UI/HTTP/MCP surface.
 One protocol may release while the other remains explicitly unavailable.
