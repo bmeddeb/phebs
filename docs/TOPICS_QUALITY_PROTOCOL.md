@@ -97,3 +97,30 @@ Three records signed with `ben-phebs-release-2026-10` for one binary, all
 expiring 2027-01-11: Topics 1.0.0, producer 1.0.2 and consumer 1.0.1. The two
 plane records re-bind unchanged claims, because a record admits one exact
 binary. WIRE stays bound to `e485fc36` until its own revalidation.
+
+## 7. Result (2026-10-13): census exact; rows not established
+
+The rehearsal ran release-only, under a throwaway key, on binary `dc7632ee`
+(`sha256:256a85f4…`, reproduced byte for byte by a second clean build). The
+receipt is `spike/t573/release/receipts/rehearsal.json`.
+
+- **Census: passes.** In every phase (cold, restart, hard death,
+  backup→restore), the inventory's unresolved census equalled both oracles
+  exactly. It did so for the administrator and for the goka-only member.
+  Capabilities were exactly the three in §5, anonymous got 401, and the MCP
+  first page equalled the HTTP first page.
+- **Rows: vacuous, so not established.** The oracle union is **0 topics**,
+  and so was the served inventory. A 0 = 0 match measures nothing about rows.
+  Running the oracles over all 17 T55.1 corpus repositories at their locked
+  commits also finds 0 resolved topic spellings in either plane. Every site is
+  unresolved or has no topic field, because production topics are
+  config-driven, the same finding behind the T55.1/T56.1 site-coverage claims.
+  No population we already hold can measure inventory rows.
+- **Operating.** Cold start reached published in 52.6 s. Restart and hard
+  death each recovered in 3.6 s. The backup was 166 MiB, restore took 31.4 s,
+  and the data dir was 473 MiB. Inventory p95 was 252 ms (every page,
+  20 runs) and topic-usage p95 was 249 ms. Peak session RSS was 519 MiB.
+
+Per §5 nothing fails, but the claim in §1 is not established on rows. No
+record is signed with Ben's key on this result. The next step is Ben's call:
+a fresh population with literal topics, or a narrower census-only claim.
