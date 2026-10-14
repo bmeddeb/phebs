@@ -411,6 +411,76 @@ export interface KafkaTopicCensus {
   producer_published_runs: number
   consumer_published_runs: number
   truncated?: string[]
+  // Planes no released recipe admits on this server: unavailable, never zero.
+  unavailable_planes?: string[]
+}
+
+// T57.4: the composed Topics inventory (internal/api/topics.go, schema
+// kafka-topic-inventory-v1). Plane and row states are one closed vocabulary:
+// served (measured), none (a measured zero), unpublished (admitted, nothing
+// published yet) and unavailable (not admitted here).
+export type TopicPlaneStateName = 'served' | 'none' | 'unpublished' | 'unavailable'
+
+export interface TopicPlaneQuality {
+  card: string
+  claim: string
+  protocol: string
+  measured: string[]
+  unmeasured: string[]
+}
+
+export interface TopicPlaneState {
+  plane: 'producer' | 'consumer'
+  domain: string
+  released: boolean
+  state: TopicPlaneStateName
+  quality?: TopicPlaneQuality
+  published_runs: number
+  repositories: number
+  topic_count: number
+  site_count: number
+}
+
+export interface TopicCitation {
+  repository: string
+  commit: string
+  run_id: string
+  assertion_id: string
+  path: string
+  sites: number
+}
+
+export interface TopicRowPlane {
+  state: TopicPlaneStateName
+  sites: number
+  files: number
+  citations?: TopicCitation[]
+  omitted_citations?: number
+}
+
+export interface TopicInventoryRow {
+  topic: string
+  producer: TopicRowPlane
+  consumer: TopicRowPlane
+}
+
+export interface TopicInventoryReport {
+  schema_version: string
+  bundle_id: string
+  planes: TopicPlaneState[]
+  topics: TopicInventoryRow[]
+  pagination: {
+    order: string
+    page_size: number
+    returned: number
+    total: number
+    complete: boolean
+    next_cursor?: string
+  }
+  unresolved_census?: KafkaTopicCensus
+  coverage: CoverageCertificate
+  truncated?: string[]
+  caveat: string
 }
 
 export interface BundleExtractor {
@@ -1395,6 +1465,16 @@ export const fetchSavedImpact = (id: string, signal?: AbortSignal) =>
 
 export const fetchKafkaTopicUsage = (topic: string, signal?: AbortSignal) =>
   getJSON<ProofBundleEnvelope>(`/api/find_kafka_topic_usage?${query({ topic })}`, signal)
+
+// Composing persists one immutable inventory bundle; pages read it back.
+export const composeKafkaTopicInventory = (signal?: AbortSignal) =>
+  getJSON<ProofBundleEnvelope>('/api/list_kafka_topics', signal)
+
+export const fetchTopicInventoryPage = (id: string, cursor: string, signal?: AbortSignal) =>
+  getJSON<TopicInventoryReport>(
+    `/api/topic_inventory/${encodeURIComponent(id)}?${query({ page_size: 50, cursor })}`,
+    signal,
+  )
 
 export async function postChangeImpact(requestBody: CompatibilityRequest, signal?: AbortSignal): Promise<ContractImpactReport> {
   const res = await request('/api/contract_impact_report', {
