@@ -19460,9 +19460,58 @@ because `schemas/pack-release-v1.0.json` was added by `0768ff9e` (T48.2) without
 a `schemaFilenames` entry. No UI, quality, coverage, release, scale or SLO claim
 follows, and the Topics product is still not promoted.*
 
+*T57.2 closed (2026-10-13, Claude lead): **complete as HTTP + MCP.** Ben
+chose to close it on the two landed slices and split the Topics UI into T57.4,
+which waits on his routed presentation handoff.*
+
 **T57.3 · Measured Topics promotion** — satisfy the common bar for the stated
 producer-only, consumer-only or combined product; none implies runtime topic
 activity, complete topology or equality across broker environments.
+
+*T57.3 (2026-10-13, Claude lead): **`rel-phebs.kafka.topics-1.0.0`
+released, with producer 1.0.2 and consumer 1.0.1, for binary `dc7632ee`.**
+Ben chose the combined claim, an exact oracle-union bar, closing T57.2 as
+HTTP + MCP, and re-signing both planes beside Topics. The protocol is
+[TOPICS_QUALITY_PROTOCOL.md](TOPICS_QUALITY_PROTOCOL.md).
+
+- **Admission.** `phebs.kafka.topics` is a `releasedClaims` entry
+  (`list_kafka_topics@kafka-topic-inventory-v1`, so the pack-implementation
+  digest moves). A verified record adds exactly the inventory routes, MCP
+  tools and the `kafka-topic-inventory` capability to the released-plane
+  surface. It does so only when both plane records are released; otherwise it
+  is withdrawn with one startup log line. Released planes alone are
+  unchanged.
+- **Round 1** (sealed `562e1af7`; the T56.3 seven): the census was exact in
+  every phase, but the rows were vacuous at 0 topics, so not established.
+  All 17 T55.1 production repositories spell no literal topic. This was
+  recorded as found, and nothing was signed on it.
+- **Round 2** (Ben's choice; sealed `e2f6e67b`; corpus locked `4a1d23b4`
+  before phebs ran): 10 repositories from four frozen code searches, 41 oracle
+  topics. 41 of 41 matched exactly, with every per-plane site and file count
+  and the census, in all four phases and for the member. Anonymous got 401 and
+  MCP equalled HTTP. Disclosed: mostly student or demo projects, with one
+  repository holding 27 topics.
+- **Final proof with Ben's key.** All three records serve 41 of 41. Revoking
+  Topics alone leaves both planes exact and the inventory 404. Revoking the
+  consumer leaves the producer serving and withdraws Topics, logged by the
+  real binary.
+- **Envelope** (10 repositories): cold start to published 47 s,
+  restart/SIGKILL recovery 3.9 s, backup 138 MiB, restore 30 s, inventory p95
+  361 ms, peak RSS 409 MiB.
+
+Gates: `cmd/phebs` (146.6 s), `internal/api` and `internal/mcp` under race,
+lint (0 issues), docs-check and whitespace pass. Mutation checks: removing the
+api registration fails the new api test, and dropping the both-planes
+requirement fails the new assembly case. The binary reproduces byte for byte.
+
+Not established: independent human review, production-scale topic rows and
+any UI. The three darwin-only `cmd/phebs` T422 tests do not compile on this
+Linux host and were not run (see T57R.1).*
+
+**T57.4 · Topics UI** *(split from T57.2 on 2026-10-13)* — present the
+released inventory only after Ben's routed presentation handoff. The existing
+page still gates on `kafka-topic-usage`. Keep per-plane states and the
+not-proven-absent caveat visible.
 
 **T57R.1 · Inherited gate repairs** *(cross-cutting; found while landing Epic
 57)* — return `make docs-check`, repository-wide lint and

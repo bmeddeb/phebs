@@ -11133,3 +11133,35 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   because the same three reproduce at the exact base commit `ccbcd8c2`. No quality,
   coverage, release, scale or SLO claim follows, and no Epic 57 behavior
   changes.
+- **2026-10-13 — T57.3 releases the combined Topics claim as its own signed
+  record.** Ben chose four things: the combined claim (both planes), an exact
+  oracle-union bar, closing T57.2 as HTTP + MCP with the UI moved to T57.4,
+  and re-signing both planes beside Topics.
+
+  **Why a claim and not a recipe.** Topics extracts nothing. It composes the
+  two released planes. Like Buf WIRE (T53.3), it is a `releasedClaims` entry,
+  `phebs.kafka.topics` → `list_kafka_topics@kafka-topic-inventory-v1`, so
+  revoking it never touches either plane. It admits the existing inventory
+  routes, MCP tools and capability on the released-plane surface only when
+  both plane records are also released, because the combined claim measured
+  nothing else. Otherwise it is withdrawn, with one startup log line.
+  Producer-only and consumer-only Topics remain unclaimed products.
+
+  **Why two rounds.** The first sealed round reused the T56.3 seven. Its
+  census was exact, but its rows were 0 = 0. Running the oracles across all
+  17 production repositories found no literal topic in either plane, because
+  production topics are config-driven. Recording that as a pass would have
+  released a row claim nothing measured. So round 1 is recorded as not
+  established on rows, and nothing was signed on it. Round 2 froze its
+  search-based selection rule and a 20-topic power floor before selecting,
+  then locked the corpus before phebs ran. It matched 41 of 41 topics, with
+  every per-plane count exact, in every phase.
+
+  **Steady-state cost.** Startup adds one map lookup and one length check.
+  When admitted, it adds the two routes and two MCP descriptors T57.2 already
+  built. Per-request costs are unchanged from T57.2: one composition and
+  bundle persist per list, and one bundle read per page. There is no new
+  query, lock, child, cache or durable state. The implementation-digest row
+  invalidates every existing release record for new builds, as any registry
+  change does. Not established: independent human review, production-scale
+  rows and any UI.

@@ -4684,7 +4684,21 @@ succeeds (the first five remain available when compatibility is unavailable):
   singular↔repeated change as breaking, including string and message changes
   that protobuf documents as wire-compatible.
 
-  **Released Kafka planes (T56.3, current).** Use
+  **Released Kafka planes with Topics (T57.3, current).** Use
+  `spike/t573/release/{selection,artifacts}`. The selection holds Topics
+  1.0.0, producer 1.0.2 and consumer 1.0.1, and admits only the binary built
+  from `dc7632ee` (`sha256:256a85f4…`). It supersedes the T56.3 selection,
+  which loads only on `41da6187`.
+
+  - Topics adds `GET /api/list_kafka_topics`, `GET /api/topic_inventory/{id}`,
+    the MCP tools `list_kafka_topics` and `read_topic_inventory`, and the
+    `kafka-topic-inventory` capability.
+  - Revoking `rel-phebs.kafka.topics-1.0.0` withdraws only the inventory.
+    Revoking either plane withdraws that plane and Topics, and startup logs
+    `release selection: phebs.kafka.topics withdrawn: …`.
+  - All three records expire on 2027-01-11.
+
+  **Released Kafka planes (T56.3).** Use
   `spike/t563/release/{selection,artifacts}`. The selection holds consumer
   1.0.0 and producer 1.0.1, and admits only the binary built from `41da6187`
   (`sha256:9dc0ad09…`). It supersedes the T55.3 producer-only selection,

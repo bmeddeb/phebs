@@ -353,13 +353,20 @@ and who owns each.
     measured zero, so a proto-only deployment claimed both Kafka planes were
     served. Both vocabularies now carry `unpublished`, distinct from
     `unavailable`.
-  - Remaining, Ben: the routed presentation handoff for any Topics UI change;
-    the existing page still gates on `kafka-topic-usage`.
-  - Remaining, agent: T57.3 is the measured promotion for the stated
-    producer-only, consumer-only or combined product.
-  - Not claimed: the inventory is served dark over HTTP and MCP, so this grants
-    no quality, coverage, runtime topic activity, complete topology, release or
-    scale result.
+  - Done: T57.2 is closed as HTTP + MCP, and the UI moves to T57.4.
+  - **Released 2026-10-13:** `rel-phebs.kafka.topics-1.0.0`, the combined
+    claim, ships with producer 1.0.2 and consumer 1.0.1 for binary
+    `dc7632ee`. It serves only beside both released planes.
+    - Round 1 on the production seven was census-exact but row-vacuous:
+      production Go spells no literal topic.
+    - Round 2 on a fresh, locked 10-repository population matched 41 of 41
+      topics against the oracle union in every phase.
+    - Revoking Topics alone, or either plane, withdraws it. See Topics
+      protocol §9.
+  - Remaining, Ben: the routed presentation handoff for T57.4 (Topics UI). The
+    existing page still gates on `kafka-topic-usage`.
+  - Not claimed: runtime topic activity, complete topology, production-scale
+    topic rows or an independent human review.
 
 Everything human-gated is listed above. Agent work proceeds on ungated
 tickets in the meantime.

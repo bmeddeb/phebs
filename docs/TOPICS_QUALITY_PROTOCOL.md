@@ -172,3 +172,66 @@ the rows now carry literal spellings, a served topic absent from the oracle,
 or a mismatched per-plane count, is also the planes' first topic-name
 precision evidence. It is reported as such, without re-scoring their sealed
 site results.
+
+## 9. Round 2 result and release (2026-10-13): passes; Topics 1.0.0 released
+
+**Population.** The four frozen searches returned 77 unique repositories. In
+order, 30 candidates were examined before 10 were eligible. The 20 drops
+were:
+
+- 17 with no resolved topic in either plane;
+- 2 excluded by the T55.1 corpus or a T23.1 pin;
+- 1 exceeding the host envelope.
+
+The lock is `spike/t573/round2/corpus.lock.json`, committed at `4a1d23b4`
+before phebs ran on any candidate. The oracle union holds 41 distinct topics:
+34 producer and 31 consumer. The fourth query returned no results as run.
+Disclosed: the population is mostly small student or demo projects, and
+swiggy-2022-bootcamp/training-i-plus-plus carries 27 of the 41 topics.
+
+**Rehearsal.** Run under a throwaway key, on the same binary `dc7632ee`; the
+receipt is `spike/t573/round2/rehearsal.json`.
+- In all four phases, 41 of 41 served topics equalled the oracle union. Every
+  per-plane site and file count matched, missing 0, extra 0, and the census
+  was exact.
+- The member's inventory equalled the oracle over its one repository
+  (1 topic).
+- Anonymous requests got 401, and the MCP first page equalled the HTTP first
+  page.
+- No topic-name precision defect appeared in either plane.
+
+| Phase | Ready | To published | Peak RSS |
+|---|---|---|---|
+| Cold | 2.5 s | 46.8 s | 409 MiB |
+| Restart | 1.5 s | 3.9 s | 250 MiB |
+| Hard death (SIGKILL) | 1.5 s | 3.9 s | 250 MiB |
+| Backup → restore (backup 138 MiB, restore 29.8 s) | 1.5 s | 57.7 s | 302 MiB |
+
+Inventory p95 is 361 ms, paging every page; topic usage p95 is 350 ms.
+
+**Release.** `spike/t573/release/selection/` holds three records signed with
+`ben-phebs-release-2026-10` for binary `dc7632ee` (`sha256:256a85f4…`,
+reproduced byte for byte by a second clean build). All three expire
+2027-01-11:
+
+- `rel-phebs.kafka.topics-1.0.0`;
+- `rel-phebs.kafka.producer-1.0.2`;
+- `rel-phebs.kafka.consumer-1.0.1`.
+
+The plane records re-bind unchanged claims. Their served-path evidence is the
+round 1 rehearsal over the T56.3 seven, on this binary.
+
+**Final proof with Ben's key (`spike/t573/release/receipts/final.json`).**
+- With all three records, the inventory served 41 of 41 exactly.
+- With only the Topics release revoked, both planes served exact censuses and
+  the inventory answered 404.
+- With only the consumer release revoked, the producer served and Topics was
+  withdrawn (404). The real binary logged: `release selection:
+  phebs.kafka.topics withdrawn: its combined claim needs both Kafka planes
+  released, have [producer]`.
+
+**Not established.**
+- No independent human review.
+- Topic rows at production scale: production Go code in the T55.1 corpus
+  spells no literal topic.
+- The envelope covers only this host and these populations.
