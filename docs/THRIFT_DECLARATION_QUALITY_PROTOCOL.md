@@ -306,3 +306,19 @@ by Ben):
 
 **Open defect:** the typedef-of-map over-abstention, which is small and
 still unfixed.
+
+## 10. Round 3 (frozen 2026-10-14, before selection)
+
+The candidate is `thriftdecl` 1.1.1. It fixes round 2's one defect: a field
+typed by a same-file typedef of a map now resolves as a top-level map,
+following unique typedefs within the D8 chase bound. A map typedef inside a
+container still abstains.
+
+Everything else in §8 applies unchanged: claim, oracle, thresholds,
+non-claims, the four search queries in order, the floors, and
+lock-before-phebs. The exclusions now cover both earlier rounds: the
+round-1 and round-2 population repositories, and any candidate where more
+than half of its `.thrift` files are byte-identical to a file from either
+round (`spike/t492/round1-thrift-sha256.txt`,
+`spike/t492/round2-thrift-sha256.txt`). The selector is
+`spike/t492/select_r3.py`.

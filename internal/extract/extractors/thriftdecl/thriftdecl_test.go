@@ -460,6 +460,33 @@ service S { void f(1: i32 x) }
 	assertLineSpan(t, source, gap, 2, "string name")
 }
 
+// TestTypedefOfMapIsATopLevelMap pins the T49.2 round-2 fix: a field typed by
+// a same-file typedef of a map resolves its key and value like a written map,
+// while a map typedef inside a container still abstains (D8).
+func TestTypedefOfMapIsATopLevelMap(t *testing.T) {
+	source := `typedef map<string, Tag> Index
+typedef Index Alias
+struct Tag { 1: string name }
+struct Holder {
+  1: Index direct
+  2: Alias chained
+  3: list<Index> nested
+}
+`
+	facts, _ := mustExtract(t, singleFileCorpus(source))
+	for _, object := range []string{"svc.Holder#1", "svc.Holder#2"} {
+		field := decodeDetail[decodedFieldDetail](t, findPredicateFact(t, facts, "DECLARES_FIELD", object))
+		if field.Map == nil || field.Type != nil || field.Map.Key.Resolution != "intrinsic" ||
+			field.Map.Value.Declaration != "svc.Tag" {
+			t.Fatalf("%s = %+v", object, field)
+		}
+	}
+	nested := decodeDetail[decodedFieldDetail](t, findPredicateFact(t, facts, "DECLARES_FIELD", "svc.Holder#3"))
+	if nested.Type == nil || nested.Type.Resolution != "unresolved" || nested.Map != nil {
+		t.Fatalf("map typedef inside a container = %+v", nested)
+	}
+}
+
 // TestParseFailureIsANamedFileGap pins T49.2: a file thriftrw cannot parse,
 // including Apache-valid reserved-word identifiers and namespace annotations,
 // is one parse_error gap at its first non-blank line, and the repository's

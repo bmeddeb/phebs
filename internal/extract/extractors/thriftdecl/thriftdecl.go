@@ -28,7 +28,7 @@ import (
 
 const (
 	domain        = "thrift-contract"
-	version       = "1.1.0"
+	version       = "1.1.1"
 	schemaVersion = "t19-v1"
 
 	// idl.Parse is in-process and does not accept a context. Preflight the
@@ -657,7 +657,7 @@ func requirednessLabel(requiredness ast.Requiredness) string {
 // the shared map shape; list/set references resolve their element type while
 // Raw preserves the container form as written.
 func resolveInto(state *fileState, detail *fieldDetail, fieldType ast.Type) {
-	if mapType, ok := fieldType.(ast.MapType); ok {
+	if mapType, ok := topLevelMap(state, fieldType); ok {
 		detail.Map = &mapShapeDetail{
 			Key:   resolveType(state, mapType.KeyType, 0),
 			Value: resolveType(state, mapType.ValueType, 0),
@@ -666,6 +666,27 @@ func resolveInto(state *fileState, detail *fieldDetail, fieldType ast.Type) {
 	}
 	reference := resolveType(state, fieldType, 0)
 	detail.Type = &reference
+}
+
+// topLevelMap reports the map a field's type denotes, following unique
+// same-file typedefs within the D8 chase bound. A typedef of a map at field
+// level is a top-level map, not a nested container (T49.2 round 2).
+func topLevelMap(state *fileState, fieldType ast.Type) (ast.MapType, bool) {
+	for depth := 0; depth <= maxTypedefChase; depth++ {
+		switch node := fieldType.(type) {
+		case ast.MapType:
+			return node, true
+		case ast.TypeReference:
+			declared, ok := state.types[node.Name]
+			if !ok || declared.count > 1 || declared.kind != "typedef" {
+				return ast.MapType{}, false
+			}
+			fieldType = declared.typedef
+		default:
+			return ast.MapType{}, false
+		}
+	}
+	return ast.MapType{}, false
 }
 
 // resolveType is decision D8: same-file resolution only. Base types are

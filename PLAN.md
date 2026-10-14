@@ -11368,3 +11368,11 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
     filesystem-free package.
   - **Negative IDs.** Nonpositive explicit IDs stay a fail-closed gap: Apache
     auto-assigns their wire keys.
+
+- **2026-10-14 — `thrift-contract` 1.1.1: a typedef of a map is a top-level
+  map.** T49.2 round 2's single reference-state miss came from field-level
+  map detection that saw only a written `map<…>`. A same-file typedef chain
+  to a map therefore fell into the nested-container branch and abstained.
+  Field-level detection now follows unique same-file typedefs within the D8
+  bound. Maps inside containers still abstain, and there is no other
+  behavior change.
