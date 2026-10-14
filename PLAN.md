@@ -11368,3 +11368,83 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
     filesystem-free package.
   - **Negative IDs.** Nonpositive explicit IDs stay a fail-closed gap: Apache
     auto-assigns their wire keys.
+
+- **2026-10-14 — T58.1 preregistration completes: thresholds frozen before any
+  count, a separate oracle author, and the lead-owned machinery built.** Ben chose
+  the separate-author oracle and froze §6, so no §9 decision remains open and the
+  round awaits only the oracle's pre-seal pass and his seal. Nothing has been
+  measured.
+
+  The thresholds were frozen **before any oracle pass**, which is stricter than
+  T55.1's sequence where the pre-seal counts were already known. Coverage ≥99%,
+  state agreement ≥99%, zero resolved/ambiguous inversions, zero
+  call↔registration swaps, spurious rows ≤1% of scored sites, zero pending after
+  adjudication and ≥300 scored sites carry over from the draft. The
+  **production-role** floor is promoted from disclosed to scored at ≥99%, because
+  production code is what the product serves and a defect concentrated there must
+  fail the round rather than hide inside an aggregate that test and generated files
+  can dominate. Per-repository counts with an explicit concentration statement, the
+  other four roles and the out-of-domain counts stay **disclosed rather than
+  floored**: stub counts in the locked population run from 1 (`spiffe/spire`) to 54
+  (`envoyproxy/go-control-plane`), so a distribution floor could fail the round for
+  a population-shape reason that says nothing about extractor quality.
+
+  The oracle is written by a **separate author** from §1 and §3 and the pack card
+  alone, forbidden from reading `internal/extract/extractors/grpcgo`, its tests or
+  any phebs output; the lead does not author it and does not answer its clarifying
+  questions, because answering from implementation knowledge would rebuild exactly
+  the coupling the separation exists to prevent. An ambiguity is left to surface as
+  a disagreement at adjudication, where §4 requires §3 to be amended before scoring
+  rather than adjudicated around. The protocol states that this guarantee is
+  **procedural, not technical** — the author has filesystem access and is instructed
+  not to use it — so the round's independence remains weaker than T55.1's in kind.
+
+  One spec gap was closed before it could bias the result. GD16 fixes role names
+  and precedence but deliberately not role *detection*, so an oracle that
+  re-implemented classification would have measured classification instead of
+  coverage. The oracle therefore classifies nothing: the scorer groups rows by the
+  role the exporter reports, and every per-role figure — including the scored
+  production floor — is published with the disclosure that it inherits the
+  extractor's own classification.
+
+  The machinery is built and exercised. `enumerate_population.py` lists each unit's
+  pinned tree through `git ls-tree -r -z` reading no file's contents, and refuses a
+  clone whose HEAD drifted from the lock; it caught and now handles submodule
+  gitlinks (mode 160000), which a naive mode filter mis-raised on. The population is
+  **13 units, 53,721 `.go` files, 225 stubs, 12 symlinks, 0 gitlinks**, largest
+  member `grafana/loki` at 13,856 files, `units_sha256`
+  `sha256:95cc4cb4ca92dcd72551c40ccd6556d059ee5a9196ccca46e9112ac2b5ef5c62`.
+  `export/main.go` (tag `t581export`) serves one whole unit tree through
+  `sdk.Corpus` from a single `git cat-file --batch` child per unit and emits one row
+  per **fact**, never per assertion, carrying `code_role` so the per-role bars are
+  computable. `score.py` joins on `(unit, path, start_byte, end_byte)`, applies the
+  frozen bars and restates its three standing disclosures in its own output;
+  `test_score.py` has 22 cases covering inversion, swap, spurious, duplicate,
+  out-of-domain denominator, adjudication override, `not_a_site`, pending, per-role
+  and concentration behaviour, plus refusal of a foreign or missing schema and of two
+  oracle sites at one span.
+
+  The pre-seal prohibition is **enforced rather than documented**: the exporter
+  refuses without `-seal`, refuses a seal whose `units_sha256` differs from the units
+  file it was handed, and rejects unknown seal fields. All three refusals were
+  exercised against the real population file and the digest check independently
+  reproduced the enumerator's digest. The happy path was validated end to end on a
+  throwaway synthetic repository and never on the population: a method name shared by
+  two services produced `UNRESOLVED_GRPC_CALL` (GD8), a selector registration
+  produced `REGISTERS_GRPC_SERVICE` (GD12), an unindexed selector and a
+  zero-argument call produced nothing (GD10), and the stub file produced no sites
+  (GD2).
+
+  **Steady-state cost.** None in any production path. These are offline one-shot
+  readers: one `git ls-tree` and one `git cat-file --batch` child per unit, one
+  in-memory tree per unit released before the next, and no request, sync, startup,
+  retry, publication, lock, cache, schema or durable-state change. The 1.7 GiB
+  corpus lives outside the repository and is never committed.
+
+  **Validation posture.** `make docs-check` passes all three of its tests, glossary
+  and whitespace pass, and `go build`, `go vet` and pinned golangci-lint pass on the
+  tagged exporter package (0 issues). The 22 scorer cases pass. No oracle exists
+  yet, so there is no site count, no score, no seal and no result, and the extractor
+  has not been run over the population. Remaining in order: the separate author's
+  oracle and its pre-seal pass, Ben's §7 seal, then export, score and adjudication.
+  No quality, coverage, release, scale or SLO claim follows.

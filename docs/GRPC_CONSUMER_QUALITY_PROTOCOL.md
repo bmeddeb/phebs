@@ -1,14 +1,15 @@
 # T58.1 Go gRPC syntactic consumer/registration site-coverage quality protocol
 
-Status: **unsealed draft — the corpus is locked; no site has been enumerated,
-scored, sealed or predicted.** Ben chose the site-coverage claim, a fresh blind
-population, the frozen filename-convention identity and observed-corpus version
-recording on 2026-10-13, and on 2026-10-14 approved and closed the 18-name list,
-which `spike/t581/corpus.lock.json` then pinned at 13 members and 5 drops. §3's
-oracle-independence posture and §6's thresholds remain **proposed and not yet
-frozen**; §9 lists what blocks the seal. No oracle has run, no extractor has been
-run over the population, no result exists, and this document authorizes no
-measurement.
+Status: **preregistration complete and unsealed — the corpus is locked and every
+decision is frozen; no site has been enumerated, scored, sealed or predicted.**
+Ben chose the site-coverage claim, a fresh blind population, the frozen
+filename-convention identity and observed-corpus version recording on 2026-10-13;
+on 2026-10-14 he approved and closed the 18-name list — which
+`spike/t581/corpus.lock.json` then pinned at 13 members and 5 drops — chose the
+separate-author oracle posture in §3, and froze the §6 thresholds. **No §9
+decision remains open.** Nothing has been measured: no oracle has run, no
+extractor has been run over the population, no result exists, and this document
+authorizes no measurement until §7's seal is published.
 
 ## 1. Claim card (`phebs.grpc.consumer.go`, site coverage)
 
@@ -222,7 +223,7 @@ release work stays with the Linux track.
 
 ## 3. Truth (GD1–GD16)
 
-### Independence posture (PROPOSED — pending Ben's decision)
+### Independence posture (FROZEN by Ben, 2026-10-14)
 
 This round **cannot** claim T55.1's independence. There, T23.1 froze KD1–KD10
 before T23.2 implemented them verbatim, so the oracle was written from rules
@@ -236,11 +237,25 @@ independently derived ground truth. That is still a real measurement (it is how
 T53.3 round 1 caught nine genuine misses), but it must be stated as such and must
 not borrow the Kafka rounds' independence language.
 
-Proposed mitigation, restoring independence between oracle and extractor even
-though the spec postdates the code: `spike/t581/oracle` is authored by a separate
-agent session given **only** this document's §1 and §3 and the pack card, and
-explicitly forbidden from reading `internal/extract/extractors/grpcgo`. Its tests
-must pin every GD shape and state without reference to the extractor's code.
+**Frozen mitigation (Ben, 2026-10-14).** `spike/t581/oracle` is authored by a
+separate agent session given **only** this document's §1 and §3 and the
+`phebs.grpc.consumer.go` pack card, and explicitly forbidden from reading
+`internal/extract/extractors/grpcgo`, its tests, or any phebs output. It must be
+stdlib-only Go behind a `t581oracle` build tag, mirroring `t551oracle`, and its
+tests must pin every GD shape and state without reference to the extractor's code.
+The lead who froze GD1–GD16 does not author the oracle and does not answer its
+clarifying questions, because answering them from implementation knowledge would
+rebuild exactly the coupling this separation exists to prevent; an ambiguity is
+left to surface as a disagreement at adjudication, where §4 requires it to be
+resolved by amending §3 **before** scoring rather than adjudicated around.
+
+**The limit of that guarantee, stated plainly.** The separation is procedural, not
+technical: the oracle's author has filesystem access to this repository and is
+instructed not to read the extractor, which cannot be enforced from here. So this
+round's independence is weaker than T55.1's in kind and not merely in degree, and
+any result must say so. What the separation does buy is real — an independently
+written implementation of the frozen rules diverges from `grpcgo` wherever `grpcgo`
+departs from the spec, which is the defect class this round exists to find.
 
 ### Frozen rules
 
@@ -397,9 +412,11 @@ denominator and silently pass missed sites.
 
 The exporter must not run on the round population before the round is sealed.
 
-## 6. Thresholds (PROPOSED — pending Ben's freeze)
+## 6. Thresholds (frozen by Ben, 2026-10-14)
 
-| Check | Proposed bar |
+**Scored — the round fails if any of these misses.**
+
+| Check | Bar |
 |---|---|
 | Coverage: scored sites with exactly one row | ≥ 99% |
 | State agreement: covered sites with the right scored state | ≥ 99% |
@@ -408,10 +425,44 @@ The exporter must not run on the round population before the round is sealed.
 | Confirmed spurious rows per scored site | ≤ 1% |
 | Pending after adjudication | 0 |
 | Scored sites | ≥ 300 |
-| Per-role state agreement, each of `production`, `test`, `generated` | ≥ 95% (reported; a role below this is a disclosed finding requiring an adjudication note, not an automatic failure) |
+| **Production-role state agreement** | **≥ 99%** |
 
-The bars mirror T55.1's §6, which Ben froze as proposed. They are **not** frozen
-here and no measurement may run against them until Ben freezes them.
+**Reported and disclosed, not scored.**
+
+| Report | Requirement |
+|---|---|
+| Per-repository scored-site counts | published in full, with an explicit concentration statement naming the largest member's share of the total |
+| State agreement for `test`, `generated`, `mock` and `vendor` roles | published per role; any role below 95% is a disclosed finding requiring an adjudication note |
+| Out-of-domain candidate counts | published, because GD10's silence is this claim's largest blind spot |
+
+**Roles are the extractor's own, and this round does not verify them.** GD16 fixes
+the five role names and their precedence but deliberately does not freeze how each
+role is *detected*, so the oracle does not classify roles at all. The scorer groups
+rows by the role the exporter reports and computes per-role agreement within those
+groups. Every per-role number therefore inherits the extractor's role
+classification: if a site's role is misclassified it lands in the wrong bucket and
+can move a per-role figure without any site being missed or misstated. That is a
+disclosed limit on the per-role disclosures, not on the aggregate coverage and
+state-agreement bars, which are role-independent. The scored production-role floor
+inherits the same caveat, so a production-role failure must be read as "sites the
+extractor labelled production disagreed", and adjudication must say whether the
+disagreement was coverage, state, or role.
+
+The production-role floor is **scored** rather than disclosed because production
+code is what the product serves, so a defect concentrated there must fail the round
+instead of hiding inside an aggregate that test and generated files can dominate.
+The per-repository counts are **disclosed** rather than floored because stub counts
+in the locked population range from 1 (`spiffe/spire`) to 54
+(`envoyproxy/go-control-plane`), so a distribution floor could fail the round for a
+population-shape reason that says nothing about extractor quality; concentration is
+named explicitly instead of barred.
+
+These bars mirror T55.1's §6, which Ben froze as proposed and which passed at
+762/762. They are frozen here **before any oracle pass**, which is stricter than
+T55.1's sequence, where the oracle's pre-seal counts were already known when the
+thresholds were frozen. No threshold may be revised after a count is seen: a round
+that misses is a failed round, and a replacement requires a newly pre-declared
+population under §2.
 
 ## 7. Seal
 
@@ -426,19 +477,43 @@ follows must reproduce the sealed counts exactly.
 **Not run.** No population has been enumerated, no oracle pass has been
 recorded, no score exists and nothing is sealed.
 
-## 9. Open decisions blocking the seal
+## 9. Preregistration status and remaining sequence
 
-1. **Ben:** choose the §3 oracle-independence posture — a separate agent authoring
-   the oracle from this document alone, or spec-conformance accepted without that
-   separation.
-2. **Ben:** freeze the §6 thresholds, including whether the per-role floors are
-   scored or only disclosed.
-3. **Agent, after 1–2:** write `spike/t581/{enumerate_population.py, oracle,
-   export, score.py, test_score.py, README.md}` and run the oracle's pre-seal pass
-   to publish the state table and scored-site count in §3 before any extractor
-   run. This document is already linked from `docs/README.md`.
+**No decision remains open.** Every preregistration input is frozen:
 
-**Decided, no longer open:**
+- the **claim** (§1): site coverage only, with emitted identities recorded but not
+  scored;
+- the **population** (§2): 18 names approved and closed 2026-10-14, locked at 13
+  members and 5 drops by `spike/t581/corpus.lock.json`, with `etcd-io/etcd`
+  included and its T47.2 `grpc-caller` overlap disclosed and accepted;
+- the **rules** (§3): GD1–GD16;
+- the **oracle posture** (§3): a separate author working from §1 and §3 alone,
+  forbidden from reading the extractor, with the procedural limit of that
+  guarantee stated rather than glossed;
+- the **thresholds** (§6): frozen 2026-10-14 before any oracle pass, with the
+  production-role floor scored and per-repository concentration disclosed;
+- the **host** (§2): this macOS development host over depth-1 clones.
+
+**Remaining sequence, in this order.**
+
+1. *Agent:* write `spike/t581/{enumerate_population.py, export/main.go, score.py,
+   test_score.py, README.md}`. None of these may run the extractor over the
+   population before the seal.
+2. *Separate author:* write `spike/t581/oracle` from §1 and §3 alone.
+3. *Agent:* run the oracle's **pre-seal pass** and publish its state table and
+   scored-site count in §3, before any extractor run. If the scored-site count is
+   below the §6 floor, the round stops there under §2's stop rule and a
+   replacement round needs a newly pre-declared population.
+4. *Ben:* seal per §7 — publish the commit, the population digest and the tool
+   digests in a public gist **before** `export` touches the population.
+5. *Agent:* run `export`, then `score`, then adjudicate every disagreement per §4,
+   then record the result in §8 with every §6 disclosure.
+
+**Not authorized by this document:** any extractor run over the population before
+step 4; any revision to a threshold, rule or population member after a count is
+seen; and any quality, coverage, release, scale or SLO claim.
+
+**Previously open, now decided:**
 
 - **The population list.** Ben approved the 18 frozen names on 2026-10-14 and
   chose to include `etcd-io/etcd` with its T47.2 `grpc-caller` overlap disclosed
