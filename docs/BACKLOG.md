@@ -19817,6 +19817,75 @@ lock tool that touches no production path, so there is no steady-state cost.
 **Blocked on Ben** for the §3 oracle-independence posture and the §6 thresholds.
 No quality, coverage, release, scale or SLO claim follows.*
 
+*T58.1 preregistration complete (2026-10-14, Qoder lead): **every decision is
+frozen and the lead-owned machinery is built; no measurement has run.** Ben chose
+the separate-author oracle and froze the thresholds, so §9 has no open decision
+left and the round is ready for the oracle's pre-seal pass and then his seal.
+
+- **Thresholds frozen before any count was seen.** Coverage ≥99%, state agreement
+  ≥99%, zero resolved/ambiguous inversions, zero call↔registration swaps, spurious
+  rows ≤1% of scored sites, zero pending after adjudication, ≥300 scored sites, and
+  — promoted from disclosed to **scored** — production-role state agreement ≥99%,
+  because production code is what the product serves and a defect concentrated
+  there must fail the round instead of hiding in an aggregate that test and
+  generated files can dominate. Per-repository scored counts with an explicit
+  concentration statement, the other four roles' agreement, and out-of-domain
+  candidate counts are **disclosed rather than floored**: stub counts in the locked
+  population run from 1 (`spiffe/spire`) to 54 (`envoyproxy/go-control-plane`), so
+  a distribution floor could fail the round for a population-shape reason that says
+  nothing about extractor quality. Freezing before any oracle pass is stricter than
+  T55.1, where the pre-seal counts were already known when §6 was frozen.
+- **Oracle independence chosen, with its limit stated.** A separate author writes
+  `spike/t581/oracle` from §1 and §3 and the pack card alone, forbidden from
+  reading `internal/extract/extractors/grpcgo`, its tests or any phebs output; the
+  lead does not author it and does not answer its clarifying questions, because
+  answering from implementation knowledge would rebuild the coupling the separation
+  exists to prevent. The protocol states plainly that this guarantee is
+  **procedural, not technical** — the author has filesystem access and is instructed
+  not to use it — so this round's independence is weaker than T55.1's in kind, not
+  merely in degree.
+- **A spec gap closed before it could bias the result.** GD16 fixes role names and
+  precedence but not role *detection*, so an oracle that re-implemented
+  classification would have measured classification instead of coverage. The oracle
+  therefore classifies nothing: the scorer groups by the role the exporter reports
+  and every per-role figure is published with the disclosure that it inherits the
+  extractor's own classification, including the scored production floor.
+- **Machinery built and exercised.** `enumerate_population.py` lists each unit's
+  pinned `.go` tree through `git ls-tree -r -z`, reading no file's contents, and
+  refuses a clone whose HEAD has drifted from the lock. It caught and now handles
+  submodule gitlinks (mode 160000), which a naive mode filter mis-raised on; a
+  `.go`-named gitlink would be recorded separately rather than read. Result: **13
+  units, 53,721 `.go` files, 225 stubs, 12 symlinks, 0 gitlinks**, largest member
+  `grafana/loki` at 13,856 files, `units_sha256`
+  `sha256:95cc4cb4ca92dcd72551c40ccd6556d059ee5a9196ccca46e9112ac2b5ef5c62`.
+  `export/main.go` (build tag `t581export`) serves one whole unit tree through the
+  `sdk.Corpus` interface from a single `git cat-file --batch` child per unit and
+  emits **one row per fact, never per assertion**, carrying `code_role` so §6's
+  per-role bars are computable. `score.py` joins on `(unit, path, start_byte,
+  end_byte)`, applies the frozen bars, and restates the three standing disclosures
+  in its own output; `test_score.py` has 22 cases including inversion, swap,
+  spurious, duplicate, out-of-domain-denominator, adjudication-override,
+  `not_a_site`, pending, per-role and concentration behaviour, plus refusal of a
+  foreign or missing schema and of two oracle sites at one span.
+- **The pre-seal prohibition is enforced, not documented.** The exporter refuses
+  without `-seal`, refuses a seal whose `units_sha256` differs from the units file
+  it was handed, and rejects unknown seal fields. All three refusals were exercised
+  against the real population file, and the digest check independently reproduced
+  the enumerator's `95cc4cb4…`. The happy path was validated end to end on a
+  throwaway synthetic repository, never on the population: a same-named method in
+  two services produced `UNRESOLVED_GRPC_CALL` (GD8), a selector registration
+  produced `REGISTERS_GRPC_SERVICE` (GD12), an unindexed selector and a
+  zero-argument call produced nothing (GD10), and the stub file produced no sites
+  (GD2).
+
+No oracle exists yet, so there is no site count, no score, no seal and no result,
+and the extractor has not been run over the population. Documentation plus offline
+one-shot tooling touching no production path, so there is no steady-state cost.
+`make docs-check`, glossary and whitespace pass, `go build`/`go vet`/pinned lint
+pass on the tagged exporter package, and the 22 scorer cases pass. Remaining: the
+separate author's oracle and its pre-seal pass, then Ben's §7 seal, then export,
+score and adjudication. No quality, coverage, release, scale or SLO claim follows.*
+
 **T58.2 · Go Thrift syntactic consumer/registration quality** — independently
 freeze thriftgo/other admitted generator/library shapes and input identity;
 measure unsupported/dynamic/ambiguous cases and registration claims separately.

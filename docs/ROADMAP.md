@@ -414,9 +414,17 @@ and who owns each.
     vendoring modern split stubs in-tree and says nothing about the rest. The
     characterization came after the mechanical drop, changed no selection, and
     re-added nothing.
-  - Remaining, Ben: choose the oracle-independence posture and freeze the
-    thresholds. Remaining, agent: the rest of `spike/t581/` and the oracle's
-    pre-seal pass.
+  - Done: preregistration is complete — Ben chose the separate-author oracle and
+    froze the thresholds before any count was seen, so no open decision remains.
+    The lead-owned machinery is built: the enumerator (13 units, 53,721 `.go`
+    files, 225 stubs), the exporter (one row per fact, never per assertion, with a
+    seal guard that refuses to touch the population before §7), and the scorer
+    with 22 cases. Production-role agreement is scored, not merely disclosed; the
+    oracle classifies no roles, so per-role figures inherit the extractor's own
+    labels and say so.
+  - Remaining, agent: the separate author's oracle and its pre-seal pass.
+    Remaining, Ben: the §7 seal, after which export, score and adjudication may
+    run.
   - Not claimed: nothing is enumerated, scored, sealed or predicted, so this
     grants no quality, coverage, release or scale result, and it is not a T11.1
     retry — that round stays terminally closed with `GATE2-V2 NOT_ESTABLISHED`.
