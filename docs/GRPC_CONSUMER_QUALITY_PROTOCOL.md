@@ -493,7 +493,12 @@ oracle therefore emits one aggregate per unit after that unit's site rows:
 ```
 
 An aggregate is emitted even when `total` is 0, so a unit with no out-of-domain
-candidate is distinguishable from a unit whose record is missing.
+candidate is distinguishable from a unit whose record is missing. The oracle
+publishes **nothing** for a unit it failed to scan, rather than a partial count that
+would understate the blind spot — which makes a failed unit invisible in both
+streams. The scorer must therefore be given the population and fails outright on any
+unit absent from the oracle output, instead of quietly scoring a smaller
+denominator.
 
 The exporter must not run on the round population before the round is sealed.
 

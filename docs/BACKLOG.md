@@ -19929,8 +19929,15 @@ and did not answer its clarifying questions.
   candidate at a span the oracle never reported is already spurious. The oracle now
   emits one `t581-out-of-domain-v1` aggregate per unit, with the two-cause breakdown
   and a file count, emitted even at `total: 0` so a missing record is
-  distinguishable from an empty one. The scorer consumes it, names any unit lacking
-  an aggregate, and its suite grows to 26 cases.
+  distinguishable from an empty one. The scorer consumes it and its suite grows to
+  30 cases. The amendment also retired `out_of_domain` from the site vocabulary
+  outright, and the scorer now **refuses** that state rather than ignoring it, since
+  a site row carrying it would mean the two streams disagree about the contract. One
+  further hole was closed: the oracle publishes *nothing* for a unit it failed to
+  scan, rather than a partial count that would understate the blind spot, which makes
+  a failed unit invisible in both streams — so the scorer takes the population and
+  fails outright on any unit absent from the oracle output instead of quietly scoring
+  a smaller denominator.
 - **Independence disclosure, recorded rather than smoothed over.** The author reports
   one shell glob aimed at `internal/` that errored under zsh before matching anything
   and was not retried. The separation held in outcome and no phebs package is
