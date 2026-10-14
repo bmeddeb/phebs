@@ -613,6 +613,48 @@ published in a public gist before `export` runs on the population. Sealing
 records the sealer and the sole reviewer, and the draw or enumeration that
 follows must reproduce the sealed counts exactly.
 
+### Recorded breach of the pre-seal prohibition (2026-10-14)
+
+**The extractor was run over the locked population before any seal existed, and
+this section records it rather than leaving it implicit.** While testing the
+exporter's seal guard, a case using the placeholder gist URL
+`https://gist.github.com/TODO` was expected to be refused. The guard then in force
+checked only that the gist began with `https://` and exceeded a length, so the
+placeholder cleared it and the exporter started against
+`~/phebs-t581-corpus` with the committed population. Its stdout was piped to
+`head -2`; the pipe closed, the process died on SIGPIPE after emitting two rows,
+and **no candidate file was written to disk**. Two `UNRESOLVED_GRPC_CALL` rows
+from `containerd/containerd`'s `api/runtime/sandbox/v1/sandbox_ttrpc.pb.go`
+(`CreateSandbox`, `StartSandbox`, each `candidate_count` 2) reached the lead's
+working context.
+
+What this did and did not compromise:
+
+- **Not compromised:** the anti-tuning purpose of the prohibition. The rules
+  (GD1–GD16 and the nine adopted amendments), the population lock, the
+  thresholds and every tool were frozen and committed at `7b581d07` *before* the
+  accidental run, and nothing was amended, re-scoped or re-thresholded in
+  response to it. The oracle had already completed its pre-seal pass.
+- **Compromised:** the letter of §7, and the "no peeking" property. The lead saw
+  two rows of real extractor output over the round population before sealing.
+  Two rows out of an expected tens of thousands is negligible as information, but
+  it is not zero and it is not the lead's to excuse.
+
+**Disposition is Ben's, not the lead's.** The options are to seal with this breach
+disclosed beside the result, or to require a replacement round on a newly
+pre-declared population under §2. The lead recommends the former only because
+every input was already frozen and committed and nothing was tuned, and records
+that recommendation as interested. Until Ben decides, no seal exists and the
+exporter must not run.
+
+**Corrective action taken.** The guard no longer accepts a placeholder: the gist
+must match `^https://gist\.github\.com/<user>/<16-64 hex>$`, the seal date must be
+a real non-future `YYYY-MM-DD`, the seal must bind the protocol's digest so a
+specification that moved after sealing is refused, and the seal file must be
+**tracked in git** so an ad-hoc file in `/tmp` cannot authorize a run. All six
+refusals were re-exercised against a synthetic fixture — never against the round
+population, which is the mistake that caused this breach.
+
 ## 8. Result
 
 **Not run.** The oracle's pre-seal pass is recorded in §3, but the extractor has

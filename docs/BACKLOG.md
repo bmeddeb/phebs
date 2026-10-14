@@ -19991,6 +19991,38 @@ there is no steady-state cost. `make docs-check` passes all three of its tests a
 glossary and whitespace pass. **Next: Ben's §7 seal**, after which export, score and
 adjudication may run. No quality, coverage, release, scale or SLO claim follows.*
 
+*T58.1 pre-seal breach, self-reported (2026-10-14, Qoder lead): **the extractor ran
+over the locked population before any seal existed.** While testing the exporter's
+seal guard, a case using the placeholder gist `https://gist.github.com/TODO` was
+expected to be refused; the guard then checked only an `https://` prefix and a
+length, so the placeholder cleared it and the exporter started against the committed
+population. Stdout was piped to `head -2`, the pipe closed, and the process died on
+SIGPIPE after two rows — **no candidate file was written to disk**. Two
+`UNRESOLVED_GRPC_CALL` rows from `containerd/containerd`'s
+`sandbox_ttrpc.pb.go` reached the lead's context.
+
+Not compromised: the anti-tuning purpose of the prohibition. GD1–GD16 with the nine
+adopted amendments, the population lock, the thresholds and every tool were frozen
+and committed at `7b581d07` **before** the run, the oracle's pre-seal pass was
+already complete, and nothing was amended, re-scoped or re-thresholded in response.
+Compromised: the letter of §7 and the no-peeking property — two rows out of an
+expected tens of thousands is negligible as information but is not zero, and is not
+the lead's to excuse.
+
+**Disposition is Ben's.** Seal with the breach disclosed beside the result, or
+require a replacement round on a newly pre-declared population under §2. The lead
+recommends the former only because every input was already frozen and nothing was
+tuned, and records that recommendation as interested. Until he decides, no seal
+exists and the exporter must not run.
+
+Corrective action: the gist must now match
+`^https://gist\.github\.com/<user>/<16-64 hex>$`, the seal date must be a real
+non-future `YYYY-MM-DD`, the seal must bind the protocol's digest so a specification
+that moved after sealing is refused, and the seal file must be **tracked in git** so
+an ad-hoc `/tmp` file cannot authorize a run. All six refusals were re-exercised
+against a synthetic fixture and never against the round population, which is the
+mistake that caused the breach. Full record in protocol §7.*
+
 **T58.2 · Go Thrift syntactic consumer/registration quality** — independently
 freeze thriftgo/other admitted generator/library shapes and input identity;
 measure unsupported/dynamic/ambiguous cases and registration claims separately.

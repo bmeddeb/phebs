@@ -30,12 +30,19 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/bmeddeb/phebs/internal/extract/extractors/grpcgo"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
 )
+
+// gistRe matches a real published gist URL. A prefix or length check is not
+// enough: a placeholder cleared an earlier guard and let the extractor run over
+// the locked population before any seal existed.
+var gistRe = regexp.MustCompile(`^https://gist\.github\.com/[A-Za-z0-9_-]+/[0-9a-f]{16,64}$`)
 
 const (
 	unitSchema      = "t581-unit-v1"
@@ -178,7 +185,7 @@ func readTree(clone string, u unit) (map[string]string, error) {
 // requireSeal enforces the protocol's pre-seal prohibition on running the
 // extractor over the population. It returns the units bytes it validated, so the
 // digest the seal binds is the digest of exactly what is then parsed.
-func requireSeal(sealPath, unitsPath string, gunzip bool) ([]byte, error) {
+func requireSeal(sealPath, unitsPath, protocolPath string, gunzip bool) ([]byte, error) {
 	if sealPath == "" {
 		return nil, errors.New("refusing to export without -seal: the round is not sealed")
 	}
@@ -205,6 +212,47 @@ func requireSeal(sealPath, unitsPath string, gunzip bool) ([]byte, error) {
 		return nil, fmt.Errorf(
 			"seal binds units %s but the units file is %s: the population moved after sealing",
 			value.UnitsSHA256, actual,
+		)
+	}
+	// A seal is only a seal if it names a published gist, carries a real date,
+	// and binds the protocol text the thresholds were frozen in. Without these
+	// a hand-written placeholder file would satisfy the units digest alone and
+	// silently defeat the pre-seal prohibition this guard exists to enforce.
+	//
+	// The gist must look like a real published one. A length check is not
+	// enough: "https://gist.github.com/TODO" cleared an earlier version of this
+	// guard and let the extractor run over the locked population before any
+	// seal existed, which is recorded as a protocol breach in §7.
+	if !gistRe.MatchString(value.Gist) {
+		return nil, fmt.Errorf(
+			"seal names no published gist (%q): §7 requires a real "+
+				"https://gist.github.com/<user>/<id> URL before export runs",
+			value.Gist,
+		)
+	}
+	if _, err := time.Parse("2006-01-02", value.SealedUTC); err != nil {
+		return nil, fmt.Errorf("seal date %q is not YYYY-MM-DD: %w", value.SealedUTC, err)
+	}
+	if sealed, err := time.Parse("2006-01-02", value.SealedUTC); err == nil &&
+		sealed.After(time.Now().UTC().AddDate(0, 0, 1)) {
+		return nil, fmt.Errorf("seal date %q is in the future", value.SealedUTC)
+	}
+	// The seal must also be a committed round record, not an ad-hoc file: a
+	// seal that is not tracked in git has no reviewed provenance.
+	if out, err := exec.Command("git", "ls-files", "--error-unmatch", sealPath).CombinedOutput(); err != nil {
+		return nil, fmt.Errorf(
+			"seal %s is not tracked in git (%v): commit the round record before exporting",
+			sealPath, strings.TrimSpace(string(out)),
+		)
+	}
+	protocol, err := os.ReadFile(protocolPath)
+	if err != nil {
+		return nil, fmt.Errorf("read the protocol the seal must bind: %w", err)
+	}
+	if actual := digestBytes(protocol); value.ProtocolSHA != actual {
+		return nil, fmt.Errorf(
+			"seal binds protocol %s but %s is %s: the specification moved after sealing",
+			value.ProtocolSHA, protocolPath, actual,
 		)
 	}
 	if !gunzip {
@@ -256,6 +304,8 @@ func main() {
 	gunzip := flag.Bool("gunzip", true, "the committed units file is gzipped; set false for plain JSON Lines")
 	corpus := flag.String("corpus", "", "corpus root holding one clone directory per unit")
 	sealPath := flag.String("seal", "", "sealed round file; required, and must bind this units digest")
+	protocolPath := flag.String("protocol", "docs/GRPC_CONSUMER_QUALITY_PROTOCOL.md",
+		"protocol the seal must bind by digest")
 	only := flag.String("unit", "", "export only this unit id")
 	flag.Parse()
 
@@ -263,7 +313,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "both -units and -corpus are required")
 		os.Exit(2)
 	}
-	raw, err := requireSeal(*sealPath, *unitsPath, *gunzip)
+	raw, err := requireSeal(*sealPath, *unitsPath, *protocolPath, *gunzip)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "export refused: %v\n", err)
 		os.Exit(1)
