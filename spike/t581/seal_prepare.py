@@ -123,7 +123,7 @@ def build_inputs() -> dict:
         "disclosed_breach": {
             "occurred_utc": "2026-10-14",
             "summary": (
-                "the exporter ran over the locked population before any seal existed "
+                "The exporter ran over the locked population before any seal existed "
                 "because a placeholder gist URL cleared a prefix-and-length guard; "
                 "SIGPIPE stopped it after two rows and no candidate file was written"
             ),
