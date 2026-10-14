@@ -18549,6 +18549,50 @@ matches parsing: `path` requires `artifacts_path`, while `artifacts_path`
 alone can be staged. Query/request, sync, retry/no-op, publication, lock,
 persistent-cache, corpus/shard, disk-write and child costs remain unchanged.*
 
+**T48.5 · Exact partitioned reads for every proof surface** *(Linux track,
+2026-10-13)* — every current extraction mode publishes partitioned roots, so a
+proof surface that reads only legacy runs answers with no evidence on a real
+deployment. AC: operation consumers, field references, Impact and
+compatibility-enriched bundles read the same exact sources as topic usage
+(T55.3) and Atlas (T49.3); legacy-only bundles are byte-identical; a stale or
+moved root is never served; this is proven on the real binary.
+
+*T48.5 (2026-10-13, Claude lead): **done.**
+
+- **Change.** `buildProofBundleValue` selected exact sources only for
+  census-bearing queries (`withCensus`), which only Kafka topic usage and
+  Topics use. Every other proof surface shares that function, so each one
+  read legacy runs only. Selection and the confirm-after-build re-selection
+  now run for every query; the census alone stays gated. That one change
+  covers operation consumers, field references (`fieldreferences.go`),
+  Impact (`report.go`) and compatibility enrichment.
+- **Bytes.** Legacy-only bundles are unchanged: `exact_authorities` is
+  emitted only when a partitioned root is read, and every existing proof,
+  MCP schema-digest and assembly pin passes untouched.
+- **Test.** A new test reproduces the gap first (0 assertions and 0 native
+  reads with a current `grpc-consumer` root). It then passes, covering the
+  bundle reread, and a stale root (another candidate generation) is never
+  served. The topic-usage partitioned test now shares its store, keyed by
+  the root's domain.
+- **Real binary.** The same neutral `t307` gRPC fixture ran on fresh
+  instances with the proto switch on, querying `/demo.orders.v1.Orders/Create`:
+  - `main` (`fc07a364`): 0 assertions after 236 s;
+  - this branch: 1 assertion (`consumers/external/caller.go`), 1 evidence
+    row and a `grpc-consumer` exact authority after 30 s.
+
+Steady-state cost: each non-census proof query now adds what topic usage
+already paid. That is one bounded root-reference lookup per visible
+repository and queried domain, plus a one-row fence probe when a root exists.
+The confirmation adds the same again, once per build attempt. There is no new
+lock, child, cache or durable state.
+
+Gates: `internal/api` normally (10.8 s) and under race (58.4 s), and
+`internal/mcp`, pass; lint reports 0 issues.
+
+Remaining gap, not in scope: the evidence browser
+(`EvidenceRepositoryView`, `evidence.go`) still reads the latest legacy
+published run only.*
+
 ## Epic 49 · Contract Atlas and declaration production readiness
 
 Own `phebs.protobuf.contract` and `phebs.thrift.contract` separately, plus

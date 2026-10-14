@@ -525,15 +525,15 @@ func buildProofBundleValue(
 		if err != nil {
 			return nil, huma.Error500InternalServerError("build extraction coverage", err)
 		}
-		var sources catalogSources
-		if withCensus {
-			sources, err = selectExactSources(ctx, opts.Evidence, certificate, visible, query.Domains)
-			if err != nil {
-				if errors.Is(err, store.ErrConflict) || errors.Is(err, store.ErrNotFound) {
-					continue
-				}
-				return nil, huma.Error500InternalServerError("select topic usage sources", err)
+		// Every proof surface reads the same exact sources (T48.5): a legacy
+		// run when present, else the fenced current partitioned root. Every
+		// current extraction mode publishes partitioned roots.
+		sources, err := selectExactSources(ctx, opts.Evidence, certificate, visible, query.Domains)
+		if err != nil {
+			if errors.Is(err, store.ErrConflict) || errors.Is(err, store.ErrNotFound) {
+				continue
 			}
+			return nil, huma.Error500InternalServerError("select exact evidence sources", err)
 		}
 		assertions, evidence, err := collectProofEvidence(ctx, opts.Evidence, certificate, filters, sources)
 		if err != nil {
@@ -574,11 +574,9 @@ func buildProofBundleValue(
 		if confirmed.Digest != certificate.Digest {
 			continue
 		}
-		if withCensus {
-			reselected, err := selectExactSources(ctx, opts.Evidence, confirmed, visible, query.Domains)
-			if err != nil || !slices.Equal(reselected.authorities(), sources.authorities()) {
-				continue // a partitioned root moved while the bundle was built
-			}
+		reselected, err := selectExactSources(ctx, opts.Evidence, confirmed, visible, query.Domains)
+		if err != nil || !slices.Equal(reselected.authorities(), sources.authorities()) {
+			continue // a partitioned root moved while the bundle was built
 		}
 		confirmedVisible, err := visibleRepositories(ctx, opts)
 		if err != nil {

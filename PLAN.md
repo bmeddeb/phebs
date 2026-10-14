@@ -11258,3 +11258,19 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   against an estimated 30–60 GiB for 18 full clones. Only after those does the
   agent write `spike/t581/` and run the oracle's pre-seal pass. No quality,
   coverage, release, scale or SLO claim follows.
+
+- **2026-10-13 — T48.5 makes every proof surface read the exact source.**
+  Topic usage (T55.3) and Atlas (T49.3) learned to read fenced partitioned
+  roots. Operation consumers, field references, Impact and
+  compatibility-enriched bundles still read legacy runs only, because exact
+  source selection in the shared proof builder was gated on the census flag.
+  On any current deployment those surfaces answered with no evidence: the
+  real binary returned 0 call sites where the branch returns the fixture's
+  one.
+
+  Selection is now unconditional, and only the census stays gated.
+  Legacy-only bundles are byte-identical, because `exact_authorities` appears
+  only when a root is read. The per-query cost is the bounded root lookup
+  and fence probe topic usage already pays.
+
+  This is shared machinery for T58.3, T51.2 and T54.2. It releases no claim.

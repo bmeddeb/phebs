@@ -10,9 +10,8 @@ import (
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
-// partitionedKafkaStore serves one partitioned kafka-producer root behind a
-// fence the test controls: the production publication shape the T55.3
-// real-binary run found topic usage could not read.
+// partitionedKafkaStore serves one partitioned root (its root's domain) behind a fence the test controls: the production
+// publication shape the T55.3 real-binary run found topic usage could not read.
 type partitionedKafkaStore struct {
 	*proofAPIStore
 	root        store.PartitionedExtractionDomainReference
@@ -25,14 +24,14 @@ const kafkaNativeRun = "native-kafka-run"
 
 func (s *partitionedKafkaStore) authority() store.PartitionedAssertionAuthority {
 	return store.PartitionedAssertionAuthority{
-		Repository: atlasRepo, Domain: "kafka-producer", RunID: s.root.RunID,
+		Repository: atlasRepo, Domain: s.root.Domain, RunID: s.root.RunID,
 		PlanDigest: s.root.PlanDigest, RootDigest: s.root.RootDigest, Commit: catalogCommit,
 		CandidateManifestDigest: s.manifest.ManifestDigest, CandidatePolicyDigest: s.manifest.PolicyDigest,
 	}
 }
 
 func (s *partitionedKafkaStore) GetPartitionedExtractionDomainReference(_ context.Context, repository, domain string) (store.PartitionedExtractionDomainReference, error) {
-	if repository != atlasRepo || domain != "kafka-producer" {
+	if repository != atlasRepo || domain != s.root.Domain {
 		return store.PartitionedExtractionDomainReference{}, store.ErrNotFound
 	}
 	return s.root, nil
@@ -118,4 +117,61 @@ func TestKafkaTopicUsageReadsTheCurrentPartitionedRoot(t *testing.T) {
 		len(stale.Bundle.ExactAuthorities) != 0 {
 		t.Fatalf("stale partitioned root was served: %d %s", code, body)
 	}
+}
+
+// TestOperationConsumersReadTheCurrentPartitionedRoot pins T48.5: every proof
+// surface, not only topic usage, reads the fenced current partitioned root
+// when no legacy run exists. Before T48.5 only census-bearing queries selected
+// exact sources, so operation consumers over partitioned extraction answered
+// with no evidence on every current deployment.
+func TestOperationConsumersReadTheCurrentPartitionedRoot(t *testing.T) {
+	digest := func(c string) string { return "sha256:" + strings.Repeat(c, 64) }
+	base := &proofAPIStore{
+		repos:       []store.Repo{{Name: atlasRepo, IndexedCommitHash: catalogCommit}},
+		runs:        map[string]store.ExtractionRun{},
+		assertions:  map[string][]store.Assertion{},
+		resolutions: map[string]store.EvidenceResolution{},
+		bundles:     map[string]store.ProofBundleRecord{},
+	}
+	calls, callsResolution := proofAssertion(atlasRepo, kafkaNativeRun, "calls", "CALLS_OPERATION", "/shop.Cart/Get", "", "rpc")
+	base.assertions[atlasRepo] = []store.Assertion{calls}
+	base.resolutions[proofEvidenceScope(atlasRepo, kafkaNativeRun, calls.Supporting[0])] = callsResolution
+	st := &partitionedKafkaStore{
+		proofAPIStore: base, current: true,
+		root: store.PartitionedExtractionDomainReference{
+			Schema: store.PartitionedExtractionDomainSchema, Repository: atlasRepo, Domain: "grpc-consumer",
+			RunID: kafkaNativeRun, PlanDigest: digest("1"), RootDigest: digest("2"), CandidateDigest: digest("3"),
+			SourceDigest: digest("4"), ObservationDigest: digest("5"),
+		},
+		manifest: store.CandidateManifestPublication{
+			Repository: atlasRepo, HeadCommit: catalogCommit, ManifestDigest: digest("3"), PolicyDigest: digest("6"),
+		},
+	}
+	handler := proofHandlerFor(st)
+	code, body, envelope := getProof(t, handler, "/api/find_operation_consumers?operation=/shop.Cart/Get")
+	if code != http.StatusOK || len(envelope.Bundle.Assertions) != 1 || len(envelope.Bundle.Evidence) != 1 ||
+		len(envelope.Bundle.ExactAuthorities) != 1 || envelope.Bundle.ExactAuthorities[0].Domain != "grpc-consumer" ||
+		st.nativeReads == 0 {
+		t.Fatalf("partitioned operation consumers = %d %s (native reads %d)", code, body, st.nativeReads)
+	}
+	if code, _, read := getProof(t, handler, "/api/proof_bundles/"+envelope.ID); code != http.StatusOK ||
+		len(read.Bundle.Assertions) != 1 || len(read.Bundle.ExactAuthorities) != 1 {
+		t.Fatalf("partitioned operation-consumer bundle read = %d", code)
+	}
+
+	st.manifest.HeadCommit = strings.Repeat("b", 40) // the root belongs to another candidate generation
+	code, body, stale := getProof(t, handler, "/api/find_operation_consumers?operation=/shop.Cart/Get")
+	if code != http.StatusOK || len(stale.Bundle.Assertions) != 0 || len(stale.Bundle.ExactAuthorities) != 0 {
+		t.Fatalf("stale partitioned root was served: %d %s", code, body)
+	}
+}
+
+// proofHandlerFor is the experimental proof surface over st.
+func proofHandlerFor(st *partitionedKafkaStore) http.Handler {
+	return api.New(api.Options{
+		Version: "test", Store: st, Evidence: st, ProofBundles: st,
+		Visible:               func(context.Context) func(store.Repo) bool { return nil },
+		Principal:             func(context.Context) string { return "user:member" },
+		AuthorizationProvider: "test-permissions-v1",
+	})
 }
