@@ -4453,6 +4453,44 @@ is first installed as a closed zero-total `terminal_refusal` result and included
 in the nonpublishing terminal root; only then does the worker return terminal
 status to the scheduler. Private error detail never enters that result.
 
+#### Partition failure diagnostics (T47.2b, opt-in)
+
+That invariant is why a partition refusal can be honestly uninformative: the
+receipt projection keeps raw child diagnostics out of the durable job error, so a
+staging failure that the classifier cannot name is recorded as
+`classification=unknown` and nothing retained distinguishes an evidence append
+from a receipt read or a reservation check. `PHEBS_PARTITION_FAILURE_DIAGNOSTICS=1`
+is the deliberate, opt-in exception. It writes the full private error chain to the
+standard logger at the partition boundary, immediately before the refusal closes
+over it, prefixed `partition diagnostics: stage=<stage> failure=<chain>`.
+
+The durable result and the receipt are **unchanged in both states**: private
+detail still never enters either, and the gate adds no classification, retry,
+refusal, authority or publication behavior. It writes to the serve log only, so
+its output is as sensitive as the log it lands in.
+
+Bounds and posture, all measured rather than assumed:
+
+- **Off by default, and provably silent.** With the variable unset or set to
+  anything other than exactly `1`, a boundary failure logs zero bytes.
+- **Read once at process start.** The value is captured when the package
+  initializes, so toggling it needs a restart; it cannot be flipped on a live
+  serve.
+- **2,048 bytes per failure, not per line.** The chain is truncated to 2,048
+  bytes. A chain containing embedded newlines spans that many physical log lines
+  — one 2,000-byte chain with 400 newlines produced 400 lines — so the bound is
+  on bytes retained per failure, and the line count follows the error text.
+  Truncation slices bytes, so a chain cut mid-rune can emit invalid UTF-8.
+- **Bounded per failure, unbounded per run.** Each partition boundary failure
+  logs once. Nothing caps the number of failures over a long-lived serve, so
+  this is a diagnosis-run switch, not a steady-state setting.
+
+Enable it only for a run whose log is retained under the same custody as the run
+itself, attribute the failing staging operation, and disable it afterward. It is
+a diagnostic surface, not a product surface: no API, MCP, schema, receipt or
+evidence field carries its output, and its absence changes nothing an operator or
+consumer can observe.
+
 ### Shared source-observation progress and neutral demo
 
 Whole-repository indexing publishes one immutable Go source-observation

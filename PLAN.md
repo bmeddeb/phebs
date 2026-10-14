@@ -11659,3 +11659,59 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   whose card still reads `Independent validation owner: none assigned;
   release-blocking` until T58.3 binds this result. No coverage, release, scale or SLO
   claim follows.
+
+- **2026-10-14 — T47.2b partition failure diagnostics: keep the refusal receipt
+  private and attribute staging failures through an opt-in log-only gate.** A
+  partition refusal installs a closed `terminal_refusal` result whose projection
+  deliberately excludes raw child diagnostics, so a staging failure the classifier
+  cannot name is retained as `classification=unknown` with nothing distinguishing an
+  evidence append from a receipt read or a reservation check. Run c hit exactly that.
+  Two repairs were available: widen the receipt projection, or leave the durable
+  evidence untouched and expose the chain beside it. **The projection stays narrow.**
+  `PHEBS_PARTITION_FAILURE_DIAGNOSTICS=1` writes the full private chain to the standard
+  logger at the partition boundary immediately before the refusal closes over it, and
+  changes nothing durable.
+
+  The reason to prefer the log is that the two options are not symmetric in what they
+  make permanent. A receipt is retained, digest-bound evidence: widening it would put
+  private child detail into every future refusal receipt, into backup and restore, and
+  into any comparison that reads retained bytes, in exchange for attributing one
+  diagnosis. A log line is scoped to the run that chose to emit it, is not part of any
+  receipt, bundle, schema or evidence field, and is not reachable through any API or MCP
+  surface. The gate is therefore read once at process start, cannot be toggled on a live
+  serve, and its absence is indistinguishable from today's behavior.
+
+  **Bounds are measured, and one earlier wording is corrected.** With the variable unset
+  or set to anything other than exactly `1`, a boundary failure logs zero bytes. The
+  chain is truncated to 2,048 bytes **per failure, not per line** — the merged PR
+  description said "per line", which is wrong: a 2,000-byte chain containing 400 newlines
+  produced 400 physical log lines, because the bound is on bytes retained and the line
+  count follows the error text. Truncation slices bytes, so a chain cut mid-rune can emit
+  invalid UTF-8. Each failure logs once and nothing caps the number of failures over a
+  long-lived serve, so this is a diagnosis-run switch rather than a steady-state setting.
+  The documentation obligation is discharged in
+  `docs/guides/OPERATIONS.md` under "Partition failure diagnostics".
+
+  **Sequencing, recorded honestly.** PR #76 merged at `bfe81c34` on Ben's explicit
+  instruction before this record existed, so for one commit an operator-facing gate that
+  exposes the private chain the receipt exists to exclude shipped undocumented. Review
+  had already named that gap and the two minor findings above; the merge was instructed
+  with them known, and this bullet plus the guide section close the documentation part.
+  Still open and not claimed here: a test pinning the default-silent path, which is the
+  load-bearing half of the "absent by default" claim and is currently proven only by
+  measurement during review, and a decision on whether mid-rune truncation should be
+  rune-aligned.
+
+  **Steady-state cost.** Off: one boolean test per partition boundary failure, no
+  allocation, no I/O, and no change to any request, sync, startup, retry/no-op,
+  publication, lock, cache, schema, store, child or durable-state path. On: one bounded
+  log write of at most 2,048 bytes per failure, proportional to failures rather than to
+  corpus, queries or repositories. Neither state adds a request, poll, mutation, timer,
+  listener, receipt field or retained artifact.
+
+  **Track crossing.** The gate is Linux-track code in `internal/extract`; this record and
+  the guide section are Mac-track authored under Ben's chat flag on 2026-10-14, and the
+  crossing is recorded in the T47.2b backlog entry. PLAN.md and `docs/guides/` are shared
+  append-only spine documents: this bullet is added at the end of the ADR list and the
+  guide section is inserted inside the existing "Partitioned extraction execution"
+  boundary, reflowing no other track's text.
