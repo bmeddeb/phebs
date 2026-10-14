@@ -53,12 +53,10 @@
       "sha256": "sha256:b59b577496de3a002a58ce50bf1e378695628dee6e626a8da9e2e5251d7cff85"
     }
   },
-  "bound_artifacts_clean": false,
-  "commit": "4a521e185825db3b3af13f483f55cef79202e51f",
-  "commit_subject": "t58.1: record Ben's disposition on the pre-seal breach, and add seal preparation that computes rather than transcribes digests",
-  "dirty_paths": [
-    "pike/t581/seal_prepare.py"
-  ],
+  "bound_artifacts_clean": true,
+  "commit": "60bb28934763d3914782f99b5084a63759a3da18",
+  "commit_subject": "t58.1: prepare the seal \u2014 13 bound digests, the frozen thresholds and the breach disclosure in one gist-ready document",
+  "dirty_paths": [],
   "disclosed_breach": {
     "disposition": "Ben elected to seal with the breach disclosed (2026-10-14)",
     "lead_recommendation": "interested \u2014 the lead caused the breach",

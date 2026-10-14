@@ -1,7 +1,7 @@
 # T58.1 seal — Go gRPC syntactic consumer/registration site-coverage round
 
-Protocol: `docs/GRPC_CONSUMER_QUALITY_PROTOCOL.md` at commit `4a521e185825db3b3af13f483f55cef79202e51f`
-Commit subject: t58.1: record Ben's disposition on the pre-seal breach, and add seal preparation that computes rather than transcribes digests
+Protocol: `docs/GRPC_CONSUMER_QUALITY_PROTOCOL.md` at commit `60bb28934763d3914782f99b5084a63759a3da18`
+Commit subject: t58.1: prepare the seal — 13 bound digests, the frozen thresholds and the breach disclosure in one gist-ready document
 
 Published under §7 before `export` runs on the population. This gist is the
 seal; the thresholds and every digest below were frozen before any extractor
@@ -54,8 +54,7 @@ Disclosed but not scored: per_repository_scored_counts_with_concentration, test_
 | `spike/t581/oracle/main_test.go` | `sha256:0dc608f4d5a1219e855fda0e2963b0f72fa3c97a8814873be0d61fdbda601213` | 42377 |
 | `spike/t581/seal_prepare.py` | `sha256:f66bee48956667a5f33fb632293ed91fab953c7cdf6c8457ec0df7ded5535b35` | 11246 |
 
-Bound artifacts clean at commit: **False**
-Uncommitted changes in bound paths: pike/t581/seal_prepare.py
+Bound artifacts clean at commit: **True**
 
 ## Claim boundary
 
