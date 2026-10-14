@@ -6,9 +6,9 @@ assertion, because two same-file sites sharing a claim identity collapse into on
 stored assertion carrying two atoms.
 
 The claim is site coverage only (protocol §1): emitted operation and service
-identities are recorded but never scored. The scored denominator excludes
-`out_of_domain`, whose silence GD10 makes the claim's largest blind spot; those
-counts are still published, because §6 requires it.
+identities are recorded but never scored. GD10's out-of-domain candidates — the
+claim's largest blind spot — arrive as one aggregate per unit rather than as site
+rows, and §6 requires their count published.
 
 Roles come from the exporter, not the oracle: GD16 freezes role names and
 precedence but deliberately not role *detection*, so per-role figures inherit the
@@ -55,6 +55,12 @@ GAP_STATES = {"gap_source_too_large", "gap_parse_error"}
 RESOLVED_STATES = {"resolved_call", "resolved_registration"}
 AMBIGUOUS_STATES = {"ambiguous_call", "ambiguous_registration"}
 
+# The complete scored site vocabulary. `out_of_domain` was retired from the site
+# stream: GD10 candidates are published as one per-unit aggregate instead, because
+# a row per candidate would be millions of records across the population for a
+# count §6 is the only consumer of.
+SCORED_STATES = CALL_STATES | REGISTRATION_STATES | GAP_STATES
+
 # The extractor's predicates map onto the protocol's scored state vocabulary.
 # GRPC_EXTRACTION_GAP is split by its object, which carries the reason.
 PREDICATE_TO_STATE = {
@@ -96,6 +102,23 @@ def read_jsonl(path: Path) -> list[dict]:
             except json.JSONDecodeError as error:
                 raise SystemExit(f"{path}:{number}: invalid JSON: {error}") from error
     return rows
+
+
+def load_units(path: Path) -> list[dict]:
+    """Read the population unit ids, transparently handling the committed gzip."""
+    import gzip
+
+    raw = path.read_bytes()
+    if raw[:2] == b"\x1f\x8b":
+        raw = gzip.decompress(raw)
+    units = []
+    for line in raw.decode("utf-8").splitlines():
+        line = line.strip()
+        if line:
+            units.append(json.loads(line))
+    if not units:
+        raise SystemExit(f"{path} holds no units")
+    return units
 
 
 def sites_from_rows(rows: list[dict]) -> dict[tuple, dict]:
@@ -160,7 +183,13 @@ def ratio(numerator: int, denominator: int) -> float | None:
     return None if denominator == 0 else numerator / denominator
 
 
-def score(sites: dict, candidates: dict, adjudications: dict | None, aggregates: dict | None = None) -> dict:
+def score(
+    sites: dict,
+    candidates: dict,
+    adjudications: dict | None,
+    aggregates: dict | None = None,
+    population: set | None = None,
+) -> dict:
     adjudications = adjudications or {}
     aggregates = aggregates or {}
     pending = [k for k, v in adjudications.items() if v is None or v[0] is None]
@@ -179,20 +208,20 @@ def score(sites: dict, candidates: dict, adjudications: dict | None, aggregates:
     per_repo_scored: Counter = Counter()
     per_role_total: Counter = Counter()
     per_role_agree: Counter = Counter()
-    out_of_domain = 0
     oracle_states: Counter = Counter()
 
     for k, site in sites.items():
         state = site["state"]
+        # The retired out_of_domain state is refused rather than ignored: GD10
+        # candidates are published as per-unit aggregates, so a site row carrying
+        # that state means the streams disagree about the contract, and silently
+        # dropping it would hide a site from the denominator.
+        if state not in SCORED_STATES:
+            raise SystemExit(
+                f"oracle site at {_adj_key(k)} has state {state!r}, which is not in "
+                f"the scored vocabulary {sorted(SCORED_STATES)}"
+            )
         oracle_states[state] += 1
-        if state == "out_of_domain":
-            out_of_domain += 1
-            # Out-of-domain sites are outside the denominator, but a candidate
-            # row there is still spurious: GD10 says the product emits nothing.
-            if k in candidates:
-                spurious += len(candidates[k])
-                spurious_rows.extend(_brief(k, candidates[k], state))
-            continue
 
         # An adjudicated truth replaces the oracle's for this key.
         override = adjudications.get(_adj_key(k))
@@ -243,6 +272,20 @@ def score(sites: dict, candidates: dict, adjudications: dict | None, aggregates:
         spurious += len(rows)
         spurious_rows.extend(_brief(k, rows, "no_oracle_site"))
 
+    if population:
+        seen = {site["unit"] for site in sites.values()} | set(aggregates)
+        absent = sorted(population - seen)
+        if absent:
+            # The oracle publishes nothing for a unit it failed to scan, rather
+            # than a partial count that would understate the blind spot. Silence
+            # is therefore indistinguishable from omission unless the population
+            # is checked, so a missing unit is a hard failure and never a
+            # silently smaller denominator.
+            raise SystemExit(
+                "the oracle produced no output for "
+                f"{len(absent)} of {len(population)} population units: {absent}"
+            )
+
     production_total = per_role_total.get("production", 0)
     production_agree = per_role_agree.get("production", 0)
     total = sum(per_repo_scored.values())
@@ -261,8 +304,7 @@ def score(sites: dict, candidates: dict, adjudications: dict | None, aggregates:
         "duplicated_sites": len(duplicated),
         "pending_after_adjudication": len(pending),
         "production_role_agreement": ratio(production_agree, production_total),
-        "out_of_domain_candidates": out_of_domain,
-        "out_of_domain": _summarize_out_of_domain(aggregates, sites),
+        "out_of_domain": _summarize_out_of_domain(aggregates, sites, population),
         "oracle_state_counts": dict(sorted(oracle_states.items())),
         "per_role_total": dict(sorted(per_role_total.items())),
         "per_role_agreement": {
@@ -298,11 +340,16 @@ def score(sites: dict, candidates: dict, adjudications: dict | None, aggregates:
     }
 
 
-def _summarize_out_of_domain(aggregates: dict, sites: dict) -> dict:
+def _summarize_out_of_domain(aggregates: dict, sites: dict, population: set | None = None) -> dict:
     """Publish the out-of-domain blind spot §6 requires, from the per-unit
-    aggregates. A unit with no aggregate is named, because the oracle emits one
-    even at total 0 — so absence means the stream was incomplete, not that the
-    unit had no candidates."""
+    aggregates.
+
+    A unit with zero candidates still emits an aggregate, so a missing record is
+    never benign. Against the population it means the unit produced no oracle
+    output at all — which is what a failed scan looks like, since the oracle
+    publishes nothing rather than a partial count that would understate the blind
+    spot. That is reported as a hard failure, not a disclosure.
+    """
     by_reason: Counter = Counter()
     total = 0
     files = 0
@@ -312,12 +359,15 @@ def _summarize_out_of_domain(aggregates: dict, sites: dict) -> dict:
         for reason, count in value.get("by_reason", {}).items():
             by_reason[reason] += count
     units_in_sites = {site["unit"] for site in sites.values()}
+    seen = units_in_sites | set(aggregates)
+    missing_from_population = sorted(population - seen) if population else []
     return {
         "total": total,
         "files_with_candidates": files,
         "by_reason": dict(sorted(by_reason.items())),
         "units_with_aggregate": len(aggregates),
         "units_missing_aggregate": sorted(units_in_sites - set(aggregates)),
+        "units_absent_from_oracle_output": missing_from_population,
         "per_unit": {unit: aggregates[unit]["total"] for unit in sorted(aggregates)},
     }
 
@@ -384,6 +434,11 @@ def main() -> int:
     parser.add_argument("--sites", type=Path, required=True, help="oracle output")
     parser.add_argument("--candidate", type=Path, required=True, help="exporter output")
     parser.add_argument("--adjudications", type=Path)
+    parser.add_argument(
+        "--units", type=Path,
+        help="population units.jsonl.gz; when given, every unit must appear in the "
+             "oracle output or scoring fails rather than silently shrinking",
+    )
     parser.add_argument("--out", type=Path)
     args = parser.parse_args()
 
@@ -393,7 +448,10 @@ def main() -> int:
     adjudications = {}
     if args.adjudications:
         adjudications = json.loads(args.adjudications.read_text(encoding="utf-8"))
-    result = score(sites, candidates, adjudications, aggregates)
+    population = None
+    if args.units:
+        population = {u["unit"] for u in load_units(args.units)}
+    result = score(sites, candidates, adjudications, aggregates, population)
 
     text = json.dumps(result, indent=2) + "\n"
     if args.out:

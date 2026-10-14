@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
 
 import score
 
@@ -120,14 +121,18 @@ class TestScoring(unittest.TestCase):
                       cand("r", "f.go", 1, 5, "CALLS_OPERATION")])
         self.assertEqual(result["metrics"]["duplicated_sites"], 1)
 
-    def test_out_of_domain_leaves_the_denominator_but_a_row_there_is_spurious(self):
-        sites = [site("r", "f.go", 1, 5, "out_of_domain"), site("r", "g.go", 1, 5, "resolved_call")]
-        cands = [cand("r", "f.go", 1, 5, "CALLS_OPERATION"), cand("r", "g.go", 1, 5, "CALLS_OPERATION")]
-        result = run(sites, cands)
-        self.assertEqual(result["metrics"]["scored_sites"], 1)
-        self.assertEqual(result["metrics"]["out_of_domain_candidates"], 1)
-        self.assertEqual(result["metrics"]["spurious_rows"], 1)
-        self.assertEqual(result["metrics"]["coverage"], 1.0)
+    def test_a_retired_out_of_domain_site_state_is_refused_not_ignored(self):
+        # GD10 candidates arrive as per-unit aggregates now. A site row still
+        # carrying the retired state means the streams disagree about the
+        # contract, and silently dropping it would hide a site.
+        with self.assertRaises(SystemExit):
+            run([site("r", "f.go", 1, 5, "out_of_domain")],
+                [cand("r", "f.go", 1, 5, "CALLS_OPERATION")])
+
+    def test_an_unknown_site_state_is_refused(self):
+        with self.assertRaises(SystemExit):
+            run([site("r", "f.go", 1, 5, "mostly_resolved")],
+                [cand("r", "f.go", 1, 5, "CALLS_OPERATION")])
 
 
 class TestAdjudication(unittest.TestCase):
@@ -232,6 +237,41 @@ class TestOutOfDomainAggregates(unittest.TestCase):
         self.assertEqual(summary["files_with_candidates"], 5)
         self.assertEqual(summary["by_reason"], {"unindexed_selector": 14, "zero_arguments": 1})
         self.assertEqual(summary["per_unit"], {"a": 10, "b": 5})
+
+
+class TestPopulationCoverage(unittest.TestCase):
+    """The oracle publishes nothing for a unit it failed to scan, so silence is
+    indistinguishable from omission unless the population is checked."""
+
+    def test_a_unit_absent_from_all_oracle_output_fails_scoring(self):
+        sites = score.sites_from_rows([site("present", "f.go", 1, 5, "resolved_call")])
+        aggregates = {"present": {"total": 0, "by_reason": {}, "files_with_candidates": 0}}
+        with self.assertRaises(SystemExit):
+            score.score(sites, {}, None, aggregates, {"present", "scan_failed"})
+
+    def test_a_unit_present_only_through_its_aggregate_is_covered(self):
+        aggregates = {
+            "a": {"total": 3, "by_reason": {"unindexed_selector": 3}, "files_with_candidates": 1},
+            "b": {"total": 0, "by_reason": {}, "files_with_candidates": 0},
+        }
+        result = score.score({}, {}, None, aggregates, {"a", "b"})
+        self.assertEqual(result["metrics"]["out_of_domain"]["units_absent_from_oracle_output"], [])
+        self.assertEqual(result["metrics"]["out_of_domain"]["total"], 3)
+
+    def test_the_population_loader_reads_the_committed_gzip(self):
+        import gzip
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix=".jsonl.gz", delete=False) as handle:
+            handle.write(gzip.compress(
+                b'{"schema":"t581-unit-v1","unit":"a/b","go_files":["x.go"]}\n'
+                b'{"schema":"t581-unit-v1","unit":"c/d","go_files":["y.go"]}\n',
+                mtime=0,
+            ))
+            path = Path(handle.name)
+        try:
+            self.assertEqual([u["unit"] for u in score.load_units(path)], ["a/b", "c/d"])
+        finally:
+            path.unlink()
 
 
 class TestInputGuards(unittest.TestCase):

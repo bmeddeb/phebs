@@ -54,6 +54,7 @@ go build -tags t581export -o /tmp/t581export ./spike/t581/export
 
 # 6. Score, then adjudicate every disagreement by reading the source (§4).
 python3 spike/t581/score.py --sites sites.jsonl --candidate candidate.jsonl \
+        --units spike/t581/population/units.jsonl.gz \
         [--adjudications adjudications.json] --out spike/t581/round/score.json
 ```
 
@@ -98,6 +99,12 @@ file a candidate, so a row each would be millions of records across 53,721 files
 §6 needs the count, and dropping the rows changes no scored outcome — a candidate
 at a span the oracle never reported is already spurious. An aggregate is emitted
 even at `total: 0`, so the scorer can name a unit whose record is missing.
+
+**Always pass `--units`.** The oracle publishes *nothing* for a unit it failed to
+scan, rather than a partial count that would understate the blind spot, so a failed
+unit is invisible in both streams. The scorer therefore cross-checks the population
+and fails outright on any unit absent from the oracle output, instead of quietly
+scoring a smaller denominator. Without `--units` that guard is off.
 
 ## Why a unit is a repository, not a file
 
