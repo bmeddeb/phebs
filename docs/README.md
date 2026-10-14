@@ -90,6 +90,9 @@ replace the user manual.
   T56.1 consumer site-coverage round, sealed and passing independently of the
   producer number; §9 records the signed `rel-phebs.kafka.consumer` release
   result.
+- [THRIFT_DECLARATION_QUALITY_PROTOCOL.md](./THRIFT_DECLARATION_QUALITY_PROTOCOL.md) —
+  T49.2 Thrift declaration identity round against the pinned Apache Thrift
+  reference compiler, frozen before selection.
 - [TOPICS_QUALITY_PROTOCOL.md](./TOPICS_QUALITY_PROTOCOL.md) — T57.3 combined
   Topics composition: round 1 census-exact but row-vacuous, round 2 passing
   41/41 topics; §9 records the signed `rel-phebs.kafka.topics` release.

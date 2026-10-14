@@ -1,0 +1,160 @@
+# T49.2 Thrift declaration quality protocol
+
+Frozen before selection (Ben's decisions, 2026-10-13). The commit that adds
+this file is the seal: nothing below changes after scoring starts, and a
+failed round is recorded as failed rather than rescored. Protobuf results
+(T49.1) grant no Thrift support, and this round grants none to protobuf.
+
+## 1. Decisions (Ben, 2026-10-13)
+
+- **Oracle:** the official Apache Thrift compiler, pinned (§3). Its `-gen
+  json` output is a complete oracle for every file it compiles. It shares no
+  code with thriftrw or `thriftdecl`, so no human label sample is drawn.
+- **Adjudicator:** Claude, as named by Ben. Every disagreement is
+  adjudicated, and none may be left `unsure`. This is not an independent
+  human review.
+- **Thresholds** (point estimates, §6): declaration agreement ≥ 99.5%,
+  reference-state agreement ≥ 99.5%, and field-ID agreement 100%. Every file
+  the oracle rejects is reported with phebs's behavior on it, never silently
+  dropped.
+- **Population:** fresh, by the frozen search rule in §4.
+
+## 2. Claim card (`thrift-contract`, declaration identity)
+
+**Claim.** For each `.thrift` file the reference compiler accepts, the
+`thrift-contract` extractor declares exactly the oracle's declarations, under
+the identities frozen by T19.1 (D1, D2, D8) and implemented by
+`internal/extract/extractors/thriftdecl` (version 1.0.0, last changed at
+`b8081248`):
+
+| Kind | Identity |
+|---|---|
+| Service | `DECLARES_SERVICE scope.Service` |
+| Operation | `DECLARES_OPERATION scope.Service/function` |
+| Message (struct, union or exception) | `DECLARES_MESSAGE scope.Name` |
+| Synthetic message | `scope.Service.function_args` always; `scope.Service.function_result` unless the function is `oneway` |
+| Field | `DECLARES_FIELD message#id`: struct fields, arguments in `_args`, `throws` fields in `_result`, and the success slot `_result#0` when the return type is not `void` |
+
+`scope` (D1) is the last dot-segment of `namespace go`, then of `namespace *`,
+and otherwise the file basename.
+
+**Non-claims.**
+- No include resolution or cross-file linking.
+- Enums, enum values, constants, typedefs as declarations, and annotations
+  are out of scope, and never count as misses.
+- Implicit field IDs are a deliberate file-level gap (D2), so those files
+  form their own reported stratum (§5) and are not scored.
+- Nested containers below one level, and a map directly inside a container,
+  abstain (D8).
+- No fbthrift dialect.
+
+## 3. Oracle
+
+The oracle is `thrift` 0.19.0 from Ubuntu package
+`thrift-compiler=0.19.0-2.1build5`, installed on
+`ubuntu@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55`.
+`spike/t492/oracle/Dockerfile` builds it, and the round records the image
+digest.
+
+Each file is compiled once, as `thrift --gen json`. The include search path
+is the file's own directory, then the repository root, then every repository
+directory containing a `.thrift` file, in sorted order, capped at 64. A
+non-zero exit is an **oracle rejection**, recorded with its first error line.
+
+The oracle JSON maps to §2 identities as follows:
+
+- **Scope:** `namespaces.go`, then `namespaces["*"]` (last dot-segment),
+  else `name`.
+- **Declarations:**
+  - `services[].functions[]` give the operations and the synthetic messages
+    (`oneway` omits `_result`).
+  - `returnTypeId != "void"` gives `#0`.
+  - `arguments[].key` and `exceptions[].key` give the synthetic fields.
+  - `structs[]` (any `isException` or `isUnion` value) gives the messages,
+    and `fields[].key` their fields.
+- **Requiredness:** `required` → `required`, `optional` → `optional`,
+  `req_out` → `default`.
+- **Reference state** of a field, and of each map key and map value:
+  - a base type is `intrinsic`;
+  - a `struct`, `union` or `exception` class without a `.` is `same_file`
+    message `scope.Class`, and an `enum` class likewise is `same_file` enum;
+  - a class containing `.` is include-qualified, and `unresolved`;
+  - `list` and `set` contribute their element (one level);
+  - a container nested inside a container is `unresolved`.
+
+  Apache flattens typedefs to their target, and phebs chases same-file
+  typedefs (D8), so both sides compare the resolved target.
+
+## 4. Population (run once, after this seal)
+
+Run `gh search code --extension thrift --limit 100` for each query, in order:
+
+1. `"namespace go"`
+2. `"namespace java"`
+3. `"exception"`
+4. `"union"`
+
+Candidates are repositories in order of first appearance. Excluded:
+
+- the T19.1 corpus: jaegertracing/jaeger-idl, jaegertracing/jaeger-client-go
+  and jaegertracing/jaeger;
+- apache/thrift, whose test IDLs are the reference compiler's own suite;
+- facebook/fbthrift and repositories whose name contains `fbthrift`;
+- forks and archived repositories.
+
+Each candidate is pinned at default-branch HEAD (depth-1 clone on the
+selection date). A candidate is dropped, with the reason recorded, when:
+
+- its checkout exceeds 200 MiB, or it has more than 2,000 `.thrift` files;
+- or the oracle compiles none of its `.thrift` files.
+
+Eligible candidates are admitted in order until both at least 10
+repositories and at least 1,000 oracle declarations are held (power floor),
+capped at 30 repositories. Reaching the cap below the floor makes the round
+underpowered, recorded as not established, never as a pass. The lock is
+committed before phebs runs on any candidate.
+
+**Strata:** repository × role × kind. A `vendor` path segment makes a file
+vendor; otherwise `test`, `tests` or `testdata` makes it test; everything
+else is production.
+
+## 5. Candidate and measurement
+
+The candidate is `thriftdecl` at the lock commit, run directly over every
+`.thrift` blob by `spike/t492/export`. It is the same code the served path
+runs; T48.5 and T49.3 prove the served read path separately.
+
+Files fall into strata that are counted and reported separately:
+
+- **Scored:** the oracle accepts the file, and phebs emits facts with no
+  file-level gap.
+- **Phebs D2 gap:** the oracle accepts, and phebs emits an `implicit_field_id`
+  gap. A non-claim; reported, not scored.
+- **Phebs other gap or parse failure, oracle accepts:** every oracle
+  declaration in the file counts as a **miss** in the agreement denominator.
+- **Oracle rejects:** reported with phebs's behavior on the file (facts, gap
+  or error). Not scored.
+
+The measures, over scored files:
+
+- **Declaration agreement:** |oracle ∩ phebs| / |oracle ∪ phebs| over
+  (predicate, object) pairs, per file.
+- **Field-ID agreement:** for every oracle field, phebs declares the same
+  `message#id` with the same field name. This must be 100%.
+- **Reference-state agreement:** over fields both sides declare, the
+  fraction whose requiredness and every reference state (field, or map key
+  and value) agree.
+
+## 6. Thresholds and adjudication
+
+- **Pass:** declaration agreement ≥ 99.5%, reference-state agreement
+  ≥ 99.5% and field-ID agreement 100%, with every disagreement adjudicated
+  and none `unsure`.
+- **Adjudication verdicts** for each disagreement: `phebs_wrong`,
+  `oracle_quirk` (a reference-compiler behavior outside §2's identity, with
+  evidence), or `out_of_scope` (a §2 non-claim).
+- **Scores are reported twice:** as measured, and after removing only
+  `oracle_quirk` and `out_of_scope` items. The pass decision uses the
+  post-adjudication figure.
+- **Disclosure:** every adjudicated item is listed with its verdict. Any
+  `phebs_wrong` item is a defect, reported whether or not the thresholds pass.
