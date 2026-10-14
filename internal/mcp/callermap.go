@@ -484,7 +484,7 @@ func contractOperationOutputSchema() map[string]any {
 					"implementations":           arrayProperty,
 					"callers":                   arrayProperty,
 					"unresolved_candidates":     arrayProperty,
-					"unavailable_relationships": arrayProperty,
+					"unavailable_relationships": map[string]any{"type": "array", "items": stringProperty},
 					"relationships_truncated":   map[string]any{"type": "boolean"},
 					"relationship_limit_reason": stringProperty,
 					"shape_truncated":           map[string]any{"type": "boolean"},
