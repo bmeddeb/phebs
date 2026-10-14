@@ -1,7 +1,7 @@
 # T58.1 seal — Go gRPC syntactic consumer/registration site-coverage round
 
-Protocol: `docs/GRPC_CONSUMER_QUALITY_PROTOCOL.md` at commit `60bb28934763d3914782f99b5084a63759a3da18`
-Commit subject: t58.1: prepare the seal — 13 bound digests, the frozen thresholds and the breach disclosure in one gist-ready document
+Protocol: `docs/GRPC_CONSUMER_QUALITY_PROTOCOL.md` at commit `4d538f582c7f43a1a57b6118ee4c5c4956cc3c93`
+Commit subject: t58.1: regenerate the seal manifest so it binds the current seal_prepare.py digest
 
 Published under §7 before `export` runs on the population. This gist is the
 seal; the thresholds and every digest below were frozen before any extractor

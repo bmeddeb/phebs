@@ -54,8 +54,8 @@
     }
   },
   "bound_artifacts_clean": true,
-  "commit": "60bb28934763d3914782f99b5084a63759a3da18",
-  "commit_subject": "t58.1: prepare the seal \u2014 13 bound digests, the frozen thresholds and the breach disclosure in one gist-ready document",
+  "commit": "4d538f582c7f43a1a57b6118ee4c5c4956cc3c93",
+  "commit_subject": "t58.1: regenerate the seal manifest so it binds the current seal_prepare.py digest",
   "dirty_paths": [],
   "disclosed_breach": {
     "disposition": "Ben elected to seal with the breach disclosed (2026-10-14)",
