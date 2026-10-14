@@ -1,0 +1,4 @@
+{"kind": "reference_state", "object": "picard.Picard.batchFeed_args#1", "oracle": {"cardinality": "default", "name": "inputIds", "refs": ["unresolved:nested"]}, "path": "graphix/picard.thrift", "phebs": {"cardinality": "default", "name": "inputIds", "refs": ["intrinsic"]}, "repository": "AlibabaResearch/DAMO-ConvAI"}
+{"kind": "phebs_other_gap", "missed": 71, "path": "service.thrift", "phebs": "parse_error", "repository": "TCKnickerbocker/DHT_based_Federated_Learning_System"}
+{"kind": "phebs_other_gap", "missed": 379, "path": "bizdemo/kitex_swagger_gen/idl/openapi.thrift", "phebs": "parse_error", "repository": "cloudwego/kitex-examples"}
+{"kind": "oracle_rejected", "oracle_error": "[ERROR:/r/bizdemo/kitex_swagger_gen/idl/user.thrift:37] (last token was ''')", "path": "bizdemo/kitex_swagger_gen/idl/user.thrift", "phebs": "gap:parse_error", "repository": "cloudwego/kitex-examples"}

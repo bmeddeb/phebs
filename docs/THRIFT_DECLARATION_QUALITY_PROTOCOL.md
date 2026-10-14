@@ -322,3 +322,46 @@ than half of its `.thrift` files are byte-identical to a file from either
 round (`spike/t492/round1-thrift-sha256.txt`,
 `spike/t492/round2-thrift-sha256.txt`). The selector is
 `spike/t492/select_r3.py`.
+
+## 11. Round 3 result (2026-10-14): passes the thresholds; one false shape claim found
+
+**Population.** The four §8 searches returned 146 unique repositories, and
+21 were examined in order:
+
+- 10 were eligible;
+- 10 were round-2 repositories and excluded;
+- 1 had no file the oracle compiles.
+
+None of the eligible repositories was mostly byte-identical to an earlier
+round. The lock is `spike/t492/round3/corpus.lock.json` (`3b8ed93d`),
+committed before phebs ran. It holds 34 files: 31 scored, 2 phebs
+`parse_error` gaps the oracle accepts, and 1 the oracle rejects. The oracle
+declares 1,673 declarations. The candidate is `thriftdecl` 1.1.1 at
+`dead94a2`.
+
+| Measure | As measured | After adjudication | Threshold |
+|---|---|---|---|
+| Declaration agreement | 73.10% | **100%** (1,223 / 1,223) | ≥ 99.5% |
+| Field-ID agreement | 100% (692) | **100%** | 100% |
+| Reference-state agreement | 99.86% | **99.86%** (691 / 692) | ≥ 99.5% |
+
+**Adjudication** (`spike/t492/round3/adjudication.jsonl`):
+
+- **Two `parse_error` gaps are `out_of_scope`**, as §8's declared thriftrw
+  dialect limit (450 declarations):
+  - `end`, a thriftrw reserved word, used as a field name;
+  - `string`, a Thrift base-type keyword, used as a field name. Apache
+    accepts it and thriftrw's grammar does not. It is disclosed as a type
+    keyword rather than a reserved word.
+- **One reference-state miss is `phebs_wrong`, a false shape claim.**
+  `list<InputIds>`, with `typedef list<Token> InputIds`, is
+  `list<list<i64>>`: a nested container, which D8 abstains on. phebs chases
+  the element typedef through the inner list and reports the element as
+  intrinsic. This is the mirror of the round-2 defect, and it has been
+  present since 1.0.0.
+- **One file the oracle rejects** is reported; phebs gaps it as
+  `parse_error`.
+
+The round passes the frozen thresholds. Unlike round 2's over-abstention,
+though, this defect is a false claim, not an abstention: it misstates a
+field's shape. It is recorded for a fix before any release decision.
