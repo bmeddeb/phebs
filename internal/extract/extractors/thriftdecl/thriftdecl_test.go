@@ -471,7 +471,11 @@ struct Holder {
   1: Index direct
   2: Alias chained
   3: list<Index> nested
+  4: list<Ids> listOfTypedefList
+  5: set<Deep> setOfChainedList
 }
+typedef list<i64> Ids
+typedef Ids Deep
 `
 	facts, _ := mustExtract(t, singleFileCorpus(source))
 	for _, object := range []string{"svc.Holder#1", "svc.Holder#2"} {
@@ -479,6 +483,13 @@ struct Holder {
 		if field.Map == nil || field.Type != nil || field.Map.Key.Resolution != "intrinsic" ||
 			field.Map.Value.Declaration != "svc.Tag" {
 			t.Fatalf("%s = %+v", object, field)
+		}
+	}
+	// T49.2 round 3: a typedef'd container as an element is a nested container.
+	for _, object := range []string{"svc.Holder#4", "svc.Holder#5"} {
+		element := decodeDetail[decodedFieldDetail](t, findPredicateFact(t, facts, "DECLARES_FIELD", object))
+		if element.Type == nil || element.Type.Resolution != "unresolved" || element.Type.Reason != "NESTED_CONTAINER_SHAPE" {
+			t.Fatalf("%s = %+v", object, element)
 		}
 	}
 	nested := decodeDetail[decodedFieldDetail](t, findPredicateFact(t, facts, "DECLARES_FIELD", "svc.Holder#3"))

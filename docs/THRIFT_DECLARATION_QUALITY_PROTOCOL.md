@@ -365,3 +365,23 @@ declares 1,673 declarations. The candidate is `thriftdecl` 1.1.1 at
 The round passes the frozen thresholds. Unlike round 2's over-abstention,
 though, this defect is a false claim, not an abstention: it misstates a
 field's shape. It is recorded for a fix before any release decision.
+
+## 12. `thriftdecl` 1.1.2: the round-3 false claim is fixed (2026-10-14)
+
+A container element that is a same-file typedef of a container
+(`list<Alias>` with `typedef list<i64> Alias`, or a chain of such typedefs)
+now abstains as `NESTED_CONTAINER_SHAPE`, as D8 requires. Before, it was
+resolved through to the inner element. A shared bounded typedef-target helper
+now drives both this check and 1.1.1's top-level map detection. The unit
+test fails with the fix reverted.
+
+**Diagnostic only, not a measurement.** Re-running 1.1.2 over round 3's
+already-seen locked files changes exactly one row:
+
+- reference-state agreement goes from 691/692 to 692/692;
+- declaration agreement, field-ID agreement and every stratum are
+  identical.
+
+The round-3 result in §11 stands as measured on 1.1.1. Any release binds
+1.1.2, so its served-path rehearsal re-checks the fixed behavior on real
+data.

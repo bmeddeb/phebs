@@ -28,7 +28,7 @@ import (
 
 const (
 	domain        = "thrift-contract"
-	version       = "1.1.1"
+	version       = "1.1.2"
 	schemaVersion = "t19-v1"
 
 	// idl.Parse is in-process and does not accept a context. Preflight the
@@ -668,25 +668,29 @@ func resolveInto(state *fileState, detail *fieldDetail, fieldType ast.Type) {
 	detail.Type = &reference
 }
 
+// typedefTarget follows unique same-file typedefs within the D8 chase bound
+// and returns the type they denote, or the input when it is not such a typedef.
+func typedefTarget(state *fileState, fieldType ast.Type) ast.Type {
+	for depth := 0; depth <= maxTypedefChase; depth++ {
+		reference, ok := fieldType.(ast.TypeReference)
+		if !ok {
+			return fieldType
+		}
+		declared, ok := state.types[reference.Name]
+		if !ok || declared.count > 1 || declared.kind != "typedef" {
+			return fieldType
+		}
+		fieldType = declared.typedef
+	}
+	return fieldType
+}
+
 // topLevelMap reports the map a field's type denotes, following unique
 // same-file typedefs within the D8 chase bound. A typedef of a map at field
 // level is a top-level map, not a nested container (T49.2 round 2).
 func topLevelMap(state *fileState, fieldType ast.Type) (ast.MapType, bool) {
-	for depth := 0; depth <= maxTypedefChase; depth++ {
-		switch node := fieldType.(type) {
-		case ast.MapType:
-			return node, true
-		case ast.TypeReference:
-			declared, ok := state.types[node.Name]
-			if !ok || declared.count > 1 || declared.kind != "typedef" {
-				return ast.MapType{}, false
-			}
-			fieldType = declared.typedef
-		default:
-			return ast.MapType{}, false
-		}
-	}
-	return ast.MapType{}, false
+	mapType, ok := typedefTarget(state, fieldType).(ast.MapType)
+	return mapType, ok
 }
 
 // resolveType is decision D8: same-file resolution only. Base types are
@@ -719,7 +723,10 @@ func resolveType(state *fileState, fieldType ast.Type, typedefDepth int) typeRef
 }
 
 func containerReference(state *fileState, form string, element ast.Type, typedefDepth int) typeReferenceDetail {
-	switch element.(type) {
+	// A same-file typedef of a container is still a container: list<Alias>
+	// with typedef list<i64> Alias is list<list<i64>> and abstains (T49.2
+	// round 3 found it resolved through to the inner element).
+	switch typedefTarget(state, element).(type) {
 	case ast.ListType, ast.SetType, ast.MapType:
 		// Single-level unwrap only; deeper nesting abstains (known ceiling,
 		// D8). The raw form still records what was written.

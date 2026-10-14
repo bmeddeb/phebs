@@ -11376,3 +11376,11 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Field-level detection now follows unique same-file typedefs within the D8
   bound. Maps inside containers still abstain, and there is no other
   behavior change.
+
+- **2026-10-14 — `thrift-contract` 1.1.2: a typedef'd container used as a
+  container element is nested.** T49.2 round 3 found a false shape claim,
+  the mirror of round 2's over-abstention. `list<Alias>`, with `Alias` a
+  same-file typedef of a list, resolved to the inner element instead of
+  abstaining as D8's nested container. One bounded typedef-target helper now
+  serves both container-element and top-level-map detection. A diagnostic
+  re-run over round 3's seen files changes only that row.
