@@ -430,9 +430,15 @@ and who owns each.
     combined-style stubs and external-module contracts. Out-of-domain candidates are
     aggregated per unit rather than enumerated, since GD7+GD10 would otherwise emit
     millions of rows for a count §6 is the only consumer of.
-  - Remaining, agent: the oracle's pre-seal pass, which stops the round under §2's
-    rule if scored sites fall below 300. Remaining, Ben: the §7 seal, after which
-    export, score and adjudication may run.
+  - Done: the oracle's pre-seal pass ran over the locked population without the
+    extractor — **34,089 scored sites**, 114 times the frozen 300 floor, so §2's
+    stop rule does not fire. It also quantified the blind spot: 2,870,212
+    out-of-domain candidates, **84.2 for every scored site**, and four members
+    supplying 78.9% of scored sites while `kubevirt/kubevirt` contributes 12 from
+    9,680 files with zero resolved calls. Both are disclosed in §3.
+  - Remaining, Ben: the §7 seal. Remaining, agent, only after it: export, score and
+    adjudication. The extractor has not touched the population and the exporter
+    refuses without a seal binding the units digest.
   - Not claimed: nothing is enumerated, scored, sealed or predicted, so this
     grants no quality, coverage, release or scale result, and it is not a T11.1
     retry — that round stays terminally closed with `GATE2-V2 NOT_ESTABLISHED`.

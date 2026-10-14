@@ -1,7 +1,10 @@
 # T58.1 Go gRPC syntactic consumer/registration site-coverage quality protocol
 
-Status: **preregistration complete and unsealed — the corpus is locked and every
-decision is frozen; no site has been enumerated, scored, sealed or predicted.**
+Status: **preregistration complete, oracle pre-seal pass run, awaiting Ben's §7
+seal.** Every decision is frozen, the corpus is locked, and the independent oracle
+has run over the population **without the extractor**: 34,089 scored sites, 114
+times the frozen floor, so §2's stop rule does not fire. Nothing is scored, sealed
+or predicted, and the extractor has not touched the population.
 Ben chose the site-coverage claim, a fresh blind population, the frozen
 filename-convention identity and observed-corpus version recording on 2026-10-13;
 on 2026-10-14 he approved and closed the 18-name list — which
@@ -426,6 +429,54 @@ package. The separation therefore held in outcome but was not attempt-clean, whi
 is what a procedural rather than technical guarantee costs. It is recorded here
 rather than smoothed over, and any result must carry it.
 
+### Pre-seal oracle pass (2026-10-14)
+
+The oracle ran over the locked population **without the extractor**, as §9 step 3
+requires, in 8.6 seconds across all 13 units. Its output is
+`spike/t581/round/sites.jsonl.gz` (612,614 bytes,
+`sha256:05f23347b48cb620c3670ea74a80e27dba897008095a77705c6db0a66bb0c815`;
+uncompressed `sha256:4955e9d76cdb079b52e7a79e836f091d7bb5059e14ee672b714b35f6ff511b74`),
+holding 34,089 site rows and 13 out-of-domain aggregates — one per unit, so no
+unit failed to scan.
+
+| State | Sites |
+|---|---|
+| Resolved call | 20,534 |
+| Ambiguous call | 13,317 |
+| Resolved registration | 159 |
+| Ambiguous registration | 73 |
+| Gap: `source_too_large` | 5 |
+| Gap: `parse_error` | 1 |
+| **Scored total** | **34,089** |
+| Out of domain (aggregated, not scored) | 2,870,212 |
+
+That leaves **34,089 scored sites**, which is 114 times the frozen §6 floor of 300,
+so §2's stop rule does not fire and the round may proceed to seal. Out-of-domain
+candidates break down as 2,862,933 `unindexed_selector` and 7,279
+`zero_arguments` across 42,313 files; every aggregate's `total` equals the sum of
+its `by_reason`, and both cause keys are present in all 13.
+
+**Two disclosures this pass makes unavoidable.**
+
+- **The blind spot dwarfs the claim, by 84 to 1.** For every scored site there are
+  84.2 selector calls the rules place silently out of domain. That is a direct
+  consequence of GD10 and is not a defect, but it bounds what any passing score
+  means far more tightly than the site count suggests: this round measures the
+  extractor's fidelity on the narrow shape it claims, over a corpus in which the
+  overwhelming majority of call-shaped syntax is outside the claim. `grafana/loki`
+  is the extreme case — 926,726 out-of-domain candidates against 2,075 scored
+  sites.
+- **Concentration is high, and two members contribute almost nothing.** The four
+  largest members supply 78.9% of scored sites (`moby/buildkit` 21.1%,
+  `containerd/containerd` 20.2%, `temporalio/temporal` 19.9%, `vitessio/vitess`
+  17.7%). At the other end `kubevirt/kubevirt` contributes 12 scored sites from
+  9,680 `.go` files and **zero** resolved calls, and `spiffe/spire` contributes 5
+  from 1,233 files — both because they hold only 4 and 1 same-repository split
+  stubs. This is exactly why §6 discloses per-repository counts instead of flooring
+  them: a distribution floor would have failed the round over population shape, and
+  the honest statement is that the result is dominated by four repositories and
+  says little about the two stub-poor ones.
+
 ### Row identity used for scoring
 
 | Field | Value |
@@ -564,8 +615,10 @@ follows must reproduce the sealed counts exactly.
 
 ## 8. Result
 
-**Not run.** No population has been enumerated, no oracle pass has been
-recorded, no score exists and nothing is sealed.
+**Not run.** The oracle's pre-seal pass is recorded in §3, but the extractor has
+not been run over the population, no candidate stream exists, no score exists,
+nothing is sealed and no threshold has been evaluated. §7's seal must be published
+before `export` may touch the population, and the exporter refuses without it.
 
 ## 9. Preregistration status and remaining sequence
 
@@ -590,10 +643,9 @@ recorded, no score exists and nothing is sealed.
    test_score.py, README.md}`. None of these may run the extractor over the
    population before the seal.
 2. *Separate author:* write `spike/t581/oracle` from §1 and §3 alone.
-3. *Agent:* run the oracle's **pre-seal pass** and publish its state table and
-   scored-site count in §3, before any extractor run. If the scored-site count is
-   below the §6 floor, the round stops there under §2's stop rule and a
-   replacement round needs a newly pre-declared population.
+3. *Agent:* ~~run the oracle's pre-seal pass~~ — **done 2026-10-14**, recorded in
+   §3 with its state table, digests and two disclosures. 34,089 scored sites clear
+   the §6 floor of 300 by 114 times, so §2's stop rule does not fire.
 4. *Ben:* seal per §7 — publish the commit, the population digest and the tool
    digests in a public gist **before** `export` touches the population.
 5. *Agent:* run `export`, then `score`, then adjudicate every disagreement per §4,
