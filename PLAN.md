@@ -11384,3 +11384,19 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   abstaining as D8's nested container. One bounded typedef-target helper now
   serves both container-element and top-level-map detection. A diagnostic
   re-run over round 3's seen files changes only that row.
+
+- **2026-10-14 — T49.3 releases Thrift declarations through a release-scoped
+  Contract Atlas.**
+  - **The defect.** Released alone, `thrift-contract` would have admitted an
+    Atlas whose certificate still listed every catalog domain as
+    `unpublished`, and whose operations returned empty implementation and
+    caller lists. Both read as measured absence. This is the T57.2
+    vocabulary defect in another surface.
+  - **The fix.** `CatalogReleasedDomains` narrows the certificate to the
+    released domains. An operation derives `unavailable_relationships` from
+    that certificate: implementations need the consumer domain; callers and
+    unresolved candidates need both the consumer and caller domains. A
+    partial caller list would mislead as much as an empty one.
+  - **Unchanged.** Experimental and default Atlas bytes, through omitempty.
+  - **Cost.** The narrowed certificate reads fewer domains, plus two slice
+    scans per detail. There is no new query, lock, child or state.

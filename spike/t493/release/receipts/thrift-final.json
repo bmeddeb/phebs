@@ -1,0 +1,29 @@
+{
+ "revoked-rel-phebs.kafka.consumer-1.0.2": {
+  "atlas_equals_oracle": true,
+  "capabilities": [
+   "contract-atlas",
+   "kafka-topic-usage",
+   "service-catalog-v2"
+  ],
+  "seconds_to_oracle_equal": 35.194
+ },
+ "revoked-rel-phebs.thrift.contract-1.0.0": {
+  "atlas_status": 404,
+  "capabilities": [
+   "kafka-topic-inventory",
+   "kafka-topic-usage",
+   "service-catalog-v2"
+  ]
+ },
+ "signed": {
+  "atlas_equals_oracle": true,
+  "capabilities": [
+   "contract-atlas",
+   "kafka-topic-inventory",
+   "kafka-topic-usage",
+   "service-catalog-v2"
+  ],
+  "seconds_to_oracle_equal": 53.087
+ }
+}

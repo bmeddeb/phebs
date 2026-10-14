@@ -1,0 +1,137 @@
+{
+ "binary_sha256": "sha256:8aabade00c34f58a209d578ab1cb3f694e2ef53c4273c1cac42b8146e078ce07",
+ "data_bytes": 555064303,
+ "expected": {
+  "AlibabaResearch__DAMO-ConvAI": {
+   "operations": 4,
+   "services": 1
+  },
+  "HartLuk__CCS": {
+   "operations": 8,
+   "services": 1
+  },
+  "StrikeW__aicampf2": {
+   "operations": 2,
+   "services": 1
+  },
+  "Xavier2323__Distributed-File-System": {
+   "operations": 11,
+   "services": 2
+  },
+  "Xavier2323__Distributed-ML-System": {
+   "operations": 4,
+   "services": 2
+  },
+  "cloudwego__kitex-examples": {
+   "operations": 44,
+   "services": 18
+  },
+  "matiasfha__cvnodestreaming": {
+   "operations": 34,
+   "services": 5
+  },
+  "myntra__golimit": {
+   "operations": 4,
+   "services": 1
+  },
+  "osquery__osquery-go": {
+   "operations": 9,
+   "services": 2
+  }
+ },
+ "phases": {
+  "backup-restore": {
+   "atlas_equals_oracle": true,
+   "ready_seconds": 1.254,
+   "rss": {
+    "mean_bytes": 249434629,
+    "peak_bytes": 363413504,
+    "peak_processes": 7,
+    "samples": 87
+   },
+   "seconds_to_oracle_equal": 44.204,
+   "stop": {
+    "outcome": "success",
+    "stop_mode": "graceful",
+    "wall_seconds": 45.6
+   }
+  },
+  "cold": {
+   "anonymous": 401,
+   "atlas_equals_oracle": true,
+   "atlas_latency": {
+    "max_ms": 987.9,
+    "n": 20,
+    "p50_ms": 952.4,
+    "p95_ms": 987.9,
+    "p99_ms": 987.9
+   },
+   "capabilities": [
+    "contract-atlas",
+    "service-catalog-v2"
+   ],
+   "member_atlas_limited_to": "HartLuk__CCS",
+   "operation_details_checked": 9,
+   "ready_seconds": 2.255,
+   "rss": {
+    "mean_bytes": 258612989,
+    "peak_bytes": 808370176,
+    "peak_processes": 7,
+    "samples": 190
+   },
+   "seconds_to_oracle_equal": 74.905,
+   "stop": {
+    "outcome": "success",
+    "stop_mode": "graceful",
+    "wall_seconds": 99.176
+   }
+  },
+  "hard-death": {
+   "atlas_equals_oracle": true,
+   "ready_seconds": 1.253,
+   "rss": {
+    "mean_bytes": 259715072,
+    "peak_bytes": 268972032,
+    "peak_processes": 2,
+    "samples": 3
+   },
+   "seconds_to_oracle_equal": 1.34,
+   "stop": {
+    "outcome": "success",
+    "stop_mode": "graceful",
+    "wall_seconds": 2.715
+   }
+  },
+  "restart": {
+   "atlas_equals_oracle": true,
+   "backup_bytes": 233056013,
+   "ready_seconds": 1.505,
+   "rss": {
+    "mean_bytes": 259790690,
+    "peak_bytes": 271925248,
+    "peak_processes": 2,
+    "samples": 13
+   },
+   "seconds_to_oracle_equal": 1.355,
+   "stop": {
+    "outcome": "success",
+    "stop_mode": "hard_kill",
+    "wall_seconds": 7.707
+   }
+  }
+ },
+ "repositories": {
+  "AlibabaResearch__DAMO-ConvAI": "local/home/ben/phebs-rehearsals/t493-release-20261014/thrift-rehearsal-2/corpus/AlibabaResearch__DAMO-ConvAI",
+  "HartLuk__CCS": "local/home/ben/phebs-rehearsals/t493-release-20261014/thrift-rehearsal-2/corpus/HartLuk__CCS",
+  "StrikeW__aicampf2": "local/home/ben/phebs-rehearsals/t493-release-20261014/thrift-rehearsal-2/corpus/StrikeW__aicampf2",
+  "TCKnickerbocker__DHT_based_Federated_Learning_System": "local/home/ben/phebs-rehearsals/t493-release-20261014/thrift-rehearsal-2/corpus/TCKnickerbocker__DHT_based_Federated_Learning_System",
+  "Xavier2323__Distributed-File-System": "local/home/ben/phebs-rehearsals/t493-release-20261014/thrift-rehearsal-2/corpus/Xavier2323__Distributed-File-System",
+  "Xavier2323__Distributed-ML-System": "local/home/ben/phebs-rehearsals/t493-release-20261014/thrift-rehearsal-2/corpus/Xavier2323__Distributed-ML-System",
+  "cloudwego__kitex-examples": "local/home/ben/phebs-rehearsals/t493-release-20261014/thrift-rehearsal-2/corpus/cloudwego__kitex-examples",
+  "matiasfha__cvnodestreaming": "local/home/ben/phebs-rehearsals/t493-release-20261014/thrift-rehearsal-2/corpus/matiasfha__cvnodestreaming",
+  "myntra__golimit": "local/home/ben/phebs-rehearsals/t493-release-20261014/thrift-rehearsal-2/corpus/myntra__golimit",
+  "osquery__osquery-go": "local/home/ben/phebs-rehearsals/t493-release-20261014/thrift-rehearsal-2/corpus/osquery__osquery-go"
+ },
+ "restore_seconds": 22.947,
+ "schema": "t493-thrift-atlas-rehearsal-v1"
+}

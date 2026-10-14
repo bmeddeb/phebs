@@ -18856,6 +18856,26 @@ candidate pointer) and one one-row fenced probe, on both build and confirm.
 Pages and locators reuse the store fence. No new lock, cache, schema, child or
 background work is added, and legacy-only stores take no new reads.*
 
+*T49.3 Thrift release (2026-10-14, Claude lead, Linux track):
+**`rel-phebs.thrift.contract-1.0.0` released for binary `2467bd17`, with
+producer 1.0.3, consumer 1.0.2 and Topics 1.0.1 re-bound** (Thrift protocol
+§13).
+
+- **Admission.** A release-only Atlas now covers exactly the released catalog
+  domains, and an operation names `unavailable_relationships` (implementations,
+  callers and unresolved candidates) instead of returning empty lists. That
+  meets this ticket's acceptance criterion that unrelated
+  implementation/consumer evidence remains unavailable unless separately
+  released. The `get_contract_operation` MCP schema admits the field.
+- **Rehearsal.** Atlas equalled the T49.2 round-3 oracle in every phase:
+  33 services and 120 operations. Member scoping, 401, and 404 on hidden
+  operations all held.
+- **Revocation.** Revoking the Thrift release removes Atlas and leaves Kafka
+  and Topics serving; revoking the consumer leaves Atlas untouched.
+- **Gates.** `cmd/phebs`, `internal/api` (race) and `internal/mcp` pass,
+  lint reports 0 issues, and the new Atlas test fails under mutation.
+- **Release selection for protobuf** still waits on T49.1b's labels.*
+
 **T49.4 · Measured Atlas promotion and product closure** — satisfy the common
 promotion bar for each selected protocol and the declared UI/HTTP/MCP surface.
 One protocol may release while the other remains explicitly unavailable.

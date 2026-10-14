@@ -278,6 +278,13 @@ and who owns each.
     sheet.
   - Remaining, Ben: label them. Then the agent compares and adjudicates. Release selection (T49.3 remainder) and T49.4
     follow a passing round.
+- **Thrift declarations (T49.2/T49.3).**
+  - Released 2026-10-14: `rel-phebs.thrift.contract-1.0.0` (`thriftdecl`
+    1.1.2), measured against the pinned Apache Thrift compiler. Round 3:
+    declarations 100%, field IDs 100%, reference state 99.86%.
+  - It serves Contract Atlas over HTTP and UI; consumer and caller sections
+    are named unavailable. Atlas MCP stays annexed to Caller Map. See the
+    Thrift protocol §13.
 - **Compatibility (Epic 53).**
   - Done: T53.2 fixed the Linux sandbox. T53.1 has 29 independent goldens
     covering all 15 WIRE rules.

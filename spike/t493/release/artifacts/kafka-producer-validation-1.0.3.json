@@ -1,0 +1,139 @@
+{
+ "authorization": {
+  "anonymous": 401,
+  "member_census_limited_to_visible_repository": true,
+  "member_reads_admin_bundle": 404
+ },
+ "not_established": [
+  "independent human review",
+  "topic-name precision (4 literal sites measured)"
+ ],
+ "pack_claim_version": "1.0.3",
+ "pack_id": "phebs.kafka.producer",
+ "quality": {
+  "covered_agree": 762,
+  "extra": 0,
+  "miss_rate_upper_95": 0.0039,
+  "protocol": "docs/KAFKA_PRODUCER_QUALITY_PROTOCOL.md section 8",
+  "scored_sites": 762,
+  "seal_commit": "814fc0e20e4e6c36b2f9c7a5ac3c7d5d45620d64",
+  "seal_gist": "https://gist.github.com/Blandt/78a8678412666759038795eb854f16e9",
+  "wrong_topic": 0
+ },
+ "release_binary": {
+  "source_commit": "2467bd17a8e483bdfe427419e7a71633fafdf2ac"
+ },
+ "reviewer": "Claude, named by Ben (not an independent human review)",
+ "schema": "phebs-extractor-pack-validation-v1",
+ "served_path": {
+  "census_matched_oracle_every_phase_for_every_plane": true,
+  "data_bytes": 374850640,
+  "expected_census_from_independent_oracle": {
+   "consumer": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 1,
+    "selector-expr": 2,
+    "unresolved-ident": 11
+   },
+   "producer": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 2,
+    "selector-expr": 2,
+    "unresolved-ident": 14
+   }
+  },
+  "phases": {
+   "backup-restore": {
+    "census_matches_oracle": true,
+    "ready_seconds": 1.254,
+    "rss_peak_bytes": 299044864,
+    "seconds_to_published": 57.786,
+    "topics": {
+     "inventory_matches_oracle": true,
+     "topics": 41
+    }
+   },
+   "cold": {
+    "anonymous": 401,
+    "anonymous_inventory": 401,
+    "capabilities": [
+     "kafka-topic-inventory",
+     "kafka-topic-usage",
+     "service-catalog-v2"
+    ],
+    "census_matches_oracle": true,
+    "inventory_latency": {
+     "max_ms": 318.13,
+     "n": 20,
+     "p50_ms": 309.79,
+     "p95_ms": 318.13,
+     "p99_ms": 318.13
+    },
+    "mcp_inventory_matches_http": true,
+    "member_topics": {
+     "inventory_matches_oracle": true,
+     "topics": 1
+    },
+    "query_latency": {
+     "max_ms": 331.64,
+     "n": 60,
+     "p50_ms": 301.02,
+     "p95_ms": 310.87,
+     "p99_ms": 331.64
+    },
+    "ready_seconds": 2.255,
+    "rss_peak_bytes": 437284864,
+    "seconds_to_published": 65.442,
+    "topics": {
+     "inventory_matches_oracle": true,
+     "topics": 41
+    }
+   },
+   "hard-death": {
+    "census_matches_oracle": true,
+    "ready_seconds": 1.254,
+    "rss_peak_bytes": 260853760,
+    "seconds_to_published": 3.768,
+    "topics": {
+     "inventory_matches_oracle": true,
+     "topics": 41
+    }
+   },
+   "restart": {
+    "backup_bytes": 144449015,
+    "census_matches_oracle": true,
+    "ready_seconds": 1.504,
+    "rss_peak_bytes": 263802880,
+    "seconds_to_published": 3.775,
+    "topics": {
+     "inventory_matches_oracle": true,
+     "topics": 41
+    }
+   }
+  },
+  "rehearsal_key": "a throwaway key over the identical binary and code path; the signed records are proven separately",
+  "rehearsal_sha256": "sha256:feced93eeb8ae4cba166c2ff515032c9e3b607d891b7b7c12be0e14ac24001f5",
+  "released_planes": [
+   "consumer",
+   "producer"
+  ],
+  "repositories": [
+   "Cris1928__SO1_1S2024_202107190",
+   "Nahua-Foundation__ragota",
+   "OsmanPL__sopes1-proyecto2",
+   "SidIvan__MtsFinalProject",
+   "dakhipp__graphql-services",
+   "kartikey09__IIITB-SPE-Major-Project",
+   "sat3en__crosspoint2.0",
+   "swiggy-2022-bootcamp__training-i-plus-plus",
+   "wangzhongyang007__goframe-shop-v2",
+   "xhuniktzi__SO1_1S2024_201900462"
+  ],
+  "restore_seconds": 24.602
+ },
+ "supersedes": "rel-phebs.kafka.producer-1.0.0 (binary 71924817); same claim, re-bound to the T56.3 binary"
+}

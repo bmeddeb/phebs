@@ -385,3 +385,64 @@ already-seen locked files changes exactly one row:
 The round-3 result in §11 stands as measured on 1.1.1. Any release binds
 1.1.2, so its served-path rehearsal re-checks the fixed behavior on real
 data.
+
+## 13. Release (2026-10-14): `phebs.thrift.contract` 1.0.0, signed and proven on the real binary
+
+`spike/t493/release/selection/` holds four records signed with
+`ben-phebs-release-2026-10` for binary `2467bd17`
+(`sha256:8aabade0…`, reproduced byte for byte by a second clean build). All
+expire 2027-01-12:
+
+- `rel-phebs.thrift.contract-1.0.0` binds `thriftdecl` 1.1.2;
+- producer 1.0.3, consumer 1.0.2 and Topics 1.0.1 re-bind their unchanged
+  claims to this binary.
+
+**Code.** Under release-only admission, Contract Atlas describes exactly the
+released catalog domains, and an operation lists
+`unavailable_relationships` instead of returning empty lists, which would
+read as "no callers". Default and experimental Atlas bytes are unchanged.
+
+**Thrift rehearsal** (`receipts/thrift-rehearsal.json`, throwaway key,
+round-3 population). In every phase (cold, restart, SIGKILL,
+backup→restore), Atlas equalled the oracle's 33 service and 120 operation
+declarations exactly: one item per declaring file, and nothing from the
+gapped files. The cold phase also showed:
+
+- capabilities exactly `contract-atlas` and the service catalog;
+- anonymous 401;
+- an OIDC member limited to its one repository, with hidden operations
+  answering 404;
+- every repository's operation detail naming all three relationship
+  sections unavailable, with coverage `thrift-contract` alone.
+
+| Measure | Value |
+|---|---|
+| Cold start to Atlas equal to the oracle | 75 s |
+| Restart / SIGKILL recovery | 1.4 s |
+| Backup | 222 MiB |
+| Restore | 23 s |
+| Whole-Atlas listing p95 (every page) | 988 ms |
+| Peak RSS | 771 MiB |
+
+**Kafka and Topics rehearsal on the same binary**
+(`receipts/kafka-rehearsal.json`): 41 of 41 topics and exact censuses in
+every phase, with member scoping, and MCP equal to HTTP.
+
+**Final proofs with Ben's key.**
+
+- **All four records** (`receipts/thrift-final.json`): Atlas equals the
+  oracle, and capabilities are `contract-atlas`, `kafka-topic-inventory`,
+  `kafka-topic-usage` and the service catalog.
+  - Revoking the Thrift release alone: Atlas 404, Kafka and Topics still
+    served.
+  - Revoking the consumer alone: Atlas unaffected and still equal; Topics
+    withdrawn.
+- **The three Kafka records** (`receipts/kafka-final.json`): 41 of 41
+  topics.
+  - Revoking Topics alone: inventory 404, planes exact.
+  - Revoking the consumer: the producer stays exact, and Topics is
+    withdrawn.
+
+**Not established.** No independent human review. Atlas MCP discovery,
+which is annexed to Caller Map. Protobuf declarations. The envelope covers
+only this host and this population.

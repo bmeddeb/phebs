@@ -1,0 +1,146 @@
+{
+ "authorization": {
+  "anonymous": 401,
+  "mcp_inventory_matches_http": true,
+  "member_inventory_limited_to_visible_repository": true
+ },
+ "not_established": [
+  "independent human review",
+  "production-scale topic rows (production Go code in the 17-repository corpus spells no literal topic)"
+ ],
+ "pack_claim_version": "1.0.1",
+ "pack_id": "phebs.kafka.topics",
+ "quality": {
+  "protocol": "docs/TOPICS_QUALITY_PROTOCOL.md sections 7-8",
+  "round_1": {
+   "census_exact_every_phase": true,
+   "expected_topics": 0,
+   "repositories": 7,
+   "rows": "vacuous, not established",
+   "seal_commit": "562e1af7"
+  },
+  "round_2": {
+   "census_exact_every_phase": true,
+   "expected_topics": 41,
+   "extra": 0,
+   "lock_commit": "4a1d23b4",
+   "member_inventory_matches": true,
+   "missing": 0,
+   "power_floor": 20,
+   "repositories": 10,
+   "seal_commit": "e2f6e67b",
+   "served_topics_matching": 41,
+   "wrong_counts": 0
+  }
+ },
+ "release_binary": {
+  "source_commit": "2467bd17a8e483bdfe427419e7a71633fafdf2ac"
+ },
+ "reviewer": "Claude, named by Ben (not an independent human review)",
+ "schema": "phebs-verdict-claim-validation-v1",
+ "served_path": {
+  "data_bytes": 374850640,
+  "expected_census_from_independent_oracle": {
+   "consumer": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 1,
+    "selector-expr": 2,
+    "unresolved-ident": 11
+   },
+   "producer": {
+    "ambiguous-library-import": 0,
+    "call-expr": 0,
+    "invalid-topic-literal": 0,
+    "non-literal-expr": 2,
+    "selector-expr": 2,
+    "unresolved-ident": 14
+   }
+  },
+  "phases": {
+   "backup-restore": {
+    "census_matches_oracle": true,
+    "ready_seconds": 1.254,
+    "rss_peak_bytes": 299044864,
+    "seconds_to_published": 57.786,
+    "topics": {
+     "inventory_matches_oracle": true,
+     "topics": 41
+    }
+   },
+   "cold": {
+    "anonymous": 401,
+    "anonymous_inventory": 401,
+    "capabilities": [
+     "kafka-topic-inventory",
+     "kafka-topic-usage",
+     "service-catalog-v2"
+    ],
+    "census_matches_oracle": true,
+    "inventory_latency": {
+     "max_ms": 318.13,
+     "n": 20,
+     "p50_ms": 309.79,
+     "p95_ms": 318.13,
+     "p99_ms": 318.13
+    },
+    "mcp_inventory_matches_http": true,
+    "member_topics": {
+     "inventory_matches_oracle": true,
+     "topics": 1
+    },
+    "query_latency": {
+     "max_ms": 331.64,
+     "n": 60,
+     "p50_ms": 301.02,
+     "p95_ms": 310.87,
+     "p99_ms": 331.64
+    },
+    "ready_seconds": 2.255,
+    "rss_peak_bytes": 437284864,
+    "seconds_to_published": 65.442,
+    "topics": {
+     "inventory_matches_oracle": true,
+     "topics": 41
+    }
+   },
+   "hard-death": {
+    "census_matches_oracle": true,
+    "ready_seconds": 1.254,
+    "rss_peak_bytes": 260853760,
+    "seconds_to_published": 3.768,
+    "topics": {
+     "inventory_matches_oracle": true,
+     "topics": 41
+    }
+   },
+   "restart": {
+    "backup_bytes": 144449015,
+    "census_matches_oracle": true,
+    "ready_seconds": 1.504,
+    "rss_peak_bytes": 263802880,
+    "seconds_to_published": 3.775,
+    "topics": {
+     "inventory_matches_oracle": true,
+     "topics": 41
+    }
+   }
+  },
+  "rehearsal_key": "a throwaway key over the identical binary and code path; the signed records are proven separately",
+  "rehearsal_sha256": "sha256:feced93eeb8ae4cba166c2ff515032c9e3b607d891b7b7c12be0e14ac24001f5",
+  "repositories": [
+   "Cris1928__SO1_1S2024_202107190",
+   "Nahua-Foundation__ragota",
+   "OsmanPL__sopes1-proyecto2",
+   "SidIvan__MtsFinalProject",
+   "dakhipp__graphql-services",
+   "kartikey09__IIITB-SPE-Major-Project",
+   "sat3en__crosspoint2.0",
+   "swiggy-2022-bootcamp__training-i-plus-plus",
+   "wangzhongyang007__goframe-shop-v2",
+   "xhuniktzi__SO1_1S2024_201900462"
+  ],
+  "restore_seconds": 24.602
+ }
+}

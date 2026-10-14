@@ -1,0 +1,86 @@
+{
+ "authorization": {
+  "anonymous": 401,
+  "member_atlas_limited_to_visible_repository": true,
+  "member_hidden_operation": 404
+ },
+ "not_established": [
+  "independent human review",
+  "Atlas MCP surface (annexed to Caller Map)",
+  "protobuf declarations"
+ ],
+ "pack_claim_version": "1.0.0",
+ "pack_id": "phebs.thrift.contract",
+ "quality": {
+  "oracle": "Apache Thrift 0.19.0 (thrift-compiler=0.19.0-2.1build5 on ubuntu@sha256:534baea6...)",
+  "protocol": "docs/THRIFT_DECLARATION_QUALITY_PROTOCOL.md sections 7-12",
+  "round_1": "failed (defects fixed in 1.1.0)",
+  "round_2": {
+   "declarations": "1353/1353",
+   "field_ids": "718/718",
+   "lock": "21ae7ae2",
+   "reference_state": "717/718",
+   "seal": "d215ab98"
+  },
+  "round_3": {
+   "declarations": "1223/1223 after adjudication",
+   "field_ids": "692/692",
+   "lock": "3b8ed93d",
+   "reference_state": "691/692; the one false claim fixed in 1.1.2 (diagnostic 692/692)",
+   "seal": "dead94a2"
+  }
+ },
+ "release_binary": {
+  "source_commit": "2467bd17a8e483bdfe427419e7a71633fafdf2ac"
+ },
+ "reviewer": "Claude, named by Ben (not an independent human review)",
+ "schema": "phebs-extractor-pack-validation-v1",
+ "served_path": {
+  "data_bytes": 555064303,
+  "expected": "spike/t493/expected.json (33 services, 120 operations)",
+  "phases": {
+   "backup-restore": {
+    "atlas_equals_oracle": true,
+    "ready_seconds": 1.254,
+    "rss_peak_bytes": 363413504,
+    "seconds_to_oracle_equal": 44.204
+   },
+   "cold": {
+    "anonymous": 401,
+    "atlas_equals_oracle": true,
+    "atlas_latency": {
+     "max_ms": 987.9,
+     "n": 20,
+     "p50_ms": 952.4,
+     "p95_ms": 987.9,
+     "p99_ms": 987.9
+    },
+    "capabilities": [
+     "contract-atlas",
+     "service-catalog-v2"
+    ],
+    "member_atlas_limited_to": "HartLuk__CCS",
+    "operation_details_checked": 9,
+    "ready_seconds": 2.255,
+    "rss_peak_bytes": 808370176,
+    "seconds_to_oracle_equal": 74.905
+   },
+   "hard-death": {
+    "atlas_equals_oracle": true,
+    "ready_seconds": 1.253,
+    "rss_peak_bytes": 268972032,
+    "seconds_to_oracle_equal": 1.34
+   },
+   "restart": {
+    "atlas_equals_oracle": true,
+    "backup_bytes": 233056013,
+    "ready_seconds": 1.505,
+    "rss_peak_bytes": 271925248,
+    "seconds_to_oracle_equal": 1.355
+   }
+  },
+  "rehearsal_key": "a throwaway key over the identical binary and code path; the signed records are proven separately",
+  "rehearsal_sha256": "sha256:fb22744fa03311de7fff749f035ba0b37088510a5cfc07591ba3d38dc2e4f6af",
+  "restore_seconds": 22.947
+ }
+}

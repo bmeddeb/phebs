@@ -1,0 +1,28 @@
+{
+ "excluded": [
+  "thrift-consumer",
+  "thrift-caller",
+  "proto-contract (Epic 49 T49.1b)",
+  "include resolution (non-claim)"
+ ],
+ "pack_claim_version": "1.0.0",
+ "pack_id": "phebs.thrift.contract",
+ "recipe": {
+  "extractors": [
+   "thrift-contract@1.1.2"
+  ],
+  "registry": "cmd/phebs packRecipes"
+ },
+ "schema": "phebs-extractor-pack-manifest-v1",
+ "scope": "CatalogReleasedDomains: Contract Atlas over released declaration domains only; Thrift consumer and caller sections named unavailable; no protobuf, Impact, field references or compatibility",
+ "surfaces": {
+  "capability": "contract-atlas",
+  "http": [
+   "GET /api/contract_atlas",
+   "GET /api/contract_atlas/operation"
+  ],
+  "mcp_note": "Atlas MCP discovery tools register only as an annex with Caller Map (T20.11), which this release does not admit",
+  "mcp_tools": [],
+  "ui": "/contracts"
+ }
+}

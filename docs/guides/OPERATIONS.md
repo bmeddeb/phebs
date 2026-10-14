@@ -4684,7 +4684,18 @@ succeeds (the first five remain available when compatibility is unavailable):
   singular↔repeated change as breaking, including string and message changes
   that protobuf documents as wire-compatible.
 
-  **Released Kafka planes with Topics (T57.3, current).** Use
+  **Released Thrift declarations with Kafka and Topics (T49.3, current).** Use
+  `spike/t493/release/{selection,artifacts}`. The selection holds Thrift
+  contract 1.0.0, producer 1.0.3, consumer 1.0.2 and Topics 1.0.1, and admits
+  only the binary built from `2467bd17` (`sha256:8aabade0…`). It supersedes
+  the T57.3 selection.
+
+  - Thrift admits Contract Atlas (`/api/contract_atlas`, `/contracts`) over
+    `thrift-contract` alone.
+  - Revoking `rel-phebs.thrift.contract-1.0.0` withdraws only Atlas.
+  - All four records expire on 2027-01-12.
+
+  **Released Kafka planes with Topics (T57.3).** Use
   `spike/t573/release/{selection,artifacts}`. The selection holds Topics
   1.0.0, producer 1.0.2 and consumer 1.0.1, and admits only the binary built
   from `dc7632ee` (`sha256:256a85f4…`). It supersedes the T56.3 selection,

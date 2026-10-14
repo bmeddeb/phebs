@@ -1,0 +1,213 @@
+{
+ "repositories": {
+  "AlibabaResearch__DAMO-ConvAI": {
+   "operations": [
+    "/picard.Picard/batchFeed",
+    "/picard.Picard/feed",
+    "/picard.Picard/registerSQLSchema",
+    "/picard.Picard/registerTokenizer"
+   ],
+   "services": [
+    "picard.Picard"
+   ]
+  },
+  "HartLuk__CCS": {
+   "operations": [
+    "/rpc_service.ClassSchedulignService/createTaskForClassStrategy",
+    "/rpc_service.ClassSchedulignService/delTaskForClassStrategy",
+    "/rpc_service.ClassSchedulignService/getClassStrategyRule",
+    "/rpc_service.ClassSchedulignService/getTaskResultForClassStrategy",
+    "/rpc_service.ClassSchedulignService/getTasksStatusForClassStrategy",
+    "/rpc_service.ClassSchedulignService/modifyTaskResultForClassStrategy",
+    "/rpc_service.ClassSchedulignService/ping",
+    "/rpc_service.ClassSchedulignService/runTaskForClassStrategy"
+   ],
+   "services": [
+    "rpc_service.ClassSchedulignService"
+   ]
+  },
+  "StrikeW__aicampf2": {
+   "operations": [
+    "/service.ImageService/ping",
+    "/service.ImageService/predict"
+   ],
+   "services": [
+    "service.ImageService"
+   ]
+  },
+  "Xavier2323__Distributed-File-System": {
+   "operations": [
+    "/service.CoordinatorService/getHighestVersionForRead",
+    "/service.CoordinatorService/getHighestVersionForWrite",
+    "/service.CoordinatorService/registerWrite",
+    "/service.ReplicaService/copyFile",
+    "/service.ReplicaService/getFileChunk",
+    "/service.ReplicaService/getFileSize",
+    "/service.ReplicaService/getFileVersion",
+    "/service.ReplicaService/listFiles",
+    "/service.ReplicaService/readFile",
+    "/service.ReplicaService/updateFile",
+    "/service.ReplicaService/writeFile"
+   ],
+   "services": [
+    "service.CoordinatorService",
+    "service.ReplicaService"
+   ]
+  },
+  "Xavier2323__Distributed-ML-System": {
+   "operations": [
+    "/service.ComputeNode/initializeTraining",
+    "/service.ComputeNode/should_accept_task",
+    "/service.ComputeNode/trainModel",
+    "/service.Coordinator/train"
+   ],
+   "services": [
+    "service.ComputeNode",
+    "service.Coordinator"
+   ]
+  },
+  "cloudwego__kitex-examples": {
+   "operations": [
+    "/api.Echo/echo",
+    "/api.Hello/echo",
+    "/api.ServiceA/echoA",
+    "/api.ServiceB/echoB",
+    "/echo.TestService/Echo",
+    "/echo.TestService/Echo",
+    "/echo.TestService/EchoClient",
+    "/echo.TestService/EchoClient",
+    "/echo.TestService/EchoPingPong",
+    "/echo.TestService/EchoPingPong",
+    "/echo.TestService/EchoServer",
+    "/echo.TestService/EchoServer",
+    "/echo.TestService/EchoUnary",
+    "/example.HelloService/HelloMethod",
+    "/example.HelloService/HelloMethod",
+    "/http.BizService/BizMethod1",
+    "/http.BizService/BizMethod2",
+    "/http.BizService/BizMethod3",
+    "/item.ItemService/GetItem",
+    "/notedemo.NoteService/CreateNote",
+    "/notedemo.NoteService/DeleteNote",
+    "/notedemo.NoteService/MGetNote",
+    "/notedemo.NoteService/QueryNote",
+    "/notedemo.NoteService/UpdateNote",
+    "/proxyless.GreetService/SayHello1",
+    "/proxyless.GreetService/SayHello2",
+    "/server.ExampleService/ExampleMethod",
+    "/stock.StockService/GetItemStock",
+    "/user.UserService/CreateUser",
+    "/user.UserService/CreateUser",
+    "/user.UserService/CreateUser",
+    "/user.UserService/CreateUser",
+    "/user.UserService/DeleteUser",
+    "/user.UserService/DeleteUser",
+    "/user.UserService/DeleteUser",
+    "/user.UserService/DeleteUser",
+    "/user.UserService/QueryUser",
+    "/user.UserService/QueryUser",
+    "/user.UserService/QueryUser",
+    "/user.UserService/QueryUser",
+    "/user.UserService/UpdateUser",
+    "/user.UserService/UpdateUser",
+    "/user.UserService/UpdateUser",
+    "/user.UserService/UpdateUser"
+   ],
+   "services": [
+    "api.Echo",
+    "api.Hello",
+    "api.ServiceA",
+    "api.ServiceB",
+    "echo.TestService",
+    "echo.TestService",
+    "example.HelloService",
+    "example.HelloService",
+    "http.BizService",
+    "item.ItemService",
+    "notedemo.NoteService",
+    "proxyless.GreetService",
+    "server.ExampleService",
+    "stock.StockService",
+    "user.UserService",
+    "user.UserService",
+    "user.UserService",
+    "user.UserService"
+   ]
+  },
+  "matiasfha__cvnodestreaming": {
+   "operations": [
+    "/cassandra.Cassandra/batch_insert",
+    "/cassandra.Cassandra/batch_mutate",
+    "/cassandra.Cassandra/describe_cluster_name",
+    "/cassandra.Cassandra/describe_keyspace",
+    "/cassandra.Cassandra/describe_keyspaces",
+    "/cassandra.Cassandra/describe_ring",
+    "/cassandra.Cassandra/describe_splits",
+    "/cassandra.Cassandra/describe_version",
+    "/cassandra.Cassandra/force_table_clean",
+    "/cassandra.Cassandra/force_table_compaction",
+    "/cassandra.Cassandra/force_table_flush",
+    "/cassandra.Cassandra/get",
+    "/cassandra.Cassandra/get_count",
+    "/cassandra.Cassandra/get_range_slice",
+    "/cassandra.Cassandra/get_range_slices",
+    "/cassandra.Cassandra/get_slice",
+    "/cassandra.Cassandra/get_string_list_property",
+    "/cassandra.Cassandra/get_string_property",
+    "/cassandra.Cassandra/get_table_stats",
+    "/cassandra.Cassandra/insert",
+    "/cassandra.Cassandra/login",
+    "/cassandra.Cassandra/multiget",
+    "/cassandra.Cassandra/multiget_slice",
+    "/cassandra.Cassandra/remove",
+    "/cassandra.Cassandra/take_snapshot",
+    "/scheduler.JobExchange/get_all",
+    "/scheduler.JobExchange/get_all",
+    "/scheduler.JobExchange/get_job",
+    "/scheduler.JobExchange/get_job",
+    "/scheduler.JobExchange/insert_job",
+    "/scheduler.JobExchange/insert_job",
+    "/service.ImageService/receiveImage",
+    "/user.UserStorage/retrieve",
+    "/user.UserStorage/store"
+   ],
+   "services": [
+    "cassandra.Cassandra",
+    "scheduler.JobExchange",
+    "scheduler.JobExchange",
+    "service.ImageService",
+    "user.UserStorage"
+   ]
+  },
+  "myntra__golimit": {
+   "operations": [
+    "/com.StoreNode/IncrAction",
+    "/com.StoreNode/RateLimitGlobalAction",
+    "/com.StoreNode/SyncKeys",
+    "/com.StoreNode/SyncRateConfig"
+   ],
+   "services": [
+    "com.StoreNode"
+   ]
+  },
+  "osquery__osquery-go": {
+   "operations": [
+    "/osquery.Extension/call",
+    "/osquery.Extension/ping",
+    "/osquery.Extension/shutdown",
+    "/osquery.ExtensionManager/deregisterExtension",
+    "/osquery.ExtensionManager/extensions",
+    "/osquery.ExtensionManager/getQueryColumns",
+    "/osquery.ExtensionManager/options",
+    "/osquery.ExtensionManager/query",
+    "/osquery.ExtensionManager/registerExtension"
+   ],
+   "services": [
+    "osquery.Extension",
+    "osquery.ExtensionManager"
+   ]
+  }
+ },
+ "schema": "t493-thrift-atlas-expected-v1",
+ "source": "spike/t492 round 3 oracle (sealed dead94a2, locked 3b8ed93d), files thriftdecl 1.1.2 does not gap; one entry per declaring file"
+}

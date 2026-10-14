@@ -1,0 +1,30 @@
+{
+ "admission": "cmd/phebs releasedClaims registry; a verified released record for this pack_id admits the composed inventory only beside released phebs.kafka.producer and phebs.kafka.consumer records, and is withdrawn otherwise",
+ "bounds": {
+  "citations_per_row": 8,
+  "cursor_bytes": 4096,
+  "default_page": 50,
+  "max_page": 100,
+  "max_topics": 2000
+ },
+ "depends_on": [
+  "phebs.kafka.producer",
+  "phebs.kafka.consumer"
+ ],
+ "implementation_row": "phebs.kafka.topics list_kafka_topics@kafka-topic-inventory-v1",
+ "pack_claim_version": "1.0.1",
+ "pack_id": "phebs.kafka.topics",
+ "schema": "phebs-verdict-claim-manifest-v1",
+ "scope": "combined composition over both released planes; plane site quality inherited from T55.1/T56.1",
+ "surfaces": {
+  "capability": "kafka-topic-inventory",
+  "http": [
+   "GET /api/list_kafka_topics",
+   "GET /api/topic_inventory/{id}"
+  ],
+  "mcp_tools": [
+   "list_kafka_topics",
+   "read_topic_inventory"
+  ]
+ }
+}
