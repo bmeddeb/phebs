@@ -11251,11 +11251,32 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   precedence, which §3 already flags; the independently authored oracle is what will
   exercise it. **Blocked on Ben**
   for the §2 named list and whether `etcd-io/etcd` stays given its presence in
-  T47.2's `grpc-caller` universe, the §3 oracle-independence posture, the §6
-  thresholds including whether per-role floors are scored or only disclosed, and
-  where the round runs — it needs bare clones of the approved list, the Linux
-  corpus host is occupied by T42.2, and this macOS host has roughly 89 GiB free
-  against an estimated 30–60 GiB for 18 full clones. Only after those does the
+  T47.2's `grpc-caller` universe, the §3 oracle-independence posture, and the §6
+  thresholds including whether per-role floors are scored or only disclosed.
+
+  **The execution host is decided, on measurement rather than estimate.** Ben
+  delegated the choice. The round runs on the macOS development host over depth-1
+  clones, because §2's no-history-expansion rule means no full-history clone is
+  needed: measured depth-1 sizes on four large Go repositories outside the
+  proposed population — `hashicorp/consul` 136 MiB, `moby/moby` 159 MiB,
+  `pingcap/tidb` 217 MiB, `kubernetes/kubernetes` 396 MiB — put eighteen members
+  at roughly 4–8 GiB against 93 GiB free. The draft's earlier 30–60 GiB figure is
+  withdrawn as a full-history assumption this round does not have. The Linux
+  ceremony host is deliberately not used: it is running T42.2 work whose tests
+  fail at deadline boundaries, so clone and whole-tree extraction I/O there could
+  perturb already deadline-sensitive measurements, and AGENTS.md requires
+  serializing expensive host execution. The Ubuntu-amd64 baseline mandate covers
+  rehearsals, ceremonies and reruns of historical workloads, not an offline
+  quality measurement that produces no signed custody, ceremony receipt or scale
+  claim; a T58.3 release rehearsal would be a separate decision with its own host
+  facts. The round is pure Go over pinned Git objects, so its outcome is
+  reproducible from the recorded commits on any host, and the execution host and
+  toolchain are recorded in the artifacts regardless. Guards are enforced rather
+  than assumed: the corpus lives outside the repository at `~/phebs-t581-corpus/`
+  and is never committed, the cloner aborts cleanly below a 40 GiB free-space
+  floor and records where it stopped, symlinks are inventoried and never parsed
+  per the T47.2 etcd lesson, and no expensive Go test run is concurrent with
+  cloning or exporting. Only after Ben's three remaining decisions does the
   agent write `spike/t581/` and run the oracle's pre-seal pass. No quality,
   coverage, release, scale or SLO claim follows.
 

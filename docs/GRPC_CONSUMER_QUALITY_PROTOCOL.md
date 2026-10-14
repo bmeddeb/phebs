@@ -110,6 +110,43 @@ These describe the measured population only. The extractor inspects none of them
 stub identity is the `_grpc.pb.go` filename convention alone (GD1), so no
 generator version gates recognition at runtime and none is added by this ticket.
 
+### Host and clone discipline (DECIDED 2026-10-13)
+
+The round runs on the **macOS arm64 development host**, not the Ubuntu Linux
+ceremony host. Ben delegated the choice and it was decided on measurement rather
+than estimate.
+
+- **Depth-1 clones only.** §2 pins one commit per repository and forbids history
+  expansion, so no full-history clone is needed. Measured depth-1 sizes on four
+  large Go repositories *outside* the proposed population, used only as
+  calibration: `hashicorp/consul` 136 MiB, `moby/moby` 159 MiB, `pingcap/tidb`
+  217 MiB, `kubernetes/kubernetes` 396 MiB. Eighteen list members therefore cost
+  roughly 4–8 GiB, against 93 GiB free at decision time. An earlier figure of
+  30–60 GiB in this document's draft is **withdrawn**: it assumed full-history
+  clones, which this round does not use.
+- **Not the Linux host, deliberately.** That host is running T42.2 lifecycle work
+  whose tests fail at *deadline* boundaries (600.02s / 600.02s / 180.02s), so
+  adding clone and whole-tree extraction I/O there could perturb measurements
+  that are already deadline-sensitive. AGENTS.md also requires serializing
+  expensive host execution rather than running two heavy workloads at once.
+- **The Linux ceremony baseline does not govern this round.** AGENTS.md's
+  Ubuntu-amd64 mandate covers rehearsals, ceremonies and reruns of historical
+  workloads. T58.1 is an offline quality measurement producing no signed custody,
+  ceremony receipt or scale claim. If T58.3's release later needs a real-binary
+  rehearsal, that is a separate decision carrying its own host facts.
+- **Host-independence of the result.** The round is pure Go over pinned Git
+  objects — `git ls-tree -r`, `git cat-file --batch`, `go/parser` — with no
+  platform-specific custody, process or filesystem behavior, so the measured
+  outcome is reproducible from the recorded commits on any host. The execution
+  host identity and Go toolchain are still recorded in the round artifacts, so
+  the result stays attributable.
+- **Guards enforced rather than assumed.** The corpus lives outside the repository
+  at `~/phebs-t581-corpus/` and is never committed. The cloner checks free space
+  before each repository and aborts cleanly, recording where it stopped, if free
+  space would fall below a 40 GiB floor. Symlinks are inventoried and never
+  parsed, per the T47.2 etcd-symlink lesson. No expensive Go test run is
+  concurrent with cloning or exporting.
+
 ## 3. Truth (GD1–GD16)
 
 ### Independence posture (PROPOSED — pending Ben's decision)
@@ -325,14 +362,19 @@ recorded, no score exists and nothing is sealed.
    separation.
 3. **Ben:** freeze the §6 thresholds, including whether the per-role floors are
    scored or only disclosed.
-4. **Ben:** decide where the round runs. It needs bare clones of the approved
-   list; T55.1's corpus lives on the Linux host at `/home/ben/phebs-rehearsals`,
-   which is currently occupied by T42.2 work, and this macOS host has ~89 GiB free
-   against an estimated 30–60 GiB for 18 full clones.
-5. **Agent, after 1–4:** write `spike/t581/{corpus.lock.json, enumerate_population.py,
-   oracle, export, score.py, test_score.py, README.md}`, add this document to
-   `docs/README.md`, and run the oracle's pre-seal pass to publish the state table
-   and scored-site count in §3 before any extractor run.
+4. **Agent, after 1–3:** write `spike/t581/{corpus.lock.json,
+   enumerate_population.py, oracle, export, score.py, test_score.py, README.md}`
+   and run the oracle's pre-seal pass to publish the state table and scored-site
+   count in §3 before any extractor run. This document is already linked from
+   `docs/README.md`.
+
+**Decided, no longer open — the execution host.** Ben delegated it and §2's host
+and clone discipline records the decision: the round runs on the macOS
+development host over depth-1 clones, because the measured cost is roughly 4–8
+GiB against 93 GiB free, while the Linux ceremony host is occupied by
+deadline-sensitive T42.2 work and this round is not a rehearsal, ceremony or
+historical rerun that the Linux baseline governs. The draft's earlier 30–60 GiB
+estimate is withdrawn there with the measurement that replaced it.
 
 ## 10. Relationship to prior gRPC measurement
 

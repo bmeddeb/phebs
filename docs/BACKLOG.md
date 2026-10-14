@@ -19679,10 +19679,24 @@ this is documentation only, so there is no steady-state cost. `make docs-check`
 passes all three of its tests with the new document linked, and whitespace is
 clean. **Blocked on Ben** for: the §2 named list and whether `etcd-io/etcd` stays
 given its presence in T47.2's `grpc-caller` universe; the §3 oracle-independence
-posture; the §6 thresholds including whether per-role floors are scored or only
-disclosed; and where the round runs, since it needs bare clones and the Linux
-corpus host is occupied by T42.2 while this macOS host has ~89 GiB free against an
-estimated 30–60 GiB for 18 full clones. Only after those does the agent write
+posture; and the §6 thresholds including whether per-role floors are scored or
+only disclosed. **The execution host is decided.** Ben delegated it, and the round
+runs on this macOS development host over depth-1 clones: §2's
+no-history-expansion rule means no full-history clone is needed, and measured
+depth-1 sizes on four large Go repositories *outside* the proposed population
+(`hashicorp/consul` 136 MiB, `moby/moby` 159 MiB, `pingcap/tidb` 217 MiB,
+`kubernetes/kubernetes` 396 MiB) put eighteen members at roughly 4–8 GiB against
+93 GiB free. The Linux ceremony host is deliberately not used: it is running
+T42.2 work whose tests fail at deadline boundaries, so clone and whole-tree
+extraction I/O there could perturb already deadline-sensitive measurements, and
+AGENTS.md requires serializing expensive host execution. The Linux baseline
+mandate covers rehearsals, ceremonies and historical reruns, not an offline
+quality measurement producing no signed custody. The draft's earlier 30–60 GiB
+figure is **withdrawn** — it assumed full-history clones this round does not use.
+The corpus lives outside the repository at `~/phebs-t581-corpus/`, is never
+committed, and the cloner enforces a 40 GiB free-space floor, aborting cleanly and
+recording where it stopped rather than trusting the estimate. Only after Ben's
+three decisions does the agent write
 `spike/t581/` and run the oracle's pre-seal pass. No quality, coverage, release,
 scale or SLO claim follows, and no measurement is authorized by this draft.*
 

@@ -386,9 +386,17 @@ and who owns each.
     predated the Kafka recognizer while `grpcgo` shipped before GD1–GD16 were
     written. It measures spec conformance, and the proposed mitigation is a
     separate author for the oracle, forbidden from reading the extractor.
+  - Decided: the round runs on the macOS development host over depth-1 clones,
+    not the Linux ceremony host. §2's no-history-expansion rule means no
+    full-history clone is needed; measured depth-1 sizes on four large Go
+    repositories outside the population are 136–396 MiB, putting eighteen
+    members at roughly 4–8 GiB against 93 GiB free. The Linux host is running
+    deadline-sensitive T42.2 work, and the Ubuntu baseline mandate covers
+    rehearsals, ceremonies and historical reruns rather than an offline quality
+    measurement. The draft's earlier 30–60 GiB figure is withdrawn.
   - Remaining, Ben: approve the named population list, choose the
-    oracle-independence posture, freeze the thresholds, and decide where the
-    round runs. Remaining, agent: `spike/t581/` and the oracle's pre-seal pass.
+    oracle-independence posture, and freeze the thresholds. Remaining, agent:
+    `spike/t581/` and the oracle's pre-seal pass.
   - Not claimed: nothing is enumerated, scored, sealed or predicted, so this
     grants no quality, coverage, release or scale result, and it is not a T11.1
     retry — that round stays terminally closed with `GATE2-V2 NOT_ESTABLISHED`.
