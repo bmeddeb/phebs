@@ -426,6 +426,15 @@ func TestCallerMapOrdinarySurfaceFollowsProductionAssembly(t *testing.T) {
 			},
 		},
 		{
+			// T49.3: Thrift declarations alone admit Atlas and nothing else.
+			name:      "a released Thrift contract alone serves only Contract Atlas",
+			kafka:     []string{thriftContractPackID},
+			configure: func(*config.Config) {},
+			want: servedCallerSurfaces{
+				capabilities: []string{"contract-atlas", "service-catalog-v2"},
+			},
+		},
+		{
 			// T57.3: the combined claim adds exactly the composed inventory.
 			name:      "released Kafka planes with the Topics claim serve the composed inventory",
 			kafka:     []string{kafkaProducerPackID, kafkaConsumerPackID, kafkaTopicsPackID},
@@ -497,6 +506,7 @@ func TestCallerMapOrdinarySurfaceFollowsProductionAssembly(t *testing.T) {
 				restore := packRecipes
 				packRecipes = map[string]func() []extract.Extractor{
 					kafkaProducerPackID: kafkaProducerRecipe, kafkaConsumerPackID: kafkaConsumerRecipe,
+					thriftContractPackID: thriftContractRecipe,
 				}
 				t.Cleanup(func() { packRecipes = restore })
 				selection := newReleasedSelection(t)

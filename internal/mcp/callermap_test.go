@@ -168,7 +168,7 @@ func (service exactEnvelopeCallerComparisonQueries) Compare(
 func TestCallerMapToolSchemasAndDarkRegistration(t *testing.T) {
 	schemaDigests := map[string]string{
 		"search_contract_operations": "sha256:fd695b7d07280a1bb9840bb200766aebf082d5e31f5d8adb09c22c9864f7c024",
-		"get_contract_operation":     "sha256:09ad769be6c617249f1b801d5b89cd6c9ab1120baf0ceb79c69e81655982c2d6",
+		"get_contract_operation":     "sha256:4de0520bfe06d6cb3561fb4c4bc40137aab57a58f5255697c69f016d916335fc",
 		"list_operation_callers":     "sha256:12032f56828d67e4e7546b4302c38e6f793a4e2f2b839f03450de51b6c2d5931",
 		"compare_operation_callers":  "sha256:a6df9c83577b74080b819b88ee6c271fa7a3277cd16324cd8e025542a6edc22d",
 	}

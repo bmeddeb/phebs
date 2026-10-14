@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
@@ -218,6 +219,22 @@ func releasedKafkaPlanes(cfg *config.Config, released map[string]bool) []string 
 	return planes
 }
 
+// releasedCatalogDomains scopes a release-only Contract Atlas to the domains
+// verified records admit (T49.3), so an unreleased consumer or caller domain
+// is named unavailable rather than reported unpublished. The provisional
+// switches keep the whole experimental catalog.
+func releasedCatalogDomains(cfg *config.Config, released map[string]bool) []string {
+	if provisionalExtractionOn(cfg) || len(released) == 0 {
+		return nil
+	}
+	domains := make([]string, 0, len(released))
+	for domain := range released {
+		domains = append(domains, domain)
+	}
+	sort.Strings(domains)
+	return domains
+}
+
 // releasedKafkaTopics admits the composed inventory beside the released planes
 // only when a verified phebs.kafka.topics record selects it and both planes are
 // themselves released: the combined claim measured nothing else. Revoking
@@ -296,6 +313,7 @@ func newServeAPIOptions(d *serveDeps) (api.Options, error) {
 		KafkaReleasedPlanes: releasedKafkaPlanes(cfg, d.releasedDomains),
 		KafkaTopicInventoryReleased: releasedKafkaTopics(
 			d.releasedClaims, releasedKafkaPlanes(cfg, d.releasedDomains)),
+		CatalogReleasedDomains: releasedCatalogDomains(cfg, d.releasedDomains),
 		ContractCatalogUnadmitted: !provisionalExtractionOn(cfg) &&
 			!d.releasedDomains["proto-contract"] && !d.releasedDomains["thrift-contract"],
 		CallerMapEnabled: d.callerRegistry.Enabled(),

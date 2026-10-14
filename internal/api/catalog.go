@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -166,6 +167,21 @@ type ContractCatalogService struct {
 	opts Options
 }
 
+// domains is the coverage universe this Atlas describes: every catalog domain,
+// or only the released ones under release-only admission (T49.3).
+func (s *ContractCatalogService) domains() []string {
+	if len(s.opts.CatalogReleasedDomains) == 0 {
+		return catalogDomains
+	}
+	var domains []string
+	for _, domain := range catalogDomains {
+		if slices.Contains(s.opts.CatalogReleasedDomains, domain) {
+			domains = append(domains, domain)
+		}
+	}
+	return domains
+}
+
 func NewContractCatalogService(opts Options) *ContractCatalogService {
 	if opts.Store == nil || opts.Principal == nil ||
 		(opts.Evidence == nil || opts.ContractCatalogUnadmitted) && opts.ContractCatalogFixture == nil {
@@ -310,25 +326,29 @@ type ContractCatalogRelationship struct {
 }
 
 type ContractCatalogOperation struct {
-	SchemaVersion           string                             `json:"schema_version"`
-	Protocol                string                             `json:"-"`
-	Repository              string                             `json:"repository"`
-	DeclarationLineage      string                             `json:"declaration_lineage"`
-	ServiceFQN              string                             `json:"service_fqn"`
-	Method                  string                             `json:"method"`
-	Operation               string                             `json:"operation"`
-	Declaration             ContractCatalogClaim               `json:"declaration"`
-	FactDetail              ContractCatalogOperationFactDetail `json:"fact_detail"`
-	Request                 ContractCatalogMessage             `json:"request"`
-	Response                ContractCatalogMessage             `json:"response"`
-	Implementations         []ContractCatalogRelationship      `json:"implementations"`
-	Callers                 []ContractCatalogRelationship      `json:"callers"`
-	UnresolvedCandidates    []ContractCatalogRelationship      `json:"unresolved_candidates"`
-	RelationshipsTruncated  bool                               `json:"relationships_truncated"`
-	RelationshipLimitReason string                             `json:"relationship_limit_reason,omitempty"`
-	ShapeTruncated          bool                               `json:"shape_truncated"`
-	CoverageDigest          string                             `json:"coverage_digest"`
-	Coverage                extract.CoverageCertificate        `json:"coverage"`
+	SchemaVersion        string                             `json:"schema_version"`
+	Protocol             string                             `json:"-"`
+	Repository           string                             `json:"repository"`
+	DeclarationLineage   string                             `json:"declaration_lineage"`
+	ServiceFQN           string                             `json:"service_fqn"`
+	Method               string                             `json:"method"`
+	Operation            string                             `json:"operation"`
+	Declaration          ContractCatalogClaim               `json:"declaration"`
+	FactDetail           ContractCatalogOperationFactDetail `json:"fact_detail"`
+	Request              ContractCatalogMessage             `json:"request"`
+	Response             ContractCatalogMessage             `json:"response"`
+	Implementations      []ContractCatalogRelationship      `json:"implementations"`
+	Callers              []ContractCatalogRelationship      `json:"callers"`
+	UnresolvedCandidates []ContractCatalogRelationship      `json:"unresolved_candidates"`
+	// UnavailableRelationships names each relationship section no released
+	// recipe can feed (T49.3); it is never an empty answer. Omitted when every
+	// feeding domain is in this Atlas's coverage.
+	UnavailableRelationships []string                    `json:"unavailable_relationships,omitempty"`
+	RelationshipsTruncated   bool                        `json:"relationships_truncated"`
+	RelationshipLimitReason  string                      `json:"relationship_limit_reason,omitempty"`
+	ShapeTruncated           bool                        `json:"shape_truncated"`
+	CoverageDigest           string                      `json:"coverage_digest"`
+	Coverage                 extract.CoverageCertificate `json:"coverage"`
 	// ExactAuthority names the partitioned declaration root this detail was
 	// read from; absent for a legacy published run described by Coverage.
 	ExactAuthority *ContractCatalogAuthority `json:"exact_authority,omitempty"`
@@ -397,7 +417,7 @@ func (s *ContractCatalogService) List(
 	}{query, pageSize})
 
 	for attempt := 0; attempt < catalogBuildAttempts; attempt++ {
-		certificate, err := extract.BuildCoverageCertificate(ctx, s.opts.Evidence, visible, catalogDomains)
+		certificate, err := extract.BuildCoverageCertificate(ctx, s.opts.Evidence, visible, s.domains())
 		if err != nil {
 			return nil, huma.Error500InternalServerError("build contract catalog coverage", err)
 		}
@@ -430,7 +450,7 @@ func (s *ContractCatalogService) List(
 			return nil, huma.Error409Conflict("contract catalog authorization changed while building the response; retry")
 		}
 		confirmed, confirmErr := extract.BuildCoverageCertificate(
-			ctx, s.opts.Evidence, confirmedVisible, catalogDomains,
+			ctx, s.opts.Evidence, confirmedVisible, s.domains(),
 		)
 		if confirmErr != nil {
 			return nil, huma.Error500InternalServerError("confirm contract catalog coverage", confirmErr)
@@ -541,7 +561,7 @@ func (s *ContractCatalogService) operation(
 	}
 
 	for attempt := 0; attempt < catalogBuildAttempts; attempt++ {
-		certificate, err := extract.BuildCoverageCertificate(ctx, s.opts.Evidence, visible, catalogDomains)
+		certificate, err := extract.BuildCoverageCertificate(ctx, s.opts.Evidence, visible, s.domains())
 		if err != nil {
 			return nil, huma.Error500InternalServerError("build contract catalog coverage", err)
 		}
@@ -565,7 +585,7 @@ func (s *ContractCatalogService) operation(
 			return nil, huma.Error409Conflict("contract catalog authorization changed while building the response; retry")
 		}
 		confirmed, confirmErr := extract.BuildCoverageCertificate(
-			ctx, s.opts.Evidence, confirmedVisible, catalogDomains,
+			ctx, s.opts.Evidence, confirmedVisible, s.domains(),
 		)
 		if confirmErr != nil {
 			return nil, huma.Error500InternalServerError("confirm contract catalog coverage", confirmErr)
@@ -823,10 +843,12 @@ func collectCatalogOperation(
 	if err != nil {
 		return nil, err
 	}
+	unavailable := unavailableCatalogRelationships(certificate, pack)
 	return &ContractCatalogOperation{
-		SchemaVersion: contractCatalogSchemaVersion,
-		Protocol:      pack.protocol,
-		Repository:    repository, DeclarationLineage: lineage,
+		SchemaVersion:            contractCatalogSchemaVersion,
+		UnavailableRelationships: unavailable,
+		Protocol:                 pack.protocol,
+		Repository:               repository, DeclarationLineage: lineage,
 		ServiceFQN: service, Method: method, Operation: operation,
 		Declaration: declaration, FactDetail: factDetail,
 		Request: request, Response: response,
@@ -1005,6 +1027,22 @@ func (s *catalogShapeState) expandType(
 		result.Fields = append(result.Fields, fieldShape)
 	}
 	return result, nil
+}
+
+// unavailableCatalogRelationships names the sections a domain outside the
+// certificate would feed: implementations come from the consumer domain, and
+// callers and unresolved candidates from both the consumer and caller domains.
+func unavailableCatalogRelationships(certificate *extract.CoverageCertificate, pack protocolPack) []string {
+	consumer := slices.Contains(certificate.Domains, pack.consumerDomain)
+	caller := slices.Contains(certificate.Domains, pack.callerDomain)
+	var unavailable []string
+	if !consumer {
+		unavailable = append(unavailable, "implementations")
+	}
+	if !consumer || !caller {
+		unavailable = append(unavailable, "callers", "unresolved_candidates")
+	}
+	return unavailable
 }
 
 func collectCatalogRelationships(

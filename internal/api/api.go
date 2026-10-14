@@ -159,6 +159,11 @@ type Options struct {
 	// only for a released recipe with no declaration domain (T55.2: a released
 	// Kafka producer must not expose Atlas, which Epic 49 owns).
 	ContractCatalogUnadmitted bool
+	// CatalogReleasedDomains, when non-empty, marks Contract Atlas admitted
+	// solely by released recipes (T49.3): its coverage describes exactly these
+	// catalog domains, and an operation names every relationship section a
+	// missing domain would feed unavailable instead of returning it empty.
+	CatalogReleasedDomains []string
 	// KafkaReleasedPlanes, when non-empty, marks a proof service admitted
 	// solely by released Kafka planes ("producer", "consumer"; T55.2/T56.2). It
 	// then serves topic usage over exactly those planes' domains and bundle

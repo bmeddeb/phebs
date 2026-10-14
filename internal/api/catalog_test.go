@@ -584,6 +584,33 @@ func TestContractCatalogThriftPack(t *testing.T) {
 		t.Fatalf("thrift relationships = %+v / %+v / %+v",
 			detail.Implementations, detail.Callers, detail.UnresolvedCandidates)
 	}
+	if detail.UnavailableRelationships != nil {
+		t.Fatalf("the full catalog named sections unavailable: %v", detail.UnavailableRelationships)
+	}
+
+	// T49.3: a release-only Atlas admitted by thrift-contract alone describes
+	// only that domain and names the sections unreleased domains would feed
+	// unavailable, even though this store holds consumer evidence.
+	released := options
+	released.CatalogReleasedDomains = []string{"thrift-contract"}
+	scoped := api.NewContractCatalogService(released)
+	scopedList, err := scoped.List(context.Background(), api.ContractCatalogQuery{}, 50, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(scopedList.Items) != 2 || !slices.Equal(scopedList.Coverage.Domains, []string{"thrift-contract"}) {
+		t.Fatalf("release-scoped list = %d items over %v", len(scopedList.Items), scopedList.Coverage.Domains)
+	}
+	scopedDetail, err := scoped.Operation(context.Background(), idlRepo, lineage, "/"+service+"/emitBatch")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(scopedDetail.Implementations)+len(scopedDetail.Callers)+len(scopedDetail.UnresolvedCandidates) != 0 ||
+		!slices.Equal(scopedDetail.UnavailableRelationships, []string{"implementations", "callers", "unresolved_candidates"}) ||
+		!slices.Equal(scopedDetail.Coverage.Domains, []string{"thrift-contract"}) ||
+		scopedDetail.Response.Fields[0].Detail.Name != "success" {
+		t.Fatalf("release-scoped detail = %v over %v", scopedDetail.UnavailableRelationships, scopedDetail.Coverage.Domains)
+	}
 }
 
 func TestContractCatalogOperationFactDetailPreservesProtocolFamilies(t *testing.T) {

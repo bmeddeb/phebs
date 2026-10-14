@@ -17,6 +17,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/kafkago"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/protodecl"
+	"github.com/bmeddeb/phebs/internal/extract/extractors/thriftdecl"
 	"github.com/bmeddeb/phebs/internal/packrelease"
 	"github.com/bmeddeb/phebs/internal/resolvermaterialize"
 )
@@ -145,8 +146,9 @@ func newServeExtractionRegistries(d *serveDeps) error {
 // third-party loader and no manifest-selected arbitrary code: a released pack
 // resolves only through this exact in-tree registry.
 var packRecipes = map[string]func() []extract.Extractor{
-	kafkaProducerPackID: kafkaProducerRecipe, // T55.3: bound beside its first signed record
-	kafkaConsumerPackID: kafkaConsumerRecipe, // T56.3: bound beside its first signed record
+	kafkaProducerPackID:  kafkaProducerRecipe,  // T55.3: bound beside its first signed record
+	kafkaConsumerPackID:  kafkaConsumerRecipe,  // T56.3: bound beside its first signed record
+	thriftContractPackID: thriftContractRecipe, // T49.3: bound beside its first signed record
 }
 
 // releasedClaims is the fixed in-tree registry of released product claims that
@@ -180,6 +182,19 @@ const kafkaConsumerPackID = "phebs.kafka.consumer"
 // producer extractor, which has its own release (T55.3).
 func kafkaConsumerRecipe() []extract.Extractor {
 	return []extract.Extractor{kafkago.NewConsumer()}
+}
+
+// thriftContractPackID is the T49.2 Thrift declaration card
+// (docs/THRIFT_DECLARATION_QUALITY_PROTOCOL.md): thrift-contract alone, served
+// through Contract Atlas. T49.3 bound thriftContractRecipe with its first
+// signed record.
+const thriftContractPackID = "phebs.thrift.contract"
+
+// thriftContractRecipe is the declaration domain only; it never brings the
+// Thrift consumer or caller extractors, whose sections Atlas then names
+// unavailable.
+func thriftContractRecipe() []extract.Extractor {
+	return []extract.Extractor{thriftdecl.New()}
 }
 
 // wireCompatibilityPackID is the T53.3 claim card in
