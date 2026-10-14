@@ -1,0 +1,282 @@
+{
+ "schema": "t583-grpc-identity-corpus-lock-v1",
+ "round": 2,
+ "kind": "registration",
+ "selected_utc": "2026-10-14",
+ "selection_rule": "docs/GRPC_IDENTITY_QUALITY_PROTOCOL.md section 9 (sealed 8d7ae7a0)",
+ "oracle_resolved_registration_sites": 153,
+ "repos": [
+  {
+   "name": "ab180/lrmr",
+   "dir": "ab180__lrmr",
+   "git_url": "https://github.com/ab180/lrmr.git",
+   "commit": "0139a303c52d9885563e545f652627bbccd9b56e",
+   "oracle_resolved_registration_sites": 1,
+   "loaded_fraction": 0.9787
+  },
+  {
+   "name": "Pr0nE/trip-brain-app",
+   "dir": "Pr0nE__trip-brain-app",
+   "git_url": "https://github.com/Pr0nE/trip-brain-app.git",
+   "commit": "090d6ec4fb05484d2e23dbad32fc4b84a22e7740",
+   "oracle_resolved_registration_sites": 5,
+   "loaded_fraction": 1.0
+  },
+  {
+   "name": "mezonai/mmn",
+   "dir": "mezonai__mmn",
+   "git_url": "https://github.com/mezonai/mmn.git",
+   "commit": "540ac281b8c0646d4eaac5c9d79b44ae150c0395",
+   "oracle_resolved_registration_sites": 4,
+   "loaded_fraction": 0.9915
+  },
+  {
+   "name": "v3io/frames",
+   "dir": "v3io__frames",
+   "git_url": "https://github.com/v3io/frames.git",
+   "commit": "8579ec34ae808be07e8a32b5db790300248127d3",
+   "oracle_resolved_registration_sites": 1,
+   "loaded_fraction": 0.9634
+  },
+  {
+   "name": "evanrolfe/trayce_agent",
+   "dir": "evanrolfe__trayce_agent",
+   "git_url": "https://github.com/evanrolfe/trayce_agent.git",
+   "commit": "16ab2f61ea3ebd8fdf9c0ac8c7d5e7365cf68ee7",
+   "oracle_resolved_registration_sites": 2,
+   "loaded_fraction": 0.8082
+  },
+  {
+   "name": "kralicky/totem",
+   "dir": "kralicky__totem",
+   "git_url": "https://github.com/kralicky/totem.git",
+   "commit": "9b261d498fa0d4fddbcc254fc5e87111ffbf0434",
+   "oracle_resolved_registration_sites": 39,
+   "loaded_fraction": 0.9615
+  },
+  {
+   "name": "nyaxt/otaru",
+   "dir": "nyaxt__otaru",
+   "git_url": "https://github.com/nyaxt/otaru.git",
+   "commit": "7ab65528087aafc75dc3cde58a493323d6125754",
+   "oracle_resolved_registration_sites": 5,
+   "loaded_fraction": 0.9898
+  },
+  {
+   "name": "devfullcycle/fc-grpc",
+   "dir": "devfullcycle__fc-grpc",
+   "git_url": "https://github.com/devfullcycle/fc-grpc.git",
+   "commit": "045c5b4101d24aedb5a74d7661d3938cead1d678",
+   "oracle_resolved_registration_sites": 1,
+   "loaded_fraction": 1.0
+  },
+  {
+   "name": "taiyoh/sqsd",
+   "dir": "taiyoh__sqsd",
+   "git_url": "https://github.com/taiyoh/sqsd.git",
+   "commit": "1c8cf43bcd5d97606317e61b305e080b6ea9257f",
+   "oracle_resolved_registration_sites": 1,
+   "loaded_fraction": 1.0
+  },
+  {
+   "name": "escalopa/fingo",
+   "dir": "escalopa__fingo",
+   "git_url": "https://github.com/escalopa/fingo.git",
+   "commit": "df486c6f85bb7cacffa9a4387f37a108365bff81",
+   "oracle_resolved_registration_sites": 4,
+   "loaded_fraction": 1.0
+  },
+  {
+   "name": "TengFeiyang01/webook",
+   "dir": "TengFeiyang01__webook",
+   "git_url": "https://github.com/TengFeiyang01/webook.git",
+   "commit": "cc8952ffe5ea2014b19c2f8a48a7a4fa29b9d1e3",
+   "oracle_resolved_registration_sites": 3,
+   "loaded_fraction": 0.8734
+  },
+  {
+   "name": "lukas-andre/go-grpc-login",
+   "dir": "lukas-andre__go-grpc-login",
+   "git_url": "https://github.com/lukas-andre/go-grpc-login.git",
+   "commit": "e25b12d787508bd053a74d60be1587d89e2e9343",
+   "oracle_resolved_registration_sites": 2,
+   "loaded_fraction": 0.9545
+  },
+  {
+   "name": "EnbinYang/golang-tips",
+   "dir": "EnbinYang__golang-tips",
+   "git_url": "https://github.com/EnbinYang/golang-tips.git",
+   "commit": "d9ba0b4a1753fc2f27f793e3d57e73f423e1702f",
+   "oracle_resolved_registration_sites": 1,
+   "loaded_fraction": 0.9
+  },
+  {
+   "name": "b9lab/checkers-minimal",
+   "dir": "b9lab__checkers-minimal",
+   "git_url": "https://github.com/b9lab/checkers-minimal.git",
+   "commit": "0f891de80bdc358abfdab8add7cbf63b0b89cdcd",
+   "oracle_resolved_registration_sites": 2,
+   "loaded_fraction": 1.0
+  },
+  {
+   "name": "manavkush/microservices-go",
+   "dir": "manavkush__microservices-go",
+   "git_url": "https://github.com/manavkush/microservices-go.git",
+   "commit": "ee5cb3fcecace2b84592411d6d22c14f23d29a48",
+   "oracle_resolved_registration_sites": 3,
+   "loaded_fraction": 0.9429
+  },
+  {
+   "name": "googleforgames/open-match2",
+   "dir": "googleforgames__open-match2",
+   "git_url": "https://github.com/googleforgames/open-match2.git",
+   "commit": "ac392a0576ea65a73d17aa07090519efcdba99cd",
+   "oracle_resolved_registration_sites": 1,
+   "loaded_fraction": 1.0
+  },
+  {
+   "name": "yinhm/friendfeed",
+   "dir": "yinhm__friendfeed",
+   "git_url": "https://github.com/yinhm/friendfeed.git",
+   "commit": "9c870be26a48085e520c2a5eb2a45e42a363917d",
+   "oracle_resolved_registration_sites": 5,
+   "loaded_fraction": 0.9932
+  },
+  {
+   "name": "noble-assets/dollar",
+   "dir": "noble-assets__dollar",
+   "git_url": "https://github.com/noble-assets/dollar.git",
+   "commit": "61a989b959348705b9e503c560dcb82e60c81a72",
+   "oracle_resolved_registration_sites": 8,
+   "loaded_fraction": 0.912
+  },
+  {
+   "name": "quangh33/Go-Kafka",
+   "dir": "quangh33__Go-Kafka",
+   "git_url": "https://github.com/quangh33/Go-Kafka.git",
+   "commit": "5f3849cb225f932c309ba832832733773ca6370e",
+   "oracle_resolved_registration_sites": 1,
+   "loaded_fraction": 1.0
+  },
+  {
+   "name": "pixperk/plethora",
+   "dir": "pixperk__plethora",
+   "git_url": "https://github.com/pixperk/plethora.git",
+   "commit": "529418b19200b6320bd0b81b5dbd85d6ca2d201e",
+   "oracle_resolved_registration_sites": 1,
+   "loaded_fraction": 1.0
+  },
+  {
+   "name": "jerkeyray/mimori",
+   "dir": "jerkeyray__mimori",
+   "git_url": "https://github.com/jerkeyray/mimori.git",
+   "commit": "e665ec4c6145e89dca5d8f5359f371790f89a679",
+   "oracle_resolved_registration_sites": 4,
+   "loaded_fraction": 1.0
+  },
+  {
+   "name": "PKUHPC/scow-slurm-adapter",
+   "dir": "PKUHPC__scow-slurm-adapter",
+   "git_url": "https://github.com/PKUHPC/scow-slurm-adapter.git",
+   "commit": "9787455f35ac781c25d9c22d9d678b4cf356c930",
+   "oracle_resolved_registration_sites": 6,
+   "loaded_fraction": 1.0
+  },
+  {
+   "name": "ondoprotocol/usdy-noble",
+   "dir": "ondoprotocol__usdy-noble",
+   "git_url": "https://github.com/ondoprotocol/usdy-noble.git",
+   "commit": "c186c4023a65409fd6dfbba68fd37eeeb57b09a0",
+   "oracle_resolved_registration_sites": 4,
+   "loaded_fraction": 0.8525
+  },
+  {
+   "name": "Fred78290/kubernetes-vmware-autoscaler",
+   "dir": "Fred78290__kubernetes-vmware-autoscaler",
+   "git_url": "https://github.com/Fred78290/kubernetes-vmware-autoscaler.git",
+   "commit": "116e7cf28e66c828c63f774616add040cec237da",
+   "oracle_resolved_registration_sites": 4,
+   "loaded_fraction": 0.9661
+  },
+  {
+   "name": "lightninglabs/wavelength",
+   "dir": "lightninglabs__wavelength",
+   "git_url": "https://github.com/lightninglabs/wavelength.git",
+   "commit": "a7286555474d269645f4bc76d6af02aca1bb0ac3",
+   "oracle_resolved_registration_sites": 15,
+   "loaded_fraction": 0.8388
+  },
+  {
+   "name": "monerium/module-noble",
+   "dir": "monerium__module-noble",
+   "git_url": "https://github.com/monerium/module-noble.git",
+   "commit": "f982219e30929d801e8d23e01e4dadc50e0612b8",
+   "oracle_resolved_registration_sites": 4,
+   "loaded_fraction": 0.9
+  },
+  {
+   "name": "ani03sha/raftly",
+   "dir": "ani03sha__raftly",
+   "git_url": "https://github.com/ani03sha/raftly.git",
+   "commit": "235a033c44c88a3de0ddd290ab0c522b9770ed41",
+   "oracle_resolved_registration_sites": 1,
+   "loaded_fraction": 1.0
+  },
+  {
+   "name": "lizhaoliu/konsen",
+   "dir": "lizhaoliu__konsen",
+   "git_url": "https://github.com/lizhaoliu/konsen.git",
+   "commit": "e561a891671d3b4d20fcd600e29c7fbe936f3767",
+   "oracle_resolved_registration_sites": 2,
+   "loaded_fraction": 1.0
+  },
+  {
+   "name": "vega-project/ccb-operator",
+   "dir": "vega-project__ccb-operator",
+   "git_url": "https://github.com/vega-project/ccb-operator.git",
+   "commit": "523fb5d3cd4cf3b2e367bf0f587613b0290ab09a",
+   "oracle_resolved_registration_sites": 1,
+   "loaded_fraction": 0.9815
+  },
+  {
+   "name": "mtnmunuklu/lescatit",
+   "dir": "mtnmunuklu__lescatit",
+   "git_url": "https://github.com/mtnmunuklu/lescatit.git",
+   "commit": "d19eb80a640db3f1b1806a13cdf67f14f5a38432",
+   "oracle_resolved_registration_sites": 4,
+   "loaded_fraction": 1.0
+  },
+  {
+   "name": "replit/replit-ebpf",
+   "dir": "replit__replit-ebpf",
+   "git_url": "https://github.com/replit/replit-ebpf.git",
+   "commit": "4f0fcca6962bf3ffcead13050a2e3e5f5ad53aea",
+   "oracle_resolved_registration_sites": 2,
+   "loaded_fraction": 1.0
+  },
+  {
+   "name": "dtm-labs/quick-start-sample",
+   "dir": "dtm-labs__quick-start-sample",
+   "git_url": "https://github.com/dtm-labs/quick-start-sample.git",
+   "commit": "0705590c1cf0081d214b81225e3aa9a3d90db858",
+   "oracle_resolved_registration_sites": 2,
+   "loaded_fraction": 1.0
+  },
+  {
+   "name": "dperfly/frieza",
+   "dir": "dperfly__frieza",
+   "git_url": "https://github.com/dperfly/frieza.git",
+   "commit": "e3600f509ee60e4b53d22cf9a140e82b9660e57c",
+   "oracle_resolved_registration_sites": 1,
+   "loaded_fraction": 1.0
+  },
+  {
+   "name": "onepanelio/onepanel",
+   "dir": "onepanelio__onepanel",
+   "git_url": "https://github.com/onepanelio/onepanel.git",
+   "commit": "1170b53f6154df2cb9cb2aef32ce73c8436919b7",
+   "oracle_resolved_registration_sites": 13,
+   "loaded_fraction": 0.9945
+  }
+ ]
+}

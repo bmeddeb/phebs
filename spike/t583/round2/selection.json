@@ -1,0 +1,1123 @@
+{
+ "selected_utc": "2026-10-14",
+ "eligible_repositories": 34,
+ "oracle_resolved_sites": 153,
+ "records": [
+  {
+   "name": "Marve10s/Better-Fullstack",
+   "commit": "ed979af9a4bc138451c97bfe547cbd57e1a4142c",
+   "checkout_mib": 27.1,
+   "go_files": 0,
+   "drop": "no root go.mod"
+  },
+  {
+   "name": "Blocktunium/gonyx",
+   "commit": "789635144b05767108b9a1d25705945b0fb81589",
+   "checkout_mib": 0.5,
+   "go_files": 98,
+   "dir": "Blocktunium__gonyx",
+   "tracked_go_files": 98,
+   "loaded_fraction": 0.9694,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle finds no resolved registration site"
+  },
+  {
+   "name": "kaecer68/lunar-zenith",
+   "commit": "2d282f2d220f6ff82c384cd2ecf868e059bf8201",
+   "checkout_mib": 29.8,
+   "go_files": 68,
+   "dir": "kaecer68__lunar-zenith",
+   "tracked_go_files": 68,
+   "loaded_fraction": 0.0882,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle loads under 80% of tracked .go files"
+  },
+  {
+   "name": "seoyhaein/tori",
+   "commit": "ce6e9651e5ddd08765a8c3085ebdca7df7e95099",
+   "checkout_mib": 0.4,
+   "go_files": 22,
+   "dir": "seoyhaein__tori",
+   "tracked_go_files": 22,
+   "loaded_fraction": 0.9545,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle finds no resolved registration site"
+  },
+  {
+   "name": "seoyhaein/ConnectService",
+   "drop": "excluded: T58.1/T47.2/T58.3a population, grpc-go, or dry-run repository"
+  },
+  {
+   "name": "heping2018/coolcar",
+   "commit": "c065649940c49cf32436f7085f108c3c2ddd609f",
+   "checkout_mib": 17.2,
+   "go_files": 30,
+   "drop": "no root go.mod"
+  },
+  {
+   "name": "fengjx/lc",
+   "commit": "4da6a563cbe7d00acddb91c5c4c1c84de26b7471",
+   "checkout_mib": 0.5,
+   "go_files": 65,
+   "dir": "fengjx__lc",
+   "tracked_go_files": 65,
+   "loaded_fraction": 0.4308,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle loads under 80% of tracked .go files"
+  },
+  {
+   "name": "AIOpsArena/aiopsarena",
+   "commit": "d9c914846a65b09d5ee5000802fd8043b899e0d7",
+   "checkout_mib": 164.3,
+   "go_files": 21,
+   "drop": "no root go.mod"
+  },
+  {
+   "name": "open-oam/manager_program",
+   "drop": "excluded: T58.1/T47.2/T58.3a population, grpc-go, or dry-run repository"
+  },
+  {
+   "name": "Clay294/forum",
+   "drop": "excluded: T58.1/T47.2/T58.3a population, grpc-go, or dry-run repository"
+  },
+  {
+   "name": "abolfazlbeh/zhycan",
+   "commit": "9f5f6e36143ca062a4afa4bf883a48e2a88662f3",
+   "checkout_mib": 0.4,
+   "go_files": 76,
+   "dir": "abolfazlbeh__zhycan",
+   "tracked_go_files": 76,
+   "loaded_fraction": 0.9605,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle finds no resolved registration site"
+  },
+  {
+   "name": "agentic-labs/demo-docs",
+   "commit": "26d162cdf31eeddcccf0cc16d50b69ecbcc2ec58",
+   "checkout_mib": 545.9,
+   "go_files": 0,
+   "drop": "no root go.mod"
+  },
+  {
+   "name": "aarioai/airis",
+   "commit": "a1e6ba3f52a851f00cf18b1bf6c7a3a67e297ef9",
+   "checkout_mib": 0.6,
+   "go_files": 263,
+   "dir": "aarioai__airis",
+   "tracked_go_files": 263,
+   "loaded_fraction": 0.5057,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle loads under 80% of tracked .go files"
+  },
+  {
+   "name": "liuxd6825/dapr-1.7",
+   "commit": "bf982e4a60708385d1bd66c82852b9fc44bf79c5",
+   "checkout_mib": 6.6,
+   "go_files": 454,
+   "dir": "liuxd6825__dapr-1.7",
+   "tracked_go_files": 454,
+   "loaded_fraction": 0.5925,
+   "oracle_resolved_sites": 7,
+   "drop": "oracle loads under 80% of tracked .go files"
+  },
+  {
+   "name": "codefly-dev/service-go-grpc",
+   "commit": "2f6d03a96d2d1c79ebd1bfdb3223ddc5f3c9cdb8",
+   "checkout_mib": 0.6,
+   "go_files": 56,
+   "dir": "codefly-dev__service-go-grpc",
+   "tracked_go_files": 56,
+   "loaded_fraction": 0.0,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle loads under 80% of tracked .go files"
+  },
+  {
+   "name": "agancsos/go",
+   "commit": "670c994ca10cdfbb7b9c70157fd65b0527f0a906",
+   "checkout_mib": 97.6,
+   "go_files": 250,
+   "drop": "no root go.mod"
+  },
+  {
+   "name": "AnnieFandingying/Software-Testing-Group-13",
+   "commit": "a126731d9c6da648a3a9c80f939ea0b8a0b71acf",
+   "checkout_mib": 203.1,
+   "go_files": 43,
+   "drop": "no root go.mod"
+  },
+  {
+   "name": "ddefrancesco/handson-go",
+   "commit": "bc2df7d751c5df688308077df236907d7bc95c7d",
+   "checkout_mib": 2.1,
+   "go_files": 33,
+   "drop": "no root go.mod"
+  },
+  {
+   "name": "jamilmuhammad/synapsis",
+   "commit": "146ff96177b9b8d1cb62c7244339eaab7fdff042",
+   "checkout_mib": 0.4,
+   "go_files": 62,
+   "dir": "jamilmuhammad__synapsis",
+   "tracked_go_files": 62,
+   "loaded_fraction": 0.0,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle loads under 80% of tracked .go files"
+  },
+  {
+   "name": "celil-vural/software-template-engine",
+   "commit": "52996a0ca98a06ac9f4d565bb5db3c260735ef8d",
+   "checkout_mib": 0.6,
+   "go_files": 258,
+   "dir": "celil-vural__software-template-engine",
+   "tracked_go_files": 258,
+   "loaded_fraction": 0.0814,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle loads under 80% of tracked .go files"
+  },
+  {
+   "name": "AgoCan/tmp-code",
+   "commit": "fea8e23b961ce83d1696b8f36154bbcc2b4e9d07",
+   "checkout_mib": 0.1,
+   "go_files": 16,
+   "dir": "AgoCan__tmp-code",
+   "tracked_go_files": 16,
+   "loaded_fraction": 1.0,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle finds no resolved registration site"
+  },
+  {
+   "name": "jcsvwinston/quark",
+   "commit": "cda611bbb9845c238246b46f97987a1b6f3fc571",
+   "checkout_mib": 17.6,
+   "go_files": 611,
+   "dir": "jcsvwinston__quark",
+   "tracked_go_files": 611,
+   "loaded_fraction": 0.4255,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle loads under 80% of tracked .go files"
+  },
+  {
+   "name": "straightdave/arion",
+   "drop": "excluded: T58.1/T47.2/T58.3a population, grpc-go, or dry-run repository"
+  },
+  {
+   "name": "link1st/go-stress-testing",
+   "drop": "excluded: T58.1/T47.2/T58.3a population, grpc-go, or dry-run repository"
+  },
+  {
+   "name": "crazy-max/diun",
+   "commit": "269cb27295944aeacfe549d24ab7ac483e600aa9",
+   "checkout_mib": 59.2,
+   "go_files": 5505,
+   "drop": "exceeds host envelope"
+  },
+  {
+   "name": "kayac/go-katsubushi",
+   "drop": "excluded: T58.1/T47.2/T58.3a population, grpc-go, or dry-run repository"
+  },
+  {
+   "name": "openconfig/gnoi",
+   "commit": "b56005d832064c0d6b4268410e4d72567e2f3f83",
+   "checkout_mib": 1.4,
+   "go_files": 41,
+   "dir": "openconfig__gnoi",
+   "tracked_go_files": 41,
+   "loaded_fraction": 0.9756,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle finds no resolved registration site"
+  },
+  {
+   "name": "omrikiei/ktunnel",
+   "commit": "0373cdd999415c8264410997144c34d93d991e12",
+   "checkout_mib": 1.2,
+   "go_files": 73,
+   "dir": "omrikiei__ktunnel",
+   "tracked_go_files": 73,
+   "loaded_fraction": 0.0,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle loads under 80% of tracked .go files"
+  },
+  {
+   "name": "langhuihui/monibuca",
+   "drop": "excluded: T58.1/T47.2/T58.3a population, grpc-go, or dry-run repository"
+  },
+  {
+   "name": "lytics/grid",
+   "drop": "excluded: T58.1/T47.2/T58.3a population, grpc-go, or dry-run repository"
+  },
+  {
+   "name": "AliyunContainerService/terway",
+   "drop": "excluded: T58.1/T47.2/T58.3a population, grpc-go, or dry-run repository"
+  },
+  {
+   "name": "dispatchrun/net",
+   "commit": "fc22d416b6627bfd846e773720242ad5a87376d0",
+   "checkout_mib": 0.1,
+   "go_files": 38,
+   "dir": "dispatchrun__net",
+   "tracked_go_files": 38,
+   "loaded_fraction": 0.0263,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle loads under 80% of tracked .go files"
+  },
+  {
+   "name": "3n21c0/hello-auth-grpc",
+   "drop": "excluded: T58.1/T47.2/T58.3a population, grpc-go, or dry-run repository"
+  },
+  {
+   "name": "ubuntu/zsys",
+   "commit": "25de0d4956d6958149289bbb607dc1614657aeab",
+   "checkout_mib": 6.2,
+   "go_files": 79,
+   "dir": "ubuntu__zsys",
+   "tracked_go_files": 79,
+   "loaded_fraction": 0.3291,
+   "oracle_resolved_sites": 1,
+   "drop": "oracle loads under 80% of tracked .go files"
+  },
+  {
+   "name": "BuoyantIO/bb",
+   "drop": "excluded: T58.1/T47.2/T58.3a population, grpc-go, or dry-run repository"
+  },
+  {
+   "name": "BWbwchen/MapReduce",
+   "commit": "b3b9f779fd438571d99ffafded311326cdc20de6",
+   "checkout_mib": 13.5,
+   "go_files": 709,
+   "dir": "BWbwchen__MapReduce",
+   "tracked_go_files": 709,
+   "loaded_fraction": 0.0324,
+   "oracle_resolved_sites": 2,
+   "drop": "oracle loads under 80% of tracked .go files"
+  },
+  {
+   "name": "aergoio/aergo",
+   "commit": "6c4a9502adeb75a8de84b887482d8b3a04d2ef43",
+   "checkout_mib": 20.4,
+   "go_files": 624,
+   "dir": "aergoio__aergo",
+   "tracked_go_files": 624,
+   "loaded_fraction": 0.6266,
+   "oracle_resolved_sites": 1,
+   "drop": "oracle loads under 80% of tracked .go files"
+  },
+  {
+   "name": "rollchains/tiablob",
+   "commit": "4ef5390ce3031309447e51172cda23a145941394",
+   "checkout_mib": 2.2,
+   "go_files": 178,
+   "dir": "rollchains__tiablob",
+   "tracked_go_files": 178,
+   "loaded_fraction": 0.4607,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle loads under 80% of tracked .go files"
+  },
+  {
+   "name": "Ptt-official-app/go-pttbbs",
+   "drop": "excluded: T58.1/T47.2/T58.3a population, grpc-go, or dry-run repository"
+  },
+  {
+   "name": "moderato-app/live-pprof",
+   "drop": "excluded: T58.1/T47.2/T58.3a population, grpc-go, or dry-run repository"
+  },
+  {
+   "name": "api7/grpc_server_example",
+   "drop": "excluded: T58.1/T47.2/T58.3a population, grpc-go, or dry-run repository"
+  },
+  {
+   "name": "ava-labs/avalanche-network-runner",
+   "drop": "excluded: T58.1/T47.2/T58.3a population, grpc-go, or dry-run repository"
+  },
+  {
+   "name": "kevwan/grpc-restful",
+   "drop": "excluded: T58.1/T47.2/T58.3a population, grpc-go, or dry-run repository"
+  },
+  {
+   "name": "gobench-io/gobench",
+   "drop": "excluded: T58.1/T47.2/T58.3a population, grpc-go, or dry-run repository"
+  },
+  {
+   "name": "thspinto/isecnet-go",
+   "drop": "excluded: T58.1/T47.2/T58.3a population, grpc-go, or dry-run repository"
+  },
+  {
+   "name": "jina-ai/client-go",
+   "drop": "excluded: T58.1/T47.2/T58.3a population, grpc-go, or dry-run repository"
+  },
+  {
+   "name": "gautamrege/gochat",
+   "drop": "excluded: T58.1/T47.2/T58.3a population, grpc-go, or dry-run repository"
+  },
+  {
+   "name": "dtm-labs/dtmdriver-clients",
+   "commit": "04acb0f43a228b63954bf2ac769f224d7845b8c6",
+   "checkout_mib": 0.4,
+   "go_files": 28,
+   "dir": "dtm-labs__dtmdriver-clients",
+   "tracked_go_files": 28,
+   "loaded_fraction": 0.5714,
+   "oracle_resolved_sites": 2,
+   "drop": "oracle loads under 80% of tracked .go files"
+  },
+  {
+   "name": "artemis19/riverside",
+   "commit": "8b737020a002d8ca8f1c4917ac949d83ff6b878c",
+   "checkout_mib": 102.6,
+   "go_files": 30,
+   "dir": "artemis19__riverside",
+   "tracked_go_files": 30,
+   "loaded_fraction": 0.6,
+   "oracle_resolved_sites": 1,
+   "drop": "oracle loads under 80% of tracked .go files"
+  },
+  {
+   "name": "weeaa/jito-go",
+   "drop": "excluded: T58.1/T47.2/T58.3a population, grpc-go, or dry-run repository"
+  },
+  {
+   "name": "hyperledger/fabric-protos-go-apiv2",
+   "commit": "f073c145d26b24f3cc43cd6dabe9d2725da5673d",
+   "checkout_mib": 1.2,
+   "go_files": 53,
+   "dir": "hyperledger__fabric-protos-go-apiv2",
+   "tracked_go_files": 53,
+   "loaded_fraction": 1.0,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle finds no resolved registration site"
+  },
+  {
+   "name": "vito/progrock",
+   "drop": "excluded: T58.1/T47.2/T58.3a population, grpc-go, or dry-run repository"
+  },
+  {
+   "name": "routeviews/google-cloud-storage",
+   "drop": "excluded: T58.1/T47.2/T58.3a population, grpc-go, or dry-run repository"
+  },
+  {
+   "name": "breez/lspd",
+   "drop": "excluded: T58.1/T47.2/T58.3a population, grpc-go, or dry-run repository"
+  },
+  {
+   "name": "alauda/nativestor",
+   "drop": "excluded: T58.1/T47.2/T58.3a population, grpc-go, or dry-run repository"
+  },
+  {
+   "name": "blockchain-data-standards/manifesto",
+   "commit": "00f4bd1d2991d635bcc25c2947efc5028d745b55",
+   "checkout_mib": 1.7,
+   "go_files": 53,
+   "dir": "blockchain-data-standards__manifesto",
+   "tracked_go_files": 53,
+   "loaded_fraction": 1.0,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle finds no resolved registration site"
+  },
+  {
+   "name": "ab180/lrmr",
+   "commit": "0139a303c52d9885563e545f652627bbccd9b56e",
+   "checkout_mib": 39.7,
+   "go_files": 141,
+   "dir": "ab180__lrmr",
+   "tracked_go_files": 141,
+   "loaded_fraction": 0.9787,
+   "oracle_resolved_sites": 1,
+   "eligible": 1
+  },
+  {
+   "name": "Pr0nE/trip-brain-app",
+   "commit": "090d6ec4fb05484d2e23dbad32fc4b84a22e7740",
+   "checkout_mib": 0.4,
+   "go_files": 13,
+   "dir": "Pr0nE__trip-brain-app",
+   "tracked_go_files": 13,
+   "loaded_fraction": 1.0,
+   "oracle_resolved_sites": 5,
+   "eligible": 2
+  },
+  {
+   "name": "mezonai/mmn",
+   "commit": "540ac281b8c0646d4eaac5c9d79b44ae150c0395",
+   "checkout_mib": 32.3,
+   "go_files": 118,
+   "dir": "mezonai__mmn",
+   "tracked_go_files": 118,
+   "loaded_fraction": 0.9915,
+   "oracle_resolved_sites": 4,
+   "eligible": 3
+  },
+  {
+   "name": "v3io/frames",
+   "commit": "8579ec34ae808be07e8a32b5db790300248127d3",
+   "checkout_mib": 1.8,
+   "go_files": 82,
+   "dir": "v3io__frames",
+   "tracked_go_files": 82,
+   "loaded_fraction": 0.9634,
+   "oracle_resolved_sites": 1,
+   "eligible": 4
+  },
+  {
+   "name": "evanrolfe/trayce_agent",
+   "commit": "16ab2f61ea3ebd8fdf9c0ac8c7d5e7365cf68ee7",
+   "checkout_mib": 37.8,
+   "go_files": 73,
+   "dir": "evanrolfe__trayce_agent",
+   "tracked_go_files": 73,
+   "loaded_fraction": 0.8082,
+   "oracle_resolved_sites": 2,
+   "eligible": 5
+  },
+  {
+   "name": "czerwonk/bioject",
+   "commit": "fe8011fb0cfbc16c0c19245cc3c82db0200ec578",
+   "checkout_mib": 0.1,
+   "go_files": 21,
+   "dir": "czerwonk__bioject",
+   "tracked_go_files": 21,
+   "loaded_fraction": 0.5238,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle loads under 80% of tracked .go files"
+  },
+  {
+   "name": "openbank/openbank",
+   "commit": "5d084f2397963a7b3f48ace7fbf7f43f9d01b2f6",
+   "checkout_mib": 6.2,
+   "go_files": 111,
+   "dir": "openbank__openbank",
+   "tracked_go_files": 111,
+   "loaded_fraction": 0.991,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle finds no resolved registration site"
+  },
+  {
+   "name": "openimsdk/protocol",
+   "commit": "1a91e17bd182dd97e0229c0798f5428dfa2cd2ed",
+   "checkout_mib": 2.0,
+   "go_files": 48,
+   "dir": "openimsdk__protocol",
+   "tracked_go_files": 48,
+   "loaded_fraction": 0.9583,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle finds no resolved registration site"
+  },
+  {
+   "name": "chirpstack/chirpstack-rest-api",
+   "commit": "a70066721289ffe3647745476c04a5dfa4457389",
+   "checkout_mib": 10.6,
+   "go_files": 31,
+   "dir": "chirpstack__chirpstack-rest-api",
+   "tracked_go_files": 31,
+   "loaded_fraction": 0.9355,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle finds no resolved registration site"
+  },
+  {
+   "name": "kralicky/totem",
+   "commit": "9b261d498fa0d4fddbcc254fc5e87111ffbf0434",
+   "checkout_mib": 0.2,
+   "go_files": 26,
+   "dir": "kralicky__totem",
+   "tracked_go_files": 26,
+   "loaded_fraction": 0.9615,
+   "oracle_resolved_sites": 39,
+   "eligible": 6
+  },
+  {
+   "name": "nyaxt/otaru",
+   "commit": "7ab65528087aafc75dc3cde58a493323d6125754",
+   "checkout_mib": 22.8,
+   "go_files": 196,
+   "dir": "nyaxt__otaru",
+   "tracked_go_files": 196,
+   "loaded_fraction": 0.9898,
+   "oracle_resolved_sites": 5,
+   "eligible": 7
+  },
+  {
+   "name": "devfullcycle/fc-grpc",
+   "commit": "045c5b4101d24aedb5a74d7661d3938cead1d678",
+   "checkout_mib": 0.0,
+   "go_files": 5,
+   "dir": "devfullcycle__fc-grpc",
+   "tracked_go_files": 5,
+   "loaded_fraction": 1.0,
+   "oracle_resolved_sites": 1,
+   "eligible": 8
+  },
+  {
+   "name": "taiyoh/sqsd",
+   "commit": "1c8cf43bcd5d97606317e61b305e080b6ea9257f",
+   "checkout_mib": 0.1,
+   "go_files": 26,
+   "dir": "taiyoh__sqsd",
+   "tracked_go_files": 26,
+   "loaded_fraction": 1.0,
+   "oracle_resolved_sites": 1,
+   "eligible": 9
+  },
+  {
+   "name": "bloXroute-Labs/solana-trader-proto",
+   "commit": "818acd4840a67e5950e729901c7d8963c76e0785",
+   "checkout_mib": 1.2,
+   "go_files": 19,
+   "dir": "bloXroute-Labs__solana-trader-proto",
+   "tracked_go_files": 19,
+   "loaded_fraction": 1.0,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle finds no resolved registration site"
+  },
+  {
+   "name": "tcfw/didem",
+   "commit": "a5ce5ae9203a7a8a28b3dd62a64a073200a77858",
+   "checkout_mib": 0.8,
+   "go_files": 98,
+   "dir": "tcfw__didem",
+   "tracked_go_files": 98,
+   "loaded_fraction": 0.7245,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle loads under 80% of tracked .go files"
+  },
+  {
+   "name": "escalopa/fingo",
+   "commit": "df486c6f85bb7cacffa9a4387f37a108365bff81",
+   "checkout_mib": 1.2,
+   "go_files": 166,
+   "dir": "escalopa__fingo",
+   "tracked_go_files": 166,
+   "loaded_fraction": 1.0,
+   "oracle_resolved_sites": 4,
+   "eligible": 10
+  },
+  {
+   "name": "TengFeiyang01/webook",
+   "commit": "cc8952ffe5ea2014b19c2f8a48a7a4fa29b9d1e3",
+   "checkout_mib": 3.5,
+   "go_files": 237,
+   "dir": "TengFeiyang01__webook",
+   "tracked_go_files": 237,
+   "loaded_fraction": 0.8734,
+   "oracle_resolved_sites": 3,
+   "eligible": 11
+  },
+  {
+   "name": "lukas-andre/go-grpc-login",
+   "commit": "e25b12d787508bd053a74d60be1587d89e2e9343",
+   "checkout_mib": 10.9,
+   "go_files": 22,
+   "dir": "lukas-andre__go-grpc-login",
+   "tracked_go_files": 22,
+   "loaded_fraction": 0.9545,
+   "oracle_resolved_sites": 2,
+   "eligible": 12
+  },
+  {
+   "name": "skypies/flightdb",
+   "commit": "99e68679215eb424f335c450d4c6fbd3816dfe63",
+   "checkout_mib": 1.4,
+   "go_files": 112,
+   "dir": "skypies__flightdb",
+   "tracked_go_files": 112,
+   "loaded_fraction": 0.9732,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle finds no resolved registration site"
+  },
+  {
+   "name": "EnbinYang/golang-tips",
+   "commit": "d9ba0b4a1753fc2f27f793e3d57e73f423e1702f",
+   "checkout_mib": 0.1,
+   "go_files": 40,
+   "dir": "EnbinYang__golang-tips",
+   "tracked_go_files": 40,
+   "loaded_fraction": 0.9,
+   "oracle_resolved_sites": 1,
+   "eligible": 13
+  },
+  {
+   "name": "b9lab/checkers-minimal",
+   "commit": "0f891de80bdc358abfdab8add7cbf63b0b89cdcd",
+   "checkout_mib": 0.4,
+   "go_files": 24,
+   "dir": "b9lab__checkers-minimal",
+   "tracked_go_files": 24,
+   "loaded_fraction": 1.0,
+   "oracle_resolved_sites": 2,
+   "eligible": 14
+  },
+  {
+   "name": "PythonHacker24/linux-acl-management-backend",
+   "commit": "3f148d297999da6a5301f61831d1d901e898c555",
+   "checkout_mib": 66.4,
+   "go_files": 1260,
+   "dir": "PythonHacker24__linux-acl-management-backend",
+   "tracked_go_files": 1260,
+   "loaded_fraction": 0.0516,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle loads under 80% of tracked .go files"
+  },
+  {
+   "name": "SimonWaldherr/HARP",
+   "commit": "bf0793f1c49170e4c17e65578ead559314d88645",
+   "checkout_mib": 0.7,
+   "go_files": 34,
+   "dir": "SimonWaldherr__HARP",
+   "tracked_go_files": 34,
+   "loaded_fraction": 0.5294,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle loads under 80% of tracked .go files"
+  },
+  {
+   "name": "manavkush/microservices-go",
+   "commit": "ee5cb3fcecace2b84592411d6d22c14f23d29a48",
+   "checkout_mib": 0.1,
+   "go_files": 35,
+   "dir": "manavkush__microservices-go",
+   "tracked_go_files": 35,
+   "loaded_fraction": 0.9429,
+   "oracle_resolved_sites": 3,
+   "eligible": 15
+  },
+  {
+   "name": "milosgajdos/go-playht",
+   "commit": "3a6aae325858b79aa3f12771049873b5bc80a956",
+   "checkout_mib": 0.1,
+   "go_files": 20,
+   "dir": "milosgajdos__go-playht",
+   "tracked_go_files": 20,
+   "loaded_fraction": 1.0,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle finds no resolved registration site"
+  },
+  {
+   "name": "trimble-oss/tierceron-hat",
+   "commit": "85fb4fc508fc6a2972322a2d3d90027443b3f71f",
+   "checkout_mib": 0.1,
+   "go_files": 21,
+   "dir": "trimble-oss__tierceron-hat",
+   "tracked_go_files": 21,
+   "loaded_fraction": 0.0,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle loads under 80% of tracked .go files"
+  },
+  {
+   "name": "muxable/cdn",
+   "commit": "4440f63b24f8b6e9e6f008699b1a328ebea539c5",
+   "checkout_mib": 2.3,
+   "go_files": 13,
+   "dir": "muxable__cdn",
+   "tracked_go_files": 13,
+   "loaded_fraction": 0.1538,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle loads under 80% of tracked .go files"
+  },
+  {
+   "name": "pomerium/cli",
+   "commit": "1a6a2eb7d78243cd7144d860387c89a35ff048ea",
+   "checkout_mib": 0.5,
+   "go_files": 76,
+   "dir": "pomerium__cli",
+   "tracked_go_files": 76,
+   "loaded_fraction": 0.0,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle loads under 80% of tracked .go files"
+  },
+  {
+   "name": "benchhub/benchhub",
+   "commit": "5ae482ce2a1e4f3bb1ff966f6d59efb09c12a136",
+   "checkout_mib": 1.4,
+   "go_files": 195,
+   "dir": "benchhub__benchhub",
+   "drop": "oracle failed: eplaced by ../../dyweb/gommon): reading ../../dyweb/gommon/go.mod: open /home/ben/phebs-rehearsals/t583b-20261014/dyweb/gommon/go.mod: no such file or directory"
+  },
+  {
+   "name": "Bastien-Antigravity/obsidian-brain",
+   "commit": "b6629b325145b1fc4bbc753520dccb700e3ef5c1",
+   "checkout_mib": 2.8,
+   "go_files": 0,
+   "drop": "no root go.mod"
+  },
+  {
+   "name": "googleforgames/open-match2",
+   "commit": "ac392a0576ea65a73d17aa07090519efcdba99cd",
+   "checkout_mib": 0.6,
+   "go_files": 22,
+   "dir": "googleforgames__open-match2",
+   "tracked_go_files": 22,
+   "loaded_fraction": 1.0,
+   "oracle_resolved_sites": 1,
+   "eligible": 16
+  },
+  {
+   "name": "yinhm/friendfeed",
+   "commit": "9c870be26a48085e520c2a5eb2a45e42a363917d",
+   "checkout_mib": 3.3,
+   "go_files": 293,
+   "dir": "yinhm__friendfeed",
+   "tracked_go_files": 293,
+   "loaded_fraction": 0.9932,
+   "oracle_resolved_sites": 5,
+   "eligible": 17
+  },
+  {
+   "name": "danthegoodman1/netfence",
+   "commit": "5d43d26152638b9e69029e739842b6c97593c511",
+   "checkout_mib": 1.8,
+   "go_files": 109,
+   "dir": "danthegoodman1__netfence",
+   "tracked_go_files": 109,
+   "loaded_fraction": 0.1009,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle loads under 80% of tracked .go files"
+  },
+  {
+   "name": "noble-assets/dollar",
+   "commit": "61a989b959348705b9e503c560dcb82e60c81a72",
+   "checkout_mib": 4.5,
+   "go_files": 125,
+   "dir": "noble-assets__dollar",
+   "tracked_go_files": 125,
+   "loaded_fraction": 0.912,
+   "oracle_resolved_sites": 8,
+   "eligible": 18
+  },
+  {
+   "name": "quangh33/Go-Kafka",
+   "commit": "5f3849cb225f932c309ba832832733773ca6370e",
+   "checkout_mib": 1.0,
+   "go_files": 10,
+   "dir": "quangh33__Go-Kafka",
+   "tracked_go_files": 10,
+   "loaded_fraction": 1.0,
+   "oracle_resolved_sites": 1,
+   "eligible": 19
+  },
+  {
+   "name": "pixperk/plethora",
+   "commit": "529418b19200b6320bd0b81b5dbd85d6ca2d201e",
+   "checkout_mib": 0.1,
+   "go_files": 19,
+   "dir": "pixperk__plethora",
+   "tracked_go_files": 19,
+   "loaded_fraction": 1.0,
+   "oracle_resolved_sites": 1,
+   "eligible": 20
+  },
+  {
+   "name": "jerkeyray/mimori",
+   "commit": "e665ec4c6145e89dca5d8f5359f371790f89a679",
+   "checkout_mib": 2.4,
+   "go_files": 43,
+   "dir": "jerkeyray__mimori",
+   "tracked_go_files": 43,
+   "loaded_fraction": 1.0,
+   "oracle_resolved_sites": 4,
+   "eligible": 21
+  },
+  {
+   "name": "PKUHPC/scow-slurm-adapter",
+   "commit": "9787455f35ac781c25d9c22d9d678b4cf356c930",
+   "checkout_mib": 0.6,
+   "go_files": 44,
+   "dir": "PKUHPC__scow-slurm-adapter",
+   "tracked_go_files": 44,
+   "loaded_fraction": 1.0,
+   "oracle_resolved_sites": 6,
+   "eligible": 22
+  },
+  {
+   "name": "gitpod-io/gitpod-sdk-go",
+   "commit": "779e0a621ab562131892a6a50da9df2a06a4ed24",
+   "checkout_mib": 5.9,
+   "go_files": 144,
+   "dir": "gitpod-io__gitpod-sdk-go",
+   "tracked_go_files": 144,
+   "loaded_fraction": 1.0,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle finds no resolved registration site"
+  },
+  {
+   "name": "flakrimjusufi/grpc-with-rest",
+   "commit": "8b05c01d24a95134b73ab6c753f308bbf8717c1d",
+   "checkout_mib": 2.0,
+   "go_files": 13,
+   "dir": "flakrimjusufi__grpc-with-rest",
+   "tracked_go_files": 13,
+   "loaded_fraction": 0.6923,
+   "oracle_resolved_sites": 2,
+   "drop": "oracle loads under 80% of tracked .go files"
+  },
+  {
+   "name": "ondoprotocol/usdy-noble",
+   "commit": "c186c4023a65409fd6dfbba68fd37eeeb57b09a0",
+   "checkout_mib": 3.0,
+   "go_files": 61,
+   "dir": "ondoprotocol__usdy-noble",
+   "tracked_go_files": 61,
+   "loaded_fraction": 0.8525,
+   "oracle_resolved_sites": 4,
+   "eligible": 23
+  },
+  {
+   "name": "Fred78290/kubernetes-vmware-autoscaler",
+   "commit": "116e7cf28e66c828c63f774616add040cec237da",
+   "checkout_mib": 1.0,
+   "go_files": 59,
+   "dir": "Fred78290__kubernetes-vmware-autoscaler",
+   "tracked_go_files": 59,
+   "loaded_fraction": 0.9661,
+   "oracle_resolved_sites": 4,
+   "eligible": 24
+  },
+  {
+   "name": "lightninglabs/wavelength",
+   "commit": "a7286555474d269645f4bc76d6af02aca1bb0ac3",
+   "checkout_mib": 20.5,
+   "go_files": 1445,
+   "dir": "lightninglabs__wavelength",
+   "tracked_go_files": 1445,
+   "loaded_fraction": 0.8388,
+   "oracle_resolved_sites": 15,
+   "eligible": 25
+  },
+  {
+   "name": "xushuhui/lin-cms-go",
+   "commit": "b950dd23e5244bcb0d714c78ce2a44541b83d9ae",
+   "checkout_mib": 0.4,
+   "go_files": 66,
+   "dir": "xushuhui__lin-cms-go",
+   "tracked_go_files": 66,
+   "loaded_fraction": 0.9848,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle finds no resolved registration site"
+  },
+  {
+   "name": "monerium/module-noble",
+   "commit": "f982219e30929d801e8d23e01e4dadc50e0612b8",
+   "checkout_mib": 13.7,
+   "go_files": 70,
+   "dir": "monerium__module-noble",
+   "tracked_go_files": 70,
+   "loaded_fraction": 0.9,
+   "oracle_resolved_sites": 4,
+   "eligible": 26
+  },
+  {
+   "name": "ani03sha/raftly",
+   "commit": "235a033c44c88a3de0ddd290ab0c522b9770ed41",
+   "checkout_mib": 1.6,
+   "go_files": 37,
+   "dir": "ani03sha__raftly",
+   "tracked_go_files": 37,
+   "loaded_fraction": 1.0,
+   "oracle_resolved_sites": 1,
+   "eligible": 27
+  },
+  {
+   "name": "lizhaoliu/konsen",
+   "commit": "e561a891671d3b4d20fcd600e29c7fbe936f3767",
+   "checkout_mib": 0.6,
+   "go_files": 27,
+   "dir": "lizhaoliu__konsen",
+   "tracked_go_files": 27,
+   "loaded_fraction": 1.0,
+   "oracle_resolved_sites": 2,
+   "eligible": 28
+  },
+  {
+   "name": "vega-project/ccb-operator",
+   "commit": "523fb5d3cd4cf3b2e367bf0f587613b0290ab09a",
+   "checkout_mib": 6.5,
+   "go_files": 54,
+   "dir": "vega-project__ccb-operator",
+   "tracked_go_files": 54,
+   "loaded_fraction": 0.9815,
+   "oracle_resolved_sites": 1,
+   "eligible": 29
+  },
+  {
+   "name": "Azure/mygreeterv3-demo",
+   "commit": "79f3a68488f99f0616dfdd9ab1291cc33391627d",
+   "checkout_mib": 0.7,
+   "go_files": 73,
+   "drop": "no root go.mod"
+  },
+  {
+   "name": "mtnmunuklu/lescatit",
+   "commit": "d19eb80a640db3f1b1806a13cdf67f14f5a38432",
+   "checkout_mib": 17.4,
+   "go_files": 72,
+   "dir": "mtnmunuklu__lescatit",
+   "tracked_go_files": 72,
+   "loaded_fraction": 1.0,
+   "oracle_resolved_sites": 4,
+   "eligible": 30
+  },
+  {
+   "name": "openconfig/ovgs",
+   "commit": "633845c3f0f23ad41cc5af94e09a3138a1968957",
+   "checkout_mib": 0.3,
+   "go_files": 2,
+   "dir": "openconfig__ovgs",
+   "tracked_go_files": 2,
+   "loaded_fraction": 1.0,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle finds no resolved registration site"
+  },
+  {
+   "name": "tidepool-org/devices",
+   "commit": "2a003d65e1ce47930eaff75c5f98224a1066839b",
+   "checkout_mib": 0.2,
+   "go_files": 18,
+   "dir": "tidepool-org__devices",
+   "tracked_go_files": 18,
+   "loaded_fraction": 0.7778,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle loads under 80% of tracked .go files"
+  },
+  {
+   "name": "doublemo/nakama-kit",
+   "commit": "834534810e45ad63e820ab2864ceb9c861eac9fb",
+   "checkout_mib": 20.5,
+   "go_files": 1117,
+   "dir": "doublemo__nakama-kit",
+   "tracked_go_files": 1117,
+   "loaded_fraction": 0.0215,
+   "oracle_resolved_sites": 1,
+   "drop": "oracle loads under 80% of tracked .go files"
+  },
+  {
+   "name": "replit/replit-ebpf",
+   "commit": "4f0fcca6962bf3ffcead13050a2e3e5f5ad53aea",
+   "checkout_mib": 0.1,
+   "go_files": 9,
+   "dir": "replit__replit-ebpf",
+   "tracked_go_files": 9,
+   "loaded_fraction": 1.0,
+   "oracle_resolved_sites": 2,
+   "eligible": 31
+  },
+  {
+   "name": "dtm-labs/quick-start-sample",
+   "commit": "0705590c1cf0081d214b81225e3aa9a3d90db858",
+   "checkout_mib": 0.2,
+   "go_files": 8,
+   "dir": "dtm-labs__quick-start-sample",
+   "tracked_go_files": 8,
+   "loaded_fraction": 1.0,
+   "oracle_resolved_sites": 2,
+   "eligible": 32
+  },
+  {
+   "name": "opencontrolplane/opencp-spec",
+   "commit": "eb673e53c79f6654c938f2cdd9ec5857e40f442c",
+   "checkout_mib": 0.4,
+   "go_files": 32,
+   "dir": "opencontrolplane__opencp-spec",
+   "tracked_go_files": 32,
+   "loaded_fraction": 1.0,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle finds no resolved registration site"
+  },
+  {
+   "name": "dperfly/frieza",
+   "commit": "e3600f509ee60e4b53d22cf9a140e82b9660e57c",
+   "checkout_mib": 0.1,
+   "go_files": 25,
+   "dir": "dperfly__frieza",
+   "tracked_go_files": 25,
+   "loaded_fraction": 1.0,
+   "oracle_resolved_sites": 1,
+   "eligible": 33
+  },
+  {
+   "name": "dsrvlabs/vatz-proto",
+   "commit": "6850934f3c27030b759d163736a5f3a40118cbce",
+   "checkout_mib": 0.2,
+   "go_files": 8,
+   "dir": "dsrvlabs__vatz-proto",
+   "tracked_go_files": 8,
+   "loaded_fraction": 0.875,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle finds no resolved registration site"
+  },
+  {
+   "name": "grpc-ecosystem/go-grpc-middleware",
+   "commit": "e4b8359eab1decf4f6df8e9723acf947dacdb519",
+   "checkout_mib": 1.1,
+   "go_files": 105,
+   "dir": "grpc-ecosystem__go-grpc-middleware",
+   "tracked_go_files": 105,
+   "loaded_fraction": 0.781,
+   "oracle_resolved_sites": 9,
+   "drop": "oracle loads under 80% of tracked .go files"
+  },
+  {
+   "name": "lileio/lile",
+   "commit": "2b112ceae4ac6da1d274a1cdfcef7b476513ce1e",
+   "checkout_mib": 0.1,
+   "go_files": 17,
+   "dir": "lileio__lile",
+   "tracked_go_files": 17,
+   "loaded_fraction": 0.9412,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle finds no resolved registration site"
+  },
+  {
+   "name": "gavinbunney/terraform-provider-kubectl",
+   "commit": "82633069ffbd8097e09866dd036b41b097bb4ed9",
+   "checkout_mib": 0.7,
+   "go_files": 25,
+   "dir": "gavinbunney__terraform-provider-kubectl",
+   "tracked_go_files": 25,
+   "loaded_fraction": 1.0,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle finds no resolved registration site"
+  },
+  {
+   "name": "quackduck/devzat",
+   "commit": "a4a1be9e0dd5c7d771462970aa8359ae4b918c12",
+   "checkout_mib": 0.2,
+   "go_files": 18,
+   "dir": "quackduck__devzat",
+   "tracked_go_files": 18,
+   "loaded_fraction": 0.7222,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle loads under 80% of tracked .go files"
+  },
+  {
+   "name": "dapplink-labs/wallet-chain-node",
+   "commit": "ef4c8b890068d05ac6e23363ae8ae5e41a35ec01",
+   "checkout_mib": 2.2,
+   "go_files": 176,
+   "dir": "dapplink-labs__wallet-chain-node",
+   "tracked_go_files": 176,
+   "loaded_fraction": 0.7898,
+   "oracle_resolved_sites": 0,
+   "drop": "oracle loads under 80% of tracked .go files"
+  },
+  {
+   "name": "gonet2/game",
+   "commit": "5f8780d050e85bc75d7c8f15e134db732d3d7601",
+   "checkout_mib": 6.7,
+   "go_files": 460,
+   "drop": "no root go.mod"
+  },
+  {
+   "name": "danie1Lin/Distributed-Golang-Game-Server",
+   "commit": "620f6c91b6e21db9f8eca88916b1130223ff8b81",
+   "checkout_mib": 29.0,
+   "go_files": 36,
+   "drop": "no root go.mod"
+  },
+  {
+   "name": "onepanelio/onepanel",
+   "commit": "1170b53f6154df2cb9cb2aef32ce73c8436919b7",
+   "checkout_mib": 6.6,
+   "go_files": 183,
+   "dir": "onepanelio__onepanel",
+   "tracked_go_files": 183,
+   "loaded_fraction": 0.9945,
+   "oracle_resolved_sites": 13,
+   "eligible": 34
+  }
+ ]
+}
