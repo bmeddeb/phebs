@@ -311,6 +311,9 @@ and who owns each.
     with Ben's key. The real release binary admits only `wire-compatibility`
     with no experimental switch, and revocation is proven. The release
     expires on 2027-01-10. See protocol §11.
+  - 2026-10-14: re-bound as 1.0.1 into the five-release selection for binary
+    `2467bd17` (`spike/t533r/release`), so one binary serves every released
+    claim.
   - Remaining, agent: bind the input identity after Epic 49.
 
 - **Kafka producer (Epic 55).**

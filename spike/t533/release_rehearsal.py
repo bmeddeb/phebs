@@ -143,7 +143,7 @@ def envelope(binary: Path, history: Path, population: Path, run_root: Path) -> d
 
 
 def release(binary: Path, selection: Path, artifacts: Path, key_id: str, public_key: str, release_id: str,
-            run_root: Path) -> dict:
+            run_root: Path, expect: list[str] | None = None) -> dict:
     run_root.mkdir(parents=True)
     trust = (f'release_selection:\n  path: "{selection}"\n  artifacts_path: "{artifacts}"\n'
              f'  keys:\n    - id: "{key_id}"\n      public_key: "{public_key}"\n')
@@ -151,8 +151,12 @@ def release(binary: Path, selection: Path, artifacts: Path, key_id: str, public_
     session, base, key = start(binary, run_root, 'released', trust)
     try:
         result['capabilities'] = capabilities(base, key)
-        if 'wire-compatibility' not in result['capabilities'] or any(
-                c.startswith('contract-') or c == 'kafka-topic-usage' for c in result['capabilities']):
+        # A selection shipping sibling releases names its exact capability set;
+        # alone, WIRE must admit no other proof or contract surface.
+        wrong = (result['capabilities'] != sorted(expect) if expect else
+                 'wire-compatibility' not in result['capabilities'] or any(
+                     c.startswith('contract-') or c == 'kafka-topic-usage' for c in result['capabilities']))
+        if wrong:
             raise serve.ServeError(f"released claim admitted the wrong surface set: {result['capabilities']}")
         result['denial'] = denial(base)
         status, body = run_round.post(base, '/api/check_wire_compatibility', BREAKING, key)
@@ -172,6 +176,8 @@ def release(binary: Path, selection: Path, artifacts: Path, key_id: str, public_
         result['revoked_status'] = status
         if 'wire-compatibility' in result['revoked_capabilities'] or status == 200:
             raise serve.ServeError('a revoked release still serves the verdict')
+        if expect and result['revoked_capabilities'] != sorted(c for c in expect if c != 'wire-compatibility'):
+            raise serve.ServeError(f"revoking WIRE disturbed its siblings: {result['revoked_capabilities']}")
     finally:
         result['revoked_stop'] = session.stop('graceful').get('outcome')
     return result  # the harness drops scratch logs on a clean stop; the withdrawal line is checked directly
@@ -190,12 +196,14 @@ def main() -> None:
         r.add_argument(flag, type=Path, required=True)
     for flag in ('--key-id', '--public-key', '--release-id'):
         r.add_argument(flag, required=True)
+    r.add_argument('--expect-capabilities', help='comma-separated exact capability set of a multi-release selection')
     args = parser.parse_args()
     if args.command == 'envelope':
         out = envelope(args.binary.resolve(), args.history, args.population, args.run_root.resolve())
     else:
         out = release(args.binary.resolve(), args.selection.resolve(), args.artifacts.resolve(), args.key_id,
-                      args.public_key, args.release_id, args.run_root.resolve())
+                      args.public_key, args.release_id, args.run_root.resolve(),
+                      args.expect_capabilities.split(',') if args.expect_capabilities else None)
     print(json.dumps(out, indent=1, sort_keys=True))
 
 

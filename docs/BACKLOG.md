@@ -19223,6 +19223,15 @@ his ed25519 signing key (`~/phebs-release-ed25519.pem`) and signed
 Protocol §11 holds the details. The validation expires on 2027-01-10. This
 release had no independent human review.*
 
+*T53.3 upkeep (2026-10-14, Claude lead, Linux track): **WIRE re-bound as
+1.0.1 into a five-release selection for binary `2467bd17`** (WIRE protocol §12).
+
+- **Why.** The claim's dependencies are byte-identical since `e485fc36`.
+- **Evidence.** The envelope was re-measured on the new binary, and the final
+  proofs show each release revoking only its own surface.
+- **Selection.** `spike/t533r/release` is now the current selection. The
+  harness gained `--expect-capabilities` for multi-release selections.*
+
 ## Epic 54 · Contract Impact production readiness
 
 **T54.1 · Supported report contract and direct end-to-end quality** — freeze

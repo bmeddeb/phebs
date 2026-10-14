@@ -431,3 +431,41 @@ experimental switch, only the signed selection and the key.
 **Not established.** This release has not had an independent human review;
 Claude was the sole adjudicator and reviewer Ben named. The envelope was
 measured on this host only.
+
+## 12. Re-bind 1.0.1 (2026-10-14): one binary serves every released claim
+
+1.0.0 admits only binary `e485fc36`, so the T49.3 release binary `2467bd17`
+served no WIRE verdict. Nothing the claim depends on changed between the two:
+`internal/compat`, `cmd/phebs/serve_runners.go`, and the Buf and protocompile
+pins are byte-identical. `rel-phebs.protobuf.wire.buf-1.0.1` therefore
+re-binds the unchanged claim. It ships in `spike/t533r/release/`, a
+five-release selection signed with `ben-phebs-release-2026-10` for
+`2467bd17`.
+
+That selection holds Thrift contract 1.0.1, producer 1.0.4, consumer 1.0.3,
+Topics 1.0.2 and WIRE 1.0.1. The other four are re-signatures of the
+unchanged T49.3 records, needed because a record binds the digest of its
+whole artifacts directory.
+
+**Envelope on `2467bd17`** (`receipts/wire-envelope.json`): 235 round-2 units
+at each of 1, 4 and 8 concurrent clients, all answering 200.
+
+| Clients | p95 | Throughput | Peak tree RSS |
+|---|---|---|---|
+| 1 | 224 ms | 8.2 checks/s | 297 MiB |
+| 4 | 312 ms | 23.4 checks/s | 491 MiB |
+| 8 | 509 ms | 24.0 checks/s | 501 MiB |
+
+Anonymous and wrong-token requests get 401.
+
+**Final proofs with Ben's key.**
+
+- **WIRE** (`receipts/wire-final.json`): capabilities are exactly the five
+  released surfaces, and a real breaking change returns
+  `FIELD_WIRE_COMPATIBLE_TYPE` with MCP equal to HTTP. Revoking WIRE removes
+  only `wire-compatibility`, and its route answers 404.
+- **Thrift** (`receipts/thrift-final.json`): all five records leave Atlas
+  equal to the oracle. Revoking Thrift removes only Atlas; revoking WIRE
+  leaves Atlas exact.
+- **Kafka** (`receipts/kafka-final.json`): 41 of 41 topics. Revoking Topics
+  or the consumer withdraws exactly those surfaces.

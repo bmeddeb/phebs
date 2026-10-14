@@ -1,0 +1,46 @@
+{
+ "denial": {
+  "anonymous": 401,
+  "wrong_token": 401
+ },
+ "levels": {
+  "1": {
+   "checks_per_second": 8.16,
+   "max_s": 0.2428,
+   "p50_s": 0.1064,
+   "p95_s": 0.2236,
+   "p99_s": 0.2392,
+   "peak_tree_rss_mib": 297.1,
+   "seconds": 28.79,
+   "statuses": {
+    "200": 235
+   }
+  },
+  "4": {
+   "checks_per_second": 23.35,
+   "max_s": 0.3513,
+   "p50_s": 0.1479,
+   "p95_s": 0.3124,
+   "p99_s": 0.3406,
+   "peak_tree_rss_mib": 491.4,
+   "seconds": 10.07,
+   "statuses": {
+    "200": 235
+   }
+  },
+  "8": {
+   "checks_per_second": 23.99,
+   "max_s": 0.5949,
+   "p50_s": 0.3069,
+   "p95_s": 0.5086,
+   "p99_s": 0.5811,
+   "peak_tree_rss_mib": 500.6,
+   "seconds": 9.8,
+   "statuses": {
+    "200": 235
+   }
+  }
+ },
+ "stop": "success",
+ "units": 235
+}

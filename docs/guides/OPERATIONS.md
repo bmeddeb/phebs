@@ -4684,7 +4684,16 @@ succeeds (the first five remain available when compatibility is unavailable):
   singular↔repeated change as breaking, including string and message changes
   that protobuf documents as wire-compatible.
 
-  **Released Thrift declarations with Kafka and Topics (T49.3, current).** Use
+  **Five released claims for one binary (T53.3 re-bind, current).** Use
+  `spike/t533r/release/{selection,artifacts}`. The selection holds Thrift
+  contract 1.0.1, producer 1.0.4, consumer 1.0.3, Topics 1.0.2 and Buf WIRE
+  1.0.1, and admits only the binary built from `2467bd17`
+  (`sha256:8aabade0…`). It supersedes the T49.3 selection, which lacks WIRE.
+
+  - Each release_id revokes only its own surface.
+  - WIRE expires 2027-01-10, and the others expire 2027-01-12.
+
+  **Released Thrift declarations with Kafka and Topics (T49.3).** Use
   `spike/t493/release/{selection,artifacts}`. The selection holds Thrift
   contract 1.0.0, producer 1.0.3, consumer 1.0.2 and Topics 1.0.1, and admits
   only the binary built from `2467bd17` (`sha256:8aabade0…`). It supersedes
