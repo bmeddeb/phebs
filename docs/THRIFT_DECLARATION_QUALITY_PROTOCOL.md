@@ -158,3 +158,61 @@ The measures, over scored files:
   post-adjudication figure.
 - **Disclosure:** every adjudicated item is listed with its verdict. Any
   `phebs_wrong` item is a defect, reported whether or not the thresholds pass.
+
+## 7. Result (2026-10-13): fails
+
+**Population.** Run as frozen:
+- the four searches returned 44 unique repositories; queries 1 and 2
+  returned no results as run;
+- in order, 10 were eligible and 19 were dropped (5 excluded, 13 over the
+  envelope, 1 where the oracle compiled nothing);
+- the lock is `spike/t492/corpus.lock.json` (`03cd8c85`), committed before
+  phebs ran.
+
+It holds 279 files: 252 scored, 5 phebs D2 gaps, 4 phebs parse errors, 1
+other phebs gap, and 17 the oracle rejects. The oracle declares 20,012
+declarations. Disclosed: the population is dominated by Impala and Doris IDL
+families, and 217 of the 279 files have distinct contents.
+
+| Measure | As measured | After adjudication | Distinct contents | Threshold |
+|---|---|---|---|---|
+| Declaration agreement | 98.11% | 98.11% | 97.88% | ≥ 99.5% — **fails** |
+| Field-ID agreement | 100% (14,091) | 100% | 100% | 100% — passes |
+| Reference-state agreement | 93.47% | 98.52% | 98.33% | ≥ 99.5% — **fails** |
+
+**Declarations.** In the 252 scored files, every declaration matched exactly:
+zero oracle-only and zero phebs-only rows. All 368 missed declarations come
+from 5 files phebs fails on.
+
+**Adjudication** (`spike/t492/adjudication.jsonl`, by Claude as named by Ben;
+none `unsure`):
+
+- **`out_of_scope`, 722 fields.** Include-qualified references, such as
+  `Types.TPlanNodeId`, which Apache resolves across the include, often to a
+  base type. phebs abstains with `IMPORT_LINKING_UNAVAILABLE`, as §2's
+  include non-claim says.
+- **`phebs_wrong`, 198 fields.** Union members. Thrift unions are implicitly
+  optional, and Apache reports them so; phebs reports `default`.
+- **`phebs_wrong`, 4 files (cloudwego/thriftgo).** thriftrw rejects what the
+  reference compiler accepts:
+  - the reserved words `goto`, `alias` and `def` used as identifiers;
+  - a namespace annotation, `namespace xsd test (uri = '…')`.
+
+  A single unparseable file fails the whole repository's `thrift-contract`
+  run in production, so on the served path this repository would publish
+  none of its Thrift declarations.
+- **`phebs_wrong`, 1 file.** Negative explicit field IDs (`-1: i32 a`). They
+  are valid Apache wire IDs, but phebs gaps the file as `invalid_field_id`,
+  which §2 does not declare as a non-claim.
+- **Reported, 17 files** the reference compiler rejects (errors and phebs
+  behavior are in the adjudication file).
+
+**Defects** (`phebs_wrong`), for a fix before any fresh round:
+- union-member cardinality;
+- reserved-word identifiers and namespace annotations failing the parse;
+- the repository-wide blast radius of one parse failure;
+- negative explicit field IDs.
+
+This population has now been seen, so a passing claim needs a fresh round
+after those fixes. Field-ID identity, the wire identity Atlas and field
+references join on, was 100% exact.

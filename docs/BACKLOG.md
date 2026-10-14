@@ -18730,6 +18730,33 @@ freeze namespace/include/generator lineage and declarations, ambiguity,
 missing/unsupported input and gap accounting; protobuf results grant no Thrift
 support.
 
+*T49.2 round 1 (2026-10-13, Claude lead, Linux track): **fails**
+([protocol](THRIFT_DECLARATION_QUALITY_PROTOCOL.md) §7).
+
+- **Design** (Ben's choices): the pinned Apache Thrift 0.19.0 reference
+  compiler (`-gen json`) is the complete oracle, with no human sample. The
+  thresholds mirror T49.1b, plus 100% field-ID agreement. The population is
+  fresh, chosen by a frozen search rule, and Claude adjudicates.
+- **Sealed and locked:** the protocol at `8d8f5678`, the tools at
+  `4fb81ab3`, and the population at `03cd8c85`. That is 10 repositories,
+  279 files and 20,012 oracle declarations, dominated by the Impala and
+  Doris families.
+- **Result:**
+  - field-ID agreement is **100%** (14,091 fields);
+  - declaration agreement is 98.11%. In the scored files it is exact; every
+    miss comes from 5 files phebs fails on;
+  - reference-state agreement is 98.52% after adjudication (93.47% as
+    measured). Of the disagreements, 722 are include-qualified references
+    (`out_of_scope`) and 198 are union members (`phebs_wrong`).
+- **Defects:**
+  - union members should be `optional`;
+  - thriftrw rejects the reserved words `goto`, `alias` and `def` as
+    identifiers, and namespace annotations;
+  - one unparseable file fails the repository's whole run;
+  - negative explicit field IDs are gapped.
+
+  A fresh round follows only after they are fixed.*
+
 **T49.3 · Stable Atlas startup and exact discovery/detail** — use T48's
 release selection for only admitted declaration recipes; prove real source,
 authorization, paging/currentness and immutable citations; unrelated
