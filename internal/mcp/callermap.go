@@ -52,7 +52,10 @@ type contractOperationResult struct {
 }
 
 func registerCallerMapTools(s *sdk.Server, opts Options) {
-	if opts.ContractCatalog == nil || opts.CallerMap == nil {
+	// T49.4: the two Contract Atlas tools need only Atlas, so a release that
+	// admits Atlas alone (thrift-contract, T49.3) serves the same discovery over
+	// MCP as over HTTP. The caller tools below still need Caller Map.
+	if opts.ContractCatalog == nil {
 		return
 	}
 
@@ -132,6 +135,10 @@ func registerCallerMapTools(s *sdk.Server, opts Options) {
 			Detail: *detail,
 		}, nil
 	})
+
+	if opts.CallerMap == nil {
+		return
+	}
 
 	type operationCallersIn struct {
 		Protocol   string `json:"protocol" jsonschema:"exact protocol returned by search_contract_operations"`

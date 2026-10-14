@@ -34,6 +34,7 @@ import caller_operating  # noqa: E402
 import serve_rehearsal  # noqa: E402
 
 RELATIONSHIPS = ['implementations', 'callers', 'unresolved_candidates']
+MCP = False  # --mcp: the release declares the Atlas MCP tools (T49.4), so MCP must equal HTTP
 
 
 def connection(name: str) -> str:
@@ -177,6 +178,10 @@ def rehearse(binary: Path, history: Path, lock_path: Path, expected: Path, selec
                         params = {'repository': op['repository'], 'lineage': op['declaration_lineage'], 'operation': op['operation']}
                         status, body = serve.http_get(base, '/api/contract_atlas/operation', params, token=key)
                         detail = json.loads(body) if status == 200 else {}
+                        mcp = serve.mcp_call(base, 'get_contract_operation', {'protocol': 'thrift', 'repository': op['repository'],
+                                             'declaration_lineage': op['declaration_lineage'], 'operation': op['operation']}, token=key)
+                        if MCP:
+                            serve.parity(body, {'structuredContent': (mcp.get('structuredContent') or {}).get('detail')}, serve_rehearsal.VOLATILE)
                         if (status != 200 or detail.get('unavailable_relationships') != RELATIONSHIPS
                                 or any(detail.get(k) for k in RELATIONSHIPS)
                                 or detail['coverage'].get('domains') != ['thrift-contract']
@@ -189,6 +194,11 @@ def rehearse(binary: Path, history: Path, lock_path: Path, expected: Path, selec
                         if hidden != 404:
                             raise serve.ServeError(f'a member read a hidden repository operation ({hidden})')
                     record['operation_details_checked'] = details
+                    if MCP:
+                        status, body = serve.http_get(base, '/api/contract_atlas', {'page_size': '100'}, token=key)
+                        serve.parity(body, serve.mcp_call(base, 'search_contract_operations', {'page_size': 100}, token=key),
+                                     serve_rehearsal.VOLATILE)
+                        record['mcp_matches_http'] = True
                     latencies = []
                     for _ in range(20):
                         started = time.monotonic()
@@ -274,7 +284,10 @@ def main() -> None:
     parser.add_argument('--public-key', required=True)
     parser.add_argument('--member', default='HartLuk__CCS')
     parser.add_argument('--final-revoke', action='append', default=[], metavar='RELEASE_ID')
+    parser.add_argument('--mcp', action='store_true', help='require Atlas MCP parity (T49.4)')
     args = parser.parse_args()
+    global MCP
+    MCP = args.mcp
     common = (args.binary.resolve(), args.history, args.lock, args.expected, args.selection.resolve(),
               args.artifacts.resolve(), args.key_id, args.public_key)
     if args.final_revoke:

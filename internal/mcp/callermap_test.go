@@ -183,8 +183,9 @@ func TestCallerMapToolSchemasAndDarkRegistration(t *testing.T) {
 	}{
 		{name: "dark", wantCount: 10},
 		{
-			name: "catalog alone stays dark", catalog: schemaContractCatalogQueries{},
-			wantCount: 10,
+			// T49.4: Atlas alone serves its two discovery tools, never the caller tools.
+			name: "catalog alone serves only the Atlas tools", catalog: schemaContractCatalogQueries{},
+			wantCount: 12,
 		},
 		{
 			name: "caller map alone stays dark", callerMap: schemaCallerMapQueries{},
@@ -258,6 +259,9 @@ func TestCallerMapToolSchemasAndDarkRegistration(t *testing.T) {
 			} {
 				tool, ok := found[name]
 				wantEnabled := enabled
+				if name == "search_contract_operations" || name == "get_contract_operation" {
+					wantEnabled = test.catalog != nil
+				}
 				if name == "compare_operation_callers" {
 					wantEnabled = enabled && test.comparison != nil
 				}

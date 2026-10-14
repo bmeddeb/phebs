@@ -67,8 +67,8 @@ type Options struct {
 	// WireCompatibility enables the standalone Buf WIRE verdict tool (T53.2):
 	// the verdict alone, with no proof bundle or field-reference evidence.
 	WireCompatibility compat.Service
-	// ContractCatalog and CallerMap enable T20.11's three read-only discovery
-	// tools only as one complete annex. CallerComparison adds T20.13's fourth
+	// ContractCatalog enables the two Contract Atlas tools alone (T49.4);
+	// with CallerMap it also enables T20.11's caller tools. CallerComparison adds T20.13's fourth
 	// workflow tool only when the same annex and shared comparison service are
 	// present. These are the same instances used by Huma.
 	ContractCatalog  ContractCatalogQueries

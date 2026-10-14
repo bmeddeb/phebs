@@ -247,6 +247,7 @@ type servedCallerSurfaces struct {
 	wireTool          bool
 	listTopicsTool    bool
 	readInventoryTool bool
+	atlasTools        int // search_contract_operations and get_contract_operation
 	callerMapEnabled  bool
 	callerMapServiced bool
 }
@@ -336,6 +337,8 @@ func serveCallerSurfaces(t *testing.T, cfg *config.Config) servedCallerSurfaces 
 			served.listTopicsTool = true
 		case "read_topic_inventory":
 			served.readInventoryTool = true
+		case "search_contract_operations", "get_contract_operation":
+			served.atlasTools++
 		}
 	}
 	return served
@@ -536,6 +539,13 @@ func TestCallerMapOrdinarySurfaceFollowsProductionAssembly(t *testing.T) {
 				cfg.ReleaseSelection.Keys = []config.ReleaseKey{{ID: "key-1", PublicKey: public}}
 			}
 			got := serveCallerSurfaces(t, cfg)
+			// T49.4: Atlas MCP parity — both discovery tools exactly when the
+			// contract-atlas capability is advertised, Caller Map or not.
+			if wantAtlas := slices.Contains(got.capabilities, "contract-atlas"); (got.atlasTools == 2) != wantAtlas ||
+				(!wantAtlas && got.atlasTools != 0) {
+				t.Fatalf("Atlas MCP tools = %d with contract-atlas advertised = %v", got.atlasTools, wantAtlas)
+			}
+			got.atlasTools = 0
 			if !slices.Equal(got.capabilities, test.want.capabilities) {
 				t.Fatalf("/api/version capabilities = %v, want %v", got.capabilities, test.want.capabilities)
 			}
