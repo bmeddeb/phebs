@@ -386,9 +386,37 @@ and who owns each.
     predated the Kafka recognizer while `grpcgo` shipped before GD1–GD16 were
     written. It measures spec conformance, and the proposed mitigation is a
     separate author for the oracle, forbidden from reading the extractor.
-  - Remaining, Ben: approve the named population list, choose the
-    oracle-independence posture, freeze the thresholds, and decide where the
-    round runs. Remaining, agent: `spike/t581/` and the oracle's pre-seal pass.
+  - Decided: the round runs on the macOS development host over depth-1 clones,
+    not the Linux ceremony host. §2's no-history-expansion rule means no
+    full-history clone is needed; measured depth-1 sizes on four large Go
+    repositories outside the population are 136–396 MiB, putting eighteen
+    members at roughly 4–8 GiB against 93 GiB free. The 2026-10-13 machine tracks
+    settle it: T58.1 is Mac-track work, while the Linux track owns the rehearsal
+    corpora, release signing and T58.3. The draft's earlier 30–60 GiB figure is
+    withdrawn, and so is its later claim that Linux-hosted T42.2 measurements
+    needed protecting — that policy assigns those darwin tests to this machine.
+  - Done: Ben approved and closed the 18-name population list on 2026-10-14,
+    including `etcd-io/etcd` with its T47.2 `grpc-caller` overlap disclosed and
+    accepted, so any etcd result must be restated as not independent of Epic 47's
+    caller corpus. `spike/t581/lock_corpus.py` clones it at depth 1 under the one
+    pre-declared drop rule and writes the lock, running no phebs code, extractor
+    or oracle, so the lock precedes measurement. The lock holds **13 members and
+    5 drops** at exact commits, 225 stubs, 43 symlinks inventoried and never
+    parsed, 1.7 GiB total on this macOS host.
+  - Finding: the 5 drops split into two **structural blind spots** of the domain,
+    not bad luck in the list. `thanos-io/thanos` and `argoproj/argo-cd` do carry
+    real gRPC stubs, but in the older combined `*.pb.go` form; GD1 recognizes only
+    the `_grpc.pb.go` suffix, so such a repository indexes nothing and every call
+    site in it is silently out of domain — no row, no gap, no abstention.
+    `tikv/client-go`, `goharbor/harbor` and `projectcontour/contour` keep their
+    contracts in external modules, which the repository-scoped index cannot see.
+    §1's non-claims now state that a passing score is scoped to repositories
+    vendoring modern split stubs in-tree and says nothing about the rest. The
+    characterization came after the mechanical drop, changed no selection, and
+    re-added nothing.
+  - Remaining, Ben: choose the oracle-independence posture and freeze the
+    thresholds. Remaining, agent: the rest of `spike/t581/` and the oracle's
+    pre-seal pass.
   - Not claimed: nothing is enumerated, scored, sealed or predicted, so this
     grants no quality, coverage, release or scale result, and it is not a T11.1
     retry — that round stays terminally closed with `GATE2-V2 NOT_ESTABLISHED`.
