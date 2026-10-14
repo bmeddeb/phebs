@@ -189,3 +189,41 @@ repositories and at least 150 resolved registration sites are held, capped
 at 60 repositories; below the floors at the cap, the round is underpowered.
 The selector is `spike/t583/select_r2.py`, and the lock is committed before
 grpcgo runs.
+
+## 10. Round 2 result (2026-10-14): fails
+
+**Population.** Of 122 candidates examined, 34 were eligible: the floor of at
+least 10 repositories and at least 150 sites was met with **153** resolved
+registration sites. The lock is `spike/t583/round2/corpus.lock.json`
+(`7071aa7a`), committed before grpcgo ran.
+
+| Measure | Result | Threshold |
+|---|---|---|
+| Precision | **97.67%** (126 / 129) | ≥ 98% — fails, by 3 rows |
+| Recall | **82.35%** (126 / 153) | ≥ 90% — fails |
+
+The only qualifying repository, `kralicky/totem`, scores 100% / 100%.
+
+**Adjudication** (`spike/t583/round2/adjudication.jsonl`): all 30
+disagreements are `phebs_wrong` under the frozen rules, and no oracle
+verdict was overturned.
+
+- **3 wrong rows: false claims.**
+  `btcwalletrpc.RegisterWalletServiceServer(…)` registers an external-module
+  service, which grpcgo name-matched to the repository's own
+  `wavewalletrpc.WalletService`.
+- **22 misses: honest abstentions.** The `Register…Server` name occurs in two
+  or more stubs: duplicate stub copies, or per-package cosmos-style
+  `RegisterMsgServer`. go/types resolves each one uniquely.
+- **3 misses: silent, combined-style `*.pb.go` stubs**, T58.1's declared
+  blind spot.
+- **2 misses: silent, a repository's own registering wrapper**, which is
+  outside grpcgo's shapes.
+
+**What this establishes.** grpcgo's registrations are mostly right when
+emitted: 126 of 129, and the 3 errors are external-module name collisions.
+But name-based resolution abstains or is silent on 27 of 153 real
+registrations. Neither a registrations-only release nor any claim of finding
+registrations is supported on this extractor. Both rounds point the same
+way: identity needs type information that the pure-reader extractor does
+not have.

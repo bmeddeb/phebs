@@ -1,0 +1,301 @@
+{
+ "*": {
+  "oracle_resolved": 153,
+  "precision": 0.976744,
+  "precision_den": 129,
+  "precision_num": 126,
+  "recall": 0.823529,
+  "recall_den": 153,
+  "recall_num": 126,
+  "rows_unloaded_file": 7
+ },
+ "EnbinYang/golang-tips": {
+  "oracle_resolved": 1,
+  "precision": 1.0,
+  "precision_den": 1,
+  "precision_num": 1,
+  "recall": 1.0,
+  "recall_den": 1,
+  "recall_num": 1
+ },
+ "Fred78290/kubernetes-vmware-autoscaler": {
+  "oracle_resolved": 4,
+  "precision": 1.0,
+  "precision_den": 4,
+  "precision_num": 4,
+  "recall": 1.0,
+  "recall_den": 4,
+  "recall_num": 4
+ },
+ "PKUHPC/scow-slurm-adapter": {
+  "oracle_resolved": 6,
+  "precision": 1.0,
+  "precision_den": 6,
+  "precision_num": 6,
+  "recall": 1.0,
+  "recall_den": 6,
+  "recall_num": 6
+ },
+ "Pr0nE/trip-brain-app": {
+  "oracle_resolved": 5,
+  "precision": 1.0,
+  "precision_den": 5,
+  "precision_num": 5,
+  "recall": 1.0,
+  "recall_den": 5,
+  "recall_num": 5
+ },
+ "TengFeiyang01/webook": {
+  "oracle_resolved": 3,
+  "precision": 1.0,
+  "precision_den": 3,
+  "precision_num": 3,
+  "recall": 1.0,
+  "recall_den": 3,
+  "recall_num": 3
+ },
+ "ab180/lrmr": {
+  "oracle_resolved": 1,
+  "precision": 1.0,
+  "precision_den": 1,
+  "precision_num": 1,
+  "recall": 1.0,
+  "recall_den": 1,
+  "recall_num": 1
+ },
+ "ani03sha/raftly": {
+  "oracle_resolved": 1,
+  "precision": 1.0,
+  "precision_den": 1,
+  "precision_num": 1,
+  "recall": 1.0,
+  "recall_den": 1,
+  "recall_num": 1
+ },
+ "b9lab/checkers-minimal": {
+  "oracle_resolved": 2,
+  "precision": 1.0,
+  "precision_den": 2,
+  "precision_num": 2,
+  "recall": 1.0,
+  "recall_den": 2,
+  "recall_num": 2
+ },
+ "devfullcycle/fc-grpc": {
+  "oracle_resolved": 1,
+  "precision": 1.0,
+  "precision_den": 1,
+  "precision_num": 1,
+  "recall": 1.0,
+  "recall_den": 1,
+  "recall_num": 1
+ },
+ "dperfly/frieza": {
+  "oracle_resolved": 1,
+  "precision": 1.0,
+  "precision_den": 1,
+  "precision_num": 1,
+  "recall": 1.0,
+  "recall_den": 1,
+  "recall_num": 1
+ },
+ "dtm-labs/quick-start-sample": {
+  "oracle_resolved": 2,
+  "precision": null,
+  "recall": 0.0,
+  "recall_den": 2
+ },
+ "escalopa/fingo": {
+  "oracle_resolved": 4,
+  "precision": 1.0,
+  "precision_den": 4,
+  "precision_num": 4,
+  "recall": 1.0,
+  "recall_den": 4,
+  "recall_num": 4
+ },
+ "evanrolfe/trayce_agent": {
+  "oracle_resolved": 2,
+  "precision": null,
+  "recall": 0.0,
+  "recall_den": 2
+ },
+ "googleforgames/open-match2": {
+  "oracle_resolved": 1,
+  "precision": 1.0,
+  "precision_den": 1,
+  "precision_num": 1,
+  "recall": 1.0,
+  "recall_den": 1,
+  "recall_num": 1
+ },
+ "jerkeyray/mimori": {
+  "oracle_resolved": 4,
+  "precision": null,
+  "recall": 0.0,
+  "recall_den": 4
+ },
+ "kralicky/totem": {
+  "oracle_resolved": 39,
+  "precision": 1.0,
+  "precision_den": 39,
+  "precision_num": 39,
+  "recall": 1.0,
+  "recall_den": 39,
+  "recall_num": 39
+ },
+ "lightninglabs/wavelength": {
+  "oracle_resolved": 15,
+  "precision": 0.833333,
+  "precision_den": 18,
+  "precision_num": 15,
+  "recall": 1.0,
+  "recall_den": 15,
+  "recall_num": 15,
+  "rows_unloaded_file": 7
+ },
+ "lizhaoliu/konsen": {
+  "oracle_resolved": 2,
+  "precision": 1.0,
+  "precision_den": 2,
+  "precision_num": 2,
+  "recall": 1.0,
+  "recall_den": 2,
+  "recall_num": 2
+ },
+ "lukas-andre/go-grpc-login": {
+  "oracle_resolved": 2,
+  "precision": 1.0,
+  "precision_den": 2,
+  "precision_num": 2,
+  "recall": 1.0,
+  "recall_den": 2,
+  "recall_num": 2
+ },
+ "manavkush/microservices-go": {
+  "oracle_resolved": 3,
+  "precision": 1.0,
+  "precision_den": 3,
+  "precision_num": 3,
+  "recall": 1.0,
+  "recall_den": 3,
+  "recall_num": 3
+ },
+ "mezonai/mmn": {
+  "oracle_resolved": 4,
+  "precision": 1.0,
+  "precision_den": 4,
+  "precision_num": 4,
+  "recall": 1.0,
+  "recall_den": 4,
+  "recall_num": 4
+ },
+ "monerium/module-noble": {
+  "oracle_resolved": 4,
+  "precision": null,
+  "recall": 0.0,
+  "recall_den": 4
+ },
+ "mtnmunuklu/lescatit": {
+  "oracle_resolved": 4,
+  "precision": 1.0,
+  "precision_den": 4,
+  "precision_num": 4,
+  "recall": 1.0,
+  "recall_den": 4,
+  "recall_num": 4
+ },
+ "noble-assets/dollar": {
+  "oracle_resolved": 8,
+  "precision": null,
+  "recall": 0.0,
+  "recall_den": 8
+ },
+ "nyaxt/otaru": {
+  "oracle_resolved": 5,
+  "precision": 1.0,
+  "precision_den": 5,
+  "precision_num": 5,
+  "recall": 1.0,
+  "recall_den": 5,
+  "recall_num": 5
+ },
+ "ondoprotocol/usdy-noble": {
+  "oracle_resolved": 4,
+  "precision": null,
+  "recall": 0.0,
+  "recall_den": 4
+ },
+ "onepanelio/onepanel": {
+  "oracle_resolved": 13,
+  "precision": 1.0,
+  "precision_den": 13,
+  "precision_num": 13,
+  "recall": 1.0,
+  "recall_den": 13,
+  "recall_num": 13
+ },
+ "pixperk/plethora": {
+  "oracle_resolved": 1,
+  "precision": 1.0,
+  "precision_den": 1,
+  "precision_num": 1,
+  "recall": 1.0,
+  "recall_den": 1,
+  "recall_num": 1
+ },
+ "quangh33/Go-Kafka": {
+  "oracle_resolved": 1,
+  "precision": 1.0,
+  "precision_den": 1,
+  "precision_num": 1,
+  "recall": 1.0,
+  "recall_den": 1,
+  "recall_num": 1
+ },
+ "replit/replit-ebpf": {
+  "oracle_resolved": 2,
+  "precision": 1.0,
+  "precision_den": 2,
+  "precision_num": 2,
+  "recall": 1.0,
+  "recall_den": 2,
+  "recall_num": 2
+ },
+ "taiyoh/sqsd": {
+  "oracle_resolved": 1,
+  "precision": 1.0,
+  "precision_den": 1,
+  "precision_num": 1,
+  "recall": 1.0,
+  "recall_den": 1,
+  "recall_num": 1
+ },
+ "v3io/frames": {
+  "oracle_resolved": 1,
+  "precision": 1.0,
+  "precision_den": 1,
+  "precision_num": 1,
+  "recall": 1.0,
+  "recall_den": 1,
+  "recall_num": 1
+ },
+ "vega-project/ccb-operator": {
+  "oracle_resolved": 1,
+  "precision": 1.0,
+  "precision_den": 1,
+  "precision_num": 1,
+  "recall": 1.0,
+  "recall_den": 1,
+  "recall_num": 1
+ },
+ "yinhm/friendfeed": {
+  "oracle_resolved": 5,
+  "precision": 1.0,
+  "precision_den": 2,
+  "precision_num": 2,
+  "recall": 0.4,
+  "recall_den": 5,
+  "recall_num": 2
+ }
+}
