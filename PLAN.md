@@ -11697,10 +11697,23 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   exposes the private chain the receipt exists to exclude shipped undocumented. Review
   had already named that gap and the two minor findings above; the merge was instructed
   with them known, and this bullet plus the guide section close the documentation part.
-  Still open and not claimed here: a test pinning the default-silent path, which is the
-  load-bearing half of the "absent by default" claim and is currently proven only by
-  measurement during review, and a decision on whether mid-rune truncation should be
-  rune-aligned.
+
+  **Three things remain open, and writing the record surfaced two of them.** First, no
+  test pins the default-silent path, which is the load-bearing half of the "absent by
+  default" claim and is currently proven only by measurement during review. Second,
+  checking the guide against its neighbours showed this gate diverges from the house
+  diagnostics mechanism: bounded pipeline diagnostics are the `diagnostics:` config
+  block's `jobs`, `candidates`, `extraction` and `extractor_details` components, and this
+  is an environment variable that is not one of them. Its restart posture matches, its
+  surface does not, and whether it should become `diagnostics.partition_failures` is
+  unsettled. Third, the same comparison showed weaker log hygiene than the verbose-index
+  switch, which splits child lines over 64 KiB into bounded continued records and replaces
+  invalid UTF-8 before logging; this gate hard-slices at 2,048 bytes and can emit a
+  mid-rune cut. Worth recording alongside both: the guide's "Pipeline diagnostics" already
+  excludes handler error text and its "Closed pipeline refusals" already excludes raw
+  errors from the refusal projection, so `classification=unknown` is a designed closed
+  projection rather than a defect, and this gate is the only place in the product that
+  emits the excluded class. None of the three is claimed resolved here.
 
   **Steady-state cost.** Off: one boolean test per partition boundary failure, no
   allocation, no I/O, and no change to any request, sync, startup, retry/no-op,
