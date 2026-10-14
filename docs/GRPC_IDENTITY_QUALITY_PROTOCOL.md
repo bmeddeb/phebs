@@ -168,3 +168,62 @@ lookup-by-operation. `find_operation_consumers` over `grpc-consumer` must not
 be released on this extractor. T58.1's site-coverage pass stands, because it
 measured something else. Registrations look sound (38/38), but 41 sites in
 an underpowered round establish nothing.
+
+## 9. Round 2: registrations only (frozen 2026-10-14, before selection)
+
+Ben chose a registrations-only claim after §8. Calls stay dark, and
+lookup-by-operation remains Caller Map's job (Epic 47).
+
+**Claim.** `REGISTERS_GRPC_SERVICE pkg.Service` names the service actually
+registered, and grpcgo finds the registrations go/types resolves.
+
+**Unchanged.** The oracle and its rules (§3), the adjudication (§5), and the
+thresholds (precision ≥ 98%, recall ≥ 90%, ≥ 90% per repository with at
+least 20 scored rows or sites). Scoring is `score.py --kind registration`:
+the same rules, restricted to registration rows and sites.
+
+**Population.** §6's searches run again, with the same exclusions plus §8's
+25 repositories. Eligibility is as in §6, but the site that counts is an
+oracle-resolved **registration**. Admit candidates until at least 10
+repositories and at least 150 resolved registration sites are held, capped
+at 60 repositories; below the floors at the cap, the round is underpowered.
+The selector is `spike/t583/select_r2.py`, and the lock is committed before
+grpcgo runs.
+
+## 10. Round 2 result (2026-10-14): fails
+
+**Population.** Of 122 candidates examined, 34 were eligible: the floor of at
+least 10 repositories and at least 150 sites was met with **153** resolved
+registration sites. The lock is `spike/t583/round2/corpus.lock.json`
+(`7071aa7a`), committed before grpcgo ran.
+
+| Measure | Result | Threshold |
+|---|---|---|
+| Precision | **97.67%** (126 / 129) | ≥ 98% — fails, by 3 rows |
+| Recall | **82.35%** (126 / 153) | ≥ 90% — fails |
+
+The only qualifying repository, `kralicky/totem`, scores 100% / 100%.
+
+**Adjudication** (`spike/t583/round2/adjudication.jsonl`): all 30
+disagreements are `phebs_wrong` under the frozen rules, and no oracle
+verdict was overturned.
+
+- **3 wrong rows: false claims.**
+  `btcwalletrpc.RegisterWalletServiceServer(…)` registers an external-module
+  service, which grpcgo name-matched to the repository's own
+  `wavewalletrpc.WalletService`.
+- **22 misses: honest abstentions.** The `Register…Server` name occurs in two
+  or more stubs: duplicate stub copies, or per-package cosmos-style
+  `RegisterMsgServer`. go/types resolves each one uniquely.
+- **3 misses: silent, combined-style `*.pb.go` stubs**, T58.1's declared
+  blind spot.
+- **2 misses: silent, a repository's own registering wrapper**, which is
+  outside grpcgo's shapes.
+
+**What this establishes.** grpcgo's registrations are mostly right when
+emitted: 126 of 129, and the 3 errors are external-module name collisions.
+But name-based resolution abstains or is silent on 27 of 153 real
+registrations. Neither a registrations-only release nor any claim of finding
+registrations is supported on this extractor. Both rounds point the same
+way: identity needs type information that the pure-reader extractor does
+not have.

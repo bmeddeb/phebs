@@ -20302,6 +20302,19 @@ bar, on a fresh population.
 `find_operation_consumers` over `grpc-consumer` stays dark, and T58.3's
 release is blocked on Ben's choice of next path.*
 
+*T58.3b registrations round (2026-10-14, Claude lead): **fails.** 34 fresh
+repositories and 153 resolved registration sites (powered).
+
+- **Precision:** 97.67% (126/129). The 3 false rows are external-module
+  registrations name-matched to the repository's own same-named stub.
+- **Recall:** 82.35%. Of the 27 misses, 22 are honest abstentions on
+  `Register…Server` names that occur in several stubs, 3 come from
+  combined-style stubs, and 2 from registering wrappers.
+
+Both identity rounds point the same way: a name-based pure reader cannot
+carry an identity claim. Epic 58's gRPC release stays blocked; Ben chooses
+the next path.*
+
 ## Epic 25 · Embedded documentation browser *(drafted 2026-07-27 · unscheduled nice-to-have)*
 
 Serve the repository's markdown documentation, rendered, from the phebs binary
