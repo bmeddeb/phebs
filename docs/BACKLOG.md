@@ -18880,6 +18880,69 @@ producer 1.0.3, consumer 1.0.2 and Topics 1.0.1 re-bound** (Thrift protocol
 promotion bar for each selected protocol and the declared UI/HTTP/MCP surface.
 One protocol may release while the other remains explicitly unavailable.
 
+**T49R.1 · Inherited generated-client drift** *(cross-cutting; found while
+reviewing PRs #75 and #76, Mac track)* — regenerate `ui/openapi.json` and
+`ui/src/api.generated.ts` from the Go spec so `npm run gen:api:check` and
+`make ci-ui` are green again, without touching the contract-catalog code the
+drift sits beside.
+
+*T49R.1 (2026-10-14, Qoder lead, Mac track): **repaired; `make ci-ui` is green.**
+Reproduced unchanged at exact base `d103bb68` before anything was touched.
+
+- **Cause.** `b5b74c7a` (T49.3 slice 1, exact partitioned Contract Atlas
+  discovery and detail) added `ContractCatalogAuthority` and three optional
+  properties to the emitted OpenAPI document through `internal/api/catalog.go`
+  and `internal/mcp/callermap.go`, and did not regenerate the committed client.
+  The two derived files were last regenerated at `3a9bf00c` (T45.8b), so every
+  ticket since then inherited a red `gen:api:check`.
+- **Why nothing caught it.** `gen:api:check` runs only under `make ci-ui`, and
+  the hosted `ci` workflow has never executed: `.github/workflows/ci.yml` is
+  `state: active` with `total_count: 0` runs across 1,755 commits on
+  `origin/main`, re-measured 2026-10-14. The gate exists and is correct; no
+  runner invokes it. This repair does not make hosted CI run.
+- **The repair is derived, not authored.** `npm run gen:api:full` was run under
+  the pinned toolchain — Node `24.18.0` from `.node-version`, downloaded from
+  nodejs.org and checksum-verified against its published `SHASUMS256.txt`
+  (`e1a97e14c99c803e96c7339403282ea05a499c32f8d83defe9ef5ec66f979ed1`), and Go
+  `1.26.5` from `.go-version`, both confirmed by `make verify-node` and
+  `make verify-go`. Two independent regenerations are byte-identical:
+  `ui/openapi.json`
+  `sha256:d063be9d10eb4663bdc8a07ea860e45a3cac325a4b3a4747a4df550f0f151c52`
+  and `ui/src/api.generated.ts`
+  `sha256:0535191c3b7a6fbfc3450cf97425168362195d0871d35a7ef341f6e3b6f73c03`.
+  No hand edit was made to either file, and `ui/src/api.ts` is untouched.
+- **Purely additive, verified structurally rather than by eye.** Comparing the
+  committed document against the regenerated one node by node: one schema added
+  (`ContractCatalogAuthority`), `exact_authorities` added to
+  `ContractCatalogList`, `exact_authority` and `unavailable_relationships` added
+  to `ContractCatalogOperation`; zero schemas removed, zero properties removed,
+  zero new required fields, zero API paths added or removed, and 27 added
+  structural nodes against 0 removed. Every new field is optional, so no
+  existing consumer can break on it.
+- **Gates.** Full `make ci-ui` passes under the pinned toolchain:
+  `gen:api:check`, 43 test files / 747 tests, oxlint 0 warnings 0 errors,
+  `vite build`, `go build -tags ui ./...` and
+  `node spike/t459/settings_driver_test.cjs`. `make docs-check`,
+  `make verify-glossary` and `git diff --check` pass.
+- **Track crossing, recorded per the machine-track rule.** The omission is
+  Linux-track (`internal/api/catalog.go`, `internal/mcp/callermap.go`); the
+  derived files are Mac-track-owned `ui/`. Ben flagged the crossing in chat on
+  2026-10-14 ("fix the api drift first"). No Linux-track source is edited here,
+  and the underlying Go contract is unchanged — only the committed copy of what
+  it already emits.
+- **No PLAN ADR bullet, deliberately.** AGENTS.md lands *decisions* as ADR
+  bullets; this records no new decision. The contract it catches up to is
+  already decided and recorded under T49.3, and the same-PR regeneration
+  obligation is already enforced by `gen:api:check`. Matches the T57R.1
+  precedent for inherited gate repairs.
+
+Steady-state cost: none. Two derived files change; no runtime path, schema
+document, query, lock, cache, child, publication, authority, capability or
+durable state changes, and the OpenAPI document the server emits is byte-for-byte
+what it already emitted. Not claimed here: hosted CI execution, the PR #75
+receipt-baseline gap, and the three `TestT422Workspace*NativeComposition` darwin
+failures.*
+
 ## Epic 50 · Caller comparison production readiness
 
 **T50.1 · Exact old/replacement comparison contract and gold cases** — depends
