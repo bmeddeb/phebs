@@ -1,0 +1,209 @@
+{
+ "schema": "t583-grpc-identity-corpus-lock-v1",
+ "selected_utc": "2026-10-14",
+ "selection_rule": "docs/GRPC_IDENTITY_QUALITY_PROTOCOL.md section 6 (sealed 99665049)",
+ "oracle_resolved_sites": 418,
+ "power": "underpowered: cap of 25 repositories reached below the 500-site floor",
+ "repos": [
+  {
+   "name": "seoyhaein/ConnectService",
+   "dir": "seoyhaein__ConnectService",
+   "git_url": "https://github.com/seoyhaein/ConnectService.git",
+   "commit": "80280311f5da5be520d52b0d0a36fcb0528f4493",
+   "oracle_resolved_sites": 2,
+   "loaded_fraction": 1.0
+  },
+  {
+   "name": "open-oam/manager_program",
+   "dir": "open-oam__manager_program",
+   "git_url": "https://github.com/open-oam/manager_program.git",
+   "commit": "144304dfcecbbfb420a66e5923541cd2abd8306e",
+   "oracle_resolved_sites": 4,
+   "loaded_fraction": 1.0
+  },
+  {
+   "name": "Clay294/forum",
+   "dir": "Clay294__forum",
+   "git_url": "https://github.com/Clay294/forum.git",
+   "commit": "cf347e296e6b5887af5357a5f1b45082d33ba375",
+   "oracle_resolved_sites": 2,
+   "loaded_fraction": 1.0
+  },
+  {
+   "name": "straightdave/arion",
+   "dir": "straightdave__arion",
+   "git_url": "https://github.com/straightdave/arion.git",
+   "commit": "575c6c00e80285d33d29e17a5d7209882550d6e3",
+   "oracle_resolved_sites": 1,
+   "loaded_fraction": 0.9
+  },
+  {
+   "name": "link1st/go-stress-testing",
+   "dir": "link1st__go-stress-testing",
+   "git_url": "https://github.com/link1st/go-stress-testing.git",
+   "commit": "abef1d889222aef9472eb2cd0627a1f7230adca0",
+   "oracle_resolved_sites": 2,
+   "loaded_fraction": 1.0
+  },
+  {
+   "name": "kayac/go-katsubushi",
+   "dir": "kayac__go-katsubushi",
+   "git_url": "https://github.com/kayac/go-katsubushi.git",
+   "commit": "1084784a5e41eb21bbc7e6c433c7c6731b844db1",
+   "oracle_resolved_sites": 5,
+   "loaded_fraction": 1.0
+  },
+  {
+   "name": "langhuihui/monibuca",
+   "dir": "langhuihui__monibuca",
+   "git_url": "https://github.com/langhuihui/monibuca.git",
+   "commit": "3c33109e34209c3ed4925c617d6b290b100185fc",
+   "oracle_resolved_sites": 188,
+   "loaded_fraction": 0.9536
+  },
+  {
+   "name": "lytics/grid",
+   "dir": "lytics__grid",
+   "git_url": "https://github.com/lytics/grid.git",
+   "commit": "5e005517f4836139aad4a92ecd3a7acccd44d135",
+   "oracle_resolved_sites": 2,
+   "loaded_fraction": 1.0
+  },
+  {
+   "name": "AliyunContainerService/terway",
+   "dir": "AliyunContainerService__terway",
+   "git_url": "https://github.com/AliyunContainerService/terway.git",
+   "commit": "0b123de26bc8faa0bbf20e0e26e82b07964171e2",
+   "oracle_resolved_sites": 18,
+   "loaded_fraction": 0.8355
+  },
+  {
+   "name": "3n21c0/hello-auth-grpc",
+   "dir": "3n21c0__hello-auth-grpc",
+   "git_url": "https://github.com/3n21c0/hello-auth-grpc.git",
+   "commit": "e85f129d8bb7c5a3ef4bb4f109cf6159bf32682b",
+   "oracle_resolved_sites": 4,
+   "loaded_fraction": 1.0
+  },
+  {
+   "name": "BuoyantIO/bb",
+   "dir": "BuoyantIO__bb",
+   "git_url": "https://github.com/BuoyantIO/bb.git",
+   "commit": "971aeae3f774cdacc9a95dc37fe2226192ba9f30",
+   "oracle_resolved_sites": 2,
+   "loaded_fraction": 0.96
+  },
+  {
+   "name": "Ptt-official-app/go-pttbbs",
+   "dir": "Ptt-official-app__go-pttbbs",
+   "git_url": "https://github.com/Ptt-official-app/go-pttbbs.git",
+   "commit": "b466a57e01dd4e30f14387b51b94c11abb75a68f",
+   "oracle_resolved_sites": 3,
+   "loaded_fraction": 0.9918
+  },
+  {
+   "name": "moderato-app/live-pprof",
+   "dir": "moderato-app__live-pprof",
+   "git_url": "https://github.com/moderato-app/live-pprof.git",
+   "commit": "8cdfbdda424bff8f19ba69341b35e31bb30cb342",
+   "oracle_resolved_sites": 3,
+   "loaded_fraction": 0.931
+  },
+  {
+   "name": "api7/grpc_server_example",
+   "dir": "api7__grpc_server_example",
+   "git_url": "https://github.com/api7/grpc_server_example.git",
+   "commit": "c37c9aaecb69b2332592f5db5f16612779489e25",
+   "oracle_resolved_sites": 6,
+   "loaded_fraction": 1.0
+  },
+  {
+   "name": "ava-labs/avalanche-network-runner",
+   "dir": "ava-labs__avalanche-network-runner",
+   "git_url": "https://github.com/ava-labs/avalanche-network-runner.git",
+   "commit": "6911ff015e4c1c343d58247efbd341fe357407e5",
+   "oracle_resolved_sites": 66,
+   "loaded_fraction": 1.0
+  },
+  {
+   "name": "kevwan/grpc-restful",
+   "dir": "kevwan__grpc-restful",
+   "git_url": "https://github.com/kevwan/grpc-restful.git",
+   "commit": "3f7977921cee0d4b881ff42af5b5228a105e3b87",
+   "oracle_resolved_sites": 2,
+   "loaded_fraction": 1.0
+  },
+  {
+   "name": "gobench-io/gobench",
+   "dir": "gobench-io__gobench",
+   "git_url": "https://github.com/gobench-io/gobench.git",
+   "commit": "37de26ce6741a2dbb1dc4f30dfba1d9e51ae00bc",
+   "oracle_resolved_sites": 10,
+   "loaded_fraction": 1.0
+  },
+  {
+   "name": "thspinto/isecnet-go",
+   "dir": "thspinto__isecnet-go",
+   "git_url": "https://github.com/thspinto/isecnet-go.git",
+   "commit": "f89cb819137ec6beaf12a5eb35d9b455f842a0ee",
+   "oracle_resolved_sites": 1,
+   "loaded_fraction": 1.0
+  },
+  {
+   "name": "jina-ai/client-go",
+   "dir": "jina-ai__client-go",
+   "git_url": "https://github.com/jina-ai/client-go.git",
+   "commit": "2c5e70ecaf99bddd955dd7e3b53b63354bed9905",
+   "oracle_resolved_sites": 4,
+   "loaded_fraction": 1.0
+  },
+  {
+   "name": "gautamrege/gochat",
+   "dir": "gautamrege__gochat",
+   "git_url": "https://github.com/gautamrege/gochat.git",
+   "commit": "1e5e981621cf9930b4c9ef4e7c549490d98cbc39",
+   "oracle_resolved_sites": 2,
+   "loaded_fraction": 1.0
+  },
+  {
+   "name": "weeaa/jito-go",
+   "dir": "weeaa__jito-go",
+   "git_url": "https://github.com/weeaa/jito-go.git",
+   "commit": "3fe69f58b988b421b639de626585bd41de0f9b57",
+   "oracle_resolved_sites": 20,
+   "loaded_fraction": 0.9487
+  },
+  {
+   "name": "vito/progrock",
+   "dir": "vito__progrock",
+   "git_url": "https://github.com/vito/progrock.git",
+   "commit": "773ba331eed070eae12eb483032de735ca6b028e",
+   "oracle_resolved_sites": 2,
+   "loaded_fraction": 0.9394
+  },
+  {
+   "name": "routeviews/google-cloud-storage",
+   "dir": "routeviews__google-cloud-storage",
+   "git_url": "https://github.com/routeviews/google-cloud-storage.git",
+   "commit": "04c79e546c528c633057bc0cfc746b9c73c6b154",
+   "oracle_resolved_sites": 4,
+   "loaded_fraction": 1.0
+  },
+  {
+   "name": "breez/lspd",
+   "dir": "breez__lspd",
+   "git_url": "https://github.com/breez/lspd.git",
+   "commit": "353a004d73fcf56110d21b01c1c0071dfa9ccab2",
+   "oracle_resolved_sites": 61,
+   "loaded_fraction": 1.0
+  },
+  {
+   "name": "alauda/nativestor",
+   "dir": "alauda__nativestor",
+   "git_url": "https://github.com/alauda/nativestor.git",
+   "commit": "02c98435287462a1f32abeb6b6334416934f42fd",
+   "oracle_resolved_sites": 4,
+   "loaded_fraction": 1.0
+  }
+ ]
+}
