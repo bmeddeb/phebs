@@ -2370,10 +2370,10 @@ func TestEvidenceExtractorsRemainValidationGated(t *testing.T) {
 		t.Fatalf("proto-only extractor registry = %#v", got)
 	}
 	// T19.2/T19.3: the Thrift packs ride their own dark flag and compose with
-	// the proto pack without reordering it.
+	// the proto pack without reordering it. T49.2 moved thriftdecl to 1.1.0.
 	thriftOnly := evidenceExtractors(false, true, false, false)
 	if len(thriftOnly) != 3 || thriftOnly[0].Domain() != "thrift-contract" ||
-		thriftOnly[0].Version() != "1.0.0" || thriftOnly[1].Domain() != "thrift-consumer" ||
+		thriftOnly[0].Version() != "1.1.0" || thriftOnly[1].Domain() != "thrift-consumer" ||
 		thriftOnly[1].Version() != "1.2.0" ||
 		thriftOnly[2].Domain() != "thrift-caller" ||
 		thriftOnly[2].Version() != "1.6.0" {

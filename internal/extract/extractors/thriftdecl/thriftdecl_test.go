@@ -342,6 +342,12 @@ func TestContainersAndMessageKinds(t *testing.T) {
 	if value.Cardinality != "optional" {
 		t.Fatalf("optional field = %+v", value)
 	}
+	// T49.2: union members are implicitly optional, as the reference compiler reports.
+	for _, object := range []string{"demo.Payload#1", "demo.Payload#2"} {
+		if member := decodeDetail[decodedFieldDetail](t, findPredicateFact(t, facts, "DECLARES_FIELD", object)); member.Cardinality != "optional" {
+			t.Fatalf("union member %s = %+v", object, member)
+		}
+	}
 	weight := decodeDetail[decodedFieldDetail](t, findPredicateFact(t, facts, "DECLARES_FIELD", "demo.Tag#3"))
 	if weight.Cardinality != "default" {
 		t.Fatalf("default field = %+v", weight)
@@ -454,11 +460,42 @@ service S { void f(1: i32 x) }
 	assertLineSpan(t, source, gap, 2, "string name")
 }
 
+// TestParseFailureIsANamedFileGap pins T49.2: a file thriftrw cannot parse,
+// including Apache-valid reserved-word identifiers and namespace annotations,
+// is one parse_error gap at its first non-blank line, and the repository's
+// other files still extract.
+func TestParseFailureIsANamedFileGap(t *testing.T) {
+	for name, source := range map[string]string{
+		"syntax error":         "\n  service {",
+		"reserved identifier":  "\nstruct S { 1: i32 goto }\n",
+		"namespace annotation": "\nnamespace xsd test (uri = 'http://x')\nstruct S { 1: i32 a }\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			facts, coverage := mustExtract(t, memoryCorpus{repo: "r", commit: "c", files: map[string]string{
+				"bad.thrift":  source,
+				"good.thrift": "service Good { void f(1: i32 x) }\n",
+			}})
+			var gaps []sdk.Fact
+			for _, fact := range facts {
+				if fact.Path == "bad.thrift" {
+					gaps = append(gaps, fact)
+				}
+			}
+			if len(gaps) != 1 || gaps[0].Assertion.Predicate != "THRIFT_EXTRACTION_GAP" ||
+				gaps[0].Assertion.Object != "parse_error" || gaps[0].StartLine != 2 || coverage.UnresolvedCount != 1 {
+				t.Fatalf("bad.thrift facts = %+v, unresolved = %d", gaps, coverage.UnresolvedCount)
+			}
+			if !hasFact(facts, "DECLARES_OPERATION", "good.Good/f") {
+				t.Fatal("a parse failure in one file suppressed the repository's other files")
+			}
+		})
+	}
+}
+
 func TestParseAndComplexityFailuresFailClosed(t *testing.T) {
 	cases := []struct {
 		name, source string
 	}{
-		{"syntax error", "service {"},
 		{"unterminated comment", "/* forever\nservice S { void f(1: i32 x) }"},
 		{"unterminated string", `const string X = "open`},
 		{"nesting bomb", strings.Repeat("<", 200)},

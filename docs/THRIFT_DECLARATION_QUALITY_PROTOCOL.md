@@ -216,3 +216,52 @@ none `unsure`):
 This population has now been seen, so a passing claim needs a fresh round
 after those fixes. Field-ID identity, the wire identity Atlas and field
 references join on, was 100% exact.
+
+**Correction (2026-10-13, before any fix).** The negative-explicit-ID file was
+wrongly adjudicated `phebs_wrong`. Apache 0.19.0 does not honor nonpositive
+explicit keys: it warns ("Nonpositive value (-5) not allowed as a field key")
+and auto-assigns negative keys, so `-5` becomes `-1` and `0` becomes `-2`.
+The written ID is therefore not the wire ID, and phebs's `invalid_field_id`
+gap is the D2 fail-closed posture. Its verdict is now `out_of_scope`.
+Declaration agreement after adjudication moves from 98.11% to 98.25%
+(19,129 / 19,471). The round still fails, and nothing else changes.
+
+## 8. Round 2 (frozen 2026-10-13, after Ben chose targeted fixes)
+
+Ben chose to keep thriftrw (exact positions, pure reader) and fix the
+defects round 1 found. The candidate is `thriftdecl` 1.1.0:
+
+- unspecified union members are `optional`;
+- a file thriftrw cannot parse is one `THRIFT_EXTRACTION_GAP parse_error` at
+  its first non-blank line, instead of failing the repository's run.
+
+Negative and zero explicit IDs stay a fail-closed gap, by the §7
+correction. §2's claim, §3's oracle and mapping, and §6's thresholds and
+adjudication are unchanged. Two non-claims are added. Like D2, they form
+reported strata and are not scored:
+
+- **`parse_error` gaps the oracle accepts.** Each is adjudicated by cause. A
+  reserved word used as an identifier, or a namespace annotation, is the
+  declared thriftrw dialect limit (`out_of_scope`). Any other cause is
+  `phebs_wrong`, and its oracle declarations count as misses.
+- **`invalid_field_id` gaps** (nonpositive or out-of-range explicit IDs),
+  where Apache auto-assigns keys.
+
+**Population (run once, after this section is committed).** Run
+`gh search code --extension thrift --limit 100` for each query, in order:
+
+1. `service`
+2. `struct`
+3. `namespace`
+4. `include`
+
+Candidates are repositories in order of first appearance. §4's exclusions
+and envelope still apply, plus:
+
+- the 10 round-1 population repositories;
+- any candidate where more than half of its `.thrift` files are
+  byte-identical to a round-1 file (`spike/t492/round1-thrift-sha256.txt`).
+
+Eligibility, the floors (at least 10 repositories and at least 1,000 oracle
+declarations, capped at 30) and the lock-before-phebs rule are as in §4.
+Distinct-content figures are reported beside the per-file ones.

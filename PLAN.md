@@ -11350,3 +11350,21 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   and fence probe topic usage already pays.
 
   This is shared machinery for T58.3, T51.2 and T54.2. It releases no claim.
+
+- **2026-10-13 — T49.2 fixes the two thriftdecl defects its reference-compiler
+  round found (`thrift-contract` 1.1.0).**
+  - **Union members.** Unspecified union members are now `optional`, as
+    Thrift defines them and the Apache compiler reports them.
+  - **Parse failures.** A file thriftrw cannot parse now becomes one
+    `THRIFT_EXTRACTION_GAP parse_error` at its first non-blank line. This
+    supersedes, for parse failures only, T19.2's rule that parse failures
+    abort publication. Its known causes are Apache-valid reserved-word
+    identifiers and namespace annotations. Round 1 showed one such file
+    withheld every Thrift declaration in its repository. The gap names the
+    file, so no evidence silently shrinks; preflight-bound, complexity and
+    read failures still abort.
+  - **Kept.** Ben kept thriftrw: exact source positions, and pure-reader
+    imports. cloudwego/thriftgo's parser has neither positions nor a
+    filesystem-free package.
+  - **Negative IDs.** Nonpositive explicit IDs stay a fail-closed gap: Apache
+    auto-assigns their wire keys.

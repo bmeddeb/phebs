@@ -371,7 +371,7 @@ func TestEvidencePartitionExecutorKeepsFileLocalProtoAndThriftGapsSettled(t *tes
 		},
 		{
 			name: "well formed unsupported thrift construct", domain: "thrift-contract",
-			version: "1.0.0", suffix: ".thrift",
+			version: "1.1.0", suffix: ".thrift",
 			content: "struct Fixture { string value }\n",
 			marker:  "THRIFT_EXTRACTION_GAP", extractor: thriftdecl.New(),
 		},

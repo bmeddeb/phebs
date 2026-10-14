@@ -28,7 +28,7 @@ import (
 
 const (
 	domain        = "thrift-contract"
-	version       = "1.0.0"
+	version       = "1.1.0"
 	schemaVersion = "t19-v1"
 
 	// idl.Parse is in-process and does not accept a context. Preflight the
@@ -206,7 +206,11 @@ func fileFacts(ctx context.Context, corpus sdk.Corpus, relPath string, blob sdk.
 	}
 	program, err := idl.Parse([]byte(blob.Content))
 	if err != nil {
-		return 0, fmt.Errorf("parse: %w", err)
+		// T49.2: a file thriftrw cannot parse (for example a reserved word
+		// used as an identifier, or a namespace annotation, both valid Apache
+		// Thrift) becomes one named file gap rather than failing the whole
+		// repository's run, so the rest of its evidence still publishes.
+		return emitParseGap(corpus, relPath, blob, emit)
 	}
 	if program == nil {
 		return 0, errors.New("parse returned no program")
@@ -442,6 +446,29 @@ func emitFileGap(state *fileState, reason string, line, column int) error {
 	return state.emitFact("THRIFT_EXTRACTION_GAP", reason, "thrift-file-gap-v1", detail, line, column)
 }
 
+// emitParseGap records an unparseable file as a single parse_error gap, cited
+// at its first non-blank line. No declaration of the file is emitted.
+func emitParseGap(corpus sdk.Corpus, relPath string, blob sdk.Blob, emit sdk.Emit) (int, error) {
+	state := &fileState{
+		relPath: relPath, blob: blob, role: roleFor(relPath),
+		lines: lineStarts(blob.Content), emit: emit,
+	}
+	for index, start := range state.lines {
+		end := len(blob.Content)
+		if index+1 < len(state.lines) {
+			end = state.lines[index+1] - 1
+		}
+		if line := blob.Content[start:end]; strings.TrimSpace(line) != "" {
+			column := len(line) - len(strings.TrimLeft(line, " \t\r")) + 1
+			if err := emitFileGap(state, "parse_error", index+1, column); err != nil {
+				return 0, err
+			}
+			return 1, nil
+		}
+	}
+	return 0, errors.New("parse failed on a blank file")
+}
+
 func emitService(state *fileState, service *ast.Service) error {
 	if service.Name == "" {
 		return errors.New("service is missing name")
@@ -577,7 +604,7 @@ func emitStructMessage(state *fileState, node *ast.Struct) error {
 		return err
 	}
 	for _, field := range node.Fields {
-		if err := emitField(state, object, field); err != nil {
+		if err := emitMember(state, object, field, node.Type == ast.UnionType); err != nil {
 			return err
 		}
 	}
@@ -585,12 +612,23 @@ func emitStructMessage(state *fileState, node *ast.Struct) error {
 }
 
 func emitField(state *fileState, messageObject string, field *ast.Field) error {
+	return emitMember(state, messageObject, field, false)
+}
+
+// emitMember declares one field. Union members are implicitly optional in
+// Thrift (the reference compiler reports them so), so an unspecified union
+// member is optional, never default (T49.2).
+func emitMember(state *fileState, messageObject string, field *ast.Field, union bool) error {
 	if field.Name == "" {
 		return fmt.Errorf("field %d in %s is missing name", field.ID, messageObject)
 	}
+	cardinality := requirednessLabel(field.Requiredness)
+	if union && field.Requiredness == ast.Unspecified {
+		cardinality = "optional"
+	}
 	detail := fieldDetail{
 		Schema: "thrift-field-detail-v1", Name: field.Name,
-		Cardinality: requirednessLabel(field.Requiredness),
+		Cardinality: cardinality,
 	}
 	resolveInto(state, &detail, field.Type)
 	encoded, err := detailJSON(detail)
