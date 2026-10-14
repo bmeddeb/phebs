@@ -1,0 +1,120 @@
+{
+  "schema": "t581-score-v1",
+  "thresholds": {
+    "coverage_min": 0.99,
+    "state_agreement_min": 0.99,
+    "inversions_max": 0,
+    "call_registration_swaps_max": 0,
+    "spurious_per_scored_site_max": 0.01,
+    "pending_after_adjudication_max": 0,
+    "scored_sites_min": 300,
+    "production_role_agreement_min": 0.99,
+    "other_role_agreement_note_below": 0.95
+  },
+  "metrics": {
+    "scored_sites": 34089,
+    "covered_sites": 34089,
+    "coverage": 1.0,
+    "state_agreement": 1.0,
+    "inversions": 0,
+    "call_registration_swaps": 0,
+    "spurious_rows": 0,
+    "spurious_per_scored_site": 0.0,
+    "missed_sites": 0,
+    "duplicated_sites": 0,
+    "pending_after_adjudication": 0,
+    "production_role_agreement": 1.0,
+    "out_of_domain": {
+      "total": 2870212,
+      "files_with_candidates": 42313,
+      "by_reason": {
+        "unindexed_selector": 2862933,
+        "zero_arguments": 7279
+      },
+      "units_with_aggregate": 13,
+      "units_missing_aggregate": [],
+      "units_absent_from_oracle_output": [],
+      "per_unit": {
+        "containerd/containerd": 186380,
+        "envoyproxy/go-control-plane": 103020,
+        "etcd-io/etcd": 49488,
+        "grafana/loki": 926726,
+        "grpc-ecosystem/grpc-gateway": 30221,
+        "hashicorp/go-plugin": 2119,
+        "hashicorp/nomad": 150680,
+        "hyperledger/fabric": 249930,
+        "kubevirt/kubevirt": 334645,
+        "moby/buildkit": 216749,
+        "spiffe/spire": 54627,
+        "temporalio/temporal": 325997,
+        "vitessio/vitess": 239630
+      }
+    },
+    "oracle_state_counts": {
+      "ambiguous_call": 13317,
+      "ambiguous_registration": 73,
+      "gap_parse_error": 1,
+      "gap_source_too_large": 5,
+      "resolved_call": 20534,
+      "resolved_registration": 159
+    },
+    "per_role_total": {
+      "generated": 1660,
+      "mock": 25,
+      "production": 7771,
+      "test": 16083,
+      "vendor": 8550
+    },
+    "per_role_agreement": {
+      "generated": 1.0,
+      "mock": 1.0,
+      "production": 1.0,
+      "test": 1.0,
+      "vendor": 1.0
+    },
+    "per_repository_scored": {
+      "containerd/containerd": 6879,
+      "envoyproxy/go-control-plane": 104,
+      "etcd-io/etcd": 2180,
+      "grafana/loki": 2075,
+      "grpc-ecosystem/grpc-gateway": 312,
+      "hashicorp/go-plugin": 94,
+      "hashicorp/nomad": 1040,
+      "hyperledger/fabric": 1399,
+      "kubevirt/kubevirt": 12,
+      "moby/buildkit": 7177,
+      "spiffe/spire": 5,
+      "temporalio/temporal": 6786,
+      "vitessio/vitess": 6026
+    },
+    "concentration": {
+      "largest_member": "moby/buildkit",
+      "largest_share": 0.21053712341224443
+    }
+  },
+  "pass": {
+    "passed": true,
+    "checks": {
+      "coverage": true,
+      "state_agreement": true,
+      "inversions": true,
+      "call_registration_swaps": true,
+      "spurious_per_scored_site": true,
+      "pending_after_adjudication": true,
+      "scored_sites": true,
+      "production_role_agreement": true
+    }
+  },
+  "detail": {
+    "missed": [],
+    "duplicated": [],
+    "disagreed": [],
+    "spurious": [],
+    "pending_keys": []
+  },
+  "disclosures": [
+    "Identities (operation and service full names) were recorded but not scored: the claim is site coverage only.",
+    "Roles come from the extractor, not the oracle, so every per-role figure inherits the extractor's role classification.",
+    "out_of_domain candidates are excluded from the denominator by GD10 and reported only as a count."
+  ]
+}

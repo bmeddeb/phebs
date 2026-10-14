@@ -436,9 +436,20 @@ and who owns each.
     out-of-domain candidates, **84.2 for every scored site**, and four members
     supplying 78.9% of scored sites while `kubevirt/kubevirt` contributes 12 from
     9,680 files with zero resolved calls. Both are disclosed in §3.
-  - Remaining, Ben: the §7 seal. Remaining, agent, only after it: export, score and
-    adjudication. The extractor has not touched the population and the exporter
-    refuses without a seal binding the units digest.
+  - **Sealed and scored 2026-10-14: passes.** Public gist
+    `3579639d9dae054906b5f5cac236752f`, published before the export ran.
+    **34,089 of 34,089** scored sites — 100% coverage, 100% state agreement, zero
+    inversions, zero call/registration swaps, zero spurious rows, zero misses, and
+    every one of the five code roles at 100%, so nothing needed adjudicating. The
+    scorer was mutation-controlled before the result was believed: a one-byte span
+    shift gave 1 miss + 1 spurious, a flipped predicate gave 1 swap and failed the
+    round, and a deleted row gave 1 miss.
+  - What it does not establish: GD1–GD16 were authored from the shipped
+    implementation, so this is **spec conformance, not accuracy** — a perfect score
+    is what a faithful implementation of a faithful transcription is expected to
+    produce. Identities were recorded but not scored, the three structural blind
+    spots stay unmeasured, and the disclosed pre-seal breach travels with the
+    result. T58.3 owns registration and any measured promotion.
   - Not claimed: nothing is enumerated, scored, sealed or predicted, so this
     grants no quality, coverage, release or scale result, and it is not a T11.1
     retry — that round stays terminally closed with `GATE2-V2 NOT_ESTABLISHED`.

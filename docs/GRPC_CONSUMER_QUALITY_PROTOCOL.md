@@ -1,7 +1,9 @@
 # T58.1 Go gRPC syntactic consumer/registration site-coverage quality protocol
 
-Status: **preregistration complete, oracle pre-seal pass run, awaiting Ben's §7
-seal.** Every decision is frozen, the corpus is locked, and the independent oracle
+Status: **sealed and scored: passes** (2026-10-14). Sealed at public gist
+`3579639d9dae054906b5f5cac236752f` before the export ran; 34,089 of 34,089 scored
+sites, zero misses, zero spurious, zero disagreements. The result is in §8 and the
+disclosed pre-seal breach travels with it in §7. Every decision is frozen, the corpus is locked, and the independent oracle
 has run over the population **without the extractor**: 34,089 scored sites, 114
 times the frozen floor, so §2's stop rule does not fire. Nothing is scored, sealed
 or predicted, and the extractor has not touched the population.
@@ -666,12 +668,66 @@ specification that moved after sealing is refused, and the seal file must be
 refusals were re-exercised against a synthetic fixture — never against the round
 population, which is the mistake that caused this breach.
 
-## 8. Result
+## 8. Result (2026-10-14): passes, at 34,089 of 34,089
 
-**Not run.** The oracle's pre-seal pass is recorded in §3, but the extractor has
-not been run over the population, no candidate stream exists, no score exists,
-nothing is sealed and no threshold has been evaluated. §7's seal must be published
-before `export` may touch the population, and the exporter refuses without it.
+Sealed at gist `3579639d9dae054906b5f5cac236752f` before the export ran, then
+exported and scored with every tool byte-identical to its sealed digest.
+
+| §6 check | Bar | Result |
+|---|---|---|
+| Coverage: scored sites with exactly one row | ≥ 99% | **100%** (34,089 / 34,089) |
+| State agreement on covered sites | ≥ 99% | **100%** |
+| Resolved/ambiguous inversions | 0 | **0** |
+| Call↔registration swaps (GD9) | 0 | **0** |
+| Confirmed spurious rows per scored site | ≤ 1% | **0** (0 rows) |
+| Pending after adjudication | 0 | **0 — no disagreement arose, so nothing needed adjudicating** |
+| Scored sites | ≥ 300 | **34,089** |
+| Production-role state agreement | ≥ 99% | **100%** |
+
+Every role agrees at 100% (`production`, `test`, `generated`, `mock`, `vendor`),
+so no role is below the 95% disclosure floor. Missed 0, duplicated 0, disagreed 0,
+spurious 0. Concentration: largest member `moby/buildkit` at 21.05% of scored
+sites. Out-of-domain: 2,870,212 candidates, 84.2 per scored site.
+
+**What this result does and does not establish.** It establishes that `grpcgo`
+implements GD1–GD16 exactly on this population — zero divergence across 34,089
+sites and five code roles. It does **not** establish accuracy against reality,
+because GD1–GD16 were authored from the shipped implementation (§3) and the
+oracle's independence is procedural rather than technical. A perfect score is
+what a faithful implementation of a faithful transcription is *expected* to
+produce, so the number is weak evidence about real-world correctness and strong
+evidence about spec conformance. The three structural blind spots in §1 and §2 —
+combined-style stubs, external-module contracts, generic instantiation — are
+unaffected by this result and remain entirely unmeasured. Emitted operation and
+service identities were recorded but not scored, so nothing here is identity
+accuracy and T13.1's deferred bar is untouched.
+
+**The scorer was mutation-controlled before this result was believed.** Three
+perturbed candidate streams were scored: shifting one row's span by one byte
+produced exactly 1 miss and 1 spurious row; flipping one `CALLS_OPERATION` to
+`REGISTERS_GRPC_SERVICE` produced 1 swap and **failed** the round; deleting one
+row produced 1 miss. So the join is real and a perfect score is not an artifact of
+a vacuous comparison. Note that the frozen ≥99% bars would have tolerated roughly
+340 missed sites, so the perfect result is a property of the measurement, not of
+the threshold.
+
+**The sealed bytes are the gist's, not this file's.** §7 bound
+`protocol_sha256 sha256:eeba4b65f07e214466500f16fa7cc12ae70d6a61882dad502f010a1c4e17dc5c`,
+and recording this result necessarily edits the working copy, so the file no longer
+matches that digest. That is the intended order — seal, then measure, then record —
+and the immutable sealed specification is the gist. No threshold, rule, population
+member or tool changed after sealing: `score.py` was verified byte-identical to its
+sealed digest before it was run, and the uncompressed oracle stream still hashes to
+the digest §3 recorded.
+
+**Artifacts.** `round/candidate.jsonl.gz`
+(`sha256:70d4e1fdbd22ba4208ba138abdf14ae2c714915d76488eb8ad4d6505e88a9116`, 712,106
+bytes) and `round/score.json`
+(`sha256:e5816e042f9d33f39aa15fcdb2ea7b34d2da18c517103e7f6064910cc860c370`); the uncompressed
+oracle stream digest matches §3 exactly
+(`sha256:4955e9d76cdb079b52e7a79e836f091d7bb5059e14ee672b714b35f6ff511b74`). The
+export ran in 10.7s over 13 units and 53,721 `.go` files. The pre-seal breach in
+§7 travels with this result and is not cured by it.
 
 ## 9. Preregistration status and remaining sequence
 

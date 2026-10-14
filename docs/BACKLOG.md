@@ -20023,6 +20023,57 @@ an ad-hoc `/tmp` file cannot authorize a run. All six refusals were re-exercised
 against a synthetic fixture and never against the round population, which is the
 mistake that caused the breach. Full record in protocol §7.*
 
+*T58.1 sealed and scored (2026-10-14, Qoder lead): **passes — 34,089 of 34,089
+scored sites, zero misses, zero spurious, zero disagreements, nothing to
+adjudicate.** Sealed at public gist `3579639d9dae054906b5f5cac236752f` **before**
+the export ran, and every tool was verified byte-identical to its sealed digest
+before use — `score.py` in particular, since patching it to read gzip would have
+broken the seal, so the uncompressed oracle stream was fed instead and its digest
+confirmed against §3.
+
+- **Every §6 bar met.** Coverage 100% (34,089/34,089), state agreement 100%,
+  inversions 0, call↔registration swaps 0, spurious rows 0, pending after
+  adjudication 0, scored sites 34,089 against a 300 floor, production-role
+  agreement 100%. All five code roles agree at 100%, so none is near the 95%
+  disclosure floor. Concentration: `moby/buildkit` is the largest member at 21.05%.
+  Out-of-domain 2,870,212, i.e. 84.2 per scored site.
+- **The scorer was mutation-controlled before the result was believed.** Three
+  perturbed candidate streams: a one-byte span shift produced exactly 1 miss and 1
+  spurious row; flipping one `CALLS_OPERATION` to `REGISTERS_GRPC_SERVICE` produced
+  1 swap and **failed** the round; deleting one row produced 1 miss. The join is
+  therefore real and the perfect score is not a vacuous comparison. Note the frozen
+  ≥99% bars would have tolerated roughly 340 missed sites, so the perfect result is
+  a property of the measurement and not of the threshold.
+- **What it does not establish.** GD1–GD16 were authored from the shipped
+  implementation, so this is **spec conformance, not accuracy**: a perfect score is
+  what a faithful implementation of a faithful transcription is expected to produce.
+  It is weak evidence about real-world correctness and strong evidence that `grpcgo`
+  matches its frozen description. The three structural blind spots — combined-style
+  `*.pb.go` stubs, external-module contracts, generic instantiation — remain entirely
+  unmeasured, and emitted operation and service identities were recorded but not
+  scored, so T13.1's deferred ≥98%/≥90% bar is untouched.
+- **The pre-seal breach is not cured by this result.** §7's disclosure travels with
+  it: the extractor ran over the population once before any seal existed because a
+  placeholder gist cleared a weak guard, Ben elected to seal with the breach
+  disclosed, and the lead's recommendation in favour of that is recorded as
+  interested. Two rows seen during the breach were treated as unseen for every
+  purpose except the disclosure, and nothing in §3, §6 or the population was amended
+  after sealing.
+- **The sealed bytes are the gist's, not the working file's.** Recording §8
+  necessarily edits the protocol, so the file no longer matches the sealed
+  `protocol_sha256` `eeba4b65…`. That is the intended order — seal, measure, record —
+  and the immutable sealed specification is the gist.
+
+Artifacts: `spike/t581/round/{seal.json,seal-inputs.json,SEAL.md,sites.jsonl.gz,candidate.jsonl.gz,score.json}`.
+The export ran in 10.7s over 13 units and 53,721 `.go` files. Documentation and
+offline one-shot tooling only, so there is no steady-state cost and no production
+path changes; `make docs-check` passes all three of its tests and glossary and
+whitespace pass. **T58.3 owns recipe registration and any measured promotion** — a
+passing site-coverage round does not by itself register or release
+`phebs.grpc.consumer.go`, whose card still reads `Independent validation owner: none
+assigned; release-blocking` until T58.3 binds this result. No coverage, release,
+scale or SLO claim follows.*
+
 **T58.2 · Go Thrift syntactic consumer/registration quality** — independently
 freeze thriftgo/other admitted generator/library shapes and input identity;
 measure unsupported/dynamic/ambiguous cases and registration claims separately.

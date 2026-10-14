@@ -11581,3 +11581,65 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   tests, glossary and whitespace pass, and the tagged exporter still builds. No
   quality, coverage, release, scale or SLO claim follows, and a passing pre-seal count
   is not a passing round.
+
+- **2026-10-14 — T58.1 sealed and scored: `grpcgo` conforms to GD1–GD16 exactly on
+  34,089 sites, and the result is spec conformance rather than accuracy.** The seal
+  was published as public gist `3579639d9dae054906b5f5cac236752f` **before** the
+  export ran, and every tool was verified byte-identical to its sealed digest before
+  use. `score.py` could not read the committed gzipped oracle stream, and patching it
+  would have broken the seal, so the uncompressed stream was fed instead after
+  confirming its digest against §3 — the sealed tool wins over convenience.
+
+  Every §6 bar is met: coverage 100% (34,089/34,089), state agreement 100%, zero
+  resolved/ambiguous inversions, zero call↔registration swaps, zero spurious rows,
+  zero misses, zero duplicates, and nothing pending adjudication because no
+  disagreement arose. All five code roles agree at 100%, so none approaches the 95%
+  disclosure floor. Concentration is as predicted, `moby/buildkit` largest at 21.05%,
+  and the blind spot is 2,870,212 out-of-domain candidates, 84.2 per scored site.
+
+  **The perfect score was not believed until the scorer was mutation-controlled.**
+  Three perturbed candidate streams were scored: a one-byte span shift produced
+  exactly 1 miss and 1 spurious row; flipping one `CALLS_OPERATION` to
+  `REGISTERS_GRPC_SERVICE` produced 1 swap and failed the round; deleting one row
+  produced 1 miss. The join is therefore real. It is also worth recording that the
+  frozen ≥99% bars would have tolerated roughly 340 missed sites, so the perfect
+  result is a property of the measurement and not of the threshold.
+
+  **What this establishes, and what it does not.** It establishes that `grpcgo`
+  implements GD1–GD16 exactly on this population. It does not establish accuracy
+  against reality, because GD1–GD16 were authored from the shipped implementation and
+  the oracle's independence is procedural rather than technical: a perfect score is
+  precisely what a faithful implementation of a faithful transcription is expected to
+  produce. The result is therefore weak evidence about real-world correctness and
+  strong evidence about spec conformance, and it must be cited that way. The three
+  structural blind spots — combined-style `*.pb.go` stubs, external-module contracts
+  and generic instantiation — remain entirely unmeasured, and emitted operation and
+  service identities were recorded but not scored, so T13.1's deferred ≥98%/≥90% bar
+  is untouched.
+
+  **The pre-seal breach is not cured by a passing score.** §7's disclosure travels
+  with the result: the extractor ran over the population once before any seal existed
+  because a placeholder gist cleared a weak guard, Ben elected to seal with the breach
+  disclosed, and the lead's recommendation in favour of that course is recorded as
+  interested. The two rows seen during the breach were treated as unseen for every
+  purpose except the disclosure, and nothing in §3, §6 or the population was amended
+  after sealing.
+
+  Recording §8 necessarily edits the protocol, so the working file no longer matches
+  the sealed `protocol_sha256` `eeba4b65…`. That is the intended order — seal,
+  measure, record — and the immutable sealed specification is the gist, not the file.
+
+  **Steady-state cost.** None in any production path. The round is offline one-shot
+  tooling: the export spent 10.7s over 13 units and 53,721 `.go` files, with no
+  request, sync, startup, retry, publication, lock, cache, schema or durable-state
+  change, and no extractor, schema or registration behavior was modified.
+
+  **Validation posture.** `make docs-check` passes all three of its tests, glossary
+  and whitespace pass, and the scorer's 30 cases pass. `spike/t581/round/` holds
+  `seal.json`, `seal-inputs.json`, `SEAL.md`, `sites.jsonl.gz`, `candidate.jsonl.gz`
+  (`sha256:70d4e1fd…`, 712,106 bytes) and `score.json` (`sha256:e5816e04…`).
+  **T58.3 owns recipe registration and any measured promotion**: a passing
+  site-coverage round does not by itself register or release `phebs.grpc.consumer.go`,
+  whose card still reads `Independent validation owner: none assigned;
+  release-blocking` until T58.3 binds this result. No coverage, release, scale or SLO
+  claim follows.
