@@ -1,0 +1,3 @@
+{"kind": "oracle_rejected", "oracle_error": "exit 1", "path": "lib-go/test/IncludesTest.thrift", "phebs": "37 facts", "repository": "52fhy/thrift-sample"}
+{"kind": "oracle_rejected", "oracle_error": "exit 1", "path": "lib-go/test/NamespacedTest.thrift", "phebs": "7 facts", "repository": "52fhy/thrift-sample"}
+{"kind": "reference_state", "object": "Sample.Response#3", "oracle": {"cardinality": "required", "name": "data", "refs": ["intrinsic", "intrinsic"]}, "path": "thrift/Service.thrift", "phebs": {"cardinality": "required", "name": "data", "refs": ["unresolved:nested"]}, "repository": "52fhy/thrift-sample"}

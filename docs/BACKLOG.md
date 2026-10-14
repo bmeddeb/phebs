@@ -18757,6 +18757,33 @@ support.
 
   A fresh round follows only after they are fixed.*
 
+*T49.2 fixes and round 2 (2026-10-13, Claude lead): **passes; T49.2 done.**
+
+- **Parser.** Ben kept thriftrw. cloudwego/thriftgo's parser was rejected
+  because its AST has no source positions and its package imports `os` and
+  `ioutil` into the pure-reader boundary.
+- **`thriftdecl` 1.1.0:**
+  - union members are `optional`;
+  - a file thriftrw cannot parse becomes one named `parse_error` gap
+    instead of aborting the repository's run.
+
+  Both are mutation-tested.
+- **Correction to round 1.** Apache auto-assigns nonpositive explicit keys,
+  so phebs's `invalid_field_id` gap was correct (the same reasoning as D2).
+  That verdict is now `out_of_scope`, and round 1 still fails at 98.25%.
+- **Round 2** (sealed `d215ab98`, locked `21ae7ae2`; 10 fresh repositories,
+  29 files and 1,353 oracle declarations):
+  - declaration agreement 100%;
+  - field-ID agreement 100%;
+  - reference-state agreement 99.86%.
+
+  The one miss is a typedef'd top-level map that phebs over-abstains on
+  (minor, open).
+
+Gates: `thriftdecl`, `internal/extract`, `internal/api`, `internal/mcp`,
+`internal/idlpreview` and `cmd/phebs` pass; lint reports 0 issues. Atlas
+Thrift release selection stays with T49.3/T49.4.*
+
 **T49.3 · Stable Atlas startup and exact discovery/detail** — use T48's
 release selection for only admitted declaration recipes; prove real source,
 authorization, paging/currentness and immutable citations; unrelated

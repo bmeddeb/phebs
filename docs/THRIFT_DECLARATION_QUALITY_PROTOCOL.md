@@ -265,3 +265,44 @@ and envelope still apply, plus:
 Eligibility, the floors (at least 10 repositories and at least 1,000 oracle
 declarations, capped at 30) and the lock-before-phebs rule are as in §4.
 Distinct-content figures are reported beside the per-file ones.
+
+## 9. Round 2 result (2026-10-13): passes
+
+**Population.** The four §8 searches returned 146 unique repositories, and
+the first 10 examined were all eligible; none was mostly byte-identical to
+round 1. The lock is `spike/t492/round2/corpus.lock.json` (`21ae7ae2`),
+committed before phebs ran. It holds 29 files, all with distinct contents:
+27 scored and 2 the oracle rejects. The oracle declares 1,353 declarations.
+
+The candidate is `thriftdecl` 1.1.0 at `d215ab98`. It produced no parse or
+field-ID gaps on this population.
+
+| Measure | Result | Threshold |
+|---|---|---|
+| Declaration agreement | **100%** (1,353 / 1,353) | ≥ 99.5% |
+| Field-ID agreement | **100%** (718 / 718) | 100% |
+| Reference-state agreement | **99.86%** (717 / 718) | ≥ 99.5% |
+
+**Adjudication** (`spike/t492/round2/adjudication.jsonl`, by Claude as named
+by Ben):
+
+- **The one disagreement is `phebs_wrong`.** It is a field typed by a
+  typedef of a top-level map (`typedef map<string, string> Data`). phebs
+  chases the typedef and labels the map nested, so it abstains where the
+  reference compiler resolves the key and value. This is an over-abstention,
+  not a false claim. The score is unchanged after adjudication.
+- **The 2 oracle rejections** are files whose include
+  (`ThriftTest.thrift`) is absent from the repository. They are reported and
+  not scored; phebs emits facts for both.
+
+**Disclosed.**
+- The population is small: 29 files, with two repositories holding 825 of
+  the 1,353 declarations.
+- No parse-gap or field-ID non-claim stratum was exercised, so the
+  `parse_error` path is proven by unit tests and round 1's files, not by
+  this round.
+- The round passes the thresholds Ben froze. It is not an independent human
+  review, and it makes no release decision; that is T49.3/T49.4.
+
+**Open defect:** the typedef-of-map over-abstention, which is small and
+still unfixed.

@@ -1,0 +1,39 @@
+{
+ "by_role": {
+  "production": {
+   "agree": 876,
+   "field_id_agree": 466,
+   "oracle_fields": 466,
+   "ref_agree": 465,
+   "shared_fields": 466,
+   "union": 876
+  },
+  "test": {
+   "agree": 477,
+   "field_id_agree": 252,
+   "oracle_fields": 252,
+   "ref_agree": 252,
+   "shared_fields": 252,
+   "union": 477
+  }
+ },
+ "disagreement_kinds": {
+  "oracle_rejected": 2,
+  "reference_state": 1
+ },
+ "measures": {
+  "declaration_agreement": 1.0,
+  "field_id_agreement": 1.0,
+  "reference_state_agreement": 0.998607
+ },
+ "strata": {
+  "agree": 1353,
+  "field_id_agree": 718,
+  "oracle_fields": 718,
+  "oracle_rejected": 2,
+  "ref_agree": 717,
+  "scored": 27,
+  "shared_fields": 718,
+  "union": 1353
+ }
+}
