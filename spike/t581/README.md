@@ -81,7 +81,8 @@ be scored against a stale seal. Unknown fields are rejected.
 | Stream | Schema | Grain |
 |---|---|---|
 | `population/units.jsonl.gz` | `t581-unit-v1` | one repository at one pinned commit, with its complete `.go` file set |
-| oracle `sites.jsonl` | `t581-site-v1` | one candidate site, including `out_of_domain` |
+| oracle `sites.jsonl` | `t581-site-v1` | one candidate site |
+| oracle `sites.jsonl` | `t581-out-of-domain-v1` | one **aggregate per unit**, not a row per candidate |
 | exporter `candidate.jsonl` | `t581-candidate-v1` | one emitted **fact**, never one assertion |
 | `round/score.json` | `t581-score-v1` | metrics, the §6 verdict, detail slices and the standing disclosures |
 
@@ -90,6 +91,13 @@ Exporting one row per fact rather than per assertion is load-bearing:
 a claim identity collapse into one stored assertion carrying two atoms, and
 `Coverage.UnresolvedCount` counts assertions. Scoring assertion counts would
 understate the denominator and silently pass missed sites.
+
+Out-of-domain candidates are aggregated per unit for the mirror-image reason: GD7
+plus GD10 make every selector call with at least one argument in every non-stub
+file a candidate, so a row each would be millions of records across 53,721 files.
+§6 needs the count, and dropping the rows changes no scored outcome — a candidate
+at a span the oracle never reported is already spurious. An aggregate is emitted
+even at `total: 0`, so the scorer can name a unit whose record is missing.
 
 ## Why a unit is a repository, not a file
 
