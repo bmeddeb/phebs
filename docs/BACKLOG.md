@@ -19952,6 +19952,45 @@ stops the round under §2's rule if scored sites fall below 300), Ben's §7 seal
 export, score and adjudication. No quality, coverage, release, scale or SLO claim
 follows.*
 
+*T58.1 oracle pre-seal pass (2026-10-14, Qoder lead): **34,089 scored sites clear
+the frozen floor by 114 times, and the pass quantifies the blind spot at 84 to 1.**
+The independent oracle ran over the locked population without the extractor, in 8.6
+seconds across all 13 units, emitting 34,089 site rows and 13 out-of-domain
+aggregates — one per unit, so no unit failed to scan. Output is
+`spike/t581/round/sites.jsonl.gz`, 612,614 bytes,
+`sha256:05f23347b48cb620c3670ea74a80e27dba897008095a77705c6db0a66bb0c815`.
+
+- **State table.** Resolved call 20,534; ambiguous call 13,317; resolved
+  registration 159; ambiguous registration 73; `source_too_large` gaps 5;
+  `parse_error` gaps 1. Out of domain 2,870,212, split 2,862,933
+  `unindexed_selector` and 7,279 `zero_arguments` across 42,313 files. Every
+  aggregate's total equals the sum of its reasons and both cause keys are present
+  in all 13.
+- **The floor is cleared, so §2's stop rule does not fire** and the round may
+  proceed to seal. 34,089 against a frozen floor of 300 is 114 times, so unlike
+  T57.3's row-vacuous round 1 this population is not empty.
+- **Disclosure one: the blind spot dwarfs the claim, 84.2 to 1.** For every scored
+  site, 84.2 selector calls fall silently out of domain under GD10. That is the
+  rule working as frozen, not a defect, but it bounds what a pass means far more
+  tightly than the site count suggests: `grafana/loki` alone has 926,726
+  out-of-domain candidates against 2,075 scored sites.
+- **Disclosure two: concentration is high and two members contribute almost
+  nothing.** The four largest members supply 78.9% of scored sites (`moby/buildkit`
+  21.1%, `containerd/containerd` 20.2%, `temporalio/temporal` 19.9%,
+  `vitessio/vitess` 17.7%). `kubevirt/kubevirt` contributes 12 scored sites from
+  9,680 `.go` files and **zero** resolved calls, and `spiffe/spire` 5 from 1,233
+  files, because they hold only 4 and 1 same-repository split stubs. This is why §6
+  discloses per-repository counts instead of flooring them — a distribution floor
+  would have failed the round over population shape, and the honest statement is
+  that the result is dominated by four repositories.
+
+The extractor has **not** been run over the population: no candidate stream, no
+score, no seal, and no threshold evaluated. The exporter refuses without a seal file
+binding the exact units digest. Documentation plus offline one-shot tooling only, so
+there is no steady-state cost. `make docs-check` passes all three of its tests and
+glossary and whitespace pass. **Next: Ben's §7 seal**, after which export, score and
+adjudication may run. No quality, coverage, release, scale or SLO claim follows.*
+
 **T58.2 · Go Thrift syntactic consumer/registration quality** — independently
 freeze thriftgo/other admitted generator/library shapes and input identity;
 measure unsupported/dynamic/ambiguous cases and registration claims separately.

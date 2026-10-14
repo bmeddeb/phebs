@@ -11516,3 +11516,52 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   §3's state table and scored-site count — which stops the round under §2's stop rule
   if scored sites fall below the frozen 300 floor — then Ben's §7 seal, then export,
   score and adjudication. No quality, coverage, release, scale or SLO claim follows.
+
+- **2026-10-14 — T58.1's oracle pre-seal pass clears the frozen floor by 114 times
+  and quantifies the claim's blind spot at 84 to 1.** The independent oracle ran over
+  the locked population **without the extractor**, as §9 step 3 requires, in 8.6
+  seconds across all 13 units, emitting 34,089 site rows and 13 out-of-domain
+  aggregates — one per unit, so no unit failed to scan and the scorer's
+  population cross-check is satisfied. Output is `spike/t581/round/sites.jsonl.gz`,
+  612,614 bytes, `sha256:05f23347b48cb620c3670ea74a80e27dba897008095a77705c6db0a66bb0c815`.
+
+  The state table is resolved call 20,534, ambiguous call 13,317, resolved
+  registration 159, ambiguous registration 73, `source_too_large` gaps 5 and
+  `parse_error` gaps 1. Against the frozen §6 floor of 300 scored sites this is 114
+  times, so §2's stop rule does not fire and the round may proceed to seal — unlike
+  T57.3's round 1, which was row-vacuous on a plausible-looking population.
+
+  Two disclosures the pass makes unavoidable are recorded in §3 rather than left in
+  the raw output. First, **the blind spot dwarfs the claim by 84.2 to 1**: for every
+  scored site, 84.2 selector calls fall silently out of domain under GD10, split
+  2,862,933 `unindexed_selector` and 7,279 `zero_arguments` across 42,313 files.
+  That is the frozen rule working as written and not a defect, but it bounds what a
+  passing score means far more tightly than the site count suggests; `grafana/loki`
+  alone carries 926,726 out-of-domain candidates against 2,075 scored sites. Second,
+  **concentration is high**: the four largest members supply 78.9% of scored sites,
+  while `kubevirt/kubevirt` contributes 12 scored sites from 9,680 `.go` files with
+  zero resolved calls and `spiffe/spire` contributes 5 from 1,233 files, because they
+  hold only 4 and 1 same-repository split stubs. That is the concrete vindication of
+  §6's choice to disclose per-repository counts instead of flooring them — a
+  distribution floor would have failed this round over population shape rather than
+  extractor quality.
+
+  The extractor has **not** been run over the population. There is no candidate
+  stream, no score, no seal and no evaluated threshold, and the exporter refuses to
+  start without a seal file binding the exact units digest, so the pre-seal
+  prohibition is enforced by the tool rather than by discipline. Ben's §7 seal is the
+  only remaining gate before export, score and adjudication.
+
+  **Steady-state cost.** None in any production path: an offline one-shot reader
+  spending two `git cat-file --batch` children per unit and 8.6 seconds total, with
+  no request, sync, startup, retry, publication, lock, cache, schema or durable-state
+  change.
+
+  **Validation posture.** Every aggregate's `total` equals the sum of its `by_reason`
+  and both cause keys are present in all 13 units; the record count reconciles exactly
+  (34,089 + 13 = 34,102 lines). The lead re-ran the oracle's gates rather than taking
+  them on report — gofmt clean, vet clean, suite passes normally and under `-race`, and
+  neither file imports a phebs package. `make docs-check` passes all three of its
+  tests, glossary and whitespace pass, and the tagged exporter still builds. No
+  quality, coverage, release, scale or SLO claim follows, and a passing pre-seal count
+  is not a passing round.
