@@ -19574,6 +19574,74 @@ client/server registration shapes and Go/generator/tool versions; independently
 measure matching evidence and unresolved outcomes; bind declaration facts when
 claimed and never relabel a name match as an exact caller.
 
+*T58.1 (2026-10-13, Qoder lead): **prospective site-coverage protocol authored;
+nothing enumerated, scored or sealed.**
+[GRPC_CONSUMER_QUALITY_PROTOCOL.md](./GRPC_CONSUMER_QUALITY_PROTOCOL.md) is an
+unsealed draft in the T55.1/T56.1 shape, added to `docs/README.md` in the same
+change so `make docs-check` reaches it.
+
+- **Ben's four preregistration decisions, recorded before any measurement.** The
+  claim is **site coverage only** — whether every site of the frozen shapes is
+  found and correctly stated as resolved, ambiguous, gap, or out of domain — and
+  **not** operation or service identity, so T13.1's deferred ≥98%/≥90% accuracy
+  bar does not attach and a pass must never be cited as identity accuracy. The
+  population is a **fresh blind list**, not the T55.1 Kafka lock and not T47.2's
+  run-g population. Library and generator identity is **frozen as the current
+  filename convention** with no code change and no follow-up gate ticket. Version
+  freezing **records the observed corpus versions** of protoc-gen-go,
+  protoc-gen-go-grpc and grpc-go, with no runtime gate.
+- **GD1–GD16 freeze the shape vocabulary** verbatim against the shipped
+  extractor: stub identity is the `_grpc.pb.go` suffix alone and no import is
+  ever inspected; stubs feed a repository-scoped index and are never scanned for
+  sites; one client shape (selector call, ≥1 argument, selector name matching
+  exactly one index entry) and one registration shape (`Register<Short>Server`
+  bound to a same-file `ServiceName` literal); registration is tested **before**
+  call for selector expressions; a name absent from the index or a zero-argument
+  call is silently out of domain rather than an abstention; 4 MiB and parse
+  failures yield whole-file gaps; an empty file yields none; and code role is an
+  attribute that filters nothing, so **test-role sites are in scope** — unlike the
+  Kafka rounds, whose claim was scoped to non-test files.
+- **A structural finding that changes the round's shape.** The extractor is
+  two-pass and repository-scoped, so a single file blob has no index and would
+  score entirely as out of domain. The unit must therefore be **one repository at
+  one pinned commit**, walked as a whole tree, rather than T55.1's per-blob unit.
+  The population is one commit per repository and is not history-expanded; if the
+  scored-site count falls below the frozen floor the round fails its own stop rule
+  and a replacement round needs a newly pre-declared population. Re-scoping after
+  seeing a denominator is forbidden. Relatedly, two same-file sites sharing a
+  claim identity collapse into one stored assertion with two atoms, so the
+  exporter must emit per fact and the scorer must join on spans — scoring
+  assertion counts would understate the denominator and silently pass misses.
+- **An honesty limit stated rather than papered over.** This round cannot claim
+  T55.1's independence: there KD1–KD10 were frozen at T23.1 *before* T23.2
+  implemented them verbatim, whereas `grpcgo` shipped first and no numbered rule
+  set pre-existed. GD1–GD16 were authored after the fact from the pack card and
+  the shipped recognition rules, so the round measures **spec conformance**, not
+  accuracy against independently derived truth. The proposed mitigation is that a
+  separate agent authors `spike/t581/oracle` from §1 and §3 alone, forbidden from
+  reading the extractor. GD9 (registration precedence) and GD5 (a method literal
+  indexed without a matching `ServiceName` binding) are flagged as the two rules
+  where an independent oracle is most likely to diverge.
+- **Not a T11.1 retry.** `spike/t111` is terminally CLOSED on a capacity stop with
+  `GATE2-V2 NOT_ESTABLISHED` and no authority to retry; its numbers measured the
+  typed go/types spike, which the productized syntactic extractor's own header
+  says do not transfer. `spike/t394` still records `go_grpc_call_site_quality` as
+  `not_run` / `unsealed_preregistration` / `measurement_authorized false`, and the
+  pack card's `Independent validation owner: none assigned; release-blocking` is
+  unchanged.
+
+No runtime, schema, registration, evidence-status or historical-record change;
+this is documentation only, so there is no steady-state cost. `make docs-check`
+passes all three of its tests with the new document linked, and whitespace is
+clean. **Blocked on Ben** for: the §2 named list and whether `etcd-io/etcd` stays
+given its presence in T47.2's `grpc-caller` universe; the §3 oracle-independence
+posture; the §6 thresholds including whether per-role floors are scored or only
+disclosed; and where the round runs, since it needs bare clones and the Linux
+corpus host is occupied by T42.2 while this macOS host has ~89 GiB free against an
+estimated 30–60 GiB for 18 full clones. Only after those does the agent write
+`spike/t581/` and run the oracle's pre-seal pass. No quality, coverage, release,
+scale or SLO claim follows, and no measurement is authorized by this draft.*
+
 **T58.2 · Go Thrift syntactic consumer/registration quality** — independently
 freeze thriftgo/other admitted generator/library shapes and input identity;
 measure unsupported/dynamic/ambiguous cases and registration claims separately.

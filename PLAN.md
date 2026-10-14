@@ -11133,6 +11133,7 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   because the same three reproduce at the exact base commit `ccbcd8c2`. No quality,
   coverage, release, scale or SLO claim follows, and no Epic 57 behavior
   changes.
+
 - **2026-10-13 — T57.3 releases the combined Topics claim as its own signed
   record.** Ben chose four things: the combined claim (both planes), an exact
   oracle-union bar, closing T57.2 as HTTP + MCP with the UI moved to T57.4,
@@ -11165,3 +11166,95 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   invalidates every existing release record for new builds, as any registry
   change does. Not established: independent human review, production-scale
   rows and any UI.
+
+- **2026-10-13 — T58.1 authors a prospective Go gRPC consumer/registration
+  site-coverage protocol; the measurement unit must be a repository, not a file.**
+  `docs/GRPC_CONSUMER_QUALITY_PROTOCOL.md` preregisters Epic 58's first round in
+  the T55.1/T56.1 shape and is added to `docs/README.md` in the same change. It is
+  an unsealed draft: nothing has been enumerated, scored, sealed or predicted, and
+  it authorizes no measurement.
+
+  Ben's four preregistration decisions are recorded before any output exists. The
+  claim is **site coverage only** — every site of the frozen shapes found and
+  correctly stated as resolved, ambiguous, gap or out of domain — and expressly not
+  operation or service identity, so T13.1's deferred ≥98% precision / ≥90% recall /
+  ≥90% per-fixture clause does not attach and a pass can never be cited as identity
+  accuracy. The population is a fresh blind list, independent of both the T55.1
+  Kafka lock and T47.2's run-g population. Generator and library identity is frozen
+  as the shipped `_grpc.pb.go` filename convention with no code change, and version
+  freezing records the observed corpus versions of protoc-gen-go,
+  protoc-gen-go-grpc and grpc-go rather than adding a runtime gate.
+
+  GD1–GD16 freeze the shape vocabulary verbatim against the shipped extractor,
+  including the parts that are easy to get wrong: stubs feed a repository-scoped
+  index and are themselves never scanned for sites; registration is tested before
+  call for selector expressions, so a name that is both is reported as a
+  registration; a selector absent from the index or a zero-argument call is
+  silently out of domain rather than an abstention; a full-method literal with no
+  matching `ServiceName` binding is still indexed through a synthetic entry; 4 MiB
+  and parse failures yield whole-file gaps while an empty file yields none; and
+  code role filters nothing, so test-role sites are in scope — a real difference
+  from the Kafka rounds, whose claim was scoped to non-test files.
+
+  **The structural decision.** Because the extractor is two-pass and
+  repository-scoped, a single file blob has no index and would score entirely as
+  out of domain, so T55.1's per-blob unit cannot be reused. The unit is one
+  repository at one pinned commit, walked as a whole tree from a bare clone
+  without materializing a worktree; the population is one commit per repository and
+  is not history-expanded. If the scored-site count falls below the frozen floor the
+  round fails its own stop rule and a replacement round requires a newly
+  pre-declared population — re-scoping after seeing a denominator is forbidden.
+  Separately, two same-file sites sharing a claim identity collapse into one stored
+  assertion carrying two atoms while `Coverage.UnresolvedCount` counts assertions,
+  so the exporter must emit per fact and the scorer must join on spans; scoring
+  assertion counts would understate the denominator and silently pass missed sites.
+
+  **An honesty limit recorded rather than papered over.** This round cannot claim
+  T55.1's independence. There, T23.1 froze KD1–KD10 before T23.2 implemented them
+  verbatim; here `grpcgo` shipped first and no numbered rule set pre-existed, so
+  GD1–GD16 were authored after the fact from the pack card and the shipped
+  recognition rules. What the round measures is therefore **spec conformance** —
+  whether `grpcgo` correctly implements a specification frozen now — not accuracy
+  against independently derived truth. That is still a real measurement, and it is
+  how T53.3 round 1 caught nine genuine misses, but the protocol says so plainly
+  instead of borrowing the Kafka rounds' independence language. The proposed
+  mitigation is that a separate agent authors `spike/t581/oracle` from §1 and §3
+  alone, forbidden from reading the extractor, which restores independence between
+  oracle and implementation even though the specification postdates the code. GD9
+  and GD5 are flagged as the two rules where an independent oracle is most likely
+  to diverge.
+
+  This is a fresh round and not a T11.1 retry: `spike/t111` is terminally CLOSED on
+  a valid capacity stop with `GATE2-V2 NOT_ESTABLISHED` and no authority to retry,
+  and its numbers measured the typed `go/types` spike, which the productized
+  syntactic extractor's own header states do not transfer. `spike/t394` still
+  records `go_grpc_call_site_quality` as `not_run` / `unsealed_preregistration` /
+  `measurement_authorized false`, and the pack card's `Independent validation owner:
+  none assigned; release-blocking` is unchanged. T58.3 still owns recipe
+  registration and promotion; no `phebs.grpc.consumer.go` pack ID or recipe is
+  added here.
+
+  **Steady-state cost.** None. Documentation only: no runtime path, schema,
+  registration, extractor, evidence status or historical record changes, and no
+  query, sync, startup, retry, publication, lock, cache, child or durable-state
+  cost is added.
+
+  **Validation posture.** `make docs-check` passes all three of its tests with the
+  new protocol linked and reachable from the documentation map, and whitespace is
+  clean. Every GD rule was read out of the shipped recognition code before being
+  frozen rather than inferred from the pack card. The existing `grpcgo` suite
+  corroborates most of them directly — role precedence, the oversized and
+  unparseable gap counts, registration-name collision, duplicate full names across
+  lineages, and package-less service resolution — and confirms that spans cite call
+  expressions, though it does not pin the exact whole-`CallExpr` byte boundary this
+  protocol freezes. Nothing in that suite pins GD9's registration-before-call
+  precedence, which §3 already flags; the independently authored oracle is what will
+  exercise it. **Blocked on Ben**
+  for the §2 named list and whether `etcd-io/etcd` stays given its presence in
+  T47.2's `grpc-caller` universe, the §3 oracle-independence posture, the §6
+  thresholds including whether per-role floors are scored or only disclosed, and
+  where the round runs — it needs bare clones of the approved list, the Linux
+  corpus host is occupied by T42.2, and this macOS host has roughly 89 GiB free
+  against an estimated 30–60 GiB for 18 full clones. Only after those does the
+  agent write `spike/t581/` and run the oracle's pre-seal pass. No quality,
+  coverage, release, scale or SLO claim follows.

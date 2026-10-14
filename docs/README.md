@@ -93,6 +93,10 @@ replace the user manual.
 - [TOPICS_QUALITY_PROTOCOL.md](./TOPICS_QUALITY_PROTOCOL.md) — T57.3 combined
   Topics composition: round 1 census-exact but row-vacuous, round 2 passing
   41/41 topics; §9 records the signed `rel-phebs.kafka.topics` release.
+- [GRPC_CONSUMER_QUALITY_PROTOCOL.md](./GRPC_CONSUMER_QUALITY_PROTOCOL.md) —
+  T58.1 Go gRPC syntactic consumer/registration site-coverage round. **Unsealed
+  draft:** the population list, oracle-independence posture and thresholds are
+  proposed and nothing has been enumerated, scored or sealed.
 
 These packs remain experimental-dark unless the manual and capability response
 explicitly say otherwise. Their retained validation result is not an accuracy
