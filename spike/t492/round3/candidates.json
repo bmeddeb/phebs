@@ -1,0 +1,586 @@
+[
+ {
+  "name": "Saltside/thrift_server-ruby",
+  "drop": null
+ },
+ {
+  "name": "ucbrise/confluo",
+  "drop": null
+ },
+ {
+  "name": "52fhy/thrift-sample",
+  "drop": null
+ },
+ {
+  "name": "flystar32/DistributedTrans",
+  "drop": null
+ },
+ {
+  "name": "petrabarus/aws-lambda-thrift-example",
+  "drop": null
+ },
+ {
+  "name": "itdelatrisu/518-craq",
+  "drop": null
+ },
+ {
+  "name": "akshayka/bft2f",
+  "drop": null
+ },
+ {
+  "name": "worksroom/YytRpc",
+  "drop": null
+ },
+ {
+  "name": "biokoda/actordb",
+  "drop": null
+ },
+ {
+  "name": "ly1ex/thrift2OpenAPI",
+  "drop": null
+ },
+ {
+  "name": "matiasfha/cvnodestreaming",
+  "drop": null
+ },
+ {
+  "name": "HartLuk/CCS",
+  "drop": null
+ },
+ {
+  "name": "AlibabaResearch/DAMO-ConvAI",
+  "drop": null
+ },
+ {
+  "name": "myntra/golimit",
+  "drop": null
+ },
+ {
+  "name": "StrikeW/aicampf2",
+  "drop": null
+ },
+ {
+  "name": "TCKnickerbocker/DHT_based_Federated_Learning_System",
+  "drop": null
+ },
+ {
+  "name": "Xavier2323/Distributed-File-System",
+  "drop": null
+ },
+ {
+  "name": "Xavier2323/Distributed-ML-System",
+  "drop": null
+ },
+ {
+  "name": "osquery/osquery-go",
+  "drop": null
+ },
+ {
+  "name": "kamek-pf/thrift-example",
+  "drop": null
+ },
+ {
+  "name": "cloudwego/kitex-examples",
+  "drop": null
+ },
+ {
+  "name": "JonMerlevede/NeatSim",
+  "drop": null
+ },
+ {
+  "name": "osquery/osquery-python",
+  "drop": null
+ },
+ {
+  "name": "pyj4104/ECE454",
+  "drop": null
+ },
+ {
+  "name": "cloudwego/hertz-examples",
+  "drop": null
+ },
+ {
+  "name": "cloudwego/thriftgo",
+  "drop": null
+ },
+ {
+  "name": "RobWC/thrift-fun",
+  "drop": null
+ },
+ {
+  "name": "philsong/bitcoin-broker",
+  "drop": null
+ },
+ {
+  "name": "moonpolysoft/dynomite",
+  "drop": null
+ },
+ {
+  "name": "snower/forsun",
+  "drop": null
+ },
+ {
+  "name": "erfanghoreishi/payapp",
+  "drop": null
+ },
+ {
+  "name": "migueldealeixo/Uevora",
+  "drop": null
+ },
+ {
+  "name": "ii64/volo_testing",
+  "drop": null
+ },
+ {
+  "name": "herin049/csci5105",
+  "drop": null
+ },
+ {
+  "name": "OuterCyrex/HermesGate",
+  "drop": null
+ },
+ {
+  "name": "beltran/gohive",
+  "drop": null
+ },
+ {
+  "name": "cloudera/hs2client",
+  "drop": null
+ },
+ {
+  "name": "diwakergupta/thrift-missing-guide",
+  "drop": null
+ },
+ {
+  "name": "omribahumi/python_tornado_thrift",
+  "drop": null
+ },
+ {
+  "name": "custora/bee",
+  "drop": null
+ },
+ {
+  "name": "thriftrw/thriftrw-go",
+  "drop": null
+ },
+ {
+  "name": "nathanmarz/storm-kestrel",
+  "drop": null
+ },
+ {
+  "name": "er1ce/LINE-Protocol",
+  "drop": null
+ },
+ {
+  "name": "robotology/how-to-document-modules",
+  "drop": null
+ },
+ {
+  "name": "snower/forsun-laravel",
+  "drop": null
+ },
+ {
+  "name": "rfonseca/X-Trace",
+  "drop": null
+ },
+ {
+  "name": "JMHOO/ADC",
+  "drop": null
+ },
+ {
+  "name": "elodina/go-zipkin",
+  "drop": null
+ },
+ {
+  "name": "XiaoMi/galaxy-thrift-api",
+  "drop": null
+ },
+ {
+  "name": "nebula-contrib/nebula-node",
+  "drop": null
+ },
+ {
+  "name": "ziyunhx/imitate-login",
+  "drop": null
+ },
+ {
+  "name": "yuxel/thrift-examples",
+  "drop": null
+ },
+ {
+  "name": "samuelduann/goshine",
+  "drop": null
+ },
+ {
+  "name": "thulab/iotdb-jdbc",
+  "drop": null
+ },
+ {
+  "name": "saleyn/utxx",
+  "drop": null
+ },
+ {
+  "name": "robotology/superquadric-model",
+  "drop": null
+ },
+ {
+  "name": "aaalgo/donkey",
+  "drop": null
+ },
+ {
+  "name": "bilibili/bbip",
+  "drop": null
+ },
+ {
+  "name": "Trae-AI/stream-to-river",
+  "drop": null
+ },
+ {
+  "name": "MZMonster/node-thrift-service",
+  "drop": null
+ },
+ {
+  "name": "west2-online/fzuhelper-server",
+  "drop": null
+ },
+ {
+  "name": "paypal/gorealis",
+  "drop": null
+ },
+ {
+  "name": "atl/thrifty-p2p",
+  "drop": null
+ },
+ {
+  "name": "cadence-workflow/cadence-idl",
+  "drop": null
+ },
+ {
+  "name": "hltcoe/concrete",
+  "drop": null
+ },
+ {
+  "name": "wawandco/goechoservice",
+  "drop": null
+ },
+ {
+  "name": "shenfeng/pedis",
+  "drop": null
+ },
+ {
+  "name": "blackbeans/flume-bridge",
+  "drop": null
+ },
+ {
+  "name": "flier/zipkin-cpp",
+  "drop": null
+ },
+ {
+  "name": "robotology/superquadric-grasp",
+  "drop": null
+ },
+ {
+  "name": "kentonv/capnp-vs-ice",
+  "drop": null
+ },
+ {
+  "name": "simplegeo/thrift-fb303",
+  "drop": null
+ },
+ {
+  "name": "robotology/icub-gazebo-grasping-sandbox",
+  "drop": null
+ },
+ {
+  "name": "coinbase/cadence-ruby",
+  "drop": null
+ },
+ {
+  "name": "guardian/bridget",
+  "drop": null
+ },
+ {
+  "name": "cloudwego/kitex-tests",
+  "drop": null
+ },
+ {
+  "name": "spacemonkeygo/monkit-zipkin",
+  "drop": null
+ },
+ {
+  "name": "robwilkerson/Thrift-Client-Server-Example--PHP-",
+  "drop": null
+ },
+ {
+  "name": "horizon3ai/vRealizeLogInsightRCE",
+  "drop": null
+ },
+ {
+  "name": "lhpqaq/xzdp-go",
+  "drop": null
+ },
+ {
+  "name": "vmcraft/RemotePrinter",
+  "drop": null
+ },
+ {
+  "name": "stucchio/Hobo",
+  "drop": null
+ },
+ {
+  "name": "ruyaoyao/LINE-instant-messenger-protocol",
+  "drop": null
+ },
+ {
+  "name": "andeya/erpc",
+  "drop": null
+ },
+ {
+  "name": "microsoft/rDSN",
+  "drop": null
+ },
+ {
+  "name": "JustYOLO/Serialization-Benchmark",
+  "drop": null
+ },
+ {
+  "name": "team-ide/teamide",
+  "drop": null
+ },
+ {
+  "name": "fanchy/h2engine",
+  "drop": null
+ },
+ {
+  "name": "JustYOLO/Serialization-Benchmark-mk2",
+  "drop": null
+ },
+ {
+  "name": "ironSource/parquetjs",
+  "drop": null
+ },
+ {
+  "name": "retresco/Spyder",
+  "drop": null
+ },
+ {
+  "name": "airbnb/sparsam",
+  "drop": null
+ },
+ {
+  "name": "WesleyBatista/snowplow-kafka",
+  "drop": null
+ },
+ {
+  "name": "RandyAbernethy/ThriftBook",
+  "drop": null
+ },
+ {
+  "name": "hdclark/DICOMautomaton",
+  "drop": null
+ },
+ {
+  "name": "henrique/rsba",
+  "drop": null
+ },
+ {
+  "name": "terragraph/tgnms",
+  "drop": null
+ },
+ {
+  "name": "RevolutionAnalytics/rhbase",
+  "drop": null
+ },
+ {
+  "name": "kitex-contrib/codec-dubbo",
+  "drop": null
+ },
+ {
+  "name": "Gramdel/llp_lab3",
+  "drop": null
+ },
+ {
+  "name": "PBH-BTN/trunker",
+  "drop": null
+ },
+ {
+  "name": "wadey/go-zipkin",
+  "drop": null
+ },
+ {
+  "name": "dulikvor/cppKin",
+  "drop": null
+ },
+ {
+  "name": "rdio/scribe-public",
+  "drop": null
+ },
+ {
+  "name": "rbkmoney/damsel",
+  "drop": null
+ },
+ {
+  "name": "glycerine/golang-thrift-minimal-example",
+  "drop": null
+ },
+ {
+  "name": "colinmarc/impala-ruby",
+  "drop": null
+ },
+ {
+  "name": "glycerine/rmq",
+  "drop": null
+ },
+ {
+  "name": "Big-Data-Manning/big-data-code",
+  "drop": null
+ },
+ {
+  "name": "spacemonkeygo/monitor",
+  "drop": null
+ },
+ {
+  "name": "dkhadoop/dk-fitting",
+  "drop": null
+ },
+ {
+  "name": "superconvert/qiyicc.nvr",
+  "drop": null
+ },
+ {
+  "name": "xkeyideal/ThriftClientPool",
+  "drop": null
+ },
+ {
+  "name": "ceph/babeltrace-zipkin",
+  "drop": null
+ },
+ {
+  "name": "limingxinleo/phalcon-thrift-project",
+  "drop": null
+ },
+ {
+  "name": "collinmsn/thrift-client-pool",
+  "drop": null
+ },
+ {
+  "name": "blackbaud/integration-thrift",
+  "drop": null
+ },
+ {
+  "name": "degupta/human_readable_json_protocol",
+  "drop": null
+ },
+ {
+  "name": "west2-online/DomTok",
+  "drop": null
+ },
+ {
+  "name": "fastio/1store",
+  "drop": null
+ },
+ {
+  "name": "sputnik-maps/gopnik",
+  "drop": null
+ },
+ {
+  "name": "airbnb/chronon",
+  "drop": null
+ },
+ {
+  "name": "xitongsys/parquet-go",
+  "drop": null
+ },
+ {
+  "name": "firebolt-db/firebolt-core",
+  "drop": null
+ },
+ {
+  "name": "erans/pysnowflake",
+  "drop": null
+ },
+ {
+  "name": "socialite-lang/socialite",
+  "drop": null
+ },
+ {
+  "name": "tree-sitter-grammars/tree-sitter-thrift",
+  "drop": null
+ },
+ {
+  "name": "cloudwego/pilota",
+  "drop": null
+ },
+ {
+  "name": "selectdb/ccr-syncer",
+  "drop": null
+ },
+ {
+  "name": "samuel/go-thrift",
+  "drop": null
+ },
+ {
+  "name": "chadmv/plow",
+  "drop": null
+ },
+ {
+  "name": "ImpalaToGo/ImpalaToGo",
+  "drop": null
+ },
+ {
+  "name": "cloudera/Impala",
+  "drop": null
+ },
+ {
+  "name": "CyanAsterisk/FreeCar",
+  "drop": null
+ },
+ {
+  "name": "doris-vectorized/doris-vectorized",
+  "drop": null
+ },
+ {
+  "name": "terminalcloud/thrift",
+  "drop": null
+ },
+ {
+  "name": "phrocker/sharkbite",
+  "drop": null
+ },
+ {
+  "name": "hoangsonww/Post-Analyzer-Webserver",
+  "drop": null
+ },
+ {
+  "name": "shenrie/apache-thrift-amqp",
+  "drop": null
+ },
+ {
+  "name": "coze-plus-dev/coze-plus",
+  "drop": null
+ },
+ {
+  "name": "sentinel-group/sentinel-php-client",
+  "drop": null
+ },
+ {
+  "name": "ufukomer/node-impala",
+  "drop": null
+ },
+ {
+  "name": "parsyl/parquet",
+  "drop": null
+ },
+ {
+  "name": "bippio/go-impala",
+  "drop": null
+ },
+ {
+  "name": "DeachSword/CHRLINE-Thrift",
+  "drop": null
+ },
+ {
+  "name": "openzipkin/zipkin-api",
+  "drop": null
+ }
+]

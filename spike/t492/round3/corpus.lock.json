@@ -1,0 +1,89 @@
+{
+ "schema": "t492-thrift-corpus-lock-v1",
+ "round": 3,
+ "selected_utc": "2026-10-14",
+ "selection_rule": "docs/THRIFT_DECLARATION_QUALITY_PROTOCOL.md section 10 (sealed dead94a2)",
+ "oracle_declarations": 1673,
+ "repos": [
+  {
+   "name": "matiasfha/cvnodestreaming",
+   "dir": "matiasfha__cvnodestreaming",
+   "git_url": "https://github.com/matiasfha/cvnodestreaming.git",
+   "commit": "b39e7cdd6262ad177a087c0461b8da226ec06e16",
+   "oracle_files_ok": 5,
+   "oracle_files_rejected": 0
+  },
+  {
+   "name": "HartLuk/CCS",
+   "dir": "HartLuk__CCS",
+   "git_url": "https://github.com/HartLuk/CCS.git",
+   "commit": "25fa882085ab2c529a75a21bb31510385b5e5067",
+   "oracle_files_ok": 1,
+   "oracle_files_rejected": 0
+  },
+  {
+   "name": "AlibabaResearch/DAMO-ConvAI",
+   "dir": "AlibabaResearch__DAMO-ConvAI",
+   "git_url": "https://github.com/AlibabaResearch/DAMO-ConvAI.git",
+   "commit": "188835d4f9948563a6b9c8ac50cd0f3ae4021ed6",
+   "oracle_files_ok": 1,
+   "oracle_files_rejected": 0
+  },
+  {
+   "name": "myntra/golimit",
+   "dir": "myntra__golimit",
+   "git_url": "https://github.com/myntra/golimit.git",
+   "commit": "e034a0fc380b089d0f59bcd401c3cabb6516f1f8",
+   "oracle_files_ok": 1,
+   "oracle_files_rejected": 0
+  },
+  {
+   "name": "StrikeW/aicampf2",
+   "dir": "StrikeW__aicampf2",
+   "git_url": "https://github.com/StrikeW/aicampf2.git",
+   "commit": "f82b946c36b0b8ce855565b081640848343d1bb4",
+   "oracle_files_ok": 1,
+   "oracle_files_rejected": 0
+  },
+  {
+   "name": "TCKnickerbocker/DHT_based_Federated_Learning_System",
+   "dir": "TCKnickerbocker__DHT_based_Federated_Learning_System",
+   "git_url": "https://github.com/TCKnickerbocker/DHT_based_Federated_Learning_System.git",
+   "commit": "864f1320a70954ec9d969ba87abb5ee2efa9d732",
+   "oracle_files_ok": 1,
+   "oracle_files_rejected": 0
+  },
+  {
+   "name": "Xavier2323/Distributed-File-System",
+   "dir": "Xavier2323__Distributed-File-System",
+   "git_url": "https://github.com/Xavier2323/Distributed-File-System.git",
+   "commit": "0fbc02e7b78d67260fbc6f05f8656e4067aa2c69",
+   "oracle_files_ok": 1,
+   "oracle_files_rejected": 0
+  },
+  {
+   "name": "Xavier2323/Distributed-ML-System",
+   "dir": "Xavier2323__Distributed-ML-System",
+   "git_url": "https://github.com/Xavier2323/Distributed-ML-System.git",
+   "commit": "b1ca9fbe06b0e68d4613bee7bed2912ea228a5d6",
+   "oracle_files_ok": 2,
+   "oracle_files_rejected": 0
+  },
+  {
+   "name": "osquery/osquery-go",
+   "dir": "osquery__osquery-go",
+   "git_url": "https://github.com/osquery/osquery-go.git",
+   "commit": "eb39ad3443df2d428c21e61a992cab97fe044edb",
+   "oracle_files_ok": 1,
+   "oracle_files_rejected": 0
+  },
+  {
+   "name": "cloudwego/kitex-examples",
+   "dir": "cloudwego__kitex-examples",
+   "git_url": "https://github.com/cloudwego/kitex-examples.git",
+   "commit": "f8ee9c8f4d8283f541f532c22c0f404e4e8a7a8b",
+   "oracle_files_ok": 19,
+   "oracle_files_rejected": 1
+  }
+ ]
+}
