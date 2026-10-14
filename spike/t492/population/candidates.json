@@ -1,0 +1,178 @@
+[
+ {
+  "name": "cloudwego/thriftgo",
+  "drop": null
+ },
+ {
+  "name": "qudoor/qutrunk",
+  "drop": null
+ },
+ {
+  "name": "qudoor/qusprout",
+  "drop": null
+ },
+ {
+  "name": "apache/thrift",
+  "drop": "excluded: T19.1 corpus, reference compiler, or fbthrift"
+ },
+ {
+  "name": "facebook/fbthrift",
+  "drop": "excluded: T19.1 corpus, reference compiler, or fbthrift"
+ },
+ {
+  "name": "rhi-zone/normalize",
+  "drop": null
+ },
+ {
+  "name": "apache/doris",
+  "drop": null
+ },
+ {
+  "name": "StarRocks/starrocks",
+  "drop": null
+ },
+ {
+  "name": "apache/impala",
+  "drop": null
+ },
+ {
+  "name": "ImpalaToGo/ImpalaToGo",
+  "drop": null
+ },
+ {
+  "name": "cloudera/Impala",
+  "drop": null
+ },
+ {
+  "name": "doris-vectorized/doris-vectorized",
+  "drop": null
+ },
+ {
+  "name": "selectdb/ccr-syncer",
+  "drop": null
+ },
+ {
+  "name": "AtScaleInc/Impala",
+  "drop": null
+ },
+ {
+  "name": "tckz/ImpalaSharp",
+  "drop": null
+ },
+ {
+  "name": "ibmsoe/ImpalaPPC",
+  "drop": null
+ },
+ {
+  "name": "rampage644/impala-cut",
+  "drop": null
+ },
+ {
+  "name": "zerovm/impala-port",
+  "drop": null
+ },
+ {
+  "name": "dralves/impala-kudu",
+  "drop": null
+ },
+ {
+  "name": "izlley/querycache",
+  "drop": null
+ },
+ {
+  "name": "wnch/selectdb",
+  "drop": null
+ },
+ {
+  "name": "doris-vectorized/doris-pipeline",
+  "drop": null
+ },
+ {
+  "name": "henryr/minimised-impala",
+  "drop": null
+ },
+ {
+  "name": "Jones0036/impala-patching",
+  "drop": null
+ },
+ {
+  "name": "timarmstrong/impala",
+  "drop": null
+ },
+ {
+  "name": "lucasaytt/StartRocks",
+  "drop": null
+ },
+ {
+  "name": "wujiapei/alldata",
+  "drop": null
+ },
+ {
+  "name": "edingbrugh/doris",
+  "drop": null
+ },
+ {
+  "name": "yoock/doris",
+  "drop": null
+ },
+ {
+  "name": "mohammadmaso/starrocks",
+  "drop": null
+ },
+ {
+  "name": "lukoou3/starrocks-3.4.3",
+  "drop": null
+ },
+ {
+  "name": "tomato6818/starrocks",
+  "drop": null
+ },
+ {
+  "name": "Calluking/starrocks_parquet",
+  "drop": null
+ },
+ {
+  "name": "itsharex/ccr-syncer",
+  "drop": null
+ },
+ {
+  "name": "songpengfei159/my_be",
+  "drop": null
+ },
+ {
+  "name": "decster/thrift-java-maven-plugin",
+  "drop": null
+ },
+ {
+  "name": "codacy-open-source-projects-scans/doris",
+  "drop": null
+ },
+ {
+  "name": "codacy-open-source-projects-scans/starrocks",
+  "drop": null
+ },
+ {
+  "name": "gridgentoo/impala",
+  "drop": null
+ },
+ {
+  "name": "anujphadke/Impala",
+  "drop": null
+ },
+ {
+  "name": "gistic/SpatialImpala",
+  "drop": null
+ },
+ {
+  "name": "ep-infosec/33_apache_doris",
+  "drop": null
+ },
+ {
+  "name": "ep-infosec/33_apache_impala",
+  "drop": null
+ },
+ {
+  "name": "decster/starrocks-fe",
+  "drop": null
+ }
+]

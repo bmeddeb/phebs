@@ -1,0 +1,88 @@
+{
+ "schema": "t492-thrift-corpus-lock-v1",
+ "selected_utc": "2026-10-13",
+ "selection_rule": "docs/THRIFT_DECLARATION_QUALITY_PROTOCOL.md section 4 (sealed 8d8f5678)",
+ "oracle_declarations": 20012,
+ "repos": [
+  {
+   "name": "cloudwego/thriftgo",
+   "dir": "cloudwego__thriftgo",
+   "git_url": "https://github.com/cloudwego/thriftgo.git",
+   "commit": "6e9c23bcd91ac44fb9bd84f958b62d49ab3ec7b9",
+   "oracle_files_ok": 51,
+   "oracle_files_rejected": 8
+  },
+  {
+   "name": "qudoor/qutrunk",
+   "dir": "qudoor__qutrunk",
+   "git_url": "https://github.com/qudoor/qutrunk.git",
+   "commit": "385f00ae04d33f3ad5b18cb23938c15846eb6f26",
+   "oracle_files_ok": 3,
+   "oracle_files_rejected": 0
+  },
+  {
+   "name": "qudoor/qusprout",
+   "dir": "qudoor__qusprout",
+   "git_url": "https://github.com/qudoor/qusprout.git",
+   "commit": "fa1679e9951f5f27dc9abd90a4c6a3c2ded64a65",
+   "oracle_files_ok": 4,
+   "oracle_files_rejected": 0
+  },
+  {
+   "name": "cloudera/Impala",
+   "dir": "cloudera__Impala",
+   "git_url": "https://github.com/cloudera/Impala.git",
+   "commit": "495397101e5807c701df71ea288f4815d69c2c8a",
+   "oracle_files_ok": 26,
+   "oracle_files_rejected": 4
+  },
+  {
+   "name": "doris-vectorized/doris-vectorized",
+   "dir": "doris-vectorized__doris-vectorized",
+   "git_url": "https://github.com/doris-vectorized/doris-vectorized.git",
+   "commit": "f128c3c50e217a4269a8df4acb8a87512406687f",
+   "oracle_files_ok": 33,
+   "oracle_files_rejected": 0
+  },
+  {
+   "name": "selectdb/ccr-syncer",
+   "dir": "selectdb__ccr-syncer",
+   "git_url": "https://github.com/selectdb/ccr-syncer.git",
+   "commit": "d35c41120972c1074ca357656f83ab962baf904d",
+   "oracle_files_ok": 28,
+   "oracle_files_rejected": 0
+  },
+  {
+   "name": "tckz/ImpalaSharp",
+   "dir": "tckz__ImpalaSharp",
+   "git_url": "https://github.com/tckz/ImpalaSharp.git",
+   "commit": "7522fc0613d3b8b25cf83fcf334d98bfd2ac6764",
+   "oracle_files_ok": 51,
+   "oracle_files_rejected": 3
+  },
+  {
+   "name": "izlley/querycache",
+   "dir": "izlley__querycache",
+   "git_url": "https://github.com/izlley/querycache.git",
+   "commit": "45128e563d8936aa89c648c22dbaa4f99fc70e52",
+   "oracle_files_ok": 15,
+   "oracle_files_rejected": 2
+  },
+  {
+   "name": "wnch/selectdb",
+   "dir": "wnch__selectdb",
+   "git_url": "https://github.com/wnch/selectdb.git",
+   "commit": "dbc5af44ef489d538c541284eb94107282a6a27e",
+   "oracle_files_ok": 25,
+   "oracle_files_rejected": 0
+  },
+  {
+   "name": "doris-vectorized/doris-pipeline",
+   "dir": "doris-vectorized__doris-pipeline",
+   "git_url": "https://github.com/doris-vectorized/doris-pipeline.git",
+   "commit": "063f05475cbbcfd6474d230435b202e695b2cca3",
+   "oracle_files_ok": 26,
+   "oracle_files_rejected": 0
+  }
+ ]
+}

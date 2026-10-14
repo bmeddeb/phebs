@@ -1,0 +1,208 @@
+{
+ "selected_utc": "2026-10-13",
+ "eligible_repositories": 10,
+ "oracle_declarations": 20012,
+ "records": [
+  {
+   "name": "cloudwego/thriftgo",
+   "dir": "cloudwego__thriftgo",
+   "commit": "6e9c23bcd91ac44fb9bd84f958b62d49ab3ec7b9",
+   "checkout_mib": 2.2,
+   "thrift_files": 59,
+   "oracle_files_ok": 51,
+   "oracle_files_rejected": 8,
+   "oracle_declarations": 1057,
+   "eligible": 1
+  },
+  {
+   "name": "qudoor/qutrunk",
+   "dir": "qudoor__qutrunk",
+   "commit": "385f00ae04d33f3ad5b18cb23938c15846eb6f26",
+   "checkout_mib": 16.3,
+   "thrift_files": 3,
+   "oracle_files_ok": 3,
+   "oracle_files_rejected": 0,
+   "oracle_declarations": 182,
+   "eligible": 2
+  },
+  {
+   "name": "qudoor/qusprout",
+   "dir": "qudoor__qusprout",
+   "commit": "fa1679e9951f5f27dc9abd90a4c6a3c2ded64a65",
+   "checkout_mib": 85.3,
+   "thrift_files": 4,
+   "oracle_files_ok": 4,
+   "oracle_files_rejected": 0,
+   "oracle_declarations": 324,
+   "eligible": 3
+  },
+  {
+   "name": "apache/thrift",
+   "drop": "excluded: T19.1 corpus, reference compiler, or fbthrift"
+  },
+  {
+   "name": "facebook/fbthrift",
+   "drop": "excluded: T19.1 corpus, reference compiler, or fbthrift"
+  },
+  {
+   "name": "rhi-zone/normalize",
+   "dir": "rhi-zone__normalize",
+   "commit": "3fa72ba889c4b189d61fa18fa08f1337240bb4e8",
+   "checkout_mib": 18.0,
+   "thrift_files": 2,
+   "oracle_files_ok": 0,
+   "oracle_files_rejected": 2,
+   "oracle_declarations": 0,
+   "drop": "oracle compiles none of its .thrift files"
+  },
+  {
+   "name": "apache/doris",
+   "dir": "apache__doris",
+   "commit": "c67aa4f3ca029d3597d610b5c68bda7cdca10d03",
+   "checkout_mib": 664.6,
+   "thrift_files": 27,
+   "drop": "exceeds host envelope"
+  },
+  {
+   "name": "StarRocks/starrocks",
+   "dir": "StarRocks__starrocks",
+   "commit": "1d8c904ac56d8e15417a45b52b4427def7588cf1",
+   "checkout_mib": 661.6,
+   "thrift_files": 33,
+   "drop": "exceeds host envelope"
+  },
+  {
+   "name": "apache/impala",
+   "dir": "apache__impala",
+   "commit": "ca40f73cbf374971d552bb6c1d6f925aef3adae7",
+   "checkout_mib": 301.7,
+   "thrift_files": 35,
+   "drop": "exceeds host envelope"
+  },
+  {
+   "name": "ImpalaToGo/ImpalaToGo",
+   "dir": "ImpalaToGo__ImpalaToGo",
+   "commit": "a1a79c0684d1319ee5c99aaf9b8a09c8392ba054",
+   "checkout_mib": 595.4,
+   "thrift_files": 62,
+   "drop": "exceeds host envelope"
+  },
+  {
+   "name": "cloudera/Impala",
+   "dir": "cloudera__Impala",
+   "commit": "495397101e5807c701df71ea288f4815d69c2c8a",
+   "checkout_mib": 101.4,
+   "thrift_files": 30,
+   "oracle_files_ok": 26,
+   "oracle_files_rejected": 4,
+   "oracle_declarations": 1932,
+   "eligible": 4
+  },
+  {
+   "name": "doris-vectorized/doris-vectorized",
+   "dir": "doris-vectorized__doris-vectorized",
+   "commit": "f128c3c50e217a4269a8df4acb8a87512406687f",
+   "checkout_mib": 70.8,
+   "thrift_files": 33,
+   "oracle_files_ok": 33,
+   "oracle_files_rejected": 0,
+   "oracle_declarations": 2611,
+   "eligible": 5
+  },
+  {
+   "name": "selectdb/ccr-syncer",
+   "dir": "selectdb__ccr-syncer",
+   "commit": "d35c41120972c1074ca357656f83ab962baf904d",
+   "checkout_mib": 18.9,
+   "thrift_files": 28,
+   "oracle_files_ok": 28,
+   "oracle_files_rejected": 0,
+   "oracle_declarations": 4459,
+   "eligible": 6
+  },
+  {
+   "name": "AtScaleInc/Impala",
+   "dir": "AtScaleInc__Impala",
+   "commit": "1073a9108220faffe61c3bc9dff7a953adde12df",
+   "checkout_mib": 377.5,
+   "thrift_files": 61,
+   "drop": "exceeds host envelope"
+  },
+  {
+   "name": "tckz/ImpalaSharp",
+   "dir": "tckz__ImpalaSharp",
+   "commit": "7522fc0613d3b8b25cf83fcf334d98bfd2ac6764",
+   "checkout_mib": 2.0,
+   "thrift_files": 54,
+   "oracle_files_ok": 51,
+   "oracle_files_rejected": 3,
+   "oracle_declarations": 3941,
+   "eligible": 7
+  },
+  {
+   "name": "ibmsoe/ImpalaPPC",
+   "dir": "ibmsoe__ImpalaPPC",
+   "commit": "09db2bd494210c3e292dde2314cbb0674ff02845",
+   "checkout_mib": 833.7,
+   "thrift_files": 66,
+   "drop": "exceeds host envelope"
+  },
+  {
+   "name": "rampage644/impala-cut",
+   "dir": "rampage644__impala-cut",
+   "commit": "82bf540a2e113a867314f4d25f6e3abc66d98ace",
+   "checkout_mib": 375.5,
+   "thrift_files": 59,
+   "drop": "exceeds host envelope"
+  },
+  {
+   "name": "zerovm/impala-port",
+   "dir": "zerovm__impala-port",
+   "commit": "4916f5d79b925d98930a3b9f00575cd25a9db913",
+   "checkout_mib": 562.2,
+   "thrift_files": 29,
+   "drop": "exceeds host envelope"
+  },
+  {
+   "name": "dralves/impala-kudu",
+   "dir": "dralves__impala-kudu",
+   "commit": "9e7d6fa64f948d0247c698720f9892dfad99bf2c",
+   "checkout_mib": 739.5,
+   "thrift_files": 64,
+   "drop": "exceeds host envelope"
+  },
+  {
+   "name": "izlley/querycache",
+   "dir": "izlley__querycache",
+   "commit": "45128e563d8936aa89c648c22dbaa4f99fc70e52",
+   "checkout_mib": 180.2,
+   "thrift_files": 17,
+   "oracle_files_ok": 15,
+   "oracle_files_rejected": 2,
+   "oracle_declarations": 539,
+   "eligible": 8
+  },
+  {
+   "name": "wnch/selectdb",
+   "dir": "wnch__selectdb",
+   "commit": "dbc5af44ef489d538c541284eb94107282a6a27e",
+   "checkout_mib": 75.3,
+   "thrift_files": 25,
+   "oracle_files_ok": 25,
+   "oracle_files_rejected": 0,
+   "oracle_declarations": 2329,
+   "eligible": 9
+  },
+  {
+   "name": "doris-vectorized/doris-pipeline",
+   "dir": "doris-vectorized__doris-pipeline",
+   "commit": "063f05475cbbcfd6474d230435b202e695b2cca3",
+   "checkout_mib": 129.4,
+   "thrift_files": 26,
+   "oracle_files_ok": 26,
+   "oracle_files_rejected": 0,
+   "oracle_declarations": 2638,
+   "eligible": 10
+  }
+ ]
+}
