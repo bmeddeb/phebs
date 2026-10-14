@@ -68,8 +68,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     for flag in ('--oracle', '--candidate', '--disagreements'):
         parser.add_argument(flag, type=Path, required=True)
+    parser.add_argument('--kind', choices=('call', 'registration'), help='score one kind only (round 2: registration)')
     args = parser.parse_args()
     load = lambda p: [json.loads(l) for l in p.read_text().splitlines() if l.strip()]
-    result, out = score(load(args.oracle), load(args.candidate))
+    oracle_rows, candidate_rows = load(args.oracle), load(args.candidate)
+    if args.kind:
+        oracle_rows = [r for r in oracle_rows if r.get('summary') or r['kind'] == args.kind]
+        candidate_rows = [r for r in candidate_rows if RESOLVED.get(r['predicate']) == args.kind]
+    result, out = score(oracle_rows, candidate_rows)
     args.disagreements.write_text(''.join(json.dumps(d, sort_keys=True) + '\n' for d in out))
     print(json.dumps(result, indent=1, sort_keys=True))

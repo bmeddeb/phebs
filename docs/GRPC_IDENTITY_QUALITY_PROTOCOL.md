@@ -168,3 +168,24 @@ lookup-by-operation. `find_operation_consumers` over `grpc-consumer` must not
 be released on this extractor. T58.1's site-coverage pass stands, because it
 measured something else. Registrations look sound (38/38), but 41 sites in
 an underpowered round establish nothing.
+
+## 9. Round 2: registrations only (frozen 2026-10-14, before selection)
+
+Ben chose a registrations-only claim after §8. Calls stay dark, and
+lookup-by-operation remains Caller Map's job (Epic 47).
+
+**Claim.** `REGISTERS_GRPC_SERVICE pkg.Service` names the service actually
+registered, and grpcgo finds the registrations go/types resolves.
+
+**Unchanged.** The oracle and its rules (§3), the adjudication (§5), and the
+thresholds (precision ≥ 98%, recall ≥ 90%, ≥ 90% per repository with at
+least 20 scored rows or sites). Scoring is `score.py --kind registration`:
+the same rules, restricted to registration rows and sites.
+
+**Population.** §6's searches run again, with the same exclusions plus §8's
+25 repositories. Eligibility is as in §6, but the site that counts is an
+oracle-resolved **registration**. Admit candidates until at least 10
+repositories and at least 150 resolved registration sites are held, capped
+at 60 repositories; below the floors at the cap, the round is underpowered.
+The selector is `spike/t583/select_r2.py`, and the lock is committed before
+grpcgo runs.
