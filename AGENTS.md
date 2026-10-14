@@ -95,6 +95,26 @@ bare repos · Vite + React + TS + CodeMirror 6 in `ui/`, embedded in the binary.
   `ui/` or design-document changes uncommitted. Any boundary crossing must be
   identified in the ticket summary and wait for Ben's routing rather than
   crossing silently.
+- **Machine tracks (2026-10-13, Ben-adopted; supersedes the 2026-08-07 track
+  ownership above, which keeps its shared-spine and staging rules).**
+  - **Linux track** (Claude lead, `/home/ben/phebs`, branches `hp/t*`) owns
+    backend and releases: `internal/`, `cmd/`, `spike/`, the store schema,
+    `Makefile`, `go.mod` and `scripts/` (except receipt tooling). It also owns
+    release signing, since the key lives on this host, and the rehearsal
+    corpora (`~/phebs-rehearsals`). Its epics are 47, 49, the server side of
+    50–54, partitioned proof reads, Epic 58's T58.3 registration, and upkeep
+    of the released Kafka, Topics and WIRE claims.
+  - **Mac track** (Ben's machine, `../phebs-ux` and its checkout, branches
+    `ux/t*` for UI and `mac/t*` otherwise) owns presentation: `ui/`,
+    `docs/DESIGN_CHARTER.md`, and receipt tooling and baselines. Its work is
+    Epic 43 and every product's UI ticket, the darwin-only T42.2 native work
+    (including the `TestT422Workspace*NativeComposition` tests), and T58.1.
+  - **Handoffs** between tracks are GitHub issues labeled `track:linux` or
+    `track:mac`. A crossing happens only through such an issue or Ben's flag
+    in chat, and the receiving track records it in the ticket.
+  - Shared spine docs stay append-only across tracks. Nothing merges into
+    `main` without Ben's explicit request, and the second merger resolves
+    conflicts and reruns `make docs-check` and `make verify-glossary`.
 - Table-driven tests. Every epic ends demoable via `make dev` — an epic that
   can't be shown end-to-end is not done.
 - Every implementation review includes a steady-state-cost pass: enumerate work
