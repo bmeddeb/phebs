@@ -63,7 +63,10 @@ round's scope makes explicit:
   affected call sites are *silently* out of domain rather than abstentions, so
   nothing in the evidence reports them as missing. The claim is therefore scoped to
   repositories whose gRPC stubs are same-repository split-generated files, and a
-  passing score says nothing about code outside that class.
+  passing score says nothing about code outside that class. A third blind spot is
+  the same shape: a generic method instantiation has an `IndexExpr` rather than a
+  `SelectorExpr` as its function expression, so GD7 does not match it and it is
+  silent — not even out of domain.
 - No exact-caller identity: `grpc-consumer` is syntactic and Epic 47's
   `grpc-caller` domain owns resolved callers. Nothing in this round promotes,
   renames or relabels a name match as an exact caller.
@@ -268,12 +271,17 @@ departs from the spec, which is the defect class this round exists to find.
   file feeds the index only and is never scanned for sites.
 - **GD3** — A *service binding* is a `KeyValueExpr` in a stub whose key is the
   identifier `ServiceName` and whose value is a string literal matching
-  `^[A-Za-z_]\w*(\.[A-Za-z_]\w*)*$`. Its short name is the substring after the
-  last `.`. Bindings are collected per stub file.
+  `^[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*$` — the inner group is non-capturing. Its
+  short name is the substring after the last `.`. Bindings are collected per stub
+  file.
 - **GD4** — A *method entry* is a string literal in a stub matching the anchored
-  full-method pattern `^/([A-Za-z_]\w*(\.[A-Za-z_]\w*)*)/([A-Za-z_]\w*)$`. The
-  bare method name is the second capture. Anchoring is what keeps arbitrary
-  string constants out of the index.
+  full-method pattern `^/([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)/([A-Za-z_]\w*)$`. The
+  inner dot-segment group is **non-capturing**, so there are exactly two captures
+  and the bare method name is the second. Anchoring is what keeps arbitrary string
+  constants out of the index. An earlier draft wrote both patterns with a
+  *capturing* inner group, which made "second capture" denote the dot segment; the
+  oracle's independent author caught it and read §1's `/package.Service/Method`
+  instead. The patterns above are now the shipped ones verbatim.
 - **GD5** — A method entry is attributed to the service bindings in the same stub
   whose full name matches the entry's first capture exactly. **If none matches**,
   the entry is still indexed, attributed to a synthetic entry carrying that full
@@ -357,6 +365,67 @@ expression to its closing parenthesis. The oracle must implement the whole-node
 boundary, so a one-sided disagreement there is a real finding about which
 boundary the product should cite, not a scoring artifact.
 
+### Ambiguities the independent author surfaced, adopted as §3 amendments
+
+§4 requires a rule ambiguity to be resolved by amending §3 **before** scoring
+rather than adjudicated around afterwards. The oracle's separate author reported
+nine places where the frozen text admitted more than one reading. All nine are
+adopted here verbatim as the rule, in the direction spec ← independent reading,
+never spec ← implementation. The consequence is deliberate: after this amendment
+the oracle and the specification agree by construction, so a disagreement at
+scoring is evidence about the extractor rather than about the wording.
+
+1. **GD4 capture numbering — a defect in the specification, not an ambiguity.**
+   The draft wrote both patterns with a *capturing* inner dot-segment group, which
+   made "the second capture" denote the dot segment rather than the method. The
+   author noticed the pattern had three groups, declined to use group 2, and read
+   §1's `/package.Service/Method` and the row-identity table instead. GD3 and GD4
+   are corrected above to the non-capturing form so the prose and the patterns
+   agree. This is the separation paying for itself: a lead-authored spec error
+   caught by an author who had not seen the code.
+2. **GD6 deduplication key.** Deduplicating method entries on the *service* full
+   name would collapse every method of a service into one entry and make GD8
+   unanswerable. A method entry's identity is therefore (service, method, stub
+   path, lineage): one repeated literal in one stub stays resolved, and the same
+   literal in two stubs is ambiguous. Registrations deduplicate on (name, service,
+   stub), which is what makes §1's "one full name reached through two stubs"
+   ambiguous. "Lineage" is undefined elsewhere in §3 and is taken as
+   binding-or-synthetic per GD5.
+3. **GD11 with no matching binding is constitutive, not permissive.** A
+   `Register<Short>Server` declaration whose `<Short>` has no `ServiceName` binding
+   in the same stub enters nothing: GD9 never fires for it, a bare-`Ident` call
+   emits nothing, and a *selector* call falls through to out of domain.
+4. **GD7 and generic instantiations.** A generic method instantiation has `Fun` of
+   type `IndexExpr`,
+   not `SelectorExpr`, and §3 never says to unwrap it. The shape is read strictly,
+   so such a call is silent — not even out of domain. This is a third structural
+   blind spot and is now named in §1's non-claims beside combined-style stubs and
+   external-module contracts.
+5. **GD10's zero-argument condition belongs to client calls only.** It sits under
+   "Client call sites", and GD12 states no argument condition, so
+   `RegisterSvcServer()` with zero arguments is still a resolved registration. GD9
+   also precedes GD10, so a name present in the registration index is never out of
+   domain.
+6. **GD10's two causes share one state but are counted separately.** §3 freezes no
+   reason vocabulary, so the oracle records `unindexed_selector` (checked first)
+   and `zero_arguments` as distinct causes inside the per-unit aggregate.
+7. **GD13 "exceeds" is strict.** Exactly 4 MiB is parsed, not gapped. The check
+   precedes parsing and applies to stubs as well, so an oversized stub also indexes
+   nothing and its services stay unresolvable repository-wide.
+8. **Gap line numbers are not frozen.** Scoring joins on byte spans, so the oracle
+   emits line 1 and newline-count + 1 for a whole-file gap and no claim is made
+   about them.
+9. **Stubness comes from GD1's suffix, not from the unit's `stub_files` list.** The
+   two must agree; a disagreement is warned on stderr rather than silently
+   resolved in favour of either.
+
+**Independence disclosure, stated plainly.** The author reports that one shell glob
+aimed at `internal/` errored under zsh before matching anything and was not
+retried, and the delivered oracle imports no `github.com/bmeddeb/phebs/...`
+package. The separation therefore held in outcome but was not attempt-clean, which
+is what a procedural rather than technical guarantee costs. It is recorded here
+rather than smoothed over, and any result must carry it.
+
 ### Row identity used for scoring
 
 | Field | Value |
@@ -409,6 +478,22 @@ counts distinct assertions rather than occurrences. The exporter must therefore
 emit one line per emitted fact (per site span), as T55.1's did, and the scorer
 must join on spans. Scoring against assertion counts would understate the
 denominator and silently pass missed sites.
+
+**Out-of-domain candidates are aggregated, not enumerated.** GD7 plus GD10 make
+every selector call with at least one argument in every non-stub file a candidate,
+so across 53,721 `.go` files a row per candidate would be millions of records and
+hundreds of megabytes. §6 requires the count, not the enumeration, and dropping the
+rows changes no scored outcome: a candidate row at a span where the oracle reported
+nothing is already spurious whether or not an `out_of_domain` row sits there. The
+oracle therefore emits one aggregate per unit after that unit's site rows:
+
+```json
+{"schema":"t581-out-of-domain-v1","unit":"<name>","total":0,
+ "by_reason":{"unindexed_selector":0,"zero_arguments":0},"files_with_candidates":0}
+```
+
+An aggregate is emitted even when `total` is 0, so a unit with no out-of-domain
+candidate is distinguishable from a unit whose record is missing.
 
 The exporter must not run on the round population before the round is sealed.
 

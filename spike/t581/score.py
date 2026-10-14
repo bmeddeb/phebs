@@ -30,6 +30,7 @@ from pathlib import Path
 
 SITE_SCHEMA = "t581-site-v1"
 CANDIDATE_SCHEMA = "t581-candidate-v1"
+OUT_OF_DOMAIN_SCHEMA = "t581-out-of-domain-v1"
 SCORE_SCHEMA = "t581-score-v1"
 
 # The frozen §6 thresholds (Ben, 2026-10-14). Never edit these after a count is
@@ -100,8 +101,12 @@ def read_jsonl(path: Path) -> list[dict]:
 def sites_from_rows(rows: list[dict]) -> dict[tuple, dict]:
     sites: dict[tuple, dict] = {}
     for row in rows:
-        if row.get("schema") != SITE_SCHEMA:
-            raise SystemExit(f"site row has schema {row.get('schema')!r}, want {SITE_SCHEMA!r}")
+        schema = row.get("schema")
+        if schema == OUT_OF_DOMAIN_SCHEMA:
+            # Per-unit aggregates share the stream but are not sites.
+            continue
+        if schema != SITE_SCHEMA:
+            raise SystemExit(f"site row has schema {schema!r}, want {SITE_SCHEMA!r}")
         k = key(row["unit"], row["path"], row["start_byte"], row["end_byte"])
         if k in sites:
             # Two oracle sites at one span would make the join ambiguous, so it
@@ -109,6 +114,27 @@ def sites_from_rows(rows: list[dict]) -> dict[tuple, dict]:
             raise SystemExit(f"oracle emitted two sites at {_adj_key(k)}")
         sites[k] = row
     return sites
+
+
+def aggregates_from_rows(rows: list[dict]) -> dict[str, dict]:
+    """Collect the per-unit out-of-domain aggregates §6 requires published.
+
+    A unit with zero candidates still emits an aggregate, so a missing record is
+    distinguishable from an empty one and is reported as such.
+    """
+    out: dict[str, dict] = {}
+    for row in rows:
+        if row.get("schema") != OUT_OF_DOMAIN_SCHEMA:
+            continue
+        unit = row["unit"]
+        if unit in out:
+            raise SystemExit(f"oracle emitted two out-of-domain aggregates for {unit}")
+        out[unit] = {
+            "total": row.get("total", 0),
+            "by_reason": dict(row.get("by_reason", {})),
+            "files_with_candidates": row.get("files_with_candidates", 0),
+        }
+    return out
 
 
 def candidates_from_rows(rows: list[dict]) -> dict[tuple, list[dict]]:
@@ -134,8 +160,9 @@ def ratio(numerator: int, denominator: int) -> float | None:
     return None if denominator == 0 else numerator / denominator
 
 
-def score(sites: dict, candidates: dict, adjudications: dict | None) -> dict:
+def score(sites: dict, candidates: dict, adjudications: dict | None, aggregates: dict | None = None) -> dict:
     adjudications = adjudications or {}
+    aggregates = aggregates or {}
     pending = [k for k, v in adjudications.items() if v is None or v[0] is None]
 
     scored = 0
@@ -235,6 +262,7 @@ def score(sites: dict, candidates: dict, adjudications: dict | None) -> dict:
         "pending_after_adjudication": len(pending),
         "production_role_agreement": ratio(production_agree, production_total),
         "out_of_domain_candidates": out_of_domain,
+        "out_of_domain": _summarize_out_of_domain(aggregates, sites),
         "oracle_state_counts": dict(sorted(oracle_states.items())),
         "per_role_total": dict(sorted(per_role_total.items())),
         "per_role_agreement": {
@@ -267,6 +295,30 @@ def score(sites: dict, candidates: dict, adjudications: dict | None) -> dict:
             "out_of_domain candidates are excluded from the denominator by GD10 "
             "and reported only as a count.",
         ],
+    }
+
+
+def _summarize_out_of_domain(aggregates: dict, sites: dict) -> dict:
+    """Publish the out-of-domain blind spot §6 requires, from the per-unit
+    aggregates. A unit with no aggregate is named, because the oracle emits one
+    even at total 0 — so absence means the stream was incomplete, not that the
+    unit had no candidates."""
+    by_reason: Counter = Counter()
+    total = 0
+    files = 0
+    for value in aggregates.values():
+        total += value.get("total", 0)
+        files += value.get("files_with_candidates", 0)
+        for reason, count in value.get("by_reason", {}).items():
+            by_reason[reason] += count
+    units_in_sites = {site["unit"] for site in sites.values()}
+    return {
+        "total": total,
+        "files_with_candidates": files,
+        "by_reason": dict(sorted(by_reason.items())),
+        "units_with_aggregate": len(aggregates),
+        "units_missing_aggregate": sorted(units_in_sites - set(aggregates)),
+        "per_unit": {unit: aggregates[unit]["total"] for unit in sorted(aggregates)},
     }
 
 
@@ -336,11 +388,12 @@ def main() -> int:
     args = parser.parse_args()
 
     sites = load_sites(args.sites)
+    aggregates = aggregates_from_rows(read_jsonl(args.sites))
     candidates = load_candidates(args.candidate)
     adjudications = {}
     if args.adjudications:
         adjudications = json.loads(args.adjudications.read_text(encoding="utf-8"))
-    result = score(sites, candidates, adjudications)
+    result = score(sites, candidates, adjudications, aggregates)
 
     text = json.dumps(result, indent=2) + "\n"
     if args.out:

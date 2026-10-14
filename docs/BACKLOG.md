@@ -19886,6 +19886,65 @@ pass on the tagged exporter package, and the 22 scorer cases pass. Remaining: th
 separate author's oracle and its pre-seal pass, then Ben's §7 seal, then export,
 score and adjudication. No quality, coverage, release, scale or SLO claim follows.*
 
+*T58.1 independent oracle delivered (2026-10-14, separate author; recorded by the
+Qoder lead): **the separation caught a defect in the frozen specification, and nine
+ambiguities are now §3 amendments.** `spike/t581/oracle/{main.go,main_test.go}`
+(823 + 779 lines) is stdlib-only behind `//go:build t581oracle`, imports no
+`github.com/bmeddeb/phebs/...` package, reads each unit through two `git cat-file
+--batch` sessions and never touches the working tree, classifies no roles, and is
+deterministic — two runs are byte-identical. gofmt, vet, `go test` (32 cases
+including 25 rule-table subtests) and `-race` all pass. The lead did not author it
+and did not answer its clarifying questions.
+
+- **A specification defect, caught by the separation.** GD4 as drafted wrote the
+  full-method pattern with a *capturing* inner dot-segment group, so "the bare
+  method name is the second capture" denoted the dot segment rather than the
+  method. The author noticed the pattern had three groups, declined to use group 2,
+  and read §1's `/package.Service/Method` and the row-identity table instead. GD3
+  and GD4 are corrected to the non-capturing form so prose and pattern agree. This
+  is the concrete payoff of Ben's separate-author choice: a lead-authored spec error
+  found by an author who had never seen the code.
+- **Nine ambiguities adopted as §3 amendments before scoring**, in the direction
+  spec ← independent reading and never spec ← implementation, so after the
+  amendment a scoring disagreement is evidence about the extractor rather than about
+  the wording. They fix GD6's deduplication key (method entries on
+  service+method+stub+lineage, registrations on name+service+stub, which is what
+  makes one full name through two stubs ambiguous); GD11 as constitutive, so an
+  unbound `Register…Server` enters nothing; GD7 read strictly, so a generic
+  instantiation is silent because its `Fun` is an `IndexExpr`; GD10's
+  zero-argument condition as belonging to client calls only, so `RegisterSvcServer()`
+  still resolves, and GD9 preceding GD10 so a registration name is never out of
+  domain; GD10's two causes counted separately as `unindexed_selector` and
+  `zero_arguments`; GD13's "exceeds" as strict, so exactly 4 MiB parses and an
+  oversized stub indexes nothing; gap line numbers as unfrozen because scoring joins
+  on bytes; and stubness from GD1's suffix rather than the unit's `stub_files`, with
+  a disagreement warned on stderr.
+- **A third structural blind spot is now named in §1** beside combined-style stubs
+  and external-module contracts: generic instantiation calls are silent, not even
+  out of domain.
+- **An output-contract correction, made before any run.** GD7 plus GD10 make every
+  selector call with at least one argument in every non-stub file a candidate, so a
+  row per candidate would be millions of records across 53,721 files. §6 requires the
+  count, not the enumeration, and dropping the rows changes no scored outcome — a
+  candidate at a span the oracle never reported is already spurious. The oracle now
+  emits one `t581-out-of-domain-v1` aggregate per unit, with the two-cause breakdown
+  and a file count, emitted even at `total: 0` so a missing record is
+  distinguishable from an empty one. The scorer consumes it, names any unit lacking
+  an aggregate, and its suite grows to 26 cases.
+- **Independence disclosure, recorded rather than smoothed over.** The author reports
+  one shell glob aimed at `internal/` that errored under zsh before matching anything
+  and was not retried. The separation held in outcome and no phebs package is
+  imported, but it was not attempt-clean — which is precisely what a procedural
+  rather than technical guarantee costs, and any result must carry it.
+
+No population was touched: the oracle has not run over `~/phebs-t581-corpus`, so
+there is still no site count, no score, no seal and no result. Documentation and
+offline one-shot tooling only, so there is no steady-state cost. Remaining in order:
+the oracle's pre-seal pass publishing §3's state table and scored-site count (which
+stops the round under §2's rule if scored sites fall below 300), Ben's §7 seal, then
+export, score and adjudication. No quality, coverage, release, scale or SLO claim
+follows.*
+
 **T58.2 · Go Thrift syntactic consumer/registration quality** — independently
 freeze thriftgo/other admitted generator/library shapes and input identity;
 measure unsupported/dynamic/ambiguous cases and registration claims separately.

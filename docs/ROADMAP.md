@@ -422,9 +422,17 @@ and who owns each.
     with 22 cases. Production-role agreement is scored, not merely disclosed; the
     oracle classifies no roles, so per-role figures inherit the extractor's own
     labels and say so.
-  - Remaining, agent: the separate author's oracle and its pre-seal pass.
-    Remaining, Ben: the §7 seal, after which export, score and adjudication may
-    run.
+  - Done: the separate author delivered the oracle, and the separation immediately
+    earned its cost — it caught a defect in the frozen spec, where GD4's pattern had
+    a capturing inner group so "the second capture" denoted the dot segment rather
+    than the method. Nine ambiguities are adopted as §3 amendments before scoring,
+    and generic method instantiation becomes the third named blind spot beside
+    combined-style stubs and external-module contracts. Out-of-domain candidates are
+    aggregated per unit rather than enumerated, since GD7+GD10 would otherwise emit
+    millions of rows for a count §6 is the only consumer of.
+  - Remaining, agent: the oracle's pre-seal pass, which stops the round under §2's
+    rule if scored sites fall below 300. Remaining, Ben: the §7 seal, after which
+    export, score and adjudication may run.
   - Not claimed: nothing is enumerated, scored, sealed or predicted, so this
     grants no quality, coverage, release or scale result, and it is not a T11.1
     retry — that round stays terminally closed with `GATE2-V2 NOT_ESTABLISHED`.

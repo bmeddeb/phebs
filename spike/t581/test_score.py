@@ -194,6 +194,46 @@ class TestDisclosures(unittest.TestCase):
         self.assertIn("out_of_domain", joined)
 
 
+class TestOutOfDomainAggregates(unittest.TestCase):
+    def aggregate(self, unit, total, reasons, files):
+        return {"schema": score.OUT_OF_DOMAIN_SCHEMA, "unit": unit, "total": total,
+                "by_reason": reasons, "files_with_candidates": files}
+
+    def test_aggregates_are_not_treated_as_sites(self):
+        rows = [site("r", "f.go", 1, 5, "resolved_call"),
+                self.aggregate("r", 42, {"unindexed_selector": 40, "zero_arguments": 2}, 7)]
+        sites = score.sites_from_rows(rows)
+        self.assertEqual(len(sites), 1)
+        got = score.aggregates_from_rows(rows)
+        self.assertEqual(got["r"]["total"], 42)
+        self.assertEqual(got["r"]["by_reason"]["zero_arguments"], 2)
+
+    def test_two_aggregates_for_one_unit_are_refused(self):
+        rows = [self.aggregate("r", 1, {}, 1), self.aggregate("r", 2, {}, 1)]
+        with self.assertRaises(SystemExit):
+            score.aggregates_from_rows(rows)
+
+    def test_a_zero_aggregate_is_distinguishable_from_a_missing_one(self):
+        sites = score.sites_from_rows([site("have", "f.go", 1, 5, "resolved_call"),
+                                       site("missing", "g.go", 1, 5, "resolved_call")])
+        result = score.score(sites, {}, None, {"have": {"total": 0, "by_reason": {}, "files_with_candidates": 0}})
+        summary = result["metrics"]["out_of_domain"]
+        self.assertEqual(summary["units_with_aggregate"], 1)
+        self.assertEqual(summary["units_missing_aggregate"], ["missing"])
+
+    def test_reasons_and_files_sum_across_units(self):
+        aggregates = {
+            "a": {"total": 10, "by_reason": {"unindexed_selector": 9, "zero_arguments": 1}, "files_with_candidates": 3},
+            "b": {"total": 5, "by_reason": {"unindexed_selector": 5}, "files_with_candidates": 2},
+        }
+        result = score.score({}, {}, None, aggregates)
+        summary = result["metrics"]["out_of_domain"]
+        self.assertEqual(summary["total"], 15)
+        self.assertEqual(summary["files_with_candidates"], 5)
+        self.assertEqual(summary["by_reason"], {"unindexed_selector": 14, "zero_arguments": 1})
+        self.assertEqual(summary["per_unit"], {"a": 10, "b": 5})
+
+
 class TestInputGuards(unittest.TestCase):
     def test_two_oracle_sites_at_one_span_are_refused(self):
         rows = [site("r", "f.go", 1, 5, "resolved_call"), site("r", "f.go", 1, 5, "ambiguous_call")]
