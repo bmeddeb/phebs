@@ -20103,6 +20103,27 @@ satisfy the common bar per protocol/claim, retain proof/coverage/HTTP/MCP
 parity, and expose only admitted matching evidence. These results neither
 promote Epic 47 exact resolution nor all Contract Atlas implementation detail.
 
+*T58.3a identity round (2026-10-14, Claude lead, Linux track): **fails
+(underpowered)**. See [GRPC_IDENTITY_QUALITY_PROTOCOL.md](GRPC_IDENTITY_QUALITY_PROTOCOL.md)
+§8.
+
+Ben chose to measure identity before any release, because T58.1 scored site
+coverage only. The design is a go/types oracle (method bodies' `Invoke`
+constants and `ServiceDesc` names, with no name matching) against T13.1's
+bar, on a fresh population.
+
+- **Population:** 25 repositories at the cap, 418 resolved sites (floor 500).
+- **Precision:** 22.3%. Calls are at 20.5%: grpcgo labels any call whose
+  method name is unique among the stubs (`URL.Query().Get`, `time.Add`) as
+  that operation.
+- **Recall:** 89.7%.
+- **Registrations:** 38/38 precision and 38/41 recall, too few to claim.
+- **Second defect:** the wire identity is built from the Go method name, not
+  the proto name (`insert` and `Insert`).
+
+`find_operation_consumers` over `grpc-consumer` stays dark, and T58.3's
+release is blocked on Ben's choice of next path.*
+
 ## Epic 25 · Embedded documentation browser *(drafted 2026-07-27 · unscheduled nice-to-have)*
 
 Serve the repository's markdown documentation, rendered, from the phebs binary

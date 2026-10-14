@@ -1,0 +1,262 @@
+{
+ "*": {
+  "oracle_external": 703,
+  "oracle_resolved": 418,
+  "precision": 0.222552,
+  "precision_den": 1685,
+  "precision_num": 375,
+  "recall": 0.897129,
+  "recall_den": 418,
+  "recall_num": 375,
+  "rows_at_external_sites": 14,
+  "rows_unloaded_file": 25
+ },
+ "3n21c0/hello-auth-grpc": {
+  "oracle_external": 2,
+  "oracle_resolved": 4,
+  "precision": 1.0,
+  "precision_den": 4,
+  "precision_num": 4,
+  "recall": 1.0,
+  "recall_den": 4,
+  "recall_num": 4
+ },
+ "AliyunContainerService/terway": {
+  "oracle_external": 11,
+  "oracle_resolved": 18,
+  "precision": 0.461538,
+  "precision_den": 39,
+  "precision_num": 18,
+  "recall": 1.0,
+  "recall_den": 18,
+  "recall_num": 18,
+  "rows_unloaded_file": 8
+ },
+ "BuoyantIO/bb": {
+  "oracle_external": 1,
+  "oracle_resolved": 2,
+  "precision": 1.0,
+  "precision_den": 1,
+  "precision_num": 1,
+  "recall": 0.5,
+  "recall_den": 2,
+  "recall_num": 1
+ },
+ "Clay294/forum": {
+  "oracle_external": 1,
+  "oracle_resolved": 2,
+  "precision": 0.666667,
+  "precision_den": 3,
+  "precision_num": 2,
+  "recall": 1.0,
+  "recall_den": 2,
+  "recall_num": 2
+ },
+ "Ptt-official-app/go-pttbbs": {
+  "oracle_external": 7,
+  "oracle_resolved": 3,
+  "precision": 1.0,
+  "precision_den": 2,
+  "precision_num": 2,
+  "recall": 0.666667,
+  "recall_den": 3,
+  "recall_num": 2
+ },
+ "alauda/nativestor": {
+  "oracle_external": 24,
+  "oracle_resolved": 4,
+  "precision": 1.0,
+  "precision_den": 4,
+  "precision_num": 4,
+  "recall": 1.0,
+  "recall_den": 4,
+  "recall_num": 4
+ },
+ "api7/grpc_server_example": {
+  "oracle_external": 9,
+  "oracle_resolved": 6,
+  "precision": 1.0,
+  "precision_den": 6,
+  "precision_num": 6,
+  "recall": 1.0,
+  "recall_den": 6,
+  "recall_num": 6
+ },
+ "ava-labs/avalanche-network-runner": {
+  "oracle_external": 32,
+  "oracle_resolved": 66,
+  "precision": 0.26087,
+  "precision_den": 253,
+  "precision_num": 66,
+  "recall": 1.0,
+  "recall_den": 66,
+  "recall_num": 66
+ },
+ "breez/lspd": {
+  "oracle_external": 157,
+  "oracle_resolved": 61,
+  "precision": 0.6,
+  "precision_den": 85,
+  "precision_num": 51,
+  "recall": 0.836066,
+  "recall_den": 61,
+  "recall_num": 51,
+  "rows_at_external_sites": 7
+ },
+ "gautamrege/gochat": {
+  "oracle_external": 1,
+  "oracle_resolved": 2,
+  "precision": 1.0,
+  "precision_den": 2,
+  "precision_num": 2,
+  "recall": 1.0,
+  "recall_den": 2,
+  "recall_num": 2
+ },
+ "gobench-io/gobench": {
+  "oracle_external": 12,
+  "oracle_resolved": 10,
+  "precision": 0.041152,
+  "precision_den": 243,
+  "precision_num": 10,
+  "recall": 1.0,
+  "recall_den": 10,
+  "recall_num": 10
+ },
+ "jina-ai/client-go": {
+  "oracle_external": 190,
+  "oracle_resolved": 4,
+  "precision": null,
+  "recall": 0.0,
+  "recall_den": 4
+ },
+ "kayac/go-katsubushi": {
+  "oracle_external": 3,
+  "oracle_resolved": 5,
+  "precision": 0.104167,
+  "precision_den": 48,
+  "precision_num": 5,
+  "recall": 1.0,
+  "recall_den": 5,
+  "recall_num": 5
+ },
+ "kevwan/grpc-restful": {
+  "oracle_external": 1,
+  "oracle_resolved": 2,
+  "precision": 0.4,
+  "precision_den": 5,
+  "precision_num": 2,
+  "recall": 1.0,
+  "recall_den": 2,
+  "recall_num": 2
+ },
+ "langhuihui/monibuca": {
+  "oracle_external": 182,
+  "oracle_resolved": 188,
+  "precision": 0.174603,
+  "precision_den": 945,
+  "precision_num": 165,
+  "recall": 0.87766,
+  "recall_den": 188,
+  "recall_num": 165,
+  "rows_unloaded_file": 17
+ },
+ "link1st/go-stress-testing": {
+  "oracle_external": 1,
+  "oracle_resolved": 2,
+  "precision": 1.0,
+  "precision_den": 2,
+  "precision_num": 2,
+  "recall": 1.0,
+  "recall_den": 2,
+  "recall_num": 2
+ },
+ "lytics/grid": {
+  "oracle_external": 3,
+  "oracle_resolved": 2,
+  "precision": 1.0,
+  "precision_den": 1,
+  "precision_num": 1,
+  "recall": 0.5,
+  "recall_den": 2,
+  "recall_num": 1
+ },
+ "moderato-app/live-pprof": {
+  "oracle_external": 9,
+  "oracle_resolved": 3,
+  "precision": 1.0,
+  "precision_den": 3,
+  "precision_num": 3,
+  "recall": 1.0,
+  "recall_den": 3,
+  "recall_num": 3
+ },
+ "open-oam/manager_program": {
+  "oracle_external": 3,
+  "oracle_resolved": 4,
+  "precision": 1.0,
+  "precision_den": 4,
+  "precision_num": 4,
+  "recall": 1.0,
+  "recall_den": 4,
+  "recall_num": 4
+ },
+ "routeviews/google-cloud-storage": {
+  "oracle_external": 1,
+  "oracle_resolved": 4,
+  "precision": 0.8,
+  "precision_den": 5,
+  "precision_num": 4,
+  "recall": 1.0,
+  "recall_den": 4,
+  "recall_num": 4
+ },
+ "seoyhaein/ConnectService": {
+  "oracle_external": 4,
+  "oracle_resolved": 2,
+  "precision": 1.0,
+  "precision_den": 2,
+  "precision_num": 2,
+  "recall": 1.0,
+  "recall_den": 2,
+  "recall_num": 2
+ },
+ "straightdave/arion": {
+  "oracle_external": 1,
+  "oracle_resolved": 1,
+  "precision": null,
+  "recall": 0.0,
+  "recall_den": 1
+ },
+ "thspinto/isecnet-go": {
+  "oracle_external": 1,
+  "oracle_resolved": 1,
+  "precision": 0.125,
+  "precision_den": 8,
+  "precision_num": 1,
+  "recall": 1.0,
+  "recall_den": 1,
+  "recall_num": 1
+ },
+ "vito/progrock": {
+  "oracle_external": 1,
+  "oracle_resolved": 2,
+  "precision": 1.0,
+  "precision_den": 2,
+  "precision_num": 2,
+  "recall": 1.0,
+  "recall_den": 2,
+  "recall_num": 2
+ },
+ "weeaa/jito-go": {
+  "oracle_external": 46,
+  "oracle_resolved": 20,
+  "precision": 1.0,
+  "precision_den": 18,
+  "precision_num": 18,
+  "recall": 0.9,
+  "recall_den": 20,
+  "recall_num": 18,
+  "rows_at_external_sites": 7
+ }
+}

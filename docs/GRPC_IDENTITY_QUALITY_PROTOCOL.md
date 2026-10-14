@@ -119,3 +119,52 @@ The tooling was exercised on hashicorp/go-plugin, a T58.1 repository, which
 
 Every sampled oracle verdict was checked against the source and is right.
 This shaped no rule or threshold, and grpcgo was not changed.
+
+## 8. Result (2026-10-14): fails, and underpowered
+
+**Population.** The four searches returned candidates in order. Of 55
+examined, 25 were eligible: the cap was reached holding **418**
+oracle-resolved sites, below the 500 floor, so the round is underpowered and
+cannot pass in any case. The lock is `spike/t583/corpus.lock.json`
+(`bde54469`), committed before grpcgo ran. The oracle also found 703
+`external` sites (stubs in other modules) and no `ambiguous` site.
+
+| Measure | Result | Threshold |
+|---|---|---|
+| Precision | **22.3%** (375 / 1,685) | ≥ 98% — fails |
+| Recall | **89.7%** (375 / 418) | ≥ 90% — fails |
+| Calls only | precision 20.5% (337 / 1,647), recall 89.4% (337 / 377) | — |
+| Registrations only | precision 100% (38 / 38), recall 92.7% (38 / 41) | — |
+
+Every repository with at least 20 precision rows fails precision, except
+`weeaa/jito-go` at 18/18. That repository has fewer than 20 rows, so it does
+not qualify.
+
+**Adjudication** (`spike/t583/round/adjudication.jsonl`, Claude as named by
+Ben; every item is `phebs_wrong`, and no oracle verdict was overturned):
+
+- **1,115 wrong rows: name-matched non-gRPC calls.** go/types resolves each
+  callee to an ordinary method. Examples:
+  - `r.URL.Query().Get(…)` labelled `/logrotate.api/Get`;
+  - `fileStartTime.Add(…)` labelled a crontab operation;
+  - generated `ent` predicates labelled `/pb.Agent/Gauge`.
+
+  grpcgo's method index assigns any call whose method name is unique across
+  the repository's stubs, so one common name (`Get`, `Add`) in one stub
+  captures every call of that name in the repository.
+- **195 wrong rows: grpc-gateway in-process handlers.** These calls in
+  `*.pb.gw.go` invoke the server implementation directly. They are disclosed
+  as borderline; crediting all of them gives 33.8% precision, so they cannot
+  change the outcome.
+- **33 misses: honest abstentions.** grpcgo abstained as ambiguous where
+  go/types resolves uniquely.
+- **10 misses: no row at all.** Proto method names that differ from the Go
+  name (`insert` and `Insert`, `dry_run` and `DryRun`) are among the causes.
+  grpcgo builds the wire identity from the Go method name, so such an
+  operation's identity is wrong even when the name does match.
+
+**What this establishes.** grpcgo's call identities are not fit for
+lookup-by-operation. `find_operation_consumers` over `grpc-consumer` must not
+be released on this extractor. T58.1's site-coverage pass stands, because it
+measured something else. Registrations look sound (38/38), but 41 sites in
+an underpowered round establish nothing.
