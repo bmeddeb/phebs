@@ -3,10 +3,12 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { Client } from 'styletron-engine-monolithic'
 import { Provider as StyletronProvider } from 'styletron-react'
 import { BaseProvider, LightTheme } from 'baseui'
-import type { ProofBundleEnvelope } from '../api'
+import type { ProofBundleEnvelope, TopicInventoryReport } from '../api'
 
 const api = vi.hoisted(() => ({
   fetchKafkaTopicUsage: vi.fn(),
+  composeKafkaTopicInventory: vi.fn(),
+  fetchTopicInventoryPage: vi.fn(),
 }))
 vi.mock('../api', () => api)
 
@@ -100,13 +102,47 @@ const envelope: ProofBundleEnvelope = {
   },
 }
 
-function page(hash: string) {
+const quality = {
+  card: 'phebs.kafka.producer', claim: 'site coverage', protocol: 'docs/KAFKA_PRODUCER_QUALITY_PROTOCOL.md',
+  measured: ['762/762 sites'], unmeasured: ['topic-name precision'],
+}
+
+const inventory: TopicInventoryReport = {
+  schema_version: 'kafka-topic-inventory-v1',
+  bundle_id: 'pb_inv',
+  planes: [
+    { plane: 'producer', domain: 'kafka-producer', released: true, state: 'served', quality, published_runs: 1, repositories: 1, topic_count: 1, site_count: 2 },
+    { plane: 'consumer', domain: 'kafka-consumer', released: true, state: 'served', quality: { ...quality, card: 'phebs.kafka.consumer' }, published_runs: 1, repositories: 1, topic_count: 1, site_count: 1 },
+  ],
+  topics: [
+    {
+      topic: 'orders-v1',
+      producer: {
+        state: 'served', sites: 2, files: 1, omitted_citations: 3,
+        citations: [{ repository: 'example.com/app', commit: 'c0ffee1234567890', run_id: 'run-p', assertion_id: 'a1', path: 'svc/producer.go', sites: 2 }],
+      },
+      consumer: { state: 'none', sites: 0, files: 0 },
+    },
+    {
+      topic: 'payments',
+      producer: { state: 'none', sites: 0, files: 0 },
+      consumer: { state: 'served', sites: 1, files: 1 },
+    },
+  ],
+  pagination: { order: 'topic ascending', page_size: 50, returned: 2, total: 3, complete: false, next_cursor: 'cur2' },
+  unresolved_census: { ...envelope.bundle.unresolved_census! },
+  coverage: envelope.bundle.coverage,
+  truncated: ['producer:topic-scan'],
+  caveat: 'Composed source-spelled topic inventory. A topic is a source spelling, never a broker, cluster, environment, or runtime identity, and a topic absent from this inventory is not proven absent from the system.',
+}
+
+function page(hash: string, inventoryAvailable = false) {
   window.location.hash = hash
   const params = new URLSearchParams(hash.split('?')[1] ?? '')
   return render(
     <StyletronProvider value={engine}>
       <BaseProvider theme={LightTheme}>
-        <KafkaTopicsPage params={params} />
+        <KafkaTopicsPage params={params} inventoryAvailable={inventoryAvailable} />
       </BaseProvider>
     </StyletronProvider>,
   )
@@ -115,6 +151,8 @@ function page(hash: string) {
 beforeEach(() => {
   window.location.hash = ''
   api.fetchKafkaTopicUsage.mockReset().mockResolvedValue(envelope)
+  api.composeKafkaTopicInventory.mockReset().mockResolvedValue({ id: 'pb_inv', bundle: envelope.bundle })
+  api.fetchTopicInventoryPage.mockReset().mockResolvedValue(inventory)
 })
 afterEach(cleanup)
 
@@ -217,4 +255,98 @@ test('query failures clear any previous result and same-topic resubmit retries',
   fireEvent.submit(screen.getByRole('button', { name: 'Query' }).closest('form') as HTMLFormElement)
   expect(await screen.findByTestId('topic-usage')).toBeTruthy()
   expect(api.fetchKafkaTopicUsage).toHaveBeenCalledTimes(3)
+})
+
+test('the inventory appears only with its own capability', async () => {
+  page('#/topics')
+  expect(screen.queryByTestId('topic-inventory')).toBeNull()
+  expect(api.composeKafkaTopicInventory).not.toHaveBeenCalled()
+})
+
+test('a bare /topics composes once and addresses the bundle from the URL', async () => {
+  page('#/topics', true)
+  await vi.waitFor(() => expect(window.location.hash).toBe('#/topics?inventory=pb_inv'))
+  expect(api.composeKafkaTopicInventory).toHaveBeenCalledTimes(1)
+})
+
+test('served inventory rows keep plane states, citations, truncation and paging', async () => {
+  page('#/topics?inventory=pb_inv&cursor=cur1', true)
+  const view = await screen.findByTestId('topic-inventory')
+  expect(api.fetchTopicInventoryPage).toHaveBeenCalledWith('pb_inv', 'cur1', expect.anything())
+  // Each row links into the per-spelling detail.
+  expect(screen.getByRole('link', { name: 'orders-v1' }).getAttribute('href')).toBe('#/topics?topic=orders-v1')
+  expect(view.textContent).toContain('2 sites · 1 file')
+  // A measured zero is named as such, never a blank.
+  expect(screen.getAllByText('none · measured zero')).toHaveLength(2)
+  // Citations pin the exact commit, and omitted ones are counted.
+  expect(screen.getByRole('link', { name: 'example.com/app/svc/producer.go@c0ffee123456' })).toBeTruthy()
+  expect(view.textContent).toContain('3 more not shown')
+  expect(view.textContent).toContain('Counts are lower bounds')
+  expect(view.textContent).toContain('2 of 3 topics on this page')
+  expect(screen.getByTestId('plane-producer').textContent).toContain('Not measured: topic-name precision')
+  expect(screen.getByTestId('unresolved-census')).toBeTruthy()
+  expect(view.textContent).toContain(inventory.caveat.split(' A topic')[0])
+  fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
+  expect(window.location.hash).toBe('#/topics?inventory=pb_inv&cursor=cur2')
+})
+
+test('unpublished and unavailable planes never read as zero, and an empty inventory is not an absence claim', async () => {
+  api.fetchTopicInventoryPage.mockResolvedValue({
+    ...inventory,
+    planes: [
+      { ...inventory.planes[0], state: 'unpublished', published_runs: 0, topic_count: 0, site_count: 0 },
+      { ...inventory.planes[1], state: 'unavailable', released: false, quality: undefined, published_runs: 0, topic_count: 0, site_count: 0 },
+    ],
+    topics: [],
+    truncated: [],
+    pagination: { order: 'topic ascending', page_size: 50, returned: 0, total: 0, complete: true },
+    unresolved_census: {
+      schema_version: 'kafka-topic-census-v1',
+      producer: { ...zeroCensus, 'unresolved-ident': 4 },
+      consumer: { ...zeroCensus },
+      published_runs: 1,
+      producer_published_runs: 1,
+      consumer_published_runs: 0,
+      unavailable_planes: ['consumer'],
+    },
+  })
+  page('#/topics?inventory=pb_inv', true)
+  await screen.findByTestId('topic-inventory')
+  expect(screen.getByTestId('plane-producer').textContent).toContain('unpublished')
+  expect(screen.getByTestId('plane-producer').textContent).toContain("this plane's zeros are not measured")
+  expect(screen.getByTestId('plane-consumer').textContent).toContain('not released on this server')
+  expect(screen.getByText('No literal topic spelling resolved in scope')).toBeTruthy()
+  expect(screen.getByText(/This is not an absence claim/)).toBeTruthy()
+  const census = screen.getByTestId('unresolved-census')
+  expect(census.textContent).toContain('4 producer source sites could not be resolved')
+  expect(census.textContent).toContain('The consumer plane is unavailable on this server (not released)')
+  expect(screen.queryByRole('button', { name: 'Next page' })).toBeNull()
+})
+
+test('a crossed or inconsistent answer fails closed with a retry, never partial rows', async () => {
+  api.fetchTopicInventoryPage.mockResolvedValueOnce({ ...inventory, bundle_id: 'pb_other' })
+  page('#/topics?inventory=pb_inv', true)
+  expect(await screen.findByText(/names a different inventory/)).toBeTruthy()
+  expect(screen.queryByRole('table')).toBeNull()
+  api.fetchTopicInventoryPage.mockResolvedValueOnce({ ...inventory, pagination: { ...inventory.pagination, returned: 5 } })
+  fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+  expect(await screen.findByText(/disagrees with its pagination/)).toBeTruthy()
+  api.fetchTopicInventoryPage.mockResolvedValueOnce(inventory)
+  fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+  expect(await screen.findByRole('link', { name: 'orders-v1' })).toBeTruthy()
+})
+
+test('leaving a topic for the inventory clears the topic answer', async () => {
+  const view = page('#/topics?topic=orders-v1', true)
+  await screen.findByTestId('topic-usage')
+  window.location.hash = '#/topics?inventory=pb_inv'
+  view.rerender(
+    <StyletronProvider value={engine}>
+      <BaseProvider theme={LightTheme}>
+        <KafkaTopicsPage params={new URLSearchParams('inventory=pb_inv')} inventoryAvailable />
+      </BaseProvider>
+    </StyletronProvider>,
+  )
+  await screen.findByTestId('topic-inventory')
+  expect(screen.queryByTestId('topic-usage')).toBeNull()
 })

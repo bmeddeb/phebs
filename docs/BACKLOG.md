@@ -19513,6 +19513,53 @@ released inventory only after Ben's routed presentation handoff. The existing
 page still gates on `kafka-topic-usage`. Keep per-plane states and the
 not-proven-absent caveat visible.
 
+*T57.4 (2026-10-13, Claude lead, under Ben's flagged handoff "flagged, do it
+here"): **inventory view on `/topics`; screenshot baselines pending CI.**
+
+- **Surface.** The inventory is shown only when `/api/version` lists
+  `kafka-topic-inventory`; without it the page is unchanged. A bare `/topics`
+  composes once, then addresses the immutable bundle from the URL
+  (`?inventory=<id>&cursor=<c>`), so reload and back/forward replay the same
+  inventory. "Recompose from current evidence" builds a new one, and each row
+  links to the per-spelling detail.
+- **Truth constraints held:**
+  - the four plane states are distinct words and tones, at plane level and
+    on every row (a measured zero reads "none · measured zero");
+  - the server caveat is shown verbatim;
+  - an empty inventory says it is not an absence claim, and the census
+    follows it;
+  - citations pin the commit and count omitted ones;
+  - truncation is stated as lower bounds;
+  - quality is shown per plane, with its unmeasured list.
+- **Fail-closed.** An answer that is crossed (wrong bundle), off-schema,
+  miscounted, or that counts sites on an unserved plane renders a bounded
+  error with a retry, never partial rows.
+- **Found and fixed during browser QA:**
+  - leaving a topic for `/topics` kept that topic's answer on screen, which
+    is now cleared;
+  - the 64-character bundle ID in caveat summaries overflowed 390 px on both
+    views, so it moved into the expanded caveat as identity text;
+  - long citation links now wrap.
+  - Charter §3 already said digests never lead.
+
+Gates:
+- 10 KafkaTopicsPage tests pass; the stale-answer test fails with the fix
+  reverted.
+- tsc and oxlint are clean, and the chunk is 16.29 kB (5.19 kB gzip).
+- In the full vitest run, two unrelated paging tests (CallerComparison,
+  CallerMap) time out under parallel load here, identically on the base code,
+  and pass alone.
+- Browser QA used the signed release binary on the round 2 data: 41 rows,
+  both planes served. It showed no document overflow at 390 px on either
+  view, a clean console, light and dark themes, and keyboard Enter opening a
+  topic.
+
+Not done: the four `kafka-topics` receipt baselines change, because `/topics`
+now renders the inventory. This host's Chromium does not reproduce the
+committed baselines (login differs by 1,874 px of glyph antialiasing; the
+cohort's caller job did not settle in 10 minutes), so the new baselines must
+come from the pinned CI image.*
+
 **T57R.1 · Inherited gate repairs** *(cross-cutting; found while landing Epic
 57)* — return `make docs-check`, repository-wide lint and
 `internal/investigation` to green without touching the code those findings sit

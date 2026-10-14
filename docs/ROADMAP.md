@@ -363,8 +363,10 @@ and who owns each.
       topics against the oracle union in every phase.
     - Revoking Topics alone, or either plane, withdraws it. See Topics
       protocol §9.
-  - Remaining, Ben: the routed presentation handoff for T57.4 (Topics UI). The
-    existing page still gates on `kafka-topic-usage`.
+  - Done (pending CI baselines): T57.4 adds the inventory view to `/topics`,
+    gated on `kafka-topic-inventory`, with URL-addressed bundles and paging,
+    the four plane states kept distinct, and fail-closed validation. The four
+    `kafka-topics` receipt baselines must be refreshed from the CI image.
   - Not claimed: runtime topic activity, complete topology, production-scale
     topic rows or an independent human review.
 
