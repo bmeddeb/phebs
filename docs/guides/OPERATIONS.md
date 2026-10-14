@@ -4453,6 +4453,70 @@ is first installed as a closed zero-total `terminal_refusal` result and included
 in the nonpublishing terminal root; only then does the worker return terminal
 status to the scheduler. Private error detail never enters that result.
 
+#### Partition failure diagnostics (T47.2b, opt-in)
+
+That invariant is why a partition refusal can be honestly uninformative: the
+receipt projection keeps raw child diagnostics out of the durable job error, so a
+staging failure that the classifier cannot name is recorded as
+`classification=unknown` and nothing retained distinguishes an evidence append
+from a receipt read or a reservation check. `PHEBS_PARTITION_FAILURE_DIAGNOSTICS=1`
+is the deliberate, opt-in exception. It writes the full private error chain to the
+standard logger at the partition boundary, immediately before the refusal closes
+over it, prefixed `partition diagnostics: stage=<stage> failure=<chain>`.
+
+The durable result and the receipt are **unchanged in both states**: private
+detail still never enters either, and the gate adds no classification, retry,
+refusal, authority or publication behavior. It writes to the serve log only, so
+its output is as sensitive as the log it lands in.
+
+**How this relates to the two neighbouring conventions, stated plainly because it
+diverges from both.** The house mechanism for bounded pipeline diagnostics is the
+`diagnostics:` configuration block documented under "Pipeline diagnostics" above,
+whose `jobs`, `candidates`, `extraction` and `extractor_details` components are
+enabled in config and require a restart; this gate is an environment variable
+instead, so it is not a `diagnostics:` component and does not appear in that
+block. Its restart posture matches — the value is read once at process start —
+but its surface does not, and whether it should become
+`diagnostics.partition_failures` is an open consistency question, not a settled
+one. Second, those receipts exclude "source paths, source samples, blob content,
+handler error text, credentials, and child stdout/stderr" by rule, and "Closed
+pipeline refusals" below records that repository names, paths, object IDs,
+digests, child output and raw errors are not part of the refusal projection.
+`classification=unknown` is therefore the designed behaviour of a closed
+projection rather than a gap in it. This gate emits exactly the excluded class —
+raw error text — and is the only place in the product that does so, which is why
+its log inherits that sensitivity rather than being ordinary diagnostics output.
+
+Bounds and posture, all measured rather than assumed:
+
+- **Off by default, and provably silent.** With the variable unset or set to
+  anything other than exactly `1`, a boundary failure logs zero bytes. Verified
+  end to end through the environment, not only by mutating the package variable:
+  unset, `0`, `1` and `true` give off, off, on, off.
+- **Read once at process start.** The value is captured when the package
+  initializes, so toggling it needs a restart; it cannot be flipped on a live
+  serve.
+- **2,048 bytes per failure, not per line.** The chain is truncated to 2,048
+  bytes. A chain containing embedded newlines spans that many physical log lines
+  — one 2,000-byte chain with 400 newlines produced 400 lines — so the bound is
+  on bytes retained per failure, and the line count follows the error text.
+  Truncation slices bytes, so a chain cut mid-rune can emit invalid UTF-8.
+- **Bounded per failure, unbounded per run.** Each partition boundary failure
+  logs once. Nothing caps the number of failures over a long-lived serve, so
+  this is a diagnosis-run switch, not a steady-state setting.
+- **Weaker log hygiene than the verbose-index switch.** "Verbose index
+  diagnostics" above splits child lines longer than 64 KiB into bounded continued
+  records and replaces invalid UTF-8 before logging. This gate does neither: it
+  hard-slices at 2,048 bytes and can emit a mid-rune cut. That is a divergence
+  from the house treatment of forwarded child output, recorded here rather than
+  papered over.
+
+Enable it only for a run whose log is retained under the same custody as the run
+itself, attribute the failing staging operation, and disable it afterward. It is
+a diagnostic surface, not a product surface: no API, MCP, schema, receipt or
+evidence field carries its output, and its absence changes nothing an operator or
+consumer can observe.
+
 ### Shared source-observation progress and neutral demo
 
 Whole-repository indexing publishes one immutable Go source-observation
