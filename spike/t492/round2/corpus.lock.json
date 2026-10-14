@@ -1,0 +1,89 @@
+{
+ "schema": "t492-thrift-corpus-lock-v1",
+ "round": 2,
+ "selected_utc": "2026-10-13",
+ "selection_rule": "docs/THRIFT_DECLARATION_QUALITY_PROTOCOL.md section 8 (sealed d215ab98)",
+ "oracle_declarations": 1353,
+ "repos": [
+  {
+   "name": "Saltside/thrift_server-ruby",
+   "dir": "Saltside__thrift_server-ruby",
+   "git_url": "https://github.com/Saltside/thrift_server-ruby.git",
+   "commit": "c5d2e14d7d68852599a6016a1b910635bc6f31e1",
+   "oracle_files_ok": 1,
+   "oracle_files_rejected": 0
+  },
+  {
+   "name": "ucbrise/confluo",
+   "dir": "ucbrise__confluo",
+   "git_url": "https://github.com/ucbrise/confluo.git",
+   "commit": "e9b8621e99f56b1adf5675c4296c006d89e6e582",
+   "oracle_files_ok": 1,
+   "oracle_files_rejected": 0
+  },
+  {
+   "name": "52fhy/thrift-sample",
+   "dir": "52fhy__thrift-sample",
+   "git_url": "https://github.com/52fhy/thrift-sample.git",
+   "commit": "f1f4ff9b8a75bffa53f754036290da9848b651bc",
+   "oracle_files_ok": 18,
+   "oracle_files_rejected": 2
+  },
+  {
+   "name": "flystar32/DistributedTrans",
+   "dir": "flystar32__DistributedTrans",
+   "git_url": "https://github.com/flystar32/DistributedTrans.git",
+   "commit": "42aba259b47d2c7cf34ed86cac5b9c3c314b5d84",
+   "oracle_files_ok": 1,
+   "oracle_files_rejected": 0
+  },
+  {
+   "name": "petrabarus/aws-lambda-thrift-example",
+   "dir": "petrabarus__aws-lambda-thrift-example",
+   "git_url": "https://github.com/petrabarus/aws-lambda-thrift-example.git",
+   "commit": "199b56ba5e6f55c2b497ce04abc596ea0a5ac733",
+   "oracle_files_ok": 1,
+   "oracle_files_rejected": 0
+  },
+  {
+   "name": "itdelatrisu/518-craq",
+   "dir": "itdelatrisu__518-craq",
+   "git_url": "https://github.com/itdelatrisu/518-craq.git",
+   "commit": "5e4b064eb4766cc09814a88acc8e5c6d705ab6c6",
+   "oracle_files_ok": 1,
+   "oracle_files_rejected": 0
+  },
+  {
+   "name": "akshayka/bft2f",
+   "dir": "akshayka__bft2f",
+   "git_url": "https://github.com/akshayka/bft2f.git",
+   "commit": "9ebac39ad0cafd290ab03051920af7396b4a751c",
+   "oracle_files_ok": 1,
+   "oracle_files_rejected": 0
+  },
+  {
+   "name": "worksroom/YytRpc",
+   "dir": "worksroom__YytRpc",
+   "git_url": "https://github.com/worksroom/YytRpc.git",
+   "commit": "8ccbddc9df1dd108cb70d8a7fbd38d4df7f56c26",
+   "oracle_files_ok": 1,
+   "oracle_files_rejected": 0
+  },
+  {
+   "name": "biokoda/actordb",
+   "dir": "biokoda__actordb",
+   "git_url": "https://github.com/biokoda/actordb.git",
+   "commit": "cf48f819c6cd1a5d4d50ff977db1617b3cece460",
+   "oracle_files_ok": 1,
+   "oracle_files_rejected": 0
+  },
+  {
+   "name": "ly1ex/thrift2OpenAPI",
+   "dir": "ly1ex__thrift2OpenAPI",
+   "git_url": "https://github.com/ly1ex/thrift2OpenAPI.git",
+   "commit": "c47c00de0f74f2eb5222f42f993c07c00ae5dde6",
+   "oracle_files_ok": 1,
+   "oracle_files_rejected": 0
+  }
+ ]
+}

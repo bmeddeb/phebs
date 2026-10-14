@@ -1,0 +1,127 @@
+{
+ "selected_utc": "2026-10-13",
+ "eligible_repositories": 10,
+ "oracle_declarations": 1353,
+ "records": [
+  {
+   "name": "Saltside/thrift_server-ruby",
+   "dir": "Saltside__thrift_server-ruby",
+   "commit": "c5d2e14d7d68852599a6016a1b910635bc6f31e1",
+   "checkout_mib": 0.0,
+   "thrift_files": 1,
+   "round1_identical_files": 0,
+   "oracle_files_ok": 1,
+   "oracle_files_rejected": 0,
+   "oracle_declarations": 18,
+   "eligible": 1
+  },
+  {
+   "name": "ucbrise/confluo",
+   "dir": "ucbrise__confluo",
+   "commit": "e9b8621e99f56b1adf5675c4296c006d89e6e582",
+   "checkout_mib": 4.9,
+   "thrift_files": 1,
+   "round1_identical_files": 0,
+   "oracle_files_ok": 1,
+   "oracle_files_rejected": 0,
+   "oracle_declarations": 212,
+   "eligible": 2
+  },
+  {
+   "name": "52fhy/thrift-sample",
+   "dir": "52fhy__thrift-sample",
+   "commit": "f1f4ff9b8a75bffa53f754036290da9848b651bc",
+   "checkout_mib": 1.0,
+   "thrift_files": 20,
+   "round1_identical_files": 1,
+   "oracle_files_ok": 18,
+   "oracle_files_rejected": 2,
+   "oracle_declarations": 502,
+   "eligible": 3
+  },
+  {
+   "name": "flystar32/DistributedTrans",
+   "dir": "flystar32__DistributedTrans",
+   "commit": "42aba259b47d2c7cf34ed86cac5b9c3c314b5d84",
+   "checkout_mib": 0.2,
+   "thrift_files": 1,
+   "round1_identical_files": 0,
+   "oracle_files_ok": 1,
+   "oracle_files_rejected": 0,
+   "oracle_declarations": 8,
+   "eligible": 4
+  },
+  {
+   "name": "petrabarus/aws-lambda-thrift-example",
+   "dir": "petrabarus__aws-lambda-thrift-example",
+   "commit": "199b56ba5e6f55c2b497ce04abc596ea0a5ac733",
+   "checkout_mib": 0.0,
+   "thrift_files": 1,
+   "round1_identical_files": 0,
+   "oracle_files_ok": 1,
+   "oracle_files_rejected": 0,
+   "oracle_declarations": 7,
+   "eligible": 5
+  },
+  {
+   "name": "itdelatrisu/518-craq",
+   "dir": "itdelatrisu__518-craq",
+   "commit": "5e4b064eb4766cc09814a88acc8e5c6d705ab6c6",
+   "checkout_mib": 0.8,
+   "thrift_files": 1,
+   "round1_identical_files": 0,
+   "oracle_files_ok": 1,
+   "oracle_files_rejected": 0,
+   "oracle_declarations": 30,
+   "eligible": 6
+  },
+  {
+   "name": "akshayka/bft2f",
+   "dir": "akshayka__bft2f",
+   "commit": "9ebac39ad0cafd290ab03051920af7396b4a751c",
+   "checkout_mib": 1.9,
+   "thrift_files": 1,
+   "round1_identical_files": 0,
+   "oracle_files_ok": 1,
+   "oracle_files_rejected": 0,
+   "oracle_declarations": 41,
+   "eligible": 7
+  },
+  {
+   "name": "worksroom/YytRpc",
+   "dir": "worksroom__YytRpc",
+   "commit": "8ccbddc9df1dd108cb70d8a7fbd38d4df7f56c26",
+   "checkout_mib": 6.0,
+   "thrift_files": 1,
+   "round1_identical_files": 0,
+   "oracle_files_ok": 1,
+   "oracle_files_rejected": 0,
+   "oracle_declarations": 323,
+   "eligible": 8
+  },
+  {
+   "name": "biokoda/actordb",
+   "dir": "biokoda__actordb",
+   "commit": "cf48f819c6cd1a5d4d50ff977db1617b3cece460",
+   "checkout_mib": 0.5,
+   "thrift_files": 1,
+   "round1_identical_files": 0,
+   "oracle_files_ok": 1,
+   "oracle_files_rejected": 0,
+   "oracle_declarations": 141,
+   "eligible": 9
+  },
+  {
+   "name": "ly1ex/thrift2OpenAPI",
+   "dir": "ly1ex__thrift2OpenAPI",
+   "commit": "c47c00de0f74f2eb5222f42f993c07c00ae5dde6",
+   "checkout_mib": 0.0,
+   "thrift_files": 1,
+   "round1_identical_files": 0,
+   "oracle_files_ok": 1,
+   "oracle_files_rejected": 0,
+   "oracle_declarations": 71,
+   "eligible": 10
+  }
+ ]
+}
