@@ -90,6 +90,10 @@ replace the user manual.
   T56.1 consumer site-coverage round, sealed and passing independently of the
   producer number; §9 records the signed `rel-phebs.kafka.consumer` release
   result.
+- [GRPC_CONSUMER_QUALITY_PROTOCOL.md](./GRPC_CONSUMER_QUALITY_PROTOCOL.md) —
+  T58.1 Go gRPC syntactic consumer/registration site-coverage round. **Unsealed
+  draft:** the population list, oracle-independence posture and thresholds are
+  proposed and nothing has been enumerated, scored or sealed.
 
 These packs remain experimental-dark unless the manual and capability response
 explicitly say otherwise. Their retained validation result is not an accuracy

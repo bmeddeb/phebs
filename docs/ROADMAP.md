@@ -361,6 +361,31 @@ and who owns each.
     no quality, coverage, runtime topic activity, complete topology, release or
     scale result.
 
+- **Go RPC syntactic consumer/registration (Epic 58).**
+  - Done: T58.1 authors
+    `docs/GRPC_CONSUMER_QUALITY_PROTOCOL.md`, an unsealed prospective
+    site-coverage round in the T55.1/T56.1 shape, with GD1–GD16 freezing the
+    shape vocabulary verbatim against the shipped `grpc-consumer` extractor.
+  - Decided: the claim is site coverage only, expressly not operation or service
+    identity, so T13.1's deferred accuracy bar does not attach. The population is
+    a fresh blind list, independent of both the T55.1 Kafka lock and T47.2's
+    run-g population. Generator identity stays the `_grpc.pb.go` filename
+    convention with no code change, and versions are recorded as observed in the
+    corpus rather than gated at runtime.
+  - Finding: because the extractor is two-pass and repository-scoped, the unit
+    must be one repository at one pinned commit rather than T55.1's per-file
+    blob — a lone file has no stub index and would score entirely out of domain.
+  - Recorded limit: this round cannot claim T55.1's independence, since KD1–KD10
+    predated the Kafka recognizer while `grpcgo` shipped before GD1–GD16 were
+    written. It measures spec conformance, and the proposed mitigation is a
+    separate author for the oracle, forbidden from reading the extractor.
+  - Remaining, Ben: approve the named population list, choose the
+    oracle-independence posture, freeze the thresholds, and decide where the
+    round runs. Remaining, agent: `spike/t581/` and the oracle's pre-seal pass.
+  - Not claimed: nothing is enumerated, scored, sealed or predicted, so this
+    grants no quality, coverage, release or scale result, and it is not a T11.1
+    retry — that round stays terminally closed with `GATE2-V2 NOT_ESTABLISHED`.
+
 Everything human-gated is listed above. Agent work proceeds on ungated
 tickets in the meantime.
 
