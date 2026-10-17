@@ -11802,3 +11802,40 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
     test.
   - **Cost.** Two tool descriptors at startup when Atlas is admitted. There
     is no new query, lock or state.
+
+- **2026-10-17 — T57.4 refreshes only the four canonical Topics inventory
+  screenshots.** The Mac handoff is GitHub issue #73. Source `c9f3c94c` already
+  serves the inventory; the retained `kafka-topics` PNGs still showed only its
+  query form. Refresh light/dark and comfortable/dense with Playwright 1.62.1
+  and its package-matched Chromium in the unchanged Noble AMD64 image
+  `sha256:c091b21d9fae78c76e85cd4356431e9b018402f172a214fc7d7a5e9a7e29d8ac`.
+  Node is the repository-pinned 24.18.0. Execution is a temporary local VZ VM
+  with Rosetta, two CPUs and 6 GiB RAM; it is not hosted Actions evidence.
+  The four authored PNGs match the four visually reviewed captures exactly;
+  every other one of the 126 retained baseline files stays byte-identical.
+
+  The fresh instance uses the already documented explicit whole-repository
+  receipt configuration, the unchanged two staged bundles and operator
+  catalogs, and provisional protobuf/Kafka packs. Strict authentication,
+  exact-cohort, settled-job, current-service and complete-relationship checks
+  pass without a fixture or readiness waiver. The initial focused `make dev`
+  attempt was stopped with observation-v2 authority missing and caller work
+  pending; it did not pass strict setup. Whole-repository receipts do not
+  close that focused-pipeline issue.
+
+  Authoring passes all five selected harness tests, including setup. Eight
+  additional local keyboard journeys cover both themes and densities at
+  1280 and 390 px: immutable inventory addressing, reload, topic detail and
+  Back, caveat disclosure and response-bound recomposition. They show no
+  document overflow, framework overlay or console error. Initial temporary
+  QA expectations for the route title and bundle-ID shape were corrected;
+  their failed diagnostics remain outside the repository. The production
+  code, receipt harness, masks, zero retries and 0.1% pixel threshold are
+  unchanged. The owning backlog records the separate full-matrix result.
+
+  **Steady-state cost:** zero change to JavaScript bytes, request/query,
+  sync, startup/restart, retry/no-op, publication, lock, cache, memory, disk
+  or child-process work. Only four test PNGs and their documentation change.
+  The repository test PNGs grow by 230,112 bytes.
+  No claim, caveat, evidence authority, release selection or scale result
+  changes.

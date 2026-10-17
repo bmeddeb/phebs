@@ -19802,6 +19802,46 @@ committed baselines (login differs by 1,874 px of glyph antialiasing; the
 cohort's caller job did not settle in 10 minutes), so the new baselines must
 come from the pinned CI image.*
 
+*T57.4 canonical baseline handoff (2026-10-17, Mac track, GitHub #73): the
+four `kafka-topics--{light,dark}--{comfortable,dense}.png` images are refreshed
+from the unchanged digest-pinned Playwright 1.62.1 Noble AMD64 image and its
+package-matched Chromium, with repository-pinned Node 24.18.0. Local VZ/Rosetta
+execution uses two CPUs and 6 GiB RAM; this is not hosted Actions evidence.
+The four authored images match the four visually reviewed captures exactly.
+All other 122 retained baseline files are byte-identical, and no application,
+fixture, mask, screenshot threshold or retry setting changes.
+
+The fresh real instance follows the existing explicit whole-repository
+receipt setup in `ui/receipts/README.md`, using the same staged neutral
+bundles and operator catalogs. Unchanged strict setup passes exact cohort,
+settled-job, current-service and complete-relationship checks. The initial
+focused `make dev` attempt was stopped with observation-v2 authority missing
+and caller work pending; it did not pass strict setup. These whole-repository
+receipts do not repair or close that focused-pipeline issue.
+
+Validation: 10/10 Topics unit tests, UI lint and the embedded UI build pass.
+Selected authoring passes 5/5 tests including setup (20.3 s). Eight additional
+keyboard journeys pass (30.4 s) across 1280/390 px, both themes and densities:
+inventory composition, immutable URL/reload, topic detail and Back, caveat
+disclosure, and response-bound recomposition. Console errors, framework
+overlays and document overflow are zero. Review preserves state words,
+per-plane quality disclosures, the census and collapsed inventory caveat.
+Temporary QA title/ID expectation mistakes were corrected and their failed
+diagnostics retained outside the repository; no product oracle was changed.
+
+The fresh complete matrix runs all 132 tests with zero retries: **25 pass,
+107 fail, zero skipped or flaky** (658.474 s). All four refreshed Topics
+comparisons pass. Of the failures outside this handoff, 106 are retained
+screenshot differences; `settings-indexing-390 · light · dense` instead lacks
+`[data-palette-ready="true"]` at its existing deadline. No source or harness
+change accompanies those failures, and none of their baselines is refreshed.
+This is not a green full receipt gate or an Epic 57 completion claim.
+
+Steady-state cost is unchanged for requests, queries, sync, startup/restart,
+retry/no-op, publication, locks, caches, runtime memory/disk and children;
+JavaScript delta is zero. The four repository test PNGs grow by 230,112 bytes.
+No claim, caveat, authority, release or scale posture changes.*
+
 **T57R.1 · Inherited gate repairs** *(cross-cutting; found while landing Epic
 57)* — return `make docs-check`, repository-wide lint and
 `internal/investigation` to green without touching the code those findings sit

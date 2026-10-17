@@ -381,6 +381,13 @@ and who owns each.
     gated on `kafka-topic-inventory`, with URL-addressed bundles and paging,
     the four plane states kept distinct, and fail-closed validation. The four
     `kafka-topics` receipt baselines must be refreshed from the CI image.
+  - Receipt follow-up (2026-10-17, Mac): the four-baseline hold above is
+    closed using the unchanged pinned CI rendering image locally. All four
+    Topics comparisons and eight desktop/mobile keyboard journeys pass;
+    the other 122 baseline files stay byte-identical. The complete matrix
+    remains red at 25 passed/107 failed: 106 unrelated screenshot differences
+    and one Settings palette-readiness deadline. This grants no full receipt
+    or hosted CI pass; the owning T57.4 backlog record retains the limits.
   - Not claimed: runtime topic activity, complete topology, production-scale
     topic rows or an independent human review.
 
