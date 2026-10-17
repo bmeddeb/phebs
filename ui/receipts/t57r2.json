@@ -1,0 +1,766 @@
+{
+  "ticket": "T57R.2",
+  "date": "2026-10-17",
+  "baseline_commit": "ef1fca81b04e78ee6c8a969bb2aaae0205fc24d8",
+  "environment": {
+    "image": "mcr.microsoft.com/playwright:v1.62.1-noble@sha256:c091b21d9fae78c76e85cd4356431e9b018402f172a214fc7d7a5e9a7e29d8ac",
+    "playwright": "1.62.1",
+    "chromium": "151.0.7922.34",
+    "node": "24.18.0",
+    "renderer": "local VZ/Rosetta; 2 CPUs, 6 GiB VM; container limited to 4 GiB",
+    "backend": "Go 1.26.5 darwin/arm64; SurrealDB 3.2.0; embedded production UI",
+    "browser_plugin": "not available; repository Playwright workflow",
+    "hosted_ci": false,
+    "retries": 0,
+    "max_diff_pixel_ratio": 0.001
+  },
+  "cohort": {
+    "repositories": [
+      "local/tmp/phebs-receipts-fixtures/t307-neutral-service.bundle",
+      "local/tmp/phebs-receipts-fixtures/t323-neutral-corpus.bundle"
+    ],
+    "heads": [
+      "b7f443ed7e89dbaede855a6cfd30767bbe13dfbb",
+      "4ac5335893fc18a1243b60a005faa1f09268d858"
+    ],
+    "profile": "explicit whole repository; unchanged operator catalogs; provisional protobuf/Kafka; no analysis units or typed runtime",
+    "author_and_compare_use_distinct_fresh_data_directories": true,
+    "strict_setup": "unchanged exact cohort, settled jobs, required current services and complete orders-api relationships",
+    "fresh_data_generations": 4
+  },
+  "original_matrix": {
+    "startTime": "2026-10-17T21:46:41.923Z",
+    "duration": 658474.2740000001,
+    "expected": 25,
+    "skipped": 0,
+    "unexpected": 107,
+    "flaky": 0
+  },
+  "author": {
+    "startTime": "2026-10-17T22:19:21.149Z",
+    "duration": 403297.202,
+    "expected": 133,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "comparison": {
+    "startTime": "2026-10-17T23:08:34.494Z",
+    "duration": 418929.432,
+    "expected": 135,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "other_gates": {
+    "ui_tests": 762,
+    "targeted_relationship_tests": 18,
+    "ui_lint": "pass",
+    "ui_build_and_embedded_go_build": "pass",
+    "docs_and_glossary": "pass",
+    "workflow_yaml_and_shell_syntax": "pass",
+    "fixture_staging": {
+      "passed": 20,
+      "skipped": 1,
+      "reason": "wrong-owner case needs uid 0; host uid 501"
+    },
+    "whitespace": "pass",
+    "go_http_auth_normal": "pass",
+    "go_http_auth_race": "pass",
+    "go_vet_changed_packages": "pass",
+    "go_lint_changed_packages": "pass; pinned 2.12.2 built with Go 1.26.5",
+    "session_routing_mutation": "old global session wrapper fails all four concurrent public UI routes; fixed source passes"
+  },
+  "regressions": {
+    "settings": "Eight-second real highlight-chunk delay fails the former 5s ready assertion and passes the shared 30s readiness budget; marker remains required. Does not attribute the uncaptured original delay to an exact cause.",
+    "relationship": "Published gaps and exact absent-domain counts tested; unknown schema/disposition, impossible counts, duplicate gaps and excess bounds refused. Reverting v2 admission or gap accounting fails the positive component test.",
+    "usage": "Four audit fixture rows and fixed analytics fixture body; existing masks unchanged.",
+    "initial_main": "Eight-second auth-status delay fails the former 5s main assertion and passes 30s; no exact cause invented for the uncaptured original delay.",
+    "physical_generation": "Eight drawer captures require the exact Repo search field and SHA-256 shape, then mask its value only. Every pixel outside that rectangle matches the prior capture in all eight images.",
+    "dom_quiet": "Same three equal samples at 250 ms/30s inside browser poller, returning boolean. Controlled 1.6s markup churn passes; an always-ready mutation fails. No repeated full-HTML protocol transfer.",
+    "public_assets": "Ben flagged backend Mac handoff. Auth/API/MCP/metrics retain SCS; public UI pages and assets bypass session reads/renewals. Concurrent public requests during injected session-store failure retain bodies and security headers; protected API remains closed. Browser/API-key authentication and CSRF/MCP/metrics regression gates pass."
+  },
+  "interaction_qa": {
+    "passed": 8,
+    "duration_seconds": 15.5,
+    "viewports": [
+      1280,
+      390
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "densities": [
+      "comfortable",
+      "dense"
+    ],
+    "browser": "native system Chrome; functional evidence only",
+    "flow": "Settings palette switch and panel; real four-row Relationship Explorer; listbox keyboard Enter, immutable citation, close; meaningful route identity and no overlay",
+    "console_errors": 0,
+    "document_overflow": 0,
+    "corrected_backend_confirmation": {
+      "startTime": "2026-10-17T23:17:59.507Z",
+      "duration": 14333.354000000001,
+      "expected": 8,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "screenshots": "Retained outside repository under session-fix-qa/screens; native Chrome functional evidence, not canonical pixels."
+  },
+  "retained_diagnostics": {
+    "comparison_boot_race": {
+      "stats": {
+        "startTime": "2026-10-17T22:26:26.383Z",
+        "duration": 47066.877,
+        "expected": 15,
+        "skipped": 117,
+        "unexpected": 1,
+        "flaky": 0
+      },
+      "cause": "Operator launched before listener readiness; ERR_SOCKET_NOT_CONNECTED at auth/status. No ordinary receipts ran. Restart only after container-side version health passed; no source change or test retry."
+    },
+    "native_qa": "Initial missing-session diagnostic and incorrect option focus expectation retained outside repository; authenticated setup and listbox focus corrected.",
+    "renderer_preflight": "One command started before npm ci completed; playwright unavailable, no tests ran. One UI-build command used the repository root instead of ui; corrected command and embedded build pass."
+  },
+  "classification_counts": {
+    "stale-baseline": 82,
+    "stale-baseline-and-generation-mask": 8,
+    "receipt-fixture-repair": 8,
+    "product-validator-repair": 8,
+    "unchanged-control": 20
+  },
+  "review": [
+    {
+      "route": "analytics",
+      "category": "receipt-fixture-repair",
+      "images": 4,
+      "reason": "Existing masks retained; usage fixture stabilizes row cardinality/body height.",
+      "previous_commits": [
+        "65942aa4 2026-08-07 T43.5 Authority drawer and receipt disclosure",
+        "a0c03bd5 2026-08-08 T43.11 Directory and explorer at density"
+      ]
+    },
+    {
+      "route": "audit",
+      "category": "receipt-fixture-repair",
+      "images": 4,
+      "reason": "Existing masks retained; usage fixture stabilizes row cardinality/body height.",
+      "previous_commits": [
+        "9dc09d24 2026-08-08 T43.10f Review follow-up: retained repos truth, honest captions, visible times",
+        "a0c03bd5 2026-08-08 T43.11 Directory and explorer at density"
+      ]
+    },
+    {
+      "route": "blame",
+      "category": "stale-baseline",
+      "images": 4,
+      "reason": "Fixed repository identity, contextual help and current type/chrome.",
+      "previous_commits": [
+        "a0c03bd5 2026-08-08 T43.11 Directory and explorer at density",
+        "e9c7c9fc 2026-08-07 T43.4 Deterministic screenshot receipts"
+      ]
+    },
+    {
+      "route": "caller-comparison-required-identity",
+      "category": "stale-baseline",
+      "images": 4,
+      "reason": "Fixed two-repository identity/cohort, retired Workbench chrome, current type, help and scope presentation.",
+      "previous_commits": [
+        "9ce402a4 2026-08-07 fix(t43): close reverse-review presentation gaps",
+        "a0c03bd5 2026-08-08 T43.11 Directory and explorer at density"
+      ]
+    },
+    {
+      "route": "caller-map-required-identity",
+      "category": "stale-baseline",
+      "images": 4,
+      "reason": "Fixed two-repository identity/cohort, retired Workbench chrome, current type, help and scope presentation.",
+      "previous_commits": [
+        "9ce402a4 2026-08-07 fix(t43): close reverse-review presentation gaps",
+        "a0c03bd5 2026-08-08 T43.11 Directory and explorer at density"
+      ]
+    },
+    {
+      "route": "command-navigator",
+      "category": "stale-baseline",
+      "images": 4,
+      "reason": "Retired Workbench entry removed; exact two-bundle explorer replaces third remote repository.",
+      "previous_commits": [
+        "3487a6f1 2026-08-08 T43.9f Review follow-up: principal-scoped recents, real modal, calm focus",
+        "a0c03bd5 2026-08-08 T43.11 Directory and explorer at density"
+      ]
+    },
+    {
+      "route": "commit",
+      "category": "stale-baseline",
+      "images": 4,
+      "reason": "Current diff presentation and type/chrome.",
+      "previous_commits": [
+        "a0c03bd5 2026-08-08 T43.11 Directory and explorer at density",
+        "e9c7c9fc 2026-08-07 T43.4 Deterministic screenshot receipts"
+      ]
+    },
+    {
+      "route": "contract-atlas",
+      "category": "stale-baseline",
+      "images": 4,
+      "reason": "Exact two-repository cohort yields four declarations; current scope/chrome anatomy.",
+      "previous_commits": [
+        "a0c03bd5 2026-08-08 T43.11 Directory and explorer at density",
+        "e9c7c9fc 2026-08-07 T43.4 Deterministic screenshot receipts"
+      ]
+    },
+    {
+      "route": "file",
+      "category": "stale-baseline",
+      "images": 4,
+      "reason": "Fixed repository identity, whole-repository tree and current type/chrome.",
+      "previous_commits": [
+        "a0c03bd5 2026-08-08 T43.11 Directory and explorer at density",
+        "a1fe1b32 2026-08-08 T44.1 Proto and citation highlighting",
+        "e9c7c9fc 2026-08-07 T43.4 Deterministic screenshot receipts"
+      ]
+    },
+    {
+      "route": "history",
+      "category": "stale-baseline",
+      "images": 4,
+      "reason": "Fixed repository identity, contextual help and current type/chrome.",
+      "previous_commits": [
+        "a0c03bd5 2026-08-08 T43.11 Directory and explorer at density",
+        "e9c7c9fc 2026-08-07 T43.4 Deterministic screenshot receipts"
+      ]
+    },
+    {
+      "route": "impact",
+      "category": "stale-baseline",
+      "images": 4,
+      "reason": "Fixed two-repository identity/cohort, retired Workbench chrome, current type, help and scope presentation.",
+      "previous_commits": [
+        "a0c03bd5 2026-08-08 T43.11 Directory and explorer at density",
+        "e9c7c9fc 2026-08-07 T43.4 Deterministic screenshot receipts"
+      ]
+    },
+    {
+      "route": "kafka-topic-usage",
+      "category": "stale-baseline",
+      "images": 4,
+      "reason": "Fixed two-repository identity/cohort, retired Workbench chrome, current type, help and scope presentation.",
+      "previous_commits": [
+        "1f82c8cf 2026-08-07 T43.6f Review follow-up: real disclosure sections, Go-bound pins, honest status",
+        "a0c03bd5 2026-08-08 T43.11 Directory and explorer at density"
+      ]
+    },
+    {
+      "route": "kafka-topic-usage-expanded-390",
+      "category": "stale-baseline",
+      "images": 4,
+      "reason": "Fixed two-repository identity/cohort, retired Workbench chrome, current type, help and scope presentation.",
+      "previous_commits": [
+        "1f82c8cf 2026-08-07 T43.6f Review follow-up: real disclosure sections, Go-bound pins, honest status",
+        "a0c03bd5 2026-08-08 T43.11 Directory and explorer at density"
+      ]
+    },
+    {
+      "route": "kafka-topics",
+      "category": "unchanged-control",
+      "images": 4,
+      "reason": "Retained Topics, Settings or managed-index control.",
+      "previous_commits": [
+        "005f13e1 2026-10-17 t57.4: refresh Topics baselines on pinned Playwright Chromium"
+      ]
+    },
+    {
+      "route": "login",
+      "category": "stale-baseline",
+      "images": 2,
+      "reason": "Legacy system-Chrome capture; current pinned Chromium rendering.",
+      "previous_commits": [
+        "e9c7c9fc 2026-08-07 T43.4 Deterministic screenshot receipts"
+      ]
+    },
+    {
+      "route": "markdown-preview",
+      "category": "stale-baseline",
+      "images": 4,
+      "reason": "Current sanitized image placeholder, typography and admitted navigation.",
+      "previous_commits": [
+        "4a33119d 2026-08-31 Close T44.3 Markdown preview trust boundaries"
+      ]
+    },
+    {
+      "route": "relationship-explorer",
+      "category": "stale-baseline",
+      "images": 4,
+      "reason": "Fixed two-repository identity/cohort, retired Workbench chrome, current type, help and scope presentation.",
+      "previous_commits": [
+        "a0c03bd5 2026-08-08 T43.11 Directory and explorer at density",
+        "bc625775 2026-08-07 T43.8 Scope context bar"
+      ]
+    },
+    {
+      "route": "relationship-explorer-service",
+      "category": "product-validator-repair",
+      "images": 4,
+      "reason": "Valid current v2 upstream authority now renders four real rows; the pre-fix error was rejected as a baseline.",
+      "previous_commits": [
+        "a0c03bd5 2026-08-08 T43.11 Directory and explorer at density",
+        "bc625775 2026-08-07 T43.8 Scope context bar"
+      ]
+    },
+    {
+      "route": "relationship-explorer-service-expanded",
+      "category": "product-validator-repair",
+      "images": 4,
+      "reason": "Valid current v2 upstream authority now renders four real rows; the pre-fix error was rejected as a baseline.",
+      "previous_commits": [
+        "a0c03bd5 2026-08-08 T43.11 Directory and explorer at density",
+        "bc625775 2026-08-07 T43.8 Scope context bar"
+      ]
+    },
+    {
+      "route": "repos",
+      "category": "stale-baseline",
+      "images": 4,
+      "reason": "Fixed two-repository identity/cohort, retired Workbench chrome, current type, help and scope presentation.",
+      "previous_commits": [
+        "9dc09d24 2026-08-08 T43.10f Review follow-up: retained repos truth, honest captions, visible times",
+        "a0c03bd5 2026-08-08 T43.11 Directory and explorer at density"
+      ]
+    },
+    {
+      "route": "search",
+      "category": "stale-baseline",
+      "images": 4,
+      "reason": "Fixed two-repository identity/cohort, retired Workbench chrome, current type, help and scope presentation.",
+      "previous_commits": [
+        "a0c03bd5 2026-08-08 T43.11 Directory and explorer at density"
+      ]
+    },
+    {
+      "route": "search-results",
+      "category": "stale-baseline",
+      "images": 4,
+      "reason": "Fixed two-repository identity/cohort, retired Workbench chrome, current type, help and scope presentation.",
+      "previous_commits": [
+        "65942aa4 2026-08-07 T43.5 Authority drawer and receipt disclosure",
+        "a0c03bd5 2026-08-08 T43.11 Directory and explorer at density"
+      ]
+    },
+    {
+      "route": "search-results-authority",
+      "category": "stale-baseline",
+      "images": 4,
+      "reason": "Fixed two-repository identity/cohort, retired Workbench chrome, current type, help and scope presentation.",
+      "previous_commits": [
+        "572d028f 2026-08-07 T43.5f Review follow-up: authority fidelity, fail-closed receipts, dialog semantics",
+        "a0c03bd5 2026-08-08 T43.11 Directory and explorer at density"
+      ]
+    },
+    {
+      "route": "search-service",
+      "category": "stale-baseline",
+      "images": 4,
+      "reason": "Fixed two-repository identity/cohort, retired Workbench chrome, current type, help and scope presentation.",
+      "previous_commits": [
+        "a0c03bd5 2026-08-08 T43.11 Directory and explorer at density",
+        "bc625775 2026-08-07 T43.8 Scope context bar"
+      ]
+    },
+    {
+      "route": "search-service-390",
+      "category": "stale-baseline",
+      "images": 4,
+      "reason": "Fixed two-repository identity/cohort, retired Workbench chrome, current type, help and scope presentation.",
+      "previous_commits": [
+        "a0c03bd5 2026-08-08 T43.11 Directory and explorer at density"
+      ]
+    },
+    {
+      "route": "search-service-authority",
+      "category": "stale-baseline-and-generation-mask",
+      "images": 4,
+      "reason": "Fixed two-repository identity/cohort, retired Workbench chrome, current type, help and scope presentation. Independent fresh-instance comparison additionally requires a value-only physical-generation mask.",
+      "previous_commits": [
+        "a0c03bd5 2026-08-08 T43.11 Directory and explorer at density"
+      ]
+    },
+    {
+      "route": "search-service-authority-390",
+      "category": "stale-baseline-and-generation-mask",
+      "images": 4,
+      "reason": "Fixed two-repository identity/cohort, retired Workbench chrome, current type, help and scope presentation. Independent fresh-instance comparison additionally requires a value-only physical-generation mask.",
+      "previous_commits": [
+        "a0c03bd5 2026-08-08 T43.11 Directory and explorer at density"
+      ]
+    },
+    {
+      "route": "service-directory",
+      "category": "stale-baseline",
+      "images": 4,
+      "reason": "Fixed repository identity, current service authorities and current chrome.",
+      "previous_commits": [
+        "c501ec48 2026-08-08 T43.11f Review follow-up: composite row pins, honest ARIA, unclippable facts"
+      ]
+    },
+    {
+      "route": "settings",
+      "category": "unchanged-control",
+      "images": 4,
+      "reason": "Retained Topics, Settings or managed-index control.",
+      "previous_commits": [
+        "4f1f9bdd 2026-10-03 test(t45.8b): retain pinned Settings workflow receipts"
+      ]
+    },
+    {
+      "route": "settings-indexing-390",
+      "category": "unchanged-control",
+      "images": 4,
+      "reason": "Retained Topics, Settings or managed-index control.",
+      "previous_commits": [
+        "4f1f9bdd 2026-10-03 test(t45.8b): retain pinned Settings workflow receipts"
+      ]
+    },
+    {
+      "route": "typed-index-preview",
+      "category": "unchanged-control",
+      "images": 8,
+      "reason": "Retained Topics, Settings or managed-index control.",
+      "previous_commits": [
+        "4f1f9bdd 2026-10-03 test(t45.8b): retain pinned Settings workflow receipts"
+      ]
+    }
+  ],
+  "baseline_sha256": {
+    "analytics--dark--comfortable.png": "03ff06af6b01c2b1ef6351eacef8d6c28e8ba933e3a0907f3c4c2e431629c6f9",
+    "analytics--dark--dense.png": "1633e8229e16ec92d3c5628513c609b021df550545b9655eb7005c8ba64824db",
+    "analytics--light--comfortable.png": "2726a16774f745f0edcbb41b8b57a19159512954692746ae8f468e6454a3a4fa",
+    "analytics--light--dense.png": "c0c2dd6304f0469e0d6b08b3eb80bf0421af3ebc95b1b7c8c9cc7128b7a202ec",
+    "audit--dark--comfortable.png": "56c59434ac8b75c46a2738a0d58b9d173376e308c2c562c67aeb0dbad9d4e88b",
+    "audit--dark--dense.png": "265b4897002dace3996b003c7aaad38342896eb171640e50b1a5fe1036ede178",
+    "audit--light--comfortable.png": "416232d5f0bd3f521b8431c7cb6a0f109d45dd8b1158c88f939b862547141187",
+    "audit--light--dense.png": "6fa1485c850bd28c36a72957cf5db04fa28d90561a6b2c84d8f1475174740a7f",
+    "blame--dark--comfortable.png": "b069ed5a0357d7864094cb813c01130a592aeb938cb2ca3a636bce897abb7f9e",
+    "blame--dark--dense.png": "8ade37c7d8c87420c83edcec687350d971a6a9a304164e392ce7307bc1ae15eb",
+    "blame--light--comfortable.png": "ad6e2c4f5a08b776f0fa92f16e5c6603bb071597c66162c9c63b1a53bf401a9b",
+    "blame--light--dense.png": "5e5f781f77f4d93490574a6d2162707908c1efe69749e76f9d479eba7a914b24",
+    "caller-comparison-required-identity--dark--comfortable.png": "30792db80fdcf1916ab383f421d94ab67bab85d94c7627790944ce17f7f21cbb",
+    "caller-comparison-required-identity--dark--dense.png": "011595072cd2ae2e044351cf9a1dc8ec0d3cb564087cf999560062d210530110",
+    "caller-comparison-required-identity--light--comfortable.png": "739dfa96ca2a4e152b8d55289349991cd66361a2696a6a6e69788720a707cc79",
+    "caller-comparison-required-identity--light--dense.png": "2b024e248e2c6f22900d739363e9072725785b57a8575e37d9d46fcc192f5042",
+    "caller-map-required-identity--dark--comfortable.png": "1ccbba18224ced76bf01fa1d60b1ca5b6210b1732befbbd611e292243c929cb2",
+    "caller-map-required-identity--dark--dense.png": "a782be4c25b9cba883a9caaf5a2836b86085813f3d7a28b4cfebae482f58ceb8",
+    "caller-map-required-identity--light--comfortable.png": "1e23ef0315a2bf3fd225e6ef6a8933dd75574eb90ef186dad4d44c77e53d7d40",
+    "caller-map-required-identity--light--dense.png": "61a9187be247f87055a28e3eb7dec3240a01398ee20f166ecf43be98a765b363",
+    "command-navigator--dark--comfortable.png": "c242bc52b591c6a6cff0ff7b666ddea88f4e305b8df92f011923eae15e933360",
+    "command-navigator--dark--dense.png": "dae2e22099b9f5edb484392c495c6f057ffbbacd088608cda0d91a6860ba94f3",
+    "command-navigator--light--comfortable.png": "b2e282c3cb5c56f63060dd0222ec5b2168e7f25d155a1a76a3c190eb1ccd8be8",
+    "command-navigator--light--dense.png": "bb05f293e54c832beb4cd07988a7f561ecbd46de99eade490b33c9a60887cbc4",
+    "commit--dark--comfortable.png": "f4b953eecd3d66ccbf9866bb5cc2dca413ba0219ac6b472cbfebd31f5e1e82e4",
+    "commit--dark--dense.png": "bc8b23c95b33f57e2f3e44d6da2aaf779bdb68a9666de3615bb20c527a91feec",
+    "commit--light--comfortable.png": "308110aa912bed4d9b3f050c7b606b29d386ce6648dc730e12701ea29c984de0",
+    "commit--light--dense.png": "7b8274555fbae14246a180202266c126f3182d0e8624d5bead9074094e0ba3a0",
+    "contract-atlas--dark--comfortable.png": "0b85c5d67e7473f33fd862f138445ae28406e0354c0320a6149a7ab93e441af7",
+    "contract-atlas--dark--dense.png": "0fc118be57410886c4c8cc3c50e1c90ac14e7e505f97d9554389ea4df0a4db75",
+    "contract-atlas--light--comfortable.png": "e96db9c86cafcb815152d3dd75490e6aab2cc5262f9d4f6737724d25176bd72d",
+    "contract-atlas--light--dense.png": "612d9fdbf98c3e24666bfcf2c9657534553a6599d296129264394ffe8f3745a3",
+    "file--dark--comfortable.png": "de6515b382f064a4d436b25b2e821bb6bfe0a5204e4e93ff83ae76f21c4af82c",
+    "file--dark--dense.png": "0ba063bef1053818fb7d08c01bba503dc1871d9b6b975b15d01ca57bcc33efc3",
+    "file--light--comfortable.png": "6d6297fa46c62ea48108256d3ed5f4f7925a269f8b6e9dfa979f5a34cd7fa7dc",
+    "file--light--dense.png": "f4efb6d38f52e1fb770faed50f26d58aa37623e73093ac203dc79afc5a7efdee",
+    "history--dark--comfortable.png": "d461ce02dae3b473db90955c8a0364d76f731705ebf1be8049114776f880d867",
+    "history--dark--dense.png": "6b330a32ef017c77d5f1b4da4682ef6257d4c3ac3dec688acb0fe4b1218270b0",
+    "history--light--comfortable.png": "4c753d9891e533d05faa3f06dedd97f43ff9ee55e61890b209cf5e64b79c244b",
+    "history--light--dense.png": "2c802d96eeb6376beadcc6add277be50ccd8d5bd7ed0b67755bed718ed73954b",
+    "impact--dark--comfortable.png": "0a612c6b1e3974dc0f6129d1de8657a2269b641c551d17cd0d9ac345b00e303a",
+    "impact--dark--dense.png": "0552280a6d4297f3c8941d76e6f07d75bbff45f2682570e5231afc5fb32b9ce9",
+    "impact--light--comfortable.png": "b42e2b94a0f207eb7d0794edf36b25d765ed105d9f6928d54a79a77ed6a9c822",
+    "impact--light--dense.png": "b2c8c0d4502ce3b763350b9a7fd922c3a63707a8ad4c8b3b7bc4f04699963d5d",
+    "kafka-topic-usage--dark--comfortable.png": "5441538b8a5a631c9255b2b3a35e6564868493ed59178ffad2d41e5a2e42d25f",
+    "kafka-topic-usage--dark--dense.png": "f5a1bcb2f8eef04bec6e12349d73a8daa1c12f5c986d9ad7f919b853b0ce358a",
+    "kafka-topic-usage--light--comfortable.png": "523daccf55fd2cec055c86b451158a9c24dfa05c8551ac847daad5f9fddd696a",
+    "kafka-topic-usage--light--dense.png": "568c243c8f5ef66d450e14f303fc9cee9288be970bace460dceb5ad258080969",
+    "kafka-topic-usage-expanded-390--dark--comfortable.png": "0f89eef042bdfe115286c1801e542ed2c38bdf61f3e4eddc0b99594da5606e8d",
+    "kafka-topic-usage-expanded-390--dark--dense.png": "951090e45e537eb34762b85f78b13204d653ac700aea965346d59a10b5bd905e",
+    "kafka-topic-usage-expanded-390--light--comfortable.png": "6c089f8ef02de40ed9f84e3db5ef877521f029fb0479077bbdbf4caa1b424cb8",
+    "kafka-topic-usage-expanded-390--light--dense.png": "f6d1ad2a44dc99d568ff06d2bb4df9fadfceb78cf3769e81422afa91af3ef660",
+    "kafka-topics--dark--comfortable.png": "335ff8238424e58e8293a80d05535869a2bc38d63e2b9ebe2ddd67deacf6cb61",
+    "kafka-topics--dark--dense.png": "80801e9de7f64263755cffa5dbc55c685e69263f7a152b1823efda1d1541c301",
+    "kafka-topics--light--comfortable.png": "c9c5915be0f46da1f50ef22e21a92fe47f37d2f2692edd37a59326017cfa593f",
+    "kafka-topics--light--dense.png": "d617c49ede01a57e82e90e06af5f9e96d0ab44773ac8adcfb841410a63f4ba29",
+    "login--dark.png": "200cb55f2cd24402da9e26b1d0d35c534c96c1ff54c32655fe958e189ffd2148",
+    "login--light.png": "13047c9d2086e005ff13a415aeb5ffb918fdaa7da86fbc1428a585391a8234b0",
+    "markdown-preview--dark--comfortable.png": "d8120e8c8f208288659a2af7209fc9433555eefd046201978296f11f3e02e8b8",
+    "markdown-preview--dark--dense.png": "ad4816d0287f5d80914938cf8abb65bfea006f6f45894232cb070276ae696069",
+    "markdown-preview--light--comfortable.png": "4923d2f985b48fc908e60d1556038980f2ef859d28d0f5bcd647710630f055be",
+    "markdown-preview--light--dense.png": "0976a2ea9b4465eec0d5ff3b57c93c6486e9e6faed34c14194df5a835e04909d",
+    "relationship-explorer--dark--comfortable.png": "4dbdbc6ffef6389bf1b7105e440d0bfa045fb02f2d83ca0ab3218d9e4a2ea42a",
+    "relationship-explorer--dark--dense.png": "bef540a8a594b63d5d67f44c2c79159e86ad79e010911f4cc209421033d8e83a",
+    "relationship-explorer--light--comfortable.png": "d58ea65b46dc8a5e1418bdaf858035dc6d204da833c39997cbe8a009e5932576",
+    "relationship-explorer--light--dense.png": "e37ff46a3bda7be0323ad7603c981b90ea8b644091badf4e0136f26fb28a921e",
+    "relationship-explorer-service--dark--comfortable.png": "474d5903b6178d22c1433180ec10604943e75655eaf14a6c048b92da420204db",
+    "relationship-explorer-service--dark--dense.png": "9b6834cc1dbde83395bcbd2fd709c04756743dbd899ba1e85a00d332325312dc",
+    "relationship-explorer-service--light--comfortable.png": "5cac74acb591bba710c1e68b353b05ca8750c8153361406ec72b7eadbe73f9c6",
+    "relationship-explorer-service--light--dense.png": "56632f37d3a3a358e9c6fb20b818b1b44a46e64842e03074778249bc003c8bba",
+    "relationship-explorer-service-expanded--dark--comfortable.png": "9c522a5c0ffded2f595dd63d56af0a87a0568000d8338a8593a46208db212162",
+    "relationship-explorer-service-expanded--dark--dense.png": "28074832ab5b1000b83d6a83a19e3f36384c4030f194f10c884688fef786e9b3",
+    "relationship-explorer-service-expanded--light--comfortable.png": "e91b06d30f4cea6a2a58ad795f5b66ec59004d4244d3061c61b383884cb3a44b",
+    "relationship-explorer-service-expanded--light--dense.png": "9f988ac90d99c9fb86e30277ffb510d563a0aaf3b63eded4f8e26ab5b354cc20",
+    "repos--dark--comfortable.png": "1547c325ae2e3d373ca4702fedbdde9bcc2eddbeac134c15c0e4f6264fd4e780",
+    "repos--dark--dense.png": "8c8274401ee9ed383b7dd243d38a2efbe13f7e82e00c01caca38ded6732dc42e",
+    "repos--light--comfortable.png": "2fb1524de6fbbc8964024ab4b2b0d2cef6c5c579e7615e8be3118b7f5499059f",
+    "repos--light--dense.png": "387c0ab8a69138757fa6c5c09bfaa74a5723feed5747868168db7ab6907fcb41",
+    "search--dark--comfortable.png": "1a0dfd9ef44fad0a3f66be7196b1ccd261f7798a0f549c6df9378b4e63f1d550",
+    "search--dark--dense.png": "4fea168b4275dd2dfaacd25c650a6117ab5192d9299a09877a13c0804c09430e",
+    "search--light--comfortable.png": "0d2eb35a03f7b78574b4bf14d8560e468ec5bb23c333c7434f46694ab2043fd2",
+    "search--light--dense.png": "ebd10779d25b000107ae9445051db4f41b9c66fc70089e8a76ab8933c0de20d2",
+    "search-results--dark--comfortable.png": "a7ba531ab610a88c2ad7a83f343cdfcd17acbe8cce864f539d68a3756718e9a1",
+    "search-results--dark--dense.png": "2bf4fb6fb26986a6f3046c0af43dc56935d1b82fda8928065db0dd915efefee3",
+    "search-results--light--comfortable.png": "efb847e83454f2229b656a830bddaf2d7fbe1a155ba097825073495e3463e513",
+    "search-results--light--dense.png": "8415b804dd1e003c9a301e6dcbd151c366ef4ac45f93a9ca3f334f4eb869cb38",
+    "search-results-authority--dark--comfortable.png": "12810d3d20d8fb7b5191fb25484d0515acb544b0207c82a1118eb6bd33a67fba",
+    "search-results-authority--dark--dense.png": "22a449073ec7648e71b639de6f6e9c148fddca9f0f99587a79040c5049e401c6",
+    "search-results-authority--light--comfortable.png": "3783247889b5712c8a881781c9deaddc86af736b308105427288a1006a0a34d9",
+    "search-results-authority--light--dense.png": "876df41aa1a5b2b98f1d95b9cacd4e48a2c865da54aa8f96895eb714c3d4682f",
+    "search-service--dark--comfortable.png": "46d593e79b58337fe764514bf554f3eaf97e4a1eddea0f1a3653423546d29198",
+    "search-service--dark--dense.png": "bb390cb4c9bf8822717978b912a36647b7628d1ddee245b8f180dd2798f485d9",
+    "search-service--light--comfortable.png": "76298a9ca4356119bb29e44d6eff012b4d8e4edfc3f94089bd3492b4745f1020",
+    "search-service--light--dense.png": "34afa34e88f291fe369615e87a67ad196bf5247364a2c03a32b6b8b8219a4b5d",
+    "search-service-390--dark--comfortable.png": "d911d7ea24d5b22e5dd25b264aa6738b6752a713d61c386f2c1b484d6376280a",
+    "search-service-390--dark--dense.png": "3c35296e4a7e9acb57f5633de040ad4f362c1653ec405b600dd84fd7bfdabf8a",
+    "search-service-390--light--comfortable.png": "7513f3fb07ee9be937ef7289482085edf61b2bd2d7e36d6e1f17401713f496ed",
+    "search-service-390--light--dense.png": "984265f7a44d863ebce68a4349513e4759696be42ca0ad19c44015abec26b1f3",
+    "search-service-authority--dark--comfortable.png": "bc0101641456d3b6a4482324e6e304ba2a9df0cbc90a719db926ab0eea629460",
+    "search-service-authority--dark--dense.png": "1507b016ff7db819bd6ca52f62ecf95be187d07d25cca0c7f91eaa0ca3607e85",
+    "search-service-authority--light--comfortable.png": "76fa43460f1c30fa64a7004014df39f8abadda74f2a5af9c5c87a22ff269ba2e",
+    "search-service-authority--light--dense.png": "ec21b9cfb9c7317b66386784c70864ad205588e496918e27cc52e6e6c3efa620",
+    "search-service-authority-390--dark--comfortable.png": "954433baf03c1ca6ff13a58adf4677e3705d5bb21ed15ef6864538207ae7c20f",
+    "search-service-authority-390--dark--dense.png": "a533a5d07c40a616add06eb2afd0d45eb7372bc01a49d4169dc7aa9b9671fb97",
+    "search-service-authority-390--light--comfortable.png": "aaf1326c4af550f60d8901e80f6abcd245ac0ccf7f4b707b2bce71c0ae4c18b3",
+    "search-service-authority-390--light--dense.png": "3439a17ce062464ebb474a267e5a6d254de1c52f4915090fb0e601ddc0ddb191",
+    "service-directory--dark--comfortable.png": "4898b45ef1ea4f9eb61a7f9da41d091187787859e1ec66de702c8c4674d3bb3b",
+    "service-directory--dark--dense.png": "39b84e26ad682ff5da38895ee90c8b4f5d3ae9ca7da884f050e53feed5cb532b",
+    "service-directory--light--comfortable.png": "d629ff0467234be106e12a081d7518d7e0caa56a0253bee2c70696881a945657",
+    "service-directory--light--dense.png": "33fa9a93e10c274296dd71b07ac0a105cd4a1fe72edc615938044d78f3e86b15",
+    "settings--dark--comfortable.png": "b510526dff3d000dabc9c99db850b58b43ffcdf9ed2463543d817a69cc3b9825",
+    "settings--dark--dense.png": "865b4f9c550473caa119d73e866b533642cb94b87a2c86c6e78b5bebb6bf7308",
+    "settings--light--comfortable.png": "6bb3cc8b7a4819ae4a7d03b27a944ad73486965fa28e8186f6150424d6332551",
+    "settings--light--dense.png": "b502b5a1919455df8b7135da0c7ab5202a7cf983d90977b04eb7f0bb58041832",
+    "settings-indexing-390--dark--comfortable.png": "0103fa723bd04d6e7ad8db403582522c7a3550c247b724df1e5e6bd6e77a6ee3",
+    "settings-indexing-390--dark--dense.png": "1bca9c7c28e2795b13bfe35bf6b9648302df53efeda6a7c09bc929f4063c3638",
+    "settings-indexing-390--light--comfortable.png": "3de33b1eb013420d861cd33d377568adf4afbeb95b71feadc37c5ff18898669e",
+    "settings-indexing-390--light--dense.png": "df95288fbc2e06d7d2bfcef73c923ed5543582657f6f683cecd2f4226d8b9fe6",
+    "typed-index-preview--dark--1280--comfortable.png": "85ed0904a1f147e95edfa0794038e2faa49ef03b94590abe162184095a4335af",
+    "typed-index-preview--dark--1280--dense.png": "85ed0904a1f147e95edfa0794038e2faa49ef03b94590abe162184095a4335af",
+    "typed-index-preview--dark--390--comfortable.png": "631b346c6c5974011d03548b25f20a9667266fc3caf4dfa80c534d9ba16c7a55",
+    "typed-index-preview--dark--390--dense.png": "9ceb6f54a8e6af0568202f8358550bd60f0de89574d457935e2a868ea6bab59b",
+    "typed-index-preview--light--1280--comfortable.png": "7ae663f56b11a4d344d5af9b7405a4c7509c3a5e654813e6c0bdc80dec11d27e",
+    "typed-index-preview--light--1280--dense.png": "7ae663f56b11a4d344d5af9b7405a4c7509c3a5e654813e6c0bdc80dec11d27e",
+    "typed-index-preview--light--390--comfortable.png": "6804965b9eed6140153e1543940efa0c32a72f4dafe565754cf5c83ef05f25cd",
+    "typed-index-preview--light--390--dense.png": "cfcf31b86e50ce0d9ca3e6bf86b89acc32982daf868ffc9d8276e14cff21f5bc"
+  },
+  "png_byte_delta": -309067,
+  "limits": [
+    "Local pinned renderer evidence; hosted Actions not run.",
+    "Complete Go and native ceremony suites not rerun; targeted HTTP/auth normal/race, vet and pinned lint pass.",
+    "Whole-repository receipts do not close the separate focused pipeline diagnostic.",
+    "No merge, release, label validation, quality or scale claim."
+  ],
+  "initial_application_source_commit": "52a76ce265f6b79c7c4a1517fe668229eb1dc271",
+  "final_harness_and_comparison_source_commit": "50429a8f5fd5adfa6508b22f8b30d1f62a9dc0ca",
+  "application_changes_after_initial_source": "HTTP routing session boundary repaired at 50429a8f; receipts and baseline follow-ups remain separate commits",
+  "intermediate_comparison": {
+    "stats": {
+      "startTime": "2026-10-17T22:27:21.808Z",
+      "duration": 419643.20999999996,
+      "expected": 124,
+      "skipped": 0,
+      "unexpected": 9,
+      "flaky": 0
+    },
+    "failures": "Eight physical repository-search generation values; one pre-main readiness deadline. Complete diagnostics retained outside repository."
+  },
+  "generation_author": {
+    "startTime": "2026-10-17T22:36:34.856Z",
+    "duration": 40784.788,
+    "expected": 10,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "mask_review": [
+    {
+      "file": "search-service-authority--dark--comfortable.png",
+      "value_mask_bbox": [
+        920,
+        416,
+        1260,
+        450
+      ],
+      "changed_pixels_outside_mask": 0
+    },
+    {
+      "file": "search-service-authority--dark--dense.png",
+      "value_mask_bbox": [
+        920,
+        416,
+        1260,
+        450
+      ],
+      "changed_pixels_outside_mask": 0
+    },
+    {
+      "file": "search-service-authority--light--comfortable.png",
+      "value_mask_bbox": [
+        920,
+        416,
+        1260,
+        450
+      ],
+      "changed_pixels_outside_mask": 0
+    },
+    {
+      "file": "search-service-authority--light--dense.png",
+      "value_mask_bbox": [
+        920,
+        416,
+        1260,
+        450
+      ],
+      "changed_pixels_outside_mask": 0
+    },
+    {
+      "file": "search-service-authority-390--dark--comfortable.png",
+      "value_mask_bbox": [
+        140,
+        451,
+        370,
+        485
+      ],
+      "changed_pixels_outside_mask": 0
+    },
+    {
+      "file": "search-service-authority-390--dark--dense.png",
+      "value_mask_bbox": [
+        140,
+        451,
+        370,
+        485
+      ],
+      "changed_pixels_outside_mask": 0
+    },
+    {
+      "file": "search-service-authority-390--light--comfortable.png",
+      "value_mask_bbox": [
+        140,
+        451,
+        370,
+        485
+      ],
+      "changed_pixels_outside_mask": 0
+    },
+    {
+      "file": "search-service-authority-390--light--dense.png",
+      "value_mask_bbox": [
+        140,
+        451,
+        370,
+        485
+      ],
+      "changed_pixels_outside_mask": 0
+    }
+  ],
+  "application_build_source_commit": "50429a8f5fd5adfa6508b22f8b30d1f62a9dc0ca",
+  "post_generation_comparison": {
+    "stats": {
+      "startTime": "2026-10-17T22:37:52.503Z",
+      "duration": 442794.606,
+      "expected": 133,
+      "skipped": 0,
+      "unexpected": 1,
+      "flaky": 0
+    },
+    "failure": "Timeout awaiting browser DOM read on caller-map-required-identity dark/dense; no final DOM snapshot or kernel OOM/crash retained. Cause unattributed."
+  },
+  "renderer_diagnostic": {
+    "stats": {
+      "startTime": "2026-10-17T22:49:17.189Z",
+      "duration": 52498.603,
+      "expected": 11,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "mode": "Ten explicit repetitions of the affected capture with trace and browser stderr; no test retries. Traces were generated; log and JSON retained outside repository.",
+    "result": "no reproduction; no exact root-cause claim"
+  },
+  "dom_regressions": {
+    "startTime": "2026-10-17T22:51:04.249Z",
+    "duration": 27865.245,
+    "expected": 4,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "settled_comparison_before_session_fix": {
+    "stats": {
+      "startTime": "2026-10-17T22:52:09.138Z",
+      "duration": 471250.675,
+      "expected": 131,
+      "skipped": 0,
+      "unexpected": 4,
+      "flaky": 0
+    },
+    "failures": "One screenshot missing global CSS, one pre-main deadline and two DOM-quiet deadlines; full artifacts retained outside repository. Individual untraced causes not asserted."
+  },
+  "persistent_browser_failure": {
+    "iterations_passed_before_failure": 8,
+    "asset": "/assets/theme-CQZ9cTmG.js",
+    "response_status": 500,
+    "response_utc": "2026-10-17T23:01:06Z",
+    "server_log": "Transaction conflict: Transaction write conflict. This transaction can be retried; scs sessionResponseWriter superfluous WriteHeader",
+    "trace_sha256": "5e1e2faf8f396b59048b9e7e59bd3a278dc323747c353b4876fa034980032a14",
+    "evidence": "Full trace, log, source and JSON retained outside repository; trace can contain session credentials and is not committed."
+  },
+  "application_build_note": "Built from the same application source content before recording commit 50429a8f; later changes are documentation/provenance only.",
+  "qa_checks": {
+    "page_identity": "pass",
+    "meaningful_content": "pass",
+    "no_framework_overlay": "pass",
+    "console_health": "pass",
+    "screenshot_comparison": "pass",
+    "interaction_proof": "pass",
+    "commands": [
+      "npm run receipts -- --reporter=list,json (pinned renderer)",
+      "npm test -- --run",
+      "npm run lint",
+      "npm run build",
+      "go test ./cmd/phebs -run TestHTTPHandlerAuthenticationBoundaries|TestVersionCapabilitiesRequireAuthenticatedPrincipal|TestEvidenceViewUsesAuthenticatedPrincipal -count=1",
+      "go test -race ./cmd/phebs -run selected HTTP/auth/security-header tests -count=1",
+      "go test ./internal/auth -count=1",
+      "go test -race ./internal/auth -count=1",
+      "go vet ./cmd/phebs ./internal/auth",
+      "golangci-lint v2.12.2 run ./cmd/phebs/... ./internal/auth/...",
+      "make docs-check verify-glossary"
+    ]
+  },
+  "persistent_browser_confirmation": {
+    "stats": {
+      "startTime": "2026-10-17T23:15:50.372Z",
+      "duration": 118210.172,
+      "expected": 1,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "captures": 40,
+    "mode": "one persistent browser, alternating 20 Caller Map dark/dense and 20 authority-drawer mobile light/comfortable captures; new context per capture; zero retries",
+    "console_errors": 0,
+    "page_errors": 0,
+    "request_failures": 0,
+    "server_session_conflicts": 0,
+    "baseline_updates": 0
+  }
+}

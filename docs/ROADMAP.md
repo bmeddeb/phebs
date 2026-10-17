@@ -388,6 +388,15 @@ and who owns each.
     remains red at 25 passed/107 failed: 106 unrelated screenshot differences
     and one Settings palette-readiness deadline. This grants no full receipt
     or hosted CI pass; the owning T57.4 backlog record retains the limits.
+  - Receipt recovery (T57R.2, 2026-10-17, Mac): the complete fresh-data
+    pinned-renderer matrix now passes 135/135 with zero retries and unchanged
+    pixel threshold. Settings readiness, current v2 relationship validation,
+    deterministic usage fixtures and public-asset session isolation are repaired;
+    Ben explicitly flagged the backend Mac handoff. Of 106 reviewed changed
+    PNGs, 90 were stale baselines and 16 accompany the fixture/validator repairs;
+    20 controls remain byte-identical. The owning backlog and
+    `ui/receipts/t57r2.json` retain provenance, costs and limits. This does not
+    establish a hosted CI pass or close the separate focused pipeline diagnostic.
   - Not claimed: runtime topic activity, complete topology, production-scale
     topic rows or an independent human review.
 

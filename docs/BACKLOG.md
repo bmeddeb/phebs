@@ -19859,6 +19859,22 @@ in chat: public UI assets must bypass session persistence while auth, API,
 MCP, metrics and CSRF protections remain enforced. A retained browser trace
 ties an asset HTTP 500 to the server's session-save transaction conflict.
 
+*Outcome (2026-10-17): the complete local pinned-renderer matrix passes
+135/135 on fresh data, with zero skips, flaky results or retries and the
+unchanged 0.1% threshold. The 106 reviewed changed PNGs comprise 90 stale
+baselines (eight also gain a precise physical-generation value mask), eight
+usage-fixture repairs and eight relationship-validator repairs; 20 controls
+remain byte-identical. Settings' delayed real chunk, initial identity delay
+and DOM-churn regressions pass. All 762 UI tests, UI lint/build, targeted
+HTTP/auth normal/race tests, changed-package vet/pinned lint, docs and glossary
+pass. Provenance and per-route classification live in
+`ui/receipts/t57r2.json`. Forty captures in one persistent pinned browser pass
+without console/page/request errors, and eight fresh desktop/mobile palette
+and keyboard relationship/citation journeys pass without overflow or errors.
+This is local canonical evidence, not hosted Actions;
+full Go/native ceremony suites were not rerun, and the separate focused
+pipeline diagnostic remains open.*
+
 **T57R.1 · Inherited gate repairs** *(cross-cutting; found while landing Epic
 57)* — return `make docs-check`, repository-wide lint and
 `internal/investigation` to green without touching the code those findings sit

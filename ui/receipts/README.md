@@ -271,3 +271,19 @@ DOM quiet still requires three equal rendered samples at 250 ms, bounded by
 HTML over the protocol every sample. A changing-markup test pins the quiet-state
 predicate; the earlier browser-read timeout and traced non-reproduction remain
 part of the receipt record, without an invented host-cause attribution.
+
+The subsequent persistent-browser trace captured a JavaScript HTTP 500 with
+the server's session-save transaction conflict. Under Ben's explicit backend
+Mac handoff, public UI pages/assets now bypass session persistence; auth, API,
+MCP and metrics retain session handling and CSRF protections. This diagnoses
+the captured failure without assigning every earlier timeout the same cause.
+The repaired source passes the complete fresh-data matrix: 135/135, zero
+skips/retries/flaky results, unchanged 0.1% threshold. The 106 reviewed changed
+PNGs include 90 stale baselines (eight also receive the precise generation-value
+mask), eight usage-fixture repairs and eight relationship-validator repairs;
+20 controls remain byte-identical. [T57R.2 provenance](./t57r2.json) records
+per-route classification, hashes, regression and interaction evidence. These
+are local pinned-renderer checks, not hosted Actions or focused-pipeline closure.
+Forty subsequent captures in one persistent pinned browser pass with no
+console/page/request errors. Eight fresh desktop/mobile palette and keyboard
+relationship/citation journeys pass without overflow or errors.

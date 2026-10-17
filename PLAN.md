@@ -11913,11 +11913,28 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   assets no longer extend idle expiry. This does not attribute every earlier
   untraced readiness failure to that captured conflict.
 
-  **Cost:** each public UI request removes one session lookup and any idle
-  renewal write. Auth/API/MCP/metrics retain one existing SCS wrapper, the same
+  **Cost:** public UI requests with a valid session cookie remove one session
+  lookup and idle-renewal write; anonymous requests retain zero session-store
+  accesses. Auth/API/MCP/metrics retain one existing SCS wrapper, the same
   store access and concurrency bounds. Startup constructs four wrappers instead
   of one; routing stays in the same mux with no new lock, cache, retry, polling,
   child, durable state, sync or publication work. Regression coverage injects
   session-store failure while concurrent public requests retain security
   headers and return their bodies; the same cookie still fails closed on API
   access. Existing browser/API-key, MCP, metrics and CSRF gates remain required.
+
+  The repaired source passes the complete fresh-data pinned-renderer matrix:
+  135/135 with zero retries, skips or flaky results and unchanged 0.1% pixel
+  threshold. The 106 reviewed changed PNGs classify as 90 stale baselines
+  (eight also use the physical-generation value mask), eight usage-fixture
+  repairs and eight relationship-validator repairs; 20 controls remain exact.
+  Test PNG bytes decrease by 309,067 against the T57.4 parent. The validator
+  adds no dependency. The receipt
+  report binds every baseline hash and its per-route classification. Targeted
+  HTTP/auth normal/race, changed-package vet/pinned lint and documentation gates
+  pass. Forty captures in one persistent pinned browser then pass without
+  console/page/request errors; eight fresh native desktop/mobile palette and
+  keyboard relationship/citation journeys pass without overflow or errors.
+  Full Go/native ceremony suites and hosted Actions were not rerun; the
+  separate focused pipeline diagnostic and all release/quality/scale posture
+  remain unchanged.
