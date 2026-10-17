@@ -265,3 +265,9 @@ publication's generation digest in eight drawer images. Its precise value-only
 mask follows a required-selector and SHA-256 assertion. All previous masks stay
 intact. Initial application-main readiness uses the same 30-second budget;
 an eight-second identity-response delay tests the pre-main loading boundary.
+
+DOM quiet still requires three equal rendered samples at 250 ms, bounded by
+30 seconds. The comparison now runs inside the browser instead of sending full
+HTML over the protocol every sample. A changing-markup test pins the quiet-state
+predicate; the earlier browser-read timeout and traced non-reproduction remain
+part of the receipt record, without an invented host-cause attribution.

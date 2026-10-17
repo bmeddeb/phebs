@@ -11887,3 +11887,15 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   is not assigned an invented exact cause. These changes add one DOM format
   assertion per eight captures and one test-only mask; production work and
   UI bytes are unchanged from the first T57R.2 implementation.
+
+  A later complete T57R.2 comparison passes 133/134, retaining one timeout
+  while awaiting a browser DOM read on Caller Map's input-required screen.
+  The kernel retains no OOM or crash report. Ten unchanged traced repetitions
+  pass, so no exact host or product cause is asserted. The quiet-state check
+  now performs the same three equal samples at 250 ms under the same
+  30-second limit inside Playwright's browser poller. It returns a boolean
+  instead of repeatedly transporting full HTML through the browser protocol.
+  A controlled markup-churn regression prevents early readiness. This moves
+  the existing DOM string comparison/cache into the test renderer, reduces
+  protocol copying and Node-side retained HTML, and adds no production work.
+  Earlier failed evidence remains retained; no retry or pixel waiver is added.

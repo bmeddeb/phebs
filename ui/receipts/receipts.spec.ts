@@ -23,18 +23,15 @@ async function waitForReceiptReady(page: Page) {
     return states.some((state) => /\b(loading|reading|checking|searching|rendering)\b/i.test(state))
   }, { message: 'receipt route still renders a loading state', timeout: 30_000 }).toBe(false)
 
-  let prior = ''
-  let stableSamples = 0
-  await expect.poll(async () => {
-    const next = await applicationMain.evaluate((node) => node.innerHTML)
-    stableSamples = next === prior ? stableSamples + 1 : 0
-    prior = next
-    return stableSamples
-  }, {
-    message: 'receipt route did not reach a stable rendered state',
-    timeout: 30_000,
-    intervals: [250],
-  }).toBeGreaterThanOrEqual(3)
+  // Keep full markup comparisons in the renderer; only the settled boolean
+  // crosses the browser protocol, rather than every intermediate HTML tree.
+  await page.waitForFunction((state) => {
+    const main = document.querySelector('main')
+    const next = main?.innerHTML ?? ''
+    state.samples = main && next === state.prior ? state.samples + 1 : 0
+    state.prior = next
+    return state.samples >= 3
+  }, { prior: '', samples: 0 }, { timeout: 30_000, polling: 250 })
 }
 
 async function capture(page: Page, route: ReceiptRoute, theme: (typeof THEMES)[number], density: (typeof DENSITIES)[number], name: string) {
@@ -151,4 +148,16 @@ test('waits for initial identity before requiring the application main', async (
   })
   const route = ROUTES.find((candidate) => candidate.name === 'audit')!
   await capture(page, route, 'dark', 'dense', 'audit--dark--dense')
+})
+
+test('DOM readiness waits for changing markup to settle', async ({ page }) => {
+  await page.setContent('<main><span>starting</span></main>')
+  await page.evaluate(() => {
+    const span = document.querySelector('span')!
+    let changes = 0
+    const timer = setInterval(() => { span.textContent = String(++changes) }, 100)
+    setTimeout(() => { clearInterval(timer); span.textContent = 'settled' }, 1_600)
+  })
+  await waitForReceiptReady(page)
+  expect(await page.locator('span').textContent()).toBe('settled')
 })
