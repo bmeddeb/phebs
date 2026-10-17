@@ -718,7 +718,10 @@ fresh installation has three supported enrollment paths:
 Browser sessions live in SurrealDB and survive process restarts. The cookie is
 `HttpOnly`, `SameSite=Lax`, `Secure` by default, and stores only a random
 token whose SHA-256 hash is persisted. Unsafe cookie-authenticated requests
-also require the per-session `X-CSRF-Token`; the UI supplies it. Login/setup
+also require the per-session `X-CSRF-Token`; the UI supplies it. Auth, API, MCP
+and metrics requests load and renew sessions. Public UI pages and assets do
+not access session persistence or extend the fixed 30-minute idle timeout.
+Login/setup
 attempts reserve a per-client slot before password work (8 credential failures
 per 5 minutes), and Argon2id work is globally capped at four concurrent hashes;
 overload fails with `429` instead of growing memory without bound. By default

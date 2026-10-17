@@ -11899,3 +11899,25 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   the existing DOM string comparison/cache into the test renderer, reduces
   protocol copying and Node-side retained HTML, and adds no production work.
   Earlier failed evidence remains retained; no retry or pixel waiver is added.
+
+  A bounded persistent-browser trace subsequently captured a JavaScript asset
+  HTTP 500 beside the server's exact session-save transaction conflict. The
+  public asset had entered global SCS persistence and renewed the same session
+  concurrently with other requests. Ben explicitly routed the backend repair
+  here ("Fix here; flag the Mac handoff"). This is the flagged Mac-to-Linux
+  ownership crossing for `cmd/phebs` and the auth middleware contract comment.
+  Session loading/saving now wraps the existing auth, API, MCP and metrics
+  routes individually, leaving public UI pages/assets outside persistence.
+  Security headers and retention warnings remain global. API authentication,
+  CSRF, absolute expiry and the 30-minute idle timeout remain enforced; public
+  assets no longer extend idle expiry. This does not attribute every earlier
+  untraced readiness failure to that captured conflict.
+
+  **Cost:** each public UI request removes one session lookup and any idle
+  renewal write. Auth/API/MCP/metrics retain one existing SCS wrapper, the same
+  store access and concurrency bounds. Startup constructs four wrappers instead
+  of one; routing stays in the same mux with no new lock, cache, retry, polling,
+  child, durable state, sync or publication work. Regression coverage injects
+  session-store failure while concurrent public requests retain security
+  headers and return their bodies; the same cookie still fails closed on API
+  access. Existing browser/API-key, MCP, metrics and CSRF gates remain required.

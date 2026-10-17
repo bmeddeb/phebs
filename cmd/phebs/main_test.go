@@ -1133,6 +1133,28 @@ func TestObservationPlanningStartupIsFilteredAndSourceFree(t *testing.T) {
 	}
 }
 
+type failingHTTPSessionStore struct {
+	store.AuthStore
+	calls atomic.Int32
+	fail  atomic.Bool
+}
+
+func (s *failingHTTPSessionStore) FindAuthSession(ctx context.Context, token string, now time.Time) ([]byte, bool, error) {
+	s.calls.Add(1)
+	if s.fail.Load() {
+		return nil, false, errors.New("session store unavailable")
+	}
+	return s.AuthStore.FindAuthSession(ctx, token, now)
+}
+
+func (s *failingHTTPSessionStore) CommitAuthSession(ctx context.Context, token string, data []byte, expiry time.Time) error {
+	s.calls.Add(1)
+	if s.fail.Load() {
+		return errors.New("session store unavailable")
+	}
+	return s.AuthStore.CommitAuthSession(ctx, token, data, expiry)
+}
+
 func TestHTTPHandlerAuthenticationBoundaries(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
@@ -1142,8 +1164,9 @@ func TestHTTPHandlerAuthenticationBoundaries(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = st.Close(context.Background()) })
 
+	sessionStore := &failingHTTPSessionStore{AuthStore: st}
 	insecure := false
-	authService, err := auth.New(ctx, auth.Options{Store: st, Config: config.Auth{
+	authService, err := auth.New(ctx, auth.Options{Store: sessionStore, Config: config.Auth{
 		APIKey: "legacy-integration-token", CookieSecure: &insecure,
 		BootstrapUser: config.BootstrapUser{
 			Email: "admin@example.com", Password: "integration-password",
@@ -1239,6 +1262,36 @@ func TestHTTPHandlerAuthenticationBoundaries(t *testing.T) {
 	if err := json.Unmarshal(login, &loginResult); err != nil || loginResult.CSRFToken == "" {
 		t.Fatalf("login response = %s, err %v", login, err)
 	}
+	assertStatus(t, client, http.MethodGet, server.URL+"/metrics", "", nil, http.StatusOK, "metrics")
+	before := sessionStore.calls.Load()
+	if before == 0 {
+		t.Fatal("login did not establish a persisted browser session")
+	}
+	sessionStore.fail.Store(true)
+	t.Run("public UI survives session-store failure", func(t *testing.T) {
+		for _, path := range []string{"/", "/settings", "/assets/app.js", "/assets/app.css"} {
+			t.Run(path, func(t *testing.T) {
+				t.Parallel()
+				resp, err := client.Get(server.URL + path)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer func() { _ = resp.Body.Close() }()
+				body, err := io.ReadAll(resp.Body)
+				if err != nil || resp.StatusCode != http.StatusOK || string(body) != "ui" {
+					t.Fatalf("public response: status=%d body=%q err=%v", resp.StatusCode, body, err)
+				}
+				if resp.Header.Get("X-Content-Type-Options") != "nosniff" || len(resp.Cookies()) != 0 {
+					t.Fatalf("public headers = %v", resp.Header)
+				}
+			})
+		}
+	})
+	if got := sessionStore.calls.Load(); got != before {
+		t.Fatalf("public UI touched session persistence: calls %d -> %d", before, got)
+	}
+	assertStatus(t, client, http.MethodGet, server.URL+"/api/repos", "", nil, http.StatusInternalServerError, "Internal Server Error")
+	sessionStore.fail.Store(false)
 	sessionTools, err := mcpToolNamesWithBrowserSession(
 		t,
 		server.URL+"/api/mcp",

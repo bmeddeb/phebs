@@ -721,9 +721,9 @@ func newHTTPHandler(authService *auth.Service, apiHandler, mcpHandler, metricsHa
 	mux := http.NewServeMux()
 	protectedAPI := authService.Require(apiHandler)
 	identifiedAPI := authService.Identify(apiHandler)
-	mux.Handle("/api/auth/", authService.Handler())
-	mux.Handle("/api/mcp", authService.Require(mcpHandler))
-	mux.Handle("/api/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/api/auth/", authService.LoadAndSave(authService.Handler()))
+	mux.Handle("/api/mcp", authService.LoadAndSave(authService.Require(mcpHandler)))
+	mux.Handle("/api/", authService.LoadAndSave(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if api.IsAuthenticationExempt(r.URL.Path) {
 			if r.URL.Path == "/api/version" {
 				identifiedAPI.ServeHTTP(w, r)
@@ -733,12 +733,12 @@ func newHTTPHandler(authService *auth.Service, apiHandler, mcpHandler, metricsHa
 			return
 		}
 		protectedAPI.ServeHTTP(w, r)
-	}))
+	})))
 	// /metrics is operator telemetry: it sits behind auth like every other
 	// protected route, not on the public surface.
-	mux.Handle("GET /metrics", authService.Require(metricsHandler))
+	mux.Handle("GET /metrics", authService.LoadAndSave(authService.Require(metricsHandler)))
 	mux.Handle("/", uiHandler)
-	handler := api.WithRetentionStatusWarning(authService.LoadAndSave(mux))
+	handler := api.WithRetentionStatusWarning(mux)
 	return securityHeadersMiddleware(serverCfg.SecurityHeadersEnabled())(handler)
 }
 

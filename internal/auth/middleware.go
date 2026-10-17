@@ -16,8 +16,8 @@ var (
 	ErrInvalidCSRF     = errors.New("invalid CSRF token")
 )
 
-// LoadAndSave must wrap the top-level mux so sessions established on the auth
-// routes are available to protected API and MCP handlers too.
+// LoadAndSave wraps auth, API, MCP and metrics handlers; public UI assets must
+// not renew sessions or depend on session-store availability.
 func (s *Service) LoadAndSave(next http.Handler) http.Handler {
 	return s.sessions.LoadAndSave(next)
 }

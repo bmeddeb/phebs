@@ -19854,6 +19854,10 @@ screenshot CI job without changing the focused pipeline; review differences
 before committing their PNGs, then compare every receipt on fresh data.
 Retain provenance and the steady-state-cost pass in the same PR. No merge,
 release promotion, label validation or scale claim is authorized by this work.
+Ben explicitly flagged the backend session-boundary repair as a Mac handoff
+in chat: public UI assets must bypass session persistence while auth, API,
+MCP, metrics and CSRF protections remain enforced. A retained browser trace
+ties an asset HTTP 500 to the server's session-save transaction conflict.
 
 **T57R.1 · Inherited gate repairs** *(cross-cutting; found while landing Epic
 57)* — return `make docs-check`, repository-wide lint and
