@@ -185,6 +185,7 @@ pinned or masked — the fixture root is only the repository-identity piece:
 | Audit trail rows (the harness's own logins/searches mutate them) | Four page-scoped usage fixture rows; existing `mask: ['main tbody td > *']` keeps values masked and anatomy compared |
 | Analytics page (usage-derived in whole) | Page-scoped usage fixture fixes body height; existing `mask: ['main']` still compares chrome only |
 | Settings lifecycle values (disk pressure, capacity badge) | precise `[data-volatile="lifecycle"]` / status masks |
+| Physical search generation in the service-authority drawer | Require the exact field and SHA-256 shape, then mask only its value; label, geometry, revision and all other authority values remain compared |
 | Indexing transitions ("Indexing…", "Cloning") | `awaitAbsent` terminal-state guards; `Failed` is terminal and fails the capture |
 | Fixture content drift | the t307 bundle pin (`T307_COMMIT`) binds the content |
 | Markdown-preview surface | page-scoped synthetic fixture (`receipt-fixture/markdown-preview`), never instance state |
@@ -258,3 +259,9 @@ presentation markers. The Settings regression holds the real highlight chunk
 for eight seconds; the ordinary five-second assertion budget fails this case.
 Missing readiness still fails capture; thresholds and retries are unchanged.
 Browser plugin not available; these checks use the repository's Playwright flow.
+
+The independent fresh-instance comparison also exposed the physical search
+publication's generation digest in eight drawer images. Its precise value-only
+mask follows a required-selector and SHA-256 assertion. All previous masks stay
+intact. Initial application-main readiness uses the same 30-second budget;
+an eight-second identity-response delay tests the pre-main loading boundary.

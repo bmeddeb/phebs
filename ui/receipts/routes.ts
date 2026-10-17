@@ -74,6 +74,10 @@ export interface ReceiptRoute {
   scrollIntoView?: string
 }
 
+// A fresh physical index has its own search-generation digest. Keep the
+// label and every other authority field compared; mask only this exact value.
+export const REPO_SEARCH_GENERATION = '[role="dialog"][aria-label="Search scope authority"] span:text-is("Repo search") + span'
+
 const T323_REPO = receiptFixtureRepoName(T323_BUNDLE)
 export const ROUTES: ReceiptRoute[] = [
   { name: 'search', path: '/' },
@@ -88,11 +92,11 @@ export const ROUTES: ReceiptRoute[] = [
   // authority generations, and the drawer at 390px.
   { name: 'search-results-authority', path: '/search?q=%22T323_ORDERS_API_PRODUCER%22&authority=scope' },
   { name: 'search-service', path: `/search?${q({ q: 'orders', scope: 'service', repository: T323_REPO, service_key: 'svc.fulfillment' })}` },
-  { name: 'search-service-authority', path: `/search?${q({ q: 'orders', scope: 'service', repository: T323_REPO, service_key: 'svc.fulfillment', authority: 'scope' })}` },
+  { name: 'search-service-authority', mask: [REPO_SEARCH_GENERATION], awaitVisible: [REPO_SEARCH_GENERATION], path: `/search?${q({ q: 'orders', scope: 'service', repository: T323_REPO, service_key: 'svc.fulfillment', authority: 'scope' })}` },
   // The scope context bar's own 390px state (T43.8): scoped service search
   // without the drawer overlaying it.
   { name: 'search-service-390', path: `/search?${q({ q: 'orders', scope: 'service', repository: T323_REPO, service_key: 'svc.fulfillment' })}`, viewport: { width: 390, height: 844 } },
-  { name: 'search-service-authority-390', path: `/search?${q({ q: 'orders', scope: 'service', repository: T323_REPO, service_key: 'svc.fulfillment', authority: 'scope' })}`, viewport: { width: 390, height: 844 } },
+  { name: 'search-service-authority-390', mask: [REPO_SEARCH_GENERATION], awaitVisible: [REPO_SEARCH_GENERATION], path: `/search?${q({ q: 'orders', scope: 'service', repository: T323_REPO, service_key: 'svc.fulfillment', authority: 'scope' })}`, viewport: { width: 390, height: 844 } },
   // A server restart queues index rebuilds; repos is captured only in its
   // terminal all-indexed state (twice this trap produced mid-reindex
   // baselines that were rejected in review).

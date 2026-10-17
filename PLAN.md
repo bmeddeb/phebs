@@ -11873,3 +11873,17 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   pages render their existing bounded row surface instead of an error. Test
   capture alone waits longer for a required marker, adds one delayed-chunk
   regression, and substitutes bounded usage-only fixtures.
+
+  T57R.2's independent fresh-instance comparison exposed eight physical
+  search-generation value differences and one pre-main readiness deadline.
+  The receipt harness now requires the exact Repo search field and its
+  SHA-256 shape, then masks only that instance-specific value in the two
+  service-authority drawer routes. Labels, geometry, state, revision pins,
+  service/source/catalog authorities and every earlier mask remain compared.
+  The SearchManifest binds a physical publication, so its identity is not a
+  deterministic source-content fixture; no backend hash or authority changes.
+  Application-main readiness also uses the existing 30-second budget, with
+  an eight-second initial-identity regression. The earlier uncaptured delay
+  is not assigned an invented exact cause. These changes add one DOM format
+  assertion per eight captures and one test-only mask; production work and
+  UI bytes are unchanged from the first T57R.2 implementation.

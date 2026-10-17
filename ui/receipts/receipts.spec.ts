@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { DENSITIES, FROZEN_NOW, ROUTES, THEMES, type ReceiptRoute } from './routes'
+import { DENSITIES, FROZEN_NOW, REPO_SEARCH_GENERATION, ROUTES, THEMES, type ReceiptRoute } from './routes'
 import { DEFAULT_PALETTE } from '../src/palette'
 import { installIdentityFixture, installReceiptFixture } from './fixture'
 
@@ -66,13 +66,16 @@ async function capture(page: Page, route: ReceiptRoute, theme: (typeof THEMES)[n
   await page.addInitScript((value) => localStorage.setItem('phebs-palette', value as string), DEFAULT_PALETTE)
   await page.emulateMedia({ colorScheme: theme })
   await page.goto(`/#${path}`)
-  await expect(page.locator('main').first()).toBeVisible()
+  await expect(page.locator('main').first()).toBeVisible({ timeout: 30_000 })
   await page.evaluate(() => document.fonts.ready)
   await waitForReceiptReady(page)
   if (route.awaitVisible) {
     for (const selector of route.awaitVisible) {
       await expect(page.locator(selector).first(), `required ready state missing: ${selector}`).toBeVisible({ timeout: 30_000 })
     }
+  }
+  if (route.mask?.includes(REPO_SEARCH_GENERATION)) {
+    await expect(page.locator(REPO_SEARCH_GENERATION)).toHaveText(/^sha256:[0-9a-f]{64}$/)
   }
   if (route.awaitAbsent) {
     for (const text of route.awaitAbsent) {
@@ -136,4 +139,16 @@ test('settings waits for its delayed palette chunk', async ({ page }) => {
   const route = ROUTES.find((candidate) => candidate.name === 'settings')!
   await capture(page, route, 'light', 'comfortable', 'settings--light--comfortable')
   expect(delayed, 'the production lazy highlight chunk was exercised').toBe(true)
+})
+
+test('waits for initial identity before requiring the application main', async ({ page }) => {
+  await page.addInitScript(() => {
+    const fetch = window.fetch.bind(window)
+    window.fetch = async (...args: Parameters<typeof window.fetch>) => {
+      if (args[0] === '/api/auth/status') await new Promise((resolve) => setTimeout(resolve, 8_000))
+      return fetch(...args)
+    }
+  })
+  const route = ROUTES.find((candidate) => candidate.name === 'audit')!
+  await capture(page, route, 'dark', 'dense', 'audit--dark--dense')
 })
