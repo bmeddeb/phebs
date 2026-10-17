@@ -11839,3 +11839,37 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   The repository test PNGs grow by 230,112 bytes.
   No claim, caveat, evidence authority, release selection or scale result
   changes.
+
+- **2026-10-17 — T57R.2 repairs remaining receipt failures under Ben's Mac
+  routing.** Required lazy presentation markers use the same 30-second
+  readiness budget as API/DOM settlement, preserving exact ready predicates,
+  zero retries and the 0.1% screenshot threshold. An eight-second production
+  highlight-chunk delay reproduces the old Settings five-second refusal.
+  This does not assert that the earlier uncaptured delay had that exact cause.
+
+  The shared relationship UI validator accepts the server's closed v1/v2
+  upstream projection. Published prerequisite/refusal/retry gaps do not reduce
+  the publication count; only `absent` domains do. Required domains stay
+  bounded to 64, gaps cannot repeat a domain/version, and unknown schemas,
+  dispositions or inconsistent counts refuse. Explorer and Service Overview
+  continue sharing that validator; citation identity checks remain exact.
+  This repairs a real current-response rejection, which must not be baselined
+  as healthy. It changes no server authority or caveat wording.
+
+  Receipt-only Audit and Analytics fixtures pin usage row cardinality and
+  body height while retaining every existing mask. The CI screenshot launch
+  and documented local recipe explicitly select the already-used two-bundle
+  whole-repository cohort and operator catalogs, clearing demo injectors.
+  Strict real-cohort readiness remains mandatory; no backend or focused
+  pipeline implementation changes. The screenshot job is receipt tooling
+  within this Mac task. Canonical comparison and PNG review follow separately.
+
+  **Steady-state cost:** the existing browser response validator adds bounded
+  gap passes and a temporary identity Set (at most 64 gaps per root, at most
+  32 authorized roots). It adds no HTTP request, polling, cache or held lock.
+  Ordinary startup adds only the small closed schema/disposition constants;
+  server startup/restart, queries, sync ticks, retry/no-op, publication,
+  durable memory/disk and child-process costs are unchanged. Valid current
+  pages render their existing bounded row surface instead of an error. Test
+  capture alone waits longer for a required marker, adds one delayed-chunk
+  regression, and substitutes bounded usage-only fixtures.

@@ -70,6 +70,10 @@ The workflow-state catalog contains five intentionally different identities:
    one immutable citation, and note every root/incarnation/generation receipt.
    Unowned, proposal, conflict, ambiguous, empty, failed, unavailable, and
    truncated states stay explicit.
+   Current v2 upstream receipts may include published prerequisite gaps;
+   these remain explicit evidence limits alongside the available rows. An
+   absent domain reduces the published count. Unsupported receipt schemas
+   or inconsistent domain accounting still refuse the response.
 4. **Comparison.** When two exact retained relationship roots are available,
    compare them with both generation and root digests. Otherwise record the
    explicit unavailable/gap state; do not substitute current rows or infer an

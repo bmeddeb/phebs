@@ -4,6 +4,7 @@ import { Client } from 'styletron-engine-monolithic'
 import { Provider as StyletronProvider } from 'styletron-react'
 import { BaseProvider, LightTheme } from 'baseui'
 import RelationshipExplorerPage from './RelationshipExplorerPage'
+import { validateServiceRelationshipRoot } from '../components/serviceRelationshipCitation'
 import type {
   ServiceRelationshipCitation,
   ServiceRelationshipPage,
@@ -69,6 +70,44 @@ test('uses broad authorized fallback and shares deterministic ids between exact 
   expect(screen.getAllByText('Ambiguous').length).toBeGreaterThan(0)
   expect(screen.getAllByText('Unowned').length).toBeGreaterThan(0)
   expect(screen.getByRole('link', { name: 'Next exact page' }).getAttribute('href')).toContain('cursor=bound%2Fnext')
+})
+
+test('renders v2 authority with published prerequisite gaps', async () => {
+  const page = relationshipPage(defaultRequest())
+  const upstream = page.roots[0].authority!.upstream!
+  upstream.schema = 'phebs-downstream-upstream-authority-v2'
+  upstream.published_domain_count = upstream.required_domain_count
+  upstream.gaps = [{ domain: 'scip', version: 'v1', disposition: 'unavailable_prerequisite' }]
+  api.fetchServiceRelationships.mockResolvedValueOnce(page)
+  renderPage(new URLSearchParams({ service_key: 'orders-api' }))
+  expect(await screen.findByRole('heading', { name: 'Exact source rows' })).toBeTruthy()
+})
+
+test.each([
+  { name: 'published gap', published: 2, gaps: ['unavailable_prerequisite'], valid: true },
+  { name: 'absent plus published gap', published: 1, gaps: ['absent', 'terminal_refusal'], valid: true },
+  { name: 'missing absence', published: 1, gaps: ['retryable'], valid: false },
+  { name: 'invented absence', published: 2, gaps: ['absent'], valid: false },
+  { name: 'excess gaps', published: 2, gaps: ['retryable', 'retryable', 'retryable'], valid: false },
+  { name: 'unknown disposition', published: 2, gaps: ['unknown'], valid: false },
+  { name: 'excess publication', published: 3, gaps: [], valid: false },
+])('validates v2 domain accounting: $name', ({ published, gaps, valid }) => {
+  const root = relationshipPage(defaultRequest()).roots[0]
+  const upstream = root.authority!.upstream!
+  upstream.schema = 'phebs-downstream-upstream-authority-v2'
+  upstream.published_domain_count = published
+  upstream.gaps = gaps.map((disposition, index) => ({ domain: `domain-${index}`, version: 'v1', disposition }))
+  expect(validateServiceRelationshipRoot(root) === '').toBe(valid)
+})
+
+test('refuses unknown upstream schemas and repeated gap identities', () => {
+  const root = relationshipPage(defaultRequest()).roots[0]
+  const upstream = root.authority!.upstream!
+  upstream.schema = 'phebs-downstream-upstream-authority-v3'
+  expect(validateServiceRelationshipRoot(root)).not.toBe('')
+  upstream.schema = 'phebs-downstream-upstream-authority-v2'
+  upstream.gaps.push({ ...upstream.gaps[0], disposition: 'retryable' })
+  expect(validateServiceRelationshipRoot(root)).not.toBe('')
 })
 
 test('maps repository, direction, evidence, and exact contract filters into one bounded reader query', async () => {
@@ -367,7 +406,7 @@ function relationshipAuthority(repository: string): NonNullable<ServiceRelations
       },
       required_domain_count: 2,
       published_domain_count: 1,
-      gaps: [{ domain: 'scip', version: 'v1', disposition: 'unavailable_prerequisite' }],
+      gaps: [{ domain: 'scip', version: 'v1', disposition: 'absent' }],
       digest: digest('8'),
     },
   }

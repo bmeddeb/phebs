@@ -166,9 +166,39 @@ jobs:
           # not depend on the script's executable bit surviving the push.
           receipt_env="$(sh scripts/stage-receipt-fixtures.sh --env)" || exit 1
           eval "$receipt_env"
-          # make dev builds the server, its index children, and the embedded
-          # UI, then serves with the neutral demo fixtures the receipts pin.
-          make dev ARGS="-config $receipts_config" >"$RUNNER_TEMP/phebs-dev.log" 2>&1 &
+          # Explicit whole-repository receipt cohort; make dev injects a focused
+          # analysis unit whose separate pipeline is not this visual gate.
+          cat >> "$receipts_config" <<EOF
+          connections:
+            - name: t30-service-scope-demo
+              type: git
+              url: "$PHEBS_T307_NEUTRAL_SERVICE_REPO"
+            - name: t34-service-search-demo
+              type: git
+              url: "$PHEBS_T344_SERVICE_SEARCH_REPO"
+          service_catalogs:
+            "local$PHEBS_T307_NEUTRAL_SERVICE_REPO":
+              kind: operator
+              id: t335-demo
+              version: v1
+              path: "$(pwd)/docs/fixtures/t33.5-service-directory/t335-service-catalog.json"
+            "local$PHEBS_T344_SERVICE_SEARCH_REPO":
+              kind: operator
+              id: t344-demo
+              version: v1
+              path: "$(pwd)/docs/fixtures/t34.4-service-search/t344-service-catalog.json"
+          experimental:
+            provisional_proto_extraction: true
+            provisional_kafka_extraction: true
+          EOF
+          make bin/zoekt-git-index bin/phebs-focused-index bin/buf ui
+          PHEBS_ZOEKT_GIT_INDEX="$(pwd)/bin/zoekt-git-index" \
+            PHEBS_FOCUSED_INDEX="$(pwd)/bin/phebs-focused-index" \
+            PHEBS_BUF="$(pwd)/bin/buf" \
+            PHEBS_T307_NEUTRAL_SERVICE_REPO= PHEBS_T335_SERVICE_CATALOG= \
+            PHEBS_T344_SERVICE_SEARCH_REPO= PHEBS_T344_SERVICE_SEARCH_CATALOG= \
+            PHEBS_CONTRACT_ATLAS_FIXTURE= PHEBS_THRIFT_FIELD_DEMO_REPO= \
+            go run -tags ui ./cmd/phebs serve -config "$receipts_config" >"$RUNNER_TEMP/phebs-dev.log" 2>&1 &
           server_pid=$!
           cleanup_server() {
             [ -n "${server_pid:-}" ] || return

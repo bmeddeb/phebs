@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import type { Page, Route } from '@playwright/test'
-import { MARKDOWN_PREVIEW_FIXTURE, type ReceiptRoute } from './routes'
+import { FROZEN_NOW, MARKDOWN_PREVIEW_FIXTURE, type ReceiptRoute } from './routes'
 
 const MARKDOWN_PREVIEW_SOURCE = readFileSync(
   new URL('./fixtures/markdown-preview.md', import.meta.url),
@@ -118,4 +118,18 @@ async function installMarkdownPreviewFixture(page: Page) {
 
 export async function installReceiptFixture(page: Page, fixture: ReceiptRoute['fixture']) {
   if (fixture === 'markdown-preview') await installMarkdownPreviewFixture(page)
+  // Login/search activity changes row counts and the masked body's height.
+  // Pin usage-only presentation data as well as its already-masked values.
+  if (fixture === 'audit') await page.route('**/api/audit?*', (route) => fulfillJSON(route, {
+    events: Array.from({ length: 4 }, (_, index) => ({
+      id: `receipt-event-${index}`, action: 'search', actor_email: PINNED_IDENTITY.user.email,
+      created_at: FROZEN_NOW.toISOString(), source_ip: '127.0.0.1', status: 200, target: 'neutral receipt',
+    })),
+    has_more: false,
+  }))
+  if (fixture === 'analytics') await page.route('**/api/analytics?*', (route) => fulfillJSON(route, {
+    total_searches: 4, avg_duration_ms: 1,
+    daily: [{ date: '2026-08-07', count: 4 }],
+    top_repos: [{ name: 'receipt-fixture/usage', count: 4 }],
+  }))
 }

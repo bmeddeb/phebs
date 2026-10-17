@@ -9,9 +9,9 @@ const CITATION_SCHEMA = 'phebs-service-relationship-citation-v1'
 const ROOT_SCHEMAS = new Set(['phebs-relationship-root-v1', 'phebs-relationship-root-v2'])
 const ROOT_SCHEMA_V2 = 'phebs-relationship-root-v2'
 const UNAVAILABLE_SCHEMA = 'phebs-relationship-unavailable-v1'
-const UPSTREAM_SCHEMA = 'phebs-downstream-upstream-authority-v1'
+const UPSTREAM_SCHEMAS = new Set(['phebs-downstream-upstream-authority-v1', 'phebs-downstream-upstream-authority-v2'])
 const SHA256_DIGEST = /^sha256:[0-9a-f]{64}$/
-const GAP_DISPOSITIONS = new Set(['unavailable_prerequisite', 'terminal_refusal', 'retryable'])
+const GAP_DISPOSITIONS = new Set(['absent', 'unavailable_prerequisite', 'terminal_refusal', 'retryable'])
 
 /**
  * Validate the generation seam before a product surface treats a root receipt
@@ -71,7 +71,7 @@ export function validateServiceRelationshipCitation(
 }
 
 function validUpstream(value: ServiceRelationshipUpstreamAuthority | undefined, repository: string): boolean {
-  if (value?.schema !== UPSTREAM_SCHEMA || value.repository !== repository || !isDigest(value.digest)) return false
+  if (!value || !UPSTREAM_SCHEMAS.has(value.schema) || value.repository !== repository || !isDigest(value.digest)) return false
   const observation = value.observation
   if (!observation || observation.repository !== repository || !observation.version ||
       !isDigest(observation.source_generation_digest) || !isDigest(observation.source_root_digest) ||
@@ -81,10 +81,14 @@ function validUpstream(value: ServiceRelationshipUpstreamAuthority | undefined, 
       !Number.isInteger(observation.record_count) || observation.record_count < 0 ||
       !Number.isInteger(observation.observed_count) || observation.observed_count < 0 ||
       observation.observed_count > observation.record_count) return false
-  return Number.isInteger(value.required_domain_count) && value.required_domain_count >= 0 &&
+  return Number.isInteger(value.required_domain_count) && value.required_domain_count >= 0 && value.required_domain_count <= 64 &&
     Number.isInteger(value.published_domain_count) && value.published_domain_count >= 0 &&
     value.published_domain_count <= value.required_domain_count && Array.isArray(value.gaps) &&
-    value.gaps.length === value.required_domain_count - value.published_domain_count &&
+    // Published domains can carry explicit gaps; only absent domains reduce
+    // the published count (projectRelationshipUpstream on the server).
+    value.gaps.length <= value.required_domain_count &&
+    value.gaps.filter((gap) => gap.disposition === 'absent').length === value.required_domain_count - value.published_domain_count &&
+    new Set(value.gaps.map((gap) => `${gap.domain}\0${gap.version}`)).size === value.gaps.length &&
     value.gaps.every((gap) => gap.domain.length > 0 && gap.version.length > 0 && GAP_DISPOSITIONS.has(gap.disposition))
 }
 

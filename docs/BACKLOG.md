@@ -19842,6 +19842,19 @@ retry/no-op, publication, locks, caches, runtime memory/disk and children;
 JavaScript delta is zero. The four repository test PNGs grow by 230,112 bytes.
 No claim, caveat, authority, release or scale posture changes.*
 
+**T57R.2 · Remaining receipt recovery** *(2026-10-17, Mac track,
+Ben-directed in chat)* — repair Settings lazy readiness, distinguish stale
+pixels from current UI defects, and restore the complete canonical matrix.
+AC: reproduce the Settings readiness failure with a delayed real chunk;
+retain the exact ready marker, zero retries and 0.1% pixel threshold; accept
+the server's current v2 relationship projection with explicit absence/gap
+accounting and negative tests; stabilize usage-only receipt anatomy; use the
+same explicit two-bundle whole-repository receipt setup locally and in the
+screenshot CI job without changing the focused pipeline; review differences
+before committing their PNGs, then compare every receipt on fresh data.
+Retain provenance and the steady-state-cost pass in the same PR. No merge,
+release promotion, label validation or scale claim is authorized by this work.
+
 **T57R.1 · Inherited gate repairs** *(cross-cutting; found while landing Epic
 57)* — return `make docs-check`, repository-wide lint and
 `internal/investigation` to green without touching the code those findings sit

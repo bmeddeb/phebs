@@ -71,7 +71,7 @@ async function capture(page: Page, route: ReceiptRoute, theme: (typeof THEMES)[n
   await waitForReceiptReady(page)
   if (route.awaitVisible) {
     for (const selector of route.awaitVisible) {
-      await expect(page.locator(selector).first(), `required ready state missing: ${selector}`).toBeVisible()
+      await expect(page.locator(selector).first(), `required ready state missing: ${selector}`).toBeVisible({ timeout: 30_000 })
     }
   }
   if (route.awaitAbsent) {
@@ -123,3 +123,17 @@ for (const theme of THEMES) {
     }
   }
 }
+
+// Keep a real lazy chunk outstanding beyond Playwright's ordinary 5s assertion
+// budget. DOM quiet alone must not turn an uncolored specimen into a receipt.
+test('settings waits for its delayed palette chunk', async ({ page }) => {
+  let delayed = false
+  await page.route('**/assets/highlight-*.js', async (request) => {
+    delayed = true
+    await new Promise((resolve) => setTimeout(resolve, 8_000))
+    await request.continue()
+  })
+  const route = ROUTES.find((candidate) => candidate.name === 'settings')!
+  await capture(page, route, 'light', 'comfortable', 'settings--light--comfortable')
+  expect(delayed, 'the production lazy highlight chunk was exercised').toBe(true)
+})

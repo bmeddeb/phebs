@@ -1,7 +1,7 @@
 # Screenshot receipts
 
 Deterministic Playwright screenshot receipts over the routed UI surfaces
-(`routes.ts` is the manifest). The CI workflow boots a dev instance with
+(`routes.ts` is the manifest). The CI workflow boots a receipt instance with
 the neutral-demo fixtures, then `make ui-receipts` compares every
 theme × density × route against the committed PNGs in `baselines/`.
 
@@ -40,8 +40,38 @@ machine — otherwise macOS and Ubuntu CI can never share one baseline set.
   EOF
   receipt_env="$(sh scripts/stage-receipt-fixtures.sh --env)" || exit 1
   eval "$receipt_env"
+  cat >>"$receipt_config" <<EOF
+  connections:
+    - name: t30-service-scope-demo
+      type: git
+      url: "$PHEBS_T307_NEUTRAL_SERVICE_REPO"
+    - name: t34-service-search-demo
+      type: git
+      url: "$PHEBS_T344_SERVICE_SEARCH_REPO"
+  service_catalogs:
+    "local$PHEBS_T307_NEUTRAL_SERVICE_REPO":
+      kind: operator
+      id: t335-demo
+      version: v1
+      path: "$(pwd)/docs/fixtures/t33.5-service-directory/t335-service-catalog.json"
+    "local$PHEBS_T344_SERVICE_SEARCH_REPO":
+      kind: operator
+      id: t344-demo
+      version: v1
+      path: "$(pwd)/docs/fixtures/t34.4-service-search/t344-service-catalog.json"
+  experimental:
+    provisional_proto_extraction: true
+    provisional_kafka_extraction: true
+  EOF
   set -m
-  make dev ARGS="-config $receipt_config" >"$receipt_run/phebs-dev.log" 2>&1 &
+  make bin/zoekt-git-index bin/phebs-focused-index bin/buf ui
+  PHEBS_ZOEKT_GIT_INDEX="$(pwd)/bin/zoekt-git-index" \
+    PHEBS_FOCUSED_INDEX="$(pwd)/bin/phebs-focused-index" \
+    PHEBS_BUF="$(pwd)/bin/buf" \
+    PHEBS_T307_NEUTRAL_SERVICE_REPO= PHEBS_T335_SERVICE_CATALOG= \
+    PHEBS_T344_SERVICE_SEARCH_REPO= PHEBS_T344_SERVICE_SEARCH_CATALOG= \
+    PHEBS_CONTRACT_ATLAS_FIXTURE= PHEBS_THRIFT_FIELD_DEMO_REPO= \
+    go run -tags ui ./cmd/phebs serve -config "$receipt_config" >"$receipt_run/phebs-dev.log" 2>&1 &
   receipt_server_pid=$!
   cleanup_receipt_server() {
     kill -TERM -- "-$receipt_server_pid" 2>/dev/null || true
@@ -67,8 +97,11 @@ machine — otherwise macOS and Ubuntu CI can never share one baseline set.
   credentials. Exiting the shell stops the server. The `surreal` binary on
   `PATH` must match `.surrealdb-version`.
 
-  The staging script copies the neutral-demo bundles into the fixed root;
-  `make dev` / `make dev-api` honor the pre-set
+  The receipt launch explicitly selects whole-repository indexing for both
+  bundles and their retained catalogs. It clears demo injectors so this
+  presentation cohort stays independent of the default focused pipeline.
+  Strict real-cohort readiness remains mandatory. The staging script copies
+  the bundles into the fixed root; ordinary `make dev` / `make dev-api` honor the pre-set
   `PHEBS_T307_NEUTRAL_SERVICE_REPO` / `PHEBS_T344_SERVICE_SEARCH_REPO`
   paths and fall back to the checkout-relative defaults when unset.
   Production repository-identity semantics (`internal/sync` RepoName) are
@@ -149,8 +182,8 @@ pinned or masked — the fixture root is only the repository-identity piece:
 |---|---|
 | Operator email/display name in the header | `installIdentityFixture` pins the neutral `UX audit` / `ux-audit@localhost.test` identity on every captured page (`fixture.ts`) |
 | Relative-time copy ("indexed … ago") | `page.clock.setFixedTime(FROZEN_NOW)` per capture (`routes.ts`, `receipts.spec.ts`) |
-| Audit trail rows (the harness's own logins/searches mutate them) | `mask: ['main tbody td > *']` — anatomy stays compared, dynamic cells masked |
-| Analytics page (usage-derived in whole) | `mask: ['main']` — chrome only |
+| Audit trail rows (the harness's own logins/searches mutate them) | Four page-scoped usage fixture rows; existing `mask: ['main tbody td > *']` keeps values masked and anatomy compared |
+| Analytics page (usage-derived in whole) | Page-scoped usage fixture fixes body height; existing `mask: ['main']` still compares chrome only |
 | Settings lifecycle values (disk pressure, capacity badge) | precise `[data-volatile="lifecycle"]` / status masks |
 | Indexing transitions ("Indexing…", "Cloning") | `awaitAbsent` terminal-state guards; `Failed` is terminal and fails the capture |
 | Fixture content drift | the t307 bundle pin (`T307_COMMIT`) binds the content |
@@ -219,3 +252,9 @@ The corrected Settings chunk is 28,072 bytes (8.33 kB reported gzip). All 746
 UI tests pass with the executable preview matrix included in manifest cardinality;
 13 fresh pinned Chromium checks pass, comparing eight original preview pixels
 unchanged. Original ordinary-cohort and native receipts retain their old source.
+
+T57R.2 waits up to the existing 30-second readiness budget for required lazy
+presentation markers. The Settings regression holds the real highlight chunk
+for eight seconds; the ordinary five-second assertion budget fails this case.
+Missing readiness still fails capture; thresholds and retries are unchanged.
+Browser plugin not available; these checks use the repository's Playwright flow.

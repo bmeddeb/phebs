@@ -45,7 +45,7 @@ export interface ReceiptRoute {
   path: string
   // Page-scoped API fixture installed only for this route. It exercises the
   // product surface without mutating the shared neutral dev cohorts.
-  fixture?: 'markdown-preview'
+  fixture?: 'markdown-preview' | 'audit' | 'analytics'
   // Regions that mutate BECAUSE a receipts run happens (e.g. the audit log
   // records the harness's own login) are masked, never baselined.
   mask?: string[]
@@ -151,10 +151,10 @@ export const ROUTES: ReceiptRoute[] = [
   // The run mutates audit values, not table anatomy. Mask only the dynamic
   // cell contents so headers, rows, spacing, borders, and status-chip layout
   // remain under visual comparison.
-  { name: 'audit', path: '/audit', mask: ['main tbody td > *'] },
+  { name: 'audit', path: '/audit', fixture: 'audit', mask: ['main tbody td > *'] },
   // Analytics content is usage-derived in whole (the harness's own searches
   // mutate it), so the body is masked and the receipt pins chrome only.
-  { name: 'analytics', path: '/analytics', mask: ['main'] },
+  { name: 'analytics', path: '/analytics', fixture: 'analytics', mask: ['main'] },
 ]
 
 export const THEMES = ['light', 'dark'] as const
