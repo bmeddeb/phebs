@@ -1,0 +1,17 @@
+{
+  "schema": "phebs-t475-bounded-startup-v1",
+  "source_commit": "c4eec64601f060d625216bfec9d29a538a445b5b",
+  "outcome": "refused_before_signing_or_server_launch",
+  "build": "clean managed worktree; embedded UI reused from source-identical PR80 tree; darwin/arm64 go1.26.5",
+  "commands": [
+    "go build -trimpath -tags ui -o /tmp/phebs-t475-integration-bin ./cmd/phebs",
+    "go build -buildvcs=true -trimpath -tags ui -o /tmp/phebs-t475-integration-bin ./cmd/phebs"
+  ],
+  "observed": "Both built images omitted vcs.revision; the unchanged release-sign verifier refused an empty source commit.",
+  "not_established": [
+    "real-binary signed startup/withdrawal",
+    "production signature or release"
+  ],
+  "cleanup": "No server launched; disposable integration private key and scratch removed.",
+  "next": "Use a clean build with actual embedded VCS identity when the existing production signing key is available; never inject or bypass provenance."
+}

@@ -18341,6 +18341,15 @@ closed or merged, and no production release is claimed. No label round or
 long rehearsal was run. The existing five-release selections remain exact;
 any records used with the new binary must be signed for its new identity.
 
+The one clean-build real-binary smoke check refused before signing or server
+launch: this managed-worktree Go build omitted `vcs.revision`, including with
+explicit `-buildvcs=true`, and the unchanged signer rejected the missing commit.
+`spike/t475/release/receipts/bounded-startup.json` retains that refusal. No native
+startup PASS is claimed, and no server or disposable private key remains. Ben
+confirmed the Linux signing key/host is currently unavailable. The draft needs
+both an honestly VCS-stamped clean binary and that existing key before a
+production record can be published; integration tests are otherwise passing.
+
 Steady-state cost: no new per-query/request, sync-tick, retry/no-op, publication,
 lock, cache, disk scan or child-process work. Startup adds one fixed recipe row
 to the existing implementation digest and one caller wrapper allocation when

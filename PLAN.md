@@ -12100,3 +12100,13 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   constructs one wrapper when the recipe is admitted. First released admission
   invokes the existing bounded generation replacement work; it adds no worker,
   scheduler, concurrency, source rule or ceiling. Later reuse is unchanged.
+
+  The one clean-build real-binary smoke check refused before signing or server
+  launch: the managed-worktree Go image omitted `vcs.revision`, even with
+  `-buildvcs=true`. The existing verifier correctly rejected it. Retain
+  `spike/t475/release/receipts/bounded-startup.json`; no native-startup PASS or
+  source identity is invented. The disposable integration key/scratch is gone,
+  no server launched, and Ben confirms the production key/host is unavailable.
+  A correctly VCS-stamped clean build and that existing key remain prerequisites
+  for the production record; do not bypass the verifier or create a substitute
+  production identity.

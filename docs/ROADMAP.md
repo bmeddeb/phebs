@@ -158,6 +158,12 @@ prepared under `spike/t475/release`; production signing on the Linux key host
 and ticket integration remain open. No independent caller accuracy or new
 operating/scale result is asserted.
 
+The clean-build real-binary smoke check refused at the existing signer because
+its Go build omitted `vcs.revision`; no server launched and the disposable key
+was removed. Ben confirmed the Linux signing key/host is currently unavailable.
+The draft retains the refusal and awaits an actual VCS-stamped clean build and
+production signature; the verifier and source requirements are unchanged.
+
 **Caller Map production priority (2026-10-09, Ben-directed):** after immediate
 SCIP operational availability, Epic 47 targets a supported Caller Map release
 for repositories within current admitted limits. Ben explicitly keeps

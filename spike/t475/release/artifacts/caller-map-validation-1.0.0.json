@@ -124,5 +124,10 @@
       "command": "make verify-glossary",
       "exit_code": 0
     }
-  ]
+  ],
+  "real_binary_startup": {
+    "outcome": "refused_before_signing_or_launch",
+    "receipt": "spike/t475/release/receipts/bounded-startup.json",
+    "sha256": "057733317f02035a6cfed3f54fdde691003a946da08305184d79e63f7aba8da2"
+  }
 }
