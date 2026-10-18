@@ -299,3 +299,11 @@ commits, all before/after hashes, scoped accessibility/keyboard checks,
 bundle measurements, generation-value and minor raster differences, and
 retained failed/interrupted diagnostics. These remain local pinned-renderer
 checks and do not close the separate focused pipeline or validation labels.
+
+Integration review adds eight non-screenshot sidebar scroll cases at
+721/800/960/961px, bringing the future full matrix to 143 tests. They first
+reproduce the tablet overlap, then pass with the shared narrow-header geometry;
+four native mobile checks preserve the existing static layout. No PNG changes.
+The recorded 135/135 canonical matrices remain bound to their original source,
+and the new cases are native functional evidence. Cross-checkout catalog-path
+portability remains a separate inherited receipt-environment follow-up.

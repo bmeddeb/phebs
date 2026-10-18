@@ -2445,6 +2445,14 @@ retained diagnostics and the bounded evidence are in
 [the T44.5 receipt](../ui/receipts/t445.json). The branch is ready for review;
 integration still requires Ben's request and no validation label is advanced.
 
+T44.5 integration review (2026-10-17): the tablet repository sidebars now use
+the shared narrow-header offset and viewport budget. All eight breakpoint
+scroll cases and four mobile layout checks pass, with 766 unit tests and the
+UI/build/docs gates green. Original canonical evidence remains source-bound;
+no PNG is re-authored. Ben requested PR #80 integration. The next Mac receipt
+follow-up is cross-checkout portability: pin catalog input paths and verify
+from two roots, independently of the pending Caller Map/Atlas labels.
+
 T43R.1 completed in the presentation track on 2026-08-30. The adopted type-floor
 rule keeps interface text at 11px or larger and permits one named 10px token
 only for supplementary, non-interactive machine metadata whose essential

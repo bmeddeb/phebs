@@ -15532,6 +15532,15 @@ classification, bundle/interaction measurements and limits. Masks, zero
 retries and 0.1% tolerance remain exact. No main merge, validation-label,
 focused-pipeline, release or scale closure is claimed.*
 
+*Integration review (2026-10-17): one tablet sidebar regression was reproduced
+and corrected at `b2ad626a`; eight scroll cases plus setup pass 9/9, and four
+390/720px mobile layout checks pass. All 766 UI tests, lint/build, embedded Go,
+Settings driver and docs/glossary pass. Final JS delta: +1,904 raw/+570 gzip
+bytes over the original base. No baseline is re-authored; the original
+canonical 135/135 evidence stays source-bound, and the expanded future matrix
+has 143 cases. No finding remains open. Ben explicitly requested integration
+of PR #80; no label or release claim is advanced.*
+
 ## Epic 45 · Bazel-first managed SCIP generation *(planned after Epics 40–42 · cross-track)*
 
 Phebs is purpose-built for massive, service-dense monorepositories. This epic
@@ -19918,6 +19927,15 @@ and keyboard relationship/citation journeys pass without overflow or errors.
 This is local canonical evidence, not hosted Actions;
 full Go/native ceremony suites were not rerun, and the separate focused
 pipeline diagnostic remains open.*
+
+*Next Mac receipt follow-up identified during PR #80 review (2026-10-17):
+pin operator catalog fixture paths independently of the checkout root and
+prove comparison from two different roots. The current production generation
+correctly binds `SourcePath`, while local/CI boot selects `$(pwd)` catalog
+paths; same-root fresh-data checks therefore do not establish portability.
+Keep production identity, strict cohort checks, masks, zero retries and 0.1%
+tolerance intact. This receipt-tooling work requires no Caller Map/Atlas
+validation labels and does not promote a released claim.*
 
 **T57R.1 · Inherited gate repairs** *(cross-cutting; found while landing Epic
 57)* — return `make docs-check`, repository-wide lint and

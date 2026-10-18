@@ -74,11 +74,12 @@
   "bundle": {
     "before_js_raw": 6751109,
     "before_js_gzip": 1993033,
-    "delta_js_raw": 1685,
-    "delta_js_individual_gzip": 509,
+    "delta_js_raw": 1904,
+    "delta_js_individual_gzip": 570,
     "chunks_before": 161,
     "chunks_after": 161,
-    "new_dependencies": 0
+    "new_dependencies": 0,
+    "measured_source_commit": "b2ad626a3c84c8ecffae46bc31ad53b1bd6e2e9a"
   },
   "critique": {
     "method": "dual isolated agents",
@@ -1021,5 +1022,105 @@
     "ci-ui.log": "390090981f82953f3bb7fabf9f39c62b99fe20d5c9ba792b943b9efc6ee41967",
     "partial-author.json": "3fd367e353a08fd265b9f32f9b5f6207d43ee6f3ac256a1ae83b9da5629e7414",
     "offset-diagnostic-author.json": "1899bc07de322efacd7626a69cf58b3c09deef1e5fc3f226cd009a119950de93"
+  },
+  "pre_review_bundle": {
+    "before_js_raw": 6751109,
+    "before_js_gzip": 1993033,
+    "delta_js_raw": 1685,
+    "delta_js_individual_gzip": 509,
+    "chunks_before": 161,
+    "chunks_after": 161,
+    "new_dependencies": 0
+  },
+  "integration_review": {
+    "date": "2026-10-17",
+    "source_commit": "b2ad626a3c84c8ecffae46bc31ad53b1bd6e2e9a",
+    "reviewed_original_head": "2c578be28a80e302fef74c22f98cc58ccdeb2d2c",
+    "method": "Direct host code review with full changed-file inventory; OCR installer failed on GitHub DNS, and release lookup failed TLS. No external review or configured LLM claimed.",
+    "resolved_finding": "P2: RepositoryTree and Search explorer retained 68px sticky top under the 105px header at 721\u2013960px. Both narrow offsets and viewport budgets now use HEADER_LAYOUT.",
+    "before": {
+      "startTime": "2026-10-18T02:46:47.057Z",
+      "duration": 4839.307,
+      "expected": 1,
+      "skipped": 0,
+      "unexpected": 4,
+      "flaky": 0
+    },
+    "after": {
+      "startTime": "2026-10-18T02:49:01.945Z",
+      "duration": 4519.387,
+      "expected": 9,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "mobile_checks": [
+      {
+        "width": 390,
+        "surface": "search",
+        "position": "static",
+        "maxHeight": "360px",
+        "overflow": false,
+        "header": 105
+      },
+      {
+        "width": 390,
+        "surface": "file",
+        "position": "static",
+        "maxHeight": "280px",
+        "overflow": false,
+        "header": 105
+      },
+      {
+        "width": 720,
+        "surface": "search",
+        "position": "static",
+        "maxHeight": "360px",
+        "overflow": false,
+        "header": 105
+      },
+      {
+        "width": 720,
+        "surface": "file",
+        "position": "static",
+        "maxHeight": "280px",
+        "overflow": false,
+        "header": 105
+      }
+    ],
+    "current_full_matrix_test_count": 143,
+    "baseline_updates": 0,
+    "canonical_scope": "Original 135/135 author and comparison remain exact evidence for the pre-review source. Eight added scroll cases run with native Chrome and real strict setup. The 1280px/390px canonical geometry is unchanged; the full canonical matrix was not repeated after this tablet-only correction.",
+    "bundle": {
+      "js_raw": 6753013,
+      "js_individual_gzip": 1993603,
+      "chunks": 161,
+      "delta_raw": 1904,
+      "delta_gzip": 570
+    },
+    "gates": {
+      "ui_tests": 766,
+      "lint": "pass",
+      "production_build": "pass",
+      "embedded_go_build": "pass",
+      "settings_driver": "pass",
+      "docs_glossary_whitespace": "pass"
+    },
+    "open_findings": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    },
+    "retained_mobile_probe": "Initial external probe guessed a nonexistent service/main.go and measured overflow before File loaded. Confirmation uses manifest path api/orders.proto and waits for Copy file contents; no production error-state change or waiver.",
+    "evidence_sha256": {
+      "sidebars-before.json": "a740cbb57b5b0fc95d25a60dbf42f34dbcf1820496742395b97471f2bb8b2859",
+      "sidebars-after.json": "6794f971f02c9870f40016e1547b653cef6f2a5badd71dcfd866b2e09dbbaef0",
+      "mobile-check.json": "49e487bb78bf4cd95ccf4f02c13b9a051d215f33080bc18c05d02daf110cfae7",
+      "ui-tests-corrected.log": "36b433be4a6157d171590dea45876231dd78b0d6b6ce7904858bfbedbeadfeff",
+      "sidebar-build.log": "63ac7f63e69c103307c08e7f52cdc6276dcf6bafc65a6c7c091011ccc6c9da75",
+      "bundle-corrected.json": "e3b3399e40a9ddf2bbd6cc3ae2e5747995a231e86bc9b9448b3c7cd27e20bb51"
+    },
+    "follow_up": "Inherited receipt setup selects operator catalogs from checkout paths. PublicationGenerationDigest binds SourcePath. Pin receipt inputs and compare from two different checkout roots without weakening authority or masks; this requires no validation labels."
   }
 }

@@ -12037,3 +12037,25 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   poll, lock, cache, child, persistent state or production memory/disk work;
   the screenshot harness alone adds eight bounded scroll checks. Existing
   1280px/390px baseline geometry is unchanged, so no PNG is re-authored.
+
+  The integration correction at `b2ad626a` passes all eight 721/800/960/961px
+  Search/File scroll cases plus strict setup (9/9), and four 390/720px mobile
+  layout checks retain static sidebars and no document overflow. All 766 UI
+  tests, lint/production build, embedded Go build, Settings driver and docs/
+  glossary pass. The final source bundle delta is +1,904 raw/+570 individually
+  gzipped bytes, still 161 chunks with no dependency. Original 135/135
+  canonical author/comparison evidence remains bound to its original source;
+  no PNG is changed and that full matrix was not repeated for this tablet-only
+  correction. The expanded future full suite has 143 cases. Direct review
+  leaves zero findings open; OCR binary installation/lookup was unavailable
+  on DNS/TLS, so no external tool review is claimed.
+
+  The review also records an inherited, separate receipt-environment gap:
+  operator catalog paths use the checkout root, while publication generations
+  intentionally bind that selected source path. A same-checkout fresh-data
+  comparison cannot prove cross-checkout portability. The next Mac receipt
+  task can pin those inputs and compare from two different roots without
+  waiting for Caller Map/Atlas validation labels, changing production identity,
+  weakening comparisons or promoting a release. Ben explicitly requested
+  review and integration of PR #80 in chat; the original branch-only holds
+  above are historical checkpoints, not a remaining approval request.
