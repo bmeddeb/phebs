@@ -16541,6 +16541,18 @@ Focused config/normal/race/static gates and eight harness controls pass.
 `spike/t458c/` retains the prospective one180s exact-image smoke plan; native
 readiness, scoped search, citation and joined teardown remain to execute.
 
+T45.8c completion (2026-10-18): one clean-image native run passed in20.344438s
+under the180s ceiling, with85total HTTP calls including startup attempts. Both
+retained HEADs and operator catalogs matched; required services became current,
+orders-api relationships complete/nonempty, anonymous service search refused401,
+exact scoped search and whole outside-unit sentinel passed, and a relationship
+citation matched its live root/projection and immutable retained blob/span.
+Graceful exit0, joined group absence and private runtime cleanup passed. Focused
+normal/race/vet/lint and nine pure harness controls also pass; no repeat or long
+rehearsal was needed. Exact evidence is `spike/t458c/success/`. This closes the
+neutral default repair; historical T45.8b failure stays exact, focused authority
+remains unavailable, and native managed generation/scale/release gates stay open.
+
 **T45.9 · Generated-SCIP evidence integration and product-scale closure**
 *(needs T45.5, T45.6, and T45.8b; T45.7 is optional)* — decide separately
 whether generated bundle members may feed SCIP-derived evidence. If GO,

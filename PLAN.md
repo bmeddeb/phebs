@@ -13576,3 +13576,17 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   List/read/citation/recovery mechanisms retain scoped source-mapped gates.
   Serving adds constant wrapper metadata, no second read, row scan, writer,
   cache/store/schema/lock/worker/child; UI validation/render stays page bounded.
+
+- **2026-10-18 — T45.8c neutral whole default accepted (Ben-routed Mac handoff).**
+  One clean bfaa5683native image passed the preregistered finite integration in
+  20.344438s with85total HTTP calls. Actual demo binders populated exact retained
+  HEADs/catalogs, required current services, complete relationships, authorized
+  exact service search, All code outside-unit sentinel and immutable live
+  citation. Exit0, group absence and secret/data cleanup passed. Prior focused
+  failures remain exact and focused authority guards are unchanged. No repeated
+  campaign or production signature was needed. Whole T307initial indexing uses
+  nine files rather than seven focused files; T323fourteen files are unchanged.
+  One startup selector read/closed comparison adds no per-query/tick/retry/
+  publication/cache/schema/lock or child-class work. Retained evidence lives in
+  `spike/t458c/success/`; managed generation, host/scale and release claims remain
+  separately gated.
