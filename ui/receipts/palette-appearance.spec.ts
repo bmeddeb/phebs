@@ -131,8 +131,9 @@ for (const width of widths) {
     const interactionMillis: number[] = []
     for (let index = 0; index < PALETTE_NAMES.length; index++) {
       const start = Date.now()
+      // Open the native menu before moving its highlight; Enter commits it.
+      await page.keyboard.press('Space')
       await page.keyboard.press(index === 0 ? 'Home' : 'ArrowDown')
-      // macOS opens the native menu on ArrowDown; Enter commits its choice.
       await page.keyboard.press('Enter')
       await f.ready(PALETTE_NAMES[index])
       // Stop timing at the live identity's token/color ready state. Fonts,
