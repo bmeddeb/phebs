@@ -1,0 +1,14 @@
+{
+  "title": "native Appearance frame light 1280 dense",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  },
+  "capture_state": "ready",
+  "audit": {
+    "version": "4.12.1",
+    "violations": [],
+    "passes": 11,
+    "incomplete": 0
+  }
+}

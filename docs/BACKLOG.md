@@ -15529,6 +15529,33 @@ attempts, final comparison, visual binding, cost and cleanup evidence. Unfiltere
 receipt runs gain ten cases; existing explicitly selected projects are unchanged.
 Linux #124 and production signing remain pending independently.
 
+**T44.2a ✅ · Appearance preview failure recovery** *(completed 2026-10-18, Mac;
+independent of #124)* — close the P2 silent-fallback observation recorded in
+T44.2's critique. Keep the exact plain specimen on lazy language/tokenizer
+failure, announce a bounded unavailable state, and offer an explicit keyboard
+reachable full-page reload. Preserve palette persistence and discard failures
+from superseded palette/theme identities. AC: regression red on the old source;
+focused existing palette/contrast/consumer checks plus new error/stale-result
+tests; production build/types/lint; both themes at 1280/390px with fault-state
+accessibility, visible focus, exact same-URL/palette recovery and no overflow;
+source/renderer-bound author/fresh native comparison; recorded bundle/interaction
+cost and independent source/design review. Existing canonical PNGs remain exact;
+production signing and Linux #124 remain pending. Recovery reloads Settings, so
+the owning guide tells users to finish edits and copy a new API key first.
+
+Closure: the expected old-source regression fails on the missing status; the
+candidate passes 300 focused checks, receipt types/lint and production build.
+Native author 14/14 and fresh 12/12 pass in 25.793828/15.551865 seconds including
+clean joined teardown. All 12 screenshot pairs are byte-identical and all 24
+capture-state axe audits have zero violations/incomplete checks. Actual keyboard
+reload recovers the preview at the same URL with its selected palette; only the
+four deliberately injected HTTP503 errors are admitted. Eight healthy frames
+also exactly match the previous native receipt. Bundle delta is +566 raw/+221
+individually gzipped bytes, with no new dependency/chunk. Independent source/cost
+and design review find no blocker; ordinary full-page reload state loss remains
+documented. See the [bounded outcome](../spike/t442a/README.md). No historical
+canonical baseline is refreshed; Linux #124 and signing remain pending.
+
 **T44.3 · Markdown source and preview** — a Markdown | Preview segmented
 control on the file viewer for markdown files. AC: view state in the URL
 (`view=preview`), source is the default, and `?L=` line deep-links force

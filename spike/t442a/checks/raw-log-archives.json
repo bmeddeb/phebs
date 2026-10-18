@@ -1,0 +1,22 @@
+[
+  {
+    "archive": "baseline-regression.log.gz",
+    "decoded_sha256": "ae1b98a3c9f4b9bfc183672da36eba9cb25283b396df3649932bd6578875bacb",
+    "archive_sha256": "45ce2f17fb2842a67049ab958a9a8837ef11a07accaea2e809802457ea615c83"
+  },
+  {
+    "archive": "build.log.gz",
+    "decoded_sha256": "71475e830f736ec2626a9c29a9d01cd1d129cf429b72b7055cab9987759de51c",
+    "archive_sha256": "49cf2e4c7fab65a25dc87122df331d4ee25b22be4d58e3b4a9f75696c2dbcc12"
+  },
+  {
+    "archive": "focused.log.gz",
+    "decoded_sha256": "9ff75a56ca5132f3e590f439c2779a7e1867de8c017c8c4180b2aa792a3b7140",
+    "archive_sha256": "584fa11b92c9abc5241310f8ace9fc1c2e5aa0059ab275f4dcf62b1da8d5639a"
+  },
+  {
+    "archive": "whitespace.log.gz",
+    "decoded_sha256": "edc6d8bd461c2d271b3c3c883adbb7b784e07b8360ebd0ea28d8b6aaff25db80",
+    "archive_sha256": "2dfebfa3cfd6a735e63ebc1f786edb6da098e39b294d97e6505794fdd4c48b41"
+  }
+]

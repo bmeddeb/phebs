@@ -2678,6 +2678,17 @@ full Noble matrix or product UI/bundle change. See
 [the T44.2 outcome](../spike/t442/appearance-receipts/README.md). Linux #124 and
 production signing remain pending; no validation label is advanced.
 
+T44.2a preview recovery (2026-10-18, Mac): the recorded silent-fallback
+observation is closed with an announced unavailable state and explicit
+full-page reload. Plain source and palette identity remain truthful; stale
+rejections cannot replace the current preview. Focused checks/build and native
+author 14/14 plus fresh 12/12 pass, with 12 byte-identical screenshot pairs and
+24 clean capture-state accessibility audits. The eight healthy frames also
+match the prior native lineage exactly. The guide names ordinary reload state
+loss. [The bounded outcome](../spike/t442a/README.md) preserves all historical
+baselines. This independent Mac follow-up does not advance Linux #124,
+validation labels or production signing.
+
 T43R.1 completed in the presentation track on 2026-08-30. The adopted type-floor
 rule keeps interface text at 11px or larger and permits one named 10px token
 only for supplementary, non-interactive machine metadata whose essential

@@ -1,0 +1,13 @@
+{
+  "source_commit": "a40a4e6d0149b18c35822821500e8e146f54636f",
+  "reviewer": "ticket_dependency_audit",
+  "outcome": "no_blocking_findings",
+  "scope": [
+    "ui/src/pages/SettingsPage.tsx",
+    "ui/src/pages/SettingsPage.test.tsx",
+    "ui/receipts/palette-appearance.spec.ts",
+    "docs/guides/WORKFLOWS.md"
+  ],
+  "cost": "Existing4fixedline tokenization; failure1bounded localupdate; no new query/sync/publication/no-op work; explicit userreload repeats ordinary startup/auth/Settings reads; no new dependency/cache/worker/lock/store/corpus path",
+  "bounds": "14default Appearance cases, no full canonical/backend/Linux/signing claim"
+}

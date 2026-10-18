@@ -11238,3 +11238,21 @@ synthetic catalog. No production/test code or steady-state cost changes; no
 full package/race matrix, Linux #124 acceptance, pressure/restore/whole-phase,
 complete readiness, ceremony, scale, SLO or release result. Production signing
 stays pending independently.
+
+## T44.2a · Appearance preview failure recovery (complete 2026-10-18)
+
+The recorded silent-fallback observation now has an announced unavailable state,
+exact plain specimen and explicit keyboard-reachable full-page reload. Failure
+uses the existing mode/palette identity and disposed-effect fence; a late old
+rejection cannot replace current colors. Browser palette preferences survive;
+the guide explains finishing Settings edits/copying a new API key before reload.
+
+The old-source regression is red as expected; candidate checks pass 300 focused
+tests, receipt types/lint and production build. Author 14/14 plus fresh 12/12 native
+cases pass with 12 byte-identical screenshot pairs, 24 clean capture-state axe audits
+and clean joined custody. Four deliberate 503 failures recover by actual keyboard
+reload at the same URL/palette. Eight healthy frames also match the prior native
+lineage exactly; all 130 canonical baseline hashes stay unchanged. Independent
+source/cost/design review has no blocker. Bundle delta is +566 raw/+221 individually
+gzipped bytes with no new chunk/dependency. [Evidence](../spike/t442a/README.md)
+establishes presentation mechanics only. Linux #124 and signing remain pending.

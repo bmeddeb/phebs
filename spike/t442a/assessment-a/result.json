@@ -1,0 +1,202 @@
+{
+  "schema": "phebs-t442-native-qa-v1",
+  "pass": "assessment-a",
+  "outcome": "passed",
+  "source_checkpoint": "a40a4e6d0149b18c35822821500e8e146f54636f",
+  "scroll_helper_sha256": "1207f1a353b3425ba308bec6806b79326a36f717c4103aac0d0be02fdc308c37",
+  "native_renderer_claim": "Darwin installed Chrome only; no Noble baseline equivalence",
+  "commands": [
+    {
+      "name": "vite",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "/Users/ben/.codex/worktrees/t442a-preview-recovery/phebs.com/ui/node_modules/vite/bin/vite.js",
+        "preview",
+        "/Users/ben/.codex/worktrees/t442a-preview-recovery/phebs.com/ui",
+        "--outDir",
+        "/Users/ben/.codex/worktrees/t442a-preview-recovery/phebs.com/ui/dist",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "63982",
+        "--strictPort"
+      ]
+    },
+    {
+      "name": "chrome",
+      "argv": [
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "--headless=new",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--disable-background-networking",
+        "--disable-component-update",
+        "--disable-sync",
+        "--remote-debugging-address=127.0.0.1",
+        "--remote-debugging-port=0",
+        "--user-data-dir=/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/assessment-a/private-chrome-profile",
+        "about:blank"
+      ]
+    },
+    {
+      "name": "client",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "/Users/ben/.codex/worktrees/t442a-preview-recovery/phebs.com/ui/node_modules/@playwright/test/cli.js",
+        "test",
+        "--config",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/assessment-a-runner/playwright.config.ts",
+        "--project",
+        "appearance",
+        "--max-failures=1",
+        "--grep",
+        "native Appearance unavailable recovery (light 390|dark 1280)"
+      ]
+    }
+  ],
+  "terminals": {
+    "client": {
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "already_exited",
+      "pid": 29412,
+      "expected_pgid": 29412,
+      "observed_pgid": 29412,
+      "joined": true
+    },
+    "chrome": {
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "sigterm",
+      "pid": 29394,
+      "expected_pgid": 29394,
+      "observed_pgid": 29394,
+      "joined": true
+    },
+    "vite": {
+      "exit_code": 143,
+      "teardown": "clean",
+      "termination_mode": "sigterm",
+      "pid": 29387,
+      "expected_pgid": 29387,
+      "observed_pgid": 29387,
+      "joined": true
+    }
+  },
+  "owners": {
+    "vite": {
+      "pid": 29387,
+      "expected_pgid": 29387,
+      "observed_pgid": 29387
+    },
+    "chrome": {
+      "pid": 29394,
+      "expected_pgid": 29394,
+      "observed_pgid": 29394
+    },
+    "client": {
+      "pid": 29412,
+      "expected_pgid": 29412,
+      "observed_pgid": 29412
+    }
+  },
+  "verified_census": {
+    "production_inputs": {
+      "rows": 118,
+      "digest": "09a1fd1d2bbf6735d13bf394a26a07baa9437dfeb697be9b62fb0377d38a64db"
+    },
+    "production_dist": {
+      "rows": 165,
+      "digest": "cf31b3397ab481812df93e63a68c872c1eb83e86c6c6b9a0ceae46134fec1343"
+    }
+  },
+  "tools": {
+    "node": {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+      "sha256": "ee6fb0e015284d83a91e8ec5213f43a157f8a392b58555301682892ba928c04a"
+    },
+    "chrome_launcher": {
+      "path": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "sha256": "3972431aa8acff4e590998116c6c3e663e9a4d0eb6efd08fd160df8206db94a6"
+    },
+    "axe": {
+      "path": "/Users/ben/phebs.com/ui/node_modules/axe-core/axe.min.js",
+      "sha256": "66a8aaa95a8b044a7fd74a5435873bf04ff65a1ca75567c921b7509742085a14",
+      "version": "4.12.1"
+    },
+    "playwright": "1.62.1"
+  },
+  "started_monotonic": 0.71712575,
+  "renderer": {
+    "Browser": "Chrome/155.0.8059.82",
+    "Protocol-Version": "1.3",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
+    "V8-Version": "15.5.35.23",
+    "WebKit-Version": "537.36 (@c56fe5daef8be123f68808a4bb705ff378cd2019)",
+    "webSocketDebuggerUrl": "ws://127.0.0.1:63994/devtools/browser/6d164049-fb8b-4a4e-bb80-abc9b0b0c901"
+  },
+  "playwright_stats": {
+    "startTime": "2026-10-18T20:38:47.035Z",
+    "duration": 7029.0199999999995,
+    "expected": 2,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "frames": [
+    {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/assessment-a/output/palette.native-native-Appe-48e20-vailable-recovery-dark-1280-appearance/palette-preview-unavailable--dark--1280.png",
+      "name": "palette-preview-unavailable--dark--1280.png",
+      "bytes": 39807,
+      "sha256": "26d0f607c3e12ee182720272108a3b93851b93e7d058d1ff53c7b3ba99fedf9a"
+    },
+    {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/assessment-a/output/palette.native-native-Appe-ad586-vailable-recovery-light-390-appearance/palette-preview-unavailable--light--390.png",
+      "name": "palette-preview-unavailable--light--390.png",
+      "bytes": 32838,
+      "sha256": "5ffd244ff0865f828b726ba20a9eacec0293675d26254ea76e534feb6c43e354"
+    }
+  ],
+  "audits": [
+    {
+      "title": "native Appearance unavailable recovery dark 1280",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "capture_state": "unavailable",
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 15,
+        "incomplete": 0
+      }
+    },
+    {
+      "title": "native Appearance unavailable recovery light 390",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "capture_state": "unavailable",
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 15,
+        "incomplete": 0
+      }
+    }
+  ],
+  "all_owned_groups_joined_cleanly": true,
+  "total_seconds": 9.870343,
+  "final_census": {
+    "production_inputs": {
+      "rows": 118,
+      "digest": "09a1fd1d2bbf6735d13bf394a26a07baa9437dfeb697be9b62fb0377d38a64db"
+    },
+    "production_dist": {
+      "rows": 165,
+      "digest": "cf31b3397ab481812df93e63a68c872c1eb83e86c6c6b9a0ceae46134fec1343"
+    }
+  }
+}

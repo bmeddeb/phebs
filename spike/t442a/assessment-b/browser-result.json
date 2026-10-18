@@ -1,0 +1,180 @@
+{
+  "method": "cached Playwright; installed Darwin Chrome; headless only",
+  "visible_overlay": false,
+  "views": [
+    {
+      "theme": "light",
+      "width": 1280,
+      "state": "ready",
+      "console": [
+        {
+          "type": "log",
+          "text": "%c[impeccable] No anti-patterns found. color: #22c55e; font-weight: bold",
+          "url": "http://127.0.0.1:65348/detect.js"
+        }
+      ],
+      "pageerrors": [],
+      "unexpected": [],
+      "faults": [],
+      "preflight": {
+        "title": "[Human] Impeccable · Appearance",
+        "scriptRan": true
+      },
+      "injection": true,
+      "impeccableConsole": [
+        {
+          "type": "log",
+          "text": "%c[impeccable] No anti-patterns found. color: #22c55e; font-weight: bold",
+          "url": "http://127.0.0.1:65348/detect.js"
+        }
+      ],
+      "domEvidence": {
+        "title": "[Human] Impeccable · Appearance",
+        "scriptSources": [
+          "http://127.0.0.1:65348/detect.js"
+        ],
+        "overlayElements": [],
+        "appearanceText": "Appearance\nCode highlighting for the viewer, search results, and citations. Every palette meets the AA contrast floor in both themes; the choice is stored in this browser.\nCode highlight palette\nPhebs\nQuiet\nClassic\nHigh contrast\n// verified span\nfunc Count(limit int) error {\n\treturn fmt.Errorf(\"bound=%d\", 42)\n}",
+        "documentWidth": 1280,
+        "viewportWidth": 1280
+      },
+      "controls": [
+        {
+          "tag": "SELECT",
+          "text": "phebs",
+          "width": 240,
+          "height": 30,
+          "font": "12px"
+        }
+      ],
+      "screenshot": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/assessment-b/overlay-light-1280-ready.png",
+      "contextClosed": true
+    },
+    {
+      "theme": "dark",
+      "width": 1280,
+      "state": "unavailable",
+      "console": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+          "url": "http://127.0.0.1:65298/assets/highlight-DQ8ytWfb.js"
+        },
+        {
+          "type": "log",
+          "text": "%c[impeccable] No anti-patterns found. color: #22c55e; font-weight: bold",
+          "url": "http://127.0.0.1:65348/detect.js"
+        }
+      ],
+      "pageerrors": [],
+      "unexpected": [],
+      "faults": [
+        "http://127.0.0.1:65298/assets/highlight-DQ8ytWfb.js"
+      ],
+      "preflight": {
+        "title": "[Human] Impeccable · Appearance",
+        "scriptRan": true
+      },
+      "injection": true,
+      "impeccableConsole": [
+        {
+          "type": "log",
+          "text": "%c[impeccable] No anti-patterns found. color: #22c55e; font-weight: bold",
+          "url": "http://127.0.0.1:65348/detect.js"
+        }
+      ],
+      "domEvidence": {
+        "title": "[Human] Impeccable · Appearance",
+        "scriptSources": [
+          "http://127.0.0.1:65348/detect.js"
+        ],
+        "overlayElements": [],
+        "appearanceText": "Appearance\nCode highlighting for the viewer, search results, and citations. Every palette meets the AA contrast floor in both themes; the choice is stored in this browser.\nCode highlight palette\nPhebs\nQuiet\nClassic\nHigh contrast\n// verified span\nfunc Count(limit int) error {\n\treturn fmt.Errorf(\"bound=%d\", 42)\n}\nPreview unavailable.\nReload page",
+        "documentWidth": 1280,
+        "viewportWidth": 1280
+      },
+      "controls": [
+        {
+          "tag": "SELECT",
+          "text": "phebs",
+          "width": 240,
+          "height": 30,
+          "font": "12px"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Reload page",
+          "width": 95.453125,
+          "height": 44,
+          "font": "12px"
+        }
+      ],
+      "screenshot": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/assessment-b/overlay-dark-1280-unavailable.png",
+      "contextClosed": true
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "state": "unavailable",
+      "console": [
+        {
+          "type": "error",
+          "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+          "url": "http://127.0.0.1:65298/assets/highlight-DQ8ytWfb.js"
+        },
+        {
+          "type": "log",
+          "text": "%c[impeccable] No anti-patterns found. color: #22c55e; font-weight: bold",
+          "url": "http://127.0.0.1:65348/detect.js"
+        }
+      ],
+      "pageerrors": [],
+      "unexpected": [],
+      "faults": [
+        "http://127.0.0.1:65298/assets/highlight-DQ8ytWfb.js"
+      ],
+      "preflight": {
+        "title": "[Human] Impeccable · Appearance",
+        "scriptRan": true
+      },
+      "injection": true,
+      "impeccableConsole": [
+        {
+          "type": "log",
+          "text": "%c[impeccable] No anti-patterns found. color: #22c55e; font-weight: bold",
+          "url": "http://127.0.0.1:65348/detect.js"
+        }
+      ],
+      "domEvidence": {
+        "title": "[Human] Impeccable · Appearance",
+        "scriptSources": [
+          "http://127.0.0.1:65348/detect.js"
+        ],
+        "overlayElements": [],
+        "appearanceText": "Appearance\nCode highlighting for the viewer, search results, and citations. Every palette meets the AA contrast floor in both themes; the choice is stored in this browser.\nCode highlight palette\nPhebs\nQuiet\nClassic\nHigh contrast\n// verified span\nfunc Count(limit int) error {\n\treturn fmt.Errorf(\"bound=%d\", 42)\n}\nPreview unavailable.\nReload page",
+        "documentWidth": 390,
+        "viewportWidth": 390
+      },
+      "controls": [
+        {
+          "tag": "SELECT",
+          "text": "phebs",
+          "width": 328,
+          "height": 30,
+          "font": "12px"
+        },
+        {
+          "tag": "BUTTON",
+          "text": "Reload page",
+          "width": 95.453125,
+          "height": 44,
+          "font": "12px"
+        }
+      ],
+      "screenshot": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/assessment-b/overlay-light-390-unavailable.png",
+      "contextClosed": true
+    }
+  ],
+  "outcome": "passed",
+  "browserControlClosed": true
+}

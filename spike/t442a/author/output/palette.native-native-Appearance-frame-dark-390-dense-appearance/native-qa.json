@@ -1,0 +1,14 @@
+{
+  "title": "native Appearance frame dark 390 dense",
+  "viewport": {
+    "width": 390,
+    "height": 900
+  },
+  "capture_state": "ready",
+  "audit": {
+    "version": "4.12.1",
+    "violations": [],
+    "passes": 11,
+    "incomplete": 0
+  }
+}

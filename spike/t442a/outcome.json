@@ -1,0 +1,57 @@
+{
+  "ticket": "T44.2a",
+  "date": "2026-10-18",
+  "source_checkpoint": "a40a4e6d0149b18c35822821500e8e146f54636f",
+  "base_commit": "9b3468f00b706bde161e01cb2aa090b979e36108",
+  "outcome": "passed",
+  "author_cases": 14,
+  "fresh_cases": 12,
+  "frame_pairs": 12,
+  "all_pairs_byte_identical": true,
+  "healthy_vs_previous_byte_identical": 8,
+  "capture_state_axe_audits": 24,
+  "axe_violations": 0,
+  "axe_incomplete": 0,
+  "expected_fault_errors_per_pass": 4,
+  "unexpected_console_page_errors": 0,
+  "browser_limits": "Darwin arm64 Chrome155.0.8059.82 only; no Noble/canonical fullmatrix equivalence",
+  "unit_checks": 300,
+  "unit_filter_skips": 144,
+  "baseline_regression": "Expected exit1: old source lacks unavailable status; source restored in finally",
+  "scope": "SettingsAppearance presentation fixture; no real backend authentication, Linux or signing result",
+  "review": "Independent source/cost clean; dual-agent design34/40 with one nonblocking documented reload concern; detector0findings and3successful headless injections",
+  "source_sha256": {
+    "ui/src/pages/SettingsPage.tsx": "264a3803403a7fa06e952252045a4423b194106ef33fa251a400e3b9a2d61086",
+    "ui/src/pages/SettingsPage.test.tsx": "17a1ead5c4bdef3b417770740a26c03c37c0dabe32d5e4d0dea5ec0d9d1026ea",
+    "ui/receipts/palette-appearance.spec.ts": "5168a74961a112bcde47e29768b77c22f71d0a3f12a2a60c839070097efeece6",
+    "ui/receipts/fixture.ts": "1207f1a353b3425ba308bec6806b79326a36f717c4103aac0d0be02fdc308c37",
+    "ui/receipts/routes.ts": "463486f1a5df3ac5cd5f04cf68dce8c48a71497f57cde60b3f4ce5c29763de8e",
+    "ui/playwright.config.ts": "b205b0585f83785ee14c041a479919e93dc4da4ee7a47b0bbe3f854a538b0fe3"
+  },
+  "native_runs": {
+    "author": {
+      "outcome": "passed",
+      "seconds_including_join": 25.793828,
+      "joined": true
+    },
+    "fresh": {
+      "outcome": "passed",
+      "seconds_including_join": 15.551865,
+      "joined": true
+    },
+    "assessment-a": {
+      "outcome": "passed",
+      "seconds_including_join": 9.870343,
+      "joined": true
+    }
+  },
+  "bundle_delta": {
+    "chunks": 0,
+    "raw": 566,
+    "gzip": 221
+  },
+  "canonical_baselines_changed": 0,
+  "linux_issue": "https://github.com/bmeddeb/phebs/issues/124",
+  "production_signing": "pending",
+  "assessment_b_cleanup": "Initial Chrome group-drain EPERM after root exit0 retained as stopped; read-only follow-up proves all4ownedgroups absent; no rerun/kill; private profile removed"
+}
