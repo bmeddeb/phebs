@@ -12333,3 +12333,17 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   startup work, locks, caches, publication, concurrency or children change;
   preparation and qualification are one-shot bounded work. Actual quality and
   operating outcomes remain pending and must not be inferred from this freeze.
+
+  Before the first index execution, review corrects only an omitted required
+  `index` subcommand in the frozen scip-go argv. The unchanged preregistration
+  remains exact; separate preparation evidence records both commands and the
+  lead's prospective approval. The one offline index attempt passes in 1.865s;
+  existing T47.2 canonicalization passes in 0.965s with nine documents, no dropped
+  records or version skew. All eighteen source files remain unchanged. The lead
+  creates actual evaluation source commit `3186f5e995e4c389caef090f1c2b2adccd90d91d`
+  and derived-input commit `dba5bcf2480ea04b7e775905c098a45acadd5b8e`, verifies
+  every Git blob and retains their 51,603-byte bundle. The two separate local
+  repository identities share those exact nineteen-file input bytes; only the
+  primary contributes source quality denominators. These preparation/source
+  bindings precede candidate export and scoring. No quality or operating PASS
+  is inferred from indexing, source cloning or canonicalization.
