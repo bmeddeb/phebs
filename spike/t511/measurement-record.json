@@ -1,0 +1,72 @@
+{
+  "schema": "t511-first-measurement-record-v1",
+  "record_date": "2026-10-18",
+  "review": {
+    "reviewer": "lead /root",
+    "checkpoint_commit": "fe00906d69a46c80294ce7a9b9f3198bc98b4bdc",
+    "preregistration_digest": "sha256:171f577d1a79f8c8e44325b92182fd7444fc827644bac8138bcce1103fe1ada0",
+    "source_labels_digest": "sha256:3988617e8ba5f9cf5218bd2bd67d1f921cbb2ed484a4d8d421b31fcff5c253c3",
+    "declaration_oracle_digest": "sha256:c1964244656b6e95aaaa6bea77496e07934ffde59fc49493e81f6ed7a765cc73",
+    "review": "Lead independently checked every occurrence byte range, all public14/56 and neutral17/7/12 source identities, source/index digests and real evaluation bundles before approving first measurement."
+  },
+  "first_measurement": {
+    "command": "T511_RESULT_PATH=\"$PWD/spike/t511/result.json\" go test ./spike/t511 -run ^TestFrozenFieldQuality$ -count=1 -timeout=30s -v",
+    "harness_digest": "sha256:ce8e395448175cc35b15aecbb3abc127bbc931e1fc10e2bce41565fbf7b17e5d",
+    "result": "PASS",
+    "go_test_package_seconds": 0.324,
+    "test_wall_seconds_reported": 0.02,
+    "result_path": "result.json",
+    "result_digest": "sha256:e848bf4098fb4d3282dac6e88dea567ebd37a89a03aa35886f01cdb44db6d955",
+    "recipe_code": [
+      {
+        "path": "internal/extract/extractors/scipfield/scipfield.go",
+        "digest": "sha256:67d143e644f1f404884eaeaa54b079b628c6082a7adc74a7c025e769d9591458"
+      },
+      {
+        "path": "internal/extract/extractors/protodecl/protodecl.go",
+        "digest": "sha256:e70a1454eb9367dd80485e8805e521d60711632d978914dcbce780e621bbf15f"
+      },
+      {
+        "path": "internal/extract/scipsource/policy.go",
+        "digest": "sha256:43a28796c8058908c95b9d11937c647c287da11a3450079d0bf3cc8e688b9f3a"
+      },
+      {
+        "path": "internal/extract/sdk/sdk.go",
+        "digest": "sha256:aebb28d5450088a99e1a6aa21a4f2f4fe615d58574e01280a16978761dfb3541"
+      },
+      {
+        "path": "go.mod",
+        "digest": "sha256:71afc76e3fc46c6fc3b9364fe10d4a9149e7b40bbb7cc84d5401f4d459ae6662"
+      },
+      {
+        "path": "go.sum",
+        "digest": "sha256:d7aa72d0c2c4283125d37d4377e74be0e87723735a27015900d23092798b1665"
+      }
+    ],
+    "retries": 0,
+    "extractor_children": 0,
+    "networks": 0,
+    "labels_changed": false,
+    "thresholds_changed": false,
+    "field_extractor_invocations": 2,
+    "declaration_extractor_invocations": 2
+  },
+  "follow_up": {
+    "change": "Replace two deprecated GetRange witness reads with SourceRange; candidate, inputs, labels, thresholds and first result unchanged.",
+    "checks": [
+      "compile-only pre-measurement0.353s; no extractor run",
+      "focused vet passed",
+      "pinned golangci-lint passed with0issues",
+      "focused race package passed1.414s under30s bound; same frozen source/labels, no report overwrite"
+    ]
+  },
+  "cost": {
+    "production": "No runtime code change: no added query/request, sync tick, startup/restart, retry/no-op, publication, lock, cache, schema, concurrency, disk or child cost.",
+    "preparation": "One serial offline scip-go process per population with GOMAXPROCS2 and90s timeout;0.724s/0.174s; all direct children joined. Max child RSS49,561,600B is a Darwin lifetime maximum for one child, not summed process-family memory.",
+    "stored_input_bytes": 226991,
+    "stored_bundle_bytes": 43825,
+    "measurement": "Existing reader enumerates the immutable selected tree; parses one bounded committed SCIP index, generated Go definitions and unique source proto; caches parsed proto fields for that invocation; re-reads each source document with emitted facts. No child/network/DB. Public5reads161951B/1665us; neutral5reads59966B/315us. Times are wall time for extractor plus test-corpus and streaming callback verification, not isolated extractor CPU or production latency. Corpus.Read hashes each read content; the callback additionally hashes the entire fact.Path source and checks both line-prefix counts once per emitted fact, including all generated-file emissions (25total public facts and24total neutral facts). These are finite harness observations, not a ceiling or SLO.",
+    "implementation_bounds": "Existing64MiB SCIP,100000documents,1000000occurrences,16KiBsymbol,4MiBproto and4MiBgenerated file limits; derived occurrence/symbol maps and sorting remain bounded by those inputs. No new broad cache, full-corpus hash, lock or parallel execution in production. Frozen-input preflight, descriptor and exact definition-witness checks run outside the timed extractor-plus-callback region; test-corpus hashing and callback source hashing/line-prefix verification are included in that wall time."
+  },
+  "qualification": "Public finite direct-field census and separate neutral controls only; no generalized accuracy, semantic read/write, scale, production registration, runtime surfaces, signing or release claim. T51.2/T51.3 and production signing remain pending."
+}

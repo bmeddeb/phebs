@@ -16,6 +16,23 @@ source and produced SCIP together. Evaluation repository labels keep those
 commits distinct from upstream history. All indexed documents are retained.
 The public files retain their copyright headers and Apache-2.0 license.
 
+The lead accepted the corrected frozen authority and source labels at checkpoint
+`fe00906d69a46c80294ce7a9b9f3198bc98b4bdc`. The first measurement passed:
+14/14 public positives with zero emissions at 56 negatives; 17/17 neutral
+positives with zero emissions at seven negatives and 12 unsupported sites.
+All 19 descriptor/source/declaration field identities agree. Eleven public
+and seven neutral generated-file emissions are outside those denominators.
+`result.json` preserves the first result and its exact bridge witnesses;
+`measurement-record.json` binds its review, implementation and cost evidence.
+
+The recorded 1,665 µs public and 315 µs neutral times are wall time for the
+extractor plus the test corpus and streaming callback verification. Each corpus
+read hashes its content; each emitted fact, including generated-file emissions,
+also hashes its complete source content and checks both line-prefix counts in
+the callback. These are finite harness observations, not isolated extractor CPU
+or production latency measurements. Frozen-input preflight, descriptor and
+exact definition-witness checks run outside that timed region.
+
 Run the frozen check after preregistration review:
 
 ```sh

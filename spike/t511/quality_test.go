@@ -560,15 +560,14 @@ func checkDescriptor(t *testing.T, c *corpus, all []declaration) {
 	}
 }
 
-func byteRange(t *testing.T, content string, ranges []int32) (int, int) {
+func byteRange(t *testing.T, content string, occurrence *scip.Occurrence) (int, int) {
 	t.Helper()
-	if len(ranges) != 3 && len(ranges) != 4 {
+	rangeValue, present := occurrence.SourceRange()
+	if !present || rangeValue.Validate() != nil {
 		t.Fatal("invalid frozen SCIP range")
 	}
-	line, col, endLine, endCol := int(ranges[0]), int(ranges[1]), int(ranges[0]), int(ranges[2])
-	if len(ranges) == 4 {
-		endLine, endCol = int(ranges[2]), int(ranges[3])
-	}
+	line, col := int(rangeValue.Start.Line), int(rangeValue.Start.Character)
+	endLine, endCol := int(rangeValue.End.Line), int(rangeValue.End.Character)
 	lines := strings.SplitAfter(content, "\n")
 	if line < 0 || line >= len(lines) || endLine < line || endLine >= len(lines) || col < 0 || col > len(strings.TrimSuffix(lines[line], "\n")) || endCol < 0 || endCol > len(strings.TrimSuffix(lines[endLine], "\n")) {
 		t.Fatal("invalid frozen SCIP byte range")
@@ -598,7 +597,7 @@ func exactWitness(t *testing.T, c *corpus, index *scip.Index, row label, decl de
 	for _, d := range index.GetDocuments() {
 		if d.GetRelativePath() == row.Path {
 			for _, o := range d.GetOccurrences() {
-				a, b := byteRange(t, c.files[row.Path], o.GetRange())
+				a, b := byteRange(t, c.files[row.Path], o)
 				if a == row.Start && b == row.End && o.GetSymbolRoles()&int32(scip.SymbolRole_Definition|scip.SymbolRole_ForwardDefinition) == 0 {
 					matches = append(matches, o)
 				}
@@ -630,7 +629,7 @@ func exactWitness(t *testing.T, c *corpus, index *scip.Index, row label, decl de
 				if d.GetRelativePath() != c.Generated {
 					t.Fatal("foreign definition path")
 				}
-				a, b := byteRange(t, c.files[c.Generated], def.GetRange())
+				a, b := byteRange(t, c.files[c.Generated], def)
 				definitions = append(definitions, [2]int{a, b})
 			}
 		}

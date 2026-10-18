@@ -12318,3 +12318,20 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   request/startup/sync/retry/no-op/publication, lock, cache, state, scheduler,
   concurrency or child cost changes. Actual finite results, T51.2 source fences
   and T51.3 operating/signed closure remain separate after this checkpoint.
+
+  T51.1's first candidate measurement then passes the unchanged finite gates:
+  public14/14 positive references and56 clean negatives; authored17/17 positives,
+  7 clean negatives and12 clean unsupported sites. All19 descriptor/source
+  identities and22 unique generated-definition witnesses agree; generated-only
+  emissions11/7 remain outside quality denominators. All31 consumer roles are
+  raw SCIP read, including assignment controls; no semantic-write accuracy follows.
+  Preserve the first result and preregistration; normal0.324s, race1.414s, vet,
+  pinned lint0issues and independent source/denominator/identity review pass.
+  A review wording correction clarifies1665/315µs are extractor-plus-streaming-
+  verification wall observations: callbacks hash each fact's source and count
+  line prefixes, including generated emissions. Preflight/descriptor/definition
+  witness work is outside those timed regions. Each extraction makes five corpus
+  reads,161,951/59,966 bytes; these are finite fixture observations, no SLO or
+  production headroom claim. No production code, source fence, registration,
+  schema, lock, cache, worker, disk publication or child behavior changes.
+  T51.2 production admission and T51.3 operating/signed promotion remain pending.

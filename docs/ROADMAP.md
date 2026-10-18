@@ -176,6 +176,12 @@ inputs, explicit descriptor/lineage witnesses and prospective finite thresholds.
 The first measurement follows this checkpoint; production registration and
 operating/signing closure remain distinct.
 
+**T51.1 finite qualification (2026-10-18):** the unchanged public14/56 and
+separate authored17/7/12 gates pass, including exact descriptor/definition/
+citation witnesses. Independent review and bounded checks are complete. T51.2
+stable production input/surface isolation can proceed; operating and signing
+remain separate, with no broad generator or semantic-write accuracy claim.
+
 **Caller Map / Atlas sequencing override (2026-10-17, Ben-directed):** bounded
 integration tests suffice for these products and their release bindings. The
 owning amendment at the start of Epic 47 in [BACKLOG.md](./BACKLOG.md) supersedes

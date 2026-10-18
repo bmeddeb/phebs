@@ -9200,3 +9200,16 @@ the exact socket, image, and `--inputs` directory from that owner. Recovery
 checks daemon and container identity, stops/removes only that exact owner,
 and confirms absence before clearing the journal. Preserve inputs when that
 proof fails; do not use daemon-wide pruning or container-name guesses.
+
+### Protobuf field-input qualification
+
+The [T51.1 qualification](../../spike/t511/README.md) records a finite public
+Go proto3 Open-API field population and separate authored controls. It binds
+committed source/generated/SCIP bytes, scip-go0.2.7 and header-reported generator
+versions, with exact numeric field/descriptor/source witnesses. Evaluator Git
+commits are distinct from upstream source provenance. SCIP read/write roles are
+reported as supplied by the indexer; assignment syntax does not establish a
+semantic write classification. Declaration repository/path and SCIP module
+package lineages remain distinct and require explicit exact witnesses to join.
+This result does not activate fields: stable registration/source fencing and
+product operating/signed promotion remain pending under T51.2/T51.3.

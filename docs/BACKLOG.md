@@ -19297,6 +19297,17 @@ negative/unsupported facts; generated emissions stay separately reported. A
 child-free30s measurement follows the immutable checkpoint. No quality PASS,
 production bridge/registration, operating result or signature exists yet.
 
+**T51.1 finite result (2026-10-18).** First measurement passes frozen public
+14/14 positive +56 negative and separate authored17/17 positive +7 negative/
+12 unsupported sites, with all19 descriptor/source identities and22 exact
+unique definition witnesses. Generated-only emissions11/7 are separately
+reported; raw SCIP role semantics do not establish semantic writes. The original
+result/preregistration/labels remain exact. Normal/race, vet, pinned lint and
+independent identity/denominator/source/cost review pass; the only review wording
+gap is corrected without rerunning or relabelling. The source/index bundles and
+narrow supported recipe complete T51.1 on its branch; no production bridge,
+registration, operating/SLO or release claim follows. T51.2 is the next leaf.
+
 **T51.2 · Stable field reader registration and source fencing** — isolate
 this recipe from the provisional proto umbrella; preserve exact committed
 source, declaration, SCIP, authorization and gap identity.
