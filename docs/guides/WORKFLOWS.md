@@ -1283,6 +1283,10 @@ is a failure or terminal refusal.
   in both themes (high contrast holds ≥7:1 against the page). A live specimen
   previews the selection and falls back to uncolored source while a new
   palette or theme is being tokenized, so prior colors are never relabeled.
+  If the preview fails to load, it keeps the plain specimen and announces
+  **Preview unavailable**. **Reload page** reloads Settings to retry the lazy
+  preview; the browser palette preference remains selected. Finish other
+  Settings changes and copy any newly created API key before reloading.
 - **Row density**: the header's rows button (next to the theme toggle)
   switches every density-aware surface between comfortable and dense
   rows. Density changes spacing and row height, never information; the

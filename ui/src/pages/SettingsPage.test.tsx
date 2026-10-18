@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, useState } from 'react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { BaseProvider, LightTheme } from 'baseui'
 import { Client } from 'styletron-engine-monolithic'
@@ -104,7 +104,10 @@ beforeEach(() => {
   })
 })
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.restoreAllMocks()
+})
 
 test('Appearance offers every curated palette and commits through the preference (T44.2)', async () => {
   render(
@@ -138,6 +141,58 @@ test('Appearance offers every curated palette and commits through the preference
     expect(keyword?.style.color).toBeTruthy()
     expect(keyword!.style.color).not.toBe(phebsColor)
   })
+})
+
+test.each(['language', 'tokenizer'] as const)('Appearance explains %s failure without exposing diagnostics (T44.2a)', async (failure) => {
+  const lang = await import('../lang')
+  const highlight = await import('../highlight')
+  const privateFailure = new Error('private preview diagnostic must not render')
+  if (failure === 'language') vi.spyOn(lang, 'languageFor').mockRejectedValue(privateFailure)
+  else vi.spyOn(highlight, 'tokenize').mockImplementation(() => { throw privateFailure })
+  render(
+    <StyletronProvider value={engine}>
+      <BaseProvider theme={LightTheme}><StatefulPalettePage /></BaseProvider>
+    </StyletronProvider>,
+  )
+  const appearance = within(await screen.findByRole('region', { name: 'Appearance' }))
+  expect((await appearance.findByRole('status')).textContent).toBe('Preview unavailable.')
+  expect(appearance.getByRole('button', { name: 'Reload page' }).getAttribute('type')).toBe('button')
+  expect(screen.queryByText(privateFailure.message)).toBeNull()
+  const pre = document.querySelector('pre')!
+  expect(pre.textContent).toBe('// verified span\nfunc Count(limit int) error {\n\treturn fmt.Errorf("bound=%d", 42)\n}')
+  expect(pre.querySelector('[style]')).toBeNull()
+  expect(pre.getAttribute('data-palette-ready')).toBeNull()
+  expect(api.fetchAPIKeys).toHaveBeenCalledTimes(1)
+
+  vi.restoreAllMocks()
+  fireEvent.change(appearance.getByRole('combobox'), { target: { value: 'quiet' } })
+  expect(appearance.queryByRole('status')).toBeNull()
+  await waitFor(() => expect(pre.getAttribute('data-palette-ready')).toBe('true'))
+  expect(appearance.queryByRole('button', { name: 'Reload page' })).toBeNull()
+  expect(api.fetchAPIKeys).toHaveBeenCalledTimes(1)
+})
+
+test('a superseded preview rejection cannot replace the current palette (T44.2a)', async () => {
+  const lang = await import('../lang')
+  const original = lang.languageFor
+  let reject!: (error: Error) => void
+  const pending = new Promise<never>((_, fail) => { reject = fail })
+  const load = vi.spyOn(lang, 'languageFor').mockReturnValue(pending)
+  render(
+    <StyletronProvider value={engine}>
+      <BaseProvider theme={LightTheme}><StatefulPalettePage /></BaseProvider>
+    </StyletronProvider>,
+  )
+  const appearance = within(await screen.findByRole('region', { name: 'Appearance' }))
+  await waitFor(() => expect(load).toHaveBeenCalledWith('specimen.go'))
+  load.mockImplementation(original)
+  fireEvent.change(appearance.getByRole('combobox'), { target: { value: 'classic' } })
+  await waitFor(() => expect(document.querySelector('[data-palette-ready="true"]')).toBeTruthy())
+  const readyMarkup = document.querySelector('pre')!.innerHTML
+  await act(async () => { reject(new Error('late previous preview failure')) })
+  expect(document.querySelector('pre')!.innerHTML).toBe(readyMarkup)
+  expect(appearance.queryByRole('status')).toBeNull()
+  expect(appearance.queryByRole('button', { name: 'Reload page' })).toBeNull()
 })
 
 test('lists existing keys as read only without secret material', async () => {
