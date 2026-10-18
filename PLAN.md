@@ -13537,3 +13537,13 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   applicable UI/keyboard/390px/console/a11y/fresh-frame gates remain to execute
   before closure. Fixture-only work adds no production request/sync/startup/
   retry/publication, schema/cache/lock/worker or child cost.
+
+- **2026-10-18 — T45.10a native receipt clearance correction.**
+  The first390px QA measured116.5px below a strict117px sticky-header clearance.
+  After the existing scroll, measure actual target top and apply a floored
+  negative correction only when short. Preserve already-cleared scroll positions,
+  strict clearance inequality and all historical pixels; do not loosen tolerance.
+  The shared helper has two receipt callers. Added cost is one local geometry
+  observation and at most one corrective scroll, no product/bundle/runtime work.
+  The failed native geometry and separate wrapper discovery/title preparation
+  mistakes remain failures; passed static895tests are not repeated.

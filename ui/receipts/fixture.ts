@@ -13,6 +13,8 @@ export async function scrollBelowHeader(target: Locator): Promise<number> {
     const clearance = document.querySelector('header')!.getBoundingClientRect().height + 12
     node.scrollIntoView({ block: 'start', inline: 'nearest' })
     window.scrollBy(0, -clearance)
+    const shortfall = node.getBoundingClientRect().top - clearance
+    if (shortfall < 0) window.scrollBy(0, Math.floor(shortfall))
     return clearance
   })
 }
