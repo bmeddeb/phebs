@@ -12989,3 +12989,27 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   fixture-range reset; behavior is unchanged. Registration supplies no operating,
   managed-generation, scale or production-signature claim. Each generator's
   measured promotion and the existing unavailable production key remain pending.
+
+- **2026-10-18 — T51.3a discovered repositories have unpublished evidence
+  (Ben-routed Mac backend handoff).** The first corrected-origin T51.3 native
+  run exposes a real HTTP500: discovery creates a visible repository before
+  its indexed commit exists, while exact extraction storage correctly rejects
+  an empty commit. Keep that strict store boundary. The shared coverage builder
+  now skips publication/outcome/attempt reads only for an exactly empty indexed
+  commit, preserving visible census, unpublished domains and unknown SCIP with
+  no evidence authority or absence claim. Raw evidence skips its matching
+  initial/final publication reads while retaining the final freshly authorized
+  repository/source/revision/unit fence. Nonempty malformed metadata, storage
+  errors and indexed publication confirmation remain unchanged. Source/permission
+  changes during a request still conflict; saved bytes are untouched.
+
+  Focused normal/race checks include authentication, hidden repositories, mixed
+  indexed/unindexed coverage, no borrowed retained authority, strict real-store
+  validation and discovery-to-indexed transition. Vet/pinned lint pass, with
+  independent source/security/cost review clear. Cost is one constant branch
+  per existing repository/domain: empty coverage avoids three store reads per
+  domain/build; raw evidence avoids its two publication reads. Existing visible
+  lists/maps and output cardinality remain; indexed requests, sync, startup,
+  retry/no-op and publication costs are unchanged. No lock/cache/schema/worker/
+  child or new retained state is added. Fresh binary qualification follows;
+  operating promotion and the unavailable production signing key remain open.

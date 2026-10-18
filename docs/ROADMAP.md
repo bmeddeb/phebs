@@ -5610,3 +5610,8 @@ Standalone remains the supported development and small-deployment profile.
 - anonymous access;
 - silent filesystem-wide repository discovery;
 - treating runtime telemetry or static evidence as a substitute for the other.
+
+**T51.3a discovery repair (2026-10-18):** shared proof coverage and raw evidence
+represent visible unindexed repositories as unpublished, preserving strict store
+validation and final authorization/source fences. Bounded checks and independent
+review pass. A fresh binary operating run and production signing remain open.

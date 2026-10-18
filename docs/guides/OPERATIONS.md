@@ -9246,6 +9246,24 @@ unmeasured. This supplies no runtime-use, deployment, managed generation,
 scale or broad generator coverage claim. T52.3 registration/operating/signing
 remain pending; the independent thriftrw recipe gets its own T52.2 result.
 
+### Newly discovered repositories and evidence coverage (T51.3a)
+
+A visible repository can be discovered before its first HEAD is indexed.
+During that interval, proof and extraction-coverage responses retain it in
+the visible repository census, omit an indexed commit, mark each requested
+domain `unpublished` and keep SCIP availability `unknown`. They return no
+facts, extractor witness or exact publication authority for that repository.
+Raw `/api/evidence` similarly counts the visible repository without adding a
+published repository row. These are unavailable publication states, not
+evidence of zero callers or field/topic uses.
+
+Once indexing completes, ordinary extraction/source selection can advance the
+answer. A source, publication or permission change during a response still
+conflicts and requires a fresh request. Malformed nonempty commit metadata and
+storage failures remain errors; they are not converted into unpublished
+coverage. Authentication, source/version checks, immutable saved proof bytes
+and citation access remain governed by their existing boundaries.
+
 ### Independent Thrift field registration (T52.3)
 
 When a verified signed Apache and/or thriftrw field recipe is selected, use

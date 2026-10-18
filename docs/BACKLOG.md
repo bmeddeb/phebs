@@ -19426,6 +19426,16 @@ signature promotion; this implementation alone activates no unsigned pack.
 **T51.3 · Measured field-reference promotion** — satisfy the common bar and
 publish exact supported generators, input formats, operating bounds and expiry.
 
+**T51.3a · Discovered-repository coverage repair** *(2026-10-18, complete;
+Ben-routed Mac backend handoff).* A first corrected-origin T51.3 run exposed an
+HTTP500 before the repository had an indexed commit. Shared coverage now reports
+unpublished/SCIP unknown without querying invalid extraction scopes; raw
+evidence retains census with no published row. Final source/permission fences
+and strict nonempty-error behavior remain. Focused normal/race (including one
+real-store discovery transition), vet/pinned lint and independent source/cost
+review pass. This repairs discovery only; T51.3's fresh-binary operating result
+and production signature remain separate.
+
 ## Epic 52 · Thrift field-reference production readiness
 
 **T52.1 · Apache Thrift field contract and independent quality** — freeze
