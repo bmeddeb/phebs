@@ -163,6 +163,13 @@ interfaces without waiting for the production key. T50.3 still owns its direct
 quality/operating result and signature; no comparison release follows from
 Caller Map/Atlas's integration-test amendment.
 
+**T57R.3 portability closure (2026-10-18):** fixed staged operator catalog
+paths preserve production SourcePath authority across checkouts. Native and
+scoped canonical comparisons pass across fresh roots; eight reviewed Catalog
+values update and 118 baselines remain untouched. This closes the portability
+implementation on its branch; full-matrix history and production signing retain
+their recorded scope.
+
 **Caller Map / Atlas sequencing override (2026-10-17, Ben-directed):** bounded
 integration tests suffice for these products and their release bindings. The
 owning amendment at the start of Epic 47 in [BACKLOG.md](./BACKLOG.md) supersedes

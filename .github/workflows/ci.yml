@@ -157,8 +157,8 @@ jobs:
               password: "$PHEBS_RECEIPT_PASSWORD"
           EOF
           # Deterministic receipt fixture identities: stage the neutral-demo
-          # bundles at the fixed fixture root and point the dev instance at
-          # them. make dev honors these pre-set fixture paths.
+          # bundles and operator catalogs at the fixed fixture root, pinning
+          # both repository names and catalog SourcePath generation authority.
           # Capture the staging output and CHECK it before eval: a failed
           # staging run must fail the step here, before make dev starts
           # (eval of a failed command substitution's empty output would
@@ -181,12 +181,12 @@ jobs:
               kind: operator
               id: t335-demo
               version: v1
-              path: "$(pwd)/docs/fixtures/t33.5-service-directory/t335-service-catalog.json"
+              path: "$PHEBS_T335_SERVICE_CATALOG"
             "local$PHEBS_T344_SERVICE_SEARCH_REPO":
               kind: operator
               id: t344-demo
               version: v1
-              path: "$(pwd)/docs/fixtures/t34.4-service-search/t344-service-catalog.json"
+              path: "$PHEBS_T344_SERVICE_SEARCH_CATALOG"
           experimental:
             provisional_proto_extraction: true
             provisional_kafka_extraction: true

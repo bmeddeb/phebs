@@ -12251,3 +12251,23 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   without reading the grouping/classifier. All exact comparison regressions pass
   in 2.902s, the new gold test under race in 2.782s; vet, pinned lint (zero issues),
   docs, glossary and whitespace pass. No production behavior changes.
+
+- **2026-10-18 — T57R.3 checkout-independent receipt catalog authority.**
+  Stage the two retained operator catalog JSONs beside the two neutral bundles
+  at the fixed receipt root and select their exported paths in local and CI
+  boots. Bundle pinning alone did not pin operator SourcePath, so different
+  checkout roots legitimately produced different catalog generations. Reuse
+  existing validated private-root, exact-byte reuse and atomic create-only
+  publication; mismatched bytes, symlinks and unsafe ownership still refuse
+  before exports. Production generation hashing, masks, strict cohort readiness,
+  zero retries and 0.1% tolerance remain exact. Four fresh ordinary servers have
+  equal real catalog authorities across checkout roots. Local pinned-renderer
+  author 9/9 and fresh-root comparison 33/33, plus native 18/18 pass; eight reviewed
+  Catalog-value images update and 118 controls stay byte-identical. Preserve
+  October 17 execution timestamps under the October 18 closure record in
+  `ui/receipts/t57r3.json`; no full 143-case, hosted Actions or release result is
+  inferred. Cost: two additional bounded cmp reads totaling 6,202 bytes; first
+  staging adds two existing serial copy/chmod/link publications; reuse changes
+  no bytes, mode or mtime. Production requests, queries, sync, startup/restart,
+  retry/no-op, publication, locks, caches, concurrency and children are unchanged.
+  JavaScript delta is zero; the eight PNGs shrink 1,139 bytes collectively.

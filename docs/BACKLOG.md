@@ -20160,6 +20160,22 @@ same catalog authority and representative pixels. Review any changed canonical
 baselines without new masks, retries or tolerance changes. Production SourcePath
 identity and the separate focused pipeline remain intact.
 
+**T57R.3 outcome (2026-10-18).** Both operator catalogs stage through the
+existing owner-only/create-only helper and local/CI boots use their exported
+fixed paths. Production SourcePath identity remains exact. Four fresh ordinary
+instances across two roots have identical real catalog authorities. Native 18/18,
+canonical author 9/9 (80.613s) and fresh-root comparison 33/33 (134.994s) pass,
+with existing strict cohort checks, masks, zero retries and 0.1% tolerance. Eight
+Catalog-value PNGs are reviewed by agent and lead; 118 controls are byte-identical.
+Provenance `ui/receipts/t57r3.json` preserves October 17 execution dates; this
+is local canonical evidence, not hosted Actions or a full 143-case rerun.
+Staging 27 pass plus one existing privilege-only skip, fixture-root 7 unit checks,
+full scripts 4.794s, vet, pinned lint, shell syntax, docs/glossary and whitespace
+pass. All task servers, renderer and temporary credentials are cleaned up.
+Two bounded catalog comparisons add 6,202 bytes of staging reads; first staging
+adds two serial existing atomic publications, reuse preserves metadata and
+content. No production runtime, identity, concurrency or bundle cost changes.
+
 **T57R.1 · Inherited gate repairs** *(cross-cutting; found while landing Epic
 57)* — return `make docs-check`, repository-wide lint and
 `internal/investigation` to green without touching the code those findings sit

@@ -231,6 +231,20 @@ func TestReceiptFixtureStagingContract(t *testing.T) {
 	if !strings.Contains(workflow, "sh scripts/test-stage-receipt-fixtures.sh") {
 		t.Error("workflow must run the receipt fixture staging regression tests")
 	}
+	readmeBytes, err := os.ReadFile(filepath.Join(root, "ui", "receipts", "README.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, launch := range map[string]string{"workflow": workflow, "receipt guide": string(readmeBytes)} {
+		for _, variable := range []string{"PHEBS_T335_SERVICE_CATALOG", "PHEBS_T344_SERVICE_SEARCH_CATALOG"} {
+			if !strings.Contains(launch, `path: "$`+variable+`"`) {
+				t.Errorf("%s must select the staged operator catalog through %s", name, variable)
+			}
+		}
+		if strings.Contains(launch, `path: "$(pwd)/docs/fixtures/`) {
+			t.Errorf("%s must not bind operator catalog identity to the checkout root", name)
+		}
+	}
 	configBytes, err := os.ReadFile(filepath.Join(root, "phebs-ux-dev.yaml"))
 	if err != nil {
 		t.Fatal(err)
