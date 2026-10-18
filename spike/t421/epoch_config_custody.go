@@ -334,7 +334,7 @@ func parseEpochConfigBytes(plan Plan, epoch ExecutionEpochConfig, source string,
 		len(cfg.Connections) != 1 || !reflect.DeepEqual(cfg.Connections[0], config.Connection{Name: "t422-local", Type: "git", URL: source, Watch: true}) ||
 		len(cfg.ServiceCatalogs) != 1 || cfg.ServiceCatalogs[epoch.Repository] != (config.ServiceCatalog{
 		Kind: servicecatalog.AuthorityOperator, ID: combinedAuthorityID, Version: versions[logical], Path: epoch.CatalogPath, Runtime: config.ServiceCatalogRuntimeV3}) ||
-		len(cfg.AnalysisUnits) != 0 || len(cfg.Revisions) != 0 || len(cfg.Contexts) != 0 || cfg.Permissions != nil ||
+		len(cfg.AnalysisUnits) != 0 || len(cfg.Revisions) != 0 || len(cfg.Contexts) != 0 || cfg.Permissions != nil || cfg.ManagedSCIP != nil ||
 		cfg.Webhook.Secret != "" || cfg.Indexing.Verbose || cfg.Auth.SessionLifetime != "" ||
 		cfg.Audit != (config.Audit{}) || cfg.Analytics != (config.Analytics{}) || cfg.ProofBundles != (config.ProofBundles{}) {
 		return nil, ErrExecutionEpochConfigs

@@ -3991,6 +3991,18 @@ The first lint refusal and error-text-only correction stay exact in
 `spike/t42h2j/`. All validation groups joined. No native Linux/capacity authority
 is claimed; Ben defers actual Linux execution until2026-10-20.
 
+**T42.H2n · Close current dispatch and epoch-config inventory** *(2026-10-18,
+Ben all-ticket delegation; flagged Mac source handoff).*
+Repair the inherited typed launch-inventory checker for current stdout and
+password adapters and exact forwarding locations. Keep the sixteen frozen core
+sites/roles/IDs unchanged; enumerate the separately admitted managed-tooling
+boundaries explicitly and retain unknown/aliased-call detection. Analyze Darwin
+arm64 and Linux amd64 source/types without executing a Linux binary. Reject a
+valid `managed_scip` selection in the closed epoch config projection. AC: both
+source inventories and alias controls, valid-config regression and existing
+config refusals pass; original failures remain qualified historical evidence.
+This adds no installed runtime, tool, native authority or plan/receipt field.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

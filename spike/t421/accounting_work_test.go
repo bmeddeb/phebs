@@ -9,7 +9,9 @@ import (
 	"go/parser"
 	"go/token"
 	"go/types"
+	"maps"
 	"math"
+	"os"
 	"path/filepath"
 	"reflect"
 	"slices"
@@ -209,39 +211,57 @@ func TestProductionDispatchSitesMatchActualBoundaries(t *testing.T) {
 	want["internal/dispatchadmission/local_producer.go:(*LocalProducer).StartInPhase"] = 1
 	want["internal/dispatchadmission/production.go:StartProduction"] = 1
 	want["internal/dispatchadmission/production_pipes.go:StartPipedProduction"] = 1
-	want["internal/dispatchadmission/production.go:startProductionCommand"] = 1
+	want["internal/dispatchadmission/production.go:startProductionCommandWithEnv"] = 1
+	want["internal/dispatchadmission/production.go:StartProductionWithEnv"] = 1
 	want["internal/dispatchadmission/production.go:RunProduction"] = 2
-	want["internal/dispatchadmission/production.go:CombinedOutputProduction"] = 2
+	want["internal/dispatchadmission/production.go:RunProductionWithEnv"] = 2
+	want["internal/dispatchadmission/production.go:productionOutput"] = 3
+	// Managed compiler tooling has separate admission; keep its exact boundaries
+	// visible without changing the retained sixteen-site runtime contract.
+	want["internal/typedbazel/launcher/bazel.go:runBazelCommand"] = 1
+	want["internal/typedbazel/launcher/launcher.go:runClosedChild"] = 1
+	want["internal/typedbazel/provider/planning.go:runCommandAt"] = 1
 	root, err := filepath.Abs(filepath.Join("..", ".."))
 	if err != nil {
 		t.Fatal(err)
 	}
-	loaded, err := packages.Load(&packages.Config{
-		Context: t.Context(), Dir: root,
-		Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles |
-			packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo,
-	}, "./internal/...", "./cmd/...")
-	if err != nil || len(loaded) == 0 {
-		t.Fatalf("independent production package inventory: %v", err)
-	}
-	got := make(map[string]int)
-	for _, pkg := range loaded {
-		if len(pkg.Errors) != 0 || pkg.TypesInfo == nil {
-			t.Fatalf("production package %s is not type-complete: %v", pkg.PkgPath, pkg.Errors)
-		}
-		for _, file := range pkg.Syntax {
-			path, err := filepath.Rel(root, pkg.Fset.Position(file.Pos()).Filename)
-			if err != nil {
-				t.Fatal(err)
+	for _, target := range []struct{ os, arch string }{{"darwin", "arm64"}, {"linux", "amd64"}} {
+		t.Run(target.os+"/"+target.arch, func(t *testing.T) {
+			expected := maps.Clone(want)
+			if target.os == "linux" {
+				expected["internal/typedsandbox/host_linux.go:runHostFormatter"] = 1
+				expected["internal/typedsandbox/supervisor_linux.go:supervise"] = 1
 			}
-			for boundary, count := range typedDispatchBoundaries(file, pkg.TypesInfo) {
-				got[filepath.ToSlash(path)+":"+boundary] += count
+			// Only source/type analysis targets Linux; no target binary runs.
+			loaded, err := packages.Load(&packages.Config{
+				Context: t.Context(), Dir: root,
+				Env: append(os.Environ(), "GOOS="+target.os, "GOARCH="+target.arch, "CGO_ENABLED=0"),
+				Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles |
+					packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo,
+			}, "./internal/...", "./cmd/...")
+			if err != nil || len(loaded) == 0 {
+				t.Fatalf("independent production package inventory: %v", err)
 			}
-			verifyProductionSiteArguments(t, filepath.ToSlash(path), file, pkg.TypesInfo, wantIDs)
-		}
-	}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("complete production launch boundary inventory differs:\nobserved=%v\nexpected=%v", got, want)
+			got := make(map[string]int)
+			for _, pkg := range loaded {
+				if len(pkg.Errors) != 0 || pkg.TypesInfo == nil {
+					t.Fatalf("production package %s is not type-complete: %v", pkg.PkgPath, pkg.Errors)
+				}
+				for _, file := range pkg.Syntax {
+					path, err := filepath.Rel(root, pkg.Fset.Position(file.Pos()).Filename)
+					if err != nil {
+						t.Fatal(err)
+					}
+					for boundary, count := range typedDispatchBoundaries(file, pkg.TypesInfo) {
+						got[filepath.ToSlash(path)+":"+boundary] += count
+					}
+					verifyProductionSiteArguments(t, filepath.ToSlash(path), file, pkg.TypesInfo, wantIDs)
+				}
+			}
+			if !reflect.DeepEqual(got, expected) {
+				t.Fatalf("complete production launch boundary inventory differs:\nobserved=%v\nexpected=%v", got, expected)
+			}
+		})
 	}
 	sites[0].Roles[0] = "changed"
 	if productionDispatchSites()[0].Roles[0] != "git" {
@@ -286,7 +306,7 @@ func typedDispatchBoundaries(file *ast.File, info *types.Info) map[string]int {
 			case "syscall", "golang.org/x/sys/unix":
 				launch = slices.Contains([]string{"StartProcess", "ForkExec", "Exec", "Fexecve"}, function.Name())
 			case "github.com/bmeddeb/phebs/internal/dispatchadmission":
-				launch = slices.Contains([]string{"StartProduction", "StartPipedProduction", "StartAuthor", "RunProduction", "CombinedOutputProduction"}, function.Name())
+				launch = productionDispatchArguments(function.Name()) != 0 || function.Name() == "StartAuthor"
 				if slices.Contains([]string{"Start", "Run", "start", "StartInPhase"}, function.Name()) {
 					receiver := function.Type().(*types.Signature).Recv()
 					launch = receiver != nil && slices.Contains([]string{"*Client", "*LocalProducer"}, types.TypeString(receiver.Type(), func(*types.Package) string { return "" }))
@@ -299,6 +319,17 @@ func typedDispatchBoundaries(file *ast.File, info *types.Info) map[string]int {
 		})
 	}
 	return result
+}
+
+func productionDispatchArguments(name string) int {
+	switch name {
+	case "StartProduction", "RunProduction", "CombinedOutputProduction", "OutputProduction":
+		return 3
+	case "StartPipedProduction", "StartProductionWithEnv", "RunProductionWithEnv":
+		return 4
+	default:
+		return 0
+	}
 }
 
 // A listed function must pass its own exact constant, not a different admitted
@@ -332,14 +363,11 @@ func verifyProductionSiteArguments(t *testing.T, path string, file *ast.File, in
 			}
 			callee, ok := info.Uses[selector.Sel].(*types.Func)
 			if !ok || callee.Pkg() == nil || callee.Pkg().Path() != "github.com/bmeddeb/phebs/internal/dispatchadmission" ||
-				!slices.Contains([]string{"StartProduction", "StartPipedProduction", "RunProduction", "CombinedOutputProduction"}, callee.Name()) {
+				productionDispatchArguments(callee.Name()) == 0 {
 				return true
 			}
 			found++
-			arguments := 3
-			if callee.Name() == "StartPipedProduction" {
-				arguments = 4
-			}
+			arguments := productionDispatchArguments(callee.Name())
 			if len(call.Args) != arguments || info.Types[call.Args[1]].Value == nil {
 				t.Fatalf("dispatch site %s:%s lacks its fixed site constant", path, name)
 			}

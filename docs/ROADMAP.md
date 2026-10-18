@@ -138,6 +138,10 @@ T42.H2i prepares linux byte observation and allocation seams.
 T42.H2j prepares prospective aggregate linux memory calculation.
 This is bounded source preparation; actual Linux admission/readiness remains open.
 
+T42.H2n repairs the inherited source launch-inventory check and closes the
+epoch config's managed-installation exclusion. Both supported host-source
+inventories remain exact; no runtime site, plan limit or native gate is widened.
+
 ## Current product posture
 
 **All-ticket execution (2026-10-17, Ben-directed):** resolve actual dependencies
