@@ -1,0 +1,96 @@
+{
+  "schema": "t522-input-command-plan-v1",
+  "record_date": "2026-10-18",
+  "source_checkpoint": "d8274b0f54db394593efbeef931f99f740428a02",
+  "status": "NOT_EXECUTED_AWAITING_COMMAND_PLAN_REVIEW_AND_HOST_SLOT",
+  "source_preregistration_digest": "sha256:7067eb9e6ccb5ecb24d9c9064ce54c17d5d872a71a2989971da6a84b519e38ac",
+  "labels_digest": "sha256:e1d795ca436c432b46a084ebfaf0703da0ea046321f59376fc66ba2c88643eeb",
+  "field_witnesses_digest": "sha256:ee5f5b420fadf08492aeade8225d304b54d10a687ecb1fdf159da01ebc511e90",
+  "tool": {
+    "path": "/Users/ben/go/bin/scip-go",
+    "bytes": 17881650,
+    "digest": "sha256:05b4f5086b0953268a86ddee21e53233d7fc35fa4234d4c5b30ef7faec2beb80",
+    "declared_version": "0.2.7",
+    "identity_source": "Exact existing scip-go binary rehashed2026-10-18 without execution; matching bytes retain the BuildInfo identity previously recorded in T511/T521 preparation, not their quality results",
+    "go_build_info": {
+      "go_version": "go1.26.5",
+      "main_path": "github.com/scip-code/scip-go/cmd/scip-go",
+      "module": "github.com/scip-code/scip-go",
+      "version": "v0.2.7",
+      "module_sum": "h1:gcHFnhoMCdp3C/0xvCn9QFuTsF/W3JSR5cLVf7uG+Us=",
+      "GOOS": "darwin",
+      "GOARCH": "arm64",
+      "GOARM64": "v8.0",
+      "CGO_ENABLED": "1"
+    }
+  },
+  "scratch_root": "/tmp/phebs-t522-inputs-d8274b0f",
+  "source_handling": "Copy each frozen selected source module unchanged into a new owned scratch root. Public is selected3Go files, not complete upstream Cadence; neutral is7authored files. Add only generated index.scip and evaluator go.sum; reject changed original bytes or unexpected additions. No frozen source/label/prereg/witness edits. Upstream Git pins remain provenance, not evaluator index commits.",
+  "environment": {
+    "GOPROXY": "off",
+    "GOSUMDB": "off",
+    "GOTOOLCHAIN": "local",
+    "GOWORK": "off",
+    "GOFLAGS": "-mod=mod",
+    "GOMAXPROCS": "2"
+  },
+  "runs": [
+    {
+      "population": "public",
+      "source_directory": "/Users/ben/.codex/worktrees/t503a-caller-unit-projection/phebs.com/spike/t522/testdata/public",
+      "working_directory": "/tmp/phebs-t522-inputs-d8274b0f/public",
+      "argv": [
+        "/Users/ben/go/bin/scip-go",
+        "index",
+        "--module-root=/tmp/phebs-t522-inputs-d8274b0f/public",
+        "--repository-remote=evaluation.local/t522-public",
+        "--module-path=github.com/uber/cadence",
+        "--module-version=v0.0.0-t522",
+        "--skip-implementations",
+        "--skip-tests",
+        "--output=/tmp/phebs-t522-inputs-d8274b0f/public/index.scip",
+        "./common/types/mapper/thrift",
+        "./common/types",
+        "./.gen/go/health"
+      ]
+    },
+    {
+      "population": "neutral",
+      "source_directory": "/Users/ben/.codex/worktrees/t503a-caller-unit-projection/phebs.com/spike/t522/testdata/neutral",
+      "working_directory": "/tmp/phebs-t522-inputs-d8274b0f/neutral",
+      "argv": [
+        "/Users/ben/go/bin/scip-go",
+        "index",
+        "--module-root=/tmp/phebs-t522-inputs-d8274b0f/neutral",
+        "--repository-remote=evaluation.local/t522-neutral",
+        "--module-path=example.com/t522-neutral",
+        "--module-version=v0.0.0-t522",
+        "--skip-implementations",
+        "--skip-tests",
+        "--output=/tmp/phebs-t522-inputs-d8274b0f/neutral/index.scip",
+        "./gen",
+        "./renamed",
+        "./plain",
+        "./use"
+      ]
+    }
+  ],
+  "limits": {
+    "children": "one indexer root at a time; serialize with all native/build/browser work",
+    "timeout_seconds_each": 90,
+    "attempts_each": 1,
+    "output_index_bytes_max": 33554432,
+    "output_log_bytes_max": 1048576,
+    "downloads": "none during execution",
+    "failure": "Record the first timeout, missing cached dependency or source/input refusal. Kill/drain the owned group when required and join root; stop subsequent populations. No automatic fetch, retry, source/label rewrite or candidate scoring."
+  },
+  "record_on_execution": [
+    "Exact argv/environment, rehashed tool and before/after copied-source size/digest census",
+    "Per-input wall/user/system, actual memory measurement scope if available; RUSAGE_CHILDREN is not aggregate family peak",
+    "Exit/timeout/refusal plus root joined and owned process group absent; no surviving child/session",
+    "Retained index digest/bytes/tool/encoding metadata and complete document/occurrence census, explicitly listing indexed documents absent from retained inputs",
+    "Added go.sum bytes/digest; frozen inputs/source/oracle remain exact before/after",
+    "Owned scratch logical bytes and removal after verifying retained output hashes",
+    "Lead-created actual evaluator Git source/index commits and bundle hashes, followed by independent final checkpoint before any extractor/scoring"
+  ]
+}

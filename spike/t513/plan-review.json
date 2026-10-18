@@ -1,0 +1,17 @@
+{
+  "schema": "t513-prospective-plan-review-v1",
+  "date": "2026-10-18",
+  "author": "root",
+  "peer": "receipt_portability",
+  "candidate_or_native_runs": 0,
+  "corrections_before_measurement": [
+    "Immutable retained admitted proof stays200 with byte-identical old source authority; new current query binds new generation; expected-version mismatch/withdrawal refuses",
+    "MCP v1.0 projected facts/provenance checked against HTTP assertions/atoms; HTTP-only bundle-by-ID verification; no raw-envelope or MCP-by-ID promise",
+    "Whole-proof concurrency batches, no field pagination",
+    "GET/source and MCP read_file open complete immutable blob per request and client slice exact field ranges; source-code cost unless instrumented",
+    "Preserve MCP partial/withheld coverage and ordinary authorization/exact-version fences",
+    "Reuse corrected joined sampling/whole-request deadline controls before one serial native execution"
+  ],
+  "plan_digest": "sha256:71f2d2df416332ed19cbeb8d337327e1e5d7f72593eaeed0e70f15fd169b3268",
+  "outcome": "source reviewed; harness/exact execution binding/native result pending"
+}

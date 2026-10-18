@@ -1,0 +1,35 @@
+{
+  "schema": "t503-prospective-preparation-tool-correction-v1",
+  "date": "2026-10-18",
+  "original_harness_commit": "c18d924de5d5d6b0cd6de23e7653f35b2240100d",
+  "original_plan_digest": "sha256:8acec78a879023e4642e41710a3563c3d4930071239e925798cf1666b5735f9f",
+  "original_binding_digest": "sha256:943b6de028c0165e9ec984ad041c71e6221bf130959b8996d845d893258c71bb",
+  "first_preparation_result_digest": "sha256:f8f2fd2faf76ff79b731e233ad24ce01a15764199314ad642768908e15cc1bfb",
+  "first_stop": "System LibreSSL3.3.6 cannot generate Ed25519; preparation stopped0.008086s before native clock/key/serve/data. No product reads or quality/operating output. Root selected the wrong tool; preserve stop unchanged.",
+  "tool": {
+    "path": "/opt/homebrew/opt/openssl@3/bin/openssl",
+    "resolved_path": "/opt/homebrew/Cellar/openssl@3/3.6.3/bin/openssl",
+    "bytes": 880512,
+    "sha256": "sha256:103fc7706cf6646f226d96f29242d81890363499afc730e7ef1fadd64b3a123c",
+    "version": "OpenSSL3.6.3/library3.6.3",
+    "source": "Exact original qualifier already uses this existing Homebrew OpenSSL3 path; no download/install/new production key",
+    "capability_probe": {
+      "argv": [
+        "/opt/homebrew/opt/openssl@3/bin/openssl",
+        "list",
+        "-public-key-algorithms"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.009239,
+      "output_bytes": 6729,
+      "output_digest": "sha256:73a2f865599ed5a9b503a658e937f2bbd82c137b7430f1cae993e61dfb205637",
+      "ed25519_present": true,
+      "key_generated": false
+    }
+  },
+  "prospective_scope": "Change only the disposable integration-key tool image binding before one fresh preparation and one native matrix if launch succeeds. No actual native phase has run afterT503a. Every label/source/index/endpoint/unit/threshold/180s bound/harness/binary/helper/UI/browser/tool binding exceptOpenSSL stays unchanged.",
+  "reuse": "Exact joined installed Chrome/Node/Playwright preflight1.437613875s andT503b affected gates retain their exact scopes; no unchanged repeated browser/build/index/Go workload.",
+  "first_stop_rule": "New run-root/result path. First failure remains stopped; no silent retry or overwriting first preparation result. A later implementation/input change requires separately reviewed prospective correction.",
+  "production_signing": "Pending existing unavailable Linux key; only disposable integration selection generated during preparation, key deleted before serve.",
+  "review": "Accepted read/hash-only by independentpeer t493_protobuf_atlas; preserved old binding/result/plan and exact existing tool hash/path verified, no probes/key/server/product execution by reviewer."
+}

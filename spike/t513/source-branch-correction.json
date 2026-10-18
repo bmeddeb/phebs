@@ -1,0 +1,28 @@
+{
+  "schema": "phebs-t513-prospective-source-branch-correction-v1",
+  "date": "2026-10-18",
+  "reason": "Live generic Git discovery requires symbolic default branch; base bundle clone was detached with no local branch. Keep the same input branch in both origins for ordinary incremental mirror fetch.",
+  "records": [
+    {
+      "role": "base",
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t513-inputs-ytjyz65j/base",
+      "branch": "input",
+      "commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+      "old_HEAD": "detached/no local branch",
+      "new_HEAD": "refs/heads/input",
+      "working_tree_clean": true
+    },
+    {
+      "role": "transition",
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t513-inputs-ytjyz65j/public",
+      "branch": "input",
+      "commit": "cd72bf6914988aed1974bd8bfcc744f4d08ccfd2",
+      "old_HEAD": "refs/heads/t513-transition",
+      "new_HEAD": "refs/heads/input",
+      "working_tree_clean": true
+    }
+  ],
+  "preparation_note": "Initial script corrected base then stopped on a source-only assertion because transition already had a t513-transition branch. No native run occurred; transition now also exposes input at its unchanged prebound commit. Existing transition ref is retained.",
+  "unchanged": "All source commits, trees, eight-file bytes, index, labels, thresholds, binary and operating bounds remain exact. Only live-origin refs/HEAD are corrected prospectively.",
+  "native_runs": 0
+}

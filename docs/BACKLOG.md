@@ -19368,6 +19368,58 @@ historical custody tests; direct/independent source and steady-cost review.
 T50.3 quality/operating/publication-transition qualification remains separate
 and must use new prospectively bound exact inputs after this fix integrates.
 
+**T50.3 immutable preregistration (2026-10-18, Ben-routed Mac handoff).**
+The lead's independent source-only review accepts
+`spike/t503/checkpoint.json` SHA-256
+`54b1377c20d2422f93756dedea56ef30aa1df0e6114d41fd646558ef4cd3ab29`
+and all twelve bound artifacts before predictions. Nine actual method sites
+supply five selected and four excluded sites; occurrence classes are two old,
+three new, while four supplied-unit rows cover old/new/both/unresolved.
+Evaluator-selected endpoints and package units claim no upstream migration or
+deployment truth. The finite quality/read/operating matrix and stops are frozen;
+absent real classes stay unavailable. Next: serialized offline indexing,
+lead-owned exact evaluation Git bindings, then the first candidate measurement.
+No quality/operating PASS, production signature, Linux capacity or scale claim
+exists at this checkpoint.
+
+**T50.3 first-attempt outcome (2026-10-18).** Preserve the15.163s joined
+native attempt as failed. Offline review finds5/5 selected source sites and
+source tuples, four correctly excluded outside-pair sites, but0/5 correct unit
+attribution. An extra scip-only checker assertion was prospectively corrected
+to the public resolved syntax/scip contract without new product reads or any
+source/label/threshold change; the original stop remains exact. Unit composition,
+citation opening, HTTP/MCP/UI and transition evidence remain unmeasured.
+T50.3a owns dropped-unit-projection repair; a fresh exact-binary/generation plan
+and unchanged frozen truth precede any new bounded qualification.
+**T50.3b · Repair current resolver API fixture admission** *(2026-10-18,
+Ben-routed Mac handoff; complete)* — the prospective affected regression pass
+exposed an empty-pack shared positive fixture after T50.3a. Current resolver
+constants restore exact CallerMap/comparison tests; warm missing/old-pack cases
+retain stale/unavailable rather than bypassing admission. Failed first log is
+retained in `spike/t503b/`; bounded normal/race/MCP/admission/current-pack tests,
+vet, pinned lint and independent source/cost review pass. Production code is
+unchanged; T50.3's native quality/operating result remains separate.
+
+**T50.3 harness checkpoint (2026-10-18).** Reviewed bounded lifecycle/HTTP/
+resource/browser helpers and31 source/mock controls are ready for integration.
+All first outcomes stay exact. The latest21.547477s run passed finite source
+quality and desktop interaction before stopping on mobile overflow, repaired
+by T50.3c. T51.3a repairs a separate discovery coverage defect. Fresh binary
+qualification, the remaining operating matrix and production signing remain open.
+
+**T50.3c · Keep real comparison identities within small screens** *(2026-10-18,
+Ben-routed Mac presentation handoff; complete)* — the bounded real-source
+journey exposed390px overflow from auto-minimum grid tracks and an unbroken
+unit ID. Constrain the tracks/sides and wrap that existing metadata while
+preserving complete accessible citation labels, exact source bytes and keyboard
+opening. Two scoped declaration links now use an accessible existing text
+token. Real-response fixture390/1280 checks have no overflow or console errors
+and zero accessibility violations;14 focused tests, type/lint/build pass.
+Four neutral controls are byte-identical to main on the same renderer. Their
+0.399–0.412% differences from retained Noble baselines reproduce unchanged on
+main and are inherited baseline/environment drift; no baseline is replaced or
+Noble pass invented. T50.3's source-bound final native matrix stays separate.
+
 ## Epic 51 · Protobuf field-reference production readiness
 
 **T51.1 · Exact field/SCIP identity and independent quality** — depend on
@@ -19417,6 +19469,29 @@ signature promotion; this implementation alone activates no unsigned pack.
 **T51.3 · Measured field-reference promotion** — satisfy the common bar and
 publish exact supported generators, input formats, operating bounds and expiry.
 
+*2026-10-18 preparation:* `spike/t513/operating-plan.json` prospectively binds
+the T51.1 public14/56 source oracle to the actual stable OpenAPI recipe, one
+180s native matrix, exact HTTP/MCP projections/source reads, bounded whole-proof
+concurrency, a comment-only publication and withdrawal restart. Independent
+plan review corrected immutable-proof/MCP semantics before execution. Harness,
+execution binding, operating result/artifacts and production signature remain
+open; no product run or production promotion has occurred.
+
+*2026-10-18 harness checkpoint:* reviewed reusable field operating/source/
+cleanup helpers and14 pure/mock controls pass. First detached-origin and later
+corrected-origin discovery HTTP500 stops remain exact. T51.3a repairs the latter;
+a fresh binary/binding and actual operating/artifact/signature closure remain.
+
+**T51.3a · Discovered-repository coverage repair** *(2026-10-18, complete;
+Ben-routed Mac backend handoff).* A first corrected-origin T51.3 run exposed an
+HTTP500 before the repository had an indexed commit. Shared coverage now reports
+unpublished/SCIP unknown without querying invalid extraction scopes; raw
+evidence retains census with no published row. Final source/permission fences
+and strict nonempty-error behavior remain. Focused normal/race (including one
+real-store discovery transition), vet/pinned lint and independent source/cost
+review pass. This repairs discovery only; T51.3's fresh-binary operating result
+and production signature remain separate.
+
 ## Epic 52 · Thrift field-reference production readiness
 
 **T52.1 · Apache Thrift field contract and independent quality** — freeze
@@ -19457,9 +19532,37 @@ managed/runtime/scale result follows.
 **T52.2 · thriftrw field contract and independent quality** — separate
 generator-specific identity and quality population; no Apache result transfers.
 
+*2026-10-18 checkpoint:* source-only thriftrw1.34.0 recipe and exact retained
+Cadence health mapper/IDL plus separate authored controls are independently
+reviewed. All15 source files/52,650 bytes,116 spans, three embedded Raw/SHA1
+equalities and nine field/eighteen definition witnesses agree. Public4/31 and
+authored15/62/4 positive/negative/unsupported populations are frozen before
+indexing. Existing gitlink provenance and the fresh metadata403 remain explicit.
+No SCIP or candidate output exists yet; actual evaluator commits, bounded index
+preparation, extraction quality and T52.3 admission/operating/signing stay open.
+
+*2026-10-18 qualified outcome:* T52.2 completes its independent finite leaf.
+First actual evaluator inputs pass public4/31 and authored15/62/4 gates, all3
+Raw/SHA1/nine field/eighteen real definition witnesses, zero wrong/duplicate
+consumer emissions and exact citations. Generated49/7 and raw read roles stay
+separate. First normal0.339s/race1.441s, vet, pinned lint and independent root/
+peer source/cost review pass. `spike/t522/outcome-cost.json` retains exact input/
+result/checkpoint and cost scopes. No production registration, operating or
+signature is inferred; T52.3 remains the next independent selection boundary.
+
 **T52.3 · Independent stable registration and measured promotion** — split
 the current shared experimental switch into explicitly selected admitted
 recipes; satisfy the common bar for each. Either generator may release alone.
+
+Registration slice (2026-10-18, Ben-routed Mac handoff): independent signed
+Apache0.14.1 and thriftrw1.34.0 recipes now compose once on the shared domain
+with three exact selected-set versions. Neither selection inherits the other
+generator through provisional mode. Current/raw/proof/citation/HTTP/MCP fences,
+field0/protocol bounds and withdrawal-survivor behavior pass bounded normal
+and race integration checks; independent source and steady-state-cost review
+is clear. This supplies registration only. Each selected generator's measured
+operating/artifact/production-signature promotion remains open; the existing
+production key is unavailable.
 
 ## Epic 53 · Protobuf Buf WIRE compatibility production readiness
 

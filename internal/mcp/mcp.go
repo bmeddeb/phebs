@@ -63,6 +63,9 @@ type Options struct {
 	// ProtobufFieldReferencesOnly admits the two field tools alongside any
 	// separately selected Kafka tools, without the provisional proof umbrella.
 	ProtobufFieldReferencesOnly bool
+	// ThriftFieldReferencesOnly admits the neutral field tool independently of
+	// protobuf or any other experimental proof product.
+	ThriftFieldReferencesOnly bool
 	// KafkaTopicInventoryReleased lets TopicInventory register beside
 	// KafkaTopicUsageOnly: a verified phebs.kafka.topics record with both
 	// planes released (T57.3).
@@ -216,17 +219,19 @@ func registerFieldReferenceTools(s *sdk.Server, opts Options) {
 		Message     string `json:"message" jsonschema:"fully-qualified protobuf message name, e.g. shop.Cart"`
 		FieldNumber int    `json:"field_number" jsonschema:"protobuf wire field number, 1 through 536870911 excluding 19000 through 19999"`
 	}
-	sdk.AddTool(s, &sdk.Tool{
-		Name:         "find_proto_field_references",
-		Description:  "Find source references to one protobuf field identity (lineage, message, field number). Returns envelope v1.0 with permission-scoped facts and separate semantic, attribution, and processing states; field names are versioned attributes, not identity.",
-		OutputSchema: proofEnvelopeSchema("mcp-payload-contract-edges-v1.0.json"),
-	}, func(ctx context.Context, _ *sdk.CallToolRequest, in fieldIn) (*sdk.CallToolResult, investigation.Envelope, error) {
-		result, err := opts.Proofs.FindProtoFieldReferencesMCP(ctx, in.Lineage, in.Message, in.FieldNumber)
-		if err != nil {
-			return nil, investigation.Envelope{}, err
-		}
-		return nil, *result, nil
-	})
+	if !opts.KafkaTopicUsageOnly && !opts.ThriftFieldReferencesOnly || opts.ProtobufFieldReferencesOnly {
+		sdk.AddTool(s, &sdk.Tool{
+			Name:         "find_proto_field_references",
+			Description:  "Find source references to one protobuf field identity (lineage, message, field number). Returns envelope v1.0 with permission-scoped facts and separate semantic, attribution, and processing states; field names are versioned attributes, not identity.",
+			OutputSchema: proofEnvelopeSchema("mcp-payload-contract-edges-v1.0.json"),
+		}, func(ctx context.Context, _ *sdk.CallToolRequest, in fieldIn) (*sdk.CallToolResult, investigation.Envelope, error) {
+			result, err := opts.Proofs.FindProtoFieldReferencesMCP(ctx, in.Lineage, in.Message, in.FieldNumber)
+			if err != nil {
+				return nil, investigation.Envelope{}, err
+			}
+			return nil, *result, nil
+		})
+	}
 
 	type neutralFieldIn struct {
 		Lineage     string `json:"lineage" jsonschema:"canonical contract SCIP package lineage id from extracted protobuf or Thrift field evidence"`
@@ -261,8 +266,8 @@ func registerProofTools(s *sdk.Server, opts Options) {
 	if opts.Proofs == nil {
 		return
 	}
-	if opts.KafkaTopicUsageOnly || opts.ProtobufFieldReferencesOnly {
-		if opts.ProtobufFieldReferencesOnly {
+	if opts.KafkaTopicUsageOnly || opts.ProtobufFieldReferencesOnly || opts.ThriftFieldReferencesOnly {
+		if opts.ProtobufFieldReferencesOnly || opts.ThriftFieldReferencesOnly {
 			registerFieldReferenceTools(s, opts)
 		}
 		if opts.KafkaTopicUsageOnly {

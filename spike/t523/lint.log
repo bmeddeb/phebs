@@ -1,0 +1,9 @@
+internal/extract/extractors/thriftfield/admission_test.go:25:3: SA1019: occurrence.Range is deprecated: Use `single_line_range` or `multi_line_range` instead. (staticcheck)
+		occurrence.Range = nil
+		^
+internal/extract/extractors/thriftfield/thriftfield.go:208:6: func parseIndexScoped is unused (unused)
+func parseIndexScoped(
+     ^
+2 issues:
+* staticcheck: 1
+* unused: 1

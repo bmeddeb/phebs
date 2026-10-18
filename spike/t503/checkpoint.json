@@ -1,0 +1,23 @@
+{
+  "schema": "phebs-t503-independent-review-checkpoint-v1",
+  "date": "2026-10-18",
+  "implementation_base": "5f58beb27ed155c0998df02f85a6bec5fbb8040a",
+  "status": "source-only labels accepted by independent lead review; prospective RSS wording corrected before immutable checkpoint; no predictions or scores produced",
+  "artifacts": {
+    "spike/t503/README.md": "sha256:cdbc399f5dd05b5d12644c508887669b6eda83c112e4fc505994243084596fc4",
+    "spike/t503/inputs/generated-from-snapshot.json": "sha256:066d1e4fecaa37ff7b92a7b7d9e818cd27a4e065ac0c4af9d38a7380e46deb1c",
+    "spike/t503/inputs/go.mod": "sha256:b2703b3404581b66756d550f640c4eda2ca52d589eb1c03b449fdd58b69625bc",
+    "spike/t503/inputs/go.sum": "sha256:e74b7b78ebdfa1fded22c9af03ca827225adad4e73dd1f2901e4002b8c680fcf",
+    "spike/t503/inputs/layout-snapshot.json": "sha256:9276f576011fb096912ff75d70cc52358349dfbee5283b52c5635e042936430b",
+    "spike/t503/inputs/unit-snapshot.json": "sha256:23b21c02ee9ca6afacebc12774bed65d450e238df2fbad03e19696a60d656864",
+    "spike/t503/labels.json": "sha256:db84af5c81cad0526677a058d602523049e000d2b960262f5bb6e547d77bcd26",
+    "spike/t503/population.lock.json": "sha256:ca08ab1f966d3e8090ba548949cb3cec9c2c208e761f24f976fc294f7a8b089f",
+    "spike/t503/preparation.json": "sha256:a225d1bbcd1df54d7ef2ccc8817d2476547407e6e078cac33e095a7d7fc6d7f6",
+    "spike/t503/prepare.py": "sha256:431bca1307dd0a600a830204703d8b58fb2c930344507c5e75a72afaa089d597",
+    "spike/t503/preregistration.json": "sha256:38d85e4c0054f16762821362620c6faec7e564ea0682d344b0c23db1af22fd77",
+    "spike/t503/test_prepare.py": "sha256:1c958992e796332184e2e4ad79a3e7537660a2fc7f04735a317605fa5d32505b"
+  },
+  "required_review": "Independent reviewer inspects only source/input/label/preregistration contracts before prediction. Acceptance must name this checkpoint SHA256 and reviewer; any input change requires another checkpoint.",
+  "source_roles": "Four actual public clients, two declaration/client packages and one support helper; selected old/replacement roles and supplied package units are evaluator choices, not upstream migration/deployment truth.",
+  "review_notes": "Lead independently accepted all nine real generated-method sites, five selected sides, four exclusions, supplied unit grouping and exact byte ranges from original public files without consulting classifier/grouping code. Labels unchanged. Process-tree RSS is now explicitly a sampled maximum; actual 4 GiB physical-headroom and unavailable-measurement stops remain."
+}

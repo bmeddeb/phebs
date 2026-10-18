@@ -1,0 +1,19 @@
+{
+  "schema": "t522-input-independent-review-v1",
+  "date": "2026-10-18",
+  "reviewer": "lead root",
+  "source_checkpoint": "d8274b0f54db394593efbeef931f99f740428a02",
+  "command_checkpoint": "81a4cd02",
+  "preregistration_digest": "sha256:7067eb9e6ccb5ecb24d9c9064ce54c17d5d872a71a2989971da6a84b519e38ac",
+  "input_preparation_digest": "sha256:f7138b6161540a0b31c0bcce9a8ccb308ac4ae0d97eaea4ce1f971d8d89c1005",
+  "committed_inputs_digest": "sha256:be48e56803a17ee10128e63ac2c437b3549afc9d9d3887086be9bf6b8785046e",
+  "checks": [
+    "All15frozen source files52650B and116independent label spans/source digests/lines unchanged",
+    "Three exact embedded Raw/SHA1 modules,nine field/eighteen definitions and numeric IDL witnesses independently verified before indexing",
+    "One offline index attempt/public0.445871s/79356B andneutral0.170429s/26384B; both rootjoined/groupabsent/sourceunchanged/scratchremoved; no downloads/retries",
+    "All7indexed documents retained, UTF8 source/index metadata, no invented source stubs or upstream input commits",
+    "All retained index/go.sum/log hashes independently match preparation record; actual evaluation Git trees/source+input commits and complete bundles verified",
+    "No candidate extraction or scoring yet; first harness/finalprereg review and immutable checkpoint still required"
+  ],
+  "limits": "Finite selected unchanged public4positive31negative and authored15positive62negative4unsupported only; Apache and historical results do not transfer. Production registration/operating/signature not claimed."
+}

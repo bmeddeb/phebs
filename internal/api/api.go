@@ -179,6 +179,9 @@ type Options struct {
 	// ProtobufFieldReferencesReleased restricts proof products to the signed field
 	// recipe (plus independently released Kafka planes), preserving nil defaults.
 	ProtobufFieldReferencesReleased bool
+	// ThriftFieldReferencesReleased independently admits the signed selected
+	// Thrift generator set, without protobuf or the provisional proof umbrella.
+	ThriftFieldReferencesReleased bool
 	// EvidenceExtractorVersions fences admitted domains to exact extraction
 	// versions, including raw reads and retained bundles. Nil is unrestricted.
 	EvidenceExtractorVersions map[string]string

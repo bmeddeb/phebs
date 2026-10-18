@@ -1,0 +1,22 @@
+{
+  "outcome": "running",
+  "playwright_version": "1.62.1",
+  "browser_path": "Browser plugin not available; installed Chrome and existing Playwright, without downloads",
+  "chrome_version": "155.0.8059.82",
+  "unit_rows": 4,
+  "occurrence_rows": 5,
+  "actual_endpoint_selection": true,
+  "unit_classes": {
+    "old_only_evidence": 1,
+    "both_evidence": 1,
+    "new_only_evidence": 1,
+    "unresolved": 1
+  },
+  "real_path_filter": {
+    "prefix": "features/multiplex/client/",
+    "unit_rows": 1,
+    "classification": "both_evidence",
+    "reset_rows": 4
+  },
+  "viewports": []
+}

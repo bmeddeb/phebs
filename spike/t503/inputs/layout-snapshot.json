@@ -1,0 +1,55 @@
+{
+  "version": "t20-layout-snapshot-v1",
+  "roots": [
+    {
+      "kind": "source",
+      "path": "data/data.go"
+    },
+    {
+      "kind": "source",
+      "path": "features/interceptor/client/main.go"
+    },
+    {
+      "kind": "source",
+      "path": "features/metadata/client/main.go"
+    },
+    {
+      "kind": "source",
+      "path": "features/multiplex/client/main.go"
+    },
+    {
+      "kind": "generated",
+      "path": "features/proto/echo/echo.pb.go",
+      "protocol": "grpc"
+    },
+    {
+      "kind": "idl",
+      "path": "features/proto/echo/echo.proto",
+      "protocol": "grpc"
+    },
+    {
+      "kind": "generated",
+      "path": "features/proto/echo/echo_grpc.pb.go",
+      "protocol": "grpc"
+    },
+    {
+      "kind": "source",
+      "path": "helloworld/greeter_client/main.go"
+    },
+    {
+      "kind": "generated",
+      "path": "helloworld/helloworld/helloworld.pb.go",
+      "protocol": "grpc"
+    },
+    {
+      "kind": "idl",
+      "path": "helloworld/helloworld/helloworld.proto",
+      "protocol": "grpc"
+    },
+    {
+      "kind": "generated",
+      "path": "helloworld/helloworld/helloworld_grpc.pb.go",
+      "protocol": "grpc"
+    }
+  ]
+}

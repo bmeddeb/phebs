@@ -1,0 +1,29 @@
+{
+  "schema": "phebs-t503-offline-adjudicated-check-v1",
+  "new_product_reads": 0,
+  "raw_input_digests": [
+    {
+      "name": "http-016.json",
+      "sha256": "2b6bd9115ef8484076c6b4a5eb27306317e787149bfb772fd5fbeb11ce6f8d8a"
+    },
+    {
+      "name": "http-017.json",
+      "sha256": "0013dd6e015d3604233878437647e88126c326e65147d7a2f947bee67de190c3"
+    },
+    {
+      "name": "http-018.json",
+      "sha256": "1811803610157ddbf8f6aad6d1fb67ca4d9f4845826b46e1a00fc1ca360be069"
+    },
+    {
+      "name": "http-019.json",
+      "sha256": "c52f9716db4aedf744b369567d1f9fe8fec3fb300cb9e39d6b541ef1722bfdec"
+    },
+    {
+      "name": "http-020.json",
+      "sha256": "6a1c551782b13f1d279a5e622367e6b6451dddd091c8fd75a0aabbb834ca9fb8"
+    }
+  ],
+  "first_attempt": "stopped; unchanged",
+  "outcome": "quality_mismatch",
+  "reason": "wrong unit state: features/interceptor/client/main.go:3590-3606"
+}

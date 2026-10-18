@@ -1,0 +1,1132 @@
+{
+  "schema": "phebs-t503-postfix-matrix-v1",
+  "date": "2026-10-18",
+  "outcome": "stopped_no_retry",
+  "reads": [
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 404,
+      "seconds": 0.006755,
+      "bytes": 135,
+      "raw_digest": "sha256:b3a6f8bcc0e8ec90c705bd6872858beb2fd5ba8a0db855012219121b813e984d"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 404,
+      "seconds": 0.001538,
+      "bytes": 135,
+      "raw_digest": "sha256:b3a6f8bcc0e8ec90c705bd6872858beb2fd5ba8a0db855012219121b813e984d"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.002018,
+      "bytes": 1798,
+      "raw_digest": "sha256:b541fe49f39fb6273b07dbca5f6871928249fa6ff2625028a96e43b52fc85ca9"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.002962,
+      "bytes": 1798,
+      "raw_digest": "sha256:b541fe49f39fb6273b07dbca5f6871928249fa6ff2625028a96e43b52fc85ca9"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.002981,
+      "bytes": 1798,
+      "raw_digest": "sha256:b541fe49f39fb6273b07dbca5f6871928249fa6ff2625028a96e43b52fc85ca9"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.002534,
+      "bytes": 1798,
+      "raw_digest": "sha256:b541fe49f39fb6273b07dbca5f6871928249fa6ff2625028a96e43b52fc85ca9"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.002778,
+      "bytes": 1798,
+      "raw_digest": "sha256:b541fe49f39fb6273b07dbca5f6871928249fa6ff2625028a96e43b52fc85ca9"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.002009,
+      "bytes": 1798,
+      "raw_digest": "sha256:b541fe49f39fb6273b07dbca5f6871928249fa6ff2625028a96e43b52fc85ca9"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.002609,
+      "bytes": 1798,
+      "raw_digest": "sha256:b541fe49f39fb6273b07dbca5f6871928249fa6ff2625028a96e43b52fc85ca9"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.003826,
+      "bytes": 1798,
+      "raw_digest": "sha256:b541fe49f39fb6273b07dbca5f6871928249fa6ff2625028a96e43b52fc85ca9"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.003431,
+      "bytes": 1798,
+      "raw_digest": "sha256:b541fe49f39fb6273b07dbca5f6871928249fa6ff2625028a96e43b52fc85ca9"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.005257,
+      "bytes": 1798,
+      "raw_digest": "sha256:b541fe49f39fb6273b07dbca5f6871928249fa6ff2625028a96e43b52fc85ca9"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.003733,
+      "bytes": 1798,
+      "raw_digest": "sha256:b541fe49f39fb6273b07dbca5f6871928249fa6ff2625028a96e43b52fc85ca9"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.00304,
+      "bytes": 1798,
+      "raw_digest": "sha256:b541fe49f39fb6273b07dbca5f6871928249fa6ff2625028a96e43b52fc85ca9"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.005745,
+      "bytes": 1798,
+      "raw_digest": "sha256:b541fe49f39fb6273b07dbca5f6871928249fa6ff2625028a96e43b52fc85ca9"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.002926,
+      "bytes": 1798,
+      "raw_digest": "sha256:b541fe49f39fb6273b07dbca5f6871928249fa6ff2625028a96e43b52fc85ca9"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.00434,
+      "bytes": 1798,
+      "raw_digest": "sha256:b541fe49f39fb6273b07dbca5f6871928249fa6ff2625028a96e43b52fc85ca9"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.003563,
+      "bytes": 1798,
+      "raw_digest": "sha256:b541fe49f39fb6273b07dbca5f6871928249fa6ff2625028a96e43b52fc85ca9"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.003477,
+      "bytes": 1798,
+      "raw_digest": "sha256:b541fe49f39fb6273b07dbca5f6871928249fa6ff2625028a96e43b52fc85ca9"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.003002,
+      "bytes": 1798,
+      "raw_digest": "sha256:b541fe49f39fb6273b07dbca5f6871928249fa6ff2625028a96e43b52fc85ca9"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.003637,
+      "bytes": 1798,
+      "raw_digest": "sha256:b541fe49f39fb6273b07dbca5f6871928249fa6ff2625028a96e43b52fc85ca9"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.003257,
+      "bytes": 1798,
+      "raw_digest": "sha256:b541fe49f39fb6273b07dbca5f6871928249fa6ff2625028a96e43b52fc85ca9"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.004905,
+      "bytes": 1798,
+      "raw_digest": "sha256:b541fe49f39fb6273b07dbca5f6871928249fa6ff2625028a96e43b52fc85ca9"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.003968,
+      "bytes": 1798,
+      "raw_digest": "sha256:b541fe49f39fb6273b07dbca5f6871928249fa6ff2625028a96e43b52fc85ca9"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.003617,
+      "bytes": 1798,
+      "raw_digest": "sha256:b541fe49f39fb6273b07dbca5f6871928249fa6ff2625028a96e43b52fc85ca9"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.002513,
+      "bytes": 1798,
+      "raw_digest": "sha256:b541fe49f39fb6273b07dbca5f6871928249fa6ff2625028a96e43b52fc85ca9"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.002445,
+      "bytes": 1798,
+      "raw_digest": "sha256:b541fe49f39fb6273b07dbca5f6871928249fa6ff2625028a96e43b52fc85ca9"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.00242,
+      "bytes": 1798,
+      "raw_digest": "sha256:b541fe49f39fb6273b07dbca5f6871928249fa6ff2625028a96e43b52fc85ca9"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.006769,
+      "bytes": 2694,
+      "raw_digest": "sha256:2dbc04d5db511593e0ae98f1263cb43c07e8f5671fb0697f8a8e6782861b9ed3"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.005972,
+      "bytes": 2694,
+      "raw_digest": "sha256:2dbc04d5db511593e0ae98f1263cb43c07e8f5671fb0697f8a8e6782861b9ed3"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.006491,
+      "bytes": 2694,
+      "raw_digest": "sha256:2dbc04d5db511593e0ae98f1263cb43c07e8f5671fb0697f8a8e6782861b9ed3"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.051441,
+      "bytes": 15552,
+      "raw_digest": "sha256:51f99527a94c19ca890b80960ecf05c34da7ca439d712cfa379f8f4e6b0812ce"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.032622,
+      "bytes": 9074,
+      "raw_digest": "sha256:5a25764c82b02719db8be9d56b2074f471cae8091625a7d303dd87d5d9b6c5e4"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.021336,
+      "bytes": 9027,
+      "raw_digest": "sha256:2a543631a2ccee24119eed873a8e7de95776236c90b5274f2b13bc6cb999e0e9"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.020129,
+      "bytes": 9049,
+      "raw_digest": "sha256:89c2de58912a0459fbe8e3ad36c1639cea3b0b8a6522b882ff61e5fe4b3f769b"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.022507,
+      "bytes": 9066,
+      "raw_digest": "sha256:aaaf79865c17f9a7f96723a21c56b00632aac97bbb9f8e205d25e93ff2ec2935"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.009748,
+      "bytes": 7832,
+      "raw_digest": "sha256:e4d6cc55c96d43e9653bd13dfffc789cf59c4423ee38f1ea0869956fe52917e3"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.047694,
+      "bytes": 1813,
+      "raw_digest": "sha256:394f3e548c5a0c05b4afccc2eac81cc56f5f395ecf8bcdf7b762d6ba7ca6782a"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.046761,
+      "bytes": 3733,
+      "raw_digest": "sha256:9bd77a7629a3ea4d525f9b6420dc884e50ed2b98dba4d3f2cfaf938122bd00f2"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.042713,
+      "bytes": 1803,
+      "raw_digest": "sha256:e5ed6232ce65426626028337d07b0bd7fc961d422c63284147b0d393df82a7dd"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.049891,
+      "bytes": 3713,
+      "raw_digest": "sha256:b2c4707afc81151527668d086b9442e3e96f44cefb950ebdbe6b367854f46817"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.052233,
+      "bytes": 1803,
+      "raw_digest": "sha256:f530c7228f2786bd822708ba4256fa46f60a9ab3a0313ca0c82470aeafc65ad5"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.052181,
+      "bytes": 3713,
+      "raw_digest": "sha256:b5991668e3bec5afbf77bcc58df2d2ae20b48c4702bdaa177404ca2ee0899461"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.05671,
+      "bytes": 1809,
+      "raw_digest": "sha256:7f572821e74fbd388ceac8094934e6173895f183f771d06d043f7c8f090c4cf3"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.048328,
+      "bytes": 3725,
+      "raw_digest": "sha256:b8b59259d31f89144a2e1c8505665e57b26d2eb162c40e5f00f01b707657c975"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.051858,
+      "bytes": 1803,
+      "raw_digest": "sha256:a6302bc980cf91fe38cccff1e88acd21e0bdd5ef2494e0ebe6bdb1154ed3ab5c"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.04789,
+      "bytes": 3713,
+      "raw_digest": "sha256:6c142977ced7f9f9e81060779d0a84b1e6b1b656eda1bbbcecf3193a5208f262"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.018504,
+      "bytes": 10977,
+      "raw_digest": "sha256:745e462bb3310ca09e2ef2412333b22d3225b8273e47b5717e6ad278a7261790"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.016349,
+      "bytes": 10991,
+      "raw_digest": "sha256:a8ffb940d0bc5a21171d17d48cabd86ff1851e83a985ccf75b395ef8e270fe59"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.009773,
+      "bytes": 7832,
+      "raw_digest": "sha256:a74cd70c7a5198f4b14c4cfa5f3ccff0e3fdf4d565786563f6ed250b913ae223"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.023361,
+      "bytes": 15552,
+      "raw_digest": "sha256:3c0078606c3fb55fc4f0e1f545382e8b187d2a5ffbf03ac463bfcba62621030a"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.023786,
+      "bytes": 32207,
+      "raw_digest": "sha256:45867568d647f49b1339fdc25baa22fd7d46a05c73ce6d5d62a935daa7755db7"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.021074,
+      "bytes": 15552,
+      "raw_digest": "sha256:5405e4e405394ea9ae6ceb11608ddce3f919eb4ff2a3c8559d95a278e07fd0ce"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.023708,
+      "bytes": 15552,
+      "raw_digest": "sha256:3817c6092bc1996b4ab5fb80970ebfa6be385b65ddf9f940c544e1d212109175"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.021168,
+      "bytes": 15552,
+      "raw_digest": "sha256:0e66e2506430f096a61df9d4bf65f9371ec7762cbfa8063c6086259e0d83dfd4"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.016939,
+      "bytes": 15552,
+      "raw_digest": "sha256:5789d527768fc540206f9aed1c79fea2ef1b55765a0b100cdb9a7c96aad033ea"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.021255,
+      "bytes": 15552,
+      "raw_digest": "sha256:6081cdc78a9bf3fcc799ef53c225ff6e70843f0ca81749fe521b68e74aa4d679"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.017808,
+      "bytes": 9794,
+      "raw_digest": "sha256:4e411313b49d0594dd1175dc84eb9def355accbe991d84329efd1fa350ac79f8"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.014651,
+      "bytes": 11739,
+      "raw_digest": "sha256:f449d42d457972ac88a1573289af9179d5cf2991dd3dcd89cd492ca2a78186bc"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.015182,
+      "bytes": 5941,
+      "raw_digest": "sha256:d1604d7dab0b178457c6b3af745fb58ad9425d48f7b1fb47a0f90ab4882a2561"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.015654,
+      "bytes": 5938,
+      "raw_digest": "sha256:ca3636b17ac7e601505a5009bd8d3f28febc1e11905f08af4867ec041b934cac"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.017257,
+      "bytes": 9817,
+      "raw_digest": "sha256:27aa49841b416d2db7ce755352d0ace6a2a7f9ee4bb030dbd0d47da250011a2d"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.015459,
+      "bytes": 9851,
+      "raw_digest": "sha256:dfa3eedfa28e638ee8957f4cd2fb2d18d03a6812fe6e88dc021ba6f61dc558be"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.015524,
+      "bytes": 5985,
+      "raw_digest": "sha256:b2b5bd965754d7fff2909d3a27ce6bd61e841c46e000e893d925d7b40803e7f7"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.015666,
+      "bytes": 9015,
+      "raw_digest": "sha256:8d0e3d366cbc69ca22fc38a539523bc46ba252ab067ab1714ad74cea6d6ef3f5"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.009751,
+      "bytes": 9019,
+      "raw_digest": "sha256:1d7176f53c7caec763501581df0500253e32ade2d4e1a7f6d596e100695fb799"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.01619,
+      "bytes": 10423,
+      "raw_digest": "sha256:32eeeb6d6ff2ea200aceb41c9afdcbdf1af7d6c3687e6f4f06f039f4ebbab5b0"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.011596,
+      "bytes": 7775,
+      "raw_digest": "sha256:fb97def9e0a95d2aa0a5ed4692044e365ccadbbbb623cc63845b3c8207c9c615"
+    }
+  ],
+  "phases": [
+    {
+      "phase": "postfix-baseline",
+      "ready_seconds": 6.889,
+      "operating": {
+        "rss_samples": 45,
+        "sampled_max_tree_rss_bytes": 238157824,
+        "sampled_max_descendants": 5,
+        "minimum_available_physical_bytes": 7716700160,
+        "physical_samples": 9,
+        "physical_formula": "page_size*(free+inactive+speculative); compressor and swap excluded",
+        "sampled_max_data_allocated_bytes": 3526656,
+        "rss_cadence_seconds": 0.2,
+        "host_disk_cadence_seconds": 1,
+        "qualification": "Sequential native samples after HTTP readiness; not an atomic tree snapshot, transient peak or hard enforcement. Startup before HTTP readiness and teardown are not RSS-sampled. No swap credit.",
+        "ownership": {
+          "sampling_thread_joined": true,
+          "host_children": [
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            }
+          ],
+          "forced_sampling_cancellation": false,
+          "observer": {
+            "exit_code": 0,
+            "joined": true,
+            "forced": false
+          }
+        }
+      },
+      "terminal": {
+        "outcome": "success",
+        "exit_code": 0,
+        "teardown": "clean",
+        "wall_seconds": 16.706
+      },
+      "owned_pgid": 51877,
+      "server_group_drained": true
+    }
+  ],
+  "production_signing": "pending; no production key or production signature",
+  "input_censuses_before_launch": [
+    {
+      "role": "primary",
+      "repository": "evaluation.local/t503-public",
+      "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+      "tree": "a0d73c675a066f2e969c1caa2db205576108d57e",
+      "files": 19,
+      "bytes": 316648,
+      "census_digest": "sha256:18891698bfb2873c21d794e1d1652902f36be06fcca4ed2e017d52d13164383b"
+    },
+    {
+      "role": "concurrent_copy",
+      "repository": "evaluation.local/t503-public-copy",
+      "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+      "tree": "a0d73c675a066f2e969c1caa2db205576108d57e",
+      "files": 19,
+      "bytes": 316648,
+      "census_digest": "sha256:18891698bfb2873c21d794e1d1652902f36be06fcca4ed2e017d52d13164383b"
+    },
+    {
+      "role": "primary_prospective_transition",
+      "repository": "evaluation.local/t503-public",
+      "commit": "5b187e7b79f5580a8918f8c0b34fb3350b447c97",
+      "tree": "965232d0b63975a25a6537d220ac1f6fc00c6d70",
+      "files": 19,
+      "bytes": 316718,
+      "census_digest": "sha256:d2d744a1cbea958fd9ad201b809ebf6b64853faab8e6d3c1118ae4e48204cb25"
+    },
+    {
+      "role": "concurrent_copy_prospective_transition",
+      "repository": "evaluation.local/t503-public-copy",
+      "commit": "cd064619232a149ee00374fadad0759cf12528c0",
+      "tree": "071ab5e3793d50a32966246a651818b7d10a2e71",
+      "files": 19,
+      "bytes": 316722,
+      "census_digest": "sha256:9f712925ab4c4165f6399a3a7bb8817dbaa0019d5e78d4eb75b8879e855a6b0e"
+    }
+  ],
+  "host": {
+    "sysname": "Darwin",
+    "machine": "arm64",
+    "cpu_count": 10,
+    "physical_memory_bytes": 25769803776
+  },
+  "bounds": {
+    "index_seconds": 60,
+    "index_bytes": 8388608,
+    "evaluation_tree_files": 32,
+    "evaluation_tree_bytes": 16777216,
+    "repositories": 2,
+    "parallel_comparison_requests": 8,
+    "http_response_bytes": 262144,
+    "cold_request_seconds": 2,
+    "warm_request_seconds": 1,
+    "startup_seconds": 30,
+    "publication_seconds": 90,
+    "complete_native_seconds": 180,
+    "derived_allocated_disk_bytes": 536870912,
+    "minimum_available_physical_headroom_bytes": 4294967296,
+    "minimum_free_disk_bytes": 2147483648,
+    "source_blobs_read_per_citation": 1,
+    "process_tree_sampled_max_rss_bytes": 2147483648
+  },
+  "free_disk_preflight_bytes": 231575101440,
+  "executed_tools": {
+    "go": {
+      "path": "/opt/homebrew/bin/go",
+      "resolved_path": "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+      "bytes": 14500160,
+      "sha256": "sha256:3925fc3221ac440ebf7c35361ff663bed0c7bdb2e0a157b75fe993607ffe0a19",
+      "version": "go1.26.5",
+      "version_evidence": "go version go1.26.5 darwin/arm64"
+    },
+    "git": {
+      "path": "/usr/bin/git",
+      "resolved_path": "/usr/bin/git",
+      "bytes": 118640,
+      "sha256": "sha256:b8763cf250e607a778bb4603cecb5b90338814d0a3dfcba0d57b1de242f610e9",
+      "version_evidence": "git version 2.54.0 (Apple Git-157)"
+    },
+    "zoekt_git_index": {
+      "path": "/private/tmp/phebs-main-8a70-native-qualification/zoekt-git-index",
+      "resolved_path": "/private/tmp/phebs-main-8a70-native-qualification/zoekt-git-index",
+      "bytes": 39081090,
+      "sha256": "sha256:dd216b7e4df21b956a8a3461108ac81ee6cb700799a3decf9c739af2ba003c4d",
+      "version": "same-main-go.mod",
+      "version_evidence": "helper-build-receipt.json"
+    },
+    "focused_index": {
+      "path": "/private/tmp/phebs-main-8a70-native-qualification/phebs-focused-index",
+      "resolved_path": "/private/tmp/phebs-main-8a70-native-qualification/phebs-focused-index",
+      "bytes": 27295666,
+      "sha256": "sha256:701d83e026ac926d3e5d92a948a68c346c11335ce83c37c31bd62207beb0d8b5",
+      "version": "same-main-go.mod",
+      "version_evidence": "helper-build-receipt.json"
+    },
+    "buf": {
+      "path": "/Users/ben/.codex/worktrees/t445-header/phebs.com/bin/buf",
+      "resolved_path": "/Users/ben/.codex/worktrees/t445-header/phebs.com/bin/buf",
+      "bytes": 77461554,
+      "sha256": "sha256:691b8635ab9c083e38f1d892bf10799ea688070ed8ef8081d9b7907d0a7e4658",
+      "version_evidence": "1.72.0"
+    },
+    "surreal": {
+      "path": "/opt/homebrew/bin/surreal",
+      "resolved_path": "/opt/homebrew/opt/phebs-surreal-3.2.0/surreal",
+      "bytes": 233283488,
+      "sha256": "sha256:ee819dfcedd23035a785ac40f2509f86cbb09fc3255726ad74755b161a3ca0a8",
+      "version": "3.2.0",
+      "version_evidence": "3.2.0 for macos on aarch64"
+    },
+    "node": {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+      "resolved_path": "/private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+      "bytes": 120965360,
+      "sha256": "sha256:ee6fb0e015284d83a91e8ec5213f43a157f8a392b58555301682892ba928c04a",
+      "version": "v24.18.0",
+      "version_evidence": "v24.18.0"
+    },
+    "chrome": {
+      "path": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "resolved_path": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "bytes": 367696,
+      "sha256": "sha256:3972431aa8acff4e590998116c6c3e663e9a4d0eb6efd08fd160df8206db94a6",
+      "version": "155.0.8059.82",
+      "version_evidence": "Source-bound installed-Chrome preflight actual renderer155.0.8059.82, clean exit0 joined teardown"
+    },
+    "chrome_framework": {
+      "path": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/Current/Google Chrome Framework",
+      "resolved_path": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.82/Google Chrome Framework",
+      "bytes": 520002192,
+      "sha256": "sha256:b9aa14e0270a6a96bde855b9765c2a6eb48d0af70da7e9018f9622c4f626ef6c",
+      "version": "155.0.8059.82",
+      "version_evidence": "Source-bound installed-Chrome preflight actual renderer155.0.8059.82, clean exit0 joined teardown"
+    },
+    "openssl": {
+      "path": "/opt/homebrew/opt/openssl@3/bin/openssl",
+      "resolved_path": "/opt/homebrew/Cellar/openssl@3/3.6.3/bin/openssl",
+      "bytes": 880512,
+      "sha256": "sha256:103fc7706cf6646f226d96f29242d81890363499afc730e7ef1fadd64b3a123c",
+      "version_evidence": "OpenSSL3.6.3/library3.6.3"
+    },
+    "vm_stat": {
+      "path": "/usr/bin/vm_stat",
+      "resolved_path": "/usr/bin/vm_stat",
+      "bytes": 101664,
+      "sha256": "sha256:0127fec1de1d99c7f0b0cf185fec048c7fe92d1f1b2ad380882c583f0c921df7",
+      "version_evidence": "Darwin system sampler image; no sample performed during draft prep"
+    }
+  },
+  "observer": {
+    "path": "/tmp/phebs-main-8a70-native-qualification/native-observer",
+    "resolved_path": "/private/tmp/phebs-main-8a70-native-qualification/native-observer",
+    "bytes": 31576930,
+    "sha256": "sha256:3b25f9b9cabb9cac5087d9e65af54eb7d6bf0643d5bbd33ed9296c621d3fc16e"
+  },
+  "source_commit": "8a70fef5f60411f31d210efd52ab4dcd79385549",
+  "source_tree": "ebbe68f5d6faef8851e3368c268d3280797ce98b",
+  "binary_digest": "sha256:7dab45a9011c60132a80381933242705e44da19b2712421ed4361b67dcca19be",
+  "binary_metadata": "/tmp/phebs-main-8a70-native-qualification/phebs: go1.26.5\n\tpath\tgithub.com/bmeddeb/phebs/cmd/phebs\n\tmod\tgithub.com/bmeddeb/phebs\tv0.2.1-0.20261018114706-8a70fef5f604\t\n\tdep\tgithub.com/RoaringBitmap/roaring/v2\tv2.19.0\th1:zsWtVE+biht4eVl0YDLvykUqGkftR3Qc5UCbeKB4UQ4=\n\tdep\tgithub.com/alexedwards/scs/v2\tv2.9.0\th1:xa05mVpwTBm1iLeTMNFfAWpKUm4fXAW7CeAViqBVS90=\n\tdep\tgithub.com/beorn7/perks\tv1.0.1\th1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=\n\tdep\tgithub.com/bits-and-blooms/bitset\tv1.24.4\th1:95H15Og1clikBrKr/DuzMXkQzECs1M6hhoGXLwLQOZE=\n\tdep\tgithub.com/bmatcuk/doublestar/v4\tv4.10.0\th1:zU9WiOla1YA122oLM6i4EXvGW62DvKZVxIe6TYWexEs=\n\tdep\tgithub.com/bufbuild/protocompile\tv0.14.2-0.20260716165721-bb5762d29672\th1:6xykiXQPoF/hhOjAhwiHQ0kgcAvrDZw0Tjl1VQkpu5c=\n\tdep\tgithub.com/cespare/xxhash/v2\tv2.3.0\th1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=\n\tdep\tgithub.com/cockroachdb/errors\tv1.11.3\th1:5bA+k2Y6r+oz/6Z/RFlNeVCesGARKuC6YymtcDrbC/I=\n\tdep\tgithub.com/cockroachdb/logtags\tv0.0.0-20241215232642-bb51bb14a506\th1:ASDL+UJcILMqgNeV5jiqR4j+sTuvQNHdf2chuKj1M5k=\n\tdep\tgithub.com/cockroachdb/redact\tv1.1.5\th1:u1PMllDkdFfPWaNGMyLD1+so+aq3uUItthCFqzwPJ30=\n\tdep\tgithub.com/coreos/go-oidc/v3\tv3.16.0\th1:qRQUCFstKpXwmEjDQTIbyY/5jF00+asXzSkmkoa/mow=\n\tdep\tgithub.com/danielgtaylor/huma/v2\tv2.38.0\th1:fb0WZCatnaiHLphMQDDWDjygNxfMkX/ENma3QsRl7vY=\n\tdep\tgithub.com/dustin/go-humanize\tv1.0.1\th1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkpeCY=\n\tdep\tgithub.com/fatih/color\tv1.19.0\th1:Zp3PiM21/9Ld6FzSKyL5c/BULoe/ONr9KlbYVOfG8+w=\n\tdep\tgithub.com/fsnotify/fsnotify\tv1.8.0\th1:dAwr6QBTBZIkG8roQaJjGof0pp0EeF+tNV7YBP3F/8M=\n\tdep\tgithub.com/fxamacker/cbor/v2\tv2.9.2\th1:X4Ksno9+x3cz0TZv69ec1hxP/+tymuR8PXQJyDwfh78=\n\tdep\tgithub.com/getsentry/sentry-go\tv0.31.1\th1:ELVc0h7gwyhnXHDouXkhqTFSO5oslsRDk0++eyE0KJ4=\n\tdep\tgithub.com/go-enry/go-enry/v2\tv2.9.6\th1:np63eOtMV56zfYDHnFVgpEVOk8fr2kmylcMnAZUDbSs=\n\tdep\tgithub.com/go-jose/go-jose/v4\tv4.1.3\th1:CVLmWDhDVRa6Mi/IgCgaopNosCaHz7zrMeF9MlZRkrs=\n\tdep\tgithub.com/gofrs/flock\tv0.13.0\th1:95JolYOvGMqeH31+FC7D2+uULf6mG61mEZ/A8dRYMzw=\n\tdep\tgithub.com/gofrs/uuid\tv4.4.0+incompatible\th1:3qXRTX8/NbyulANqlc0lchS1gqAVxRgsuW1YrTJupqA=\n\tdep\tgithub.com/gogo/protobuf\tv1.3.2\th1:Ov1cvc58UF3b5XjBnZv7+opcTcQFZebYjWzi34vdm4Q=\n\tdep\tgithub.com/google/go-cmp\tv0.7.0\th1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=\n\tdep\tgithub.com/google/jsonschema-go\tv0.4.3\th1:/DBOLZTfDow7pe2GmaJNhltueGTtDKICi8V8p+DQPd0=\n\tdep\tgithub.com/google/uuid\tv1.6.0\th1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=\n\tdep\tgithub.com/gorilla/websocket\tv1.5.3\th1:saDtZ6Pbx/0u+bgYQ3q96pZgCzfhKXGPqt7kZ72aNNg=\n\tdep\tgithub.com/grafana/regexp\tv0.0.0-20240607082908-2cb410fa05da\th1:BML5sNe+bw2uO8t8cQSwe5QhvoP04eHPF7bnaQma0Kw=\n\tdep\tgithub.com/grpc-ecosystem/go-grpc-middleware/v2\tv2.3.3\th1:B+8ClL/kCQkRiU82d9xajRPKYMrB7E0MbtzWVi1K4ns=\n\tdep\tgithub.com/kr/pretty\tv0.3.1\th1:flRD4NNwYAUpkphVc1HcthR4KEIFJ65n8Mw5qdRn3LE=\n\tdep\tgithub.com/kr/text\tv0.2.0\th1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=\n\tdep\tgithub.com/mattn/go-colorable\tv0.1.15\th1:+u9SLTRGnXv73cEsnsmoZBom+dMU88B2M0aDcWy0/jY=\n\tdep\tgithub.com/mattn/go-isatty\tv0.0.23\th1:cYwCQTQf3HB6xUC+BtyCLZNr7IzbOmoZbmssVNzSyiQ=\n\tdep\tgithub.com/modelcontextprotocol/go-sdk\tv1.6.1\th1:0zOSupjKUxPKSocPT1Wtago+mUHU2/uZ4xSOY0FGReU=\n\tdep\tgithub.com/mschoch/smat\tv0.2.0\th1:8imxQsjDm8yFEAVBe7azKmKSgzSkZXDuKkSq9374khM=\n\tdep\tgithub.com/munnerz/goautoneg\tv0.0.0-20191010083416-a7dc8b61c822\th1:C3w9PqII01/Oq1c1nUAm88MOHcQC9l5mIlSMApZMrHA=\n\tdep\tgithub.com/opentracing/opentracing-go\tv1.2.0\th1:uEJPy/1a5RIPAJ0Ov+OIO8OxWu77jEv+1B0VhjKrZUs=\n\tdep\tgithub.com/pkg/errors\tv0.9.1\th1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=\n\tdep\tgithub.com/prometheus/client_golang\tv1.23.2\th1:Je96obch5RDVy3FDMndoUsjAhG5Edi49h0RJWRi/o0o=\n\tdep\tgithub.com/prometheus/client_model\tv0.6.2\th1:oBsgwpGs7iVziMvrGhE53c/GrLUsZdHnqNwqPLxwZyk=\n\tdep\tgithub.com/prometheus/common\tv0.66.1\th1:h5E0h5/Y8niHc5DlaLlWLArTQI7tMrsfQjHV+d9ZoGs=\n\tdep\tgithub.com/rogpeppe/go-internal\tv1.14.1\th1:UQB4HGPB6osV0SQTLymcB4TgvyWu6ZyliaW0tI/otEQ=\n\tdep\tgithub.com/rs/xid\tv1.6.0\th1:fV591PaemRlL6JfRxGDEPl69wICngIQ3shQtzfy2gxU=\n\tdep\tgithub.com/scip-code/scip/bindings/go/scip\tv0.9.0\th1:C0LVhTl9Gw+2UC4d7RZdvB0iWUkaOyRA1fQW1CrhsMA=\n\tdep\tgithub.com/segmentio/asm\tv1.2.1\th1:DTNbBqs57ioxAD4PrArqftgypG4/qNpXoJx8TVXxPR0=\n\tdep\tgithub.com/segmentio/encoding\tv0.5.4\th1:OW1VRern8Nw6ITAtwSZ7Idrl3MXCFwXHPgqESYfvNt0=\n\tdep\tgithub.com/sourcegraph/beaut\tv0.0.0-20240611013027-627e4c25335a\th1:j/CQ27s679M9wRGBRJYyXGrfkYuQA6VMnD7R08mHD9c=\n\tdep\tgithub.com/sourcegraph/go-ctags\tv0.0.0-20250729094530-349a251d78d8\th1:hpCD/FvbXLR7/034fKD0CQ8LmT4zoQfT2DzJIjqMzUI=\n\tdep\tgithub.com/sourcegraph/log\tv0.0.0-20241024013702-574f7079c888\th1:9PUH8Hn8mVhPTtRKqot1HHsbLRDP0H2A+FSyuRumP2Q=\n\tdep\tgithub.com/sourcegraph/zoekt\tv0.0.0-20260709064101-33f1f18af292\th1:HsoQyVl9olsjSqA0YddekTbCJOsfn9bUeu//bLg6fa8=\n\tdep\tgithub.com/surrealdb/surrealdb.go\tv1.5.1\th1:5uyGYkwjO9p3UEdRBroWGhw5PpLuJorenmeB9GtGWKo=\n\tdep\tgithub.com/tetratelabs/wazero\tv1.12.0\th1:DuWcpNu/FzgEXgGBDp8J1Spc+CWOvvtvVyjKlaZopYU=\n\tdep\tgithub.com/wasilibs/go-re2\tv1.10.0\th1:vQZEBYZOCA9jdBMmrO4+CvqyCj0x4OomXTJ4a5/urQ0=\n\tdep\tgithub.com/wasilibs/wazero-helpers\tv0.0.0-20240620070341-3dff1577cd52\th1:OvLBa8SqJnZ6P+mjlzc2K7PM22rRUPE1x32G9DTPrC4=\n\tdep\tgithub.com/x448/float16\tv0.8.4\th1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=\n\tdep\tgithub.com/yosida95/uritemplate/v3\tv3.0.2\th1:Ed3Oyj9yrmi9087+NczuL5BwkIc4wvTb5zIM+UJPGz4=\n\tdep\tgithub.com/yuin/goldmark\tv1.4.13\th1:fVcFKWvrslecOb/tg+Cc05dkeYx540o0FuFt3nUVDoE=\n\tdep\tgo.uber.org/atomic\tv1.11.0\th1:ZvwS0R+56ePWxUNi+Atn9dWONBPp/AUETXlHW0DxSjE=\n\tdep\tgo.uber.org/multierr\tv1.11.0\th1:blXXJkSxSSfBVBlC76pxqeO+LN3aDfLQo+309xJstO0=\n\tdep\tgo.uber.org/thriftrw\tv1.34.0\th1:F6aIyIg6B1+fx7aiylVyqDdTG8mtLQfREfOdlm6u+mI=\n\tdep\tgo.uber.org/zap\tv1.28.0\th1:IZzaP1Fv73/T/pBMLk4VutPl36uNC+OSUh3JLG3FIjo=\n\tdep\tgo.yaml.in/yaml/v2\tv2.4.2\th1:DzmwEr2rDGHl7lsFgAHxmNz/1NlQ7xLIrlN2h5d1eGI=\n\tdep\tgolang.org/x/crypto\tv0.54.0\th1:YLIA59K4fiNzHzjnZt2tUJQjQtUWfWbeHBqKtk3eScw=\n\tdep\tgolang.org/x/mod\tv0.38.0\th1:MECBjubtXD7yj4HrhIUcywNaGeNVUdfVnxmPajOk4yk=\n\tdep\tgolang.org/x/net\tv0.57.0\th1:K5+3DljvIuDG9/Jv9rvyMywYNFCQ9RSUY6OOTTkT+tE=\n\tdep\tgolang.org/x/oauth2\tv0.36.0\th1:peZ/1z27fi9hUOFCAZaHyrpWG5lwe0RJEEEeH0ThlIs=\n\tdep\tgolang.org/x/sync\tv0.22.0\th1:SZjpbeLmrCk4xhRSZFNZW5gFUeCeFgjekvI/+gfScek=\n\tdep\tgolang.org/x/sys\tv0.47.0\th1:o7XGOvZQCADBQQ4Y7VNq2dRWQR7JmOUW8Kxx4ZsNgWs=\n\tdep\tgolang.org/x/text\tv0.40.0\th1:Ub2Z6/xjgF1WrYQz2nuITOEegKFtiIy+rieRJ5lHZKs=\n\tdep\tgoogle.golang.org/genproto/googleapis/rpc\tv0.0.0-20260715232425-e75dac1f907d\th1:Jkpk39hlTZOIp3RbfvNX9R8Hv+Sw0X89nlU/xFOErsc=\n\tdep\tgoogle.golang.org/grpc\tv1.80.0\th1:Xr6m2WmWZLETvUNvIUmeD5OAagMw3FiKmMlTdViWsHM=\n\tdep\tgoogle.golang.org/protobuf\tv1.36.11\th1:fV6ZwhNocDyBLK0dj+fg8ektcVegBBuEolpbTQyBNVE=\n\tdep\tgopkg.in/yaml.v3\tv3.0.1\th1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=\n\tbuild\t-buildmode=exe\n\tbuild\t-compiler=gc\n\tbuild\t-tags=ui\n\tbuild\t-trimpath=true\n\tbuild\tCGO_ENABLED=1\n\tbuild\tGOARCH=arm64\n\tbuild\tGOOS=darwin\n\tbuild\tGOARM64=v8.0\n\tbuild\tvcs=git\n\tbuild\tvcs.revision=8a70fef5f60411f31d210efd52ab4dcd79385549\n\tbuild\tvcs.time=2026-10-18T11:47:06Z\n\tbuild\tvcs.modified=false\n",
+  "binding_digest": "sha256:05e59b90af631558e3485451645e2cc3fe0981d80a2afb873774116f5223fca5",
+  "plan_digest": "sha256:8acec78a879023e4642e41710a3563c3d4930071239e925798cf1666b5735f9f",
+  "first_attempt_digest": "sha256:7e63806f9269a357fa056d46ff625a1a764da8930eb74df00d84341607163693",
+  "labels_digest": "sha256:db84af5c81cad0526677a058d602523049e000d2b960262f5bb6e547d77bcd26",
+  "headroom_preflight": {
+    "available_physical_bytes": 7976534016,
+    "page_size": 16384,
+    "pages": {
+      "free": 4242,
+      "inactive": 472814,
+      "speculative": 9793
+    },
+    "formula": "page_size*(free+inactive+speculative); compressor and swap excluded"
+  },
+  "signed_records": [
+    {
+      "pack": "phebs.grpc.caller.go",
+      "record_digest": "sha256:711a06b6bfd5217e033bf65df9f60ea19d3cf21fc719d0ff3c2dd5c57f1638ce",
+      "record": {
+        "release_schema_version": "1.0",
+        "release_id": "rel-phebs.grpc.caller.go-1.0.0",
+        "release_version": "1.0.0",
+        "pack_id": "phebs.grpc.caller.go",
+        "pack_claim_version": "1.0.0",
+        "card": {
+          "artifact_id": "caller-map-card-1.0.0.md",
+          "digest": "sha256:46d032ed71236a1f32dc67d9bc0eca3a0a83e8c385d8988abee7609f37b7f397"
+        },
+        "manifest": {
+          "artifact_id": "caller-map-manifest-1.0.0.json",
+          "digest": "sha256:89c9b414961352483a5c28fb45f38d8b886042ae6dd54f968ca1d1580598c640"
+        },
+        "implementation": {
+          "phebs_source_commit": "8a70fef5f60411f31d210efd52ab4dcd79385549",
+          "phebs_binary_digest": "sha256:7dab45a9011c60132a80381933242705e44da19b2712421ed4361b67dcca19be",
+          "pack_implementation_digest": "sha256:b58de55cafe2bdfc192110aa0fac7f0ce59bf03aa68237aa45b4f6ce1815e8ff",
+          "toolchain_digest": "sha256:c6652a655b5c51d1ce66b001a3f82f118b97fecfca54705e3b7313d6c8b82dba"
+        },
+        "referenced_artifacts_root_digest": "sha256:f0fc078760f06aa1251f559328011013f80b9c5dcde1b9da39216af530453167",
+        "validation": {
+          "artifact_id": "caller-map-validation-1.0.0.json",
+          "digest": "sha256:abc969d0321bb67ccba283a6c9ff33f49e3071224edda507758460e195f89834",
+          "applies": true,
+          "expires_at": "2027-01-15T23:59:59Z",
+          "expiry_trigger": null
+        },
+        "derived_status": "released",
+        "approved_at": "2026-10-18T00:00:00Z",
+        "approval_records": [
+          "t503-postfix-disposable-key-measurement-only"
+        ],
+        "canonicalization": {
+          "algorithm": "phebs-canonical-json",
+          "version": "1"
+        },
+        "signature": {
+          "key_id": "t503-postfix-integration-only",
+          "algorithm": "ed25519",
+          "value": "8S5QsXVGCO5zHOUqFXHtIZGKdHBPUsEQJJ8LXRzyKaW2kK7h8viNDnFVAtW2EKaI9U4esq6R2tLvPLOaZn5xDA=="
+        }
+      }
+    },
+    {
+      "pack": "phebs.grpc.caller.comparison",
+      "record_digest": "sha256:d2f803b0f84cd278323c847166e25048a7404097d0cf615ce6169e04caf934b4",
+      "record": {
+        "release_schema_version": "1.0",
+        "release_id": "rel-phebs.grpc.caller.comparison-1.0.0",
+        "release_version": "1.0.0",
+        "pack_id": "phebs.grpc.caller.comparison",
+        "pack_claim_version": "1.0.0",
+        "card": {
+          "artifact_id": "caller-comparison-card-1.0.0.md",
+          "digest": "sha256:19c62808095d36e21e7228564e836e64e810ee82aab2789619a2ef8c884662da"
+        },
+        "manifest": {
+          "artifact_id": "caller-comparison-manifest-1.0.0.json",
+          "digest": "sha256:35fa4f5d828fd9d540d15bd9edf94b0fdbca2cfa53c51f782569160e40144e63"
+        },
+        "implementation": {
+          "phebs_source_commit": "8a70fef5f60411f31d210efd52ab4dcd79385549",
+          "phebs_binary_digest": "sha256:7dab45a9011c60132a80381933242705e44da19b2712421ed4361b67dcca19be",
+          "pack_implementation_digest": "sha256:b58de55cafe2bdfc192110aa0fac7f0ce59bf03aa68237aa45b4f6ce1815e8ff",
+          "toolchain_digest": "sha256:c6652a655b5c51d1ce66b001a3f82f118b97fecfca54705e3b7313d6c8b82dba"
+        },
+        "referenced_artifacts_root_digest": "sha256:f0fc078760f06aa1251f559328011013f80b9c5dcde1b9da39216af530453167",
+        "validation": {
+          "artifact_id": "caller-comparison-validation-1.0.0.json",
+          "digest": "sha256:a2c3baa241e12bfdb11abdba0c303477e6a1baeefc2400ab2b831a3bc0d78772",
+          "applies": true,
+          "expires_at": "2027-01-15T23:59:59Z",
+          "expiry_trigger": null
+        },
+        "derived_status": "released",
+        "approved_at": "2026-10-18T00:00:00Z",
+        "approval_records": [
+          "t503-postfix-disposable-key-measurement-only"
+        ],
+        "canonicalization": {
+          "algorithm": "phebs-canonical-json",
+          "version": "1"
+        },
+        "signature": {
+          "key_id": "t503-postfix-integration-only",
+          "algorithm": "ed25519",
+          "value": "fwvDtk9atIw2q1BGrlrnKhX+oT4DnR8VsCQBSUCjDDMM5NyBOsw7baSbNQDqAjHSaDfR8d9IgWr7lLTvDTMxCA=="
+        }
+      }
+    }
+  ],
+  "qualification": "Finite Darwin-local selected public-source composition; no upstream migration/equivalence, deployment/runtime/retirement, global accuracy or Linux scale inference.",
+  "preparation_seconds": 1.114041,
+  "initial_authorities": {
+    "old": {
+      "state": "current",
+      "plane": "repository-overlay",
+      "repository": "evaluation.local/t503-public",
+      "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+      "generation_digest": "sha256:0e89feb2688028767172dbae48cbf2d99446e75fea603066dc403ebb3dfba982",
+      "declaration_set_digest": "sha256:f0a88a5859c031af6a87938502fdb17162df766f3d5a889a1d66dc4983ded5cd",
+      "candidate_manifest_digest": "sha256:110562e26806486c22637368839d8858595a476f741dfadbd21de375d4e55bb4",
+      "resolver_manifest_digest": "sha256:b23f0fcc1fc833a29aca5c2bb269345944b5c08cff56baff96e4215331668aa0",
+      "pair_set_digest": "sha256:9e26910ab968c1827fcaaebf812a46ec341235e99cfe474a47075348372f2a72",
+      "manifest_digest": "sha256:819d92ba5b67aa406dba205e0e4e1267660b1aaacb6dcb743c5fce8e8d1d7735",
+      "publication_revision": 1,
+      "pair_count": 3,
+      "result_count": 9,
+      "abstention_count": 6,
+      "coverage_record_count": 1,
+      "covered_candidate_count": 3,
+      "canonical_bytes": 18523,
+      "partition_progress": {
+        "state": "complete",
+        "settled_pair_count": 3,
+        "succeeded_pair_count": 3,
+        "refused_pair_count": 0,
+        "total_pair_count": 3
+      }
+    },
+    "replacement": {
+      "state": "current",
+      "plane": "repository-overlay",
+      "repository": "evaluation.local/t503-public",
+      "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+      "generation_digest": "sha256:0e89feb2688028767172dbae48cbf2d99446e75fea603066dc403ebb3dfba982",
+      "declaration_set_digest": "sha256:f0a88a5859c031af6a87938502fdb17162df766f3d5a889a1d66dc4983ded5cd",
+      "candidate_manifest_digest": "sha256:110562e26806486c22637368839d8858595a476f741dfadbd21de375d4e55bb4",
+      "resolver_manifest_digest": "sha256:b23f0fcc1fc833a29aca5c2bb269345944b5c08cff56baff96e4215331668aa0",
+      "pair_set_digest": "sha256:9e26910ab968c1827fcaaebf812a46ec341235e99cfe474a47075348372f2a72",
+      "manifest_digest": "sha256:819d92ba5b67aa406dba205e0e4e1267660b1aaacb6dcb743c5fce8e8d1d7735",
+      "publication_revision": 1,
+      "pair_count": 3,
+      "result_count": 9,
+      "abstention_count": 6,
+      "coverage_record_count": 1,
+      "covered_candidate_count": 3,
+      "canonical_bytes": 18523,
+      "partition_progress": {
+        "state": "complete",
+        "settled_pair_count": 3,
+        "succeeded_pair_count": 3,
+        "refused_pair_count": 0,
+        "total_pair_count": 3
+      }
+    }
+  },
+  "resolver_units": [
+    {
+      "repository": "evaluation.local/t503-public",
+      "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+      "resolver_generation": "sha256:163510a739b58d3c56b87a575287e460cc4d2a816a188b90541d19fca279b20c",
+      "resolver_authority": "sha256:b23f0fcc1fc833a29aca5c2bb269345944b5c08cff56baff96e4215331668aa0",
+      "pack_set_digest": "sha256:f2042fea6780e4ef3c6e5823b7779350e19c67099db2ef73ffd858df89d413ad",
+      "unit_member_digest": "sha256:01c6a794fe9dce1c3072558cb59db5a7a770b60e67bfba90c30dac1dbcc69000",
+      "unit_input": {
+        "input_digest": "sha256:23b21c02ee9ca6afacebc12774bed65d450e238df2fbad03e19696a60d656864",
+        "input_object_id": "bec863cd04d297a334ff9bd322c63f9200b126ae",
+        "input_path": "unit-snapshot.json",
+        "kind": "consumer_unit_input",
+        "mapping_total": 4,
+        "pack": "go-module",
+        "pack_version": "1.2.0",
+        "record_schema": "phebs-resolver-consumer-unit-v1",
+        "schema": "phebs-resolver-catalog-record-v1",
+        "state": "resolved"
+      },
+      "materialization_policy": {
+        "consumer_unit_record_schema": "phebs-resolver-consumer-unit-v1",
+        "consumer_unit_scope": "selected-caller-overlay-path-oid-v1",
+        "declaration_record_schema": "phebs-resolver-declaration-target-v1",
+        "generated_ordering": "declaration-input-mapping-symbol-sorted-candidates-invocation-v2",
+        "generated_record_schema": "phebs-resolver-generated-attribution-v2",
+        "generated_symbol_identity_accounting": "catalog-wide-unique-source-plus-descriptor-v1",
+        "generated_symbol_record_schema": "phebs-resolver-generated-go-symbol-v1",
+        "max_consumer_unit_identity_bytes": 16777216,
+        "max_consumer_unit_mappings": 25000,
+        "max_consumer_unit_member_bytes": 16777216,
+        "max_consumer_unit_snapshot_bytes": 4194304,
+        "max_declaration_path_bytes": 16777216,
+        "max_declaration_records": 25000,
+        "max_generated_candidate_bytes": 16777216,
+        "max_generated_candidate_bytes_per_selector": 131072,
+        "max_generated_candidate_expansions": 25000,
+        "max_generated_candidates_per_selector": 1024,
+        "max_generated_mappings": 25000,
+        "max_generated_symbol_descriptors": 100000,
+        "max_generated_symbol_identity_bytes": 33554432,
+        "max_generated_symbol_source_bytes": 4194304,
+        "max_generated_symbol_sources": 25000,
+        "max_generator_invocations": 128,
+        "max_go_module_bytes": 4194304,
+        "max_input_blob_bytes": 536870912,
+        "max_input_blob_reads": 100000,
+        "max_layout_roots": 128,
+        "max_snapshot_blob_bytes": 10485760,
+        "module_ordering": "candidate-caller-order-v1",
+        "module_parsing": "single-line-strict-token-factored-unsupported-v1",
+        "module_record_schema": "phebs-resolver-go-module-v1",
+        "name": "phebs-resolver-materialization-policy-v2",
+        "protocol_member_schema": "phebs-resolver-protocol-member-v2",
+        "snapshot_decoding": "exact-unique-keys-bounded-stream-v1",
+        "state_vocabulary": "resolved-unavailable-ambiguous-unsupported-v1",
+        "timeout_milliseconds": 300000
+      },
+      "catalog_identity": {
+        "repository": "evaluation.local/t503-public",
+        "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+        "unit_digest": "",
+        "declarations": [
+          {
+            "domain": "proto-contract",
+            "run_id": "6dc955bb0ca0df192e36b3ec830f60ae",
+            "generation_digest": "sha256:7c7908e87fc1eaa8e1dfd2fe4ed93c9ba100ec30cac76caf1aa021037c0a085d",
+            "authority_schema": "phebs-partitioned-extraction-domain-v1",
+            "plan_digest": "sha256:920204445331267bb5c905ce6a2291dafd4fea0c7bdd099084244cba72a37c6e",
+            "root_digest": "sha256:7c7908e87fc1eaa8e1dfd2fe4ed93c9ba100ec30cac76caf1aa021037c0a085d"
+          }
+        ],
+        "declaration_set_digest": "sha256:f0a88a5859c031af6a87938502fdb17162df766f3d5a889a1d66dc4983ded5cd",
+        "candidate_manifest_digest": "sha256:110562e26806486c22637368839d8858595a476f741dfadbd21de375d4e55bb4",
+        "source_lane_policy": "candidate-source-lane-base-v1",
+        "resolver_packs": [
+          {
+            "name": "go-module",
+            "version": "1.2.0"
+          },
+          {
+            "name": "grpc-generated-attribution",
+            "version": "1.2.0"
+          }
+        ],
+        "resolver_pack_set_digest": "sha256:f2042fea6780e4ef3c6e5823b7779350e19c67099db2ef73ffd858df89d413ad",
+        "catalog_policy": {
+          "name": "phebs-resolver-catalog-policy-v2",
+          "record_schema": "phebs-resolver-catalog-record-v1",
+          "record_ordering": "member-name-then-emission-v1",
+          "max_declaration_publications": 16,
+          "max_resolver_packs": 16,
+          "max_members": 256,
+          "max_records_per_member": 100000,
+          "max_records": 1000000,
+          "max_record_bytes": 1048576,
+          "max_metadata_bytes": 65536,
+          "max_manifest_bytes": 1048576,
+          "max_member_content_bytes": 67108864,
+          "max_catalog_content_bytes": 536870912,
+          "max_memory_bytes": 67108864,
+          "max_directory_entries": 32768,
+          "max_staging_disk_bytes": 545259520,
+          "max_publication_disk_bytes": 1084227584,
+          "max_open_files": 2
+        },
+        "catalog_policy_digest": "sha256:232d212b178fb3a08a7cb8ccf47df9d330c0173873dd26c21cdbc78df3e7d84a",
+        "generation_digest": "sha256:163510a739b58d3c56b87a575287e460cc4d2a816a188b90541d19fca279b20c"
+      }
+    }
+  ],
+  "caller_authorities": [
+    {
+      "generation_identity": {
+        "schema": "phebs-caller-generation-v2",
+        "repository": "evaluation.local/t503-public",
+        "head_commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+        "unit_digest": "",
+        "declaration_set_digest": "sha256:f0a88a5859c031af6a87938502fdb17162df766f3d5a889a1d66dc4983ded5cd",
+        "candidate_manifest_digest": "sha256:110562e26806486c22637368839d8858595a476f741dfadbd21de375d4e55bb4",
+        "candidate_policy_digest": "sha256:4df27648658cd6d26f7d0b68fed52b4017dbce6909c628dc183cebd71ab1eb94",
+        "source_lane_policy": "candidate-source-lane-base-v1",
+        "resolver_generation_digest": "sha256:163510a739b58d3c56b87a575287e460cc4d2a816a188b90541d19fca279b20c",
+        "resolver_manifest_digest": "sha256:b23f0fcc1fc833a29aca5c2bb269345944b5c08cff56baff96e4215331668aa0",
+        "caller_policy": {
+          "name": "phebs-direct-caller-leaf-policy-v3",
+          "leaf_adapter": "direct-syntax-zero-fact-coverage-v3",
+          "source_lane_policy": "candidate-source-lane-base-v1",
+          "max_caller_domains": 16,
+          "max_expected_pairs": 16384,
+          "max_result_records_per_pair": 12500,
+          "max_abstention_records_per_pair": 4096,
+          "max_record_bytes": 1048576,
+          "max_canonical_bytes_per_pair": 67108864,
+          "max_metadata_bytes": 65536,
+          "max_staging_bytes_per_pair": 68157440,
+          "max_aggregate_result_records": 100000,
+          "max_aggregate_abstention_records": 100000,
+          "max_aggregate_canonical_bytes": 536870912,
+          "max_aggregate_staging_bytes": 545259520,
+          "max_repository_directory_entries": 65536,
+          "max_direct_source_bytes": 4194304,
+          "max_source_blob_bytes_per_pair": 67108864,
+          "publication_memory_design_bytes": 134217728,
+          "max_open_files": 5,
+          "worker_timeout_milliseconds": 300000,
+          "max_coverage_records_per_pair": 1,
+          "max_aggregate_coverage_records": 16384,
+          "max_aggregate_covered_candidates": 67108864
+        },
+        "caller_policy_digest": "sha256:dbc7ed598f775156d80bf1880df325a22cfe4350f5a2ca5696bf16f559f727c9",
+        "extractors": [
+          {
+            "domain": "grpc-caller",
+            "version": "1.6.0-released.1",
+            "leaf_adapter_version": "direct-syntax-zero-fact-coverage-v3"
+          }
+        ],
+        "extractor_set_digest": "sha256:8025688ad011e5a535e4936f449da41005a68f7de48ae413febba356484ba021",
+        "digest": "sha256:0e89feb2688028767172dbae48cbf2d99446e75fea603066dc403ebb3dfba982",
+        "upstream": {
+          "schema": "phebs-downstream-upstream-authority-v2",
+          "repository": "evaluation.local/t503-public",
+          "observation": {
+            "version": "observation-v2",
+            "repository": "evaluation.local/t503-public",
+            "source_generation_digest": "sha256:9afdc4297bd84b7bbe997d146edb4eae7050b388fe2f4cb066fe15b3292d731f",
+            "source_root_digest": "sha256:bdf6369e1860dab44ab0c32136e39b50efa5eeaab6faa4714adc970172285254",
+            "observation_generation_digest": "sha256:7e0f35934d3a4d82335d51e036a89276df5dad235fda73bcd365b0191d6cdf42",
+            "observation_root_digest": "sha256:33b44dedbe0f197227e971d40e7418f903d6967a1fcb2dac34472ac547de97ea",
+            "partition_policy_digest": "sha256:48ac2209897adb7a399564ad8bbf3406c79696217c270cb5ead5c50ec95754d1",
+            "observation_policy_digest": "sha256:b0563c9ea6a4fc22a338a326216cfe77b4ae2ecbcf30bfa0617782308e0e3b7f",
+            "inventory_policy_digest": "sha256:ffd6deeb58cbdfb3072d7a7c5028357d1e3f53deded473b602e822b20dd3a1ff",
+            "record_count": 9,
+            "observed_count": 9
+          },
+          "required": [
+            {
+              "domain": "grpc-caller",
+              "version": "1.6.0-released.1"
+            }
+          ],
+          "domains": [
+            {
+              "domain": "grpc-caller",
+              "version": "1.6.0-released.1",
+              "plan_digest": "sha256:69d8f5afc0800900a7f99e56132e92054689a2c77fb3f7d0f2492cfc767f7950",
+              "root_digest": "sha256:058db7b7aeb1dad1788db44bdb455b918a309b375c0da0e0e3cee4e6719eeaac",
+              "run_id": "372cb445b8b1f10060e883165f2b4df5",
+              "disposition": "success",
+              "candidate_manifest_digest": "sha256:110562e26806486c22637368839d8858595a476f741dfadbd21de375d4e55bb4",
+              "candidate_partition_root_digest": "sha256:f031de9f31d95be936d596decae74e55ccfe263fd895216f52898a30c1d242e7",
+              "candidate_policy_digest": "sha256:4df27648658cd6d26f7d0b68fed52b4017dbce6909c628dc183cebd71ab1eb94",
+              "source_generation_digest": "sha256:9afdc4297bd84b7bbe997d146edb4eae7050b388fe2f4cb066fe15b3292d731f",
+              "observation_generation_digest": "sha256:7e0f35934d3a4d82335d51e036a89276df5dad235fda73bcd365b0191d6cdf42",
+              "extraction_policy_digest": "sha256:4df27648658cd6d26f7d0b68fed52b4017dbce6909c628dc183cebd71ab1eb94",
+              "domain_index_digest": "sha256:ac80302c306d349336affb323e71d608aa3faceb34c096d1a4aef7b35676b37f",
+              "domain_schedule_digest": "sha256:22c9eb055a82ea71928c50a581a0e8678298ae98173529bb41507cad4f35daea"
+            }
+          ],
+          "provenance_digest": "sha256:38924ae48e1442133fc6e68768e49adf0149b56cdfe2293e901bebc4baa72471",
+          "digest": "sha256:0efdbba581d2a610678332270d15b7bc0494880dfc1dcd9172332d4b93197ccf"
+        },
+        "upstream_digest": "sha256:0efdbba581d2a610678332270d15b7bc0494880dfc1dcd9172332d4b93197ccf"
+      },
+      "manifest_digest": "sha256:819d92ba5b67aa406dba205e0e4e1267660b1aaacb6dcb743c5fce8e8d1d7735",
+      "pair_set_digest": "sha256:9e26910ab968c1827fcaaebf812a46ec341235e99cfe474a47075348372f2a72",
+      "aggregate": {
+        "pair_count": 3,
+        "artifact_count": 3,
+        "result_count": 9,
+        "abstention_count": 6,
+        "canonical_bytes": 18523,
+        "staging_bytes": 18523,
+        "peak_open_files": 5,
+        "coverage_record_count": 1,
+        "covered_candidate_count": 3
+      },
+      "manifest_bytes_digest": "sha256:57cc9218b30eb33ff041a76aeedec43bcb35d840017ee2b2982a6947db7d4efc",
+      "publication_revision": 1
+    }
+  ],
+  "cold_first_exact_response": {
+    "occurrence": {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.051441,
+      "bytes": 15552,
+      "raw_digest": "sha256:51f99527a94c19ca890b80960ecf05c34da7ca439d712cfa379f8f4e6b0812ce"
+    },
+    "unit": {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.015666,
+      "bytes": 9015,
+      "raw_digest": "sha256:8d0e3d366cbc69ca22fc38a539523bc46ba252ab067ab1714ad74cea6d6ef3f5"
+    }
+  },
+  "reason": "'candidates'",
+  "seconds": 16.725757
+}

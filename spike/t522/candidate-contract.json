@@ -1,0 +1,311 @@
+{
+  "schema": "t522-candidate-contract-v1",
+  "record_date": "2026-10-18",
+  "status": "AWAITING_INDEPENDENT_HARNESS_REVIEW_AND_CHECKPOINT_BEFORE_FIRST_CANDIDATE",
+  "source_checkpoint": "d8274b0f54db394593efbeef931f99f740428a02",
+  "authority_records": [
+    {
+      "path": "preregistration.json",
+      "bytes": 9013,
+      "digest": "sha256:7067eb9e6ccb5ecb24d9c9064ce54c17d5d872a71a2989971da6a84b519e38ac"
+    },
+    {
+      "path": "source-inputs.json",
+      "bytes": 4886,
+      "digest": "sha256:59d373f859659fe173e168d2557463014370ac70f2ca613b2b608af7d208cde3"
+    },
+    {
+      "path": "neutral-inputs.json",
+      "bytes": 2042,
+      "digest": "sha256:2b68da9a6854bbc1ae8ac031546f98287710dcff9d8c8187d629f11d9d6a9860"
+    },
+    {
+      "path": "source-freeze.json",
+      "bytes": 3050,
+      "digest": "sha256:9e0a7d831bc362ba934d00397de4626c4f9d0109d7c6721859eecc8e6efd0adb"
+    },
+    {
+      "path": "source-labels.jsonl",
+      "bytes": 46182,
+      "digest": "sha256:e1d795ca436c432b46a084ebfaf0703da0ea046321f59376fc66ba2c88643eeb"
+    },
+    {
+      "path": "field-witnesses.json",
+      "bytes": 12767,
+      "digest": "sha256:ee5f5b420fadf08492aeade8225d304b54d10a687ecb1fdf159da01ebc511e90"
+    },
+    {
+      "path": "gitlink-witness.json",
+      "bytes": 1341,
+      "digest": "sha256:b7fb1adb15e80d082b0808e0cbb64c0b6d50dec5ed4df98d87887528a72d36d8"
+    },
+    {
+      "path": "licenses/record.json",
+      "bytes": 2114,
+      "digest": "sha256:62fedbf99b043c47b5df5bf946843d223e3d897f7f7c2f967b2367604e76786c"
+    },
+    {
+      "path": "input-command-plan.json",
+      "bytes": 4810,
+      "digest": "sha256:359c1c973ca16a8ceace478e83392a9d9d0a573205b4d8a4e21ac3890801c122"
+    },
+    {
+      "path": "input-preparation.json",
+      "bytes": 11356,
+      "digest": "sha256:f7138b6161540a0b31c0bcce9a8ccb308ac4ae0d97eaea4ce1f971d8d89c1005"
+    },
+    {
+      "path": "committed-inputs.json",
+      "bytes": 5785,
+      "digest": "sha256:be48e56803a17ee10128e63ac2c437b3549afc9d9d3887086be9bf6b8785046e"
+    },
+    {
+      "path": "quality_test.go",
+      "bytes": 22932,
+      "digest": "sha256:3b25b1b317894cc424cfc84c536ae5e4c60a6f988bd2d2f69f7f9a5d577db0a4"
+    }
+  ],
+  "labels": {
+    "path": "source-labels.jsonl",
+    "bytes": 46182,
+    "digest": "sha256:e1d795ca436c432b46a084ebfaf0703da0ea046321f59376fc66ba2c88643eeb"
+  },
+  "populations": [
+    {
+      "id": "public",
+      "evaluation_repository": "evaluation.local/t522-public",
+      "commit": "01726539645e3bab1c04a4633b806dead7a0c97a",
+      "source_commit": "15eb1621f4fca081405ccc52fa1d96e7faa4b822",
+      "tree": "0f1ba4058ea5163990a396cca653c5547735ec7a",
+      "bundle": "input-bundles/public.bundle",
+      "bundle_digest": "sha256:7dff0ce34e006a5db0ebbefec15da93140c105a847a0d917c459b67c0ce2efa2",
+      "bundle_bytes": 22615,
+      "scip_package": "github.com/uber/cadence",
+      "module_version": "v0.0.0-t522",
+      "field_lineage": "contract_scip_package_v1_7d154878e9bf2a86ee12cc1f26284c96edd999119d482f2c5cfa3ce4f133bd7b",
+      "application": [
+        "common/types/mapper/thrift/health.go"
+      ],
+      "generated_paths": [
+        ".gen/go/health/health.go"
+      ],
+      "positive": 4,
+      "negative": 31,
+      "unsupported": 0,
+      "files": [
+        {
+          "path": ".gen/go/health/health.go",
+          "location": "testdata/public/.gen/go/health/health.go",
+          "bytes": 20279,
+          "digest": "sha256:360126ead92a8dd481e094fed6aad98c6375afff6d31710e5c6401071eeb1291"
+        },
+        {
+          "path": "LICENSE",
+          "location": "testdata/public/LICENSE",
+          "bytes": 11356,
+          "digest": "sha256:43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1"
+        },
+        {
+          "path": "NOTICE",
+          "location": "testdata/public/NOTICE",
+          "bytes": 1081,
+          "digest": "sha256:53d86f4fec2e8c6dc15f2e452dfaafcb11a30abcf06ba665ae28c0cf63922d0a"
+        },
+        {
+          "path": "common/types/health.go",
+          "location": "testdata/public/common/types/health.go",
+          "bytes": 1283,
+          "digest": "sha256:7133addfa3fbfa85787ce06e7386d6da83d7414ceffd190ea84df93fd2755259"
+        },
+        {
+          "path": "common/types/mapper/thrift/health.go",
+          "location": "testdata/public/common/types/mapper/thrift/health.go",
+          "bytes": 1692,
+          "digest": "sha256:590da41af2161a96865324c25ccf124768e9cada246bd12a78aabb69b99a66f6"
+        },
+        {
+          "path": "go.mod",
+          "location": "testdata/public/go.mod",
+          "bytes": 140,
+          "digest": "sha256:358a79bc91579c6de226d2555a28d9eed228399a50254131677d959a2c5cf39b"
+        },
+        {
+          "path": "go.sum",
+          "location": "prepared/public/go.sum",
+          "bytes": 473,
+          "digest": "sha256:6ef7b0d90adc88cab4a54a14a7d8f778020e8a2de5405a4a88549a747ae1f356"
+        },
+        {
+          "path": "index.scip",
+          "location": "prepared/public/index.scip",
+          "bytes": 79356,
+          "digest": "sha256:62e0d423a13ff36f0eef3f0937fb56f66f695fc0fa8ee262f40cba36d7410403"
+        }
+      ]
+    },
+    {
+      "id": "neutral",
+      "evaluation_repository": "evaluation.local/t522-neutral",
+      "commit": "85cc3f7f57bd339e5c1f3dd715a78a6dc6259f57",
+      "source_commit": "5de531d4971e305988548f71868e144e67ca18ea",
+      "tree": "60233ecc26e22b54e2dda291c40b83b6fc57c1c0",
+      "bundle": "input-bundles/neutral.bundle",
+      "bundle_digest": "sha256:51349a3ad2ee461a76413b5e9f3f22991d4e8fe282eae064c06d31045fccf35f",
+      "bundle_bytes": 6370,
+      "scip_package": "example.com/t522-neutral",
+      "module_version": "v0.0.0-t522",
+      "field_lineage": "contract_scip_package_v1_ffb41c3e57ead6d40d67085c6f3872f46e06d1c2fa649dca62a7e5004576e382",
+      "application": [
+        "use/use.go"
+      ],
+      "generated_paths": [
+        "gen/packet.go",
+        "renamed/packet.go"
+      ],
+      "positive": 15,
+      "negative": 62,
+      "unsupported": 4,
+      "files": [
+        {
+          "path": "gen/packet.go",
+          "location": "testdata/neutral/gen/packet.go",
+          "bytes": 1945,
+          "digest": "sha256:849a00059670dd9369b56f521e1f6c0062132619b01de4174d0bfbeb1b2aa8a1"
+        },
+        {
+          "path": "go.mod",
+          "location": "testdata/neutral/go.mod",
+          "bytes": 81,
+          "digest": "sha256:d7eab8314fdd5e54551dba0aa9691637b05a3a580b3c7566542db7df7b46a6b7"
+        },
+        {
+          "path": "go.sum",
+          "location": "prepared/neutral/go.sum",
+          "bytes": 161,
+          "digest": "sha256:3560a549b5a07a5ef860f4e60607b71061359cdb5699c7c77441f33d4f6c2a1b"
+        },
+        {
+          "path": "idl/packet.thrift",
+          "location": "testdata/neutral/idl/packet.thrift",
+          "bytes": 253,
+          "digest": "sha256:05362b263d8ee63501763535e6d853e4a5eb51006e222f37dbe3c3b366772846"
+        },
+        {
+          "path": "idl/renamed.thrift",
+          "location": "testdata/neutral/idl/renamed.thrift",
+          "bytes": 72,
+          "digest": "sha256:46f16aa627ad8361c702a13af5d6b65fafe5ba502eda54c3c18d6f6141d37161"
+        },
+        {
+          "path": "index.scip",
+          "location": "prepared/neutral/index.scip",
+          "bytes": 26384,
+          "digest": "sha256:76ff481f38f61cc0940924d5fcd7dde90615c3a89c813c4ec8cb298b91416a0f"
+        },
+        {
+          "path": "plain/packet.go",
+          "location": "testdata/neutral/plain/packet.go",
+          "bytes": 120,
+          "digest": "sha256:45de7025f1496bb61d1cecbbc01fb430b82ecdae13a95401eb6fe29d6e3b18dc"
+        },
+        {
+          "path": "renamed/packet.go",
+          "location": "testdata/neutral/renamed/packet.go",
+          "bytes": 854,
+          "digest": "sha256:69c8ce9fd204396525a319114c39df0b2df51a634d559078935ddea2dcda1aa1"
+        },
+        {
+          "path": "use/use.go",
+          "location": "testdata/neutral/use/use.go",
+          "bytes": 801,
+          "digest": "sha256:32af0a8c9775a166bb9d0ab677965bf4b38a32ff8036315b4a1b62a61ad6b9dc"
+        }
+      ]
+    }
+  ],
+  "recipe": {
+    "pack": "phebs.thrift.field.thriftrw",
+    "extractor": "scip-thrift-field",
+    "extractor_version": "1.4.0",
+    "generator": "Header-declared thriftrw1.34.0 on unchanged public source; no regeneration claimed. Authored controls have no compiler claim.",
+    "runtime": "Cached go.uber.org/thriftrw1.34.0, multierr1.11.0 and zap1.28.0; permissive notices retained before new source reads. No managed dependency invented.",
+    "indexer": "scip-go0.2.7, exact existing pinned tool must be rehashed before execution",
+    "input": "Root index.scip committed with exact indexed sources at actual evaluator Git commit, UTF8 bytes",
+    "identity": "SCIP package-family sha256(scheme NUL manager NUL package_name); object embedded-IDL scope.GeneratedMessage#numericID, IDs0..32767; generated service result success0 explicit convention; field/accessor rename preserves number-based object identity",
+    "tier": "exact",
+    "source_binding": "module_digest",
+    "join": "Imported thriftreflect.ThriftModule marker, Raw/SHA1 equality and module scope; embedded IDL Go names/IDs agree with generated fields and literal wire IDs; unique SCIP definition at exact generated identifier range with expected package/version/enclosing Type and final Term(field) or Method(accessor) descriptor; reference exact source span. Duplicate/uncertain joins abstain or error, never name-only substitution.",
+    "declaration_family": "T49.2 declaration family stays distinct from SCIP package lineage. External source-only IDL witnesses and ThriftModule.Package strings grant no automatic production bridge.",
+    "bounds": {
+      "index_bytes": 33554432,
+      "documents": 50000,
+      "occurrences": 500000,
+      "symbol_bytes": 8192,
+      "generated_source_bytes": 4194304
+    },
+    "registration": "None. T52.3 later, generator-specific recipe only. No shared provisional umbrella activation.",
+    "definition_suffix_contract": {
+      "module": "github.com/scip-code/scip-go@v0.2.7",
+      "license": "Apache-2.0, local upstream LICENSE checked before source inspection",
+      "field": "internal/visitors/visitor_type.go named ast.Field uses Descriptor_Term",
+      "accessor": "internal/visitors/visitor_func.go FuncDecl with receiver Type uses Descriptor_Method",
+      "upstream_source_digests": [
+        {
+          "path": "LICENSE",
+          "bytes": 11357,
+          "digest": "sha256:c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+        },
+        {
+          "path": "internal/visitors/visitor_type.go",
+          "bytes": 3592,
+          "digest": "sha256:4c2cf7f53666b0d4eb5354050351ec431238a98425c5acb9bcd832ecf7e4ede1"
+        },
+        {
+          "path": "internal/visitors/visitor_func.go",
+          "bytes": 2709,
+          "digest": "sha256:f0280aea776ebdf5f3bcdb34b1f615182a4ce65292508a337b11f548dcd5d5de"
+        },
+        {
+          "path": "internal/symbols/composer_test.go",
+          "bytes": 6185,
+          "digest": "sha256:a7baa5527c04c03a46ca1d1a273bdac4dbd2cd4a6fe4ecdd4257c1f0c34b1941"
+        }
+      ]
+    }
+  },
+  "thresholds": {
+    "positive_identity_span_recall": 1.0,
+    "positive_identity_span_precision": 1.0,
+    "negative_false_positives": 0,
+    "unsupported_claims": 0,
+    "wrong_family_tier_binding": 0,
+    "duplicate_emissions": 0,
+    "input_digest_span_or_unknown_symbol_shape": "stop, retain first failure; do not alter frozen labels/thresholds",
+    "generated_emissions": "Report separately and check source citation/schema/family/tier/source_binding; the same global path/start/end duplicate refusal applies before generated/application branching; no complete generated accuracy oracle"
+  },
+  "preflight": [
+    "Verify frozen source/oracle/module/field/tool/preparation/actual evaluator input and bundle byte digests. No upstream revision is paired with evaluator-generated SCIP.",
+    "Complete source Go identifier census and distinct4/31 +15/62/4 denominator checks, with explicit reflection string outside lexical identifiers.",
+    "All3 embedded Raw literals equal independent retained IDL bytes and SHA1 before candidate extraction. All9 field/wire-ID/IDL witnesses remain exact.",
+    "All18 field/accessor identifier definitions must have one real SCIP definition at exact frozen span/enclosing Type with expected package/version and final Term(field) or Method(accessor) suffix. Unknown/missing/duplicate/foreign shape stops.",
+    "Keep rename names per source and exact application spelling; packet.Envelope#1 remains number-stable with independent key/identifier witnesses."
+  ],
+  "measurement": {
+    "selector": "^TestFrozenThriftRWFieldQuality$",
+    "timeout_seconds": 30,
+    "runs": 1,
+    "candidate_children": 0,
+    "record_environment": "PHEBS_T522_RECORD_RESULT=1",
+    "first_result": "first-result.json via exclusive create; external exclusive terminal log preserves preflight stops before result creation",
+    "clock_scope": "Wall covers Extract plus streaming citation/schema/name/label/counter verification. Full input/source/bundle hashes, line-start preparation, source census, embedded-module/IDL and real SCIP definition witness checks precede the clock. Cached Corpus.Read digests avoid per-emission hashing; reads are logical bytes, not physical disk I/O. Not isolated CPU.",
+    "failure": "First preflight, extraction, coverage, citation, tier/binding/identity/name, missing/extra/negative/unsupported/duplicate failure retained. No label/threshold/input change or retry."
+  },
+  "nonclaims": [
+    "No T521 Apache or T222 quality transfer",
+    "No candidate extraction output or quality result exists for this leaf",
+    "No production registration, automatic declaration-family join, managed generation, operating/scale/SLO or generalized accuracy claim",
+    "Production signing pending until production key availability",
+    "Header-declared public generator only; authored neutral fixture is not actual compiler output",
+    "Generated emissions checked against source witnesses and counted separately, with no generated recall denominator or semantic access-role claim"
+  ]
+}

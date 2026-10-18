@@ -1,0 +1,73 @@
+{
+  "schema": "t503-tool-identity-preflight-v1",
+  "date": "2026-10-18",
+  "runs": [
+    {
+      "tool": "go",
+      "argv": [
+        "/opt/homebrew/bin/go",
+        "version"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.006658,
+      "output": "go version go1.26.5 darwin/arm64",
+      "image_sha256": "sha256:3925fc3221ac440ebf7c35361ff663bed0c7bdb2e0a157b75fe993607ffe0a19"
+    },
+    {
+      "tool": "git",
+      "argv": [
+        "/usr/bin/git",
+        "--version"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.007852,
+      "output": "git version 2.54.0 (Apple Git-157)",
+      "image_sha256": "sha256:b8763cf250e607a778bb4603cecb5b90338814d0a3dfcba0d57b1de242f610e9"
+    },
+    {
+      "tool": "buf",
+      "argv": [
+        "/Users/ben/.codex/worktrees/t445-header/phebs.com/bin/buf",
+        "--version"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.040215,
+      "output": "1.72.0",
+      "image_sha256": "sha256:691b8635ab9c083e38f1d892bf10799ea688070ed8ef8081d9b7907d0a7e4658"
+    },
+    {
+      "tool": "surreal",
+      "argv": [
+        "/opt/homebrew/bin/surreal",
+        "version"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.338791,
+      "output": "3.2.0 for macos on aarch64",
+      "image_sha256": "sha256:ee819dfcedd23035a785ac40f2509f86cbb09fc3255726ad74755b161a3ca0a8"
+    },
+    {
+      "tool": "node",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "--version"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.020193,
+      "output": "v24.18.0",
+      "image_sha256": "sha256:ee6fb0e015284d83a91e8ec5213f43a157f8a392b58555301682892ba928c04a"
+    },
+    {
+      "tool": "openssl",
+      "argv": [
+        "/usr/bin/openssl",
+        "version"
+      ],
+      "exit": 0,
+      "wall_seconds": 0.005077,
+      "output": "LibreSSL 3.3.6",
+      "image_sha256": "sha256:f81b4fcec5048ea1eceb40fc08f4e06f1668181f0b5bacfa8be27d0da181dcb7"
+    }
+  ],
+  "qualification": "Read-only bounded version probes before browser or product execution; exact image hashes also rechecked. Helpers retain same-main module build receipt; Chrome actual renderer checked separately."
+}

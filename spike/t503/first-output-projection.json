@@ -1,0 +1,188 @@
+{
+  "schema": "phebs-t503-first-output-projection-v1",
+  "qualification": "Source-free public tuple projection of first attempt; omitted opaque cursor, citation and assertion/run/atom capabilities. Raw bytes stay private and bound separately. Not a replay or new product read.",
+  "raw_inputs": [
+    {
+      "name": "http-016.json",
+      "sha256": "2b6bd9115ef8484076c6b4a5eb27306317e787149bfb772fd5fbeb11ce6f8d8a"
+    },
+    {
+      "name": "http-017.json",
+      "sha256": "0013dd6e015d3604233878437647e88126c326e65147d7a2f947bee67de190c3"
+    },
+    {
+      "name": "http-018.json",
+      "sha256": "1811803610157ddbf8f6aad6d1fb67ca4d9f4845826b46e1a00fc1ca360be069"
+    },
+    {
+      "name": "http-019.json",
+      "sha256": "c52f9716db4aedf744b369567d1f9fe8fec3fb300cb9e39d6b541ef1722bfdec"
+    },
+    {
+      "name": "http-020.json",
+      "sha256": "6a1c551782b13f1d279a5e622367e6b6451dddd091c8fd75a0aabbb834ca9fb8"
+    }
+  ],
+  "rows": [
+    {
+      "level": "occurrence",
+      "classification": "new_only_evidence",
+      "old": [],
+      "replacement": [
+        {
+          "classification": "resolved_caller",
+          "protocol": "protobuf",
+          "operation": "/grpc.examples.echo.Echo/UnaryEcho",
+          "declaration_lineage": "provisional_repo_path_v1_0484ee2c646aef1cf54a9cb9d0351134344764c2838ffee73a075807f2c41272",
+          "resolution": "syntax",
+          "tier": "heuristic",
+          "fresh": true,
+          "unit": {
+            "state": "unavailable",
+            "reason": "consumer_unit_projection_unavailable"
+          },
+          "source": {
+            "repository": "evaluation.local/t503-public",
+            "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+            "path": "features/interceptor/client/main.go",
+            "object_id": "feb59bf1a2eb28207d093d9d77b5a6930f1ecf10",
+            "blob_digest": "sha256:67a96c9ce41464119ed93fab70bebb50cb96accdecaca43d8f9a0cf43a6bf641",
+            "plane": "repository-overlay",
+            "start_byte": 3590,
+            "end_byte": 3606,
+            "start_line": 115,
+            "end_line": 115
+          }
+        }
+      ]
+    },
+    {
+      "level": "occurrence",
+      "classification": "new_only_evidence",
+      "old": [],
+      "replacement": [
+        {
+          "classification": "resolved_caller",
+          "protocol": "protobuf",
+          "operation": "/grpc.examples.echo.Echo/UnaryEcho",
+          "declaration_lineage": "provisional_repo_path_v1_0484ee2c646aef1cf54a9cb9d0351134344764c2838ffee73a075807f2c41272",
+          "resolution": "syntax",
+          "tier": "heuristic",
+          "fresh": true,
+          "unit": {
+            "state": "unavailable",
+            "reason": "consumer_unit_projection_unavailable"
+          },
+          "source": {
+            "repository": "evaluation.local/t503-public",
+            "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+            "path": "features/metadata/client/main.go",
+            "object_id": "861e3eece26840007f3204f41ab5689de2e94d2b",
+            "blob_digest": "sha256:26aceadb046196cf67fc5f790f2d6dc4e5f74ae1a919002b6fb6686db41c4fa7",
+            "plane": "repository-overlay",
+            "start_byte": 1453,
+            "end_byte": 1464,
+            "start_line": 51,
+            "end_line": 51
+          }
+        }
+      ]
+    },
+    {
+      "level": "occurrence",
+      "classification": "old_only_evidence",
+      "old": [
+        {
+          "classification": "resolved_caller",
+          "protocol": "protobuf",
+          "operation": "/helloworld.Greeter/SayHello",
+          "declaration_lineage": "provisional_repo_path_v1_638282c35011d6ab092ccfdff2d6ee65322335d7a80e2e84dba2ac347eb710f0",
+          "resolution": "syntax",
+          "tier": "heuristic",
+          "fresh": true,
+          "unit": {
+            "state": "unavailable",
+            "reason": "consumer_unit_projection_unavailable"
+          },
+          "source": {
+            "repository": "evaluation.local/t503-public",
+            "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+            "path": "features/multiplex/client/main.go",
+            "object_id": "d5a432e16b120abf18af05b204d4b2bff4f65ae6",
+            "blob_digest": "sha256:4fd071c359f34dd525a7125e9ef2eaf7ba871828eec21b574467bfb7b9224a7e",
+            "plane": "repository-overlay",
+            "start_byte": 1282,
+            "end_byte": 1292,
+            "start_line": 43,
+            "end_line": 43
+          }
+        }
+      ],
+      "replacement": []
+    },
+    {
+      "level": "occurrence",
+      "classification": "new_only_evidence",
+      "old": [],
+      "replacement": [
+        {
+          "classification": "resolved_caller",
+          "protocol": "protobuf",
+          "operation": "/grpc.examples.echo.Echo/UnaryEcho",
+          "declaration_lineage": "provisional_repo_path_v1_0484ee2c646aef1cf54a9cb9d0351134344764c2838ffee73a075807f2c41272",
+          "resolution": "syntax",
+          "tier": "heuristic",
+          "fresh": true,
+          "unit": {
+            "state": "unavailable",
+            "reason": "consumer_unit_projection_unavailable"
+          },
+          "source": {
+            "repository": "evaluation.local/t503-public",
+            "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+            "path": "features/multiplex/client/main.go",
+            "object_id": "d5a432e16b120abf18af05b204d4b2bff4f65ae6",
+            "blob_digest": "sha256:4fd071c359f34dd525a7125e9ef2eaf7ba871828eec21b574467bfb7b9224a7e",
+            "plane": "repository-overlay",
+            "start_byte": 1604,
+            "end_byte": 1620,
+            "start_line": 53,
+            "end_line": 53
+          }
+        }
+      ]
+    },
+    {
+      "level": "occurrence",
+      "classification": "old_only_evidence",
+      "old": [
+        {
+          "classification": "resolved_caller",
+          "protocol": "protobuf",
+          "operation": "/helloworld.Greeter/SayHello",
+          "declaration_lineage": "provisional_repo_path_v1_638282c35011d6ab092ccfdff2d6ee65322335d7a80e2e84dba2ac347eb710f0",
+          "resolution": "syntax",
+          "tier": "heuristic",
+          "fresh": true,
+          "unit": {
+            "state": "unavailable",
+            "reason": "consumer_unit_projection_unavailable"
+          },
+          "source": {
+            "repository": "evaluation.local/t503-public",
+            "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+            "path": "helloworld/greeter_client/main.go",
+            "object_id": "d746840e6036c5de0f8a45c2fc2c19ecd7c0540d",
+            "blob_digest": "sha256:5539f38f560ab26ce11514cd81f941fb80f4ca9a88754aaaf40d89bbc92e3e30",
+            "plane": "repository-overlay",
+            "start_byte": 1456,
+            "end_byte": 1466,
+            "start_line": 55,
+            "end_line": 55
+          }
+        }
+      ],
+      "replacement": []
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "schema": "t522-first-harness-review-v1",
+  "date": "2026-10-18",
+  "lead": "root",
+  "peer": "ticket_dependency_audit",
+  "source_checkpoint": "d8274b0f54db394593efbeef931f99f740428a02",
+  "committed_input_checkpoint": "b1c75dc2",
+  "harness_digest": "sha256:3b25b1b317894cc424cfc84c536ae5e4c60a6f988bd2d2f69f7f9a5d577db0a4",
+  "contract_digest": "sha256:2cdcac1badbfdc2668e2955a6b496546740cb61cc2b452da1905f5b935983270",
+  "outcome": "No source/identity/denominator/cost blocker before first measurement",
+  "reviewed": [
+    "All source-only labels andRaw/SHA1/module/field/wire-ID witnesses plus actual SCIP definition suffix/name/type/package/version/range joins",
+    "Per-source rename spelling with stable numeric field identity and independent SCIP/declaration families",
+    "All4/31public and15/62/4authored label census/spans; no negative/unsupported/extra/missing/duplicate reference accepted; global duplicate guard includes generated branches",
+    "Generated rows separately counted and source/schema/family/tier checked, without generated recall or semantic-role claim",
+    "Exact committed evaluator Git trees/bundles/source/index/go.sum match independently verified preparation; original provenance remains distinct",
+    "Source/SCIP/witness preflight outside timed Extract plus streaming-check/counter wall; logical cached reads/bytes, no child",
+    "Record wording corrected before measurement to acknowledge prepared SCIP indexes while retaining no-candidate-result status"
+  ],
+  "static_checks": [
+    "Compile-only go test -run ^$0.338s, no tests executed",
+    "go vet passed",
+    "repository-pinned golangci-lint2.12.2 zero issues"
+  ],
+  "execution": "One external-log-exclusive andfirst-result-exclusive30s candidate measurement after this immutable commit; stopfirstmismatch,no retry orlabel edits; productionregistration/operating/signature pending"
+}

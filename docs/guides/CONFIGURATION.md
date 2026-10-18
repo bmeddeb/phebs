@@ -1587,3 +1587,35 @@ See [Exact operation Impact view](OPERATIONS.md#exact-operation-impact-view-t542
 for endpoint identity, paging, citation and uncertainty behavior. Production
 activation/signature and the independent composed quality/operating gates
 remain separate from this registration implementation.
+
+### Independent committed Thrift field recipes (T52.3)
+
+The signed release-selection registry has independent
+`phebs.thrift.field.apache` and `phebs.thrift.field.thriftrw` recipes, each
+claim version `1.0.0`. A verified record may select either generator or both;
+adding a registry recipe alone activates nothing. No additional YAML switch
+or generator installation is required. Production signing remains pending
+until the production key is available.
+
+The initial committed input recipe is root `index.scip` from scip-go0.2.7
+with UTF8 document coordinates and exact immutable Go source bytes. Apache
+requires one supported0.14.1 compiler header and exact field-tag/SCIP binding;
+its references remain `derived`, `source_binding=none`. thriftrw requires one
+supported1.34.0 header and the existing embedded Raw/SHA1, IDL, generated
+field/wire-ID and SCIP binding; its references remain `exact`,
+`source_binding=module_digest`. A header declares an input property and does
+not prove a generator ran. No managed indexing or declaration-family bridge
+is implied.
+
+Both selections share `scip-thrift-field` and one extraction pass. Its reader
+version attests the selected set: `1.4.0-released.apache.1`,
+`1.4.0-released.thriftrw.1`, or `1.4.0-released.apache-thriftrw.1`.
+Suspending or revoking one recipe preserves the other's admission and changes
+that version. Ordinary reconciliation must publish the new selected-set
+generation before it is readable; retained former-set proofs become
+unavailable without rewriting their custody bytes.
+
+`experimental.provisional_thrift_field_extraction` retains its historical
+reader only when no signed Thrift field recipe governs that shared domain.
+Other explicitly enabled provisional domains remain independent. A signed
+Apache selection cannot inherit unsigned thriftrw evidence through this switch.

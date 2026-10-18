@@ -63,10 +63,21 @@ const (
 // New returns the stateless extractor.
 func New() sdk.Extractor { return extractor{} }
 
-type extractor struct{}
+type extractor struct{ selected generatorSelection }
 
-func (extractor) Domain() string        { return domain }
-func (extractor) Version() string       { return version }
+func (extractor) Domain() string { return domain }
+func (reader extractor) Version() string {
+	switch reader.selected {
+	case apacheGenerator:
+		return CommittedApacheVersion
+	case thriftRWGenerator:
+		return CommittedThriftRWVersion
+	case apacheGenerator | thriftRWGenerator:
+		return CommittedApacheThriftRWVersion
+	default:
+		return version
+	}
+}
 func (extractor) Candidate(string) bool { return false }
 
 type indexedOccurrence struct {
@@ -113,6 +124,7 @@ type generatedField struct {
 
 type fieldDefinition struct {
 	identifier    string
+	accessor      bool
 	scope         string
 	message       string
 	fieldName     string
@@ -140,7 +152,7 @@ type fieldBinding struct {
 	tier              string
 }
 
-func (extractor) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) (sdk.Coverage, error) {
+func (reader extractor) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) (sdk.Coverage, error) {
 	paths := make(map[string]struct{})
 	if err := corpus.WalkFiles(ctx, func(filePath string) error {
 		paths[filePath] = struct{}{}
@@ -159,7 +171,10 @@ func (extractor) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) 
 	if !input.Present {
 		return sdk.Coverage{Protocols: []string{"scip-index-absent"}}, nil
 	}
-	documents, exclusions, err := parseIndexScoped(ctx, input.Content, corpus)
+	if reader.selected != 0 && input.Path != indexPath {
+		return sdk.Coverage{}, errors.New("committed Thrift field recipe requires repository-root index.scip")
+	}
+	documents, exclusions, err := parseIndexAdmitted(ctx, input.Content, corpus, reader.selected != 0)
 	if err != nil {
 		return sdk.Coverage{}, fmt.Errorf("parse %s: %w", input.Path, err)
 	}
@@ -167,31 +182,30 @@ func (extractor) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) 
 	// index bytes remain owned by the trusted current-read slot.
 	input = sdk.SCIPInput{}
 
-	bindings, err := bindGeneratedFields(ctx, corpus, paths, documents)
+	bindings, err := bindGeneratedFields(ctx, corpus, paths, documents, reader.selected)
 	if err != nil {
 		return sdk.Coverage{}, err
 	}
 	if err := emitReferences(ctx, corpus, paths, documents, bindings, emit); err != nil {
 		return sdk.Coverage{}, err
 	}
+	protocols := []string{}
+	if reader.selected == 0 || reader.selected&apacheGenerator != 0 {
+		protocols = append(protocols, "apache-thrift-tag-v1")
+	}
+	protocols = append(protocols, "scip", "scip-package-lineage-v1")
+	if reader.selected == 0 || reader.selected&thriftRWGenerator != 0 {
+		protocols = append(protocols, "thriftrw-module-digest-v1")
+	}
 	return sdk.Coverage{
-		Protocols: []string{
-			"apache-thrift-tag-v1",
-			"scip",
-			"scip-package-lineage-v1",
-			"thriftrw-module-digest-v1",
-		},
+		Protocols:               protocols,
 		ExcludedSCIPDocuments:   exclusions.ExcludedSCIPDocuments,
 		ExcludedSCIPDefinitions: exclusions.ExcludedSCIPDefinitions,
 		ExcludedSCIPOccurrences: exclusions.ExcludedSCIPOccurrences,
 	}, nil
 }
 
-func parseIndexScoped(
-	ctx context.Context,
-	content string,
-	corpus sdk.Corpus,
-) ([]indexedDocument, sdk.Coverage, error) {
+func parseIndexAdmitted(ctx context.Context, content string, corpus sdk.Corpus, released bool) ([]indexedDocument, sdk.Coverage, error) {
 	if len(content) > maxIndexBytes {
 		return nil, sdk.Coverage{},
 			fmt.Errorf("index exceeds %d-byte thriftfield limit", maxIndexBytes)
@@ -213,6 +227,9 @@ func parseIndexScoped(
 				return errors.New("metadata appears more than once")
 			}
 			metadataSeen = true
+			if released && (metadata.GetToolInfo().GetName() != "scip-go" || metadata.GetToolInfo().GetVersion() != "0.2.7" || metadata.GetTextDocumentEncoding() != scip.TextEncoding_UTF8) {
+				return errors.New("committed Thrift field recipe requires scip-go 0.2.7 UTF8 input")
+			}
 			switch metadata.GetTextDocumentEncoding() {
 			case scip.TextEncoding_UnspecifiedTextEncoding:
 			case scip.TextEncoding_UTF8:
@@ -251,6 +268,9 @@ func parseIndexScoped(
 			encoding := doc.GetPositionEncoding()
 			if encoding == scip.PositionEncoding_UnspecifiedPositionEncoding {
 				encoding = metadataEncoding
+			}
+			if released && encoding != scip.PositionEncoding_UTF8CodeUnitOffsetFromLineStart {
+				return fmt.Errorf("committed Thrift field recipe requires UTF8 document %q", doc.GetRelativePath())
 			}
 			if !validEncoding(encoding) {
 				return fmt.Errorf("document %q has unspecified position encoding", doc.GetRelativePath())
@@ -352,6 +372,7 @@ func bindGeneratedFields(
 	corpus sdk.Corpus,
 	paths map[string]struct{},
 	documents []indexedDocument,
+	selected generatorSelection,
 ) (map[string]fieldBinding, error) {
 	candidates := make(map[string][]fieldBinding)
 	for _, doc := range documents {
@@ -368,7 +389,7 @@ func bindGeneratedFields(
 		if err != nil {
 			return nil, fmt.Errorf("read definition document %q: %w", doc.path, err)
 		}
-		definitions, eligible, err := generatedDefinitions(ctx, doc, blob.Content)
+		definitions, eligible, err := generatedDefinitions(ctx, doc, blob.Content, selected)
 		if err != nil {
 			return nil, fmt.Errorf("generated document %q: %w", doc.path, err)
 		}
@@ -378,6 +399,11 @@ func bindGeneratedFields(
 			continue
 		}
 		for _, definition := range definitions {
+			if selected != 0 {
+				if err := admitDefinitionSymbol(definition); err != nil {
+					return nil, err
+				}
+			}
 			lineage, dependencyVersion, ok := symbolIdentity(
 				definition.symbol, definition.field.message, definition.identifier,
 			)
@@ -414,9 +440,13 @@ func generatedDefinitions(
 	ctx context.Context,
 	doc indexedDocument,
 	content string,
+	selected generatorSelection,
 ) ([]generatedDefinition, bool, error) {
 	thriftRWCandidate := looksLikeThriftRWModule(content)
 	apacheCandidate := hasApacheGeneratedMarker(content)
+	if selected != 0 {
+		thriftRWCandidate = thriftRWCandidate || hasThriftRWGeneratedMarker(content)
+	}
 	if !thriftRWCandidate && !apacheCandidate {
 		return nil, false, nil
 	}
@@ -425,6 +455,17 @@ func generatedDefinitions(
 	}
 	if !utf8.ValidString(content) {
 		return nil, false, errors.New("source is not UTF-8")
+	}
+	if selected != 0 {
+		generator, err := admitGeneratedHeader(ctx, doc.path, content, selected)
+		if err != nil {
+			return nil, false, err
+		}
+		if generator == 0 {
+			return nil, false, nil
+		}
+		thriftRWCandidate = generator == thriftRWGenerator
+		apacheCandidate = generator == apacheGenerator
 	}
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, doc.path, content, parser.SkipObjectResolution)
@@ -565,6 +606,7 @@ func documentDefinitions(
 		}
 		definitions[key] = fieldDefinition{
 			identifier:    identifier,
+			accessor:      identifier != goField,
 			scope:         scope,
 			message:       message,
 			fieldName:     want.name,

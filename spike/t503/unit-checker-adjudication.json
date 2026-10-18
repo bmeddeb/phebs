@@ -1,0 +1,61 @@
+{
+  "schema": "phebs-t503-unit-checker-adjudication-v1",
+  "date": "2026-10-18",
+  "retained_stop_sha256": "a5227bf4a24493bc8bfcb7412723f28dddfcb6a4ba7c4008604e75e853479322",
+  "diagnosis": "The exact unit comparison contract serializes resolved attribution once on the outer row; inner citation samples intentionally retain state/reason only. The frozen occurrence-shaped scorer incorrectly required repeated sample candidates. Existing API test explicitly requires omission.",
+  "correction": "A deep-copy representation adapter expands only actual outer candidates into actual resolved samples. It reads no oracle when adapting, rejects conflicting sample attribution, and leaves absent-outer unavailable samples unchanged. Frozen score.py/labels/thresholds/input/binary/bounds remain exact.",
+  "source_references": [
+    "internal/api/callercomparison_exact.go:903-946",
+    "internal/api/callercomparison_exact_publication_test.go:297-298"
+  ],
+  "independent_source_review": "ticket_dependency_audit verified actual outer IDs/targets against every contributing gold site and unchanged unavailable reason, without scoring/native execution.",
+  "offline_retained_output": [
+    {
+      "level": "occurrence",
+      "rows": 5,
+      "classes": {
+        "new_only_evidence": 3,
+        "old_only_evidence": 2
+      },
+      "selected_source_sites": 5,
+      "actual_responses": [
+        {
+          "name": "response-0032.json",
+          "sha256": "51f99527a94c19ca890b80960ecf05c34da7ca439d712cfa379f8f4e6b0812ce"
+        }
+      ]
+    },
+    {
+      "level": "unit",
+      "rows": 4,
+      "classes": {
+        "new_only_evidence": 1,
+        "unresolved": 1,
+        "both_evidence": 1,
+        "old_only_evidence": 1
+      },
+      "selected_source_sites": 5,
+      "actual_responses": [
+        {
+          "name": "response-0065.json",
+          "sha256": "8d0e3d366cbc69ca22fc38a539523bc46ba252ab067ab1714ad74cea6d6ef3f5"
+        },
+        {
+          "name": "response-0066.json",
+          "sha256": "1d7176f53c7caec763501581df0500253e32ade2d4e1a7f6d596e100695fb799"
+        },
+        {
+          "name": "response-0067.json",
+          "sha256": "32eeeb6d6ff2ea200aceb41c9afdcbdf1af7d6c3687e6f4f06f039f4ebbab5b0"
+        },
+        {
+          "name": "response-0068.json",
+          "sha256": "fb97def9e0a95d2aa0a5ed4692044e365ccadbbbb623cc63845b3c8207c9c615"
+        }
+      ]
+    }
+  ],
+  "qualification": "Retained baseline rows only. No PASS for stopped attempt, no additional truth samples and no UI/publication/revocation result. New prospective harness binding required for remaining finite matrix.",
+  "native_runs": 0,
+  "source_quality_generalization": false
+}

@@ -38,6 +38,9 @@ func proofCapabilities(opts Options) []string {
 		if opts.ProtobufFieldReferencesReleased {
 			capabilities = append(capabilities, "protobuf-field-references")
 		}
+		if opts.ThriftFieldReferencesReleased {
+			capabilities = append(capabilities, "thrift-field-references")
+		}
 		sort.Strings(capabilities)
 		return capabilities
 	}
