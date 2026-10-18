@@ -12271,3 +12271,18 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   no bytes, mode or mtime. Production requests, queries, sync, startup/restart,
   retry/no-op, publication, locks, caches, concurrency and children are unchanged.
   JavaScript delta is zero; the eight PNGs shrink 1,139 bytes collectively.
+
+- **2026-10-18 — T28.1 source/license preparation (Ben-routed Mac handoff).**
+  Before any recognizer runs, verify the frozen BSD Redis 7.2.15 COPYING blob
+  and command tree plus the pinned Asynq MIT and Eino Apache-2.0 licenses. Retain
+  392 core command JSONs, three public ACL safety fixtures and every scoped
+  application Go/module/sum file: 793 exact Git blobs / 3,600,148 source bytes,
+  with per-file SHA-256 and three compressed archives. No later Redis or module
+  implementation/metadata enters. Whole-file selection precedes recognition;
+  nested v9.7.0 client modules remain explicit unsupported-version populations
+  rather than inheriting the root v9.14.1/v9.17.2 adapter decision or disappearing.
+  Source-only labels, sampling, separate denominators and semantic decisions
+  remain pending; no parser, recognizer, quality or manifest GO result exists.
+  The isolated spike registers no production pack and adds no request, startup,
+  sync, retry/no-op, publication, shared lock, cache, worker, schema, persistent
+  data or child work. Preparation is bounded one-shot source/hash I/O only.
