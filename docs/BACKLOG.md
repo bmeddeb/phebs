@@ -4064,6 +4064,14 @@ borrowed mount, callback boolean or observed formatter hash grants authority.
 Standalone ownership does not certify an executor's descendants joined; full
 pressure/restore binding, native geometry and prospective plans remain H2 gates.
 Historical APFS plans/receipts and active entry-point refusals stay exact.
+Portable models pass normally and with race. The first Linux static check
+caught a private formatter constant/type collision; reviewed correction
+`aaae2797` changes only the metadata type name. Remaining tagged Linux static,
+pinned scoped lint, both compile-only targets, docs and glossary pass. The
+combined K/M tree also compiles for Linux amd64 without execution.
+`spike/t42h2m/` retains the original stop, carried Darwin checks and remaining
+joined sequences. Actual Linux geometry, setup/teardown and full pressure/
+restore acceptance remain pending Ben's office return.
 
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over

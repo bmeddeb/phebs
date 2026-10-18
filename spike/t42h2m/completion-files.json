@@ -1,0 +1,51 @@
+{
+  "files": [
+    {
+      "path": "completion/compile-linux-amd64-tagged-spike-t421.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "completion/compile-linux-arm64-tagged-spike-t421.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "completion/darwin-pinned-lint.log",
+      "bytes": 10,
+      "sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+    },
+    {
+      "path": "completion/docs-check.log",
+      "bytes": 179,
+      "sha256": "23f7d4747269423f46f36a7a450f74cca119f16019c1750aa0db89b3a65b2c6d"
+    },
+    {
+      "path": "completion/linux-amd64-tagged-pinned-lint.log",
+      "bytes": 10,
+      "sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+    },
+    {
+      "path": "completion/linux-amd64-tagged-vet.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "completion/runner.py",
+      "bytes": 8153,
+      "sha256": "43285490e090a9d08f34a4afd0cde5e71b0fcd1b7fef56d816f80691f89e0ab8"
+    },
+    {
+      "path": "completion/summary.json",
+      "bytes": 160495,
+      "sha256": "d7190160ba6c934fd39f5a15a777ae8d8c59f87e9bc4030a7f08648abb839230"
+    },
+    {
+      "path": "completion/verify-glossary.log",
+      "bytes": 60,
+      "sha256": "f128ad7aef2b6215c4414d1e00b2650f9c42011b1705707b624be1c70d92f095"
+    }
+  ],
+  "file_count": 9,
+  "total_bytes": 168907
+}

@@ -1,0 +1,46 @@
+{
+  "files": [
+    {
+      "path": "first-attempt/darwin-affected-vet.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "first-attempt/go-version.log",
+      "bytes": 33,
+      "sha256": "278375c8a03c34bb0f855154850de7c4f217fd3b8cdf37986819e3f05d0a4c33"
+    },
+    {
+      "path": "first-attempt/lint-version.log",
+      "bytes": 154,
+      "sha256": "f6ce18432a72a64b38b7830998527f2c918abfadba447e43ca90225de0b3f242"
+    },
+    {
+      "path": "first-attempt/linux-amd64-tagged-vet.log",
+      "bytes": 186,
+      "sha256": "d8baab1ff083a882a813180e95b945635d423f9814402f79ab5e0efef4919156"
+    },
+    {
+      "path": "first-attempt/runner.py",
+      "bytes": 8011,
+      "sha256": "dbfeb53e45257636e99cb2e44908bdacf21cad518ea575946c2ab2ff6ed42b8c"
+    },
+    {
+      "path": "first-attempt/summary.json",
+      "bytes": 159249,
+      "sha256": "dd9079e19f530b96d444d23adc2627cfece647d160ac7e716bee1f2239138f16"
+    },
+    {
+      "path": "first-attempt/t421-linux-pressure-normal.log",
+      "bytes": 52036,
+      "sha256": "7fc8532a28138595c32da639aba6110fe4a08eda05f02b776d2ecef07f213e60"
+    },
+    {
+      "path": "first-attempt/t421-linux-pressure-race.log",
+      "bytes": 52025,
+      "sha256": "2eb2612512c576f9dafc4ef913403680a9cc649cf8b2338c8b8a6c99f638d9f9"
+    }
+  ],
+  "file_count": 8,
+  "total_bytes": 271694
+}
