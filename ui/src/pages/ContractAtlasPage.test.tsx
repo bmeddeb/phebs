@@ -336,6 +336,7 @@ const engine = new Client()
 function tree(
   params: URLSearchParams,
   callerMapAvailable: boolean,
+  impactAvailable = false,
 ) {
   return (
     <StyletronProvider value={engine}>
@@ -343,6 +344,7 @@ function tree(
         <ContractAtlasPage
           params={params}
           callerMapAvailable={callerMapAvailable}
+          impactAvailable={impactAvailable}
         />
       </BaseProvider>
     </StyletronProvider>
@@ -352,8 +354,9 @@ function tree(
 function page(
   params = new URLSearchParams(),
   callerMapAvailable = false,
+  impactAvailable = false,
 ) {
-  return render(tree(params, callerMapAvailable))
+  return render(tree(params, callerMapAvailable, impactAvailable))
 }
 
 function paramsFromHash() {
@@ -365,8 +368,9 @@ function paramsFromHash() {
 function rerenderFromHash(
   view: ReturnType<typeof page>,
   callerMapAvailable = false,
+  impactAvailable = false,
 ) {
-  view.rerender(tree(paramsFromHash(), callerMapAvailable))
+  view.rerender(tree(paramsFromHash(), callerMapAvailable, impactAvailable))
 }
 
 beforeEach(() => {
@@ -417,13 +421,13 @@ test('browses duplicate declarations through stable bounded pages', async () => 
 })
 
 test('renders bounded shapes, qualified relationships, and pinned source links', async () => {
-  const view = page(new URLSearchParams(), true)
+  const view = page(new URLSearchParams(), true, true)
   await screen.findByText('3 rows')
   fireEvent.click(screen.getByRole('listitem', { name: /Get/ }))
   expect(decodeURIComponent(window.location.hash)).toBe(
     '#/contracts?sel_repository=github.com/acme/contracts&sel_lineage=lineage-a&sel_operation=/demo.Catalog/Get&sel_protocol=protobuf',
   )
-  rerenderFromHash(view, true)
+  rerenderFromHash(view, true, true)
   await screen.findByTestId('contract-operation-detail')
 
   expect(api.fetchContractOperation).toHaveBeenCalledWith(
@@ -629,4 +633,135 @@ test('changing the protocol filter survives lazy updater evaluation', async () =
     expect.any(AbortSignal),
   )
   expect(screen.getByTestId('contract-atlas-workspace')).toBeTruthy()
+})
+
+test('partitioned declaration authority is current without a legacy run or unrelated product links', async () => {
+  const authority = {
+    repository: detail.repository, domain: 'proto-contract', run_id: detail.declaration.run_id,
+    commit, plan_digest: `sha256:${'a'.repeat(64)}`, root_digest: `sha256:${'b'.repeat(64)}`,
+  }
+  const declarationOnly = {
+    ...detail, exact_authority: authority,
+    implementations: [], callers: [], unresolved_candidates: [], relationships_truncated: false,
+    unavailable_relationships: ['implementations', 'callers', 'unresolved_candidates'],
+    coverage: { ...coverage, repositories: [] },
+  }
+  api.fetchContractCatalog.mockReset().mockResolvedValue({ ...firstPage, query: {}, exact_authorities: [authority] })
+  api.fetchContractOperation.mockResolvedValue(declarationOnly)
+  page(new URLSearchParams({
+    sel_repository: detail.repository, sel_lineage: detail.declaration_lineage,
+    sel_operation: detail.operation, sel_protocol: 'protobuf',
+  }))
+  await screen.findByTestId('contract-operation-detail')
+  expect(screen.getByTitle(`current · run ${authority.run_id} at ${commit}`).textContent).toBe('current')
+  expect(screen.getByText('1 current declaration roots')).toBeTruthy()
+  expect(screen.getByText(/Relationship evidence unavailable: implementations, callers, unresolved candidates/)).toBeTruthy()
+  expect(screen.queryByText(/bounded relationship set is complete/)).toBeNull()
+  expect(screen.queryByRole('link', { name: 'Analyze impact' })).toBeNull()
+  expect(screen.queryByRole('link', { name: 'View callers' })).toBeNull()
+})
+
+test('a partitioned authority crossed with another source fails closed', async () => {
+  api.fetchContractOperation.mockResolvedValue({
+    ...detail,
+    exact_authority: {
+      repository: detail.repository, domain: 'proto-contract', run_id: detail.declaration.run_id,
+      commit: 'f'.repeat(40), plan_digest: `sha256:${'a'.repeat(64)}`, root_digest: `sha256:${'b'.repeat(64)}`,
+    },
+  })
+  page(new URLSearchParams({
+    sel_repository: detail.repository, sel_lineage: detail.declaration_lineage,
+    sel_operation: detail.operation, sel_protocol: 'protobuf',
+  }))
+  await screen.findByText('Operation evidence authority does not match its pinned source. Retry the selection.')
+  expect(screen.queryByTestId('contract-operation-detail')).toBeNull()
+})
+
+function partitionedAuthority() {
+  return {
+    repository: detail.repository, domain: 'proto-contract', run_id: detail.declaration.run_id,
+    commit, plan_digest: `sha256:${'a'.repeat(64)}`, root_digest: `sha256:${'b'.repeat(64)}`,
+  }
+}
+
+test.each([
+  ['null array', null],
+  ['null root', [null]],
+  ['foreign repository', [{ ...partitionedAuthority(), repository: 'github.com/hidden/contracts' }]],
+  ['wrong domain', [{ ...partitionedAuthority(), domain: 'grpc-consumer' }]],
+  ['moved commit', [{ ...partitionedAuthority(), commit: 'f'.repeat(40) }]],
+  ['malformed digest', [{ ...partitionedAuthority(), root_digest: 'sha256:no' }]],
+  ['empty run', [{ ...partitionedAuthority(), run_id: '' }]],
+  ['coercible commit', [{ ...partitionedAuthority(), commit: [commit] }]],
+  ['duplicate root', [partitionedAuthority(), partitionedAuthority()]],
+])('rejects a malformed catalog authority: %s', async (_name, authorities) => {
+  api.fetchContractCatalog.mockReset().mockResolvedValue({ ...firstPage, query: {}, exact_authorities: authorities })
+  page()
+  await screen.findByText('Catalog declaration authority is inconsistent. Retry the catalog.')
+  expect(screen.queryByText(/current declaration roots/)).toBeNull()
+  expect(screen.queryByRole('listitem', { name: /Get/ })).toBeNull()
+})
+
+test('a filtered page retains independently current roots for all visible coverage', async () => {
+  api.fetchContractCatalog.mockReset().mockResolvedValue({
+    ...firstPage, query: { repository: detail.repository, protocol: 'protobuf' },
+    exact_authorities: [partitionedAuthority(), {
+      ...partitionedAuthority(), repository: 'github.com/acme/consumer', run_id: 'other-current-root',
+    }],
+  })
+  page(new URLSearchParams({ repository: detail.repository, protocol: 'protobuf' }))
+  expect(await screen.findByText('2 current declaration roots')).toBeTruthy()
+})
+
+test('a catalog response with crossed filter echo refuses its current roots', async () => {
+  api.fetchContractCatalog.mockReset().mockResolvedValue({
+    ...firstPage, query: { protocol: 'thrift' }, exact_authorities: [partitionedAuthority()],
+  })
+  page(new URLSearchParams({ protocol: 'protobuf' }))
+  await screen.findByText('Catalog declaration authority is inconsistent. Retry the catalog.')
+})
+
+test.each([
+  ['null', null],
+  ['empty object', {}],
+  ['malformed digest', { ...partitionedAuthority(), plan_digest: 'broken' }],
+  ['foreign root', { ...partitionedAuthority(), repository: 'github.com/other/contracts' }],
+  ['wrong protocol domain', { ...partitionedAuthority(), domain: 'thrift-contract' }],
+])('rejects a malformed operation authority: %s', async (_name, authority) => {
+  api.fetchContractOperation.mockResolvedValue({ ...detail, exact_authority: authority })
+  page(new URLSearchParams({
+    sel_repository: detail.repository, sel_lineage: detail.declaration_lineage,
+    sel_operation: detail.operation, sel_protocol: 'protobuf',
+  }))
+  await screen.findByText('Operation evidence authority does not match its pinned source. Retry the selection.')
+  expect(screen.queryByTestId('contract-operation-detail')).toBeNull()
+})
+
+test('a self-consistent exact detail for another selected endpoint fails closed', async () => {
+  api.fetchContractOperation.mockResolvedValue({
+    ...detail, operation: '/demo.Catalog/Other', exact_authority: partitionedAuthority(),
+  })
+  page(new URLSearchParams({
+    sel_repository: detail.repository, sel_lineage: detail.declaration_lineage,
+    sel_operation: detail.operation, sel_protocol: 'protobuf',
+  }))
+  await screen.findByText('Operation evidence authority does not match its pinned source. Retry the selection.')
+  expect(screen.queryByTestId('contract-operation-detail')).toBeNull()
+})
+
+test.each([
+  ['null', null],
+  ['not an array', 'callers'],
+  ['unknown section', ['unknown']],
+  ['duplicate sections', ['callers', 'callers']],
+  ['too many sections', ['callers', 'callers', 'callers', 'callers']],
+  ['contradictory edges', ['implementations']],
+])('rejects malformed relationship availability: %s', async (_name, unavailable) => {
+  api.fetchContractOperation.mockResolvedValue({ ...detail, unavailable_relationships: unavailable })
+  page(new URLSearchParams({
+    sel_repository: detail.repository, sel_lineage: detail.declaration_lineage,
+    sel_operation: detail.operation, sel_protocol: 'protobuf',
+  }))
+  await screen.findByText('Operation relationship availability is inconsistent. Retry the selection.')
+  expect(screen.queryByTestId('contract-operation-detail')).toBeNull()
 })

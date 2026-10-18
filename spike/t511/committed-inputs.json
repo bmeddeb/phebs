@@ -1,0 +1,26 @@
+{
+  "schema": "t511-real-committed-inputs-v1",
+  "date": "2026-10-18",
+  "records": [
+    {
+      "population": "public",
+      "evaluation_commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+      "evaluation_tree": "ae63dc5eac24e67584f5024ac14d7bb0e7ba76e8",
+      "bundle": "testdata/committed-public.bundle",
+      "bundle_bytes": 33813,
+      "bundle_sha256": "8d76e748134c368ad360f53d2dd4fcab6bb5133f440f93e7196bce68513cf50a",
+      "files": 8,
+      "qualification": "Real local evaluator-assembled Git source/index commit, distinct from upstream source history. All source/index bytes match pre-scoring frozen input digests. No candidate extraction or scoring performed."
+    },
+    {
+      "population": "neutral",
+      "evaluation_commit": "a0c1c9f337f11cdafd4231a16a2cc53d10768d89",
+      "evaluation_tree": "d22a9ec1d6a237ac55d3e80a2f611d616d09fd6f",
+      "bundle": "testdata/committed-neutral.bundle",
+      "bundle_bytes": 10012,
+      "bundle_sha256": "db835f56a8b6c6a8c40efd48470c0eeae0da85a3608fc93abca39dde3c4d93fe",
+      "files": 6,
+      "qualification": "Real local evaluator-assembled Git source/index commit, distinct from upstream source history. All source/index bytes match pre-scoring frozen input digests. No candidate extraction or scoring performed."
+    }
+  ]
+}

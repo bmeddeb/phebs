@@ -1,0 +1,252 @@
+{
+  "schema": "t511-preregistration-v1",
+  "record_date": "2026-10-18",
+  "status": "FROZEN_BEFORE_CANDIDATE_MEASUREMENT",
+  "owner": "Mac handoff routed by Ben all-ticket request; lead owns independent preregistration review",
+  "recipe": {
+    "extractor": "scip-proto-field",
+    "extractor_version": "1.4.0",
+    "atom_schema": "t13-v1",
+    "rule": "scip-proto-field-reference-v1",
+    "detail": "proto-field-reference-detail-v1",
+    "declaration_reader": "proto-contract 4.0.0",
+    "input": "Exact committed repository-root index.scip and source .proto/generated .pb.go/consumer .go bytes. No managed generation or navigation authority substitution.",
+    "indexer": "scip-go 0.2.7",
+    "indexer_build_go": "go1.26.5",
+    "protobuf_runtime": "v1.36.11",
+    "evaluation_revision": "Local evaluator Git commits/bundles contain exact committed source plus produced index. Upstream source revision is provenance only; evaluation.local repo labels prevent false upstream commit authority."
+  },
+  "tools": [
+    {
+      "name": "scip-go",
+      "version": "0.2.7",
+      "sha256": "05b4f5086b0953268a86ddee21e53233d7fc35fa4234d4c5b30ef7faec2beb80"
+    },
+    {
+      "name": "protoc-gen-go",
+      "version": "v1.36.12",
+      "sha256": "4fb69e4e01431c4008ac961d29f5ed3bacc2c8640af98e22e894e9cd50e02914"
+    },
+    {
+      "name": "protoc",
+      "version": "libprotoc 36.2",
+      "sha256": "5ffdd8c0d2ec4494aa5a3b55164e71b6f39866b37d9b699d26bea77e110ac325"
+    }
+  ],
+  "populations": [
+    {
+      "id": "public",
+      "repo": "evaluation.local/t511-public",
+      "commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+      "module": "google.golang.org/grpc",
+      "version": "v1.80.0",
+      "proto": "profiling/proto/service.proto",
+      "generated": "profiling/proto/service.pb.go",
+      "consumer": "profiling/service/service.go",
+      "generator": "protoc-gen-go v1.36.11",
+      "protoc": "v5.27.1",
+      "generation_provenance": "Unmodified upstream committed .pb.go; exact header-reported versions. No claim to have regenerated old public bytes.",
+      "license": "Apache-2.0",
+      "module_zip_sum": "h1:Xr6m2WmWZLETvUNvIUmeD5OAagMw3FiKmMlTdViWsHM=",
+      "positive": 14,
+      "negative": 56,
+      "unsupported": 0,
+      "scip_scheme": "scip-go",
+      "scip_manager": "gomod",
+      "scip_package": "google.golang.org/grpc",
+      "field_lineage": "contract_scip_package_v1_f89a7a10ce1e093b8da9bdceb774fa0049ba935c0b4f3a502a944a2f2e3f9566",
+      "declaration_lineage": "provisional_repo_path_v1_8331421bf10566b5a4bff5a503249ffae57c51c27bc271f90e6dcb706aa5fd47",
+      "files": [
+        {
+          "path": "LICENSE",
+          "bytes": 11358,
+          "digest": "sha256:cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+        },
+        {
+          "path": "go.mod",
+          "bytes": 1734,
+          "digest": "sha256:c38d5562384b31054ca85cd1b6f57e2fd3615234198560c65da2b2cda1be82f8"
+        },
+        {
+          "path": "go.sum",
+          "bytes": 7347,
+          "digest": "sha256:65f0a1e60a75debcc0b26833d0489038b5ad4cb21cbb5cfc9b67f0f17bc6f7df"
+        },
+        {
+          "path": "index.scip",
+          "bytes": 123050,
+          "digest": "sha256:3fd080f9b8d8629bd84fbb8fd07692ca1b2fb1070dd8bdc623f8c33a148c0716"
+        },
+        {
+          "path": "profiling/proto/service.pb.go",
+          "bytes": 15227,
+          "digest": "sha256:2abc999321c3a8be9f09e30d55d02f259497c836ce28d8238d0c9b78d58940d8"
+        },
+        {
+          "path": "profiling/proto/service.proto",
+          "bytes": 3683,
+          "digest": "sha256:507248b8ad414be8dd76bd409c79d22e0a003d8c994b35a80963250fa19e5416"
+        },
+        {
+          "path": "profiling/proto/service_grpc.pb.go",
+          "bytes": 7041,
+          "digest": "sha256:b896aede048289fb83835beedd8f6dc7e3caa2007d6a3cdf0d9e2f2ced5db4e0"
+        },
+        {
+          "path": "profiling/service/service.go",
+          "bytes": 4764,
+          "digest": "sha256:949728b78ac582ec2c796bf0fb3c4dfcc4ad0db0f288efe9efce4a46860b54a7"
+        }
+      ],
+      "upstream_source_commit": "397e45edaa68f8763773bbaaf539cf7894169cd2",
+      "evaluation_bundle_digest": "sha256:8d76e748134c368ad360f53d2dd4fcab6bb5133f440f93e7196bce68513cf50a",
+      "upstream_source_repository": "https://github.com/grpc/grpc-go",
+      "evaluation_tree": "ae63dc5eac24e67584f5024ac14d7bb0e7ba76e8",
+      "evaluation_bundle": "testdata/committed-public.bundle",
+      "evaluation_bundle_bytes": 33813
+    },
+    {
+      "id": "neutral",
+      "repo": "evaluation.local/t511-neutral",
+      "commit": "a0c1c9f337f11cdafd4231a16a2cc53d10768d89",
+      "module": "example.com/t511",
+      "version": "v0.0.0-t511",
+      "proto": "schema/fields.proto",
+      "generated": "schema/fields.pb.go",
+      "consumer": "use/use.go",
+      "generator": "protoc-gen-go v1.36.12",
+      "protoc": "CLI libprotoc 36.2; generated header v7.36.2",
+      "generation_provenance": "Generated locally from frozen authored .proto with pinned tools; supplementary contract controls, not public quality evidence.",
+      "license": "Apache-2.0 (phebs-authored)",
+      "positive": 17,
+      "negative": 7,
+      "unsupported": 12,
+      "scip_scheme": "scip-go",
+      "scip_manager": "gomod",
+      "scip_package": "example.com/t511",
+      "field_lineage": "contract_scip_package_v1_6076703d418d380c096229fe5049a062cea336f7ceb8f5ffb03e3e6b2e63e7cf",
+      "declaration_lineage": "provisional_repo_path_v1_245af4b1ac4946ef46918cd0d10453d8e76564888e8fd62acf1b00c8d35c9c26",
+      "files": [
+        {
+          "path": "go.mod",
+          "bytes": 80,
+          "digest": "sha256:4ed023631e94aa7d7050f92d7d55becf1c58a7687d9ea37e9b9636d5b9b9d983"
+        },
+        {
+          "path": "go.sum",
+          "bytes": 175,
+          "digest": "sha256:963a8008710b609b5155fb77b395700f7e191b5d8266776e3be1ed1f81757f59"
+        },
+        {
+          "path": "index.scip",
+          "bytes": 43535,
+          "digest": "sha256:ffd47d67314ca1c42d5edabaefe699f1ffce3db8fb1988ea5beec3c54d112be8"
+        },
+        {
+          "path": "schema/fields.pb.go",
+          "bytes": 7434,
+          "digest": "sha256:61d7a33d8db29d6c4cff42dfcc572ad414eaa8cc45e4bd22645895dd309e2bef"
+        },
+        {
+          "path": "schema/fields.proto",
+          "bytes": 332,
+          "digest": "sha256:06cf7052b70cfed823fb0e463895a8d8a6f9a0ecce4cc6ea3094ef2e03021f2b"
+        },
+        {
+          "path": "use/use.go",
+          "bytes": 1231,
+          "digest": "sha256:ad9061110ca5e82e3d605b64c871d1c67ff5e42067e78bd7b9d619287d32c122"
+        }
+      ],
+      "upstream_source_commit": null,
+      "evaluation_bundle_digest": "sha256:db835f56a8b6c6a8c40efd48470c0eeae0da85a3608fc93abca39dde3c4d93fe",
+      "upstream_source_repository": null,
+      "evaluation_tree": "d22a9ec1d6a237ac55d3e80a2f611d616d09fd6f",
+      "evaluation_bundle": "testdata/committed-neutral.bundle",
+      "evaluation_bundle_bytes": 10012
+    }
+  ],
+  "labels": {
+    "path": "source-labels.jsonl",
+    "digest": "sha256:3988617e8ba5f9cf5218bd2bd67d1f921cbb2ed484a4d8d421b31fcff5c253c3",
+    "enumerator": "cmd/enumerate/main.go: Go AST selectors plus identifier composite-literal keys, no SCIP/phebs imports or outputs",
+    "derivation": "Source receiver/literal type and exact source .proto numeric ID manually labelled before index creation. All enumerated sites retained; non-field package/type/method/ordinary-Go fields are negatives.",
+    "independent_declarations_path": "declarations.json",
+    "independent_declarations_digest": "sha256:c1964244656b6e95aaaa6bea77496e07934ffde59fc49493e81f6ed7a765cc73",
+    "independent_declarations_derivation": "Existing spike/t491 independent lexer/parser over frozen proto bytes, with manually source-checked names, numeric IDs and unsupported oneof labels. No protodecl/scipfield output."
+  },
+  "identity": {
+    "field_object": "Fully-qualified source protobuf message + # + numeric field ID; renames retain ID; generated Go spelling alone is insufficient.",
+    "bridge": "The two lineage families remain distinct. Only within one exact repo/commit/source+SCIP snapshot, join a unique source DECLARES_FIELD object to its exact generated file/tag and header source path plus exact SCIP definition and global symbol package. Record proto/generated/index digests and declaration span; no join on bare names or lineage equality. This spike proves witnesses, not a production cross-family reader.",
+    "package_identity": "SCIP package name is the Go module (not the generated import path); version is detail only, not package-family hash. The exact generated import/type/identifier definition remains a required witness.",
+    "ambiguous": "Missing, conflicting or multiple proto roots/field candidates/definition bindings abstain. Cross-repo/commit/path/index/digest, changed source, or mismatched family cannot share a bridge.",
+    "descriptor": "Decode exact generated raw FileDescriptorProto and compare source-name/message/field-number/name census independently with frozen source declaration oracle; synthetic map-entry message is not a source declaration."
+  },
+  "supported": [
+    "Go proto3 Open API direct tagged struct field selector and composite-literal key",
+    "Exact generated Get<Field> call or method value, bound to the same generated receiver/tag",
+    "Proto3 optional, repeated, map and nested message direct fields are covered by separate neutral controls"
+  ],
+  "excluded": [
+    "Reflection/protoreflect field-name lookup and runtime dynamicpb messages",
+    "Unknown/wire bytes, oneof wrapper fields and getters without a directly tagged parent field",
+    "Opaque/Hybrid API, Editions/proto2/extensions, unpinned generators/indexers/languages, missing generated sources or uncommitted/managed SCIP",
+    "Semantic read/write inference: classification reports exact raw SCIP role precedence write > read > test > generated > unknown. Assignments may be reported as read by scip-go; no semantic write-accuracy claim."
+  ],
+  "metrics": {
+    "scope": "Separate exhaustive finite public and neutral consumer-path populations. Count every emitted reference on either consumer path, including any span outside source-only enumeration. Generated-file emissions are reported separately and never mixed into quality denominators.",
+    "precision": "Exact positive identity+byte citation matches / all consumer-path emissions; duplicates or extras fail.",
+    "recall": "Exact positive matches / all independently labelled positive sites (public 14, neutral 17).",
+    "negative": "Zero exact consumer emissions at all negative and unsupported sites; public 56 negatives, neutral 7 negatives and 12 unsupported.",
+    "identity_and_citation": "100% of matched facts must carry expected predicate, numeric object, package family, dependency version, exact source digest, byte and line range, exact tier, production role, schema/rule and raw SCIP role classification.",
+    "thresholds": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "wrong_identity": 0,
+      "negative_emissions": 0,
+      "unsupported_emissions": 0,
+      "unexpected_emissions": 0,
+      "duplicate_emissions": 0,
+      "descriptor_source_disagreements": 0
+    },
+    "interpretation": "Finite source census only; no sampled confidence, broad generator accuracy, scale, operating, startup/auth/API/UI/MCP, production registration or promotion claim. Public result does not transfer to neutral or other generators."
+  },
+  "bounds": {
+    "index_bytes": 67108864,
+    "documents": 100000,
+    "occurrences": 1000000,
+    "symbol_bytes": 16384,
+    "proto_file_bytes": 4194304,
+    "generated_file_bytes": 4194304,
+    "index_prep_timeout_seconds": 90,
+    "index_prep_concurrency": 1,
+    "index_prep_GOMAXPROCS": 2,
+    "measurement_timeout_seconds": 30,
+    "measurement_no_child_process": true
+  },
+  "stop_rules": [
+    "Any frozen source/index/label/descriptor digest drift stops before scoring.",
+    "Independent lead must review preregistration and labels before first extractor run.",
+    "Any unsupported input, parse refusal, corpus error, missed positive, extra/duplicate/wrong identity/citation or negative/unsupported emission fails the preregistered result; preserve original labels and report failure rather than repair labels after seeing output.",
+    "Any changed recipe/source-label population needs a new preregistration before a new measurement; no retries to manufacture a pass."
+  ],
+  "pending": [
+    "Independent preregistration/source-label review",
+    "First field/declaration extraction and score",
+    "T51.2 exact production registration/source fences and T51.3 operating/signed promotion remain separate"
+  ],
+  "authority_records": [
+    {
+      "path": "input-manifest.json",
+      "digest": "sha256:1d09b674d43a9cdcc8e62f0cb53a278bfd6032f78d6a8a11720a2afa516d80fd"
+    },
+    {
+      "path": "committed-inputs.json",
+      "digest": "sha256:694cb6c096fa4d8536e6ff61b042979eee4d02e8ffb87a7a47fe7de87c8240aa"
+    },
+    {
+      "path": "input-preparation.json",
+      "digest": "sha256:9cd9cdb5a39e012aaaa6a67be9749c30c0cdb6a10390b7d9f26715be14a351a1"
+    }
+  ]
+}

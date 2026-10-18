@@ -27,11 +27,19 @@ func proofCapabilities(opts Options) []string {
 	if service == nil {
 		return nil
 	}
-	if len(opts.KafkaReleasedPlanes) > 0 {
-		if opts.KafkaTopicInventoryReleased {
-			return []string{"kafka-topic-inventory", "kafka-topic-usage"}
+	if releasedProofOnly(opts) {
+		capabilities := []string{}
+		if len(opts.KafkaReleasedPlanes) > 0 {
+			capabilities = append(capabilities, "kafka-topic-usage")
 		}
-		return []string{"kafka-topic-usage"}
+		if opts.KafkaTopicInventoryReleased {
+			capabilities = append(capabilities, "kafka-topic-inventory")
+		}
+		if opts.ProtobufFieldReferencesReleased {
+			capabilities = append(capabilities, "protobuf-field-references")
+		}
+		sort.Strings(capabilities)
+		return capabilities
 	}
 	// The experimental surface advertises the composed inventory (T57.2);
 	// released planes advertise it only beside the released Topics claim
@@ -116,7 +124,7 @@ type ImpactCoverageRow struct {
 // BuildOperationImpactReport includes exact operation matches and same-method
 // syntactic candidates the extractor deliberately could not disambiguate.
 func (s *ProofService) BuildOperationImpactReport(ctx context.Context, operation string) (*ContractImpactReport, error) {
-	if s == nil {
+	if s == nil || releasedProofOnly(s.opts) {
 		return nil, huma.Error503ServiceUnavailable("contract impact reports unavailable")
 	}
 	if err := validateOperation(operation); err != nil {
@@ -155,7 +163,7 @@ func (s *ProofService) BuildOperationImpactReport(ctx context.Context, operation
 
 // BuildFieldImpactReport reports references to one stable field identity.
 func (s *ProofService) BuildFieldImpactReport(ctx context.Context, lineage, message string, fieldNumber int) (*ContractImpactReport, error) {
-	if s == nil {
+	if s == nil || releasedProofOnly(s.opts) {
 		return nil, huma.Error503ServiceUnavailable("contract impact reports unavailable")
 	}
 	envelope, err := buildAndPersistProofBundle(
@@ -193,7 +201,7 @@ func (s *ProofService) BuildChangeImpactReport(ctx context.Context, request comp
 // its report. A report URL is therefore no more a bearer credential than the
 // underlying bundle ID.
 func (s *ProofService) ReadContractImpactReport(ctx context.Context, id string) (*ContractImpactReport, error) {
-	if s == nil {
+	if s == nil || releasedProofOnly(s.opts) {
 		return nil, huma.Error503ServiceUnavailable("contract impact reports unavailable")
 	}
 	envelope, err := readProofBundle(ctx, s.opts, id)

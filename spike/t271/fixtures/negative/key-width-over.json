@@ -1,0 +1,169 @@
+{
+  "format": "phebs-document-schema-v1",
+  "source_class": "authored",
+  "tables": [
+    {
+      "name": "T",
+      "fields": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f0"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f1"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f2"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f3"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f4"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f5"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f6"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f7"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f8"
+            }
+          ],
+          "type": "opaque:string"
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f0"
+            }
+          ]
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f1"
+            }
+          ]
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f2"
+            }
+          ]
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f3"
+            }
+          ]
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f4"
+            }
+          ]
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f5"
+            }
+          ]
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f6"
+            }
+          ]
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f7"
+            }
+          ]
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f8"
+            }
+          ]
+        }
+      ],
+      "indexes": [],
+      "associations": []
+    }
+  ],
+  "views": []
+}

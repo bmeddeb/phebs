@@ -1,7 +1,7 @@
 // Package resolvermaterialize builds the bounded resolver catalog consumed by
 // repository-overlay caller workers. It reads only immutable candidate rows,
-// exact published declaration assertions, and the committed module/generated
-// attribution blobs named by those rows.
+// exact published declaration assertions, and committed module/generated and
+// consumer-unit attribution blobs named by those rows.
 package resolvermaterialize
 
 import (
@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	PackVersion = "1.1.1"
+	PackVersion = "1.2.0"
 
 	GoModulePackName            = "go-module"
 	GRPCGeneratedPackName       = "grpc-generated-attribution"
@@ -31,6 +31,10 @@ const (
 	ProtocolMemberRecordSchema  = "phebs-resolver-protocol-member-v2"
 	MemberMetadataSchema        = "phebs-resolver-member-metadata-v2"
 	MaterializationPolicyName   = "phebs-resolver-materialization-policy-v2"
+
+	ConsumerUnitRecordSchema   = "phebs-resolver-consumer-unit-v1"
+	ConsumerUnitMemberName     = "go-unit-attribution-v1.ndjson"
+	MaxConsumerUnitMemberBytes = 16 << 20
 
 	StateResolved    = "resolved"
 	StateUnavailable = "unavailable"
@@ -209,6 +213,12 @@ func (registry *Registry) validate() error {
 
 type MaterializationPolicy struct {
 	Name                                  string `json:"name"`
+	ConsumerUnitRecordSchema              string `json:"consumer_unit_record_schema"`
+	ConsumerUnitScope                     string `json:"consumer_unit_scope"`
+	MaxConsumerUnitSnapshotBytes          int    `json:"max_consumer_unit_snapshot_bytes"`
+	MaxConsumerUnitMappings               int    `json:"max_consumer_unit_mappings"`
+	MaxConsumerUnitIdentityBytes          int    `json:"max_consumer_unit_identity_bytes"`
+	MaxConsumerUnitMemberBytes            int    `json:"max_consumer_unit_member_bytes"`
 	ModuleRecordSchema                    string `json:"module_record_schema"`
 	GeneratedRecordSchema                 string `json:"generated_record_schema"`
 	GeneratedSymbolRecordSchema           string `json:"generated_symbol_record_schema"`
@@ -243,6 +253,12 @@ type MaterializationPolicy struct {
 func FrozenMaterializationPolicy() MaterializationPolicy {
 	return MaterializationPolicy{
 		Name:                                  MaterializationPolicyName,
+		ConsumerUnitRecordSchema:              ConsumerUnitRecordSchema,
+		ConsumerUnitScope:                     "selected-caller-overlay-path-oid-v1",
+		MaxConsumerUnitSnapshotBytes:          extract.MaxConsumerUnitSnapshotBytes,
+		MaxConsumerUnitMappings:               extract.MaxConsumerUnitMappings,
+		MaxConsumerUnitIdentityBytes:          extract.MaxConsumerUnitIdentityBytes,
+		MaxConsumerUnitMemberBytes:            MaxConsumerUnitMemberBytes,
 		ModuleRecordSchema:                    GoModuleRecordSchema,
 		GeneratedRecordSchema:                 GeneratedRecordSchema,
 		GeneratedSymbolRecordSchema:           GeneratedSymbolRecordSchema,

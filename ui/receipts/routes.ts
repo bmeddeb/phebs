@@ -172,3 +172,8 @@ export const DENSITIES = ['comfortable', 'dense'] as const
 
 // T45.8b synthetic managed-index preview matrix, separate from ordinary routes.
 export const TYPED_INDEX_WIDTHS = [1280, 390] as const
+
+// T49.4 declaration-only Atlas presentation matrix, comfortable density only.
+export const ATLAS_DECLARATION_VIEWPORTS = [
+  ['desktop', 1280, 800], ['mobile', 390, 844],
+] as const

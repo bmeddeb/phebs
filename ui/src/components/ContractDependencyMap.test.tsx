@@ -183,3 +183,16 @@ test('an empty relationship neighborhood names exact coverage and completeness w
   expect(screen.queryByTestId('dependency-diagram-edge')).toBeNull()
   expect(screen.queryByTestId('dependency-table-edge')).toBeNull()
 })
+
+test('unreleased relationship sections stay unavailable instead of a complete empty set', () => {
+  page({
+    ...operation(), implementations: [], callers: [], unresolved_candidates: [],
+    unavailable_relationships: ['implementations', 'callers', 'unresolved_candidates'],
+  })
+  expect(screen.getByText(/Relationship evidence unavailable: implementations, callers, unresolved candidates/)).toBeTruthy()
+  expect(screen.getByTestId('dependency-map-empty').textContent).toBe('No admitted relationship edges are displayed.')
+  expect(screen.queryByText(/complete bounded set/)).toBeNull()
+  expect(screen.queryByText(/bounded relationship set is complete/)).toBeNull()
+  expect(screen.queryByText(/relationship projection truncated/)).toBeNull()
+  expect(screen.queryByRole('table')).toBeNull()
+})

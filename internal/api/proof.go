@@ -308,14 +308,14 @@ func (s *ProofService) GetExtractionCoverage(ctx context.Context, domains []stri
 // genuine compatibility operation. Transports use it to avoid advertising a
 // permanently failing placeholder when the Buf sandbox is unavailable.
 func (s *ProofService) CompatibilityAvailable() bool {
-	return s != nil && s.opts.Compatibility != nil
+	return s != nil && !releasedProofOnly(s.opts) && s.opts.Compatibility != nil
 }
 
 // CheckContractCompatibility runs the pinned Buf WIRE policy, maps findings
 // to stable field identities, then enriches them with permission-filtered SCIP
 // consumers and exact source evidence in the same immutable proof bundle.
 func (s *ProofService) CheckContractCompatibility(ctx context.Context, request compat.Request) (*ProofBundleEnvelope, error) {
-	if s == nil || s.opts.Compatibility == nil {
+	if !s.CompatibilityAvailable() {
 		return nil, huma.Error503ServiceUnavailable("contract compatibility unavailable")
 	}
 	result, err := s.opts.Compatibility.Check(ctx, request)
@@ -345,8 +345,13 @@ func registerProofAPI(api huma.API, opts Options) {
 	if service == nil {
 		return
 	}
-	if len(opts.KafkaReleasedPlanes) > 0 {
-		registerKafkaTopicUsageAPI(api, service)
+	if releasedProofOnly(opts) {
+		if opts.ProtobufFieldReferencesReleased {
+			registerFieldReferenceAPI(api, service)
+		}
+		if len(opts.KafkaReleasedPlanes) > 0 {
+			registerKafkaTopicUsageAPI(api, service)
+		}
 		registerProofBundleReadAPI(api, opts)
 		if opts.KafkaTopicInventoryReleased {
 			registerTopicInventoryAPI(api, service)
@@ -366,41 +371,7 @@ func registerProofAPI(api huma.API, opts Options) {
 		return &proofOut{Body: *envelope}, nil
 	})
 
-	type fieldIn struct {
-		Lineage     string `query:"lineage" required:"true" minLength:"1" maxLength:"1024"`
-		Message     string `query:"message" required:"true" minLength:"1" maxLength:"1024" example:"shop.Cart"`
-		FieldNumber int    `query:"field_number" required:"true" minimum:"1" maximum:"536870911" example:"1"`
-	}
-	huma.Get(api, "/api/find_proto_field_references", func(ctx context.Context, in *fieldIn) (*proofOut, error) {
-		envelope, err := service.FindProtoFieldReferences(ctx, in.Lineage, in.Message, in.FieldNumber)
-		if err != nil {
-			return nil, err
-		}
-		return &proofOut{Body: *envelope}, nil
-	})
-
-	type neutralFieldIn struct {
-		Lineage     string           `query:"lineage" required:"true" minLength:"1" maxLength:"1024"`
-		Message     string           `query:"message" required:"true" minLength:"1" maxLength:"1024" example:"shop.Cart"`
-		FieldNumber optionalIntParam `query:"field_number" required:"true" minimum:"0" maximum:"536870911" example:"0"`
-	}
-	huma.Get(api, "/api/find_field_references", func(ctx context.Context, in *neutralFieldIn) (*proofOut, error) {
-		if !in.FieldNumber.IsSet {
-			return nil, huma.Error400BadRequest(
-				"field identity requires an explicitly present field_number",
-			)
-		}
-		envelope, err := service.FindFieldReferences(
-			ctx,
-			in.Lineage,
-			in.Message,
-			in.FieldNumber.Value,
-		)
-		if err != nil {
-			return nil, err
-		}
-		return &proofOut{Body: *envelope}, nil
-	})
+	registerFieldReferenceAPI(api, service)
 
 	registerKafkaTopicUsageAPI(api, service)
 
@@ -439,6 +410,46 @@ func registerProofAPI(api huma.API, opts Options) {
 	registerProofBundleReadAPI(api, opts)
 	registerContractImpactAPI(api, opts, service)
 	registerTopicInventoryAPI(api, service)
+}
+
+func registerFieldReferenceAPI(api huma.API, service *ProofService) {
+	type proofOut struct{ Body ProofBundleEnvelope }
+	type fieldIn struct {
+		Lineage     string `query:"lineage" required:"true" minLength:"1" maxLength:"1024"`
+		Message     string `query:"message" required:"true" minLength:"1" maxLength:"1024" example:"shop.Cart"`
+		FieldNumber int    `query:"field_number" required:"true" minimum:"1" maximum:"536870911" example:"1"`
+	}
+	huma.Get(api, "/api/find_proto_field_references", func(ctx context.Context, in *fieldIn) (*proofOut, error) {
+		envelope, err := service.FindProtoFieldReferences(ctx, in.Lineage, in.Message, in.FieldNumber)
+		if err != nil {
+			return nil, err
+		}
+		return &proofOut{Body: *envelope}, nil
+	})
+
+	type neutralFieldIn struct {
+		Lineage     string           `query:"lineage" required:"true" minLength:"1" maxLength:"1024"`
+		Message     string           `query:"message" required:"true" minLength:"1" maxLength:"1024" example:"shop.Cart"`
+		FieldNumber optionalIntParam `query:"field_number" required:"true" minimum:"0" maximum:"536870911" example:"0"`
+	}
+	huma.Get(api, "/api/find_field_references", func(ctx context.Context, in *neutralFieldIn) (*proofOut, error) {
+		if !in.FieldNumber.IsSet {
+			return nil, huma.Error400BadRequest(
+				"field identity requires an explicitly present field_number",
+			)
+		}
+		envelope, err := service.FindFieldReferences(
+			ctx,
+			in.Lineage,
+			in.Message,
+			in.FieldNumber.Value,
+		)
+		if err != nil {
+			return nil, err
+		}
+		return &proofOut{Body: *envelope}, nil
+	})
+
 }
 
 func registerKafkaTopicUsageAPI(api huma.API, service *ProofService) {
@@ -516,6 +527,9 @@ func buildProofBundleValue(
 	compatibility *compat.CompatibilityResult,
 	withCensus bool,
 ) (*ProofBundle, error) {
+	if err := admitProofQuery(opts, query); err != nil {
+		return nil, err
+	}
 	visible, err := visibleRepositories(ctx, opts)
 	if err != nil {
 		return nil, err
@@ -528,7 +542,7 @@ func buildProofBundleValue(
 		// Every proof surface reads the same exact sources (T48.5): a legacy
 		// run when present, else the fenced current partitioned root. Every
 		// current extraction mode publishes partitioned roots.
-		sources, err := selectExactSources(ctx, opts.Evidence, certificate, visible, query.Domains)
+		sources, err := selectExactSourcesWithVersions(ctx, opts.Evidence, certificate, visible, query.Domains, opts.EvidenceExtractorVersions)
 		if err != nil {
 			if errors.Is(err, store.ErrConflict) || errors.Is(err, store.ErrNotFound) {
 				continue
@@ -574,7 +588,7 @@ func buildProofBundleValue(
 		if confirmed.Digest != certificate.Digest {
 			continue
 		}
-		reselected, err := selectExactSources(ctx, opts.Evidence, confirmed, visible, query.Domains)
+		reselected, err := selectExactSourcesWithVersions(ctx, opts.Evidence, confirmed, visible, query.Domains, opts.EvidenceExtractorVersions)
 		if err != nil || !slices.Equal(reselected.authorities(), sources.authorities()) {
 			continue // a partitioned root moved while the bundle was built
 		}
@@ -617,11 +631,14 @@ func buildProofBundleValue(
 			Assertions: assertions, Evidence: evidence, UnresolvedCensus: census,
 			ExactAuthorities:  nonEmptyAuthorities(sources),
 			Coverage:          *certificate,
-			ExtractorVersions: certificateExtractors(certificate),
+			ExtractorVersions: proofSourceExtractors(certificate, sources, opts.EvidenceExtractorVersions),
 			VisibilityContext: visibilityContext(ctx, opts, certificate),
 			Compatibility:     compatibility, Caveat: caveat,
 			RelationshipCoverage: relationshipCoverage,
 			visibilityReceipt:    cloneVisibleEvidenceScopes(confirmedVisible),
+		}
+		if err := validateExpectedEvidenceVersions(opts, &bundle); err != nil {
+			return nil, err
 		}
 		return &bundle, nil
 	}
@@ -692,6 +709,20 @@ func buildAndPersistProofBundle(
 				return nil, huma.Error409Conflict(
 					"evidence or visibility changed while persisting the proof bundle; retry",
 				)
+			}
+			// Coverage alone cannot confirm native runs. A version-specific
+			// field read also confirms its exact source after persistence, using
+			// the same bounded point/probe fences as initial selection.
+			for _, domain := range envelope.Bundle.Query.Domains {
+				if opts.EvidenceExtractorVersions[domain] == "" {
+					continue
+				}
+				sources, sourceErr := selectExactSourcesWithVersions(ctx, opts.Evidence, confirmed,
+					envelope.Bundle.visibilityReceipt, envelope.Bundle.Query.Domains, opts.EvidenceExtractorVersions)
+				if sourceErr != nil || !slices.Equal(sources.authorities(), envelope.Bundle.ExactAuthorities) {
+					return nil, huma.Error409Conflict("evidence recipe authority changed while persisting the proof bundle; retry")
+				}
+				break
 			}
 			visible, visibleErr := visibleRepositories(ctx, opts)
 			if visibleErr != nil {
@@ -1018,6 +1049,12 @@ func readProofBundle(ctx context.Context, opts Options, id string) (*ProofBundle
 	repositories, runIDs := certificateScopes(&bundle.Coverage)
 	if !equalStrings(repositories, record.Repositories) || !equalStrings(runIDs, record.RunIDs) {
 		return nil, huma.Error500InternalServerError("stored proof bundle scope is inconsistent")
+	}
+	if err := admitProofQuery(opts, bundle.Query); err != nil {
+		return nil, huma.Error404NotFound("proof bundle not found")
+	}
+	if err := validateExpectedEvidenceVersions(opts, &bundle); err != nil {
+		return nil, huma.Error404NotFound("proof bundle not found")
 	}
 	return &ProofBundleEnvelope{ID: record.ID, Bundle: bundle}, nil
 }

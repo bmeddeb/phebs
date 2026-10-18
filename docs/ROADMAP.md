@@ -177,6 +177,61 @@ unsupported endpoint pairs refuse early. Focused normal/race/MCP/static checks
 pass. Actual quality/operating promotion and signing remain T50.3, not inherited
 from Caller Map or Atlas.
 
+**T51.1 field inputs (2026-10-18):** a source-labelled public population and
+separate authored controls now have reviewed, actual committed evaluator SCIP
+inputs, explicit descriptor/lineage witnesses and prospective finite thresholds.
+The first measurement follows this checkpoint; production registration and
+operating/signing closure remain distinct.
+
+**T51.1 finite qualification (2026-10-18):** the unchanged public14/56 and
+separate authored17/7/12 gates pass, including exact descriptor/definition/
+citation witnesses. Independent review and bounded checks are complete. T51.2
+stable production input/surface isolation can proceed; operating and signing
+remain separate, with no broad generator or semantic-write accuracy claim.
+
+**T51.2 field admission (2026-10-18):** the isolated signed recipe, exact
+committed-input checks and source/version/authorization fences are implemented
+and reviewed with bounded normal/race/store/MCP tests. Mixed explicit provisional
+surfaces remain available; no identity bridge or other product is promoted.
+T51.3 operating and production signing remain separate.
+
+**T48.5a raw evidence (2026-10-18):** implementation and bounded real-root,
+legacy-byte, final-fence and release-domain checks pass on its ticket branch.
+The browser exposes exact native authority without inventing legacy runs;
+unadmitted retained domains refuse before storage. Main integration remains a
+separate decision.
+
+**T25.1 embedded docs preparation (2026-10-18):** authenticated build-snapshot
+Markdown/SVG/YAML, exact links and explicit repository-only fallback are
+implemented with normal/race/auth/static and four-appearance browser gates
+passing. Canonical deterministic comparison and final integration remain open;
+this does not add a release or anonymous documentation surface.
+
+**T25.1 documentation browser (2026-10-18):** authenticated embedded docs,
+strict links/content boundaries, native keyboard/a11y and twelve canonical
+captures with fresh-fixture comparison are implemented and reviewed on the
+ticket branch. Repository-only destinations are explicitly labelled; no excluded
+history or fixture bytes are embedded. Main integration remains separate.
+
+**T49.4 Atlas closure (2026-10-18):** signed disposable-key native HTTP/MCP/
+UI/revocation and eight reviewed canonical frames pass on the ticket branch.
+Current partitioned authority, unavailable planes, capabilities and narrow layout
+are repaired. Shared scope-help accessibility is tracked separately as T43R.6;
+production signing remains pending the existing key. No accuracy/scale or
+full-page accessibility claim follows from the scoped integration result.
+
+**T27.1 inputs (2026-10-18):** the document-schema spike has independently
+reviewed, digest-pinned labels and public derivation before reader code or
+execution. The bounded reader and two deterministic passes follow; this is
+isolated spike preparation, with no production pack or live-schema claim.
+
+**T27.1 bounded reader result (2026-10-18):** both frozen 119-case passes,
+534 exact facts/citations and public derivation agree. The JSON whitespace
+review finding is corrected and independently re-reviewed; normal/race/static
+checks pass. The spike is complete on its branch for neutral fixture contract
+conformance only. No production integration or runtime-schema claim follows;
+future production work requires a separately specified ticket.
+
 **T50.3 comparison inputs (2026-10-18):** independent agent source-only review
 accepts the immutable twelve-artifact checkpoint before indexing/predictions.
 Five selected public source sites and four outside-pair negatives have frozen
@@ -5490,6 +5545,13 @@ Production registration of the remaining evidence surfaces still requires:
 
 Until both exist, the implementation remains dark regardless of feature
 completeness or demo quality.
+
+**T50.3a caller unit repair (2026-10-18):** the direct caller pipeline now
+carries exact committed unit attribution through one bounded shared resolver
+member. Old unit-less catalogs refuse current worker/read admission and rebuild
+under pack1.2.0; historical artifact custody stays intact. Bounded regression
+and independent source/cost review precede integration. T50.3's earlier unit
+failure stays retained; new product qualification remains separate.
 
 **T50.3 first product attempt (2026-10-18):** source-site composition matched
 5/5 but supplied unit attribution failed0/5. The stop remains immutable; only

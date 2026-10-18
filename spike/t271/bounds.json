@@ -1,0 +1,22 @@
+{
+  "manifest_bytes": 65536,
+  "json_depth": 32,
+  "tables": 16,
+  "fields_per_table": 128,
+  "path_depth": 8,
+  "name_utf8_bytes": 128,
+  "type_utf8_bytes": 256,
+  "key_width": 8,
+  "index_columns": 8,
+  "association_fields": 8,
+  "prefix_length_max": 9223372036854775807,
+  "indexes_per_owner": 16,
+  "associations_total": 64,
+  "views": 16,
+  "fields_per_view": 128,
+  "sources_per_view_field": 16,
+  "aggregate_declarations": 256,
+  "emitted_citations": 192,
+  "repository_utf8_bytes": 256,
+  "manifest_path_utf8_bytes": 256
+}

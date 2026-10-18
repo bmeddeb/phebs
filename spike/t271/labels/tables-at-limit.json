@@ -1,0 +1,1012 @@
+{
+  "authorship": "Fixture-author declarative labels, frozen before any reader implementation or run; not independent extraction-accuracy evidence.",
+  "fixture_sha256": "a25ed1807129cbd1d877880e6221a1c42197ae012d0996da9bdd08f1c04f5d99",
+  "declarations": [
+    {
+      "kind": "DECLARES_SCHEMA_SET",
+      "pointer": "",
+      "owner": null,
+      "meaning": {
+        "format": "phebs-document-schema-v1",
+        "source_class": "authored"
+      },
+      "span": {
+        "start": 0,
+        "end": 7295,
+        "sha256": "f642c5ea3482f97db8de0b052b07da749b03c4f579c15f43f98308deb4bc4461"
+      }
+    },
+    {
+      "kind": "DECLARES_TABLE",
+      "pointer": "/tables/0",
+      "owner": {
+        "kind": "table",
+        "name": "T0"
+      },
+      "meaning": {
+        "name": "T0",
+        "partition_key_state": "undeclared"
+      },
+      "span": {
+        "start": 90,
+        "end": 533,
+        "sha256": "116e636bf249514a53b186c49d2f57edb1ea59f3cfbea9ec4a6068f3c355de63"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/0/fields/0",
+      "owner": {
+        "kind": "table",
+        "name": "T0"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 138,
+        "end": 302,
+        "sha256": "c0c1dc41f863f03f0e95ed41c591f6f1ad3ac7bf6aac527e9c4df4f6bbb0b66d"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/tables/0/primary_key/0",
+      "owner": {
+        "kind": "table",
+        "name": "T0"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "position": 0,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 343,
+        "end": 472,
+        "sha256": "640ade14bb4afc774d88363ad6ec6e8347b86cc995f205711da02fe499327c92"
+      }
+    },
+    {
+      "kind": "DECLARES_TABLE",
+      "pointer": "/tables/1",
+      "owner": {
+        "kind": "table",
+        "name": "T1"
+      },
+      "meaning": {
+        "name": "T1",
+        "partition_key_state": "undeclared"
+      },
+      "span": {
+        "start": 539,
+        "end": 982,
+        "sha256": "c28a27c58bd41f57e1f886700977545199b6bda9542f0968a6f791313675d482"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/1/fields/0",
+      "owner": {
+        "kind": "table",
+        "name": "T1"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 587,
+        "end": 751,
+        "sha256": "c0c1dc41f863f03f0e95ed41c591f6f1ad3ac7bf6aac527e9c4df4f6bbb0b66d"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/tables/1/primary_key/0",
+      "owner": {
+        "kind": "table",
+        "name": "T1"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "position": 0,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 792,
+        "end": 921,
+        "sha256": "640ade14bb4afc774d88363ad6ec6e8347b86cc995f205711da02fe499327c92"
+      }
+    },
+    {
+      "kind": "DECLARES_TABLE",
+      "pointer": "/tables/2",
+      "owner": {
+        "kind": "table",
+        "name": "T2"
+      },
+      "meaning": {
+        "name": "T2",
+        "partition_key_state": "undeclared"
+      },
+      "span": {
+        "start": 988,
+        "end": 1431,
+        "sha256": "e0b445c5498e54a50628fe177d6d061edb409540abb8d9375c0f10136b03338f"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/2/fields/0",
+      "owner": {
+        "kind": "table",
+        "name": "T2"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 1036,
+        "end": 1200,
+        "sha256": "c0c1dc41f863f03f0e95ed41c591f6f1ad3ac7bf6aac527e9c4df4f6bbb0b66d"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/tables/2/primary_key/0",
+      "owner": {
+        "kind": "table",
+        "name": "T2"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "position": 0,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 1241,
+        "end": 1370,
+        "sha256": "640ade14bb4afc774d88363ad6ec6e8347b86cc995f205711da02fe499327c92"
+      }
+    },
+    {
+      "kind": "DECLARES_TABLE",
+      "pointer": "/tables/3",
+      "owner": {
+        "kind": "table",
+        "name": "T3"
+      },
+      "meaning": {
+        "name": "T3",
+        "partition_key_state": "undeclared"
+      },
+      "span": {
+        "start": 1437,
+        "end": 1880,
+        "sha256": "7f9a18ac84b4fe1641e017edff73edb2ca69a165a423657e539ab909baaeba76"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/3/fields/0",
+      "owner": {
+        "kind": "table",
+        "name": "T3"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 1485,
+        "end": 1649,
+        "sha256": "c0c1dc41f863f03f0e95ed41c591f6f1ad3ac7bf6aac527e9c4df4f6bbb0b66d"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/tables/3/primary_key/0",
+      "owner": {
+        "kind": "table",
+        "name": "T3"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "position": 0,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 1690,
+        "end": 1819,
+        "sha256": "640ade14bb4afc774d88363ad6ec6e8347b86cc995f205711da02fe499327c92"
+      }
+    },
+    {
+      "kind": "DECLARES_TABLE",
+      "pointer": "/tables/4",
+      "owner": {
+        "kind": "table",
+        "name": "T4"
+      },
+      "meaning": {
+        "name": "T4",
+        "partition_key_state": "undeclared"
+      },
+      "span": {
+        "start": 1886,
+        "end": 2329,
+        "sha256": "3ccccbe15e2eefec583776f092881e02b16e9e5ae6887210e797e72786a2f76d"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/4/fields/0",
+      "owner": {
+        "kind": "table",
+        "name": "T4"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 1934,
+        "end": 2098,
+        "sha256": "c0c1dc41f863f03f0e95ed41c591f6f1ad3ac7bf6aac527e9c4df4f6bbb0b66d"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/tables/4/primary_key/0",
+      "owner": {
+        "kind": "table",
+        "name": "T4"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "position": 0,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 2139,
+        "end": 2268,
+        "sha256": "640ade14bb4afc774d88363ad6ec6e8347b86cc995f205711da02fe499327c92"
+      }
+    },
+    {
+      "kind": "DECLARES_TABLE",
+      "pointer": "/tables/5",
+      "owner": {
+        "kind": "table",
+        "name": "T5"
+      },
+      "meaning": {
+        "name": "T5",
+        "partition_key_state": "undeclared"
+      },
+      "span": {
+        "start": 2335,
+        "end": 2778,
+        "sha256": "676ecbd25ae552631c8571bbfe093405e4a4c4582efedaf0cb2e314af3e9cb6c"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/5/fields/0",
+      "owner": {
+        "kind": "table",
+        "name": "T5"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 2383,
+        "end": 2547,
+        "sha256": "c0c1dc41f863f03f0e95ed41c591f6f1ad3ac7bf6aac527e9c4df4f6bbb0b66d"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/tables/5/primary_key/0",
+      "owner": {
+        "kind": "table",
+        "name": "T5"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "position": 0,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 2588,
+        "end": 2717,
+        "sha256": "640ade14bb4afc774d88363ad6ec6e8347b86cc995f205711da02fe499327c92"
+      }
+    },
+    {
+      "kind": "DECLARES_TABLE",
+      "pointer": "/tables/6",
+      "owner": {
+        "kind": "table",
+        "name": "T6"
+      },
+      "meaning": {
+        "name": "T6",
+        "partition_key_state": "undeclared"
+      },
+      "span": {
+        "start": 2784,
+        "end": 3227,
+        "sha256": "7501b174c792a5d0deca09a3f70650f0760a2af5c63b9f94dfe44ba3e40f4832"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/6/fields/0",
+      "owner": {
+        "kind": "table",
+        "name": "T6"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 2832,
+        "end": 2996,
+        "sha256": "c0c1dc41f863f03f0e95ed41c591f6f1ad3ac7bf6aac527e9c4df4f6bbb0b66d"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/tables/6/primary_key/0",
+      "owner": {
+        "kind": "table",
+        "name": "T6"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "position": 0,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 3037,
+        "end": 3166,
+        "sha256": "640ade14bb4afc774d88363ad6ec6e8347b86cc995f205711da02fe499327c92"
+      }
+    },
+    {
+      "kind": "DECLARES_TABLE",
+      "pointer": "/tables/7",
+      "owner": {
+        "kind": "table",
+        "name": "T7"
+      },
+      "meaning": {
+        "name": "T7",
+        "partition_key_state": "undeclared"
+      },
+      "span": {
+        "start": 3233,
+        "end": 3676,
+        "sha256": "f0a3a16cc44cae25f389b29628d3632a1c55ed97e40656ba623541a751eabb2f"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/7/fields/0",
+      "owner": {
+        "kind": "table",
+        "name": "T7"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 3281,
+        "end": 3445,
+        "sha256": "c0c1dc41f863f03f0e95ed41c591f6f1ad3ac7bf6aac527e9c4df4f6bbb0b66d"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/tables/7/primary_key/0",
+      "owner": {
+        "kind": "table",
+        "name": "T7"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "position": 0,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 3486,
+        "end": 3615,
+        "sha256": "640ade14bb4afc774d88363ad6ec6e8347b86cc995f205711da02fe499327c92"
+      }
+    },
+    {
+      "kind": "DECLARES_TABLE",
+      "pointer": "/tables/8",
+      "owner": {
+        "kind": "table",
+        "name": "T8"
+      },
+      "meaning": {
+        "name": "T8",
+        "partition_key_state": "undeclared"
+      },
+      "span": {
+        "start": 3682,
+        "end": 4125,
+        "sha256": "3ad38310eeda6cb57ee8ee1d6ae2e7ca5d9368af114195b890c8708d47ec870e"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/8/fields/0",
+      "owner": {
+        "kind": "table",
+        "name": "T8"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 3730,
+        "end": 3894,
+        "sha256": "c0c1dc41f863f03f0e95ed41c591f6f1ad3ac7bf6aac527e9c4df4f6bbb0b66d"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/tables/8/primary_key/0",
+      "owner": {
+        "kind": "table",
+        "name": "T8"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "position": 0,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 3935,
+        "end": 4064,
+        "sha256": "640ade14bb4afc774d88363ad6ec6e8347b86cc995f205711da02fe499327c92"
+      }
+    },
+    {
+      "kind": "DECLARES_TABLE",
+      "pointer": "/tables/9",
+      "owner": {
+        "kind": "table",
+        "name": "T9"
+      },
+      "meaning": {
+        "name": "T9",
+        "partition_key_state": "undeclared"
+      },
+      "span": {
+        "start": 4131,
+        "end": 4574,
+        "sha256": "e66709b5bbe94870ef966c548b4067c9422a5aaec4923e45c1da90469af26ecf"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/9/fields/0",
+      "owner": {
+        "kind": "table",
+        "name": "T9"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 4179,
+        "end": 4343,
+        "sha256": "c0c1dc41f863f03f0e95ed41c591f6f1ad3ac7bf6aac527e9c4df4f6bbb0b66d"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/tables/9/primary_key/0",
+      "owner": {
+        "kind": "table",
+        "name": "T9"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "position": 0,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 4384,
+        "end": 4513,
+        "sha256": "640ade14bb4afc774d88363ad6ec6e8347b86cc995f205711da02fe499327c92"
+      }
+    },
+    {
+      "kind": "DECLARES_TABLE",
+      "pointer": "/tables/10",
+      "owner": {
+        "kind": "table",
+        "name": "T10"
+      },
+      "meaning": {
+        "name": "T10",
+        "partition_key_state": "undeclared"
+      },
+      "span": {
+        "start": 4580,
+        "end": 5024,
+        "sha256": "51af2ccc9bade3ea67315bfb438702dd4d37449a9b980176135eff58b8fbf1bc"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/10/fields/0",
+      "owner": {
+        "kind": "table",
+        "name": "T10"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 4629,
+        "end": 4793,
+        "sha256": "c0c1dc41f863f03f0e95ed41c591f6f1ad3ac7bf6aac527e9c4df4f6bbb0b66d"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/tables/10/primary_key/0",
+      "owner": {
+        "kind": "table",
+        "name": "T10"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "position": 0,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 4834,
+        "end": 4963,
+        "sha256": "640ade14bb4afc774d88363ad6ec6e8347b86cc995f205711da02fe499327c92"
+      }
+    },
+    {
+      "kind": "DECLARES_TABLE",
+      "pointer": "/tables/11",
+      "owner": {
+        "kind": "table",
+        "name": "T11"
+      },
+      "meaning": {
+        "name": "T11",
+        "partition_key_state": "undeclared"
+      },
+      "span": {
+        "start": 5030,
+        "end": 5474,
+        "sha256": "c16c35715f12b0ed0a4e078fa3cbad70a91a294bb3b16ad413c075c5c0bb0cd8"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/11/fields/0",
+      "owner": {
+        "kind": "table",
+        "name": "T11"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 5079,
+        "end": 5243,
+        "sha256": "c0c1dc41f863f03f0e95ed41c591f6f1ad3ac7bf6aac527e9c4df4f6bbb0b66d"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/tables/11/primary_key/0",
+      "owner": {
+        "kind": "table",
+        "name": "T11"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "position": 0,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 5284,
+        "end": 5413,
+        "sha256": "640ade14bb4afc774d88363ad6ec6e8347b86cc995f205711da02fe499327c92"
+      }
+    },
+    {
+      "kind": "DECLARES_TABLE",
+      "pointer": "/tables/12",
+      "owner": {
+        "kind": "table",
+        "name": "T12"
+      },
+      "meaning": {
+        "name": "T12",
+        "partition_key_state": "undeclared"
+      },
+      "span": {
+        "start": 5480,
+        "end": 5924,
+        "sha256": "3df643db21f530daf2f72d34f43569906ac9dfa9b814f4bc2f89388b5a5b63bf"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/12/fields/0",
+      "owner": {
+        "kind": "table",
+        "name": "T12"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 5529,
+        "end": 5693,
+        "sha256": "c0c1dc41f863f03f0e95ed41c591f6f1ad3ac7bf6aac527e9c4df4f6bbb0b66d"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/tables/12/primary_key/0",
+      "owner": {
+        "kind": "table",
+        "name": "T12"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "position": 0,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 5734,
+        "end": 5863,
+        "sha256": "640ade14bb4afc774d88363ad6ec6e8347b86cc995f205711da02fe499327c92"
+      }
+    },
+    {
+      "kind": "DECLARES_TABLE",
+      "pointer": "/tables/13",
+      "owner": {
+        "kind": "table",
+        "name": "T13"
+      },
+      "meaning": {
+        "name": "T13",
+        "partition_key_state": "undeclared"
+      },
+      "span": {
+        "start": 5930,
+        "end": 6374,
+        "sha256": "e1c3c3b03d8e14b4095d00f4805e901017619f753cc041705c5746165cfa952a"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/13/fields/0",
+      "owner": {
+        "kind": "table",
+        "name": "T13"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 5979,
+        "end": 6143,
+        "sha256": "c0c1dc41f863f03f0e95ed41c591f6f1ad3ac7bf6aac527e9c4df4f6bbb0b66d"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/tables/13/primary_key/0",
+      "owner": {
+        "kind": "table",
+        "name": "T13"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "position": 0,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 6184,
+        "end": 6313,
+        "sha256": "640ade14bb4afc774d88363ad6ec6e8347b86cc995f205711da02fe499327c92"
+      }
+    },
+    {
+      "kind": "DECLARES_TABLE",
+      "pointer": "/tables/14",
+      "owner": {
+        "kind": "table",
+        "name": "T14"
+      },
+      "meaning": {
+        "name": "T14",
+        "partition_key_state": "undeclared"
+      },
+      "span": {
+        "start": 6380,
+        "end": 6824,
+        "sha256": "71df2f76ed0326792b41ca57ee91478e3edc55cf68e292cac3d2f372062acdd6"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/14/fields/0",
+      "owner": {
+        "kind": "table",
+        "name": "T14"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 6429,
+        "end": 6593,
+        "sha256": "c0c1dc41f863f03f0e95ed41c591f6f1ad3ac7bf6aac527e9c4df4f6bbb0b66d"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/tables/14/primary_key/0",
+      "owner": {
+        "kind": "table",
+        "name": "T14"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "position": 0,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 6634,
+        "end": 6763,
+        "sha256": "640ade14bb4afc774d88363ad6ec6e8347b86cc995f205711da02fe499327c92"
+      }
+    },
+    {
+      "kind": "DECLARES_TABLE",
+      "pointer": "/tables/15",
+      "owner": {
+        "kind": "table",
+        "name": "T15"
+      },
+      "meaning": {
+        "name": "T15",
+        "partition_key_state": "undeclared"
+      },
+      "span": {
+        "start": 6830,
+        "end": 7274,
+        "sha256": "c8ead90448fac8dcec4b436c7d698b53b23aae4b24d16bf07c60b9d50bf5035b"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/15/fields/0",
+      "owner": {
+        "kind": "table",
+        "name": "T15"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 6879,
+        "end": 7043,
+        "sha256": "c0c1dc41f863f03f0e95ed41c591f6f1ad3ac7bf6aac527e9c4df4f6bbb0b66d"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/tables/15/primary_key/0",
+      "owner": {
+        "kind": "table",
+        "name": "T15"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "position": 0,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 7084,
+        "end": 7213,
+        "sha256": "640ade14bb4afc774d88363ad6ec6e8347b86cc995f205711da02fe499327c92"
+      }
+    }
+  ]
+}

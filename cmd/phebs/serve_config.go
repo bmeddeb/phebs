@@ -17,6 +17,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/kafkago"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/protodecl"
+	"github.com/bmeddeb/phebs/internal/extract/extractors/scipfield"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/thriftdecl"
 	"github.com/bmeddeb/phebs/internal/packrelease"
 	"github.com/bmeddeb/phebs/internal/resolvermaterialize"
@@ -145,6 +146,7 @@ func newServeExtractionRegistries(d *serveDeps) error {
 // third-party loader and no manifest-selected arbitrary code: a released pack
 // resolves only through this exact in-tree registry.
 var packRecipes = map[string]func() []extract.Extractor{
+	protobufFieldPackID:    protobufFieldRecipe,    // T51.2: exact committed Open API recipe; signature still required
 	callerMapPackID:        callerMapRecipe,        // T47.5: signed integration-test qualification
 	protobufContractPackID: protobufContractRecipe, // T49.3: independent declaration-only admission
 	kafkaProducerPackID:    kafkaProducerRecipe,    // T55.3: bound beside its first signed record
@@ -207,6 +209,16 @@ const protobufContractPackID = "phebs.protobuf.contract"
 
 func protobufContractRecipe() []extract.Extractor {
 	return []extract.Extractor{protodecl.New()}
+}
+
+// The first stable field recipe is independent of declaration discovery,
+// callers, consumer syntax, compatibility and Impact. Source proto bytes are
+// read by its exact field join; this does not publish an Atlas declaration bridge.
+const protobufFieldPackID = "phebs.protobuf.field.go"
+const protobufFieldClaimVersion = "1.0.0"
+
+func protobufFieldRecipe() []extract.Extractor {
+	return []extract.Extractor{scipfield.NewCommittedOpenAPI()}
 }
 
 // wireCompatibilityPackID is the T53.3 claim card in
@@ -275,6 +287,12 @@ func releasedExtractors(ctx context.Context, cfg *config.Config) ([]extract.Extr
 	released := make([]extract.Extractor, 0, selection.Count())
 	claims := map[string]bool{}
 	for _, packID := range selection.PackIDs() {
+		if packID == protobufFieldPackID {
+			record, _ := selection.Released(packID)
+			if record.PackClaimVersion != protobufFieldClaimVersion {
+				return nil, nil, fmt.Errorf("unsupported protobuf field claim version %q", record.PackClaimVersion)
+			}
+		}
 		if _, claim := releasedClaims[packID]; claim {
 			claims[packID] = true
 			continue

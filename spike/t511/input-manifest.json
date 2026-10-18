@@ -1,0 +1,184 @@
+{
+  "schema": "t511-source-input-origin-manifest-v1",
+  "record_date": "2026-10-18",
+  "purpose": "Prepare local Git evaluation source snapshots containing these exact source+SCIP bytes. The resulting local commits are evaluator snapshots, not upstream history.",
+  "populations": [
+    {
+      "id": "public",
+      "source_directory": "testdata/public",
+      "repo_name": "evaluation.local/t511-public",
+      "upstream": {
+        "url": "https://github.com/grpc/grpc-go",
+        "tag": "v1.80.0",
+        "commit": "397e45edaa68f8763773bbaaf539cf7894169cd2",
+        "module_zip_sum": "h1:Xr6m2WmWZLETvUNvIUmeD5OAagMw3FiKmMlTdViWsHM="
+      },
+      "evaluation_commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+      "evaluation_bundle_digest": "sha256:8d76e748134c368ad360f53d2dd4fcab6bb5133f440f93e7196bce68513cf50a",
+      "files": [
+        {
+          "path": "LICENSE",
+          "bytes": 11358,
+          "digest": "sha256:cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+          "origin": "upstream-committed",
+          "upstream_commit": "397e45edaa68f8763773bbaaf539cf7894169cd2"
+        },
+        {
+          "path": "go.mod",
+          "bytes": 1734,
+          "digest": "sha256:c38d5562384b31054ca85cd1b6f57e2fd3615234198560c65da2b2cda1be82f8",
+          "origin": "upstream-committed",
+          "upstream_commit": "397e45edaa68f8763773bbaaf539cf7894169cd2"
+        },
+        {
+          "path": "go.sum",
+          "bytes": 7347,
+          "digest": "sha256:65f0a1e60a75debcc0b26833d0489038b5ad4cb21cbb5cfc9b67f0f17bc6f7df",
+          "origin": "upstream-committed",
+          "upstream_commit": "397e45edaa68f8763773bbaaf539cf7894169cd2"
+        },
+        {
+          "path": "index.scip",
+          "bytes": 123050,
+          "digest": "sha256:3fd080f9b8d8629bd84fbb8fd07692ca1b2fb1070dd8bdc623f8c33a148c0716",
+          "origin": "evaluator-produced-real-scip-go-index"
+        },
+        {
+          "path": "profiling/proto/service.pb.go",
+          "bytes": 15227,
+          "digest": "sha256:2abc999321c3a8be9f09e30d55d02f259497c836ce28d8238d0c9b78d58940d8",
+          "origin": "upstream-committed",
+          "upstream_commit": "397e45edaa68f8763773bbaaf539cf7894169cd2"
+        },
+        {
+          "path": "profiling/proto/service.proto",
+          "bytes": 3683,
+          "digest": "sha256:507248b8ad414be8dd76bd409c79d22e0a003d8c994b35a80963250fa19e5416",
+          "origin": "upstream-committed",
+          "upstream_commit": "397e45edaa68f8763773bbaaf539cf7894169cd2"
+        },
+        {
+          "path": "profiling/proto/service_grpc.pb.go",
+          "bytes": 7041,
+          "digest": "sha256:b896aede048289fb83835beedd8f6dc7e3caa2007d6a3cdf0d9e2f2ced5db4e0",
+          "origin": "upstream-committed",
+          "upstream_commit": "397e45edaa68f8763773bbaaf539cf7894169cd2"
+        },
+        {
+          "path": "profiling/service/service.go",
+          "bytes": 4764,
+          "digest": "sha256:949728b78ac582ec2c796bf0fb3c4dfcc4ad0db0f288efe9efce4a46860b54a7",
+          "origin": "upstream-committed",
+          "upstream_commit": "397e45edaa68f8763773bbaaf539cf7894169cd2"
+        }
+      ],
+      "indexed_documents": [
+        {
+          "path": "profiling/proto/service.pb.go",
+          "occurrences": 546,
+          "definitions": 142
+        },
+        {
+          "path": "profiling/proto/service_grpc.pb.go",
+          "occurrences": 271,
+          "definitions": 70
+        },
+        {
+          "path": "profiling/service/service.go",
+          "occurrences": 183,
+          "definitions": 30
+        }
+      ],
+      "missing_indexed_documents": [],
+      "index_metadata": {
+        "project_root": "file:///var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t511-index-tunkny_i/public",
+        "tool": "scip-go",
+        "version": "0.2.7",
+        "encoding": "UTF8"
+      },
+      "preparation_context": {
+        "scope": "Complete upstream module with cached dependency graph",
+        "files": 1035,
+        "bytes": 9944607,
+        "sorted_file_inventory_digest": "sha256:310b4fdc03c531d74954f5932f897a9d002ab5ad71dce10182ac1d06ffdd200e",
+        "retained_go_mod_and_go_sum_equal_preparation": true,
+        "network": "GOPROXY=off GOSUMDB=off; no download",
+        "runtime": "Go1.26.5, module go directives/public1.24.0 and neutral1.26.0; SCIP symbols may carry those standard-library version labels"
+      }
+    },
+    {
+      "id": "neutral",
+      "source_directory": "testdata/neutral",
+      "repo_name": "evaluation.local/t511-neutral",
+      "upstream": null,
+      "evaluation_commit": "a0c1c9f337f11cdafd4231a16a2cc53d10768d89",
+      "evaluation_bundle_digest": "sha256:db835f56a8b6c6a8c40efd48470c0eeae0da85a3608fc93abca39dde3c4d93fe",
+      "files": [
+        {
+          "path": "go.mod",
+          "bytes": 80,
+          "digest": "sha256:4ed023631e94aa7d7050f92d7d55becf1c58a7687d9ea37e9b9636d5b9b9d983",
+          "origin": "phebs-authored-neutral-control"
+        },
+        {
+          "path": "go.sum",
+          "bytes": 175,
+          "digest": "sha256:963a8008710b609b5155fb77b395700f7e191b5d8266776e3be1ed1f81757f59",
+          "origin": "evaluator-produced-offline-module-checksums"
+        },
+        {
+          "path": "index.scip",
+          "bytes": 43535,
+          "digest": "sha256:ffd47d67314ca1c42d5edabaefe699f1ffce3db8fb1988ea5beec3c54d112be8",
+          "origin": "evaluator-produced-real-scip-go-index"
+        },
+        {
+          "path": "schema/fields.pb.go",
+          "bytes": 7434,
+          "digest": "sha256:61d7a33d8db29d6c4cff42dfcc572ad414eaa8cc45e4bd22645895dd309e2bef",
+          "origin": "evaluator-produced-pinned-protoc-go-output"
+        },
+        {
+          "path": "schema/fields.proto",
+          "bytes": 332,
+          "digest": "sha256:06cf7052b70cfed823fb0e463895a8d8a6f9a0ecce4cc6ea3094ef2e03021f2b",
+          "origin": "phebs-authored-neutral-control"
+        },
+        {
+          "path": "use/use.go",
+          "bytes": 1231,
+          "digest": "sha256:ad9061110ca5e82e3d605b64c871d1c67ff5e42067e78bd7b9d619287d32c122",
+          "origin": "phebs-authored-neutral-control"
+        }
+      ],
+      "indexed_documents": [
+        {
+          "path": "schema/fields.pb.go",
+          "occurrences": 302,
+          "definitions": 82
+        },
+        {
+          "path": "use/use.go",
+          "occurrences": 80,
+          "definitions": 12
+        }
+      ],
+      "missing_indexed_documents": [],
+      "index_metadata": {
+        "project_root": "file:///var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t511-index-tunkny_i/neutral",
+        "tool": "scip-go",
+        "version": "0.2.7",
+        "encoding": "UTF8"
+      },
+      "preparation_context": {
+        "scope": "Complete authored neutral module including offline-resolved go.sum",
+        "files": 5,
+        "bytes": 9252,
+        "sorted_file_inventory_digest": "sha256:68f29c647823600331d4626e1802261ebf0a799c8f333bb1f2ebff9ed959f36a",
+        "retained_go_mod_and_go_sum_equal_preparation": true,
+        "network": "GOPROXY=off GOSUMDB=off; no download",
+        "runtime": "Go1.26.5, module go directives/public1.24.0 and neutral1.26.0; SCIP symbols may carry those standard-library version labels"
+      }
+    }
+  ]
+}

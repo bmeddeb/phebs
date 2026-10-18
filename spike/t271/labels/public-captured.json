@@ -1,0 +1,1362 @@
+{
+  "authorship": "Fixture-author declarative labels, frozen before any reader implementation or run; not independent extraction-accuracy evidence.",
+  "fixture_sha256": "b3b71a23e40c87603616e746d8245d7579f65c6d7d28b95fe2946ba43946cd57",
+  "declarations": [
+    {
+      "kind": "DECLARES_SCHEMA_SET",
+      "pointer": "",
+      "owner": null,
+      "meaning": {
+        "format": "phebs-document-schema-v1",
+        "source_class": "captured"
+      },
+      "span": {
+        "start": 0,
+        "end": 11256,
+        "sha256": "f792c6881b50d30ff76b28ef86db796161c44ee1ac130602a4c1cefa4a5e2ac4"
+      }
+    },
+    {
+      "kind": "DECLARES_TABLE",
+      "pointer": "/tables/0",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.reservations_by_hotel_date"
+      },
+      "meaning": {
+        "name": "reservation.reservations_by_hotel_date",
+        "partition_key_state": "declared"
+      },
+      "span": {
+        "start": 90,
+        "end": 1982,
+        "sha256": "83bdc1486a882d5bc6fb65d004ecae4208f74ee59251550dd4ee41f9bb60c0e3"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/0/fields/0",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.reservations_by_hotel_date"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "hotel_id"
+          }
+        ],
+        "type": "text"
+      },
+      "span": {
+        "start": 174,
+        "end": 335,
+        "sha256": "5c70b94f5c6f37affaaa23036012292d1d07c586c091fbe5feecc8ee7b74f1e7"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/0/fields/1",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.reservations_by_hotel_date"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "start_date"
+          }
+        ],
+        "type": "date"
+      },
+      "span": {
+        "start": 345,
+        "end": 508,
+        "sha256": "cf71e5be4a30b6f958494f4fb8b28451993bbef4bff78cc1d2e97e00eb08db4c"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/0/fields/2",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.reservations_by_hotel_date"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "end_date"
+          }
+        ],
+        "type": "date"
+      },
+      "span": {
+        "start": 518,
+        "end": 679,
+        "sha256": "076447492dcc1c51429e56fca23305ef364ecb443568f07a3ee7d3fd3bb80087"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/0/fields/3",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.reservations_by_hotel_date"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "room_number"
+          }
+        ],
+        "type": "smallint"
+      },
+      "span": {
+        "start": 689,
+        "end": 857,
+        "sha256": "444bbb328ea49c4802d05af2465d9040e83a355738e25de48d6aeb140ba386a8"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/0/fields/4",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.reservations_by_hotel_date"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "confirm_number"
+          }
+        ],
+        "type": "text"
+      },
+      "span": {
+        "start": 867,
+        "end": 1034,
+        "sha256": "d202cc2ae055dff5a9cea8687a894b06dd66ac0dae5cbbc47b9a81f101894e5b"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/0/fields/5",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.reservations_by_hotel_date"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "guest_id"
+          }
+        ],
+        "type": "uuid"
+      },
+      "span": {
+        "start": 1044,
+        "end": 1205,
+        "sha256": "2f0f67dfe619e2a0af601df321319c4e90e5b9e8948903019f22220b0da4a421"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/tables/0/primary_key/0",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.reservations_by_hotel_date"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "hotel_id"
+          }
+        ],
+        "position": 0,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 1246,
+        "end": 1381,
+        "sha256": "c9572545a9b23df33acee896c328225b5a0c9b1b4aec6adea38a696a5d505a24"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/tables/0/primary_key/1",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.reservations_by_hotel_date"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "start_date"
+          }
+        ],
+        "position": 1,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 1391,
+        "end": 1528,
+        "sha256": "f0bb463600a83c74b95d7d89bc397ab4d034d7cea7ef00700da79bf022870b1d"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/tables/0/primary_key/2",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.reservations_by_hotel_date"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "room_number"
+          }
+        ],
+        "position": 2,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 1538,
+        "end": 1676,
+        "sha256": "1991d7ff28d95879f169dee322320aecf9ad3e44f9736f8465a11f3f6ab538d8"
+      }
+    },
+    {
+      "kind": "DECLARES_PARTITION_KEY",
+      "pointer": "/tables/0/partition_key/0",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.reservations_by_hotel_date"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "hotel_id"
+          }
+        ],
+        "position": 0
+      },
+      "span": {
+        "start": 1766,
+        "end": 1861,
+        "sha256": "2dfe24b16db68b90a55529b5ffbed884da7d3ad73a3781f104c26d00241abcf1"
+      }
+    },
+    {
+      "kind": "DECLARES_PARTITION_KEY",
+      "pointer": "/tables/0/partition_key/1",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.reservations_by_hotel_date"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "start_date"
+          }
+        ],
+        "position": 1
+      },
+      "span": {
+        "start": 1871,
+        "end": 1968,
+        "sha256": "0a0c8b06dfcc7cbecc837b53180f0f340b821859591e2b572d4706f4b00a3da6"
+      }
+    },
+    {
+      "kind": "DECLARES_TABLE",
+      "pointer": "/tables/1",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.reservations_by_guest"
+      },
+      "meaning": {
+        "name": "reservation.reservations_by_guest",
+        "partition_key_state": "declared"
+      },
+      "span": {
+        "start": 1988,
+        "end": 3810,
+        "sha256": "7b076ac67f1d8cae376f6d5263be34ec9bfd4dbfd23a8ebf678cbe05c37e0905"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/1/fields/0",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.reservations_by_guest"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "guest_last_name"
+          }
+        ],
+        "type": "text"
+      },
+      "span": {
+        "start": 2067,
+        "end": 2235,
+        "sha256": "12177fec030553fac9aa22a92e391b79fa73ec9679958975ffe7b977fb68594f"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/1/fields/1",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.reservations_by_guest"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "hotel_id"
+          }
+        ],
+        "type": "text"
+      },
+      "span": {
+        "start": 2245,
+        "end": 2406,
+        "sha256": "5c70b94f5c6f37affaaa23036012292d1d07c586c091fbe5feecc8ee7b74f1e7"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/1/fields/2",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.reservations_by_guest"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "start_date"
+          }
+        ],
+        "type": "date"
+      },
+      "span": {
+        "start": 2416,
+        "end": 2579,
+        "sha256": "cf71e5be4a30b6f958494f4fb8b28451993bbef4bff78cc1d2e97e00eb08db4c"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/1/fields/3",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.reservations_by_guest"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "end_date"
+          }
+        ],
+        "type": "date"
+      },
+      "span": {
+        "start": 2589,
+        "end": 2750,
+        "sha256": "076447492dcc1c51429e56fca23305ef364ecb443568f07a3ee7d3fd3bb80087"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/1/fields/4",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.reservations_by_guest"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "room_number"
+          }
+        ],
+        "type": "smallint"
+      },
+      "span": {
+        "start": 2760,
+        "end": 2928,
+        "sha256": "444bbb328ea49c4802d05af2465d9040e83a355738e25de48d6aeb140ba386a8"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/1/fields/5",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.reservations_by_guest"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "confirm_number"
+          }
+        ],
+        "type": "text"
+      },
+      "span": {
+        "start": 2938,
+        "end": 3105,
+        "sha256": "d202cc2ae055dff5a9cea8687a894b06dd66ac0dae5cbbc47b9a81f101894e5b"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/1/fields/6",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.reservations_by_guest"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "guest_id"
+          }
+        ],
+        "type": "uuid"
+      },
+      "span": {
+        "start": 3115,
+        "end": 3276,
+        "sha256": "2f0f67dfe619e2a0af601df321319c4e90e5b9e8948903019f22220b0da4a421"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/tables/1/primary_key/0",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.reservations_by_guest"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "guest_last_name"
+          }
+        ],
+        "position": 0,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 3317,
+        "end": 3459,
+        "sha256": "aedda57fd9fae204c6bbeee77029f6fab95d5314d4516359d6685acd842db81b"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/tables/1/primary_key/1",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.reservations_by_guest"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "hotel_id"
+          }
+        ],
+        "position": 1,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 3469,
+        "end": 3604,
+        "sha256": "c9572545a9b23df33acee896c328225b5a0c9b1b4aec6adea38a696a5d505a24"
+      }
+    },
+    {
+      "kind": "DECLARES_PARTITION_KEY",
+      "pointer": "/tables/1/partition_key/0",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.reservations_by_guest"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "guest_last_name"
+          }
+        ],
+        "position": 0
+      },
+      "span": {
+        "start": 3694,
+        "end": 3796,
+        "sha256": "6894ebb5c63e67cf7833f6b3a0a78edb89c827f15d433e32c996daed18811174"
+      }
+    },
+    {
+      "kind": "DECLARES_TABLE",
+      "pointer": "/tables/2",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.guests"
+      },
+      "meaning": {
+        "name": "reservation.guests",
+        "partition_key_state": "declared"
+      },
+      "span": {
+        "start": 3816,
+        "end": 8026,
+        "sha256": "0653012c620765cc58889ca23f2ff0c63675b4ac90218f4e07552e9c0c43c5fa"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/2/fields/0",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.guests"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "guest_id"
+          }
+        ],
+        "type": "uuid"
+      },
+      "span": {
+        "start": 3880,
+        "end": 4041,
+        "sha256": "2f0f67dfe619e2a0af601df321319c4e90e5b9e8948903019f22220b0da4a421"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/2/fields/1",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.guests"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "first_name"
+          }
+        ],
+        "type": "text"
+      },
+      "span": {
+        "start": 4051,
+        "end": 4214,
+        "sha256": "944177bb9bbabe333a6b537a174a5e4b1ce893e56188659fbec16868f317d85f"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/2/fields/2",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.guests"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "last_name"
+          }
+        ],
+        "type": "text"
+      },
+      "span": {
+        "start": 4224,
+        "end": 4386,
+        "sha256": "425e2c6ff857bad67408b17ee020ca6fddfbd2efa8afc2fa977b791d885bcaf5"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/2/fields/3",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.guests"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "title"
+          }
+        ],
+        "type": "text"
+      },
+      "span": {
+        "start": 4396,
+        "end": 4554,
+        "sha256": "79efc549684954453c01c1e425c3fbee428441d9a9c936bb2beb555ebf6b7a2b"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/2/fields/4",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.guests"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "emails"
+          }
+        ],
+        "type": "set<text>"
+      },
+      "span": {
+        "start": 4564,
+        "end": 4728,
+        "sha256": "67f89cc0a5771351b09c367a1c288c1cdd4a8efbc1657775ce18bf0364f2da8a"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/2/fields/5",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.guests"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "phone_numbers"
+          }
+        ],
+        "type": "list<text>"
+      },
+      "span": {
+        "start": 4738,
+        "end": 4910,
+        "sha256": "0aa1571a60ee8bd89af0565217f8e000e1351bf9e7b793f335b0f79a69c58817"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/2/fields/6",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.guests"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "addresses"
+          }
+        ],
+        "type": "map<text, frozen<address>>"
+      },
+      "span": {
+        "start": 4920,
+        "end": 5104,
+        "sha256": "d55838dbeb06d2d17934c1ed38fcfa4c631daf9a3bd87929056e832fff57f1f4"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/2/fields/7",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.guests"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "confirm_number"
+          }
+        ],
+        "type": "text"
+      },
+      "span": {
+        "start": 5114,
+        "end": 5281,
+        "sha256": "d202cc2ae055dff5a9cea8687a894b06dd66ac0dae5cbbc47b9a81f101894e5b"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/2/fields/8",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.guests"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "emails"
+          },
+          {
+            "kind": "array_element"
+          }
+        ],
+        "type": "text"
+      },
+      "span": {
+        "start": 5291,
+        "end": 5517,
+        "sha256": "aafe704850fcd46f2e1ed983f7ed8acbd133f679388547ff53edbd7a6da419fa"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/2/fields/9",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.guests"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "phone_numbers"
+          },
+          {
+            "kind": "array_element"
+          }
+        ],
+        "type": "text"
+      },
+      "span": {
+        "start": 5527,
+        "end": 5760,
+        "sha256": "68421b1c1ab62e073404f220423e84587bf0f0294d21587599b7674ed5f8cfa9"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/2/fields/10",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.guests"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "addresses"
+          },
+          {
+            "kind": "map_value"
+          }
+        ],
+        "type": "frozen<address>"
+      },
+      "span": {
+        "start": 5770,
+        "end": 6006,
+        "sha256": "63a459d9137d701c62088a445595633407fe6157afa055f2700dd7170123ff4a"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/2/fields/11",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.guests"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "addresses"
+          },
+          {
+            "kind": "map_value"
+          },
+          {
+            "kind": "field",
+            "name": "street"
+          }
+        ],
+        "type": "text"
+      },
+      "span": {
+        "start": 6016,
+        "end": 6332,
+        "sha256": "548f167bc4f845f17576cb252b43662a7a5e0a3e4db0271056c7bd19b9d84ba6"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/2/fields/12",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.guests"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "addresses"
+          },
+          {
+            "kind": "map_value"
+          },
+          {
+            "kind": "field",
+            "name": "city"
+          }
+        ],
+        "type": "text"
+      },
+      "span": {
+        "start": 6342,
+        "end": 6656,
+        "sha256": "24bb98c7313445c31d9e93f4fd6360db84ef88f7886778c8b033b694376c18eb"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/2/fields/13",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.guests"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "addresses"
+          },
+          {
+            "kind": "map_value"
+          },
+          {
+            "kind": "field",
+            "name": "state_or_province"
+          }
+        ],
+        "type": "text"
+      },
+      "span": {
+        "start": 6666,
+        "end": 6993,
+        "sha256": "3a01cf67622813a7db87a946c4a347ccad8b44e600d3e3fa9263df2d9fed7e74"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/2/fields/14",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.guests"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "addresses"
+          },
+          {
+            "kind": "map_value"
+          },
+          {
+            "kind": "field",
+            "name": "postal_code"
+          }
+        ],
+        "type": "text"
+      },
+      "span": {
+        "start": 7003,
+        "end": 7324,
+        "sha256": "d11f8d4ef61f54572c2c6247538521b277c21b8c1a4a969308ca9fab15c59422"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/2/fields/15",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.guests"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "addresses"
+          },
+          {
+            "kind": "map_value"
+          },
+          {
+            "kind": "field",
+            "name": "country"
+          }
+        ],
+        "type": "text"
+      },
+      "span": {
+        "start": 7334,
+        "end": 7651,
+        "sha256": "c7ee19cc4c4ac101dac90820fa33a922b67833fdf7d30ac112164eab96fce975"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/tables/2/primary_key/0",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.guests"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "guest_id"
+          }
+        ],
+        "position": 0,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 7692,
+        "end": 7827,
+        "sha256": "e67c14cdb5a57010ed7bf01be4ddbcb6d58f10597101e5d2caa5531e01a20ed9"
+      }
+    },
+    {
+      "kind": "DECLARES_PARTITION_KEY",
+      "pointer": "/tables/2/partition_key/0",
+      "owner": {
+        "kind": "table",
+        "name": "reservation.guests"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "guest_id"
+          }
+        ],
+        "position": 0
+      },
+      "span": {
+        "start": 7917,
+        "end": 8012,
+        "sha256": "1ae0b35bf7a1085d23007a49f8d264650356dc9f2b0df35a0633e0a7ab740343"
+      }
+    },
+    {
+      "kind": "DECLARES_VIEW",
+      "pointer": "/views/0",
+      "owner": {
+        "kind": "view",
+        "name": "reservation.reservations_by_confirmation"
+      },
+      "meaning": {
+        "name": "reservation.reservations_by_confirmation",
+        "partition_key_state": "declared"
+      },
+      "span": {
+        "start": 8049,
+        "end": 11250,
+        "sha256": "7ad09de0ebb27374a1fd514a2881b58d689f1b7a39c62570ede48f6d76e64fae"
+      }
+    },
+    {
+      "kind": "DECLARES_VIEW_FIELD",
+      "pointer": "/views/0/fields/0",
+      "owner": {
+        "kind": "view",
+        "name": "reservation.reservations_by_confirmation"
+      },
+      "meaning": {
+        "name": "hotel_id",
+        "type": "text",
+        "position": 0
+      },
+      "span": {
+        "start": 8135,
+        "end": 8508,
+        "sha256": "596dce17b3c3567d0b6309cd5f02e79c40c39ef69e09bedbd0024a13099c7eef"
+      }
+    },
+    {
+      "kind": "DECLARES_VIEW_SOURCE",
+      "pointer": "/views/0/fields/0/sources/0",
+      "owner": {
+        "kind": "view",
+        "name": "reservation.reservations_by_confirmation",
+        "field": "hotel_id"
+      },
+      "meaning": {
+        "kind": "table",
+        "name": "reservation.reservations_by_hotel_date",
+        "path": [
+          {
+            "kind": "field",
+            "name": "hotel_id"
+          }
+        ]
+      },
+      "span": {
+        "start": 8228,
+        "end": 8486,
+        "sha256": "32141ae4c977a87494b905b0de63f252d7e911187debbc3813737e0af606e7b8"
+      }
+    },
+    {
+      "kind": "DECLARES_VIEW_FIELD",
+      "pointer": "/views/0/fields/1",
+      "owner": {
+        "kind": "view",
+        "name": "reservation.reservations_by_confirmation"
+      },
+      "meaning": {
+        "name": "start_date",
+        "type": "date",
+        "position": 1
+      },
+      "span": {
+        "start": 8518,
+        "end": 8895,
+        "sha256": "a8d8593b1cc8cc8c2ab1fd2c01d93d3a24fc163c119487ee52a7e1f599cf8df9"
+      }
+    },
+    {
+      "kind": "DECLARES_VIEW_SOURCE",
+      "pointer": "/views/0/fields/1/sources/0",
+      "owner": {
+        "kind": "view",
+        "name": "reservation.reservations_by_confirmation",
+        "field": "start_date"
+      },
+      "meaning": {
+        "kind": "table",
+        "name": "reservation.reservations_by_hotel_date",
+        "path": [
+          {
+            "kind": "field",
+            "name": "start_date"
+          }
+        ]
+      },
+      "span": {
+        "start": 8613,
+        "end": 8873,
+        "sha256": "d91b97820c002a5284f51aada3bce13b1e04bb3eca14f9bd4b9cdc0646be7432"
+      }
+    },
+    {
+      "kind": "DECLARES_VIEW_FIELD",
+      "pointer": "/views/0/fields/2",
+      "owner": {
+        "kind": "view",
+        "name": "reservation.reservations_by_confirmation"
+      },
+      "meaning": {
+        "name": "end_date",
+        "type": "date",
+        "position": 2
+      },
+      "span": {
+        "start": 8905,
+        "end": 9278,
+        "sha256": "362901b80e9323f4e5c4b194107be0a8b627699b32b4549d540eb1700e39326c"
+      }
+    },
+    {
+      "kind": "DECLARES_VIEW_SOURCE",
+      "pointer": "/views/0/fields/2/sources/0",
+      "owner": {
+        "kind": "view",
+        "name": "reservation.reservations_by_confirmation",
+        "field": "end_date"
+      },
+      "meaning": {
+        "kind": "table",
+        "name": "reservation.reservations_by_hotel_date",
+        "path": [
+          {
+            "kind": "field",
+            "name": "end_date"
+          }
+        ]
+      },
+      "span": {
+        "start": 8998,
+        "end": 9256,
+        "sha256": "11efdd7fedd751e302aa3dc30e463330a2466635e60863d653ee2e99e49df51e"
+      }
+    },
+    {
+      "kind": "DECLARES_VIEW_FIELD",
+      "pointer": "/views/0/fields/3",
+      "owner": {
+        "kind": "view",
+        "name": "reservation.reservations_by_confirmation"
+      },
+      "meaning": {
+        "name": "room_number",
+        "type": "smallint",
+        "position": 3
+      },
+      "span": {
+        "start": 9288,
+        "end": 9671,
+        "sha256": "fa2aec67b6e5dffb53d06c77a9fb68b0b171de78c54d6da1e8e392f0b1e4f198"
+      }
+    },
+    {
+      "kind": "DECLARES_VIEW_SOURCE",
+      "pointer": "/views/0/fields/3/sources/0",
+      "owner": {
+        "kind": "view",
+        "name": "reservation.reservations_by_confirmation",
+        "field": "room_number"
+      },
+      "meaning": {
+        "kind": "table",
+        "name": "reservation.reservations_by_hotel_date",
+        "path": [
+          {
+            "kind": "field",
+            "name": "room_number"
+          }
+        ]
+      },
+      "span": {
+        "start": 9388,
+        "end": 9649,
+        "sha256": "5d3b2efe46c4b404c63155d00313af04a564075ceca980ff16973793f2755b44"
+      }
+    },
+    {
+      "kind": "DECLARES_VIEW_FIELD",
+      "pointer": "/views/0/fields/4",
+      "owner": {
+        "kind": "view",
+        "name": "reservation.reservations_by_confirmation"
+      },
+      "meaning": {
+        "name": "confirm_number",
+        "type": "text",
+        "position": 4
+      },
+      "span": {
+        "start": 9681,
+        "end": 10066,
+        "sha256": "3819feab4f329dedfb690f1c92ba227da5d141a591aea6cb5e594e0c7df68294"
+      }
+    },
+    {
+      "kind": "DECLARES_VIEW_SOURCE",
+      "pointer": "/views/0/fields/4/sources/0",
+      "owner": {
+        "kind": "view",
+        "name": "reservation.reservations_by_confirmation",
+        "field": "confirm_number"
+      },
+      "meaning": {
+        "kind": "table",
+        "name": "reservation.reservations_by_hotel_date",
+        "path": [
+          {
+            "kind": "field",
+            "name": "confirm_number"
+          }
+        ]
+      },
+      "span": {
+        "start": 9780,
+        "end": 10044,
+        "sha256": "56dca3d351d368bb40782022034298ed3cc965119f48d6a7c29cc1803864d825"
+      }
+    },
+    {
+      "kind": "DECLARES_VIEW_FIELD",
+      "pointer": "/views/0/fields/5",
+      "owner": {
+        "kind": "view",
+        "name": "reservation.reservations_by_confirmation"
+      },
+      "meaning": {
+        "name": "guest_id",
+        "type": "uuid",
+        "position": 5
+      },
+      "span": {
+        "start": 10076,
+        "end": 10449,
+        "sha256": "607c5c65019f53596e5e2ee6e94a2cf186b9c45c312ba2cf4707575f882ef367"
+      }
+    },
+    {
+      "kind": "DECLARES_VIEW_SOURCE",
+      "pointer": "/views/0/fields/5/sources/0",
+      "owner": {
+        "kind": "view",
+        "name": "reservation.reservations_by_confirmation",
+        "field": "guest_id"
+      },
+      "meaning": {
+        "kind": "table",
+        "name": "reservation.reservations_by_hotel_date",
+        "path": [
+          {
+            "kind": "field",
+            "name": "guest_id"
+          }
+        ]
+      },
+      "span": {
+        "start": 10169,
+        "end": 10427,
+        "sha256": "588fdea6a6f406895fd9c256a4042dfeda5281b2f04b72095a611ee60eae3a6d"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/views/0/primary_key/0",
+      "owner": {
+        "kind": "view",
+        "name": "reservation.reservations_by_confirmation"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "confirm_number"
+          }
+        ],
+        "position": 0,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 10490,
+        "end": 10631,
+        "sha256": "2c9a98f775b86874ccac5a46ffe9447cc11a76d255b135b9c4442f62862348b9"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/views/0/primary_key/1",
+      "owner": {
+        "kind": "view",
+        "name": "reservation.reservations_by_confirmation"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "hotel_id"
+          }
+        ],
+        "position": 1,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 10641,
+        "end": 10776,
+        "sha256": "c9572545a9b23df33acee896c328225b5a0c9b1b4aec6adea38a696a5d505a24"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/views/0/primary_key/2",
+      "owner": {
+        "kind": "view",
+        "name": "reservation.reservations_by_confirmation"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "start_date"
+          }
+        ],
+        "position": 2,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 10786,
+        "end": 10923,
+        "sha256": "f0bb463600a83c74b95d7d89bc397ab4d034d7cea7ef00700da79bf022870b1d"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/views/0/primary_key/3",
+      "owner": {
+        "kind": "view",
+        "name": "reservation.reservations_by_confirmation"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "room_number"
+          }
+        ],
+        "position": 3,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 10933,
+        "end": 11071,
+        "sha256": "1991d7ff28d95879f169dee322320aecf9ad3e44f9736f8465a11f3f6ab538d8"
+      }
+    },
+    {
+      "kind": "DECLARES_PARTITION_KEY",
+      "pointer": "/views/0/partition_key/0",
+      "owner": {
+        "kind": "view",
+        "name": "reservation.reservations_by_confirmation"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "confirm_number"
+          }
+        ],
+        "position": 0
+      },
+      "span": {
+        "start": 11135,
+        "end": 11236,
+        "sha256": "58e806f7fa39740d543683317162eb658f005a19e7e03fd716bacfaad6f5ed19"
+      }
+    }
+  ]
+}

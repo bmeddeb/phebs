@@ -1,0 +1,727 @@
+{
+  "format": "phebs-t271-preregistration-v1",
+  "prepared_on": "2026-10-18",
+  "status": "frozen-inputs-awaiting-independent-lead-review-and-checkpoint",
+  "reader_implemented": false,
+  "reader_runs": 0,
+  "labels": "Fixture-author declarative labels and hand-derived public reference, authored before reader implementation/execution; fixture-conformance evidence only.",
+  "cases": 119,
+  "accepted_cases": 14,
+  "refused_cases": 104,
+  "missing_cases": 1,
+  "accepted_declaration_labels": 534,
+  "public_derivation_rows": 61,
+  "inventory_rule": "This index intentionally excludes itself; every listed input is byte/digest pinned. Future implementation/results are outside the frozen input inventory.",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 20838,
+      "sha256": "f316a2383b21ffe620ec8af6f350ac98e160fb1b8540174dbdd28d5d0f9ca942"
+    },
+    {
+      "path": "author_fixtures.py",
+      "bytes": 39592,
+      "sha256": "d5636e107798b9a49b2f4d8cd8b0de782f7068554f7299c0950ac128a4a60097"
+    },
+    {
+      "path": "bounds.json",
+      "bytes": 531,
+      "sha256": "989e78dde1f4be9809c5d3d0f79e62f8749402809d2d6cacf745ebbe345a09cb"
+    },
+    {
+      "path": "cases.json",
+      "bytes": 65474,
+      "sha256": "286882b3633135453de4463756c0473edf8e9e000634c86307c0951596b0fb58"
+    },
+    {
+      "path": "comparison-labels.json",
+      "bytes": 1122,
+      "sha256": "908a67ab43795ce21d60a394bff12d28444c59f77d9a27dcf714d6c793e80c86"
+    },
+    {
+      "path": "fixtures/negative/aggregate-over.json",
+      "bytes": 44998,
+      "sha256": "7e87afeefd0c465b168e642ec630484b5d58050981addb6a3e03124da82be0b6"
+    },
+    {
+      "path": "fixtures/negative/association-fields-over.json",
+      "bytes": 4919,
+      "sha256": "634c5e90db0ae1e4be5887baa90e22e933d33848e44c63f12af2bfa70e387e51"
+    },
+    {
+      "path": "fixtures/negative/associations-over.json",
+      "bytes": 27980,
+      "sha256": "13822b3a347a1aeaf2500f324f31c872f66b4a8a3df1cf32ec4c29f0dbaeb5c6"
+    },
+    {
+      "path": "fixtures/negative/blank-name.json",
+      "bytes": 555,
+      "sha256": "50f65063363efd95812f1c38c54cb19b96922dbe4c5c514586038a15a560adf2"
+    },
+    {
+      "path": "fixtures/negative/c1-control-name.json",
+      "bytes": 562,
+      "sha256": "6a7cad808daf645ed70935272a29d89cb50bf06af4846b6baaed530e56216563"
+    },
+    {
+      "path": "fixtures/negative/citations-over.json",
+      "bytes": 33534,
+      "sha256": "3ece6684c7dc27a733d6c7a7873180a6bbf0caf9f715d5e491d21e559fe69b53"
+    },
+    {
+      "path": "fixtures/negative/context-blank-repository.json",
+      "bytes": 554,
+      "sha256": "48701caec856ce8665ef76d1613ec874f2ff2f40c6ce4cf913512af2be208bee"
+    },
+    {
+      "path": "fixtures/negative/context-invalid-commit.json",
+      "bytes": 554,
+      "sha256": "48701caec856ce8665ef76d1613ec874f2ff2f40c6ce4cf913512af2be208bee"
+    },
+    {
+      "path": "fixtures/negative/control-name.json",
+      "bytes": 566,
+      "sha256": "c8f6b97203fbd34d45b1e31832df4771bb86450726d3a5553da14a00e34acc76"
+    },
+    {
+      "path": "fixtures/negative/control-type.json",
+      "bytes": 543,
+      "sha256": "00dac9936e339d4c4483c729388369347d9a93d3564ab0598926f34595fa8824"
+    },
+    {
+      "path": "fixtures/negative/cql-not-admitted.json",
+      "bytes": 2218,
+      "sha256": "38992bd1f0882ebefe7e16570d05886ade150bf2036ea6119ab08fc11b3bb39e"
+    },
+    {
+      "path": "fixtures/negative/direction-on-partition.json",
+      "bytes": 756,
+      "sha256": "feeb6f998697c996b57d6d648f30b24ea7a0c1f0e121784b32f0520ce8085ee5"
+    },
+    {
+      "path": "fixtures/negative/duplicate-association-pair.json",
+      "bytes": 1301,
+      "sha256": "037dd185c4c27a13c15e6c284e953a9a7a7f6d5ec7d644d218e2c3aada1217bb"
+    },
+    {
+      "path": "fixtures/negative/duplicate-association.json",
+      "bytes": 1406,
+      "sha256": "85739a304898fb842933697b64840e6132aecb09e089460b7097de410449cc38"
+    },
+    {
+      "path": "fixtures/negative/duplicate-field.json",
+      "bytes": 728,
+      "sha256": "32b4b052a07163fab338ac51556c0e715c6bab254edc1702caf9e0ef08bd2d19"
+    },
+    {
+      "path": "fixtures/negative/duplicate-index-column.json",
+      "bytes": 1008,
+      "sha256": "adebe98bc18e54b9abfe903c9a99c343b9583b432425a8bbfde4af5009037e5c"
+    },
+    {
+      "path": "fixtures/negative/duplicate-index.json",
+      "bytes": 1114,
+      "sha256": "11855c94e413561c0ddcc36ff1da8e91e6a1c6f7cd8929fe5337553d2a302886"
+    },
+    {
+      "path": "fixtures/negative/duplicate-key-column.json",
+      "bytes": 693,
+      "sha256": "0324effc3a1100bf673fac56ca1da4c1d73be32714c93d6f65a7d92d9917cd7e"
+    },
+    {
+      "path": "fixtures/negative/duplicate-nested-key.json",
+      "bytes": 567,
+      "sha256": "d9729bf0c310b6b4cf32d7dd75e09f1cd1b2d5fd852dbd406e9a1405c0317093"
+    },
+    {
+      "path": "fixtures/negative/duplicate-partition-column.json",
+      "bytes": 785,
+      "sha256": "bc91be94391b11c85bfd251d1c7608bd43f9bc404676fdf55127d480a0e90744"
+    },
+    {
+      "path": "fixtures/negative/duplicate-root-key.json",
+      "bytes": 594,
+      "sha256": "0e2f9975be0f2897cf36293d1b2d020b5b92988daa29f7826bd16b3927a33b31"
+    },
+    {
+      "path": "fixtures/negative/duplicate-table.json",
+      "bytes": 1002,
+      "sha256": "f41e600e6774ece9a45ddeccecc4a7072fa100aa88c5ea46ea7ad1d5e1c0612b"
+    },
+    {
+      "path": "fixtures/negative/duplicate-view-key.json",
+      "bytes": 1047,
+      "sha256": "16eb50a6d975f39ef88561ad35dab5e34034c5a1bbf0372f4aeee46bd4b9266f"
+    },
+    {
+      "path": "fixtures/negative/duplicate-view-output.json",
+      "bytes": 1012,
+      "sha256": "0a4db021b10bdce6a13c0f0efecc9b7c58b82f15aba34ec70ed34a0f40bcd23d"
+    },
+    {
+      "path": "fixtures/negative/duplicate-view-source.json",
+      "bytes": 1376,
+      "sha256": "4be2e9dbf2e77406de5c3a3a0b9811ffe1433cf4c1bc8d7d501c7990c005701d"
+    },
+    {
+      "path": "fixtures/negative/duplicate-view.json",
+      "bytes": 1260,
+      "sha256": "569e251c279a126f2dfb0d0ace2a2285f0d52f4afe4733f669fe10b5680b3e30"
+    },
+    {
+      "path": "fixtures/negative/empty-name.json",
+      "bytes": 553,
+      "sha256": "aacd008d7aade0e2cfce8b1da6ca3bb853a02099740447261afba7e0e7925dea"
+    },
+    {
+      "path": "fixtures/negative/empty-partition.json",
+      "bytes": 581,
+      "sha256": "57b591891051d776beed834db77a21b5a1345865f8fb80772a59735222cfb9b2"
+    },
+    {
+      "path": "fixtures/negative/empty-path.json",
+      "bytes": 457,
+      "sha256": "9c25f0d8dc6f3c1b0cdab3509793b74ddfb7926bf1d5369c5548e774f8438059"
+    },
+    {
+      "path": "fixtures/negative/empty-primary-key.json",
+      "bytes": 409,
+      "sha256": "ef232be05c377bdd237d2309776af273b5821505047b3280c534cdf64434f355"
+    },
+    {
+      "path": "fixtures/negative/empty-type.json",
+      "bytes": 541,
+      "sha256": "ed61a1c2ea31d5f6e8a7beb39fb1bd64f8ef205d6d8b1b0111fa210b87fc8471"
+    },
+    {
+      "path": "fixtures/negative/field-segment-missing-name.json",
+      "bytes": 526,
+      "sha256": "31031406d9a7198676175d3176518b309fbb167d2812a2007d6cc93a27eb54a0"
+    },
+    {
+      "path": "fixtures/negative/fields-over.json",
+      "bytes": 22974,
+      "sha256": "b27cc407eed49b0154b2bfd242f52c1942b88ef5767f8f10938830f9bfdac99e"
+    },
+    {
+      "path": "fixtures/negative/index-columns-over.json",
+      "bytes": 3597,
+      "sha256": "3143f2f86b3ec4791553db177ace549fbcf59fe9845ed43c002d8831ef1d207e"
+    },
+    {
+      "path": "fixtures/negative/indexes-over.json",
+      "bytes": 5293,
+      "sha256": "898f4c7bf6972704243e91dbe8175bae0c622291f9dc98b3aa9d526215a52ee3"
+    },
+    {
+      "path": "fixtures/negative/input-bytes-over.json",
+      "bytes": 65537,
+      "sha256": "e83e894224e14d442474d796859999a6d1afcc87b9362bda5553bfcb34d5eae3"
+    },
+    {
+      "path": "fixtures/negative/invalid-direction-7.json",
+      "bytes": 580,
+      "sha256": "c27707b859995abd7d96995729d80de26e0f7d0ddbd8af18232906a84da3a4dc"
+    },
+    {
+      "path": "fixtures/negative/invalid-direction-None.json",
+      "bytes": 583,
+      "sha256": "7e63dcbbeb9d4fdfa01e0477d5f2e08cb28c3d61a6f54920c5c28e94732202cd"
+    },
+    {
+      "path": "fixtures/negative/invalid-direction-sideways.json",
+      "bytes": 589,
+      "sha256": "efbda85d394eda9f633ea71b42629daa8001945b49deec0f6efa61af887450ce"
+    },
+    {
+      "path": "fixtures/negative/invalid-prefix--1.json",
+      "bytes": 911,
+      "sha256": "42ac2403c88b93a6cd5d08b8243cf72084853be78fc4afe2e120a040814408fd"
+    },
+    {
+      "path": "fixtures/negative/invalid-prefix-0.json",
+      "bytes": 910,
+      "sha256": "00bd72e0d30c98c76e688f92429addd71728808889d952f8c16d7f3c51f7c36f"
+    },
+    {
+      "path": "fixtures/negative/invalid-prefix-1.5.json",
+      "bytes": 912,
+      "sha256": "a5cb52315964c59dc5e226bae18e8ba83a8ebe966f964a7b6e16a915fe763e36"
+    },
+    {
+      "path": "fixtures/negative/invalid-prefix-4.json",
+      "bytes": 912,
+      "sha256": "ea3fcedddb52226708463bc223a3d9d0363aaff2a119a26510a22a0d370b2882"
+    },
+    {
+      "path": "fixtures/negative/invalid-prefix-9223372036854775808.json",
+      "bytes": 928,
+      "sha256": "4df7dc03023ef52f8ba8e20a29e968e3fc23579314444e75a86d4a57d687530f"
+    },
+    {
+      "path": "fixtures/negative/invalid-utf8.json",
+      "bytes": 554,
+      "sha256": "485a930a17e740a37fed6d060df687e99f494c89b8976271f66965d0c0608f18"
+    },
+    {
+      "path": "fixtures/negative/json-depth-over.json",
+      "bytes": 67,
+      "sha256": "eac9bf029c22e177c74309fb891e3351dccfb04f055127ea82dc2dc3136cd899"
+    },
+    {
+      "path": "fixtures/negative/key-width-over.json",
+      "bytes": 3058,
+      "sha256": "ebbdf3fda7c47c36b4e90f1d960b0b45950fad1d73933ea5ee4fed9da64f74ef"
+    },
+    {
+      "path": "fixtures/negative/malformed-json.json",
+      "bytes": 10,
+      "sha256": "a4e54678ffcc21fb5b8e89f26ad975d3e07e9b282b211fdcf057f4ff49623e83"
+    },
+    {
+      "path": "fixtures/negative/manifest-path-absolute.json",
+      "bytes": 554,
+      "sha256": "48701caec856ce8665ef76d1613ec874f2ff2f40c6ce4cf913512af2be208bee"
+    },
+    {
+      "path": "fixtures/negative/manifest-path-backslash.json",
+      "bytes": 554,
+      "sha256": "48701caec856ce8665ef76d1613ec874f2ff2f40c6ce4cf913512af2be208bee"
+    },
+    {
+      "path": "fixtures/negative/manifest-path-traversal.json",
+      "bytes": 554,
+      "sha256": "48701caec856ce8665ef76d1613ec874f2ff2f40c6ce4cf913512af2be208bee"
+    },
+    {
+      "path": "fixtures/negative/manifest-path-unnormalized.json",
+      "bytes": 554,
+      "sha256": "48701caec856ce8665ef76d1613ec874f2ff2f40c6ce4cf913512af2be208bee"
+    },
+    {
+      "path": "fixtures/negative/missing-primary-key.json",
+      "bytes": 384,
+      "sha256": "3a82ed9ccb95e120ac7677a7375e276410eb793273024fd67b2cf7e1457885d0"
+    },
+    {
+      "path": "fixtures/negative/name-bytes-over.json",
+      "bytes": 683,
+      "sha256": "f30885152f40a0173b14d2b69ae6f9d133a684c588764f75bdb1351f8062d70d"
+    },
+    {
+      "path": "fixtures/negative/null-table.json",
+      "bytes": 116,
+      "sha256": "8d9957fbd1b63dd46f05fdec6918ffdd014def1c18f616fa39855d9d34bb7e47"
+    },
+    {
+      "path": "fixtures/negative/partition-not-prefix.json",
+      "bytes": 866,
+      "sha256": "598d81eb8ffe896775b253dafad58801d37d957b185b4be04dca72dcf1f9e732"
+    },
+    {
+      "path": "fixtures/negative/path-context-over.json",
+      "bytes": 554,
+      "sha256": "48701caec856ce8665ef76d1613ec874f2ff2f40c6ce4cf913512af2be208bee"
+    },
+    {
+      "path": "fixtures/negative/path-depth-over.json",
+      "bytes": 1417,
+      "sha256": "5dce5b210984e7f4fa514d085c2f61238f417d8e635288c19fdc6e475c0109a7"
+    },
+    {
+      "path": "fixtures/negative/path-starts-traversal.json",
+      "bytes": 534,
+      "sha256": "17ad69d6025af7794b34f898d61ce52b618304e2c14755094dcb6638d785fd91"
+    },
+    {
+      "path": "fixtures/negative/path-string.json",
+      "bytes": 459,
+      "sha256": "a59faf183076e60e6fa4b5514fa5b4dda88d4610b6ef28a9c39659269373292f"
+    },
+    {
+      "path": "fixtures/negative/payload-data.json",
+      "bytes": 587,
+      "sha256": "12df79aa5cfbdd206ee941c5f492021d374d4b5d6ebf5780ac367a265d26dedc"
+    },
+    {
+      "path": "fixtures/negative/payload-default.json",
+      "bytes": 590,
+      "sha256": "31c77ed02b6bc0bafac5a930693b6b9aaab2bf1c1ca2f5464ae556d978088a7b"
+    },
+    {
+      "path": "fixtures/negative/payload-defaults.json",
+      "bytes": 591,
+      "sha256": "0699e531c7d6f846b41e15a5a8fa55ce0b039ef0662eecbcb07e9ff1a16aff68"
+    },
+    {
+      "path": "fixtures/negative/payload-documents.json",
+      "bytes": 592,
+      "sha256": "f8b7dfd997f0b72f58567ef5de98f81ee0b752d9c458fc034ac2fc1378830567"
+    },
+    {
+      "path": "fixtures/negative/payload-example.json",
+      "bytes": 590,
+      "sha256": "cbd3f9340a83fcac6d8d22fb279e75c128e9f483a047d7a8a69c0c33fa5c941d"
+    },
+    {
+      "path": "fixtures/negative/payload-examples.json",
+      "bytes": 591,
+      "sha256": "cc879a551c76de6653b438c1ec99bed977fc140bc5f2009ce07e8f6d0995da02"
+    },
+    {
+      "path": "fixtures/negative/payload-record.json",
+      "bytes": 589,
+      "sha256": "e2b21bd291354fbfa0d468aa4a5930c250e20c37e0aabf5eaf4831f1724ae189"
+    },
+    {
+      "path": "fixtures/negative/payload-records.json",
+      "bytes": 590,
+      "sha256": "cfba1d67426163b25742c5829f1f106221409e52fe22661d0beedfe9341c4544"
+    },
+    {
+      "path": "fixtures/negative/payload-sample.json",
+      "bytes": 589,
+      "sha256": "81d0f6fcb6675ffa01febf62d13429f0d1ca1d2126ad0df37167cb32bbe0358a"
+    },
+    {
+      "path": "fixtures/negative/payload-samples.json",
+      "bytes": 590,
+      "sha256": "413658710cd9098bd4552828b6b61da75ca310d929b4cc65cc76d05c0abe036c"
+    },
+    {
+      "path": "fixtures/negative/payload-value.json",
+      "bytes": 588,
+      "sha256": "749e6c44edbfbfed4427e7ef57d6c60bbd9507a083e8c8baeb57764de937b4f5"
+    },
+    {
+      "path": "fixtures/negative/payload-values.json",
+      "bytes": 589,
+      "sha256": "6e9d9a1baeeca4f7646698ebd5d965a9be2ad29897d362537b2a7dc2e72aa9f8"
+    },
+    {
+      "path": "fixtures/negative/prefix-without-unit.json",
+      "bytes": 871,
+      "sha256": "43292db05bdce0e2cd365a3db74732d4011f141a80137030fc2bb8e8358ed199"
+    },
+    {
+      "path": "fixtures/negative/repository-context-over.json",
+      "bytes": 554,
+      "sha256": "48701caec856ce8665ef76d1613ec874f2ff2f40c6ce4cf913512af2be208bee"
+    },
+    {
+      "path": "fixtures/negative/root-array.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "fixtures/negative/segment-extra-key.json",
+      "bytes": 583,
+      "sha256": "2a917031e2380d36958efc84efd36f042d9c1b4a6e4b14ed0249bc0cae695e02"
+    },
+    {
+      "path": "fixtures/negative/source-class-missing.json",
+      "bytes": 524,
+      "sha256": "d6b0ee1927989362a0ccc6af510e198222521590159506ba6abf5ff4e02412a1"
+    },
+    {
+      "path": "fixtures/negative/source-class-unknown.json",
+      "bytes": 550,
+      "sha256": "66bfb5e40afe30552060dea70e6c468e0c751ec37e1f6a87a88bc3ac3e38c080"
+    },
+    {
+      "path": "fixtures/negative/tables-over.json",
+      "bytes": 7746,
+      "sha256": "84269da843505089e3ff487dae6bc7bce834ac9105026336dcf1afa377005fd9"
+    },
+    {
+      "path": "fixtures/negative/trailing-value.json",
+      "bytes": 558,
+      "sha256": "3441751decd3763e69e5cace28ba91d640c6543edbf40b06763cbb6c821b7cca"
+    },
+    {
+      "path": "fixtures/negative/traversal-with-name.json",
+      "bytes": 646,
+      "sha256": "5269aaffa25a9de3d91fd380ad6c64a9aa079998df1d376a2ace30b5e93dccd8"
+    },
+    {
+      "path": "fixtures/negative/type-bytes-over.json",
+      "bytes": 798,
+      "sha256": "edb0568437ce7db6b2e252f357d0b4ed18bb73e2f1c1f15095a8699799981b6b"
+    },
+    {
+      "path": "fixtures/negative/unit-without-prefix.json",
+      "bytes": 876,
+      "sha256": "52872487edfd7c3acd3acfe44a0037ef3a6e17ae4526359007c18c50432e58cf"
+    },
+    {
+      "path": "fixtures/negative/unknown-nested-key.json",
+      "bytes": 581,
+      "sha256": "67d4224248be41c70c3abbea8f8146c4e8fb99ff247755167e7ce8b841811891"
+    },
+    {
+      "path": "fixtures/negative/unknown-root-key.json",
+      "bytes": 573,
+      "sha256": "eaf97d6f67207b13f47a9782e35eab202892ed68a5ebbca725a8b4c32e5e4928"
+    },
+    {
+      "path": "fixtures/negative/unknown-traversal.json",
+      "bytes": 619,
+      "sha256": "407e37b63f65f0f3f49db8ea721b43c902ff881b488a7f5955fbe81917fe842f"
+    },
+    {
+      "path": "fixtures/negative/unknown-version.json",
+      "bytes": 555,
+      "sha256": "6ee8ebe3bc2a4d7b0f4579ed18ed72e44965dfc905332e1128e3f79ad7faebbf"
+    },
+    {
+      "path": "fixtures/negative/unpaired-surrogate.json",
+      "bytes": 559,
+      "sha256": "f297cbdc4500f2fc147a91e4729e9dec543b5f573391dcf28f71b49ee5a848da"
+    },
+    {
+      "path": "fixtures/negative/unresolved-association-source-field.json",
+      "bytes": 988,
+      "sha256": "399c3cb3c6f1adae831fbe678a1a96a21339d02864b6f32085694d4f54389214"
+    },
+    {
+      "path": "fixtures/negative/unresolved-association-target-field.json",
+      "bytes": 988,
+      "sha256": "931703bb07a9e76ed63c6e4a8dda54db90d1c824927e7167a4d51fe9f114bc7e"
+    },
+    {
+      "path": "fixtures/negative/unresolved-association-target.json",
+      "bytes": 989,
+      "sha256": "761bd211897ae90fbccd72e2763f048975ce64416ee04a858191bafa4c180790"
+    },
+    {
+      "path": "fixtures/negative/unresolved-index.json",
+      "bytes": 842,
+      "sha256": "0ce0ac39c0f4ee68c3aca07acc6b1a9bb39f1880e7eb31509464048549ff34c7"
+    },
+    {
+      "path": "fixtures/negative/unresolved-primary.json",
+      "bytes": 559,
+      "sha256": "88107629eb15f12c638856092cdc0c30c6d8ffc2cefc4ca4116206d945fafe3d"
+    },
+    {
+      "path": "fixtures/negative/unresolved-view-index.json",
+      "bytes": 1196,
+      "sha256": "8c32d22209507d23d2bac729e0e02cb25cfe821551182b88c73e939c7a9337e6"
+    },
+    {
+      "path": "fixtures/negative/unresolved-view-primary.json",
+      "bytes": 913,
+      "sha256": "eca1c724e1ef7f40daf42c9f8ed98690c0ce97f39f115d326044f6c13d9e03c7"
+    },
+    {
+      "path": "fixtures/negative/unresolved-view-source-table-field.json",
+      "bytes": 1152,
+      "sha256": "3b7253fa091916051b6c9b36d57f92280575297976b4456c2cd5c1be8856224d"
+    },
+    {
+      "path": "fixtures/negative/unresolved-view-source-table.json",
+      "bytes": 1153,
+      "sha256": "cf01082c5166cc37c2d147fce91ab8e695724a254d7721406b3d76533997e117"
+    },
+    {
+      "path": "fixtures/negative/unresolved-view-source-view-field.json",
+      "bytes": 1511,
+      "sha256": "153ba75af38b979a244f3254e699806d3461c598a526033a6926f987f374704b"
+    },
+    {
+      "path": "fixtures/negative/unresolved-view-source-view.json",
+      "bytes": 1152,
+      "sha256": "bdcf371e3129c1dc102d42e50af7e47236ca456c08b562d229bb4e2ea992ac9e"
+    },
+    {
+      "path": "fixtures/negative/view-fields-over.json",
+      "bytes": 13465,
+      "sha256": "e34e86ed56f83ffc010ccf7c38d3fa1dff6fb0c15b08424a905f73a4d101ab68"
+    },
+    {
+      "path": "fixtures/negative/view-self-cycle.json",
+      "bytes": 1146,
+      "sha256": "89af1c9a7a6f83aa4dd906bf0f7991b8b38d136ebf85b879418906402ed02215"
+    },
+    {
+      "path": "fixtures/negative/view-sources-over.json",
+      "bytes": 7609,
+      "sha256": "00fa4a7339ab5339456c261de265c3ab2799aa20e115e48c03a586dab08e9f5a"
+    },
+    {
+      "path": "fixtures/negative/view-two-cycle.json",
+      "bytes": 1736,
+      "sha256": "f5ed7bfb75c2162133a8b223ce391196932a9e41a56a6438a451d1c1ac240dd0"
+    },
+    {
+      "path": "fixtures/negative/views-over.json",
+      "bytes": 6564,
+      "sha256": "8a116232622ac650ef52a1aeb5c40a9cf8d5799f5938c51ff234f009600b7b7f"
+    },
+    {
+      "path": "fixtures/positive/authored-rich.json",
+      "bytes": 10337,
+      "sha256": "1af876153b154d1e88a17a33a0bb8ecefc2a5791fbc17b96971a315b3cb33a59"
+    },
+    {
+      "path": "fixtures/positive/captured-minimal.json",
+      "bytes": 554,
+      "sha256": "d53b432dd64a8ab9123fa3952d25f840deaa91620a516554a41a269386adf6b9"
+    },
+    {
+      "path": "fixtures/positive/citations-at-limit.json",
+      "bytes": 33359,
+      "sha256": "1a1b6a074bae36a923dcd737f8204271771f8cf347bca6efbdf0d32bba21f4a7"
+    },
+    {
+      "path": "fixtures/positive/comparison-after.json",
+      "bytes": 913,
+      "sha256": "ba1b7ba78fa42c622924673090b918c586e9cb9864477883bdcd8b1a2d2f37ba"
+    },
+    {
+      "path": "fixtures/positive/comparison-before.json",
+      "bytes": 911,
+      "sha256": "830c5d00e0c5b26c7ccd31a777abb693df6f4dd3d9b8539baaa23dae8172ffae"
+    },
+    {
+      "path": "fixtures/positive/empty-captured.json",
+      "bytes": 104,
+      "sha256": "766e77f2909eb8a0d3058f21c72de4f0c30abc887a198117b09a419175806171"
+    },
+    {
+      "path": "fixtures/positive/fields-at-limit.json",
+      "bytes": 22798,
+      "sha256": "ced9703ccd274cdcb1d819f5cc37e858978ee7d9abc8e219920006367e6c45a2"
+    },
+    {
+      "path": "fixtures/positive/input-bytes-at-limit.json",
+      "bytes": 65536,
+      "sha256": "d32aec966fae111019dbdedfa84cb301a6a8f7c901f216390b2f95d9c264e8f4"
+    },
+    {
+      "path": "fixtures/positive/literal-and-kind-identities.json",
+      "bytes": 2031,
+      "sha256": "fbc3b8c662882fc81da24ae3ea252d57253e075d50543484578226450a3b2271"
+    },
+    {
+      "path": "fixtures/positive/names-at-limit.json",
+      "bytes": 1049,
+      "sha256": "7e19244959ce379f1e44cdbbb1ca4267bb5ac1fc88d42a02e83c4290341b1719"
+    },
+    {
+      "path": "fixtures/positive/path-at-limit.json",
+      "bytes": 1330,
+      "sha256": "6a180d0b428d9c37f52a48b302640a2ba8f2f45e8ca216d100a7f0efcb4a2d3e"
+    },
+    {
+      "path": "fixtures/positive/prefix-at-integer-limit.json",
+      "bytes": 940,
+      "sha256": "7f1f77add84111b7245e4751da5f76e2a0e600d7b1a57eae74d4524ad43ee4ad"
+    },
+    {
+      "path": "fixtures/positive/public-captured.json",
+      "bytes": 11257,
+      "sha256": "b3b71a23e40c87603616e746d8245d7579f65c6d7d28b95fe2946ba43946cd57"
+    },
+    {
+      "path": "fixtures/positive/tables-at-limit.json",
+      "bytes": 7296,
+      "sha256": "a25ed1807129cbd1d877880e6221a1c42197ae012d0996da9bdd08f1c04f5d99"
+    },
+    {
+      "path": "labels/authored-rich.json",
+      "bytes": 26816,
+      "sha256": "f73cb666dac0ffdf71fb32e62ebf68f2bb0d0582246018e4599faed5104f3fb4"
+    },
+    {
+      "path": "labels/captured-minimal.json",
+      "bytes": 1977,
+      "sha256": "f6d4978f7b3557fa2b22c48ce1eda82c99a2569206a7ad3f5f4642d5489ead5b"
+    },
+    {
+      "path": "labels/citations-at-limit.json",
+      "bytes": 91822,
+      "sha256": "cd8335cd0c8b586e576db91e3529ed73b287f05e5557db48b55a11b67c9aa49b"
+    },
+    {
+      "path": "labels/comparison-after.json",
+      "bytes": 2954,
+      "sha256": "6063d5b34230355d94b56997e8f0c6a6c13938c7f21ee6f97cdd44182b4b9606"
+    },
+    {
+      "path": "labels/comparison-before.json",
+      "bytes": 2952,
+      "sha256": "721faff1b1200290e46484902dd2bfe9b10f4168556f1769fc30875199a08379"
+    },
+    {
+      "path": "labels/empty-captured.json",
+      "bytes": 613,
+      "sha256": "8ca021a8b4d26a23532e25551214b0634ea9a2d1aa63576c59ef53e307a861ea"
+    },
+    {
+      "path": "labels/fields-at-limit.json",
+      "bytes": 62737,
+      "sha256": "c8ef646b0c8168309b2417d0ae17d0959b87a8556e8c1aecf7b30ee0c5c70702"
+    },
+    {
+      "path": "labels/input-bytes-at-limit.json",
+      "bytes": 1977,
+      "sha256": "96489ecd604d417ed072e171b3fa3d420b6a940b499741c089a03aa5524b330d"
+    },
+    {
+      "path": "labels/literal-and-kind-identities.json",
+      "bytes": 6255,
+      "sha256": "d5c2ccf119b9609e9e22f9f330873c8c05ec5fa3966f8bd33a547788bde0844c"
+    },
+    {
+      "path": "labels/names-at-limit.json",
+      "bytes": 2474,
+      "sha256": "61b06ebf18771eb6187ec45bf9d62ae6e0e266d45bf6f7f0c9a1df0325ea49e5"
+    },
+    {
+      "path": "labels/path-at-limit.json",
+      "bytes": 3001,
+      "sha256": "1d4a528316dbc45062bd81654cf3e1695809fbf2651b5c54116e889bcd883c35"
+    },
+    {
+      "path": "labels/prefix-at-integer-limit.json",
+      "bytes": 3003,
+      "sha256": "fc8762edf8022c8d912fd2758bdcffe8cfa39c0c1627abda156c2731ca713386"
+    },
+    {
+      "path": "labels/public-captured.json",
+      "bytes": 32329,
+      "sha256": "fbca847b44ca4cec3f8534d61eca331f0aa2653ebe218d7a9b154e1051cff747"
+    },
+    {
+      "path": "labels/tables-at-limit.json",
+      "bytes": 22642,
+      "sha256": "312f02df340e32ad3067dacac1c2cb90e8305c62233b4ab3a127189c56c761cc"
+    },
+    {
+      "path": "phebs-document-schema-v1.schema.json",
+      "bytes": 8018,
+      "sha256": "361160493299efc234702de80380608066f6b476ed97a79cffbb22ca65560cfe"
+    },
+    {
+      "path": "public/LICENSE-2.0.txt",
+      "bytes": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "path": "public/derivation.json",
+      "bytes": 30781,
+      "sha256": "b146826bedbaa4725fde3bbe811b8550be5aceafadc109ccb99c47b7a92ce23a"
+    },
+    {
+      "path": "public/receipt.json",
+      "bytes": 1051,
+      "sha256": "40adeb455169b538c253a722c56b73736349756ad0e8683fb883532702da5bba"
+    },
+    {
+      "path": "public/reservation.cql",
+      "bytes": 2218,
+      "sha256": "38992bd1f0882ebefe7e16570d05886ade150bf2036ea6119ab08fc11b3bb39e"
+    }
+  ]
+}

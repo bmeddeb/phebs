@@ -116,8 +116,8 @@ func TestBuildObservesEveryNativeResolverReturn(t *testing.T) {
 	if err := prepared.Discard(); err != nil {
 		t.Fatal(err)
 	}
-	// Two fixed snapshots, two modules and one generated source per protocol.
-	if actualReads != 6 || observedReads != actualReads || observedBytes != actualBytes || observedBytes == 0 {
+	// Three fixed snapshots, two modules and one generated source per protocol.
+	if actualReads != 7 || observedReads != actualReads || observedBytes != actualBytes || observedBytes == 0 {
 		t.Fatalf("Build native=%d/%d observed=%d/%d paths=%v", actualReads, actualBytes, observedReads, observedBytes, blobs.readPaths)
 	}
 }
