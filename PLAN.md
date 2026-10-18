@@ -13044,3 +13044,16 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   input/binary/tool bytes and180-second envelope remain exact. Cost changes
   only by one real disclosure interaction per viewport; production work and
   production-signing status are unchanged.
+
+- **2026-10-18 — T50.3 qualification harness integration checkpoint
+  (Ben-routed Mac handoff).** Preserve all frozen input/label and first-output
+  bytes, prospective180s operating plan, joined ownership/HTTP/sampler/browser
+  helpers, and separate preparation/tool/checker/UI stops. Thirty-one bounded
+  source/mock controls pass; independent ownership/authority/source/cost reviews
+  are clear. The last21.547477s run passed finite source quality, exact citation/
+  MCP and desktop source opening, then stopped at actual390px overflow. PR100
+  repairs that UI; PR101 repairs newly discovered-repository coverage. Integrate
+  the reviewed reusable harness so field/Thrift/Impact qualification can share
+  its existing ownership boundaries. A fresh clean binary/source/UI binding
+  precedes the next bounded run; no full matrix, production signature or scale
+  pass is claimed. Helpers add opt-in evaluator work only, no serving cost.
