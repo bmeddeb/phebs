@@ -12332,3 +12332,31 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   aggregate family cap. This experiment adds no production query, sync, retry,
   startup, publication, lock/cache/schema/worker or dependency. No Redis/client/
   source application is executed or production manifest/registration adopted.
+
+- **2026-10-18 — T28.1 measured Redis spike; no production adoption
+  (Ben-routed Mac handoff).** The first offline build0.501s and two fresh
+  joined reader passes0.432/0.180s emit identical484,258B outputs at source
+  3c1305ad. All99 public labelled sites are present; three extra unresolved
+  zero-fact frontier rows (RDB wrapper ClusterKeySlot, miniredis.Run and
+  sync.Once.Do) prevent a site-census quality pass. Retain that failed finite
+  quality result without retuning source truth or predictions. Exact recognized
+  37commands,30position/access rows and27known/3unknown kinds match; spellings
+  and family opportunities remain unproved/unmeasured. All60 authored plus two
+  admission controls and seven ACL pairs pass; credential scans retain no
+  credential token, payload or unsafe output. Twelve result-manifest artifacts,
+  citations/censuses and deterministic outputs independently verify exact.
+
+  Current candidate/production adoption is NO-GO. Manifest design is
+  INCONCLUSIVE/DEFER with no authorization: both public native sites use an
+  unadmittedv9.7 adapter, so source-only dynamic DIM motivation does not meet
+  the frozen correctly-admitted-adapter measurement criterion. Object mapping
+  remains deferred. No pack, schema, loader, production dependency or reader
+  is added. The measured spike can close its stated AC without claiming
+  quality success or designing the next product. All children/groups joined;
+  scratch deletion followed join. Peak direct reader RSS13,369,344/12,926,976B
+  excludes parent/build-family overhead; wall/RSS are qualified and CPU remains
+  unmeasured. Original inputs/contract/first outcomes stay exact. Postmeasurement
+  lint-only equivalent source cleanup has separate hashes, without rescoring
+  public output or rewriting the original source binding. Production request,
+  sync, startup, retry/no-op, publication, lock/cache/schema and child cost is
+  unchanged; isolated evaluation costs remain in the retained outcome addendum.

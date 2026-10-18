@@ -17,8 +17,8 @@ type goFile struct {
 	tree       *ast.File
 	e          *engine
 	imports    map[string]string
-	constant   map[*ast.Object]ast.Expr
-	bad        map[*ast.Object]bool
+	constant   map[*ast.Object]ast.Expr //nolint:staticcheck // SA1019: intentional lexical parser identity only; no type-information claim.
+	bad        map[*ast.Object]bool     //nolint:staticcheck // SA1019: intentional lexical parser identity only; no type-information claim.
 	modulePath string
 	version    module
 	packageKey string
@@ -101,7 +101,7 @@ func prepareGo(e *engine, f inputFile, raw []byte) (*goFile, string) {
 	if nodes > 100000 || nameLimit {
 		return nil, "resource-limit"
 	}
-	g := &goFile{f: f, raw: raw, set: set, tree: tree, e: e, imports: map[string]string{}, constant: map[*ast.Object]ast.Expr{}, bad: map[*ast.Object]bool{}}
+	g := &goFile{f: f, raw: raw, set: set, tree: tree, e: e, imports: map[string]string{}, constant: map[*ast.Object]ast.Expr{}, bad: map[*ast.Object]bool{}} //nolint:staticcheck // SA1019: intentional lexical parser identity only; no type-information claim.
 	g.modulePath, g.version = e.moduleFor(f)
 	g.packageKey = f.Population + "\x00" + g.modulePath + "\x00" + path.Dir(f.Path) + "\x00" + tree.Name.Name
 	if strings.HasSuffix(f.Path, "_test.go") {
@@ -273,7 +273,7 @@ func (e *engine) collect(f inputFile, raw []byte) {
 	}
 }
 
-func (g *goFile) objectType(id *ast.Ident, seen map[*ast.Object]bool, depth int) fieldType {
+func (g *goFile) objectType(id *ast.Ident, seen map[*ast.Object]bool, depth int) fieldType { //nolint:staticcheck // SA1019: intentional lexical parser identity only; no type-information claim.
 	if id.Obj == nil || g.bad[id.Obj] || depth > 64 || seen[id.Obj] {
 		return fieldType{}
 	}
@@ -311,7 +311,7 @@ func (g *goFile) objectType(id *ast.Ident, seen map[*ast.Object]bool, depth int)
 	}
 	return fieldType{}
 }
-func (g *goFile) receiver(x ast.Expr, seen map[*ast.Object]bool, depth int) fieldType {
+func (g *goFile) receiver(x ast.Expr, seen map[*ast.Object]bool, depth int) fieldType { //nolint:staticcheck // SA1019: intentional lexical parser identity only; no type-information claim.
 	if depth > 64 {
 		return fieldType{}
 	}
@@ -534,7 +534,7 @@ func (e *engine) goBlob(f inputFile, raw []byte) blobResult {
 			b.Sites = append(b.Sites, site{Method: method, Span: g.at(s.Sel), Gaps: []string{"opaque-helper"}, Keys: []keyFact{}, KeyCardinality: "unmeasured"})
 			return true
 		}
-		typ := g.receiver(s.X, map[*ast.Object]bool{}, 0)
+		typ := g.receiver(s.X, map[*ast.Object]bool{}, 0) //nolint:staticcheck // SA1019: intentional lexical parser identity only; no type-information claim.
 		_, known := methodCommands[method]
 		if !known && method != "Do" {
 			if typ.Type == "" || method == "Pipeline" || method == "Close" || method == "Receive" || method == "Exec" || method == "Discard" || method == "TxPipeline" {

@@ -360,12 +360,13 @@ func (e *engine) commandRow(row *site, args []value, method string, b *blobResul
 				k.KindGap = "unknown-expected-value-kind"
 				row.Gaps = gaps(append(row.Gaps, k.KindGap)...)
 			}
-			if v.State == "literal" {
+			switch v.State {
+			case "literal":
 				k.HashTag = hashTag(v.Bytes)
 				k.HashTagState = "literal-byte-selection"
-			} else if v.State == "structure" {
+			case "structure":
 				k.HashTagState = "argument-dependent; parameter may contain closing brace"
-			} else {
+			default:
 				row.Gaps = gaps(append(row.Gaps, v.Reason)...)
 			}
 			row.Keys = append(row.Keys, k)

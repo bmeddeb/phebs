@@ -116,7 +116,7 @@ func parseACL(f inputFile, raw []byte) blobResult {
 		}
 		if position == 1 {
 			position++
-			if len(v) == 0 || t.punctuation != 0 || bytes.IndexAny(v, "\"'") >= 0 {
+			if len(v) == 0 || t.punctuation != 0 || bytes.ContainsAny(v, "\"'") {
 				return refusal(f, "malformed-input")
 			}
 			principals++
@@ -161,7 +161,7 @@ func parseACL(f inputFile, raw []byte) blobResult {
 		if intent == "" {
 			continue
 		}
-		if bytes.IndexAny(v, "\"'") >= 0 {
+		if bytes.ContainsAny(v, "\"'") {
 			return refusal(f, "malformed-input")
 		}
 		patterns++

@@ -5508,3 +5508,9 @@ Standalone remains the supported development and small-deployment profile.
 - anonymous access;
 - silent filesystem-wide repository discovery;
 - treating runtime telemetry or static evidence as a substitute for the other.
+
+**T28.1 measured Redis spike (2026-10-18):** deterministic two-pass source
+evidence and ACL safety close the finite spike with no production adoption.
+Three extra unresolved frontier sites prevent qualityPASS; manifest design and
+object mapping remain deferred. No Redis query surface, dependency or pack
+is registered. First source/outputs and all failed assertions stay retained.

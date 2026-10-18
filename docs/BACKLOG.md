@@ -21222,6 +21222,17 @@ Nested v9.7.0 client modules remain explicit unsupported-version census inputs.
 Source-only labels, sampling, denominators, semantic decisions, recognizers and
 measurements remain pending. There is no implementation or quality PASS yet.
 
+**T28.1 measured outcome (2026-10-18; complete as a spike, no production
+adoption).** Two fresh outputs/citations/censuses are byte-identical; all62
+controls and7ACL pairs pass with zero credential-retention failure. All99
+labelled public sites are present, but3 extra unresolved zero-fact frontier
+rows prevent qualityPASS. Recognized37commands/30key positions and access
+flags/27known kinds match independently; no spelling/family/runtime accuracy
+is inferred. Retain the first quality failures, exact contract/source/outcomes,
+joined cleanup and separate lint-only correction. Manifest design and object
+mapping stay deferred; unsupported native versions do not meet the frozen
+correct-adapter criterion. No production pack/schema/dependency/reader is added.
+
 ## Deliberate non-goals
 
 SCIM provisioning, multi-org RBAC / seats, and a built-in chat app —
