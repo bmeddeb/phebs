@@ -1,0 +1,31 @@
+{
+  "files": [
+    {
+      "path": "integration/compile-linux-amd64-tagged-spike-t421.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "integration/docs-check.log",
+      "bytes": 179,
+      "sha256": "9fb5ab038507be24e65a87882c54bed5eaf66a813a791ae2a43f96e0e2751bf4"
+    },
+    {
+      "path": "integration/runner.py",
+      "bytes": 7864,
+      "sha256": "6ae41cfb680822c22f7d14dd2594e477be3aac6c13097df884218e57c26d203f"
+    },
+    {
+      "path": "integration/summary.json",
+      "bytes": 160225,
+      "sha256": "8429c788ee8a2a891fc7643d2341300f7b4a0e73f33a802daf632696d6497a4a"
+    },
+    {
+      "path": "integration/verify-glossary.log",
+      "bytes": 60,
+      "sha256": "f128ad7aef2b6215c4414d1e00b2650f9c42011b1705707b624be1c70d92f095"
+    }
+  ],
+  "file_count": 5,
+  "total_bytes": 168328
+}

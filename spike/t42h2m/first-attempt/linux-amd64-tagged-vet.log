@@ -1,0 +1,3 @@
+# github.com/bmeddeb/phebs/spike/t421
+# [github.com/bmeddeb/phebs/spike/t421]
+vet: spike/t421/linux_pressure_formatter_linux.go:37:6: linuxPressureFormatterPath redeclared in this block

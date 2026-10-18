@@ -4050,6 +4050,29 @@ compile-only targets and helper builds, docs and glossary. `spike/t42h2k/`
 retains the first fourteen serial steps; every group joined and all four Linux
 outputs were removed without execution. Native qualification remains pending.
 
+**T42.H2m · Owned isolated Linux pressure filesystem** *(2026-10-18, Ben
+all-ticket delegation; flagged Mac source handoff).*
+Implement a distinct root-owned image/loop/private-ext4 owner under the existing
+trusted host-staging boundary. Operator-supplied privilege and a prospective
+exact formatter binding are prerequisites; this work installs or grants neither.
+Retain the owned image, exact loop and native root/workspace identities through
+serialized loans. Non-forced unmount, exact loop-detach and underlay verification
+precede image removal; failed setup or uncertain cleanup retains its actual
+prefix. AC: bounded modeled state/refusal/cleanup tests, supported Linux compile
+checks, and authored but unrun native setup/allocation/teardown controls. No raw
+borrowed mount, callback boolean or observed formatter hash grants authority.
+Standalone ownership does not certify an executor's descendants joined; full
+pressure/restore binding, native geometry and prospective plans remain H2 gates.
+Historical APFS plans/receipts and active entry-point refusals stay exact.
+Portable models pass normally and with race. The first Linux static check
+caught a private formatter constant/type collision; reviewed correction
+`aaae2797` changes only the metadata type name. Remaining tagged Linux static,
+pinned scoped lint, both compile-only targets, docs and glossary pass. The
+combined K/M tree also compiles for Linux amd64 without execution.
+`spike/t42h2m/` retains the original stop, carried Darwin checks and remaining
+joined sequences. Actual Linux geometry, setup/teardown and full pressure/
+restore acceptance remain pending Ben's office return.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

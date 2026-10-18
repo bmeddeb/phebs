@@ -13790,3 +13790,30 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   each successful tree retains two FDs and each serialized loan adds one FD
   and constant native checks. Explicit tagged native tests remain mandatory and
   fail missing prerequisites; ordinary CI does not launch them implicitly.
+
+- **2026-10-18 — T42.H2m owned Linux pressure filesystem (Mac source handoff).**
+  Use a distinct root-owned image/loop/private-ext4 owner under existing trusted
+  host staging. Initial-user-namespace privilege and a prospectively bound exact
+  formatter remain operator prerequisites, never provisioning side effects or
+  an observed-hash self-admission. Unprivileged input namespaces cannot supply
+  block-filesystem mounting authority. Bind held native image/loop/mount/root
+  identities, retain failed prefixes, and require non-forced unmount plus exact
+  loop detach and original-underlay verification before owned-image removal.
+  Descriptor loans retain the trusted consumer's explicit joined-use obligation
+  and issue no process-drain certificate. Native geometry and full pressure,
+  restore, version and execution binding remain separate H2 gates; historical
+  APFS contracts and active refusals stay exact. Setup/allocation/teardown are
+  explicit bounded staging work, with no production request/tick/startup/retry/
+  publication, store/schema or cache change. Actual Linux proof is deferred.
+  Setup reserves one fully allocated 64-MiB–96-GiB image plus bounded journal
+  metadata, holds at most nine owner FDs, and hashes at most 32 MiB of formatter
+  once. One formatter has a cooperative 60-second context and 64-KiB combined
+  output cap; existing session fences add bounded host process scans. Thirteen
+  durable phases use bounded 8-KiB records and sync their replacements. A check
+  reads mountinfo twice at a 1-MiB cap and the journal once; a loan runs checks
+  before and after while holding the owner mutex across its trusted callback.
+  Allocation, sync, mount, unmount, Wait and callback completion are cooperative,
+  not hard wall deadlines. Close releases only safe descriptors and can retain
+  a mounted/disk prefix. The existing 48-GiB production reservation cap is exact:
+  its zero-byte call observes only the actual capacity latch, while a separate
+  checked full-image projection requires the unchanged normal watermark.
