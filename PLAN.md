@@ -12668,3 +12668,8 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   invocation-local, with no new
   numerical heap/SLO claim. Sync/no-op/retry, publication writers, lifecycle,
   shared locks/caches, permanent schema, concurrency and children are unchanged.
+
+  After convergence with main e09a5dec, the corrected exact field tree passes
+  the same reader/API/command selectors in0.445/0.573/0.812s, plus documentation,
+  glossary and whitespace checks. Peer recheck closes the sole retained-header
+  finding. No test or review finding remains for this implementation.
