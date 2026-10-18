@@ -1,0 +1,470 @@
+{
+  "all_owned_groups_joined_cleanly": true,
+  "capacity_admitted": false,
+  "commands": [
+    {
+      "argv": [
+        "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+        "version"
+      ],
+      "environment_overrides": {},
+      "exit_code": 0,
+      "group_absent": true,
+      "joined": true,
+      "launched": true,
+      "name": "go-version",
+      "outer_deadline_seconds": 10,
+      "pid": 37390,
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout": {
+        "bytes": 33,
+        "sha256": "278375c8a03c34bb0f855154850de7c4f217fd3b8cdf37986819e3f05d0a4c33"
+      },
+      "wall_seconds": 0.028099333000000004
+    },
+    {
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-fv0m6vmf/lint-bin/golangci-lint",
+        "version"
+      ],
+      "environment_overrides": {},
+      "exit_code": 0,
+      "group_absent": true,
+      "joined": true,
+      "launched": true,
+      "name": "lint-version",
+      "outer_deadline_seconds": 10,
+      "pid": 37393,
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout": {
+        "bytes": 154,
+        "sha256": "f6ce18432a72a64b38b7830998527f2c918abfadba447e43ca90225de0b3f242"
+      },
+      "wall_seconds": 0.07467133299999999
+    },
+    {
+      "argv": [
+        "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+        "test",
+        "-p=1",
+        "./spike/t421",
+        "-run",
+        "^TestLinuxInputTree",
+        "-count=1",
+        "-timeout=60s"
+      ],
+      "environment_overrides": {},
+      "exit_code": 0,
+      "group_absent": true,
+      "joined": true,
+      "launched": true,
+      "name": "normal",
+      "outer_deadline_seconds": 150,
+      "pid": 37394,
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout": {
+        "bytes": 48,
+        "sha256": "026f0b3fef6bc1adf8562dc47f462da399fc9d7f19b30f80338f44a1283479b8"
+      },
+      "wall_seconds": 24.480567917000002
+    },
+    {
+      "argv": [
+        "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+        "test",
+        "-race",
+        "-p=1",
+        "./spike/t421",
+        "-run",
+        "^TestLinuxInputTree",
+        "-count=1",
+        "-timeout=60s"
+      ],
+      "environment_overrides": {},
+      "exit_code": 0,
+      "group_absent": true,
+      "joined": true,
+      "launched": true,
+      "name": "race",
+      "outer_deadline_seconds": 180,
+      "pid": 37654,
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout": {
+        "bytes": 48,
+        "sha256": "593e4d8b383a3c263dd31ecaaa45e4be7e771ca80948e75a462b1d1383bafabf"
+      },
+      "wall_seconds": 46.43644045799999
+    },
+    {
+      "argv": [
+        "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+        "vet",
+        "-p=1",
+        "./spike/t421",
+        "./spike/t421/cmd/input-tree-helper"
+      ],
+      "environment_overrides": {},
+      "exit_code": 0,
+      "group_absent": true,
+      "joined": true,
+      "launched": true,
+      "name": "vet-darwin",
+      "outer_deadline_seconds": 150,
+      "pid": 38090,
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "wall_seconds": 14.040050582999996
+    },
+    {
+      "argv": [
+        "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+        "vet",
+        "-p=1",
+        "-tags",
+        "phebs_t42_native",
+        "./spike/t421",
+        "./spike/t421/cmd/input-tree-helper"
+      ],
+      "environment_overrides": {
+        "CGO_ENABLED": "0",
+        "GOARCH": "amd64",
+        "GOOS": "linux"
+      },
+      "exit_code": 0,
+      "group_absent": true,
+      "joined": true,
+      "launched": true,
+      "name": "vet-linux-amd64",
+      "outer_deadline_seconds": 150,
+      "pid": 38294,
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "wall_seconds": 45.40311733300001
+    },
+    {
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-fv0m6vmf/lint-bin/golangci-lint",
+        "run",
+        "--new-from-rev=ef6b2551",
+        "--timeout=120s",
+        "./spike/t421",
+        "./spike/t421/cmd/input-tree-helper"
+      ],
+      "environment_overrides": {},
+      "exit_code": 0,
+      "group_absent": true,
+      "joined": true,
+      "launched": true,
+      "name": "lint-darwin",
+      "outer_deadline_seconds": 135,
+      "pid": 39569,
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout": {
+        "bytes": 10,
+        "sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+      },
+      "wall_seconds": 11.352995832999994
+    },
+    {
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-fv0m6vmf/lint-bin/golangci-lint",
+        "run",
+        "--new-from-rev=ef6b2551",
+        "--build-tags=phebs_t42_native",
+        "--timeout=120s",
+        "./spike/t421",
+        "./spike/t421/cmd/input-tree-helper"
+      ],
+      "environment_overrides": {
+        "CGO_ENABLED": "0",
+        "GOARCH": "amd64",
+        "GOOS": "linux"
+      },
+      "exit_code": 0,
+      "group_absent": true,
+      "joined": true,
+      "launched": true,
+      "name": "lint-linux-amd64",
+      "outer_deadline_seconds": 135,
+      "pid": 39753,
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout": {
+        "bytes": 10,
+        "sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+      },
+      "wall_seconds": 41.12403037499999
+    },
+    {
+      "argv": [
+        "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+        "test",
+        "-c",
+        "-p=1",
+        "-tags",
+        "phebs_t42_native",
+        "-o",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t42h2k-compile-mzke2kc2/amd64.test",
+        "./spike/t421"
+      ],
+      "environment_overrides": {
+        "CGO_ENABLED": "0",
+        "GOARCH": "amd64",
+        "GOOS": "linux"
+      },
+      "exit_code": 0,
+      "group_absent": true,
+      "joined": true,
+      "launched": true,
+      "name": "compile-tests-linux-amd64",
+      "outer_deadline_seconds": 180,
+      "pid": 40108,
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "wall_seconds": 9.888608250000004
+    },
+    {
+      "argv": [
+        "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+        "build",
+        "-p=1",
+        "-tags",
+        "phebs_t42_native",
+        "-o",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t42h2k-compile-mzke2kc2/amd64-helper",
+        "./spike/t421/cmd/input-tree-helper"
+      ],
+      "environment_overrides": {
+        "CGO_ENABLED": "0",
+        "GOARCH": "amd64",
+        "GOOS": "linux"
+      },
+      "exit_code": 0,
+      "group_absent": true,
+      "joined": true,
+      "launched": true,
+      "name": "compile-helper-linux-amd64",
+      "outer_deadline_seconds": 180,
+      "pid": 40240,
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "wall_seconds": 1.5412694590000058
+    },
+    {
+      "argv": [
+        "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+        "test",
+        "-c",
+        "-p=1",
+        "-tags",
+        "phebs_t42_native",
+        "-o",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t42h2k-compile-mzke2kc2/arm64.test",
+        "./spike/t421"
+      ],
+      "environment_overrides": {
+        "CGO_ENABLED": "0",
+        "GOARCH": "arm64",
+        "GOOS": "linux"
+      },
+      "exit_code": 0,
+      "group_absent": true,
+      "joined": true,
+      "launched": true,
+      "name": "compile-tests-linux-arm64",
+      "outer_deadline_seconds": 180,
+      "pid": 40249,
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "wall_seconds": 38.277934125
+    },
+    {
+      "argv": [
+        "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+        "build",
+        "-p=1",
+        "-tags",
+        "phebs_t42_native",
+        "-o",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t42h2k-compile-mzke2kc2/arm64-helper",
+        "./spike/t421/cmd/input-tree-helper"
+      ],
+      "environment_overrides": {
+        "CGO_ENABLED": "0",
+        "GOARCH": "arm64",
+        "GOOS": "linux"
+      },
+      "exit_code": 0,
+      "group_absent": true,
+      "joined": true,
+      "launched": true,
+      "name": "compile-helper-linux-arm64",
+      "outer_deadline_seconds": 180,
+      "pid": 40688,
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "wall_seconds": 14.932285084
+    },
+    {
+      "argv": [
+        "make",
+        "docs-check"
+      ],
+      "environment_overrides": {},
+      "exit_code": 0,
+      "group_absent": true,
+      "joined": true,
+      "launched": true,
+      "name": "docs-check",
+      "outer_deadline_seconds": 120,
+      "pid": 40837,
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout": {
+        "bytes": 179,
+        "sha256": "90eaa58f02c1144126d652763b73801198ab032a18f857459280418181acb26a"
+      },
+      "wall_seconds": 2.5095564579999916
+    },
+    {
+      "argv": [
+        "make",
+        "verify-glossary"
+      ],
+      "environment_overrides": {},
+      "exit_code": 0,
+      "group_absent": true,
+      "joined": true,
+      "launched": true,
+      "name": "verify-glossary",
+      "outer_deadline_seconds": 120,
+      "pid": 40878,
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stdout": {
+        "bytes": 60,
+        "sha256": "f128ad7aef2b6215c4414d1e00b2650f9c42011b1705707b624be1c70d92f095"
+      },
+      "wall_seconds": 1.5058588329999907
+    }
+  ],
+  "compile_only_artifacts": {
+    "amd64-helper": {
+      "bytes": 34367227,
+      "sha256": "f4fcbfb4346f279e2d43d6d4a8c9968358fd78fb3a01e5f9ee9096577f8910d9"
+    },
+    "amd64.test": {
+      "bytes": 86402581,
+      "sha256": "9d0fd0edf09a0d2a366496c27d92912b68d4677f0510a1fb5ce08fe88891c9ff"
+    },
+    "arm64-helper": {
+      "bytes": 32622913,
+      "sha256": "a7989c4c44b3a3d743afe704bfe2507c5a87f3bc856c9fa468f2b86093a3af79"
+    },
+    "arm64.test": {
+      "bytes": 80436593,
+      "sha256": "909c7a64a42a6a65303cc03ebda2475c2f6585b4e61230a732a8c8446b0cd769"
+    }
+  },
+  "compile_only_artifacts_removed": true,
+  "linux_native_execution": false,
+  "outcome": "passed",
+  "source_after": {
+    "spike/t421/cmd/input-tree-helper/main.go": "f6db4151cd36dfb378030064ce2f1c2f8827013eed73282a09ddd2e4322959d3",
+    "spike/t421/input_tree_helper_linux.go": "316e54309088813babe26cac6912b92c93f61e501bf6df6cd282092382ce9850",
+    "spike/t421/input_tree_helper_other.go": "18432c9a50bc7e9050d280227b1fab78057e5c795eda8999adc5cf32a9dc6f8e",
+    "spike/t421/input_tree_linux.go": "beb6e5a0f2296d7d0009ef8bdee311b8f30a89599f67f67e0cb24c0b34ae71f2",
+    "spike/t421/input_tree_linux_test.go": "477b58a0b1a1a59aeb7ac5004deb7750a63465e5b505548230d944adf0e01278",
+    "spike/t421/input_tree_native_linux_test.go": "50cf234ee7a079189ddce9d0c910aef073e2a56b98b39c1814593fd95e531b90",
+    "spike/t421/input_tree_root_linux.go": "c4833542b3f1fd46eaf553a83da4e0ad0f6e2f5c4b4b713a79364ed66a1b417c",
+    "spike/t421/input_tree_socket_linux.go": "87242fbf320e0a7ba0128d2cac6cf504c30b7c85405bd35958d5654dc57242a8",
+    "spike/t421/input_tree_wire.go": "ccbe91ab1cc7a9ddf7873f96b0859b2beec8a54ee04ca1c660b5a1c31516e325",
+    "spike/t421/input_tree_wire_test.go": "28d6b13cf97db07f808e2e5abcfdd658671bb474dfc7418f9fbd7b89b58800b6",
+    "spike/t421/reference_tool.go": "3a23d7376e42b880fd27c5abf2d845bdaf3bff3a9057a1af57e068af3cabfb6f"
+  },
+  "source_before": {
+    "spike/t421/cmd/input-tree-helper/main.go": "f6db4151cd36dfb378030064ce2f1c2f8827013eed73282a09ddd2e4322959d3",
+    "spike/t421/input_tree_helper_linux.go": "316e54309088813babe26cac6912b92c93f61e501bf6df6cd282092382ce9850",
+    "spike/t421/input_tree_helper_other.go": "18432c9a50bc7e9050d280227b1fab78057e5c795eda8999adc5cf32a9dc6f8e",
+    "spike/t421/input_tree_linux.go": "beb6e5a0f2296d7d0009ef8bdee311b8f30a89599f67f67e0cb24c0b34ae71f2",
+    "spike/t421/input_tree_linux_test.go": "477b58a0b1a1a59aeb7ac5004deb7750a63465e5b505548230d944adf0e01278",
+    "spike/t421/input_tree_native_linux_test.go": "50cf234ee7a079189ddce9d0c910aef073e2a56b98b39c1814593fd95e531b90",
+    "spike/t421/input_tree_root_linux.go": "c4833542b3f1fd46eaf553a83da4e0ad0f6e2f5c4b4b713a79364ed66a1b417c",
+    "spike/t421/input_tree_socket_linux.go": "87242fbf320e0a7ba0128d2cac6cf504c30b7c85405bd35958d5654dc57242a8",
+    "spike/t421/input_tree_wire.go": "ccbe91ab1cc7a9ddf7873f96b0859b2beec8a54ee04ca1c660b5a1c31516e325",
+    "spike/t421/input_tree_wire_test.go": "28d6b13cf97db07f808e2e5abcfdd658671bb474dfc7418f9fbd7b89b58800b6",
+    "spike/t421/reference_tool.go": "3a23d7376e42b880fd27c5abf2d845bdaf3bff3a9057a1af57e068af3cabfb6f"
+  },
+  "source_commit": "94a49c6e972fbc7d96b899c0c850121a386eaa68",
+  "source_unchanged": true,
+  "tools": {
+    "go": {
+      "bytes": 14500160,
+      "path": "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+      "sha256": "3925fc3221ac440ebf7c35361ff663bed0c7bdb2e0a157b75fe993607ffe0a19"
+    },
+    "golangci-lint": {
+      "bytes": 60504114,
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-fv0m6vmf/lint-bin/golangci-lint",
+      "sha256": "ed419de2397a00d7fdfb6a6aa6d4d9a58f53aac217e444950e643c848b638d94"
+    }
+  },
+  "wall_seconds": 251.96872325
+}

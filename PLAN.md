@@ -13759,3 +13759,34 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Tests add two serial source/type/AST passes; private config parsing adds one
   pointer comparison and no I/O. No product query/tick/startup/retry/publication,
   child, cache, lock, store/schema, install, release or capacity behavior changes.
+
+- **2026-10-18 — T42.H2k owned read-only Linux input-tree loan (Mac source handoff).**
+  Implement H2h's distinct scoped tree recipe with one fixed measured/sealed
+  helper. Fresh bounded tmpfs copies exist only in its private unprivileged
+  user/mount namespace. Close writers before read-only transition and protected
+  manifest verification; transfer and authenticate the exact read-only root FD,
+  then join the actual helper before publication. That FD pins the protected
+  mount after helper exit, avoiding a keeper daemon or per-loan child/RPC.
+  Serialized loans expose descriptors rather than ordinary host paths; trusted
+  consumers retain the existing explicit joined-use obligation. Uncertain
+  construction/drain is sticky, unusable and retained. No host entitlement is
+  provisioned, and historical constructors, tool/Go/Git admission and plan gates
+  remain exact. Work is bounded by the existing tree ceilings; copy/transfer and
+  protected hashing occur at construction, not per loan or product request.
+  Tmpfs payload, metadata, source cache and helper RSS must be reserved by future
+  aggregate admission. No production request/tick/startup/retry/publication,
+  store, cache or corpus behavior changes; native Linux proof remains deferred.
+  The helper performs recursive read-only mount attributes and drops remount
+  authority across all Go threads, including locked securebits and no-new-privs,
+  before the protected-byte check and authenticated handoff. One helper handle
+  permits one construction with no pending queue; distinct handles and published
+  trees still require future aggregate admission. Construction uses a cooperative
+  30-minute cap and retains its tracked Wait/launch thread on uncertain kernel
+  exit. Bounded 32-KiB frames stream at most 2 GiB of input, with at most 100,000
+  entries, 64 MiB of names per census and 4,096-byte paths; tmpfs has explicit
+  2-GiB/100,002-inode ceilings, not a total RSS/cgroup ceiling. Source/census maps,
+  page cache, metadata and the sealed helper need separate reservations. The
+  existing offline reference verifier can take 20 minutes once per helper;
+  each successful tree retains two FDs and each serialized loan adds one FD
+  and constant native checks. Explicit tagged native tests remain mandatory and
+  fail missing prerequisites; ordinary CI does not launch them implicitly.

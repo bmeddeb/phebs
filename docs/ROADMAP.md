@@ -147,6 +147,11 @@ T42.H2n repairs the inherited source launch-inventory check and closes the
 epoch config's managed-installation exclusion. Both supported host-source
 inventories remain exact; no runtime site, plan limit or native gate is widened.
 
+T42.H2k implements the distinct owned read-only Linux input-tree loan next.
+Its fixed helper copies inside a private namespace, closes writers, protects the
+mount and joins before publication. Source/model checks proceed on the Mac;
+real namespace acceptance and ordinary tool/plan integration remain pending.
+
 ## Current product posture
 
 **All-ticket execution (2026-10-17, Ben-directed):** resolve actual dependencies
