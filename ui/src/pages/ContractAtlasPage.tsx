@@ -843,7 +843,7 @@ function OperationDetail({
         </div>
       </header>
 
-      <div className={css({ padding: '16px', display: 'grid', gap: '22px' })}>
+      <div className={css({ padding: '16px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '22px' })}>
         <EvidenceBlock title="Operation declaration" claim={operation.declaration} />
 
         {(operation.shape_truncated || operation.relationships_truncated) && (
