@@ -325,17 +325,19 @@ func TestMergeExtractorsCallerMapRecipeGovernsMixedProvenance(t *testing.T) {
 // /api/version capabilities and whether MCP lists the Caller Map, comparison
 // and proof tools.
 type servedCallerSurfaces struct {
-	capabilities      []string
-	callerMapTool     bool
-	comparisonTool    bool
-	proofTool         bool
-	topicTool         bool
-	wireTool          bool
-	listTopicsTool    bool
-	readInventoryTool bool
-	atlasTools        int // search_contract_operations and get_contract_operation
-	callerMapEnabled  bool
-	callerMapServiced bool
+	capabilities        []string
+	callerMapTool       bool
+	comparisonTool      bool
+	comparisonReleased  bool
+	operationImpactTool bool
+	proofTool           bool
+	topicTool           bool
+	wireTool            bool
+	listTopicsTool      bool
+	readInventoryTool   bool
+	atlasTools          int // search_contract_operations and get_contract_operation
+	callerMapEnabled    bool
+	callerMapServiced   bool
 }
 
 // serveCallerSurfaces drives one startup through the production assembly and
@@ -369,8 +371,9 @@ func serveCallerSurfaces(t *testing.T, cfg *config.Config) servedCallerSurfaces 
 		t.Fatalf("newServeAPIOptions: %v", err)
 	}
 	served := servedCallerSurfaces{
-		callerMapEnabled:  apiOpts.CallerMapEnabled,
-		callerMapServiced: apiOpts.CallerMap != nil,
+		callerMapEnabled:   apiOpts.CallerMapEnabled,
+		callerMapServiced:  apiOpts.CallerMap != nil,
+		comparisonReleased: apiOpts.CallerComparisonReleased,
 	}
 
 	// /api/version lists capabilities only to an authenticated caller, whose
@@ -413,6 +416,8 @@ func serveCallerSurfaces(t *testing.T, cfg *config.Config) servedCallerSurfaces 
 			served.callerMapTool = true
 		case "compare_operation_callers":
 			served.comparisonTool = true
+		case "build_operation_impact_report":
+			served.operationImpactTool = true
 		case "find_operation_consumers":
 			served.proofTool = true
 		case "check_wire_compatibility":

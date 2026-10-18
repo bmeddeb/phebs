@@ -1,0 +1,169 @@
+{
+  "schema": "phebs-t503-public-source-baseline-v1",
+  "recorded_date": "2026-10-18",
+  "outcome": "stopped_no_retry",
+  "source_commit": "24b7ddb3aae21bb0fabb948091cdb02052008dc0",
+  "binary_digest": "sha256:5fa2721d77586b935c94215ca4d8639fe3b22d1502c4fc90250249dfb1fceea6",
+  "checkpoint_digest": "sha256:54b1377c20d2422f93756dedea56ef30aa1df0e6114d41fd646558ef4cd3ab29",
+  "labels_digest": "sha256:db84af5c81cad0526677a058d602523049e000d2b960262f5bb6e547d77bcd26",
+  "committed_inputs_digest": "sha256:62f4e8734140569487c9dd7cbb5f1f5f1b691b9d82e752dcf6509306b81cfed8",
+  "evaluation_commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+  "production_signing": "pending; existing key never accessed; disposable integration key removed before launch",
+  "headroom_preflight": {
+    "available_physical_bytes": 8732917760,
+    "page_size": 16384,
+    "pages": {
+      "free": 5906,
+      "inactive": 509954,
+      "speculative": 17155
+    },
+    "formula": "page_size*(free+inactive+speculative); compressor and swap excluded"
+  },
+  "qualification": "Real public-source composition census through ordinary signed engine; selected endpoint roles and supplied package attribution, no upstream migration/deployment/scale inference.",
+  "reads": [
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 404,
+      "seconds": 0.018542,
+      "bytes": 135
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 404,
+      "seconds": 0.003564,
+      "bytes": 135
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.004626,
+      "bytes": 1798
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.006914,
+      "bytes": 1798
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.012527,
+      "bytes": 1798
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.006218,
+      "bytes": 1798
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.00558,
+      "bytes": 1798
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.004267,
+      "bytes": 1798
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.006837,
+      "bytes": 1798
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.00398,
+      "bytes": 1798
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.005403,
+      "bytes": 1798
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.004781,
+      "bytes": 1798
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.008398,
+      "bytes": 2694
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.008855,
+      "bytes": 2694
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.019712,
+      "bytes": 14552
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.015016,
+      "bytes": 8865
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.008538,
+      "bytes": 8857
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.009636,
+      "bytes": 8842
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.009792,
+      "bytes": 8859
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.014699,
+      "bytes": 7625
+    }
+  ],
+  "ready_seconds": 7.4,
+  "cold_first_occurrence_seconds": 0.019712,
+  "publication_seconds": 14.633,
+  "reason": "wrong committed-SCIP resolution: features/interceptor/client/main.go:3590-3606",
+  "operating_samples": {
+    "rss_samples": 33,
+    "sampled_max_tree_rss_bytes": 233488384,
+    "sampled_max_descendants": 2,
+    "minimum_available_physical_bytes": 8579858432,
+    "physical_samples": 7,
+    "physical_formula": "page_size*(free+inactive+speculative); compressor and swap excluded",
+    "sampled_max_data_allocated_bytes": 3313664,
+    "rss_cadence_seconds": 0.2,
+    "host_disk_cadence_seconds": 1,
+    "qualification": "Sequential native samples after HTTP readiness; not an atomic tree snapshot, transient peak or hard enforcement. Startup before HTTP readiness and teardown are not RSS-sampled. No swap credit."
+  },
+  "terminal": {
+    "outcome": "success",
+    "exit_code": 0,
+    "stop_mode": "graceful",
+    "teardown": "clean",
+    "wall_seconds": 15.128
+  },
+  "seconds": 15.163
+}

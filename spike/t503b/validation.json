@@ -1,0 +1,116 @@
+{
+  "schema": "t503b-fixture-validation-v1",
+  "base_commit": "cb099b26fbb78070cbaa9a0eb66949e464d67220",
+  "file": "internal/api/callermap_exact_publication_test.go",
+  "file_sha256": "e57a7e53d40a29b66d1ba1baee4ba6465d27c98d41bf283e0bdb08ac307d8d07",
+  "preceding_normal": {
+    "argv": [
+      "go",
+      "test",
+      "-p",
+      "1",
+      "./internal/api",
+      "-run",
+      "^TestExactCaller",
+      "-count=1",
+      "-timeout=2m"
+    ],
+    "package_seconds": 7.549,
+    "exit": 0,
+    "evidence": "root tool result retained; same fixture file hash before listed checks"
+  },
+  "runs": [
+    {
+      "argv": [
+        "go",
+        "test",
+        "-p",
+        "1",
+        "-race",
+        "./internal/api",
+        "-run",
+        "^TestExactCaller",
+        "-count=1",
+        "-timeout=2m"
+      ],
+      "exit": 0,
+      "wall_seconds": 36.753223,
+      "log": "check-1.log",
+      "log_sha256": "ba3ce0fd05936c0b351fdf444e0baaa81d3526639e33862feb38dab5c52bb2d9"
+    },
+    {
+      "argv": [
+        "go",
+        "test",
+        "-p",
+        "1",
+        "./internal/mcp",
+        "-run",
+        "^TestCallerComparisonTool",
+        "-count=1",
+        "-timeout=2m"
+      ],
+      "exit": 0,
+      "wall_seconds": 6.14378,
+      "log": "check-2.log",
+      "log_sha256": "9191af12b81e15de4d056380d924cc8992f6bd84f13929db60c8f2814225405c"
+    },
+    {
+      "argv": [
+        "go",
+        "test",
+        "-p",
+        "1",
+        "./cmd/phebs",
+        "-run",
+        "^TestCallerComparisonReleasedAdmission$",
+        "-count=1",
+        "-timeout=2m"
+      ],
+      "exit": 0,
+      "wall_seconds": 11.583651,
+      "log": "check-3.log",
+      "log_sha256": "c5032f5d05ce9b334cc076fa996853d03c1a4d61a41aa3c8e6972c968a218ded"
+    },
+    {
+      "argv": [
+        "go",
+        "test",
+        "-p",
+        "1",
+        "./internal/callerexecute",
+        "-run",
+        "^TestCallerUnitsRuntimeRejectsStoreCurrentOldPack$",
+        "-count=1",
+        "-timeout=30s"
+      ],
+      "exit": 0,
+      "wall_seconds": 2.155216,
+      "log": "check-4.log",
+      "log_sha256": "3a41b5aa91a69de09a2bd3972cb961f4d2b79aaa5ecf57ee8740f182c8bff119"
+    },
+    {
+      "argv": [
+        "go",
+        "vet",
+        "./internal/api"
+      ],
+      "exit": 0,
+      "wall_seconds": 1.183232,
+      "log": "check-5.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-fv0m6vmf/lint-bin/golangci-lint",
+        "run",
+        "./internal/api/..."
+      ],
+      "exit": 0,
+      "wall_seconds": 3.033055,
+      "log": "check-6.log",
+      "log_sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+    }
+  ],
+  "qualification": "Fixture-only repair/current-pack warm refusal; production source unchanged. No full repository or native product qualification."
+}

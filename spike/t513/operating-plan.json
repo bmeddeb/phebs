@@ -1,0 +1,147 @@
+{
+  "schema": "phebs-t513-operating-plan-v1",
+  "date": "2026-10-18",
+  "status": "prospective_pending_independent_review_harness_and_actual_execution_binding",
+  "execution_authorized_by_this_file": false,
+  "owner": "Ben Meddeb",
+  "implementation_lead": "root; Ben-routed Mac handoff",
+  "independent_review": "peer source review required before execution; no independent-human accuracy claim",
+  "validation_expiry": "2027-01-16; revalidate on supported input/recipe/tool/source/security drift or operating boundary breach",
+  "claim": {
+    "pack_id": "phebs.protobuf.field.go",
+    "claim_version": "1.0.0",
+    "extractor": "scip-proto-field@1.4.0-released.1",
+    "scope": "Committed root index.scip from scip-go0.2.7, proto3 OpenAPI generated Go headers protoc-gen-go1.36.11/protoc5.27.1; direct field selectors/composite keys and receiver-bound getters, exact numbered message identity. Header versions are source admission, not generator execution attestation.",
+    "surfaces": [
+      "find_proto_field_references HTTP/MCP",
+      "find_field_references HTTP/MCP limited to selected protobuf recipe",
+      "immutable proof bundle by ID through HTTP only",
+      "authenticated general source HTTP/read_file MCP at exact commit"
+    ],
+    "ui": "No dedicated field product UI route is declared or admitted by this recipe. Existing general application navigation grants no new field UI claim.",
+    "nonclaims": [
+      "No Atlas declaration-family bridge",
+      "No unrelated caller,consumer,Impact,Thrift,Kafka,WIRE or managed-generation admission",
+      "No semantic read/write, runtime use, completeness, compatibility, migration completion or safe removal",
+      "Finite source conformance and Darwin local envelope only; no generalized accuracy, Linux capacity, scale or SLO"
+    ]
+  },
+  "protected_artifacts": {
+    "spike/t511/preregistration.json": "sha256:171f577d1a79f8c8e44325b92182fd7444fc827644bac8138bcce1103fe1ada0",
+    "spike/t511/source-labels.jsonl": "sha256:3988617e8ba5f9cf5218bd2bd67d1f921cbb2ed484a4d8d421b31fcff5c253c3",
+    "spike/t511/declarations.json": "sha256:c1964244656b6e95aaaa6bea77496e07934ffde59fc49493e81f6ed7a765cc73",
+    "spike/t511/committed-inputs.json": "sha256:694cb6c096fa4d8536e6ff61b042979eee4d02e8ffb87a7a47fe7de87c8240aa",
+    "spike/t511/result.json": "sha256:e848bf4098fb4d3282dac6e88dea567ebd37a89a03aa35886f01cdb44db6d955",
+    "spike/t513/planned-transition.json": "sha256:1d24d793e948f3eaffe9518ecdd0196144f7587c9604cf44740a17545e0b27fb",
+    "spike/t513/transition.bundle": "sha256:fce066909bccfc84b4037d50d2c39565b0d3c29d8f2f6cbfaa817942ae691887"
+  },
+  "population": {
+    "repository": "evaluation.local/t511-public",
+    "base_commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+    "base_tree": "ae63dc5eac24e67584f5024ac14d7bb0e7ba76e8",
+    "base_local_path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t513-inputs-ytjyz65j/base",
+    "bundle": "spike/t511/testdata/committed-public.bundle",
+    "files": [
+      {
+        "path": "LICENSE",
+        "bytes": 11358,
+        "digest": "sha256:cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+      },
+      {
+        "path": "go.mod",
+        "bytes": 1734,
+        "digest": "sha256:c38d5562384b31054ca85cd1b6f57e2fd3615234198560c65da2b2cda1be82f8"
+      },
+      {
+        "path": "go.sum",
+        "bytes": 7347,
+        "digest": "sha256:65f0a1e60a75debcc0b26833d0489038b5ad4cb21cbb5cfc9b67f0f17bc6f7df"
+      },
+      {
+        "path": "index.scip",
+        "bytes": 123050,
+        "digest": "sha256:3fd080f9b8d8629bd84fbb8fd07692ca1b2fb1070dd8bdc623f8c33a148c0716"
+      },
+      {
+        "path": "profiling/proto/service.pb.go",
+        "bytes": 15227,
+        "digest": "sha256:2abc999321c3a8be9f09e30d55d02f259497c836ce28d8238d0c9b78d58940d8"
+      },
+      {
+        "path": "profiling/proto/service.proto",
+        "bytes": 3683,
+        "digest": "sha256:507248b8ad414be8dd76bd409c79d22e0a003d8c994b35a80963250fa19e5416"
+      },
+      {
+        "path": "profiling/proto/service_grpc.pb.go",
+        "bytes": 7041,
+        "digest": "sha256:b896aede048289fb83835beedd8f6dc7e3caa2007d6a3cdf0d9e2f2ced5db4e0"
+      },
+      {
+        "path": "profiling/service/service.go",
+        "bytes": 4764,
+        "digest": "sha256:949728b78ac582ec2c796bf0fb3c4dfcc4ad0db0f288efe9efce4a46860b54a7"
+      }
+    ],
+    "field_lineage": "contract_scip_package_v1_f89a7a10ce1e093b8da9bdceb774fa0049ba935c0b4f3a502a944a2f2e3f9566",
+    "source_positive_sites": 14,
+    "source_negative_sites": 56,
+    "generated_emissions": "Separate source locations, never pooled with the14public denominator; every emitted span/source/version still validated",
+    "objects": {
+      "grpc.go.profiling.v1alpha.EnableRequest#1": 2,
+      "grpc.go.profiling.v1alpha.Timer#1": 1,
+      "grpc.go.profiling.v1alpha.Timer#2": 1,
+      "grpc.go.profiling.v1alpha.Timer#3": 1,
+      "grpc.go.profiling.v1alpha.Timer#4": 1,
+      "grpc.go.profiling.v1alpha.Timer#5": 1,
+      "grpc.go.profiling.v1alpha.Timer#6": 1,
+      "grpc.go.profiling.v1alpha.Stat#1": 1,
+      "grpc.go.profiling.v1alpha.Stat#2": 3,
+      "grpc.go.profiling.v1alpha.Stat#3": 1,
+      "grpc.go.profiling.v1alpha.GetStreamStatsResponse#1": 1
+    },
+    "quality": "Reuse exact independently source-reviewed T511 labels before native output; this measures stable product composition, not a fresh independent population. All public positives and negatives remain included; authored1.36.12 inputs are not represented as supported stable1.36.11."
+  },
+  "implementation_binding": {
+    "source_commit": "8a70fef5f60411f31d210efd52ab4dcd79385549",
+    "binary": "/tmp/phebs-main-8a70-native-qualification/phebs",
+    "binary_sha256": "7dab45a9011c60132a80381933242705e44da19b2712421ed4361b67dcca19be",
+    "preparation": "Previously joined source-clean release build with exact VCS metadata, separately retained build/helper/UI receipts; no binary rebuild or repeated indexing needed. Actual receipts/tool hashes/final harness commit bind before execution. Current main changes since8a70 are spike/docs only."
+  },
+  "bounds": {
+    "complete_native_seconds": 180,
+    "startup_seconds": 30,
+    "publication_seconds": 90,
+    "cold_request_seconds": 2,
+    "warm_request_seconds": 1,
+    "parallel_requests": 8,
+    "http_response_bytes": 1048576,
+    "process_tree_sampled_max_rss_bytes": 2147483648,
+    "minimum_available_physical_headroom_bytes": 4294967296,
+    "minimum_free_disk_bytes": 2147483648,
+    "derived_allocated_disk_bytes": 536870912,
+    "source_blobs_read_per_citation": 1,
+    "repositories": 1
+  },
+  "sampling": "Same native process observer after healthy HTTP, every0.2s; physical available=vm_stat page_size*(free+inactive+speculative), no compressor/swap credit, plus allocated derived bytes every1s. Maximum observed samples only, no simultaneous/transient peak or hard memory enforcement. Startup and teardown excluded from RSS samples and included in whole wall deadline. Missing/failed samples stop operating qualification.",
+  "matrix": [
+    "Verify all protected sources/bundle bytes, exact committed base/transition tree census, binary clean VCS/recipe/tool/build/helper bindings and physical/disk headroom before launch. One fresh owned data/auth/cache/selection root. Disposable integration key removed before serve; no production signature.",
+    "Start ordinary binary with only independently signed field pack, no experimental switches, real auth and base evaluator source. Healthy HTTP<=30s and current exact source publication<=90s within global180s. Bind selected1.4.0-released.1 version, run/root/candidate/commit and exact extractor evidence to every response; pending,stale,failed,partial or version mismatch cannot become exact empty.",
+    "For every frozen public field object query both HTTP field endpoints, compare all14consumer source spans/identities to unchanged labels and56negatives. Validate all additional generated emissions separately, reject extra consumer sites/duplicates/wrong family/tier/version/blob/line/byte. MCP v1.0 facts/provenance IDs project exactly onto HTTP assertions/atoms, retaining MCP partial/withheld processing semantics. Verify every referenced immutable bundle by HTTP only; no MCP-by-ID or raw-envelope parity is claimed. Read exact committed source through GET /api/source and MCP read_file, each one full immutable blob per transport request, then client-slice every unique consumer atom by frozen byte spans.",
+    "Record first successful exact response/object as cold and five warm reads/object; previous publication probes and shared cache warming explicit. Run bounded1/4/8-client whole-proof requests over existing objects, one finite batch each; require only successful complete coherent proofs with unchanged authority tuples and per-request/wall/byte bounds. Report actual latency/throughput/sample counts descriptively, no confidence bound or added independent quality denominator.",
+    "Check401anonymous and closed capability/MCP discovery; no unrelated product activation. Existing scoped denied-source/version/generation/permission/hard-death/recovery/backup/pressure tests remain evidence only for their exact source; run affected field selectors once if composition changes, no full-repo/rehearsal.",
+    "Apply one ordinary HMAC-authenticated webhook fetch after atomically selecting the already bound comment-only transition clone. No new source/ref/index mutation during measurement. Require new current publication with unchanged14selector truth, new commit/blob and source binding; old immutable proof read remains200 with byte-identical pinned old content/source authority, while a fresh current query/new proof must bind only the new generation. Verify one fresh exact new proof and source bytes; transition is mechanics only, not a second quality population.",
+    "Gracefully stop/join, planned restart same binary/data with only field release revoked. Field HTTP/MCP/capability withdrawn; no fallback or unrelated promotion. Stop/join all server/store/indexer/observer/measurement children; remove disposable auth/config/key/private-derived/source scratch. Forced cleanup remains stopped. Preserve source-free first terminal report only; first failure no silent retry."
+  ],
+  "thresholds": {
+    "consumer_reference_precision_recall": 1.0,
+    "negative_false_positives": 0,
+    "extra_duplicate_wrong_family_source_version_or_span": 0,
+    "http_mcp_or_proof_source_mismatch": 0,
+    "missing_operating_observation": "stop",
+    "unjoined_or_forced_cleanup": "stop",
+    "failure": "Retain first native stop/output; no label/scope/threshold/tool/source change in response. Any prerequisite repair requires separately reviewed prospective requalification."
+  },
+  "steady_cost": "No production code changes. Reuse T512 reviewed startup admission/version/source fences and exact current tree worker; native fixture only adds finite signed startup, one repository initial publication, bounded proof requests and1comment publication plus1withdrawal restart. Per-proof existing store/root selection/filtered bounded assertion/evidence reads and canonical bundle hashing/persistence; exact costs and cache/no-op/publication behavior recorded from source and measured counters where available. No new lock,schema,worker,cache,scan or child class. Validation/client work and observers are separately disclosed; no hard global heap bound inferred. General source opens read one complete immutable blob per transport request, followed by client-side slicing; no field range-citation service or measured blob-read counter is invented. Field APIs have no pagination. Reuse reviewed total-deadline and joined-monitor controls; do not copy the first-attempt unjoined failure path.",
+  "production_signing": "Pending existing unavailable Linux key. Artifacts may be prepared/reviewed after measured result, but no production signature or production release claimed."
+}

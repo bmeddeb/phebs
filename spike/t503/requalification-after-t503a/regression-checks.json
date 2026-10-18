@@ -1,0 +1,25 @@
+{
+  "schema": "t503-postfix-scoped-regressions-v1",
+  "source_commit": "8a70fef5f60411f31d210efd52ab4dcd79385549",
+  "production_source": "Go implementation identical to8a70; onlyspike/docs additions in harness worktree",
+  "runs": [
+    {
+      "argv": [
+        "go",
+        "test",
+        "-p",
+        "1",
+        "./internal/api",
+        "-run",
+        "^TestExactCallerComparison",
+        "-count=1",
+        "-timeout=2m"
+      ],
+      "exit": 1,
+      "wall_seconds": 16.116512,
+      "log": "regression-1.log",
+      "log_sha256": "84d917cb9711bff4b2dd056ffec0bdb0c003e1c2a4e02ae9349088f8577fc0e6"
+    }
+  ],
+  "qualification": "Affected frozen normal/race/admission/MCP gates only; no native product qualification or full repository suite."
+}

@@ -23,6 +23,7 @@ import { type GlossaryTermId } from '../glossary.generated'
 import { FONTS, TYPE, usePhebsTokens } from '../theme'
 import { href, navigate } from '../router'
 import { isAbortError } from '../util'
+import CallerMapPage from './CallerMapPage'
 
 type Mode = 'operation' | 'field' | 'change'
 type FieldProtocol = 'protobuf' | 'thrift'
@@ -35,12 +36,44 @@ const supportedCoverageSchemas = new Set([
   'coverage-certificate-v2',
   'coverage-certificate-v3',
 ])
+const operationRouteKeys = new Set(['shape', 'protocol', 'repository', 'lineage', 'operation', 'unit', 'owner', 'path_prefix', 'code_role', 'tier', 'freshness', 'resolution', 'ordering', 'page_size', 'cursor', 'view'])
 
 export default function ImpactPage({
   params,
   compatibilityAvailable,
   capabilities,
 }: {
+  params: URLSearchParams
+  compatibilityAvailable: boolean
+  capabilities: readonly string[]
+}) {
+  const stable = capabilities.includes('contract-impact-operation')
+  const legacy = capabilities.includes('contract-impact-report')
+  if (params.has('shape') || (stable && !legacy)) {
+    return <OperationImpactView params={params} available={stable} />
+  }
+  return <LegacyImpactPage params={params} compatibilityAvailable={compatibilityAvailable} capabilities={capabilities} />
+}
+
+function OperationImpactView({ params, available }: { params: URLSearchParams; available: boolean }) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  const shape = params.get('shape') ?? 'operation_callers'
+  const mixed = [...params.keys()].some((key) => !operationRouteKeys.has(key) || params.getAll(key).length !== 1)
+  const pageSize = Number(params.get('page_size') ?? 100)
+  if (!available || shape !== 'operation_callers' || mixed || (params.has('protocol') && params.get('protocol') !== 'protobuf') || !Number.isSafeInteger(pageSize) || pageSize < 0 || pageSize > 100) {
+    return <section className={css({ maxWidth: '920px', margin: '0 auto', color: tok.textPrimary })}>
+      <h1 className={css({ fontSize: '22px', lineHeight: '30px' })}>Operation impact</h1>
+      <Notification kind={NOTIFICATION_KIND.info} overrides={{ Body: { style: { width: 'auto', margin: 0 } } }}>
+        {!available ? 'Operation impact is unavailable on this server.' : 'This report supports one exact protobuf operation. Field, change, implementation, WIRE, matching-call and saved-report sections are unavailable.'}
+      </Notification>
+      <a href="#/contracts" className={css({ display: 'inline-flex', marginTop: '16px', color: tok.accent, fontSize: '13px' })}>Select an operation in Contracts</a>
+    </section>
+  }
+  return <CallerMapPage params={params} operationImpact />
+}
+
+function LegacyImpactPage({ params, compatibilityAvailable, capabilities }: {
   params: URLSearchParams
   compatibilityAvailable: boolean
   capabilities: readonly string[]

@@ -41,6 +41,9 @@ func (service *FieldReferenceService) buildProtoProofBundle(
 	if err != nil {
 		return nil, huma.Error400BadRequest(err.Error())
 	}
+	if err := admittedFieldIdentity(service.opts, "scip-proto-field", field.Lineage); err != nil {
+		return nil, err
+	}
 	field = fields[0]
 	number := field.Number
 	return service.buildProto(
@@ -74,6 +77,29 @@ func (service *FieldReferenceService) buildNeutralProofBundle(
 		return nil, huma.Error400BadRequest(err.Error())
 	}
 	packs := fieldReferencePacks(field.Number)
+	restricted := releasedProofOnly(service.opts)
+	if restricted && !service.opts.ProtobufFieldReferencesReleased && !service.opts.ThriftFieldReferencesReleased {
+		return nil, huma.Error503ServiceUnavailable("field references unavailable")
+	}
+	admitted := packs[:0]
+	var identityErr error
+	for _, pack := range packs {
+		if restricted && !releasedFieldDomain(service.opts, pack.fieldReferenceDomain) {
+			continue
+		}
+		if err := admittedFieldIdentity(service.opts, pack.fieldReferenceDomain, field.Lineage); err != nil {
+			identityErr = err
+			continue // preserve independently available provisional protocols
+		}
+		admitted = append(admitted, pack)
+	}
+	packs = admitted
+	if len(packs) == 0 {
+		if identityErr != nil {
+			return nil, identityErr
+		}
+		return nil, huma.Error400BadRequest("field number is outside every admitted field-reference protocol")
+	}
 	domains := make([]string, 0, len(packs))
 	filters := make([]assertionFilter, 0, len(packs))
 	for _, pack := range packs {

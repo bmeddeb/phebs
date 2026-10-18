@@ -1,0 +1,23 @@
+{
+  "schema": "t522-first-measurement-command-v1",
+  "harness_checkpoint": "0143db66",
+  "argv": [
+    "go",
+    "test",
+    "-p",
+    "1",
+    "-count=1",
+    "-timeout=30s",
+    "-run",
+    "^TestFrozenThriftRWFieldQuality$",
+    "./spike/t522"
+  ],
+  "exit": 0,
+  "wall_seconds": 1.251027,
+  "terminal_digest": "sha256:bf3b0965a4d1189af67edb6d96912370b4ef292af57e67e8d3302851bd077a87",
+  "contract_digest": "sha256:2cdcac1badbfdc2668e2955a6b496546740cb61cc2b452da1905f5b935983270",
+  "harness_digest": "sha256:3b25b1b317894cc424cfc84c536ae5e4c60a6f988bd2d2f69f7f9a5d577db0a4",
+  "retries": 0,
+  "qualification": "Exactly one reviewed finite candidate measurement; no production registration, operating or signature claim.",
+  "result_digest": "sha256:fb56ce29a3a1c38a4bf999f328669f068b6245d4635152b35f8c15b08f3dd4c4"
+}

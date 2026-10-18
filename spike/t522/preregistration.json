@@ -1,0 +1,171 @@
+{
+  "schema": "t522-source-preregistration-v1",
+  "record_date": "2026-10-18",
+  "status": "AWAITING_INDEPENDENT_SOURCE_REVIEW_BEFORE_INDEX_PREPARATION",
+  "candidate_runs": 0,
+  "indexer_runs": 0,
+  "generator_runs": 0,
+  "authority_records": [
+    {
+      "path": "licenses/record.json",
+      "bytes": 2114,
+      "digest": "sha256:62fedbf99b043c47b5df5bf946843d223e3d897f7f7c2f967b2367604e76786c"
+    },
+    {
+      "path": "source-inputs.json",
+      "bytes": 4886,
+      "digest": "sha256:59d373f859659fe173e168d2557463014370ac70f2ca613b2b608af7d208cde3"
+    },
+    {
+      "path": "neutral-inputs.json",
+      "bytes": 2042,
+      "digest": "sha256:2b68da9a6854bbc1ae8ac031546f98287710dcff9d8c8187d629f11d9d6a9860"
+    },
+    {
+      "path": "source-freeze.json",
+      "bytes": 3050,
+      "digest": "sha256:9e0a7d831bc362ba934d00397de4626c4f9d0109d7c6721859eecc8e6efd0adb"
+    },
+    {
+      "path": "source-labels.jsonl",
+      "bytes": 46182,
+      "digest": "sha256:e1d795ca436c432b46a084ebfaf0703da0ea046321f59376fc66ba2c88643eeb"
+    },
+    {
+      "path": "field-witnesses.json",
+      "bytes": 12767,
+      "digest": "sha256:ee5f5b420fadf08492aeade8225d304b54d10a687ecb1fdf159da01ebc511e90"
+    },
+    {
+      "path": "gitlink-witness.json",
+      "bytes": 1341,
+      "digest": "sha256:b7fb1adb15e80d082b0808e0cbb64c0b6d50dec5ed4df98d87887528a72d36d8"
+    }
+  ],
+  "selection": {
+    "public": "One complete unchanged real bidirectional health mapper plus unchanged internal type and generated health package at Cadence98f3d45e. This deliberately selected small public population is not a full application or a generalized independent accuracy claim.",
+    "neutral": "Separate authored field/accessor/zero/nonsequential/rename/lookalike/helper/ambiguous/reflection/UTF8 controls; no generator execution or borrowed quality."
+  },
+  "source_provenance": {
+    "repository": "uber/cadence",
+    "commit": "98f3d45ec820380dadae38206753777a7417709f",
+    "idl_repository": "cadence-workflow/cadence-idl",
+    "idl_commit": "ee96c0aebffaea083bdeab66b62c7e18291045f3",
+    "gitlink": "Existing committed T221 pin retained; fresh API metadata lookup returned403 without retry. Exact external IDL/embedded Raw/SHA1 equality independently checked.",
+    "evaluator_git": "Not created. Lead must create actual source+index commits/bundles after any accepted offline preparation; upstream pins remain provenance only."
+  },
+  "recipe": {
+    "pack": "phebs.thrift.field.thriftrw",
+    "extractor": "scip-thrift-field",
+    "extractor_version": "1.4.0",
+    "generator": "Header-declared thriftrw1.34.0 on unchanged public source; no regeneration claimed. Authored controls have no compiler claim.",
+    "runtime": "Cached go.uber.org/thriftrw1.34.0, multierr1.11.0 and zap1.28.0; permissive notices retained before new source reads. No managed dependency invented.",
+    "indexer": "scip-go0.2.7, exact existing pinned tool must be rehashed before execution",
+    "input": "Root index.scip committed with exact indexed sources at actual evaluator Git commit, UTF8 bytes",
+    "identity": "SCIP package-family sha256(scheme NUL manager NUL package_name); object embedded-IDL scope.GeneratedMessage#numericID, IDs0..32767; generated service result success0 explicit convention; field/accessor rename preserves number-based object identity",
+    "tier": "exact",
+    "source_binding": "module_digest",
+    "join": "Imported thriftreflect.ThriftModule marker, Raw/SHA1 equality and module scope; embedded IDL Go names/IDs agree with generated fields and literal wire IDs; unique SCIP definition at exact generated identifier range with expected package/version/type; reference exact source span. Duplicate/uncertain joins abstain or error, never name-only substitution.",
+    "declaration_family": "T49.2 declaration family stays distinct from SCIP package lineage. External source-only IDL witnesses and ThriftModule.Package strings grant no automatic production bridge.",
+    "bounds": {
+      "index_bytes": 33554432,
+      "documents": 50000,
+      "occurrences": 500000,
+      "symbol_bytes": 8192,
+      "generated_source_bytes": 4194304
+    },
+    "registration": "None. T52.3 later, generator-specific recipe only. No shared provisional umbrella activation."
+  },
+  "labels": {
+    "path": "source-labels.jsonl",
+    "digest": "sha256:e1d795ca436c432b46a084ebfaf0703da0ea046321f59376fc66ba2c88643eeb",
+    "counts": {
+      "neutral/negative": 62,
+      "neutral/positive": 15,
+      "neutral/unsupported": 4,
+      "public/negative": 31,
+      "public/positive": 4
+    },
+    "method": "Complete source-only Go identifier census in exactly public mapper health.go and authored use.go, plus one unsupported reflection string. Manual positive identity tables derive from exact source/IDL/generated fields before any SCIP or candidate output; comments/strings omitted otherwise. Lead independently verifies spans/lines/names/IDs and negative/unsupported sites.",
+    "generated": "Generated emissions recorded separately from public/neutral quality denominators; each citation/schema/tier/family still checked.",
+    "roles": "Record raw SCIP classification counters separately; source-semantic read/write accuracy is not scored or claimed."
+  },
+  "witnesses": {
+    "path": "field-witnesses.json",
+    "digest": "sha256:ee5f5b420fadf08492aeade8225d304b54d10a687ecb1fdf159da01ebc511e90",
+    "embedded_modules": 3,
+    "field_witnesses": 9,
+    "definition_bindings": 18,
+    "rule": "Validate source-only field/accessor/IDL/wire-ID spans and digests now; after indexing require one exact real SCIP definition per binding without consulting candidate output."
+  },
+  "populations": [
+    {
+      "id": "public",
+      "evaluation_repository": "evaluation.local/t522-public",
+      "module": "github.com/uber/cadence",
+      "module_version": "v0.0.0-t522",
+      "field_lineage": "contract_scip_package_v1_7d154878e9bf2a86ee12cc1f26284c96edd999119d482f2c5cfa3ce4f133bd7b",
+      "application": [
+        "common/types/mapper/thrift/health.go"
+      ],
+      "generated": [
+        ".gen/go/health/health.go"
+      ],
+      "positive": 4,
+      "negative": 31,
+      "unsupported": 0,
+      "source_context": "Selected unchanged3Go files plus evaluator go.mod and original LICENSE/NOTICE; no source stub or full Cadence context.",
+      "index_targets": [
+        "./common/types/mapper/thrift",
+        "./common/types",
+        "./.gen/go/health"
+      ]
+    },
+    {
+      "id": "neutral",
+      "evaluation_repository": "evaluation.local/t522-neutral",
+      "module": "example.com/t522-neutral",
+      "module_version": "v0.0.0-t522",
+      "field_lineage": "contract_scip_package_v1_ffb41c3e57ead6d40d67085c6f3872f46e06d1c2fa649dca62a7e5004576e382",
+      "application": [
+        "use/use.go"
+      ],
+      "generated": [
+        "gen/packet.go",
+        "renamed/packet.go"
+      ],
+      "positive": 15,
+      "negative": 62,
+      "unsupported": 4,
+      "source_context": "Seven authored files, no compiler execution. Renamed IDL declares namespace go packet; embedded FilePath packet.thrift is provenance, not a path-guess bridge.",
+      "index_targets": [
+        "./gen",
+        "./renamed",
+        "./plain",
+        "./use"
+      ]
+    }
+  ],
+  "thresholds": {
+    "positive_identity_span_recall": 1.0,
+    "positive_identity_span_precision": 1.0,
+    "negative_false_positives": 0,
+    "unsupported_claims": 0,
+    "wrong_family_tier_binding": 0,
+    "duplicate_emissions": 0,
+    "input_digest_span_or_unknown_symbol_shape": "stop, retain first failure; do not alter frozen labels/thresholds",
+    "generated_emissions": "Report separately and check source citation/schema/family/tier/source_binding; no complete generated accuracy oracle"
+  },
+  "execution_plan": {
+    "stage1": "Independent source/license/oracle/witness checkpoint before indexing. Current stage only.",
+    "stage2": "After host-slot authorization, one90-second offline scip-go attempt per population serially, GOPROXYoff/GOSUMDBoff/GOTOOLCHAINlocal/GOWORKoff/GOMAXPROCS2; retain exact argv/tool/source/index/join/byte/doc census. Stop on missing dependency; no download or retry. No candidate scoring.",
+    "stage3": "Lead constructs evaluator source/index commits/bundles and independently reviews final file/tool/schema/package/span gates. Freeze harness/checkpoint before first measurement.",
+    "stage4": "One30-second child-free candidate measurement with exclusive first-result/terminal log; timed Extract+stream verification, preflight hashes/source/SCIP witness work outside clock. Record costs exactly; allocations/RSS only if measured."
+  },
+  "nonclaims": [
+    "No T521 Apache or T222 quality transfer",
+    "No current SCIP/candidate output or quality result exists for this leaf",
+    "No production registration, automatic declaration-family join, managed generation, operating/scale/SLO or generalized accuracy claim",
+    "Production signing pending until production key availability"
+  ]
+}

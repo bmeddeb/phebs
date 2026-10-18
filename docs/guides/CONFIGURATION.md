@@ -611,6 +611,22 @@ Map preserves standalone Atlas. Thrift and Kafka retain their own selections.
 Every selected record must match the new binary's actual implementation identity.
 
 
+### Independent caller-comparison admission (T50.2)
+
+Ordinary comparison requires an applicable signed
+`phebs.grpc.caller.comparison` claim and the independently admitted
+`phebs.grpc.caller.go` recipe. The former selects no extractor by itself.
+Withdrawing either withdraws ordinary comparison; withdrawing only comparison
+keeps Caller Map available. The first supported claim accepts two protobuf
+endpoint identities and rejects Thrift/mixed pairs as unavailable before
+publication reads. This restriction also governs mixed released/provisional
+configurations when the comparison claim is admitted.
+
+Provisional protobuf/Thrift switches retain the explicit experimental comparison
+path. Neither ordinary Caller Map nor Atlas admission enables comparison alone.
+T50.3's separate quality/operating result and production signature remain pending;
+this binding and its test keys do not constitute a production release.
+
 ### Caller Map activation and recipe admission (T47.3)
 
 Caller Map's ordinary configuration is a signed `release_selection` record for
@@ -703,6 +719,25 @@ provisional switches for the proof service: no new lock, no
 cache-invalidation path, no file read, hashing, child process, or bounded
 memory and disk cost. Activation remains gated until T47.5 promotion, with
 the T47.4 operating acceptance separate.
+
+### Signed protobuf field references (T51.2)
+
+An applicable verified `phebs.protobuf.field.go` claim `1.0.0` selects only the
+committed Open-API protobuf field reader `1.4.0-released.1`. It requires a
+repository-root committed `index.scip` declaring scip-go0.2.7/UTF8, proto3,
+protoc-gen-go1.36.11/protoc5.27.1 generated headers and exact matching source
+and descriptor field identities. The headers describe committed inputs;
+they do not attest a generator execution. Missing SCIP remains an explicit gap;
+unsupported or conflicting inputs refuse without partial facts.
+
+The pack exposes `find_proto_field_references` and `find_field_references`
+through HTTP/MCP, exact citations and immutable proofs. Use the exact
+SCIP-package lineage from permitted field evidence; a declaration lineage is a
+different family. Field 0 and Thrift require separately enabled provisional
+support. This recipe supplies no automatic identity bridge, consumers, Impact
+or compatibility product. Existing signed-selection expiry/revocation and
+restart behavior applies. T51.3 operating qualification and production signing
+remain pending; registration supplies no unsigned activation.
 
 ### Authentication
 
@@ -1530,3 +1565,57 @@ retains its existing smaller limits. Serial installation source validation has
 one five-minute deadline. These explicit installation bounds do not establish
 the 5,000-service/12-GB target. Historical exact-control ceremony launches refuse
 this configuration instead of accepting unaccounted work.
+
+### Operation Impact release selection (T54.2)
+
+The stable operation view requires its own verified
+`phebs.contract.impact.operation` claim version1.0.0, bound to
+`build_operation_impact_report@contract-impact-operation-v1`, and the actual
+released protobuf Caller Map recipe: `proto-contract@4.0.0` plus
+`grpc-caller@1.6.0-released.1`. Selection uses the existing signed release
+manifest and verification path; there is no new YAML loader or key location.
+
+Missing, expired, revoked, suspended or mismatched claims keep the HTTP route,
+MCP tool and `contract-impact-operation` capability absent. Provisional flags
+cannot substitute for either release dependency. Withdrawal of a separately
+selected Atlas product does not remove the declaration reader already admitted
+by Caller Map. Other field, comparison, WIRE and Topics selections do not
+activate or expand operation Impact. The retained experimental v2 Impact
+surface remains independently governed by its existing experimental setting.
+
+See [Exact operation Impact view](OPERATIONS.md#exact-operation-impact-view-t542)
+for endpoint identity, paging, citation and uncertainty behavior. Production
+activation/signature and the independent composed quality/operating gates
+remain separate from this registration implementation.
+
+### Independent committed Thrift field recipes (T52.3)
+
+The signed release-selection registry has independent
+`phebs.thrift.field.apache` and `phebs.thrift.field.thriftrw` recipes, each
+claim version `1.0.0`. A verified record may select either generator or both;
+adding a registry recipe alone activates nothing. No additional YAML switch
+or generator installation is required. Production signing remains pending
+until the production key is available.
+
+The initial committed input recipe is root `index.scip` from scip-go0.2.7
+with UTF8 document coordinates and exact immutable Go source bytes. Apache
+requires one supported0.14.1 compiler header and exact field-tag/SCIP binding;
+its references remain `derived`, `source_binding=none`. thriftrw requires one
+supported1.34.0 header and the existing embedded Raw/SHA1, IDL, generated
+field/wire-ID and SCIP binding; its references remain `exact`,
+`source_binding=module_digest`. A header declares an input property and does
+not prove a generator ran. No managed indexing or declaration-family bridge
+is implied.
+
+Both selections share `scip-thrift-field` and one extraction pass. Its reader
+version attests the selected set: `1.4.0-released.apache.1`,
+`1.4.0-released.thriftrw.1`, or `1.4.0-released.apache-thriftrw.1`.
+Suspending or revoking one recipe preserves the other's admission and changes
+that version. Ordinary reconciliation must publish the new selected-set
+generation before it is readable; retained former-set proofs become
+unavailable without rewriting their custody bytes.
+
+`experimental.provisional_thrift_field_extraction` retains its historical
+reader only when no signed Thrift field recipe governs that shared domain.
+Other explicitly enabled provisional domains remain independent. A signed
+Apache selection cannot inherit unsigned thriftrw evidence through this switch.

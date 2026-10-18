@@ -329,7 +329,7 @@ func TestBuildResolvedInputsAreDeterministicAndBlobBounded(t *testing.T) {
 		if err := json.Unmarshal(member.Metadata, &metadata); err != nil {
 			t.Fatal(err)
 		}
-		if member.Name != "go-module-v2.ndjson" &&
+		if member.Name != "go-module-v2.ndjson" && member.Name != ConsumerUnitMemberName &&
 			metadata.RecordSchema != ProtocolMemberRecordSchema {
 			t.Fatalf("protocol member %q schema = %q, want %q",
 				member.Name, metadata.RecordSchema, ProtocolMemberRecordSchema)
@@ -392,6 +392,7 @@ func TestBuildResolvedInputsAreDeterministicAndBlobBounded(t *testing.T) {
 	wantReads := []string{
 		resolverinput.LayoutSnapshotPath,
 		resolverinput.GeneratedFromSnapshotPath,
+		extract.ConsumerUnitSnapshotPath,
 		"go.mod",
 		"services/payments/go.mod",
 		"gen/grpc/orders_grpc.pb.go",
@@ -402,7 +403,7 @@ func TestBuildResolvedInputsAreDeterministicAndBlobBounded(t *testing.T) {
 			t.Errorf("build %d blob reads = %v, want %v", index+1, got, wantReads)
 		}
 		for _, forbidden := range []string{
-			"src/main.go", "unit-snapshot.json", "idl/proto/orders.proto",
+			"src/main.go", "idl/proto/orders.proto",
 			"idl/thrift/ledger.thrift",
 		} {
 			if slices.Contains(got, forbidden) {
@@ -1677,7 +1678,7 @@ func TestBuildReportsActualSealedCatalogCounts(t *testing.T) {
 		defer func() { _ = prepared.Discard() }()
 		state := prepared.State()
 		if observed.GenerationSHA256 != state.GenerationDigest || observed.ManifestSHA256 != state.ManifestDigest ||
-			observed.DeclarationRecords != 2 || observed.GeneratedDescriptors != 0 || len(blobs.readPaths) != 6 {
+			observed.DeclarationRecords != 2 || observed.GeneratedDescriptors != 0 || len(blobs.readPaths) != 7 {
 			t.Fatalf("native counts=%+v blob reads=%v", observed, blobs.readPaths)
 		}
 	}

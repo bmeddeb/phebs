@@ -1,0 +1,43 @@
+{
+  "release_schema_version": "1.0",
+  "release_id": "rel-phebs.protobuf.contract-1.0.0",
+  "release_version": "1.0.0",
+  "pack_id": "phebs.protobuf.contract",
+  "pack_claim_version": "1.0.0",
+  "card": {
+    "artifact_id": "protobuf-atlas-card-1.0.0.md",
+    "digest": ""
+  },
+  "manifest": {
+    "artifact_id": "protobuf-atlas-manifest-1.0.0.json",
+    "digest": ""
+  },
+  "implementation": {
+    "phebs_source_commit": "",
+    "phebs_binary_digest": "",
+    "pack_implementation_digest": "",
+    "toolchain_digest": ""
+  },
+  "referenced_artifacts_root_digest": "",
+  "validation": {
+    "artifact_id": "protobuf-atlas-validation-1.0.0.json",
+    "digest": "",
+    "applies": true,
+    "expires_at": "2027-01-15T23:59:59Z",
+    "expiry_trigger": null
+  },
+  "derived_status": "released",
+  "approved_at": "2026-10-17T00:00:00Z",
+  "approval_records": [
+    "ben-2026-10-17-bounded-integration-acceptance"
+  ],
+  "canonicalization": {
+    "algorithm": "",
+    "version": ""
+  },
+  "signature": {
+    "key_id": "",
+    "algorithm": "",
+    "value": ""
+  }
+}

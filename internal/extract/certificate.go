@@ -620,6 +620,15 @@ func BuildCoverageCertificate(
 		}
 		for _, domain := range domainList {
 			scope := certificateExtractionScope(repo, domain)
+			// Discovery precedes the first indexed HEAD. There is no exact
+			// extraction scope to query yet; preserve the visible repository
+			// as unpublished without borrowing retained evidence or outcomes.
+			if scope.Commit == "" {
+				entry.Runs = append(entry.Runs, CertificateRun{
+					Domain: domain, Status: "unpublished", UnitDigest: scope.UnitDigest,
+				})
+				continue
+			}
 			var (
 				run                *store.ExtractionRun
 				published          bool

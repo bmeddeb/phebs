@@ -1,0 +1,124 @@
+{
+  "format": "phebs-t251-canonical-v1",
+  "image": "mcr.microsoft.com/playwright@sha256:c091b21d9fae78c76e85cd4356431e9b018402f172a214fc7d7a5e9a7e29d8ac",
+  "qualification": "Local pinned-renderer comparison; not hosted CI or a release/scale claim.",
+  "runs": [
+    {
+      "phase": "author",
+      "stats": {
+        "startTime": "2026-10-18T10:19:21.608Z",
+        "duration": 12707.661,
+        "expected": 4,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "seconds": 19.056,
+      "fresh_auth_store": true,
+      "report_sha256": "e5a2ff2a5b25e6e84ce13e652b7bc7d5b0ac765a54af9340f9f74e93db184bd7",
+      "fixture_log_sha256": "4e9e2362d69d211114265e1b6fd89995ee1dd8cfce7d8ae2485e9b1a5859834d",
+      "fixture_exit_code": 0,
+      "screenshot_assertions": 12
+    },
+    {
+      "phase": "comparison",
+      "stats": {
+        "startTime": "2026-10-18T10:19:39.132Z",
+        "duration": 10987.208999999999,
+        "expected": 4,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "seconds": 15.671,
+      "fresh_auth_store": true,
+      "report_sha256": "371ff17c168086861735c9d8bad2d5f3b35e2fc99187b8910e166724e998c5b5",
+      "fixture_log_sha256": "9c8c0120dcce96ccf9433b4cd19d655a7d107950c244a39c87fb6acd418f1852",
+      "fixture_exit_code": 0,
+      "screenshot_assertions": 12
+    }
+  ],
+  "image_id": "sha256:c091b21d9fae78c76e85cd4356431e9b018402f172a214fc7d7a5e9a7e29d8ac",
+  "image_architecture": "amd64",
+  "node": "v24.18.0",
+  "playwright": "1.62.1",
+  "chromium": "Google Chrome for Testing 151.0.7922.34",
+  "source_commit": "60683660bb1b9ef542cce5e67b0efaa8f5628f2b",
+  "source_files_sha256": {
+    "documentation.go": "22b81dcea9bc9822ace36137513a83030b7edb16241f1f21e73d9c019662548d",
+    "documentation_embed.go": "7417acbca8d5cee5d6b4f9ecb0a3112c11a4d4b17ffe2fd5ebd3e0aed26773ba",
+    "cmd/phebs/serve_docs.go": "9b0e3cd8acc289ca605df4ce5b3f65eb4e1dbe3000d4f4b5a3e9c4db90890506",
+    "cmd/phebs/serve_docs_browser_test.go": "f698b2f75e1edf45c8fccc82d6b22785d76cd86aa02609b3ac921a5d0850cf49",
+    "spike/t251/canonical.config.cjs": "2b5ad60f96d3c503e21ae04da694380c19913a21c62727c96fc494cd907e3863",
+    "spike/t251/canonical.spec.cjs": "1a4844a17ca865736053f34aaee6ce3f412f06048d4acb23014632a450e5a9ac"
+  },
+  "baselines_sha256": {
+    "documentation-guide--1280--dark.png": "a39967d14a15614d42559f9cb5cc46e3f6118a61e1e0bfad7cc06fabf231cbc8",
+    "documentation-guide--1280--light.png": "a42acdd35bdfca199c101f3296db26d2d4acea774f8f6ce3ac3a971c0236eebc",
+    "documentation-guide--390--dark.png": "1685773d96b9948c74d0d22db5f560adbf42c144aad0d0cb5bc5e11881d2d7f9",
+    "documentation-guide--390--light.png": "1a66f9839e6f8145a565f792be1ffc532d8d852da75c454690b9864b8628b65b",
+    "documentation-index--1280--dark.png": "7b983c6a705f567badc59f5d20d958453a212ad496be535b8337721bd6533689",
+    "documentation-index--1280--light.png": "d5ea218a5ddd0d70e21d47be5c2e5448bd9c45c077a0aa71fb8622d31bb7061c",
+    "documentation-index--390--dark.png": "93c998b5c299c2c9bc1aa1edce874eba2df26b858dac8cd5bbbd5294e3d255cd",
+    "documentation-index--390--light.png": "05cab79626dcd9ac9d1039aacb2fccaf2c4eb273080d22b468eaf861df11edd2",
+    "documentation-repository-only--1280--dark.png": "fcde733d7906799ece3e2d9b5933152a87a95cbd19f55f3994c5460878bcc9a2",
+    "documentation-repository-only--1280--light.png": "0a23e3238500be45939ffac8424dbc31bf0da19fc7cb5fd89d8d0ba0620565c1",
+    "documentation-repository-only--390--dark.png": "41d4c6beed4d53c422b3bd0cb3cdc743b38c98f3093592d517dc84a5c1f84ab7",
+    "documentation-repository-only--390--light.png": "0027c61f43b4ebf9a32cd742cb0001f49fd2278f6b76eb191d72a198e8ab5461"
+  },
+  "pass": true,
+  "wall_seconds": 38.085,
+  "date": "2026-10-18",
+  "embedded_document_tree_sha256": "476c2846a0f05bd804f9de9f9679f96ebcbefec5bada0ec267fa858e451caf7d",
+  "embedded_files": 56,
+  "embedded_source_bytes": 6891507,
+  "scope": {
+    "routes": [
+      "documentation index",
+      "linked Getting Started guide",
+      "repository-only reference landing"
+    ],
+    "widths": [
+      1280,
+      390
+    ],
+    "color_schemes": [
+      "light",
+      "dark"
+    ],
+    "screenshots": 12,
+    "masks": [],
+    "density": "not applicable to the documentation shell",
+    "actual_auth_session_store": true,
+    "api_interception": false
+  },
+  "comparison_policy": {
+    "workers": 1,
+    "retries": 0,
+    "max_diff_pixel_ratio": 0.001,
+    "animations": "disabled",
+    "device_scale_factor": 1,
+    "locale": "en-US",
+    "timezone": "UTC",
+    "fresh_fixture_each_pass": true
+  },
+  "orchestrator_sha256": "2c6f11d61c73937fdcb9f796a4c5fb1b6f3a01af809d488d4a4a61f5d3105a76",
+  "retained_diagnostics": "Temporary source-free author/comparison reports and fixture/browser logs under phebs-t251-canonical-n3q0veht; digests above. No failed attempt occurred in this bounded run.",
+  "teardown": {
+    "author_and_comparison_fixture_exit_code": 0,
+    "both_http_servers_joined": true,
+    "both_surreal_children_joined": true,
+    "browser_contexts_and_runner_joined": true,
+    "dedicated_ssh_tunnels_joined": true,
+    "renderer_container_removed": true,
+    "matching_phebs_test_or_surreal_processes_afterward": 0,
+    "vm_cache_preserved_for_next_leaf": true
+  },
+  "review": "Authored PNG visual review pending lead; the comparison result does not replace review.",
+  "lead_visual_review": {
+    "date": "2026-10-18",
+    "captures_reviewed": 12,
+    "result": "accepted",
+    "notes": "Index, Getting Started and repository-only landing in both themes at1280/390. Local table wrapping, readable type, explicit exclusions and no document overflow; no pixel editing."
+  }
+}

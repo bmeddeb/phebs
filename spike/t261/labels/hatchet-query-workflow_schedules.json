@@ -1,0 +1,517 @@
+{
+  "format": "t261-source-labels-v1",
+  "dialect": "postgresql",
+  "repository": "hatchet-dev/hatchet",
+  "commit": "559b5021e418f12ded175f950b709b7fa66be5a5",
+  "source_path": "pkg/repository/sqlcv1/workflow_schedules.sql",
+  "source_sha256": "1cfa31155de3363fecd65e8dac42e10ff07e1b8e9be1a4d2b7522010e74b60e9",
+  "plane": "sql-query",
+  "statements": [
+    {
+      "id": "ListScheduledWorkflows",
+      "start": 0,
+      "end": 1813,
+      "sha256": "73e9f023d669bf0a235df08a3e8d449e9861fb126549ef1f0b4175abf008cee0",
+      "syntax_class": "select-join",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "WorkflowTriggerScheduledRef",
+          "quoted": true,
+          "start": 314,
+          "end": 343,
+          "sha256": "7ebb0984cfdf303664cc6d38f8fc462c846d913426f6a327cefb0a59c791863c",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowTriggerScheduledRef"
+        },
+        {
+          "name": "WorkflowVersion",
+          "quoted": true,
+          "start": 351,
+          "end": 368,
+          "sha256": "8a255575dd028ac5fd12ce28410702aff77152c629fcfcd916f60848d9570842",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowVersion"
+        },
+        {
+          "name": "Workflow",
+          "quoted": true,
+          "start": 401,
+          "end": 411,
+          "sha256": "5fa5c70451b7823d34a7160c73497c84878d6e262570cc2ace863b0e95d467a2",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "Workflow"
+        },
+        {
+          "name": "WorkflowRunTriggeredBy",
+          "quoted": true,
+          "start": 451,
+          "end": 475,
+          "sha256": "f634bbe34599709adf5948732c9ce735dc83219c8b2cedbde18060f79d8f2fe9",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowRunTriggeredBy"
+        },
+        {
+          "name": "WorkflowRun",
+          "quoted": true,
+          "start": 518,
+          "end": 531,
+          "sha256": "651d54f8707a586a4c2c5f0e288bc1f802a63573e7b39f7f4c71cec0c3694243",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowRun"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "CountScheduledWorkflows",
+      "start": 1814,
+      "end": 2979,
+      "sha256": "0bf9d461843dcd4432ea4a9a73c7d699410263c97272bf0ad495f2bdc3195785",
+      "syntax_class": "select-join",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "WorkflowTriggerScheduledRef",
+          "quoted": true,
+          "start": 1873,
+          "end": 1902,
+          "sha256": "7ebb0984cfdf303664cc6d38f8fc462c846d913426f6a327cefb0a59c791863c",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowTriggerScheduledRef"
+        },
+        {
+          "name": "WorkflowVersion",
+          "quoted": true,
+          "start": 1910,
+          "end": 1927,
+          "sha256": "8a255575dd028ac5fd12ce28410702aff77152c629fcfcd916f60848d9570842",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowVersion"
+        },
+        {
+          "name": "Workflow",
+          "quoted": true,
+          "start": 1960,
+          "end": 1970,
+          "sha256": "5fa5c70451b7823d34a7160c73497c84878d6e262570cc2ace863b0e95d467a2",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "Workflow"
+        },
+        {
+          "name": "WorkflowRunTriggeredBy",
+          "quoted": true,
+          "start": 2010,
+          "end": 2034,
+          "sha256": "f634bbe34599709adf5948732c9ce735dc83219c8b2cedbde18060f79d8f2fe9",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowRunTriggeredBy"
+        },
+        {
+          "name": "WorkflowRun",
+          "quoted": true,
+          "start": 2077,
+          "end": 2090,
+          "sha256": "651d54f8707a586a4c2c5f0e288bc1f802a63573e7b39f7f4c71cec0c3694243",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowRun"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "UpdateScheduledWorkflow",
+      "start": 2980,
+      "end": 3132,
+      "sha256": "319e73c7a2fb47d08f123e9c38c09613739cd36fa027249e7ecea2ed49c53ce7",
+      "syntax_class": "update",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "WorkflowTriggerScheduledRef",
+          "quoted": true,
+          "start": 3026,
+          "end": 3055,
+          "sha256": "7ebb0984cfdf303664cc6d38f8fc462c846d913426f6a327cefb0a59c791863c",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowTriggerScheduledRef"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "DeleteScheduledWorkflow",
+      "start": 3133,
+      "end": 3250,
+      "sha256": "0fdd01ba7beabddcb316be674b814bebd7c8ddecf7f4b96c47f148d1b57cc71f",
+      "syntax_class": "delete",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "WorkflowTriggerScheduledRef",
+          "quoted": true,
+          "start": 3184,
+          "end": 3213,
+          "sha256": "7ebb0984cfdf303664cc6d38f8fc462c846d913426f6a327cefb0a59c791863c",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowTriggerScheduledRef"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "GetScheduledWorkflowMetaByIds",
+      "start": 3251,
+      "end": 3678,
+      "sha256": "b14c9eac0795b0d55c2aba4b5cddd79e6d7a25a669e328d798311abad0d10538",
+      "syntax_class": "select-subquery",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "WorkflowRunTriggeredBy",
+          "quoted": true,
+          "start": 3374,
+          "end": 3398,
+          "sha256": "f634bbe34599709adf5948732c9ce735dc83219c8b2cedbde18060f79d8f2fe9",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowRunTriggeredBy"
+        },
+        {
+          "name": "WorkflowTriggerScheduledRef",
+          "quoted": true,
+          "start": 3474,
+          "end": 3503,
+          "sha256": "7ebb0984cfdf303664cc6d38f8fc462c846d913426f6a327cefb0a59c791863c",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowTriggerScheduledRef"
+        },
+        {
+          "name": "WorkflowVersion",
+          "quoted": true,
+          "start": 3511,
+          "end": 3528,
+          "sha256": "8a255575dd028ac5fd12ce28410702aff77152c629fcfcd916f60848d9570842",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowVersion"
+        },
+        {
+          "name": "Workflow",
+          "quoted": true,
+          "start": 3561,
+          "end": 3571,
+          "sha256": "5fa5c70451b7823d34a7160c73497c84878d6e262570cc2ace863b0e95d467a2",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "Workflow"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "BulkDeleteScheduledWorkflows",
+      "start": 3679,
+      "end": 3990,
+      "sha256": "452636dd0497b3e296c816c02ac2b881f2f110bbf9b004cff35e2726574c37da",
+      "syntax_class": "delete-using",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "WorkflowTriggerScheduledRef",
+          "quoted": true,
+          "start": 3735,
+          "end": 3764,
+          "sha256": "7ebb0984cfdf303664cc6d38f8fc462c846d913426f6a327cefb0a59c791863c",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowTriggerScheduledRef"
+        },
+        {
+          "name": "WorkflowVersion",
+          "quoted": true,
+          "start": 3773,
+          "end": 3790,
+          "sha256": "8a255575dd028ac5fd12ce28410702aff77152c629fcfcd916f60848d9570842",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowVersion"
+        },
+        {
+          "name": "Workflow",
+          "quoted": true,
+          "start": 3794,
+          "end": 3804,
+          "sha256": "5fa5c70451b7823d34a7160c73497c84878d6e262570cc2ace863b0e95d467a2",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "Workflow"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "BulkUpdateScheduledWorkflows",
+      "start": 3991,
+      "end": 4687,
+      "sha256": "5f1aef7f852f61abd5c7f0806ac0afb9c832fc6c958759b171b888afe85f6bad",
+      "syntax_class": "update-cte",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "WorkflowTriggerScheduledRef",
+          "quoted": true,
+          "start": 4280,
+          "end": 4309,
+          "sha256": "7ebb0984cfdf303664cc6d38f8fc462c846d913426f6a327cefb0a59c791863c",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowTriggerScheduledRef"
+        },
+        {
+          "name": "WorkflowVersion",
+          "quoted": true,
+          "start": 4358,
+          "end": 4375,
+          "sha256": "8a255575dd028ac5fd12ce28410702aff77152c629fcfcd916f60848d9570842",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowVersion"
+        },
+        {
+          "name": "Workflow",
+          "quoted": true,
+          "start": 4379,
+          "end": 4389,
+          "sha256": "5fa5c70451b7823d34a7160c73497c84878d6e262570cc2ace863b0e95d467a2",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "Workflow"
+        },
+        {
+          "name": "WorkflowRunTriggeredBy",
+          "quoted": true,
+          "start": 4595,
+          "end": 4619,
+          "sha256": "f634bbe34599709adf5948732c9ce735dc83219c8b2cedbde18060f79d8f2fe9",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowRunTriggeredBy"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "CreateWorkflowTriggerScheduledRefForWorkflow",
+      "start": 4688,
+      "end": 5557,
+      "sha256": "e003508484d82a15a5e8a36238d9ef154a439686cd5931e682a597470c38dd5f",
+      "syntax_class": "insert-values-cte",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "WorkflowVersion",
+          "quoted": true,
+          "start": 4793,
+          "end": 4810,
+          "sha256": "8a255575dd028ac5fd12ce28410702aff77152c629fcfcd916f60848d9570842",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowVersion"
+        },
+        {
+          "name": "WorkflowTriggers",
+          "quoted": true,
+          "start": 4968,
+          "end": 4986,
+          "sha256": "47bcc53239c2f68af37436b840a49d9f88dfbb9bec67a44042453815032c15fe",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowTriggers"
+        },
+        {
+          "name": "WorkflowTriggerScheduledRef",
+          "quoted": true,
+          "start": 5109,
+          "end": 5138,
+          "sha256": "7ebb0984cfdf303664cc6d38f8fc462c846d913426f6a327cefb0a59c791863c",
+          "access": "write",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowTriggerScheduledRef"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "ListCronWorkflows",
+      "start": 5558,
+      "end": 7484,
+      "sha256": "eb295d450aca439fe4ac28312fdc27122b780698797bbf31d535bc01e43b093c",
+      "syntax_class": "select-cte",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "WorkflowVersion",
+          "quoted": true,
+          "start": 5821,
+          "end": 5838,
+          "sha256": "8a255575dd028ac5fd12ce28410702aff77152c629fcfcd916f60848d9570842",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowVersion"
+        },
+        {
+          "name": "Workflow",
+          "quoted": true,
+          "start": 5876,
+          "end": 5886,
+          "sha256": "5fa5c70451b7823d34a7160c73497c84878d6e262570cc2ace863b0e95d467a2",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "Workflow"
+        },
+        {
+          "name": "WorkflowTriggers",
+          "quoted": true,
+          "start": 6323,
+          "end": 6341,
+          "sha256": "47bcc53239c2f68af37436b840a49d9f88dfbb9bec67a44042453815032c15fe",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowTriggers"
+        },
+        {
+          "name": "WorkflowTriggerCronRef",
+          "quoted": true,
+          "start": 6419,
+          "end": 6443,
+          "sha256": "580b683ed273705b8c38c325cdb62ee32ba761c335f73f6dac6fb829cdef18be",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowTriggerCronRef"
+        },
+        {
+          "name": "Workflow",
+          "quoted": true,
+          "start": 6483,
+          "end": 6493,
+          "sha256": "5fa5c70451b7823d34a7160c73497c84878d6e262570cc2ace863b0e95d467a2",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "Workflow"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "CountCronWorkflows",
+      "start": 7485,
+      "end": 8868,
+      "sha256": "afa055675f3e5cce5003dc3c6f4459313a77ae17cd55f3d5a6dbe837f5a320cb",
+      "syntax_class": "select-cte",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "WorkflowVersion",
+          "quoted": true,
+          "start": 7748,
+          "end": 7765,
+          "sha256": "8a255575dd028ac5fd12ce28410702aff77152c629fcfcd916f60848d9570842",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowVersion"
+        },
+        {
+          "name": "Workflow",
+          "quoted": true,
+          "start": 7803,
+          "end": 7813,
+          "sha256": "5fa5c70451b7823d34a7160c73497c84878d6e262570cc2ace863b0e95d467a2",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "Workflow"
+        },
+        {
+          "name": "WorkflowTriggers",
+          "quoted": true,
+          "start": 8078,
+          "end": 8096,
+          "sha256": "47bcc53239c2f68af37436b840a49d9f88dfbb9bec67a44042453815032c15fe",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowTriggers"
+        },
+        {
+          "name": "WorkflowTriggerCronRef",
+          "quoted": true,
+          "start": 8174,
+          "end": 8198,
+          "sha256": "580b683ed273705b8c38c325cdb62ee32ba761c335f73f6dac6fb829cdef18be",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowTriggerCronRef"
+        },
+        {
+          "name": "Workflow",
+          "quoted": true,
+          "start": 8238,
+          "end": 8248,
+          "sha256": "5fa5c70451b7823d34a7160c73497c84878d6e262570cc2ace863b0e95d467a2",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "Workflow"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "DeleteWorkflowTriggerCronRef",
+      "start": 8869,
+      "end": 8978,
+      "sha256": "68a7cfba93fa12cc3da7aa7ed0359e0a9f43f4457dd562d95066206d5abe3a62",
+      "syntax_class": "delete",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "WorkflowTriggerCronRef",
+          "quoted": true,
+          "start": 8925,
+          "end": 8949,
+          "sha256": "580b683ed273705b8c38c325cdb62ee32ba761c335f73f6dac6fb829cdef18be",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowTriggerCronRef"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    }
+  ],
+  "inventory_notes": [
+    "Entire selected file labelled under preregistered metadata-only stratified sample; no inference to the 30 unsampled query files.",
+    "Exactly one committed sqlc manifest selects all five declarations inputs; names stay quoted/unquoted dialect-specific. Generated sql.go supplies no primary usage."
+  ]
+}

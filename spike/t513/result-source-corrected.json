@@ -1,0 +1,275 @@
+{
+  "schema": "phebs-t513-finite-operating-v1",
+  "date": "2026-10-18",
+  "outcome": "stopped_no_retry",
+  "reads": [
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.008633,
+      "bytes": 1121,
+      "raw_digest": "sha256:acd9884b9411bea6e12ccc5e245250c1e01a933f34517f94044cb8b2682110f4"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.011681,
+      "bytes": 1121,
+      "raw_digest": "sha256:acd9884b9411bea6e12ccc5e245250c1e01a933f34517f94044cb8b2682110f4"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.009024,
+      "bytes": 1121,
+      "raw_digest": "sha256:acd9884b9411bea6e12ccc5e245250c1e01a933f34517f94044cb8b2682110f4"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.005965,
+      "bytes": 1121,
+      "raw_digest": "sha256:acd9884b9411bea6e12ccc5e245250c1e01a933f34517f94044cb8b2682110f4"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.008348,
+      "bytes": 1121,
+      "raw_digest": "sha256:acd9884b9411bea6e12ccc5e245250c1e01a933f34517f94044cb8b2682110f4"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 500,
+      "seconds": 0.00207,
+      "bytes": 304,
+      "raw_digest": "sha256:de06b87223a3c382d07af5eea46342c92c0cdf9528a3007f8b63dd6c7e4c1b72"
+    }
+  ],
+  "phases": [
+    {
+      "phase": "field-baseline",
+      "ready_seconds": 6.98,
+      "operating": {
+        "rss_samples": 7,
+        "sampled_max_tree_rss_bytes": 213204992,
+        "sampled_max_descendants": 1,
+        "minimum_available_physical_bytes": 7839268864,
+        "physical_samples": 2,
+        "physical_formula": "page_size*(free+inactive+speculative); compressor and swap excluded",
+        "sampled_max_data_allocated_bytes": 348160,
+        "rss_cadence_seconds": 0.2,
+        "host_disk_cadence_seconds": 1,
+        "qualification": "Sequential native samples after HTTP readiness; not an atomic tree snapshot, transient peak or hard enforcement. Startup before HTTP readiness and teardown are not RSS-sampled. No swap credit.",
+        "ownership": {
+          "sampling_thread_joined": true,
+          "host_children": [
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            }
+          ],
+          "forced_sampling_cancellation": false,
+          "observer": {
+            "exit_code": 0,
+            "joined": true,
+            "forced": false
+          }
+        }
+      },
+      "terminal": {
+        "outcome": "success",
+        "exit_code": 0,
+        "teardown": "clean",
+        "wall_seconds": 8.686
+      },
+      "owned_pgid": 58815,
+      "server_group_drained": true
+    }
+  ],
+  "production_signing": "pending; no production key or production signature",
+  "qualification": "Finite selected public source conformance and measured Darwin local envelope only; production signing pending. No dedicated field UI/browser claim.",
+  "host": {
+    "sysname": "Darwin",
+    "machine": "arm64",
+    "cpu_count": 10,
+    "physical_memory_bytes": 25769803776
+  },
+  "headroom_preflight": {
+    "available_physical_bytes": 8026177536,
+    "page_size": 16384,
+    "pages": {
+      "free": 9802,
+      "inactive": 392016,
+      "speculative": 88061
+    },
+    "formula": "page_size*(free+inactive+speculative); compressor and swap excluded"
+  },
+  "free_disk_preflight_bytes": 230574301184,
+  "bounds": {
+    "complete_native_seconds": 180,
+    "startup_seconds": 30,
+    "publication_seconds": 90,
+    "cold_request_seconds": 2,
+    "warm_request_seconds": 1,
+    "parallel_requests": 8,
+    "http_response_bytes": 1048576,
+    "process_tree_sampled_max_rss_bytes": 2147483648,
+    "minimum_available_physical_headroom_bytes": 4294967296,
+    "minimum_free_disk_bytes": 2147483648,
+    "derived_allocated_disk_bytes": 536870912,
+    "source_blobs_read_per_citation": 1,
+    "repositories": 1
+  },
+  "input_censuses": [
+    {
+      "commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+      "tree": "ae63dc5eac24e67584f5024ac14d7bb0e7ba76e8",
+      "files": 8,
+      "bytes": 174204,
+      "census_digest": "sha256:1ffee62e455e0e893671f5ad51fa1f2130b0af850f5eae878bab066536d15d6c"
+    },
+    {
+      "commit": "cd72bf6914988aed1974bd8bfcc744f4d08ccfd2",
+      "tree": "b4d6c7366ce97329bd87a8b81be50e94ffd917f7",
+      "files": 8,
+      "bytes": 174283,
+      "census_digest": "sha256:d8621c99cb7995625778763999fc528aba881f82347a7cb12e6c7df31cf8ba3a"
+    }
+  ],
+  "plan_digest": "sha256:71f2d2df416332ed19cbeb8d337327e1e5d7f72593eaeed0e70f15fd169b3268",
+  "binding_digest": "sha256:96243cd3a143eb2badccbdcd287308ed31112d562c6172e028801b8eca21083e",
+  "source_commit": "8a70fef5f60411f31d210efd52ab4dcd79385549",
+  "binary_metadata": "/tmp/phebs-main-8a70-native-qualification/phebs: go1.26.5\n\tpath\tgithub.com/bmeddeb/phebs/cmd/phebs\n\tmod\tgithub.com/bmeddeb/phebs\tv0.2.1-0.20261018114706-8a70fef5f604\t\n\tdep\tgithub.com/RoaringBitmap/roaring/v2\tv2.19.0\th1:zsWtVE+biht4eVl0YDLvykUqGkftR3Qc5UCbeKB4UQ4=\n\tdep\tgithub.com/alexedwards/scs/v2\tv2.9.0\th1:xa05mVpwTBm1iLeTMNFfAWpKUm4fXAW7CeAViqBVS90=\n\tdep\tgithub.com/beorn7/perks\tv1.0.1\th1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=\n\tdep\tgithub.com/bits-and-blooms/bitset\tv1.24.4\th1:95H15Og1clikBrKr/DuzMXkQzECs1M6hhoGXLwLQOZE=\n\tdep\tgithub.com/bmatcuk/doublestar/v4\tv4.10.0\th1:zU9WiOla1YA122oLM6i4EXvGW62DvKZVxIe6TYWexEs=\n\tdep\tgithub.com/bufbuild/protocompile\tv0.14.2-0.20260716165721-bb5762d29672\th1:6xykiXQPoF/hhOjAhwiHQ0kgcAvrDZw0Tjl1VQkpu5c=\n\tdep\tgithub.com/cespare/xxhash/v2\tv2.3.0\th1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=\n\tdep\tgithub.com/cockroachdb/errors\tv1.11.3\th1:5bA+k2Y6r+oz/6Z/RFlNeVCesGARKuC6YymtcDrbC/I=\n\tdep\tgithub.com/cockroachdb/logtags\tv0.0.0-20241215232642-bb51bb14a506\th1:ASDL+UJcILMqgNeV5jiqR4j+sTuvQNHdf2chuKj1M5k=\n\tdep\tgithub.com/cockroachdb/redact\tv1.1.5\th1:u1PMllDkdFfPWaNGMyLD1+so+aq3uUItthCFqzwPJ30=\n\tdep\tgithub.com/coreos/go-oidc/v3\tv3.16.0\th1:qRQUCFstKpXwmEjDQTIbyY/5jF00+asXzSkmkoa/mow=\n\tdep\tgithub.com/danielgtaylor/huma/v2\tv2.38.0\th1:fb0WZCatnaiHLphMQDDWDjygNxfMkX/ENma3QsRl7vY=\n\tdep\tgithub.com/dustin/go-humanize\tv1.0.1\th1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkpeCY=\n\tdep\tgithub.com/fatih/color\tv1.19.0\th1:Zp3PiM21/9Ld6FzSKyL5c/BULoe/ONr9KlbYVOfG8+w=\n\tdep\tgithub.com/fsnotify/fsnotify\tv1.8.0\th1:dAwr6QBTBZIkG8roQaJjGof0pp0EeF+tNV7YBP3F/8M=\n\tdep\tgithub.com/fxamacker/cbor/v2\tv2.9.2\th1:X4Ksno9+x3cz0TZv69ec1hxP/+tymuR8PXQJyDwfh78=\n\tdep\tgithub.com/getsentry/sentry-go\tv0.31.1\th1:ELVc0h7gwyhnXHDouXkhqTFSO5oslsRDk0++eyE0KJ4=\n\tdep\tgithub.com/go-enry/go-enry/v2\tv2.9.6\th1:np63eOtMV56zfYDHnFVgpEVOk8fr2kmylcMnAZUDbSs=\n\tdep\tgithub.com/go-jose/go-jose/v4\tv4.1.3\th1:CVLmWDhDVRa6Mi/IgCgaopNosCaHz7zrMeF9MlZRkrs=\n\tdep\tgithub.com/gofrs/flock\tv0.13.0\th1:95JolYOvGMqeH31+FC7D2+uULf6mG61mEZ/A8dRYMzw=\n\tdep\tgithub.com/gofrs/uuid\tv4.4.0+incompatible\th1:3qXRTX8/NbyulANqlc0lchS1gqAVxRgsuW1YrTJupqA=\n\tdep\tgithub.com/gogo/protobuf\tv1.3.2\th1:Ov1cvc58UF3b5XjBnZv7+opcTcQFZebYjWzi34vdm4Q=\n\tdep\tgithub.com/google/go-cmp\tv0.7.0\th1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=\n\tdep\tgithub.com/google/jsonschema-go\tv0.4.3\th1:/DBOLZTfDow7pe2GmaJNhltueGTtDKICi8V8p+DQPd0=\n\tdep\tgithub.com/google/uuid\tv1.6.0\th1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=\n\tdep\tgithub.com/gorilla/websocket\tv1.5.3\th1:saDtZ6Pbx/0u+bgYQ3q96pZgCzfhKXGPqt7kZ72aNNg=\n\tdep\tgithub.com/grafana/regexp\tv0.0.0-20240607082908-2cb410fa05da\th1:BML5sNe+bw2uO8t8cQSwe5QhvoP04eHPF7bnaQma0Kw=\n\tdep\tgithub.com/grpc-ecosystem/go-grpc-middleware/v2\tv2.3.3\th1:B+8ClL/kCQkRiU82d9xajRPKYMrB7E0MbtzWVi1K4ns=\n\tdep\tgithub.com/kr/pretty\tv0.3.1\th1:flRD4NNwYAUpkphVc1HcthR4KEIFJ65n8Mw5qdRn3LE=\n\tdep\tgithub.com/kr/text\tv0.2.0\th1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=\n\tdep\tgithub.com/mattn/go-colorable\tv0.1.15\th1:+u9SLTRGnXv73cEsnsmoZBom+dMU88B2M0aDcWy0/jY=\n\tdep\tgithub.com/mattn/go-isatty\tv0.0.23\th1:cYwCQTQf3HB6xUC+BtyCLZNr7IzbOmoZbmssVNzSyiQ=\n\tdep\tgithub.com/modelcontextprotocol/go-sdk\tv1.6.1\th1:0zOSupjKUxPKSocPT1Wtago+mUHU2/uZ4xSOY0FGReU=\n\tdep\tgithub.com/mschoch/smat\tv0.2.0\th1:8imxQsjDm8yFEAVBe7azKmKSgzSkZXDuKkSq9374khM=\n\tdep\tgithub.com/munnerz/goautoneg\tv0.0.0-20191010083416-a7dc8b61c822\th1:C3w9PqII01/Oq1c1nUAm88MOHcQC9l5mIlSMApZMrHA=\n\tdep\tgithub.com/opentracing/opentracing-go\tv1.2.0\th1:uEJPy/1a5RIPAJ0Ov+OIO8OxWu77jEv+1B0VhjKrZUs=\n\tdep\tgithub.com/pkg/errors\tv0.9.1\th1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=\n\tdep\tgithub.com/prometheus/client_golang\tv1.23.2\th1:Je96obch5RDVy3FDMndoUsjAhG5Edi49h0RJWRi/o0o=\n\tdep\tgithub.com/prometheus/client_model\tv0.6.2\th1:oBsgwpGs7iVziMvrGhE53c/GrLUsZdHnqNwqPLxwZyk=\n\tdep\tgithub.com/prometheus/common\tv0.66.1\th1:h5E0h5/Y8niHc5DlaLlWLArTQI7tMrsfQjHV+d9ZoGs=\n\tdep\tgithub.com/rogpeppe/go-internal\tv1.14.1\th1:UQB4HGPB6osV0SQTLymcB4TgvyWu6ZyliaW0tI/otEQ=\n\tdep\tgithub.com/rs/xid\tv1.6.0\th1:fV591PaemRlL6JfRxGDEPl69wICngIQ3shQtzfy2gxU=\n\tdep\tgithub.com/scip-code/scip/bindings/go/scip\tv0.9.0\th1:C0LVhTl9Gw+2UC4d7RZdvB0iWUkaOyRA1fQW1CrhsMA=\n\tdep\tgithub.com/segmentio/asm\tv1.2.1\th1:DTNbBqs57ioxAD4PrArqftgypG4/qNpXoJx8TVXxPR0=\n\tdep\tgithub.com/segmentio/encoding\tv0.5.4\th1:OW1VRern8Nw6ITAtwSZ7Idrl3MXCFwXHPgqESYfvNt0=\n\tdep\tgithub.com/sourcegraph/beaut\tv0.0.0-20240611013027-627e4c25335a\th1:j/CQ27s679M9wRGBRJYyXGrfkYuQA6VMnD7R08mHD9c=\n\tdep\tgithub.com/sourcegraph/go-ctags\tv0.0.0-20250729094530-349a251d78d8\th1:hpCD/FvbXLR7/034fKD0CQ8LmT4zoQfT2DzJIjqMzUI=\n\tdep\tgithub.com/sourcegraph/log\tv0.0.0-20241024013702-574f7079c888\th1:9PUH8Hn8mVhPTtRKqot1HHsbLRDP0H2A+FSyuRumP2Q=\n\tdep\tgithub.com/sourcegraph/zoekt\tv0.0.0-20260709064101-33f1f18af292\th1:HsoQyVl9olsjSqA0YddekTbCJOsfn9bUeu//bLg6fa8=\n\tdep\tgithub.com/surrealdb/surrealdb.go\tv1.5.1\th1:5uyGYkwjO9p3UEdRBroWGhw5PpLuJorenmeB9GtGWKo=\n\tdep\tgithub.com/tetratelabs/wazero\tv1.12.0\th1:DuWcpNu/FzgEXgGBDp8J1Spc+CWOvvtvVyjKlaZopYU=\n\tdep\tgithub.com/wasilibs/go-re2\tv1.10.0\th1:vQZEBYZOCA9jdBMmrO4+CvqyCj0x4OomXTJ4a5/urQ0=\n\tdep\tgithub.com/wasilibs/wazero-helpers\tv0.0.0-20240620070341-3dff1577cd52\th1:OvLBa8SqJnZ6P+mjlzc2K7PM22rRUPE1x32G9DTPrC4=\n\tdep\tgithub.com/x448/float16\tv0.8.4\th1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=\n\tdep\tgithub.com/yosida95/uritemplate/v3\tv3.0.2\th1:Ed3Oyj9yrmi9087+NczuL5BwkIc4wvTb5zIM+UJPGz4=\n\tdep\tgithub.com/yuin/goldmark\tv1.4.13\th1:fVcFKWvrslecOb/tg+Cc05dkeYx540o0FuFt3nUVDoE=\n\tdep\tgo.uber.org/atomic\tv1.11.0\th1:ZvwS0R+56ePWxUNi+Atn9dWONBPp/AUETXlHW0DxSjE=\n\tdep\tgo.uber.org/multierr\tv1.11.0\th1:blXXJkSxSSfBVBlC76pxqeO+LN3aDfLQo+309xJstO0=\n\tdep\tgo.uber.org/thriftrw\tv1.34.0\th1:F6aIyIg6B1+fx7aiylVyqDdTG8mtLQfREfOdlm6u+mI=\n\tdep\tgo.uber.org/zap\tv1.28.0\th1:IZzaP1Fv73/T/pBMLk4VutPl36uNC+OSUh3JLG3FIjo=\n\tdep\tgo.yaml.in/yaml/v2\tv2.4.2\th1:DzmwEr2rDGHl7lsFgAHxmNz/1NlQ7xLIrlN2h5d1eGI=\n\tdep\tgolang.org/x/crypto\tv0.54.0\th1:YLIA59K4fiNzHzjnZt2tUJQjQtUWfWbeHBqKtk3eScw=\n\tdep\tgolang.org/x/mod\tv0.38.0\th1:MECBjubtXD7yj4HrhIUcywNaGeNVUdfVnxmPajOk4yk=\n\tdep\tgolang.org/x/net\tv0.57.0\th1:K5+3DljvIuDG9/Jv9rvyMywYNFCQ9RSUY6OOTTkT+tE=\n\tdep\tgolang.org/x/oauth2\tv0.36.0\th1:peZ/1z27fi9hUOFCAZaHyrpWG5lwe0RJEEEeH0ThlIs=\n\tdep\tgolang.org/x/sync\tv0.22.0\th1:SZjpbeLmrCk4xhRSZFNZW5gFUeCeFgjekvI/+gfScek=\n\tdep\tgolang.org/x/sys\tv0.47.0\th1:o7XGOvZQCADBQQ4Y7VNq2dRWQR7JmOUW8Kxx4ZsNgWs=\n\tdep\tgolang.org/x/text\tv0.40.0\th1:Ub2Z6/xjgF1WrYQz2nuITOEegKFtiIy+rieRJ5lHZKs=\n\tdep\tgoogle.golang.org/genproto/googleapis/rpc\tv0.0.0-20260715232425-e75dac1f907d\th1:Jkpk39hlTZOIp3RbfvNX9R8Hv+Sw0X89nlU/xFOErsc=\n\tdep\tgoogle.golang.org/grpc\tv1.80.0\th1:Xr6m2WmWZLETvUNvIUmeD5OAagMw3FiKmMlTdViWsHM=\n\tdep\tgoogle.golang.org/protobuf\tv1.36.11\th1:fV6ZwhNocDyBLK0dj+fg8ektcVegBBuEolpbTQyBNVE=\n\tdep\tgopkg.in/yaml.v3\tv3.0.1\th1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=\n\tbuild\t-buildmode=exe\n\tbuild\t-compiler=gc\n\tbuild\t-tags=ui\n\tbuild\t-trimpath=true\n\tbuild\tCGO_ENABLED=1\n\tbuild\tGOARCH=arm64\n\tbuild\tGOOS=darwin\n\tbuild\tGOARM64=v8.0\n\tbuild\tvcs=git\n\tbuild\tvcs.revision=8a70fef5f60411f31d210efd52ab4dcd79385549\n\tbuild\tvcs.time=2026-10-18T11:47:06Z\n\tbuild\tvcs.modified=false\n",
+  "binary_digest": "sha256:7dab45a9011c60132a80381933242705e44da19b2712421ed4361b67dcca19be",
+  "executed_tool_bindings": {
+    "go": {
+      "path": "/opt/homebrew/bin/go",
+      "resolved_path": "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+      "bytes": 14500160,
+      "sha256": "sha256:3925fc3221ac440ebf7c35361ff663bed0c7bdb2e0a157b75fe993607ffe0a19",
+      "version": "go1.26.5",
+      "version_evidence": "go version go1.26.5 darwin/arm64"
+    },
+    "git": {
+      "path": "/usr/bin/git",
+      "resolved_path": "/usr/bin/git",
+      "bytes": 118640,
+      "sha256": "sha256:b8763cf250e607a778bb4603cecb5b90338814d0a3dfcba0d57b1de242f610e9",
+      "version_evidence": "git version 2.54.0 (Apple Git-157)"
+    },
+    "zoekt_git_index": {
+      "path": "/private/tmp/phebs-main-8a70-native-qualification/zoekt-git-index",
+      "resolved_path": "/private/tmp/phebs-main-8a70-native-qualification/zoekt-git-index",
+      "bytes": 39081090,
+      "sha256": "sha256:dd216b7e4df21b956a8a3461108ac81ee6cb700799a3decf9c739af2ba003c4d",
+      "version": "same-main-go.mod",
+      "version_evidence": "helper-build-receipt.json"
+    },
+    "focused_index": {
+      "path": "/private/tmp/phebs-main-8a70-native-qualification/phebs-focused-index",
+      "resolved_path": "/private/tmp/phebs-main-8a70-native-qualification/phebs-focused-index",
+      "bytes": 27295666,
+      "sha256": "sha256:701d83e026ac926d3e5d92a948a68c346c11335ce83c37c31bd62207beb0d8b5",
+      "version": "same-main-go.mod",
+      "version_evidence": "helper-build-receipt.json"
+    },
+    "buf": {
+      "path": "/Users/ben/.codex/worktrees/t445-header/phebs.com/bin/buf",
+      "resolved_path": "/Users/ben/.codex/worktrees/t445-header/phebs.com/bin/buf",
+      "bytes": 77461554,
+      "sha256": "sha256:691b8635ab9c083e38f1d892bf10799ea688070ed8ef8081d9b7907d0a7e4658",
+      "version_evidence": "1.72.0"
+    },
+    "surreal": {
+      "path": "/opt/homebrew/bin/surreal",
+      "resolved_path": "/opt/homebrew/opt/phebs-surreal-3.2.0/surreal",
+      "bytes": 233283488,
+      "sha256": "sha256:ee819dfcedd23035a785ac40f2509f86cbb09fc3255726ad74755b161a3ca0a8",
+      "version": "3.2.0",
+      "version_evidence": "3.2.0 for macos on aarch64"
+    },
+    "openssl": {
+      "path": "/opt/homebrew/opt/openssl@3/bin/openssl",
+      "resolved_path": "/opt/homebrew/Cellar/openssl@3/3.6.3/bin/openssl",
+      "bytes": 880512,
+      "sha256": "sha256:103fc7706cf6646f226d96f29242d81890363499afc730e7ef1fadd64b3a123c",
+      "version_evidence": "OpenSSL3.6.3/library3.6.3"
+    },
+    "vm_stat": {
+      "path": "/usr/bin/vm_stat",
+      "resolved_path": "/usr/bin/vm_stat",
+      "bytes": 101664,
+      "sha256": "sha256:0127fec1de1d99c7f0b0cf185fec048c7fe92d1f1b2ad380882c583f0c921df7",
+      "version_evidence": "Darwin system sampler image; no sample performed during draft prep"
+    }
+  },
+  "observer_binding": {
+    "path": "/tmp/phebs-main-8a70-native-qualification/native-observer",
+    "resolved_path": "/private/tmp/phebs-main-8a70-native-qualification/native-observer",
+    "bytes": 31576930,
+    "sha256": "sha256:3b25f9b9cabb9cac5087d9e65af54eb7d6bf0643d5bbd33ed9296c621d3fc16e"
+  },
+  "signed_disposable_field_selection": {
+    "record": {
+      "release_schema_version": "1.0",
+      "release_id": "rel-phebs.protobuf.field.go-1.0.0",
+      "release_version": "1.0.0",
+      "pack_id": "phebs.protobuf.field.go",
+      "pack_claim_version": "1.0.0",
+      "card": {
+        "artifact_id": "protobuf-fields-card-1.0.0.md",
+        "digest": "sha256:20d0e8c381ab415bb634a31e87c984caa4791a2905ac3b58830fce2540637d79"
+      },
+      "manifest": {
+        "artifact_id": "protobuf-fields-manifest-1.0.0.json",
+        "digest": "sha256:a30b8821aa8ad13151e8072d6ff042a4b4679cf8d51c04b8979c1b16a10cbfa0"
+      },
+      "implementation": {
+        "phebs_source_commit": "8a70fef5f60411f31d210efd52ab4dcd79385549",
+        "phebs_binary_digest": "sha256:7dab45a9011c60132a80381933242705e44da19b2712421ed4361b67dcca19be",
+        "pack_implementation_digest": "sha256:b58de55cafe2bdfc192110aa0fac7f0ce59bf03aa68237aa45b4f6ce1815e8ff",
+        "toolchain_digest": "sha256:c6652a655b5c51d1ce66b001a3f82f118b97fecfca54705e3b7313d6c8b82dba"
+      },
+      "referenced_artifacts_root_digest": "sha256:135ad72b465108ed0482dd0d6a4493405a43651f36c6ee2c2ce6283ecc157865",
+      "validation": {
+        "artifact_id": "protobuf-fields-validation-1.0.0.json",
+        "digest": "sha256:ce30d91459b4b08435feae41fd16fd68ef4bf0615e7eb40fcba6dd913adbd4f5",
+        "applies": true,
+        "expires_at": "2027-01-16T23:59:59Z",
+        "expiry_trigger": null
+      },
+      "derived_status": "released",
+      "approved_at": "2026-10-18T00:00:00Z",
+      "approval_records": [
+        "t513-disposable-key-measurement-only"
+      ],
+      "canonicalization": {
+        "algorithm": "phebs-canonical-json",
+        "version": "1"
+      },
+      "signature": {
+        "key_id": "t513-integration-only",
+        "algorithm": "ed25519",
+        "value": "TwD0qTfHeW93N774U+vW902Dip4WonVyunxklwOiK9eCZT3E0gPE+iHP3Jv2Ga0HX3L8V1IGPQC+qv3MEhoBBA=="
+      }
+    },
+    "record_digest": "sha256:5156fa19b5cec95ed2450179f1bd3eb666c298fc955a91c04ebb7919fa4e6e8f"
+  },
+  "reason": "unexpected field publication status",
+  "retained_stop_evidence": {
+    "root": "/tmp/phebs-t513-native-02",
+    "raw_files": 6,
+    "raw_bytes": 5909,
+    "bound": "finite reviewed request matrix, fixed publication deadlines/cadence, global180s and1MiB per response",
+    "diagnostics_digest": "sha256:39ca8435f35e9aa6cc2754f6b5158471f1d02cacc8d0dd4e09225b31696ae30c",
+    "auth_config_key_data_removed_after_join": true
+  },
+  "seconds": 8.692433291999999
+}

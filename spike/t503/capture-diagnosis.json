@@ -1,0 +1,229 @@
+{
+  "schema": "phebs-t503-first-capture-diagnosis-v1",
+  "date": "2026-10-18",
+  "outcome": "real_unit_attribution_mismatch_no_release_or_overall_pass",
+  "new_product_reads": 0,
+  "first_result_digest": "sha256:7e63806f9269a357fa056d46ff625a1a764da8930eb74df00d84341607163693",
+  "first_attempt_status": "stopped_no_retry; unchanged",
+  "qualification": "Offline diagnosis of retained actual first output. It does not complete the interrupted native matrix or establish unit-composition/citation-open/transport/UI/concurrency/restart quality.",
+  "observed_metrics": {
+    "selected_occurrence_membership_precision": {
+      "numerator": 5,
+      "denominator": 5,
+      "observed_rate": 1.0,
+      "wilson95": [
+        0.5655175352168251,
+        1
+      ],
+      "qualification": "Selected finite census only; interval is descriptive, not a confidence-bound pass."
+    },
+    "selected_occurrence_recall": {
+      "numerator": 5,
+      "denominator": 5,
+      "observed_rate": 1.0,
+      "wilson95": [
+        0.5655175352168251,
+        1
+      ],
+      "qualification": "Selected finite census only; interval is descriptive, not a confidence-bound pass."
+    },
+    "occurrence_classification": {
+      "metric": {
+        "numerator": 5,
+        "denominator": 5,
+        "observed_rate": 1.0,
+        "wilson95": [
+          0.5655175352168251,
+          1
+        ],
+        "qualification": "Selected finite census only; interval is descriptive, not a confidence-bound pass."
+      },
+      "actual_classes": {
+        "new_only_evidence": 3,
+        "old_only_evidence": 2
+      }
+    },
+    "outside_pair_exclusion": {
+      "numerator": 4,
+      "denominator": 4,
+      "observed_rate": 1.0,
+      "wilson95": [
+        0.5101091635454027,
+        1
+      ],
+      "qualification": "Selected finite census only; interval is descriptive, not a confidence-bound pass."
+    },
+    "source_tuple_integrity": {
+      "numerator": 5,
+      "denominator": 5,
+      "observed_rate": 1.0,
+      "wilson95": [
+        0.5655175352168251,
+        1
+      ],
+      "qualification": "Selected finite census only; interval is descriptive, not a confidence-bound pass."
+    },
+    "source_processing_accounted": {
+      "metric": {
+        "numerator": 9,
+        "denominator": 9,
+        "observed_rate": 1.0,
+        "wilson95": [
+          0.7008549515804559,
+          1
+        ],
+        "qualification": "Selected finite census only; interval is descriptive, not a confidence-bound pass."
+      },
+      "rows": [
+        {
+          "path": "data/data.go",
+          "state": "analyzed",
+          "reason": "source_scan_complete",
+          "blob_digest": "sha256:d088b7e127ad41acdf1e267515b003b7ce1a292c217954265be0a122e12ca367"
+        },
+        {
+          "path": "features/interceptor/client/main.go",
+          "state": "analyzed",
+          "reason": "source_scan_complete",
+          "blob_digest": "sha256:67a96c9ce41464119ed93fab70bebb50cb96accdecaca43d8f9a0cf43a6bf641"
+        },
+        {
+          "path": "features/metadata/client/main.go",
+          "state": "analyzed",
+          "reason": "source_scan_complete",
+          "blob_digest": "sha256:26aceadb046196cf67fc5f790f2d6dc4e5f74ae1a919002b6fb6686db41c4fa7"
+        },
+        {
+          "path": "features/multiplex/client/main.go",
+          "state": "analyzed",
+          "reason": "source_scan_complete",
+          "blob_digest": "sha256:4fd071c359f34dd525a7125e9ef2eaf7ba871828eec21b574467bfb7b9224a7e"
+        },
+        {
+          "path": "features/proto/echo/echo.pb.go",
+          "state": "analyzed",
+          "reason": "source_scan_complete",
+          "blob_digest": "sha256:782b379b30abb36abc05916e65516a261a266a8d8e8c1e42adc606a2a86a6f34"
+        },
+        {
+          "path": "features/proto/echo/echo_grpc.pb.go",
+          "state": "analyzed",
+          "reason": "source_scan_complete",
+          "blob_digest": "sha256:af593380d0cb47c95469db614f42c582a21c6028e04cae1f84a3da7a96e57a40"
+        },
+        {
+          "path": "helloworld/greeter_client/main.go",
+          "state": "analyzed",
+          "reason": "source_scan_complete",
+          "blob_digest": "sha256:5539f38f560ab26ce11514cd81f941fb80f4ca9a88754aaaf40d89bbc92e3e30"
+        },
+        {
+          "path": "helloworld/helloworld/helloworld.pb.go",
+          "state": "analyzed",
+          "reason": "source_scan_complete",
+          "blob_digest": "sha256:d365b6dd964d474e5e3d50ef1b8bedb6d728a0377eb7926ef6fee6dfdeb1a59a"
+        },
+        {
+          "path": "helloworld/helloworld/helloworld_grpc.pb.go",
+          "state": "analyzed",
+          "reason": "source_scan_complete",
+          "blob_digest": "sha256:e1de746d9f7c0fa108c370c420cbe1a630a8cf7ae55e43a2d946dc5589c6993d"
+        }
+      ]
+    },
+    "unit_attribution": {
+      "numerator": 0,
+      "denominator": 5,
+      "observed_rate": 0,
+      "wilson95": [
+        0,
+        0.43448246478317476
+      ],
+      "issues": [
+        {
+          "site_id": "features/interceptor/client/main.go:3590-3606",
+          "expected_unit": {
+            "state": "resolved",
+            "id": "au_9439cbc5675ce77294613145d56bd6d01064f47b19e56804684be204c10b379a",
+            "build_targets": [
+              "go:google.golang.org/grpc/examples/features/interceptor/client"
+            ]
+          },
+          "actual_unit": {
+            "state": "unavailable",
+            "reason": "consumer_unit_projection_unavailable"
+          }
+        },
+        {
+          "site_id": "features/metadata/client/main.go:1453-1464",
+          "expected_unit": {
+            "state": "unavailable",
+            "reason": "mapping_has_no_attribution"
+          },
+          "actual_unit": {
+            "state": "unavailable",
+            "reason": "consumer_unit_projection_unavailable"
+          }
+        },
+        {
+          "site_id": "features/multiplex/client/main.go:1282-1292",
+          "expected_unit": {
+            "state": "resolved",
+            "id": "au_1708d0bd8c3cd2a1099790102b179f46c5fcbf67c4e2a23412bb65b4ff224be2",
+            "build_targets": [
+              "go:google.golang.org/grpc/examples/features/multiplex/client"
+            ]
+          },
+          "actual_unit": {
+            "state": "unavailable",
+            "reason": "consumer_unit_projection_unavailable"
+          }
+        },
+        {
+          "site_id": "features/multiplex/client/main.go:1604-1620",
+          "expected_unit": {
+            "state": "resolved",
+            "id": "au_1708d0bd8c3cd2a1099790102b179f46c5fcbf67c4e2a23412bb65b4ff224be2",
+            "build_targets": [
+              "go:google.golang.org/grpc/examples/features/multiplex/client"
+            ]
+          },
+          "actual_unit": {
+            "state": "unavailable",
+            "reason": "consumer_unit_projection_unavailable"
+          }
+        },
+        {
+          "site_id": "helloworld/greeter_client/main.go:1456-1466",
+          "expected_unit": {
+            "state": "resolved",
+            "id": "au_3b21c319bce883977589a6fd651789a8a16a2fe2a1b6466815e51b98cbef7234",
+            "build_targets": [
+              "go:google.golang.org/grpc/examples/helloworld/greeter_client"
+            ]
+          },
+          "actual_unit": {
+            "state": "unavailable",
+            "reason": "consumer_unit_projection_unavailable"
+          }
+        }
+      ]
+    },
+    "unit_composition": {
+      "status": "not measured; run stopped before unit query"
+    },
+    "citation_opening": {
+      "status": "not measured; run stopped before immutable source reads"
+    },
+    "resolution_tiers": {
+      "syntax_heuristic": 5,
+      "scip_derived": 0
+    }
+  },
+  "cause": {
+    "file": "internal/callerexecute/execute.go",
+    "boundary": "ExecutePair -> gocaller.ScanDirectSyntaxFile",
+    "finding": "DirectScanRequest.ConsumerUnits is omitted, so directAttribution returns consumer_unit_projection_unavailable for every source. Exact public reads preserve this unavailable metadata; committed legacy extraction facts do not populate this separate exact overlay."
+  },
+  "next_gate": "Repair exact committed unit projection with an explicit version/admission/authority/cost review and focused regression. Freeze repaired implementation and independently review prospective continuation before any new product execution. Labels, sources, thresholds and first failure remain exact."
+}

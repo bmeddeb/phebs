@@ -1,0 +1,5 @@
+
+> ui@0.0.0 test
+> vitest run --run src/operationImpactContract.test.ts src/operationImpactApi.test.ts src/pages/OperationImpactPage.test.tsx src/pages/ContractAtlasPage.test.tsx src/pages/CallerMapPage.test.tsx src/pages/ImpactPage.test.tsx
+
+sh: vitest: command not found

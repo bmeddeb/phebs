@@ -1,0 +1,20 @@
+{
+  "schema": "t513-prospective-transition-v1",
+  "repository": "evaluation.local/t511-public",
+  "base_commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+  "base_tree": "ae63dc5eac24e67584f5024ac14d7bb0e7ba76e8",
+  "transition_commit": "cd72bf6914988aed1974bd8bfcc744f4d08ccfd2",
+  "transition_tree": "b4d6c7366ce97329bd87a8b81be50e94ffd917f7",
+  "local_path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t513-inputs-ytjyz65j/public",
+  "path": "profiling/service/service.go",
+  "base_git_blob": "458056feb7d84f3175bd68e74ed4b2c376c1f23e",
+  "new_git_blob": "475efd515af3c77c7d7556f1bf6823c4bb4f01ad",
+  "base_sha256": "949728b78ac582ec2c796bf0fb3c4dfcc4ad0db0f288efe9efce4a46860b54a7",
+  "new_sha256": "331805b0a45eabfd1206a7fac5e1d256a15a2a39da34577d3162fa2a12d971df",
+  "appended_utf8": "\n// T513 prospective publication transition; field reference tokens unchanged.\n",
+  "bundle": "transition.bundle",
+  "bundle_bytes": 34209,
+  "bundle_sha256": "fce066909bccfc84b4037d50d2c39565b0d3c29d8f2f6cbfaa817942ae691887",
+  "preparation_note": "Bundle has no default HEAD; initial clone performed no checkout. Explicit frozen base commit selected before authoring. No tool/candidate/product execution.",
+  "qualification": "Evaluator prospectively authored comment-only transition; original public/index/labels untouched; no index or candidate run."
+}

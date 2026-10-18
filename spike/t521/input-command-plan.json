@@ -1,0 +1,91 @@
+{
+  "schema": "t521-input-command-plan-v1",
+  "record_date": "2026-10-18",
+  "source_checkpoint": "61ff5faa25dfb4f609ecbef6836f69d1741a14fe",
+  "status": "NOT_EXECUTED_AWAITING_WITNESS_REVIEW_AND_HOST_SLOT",
+  "tool": {
+    "path": "/Users/ben/go/bin/scip-go",
+    "bytes": 17881650,
+    "digest": "sha256:05b4f5086b0953268a86ddee21e53233d7fc35fa4234d4c5b30ef7faec2beb80",
+    "declared_version": "0.2.7",
+    "identity_source": "Same pinned binary as accepted T511 preparation; rehashed2026-10-18 without execution",
+    "go_build_info": {
+      "go_version": "go1.26.5",
+      "main_path": "github.com/scip-code/scip-go/cmd/scip-go",
+      "module": "github.com/scip-code/scip-go",
+      "version": "v0.2.7",
+      "module_sum": "h1:gcHFnhoMCdp3C/0xvCn9QFuTsF/W3JSR5cLVf7uG+Us=",
+      "GOOS": "darwin",
+      "GOARCH": "arm64",
+      "GOARM64": "v8.0",
+      "CGO_ENABLED": "1"
+    }
+  },
+  "scratch_root": "/tmp/phebs-t521-inputs-61ff5faa",
+  "source_handling": "Copy frozen selected source modules unchanged to fresh scratch; only scip-go output and evaluator go.sum may be added. Record a before/after source-byte census. Retain no inferred upstream Git claim. Do not modify label/source/prereg checkpoint files.",
+  "environment": {
+    "GOPROXY": "off",
+    "GOSUMDB": "off",
+    "GOTOOLCHAIN": "local",
+    "GOWORK": "off",
+    "GOFLAGS": "-mod=mod",
+    "GOMAXPROCS": "2"
+  },
+  "runs": [
+    {
+      "population": "public",
+      "source_directory": "/Users/ben/.codex/worktrees/t521-apache-thrift-fields/phebs.com/spike/t521/testdata/public",
+      "working_directory": "/tmp/phebs-t521-inputs-61ff5faa/public",
+      "argv": [
+        "/Users/ben/go/bin/scip-go",
+        "index",
+        "--module-root=/tmp/phebs-t521-inputs-61ff5faa/public",
+        "--repository-remote=evaluation.local/t521-public",
+        "--module-path=github.com/uber/jaeger-client-go",
+        "--module-version=v0.0.0-t521",
+        "--skip-implementations",
+        "--skip-tests",
+        "--output=/tmp/phebs-t521-inputs-61ff5faa/public/index.scip",
+        ".",
+        "./testutils",
+        "./thrift-gen/jaeger",
+        "./thrift-gen/sampling"
+      ]
+    },
+    {
+      "population": "neutral",
+      "source_directory": "/Users/ben/.codex/worktrees/t521-apache-thrift-fields/phebs.com/spike/t521/testdata/neutral",
+      "working_directory": "/tmp/phebs-t521-inputs-61ff5faa/neutral",
+      "argv": [
+        "/Users/ben/go/bin/scip-go",
+        "index",
+        "--module-root=/tmp/phebs-t521-inputs-61ff5faa/neutral",
+        "--repository-remote=evaluation.local/t521-neutral",
+        "--module-path=example.com/t521-neutral",
+        "--module-version=v0.0.0-t521",
+        "--skip-implementations",
+        "--skip-tests",
+        "--output=/tmp/phebs-t521-inputs-61ff5faa/neutral/index.scip",
+        "./gen",
+        "./use",
+        "./fake"
+      ]
+    }
+  ],
+  "limits": {
+    "children": "one indexer root at a time; no overlap with another host workload",
+    "timeout_seconds_each": 90,
+    "attempts_each": 1,
+    "output_index_bytes_max": 33554432,
+    "downloads": "none during tool execution",
+    "failure": "record refusal/missing cached dependency, join child and stop; no automatic dependency fetch, source/label rewrite or retry"
+  },
+  "record_on_execution": [
+    "exact argv/environment/tool digest/input copy census",
+    "wall,user,system seconds; actual child memory scope if measured, not claimed family memory from RUSAGE_CHILDREN",
+    "exit/timeout/error and joined-child evidence",
+    "index digest/bytes/metadata/documents census, including documents absent from retained source",
+    "evaluator-added go.sum digest; all source bytes unchanged",
+    "actual local evaluator Git source+index commits/bundles created by lead after input preparation and bound before first scoring"
+  ]
+}

@@ -60,6 +60,12 @@ type Options struct {
 	// matching an HTTP proof service admitted only by released Kafka planes
 	// (T55.2/T56.2).
 	KafkaTopicUsageOnly bool
+	// ProtobufFieldReferencesOnly admits the two field tools alongside any
+	// separately selected Kafka tools, without the provisional proof umbrella.
+	ProtobufFieldReferencesOnly bool
+	// ThriftFieldReferencesOnly admits the neutral field tool independently of
+	// protobuf or any other experimental proof product.
+	ThriftFieldReferencesOnly bool
 	// KafkaTopicInventoryReleased lets TopicInventory register beside
 	// KafkaTopicUsageOnly: a verified phebs.kafka.topics record with both
 	// planes released (T57.3).
@@ -74,6 +80,7 @@ type Options struct {
 	ContractCatalog  ContractCatalogQueries
 	CallerMap        CallerMapQueries
 	CallerComparison CallerComparisonQueries
+	OperationImpact  OperationImpactQueries
 	// ServiceDirectory is the same T33.4 store-backed service supplied to
 	// Huma. Nil keeps the tools undiscoverable.
 	ServiceDirectory ServiceDirectoryQueries
@@ -197,6 +204,7 @@ func NewServer(opts Options) *sdk.Server {
 	registerWireCompatibilityTool(s, opts)
 	registerCallerMapTools(s, opts)
 	registerCallerComparisonTool(s, opts)
+	registerOperationImpactTool(s, opts)
 	registerServiceDirectoryTools(s, opts)
 	registerObservationProgressTool(s, opts)
 	registerRelationshipTools(s, opts)
@@ -205,46 +213,25 @@ func NewServer(opts Options) *sdk.Server {
 	return s
 }
 
-func registerProofTools(s *sdk.Server, opts Options) {
-	if opts.Proofs == nil {
-		return
-	}
-	if opts.KafkaTopicUsageOnly {
-		registerKafkaTopicUsageTool(s, opts)
-		return
-	}
-
-	type operationIn struct {
-		Operation string `json:"operation" jsonschema:"canonical fully-qualified RPC operation /scope.Service/method (gRPC or Thrift)"`
-	}
-	sdk.AddTool(s, &sdk.Tool{
-		Name:         "find_operation_consumers",
-		Description:  "Find matching static call evidence for one bare canonical RPC operation across the registered consumer domains (gRPC and Thrift). This operation-name query does not establish declaration identity or a known-caller roster. Returns envelope v1.0 with permission-scoped facts, extractor abstentions, exact proof references, separate coverage dimensions, and server-rendered qualifications; it cannot establish absence or safety.",
-		OutputSchema: proofEnvelopeSchema("mcp-payload-contract-edges-v1.0.json"),
-	}, func(ctx context.Context, _ *sdk.CallToolRequest, in operationIn) (*sdk.CallToolResult, investigation.Envelope, error) {
-		result, err := opts.Proofs.FindOperationConsumersMCP(ctx, in.Operation)
-		if err != nil {
-			return nil, investigation.Envelope{}, err
-		}
-		return nil, *result, nil
-	})
-
+func registerFieldReferenceTools(s *sdk.Server, opts Options) {
 	type fieldIn struct {
 		Lineage     string `json:"lineage" jsonschema:"canonical contract lineage id from extracted protobuf/SCIP evidence"`
 		Message     string `json:"message" jsonschema:"fully-qualified protobuf message name, e.g. shop.Cart"`
 		FieldNumber int    `json:"field_number" jsonschema:"protobuf wire field number, 1 through 536870911 excluding 19000 through 19999"`
 	}
-	sdk.AddTool(s, &sdk.Tool{
-		Name:         "find_proto_field_references",
-		Description:  "Find source references to one protobuf field identity (lineage, message, field number). Returns envelope v1.0 with permission-scoped facts and separate semantic, attribution, and processing states; field names are versioned attributes, not identity.",
-		OutputSchema: proofEnvelopeSchema("mcp-payload-contract-edges-v1.0.json"),
-	}, func(ctx context.Context, _ *sdk.CallToolRequest, in fieldIn) (*sdk.CallToolResult, investigation.Envelope, error) {
-		result, err := opts.Proofs.FindProtoFieldReferencesMCP(ctx, in.Lineage, in.Message, in.FieldNumber)
-		if err != nil {
-			return nil, investigation.Envelope{}, err
-		}
-		return nil, *result, nil
-	})
+	if !opts.KafkaTopicUsageOnly && !opts.ThriftFieldReferencesOnly || opts.ProtobufFieldReferencesOnly {
+		sdk.AddTool(s, &sdk.Tool{
+			Name:         "find_proto_field_references",
+			Description:  "Find source references to one protobuf field identity (lineage, message, field number). Returns envelope v1.0 with permission-scoped facts and separate semantic, attribution, and processing states; field names are versioned attributes, not identity.",
+			OutputSchema: proofEnvelopeSchema("mcp-payload-contract-edges-v1.0.json"),
+		}, func(ctx context.Context, _ *sdk.CallToolRequest, in fieldIn) (*sdk.CallToolResult, investigation.Envelope, error) {
+			result, err := opts.Proofs.FindProtoFieldReferencesMCP(ctx, in.Lineage, in.Message, in.FieldNumber)
+			if err != nil {
+				return nil, investigation.Envelope{}, err
+			}
+			return nil, *result, nil
+		})
+	}
 
 	type neutralFieldIn struct {
 		Lineage     string `json:"lineage" jsonschema:"canonical contract SCIP package lineage id from extracted protobuf or Thrift field evidence"`
@@ -272,6 +259,39 @@ func registerProofTools(s *sdk.Server, opts Options) {
 		}
 		return nil, *result, nil
 	})
+
+}
+
+func registerProofTools(s *sdk.Server, opts Options) {
+	if opts.Proofs == nil {
+		return
+	}
+	if opts.KafkaTopicUsageOnly || opts.ProtobufFieldReferencesOnly || opts.ThriftFieldReferencesOnly {
+		if opts.ProtobufFieldReferencesOnly || opts.ThriftFieldReferencesOnly {
+			registerFieldReferenceTools(s, opts)
+		}
+		if opts.KafkaTopicUsageOnly {
+			registerKafkaTopicUsageTool(s, opts)
+		}
+		return
+	}
+
+	type operationIn struct {
+		Operation string `json:"operation" jsonschema:"canonical fully-qualified RPC operation /scope.Service/method (gRPC or Thrift)"`
+	}
+	sdk.AddTool(s, &sdk.Tool{
+		Name:         "find_operation_consumers",
+		Description:  "Find matching static call evidence for one bare canonical RPC operation across the registered consumer domains (gRPC and Thrift). This operation-name query does not establish declaration identity or a known-caller roster. Returns envelope v1.0 with permission-scoped facts, extractor abstentions, exact proof references, separate coverage dimensions, and server-rendered qualifications; it cannot establish absence or safety.",
+		OutputSchema: proofEnvelopeSchema("mcp-payload-contract-edges-v1.0.json"),
+	}, func(ctx context.Context, _ *sdk.CallToolRequest, in operationIn) (*sdk.CallToolResult, investigation.Envelope, error) {
+		result, err := opts.Proofs.FindOperationConsumersMCP(ctx, in.Operation)
+		if err != nil {
+			return nil, investigation.Envelope{}, err
+		}
+		return nil, *result, nil
+	})
+
+	registerFieldReferenceTools(s, opts)
 
 	registerKafkaTopicUsageTool(s, opts)
 

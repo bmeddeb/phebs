@@ -65,6 +65,7 @@ type DirectResolver struct {
 	descriptorCount  int
 	index            generatedSyntaxIndex
 	generatedSources map[string]string
+	consumerUnits    func(string, string) (func(string, int) sdk.ConsumerUnitAttribution, error)
 }
 
 type directMethodIdentity struct {
@@ -460,4 +461,25 @@ func validateDirectDescriptor(protocol string, descriptor DirectDescriptor) erro
 		}
 	}
 	return nil
+}
+
+// WithConsumerUnits returns a shallow immutable resolver view over one shared,
+// catalog-bound unit projection. Syntax maps and generated identities remain
+// shared; no unit snapshot is copied per protocol, source file or caller leaf.
+func (resolver *DirectResolver) WithConsumerUnits(lookup func(string, string) (func(string, int) sdk.ConsumerUnitAttribution, error)) *DirectResolver {
+	if resolver == nil {
+		return nil
+	}
+	copy := *resolver
+	copy.consumerUnits = lookup
+	return &copy
+}
+
+// ConsumerUnitsForSource validates the selected source OID once, before any
+// calls are emitted from it. Legacy isolated scanners may have no projection.
+func (resolver *DirectResolver) ConsumerUnitsForSource(path, objectID string) (func(string, int) sdk.ConsumerUnitAttribution, error) {
+	if resolver == nil || resolver.consumerUnits == nil {
+		return nil, nil
+	}
+	return resolver.consumerUnits(path, objectID)
 }

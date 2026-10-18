@@ -1,0 +1,60 @@
+{
+  "schema": "phebs-t503c-review-v1",
+  "date": "2026-10-18",
+  "handoff": "Mac presentation; user all-ticket routing.",
+  "review": "Root source/accessibility/actual390 screenshot and test review clear. Agent reproduced root cause and bounded before/after layout.",
+  "functional": "14focusedUItests pass, typecheck corrected after removing test-only unsupported exact option; lint and productionUIbuild pass.",
+  "layout": "1280/390 document equalsviewport, keyboard full-source opening and filter/reset pass; axe0violations/25passes and no consoleerrors.",
+  "canonical_controls": "All4main-before/fixed-after native PNGs byteidentical. RetainedNoble comparisons0.399\u20130.412% differ identically onmain; no baselineupdate or NoblePASS.",
+  "bundle": {
+    "comparison_before_bytes": 22404,
+    "after_bytes": 22482,
+    "raw_delta_bytes": 78,
+    "gzip_delta_bytes": 13
+  },
+  "interaction_note": "Actions verified under5s assertion timeout, no independent latency/usability measurement.",
+  "cost": "Staticgrid/min-width/wrapping/linkstyles only; no new query, source read, request, schema, loop, lock, cache, child, sync or publication work.",
+  "evidence": {
+    "layout-after.json": {
+      "bytes": 947,
+      "sha256": "79c4d72cc179b20b89260fedeb314b3d0106000a7742c579597a24be8a2407a2"
+    },
+    "layout-joined.json": {
+      "bytes": 303,
+      "sha256": "1535401b13aa8aae1b4d98fd293294191f12c4a63d0c299a8a76901ce20f812a"
+    },
+    "neutral-controls.json": {
+      "bytes": 4202,
+      "sha256": "650b17908fc01af2c2b3ea65be199b916f3cd125ee55981a21a934438d80c035"
+    },
+    "neutral-diagnosis.json": {
+      "bytes": 862,
+      "sha256": "6e0c0649e498144e9d70b65b09c54587d8b61c730089cb48a2d98233786dc970"
+    },
+    "pixel-diagnosis.json": {
+      "bytes": 1522,
+      "sha256": "386c18f3559a9fc872acb33f00d161028527e1f8130e4fefb70b94aec451c06a"
+    },
+    "ui-tests.log": {
+      "bytes": 248,
+      "sha256": "f0bc9652a9743b7a58ff44daedd6afe63d6b73ab6e617b80b2a557e930b4c91c"
+    },
+    "typecheck-first.log": {
+      "bytes": 668,
+      "sha256": "9ae6c9422a60b573c9869bbfd319e6c0f019034154ef9cb8c8824c17af9f9d49"
+    },
+    "typecheck-corrected.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "lint.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "build.log": {
+      "bytes": 14529,
+      "sha256": "4d44c7e24998e32df1031f80eed7a7aedc3d070b623f957c508c5ee790fd43e6"
+    }
+  },
+  "remaining": "Fresh source-bound embeddedUI/binary T50.3 matrix and production signing remain separate."
+}

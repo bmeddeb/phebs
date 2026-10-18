@@ -1,0 +1,49 @@
+{
+  "schema": "t522-license-admission-v1",
+  "record_date": "2026-10-18",
+  "application_reads_before_license_verification": 0,
+  "licenses": [
+    {
+      "name": "cadence",
+      "license": "Apache-2.0",
+      "url": "https://raw.githubusercontent.com/uber/cadence/98f3d45ec820380dadae38206753777a7417709f/LICENSE",
+      "path": "licenses/cadence.LICENSE",
+      "bytes": 11356,
+      "digest": "sha256:43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1"
+    },
+    {
+      "name": "cadence-idl",
+      "license": "Apache-2.0",
+      "url": "https://raw.githubusercontent.com/cadence-workflow/cadence-idl/ee96c0aebffaea083bdeab66b62c7e18291045f3/LICENSE",
+      "path": "licenses/cadence-idl.LICENSE",
+      "bytes": 11356,
+      "digest": "sha256:43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1"
+    },
+    {
+      "name": "thriftrw-go",
+      "license": "MIT",
+      "url": "https://raw.githubusercontent.com/thriftrw/thriftrw-go/v1.34.0/LICENSE",
+      "path": "licenses/thriftrw-go.LICENSE",
+      "bytes": 1090,
+      "digest": "sha256:baa160cbb643ef58cf76d10f2aa1a4371c6af50ff442b2328ae23953ebf922a1"
+    },
+    {
+      "name": "multierr",
+      "license": "MIT",
+      "url": "https://raw.githubusercontent.com/uber-go/multierr/v1.11.0/LICENSE.txt",
+      "path": "licenses/multierr.LICENSE",
+      "bytes": 1072,
+      "digest": "sha256:dcdabe03bef2382a130640d1c3a4cd5ec42aba1035095c38272fde694eb72405"
+    },
+    {
+      "name": "zap",
+      "license": "MIT",
+      "url": "https://raw.githubusercontent.com/uber-go/zap/v1.28.0/LICENSE",
+      "path": "licenses/zap.LICENSE",
+      "bytes": 1072,
+      "digest": "sha256:c2b97b3281be272711909076c8402499b4b5a3216196af47a25b1d3674d86152"
+    }
+  ],
+  "selected_source_notice": "Cadence repository is Apache-2.0; selected handwritten files additionally retain their in-file MIT grant. Original notices and generated headers are unchanged.",
+  "dependency_scope": "Cached runtime modules, not scored source or generator execution; retain direct MIT notices. No proprietary/source-available application input is admitted."
+}

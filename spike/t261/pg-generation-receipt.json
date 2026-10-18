@@ -1,0 +1,98 @@
+{
+  "format": "t261-pg-generation-receipt-v1",
+  "date": "2026-10-18",
+  "stage": "finished; source-only preparation resumes; no parser executed",
+  "input_sha256": "dd7153ba4733be4d24b26993f8762d98d05d8754691194c41266f824c2253273",
+  "input_bytes": 658,
+  "script_sha256": "771558db0a173f378f12fb6a7c212960cb098518684931a104c3ebd3e85534a3",
+  "image_ref": "docker.io/library/postgres@sha256:a63b24165ea0eacced7585766d790ac08bbaefe10a1841f87783a4505d29a69c",
+  "platform": "linux/arm64/v8",
+  "docker_context": "colima-t574-receipts",
+  "vm_profile": "t574-receipts",
+  "vm_configuration_sha256": "77601ca629d89a463184acd1d1bbbb7fec8c93fdea1a7dd0e3b5b2a228a5c138",
+  "vm_reused_unchanged": true,
+  "vm_start_argv": [
+    "/opt/homebrew/bin/colima",
+    "start",
+    "--profile",
+    "t574-receipts"
+  ],
+  "original_docker_context": "colima",
+  "container_execution_cap_seconds": 60,
+  "stdout_acceptance_cap_bytes": 65536,
+  "stderr_cap_bytes": 65536,
+  "parser_runs": 0,
+  "recognizer_runs": 0,
+  "steps": [
+    {
+      "argv": [
+        "/opt/homebrew/bin/colima",
+        "status",
+        "--profile",
+        "t574-receipts"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.401441,
+      "stdout": "",
+      "stderr": "time=\"2026-10-18T04:25:18-07:00\" level=info msg=\"colima [profile=t574-receipts] is running using macOS Virtualization.Framework\"\ntime=\"2026-10-18T04:25:18-07:00\" level=info msg=\"arch: aarch64\"\ntime=\"2026-10-18T04:25:18-07:00\" level=info msg=\"runtime: docker\"\ntime=\"2026-10-18T04:25:18-07:00\" level=info msg=\"mountType: virtiofs\"\ntime=\"2026-10-18T04:25:18-07:00\" level=info msg=\"docker socket: unix:///Users/ben/.colima/t574-receipts/docker.sock\"\ntime=\"2026-10-18T04:25:18-07:00\" level=info msg=\"containerd socket: unix:///Users/ben/.colima/t574-receipts/containerd.sock\"\n"
+    },
+    {
+      "argv": [
+        "/opt/homebrew/bin/docker",
+        "--context",
+        "colima-t574-receipts",
+        "pull",
+        "--platform",
+        "linux/arm64/v8",
+        "docker.io/library/postgres@sha256:a63b24165ea0eacced7585766d790ac08bbaefe10a1841f87783a4505d29a69c"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 5.420581,
+      "stdout": "docker.io/library/postgres@sha256:a63b24165ea0eacced7585766d790ac08bbaefe10a1841f87783a4505d29a69c: Pulling from library/postgres\n19fcd068927b: Pulling fs layer\n729e9c644210: Pulling fs layer\nbbeda6b4abb7: Pulling fs layer\nc344258f5c4b: Pulling fs layer\n7ceb07498658: Pulling fs layer\na97c43a6325a: Pulling fs layer\n9aa353a8667f: Pulling fs layer\n21a9e5df9938: Pulling fs layer\n145ddee77a61: Pulling fs layer\ndae9c1725998: Pulling fs layer\n364028cfe3c1: Pulling fs layer\nadef3e37879a: Pulling fs layer\n7f4f6f4ec9d3: Pulling fs layer\nadef3e37879a: Download complete\n7ceb07498658: Download complete\n729e9c644210: Download complete\nc344258f5c4b: Download complete\n145ddee77a61: Download complete\n364028cfe3c1: Download complete\n7f4f6f4ec9d3: Download complete\n19fcd068927b: Download complete\na97c43a6325a: Download complete\n21a9e5df9938: Download complete\ndae9c1725998: Download complete\nbbeda6b4abb7: Download complete\n19fcd068927b: Pull complete\ndae9c1725998: Pull complete\nbbeda6b4abb7: Pull complete\na97c43a6325a: Pull complete\nadef3e37879a: Pull complete\n729e9c644210: Pull complete\nc344258f5c4b: Pull complete\n21a9e5df9938: Pull complete\n9aa353a8667f: Download complete\n145ddee77a61: Pull complete\n364028cfe3c1: Pull complete\n7f4f6f4ec9d3: Pull complete\n9aa353a8667f: Pull complete\n7ceb07498658: Pull complete\nDigest: sha256:a63b24165ea0eacced7585766d790ac08bbaefe10a1841f87783a4505d29a69c\nStatus: Downloaded newer image for postgres@sha256:a63b24165ea0eacced7585766d790ac08bbaefe10a1841f87783a4505d29a69c\ndocker.io/library/postgres@sha256:a63b24165ea0eacced7585766d790ac08bbaefe10a1841f87783a4505d29a69c\n",
+      "stderr": ""
+    }
+  ],
+  "teardown": {
+    "context_restore": {
+      "argv": [
+        "/opt/homebrew/bin/docker",
+        "context",
+        "use",
+        "colima"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.009124,
+      "stdout": "colima\n",
+      "stderr": "Current context is now \"colima\"\n"
+    },
+    "vm_stop": {
+      "argv": [
+        "/opt/homebrew/bin/colima",
+        "stop",
+        "--profile",
+        "t574-receipts"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 1.702211,
+      "stdout": "Stopping 'docker.service', but its triggering units are still active:\ndocker.socket\ncolima-t574-receipts\ntime=\"2026-10-18T04:25:24-07:00\" level=info msg=\"Sending SIGINT to hostagent process 32554\"\ntime=\"2026-10-18T04:25:24-07:00\" level=info msg=\"Waiting for the host agent and the driver processes to shut down\"\ntime=\"2026-10-18T04:25:24-07:00\" level=info msg=\"[hostagent] Received SIGINT, shutting down the host agent\"\ntime=\"2026-10-18T04:25:24-07:00\" level=info msg=\"[hostagent] Shutting down the host agent\"\ntime=\"2026-10-18T04:25:24-07:00\" level=info msg=\"[hostagent] Stopping forwarding `/var/run/docker.sock` (guest) to `/Users/ben/.colima/t574-receipts/docker.sock` (host)\"\ntime=\"2026-10-18T04:25:24-07:00\" level=info msg=\"[hostagent] Stopping forwarding `/var/run/containerd/containerd.sock` (guest) to `/Users/ben/.colima/t574-receipts/containerd.sock` (host)\"\ntime=\"2026-10-18T04:25:24-07:00\" level=info msg=\"[hostagent] Unmounting disk `colima-t574-receipts`\"\ntime=\"2026-10-18T04:25:24-07:00\" level=info msg=\"[hostagent] Shutting down VZ\"\ntime=\"2026-10-18T04:25:24-07:00\" level=info msg=\"[hostagent] [VZ] - vm state change: stopped\"\ntime=\"2026-10-18T04:25:24-07:00\" level=info msg=\"Waiting for the instance to shut down\"\ntime=\"2026-10-18T04:25:25-07:00\" level=info msg=\"The instance colima-t574-receipts has shut down\"\n",
+      "stderr": "time=\"2026-10-18T04:25:23-07:00\" level=info msg=\"stopping colima [profile=t574-receipts]\"\ntime=\"2026-10-18T04:25:24-07:00\" level=info msg=\"stopping ...\" context=docker\ntime=\"2026-10-18T04:25:24-07:00\" level=info msg=\"stopping ...\" context=vm\ntime=\"2026-10-18T04:25:25-07:00\" level=info msg=done\n"
+    },
+    "vm_stopped": true,
+    "docker_context_restored": true
+  },
+  "status": "failed",
+  "docker_server": {
+    "Architecture": "aarch64",
+    "OSType": "linux",
+    "NCPU": 2,
+    "MemTotal": 6197886976,
+    "ServerVersion": "29.5.2",
+    "OperatingSystem": "Ubuntu 24.04.4 LTS",
+    "Name": "colima-t574-receipts"
+  },
+  "failure_type": "AssertionError",
+  "failure": "",
+  "stdout_bytes": 0,
+  "stderr_transcript": "",
+  "vm_configuration_unchanged": true
+}

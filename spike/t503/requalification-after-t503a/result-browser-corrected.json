@@ -1,0 +1,1586 @@
+{
+  "schema": "phebs-t503-postfix-matrix-v1",
+  "date": "2026-10-18",
+  "outcome": "stopped_no_retry",
+  "reads": [
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 404,
+      "seconds": 0.00777,
+      "bytes": 135,
+      "raw_digest": "sha256:b7cacfaabcf96c473000e5c58ebd5ce5454d1af5d0016566164fb29e7a7822eb"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 404,
+      "seconds": 0.00237,
+      "bytes": 135,
+      "raw_digest": "sha256:b7cacfaabcf96c473000e5c58ebd5ce5454d1af5d0016566164fb29e7a7822eb"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 404,
+      "seconds": 0.003738,
+      "bytes": 135,
+      "raw_digest": "sha256:b7cacfaabcf96c473000e5c58ebd5ce5454d1af5d0016566164fb29e7a7822eb"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 404,
+      "seconds": 0.002464,
+      "bytes": 135,
+      "raw_digest": "sha256:b7cacfaabcf96c473000e5c58ebd5ce5454d1af5d0016566164fb29e7a7822eb"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.004327,
+      "bytes": 1798,
+      "raw_digest": "sha256:6ed095af16fd082eb1e75489713d3b4760cb499a0f474d154e19877516799f05"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.007252,
+      "bytes": 1798,
+      "raw_digest": "sha256:6ed095af16fd082eb1e75489713d3b4760cb499a0f474d154e19877516799f05"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.00506,
+      "bytes": 1798,
+      "raw_digest": "sha256:6ed095af16fd082eb1e75489713d3b4760cb499a0f474d154e19877516799f05"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.002693,
+      "bytes": 1798,
+      "raw_digest": "sha256:6ed095af16fd082eb1e75489713d3b4760cb499a0f474d154e19877516799f05"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.004211,
+      "bytes": 1798,
+      "raw_digest": "sha256:6ed095af16fd082eb1e75489713d3b4760cb499a0f474d154e19877516799f05"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.008387,
+      "bytes": 1798,
+      "raw_digest": "sha256:6ed095af16fd082eb1e75489713d3b4760cb499a0f474d154e19877516799f05"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.00777,
+      "bytes": 1798,
+      "raw_digest": "sha256:6ed095af16fd082eb1e75489713d3b4760cb499a0f474d154e19877516799f05"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.008876,
+      "bytes": 1798,
+      "raw_digest": "sha256:6ed095af16fd082eb1e75489713d3b4760cb499a0f474d154e19877516799f05"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.008814,
+      "bytes": 1798,
+      "raw_digest": "sha256:6ed095af16fd082eb1e75489713d3b4760cb499a0f474d154e19877516799f05"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.009736,
+      "bytes": 1798,
+      "raw_digest": "sha256:6ed095af16fd082eb1e75489713d3b4760cb499a0f474d154e19877516799f05"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.004454,
+      "bytes": 1798,
+      "raw_digest": "sha256:6ed095af16fd082eb1e75489713d3b4760cb499a0f474d154e19877516799f05"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.008745,
+      "bytes": 1798,
+      "raw_digest": "sha256:6ed095af16fd082eb1e75489713d3b4760cb499a0f474d154e19877516799f05"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.003326,
+      "bytes": 1798,
+      "raw_digest": "sha256:6ed095af16fd082eb1e75489713d3b4760cb499a0f474d154e19877516799f05"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.01048,
+      "bytes": 1798,
+      "raw_digest": "sha256:6ed095af16fd082eb1e75489713d3b4760cb499a0f474d154e19877516799f05"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.002879,
+      "bytes": 1798,
+      "raw_digest": "sha256:6ed095af16fd082eb1e75489713d3b4760cb499a0f474d154e19877516799f05"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.00739,
+      "bytes": 1798,
+      "raw_digest": "sha256:6ed095af16fd082eb1e75489713d3b4760cb499a0f474d154e19877516799f05"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.005395,
+      "bytes": 1798,
+      "raw_digest": "sha256:6ed095af16fd082eb1e75489713d3b4760cb499a0f474d154e19877516799f05"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.005748,
+      "bytes": 1798,
+      "raw_digest": "sha256:6ed095af16fd082eb1e75489713d3b4760cb499a0f474d154e19877516799f05"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.007499,
+      "bytes": 1798,
+      "raw_digest": "sha256:6ed095af16fd082eb1e75489713d3b4760cb499a0f474d154e19877516799f05"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.006051,
+      "bytes": 1798,
+      "raw_digest": "sha256:6ed095af16fd082eb1e75489713d3b4760cb499a0f474d154e19877516799f05"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.007846,
+      "bytes": 1798,
+      "raw_digest": "sha256:6ed095af16fd082eb1e75489713d3b4760cb499a0f474d154e19877516799f05"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.018541,
+      "bytes": 1798,
+      "raw_digest": "sha256:6ed095af16fd082eb1e75489713d3b4760cb499a0f474d154e19877516799f05"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.004518,
+      "bytes": 1798,
+      "raw_digest": "sha256:6ed095af16fd082eb1e75489713d3b4760cb499a0f474d154e19877516799f05"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.002754,
+      "bytes": 1798,
+      "raw_digest": "sha256:6ed095af16fd082eb1e75489713d3b4760cb499a0f474d154e19877516799f05"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.004714,
+      "bytes": 1798,
+      "raw_digest": "sha256:6ed095af16fd082eb1e75489713d3b4760cb499a0f474d154e19877516799f05"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.005422,
+      "bytes": 1798,
+      "raw_digest": "sha256:6ed095af16fd082eb1e75489713d3b4760cb499a0f474d154e19877516799f05"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.005607,
+      "bytes": 2694,
+      "raw_digest": "sha256:42bc2a9d1f9d700c8f0b3a5b28d171099f602d57f1e7951dd9c6ad55a8543a84"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.005372,
+      "bytes": 2694,
+      "raw_digest": "sha256:42bc2a9d1f9d700c8f0b3a5b28d171099f602d57f1e7951dd9c6ad55a8543a84"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.020113,
+      "bytes": 15552,
+      "raw_digest": "sha256:cdee2d2bd14dcedb122234ad61746a184adba06a7be0b597b4efa6f0fc862934"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.021279,
+      "bytes": 9074,
+      "raw_digest": "sha256:b13644cc9cae3e9195946e2aeb39b6846d75203a609ffa25c7e28ceb488d3a36"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.017024,
+      "bytes": 9027,
+      "raw_digest": "sha256:24daf13fbaf84e0bc65602f627c4c9c8435c82cd31a2d2a4725cb88f89b4664a"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.019385,
+      "bytes": 9049,
+      "raw_digest": "sha256:8cc6244c846ad65ec6cd6edc89bb4908f786e5f3c7ac28895fd753be302bd033"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.011099,
+      "bytes": 9066,
+      "raw_digest": "sha256:7aec6980bdc6a378cefadff0e923379ce479d72a3d97e33d9baebbb7576e0dae"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.013902,
+      "bytes": 7832,
+      "raw_digest": "sha256:140fe39ee6492116c106c2257e2104b6e84e49a4e4f28b8837c3d470619c3f4d"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.050673,
+      "bytes": 1813,
+      "raw_digest": "sha256:09c4ebb306369544c4aac1e1664b4bc5540dd45caafd632250951a5e15203fe1"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.045858,
+      "bytes": 3733,
+      "raw_digest": "sha256:ad98e6189fc78cc95d214bb9b4f9b5ea8c7cd91d9d3e3cf834dda7595c815fba"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.041188,
+      "bytes": 1803,
+      "raw_digest": "sha256:d87529b8fbbeebd654968053050a2b53e93708aa1c952706983ff024bc17c301"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.044302,
+      "bytes": 3713,
+      "raw_digest": "sha256:2470efff63aab13d97759341bde875791baa785d7c60fa44bfaf9fd3c89f67d2"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.039065,
+      "bytes": 1803,
+      "raw_digest": "sha256:637e223fba1113b79110972d353fa3de091bffda08778427db32b044d8e2d45d"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.038668,
+      "bytes": 3713,
+      "raw_digest": "sha256:4a71e44decf67607df2fa516ab00fb397ee17c5d19b9c30af48abab86db1784d"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.036876,
+      "bytes": 1809,
+      "raw_digest": "sha256:6f41e947f5ba22ba1d4a45976ec6698933d3c75487c807ca99b901b385b72780"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.038222,
+      "bytes": 3725,
+      "raw_digest": "sha256:d58af5f773bf482c060f53ace93b8c7a524d958a526d6d14b502eccec82354c6"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.04096,
+      "bytes": 1803,
+      "raw_digest": "sha256:1b0177fb063a0587878207be093c607e9539a2551b76ad0697c2e35044138fd8"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.03632,
+      "bytes": 3713,
+      "raw_digest": "sha256:15bc89649879ba45bec3db1619b832e5dffb69c42d0d4114b83ef2d9f9b575ad"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.014689,
+      "bytes": 10977,
+      "raw_digest": "sha256:aed37adf5ce68114349c66c4ec80a784606d3fd1e2a4b16a1e4885cdfa2e48f3"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.008391,
+      "bytes": 10991,
+      "raw_digest": "sha256:12bcbd80dbd31da6c6e218f92c9e38a83eb32d730397ea581f52ad94a3fe87aa"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.009241,
+      "bytes": 7832,
+      "raw_digest": "sha256:e43abbbe1fd07006d1e41192bec37664e3b12d65cf1f504dcc1cb1d7c8af6fa6"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.013531,
+      "bytes": 15552,
+      "raw_digest": "sha256:6d08bc261369760a0afd8b84fcabb917c2fa2f80fdb1386262906121a40b7dd9"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.016064,
+      "bytes": 32207,
+      "raw_digest": "sha256:4aa97f47777a22a06b731874363cb6a5284e849855ce4514ea937188c4b5f30b"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.014032,
+      "bytes": 15552,
+      "raw_digest": "sha256:6ee1a10e45906e4bfcf6bf360d85105f43fa18111703267b42658408dda3d535"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.01467,
+      "bytes": 15552,
+      "raw_digest": "sha256:44a4a36968251700b7c8bd4371e89ce85130e87a55d772fa71355a46ff1696df"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.014683,
+      "bytes": 15552,
+      "raw_digest": "sha256:9a36a3b5b7c566be7ecb672d5930b9867b66f946eeea404930ff613e8f1f9e28"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.014108,
+      "bytes": 15552,
+      "raw_digest": "sha256:4c7203615f86fc013f9d6bce8a81e93a3dc30fe33d2142bc3a962d2ab0c8e225"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.013653,
+      "bytes": 15552,
+      "raw_digest": "sha256:959d1fa1b503c1641dcfa2f20dd09a568d57e76f855752fa5d1cd0ae92111a24"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.013011,
+      "bytes": 9794,
+      "raw_digest": "sha256:e975f82c26f008c7bcd95b0ae88fec73327449c3d41435f7a61665501ddee142"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.012471,
+      "bytes": 11739,
+      "raw_digest": "sha256:7389e5fe3067842190317599a7ccf15dd9a003aa30d3001f97057c512d1118de"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.013261,
+      "bytes": 5941,
+      "raw_digest": "sha256:94e4df5203363b29034d5e1c2d1339c0729f39c6460f367de1a94d69ff2cb095"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.014958,
+      "bytes": 5938,
+      "raw_digest": "sha256:41615f06f99678dd8fe25cf4ca0e1ba093594b18f86b75a5bd00e874e2f48062"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.017459,
+      "bytes": 9817,
+      "raw_digest": "sha256:edd796eea46ba0388f78d7bd91c707639eed35553962d44260d9253ab7eee42d"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.020411,
+      "bytes": 9851,
+      "raw_digest": "sha256:3a5164796ec8cee6919ab7df166a65734aeab4da0d62f7ef01af91279a631da5"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.012863,
+      "bytes": 5985,
+      "raw_digest": "sha256:345a11b4c3da8997650c90109e671df580ffd7912488be9c7e9d3d0374ef15f6"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.014569,
+      "bytes": 9015,
+      "raw_digest": "sha256:3fba2eca85dba0fc0a8b131783aeceef3bfe923c7e7a6e75c49527d2dc52c3dd"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.007873,
+      "bytes": 9019,
+      "raw_digest": "sha256:794cc15df77c2ac284b739dbeb9ae4e3613226c1cd184d45a0e4d23457e61385"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.009415,
+      "bytes": 10423,
+      "raw_digest": "sha256:6a4670884e80e5a3d4c726c6adc417607688ac958ed4ae2c99a947299ca61fda"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.008965,
+      "bytes": 7775,
+      "raw_digest": "sha256:02d311dc7e446f53509a8abade8133181f65d10e6081485b16274cdf492d2f77"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.040251,
+      "bytes": 1813,
+      "raw_digest": "sha256:09c4ebb306369544c4aac1e1664b4bc5540dd45caafd632250951a5e15203fe1"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.043452,
+      "bytes": 3733,
+      "raw_digest": "sha256:ad98e6189fc78cc95d214bb9b4f9b5ea8c7cd91d9d3e3cf834dda7595c815fba"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.042373,
+      "bytes": 1803,
+      "raw_digest": "sha256:d87529b8fbbeebd654968053050a2b53e93708aa1c952706983ff024bc17c301"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.049296,
+      "bytes": 3713,
+      "raw_digest": "sha256:2470efff63aab13d97759341bde875791baa785d7c60fa44bfaf9fd3c89f67d2"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.045828,
+      "bytes": 1803,
+      "raw_digest": "sha256:637e223fba1113b79110972d353fa3de091bffda08778427db32b044d8e2d45d"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.044253,
+      "bytes": 3713,
+      "raw_digest": "sha256:4a71e44decf67607df2fa516ab00fb397ee17c5d19b9c30af48abab86db1784d"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.041607,
+      "bytes": 1809,
+      "raw_digest": "sha256:6f41e947f5ba22ba1d4a45976ec6698933d3c75487c807ca99b901b385b72780"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.046554,
+      "bytes": 3725,
+      "raw_digest": "sha256:d58af5f773bf482c060f53ace93b8c7a524d958a526d6d14b502eccec82354c6"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.050262,
+      "bytes": 1803,
+      "raw_digest": "sha256:1b0177fb063a0587878207be093c607e9539a2551b76ad0697c2e35044138fd8"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.039679,
+      "bytes": 3713,
+      "raw_digest": "sha256:15bc89649879ba45bec3db1619b832e5dffb69c42d0d4114b83ef2d9f9b575ad"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.01702,
+      "bytes": 10916,
+      "raw_digest": "sha256:6e63b14513bc6246b0accb06f5fc1009beee30619a9aa01a24d546e565fd8b27"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.013575,
+      "bytes": 11080,
+      "raw_digest": "sha256:90207ad5f71967c8839c5bfbb4a81fda845b4f461d4e330fc10f4fe2ba8618fc"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.018034,
+      "bytes": 14878,
+      "raw_digest": "sha256:4bfb4835e858fa31bfc11df88ca15ac192bf77f3be07536ab2a0fb3a9148324b"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.02246,
+      "bytes": 30813,
+      "raw_digest": "sha256:dbdd252717613332363e6f8fd43d0e2030a95d8495f1f6052d2a40ff7f6d8377"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.02328,
+      "bytes": 14878,
+      "raw_digest": "sha256:225c47b3846d1ff604de3d47a9d8f48450211a276db7434a1389ac20c9bd5181"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.020512,
+      "bytes": 14878,
+      "raw_digest": "sha256:9fb27ff258a3c6ecd2e0c199de958a01fae638746a8448abf48b73fd2452d052"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.019652,
+      "bytes": 14878,
+      "raw_digest": "sha256:0384e5ce650130e027e6f355409b4cabda56e4b479c055b53aff7660df1e7b65"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.021818,
+      "bytes": 14878,
+      "raw_digest": "sha256:be6c58cf02d4d8ac22ae2332cbb0ad815a419bc773af0b7cf5a65318f0769492"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.020164,
+      "bytes": 14878,
+      "raw_digest": "sha256:ffee09d0cc0fb249b36b294b02eda5c564416efaeae7f5b9d1c81e551a9dcc9b"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.021681,
+      "bytes": 7812,
+      "raw_digest": "sha256:ecdf1afd3c1cea6c88fbb76d58e95324d135bf7b3a6e4f105430606a16d9e676"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.020904,
+      "bytes": 7835,
+      "raw_digest": "sha256:c01aa71a7f66e3b443e4d5084e25591a453c2c62d0c40ecd7688d8ba44014c99"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.011929,
+      "bytes": 9239,
+      "raw_digest": "sha256:618d1c6feffa5814436cb13a6f118d9bd59021ba34db88ec68b8cd7aa7fc3d31"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.020862,
+      "bytes": 7832,
+      "raw_digest": "sha256:91e7ef52b8e8e7428244f747bebb1296961c4e73de0963ada79fa7bea5b2ba96"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.019268,
+      "bytes": 9249,
+      "raw_digest": "sha256:18e86cc24e3c590de871b2b8780dba88eb922af1087d9dc3ea0b9d992e98f04c"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.012982,
+      "bytes": 9283,
+      "raw_digest": "sha256:563215f19412a1fd0abb30732e56f9b95467ad300ee058ff238fad4b73b110d1"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.017359,
+      "bytes": 5979,
+      "raw_digest": "sha256:f19e7e0e4f4b3d362cef8c81794f57aeb8ed5b43e48241f0d40652d337d679e8"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 401,
+      "seconds": 0.000367,
+      "bytes": 36,
+      "raw_digest": "sha256:981ec6aa5b1d3cbd4bc50c6b4c98f877de8334eed519c19bd8463d78e03e8d5a"
+    },
+    {
+      "path": "/api/version",
+      "status": 200,
+      "seconds": 0.000428,
+      "bytes": 235,
+      "raw_digest": "sha256:5b4b878fddcebedea1f91708b979f57804e3bcb2b9f18de45d0c80149fc7a82d"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.004215,
+      "bytes": 73198,
+      "raw_digest": "sha256:e367e52835916efeb3b1828c07bffdaaa95531d224ba049b939eccd949f0b90c"
+    }
+  ],
+  "phases": [
+    {
+      "phase": "postfix-baseline",
+      "ready_seconds": 7.477,
+      "operating": {
+        "rss_samples": 66,
+        "sampled_max_tree_rss_bytes": 242515968,
+        "sampled_max_descendants": 3,
+        "minimum_available_physical_bytes": 7175258112,
+        "physical_samples": 14,
+        "physical_formula": "page_size*(free+inactive+speculative); compressor and swap excluded",
+        "sampled_max_data_allocated_bytes": 3526656,
+        "rss_cadence_seconds": 0.2,
+        "host_disk_cadence_seconds": 1,
+        "qualification": "Sequential native samples after HTTP readiness; not an atomic tree snapshot, transient peak or hard enforcement. Startup before HTTP readiness and teardown are not RSS-sampled. No swap credit.",
+        "ownership": {
+          "sampling_thread_joined": true,
+          "host_children": [
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            }
+          ],
+          "forced_sampling_cancellation": false,
+          "observer": {
+            "exit_code": 0,
+            "joined": true,
+            "forced": false
+          }
+        }
+      },
+      "terminal": {
+        "outcome": "success",
+        "exit_code": 0,
+        "teardown": "clean",
+        "wall_seconds": 21.529
+      },
+      "owned_pgid": 55588,
+      "server_group_drained": true
+    }
+  ],
+  "production_signing": "pending; no production key or production signature",
+  "input_censuses_before_launch": [
+    {
+      "role": "primary",
+      "repository": "evaluation.local/t503-public",
+      "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+      "tree": "a0d73c675a066f2e969c1caa2db205576108d57e",
+      "files": 19,
+      "bytes": 316648,
+      "census_digest": "sha256:18891698bfb2873c21d794e1d1652902f36be06fcca4ed2e017d52d13164383b"
+    },
+    {
+      "role": "concurrent_copy",
+      "repository": "evaluation.local/t503-public-copy",
+      "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+      "tree": "a0d73c675a066f2e969c1caa2db205576108d57e",
+      "files": 19,
+      "bytes": 316648,
+      "census_digest": "sha256:18891698bfb2873c21d794e1d1652902f36be06fcca4ed2e017d52d13164383b"
+    },
+    {
+      "role": "primary_prospective_transition",
+      "repository": "evaluation.local/t503-public",
+      "commit": "5b187e7b79f5580a8918f8c0b34fb3350b447c97",
+      "tree": "965232d0b63975a25a6537d220ac1f6fc00c6d70",
+      "files": 19,
+      "bytes": 316718,
+      "census_digest": "sha256:d2d744a1cbea958fd9ad201b809ebf6b64853faab8e6d3c1118ae4e48204cb25"
+    },
+    {
+      "role": "concurrent_copy_prospective_transition",
+      "repository": "evaluation.local/t503-public-copy",
+      "commit": "cd064619232a149ee00374fadad0759cf12528c0",
+      "tree": "071ab5e3793d50a32966246a651818b7d10a2e71",
+      "files": 19,
+      "bytes": 316722,
+      "census_digest": "sha256:9f712925ab4c4165f6399a3a7bb8817dbaa0019d5e78d4eb75b8879e855a6b0e"
+    }
+  ],
+  "host": {
+    "sysname": "Darwin",
+    "machine": "arm64",
+    "cpu_count": 10,
+    "physical_memory_bytes": 25769803776
+  },
+  "bounds": {
+    "index_seconds": 60,
+    "index_bytes": 8388608,
+    "evaluation_tree_files": 32,
+    "evaluation_tree_bytes": 16777216,
+    "repositories": 2,
+    "parallel_comparison_requests": 8,
+    "http_response_bytes": 262144,
+    "cold_request_seconds": 2,
+    "warm_request_seconds": 1,
+    "startup_seconds": 30,
+    "publication_seconds": 90,
+    "complete_native_seconds": 180,
+    "derived_allocated_disk_bytes": 536870912,
+    "minimum_available_physical_headroom_bytes": 4294967296,
+    "minimum_free_disk_bytes": 2147483648,
+    "source_blobs_read_per_citation": 1,
+    "process_tree_sampled_max_rss_bytes": 2147483648
+  },
+  "free_disk_preflight_bytes": 230790275072,
+  "executed_tools": {
+    "go": {
+      "path": "/opt/homebrew/bin/go",
+      "resolved_path": "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+      "bytes": 14500160,
+      "sha256": "sha256:3925fc3221ac440ebf7c35361ff663bed0c7bdb2e0a157b75fe993607ffe0a19",
+      "version": "go1.26.5",
+      "version_evidence": "go version go1.26.5 darwin/arm64"
+    },
+    "git": {
+      "path": "/usr/bin/git",
+      "resolved_path": "/usr/bin/git",
+      "bytes": 118640,
+      "sha256": "sha256:b8763cf250e607a778bb4603cecb5b90338814d0a3dfcba0d57b1de242f610e9",
+      "version_evidence": "git version 2.54.0 (Apple Git-157)"
+    },
+    "zoekt_git_index": {
+      "path": "/private/tmp/phebs-main-8a70-native-qualification/zoekt-git-index",
+      "resolved_path": "/private/tmp/phebs-main-8a70-native-qualification/zoekt-git-index",
+      "bytes": 39081090,
+      "sha256": "sha256:dd216b7e4df21b956a8a3461108ac81ee6cb700799a3decf9c739af2ba003c4d",
+      "version": "same-main-go.mod",
+      "version_evidence": "helper-build-receipt.json"
+    },
+    "focused_index": {
+      "path": "/private/tmp/phebs-main-8a70-native-qualification/phebs-focused-index",
+      "resolved_path": "/private/tmp/phebs-main-8a70-native-qualification/phebs-focused-index",
+      "bytes": 27295666,
+      "sha256": "sha256:701d83e026ac926d3e5d92a948a68c346c11335ce83c37c31bd62207beb0d8b5",
+      "version": "same-main-go.mod",
+      "version_evidence": "helper-build-receipt.json"
+    },
+    "buf": {
+      "path": "/Users/ben/.codex/worktrees/t445-header/phebs.com/bin/buf",
+      "resolved_path": "/Users/ben/.codex/worktrees/t445-header/phebs.com/bin/buf",
+      "bytes": 77461554,
+      "sha256": "sha256:691b8635ab9c083e38f1d892bf10799ea688070ed8ef8081d9b7907d0a7e4658",
+      "version_evidence": "1.72.0"
+    },
+    "surreal": {
+      "path": "/opt/homebrew/bin/surreal",
+      "resolved_path": "/opt/homebrew/opt/phebs-surreal-3.2.0/surreal",
+      "bytes": 233283488,
+      "sha256": "sha256:ee819dfcedd23035a785ac40f2509f86cbb09fc3255726ad74755b161a3ca0a8",
+      "version": "3.2.0",
+      "version_evidence": "3.2.0 for macos on aarch64"
+    },
+    "node": {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+      "resolved_path": "/private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+      "bytes": 120965360,
+      "sha256": "sha256:ee6fb0e015284d83a91e8ec5213f43a157f8a392b58555301682892ba928c04a",
+      "version": "v24.18.0",
+      "version_evidence": "v24.18.0"
+    },
+    "chrome": {
+      "path": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "resolved_path": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "bytes": 367696,
+      "sha256": "sha256:3972431aa8acff4e590998116c6c3e663e9a4d0eb6efd08fd160df8206db94a6",
+      "version": "155.0.8059.82",
+      "version_evidence": "Source-bound installed-Chrome preflight actual renderer155.0.8059.82, clean exit0 joined teardown"
+    },
+    "chrome_framework": {
+      "path": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/Current/Google Chrome Framework",
+      "resolved_path": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.82/Google Chrome Framework",
+      "bytes": 520002192,
+      "sha256": "sha256:b9aa14e0270a6a96bde855b9765c2a6eb48d0af70da7e9018f9622c4f626ef6c",
+      "version": "155.0.8059.82",
+      "version_evidence": "Source-bound installed-Chrome preflight actual renderer155.0.8059.82, clean exit0 joined teardown"
+    },
+    "openssl": {
+      "path": "/opt/homebrew/opt/openssl@3/bin/openssl",
+      "resolved_path": "/opt/homebrew/Cellar/openssl@3/3.6.3/bin/openssl",
+      "bytes": 880512,
+      "sha256": "sha256:103fc7706cf6646f226d96f29242d81890363499afc730e7ef1fadd64b3a123c",
+      "version_evidence": "OpenSSL3.6.3/library3.6.3"
+    },
+    "vm_stat": {
+      "path": "/usr/bin/vm_stat",
+      "resolved_path": "/usr/bin/vm_stat",
+      "bytes": 101664,
+      "sha256": "sha256:0127fec1de1d99c7f0b0cf185fec048c7fe92d1f1b2ad380882c583f0c921df7",
+      "version_evidence": "Darwin system sampler image; no sample performed during draft prep"
+    }
+  },
+  "observer": {
+    "path": "/tmp/phebs-main-8a70-native-qualification/native-observer",
+    "resolved_path": "/private/tmp/phebs-main-8a70-native-qualification/native-observer",
+    "bytes": 31576930,
+    "sha256": "sha256:3b25f9b9cabb9cac5087d9e65af54eb7d6bf0643d5bbd33ed9296c621d3fc16e"
+  },
+  "source_commit": "8a70fef5f60411f31d210efd52ab4dcd79385549",
+  "source_tree": "ebbe68f5d6faef8851e3368c268d3280797ce98b",
+  "binary_digest": "sha256:7dab45a9011c60132a80381933242705e44da19b2712421ed4361b67dcca19be",
+  "binary_metadata": "/tmp/phebs-main-8a70-native-qualification/phebs: go1.26.5\n\tpath\tgithub.com/bmeddeb/phebs/cmd/phebs\n\tmod\tgithub.com/bmeddeb/phebs\tv0.2.1-0.20261018114706-8a70fef5f604\t\n\tdep\tgithub.com/RoaringBitmap/roaring/v2\tv2.19.0\th1:zsWtVE+biht4eVl0YDLvykUqGkftR3Qc5UCbeKB4UQ4=\n\tdep\tgithub.com/alexedwards/scs/v2\tv2.9.0\th1:xa05mVpwTBm1iLeTMNFfAWpKUm4fXAW7CeAViqBVS90=\n\tdep\tgithub.com/beorn7/perks\tv1.0.1\th1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=\n\tdep\tgithub.com/bits-and-blooms/bitset\tv1.24.4\th1:95H15Og1clikBrKr/DuzMXkQzECs1M6hhoGXLwLQOZE=\n\tdep\tgithub.com/bmatcuk/doublestar/v4\tv4.10.0\th1:zU9WiOla1YA122oLM6i4EXvGW62DvKZVxIe6TYWexEs=\n\tdep\tgithub.com/bufbuild/protocompile\tv0.14.2-0.20260716165721-bb5762d29672\th1:6xykiXQPoF/hhOjAhwiHQ0kgcAvrDZw0Tjl1VQkpu5c=\n\tdep\tgithub.com/cespare/xxhash/v2\tv2.3.0\th1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=\n\tdep\tgithub.com/cockroachdb/errors\tv1.11.3\th1:5bA+k2Y6r+oz/6Z/RFlNeVCesGARKuC6YymtcDrbC/I=\n\tdep\tgithub.com/cockroachdb/logtags\tv0.0.0-20241215232642-bb51bb14a506\th1:ASDL+UJcILMqgNeV5jiqR4j+sTuvQNHdf2chuKj1M5k=\n\tdep\tgithub.com/cockroachdb/redact\tv1.1.5\th1:u1PMllDkdFfPWaNGMyLD1+so+aq3uUItthCFqzwPJ30=\n\tdep\tgithub.com/coreos/go-oidc/v3\tv3.16.0\th1:qRQUCFstKpXwmEjDQTIbyY/5jF00+asXzSkmkoa/mow=\n\tdep\tgithub.com/danielgtaylor/huma/v2\tv2.38.0\th1:fb0WZCatnaiHLphMQDDWDjygNxfMkX/ENma3QsRl7vY=\n\tdep\tgithub.com/dustin/go-humanize\tv1.0.1\th1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkpeCY=\n\tdep\tgithub.com/fatih/color\tv1.19.0\th1:Zp3PiM21/9Ld6FzSKyL5c/BULoe/ONr9KlbYVOfG8+w=\n\tdep\tgithub.com/fsnotify/fsnotify\tv1.8.0\th1:dAwr6QBTBZIkG8roQaJjGof0pp0EeF+tNV7YBP3F/8M=\n\tdep\tgithub.com/fxamacker/cbor/v2\tv2.9.2\th1:X4Ksno9+x3cz0TZv69ec1hxP/+tymuR8PXQJyDwfh78=\n\tdep\tgithub.com/getsentry/sentry-go\tv0.31.1\th1:ELVc0h7gwyhnXHDouXkhqTFSO5oslsRDk0++eyE0KJ4=\n\tdep\tgithub.com/go-enry/go-enry/v2\tv2.9.6\th1:np63eOtMV56zfYDHnFVgpEVOk8fr2kmylcMnAZUDbSs=\n\tdep\tgithub.com/go-jose/go-jose/v4\tv4.1.3\th1:CVLmWDhDVRa6Mi/IgCgaopNosCaHz7zrMeF9MlZRkrs=\n\tdep\tgithub.com/gofrs/flock\tv0.13.0\th1:95JolYOvGMqeH31+FC7D2+uULf6mG61mEZ/A8dRYMzw=\n\tdep\tgithub.com/gofrs/uuid\tv4.4.0+incompatible\th1:3qXRTX8/NbyulANqlc0lchS1gqAVxRgsuW1YrTJupqA=\n\tdep\tgithub.com/gogo/protobuf\tv1.3.2\th1:Ov1cvc58UF3b5XjBnZv7+opcTcQFZebYjWzi34vdm4Q=\n\tdep\tgithub.com/google/go-cmp\tv0.7.0\th1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=\n\tdep\tgithub.com/google/jsonschema-go\tv0.4.3\th1:/DBOLZTfDow7pe2GmaJNhltueGTtDKICi8V8p+DQPd0=\n\tdep\tgithub.com/google/uuid\tv1.6.0\th1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=\n\tdep\tgithub.com/gorilla/websocket\tv1.5.3\th1:saDtZ6Pbx/0u+bgYQ3q96pZgCzfhKXGPqt7kZ72aNNg=\n\tdep\tgithub.com/grafana/regexp\tv0.0.0-20240607082908-2cb410fa05da\th1:BML5sNe+bw2uO8t8cQSwe5QhvoP04eHPF7bnaQma0Kw=\n\tdep\tgithub.com/grpc-ecosystem/go-grpc-middleware/v2\tv2.3.3\th1:B+8ClL/kCQkRiU82d9xajRPKYMrB7E0MbtzWVi1K4ns=\n\tdep\tgithub.com/kr/pretty\tv0.3.1\th1:flRD4NNwYAUpkphVc1HcthR4KEIFJ65n8Mw5qdRn3LE=\n\tdep\tgithub.com/kr/text\tv0.2.0\th1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=\n\tdep\tgithub.com/mattn/go-colorable\tv0.1.15\th1:+u9SLTRGnXv73cEsnsmoZBom+dMU88B2M0aDcWy0/jY=\n\tdep\tgithub.com/mattn/go-isatty\tv0.0.23\th1:cYwCQTQf3HB6xUC+BtyCLZNr7IzbOmoZbmssVNzSyiQ=\n\tdep\tgithub.com/modelcontextprotocol/go-sdk\tv1.6.1\th1:0zOSupjKUxPKSocPT1Wtago+mUHU2/uZ4xSOY0FGReU=\n\tdep\tgithub.com/mschoch/smat\tv0.2.0\th1:8imxQsjDm8yFEAVBe7azKmKSgzSkZXDuKkSq9374khM=\n\tdep\tgithub.com/munnerz/goautoneg\tv0.0.0-20191010083416-a7dc8b61c822\th1:C3w9PqII01/Oq1c1nUAm88MOHcQC9l5mIlSMApZMrHA=\n\tdep\tgithub.com/opentracing/opentracing-go\tv1.2.0\th1:uEJPy/1a5RIPAJ0Ov+OIO8OxWu77jEv+1B0VhjKrZUs=\n\tdep\tgithub.com/pkg/errors\tv0.9.1\th1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=\n\tdep\tgithub.com/prometheus/client_golang\tv1.23.2\th1:Je96obch5RDVy3FDMndoUsjAhG5Edi49h0RJWRi/o0o=\n\tdep\tgithub.com/prometheus/client_model\tv0.6.2\th1:oBsgwpGs7iVziMvrGhE53c/GrLUsZdHnqNwqPLxwZyk=\n\tdep\tgithub.com/prometheus/common\tv0.66.1\th1:h5E0h5/Y8niHc5DlaLlWLArTQI7tMrsfQjHV+d9ZoGs=\n\tdep\tgithub.com/rogpeppe/go-internal\tv1.14.1\th1:UQB4HGPB6osV0SQTLymcB4TgvyWu6ZyliaW0tI/otEQ=\n\tdep\tgithub.com/rs/xid\tv1.6.0\th1:fV591PaemRlL6JfRxGDEPl69wICngIQ3shQtzfy2gxU=\n\tdep\tgithub.com/scip-code/scip/bindings/go/scip\tv0.9.0\th1:C0LVhTl9Gw+2UC4d7RZdvB0iWUkaOyRA1fQW1CrhsMA=\n\tdep\tgithub.com/segmentio/asm\tv1.2.1\th1:DTNbBqs57ioxAD4PrArqftgypG4/qNpXoJx8TVXxPR0=\n\tdep\tgithub.com/segmentio/encoding\tv0.5.4\th1:OW1VRern8Nw6ITAtwSZ7Idrl3MXCFwXHPgqESYfvNt0=\n\tdep\tgithub.com/sourcegraph/beaut\tv0.0.0-20240611013027-627e4c25335a\th1:j/CQ27s679M9wRGBRJYyXGrfkYuQA6VMnD7R08mHD9c=\n\tdep\tgithub.com/sourcegraph/go-ctags\tv0.0.0-20250729094530-349a251d78d8\th1:hpCD/FvbXLR7/034fKD0CQ8LmT4zoQfT2DzJIjqMzUI=\n\tdep\tgithub.com/sourcegraph/log\tv0.0.0-20241024013702-574f7079c888\th1:9PUH8Hn8mVhPTtRKqot1HHsbLRDP0H2A+FSyuRumP2Q=\n\tdep\tgithub.com/sourcegraph/zoekt\tv0.0.0-20260709064101-33f1f18af292\th1:HsoQyVl9olsjSqA0YddekTbCJOsfn9bUeu//bLg6fa8=\n\tdep\tgithub.com/surrealdb/surrealdb.go\tv1.5.1\th1:5uyGYkwjO9p3UEdRBroWGhw5PpLuJorenmeB9GtGWKo=\n\tdep\tgithub.com/tetratelabs/wazero\tv1.12.0\th1:DuWcpNu/FzgEXgGBDp8J1Spc+CWOvvtvVyjKlaZopYU=\n\tdep\tgithub.com/wasilibs/go-re2\tv1.10.0\th1:vQZEBYZOCA9jdBMmrO4+CvqyCj0x4OomXTJ4a5/urQ0=\n\tdep\tgithub.com/wasilibs/wazero-helpers\tv0.0.0-20240620070341-3dff1577cd52\th1:OvLBa8SqJnZ6P+mjlzc2K7PM22rRUPE1x32G9DTPrC4=\n\tdep\tgithub.com/x448/float16\tv0.8.4\th1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=\n\tdep\tgithub.com/yosida95/uritemplate/v3\tv3.0.2\th1:Ed3Oyj9yrmi9087+NczuL5BwkIc4wvTb5zIM+UJPGz4=\n\tdep\tgithub.com/yuin/goldmark\tv1.4.13\th1:fVcFKWvrslecOb/tg+Cc05dkeYx540o0FuFt3nUVDoE=\n\tdep\tgo.uber.org/atomic\tv1.11.0\th1:ZvwS0R+56ePWxUNi+Atn9dWONBPp/AUETXlHW0DxSjE=\n\tdep\tgo.uber.org/multierr\tv1.11.0\th1:blXXJkSxSSfBVBlC76pxqeO+LN3aDfLQo+309xJstO0=\n\tdep\tgo.uber.org/thriftrw\tv1.34.0\th1:F6aIyIg6B1+fx7aiylVyqDdTG8mtLQfREfOdlm6u+mI=\n\tdep\tgo.uber.org/zap\tv1.28.0\th1:IZzaP1Fv73/T/pBMLk4VutPl36uNC+OSUh3JLG3FIjo=\n\tdep\tgo.yaml.in/yaml/v2\tv2.4.2\th1:DzmwEr2rDGHl7lsFgAHxmNz/1NlQ7xLIrlN2h5d1eGI=\n\tdep\tgolang.org/x/crypto\tv0.54.0\th1:YLIA59K4fiNzHzjnZt2tUJQjQtUWfWbeHBqKtk3eScw=\n\tdep\tgolang.org/x/mod\tv0.38.0\th1:MECBjubtXD7yj4HrhIUcywNaGeNVUdfVnxmPajOk4yk=\n\tdep\tgolang.org/x/net\tv0.57.0\th1:K5+3DljvIuDG9/Jv9rvyMywYNFCQ9RSUY6OOTTkT+tE=\n\tdep\tgolang.org/x/oauth2\tv0.36.0\th1:peZ/1z27fi9hUOFCAZaHyrpWG5lwe0RJEEEeH0ThlIs=\n\tdep\tgolang.org/x/sync\tv0.22.0\th1:SZjpbeLmrCk4xhRSZFNZW5gFUeCeFgjekvI/+gfScek=\n\tdep\tgolang.org/x/sys\tv0.47.0\th1:o7XGOvZQCADBQQ4Y7VNq2dRWQR7JmOUW8Kxx4ZsNgWs=\n\tdep\tgolang.org/x/text\tv0.40.0\th1:Ub2Z6/xjgF1WrYQz2nuITOEegKFtiIy+rieRJ5lHZKs=\n\tdep\tgoogle.golang.org/genproto/googleapis/rpc\tv0.0.0-20260715232425-e75dac1f907d\th1:Jkpk39hlTZOIp3RbfvNX9R8Hv+Sw0X89nlU/xFOErsc=\n\tdep\tgoogle.golang.org/grpc\tv1.80.0\th1:Xr6m2WmWZLETvUNvIUmeD5OAagMw3FiKmMlTdViWsHM=\n\tdep\tgoogle.golang.org/protobuf\tv1.36.11\th1:fV6ZwhNocDyBLK0dj+fg8ektcVegBBuEolpbTQyBNVE=\n\tdep\tgopkg.in/yaml.v3\tv3.0.1\th1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=\n\tbuild\t-buildmode=exe\n\tbuild\t-compiler=gc\n\tbuild\t-tags=ui\n\tbuild\t-trimpath=true\n\tbuild\tCGO_ENABLED=1\n\tbuild\tGOARCH=arm64\n\tbuild\tGOOS=darwin\n\tbuild\tGOARM64=v8.0\n\tbuild\tvcs=git\n\tbuild\tvcs.revision=8a70fef5f60411f31d210efd52ab4dcd79385549\n\tbuild\tvcs.time=2026-10-18T11:47:06Z\n\tbuild\tvcs.modified=false\n",
+  "binding_digest": "sha256:c94d3aef6f36c0983fb643d75034f860eae0f543bded2a91a73f997886136c8e",
+  "plan_digest": "sha256:8acec78a879023e4642e41710a3563c3d4930071239e925798cf1666b5735f9f",
+  "first_attempt_digest": "sha256:7e63806f9269a357fa056d46ff625a1a764da8930eb74df00d84341607163693",
+  "labels_digest": "sha256:db84af5c81cad0526677a058d602523049e000d2b960262f5bb6e547d77bcd26",
+  "headroom_preflight": {
+    "available_physical_bytes": 7738195968,
+    "page_size": 16384,
+    "pages": {
+      "free": 3909,
+      "inactive": 446593,
+      "speculative": 21800
+    },
+    "formula": "page_size*(free+inactive+speculative); compressor and swap excluded"
+  },
+  "signed_records": [
+    {
+      "pack": "phebs.grpc.caller.go",
+      "record_digest": "sha256:0764a7c2690a2409994cae6a84670407257f7a748f12772af8c816e3e8af5e29",
+      "record": {
+        "release_schema_version": "1.0",
+        "release_id": "rel-phebs.grpc.caller.go-1.0.0",
+        "release_version": "1.0.0",
+        "pack_id": "phebs.grpc.caller.go",
+        "pack_claim_version": "1.0.0",
+        "card": {
+          "artifact_id": "caller-map-card-1.0.0.md",
+          "digest": "sha256:46d032ed71236a1f32dc67d9bc0eca3a0a83e8c385d8988abee7609f37b7f397"
+        },
+        "manifest": {
+          "artifact_id": "caller-map-manifest-1.0.0.json",
+          "digest": "sha256:89c9b414961352483a5c28fb45f38d8b886042ae6dd54f968ca1d1580598c640"
+        },
+        "implementation": {
+          "phebs_source_commit": "8a70fef5f60411f31d210efd52ab4dcd79385549",
+          "phebs_binary_digest": "sha256:7dab45a9011c60132a80381933242705e44da19b2712421ed4361b67dcca19be",
+          "pack_implementation_digest": "sha256:b58de55cafe2bdfc192110aa0fac7f0ce59bf03aa68237aa45b4f6ce1815e8ff",
+          "toolchain_digest": "sha256:c6652a655b5c51d1ce66b001a3f82f118b97fecfca54705e3b7313d6c8b82dba"
+        },
+        "referenced_artifacts_root_digest": "sha256:f0fc078760f06aa1251f559328011013f80b9c5dcde1b9da39216af530453167",
+        "validation": {
+          "artifact_id": "caller-map-validation-1.0.0.json",
+          "digest": "sha256:abc969d0321bb67ccba283a6c9ff33f49e3071224edda507758460e195f89834",
+          "applies": true,
+          "expires_at": "2027-01-15T23:59:59Z",
+          "expiry_trigger": null
+        },
+        "derived_status": "released",
+        "approved_at": "2026-10-18T00:00:00Z",
+        "approval_records": [
+          "t503-postfix-disposable-key-measurement-only"
+        ],
+        "canonicalization": {
+          "algorithm": "phebs-canonical-json",
+          "version": "1"
+        },
+        "signature": {
+          "key_id": "t503-postfix-integration-only",
+          "algorithm": "ed25519",
+          "value": "ynQYCVMb4HEvMoE3185E88W++RGA1anVRb9OFcnB5Nw93VvKCw7K86Wh60RQ4U792/Fjfr18ZkBI2D+LyDPZDg=="
+        }
+      }
+    },
+    {
+      "pack": "phebs.grpc.caller.comparison",
+      "record_digest": "sha256:57e5e3e3e2522a72dd8ccedafcc6ef88fbce087fb3dcd2019a725144449598b2",
+      "record": {
+        "release_schema_version": "1.0",
+        "release_id": "rel-phebs.grpc.caller.comparison-1.0.0",
+        "release_version": "1.0.0",
+        "pack_id": "phebs.grpc.caller.comparison",
+        "pack_claim_version": "1.0.0",
+        "card": {
+          "artifact_id": "caller-comparison-card-1.0.0.md",
+          "digest": "sha256:19c62808095d36e21e7228564e836e64e810ee82aab2789619a2ef8c884662da"
+        },
+        "manifest": {
+          "artifact_id": "caller-comparison-manifest-1.0.0.json",
+          "digest": "sha256:35fa4f5d828fd9d540d15bd9edf94b0fdbca2cfa53c51f782569160e40144e63"
+        },
+        "implementation": {
+          "phebs_source_commit": "8a70fef5f60411f31d210efd52ab4dcd79385549",
+          "phebs_binary_digest": "sha256:7dab45a9011c60132a80381933242705e44da19b2712421ed4361b67dcca19be",
+          "pack_implementation_digest": "sha256:b58de55cafe2bdfc192110aa0fac7f0ce59bf03aa68237aa45b4f6ce1815e8ff",
+          "toolchain_digest": "sha256:c6652a655b5c51d1ce66b001a3f82f118b97fecfca54705e3b7313d6c8b82dba"
+        },
+        "referenced_artifacts_root_digest": "sha256:f0fc078760f06aa1251f559328011013f80b9c5dcde1b9da39216af530453167",
+        "validation": {
+          "artifact_id": "caller-comparison-validation-1.0.0.json",
+          "digest": "sha256:a2c3baa241e12bfdb11abdba0c303477e6a1baeefc2400ab2b831a3bc0d78772",
+          "applies": true,
+          "expires_at": "2027-01-15T23:59:59Z",
+          "expiry_trigger": null
+        },
+        "derived_status": "released",
+        "approved_at": "2026-10-18T00:00:00Z",
+        "approval_records": [
+          "t503-postfix-disposable-key-measurement-only"
+        ],
+        "canonicalization": {
+          "algorithm": "phebs-canonical-json",
+          "version": "1"
+        },
+        "signature": {
+          "key_id": "t503-postfix-integration-only",
+          "algorithm": "ed25519",
+          "value": "2YfGGvXSqh6qSYwqyA49zOQQEclMapQCWrdowvRncJF1q4jjkPRGHdCCJjpPzSy0NLXYnrkroXiHzJQvSY/4Cg=="
+        }
+      }
+    }
+  ],
+  "qualification": "Finite Darwin-local selected public-source composition; no upstream migration/equivalence, deployment/runtime/retirement, global accuracy or Linux scale inference.",
+  "preparation_seconds": 0.261509,
+  "initial_authorities": {
+    "old": {
+      "state": "current",
+      "plane": "repository-overlay",
+      "repository": "evaluation.local/t503-public",
+      "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+      "generation_digest": "sha256:0e89feb2688028767172dbae48cbf2d99446e75fea603066dc403ebb3dfba982",
+      "declaration_set_digest": "sha256:f0a88a5859c031af6a87938502fdb17162df766f3d5a889a1d66dc4983ded5cd",
+      "candidate_manifest_digest": "sha256:110562e26806486c22637368839d8858595a476f741dfadbd21de375d4e55bb4",
+      "resolver_manifest_digest": "sha256:b23f0fcc1fc833a29aca5c2bb269345944b5c08cff56baff96e4215331668aa0",
+      "pair_set_digest": "sha256:9e26910ab968c1827fcaaebf812a46ec341235e99cfe474a47075348372f2a72",
+      "manifest_digest": "sha256:03a381ea276032b2936722cb0faf7b283c498e953b10bafd533da21df94a02be",
+      "publication_revision": 1,
+      "pair_count": 3,
+      "result_count": 9,
+      "abstention_count": 6,
+      "coverage_record_count": 1,
+      "covered_candidate_count": 3,
+      "canonical_bytes": 18523,
+      "partition_progress": {
+        "state": "complete",
+        "settled_pair_count": 3,
+        "succeeded_pair_count": 3,
+        "refused_pair_count": 0,
+        "total_pair_count": 3
+      }
+    },
+    "replacement": {
+      "state": "current",
+      "plane": "repository-overlay",
+      "repository": "evaluation.local/t503-public",
+      "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+      "generation_digest": "sha256:0e89feb2688028767172dbae48cbf2d99446e75fea603066dc403ebb3dfba982",
+      "declaration_set_digest": "sha256:f0a88a5859c031af6a87938502fdb17162df766f3d5a889a1d66dc4983ded5cd",
+      "candidate_manifest_digest": "sha256:110562e26806486c22637368839d8858595a476f741dfadbd21de375d4e55bb4",
+      "resolver_manifest_digest": "sha256:b23f0fcc1fc833a29aca5c2bb269345944b5c08cff56baff96e4215331668aa0",
+      "pair_set_digest": "sha256:9e26910ab968c1827fcaaebf812a46ec341235e99cfe474a47075348372f2a72",
+      "manifest_digest": "sha256:03a381ea276032b2936722cb0faf7b283c498e953b10bafd533da21df94a02be",
+      "publication_revision": 1,
+      "pair_count": 3,
+      "result_count": 9,
+      "abstention_count": 6,
+      "coverage_record_count": 1,
+      "covered_candidate_count": 3,
+      "canonical_bytes": 18523,
+      "partition_progress": {
+        "state": "complete",
+        "settled_pair_count": 3,
+        "succeeded_pair_count": 3,
+        "refused_pair_count": 0,
+        "total_pair_count": 3
+      }
+    }
+  },
+  "resolver_units": [
+    {
+      "repository": "evaluation.local/t503-public",
+      "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+      "resolver_generation": "sha256:163510a739b58d3c56b87a575287e460cc4d2a816a188b90541d19fca279b20c",
+      "resolver_authority": "sha256:b23f0fcc1fc833a29aca5c2bb269345944b5c08cff56baff96e4215331668aa0",
+      "pack_set_digest": "sha256:f2042fea6780e4ef3c6e5823b7779350e19c67099db2ef73ffd858df89d413ad",
+      "unit_member_digest": "sha256:01c6a794fe9dce1c3072558cb59db5a7a770b60e67bfba90c30dac1dbcc69000",
+      "unit_input": {
+        "input_digest": "sha256:23b21c02ee9ca6afacebc12774bed65d450e238df2fbad03e19696a60d656864",
+        "input_object_id": "bec863cd04d297a334ff9bd322c63f9200b126ae",
+        "input_path": "unit-snapshot.json",
+        "kind": "consumer_unit_input",
+        "mapping_total": 4,
+        "pack": "go-module",
+        "pack_version": "1.2.0",
+        "record_schema": "phebs-resolver-consumer-unit-v1",
+        "schema": "phebs-resolver-catalog-record-v1",
+        "state": "resolved"
+      },
+      "materialization_policy": {
+        "consumer_unit_record_schema": "phebs-resolver-consumer-unit-v1",
+        "consumer_unit_scope": "selected-caller-overlay-path-oid-v1",
+        "declaration_record_schema": "phebs-resolver-declaration-target-v1",
+        "generated_ordering": "declaration-input-mapping-symbol-sorted-candidates-invocation-v2",
+        "generated_record_schema": "phebs-resolver-generated-attribution-v2",
+        "generated_symbol_identity_accounting": "catalog-wide-unique-source-plus-descriptor-v1",
+        "generated_symbol_record_schema": "phebs-resolver-generated-go-symbol-v1",
+        "max_consumer_unit_identity_bytes": 16777216,
+        "max_consumer_unit_mappings": 25000,
+        "max_consumer_unit_member_bytes": 16777216,
+        "max_consumer_unit_snapshot_bytes": 4194304,
+        "max_declaration_path_bytes": 16777216,
+        "max_declaration_records": 25000,
+        "max_generated_candidate_bytes": 16777216,
+        "max_generated_candidate_bytes_per_selector": 131072,
+        "max_generated_candidate_expansions": 25000,
+        "max_generated_candidates_per_selector": 1024,
+        "max_generated_mappings": 25000,
+        "max_generated_symbol_descriptors": 100000,
+        "max_generated_symbol_identity_bytes": 33554432,
+        "max_generated_symbol_source_bytes": 4194304,
+        "max_generated_symbol_sources": 25000,
+        "max_generator_invocations": 128,
+        "max_go_module_bytes": 4194304,
+        "max_input_blob_bytes": 536870912,
+        "max_input_blob_reads": 100000,
+        "max_layout_roots": 128,
+        "max_snapshot_blob_bytes": 10485760,
+        "module_ordering": "candidate-caller-order-v1",
+        "module_parsing": "single-line-strict-token-factored-unsupported-v1",
+        "module_record_schema": "phebs-resolver-go-module-v1",
+        "name": "phebs-resolver-materialization-policy-v2",
+        "protocol_member_schema": "phebs-resolver-protocol-member-v2",
+        "snapshot_decoding": "exact-unique-keys-bounded-stream-v1",
+        "state_vocabulary": "resolved-unavailable-ambiguous-unsupported-v1",
+        "timeout_milliseconds": 300000
+      },
+      "catalog_identity": {
+        "repository": "evaluation.local/t503-public",
+        "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+        "unit_digest": "",
+        "declarations": [
+          {
+            "domain": "proto-contract",
+            "run_id": "dfd19f0b12742bb8ad531df32887fb63",
+            "generation_digest": "sha256:7c7908e87fc1eaa8e1dfd2fe4ed93c9ba100ec30cac76caf1aa021037c0a085d",
+            "authority_schema": "phebs-partitioned-extraction-domain-v1",
+            "plan_digest": "sha256:920204445331267bb5c905ce6a2291dafd4fea0c7bdd099084244cba72a37c6e",
+            "root_digest": "sha256:7c7908e87fc1eaa8e1dfd2fe4ed93c9ba100ec30cac76caf1aa021037c0a085d"
+          }
+        ],
+        "declaration_set_digest": "sha256:f0a88a5859c031af6a87938502fdb17162df766f3d5a889a1d66dc4983ded5cd",
+        "candidate_manifest_digest": "sha256:110562e26806486c22637368839d8858595a476f741dfadbd21de375d4e55bb4",
+        "source_lane_policy": "candidate-source-lane-base-v1",
+        "resolver_packs": [
+          {
+            "name": "go-module",
+            "version": "1.2.0"
+          },
+          {
+            "name": "grpc-generated-attribution",
+            "version": "1.2.0"
+          }
+        ],
+        "resolver_pack_set_digest": "sha256:f2042fea6780e4ef3c6e5823b7779350e19c67099db2ef73ffd858df89d413ad",
+        "catalog_policy": {
+          "name": "phebs-resolver-catalog-policy-v2",
+          "record_schema": "phebs-resolver-catalog-record-v1",
+          "record_ordering": "member-name-then-emission-v1",
+          "max_declaration_publications": 16,
+          "max_resolver_packs": 16,
+          "max_members": 256,
+          "max_records_per_member": 100000,
+          "max_records": 1000000,
+          "max_record_bytes": 1048576,
+          "max_metadata_bytes": 65536,
+          "max_manifest_bytes": 1048576,
+          "max_member_content_bytes": 67108864,
+          "max_catalog_content_bytes": 536870912,
+          "max_memory_bytes": 67108864,
+          "max_directory_entries": 32768,
+          "max_staging_disk_bytes": 545259520,
+          "max_publication_disk_bytes": 1084227584,
+          "max_open_files": 2
+        },
+        "catalog_policy_digest": "sha256:232d212b178fb3a08a7cb8ccf47df9d330c0173873dd26c21cdbc78df3e7d84a",
+        "generation_digest": "sha256:163510a739b58d3c56b87a575287e460cc4d2a816a188b90541d19fca279b20c"
+      }
+    }
+  ],
+  "caller_authorities": [
+    {
+      "generation_identity": {
+        "schema": "phebs-caller-generation-v2",
+        "repository": "evaluation.local/t503-public",
+        "head_commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+        "unit_digest": "",
+        "declaration_set_digest": "sha256:f0a88a5859c031af6a87938502fdb17162df766f3d5a889a1d66dc4983ded5cd",
+        "candidate_manifest_digest": "sha256:110562e26806486c22637368839d8858595a476f741dfadbd21de375d4e55bb4",
+        "candidate_policy_digest": "sha256:4df27648658cd6d26f7d0b68fed52b4017dbce6909c628dc183cebd71ab1eb94",
+        "source_lane_policy": "candidate-source-lane-base-v1",
+        "resolver_generation_digest": "sha256:163510a739b58d3c56b87a575287e460cc4d2a816a188b90541d19fca279b20c",
+        "resolver_manifest_digest": "sha256:b23f0fcc1fc833a29aca5c2bb269345944b5c08cff56baff96e4215331668aa0",
+        "caller_policy": {
+          "name": "phebs-direct-caller-leaf-policy-v3",
+          "leaf_adapter": "direct-syntax-zero-fact-coverage-v3",
+          "source_lane_policy": "candidate-source-lane-base-v1",
+          "max_caller_domains": 16,
+          "max_expected_pairs": 16384,
+          "max_result_records_per_pair": 12500,
+          "max_abstention_records_per_pair": 4096,
+          "max_record_bytes": 1048576,
+          "max_canonical_bytes_per_pair": 67108864,
+          "max_metadata_bytes": 65536,
+          "max_staging_bytes_per_pair": 68157440,
+          "max_aggregate_result_records": 100000,
+          "max_aggregate_abstention_records": 100000,
+          "max_aggregate_canonical_bytes": 536870912,
+          "max_aggregate_staging_bytes": 545259520,
+          "max_repository_directory_entries": 65536,
+          "max_direct_source_bytes": 4194304,
+          "max_source_blob_bytes_per_pair": 67108864,
+          "publication_memory_design_bytes": 134217728,
+          "max_open_files": 5,
+          "worker_timeout_milliseconds": 300000,
+          "max_coverage_records_per_pair": 1,
+          "max_aggregate_coverage_records": 16384,
+          "max_aggregate_covered_candidates": 67108864
+        },
+        "caller_policy_digest": "sha256:dbc7ed598f775156d80bf1880df325a22cfe4350f5a2ca5696bf16f559f727c9",
+        "extractors": [
+          {
+            "domain": "grpc-caller",
+            "version": "1.6.0-released.1",
+            "leaf_adapter_version": "direct-syntax-zero-fact-coverage-v3"
+          }
+        ],
+        "extractor_set_digest": "sha256:8025688ad011e5a535e4936f449da41005a68f7de48ae413febba356484ba021",
+        "digest": "sha256:0e89feb2688028767172dbae48cbf2d99446e75fea603066dc403ebb3dfba982",
+        "upstream": {
+          "schema": "phebs-downstream-upstream-authority-v2",
+          "repository": "evaluation.local/t503-public",
+          "observation": {
+            "version": "observation-v2",
+            "repository": "evaluation.local/t503-public",
+            "source_generation_digest": "sha256:9afdc4297bd84b7bbe997d146edb4eae7050b388fe2f4cb066fe15b3292d731f",
+            "source_root_digest": "sha256:bdf6369e1860dab44ab0c32136e39b50efa5eeaab6faa4714adc970172285254",
+            "observation_generation_digest": "sha256:7e0f35934d3a4d82335d51e036a89276df5dad235fda73bcd365b0191d6cdf42",
+            "observation_root_digest": "sha256:33b44dedbe0f197227e971d40e7418f903d6967a1fcb2dac34472ac547de97ea",
+            "partition_policy_digest": "sha256:48ac2209897adb7a399564ad8bbf3406c79696217c270cb5ead5c50ec95754d1",
+            "observation_policy_digest": "sha256:b0563c9ea6a4fc22a338a326216cfe77b4ae2ecbcf30bfa0617782308e0e3b7f",
+            "inventory_policy_digest": "sha256:ffd6deeb58cbdfb3072d7a7c5028357d1e3f53deded473b602e822b20dd3a1ff",
+            "record_count": 9,
+            "observed_count": 9
+          },
+          "required": [
+            {
+              "domain": "grpc-caller",
+              "version": "1.6.0-released.1"
+            }
+          ],
+          "domains": [
+            {
+              "domain": "grpc-caller",
+              "version": "1.6.0-released.1",
+              "plan_digest": "sha256:69d8f5afc0800900a7f99e56132e92054689a2c77fb3f7d0f2492cfc767f7950",
+              "root_digest": "sha256:058db7b7aeb1dad1788db44bdb455b918a309b375c0da0e0e3cee4e6719eeaac",
+              "run_id": "b798d523f27d436c81917ab59b5df01c",
+              "disposition": "success",
+              "candidate_manifest_digest": "sha256:110562e26806486c22637368839d8858595a476f741dfadbd21de375d4e55bb4",
+              "candidate_partition_root_digest": "sha256:f031de9f31d95be936d596decae74e55ccfe263fd895216f52898a30c1d242e7",
+              "candidate_policy_digest": "sha256:4df27648658cd6d26f7d0b68fed52b4017dbce6909c628dc183cebd71ab1eb94",
+              "source_generation_digest": "sha256:9afdc4297bd84b7bbe997d146edb4eae7050b388fe2f4cb066fe15b3292d731f",
+              "observation_generation_digest": "sha256:7e0f35934d3a4d82335d51e036a89276df5dad235fda73bcd365b0191d6cdf42",
+              "extraction_policy_digest": "sha256:4df27648658cd6d26f7d0b68fed52b4017dbce6909c628dc183cebd71ab1eb94",
+              "domain_index_digest": "sha256:ac80302c306d349336affb323e71d608aa3faceb34c096d1a4aef7b35676b37f",
+              "domain_schedule_digest": "sha256:22c9eb055a82ea71928c50a581a0e8678298ae98173529bb41507cad4f35daea"
+            }
+          ],
+          "provenance_digest": "sha256:a2a725a36e6557377de1b057944786c0b24ded2c53f0f3c35bb3a96d46b8b8a6",
+          "digest": "sha256:0efdbba581d2a610678332270d15b7bc0494880dfc1dcd9172332d4b93197ccf"
+        },
+        "upstream_digest": "sha256:0efdbba581d2a610678332270d15b7bc0494880dfc1dcd9172332d4b93197ccf"
+      },
+      "manifest_digest": "sha256:03a381ea276032b2936722cb0faf7b283c498e953b10bafd533da21df94a02be",
+      "pair_set_digest": "sha256:9e26910ab968c1827fcaaebf812a46ec341235e99cfe474a47075348372f2a72",
+      "aggregate": {
+        "pair_count": 3,
+        "artifact_count": 3,
+        "result_count": 9,
+        "abstention_count": 6,
+        "canonical_bytes": 18523,
+        "staging_bytes": 18523,
+        "peak_open_files": 5,
+        "coverage_record_count": 1,
+        "covered_candidate_count": 3
+      },
+      "manifest_bytes_digest": "sha256:79e4eff16b3c70aa13e3ce7676aafa69084530ad4cb671781609e2518df585d3",
+      "publication_revision": 1
+    }
+  ],
+  "cold_first_exact_response": {
+    "occurrence": {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.020113,
+      "bytes": 15552,
+      "raw_digest": "sha256:cdee2d2bd14dcedb122234ad61746a184adba06a7be0b597b4efa6f0fc862934"
+    },
+    "unit": {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.014569,
+      "bytes": 9015,
+      "raw_digest": "sha256:3fba2eca85dba0fc0a8b131783aeceef3bfe923c7e7a6e75c49527d2dc52c3dd"
+    }
+  },
+  "quality": {
+    "occurrence": {
+      "rows": 5,
+      "classes": {
+        "new_only_evidence": 3,
+        "old_only_evidence": 2
+      },
+      "row_metric": {
+        "numerator": 5,
+        "denominator": 5,
+        "observed_rate": 1.0,
+        "wilson95": [
+          0.5655175352168251,
+          1
+        ],
+        "qualification": "Selected finite census only; interval is descriptive, not a confidence-bound pass."
+      },
+      "site_metric": {
+        "numerator": 5,
+        "denominator": 5,
+        "observed_rate": 1.0,
+        "wilson95": [
+          0.5655175352168251,
+          1
+        ],
+        "qualification": "Selected finite census only; interval is descriptive, not a confidence-bound pass."
+      },
+      "resolution_tiers": {
+        "syntax/heuristic": 5
+      }
+    },
+    "unit": {
+      "rows": 4,
+      "classes": {
+        "new_only_evidence": 1,
+        "unresolved": 1,
+        "both_evidence": 1,
+        "old_only_evidence": 1
+      },
+      "row_metric": {
+        "numerator": 4,
+        "denominator": 4,
+        "observed_rate": 1.0,
+        "wilson95": [
+          0.5101091635454027,
+          1
+        ],
+        "qualification": "Selected finite census only; interval is descriptive, not a confidence-bound pass."
+      },
+      "site_metric": {
+        "numerator": 5,
+        "denominator": 5,
+        "observed_rate": 1.0,
+        "wilson95": [
+          0.5655175352168251,
+          1
+        ],
+        "qualification": "Selected finite census only; interval is descriptive, not a confidence-bound pass."
+      },
+      "resolution_tiers": {
+        "syntax/heuristic": 5
+      }
+    },
+    "source_processing": {
+      "unique_files": 9,
+      "complete_observations": [
+        {
+          "run_id": "b798d523f27d436c81917ab59b5df01c",
+          "plan_digest": "sha256:69d8f5afc0800900a7f99e56132e92054689a2c77fb3f7d0f2492cfc767f7950",
+          "rows": [
+            {
+              "path": "data/data.go",
+              "state": "analyzed",
+              "reason": "source_scan_complete",
+              "blob_digest": "sha256:d088b7e127ad41acdf1e267515b003b7ce1a292c217954265be0a122e12ca367"
+            },
+            {
+              "path": "features/interceptor/client/main.go",
+              "state": "analyzed",
+              "reason": "source_scan_complete",
+              "blob_digest": "sha256:67a96c9ce41464119ed93fab70bebb50cb96accdecaca43d8f9a0cf43a6bf641"
+            },
+            {
+              "path": "features/metadata/client/main.go",
+              "state": "analyzed",
+              "reason": "source_scan_complete",
+              "blob_digest": "sha256:26aceadb046196cf67fc5f790f2d6dc4e5f74ae1a919002b6fb6686db41c4fa7"
+            },
+            {
+              "path": "features/multiplex/client/main.go",
+              "state": "analyzed",
+              "reason": "source_scan_complete",
+              "blob_digest": "sha256:4fd071c359f34dd525a7125e9ef2eaf7ba871828eec21b574467bfb7b9224a7e"
+            },
+            {
+              "path": "features/proto/echo/echo.pb.go",
+              "state": "analyzed",
+              "reason": "source_scan_complete",
+              "blob_digest": "sha256:782b379b30abb36abc05916e65516a261a266a8d8e8c1e42adc606a2a86a6f34"
+            },
+            {
+              "path": "features/proto/echo/echo_grpc.pb.go",
+              "state": "analyzed",
+              "reason": "source_scan_complete",
+              "blob_digest": "sha256:af593380d0cb47c95469db614f42c582a21c6028e04cae1f84a3da7a96e57a40"
+            },
+            {
+              "path": "helloworld/greeter_client/main.go",
+              "state": "analyzed",
+              "reason": "source_scan_complete",
+              "blob_digest": "sha256:5539f38f560ab26ce11514cd81f941fb80f4ca9a88754aaaf40d89bbc92e3e30"
+            },
+            {
+              "path": "helloworld/helloworld/helloworld.pb.go",
+              "state": "analyzed",
+              "reason": "source_scan_complete",
+              "blob_digest": "sha256:d365b6dd964d474e5e3d50ef1b8bedb6d728a0377eb7926ef6fee6dfdeb1a59a"
+            },
+            {
+              "path": "helloworld/helloworld/helloworld_grpc.pb.go",
+              "state": "analyzed",
+              "reason": "source_scan_complete",
+              "blob_digest": "sha256:e1de746d9f7c0fa108c370c420cbe1a630a8cf7ae55e43a2d946dc5589c6993d"
+            }
+          ],
+          "sha256": "sha256:bdef210241f8ff86798babc34c91301d67e0283b174a97a18474f1c36298ddf2"
+        }
+      ],
+      "quality_denominator": 9
+    },
+    "outside_pair_exclusion": {
+      "numerator": 4,
+      "denominator": 4,
+      "observed_rate": 1.0,
+      "wilson95": [
+        0.5101091635454027,
+        1
+      ],
+      "qualification": "Selected finite census only; interval is descriptive, not a confidence-bound pass."
+    },
+    "unit_attribution": {
+      "numerator": 5,
+      "denominator": 5,
+      "observed_rate": 1.0,
+      "wilson95": [
+        0.5655175352168251,
+        1
+      ],
+      "qualification": "Selected finite census only; interval is descriptive, not a confidence-bound pass."
+    },
+    "citation_integrity": {
+      "numerator": 5,
+      "denominator": 5,
+      "observed_rate": 1.0,
+      "wilson95": [
+        0.5655175352168251,
+        1
+      ],
+      "qualification": "Selected finite census only; interval is descriptive, not a confidence-bound pass."
+    },
+    "per_file": {
+      "features/interceptor/client/main.go": {
+        "selected_sites": 1,
+        "outside_pair": 1,
+        "all_checked": true
+      },
+      "features/metadata/client/main.go": {
+        "selected_sites": 1,
+        "outside_pair": 3,
+        "all_checked": true
+      },
+      "features/multiplex/client/main.go": {
+        "selected_sites": 2,
+        "outside_pair": 0,
+        "all_checked": true
+      },
+      "helloworld/greeter_client/main.go": {
+        "selected_sites": 1,
+        "outside_pair": 0,
+        "all_checked": true
+      }
+    }
+  },
+  "dependency_checks": [
+    {
+      "caller_map": true,
+      "comparison": true,
+      "capabilities": [
+        "contract-atlas",
+        "contract-caller-comparison",
+        "contract-caller-map",
+        "service-catalog-v2",
+        "service-relationships-v1"
+      ],
+      "mcp_tools": [
+        "blame",
+        "compare_operation_callers",
+        "compare_service_relationships",
+        "diff",
+        "find_definitions",
+        "find_references",
+        "get_commit",
+        "get_contract_operation",
+        "get_observation_progress",
+        "get_service",
+        "hover",
+        "list_commits",
+        "list_operation_callers",
+        "list_repos",
+        "list_service_relationships",
+        "list_services",
+        "read_file",
+        "read_operation_caller_citation",
+        "read_service_relationship_citation",
+        "search_code",
+        "search_contract_operations"
+      ]
+    }
+  ],
+  "reason": "Playwright source UI/preflight failed",
+  "seconds": 21.547477
+}

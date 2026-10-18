@@ -1,0 +1,98 @@
+AssertionError [ERR_ASSERTION]: The input did not match the regular expression /completeness/i. Input:
+
+'MIGRATION COMPARISON\n' +
+  'Static caller evidence\n' +
+  'Change replacement\n' +
+  'OLD ENDPOINT\n' +
+  '/helloworld.Greeter/SayHello\n' +
+  'protobuf · evaluation.local/t503-public · provisiona…eb710f0\n' +
+  'exact rows · generation current\n' +
+  'revision 1 · commit dba5bcf248…add5b8e · generation sha256:0e8…dfba982\n' +
+  'Declaration\n' +
+  'REPLACEMENT ENDPOINT\n' +
+  '/grpc.examples.echo.Echo/UnaryEcho\n' +
+  'protobuf · evaluation.local/t503-public · provisiona…2c41272\n' +
+  'exact rows · generation current\n' +
+  'revision 1 · commit dba5bcf248…add5b8e · generation sha256:0e8…dfba982\n' +
+  'Declaration\n' +
+  'Unit\n' +
+  'Owner\n' +
+  'Path prefix\n' +
+  'Level\n' +
+  'Occurrence\n' +
+  'Unit\n' +
+  'Classification\n' +
+  'All classifications\n' +
+  'Old only evidence\n' +
+  'Both evidence\n' +
+  'New only evidence\n' +
+  'Unresolved\n' +
+  'Code role\n' +
+  'Any role\n' +
+  'Production\n' +
+  'Test\n' +
+  'Mock\n' +
+  'Generated\n' +
+  'Vendor\n' +
+  'Tier\n' +
+  'Any tier\n' +
+  'Exact\n' +
+  'Derived\n' +
+  'Heuristic\n' +
+  'Unresolved\n' +
+  'Freshness\n' +
+  'Any freshness\n' +
+  'Fresh\n' +
+  'Stale\n' +
+  'Resolution\n' +
+  'Any resolution\n' +
+  'SCIP\n' +
+  'Syntax\n' +
+  'Unresolved\n' +
+  'Ordering\n' +
+  'Source\n' +
+  'Unit\n' +
+  'Apply filters\n' +
+  'Clear\n' +
+  'Rows 1–4 of 4Exact snapshot exhausted on page 1.\n' +
+  'New plane only\n' +
+  'unit\n' +
+  'evaluation.local/t503-public:au_9439cbc5675ce77294613145d56bd6d01064f47b19e56804684be204c10b379a\n' +
+  'unit au_9439cbc5675ce77294613145d56bd6d01064f47b19e56804684be204c10b379a\n' +
+  'Old evidence · 0\n' +
+  'No retained occurrence sample on this side; runtime absence is not inferred.\n' +
+  'Replacement evidence · 1\n' +
+  'evaluation.local/t503-public/features/interceptor/client/main.go:115\n' +
+  'Repository-overlay occurrence; source access is limited to its authorized byte range.\n' +
+  'Unresolved\n' +
+  'unit\n' +
+  'unresolved:evaluation.local/t503-public@dba5bcf2480ea04b7e775905c098a45acadd5b8e:features/metadata/client/main.go:1453-1464\n' +
+  'Old evidence · 0\n' +
+  'No retained occurrence sample on this side; runtime absence is not inferred.\n' +
+  'Replacement evidence · 1\n' +
+  'evaluation.local/t503-public/features/metadata/client/main.go:51\n' +
+  'Repository-overlay occurrence; source access is limited to its authorized byte range.\n' +
+  'Both planes\n' +
+  'unit\n' +
+  'evaluation.local/t503-public:au_1708d0bd8c3cd2a1099790102b179f46c5fcbf67c4e2a23412bb65b4ff224be2\n' +
+  'unit au_1708d0bd8c3cd2a1099790102b179f46c5fcbf67c4e2a23412bb65b4ff224be2\n' +
+  'Old evidence · 1\n' +
+  'evaluation.local/t503-public/features/multiplex/client/main.go:43\n' +
+  'Repository-overlay occurrence; source access is limited to its authorized byte range.\n' +
+  'Replacement evidence · 1\n' +
+  'evaluation.local/t503-public/features/multiplex/client/main.go:53\n' +
+  'Repository-overlay occurrence; source access is limited to its authorized byte range.\n' +
+  'Old plane only\n' +
+  'unit\n' +
+  'evaluation.local/t503-public:au_3b21c319bce883977589a6fd651789a8a16a2fe2a1b6466815e51b98cbef7234\n' +
+  'unit au_3b21c319bce883977589a6fd651789a8a16a2fe2a1b6466815e51b98cbef7234\n' +
+  'Old evidence · 1\n' +
+  'evaluation.local/t503-public/helloworld/greeter_client/main.go:55\n' +
+  'Repository-overlay occurrence; source access is limited to its authorized byte range.\n' +
+  'Replacement evidence · 0\n' +
+  'No retained occurrence sample on this side; runtime absence is not inferred.\n' +
+  'Previous page\n' +
+  'Page 1\n' +
+  'Next page\n' +
+  'Repository-overlay static source evidence only …'
+

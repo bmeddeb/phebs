@@ -1,0 +1,417 @@
+{
+  "schema": "t521-offline-input-preparation-v1",
+  "record_date": "2026-10-18",
+  "source_checkpoint": "61ff5faa25dfb4f609ecbef6836f69d1741a14fe",
+  "witness_checkpoint": "683a64081ca1f87aa968ed27679989e970561e76",
+  "tool": {
+    "path": "/Users/ben/go/bin/scip-go",
+    "bytes": 17881650,
+    "digest": "sha256:05b4f5086b0953268a86ddee21e53233d7fc35fa4234d4c5b30ef7faec2beb80",
+    "declared_version": "0.2.7",
+    "identity_source": "Same pinned binary as accepted T511 preparation; rehashed2026-10-18 without execution",
+    "go_build_info": {
+      "go_version": "go1.26.5",
+      "main_path": "github.com/scip-code/scip-go/cmd/scip-go",
+      "module": "github.com/scip-code/scip-go",
+      "version": "v0.2.7",
+      "module_sum": "h1:gcHFnhoMCdp3C/0xvCn9QFuTsF/W3JSR5cLVf7uG+Us=",
+      "GOOS": "darwin",
+      "GOARCH": "arm64",
+      "GOARM64": "v8.0",
+      "CGO_ENABLED": "1"
+    }
+  },
+  "source_only_labels_digest": "sha256:4e9c7474bc33e98c1d1f057f8e8cd72f71a5801ca157df873e9dbf1bc87c491f",
+  "scratch_root": "/tmp/phebs-t521-inputs-61ff5faa",
+  "runs": [
+    {
+      "population": "public",
+      "argv": [
+        "/Users/ben/go/bin/scip-go",
+        "index",
+        "--module-root=/tmp/phebs-t521-inputs-61ff5faa/public",
+        "--repository-remote=evaluation.local/t521-public",
+        "--module-path=github.com/uber/jaeger-client-go",
+        "--module-version=v0.0.0-t521",
+        "--skip-implementations",
+        "--skip-tests",
+        "--output=/tmp/phebs-t521-inputs-61ff5faa/public/index.scip",
+        ".",
+        "./testutils",
+        "./thrift-gen/jaeger",
+        "./thrift-gen/sampling"
+      ],
+      "working_directory": "/tmp/phebs-t521-inputs-61ff5faa/public",
+      "environment": {
+        "GOPROXY": "off",
+        "GOSUMDB": "off",
+        "GOTOOLCHAIN": "local",
+        "GOWORK": "off",
+        "GOFLAGS": "-mod=mod",
+        "GOMAXPROCS": "2"
+      },
+      "source_before": {
+        "LICENSE": {
+          "bytes": 11357,
+          "digest": "sha256:c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+        },
+        "go.mod": {
+          "bytes": 105,
+          "digest": "sha256:7812715efed3039621809000de4ca94c6b801c6139c5f62e7a204eaed63caac9"
+        },
+        "jaeger_tag.go": {
+          "bytes": 2538,
+          "digest": "sha256:94635d6f7ab873a4a884936ee0c2cdc31cb9edd8e5b3cffe7cdf45f0b4c5441c"
+        },
+        "testutils/sampling_manager.go": {
+          "bytes": 1619,
+          "digest": "sha256:4bebe55774e3c0596ef37ca892863698b1657fda6a55c5d6c65fdeae80ab66d8"
+        },
+        "thrift/application_exception.go": {
+          "bytes": 4562,
+          "digest": "sha256:9c7e70b8c8d384012cbdb45bc07e17c77aa184e1308fa11ed1250ed5cd84315a"
+        },
+        "thrift/binary_protocol.go": {
+          "bytes": 13617,
+          "digest": "sha256:db706eb9a60c077870aaef054e7d2a338f08840a68631bc699020b3550165c1b"
+        },
+        "thrift/client.go": {
+          "bytes": 2924,
+          "digest": "sha256:ffb7ac3daf852297146e7d622c57e088b9ae8afec6f0f1070c8f9054a7439933"
+        },
+        "thrift/compact_protocol.go": {
+          "bytes": 24857,
+          "digest": "sha256:483cc6a3a011515d4e7b27ff70b863fda966556f21c4de6e0f8e3711170d8878"
+        },
+        "thrift/configuration.go": {
+          "bytes": 12231,
+          "digest": "sha256:f3f3965e020e13add922f872d0b34291ec75e41734622ea7062426e8333f5c34"
+        },
+        "thrift/context.go": {
+          "bytes": 877,
+          "digest": "sha256:460e8631b6e71e6c2ae3854fc9c864db999bc94edff808f238c04f91347ef8fd"
+        },
+        "thrift/exception.go": {
+          "bytes": 3160,
+          "digest": "sha256:8320c3ed5cdaf01e834a919e7fd59542a1115e4dbcea3bdb6df915056b65b086"
+        },
+        "thrift/header_context.go": {
+          "bytes": 2991,
+          "digest": "sha256:d19a438724fd7ca22aec9a44136b5960f0b8fa7da29bbdf56a769a8fb1921db6"
+        },
+        "thrift/header_protocol.go": {
+          "bytes": 10646,
+          "digest": "sha256:e8dbf39fb14a73b764ff67196bd0bff6996cf80a52bf48b222e0cbe33dfeb87f"
+        },
+        "thrift/header_transport.go": {
+          "bytes": 22580,
+          "digest": "sha256:97f9770c8d96b04ce83dcd1226bfb212550d623d8b36ce3e3ed08e8ea71ba560"
+        },
+        "thrift/logger.go": {
+          "bytes": 1780,
+          "digest": "sha256:e81994052fe01a71e7d9945565757b25be876587dabb0ca6ce6afb241581440d"
+        },
+        "thrift/memory_buffer.go": {
+          "bytes": 2074,
+          "digest": "sha256:3d410eaf677dd9399338212b830de1bc396f851c052c66f9c13986804a6e9d28"
+        },
+        "thrift/messagetype.go": {
+          "bytes": 1106,
+          "digest": "sha256:1bfe4644d9d3b67f3c9109d5005777783e21759cce0a134d549729e259d41f1c"
+        },
+        "thrift/numeric.go": {
+          "bytes": 3973,
+          "digest": "sha256:9acff6ecbd5f732da3fbef7064043fe2ce23d360f1dee239c41fd54abcb3c47d"
+        },
+        "thrift/processor_factory.go": {
+          "bytes": 2471,
+          "digest": "sha256:58c138c2612550010fe60917b6d3c7b185b2bf9ae38a5ceddbdaaf9f18227aad"
+        },
+        "thrift/protocol.go": {
+          "bytes": 5652,
+          "digest": "sha256:92fab2234679a3b9575a81466500ca736b78bd12c423fcfd613db2b7e54f2f2c"
+        },
+        "thrift/protocol_exception.go": {
+          "bytes": 2414,
+          "digest": "sha256:30a31de7957d7602259cbb186bba930983c6dafe33f2491b76325fa52a61f13b"
+        },
+        "thrift/protocol_factory.go": {
+          "bytes": 956,
+          "digest": "sha256:f52875baa83a7719f29ec815911e4d96c60d74a32828db92f311afea24398aac"
+        },
+        "thrift/response_helper.go": {
+          "bytes": 3052,
+          "digest": "sha256:cd9cc8a307f605d87152bec5d6bb47bd4cc0a677cd366c8f801edd9774d04eac"
+        },
+        "thrift/rich_transport.go": {
+          "bytes": 1792,
+          "digest": "sha256:6e5ea70bbdf61e35a6e564013f666ed0f69befc70c390c6a5892cce6d8159f62"
+        },
+        "thrift/serializer.go": {
+          "bytes": 3415,
+          "digest": "sha256:41df8a6bbe8acb53278909ddcc3751c6fb34903022faeded20cc1cf633b759d4"
+        },
+        "thrift/server_transport.go": {
+          "bytes": 1318,
+          "digest": "sha256:73d3b81269c69c08d9bff61279cd6160fa017f3c82de252bee349364340f1b2f"
+        },
+        "thrift/simple_json_protocol.go": {
+          "bytes": 36888,
+          "digest": "sha256:4e14e9f730d4cdb627b5a50b432ce460710babb9b47f0881685a97c66953f224"
+        },
+        "thrift/simple_server.go": {
+          "bytes": 9733,
+          "digest": "sha256:12b7ed9d46c6d5f0803c6d5d59327240d3111d7522fd181f2668fa84057d0e51"
+        },
+        "thrift/transport.go": {
+          "bytes": 1792,
+          "digest": "sha256:9e73026fed866f202e7b0a2b424b337fc04e6a3e6d631f0414bc041186b717c6"
+        },
+        "thrift/transport_exception.go": {
+          "bytes": 2779,
+          "digest": "sha256:14472f23d5e52969320b7bf56fc24b166df961dacfe8e0738390eb5aebae4081"
+        },
+        "thrift/transport_factory.go": {
+          "bytes": 1432,
+          "digest": "sha256:d5b66c9b62437e84f18e7407e464b5cb0f335eaef62770d77dd4b373c0580526"
+        },
+        "thrift/type.go": {
+          "bytes": 1534,
+          "digest": "sha256:dffb9d5b56e1de91621e5fce389cee0ede1510a799855a0b0a196e518f882469"
+        },
+        "thrift-gen/jaeger/GoUnusedProtection__.go": {
+          "bytes": 108,
+          "digest": "sha256:13aeeefa5045848503e246ddaa38b6d45c83960971f7f41e3e18bcdfed9f441d"
+        },
+        "thrift-gen/jaeger/jaeger-consts.go": {
+          "bytes": 360,
+          "digest": "sha256:598299f2e790ef206d3b4f0f0694ac1acf5ca629bcecbf6249e4386ef7eb1cee"
+        },
+        "thrift-gen/jaeger/jaeger.go": {
+          "bytes": 88028,
+          "digest": "sha256:84aa41eff7830e23021707b4809261a3fa07196285351a8c6506fbd6e9922f46"
+        },
+        "thrift-gen/sampling/GoUnusedProtection__.go": {
+          "bytes": 110,
+          "digest": "sha256:af1260b07ed4cc7efb987de8471a86a975c4cab927341fc754bd842e1953933f"
+        },
+        "thrift-gen/sampling/sampling-consts.go": {
+          "bytes": 362,
+          "digest": "sha256:6418f31d36a8d19326add1eb391321b1fcde770fa83d98dab59aa0a3f23e71ea"
+        },
+        "thrift-gen/sampling/sampling.go": {
+          "bytes": 48733,
+          "digest": "sha256:d551fc830ea6302a2fd81958a7d18d477ceeca30b64bc22e6db1e7cf5806f232"
+        }
+      },
+      "source_unchanged": true,
+      "added_paths": [
+        "go.sum",
+        "index.scip"
+      ],
+      "unexpected_added_paths": [],
+      "wall_seconds": 0.458322,
+      "user_seconds": 0.429083,
+      "system_seconds": 0.142977,
+      "darwin_rusage_children_lifetime_max_rss_bytes": 99303424,
+      "rss_scope": "Lifetime maximum of terminated children in this preparation process, not aggregate process-family peak",
+      "exit_status": 0,
+      "timeout_seconds": 90,
+      "stop_reason": "",
+      "root_child_pid": 37558,
+      "root_child_joined": true,
+      "log_bytes": 147,
+      "log_digest": "sha256:387300326803a676d24333c233f1772721eef6c44f19ae07d6e9a1c7589c2ec4",
+      "index.scip": {
+        "path": "prepared/public/index.scip",
+        "bytes": 839828,
+        "digest": "sha256:2bf4030cb6f100e78d78505894e87f464c2ac4a90529ad6555df09c3850ebd28"
+      },
+      "go.sum": {
+        "path": "prepared/public/go.sum",
+        "bytes": 193,
+        "digest": "sha256:427b9b2f6afd0a292b1236e5d403fe0f233dc20c056f02fb6d56bc093873f747"
+      },
+      "process_group_absent": true,
+      "index_metadata": {
+        "tool": "scip-go",
+        "version": "0.2.7",
+        "project_root": "file:///tmp/phebs-t521-inputs-61ff5faa/public",
+        "text_encoding_enum": 1
+      },
+      "indexed_documents": [
+        {
+          "path": "jaeger_tag.go",
+          "occurrences": 207,
+          "position_encoding_enum": 0,
+          "retained_source": true,
+          "source_digest": "sha256:94635d6f7ab873a4a884936ee0c2cdc31cb9edd8e5b3cffe7cdf45f0b4c5441c"
+        },
+        {
+          "path": "testutils/sampling_manager.go",
+          "occurrences": 53,
+          "position_encoding_enum": 0,
+          "retained_source": true,
+          "source_digest": "sha256:4bebe55774e3c0596ef37ca892863698b1657fda6a55c5d6c65fdeae80ab66d8"
+        },
+        {
+          "path": "thrift-gen/jaeger/GoUnusedProtection__.go",
+          "occurrences": 2,
+          "position_encoding_enum": 0,
+          "retained_source": true,
+          "source_digest": "sha256:13aeeefa5045848503e246ddaa38b6d45c83960971f7f41e3e18bcdfed9f441d"
+        },
+        {
+          "path": "thrift-gen/jaeger/jaeger-consts.go",
+          "occurrences": 17,
+          "position_encoding_enum": 0,
+          "retained_source": true,
+          "source_digest": "sha256:598299f2e790ef206d3b4f0f0694ac1acf5ca629bcecbf6249e4386ef7eb1cee"
+        },
+        {
+          "path": "thrift-gen/jaeger/jaeger.go",
+          "occurrences": 6402,
+          "position_encoding_enum": 0,
+          "retained_source": true,
+          "source_digest": "sha256:84aa41eff7830e23021707b4809261a3fa07196285351a8c6506fbd6e9922f46"
+        },
+        {
+          "path": "thrift-gen/sampling/GoUnusedProtection__.go",
+          "occurrences": 2,
+          "position_encoding_enum": 0,
+          "retained_source": true,
+          "source_digest": "sha256:af1260b07ed4cc7efb987de8471a86a975c4cab927341fc754bd842e1953933f"
+        },
+        {
+          "path": "thrift-gen/sampling/sampling-consts.go",
+          "occurrences": 17,
+          "position_encoding_enum": 0,
+          "retained_source": true,
+          "source_digest": "sha256:6418f31d36a8d19326add1eb391321b1fcde770fa83d98dab59aa0a3f23e71ea"
+        },
+        {
+          "path": "thrift-gen/sampling/sampling.go",
+          "occurrences": 3033,
+          "position_encoding_enum": 0,
+          "retained_source": true,
+          "source_digest": "sha256:d551fc830ea6302a2fd81958a7d18d477ceeca30b64bc22e6db1e7cf5806f232"
+        }
+      ],
+      "indexed_documents_count": 8,
+      "indexed_occurrences_count": 9733,
+      "external_symbols_count": 0,
+      "indexed_documents_absent_from_retained_input": []
+    },
+    {
+      "population": "neutral",
+      "argv": [
+        "/Users/ben/go/bin/scip-go",
+        "index",
+        "--module-root=/tmp/phebs-t521-inputs-61ff5faa/neutral",
+        "--repository-remote=evaluation.local/t521-neutral",
+        "--module-path=example.com/t521-neutral",
+        "--module-version=v0.0.0-t521",
+        "--skip-implementations",
+        "--skip-tests",
+        "--output=/tmp/phebs-t521-inputs-61ff5faa/neutral/index.scip",
+        "./gen",
+        "./use",
+        "./fake"
+      ],
+      "working_directory": "/tmp/phebs-t521-inputs-61ff5faa/neutral",
+      "environment": {
+        "GOPROXY": "off",
+        "GOSUMDB": "off",
+        "GOTOOLCHAIN": "local",
+        "GOWORK": "off",
+        "GOFLAGS": "-mod=mod",
+        "GOMAXPROCS": "2"
+      },
+      "source_before": {
+        "fake/parcel.go": {
+          "bytes": 126,
+          "digest": "sha256:fc1cd634735664098549013388ae35272fa78c522e703e2e49ef0ffa3f2ae3a0"
+        },
+        "gen/parcel.go": {
+          "bytes": 618,
+          "digest": "sha256:7ff6556c7d8da13ebfd416e9679c0f6a692877266a9a28d02dac5c0ac6c1d352"
+        },
+        "go.mod": {
+          "bytes": 43,
+          "digest": "sha256:a76bc5a9484c44e48c1bac6355cffc2f51372cc2579d8128a40bbb63f2b1db22"
+        },
+        "idl/parcel.thrift": {
+          "bytes": 218,
+          "digest": "sha256:41be613eda524dcd1e3f1c6cd15e9408e04d5eee44d7f2b8b0f03bd876e08ae0"
+        },
+        "use/use.go": {
+          "bytes": 680,
+          "digest": "sha256:e2ee225dca2277e447f288b99405ddbf6a5b3c66625f8d49edbdb84d5a96434f"
+        }
+      },
+      "source_unchanged": true,
+      "added_paths": [
+        "index.scip"
+      ],
+      "unexpected_added_paths": [],
+      "wall_seconds": 0.110761,
+      "user_seconds": 0.058749,
+      "system_seconds": 0.058313,
+      "darwin_rusage_children_lifetime_max_rss_bytes": 99303424,
+      "rss_scope": "Lifetime maximum of terminated children in this preparation process, not aggregate process-family peak",
+      "exit_status": 0,
+      "timeout_seconds": 90,
+      "stop_reason": "",
+      "root_child_pid": 37580,
+      "root_child_joined": true,
+      "log_bytes": 147,
+      "log_digest": "sha256:c4943f11f1c2a1ee8bc95f63aa819d1f241b7858c10092b0638e43e43a31c2ac",
+      "index.scip": {
+        "path": "prepared/neutral/index.scip",
+        "bytes": 10154,
+        "digest": "sha256:a2b01df52996dfe5edc2b03d1d0236c879475c2313369f1bcc184791c9f08d55"
+      },
+      "process_group_absent": true,
+      "index_metadata": {
+        "tool": "scip-go",
+        "version": "0.2.7",
+        "project_root": "file:///tmp/phebs-t521-inputs-61ff5faa/neutral",
+        "text_encoding_enum": 1
+      },
+      "indexed_documents": [
+        {
+          "path": "fake/parcel.go",
+          "occurrences": 4,
+          "position_encoding_enum": 0,
+          "retained_source": true,
+          "source_digest": "sha256:fc1cd634735664098549013388ae35272fa78c522e703e2e49ef0ffa3f2ae3a0"
+        },
+        {
+          "path": "gen/parcel.go",
+          "occurrences": 16,
+          "position_encoding_enum": 0,
+          "retained_source": true,
+          "source_digest": "sha256:7ff6556c7d8da13ebfd416e9679c0f6a692877266a9a28d02dac5c0ac6c1d352"
+        },
+        {
+          "path": "use/use.go",
+          "occurrences": 61,
+          "position_encoding_enum": 0,
+          "retained_source": true,
+          "source_digest": "sha256:e2ee225dca2277e447f288b99405ddbf6a5b3c66625f8d49edbdb84d5a96434f"
+        }
+      ],
+      "indexed_documents_count": 3,
+      "indexed_occurrences_count": 81,
+      "external_symbols_count": 0,
+      "indexed_documents_absent_from_retained_input": []
+    }
+  ],
+  "candidate_executed": false,
+  "teardown": {
+    "scratch_removed": true,
+    "scratch_logical_bytes_before_removal": 1187786,
+    "process_groups_absent": true,
+    "retained_inputs": "Frozen source trees plus prepared index/go.sum/logs; no scratch or tool child retained"
+  }
+}

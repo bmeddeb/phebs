@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"reflect"
+	"slices"
 	"sort"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -14,15 +15,15 @@ import (
 
 const evidenceViewAssertionLimit = 5000
 
-// EvidenceRepositoryView is one caller-visible repository's latest published
-// run for the requested domain. Assertions are complete for that run or the
-// whole request fails; this endpoint never returns a truncated partial view.
+// EvidenceRepositoryView contains one visible repository's exact legacy run
+// or partitioned root. Assertions are complete or the whole request fails.
 type EvidenceRepositoryView struct {
-	Repository     string                  `json:"repository"`
-	Run            store.ExtractionRun     `json:"run"`
-	Assertions     []store.Assertion       `json:"assertions"`
-	AssertionCount int                     `json:"assertion_count"`
-	CandidateScope *EvidenceCandidateScope `json:"candidate_scope,omitempty"`
+	Repository     string                    `json:"repository"`
+	Run            *store.ExtractionRun      `json:"run,omitempty"`
+	Assertions     []store.Assertion         `json:"assertions"`
+	AssertionCount int                       `json:"assertion_count"`
+	CandidateScope *EvidenceCandidateScope   `json:"candidate_scope,omitempty"`
+	ExactAuthority *ContractCatalogAuthority `json:"exact_authority,omitempty"`
 }
 
 // EvidenceCandidateScope is the additive projection that distinguishes a
@@ -61,6 +62,7 @@ type EvidenceView struct {
 	VisibleRepositoryCount int                      `json:"visible_repository_count"`
 	PublishedRunCount      int                      `json:"published_run_count"`
 	AssertionCount         int                      `json:"assertion_count"`
+	PartitionedRootCount   int                      `json:"partitioned_root_count,omitempty"`
 	Repositories           []EvidenceRepositoryView `json:"repositories"`
 }
 
@@ -77,6 +79,9 @@ func registerEvidence(api huma.API, opts Options) {
 	}
 
 	huma.Get(api, "/api/evidence", func(ctx context.Context, in *evidenceIn) (*evidenceOut, error) {
+		if len(opts.CatalogReleasedDomains) > 0 && !slices.Contains(opts.CatalogReleasedDomains, in.Domain) {
+			return nil, huma.Error404NotFound("evidence domain unavailable")
+		}
 		visible, err := visibleRepositories(ctx, opts)
 		if err != nil {
 			return nil, err
@@ -91,11 +96,50 @@ func registerEvidence(api huma.API, opts Options) {
 			map[string]*store.ExtractionRun,
 			len(visible),
 		)
+		native, partitioned := opts.Evidence.(partitionedCatalogStore)
+		partitionedSnapshot := make(map[string]*ContractCatalogAuthority)
 		for _, repo := range visible {
+			if repo.IndexedCommitHash == "" {
+				// No indexed HEAD means no exact publication scope. Keep the
+				// repository in the visible census, with no published row.
+				publicationSnapshot[repo.Name] = nil
+				continue
+			}
 			scope := currentEvidenceScope(repo, in.Domain)
 			run, err := opts.Evidence.LatestPublishedRun(ctx, scope)
 			if errors.Is(err, store.ErrNotFound) {
 				publicationSnapshot[repo.Name] = nil
+				if partitioned && repo.IndexedCommitHash != "" {
+					selected, selectErr := partitionedCatalogSource(ctx, opts.Evidence, native, repo, in.Domain, opts.EvidenceExtractorVersions[in.Domain])
+					if errors.Is(selectErr, store.ErrNotFound) {
+						partitionedSnapshot[repo.Name] = nil
+						continue
+					}
+					if selectErr != nil {
+						return nil, evidencePartitionedReadError("select partitioned evidence root", selectErr)
+					}
+					assertions, readErr := selected.evidence.ListAssertions(ctx, store.AssertionQuery{
+						Repo: repo.Name, RunID: selected.run.RunID, Limit: evidenceViewAssertionLimit,
+					})
+					if readErr != nil {
+						return nil, evidencePartitionedReadError("read partitioned evidence assertions", readErr)
+					}
+					for _, assertion := range assertions {
+						if assertion.Repo != repo.Name || assertion.RunID != selected.run.RunID {
+							return nil, huma.Error500InternalServerError("partitioned evidence assertion scope is inconsistent")
+						}
+					}
+					if len(assertions) > evidenceViewAssertionLimit {
+						return nil, evidencePartitionedReadError("read partitioned evidence assertions", store.ErrResultLimit)
+					}
+					partitionedSnapshot[repo.Name] = selected.authority
+					view.Repositories = append(view.Repositories, EvidenceRepositoryView{
+						Repository: repo.Name, Assertions: deterministicAssertions(assertions),
+						AssertionCount: len(assertions), ExactAuthority: selected.authority,
+					})
+					view.PartitionedRootCount++
+					view.AssertionCount += len(assertions)
+				}
 				continue
 			}
 			if err != nil {
@@ -108,6 +152,9 @@ func registerEvidence(api huma.API, opts Options) {
 				run.Domain != scope.Domain ||
 				run.Status != "published" {
 				return nil, huma.Error500InternalServerError("latest published evidence run is inconsistent")
+			}
+			if expected := opts.EvidenceExtractorVersions[in.Domain]; expected != "" && run.Extractor != expected {
+				return nil, huma.Error409Conflict("evidence recipe generation unavailable")
 			}
 			snapshot := copyEvidenceRun(*run)
 			publicationSnapshot[repo.Name] = &snapshot
@@ -130,7 +177,7 @@ func registerEvidence(api huma.API, opts Options) {
 			runCopy := deterministicRun(*run)
 			assertionCopies := deterministicAssertions(assertions)
 			view.Repositories = append(view.Repositories, EvidenceRepositoryView{
-				Repository: repo.Name, Run: runCopy, Assertions: assertionCopies,
+				Repository: repo.Name, Run: &runCopy, Assertions: assertionCopies,
 				AssertionCount: len(assertionCopies),
 				CandidateScope: evidenceCandidateScope(run.Coverage),
 			})
@@ -146,6 +193,22 @@ func registerEvidence(api huma.API, opts Options) {
 		); err != nil {
 			return nil, err
 		}
+		for _, repo := range visible {
+			initial, selected := partitionedSnapshot[repo.Name]
+			if !selected {
+				continue
+			}
+			current, confirmErr := partitionedCatalogSource(ctx, opts.Evidence, native, repo, in.Domain, opts.EvidenceExtractorVersions[in.Domain])
+			if errors.Is(confirmErr, store.ErrNotFound) && initial == nil {
+				continue
+			}
+			if confirmErr != nil && !errors.Is(confirmErr, store.ErrNotFound) && !errors.Is(confirmErr, store.ErrConflict) {
+				return nil, evidencePartitionedReadError("confirm partitioned evidence root", confirmErr)
+			}
+			if confirmErr != nil || initial == nil || *initial != *current.authority {
+				return nil, huma.Error409Conflict("partitioned evidence publication changed while building the response; retry")
+			}
+		}
 		confirmedVisible, err := visibleRepositories(ctx, opts)
 		if err != nil {
 			return nil, err
@@ -158,6 +221,16 @@ func registerEvidence(api huma.API, opts Options) {
 		return &evidenceOut{Body: view}, nil
 	})
 	registerProofAPI(api, opts)
+}
+
+func evidencePartitionedReadError(message string, err error) error {
+	if errors.Is(err, store.ErrNotFound) || errors.Is(err, store.ErrConflict) {
+		return huma.Error409Conflict("partitioned evidence changed while building the response; retry")
+	}
+	if errors.Is(err, store.ErrResultLimit) {
+		return huma.Error422UnprocessableEntity("evidence view exceeds bounded result limits; narrow the domain")
+	}
+	return huma.Error500InternalServerError(message, err)
 }
 
 func evidenceCandidateScope(
@@ -249,6 +322,14 @@ func confirmEvidencePublicationSnapshot(
 			return huma.Error409Conflict(
 				"evidence publication set changed while building the response; retry",
 			)
+		}
+		if repo.IndexedCommitHash == "" {
+			if initial != nil {
+				return huma.Error409Conflict("unindexed repository claimed an evidence publication; retry")
+			}
+			// The final visible-scope comparison below this helper still
+			// refuses an empty-to-indexed or permission transition.
+			continue
 		}
 		current, err := evidence.LatestPublishedRun(
 			ctx,

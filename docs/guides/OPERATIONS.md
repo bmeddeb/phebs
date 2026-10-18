@@ -9200,3 +9200,151 @@ the exact socket, image, and `--inputs` directory from that owner. Recovery
 checks daemon and container identity, stops/removes only that exact owner,
 and confirms absence before clearing the journal. Preserve inputs when that
 proof fails; do not use daemon-wide pruning or container-name guesses.
+
+### Protobuf field-input qualification
+
+The [T51.1 qualification](../../spike/t511/README.md) records a finite public
+Go proto3 Open-API field population and separate authored controls. It binds
+committed source/generated/SCIP bytes, scip-go0.2.7 and header-reported generator
+versions, with exact numeric field/descriptor/source witnesses. Evaluator Git
+commits are distinct from upstream source provenance. SCIP read/write roles are
+reported as supplied by the indexer; assignment syntax does not establish a
+semantic write classification. Declaration repository/path and SCIP module
+package lineages remain distinct and require explicit exact witnesses to join.
+This result does not activate fields: stable registration/source fencing and
+product operating/signed promotion remain pending under T51.2/T51.3.
+
+T51.2 subsequently implements the isolated stable reader and source/version
+fences, with bounded normal/race and joined store integrations. Its declared
+header recipe remains the public 1.36.11/5.27.1 control; authored 1.36.12/7.36.2
+controls do not widen admission. T51.3 still owns operating and production
+signature promotion. Existing historical qualification/measurement bytes are
+preserved; no metadata or timing sample is relabelled as a production release.
+
+### Caller unit-attribution cutover (T50.3a)
+
+T50.3a advances resolver packs to1.2.0 and includes a bounded, exact committed
+consumer-unit projection. Retained1.1.1 catalogs cannot satisfy current caller
+worker/read admission; ordinary reconciliation builds the new generation.
+During that transition, unavailable evidence stays explicit. Historical backup,
+restore and lifecycle custody still recognize old artifacts. Missing unit
+snapshots remain unavailable; invalid snapshots fail materialization atomically.
+Only admitted repository-overlay source path/OID mappings annotate caller facts;
+this supplies no focused-local, runtime ownership or deployment claim.
+
+### Apache Thrift field-input qualification
+
+The [T52.1 qualification](../../spike/t521/README.md) binds unchanged Apache
+Thrift0.14.1 generated Go/tag inputs, real scip-go0.2.7 committed indexes and
+two public handwritten sources, with separate authored controls. Its finite
+33 public/11 authored positive sites and negative/unsupported controls agree
+with exact numeric field and citation witnesses. References remain derived
+with source_binding=none; external IDLs do not create an automatic declaration/
+SCIP lineage bridge. Field0 is retained as an explicit result-slot control.
+Raw SCIP read roles include source writes, so semantic read/write accuracy is
+unmeasured. This supplies no runtime-use, deployment, managed generation,
+scale or broad generator coverage claim. T52.3 registration/operating/signing
+remain pending; the independent thriftrw recipe gets its own T52.2 result.
+
+### Exact operation Impact view (T54.2)
+
+When the server admits the independent operation Impact claim and its released
+protobuf Caller Map dependency, select **Inspect operation impact** from an
+exact protobuf operation in Contracts or Caller Map. The link includes the
+protocol, repository, declaration lineage and canonical operation. A bare
+operation name cannot select this view.
+
+The view shows one bounded page of the same static Caller Map evidence and
+its source scope. Filters, grouping and the opaque continuation cursor remain
+in the URL. **Source authority and scope** discloses the exact publication and
+scope below the rows. Source chips read only the existing authorized immutable
+byte range; an expired or changed citation offers a row refresh. A changed
+cursor offers **Restart from first page** while retaining the selected endpoint
+and filters.
+
+The report preserves syntax/heuristic resolution, extractor abstentions and
+ambiguous or unavailable unit attribution. An unavailable unit may retain a
+supplied ID-only candidate with `mapping_has_no_attribution`; that candidate
+does not establish an owner, service or deployment. **Exact empty** means no
+matching static evidence in the exact filtered scope. **Unavailable** has no
+caller total and cannot establish zero callers. Neither state proves runtime
+absence, completeness, migration completion or safe retirement.
+
+Field references, proposed changes, implementations, WIRE verdicts, matching
+syntactic calls and saved reports remain named unavailable in this shape,
+even if another product is selected. The retained experimental v2 Impact
+forms and saved bundles use their existing capability and routes separately.
+This view creates no durable report or historical pin.
+
+HTTP clients use `GET /api/operation_impact_report` with
+`shape=operation_callers`, `protocol=protobuf`, `repository`, `lineage` and
+`operation`, plus the existing Caller Map filters. `page_size` defaults to50
+and admits at most100; continuation requires the exact returned cursor and
+same query/page size. MCP clients use `build_operation_impact_report` with
+the same inputs and `declaration_lineage` spelling, then
+`read_operation_caller_citation` for a returned citation. Both return
+`contract-impact-operation-v1`, containing the unmodified `caller_page`, a
+generation/query-bound conclusion and six fixed unavailable sections. Mixed
+field/change/bundle inputs refuse instead of broadening the report.
+
+The report calls the shared exact Caller Map service once and adds fixed
+metadata. It adds no worker, source scan, second Atlas query, durable store,
+cache or child process. Existing authorization, source/current-generation,
+permission, paging and citation fences still govern every request. The UI
+validates the complete bounded page before displaying rows; a crossed or
+malformed response displays an error and retains no partial facts. This
+implementation alone establishes no composed quality, operating, scale or
+production-signing result.
+
+### Newly discovered repositories and evidence coverage (T51.3a)
+
+A visible repository can be discovered before its first HEAD is indexed.
+During that interval, proof and extraction-coverage responses retain it in
+the visible repository census, omit an indexed commit, mark each requested
+domain `unpublished` and keep SCIP availability `unknown`. They return no
+facts, extractor witness or exact publication authority for that repository.
+Raw `/api/evidence` similarly counts the visible repository without adding a
+published repository row. These are unavailable publication states, not
+evidence of zero callers or field/topic uses.
+
+Once indexing completes, ordinary extraction/source selection can advance the
+answer. A source, publication or permission change during a response still
+conflicts and requires a fresh request. Malformed nonempty commit metadata and
+storage failures remain errors; they are not converted into unpublished
+coverage. Authentication, source/version checks, immutable saved proof bytes
+and citation access remain governed by their existing boundaries.
+
+### Independent Thrift field registration (T52.3)
+
+When a verified signed Apache and/or thriftrw field recipe is selected, use
+`GET /api/find_field_references` or MCP `find_field_references` with the exact
+SCIP package lineage, message and explicitly present field number. Thrift
+admits0 through32767; field0 does not activate protobuf. Protobuf's independent
+recipe retains its1-through536870911 bounds and reserved19000-through19999
+exclusion. A Thrift-only selection exposes the neutral field tool and route;
+protobuf-only discovery remains unavailable. Independent Kafka selections may
+coexist without exposing Impact, compatibility or other provisional products.
+
+Raw evidence, direct proof calls, HTTP/MCP, citation atoms and retained bundle
+reads share the exact selected-set version fences. Authorization, current
+source/candidate/root checks and permission confirmation still precede serving
+facts. Missing SCIP reports an explicit gap, a stale or wrong-version native
+root remains unpublished/unavailable, and unsupported selected input fails
+before emission. Zero rows never establish absence or safety. Source opens use
+the cited exact commit and ordinary repository authorization.
+
+Withdraw one generator by the existing signed-selection suspension, retirement,
+expiry or revocation mechanism and restart. The surviving recipe remains
+selected; its changed shared-domain version forces ordinary re-extraction.
+Until that generation publishes, current evidence is unavailable. Former-set
+bundles fail current recipe admission while their immutable bytes and retention
+ownership remain intact. No automatic declaration/SCIP identity translation is
+performed. Stable generator registration supplies no operating, managed-runtime,
+scale or production-signature result; production signing remains pending.
+
+### Comparison on small screens (T50.3c)
+
+Comparison source cards and long unit IDs fit narrow screens. Citation chips
+retain the complete path in their accessible name/title; focus a chip and
+press Enter to open its exact cited bytes. Unit identity wrapping and source
+presentation change no evidence, scope, current-generation or absence rules.

@@ -1,0 +1,225 @@
+{
+  "schema": "phebs-t541-supported-report-contract-v1",
+  "date": "2026-10-18",
+  "status": "PROPOSED_SOURCE_ONLY_NOT_A_RELEASE_OR_QUALITY_PASS",
+  "owning_ticket": "T54.1",
+  "mac_handoff": "Ben all-ticket chat routing; root owns dated PLAN/owning ticket records. Artifacts only in this leaf.",
+  "claim": "For one authenticated exact protobuf endpoint and explicit source filters, return a bounded page of the existing declaration-bound repository-overlay Caller Map evidence, its exact source/generation/scope and unchanged per-row resolution/unit uncertainty. The report supports static evidence inspection only.",
+  "non_claims": [
+    "runtime impact, traffic or deployment inventory",
+    "universal caller or consumer absence",
+    "migration completion, replacement equivalence or safe retirement",
+    "cross-repository or cross-unit equivalence",
+    "field impact, proposed-change impact, implementations or WIRE verdict",
+    "new classifier, new source extraction, managed SCIP accuracy or independent component accuracy",
+    "durable saved report or historical report pin/archive custody",
+    "production activation, Linux operating capacity or large-scale SLO"
+  ],
+  "selected_shape": {
+    "id": "operation_callers",
+    "proposed_schema_version": "contract-impact-operation-v1",
+    "proposed_capability": "contract-impact-operation",
+    "proposed_release_claim": "phebs.contract.impact.operation",
+    "proposed_implementation_identity": "build_operation_impact_report@contract-impact-operation-v1",
+    "selection_status": "Identifiers proposed for T54.2; no compiled registry binding or released status exists now."
+  },
+  "dependencies": {
+    "own_verified_claim": "One exact signed Impact operation claim is required for ordinary stable registration; absent/revoked/expired/mismatched claim stays dark.",
+    "required_verified_recipe": {
+      "pack_id": "phebs.grpc.caller.go",
+      "extractors": {
+        "proto-contract": "4.0.0",
+        "grpc-caller": "1.6.0-released.1"
+      },
+      "caller_algorithm": "1.6.0",
+      "caller_schema": "t20-caller-v1",
+      "exact_page_schema": "caller-map-v2",
+      "cursor_schema": "caller-map-cursor-v2",
+      "citation_schema": "caller-map-citation-v1",
+      "resolver_packs": {
+        "go-module": "1.2.0",
+        "grpc-generated-attribution": "1.2.0"
+      },
+      "unit_member": "go-unit-attribution-v1.ndjson",
+      "unit_record_schema": "phebs-resolver-consumer-unit-v1"
+    },
+    "declaration_authority": "The SAME CallerMapService.List call resolves DECLARES_OPERATION from its selected exact resolver declaration publication using the current proto-contract authority. No second Atlas query or read-side join is needed.",
+    "not_dependencies": [
+      "independent phebs.protobuf.contract Atlas product record when Caller Map already admits proto-contract",
+      "caller comparison",
+      "protobuf fields",
+      "Apache/thriftrw fields",
+      "WIRE/Buf verdict claim",
+      "Kafka planes/Topics",
+      "gRPC/Thrift syntactic matching evidence",
+      "optional blind-label rounds",
+      "production signing key for source/contract preparation"
+    ],
+    "selection_fences": [
+      "Impact verified claim plus actual verified Caller Map recipe domains; experimental flags cannot substitute for either stable release dependency",
+      "Missing, expired or revoked Caller Map withdraws Impact only and leaves unrelated products governed by their own records",
+      "Revoking a separately selected Atlas product does not withdraw this view while the consumed Caller Map proto-contract recipe remains admitted",
+      "Current resolver pack1.2 guards apply; retained old1.1.1 catalogs are custody, not serving authority",
+      "A field or WIRE record never expands this report shape implicitly"
+    ]
+  },
+  "input": {
+    "endpoint": [
+      "protocol=protobuf",
+      "exact visible repository",
+      "exact declaration_lineage",
+      "canonical /package.Service/Method operation"
+    ],
+    "filters": [
+      "unit",
+      "owner",
+      "path_prefix",
+      "code_role",
+      "tier",
+      "freshness",
+      "resolution",
+      "ordering"
+    ],
+    "paging": "Same caller page_size default50/max100 and exact opaque cursor. HTTP lineage maps to MCP declaration_lineage, as existing Caller Map does. Reject mixed field/change/bundle input; no bare operation cross-protocol search.",
+    "scope": "Single repository endpoint scope; repository-overlay attribution does not become focused-local/deployment authority."
+  },
+  "output": {
+    "schema_version": "contract-impact-operation-v1",
+    "shape": "operation_callers",
+    "caller_page": "Unmodified typed CallerMapPage from the shared service, including query/declaration/rows/groups/total_matching_rows/pagination/generation/scope/matching_rows_state/caveat. No second read or regrouping.",
+    "conclusion": {
+      "state": "evidence_present | exact_empty | unavailable",
+      "authority": "Echo the exact caller generation digest and query identity from caller_page; no synthetic certificate digest.",
+      "evidence_present": "Static caller evidence matches this endpoint scope; per-row resolution applies. This is not runtime impact, completeness or retirement safety.",
+      "exact_empty": "No matching static caller evidence in this exact filtered source scope; this does not establish absence.",
+      "unavailable": "Caller evidence is unavailable for this generation; no zero-caller or absence conclusion is made."
+    },
+    "unavailable_sections": {
+      "field_references": "not_in_supported_shape",
+      "proposed_change": "not_in_supported_shape",
+      "implementations": "not_in_supported_shape",
+      "wire_verdict": "not_in_supported_shape",
+      "matching_syntactic_calls": "not_in_supported_shape",
+      "saved_report": "not_in_supported_shape"
+    },
+    "coverage": "Current exact page leaves optional legacy Coverage/CoverageDigest/AttributionDigest absent. Preserve that absence. Authority/scope/record and candidate census come from exact caller generation fields; never label them a new coverage certificate.",
+    "new_metadata_bound": "Closed shape/state vocabulary, six fixed unavailable-section entries, fixed prose and one existing generation/query identity; no source-sized metadata vectors."
+  },
+  "uncertainty_and_empty_semantics": [
+    "Resolution syntax retains heuristic tier; scip retains derived tier. A resolved declaration-bound source edge is never promoted to exact runtime use.",
+    "Unavailable/ambiguous unit attribution remains attached to its real caller occurrence; do not drop it, synthesize an owner or turn it into a missing caller.",
+    "Extractor abstention remains an abstention row/reason. Caller Map filtered total may include abstention evidence; evidence_present never means all rows resolved.",
+    "An exact filtered zero requires matching_rows_state=exact plus current generation and total_matching_rows=0; it says nothing about sources outside this scope.",
+    "Gap/unpublished/partial/failed/refused generation passes through the shared unavailable page: rows empty, no fabricated total0 or complete generation.",
+    "Pagination.complete means the selected snapshot query was exhausted, not runtime completeness or full-corpus analysis.",
+    "Unsupported sections always remain named unavailable, including when unrelated signed packs coexist."
+  ],
+  "authority_and_security": [
+    "Reuse CallerMapService.List and ReadCitation; preserve authorization-first source access and final visibility/source/current-root fences. No legacy assertions fallback and no synthetic joins.",
+    "Pin echoed full endpoint, filters, generation/manifest/pairset/publication revision and per-row source.run_id/repository/commit/object_id/blob_digest/range.",
+    "Opaque cursor remains bound to exact query, page size, principal/visibility and caller publication; changed source/publication/permission, expiry or eviction refuses it.",
+    "Citation transport remains existing exact caller citation reader; request independently reauthorizes and checks generation before one bounded immutable blob read.",
+    "HTTP/MCP/UI return the same transport-neutral report. A malformed/crossed/oversized page refuses the whole result instead of rendering partial facts.",
+    "Historical contract-impact-report-v2 proof bundles, stored bytes, archive and experimental routes remain unchanged; stable view neither creates nor reads those bundles."
+  ],
+  "transports": {
+    "http": {
+      "proposed_path": "GET /api/operation_impact_report",
+      "input": "shape=operation_callers plus existing flat Caller Map endpoint/filter/page_size/cursor fields",
+      "semantics": "Read-only paged view, no durable report write. Existing /api/contract_impact_report and /api/contract_impact_reports/{id} remain experimental v2.",
+      "errors": {
+        "400": "Malformed/mixed/unknown shape or invalid endpoint/filter/page size",
+        "401": "Anonymous authentication boundary",
+        "404": "Absent route when release not admitted; denied/missing endpoint nondisclosure; do not leak which source exists",
+        "409": "Stale/crossed publication/cursor/citation authority",
+        "422": "Existing bounded reader overflow",
+        "503": "Known unsupported report shape on an otherwise admitted report boundary, or required source service unavailable"
+      }
+    },
+    "mcp": {
+      "proposed_tool": "build_operation_impact_report",
+      "read_only": true,
+      "input": "Same shape and caller query with exact declaration_lineage spelling; no tool-side filtering/grouping",
+      "output": "Same typed report as HTTP",
+      "citation_tool": "Reuse read_operation_caller_citation",
+      "registration": "Tool absent unless own claim and actual consumed verified Caller Map recipe are admitted"
+    },
+    "ui": {
+      "entry": "#/impact?shape=operation_callers&protocol=protobuf&repository=...&lineage=...&operation=...",
+      "binding": "Select exact endpoint through existing Atlas/Caller Map discovery; preserve all URL filters and opaque pagination.",
+      "presentation": "Answer/rows first; authority and unavailable sections disclosed without hiding them. Same CallerMap source-citation component and exact current/gap state.",
+      "unsupported": "Field/change/saved report modes visibly unavailable in stable operation shape; old experimental v2 mode is separate. Do not offer a saved-report link that has no backing store.",
+      "gates": "Both desktop and390px level/filter/paging/citation keyboard journey, fail-closed payload checks, console/a11y, scoped deterministic canonical receipts, bundle and interaction notes under DESIGN_CHARTER."
+    }
+  },
+  "current_runtime_ceilings": {
+    "page_size_default": 50,
+    "page_size_max": 100,
+    "cursor_bytes_max": 16384,
+    "citation_and_binding_lifetime_seconds": 300,
+    "exact_read_concurrency": 8,
+    "citation_read_concurrency": 2,
+    "indexes_per_service_max": 8,
+    "bindings_per_service_max": 8,
+    "index_identity_bytes_max": 134217728,
+    "index_record_refs_max": 200000,
+    "serialized_unit_candidates_per_row_max": 64,
+    "unit_values_per_vector_max": 64,
+    "unit_string_bytes_max": 4096,
+    "source_blob_read_bytes_max": 4194304,
+    "caller_leaf_record_bytes_max": 1048576,
+    "caller_publication_canonical_bytes_max": 536870912,
+    "qualification": "Existing ceilings are engineering admission, not measured operating capacity. No new hard HTTP response cap is claimed here; the prospective tiny-fixture envelope separately limits observed response bytes."
+  },
+  "steady_state_cost": {
+    "request": "Exactly one shared CallerMap.List call and constant report metadata projection. Initial/continuation costs, bounded candidate filtering, retained index lookup/record reads, final authority checks and response serialization remain those of Caller Map; no second Atlas/proof query or full-corpus scan. Preserve row objects rather than copy/index them again.",
+    "citation": "Existing reader only: authorization/current-generation checks and one admitted source blob read, at existing2read concurrency.",
+    "sync_startup_retry_publication": "No new worker, source read, timer, scanner, Git/indexer/Buf child, persistent table/schema, durable pin or lifecycle owner. Startup adds one bounded release-dependency/claim decision; revocation removes route/tool/capability. New source publication invalidates through existing reader/cache rules.",
+    "locks_cache": "Reuse existing Caller Map reader/index/binding locks and lifetime; do not hold a new lock across source I/O. No new report cache or separate8index pool.",
+    "memory_disk_children": "Only fixed report wrapper metadata plus existing page serialization; no row clone, persistent disk or extra child per report. Existing worst-case index/publication bounds are retained, not newly qualified by this small population."
+  },
+  "minimum_T542_code_map": [
+    {
+      "paths": [
+        "internal/api/report_operation.go (new)",
+        "internal/api/api.go"
+      ],
+      "required": "New typed report service wrapping the already-built shared exact CallerMapService. Register independent GET/capability without ProofBundles; preserve experimental v2 code and bytes."
+    },
+    {
+      "paths": [
+        "cmd/phebs/serve_config.go",
+        "cmd/phebs/serve_api.go"
+      ],
+      "required": "Add proposed own claim identity to fixed claim registry and per-input verified Caller Map dependency guard; no experimental umbrella or unrelated field/WIRE activation."
+    },
+    {
+      "paths": [
+        "internal/mcp/impact.go (new)",
+        "internal/mcp/mcp.go"
+      ],
+      "required": "Narrow interface/options and one read-only tool delegating to same service; unchanged citation tool and exact output schema."
+    },
+    {
+      "paths": [
+        "ui/src/api.ts",
+        "ui/src/pages/ImpactPage.tsx",
+        "ui/src/App.tsx",
+        "ui/src/pages/ContractAtlasPage.tsx as exact link requires"
+      ],
+      "required": "Separate stable operation view/type from retained v2; exact endpoint discovery/deep links, unavailable shapes, reuse caller citations and fail-closed authority validators. Routed Mac presentation handoff is required before edits."
+    },
+    {
+      "paths": [
+        "focused API/MCP/serve admission/UI tests"
+      ],
+      "required": "Table-driven tuple/uncertainty/empty/permission/stale/overflow/dependency revocation/coexistence and full transport parity. No new classifier or fake unit projection."
+    }
+  ],
+  "remaining_gates": [
+    "Independent source-only oracle/contract review and immutable checkpoint before any composed candidate/report execution",
+    "T54.2 implementation and bounded meaningful affected regressions with normal/race/retained authority/recovery/archive boundaries",
+    "One prospective source-bound quality and separate operating result, all declared HTTP/MCP/UI/canonical/a11y gates",
+    "Own measured release artifacts/signature in T54.3; existing unavailable production key remains pending"
+  ]
+}

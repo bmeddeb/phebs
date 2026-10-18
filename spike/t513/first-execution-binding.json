@@ -1,0 +1,108 @@
+{
+  "source_commit": "8a70fef5f60411f31d210efd52ab4dcd79385549",
+  "source_tree": "ebbe68f5d6faef8851e3368c268d3280797ce98b",
+  "binary": {
+    "path": "/tmp/phebs-main-8a70-native-qualification/phebs",
+    "resolved_path": "/private/tmp/phebs-main-8a70-native-qualification/phebs",
+    "bytes": 91131122,
+    "sha256": "sha256:7dab45a9011c60132a80381933242705e44da19b2712421ed4361b67dcca19be",
+    "metadata_sha256": "sha256:fa16a22a9f0b2287414cbd334e388bddd1a432553fe34acf031da21a24a0b322"
+  },
+  "observer": {
+    "path": "/tmp/phebs-main-8a70-native-qualification/native-observer",
+    "resolved_path": "/private/tmp/phebs-main-8a70-native-qualification/native-observer",
+    "bytes": 31576930,
+    "sha256": "sha256:3b25f9b9cabb9cac5087d9e65af54eb7d6bf0643d5bbd33ed9296c621d3fc16e"
+  },
+  "build_receipt": {
+    "path": "/tmp/phebs-main-8a70-native-qualification/build-receipt.json",
+    "sha256": "sha256:161fcde733ac49dc755209b4bdd2ebee7bb657166f780cd380de3a403e0dc15c"
+  },
+  "helper_build_receipt": {
+    "path": "/tmp/phebs-main-8a70-native-qualification/helper-build-receipt.json",
+    "sha256": "sha256:6072dc0c49c32858868f1678017a34a67ce40cfc93303db5bf621019c914ee55"
+  },
+  "schema": "phebs-t513-execution-binding-v1",
+  "reviewed": true,
+  "plan_digest": "sha256:71f2d2df416332ed19cbeb8d337327e1e5d7f72593eaeed0e70f15fd169b3268",
+  "harness_commit": "d685b0aa8c06c487c65c4664d469eb88d7cbf5c3",
+  "tools": {
+    "go": {
+      "path": "/opt/homebrew/bin/go",
+      "resolved_path": "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+      "bytes": 14500160,
+      "sha256": "sha256:3925fc3221ac440ebf7c35361ff663bed0c7bdb2e0a157b75fe993607ffe0a19",
+      "version": "go1.26.5",
+      "version_evidence": "go version go1.26.5 darwin/arm64"
+    },
+    "git": {
+      "path": "/usr/bin/git",
+      "resolved_path": "/usr/bin/git",
+      "bytes": 118640,
+      "sha256": "sha256:b8763cf250e607a778bb4603cecb5b90338814d0a3dfcba0d57b1de242f610e9",
+      "version_evidence": "git version 2.54.0 (Apple Git-157)"
+    },
+    "zoekt_git_index": {
+      "path": "/tmp/phebs-main-8a70-native-qualification/zoekt-git-index",
+      "resolved_path": "/private/tmp/phebs-main-8a70-native-qualification/zoekt-git-index",
+      "bytes": 39081090,
+      "sha256": "sha256:dd216b7e4df21b956a8a3461108ac81ee6cb700799a3decf9c739af2ba003c4d",
+      "version": "same-main-go.mod",
+      "version_evidence": "helper-build-receipt.json"
+    },
+    "focused_index": {
+      "path": "/tmp/phebs-main-8a70-native-qualification/phebs-focused-index",
+      "resolved_path": "/private/tmp/phebs-main-8a70-native-qualification/phebs-focused-index",
+      "bytes": 27295666,
+      "sha256": "sha256:701d83e026ac926d3e5d92a948a68c346c11335ce83c37c31bd62207beb0d8b5",
+      "version": "same-main-go.mod",
+      "version_evidence": "helper-build-receipt.json"
+    },
+    "buf": {
+      "path": "/Users/ben/.codex/worktrees/t445-header/phebs.com/bin/buf",
+      "resolved_path": "/Users/ben/.codex/worktrees/t445-header/phebs.com/bin/buf",
+      "bytes": 77461554,
+      "sha256": "sha256:691b8635ab9c083e38f1d892bf10799ea688070ed8ef8081d9b7907d0a7e4658",
+      "version_evidence": "1.72.0"
+    },
+    "surreal": {
+      "path": "/opt/homebrew/bin/surreal",
+      "resolved_path": "/opt/homebrew/opt/phebs-surreal-3.2.0/surreal",
+      "bytes": 233283488,
+      "sha256": "sha256:ee819dfcedd23035a785ac40f2509f86cbb09fc3255726ad74755b161a3ca0a8",
+      "version": "3.2.0",
+      "version_evidence": "3.2.0 for macos on aarch64"
+    },
+    "openssl": {
+      "path": "/opt/homebrew/opt/openssl@3/bin/openssl",
+      "resolved_path": "/opt/homebrew/Cellar/openssl@3/3.6.3/bin/openssl",
+      "bytes": 880512,
+      "sha256": "sha256:103fc7706cf6646f226d96f29242d81890363499afc730e7ef1fadd64b3a123c",
+      "version_evidence": "OpenSSL3.6.3/library3.6.3"
+    },
+    "vm_stat": {
+      "path": "/usr/bin/vm_stat",
+      "resolved_path": "/usr/bin/vm_stat",
+      "bytes": 101664,
+      "sha256": "sha256:0127fec1de1d99c7f0b0cf185fec048c7fe92d1f1b2ad380882c583f0c921df7",
+      "version_evidence": "Darwin system sampler image; no sample performed during draft prep"
+    }
+  },
+  "harness_files": {
+    "qualify_fields.py": "sha256:c691320f7698ad3fa4ee9902232e00fa6405172a8134080044bc9bd374d9428a",
+    "field_checks.py": "sha256:576bf3c8ee05494f07f0c93ce993907b7540e186fa1a9a4a7a04ddc113258027",
+    "test_fields.py": "sha256:f4308947312479074cde4af3c4c2c7a0e3e6e50923d73b7858fcc2920bd55e28",
+    "README.md": "sha256:b3aff9b90818e4cec3825a08fc50458b1246702400578de83c32a06879603501"
+  },
+  "reused_t503_files": {
+    "requalification_browser.cjs": "sha256:d5e0a71fb97aa20d211189f7e4542ce4fd5e1dc19364a99cf6cb00a8d169c2d0",
+    "requalification_browser.py": "sha256:dfd5742e3856e908515c42042571702023753644cf4a242cc0570db00a19da6f",
+    "requalification_checks.py": "sha256:51a7d57434827beab9e3328d747afef3338ee4942cabf374f849113e45370d1b",
+    "requalification_monitor.py": "sha256:cbffb94a215e78c7210da3d7661ccd0d2627de3946cb4370b9364a786f3b6e5a",
+    "requalify.py": "sha256:0756a4ece93583644f064d227895b8666dedb4bcb975ad6e08e4ce7aad727a9f",
+    "test_requalification.py": "sha256:7b524c5fffde8096bc24404d64006f875da50eeefe3cc5444b411a0cad60c3df",
+    "qualify.py": "sha256:831d13fb28ae0054257da74b87f1298bf1df7067e75190a6fa66fe53fec92089",
+    "score.py": "sha256:9fe189b544eb877b55ba064104a489109c1416e6ea29289951d51a512d14ad30"
+  },
+  "review": "Root complete source/contract/security/cost review accepted, source-only thirteen controls passed, no candidate/native outcomes consulted. Preserves fixed plan/input oracle and uses exact existing joined build/helper images. Sole native slot must be free."
+}

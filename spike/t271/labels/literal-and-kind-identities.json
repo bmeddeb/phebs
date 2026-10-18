@@ -1,0 +1,274 @@
+{
+  "authorship": "Fixture-author declarative labels, frozen before any reader implementation or run; not independent extraction-accuracy evidence.",
+  "fixture_sha256": "fbc3b8c662882fc81da24ae3ea252d57253e075d50543484578226450a3b2271",
+  "declarations": [
+    {
+      "kind": "DECLARES_SCHEMA_SET",
+      "pointer": "",
+      "owner": null,
+      "meaning": {
+        "format": "phebs-document-schema-v1",
+        "source_class": "authored"
+      },
+      "span": {
+        "start": 0,
+        "end": 2030,
+        "sha256": "dd62383b6d4ecfc8b4a0feee2ddd651e2eda83437f0e00ac1cc3a81a092f3d76"
+      }
+    },
+    {
+      "kind": "DECLARES_TABLE",
+      "pointer": "/tables/0",
+      "owner": {
+        "kind": "table",
+        "name": "Shared"
+      },
+      "meaning": {
+        "name": "Shared",
+        "partition_key_state": "undeclared"
+      },
+      "span": {
+        "start": 90,
+        "end": 1406,
+        "sha256": "11a73d2cffefd7776ed5c8bf2761b3b190b6902ce5954e7de63597ab34d8cb45"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/0/fields/0",
+      "owner": {
+        "kind": "table",
+        "name": "Shared"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 142,
+        "end": 306,
+        "sha256": "c0c1dc41f863f03f0e95ed41c591f6f1ad3ac7bf6aac527e9c4df4f6bbb0b66d"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/0/fields/1",
+      "owner": {
+        "kind": "table",
+        "name": "Shared"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "é"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 316,
+        "end": 480,
+        "sha256": "20c1bc28ca9a966cd1550bfa1320cec135824b66fe48d9378319d8d33199953a"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/0/fields/2",
+      "owner": {
+        "kind": "table",
+        "name": "Shared"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "é"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 490,
+        "end": 655,
+        "sha256": "9cb4eefaf0e87891ec1861957bd2559854b119bf595a971e08f214f1a04698db"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/0/fields/3",
+      "owner": {
+        "kind": "table",
+        "name": "Shared"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "[]"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 665,
+        "end": 829,
+        "sha256": "e039e93c03ddc23e8eaeeab29ffd903d265a882f0f93c55b8d5c8e95e642dc62"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/0/fields/4",
+      "owner": {
+        "kind": "table",
+        "name": "Shared"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "."
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 839,
+        "end": 1002,
+        "sha256": "536e4da38404380d4a323b2846dcb9b75d48a0a298a3fcce69e9090c58e18df8"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/0/fields/5",
+      "owner": {
+        "kind": "table",
+        "name": "Shared"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "/"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 1012,
+        "end": 1175,
+        "sha256": "dfe074b136401485a0f77852e29ae945b6741ec6d2bb72971939177cc2887c4a"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/tables/0/primary_key/0",
+      "owner": {
+        "kind": "table",
+        "name": "Shared"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "position": 0,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 1216,
+        "end": 1345,
+        "sha256": "640ade14bb4afc774d88363ad6ec6e8347b86cc995f205711da02fe499327c92"
+      }
+    },
+    {
+      "kind": "DECLARES_VIEW",
+      "pointer": "/views/0",
+      "owner": {
+        "kind": "view",
+        "name": "Shared"
+      },
+      "meaning": {
+        "name": "Shared",
+        "partition_key_state": "undeclared"
+      },
+      "span": {
+        "start": 1429,
+        "end": 2024,
+        "sha256": "2cc091ff3591af9f0e323aa27805be945d9c48118b9e7c956c3e5184ced3f240"
+      }
+    },
+    {
+      "kind": "DECLARES_VIEW_FIELD",
+      "pointer": "/views/0/fields/0",
+      "owner": {
+        "kind": "view",
+        "name": "Shared"
+      },
+      "meaning": {
+        "name": "id",
+        "type": "opaque:string",
+        "position": 0
+      },
+      "span": {
+        "start": 1481,
+        "end": 1819,
+        "sha256": "f29c2ce2932c73772401e5643f230a84e765102bdc8177713f7abe4056532e23"
+      }
+    },
+    {
+      "kind": "DECLARES_VIEW_SOURCE",
+      "pointer": "/views/0/fields/0/sources/0",
+      "owner": {
+        "kind": "view",
+        "name": "Shared",
+        "field": "id"
+      },
+      "meaning": {
+        "kind": "table",
+        "name": "Shared",
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ]
+      },
+      "span": {
+        "start": 1577,
+        "end": 1797,
+        "sha256": "7ac743b3339d197b8d568c547163c0cbff8fdedaa8cf12d28385c1d09306c313"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/views/0/primary_key/0",
+      "owner": {
+        "kind": "view",
+        "name": "Shared"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "position": 0,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 1860,
+        "end": 1989,
+        "sha256": "640ade14bb4afc774d88363ad6ec6e8347b86cc995f205711da02fe499327c92"
+      }
+    }
+  ]
+}

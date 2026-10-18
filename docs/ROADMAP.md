@@ -170,10 +170,81 @@ values update and 118 baselines remain untouched. This closes the portability
 implementation on its branch; full-matrix history and production signing retain
 their recorded scope.
 
+<<<<<<< HEAD
 **T28.1 source preparation (2026-10-18):** pinned permissive licenses and
 all scoped metadata/ACL/application bytes are verified before recognition.
 Labels, separate denominators and contract decisions must freeze before the
 first reader run. No production recipe or manifest GO is claimed.
+=======
+**T50.2 comparison admission preparation (2026-10-18):** its independent signed
+claim plus released Caller Map now select the shared exact comparison service
+on the ticket branch. Joint authority/cursor/citation fences are reused;
+unsupported endpoint pairs refuse early. Focused normal/race/MCP/static checks
+pass. Actual quality/operating promotion and signing remain T50.3, not inherited
+from Caller Map or Atlas.
+
+**T51.1 field inputs (2026-10-18):** a source-labelled public population and
+separate authored controls now have reviewed, actual committed evaluator SCIP
+inputs, explicit descriptor/lineage witnesses and prospective finite thresholds.
+The first measurement follows this checkpoint; production registration and
+operating/signing closure remain distinct.
+
+**T51.1 finite qualification (2026-10-18):** the unchanged public14/56 and
+separate authored17/7/12 gates pass, including exact descriptor/definition/
+citation witnesses. Independent review and bounded checks are complete. T51.2
+stable production input/surface isolation can proceed; operating and signing
+remain separate, with no broad generator or semantic-write accuracy claim.
+
+**T51.2 field admission (2026-10-18):** the isolated signed recipe, exact
+committed-input checks and source/version/authorization fences are implemented
+and reviewed with bounded normal/race/store/MCP tests. Mixed explicit provisional
+surfaces remain available; no identity bridge or other product is promoted.
+T51.3 operating and production signing remain separate.
+
+**T48.5a raw evidence (2026-10-18):** implementation and bounded real-root,
+legacy-byte, final-fence and release-domain checks pass on its ticket branch.
+The browser exposes exact native authority without inventing legacy runs;
+unadmitted retained domains refuse before storage. Main integration remains a
+separate decision.
+
+**T25.1 embedded docs preparation (2026-10-18):** authenticated build-snapshot
+Markdown/SVG/YAML, exact links and explicit repository-only fallback are
+implemented with normal/race/auth/static and four-appearance browser gates
+passing. Canonical deterministic comparison and final integration remain open;
+this does not add a release or anonymous documentation surface.
+
+**T25.1 documentation browser (2026-10-18):** authenticated embedded docs,
+strict links/content boundaries, native keyboard/a11y and twelve canonical
+captures with fresh-fixture comparison are implemented and reviewed on the
+ticket branch. Repository-only destinations are explicitly labelled; no excluded
+history or fixture bytes are embedded. Main integration remains separate.
+
+**T49.4 Atlas closure (2026-10-18):** signed disposable-key native HTTP/MCP/
+UI/revocation and eight reviewed canonical frames pass on the ticket branch.
+Current partitioned authority, unavailable planes, capabilities and narrow layout
+are repaired. Shared scope-help accessibility is tracked separately as T43R.6;
+production signing remains pending the existing key. No accuracy/scale or
+full-page accessibility claim follows from the scoped integration result.
+
+**T27.1 inputs (2026-10-18):** the document-schema spike has independently
+reviewed, digest-pinned labels and public derivation before reader code or
+execution. The bounded reader and two deterministic passes follow; this is
+isolated spike preparation, with no production pack or live-schema claim.
+
+**T27.1 bounded reader result (2026-10-18):** both frozen 119-case passes,
+534 exact facts/citations and public derivation agree. The JSON whitespace
+review finding is corrected and independently re-reviewed; normal/race/static
+checks pass. The spike is complete on its branch for neutral fixture contract
+conformance only. No production integration or runtime-schema claim follows;
+future production work requires a separately specified ticket.
+
+**T50.3 comparison inputs (2026-10-18):** independent agent source-only review
+accepts the immutable twelve-artifact checkpoint before indexing/predictions.
+Five selected public source sites and four outside-pair negatives have frozen
+labels, supplied unit composition and finite thresholds. Actual evaluation Git
+bindings precede scoring; measured quality, local operating results and the
+production signature remain pending. No Linux/scale result follows.
+>>>>>>> main
 
 **Caller Map / Atlas sequencing override (2026-10-17, Ben-directed):** bounded
 integration tests suffice for these products and their release bindings. The
@@ -5482,6 +5553,57 @@ Production registration of the remaining evidence surfaces still requires:
 Until both exist, the implementation remains dark regardless of feature
 completeness or demo quality.
 
+**T26.1 input preparation (2026-10-18):** pinned permissive SQL corpora,
+complete declaration/dump labels, sampled migration/query labels, controls and
+bounded candidate contract are frozen in an immutable checkpoint. Mechanical
+PostgreSQL18.6 fixture capture passed with exact teardown. No candidate parser
+has executed; the two dialect comparisons and measured decision remain next.
+
+**T26.1 measured decision (2026-10-18):** the SQL spike is complete with
+partial strict declaration/history coverage and complete sampled query/binding
+witnesses. All paired outputs are deterministic; reviewed boundary/scorer
+corrections pass bounded controls. No production parser or pack is adopted.
+The [report](../spike/t261/results/REPORT.md) preserves every gap, first outcome,
+source snapshot and cost limit. Any production continuation needs a new ticket.
+**T50.3a caller unit repair (2026-10-18):** the direct caller pipeline now
+carries exact committed unit attribution through one bounded shared resolver
+member. Old unit-less catalogs refuse current worker/read admission and rebuild
+under pack1.2.0; historical artifact custody stays intact. Bounded regression
+and independent source/cost review precede integration. T50.3's earlier unit
+failure stays retained; new product qualification remains separate.
+
+**T50.3 first product attempt (2026-10-18):** source-site composition matched
+5/5 but supplied unit attribution failed0/5. The stop remains immutable; only
+offline checker adjudication followed. T50.3a repairs the dropped projection.
+New product qualification still needs prospectively bound source/binary facts;
+no overall quality, operating, UI or release pass is inferred.
+
+**T52.2 source checkpoint (2026-10-18):** independent thriftrw source labels,
+embedded-IDL/field witnesses and permissive provenance are reviewed before
+indexing. Public4/31 and separate authored15/62/4 checks are frozen; actual
+index/input commits, first quality measurement and T52.3 remain next.
+**T52.1 source preparation (2026-10-18):** the finite Apache0.14.1 source/tag/
+IDL oracle is frozen and independently reviewed before indexing. Real offline
+SCIP preparation, evaluator Git bindings and final preregistration review come
+before scoring. Registration and each generator's quality stay separate.
+
+**T52.1 finite Apache qualification (2026-10-18):** public33/266 and separate
+authored11/60/4 frozen reference/negative/unsupported checks pass with all14
+identity witnesses. Normal/race/vet/pinned lint and independent source/cost
+review are clear. This is committed-input conformance only; T52.2's thriftrw
+result and T52.3's admission/operating/signature remain separate.
+
+**T52.2 finite thriftrw qualification (2026-10-18):** public4/31 and separate
+authored15/62/4 source gates pass with all18 definition witnesses and exact
+module-digest bindings. Normal/race/vet/pinned lint and independent review are
+clear. T52.3 can implement independent Apache/RW stable selection; operating
+and existing-key production signing remain distinct.
+
+T52.3 registration update (2026-10-18): independent Apache/thriftrw signed
+recipes compose once with exact selected-set version fences and bounded green
+integration checks. Operating/artifact/signature promotion remains open for
+each generator; production signing awaits the existing key.
+
 ## On demand
 
 Epic 32 measured the target whole repository and did not trigger P6. P6 remains
@@ -5509,8 +5631,21 @@ Standalone remains the supported development and small-deployment profile.
 - silent filesystem-wide repository discovery;
 - treating runtime telemetry or static evidence as a substitute for the other.
 
+<<<<<<< HEAD
 **T28.1 measured Redis spike (2026-10-18):** deterministic two-pass source
 evidence and ACL safety close the finite spike with no production adoption.
 Three extra unresolved frontier sites prevent qualityPASS; manifest design and
 object mapping remain deferred. No Redis query surface, dependency or pack
 is registered. First source/outputs and all failed assertions stay retained.
+=======
+**T54.2 isolated operation Impact (2026-10-18):** independent own-claim plus
+actual released CallerMap admission, one exact shared read and bounded fail-closed
+UI/MCP are implemented with scoped normal/race/UI/static checks and source/cost
+review passing. Direct composed quality/operating and production signing remain
+separate; no field/WIRE/legacy shape or component accuracy transfers.
+
+**T51.3a discovery repair (2026-10-18):** shared proof coverage and raw evidence
+represent visible unindexed repositories as unpublished, preserving strict store
+validation and final authorization/source fences. Bounded checks and independent
+review pass. A fresh binary operating run and production signing remain open.
+>>>>>>> main

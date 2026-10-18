@@ -1,0 +1,34 @@
+{
+  "format": "t261-source-labels-v1",
+  "dialect": "postgresql",
+  "repository": "hatchet-dev/hatchet",
+  "commit": "559b5021e418f12ded175f950b709b7fa66be5a5",
+  "source_path": "pkg/repository/sqlcv1/concurrency-additional-tables.sql",
+  "source_sha256": "fedaff4fb95028825ba4e5549bbe3b92c08fe5fe0208a99579a9492f8ccb131a",
+  "plane": "sql-schema",
+  "statements": [
+    {
+      "id": "table-tmp_workflow_concurrency_slot",
+      "start": 104,
+      "end": 198,
+      "sha256": "b6bdddc43e62102c5cf798f6c8840ec3776056be26672f391a89c30a6377a4a7",
+      "syntax_class": "create-table-like",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "table",
+          "name": "tmp_workflow_concurrency_slot",
+          "quoted": false,
+          "start": 117,
+          "end": 146,
+          "sha256": "8f6e22e583f3f277e4c5e7c9817ae113887b38b13f6c272ca779f2dbc60169ac",
+          "source_role": "sqlc-tooling-model"
+        }
+      ],
+      "note": "Source explicitly says never written to schema. LIKE ... INCLUDING ALL references v1_workflow_concurrency_slot; no copied columns/keys/indexes or live table are inferred. Expansion is a frozen parser gap."
+    }
+  ],
+  "inventory_notes": [
+    "Complete authored sqlc model; no recursive/cross-blob LIKE expansion under one-blob citation contract."
+  ]
+}

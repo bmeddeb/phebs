@@ -1,0 +1,272 @@
+{
+  "format": "phebs-document-schema-v1",
+  "source_class": "authored",
+  "tables": [
+    {
+      "name": "T",
+      "fields": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ],
+          "type": "opaque:string"
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ]
+        }
+      ],
+      "indexes": [
+        {
+          "name": "I0",
+          "kind": "opaque",
+          "columns": [
+            {
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "I1",
+          "kind": "opaque",
+          "columns": [
+            {
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "I2",
+          "kind": "opaque",
+          "columns": [
+            {
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "I3",
+          "kind": "opaque",
+          "columns": [
+            {
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "I4",
+          "kind": "opaque",
+          "columns": [
+            {
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "I5",
+          "kind": "opaque",
+          "columns": [
+            {
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "I6",
+          "kind": "opaque",
+          "columns": [
+            {
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "I7",
+          "kind": "opaque",
+          "columns": [
+            {
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "I8",
+          "kind": "opaque",
+          "columns": [
+            {
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "I9",
+          "kind": "opaque",
+          "columns": [
+            {
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "I10",
+          "kind": "opaque",
+          "columns": [
+            {
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "I11",
+          "kind": "opaque",
+          "columns": [
+            {
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "I12",
+          "kind": "opaque",
+          "columns": [
+            {
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "I13",
+          "kind": "opaque",
+          "columns": [
+            {
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "I14",
+          "kind": "opaque",
+          "columns": [
+            {
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "I15",
+          "kind": "opaque",
+          "columns": [
+            {
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "I16",
+          "kind": "opaque",
+          "columns": [
+            {
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "associations": []
+    }
+  ],
+  "views": []
+}

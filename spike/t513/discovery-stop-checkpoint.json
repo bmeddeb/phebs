@@ -1,0 +1,11 @@
+{
+  "schema": "t513-discovery-stop-v1",
+  "outcome": "stopped_no_retry",
+  "seconds": 8.692433292,
+  "source_harness_commit": "c2de9190c823591d3f6cb33a69efc16f2cc6a050",
+  "failure": "HTTP500 build extraction coverage; discovered repository has empty indexed commit; strict extraction-store validation rejects it.",
+  "repair": "T51.3a PR101 on main; fresh binary/source/binding required before new run.",
+  "cleanup": "Serverexit0; all owned server/observer/sampler children joined; auth/key/config/data removed. Raw/safe diagnostics retained.",
+  "controls": "14 pure/mock source controls pass.",
+  "qualification": "First source-ref publication stop and corrected-origin API500 stay exact. No overall operating pass or production signature."
+}

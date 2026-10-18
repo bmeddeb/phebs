@@ -6,6 +6,7 @@
 
 import type { components } from './api.generated'
 import { csrfHeaders, notifyAuthRequired } from './authSession'
+import { validateOperationImpactReport } from './operationImpactContract'
 
 export type Schemas = components['schemas']
 
@@ -741,6 +742,8 @@ export interface ContractCatalogPagination {
   next_cursor?: string
 }
 
+export type ContractCatalogAuthority = Schemas['ContractCatalogAuthority']
+
 export interface ContractCatalogList {
   schema_version: string
   query: {
@@ -750,6 +753,7 @@ export interface ContractCatalogList {
     lineage?: string
   }
   items: ContractCatalogItem[]
+  exact_authorities?: ContractCatalogAuthority[] | null
   pagination: ContractCatalogPagination
   coverage_digest: string
   coverage: CoverageCertificate
@@ -834,12 +838,14 @@ export interface ContractCatalogOperation {
   method: string
   operation: string
   declaration: ContractCatalogClaim
+  exact_authority?: ContractCatalogAuthority
   fact_detail: ContractCatalogOperationFactDetail
   request: ContractCatalogMessage
   response: ContractCatalogMessage
   implementations: ContractCatalogRelationship[]
   callers: ContractCatalogRelationship[]
   unresolved_candidates: ContractCatalogRelationship[]
+  unavailable_relationships?: string[] | null
   relationships_truncated: boolean
   relationship_limit_reason?: string
   shape_truncated: boolean
@@ -926,6 +932,8 @@ export interface CallerMapGeneration {
   pair_count?: number
   result_count?: number
   abstention_count?: number
+  coverage_record_count?: number
+  covered_candidate_count?: number
   canonical_bytes?: number
   record_counts?: {
     candidate_records: number
@@ -993,6 +1001,19 @@ export interface CallerMapPage {
   attribution_digest?: string
   coverage?: CoverageCertificate
   caveat: string
+}
+
+export interface OperationImpactReport {
+  schema_version: 'contract-impact-operation-v1'
+  shape: 'operation_callers'
+  caller_page: CallerMapPage
+  conclusion: {
+    state: 'evidence_present' | 'exact_empty' | 'unavailable'
+    query: CallerMapQuery
+    generation_digest?: string
+    qualification: string
+  }
+  unavailable_sections: Record<'field_references' | 'proposed_change' | 'implementations' | 'wire_verdict' | 'matching_syntactic_calls' | 'saved_report', 'not_in_supported_shape'>
 }
 
 export interface CallerComparisonQuery {
@@ -1400,6 +1421,24 @@ export const fetchContractCallers = (
   })}`,
   signal,
 )
+
+export const fetchOperationImpactReport = (
+  endpoint: CallerMapEndpoint,
+  filters: Omit<Partial<CallerMapQuery>, 'endpoint'>,
+  pageSize = 50,
+  cursor = '',
+  signal?: AbortSignal,
+) => getJSON<unknown>(
+  `/api/operation_impact_report?${query({
+    shape: 'operation_callers', protocol: endpoint.protocol,
+    repository: endpoint.repository, lineage: endpoint.declaration_lineage,
+    operation: endpoint.operation, ...filters, page_size: pageSize, cursor,
+  })}`,
+  signal,
+).then((report) => validateOperationImpactReport(report, {
+  endpoint, ...filters, freshness: filters.freshness ?? 'any',
+  resolution: filters.resolution ?? 'any', ordering: filters.ordering ?? 'source',
+}, pageSize === 0 ? 50 : pageSize))
 
 export const fetchCallerCitation = (
   citation: string,

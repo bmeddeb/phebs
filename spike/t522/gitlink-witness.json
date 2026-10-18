@@ -1,0 +1,21 @@
+{
+  "schema": "t522-upstream-gitlink-provenance-v1",
+  "record_date": "2026-10-18",
+  "authority_path": "spike/t221/corpus.lock.json",
+  "authority_digest": "sha256:3b617c71e2b3152f247dedc896199fbf059606b538d2ee40ab1afee63a8eef12",
+  "entry": {
+    "name": "cadence",
+    "git_url": "https://github.com/uber/cadence.git",
+    "commit": "98f3d45ec820380dadae38206753777a7417709f",
+    "gitlink_path": "idls",
+    "gitlink_commit": "ee96c0aebffaea083bdeab66b62c7e18291045f3",
+    "note": "thriftrw corpus: .gen/go carries one thriftrw-generated file per package with an embedded thriftreflect.ThriftModule (Name/Package/FilePath/SHA1/Raw), and common/types/mapper/thrift holds real handwritten accessor call sites in the same repository. The idls gitlink names the IDL source commit; clone with --filter=blob:none, the checkout materializes every blob the gates read."
+  },
+  "fresh_verification": false,
+  "fresh_metadata_attempt": {
+    "url": "https://api.github.com/repos/uber/cadence/git/trees/98f3d45ec820380dadae38206753777a7417709f",
+    "http_status": 403,
+    "reason": "GitHub API rate limit exceeded; no retry"
+  },
+  "qualification": "Exact previously committed source pin is provenance, not a fresh Gitlink verification or evaluator Git identity. Independently retained IDL equals the generated embedded Raw and SHA1 exactly."
+}

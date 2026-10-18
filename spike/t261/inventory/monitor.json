@@ -1,0 +1,32 @@
+{
+  "repository": "ntppool/monitor",
+  "commit": "e03c40a06ae8f9bd4906001c2ede0c7296ec8e96",
+  "tree_truncated": false,
+  "files": [
+    {
+      "path": "LICENSE",
+      "sha": "bc686ac20639ca949216fc7ad66c207924d92fbe",
+      "size": 1077
+    },
+    {
+      "path": "ntpdb/query.sql.go",
+      "sha": "e18a1079324be1f88ab597aaf95b2e91e7bda1a7",
+      "size": 30823
+    },
+    {
+      "path": "query.sql",
+      "sha": "b62c669c2942827d0d9ee67214c6e5fbf4d8e913",
+      "size": 8209
+    },
+    {
+      "path": "schema.sql",
+      "sha": "2401f141dbd755806fa8b4162049fc86104137b1",
+      "size": 36563
+    },
+    {
+      "path": "sqlc.yaml",
+      "sha": "4104442e19d6e5ec8da4e1efec23522ded4129fb",
+      "size": 733
+    }
+  ]
+}

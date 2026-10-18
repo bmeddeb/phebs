@@ -15266,6 +15266,27 @@ help deployment, bounded cost, exact authority corrections, responsive review,
 and explicit retained-receipt-gate completion exception are recorded in the
 completed backlog.
 
+**T43R.6 · Accessible independent coverage help** *(scheduled 2026-10-18,
+found during T49.4 bounded native QA)* — move the shared coverage-help button
+outside the native summary, preserving a visible independent help target and
+native disclosure semantics. AC: no nested interactive summary descendants;
+help open/close/Escape focus return never changes disclosure state; desktop and
+390px keyboard/overflow/a11y and scoped canonical comparison pass; retain
+existing capabilities, caveats and bounded costs. The shared component fix and
+90 focused shared/consumer tests, lint/type checks are complete on its branch;
+rendered/canonical qualification is pending. The T49.4 inherited audit finding
+is preserved rather than relabelled as a clean full-page result.
+
+**T43R.6 bounded qualification (2026-10-18).** Combined Atlas native1280/390
+light/dark keyboard/focus/overflow and full-page audit pass; mobile offscreen
+contrast incompletes are preserved and individually pass once visible. Existing
+eight canonical frames compare unchanged9/9including setup, zero retries/.001
+and no new masks; no baseline is rewritten.116 focused UI tests, lint/type/build,
+independent source/cost review, docs/glossary and whitespace pass. Shared chunk
++174bytes/+45gzip; no new runtime requests/state/listeners. Source-bound receipt
+is `ui/receipts/t43r6.json`; all test runtime custody is joined/removed. Ready for
+integration after its T49.4 parent and Ben's explicit request.
+
 ## Epic 44 · Reading surfaces and instance chrome *(planned 2026-08-08 · presentation track)*
 
 Four operator-requested reading and chrome improvements, planned with the
@@ -18863,6 +18884,22 @@ preserve legacy-only response bytes, existing page bounds and denied-source
 behavior. Keep any additive API authority fields and generated clients aligned;
 focused real-root/read/final-fence tests and steady-state-cost review pass.
 
+**T48.5a implementation result (2026-10-18).** Current/empty partitioned
+roots now appear with explicit `exact_authority`, optional absent legacy `run`
+and additive `partitioned_root_count`; legacy-only bytes and read order remain
+exact. Reuse the existing sealed source/locator reader and 5,000-row complete-or-
+error bound. Final native presence/root checks plus existing permission,
+indexed-commit, scope and evidence-revision fences refuse transitions, including
+an absent root becoming current. Release-only raw domains are restricted to the
+existing verified recipe list before any storage read; retained unrelated
+consumer/field/Kafka roots cannot leak through declaration/Caller Map admission.
+Focused normal (lead 0.706s), race (2.279s), actual two-chunk SurrealDB root/read/
+transition proof (1.431s, joined child), vet, pinned lint, docs and glossary pass.
+Source/cost review is complete; owning PLAN records the per-repository retained
+row bound and unchanged steady-state work. Enabled-schema assertions cover the
+additive fields; there is no raw UI/MCP/generated client to regenerate. Ready on
+its ticket branch; integration still requires Ben's request.
+
 ## Epic 49 · Contract Atlas and declaration production readiness
 
 **Current acceptance (2026-10-17):** use the integration-test amendment at the
@@ -19247,6 +19284,24 @@ what it already emitted. Not claimed here: hosted CI execution, the PR #75
 receipt-baseline gap, and the three `TestT422Workspace*NativeComposition` darwin
 failures.*
 
+**T49.4 implementation/UI closure (2026-10-18, Ben-routed Mac handoff).**
+Declaration-only card/manifest/qualification and unsigned record template are
+ready. Clean-source native actual signer/start, exact root/operation HTTP/MCP,
+auth401, desktop/390px source/keyboard/overflow, revocation404 and joined teardown
+pass in6.605s; final proposal signer/load also passes. Eight reviewed canonical
+frames author/fresh-auth compare pass9/9each with zero retries/.001 threshold:
+four current-root listing status updates and four neutral declaration-only
+details. Native source authority and intercepted presentation pixels are
+separate evidence. UI fixes false staleness, unavailable relationship zeroes,
+unsupported links, mobile grid overflow and empty scrolling tables; exact
+runtime validators and focused UI/manifest/lint/type checks pass. Owning PLAN
+records costs, preserved readiness refusal and precise a11y limits: scoped
+Atlas0violations, two inherited shared nested-interactive findings assigned
+T43R.6, one mobile contrast incomplete over six offscreen cells. No global
+accessibility, extraction accuracy or scale PASS is invented. Production
+signature/activation remains PENDING the existing unavailable Linux key;
+implementation integration requires Ben's request, not optional labels.
+
 ## Epic 50 · Caller comparison production readiness
 
 **T50.1 · Exact old/replacement comparison contract and gold cases** — depends
@@ -19274,9 +19329,96 @@ pass. No production behavior, resource ceiling or per-request work changes.
 retain two-publication authorization, cursor/lease/citation binding and
 generation drift/refusal; unsupported endpoint pairs are unavailable.
 
+**T50.2 implementation checkpoint (2026-10-18, Ben's all-ticket Mac handoff).**
+The independent frozen comparison claim is in the verified release registry.
+Ordinary comparison requires both that claim and the released protobuf Caller
+Map recipe; a comparison record alone or provisional caller cannot satisfy it.
+Expiry/suspension/revocation preserves independent products. Admitted comparison
+supports protobuf pairs only, including mixed provisional/released startup;
+unsupported pairs are unavailable before publication reads. Existing joint
+generation, visibility, cursor and exact citation fences remain unchanged.
+Nine signed-selection cases, three unsupported-pair negatives with a supported
+positive control, all exact comparison tests and MCP output tests pass normally/
+under focused race; vet and pinned lint are clean. Per-request work adds only
+a boolean and two protocol comparisons; startup adds a fixed claim row and
+bounded dependency lookups, no worker/lock/cache/schema/child. This prepares
+admission only: T50.3's direct quality/operating result and production signature
+remain pending, and Caller Map/Atlas's bounded-test amendment does not waive them.
+
 **T50.3 · Measured comparison promotion** — satisfy the common bar on real
 old/replacement source, concurrent publication and bounded combined read cost;
 release requires its own result even when both Caller Maps are released.
+
+**T50.3a · Preserve committed consumer units through direct caller leaves**
+*(2026-10-18, Ben-routed Mac handoff)* — T50.3's first bounded product attempt
+returned the five expected source sites but all five lacked unit attribution:
+`consumer_unit_projection_unavailable`. Preserve that failure. Materialize one
+bounded protocol-neutral unit member from the exact candidate's committed
+`unit-snapshot.json`, bind admitted caller paths to source OIDs and supply the
+existing direct-scan unit callback. Reuse existing normalization/IDs/ambiguity/
+line precedence; no read-side join or inferred unit authority. Resolver packs
+advance1.1.1→1.2.0 so old unit-less catalogs cannot remain current. Both worker
+and reader early-return paths must reject old packs before cold-open/reconcile.
+Missing input remains explicit; malformed/duplicate/conflicting/unsupported or
+over-bound input refuses atomically. Preserve historical generic artifact,
+archive/restore and lifecycle custody. AC: source OID, shared protocol member,
+focused repository overlay, absent/ambiguous/per-line/malformed and overflow
+controls; warm old-pack refusal at both boundaries; bounded normal/race and
+historical custody tests; direct/independent source and steady-cost review.
+T50.3 quality/operating/publication-transition qualification remains separate
+and must use new prospectively bound exact inputs after this fix integrates.
+
+**T50.3 immutable preregistration (2026-10-18, Ben-routed Mac handoff).**
+The lead's independent source-only review accepts
+`spike/t503/checkpoint.json` SHA-256
+`54b1377c20d2422f93756dedea56ef30aa1df0e6114d41fd646558ef4cd3ab29`
+and all twelve bound artifacts before predictions. Nine actual method sites
+supply five selected and four excluded sites; occurrence classes are two old,
+three new, while four supplied-unit rows cover old/new/both/unresolved.
+Evaluator-selected endpoints and package units claim no upstream migration or
+deployment truth. The finite quality/read/operating matrix and stops are frozen;
+absent real classes stay unavailable. Next: serialized offline indexing,
+lead-owned exact evaluation Git bindings, then the first candidate measurement.
+No quality/operating PASS, production signature, Linux capacity or scale claim
+exists at this checkpoint.
+
+**T50.3 first-attempt outcome (2026-10-18).** Preserve the15.163s joined
+native attempt as failed. Offline review finds5/5 selected source sites and
+source tuples, four correctly excluded outside-pair sites, but0/5 correct unit
+attribution. An extra scip-only checker assertion was prospectively corrected
+to the public resolved syntax/scip contract without new product reads or any
+source/label/threshold change; the original stop remains exact. Unit composition,
+citation opening, HTTP/MCP/UI and transition evidence remain unmeasured.
+T50.3a owns dropped-unit-projection repair; a fresh exact-binary/generation plan
+and unchanged frozen truth precede any new bounded qualification.
+**T50.3b · Repair current resolver API fixture admission** *(2026-10-18,
+Ben-routed Mac handoff; complete)* — the prospective affected regression pass
+exposed an empty-pack shared positive fixture after T50.3a. Current resolver
+constants restore exact CallerMap/comparison tests; warm missing/old-pack cases
+retain stale/unavailable rather than bypassing admission. Failed first log is
+retained in `spike/t503b/`; bounded normal/race/MCP/admission/current-pack tests,
+vet, pinned lint and independent source/cost review pass. Production code is
+unchanged; T50.3's native quality/operating result remains separate.
+
+**T50.3 harness checkpoint (2026-10-18).** Reviewed bounded lifecycle/HTTP/
+resource/browser helpers and31 source/mock controls are ready for integration.
+All first outcomes stay exact. The latest21.547477s run passed finite source
+quality and desktop interaction before stopping on mobile overflow, repaired
+by T50.3c. T51.3a repairs a separate discovery coverage defect. Fresh binary
+qualification, the remaining operating matrix and production signing remain open.
+
+**T50.3c · Keep real comparison identities within small screens** *(2026-10-18,
+Ben-routed Mac presentation handoff; complete)* — the bounded real-source
+journey exposed390px overflow from auto-minimum grid tracks and an unbroken
+unit ID. Constrain the tracks/sides and wrap that existing metadata while
+preserving complete accessible citation labels, exact source bytes and keyboard
+opening. Two scoped declaration links now use an accessible existing text
+token. Real-response fixture390/1280 checks have no overflow or console errors
+and zero accessibility violations;14 focused tests, type/lint/build pass.
+Four neutral controls are byte-identical to main on the same renderer. Their
+0.399–0.412% differences from retained Noble baselines reproduce unchanged on
+main and are inherited baseline/environment drift; no baseline is replaced or
+Noble pass invented. T50.3's source-bound final native matrix stays separate.
 
 ## Epic 51 · Protobuf field-reference production readiness
 
@@ -19285,12 +19427,70 @@ T49.1 and an admitted SCIP input recipe; freeze generator/indexer/version,
 descriptor field identity, reflection/dynamic/unknown exclusions and direct
 reference quality. Managed navigation authority alone is insufficient.
 
+**T51.1 preregistration checkpoint (2026-10-18, Ben-routed Mac handoff).**
+The source/SCIP/generator/descriptor recipe, separate lineage bridge and strict
+positive/negative/unsupported exclusions are frozen in `spike/t511` before any
+candidate run. Lead reviewed public14/56 and separate neutral17/7/12 source
+labels, all exact spans/digests and actual evaluator Git source/index bundles;
+upstream397e45ed is source provenance only. Corrected preregistration digest is
+`171f577d1a79f8c8e44325b92182fd7444fc827644bac8138bcce1103fe1ada0`.
+Prospective finite thresholds are100% agreement and zero extra/duplicate/wrong/
+negative/unsupported facts; generated emissions stay separately reported. A
+child-free30s measurement follows the immutable checkpoint. No quality PASS,
+production bridge/registration, operating result or signature exists yet.
+
+**T51.1 finite result (2026-10-18).** First measurement passes frozen public
+14/14 positive +56 negative and separate authored17/17 positive +7 negative/
+12 unsupported sites, with all19 descriptor/source identities and22 exact
+unique definition witnesses. Generated-only emissions11/7 are separately
+reported; raw SCIP role semantics do not establish semantic writes. The original
+result/preregistration/labels remain exact. Normal/race, vet, pinned lint and
+independent identity/denominator/source/cost review pass; the only review wording
+gap is corrected without rerunning or relabelling. The source/index bundles and
+narrow supported recipe complete T51.1 on its branch; no production bridge,
+registration, operating/SLO or release claim follows. T51.2 is the next leaf.
+
 **T51.2 · Stable field reader registration and source fencing** — isolate
 this recipe from the provisional proto umbrella; preserve exact committed
 source, declaration, SCIP, authorization and gap identity.
 
+**T51.2 implementation result (2026-10-18, Ben-routed Mac handoff).** The
+signed field-only recipe selects distinct `1.4.0-released.1` and the T51.1 public
+committed input recipe. Pre-emission metadata/header/descriptor/source checks,
+legacy/native expected-version fences, raw reads, direct/HTTP/MCP/citation and
+archived proofs are implemented. Public authority bytes stay compatible; no
+automatic declaration-to-SCIP bridge or unrelated consumer/Impact/Thrift release
+is added. Mixed explicit provisional surfaces remain available, while foreign
+neutral identities exclude stable protobuf reads. Normal/race, two bounded
+joined real-store integrations, vet/pinned lint and source/cost review pass.
+Original T51.1 evidence stays exact. T51.3 still owns operating/production
+signature promotion; this implementation alone activates no unsigned pack.
+
 **T51.3 · Measured field-reference promotion** — satisfy the common bar and
 publish exact supported generators, input formats, operating bounds and expiry.
+
+*2026-10-18 preparation:* `spike/t513/operating-plan.json` prospectively binds
+the T51.1 public14/56 source oracle to the actual stable OpenAPI recipe, one
+180s native matrix, exact HTTP/MCP projections/source reads, bounded whole-proof
+concurrency, a comment-only publication and withdrawal restart. Independent
+plan review corrected immutable-proof/MCP semantics before execution. Harness,
+execution binding, operating result/artifacts and production signature remain
+open; no product run or production promotion has occurred.
+
+*2026-10-18 harness checkpoint:* reviewed reusable field operating/source/
+cleanup helpers and14 pure/mock controls pass. First detached-origin and later
+corrected-origin discovery HTTP500 stops remain exact. T51.3a repairs the latter;
+a fresh binary/binding and actual operating/artifact/signature closure remain.
+
+**T51.3a · Discovered-repository coverage repair** *(2026-10-18, complete;
+Ben-routed Mac backend handoff).* A first corrected-origin T51.3 run exposed an
+HTTP500 before the repository had an indexed commit. Shared coverage now reports
+unpublished/SCIP unknown without querying invalid extraction scopes; raw
+evidence retains census with no published row. Final source/permission fences
+and strict nonempty-error behavior remain. Focused normal/race (including one
+real-store discovery transition), vet/pinned lint and independent source/cost
+review pass. This repairs discovery only; T51.3's fresh-binary operating result
+and production signature remain separate.
 
 ## Epic 52 · Thrift field-reference production readiness
 
@@ -19298,12 +19498,71 @@ publish exact supported generators, input formats, operating bounds and expiry.
 generator versions, stable field IDs, symbol/tag binding and unsupported shapes;
 depend on the selected T49.2 declaration and independently admitted SCIP recipe.
 
+**T52.1 source checkpoint (2026-10-18, Ben-routed Mac handoff).** Exact
+permissive source preparation and independent source/tag/IDL review freeze
+48 files /370,645 bytes: two unchanged public handwritten files plus exact
+Apache0.14.1 generated/runtime inputs and separate authored controls. Source-only
+labels contain33public positives/266lexical identifier negatives and separate
+11authored positives/60negatives/4unsupported sites. No indexer, candidate or
+scorer has run. Bounded offline index preparation follows this checkpoint;
+actual evaluator source/index commits and final binding review precede scoring.
+No Apache result transfers from thriftrw, and no production registration,
+operating qualification or signature follows from preparation.
+
+**T52.1 final input binding (2026-10-18).** Both bounded offline index
+preparations passed once and joined; eight public/three neutral indexed documents
+match the frozen sources. Root created distinct actual evaluator source/index
+commits and verified both bundles. Final preregistration82938e1d binds every
+source/index/label/witness/tool byte before one child-free30s extraction/quality
+measurement. No candidate/scorer has run and no production registration or
+operating/signature result exists at this checkpoint.
+
+**T52.1 finite result (2026-10-18).** The frozen Apache population passes
+public33/33 references plus266 lexical negatives, and separate authored11/11
+references,60 negatives and4 unsupported sites, with zero extra/wrong/duplicate
+or unsupported claims. All14 source/tag/IDL/SCIP witnesses agree;353/1 generated
+emissions stay separate. Raw read roles do not establish semantic write
+accuracy. First result/terminal remain exact; a lint-only equivalent boolean
+correction is separately bound and passes normal/race/vet/pinned lint. Source,
+identity, citation and cost review is clear. This completes the narrow T52.1
+committed-input leaf; T52.2 is independent and T52.3 still owns registration,
+operating and production signature promotion. No generalized accuracy or
+managed/runtime/scale result follows.
+
 **T52.2 · thriftrw field contract and independent quality** — separate
 generator-specific identity and quality population; no Apache result transfers.
+
+*2026-10-18 checkpoint:* source-only thriftrw1.34.0 recipe and exact retained
+Cadence health mapper/IDL plus separate authored controls are independently
+reviewed. All15 source files/52,650 bytes,116 spans, three embedded Raw/SHA1
+equalities and nine field/eighteen definition witnesses agree. Public4/31 and
+authored15/62/4 positive/negative/unsupported populations are frozen before
+indexing. Existing gitlink provenance and the fresh metadata403 remain explicit.
+No SCIP or candidate output exists yet; actual evaluator commits, bounded index
+preparation, extraction quality and T52.3 admission/operating/signing stay open.
+
+*2026-10-18 qualified outcome:* T52.2 completes its independent finite leaf.
+First actual evaluator inputs pass public4/31 and authored15/62/4 gates, all3
+Raw/SHA1/nine field/eighteen real definition witnesses, zero wrong/duplicate
+consumer emissions and exact citations. Generated49/7 and raw read roles stay
+separate. First normal0.339s/race1.441s, vet, pinned lint and independent root/
+peer source/cost review pass. `spike/t522/outcome-cost.json` retains exact input/
+result/checkpoint and cost scopes. No production registration, operating or
+signature is inferred; T52.3 remains the next independent selection boundary.
 
 **T52.3 · Independent stable registration and measured promotion** — split
 the current shared experimental switch into explicitly selected admitted
 recipes; satisfy the common bar for each. Either generator may release alone.
+
+Registration slice (2026-10-18, Ben-routed Mac handoff): independent signed
+Apache0.14.1 and thriftrw1.34.0 recipes now compose once on the shared domain
+with three exact selected-set versions. Neither selection inherits the other
+generator through provisional mode. Current/raw/proof/citation/HTTP/MCP fences,
+field0/protocol bounds and withdrawal-survivor behavior pass bounded normal
+and race integration checks; independent source and steady-state-cost review
+is clear. This supplies registration only. Each selected generator's measured
+operating/artifact/production-signature promotion remains open; the existing
+production key is unavailable.
 
 ## Epic 53 · Protobuf Buf WIRE compatibility production readiness
 
@@ -19563,6 +19822,17 @@ only the selected admitted declaration/caller/field/compatibility recipes;
 missing/stale/unreleased inputs remain visibly unavailable. Preserve exact
 source, coverage and citations; a supported report never asserts migration
 completion, universal consumer absence or safe retirement.
+
+**T54.2 implementation checkpoint (2026-10-18, Ben-routed Mac handoff).**
+The independent operation_callers signed recipe consumes the existing exact
+released CallerMap once and preserves its source/query/cursor/citation fences.
+HTTP/MCP/UI expose the narrow versioned shape with scoped conclusions and
+explicit unavailable sections; legacy experimental Impact stays separate.
+Independent review closes malformed optional metadata, contradictory unit/
+progress state and declaration locator gaps. Normal/race,135UI controls, corrected
+type/lint/vet/pinned Go lint pass. Startup and request cost stay bounded with no
+new store/cache/worker/child. Actual composed quality/operating result and
+production signature remain T54.1/T54.3; registration alone activates no claim.
 
 **T54.3 · Measured Impact promotion** — satisfy the common bar per report
 shape; one shape may release without claiming the others. Dependencies are
@@ -20776,6 +21046,33 @@ absent from the binary; the route requires authentication; `make dev` demo —
 open the served `docs/README.md`, follow a link into a task guide and the
 architecture SVG; dated PLAN ADR bullet in the same PR; full merge bar.
 
+**T25.1 implementation checkpoint (2026-10-18, Ben's all-ticket Mac handoff).**
+Authenticated `/documentation/` now renders only the explicit tracked Markdown/
+SVG/YAML set. Raw HTML/unsafe URLs and nonembedded images cannot execute or
+automatically fetch external bytes; unknown routes 404. Known excluded local
+references resolve to labelled repository-only pages, preserving the explicit
+embed exclusion instead of adding fixture/design/retained bytes to the binary.
+The complete T24.1 link census and focused renderer/session/API-key/CSRF/public
+asset normal/race/static tests pass. Native 1280/390px light/dark browser journeys
+pass keyboard/scrolling, links/fragments/SVG and zero axe/console/overflow errors.
+`spike/t251/receipt.json` binds the tested source/doc tree; the final doc census
+is rerun after owning records. Deterministic canonical image comparison remains
+pending, so this is implementation/browser preparation rather than full closure.
+Startup renders a fixed build-time set once and retains immutable pages; docs
+requests reuse existing auth plus O(1) lookup/body write, no disk/corpus/child work.
+The initial byte-capacity mechanics record is not a measured memory ceiling.
+
+**T25.1 canonical closure (2026-10-18).** Four tests/twelve unmasked captures
+and a fresh real-auth/store comparison pass at source `60683660`; author12.708s,
+comparison10.987s. Exact pinned renderer and thresholds are unchanged. Both
+fixture servers/stores/bridges joined exit0; all twelve PNGs are visually reviewed
+and accepted (762,987 bytes). Native Chrome keyboard/overflow/a11y evidence
+remains separate; production UI JavaScript is unchanged. Source-bound receipts
+preserve earlier failures and pre-outcome document bytes; a final link/cache
+census follows documentation-only outcome/base integration. Implementation and
+bounded qualification are complete on its ticket branch, ready for review;
+main integration still requires Ben's request.
+
 ## Epic 26 · SQL schema-set evidence *(drafted 2026-07-27 · unscheduled — spike first)*
 
 Outline relational models from committed repository bytes: declaration-first,
@@ -20905,6 +21202,33 @@ class, query table sites recognized vs. unresolved, and uniquely bound joins
 vs. name-only/missing/ambiguous — with no cross-dialect blended percentage;
 double-run bytes identical in both lanes; no production code paths changed
 and no pack registered.
+
+**T26.1 input checkpoint (2026-10-18, Ben-routed Mac handoff).** The complete
+419-file / 4,439,033-byte preregistration is frozen before parser execution.
+Twenty source-only label files account for 909 envelopes, 2,339 declarations
+and 146 table sites; sampled and unsupported populations, four per-dialect
+denominators and 60 separate neutral controls stay explicit. One PostgreSQL18.6
+capture produced two identical1,311-byte schema-only dumps and joined/removed
+its server/container, stopped the unchanged VM and restored context. The earlier
+image-admission stop stays exact. Root authored/reviewed source labels and the
+full prospective contract; parser/grammar results remain unmeasured. Next is
+isolated imported-versus-subset comparison in each dialect, not production
+registration or an accuracy/release claim.
+
+**T26.1 measured outcome (2026-10-18): complete spike, no production adoption.**
+All four frozen pipelines produce byte-identical paired outputs without panics
+or invalid spans. PostgreSQL public declarations1,584/1,843, generated fixture
+separately1/8, migration statements24/43 and query/bindings98/98; MySQL subset/
+imported declarations488/488 and477/488, query/bindings48/48, migration population
+unmeasured. Unsupported and all188 unmatched strict PostgreSQL witnesses per
+lane remain explicit. Source/projector agreement is not independent imported
+extraction accuracy. Header/catalog trust and scorer direction/envelope fixes
+pass separate normal/race/vet/lint/negative controls, without corpus rerun or
+label changes. Root/peer source/cost review and exact input/result inventories
+are clear. [Measured report](../spike/t261/results/REPORT.md) records all four
+denominators, original snapshots/stops, build/output/process cost and limits.
+No production parser, dependency, schema, registration or continuation ticket
+is adopted by this isolated measurement.
 
 ## Epic 27 · Document schema-manifest evidence *(drafted 2026-07-27 · unscheduled — spike first)*
 
@@ -21071,6 +21395,30 @@ either snapshot live or current; the retained README demonstrates the
 locate-table → inspect-key/field → copy-citation ticket workflow and the
 missing-artifact checklist; no private dialect, adapter, CQL parser,
 production code path, pack registration, or runtime claim is added.
+
+**T27.1 input checkpoint (2026-10-18, Ben-routed Mac handoff).** Before any
+reader implementation/run, the required README decision table, schema, bounds,
+119 cases, 534 declaration labels and complete 61-row public derivation are
+frozen. Lead independently reviewed source/semantics and verified all public
+literal CQL/JSON spans and the 142-file/915,928-byte inventory. Preregistration
+SHA256 is `7ef0df8be38bc51494e63a57173c120c5ed2e98b832822251bdb9f6ca9555b3b`.
+The owning PLAN adopts identity, graph, refusal, comparison and cost decisions;
+no production reader/pack or measurement PASS exists at this checkpoint.
+Implementation and the two fresh-state bounded passes follow this review.
+
+**T27.1 implementation result (2026-10-18).** The isolated bounded reader,
+canonical catalog and explicit comparison pass both frozen 119-case runs:
+14 accepted, 104 atomic refusals, one missing-export state; 534 exact
+facts/citations per pass and the complete 61-row public derivation agree.
+Canonical output is byte-identical. The results README demonstrates the
+required ticket/citation/missing-artifact workflow and measured cost limits.
+Independent implementation review's JSON-tail-whitespace defect is corrected
+and re-reviewed clean; eight supplemental controls stay outside the original
+population, whose bytes and measurements remain exact. Focused normal/race,
+vet and pinned lint pass. GO is limited to neutral fixture contract conformance;
+there is no independent accuracy, live/vendor schema, production registration,
+CQL parser, runtime, release or scale claim. Detailed original/corrected source
+and review records live under `spike/t271/results/`.
 
 ## Epic 28 · Redis keyspace evidence *(drafted 2026-07-27 · unscheduled — spike first)*
 

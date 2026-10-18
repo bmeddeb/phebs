@@ -1,0 +1,37 @@
+{
+  "qualification": "Intercepted retained actual responses: fixture-layout evidence only, no source/product qualification",
+  "browser_fallback": "Browser plugin not available",
+  "stage": "after-accessible",
+  "viewports": [
+    {
+      "width": 1280,
+      "viewport": 1280,
+      "document": 1280,
+      "offenders": [],
+      "screenshot": "/tmp/phebs-t503c-layout/after-accessible/after-accessible-1280.png"
+    },
+    {
+      "width": 390,
+      "viewport": 390,
+      "document": 390,
+      "offenders": [],
+      "screenshot": "/tmp/phebs-t503c-layout/after-accessible/after-accessible-390.png"
+    }
+  ],
+  "after_filter_reset": {
+    "viewport": 390,
+    "document": 390
+  },
+  "identity": {
+    "url": "http://127.0.0.1:5193/#/compare-callers",
+    "title": "phebs · Caller comparison",
+    "meaningful": true,
+    "framework_overlay": 0
+  },
+  "axe": {
+    "violations": [],
+    "passes": 25
+  },
+  "errors": [],
+  "unexpected": []
+}

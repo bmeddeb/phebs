@@ -1,0 +1,61 @@
+{
+  "schema": "phebs-t503-input-preparation-v1",
+  "recorded_date": "2026-10-18",
+  "outcome": "frozen_inputs_prepared_no_predictions",
+  "source_cache": "Original upstream-path cache held outside checkout for independent review; source bytes bound by population lock.",
+  "public_files_verified": 14,
+  "prepared_files": 18,
+  "prepared_bytes": 75417,
+  "origin_digest": "sha256:d84131879c8bc77dcb3ea68ccf89c9012a7b33b5f8a5839dff7abec25533cb1c",
+  "go_environment": {
+    "CGO_ENABLED": "1",
+    "GOARCH": "arm64",
+    "GOFLAGS": "-mod=readonly",
+    "GOOS": "darwin",
+    "GOPROXY": "off",
+    "GOSUMDB": "off",
+    "GOTOOLCHAIN": "local",
+    "GOVERSION": "go1.26.5",
+    "GOWORK": "off"
+  },
+  "package_graph_preflight": {
+    "command": [
+      "go",
+      "list",
+      "./..."
+    ],
+    "exit_code": 0,
+    "local_packages": 7,
+    "qualification": "Offline frozen dependencies; static package loading only. Application code, indexer and extractor not executed."
+  },
+  "tests": {
+    "command": [
+      "python3",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "spike/t503",
+      "-p",
+      "test_*.py"
+    ],
+    "passed": 3,
+    "negative_population_subcases": 8,
+    "negative_label_subcases": 4,
+    "seconds": 0.001
+  },
+  "pre_freeze_corrections": [
+    "Guessed unary_interceptor source path returned404; pinned upstream tree identified the actual interceptor/client path before selecting/finalizing labels.",
+    "Initial offline module check refused missing cache entries and required data helper. Added unchanged helper to the population and resolved exact dependencies through the public checksum-verified Go proxy before freezing module files."
+  ],
+  "not_run": [
+    "SCIP indexer",
+    "Phebs extractor",
+    "Phebs server",
+    "candidate export",
+    "comparison scoring",
+    "production signer"
+  ],
+  "product_source_changes": false,
+  "git_mutations": false
+}

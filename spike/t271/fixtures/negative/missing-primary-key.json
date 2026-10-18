@@ -1,0 +1,23 @@
+{
+  "format": "phebs-document-schema-v1",
+  "source_class": "authored",
+  "tables": [
+    {
+      "name": "T",
+      "fields": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ],
+          "type": "opaque:string"
+        }
+      ],
+      "indexes": [],
+      "associations": []
+    }
+  ],
+  "views": []
+}

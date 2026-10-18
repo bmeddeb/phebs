@@ -1,0 +1,58 @@
+{
+  "schema": "phebs-t541-source-only-checkpoint-v1",
+  "date": "2026-10-18",
+  "status": "PROPOSED_AWAITING_INDEPENDENT_SOURCE_ONLY_REVIEW",
+  "source_inspection_base": "cb099b26fbb78070cbaa9a0eb66949e464d67220",
+  "product_outputs_read": 0,
+  "report_execution_authorized": false,
+  "composed_quality_result": "NOT_MEASURED",
+  "operating_result": "NOT_MEASURED",
+  "production_signing": "PENDING_EXISTING_KEY",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 2641,
+      "sha256": "sha256:9b66f6c2af1057367795f6c949fc8a12919225c01092bf263b3a4da1dff910e7"
+    },
+    {
+      "path": "base.bundle",
+      "bytes": 51603,
+      "sha256": "sha256:ee5fe200ee7319d46118fdb51ae138c6bb83d1b823906199af3f7317f314fc72"
+    },
+    {
+      "path": "check_source.py",
+      "bytes": 5229,
+      "sha256": "sha256:af961945dabb80ea1bdcc910d5281ab097fb14139f7264cca4c94c8843410e23"
+    },
+    {
+      "path": "contract.json",
+      "bytes": 15069,
+      "sha256": "sha256:a90e0e39f93d1a7c92c2e4f590e6a0b4c93f277117ac174665cb6646fbeba1ce"
+    },
+    {
+      "path": "input-binding.json",
+      "bytes": 6929,
+      "sha256": "sha256:90f3cd5d719853240bb20eb6be00cb029d51c74c2c8d8ab91dfae17d50a5e6cb"
+    },
+    {
+      "path": "oracle.json",
+      "bytes": 26334,
+      "sha256": "sha256:be2218e58b220f365c4d3c0f72ef0b7d56f0a2215e810676caedadbfd27709cb"
+    },
+    {
+      "path": "qualification-plan.json",
+      "bytes": 6338,
+      "sha256": "sha256:7b58908eb8a9f4926a54c843c03f20777438d7975d2af520379e7dc1ec1397b4"
+    },
+    {
+      "path": "source-check.json",
+      "bytes": 510,
+      "sha256": "sha256:160256c06f193d2f2017e3824cfcdc7623ab77b1e4c1a430a663237e66be4946"
+    },
+    {
+      "path": "test_source.py",
+      "bytes": 1993,
+      "sha256": "sha256:0e668d5b5a20f56d8c3c225309dad8f63a96451658766187aa802254a7c9258c"
+    }
+  ]
+}

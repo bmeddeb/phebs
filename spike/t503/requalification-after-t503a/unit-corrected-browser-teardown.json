@@ -1,0 +1,12 @@
+{
+  "client_terminal": {
+    "exit_code": 1,
+    "teardown": "clean",
+    "termination_mode": "already_exited"
+  },
+  "chrome_terminal": {
+    "exit_code": 0,
+    "teardown": "clean",
+    "termination_mode": "sigterm"
+  }
+}

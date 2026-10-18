@@ -1,0 +1,42 @@
+{
+  "schema": "phebs-t523-registration-validation-v1",
+  "date": "2026-10-18",
+  "scope": "Independent signed committed Apache/thriftrw registration and exact read admission only.",
+  "normal": "Full thriftfield package0.353s; scoped field API0.619s and command0.916s.",
+  "race": "Committed thriftfield1.412s; scoped API1.945s and command4.788s.",
+  "vet": "Affected packages passed.",
+  "lint": "Initial two issues retained. Removed unused wrapper and annotated intentional legacy fixture coordinate reset; corrected pinned2.12.2 lint0issues.",
+  "review": "Root complete implementation/callers/test/guide review and independent t493 source/security/authority/cost review clean.",
+  "logs": {
+    "extractor-normal": {
+      "sha256": "aa4e9448a734777a9a43b948547f749d6dfe9307a75ed1267bc2fa86f96965c9",
+      "bytes": 77
+    },
+    "field-boundaries-normal": {
+      "sha256": "2635ff1cffcf67502d2012ad3f1abd78241cbedc78732f4fc582fde415aeaba0",
+      "bytes": 97
+    },
+    "field-boundaries-race": {
+      "sha256": "b88460a79727d3d26e5a985e4868502cb18c84aaa8c85d53c331ebd4b6aa096b",
+      "bytes": 174
+    },
+    "vet": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "lint": {
+      "sha256": "e8ae87004a255f55528dbe7dd38d4303b13b742cba4366b0c43169d818b9e075",
+      "bytes": 374
+    },
+    "lint-corrected": {
+      "sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47",
+      "bytes": 10
+    }
+  },
+  "not_claimed": [
+    "Generator operating promotion",
+    "Production signature",
+    "Managed generation or broad accuracy",
+    "Scale"
+  ]
+}

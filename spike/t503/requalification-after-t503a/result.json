@@ -1,0 +1,167 @@
+{
+  "schema": "phebs-t503-postfix-matrix-v1",
+  "date": "2026-10-18",
+  "outcome": "stopped_no_retry",
+  "reads": [],
+  "phases": [],
+  "production_signing": "pending; no production key or production signature",
+  "input_censuses_before_launch": [
+    {
+      "role": "primary",
+      "repository": "evaluation.local/t503-public",
+      "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+      "tree": "a0d73c675a066f2e969c1caa2db205576108d57e",
+      "files": 19,
+      "bytes": 316648,
+      "census_digest": "sha256:18891698bfb2873c21d794e1d1652902f36be06fcca4ed2e017d52d13164383b"
+    },
+    {
+      "role": "concurrent_copy",
+      "repository": "evaluation.local/t503-public-copy",
+      "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+      "tree": "a0d73c675a066f2e969c1caa2db205576108d57e",
+      "files": 19,
+      "bytes": 316648,
+      "census_digest": "sha256:18891698bfb2873c21d794e1d1652902f36be06fcca4ed2e017d52d13164383b"
+    },
+    {
+      "role": "primary_prospective_transition",
+      "repository": "evaluation.local/t503-public",
+      "commit": "5b187e7b79f5580a8918f8c0b34fb3350b447c97",
+      "tree": "965232d0b63975a25a6537d220ac1f6fc00c6d70",
+      "files": 19,
+      "bytes": 316718,
+      "census_digest": "sha256:d2d744a1cbea958fd9ad201b809ebf6b64853faab8e6d3c1118ae4e48204cb25"
+    },
+    {
+      "role": "concurrent_copy_prospective_transition",
+      "repository": "evaluation.local/t503-public-copy",
+      "commit": "cd064619232a149ee00374fadad0759cf12528c0",
+      "tree": "071ab5e3793d50a32966246a651818b7d10a2e71",
+      "files": 19,
+      "bytes": 316722,
+      "census_digest": "sha256:9f712925ab4c4165f6399a3a7bb8817dbaa0019d5e78d4eb75b8879e855a6b0e"
+    }
+  ],
+  "host": {
+    "sysname": "Darwin",
+    "machine": "arm64",
+    "cpu_count": 10,
+    "physical_memory_bytes": 25769803776
+  },
+  "bounds": {
+    "index_seconds": 60,
+    "index_bytes": 8388608,
+    "evaluation_tree_files": 32,
+    "evaluation_tree_bytes": 16777216,
+    "repositories": 2,
+    "parallel_comparison_requests": 8,
+    "http_response_bytes": 262144,
+    "cold_request_seconds": 2,
+    "warm_request_seconds": 1,
+    "startup_seconds": 30,
+    "publication_seconds": 90,
+    "complete_native_seconds": 180,
+    "derived_allocated_disk_bytes": 536870912,
+    "minimum_available_physical_headroom_bytes": 4294967296,
+    "minimum_free_disk_bytes": 2147483648,
+    "source_blobs_read_per_citation": 1,
+    "process_tree_sampled_max_rss_bytes": 2147483648
+  },
+  "free_disk_preflight_bytes": 231779647488,
+  "executed_tools": {
+    "go": {
+      "path": "/opt/homebrew/bin/go",
+      "resolved_path": "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+      "bytes": 14500160,
+      "sha256": "sha256:3925fc3221ac440ebf7c35361ff663bed0c7bdb2e0a157b75fe993607ffe0a19",
+      "version": "go1.26.5",
+      "version_evidence": "go version go1.26.5 darwin/arm64"
+    },
+    "git": {
+      "path": "/usr/bin/git",
+      "resolved_path": "/usr/bin/git",
+      "bytes": 118640,
+      "sha256": "sha256:b8763cf250e607a778bb4603cecb5b90338814d0a3dfcba0d57b1de242f610e9",
+      "version_evidence": "git version 2.54.0 (Apple Git-157)"
+    },
+    "zoekt_git_index": {
+      "path": "/private/tmp/phebs-main-8a70-native-qualification/zoekt-git-index",
+      "resolved_path": "/private/tmp/phebs-main-8a70-native-qualification/zoekt-git-index",
+      "bytes": 39081090,
+      "sha256": "sha256:dd216b7e4df21b956a8a3461108ac81ee6cb700799a3decf9c739af2ba003c4d",
+      "version": "same-main-go.mod",
+      "version_evidence": "helper-build-receipt.json"
+    },
+    "focused_index": {
+      "path": "/private/tmp/phebs-main-8a70-native-qualification/phebs-focused-index",
+      "resolved_path": "/private/tmp/phebs-main-8a70-native-qualification/phebs-focused-index",
+      "bytes": 27295666,
+      "sha256": "sha256:701d83e026ac926d3e5d92a948a68c346c11335ce83c37c31bd62207beb0d8b5",
+      "version": "same-main-go.mod",
+      "version_evidence": "helper-build-receipt.json"
+    },
+    "buf": {
+      "path": "/Users/ben/.codex/worktrees/t445-header/phebs.com/bin/buf",
+      "resolved_path": "/Users/ben/.codex/worktrees/t445-header/phebs.com/bin/buf",
+      "bytes": 77461554,
+      "sha256": "sha256:691b8635ab9c083e38f1d892bf10799ea688070ed8ef8081d9b7907d0a7e4658",
+      "version_evidence": "1.72.0"
+    },
+    "surreal": {
+      "path": "/opt/homebrew/bin/surreal",
+      "resolved_path": "/opt/homebrew/opt/phebs-surreal-3.2.0/surreal",
+      "bytes": 233283488,
+      "sha256": "sha256:ee819dfcedd23035a785ac40f2509f86cbb09fc3255726ad74755b161a3ca0a8",
+      "version": "3.2.0",
+      "version_evidence": "3.2.0 for macos on aarch64"
+    },
+    "node": {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+      "resolved_path": "/private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+      "bytes": 120965360,
+      "sha256": "sha256:ee6fb0e015284d83a91e8ec5213f43a157f8a392b58555301682892ba928c04a",
+      "version": "v24.18.0",
+      "version_evidence": "v24.18.0"
+    },
+    "chrome": {
+      "path": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "resolved_path": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "bytes": 367696,
+      "sha256": "sha256:3972431aa8acff4e590998116c6c3e663e9a4d0eb6efd08fd160df8206db94a6",
+      "version": "155.0.8059.82",
+      "version_evidence": "Source-bound installed-Chrome preflight actual renderer155.0.8059.82, clean exit0 joined teardown"
+    },
+    "chrome_framework": {
+      "path": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/Current/Google Chrome Framework",
+      "resolved_path": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.82/Google Chrome Framework",
+      "bytes": 520002192,
+      "sha256": "sha256:b9aa14e0270a6a96bde855b9765c2a6eb48d0af70da7e9018f9622c4f626ef6c",
+      "version": "155.0.8059.82",
+      "version_evidence": "Source-bound installed-Chrome preflight actual renderer155.0.8059.82, clean exit0 joined teardown"
+    },
+    "openssl": {
+      "path": "/usr/bin/openssl",
+      "resolved_path": "/usr/bin/openssl",
+      "bytes": 1130832,
+      "sha256": "sha256:f81b4fcec5048ea1eceb40fc08f4e06f1668181f0b5bacfa8be27d0da181dcb7",
+      "version_evidence": "LibreSSL 3.3.6"
+    },
+    "vm_stat": {
+      "path": "/usr/bin/vm_stat",
+      "resolved_path": "/usr/bin/vm_stat",
+      "bytes": 101664,
+      "sha256": "sha256:0127fec1de1d99c7f0b0cf185fec048c7fe92d1f1b2ad380882c583f0c921df7",
+      "version_evidence": "Darwin system sampler image; no sample performed during draft prep"
+    }
+  },
+  "observer": {
+    "path": "/tmp/phebs-main-8a70-native-qualification/native-observer",
+    "resolved_path": "/private/tmp/phebs-main-8a70-native-qualification/native-observer",
+    "bytes": 31576930,
+    "sha256": "sha256:3b25f9b9cabb9cac5087d9e65af54eb7d6bf0643d5bbd33ed9296c621d3fc16e"
+  },
+  "reason": "Command '['/usr/bin/openssl', 'genpkey', '-algorithm', 'ED25519', '-out', '/tmp/phebs-t503-after-t503a-01/disposable-only.pem']' returned non-zero exit status 1.",
+  "preparation_seconds": 0.008086,
+  "seconds": 0
+}

@@ -1,0 +1,19 @@
+{
+  "argv": [
+    "go",
+    "test",
+    "-p",
+    "1",
+    "-race",
+    "./spike/t522",
+    "-run",
+    "^TestFrozenThriftRWFieldQuality$",
+    "-count=1",
+    "-timeout=30s"
+  ],
+  "exit": 0,
+  "wall_seconds": 2.592523,
+  "first_result_unchanged": true,
+  "terminal_digest": "sha256:3422b3f174fd1d73f649dd66248634ed9a0ea1259fbad67b392bfbd721385995",
+  "qualification": "Required scoped race check; no new quality population/result or retry."
+}

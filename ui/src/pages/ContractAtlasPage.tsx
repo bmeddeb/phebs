@@ -7,6 +7,7 @@ import { Spinner } from 'baseui/spinner'
 import {
   fetchContractCatalog,
   fetchContractOperation,
+  type ContractCatalogAuthority,
   type ContractCatalogClaim,
   type ContractCatalogFieldDetail,
   type ContractCatalogItem,
@@ -56,12 +57,46 @@ const emptyFilters: CatalogFilters = {
 
 const pageQualification = 'Browse provisional source declarations, bounded message shape, and separately classified implementation and caller evidence.'
 
+function isCatalogAuthority(value: unknown): value is ContractCatalogAuthority {
+  if (value === null || typeof value !== 'object') return false
+  const authority = value as Partial<ContractCatalogAuthority>
+  return typeof authority.repository === 'string' && authority.repository.trim() !== '' &&
+    typeof authority.run_id === 'string' && authority.run_id.trim() !== '' &&
+    ['proto-contract', 'thrift-contract'].includes(authority.domain ?? '') &&
+    typeof authority.commit === 'string' && /^[a-f0-9]{40}$/.test(authority.commit) &&
+    typeof authority.plan_digest === 'string' && /^sha256:[a-f0-9]{64}$/.test(authority.plan_digest) &&
+    typeof authority.root_digest === 'string' && /^sha256:[a-f0-9]{64}$/.test(authority.root_digest)
+}
+
+function validateCatalogAuthorities(result: ContractCatalogList, filters: CatalogFilters) {
+  const authorities = result.exact_authorities
+  if (authorities === undefined) return
+  const invalid = () => new Error('Catalog declaration authority is inconsistent. Retry the catalog.')
+  if (!Array.isArray(authorities) || !Number.isSafeInteger(result.coverage.repository_count) ||
+    result.coverage.repository_count < 0 || authorities.length > result.coverage.repository_count * 2 ||
+    Object.entries(filters).some(([key, value]) => (result.query[key as keyof CatalogFilters] ?? '') !== value)) throw invalid()
+  const visible = new Map(result.coverage.repositories.map((repository) => [repository.repository, repository.indexed_commit]))
+  const seen = new Set<string>()
+  // Roots describe the complete visible coverage, even for a filtered page.
+  for (const authority of authorities) {
+    if (!isCatalogAuthority(authority) || visible.get(authority.repository) !== authority.commit ||
+      !result.coverage.domains.includes(authority.domain)) throw invalid()
+    const key = `${authority.repository}\u0000${authority.domain}`
+    if (seen.has(key)) throw invalid()
+    seen.add(key)
+  }
+}
+
 export default function ContractAtlasPage({
   params,
   callerMapAvailable = false,
+  impactAvailable = false,
+  operationImpactAvailable = false,
 }: {
   params: URLSearchParams
   callerMapAvailable?: boolean
+  impactAvailable?: boolean
+  operationImpactAvailable?: boolean
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
@@ -115,6 +150,7 @@ export default function ContractAtlasPage({
     )
       .then((result) => {
         if (generation !== listGeneration.current) return
+        validateCatalogAuthorities(result, filters)
         setCatalog((current) => append && current
           ? { ...result, items: mergeCatalogItems(current.items, result.items) }
           : result)
@@ -186,6 +222,26 @@ export default function ContractAtlasPage({
       controller.signal,
     )
       .then((result) => {
+        const authority = result.exact_authority
+        if (authority !== undefined && (
+          !isCatalogAuthority(authority) ||
+          result.repository !== selection.repository || result.declaration_lineage !== selection.lineage ||
+          result.operation !== '/' + selection.operation.replace(/^\//, '') ||
+          authority.repository !== result.repository ||
+          authority.run_id !== result.declaration.run_id ||
+          !['proto-contract', 'thrift-contract'].includes(authority.domain) ||
+          (selection.protocol === 'protobuf' && authority.domain !== 'proto-contract') ||
+          (selection.protocol === 'thrift' && authority.domain !== 'thrift-contract') ||
+          result.declaration.sources.length === 0 ||
+          result.declaration.sources.some((source) => source.repository !== authority.repository ||
+            source.run_id !== authority.run_id || source.commit !== authority.commit)
+        )) throw new Error('Operation evidence authority does not match its pinned source. Retry the selection.')
+        const unavailable = result.unavailable_relationships
+        if (unavailable !== undefined && (
+          !Array.isArray(unavailable) || unavailable.length > 3 || new Set(unavailable).size !== unavailable.length ||
+          unavailable.some((section) => !['implementations', 'callers', 'unresolved_candidates'].includes(section) ||
+            !Array.isArray(result[section as 'implementations']) || result[section as 'implementations'].length > 0)
+        )) throw new Error('Operation relationship availability is inconsistent. Retry the selection.')
         if (generation === detailGeneration.current) setOperation(result)
       })
       .catch((cause) => {
@@ -372,7 +428,7 @@ export default function ContractAtlasPage({
         </Notification>
       )}
 
-      {catalog && <CoverageStrip certificate={catalog.coverage} pagination={catalog.pagination} />}
+      {catalog && <CoverageStrip certificate={catalog.coverage} pagination={catalog.pagination} authorities={catalog.exact_authorities ?? []} />}
       {catalog && (
         <AnalysisScopePanel
           id="contract-atlas-analysis-scope"
@@ -512,6 +568,8 @@ export default function ContractAtlasPage({
               operation={operation}
               selected={selectedForDetail}
               callerMapAvailable={callerMapAvailable}
+              impactAvailable={impactAvailable}
+              operationImpactAvailable={operationImpactAvailable}
             />
           )}
         </section>
@@ -682,17 +740,23 @@ function OperationDetail({
   operation,
   selected,
   callerMapAvailable,
+  impactAvailable,
+  operationImpactAvailable,
 }: {
   operation: ContractCatalogOperation
   selected: ContractCatalogItem
   callerMapAvailable: boolean
+  impactAvailable: boolean
+  operationImpactAvailable: boolean
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const run = operation.coverage.repositories
     .find((repository) => repository.repository === operation.repository)
     ?.runs.find((candidate) => candidate.run_id === operation.declaration.run_id)
-  const fresh = run?.fresh === true
+  const authority = operation.exact_authority
+  const fresh = authority !== undefined || run?.fresh === true
+  const currentRun = authority ?? run
   return (
     <article data-testid="contract-operation-detail" className={css({
       border: `1px solid ${tok.cardBorder}`,
@@ -728,7 +792,7 @@ function OperationDetail({
               </StatusChip>
               <StatusChip
                 tone={fresh ? 'green' : 'amber'}
-                title={run?.commit ? `${fresh ? 'current' : 'stale'} · run ${run.run_id ?? 'unidentified'} at ${run.commit}` : undefined}
+                title={currentRun?.commit ? `${fresh ? 'current' : 'stale'} · run ${currentRun.run_id ?? 'unidentified'} at ${currentRun.commit}` : undefined}
               >
                 {fresh ? 'current' : 'stale'}
               </StatusChip>
@@ -751,12 +815,15 @@ function OperationDetail({
                 View callers
               </a>
             )}
-            <a
-              href={href('/impact', { operation: operation.operation })}
+            {(impactAvailable || operationImpactAvailable && selected.protocol === 'protobuf') && <a
+              href={href('/impact', operationImpactAvailable && selected.protocol === 'protobuf' ? {
+                shape: 'operation_callers', protocol: selected.protocol, repository: selected.repository,
+                lineage: selected.declaration_lineage, operation: selected.operation ?? operation.operation,
+              } : { operation: operation.operation })}
               className={css(operationLinkStyle(tok))}
             >
-              Analyze impact
-            </a>
+              {operationImpactAvailable && selected.protocol === 'protobuf' ? 'Inspect operation impact' : 'Analyze impact'}
+            </a>}
           </div>
         </div>
         <div className={css({
@@ -784,7 +851,7 @@ function OperationDetail({
         </div>
       </header>
 
-      <div className={css({ padding: '16px', display: 'grid', gap: '22px' })}>
+      <div className={css({ padding: '16px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '22px' })}>
         <EvidenceBlock title="Operation declaration" claim={operation.declaration} />
 
         {(operation.shape_truncated || operation.relationships_truncated) && (
@@ -1028,9 +1095,11 @@ function SourceLink({ source, compact = false }: { source?: ContractCatalogSourc
 function CoverageStrip({
   certificate,
   pagination,
+  authorities,
 }: {
   certificate: CoverageCertificate
   pagination: ContractCatalogList['pagination']
+  authorities: ContractCatalogAuthority[]
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
@@ -1055,8 +1124,9 @@ function CoverageStrip({
       </span>
       <StatusChip tone="neutral">{certificate.repository_count} visible repos</StatusChip>
       <StatusChip tone="green">{fresh} current runs</StatusChip>
+      {authorities.length > 0 && <StatusChip tone="green">{authorities.length} current declaration roots</StatusChip>}
       {stale > 0 && <StatusChip tone="amber">{stale} stale runs</StatusChip>}
-      {unavailable > 0 && <StatusChip tone="neutral">{unavailable} unpublished</StatusChip>}
+      {unavailable > 0 && <StatusChip tone="neutral">{unavailable} unpublished{authorities.length > 0 ? ' legacy runs' : ''}</StatusChip>}
       {failed > 0 && <StatusChip tone="red">{failed} failed replacement{failed === 1 ? '' : 's'}</StatusChip>}
       <StatusChip tone={pagination.complete ? 'green' : 'amber'}>
         {pagination.complete ? 'page set complete' : humanize(pagination.reason || 'bounded page')}

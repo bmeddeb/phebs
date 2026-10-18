@@ -1,0 +1,75 @@
+{
+  "schema": "t511-committed-input-preparation-v1",
+  "record_date": "2026-10-18",
+  "temporary_root": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t511-index-tunkny_i",
+  "runs": [
+    {
+      "population": "public",
+      "argv": [
+        "/Users/ben/go/bin/scip-go",
+        "index",
+        "--module-root=/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t511-index-tunkny_i/public",
+        "--repository-remote=github.com/grpc/grpc-go",
+        "--module-path=google.golang.org/grpc",
+        "--module-version=v1.80.0",
+        "--skip-implementations",
+        "--skip-tests",
+        "--output=/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t511-index-tunkny_i/public.scip",
+        "./profiling/proto",
+        "./profiling/service"
+      ],
+      "environment": {
+        "GOPROXY": "off",
+        "GOSUMDB": "off",
+        "GOTOOLCHAIN": "local",
+        "GOWORK": "off",
+        "GOFLAGS": "-mod=mod",
+        "GOMAXPROCS": "2"
+      },
+      "wall_seconds": 0.724,
+      "user_seconds": 0.421,
+      "system_seconds": 0.304,
+      "max_child_rss_bytes": 49561600,
+      "max_child_rss_scope": "Darwin RUSAGE_CHILDREN lifetime maximum for one terminated child, not summed process-family memory",
+      "exit_status": 0,
+      "timeout_seconds": 90,
+      "child_joined": true,
+      "index_bytes": 123050,
+      "index_digest": "sha256:3fd080f9b8d8629bd84fbb8fd07692ca1b2fb1070dd8bdc623f8c33a148c0716"
+    },
+    {
+      "population": "neutral",
+      "argv": [
+        "/Users/ben/go/bin/scip-go",
+        "index",
+        "--module-root=/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t511-index-tunkny_i/neutral",
+        "--repository-remote=example.com/t511",
+        "--module-path=example.com/t511",
+        "--module-version=v0.0.0-t511",
+        "--skip-implementations",
+        "--skip-tests",
+        "--output=/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t511-index-tunkny_i/neutral.scip",
+        "./schema",
+        "./use"
+      ],
+      "environment": {
+        "GOPROXY": "off",
+        "GOSUMDB": "off",
+        "GOTOOLCHAIN": "local",
+        "GOWORK": "off",
+        "GOFLAGS": "-mod=mod",
+        "GOMAXPROCS": "2"
+      },
+      "wall_seconds": 0.174,
+      "user_seconds": 0.092,
+      "system_seconds": 0.077,
+      "max_child_rss_bytes": 49561600,
+      "max_child_rss_scope": "Darwin RUSAGE_CHILDREN lifetime maximum for one terminated child, not summed process-family memory",
+      "exit_status": 0,
+      "timeout_seconds": 90,
+      "child_joined": true,
+      "index_bytes": 43535,
+      "index_digest": "sha256:ffd47d67314ca1c42d5edabaefe699f1ffce3db8fb1988ea5beec3c54d112be8"
+    }
+  ]
+}

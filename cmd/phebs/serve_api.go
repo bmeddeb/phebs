@@ -16,6 +16,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"golang.org/x/text/unicode/norm"
 
+	documentation "github.com/bmeddeb/phebs"
 	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/auth"
 	"github.com/bmeddeb/phebs/internal/candidate"
@@ -197,7 +198,7 @@ func experimentalProofBundles(cfg *config.Config, proofBundles store.ProofBundle
 // service, or for released Kafka planes, which serve only topic usage through
 // it (T55.2/T56.2).
 func admittedProofBundles(cfg *config.Config, released map[string]bool, proofBundles store.ProofBundleStore) store.ProofBundleStore {
-	if bundles := experimentalProofBundles(cfg, proofBundles); bundles != nil || len(releasedKafkaPlanes(cfg, released)) == 0 {
+	if bundles := experimentalProofBundles(cfg, proofBundles); bundles != nil || len(releasedKafkaPlanes(cfg, released)) == 0 && !released["scip-proto-field"] && !released["scip-thrift-field"] {
 		return bundles
 	}
 	return proofBundles
@@ -251,6 +252,35 @@ func releasedKafkaTopics(claims map[string]bool, planes []string) bool {
 	return true
 }
 
+func releasedCallerComparison(claims, domains map[string]bool) bool {
+	if !claims[callerComparisonPackID] {
+		return false
+	}
+	if !domains["proto-contract"] || !domains["grpc-caller"] {
+		log.Printf("release selection: %s withdrawn: its comparison needs the released protobuf Caller Map recipe", callerComparisonPackID)
+		return false
+	}
+	return true
+}
+
+func releasedOperationImpact(d *serveDeps) bool {
+	if !d.releasedClaims[operationImpactPackID] {
+		return false
+	}
+	if d.releasedDomains["proto-contract"] && d.releasedDomains["grpc-caller"] {
+		declaration, caller := false, false
+		for _, ex := range d.exs {
+			declaration = declaration || ex.Domain() == "proto-contract" && ex.Version() == "4.0.0"
+			caller = caller || ex.Domain() == "grpc-caller" && ex.Version() == "1.6.0-released.1"
+		}
+		if declaration && caller {
+			return true
+		}
+	}
+	log.Printf("release selection: %s withdrawn: operation Impact needs the current released protobuf Caller Map recipe", operationImpactPackID)
+	return false
+}
+
 // admittedWireCompatibility admits the standalone Buf WIRE verdict (T53.2)
 // under the same dark switches as the proof-enriched check, or ordinarily when
 // a verified released record selects its claim (T53.3). A released claim never
@@ -289,6 +319,7 @@ func newServeAPIOptions(d *serveDeps) (api.Options, error) {
 		typedAdmitted = d.typedRuntime.registry.admits
 		typedProvider = d.typedRuntime.registry.provider
 	}
+	comparisonReleased := releasedCallerComparison(d.releasedClaims, d.releasedDomains)
 	apiOpts := api.Options{
 		Version:                     version,
 		TypedIndexAvailable:         d.typedRuntime != nil,
@@ -310,18 +341,23 @@ func newServeAPIOptions(d *serveDeps) (api.Options, error) {
 		},
 		AuditRecord: d.auditRecord, AuditLog: st, Analytics: st,
 		Evidence: d.evidenceView, ProofBundles: admittedProofBundles(cfg, d.releasedDomains, d.proofBundles),
-		KafkaReleasedPlanes: releasedKafkaPlanes(cfg, d.releasedDomains),
+		KafkaReleasedPlanes:             releasedKafkaPlanes(cfg, d.releasedDomains),
+		ProtobufFieldReferencesReleased: !provisionalExtractionOn(cfg) && d.releasedDomains["scip-proto-field"],
+		ThriftFieldReferencesReleased:   !provisionalExtractionOn(cfg) && d.releasedDomains["scip-thrift-field"],
+		EvidenceExtractorVersions:       releasedEvidenceVersions(d),
 		KafkaTopicInventoryReleased: releasedKafkaTopics(
 			d.releasedClaims, releasedKafkaPlanes(cfg, d.releasedDomains)),
 		CatalogReleasedDomains: releasedCatalogDomains(cfg, d.releasedDomains),
 		ContractCatalogUnadmitted: !provisionalExtractionOn(cfg) &&
 			!d.releasedDomains["proto-contract"] && !d.releasedDomains["thrift-contract"],
 		CallerMapEnabled: d.callerRegistry.Enabled(),
-		CallerComparisonEnabled: cfg.Experimental.ProvisionalProtoExtraction ||
+		CallerComparisonEnabled: comparisonReleased || cfg.Experimental.ProvisionalProtoExtraction ||
 			cfg.Experimental.ProvisionalThriftExtraction,
-		CallerReader:         d.callerReader,
-		ProofBundleRetention: cfg.ProofBundles.RetentionFor(),
-		Compatibility:        d.compatibility, Visible: d.visibleFor,
+		CallerComparisonReleased: comparisonReleased,
+		OperationImpactEnabled:   releasedOperationImpact(d),
+		CallerReader:             d.callerReader,
+		ProofBundleRetention:     cfg.ProofBundles.RetentionFor(),
+		Compatibility:            d.compatibility, Visible: d.visibleFor,
 		WireCompatibility: admittedWireCompatibility(cfg, d.releasedClaims, d.compatibility),
 		Principal: func(ctx context.Context) string {
 			principal, ok := auth.PrincipalFromContext(ctx)
@@ -355,6 +391,7 @@ func newServeAPIOptions(d *serveDeps) (api.Options, error) {
 	apiOpts.ContractCatalog = api.NewContractCatalogService(apiOpts)
 	apiOpts.CallerMap = api.NewCallerMapService(apiOpts)
 	apiOpts.CallerComparison = api.NewCallerComparisonService(apiOpts)
+	apiOpts.OperationImpact = api.NewOperationImpactService(apiOpts)
 	apiOpts.ServiceDirectory = api.NewRuntimeServiceDirectoryService(
 		apiOpts, d.serviceStateV3Reader,
 	)
@@ -425,23 +462,41 @@ func newServeFinalAuthorityReads(d *serveDeps) (t421ExactFinalAuthorityRead, t42
 	return finalAuthority, tailReadiness, nil
 }
 
+func releasedEvidenceVersions(d *serveDeps) map[string]string {
+	var versions map[string]string
+	for _, extractor := range d.exs {
+		domain := extractor.Domain()
+		if (domain == "scip-proto-field" || domain == "scip-thrift-field") && d.releasedDomains[domain] {
+			if versions == nil {
+				versions = map[string]string{}
+			}
+			versions[domain] = extractor.Version()
+		}
+	}
+	return versions
+}
+
 // newServeMCPServer assembles the read-only MCP tool registry from the API
 // options, so MCP advertises exactly the proof, compatibility, Contract Atlas,
 // Caller Map and comparison services the API constructed.
 func newServeMCPServer(d *serveDeps, apiOpts api.Options) *mcpsdk.Server {
+	var operationImpact phebsmcp.OperationImpactQueries
+	if apiOpts.OperationImpact != nil {
+		operationImpact = apiOpts.OperationImpact
+	}
 	var mcpProofs phebsmcp.ProofQueries
 	var mcpCompatibility phebsmcp.CompatibilityQueries
 	var mcpTopicInventory phebsmcp.TopicInventoryQueries
 	if proofService := api.NewProofService(apiOpts); proofService != nil {
 		mcpProofs = proofService
-		if proofService.CompatibilityAvailable() && len(apiOpts.KafkaReleasedPlanes) == 0 {
+		if proofService.CompatibilityAvailable() && !apiOpts.ProtobufFieldReferencesReleased && !apiOpts.ThriftFieldReferencesReleased && len(apiOpts.KafkaReleasedPlanes) == 0 {
 			mcpCompatibility = proofService
 		}
 		// The composed Topics inventory is admitted on exactly the boundary its
 		// HTTP routes use: the experimental proof surface, or released planes
 		// beside the released T57.3 Topics claim. Released planes alone keep
 		// listing only find_kafka_topic_usage.
-		if len(apiOpts.KafkaReleasedPlanes) == 0 || apiOpts.KafkaTopicInventoryReleased {
+		if !apiOpts.ProtobufFieldReferencesReleased && !apiOpts.ThriftFieldReferencesReleased && len(apiOpts.KafkaReleasedPlanes) == 0 || apiOpts.KafkaTopicInventoryReleased {
 			mcpTopicInventory = proofService
 		}
 	}
@@ -456,11 +511,14 @@ func newServeMCPServer(d *serveDeps, apiOpts api.Options) *mcpsdk.Server {
 		CodeNav: d.codeNavigation, Visible: d.visibleFor, Proofs: mcpProofs,
 		Compatibility:               mcpCompatibility,
 		KafkaTopicUsageOnly:         len(apiOpts.KafkaReleasedPlanes) > 0,
+		ProtobufFieldReferencesOnly: apiOpts.ProtobufFieldReferencesReleased,
+		ThriftFieldReferencesOnly:   apiOpts.ThriftFieldReferencesReleased,
 		KafkaTopicInventoryReleased: apiOpts.KafkaTopicInventoryReleased,
 		WireCompatibility:           apiOpts.WireCompatibility,
 		ContractCatalog:             catalogQueries,
 		CallerMap:                   callerMapQueries,
 		CallerComparison:            comparisonQueries,
+		OperationImpact:             operationImpact,
 		ServiceDirectory:            apiOpts.ServiceDirectory,
 		ObservationProgress:         apiOpts.ObservationProgress,
 		Relationships:               apiOpts.Relationships,
@@ -498,6 +556,11 @@ func newServeHTTPHandlers(d *serveDeps, apiOpts api.Options, finalAuthority, tai
 		apiHandler, mcpHandler = d.exact.state.wrap(apiHandler), d.exact.state.wrap(mcpHandler)
 	}
 
-	handler := t422OwnerHTTPHandler(d.startup.Owners(), newHTTPHandler(d.authService, apiHandler, mcpHandler, promhttp.Handler(), http.FileServerFS(d.dist), d.cfg.Server), d.semanticLaunch)
+	docsHandler, err := documentation.NewHandler()
+	if err != nil {
+		return nil, err
+	}
+	uiHandler := documentationAndUI(d.authService, docsHandler, http.FileServerFS(d.dist))
+	handler := t422OwnerHTTPHandler(d.startup.Owners(), newHTTPHandler(d.authService, apiHandler, mcpHandler, promhttp.Handler(), uiHandler, d.cfg.Server), d.semanticLaunch)
 	return handler, nil
 }

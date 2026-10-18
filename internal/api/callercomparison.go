@@ -15,8 +15,10 @@ import (
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
+// CallerComparisonSchemaVersion binds the ordinary comparison release claim.
+const CallerComparisonSchemaVersion = "caller-comparison-v2"
+
 const (
-	callerComparisonSchemaVersion       = "caller-comparison-v2"
 	legacyCallerComparisonSchemaVersion = "caller-comparison-v1"
 	callerComparisonCursorVersion       = "caller-comparison-cursor-v1"
 	callerComparisonCapability          = "contract-caller-comparison"
@@ -140,7 +142,7 @@ type CallerComparisonExactPage struct {
 func AsExactCallerComparisonPage(
 	page *CallerComparisonPage,
 ) (*CallerComparisonExactPage, error) {
-	if page == nil || page.SchemaVersion != callerComparisonSchemaVersion ||
+	if page == nil || page.SchemaVersion != CallerComparisonSchemaVersion ||
 		page.Old.Generation == nil || page.Replacement.Generation == nil ||
 		!stringIn(page.MatchingRowsState, "exact", "unavailable") ||
 		!stringIn(page.Old.MatchingRowsState, "exact", "unavailable") ||

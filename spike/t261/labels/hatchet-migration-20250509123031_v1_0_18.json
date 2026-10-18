@@ -1,0 +1,67 @@
+{
+  "format": "t261-source-labels-v1",
+  "dialect": "postgresql",
+  "repository": "hatchet-dev/hatchet",
+  "commit": "559b5021e418f12ded175f950b709b7fa66be5a5",
+  "source_path": "cmd/hatchet-migrate/migrate/migrations/20250509123031_v1_0_18.sql",
+  "source_sha256": "f18b49dd2bf9f1b4d20ba29d5302edd905a4a819b234e7d51ef9338661aa8a6f",
+  "plane": "sql-migration-event",
+  "statements": [
+    {
+      "id": "migration-L3",
+      "start": 38,
+      "end": 117,
+      "sha256": "170cbb534e294910feb5eec389e291d06849478dd25d02fbdeb5f7c148ec121f",
+      "syntax_class": "alter-add-column",
+      "expected_disposition": "migration-event",
+      "direction": "up",
+      "objects": [],
+      "sites": [],
+      "events": [
+        {
+          "predicate": "MIGRATION_ADDS_COLUMN",
+          "name": "retry_count",
+          "quoted": false,
+          "start": 77,
+          "end": 88,
+          "sha256": "dc24d6606b6627759aafd5b3d4ac10f3d4d68ef26d8e022ca5976226ed45e57b",
+          "relation": "v1_log_line",
+          "columns": [
+            "retry_count"
+          ]
+        }
+      ],
+      "note": "Explicit source history occurrence in Goose up branch; never execute, fold branches or emit DECLARES_* objects. Stable identity includes source path, statement byte offset and predicate."
+    },
+    {
+      "id": "migration-L9",
+      "start": 181,
+      "end": 234,
+      "sha256": "ff3261bfb17de6248e79f8c83587d3776fe89156b49a11a7210867316d9acecd",
+      "syntax_class": "alter-drop-column",
+      "expected_disposition": "migration-event",
+      "direction": "down",
+      "objects": [],
+      "sites": [],
+      "events": [
+        {
+          "predicate": "MIGRATION_DROPS_COLUMN",
+          "name": "retry_count",
+          "quoted": false,
+          "start": 221,
+          "end": 232,
+          "sha256": "dc24d6606b6627759aafd5b3d4ac10f3d4d68ef26d8e022ca5976226ed45e57b",
+          "relation": "v1_log_line",
+          "columns": [
+            "retry_count"
+          ]
+        }
+      ],
+      "note": "Explicit source history occurrence in Goose down branch; never execute, fold branches or emit DECLARES_* objects. Stable identity includes source path, statement byte offset and predicate."
+    }
+  ],
+  "inventory_notes": [
+    "Entire selected file, both Goose branches, labelled before parser execution. No accuracy inference to 208 unsampled migration files.",
+    "Lane derives from committed sqlc PostgreSQL engine metadata under explicit spike migration-root admission, never grammar sniffing."
+  ]
+}
