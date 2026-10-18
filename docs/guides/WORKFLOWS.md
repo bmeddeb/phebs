@@ -1359,6 +1359,20 @@ The UI uses its DB-backed session cookie and automatically supplies CSRF
 tokens on mutations. A `401` clears stale authenticated state and returns to
 the login view.
 
+## Exact raw evidence
+
+When evidence is enabled, authenticated `GET /api/evidence?domain=<domain>`
+returns complete evidence for caller-visible repositories. Each repository has
+an exact legacy `run` or a sealed partitioned `exact_authority`; native rows
+omit `run`. `published_run_count` counts legacy runs and
+`partitioned_root_count` counts native roots. An empty current root is distinct
+from an unavailable or stale root. The 5,000-assertion bound applies per
+repository; an exceeded bound or authority change refuses the whole response.
+Retry after a publication transition. Release-only deployments admit only the
+domains in their verified recipes; unrelated retained provisional evidence is
+unavailable. These rows describe retained source evidence, never runtime use or
+completeness.
+
 ## HTTP API
 
 The API is OpenAPI-described by itself: fetch `/api/openapi.json` or browse

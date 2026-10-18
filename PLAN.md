@@ -12335,3 +12335,38 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   production headroom claim. No production code, source fence, registration,
   schema, lock, cache, worker, disk publication or child behavior changes.
   T51.2 production admission and T51.3 operating/signed promotion remain pending.
+
+- **2026-10-18 — T48.5a exact raw partitioned evidence (Ben-routed Mac
+  handoff).** `/api/evidence` keeps its legacy publication preference and exact
+  legacy response bytes. Only an absent legacy run selects the existing sealed
+  partitioned root and bounded locator reader. Native rows carry
+  `exact_authority` instead of a fabricated legacy `run`; additive
+  `partitioned_root_count` never inflates `published_run_count`. Empty current
+  roots remain explicit; stale or foreign candidates supply no approximate rows.
+  Verify native presence/absence and immutable authority again after complete
+  reads, then retain the existing final authorization, indexed commit, scope and
+  evidence-revision fences. A moved/retired/new root refuses the whole response.
+  Reuse the verified recipe domain list as a pre-storage raw-domain allowlist;
+  an unrelated retained provisional domain must not become available because
+  another product is released. Explicit provisional mode remains unrestricted.
+  The enabled schema pins optional legacy run/native authority/count; no raw
+  evidence UI/MCP/generated-client consumer exists to update.
+
+  Focused native/legacy, absence/transition, permission, scope/ABA, complete
+  5,000/5,001-row and release-domain checks pass; lead repetition is 0.706s.
+  Actual SurrealDB two-chunk sealed-root/locator and root-transition proof passed
+  in 1.431s and joined its child. Focused race is 2.279s; vet, repository-pinned
+  lint (zero issues), docs, glossary and whitespace pass. Independent direct
+  source/cost review found and closed the release-domain admission gap; no full
+  suite, ceremony, production signature or extraction-quality claim follows.
+
+  Cost: rejected release domains do one bounded recipe-membership check and
+  zero storage reads; unrestricted mode adds the empty-list branch. A native
+  repository uses existing root/candidate point selection, a fenced probe, a
+  complete derived assertion page capped at 5,000 and final authority selection.
+  No source corpus, root blob or derived generation is newly scanned or hashed.
+  Native snapshot membership/final checks are O(visible repositories); retained
+  rows remain O(visible repositories × 5,000), the existing per-repository bound,
+  not an installation-wide memory ceiling. Concurrent requests multiply this
+  work. No new lock, cache, worker, concurrency, startup/restart, sync, retry/no-op,
+  publication, persistent state, disk write or child process is introduced.
