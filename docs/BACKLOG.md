@@ -4009,6 +4009,11 @@ native proof remain pending.
 Required helper tests use the explicit `phebs_t42_native` build tag so ordinary
 CI cannot launch target qualification implicitly. Under that tag, missing exact
 helper/kernel prerequisites fail; compile-only checks include the tagged tests.
+Exact source `94a49c6e` passes six portable controls normally and with race,
+Darwin and tagged Linux static checks, pinned scoped lint, both tagged Linux
+compile-only targets and helper builds, docs and glossary. `spike/t42h2k/`
+retains the first fourteen serial steps; every group joined and all four Linux
+outputs were removed without execution. Native qualification remains pending.
 
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
