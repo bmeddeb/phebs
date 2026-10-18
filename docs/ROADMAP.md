@@ -2427,6 +2427,15 @@ checks pass. This does not complete T44.2 or authorize merge/integration;
 T44.5 remains the next unimplemented Epic 44 UI ticket after dependency-order
 routing.
 
+T44.5 current-main follow-up (2026-10-17, Mac): T44.2/T44.3's implementation is
+integrated, and T57R.2's complete fresh-data pinned-renderer matrix now passes
+135/135. Header instance icons proceed from that current main, preserving the
+five supported code links after T46.1 retired two former surfaces. Audit and
+Analytics remain administrator-only; Settings remains signed-in navigation.
+The narrow two-row header preserves 44px controls and matching sticky/anchor
+offsets. Its independent review and full reviewed receipt refresh remain the
+owning T44.5 closure gates; this note claims no new integration or release.
+
 T43R.1 completed in the presentation track on 2026-08-30. The adopted type-floor
 rule keeps interface text at 11px or larger and permits one named 10px token
 only for supplementary, non-interactive machine metadata whose essential

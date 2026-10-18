@@ -105,6 +105,9 @@ export const AuditIcon = ({ size = 16 }: IconProps) =>
 export const ChartIcon = ({ size = 16 }: IconProps) =>
   svg(size, <><path d="M2.5 2.5v11h11" /><path d="M5.5 10.5v-3M8.5 10.5v-6M11.5 10.5v-4.5" /></>)
 
+export const SettingsIcon = ({ size = 16 }: IconProps) =>
+  svg(size, <><path d="m6.5 1.5-.4 1.6-1.5.9L3 3.6 1.5 6.2l1.2 1.2v1.8l-1.2 1.2L3 13l1.6-.4 1.5.9.4 1.5h3l.4-1.5 1.5-.9L13 13l1.5-2.6-1.2-1.2V7.4l1.2-1.2L13 3.6l-1.6.4-1.5-.9-.4-1.6Z" /><circle cx="8" cy="8" r="2.25" /></>)
+
 export const ImpactIcon = ({ size = 16 }: IconProps) =>
   svg(size, <><circle cx="3" cy="8" r="1.5" /><circle cx="12.5" cy="4" r="1.5" /><circle cx="12.5" cy="12" r="1.5" /><path d="m4.5 7.4 6.5-2.8M4.5 8.6l6.5 2.8" /></>)
 

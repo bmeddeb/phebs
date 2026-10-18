@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, expect, test, vi } from 'vitest'
 import { Client } from 'styletron-engine-monolithic'
 import { Provider as StyletronProvider } from 'styletron-react'
@@ -12,6 +12,7 @@ function header(
   topicsAvailable = false,
   path = '/',
   impactAvailable = false,
+  isAdmin = false,
 ) {
   return render(
     <StyletronProvider value={engine}>
@@ -19,7 +20,7 @@ function header(
         <Header
           path={path}
           email="user@example.com"
-          isAdmin={false}
+          isAdmin={isAdmin}
           contractsAvailable={contractsAvailable}
           impactAvailable={impactAvailable}
           topicsAvailable={topicsAvailable}
@@ -31,6 +32,34 @@ function header(
 }
 
 afterEach(cleanup)
+
+test.each([
+  ['/audit', 'Audit log'], ['/analytics', 'Analytics'], ['/settings', 'Settings'],
+])('instance navigation marks only the active %s route', (path, label) => {
+  header(true, true, path, true, true)
+  const code = screen.getByRole('navigation', { name: 'Code' })
+  expect(within(code).getAllByRole('link').map(link => link.textContent)).toEqual(['Search', 'Repos', 'Contracts', 'Impact', 'Topics'])
+  const instance = screen.getByRole('navigation', { name: 'Instance' })
+  const links = within(instance).getAllByRole('link')
+  expect(links).toHaveLength(3)
+  for (const name of ['Audit log', 'Analytics', 'Settings']) {
+    const link = within(instance).getByRole('link', { name })
+    expect(link.getAttribute('title')).toBe(name)
+    expect(link.textContent).toBe('')
+    expect(link.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true')
+    expect(link.getAttribute('aria-current')).toBe(name === label ? 'page' : null)
+  }
+  expect(within(instance).getByRole('link', { name: label }).getAttribute('href')).toBe(`#${path}`)
+})
+
+test('ordinary users retain Settings without administrative instance links', () => {
+  header(true, true, '/settings', true)
+  const instance = screen.getByRole('navigation', { name: 'Instance' })
+  expect(within(instance).getAllByRole('link')).toHaveLength(1)
+  expect(within(instance).getByRole('link', { name: 'Settings' }).getAttribute('aria-current')).toBe('page')
+  expect(screen.queryByRole('link', { name: 'Audit log' })).toBeNull()
+  expect(screen.queryByRole('link', { name: 'Analytics' })).toBeNull()
+})
 
 test('Contracts navigation is present only with the authenticated capability', () => {
   const dark = header(false)

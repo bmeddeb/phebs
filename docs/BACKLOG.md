@@ -15488,6 +15488,34 @@ unchanged; the 390px strip verified; the workflows guide's header
 description updated; the full receipt matrix re-captured in one
 reviewed update.
 
+*T44.5 current-main implementation (2026-10-17, Mac track): the historical
+seven-item count above predates T46.1's removal of Investigations and Change
+Workbench. The supported code navigation therefore keeps five text links
+(Search, Repos and capability-gated Contracts, Impact and Topics); no retired
+route returns. Audit log and Analytics retain administrator gating, and
+Settings remains available to signed-in users. All three move into native
+icon links with stable names/titles and `aria-current`, separated from the
+session/display controls. A narrow two-row header keeps 44px targets and local
+code-navigation scrolling; shared geometry also fences File's sticky toolbar
+and the Settings section anchor. Command destinations and route titles stay
+unchanged. Full reviewed receipt refresh, critique, bundle/interaction records
+and final outcome follow in this ticket.*
+
+*Pre-receipt checkpoint: the four new header cases bring the UI suite to
+766 tests; complete `make ci-ui`, docs and glossary pass. One earlier complete
+run failed the unchanged Service Directory keyboard assertion; its 19 isolated
+tests and one unchanged complete confirmation pass, with the first failure
+retained. Initial browser QA passes 32 header cases across both roles, themes
+and densities at 1280/960/640/390px, including header-scoped axe 4.12.1 and
+keyboard navigation. The offset diagnostic fired before File loaded; its
+confirmation now requires loaded contents first. Impeccable Assessment A and B
+ran in isolated agents: no blocker, design score 32/36, one inherited detector
+warning for Markdown blockquote styling outside this change. The few clipped
+Topics pixels at 390px are addressed by a 10px narrow code-link gap. The final
+JavaScript aggregate grows by 1,685 raw/509 individually gzipped bytes across
+the unchanged 161 chunks, with no dependency added. Final browser confirmation
+and reviewed canonical PNGs remain pending.*
+
 ## Epic 45 · Bazel-first managed SCIP generation *(planned after Epics 40–42 · cross-track)*
 
 Phebs is purpose-built for massive, service-dense monorepositories. This epic

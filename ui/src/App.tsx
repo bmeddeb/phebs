@@ -2,8 +2,8 @@ import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
 import { useStyletron } from 'baseui'
 import { Notification, KIND as NOTIFICATION_KIND } from 'baseui/notification'
 import { FOCUS_SEARCH, useHashRoute } from './router'
-import { FONTS, useDensity, useMode, usePhebsTokens, type PhebsTokens } from './theme'
-import { LogoutIcon, MoonIcon, RowsComfortableIcon, RowsDenseIcon, SunIcon } from './icons'
+import { FONTS, HEADER_LAYOUT, useDensity, useMode, usePhebsTokens, type PhebsTokens } from './theme'
+import { AuditIcon, ChartIcon, LogoutIcon, MoonIcon, RowsComfortableIcon, RowsDenseIcon, SettingsIcon, SunIcon } from './icons'
 import { BrandLoader, BrandLockup } from './Brand'
 import { ErrorNotice, LoadingBlock } from './components/kit'
 import { ScopeContextBar } from './components/ScopeContextBar'
@@ -296,7 +296,7 @@ export function Header({ path, email, isAdmin, contractsAvailable, impactAvailab
   return (
     <header
       className={css({
-        height: '52px',
+        height: HEADER_LAYOUT.height,
         display: 'flex',
         alignItems: 'center',
         gap: '20px',
@@ -307,23 +307,27 @@ export function Header({ path, email, isAdmin, contractsAvailable, impactAvailab
         position: 'sticky',
         top: 0,
         zIndex: 10,
-        '@media screen and (max-width: 720px)': {
-          gap: '10px',
+        [HEADER_LAYOUT.narrowQuery]: {
+          height: HEADER_LAYOUT.narrowHeight,
+          display: 'grid',
+          gridTemplateColumns: 'auto minmax(0, 1fr)',
+          gridTemplateRows: '52px 52px',
+          columnGap: '16px',
+          rowGap: '0',
           paddingLeft: '16px',
           paddingRight: '16px',
         },
       })}
     >
       <BrandLockup href="#/" markSize={18} wordmarkSize={17} gap={8} />
-      <nav className={css({
+      <nav aria-label="Code" className={css({
         display: 'flex',
         gap: '18px',
         alignItems: 'center',
         height: '100%',
-        '@media screen and (max-width: 720px)': {
-          flex: '1 1 auto',
+        [HEADER_LAYOUT.narrowQuery]: {
           minWidth: 0,
-          gap: '12px',
+          gap: '10px',
           overflowX: 'auto',
           overflowY: 'hidden',
           scrollbarWidth: 'none',
@@ -334,35 +338,41 @@ export function Header({ path, email, isAdmin, contractsAvailable, impactAvailab
         {contractsAvailable && <NavLink href="#/contracts" label="Contracts" active={isContracts} />}
         {impactAvailable && <NavLink href="#/impact" label="Impact" active={isImpact} />}
         {topicsAvailable && <NavLink href="#/topics" label="Topics" active={isTopics} />}
-        {isAdmin && <NavLink href="#/audit" label="Audit" active={isAudit} />}
-        {isAdmin && <NavLink href="#/analytics" label="Analytics" active={isAnalytics} />}
-        <NavLink href="#/settings" label="Settings" active={isSettings} />
       </nav>
-      <div className={css({ flex: 1, '@media screen and (max-width: 720px)': { display: 'none' } })} />
-      {email && <span className={css({ fontSize: '12px', color: tok.textTertiary, maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', '@media screen and (max-width: 720px)': { display: 'none' } })}>{email}</span>}
-      <button
-        onClick={toggleDensity}
-        aria-label={density === 'dense' ? 'Switch to comfortable rows' : 'Switch to dense rows'}
-        title={density === 'dense' ? 'Comfortable rows' : 'Dense rows'}
-        className={css(headerIconButton(tok))}
-      >
-        {density === 'dense' ? <RowsComfortableIcon size={14} /> : <RowsDenseIcon size={14} />}
-      </button>
-      <button
-        onClick={toggle}
-        aria-label={mode === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-        className={css(headerIconButton(tok))}
-      >
-        {mode === 'dark' ? <SunIcon size={14} /> : <MoonIcon size={14} />}
-      </button>
-      <button
-        onClick={onLogout}
-        aria-label="Sign out"
-        title="Sign out"
-        className={css(headerIconButton(tok))}
-      >
-        <LogoutIcon size={14} />
-      </button>
+      <div className={css({ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '16px', [HEADER_LAYOUT.narrowQuery]: { gridColumn: '1 / -1', marginLeft: 0, minWidth: 0 } })}>
+        <nav aria-label="Instance" className={css({ display: 'flex', alignItems: 'center', gap: '8px' })}>
+          {isAdmin && <InstanceLink href="#/audit" label="Audit log" active={isAudit}><AuditIcon size={16} /></InstanceLink>}
+          {isAdmin && <InstanceLink href="#/analytics" label="Analytics" active={isAnalytics}><ChartIcon size={16} /></InstanceLink>}
+          <InstanceLink href="#/settings" label="Settings" active={isSettings}><SettingsIcon size={16} /></InstanceLink>
+        </nav>
+        <span aria-hidden="true" className={css({ height: '24px', borderLeft: `1px solid ${tok.cardBorder}`, flexShrink: 0, [HEADER_LAYOUT.narrowQuery]: { marginLeft: 'auto' } })} />
+        <div role="group" aria-label="Session and display controls" className={css({ display: 'flex', alignItems: 'center', gap: '8px' })}>
+          {email && <span className={css({ fontSize: '12px', color: tok.textTertiary, maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', [HEADER_LAYOUT.narrowQuery]: { display: 'none' } })}>{email}</span>}
+          <button
+            onClick={toggleDensity}
+            aria-label={density === 'dense' ? 'Switch to comfortable rows' : 'Switch to dense rows'}
+            title={density === 'dense' ? 'Comfortable rows' : 'Dense rows'}
+            className={css(headerIconButton(tok))}
+          >
+            {density === 'dense' ? <RowsComfortableIcon size={14} /> : <RowsDenseIcon size={14} />}
+          </button>
+          <button
+            onClick={toggle}
+            aria-label={mode === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+            className={css(headerIconButton(tok))}
+          >
+            {mode === 'dark' ? <SunIcon size={14} /> : <MoonIcon size={14} />}
+          </button>
+          <button
+            onClick={onLogout}
+            aria-label="Sign out"
+            title="Sign out"
+            className={css(headerIconButton(tok))}
+          >
+            <LogoutIcon size={14} />
+          </button>
+        </div>
+      </div>
     </header>
   )
 }
@@ -383,8 +393,26 @@ function headerIconButton(tok: PhebsTokens) {
     cursor: 'pointer',
     color: tok.textSecondary,
     ':hover': { backgroundColor: tok.hoverFill },
+    ':active': { backgroundColor: tok.selectedLineBg },
     ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '1px' },
+    [HEADER_LAYOUT.narrowQuery]: { width: '44px', height: '44px' },
   }
+}
+
+function InstanceLink({ href, label, active, children }: { href: string; label: string; active: boolean; children: ReactNode }) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  return (
+    <a href={href} aria-label={label} title={label} aria-current={active ? 'page' : undefined} className={css({
+      ...headerIconButton(tok),
+      color: active ? tok.textPrimary : tok.textSecondary,
+      backgroundColor: active ? tok.hoverFill : 'transparent',
+      borderColor: active ? tok.textPrimary : tok.cardBorder,
+      boxShadow: active ? `inset 0 -2px 0 ${tok.textPrimary}` : 'none',
+    })}>
+      {children}
+    </a>
+  )
 }
 
 function NavLink({ href, label, active }: { href: string; label: string; active: boolean }) {

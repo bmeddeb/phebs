@@ -5,7 +5,7 @@ import { StateNotice, StatusChip } from '../components/kit'
 import { fetchRepoStatus } from '../api'
 import { enqueueTypedIndex, fetchTypedProviders, fetchTypedView, planTypedIndex, type TypedIndexPreview, type TypedIndexProviders, type TypedIndexSelection, type TypedIndexView } from '../typedIndex'
 import { navigate, useHashRoute } from '../router'
-import { FONTS, usePhebsTokens } from '../theme'
+import { FONTS, HEADER_LAYOUT, usePhebsTokens } from '../theme'
 import { isAbortError } from '../util'
 
 const ACTIVE = new Set(['planning', 'indexing', 'validating', 'publishing'])
@@ -104,7 +104,7 @@ export function CodeNavigationIndexingSection() {
   const selected = view?.repository === repository ? view : null
   return (
     <section id="code-navigation-indexing" aria-labelledby="code-navigation-indexing-heading" className={css({ marginBottom: '32px', minWidth: 0 })}>
-      <h1 id="code-navigation-indexing-heading" tabIndex={-1} className={css({ margin: '0 0 8px', scrollMarginTop: '64px', fontSize: '20px', color: tok.textPrimary })}>Code navigation indexing</h1>
+      <h1 id="code-navigation-indexing-heading" tabIndex={-1} className={css({ margin: '0 0 8px', scrollMarginTop: '64px', [HEADER_LAYOUT.narrowQuery]: { scrollMarginTop: `calc(${HEADER_LAYOUT.narrowHeight} + 12px)` }, fontSize: '20px', color: tok.textPrimary })}>Code navigation indexing</h1>
       <p className={css({ fontSize: '12px', color: tok.textSecondary })}>Generate precise navigation for the repository’s indexed HEAD.</p>
       {error && <div role="alert"><StateNotice tone="amber" title="Indexing unavailable">{error}</StateNotice></div>}
       <div className={css({ display: 'flex', gap: '8px', marginBottom: '12px' })}>

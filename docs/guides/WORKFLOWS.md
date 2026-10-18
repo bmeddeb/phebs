@@ -1144,6 +1144,20 @@ not virtualize or remove the complete patch DOM.
 Served at `/` from the binary. After setup/login, the main views are
 deep-linkable hash routes:
 
+The header separates code navigation from instance controls. Search and Repos
+stay text links, beside Contracts, Impact and Topics when their capabilities
+are available. **Audit log**, **Analytics** and **Settings** are separate labelled
+icon links to the right; Audit and Analytics remain administrator-only, while
+Settings is available to every signed-in user. The active destination has a
+border/underline and announces the current page. A separator divides these
+links from the account, density, theme and sign-out controls. Route titles and
+Cmd/Ctrl+K destination names are unchanged.
+
+At widths up to 960px the controls occupy a second header row with 44px touch
+targets. Code links scroll locally when needed; the document does not scroll
+horizontally. File's sticky toolbar and the code-navigation Settings anchor
+account for the taller header.
+
 Search, Contracts, Topics, Caller Map, and Impact share the
 scope-aware **Analysis scope & gaps** panel. Expand one repository to inspect
 its active unit name, exact primary/supporting paths, typed-index posture,

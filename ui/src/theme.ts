@@ -26,6 +26,12 @@ export const FONTS = { MONO, SANS }
 // Counts and other numerals align in columns (charter §3).
 export const NUMERIC = { fontVariantNumeric: 'tabular-nums' } as const
 
+export const HEADER_LAYOUT = {
+  height: '52px',
+  narrowHeight: '104px',
+  narrowQuery: '@media screen and (max-width: 960px)',
+} as const
+
 // Type scale (charter §3). Caption is the interface floor. The single
 // evidenceMetadata role is the narrow T43R.1 exception: supplementary,
 // non-interactive machine metadata that repeats or qualifies information

@@ -23,7 +23,7 @@ import type {
 } from '../api'
 import { languageFor, langColor, langName } from '../lang'
 import { highlightStyle } from '../highlight'
-import { usePhebsTokens, useMode, usePalette, FONTS } from '../theme'
+import { usePhebsTokens, useMode, usePalette, FONTS, HEADER_LAYOUT } from '../theme'
 import { MARKDOWN_PREVIEW_MAX_UNITS } from '../markdownBounds'
 import type { MarkdownSegment } from '../markdownSanitize'
 import { href, navigate } from '../router'
@@ -486,7 +486,8 @@ function CodeHeader({ path, content, line, meta, markdown, preview, repo, ref, p
     <div
       className={css({
         position: 'sticky',
-        top: '52px',
+        top: HEADER_LAYOUT.height,
+        [HEADER_LAYOUT.narrowQuery]: { top: HEADER_LAYOUT.narrowHeight },
         zIndex: 5,
         height: '36px',
         display: 'flex',

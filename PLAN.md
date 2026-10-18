@@ -11938,3 +11938,45 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Full Go/native ceremony suites and hosted Actions were not rerun; the
   separate focused pipeline diagnostic and all release/quality/scale posture
   remain unchanged.
+
+- **2026-10-17 — T44.5 separates instance navigation from code navigation.**
+  Audit log, Analytics and Settings use separate native icon links with stable
+  accessible names, native titles and `aria-current`; active border/underline
+  supplements color. Audit/Analytics keep their existing administrator gate,
+  Settings keeps signed-in access, and a separator precedes the session/display
+  group. Hash routes, command-navigator entries and route titles are unchanged.
+  Reuse the house Audit/Chart SVGs and add one matching authored Settings SVG;
+  no icon library or dependency is added. The ticket's old seven-code-item
+  wording predates T46.1: keep the current five supported code text links and
+  their capability gates, without restoring retired products.
+
+  At widths up to 960px, two 52px rows preserve the code strip and 44px controls
+  instead of shrinking touch targets. Wider headers retain their 52px height.
+  One shared geometry record also sets the narrow File toolbar offset and the
+  code-navigation Settings scroll margin, so the sticky header cannot cover
+  those controls. The code strip owns any horizontal scrolling; the document
+  stays within its viewport. Pressed feedback is an immediate token fill;
+  repeated navigation introduces no decorative animation.
+
+  **Steady-state cost:** three existing links move between groups and render
+  three bounded SVGs; the icon-link wrapper reuses the existing control style.
+  One static shared geometry record and CSS media rules add no resize listener,
+  measurement loop, timer, request, poll, cache, lock, child or durable state.
+  Query/request, sync, startup/restart, retry/no-op and publication work are
+  unchanged outside constant-size header rendering and CSS layout. Native
+  browser checks and canonical receipts measure this presentation only, not
+  operating, user-validation, quality, release or scale claims. Source and PNG
+  commits stay separate; reviewed baseline authoring precedes a fresh-data
+  comparison with the existing masks, zero retries and 0.1% threshold.
+
+  Pre-receipt source checks pass complete `make ci-ui` (766 tests, generated
+  clients, lint, build and Settings driver) plus docs/glossary. A preceding
+  full run's unchanged Service Directory keyboard assertion failed; its 19
+  isolated tests and one unchanged complete confirmation pass, and that failed
+  evidence stays retained. The JavaScript aggregate adds 1,685 raw/509
+  individually gzipped bytes across the unchanged 161 chunks. Two isolated
+  Impeccable assessments found no blocker; the detector's one warning is the
+  unchanged Markdown blockquote rule, not a header defect. Initial 32-case
+  header QA passes both roles, themes/densities and four widths, including
+  header-scoped axe 4.12.1. A premature File offset probe is corrected to wait
+  for loaded content. Native confirmation and canonical PNG review follow.
