@@ -5656,3 +5656,8 @@ claim is inferred.
 with eleven queried identities/fourteen spans, exact HTTP/MCP/source/proofs,
 publication/withdrawal and clean teardown. Receipt and unsigned artifacts remain
 separate from common-bar evidence reconciliation and production signing.
+
+**T52.3 finite outcome (2026-10-18):** independent Apache/both/RW-survivor
+ordinary integration passes in34.816796958s with33/37/4positive consumer spans,
+exact HTTP/MCP/proofs/source and clean teardown. Six unsigned artifact drafts
+remain separate from common-bar reconciliation and production signing.

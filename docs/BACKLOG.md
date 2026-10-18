@@ -19593,6 +19593,18 @@ plan and5synthetic controls freeze a small Apache→both→RW-survivor matrix ov
 labels remain separate; field0 is transport mechanics only. Fresh image/binding,
 first measured operating outcome and production signature remain pending.
 
+**T52.3 finite outcome (2026-10-18, Ben-routed Mac handoff).** The first
+reviewed matrix passes in34.816796958s on exact `bbb41b2c` image: Apache only,
+both generators, then RW survivor after Apache withdrawal. Positive consumer
+spans are33/37/4 with no extras within queried identities. Prior266/31full-stream
+negative labels remain separate. Selected field0returns25source-validated
+generated facts and0when unselected, without a generated recall/absence claim.
+Old both-version proof404, exact survivor metadata, HTTP/MCP/proof/source,
+all three clean server joins and private scratch removal pass. Exact receipt,
+reviewed binding, scoped outcome/cost and six unsigned artifacts are retained
+under `spike/t523/`. Root and independent peer artifact review pass; common-bar
+evidence reconciliation and existing production key/signatures remain separate.
+
 ## Epic 53 · Protobuf Buf WIRE compatibility production readiness
 
 **T53.1 · Verdict/input contract and independent golden changes** — freeze

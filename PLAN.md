@@ -13480,3 +13480,17 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   local JSON/hash admission only; no production request/tick/startup/retry/
   publication, lock/cache/schema or child work. Common-bar reconciliation and
   the existing production signature remain separate.
+
+- **2026-10-18 — T52.3 finite Thrift field outcome (Ben-routed Mac handoff).**
+  Retain the first34.816796958s exact-binary result: Apache-only, both and RW
+  survivor selections recover33/37/4consumer spans within queried identities,
+  ordinary HTTP/MCP/source/proofs and independent withdrawal. Prior266/31
+  full-stream negative labels stay separate. Field0returns25exactly validated
+  generated facts only when selected, establishing transport/source mechanics
+  without generated recall. Old both-version proof404and survivor republication
+  preserve exact selected-set metadata. All servers, observers and sampling
+  children join before private scratch removal. Root/peer-reviewed unsigned
+  cards/manifests/validation retain scope and resource/CPU caveats; original
+  disposable records cannot sign these new artifacts. No product request/sync/
+  retry/publication, cache/lock/schema/worker or child changes. Common-bar
+  evidence reconciliation and existing production-key signatures remain open.

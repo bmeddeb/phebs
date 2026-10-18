@@ -9362,3 +9362,9 @@ T51.3 retains its finite field outcome and unsigned drafts under `spike/t513/`.
 Native zero extras is limited to eleven queried positive identities; previous
 full-stream negative quality remains separate. Generated facts imply no recall
 or semantic-write guarantee. These drafts grant no production activation.
+
+T52.3 retains independent Apache/RW finite operating results and unsigned drafts
+in `spike/t523/release/`. Revoking Apache rebuilds the surviving RW domain;
+old both-version proofs refuse while retained custody remains. Field0generated
+facts are transport/source witnesses without a recall/absence guarantee.
+These drafts grant no production activation or signature.

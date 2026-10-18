@@ -1,0 +1,705 @@
+{
+  "schema": "phebs-t523-operating-outcome-cost-v1",
+  "date": "2026-10-18",
+  "status": "finite_source_conformance_and_Darwin_local_operating_pass_unsigned_drafts_pending_review_and_production_key",
+  "owner": "Ben Meddeb",
+  "routed_handoff": "Mac backend implementation/artifact preparation under Ben all-ticket routing; root serializes Git, integration and native execution.",
+  "native_executor": "root; exactly one first reviewed finite matrix, no retry",
+  "pre_outcome_review": {
+    "record": {
+      "path": "spike/t523/operating-plan-review.json",
+      "bytes": 1892,
+      "sha256": "sha256:0a7f936c63ca2f87bb0cac37fd0a972fb5938772fdf54c503c8e3952fc161d33"
+    },
+    "reviewers": "root + independent t493 peer; automated/source review, no independent human review claimed"
+  },
+  "artifact_review": "PENDING root independent review of these new exact drafts; no approval or signature inferred",
+  "first_native_outcome": "passed_finite_thrift_composition_darwin_only_production_signing_pending",
+  "wall_seconds_including_joined_cleanup": 34.816796958000005,
+  "measurement_attempts": 1,
+  "receipts": {
+    "first_native": {
+      "path": "spike/t523/release/receipts/finite-operating-first.json",
+      "bytes": 211611,
+      "sha256": "sha256:4414404b8bd0d36a6231cfee38da8819f613cd62c8781999251c32a6de9675a4"
+    },
+    "execution_binding": {
+      "path": "spike/t523/release/receipts/execution-binding-first-reviewed.json",
+      "bytes": 7325,
+      "sha256": "sha256:102cbcf74dc3815fbc2e6325af4973d7d20998604724baf612a25161dd586f41"
+    },
+    "prospective_plan": {
+      "path": "spike/t523/operating-plan.json",
+      "bytes": 13725,
+      "sha256": "sha256:d1a20eb1d6ccdecaedfe285746f914098bf83924ddced31c6f10a3d153973ead"
+    },
+    "plan_review": {
+      "path": "spike/t523/operating-plan-review.json",
+      "bytes": 1892,
+      "sha256": "sha256:0a7f936c63ca2f87bb0cac37fd0a972fb5938772fdf54c503c8e3952fc161d33"
+    },
+    "input_binding": {
+      "path": "spike/t523/operating-inputs.json",
+      "bytes": 19004,
+      "sha256": "sha256:85f37b9428f7ddf3aa2642d18925135135ead023cbbdcd4f9f46b045bc260945"
+    },
+    "registration_validation": {
+      "path": "spike/t523/validation.json",
+      "bytes": 1641,
+      "sha256": "sha256:b41a12eb64d047009907aa4199db319d37bfe30e4aa00fc45c40e41e9376fa45"
+    }
+  },
+  "implementation": {
+    "phebs_source_commit": "bbb41b2ccfb3f9b23653aabf41607185aec3efbe",
+    "phebs_binary_digest": "sha256:121c1d07999344166d8631e65a99b06476c1fa0251f8590d2c42dd7da6393481",
+    "pack_implementation_digest": "sha256:bb2dcc25ff017afb98aeba3adbf2596f5bcd64efaf6a4602b7e937c66413c4ea",
+    "toolchain_digest": "sha256:c6652a655b5c51d1ce66b001a3f82f118b97fecfca54705e3b7313d6c8b82dba"
+  },
+  "harness_commit": "3939bb543a292fea863fe739f1bf4d6dc463b760",
+  "host": {
+    "sysname": "Darwin",
+    "machine": "arm64",
+    "cpu_count": 10,
+    "physical_memory_bytes": 25769803776
+  },
+  "headroom_preflight": {
+    "available_physical_bytes": 7591116800,
+    "page_size": 16384,
+    "pages": {
+      "free": 4225,
+      "inactive": 435516,
+      "speculative": 23584
+    },
+    "formula": "page_size*(free+inactive+speculative); compressor and swap excluded"
+  },
+  "free_disk_preflight_bytes": 223143559168,
+  "bounds": {
+    "complete_native_seconds": 180,
+    "startup_seconds": 30,
+    "publication_seconds": 90,
+    "cold_request_seconds": 2,
+    "warm_request_seconds": 1,
+    "parallel_requests": 8,
+    "http_response_bytes": 1048576,
+    "process_tree_sampled_max_rss_bytes": 2147483648,
+    "minimum_available_physical_headroom_bytes": 4294967296,
+    "minimum_free_disk_bytes": 2147483648,
+    "derived_allocated_disk_bytes": 536870912,
+    "repositories": 2,
+    "evaluation_tree_files": 48,
+    "evaluation_tree_bytes": 16777216,
+    "source_blobs_read_per_citation": 1,
+    "evaluation_tree_files_per_repository": 64
+  },
+  "input_censuses": [
+    {
+      "repository": "evaluation.local/t521-public",
+      "commit": "6218bbaca1bd557c45c6aba6dfcd0c741ed1f64b",
+      "tree": "a75acafed2a89144418268d6d33290582d89ad0f",
+      "symbolic_head": "refs/heads/committed-input",
+      "files": 40,
+      "bytes": 1175947,
+      "census_digest": "sha256:81511e9ae1ade5c0d29b6f68d263d272d61c09b5c0a43a3e6f51188b2dd9ef9c"
+    },
+    {
+      "repository": "evaluation.local/t522-public",
+      "commit": "01726539645e3bab1c04a4633b806dead7a0c97a",
+      "tree": "0f1ba4058ea5163990a396cca653c5547735ec7a",
+      "symbolic_head": "refs/heads/evaluation",
+      "files": 8,
+      "bytes": 115660,
+      "census_digest": "sha256:a2b6df8bd3b82eef4ca7eb06c839f9edd7ee5e20865a180867fb12e1e23d4ff2"
+    }
+  ],
+  "native_query_scope": "Fixed nine Apache positive field identities, two thriftrw positive identities plus existing public generated-only field0. Require all frozen positive spans and no extra consumer span in those whole-proof responses. These queries do not inventory unqueried field identities; original full-stream direct T521/T522 negative-site evidence remains separately scoped, not rerun or pooled.",
+  "phase_results": [
+    {
+      "name": "apache-only",
+      "selected_generators": [
+        "apache"
+      ],
+      "extractor_version": "1.4.0-released.apache.1",
+      "native_positive_opportunities": 33,
+      "native_verified_consumer_unique_spans": 33,
+      "native_fixed_query_extra_consumer_facts": 0,
+      "prior_frozen_negative_sites": {
+        "count": 266,
+        "scope": "prior T521/T522 direct full-stream labels/results only; not new native full-stream opportunities or a new negative-site score"
+      },
+      "generated_returned_spans_outside_quality_denominator": 69,
+      "field0_mechanics": {
+        "scope": "numeric_zero_transport_admission_only; no generated-reference recall denominator",
+        "returned_generated_references": 0,
+        "live_reference_claim": false,
+        "reference_scope": "zero returned facts establish no live reference or source/runtime absence"
+      },
+      "ready_seconds": 7.202,
+      "server_wall_seconds_through_terminal": 17.986,
+      "measurements": {
+        "rss_samples": 50,
+        "sampled_max_tree_rss_bytes": 261750784,
+        "sampled_max_descendants": 2,
+        "minimum_available_physical_bytes": 7571243008,
+        "physical_samples": 10,
+        "physical_formula": "page_size*(free+inactive+speculative); compressor and swap excluded",
+        "sampled_max_data_allocated_bytes": 8298496,
+        "rss_cadence_seconds": 0.2,
+        "host_disk_cadence_seconds": 1,
+        "qualification": "Sequential native samples after HTTP readiness; not an atomic tree snapshot, transient peak or hard enforcement. Startup before HTTP readiness and teardown are not RSS-sampled. No swap credit."
+      },
+      "joined": {
+        "server_terminal": {
+          "outcome": "success",
+          "exit_code": 0,
+          "teardown": "clean",
+          "wall_seconds": 17.986
+        },
+        "server_group_drained": true,
+        "sampling_thread_joined": true,
+        "observer": {
+          "exit_code": 0,
+          "joined": true,
+          "forced": false
+        },
+        "host_children": 10,
+        "all_host_children_joined_exit0_unforced": true,
+        "forced_sampling_cancellation": false
+      },
+      "source_transports": [
+        {
+          "repository": "evaluation.local/t521-public",
+          "commit": "6218bbaca1bd557c45c6aba6dfcd0c741ed1f64b",
+          "path": "jaeger_tag.go",
+          "blob_digest": "sha256:94635d6f7ab873a4a884936ee0c2cdc31cb9edd8e5b3cffe7cdf45f0b4c5441c",
+          "unique_consumer_atoms_sliced": 30,
+          "transports": [
+            "GET /api/source full blob",
+            "MCP read_file full blob"
+          ],
+          "blob_read_count": "one immutable full blob per transport by source contract; no instrumented counter"
+        },
+        {
+          "repository": "evaluation.local/t521-public",
+          "commit": "6218bbaca1bd557c45c6aba6dfcd0c741ed1f64b",
+          "path": "testutils/sampling_manager.go",
+          "blob_digest": "sha256:4bebe55774e3c0596ef37ca892863698b1657fda6a55c5d6c65fdeae80ab66d8",
+          "unique_consumer_atoms_sliced": 3,
+          "transports": [
+            "GET /api/source full blob",
+            "MCP read_file full blob"
+          ],
+          "blob_read_count": "one immutable full blob per transport by source contract; no instrumented counter"
+        }
+      ],
+      "native_roots": [
+        {
+          "authority": {
+            "repository": "evaluation.local/t521-public",
+            "domain": "scip-thrift-field",
+            "run_id": "cedd503e5c3368a31383b0b086ac3957",
+            "commit": "6218bbaca1bd557c45c6aba6dfcd0c741ed1f64b",
+            "plan_digest": "sha256:fc9b1e9de558f746d9b055bc82903648daa8ae23a53386d837457814123a0484",
+            "root_digest": "sha256:d6a16a24929bf9c46c5b3decc10e0feed881999cf42d3bfbc2440b2f296fcd45"
+          },
+          "selected_set_version": "1.4.0-released.apache.1",
+          "generation_digest": "sha256:c094d36f37d902907c5a0827d0ffcc79b2fc6175b19b6252457f92bac107e8a9",
+          "candidate_manifest_digest": "sha256:398cf4a0111130f4cbbcd48cae7a60b5a700d79540c4ed4da889b99debd28285",
+          "candidate_generation_digest": "sha256:94399df02dce32e93ae809ee36f78313407f43eab37f2379661390fd1b9a7c76",
+          "source_generation_digest": "sha256:53a8bf40774843caeebc388731c371524f13f6b068ee44dbef6e04e52d3b275d",
+          "observation_generation_digest": "sha256:1c8b94ae2cdaf2dd05af22056c81238558da68e8eb101d8e49bd48b5b4c8ba40",
+          "root_totals": {
+            "facts": 386,
+            "rows": 772,
+            "references": 386,
+            "canonical_bytes": 355092,
+            "encoded_bytes": 355092,
+            "member_bytes": 9039,
+            "members": 1
+          },
+          "disposition": "success",
+          "plan_bytes_digest": "sha256:4f8a5fd82bf671aa17c5c2df67864095cddb04973fbd11d9ee756a21fd501b30"
+        },
+        {
+          "authority": {
+            "repository": "evaluation.local/t522-public",
+            "domain": "scip-thrift-field",
+            "run_id": "2035863a78c628d59ff976515400eb82",
+            "commit": "01726539645e3bab1c04a4633b806dead7a0c97a",
+            "plan_digest": "sha256:d1e3abd0a147fbf7b9e681d32a0d570d2209d708db3d4812868ab1000a6c46f4",
+            "root_digest": "sha256:9448e12bcb40f34a6405a1c040ccb5187afa122e716eeb0d19428b5ded4dfbc5"
+          },
+          "selected_set_version": "1.4.0-released.apache.1",
+          "generation_digest": "sha256:9ed591bf3c48eb71fb938eb099e25d5e325c7c41a13248fe1e8f900625abe05d",
+          "candidate_manifest_digest": "sha256:9abdff9f87bd8e9b8f543e2eea6ff341e6892ce5e14efeb5cc8023e87aa31dd6",
+          "candidate_generation_digest": "sha256:e3c6eee4a160b2ecce6b0b50c17be8dda276dd7d4ff77dd857c03de4f2233946",
+          "source_generation_digest": "sha256:5655f26250a6c8fc9c15b60697d8238c1b2cd240bb75eda1ec651b4b8c6b43e9",
+          "observation_generation_digest": "sha256:bdf97218ce02fd2cf4b609c82e902ab15295ce8c08ee181bd8b719e529274ebd",
+          "root_totals": {
+            "facts": 0,
+            "rows": 0,
+            "references": 0,
+            "canonical_bytes": 0,
+            "encoded_bytes": 0,
+            "member_bytes": 761,
+            "members": 1
+          },
+          "disposition": "success",
+          "plan_bytes_digest": "sha256:cec2d601c95369a3c11b5038b3231bff6ea94a38e53883b39cb3897e1dbb1e1f"
+        }
+      ]
+    },
+    {
+      "name": "both",
+      "selected_generators": [
+        "apache",
+        "thriftrw"
+      ],
+      "extractor_version": "1.4.0-released.apache-thriftrw.1",
+      "native_positive_opportunities": 37,
+      "native_verified_consumer_unique_spans": 37,
+      "native_fixed_query_extra_consumer_facts": 0,
+      "prior_frozen_negative_sites": {
+        "count": 297,
+        "scope": "prior T521/T522 direct full-stream labels/results only; not new native full-stream opportunities or a new negative-site score"
+      },
+      "generated_returned_spans_outside_quality_denominator": 118,
+      "field0_mechanics": {
+        "scope": "numeric_zero_transport_admission_only; no generated-reference recall denominator",
+        "returned_generated_references": 25,
+        "live_reference_claim": true,
+        "reference_scope": "only returned exact source/span facts were validated"
+      },
+      "ready_seconds": 1.031,
+      "server_wall_seconds_through_terminal": 9.902,
+      "measurements": {
+        "rss_samples": 41,
+        "sampled_max_tree_rss_bytes": 240173056,
+        "sampled_max_descendants": 2,
+        "minimum_available_physical_bytes": 7674478592,
+        "physical_samples": 9,
+        "physical_formula": "page_size*(free+inactive+speculative); compressor and swap excluded",
+        "sampled_max_data_allocated_bytes": 13328384,
+        "rss_cadence_seconds": 0.2,
+        "host_disk_cadence_seconds": 1,
+        "qualification": "Sequential native samples after HTTP readiness; not an atomic tree snapshot, transient peak or hard enforcement. Startup before HTTP readiness and teardown are not RSS-sampled. No swap credit."
+      },
+      "joined": {
+        "server_terminal": {
+          "outcome": "success",
+          "exit_code": 0,
+          "teardown": "clean",
+          "wall_seconds": 9.902
+        },
+        "server_group_drained": true,
+        "sampling_thread_joined": true,
+        "observer": {
+          "exit_code": 0,
+          "joined": true,
+          "forced": false
+        },
+        "host_children": 9,
+        "all_host_children_joined_exit0_unforced": true,
+        "forced_sampling_cancellation": false
+      },
+      "source_transports": [
+        {
+          "repository": "evaluation.local/t521-public",
+          "commit": "6218bbaca1bd557c45c6aba6dfcd0c741ed1f64b",
+          "path": "jaeger_tag.go",
+          "blob_digest": "sha256:94635d6f7ab873a4a884936ee0c2cdc31cb9edd8e5b3cffe7cdf45f0b4c5441c",
+          "unique_consumer_atoms_sliced": 30,
+          "transports": [
+            "GET /api/source full blob",
+            "MCP read_file full blob"
+          ],
+          "blob_read_count": "one immutable full blob per transport by source contract; no instrumented counter"
+        },
+        {
+          "repository": "evaluation.local/t521-public",
+          "commit": "6218bbaca1bd557c45c6aba6dfcd0c741ed1f64b",
+          "path": "testutils/sampling_manager.go",
+          "blob_digest": "sha256:4bebe55774e3c0596ef37ca892863698b1657fda6a55c5d6c65fdeae80ab66d8",
+          "unique_consumer_atoms_sliced": 3,
+          "transports": [
+            "GET /api/source full blob",
+            "MCP read_file full blob"
+          ],
+          "blob_read_count": "one immutable full blob per transport by source contract; no instrumented counter"
+        },
+        {
+          "repository": "evaluation.local/t522-public",
+          "commit": "01726539645e3bab1c04a4633b806dead7a0c97a",
+          "path": "common/types/mapper/thrift/health.go",
+          "blob_digest": "sha256:590da41af2161a96865324c25ccf124768e9cada246bd12a78aabb69b99a66f6",
+          "unique_consumer_atoms_sliced": 4,
+          "transports": [
+            "GET /api/source full blob",
+            "MCP read_file full blob"
+          ],
+          "blob_read_count": "one immutable full blob per transport by source contract; no instrumented counter"
+        }
+      ],
+      "native_roots": [
+        {
+          "authority": {
+            "repository": "evaluation.local/t521-public",
+            "domain": "scip-thrift-field",
+            "run_id": "38a062b82e4045f7990b2988a49f94fc",
+            "commit": "6218bbaca1bd557c45c6aba6dfcd0c741ed1f64b",
+            "plan_digest": "sha256:3ee575f5026f01329da2e4d4e89a3f46a9a7ae0a8326e6d48bbf83611f20b30c",
+            "root_digest": "sha256:f00d3effd9adaf2588302321cf4e41155c1248c610c6d41c0c397210fa0be4fa"
+          },
+          "selected_set_version": "1.4.0-released.apache-thriftrw.1",
+          "generation_digest": "sha256:17569826bec2db371677f02ebb99b85952aa68f37851432c8c9ac694d15eba55",
+          "candidate_manifest_digest": "sha256:5c0f369e07101ebd03317b277b3f6c60d5a5625715f89e59812814234c7fd4b8",
+          "candidate_generation_digest": "sha256:ae53f471c2f5a38c80d1aa9b7afdee243f1f40e699618c0b8f1defc17f4e0c36",
+          "source_generation_digest": "sha256:53a8bf40774843caeebc388731c371524f13f6b068ee44dbef6e04e52d3b275d",
+          "observation_generation_digest": "sha256:1c8b94ae2cdaf2dd05af22056c81238558da68e8eb101d8e49bd48b5b4c8ba40",
+          "root_totals": {
+            "facts": 386,
+            "rows": 772,
+            "references": 386,
+            "canonical_bytes": 355092,
+            "encoded_bytes": 355092,
+            "member_bytes": 9039,
+            "members": 1
+          },
+          "disposition": "success",
+          "plan_bytes_digest": "sha256:a06935ae08f2f53b72b4bbfd75cb223e926256df2f0cb29b58cf98eb95d810e0"
+        },
+        {
+          "authority": {
+            "repository": "evaluation.local/t522-public",
+            "domain": "scip-thrift-field",
+            "run_id": "d2b7c7ba196945f4fac5cf55252185c6",
+            "commit": "01726539645e3bab1c04a4633b806dead7a0c97a",
+            "plan_digest": "sha256:7dcd96f1281741e1b41dff3270cdaaef016cff313c71d731a490ebc483546a6d",
+            "root_digest": "sha256:7ce1c00f29360e9b7f01ba0c36d40305ec489b02f4800bfc92631e6fb9c85e98"
+          },
+          "selected_set_version": "1.4.0-released.apache-thriftrw.1",
+          "generation_digest": "sha256:8bc593d10a00b96998f370a3c85fe3742d056378cc102ce7795fdd0117a058c5",
+          "candidate_manifest_digest": "sha256:d1804bae58bd7442478f3ebc1233f6681a5b420d9c10f16894c4233eb85246a2",
+          "candidate_generation_digest": "sha256:29060e2ba69af6684c546cfc1b91b3fa4be72567964f65ade8cb9af45d269ed6",
+          "source_generation_digest": "sha256:5655f26250a6c8fc9c15b60697d8238c1b2cd240bb75eda1ec651b4b8c6b43e9",
+          "observation_generation_digest": "sha256:bdf97218ce02fd2cf4b609c82e902ab15295ce8c08ee181bd8b719e529274ebd",
+          "root_totals": {
+            "facts": 53,
+            "rows": 106,
+            "references": 53,
+            "canonical_bytes": 48882,
+            "encoded_bytes": 48882,
+            "member_bytes": 761,
+            "members": 1
+          },
+          "disposition": "success",
+          "plan_bytes_digest": "sha256:c5e296d1f9ee7f55c39aedaac7b0f69c8e64a55a970c727004dcbc5ec736d593"
+        }
+      ]
+    },
+    {
+      "name": "rw-survivor",
+      "selected_generators": [
+        "thriftrw"
+      ],
+      "extractor_version": "1.4.0-released.thriftrw.1",
+      "native_positive_opportunities": 4,
+      "native_verified_consumer_unique_spans": 4,
+      "native_fixed_query_extra_consumer_facts": 0,
+      "prior_frozen_negative_sites": {
+        "count": 31,
+        "scope": "prior T521/T522 direct full-stream labels/results only; not new native full-stream opportunities or a new negative-site score"
+      },
+      "generated_returned_spans_outside_quality_denominator": 49,
+      "field0_mechanics": {
+        "scope": "numeric_zero_transport_admission_only; no generated-reference recall denominator",
+        "returned_generated_references": 25,
+        "live_reference_claim": true,
+        "reference_scope": "only returned exact source/span facts were validated"
+      },
+      "ready_seconds": 1.035,
+      "server_wall_seconds_through_terminal": 6.675,
+      "measurements": {
+        "rss_samples": 26,
+        "sampled_max_tree_rss_bytes": 225017856,
+        "sampled_max_descendants": 2,
+        "minimum_available_physical_bytes": 7903920128,
+        "physical_samples": 6,
+        "physical_formula": "page_size*(free+inactive+speculative); compressor and swap excluded",
+        "sampled_max_data_allocated_bytes": 15704064,
+        "rss_cadence_seconds": 0.2,
+        "host_disk_cadence_seconds": 1,
+        "qualification": "Sequential native samples after HTTP readiness; not an atomic tree snapshot, transient peak or hard enforcement. Startup before HTTP readiness and teardown are not RSS-sampled. No swap credit."
+      },
+      "joined": {
+        "server_terminal": {
+          "outcome": "success",
+          "exit_code": 0,
+          "teardown": "clean",
+          "wall_seconds": 6.675
+        },
+        "server_group_drained": true,
+        "sampling_thread_joined": true,
+        "observer": {
+          "exit_code": 0,
+          "joined": true,
+          "forced": false
+        },
+        "host_children": 6,
+        "all_host_children_joined_exit0_unforced": true,
+        "forced_sampling_cancellation": false
+      },
+      "source_transports": [
+        {
+          "repository": "evaluation.local/t522-public",
+          "commit": "01726539645e3bab1c04a4633b806dead7a0c97a",
+          "path": "common/types/mapper/thrift/health.go",
+          "blob_digest": "sha256:590da41af2161a96865324c25ccf124768e9cada246bd12a78aabb69b99a66f6",
+          "unique_consumer_atoms_sliced": 4,
+          "transports": [
+            "GET /api/source full blob",
+            "MCP read_file full blob"
+          ],
+          "blob_read_count": "one immutable full blob per transport by source contract; no instrumented counter"
+        }
+      ],
+      "native_roots": [
+        {
+          "authority": {
+            "repository": "evaluation.local/t521-public",
+            "domain": "scip-thrift-field",
+            "run_id": "c3be11c549995802cb09fee4f5b10477",
+            "commit": "6218bbaca1bd557c45c6aba6dfcd0c741ed1f64b",
+            "plan_digest": "sha256:04c6ef1a724ff336b017dd09e53b4b5abcc9abc5be9446147f74fb5a47d6d803",
+            "root_digest": "sha256:1409f551b7e5551b094944eda7c41f98181ef823ef4e3dd88fb8d6459fd8e3bc"
+          },
+          "selected_set_version": "1.4.0-released.thriftrw.1",
+          "generation_digest": "sha256:b3b7839a7106615a29d46be85b9d3c101eb41ef073a5c3e6366fbb124815ab41",
+          "candidate_manifest_digest": "sha256:929c2f422570f31d95e8cafd1cbe18654e7cfa8c4b70610c493be364e57dacd9",
+          "candidate_generation_digest": "sha256:e603e4381715f57d2ffe6a7a906350c1109b6bbdad54fced740230a79008965e",
+          "source_generation_digest": "sha256:53a8bf40774843caeebc388731c371524f13f6b068ee44dbef6e04e52d3b275d",
+          "observation_generation_digest": "sha256:1c8b94ae2cdaf2dd05af22056c81238558da68e8eb101d8e49bd48b5b4c8ba40",
+          "root_totals": {
+            "facts": 0,
+            "rows": 0,
+            "references": 0,
+            "canonical_bytes": 0,
+            "encoded_bytes": 0,
+            "member_bytes": 9039,
+            "members": 1
+          },
+          "disposition": "success",
+          "plan_bytes_digest": "sha256:44d5758709480086f8d947997784fd7690d7b7b402bf3889d9a4884367007e27"
+        },
+        {
+          "authority": {
+            "repository": "evaluation.local/t522-public",
+            "domain": "scip-thrift-field",
+            "run_id": "8531c0ca791db0339c3102bf6e73fb8d",
+            "commit": "01726539645e3bab1c04a4633b806dead7a0c97a",
+            "plan_digest": "sha256:2077194b4a8ef6c160e729840efc917f372bf37e4af0cedfbfda4f3886112dce",
+            "root_digest": "sha256:bb3307abbdcdcf4af2689f58a8c9a99fe8628f37597553d97d3b0585af9d15a0"
+          },
+          "selected_set_version": "1.4.0-released.thriftrw.1",
+          "generation_digest": "sha256:8c205aa159dec01e7b090fdd6fe7529c19fb7a034ac1560b3572eb8b480f2030",
+          "candidate_manifest_digest": "sha256:9eef3d752686e8fb85dab3ea9f4989128e273411a9b278f49711ffedbafad81b",
+          "candidate_generation_digest": "sha256:33e8d195cfdaa6b8cfeb4ce303d73c9474f18a1bdb4773342210a158afe6ca68",
+          "source_generation_digest": "sha256:5655f26250a6c8fc9c15b60697d8238c1b2cd240bb75eda1ec651b4b8c6b43e9",
+          "observation_generation_digest": "sha256:bdf97218ce02fd2cf4b609c82e902ab15295ce8c08ee181bd8b719e529274ebd",
+          "root_totals": {
+            "facts": 53,
+            "rows": 106,
+            "references": 53,
+            "canonical_bytes": 48882,
+            "encoded_bytes": 48882,
+            "member_bytes": 761,
+            "members": 1
+          },
+          "disposition": "success",
+          "plan_bytes_digest": "sha256:c2eeb8a3a461328a3baa1caa509fa3721f55c362ed7f214dacdea9efca701ce3"
+        }
+      ]
+    }
+  ],
+  "prior_direct_public_quality": {
+    "apache": {
+      "record": {
+        "path": "spike/t521/first-result.json",
+        "bytes": 7058,
+        "sha256": "sha256:e1febf98dfae1d880ff664a066f21863e1d5dbb73d4d8dde222a6977a937e902"
+      },
+      "labels": {
+        "path": "spike/t521/source-labels.jsonl",
+        "bytes": 128621,
+        "sha256": "sha256:4e9c7474bc33e98c1d1f057f8e8cd72f71a5801ca157df873e9dbf1bc87c491f"
+      },
+      "outcome_cost": {
+        "path": "spike/t521/outcome-cost.json",
+        "bytes": 9126,
+        "sha256": "sha256:f0d16356d9533d62b06b59b5ca4048a1f99a1799422a86d0ad47e87a445ded30"
+      },
+      "positive_sites": 33,
+      "positive_matched": 33,
+      "negative_sites": 266,
+      "false_positive_negative_sites": 0,
+      "scope": "Prior direct full-stream finite T521 public source labels, not new native negative opportunities; no pooled/generalized accuracy."
+    },
+    "thriftrw": {
+      "record": {
+        "path": "spike/t522/first-result.json",
+        "bytes": 9494,
+        "sha256": "sha256:fb56ce29a3a1c38a4bf999f328669f068b6245d4635152b35f8c15b08f3dd4c4"
+      },
+      "labels": {
+        "path": "spike/t522/source-labels.jsonl",
+        "bytes": 46182,
+        "sha256": "sha256:e1d795ca436c432b46a084ebfaf0703da0ea046321f59376fc66ba2c88643eeb"
+      },
+      "outcome_cost": {
+        "path": "spike/t522/outcome-cost.json",
+        "bytes": 3602,
+        "sha256": "sha256:1e36c96d7bcc274b10db86d6959ae710d292cc577b7c98e99586ea75954820d9"
+      },
+      "positive_sites": 4,
+      "positive_matched": 4,
+      "negative_sites": 31,
+      "false_positive_negative_sites": 0,
+      "scope": "Prior direct full-stream finite T522 public source labels, not new native negative opportunities; no pooled/generalized accuracy."
+    }
+  },
+  "read_ledger_summary": {
+    "recorded_requests": 381,
+    "by_path_and_status": [
+      {
+        "path": "/api/find_field_references",
+        "status": 200,
+        "count": 282
+      },
+      {
+        "path": "/api/find_field_references",
+        "status": 409,
+        "count": 2
+      },
+      {
+        "path": "/api/version",
+        "status": 200,
+        "count": 3
+      },
+      {
+        "path": "/api/mcp",
+        "status": 200,
+        "count": 45
+      },
+      {
+        "path": "/api/find_field_references",
+        "status": 401,
+        "count": 3
+      },
+      {
+        "path": "/api/find_proto_field_references",
+        "status": 404,
+        "count": 3
+      },
+      {
+        "path": "proof_bundles",
+        "status": 200,
+        "count": 36
+      },
+      {
+        "path": "/api/source",
+        "status": 200,
+        "count": 6
+      },
+      {
+        "path": "proof_bundles",
+        "status": 404,
+        "count": 1
+      }
+    ],
+    "maximum_recorded_seconds": 0.130691,
+    "maximum_recorded_body_bytes": 93855,
+    "scope": "All recorded HTTP/MCP/probe/source/proof/control reads; not a per-object cold/warm statistic or latency SLO.409publication probes remain original evidence."
+  },
+  "whole_proof_concurrency": [
+    {
+      "clients": 1,
+      "whole_proof_requests": 1,
+      "wall_seconds": 0.050337,
+      "requests_per_second": 19.865921715792116
+    },
+    {
+      "clients": 4,
+      "whole_proof_requests": 4,
+      "wall_seconds": 0.082513,
+      "requests_per_second": 48.47711212535358
+    },
+    {
+      "clients": 8,
+      "whole_proof_requests": 8,
+      "wall_seconds": 0.132306,
+      "requests_per_second": 60.46577542632971
+    }
+  ],
+  "concurrency_scope": "Exactly one finite batch per1/4/8clients, all within the same measured phase; descriptive observed throughput only, no repeated-load/SLO/capacity inference.",
+  "withdrawal": {
+    "withdrawn": "phebs.thrift.field.apache",
+    "survivor": "phebs.thrift.field.thriftrw",
+    "old_both_proof": "pb_331f09c8bad608f545fe5e57115fba35f29de2bf014a726346b400121a567ddd",
+    "old_proof_current_serving": "404",
+    "historical_bytes": "custody remains a separate retained registration regression; not mutated or newly claimed here"
+  },
+  "cleanup": {
+    "all_server_groups_drained": true,
+    "all_server_exit0_clean": true,
+    "all_sampling_threads_joined": true,
+    "all_observers_exit0_joined_unforced": true,
+    "all_host_children_exit0_joined_unforced": true,
+    "private_scratch_removed_after_join": true,
+    "retention": "Exact source-free first receipt and reviewed binding retained here. Native success removed data/config/token/webhook/rewrite/private key/artifacts/server logs after owned join. Frozen committed source/labels/bundles and prior failed validation logs remain exact."
+  },
+  "steady_state_cost": {
+    "production_request": "Existing neutral field canonicalization admits the selected Thrift domain/lineage and bounded field number, then the shared proof builder reads visible repositories, builds coverage, selects exact current roots with the expected selected-set version, collects only matching bounded facts/source atoms, confirms coverage/roots and final visibility, validates versions and persists the immutable content-addressed proof. Current-serving proof-ID retrieval rechecks admitted versions/authority. No new query engine, per-request source-tree scan, SCIP parse, generator or source hash is introduced by T523 registration or this documentation leaf. Existing proof work remains proportional to visible root metadata and bounded matching evidence, not constant-cost across arbitrary repositories.",
+    "sync_tick": "No added poller or per-pack sync loop. Existing desired-generation logic uses one composed shared-domain extractor. Unchanged source and selected-set identities retain normal no-op behavior.",
+    "startup_restart": "The existing bounded release-artifact census/signature verifier admits independent pack records. Composition happens before generic domain deduplication, yielding exactly one scip-thrift-field extractor for Apache, RW or both. The selected-set version participates in expected generation identity and recovery; a changed set requires replacement extraction. This run used three starts on the same two source commits.",
+    "retry_noop": "Expected selected-set version/current-source checks refuse old/provisional or foreign-version current roots and retained/current-serving proof bytes. Existing bounded proof-build retries handle movement and finish with explicit409, not empty success. No independent retry worker or cache was added.",
+    "publication_transition": "One extraction pass per repository for the selected set, never a separate pass per selected pack. Existing atomic root publication/current-source fences remain. Selected-set changes create distinct generation/plan identities even where input source bytes are identical. The native run observed Apache→both→RW version transitions and withdrawal; no source mutation occurred.",
+    "locks": "No new mutex, store schema, lock scope or long-held runtime lock. Existing worker/publication/lifecycle locks are reused. The extractor holds ordinary immutable admitted input state during its bounded pass; this record supplies no lock-contention or duration measurement.",
+    "cache_invalidation": "No new cache. Three distinct selected-set versions invalidate old generation/reuse/current-serving proof authority. Source/permission/final-root checks remain. The old both-set proof returned404 after Apache withdrawal; historical bytes were not rewritten.",
+    "extractor_memory_and_input_bounds": {
+      "index_bytes": 33554432,
+      "documents": 50000,
+      "occurrences": 500000,
+      "symbol_bytes": 8192,
+      "generated_file_bytes": 4194304,
+      "scope": "Inherited refusal ceilings from the existing reader, not measured scale capacity. Definition/reference metadata and bounded generated-source parsing are retained for one extraction pass; no multiplied per-pack full input copy or corpus replay."
+    },
+    "native_fixture_admission": {
+      "repositories": 2,
+      "exact_files": 48,
+      "exact_bytes": 1291607,
+      "max_regular_files_per_repository": 64,
+      "max_aggregate_bytes": 16777216,
+      "scope": "This fixture admission is separate from the production reader ceilings and leaves the T50332-file helper unchanged."
+    },
+    "harness": "No production edits. Exact small frozen-file hashes/census before execution, bounded returned-atom source/span checking, six native metadata captures (one per repository per phase; each reuses five bounded metadata controls),12fixed objects per phase, five warm reads/object, one finite1/4/8request batch in both phase, three owned server starts, two ordinary release-sign invocations plus one disposable Ed25519 key creation. Imported T503/T513 lifecycle/totalHTTP/sampling/cleanup is reused. Buf is only an inherited bound constructor image and was removed from the serve environment; no Buf/SCIP/generator invocation is claimed.",
+    "source_transport": "Per phase, each unique selected consumer blob is opened once over GET /api/source and once over MCP read_file at the exact immutable commit, then all selected spans are sliced client-side. Native receipt counts2/3/1unique blobs across phases. These are full-blob transports; no new source-range service or instrumented internal blob-read count.",
+    "children_and_concurrency": "Finite request concurrency is at most8 in the both phase; no new product child class or goroutine pool. Server/store/Git/Zoekt/focused-index are existing ordinary runtime paths; an external native observer and vm_stat measurement children are owned and joined. Maximum observed descendants2 is a sample observation, not a total launch count or proof that no short-lived child existed between samples.",
+    "measurement_scope": "Process-tree RSS is the maximum of sequential observed0.2s samples after HTTP readiness; startup/teardown are not RSS-sampled. Physical free+inactive+speculative and allocated data are sampled every1s. No swap/compressor credit, atomic tree snapshot, proven transient peak or hard enforcement inference. The180s wall includes signing, all starts, measured actions and joined cleanup. Per-read latency excludes client conformance verification; cold follows explicit publication probes and may share warm process/cache state."
+  },
+  "not_established": [
+    "No production signature, approval record, activation or deployment. Retained signed records use only disposable integration authority and bind their original prospective artifacts, not these later drafts.",
+    "No Linux capacity, generalized accuracy, scale, service-count ceiling or latency/throughput SLO.",
+    "No source-semantic read/write accuracy: the admitted SCIP observations carry raw read roles.",
+    "No generated-reference recall denominator or completeness; generated facts remain separately source/span validated.",
+    "No runtime use, source/runtime absence, deployment inventory, migration completion, compatibility or removal safety.",
+    "No managed generation, new source/indexing, declaration-family bridge, independent Caller Map/Atlas/Impact/WIRE/Kafka admission or dedicated field UI."
+  ],
+  "production_release": {
+    "status": "PENDING existing unavailable Linux production key and final exact artifact review/binding/signature",
+    "new_release_record_created": false,
+    "production_signature_created": false,
+    "activation_authorized": false,
+    "disposable_selection_scope": "Original actual signed integration records are retained only inside the first receipt. They bind prospective placeholder artifacts and cannot authenticate these newly authored measured cards/manifests/validation drafts.",
+    "expiry_proposal": "2027-01-16T23:59:59Z or earlier source/input/recipe/tool/security/bound drift",
+    "suspension_rollback": "Revoke the affected pack release ID and restart under ordinary selection. Keep the independent survivor; selected-set version changes force replacement current authority. Prior-set proofs/current raw evidence cannot be served as the new set; retained historical bytes remain custody rather than current-serving authority."
+  }
+}
