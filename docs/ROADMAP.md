@@ -164,6 +164,14 @@ was removed. Ben confirmed the Linux signing key/host is currently unavailable.
 The draft retains the refusal and awaits an actual VCS-stamped clean build and
 production signature; the verifier and source requirements are unchanged.
 
+**T47.5 VCS build correction (2026-10-17, PR #81):** the pinned toolchain's
+Git-root detection ignores worktree `.git` files. The new `make release-binary`
+path and `make release` build clean worktrees through an exact-commit temporary
+standalone local clone and verify real embedded VCS metadata before publishing
+the image. Bounded integration tests pass; the earlier refusal stays retained.
+Production signing still waits for the existing Linux key, with no new key or
+runtime-verifier exception.
+
 **Caller Map production priority (2026-10-09, Ben-directed):** after immediate
 SCIP operational availability, Epic 47 targets a supported Caller Map release
 for repositories within current admitted limits. Ben explicitly keeps

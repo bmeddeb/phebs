@@ -3574,6 +3574,13 @@ field-reference domain whose number rules admit the requested identity.
 
 ### Pack-release status, expiry, suspension and rollback (T48.4)
 
+Build signable binaries with `make release-binary` from a clean checkout or
+worktree; [Getting started](./GETTING_STARTED.md#build-and-run) explains the
+worktree-compatible build and exact VCS metadata checks. The existing signer
+continues to reject missing or dirty build identity. T47.5 production signing
+remains pending the existing Linux key; bounded tests use disposable integration
+keys only.
+
 **Caller Map and Atlas acceptance (2026-10-17, Ben-directed):** bounded
 integration tests suffice for these products and their release bindings under
 the amendment at the start of Epic 47 in [BACKLOG.md](../BACKLOG.md). Blind-label

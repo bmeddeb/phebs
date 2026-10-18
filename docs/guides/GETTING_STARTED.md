@@ -56,6 +56,28 @@ exact value is printed by `phebs version`, returned by `/api/version`, written
 to backup manifests, and included in startup logs. Release builds refuse a
 non-SemVer `VERSION`.
 
+For an image used by signed pack-release selection, use a clean checkout:
+
+```bash
+make release-binary VERSION=v0.2.1
+```
+
+This builds the UI and produces `./phebs` with the actual Git commit and
+`vcs.modified=false`. It refuses tracked edits or untracked source files;
+preserve those edits and build from a separate clean worktree. It never stashes
+changes or hides `history.txt`. Ordinary `make build` remains available for
+development with local edits.
+
+The pinned Go 1.26.5 toolchain does not recognize worktrees' `.git` files, so a
+direct `go build` there may omit VCS metadata even with `-buildvcs=true`.
+The release builder uses a disposable standalone local clone for that case,
+checks out the exact selected commit, and copies the already-built ignored UI
+output. It borrows Git objects locally without network access, then removes the
+temporary checkout. Before replacing the requested binary, it reads Go's actual
+build metadata and checks the commit, clean state and unchanged source checkout.
+It never injects a revision through linker flags. `make release` uses the same
+builder; release signing and its existing key remain separate.
+
 For a clean source rebuild, run `make clean` from the repository root before
 `make build`. The clean target removes only standard repository-local
 binaries, the UI bundle,

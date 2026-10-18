@@ -12110,3 +12110,22 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   A correctly VCS-stamped clean build and that existing key remain prerequisites
   for the production record; do not bypass the verifier or create a substitute
   production identity.
+
+- **2026-10-17 — T47.5 worktree-compatible VCS release build (PR #81,
+  Ben-routed Mac fix).** The actual pinned Go 1.26.5 source recognizes Git only
+  through a `.git` directory; a bounded standalone/worktree reproduction proves
+  that even `-buildvcs=true` omits revision metadata for worktree `.git` files.
+  Add `make release-binary` and use the same builder in `make release`. Refuse
+  dirty source without stashing or hiding edits. For clean worktrees, build the
+  actual selected commit from a disposable standalone local shared clone,
+  copying the already-built ignored UI output. Read the resulting Go metadata,
+  require Git, the selected revision and explicit clean state, and recheck source
+  HEAD/cleanliness before replacing the output. No revision is injected, no
+  toolchain or runtime verifier is changed, and production signing remains
+  pending the existing unavailable key. Tests cover standalone/worktree stamps,
+  preservation of dirty history and existing output, and refusal to publish
+  an unstamped image. The retained earlier refusal stays exact. This adds only
+  build-time Git status/metadata checks, plus one temporary checkout/UI copy for
+  worktrees; Git objects are borrowed locally without network access. Runtime
+  requests, sync, startup/restart, retry/no-op, publication, locks, caches,
+  persistent state and child costs are unchanged.

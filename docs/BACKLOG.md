@@ -18359,6 +18359,24 @@ has the same existing source/SCIP, resource and concurrency limits. Warm reuse
 and reads retain existing fences and costs. No UI code changes or new UI
 receipt run is required.
 
+**T47.5 VCS build correction (2026-10-17, PR #81, Ben-routed Mac fix).**
+The cause is the actual pinned Go 1.26.5 toolchain's directory-only Git-root
+recognizer, not absent Git history or a signer defect. A bounded miniature
+standalone/worktree reproduction confirms the difference. `make release-binary`
+and `make release` now use a clean-source builder: worktrees get a disposable
+standalone local shared clone at the exact selected commit plus the prebuilt UI
+output. Native Go metadata must name Git, that actual commit and explicit clean
+state; source HEAD/cleanliness is rechecked before publishing the output. Dirty
+source refuses without changing history or existing output. No linker revision,
+verifier bypass, toolchain edit, label round or ceremony is introduced.
+Standalone/worktree, dirty-history/output-preservation and unstamped-image
+refusal integration tests pass in 1.762 seconds. The original failed receipt
+remains exact; production signing is still pending the existing Linux key.
+Build-only cost: one temporary checkout/UI copy for worktrees, local borrowed
+objects, two source-status checks and one binary metadata read. Runtime request,
+sync, startup/restart, retry/no-op, publication, lock, cache and child costs are
+unchanged.
+
 ## Epic 48 · Shared production-promotion machinery and execution plan *(Ben-directed, 2026-10-09)*
 
 Ben requests a fast plan that starts a production epic for every currently

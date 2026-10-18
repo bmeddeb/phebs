@@ -19,7 +19,7 @@ RELEASE_STAGE = $(RELEASE_ROOT)/.build-$(VERSION)-$(TARGET_GOOS)-$(TARGET_GOARCH
 RELEASE_BUNDLE = $(RELEASE_ROOT)/phebs-$(VERSION)-$(TARGET_GOOS)-$(TARGET_GOARCH)
 T2014_RESULTS_PATH ?= /private/tmp/phebs-t20.14-results.json
 
-.PHONY: dev dev-api build clean validate-version validate-release-version validate-release-target \
+.PHONY: dev dev-api build release-binary clean validate-version validate-release-version validate-release-target \
 	release verify-release smoke-release test ui-test ui-receipts ui-receipts-update lint ui db-server \
 	verify-go verify-node verify-golangci-lint verify-surreal verify-test-surreal verify-glossary t20-closure \
 	docs-check ci ci-static ci-go ci-race ci-ui
@@ -101,6 +101,9 @@ build: validate-version bin/zoekt-git-index bin/phebs-focused-index bin/buf ui #
 	go build -trimpath -tags ui -ldflags "-X main.version=$(VERSION)" -o phebs ./cmd/phebs
 	@test "$$(./phebs version)" = "$(VERSION)"
 
+release-binary: validate-version verify-go ui ## clean VCS-stamped image for signed pack releases
+	sh scripts/build-release-binary.sh "$(abspath phebs)" "$(VERSION)"
+
 clean: ## remove only standard source-tree build/package outputs; never runtime data or caches
 	@root=$$(pwd -P); \
 	if [ -z "$$root" ] || [ "$$root" = "/" ] || \
@@ -141,7 +144,7 @@ clean: ## remove only standard source-tree build/package outputs; never runtime 
 
 release: validate-release-version validate-release-target verify-go verify-node ui ## deterministic manifest-bound release directory
 	mkdir -p "$(RELEASE_STAGE)/bin"
-	CGO_ENABLED=0 GOOS="$(TARGET_GOOS)" GOARCH="$(TARGET_GOARCH)" go build -trimpath -tags ui -ldflags "-X main.version=$(VERSION)" -o "$(RELEASE_STAGE)/phebs" ./cmd/phebs
+	CGO_ENABLED=0 GOOS="$(TARGET_GOOS)" GOARCH="$(TARGET_GOARCH)" sh scripts/build-release-binary.sh "$(abspath $(RELEASE_STAGE))/phebs" "$(VERSION)"
 	CGO_ENABLED=0 GOOS="$(TARGET_GOOS)" GOARCH="$(TARGET_GOARCH)" go build -trimpath -o "$(RELEASE_STAGE)/bin/zoekt-git-index" github.com/sourcegraph/zoekt/cmd/zoekt-git-index
 	CGO_ENABLED=0 GOOS="$(TARGET_GOOS)" GOARCH="$(TARGET_GOARCH)" go build -trimpath -o "$(RELEASE_STAGE)/bin/phebs-focused-index" ./cmd/phebs-focused-index
 	CGO_ENABLED=0 GOOS="$(TARGET_GOOS)" GOARCH="$(TARGET_GOARCH)" go build -trimpath -o "$(RELEASE_STAGE)/bin/buf" github.com/bufbuild/buf/cmd/buf
