@@ -13421,3 +13421,18 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   child follows; validation adds one constant bounded-string check. Prior
   T54.2 receipts remain exact. A fresh UI/binary binding precedes the first
   composed native run; no failed product attempt or release result is invented.
+
+- **2026-10-18 — T54.3 prospective bounded Impact qualification (Ben-routed Mac handoff).**
+  Freeze one operation_callers matrix over the existing T54.1 licensed nineteen
+  source files: five RPCs, nine positive and thirty-six wrong-operation
+  memberships, two scoped-empty queries, exact source and supplied-unit joins.
+  No component result transfers. Bind one current clean image with real HTTP
+  schema metadata, exact tools and shared helper provenance; use three ordinary
+  startup/withdrawal phases and one existing comment publication transition
+  under a single 180-second deadline including browser/child joins. New neutral
+  current/unavailable light/dark frames use the actual native renderer and a
+  fresh comparison; legacy-v2/Noble pixels do not qualify this shape. No release
+  or activation follows until its own measured artifacts and signature exist.
+  Production serving stays unchanged: one existing Caller Map page plus constant
+  wrapper, no new cache/store/worker/child. The opt-in matrix alone adds bounded
+  queries, one transition, sampling and renderer work under recorded limits.

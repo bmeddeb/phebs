@@ -1,0 +1,30 @@
+{
+  "schema": "phebs-t543-existing-transition-binding-v1",
+  "date": "2026-10-18",
+  "source_record_digest": "sha256:3a2f50128c3c22e7e2e0c99a78d5b57ad3b66d4943c92d4e52693d9bf4261a61",
+  "source_record": "spike/t503/planned-transitions.json primary; exact pre-existing source/commit, no new Git or source mutation",
+  "record": {
+    "role": "primary",
+    "repository": "evaluation.local/t503-public",
+    "baseline_commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+    "transition_commit": "5b187e7b79f5580a8918f8c0b34fb3350b447c97",
+    "transition_tree": "965232d0b63975a25a6537d220ac1f6fc00c6d70",
+    "local_path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t503-transition-repositories-spzm9y18/primary",
+    "source_path": "features/multiplex/client/main.go",
+    "old_git_blob": "d5a432e16b120abf18af05b204d4b2bff4f65ae6",
+    "new_git_blob": "d094aacf6a40a25097ab34c72c7fc3eb2862f45f",
+    "old_sha256": "4fd071c359f34dd525a7125e9ef2eaf7ba871828eec21b574467bfb7b9224a7e",
+    "new_sha256": "8b3200590e1c3df7c8bba900d5be2a001264af0dcb1ab334127dbb1aae3ba644",
+    "appended_utf8": "\n// T50.3 publication fence probe: primary source generation changed.\n",
+    "append_start": 2414,
+    "bundle": {
+      "path": "inputs-bundles/primary-transition.bundle",
+      "bytes": 52505,
+      "sha256": "f6e7f99912d2d1d4305a43ce96c8097392173b8e18d8f9c1bcf0aac3c803c73f"
+    },
+    "qualification": "Prospective separate comment-only transition for authority/concurrency mechanics after baseline quality. Frozen selected source byte ranges remain unchanged; this is no additional quality population."
+  },
+  "retained_bundle": "spike/t543/transition.bundle",
+  "new_quality_samples": 0,
+  "activated_by_this_file": false
+}

@@ -19844,6 +19844,16 @@ static controls pass; first composed native qualification uses a fresh image.
 shape; one shape may release without claiming the others. Dependencies are
 the specific inputs it actually consumes, not every experimental pack.
 
+**T54.3 frozen preparation (2026-10-18, Ben-routed Mac handoff).**
+`spike/t543/qualification-plan.json` binds the unchanged T54.1 population and
+labels to one direct new-report matrix, exact HTTP/MCP/citations/unit joins,
+actual 1280/390px interaction, publication/cursor change and independent own/
+consumed-input withdrawal. Nine pure/mock controls pass. One180s deadline
+includes all owned joins and cleanup. Four new neutral current/unavailable
+light/dark frames require author review and fresh native-renderer comparison.
+No native quality, operating, canonical or production signature pass is inferred
+from preparation; prior legacy pixels and source outcomes stay exact.
+
 ## Epic 55 · Kafka producer-evidence production readiness
 
 **T55.1 · Producer topic identity and independent quality** — freeze
