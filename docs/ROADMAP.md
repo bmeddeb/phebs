@@ -156,6 +156,13 @@ pass. T49.4 qualification/UI closure follows; production signing still waits
 for the existing key. Caller Map discovery and Thrift remain independently
 admitted, and labels remain optional.
 
+**T50.1 comparison preparation (2026-10-17):** freeze the supported two-endpoint
+protobuf/gRPC comparison contract and exact source/unit gold cases on the
+implemented T47 identity. T50.2 stable admission can follow those reviewed
+interfaces without waiting for the production key. T50.3 still owns its direct
+quality/operating result and signature; no comparison release follows from
+Caller Map/Atlas's integration-test amendment.
+
 **Caller Map / Atlas sequencing override (2026-10-17, Ben-directed):** bounded
 integration tests suffice for these products and their release bindings. The
 owning amendment at the start of Epic 47 in [BACKLOG.md](./BACKLOG.md) supersedes

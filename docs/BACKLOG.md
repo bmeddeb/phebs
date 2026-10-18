@@ -19254,6 +19254,22 @@ on the supported Epic 47 identity; independently validate source/unit unions,
 `old_only_evidence`, `both_evidence`, `new_only_evidence` and unresolved states.
 No comparison asserts migration completion or decommission safety.
 
+**T50.1 contract/gold checkpoint (2026-10-17, Ben's all-ticket Mac handoff).**
+The dated PLAN contract freezes the first prospective protobuf/gRPC comparison
+recipe, source/unit union identities, explicit unresolved/unavailable behavior,
+two-side authorization/generation/cursor/citation fences and existing bounds.
+New `TestExactCallerComparisonFrozenSourceAndUnitGold` pins the complete neutral
+source/unit row identities and side membership through one-row pagination;
+existing comparison regressions cover independent side drift, hidden sources,
+missing/failed/stale input, exact citation reads and scan/hydration bounds.
+These are composition mechanics/gold cases, not independent caller extraction
+accuracy or T50.3 promotion. Stable admission remains T50.2; actual per-product
+quality, operating evidence and production signing remain T50.3. An independent
+agent reviewed the gold labels from fixture/source construction without reading
+the classifier and accepted them. Exact comparison tests pass 2.902s, focused
+gold race 2.782s; vet, pinned lint (zero issues), docs, glossary and whitespace
+pass. No production behavior, resource ceiling or per-request work changes.
+
 **T50.2 · Stable comparison registration and joint generation fencing** —
 retain two-publication authorization, cursor/lease/citation binding and
 generation drift/refusal; unsupported endpoint pairs are unavailable.

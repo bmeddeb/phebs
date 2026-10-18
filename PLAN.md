@@ -12190,3 +12190,64 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   no additional request, sync, retry/no-op, publication, lock, cache, schema,
   disk scan, child or concurrency work. Existing exact Atlas read costs stay
   unchanged. Each selected release must be signed for the actual new binary.
+
+- **2026-10-17 — T50.1 supported comparison contract and gold cases
+  (Ben's all-ticket Mac handoff).** Freeze the first prospective comparison
+  shape over two complete, authorized protobuf/gRPC Caller Map endpoints from
+  the T47.5 committed-input recipe (`proto-contract@4.0.0`, caller algorithm
+  `1.6.0`, released admission `1.6.0-released.1`). Each endpoint is the exact
+  protocol, declaration repository, provisional repository/path lineage and
+  canonical wire operation, not a method-name, owner or logical-service match.
+  The prospective product claim ID is `phebs.grpc.caller.comparison`; its
+  implementation version is `compare_operation_callers@caller-comparison-v2`.
+  The product envelope stays `caller-comparison-v2`; no schema or algorithm
+  changes. T50.2 owns stable admission and rejects unsupported endpoint pairs;
+  T50.3 still needs its own direct quality/operating result and signature.
+
+  At occurrence level, union identity is repository, immutable indexed commit,
+  path and exact byte range. At unit level, only one consistent resolved unit
+  candidate permits grouping by repository and exact unit ID; common owner or
+  logical-service text never joins populations across repositories. Ambiguous,
+  missing-unit and extractor-abstention occurrences remain unresolved. Old-only,
+  both and new-only label retained evidence in the two selected populations;
+  unresolved stays explicit even when present on both sides. If either complete
+  generation is missing, stale or failed, the whole page has unavailable rows,
+  no numeric total and no continuation; a gap is never an empty exact population.
+  Both repositories are authorized before either publication is opened and
+  jointly confirmed with immutable descriptors before serialization. Cursor
+  authority includes both generations, permissions, query and page size; a
+  transition on either side refuses continuation. Citations reuse exact Caller
+  Map source reads and authorization, never approximate HEAD bytes. No result
+  establishes runtime use, completeness, migration completion or safe retirement.
+
+  Frozen response bounds reuse the existing implementation: default 50/max 100
+  classified rows; four citations per side per row; at most 100 hydrated records
+  per page; 50,000 combined bucket positions including other-lineage scan work;
+  shared eight reverse indexes (128 MiB identity ceiling each), eight compact
+  bindings/200,000 retained positions, five-minute process-local cursor lifetime,
+  eight admitted exact reads and two citation reads. These are refusal/retention
+  ceilings, not measured operating capacity. One same-repository generation is
+  opened/indexed once; two repositories require two. A cold reverse-index miss
+  scans and verifies the whole bounded derived caller generation (at most 200,000
+  result/abstention records), never the repository source corpus. One shared
+  index-build slot serializes cold construction; exact-key negative cache entries
+  prevent unchanged deterministic refusals from repeating that scan. Cached
+  first-page work scans the bounded endpoint union, retains compact
+  classification/sample positions and
+  hydrates only the requested page. Continuation rechecks both authorities and
+  reuses those retained indexes; transitions, expiry/restart and pressure evict
+  according to existing policies. Existing registry/cache mutexes cover bounded
+  bookkeeping; no lock, invalidation scheme, sync tick, startup/retry worker,
+  publication, child, corpus read, disk or memory ceiling changes in this ticket.
+
+  The independent neutral gold ledger labels five existing committed source
+  records: old-only0–11, new-only12–23, paired both24–35, and abstention48–59;
+  the paired records share exact span/unit, and abstention is visible on both
+  sides without becoming resolved. New paged checks pin exact source/unit keys,
+  both side counts, class, attribution and immutable citation identity. Existing
+  independent-side/gap/authorization/scan/cursor/citation tests are reused. This
+  verifies comparison mechanics, not extraction accuracy or T50.3 promotion.
+  A separate agent checked the labels using only fixture/source construction,
+  without reading the grouping/classifier. All exact comparison regressions pass
+  in 2.902s, the new gold test under race in 2.782s; vet, pinned lint (zero issues),
+  docs, glossary and whitespace pass. No production behavior changes.
