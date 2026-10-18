@@ -3951,6 +3951,11 @@ native verified-copy/pre-copy-refusal tests authored, supported Linux compile
 checks, unchanged Darwin source/behavior and focused applicable gates. Linux
 native tests remain explicitly pending on this Mac; metadata observation supplies
 no protected namespace, tool dispatch or ceremony authority.
+Source-preparation checks pass:30modeled metadata controls, existing Darwin
+copy refusals normally/with race, vet/pinned lint and both supported Linux
+compilations. An explicit value-preserving Nlink conversion fixes the first
+arm64 compile refusal; original failure is retained. `spike/t42h2h/` records
+the scope. Four native Linux tests remain unrun, deferred by Ben until2026-10-20.
 
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
