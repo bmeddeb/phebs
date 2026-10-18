@@ -29,7 +29,7 @@ func inputCustodyCopyOwned(info os.FileInfo) bool {
 		return false
 	}
 	stat, ok := info.Sys().(*syscall.Stat_t)
-	return ok && stat != nil && linuxInputCopyOwnerMatches(info.Mode(), stat.Mode, stat.Uid, os.Geteuid(), stat.Nlink)
+	return ok && stat != nil && linuxInputCopyOwnerMatches(info.Mode(), stat.Mode, stat.Uid, os.Geteuid(), uint64(stat.Nlink))
 }
 
 // inputCustodySame compares every uniform Linux Stat_t identity field plus the
