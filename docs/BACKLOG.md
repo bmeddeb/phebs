@@ -19411,6 +19411,18 @@ source/index/label/witness/tool byte before one child-free30s extraction/quality
 measurement. No candidate/scorer has run and no production registration or
 operating/signature result exists at this checkpoint.
 
+**T52.1 finite result (2026-10-18).** The frozen Apache population passes
+public33/33 references plus266 lexical negatives, and separate authored11/11
+references,60 negatives and4 unsupported sites, with zero extra/wrong/duplicate
+or unsupported claims. All14 source/tag/IDL/SCIP witnesses agree;353/1 generated
+emissions stay separate. Raw read roles do not establish semantic write
+accuracy. First result/terminal remain exact; a lint-only equivalent boolean
+correction is separately bound and passes normal/race/vet/pinned lint. Source,
+identity, citation and cost review is clear. This completes the narrow T52.1
+committed-input leaf; T52.2 is independent and T52.3 still owns registration,
+operating and production signature promotion. No generalized accuracy or
+managed/runtime/scale result follows.
+
 **T52.2 · thriftrw field contract and independent quality** — separate
 generator-specific identity and quality population; no Apache result transfers.
 

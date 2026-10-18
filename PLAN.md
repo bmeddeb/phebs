@@ -12582,3 +12582,28 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   unique definition witnesses, exact streaming citations and separate generated
   counts. A static SCIP constant-name correction precedes any compilation or
   candidate output. Candidate execution awaits its serialized bounded slot.
+
+  T52.1's first finite measurement passes in0.282s: public33/33 positive,
+  266 lexical identifier negatives with zero false positives; separate
+  authored11/11 positive,60 negatives and4 unsupported sites with zero claims.
+  All14 independent source/tag/IDL/SCIP definition witnesses agree. Generated
+  emissions353/1 remain separate from quality denominators and have exact
+  streaming citations. Both consumer role maps are raw SCIP read, including
+  source writes; no semantic read/write accuracy is claimed. Callback-inclusive
+  extraction wall is6,178/79 microseconds, with13/6 reads and1,122,604/12,876
+  bytes; input hashing/census/definition checks precede timing. These are finite
+  fixture observations, not isolated CPU, heap, SLO or operating results.
+
+  First result SHA256
+  `e1febf98dfae1d880ff664a066f21863e1d5dbb73d4d8dde222a6977a937e902`
+  stays byte-exact at checkpoint42d8c553. One pinned-lint-only DeMorgan rewrite
+  follows in a separately recorded source/binding lineage; boolean semantics,
+  labels, thresholds, inputs, witnesses and extractor stay unchanged. Normal
+  0.423s/race1.393s and pinned lint zero issues pass, without overwriting or
+  enlarging the first measurement. Vet is clean; root and peer source/identity/
+  citation/cost review finds no remaining blocker. This completes the narrow
+  Apache committed-input quality leaf, not registration/operating/signature
+  promotion. T52.2 remains an independent thriftrw population; T52.3 owns each
+  selected generator's distinct stable admission. Production runtime work is
+  unchanged; only opt-in/ordinary test fixture evaluation adds source/index
+  preflight, existing extraction and local counters, with no child or service.

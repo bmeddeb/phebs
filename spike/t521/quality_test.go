@@ -277,7 +277,7 @@ func sourceCensus(c *corpus, labels []label) (map[string]label, error) {
 		}
 	}
 	for key, row := range gold {
-		if !seen[key] && !(row.Expected == "unsupported" && row.Text == "Code" && strings.HasSuffix(c.files[row.Path][:row.Start], "FieldByName(\"")) {
+		if !seen[key] && (row.Expected != "unsupported" || row.Text != "Code" || !strings.HasSuffix(c.files[row.Path][:row.Start], "FieldByName(\"")) {
 			return nil, fmt.Errorf("label is not in source census %s", key)
 		}
 	}

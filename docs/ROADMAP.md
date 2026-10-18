@@ -5526,6 +5526,12 @@ IDL oracle is frozen and independently reviewed before indexing. Real offline
 SCIP preparation, evaluator Git bindings and final preregistration review come
 before scoring. Registration and each generator's quality stay separate.
 
+**T52.1 finite Apache qualification (2026-10-18):** public33/266 and separate
+authored11/60/4 frozen reference/negative/unsupported checks pass with all14
+identity witnesses. Normal/race/vet/pinned lint and independent source/cost
+review are clear. This is committed-input conformance only; T52.2's thriftrw
+result and T52.3's admission/operating/signature remain separate.
+
 ## On demand
 
 Epic 32 measured the target whole repository and did not trigger P6. P6 remains
