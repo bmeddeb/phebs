@@ -1,0 +1,244 @@
+{
+  "binary_sha256": "c9a5dbc3a69f42c6e941f0212b0dc6b8fe2eef5ca2935a6845fb2eb25d8b7514",
+  "build": {
+    "argv": [
+      "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+      "build",
+      "-trimpath",
+      "-buildvcs=true",
+      "-o",
+      "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t281-ok8_xgqz/reader",
+      "./reader"
+    ],
+    "exact_child_wait4_maxrss_bytes": 86753280,
+    "execution_reserve_seconds": 2,
+    "exit": 0,
+    "joined": true,
+    "observed_rss_limit_bytes": null,
+    "owned_process_group_absent": true,
+    "peak_observed_direct_pid_rss_bytes": 26935296,
+    "rss_qualification": "Observed direct-PID samples plus exact wait4 direct-child peak; not a hard heap cap. Build excludes compiler descendants; parser has no child-producing imports. No aggregate family RSS claim.",
+    "rss_sample_errors": 0,
+    "rss_samples": 21,
+    "sample_interval_ms": 20,
+    "stderr_bytes": 0,
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stdout_bytes": 0,
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stop": null,
+    "wall_limit_seconds_including_cleanup": 60,
+    "wall_seconds": 0.5012453750000001
+  },
+  "candidate_contract_sha256": "d9161c18a3c819bbb96c3109a28a716f4a0b39f06b67e1a9d9a04bd10243b275",
+  "frozen": {
+    "bytes": 1907003,
+    "files": 96,
+    "preregistration_sha256": "ad9f09d50f77a789dd5e9287ae8194ace2ca0d0937d2ac1e764656710893c518",
+    "source_checkpoint": "c525a50f"
+  },
+  "frozen_after": {
+    "bytes": 1907003,
+    "files": 96,
+    "preregistration_sha256": "ad9f09d50f77a789dd5e9287ae8194ace2ca0d0937d2ac1e764656710893c518",
+    "source_checkpoint": "c525a50f"
+  },
+  "git_head_after": "3c1305adfac166a6c5a1d5fbc4725ec6e064d05a",
+  "git_head_at_build": "3c1305adfac166a6c5a1d5fbc4725ec6e064d05a",
+  "git_qualification": "Actual evaluator HEAD recorded separately from frozen input checkpoint and file inventory; no upstream evaluator provenance substitution.",
+  "go_binary_metadata": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t281-ok8_xgqz/reader: go1.26.5\n\tpath\tevaluation.local/t281/reader\n\tmod\tevaluation.local/t281\t(devel)\t\n\tbuild\t-buildmode=exe\n\tbuild\t-compiler=gc\n\tbuild\t-trimpath=true\n\tbuild\tCGO_ENABLED=0\n\tbuild\tGOARCH=arm64\n\tbuild\tGOOS=darwin\n\tbuild\tGOARM64=v8.0\n",
+  "go_tool": {
+    "bytes": 14500160,
+    "path": "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+    "sha256": "3925fc3221ac440ebf7c35361ff663bed0c7bdb2e0a157b75fe993607ffe0a19"
+  },
+  "host": {
+    "machine": "arm64",
+    "platform": "macOS-26.6.2-arm64-arm-64bit"
+  },
+  "outcome": "quality-gaps-no-production-adoption",
+  "passes": [
+    {
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t281-ok8_xgqz/reader"
+      ],
+      "exact_child_wait4_maxrss_bytes": 13369344,
+      "execution_reserve_seconds": 2,
+      "exit": 0,
+      "joined": true,
+      "observed_rss_limit_bytes": 1073741824,
+      "owned_process_group_absent": true,
+      "peak_observed_direct_pid_rss_bytes": 13369344,
+      "rss_qualification": "Observed direct-PID samples plus exact wait4 direct-child peak; not a hard heap cap. Build excludes compiler descendants; parser has no child-producing imports. No aggregate family RSS claim.",
+      "rss_sample_errors": 0,
+      "rss_samples": 18,
+      "sample_interval_ms": 20,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 484258,
+      "stdout_sha256": "4f402423b30529252d4e776bf46c19237b1510b0c00ecfdeb7bbe37fa94942c5",
+      "stop": null,
+      "wall_limit_seconds_including_cleanup": 30,
+      "wall_seconds": 0.432176667
+    },
+    {
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t281-ok8_xgqz/reader"
+      ],
+      "exact_child_wait4_maxrss_bytes": 12926976,
+      "execution_reserve_seconds": 2,
+      "exit": 0,
+      "joined": true,
+      "observed_rss_limit_bytes": 1073741824,
+      "owned_process_group_absent": true,
+      "peak_observed_direct_pid_rss_bytes": 12926976,
+      "rss_qualification": "Observed direct-PID samples plus exact wait4 direct-child peak; not a hard heap cap. Build excludes compiler descendants; parser has no child-producing imports. No aggregate family RSS claim.",
+      "rss_sample_errors": 0,
+      "rss_samples": 8,
+      "sample_interval_ms": 20,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 484258,
+      "stdout_sha256": "4f402423b30529252d4e776bf46c19237b1510b0c00ecfdeb7bbe37fa94942c5",
+      "stop": null,
+      "wall_limit_seconds_including_cleanup": 30,
+      "wall_seconds": 0.17962866700000002
+    }
+  ],
+  "schema": "t281-first-attempt-v1",
+  "scratch_removed_after_child_join": true,
+  "source_after": [
+    {
+      "bytes": 40,
+      "path": "go.mod",
+      "sha256": "e840c8a22b98c88a61f70cfa552b9d904820e549da6eac9b46eb052b08d58473"
+    },
+    {
+      "bytes": 10094,
+      "path": "output-schema.json",
+      "sha256": "0cc0b1227e4e3f50388543d2d106e63aff6ea1974ac6301f9294afdd6c311955"
+    },
+    {
+      "bytes": 5362,
+      "path": "projection-witnesses.json",
+      "sha256": "58d02a79a297b35090d0f8a8b9d07b4b586b3ae636cba93c31c1f15b3f714cbf"
+    },
+    {
+      "bytes": 3889,
+      "path": "reader/acl.go",
+      "sha256": "52e79266eb95980df6675e462a91d4b63ec35e316a3aa048045b1c4d29c9aae7"
+    },
+    {
+      "bytes": 10628,
+      "path": "reader/command.go",
+      "sha256": "bf188dbd012140f93b72f89d6ed1f607379e037dc78befdb09feda882be27955"
+    },
+    {
+      "bytes": 2367,
+      "path": "reader/command_test.go",
+      "sha256": "ca69e52e4aa9d567fdf1fe2ed256f850e0db4b63f7d59800f43d68f630698076"
+    },
+    {
+      "bytes": 15552,
+      "path": "reader/go_source.go",
+      "sha256": "160b30b667ec2a3e9b8b67fd8be65ea06522dd886ce2d65f85c076d431e5cabc"
+    },
+    {
+      "bytes": 6109,
+      "path": "reader/main.go",
+      "sha256": "233b25447d8e52b87e13c553cbcc47e4e96196b4deef161c8d1b331009aaf84d"
+    },
+    {
+      "bytes": 7850,
+      "path": "reader/model.go",
+      "sha256": "ce6f7f8edaa8a6754b4b477094cd74b6a9156688ab549f8fd3ec8bffb611b10a"
+    },
+    {
+      "bytes": 4969,
+      "path": "reader/native.go",
+      "sha256": "2a04ecbec203ff5134bdf6cb101bc14eff94093f06ca1082cc3fcb8b585b5da8"
+    },
+    {
+      "bytes": 1654,
+      "path": "reader/prefix.go",
+      "sha256": "a5494b944de62f0a738039ecba4cb6487406fec438c798d08f10a3a6f1f93a25"
+    },
+    {
+      "bytes": 15694,
+      "path": "run_spike.py",
+      "sha256": "b343dc488e31188b70d6e9fe9f4967c4b9d588e4d26e9c53cbb6811a314fcaf6"
+    },
+    {
+      "bytes": 18106,
+      "path": "score_outputs.py",
+      "sha256": "0aeaf8703c30abf77287d610e34a8e2e42e49f05d25e6f2df7f2099e4a330b4c"
+    }
+  ],
+  "source_inventory": [
+    {
+      "bytes": 40,
+      "path": "go.mod",
+      "sha256": "e840c8a22b98c88a61f70cfa552b9d904820e549da6eac9b46eb052b08d58473"
+    },
+    {
+      "bytes": 10094,
+      "path": "output-schema.json",
+      "sha256": "0cc0b1227e4e3f50388543d2d106e63aff6ea1974ac6301f9294afdd6c311955"
+    },
+    {
+      "bytes": 5362,
+      "path": "projection-witnesses.json",
+      "sha256": "58d02a79a297b35090d0f8a8b9d07b4b586b3ae636cba93c31c1f15b3f714cbf"
+    },
+    {
+      "bytes": 3889,
+      "path": "reader/acl.go",
+      "sha256": "52e79266eb95980df6675e462a91d4b63ec35e316a3aa048045b1c4d29c9aae7"
+    },
+    {
+      "bytes": 10628,
+      "path": "reader/command.go",
+      "sha256": "bf188dbd012140f93b72f89d6ed1f607379e037dc78befdb09feda882be27955"
+    },
+    {
+      "bytes": 2367,
+      "path": "reader/command_test.go",
+      "sha256": "ca69e52e4aa9d567fdf1fe2ed256f850e0db4b63f7d59800f43d68f630698076"
+    },
+    {
+      "bytes": 15552,
+      "path": "reader/go_source.go",
+      "sha256": "160b30b667ec2a3e9b8b67fd8be65ea06522dd886ce2d65f85c076d431e5cabc"
+    },
+    {
+      "bytes": 6109,
+      "path": "reader/main.go",
+      "sha256": "233b25447d8e52b87e13c553cbcc47e4e96196b4deef161c8d1b331009aaf84d"
+    },
+    {
+      "bytes": 7850,
+      "path": "reader/model.go",
+      "sha256": "ce6f7f8edaa8a6754b4b477094cd74b6a9156688ab549f8fd3ec8bffb611b10a"
+    },
+    {
+      "bytes": 4969,
+      "path": "reader/native.go",
+      "sha256": "2a04ecbec203ff5134bdf6cb101bc14eff94093f06ca1082cc3fcb8b585b5da8"
+    },
+    {
+      "bytes": 1654,
+      "path": "reader/prefix.go",
+      "sha256": "a5494b944de62f0a738039ecba4cb6487406fec438c798d08f10a3a6f1f93a25"
+    },
+    {
+      "bytes": 15694,
+      "path": "run_spike.py",
+      "sha256": "b343dc488e31188b70d6e9fe9f4967c4b9d588e4d26e9c53cbb6811a314fcaf6"
+    },
+    {
+      "bytes": 18106,
+      "path": "score_outputs.py",
+      "sha256": "0aeaf8703c30abf77287d610e34a8e2e42e49f05d25e6f2df7f2099e4a330b4c"
+    }
+  ],
+  "source_inventory_unchanged": true
+}

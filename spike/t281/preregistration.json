@@ -1,0 +1,574 @@
+{
+  "format": "t281-preregistration-v2",
+  "date": "2026-10-18",
+  "status": "prospective source-only peer correction; pending independent lead re-review and immutable checkpoint; no recognizer/parser/candidate execution",
+  "source_checkpoint": "9d444940",
+  "recognizer_runs": 0,
+  "scope": "Original licensed public corpus, source-only literal oracles, purposive complete-file sample, exact-version client source references, decisions/bounds and inert controls. No production code/dependencies, Redis/server/module implementation or metadata, application execution or neutral manifest.",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 19483,
+      "sha256": "adc00eaa2306db7005526dc22438a6d9dde6fad332a54ebb79fff58f87ecbbc3"
+    },
+    {
+      "path": "adapter-contract.json",
+      "bytes": 42037,
+      "sha256": "fa4f2b4b712bef147a933d34db0edb65140f87aa192807d58e7d3d32beb028b2"
+    },
+    {
+      "path": "adapter-source-receipt.json",
+      "bytes": 11381,
+      "sha256": "51dc3510f66926ac425dcb2bbb418408fb03d50cb13ff24edc36e569859c93bb"
+    },
+    {
+      "path": "audit_inputs.py",
+      "bytes": 7938,
+      "sha256": "623ac28a7a6951da9e81132e99245a1778bcd1a65cfaad3aa8fb3f4b3b08e061"
+    },
+    {
+      "path": "author_acl_labels.py",
+      "bytes": 2651,
+      "sha256": "e257609ef366881e88f067322a8775aa522477f957f36c1c455490e2d416aafc"
+    },
+    {
+      "path": "author_controls.py",
+      "bytes": 14961,
+      "sha256": "bce45f37eeedd60768770985a59504d3a5a8cc553a5802d86d8eee4dd48ac98f"
+    },
+    {
+      "path": "author_native_labels.py",
+      "bytes": 2661,
+      "sha256": "0264247f8c6c15b0bec77d2c12942237baed0bcc3bf88d1f692a233392fd9cdf"
+    },
+    {
+      "path": "author_usage_labels.py",
+      "bytes": 8328,
+      "sha256": "05ab9bdd7f00ed9b9e5960bf227d90e94455fbe628d52d531f26221d74304a69"
+    },
+    {
+      "path": "bounds.json",
+      "bytes": 2791,
+      "sha256": "52502627f254ab00b358ce94db164bb32fab96c2a4d73b9e17679c9ec08824c7"
+    },
+    {
+      "path": "client-license-receipt.json",
+      "bytes": 806,
+      "sha256": "58b96952339cde453b2f278f169744ba9e7ea0f0fc41f730314a8936e3ec188a"
+    },
+    {
+      "path": "controls.json",
+      "bytes": 42512,
+      "sha256": "72942f1eb9b09fbbafd74b50d5896812d9470538503246c781082eec856c833f"
+    },
+    {
+      "path": "corpus/asynq.tar.gz",
+      "bytes": 205467,
+      "sha256": "f8304509a3448ca8832174966edbb4cbe924b73cb99ced305c75429eabd58e7e"
+    },
+    {
+      "path": "corpus/eino.tar.gz",
+      "bytes": 451444,
+      "sha256": "8970000ffa6cc01a279d7806b2c726bedf5f67b1d2f4a5acf3c825c9005d4ec6"
+    },
+    {
+      "path": "corpus/redis.tar.gz",
+      "bytes": 65081,
+      "sha256": "3c547e3da8f36f7afed4a023a255b4ce5fb2346e338e02cba57c149b6aca82a3"
+    },
+    {
+      "path": "expected-kinds.json",
+      "bytes": 6892,
+      "sha256": "8950a0a00d7232c73c2cbdc6895575666f7e2513bf2c06d2ff227595acfb1a70"
+    },
+    {
+      "path": "fixtures/controls/acl-adjacent-credentials.acl",
+      "bytes": 162,
+      "sha256": "0544d448a8279941b1ac5402100dbf6b989dc24205936bbd07a7c58ababb0506"
+    },
+    {
+      "path": "fixtures/controls/acl-malformed-quote.acl",
+      "bytes": 39,
+      "sha256": "48b07a2fcd0dadbf44952700f89d14fc66de8cd297dad55c02a0747ec97efe3b"
+    },
+    {
+      "path": "fixtures/controls/acl-pattern-looking-secret.acl",
+      "bytes": 91,
+      "sha256": "97cfebe480cdc956303c3a501e87f03dbd0db661f20bb7636d21416767c080f0"
+    },
+    {
+      "path": "fixtures/controls/acl-selector-permissions.acl",
+      "bytes": 69,
+      "sha256": "62471097ae4a988ae5ee69b13cb2dccb1f360c5e6b8f9dcbc3a5f2bb7204a1b5"
+    },
+    {
+      "path": "fixtures/controls/acl-token-bound.acl",
+      "bytes": 4123,
+      "sha256": "ea16b7c0dcfb4b8159b808d2d6b763b9d5494dc58e0ee56670743750b2ae5f52"
+    },
+    {
+      "path": "fixtures/controls/array-mutation-not-literal-proof.go",
+      "bytes": 226,
+      "sha256": "186adf4f6a0d2b1ef9044aebcba215be68621dc21fdc785cc3f7ba5b6f2792ad"
+    },
+    {
+      "path": "fixtures/controls/binary-safe-key.go",
+      "bytes": 188,
+      "sha256": "095791358a0461ec51f4d0b18405370c5ac44f30f7b7a6ef20e8e4894bcd0ba3"
+    },
+    {
+      "path": "fixtures/controls/bounded-format.go",
+      "bytes": 209,
+      "sha256": "bfcae182ea10a883c8034a2503934eb23fee532c400aaccaff259eafcee9f51e"
+    },
+    {
+      "path": "fixtures/controls/core-after-pin.go",
+      "bytes": 201,
+      "sha256": "60937158792360a3a8600cc5612164106d65e5893c202ab64a6e7170f668ac51"
+    },
+    {
+      "path": "fixtures/controls/depth-bound.go",
+      "bytes": 294,
+      "sha256": "9017ee1c372457b5de65ceb0326eda2daa3494bed4778023cb06f3faf227ab9c"
+    },
+    {
+      "path": "fixtures/controls/dynamic-concatenation.go",
+      "bytes": 184,
+      "sha256": "941c98e549542b79d2fe73d92b22a23a7d0078f54a9b5b3db7140f42501b3141"
+    },
+    {
+      "path": "fixtures/controls/eval-explicit-keys.go",
+      "bytes": 218,
+      "sha256": "e8a0f18f3713cb4ac0eae0d517dc5d71732e4afa7a418083bf5033ba8b30c2a0"
+    },
+    {
+      "path": "fixtures/controls/fcall-explicit-keys.go",
+      "bytes": 207,
+      "sha256": "2f9326df43356ab3179f85be68653030b680d6eb635fba38379219fd19d946e3"
+    },
+    {
+      "path": "fixtures/controls/format-brace-uncertainty.go",
+      "bytes": 201,
+      "sha256": "7a659f3f742ed51a0b509fa35dd667ac723f37d8edfa7c73d0d9341367473962"
+    },
+    {
+      "path": "fixtures/controls/ft-flat-vector-closed-positive.go",
+      "bytes": 302,
+      "sha256": "d8ae1d90339727c944f666374c188713ef2b8bcdd000d108af685fbbd7563d01"
+    },
+    {
+      "path": "fixtures/controls/ft-hnsw-outside-narrow-subset.go",
+      "bytes": 302,
+      "sha256": "989f84ba8193f3cce9c236ae582618beef80d4d64e9ce20d9e945f366b76055d"
+    },
+    {
+      "path": "fixtures/controls/ft-partial-atomic.go",
+      "bytes": 303,
+      "sha256": "8833af962dc45db00f247fc6ee53bfe9927adb3497164f8105b9d79c3f3e0238"
+    },
+    {
+      "path": "fixtures/controls/ft-static-projection.go",
+      "bytes": 261,
+      "sha256": "1c09734729ed441d723e277cc91f149037edca3d92ca0436e329ee08dc239c01"
+    },
+    {
+      "path": "fixtures/controls/ft-unsupported-shape-atomic.go",
+      "bytes": 250,
+      "sha256": "ceb0d8f534054f11ad31836dd21179a57a62057bbd7a4c8a7bb4a030909b7551"
+    },
+    {
+      "path": "fixtures/controls/ft-vector-count-mismatch.go",
+      "bytes": 302,
+      "sha256": "fd7cd5fa1708343daf24c37d3755a218350ee57ad903cbf567f0865daec07b75"
+    },
+    {
+      "path": "fixtures/controls/ft-vector-distance-enum.go",
+      "bytes": 301,
+      "sha256": "752d54559cb8e290e08817b7282efcff5b18704f3d8589cc92a4903c44e2c242"
+    },
+    {
+      "path": "fixtures/controls/ft-vector-duplicate-attribute.go",
+      "bytes": 292,
+      "sha256": "e1815a3e1ce616f214b327c4b37a2912d7434ad002a45c415f75b3fe95fffd2c"
+    },
+    {
+      "path": "fixtures/controls/ft-vector-zero-dimension.go",
+      "bytes": 302,
+      "sha256": "a96ffdc98b546137de7fd9d0d31aa0f3e593ba0b960d7e9f50aa7874c7b08329"
+    },
+    {
+      "path": "fixtures/controls/incomplete-spec-fixed-primary.go",
+      "bytes": 203,
+      "sha256": "a10abe91795d404b436f6221b062e68f81abbdee49952b32088beccf5cbce12b"
+    },
+    {
+      "path": "fixtures/controls/input-byte-bound.go",
+      "bytes": 262145,
+      "sha256": "9408817bc040328d1c403ff97e94cea3dfd3a361b2fb7ecc7af75ff3a5157139"
+    },
+    {
+      "path": "fixtures/controls/literal-hash-tags.go",
+      "bytes": 248,
+      "sha256": "2f381dc2ab77aa1edee4c50f20360b64415fe3dae4adc52ee2dc37a8a006a6ad"
+    },
+    {
+      "path": "fixtures/controls/literal-raw-get.go",
+      "bytes": 187,
+      "sha256": "da94bd545de0306bf193035b9635d965f538154b52ed29e71ef47de6b86ffd39"
+    },
+    {
+      "path": "fixtures/controls/malformed-go.go",
+      "bytes": 184,
+      "sha256": "f1ec3f5a5f2b2b1937896f91a074cac620d47faf6b21d71f20977308eeaa89f2"
+    },
+    {
+      "path": "fixtures/controls/negative-script-count.go",
+      "bytes": 194,
+      "sha256": "e1ba7e060b3e66260315015b78a7cec019eea52a30fb942e52fadfa4d098b102"
+    },
+    {
+      "path": "fixtures/controls/opaque-key-helper.go",
+      "bytes": 184,
+      "sha256": "ce94ad92455cf95c05b5db2ef30c226134793a40e3097a09f1950bba120711e5"
+    },
+    {
+      "path": "fixtures/controls/opaque-script-key-list.go",
+      "bytes": 196,
+      "sha256": "4a9fef80ff466968c306442893f0f3b30125bf3afe07e3d4899df88d594b50be"
+    },
+    {
+      "path": "fixtures/controls/overlapping-prefix-families.go",
+      "bytes": 344,
+      "sha256": "aac30a4dd81bf78c8c33b73f332312684e9ad9aef28b690c2052a8bcc73e76ed"
+    },
+    {
+      "path": "fixtures/controls/receiver-ambiguous-field.go",
+      "bytes": 282,
+      "sha256": "c9cdaed614c98b24483492e694d1dc9ad94cd373abfe96d32302ecd6fa1145e3"
+    },
+    {
+      "path": "fixtures/controls/receiver-exact-constructor.go",
+      "bytes": 201,
+      "sha256": "c451c383c82d7edf94adaccab217364fb13d787d68a0099f9bdba096125318fd"
+    },
+    {
+      "path": "fixtures/controls/receiver-reassigned.go",
+      "bytes": 193,
+      "sha256": "76ee3c293dfddcbcb4ff969eaabf1704abd4c6e84e2612bc9da4b684770ab1f1"
+    },
+    {
+      "path": "fixtures/controls/receiver-shadowed-import.go",
+      "bytes": 229,
+      "sha256": "7804610213d8050d34137d06bdad11722e49e916fc44ce088af2303ee67d73d8"
+    },
+    {
+      "path": "fixtures/controls/receiver-shadowed-local.go",
+      "bytes": 198,
+      "sha256": "0127d7cb120629e546ecf9d2cbd8a421f41da8a2c15759bf163e483b30f2c8d9"
+    },
+    {
+      "path": "fixtures/controls/receiver-unproved-copy.go",
+      "bytes": 182,
+      "sha256": "7816e211b6431497ce4570c63932d76f2aa31784d25f5f603f4ddf3363259fa1"
+    },
+    {
+      "path": "fixtures/controls/runtime-namespace.go",
+      "bytes": 174,
+      "sha256": "121a1c9255509acf60a9487a7d597ae22bed2377a24f6316876a3cba4fbc7b6f"
+    },
+    {
+      "path": "fixtures/controls/same-file-constant.go",
+      "bytes": 216,
+      "sha256": "5a0b42498166469d4b65888e506bcf0d476574587d930677247d8731efe89214"
+    },
+    {
+      "path": "fixtures/controls/script-run-unproved-wrapper.go",
+      "bytes": 196,
+      "sha256": "55fa0c82bd39408b77edd0710663bf212c10d380e852170351662691fc0b96b4"
+    },
+    {
+      "path": "fixtures/controls/set-get-branch.go",
+      "bytes": 197,
+      "sha256": "0ee3bf6d83def24d9f8e56626de4a511e648a6a5508c701197ea674c839bf92a"
+    },
+    {
+      "path": "fixtures/controls/set-no-get-branch.go",
+      "bytes": 191,
+      "sha256": "e53e24e7a8ef3f89ae7659e4e77fecce39e265e7bb7be27ddda03b01e269979d"
+    },
+    {
+      "path": "fixtures/controls/set-variable-option.go",
+      "bytes": 229,
+      "sha256": "d8f7a84472ba9b31f8561bed825a620f8134303f0e5c9c301731c89b78d70ed9"
+    },
+    {
+      "path": "fixtures/controls/ts-aggregator-outside-subset.go",
+      "bytes": 233,
+      "sha256": "c28fb0ff89321d5eab67adf7a72b5179fb81d2e9edd17eeaf581d6fa90883599"
+    },
+    {
+      "path": "fixtures/controls/ts-alignment-outside-subset.go",
+      "bytes": 236,
+      "sha256": "7701db110fcb5b3f1208192533e7a2d3b8feec2a942f79f71f703811903f706c"
+    },
+    {
+      "path": "fixtures/controls/ts-create.go",
+      "bytes": 240,
+      "sha256": "8a2ad6b885775f5b7bc5b22be2f41b11ffe830be39cdba70d1c57cfbc016e53f"
+    },
+    {
+      "path": "fixtures/controls/ts-duplicate-label.go",
+      "bytes": 225,
+      "sha256": "b0d9b92ac449d033fe05e6734e8f67613f641664166b39a1311cb2bd01902dd7"
+    },
+    {
+      "path": "fixtures/controls/ts-negative-retention.go",
+      "bytes": 205,
+      "sha256": "2d36ce7da91c42978c57a9cba6adc8ca306ed3316ecbc48d1c902e9c2abe3a2e"
+    },
+    {
+      "path": "fixtures/controls/ts-rule-partial-atomic.go",
+      "bytes": 229,
+      "sha256": "678bc64bf08ea70d0f5526977774d364b35474cc2979688924465e0fee836580"
+    },
+    {
+      "path": "fixtures/controls/ts-rule.go",
+      "bytes": 243,
+      "sha256": "0ed1df7d804b40b1475020eaf5798589fc80ea163e25844499f5955145a5fdb6"
+    },
+    {
+      "path": "fixtures/controls/ts-zero-bucket.go",
+      "bytes": 230,
+      "sha256": "71fcc37b638de2534569e97ecebc41cff58c95d5502bd8f67d9876d21df8aff0"
+    },
+    {
+      "path": "fixtures/controls/typed-get-exact-second-version.go",
+      "bytes": 182,
+      "sha256": "031b71583641a4680be9f20efe1fa586e1e40817ae29dd773234da4abb9f5f86"
+    },
+    {
+      "path": "fixtures/controls/unadmitted-module-command.go",
+      "bytes": 190,
+      "sha256": "cf7fe079b7b638503da05dc8b3df77645468c337cb164cefbf74b9bffc062e62"
+    },
+    {
+      "path": "fixtures/controls/unknown-client-major.go",
+      "bytes": 174,
+      "sha256": "afb7e95a06f68f1ab0f05dc66cfd4d406463813d5930c53239586a179c4d9f4f"
+    },
+    {
+      "path": "fixtures/controls/unknown-expected-kind.go",
+      "bytes": 180,
+      "sha256": "6cbe70e4f2bc4b8b515684cc690c900297b7d8139c747f0c933c42f666a0d6b8"
+    },
+    {
+      "path": "fixtures/controls/unknown-format-specifier.go",
+      "bytes": 199,
+      "sha256": "1381c384443630054ad037d844cf794bcbc0bf73e50041969c47515e9fc12b11"
+    },
+    {
+      "path": "fixtures/controls/unlisted-client-method.go",
+      "bytes": 180,
+      "sha256": "7beca7ddbdd59f0c7b6839aba09d7c2b9b7915ac43992d7266cbe35ad827a498"
+    },
+    {
+      "path": "fixtures/controls/unsupported-exact-v9-version.go",
+      "bytes": 174,
+      "sha256": "e846c65bb38184c910f7130f8ec16d4b906744c0ba54663a7c99c860effd6b08"
+    },
+    {
+      "path": "fixtures/controls/xgroup-create.go",
+      "bytes": 224,
+      "sha256": "5a13d426a333511320f410b7a58a19ab6b6551f26b2d05f4f7912b9a278388d1"
+    },
+    {
+      "path": "input-audit.json",
+      "bytes": 698,
+      "sha256": "a11fb3913f62297e19ab8f7946bd7b247cb7f2168155cfb846749f8b01b3a2a0"
+    },
+    {
+      "path": "label_literals.py",
+      "bytes": 1820,
+      "sha256": "e3f7e630588828ad0e9df44d77b9297f81fb0b9fb2ddeb9b9c031a03647a8de2"
+    },
+    {
+      "path": "labels/native-declarations.json",
+      "bytes": 5012,
+      "sha256": "75e6924fef7706c5256009005f1e364fcd2da7a2bac5114803fdd929ab6050d7"
+    },
+    {
+      "path": "labels/public-acl.json",
+      "bytes": 5915,
+      "sha256": "7e2741b6d437b5cd61618d0604a69a4ff408ae85379a49adc2a42fdf17e0fe13"
+    },
+    {
+      "path": "labels/public-usage.json",
+      "bytes": 90168,
+      "sha256": "d26ddc1ae5d07373230ff4e1391ffa31573750554bacd44cae95b6a2e7adf443"
+    },
+    {
+      "path": "license-receipt.json",
+      "bytes": 2339,
+      "sha256": "3529c816440620afa079e404a10d9b6bcc8e8388f244195076f2a13a5034132b"
+    },
+    {
+      "path": "licenses/asynq-LICENSE",
+      "bytes": 1071,
+      "sha256": "eb4e388868ffc171de2f42cda88885210d65b26f17865f3616b43b1f101a8a3e"
+    },
+    {
+      "path": "licenses/eino-LICENSE-APACHE",
+      "bytes": 10174,
+      "sha256": "69849221bfb90053de2134ef5e6d540287b4b98062326492f1f96f5da685524b"
+    },
+    {
+      "path": "licenses/go-redis-v9.14.1-LICENSE",
+      "bytes": 1318,
+      "sha256": "a3a7dff87da3927db65cb4c87b1cfbc96ca2755704461a485d457be7ae300a86"
+    },
+    {
+      "path": "licenses/go-redis-v9.17.2-LICENSE",
+      "bytes": 1318,
+      "sha256": "a3a7dff87da3927db65cb4c87b1cfbc96ca2755704461a485d457be7ae300a86"
+    },
+    {
+      "path": "licenses/redis-COPYING",
+      "bytes": 1487,
+      "sha256": "97f0a15b7bbae580d2609dad2e11f1956ae167be296ab60f4691ab9c30ee9828"
+    },
+    {
+      "path": "native-subset.json",
+      "bytes": 6109,
+      "sha256": "addbfa4d597ee17e7349c5d37a69e89dc692a6e233521066727d76c56a76721b"
+    },
+    {
+      "path": "preparation/sampling-random-draft.json",
+      "bytes": 124157,
+      "sha256": "d64680b0a7eab4e88c411ac7937708b3ae0b6216151a308dad032e01c73044f0"
+    },
+    {
+      "path": "preparation/source-draft-contracts-85c3ac8a.tar.gz",
+      "bytes": 30422,
+      "sha256": "ef2cd9219b7ef2e654a99a534f21e8474fa0909e37066cf25e3c75b960b12325"
+    },
+    {
+      "path": "prospective-correction.json",
+      "bytes": 1627,
+      "sha256": "9bbaf0379f4c1486b3eff8cd334c691ed36b506e3e750aefbae04aeab9fa6c8d"
+    },
+    {
+      "path": "receiver-source-review.json",
+      "bytes": 31001,
+      "sha256": "4309f275cbd1728e1a198370d3a1dc559ea5a92d600286154e3b900583072365"
+    },
+    {
+      "path": "sampling.json",
+      "bytes": 77274,
+      "sha256": "95fea5a7529749e3d72f73576e4ceda3ffe57adf29673508a419060986f6e831"
+    },
+    {
+      "path": "source-literal-census.json",
+      "bytes": 12936,
+      "sha256": "51805901c4ed66392af470bb57d2ab62192030b6edef3e527beff5dc65fd2c2c"
+    },
+    {
+      "path": "source-receipt.json",
+      "bytes": 203303,
+      "sha256": "5f530c3358e7e47fddce09c7eab3e50335d1acc5a4b09451167c1bc11f9941a1"
+    },
+    {
+      "path": "source-review-notes.json",
+      "bytes": 2882,
+      "sha256": "574bb16fd01250196b84dda65b4e8a91fff5924069ee293adc5d6bbdaf8872ef"
+    },
+    {
+      "path": "source-scope.json",
+      "bytes": 132795,
+      "sha256": "a5dc742cd1dd8329935d268cc082f6fa7859021c6fd2c10c5c0361d0c9c9a216"
+    }
+  ],
+  "file_count": 96,
+  "artifact_bytes": 1907003,
+  "original_source_population": {
+    "files": 793,
+    "bytes": 3600148,
+    "go_source_files": 380,
+    "core_command_jsons": 392,
+    "public_acl_files": 3
+  },
+  "sample": {
+    "method": "purposive; no population accuracy inference",
+    "complete_files": 7,
+    "bytes": 136115
+  },
+  "denominators": {
+    "command_or_unresolved_sites": 99,
+    "admitted_core_api_sites": 37,
+    "opaque_script_wrapper_sites": 52,
+    "unknown_client_version_sites": 8,
+    "unproved_extension_wrapper_sites": 2,
+    "known_key_argument_expressions": 30,
+    "expected_resolved_key_expressions": 0,
+    "provable_access_mode_opportunities": 30,
+    "expected_mode_resolved": 30,
+    "expected_kind_opportunities": 30,
+    "expected_kind_known": 27,
+    "unknown_expected_kind": 3,
+    "explicit_script_key_passthrough_opportunities": 0,
+    "unmeasured_script_wrapper_sites": 52,
+    "uniquely_bindable_spelling_or_family_opportunities": 0
+  },
+  "native_declaration_denominators": {
+    "index_sites": 2,
+    "series_sites": 0,
+    "series_rule_sites": 0,
+    "stream_group_sites": 0,
+    "source_static_resource_names": 1,
+    "runtime_resource_names": 1,
+    "atomic_complete_vectors": 0,
+    "admitted_exact_version_sites": 0
+  },
+  "acl_denominators": {
+    "files": 3,
+    "principal_occurrences": 7,
+    "principal_pattern_pairs": 7,
+    "public_credential_payload_username_collisions": 2
+  },
+  "controls": {
+    "inert_source_fixtures": 60,
+    "admission_role_or_missing_controls": 2,
+    "separate_from_public_denominators": true
+  },
+  "adapter": {
+    "exact_versions": [
+      "v9.14.1",
+      "v9.17.2"
+    ],
+    "immutable_client_source_references": 30,
+    "method_witnesses": 56,
+    "helper_witnesses": 8,
+    "no_client_code_imported_or_executed": true,
+    "receiver_type_constructor_witnesses": 10
+  },
+  "audit": "input-audit.json; chosen literal/module/Git/SHA custody checks only",
+  "pending": [
+    "Independent source/semantic/label review and immutable Git checkpoint before parser implementation/execution",
+    "Freeze exact candidate/output/scorer source identities before first outcomes",
+    "Two fresh joined bounded passes, complete emissions scoring, safe output/citation scans and cost/teardown receipts"
+  ],
+  "qualifications": [
+    "All numeric quality counts are independent source expectations, not candidate outcomes or production quality results.",
+    "Unmeasured script/family cardinalities stay unmeasured.",
+    "Nested v9.7.0 remains unsupported; no corpus patch or version inheritance.",
+    "Old random sample and source-review notes remain explicitly non-authoritative preparation.",
+    "README carries the required frozen decision table; root records normative adoption in PLAN in the same PR.",
+    "No changes to history.txt, sealed artifacts, Git or shared spine."
+  ],
+  "prior_source_only_proposal": {
+    "sha256": "85c3ac8a8e6b1e2b963f97cf7b77b3ef45d27e404d1017fa925561cf714fc770",
+    "before_archive": "preparation/source-draft-contracts-85c3ac8a.tar.gz",
+    "correction_record": "prospective-correction.json"
+  },
+  "receiver_source_review": "receiver-source-review.json; all37 existing API labels remain justified; no public oracle/denominator change",
+  "native_subset": "native-subset.json; FLAT/FLOAT32 only with closed mandatory attributes/counts/enums/ranges/duplicate policy, TS avg/sum and bounded retention/labels/buckets; no vendor validity claim"
+}

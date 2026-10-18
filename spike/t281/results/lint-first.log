@@ -1,0 +1,20 @@
+spike/t281/reader/acl.go:119:44: S1003: should use bytes.ContainsAny(v, "\"'") instead (staticcheck)
+			if len(v) == 0 || t.punctuation != 0 || bytes.IndexAny(v, "\"'") >= 0 {
+			                                        ^
+spike/t281/reader/acl.go:164:6: S1003: should use bytes.ContainsAny(v, "\"'") instead (staticcheck)
+		if bytes.IndexAny(v, "\"'") >= 0 {
+		   ^
+spike/t281/reader/command.go:363:4: QF1003: could use tagged switch on v.State (staticcheck)
+			if v.State == "literal" {
+			^
+spike/t281/reader/go_source.go:20:18: SA1019: ast.Object has been deprecated since Go 1.22 and an alternative has been available since Go 1.0: The relationship between Idents and Objects cannot be correctly computed without type information. For example, the expression T{K: 0} may denote a struct, map, slice, or array literal, depending on the type of T. If T is a struct, then K refers to a field of T, whereas for the other types it refers to a value in the environment. (staticcheck)
+	constant   map[*ast.Object]ast.Expr
+	                ^
+spike/t281/reader/go_source.go:21:18: SA1019: ast.Object has been deprecated since Go 1.22 and an alternative has been available since Go 1.0: The relationship between Idents and Objects cannot be correctly computed without type information. For example, the expression T{K: 0} may denote a struct, map, slice, or array literal, depending on the type of T. If T is a struct, then K refers to a field of T, whereas for the other types it refers to a value in the environment. (staticcheck)
+	bad        map[*ast.Object]bool
+	                ^
+spike/t281/reader/go_source.go:104:104: SA1019: ast.Object has been deprecated since Go 1.22 and an alternative has been available since Go 1.0: The relationship between Idents and Objects cannot be correctly computed without type information. For example, the expression T{K: 0} may denote a struct, map, slice, or array literal, depending on the type of T. If T is a struct, then K refers to a field of T, whereas for the other types it refers to a value in the environment. (staticcheck)
+	g := &goFile{f: f, raw: raw, set: set, tree: tree, e: e, imports: map[string]string{}, constant: map[*ast.Object]ast.Expr{}, bad: map[*ast.Object]bool{}}
+	                                                                                                      ^
+6 issues:
+* staticcheck: 6

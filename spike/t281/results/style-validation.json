@@ -1,0 +1,11 @@
+{
+  "schema": "t281-postmeasurement-static-validation-v1",
+  "normal": "0.210s pass",
+  "race": "1.245s pass",
+  "vet": "pass",
+  "pinned_lint": "2.12.2;0issues after explicit lexical ast.Object deprecation annotations",
+  "public_candidate": "not rerun; first outputs/score/sourcebinding at3c1305ad remain exact",
+  "frozen_inputs": "96rows/preregistration unchanged",
+  "source_correction": "postmeasurement-style-correction.json final_files binds current3sourcefiles; first contract still binds historical implementation",
+  "review": "root+independent peer output/source/custody/cost; CPU explicitly unmeasured; no production or manifest adoption"
+}

@@ -1,0 +1,5 @@
+package neutral
+import ("context"; "fmt"; redis "github.com/redis/go-redis/v9")
+func example(ctx context.Context,c *redis.Client,key,tenant string,id int) {
+c.Do(ctx,"FT.CREATE","index","ON","HASH","PREFIX",1,"doc:","SCHEMA","v","VECTOR","FLAT",6,"TYPE","FLOAT32","TYPE","FLOAT32","DIM",3)
+}
