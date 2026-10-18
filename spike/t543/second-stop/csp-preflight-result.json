@@ -1,0 +1,13 @@
+{
+  "schema": "phebs-t543-axe-csp-preflight-v1",
+  "csp": "default-src 'self'; script-src 'self'",
+  "bypassCSP": false,
+  "console_errors": [],
+  "audit": {
+    "version": "4.12.1",
+    "violations": [],
+    "passes": 5
+  },
+  "axe_sha256": "66a8aaa95a8b044a7fd74a5435873bf04ff65a1ca75567c921b7509742085a14",
+  "outcome": "passed"
+}

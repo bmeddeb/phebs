@@ -1,0 +1,15 @@
+
+Running 4 tests using 1 worker
+
+(node:75010) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+A snapshot doesn't exist at /Users/ben/.codex/worktrees/t511-protobuf-fields/phebs.com/spike/t543/canonical/baselines/operation-impact-current-desktop--light--comfortable.png, writing actual.
+  ✓  1 [t543-native] › ../.codex/worktrees/t511-protobuf-fields/phebs.com/ui/receipts/operation-impact-receipts.spec.ts:24:3 › operation-impact-current-desktop · light · comfortable (1.8s)
+A snapshot doesn't exist at /Users/ben/.codex/worktrees/t511-protobuf-fields/phebs.com/spike/t543/canonical/baselines/operation-impact-unavailable-desktop--light--comfortable.png, writing actual.
+  ✓  2 [t543-native] › ../.codex/worktrees/t511-protobuf-fields/phebs.com/ui/receipts/operation-impact-receipts.spec.ts:24:3 › operation-impact-unavailable-desktop · light · comfortable (1.4s)
+A snapshot doesn't exist at /Users/ben/.codex/worktrees/t511-protobuf-fields/phebs.com/spike/t543/canonical/baselines/operation-impact-current-desktop--dark--comfortable.png, writing actual.
+  ✓  3 [t543-native] › ../.codex/worktrees/t511-protobuf-fields/phebs.com/ui/receipts/operation-impact-receipts.spec.ts:24:3 › operation-impact-current-desktop · dark · comfortable (1.4s)
+A snapshot doesn't exist at /Users/ben/.codex/worktrees/t511-protobuf-fields/phebs.com/spike/t543/canonical/baselines/operation-impact-unavailable-desktop--dark--comfortable.png, writing actual.
+  ✓  4 [t543-native] › ../.codex/worktrees/t511-protobuf-fields/phebs.com/ui/receipts/operation-impact-receipts.spec.ts:24:3 › operation-impact-unavailable-desktop · dark · comfortable (1.3s)
+
+  4 passed (7.3s)

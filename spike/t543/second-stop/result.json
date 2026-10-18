@@ -1,0 +1,2368 @@
+{
+  "schema": "phebs-t543-operation-impact-native-v1",
+  "date": "2026-10-18",
+  "outcome": "stopped_no_retry",
+  "reads": [
+    {
+      "path": "/api/operation_impact_report",
+      "status": 404,
+      "seconds": 0.00521,
+      "bytes": 135,
+      "raw_digest": "sha256:a66e1484b62788988809d6c05afa0cc356ff758d7518e2089f3e76232cbda18c"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 404,
+      "seconds": 0.004087,
+      "bytes": 135,
+      "raw_digest": "sha256:a66e1484b62788988809d6c05afa0cc356ff758d7518e2089f3e76232cbda18c"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.002745,
+      "bytes": 1797,
+      "raw_digest": "sha256:076448ba4b172a9f01ab3f943b7fac77937eeaf9571615b3bf4650f4e4a31a95"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.003331,
+      "bytes": 1797,
+      "raw_digest": "sha256:076448ba4b172a9f01ab3f943b7fac77937eeaf9571615b3bf4650f4e4a31a95"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.005344,
+      "bytes": 1797,
+      "raw_digest": "sha256:076448ba4b172a9f01ab3f943b7fac77937eeaf9571615b3bf4650f4e4a31a95"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.004017,
+      "bytes": 1849,
+      "raw_digest": "sha256:9b2efc6c76f4fb6a6a71dc43fefdb95d5480c9e27490eb808d821bc627fe9619"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.009764,
+      "bytes": 1849,
+      "raw_digest": "sha256:9b2efc6c76f4fb6a6a71dc43fefdb95d5480c9e27490eb808d821bc627fe9619"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.002849,
+      "bytes": 1849,
+      "raw_digest": "sha256:9b2efc6c76f4fb6a6a71dc43fefdb95d5480c9e27490eb808d821bc627fe9619"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.007671,
+      "bytes": 1849,
+      "raw_digest": "sha256:9b2efc6c76f4fb6a6a71dc43fefdb95d5480c9e27490eb808d821bc627fe9619"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.008065,
+      "bytes": 1849,
+      "raw_digest": "sha256:9b2efc6c76f4fb6a6a71dc43fefdb95d5480c9e27490eb808d821bc627fe9619"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.006157,
+      "bytes": 1849,
+      "raw_digest": "sha256:9b2efc6c76f4fb6a6a71dc43fefdb95d5480c9e27490eb808d821bc627fe9619"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.002985,
+      "bytes": 1849,
+      "raw_digest": "sha256:9b2efc6c76f4fb6a6a71dc43fefdb95d5480c9e27490eb808d821bc627fe9619"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.007399,
+      "bytes": 1849,
+      "raw_digest": "sha256:9b2efc6c76f4fb6a6a71dc43fefdb95d5480c9e27490eb808d821bc627fe9619"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.007498,
+      "bytes": 1849,
+      "raw_digest": "sha256:9b2efc6c76f4fb6a6a71dc43fefdb95d5480c9e27490eb808d821bc627fe9619"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.011737,
+      "bytes": 1849,
+      "raw_digest": "sha256:9b2efc6c76f4fb6a6a71dc43fefdb95d5480c9e27490eb808d821bc627fe9619"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.007806,
+      "bytes": 1849,
+      "raw_digest": "sha256:9b2efc6c76f4fb6a6a71dc43fefdb95d5480c9e27490eb808d821bc627fe9619"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.008862,
+      "bytes": 1849,
+      "raw_digest": "sha256:9b2efc6c76f4fb6a6a71dc43fefdb95d5480c9e27490eb808d821bc627fe9619"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.008743,
+      "bytes": 1849,
+      "raw_digest": "sha256:9b2efc6c76f4fb6a6a71dc43fefdb95d5480c9e27490eb808d821bc627fe9619"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.009555,
+      "bytes": 1849,
+      "raw_digest": "sha256:9b2efc6c76f4fb6a6a71dc43fefdb95d5480c9e27490eb808d821bc627fe9619"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.008449,
+      "bytes": 1849,
+      "raw_digest": "sha256:9b2efc6c76f4fb6a6a71dc43fefdb95d5480c9e27490eb808d821bc627fe9619"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.00495,
+      "bytes": 1849,
+      "raw_digest": "sha256:9b2efc6c76f4fb6a6a71dc43fefdb95d5480c9e27490eb808d821bc627fe9619"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.008513,
+      "bytes": 1849,
+      "raw_digest": "sha256:9b2efc6c76f4fb6a6a71dc43fefdb95d5480c9e27490eb808d821bc627fe9619"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.004259,
+      "bytes": 1849,
+      "raw_digest": "sha256:9b2efc6c76f4fb6a6a71dc43fefdb95d5480c9e27490eb808d821bc627fe9619"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.00343,
+      "bytes": 1849,
+      "raw_digest": "sha256:9b2efc6c76f4fb6a6a71dc43fefdb95d5480c9e27490eb808d821bc627fe9619"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.007455,
+      "bytes": 1849,
+      "raw_digest": "sha256:9b2efc6c76f4fb6a6a71dc43fefdb95d5480c9e27490eb808d821bc627fe9619"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.011937,
+      "bytes": 1849,
+      "raw_digest": "sha256:9b2efc6c76f4fb6a6a71dc43fefdb95d5480c9e27490eb808d821bc627fe9619"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.007719,
+      "bytes": 1849,
+      "raw_digest": "sha256:9b2efc6c76f4fb6a6a71dc43fefdb95d5480c9e27490eb808d821bc627fe9619"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.008129,
+      "bytes": 1849,
+      "raw_digest": "sha256:9b2efc6c76f4fb6a6a71dc43fefdb95d5480c9e27490eb808d821bc627fe9619"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.006138,
+      "bytes": 2391,
+      "raw_digest": "sha256:eea9e6ceb58c7421ac75090ab633da096fdabed9ab425af7f274ddab28db80e6"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.007585,
+      "bytes": 2391,
+      "raw_digest": "sha256:eea9e6ceb58c7421ac75090ab633da096fdabed9ab425af7f274ddab28db80e6"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.00528,
+      "bytes": 2387,
+      "raw_digest": "sha256:f0e6b98ed5af176e06baabc63decb16630d109c1ccd2ef00213ffb0d1114518f"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.024225,
+      "bytes": 7231,
+      "raw_digest": "sha256:00dbd177a03516de05d8c491c28980725b40969a31b87e2a4f8b4896579d0002"
+    },
+    {
+      "path": "/api/version",
+      "status": 200,
+      "seconds": 0.000802,
+      "bytes": 229,
+      "raw_digest": "sha256:acf3f2437eafa35553d9acfe57ebf42c50cfd0698dc9053512b5843c311c780c"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.009205,
+      "bytes": 75581,
+      "raw_digest": "sha256:6560e159d8074185eefca5c70399b1fda132a96d84dd11211244ca59e66bd2eb"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.017902,
+      "bytes": 6721,
+      "raw_digest": "sha256:f5538ccee0912fa50b64185bedccc4a6c70fddb3a8458d99a6d0f4da0e8ce70e"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.008881,
+      "bytes": 5636,
+      "raw_digest": "sha256:29be3a1183e571132f8b2d25f96e1d60865a0958fc0f0d4f5b4ba568bda7b955"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.013209,
+      "bytes": 7231,
+      "raw_digest": "sha256:afe408c4b92ac2b929789f4792c75f31a0de222c5b7c2c1ff7c5563ab29c1ce8"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.015757,
+      "bytes": 7231,
+      "raw_digest": "sha256:9153bb52ba65332182809fd10d8b7b3e71fa1d991755928af3465345cbcd493a"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.013802,
+      "bytes": 14979,
+      "raw_digest": "sha256:d3700ad66d08d1fee83f0bcb89b2295cc8523f83861388149918f4bc68c1dec0"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.044918,
+      "bytes": 1891,
+      "raw_digest": "sha256:057dfa20cd3aed288c6aabad74c48973b3d39f7669d6c197d99aaf863a841a24"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.054499,
+      "bytes": 3897,
+      "raw_digest": "sha256:763846908fad69fe8fb612e524f5061b564d98ec3f688ab67045c1ea78547279"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.055143,
+      "bytes": 1891,
+      "raw_digest": "sha256:7e81a39015229a85d33bbb365f7b88aa997e0039acf7bfde734e167c6dd6e056"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.05139,
+      "bytes": 3897,
+      "raw_digest": "sha256:67de543fcbeafbaaf40f3028a2499d32c4054498037363c3d8d0a1992f626c4d"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.023207,
+      "bytes": 7231,
+      "raw_digest": "sha256:a225970203f45cf048f44e9cf7d16e6dcd3ae54d13191337bc71cd8fac716db1"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.021149,
+      "bytes": 7231,
+      "raw_digest": "sha256:102a16f8853f3e36cec4bf7208e179d2ae57945c4e52024d79a9507835c09b2b"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.026427,
+      "bytes": 7231,
+      "raw_digest": "sha256:2f83de277d22bca140851d279fa92735505fe4c091bc576e5f17c760f32da2c7"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.023767,
+      "bytes": 7231,
+      "raw_digest": "sha256:8693b536e375ca23ba82f458e247f6749a89c091f5e9b176116a8580bab3cb30"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.021537,
+      "bytes": 7231,
+      "raw_digest": "sha256:8ade193b9b9a494b0ec52dded987ae68de613385a75367eec3c6e8e5258054cb"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.030794,
+      "bytes": 6762,
+      "raw_digest": "sha256:5efc5bded601af83da45a7e11a9200879c211f95d221990c37c4a95ebc1208da"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.027503,
+      "bytes": 6718,
+      "raw_digest": "sha256:8fd7cca3593994d8ae7264bd6834ee487c5e58a7f96cdfe47be1bc7fc9dc09ce"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.018431,
+      "bytes": 5671,
+      "raw_digest": "sha256:0bd7a3b58aaba01025d7f6b177f7b4441f75637f1eb33d4eed666674a2a2afe4"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.011005,
+      "bytes": 8325,
+      "raw_digest": "sha256:3d957e26b06477badee92d505bedae4bed4bb13cc14f39f0c21b6e9ef47e6c9d"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.008283,
+      "bytes": 5671,
+      "raw_digest": "sha256:692b6b2b1ee24e3aff36a2f45ae4908229ccfe4bc2284be79c1a1e0362e0441a"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.011472,
+      "bytes": 8841,
+      "raw_digest": "sha256:abfd557910bd4144960b7a611c4bea0e51cd5c70cc860cfc9b89d4fca54f63b4"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.01307,
+      "bytes": 18301,
+      "raw_digest": "sha256:2fe4cfc44a2111d904f4410daff7c7d4a0039b8160156c32f3473f2295a9d728"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.043898,
+      "bytes": 1901,
+      "raw_digest": "sha256:076b48b7edad565e19c7cd84c4cda24b8730a6b018bf362ec2a31cd67a4152c2"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.045407,
+      "bytes": 3917,
+      "raw_digest": "sha256:c2fcd322ef707d4b934aca505530a02bd5a296a1e3a47bfd8b2b92b29759d952"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.046653,
+      "bytes": 1891,
+      "raw_digest": "sha256:945c663967f81c76375cf0aae0b248369d1a605a99d70ad2e7ec080f27a1e83e"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.037605,
+      "bytes": 3897,
+      "raw_digest": "sha256:a677f738eeae21e8b694c764fb8b7acc861ea51248ba8066d39822488a8c4cb8"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.040174,
+      "bytes": 1897,
+      "raw_digest": "sha256:8df31c29985104880202c70e9226701966677d74b1f86fde2951bd522d2f04d4"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.036767,
+      "bytes": 3909,
+      "raw_digest": "sha256:c58a1dc06dc9e0af222bfde22d2ca1d73b1f729ad0e054d57880383b2e220a77"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.012411,
+      "bytes": 8841,
+      "raw_digest": "sha256:a8b027e17e20887f59af9cec2d2bce07ac458b941b8ba559bdf45b868fbbbc33"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.012736,
+      "bytes": 8841,
+      "raw_digest": "sha256:5f71f176dee1600396952aba4657e18e87f69464248e9d0ef085283ab9933540"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.012333,
+      "bytes": 8841,
+      "raw_digest": "sha256:3c580d26fab9c6436c23982739b105a40833e77caf1c4a8c47a76cf345c62228"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.011733,
+      "bytes": 8841,
+      "raw_digest": "sha256:4cfc4cb3133cca2c258d98066878a2ad69e5a2704ded14c7651fc3b8dde5726b"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.011586,
+      "bytes": 8841,
+      "raw_digest": "sha256:89baede6618caca0f3a13d125d0f5ec9d80403d7da0c2c3ed9ee514655401295"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.012437,
+      "bytes": 5673,
+      "raw_digest": "sha256:1b5d15007d5001dddf772685a3cff4a3d567f5451109071662bc80081308c72a"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.011213,
+      "bytes": 5673,
+      "raw_digest": "sha256:a690edc33f0556327e474c7293576e9d70a973d7c49ace5448436e5965ea2451"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.011329,
+      "bytes": 5673,
+      "raw_digest": "sha256:e3c06ce2e2e9525da3c8529c82b68785c6171314a6a7b84671faceb425a3d356"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.011988,
+      "bytes": 11761,
+      "raw_digest": "sha256:1c227a269f6b0f85f56bd8e0a5511083379ca986251d7413c5213fe21c4742d6"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.037951,
+      "bytes": 1901,
+      "raw_digest": "sha256:d047541063cd521a3bd746149b6d3070b2b7a26b078694b5bebfa67bf421750f"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.03724,
+      "bytes": 3917,
+      "raw_digest": "sha256:ac5a104fe1d90e26f33587ca9a18162ad479371f68415033cac78021f3764c6c"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.013126,
+      "bytes": 5673,
+      "raw_digest": "sha256:c13447b65a072f7126a7ad38b304dc332c1c709760ededfdd69876bf6c9f13fa"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.011519,
+      "bytes": 5673,
+      "raw_digest": "sha256:60ee1382df81b1a77b36417f52ff84ba9c015321bd9d4e8479aaaf4893537d0e"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.015657,
+      "bytes": 5673,
+      "raw_digest": "sha256:d36f25ea7d09164be0e23965acf4c25f59c94a7af934b1f0d77c9057dfec3736"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.010724,
+      "bytes": 5673,
+      "raw_digest": "sha256:2a0dcedb731bad4236275d4a0701c7f7ef21af957823c4f40c934dd8d576f483"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.01407,
+      "bytes": 5673,
+      "raw_digest": "sha256:cafa72a9ed51d460417c81626c5989da9a032bf5edac13612a1ad2565e84d6f8"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.010992,
+      "bytes": 5675,
+      "raw_digest": "sha256:2c42d870040ab889d607778744b1b444f927cd9688df8ffcc8ee9ab2a584b8f1"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.011242,
+      "bytes": 5675,
+      "raw_digest": "sha256:fdc6443b5a5bc6c98224b9407d1d01bd13384db9f79ffafaf78ea42f1254e97d"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.01476,
+      "bytes": 5675,
+      "raw_digest": "sha256:fe2b5a283ff27c6920d92bb8ea2304ba6aef782e12e799855740d332778001a2"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.011507,
+      "bytes": 11765,
+      "raw_digest": "sha256:ab38dbe8ef6316e05714b9646ee84b3fac0bb1a7cd3d1f3273ac531c0cf39f7c"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.038417,
+      "bytes": 1903,
+      "raw_digest": "sha256:8b27a07a320abf16b8a4755b139e56c65bd82cd055bfd5071176d306bdf4b338"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.038079,
+      "bytes": 3921,
+      "raw_digest": "sha256:becb4ff85bb96070b2883a199f5049decaab67883978142426291a1760442f3a"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.015618,
+      "bytes": 5675,
+      "raw_digest": "sha256:5d097da2e6d556830c7e46643a6338099a566564ca01ce97b0ea60acba84a165"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.02499,
+      "bytes": 5675,
+      "raw_digest": "sha256:30a2eb854bc9e4153756244c14d3269d73bdcf3aff8e85acc5f99d93ce0d52ce"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.021673,
+      "bytes": 5675,
+      "raw_digest": "sha256:51873e368b12f5a3a04915978418102e4215d210d8831c15b7d41db110639217"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.026598,
+      "bytes": 5675,
+      "raw_digest": "sha256:81ef4475dfbc61535f849d1a29a3de674e33116ab2f76f7c8e8790da19bc277e"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.013766,
+      "bytes": 5675,
+      "raw_digest": "sha256:2a27f784cc9025ac1464f1d5dacc220c73a8e93af9537bfe25801a07d4bd57f8"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.010646,
+      "bytes": 6829,
+      "raw_digest": "sha256:aa579a25c3180662634f7cce4c07f97b0f3077af5c6fc9fc00dda134d0a150dc"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.008124,
+      "bytes": 5702,
+      "raw_digest": "sha256:d3acb6fc40dac7544cd1a91ba5d9f7cfa25dd0e9736cc5a200fbefda0a0fb23e"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.011945,
+      "bytes": 7326,
+      "raw_digest": "sha256:8f453633c3a84319fd36710229a29bc8701b2b07f134a5ffd1206d9228975f9c"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.010766,
+      "bytes": 7326,
+      "raw_digest": "sha256:81bde148b5208e407594fa2a5f2f634d1911491408ff975f80940b93eb5ae3b2"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.01152,
+      "bytes": 15169,
+      "raw_digest": "sha256:068318a87a5f6b412fae74f51c629f4e1a6cb0d2ce9cd8af642fec9d5debb335"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.038307,
+      "bytes": 1918,
+      "raw_digest": "sha256:763bed52c9fa116c90e9fbe4dc2f6a0f943fe1de79c1fb646b6f787388554f80"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.038193,
+      "bytes": 3951,
+      "raw_digest": "sha256:8d857098e9e02b6c6e6dc15b31c8a8399141b5b60800d6a0f9678683ab5827a8"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.038473,
+      "bytes": 1910,
+      "raw_digest": "sha256:a9a82bc42b245a0406833456e54a57d5e02da218db7ac931a3d17162666060c8"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.038054,
+      "bytes": 3935,
+      "raw_digest": "sha256:2ff6fa927386da8bb6be4c0ba12de7263cad102ab9cb4f6962fd390dbca03ffa"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.01266,
+      "bytes": 7326,
+      "raw_digest": "sha256:1eedc972cb899186f44d1c8c5cdb5abe42456e90213e28090d9c9b5828acd16e"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.013187,
+      "bytes": 7326,
+      "raw_digest": "sha256:52a8d8dc0a5707d345898b34c41365cb7cf66f44f695f7e77d1cb1b4d028079d"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.012775,
+      "bytes": 7326,
+      "raw_digest": "sha256:f765e52078cd0db7a13c60e95e4860b92419b7d830510dd43934cc4db48ef990"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.017748,
+      "bytes": 7326,
+      "raw_digest": "sha256:ecaa47375060c99c2bee5d985e30606aea8710c9dd313ae627bb412ed98fe72a"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.017007,
+      "bytes": 7326,
+      "raw_digest": "sha256:64554c3fb3f4c4946e5b44ad9a8fab98314883e91ee631218cf5ac1a0c71ef3c"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.015201,
+      "bytes": 4083,
+      "raw_digest": "sha256:c8c8d907d270223966e00747fa0c0d26f0f4238c8a27ba09fecb1e18ea410184"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.017191,
+      "bytes": 4083,
+      "raw_digest": "sha256:c8c8d907d270223966e00747fa0c0d26f0f4238c8a27ba09fecb1e18ea410184"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.019248,
+      "bytes": 4083,
+      "raw_digest": "sha256:c8c8d907d270223966e00747fa0c0d26f0f4238c8a27ba09fecb1e18ea410184"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.020512,
+      "bytes": 8487,
+      "raw_digest": "sha256:21dd8915226c0b53214ffa3302ff0398718f45ed0247a9468124b1622c41c5b7"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.019241,
+      "bytes": 4114,
+      "raw_digest": "sha256:bbe9a3347fe995855f563e7829a64e682a6d5e8da6e7cd7a3d017c8d290a6ce1"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.018754,
+      "bytes": 4114,
+      "raw_digest": "sha256:bbe9a3347fe995855f563e7829a64e682a6d5e8da6e7cd7a3d017c8d290a6ce1"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.012461,
+      "bytes": 4114,
+      "raw_digest": "sha256:bbe9a3347fe995855f563e7829a64e682a6d5e8da6e7cd7a3d017c8d290a6ce1"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.026171,
+      "bytes": 8549,
+      "raw_digest": "sha256:bb50075290b154031644fb34afc0a4a47e6ced303933716fcdb894b7fc50d4db"
+    },
+    {
+      "path": "/api/source",
+      "status": 200,
+      "seconds": 0.03302,
+      "bytes": 1580,
+      "raw_digest": "sha256:d660274d7d5748acd9e84c01e22ba6fc9d53d6fd92b90d9a6adac017abc2643d"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.029605,
+      "bytes": 3249,
+      "raw_digest": "sha256:669b10f1e3ba40f4e33b6b0d5330a24215f9de4ed12ae469370b0f5267b94b2d"
+    },
+    {
+      "path": "/api/source",
+      "status": 200,
+      "seconds": 0.02916,
+      "bytes": 1327,
+      "raw_digest": "sha256:ae283e3627ee3522759f5e60593fbfcb172e281106ce1df7b8c2e2137f1041f2"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.028916,
+      "bytes": 2744,
+      "raw_digest": "sha256:4949adf6a4167ce517c67cdfaaf1cd4b05715b07e27390fae9704101dffeb242"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.016874,
+      "bytes": 7231,
+      "raw_digest": "sha256:67dc8cd51abcfd41bee2f0e8b65f5113fcb523855ccadd2e4b59c0c1383d0a3a"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.01801,
+      "bytes": 5675,
+      "raw_digest": "sha256:6cfbfcc30aabd7a0ca83c13706149be1f8ca556137fbd8ae885417272c7a7881"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.019963,
+      "bytes": 8841,
+      "raw_digest": "sha256:6608fea57a6d273189c8e684e0d2ece7769ddc174e25481950cfc90276f645ea"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.023531,
+      "bytes": 5673,
+      "raw_digest": "sha256:0feae7fa0fd9764d2b0b717d7b01f8db9a6236126207793e0ce92588e7145d56"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.023853,
+      "bytes": 7231,
+      "raw_digest": "sha256:e1c460917e52cb218b529987c62b3a83a06cd66eeac0340e8fcdd6834bac06fe"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.024301,
+      "bytes": 7231,
+      "raw_digest": "sha256:a97fa63e0267ed6ae76a58f942983578ad76d787efcc712f1bebc240d8c1ed0b"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.031199,
+      "bytes": 8841,
+      "raw_digest": "sha256:f4c7736a862096086c809896f28c744f549e90ffe8be240a0e2ed953cd238188"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.03141,
+      "bytes": 7326,
+      "raw_digest": "sha256:daecda0b590c2b4d6ebaafab9078c8198ee0d3c11e45ccbf8a54d7bba00457a2"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.031662,
+      "bytes": 5673,
+      "raw_digest": "sha256:721cdaf1d829a90fdef9ec14ae3890c597ad999a989ae00f7599b4cca889c2e4"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.031709,
+      "bytes": 5675,
+      "raw_digest": "sha256:2dff59eee8e3a783f3d31b5a3fc0c84df6a72f4b83ef844fa3ca4c322b039206"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.031314,
+      "bytes": 8841,
+      "raw_digest": "sha256:d88e1d63fdd7f47f9f1d8b210bc7123cb43f07e987e84f5be0d8bcf55860df5d"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.032072,
+      "bytes": 7231,
+      "raw_digest": "sha256:6ac19beebb7bdecccbba6fff24aee6e8cfd6cfad0b74007553d4422653df98cc"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 200,
+      "seconds": 0.031359,
+      "bytes": 5673,
+      "raw_digest": "sha256:7758b18d535144ad9aeb22c857b5aea0dd74a84cc9c9a2be17720dc7710f7721"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 401,
+      "seconds": 0.000346,
+      "bytes": 36,
+      "raw_digest": "sha256:981ec6aa5b1d3cbd4bc50c6b4c98f877de8334eed519c19bd8463d78e03e8d5a"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 503,
+      "seconds": 0.000419,
+      "bytes": 176,
+      "raw_digest": "sha256:428b20ed74ac1798d2fb77a43e9562a7bdcb075dfada96c2330c9c418986abed"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.000429,
+      "bytes": 171,
+      "raw_digest": "sha256:78f3109137858e962a4cea3e0eda61931483dcb9357d9f57c993161fee79d7f0"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 503,
+      "seconds": 0.000384,
+      "bytes": 176,
+      "raw_digest": "sha256:428b20ed74ac1798d2fb77a43e9562a7bdcb075dfada96c2330c9c418986abed"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.000384,
+      "bytes": 171,
+      "raw_digest": "sha256:78f3109137858e962a4cea3e0eda61931483dcb9357d9f57c993161fee79d7f0"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 503,
+      "seconds": 0.000349,
+      "bytes": 176,
+      "raw_digest": "sha256:428b20ed74ac1798d2fb77a43e9562a7bdcb075dfada96c2330c9c418986abed"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.000372,
+      "bytes": 171,
+      "raw_digest": "sha256:78f3109137858e962a4cea3e0eda61931483dcb9357d9f57c993161fee79d7f0"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 503,
+      "seconds": 0.000354,
+      "bytes": 176,
+      "raw_digest": "sha256:428b20ed74ac1798d2fb77a43e9562a7bdcb075dfada96c2330c9c418986abed"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.000385,
+      "bytes": 171,
+      "raw_digest": "sha256:78f3109137858e962a4cea3e0eda61931483dcb9357d9f57c993161fee79d7f0"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 503,
+      "seconds": 0.000357,
+      "bytes": 176,
+      "raw_digest": "sha256:428b20ed74ac1798d2fb77a43e9562a7bdcb075dfada96c2330c9c418986abed"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.000378,
+      "bytes": 171,
+      "raw_digest": "sha256:78f3109137858e962a4cea3e0eda61931483dcb9357d9f57c993161fee79d7f0"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 503,
+      "seconds": 0.000327,
+      "bytes": 176,
+      "raw_digest": "sha256:428b20ed74ac1798d2fb77a43e9562a7bdcb075dfada96c2330c9c418986abed"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.000357,
+      "bytes": 171,
+      "raw_digest": "sha256:78f3109137858e962a4cea3e0eda61931483dcb9357d9f57c993161fee79d7f0"
+    },
+    {
+      "path": "/api/operation_impact_report",
+      "status": 400,
+      "seconds": 0.00033,
+      "bytes": 200,
+      "raw_digest": "sha256:4cd81d05d2753b7c557b3f9eaaa504ae5c2e00f22453714b99b6560debf845f9"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.000348,
+      "bytes": 205,
+      "raw_digest": "sha256:7f2a7071ae80ef2eed7b9868a585cca3efbc6bdd606ce1ab43ba6e20f35bde42"
+    }
+  ],
+  "phases": [
+    {
+      "phase": "impact-baseline",
+      "ready_seconds": 7.212,
+      "operating": {
+        "rss_samples": 64,
+        "sampled_max_tree_rss_bytes": 243515392,
+        "sampled_max_descendants": 2,
+        "minimum_available_physical_bytes": 7204634624,
+        "physical_samples": 13,
+        "physical_formula": "page_size*(free+inactive+speculative); compressor and swap excluded",
+        "sampled_max_data_allocated_bytes": 1904640,
+        "rss_cadence_seconds": 0.2,
+        "host_disk_cadence_seconds": 1,
+        "qualification": "Sequential native samples after HTTP readiness; not an atomic tree snapshot, transient peak or hard enforcement. Startup before HTTP readiness and teardown are not RSS-sampled. No swap credit.",
+        "ownership": {
+          "sampling_thread_joined": true,
+          "host_children": [
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            }
+          ],
+          "forced_sampling_cancellation": false,
+          "observer": {
+            "exit_code": 0,
+            "joined": true,
+            "forced": false
+          }
+        }
+      },
+      "terminal": {
+        "outcome": "success",
+        "exit_code": 0,
+        "teardown": "clean",
+        "wall_seconds": 20.901
+      },
+      "owned_pgid": 79410,
+      "server_group_drained": true
+    }
+  ],
+  "production_signing": "pending; no production key or production signature",
+  "qualification": "Actual composed operation_callers output over the frozen selected public source and finite Darwin-local HTTP/MCP/UI operating envelope only; no component accuracy transfer, Linux/scale/SLO/runtime/absence or production signature.",
+  "host": {
+    "sysname": "Darwin",
+    "machine": "arm64",
+    "cpu_count": 10,
+    "physical_memory_bytes": 25769803776
+  },
+  "headroom_preflight": {
+    "available_physical_bytes": 7569473536,
+    "page_size": 16384,
+    "pages": {
+      "free": 5044,
+      "inactive": 451178,
+      "speculative": 5782
+    },
+    "formula": "page_size*(free+inactive+speculative); compressor and swap excluded"
+  },
+  "free_disk_preflight_bytes": 222095396864,
+  "bounds": {
+    "complete_native_seconds": 180,
+    "startup_seconds": 30,
+    "publication_seconds": 90,
+    "cold_request_seconds": 2,
+    "warm_request_seconds": 1,
+    "warm_reads": 5,
+    "parallel_requests": 8,
+    "http_response_bytes": 262144,
+    "process_tree_sampled_max_rss_bytes": 2147483648,
+    "minimum_available_physical_headroom_bytes": 4294967296,
+    "minimum_free_disk_bytes": 2147483648,
+    "derived_allocated_disk_bytes": 536870912,
+    "browser_seconds": 25,
+    "repositories": 1,
+    "evaluation_tree_files": 19,
+    "evaluation_tree_bytes": 16777216
+  },
+  "plan_digest": "sha256:52c681221b1824b8e7804953b133a7b91fcef9323e199af44fe4d0e2664277cf",
+  "binding_digest": "sha256:f492275b46b7b22810f1580c4b7d53dfed1a94046a30d152a4270298509ea602",
+  "source_commit": "e72e83f245732d516a9807bf5cc9f9e4623f5a76",
+  "binary_metadata": "/tmp/phebs-main-e72e83f2-native-qualification/phebs: go1.26.5\n\tpath\tgithub.com/bmeddeb/phebs/cmd/phebs\n\tmod\tgithub.com/bmeddeb/phebs\tv0.2.1-0.20261018144526-e72e83f24573\t\n\tdep\tgithub.com/RoaringBitmap/roaring/v2\tv2.19.0\th1:zsWtVE+biht4eVl0YDLvykUqGkftR3Qc5UCbeKB4UQ4=\n\tdep\tgithub.com/alexedwards/scs/v2\tv2.9.0\th1:xa05mVpwTBm1iLeTMNFfAWpKUm4fXAW7CeAViqBVS90=\n\tdep\tgithub.com/beorn7/perks\tv1.0.1\th1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=\n\tdep\tgithub.com/bits-and-blooms/bitset\tv1.24.4\th1:95H15Og1clikBrKr/DuzMXkQzECs1M6hhoGXLwLQOZE=\n\tdep\tgithub.com/bmatcuk/doublestar/v4\tv4.10.0\th1:zU9WiOla1YA122oLM6i4EXvGW62DvKZVxIe6TYWexEs=\n\tdep\tgithub.com/bufbuild/protocompile\tv0.14.2-0.20260716165721-bb5762d29672\th1:6xykiXQPoF/hhOjAhwiHQ0kgcAvrDZw0Tjl1VQkpu5c=\n\tdep\tgithub.com/cespare/xxhash/v2\tv2.3.0\th1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=\n\tdep\tgithub.com/cockroachdb/errors\tv1.11.3\th1:5bA+k2Y6r+oz/6Z/RFlNeVCesGARKuC6YymtcDrbC/I=\n\tdep\tgithub.com/cockroachdb/logtags\tv0.0.0-20241215232642-bb51bb14a506\th1:ASDL+UJcILMqgNeV5jiqR4j+sTuvQNHdf2chuKj1M5k=\n\tdep\tgithub.com/cockroachdb/redact\tv1.1.5\th1:u1PMllDkdFfPWaNGMyLD1+so+aq3uUItthCFqzwPJ30=\n\tdep\tgithub.com/coreos/go-oidc/v3\tv3.16.0\th1:qRQUCFstKpXwmEjDQTIbyY/5jF00+asXzSkmkoa/mow=\n\tdep\tgithub.com/danielgtaylor/huma/v2\tv2.38.0\th1:fb0WZCatnaiHLphMQDDWDjygNxfMkX/ENma3QsRl7vY=\n\tdep\tgithub.com/dustin/go-humanize\tv1.0.1\th1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkpeCY=\n\tdep\tgithub.com/fatih/color\tv1.19.0\th1:Zp3PiM21/9Ld6FzSKyL5c/BULoe/ONr9KlbYVOfG8+w=\n\tdep\tgithub.com/fsnotify/fsnotify\tv1.8.0\th1:dAwr6QBTBZIkG8roQaJjGof0pp0EeF+tNV7YBP3F/8M=\n\tdep\tgithub.com/fxamacker/cbor/v2\tv2.9.2\th1:X4Ksno9+x3cz0TZv69ec1hxP/+tymuR8PXQJyDwfh78=\n\tdep\tgithub.com/getsentry/sentry-go\tv0.31.1\th1:ELVc0h7gwyhnXHDouXkhqTFSO5oslsRDk0++eyE0KJ4=\n\tdep\tgithub.com/go-enry/go-enry/v2\tv2.9.6\th1:np63eOtMV56zfYDHnFVgpEVOk8fr2kmylcMnAZUDbSs=\n\tdep\tgithub.com/go-jose/go-jose/v4\tv4.1.3\th1:CVLmWDhDVRa6Mi/IgCgaopNosCaHz7zrMeF9MlZRkrs=\n\tdep\tgithub.com/gofrs/flock\tv0.13.0\th1:95JolYOvGMqeH31+FC7D2+uULf6mG61mEZ/A8dRYMzw=\n\tdep\tgithub.com/gofrs/uuid\tv4.4.0+incompatible\th1:3qXRTX8/NbyulANqlc0lchS1gqAVxRgsuW1YrTJupqA=\n\tdep\tgithub.com/gogo/protobuf\tv1.3.2\th1:Ov1cvc58UF3b5XjBnZv7+opcTcQFZebYjWzi34vdm4Q=\n\tdep\tgithub.com/google/go-cmp\tv0.7.0\th1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=\n\tdep\tgithub.com/google/jsonschema-go\tv0.4.3\th1:/DBOLZTfDow7pe2GmaJNhltueGTtDKICi8V8p+DQPd0=\n\tdep\tgithub.com/google/uuid\tv1.6.0\th1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=\n\tdep\tgithub.com/gorilla/websocket\tv1.5.3\th1:saDtZ6Pbx/0u+bgYQ3q96pZgCzfhKXGPqt7kZ72aNNg=\n\tdep\tgithub.com/grafana/regexp\tv0.0.0-20240607082908-2cb410fa05da\th1:BML5sNe+bw2uO8t8cQSwe5QhvoP04eHPF7bnaQma0Kw=\n\tdep\tgithub.com/grpc-ecosystem/go-grpc-middleware/v2\tv2.3.3\th1:B+8ClL/kCQkRiU82d9xajRPKYMrB7E0MbtzWVi1K4ns=\n\tdep\tgithub.com/kr/pretty\tv0.3.1\th1:flRD4NNwYAUpkphVc1HcthR4KEIFJ65n8Mw5qdRn3LE=\n\tdep\tgithub.com/kr/text\tv0.2.0\th1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=\n\tdep\tgithub.com/mattn/go-colorable\tv0.1.15\th1:+u9SLTRGnXv73cEsnsmoZBom+dMU88B2M0aDcWy0/jY=\n\tdep\tgithub.com/mattn/go-isatty\tv0.0.23\th1:cYwCQTQf3HB6xUC+BtyCLZNr7IzbOmoZbmssVNzSyiQ=\n\tdep\tgithub.com/modelcontextprotocol/go-sdk\tv1.6.1\th1:0zOSupjKUxPKSocPT1Wtago+mUHU2/uZ4xSOY0FGReU=\n\tdep\tgithub.com/mschoch/smat\tv0.2.0\th1:8imxQsjDm8yFEAVBe7azKmKSgzSkZXDuKkSq9374khM=\n\tdep\tgithub.com/munnerz/goautoneg\tv0.0.0-20191010083416-a7dc8b61c822\th1:C3w9PqII01/Oq1c1nUAm88MOHcQC9l5mIlSMApZMrHA=\n\tdep\tgithub.com/opentracing/opentracing-go\tv1.2.0\th1:uEJPy/1a5RIPAJ0Ov+OIO8OxWu77jEv+1B0VhjKrZUs=\n\tdep\tgithub.com/pkg/errors\tv0.9.1\th1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=\n\tdep\tgithub.com/prometheus/client_golang\tv1.23.2\th1:Je96obch5RDVy3FDMndoUsjAhG5Edi49h0RJWRi/o0o=\n\tdep\tgithub.com/prometheus/client_model\tv0.6.2\th1:oBsgwpGs7iVziMvrGhE53c/GrLUsZdHnqNwqPLxwZyk=\n\tdep\tgithub.com/prometheus/common\tv0.66.1\th1:h5E0h5/Y8niHc5DlaLlWLArTQI7tMrsfQjHV+d9ZoGs=\n\tdep\tgithub.com/rogpeppe/go-internal\tv1.14.1\th1:UQB4HGPB6osV0SQTLymcB4TgvyWu6ZyliaW0tI/otEQ=\n\tdep\tgithub.com/rs/xid\tv1.6.0\th1:fV591PaemRlL6JfRxGDEPl69wICngIQ3shQtzfy2gxU=\n\tdep\tgithub.com/scip-code/scip/bindings/go/scip\tv0.9.0\th1:C0LVhTl9Gw+2UC4d7RZdvB0iWUkaOyRA1fQW1CrhsMA=\n\tdep\tgithub.com/segmentio/asm\tv1.2.1\th1:DTNbBqs57ioxAD4PrArqftgypG4/qNpXoJx8TVXxPR0=\n\tdep\tgithub.com/segmentio/encoding\tv0.5.4\th1:OW1VRern8Nw6ITAtwSZ7Idrl3MXCFwXHPgqESYfvNt0=\n\tdep\tgithub.com/sourcegraph/beaut\tv0.0.0-20240611013027-627e4c25335a\th1:j/CQ27s679M9wRGBRJYyXGrfkYuQA6VMnD7R08mHD9c=\n\tdep\tgithub.com/sourcegraph/go-ctags\tv0.0.0-20250729094530-349a251d78d8\th1:hpCD/FvbXLR7/034fKD0CQ8LmT4zoQfT2DzJIjqMzUI=\n\tdep\tgithub.com/sourcegraph/log\tv0.0.0-20241024013702-574f7079c888\th1:9PUH8Hn8mVhPTtRKqot1HHsbLRDP0H2A+FSyuRumP2Q=\n\tdep\tgithub.com/sourcegraph/zoekt\tv0.0.0-20260709064101-33f1f18af292\th1:HsoQyVl9olsjSqA0YddekTbCJOsfn9bUeu//bLg6fa8=\n\tdep\tgithub.com/surrealdb/surrealdb.go\tv1.5.1\th1:5uyGYkwjO9p3UEdRBroWGhw5PpLuJorenmeB9GtGWKo=\n\tdep\tgithub.com/tetratelabs/wazero\tv1.12.0\th1:DuWcpNu/FzgEXgGBDp8J1Spc+CWOvvtvVyjKlaZopYU=\n\tdep\tgithub.com/wasilibs/go-re2\tv1.10.0\th1:vQZEBYZOCA9jdBMmrO4+CvqyCj0x4OomXTJ4a5/urQ0=\n\tdep\tgithub.com/wasilibs/wazero-helpers\tv0.0.0-20240620070341-3dff1577cd52\th1:OvLBa8SqJnZ6P+mjlzc2K7PM22rRUPE1x32G9DTPrC4=\n\tdep\tgithub.com/x448/float16\tv0.8.4\th1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=\n\tdep\tgithub.com/yosida95/uritemplate/v3\tv3.0.2\th1:Ed3Oyj9yrmi9087+NczuL5BwkIc4wvTb5zIM+UJPGz4=\n\tdep\tgithub.com/yuin/goldmark\tv1.4.13\th1:fVcFKWvrslecOb/tg+Cc05dkeYx540o0FuFt3nUVDoE=\n\tdep\tgo.uber.org/atomic\tv1.11.0\th1:ZvwS0R+56ePWxUNi+Atn9dWONBPp/AUETXlHW0DxSjE=\n\tdep\tgo.uber.org/multierr\tv1.11.0\th1:blXXJkSxSSfBVBlC76pxqeO+LN3aDfLQo+309xJstO0=\n\tdep\tgo.uber.org/thriftrw\tv1.34.0\th1:F6aIyIg6B1+fx7aiylVyqDdTG8mtLQfREfOdlm6u+mI=\n\tdep\tgo.uber.org/zap\tv1.28.0\th1:IZzaP1Fv73/T/pBMLk4VutPl36uNC+OSUh3JLG3FIjo=\n\tdep\tgo.yaml.in/yaml/v2\tv2.4.2\th1:DzmwEr2rDGHl7lsFgAHxmNz/1NlQ7xLIrlN2h5d1eGI=\n\tdep\tgolang.org/x/crypto\tv0.54.0\th1:YLIA59K4fiNzHzjnZt2tUJQjQtUWfWbeHBqKtk3eScw=\n\tdep\tgolang.org/x/mod\tv0.38.0\th1:MECBjubtXD7yj4HrhIUcywNaGeNVUdfVnxmPajOk4yk=\n\tdep\tgolang.org/x/net\tv0.57.0\th1:K5+3DljvIuDG9/Jv9rvyMywYNFCQ9RSUY6OOTTkT+tE=\n\tdep\tgolang.org/x/oauth2\tv0.36.0\th1:peZ/1z27fi9hUOFCAZaHyrpWG5lwe0RJEEEeH0ThlIs=\n\tdep\tgolang.org/x/sync\tv0.22.0\th1:SZjpbeLmrCk4xhRSZFNZW5gFUeCeFgjekvI/+gfScek=\n\tdep\tgolang.org/x/sys\tv0.47.0\th1:o7XGOvZQCADBQQ4Y7VNq2dRWQR7JmOUW8Kxx4ZsNgWs=\n\tdep\tgolang.org/x/text\tv0.40.0\th1:Ub2Z6/xjgF1WrYQz2nuITOEegKFtiIy+rieRJ5lHZKs=\n\tdep\tgoogle.golang.org/genproto/googleapis/rpc\tv0.0.0-20260715232425-e75dac1f907d\th1:Jkpk39hlTZOIp3RbfvNX9R8Hv+Sw0X89nlU/xFOErsc=\n\tdep\tgoogle.golang.org/grpc\tv1.80.0\th1:Xr6m2WmWZLETvUNvIUmeD5OAagMw3FiKmMlTdViWsHM=\n\tdep\tgoogle.golang.org/protobuf\tv1.36.11\th1:fV6ZwhNocDyBLK0dj+fg8ektcVegBBuEolpbTQyBNVE=\n\tdep\tgopkg.in/yaml.v3\tv3.0.1\th1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=\n\tbuild\t-buildmode=exe\n\tbuild\t-compiler=gc\n\tbuild\t-tags=ui\n\tbuild\t-trimpath=true\n\tbuild\tCGO_ENABLED=1\n\tbuild\tGOARCH=arm64\n\tbuild\tGOOS=darwin\n\tbuild\tGOARM64=v8.0\n\tbuild\tvcs=git\n\tbuild\tvcs.revision=e72e83f245732d516a9807bf5cc9f9e4623f5a76\n\tbuild\tvcs.time=2026-10-18T14:45:26Z\n\tbuild\tvcs.modified=false\n",
+  "binary_digest": "sha256:9afde64013cd2c920fa009395064f4a80a0fe501c467054cbc43ccbabce035e4",
+  "tool_bindings": {
+    "go": {
+      "path": "/opt/homebrew/bin/go",
+      "resolved_path": "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+      "bytes": 14500160,
+      "sha256": "sha256:3925fc3221ac440ebf7c35361ff663bed0c7bdb2e0a157b75fe993607ffe0a19",
+      "version": "go1.26.5",
+      "version_evidence": "go version go1.26.5 darwin/arm64"
+    },
+    "git": {
+      "path": "/usr/bin/git",
+      "resolved_path": "/usr/bin/git",
+      "bytes": 118640,
+      "sha256": "sha256:b8763cf250e607a778bb4603cecb5b90338814d0a3dfcba0d57b1de242f610e9",
+      "version_evidence": "git version 2.54.0 (Apple Git-157)"
+    },
+    "zoekt_git_index": {
+      "path": "/tmp/phebs-main-bbb41b2c-native-qualification/zoekt-git-index",
+      "resolved_path": "/private/tmp/phebs-main-bbb41b2c-native-qualification/zoekt-git-index",
+      "bytes": 39081090,
+      "sha256": "sha256:dd216b7e4df21b956a8a3461108ac81ee6cb700799a3decf9c739af2ba003c4d",
+      "version": "same-bbb41b2c-go.mod",
+      "version_evidence": "fresh helper-build-receipt.json; inherited-cache build, no cold claim"
+    },
+    "focused_index": {
+      "path": "/tmp/phebs-main-bbb41b2c-native-qualification/phebs-focused-index",
+      "resolved_path": "/private/tmp/phebs-main-bbb41b2c-native-qualification/phebs-focused-index",
+      "bytes": 27295666,
+      "sha256": "sha256:701d83e026ac926d3e5d92a948a68c346c11335ce83c37c31bd62207beb0d8b5",
+      "version": "same-bbb41b2c-go.mod",
+      "version_evidence": "fresh helper-build-receipt.json; inherited-cache build, no cold claim"
+    },
+    "buf": {
+      "path": "/Users/ben/.codex/worktrees/t445-header/phebs.com/bin/buf",
+      "resolved_path": "/Users/ben/.codex/worktrees/t445-header/phebs.com/bin/buf",
+      "bytes": 77461554,
+      "sha256": "sha256:691b8635ab9c083e38f1d892bf10799ea688070ed8ef8081d9b7907d0a7e4658",
+      "version_evidence": "1.72.0"
+    },
+    "surreal": {
+      "path": "/opt/homebrew/bin/surreal",
+      "resolved_path": "/opt/homebrew/opt/phebs-surreal-3.2.0/surreal",
+      "bytes": 233283488,
+      "sha256": "sha256:ee819dfcedd23035a785ac40f2509f86cbb09fc3255726ad74755b161a3ca0a8",
+      "version": "3.2.0",
+      "version_evidence": "3.2.0 for macos on aarch64"
+    },
+    "node": {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+      "resolved_path": "/private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+      "bytes": 120965360,
+      "sha256": "sha256:ee6fb0e015284d83a91e8ec5213f43a157f8a392b58555301682892ba928c04a",
+      "version": "v24.18.0",
+      "version_evidence": "v24.18.0"
+    },
+    "chrome": {
+      "path": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "resolved_path": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "bytes": 367696,
+      "sha256": "sha256:3972431aa8acff4e590998116c6c3e663e9a4d0eb6efd08fd160df8206db94a6",
+      "version": "155.0.8059.82",
+      "version_evidence": "Source-bound installed-Chrome preflight actual renderer155.0.8059.82, clean exit0 joined teardown"
+    },
+    "chrome_framework": {
+      "path": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/Current/Google Chrome Framework",
+      "resolved_path": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.82/Google Chrome Framework",
+      "bytes": 520002192,
+      "sha256": "sha256:b9aa14e0270a6a96bde855b9765c2a6eb48d0af70da7e9018f9622c4f626ef6c",
+      "version": "155.0.8059.82",
+      "version_evidence": "Source-bound installed-Chrome preflight actual renderer155.0.8059.82, clean exit0 joined teardown"
+    },
+    "openssl": {
+      "path": "/opt/homebrew/opt/openssl@3/bin/openssl",
+      "resolved_path": "/opt/homebrew/Cellar/openssl@3/3.6.3/bin/openssl",
+      "bytes": 880512,
+      "sha256": "sha256:103fc7706cf6646f226d96f29242d81890363499afc730e7ef1fadd64b3a123c",
+      "version_evidence": "OpenSSL3.6.3/library3.6.3"
+    },
+    "vm_stat": {
+      "path": "/usr/bin/vm_stat",
+      "resolved_path": "/usr/bin/vm_stat",
+      "bytes": 101664,
+      "sha256": "sha256:0127fec1de1d99c7f0b0cf185fec048c7fe92d1f1b2ad380882c583f0c921df7",
+      "version_evidence": "Darwin system sampler image; no sample performed during draft prep"
+    }
+  },
+  "input_censuses": [
+    {
+      "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+      "tree": "a0d73c675a066f2e969c1caa2db205576108d57e",
+      "files": 19,
+      "bytes": 316648,
+      "census_digest": "sha256:18891698bfb2873c21d794e1d1652902f36be06fcca4ed2e017d52d13164383b"
+    },
+    {
+      "commit": "5b187e7b79f5580a8918f8c0b34fb3350b447c97",
+      "tree": "965232d0b63975a25a6537d220ac1f6fc00c6d70",
+      "files": 19,
+      "bytes": 316718,
+      "census_digest": "sha256:d2d744a1cbea958fd9ad201b809ebf6b64853faab8e6d3c1118ae4e48204cb25"
+    }
+  ],
+  "source_coordinate_preparation": {
+    "schema": "phebs-t541-source-check-v1",
+    "date": "2026-10-18",
+    "outcome": "frozen_source_coordinates_verified_no_predictions",
+    "files": 19,
+    "rpc_declarations": 5,
+    "source_sites": 9,
+    "query_memberships": {
+      "positive": 9,
+      "negative": 36,
+      "filtered_empty_queries": 2
+    },
+    "report_predictions_read": 0,
+    "native_runs": 0,
+    "qualification": "Source-coordinate/internal-census verification only. Independent review, actual composed quality and operating measurement remain pending."
+  },
+  "disposable_records": [
+    {
+      "record": {
+        "release_schema_version": "1.0",
+        "release_id": "rel-phebs.grpc.caller.go-1.0.0",
+        "release_version": "1.0.0",
+        "pack_id": "phebs.grpc.caller.go",
+        "pack_claim_version": "1.0.0",
+        "card": {
+          "artifact_id": "caller-map-card-1.0.0.md",
+          "digest": "sha256:cd7da69ef7d87d409f6d1d4c51a2ee360962f7cd9dbf6503989b23c801f9871e"
+        },
+        "manifest": {
+          "artifact_id": "caller-map-manifest-1.0.0.json",
+          "digest": "sha256:0240bb3f49629ce94db833e3599c665223bdf3e6ba8bbbd00a8d4ab5a87992c7"
+        },
+        "implementation": {
+          "phebs_source_commit": "e72e83f245732d516a9807bf5cc9f9e4623f5a76",
+          "phebs_binary_digest": "sha256:9afde64013cd2c920fa009395064f4a80a0fe501c467054cbc43ccbabce035e4",
+          "pack_implementation_digest": "sha256:bb2dcc25ff017afb98aeba3adbf2596f5bcd64efaf6a4602b7e937c66413c4ea",
+          "toolchain_digest": "sha256:c6652a655b5c51d1ce66b001a3f82f118b97fecfca54705e3b7313d6c8b82dba"
+        },
+        "referenced_artifacts_root_digest": "sha256:b76255a5918f9d74a2cf53736b4b5d1c3f131ca0d33ac2e6874e789743b920be",
+        "validation": {
+          "artifact_id": "caller-map-validation-1.0.0.json",
+          "digest": "sha256:6725b8a7465f643d2da7c9b811f622c445441c7058e234c4a35c9116797768c2",
+          "applies": true,
+          "expires_at": "2027-01-16T23:59:59Z",
+          "expiry_trigger": null
+        },
+        "derived_status": "released",
+        "approved_at": "2026-10-18T00:00:00Z",
+        "approval_records": [
+          "t543-disposable-key-measurement-only"
+        ],
+        "canonicalization": {
+          "algorithm": "phebs-canonical-json",
+          "version": "1"
+        },
+        "signature": {
+          "key_id": "t543-integration-only",
+          "algorithm": "ed25519",
+          "value": "QL8HXE+ZfayHuAbnHdnV4Ty/uxzwsjrheAObI7JI1BeB5ELgrD6/eRfhvNYRwJsA7RsQW22CEwk/vyU2DZVbCw=="
+        }
+      },
+      "sha256": "sha256:af1df0733b315483940ebcfdb1858f3ca281502980ee585aad24b3cfdbfbefaa"
+    },
+    {
+      "record": {
+        "release_schema_version": "1.0",
+        "release_id": "rel-phebs.contract.impact.operation-1.0.0",
+        "release_version": "1.0.0",
+        "pack_id": "phebs.contract.impact.operation",
+        "pack_claim_version": "1.0.0",
+        "card": {
+          "artifact_id": "operation-impact-card-1.0.0.md",
+          "digest": "sha256:e049017ec0a5dfdc0c5bc8ace5022c0833d839ee07da1efe5aeca91ac3ee4617"
+        },
+        "manifest": {
+          "artifact_id": "operation-impact-manifest-1.0.0.json",
+          "digest": "sha256:81c6bb680228975e76946c24931812c3c27f58572566f4193b109f4281f03a31"
+        },
+        "implementation": {
+          "phebs_source_commit": "e72e83f245732d516a9807bf5cc9f9e4623f5a76",
+          "phebs_binary_digest": "sha256:9afde64013cd2c920fa009395064f4a80a0fe501c467054cbc43ccbabce035e4",
+          "pack_implementation_digest": "sha256:bb2dcc25ff017afb98aeba3adbf2596f5bcd64efaf6a4602b7e937c66413c4ea",
+          "toolchain_digest": "sha256:c6652a655b5c51d1ce66b001a3f82f118b97fecfca54705e3b7313d6c8b82dba"
+        },
+        "referenced_artifacts_root_digest": "sha256:b76255a5918f9d74a2cf53736b4b5d1c3f131ca0d33ac2e6874e789743b920be",
+        "validation": {
+          "artifact_id": "operation-impact-validation-1.0.0.json",
+          "digest": "sha256:dee4389eb6721d1c4aaea9d509367e7a9bd419c56cd66b04564e15b534d698d2",
+          "applies": true,
+          "expires_at": "2027-01-16T23:59:59Z",
+          "expiry_trigger": null
+        },
+        "derived_status": "released",
+        "approved_at": "2026-10-18T00:00:00Z",
+        "approval_records": [
+          "t543-disposable-key-measurement-only"
+        ],
+        "canonicalization": {
+          "algorithm": "phebs-canonical-json",
+          "version": "1"
+        },
+        "signature": {
+          "key_id": "t543-integration-only",
+          "algorithm": "ed25519",
+          "value": "Y4AczcbGiH/ZWLAqrIC8yKXLZA7TbVbFcM4UOxBavcGyQs5AwK3uzHJdcbpVFuOcxQS3CSI3DrqJn53ifxhvDA=="
+        }
+      },
+      "sha256": "sha256:06a57743e114d4530304b0757ec1e8e2924ee788fb6057d1944703dbd56b5fc0"
+    }
+  ],
+  "resolver_units": [
+    {
+      "repository": "evaluation.local/t503-public",
+      "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+      "resolver_generation": "sha256:163510a739b58d3c56b87a575287e460cc4d2a816a188b90541d19fca279b20c",
+      "resolver_authority": "sha256:b23f0fcc1fc833a29aca5c2bb269345944b5c08cff56baff96e4215331668aa0",
+      "pack_set_digest": "sha256:f2042fea6780e4ef3c6e5823b7779350e19c67099db2ef73ffd858df89d413ad",
+      "unit_member_digest": "sha256:01c6a794fe9dce1c3072558cb59db5a7a770b60e67bfba90c30dac1dbcc69000",
+      "unit_input": {
+        "input_digest": "sha256:23b21c02ee9ca6afacebc12774bed65d450e238df2fbad03e19696a60d656864",
+        "input_object_id": "bec863cd04d297a334ff9bd322c63f9200b126ae",
+        "input_path": "unit-snapshot.json",
+        "kind": "consumer_unit_input",
+        "mapping_total": 4,
+        "pack": "go-module",
+        "pack_version": "1.2.0",
+        "record_schema": "phebs-resolver-consumer-unit-v1",
+        "schema": "phebs-resolver-catalog-record-v1",
+        "state": "resolved"
+      },
+      "materialization_policy": {
+        "consumer_unit_record_schema": "phebs-resolver-consumer-unit-v1",
+        "consumer_unit_scope": "selected-caller-overlay-path-oid-v1",
+        "declaration_record_schema": "phebs-resolver-declaration-target-v1",
+        "generated_ordering": "declaration-input-mapping-symbol-sorted-candidates-invocation-v2",
+        "generated_record_schema": "phebs-resolver-generated-attribution-v2",
+        "generated_symbol_identity_accounting": "catalog-wide-unique-source-plus-descriptor-v1",
+        "generated_symbol_record_schema": "phebs-resolver-generated-go-symbol-v1",
+        "max_consumer_unit_identity_bytes": 16777216,
+        "max_consumer_unit_mappings": 25000,
+        "max_consumer_unit_member_bytes": 16777216,
+        "max_consumer_unit_snapshot_bytes": 4194304,
+        "max_declaration_path_bytes": 16777216,
+        "max_declaration_records": 25000,
+        "max_generated_candidate_bytes": 16777216,
+        "max_generated_candidate_bytes_per_selector": 131072,
+        "max_generated_candidate_expansions": 25000,
+        "max_generated_candidates_per_selector": 1024,
+        "max_generated_mappings": 25000,
+        "max_generated_symbol_descriptors": 100000,
+        "max_generated_symbol_identity_bytes": 33554432,
+        "max_generated_symbol_source_bytes": 4194304,
+        "max_generated_symbol_sources": 25000,
+        "max_generator_invocations": 128,
+        "max_go_module_bytes": 4194304,
+        "max_input_blob_bytes": 536870912,
+        "max_input_blob_reads": 100000,
+        "max_layout_roots": 128,
+        "max_snapshot_blob_bytes": 10485760,
+        "module_ordering": "candidate-caller-order-v1",
+        "module_parsing": "single-line-strict-token-factored-unsupported-v1",
+        "module_record_schema": "phebs-resolver-go-module-v1",
+        "name": "phebs-resolver-materialization-policy-v2",
+        "protocol_member_schema": "phebs-resolver-protocol-member-v2",
+        "snapshot_decoding": "exact-unique-keys-bounded-stream-v1",
+        "state_vocabulary": "resolved-unavailable-ambiguous-unsupported-v1",
+        "timeout_milliseconds": 300000
+      },
+      "catalog_identity": {
+        "repository": "evaluation.local/t503-public",
+        "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+        "unit_digest": "",
+        "declarations": [
+          {
+            "domain": "proto-contract",
+            "run_id": "df2f06bbf8fdb707f43d7c157405414d",
+            "generation_digest": "sha256:7c7908e87fc1eaa8e1dfd2fe4ed93c9ba100ec30cac76caf1aa021037c0a085d",
+            "authority_schema": "phebs-partitioned-extraction-domain-v1",
+            "plan_digest": "sha256:920204445331267bb5c905ce6a2291dafd4fea0c7bdd099084244cba72a37c6e",
+            "root_digest": "sha256:7c7908e87fc1eaa8e1dfd2fe4ed93c9ba100ec30cac76caf1aa021037c0a085d"
+          }
+        ],
+        "declaration_set_digest": "sha256:f0a88a5859c031af6a87938502fdb17162df766f3d5a889a1d66dc4983ded5cd",
+        "candidate_manifest_digest": "sha256:110562e26806486c22637368839d8858595a476f741dfadbd21de375d4e55bb4",
+        "source_lane_policy": "candidate-source-lane-base-v1",
+        "resolver_packs": [
+          {
+            "name": "go-module",
+            "version": "1.2.0"
+          },
+          {
+            "name": "grpc-generated-attribution",
+            "version": "1.2.0"
+          }
+        ],
+        "resolver_pack_set_digest": "sha256:f2042fea6780e4ef3c6e5823b7779350e19c67099db2ef73ffd858df89d413ad",
+        "catalog_policy": {
+          "name": "phebs-resolver-catalog-policy-v2",
+          "record_schema": "phebs-resolver-catalog-record-v1",
+          "record_ordering": "member-name-then-emission-v1",
+          "max_declaration_publications": 16,
+          "max_resolver_packs": 16,
+          "max_members": 256,
+          "max_records_per_member": 100000,
+          "max_records": 1000000,
+          "max_record_bytes": 1048576,
+          "max_metadata_bytes": 65536,
+          "max_manifest_bytes": 1048576,
+          "max_member_content_bytes": 67108864,
+          "max_catalog_content_bytes": 536870912,
+          "max_memory_bytes": 67108864,
+          "max_directory_entries": 32768,
+          "max_staging_disk_bytes": 545259520,
+          "max_publication_disk_bytes": 1084227584,
+          "max_open_files": 2
+        },
+        "catalog_policy_digest": "sha256:232d212b178fb3a08a7cb8ccf47df9d330c0173873dd26c21cdbc78df3e7d84a",
+        "generation_digest": "sha256:163510a739b58d3c56b87a575287e460cc4d2a816a188b90541d19fca279b20c"
+      }
+    }
+  ],
+  "caller_authorities": [
+    {
+      "generation_identity": {
+        "schema": "phebs-caller-generation-v2",
+        "repository": "evaluation.local/t503-public",
+        "head_commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+        "unit_digest": "",
+        "declaration_set_digest": "sha256:f0a88a5859c031af6a87938502fdb17162df766f3d5a889a1d66dc4983ded5cd",
+        "candidate_manifest_digest": "sha256:110562e26806486c22637368839d8858595a476f741dfadbd21de375d4e55bb4",
+        "candidate_policy_digest": "sha256:4df27648658cd6d26f7d0b68fed52b4017dbce6909c628dc183cebd71ab1eb94",
+        "source_lane_policy": "candidate-source-lane-base-v1",
+        "resolver_generation_digest": "sha256:163510a739b58d3c56b87a575287e460cc4d2a816a188b90541d19fca279b20c",
+        "resolver_manifest_digest": "sha256:b23f0fcc1fc833a29aca5c2bb269345944b5c08cff56baff96e4215331668aa0",
+        "caller_policy": {
+          "name": "phebs-direct-caller-leaf-policy-v3",
+          "leaf_adapter": "direct-syntax-zero-fact-coverage-v3",
+          "source_lane_policy": "candidate-source-lane-base-v1",
+          "max_caller_domains": 16,
+          "max_expected_pairs": 16384,
+          "max_result_records_per_pair": 12500,
+          "max_abstention_records_per_pair": 4096,
+          "max_record_bytes": 1048576,
+          "max_canonical_bytes_per_pair": 67108864,
+          "max_metadata_bytes": 65536,
+          "max_staging_bytes_per_pair": 68157440,
+          "max_aggregate_result_records": 100000,
+          "max_aggregate_abstention_records": 100000,
+          "max_aggregate_canonical_bytes": 536870912,
+          "max_aggregate_staging_bytes": 545259520,
+          "max_repository_directory_entries": 65536,
+          "max_direct_source_bytes": 4194304,
+          "max_source_blob_bytes_per_pair": 67108864,
+          "publication_memory_design_bytes": 134217728,
+          "max_open_files": 5,
+          "worker_timeout_milliseconds": 300000,
+          "max_coverage_records_per_pair": 1,
+          "max_aggregate_coverage_records": 16384,
+          "max_aggregate_covered_candidates": 67108864
+        },
+        "caller_policy_digest": "sha256:dbc7ed598f775156d80bf1880df325a22cfe4350f5a2ca5696bf16f559f727c9",
+        "extractors": [
+          {
+            "domain": "grpc-caller",
+            "version": "1.6.0-released.1",
+            "leaf_adapter_version": "direct-syntax-zero-fact-coverage-v3"
+          }
+        ],
+        "extractor_set_digest": "sha256:8025688ad011e5a535e4936f449da41005a68f7de48ae413febba356484ba021",
+        "digest": "sha256:0e89feb2688028767172dbae48cbf2d99446e75fea603066dc403ebb3dfba982",
+        "upstream": {
+          "schema": "phebs-downstream-upstream-authority-v2",
+          "repository": "evaluation.local/t503-public",
+          "observation": {
+            "version": "observation-v2",
+            "repository": "evaluation.local/t503-public",
+            "source_generation_digest": "sha256:9afdc4297bd84b7bbe997d146edb4eae7050b388fe2f4cb066fe15b3292d731f",
+            "source_root_digest": "sha256:bdf6369e1860dab44ab0c32136e39b50efa5eeaab6faa4714adc970172285254",
+            "observation_generation_digest": "sha256:7e0f35934d3a4d82335d51e036a89276df5dad235fda73bcd365b0191d6cdf42",
+            "observation_root_digest": "sha256:33b44dedbe0f197227e971d40e7418f903d6967a1fcb2dac34472ac547de97ea",
+            "partition_policy_digest": "sha256:48ac2209897adb7a399564ad8bbf3406c79696217c270cb5ead5c50ec95754d1",
+            "observation_policy_digest": "sha256:b0563c9ea6a4fc22a338a326216cfe77b4ae2ecbcf30bfa0617782308e0e3b7f",
+            "inventory_policy_digest": "sha256:ffd6deeb58cbdfb3072d7a7c5028357d1e3f53deded473b602e822b20dd3a1ff",
+            "record_count": 9,
+            "observed_count": 9
+          },
+          "required": [
+            {
+              "domain": "grpc-caller",
+              "version": "1.6.0-released.1"
+            }
+          ],
+          "domains": [
+            {
+              "domain": "grpc-caller",
+              "version": "1.6.0-released.1",
+              "plan_digest": "sha256:69d8f5afc0800900a7f99e56132e92054689a2c77fb3f7d0f2492cfc767f7950",
+              "root_digest": "sha256:058db7b7aeb1dad1788db44bdb455b918a309b375c0da0e0e3cee4e6719eeaac",
+              "run_id": "baed5561846390b0ec6a263bcd2fefd6",
+              "disposition": "success",
+              "candidate_manifest_digest": "sha256:110562e26806486c22637368839d8858595a476f741dfadbd21de375d4e55bb4",
+              "candidate_partition_root_digest": "sha256:f031de9f31d95be936d596decae74e55ccfe263fd895216f52898a30c1d242e7",
+              "candidate_policy_digest": "sha256:4df27648658cd6d26f7d0b68fed52b4017dbce6909c628dc183cebd71ab1eb94",
+              "source_generation_digest": "sha256:9afdc4297bd84b7bbe997d146edb4eae7050b388fe2f4cb066fe15b3292d731f",
+              "observation_generation_digest": "sha256:7e0f35934d3a4d82335d51e036a89276df5dad235fda73bcd365b0191d6cdf42",
+              "extraction_policy_digest": "sha256:4df27648658cd6d26f7d0b68fed52b4017dbce6909c628dc183cebd71ab1eb94",
+              "domain_index_digest": "sha256:ac80302c306d349336affb323e71d608aa3faceb34c096d1a4aef7b35676b37f",
+              "domain_schedule_digest": "sha256:22c9eb055a82ea71928c50a581a0e8678298ae98173529bb41507cad4f35daea"
+            }
+          ],
+          "provenance_digest": "sha256:2d4f53d59fdbf622482b75f77f92691b18513bf964271f83704a57cf3832e0a7",
+          "digest": "sha256:0efdbba581d2a610678332270d15b7bc0494880dfc1dcd9172332d4b93197ccf"
+        },
+        "upstream_digest": "sha256:0efdbba581d2a610678332270d15b7bc0494880dfc1dcd9172332d4b93197ccf"
+      },
+      "manifest_digest": "sha256:fbf248ccf88064107f74711e9b1ab49a14312108a87629bef9135b7a52bfde9e",
+      "pair_set_digest": "sha256:9e26910ab968c1827fcaaebf812a46ec341235e99cfe474a47075348372f2a72",
+      "aggregate": {
+        "pair_count": 3,
+        "artifact_count": 3,
+        "result_count": 9,
+        "abstention_count": 6,
+        "canonical_bytes": 18523,
+        "staging_bytes": 18523,
+        "peak_open_files": 5,
+        "coverage_record_count": 1,
+        "covered_candidate_count": 3
+      },
+      "manifest_bytes_digest": "sha256:7cc9d8089ebb0077afe54e091644e3575d0a25b36ad87c541eb4a7540a63e202",
+      "publication_revision": 1
+    }
+  ],
+  "dependency_discovery": [
+    {
+      "caller_map": true,
+      "operation_impact": true,
+      "capabilities": [
+        "contract-atlas",
+        "contract-caller-map",
+        "contract-impact-operation",
+        "service-catalog-v2",
+        "service-relationships-v1"
+      ],
+      "tools": [
+        "blame",
+        "build_operation_impact_report",
+        "compare_service_relationships",
+        "diff",
+        "find_definitions",
+        "find_references",
+        "get_commit",
+        "get_contract_operation",
+        "get_observation_progress",
+        "get_service",
+        "hover",
+        "list_commits",
+        "list_operation_callers",
+        "list_repos",
+        "list_service_relationships",
+        "list_services",
+        "read_file",
+        "read_operation_caller_citation",
+        "read_service_relationship_citation",
+        "search_code",
+        "search_contract_operations"
+      ]
+    }
+  ],
+  "quality_progress": [
+    {
+      "query_id": "operation-1",
+      "verified_site_ids": [
+        "features/multiplex/client/main.go:1282-1292",
+        "helloworld/greeter_client/main.go:1456-1466"
+      ],
+      "page_sizes": [
+        1,
+        2,
+        100
+      ],
+      "conclusion": "evidence_present",
+      "cold_first_response_after_explicit_probes": {
+        "page_size": 1,
+        "read": {
+          "path": "/api/operation_impact_report",
+          "status": 200,
+          "seconds": 0.017902,
+          "bytes": 6721,
+          "raw_digest": "sha256:f5538ccee0912fa50b64185bedccc4a6c70fddb3a8458d99a6d0f4da0e8ce70e"
+        }
+      },
+      "warm_firstpage_responses": {
+        "page_size": 100,
+        "reads": [
+          {
+            "path": "/api/operation_impact_report",
+            "status": 200,
+            "seconds": 0.023207,
+            "bytes": 7231,
+            "raw_digest": "sha256:a225970203f45cf048f44e9cf7d16e6dcd3ae54d13191337bc71cd8fac716db1"
+          },
+          {
+            "path": "/api/operation_impact_report",
+            "status": 200,
+            "seconds": 0.021149,
+            "bytes": 7231,
+            "raw_digest": "sha256:102a16f8853f3e36cec4bf7208e179d2ae57945c4e52024d79a9507835c09b2b"
+          },
+          {
+            "path": "/api/operation_impact_report",
+            "status": 200,
+            "seconds": 0.026427,
+            "bytes": 7231,
+            "raw_digest": "sha256:2f83de277d22bca140851d279fa92735505fe4c091bc576e5f17c760f32da2c7"
+          },
+          {
+            "path": "/api/operation_impact_report",
+            "status": 200,
+            "seconds": 0.023767,
+            "bytes": 7231,
+            "raw_digest": "sha256:8693b536e375ca23ba82f458e247f6749a89c091f5e9b176116a8580bab3cb30"
+          },
+          {
+            "path": "/api/operation_impact_report",
+            "status": 200,
+            "seconds": 0.021537,
+            "bytes": 7231,
+            "raw_digest": "sha256:8ade193b9b9a494b0ec52dded987ae68de613385a75367eec3c6e8e5258054cb"
+          }
+        ]
+      }
+    },
+    {
+      "query_id": "operation-2",
+      "verified_site_ids": [
+        "features/interceptor/client/main.go:3590-3606",
+        "features/metadata/client/main.go:1453-1464",
+        "features/multiplex/client/main.go:1604-1620"
+      ],
+      "page_sizes": [
+        1,
+        2,
+        100
+      ],
+      "conclusion": "evidence_present",
+      "cold_first_response_after_explicit_probes": {
+        "page_size": 1,
+        "read": {
+          "path": "/api/operation_impact_report",
+          "status": 200,
+          "seconds": 0.030794,
+          "bytes": 6762,
+          "raw_digest": "sha256:5efc5bded601af83da45a7e11a9200879c211f95d221990c37c4a95ebc1208da"
+        }
+      },
+      "warm_firstpage_responses": {
+        "page_size": 100,
+        "reads": [
+          {
+            "path": "/api/operation_impact_report",
+            "status": 200,
+            "seconds": 0.012411,
+            "bytes": 8841,
+            "raw_digest": "sha256:a8b027e17e20887f59af9cec2d2bce07ac458b941b8ba559bdf45b868fbbbc33"
+          },
+          {
+            "path": "/api/operation_impact_report",
+            "status": 200,
+            "seconds": 0.012736,
+            "bytes": 8841,
+            "raw_digest": "sha256:5f71f176dee1600396952aba4657e18e87f69464248e9d0ef085283ab9933540"
+          },
+          {
+            "path": "/api/operation_impact_report",
+            "status": 200,
+            "seconds": 0.012333,
+            "bytes": 8841,
+            "raw_digest": "sha256:3c580d26fab9c6436c23982739b105a40833e77caf1c4a8c47a76cf345c62228"
+          },
+          {
+            "path": "/api/operation_impact_report",
+            "status": 200,
+            "seconds": 0.011733,
+            "bytes": 8841,
+            "raw_digest": "sha256:4cfc4cb3133cca2c258d98066878a2ad69e5a2704ded14c7651fc3b8dde5726b"
+          },
+          {
+            "path": "/api/operation_impact_report",
+            "status": 200,
+            "seconds": 0.011586,
+            "bytes": 8841,
+            "raw_digest": "sha256:89baede6618caca0f3a13d125d0f5ec9d80403d7da0c2c3ed9ee514655401295"
+          }
+        ]
+      }
+    },
+    {
+      "query_id": "operation-3",
+      "verified_site_ids": [
+        "features/metadata/client/main.go:2678-2699"
+      ],
+      "page_sizes": [
+        1,
+        2,
+        100
+      ],
+      "conclusion": "evidence_present",
+      "cold_first_response_after_explicit_probes": {
+        "page_size": 1,
+        "read": {
+          "path": "/api/operation_impact_report",
+          "status": 200,
+          "seconds": 0.012437,
+          "bytes": 5673,
+          "raw_digest": "sha256:1b5d15007d5001dddf772685a3cff4a3d567f5451109071662bc80081308c72a"
+        }
+      },
+      "warm_firstpage_responses": {
+        "page_size": 100,
+        "reads": [
+          {
+            "path": "/api/operation_impact_report",
+            "status": 200,
+            "seconds": 0.013126,
+            "bytes": 5673,
+            "raw_digest": "sha256:c13447b65a072f7126a7ad38b304dc332c1c709760ededfdd69876bf6c9f13fa"
+          },
+          {
+            "path": "/api/operation_impact_report",
+            "status": 200,
+            "seconds": 0.011519,
+            "bytes": 5673,
+            "raw_digest": "sha256:60ee1382df81b1a77b36417f52ff84ba9c015321bd9d4e8479aaaf4893537d0e"
+          },
+          {
+            "path": "/api/operation_impact_report",
+            "status": 200,
+            "seconds": 0.015657,
+            "bytes": 5673,
+            "raw_digest": "sha256:d36f25ea7d09164be0e23965acf4c25f59c94a7af934b1f0d77c9057dfec3736"
+          },
+          {
+            "path": "/api/operation_impact_report",
+            "status": 200,
+            "seconds": 0.010724,
+            "bytes": 5673,
+            "raw_digest": "sha256:2a0dcedb731bad4236275d4a0701c7f7ef21af957823c4f40c934dd8d576f483"
+          },
+          {
+            "path": "/api/operation_impact_report",
+            "status": 200,
+            "seconds": 0.01407,
+            "bytes": 5673,
+            "raw_digest": "sha256:cafa72a9ed51d460417c81626c5989da9a032bf5edac13612a1ad2565e84d6f8"
+          }
+        ]
+      }
+    },
+    {
+      "query_id": "operation-4",
+      "verified_site_ids": [
+        "features/metadata/client/main.go:4418-4439"
+      ],
+      "page_sizes": [
+        1,
+        2,
+        100
+      ],
+      "conclusion": "evidence_present",
+      "cold_first_response_after_explicit_probes": {
+        "page_size": 1,
+        "read": {
+          "path": "/api/operation_impact_report",
+          "status": 200,
+          "seconds": 0.010992,
+          "bytes": 5675,
+          "raw_digest": "sha256:2c42d870040ab889d607778744b1b444f927cd9688df8ffcc8ee9ab2a584b8f1"
+        }
+      },
+      "warm_firstpage_responses": {
+        "page_size": 100,
+        "reads": [
+          {
+            "path": "/api/operation_impact_report",
+            "status": 200,
+            "seconds": 0.015618,
+            "bytes": 5675,
+            "raw_digest": "sha256:5d097da2e6d556830c7e46643a6338099a566564ca01ce97b0ea60acba84a165"
+          },
+          {
+            "path": "/api/operation_impact_report",
+            "status": 200,
+            "seconds": 0.02499,
+            "bytes": 5675,
+            "raw_digest": "sha256:30a2eb854bc9e4153756244c14d3269d73bdcf3aff8e85acc5f99d93ce0d52ce"
+          },
+          {
+            "path": "/api/operation_impact_report",
+            "status": 200,
+            "seconds": 0.021673,
+            "bytes": 5675,
+            "raw_digest": "sha256:51873e368b12f5a3a04915978418102e4215d210d8831c15b7d41db110639217"
+          },
+          {
+            "path": "/api/operation_impact_report",
+            "status": 200,
+            "seconds": 0.026598,
+            "bytes": 5675,
+            "raw_digest": "sha256:81ef4475dfbc61535f849d1a29a3de674e33116ab2f76f7c8e8790da19bc277e"
+          },
+          {
+            "path": "/api/operation_impact_report",
+            "status": 200,
+            "seconds": 0.013766,
+            "bytes": 5675,
+            "raw_digest": "sha256:2a27f784cc9025ac1464f1d5dacc220c73a8e93af9537bfe25801a07d4bd57f8"
+          }
+        ]
+      }
+    },
+    {
+      "query_id": "operation-5",
+      "verified_site_ids": [
+        "features/interceptor/client/main.go:3919-3952",
+        "features/metadata/client/main.go:6231-6259"
+      ],
+      "page_sizes": [
+        1,
+        2,
+        100
+      ],
+      "conclusion": "evidence_present",
+      "cold_first_response_after_explicit_probes": {
+        "page_size": 1,
+        "read": {
+          "path": "/api/operation_impact_report",
+          "status": 200,
+          "seconds": 0.010646,
+          "bytes": 6829,
+          "raw_digest": "sha256:aa579a25c3180662634f7cce4c07f97b0f3077af5c6fc9fc00dda134d0a150dc"
+        }
+      },
+      "warm_firstpage_responses": {
+        "page_size": 100,
+        "reads": [
+          {
+            "path": "/api/operation_impact_report",
+            "status": 200,
+            "seconds": 0.01266,
+            "bytes": 7326,
+            "raw_digest": "sha256:1eedc972cb899186f44d1c8c5cdb5abe42456e90213e28090d9c9b5828acd16e"
+          },
+          {
+            "path": "/api/operation_impact_report",
+            "status": 200,
+            "seconds": 0.013187,
+            "bytes": 7326,
+            "raw_digest": "sha256:52a8d8dc0a5707d345898b34c41365cb7cf66f44f695f7e77d1cb1b4d028079d"
+          },
+          {
+            "path": "/api/operation_impact_report",
+            "status": 200,
+            "seconds": 0.012775,
+            "bytes": 7326,
+            "raw_digest": "sha256:f765e52078cd0db7a13c60e95e4860b92419b7d830510dd43934cc4db48ef990"
+          },
+          {
+            "path": "/api/operation_impact_report",
+            "status": 200,
+            "seconds": 0.017748,
+            "bytes": 7326,
+            "raw_digest": "sha256:ecaa47375060c99c2bee5d985e30606aea8710c9dd313ae627bb412ed98fe72a"
+          },
+          {
+            "path": "/api/operation_impact_report",
+            "status": 200,
+            "seconds": 0.017007,
+            "bytes": 7326,
+            "raw_digest": "sha256:64554c3fb3f4c4946e5b44ad9a8fab98314883e91ee631218cf5ac1a0c71ef3c"
+          }
+        ]
+      }
+    },
+    {
+      "query_id": "empty-sayhello-metadata",
+      "verified_site_ids": [],
+      "page_sizes": [
+        1,
+        2,
+        100
+      ],
+      "conclusion": "exact_empty",
+      "cold_first_response_after_explicit_probes": {
+        "page_size": 1,
+        "read": {
+          "path": "/api/operation_impact_report",
+          "status": 200,
+          "seconds": 0.015201,
+          "bytes": 4083,
+          "raw_digest": "sha256:c8c8d907d270223966e00747fa0c0d26f0f4238c8a27ba09fecb1e18ea410184"
+        }
+      }
+    },
+    {
+      "query_id": "empty-unary-greeter",
+      "verified_site_ids": [],
+      "page_sizes": [
+        1,
+        2,
+        100
+      ],
+      "conclusion": "exact_empty",
+      "cold_first_response_after_explicit_probes": {
+        "page_size": 1,
+        "read": {
+          "path": "/api/operation_impact_report",
+          "status": 200,
+          "seconds": 0.019241,
+          "bytes": 4114,
+          "raw_digest": "sha256:bbe9a3347fe995855f563e7829a64e682a6d5e8da6e7cd7a3d017c8d290a6ce1"
+        }
+      }
+    }
+  ],
+  "quality": {
+    "quality_scope": "Actual new operation_callers report memberships over all frozen T5415operations/9source sites, directly scored; no component accuracy transfer or repeated-read samples",
+    "counts": {
+      "tp": 9,
+      "fn": 0,
+      "fp": 0,
+      "tn": 36
+    },
+    "precision": 1.0,
+    "recall": 1.0,
+    "positive_wilson_95_descriptive": [
+      0.7008549515804559,
+      1.0
+    ],
+    "negative_wilson_95_descriptive": [
+      0.9035813714055363,
+      1.0
+    ],
+    "per_operation": {
+      "/helloworld.Greeter/SayHello": {
+        "tp": 2,
+        "fn": 0,
+        "fp": 0,
+        "tn": 7
+      },
+      "/grpc.examples.echo.Echo/UnaryEcho": {
+        "tp": 3,
+        "fn": 0,
+        "fp": 0,
+        "tn": 6
+      },
+      "/grpc.examples.echo.Echo/ServerStreamingEcho": {
+        "tp": 1,
+        "fn": 0,
+        "fp": 0,
+        "tn": 8
+      },
+      "/grpc.examples.echo.Echo/ClientStreamingEcho": {
+        "tp": 1,
+        "fn": 0,
+        "fp": 0,
+        "tn": 8
+      },
+      "/grpc.examples.echo.Echo/BidirectionalStreamingEcho": {
+        "tp": 2,
+        "fn": 0,
+        "fp": 0,
+        "tn": 7
+      }
+    },
+    "per_file": {
+      "features/interceptor/client/main.go": {
+        "tp": 2,
+        "fn": 0,
+        "fp": 0,
+        "tn": 8
+      },
+      "features/metadata/client/main.go": {
+        "tp": 4,
+        "fn": 0,
+        "fp": 0,
+        "tn": 16
+      },
+      "features/multiplex/client/main.go": {
+        "tp": 2,
+        "fn": 0,
+        "fp": 0,
+        "tn": 8
+      },
+      "helloworld/greeter_client/main.go": {
+        "tp": 1,
+        "fn": 0,
+        "fp": 0,
+        "tn": 4
+      }
+    },
+    "scoped_empty_queries": 2,
+    "interval_qualification": "Descriptive finite composition memberships; correlated sites and selected source do not support population inference",
+    "exact_citations": [
+      {
+        "site_id": "features/multiplex/client/main.go:1282-1292",
+        "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+        "generation_digest": "sha256:0e89feb2688028767172dbae48cbf2d99446e75fea603066dc403ebb3dfba982",
+        "source_oid": "d5a432e16b120abf18af05b204d4b2bff4f65ae6",
+        "blob_digest": "sha256:4fd071c359f34dd525a7125e9ef2eaf7ba871828eec21b574467bfb7b9224a7e",
+        "citation_bytes": 10,
+        "citation_bytes_sha256": "sha256:f29774f0b06f113e319ed268c5fb693911f0dbbd95b14f830ac17a99175a4f94",
+        "transports": [
+          "HTTP exact caller citation",
+          "MCP read_operation_caller_citation"
+        ]
+      },
+      {
+        "site_id": "helloworld/greeter_client/main.go:1456-1466",
+        "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+        "generation_digest": "sha256:0e89feb2688028767172dbae48cbf2d99446e75fea603066dc403ebb3dfba982",
+        "source_oid": "d746840e6036c5de0f8a45c2fc2c19ecd7c0540d",
+        "blob_digest": "sha256:5539f38f560ab26ce11514cd81f941fb80f4ca9a88754aaaf40d89bbc92e3e30",
+        "citation_bytes": 10,
+        "citation_bytes_sha256": "sha256:f29774f0b06f113e319ed268c5fb693911f0dbbd95b14f830ac17a99175a4f94",
+        "transports": [
+          "HTTP exact caller citation",
+          "MCP read_operation_caller_citation"
+        ]
+      },
+      {
+        "site_id": "features/interceptor/client/main.go:3590-3606",
+        "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+        "generation_digest": "sha256:0e89feb2688028767172dbae48cbf2d99446e75fea603066dc403ebb3dfba982",
+        "source_oid": "feb59bf1a2eb28207d093d9d77b5a6930f1ecf10",
+        "blob_digest": "sha256:67a96c9ce41464119ed93fab70bebb50cb96accdecaca43d8f9a0cf43a6bf641",
+        "citation_bytes": 16,
+        "citation_bytes_sha256": "sha256:c6737a65ae01b829d86bdbab5ba4f25649ae373b0e0c169e70ad0a72d095a22d",
+        "transports": [
+          "HTTP exact caller citation",
+          "MCP read_operation_caller_citation"
+        ]
+      },
+      {
+        "site_id": "features/metadata/client/main.go:1453-1464",
+        "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+        "generation_digest": "sha256:0e89feb2688028767172dbae48cbf2d99446e75fea603066dc403ebb3dfba982",
+        "source_oid": "861e3eece26840007f3204f41ab5689de2e94d2b",
+        "blob_digest": "sha256:26aceadb046196cf67fc5f790f2d6dc4e5f74ae1a919002b6fb6686db41c4fa7",
+        "citation_bytes": 11,
+        "citation_bytes_sha256": "sha256:0b7cfb7d7816d8c33ff8c82d2b69056844c9636adbf9aee96572dd4a5ffc2b62",
+        "transports": [
+          "HTTP exact caller citation",
+          "MCP read_operation_caller_citation"
+        ]
+      },
+      {
+        "site_id": "features/multiplex/client/main.go:1604-1620",
+        "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+        "generation_digest": "sha256:0e89feb2688028767172dbae48cbf2d99446e75fea603066dc403ebb3dfba982",
+        "source_oid": "d5a432e16b120abf18af05b204d4b2bff4f65ae6",
+        "blob_digest": "sha256:4fd071c359f34dd525a7125e9ef2eaf7ba871828eec21b574467bfb7b9224a7e",
+        "citation_bytes": 16,
+        "citation_bytes_sha256": "sha256:c6737a65ae01b829d86bdbab5ba4f25649ae373b0e0c169e70ad0a72d095a22d",
+        "transports": [
+          "HTTP exact caller citation",
+          "MCP read_operation_caller_citation"
+        ]
+      },
+      {
+        "site_id": "features/metadata/client/main.go:2678-2699",
+        "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+        "generation_digest": "sha256:0e89feb2688028767172dbae48cbf2d99446e75fea603066dc403ebb3dfba982",
+        "source_oid": "861e3eece26840007f3204f41ab5689de2e94d2b",
+        "blob_digest": "sha256:26aceadb046196cf67fc5f790f2d6dc4e5f74ae1a919002b6fb6686db41c4fa7",
+        "citation_bytes": 21,
+        "citation_bytes_sha256": "sha256:3927f28e69cbb95342e7e065cdee9847dd8382540d2332e93c22b6d1957cddb8",
+        "transports": [
+          "HTTP exact caller citation",
+          "MCP read_operation_caller_citation"
+        ]
+      },
+      {
+        "site_id": "features/metadata/client/main.go:4418-4439",
+        "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+        "generation_digest": "sha256:0e89feb2688028767172dbae48cbf2d99446e75fea603066dc403ebb3dfba982",
+        "source_oid": "861e3eece26840007f3204f41ab5689de2e94d2b",
+        "blob_digest": "sha256:26aceadb046196cf67fc5f790f2d6dc4e5f74ae1a919002b6fb6686db41c4fa7",
+        "citation_bytes": 21,
+        "citation_bytes_sha256": "sha256:c1d54a8cc5810254f733e552f121dbed1f046acbae0546d6e207b90c1fb15253",
+        "transports": [
+          "HTTP exact caller citation",
+          "MCP read_operation_caller_citation"
+        ]
+      },
+      {
+        "site_id": "features/interceptor/client/main.go:3919-3952",
+        "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+        "generation_digest": "sha256:0e89feb2688028767172dbae48cbf2d99446e75fea603066dc403ebb3dfba982",
+        "source_oid": "feb59bf1a2eb28207d093d9d77b5a6930f1ecf10",
+        "blob_digest": "sha256:67a96c9ce41464119ed93fab70bebb50cb96accdecaca43d8f9a0cf43a6bf641",
+        "citation_bytes": 33,
+        "citation_bytes_sha256": "sha256:b3830d22f1eedeb4cb8aea6cd7d7629214398282f16dc168d2e79173d5f35bc3",
+        "transports": [
+          "HTTP exact caller citation",
+          "MCP read_operation_caller_citation"
+        ]
+      },
+      {
+        "site_id": "features/metadata/client/main.go:6231-6259",
+        "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+        "generation_digest": "sha256:0e89feb2688028767172dbae48cbf2d99446e75fea603066dc403ebb3dfba982",
+        "source_oid": "861e3eece26840007f3204f41ab5689de2e94d2b",
+        "blob_digest": "sha256:26aceadb046196cf67fc5f790f2d6dc4e5f74ae1a919002b6fb6686db41c4fa7",
+        "citation_bytes": 28,
+        "citation_bytes_sha256": "sha256:890178c58f925bc79294f84741d821ffe89391026fb3243965deb5b5e789706c",
+        "transports": [
+          "HTTP exact caller citation",
+          "MCP read_operation_caller_citation"
+        ]
+      }
+    ],
+    "declaration_sources": [
+      {
+        "operation": "/grpc.examples.echo.Echo/UnaryEcho",
+        "path": "features/proto/echo/echo.proto",
+        "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+        "blob_digest": "sha256:e1eb8e11c7c1b273a7c025eedb88064b40c11517b3413d364893e0e4df4fed83",
+        "start_byte": 982,
+        "end_byte": 1034,
+        "transports": [
+          "HTTP full immutable source",
+          "MCP read_file full blob"
+        ],
+        "blob_read_scope": "two unique proto blobs once per transport; slices checked client-side; no instrumented read-count claim"
+      },
+      {
+        "operation": "/grpc.examples.echo.Echo/ServerStreamingEcho",
+        "path": "features/proto/echo/echo.proto",
+        "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+        "blob_digest": "sha256:e1eb8e11c7c1b273a7c025eedb88064b40c11517b3413d364893e0e4df4fed83",
+        "start_byte": 1088,
+        "end_byte": 1157,
+        "transports": [
+          "HTTP full immutable source",
+          "MCP read_file full blob"
+        ],
+        "blob_read_scope": "two unique proto blobs once per transport; slices checked client-side; no instrumented read-count claim"
+      },
+      {
+        "operation": "/grpc.examples.echo.Echo/ClientStreamingEcho",
+        "path": "features/proto/echo/echo.proto",
+        "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+        "blob_digest": "sha256:e1eb8e11c7c1b273a7c025eedb88064b40c11517b3413d364893e0e4df4fed83",
+        "start_byte": 1211,
+        "end_byte": 1280,
+        "transports": [
+          "HTTP full immutable source",
+          "MCP read_file full blob"
+        ],
+        "blob_read_scope": "two unique proto blobs once per transport; slices checked client-side; no instrumented read-count claim"
+      },
+      {
+        "operation": "/grpc.examples.echo.Echo/BidirectionalStreamingEcho",
+        "path": "features/proto/echo/echo.proto",
+        "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+        "blob_digest": "sha256:e1eb8e11c7c1b273a7c025eedb88064b40c11517b3413d364893e0e4df4fed83",
+        "start_byte": 1334,
+        "end_byte": 1417,
+        "transports": [
+          "HTTP full immutable source",
+          "MCP read_file full blob"
+        ],
+        "blob_read_scope": "two unique proto blobs once per transport; slices checked client-side; no instrumented read-count claim"
+      },
+      {
+        "operation": "/helloworld.Greeter/SayHello",
+        "path": "helloworld/helloworld/helloworld.proto",
+        "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+        "blob_digest": "sha256:0e59e0b552d35f8b801e02811c3fcd3dd45dbf1a593c5ff6f2f679863219b257",
+        "start_byte": 925,
+        "end_byte": 976,
+        "transports": [
+          "HTTP full immutable source",
+          "MCP read_file full blob"
+        ],
+        "blob_read_scope": "two unique proto blobs once per transport; slices checked client-side; no instrumented read-count claim"
+      }
+    ],
+    "unit_states": {
+      "resolved": 5,
+      "unavailable": 4
+    },
+    "observed_resolution_tiers": {
+      "features/multiplex/client/main.go:1282-1292": "syntax/heuristic",
+      "helloworld/greeter_client/main.go:1456-1466": "syntax/heuristic",
+      "features/interceptor/client/main.go:3590-3606": "syntax/heuristic",
+      "features/metadata/client/main.go:1453-1464": "syntax/heuristic",
+      "features/multiplex/client/main.go:1604-1620": "syntax/heuristic",
+      "features/metadata/client/main.go:2678-2699": "syntax/heuristic",
+      "features/metadata/client/main.go:4418-4439": "syntax/heuristic",
+      "features/interceptor/client/main.go:3919-3952": "syntax/heuristic",
+      "features/metadata/client/main.go:6231-6259": "syntax/heuristic"
+    },
+    "processed_go_sources": {
+      "unique_files": 9,
+      "complete_observations": [
+        {
+          "run_id": "baed5561846390b0ec6a263bcd2fefd6",
+          "plan_digest": "sha256:69d8f5afc0800900a7f99e56132e92054689a2c77fb3f7d0f2492cfc767f7950",
+          "rows": [
+            {
+              "path": "data/data.go",
+              "state": "analyzed",
+              "reason": "source_scan_complete",
+              "blob_digest": "sha256:d088b7e127ad41acdf1e267515b003b7ce1a292c217954265be0a122e12ca367"
+            },
+            {
+              "path": "features/interceptor/client/main.go",
+              "state": "analyzed",
+              "reason": "source_scan_complete",
+              "blob_digest": "sha256:67a96c9ce41464119ed93fab70bebb50cb96accdecaca43d8f9a0cf43a6bf641"
+            },
+            {
+              "path": "features/metadata/client/main.go",
+              "state": "analyzed",
+              "reason": "source_scan_complete",
+              "blob_digest": "sha256:26aceadb046196cf67fc5f790f2d6dc4e5f74ae1a919002b6fb6686db41c4fa7"
+            },
+            {
+              "path": "features/multiplex/client/main.go",
+              "state": "analyzed",
+              "reason": "source_scan_complete",
+              "blob_digest": "sha256:4fd071c359f34dd525a7125e9ef2eaf7ba871828eec21b574467bfb7b9224a7e"
+            },
+            {
+              "path": "features/proto/echo/echo.pb.go",
+              "state": "analyzed",
+              "reason": "source_scan_complete",
+              "blob_digest": "sha256:782b379b30abb36abc05916e65516a261a266a8d8e8c1e42adc606a2a86a6f34"
+            },
+            {
+              "path": "features/proto/echo/echo_grpc.pb.go",
+              "state": "analyzed",
+              "reason": "source_scan_complete",
+              "blob_digest": "sha256:af593380d0cb47c95469db614f42c582a21c6028e04cae1f84a3da7a96e57a40"
+            },
+            {
+              "path": "helloworld/greeter_client/main.go",
+              "state": "analyzed",
+              "reason": "source_scan_complete",
+              "blob_digest": "sha256:5539f38f560ab26ce11514cd81f941fb80f4ca9a88754aaaf40d89bbc92e3e30"
+            },
+            {
+              "path": "helloworld/helloworld/helloworld.pb.go",
+              "state": "analyzed",
+              "reason": "source_scan_complete",
+              "blob_digest": "sha256:d365b6dd964d474e5e3d50ef1b8bedb6d728a0377eb7926ef6fee6dfdeb1a59a"
+            },
+            {
+              "path": "helloworld/helloworld/helloworld_grpc.pb.go",
+              "state": "analyzed",
+              "reason": "source_scan_complete",
+              "blob_digest": "sha256:e1de746d9f7c0fa108c370c420cbe1a630a8cf7ae55e43a2d946dc5589c6993d"
+            }
+          ],
+          "sha256": "sha256:53362790dd531934d7af15dd573bc70d3845caa8a771b66f5b26a4044c664c49"
+        }
+      ],
+      "quality_denominator": 9
+    },
+    "cold_caveat": "first success per operation after explicit publication probes; shared source/index/process caches may be warm",
+    "repeated_transport_samples_added": 0
+  },
+  "finite_firstpage_concurrency": [
+    {
+      "clients": 1,
+      "requests": 1,
+      "wall_seconds": 0.01731,
+      "requests_per_second": 57.77104963296045
+    },
+    {
+      "clients": 4,
+      "requests": 4,
+      "wall_seconds": 0.02437,
+      "requests_per_second": 164.1339902905701
+    },
+    {
+      "clients": 8,
+      "requests": 8,
+      "wall_seconds": 0.033446,
+      "requests_per_second": 239.1891511694232
+    }
+  ],
+  "unsupported_inputs": {
+    "http_mcp_unavailable_shapes": [
+      "field_references",
+      "proposed_change",
+      "implementations",
+      "wire_verdict",
+      "matching_syntactic_calls",
+      "saved_report"
+    ],
+    "mixed_field_refused": true,
+    "anonymous_http_401": true,
+    "quality_samples_added": 0
+  },
+  "browser_evidence": {
+    "private_root": "/tmp/phebs-t543-after-view-checker-result-browser",
+    "joined": true,
+    "joined_receipt_digest": "sha256:4325c22a02a186ec2a85c85f7c5afb5524d3dd3d548a30d178a93eccf19708af"
+  },
+  "reason": "Impact actual UI client failed",
+  "retained_stop_evidence": {
+    "root": "/tmp/phebs-t543-native-02",
+    "raw_files": 142,
+    "raw_bytes": 710673,
+    "bound": "finite reviewed request matrix, fixed publication deadlines/cadence, global180s and1MiB per response",
+    "diagnostics_digest": "sha256:5f3fee08c0f3a7cdd830c67596fa44344888c908a8debc890d66d4362de0eba5",
+    "auth_config_key_data_removed_after_join": true
+  },
+  "seconds": 21.136099708
+}

@@ -1,0 +1,13 @@
+{
+  "schema": "phebs-t543-first-stop-review-v1",
+  "outcome": "stopped_no_retry",
+  "native_seconds": 27.705159833,
+  "quality_before_stop": "9positive/36wrong-operation memberships and2scoped-empty report queries, exact HTTP/MCP/citations/source/unit joins pass; no operating/publication/withdrawal pass inferred.",
+  "reason": "Browser Source view changes the URL and triggers ordinary async refetch/remount. The checker opened the previous authority disclosure before remount; exact generation text became hidden. Root inspected source and stopped screenshot.",
+  "correction": "Wait for the initiated successful report response/body, source-view selection and no loading status before interacting with the fresh disclosure. No product/labels/source/plan/bounds/data changes.",
+  "custody": "Browser/client joined; server exit0clean, all sampler/host children joined. Secret/config/key/data removed after join, bounded raw diagnostics retained outside repository.",
+  "source_files": {
+    "spike/t543/impact_browser.cjs": "sha256:380c5e36162a49ee5d30389ae500cacdf396679c0d970627d1556950bd6f962e"
+  },
+  "next": "Separate exact clean harness/binding; first stop stays exact. No blind retry or product quality transfer."
+}

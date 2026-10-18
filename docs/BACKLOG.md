@@ -19916,6 +19916,30 @@ metadata comparison only. Fresh exact UI/binary qualification remains T54.3.
 shape; one shape may release without claiming the others. Dependencies are
 the specific inputs it actually consumes, not every experimental pack.
 
+**T54.3 frozen preparation (2026-10-18, Ben-routed Mac handoff).**
+`spike/t543/qualification-plan.json` binds the unchanged T54.1 population and
+labels to one direct new-report matrix, exact HTTP/MCP/citations/unit joins,
+actual 1280/390px interaction, publication/cursor change and independent own/
+consumed-input withdrawal. Nine pure/mock controls pass. One180s deadline
+includes all owned joins and cleanup. Four new neutral current/unavailable
+light/dark frames require author review and fresh native-renderer comparison.
+No native quality, operating, canonical or production signature pass is inferred
+from preparation; prior legacy pixels and source outcomes stay exact.
+
+**T54.1/T54.3 finite operation outcome (2026-10-18, Ben-routed Mac handoff).**
+Direct composed quality now measures9positive/36wrong-operation memberships
+across5RPCs plus2scoped-empty queries; no component result transfers. Exact
+`e72e83f2` image passes33.758060458s ordinary HTTP/MCP/source/citation/paging/
+publication/withdrawal and actual1280/390keyboard/UI/a11y matrix. All rows
+remain syntax/heuristic; supplied units imply no deployment/owner truth. Three
+server groups/browser/client/samplers join before private teardown. Four new
+neutral current/unavailable light/dark native author/visual-review/fresh
+comparison frames pass separately. Earlier two checker stops remain exact;
+CSP remains unchanged. `spike/t543/success/` and `release/` retain exact result,
+bindings, root-reviewed unsigned artifacts/census and scoped common-bar reuse.
+No Noble/globalaccuracy/scale/other-shape claim follows. Existing production
+key/signature and final production artifact/publication decision remain pending.
+
 ## Epic 55 · Kafka producer-evidence production readiness
 
 **T55.1 · Producer topic identity and independent quality** — freeze

@@ -13457,6 +13457,21 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   T54.2 receipts remain exact. A fresh UI/binary binding precedes the first
   composed native run; no failed product attempt or release result is invented.
 
+- **2026-10-18 — T54.3 prospective bounded Impact qualification (Ben-routed Mac handoff).**
+  Freeze one operation_callers matrix over the existing T54.1 licensed nineteen
+  source files: five RPCs, nine positive and thirty-six wrong-operation
+  memberships, two scoped-empty queries, exact source and supplied-unit joins.
+  No component result transfers. Bind one current clean image with real HTTP
+  schema metadata, exact tools and shared helper provenance; use three ordinary
+  startup/withdrawal phases and one existing comment publication transition
+  under a single 180-second deadline including browser/child joins. New neutral
+  current/unavailable light/dark frames use the actual native renderer and a
+  fresh comparison; legacy-v2/Noble pixels do not qualify this shape. No release
+  or activation follows until its own measured artifacts and signature exist.
+  Production serving stays unchanged: one existing Caller Map page plus constant
+  wrapper, no new cache/store/worker/child. The opt-in matrix alone adds bounded
+  queries, one transition, sampling and renderer work under recorded limits.
+
 - **2026-10-18 — T50.3 finite outcome and unsigned artifacts (Ben-routed Mac handoff).**
   Preserve the first successful 39.450236s direct comparison matrix with exact
   `bbb41b2c` binary/source/UI/tool bindings and all earlier stops. Five selected
@@ -13543,3 +13558,21 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   tables distinguish source, execution and final-artifact censuses. No product
   request/sync/startup/retry/publication, lock/cache/schema, worker or child work
   is added; the finite checks are opt-in evidence only.
+
+- **2026-10-18 — T54.3 direct operation Impact qualification (Ben-routed Mac handoff).**
+  Exact e72image passes33.758060458s finite ordinary-runtime matrix: five RPCs,
+  nine positive/thirty-six wrong-operation memberships, two scoped-empty queries,
+  exact source/citations/declaration and supplied-unit joins; all observed rows
+  remain syntax/heuristic. HTTP/MCP/paging, eight coherent before-or-after epoch
+  reads, stale cursor/changed citation409, actual1280/390keyboard/filter/source/
+  unit flows, WCAG0violations, own/input withdrawal and all joins pass. Four
+  separate neutral current/unavailable light/dark native author/visual-review/
+  fresh-comparison frames pass, without Noble/legacy-v2 equivalence. Preserve
+  both earlier checker stops, async view remount and blocked inline audit;
+  synchronize refetch and use init instrumentation without weakening CSP.
+  Record exact sampled resource/CPU/peak limits, all source/tool/build bindings
+  and frozen unsigned artifacts/census. Direct T54.1 composition quality closes
+  only this shape; production signing/activation remains pending. Existing
+  List/read/citation/recovery mechanisms retain scoped source-mapped gates.
+  Serving adds constant wrapper metadata, no second read, row scan, writer,
+  cache/store/schema/lock/worker/child; UI validation/render stays page bounded.

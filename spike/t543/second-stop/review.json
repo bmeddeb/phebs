@@ -1,0 +1,11 @@
+{
+  "schema": "phebs-t543-second-stop-review-v1",
+  "outcome": "stopped_no_retry",
+  "native_seconds": 21.136099708,
+  "reason": "Actual page retains CSP script-src self. Playwright addScriptTag(path) serializes audit source as inline script, correctly blocked by production CSP. No product failure or policy weakening.",
+  "correction": "Install exact bound axe source as browser context init instrumentation before navigation, leaving bypassCSP false/default and app response policy unchanged. Dedicated tiny local CSP preflight proves audit works with same policy and no console errors.",
+  "scope": "No source/labels/plan/product/bounds change; first source-view wait correction remains. Product9/36memberships still measured before stop; operating/publication/withdrawal not passed.",
+  "custody": "Browser/client and server/sampling groups joined. Secret/config/key/data removed; bounded response diagnostics retained outside repository.",
+  "preflight": "Same Chrome/Playwright/axe bytes; real local script-src self response, init-only instrumentation, WCAG audit0violations. This is a checker mechanics preflight, not product quality.",
+  "source_sha256": "sha256:e1e43038e911accc1cc8e85432337d19225f8805d2191a4598c76a8b98c85bb0"
+}

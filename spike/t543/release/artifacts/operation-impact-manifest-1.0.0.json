@@ -1,0 +1,112 @@
+{
+  "schema": "phebs-verdict-claim-manifest-v1",
+  "artifact_status": "DRAFT_UNSIGNED_NOT_ACTIVE",
+  "pack_id": "phebs.contract.impact.operation",
+  "pack_claim_version": "1.0.0",
+  "owner": "Ben Meddeb",
+  "qualification": "finite-direct-composed-operation-source-memberships-and-bounded-Darwin-integration",
+  "recipe": {
+    "implementation": "build_operation_impact_report@contract-impact-operation-v1",
+    "own_verified_claim_required": true,
+    "schema": "contract-impact-operation-v1",
+    "shape": "operation_callers",
+    "capability": "contract-impact-operation",
+    "dependency_pack": "phebs.grpc.caller.go",
+    "actual_dependency_extractors": [
+      "proto-contract@4.0.0",
+      "grpc-caller@1.6.0-released.1"
+    ],
+    "resolver_packs": [
+      "go-module@1.2.0",
+      "grpc-generated-attribution@1.2.0"
+    ],
+    "caller_schema": "caller-map-v2",
+    "cursor_schema": "caller-map-cursor-v2",
+    "citation_schema": "caller-map-citation-v1",
+    "composition": "Exactly one shared CallerMapService.List. No standalone Atlas product record is required when CallerMap admits its own proto-contract input; provisional switches cannot substitute for the actual stable dependency."
+  },
+  "identity": {
+    "endpoint": "protobuf + exact visible repository + declaration_lineage + canonical /package.Service/Method",
+    "filters": [
+      "unit",
+      "owner",
+      "path_prefix",
+      "code_role",
+      "tier",
+      "freshness",
+      "resolution",
+      "ordering"
+    ],
+    "source": "Unchanged exact caller/declaration source/generation/scope/cursor/citation authority, with unchanged per-row evidence tier and supplied unit uncertainty. No automatic family bridge."
+  },
+  "surfaces": {
+    "http": [
+      "GET /api/operation_impact_report",
+      "GET /api/contract_callers/citation (existing exact range capability)"
+    ],
+    "mcp": [
+      "build_operation_impact_report",
+      "read_operation_caller_citation"
+    ],
+    "ui": "Actual operation_callers Impact view at1280/390, ordinary signed isolated server. Legacy experimental v2 remains separate."
+  },
+  "states": {
+    "evidence_present": "Static evidence matching the explicit exact source/query scope; does not establish runtime impact/completeness/safety.",
+    "exact_empty": "Zero matching rows only within the exact filtered source scope; no universal absence claim.",
+    "unavailable": "No available matching-row total or fabricated zero; legitimate missing/stale/failed source epochs stay explicit.",
+    "unavailable_sections": [
+      "field_references",
+      "proposed_change",
+      "implementations",
+      "wire_verdict",
+      "matching_syntactic_calls",
+      "saved_report"
+    ]
+  },
+  "bounds": {
+    "maximum_page_size": 100,
+    "default_page_size": 50,
+    "cursor_bytes": 16384,
+    "underlying_reader": "Existing bounded exact CallerMap service and range-citation admission; no new product store/cache/worker/index/child."
+  },
+  "measured_scope": {
+    "repository": "evaluation.local/t503-public",
+    "source_input_files": 19,
+    "source_input_bytes": 316648,
+    "quality_sites": 9,
+    "endpoint_queries": 5,
+    "positive_memberships": 9,
+    "wrong_operation_negative_memberships": 36,
+    "scoped_empty_queries": 2,
+    "supplied_units": {
+      "resolved": 5,
+      "unavailable": 4
+    },
+    "evidence_tier_observed": "syntax/heuristic for all9static rows; exact authority/citations do not promote row tier.",
+    "source_transition": "One70byte comment append;8coherent publication reads, old cursor/citation409 and fresh changed-blob capability; no new truth samples.",
+    "runtime": "Three serial ordinary starts and finite1/4/8requests on Darwinarm64 observed host only."
+  },
+  "validation_artifact_id": "operation-impact-validation-1.0.0.json",
+  "revalidation": {
+    "proposed_expires_at": "2027-01-16T23:59:59Z",
+    "suspension_triggers": [
+      "own/dependency release suspension,revocation,expiry or actual recipe/version mismatch",
+      "supported report/schema/source/query/citation/security/recipe change",
+      "tool/source/input binding drift or confirmed evidence/operating-bound failure"
+    ],
+    "rollback": "Withdraw own record on the ordinary verified selection/restart path; preserve independently admitted CallerMap. Loss of consumed CallerMap withdraws dependent Impact. Historical retained bytes stay immutable."
+  },
+  "not_claimed": [
+    "Production signature, production release, operator installation or active production selection",
+    "Generalized precision/recall, independent population accuracy or source-negative recall outside the frozen9site\u00d75operation memberships",
+    "Runtime impact, deployment/traffic inventory, universal caller/consumer absence, safe retirement or migration equivalence/completion",
+    "Semantic read/write, independent source unit ownership or complete attributed service inventory",
+    "Field/change/implementation/WIRE/matching/saved-report modes or legacy experimental-v2 qualification",
+    "Durable report archive/pin/store, new classifier/indexer, source-corpus reprocessing on each report or automatic declaration-family bridge",
+    "Linux/cgroup/scale, sustained throughput/latency SLO, cold-cache benchmark, transient RSS maximum, hard memory guarantee or CPU measurement",
+    "A new real hard-death, physical-pressure or full live backup/restore campaign",
+    "Noble/Ubuntu or legacy-v2 screenshot equivalence; canonical empty/mobile frames or the full receipt matrix"
+  ],
+  "release_requirement": "Unsigned manifest only. Actual release-sign/verifier must bind the exact approved final card/manifest/validation/census/implementation/binary/tool digests. Native disposable signatures do not bind these newly authored drafts.",
+  "native_journey_image_limit": "The two native journey screenshots are contextual full-page images at retained scroll positions; the sticky header is captured at that retained position. They received no new baseline author/fresh comparison. The separately authored four neutral canonical frames are top-view current/unavailable presentation controls. No product defect is inferred from the contextual image geometry."
+}

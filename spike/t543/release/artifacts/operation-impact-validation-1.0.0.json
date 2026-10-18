@@ -1,0 +1,533 @@
+{
+  "schema": "phebs-verdict-claim-validation-v1",
+  "artifact_status": "DRAFT_UNSIGNED_NOT_ACTIVE",
+  "pack_id": "phebs.contract.impact.operation",
+  "pack_claim_version": "1.0.0",
+  "date": "2026-10-18",
+  "owner": "Ben Meddeb",
+  "production_release_signed": false,
+  "implementation": {
+    "source_commit": "e72e83f245732d516a9807bf5cc9f9e4623f5a76",
+    "source_tree": "eba2ffe091242789868841502b39e1254acd3888",
+    "binary_digest": "sha256:9afde64013cd2c920fa009395064f4a80a0fe501c467054cbc43ccbabce035e4",
+    "harness_commit": "f0ae7a3a1dedbbb5d2f72349498a61d2f2ff2ec8",
+    "plan_digest": "sha256:52c681221b1824b8e7804953b133a7b91fcef9323e199af44fe4d0e2664277cf",
+    "binding_digest": "sha256:7c390d36d069a33054e6776374b75ac974b1da38799186d58083408b97597cf2",
+    "build_receipt": {
+      "path": "spike/t543/success/build-receipt.json",
+      "bytes": 8700,
+      "digest": "sha256:f92df64f797f639377013dfca2005ccbafa46c66f05f9d7ca479904e3df6a842"
+    },
+    "helper_receipt": {
+      "path": "spike/t543/success/helper-build-receipt-bbb.json",
+      "bytes": 19554,
+      "digest": "sha256:db9ecd10fb6157f91ef21a6d7a7944ec50ae6bbf41e9173069a343ff726158f6"
+    },
+    "helper_provenance": "Actual BBB helper source and image receipt remains exact. go.mod/go.sum/focused-helper source unchanged throughe72; no rebuild/current-source provenance invented. Exact new Phebs/UI source binding is separate."
+  },
+  "native_result": {
+    "path": "spike/t543/success/finite-operating-first.json",
+    "bytes": 131021,
+    "digest": "sha256:2ee6f58f85890ad4798441d5e90047defa558fd9f688a33069b4bf051d5e8909"
+  },
+  "execution_binding": {
+    "path": "spike/t543/success/execution-binding-first-reviewed.json",
+    "bytes": 10291,
+    "digest": "sha256:7c390d36d069a33054e6776374b75ac974b1da38799186d58083408b97597cf2"
+  },
+  "outcome_cost": {
+    "path": "spike/t543/success/outcome-cost.json",
+    "bytes": 28194,
+    "digest": "sha256:7b489daa5a46a23b1b6a33de5ac201fcbbb834a97e7fe66272312faa6f3c4bda"
+  },
+  "source_oracle": {
+    "contract": {
+      "path": "spike/t541/contract.json",
+      "bytes": 15069,
+      "digest": "sha256:a90e0e39f93d1a7c92c2e4f590e6a0b4c93f277117ac174665cb6646fbeba1ce"
+    },
+    "oracle": {
+      "path": "spike/t541/oracle.json",
+      "bytes": 26334,
+      "digest": "sha256:be2218e58b220f365c4d3c0f72ef0b7d56f0a2215e810676caedadbfd27709cb"
+    },
+    "input_binding": {
+      "path": "spike/t541/input-binding.json",
+      "bytes": 6929,
+      "digest": "sha256:90f3cd5d719853240bb20eb6be00cb029d51c74c2c8d8ab91dfae17d50a5e6cb"
+    },
+    "source_review": {
+      "path": "spike/t541/source-review.json",
+      "bytes": 609,
+      "digest": "sha256:a4a347904b476eef8d3f461a206379b3b01f41383bcecbe15f6c54aa11e5b54e"
+    },
+    "quality": "Actual new composed report scored directly against immutable source-derived labels; reused public input is not a new independent sample and component quality results are not multiplied/transferred."
+  },
+  "quality": {
+    "scope": "Actual new operation_callers report memberships over all frozen T5415operations/9source sites, directly scored; no component accuracy transfer or repeated-read samples",
+    "counts": {
+      "tp": 9,
+      "fn": 0,
+      "fp": 0,
+      "tn": 36
+    },
+    "finite_composed_precision": 1.0,
+    "finite_composed_recall": 1.0,
+    "positive_wilson_95_descriptive": [
+      0.7008549515804559,
+      1.0
+    ],
+    "negative_wilson_95_descriptive": [
+      0.9035813714055363,
+      1.0
+    ],
+    "interval_qualification": "Descriptive finite composition memberships; correlated sites and selected source do not support population inference",
+    "per_operation": {
+      "/helloworld.Greeter/SayHello": {
+        "tp": 2,
+        "fn": 0,
+        "fp": 0,
+        "tn": 7
+      },
+      "/grpc.examples.echo.Echo/UnaryEcho": {
+        "tp": 3,
+        "fn": 0,
+        "fp": 0,
+        "tn": 6
+      },
+      "/grpc.examples.echo.Echo/ServerStreamingEcho": {
+        "tp": 1,
+        "fn": 0,
+        "fp": 0,
+        "tn": 8
+      },
+      "/grpc.examples.echo.Echo/ClientStreamingEcho": {
+        "tp": 1,
+        "fn": 0,
+        "fp": 0,
+        "tn": 8
+      },
+      "/grpc.examples.echo.Echo/BidirectionalStreamingEcho": {
+        "tp": 2,
+        "fn": 0,
+        "fp": 0,
+        "tn": 7
+      }
+    },
+    "per_file": {
+      "features/interceptor/client/main.go": {
+        "tp": 2,
+        "fn": 0,
+        "fp": 0,
+        "tn": 8
+      },
+      "features/metadata/client/main.go": {
+        "tp": 4,
+        "fn": 0,
+        "fp": 0,
+        "tn": 16
+      },
+      "features/multiplex/client/main.go": {
+        "tp": 2,
+        "fn": 0,
+        "fp": 0,
+        "tn": 8
+      },
+      "helloworld/greeter_client/main.go": {
+        "tp": 1,
+        "fn": 0,
+        "fp": 0,
+        "tn": 4
+      }
+    },
+    "scoped_empty_queries": 2,
+    "unit_states": {
+      "resolved": 5,
+      "unavailable": 4
+    },
+    "resolution_tiers": {
+      "syntax/heuristic": 9
+    },
+    "unique_exact_citations": 9,
+    "declaration_source_witnesses": 5,
+    "unique_proto_blobs_per_transport": 2,
+    "source_read_limit": "The2unique full immutable proto blobs were requested once per transport and sliced client-side; no instrumented filesystem open count. Exact caller capabilities return only their existing bounded immutable ranges.",
+    "processed_go_sources": {
+      "unique_files": 9,
+      "handwritten_application_files": 4,
+      "other_generated_or_data_files": 5,
+      "quality_sites": 9,
+      "processing_is_not_quality": "Nine analyzed source files is processing census, not nine negative files or exhaustive RPC recall."
+    },
+    "additional_truth_samples_from_HTTP_MCP_paging_browser_warm_or_transition": 0,
+    "no_component_result_transfer": true
+  },
+  "operating": {
+    "seconds": 33.758060457999996,
+    "host": {
+      "sysname": "Darwin",
+      "machine": "arm64",
+      "cpu_count": 10,
+      "physical_memory_bytes": 25769803776
+    },
+    "bounds": {
+      "complete_native_seconds": 180,
+      "startup_seconds": 30,
+      "publication_seconds": 90,
+      "cold_request_seconds": 2,
+      "warm_request_seconds": 1,
+      "warm_reads": 5,
+      "parallel_requests": 8,
+      "http_response_bytes": 262144,
+      "process_tree_sampled_max_rss_bytes": 2147483648,
+      "minimum_available_physical_headroom_bytes": 4294967296,
+      "minimum_free_disk_bytes": 2147483648,
+      "derived_allocated_disk_bytes": 536870912,
+      "browser_seconds": 25,
+      "repositories": 1,
+      "evaluation_tree_files": 19,
+      "evaluation_tree_bytes": 16777216
+    },
+    "phase_summaries": [
+      {
+        "phase": "impact-baseline",
+        "ready_seconds": 7.382,
+        "owned_pgid": 80384,
+        "server_group_drained": true,
+        "terminal": {
+          "outcome": "success",
+          "exit_code": 0,
+          "teardown": "clean",
+          "wall_seconds": 30.786
+        },
+        "rss_samples": 112,
+        "physical_samples": 23,
+        "sampled_max_tree_rss_bytes": 233029632,
+        "minimum_available_physical_bytes": 6068568064,
+        "sampled_max_data_allocated_bytes": 2961408
+      },
+      {
+        "phase": "impact-withdrawn",
+        "ready_seconds": 1.019,
+        "owned_pgid": 80662,
+        "server_group_drained": true,
+        "terminal": {
+          "outcome": "success",
+          "exit_code": 0,
+          "teardown": "clean",
+          "wall_seconds": 1.401
+        },
+        "rss_samples": 1,
+        "physical_samples": 1,
+        "sampled_max_tree_rss_bytes": 214990848,
+        "minimum_available_physical_bytes": 6798999552,
+        "sampled_max_data_allocated_bytes": 2756608
+      },
+      {
+        "phase": "caller-input-withdrawn",
+        "ready_seconds": 1.024,
+        "owned_pgid": 80675,
+        "server_group_drained": true,
+        "terminal": {
+          "outcome": "success",
+          "exit_code": 0,
+          "teardown": "clean",
+          "wall_seconds": 1.319
+        },
+        "rss_samples": 1,
+        "physical_samples": 1,
+        "sampled_max_tree_rss_bytes": 205488128,
+        "minimum_available_physical_bytes": 6869008384,
+        "sampled_max_data_allocated_bytes": 2748416
+      }
+    ],
+    "peak_sampled_server_tree_rss_bytes": 233029632,
+    "minimum_sampled_available_physical_bytes": 6068568064,
+    "peak_sampled_data_allocated_bytes": 2961408,
+    "finite_firstpage_batches": [
+      {
+        "clients": 1,
+        "requests": 1,
+        "wall_seconds": 0.020801,
+        "requests_per_second": 48.074805936433435
+      },
+      {
+        "clients": 4,
+        "requests": 4,
+        "wall_seconds": 0.037153,
+        "requests_per_second": 107.66218298533961
+      },
+      {
+        "clients": 8,
+        "requests": 8,
+        "wall_seconds": 0.042821,
+        "requests_per_second": 186.82513361324672
+      }
+    ],
+    "http_read_status_counts": {
+      "200": 190,
+      "202": 1,
+      "400": 1,
+      "401": 1,
+      "404": 5,
+      "409": 2,
+      "503": 6
+    },
+    "cold_warm": "Cold is first successful size1 response after publication probes; warm is five size100 firstpages/operation. Different payload sizes and prewarmed caches preclude a speedup inference. Finite1/4/8 batches are not sustained rates or SLOs.",
+    "measurement_limits": "Server-tree RSS is sequentially sampled after healthy HTTP, every0.2s; physical and data every1s. Startup/teardown are in global180s but not RSS-sampled. Available physical=page_size*(free+inactive+speculative), without swap/compressor credit. Browser/client memory and CPU unmeasured. Observed maxima are not atomic/transient peaks or hard enforcement."
+  },
+  "publication": {
+    "before": {
+      "state": "current",
+      "plane": "repository-overlay",
+      "repository": "evaluation.local/t503-public",
+      "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+      "generation_digest": "sha256:0e89feb2688028767172dbae48cbf2d99446e75fea603066dc403ebb3dfba982",
+      "declaration_set_digest": "sha256:f0a88a5859c031af6a87938502fdb17162df766f3d5a889a1d66dc4983ded5cd",
+      "candidate_manifest_digest": "sha256:110562e26806486c22637368839d8858595a476f741dfadbd21de375d4e55bb4",
+      "resolver_manifest_digest": "sha256:b23f0fcc1fc833a29aca5c2bb269345944b5c08cff56baff96e4215331668aa0",
+      "pair_set_digest": "sha256:9e26910ab968c1827fcaaebf812a46ec341235e99cfe474a47075348372f2a72",
+      "manifest_digest": "sha256:7af4abd3120f7ca4334d82dce08433be550396487541ee72ea461dbe6379d20c",
+      "publication_revision": 1,
+      "pair_count": 3,
+      "result_count": 9,
+      "abstention_count": 6,
+      "coverage_record_count": 1,
+      "covered_candidate_count": 3,
+      "canonical_bytes": 18523,
+      "record_counts": {
+        "candidate_records": 13,
+        "base_records": 13,
+        "excluded_go_test_records": 0
+      },
+      "partition_progress": {
+        "state": "complete",
+        "settled_pair_count": 3,
+        "succeeded_pair_count": 3,
+        "refused_pair_count": 0,
+        "total_pair_count": 3
+      }
+    },
+    "after": {
+      "state": "current",
+      "plane": "repository-overlay",
+      "repository": "evaluation.local/t503-public",
+      "commit": "5b187e7b79f5580a8918f8c0b34fb3350b447c97",
+      "generation_digest": "sha256:edccf445410a7c6074ea3217264623fda8f6f725513a294595488ec4d239a23c",
+      "declaration_set_digest": "sha256:ee90e5b5c35089e35c648049413a62dba55aaa6f459318da5f8ae5f066178f18",
+      "candidate_manifest_digest": "sha256:e710dff02ce74d9d4717ff764a555b1c8b6bf54bd843c1b622c8804b11fb8515",
+      "resolver_manifest_digest": "sha256:a0c86a49d4c22466880147ed2cc6707b9949c0d524aca05aba77f96dbc142e00",
+      "pair_set_digest": "sha256:268fa82b8a2ab7a459bbc7c1dfb652d3a2e4f5623e9d618b1406a9a844eaa2e2",
+      "manifest_digest": "sha256:7ed97a69894f2490e9a84c831d96c5dadf69c6b6cf6c1511732192ebd52cb57d",
+      "publication_revision": 3,
+      "pair_count": 3,
+      "result_count": 9,
+      "abstention_count": 6,
+      "coverage_record_count": 1,
+      "covered_candidate_count": 3,
+      "canonical_bytes": 18523,
+      "record_counts": {
+        "candidate_records": 13,
+        "base_records": 13,
+        "excluded_go_test_records": 0
+      },
+      "partition_progress": {
+        "state": "complete",
+        "settled_pair_count": 3,
+        "succeeded_pair_count": 3,
+        "refused_pair_count": 0,
+        "total_pair_count": 3
+      }
+    },
+    "parallel_firstpages": 8,
+    "outcomes": [
+      "exact_before_or_after_epoch",
+      "exact_before_or_after_epoch",
+      "exact_before_or_after_epoch",
+      "exact_before_or_after_epoch",
+      "exact_before_or_after_epoch",
+      "exact_before_or_after_epoch",
+      "exact_before_or_after_epoch",
+      "exact_before_or_after_epoch"
+    ],
+    "old_cursor_and_citation": "409 after source transition; bounded cache eviction also refuses, so no unique denial-cause attribution",
+    "fresh_changed_file_citation": {
+      "site_id": "features/multiplex/client/main.go:1604-1620",
+      "commit": "5b187e7b79f5580a8918f8c0b34fb3350b447c97",
+      "generation_digest": "sha256:edccf445410a7c6074ea3217264623fda8f6f725513a294595488ec4d239a23c",
+      "source_oid": "d094aacf6a40a25097ab34c72c7fc3eb2862f45f",
+      "blob_digest": "sha256:8b3200590e1c3df7c8bba900d5be2a001264af0dcb1ab334127dbb1aae3ba644",
+      "citation_bytes": 16,
+      "citation_bytes_sha256": "sha256:c6737a65ae01b829d86bdbab5ba4f25649ae373b0e0c169e70ad0a72d095a22d",
+      "transports": [
+        "HTTP exact caller citation",
+        "MCP read_operation_caller_citation"
+      ]
+    },
+    "repeated_truth_samples_added": 0
+  },
+  "withdrawals": {
+    "own_keeps_caller_map": true,
+    "input_removes_dependent_impact": true,
+    "atlas_product_independence": "separate exact-source T542 signed integration regression, no redundant native restart"
+  },
+  "unsupported_inputs": {
+    "http_mcp_unavailable_shapes": [
+      "field_references",
+      "proposed_change",
+      "implementations",
+      "wire_verdict",
+      "matching_syntactic_calls",
+      "saved_report"
+    ],
+    "mixed_field_refused": true,
+    "anonymous_http_401": true,
+    "quality_samples_added": 0
+  },
+  "browser_evidence": {
+    "result": {
+      "path": "spike/t543/success/browser/result.json",
+      "bytes": 1934,
+      "digest": "sha256:6a3e3e180094620a22b024541d87ffb97e390551812391124ee01e3ac184030d"
+    },
+    "joined": {
+      "path": "spike/t543/success/browser/joined-teardown.json",
+      "bytes": 334,
+      "digest": "sha256:ef1b034fa71cfb41799357c6d6788cb37ccce48c0ce3122a03bd0fbbc5cb59ee"
+    },
+    "screens": [
+      {
+        "path": "spike/t543/success/browser/screens/operation-impact-1280.png",
+        "bytes": 197421,
+        "digest": "sha256:8e5fda617da1c483b8721898d2f40db6664e80b7f122dde5fe5aa5d816434754"
+      },
+      {
+        "path": "spike/t543/success/browser/screens/operation-impact-390.png",
+        "bytes": 180422,
+        "digest": "sha256:c1e2508bea8dea2d5885adf55cf03986a7b93027b06b90be408248671ca15798"
+      }
+    ],
+    "actual_1280_and_390": true,
+    "response_interception": false,
+    "WCAG_violations": 0,
+    "WCAG_passes_per_width": 28,
+    "console_errors": 0,
+    "overflow": false,
+    "additional_truth_samples": 0,
+    "contextual_image_limit": "The two native journey screenshots are contextual full-page images at retained scroll positions; the sticky header is captured at that retained position. They received no new baseline author/fresh comparison. The separately authored four neutral canonical frames are top-view current/unavailable presentation controls. No product defect is inferred from the contextual image geometry."
+  },
+  "canonical_reconciliation": {
+    "receipt": {
+      "path": "spike/t543/canonical/receipt.json",
+      "bytes": 3155,
+      "digest": "sha256:0b64e00c7718d44d921933701460a9f16467988c7ed45bbfafe610f9eee6ba80"
+    },
+    "canonical_source_commit": "16a85ea363e225a7da0be2db42de0309876f350d",
+    "outcome": "passed_four_new_shape_frames_native_author_visual_review_fresh_comparison",
+    "author_seconds": 7.633016209,
+    "comparison_seconds": 6.258739667,
+    "frames": 4,
+    "root_visual_review": "All four current/unavailable light/dark frames viewed at full content; text, explicit caveats, scope, exact source, unit attribution, unknown state and header are coherent with no clipping/overflow. Exact-source author images byte-identical to those previews.",
+    "scope": "Actual installed native Chrome only. No Ubuntu/Noble or legacy-v2 equivalence. Synthetic presentation fixtures are separate from T541quality/native source.",
+    "unchanged_pending_text": "The native result.remaining_release_gates still says canonical pending; canonical/receipt.json.pending still says direct native pending. Both historical byte-exact records remain untouched. Read together: four native neutral frames separately passed author/review/fresh comparison, and this actual-source native product matrix separately passed; production signing remains pending. Different source pins/fixtures are retained, not relabelled as one execution or Noble equivalence."
+  },
+  "common_bar_reuse": {
+    "mapping": {
+      "path": "spike/t484/current-product-evidence/evidence-map.json",
+      "digest": "sha256:86a3167b8f504b2730cfbd7b91d72c8ed330e3b610cfce1afee283f77bbbf79a",
+      "captured_source_commit": "6e38710c6b6476e62cf3033e15bb25511b22adda",
+      "scope": "Shared exact caller/resolver/extraction custody and permission/epoch/pressure/restore semantics only. Mapping integration/final source-scope review belongs to root; no Impact-specific crash or backup result inferred."
+    },
+    "finite_shared_selector_receipt": {
+      "path": "/tmp/phebs-t484-finite-selectors/result.json",
+      "digest": "sha256:9f6297f8544131750927e0387355de1e36e00d1dd4f52f40d9919a6e12a729b6",
+      "source_commit": "6e38710c6b6476e62cf3033e15bb25511b22adda",
+      "outcome": "passed_all_three_finite_existing_selector_steps",
+      "seconds": [
+        10.970416333,
+        2.4691146669999995,
+        10.180675334
+      ],
+      "scope": "Root-run deterministic filesystem/archive seams, injected pressure/backup-lock policy and mocked offline restore-clear controls; not a real SIGKILL, physical-pressure or full live DB backup."
+    },
+    "report_ownership": "This operation view adds no durable report store, pin, archive, background worker or new recovery/lifecycle owner. It reuses one existing exact Caller Map List and its authority/citation/cursor/permission fences.",
+    "restore_semantics": "Native extraction controls are derived and reset/rebuilt on restore; do not promise immediate exact authority or absence. Reused caller/resolver archives retain their own exact component custody.",
+    "historical_hard_death": "Use only source-scope matched historical green custody/recovery evidence through the T484 mapping. No new Impact hard-death pass is claimed.",
+    "remaining": "Final source-scope/common-bar owner review and final referenced-artifact census/rebinding remain separate; production key is unavailable."
+  },
+  "steady_state_cost": {
+    "query": "One already-built CallerMapService.List, then fixed metadata checks and a constant-sized report/conclusion/unavailable-section wrapper; no second Atlas request, row scan, classifier, source rehash, store reader or synthetic join. HTTP/MCP serialization includes the bounded existing page (max100, default50). Exact source clicks use the existing caller-citation reader.",
+    "startup_restart": "One own-claim check plus a bounded scan of already-selected extractor identities to require actual proto-contract4.0.0 and grpc-caller1.6.0-released.1; a tiny service wrapper reuses the already-constructed exact CallerMap. No new catalog load/indexer/child/cache.",
+    "sync_tick": "No operation-report task or additional sync work; underlying admitted CallerMap source/candidate/resolver/publication pipeline is unchanged.",
+    "retry_noop": "Each retry repeats its ordinary exact List validation/page work. No new background refresh or report cache; existing exact service snapshot/index caches and bounds apply. Warm repeated reads add no truth samples.",
+    "publication": "No report publication or transaction. Exact existing caller publication epoch, source, permission, resolver pack and version fences invalidate old cursor/citation capabilities; current-source failure stays explicit unavailable/refused.",
+    "locks_caches": "No new lock, pool, cache or secret. Existing exact CallerMap metadata mutex, bounded indexes/bindings/read admission and range-citation fences remain shared, rather than duplicated per product.",
+    "bounds_memory_disk_children": "Existing page<=100, cursor<=16384bytes and exact CallerMap bounded index/binding/record limits; report adds constant metadata and no durable disk/child. Browser UI validation/rendering is bounded by returned page and existing candidates. Native test used one repository, three serial servers, max8parallel requests plus owned observer/host/browser children.",
+    "artifact_authoring": "New documentation/copies only, finite source/receipt/image reads and hashes; no product/build/test/browser/signing execution, production change or frozen-byte edit."
+  },
+  "custody": {
+    "attempts_for_exact_success_binding": 1,
+    "retry": false,
+    "prior_stops": "First disclosure-remount checker stop and second CSP instrumentation stop retained unchanged. Separate prospective checker corrections, not erased/retried as one outcome.",
+    "server_phases_all_clean_exit0": true,
+    "sampling_threads_joined": true,
+    "host_children_count": 25,
+    "host_children_all_joined_unforced": true,
+    "observers": 3,
+    "observers_all_joined_unforced": true,
+    "browser_joined": {
+      "joined": true,
+      "terminals": {
+        "client": {
+          "exit_code": 0,
+          "teardown": "clean",
+          "termination_mode": "already_exited"
+        },
+        "chrome": {
+          "exit_code": 0,
+          "teardown": "clean",
+          "termination_mode": "sigterm"
+        }
+      },
+      "seconds": 4.461013,
+      "private_input_profile_logs_removed": true
+    },
+    "private_scratch_removed_after_join": true,
+    "disposable_signatures": "Only test-only integration records inside the immutable native receipt. The disposable key was removed before serve. Those signatures bind synthetic premeasurement artifacts, not these final drafts; no production key or new signature/PackRelease/template/activation is created."
+  },
+  "prior_scoped_gates": {
+    "T542": "Owning BACKLOG T54.2 records normal/race,135UI controls,type/lint/vet/pinned Go lint; current-source signed own/dependency/mixedprovisional/Atlas-independence controls remain named scope, not rerun by artifact drafting.",
+    "T542b": "Real top-level Huma$schema metadata serialization and83focused UI/type/lint/static controls.",
+    "T542c": "Legitimate unavailable source epochs preserved without current authority or absence. FreshE72 binary is bound by this actual successful native matrix.",
+    "T543_harness": "plan-review.json records9pure/mock controls before outcome. Both later small checker-only corrections retain exact first/second stops and source review, including CSP preflight.",
+    "shared_readers": "Existing current-root/permission/auth-before-read/cursor/citation/oldpack rejection controls and source-scope matched historical recovery/archive evidence through T484; no source tests alone are labelled a native failure-campaign pass."
+  },
+  "proposed_expires_at": "2027-01-16T23:59:59Z",
+  "suspension_and_rollback": {
+    "proposed_expires_at": "2027-01-16T23:59:59Z",
+    "suspension_triggers": [
+      "own/dependency release suspension,revocation,expiry or actual recipe/version mismatch",
+      "supported report/schema/source/query/citation/security/recipe change",
+      "tool/source/input binding drift or confirmed evidence/operating-bound failure"
+    ],
+    "rollback": "Withdraw own record on the ordinary verified selection/restart path; preserve independently admitted CallerMap. Loss of consumed CallerMap withdraws dependent Impact. Historical retained bytes stay immutable."
+  },
+  "not_established": [
+    "Production signature, production release, operator installation or active production selection",
+    "Generalized precision/recall, independent population accuracy or source-negative recall outside the frozen9site\u00d75operation memberships",
+    "Runtime impact, deployment/traffic inventory, universal caller/consumer absence, safe retirement or migration equivalence/completion",
+    "Semantic read/write, independent source unit ownership or complete attributed service inventory",
+    "Field/change/implementation/WIRE/matching/saved-report modes or legacy experimental-v2 qualification",
+    "Durable report archive/pin/store, new classifier/indexer, source-corpus reprocessing on each report or automatic declaration-family bridge",
+    "Linux/cgroup/scale, sustained throughput/latency SLO, cold-cache benchmark, transient RSS maximum, hard memory guarantee or CPU measurement",
+    "A new real hard-death, physical-pressure or full live backup/restore campaign",
+    "Noble/Ubuntu or legacy-v2 screenshot equivalence; canonical empty/mobile frames or the full receipt matrix"
+  ],
+  "review": {
+    "source_labels": "Independent lead+peer source review before native output; unchanged T541 oracle/checkpoint.",
+    "harness": "Lead and t493 source review; receipt_portability reviewed the two minimal browser checker corrections before new bindings.",
+    "native_result": "Root accepted exact2ee6f58f\u2026 success.",
+    "new_artifacts": "Pending root review, final common-bar/census/signature bindings; no independent statistical/human production approval claimed."
+  },
+  "release_decision": "DRAFT only; pending final artifact/common-bar/source-scope/owner review, complete final census and exact production signature/verification/operator installation with existing unavailable key."
+}
