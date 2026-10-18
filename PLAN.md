@@ -13421,3 +13421,14 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   child follows; validation adds one constant bounded-string check. Prior
   T54.2 receipts remain exact. A fresh UI/binary binding precedes the first
   composed native run; no failed product attempt or release result is invented.
+
+- **2026-10-18 — T50.3 finite outcome and unsigned artifacts (Ben-routed Mac handoff).**
+  Preserve the first successful 39.450236s direct comparison matrix with exact
+  `bbb41b2c` binary/source/UI/tool bindings and all earlier stops. Five selected
+  syntax/heuristic sites, four supplied-unit rows, four outside-pair negatives,
+  HTTP/MCP/citations, 1280/390px interaction, two independent publication changes
+  and independent withdrawal pass; all owned groups/clients join. Retain exact
+  sampled resource limits and CPU/unsampled-peak caveats. Unsigned draft artifacts
+  do not activate a release; common-bar reconciliation and production signing
+  remain separate. This retention adds no request/sync/startup/retry/publication,
+  lock/cache/schema or child work.

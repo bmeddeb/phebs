@@ -19349,6 +19349,18 @@ remain pending, and Caller Map/Atlas's bounded-test amendment does not waive the
 old/replacement source, concurrent publication and bounded combined read cost;
 release requires its own result even when both Caller Maps are released.
 
+**T50.3 finite outcome (2026-10-18, Ben-routed Mac handoff).** The reviewed
+`bbb41b2c` image passes its 39.450236s bounded ordinary-runtime matrix: five
+selected syntax/heuristic sites, four supplied-unit rows, four outside-pair
+negatives, exact HTTP/MCP/source/UI and two publication transitions. Each
+transition retains eight concurrent exact-epoch reads and stale cursor/citation
+refusal. Withdrawal and all child joins pass. Exact receipt, source/build/UI
+bindings and unsigned card/manifest/validation drafts are retained under
+`spike/t503/requalification-after-mobile-fix/` and `spike/t503/release/artifacts/`.
+Root reviewed hashes, scope, custody and steady-state cost. No production
+activation/signature or generalized accuracy/scale claim follows; common-bar
+evidence reconciliation and the existing unavailable production key remain.
+
 **T50.3a · Preserve committed consumer units through direct caller leaves**
 *(2026-10-18, Ben-routed Mac handoff)* — T50.3's first bounded product attempt
 returned the five expected source sites but all five lacked unit attribution:

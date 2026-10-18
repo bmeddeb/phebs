@@ -1,0 +1,404 @@
+{
+  "schema": "phebs-verdict-claim-validation-v1",
+  "status": "DRAFT_UNSIGNED_PRODUCTION_SIGNATURE_PENDING",
+  "pack_id": "phebs.grpc.caller.comparison",
+  "pack_claim_version": "1.0.0",
+  "qualification": "finite-selected-public-source-composition-and-bounded-integration",
+  "production_release_signed": false,
+  "production_activation": false,
+  "release_binary": {
+    "phebs_source_commit": "bbb41b2ccfb3f9b23653aabf41607185aec3efbe",
+    "phebs_binary_digest": "sha256:121c1d07999344166d8631e65a99b06476c1fa0251f8590d2c42dd7da6393481",
+    "pack_implementation_digest": "sha256:bb2dcc25ff017afb98aeba3adbf2596f5bcd64efaf6a4602b7e937c66413c4ea",
+    "toolchain_digest": "sha256:c6652a655b5c51d1ce66b001a3f82f118b97fecfca54705e3b7313d6c8b82dba"
+  },
+  "source_tree": "ade4527a61c06801888eb6fa667b1ad075e5d826",
+  "plan": {
+    "path": "spike/t503/requalification-plan.json",
+    "sha256": "sha256:8acec78a879023e4642e41710a3563c3d4930071239e925798cf1666b5735f9f"
+  },
+  "inputs": {
+    "source_binding_sha256": "sha256:95b726d7010e649a4394bbab76e8d4ee580fab4c1510a057b443a49db52efce3",
+    "committed_inputs_sha256": "sha256:62f4e8734140569487c9dd7cbb5f1f5f1b691b9d82e752dcf6509306b81cfed8",
+    "labels_sha256": "sha256:db84af5c81cad0526677a058d602523049e000d2b960262f5bb6e547d77bcd26",
+    "first_attempt_sha256": "sha256:7e63806f9269a357fa056d46ff625a1a764da8930eb74df00d84341607163693",
+    "lineage": "spike/t503/requalification-after-mobile-fix/outcome-cost.json; all original stops/checker adjudications preserved."
+  },
+  "exact_artifacts": [
+    {
+      "path": "spike/t503/requalification-after-mobile-fix/result.json",
+      "bytes": 141960,
+      "sha256": "sha256:baebfa1616a5dab071977f640ca8eed0408e9181ce8e3ff894c9d43cbb5150ec"
+    },
+    {
+      "path": "spike/t503/requalification-after-mobile-fix/execution-binding.json",
+      "bytes": 17581,
+      "sha256": "sha256:1c900ab52a81c70147976da9033c4d492bcb73d312bc64fc2052d8e4ec9f5f36"
+    },
+    {
+      "path": "spike/t503/requalification-after-mobile-fix/outcome-cost.json",
+      "bytes": 25128,
+      "sha256": "sha256:4d878941e599ab14ba6d6733bb9a511a3909bce60c325bd75727199e71446158"
+    },
+    {
+      "path": "spike/t503/release/artifacts/caller-comparison-card-1.0.0.md",
+      "bytes": 4355,
+      "sha256": "sha256:f52f5991499b41bc1679a8038abb705021033df644a3ca2196d29bd2888d8dc7"
+    },
+    {
+      "path": "spike/t503/release/artifacts/caller-comparison-manifest-1.0.0.json",
+      "bytes": 5169,
+      "sha256": "sha256:eac25ef8d28eaa1e9afeabc9637237c21befc0e2f0bf68faafcce7c2d248f479"
+    }
+  ],
+  "native": {
+    "argv": [
+      "python3",
+      "spike/t503/requalify.py",
+      "--binding",
+      "/tmp/phebs-t503-execution-binding-after-mobile-fix-reviewed.json",
+      "--helpers",
+      "/tmp/phebs-main-bbb41b2c-native-qualification",
+      "--run-root",
+      "/tmp/phebs-t503-after-mobile-fix-05",
+      "--out",
+      "/tmp/phebs-t503-after-mobile-fix-result.json",
+      "--execute-reviewed-binding"
+    ],
+    "exit_code": 0,
+    "outcome": "passed_finite_darwin_composition_integration_only_production_signing_pending",
+    "seconds": 39.450236,
+    "native_limit_seconds": 180,
+    "preparation_seconds": 1.157304,
+    "quality": {
+      "occurrence": {
+        "rows": 5,
+        "classes": {
+          "new_only_evidence": 3,
+          "old_only_evidence": 2
+        },
+        "resolution_tiers": {
+          "syntax/heuristic": 5
+        },
+        "metrics": {
+          "row_metric": {
+            "numerator": 5,
+            "denominator": 5
+          },
+          "site_metric": {
+            "numerator": 5,
+            "denominator": 5
+          }
+        }
+      },
+      "unit": {
+        "rows": 4,
+        "classes": {
+          "new_only_evidence": 1,
+          "unresolved": 1,
+          "both_evidence": 1,
+          "old_only_evidence": 1
+        },
+        "resolution_tiers": {
+          "syntax/heuristic": 5
+        },
+        "metrics": {
+          "row_metric": {
+            "numerator": 4,
+            "denominator": 4
+          },
+          "site_metric": {
+            "numerator": 5,
+            "denominator": 5
+          }
+        }
+      },
+      "outside_pair_exclusion": {
+        "numerator": 4,
+        "denominator": 4
+      },
+      "unit_attribution": {
+        "numerator": 5,
+        "denominator": 5
+      },
+      "citation_integrity": {
+        "numerator": 5,
+        "denominator": 5
+      },
+      "per_file": {
+        "source": "Exact per-file rows remain in result.json; no separate rescore."
+      }
+    },
+    "source_processing": {
+      "unique_files": 9,
+      "quality_denominator": 9,
+      "source": "result.json quality.source_processing exact nine source rows/commits/blob hashes."
+    },
+    "publication": [
+      {
+        "role": "primary",
+        "new_commit": "5b187e7b79f5580a8918f8c0b34fb3350b447c97",
+        "parallel_first_pages": 8,
+        "outcomes": {
+          "exact_epoch": 8
+        },
+        "old_cursor_refused": true,
+        "changed_side_old_citation_refused": true
+      },
+      {
+        "role": "concurrent_copy",
+        "new_commit": "cd064619232a149ee00374fadad0759cf12528c0",
+        "parallel_first_pages": 8,
+        "outcomes": {
+          "exact_epoch": 8
+        },
+        "old_cursor_refused": true,
+        "changed_side_old_citation_refused": true
+      }
+    ],
+    "dependency_checks": [
+      {
+        "caller_map": true,
+        "comparison": true,
+        "capabilities": [
+          "contract-atlas",
+          "contract-caller-comparison",
+          "contract-caller-map",
+          "service-catalog-v2",
+          "service-relationships-v1"
+        ],
+        "mcp_tools": [
+          "blame",
+          "compare_operation_callers",
+          "compare_service_relationships",
+          "diff",
+          "find_definitions",
+          "find_references",
+          "get_commit",
+          "get_contract_operation",
+          "get_observation_progress",
+          "get_service",
+          "hover",
+          "list_commits",
+          "list_operation_callers",
+          "list_repos",
+          "list_service_relationships",
+          "list_services",
+          "read_file",
+          "read_operation_caller_citation",
+          "read_service_relationship_citation",
+          "search_code",
+          "search_contract_operations"
+        ]
+      },
+      {
+        "caller_map": true,
+        "comparison": false,
+        "capabilities": [
+          "contract-atlas",
+          "contract-caller-map",
+          "service-catalog-v2",
+          "service-relationships-v1"
+        ],
+        "mcp_tools": [
+          "blame",
+          "compare_service_relationships",
+          "diff",
+          "find_definitions",
+          "find_references",
+          "get_commit",
+          "get_contract_operation",
+          "get_observation_progress",
+          "get_service",
+          "hover",
+          "list_commits",
+          "list_operation_callers",
+          "list_repos",
+          "list_service_relationships",
+          "list_services",
+          "read_file",
+          "read_operation_caller_citation",
+          "read_service_relationship_citation",
+          "search_code",
+          "search_contract_operations"
+        ]
+      },
+      {
+        "caller_map": false,
+        "comparison": false,
+        "capabilities": [
+          "service-catalog-v2"
+        ],
+        "mcp_tools": [
+          "blame",
+          "diff",
+          "find_definitions",
+          "find_references",
+          "get_commit",
+          "get_observation_progress",
+          "get_service",
+          "hover",
+          "list_commits",
+          "list_repos",
+          "list_services",
+          "read_file",
+          "search_code"
+        ]
+      }
+    ],
+    "operating": [
+      {
+        "phase": "postfix-baseline",
+        "ready_seconds": 6.945,
+        "terminal": {
+          "outcome": "success",
+          "exit_code": 0,
+          "teardown": "clean",
+          "wall_seconds": 36.275
+        },
+        "server_group_drained": true,
+        "rss_samples": 137,
+        "sampled_max_tree_rss_bytes": 283901952,
+        "sampled_max_descendants": 2,
+        "minimum_available_physical_bytes": 6936215552,
+        "sampled_max_data_allocated_bytes": 5902336,
+        "sampling_thread_joined": true,
+        "observer": {
+          "exit_code": 0,
+          "joined": true,
+          "forced": false
+        },
+        "host_child_count": 28,
+        "all_host_children_joined": true,
+        "forced_sampling_cancellation": false
+      },
+      {
+        "phase": "comparison-withdrawn",
+        "ready_seconds": 1.294,
+        "terminal": {
+          "outcome": "success",
+          "exit_code": 0,
+          "teardown": "clean",
+          "wall_seconds": 1.726
+        },
+        "server_group_drained": true,
+        "rss_samples": 1,
+        "sampled_max_tree_rss_bytes": 233242624,
+        "sampled_max_descendants": 1,
+        "minimum_available_physical_bytes": 8447148032,
+        "sampled_max_data_allocated_bytes": 5255168,
+        "sampling_thread_joined": true,
+        "observer": {
+          "exit_code": 0,
+          "joined": true,
+          "forced": false
+        },
+        "host_child_count": 1,
+        "all_host_children_joined": true,
+        "forced_sampling_cancellation": false
+      },
+      {
+        "phase": "caller-dependency-withdrawn",
+        "ready_seconds": 1.032,
+        "terminal": {
+          "outcome": "success",
+          "exit_code": 0,
+          "teardown": "clean",
+          "wall_seconds": 1.416
+        },
+        "server_group_drained": true,
+        "rss_samples": 1,
+        "sampled_max_tree_rss_bytes": 208355328,
+        "sampled_max_descendants": 1,
+        "minimum_available_physical_bytes": 8496381952,
+        "sampled_max_data_allocated_bytes": 5214208,
+        "sampling_thread_joined": true,
+        "observer": {
+          "exit_code": 0,
+          "joined": true,
+          "forced": false
+        },
+        "host_child_count": 1,
+        "all_host_children_joined": true,
+        "forced_sampling_cancellation": false
+      }
+    ],
+    "browser": {
+      "outcome": "passed",
+      "viewports": [
+        {
+          "width": 1280,
+          "occurrence_rows": 5,
+          "unit_rows": 4,
+          "no_horizontal_overflow": true,
+          "keyboard_source_opening": true,
+          "screenshot_sha256": "a4834815351a322602af5ff1b92ac46a7063ca09ef50560da2be32e54f0f5b1f"
+        },
+        {
+          "width": 390,
+          "occurrence_rows": 5,
+          "unit_rows": 4,
+          "no_horizontal_overflow": true,
+          "keyboard_source_opening": true,
+          "screenshot_sha256": "d8069154c6b6e67839d71c5009d1ed9296c1117272970a9c772a12d4f153bcae"
+        }
+      ],
+      "console_errors": [],
+      "client_terminal": {
+        "exit_code": 0,
+        "teardown": "clean",
+        "termination_mode": "already_exited"
+      },
+      "chrome_terminal": {
+        "exit_code": 0,
+        "teardown": "clean",
+        "termination_mode": "sigterm"
+      },
+      "source": "Exact browser/result.json and browser/joined-teardown.json retained."
+    },
+    "cleanup": "All3server groups drained; clients/Chrome/samplers/observers/host children joined; disposable private key/config/rewrite/derived data removed. Exact receipt/binding retained."
+  },
+  "retained_scoped_regressions": [
+    {
+      "path": "spike/t503b/validation.json",
+      "sha256": "sha256:cb72909a55d0100bd1ee1c8131ffdfaf7c8f1f42953b2d1e41983f36525816e6",
+      "qualification": "Exact retained historical/source-mock scope only; no claim this is a fresh bbb41 package/full-repository execution. Original failed scoped regression remains visible and is followed by owning T503b fixture correction."
+    },
+    {
+      "path": "spike/t503/requalification-after-t503a/browser-corrected-checkpoint.json",
+      "sha256": "sha256:a7c2b058869c5b887ca872c15e8bbf3d55434a9598a4e9dd22d8d8db68a04c87",
+      "qualification": "Exact retained historical/source-mock scope only; no claim this is a fresh bbb41 package/full-repository execution. Original failed scoped regression remains visible and is followed by owning T503b fixture correction."
+    },
+    {
+      "path": "spike/t503/requalification-after-t503a/harness-controls.log",
+      "sha256": "sha256:e8a96e60489440bcadfc12352d7d582dda56a8d79a37306244a53bc4eac49e5b",
+      "qualification": "Exact retained historical/source-mock scope only; no claim this is a fresh bbb41 package/full-repository execution. Original failed scoped regression remains visible and is followed by owning T503b fixture correction."
+    },
+    {
+      "path": "spike/t503/requalification-after-t503a/regression-checks.json",
+      "sha256": "sha256:2529b7fd20581fd05e6f5e123a43b2d56a24febdab66e5324152fcabc979b357",
+      "qualification": "Exact retained historical/source-mock scope only; no claim this is a fresh bbb41 package/full-repository execution. Original failed scoped regression remains visible and is followed by owning T503b fixture correction."
+    }
+  ],
+  "not_established": [
+    "syntax/heuristic source tier on selected5sites; no SCIP tier promotion",
+    "Selected finite public-source composition only, not global precision/recall, completeness, unseen-corpus accuracy or scale.",
+    "Evaluator-selected endpoints do not establish migration, API equivalence, retirement safety or runtime use.",
+    "Supplied package units are not inferred services/deployments/owners.",
+    "No Linux capacity inference; exact Darwin source/workload/tool/host only.",
+    "Empty/unavailable/partial/stale/failed/overflow remain explicit; zero does not prove absence.",
+    "Existing regression records remain at their exact historical scope; no new crash/backup/pressure campaign or full repository gate was executed by retention work.",
+    "Integration-only signed records inside the exact result are historical disposable-key evidence, never a production release signature."
+  ],
+  "expiry": {
+    "proposed_expires_at": "2027-01-15T23:59:59Z",
+    "approved": false,
+    "revalidation": "As stated by draft card/manifest; no signed validity interval exists."
+  },
+  "reviewer": {
+    "owner": "Ben Meddeb",
+    "source_labels_harness_and_binding": "Root lead and independent agent peers before execution; no independent human quality review claimed.",
+    "source_side_outcome": "Accepted by root; final unsigned-artifact/production release review pending."
+  },
+  "signing": "Production signature pending the existing unavailable key. Exact result contains historical disposable-key integration signatures only; no production record/key/template/signature is supplied."
+}

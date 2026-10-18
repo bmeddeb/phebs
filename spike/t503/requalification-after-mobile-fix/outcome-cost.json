@@ -1,0 +1,620 @@
+{
+  "schema": "t503-success-outcome-cost-v1",
+  "date": "2026-10-18",
+  "status": "SOURCE_SIDE_FINITE_INTEGRATION_ACCEPTED_UNSIGNED_DRAFT_ONLY",
+  "native_outcome": "passed_finite_darwin_composition_integration_only_production_signing_pending",
+  "native_receipt_sha256": "sha256:baebfa1616a5dab071977f640ca8eed0408e9181ce8e3ff894c9d43cbb5150ec",
+  "source_commit": "bbb41b2ccfb3f9b23653aabf41607185aec3efbe",
+  "source_tree": "ade4527a61c06801888eb6fa667b1ad075e5d826",
+  "binary_digest": "sha256:121c1d07999344166d8631e65a99b06476c1fa0251f8590d2c42dd7da6393481",
+  "binding_digest": "sha256:1c900ab52a81c70147976da9033c4d492bcb73d312bc64fc2052d8e4ec9f5f36",
+  "plan_digest": "sha256:8acec78a879023e4642e41710a3563c3d4930071239e925798cf1666b5735f9f",
+  "labels_digest": "sha256:db84af5c81cad0526677a058d602523049e000d2b960262f5bb6e547d77bcd26",
+  "first_attempt_digest": "sha256:7e63806f9269a357fa056d46ff625a1a764da8930eb74df00d84341607163693",
+  "original_stops_and_adjudications": [
+    {
+      "path": "spike/t503/baseline-result.json",
+      "sha256": "sha256:7e63806f9269a357fa056d46ff625a1a764da8930eb74df00d84341607163693",
+      "bytes": 4832,
+      "outcome": "stopped_no_retry",
+      "seconds": 15.163,
+      "reason": "wrong committed-SCIP resolution: features/interceptor/client/main.go:3590-3606",
+      "preserved_exact": true
+    },
+    {
+      "path": "spike/t503/first-attempt-checkpoint.json",
+      "sha256": "sha256:c3f6834ba657fa6e98e5fcb4d2d0ab4bf3ec4d479bd226e1ff2046a684e851b0",
+      "bytes": 2972,
+      "outcome": "failed unit attribution; not a quality/operating pass",
+      "seconds": null,
+      "reason": null,
+      "preserved_exact": true
+    },
+    {
+      "path": "spike/t503/checker-adjudication.json",
+      "sha256": "sha256:cac0296d791b3ef079af157aab757b2dead90a72802503aa2cec384fb6cee318",
+      "bytes": 997,
+      "outcome": "checker correction only; does not relabel first attempt PASS",
+      "seconds": null,
+      "reason": null,
+      "preserved_exact": true
+    },
+    {
+      "path": "spike/t503/offline-check-result.json",
+      "sha256": "sha256:6a636f9bfdf314799181fcecdf6b8ba7780efb18ee64a57dce09792ffecc92ac",
+      "bytes": 901,
+      "outcome": "quality_mismatch",
+      "seconds": null,
+      "reason": "wrong unit state: features/interceptor/client/main.go:3590-3606",
+      "preserved_exact": true
+    },
+    {
+      "path": "spike/t503/unit-checker-adjudication.json",
+      "sha256": "sha256:657e8ca17382acc22b3fe3427aef71bd4857c7e73143e84a4f260e4eac6c232a",
+      "bytes": 2690,
+      "outcome": "adjudication retained",
+      "seconds": null,
+      "reason": "The exact unit comparison contract serializes resolved attribution once on the outer row; inner citation samples intentionally retain state/reason only. The frozen occurrence-shaped scorer incorrectly required repeated sample candidates. Existing API test explicitly requires omission.",
+      "preserved_exact": true
+    },
+    {
+      "path": "spike/t503/requalification-after-t503a/result.json",
+      "sha256": "sha256:f8f2fd2faf76ff79b731e233ad24ce01a15764199314ad642768908e15cc1bfb",
+      "bytes": 7295,
+      "outcome": "stopped_no_retry",
+      "seconds": 0,
+      "reason": "Command '['/usr/bin/openssl', 'genpkey', '-algorithm', 'ED25519', '-out', '/tmp/phebs-t503-after-t503a-01/disposable-only.pem']' returned non-zero exit status 1.",
+      "preserved_exact": true
+    },
+    {
+      "path": "spike/t503/requalification-after-t503a/result-tool-corrected.json",
+      "sha256": "sha256:a5227bf4a24493bc8bfcb7412723f28dddfcb6a4ba7c4008604e75e853479322",
+      "bytes": 52508,
+      "outcome": "stopped_no_retry",
+      "seconds": 16.725757,
+      "reason": "'candidates'",
+      "preserved_exact": true
+    },
+    {
+      "path": "spike/t503/requalification-after-t503a/result-unit-corrected.json",
+      "sha256": "sha256:afd41d6156134757e89ed3460365b435c9c234efe4ad2a681438d26cf60b1973",
+      "bytes": 66585,
+      "outcome": "stopped_no_retry",
+      "seconds": 22.239436,
+      "reason": "Playwright source UI/preflight failed",
+      "preserved_exact": true
+    },
+    {
+      "path": "spike/t503/requalification-after-t503a/result-browser-corrected.json",
+      "sha256": "sha256:8ee14cb1ef12cc5ccb3c417ad8aeffe063a9c4ecaf342e21a9f789c9867ba148",
+      "bytes": 66582,
+      "outcome": "stopped_no_retry",
+      "seconds": 21.547477,
+      "reason": "Playwright source UI/preflight failed",
+      "preserved_exact": true
+    },
+    {
+      "path": "spike/t503/requalification-after-t503a/browser-corrected-checkpoint.json",
+      "sha256": "sha256:a7c2b058869c5b887ca872c15e8bbf3d55434a9598a4e9dd22d8d8db68a04c87",
+      "bytes": 891,
+      "outcome": "stopped_no_retry",
+      "seconds": 21.547477,
+      "reason": "Actual390px horizontal overflow. Product repair is PR100; shared discovery repair PR101 also precedes fresh binary qualification.",
+      "preserved_exact": true
+    }
+  ],
+  "frozen_protected_artifacts": {
+    "spike/t503/checkpoint.json": "sha256:54b1377c20d2422f93756dedea56ef30aa1df0e6114d41fd646558ef4cd3ab29",
+    "spike/t503/preregistration.json": "sha256:38d85e4c0054f16762821362620c6faec7e564ea0682d344b0c23db1af22fd77",
+    "spike/t503/population.lock.json": "sha256:ca08ab1f966d3e8090ba548949cb3cec9c2c208e761f24f976fc294f7a8b089f",
+    "spike/t503/labels.json": "sha256:db84af5c81cad0526677a058d602523049e000d2b960262f5bb6e547d77bcd26",
+    "spike/t503/committed-inputs.json": "sha256:62f4e8734140569487c9dd7cbb5f1f5f1b691b9d82e752dcf6509306b81cfed8",
+    "spike/t503/planned-transitions.json": "sha256:3a2f50128c3c22e7e2e0c99a78d5b57ad3b66d4943c92d4e52693d9bf4261a61",
+    "spike/t503/baseline-result.json": "sha256:7e63806f9269a357fa056d46ff625a1a764da8930eb74df00d84341607163693",
+    "spike/t503/checker-adjudication.json": "sha256:cac0296d791b3ef079af157aab757b2dead90a72802503aa2cec384fb6cee318",
+    "spike/t503/offline-check-result.json": "sha256:6a636f9bfdf314799181fcecdf6b8ba7780efb18ee64a57dce09792ffecc92ac",
+    "spike/t503/capture-diagnosis.json": "sha256:fdc476869f2cbadf572e91e8a6dba27c05dc0299a8b3a3b4a072848848bb7bdd",
+    "spike/t503/first-output-projection.json": "sha256:32e3f05ada9fa7e31b8067911e862a35bad832b0fbc8c973cd70a62751b84734",
+    "spike/t503/index-preparation.json": "sha256:20ccea8f68d4a9828bc1cf39794dcaa9101041c7b426de130cfc781c3800e2ca",
+    "spike/t503/canonicalization.json": "sha256:c93ed29760b6f74c27510606928218366ef52fa617f199441d2cf277666cd548",
+    "spike/t503/source-binding.json": "sha256:95b726d7010e649a4394bbab76e8d4ee580fab4c1510a057b443a49db52efce3"
+  },
+  "input_scope": {
+    "upstream_provenance_only": "5f1ccf56ea5ec964bbf447a10b561214f86387a6",
+    "evaluator_source_commit": "3186f5e995e4c389caef090f1c2b2adccd90d91d",
+    "evaluator_derived_input_commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+    "source_binding_sha256": "sha256:95b726d7010e649a4394bbab76e8d4ee580fab4c1510a057b443a49db52efce3",
+    "committed_inputs_sha256": "sha256:62f4e8734140569487c9dd7cbb5f1f5f1b691b9d82e752dcf6509306b81cfed8",
+    "base_bundle_sha256": "ee5fe200ee7319d46118fdb51ae138c6bb83d1b823906199af3f7317f314fc72",
+    "canonical_scip_sha256": "56fc6f28dfe3db0130015522d27b358da14a19f0e3711771a3a3d671650426e7",
+    "input_censuses": [
+      {
+        "role": "primary",
+        "repository": "evaluation.local/t503-public",
+        "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+        "tree": "a0d73c675a066f2e969c1caa2db205576108d57e",
+        "files": 19,
+        "bytes": 316648,
+        "census_digest": "sha256:18891698bfb2873c21d794e1d1652902f36be06fcca4ed2e017d52d13164383b"
+      },
+      {
+        "role": "concurrent_copy",
+        "repository": "evaluation.local/t503-public-copy",
+        "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+        "tree": "a0d73c675a066f2e969c1caa2db205576108d57e",
+        "files": 19,
+        "bytes": 316648,
+        "census_digest": "sha256:18891698bfb2873c21d794e1d1652902f36be06fcca4ed2e017d52d13164383b"
+      },
+      {
+        "role": "primary_prospective_transition",
+        "repository": "evaluation.local/t503-public",
+        "commit": "5b187e7b79f5580a8918f8c0b34fb3350b447c97",
+        "tree": "965232d0b63975a25a6537d220ac1f6fc00c6d70",
+        "files": 19,
+        "bytes": 316718,
+        "census_digest": "sha256:d2d744a1cbea958fd9ad201b809ebf6b64853faab8e6d3c1118ae4e48204cb25"
+      },
+      {
+        "role": "concurrent_copy_prospective_transition",
+        "repository": "evaluation.local/t503-public-copy",
+        "commit": "cd064619232a149ee00374fadad0759cf12528c0",
+        "tree": "071ab5e3793d50a32966246a651818b7d10a2e71",
+        "files": 19,
+        "bytes": 316722,
+        "census_digest": "sha256:9f712925ab4c4165f6399a3a7bb8817dbaa0019d5e78d4eb75b8879e855a6b0e"
+      }
+    ],
+    "selected_sites": 5,
+    "outside_pair_negatives": 4,
+    "supplied_unit_rows": 4,
+    "quality_population_source_files": 9,
+    "units": "Evaluator-authored Go package attribution;3named units and1explicit unavailable mapping; not services/owners/deployments/runtime topology.",
+    "duplicate_role": "Independent generation/concurrency mechanics only; no added quality denominator."
+  },
+  "quality": {
+    "occurrence": {
+      "rows": 5,
+      "classes": {
+        "new_only_evidence": 3,
+        "old_only_evidence": 2
+      },
+      "resolution_tiers": {
+        "syntax/heuristic": 5
+      },
+      "metrics": {
+        "row_metric": {
+          "numerator": 5,
+          "denominator": 5
+        },
+        "site_metric": {
+          "numerator": 5,
+          "denominator": 5
+        }
+      }
+    },
+    "unit": {
+      "rows": 4,
+      "classes": {
+        "new_only_evidence": 1,
+        "unresolved": 1,
+        "both_evidence": 1,
+        "old_only_evidence": 1
+      },
+      "resolution_tiers": {
+        "syntax/heuristic": 5
+      },
+      "metrics": {
+        "row_metric": {
+          "numerator": 4,
+          "denominator": 4
+        },
+        "site_metric": {
+          "numerator": 5,
+          "denominator": 5
+        }
+      }
+    },
+    "outside_pair_exclusion": {
+      "numerator": 4,
+      "denominator": 4
+    },
+    "unit_attribution": {
+      "numerator": 5,
+      "denominator": 5
+    },
+    "citation_integrity": {
+      "numerator": 5,
+      "denominator": 5
+    },
+    "per_file": {
+      "source": "Exact per-file rows remain in result.json; no separate rescore."
+    }
+  },
+  "complete_source_processing": {
+    "unique_files": 9,
+    "quality_denominator": 9,
+    "source": "result.json quality.source_processing exact nine source rows/commits/blob hashes."
+  },
+  "native_seconds": 39.450236,
+  "preparation_seconds": 1.157304,
+  "host": {
+    "sysname": "Darwin",
+    "machine": "arm64",
+    "cpu_count": 10,
+    "physical_memory_bytes": 25769803776
+  },
+  "bounds": {
+    "index_seconds": 60,
+    "index_bytes": 8388608,
+    "evaluation_tree_files": 32,
+    "evaluation_tree_bytes": 16777216,
+    "repositories": 2,
+    "parallel_comparison_requests": 8,
+    "http_response_bytes": 262144,
+    "cold_request_seconds": 2,
+    "warm_request_seconds": 1,
+    "startup_seconds": 30,
+    "publication_seconds": 90,
+    "complete_native_seconds": 180,
+    "derived_allocated_disk_bytes": 536870912,
+    "minimum_available_physical_headroom_bytes": 4294967296,
+    "minimum_free_disk_bytes": 2147483648,
+    "source_blobs_read_per_citation": 1,
+    "process_tree_sampled_max_rss_bytes": 2147483648
+  },
+  "phases": [
+    {
+      "phase": "postfix-baseline",
+      "ready_seconds": 6.945,
+      "terminal": {
+        "outcome": "success",
+        "exit_code": 0,
+        "teardown": "clean",
+        "wall_seconds": 36.275
+      },
+      "server_group_drained": true,
+      "rss_samples": 137,
+      "sampled_max_tree_rss_bytes": 283901952,
+      "sampled_max_descendants": 2,
+      "minimum_available_physical_bytes": 6936215552,
+      "sampled_max_data_allocated_bytes": 5902336,
+      "sampling_thread_joined": true,
+      "observer": {
+        "exit_code": 0,
+        "joined": true,
+        "forced": false
+      },
+      "host_child_count": 28,
+      "all_host_children_joined": true,
+      "forced_sampling_cancellation": false
+    },
+    {
+      "phase": "comparison-withdrawn",
+      "ready_seconds": 1.294,
+      "terminal": {
+        "outcome": "success",
+        "exit_code": 0,
+        "teardown": "clean",
+        "wall_seconds": 1.726
+      },
+      "server_group_drained": true,
+      "rss_samples": 1,
+      "sampled_max_tree_rss_bytes": 233242624,
+      "sampled_max_descendants": 1,
+      "minimum_available_physical_bytes": 8447148032,
+      "sampled_max_data_allocated_bytes": 5255168,
+      "sampling_thread_joined": true,
+      "observer": {
+        "exit_code": 0,
+        "joined": true,
+        "forced": false
+      },
+      "host_child_count": 1,
+      "all_host_children_joined": true,
+      "forced_sampling_cancellation": false
+    },
+    {
+      "phase": "caller-dependency-withdrawn",
+      "ready_seconds": 1.032,
+      "terminal": {
+        "outcome": "success",
+        "exit_code": 0,
+        "teardown": "clean",
+        "wall_seconds": 1.416
+      },
+      "server_group_drained": true,
+      "rss_samples": 1,
+      "sampled_max_tree_rss_bytes": 208355328,
+      "sampled_max_descendants": 1,
+      "minimum_available_physical_bytes": 8496381952,
+      "sampled_max_data_allocated_bytes": 5214208,
+      "sampling_thread_joined": true,
+      "observer": {
+        "exit_code": 0,
+        "joined": true,
+        "forced": false
+      },
+      "host_child_count": 1,
+      "all_host_children_joined": true,
+      "forced_sampling_cancellation": false
+    }
+  ],
+  "cold_exact_requests": {
+    "occurrence": {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.014733,
+      "bytes": 15552,
+      "raw_digest": "sha256:3b3049e0f737b87019f760eaa9c3cb1c885c572f2593605b538f48260b0fb945"
+    },
+    "unit": {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.024484,
+      "bytes": 9015,
+      "raw_digest": "sha256:183e9705138bc5b4966fbf20f81ef5b2aa44f97291e1afaaeac1a90797ad9214"
+    }
+  },
+  "all_read_count": 188,
+  "publication_probes": [
+    {
+      "role": "primary",
+      "new_commit": "5b187e7b79f5580a8918f8c0b34fb3350b447c97",
+      "parallel_first_pages": 8,
+      "outcomes": {
+        "exact_epoch": 8
+      },
+      "old_cursor_refused": true,
+      "changed_side_old_citation_refused": true
+    },
+    {
+      "role": "concurrent_copy",
+      "new_commit": "cd064619232a149ee00374fadad0759cf12528c0",
+      "parallel_first_pages": 8,
+      "outcomes": {
+        "exact_epoch": 8
+      },
+      "old_cursor_refused": true,
+      "changed_side_old_citation_refused": true
+    }
+  ],
+  "dependency_checks": [
+    {
+      "caller_map": true,
+      "comparison": true,
+      "capabilities": [
+        "contract-atlas",
+        "contract-caller-comparison",
+        "contract-caller-map",
+        "service-catalog-v2",
+        "service-relationships-v1"
+      ],
+      "mcp_tools": [
+        "blame",
+        "compare_operation_callers",
+        "compare_service_relationships",
+        "diff",
+        "find_definitions",
+        "find_references",
+        "get_commit",
+        "get_contract_operation",
+        "get_observation_progress",
+        "get_service",
+        "hover",
+        "list_commits",
+        "list_operation_callers",
+        "list_repos",
+        "list_service_relationships",
+        "list_services",
+        "read_file",
+        "read_operation_caller_citation",
+        "read_service_relationship_citation",
+        "search_code",
+        "search_contract_operations"
+      ]
+    },
+    {
+      "caller_map": true,
+      "comparison": false,
+      "capabilities": [
+        "contract-atlas",
+        "contract-caller-map",
+        "service-catalog-v2",
+        "service-relationships-v1"
+      ],
+      "mcp_tools": [
+        "blame",
+        "compare_service_relationships",
+        "diff",
+        "find_definitions",
+        "find_references",
+        "get_commit",
+        "get_contract_operation",
+        "get_observation_progress",
+        "get_service",
+        "hover",
+        "list_commits",
+        "list_operation_callers",
+        "list_repos",
+        "list_service_relationships",
+        "list_services",
+        "read_file",
+        "read_operation_caller_citation",
+        "read_service_relationship_citation",
+        "search_code",
+        "search_contract_operations"
+      ]
+    },
+    {
+      "caller_map": false,
+      "comparison": false,
+      "capabilities": [
+        "service-catalog-v2"
+      ],
+      "mcp_tools": [
+        "blame",
+        "diff",
+        "find_definitions",
+        "find_references",
+        "get_commit",
+        "get_observation_progress",
+        "get_service",
+        "hover",
+        "list_commits",
+        "list_repos",
+        "list_services",
+        "read_file",
+        "search_code"
+      ]
+    }
+  ],
+  "browser": {
+    "outcome": "passed",
+    "viewports": [
+      {
+        "width": 1280,
+        "occurrence_rows": 5,
+        "unit_rows": 4,
+        "no_horizontal_overflow": true,
+        "keyboard_source_opening": true,
+        "screenshot_sha256": "a4834815351a322602af5ff1b92ac46a7063ca09ef50560da2be32e54f0f5b1f"
+      },
+      {
+        "width": 390,
+        "occurrence_rows": 5,
+        "unit_rows": 4,
+        "no_horizontal_overflow": true,
+        "keyboard_source_opening": true,
+        "screenshot_sha256": "d8069154c6b6e67839d71c5009d1ed9296c1117272970a9c772a12d4f153bcae"
+      }
+    ],
+    "console_errors": [],
+    "client_terminal": {
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "already_exited"
+    },
+    "chrome_terminal": {
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "sigterm"
+    },
+    "source": "Exact browser/result.json and browser/joined-teardown.json retained."
+  },
+  "first_successful_exact_raw": [
+    {
+      "path": "spike/t503/requalification-after-mobile-fix/raw/first-exact-occurrence.json",
+      "bytes": 15552,
+      "sha256": "sha256:3b3049e0f737b87019f760eaa9c3cb1c885c572f2593605b538f48260b0fb945",
+      "original_name": "response-0029.json",
+      "scope": "First complete exact cold occurrence comparison response; response authority/citation handles are public source evidence, not an API credential."
+    },
+    {
+      "path": "spike/t503/requalification-after-mobile-fix/raw/first-exact-unit.json",
+      "bytes": 9015,
+      "sha256": "sha256:183e9705138bc5b4966fbf20f81ef5b2aa44f97291e1afaaeac1a90797ad9214",
+      "original_name": "response-0062.json",
+      "scope": "First complete exact cold unit comparison response; response authority/citation handles are public source evidence, not an API credential."
+    }
+  ],
+  "copied_artifacts": [
+    {
+      "path": "spike/t503/requalification-after-mobile-fix/result.json",
+      "bytes": 141960,
+      "sha256": "sha256:baebfa1616a5dab071977f640ca8eed0408e9181ce8e3ff894c9d43cbb5150ec"
+    },
+    {
+      "path": "spike/t503/requalification-after-mobile-fix/execution-binding.json",
+      "bytes": 17581,
+      "sha256": "sha256:1c900ab52a81c70147976da9033c4d492bcb73d312bc64fc2052d8e4ec9f5f36"
+    },
+    {
+      "path": "spike/t503/requalification-after-mobile-fix/browser/result.json",
+      "bytes": 2033,
+      "sha256": "sha256:2bdff541f1591c598ebe8eabb13a7deff6042659c160ccf5dd509bf81006560a"
+    },
+    {
+      "path": "spike/t503/requalification-after-mobile-fix/browser/joined-teardown.json",
+      "bytes": 2254,
+      "sha256": "sha256:96067dc341e95f6901b7d1cca623bc4f4a5612ca53c713039bde74fdeb6bd1e2"
+    },
+    {
+      "path": "spike/t503/requalification-after-mobile-fix/build-receipt.json",
+      "bytes": 8706,
+      "sha256": "sha256:75861c18c95fa5ed404496c1bec9c1e8292b5920bb4ea33080ef76a7805710c2"
+    },
+    {
+      "path": "spike/t503/requalification-after-mobile-fix/helper-build-receipt.json",
+      "bytes": 19554,
+      "sha256": "sha256:db9ecd10fb6157f91ef21a6d7a7944ec50ae6bbf41e9173069a343ff726158f6"
+    },
+    {
+      "path": "spike/t503/requalification-after-mobile-fix/source-binding-preflight.json",
+      "bytes": 1005,
+      "sha256": "sha256:560646ad33f3d2257c017e0edf85f575b84943d4f687491c3d69c5634fa411b7"
+    },
+    {
+      "path": "spike/t503/requalification-after-mobile-fix/embedded-ui-check.json",
+      "bytes": 37691,
+      "sha256": "sha256:23d0843deb61f30b9cd2fd8aeae553cc0044f8a53b3b46d60e75bf440e78fdef"
+    },
+    {
+      "path": "spike/t503/requalification-after-mobile-fix/raw/first-exact-occurrence.json",
+      "bytes": 15552,
+      "sha256": "sha256:3b3049e0f737b87019f760eaa9c3cb1c885c572f2593605b538f48260b0fb945"
+    },
+    {
+      "path": "spike/t503/requalification-after-mobile-fix/raw/first-exact-unit.json",
+      "bytes": 9015,
+      "sha256": "sha256:183e9705138bc5b4966fbf20f81ef5b2aa44f97291e1afaaeac1a90797ad9214"
+    },
+    {
+      "path": "spike/t503/requalification-after-mobile-fix/browser/screens/comparison-1280.png",
+      "bytes": 189785,
+      "sha256": "sha256:a4834815351a322602af5ff1b92ac46a7063ca09ef50560da2be32e54f0f5b1f"
+    },
+    {
+      "path": "spike/t503/requalification-after-mobile-fix/browser/screens/comparison-390.png",
+      "bytes": 203611,
+      "sha256": "sha256:d8069154c6b6e67839d71c5009d1ed9296c1117272970a9c772a12d4f153bcae"
+    }
+  ],
+  "cost_qualification": {
+    "cpu": "Not measured by this native receipt; no CPU result claimed.",
+    "sampling": "Sequential native tree samples after readiness; no hard cap, atomic snapshot or transient/startup/teardown peak claim; no swap credit.",
+    "builds": "UI/binary/helpers have separate authentic joined root receipts; inherited cache, no cold build claim.",
+    "per_request": "Existing two-side authorization/generation/exact publication leases; cold bounded immutable indexes, shared comparison scan budget50000, page<=100 and<=100page citation hydrations, <=4samples per side. No new per-query child or full repository read introduced by this artifact change.",
+    "cache_and_locks": "Existing shared exact-reader mutex protects bounded maps/refcounts/expiry/admission;18-byte random binding ID allocation remains under it. At most8indexes/8bindings;128MiB identity payload per index, at most1GiB across8indexes plus record/map/Go overhead;5min binding expiry. One index build,8exact reads and2citation reads. Generation/visibility fences and pressure admission preserve refusal. No new lock/cache.",
+    "sync_startup_retry_publication": "No runtime code changed. Existing startup signed-claim dependency, resolver/caller workers and publications remain as implemented. Transition fixtures are opt-in evaluation only; no new tick/worker/schema/retry/publication work.",
+    "disk_and_children": "Native observed allocated derived data only; raw source/scratch/renderer costs are not all folded into server-tree RSS. All recorded server/observer/host/browser children joined; no retained runtime data/private key/config. Source-only report copies add bounded repository evidence bytes."
+  },
+  "release_draft": {
+    "pack_id": "phebs.grpc.caller.comparison",
+    "pack_claim_version": "1.0.0",
+    "implementation": "compare_operation_callers@caller-comparison-v2",
+    "status": "DRAFT_UNSIGNED_PRODUCTION_SIGNATURE_PENDING",
+    "production_release_signed": false,
+    "production_activation": false,
+    "owner": "Ben Meddeb",
+    "independent_source_review": "Root lead and independent peers reviewed frozen source labels/harness; source-side success accepted. No independent human quality certification.",
+    "proposed_expiry": "2027-01-15T23:59:59Z",
+    "final_approval_and_signature": "Pending existing unavailable production key and owning final release decision. No signing command/template/key or production release record authored."
+  },
+  "limitations": [
+    "syntax/heuristic source tier on selected5sites; no SCIP tier promotion",
+    "Selected finite public-source composition only, not global precision/recall, completeness, unseen-corpus accuracy or scale.",
+    "Evaluator-selected endpoints do not establish migration, API equivalence, retirement safety or runtime use.",
+    "Supplied package units are not inferred services/deployments/owners.",
+    "No Linux capacity inference; exact Darwin source/workload/tool/host only.",
+    "Empty/unavailable/partial/stale/failed/overflow remain explicit; zero does not prove absence.",
+    "Existing regression records remain at their exact historical scope; no new crash/backup/pressure campaign or full repository gate was executed by retention work.",
+    "Integration-only signed records inside the exact result are historical disposable-key evidence, never a production release signature."
+  ],
+  "execution_since_success": "Zero product/browser/signing/build/test executions; source-only copying, hashing and authoring.",
+  "unsigned_draft_paths": [
+    "spike/t503/release/artifacts/caller-comparison-card-1.0.0.md",
+    "spike/t503/release/artifacts/caller-comparison-manifest-1.0.0.json",
+    "spike/t503/release/artifacts/caller-comparison-validation-1.0.0.json"
+  ]
+}
