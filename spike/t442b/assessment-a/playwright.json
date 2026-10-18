@@ -1,0 +1,254 @@
+{
+  "config": {
+    "argv": [
+      "/private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+      "/Users/ben/.codex/worktrees/t442b-key-copy/phebs.com/ui/node_modules/@playwright/test/cli.js",
+      "test",
+      "--config",
+      "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/assessment-a-runner/playwright.config.ts",
+      "--project",
+      "appearance",
+      "--max-failures=1",
+      "--grep",
+      "native API key copying (light 390|dark 1280)$"
+    ],
+    "configFile": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/assessment-a-runner/playwright.config.ts",
+    "rootDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/assessment-a-runner",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 1,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/assessment-a/output",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "setup",
+        "name": "setup",
+        "testDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/assessment-a-runner",
+        "testIgnore": [],
+        "testMatch": [
+          "/auth\\.setup\\.ts/"
+        ],
+        "timeout": 20000
+      },
+      {
+        "outputDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/assessment-a/output",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "receipts",
+        "name": "receipts",
+        "testDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/assessment-a-runner",
+        "testIgnore": [],
+        "testMatch": [
+          "/receipts\\.spec\\.ts/"
+        ],
+        "timeout": 20000
+      },
+      {
+        "outputDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/assessment-a/output",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "anon",
+        "name": "anon",
+        "testDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/assessment-a-runner",
+        "testIgnore": [],
+        "testMatch": [
+          "/anon\\.spec\\.ts/"
+        ],
+        "timeout": 20000
+      },
+      {
+        "outputDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/assessment-a/output",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "typed-index",
+        "name": "typed-index",
+        "testDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/assessment-a-runner",
+        "testIgnore": [],
+        "testMatch": [
+          "/typed-index\\.spec\\.ts/"
+        ],
+        "timeout": 20000
+      },
+      {
+        "outputDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/assessment-a/output",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "appearance",
+        "name": "appearance",
+        "testDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/assessment-a-runner",
+        "testIgnore": [],
+        "testMatch": [
+          "/palette\\.native\\.spec\\.ts/"
+        ],
+        "timeout": 20000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/assessment-a/playwright.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.62.1",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "palette.native.spec.ts",
+      "file": "palette.native.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "native API key copying light 390",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 20000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "appearance",
+              "projectName": "appearance",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2505,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "{\"width\":390,\"theme\":\"light\",\"missingClipboard\":true,\"rejectedClipboard\":true,\"keyboardManualSelection\":true,\"deferredClipboardSuccess\":true,\"settledMillis\":40}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T21:05:18.956Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "api-key-copy-failed",
+                      "contentType": "image/png",
+                      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/assessment-a/output/palette.native-native-API-key-copying-light-390-appearance/attachments/api-key-copy-failed-1f806b66eb37000fbdada2fa194d8cac5ebe01dd.png"
+                    },
+                    {
+                      "name": "api-key-copy-done",
+                      "contentType": "image/png",
+                      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/assessment-a/output/palette.native-native-API-key-copying-light-390-appearance/attachments/api-key-copy-done-81c6b338e5087843e56daca3980a93adf2d6865e.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "1aaee7988828f5eff185-e961bc44c9159ddedd59",
+          "file": "../../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/assessment-a-runner/palette.native.spec.ts",
+          "line": 245,
+          "column": 3
+        },
+        {
+          "title": "native API key copying dark 1280",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 20000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "appearance",
+              "projectName": "appearance",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2241,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "{\"width\":1280,\"theme\":\"dark\",\"missingClipboard\":true,\"rejectedClipboard\":true,\"keyboardManualSelection\":true,\"deferredClipboardSuccess\":true,\"settledMillis\":28}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T21:05:21.562Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "api-key-copy-failed",
+                      "contentType": "image/png",
+                      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/assessment-a/output/palette.native-native-API-key-copying-dark-1280-appearance/attachments/api-key-copy-failed-f7c3f73c1c43256a6eb6594e34597a1e00ea7502.png"
+                    },
+                    {
+                      "name": "api-key-copy-done",
+                      "contentType": "image/png",
+                      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/assessment-a/output/palette.native-native-API-key-copying-dark-1280-appearance/attachments/api-key-copy-done-8d85c736a7d46074e1153bb111c496b468cfc785.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "1aaee7988828f5eff185-a93862211664dc2ce173",
+          "file": "../../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/assessment-a-runner/palette.native.spec.ts",
+          "line": 245,
+          "column": 3
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-18T21:05:18.265Z",
+    "duration": 5584.777,
+    "expected": 2,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

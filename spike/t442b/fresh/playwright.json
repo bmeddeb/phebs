@@ -1,0 +1,528 @@
+{
+  "config": {
+    "argv": [
+      "/private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+      "/Users/ben/.codex/worktrees/t442b-key-copy/phebs.com/ui/node_modules/@playwright/test/cli.js",
+      "test",
+      "--config",
+      "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/runner/playwright.config.ts",
+      "--project",
+      "appearance",
+      "--max-failures=1",
+      "--grep",
+      "native Appearance unavailable|native API key copying"
+    ],
+    "configFile": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/runner/playwright.config.ts",
+    "rootDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/runner",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 1,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/fresh/output",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "setup",
+        "name": "setup",
+        "testDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/runner",
+        "testIgnore": [],
+        "testMatch": [
+          "/auth\\.setup\\.ts/"
+        ],
+        "timeout": 20000
+      },
+      {
+        "outputDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/fresh/output",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "receipts",
+        "name": "receipts",
+        "testDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/runner",
+        "testIgnore": [],
+        "testMatch": [
+          "/receipts\\.spec\\.ts/"
+        ],
+        "timeout": 20000
+      },
+      {
+        "outputDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/fresh/output",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "anon",
+        "name": "anon",
+        "testDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/runner",
+        "testIgnore": [],
+        "testMatch": [
+          "/anon\\.spec\\.ts/"
+        ],
+        "timeout": 20000
+      },
+      {
+        "outputDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/fresh/output",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "typed-index",
+        "name": "typed-index",
+        "testDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/runner",
+        "testIgnore": [],
+        "testMatch": [
+          "/typed-index\\.spec\\.ts/"
+        ],
+        "timeout": 20000
+      },
+      {
+        "outputDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/fresh/output",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "appearance",
+        "name": "appearance",
+        "testDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/runner",
+        "testIgnore": [],
+        "testMatch": [
+          "/palette\\.native\\.spec\\.ts/"
+        ],
+        "timeout": 20000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/fresh/playwright.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.62.1",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "palette.native.spec.ts",
+      "file": "palette.native.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "native Appearance unavailable recovery light 1280",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 20000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "appearance",
+              "projectName": "appearance",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2793,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "{\"width\":1280,\"theme\":\"light\",\"failedScripts\":[\"http://127.0.0.1:55852/assets/highlight-DQ8ytWfb.js\"],\"expectedFaultConsole\":[{\"type\":\"error\",\"text\":\"Failed to load resource: the server responded with a status of 503 (Service Unavailable)\",\"url\":\"http://127.0.0.1:55852/assets/highlight-DQ8ytWfb.js\"}],\"reloadPreservedPalette\":\"quiet\",\"recovery\":true}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T21:06:05.650Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "unavailable-preview-frame",
+                      "contentType": "image/png",
+                      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/fresh/output/palette.native-native-Appe-297f4-ailable-recovery-light-1280-appearance/attachments/unavailable-preview-frame-bba72eee4c92e9e8697e4c25e17ebc0a9b37a6bb.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "1aaee7988828f5eff185-7de2843529249cfab384",
+          "file": "../../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/runner/palette.native.spec.ts",
+          "line": 172,
+          "column": 3
+        },
+        {
+          "title": "native Appearance unavailable recovery light 390",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 20000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "appearance",
+              "projectName": "appearance",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2360,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "{\"width\":390,\"theme\":\"light\",\"failedScripts\":[\"http://127.0.0.1:55852/assets/highlight-DQ8ytWfb.js\"],\"expectedFaultConsole\":[{\"type\":\"error\",\"text\":\"Failed to load resource: the server responded with a status of 503 (Service Unavailable)\",\"url\":\"http://127.0.0.1:55852/assets/highlight-DQ8ytWfb.js\"}],\"reloadPreservedPalette\":\"quiet\",\"recovery\":true}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T21:06:08.587Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "unavailable-preview-frame",
+                      "contentType": "image/png",
+                      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/fresh/output/palette.native-native-Appe-ad586-vailable-recovery-light-390-appearance/attachments/unavailable-preview-frame-b193f290b24005e2bf9b1a2727e51d41fdd72d0f.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "1aaee7988828f5eff185-ba9248b42bd85417f0b2",
+          "file": "../../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/runner/palette.native.spec.ts",
+          "line": 172,
+          "column": 3
+        },
+        {
+          "title": "native Appearance unavailable recovery dark 1280",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 20000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "appearance",
+              "projectName": "appearance",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2016,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "{\"width\":1280,\"theme\":\"dark\",\"failedScripts\":[\"http://127.0.0.1:55852/assets/highlight-DQ8ytWfb.js\"],\"expectedFaultConsole\":[{\"type\":\"error\",\"text\":\"Failed to load resource: the server responded with a status of 503 (Service Unavailable)\",\"url\":\"http://127.0.0.1:55852/assets/highlight-DQ8ytWfb.js\"}],\"reloadPreservedPalette\":\"quiet\",\"recovery\":true}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T21:06:10.975Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "unavailable-preview-frame",
+                      "contentType": "image/png",
+                      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/fresh/output/palette.native-native-Appe-48e20-vailable-recovery-dark-1280-appearance/attachments/unavailable-preview-frame-262df1fe3fc8a30662307dee3cacb1bd0632af43.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "1aaee7988828f5eff185-a9d2cf876c26c4e9b204",
+          "file": "../../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/runner/palette.native.spec.ts",
+          "line": 172,
+          "column": 3
+        },
+        {
+          "title": "native Appearance unavailable recovery dark 390",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 20000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "appearance",
+              "projectName": "appearance",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2167,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "{\"width\":390,\"theme\":\"dark\",\"failedScripts\":[\"http://127.0.0.1:55852/assets/highlight-DQ8ytWfb.js\"],\"expectedFaultConsole\":[{\"type\":\"error\",\"text\":\"Failed to load resource: the server responded with a status of 503 (Service Unavailable)\",\"url\":\"http://127.0.0.1:55852/assets/highlight-DQ8ytWfb.js\"}],\"reloadPreservedPalette\":\"quiet\",\"recovery\":true}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T21:06:13.011Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "unavailable-preview-frame",
+                      "contentType": "image/png",
+                      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/fresh/output/palette.native-native-Appe-ed7e7-available-recovery-dark-390-appearance/attachments/unavailable-preview-frame-1512f4a5936677cab90082b1a754db6b643b2f2c.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "1aaee7988828f5eff185-535139df07151d472ba2",
+          "file": "../../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/runner/palette.native.spec.ts",
+          "line": 172,
+          "column": 3
+        },
+        {
+          "title": "native API key copying light 1280",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 20000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "appearance",
+              "projectName": "appearance",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2353,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "{\"width\":1280,\"theme\":\"light\",\"missingClipboard\":true,\"rejectedClipboard\":true,\"keyboardManualSelection\":true,\"deferredClipboardSuccess\":true,\"settledMillis\":77}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T21:06:15.198Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "api-key-copy-failed",
+                      "contentType": "image/png",
+                      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/fresh/output/palette.native-native-API-key-copying-light-1280-appearance/attachments/api-key-copy-failed-715dec8aa3fc0f44d4d45fbfac1f2ee5b1cb5800.png"
+                    },
+                    {
+                      "name": "api-key-copy-done",
+                      "contentType": "image/png",
+                      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/fresh/output/palette.native-native-API-key-copying-light-1280-appearance/attachments/api-key-copy-done-46407d9dfb29878150d6fa96016b40dc7389cedc.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "1aaee7988828f5eff185-cb27d1e0593793981e3a",
+          "file": "../../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/runner/palette.native.spec.ts",
+          "line": 245,
+          "column": 3
+        },
+        {
+          "title": "native API key copying light 390",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 20000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "appearance",
+              "projectName": "appearance",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2466,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "{\"width\":390,\"theme\":\"light\",\"missingClipboard\":true,\"rejectedClipboard\":true,\"keyboardManualSelection\":true,\"deferredClipboardSuccess\":true,\"settledMillis\":57}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T21:06:17.568Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "api-key-copy-failed",
+                      "contentType": "image/png",
+                      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/fresh/output/palette.native-native-API-key-copying-light-390-appearance/attachments/api-key-copy-failed-b163a1e9cb54297172a4da9b86dd02fec1cb9230.png"
+                    },
+                    {
+                      "name": "api-key-copy-done",
+                      "contentType": "image/png",
+                      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/fresh/output/palette.native-native-API-key-copying-light-390-appearance/attachments/api-key-copy-done-0324d91897eb5846457f9530c957ab8d632a6951.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "1aaee7988828f5eff185-e961bc44c9159ddedd59",
+          "file": "../../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/runner/palette.native.spec.ts",
+          "line": 245,
+          "column": 3
+        },
+        {
+          "title": "native API key copying dark 1280",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 20000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "appearance",
+              "projectName": "appearance",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2253,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "{\"width\":1280,\"theme\":\"dark\",\"missingClipboard\":true,\"rejectedClipboard\":true,\"keyboardManualSelection\":true,\"deferredClipboardSuccess\":true,\"settledMillis\":52}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T21:06:20.050Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "api-key-copy-failed",
+                      "contentType": "image/png",
+                      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/fresh/output/palette.native-native-API-key-copying-dark-1280-appearance/attachments/api-key-copy-failed-4e1249e03e7eef182cb1c286f5ff49cbf8e82110.png"
+                    },
+                    {
+                      "name": "api-key-copy-done",
+                      "contentType": "image/png",
+                      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/fresh/output/palette.native-native-API-key-copying-dark-1280-appearance/attachments/api-key-copy-done-4f6d45f8b003ffd0463510cce79831639355be90.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "1aaee7988828f5eff185-a93862211664dc2ce173",
+          "file": "../../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/runner/palette.native.spec.ts",
+          "line": 245,
+          "column": 3
+        },
+        {
+          "title": "native API key copying dark 390",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 20000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "appearance",
+              "projectName": "appearance",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2190,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "{\"width\":390,\"theme\":\"dark\",\"missingClipboard\":true,\"rejectedClipboard\":true,\"keyboardManualSelection\":true,\"deferredClipboardSuccess\":true,\"settledMillis\":51}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T21:06:22.320Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "api-key-copy-failed",
+                      "contentType": "image/png",
+                      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/fresh/output/palette.native-native-API-key-copying-dark-390-appearance/attachments/api-key-copy-failed-73d06574334a657604ba7c978e7bca496fd11631.png"
+                    },
+                    {
+                      "name": "api-key-copy-done",
+                      "contentType": "image/png",
+                      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/fresh/output/palette.native-native-API-key-copying-dark-390-appearance/attachments/api-key-copy-done-c202c54dc6d0426aba6c51fc72955748a503bb9e.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "1aaee7988828f5eff185-73ab70afe06761044b3b",
+          "file": "../../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/runner/palette.native.spec.ts",
+          "line": 245,
+          "column": 3
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-18T21:06:05.049Z",
+    "duration": 19566.734,
+    "expected": 8,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

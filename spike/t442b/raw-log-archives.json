@@ -1,0 +1,142 @@
+[
+  {
+    "path": "assessment-a/chrome.log.gz",
+    "decoded_sha256": "5106ca22e7c1989022a62479094c153450bf9ac58ebbdb5fd1600d54bb92a61c",
+    "archive_sha256": "93722338f8af70cba0673d7f5378bb9c2db26d9dfcc3958ec07f9a2ce925fb3f"
+  },
+  {
+    "path": "assessment-a/client.log.gz",
+    "decoded_sha256": "bdb92f4fc196166b156cd00903a6b778a2742e22f2b0fc8bc5b03529a35a0f44",
+    "archive_sha256": "6ce11452b231bd4a522a01ed63a4e108ef7f1de0fe45fe8ba3830b9f6745216f"
+  },
+  {
+    "path": "assessment-a/vite.log.gz",
+    "decoded_sha256": "16acb00c5271a777dd9ff96ab4cc889f5dae6232381a214df4970222d2995492",
+    "archive_sha256": "9bbdb67303fd4fb1b2e433d6207e9dcf967799bb62abd0a77dbe58d8808e7c28"
+  },
+  {
+    "path": "assessment-b/chrome.log.gz",
+    "decoded_sha256": "3343228d3aeec4a59db763313e99c3315f350c8e9d01c51b06ca9d87723d2ac1",
+    "archive_sha256": "4c3a7db048787d9aaf1fd3fc45aba0e14c573349f6df0663d6575ed29bdb2939"
+  },
+  {
+    "path": "assessment-b/client.log.gz",
+    "decoded_sha256": "4423b10cd1610e888d7078ee04ca25f95909e3fa30c595388e23aa09fe2c729f",
+    "archive_sha256": "d95e47e24a6961e1763e82d5edeb856ba9159491fb1f8715438c4a67ed9f5e4b"
+  },
+  {
+    "path": "assessment-b/impeccable.log.gz",
+    "decoded_sha256": "8b8e7daac16ea07ab824d44b2133e4583722f372a33d91330075d67306371192",
+    "archive_sha256": "2c89fdc0df6c566f75a59fa8d54b3a2255bb9f66d3a29367c2de7c785b6de08e"
+  },
+  {
+    "path": "assessment-b/vite.log.gz",
+    "decoded_sha256": "1bc70ed2a5950b5ff4e17289beae3c32fde3abd83a01a94708fcff43818fd214",
+    "archive_sha256": "a7ce7f89ec9ca02b71ea1fd3a9b81003b1adcaf75f366ec7cd463d6607854a46"
+  },
+  {
+    "path": "author/chrome.log.gz",
+    "decoded_sha256": "45a9338ede83abd91fe29d8667aaca9e47d20d8f076f5581a7425e3ab573b6f2",
+    "archive_sha256": "8d91c7d8a0fbadb2cfb2954a2808a7f17ccad4ce25a8e73ba277b65e774160bf"
+  },
+  {
+    "path": "author/client.log.gz",
+    "decoded_sha256": "d26989907b230f60cc4171a2cb0f9e596053edb20ebab5077690eeaf6a2aebeb",
+    "archive_sha256": "0cf842006e9c1004774cbbaebf3d351d29f420b58a2ccb013b31a69d9bb8ae83"
+  },
+  {
+    "path": "author/vite.log.gz",
+    "decoded_sha256": "8f883a4da59deca5e3726ccc325761f87f859624b1ad4787601d9ab6cd31f896",
+    "archive_sha256": "62379b3a0aa2bd989d9f114c9ce88e24c2ff2e210f40042f46da651796538a9a"
+  },
+  {
+    "path": "checks/baseline-regression.log.gz",
+    "decoded_sha256": "42377787e2d7b0e6193192be0202ed73aaf920d89f3d806e126a205f39e7a23c",
+    "archive_sha256": "9845606284f28f32dc9a39035fe0a94272e6870af49b9a73fe859cb376efc90a"
+  },
+  {
+    "path": "checks/build-corrected.log.gz",
+    "decoded_sha256": "92c29274dd68fc672e7d0d76f643015f9ff19b06b6df503ff5248cc978fa1959",
+    "archive_sha256": "f1f62df438fe2516996f3ec7b1983e0809acd5dc3bb8b90613bade986d81458f"
+  },
+  {
+    "path": "checks/build.log.gz",
+    "decoded_sha256": "b8753a6567764f5ee2c5f746a266a9065edfdc7cd724d7d44f6153ca7bac35ab",
+    "archive_sha256": "f9e5a834c91e399e6b69a99dfbe9dfbdd15f776753ac41f71281981ebd33799f"
+  },
+  {
+    "path": "checks/focused-corrected.log.gz",
+    "decoded_sha256": "02d5b9cbb89e6bc4aee5560d86053058207eb5ace0e29d56e435bfede3b3f79d",
+    "archive_sha256": "380372ba467b299c03211b1689bc5f36ef09542e341a4c8c71a0074085de029d"
+  },
+  {
+    "path": "checks/focused-final.log.gz",
+    "decoded_sha256": "d971cda26c438c9ba7d8095293764bab03b8fbadb65360f4839f1783cd8d1e46",
+    "archive_sha256": "2f9c1b6318c8d4377bf0e8e4c5b99ab89b033b4402ae63d7a8377656942064ce"
+  },
+  {
+    "path": "checks/focused.log.gz",
+    "decoded_sha256": "4c7cccede629038ecfbcb5e8664a98d6f9f085e5a2d86908503cf3bd969dedac",
+    "archive_sha256": "c94f3dd92ca8642b45939e22d1c8ca17d2551fa5b4f3d4bec8370c61083fea28"
+  },
+  {
+    "path": "checks/lint-corrected.log.gz",
+    "decoded_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64"
+  },
+  {
+    "path": "checks/lint.log.gz",
+    "decoded_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64"
+  },
+  {
+    "path": "checks/receipt-lint-portable.log.gz",
+    "decoded_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64"
+  },
+  {
+    "path": "checks/receipt-types-corrected.log.gz",
+    "decoded_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64"
+  },
+  {
+    "path": "checks/receipt-types-portable.log.gz",
+    "decoded_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64"
+  },
+  {
+    "path": "checks/receipt-types.log.gz",
+    "decoded_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64"
+  },
+  {
+    "path": "fresh/chrome.log.gz",
+    "decoded_sha256": "ffb7b1b15b25032cb4f372f24bc4cb52917aa77bc7cfa3912d8fb3694644f2e1",
+    "archive_sha256": "162b864bc374102bc1b3e6d8ac4c4446f23c0bfc9c85827700d29110e31a4354"
+  },
+  {
+    "path": "fresh/client.log.gz",
+    "decoded_sha256": "51322a015b49760195a50506182c3a6d44367e07f0f32f957913bb86257a5880",
+    "archive_sha256": "0899b8c8f8f98422f069be797fbf2d367185f8493ce90a1e69bf4534caf3e449"
+  },
+  {
+    "path": "fresh/vite.log.gz",
+    "decoded_sha256": "de2f7f689aa24b30302d5f91277e2c5b18dc8094ff218f57da5d8b7a40243d95",
+    "archive_sha256": "1d6839c6b6a6a235b1e1319c614df62918b2e1ef4ede398732822672246ffe86"
+  },
+  {
+    "path": "checks/docs.log.gz",
+    "decoded_sha256": "57792307892d33d20f8f822a81196b9605e801eb578241a6c5a466dd57b73fc2",
+    "archive_sha256": "c598f00038aba08834999eac1f624203536551cfa24694340debdf3e9db763e7"
+  },
+  {
+    "path": "checks/glossary.log.gz",
+    "decoded_sha256": "f128ad7aef2b6215c4414d1e00b2650f9c42011b1705707b624be1c70d92f095",
+    "archive_sha256": "a48bfc58724fdadf76ed3abd2bbbf48454633a32c09bf01d8cebb7fc6c398cd2"
+  },
+  {
+    "path": "checks/whitespace.log.gz",
+    "decoded_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "archive_sha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64"
+  }
+]

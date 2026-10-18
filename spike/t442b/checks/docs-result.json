@@ -1,0 +1,52 @@
+{
+  "runs": [
+    {
+      "name": "docs",
+      "argv": [
+        "make",
+        "docs-check"
+      ],
+      "limit_seconds": 60,
+      "pid": 45409,
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "already_exited",
+      "joined": true,
+      "seconds_including_join": 2.4724475000000004,
+      "log_sha256": "57792307892d33d20f8f822a81196b9605e801eb578241a6c5a466dd57b73fc2"
+    },
+    {
+      "name": "glossary",
+      "argv": [
+        "make",
+        "verify-glossary"
+      ],
+      "limit_seconds": 60,
+      "pid": 45467,
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "already_exited",
+      "joined": true,
+      "seconds_including_join": 0.7603405419999998,
+      "log_sha256": "f128ad7aef2b6215c4414d1e00b2650f9c42011b1705707b624be1c70d92f095"
+    },
+    {
+      "name": "whitespace",
+      "argv": [
+        "git",
+        "diff",
+        "--cached",
+        "--check"
+      ],
+      "limit_seconds": 15,
+      "pid": 45489,
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "already_exited",
+      "joined": true,
+      "seconds_including_join": 0.07539991699999993,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "failed": false
+}

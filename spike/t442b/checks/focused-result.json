@@ -1,0 +1,30 @@
+{
+  "runs": [
+    {
+      "name": "focused",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "--maxWorkers=1",
+        "--no-file-parallelism",
+        "src/pages/SettingsPage.test.tsx",
+        "src/components/AuthorityDrawer.test.tsx",
+        "src/palette.test.ts",
+        "src/theme.test.ts",
+        "--testTimeout=10000",
+        "--hookTimeout=10000"
+      ],
+      "limit_seconds": 60,
+      "expected_exit": 0,
+      "pid": 39484,
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "already_exited",
+      "joined": true,
+      "seconds_including_join": 3.52896425,
+      "log_sha256": "4c7cccede629038ecfbcb5e8664a98d6f9f085e5a2d86908503cf3bd969dedac"
+    }
+  ],
+  "failed": false
+}

@@ -1,0 +1,49 @@
+{
+  "ticket": "T44.2b",
+  "date": "2026-10-18",
+  "outcome": "passed-scoped-gates",
+  "source_commit": "ad6cbe082f43ce7cab89a27cf18d59feb46ece15",
+  "test_correction_commit": "154fc1aa6156709e853cc81ea083f2feb30da608",
+  "unit_tests": 373,
+  "selected_author_cases": 8,
+  "selected_fresh_cases": 8,
+  "default_appearance_cases": 18,
+  "byte_identical_pairs": 12,
+  "capture_state_audits": 24,
+  "violations": 0,
+  "incomplete": 0,
+  "expected_injected_script_errors_each_pass": 4,
+  "unexpected_console_page_errors": 0,
+  "native_runs": {
+    "author": {
+      "outcome": "passed",
+      "total_seconds": 42.995365,
+      "all_owned_groups_joined_cleanly": true
+    },
+    "fresh": {
+      "outcome": "passed",
+      "total_seconds": 22.723108,
+      "all_owned_groups_joined_cleanly": true
+    },
+    "assessment-a": {
+      "outcome": "passed",
+      "total_seconds": 9.983449,
+      "all_owned_groups_joined_cleanly": true
+    }
+  },
+  "qualification": "Darwin Chrome155 neutral mocked APIs and substituted browser clipboard; no host clipboard contents, real authentication, full canonical matrix, Linux or release result",
+  "canonical_baselines_changed": 0,
+  "production_signing": "pending",
+  "linux_issue": "https://github.com/bmeddeb/phebs/issues/124",
+  "review": {
+    "source_cost": "No blocking findings; token-keyed localstate, bounded perclick work, no persistence/network/auth change",
+    "design_score": 37,
+    "design_max": 40,
+    "priority_issues": 0,
+    "detector_findings": 0,
+    "injection_contexts": 3,
+    "B_seconds_including_join": 13.837457,
+    "B_clean_join": true,
+    "portable_selection_and_keyboard_retry": "passed"
+  }
+}

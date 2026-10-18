@@ -107,6 +107,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup()
   vi.restoreAllMocks()
+  vi.unstubAllGlobals()
 })
 
 test('Appearance offers every curated palette and commits through the preference (T44.2)', async () => {
@@ -225,6 +226,57 @@ test('key creation is read only', async () => {
   })
   expect(await screen.findByText(/Read-only key/)).toBeTruthy()
   expect(screen.queryByRole('checkbox', { name: /Allow Investigation writes/ })).toBeNull()
+})
+
+async function createKey(name = 'Clipboard client') {
+  fireEvent.change(screen.getByRole('textbox', { name: 'Key name' }), { target: { value: name } })
+  fireEvent.click(screen.getByRole('button', { name: 'Create key' }))
+  expect((await screen.findByRole('textbox', { name: 'New API key token' }) as HTMLInputElement).value).toBe('phebs_new.secret')
+}
+
+test.each(['missing', 'rejected', 'throws'] as const)('key copy reports %s clipboard failure and permits recovery (T44.2b)', async (failure) => {
+  const writeText = vi.fn()
+  if (failure === 'rejected') writeText.mockRejectedValue(new Error('private clipboard details'))
+  if (failure === 'throws') writeText.mockImplementation(() => { throw new Error('private clipboard details') })
+  vi.stubGlobal('navigator', { clipboard: failure === 'missing' ? undefined : { writeText } })
+  renderPage()
+  await createKey()
+  fireEvent.click(screen.getByRole('button', { name: 'Copy API key' }))
+  expect(await screen.findByText('Copy failed. Select and copy the key above.')).toBeTruthy()
+  expect(screen.queryByText('API key copied.')).toBeNull()
+  expect(screen.queryByText('private clipboard details')).toBeNull()
+  expect((screen.getByRole('textbox', { name: 'New API key token' }) as HTMLInputElement).readOnly).toBe(true)
+  expect(api.createAPIKey).toHaveBeenCalledTimes(1)
+  expect(api.fetchAPIKeys).toHaveBeenCalledTimes(1)
+  writeText.mockResolvedValue(undefined)
+  vi.stubGlobal('navigator', { clipboard: { writeText } })
+  fireEvent.click(screen.getByRole('button', { name: 'Copy API key' }))
+  expect(await screen.findByText('API key copied.')).toBeTruthy()
+  expect(writeText).toHaveBeenLastCalledWith('phebs_new.secret')
+})
+
+test('copy success waits for the clipboard and an old key cannot mark a replacement copied (T44.2b)', async () => {
+  let resolve!: () => void
+  const writeText = vi.fn().mockReturnValue(new Promise<void>(done => { resolve = done }))
+  vi.stubGlobal('navigator', { clipboard: { writeText } })
+  renderPage()
+  await createKey()
+  fireEvent.click(screen.getByRole('button', { name: 'Copy API key' }))
+  expect(screen.queryByText('API key copied.')).toBeNull()
+  expect((screen.getByRole('button', { name: 'Copy API key' }) as HTMLButtonElement).disabled).toBe(true)
+  expect(screen.getByText('Copying API key…').getAttribute('role')).toBe('status')
+  api.createAPIKey.mockResolvedValue({ key: { id: 'replacement', name: 'Replacement', prefix: 'phebs_replacement', capabilities: [], created_at: '2026-10-18T00:00:00Z' }, token: 'phebs_replacement.secret' })
+  fireEvent.change(screen.getByRole('textbox', { name: 'Key name' }), { target: { value: 'Replacement' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Create key' }))
+  await waitFor(() => expect((screen.getByRole('textbox', { name: 'New API key token' }) as HTMLInputElement).value).toBe('phebs_replacement.secret'))
+  await act(async () => { resolve() })
+  expect(screen.queryByText('API key copied.')).toBeNull()
+  expect(screen.queryByText('Copying API key…')).toBeNull()
+  expect((screen.getByRole('button', { name: 'Copy API key' }) as HTMLButtonElement).disabled).toBe(false)
+  writeText.mockResolvedValue(undefined)
+  fireEvent.click(screen.getByRole('button', { name: 'Copy API key' }))
+  expect(await screen.findByText('API key copied.')).toBeTruthy()
+  expect(writeText).toHaveBeenLastCalledWith('phebs_replacement.secret')
 })
 
 test('administrator sees bounded lifecycle pressure without owner content', async () => {

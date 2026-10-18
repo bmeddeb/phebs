@@ -2689,6 +2689,14 @@ loss. [The bounded outcome](../spike/t442a/README.md) preserves all historical
 baselines. This independent Mac follow-up does not advance Linux #124,
 validation labels or production signing.
 
+T44.2b key-copy recovery (2026-10-18, Mac): Settings now waits for clipboard
+completion before announcing copied, preserves a labeled read-only field on
+failure, and keeps feedback bound to the displayed token. Keyboard selection
+and a 44px copy action provide a manual recovery path. The preview's reload
+reminder is inline. Focused checks/build and eight selected native flows per
+author/fresh pass qualify presentation only; production signing and Linux #124
+remain pending. See the [bounded outcome](../spike/t442b/README.md).
+
 T43R.1 completed in the presentation track on 2026-08-30. The adopted type-floor
 rule keeps interface text at 11px or larger and permits one named 10px token
 only for supplementary, non-interactive machine metadata whose essential

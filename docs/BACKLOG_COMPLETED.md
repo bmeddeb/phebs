@@ -11256,3 +11256,25 @@ lineage exactly; all 130 canonical baseline hashes stay unchanged. Independent
 source/cost/design review has no blocker. Bundle delta is +566 raw/+221 individually
 gzipped bytes with no new chunk/dependency. [Evidence](../spike/t442a/README.md)
 establishes presentation mechanics only. Linux #124 and signing remain pending.
+
+
+## T44.2b · Truthful key-copy recovery (complete 2026-10-18)
+
+Settings awaits clipboard completion before showing success. Missing, rejected
+and throwing writes preserve a labeled read-only token field with live manual-copy
+guidance; pending copy disables repeat activation. Token-keyed local state prevents
+old completions from marking a replacement copied. A 44px copy target, keyboard
+selection and inline full-reload reminder close the recorded recovery concern.
+The token remains transient; reload still clears unfinished Settings state.
+
+The old-source regression is red as expected. Corrected candidate passes 373
+focused tests, receipt types/lint and production build. Eight selected author
+and eight fresh native cases pass with 12 byte-identical screenshot pairs and 24
+clean capture-state axe audits. Independent source/cost review has no blocker;
+dual-agent design/detector assessment has zero remaining priority issues. Portable
+keyboard selection/retry is independently verified after a test-only modifier
+correction; product/build bytes remain exact. Bundle delta is +792 raw/+237
+individually gzipped bytes, with no new chunk/dependency. All 130 historical
+canonical hashes stay unchanged. [Evidence](../spike/t442b/README.md) establishes
+presentation mechanics with synthetic tokens and a substituted clipboard API;
+no OS clipboard-content, backend-auth, Linux #124 or signing claim follows.

@@ -1,0 +1,10 @@
+{
+  "measured_checkpoint": "ad6cbe082f43ce7cab89a27cf18d59feb46ece15",
+  "test_correction_checkpoint": "154fc1aa6156709e853cc81ea083f2feb30da608",
+  "production_source_and_build_unchanged": true,
+  "change": "Meta+a -> ControlOrMeta+a; installed Playwright maps it to Meta on Darwin and Control otherwise",
+  "measured_spec_sha256": "54f473cecc143cf592fb0d4b50383fe5bc56826ac1a0eb456cc216c992b37d02",
+  "corrected_spec_sha256": "7b2dc64f43f6aa9ff5ce027e7699b2340ac6c80fc9a7939a04aa1d52d4a56b08",
+  "portable_types_lint": "checks/portable-result.json",
+  "native_binding": "Assessment B verifies portable selection separately; retained author/fresh source remains exact"
+}

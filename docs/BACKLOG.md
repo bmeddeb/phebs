@@ -15556,6 +15556,32 @@ and design review find no blocker; ordinary full-page reload state loss remains
 documented. See the [bounded outcome](../spike/t442a/README.md). No historical
 canonical baseline is refreshed; Linux #124 and signing remain pending.
 
+**T44.2b ✅ · Truthful key-copy recovery and inline reload guidance** *(completed 2026-10-18,
+Mac; independent of #124)* — close the remaining T44.2a review concern and
+the observed false-success clipboard defect. Newly created keys report copied
+only after the browser write resolves; unavailable, rejected and throwing
+clipboard calls keep a labeled read-only token field with a manual-copy
+instruction. Pending copy disables repeat activation, and feedback belongs to
+the displayed token so an old completion cannot mark its replacement copied.
+The preview failure action names finishing Settings edits/copying new keys
+before full-page reload. AC: old-source regression; focused Settings/shared-copy/
+palette/contrast tests; types/lint/build; actual keyboard selection and feedback
+at 1280/390px in both themes; scoped accessibility and author/fresh native
+comparison; bundle/interaction cost and independent code/design review. Browser
+clipboard calls are substituted: no host clipboard-content or backend-auth
+claim. Never persist or log the token; existing canonical baselines stay exact.
+Linux #124 and production signing remain pending.
+
+Closure: 373 focused tests, receipt types/lint and production build pass.
+Author 8/8 and fresh 8/8 native flows pass with 12 byte-identical screenshot pairs
+and 24 clean capture-state audits. Missing/rejected clipboard access, deferred
+success, actual keyboard selection and inline reload recovery remain explicit;
+the browser clipboard is substituted, not the host OS clipboard read back.
+Independent source/cost and design review have no blocker; portable selection
+is additionally verified by Assessment B. Bundle delta is +792 raw/+237
+individually gzipped bytes, no new chunk/dependency. All 130 canonical baseline
+hashes remain exact. See [the bounded outcome](../spike/t442b/README.md).
+
 **T44.3 · Markdown source and preview** — a Markdown | Preview segmented
 control on the file viewer for markdown files. AC: view state in the URL
 (`view=preview`), source is the default, and `?L=` line deep-links force

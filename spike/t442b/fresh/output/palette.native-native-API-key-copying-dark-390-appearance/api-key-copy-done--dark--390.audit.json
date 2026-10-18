@@ -1,0 +1,14 @@
+{
+  "title": "native API key copying dark 390",
+  "viewport": {
+    "width": 390,
+    "height": 900
+  },
+  "capture_state": "api-key-copy-done--dark--390",
+  "audit": {
+    "version": "4.12.1",
+    "violations": [],
+    "passes": 15,
+    "incomplete": 0
+  }
+}
