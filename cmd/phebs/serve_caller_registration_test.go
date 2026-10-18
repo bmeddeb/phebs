@@ -15,10 +15,15 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/callerexecute"
+	"github.com/bmeddeb/phebs/internal/callerleaf"
+	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/compat"
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/extract"
+	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
+	"github.com/bmeddeb/phebs/internal/extract/sdk"
 	"github.com/bmeddeb/phebs/internal/packrelease"
+	"github.com/bmeddeb/phebs/spike/t201"
 )
 
 // TestCallerMapPackIdentityAndRecipeFrozen pins the exact T47.2a frozen tuple:
@@ -34,7 +39,7 @@ func TestCallerMapPackIdentityAndRecipeFrozen(t *testing.T) {
 	recipe := callerMapRecipe()
 	want := []struct{ domain, version string }{
 		{"proto-contract", "4.0.0"},
-		{"grpc-caller", "1.6.0"},
+		{"grpc-caller", "1.6.0-released.1"},
 	}
 	if len(recipe) != len(want) {
 		t.Fatalf("caller map recipe has %d extractors, want %d", len(recipe), len(want))
@@ -48,31 +53,113 @@ func TestCallerMapPackIdentityAndRecipeFrozen(t *testing.T) {
 	}
 }
 
-// TestCallerMapRecipeStaysUnboundUntilReleased pins the T47.5 handoff: the
-// recipe is deliberately absent from packRecipes until the same PR that records
-// its first passing signed released record binds it. A verified released record
-// for the caller-map pack must therefore still refuse startup as an unbound
-// release, so Caller Map cannot reach ordinary activation through a record
-// alone.
-func TestCallerMapRecipeStaysUnboundUntilReleased(t *testing.T) {
-	if _, bound := packRecipes[callerMapPackID]; bound {
-		t.Fatal("callerMapRecipe must not be bound before its first released record (T47.5 owns the binding)")
+// TestCallerMapReleasedRecipeAdmission drives the actual signed selection and
+// in-tree recipe, without replacing the recipe registry or enabling switches.
+func TestCallerMapReleasedRecipeAdmission(t *testing.T) {
+	if _, bound := packRecipes[callerMapPackID]; !bound {
+		t.Fatal("released Caller Map recipe is not bound")
 	}
 	dir := t.TempDir()
 	public, release := writeReleasedRecord(t, dir, callerMapPackID, "key-1")
 	bindReleaseLoad(t, release)
 	cfg := &config.Config{}
+	cfg.Server.DataDir = t.TempDir()
 	cfg.ReleaseSelection.Path = dir
 	cfg.ReleaseSelection.Keys = []config.ReleaseKey{{ID: "key-1", PublicKey: public}}
-	_, _, err := releasedExtractors(context.Background(), cfg)
-	if err == nil {
-		t.Fatal("a verified released caller-map record without its in-tree binding must refuse startup")
+	extractors, claims, err := releasedExtractors(t.Context(), cfg)
+	if err != nil || len(extractors) != 2 || len(claims) != 0 {
+		t.Fatalf("released Caller Map = %v, %v, %v", extractors, claims, err)
 	}
-	if !strings.Contains(err.Error(), "has no fixed in-tree recipe") ||
-		!strings.Contains(err.Error(), callerMapPackID) {
-		t.Fatalf("unbound release refusal = %v, want the missing in-tree recipe cause for %q",
-			err, callerMapPackID)
+	if extractors[1].Domain() != "grpc-caller" || extractors[1].Version() != "1.6.0-released.1" {
+		t.Fatalf("released caller identity = %s@%s", extractors[1].Domain(), extractors[1].Version())
 	}
+	served := serveCallerSurfaces(t, cfg)
+	if !served.callerMapEnabled || !served.callerMapServiced || !served.callerMapTool {
+		t.Fatalf("released Caller Map surface = %+v", served)
+	}
+	for _, capability := range []string{"contract-caller-comparison", "contract-impact-report", "kafka-topic-usage"} {
+		if slices.Contains(served.capabilities, capability) {
+			t.Fatalf("Caller Map release also enabled %s", capability)
+		}
+	}
+	cfg.ReleaseSelection.Revoked = []string{release.ReleaseID}
+	withdrawn := serveCallerSurfaces(t, cfg)
+	if withdrawn.callerMapEnabled || withdrawn.callerMapServiced || withdrawn.callerMapTool {
+		t.Fatalf("revoked Caller Map still serves: %+v", withdrawn)
+	}
+}
+
+func TestCallerMapReleasedAdmissionKeepsFactsAndChangesAuthority(t *testing.T) {
+	profile, err := t201.GenerateProfile(t201.SmallProfileName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := make(map[string]string, len(profile.Files))
+	for path, content := range profile.Files {
+		files[path] = string(content)
+	}
+	released := callerMapRecipe()
+	dark := []extract.Extractor{released[0], gocaller.NewGRPC()}
+	if strings.TrimSuffix(released[1].Version(), "-released.1") != dark[1].Version() {
+		t.Fatal("released admission no longer names its underlying algorithm version")
+	}
+	run := func(extractor extract.Extractor) []sdk.Fact {
+		var facts []sdk.Fact
+		coverage, extractErr := extractor.Extract(t.Context(), releasedCallerTestCorpus{newT307Corpus(files)}, func(fact sdk.Fact) error {
+			facts = append(facts, fact)
+			return nil
+		})
+		if extractErr != nil || len(coverage.Failures) != 0 {
+			t.Fatalf("caller extraction: %v, failures %v", extractErr, coverage.Failures)
+		}
+		return facts
+	}
+	want := run(dark[1])
+	if len(want) == 0 || !reflect.DeepEqual(run(released[1]), want) {
+		t.Fatal("released admission changed or omitted caller facts")
+	}
+	var previousPolicy, previousGeneration, previousExtractors string
+	for _, extractors := range [][]extract.Extractor{dark, released} {
+		policies, policyErr := extract.CandidatePolicies(extractors)
+		if policyErr != nil {
+			t.Fatal(policyErr)
+		}
+		identities, identityErr := candidate.PolicyIdentities(policies)
+		if identityErr != nil {
+			t.Fatal(identityErr)
+		}
+		policy, digestErr := candidate.PolicyDigest(identities)
+		if digestErr != nil {
+			t.Fatal(digestErr)
+		}
+		registry, registryErr := callerexecute.NewRegistry(extractors)
+		if registryErr != nil {
+			t.Fatal(registryErr)
+		}
+		// Hold upstream authority equal to prove the caller generation itself
+		// fences admission, even before a new candidate has been published.
+		generation, generationErr := callerleaf.NewGenerationIdentity(callerleaf.GenerationIdentity{
+			Repository: "example.invalid/callers", HeadCommit: strings.Repeat("a", 40),
+			DeclarationSetDigest:    testReleaseDigest("declarations"),
+			CandidateManifestDigest: testReleaseDigest("candidate"), CandidatePolicyDigest: testReleaseDigest("policy"),
+			ResolverGenerationDigest: testReleaseDigest("resolver"), ResolverManifestDigest: testReleaseDigest("root"),
+			Extractors: registry.ExtractorIdentities(),
+		})
+		if generationErr != nil {
+			t.Fatal(generationErr)
+		}
+		if policy == previousPolicy || generation.Digest == previousGeneration || generation.ExtractorSetDigest == previousExtractors {
+			t.Fatal("released admission reused experimental candidate or caller authority")
+		}
+		previousPolicy, previousGeneration, previousExtractors = policy, generation.Digest, generation.ExtractorSetDigest
+	}
+}
+
+type releasedCallerTestCorpus struct{ t307Corpus }
+
+func (corpus releasedCallerTestCorpus) ReadSCIPIndex(ctx context.Context) (sdk.SCIPInput, error) {
+	blob, err := corpus.Read(ctx, "index.scip")
+	return sdk.SCIPInput{Path: "index.scip", Blob: blob, Present: err == nil}, err
 }
 
 // TestKafkaProducerRecipeIsProducerOnlyAndBound pins T55.2/T55.3: the recipe is
@@ -137,15 +224,15 @@ func TestCallerMapRegistrationFollowsExtractorSet(t *testing.T) {
 	}
 	adapters := released.Adapters()
 	if len(adapters) != 1 || adapters[0] != (callerexecute.Adapter{
-		Domain: "grpc-caller", Version: "1.6.0", Protocol: "grpc",
+		Domain: "grpc-caller", Version: "1.6.0-released.1", Protocol: "grpc",
 	}) {
-		t.Fatalf("released adapters = %+v, want grpc-caller@1.6.0/grpc", adapters)
+		t.Fatalf("released adapters = %+v, want grpc-caller@1.6.0-released.1/grpc", adapters)
 	}
 	domains := released.CandidateDomains()
 	if len(domains) != 2 ||
-		domains[0].Domain != "grpc-caller" || domains[0].Version != "1.6.0" ||
+		domains[0].Domain != "grpc-caller" || domains[0].Version != "1.6.0-released.1" ||
 		domains[1].Domain != "proto-contract" || domains[1].Version != "4.0.0" {
-		t.Fatalf("released candidate domains = %+v, want grpc-caller@1.6.0 then proto-contract@4.0.0", domains)
+		t.Fatalf("released candidate domains = %+v, want grpc-caller@1.6.0-released.1 then proto-contract@4.0.0", domains)
 	}
 
 	for _, testCase := range []struct {
@@ -180,8 +267,7 @@ func TestCallerMapRegistrationFollowsExtractorSet(t *testing.T) {
 }
 
 // releasedRecipeMark wraps a recipe extractor so a test can tell the released
-// instance from the dark one: callerMapRecipe deliberately reuses the dark
-// constructors, so both report the identical domain@version.
+// instance from the dark one, including the shared declaration extractor.
 type releasedRecipeMark struct{ extract.Extractor }
 
 // TestMergeExtractorsCallerMapRecipeGovernsMixedProvenance proves the
@@ -229,9 +315,9 @@ func TestMergeExtractorsCallerMapRecipeGovernsMixedProvenance(t *testing.T) {
 	}
 	adapters := registry.Adapters()
 	if len(adapters) != 1 || adapters[0] != (callerexecute.Adapter{
-		Domain: "grpc-caller", Version: "1.6.0", Protocol: "grpc",
+		Domain: "grpc-caller", Version: "1.6.0-released.1", Protocol: "grpc",
 	}) {
-		t.Fatalf("mixed adapters = %+v, want exactly grpc-caller@1.6.0/grpc", adapters)
+		t.Fatalf("mixed adapters = %+v, want exactly grpc-caller@1.6.0-released.1/grpc", adapters)
 	}
 }
 

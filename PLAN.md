@@ -12079,3 +12079,24 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   products and pilot/scale results retain their scope. Documentation-only
   steady-state cost is zero across requests, startup, sync, retry, publication,
   locks, caches, storage and children.
+
+- **2026-10-17 — T47.5 released caller admission identity (Ben-routed Mac
+  handoff).** Ben requests implementation here after integrating the acceptance
+  amendment. Bind the fixed Caller Map recipe, preserving proto-contract 4.0.0
+  and delegating the caller algorithm unchanged to gocaller 1.6.0 under the
+  distinct admission version `1.6.0-released.1`. Candidate policy and caller
+  extractor-set/generation digests already commit that version; existing read
+  fences reject old experimental authority and startup queues replacement
+  before retirement. No publication/store schema or historical byte changes
+  are necessary. Bounded integration covers signed ordinary admission,
+  experimental/released fact parity, distinct authority, real-store publication
+  and stale-state fences, API/MCP surface isolation and revocation. The actual
+  proposed artifacts sign/load with an isolated ephemeral test key and refuse
+  changed claim bytes; binary facts in that test are explicitly synthetic.
+  Production signing on the Linux key host and main integration remain open.
+  No independent quality, new capacity, scale or production release is claimed.
+  Per-query/request, sync tick, retry/no-op, publication, lock, cache, disk and
+  child costs are unchanged. Startup hashes one additional registry row and
+  constructs one wrapper when the recipe is admitted. First released admission
+  invokes the existing bounded generation replacement work; it adds no worker,
+  scheduler, concurrency, source rule or ceiling. Later reuse is unchanged.

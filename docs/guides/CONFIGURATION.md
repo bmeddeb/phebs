@@ -602,8 +602,9 @@ and the gate stays dark: implemented, not absent.
 Caller Map's ordinary configuration is a signed `release_selection` record for
 its recipe identity `phebs.grpc.caller.go` ("Exact Go gRPC callers" in
 [PROTO_GRPC_PACK_CARDS.md](../PROTO_GRPC_PACK_CARDS.md)); it has no separate
-configuration key. The recipe is the frozen T47.2a Go / gRPC-Protobuf caller
-tuple, extractor `grpc-caller` 1.6.0, schema `t20-caller-v1`. Its fixed in-tree
+configuration key. The recipe keeps the T47.2a Go / gRPC-Protobuf caller
+algorithm (`grpc-caller` 1.6.0, schema `t20-caller-v1`) and uses the distinct
+released admission version `1.6.0-released.1` (T47.5). Its fixed in-tree
 extractor set carries protobuf declaration discovery with the caller
 extractor, because resolved callers are attributed through
 repository-committed declaration lineage, so a released Caller Map does not
@@ -645,22 +646,21 @@ silently reinterpreted as released authority:
   registered, the released recipe replaces the dark registration for that
   domain; no configuration key is renamed, deprecated, or promoted.
 - `release_selection` remains the only path into released admission.
-- Published caller generations are not reinterpreted either. The released
-  recipe reuses the experimental extractors' exact identities, and a caller
-  generation records only extractor domain, version and leaf adapter, never
-  how that extractor was admitted. A generation published under the
-  provisional switches is therefore indistinguishable from a released one.
-  Promotion must not serve it as released evidence: T47.5 either starts from
-  caller generations derived after the release record, or binds admission
-  provenance into the generation identity first.
+- Published experimental generations cannot become released evidence. The
+  released caller admission version changes both the candidate policy and
+  caller extractor-set/generation digests. Existing read fences refuse an old
+  publication, and startup reconciliation queues replacement before retiring
+  incompatible authority. Existing immutable source and publication rules
+  govern the newly generated result; the extraction algorithm is unchanged.
 
-Ordinary activation is gated in this build: the recipe is compiled but
-deliberately not bound into the in-tree recipe registry until T47.5 signs the
-first caller-specific record and binds it in the same change, so a selection
-naming `phebs.grpc.caller.go` refuses startup as an unbound release.
-Unsupported or unvalidated recipes cannot reach ordinary activation, refusal
-is whole-startup rather than a partial capability surface, and until T47.5
-the provisional switches remain the only way to run Caller Map.
+The in-tree recipe is bound, but ordinary activation still requires an
+applicable signed Caller Map record verified against the running binary and
+artifact directory. An absent, expired, revoked or suspended selection admits
+no released caller. The proposed integration-qualified card, manifest,
+validation and unsigned template are under `spike/t475/release`; they are not
+a production signed selection. Ben's 2026-10-17 acceptance amendment permits
+bounded integration-test qualification without completing the optional blind
+label round; it supplies no independent precision/recall result.
 
 Rollback and revalidation reuse the release lifecycle exactly: the operator
 revokes a `release_id` through `release_selection.revoked`, or a suspension

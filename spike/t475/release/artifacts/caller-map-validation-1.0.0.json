@@ -1,0 +1,128 @@
+{
+  "qualification": "bounded-integration-tests",
+  "checks": [
+    {
+      "command": [
+        "go",
+        "test",
+        "./cmd/phebs",
+        "-run",
+        "^Test(CallerMap|MergeExtractorsCallerMap|StartupAdmissionAndDiscoveryMatrix|ReleasedExtractors|SignRelease|BuildFacts|ReleaseLoadBindings|PackImplementationDigest|HTTPHandlerAuthenticationBoundaries)",
+        "-count=1",
+        "-timeout=3m"
+      ],
+      "exit_code": 0,
+      "seconds": 4.129,
+      "log_sha256": "44395022205344b4d9f9b02097c762fd077db90f436a0d448b181e4e2e632e7c"
+    },
+    {
+      "command": [
+        "go",
+        "test",
+        "./internal/packrelease",
+        "./internal/callerexecute",
+        "-count=1",
+        "-timeout=3m"
+      ],
+      "exit_code": 0,
+      "seconds": 5.684,
+      "log_sha256": "3b6ba2406d7770db1d0bd4b4f1935ecd5900b7c4d30cb4107977fd2235a78965"
+    },
+    {
+      "command": [
+        "go",
+        "test",
+        "./internal/api",
+        "-run",
+        "^Test(ExactCallerMap|ExactCallerPartitioned|CallerMapActivation|CallerMapCursor|CallerMapTools)",
+        "-count=1",
+        "-timeout=3m"
+      ],
+      "exit_code": 0,
+      "seconds": 7.513,
+      "log_sha256": "0003486cbedc4366f3eece15d03188df9e4da74e07348445811a63dd566d851b"
+    },
+    {
+      "command": [
+        "go",
+        "test",
+        "./internal/mcp",
+        "-run",
+        "^Test(CallerMap|ExactCallerCitation|ReleaseScopedOperation)",
+        "-count=1",
+        "-timeout=3m"
+      ],
+      "exit_code": 0,
+      "seconds": 2.048,
+      "log_sha256": "43313639954b826c2165c0011685723c4c46ad8206e8bdebaf285ac3a4efff86"
+    },
+    {
+      "command": [
+        "go",
+        "test",
+        "./internal/store",
+        "-run",
+        "^TestCallerGenerationPublication(SummaryReadAndCurrent|RejectsStaleAuthority|InvalidatedBySameHeadUnitTransition)$",
+        "-count=1",
+        "-timeout=3m"
+      ],
+      "exit_code": 0,
+      "seconds": 7.856,
+      "log_sha256": "05e05dc2647245a276bc01a65b83be1fce3d4c5f5e5ef74a056db69a2d52f5c2"
+    },
+    {
+      "command": [
+        "go",
+        "test",
+        "./cmd/phebs",
+        "-run",
+        "^TestCallerMapReleaseArtifactsSignAndLoad$",
+        "-count=1",
+        "-timeout=2m"
+      ],
+      "exit_code": 0,
+      "seconds": 3.392,
+      "log_sha256": "8a1ad881e21517455544882b787cbedc88c7c92b9b9dfe935fd1b24ac4b0df44",
+      "qualification": "ephemeral test key; synthetic binary facts; real signer/census/loader and API/MCP assembly"
+    }
+  ],
+  "schema": "phebs-extractor-pack-validation-v1",
+  "pack_id": "phebs.grpc.caller.go",
+  "pack_claim_version": "1.0.0",
+  "production_release_signed": false,
+  "not_established": [
+    "independent caller precision/recall or attribution accuracy",
+    "new operating envelope or scale",
+    "production signing and deployment"
+  ],
+  "source_files": {
+    "cmd/phebs/serve_config.go": "4f73f8d1fafe7f36e8d31572fc18d767c098a5fb5c30009a241d9eebb6b2e221",
+    "cmd/phebs/serve_caller_registration_test.go": "497811bfbe0cefeab0d88b88f4480f3d2fc2b220657152b949dae0baea673aef",
+    "cmd/phebs/serve_caller_release_test.go": "d59024cec885f680c08c6bb4a5ec16871104cf540476f030c07798b2d5bebf43"
+  },
+  "historical_operating_reference": "spike/t474/acceptance_20261014.json; exact historical binary/workload only, not remeasured",
+  "additional_checks": [
+    {
+      "command": "go test -race ./cmd/phebs -run ^Test(CallerMap|MergeExtractorsCallerMap|StartupAdmissionAndDiscoveryMatrix|ReleasedExtractors|SignRelease|BuildFacts|ReleaseLoadBindings|PackImplementationDigest) -count=1 -timeout=3m",
+      "exit_code": 0,
+      "package_seconds": 12.769
+    },
+    {
+      "command": "go vet ./cmd/phebs",
+      "exit_code": 0
+    },
+    {
+      "command": "go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2 run ./cmd/phebs --timeout=3m",
+      "exit_code": 0,
+      "issues": 0
+    },
+    {
+      "command": "make docs-check",
+      "exit_code": 0
+    },
+    {
+      "command": "make verify-glossary",
+      "exit_code": 0
+    }
+  ]
+}

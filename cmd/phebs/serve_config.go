@@ -146,6 +146,7 @@ func newServeExtractionRegistries(d *serveDeps) error {
 // third-party loader and no manifest-selected arbitrary code: a released pack
 // resolves only through this exact in-tree registry.
 var packRecipes = map[string]func() []extract.Extractor{
+	callerMapPackID:      callerMapRecipe,      // T47.5: signed integration-test qualification
 	kafkaProducerPackID:  kafkaProducerRecipe,  // T55.3: bound beside its first signed record
 	kafkaConsumerPackID:  kafkaConsumerRecipe,  // T56.3: bound beside its first signed record
 	thriftContractPackID: thriftContractRecipe, // T49.3: bound beside its first signed record
@@ -375,8 +376,8 @@ func mergeExtractors(dark, released []extract.Extractor) []extract.Extractor {
 // callerMapPackID is the stable pack identity of the Caller Map recipe frozen
 // by T47.2a: `phebs.grpc.caller.go` in docs/PROTO_GRPC_PACK_CARDS.md ("Exact
 // Go gRPC callers"), grpc-caller 1.6.0, schema t20-caller-v1. T47.5 signs the
-// first caller-specific released record against exactly this identity and, in
-// the same PR, binds callerMapRecipe into packRecipes above.
+// released record against this identity. The released recipe has a distinct
+// admission version so experimental caller generations cannot be reused.
 const callerMapPackID = "phebs.grpc.caller.go"
 
 // callerMapRecipe is the fixed in-tree extractor set implementing the T47.2a
@@ -387,15 +388,18 @@ const callerMapPackID = "phebs.grpc.caller.go"
 // necessary declaration discovery because this recipe carries it, never
 // because the experimental protobuf umbrella happened to be switched on.
 //
-// The recipe is deliberately NOT registered in packRecipes in this build:
-// binding it would assert a released authorization that does not exist until a
-// signed record for callerMapPackID passes verification (T47.5's promotion).
-// Until then a configured selection naming this pack refuses startup as an
-// unbound release, so Caller Map cannot reach ordinary activation without its
-// release record and its binding landing together.
+// The caller admission version flows through candidate, resolver and caller
+// generation identities. Existing startup reconciliation queues replacement
+// before retiring incompatible experimental publications; existing read fences
+// reject them before serving. The extraction algorithm and source rules match
+// gocaller 1.6.0; only verified released admission constructs this recipe.
 func callerMapRecipe() []extract.Extractor {
 	return []extract.Extractor{
 		protodecl.New(),
-		gocaller.NewGRPC(),
+		releasedGRPCCaller{gocaller.NewGRPC()},
 	}
 }
+
+type releasedGRPCCaller struct{ extract.Extractor }
+
+func (releasedGRPCCaller) Version() string { return "1.6.0-released.1" }

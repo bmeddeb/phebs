@@ -18318,6 +18318,38 @@ large-monorepo and separate pilot/SCIP-evidence gates. Integrating a passing
 ticket still requires Ben's explicit merge request; no merge or current
 production promotion is authorized merely by this backlog entry.
 
+**T47.5 implementation checkpoint (2026-10-17, Mac handoff).** Ben explicitly
+requested T47.5 here in chat after merging the bounded-integration acceptance
+amendment; this records the receiving Mac track's backend/release preparation.
+The fixed recipe is bound with `proto-contract@4.0.0` and
+`grpc-caller@1.6.0-released.1`. The latter delegates all extraction to the
+unchanged 1.6.0 algorithm but binds released admission into the existing
+candidate policy and caller extractor-set/generation identities. Existing
+read fences reject experimental publications; existing startup reconciliation
+queues replacements before retiring incompatible authority. No schema, source
+rule, SDK capability, background cadence or admission ceiling changes.
+
+The proposed card, manifest, command/result validation and unsigned signing
+template are in `spike/t475/release`. Focused production assembly, real-store
+publication/stale-authority, HTTP/MCP, exact reader, signature/withdrawal and
+artifact-mutation checks pass; the five initial integration commands took
+27.230 seconds total. The actual card/template also passes ephemeral-key
+sign/load integration; test binary facts are explicitly synthetic, not a
+production signature. Focused command race, vet and pinned lint pass.
+Production signing is still pending the Linux signing host/key; T47.5 is not
+closed or merged, and no production release is claimed. No label round or
+long rehearsal was run. The existing five-release selections remain exact;
+any records used with the new binary must be signed for its new identity.
+
+Steady-state cost: no new per-query/request, sync-tick, retry/no-op, publication,
+lock, cache, disk scan or child-process work. Startup adds one fixed recipe row
+to the existing implementation digest and one caller wrapper allocation when
+selected. First admission replaces incompatible candidate/caller generations
+through the existing bounded workers and reconciliation; that one-time rebuild
+has the same existing source/SCIP, resource and concurrency limits. Warm reuse
+and reads retain existing fences and costs. No UI code changes or new UI
+receipt run is required.
+
 ## Epic 48 · Shared production-promotion machinery and execution plan *(Ben-directed, 2026-10-09)*
 
 Ben requests a fast plan that starts a production epic for every currently

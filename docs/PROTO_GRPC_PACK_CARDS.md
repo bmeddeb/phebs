@@ -70,6 +70,15 @@ oversized, and unsupported inputs remain unresolved or gaps.
 
 ## Pack: Exact Go gRPC callers
 
+**T47.5 integration-qualified recipe (2026-10-17).** Ben's bounded-integration
+acceptance supersedes the historical label-dependent hold for this pack. The
+released recipe pairs `proto-contract@4.0.0` with the unchanged caller algorithm
+under admission version `grpc-caller@1.6.0-released.1`, separating experimental
+candidate and caller-generation authority. Its proposed card/manifest/test
+evidence and unsigned template live in `spike/t475/release`; production signing
+is still pending. No independent caller accuracy result is claimed. The table
+below retains the experimental recipe and original validation history.
+
 | Field | Value |
 |---|---|
 | Pack ID | `phebs.grpc.caller.go` |

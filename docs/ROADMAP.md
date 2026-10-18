@@ -149,6 +149,15 @@ qualification honestly in release artifacts; do not invent independent accuracy
 or measured capacity. No new release is activated by this policy. Epic 42 and
 the separate managed SCIP, pilot and scale programs retain their own scope.
 
+**T47.5 implementation checkpoint (2026-10-17, Ben-routed Mac handoff):**
+the fixed released recipe now uses a separate caller admission version, so
+existing candidate/caller generation fences prevent experimental publication
+reuse. Bounded integration, real-store, signing/withdrawal and focused race
+checks pass. The scoped card/manifest/validation and unsigned template are
+prepared under `spike/t475/release`; production signing on the Linux key host
+and ticket integration remain open. No independent caller accuracy or new
+operating/scale result is asserted.
+
 **Caller Map production priority (2026-10-09, Ben-directed):** after immediate
 SCIP operational availability, Epic 47 targets a supported Caller Map release
 for repositories within current admitted limits. Ben explicitly keeps
