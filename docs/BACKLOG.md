@@ -19368,6 +19368,15 @@ historical custody tests; direct/independent source and steady-cost review.
 T50.3 quality/operating/publication-transition qualification remains separate
 and must use new prospectively bound exact inputs after this fix integrates.
 
+**T50.3b · Repair current resolver API fixture admission** *(2026-10-18,
+Ben-routed Mac handoff; complete)* — the prospective affected regression pass
+exposed an empty-pack shared positive fixture after T50.3a. Current resolver
+constants restore exact CallerMap/comparison tests; warm missing/old-pack cases
+retain stale/unavailable rather than bypassing admission. Failed first log is
+retained in `spike/t503b/`; bounded normal/race/MCP/admission/current-pack tests,
+vet, pinned lint and independent source/cost review pass. Production code is
+unchanged; T50.3's native quality/operating result remains separate.
+
 ## Epic 51 · Protobuf field-reference production readiness
 
 **T51.1 · Exact field/SCIP identity and independent quality** — depend on

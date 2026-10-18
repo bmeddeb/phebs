@@ -12893,3 +12893,21 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   selected generator's distinct stable admission. Production runtime work is
   unchanged; only opt-in/ordinary test fixture evaluation adds source/index
   preflight, existing extraction and local counters, with no child or service.
+
+- **2026-10-18 — T50.3b current resolver metadata in shared API fixtures
+  (Ben-routed Mac handoff).** The prospective T50.3 affected regression pass
+  stops before any new native product run: the shared API fixture supplies
+  zero resolver packs, so T50.3a's current1.2.0 guard correctly returns stale.
+  Preserve that failed log. Populate only this shared positive fixture with
+  the current go-module/gRPC-generated pack constants, restoring its CallerMap
+  and comparison consumers. Add warm complete-publication negatives for
+  missing and1.1.1 packs; both retain explicit stale/unavailable with no rows,
+  totals or absence claim. Production admission and all production source
+  remain unchanged. Independent fixture/boundary review is clear.
+
+  Bounded exact API normal7.549s/race15.557s, MCP comparison, signed comparison
+  admission and current-pack worker/reader controls pass; vet and pinned
+  lint2.12.2 report zero issues. This test-only repair adds no production
+  query/request, sync, startup/restart, retry/no-op, publication, lock, cache,
+  schema, memory/disk, concurrency or child cost. No binary rebuild, native
+  product qualification, full repository replay or production signing follows.
