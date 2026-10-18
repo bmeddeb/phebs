@@ -1,0 +1,221 @@
+{
+  "schema": "phebs-t503-offline-index-preparation-v1",
+  "recorded_utc": "2026-10-18T10:54:41+00:00",
+  "checkpoint_digest": "sha256:54b1377c20d2422f93756dedea56ef30aa1df0e6114d41fd646558ef4cd3ab29",
+  "preregistration_digest": "sha256:38d85e4c0054f16762821362620c6faec7e564ea0682d344b0c23db1af22fd77",
+  "labels_digest": "sha256:db84af5c81cad0526677a058d602523049e000d2b960262f5bb6e547d77bcd26",
+  "implementation_commit": "a1db7fcdbcc63736ec369ec2241a2e911bb600c7",
+  "correction": {
+    "approved_by": "Lead agent; explicit message before this execution",
+    "original_argv": [
+      "scip-go",
+      "--module-root",
+      "<evaluation-root>",
+      "--repository-remote",
+      "github.com/grpc/grpc-go",
+      "--module-path",
+      "google.golang.org/grpc/examples",
+      "--module-version",
+      "v0.0.0-t503-public-comparison.1",
+      "--skip-implementations",
+      "--skip-tests",
+      "--output",
+      "<raw-index>"
+    ],
+    "corrected_argv": [
+      "/Users/ben/go/bin/scip-go",
+      "index",
+      "--module-root",
+      "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t503-reviewed-inputs-v1",
+      "--repository-remote",
+      "github.com/grpc/grpc-go",
+      "--module-path",
+      "google.golang.org/grpc/examples",
+      "--module-version",
+      "v0.0.0-t503-public-comparison.1",
+      "--skip-implementations",
+      "--skip-tests",
+      "--output",
+      "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t503-index-v1-bf97m9nn/raw.scip"
+    ],
+    "basis": "Pinned scip-go0.2.7 top-level and index --help require the index subcommand, as does existing spike/t472/derivation/run_scip.sh. All frozen flags remain unchanged.",
+    "before_execution": "No index, extractor, candidate export or score had run. Command-only syntax correction; immutable checkpoint and preregistration bytes preserved.",
+    "recorded_before_index_execution": true
+  },
+  "source_root": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t503-reviewed-inputs-v1",
+  "run_root": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t503-index-v1-bf97m9nn",
+  "scip_tool_digest": "sha256:05b4f5086b0953268a86ddee21e53233d7fc35fa4234d4c5b30ef7faec2beb80",
+  "go_tool_digest": "sha256:3925fc3221ac440ebf7c35361ff663bed0c7bdb2e0a157b75fe993607ffe0a19",
+  "environment": {
+    "GOPROXY": "off",
+    "GOSUMDB": "off",
+    "GOTOOLCHAIN": "local",
+    "GOWORK": "off",
+    "GOFLAGS": "-mod=readonly",
+    "GOMAXPROCS": "2",
+    "CGO_ENABLED": "1",
+    "GOOS": "darwin",
+    "GOARCH": "arm64"
+  },
+  "source_census_before": {
+    "LICENSE": {
+      "bytes": 11358,
+      "sha256": "sha256:cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    "data/data.go": {
+      "bytes": 1250,
+      "sha256": "sha256:d088b7e127ad41acdf1e267515b003b7ce1a292c217954265be0a122e12ca367"
+    },
+    "features/interceptor/client/main.go": {
+      "bytes": 5061,
+      "sha256": "sha256:67a96c9ce41464119ed93fab70bebb50cb96accdecaca43d8f9a0cf43a6bf641"
+    },
+    "features/metadata/client/main.go": {
+      "bytes": 8453,
+      "sha256": "sha256:26aceadb046196cf67fc5f790f2d6dc4e5f74ae1a919002b6fb6686db41c4fa7"
+    },
+    "features/multiplex/client/main.go": {
+      "bytes": 2414,
+      "sha256": "sha256:4fd071c359f34dd525a7125e9ef2eaf7ba871828eec21b574467bfb7b9224a7e"
+    },
+    "features/proto/echo/echo.pb.go": {
+      "bytes": 7621,
+      "sha256": "sha256:782b379b30abb36abc05916e65516a261a266a8d8e8c1e42adc606a2a86a6f34"
+    },
+    "features/proto/echo/echo.proto": {
+      "bytes": 1420,
+      "sha256": "sha256:e1eb8e11c7c1b273a7c025eedb88064b40c11517b3413d364893e0e4df4fed83"
+    },
+    "features/proto/echo/echo_grpc.pb.go": {
+      "bytes": 10887,
+      "sha256": "sha256:af593380d0cb47c95469db614f42c582a21c6028e04cae1f84a3da7a96e57a40"
+    },
+    "generated-from-snapshot.json": {
+      "bytes": 943,
+      "sha256": "sha256:066d1e4fecaa37ff7b92a7b7d9e818cd27a4e065ac0c4af9d38a7380e46deb1c"
+    },
+    "go.mod": {
+      "bytes": 436,
+      "sha256": "sha256:b2703b3404581b66756d550f640c4eda2ca52d589eb1c03b449fdd58b69625bc"
+    },
+    "go.sum": {
+      "bytes": 1408,
+      "sha256": "sha256:e74b7b78ebdfa1fded22c9af03ca827225adad4e73dd1f2901e4002b8c680fcf"
+    },
+    "helloworld/greeter_client/main.go": {
+      "bytes": 1610,
+      "sha256": "sha256:5539f38f560ab26ce11514cd81f941fb80f4ca9a88754aaaf40d89bbc92e3e30"
+    },
+    "helloworld/helloworld/helloworld.pb.go": {
+      "bytes": 6873,
+      "sha256": "sha256:d365b6dd964d474e5e3d50ef1b8bedb6d728a0377eb7926ef6fee6dfdeb1a59a"
+    },
+    "helloworld/helloworld/helloworld.proto": {
+      "bytes": 1170,
+      "sha256": "sha256:0e59e0b552d35f8b801e02811c3fcd3dd45dbf1a593c5ff6f2f679863219b257"
+    },
+    "helloworld/helloworld/helloworld_grpc.pb.go": {
+      "bytes": 4993,
+      "sha256": "sha256:e1de746d9f7c0fa108c370c420cbe1a630a8cf7ae55e43a2d946dc5589c6993d"
+    },
+    "layout-snapshot.json": {
+      "bytes": 1174,
+      "sha256": "sha256:9276f576011fb096912ff75d70cc52358349dfbee5283b52c5635e042936430b"
+    },
+    "origin.json": {
+      "bytes": 7622,
+      "sha256": "sha256:d84131879c8bc77dcb3ea68ccf89c9012a7b33b5f8a5839dff7abec25533cb1c"
+    },
+    "unit-snapshot.json": {
+      "bytes": 724,
+      "sha256": "sha256:23b21c02ee9ca6afacebc12774bed65d450e238df2fbad03e19696a60d656864"
+    }
+  },
+  "attempts": 1,
+  "outcome": "passed_offline_index_preparation_only",
+  "scoring": "held; actual evaluation Git commits/bundle/repository-role bindings not yet recorded",
+  "exit_code": 0,
+  "seconds": 1.865,
+  "source_census_after": {
+    "LICENSE": {
+      "bytes": 11358,
+      "sha256": "sha256:cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    "data/data.go": {
+      "bytes": 1250,
+      "sha256": "sha256:d088b7e127ad41acdf1e267515b003b7ce1a292c217954265be0a122e12ca367"
+    },
+    "features/interceptor/client/main.go": {
+      "bytes": 5061,
+      "sha256": "sha256:67a96c9ce41464119ed93fab70bebb50cb96accdecaca43d8f9a0cf43a6bf641"
+    },
+    "features/metadata/client/main.go": {
+      "bytes": 8453,
+      "sha256": "sha256:26aceadb046196cf67fc5f790f2d6dc4e5f74ae1a919002b6fb6686db41c4fa7"
+    },
+    "features/multiplex/client/main.go": {
+      "bytes": 2414,
+      "sha256": "sha256:4fd071c359f34dd525a7125e9ef2eaf7ba871828eec21b574467bfb7b9224a7e"
+    },
+    "features/proto/echo/echo.pb.go": {
+      "bytes": 7621,
+      "sha256": "sha256:782b379b30abb36abc05916e65516a261a266a8d8e8c1e42adc606a2a86a6f34"
+    },
+    "features/proto/echo/echo.proto": {
+      "bytes": 1420,
+      "sha256": "sha256:e1eb8e11c7c1b273a7c025eedb88064b40c11517b3413d364893e0e4df4fed83"
+    },
+    "features/proto/echo/echo_grpc.pb.go": {
+      "bytes": 10887,
+      "sha256": "sha256:af593380d0cb47c95469db614f42c582a21c6028e04cae1f84a3da7a96e57a40"
+    },
+    "generated-from-snapshot.json": {
+      "bytes": 943,
+      "sha256": "sha256:066d1e4fecaa37ff7b92a7b7d9e818cd27a4e065ac0c4af9d38a7380e46deb1c"
+    },
+    "go.mod": {
+      "bytes": 436,
+      "sha256": "sha256:b2703b3404581b66756d550f640c4eda2ca52d589eb1c03b449fdd58b69625bc"
+    },
+    "go.sum": {
+      "bytes": 1408,
+      "sha256": "sha256:e74b7b78ebdfa1fded22c9af03ca827225adad4e73dd1f2901e4002b8c680fcf"
+    },
+    "helloworld/greeter_client/main.go": {
+      "bytes": 1610,
+      "sha256": "sha256:5539f38f560ab26ce11514cd81f941fb80f4ca9a88754aaaf40d89bbc92e3e30"
+    },
+    "helloworld/helloworld/helloworld.pb.go": {
+      "bytes": 6873,
+      "sha256": "sha256:d365b6dd964d474e5e3d50ef1b8bedb6d728a0377eb7926ef6fee6dfdeb1a59a"
+    },
+    "helloworld/helloworld/helloworld.proto": {
+      "bytes": 1170,
+      "sha256": "sha256:0e59e0b552d35f8b801e02811c3fcd3dd45dbf1a593c5ff6f2f679863219b257"
+    },
+    "helloworld/helloworld/helloworld_grpc.pb.go": {
+      "bytes": 4993,
+      "sha256": "sha256:e1de746d9f7c0fa108c370c420cbe1a630a8cf7ae55e43a2d946dc5589c6993d"
+    },
+    "layout-snapshot.json": {
+      "bytes": 1174,
+      "sha256": "sha256:9276f576011fb096912ff75d70cc52358349dfbee5283b52c5635e042936430b"
+    },
+    "origin.json": {
+      "bytes": 7622,
+      "sha256": "sha256:d84131879c8bc77dcb3ea68ccf89c9012a7b33b5f8a5839dff7abec25533cb1c"
+    },
+    "unit-snapshot.json": {
+      "bytes": 724,
+      "sha256": "sha256:23b21c02ee9ca6afacebc12774bed65d450e238df2fbad03e19696a60d656864"
+    }
+  },
+  "pristine_inputs_unchanged": true,
+  "raw_index": {
+    "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t503-index-v1-bf97m9nn/raw.scip",
+    "bytes": 241526,
+    "sha256": "sha256:45f772a6923bfbcae9f69c89a18bb801016d84f9d690a3b11fe67115b8523ac6"
+  },
+  "indexer_joined": true,
+  "recorded_terminal_utc": "2026-10-18T10:54:43+00:00"
+}

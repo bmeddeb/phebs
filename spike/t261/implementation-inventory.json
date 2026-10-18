@@ -1,0 +1,602 @@
+{
+  "format": "t261-final-implementation-inventory-v1",
+  "implementation_bytes": 96816,
+  "implementation_files": [
+    {
+      "bytes": 179,
+      "path": "reader/candidates/mysql/go.mod",
+      "sha256": "80b1e38b3bb37379c6678249b917ed8085c8d7c4a6dc3165a2739dc69f4dcaf0"
+    },
+    {
+      "bytes": 231,
+      "path": "reader/candidates/mysql/go.sum",
+      "sha256": "4d2770255e36a7367b3f5824061f61254e70be55dbc95eef862d4d897cd51a8a"
+    },
+    {
+      "bytes": 840,
+      "path": "reader/candidates/mysql/main.go",
+      "sha256": "9de7e4fc15ea8ce56bab0721c56a69dde9103848b1c2c9bc189bda3373ecff32"
+    },
+    {
+      "bytes": 219,
+      "path": "reader/candidates/postgresql/go.mod",
+      "sha256": "99cfcd590c61c17a7aef5bc36b0e63f2635788bbb6da3ac7c501969d2dd64e58"
+    },
+    {
+      "bytes": 758,
+      "path": "reader/candidates/postgresql/go.sum",
+      "sha256": "a8635280c8fae499381906a6c28111fee46ed9303c20f5eb6be8bf4f40ce926b"
+    },
+    {
+      "bytes": 1504,
+      "path": "reader/candidates/postgresql/main.go",
+      "sha256": "8bdc681eb66db96d9ae826cf3a1dfd845399390a1491bdf2e7751bf2dd0e957f"
+    },
+    {
+      "bytes": 388,
+      "path": "reader/cmd/subset/main.go",
+      "sha256": "c0c4454bf0bd4a65e6cc18a44fd45c34fbce3aacca295c652c4ad25e37208f2d"
+    },
+    {
+      "bytes": 1363,
+      "path": "reader/dependency-notices.json",
+      "sha256": "1e0c1e578f07ef20fd2d32b85d61b3aead1bcf9f4579f76a910f6f67a4421d2e"
+    },
+    {
+      "bytes": 35,
+      "path": "reader/go.mod",
+      "sha256": "72cb7829d57ecc402b1e1d1d133008a288de03e1b5486deb1fa20e5408d8b291"
+    },
+    {
+      "bytes": 7020,
+      "path": "reader/lexer.go",
+      "sha256": "8bc2c6294a4681d04a293430a5b4932612effb269dc681e6cd0402cc785f050d"
+    },
+    {
+      "bytes": 1479,
+      "path": "reader/notices/go-cmp.LICENSE",
+      "sha256": "17b5d209ba8f9684257ecfcff87df6ceda6194143a8fbd074f29727cff6f0c40"
+    },
+    {
+      "bytes": 1478,
+      "path": "reader/notices/hujson.LICENSE",
+      "sha256": "a125b6c2721809b6c2a8761771932611833008ed8697d752b3e35d36e4bbd83e"
+    },
+    {
+      "bytes": 1561,
+      "path": "reader/notices/pg_query_go.LICENSE",
+      "sha256": "7752b24a3cb4bee5270c2ee8a3a7609fd57ce9dccb2e8b5757fdeca04bb03960"
+    },
+    {
+      "bytes": 1337,
+      "path": "reader/notices/pg_query_go.LICENSE.POSTGRESQL",
+      "sha256": "28e429702de70abfa1b7e4cb5d9e486bd9469f1eab5b392f704b65de09334d8d"
+    },
+    {
+      "bytes": 1479,
+      "path": "reader/notices/protobuf.LICENSE",
+      "sha256": "4835612df0098ca95f8e7d9e3bffcb02358d435dbb38057c844c99d7f725eb20"
+    },
+    {
+      "bytes": 11356,
+      "path": "reader/notices/sqlparser.LICENSE.md",
+      "sha256": "43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1"
+    },
+    {
+      "bytes": 21014,
+      "path": "reader/project.go",
+      "sha256": "77b91107fe4a2eadce49f035fb14464a3cb156733a3c0c7807ce63c93571eee7"
+    },
+    {
+      "bytes": 6916,
+      "path": "reader/reader_test.go",
+      "sha256": "98675f83670e2e0839954cb47c2899e70b83a48bc9a5357352bbf11b4bb7d265"
+    },
+    {
+      "bytes": 12305,
+      "path": "reader/run.go",
+      "sha256": "51ca412200fe21ac92a69e5a802e231277f6ec9fa037ec3cf43c33a37aaf50b7"
+    },
+    {
+      "bytes": 22696,
+      "path": "run_comparison.py",
+      "sha256": "9e855fcbc60215ccd6cea6cb48024f01ceeaf55d1bc330bb44d20948dba86b90"
+    },
+    {
+      "bytes": 2658,
+      "path": "runner_test.py",
+      "sha256": "d750effd5321448381434e317337b1afddc1c928fd84254bada7ccc2b5873952"
+    }
+  ],
+  "inputs": {
+    "bytes": 4439033,
+    "contract_sha256": "9568cf9cce51f30bfd38c131d4ba8a6502ad9c0a777d743e9b5b6cd330d7031c",
+    "files": 419,
+    "history_sha256": "ad65ad9aa90313cfc371662a3a37cf528c190212d971ebac2bb443c595f5d056",
+    "preregistration_sha256": "791585bd54e5a03ccdfbda033884229a48c2006e9ac822ad7265091605e962e9"
+  },
+  "qualification": "Lead Git checkpoint remains separate; immutable first execution source/outputs and original scores retained alongside separately identified review corrections",
+  "result_bytes": 8372822,
+  "results": [
+    {
+      "bytes": 13439,
+      "path": "results/REPORT.md",
+      "sha256": "298ae2b8c8598ddd77f87749a59c715bcb2862506927d44252ce6a78dbac0e2c"
+    },
+    {
+      "bytes": 13520,
+      "path": "results/cold-v1/build-receipt.json",
+      "sha256": "f3c7617e56960733df7307fea90af412c302fed8e349f9144fd5f9a7bb88dbc8"
+    },
+    {
+      "bytes": 333,
+      "path": "results/cold-v1/evaluator-first-stop.json",
+      "sha256": "051fa02d24d9e6f750265f08e6c190c33cb186ae71f8de22e1ab75ba460680b6"
+    },
+    {
+      "bytes": 6449,
+      "path": "results/cold-v1/executed-source/comparison-contract.json",
+      "sha256": "9568cf9cce51f30bfd38c131d4ba8a6502ad9c0a777d743e9b5b6cd330d7031c"
+    },
+    {
+      "bytes": 179,
+      "path": "results/cold-v1/executed-source/reader/candidates/mysql/go.mod",
+      "sha256": "80b1e38b3bb37379c6678249b917ed8085c8d7c4a6dc3165a2739dc69f4dcaf0"
+    },
+    {
+      "bytes": 231,
+      "path": "results/cold-v1/executed-source/reader/candidates/mysql/go.sum",
+      "sha256": "4d2770255e36a7367b3f5824061f61254e70be55dbc95eef862d4d897cd51a8a"
+    },
+    {
+      "bytes": 840,
+      "path": "results/cold-v1/executed-source/reader/candidates/mysql/main.go",
+      "sha256": "9de7e4fc15ea8ce56bab0721c56a69dde9103848b1c2c9bc189bda3373ecff32"
+    },
+    {
+      "bytes": 219,
+      "path": "results/cold-v1/executed-source/reader/candidates/postgresql/go.mod",
+      "sha256": "99cfcd590c61c17a7aef5bc36b0e63f2635788bbb6da3ac7c501969d2dd64e58"
+    },
+    {
+      "bytes": 758,
+      "path": "results/cold-v1/executed-source/reader/candidates/postgresql/go.sum",
+      "sha256": "a8635280c8fae499381906a6c28111fee46ed9303c20f5eb6be8bf4f40ce926b"
+    },
+    {
+      "bytes": 1504,
+      "path": "results/cold-v1/executed-source/reader/candidates/postgresql/main.go",
+      "sha256": "8bdc681eb66db96d9ae826cf3a1dfd845399390a1491bdf2e7751bf2dd0e957f"
+    },
+    {
+      "bytes": 388,
+      "path": "results/cold-v1/executed-source/reader/cmd/subset/main.go",
+      "sha256": "c0c4454bf0bd4a65e6cc18a44fd45c34fbce3aacca295c652c4ad25e37208f2d"
+    },
+    {
+      "bytes": 35,
+      "path": "results/cold-v1/executed-source/reader/go.mod",
+      "sha256": "72cb7829d57ecc402b1e1d1d133008a288de03e1b5486deb1fa20e5408d8b291"
+    },
+    {
+      "bytes": 7144,
+      "path": "results/cold-v1/executed-source/reader/lexer.go",
+      "sha256": "4f4b6824b60086994a9490f8c0a5d8297d52a49c1f7ecc4549d7b43fe55e7a7c"
+    },
+    {
+      "bytes": 21014,
+      "path": "results/cold-v1/executed-source/reader/project.go",
+      "sha256": "77b91107fe4a2eadce49f035fb14464a3cb156733a3c0c7807ce63c93571eee7"
+    },
+    {
+      "bytes": 5509,
+      "path": "results/cold-v1/executed-source/reader/reader_test.go",
+      "sha256": "8be6f5bbdc65f4f3168cf338ade4da1c13e0bcb2927ecf646719ddb702480b74"
+    },
+    {
+      "bytes": 11836,
+      "path": "results/cold-v1/executed-source/reader/run.go",
+      "sha256": "7981c3fe38d1ab2273111afaef0b97f137fa1c52c6c98758d39df50fda802de9"
+    },
+    {
+      "bytes": 20657,
+      "path": "results/cold-v1/executed-source/run_comparison.py",
+      "sha256": "9ad5d373d52e7e483fa619cae723e912e991f16442c18fa2e1cbccdb5395ec12"
+    },
+    {
+      "bytes": 0,
+      "path": "results/cold-v1/mysql-imported-build.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "results/cold-v1/mysql-imported-build.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 356260,
+      "path": "results/cold-v1/mysql-imported-pass1.json",
+      "sha256": "656c8983688f4f856e06d37e4898827aa54e9f774822a1d4f1d4251d742f085b"
+    },
+    {
+      "bytes": 23925,
+      "path": "results/cold-v1/mysql-imported-pass1.stderr",
+      "sha256": "df0687500a1223fd681c57e303e1062447f7ca49181157774fd68da33f178440"
+    },
+    {
+      "bytes": 356260,
+      "path": "results/cold-v1/mysql-imported-pass2.json",
+      "sha256": "656c8983688f4f856e06d37e4898827aa54e9f774822a1d4f1d4251d742f085b"
+    },
+    {
+      "bytes": 23925,
+      "path": "results/cold-v1/mysql-imported-pass2.stderr",
+      "sha256": "df0687500a1223fd681c57e303e1062447f7ca49181157774fd68da33f178440"
+    },
+    {
+      "bytes": 0,
+      "path": "results/cold-v1/mysql-subset-build.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "results/cold-v1/mysql-subset-build.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 355542,
+      "path": "results/cold-v1/mysql-subset-pass1.json",
+      "sha256": "0dd93e1e36550bb551a343a00a7b60f22da4378a158a448c9ddc30b2298e597d"
+    },
+    {
+      "bytes": 0,
+      "path": "results/cold-v1/mysql-subset-pass1.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 355542,
+      "path": "results/cold-v1/mysql-subset-pass2.json",
+      "sha256": "0dd93e1e36550bb551a343a00a7b60f22da4378a158a448c9ddc30b2298e597d"
+    },
+    {
+      "bytes": 0,
+      "path": "results/cold-v1/mysql-subset-pass2.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 1782,
+      "path": "results/cold-v1/post-build-tool-observation.json",
+      "sha256": "afce5942133231ca09ea39627a6287376f8376426a80e0b7d6737e6e7a563507"
+    },
+    {
+      "bytes": 0,
+      "path": "results/cold-v1/postgresql-imported-build.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "results/cold-v1/postgresql-imported-build.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 1489448,
+      "path": "results/cold-v1/postgresql-imported-pass1.json",
+      "sha256": "a19ae2c7bda0d530ea4c215414f66c2829f0fbcd9b26908b67095bc0d4d9d9e3"
+    },
+    {
+      "bytes": 0,
+      "path": "results/cold-v1/postgresql-imported-pass1.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 1489448,
+      "path": "results/cold-v1/postgresql-imported-pass2.json",
+      "sha256": "a19ae2c7bda0d530ea4c215414f66c2829f0fbcd9b26908b67095bc0d4d9d9e3"
+    },
+    {
+      "bytes": 0,
+      "path": "results/cold-v1/postgresql-imported-pass2.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "results/cold-v1/postgresql-subset-build.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "results/cold-v1/postgresql-subset-build.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 1413931,
+      "path": "results/cold-v1/postgresql-subset-pass1.json",
+      "sha256": "f9895b66c16d2254dd26f391db855e17f6ee2f988b922cf2c422adfcec658924"
+    },
+    {
+      "bytes": 0,
+      "path": "results/cold-v1/postgresql-subset-pass1.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 1413931,
+      "path": "results/cold-v1/postgresql-subset-pass2.json",
+      "sha256": "f9895b66c16d2254dd26f391db855e17f6ee2f988b922cf2c422adfcec658924"
+    },
+    {
+      "bytes": 0,
+      "path": "results/cold-v1/postgresql-subset-pass2.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 397,
+      "path": "results/cold-v1/prelaunch-stop-2.json",
+      "sha256": "4e5b0a2d27497ca27c49758ef05fbf1854b5ef61a004e2060aa486d6c00e739d"
+    },
+    {
+      "bytes": 412,
+      "path": "results/cold-v1/prelaunch-stop.json",
+      "sha256": "fb5f0ce5e52345a275b45166c53643b3557081ef920f2dac8e9027c3aa96383b"
+    },
+    {
+      "bytes": 209053,
+      "path": "results/cold-v1/requests.json",
+      "sha256": "a27fb80a14f86a6519c415ed39f23446d52c59dbfd7fa46ae1047fd85e8a8e77"
+    },
+    {
+      "bytes": 4603,
+      "path": "results/cold-v1/retained-output-analysis.json",
+      "sha256": "68c055d422c4d24faebcfffbf69ac769a6e83cdb8d2a0ffa329cea8ef1ce2873"
+    },
+    {
+      "bytes": 17294,
+      "path": "results/cold-v1/run-receipt.json",
+      "sha256": "ec08502ca8f4f129940186d55e14a7b18fe8b9fd0958581def20ad03cec7755d"
+    },
+    {
+      "bytes": 1637,
+      "path": "results/cold-v1/score-receipt-review-v2.json",
+      "sha256": "7c878f835d42932d75564dfeebddc3bee60d8c1ff4028ad3519d0601a7def27c"
+    },
+    {
+      "bytes": 1550,
+      "path": "results/cold-v1/score-receipt.json",
+      "sha256": "a608aba99ccc8b6f7f799ff0c64a6e6f621a82c9d84cf9964ce7511d9216e291"
+    },
+    {
+      "bytes": 321785,
+      "path": "results/cold-v1/scores-review-v2.json",
+      "sha256": "ebf789548c134f7eb032c69057a8a3c4bc8839c512fa5cf73263ec0d2d694375"
+    },
+    {
+      "bytes": 321125,
+      "path": "results/cold-v1/scores.json",
+      "sha256": "6cd6461c8877d519f53095eddfdf6acb4bd5c612f3c6748d2b2d740562a7cc29"
+    },
+    {
+      "bytes": 13056,
+      "path": "results/first/build-receipt.json",
+      "sha256": "558b30efcd31a36291e0b3a1ef74726f87123af118a52245c3c8729655a8f69e"
+    },
+    {
+      "bytes": 6449,
+      "path": "results/first/executed-source/comparison-contract.json",
+      "sha256": "9568cf9cce51f30bfd38c131d4ba8a6502ad9c0a777d743e9b5b6cd330d7031c"
+    },
+    {
+      "bytes": 179,
+      "path": "results/first/executed-source/reader/candidates/mysql/go.mod",
+      "sha256": "80b1e38b3bb37379c6678249b917ed8085c8d7c4a6dc3165a2739dc69f4dcaf0"
+    },
+    {
+      "bytes": 231,
+      "path": "results/first/executed-source/reader/candidates/mysql/go.sum",
+      "sha256": "4d2770255e36a7367b3f5824061f61254e70be55dbc95eef862d4d897cd51a8a"
+    },
+    {
+      "bytes": 840,
+      "path": "results/first/executed-source/reader/candidates/mysql/main.go",
+      "sha256": "9de7e4fc15ea8ce56bab0721c56a69dde9103848b1c2c9bc189bda3373ecff32"
+    },
+    {
+      "bytes": 219,
+      "path": "results/first/executed-source/reader/candidates/postgresql/go.mod",
+      "sha256": "99cfcd590c61c17a7aef5bc36b0e63f2635788bbb6da3ac7c501969d2dd64e58"
+    },
+    {
+      "bytes": 758,
+      "path": "results/first/executed-source/reader/candidates/postgresql/go.sum",
+      "sha256": "a8635280c8fae499381906a6c28111fee46ed9303c20f5eb6be8bf4f40ce926b"
+    },
+    {
+      "bytes": 1504,
+      "path": "results/first/executed-source/reader/candidates/postgresql/main.go",
+      "sha256": "8bdc681eb66db96d9ae826cf3a1dfd845399390a1491bdf2e7751bf2dd0e957f"
+    },
+    {
+      "bytes": 388,
+      "path": "results/first/executed-source/reader/cmd/subset/main.go",
+      "sha256": "c0c4454bf0bd4a65e6cc18a44fd45c34fbce3aacca295c652c4ad25e37208f2d"
+    },
+    {
+      "bytes": 35,
+      "path": "results/first/executed-source/reader/go.mod",
+      "sha256": "72cb7829d57ecc402b1e1d1d133008a288de03e1b5486deb1fa20e5408d8b291"
+    },
+    {
+      "bytes": 7144,
+      "path": "results/first/executed-source/reader/lexer.go",
+      "sha256": "4f4b6824b60086994a9490f8c0a5d8297d52a49c1f7ecc4549d7b43fe55e7a7c"
+    },
+    {
+      "bytes": 21014,
+      "path": "results/first/executed-source/reader/project.go",
+      "sha256": "77b91107fe4a2eadce49f035fb14464a3cb156733a3c0c7807ce63c93571eee7"
+    },
+    {
+      "bytes": 5509,
+      "path": "results/first/executed-source/reader/reader_test.go",
+      "sha256": "8be6f5bbdc65f4f3168cf338ade4da1c13e0bcb2927ecf646719ddb702480b74"
+    },
+    {
+      "bytes": 11836,
+      "path": "results/first/executed-source/reader/run.go",
+      "sha256": "7981c3fe38d1ab2273111afaef0b97f137fa1c52c6c98758d39df50fda802de9"
+    },
+    {
+      "bytes": 20014,
+      "path": "results/first/executed-source/run_comparison.py",
+      "sha256": "833d3e95f93b43cd957d3dae31538f563d5b841841124eaf425b5e9bc946e3c5"
+    },
+    {
+      "bytes": 0,
+      "path": "results/first/mysql-imported-build.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "results/first/mysql-imported-build.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "results/first/mysql-subset-build.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "results/first/mysql-subset-build.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "results/first/postgresql-imported-build.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "results/first/postgresql-imported-build.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "results/first/postgresql-subset-build.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "results/first/postgresql-subset-build.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 10882,
+      "path": "results/review-corrections/checks.json",
+      "sha256": "8fd51264103022ef0949862fafe4483c7daa05268bf2dddccc4b31e57a5191f2"
+    },
+    {
+      "bytes": 350,
+      "path": "results/review-corrections/control-source.json",
+      "sha256": "5cebce77a30b7b84a2751a0d3632370b1670a13c28caee63825eca9c1672c138"
+    },
+    {
+      "bytes": 102,
+      "path": "results/review-corrections/evaluator.stderr",
+      "sha256": "56e03afda220e7ba78bbcecf9a2e53a0149cfc3e311fa10bbd01b25e8e5ba671"
+    },
+    {
+      "bytes": 0,
+      "path": "results/review-corrections/evaluator.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "results/review-corrections/lint.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 10,
+      "path": "results/review-corrections/lint.stdout",
+      "sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+    },
+    {
+      "bytes": 0,
+      "path": "results/review-corrections/mysql-lint.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 10,
+      "path": "results/review-corrections/mysql-lint.stdout",
+      "sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+    },
+    {
+      "bytes": 0,
+      "path": "results/review-corrections/mysql-vet.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "results/review-corrections/mysql-vet.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 9925,
+      "path": "results/review-corrections/nested-checks.json",
+      "sha256": "2b500e64cfdc104b94c4be5c3ae41ee09bff7310d33c9bb163790d0dfe5201f6"
+    },
+    {
+      "bytes": 0,
+      "path": "results/review-corrections/normal.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 78,
+      "path": "results/review-corrections/normal.stdout",
+      "sha256": "ca4552598ad45299bb48d33f9db8cdabbef751629424c3d4554c8c056137395c"
+    },
+    {
+      "bytes": 0,
+      "path": "results/review-corrections/postgresql-lint.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 10,
+      "path": "results/review-corrections/postgresql-lint.stdout",
+      "sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+    },
+    {
+      "bytes": 0,
+      "path": "results/review-corrections/postgresql-vet.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "results/review-corrections/postgresql-vet.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 296,
+      "path": "results/review-corrections/preparation-stop.json",
+      "sha256": "5a0ffd98af713208e341547c3b1d054134ba27fe0a486462d69510d34d432f1f"
+    },
+    {
+      "bytes": 0,
+      "path": "results/review-corrections/race.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 78,
+      "path": "results/review-corrections/race.stdout",
+      "sha256": "59c262f644d2569e6de5dd8c8d54cebf15d8efede041ba2861845cc2e5b2e698"
+    },
+    {
+      "bytes": 0,
+      "path": "results/review-corrections/vet.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "results/review-corrections/vet.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

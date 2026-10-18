@@ -1,0 +1,31 @@
+{
+  "format": "t261-pg-generator-plan-v1",
+  "status": "frozen source and argv plan; server admission and execution pending lead native-slot allocation",
+  "required_version": "PostgreSQL 18.6 server and client",
+  "input": "fixtures/requested-pg-input.sql",
+  "input_sha256": "dd7153ba4733be4d24b26993f8762d98d05d8754691194c41266f824c2253273",
+  "working_directory": "spike/t261",
+  "placeholders": {
+    "PG18_BIN": "lead-admitted absolute PostgreSQL 18.6 server/client bin directory; record binary digests before execution",
+    "PRIVATE_ROOT": "fresh mode-0700 temporary directory chosen by lead; refuse any pre-existing data directory",
+    "FIXTURE": "absolute worktree path to fixtures/requested-pg-input.sql"
+  },
+  "argv": {
+    "initdb": ["PG18_BIN/initdb", "--pgdata=PRIVATE_ROOT/data", "--username=t261", "--encoding=UTF8", "--locale=C", "--auth-local=trust", "--auth-host=reject", "--no-instructions"],
+    "server": ["PG18_BIN/postgres", "-D", "PRIVATE_ROOT/data", "-c", "listen_addresses=", "-c", "unix_socket_directories=PRIVATE_ROOT/socket", "-c", "unix_socket_permissions=0700", "-c", "port=52611", "-c", "max_connections=4", "-c", "shared_buffers=16MB", "-c", "max_wal_size=64MB", "-c", "min_wal_size=32MB", "-c", "logging_collector=off"],
+    "load": ["PG18_BIN/psql", "-X", "--no-password", "--set=ON_ERROR_STOP=1", "--host=PRIVATE_ROOT/socket", "--port=52611", "--username=t261", "--dbname=postgres", "--file=FIXTURE"],
+    "dump": ["PG18_BIN/pg_dump", "--schema-only", "--no-owner", "--no-privileges", "--no-comments", "--no-security-labels", "--no-tablespaces", "--restrict-key=phebsT261PinnedPG186Fixture", "--no-password", "--host=PRIVATE_ROOT/socket", "--port=52611", "--username=t261", "--dbname=postgres"],
+    "stop": ["PG18_BIN/pg_ctl", "--pgdata=PRIVATE_ROOT/data", "--mode=fast", "--wait", "--timeout=10", "stop"]
+  },
+  "admission": [
+    "Verify server, initdb, psql, pg_dump and pg_ctl report exactly 18.6 and retain full binary SHA256/version records before launch.",
+    "Resolve placeholders to literal absolute paths and retain executed argv in generation receipt.",
+    "The supplementary fixture contains only the exact pinned Dispatcher table statement; do not execute full corpus SQL.",
+    "One server, Unix socket only, private socket directory, TCP disabled, no password files or credentials retained.",
+    "Hard wall cap 60 seconds after admitted binaries are present; output cap 65536 bytes; no retries or unattended child.",
+    "Load once, dump twice without mutation, require byte-identical dump outputs, record source/input/output digests.",
+    "Always stop and join server and delete private data/socket/log material; retain only source-free version/accounting/teardown receipt plus public schema-only dump.",
+    "After generation, hand-label the entire dump and checkpoint all frozen labels before any parser candidate or bounded grammar executes."
+  ],
+  "executions": 0
+}

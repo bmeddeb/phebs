@@ -1,0 +1,21 @@
+{
+  "schema": "t521-harness-review-supplement-v1",
+  "date": "2026-10-18",
+  "previous_input_checkpoint": "a74f0ae83f50a44f2f33fb84561831f0e1c7df54",
+  "previous_preregistration_digest": "sha256:82938e1d57f7b90bbfbf111184c475efdf6422ef987aec0b8a203d4a0a069c1b",
+  "new_preregistration_digest": "sha256:090c9e5b7ef41286599e58e40b46169b071b6a074abe265ff309b010d676ae6f",
+  "harness_digest": "sha256:a5f76167c7e17f8e57a8269be503f7c19ab82d6432c40b25e65e9db6206931af",
+  "delta": "Add exact harness digest/authority only. A static SCIP API constant spelling correction precedes compilation and any candidate output; frozen source/labels/witnesses/inputs/thresholds unchanged. Prior input checkpoint remains recoverable byte-for-byte.",
+  "reviewer": "lead independent source and complete516-line harness review before candidate execution",
+  "checks": [
+    "complete scanner census and separate public/neutral label counts",
+    "all emitted application spans checked, unmatched/wrong/negative/unsupported/duplicate facts fail",
+    "SCIP package/type/name/version and unique generated definition witness",
+    "exact streaming source/digest/byte/line citation fence",
+    "derived Apache/source_bindingnone and no family bridge",
+    "generated emissions separate, timing excludes input/witness preflight, first result exclusive create, terminal log required for preflight stops"
+  ],
+  "result": "accepted for first bounded30s measurement after native slot allocation",
+  "candidate_runs": 0,
+  "findings": []
+}

@@ -26,6 +26,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
 	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 	"github.com/bmeddeb/phebs/internal/resolvercatalogid"
+	"github.com/bmeddeb/phebs/internal/resolvermaterialize"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
 )
@@ -412,16 +413,19 @@ func newExactCallerAPIFixtureConfigured(
 		DeclarationSetDigest:    digest('e'),
 		CandidateManifestDigest: candidatePointer.ManifestDigest,
 		SourceLanePolicy:        "candidate-source-lane-base-v1",
-		ResolverPacks:           []store.ResolverCatalogPack{},
-		ResolverPackSetDigest:   digest('f'),
-		CatalogPolicyDigest:     digest('1'),
-		GenerationDigest:        digest('2'),
-		ManifestDigest:          digest('3'),
-		AuthorityDigest:         digest('4'),
-		ManifestPath:            "resolver-catalog-manifest.json",
-		ControlRevision:         1,
-		WriterSchema:            resolvercatalogid.WriterSchema,
-		PublishedAt:             time.Unix(2, 0).UTC(),
+		ResolverPacks: []store.ResolverCatalogPack{
+			{Name: resolvermaterialize.GoModulePackName, Version: resolvermaterialize.PackVersion},
+			{Name: resolvermaterialize.GRPCGeneratedPackName, Version: resolvermaterialize.PackVersion},
+		},
+		ResolverPackSetDigest: digest('f'),
+		CatalogPolicyDigest:   digest('1'),
+		GenerationDigest:      digest('2'),
+		ManifestDigest:        digest('3'),
+		AuthorityDigest:       digest('4'),
+		ManifestPath:          "resolver-catalog-manifest.json",
+		ControlRevision:       1,
+		WriterSchema:          resolvercatalogid.WriterSchema,
+		PublishedAt:           time.Unix(2, 0).UTC(),
 	}
 	adapters, err := callerexecute.NewRegistry([]sdk.Extractor{gocaller.NewGRPC()})
 	if err != nil {
@@ -715,6 +719,7 @@ func TestExactCallerMapReportsCurrentAndTypedGaps(t *testing.T) {
 	baseRevision := fixture.store.currentRevision
 	baseAdmission := fixture.store.admission
 	baseProgress := fixture.store.progress
+	baseResolverPacks := slices.Clone(fixture.store.resolver.ResolverPacks)
 	for _, test := range []struct {
 		name         string
 		availability string
@@ -744,12 +749,25 @@ func TestExactCallerMapReportsCurrentAndTypedGaps(t *testing.T) {
 			name: "stale", availability: "stale", progress: "unavailable",
 			configure: func() { fixture.store.currentRevision = baseRevision + 1 },
 		},
+		{
+			name: "missing current resolver packs", availability: "stale", progress: "unavailable",
+			configure: func() { fixture.store.resolver.ResolverPacks = nil },
+		},
+		{
+			name: "old resolver packs beside warm publication", availability: "stale", progress: "unavailable",
+			configure: func() {
+				for index := range fixture.store.resolver.ResolverPacks {
+					fixture.store.resolver.ResolverPacks[index].Version = "1.1.1"
+				}
+			},
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			fixture.store.publication = basePointer
 			fixture.store.currentRevision = baseRevision
 			fixture.store.admission = baseAdmission
 			fixture.store.progress = baseProgress
+			fixture.store.resolver.ResolverPacks = slices.Clone(baseResolverPacks)
 			test.configure()
 			gap, err := fixture.service.List(t.Context(), fixture.query, 100, "")
 			if err != nil {
@@ -772,6 +790,7 @@ func TestExactCallerMapReportsCurrentAndTypedGaps(t *testing.T) {
 	fixture.store.currentRevision = baseRevision
 	fixture.store.admission = baseAdmission
 	fixture.store.progress = baseProgress
+	fixture.store.resolver.ResolverPacks = baseResolverPacks
 }
 
 func TestExactCallerGenerationProgressDoesNotRequireEndpointDeclaration(t *testing.T) {

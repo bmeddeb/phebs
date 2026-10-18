@@ -1,0 +1,399 @@
+{
+  "format": "t261-pg-generation-receipt-v1",
+  "date": "2026-10-18",
+  "stage": "finished; source-only preparation resumes; no parser executed",
+  "input_sha256": "dd7153ba4733be4d24b26993f8762d98d05d8754691194c41266f824c2253273",
+  "input_bytes": 658,
+  "script_sha256": "771558db0a173f378f12fb6a7c212960cb098518684931a104c3ebd3e85534a3",
+  "image_ref": "docker.io/library/postgres@sha256:a63b24165ea0eacced7585766d790ac08bbaefe10a1841f87783a4505d29a69c",
+  "platform": "linux/arm64/v8",
+  "docker_context": "colima-t574-receipts",
+  "vm_profile": "t574-receipts",
+  "vm_configuration_sha256": "77601ca629d89a463184acd1d1bbbb7fec8c93fdea1a7dd0e3b5b2a228a5c138",
+  "vm_reused_unchanged": true,
+  "vm_start_argv": [
+    "/opt/homebrew/bin/colima",
+    "start",
+    "--profile",
+    "t574-receipts"
+  ],
+  "original_docker_context": "colima",
+  "container_execution_cap_seconds": 60,
+  "stdout_acceptance_cap_bytes": 65536,
+  "stderr_cap_bytes": 65536,
+  "parser_runs": 0,
+  "recognizer_runs": 0,
+  "steps": [
+    {
+      "argv": [
+        "/opt/homebrew/bin/colima",
+        "status",
+        "--profile",
+        "t574-receipts"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.348678,
+      "stdout": "",
+      "stderr": "time=\"2026-10-18T04:30:16-07:00\" level=info msg=\"colima [profile=t574-receipts] is running using macOS Virtualization.Framework\"\ntime=\"2026-10-18T04:30:16-07:00\" level=info msg=\"arch: aarch64\"\ntime=\"2026-10-18T04:30:16-07:00\" level=info msg=\"runtime: docker\"\ntime=\"2026-10-18T04:30:16-07:00\" level=info msg=\"mountType: virtiofs\"\ntime=\"2026-10-18T04:30:16-07:00\" level=info msg=\"docker socket: unix:///Users/ben/.colima/t574-receipts/docker.sock\"\ntime=\"2026-10-18T04:30:16-07:00\" level=info msg=\"containerd socket: unix:///Users/ben/.colima/t574-receipts/containerd.sock\"\n"
+    },
+    {
+      "argv": [
+        "/opt/homebrew/bin/docker",
+        "--context",
+        "colima-t574-receipts",
+        "create",
+        "--name",
+        "phebs-t261-pg18-fixture",
+        "--platform",
+        "linux/arm64/v8",
+        "--network",
+        "none",
+        "--user",
+        "999:999",
+        "--read-only",
+        "--cap-drop=ALL",
+        "--security-opt=no-new-privileges",
+        "--memory=256m",
+        "--memory-swap=256m",
+        "--cpus=1",
+        "--pids-limit=64",
+        "--shm-size=32m",
+        "--tmpfs",
+        "/work:rw,noexec,nosuid,size=134217728,uid=999,gid=999,mode=0700",
+        "--tmpfs",
+        "/var/lib/postgresql:rw,noexec,nosuid,size=16777216,uid=999,gid=999,mode=0700",
+        "--mount",
+        "type=bind,src=/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261/fixtures/requested-pg-input.sql,dst=/fixture/input.sql,readonly",
+        "--mount",
+        "type=bind,src=/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261/fixtures/generate-pg18-container.sh,dst=/fixture/generate.sh,readonly",
+        "--entrypoint",
+        "/bin/bash",
+        "docker.io/library/postgres@sha256:a63b24165ea0eacced7585766d790ac08bbaefe10a1841f87783a4505d29a69c",
+        "/fixture/generate.sh"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.027595,
+      "stdout": "4c28212c02ae1095a0403f86f6b7ce5e7cf5685df7e7d11c8b7cd2a54eb3ab33\n",
+      "stderr": ""
+    }
+  ],
+  "teardown": {
+    "stop": {
+      "argv": [
+        "/opt/homebrew/bin/docker",
+        "--context",
+        "colima-t574-receipts",
+        "stop",
+        "--time",
+        "10",
+        "4c28212c02ae1095a0403f86f6b7ce5e7cf5685df7e7d11c8b7cd2a54eb3ab33"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.009043,
+      "stdout": "Flag --time has been deprecated, use --timeout instead\n4c28212c02ae1095a0403f86f6b7ce5e7cf5685df7e7d11c8b7cd2a54eb3ab33\n",
+      "stderr": ""
+    },
+    "wait": {
+      "argv": [
+        "/opt/homebrew/bin/docker",
+        "--context",
+        "colima-t574-receipts",
+        "wait",
+        "4c28212c02ae1095a0403f86f6b7ce5e7cf5685df7e7d11c8b7cd2a54eb3ab33"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.009039,
+      "stdout": "0\n",
+      "stderr": ""
+    },
+    "remove": {
+      "argv": [
+        "/opt/homebrew/bin/docker",
+        "--context",
+        "colima-t574-receipts",
+        "rm",
+        "--force",
+        "--volumes",
+        "4c28212c02ae1095a0403f86f6b7ce5e7cf5685df7e7d11c8b7cd2a54eb3ab33"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.012939,
+      "stdout": "4c28212c02ae1095a0403f86f6b7ce5e7cf5685df7e7d11c8b7cd2a54eb3ab33\n",
+      "stderr": ""
+    },
+    "container_absent": true,
+    "docker_cli_joined": true,
+    "docker_cli_final_exit_code": 0,
+    "context_restore": {
+      "argv": [
+        "/opt/homebrew/bin/docker",
+        "context",
+        "use",
+        "colima"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.008215,
+      "stdout": "colima\n",
+      "stderr": "Current context is now \"colima\"\n"
+    },
+    "vm_stop": {
+      "argv": [
+        "/opt/homebrew/bin/colima",
+        "stop",
+        "--profile",
+        "t574-receipts"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 1.622541,
+      "stdout": "Stopping 'docker.service', but its triggering units are still active:\ndocker.socket\ncolima-t574-receipts\ntime=\"2026-10-18T04:30:17-07:00\" level=info msg=\"Sending SIGINT to hostagent process 33901\"\ntime=\"2026-10-18T04:30:17-07:00\" level=info msg=\"Waiting for the host agent and the driver processes to shut down\"\ntime=\"2026-10-18T04:30:17-07:00\" level=info msg=\"[hostagent] Received SIGINT, shutting down the host agent\"\ntime=\"2026-10-18T04:30:17-07:00\" level=info msg=\"[hostagent] Shutting down the host agent\"\ntime=\"2026-10-18T04:30:17-07:00\" level=info msg=\"[hostagent] Stopping forwarding `/var/run/docker.sock` (guest) to `/Users/ben/.colima/t574-receipts/docker.sock` (host)\"\ntime=\"2026-10-18T04:30:17-07:00\" level=info msg=\"[hostagent] Stopping forwarding `/var/run/containerd/containerd.sock` (guest) to `/Users/ben/.colima/t574-receipts/containerd.sock` (host)\"\ntime=\"2026-10-18T04:30:17-07:00\" level=info msg=\"[hostagent] Unmounting disk `colima-t574-receipts`\"\ntime=\"2026-10-18T04:30:17-07:00\" level=info msg=\"[hostagent] Shutting down VZ\"\ntime=\"2026-10-18T04:30:17-07:00\" level=info msg=\"[hostagent] [VZ] - vm state change: stopped\"\ntime=\"2026-10-18T04:30:17-07:00\" level=info msg=\"Waiting for the instance to shut down\"\ntime=\"2026-10-18T04:30:18-07:00\" level=info msg=\"The instance colima-t574-receipts has shut down\"\n",
+      "stderr": "time=\"2026-10-18T04:30:17-07:00\" level=info msg=\"stopping colima [profile=t574-receipts]\"\ntime=\"2026-10-18T04:30:17-07:00\" level=info msg=\"stopping ...\" context=docker\ntime=\"2026-10-18T04:30:17-07:00\" level=info msg=\"stopping ...\" context=vm\ntime=\"2026-10-18T04:30:18-07:00\" level=info msg=done\n"
+    },
+    "vm_stopped": true,
+    "docker_context_restored": true
+  },
+  "status": "passed",
+  "initial_admission_receipt_sha256": "48d1266d0f9cb884905abf7cfbc31574a378914dd64125da7a3a24690e7e4266",
+  "readmission_metadata_sha256": "0109b6ed907c2b9052b96002df24137aea679ebdbd26079cea363293098e000c",
+  "additional_image_pulls": 0,
+  "docker_server": {
+    "Architecture": "aarch64",
+    "OSType": "linux",
+    "NCPU": 2,
+    "MemTotal": 6197882880,
+    "ServerVersion": "29.5.2",
+    "OperatingSystem": "Ubuntu 24.04.4 LTS",
+    "Name": "colima-t574-receipts"
+  },
+  "observed_image_before_predicates": {
+    "Id": "sha256:a63b24165ea0eacced7585766d790ac08bbaefe10a1841f87783a4505d29a69c",
+    "Descriptor": {
+      "mediaType": "application/vnd.oci.image.manifest.v1+json",
+      "digest": "sha256:a63b24165ea0eacced7585766d790ac08bbaefe10a1841f87783a4505d29a69c",
+      "size": 3441
+    },
+    "RepoDigests": [
+      "postgres@sha256:a63b24165ea0eacced7585766d790ac08bbaefe10a1841f87783a4505d29a69c"
+    ],
+    "Architecture": "arm64",
+    "Variant": "v8",
+    "Os": "linux",
+    "RootFS": {
+      "Type": "layers",
+      "Layers": [
+        "sha256:258ba1f62b513e7bb7492d3cc8ce445e4ef176a14980f193f789b6d7270ae61c",
+        "sha256:a4a2a2dbaa40fdb7e645c5f3b394348147e2acb34b4bef37facb4bf0b8b71cf3",
+        "sha256:fe4a908765e155e429d718b9133056c466f981bb8c1b7a30e2b11f8c025d8f8d",
+        "sha256:b81dc9cede5fbf48dbd60117823e0c8dda3a7dde234fc9688b037a7c4a432364",
+        "sha256:ba36ccf4ed5f8cb18e4d15b449d2231a56ae3a662baa7c04d84a73f722b60ef7",
+        "sha256:e364749ea19eb75bdd8213eafa245d5968a28be2abb1502d06cdef379ece767f",
+        "sha256:ccaa618f65c4facd53bc23b3d05cf9cccb09c249a9f12036576901315268505c",
+        "sha256:9f1d6bcd9a63791f3c361aa0917662208000e9a002876ceed1b64dfc4b919693",
+        "sha256:fe6c54e9194019a80abeb4ae1643d0f4c20bb60f1f80b94ea0fc9b9dcc427bb9",
+        "sha256:d4926f7eaa0e14acc41ac6b4c83ec147cc5e6875c5887c6f650a7c5cae054275",
+        "sha256:43fb5d440b93d0a947df04dc0aa6632c49550e98dc82aee5d92b8aff077c1f4c",
+        "sha256:c1474b3be342f74a0870961c2c573d928547d28639097fbd5eec390d0595fce2",
+        "sha256:40fadcf3982d8de14ba2a98401a2b0cd747a577f0650dfcff882fc165d1f6ccf"
+      ]
+    },
+    "Config": {
+      "ExposedPorts": {
+        "5432/tcp": {}
+      },
+      "Env": [
+        "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/lib/postgresql/18/bin",
+        "GOSU_VERSION=1.19",
+        "LANG=en_US.utf8",
+        "PG_MAJOR=18",
+        "PG_VERSION=18.6-1.pgdg13+2",
+        "PGDATA=/var/lib/postgresql/18/docker"
+      ],
+      "Entrypoint": [
+        "docker-entrypoint.sh"
+      ],
+      "Cmd": [
+        "postgres"
+      ],
+      "Volumes": {
+        "/var/lib/postgresql": {}
+      },
+      "StopSignal": "SIGINT"
+    },
+    "Size": 161112194,
+    "Created": "2026-10-06T01:35:25.233180549Z"
+  },
+  "image_admission_predicates": {
+    "descriptor_matches_pinned_manifest": true,
+    "repo_digest_matches_pinned_manifest": true,
+    "architecture_os_match": true,
+    "exact_config_blob_hash_matches_manifest": true,
+    "rootfs_diff_id_chain_matches_config": true,
+    "runtime_config_matches_pinned_config": true
+  },
+  "admitted_image": {
+    "Id": "sha256:a63b24165ea0eacced7585766d790ac08bbaefe10a1841f87783a4505d29a69c",
+    "Descriptor": {
+      "mediaType": "application/vnd.oci.image.manifest.v1+json",
+      "digest": "sha256:a63b24165ea0eacced7585766d790ac08bbaefe10a1841f87783a4505d29a69c",
+      "size": 3441
+    },
+    "RepoDigests": [
+      "postgres@sha256:a63b24165ea0eacced7585766d790ac08bbaefe10a1841f87783a4505d29a69c"
+    ],
+    "Architecture": "arm64",
+    "Variant": "v8",
+    "Os": "linux",
+    "Size": 161112194,
+    "Created": "2026-10-06T01:35:25.233180549Z"
+  },
+  "literal_create_argv": [
+    "/opt/homebrew/bin/docker",
+    "--context",
+    "colima-t574-receipts",
+    "create",
+    "--name",
+    "phebs-t261-pg18-fixture",
+    "--platform",
+    "linux/arm64/v8",
+    "--network",
+    "none",
+    "--user",
+    "999:999",
+    "--read-only",
+    "--cap-drop=ALL",
+    "--security-opt=no-new-privileges",
+    "--memory=256m",
+    "--memory-swap=256m",
+    "--cpus=1",
+    "--pids-limit=64",
+    "--shm-size=32m",
+    "--tmpfs",
+    "/work:rw,noexec,nosuid,size=134217728,uid=999,gid=999,mode=0700",
+    "--tmpfs",
+    "/var/lib/postgresql:rw,noexec,nosuid,size=16777216,uid=999,gid=999,mode=0700",
+    "--mount",
+    "type=bind,src=/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261/fixtures/requested-pg-input.sql,dst=/fixture/input.sql,readonly",
+    "--mount",
+    "type=bind,src=/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261/fixtures/generate-pg18-container.sh,dst=/fixture/generate.sh,readonly",
+    "--entrypoint",
+    "/bin/bash",
+    "docker.io/library/postgres@sha256:a63b24165ea0eacced7585766d790ac08bbaefe10a1841f87783a4505d29a69c",
+    "/fixture/generate.sh"
+  ],
+  "literal_server_argv": [
+    "/usr/lib/postgresql/18/bin/postgres",
+    "-D",
+    "/work/data",
+    "-c",
+    "listen_addresses=",
+    "-c",
+    "unix_socket_directories=/work/socket",
+    "-c",
+    "unix_socket_permissions=0700",
+    "-c",
+    "port=52611",
+    "-c",
+    "max_connections=4",
+    "-c",
+    "shared_buffers=16MB",
+    "-c",
+    "max_wal_size=64MB",
+    "-c",
+    "min_wal_size=32MB",
+    "-c",
+    "logging_collector=off"
+  ],
+  "literal_initdb_argv": [
+    "/usr/lib/postgresql/18/bin/initdb",
+    "--pgdata=/work/data",
+    "--username=t261",
+    "--encoding=UTF8",
+    "--locale=C",
+    "--auth-local=trust",
+    "--auth-host=reject",
+    "--no-instructions"
+  ],
+  "literal_load_argv": [
+    "/usr/lib/postgresql/18/bin/psql",
+    "-X",
+    "--no-password",
+    "--set=ON_ERROR_STOP=1",
+    "--host=/work/socket",
+    "--port=52611",
+    "--username=t261",
+    "--dbname=postgres",
+    "--file=/fixture/input.sql"
+  ],
+  "literal_dump_argv": [
+    "/usr/lib/postgresql/18/bin/pg_dump",
+    "--schema-only",
+    "--no-owner",
+    "--no-privileges",
+    "--no-comments",
+    "--no-security-labels",
+    "--no-tablespaces",
+    "--restrict-key=phebsT261PinnedPG186Fixture",
+    "--no-password",
+    "--host=/work/socket",
+    "--port=52611",
+    "--username=t261",
+    "--dbname=postgres"
+  ],
+  "container_id": "4c28212c02ae1095a0403f86f6b7ce5e7cf5685df7e7d11c8b7cd2a54eb3ab33",
+  "literal_start_argv": [
+    "/opt/homebrew/bin/docker",
+    "--context",
+    "colima-t574-receipts",
+    "start",
+    "--attach",
+    "4c28212c02ae1095a0403f86f6b7ce5e7cf5685df7e7d11c8b7cd2a54eb3ab33"
+  ],
+  "execution_wall_seconds": 0.589942,
+  "docker_cli_exit_code": 0,
+  "container_wait": {
+    "argv": [
+      "/opt/homebrew/bin/docker",
+      "--context",
+      "colima-t574-receipts",
+      "wait",
+      "4c28212c02ae1095a0403f86f6b7ce5e7cf5685df7e7d11c8b7cd2a54eb3ab33"
+    ],
+    "exit_code": 0,
+    "wall_seconds": 0.009957,
+    "stdout": "0\n",
+    "stderr": ""
+  },
+  "container_final_state": {
+    "Status": "exited",
+    "Running": false,
+    "Paused": false,
+    "Restarting": false,
+    "OOMKilled": false,
+    "Dead": false,
+    "Pid": 0,
+    "ExitCode": 0,
+    "Error": "",
+    "StartedAt": "2026-10-18T11:30:15.838900503Z",
+    "FinishedAt": "2026-10-18T11:30:16.396542878Z"
+  },
+  "container_host_config": {
+    "NetworkMode": "none",
+    "ReadonlyRootfs": true,
+    "Memory": 268435456,
+    "MemorySwap": 268435456,
+    "NanoCpus": 1000000000,
+    "PidsLimit": 64,
+    "ShmSize": 33554432,
+    "Tmpfs": {
+      "/var/lib/postgresql": "rw,noexec,nosuid,size=16777216,uid=999,gid=999,mode=0700",
+      "/work": "rw,noexec,nosuid,size=134217728,uid=999,gid=999,mode=0700"
+    },
+    "PortBindings": {}
+  },
+  "output_path": "fixtures/requested-pg18.6-dump.sql",
+  "output_bytes": 1311,
+  "output_sha256": "712e9380d8b580971cc891b5cfbf3f2b0817b84782e3d67df3118a9877e0d2b2",
+  "double_dump_identical": true,
+  "stdout_bytes": 1311,
+  "stderr_transcript": "postgres (PostgreSQL) 18.6 (Debian 18.6-1.pgdg13+2)\nc567d1861c8206bb5b0e04b44b65c5c48435b0b836cfb01b8b4f3d542fbdf324  /usr/lib/postgresql/18/bin/postgres\ninitdb (PostgreSQL) 18.6 (Debian 18.6-1.pgdg13+2)\na6af30cb45ac1552431cc40b2304002fbe274eb23770f12ea363b646e14b7159  /usr/lib/postgresql/18/bin/initdb\npsql (PostgreSQL) 18.6 (Debian 18.6-1.pgdg13+2)\ndc783938aa5804c6d331d2fbe19b4ce5f504eae1a1fe046db79210be2173c44f  /usr/lib/postgresql/18/bin/psql\npg_dump (PostgreSQL) 18.6 (Debian 18.6-1.pgdg13+2)\n1f74f820f4cf54a6b92278da6edfa82dae1373e3a2a9311aadb67978b5d80d9b  /usr/lib/postgresql/18/bin/pg_dump\npg_ctl (PostgreSQL) 18.6 (Debian 18.6-1.pgdg13+2)\n3c1f8a7793f4836748b2943110446b9db4d0b1aa2c19726fd559157b07009bf5  /usr/lib/postgresql/18/bin/pg_ctl\npg_isready (PostgreSQL) 18.6 (Debian 18.6-1.pgdg13+2)\nfd8874b1fe24d2af0288880a6d2e4d8b1ba691f729b68d92437b2fc329ea85c3  /usr/lib/postgresql/18/bin/pg_isready\nccbd5106945d1095474e5ee47317266f5918aa37fc671829192a007918b1413a  /bin/bash\n367967c823a0c391e5049b15a67c6a0a629c88b9b6dcdca75ef13ac9d65334b1  /bin/sh\n9099881905b68f7831560a3cccef1a04d475568f985b97da51a9d88db84b9415  /usr/bin/id\n2b910f41d86805c20131df9f5ceec50831db66644b56cfb44facf83e79fbdd61  /usr/bin/cut\n6f977f773468265ba072d0f7e51f5ef74778e483fc65db8ebb685ea2a5d9da79  /usr/bin/mkdir\nf42cf7276848ac3dfd4d90295233c1f12f5cdc7da2e5715e75a15f2c790acbd6  /usr/bin/sleep\n067f08d102fefbcb16fce1c3832136fa964a41e39b7a9570172c1e07ec6adba4  /usr/bin/wc\n42555d3db07aeb2f12acf4085e8a5fee605abf394fe8473508fa279718cd95dd  /usr/bin/cmp\n7911a1f0aec4678c540bd78ff886f48d42790c8689a82ed0ae25ed79ed5dd512  /usr/bin/sha256sum\nThe files belonging to this database system will be owned by user \"postgres\".\nThis user must also own the server process.\n\nThe database cluster will be initialized with locale \"C\".\nThe default text search configuration will be set to \"english\".\n\nData page checksums are enabled.\n\ncreating directory /work/data ... ok\ncreating subdirectories ... ok\nselecting dynamic shared memory implementation ... posix\nselecting default \"max_connections\" ... 100\nselecting default \"shared_buffers\" ... 128MB\nselecting default time zone ... Etc/UTC\ncreating configuration files ... ok\nrunning bootstrap script ... ok\nperforming post-bootstrap initialization ... ok\nsyncing data to disk ... ok\nCREATE TABLE\n712e9380d8b580971cc891b5cfbf3f2b0817b84782e3d67df3118a9877e0d2b2  /work/dump1.sql\n712e9380d8b580971cc891b5cfbf3f2b0817b84782e3d67df3118a9877e0d2b2  /work/dump2.sql\nt261_double_dump_identical=true\nwaiting for server to shut down.... done\nserver stopped\nt261_server_exit=0\nt261_server_joined=true\n",
+  "vm_configuration_unchanged": true
+}

@@ -1,0 +1,18 @@
+{
+  "outcome": "passed",
+  "playwright_version": "1.62.1",
+  "browser_path": "Browser plugin not available; installed Chrome and existing Playwright, without downloads",
+  "chrome_version": "155.0.8059.82",
+  "client_terminal": {
+    "exit_code": 0,
+    "teardown": "clean",
+    "termination_mode": "already_exited"
+  },
+  "chrome_terminal": {
+    "exit_code": 0,
+    "teardown": "clean",
+    "termination_mode": "sigterm"
+  },
+  "chrome_path": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "seconds": 1.437613875
+}

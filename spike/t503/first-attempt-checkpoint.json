@@ -1,0 +1,76 @@
+{
+  "schema": "t503-first-attempt-custody-checkpoint-v1",
+  "date": "2026-10-18",
+  "status": "failed unit attribution; not a quality/operating pass",
+  "first_result_sha256": "7e63806f9269a357fa056d46ff625a1a764da8930eb74df00d84341607163693",
+  "frozen_labels_sha256": "db84af5c81cad0526677a058d602523049e000d2b960262f5bb6e547d77bcd26",
+  "first_product_reads": "15.163s native attempt only; later checker adjudication and diagnosis were offline, with zero new product reads",
+  "observations": {
+    "expected_source_sites": 5,
+    "observed_source_sites": 5,
+    "correct_source_tuples": 5,
+    "outside_pair_exclusions": 4,
+    "correct_unit_attributions": 0,
+    "unit_denominator": 5,
+    "remaining": "unit composition, exact citation opening, HTTP/MCP/UI parity and publication transitions unmeasured"
+  },
+  "harness_correction": "Original checker extra resolution=scip assertion contradicted frozen labels and public contract. Corrected to resolved classification with explicit scip/derived or syntax/heuristic, preserving first output/result byte-for-byte. No source/labels/threshold changes.",
+  "repair": "T50.3a fixes dropped committed unit projection; new prospective exact-binary/generation binding required before one bounded requalification.",
+  "files": [
+    {
+      "path": "baseline-result.json",
+      "bytes": 4832,
+      "sha256": "7e63806f9269a357fa056d46ff625a1a764da8930eb74df00d84341607163693"
+    },
+    {
+      "path": "capture-diagnosis.json",
+      "bytes": 8393,
+      "sha256": "fdc476869f2cbadf572e91e8a6dba27c05dc0299a8b3a3b4a072848848bb7bdd"
+    },
+    {
+      "path": "checker-adjudication.json",
+      "bytes": 997,
+      "sha256": "cac0296d791b3ef079af157aab757b2dead90a72802503aa2cec384fb6cee318"
+    },
+    {
+      "path": "diagnose_capture.py",
+      "bytes": 6333,
+      "sha256": "742ca4e02c5fdab8fbd993e9b365c1ce03429a78c1e81bc60e842dd7249d5275"
+    },
+    {
+      "path": "first-output-projection.json",
+      "bytes": 6899,
+      "sha256": "32e3f05ada9fa7e31b8067911e862a35bad832b0fbc8c973cd70a62751b84734"
+    },
+    {
+      "path": "harness-preparation.json",
+      "bytes": 849,
+      "sha256": "ff997d1b2264bbf09146349ca061deb5e9e649d7c9b1a3c154ee8831a518e2d3"
+    },
+    {
+      "path": "offline-check-result.json",
+      "bytes": 901,
+      "sha256": "6a636f9bfdf314799181fcecdf6b8ba7780efb18ee64a57dce09792ffecc92ac"
+    },
+    {
+      "path": "qualify.py",
+      "bytes": 19769,
+      "sha256": "831d13fb28ae0054257da74b87f1298bf1df7067e75190a6fa66fe53fec92089"
+    },
+    {
+      "path": "score.py",
+      "bytes": 7331,
+      "sha256": "9fe189b544eb877b55ba064104a489109c1416e6ea29289951d51a512d14ad30"
+    },
+    {
+      "path": "test_score.py",
+      "bytes": 6172,
+      "sha256": "3e639fd994953ae5d3bae4b0ad15d962e3cfea9b8c3fd77192f457dadad0f836"
+    },
+    {
+      "path": "observe/main.go",
+      "bytes": 1240,
+      "sha256": "e30c753b11c77b4359f8225bf7e0019400dac1d44290ce723274fb4a61bcc40d"
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "records": [
+    {
+      "candidate": "pg-query-go",
+      "repository": "pganalyze/pg_query_go",
+      "commit": "7ac09d4bd830e591a69c6ebc756bb8f71de0281e",
+      "license_path": "LICENSE",
+      "local_path": "licenses/pg-query-go.LICENSE",
+      "bytes": 1561,
+      "sha256": "7752b24a3cb4bee5270c2ee8a3a7609fd57ce9dccb2e8b5757fdeca04bb03960",
+      "license_verified_before_candidate_readme_or_source": true
+    },
+    {
+      "candidate": "pg-query-go",
+      "repository": "pganalyze/pg_query_go",
+      "commit": "7ac09d4bd830e591a69c6ebc756bb8f71de0281e",
+      "license_path": "LICENSE.POSTGRESQL",
+      "local_path": "licenses/pg-query-go.LICENSE.POSTGRESQL",
+      "bytes": 1337,
+      "sha256": "28e429702de70abfa1b7e4cb5d9e486bd9469f1eab5b392f704b65de09334d8d",
+      "license_verified_before_candidate_readme_or_source": true
+    },
+    {
+      "candidate": "mysql-sqlparser",
+      "repository": "xwb1989/sqlparser",
+      "commit": "120387863bf27d04bc07db8015110a6e96d0146c",
+      "license_path": "LICENSE.md",
+      "local_path": "licenses/mysql-sqlparser.LICENSE.md",
+      "bytes": 11356,
+      "sha256": "43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1",
+      "license_verified_before_candidate_readme_or_source": true
+    }
+  ],
+  "parser_runs": 0,
+  "candidate_source_opened": false,
+  "candidate_documentation_read_after_license_verification": true,
+  "candidate_documentation_scope": "Pinned README and module metadata only; no parser run, candidate implementation or production import."
+}

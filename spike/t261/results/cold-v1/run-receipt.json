@@ -1,0 +1,403 @@
+{
+  "input_checkpoint": "1f8970fe58f82bc648bf0e9fe1b7dd5b4443b76c",
+  "inputs_after": {
+    "bytes": 4439033,
+    "contract_sha256": "9568cf9cce51f30bfd38c131d4ba8a6502ad9c0a777d743e9b5b6cd330d7031c",
+    "files": 419,
+    "history_sha256": "ad65ad9aa90313cfc371662a3a37cf528c190212d971ebac2bb443c595f5d056",
+    "preregistration_sha256": "791585bd54e5a03ccdfbda033884229a48c2006e9ac822ad7265091605e962e9"
+  },
+  "inputs_before": {
+    "bytes": 4439033,
+    "contract_sha256": "9568cf9cce51f30bfd38c131d4ba8a6502ad9c0a777d743e9b5b6cd330d7031c",
+    "files": 419,
+    "history_sha256": "ad65ad9aa90313cfc371662a3a37cf528c190212d971ebac2bb443c595f5d056",
+    "preregistration_sha256": "791585bd54e5a03ccdfbda033884229a48c2006e9ac822ad7265091605e962e9"
+  },
+  "lanes": {
+    "mysql-imported": {
+      "binary_sha256": "97dd3a6d474c89ff3cc05f9903cb581cde68e856061d6dc1f52cd836d3d92901",
+      "canonical_bytes_identical": true,
+      "runs": [
+        {
+          "argv": [
+            "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t261-1icghxrx/mysql-imported",
+            "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261",
+            "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261/results/cold-v1/requests.json"
+          ],
+          "cwd": "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261",
+          "exact_child_wait4_maxrss_bytes": 11681792,
+          "exit": 0,
+          "go_cache": "inherited host cache; not a cold-build measurement",
+          "joined": true,
+          "output_limit_bytes": 67108864,
+          "peak_observed_rss_bytes": 3473408,
+          "rss_qualification": "observed stop, not hard heap or allocation bound;20ms plus scheduling/measurement overshoot; wait4 peak may exceed sampled current RSS",
+          "rss_stop_bytes": 1073741824,
+          "sample_errors": 0,
+          "samples": 13,
+          "sampling_interval_seconds": 0.02,
+          "stderr_bytes": 23925,
+          "stderr_limit_bytes": 65536,
+          "stderr_sha256": "df0687500a1223fd681c57e303e1062447f7ca49181157774fd68da33f178440",
+          "stdout_bytes": 356260,
+          "stdout_sha256": "656c8983688f4f856e06d37e4898827aa54e9f774822a1d4f1d4251d742f085b",
+          "stop": null,
+          "wall_limit_seconds": 30,
+          "wall_seconds": 0.35447
+        },
+        {
+          "argv": [
+            "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t261-1icghxrx/mysql-imported",
+            "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261",
+            "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261/results/cold-v1/requests.json"
+          ],
+          "cwd": "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261",
+          "exact_child_wait4_maxrss_bytes": 11599872,
+          "exit": 0,
+          "go_cache": "inherited host cache; not a cold-build measurement",
+          "joined": true,
+          "output_limit_bytes": 67108864,
+          "peak_observed_rss_bytes": 425984,
+          "rss_qualification": "observed stop, not hard heap or allocation bound;20ms plus scheduling/measurement overshoot; wait4 peak may exceed sampled current RSS",
+          "rss_stop_bytes": 1073741824,
+          "sample_errors": 0,
+          "samples": 1,
+          "sampling_interval_seconds": 0.02,
+          "stderr_bytes": 23925,
+          "stderr_limit_bytes": 65536,
+          "stderr_sha256": "df0687500a1223fd681c57e303e1062447f7ca49181157774fd68da33f178440",
+          "stdout_bytes": 356260,
+          "stdout_sha256": "656c8983688f4f856e06d37e4898827aa54e9f774822a1d4f1d4251d742f085b",
+          "stop": null,
+          "wall_limit_seconds": 30,
+          "wall_seconds": 0.024493
+        }
+      ]
+    },
+    "mysql-subset": {
+      "binary_sha256": "749fbf4aaa7024e6c029535a1c590b93837c1b478b6045b701ef4a13061caad7",
+      "canonical_bytes_identical": true,
+      "runs": [
+        {
+          "argv": [
+            "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t261-1icghxrx/mysql-subset",
+            "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261",
+            "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261/results/cold-v1/requests.json"
+          ],
+          "cwd": "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261",
+          "exact_child_wait4_maxrss_bytes": 9551872,
+          "exit": 0,
+          "go_cache": "inherited host cache; not a cold-build measurement",
+          "joined": true,
+          "output_limit_bytes": 67108864,
+          "peak_observed_rss_bytes": 2932736,
+          "rss_qualification": "observed stop, not hard heap or allocation bound;20ms plus scheduling/measurement overshoot; wait4 peak may exceed sampled current RSS",
+          "rss_stop_bytes": 1073741824,
+          "sample_errors": 0,
+          "samples": 8,
+          "sampling_interval_seconds": 0.02,
+          "stderr_bytes": 0,
+          "stderr_limit_bytes": 65536,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_bytes": 355542,
+          "stdout_sha256": "0dd93e1e36550bb551a343a00a7b60f22da4378a158a448c9ddc30b2298e597d",
+          "stop": null,
+          "wall_limit_seconds": 30,
+          "wall_seconds": 0.228413
+        },
+        {
+          "argv": [
+            "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t261-1icghxrx/mysql-subset",
+            "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261",
+            "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261/results/cold-v1/requests.json"
+          ],
+          "cwd": "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261",
+          "exact_child_wait4_maxrss_bytes": 9551872,
+          "exit": 0,
+          "go_cache": "inherited host cache; not a cold-build measurement",
+          "joined": true,
+          "output_limit_bytes": 67108864,
+          "peak_observed_rss_bytes": 458752,
+          "rss_qualification": "observed stop, not hard heap or allocation bound;20ms plus scheduling/measurement overshoot; wait4 peak may exceed sampled current RSS",
+          "rss_stop_bytes": 1073741824,
+          "sample_errors": 0,
+          "samples": 1,
+          "sampling_interval_seconds": 0.02,
+          "stderr_bytes": 0,
+          "stderr_limit_bytes": 65536,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_bytes": 355542,
+          "stdout_sha256": "0dd93e1e36550bb551a343a00a7b60f22da4378a158a448c9ddc30b2298e597d",
+          "stop": null,
+          "wall_limit_seconds": 30,
+          "wall_seconds": 0.02752
+        }
+      ]
+    },
+    "postgresql-imported": {
+      "binary_sha256": "dcdde90d79232cc20e71f9453ccd4e92b7c7101654437d4763c02c5c8e2e5d77",
+      "canonical_bytes_identical": true,
+      "runs": [
+        {
+          "argv": [
+            "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t261-1icghxrx/postgresql-imported",
+            "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261",
+            "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261/results/cold-v1/requests.json"
+          ],
+          "cwd": "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261",
+          "exact_child_wait4_maxrss_bytes": 28229632,
+          "exit": 0,
+          "go_cache": "inherited host cache; not a cold-build measurement",
+          "joined": true,
+          "output_limit_bytes": 67108864,
+          "peak_observed_rss_bytes": 25952256,
+          "rss_qualification": "observed stop, not hard heap or allocation bound;20ms plus scheduling/measurement overshoot; wait4 peak may exceed sampled current RSS",
+          "rss_stop_bytes": 1073741824,
+          "sample_errors": 0,
+          "samples": 14,
+          "sampling_interval_seconds": 0.02,
+          "stderr_bytes": 0,
+          "stderr_limit_bytes": 65536,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_bytes": 1489448,
+          "stdout_sha256": "a19ae2c7bda0d530ea4c215414f66c2829f0fbcd9b26908b67095bc0d4d9d9e3",
+          "stop": null,
+          "wall_limit_seconds": 30,
+          "wall_seconds": 0.364163
+        },
+        {
+          "argv": [
+            "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t261-1icghxrx/postgresql-imported",
+            "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261",
+            "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261/results/cold-v1/requests.json"
+          ],
+          "cwd": "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261",
+          "exact_child_wait4_maxrss_bytes": 29655040,
+          "exit": 0,
+          "go_cache": "inherited host cache; not a cold-build measurement",
+          "joined": true,
+          "output_limit_bytes": 67108864,
+          "peak_observed_rss_bytes": 26935296,
+          "rss_qualification": "observed stop, not hard heap or allocation bound;20ms plus scheduling/measurement overshoot; wait4 peak may exceed sampled current RSS",
+          "rss_stop_bytes": 1073741824,
+          "sample_errors": 0,
+          "samples": 4,
+          "sampling_interval_seconds": 0.02,
+          "stderr_bytes": 0,
+          "stderr_limit_bytes": 65536,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_bytes": 1489448,
+          "stdout_sha256": "a19ae2c7bda0d530ea4c215414f66c2829f0fbcd9b26908b67095bc0d4d9d9e3",
+          "stop": null,
+          "wall_limit_seconds": 30,
+          "wall_seconds": 0.100848
+        }
+      ]
+    },
+    "postgresql-subset": {
+      "binary_sha256": "9beb9a21ad32a1db864c2e7bf60f5f912981aea2af49dd68a28dc4d544c3891b",
+      "canonical_bytes_identical": true,
+      "runs": [
+        {
+          "argv": [
+            "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t261-1icghxrx/postgresql-subset",
+            "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261",
+            "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261/results/cold-v1/requests.json"
+          ],
+          "cwd": "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261",
+          "exact_child_wait4_maxrss_bytes": 18219008,
+          "exit": 0,
+          "go_cache": "inherited host cache; not a cold-build measurement",
+          "joined": true,
+          "output_limit_bytes": 67108864,
+          "peak_observed_rss_bytes": 15941632,
+          "rss_qualification": "observed stop, not hard heap or allocation bound;20ms plus scheduling/measurement overshoot; wait4 peak may exceed sampled current RSS",
+          "rss_stop_bytes": 1073741824,
+          "sample_errors": 0,
+          "samples": 12,
+          "sampling_interval_seconds": 0.02,
+          "stderr_bytes": 0,
+          "stderr_limit_bytes": 65536,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_bytes": 1413931,
+          "stdout_sha256": "f9895b66c16d2254dd26f391db855e17f6ee2f988b922cf2c422adfcec658924",
+          "stop": null,
+          "wall_limit_seconds": 30,
+          "wall_seconds": 0.307238
+        },
+        {
+          "argv": [
+            "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t261-1icghxrx/postgresql-subset",
+            "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261",
+            "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261/results/cold-v1/requests.json"
+          ],
+          "cwd": "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261",
+          "exact_child_wait4_maxrss_bytes": 17858560,
+          "exit": 0,
+          "go_cache": "inherited host cache; not a cold-build measurement",
+          "joined": true,
+          "output_limit_bytes": 67108864,
+          "peak_observed_rss_bytes": 17858560,
+          "rss_qualification": "observed stop, not hard heap or allocation bound;20ms plus scheduling/measurement overshoot; wait4 peak may exceed sampled current RSS",
+          "rss_stop_bytes": 1073741824,
+          "sample_errors": 0,
+          "samples": 3,
+          "sampling_interval_seconds": 0.02,
+          "stderr_bytes": 0,
+          "stderr_limit_bytes": 65536,
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_bytes": 1413931,
+          "stdout_sha256": "f9895b66c16d2254dd26f391db855e17f6ee2f988b922cf2c422adfcec658924",
+          "stop": null,
+          "wall_limit_seconds": 30,
+          "wall_seconds": 0.075705
+        }
+      ]
+    }
+  },
+  "source_after": [
+    {
+      "bytes": 6449,
+      "path": "comparison-contract.json",
+      "sha256": "9568cf9cce51f30bfd38c131d4ba8a6502ad9c0a777d743e9b5b6cd330d7031c"
+    },
+    {
+      "bytes": 179,
+      "path": "reader/candidates/mysql/go.mod",
+      "sha256": "80b1e38b3bb37379c6678249b917ed8085c8d7c4a6dc3165a2739dc69f4dcaf0"
+    },
+    {
+      "bytes": 231,
+      "path": "reader/candidates/mysql/go.sum",
+      "sha256": "4d2770255e36a7367b3f5824061f61254e70be55dbc95eef862d4d897cd51a8a"
+    },
+    {
+      "bytes": 840,
+      "path": "reader/candidates/mysql/main.go",
+      "sha256": "9de7e4fc15ea8ce56bab0721c56a69dde9103848b1c2c9bc189bda3373ecff32"
+    },
+    {
+      "bytes": 219,
+      "path": "reader/candidates/postgresql/go.mod",
+      "sha256": "99cfcd590c61c17a7aef5bc36b0e63f2635788bbb6da3ac7c501969d2dd64e58"
+    },
+    {
+      "bytes": 758,
+      "path": "reader/candidates/postgresql/go.sum",
+      "sha256": "a8635280c8fae499381906a6c28111fee46ed9303c20f5eb6be8bf4f40ce926b"
+    },
+    {
+      "bytes": 1504,
+      "path": "reader/candidates/postgresql/main.go",
+      "sha256": "8bdc681eb66db96d9ae826cf3a1dfd845399390a1491bdf2e7751bf2dd0e957f"
+    },
+    {
+      "bytes": 388,
+      "path": "reader/cmd/subset/main.go",
+      "sha256": "c0c4454bf0bd4a65e6cc18a44fd45c34fbce3aacca295c652c4ad25e37208f2d"
+    },
+    {
+      "bytes": 35,
+      "path": "reader/go.mod",
+      "sha256": "72cb7829d57ecc402b1e1d1d133008a288de03e1b5486deb1fa20e5408d8b291"
+    },
+    {
+      "bytes": 7144,
+      "path": "reader/lexer.go",
+      "sha256": "4f4b6824b60086994a9490f8c0a5d8297d52a49c1f7ecc4549d7b43fe55e7a7c"
+    },
+    {
+      "bytes": 21014,
+      "path": "reader/project.go",
+      "sha256": "77b91107fe4a2eadce49f035fb14464a3cb156733a3c0c7807ce63c93571eee7"
+    },
+    {
+      "bytes": 5509,
+      "path": "reader/reader_test.go",
+      "sha256": "8be6f5bbdc65f4f3168cf338ade4da1c13e0bcb2927ecf646719ddb702480b74"
+    },
+    {
+      "bytes": 11836,
+      "path": "reader/run.go",
+      "sha256": "7981c3fe38d1ab2273111afaef0b97f137fa1c52c6c98758d39df50fda802de9"
+    },
+    {
+      "bytes": 20657,
+      "path": "run_comparison.py",
+      "sha256": "9ad5d373d52e7e483fa619cae723e912e991f16442c18fa2e1cbccdb5395ec12"
+    }
+  ],
+  "source_inventory": [
+    {
+      "bytes": 6449,
+      "path": "comparison-contract.json",
+      "sha256": "9568cf9cce51f30bfd38c131d4ba8a6502ad9c0a777d743e9b5b6cd330d7031c"
+    },
+    {
+      "bytes": 179,
+      "path": "reader/candidates/mysql/go.mod",
+      "sha256": "80b1e38b3bb37379c6678249b917ed8085c8d7c4a6dc3165a2739dc69f4dcaf0"
+    },
+    {
+      "bytes": 231,
+      "path": "reader/candidates/mysql/go.sum",
+      "sha256": "4d2770255e36a7367b3f5824061f61254e70be55dbc95eef862d4d897cd51a8a"
+    },
+    {
+      "bytes": 840,
+      "path": "reader/candidates/mysql/main.go",
+      "sha256": "9de7e4fc15ea8ce56bab0721c56a69dde9103848b1c2c9bc189bda3373ecff32"
+    },
+    {
+      "bytes": 219,
+      "path": "reader/candidates/postgresql/go.mod",
+      "sha256": "99cfcd590c61c17a7aef5bc36b0e63f2635788bbb6da3ac7c501969d2dd64e58"
+    },
+    {
+      "bytes": 758,
+      "path": "reader/candidates/postgresql/go.sum",
+      "sha256": "a8635280c8fae499381906a6c28111fee46ed9303c20f5eb6be8bf4f40ce926b"
+    },
+    {
+      "bytes": 1504,
+      "path": "reader/candidates/postgresql/main.go",
+      "sha256": "8bdc681eb66db96d9ae826cf3a1dfd845399390a1491bdf2e7751bf2dd0e957f"
+    },
+    {
+      "bytes": 388,
+      "path": "reader/cmd/subset/main.go",
+      "sha256": "c0c4454bf0bd4a65e6cc18a44fd45c34fbce3aacca295c652c4ad25e37208f2d"
+    },
+    {
+      "bytes": 35,
+      "path": "reader/go.mod",
+      "sha256": "72cb7829d57ecc402b1e1d1d133008a288de03e1b5486deb1fa20e5408d8b291"
+    },
+    {
+      "bytes": 7144,
+      "path": "reader/lexer.go",
+      "sha256": "4f4b6824b60086994a9490f8c0a5d8297d52a49c1f7ecc4549d7b43fe55e7a7c"
+    },
+    {
+      "bytes": 21014,
+      "path": "reader/project.go",
+      "sha256": "77b91107fe4a2eadce49f035fb14464a3cb156733a3c0c7807ce63c93571eee7"
+    },
+    {
+      "bytes": 5509,
+      "path": "reader/reader_test.go",
+      "sha256": "8be6f5bbdc65f4f3168cf338ade4da1c13e0bcb2927ecf646719ddb702480b74"
+    },
+    {
+      "bytes": 11836,
+      "path": "reader/run.go",
+      "sha256": "7981c3fe38d1ab2273111afaef0b97f137fa1c52c6c98758d39df50fda802de9"
+    },
+    {
+      "bytes": 20657,
+      "path": "run_comparison.py",
+      "sha256": "9ad5d373d52e7e483fa619cae723e912e991f16442c18fa2e1cbccdb5395ec12"
+    }
+  ]
+}

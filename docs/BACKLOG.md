@@ -19368,6 +19368,38 @@ historical custody tests; direct/independent source and steady-cost review.
 T50.3 quality/operating/publication-transition qualification remains separate
 and must use new prospectively bound exact inputs after this fix integrates.
 
+**T50.3 immutable preregistration (2026-10-18, Ben-routed Mac handoff).**
+The lead's independent source-only review accepts
+`spike/t503/checkpoint.json` SHA-256
+`54b1377c20d2422f93756dedea56ef30aa1df0e6114d41fd646558ef4cd3ab29`
+and all twelve bound artifacts before predictions. Nine actual method sites
+supply five selected and four excluded sites; occurrence classes are two old,
+three new, while four supplied-unit rows cover old/new/both/unresolved.
+Evaluator-selected endpoints and package units claim no upstream migration or
+deployment truth. The finite quality/read/operating matrix and stops are frozen;
+absent real classes stay unavailable. Next: serialized offline indexing,
+lead-owned exact evaluation Git bindings, then the first candidate measurement.
+No quality/operating PASS, production signature, Linux capacity or scale claim
+exists at this checkpoint.
+
+**T50.3 first-attempt outcome (2026-10-18).** Preserve the15.163s joined
+native attempt as failed. Offline review finds5/5 selected source sites and
+source tuples, four correctly excluded outside-pair sites, but0/5 correct unit
+attribution. An extra scip-only checker assertion was prospectively corrected
+to the public resolved syntax/scip contract without new product reads or any
+source/label/threshold change; the original stop remains exact. Unit composition,
+citation opening, HTTP/MCP/UI and transition evidence remain unmeasured.
+T50.3a owns dropped-unit-projection repair; a fresh exact-binary/generation plan
+and unchanged frozen truth precede any new bounded qualification.
+**T50.3b · Repair current resolver API fixture admission** *(2026-10-18,
+Ben-routed Mac handoff; complete)* — the prospective affected regression pass
+exposed an empty-pack shared positive fixture after T50.3a. Current resolver
+constants restore exact CallerMap/comparison tests; warm missing/old-pack cases
+retain stale/unavailable rather than bypassing admission. Failed first log is
+retained in `spike/t503b/`; bounded normal/race/MCP/admission/current-pack tests,
+vet, pinned lint and independent source/cost review pass. Production code is
+unchanged; T50.3's native quality/operating result remains separate.
+
 ## Epic 51 · Protobuf field-reference production readiness
 
 **T51.1 · Exact field/SCIP identity and independent quality** — depend on
@@ -19430,6 +19462,37 @@ open; no product run or production promotion has occurred.
 **T52.1 · Apache Thrift field contract and independent quality** — freeze
 generator versions, stable field IDs, symbol/tag binding and unsupported shapes;
 depend on the selected T49.2 declaration and independently admitted SCIP recipe.
+
+**T52.1 source checkpoint (2026-10-18, Ben-routed Mac handoff).** Exact
+permissive source preparation and independent source/tag/IDL review freeze
+48 files /370,645 bytes: two unchanged public handwritten files plus exact
+Apache0.14.1 generated/runtime inputs and separate authored controls. Source-only
+labels contain33public positives/266lexical identifier negatives and separate
+11authored positives/60negatives/4unsupported sites. No indexer, candidate or
+scorer has run. Bounded offline index preparation follows this checkpoint;
+actual evaluator source/index commits and final binding review precede scoring.
+No Apache result transfers from thriftrw, and no production registration,
+operating qualification or signature follows from preparation.
+
+**T52.1 final input binding (2026-10-18).** Both bounded offline index
+preparations passed once and joined; eight public/three neutral indexed documents
+match the frozen sources. Root created distinct actual evaluator source/index
+commits and verified both bundles. Final preregistration82938e1d binds every
+source/index/label/witness/tool byte before one child-free30s extraction/quality
+measurement. No candidate/scorer has run and no production registration or
+operating/signature result exists at this checkpoint.
+
+**T52.1 finite result (2026-10-18).** The frozen Apache population passes
+public33/33 references plus266 lexical negatives, and separate authored11/11
+references,60 negatives and4 unsupported sites, with zero extra/wrong/duplicate
+or unsupported claims. All14 source/tag/IDL/SCIP witnesses agree;353/1 generated
+emissions stay separate. Raw read roles do not establish semantic write
+accuracy. First result/terminal remain exact; a lint-only equivalent boolean
+correction is separately bound and passes normal/race/vet/pinned lint. Source,
+identity, citation and cost review is clear. This completes the narrow T52.1
+committed-input leaf; T52.2 is independent and T52.3 still owns registration,
+operating and production signature promotion. No generalized accuracy or
+managed/runtime/scale result follows.
 
 **T52.2 · thriftrw field contract and independent quality** — separate
 generator-specific identity and quality population; no Apache result transfers.
@@ -21065,6 +21128,33 @@ class, query table sites recognized vs. unresolved, and uniquely bound joins
 vs. name-only/missing/ambiguous — with no cross-dialect blended percentage;
 double-run bytes identical in both lanes; no production code paths changed
 and no pack registered.
+
+**T26.1 input checkpoint (2026-10-18, Ben-routed Mac handoff).** The complete
+419-file / 4,439,033-byte preregistration is frozen before parser execution.
+Twenty source-only label files account for 909 envelopes, 2,339 declarations
+and 146 table sites; sampled and unsupported populations, four per-dialect
+denominators and 60 separate neutral controls stay explicit. One PostgreSQL18.6
+capture produced two identical1,311-byte schema-only dumps and joined/removed
+its server/container, stopped the unchanged VM and restored context. The earlier
+image-admission stop stays exact. Root authored/reviewed source labels and the
+full prospective contract; parser/grammar results remain unmeasured. Next is
+isolated imported-versus-subset comparison in each dialect, not production
+registration or an accuracy/release claim.
+
+**T26.1 measured outcome (2026-10-18): complete spike, no production adoption.**
+All four frozen pipelines produce byte-identical paired outputs without panics
+or invalid spans. PostgreSQL public declarations1,584/1,843, generated fixture
+separately1/8, migration statements24/43 and query/bindings98/98; MySQL subset/
+imported declarations488/488 and477/488, query/bindings48/48, migration population
+unmeasured. Unsupported and all188 unmatched strict PostgreSQL witnesses per
+lane remain explicit. Source/projector agreement is not independent imported
+extraction accuracy. Header/catalog trust and scorer direction/envelope fixes
+pass separate normal/race/vet/lint/negative controls, without corpus rerun or
+label changes. Root/peer source/cost review and exact input/result inventories
+are clear. [Measured report](../spike/t261/results/REPORT.md) records all four
+denominators, original snapshots/stops, build/output/process cost and limits.
+No production parser, dependency, schema, registration or continuation ticket
+is adopted by this isolated measurement.
 
 ## Epic 27 · Document schema-manifest evidence *(drafted 2026-07-27 · unscheduled — spike first)*
 

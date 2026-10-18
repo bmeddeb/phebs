@@ -1,0 +1,151 @@
+{
+  "schema": "t521-outcome-cost-v1",
+  "record_date": "2026-10-18",
+  "decision": "Finite Apache0.14.1 committed-source/SCIP identity-and-span recipe passes the frozen field-use thresholds; production registration and operating qualification remain separate.",
+  "first_candidate_checkpoint": "86956f87b967b496cf497a99f4694b319b3010c4",
+  "original_preregistration_digest": "sha256:090c9e5b7ef41286599e58e40b46169b071b6a074abe265ff309b010d676ae6f",
+  "original_harness_digest": "sha256:a5f76167c7e17f8e57a8269be503f7c19ab82d6432c40b25e65e9db6206931af",
+  "source_labels_digest": "sha256:4e9c7474bc33e98c1d1f057f8e8cd72f71a5801ca157df873e9dbf1bc87c491f",
+  "first_run": {
+    "executor": "lead agent, one selected run after independent source/input/harness checkpoints",
+    "selector": "^TestFrozenApacheFieldQuality$",
+    "test_timeout_seconds": 30,
+    "record_environment": "PHEBS_T521_RECORD_RESULT=1",
+    "package_result": "pass",
+    "package_reported_seconds": 0.282,
+    "recorded_candidate_runs": 1,
+    "children_spawned_by_candidate": 0,
+    "records": [
+      {
+        "path": "first-result.json",
+        "bytes": 7058,
+        "digest": "sha256:e1febf98dfae1d880ff664a066f21863e1d5dbb73d4d8dde222a6977a937e902"
+      },
+      {
+        "path": "candidate-terminal.log",
+        "bytes": 48,
+        "digest": "sha256:a0c831bd1ef04174d04a1fd75c3ccea34afc50b1f092db68095abf4f48630926"
+      }
+    ],
+    "preservation": "Original first-result/log remain exact. Any later harness lint-only rewrite and non-recording regressions have separate lead-owned provenance; this record does not replace the first result."
+  },
+  "populations": [
+    {
+      "population": "public",
+      "evaluation_commit": "6218bbaca1bd557c45c6aba6dfcd0c741ed1f64b",
+      "positive": 33,
+      "matched": 33,
+      "negative": 266,
+      "negative_false_positives": 0,
+      "unsupported": 0,
+      "unsupported_claims": 0,
+      "missing": [],
+      "mismatches": [],
+      "generated_emissions_separate": 353,
+      "all_emissions": 386,
+      "source_join_witnesses": 9,
+      "logical_corpus_reads": 13,
+      "logical_corpus_read_bytes": 1122604,
+      "extract_plus_streaming_wall_microseconds": 6178,
+      "application_roles_observed": {
+        "read": 33
+      },
+      "generated_roles_observed": {
+        "read": 353
+      }
+    },
+    {
+      "population": "neutral",
+      "evaluation_commit": "34136e8c9f6ee0364cb2dff3a1e78a7d86221721",
+      "positive": 11,
+      "matched": 11,
+      "negative": 60,
+      "negative_false_positives": 0,
+      "unsupported": 4,
+      "unsupported_claims": 0,
+      "missing": [],
+      "mismatches": [],
+      "generated_emissions_separate": 1,
+      "all_emissions": 12,
+      "source_join_witnesses": 5,
+      "logical_corpus_reads": 6,
+      "logical_corpus_read_bytes": 12876,
+      "extract_plus_streaming_wall_microseconds": 79,
+      "application_roles_observed": {
+        "read": 11
+      },
+      "generated_roles_observed": {
+        "read": 1
+      }
+    }
+  ],
+  "qualification": {
+    "public": "Two unchanged handwritten files from one selected public Jaeger module;33 source-labelled writes and266 other identifiers. This is not the complete upstream application or a generalized accuracy population.",
+    "neutral": "Authored controls,11 positive/60 negative/4 unsupported; no Apache compiler execution is claimed for the authored generated-marker fixture.",
+    "generated": "353 public and1 neutral emissions are separate from the public/neutral quality denominators. Every returned emission passed citation/schema/SCIP-family/derived/source_binding=none checks; no complete generated-field accuracy oracle is claimed.",
+    "read_write_roles": "All33 public and11 neutral application emissions carry classification=read, including source-labelled composite writes. SCIP access roles were recorded, not scored as source-semantic read/write labels. These observations do not establish write/read classification accuracy.",
+    "join": "Nine public and five neutral source-only IDL/generated identifier witnesses matched unique real SCIP definitions. Declaration lineage and SCIP package-family lineage remain distinct; this creates no production cross-family join.",
+    "tier": "All Apache emissions remain derived, generator=apache, source_binding=none. No embedded-IDL/module_digest or exact tier is claimed."
+  },
+  "input_preparation_cost": {
+    "authority": {
+      "path": "input-preparation.json",
+      "bytes": 16025,
+      "digest": "sha256:4264edbde5fcf0a99b0bb7e18506c7490df6e5ce85d9ee3544778e3d91e3ebf4"
+    },
+    "scope": "Separate from extraction; one serial offline scip-go0.2.7 child per population,90-second cap, no dependency download or retry, both joined and process groups absent; scratch removed after verified retention.",
+    "runs": [
+      {
+        "population": "public",
+        "wall_seconds": 0.458322,
+        "user_seconds": 0.429083,
+        "system_seconds": 0.142977,
+        "index_bytes": 839828,
+        "indexed_documents": 8,
+        "indexed_occurrences": 9733,
+        "darwin_rusage_children_lifetime_max_rss_bytes": 99303424,
+        "rss_scope": "Lifetime maximum of terminated children in this preparation process, not aggregate process-family peak",
+        "root_child_joined": true,
+        "process_group_absent": true
+      },
+      {
+        "population": "neutral",
+        "wall_seconds": 0.110761,
+        "user_seconds": 0.058749,
+        "system_seconds": 0.058313,
+        "index_bytes": 10154,
+        "indexed_documents": 3,
+        "indexed_occurrences": 81,
+        "darwin_rusage_children_lifetime_max_rss_bytes": 99303424,
+        "rss_scope": "Lifetime maximum of terminated children in this preparation process, not aggregate process-family peak",
+        "root_child_joined": true,
+        "process_group_absent": true
+      }
+    ],
+    "retained_extra_bytes": {
+      "public_index": 839828,
+      "neutral_index": 10154,
+      "public_go_sum": 193,
+      "public_git_bundle": 165582,
+      "neutral_git_bundle": 4037
+    },
+    "rss_limit": "No aggregate process-family peak or hard memory ceiling is inferred from RUSAGE_CHILDREN lifetime maxima."
+  },
+  "steady_state_cost": {
+    "production_query_request": "No production code, reader registration, HTTP/MCP surface or query path changed; zero new work.",
+    "sync_tick_startup_restart_retry_noop": "No production scheduler/startup/retry/cache/lifecycle change; zero new work. A future explicit extraction would execute the existing reader from immutable inputs rather than reuse a new persistent cache.",
+    "publication_transition": "No production worker publication, store mutation, release claim or signature changed. The isolated harness writes one first-result with exclusive creation only when explicitly enabled.",
+    "preflight": "Reads/hashes the finite registered authority/source/index/bundle bytes; validates the full source identifier census and14 IDL/generated/SCIP definition witnesses. Holds the selected corpus strings, cached digests and line-start arrays. This preparation is outside the timed interval.",
+    "extraction": "Existing pure reader walks registered paths, parses the bounded root SCIP stream, retains document occurrence metadata, reads Go definition documents to bind marker/tag/type/identifier spans, then reads reference documents and streams facts. A definition/reference document may be read in both phases. Timed logical reads include the typed index; cached Corpus.Read bytes are not physical disk I/O.",
+    "per_emission": "Uses current immutable source/digest comparisons, precomputed line starts, detail JSON decoding, fixed schema/tier/lineage/subject checks and label-map lookup; records roles and counters. No per-emission source hashing, filesystem read or subprocess.",
+    "locks_cache_concurrency": "No held production lock, shared cache or goroutine/child is introduced. Two populations run serially. All input/cache state is local to the test invocation.",
+    "memory_disk_bounds": "Existing reader admissions are32MiB index,50,000 documents,500,000 occurrences,8KiB symbol and4MiB generated source. These are inherited refusal limits, not measured scale ceilings. The harness retains the complete finite input population and preflight index model; allocations, heap peak and process-family RSS were not measured for extraction. Retained indices/bundles/results are finite fixture artifacts, not a production retention policy.",
+    "timing": "6,178\u00b5s public and79\u00b5s neutral are wall time for Extract plus streaming verification/counters. They exclude preflight hashes, source census, join-witness checks and line preparation, and are not isolated extractor CPU, a latency SLO or a repeated operating result."
+  },
+  "nonclaims": [
+    "No T52.2 thriftrw result transfer",
+    "No production registration (T52.3), native/managed generation admission or signed release",
+    "No operating, scale, allocation, read/write semantic accuracy or generalized independent accuracy claim",
+    "Production signing remains pending until the production key is available"
+  ]
+}

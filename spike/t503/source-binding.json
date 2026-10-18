@@ -1,0 +1,140 @@
+{
+  "schema": "phebs-t503-evaluation-source-binding-v1",
+  "source_path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t503-git-source-k3rf9gx5",
+  "source_commit": "3186f5e995e4c389caef090f1c2b2adccd90d91d",
+  "source_tree": "e2c5d7d732e9dc9a57cbd3426bd1ce3778a0958e",
+  "upstream_provenance_only": "5f1ccf56ea5ec964bbf447a10b561214f86387a6",
+  "repository_roles": {
+    "primary": "evaluation.local/t503-public",
+    "concurrent_copy": "evaluation.local/t503-public-copy"
+  },
+  "files": [
+    {
+      "path": "LICENSE",
+      "mode": "100644",
+      "git_blob": "d645695673349e3947e8e5ae42332d0ac3164cd7",
+      "bytes": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "path": "data/data.go",
+      "mode": "100644",
+      "git_blob": "c583755fdf347534678bcaeb1759a68bb9e3af32",
+      "bytes": 1250,
+      "sha256": "d088b7e127ad41acdf1e267515b003b7ce1a292c217954265be0a122e12ca367"
+    },
+    {
+      "path": "features/interceptor/client/main.go",
+      "mode": "100644",
+      "git_blob": "feb59bf1a2eb28207d093d9d77b5a6930f1ecf10",
+      "bytes": 5061,
+      "sha256": "67a96c9ce41464119ed93fab70bebb50cb96accdecaca43d8f9a0cf43a6bf641"
+    },
+    {
+      "path": "features/metadata/client/main.go",
+      "mode": "100644",
+      "git_blob": "861e3eece26840007f3204f41ab5689de2e94d2b",
+      "bytes": 8453,
+      "sha256": "26aceadb046196cf67fc5f790f2d6dc4e5f74ae1a919002b6fb6686db41c4fa7"
+    },
+    {
+      "path": "features/multiplex/client/main.go",
+      "mode": "100644",
+      "git_blob": "d5a432e16b120abf18af05b204d4b2bff4f65ae6",
+      "bytes": 2414,
+      "sha256": "4fd071c359f34dd525a7125e9ef2eaf7ba871828eec21b574467bfb7b9224a7e"
+    },
+    {
+      "path": "features/proto/echo/echo.pb.go",
+      "mode": "100644",
+      "git_blob": "7733f9759bd6f45a8aaef8814e0ee68483a4ae9a",
+      "bytes": 7621,
+      "sha256": "782b379b30abb36abc05916e65516a261a266a8d8e8c1e42adc606a2a86a6f34"
+    },
+    {
+      "path": "features/proto/echo/echo.proto",
+      "mode": "100644",
+      "git_blob": "2dde5633e2dd44414e1c08aaf6e505b62d262414",
+      "bytes": 1420,
+      "sha256": "e1eb8e11c7c1b273a7c025eedb88064b40c11517b3413d364893e0e4df4fed83"
+    },
+    {
+      "path": "features/proto/echo/echo_grpc.pb.go",
+      "mode": "100644",
+      "git_blob": "88677bda7966e657ed57e9af3807e035255554ac",
+      "bytes": 10887,
+      "sha256": "af593380d0cb47c95469db614f42c582a21c6028e04cae1f84a3da7a96e57a40"
+    },
+    {
+      "path": "generated-from-snapshot.json",
+      "mode": "100644",
+      "git_blob": "70672e62702f4f218f6bddcfd22cdc44b15bd997",
+      "bytes": 943,
+      "sha256": "066d1e4fecaa37ff7b92a7b7d9e818cd27a4e065ac0c4af9d38a7380e46deb1c"
+    },
+    {
+      "path": "go.mod",
+      "mode": "100644",
+      "git_blob": "6156939ea9ac194946ab260119d78644509b4ed0",
+      "bytes": 436,
+      "sha256": "b2703b3404581b66756d550f640c4eda2ca52d589eb1c03b449fdd58b69625bc"
+    },
+    {
+      "path": "go.sum",
+      "mode": "100644",
+      "git_blob": "246a14fab6df75917e4a3651805774a9d0303d9d",
+      "bytes": 1408,
+      "sha256": "e74b7b78ebdfa1fded22c9af03ca827225adad4e73dd1f2901e4002b8c680fcf"
+    },
+    {
+      "path": "helloworld/greeter_client/main.go",
+      "mode": "100644",
+      "git_blob": "d746840e6036c5de0f8a45c2fc2c19ecd7c0540d",
+      "bytes": 1610,
+      "sha256": "5539f38f560ab26ce11514cd81f941fb80f4ca9a88754aaaf40d89bbc92e3e30"
+    },
+    {
+      "path": "helloworld/helloworld/helloworld.pb.go",
+      "mode": "100644",
+      "git_blob": "48555f9136a55d547f4726d278afe64d2f2e52b2",
+      "bytes": 6873,
+      "sha256": "d365b6dd964d474e5e3d50ef1b8bedb6d728a0377eb7926ef6fee6dfdeb1a59a"
+    },
+    {
+      "path": "helloworld/helloworld/helloworld.proto",
+      "mode": "100644",
+      "git_blob": "692ef9deda0751d3d9be9d8a4a3c5a10d7ede385",
+      "bytes": 1170,
+      "sha256": "0e59e0b552d35f8b801e02811c3fcd3dd45dbf1a593c5ff6f2f679863219b257"
+    },
+    {
+      "path": "helloworld/helloworld/helloworld_grpc.pb.go",
+      "mode": "100644",
+      "git_blob": "bf8263b0ad5678ea2d376ece21ca7c6686620578",
+      "bytes": 4993,
+      "sha256": "e1de746d9f7c0fa108c370c420cbe1a630a8cf7ae55e43a2d946dc5589c6993d"
+    },
+    {
+      "path": "layout-snapshot.json",
+      "mode": "100644",
+      "git_blob": "5cb2896d07680fd78a524336d889ac4044ff88d0",
+      "bytes": 1174,
+      "sha256": "9276f576011fb096912ff75d70cc52358349dfbee5283b52c5635e042936430b"
+    },
+    {
+      "path": "origin.json",
+      "mode": "100644",
+      "git_blob": "37db1a18fe0079c1d258fc353e06251d6691e8af",
+      "bytes": 7622,
+      "sha256": "d84131879c8bc77dcb3ea68ccf89c9012a7b33b5f8a5839dff7abec25533cb1c"
+    },
+    {
+      "path": "unit-snapshot.json",
+      "mode": "100644",
+      "git_blob": "bec863cd04d297a334ff9bd322c63f9200b126ae",
+      "bytes": 724,
+      "sha256": "23b21c02ee9ca6afacebc12774bed65d450e238df2fbad03e19696a60d656864"
+    }
+  ],
+  "qualification": "Actual local evaluator Git source commit, not upstream commit. Candidate export/scoring remains held until derived index commit and bundles are recorded."
+}

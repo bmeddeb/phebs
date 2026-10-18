@@ -1,0 +1,71 @@
+{
+  "schema": "phebs-t503-index-canonicalization-v1",
+  "recorded_utc": "2026-10-18T10:57:12+00:00",
+  "source_binding_digest": "sha256:95b726d7010e649a4394bbab76e8d4ee580fab4c1510a057b443a49db52efce3",
+  "source_commit": "3186f5e995e4c389caef090f1c2b2adccd90d91d",
+  "source_tree": "e2c5d7d732e9dc9a57cbd3426bd1ce3778a0958e",
+  "source_census_files": 18,
+  "source_census_bytes": 75417,
+  "repository": "evaluation.local/t503-public",
+  "command": [
+    "go",
+    "run",
+    "./spike/t472/derivation/merge",
+    "--repo",
+    "evaluation.local/t503-public",
+    "--remote",
+    "evaluation.local/t503-public",
+    "--pin",
+    "3186f5e995e4c389caef090f1c2b2adccd90d91d",
+    "--clone",
+    "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t503-git-source-k3rf9gx5",
+    "--out",
+    "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t503-index-v1-bf97m9nn/canonical.scip",
+    "--run",
+    "=/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t503-index-v1-bf97m9nn/raw.scip",
+    "--max-bytes",
+    "8388608"
+  ],
+  "helper_source_digest": "sha256:f4ffec46cef45ffd4e53d45d3decac0c4649c9147cb22aed175f1d74f7c6d21c",
+  "raw_index_digest": "sha256:45f772a6923bfbcae9f69c89a18bb801016d84f9d690a3b11fe67115b8523ac6",
+  "exit_code": 0,
+  "seconds": 0.965,
+  "attempts": 1,
+  "qualification": "Existing T472 canonicalization only; validates each index document against exact local evaluator Git tree, preserves document/symbol payloads and rewrites metadata to evaluation repository. No extractor/export/scoring or Git mutations.",
+  "census": {
+    "repo": "evaluation.local/t503-public",
+    "pin": "3186f5e995e4c389caef090f1c2b2adccd90d91d",
+    "docs": 9,
+    "out_of_tree_dropped": 0,
+    "out_of_tree_testmain": 0,
+    "alias_documents_dropped": 0,
+    "alias_documents": [],
+    "occurrences": 2100,
+    "symbols": 468,
+    "external_symbols_dropped": 0,
+    "round_trip_unstable_docs": 0,
+    "version_skew_references": 0,
+    "version_skew_sample": [],
+    "bytes": 241231,
+    "runs": [
+      {
+        "rel": "",
+        "docs": 9,
+        "out_of_tree_dropped": 0,
+        "out_of_tree_testmain": 0,
+        "out_of_tree_other": null,
+        "occurrences": 2100,
+        "symbols": 468,
+        "external_symbols": 0,
+        "round_trip_stable_docs": 9,
+        "round_trip_unstable_docs": 0
+      }
+    ]
+  },
+  "canonical_index": {
+    "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t503-index-v1-bf97m9nn/canonical.scip",
+    "bytes": 241231,
+    "sha256": "sha256:56fc6f28dfe3db0130015522d27b358da14a19f0e3711771a3a3d671650426e7"
+  },
+  "outcome": "passed_preparation_only"
+}

@@ -1,0 +1,6 @@
+{
+  "child_runs": 0,
+  "correction": "resolve module path before import; no candidate/scorer semantic change",
+  "reason": "ad-hoc import used relative __file__; source inventory refused relative path against absolute root",
+  "stage": "supplemental check orchestration before child execution"
+}

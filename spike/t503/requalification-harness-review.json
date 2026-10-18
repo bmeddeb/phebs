@@ -1,0 +1,27 @@
+{
+  "schema": "t503-requalification-harness-review-v1",
+  "date": "2026-10-18",
+  "owner": "root; Ben-routed Mac handoff",
+  "peer": "receipt_portability",
+  "harness": {
+    "requalify.py": "sha256:0756a4ece93583644f064d227895b8666dedb4bcb975ad6e08e4ce7aad727a9f",
+    "requalification_checks.py": "sha256:51a7d57434827beab9e3328d747afef3338ee4942cabf374f849113e45370d1b",
+    "requalification_browser.py": "sha256:dfd5742e3856e908515c42042571702023753644cf4a242cc0570db00a19da6f",
+    "requalification_browser.cjs": "sha256:d5e0a71fb97aa20d211189f7e4542ce4fd5e1dc19364a99cf6cb00a8d169c2d0",
+    "requalification_monitor.py": "sha256:cbffb94a215e78c7210da3d7661ccd0d2627de3946cb4370b9364a786f3b6e5a",
+    "test_requalification.py": "sha256:7b524c5fffde8096bc24404d64006f875da50eeefe3cc5444b411a0cad60c3df"
+  },
+  "frozen_plan_digest": "sha256:8acec78a879023e4642e41710a3563c3d4930071239e925798cf1666b5735f9f",
+  "checks": [
+    "Independent root/peer complete source review; all protected labels/plans/first-failure bytes unchanged",
+    "Every quality page and citation binds exact current source/run and complete generation tuple; transition pages accept only coherent before/after epochs or explicit documented refusal",
+    "Both1280/390 viewports test actual discovery,counts,classes,level/filter/reset,keyboard source open and overflow without route interception",
+    "One global180s deadline through cleanup, successful startup/publication deadlines, joined total HTTP header/body timer and current remaining stop grace",
+    "Bounded owned vm_stat, observer and sampling thread; forced/unjoined cleanup fails; retain derived custody until sampling and saved-owned server process groups drain",
+    "Retain PGID before shared session helper clears pid on normal/startup failure; atomic private Git-config replace never exposes partial configuration",
+    "All30pure/mocked tests0.019s,Python compilation and pinnedNode JS syntax check pass; no native product/browser execution yet",
+    "Frozen affected regression pass stopped on shared empty-pack fixture; separate reviewed T503b fixes only fixture metadata and tests, productionsource unchanged; normal/race/MCP/admission/current-pack/vet/pinnedlint green atc6b24715. Preserve original failure and reuse exact matching source-bound validation, no repeated workload"
+  ],
+  "steady_cost": "New opt-in qualification harness only. Production query/sync/startup/retry/no-op/publication/locks/caches/schema/worker behavior unchanged. Existing exact comparison and caller engines reused; one finite2repository matrix with8maxparallel, boundedHTTP/resolver/caller reads; no unmeasured count inference. Browser/tools/build preparation cost separately retained. Per HTTP call one short-lived joined timer/socket; sampler one observer plus at most1owned2s vm_stat per host cadence, bounded data walk cancellable at entries. Startup/teardown samples excluded from peak claims; observed RSS/headroom/disk only. Same generation caches/citations and native build byte identities remain governing. No SLO/scale/global accuracy/production release claim.",
+  "readiness": "One source-only reviewed prospective run after immutable commit, exact binding and browser preflight; first native stop retained; production signing pending"
+}
