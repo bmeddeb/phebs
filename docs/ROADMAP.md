@@ -5546,6 +5546,11 @@ under pack1.2.0; historical artifact custody stays intact. Bounded regression
 and independent source/cost review precede integration. T50.3's earlier unit
 failure stays retained; new product qualification remains separate.
 
+**T52.2 source checkpoint (2026-10-18):** independent thriftrw source labels,
+embedded-IDL/field witnesses and permissive provenance are reviewed before
+indexing. Public4/31 and separate authored15/62/4 checks are frozen; actual
+index/input commits, first quality measurement and T52.3 remain next.
+
 ## On demand
 
 Epic 32 measured the target whole repository and did not trigger P6. P6 remains

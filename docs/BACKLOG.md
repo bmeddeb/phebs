@@ -19426,6 +19426,15 @@ depend on the selected T49.2 declaration and independently admitted SCIP recipe.
 **T52.2 · thriftrw field contract and independent quality** — separate
 generator-specific identity and quality population; no Apache result transfers.
 
+*2026-10-18 checkpoint:* source-only thriftrw1.34.0 recipe and exact retained
+Cadence health mapper/IDL plus separate authored controls are independently
+reviewed. All15 source files/52,650 bytes,116 spans, three embedded Raw/SHA1
+equalities and nine field/eighteen definition witnesses agree. Public4/31 and
+authored15/62/4 positive/negative/unsupported populations are frozen before
+indexing. Existing gitlink provenance and the fresh metadata403 remain explicit.
+No SCIP or candidate output exists yet; actual evaluator commits, bounded index
+preparation, extraction quality and T52.3 admission/operating/signing stay open.
+
 **T52.3 · Independent stable registration and measured promotion** — split
 the current shared experimental switch into explicitly selected admitted
 recipes; satisfy the common bar for each. Either generator may release alone.
