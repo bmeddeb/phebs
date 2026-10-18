@@ -1,0 +1,17 @@
+{
+  "client": {
+    "exit_code": 0,
+    "teardown": "clean",
+    "termination_mode": "already_exited"
+  },
+  "chrome": {
+    "exit_code": 0,
+    "teardown": "clean",
+    "termination_mode": "sigterm"
+  },
+  "vite": {
+    "exit_code": 143,
+    "teardown": "clean",
+    "termination_mode": "sigterm"
+  }
+}
