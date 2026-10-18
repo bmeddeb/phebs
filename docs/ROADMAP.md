@@ -182,6 +182,13 @@ are complete for their scope; optional labels and future polish add no current
 Mac dependency. No additional independent Mac implementation leaf is scheduled
 in this snapshot. This reconciliation changes no runtime or release posture.
 
+**Mac bug audit follow-up (2026-10-18, T57R.4 / #130):** Ben's new audit
+request found denied browser-storage startup crashes, late auth-status writes
+and premature clipboard success. The bounded presentation repair is independent
+of #124 and changes no backend or release authority. Its owning backlog/PLAN
+record supplies the regressions and current gates; the Linux, managed-SCIP and
+production-signing holds above remain exact.
+
 **All-ticket execution (2026-10-17, Ben-directed):** resolve actual dependencies
 and finish remaining work using three isolated agent lanes plus the lead. The
 current inventory is the T48.1 all-ticket table in [BACKLOG.md](./BACKLOG.md).

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { Client } from 'styletron-engine-monolithic'
 import { Provider as StyletronProvider } from 'styletron-react'
@@ -26,7 +26,20 @@ beforeEach(() => {
   api.postReindex.mockReset().mockResolvedValue(undefined)
 })
 
-afterEach(cleanup)
+afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+
+test('commit copy waits for the clipboard before displaying success', async () => {
+  let finish!: () => void
+  vi.stubGlobal('navigator', { clipboard: { writeText: vi.fn(() => new Promise<void>(resolve => { finish = resolve })) } })
+  api.fetchRepoStatus.mockResolvedValue([{ ...repos[0], indexed_commit_hash: 'a'.repeat(40) }])
+  render(<StyletronProvider value={engine}><BaseProvider theme={LightTheme}><ReposPage /></BaseProvider></StyletronProvider>)
+  const button = await screen.findByTitle('Copy commit')
+  const idle = button.innerHTML
+  fireEvent.click(button)
+  expect(button.innerHTML).toBe(idle)
+  await act(async () => finish())
+  expect(button.innerHTML).not.toBe(idle)
+})
 
 test('reindex all queues every repository and refreshes status once', async () => {
   render(
@@ -183,4 +196,14 @@ test('reindex controls preserve a retained whole-repository posture', async () =
   expect(screen.queryByRole('button', {
     name: 'Reindex legacy-service unit',
   })).toBeNull()
+})
+
+
+test('unavailable clipboard exposes the full commit for manual copying', async () => {
+  vi.stubGlobal('navigator', {})
+  const hash = '1234567890'.repeat(4)
+  api.fetchRepoStatus.mockResolvedValue([{ ...repos[0], indexed_commit_hash: hash }])
+  render(<StyletronProvider value={engine}><BaseProvider theme={LightTheme}><ReposPage /></BaseProvider></StyletronProvider>)
+  fireEvent.click(await screen.findByRole('button', { name: 'Copy commit' }))
+  expect(await screen.findByRole('button', { name: 'Copy commit failed' })).toHaveProperty('textContent', hash)
 })

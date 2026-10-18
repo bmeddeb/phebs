@@ -11299,3 +11299,18 @@ rehearsal or browser matrix is needed for this change.
 
 Documentation, glossary and whitespace gates pass; 39 merge witnesses are
 verified main ancestors. Independent factual/cost review has no finding.
+
+
+## T57R.4 · Mac browser-state audit repair (2026-10-18)
+
+The new Ben-directed audit reproduces eight UI failures: preference storage can
+blank startup, obsolete auth-status results/errors can overwrite current session
+and CSRF state, and copy controls can announce success before a write completes.
+The Mac-owned repair uses optional preference persistence, generation-bound status
+refresh and the reused clipboard feedback handler. It retains backend security,
+source authority, manual token copying and production-signing holds. The active
+T57R.4 entry records 918 UI tests, final Settings/type/lint/build checks, eight
+native keyboard/console/WCAG journeys, six unchanged native idle pairs and two
+reviewed Settings pairs reproduced byte-identically. Documentation, glossary,
+whitespace and scoped charter/cost review pass. Canonical Noble baselines and
+Linux/production-signing holds remain exact.

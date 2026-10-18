@@ -1,10 +1,11 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { useStyletron } from 'baseui'
 import { Drawer } from 'baseui/drawer'
 import type { SearchScopeReceipt } from '../api'
 import { CheckIcon, CopyIcon } from '../icons'
 import { FONTS, NUMERIC, focusRing, panelTransition, statusToneFor, usePhebsTokens, type PhebsTokens } from '../theme'
 import { IdentityText, StatusWord } from './kit'
+import { useCopy } from '../useCopy'
 
 // T43.5 chip → drawer → receipt (charter §3 Disclosure). The chip is the
 // compact authority on the answer; the drawer is the authority altitude
@@ -333,33 +334,10 @@ function DigestRow({ label, value }: { label: string; value: string }) {
   )
 }
 
-type CopyState = 'idle' | 'done' | 'failed'
-
-function useCopy(): [CopyState, (value: string) => void] {
-  const [state, setState] = useState<CopyState>('idle')
-  const timer = useRef(0)
-  const copy = (value: string) => {
-    const settle = (next: CopyState) => {
-      setState(next)
-      window.clearTimeout(timer.current)
-      timer.current = window.setTimeout(() => setState('idle'), 1600)
-    }
-    if (!navigator.clipboard?.writeText) {
-      settle('failed')
-      return
-    }
-    navigator.clipboard.writeText(value).then(
-      () => settle('done'),
-      () => settle('failed'),
-    )
-  }
-  return [state, copy]
-}
-
 function CopyButton({ label, value }: { label: string; value: string }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  const [state, copy] = useCopy()
+  const [state, copy] = useCopy(value)
   return (
     <button
       type="button"
@@ -386,7 +364,7 @@ function CopyButton({ label, value }: { label: string; value: string }) {
 function CopyReceiptButton({ receipt }: { receipt: SearchScopeReceipt }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  const [state, copy] = useCopy()
+  const [state, copy] = useCopy(receipt)
   return (
     <button
       type="button"

@@ -210,7 +210,7 @@ function AppearanceSection() {
         Appearance
       </h1>
       <div className={css({ marginTop: '4px', marginBottom: '12px', fontSize: '12px', lineHeight: '18px', color: tok.textTertiary })}>
-        Code highlighting for the viewer, search results, and citations. Every palette meets the AA contrast floor in both themes; the choice is stored in this browser.
+        Code highlighting for the viewer, search results, and citations. Every palette meets the AA contrast floor in both themes; the choice is saved when browser storage is available.
       </div>
       <div className={css({ border: `1px solid ${tok.cardBorder}`, borderRadius: '8px', padding: '12px 14px', display: 'grid', gridTemplateColumns: 'minmax(180px, 240px) minmax(0, 1fr)', gap: '14px', alignItems: 'start', '@media screen and (max-width: 640px)': { gridTemplateColumns: '1fr' } })}>
         <label className={css({ display: 'grid', gap: '3px', fontSize: '11px', lineHeight: '14px', color: tok.textTertiary })}>

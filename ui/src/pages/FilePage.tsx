@@ -1,3 +1,4 @@
+import { useCopy } from '../useCopy'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useStyletron } from 'baseui'
 import { Notification, KIND } from 'baseui/notification'
@@ -378,6 +379,8 @@ function Breadcrumb({
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
+  const permalink = `${window.location.href.split('#')[0]}${href('/file', { repo, path, ...(ref ? { ref } : {}) })}`
+  const [linkState, copyLink] = useCopy(permalink)
   const slash = path.lastIndexOf('/')
   const dir = slash === -1 ? '' : path.slice(0, slash + 1)
   const name = slash === -1 ? path : path.slice(slash + 1)
@@ -405,12 +408,11 @@ function Breadcrumb({
       )}
       <button
         type="button"
-        onClick={() => navigator.clipboard?.writeText(
-          `${window.location.href.split('#')[0]}${href('/file', { repo, path, ...(ref ? { ref } : {}) })}`,
-        )}
+        onClick={() => void copyLink(permalink)}
+        title={linkState === 'failed' ? 'Clipboard unavailable — retry copying the permalink' : undefined}
         className={css(btnStyle(tok))}
       >
-        Permalink
+        {linkState === 'done' ? 'Link copied' : linkState === 'failed' ? 'Copy failed' : 'Permalink'}
       </button>
       <button
         type="button"
@@ -720,17 +722,15 @@ function MermaidFence({ source }: { source: string }) {
 function CopyInline({ text, title, size = 14 }: { text: string; title: string; size?: number }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  const [done, setDone] = useState(false)
+  const [state, copy] = useCopy(text)
+  const done = state === 'done'
   return (
     <button
       type="button"
-      title={title}
-      onClick={() => {
-        navigator.clipboard?.writeText(text)
-        setDone(true)
-        setTimeout(() => setDone(false), 1200)
-      }}
-      className={css({ display: 'flex', border: 'none', background: 'none', cursor: 'pointer', color: done ? tok.status.current.solid : tok.textTertiary, padding: '3px', borderRadius: '6px', ':hover': { color: tok.textPrimary, backgroundColor: tok.hoverFill } })}
+      title={state === 'done' ? 'Copied' : state === 'failed' ? 'Copy failed — select text to copy manually' : title}
+      aria-label={state === 'done' ? `${title}: copied` : state === 'failed' ? `${title}: failed` : title}
+      onClick={() => void copy(text)}
+      className={css({ display: 'flex', border: 'none', background: 'none', cursor: 'pointer', color: done ? tok.status.current.solid : state === 'failed' ? tok.status.conflict.text : tok.textTertiary, padding: '3px', borderRadius: '6px', ':hover': { color: tok.textPrimary, backgroundColor: tok.hoverFill } })}
     >
       {done ? <CheckIcon size={size} /> : <CopyIcon size={size} />}
     </button>

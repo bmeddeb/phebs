@@ -13936,3 +13936,35 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   scan, child or persistent state is added. Bounded docs/glossary/whitespace,
   merged-ancestry/link checks and independent factual review are the gates;
   no historical execution or UI matrix is repeated.
+
+
+- **2026-10-18 — T57R.4 Mac audit: browser-state failures.** Ben requests a
+  fresh app bug audit, bounded tests and integration when green while Linux
+  #124 and production signing wait. Keep all changes on the Mac presentation
+  track. Browser preference storage is optional: denied reads use existing
+  defaults and denied writes retain current in-memory choices. A generation
+  fence rejects obsolete authentication-status successes/errors after a newer
+  refresh, completed login/setup/logout or provider teardown; backend session,
+  authentication and CSRF enforcement are unchanged. Reuse the authority
+  drawer's clipboard feedback for repository, file and search actions, await
+  writes, catch absent/denied/synchronous failures, invalidate old attempts on
+  identity change/unmount and clear the single success timer. Failure remains
+  visible until retry/identity change; a failed commit copy exposes its full
+  value for manual copying. Preserve the Settings token's existing manual
+  fallback. Appearance copy conditions persistence on available storage.
+  Cost: startup retains three preference reads and three writes, adding only
+  exception handling; each auth-status completion adds a constant counter
+  check, without new requests, polling, caching or authorization decisions.
+  Each mounted copy control holds one state and one two-field pending ref;
+  each attempt performs one clipboard write and holds at most one 1.6-second
+  success timer, cleared on replacement/unmount. Receipt serialization stays
+  action-only. Search keeps its existing key listener and stable copy callback;
+  no full-source traversal, new server query/sync/retry/publication work, locks,
+  disk state or child process is added. The shared clipboard chunk is lazy;
+  the first affected page loads one extra small static asset, then module-cache
+  reuse adds no asset request. There is no added API request.
+  Bounded UI/type/lint/build, desktop/390px keyboard/console/WCAG checks and
+  same-native-renderer comparisons apply. Accessibility samples settled finite
+  theme transitions, avoiding an intermediate BaseUI button contrast reading.
+  This grants no Linux native acceptance, generated-evidence or scale claim,
+  production signature, activation or ceremony authority.

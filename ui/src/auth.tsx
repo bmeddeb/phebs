@@ -1,5 +1,5 @@
 /* oxlint-disable react/only-export-components */
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { AUTH_REQUIRED_EVENT, csrfHeaders, setCSRFToken } from './authSession'
 
 export interface AuthUser {
@@ -58,6 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<AuthStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const statusGeneration = useRef({ value: 0 })
 
   const applyStatus = useCallback((next: AuthStatus) => {
     setCSRFToken(next.csrf_token)
@@ -66,14 +67,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const refresh = useCallback(async () => {
+    const generation = ++statusGeneration.current.value
     try {
-      applyStatus(await readStatus(await authRequest('/api/auth/status')))
+      const next = await readStatus(await authRequest('/api/auth/status'))
+      if (generation === statusGeneration.current.value) applyStatus(next)
     } catch (cause) {
+      if (generation !== statusGeneration.current.value) return
       setCSRFToken()
       setStatus(null)
       setError(String(cause))
     } finally {
-      setLoading(false)
+      if (generation === statusGeneration.current.value) setLoading(false)
     }
   }, [applyStatus])
 
@@ -81,7 +85,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     void refresh()
     const handleRequired = () => void refresh()
     window.addEventListener(AUTH_REQUIRED_EVENT, handleRequired)
-    return () => window.removeEventListener(AUTH_REQUIRED_EVENT, handleRequired)
+    const pending = statusGeneration.current
+    return () => {
+      pending.value++
+      window.removeEventListener(AUTH_REQUIRED_EVENT, handleRequired)
+    }
   }, [refresh])
 
   const login = useCallback(async (email: string, password: string) => {
@@ -90,6 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     }))
+    statusGeneration.current.value++
     applyStatus(next)
   }, [applyStatus])
 
@@ -99,10 +108,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password, setup_token: setupToken }),
     }))
+    statusGeneration.current.value++
     applyStatus(next)
   }, [applyStatus])
 
   const logout = useCallback(async () => {
+    statusGeneration.current.value++
     try {
       const res = await authRequest('/api/auth/logout', {
         method: 'POST',
