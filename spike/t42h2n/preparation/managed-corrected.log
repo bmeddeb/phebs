@@ -1,0 +1,56 @@
+=== RUN   TestExecutionEpochConfigRefusesSemanticDrift
+=== RUN   TestExecutionEpochConfigRefusesSemanticDrift/runtime
+=== RUN   TestExecutionEpochConfigRefusesSemanticDrift/catalog-version
+=== RUN   TestExecutionEpochConfigRefusesSemanticDrift/catalog-path
+=== RUN   TestExecutionEpochConfigRefusesSemanticDrift/poll
+=== RUN   TestExecutionEpochConfigRefusesSemanticDrift/watch
+=== RUN   TestExecutionEpochConfigRefusesSemanticDrift/details
+=== RUN   TestExecutionEpochConfigRefusesSemanticDrift/proto
+=== RUN   TestExecutionEpochConfigRefusesSemanticDrift/thrift
+=== RUN   TestExecutionEpochConfigRefusesSemanticDrift/thrift-field
+=== RUN   TestExecutionEpochConfigRefusesSemanticDrift/kafka
+=== RUN   TestExecutionEpochConfigRefusesSemanticDrift/lifecycle
+=== RUN   TestExecutionEpochConfigRefusesSemanticDrift/permissions
+=== RUN   TestExecutionEpochConfigRefusesSemanticDrift/revisions
+=== RUN   TestExecutionEpochConfigRefusesSemanticDrift/analysis-unit
+=== RUN   TestExecutionEpochConfigRefusesSemanticDrift/contexts
+=== RUN   TestExecutionEpochConfigRefusesSemanticDrift/webhook
+=== RUN   TestExecutionEpochConfigRefusesSemanticDrift/audit
+=== RUN   TestExecutionEpochConfigRefusesSemanticDrift/cookie
+=== RUN   TestExecutionEpochConfigRefusesSemanticDrift/session
+=== RUN   TestExecutionEpochConfigRefusesSemanticDrift/source
+=== RUN   TestExecutionEpochConfigRefusesSemanticDrift/api-key
+=== RUN   TestExecutionEpochConfigRefusesSemanticDrift/address
+=== RUN   TestExecutionEpochConfigRefusesSemanticDrift/ambient-secret
+=== RUN   TestExecutionEpochConfigRefusesSemanticDrift/unknown
+=== RUN   TestExecutionEpochConfigRefusesSemanticDrift/bytes
+--- PASS: TestExecutionEpochConfigRefusesSemanticDrift (0.02s)
+    --- PASS: TestExecutionEpochConfigRefusesSemanticDrift/runtime (0.00s)
+    --- PASS: TestExecutionEpochConfigRefusesSemanticDrift/catalog-version (0.00s)
+    --- PASS: TestExecutionEpochConfigRefusesSemanticDrift/catalog-path (0.00s)
+    --- PASS: TestExecutionEpochConfigRefusesSemanticDrift/poll (0.00s)
+    --- PASS: TestExecutionEpochConfigRefusesSemanticDrift/watch (0.00s)
+    --- PASS: TestExecutionEpochConfigRefusesSemanticDrift/details (0.00s)
+    --- PASS: TestExecutionEpochConfigRefusesSemanticDrift/proto (0.00s)
+    --- PASS: TestExecutionEpochConfigRefusesSemanticDrift/thrift (0.00s)
+    --- PASS: TestExecutionEpochConfigRefusesSemanticDrift/thrift-field (0.00s)
+    --- PASS: TestExecutionEpochConfigRefusesSemanticDrift/kafka (0.00s)
+    --- PASS: TestExecutionEpochConfigRefusesSemanticDrift/lifecycle (0.00s)
+    --- PASS: TestExecutionEpochConfigRefusesSemanticDrift/permissions (0.00s)
+    --- PASS: TestExecutionEpochConfigRefusesSemanticDrift/revisions (0.00s)
+    --- PASS: TestExecutionEpochConfigRefusesSemanticDrift/analysis-unit (0.00s)
+    --- PASS: TestExecutionEpochConfigRefusesSemanticDrift/contexts (0.00s)
+    --- PASS: TestExecutionEpochConfigRefusesSemanticDrift/webhook (0.00s)
+    --- PASS: TestExecutionEpochConfigRefusesSemanticDrift/audit (0.00s)
+    --- PASS: TestExecutionEpochConfigRefusesSemanticDrift/cookie (0.00s)
+    --- PASS: TestExecutionEpochConfigRefusesSemanticDrift/session (0.00s)
+    --- PASS: TestExecutionEpochConfigRefusesSemanticDrift/source (0.00s)
+    --- PASS: TestExecutionEpochConfigRefusesSemanticDrift/api-key (0.00s)
+    --- PASS: TestExecutionEpochConfigRefusesSemanticDrift/address (0.00s)
+    --- PASS: TestExecutionEpochConfigRefusesSemanticDrift/ambient-secret (0.00s)
+    --- PASS: TestExecutionEpochConfigRefusesSemanticDrift/unknown (0.00s)
+    --- PASS: TestExecutionEpochConfigRefusesSemanticDrift/bytes (0.00s)
+=== RUN   TestExecutionEpochConfigRefusesManagedInstallation
+--- PASS: TestExecutionEpochConfigRefusesManagedInstallation (0.01s)
+PASS
+ok  	github.com/bmeddeb/phebs/spike/t421	0.829s

@@ -4009,6 +4009,23 @@ both Linux compile-only targets, docs and glossary. The first serial sequence
 and joined groups are retained in `spike/t42h2l/`; no Linux image was executed.
 Native facts, admission and parent H2 readiness remain unpassed.
 
+**T42.H2n · Close current dispatch and epoch-config inventory** *(2026-10-18,
+Ben all-ticket delegation; flagged Mac source handoff).*
+Repair the inherited typed launch-inventory checker for current stdout and
+password adapters and exact forwarding locations. Keep the sixteen frozen core
+sites/roles/IDs unchanged; enumerate the separately admitted managed-tooling
+boundaries explicitly and retain unknown/aliased-call detection. Analyze Darwin
+arm64 and Linux amd64 source/types without executing a Linux binary. Reject a
+valid `managed_scip` selection in the closed epoch config projection. AC: both
+source inventories and alias controls, valid-config regression and existing
+config refusals pass; original failures remain qualified historical evidence.
+This adds no installed runtime, tool, native authority or plan/receipt field.
+Both exact source inventories and the alias control pass, as do the valid
+managed-selection regression, existing config refusals, focused race, vet,
+scoped pinned lint, docs and glossary. `spike/t42h2n/` preserves original
+failures, carried source-identical checks and final joined groups. No Linux
+binary or native workload was executed.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

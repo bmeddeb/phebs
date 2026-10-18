@@ -13745,3 +13745,17 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   descriptor metadata; at most 74 additional FDs are held. One OS-thread lock
   spans the cooperative five-second context cap; this is no hard syscall
   deadline, atomic sample, ongoing capacity guarantee or execution reservation.
+
+- **2026-10-18 — T42.H2n current dispatch/config inventory closure (Mac handoff).**
+  Keep the frozen sixteen-site core dispatch contract exact while repairing its
+  independent typed source checker for `WithEnv`/stdout adapters and their current
+  forwarding locations. Enumerate each separately admitted managed-tool launch
+  explicitly; do not exclude packages or accept unknown/aliased boundaries. The
+  checker analyzes Darwin arm64 and Linux amd64 source/types without executing a
+  Linux binary. Close the epoch parser's missing `ManagedSCIP == nil` condition
+  with a valid ordinary-config regression. Generated config already omits the
+  selection and exact-mode runtime guards refuse it; no installed writer bypass
+  is asserted. Historical plan/receipt bytes, roles, IDs and limits stay exact.
+  Tests add two serial source/type/AST passes; private config parsing adds one
+  pointer comparison and no I/O. No product query/tick/startup/retry/publication,
+  child, cache, lock, store/schema, install, release or capacity behavior changes.

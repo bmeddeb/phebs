@@ -1,0 +1,6 @@
+=== RUN   TestExecutionEpochConfigRefusesSemanticDrift
+=== RUN   TestExecutionEpochConfigRefusesSemanticDrift/managed-scip
+--- PASS: TestExecutionEpochConfigRefusesSemanticDrift (0.01s)
+    --- PASS: TestExecutionEpochConfigRefusesSemanticDrift/managed-scip (0.00s)
+PASS
+ok  	github.com/bmeddeb/phebs/spike/t421	0.675s

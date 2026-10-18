@@ -1,0 +1,6 @@
+=== RUN   TestExecutionEpochConfigRefusesManagedInstallation
+    epoch_config_custody_test.go:193: unaccounted managed installation admitted by epoch projection
+--- FAIL: TestExecutionEpochConfigRefusesManagedInstallation (0.01s)
+FAIL
+FAIL	github.com/bmeddeb/phebs/spike/t421	1.159s
+FAIL

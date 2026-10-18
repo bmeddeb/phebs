@@ -143,6 +143,10 @@ Its source/model, scoped static and both Linux compile-only checks pass; native 
 deferred until Ben's office return. Complete ancestry, source-owned reservations,
 prospective versions and actual admission/readiness remain separate gates.
 
+T42.H2n repairs the inherited source launch-inventory check and closes the
+epoch config's managed-installation exclusion. Both supported host-source
+inventories remain exact; no runtime site, plan limit or native gate is widened.
+
 ## Current product posture
 
 **All-ticket execution (2026-10-17, Ben-directed):** resolve actual dependencies

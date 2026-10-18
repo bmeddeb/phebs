@@ -690,6 +690,15 @@ overlays, disabled/threaded memory domains, drift and denial refuse with zero
 output. Required native qualification is a separate explicit
 `T42H2L_NATIVE=1` run with zero skips; ordinary opt-in skips are not evidence.
 
+T42.H2n repairs the historical launch-inventory test against today's adapters.
+It still checks exactly sixteen frozen runtime sites and their constant IDs,
+and separately names each managed-tooling launch boundary instead of excluding
+those packages. Darwin/Linux source and type analysis executes no Linux binary.
+The epoch config projection also rejects valid managed-installation selections;
+ordinary generated configs already omit them, and runtime exact-mode guards
+remain in place. This closes a parser completeness gap without establishing an
+installed writer bypass, widening a plan or changing historical evidence.
+
 On this host, development tools are in `/home/ben/.local/bin`; native amd64
 tools are staged separately under
 `/home/ben/.local/share/phebs-host/native-amd64`. Load the development PATH and
