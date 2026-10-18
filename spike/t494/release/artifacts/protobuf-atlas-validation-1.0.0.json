@@ -72,7 +72,13 @@
   "source_files": {
     "cmd/phebs/serve_config.go": "7a2ad7c50a30d69397c7fe59848164775475598a6376341488f0688586cb6dba",
     "cmd/phebs/serve_atlas_registration_test.go": "01e87136b4a3aa56240fdb2c8171101415fee63da5a7e71abd15023c73ac4dd1",
-    "cmd/phebs/serve_atlas_release_test.go": "650bc5f7f0bb354a41faf398b6055172b40dc8af3ca2333b91f5bb4891234064"
+    "cmd/phebs/serve_atlas_release_test.go": "650bc5f7f0bb354a41faf398b6055172b40dc8af3ca2333b91f5bb4891234064",
+    "ui/src/api.ts": "294869d32043fca57e917fd6d2c5433e51c7ba8c25519c2dd25b8306da27ccf6",
+    "ui/src/App.tsx": "6e291a07677352532aff98a281ebd78a914c06500d41de94dde7833edbecf186",
+    "ui/src/pages/ContractAtlasPage.tsx": "07faec2fe14096944dd165484401c4426648d60c205874e1674502b0474f21b6",
+    "ui/src/pages/ContractAtlasPage.test.tsx": "ff14af8e558d7d9931e8a135f1a133b6088f22c4eb0bd8251f11a615c4d0867a",
+    "ui/src/components/ContractDependencyMap.tsx": "af9f0c4428fa73099a06ddd8c5e775a93c2fdebd8ae447d54174283c4456f348",
+    "ui/src/components/ContractDependencyMap.test.tsx": "068d63461dc100f1aff2bda62f844844fdace989c52e5485de04c8275bec0696"
   },
   "reused_coverage": [
     "T49.3 exact partitioned-root, moved/stale authority, allowed/denied access, paging and citation coverage; unchanged readers",
@@ -85,7 +91,58 @@
     "production signing and deployment"
   ],
   "real_binary_startup": {
-    "outcome": "pending_clean_checkpoint_and_bounded_native_slot",
+    "outcome": "pending_post_ui_clean_checkpoint_and_bounded_native_slot",
     "production_signing": "pending; existing production key unavailable"
+  },
+  "ui_closure": {
+    "recorded_date": "2026-10-18",
+    "fixes": [
+      "Exact partitioned declaration authority marks current source; crossed authority fails closed.",
+      "Unavailable relationship sections remain named unavailable, never a complete empty relationship set.",
+      "Impact and Caller Map handoffs follow their actual capabilities.",
+      "Present authority metadata validates shape, exact source tuples, unique visible roots and echoed filters; malformed/null/crossed metadata and contradictory unavailable sections fail closed. Root metadata describes all visible coverage even for filtered item pages."
+    ],
+    "checks": [
+      {
+        "command": [
+          "npm",
+          "test",
+          "--",
+          "src/App.test.tsx",
+          "src/pages/ContractAtlasPage.test.tsx",
+          "src/components/ContractDependencyMap.test.tsx",
+          "src/api.test.ts"
+        ],
+        "directory": "ui",
+        "exit_code": 0,
+        "tests_passed": 68,
+        "duration_seconds": 1.48
+      },
+      {
+        "command": [
+          "npm",
+          "run",
+          "lint",
+          "--",
+          "src/api.ts",
+          "src/App.tsx",
+          "src/pages/ContractAtlasPage.tsx",
+          "src/components/ContractDependencyMap.tsx",
+          "src/pages/ContractAtlasPage.test.tsx",
+          "src/components/ContractDependencyMap.test.tsx"
+        ],
+        "directory": "ui",
+        "exit_code": 0
+      },
+      {
+        "command": [
+          "npx",
+          "tsc",
+          "-b"
+        ],
+        "directory": "ui",
+        "exit_code": 0
+      }
+    ]
   }
 }
