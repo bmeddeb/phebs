@@ -1,0 +1,19 @@
+{
+  "source_commit": "aa5cf5798e43559e6c35b02487f81198b5e23633",
+  "tracked_git_tree": "0f30a344bbd184596aed21c7037e807e19de08d7",
+  "relevant_files": {
+    "go.mod": "424c7e1038c71c10676fc3bad01e155ebc5f912a4eea65e90c284b30951a9275",
+    "go.sum": "d7aa72d0c2c4283125d37d4377e74be0e87723735a27015900d23092798b1665",
+    "cmd/phebs/t422_workspace_native_test.go": "48108cc2d2b13223e80bbcdcb80494e9153306982615f87c64f379d6f450b587",
+    "cmd/phebs/t422_workspace_cleanup_native_test.go": "d1b242592f45f22522f36ebf764552f1398132f66d2c1a6f8eb91ca8f61ed270",
+    "cmd/phebs/t422_workspace_reports_test.go": "85870d480f4c9fbdc19fdf2709bec3bd99b33c2c9851b208dfdf80427622226d",
+    "cmd/phebs/t422_backup_retirement_test.go": "ed10b2e000fda577ed5da021d3383337a3b152677327e4511e0b3643166d8f6b",
+    "cmd/phebs/t422_lifecycle_control.go": "a659bbf6b61b13f0dc2e3ede3b8af47eff76d842c1a8c0d40e6da63f0e3eb311",
+    "internal/lifecycle/capacity.go": "21fe60b9bcd9560e0bf0e29f877b326a5ce65cbebc9bc8f18062f7bce08622e3",
+    "internal/lifecycle/runner.go": "d9efd3bd0d8d677ecfceb0dbe2e7d61fb6f3cef3a40336d2e536fcd253a6b460",
+    "internal/lifecycle/runner_control.go": "8388aa23bad7e709207514c49d2795dbcf87217e4af65b99e53c3afcfd5b7f3e",
+    "internal/lifecycle/cycle_observation.go": "779a083c8522836c949980d7ef64a952f5808d6755a7b3cb47d0aa5fd46f519c"
+  },
+  "test_binary_sha256": "eedd6238d9ca8e0e9f9a8667806a3cc2caba19b371e0b9092505e93f590e7e8c",
+  "qualification": "Source/build binding, not a production release or signed tool/host admission"
+}

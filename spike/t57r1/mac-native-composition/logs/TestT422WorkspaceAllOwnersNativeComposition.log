@@ -1,0 +1,4 @@
+=== RUN   TestT422WorkspaceAllOwnersNativeComposition
+    t422_backup_retirement_test.go:1294: actual all-owner cleanup: turns=600 workspace_samples=603 store_transactions=1251 store_rows=1318
+--- PASS: TestT422WorkspaceAllOwnersNativeComposition (232.54s)
+PASS

@@ -1,0 +1,13 @@
+{
+  "root": "/Users/ben/.codex/worktrees/t57r1-mac-composition/phebs.com",
+  "qa": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t57r1-native-0akui5k6",
+  "probe_source": "/Users/ben/.codex/worktrees/t57r1-mac-composition/phebs.com/.t57r1-probe-q8xnohan/main.go",
+  "source_commit": "aa5cf5798e43559e6c35b02487f81198b5e23633",
+  "history_sha256": "ad65ad9aa90313cfc371662a3a37cf528c190212d971ebac2bb443c595f5d056",
+  "scope": "Three previously failing Mac-native component tests only; no Linux124, ceremony, scale or signing gate",
+  "test_names": [
+    "TestT422WorkspaceNativeComposition",
+    "TestT422WorkspaceCleanupNativeComposition",
+    "TestT422WorkspaceAllOwnersNativeComposition"
+  ]
+}

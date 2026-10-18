@@ -20854,6 +20854,25 @@ a rerun while the gate reads `refuse` would prove nothing. The investigation was
 read-only apart from one throwaway probe program that was removed, and it changes
 no steady-state cost. No quality, coverage, release, scale or SLO claim follows.*
 
+**T57R.1 Mac-native follow-up (2026-10-18; complete).** The three unchanged
+Darwin component checks now pass at exact source
+`aa5cf5798e43559e6c35b02487f81198b5e23633`: base 11.07s, cleanup 128.51s and
+all-owner 232.54s, once each without skips. Real `NewGate.Check(ctx,0)` samples
+on the checkout and actual fixture TMPDIR are all normal at 73% used, below the
+75% resume threshold. Fourteen bracket observations establish preconditions;
+they do not claim continuous normality. The host already met the precondition;
+no source repair, modeled capacity or longer fixture deadline was needed. All child waits/groups,
+private helper/SDK/session/EOF assertions and fixture teardown pass.
+
+The cleanup fixture reports 24,605 deletions/360 turns; all-owner reports 600 turns,
+603 workspace samples and 1,251 transactions/1,318 rows, preserving truthful job
+lower-bound/backlog. These are the existing finite component fixtures, with
+supplied auth/owners and inert residue as documented in
+[the bounded outcome](../spike/t57r1/mac-native-composition/README.md).
+The October 14 failed diagnostics remain exact. This closes only the three
+Mac inherited failures, not full T42.2 or Linux #124. Production/test behavior
+and steady-state costs are unchanged; production signing stays pending.
+
 ## Epic 58 · Go RPC syntactic consumer and registration production readiness
 
 This owns the existing consumer/registration cards independently from exact

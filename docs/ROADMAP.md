@@ -196,6 +196,16 @@ values update and 118 baselines remain untouched. This closes the portability
 implementation on its branch; full-matrix history and production signing retain
 their recorded scope.
 
+**T57R.1 Mac-native closure (2026-10-18):** all three formerly failing Darwin
+component checks pass once on unchanged `aa5cf579`, with no skips. Actual gate
+samples are normal at 73% used, below 75% resume; original fixture deadlines and
+assertions remain intact. Base/cleanup/all-owner test times are 11.07/128.51/
+232.54 seconds. Joined helper/store/session/EOF and empty fixture TMPDIR checks
+pass. [The finite outcome](../spike/t57r1/mac-native-composition/README.md)
+closes that Mac follow-up only; no full package/race matrix, Linux #124,
+pressure/whole-phase/readiness, ceremony, scale or production-signing gate is
+advanced. Production and test code are unchanged.
+
 **T28.1 source preparation (2026-10-18):** pinned permissive licenses and
 all scoped metadata/ACL/application bytes are verified before recognition.
 Labels, separate denominators and contract decisions must freeze before the
