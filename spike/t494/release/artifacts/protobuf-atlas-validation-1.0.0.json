@@ -1,0 +1,91 @@
+{
+  "schema": "phebs-extractor-pack-validation-v1",
+  "pack_id": "phebs.protobuf.contract",
+  "pack_claim_version": "1.0.0",
+  "qualification": "bounded-integration-tests",
+  "production_release_signed": false,
+  "checks": [
+    {
+      "command": [
+        "go",
+        "test",
+        "./cmd/phebs",
+        "-run",
+        "^TestProtobufAtlas",
+        "-count=1",
+        "-timeout=2m"
+      ],
+      "exit_code": 0,
+      "package_seconds": 2.263,
+      "qualification": "Actual artifact census/signer/loader and API/MCP assembly; disposable key and synthetic Go-test binary facts."
+    },
+    {
+      "command": [
+        "go",
+        "test",
+        "-race",
+        "./cmd/phebs",
+        "-run",
+        "^TestProtobufAtlas",
+        "-count=1",
+        "-timeout=2m"
+      ],
+      "exit_code": 0,
+      "package_seconds": 3.008
+    },
+    {
+      "command": [
+        "npm",
+        "test",
+        "--",
+        "src/App.test.tsx",
+        "src/pages/ContractAtlasPage.test.tsx",
+        "src/api.test.ts"
+      ],
+      "directory": "ui",
+      "exit_code": 0,
+      "tests_passed": 39,
+      "duration_seconds": 1.37,
+      "qualification": "Existing capability gating, bounded Atlas UI pages/shapes/source links/gaps/stale selections and API paths; no UI source change."
+    },
+    {
+      "command": [
+        "go",
+        "vet",
+        "./cmd/phebs"
+      ],
+      "exit_code": 0
+    },
+    {
+      "command": [
+        "go",
+        "run",
+        "github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2",
+        "run",
+        "./cmd/phebs",
+        "--timeout=2m"
+      ],
+      "exit_code": 0,
+      "issues": 0
+    }
+  ],
+  "source_files": {
+    "cmd/phebs/serve_config.go": "7a2ad7c50a30d69397c7fe59848164775475598a6376341488f0688586cb6dba",
+    "cmd/phebs/serve_atlas_registration_test.go": "01e87136b4a3aa56240fdb2c8171101415fee63da5a7e71abd15023c73ac4dd1",
+    "cmd/phebs/serve_atlas_release_test.go": "650bc5f7f0bb354a41faf398b6055172b40dc8af3ca2333b91f5bb4891234064"
+  },
+  "reused_coverage": [
+    "T49.3 exact partitioned-root, moved/stale authority, allowed/denied access, paging and citation coverage; unchanged readers",
+    "Existing release verifier, expiry/revocation and artifact census checks; no verifier changes"
+  ],
+  "not_established": [
+    "independent declaration accuracy or recall",
+    "canonical descriptor/module identity or cross-file linking",
+    "new operating envelope or scale",
+    "production signing and deployment"
+  ],
+  "real_binary_startup": {
+    "outcome": "pending_clean_checkpoint_and_bounded_native_slot",
+    "production_signing": "pending; existing production key unavailable"
+  }
+}
