@@ -1,0 +1,172 @@
+{
+  "source_commit": "96169bdef354fe0dbbbd20ee31c4425cbcc1bac3",
+  "source_before": {
+    "spike/t421/accounting_work_test.go": "ff5a96fe8d65f2b8c4c7c07d7b3f4e9b00e72602a6aaacb1869939e587b3c35d",
+    "spike/t421/epoch_config_custody.go": "aa7058d895491c77e52112a671523813b2072d5c6ddea282bcbbcbe67e9d1378",
+    "spike/t421/epoch_config_custody_test.go": "bc0f8521d7b646017c0bab5351385972789d6ce76cee0f948e58fe9f07df3450"
+  },
+  "logs": "/tmp/phebs-t42h2n-validation-84_2n2vb",
+  "commands": [
+    {
+      "name": "race",
+      "argv": [
+        "go",
+        "test",
+        "-race",
+        "./spike/t421",
+        "-run",
+        "^Test(ProductionDispatchInventoryFindsUnlistedAndAliasedLaunches|ExecutionEpochConfigRefuses(ManagedInstallation|SemanticDrift))$",
+        "-count=1",
+        "-timeout=60s"
+      ],
+      "outer_deadline_seconds": 90,
+      "launched": true,
+      "joined": true,
+      "group_absent": true,
+      "environment_overrides": {
+        "GOTOOLCHAIN": "local",
+        "GOPROXY": "off",
+        "GOSUMDB": "off"
+      },
+      "pid": 32418,
+      "exit_code": 0,
+      "wall_seconds": 29.062299874999997,
+      "stdout": {
+        "bytes": 48,
+        "sha256": "a407831458cac8acf8dd3f69f98a841952bdbf70ee224e3c3d41ebef25f67e3e"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "name": "vet",
+      "argv": [
+        "go",
+        "vet",
+        "./spike/t421"
+      ],
+      "outer_deadline_seconds": 90,
+      "launched": true,
+      "joined": true,
+      "group_absent": true,
+      "environment_overrides": {
+        "GOTOOLCHAIN": "local",
+        "GOPROXY": "off",
+        "GOSUMDB": "off"
+      },
+      "pid": 32738,
+      "exit_code": 0,
+      "wall_seconds": 1.735857792000001,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "name": "lint",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-fv0m6vmf/lint-bin/golangci-lint",
+        "run",
+        "--new-from-rev=HEAD^",
+        "--timeout=90s",
+        "./spike/t421"
+      ],
+      "outer_deadline_seconds": 100,
+      "launched": true,
+      "joined": true,
+      "group_absent": true,
+      "environment_overrides": {
+        "GOTOOLCHAIN": "local",
+        "GOPROXY": "off",
+        "GOSUMDB": "off"
+      },
+      "pid": 32828,
+      "exit_code": 0,
+      "wall_seconds": 5.830590084000004,
+      "stdout": {
+        "bytes": 10,
+        "sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "name": "docs-check",
+      "argv": [
+        "make",
+        "docs-check"
+      ],
+      "outer_deadline_seconds": 90,
+      "launched": true,
+      "joined": true,
+      "group_absent": true,
+      "environment_overrides": {
+        "GOTOOLCHAIN": "local",
+        "GOPROXY": "off",
+        "GOSUMDB": "off"
+      },
+      "pid": 32865,
+      "exit_code": 0,
+      "wall_seconds": 1.0229917500000028,
+      "stdout": {
+        "bytes": 179,
+        "sha256": "b4f996664d34a6392044f402e97670aa01a3c6fb8adb5f4a2dea77dce12add2e"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "name": "glossary",
+      "argv": [
+        "make",
+        "verify-glossary"
+      ],
+      "outer_deadline_seconds": 90,
+      "launched": true,
+      "joined": true,
+      "group_absent": true,
+      "environment_overrides": {
+        "GOTOOLCHAIN": "local",
+        "GOPROXY": "off",
+        "GOSUMDB": "off"
+      },
+      "pid": 32890,
+      "exit_code": 0,
+      "wall_seconds": 0.47456770800000214,
+      "stdout": {
+        "bytes": 60,
+        "sha256": "f128ad7aef2b6215c4414d1e00b2650f9c42011b1705707b624be1c70d92f095"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    }
+  ],
+  "native_host_observed": false,
+  "capacity_admitted": false,
+  "go_version": "go1.26.5 darwin/arm64",
+  "native_linux_execution": false,
+  "inventory_scan": "carried forward; not rerun",
+  "normal_regression": "carried forward; not rerun",
+  "outcome": "passed",
+  "source_after": {
+    "spike/t421/accounting_work_test.go": "ff5a96fe8d65f2b8c4c7c07d7b3f4e9b00e72602a6aaacb1869939e587b3c35d",
+    "spike/t421/epoch_config_custody.go": "aa7058d895491c77e52112a671523813b2072d5c6ddea282bcbbcbe67e9d1378",
+    "spike/t421/epoch_config_custody_test.go": "bc0f8521d7b646017c0bab5351385972789d6ce76cee0f948e58fe9f07df3450"
+  },
+  "source_unchanged": true,
+  "wall_seconds": 38.130775,
+  "compile_only_artifacts": {},
+  "compile_only_artifacts_removed": true
+}

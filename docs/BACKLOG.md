@@ -4002,6 +4002,11 @@ valid `managed_scip` selection in the closed epoch config projection. AC: both
 source inventories and alias controls, valid-config regression and existing
 config refusals pass; original failures remain qualified historical evidence.
 This adds no installed runtime, tool, native authority or plan/receipt field.
+Both exact source inventories and the alias control pass, as do the valid
+managed-selection regression, existing config refusals, focused race, vet,
+scoped pinned lint, docs and glossary. `spike/t42h2n/` preserves original
+failures, carried source-identical checks and final joined groups. No Linux
+binary or native workload was executed.
 
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
