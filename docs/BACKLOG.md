@@ -20918,6 +20918,21 @@ full prospective contract; parser/grammar results remain unmeasured. Next is
 isolated imported-versus-subset comparison in each dialect, not production
 registration or an accuracy/release claim.
 
+**T26.1 measured outcome (2026-10-18): complete spike, no production adoption.**
+All four frozen pipelines produce byte-identical paired outputs without panics
+or invalid spans. PostgreSQL public declarations1,584/1,843, generated fixture
+separately1/8, migration statements24/43 and query/bindings98/98; MySQL subset/
+imported declarations488/488 and477/488, query/bindings48/48, migration population
+unmeasured. Unsupported and all188 unmatched strict PostgreSQL witnesses per
+lane remain explicit. Source/projector agreement is not independent imported
+extraction accuracy. Header/catalog trust and scorer direction/envelope fixes
+pass separate normal/race/vet/lint/negative controls, without corpus rerun or
+label changes. Root/peer source/cost review and exact input/result inventories
+are clear. [Measured report](../spike/t261/results/REPORT.md) records all four
+denominators, original snapshots/stops, build/output/process cost and limits.
+No production parser, dependency, schema, registration or continuation ticket
+is adopted by this isolated measurement.
+
 ## Epic 27 · Document schema-manifest evidence *(drafted 2026-07-27 · unscheduled — spike first)*
 
 Make schema-on-write document-store structure useful during everyday ticket

@@ -1,0 +1,7 @@
+{
+  "stage": "post-run scorer only; all8 candidate children already exited0 and joined",
+  "reason": "empty temporary-view objects encoded JSON null; Python scorer assumed iterable list",
+  "candidate_retry": false,
+  "outputs_preserved": true,
+  "scorer_sha256": "9ad5d373d52e7e483fa619cae723e912e991f16442c18fa2e1cbccdb5395ec12"
+}

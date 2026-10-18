@@ -12308,3 +12308,51 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Preparation/checkpoint adds no production query, sync, startup, retry/no-op,
   publication, lock, cache, worker, disk or child cost. Candidate cost will be
   measured separately; no parser has run at this checkpoint.
+
+- **2026-10-18 — T26.1 measured SQL spike; no production adoption
+  (Ben-routed Mac handoff).** Complete the frozen four-pipeline comparison,
+  retaining every input, first stop, exact executed source snapshot and paired
+  output. Imported frontends share the bounded source projector; agreement is
+  not independent library extraction or native identifier-position support.
+  Both PostgreSQL pipelines match1,584/1,843 public declarations,24/43 sampled
+  migration statements,98/98 physical query sites and98/98 unique bindings.
+  The PostgreSQL18.6 generated fixture is separate at1/8 exact declarations.
+  MySQL subset/imported match488/488 and477/488 declarations respectively,
+  both48/48 query sites and bindings; real migration coverage is unmeasured.
+  All188 unmatched strict PostgreSQL witnesses per lane remain visible, as do
+  unsupported syntax and unlabelled safety-only populations. No quality result
+  generalizes to unsampled source, vendor grammar, runtime schema or deployment.
+
+  All four fresh-state pairs are byte-identical, with zero panics or invalid
+  source spans. Fresh-GOCACHE builds pass in1.875–6.485s; module/OS caches remain
+  warm, so no machine-cold claim follows. Eight joined parser runs take
+  0.024–0.364s; direct-child wait4 peaks are9,551,872–29,655,040 bytes. Parsed
+  executables spawn no child, while build RSS covers only the Go driver and
+  excludes compiler descendants. Preserve the first cache-warmed builds, two
+  prelaunch metadata stops and scorer null-collection stop. Known bool
+  omitempty correction plus strict Goose direction/statement containment are
+  separately rescored offline against unchanged output; no parser corpus rerun
+  or semantic tuning follows. Actual first execution source was uncommitted
+  with an exact14-file inventory; its retained snapshot now preserves those
+  bytes without inventing an earlier evaluator Git identity.
+
+  Independent review corrects symmetric conflicting-header admission and
+  atomic catalog staging before complete budget admission, plus migration
+  scorer direction/envelope checks. Separate controls, normal0.956s/race1.915s,
+  evaluator4tests0.062s, vet and pinned lint zero issues pass. Both nested
+  imported wrappers independently pass vet and pinned lint. Root verifies all
+  419 frozen inputs/4,439,033 bytes,21 implementation files/96,816 bytes and
+  96 result/snapshot/check files/8,372,822 bytes. Root/peer trust, source,
+  scoring and steady-cost reviews have no remaining blocker for the spike.
+
+  Decision: no production parser/dependency/pack adoption. A future SQL reader
+  needs a separate owning ticket for strict schema/source-role/ordered metadata
+  and parser boundaries. Production query, sync, startup, retry/no-op,
+  publication, schema, locks, caches and children are unchanged. Spike passes
+  read each schema before streamed query/migration blobs; table/view binding
+  identities stay bounded. Main also retains all BlobResults until encoding;
+  the4MiB per-blob output check follows allocation, so1024 metadata requests
+  can approach4GiB encoded before object overhead. The1GiB sampled process stop
+  may overshoot and is not a hard heap guarantee; observed complete output is
+  at most1,489,448 bytes here. All cost/limits, denominators and retained
+  corrections are in `spike/t261/results/REPORT.md`; no scale/SLO is claimed.

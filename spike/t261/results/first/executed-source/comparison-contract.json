@@ -1,0 +1,36 @@
+{
+  "format": "t261-comparison-contract-v1",
+  "input_checkpoint": "1f8970fe58f82bc648bf0e9fe1b7dd5b4443b76c",
+  "input_preregistration_sha256": "791585bd54e5a03ccdfbda033884229a48c2006e9ac822ad7265091605e962e9",
+  "status": "prospective common admission/projection; no candidate outcomes yet",
+  "candidate_runs_at_freeze": 0,
+  "lanes": ["postgresql-subset", "postgresql-imported", "mysql-subset", "mysql-imported"],
+  "implementation_boundary": "Isolated nested Go modules and child executables; no production imports, dependency changes or registration. Candidate code never reads labels or expected outcomes.",
+  "frontends": {
+    "subset": "Bounded UTF-8 byte lexer and explicit statement/identifier grammar. Unknown syntax is a visible statement gap. No SQL execution.",
+    "postgresql-imported": "Pinned pg_query_go/v6 ParseToJSON per admitted statement, then the same exact-source projection. Require the imported root statement kind to agree with projection. Library parse failure is parser-gap, never silently accepted by the subset path.",
+    "mysql-imported": "Pinned xwb1989/sqlparser Parse per admitted statement, then the same exact-source projection. Require the imported AST category to agree with projection. This old library may accept only a DDL prefix; common projection still owns its explicit bounded source grammar and abstentions.",
+    "position_contract": "Every emitted name is an exact lexer token or explicit anonymous-constraint keyword range in original bytes. Imported ASTs do not provide all required identifier positions; source projection is measured as part of each imported pipeline, and is never described as native library position support. No deparsing or label-derived offsets."
+  },
+  "shared_admission": {
+    "dialect": "Committed sqlc engine or recognized dump header only; contradiction refuses. All 296 pinned files traverse classification/panic gate; generated Go and manifest bytes never enter SQL projection.",
+    "dump": "Lexically inspect executable MySQL version comments while preserving source offsets; refuse the complete dump for COPY/INSERT/REPLACE/LOAD DATA. Keep quoted/comment text inert. Explicit PostgreSQL restrict/unrestrict and dump SET/DROP scaffolding are wrappers. Temporary MySQL constant-view scaffold is a wrapper; final explicit view is current once.",
+    "atomicity": "Invalid UTF-8, unterminated quote/comment/dollar body, unbalanced parentheses, metadata/data admission or bound failure discards all blob facts. Imported grammar failures become zero-fact parser-gap statements because unsupported modern syntax cannot be distinguished reliably from malformed grammar. Unsupported well-formed statements contribute no facts for that statement.",
+    "limits": {"input_bytes": 262144, "statements": 4096, "tokens": 65536, "depth": 64, "name_bytes": 1024, "blob_facts": 8192, "blob_output_bytes": 4194304, "schema_blobs": 64, "schema_bytes": 8388608, "schema_identities": 16384},
+    "process": "One joined child per candidate/pass, whole-corpus wall cap30s and observed RSS stop1GiB. Monitor interval and overshoot disclosed; this is not a hard heap guarantee. Build cap240s; record the first failure without retry."
+  },
+  "projection": {
+    "current_declarations": "Explicit CREATE TABLE columns/inline and named constraints, ALTER TABLE ADD constraints, explicit CREATE INDEX, enum/sequence/range, and explicitly named view outputs are attempted. Opaque type/expression text is not evaluated. Exact ordered FK/key lists are required. Unsupported complex expressions/partition/procedural syntax remain gaps instead of fabricated objects. LIKE declares only the named table and records unexpanded source-model shape.",
+    "query": "Attempt bounded SELECT/WITH physical relations, INSERT SELECT, UPDATE sources, DELETE USING and MySQL target-alias resolution; lexical aliases/CTEs/functions are excluded. Conflict-update changes one target access to read-write. Dynamic identifiers gap the statement. Bind only one explicit manifest schema set; no root guessing. Missing schema keeps name-only beside checklist, unknown declaration stays an explicit site gap, ambiguous sets refuse.",
+    "migrations": "Recognize explicit CREATE/DROP TABLE/TYPE/INDEX, ALTER ADD/DROP COLUMN and ADD FK history occurrences. Attach source Goose direction and exact offset/predicate. No DECLARES facts, execution or current-shape fold. Other forms remain syntax-class gaps.",
+    "identity": "Stable schema-set lineage is repository+manifest/root+dialect; source commit/blob hash is separate provenance. Preserve exact names, explicit qualifiers and quotedness; PostgreSQL only ASCII-folds unquoted identity. MySQL case stays exact. Anonymous constraint identity is its keyword byte offset.",
+    "conservative_scope": "Shared projection means this compares complete imported-front-end plus source-projection pipelines with bounded-front-end plus source-projection pipelines, not a claim that third-party ASTs independently extract every fact. Results may justify no-go or a later narrower production ticket."
+  },
+  "evaluation": {
+    "independence": "Requests contain only corpus metadata/manifest roles and stripped control metadata. Labels are read solely by the separate scorer after child output. No parser loads label files.",
+    "matching": "Require source path/hash, kind/predicate/access, exact token span/hash/name/quotedness and all explicitly labelled ordered FK/key fields. Count every unmatched emission separately as false positive; every unmatched label remains unresolved. Compare query binding separately from site recognition.",
+    "populations": "Separate dialects, generated PG fixture, current declarations by object kind/source, migration statements by syntax class/direction, authored query sites, binding opportunities and all60 neutral controls. Preserve0/unmeasured MySQL migration population and unsampled paths. No blended accuracy or native/vendor validation claim.",
+    "determinism": "Two fresh child passes per lane; canonical JSON including all gaps/refusals/positions/bindings must be byte-identical. Timings/RSS are separate receipts, not inside deterministic payload.",
+    "custody": "Verify all419 frozen file hashes before/after, bind evaluator source/Git/tool/binary hashes independently of upstream corpus commits, retain first outputs and failures unchanged. Any later correction gets a distinct result lineage and honest reason."
+  }
+}

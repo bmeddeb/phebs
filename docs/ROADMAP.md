@@ -5483,6 +5483,13 @@ bounded candidate contract are frozen in an immutable checkpoint. Mechanical
 PostgreSQL18.6 fixture capture passed with exact teardown. No candidate parser
 has executed; the two dialect comparisons and measured decision remain next.
 
+**T26.1 measured decision (2026-10-18):** the SQL spike is complete with
+partial strict declaration/history coverage and complete sampled query/binding
+witnesses. All paired outputs are deterministic; reviewed boundary/scorer
+corrections pass bounded controls. No production parser or pack is adopted.
+The [report](../spike/t261/results/REPORT.md) preserves every gap, first outcome,
+source snapshot and cost limit. Any production continuation needs a new ticket.
+
 ## On demand
 
 Epic 32 measured the target whole repository and did not trigger P6. P6 remains

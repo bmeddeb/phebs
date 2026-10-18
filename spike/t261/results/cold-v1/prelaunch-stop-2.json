@@ -1,0 +1,8 @@
+{
+  "stage": "request-metadata preparation; before any candidate process launch",
+  "candidate_runs": 0,
+  "reason": "metadata scalar whitespace regex consumed following newline/list item; closed inventory membership assertion rejected the resulting path",
+  "source_sha256": "61319faac6beefcae23a72935d2974d63b9baafaa66458b25a1cc1aa52558564",
+  "inputs_changed": false,
+  "parser_retry": false
+}
