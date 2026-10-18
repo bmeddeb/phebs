@@ -1,0 +1,47 @@
+{
+  "schema": "t522-authored-controls-v1",
+  "record_date": "2026-10-18",
+  "generator_executed": false,
+  "candidate_executed": false,
+  "indexer_executed": false,
+  "files": [
+    {
+      "path": "testdata/neutral/gen/packet.go",
+      "bytes": 1945,
+      "digest": "sha256:849a00059670dd9369b56f521e1f6c0062132619b01de4174d0bfbeb1b2aa8a1"
+    },
+    {
+      "path": "testdata/neutral/go.mod",
+      "bytes": 81,
+      "digest": "sha256:d7eab8314fdd5e54551dba0aa9691637b05a3a580b3c7566542db7df7b46a6b7"
+    },
+    {
+      "path": "testdata/neutral/idl/packet.thrift",
+      "bytes": 253,
+      "digest": "sha256:05362b263d8ee63501763535e6d853e4a5eb51006e222f37dbe3c3b366772846"
+    },
+    {
+      "path": "testdata/neutral/idl/renamed.thrift",
+      "bytes": 72,
+      "digest": "sha256:46f16aa627ad8361c702a13af5d6b65fafe5ba502eda54c3c18d6f6141d37161"
+    },
+    {
+      "path": "testdata/neutral/plain/packet.go",
+      "bytes": 120,
+      "digest": "sha256:45de7025f1496bb61d1cecbbc01fb430b82ecdae13a95401eb6fe29d6e3b18dc"
+    },
+    {
+      "path": "testdata/neutral/renamed/packet.go",
+      "bytes": 854,
+      "digest": "sha256:69c8ce9fd204396525a319114c39df0b2df51a634d559078935ddea2dcda1aa1"
+    },
+    {
+      "path": "testdata/neutral/use/use.go",
+      "bytes": 801,
+      "digest": "sha256:32af0a8c9775a166bb9d0ab677965bf4b38a32ff8036315b4a1b62a61ad6b9dc"
+    }
+  ],
+  "qualification": "Independent authored source controls. Generated-shaped files explicitly identify their origin; no real generator result or old T222/Apache quality transfers.",
+  "ambiguous": "Ambiguous has two IDL fields both numbered1; its two Go fields and unique wire IDs1/2 do not establish a unique IDL mapping. Left/Right use sites are unsupported, never positive.",
+  "rename": "Two separately authored generated-shaped packages share packet.Envelope#1 while source field/accessor spelling changes key to identifier. Every witness remains bound to its own exact source; same identity never implies one source file or equivalent value semantics."
+}

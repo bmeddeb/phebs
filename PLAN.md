@@ -12902,6 +12902,33 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   T50.3a owns the shared repair; only a reviewed new exact binary/generation
   binding can authorize one bounded fresh qualification. This evidence record
   adds no production work, authority, cache/lock/schema or child process.
+
+- **2026-10-18 — T52.2 independent thriftrw source checkpoint (Ben-routed Mac
+  handoff).** Freeze `spike/t522/preregistration.json` SHA256
+  `7067eb9e6ccb5ecb24d9c9064ce54c17d5d872a71a2989971da6a84b519e38ac`
+  before indexing or candidate extraction. Root independently checks the
+  unchanged permissively licensed Cadence health mapper, internal/generated
+  types and retained IDL, plus separate authored controls. All15 retained
+  source files/52,650 bytes and116 source-label spans/digests/lines agree:
+  public4 positive/31 negative; authored15 positive/62 negative/4 unsupported.
+  Three exact embedded Raw/SHA1 equalities, nine numeric field identities and
+  eighteen field/accessor positions are checked independently of SCIP. The
+  retained T22.1 gitlink pin is provenance; a fresh metadata403 is disclosed,
+  not retried or represented as a fresh verification.
+
+  The committed-input recipe is thriftrw1.34.0/scip-go0.2.7 over exact source
+  bytes, including explicit result-success field0, nonsequential IDs and a
+  number-preserving rename. `module_digest` exactness requires the unique
+  embedded-IDL/wire-ID/SCIP-definition joins. SCIP package and declaration
+  families remain distinct; no automatic bridge, Apache-quality transfer or
+  source-semantic read/write claim follows. Root has not indexed or scored
+  this checkpoint. One offline90s index attempt per population, actual evaluator
+  Git/bundle binding and independent harness review precede one30s extraction.
+  Preserve first failures and all denominators. Existing32MiB index/50,000
+  document/500,000 occurrence/8KiB symbol/4MiB generated-source refusals remain.
+  Preparation changes no production request, sync, startup, retry/no-op,
+  publication, lock, cache, schema, worker or child behavior. Registration,
+  operating qualification and existing-key production signing remain T52.3.
 - **2026-10-18 — T52.1 Apache Thrift source-only field checkpoint
   (Ben-routed Mac handoff).** Freeze unchanged public Jaeger0.14.1 generated
   inputs and two handwritten application files, independently checked against
@@ -13071,3 +13098,162 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   or invents empty evidence. A fresh source/UI/binary binding precedes the next
   bounded run. No overall operating, production signature or scale result is
   claimed; no new production serving, sync, lock/cache/schema or worker cost.
+
+- **2026-10-18 — T50.3 preparation-tool admission correction (Ben-routed
+  Mac handoff).** The first post-repair preparation stops in0.008086s before
+  any key, server, data, native phase or product read: the lead bound system
+  LibreSSL3.3.6, which lacks Ed25519. Preserve that result and exact binding.
+  Prospectively select the original qualifier's existing Homebrew OpenSSL3.6.3
+  image after a bounded algorithm-list probe confirms Ed25519 without creating
+  a key. Independent read/hash review accepts this sole tool correction.
+  All source/index/labels/thresholds,180s native bounds, harness, binary,
+  helpers and UI remain exact; reuse the joined1.437614s Chrome preflight and
+  scoped green gates. A distinct root/result carries one fresh preparation
+  and one native matrix if launch succeeds, with the same first-stop rule.
+  No quality or operating outcome is inferred from preparation, and production
+  signing remains pending. No production work or authority changes.
+
+- **2026-10-18 — T50.3 promoted-unit checker correction (Ben-routed Mac handoff).**
+  Retain the16.725757s post-fix native stop and its exact execution binding.
+  The checker failed on deliberately omitted inner `candidates`: current unit
+  comparison rows serialize the single proved attribution once on the outer
+  row, as the existing API regression requires. Independent source review
+  confirms all4 resolved samples' actual outer IDs/targets and the unchanged
+  unavailable sample; no product defect follows from this checker exception.
+  A client-only deep-copy adapter expands only actual outer attribution for
+  the unchanged frozen scorer. It rejects contradictory sample metadata and
+  never uses gold labels to create facts. Offline retained output matches5
+  occurrence rows and4 unit classes covering the same5 source sites; this
+  does not pass the stopped attempt or measure remaining phases. Preserve
+  frozen source, labels, scorer, binary, bounds and prior results. Twenty-five
+  pure/mock checks and independent projection/cost review pass. Bind corrected
+  harness bytes prospectively before one new finite matrix; no silent retry.
+  The response-bound client copy adds no production request, sync, startup,
+  publication, lock, cache, schema or child cost. Production signing is pending.
+
+- **2026-10-18 — T50.3 browser disclosure checker correction.** Preserve the
+  22.239436s native stop and its unchanged raw/UI/terminal evidence. Source
+  quality, all five exact citations and HTTP/MCP/paging/filter checks passed
+  before the browser asserted text inside the existing closed ClaimBoundary.
+  Correct only the browser test to focus/Enter the actual scoped disclosure,
+  prove it opened and verify its visible runtime/completeness paragraph.
+  Keep the original text assertions. Root and independent peer source review
+  confirm the current UI/API contract and remaining publication/revocation
+  journey; no product defect or product change follows. Bind the corrected
+  two harness files before one fresh bounded matrix. Prior stops never become
+  PASS and unexecuted phases remain unmeasured. All source truth, thresholds,
+  input/binary/tool bytes and180-second envelope remain exact. Cost changes
+  only by one real disclosure interaction per viewport; production work and
+  production-signing status are unchanged.
+
+- **2026-10-18 — T50.3 qualification harness integration checkpoint
+  (Ben-routed Mac handoff).** Preserve all frozen input/label and first-output
+  bytes, prospective180s operating plan, joined ownership/HTTP/sampler/browser
+  helpers, and separate preparation/tool/checker/UI stops. Thirty-one bounded
+  source/mock controls pass; independent ownership/authority/source/cost reviews
+  are clear. The last21.547477s run passed finite source quality, exact citation/
+  MCP and desktop source opening, then stopped at actual390px overflow. PR100
+  repairs that UI; PR101 repairs newly discovered-repository coverage. Integrate
+  the reviewed reusable harness so field/Thrift/Impact qualification can share
+  its existing ownership boundaries. A fresh clean binary/source/UI binding
+  precedes the next bounded run; no full matrix, production signature or scale
+  pass is claimed. Helpers add opt-in evaluator work only, no serving cost.
+
+- **2026-10-18 — T52.2 finite thriftrw field qualification (Ben-routed Mac
+  handoff).** The first independently reviewed committed-input measurement
+  passes public4/4 references with31 clean negatives and separate authored
+  15/15 with62 clean negatives/4 unsupported. Three embedded Raw/SHA1 modules,
+  nine numeric fields and eighteen unique SCIP definitions agree. Source-
+  specific key-to-identifier rename retains numeric identity; exact/module_digest
+  never becomes a declaration-family bridge. Generated49/7 emissions remain
+  separately source/schema/identity checked without a recall oracle; raw SCIP
+  read classifications establish no semantic-write accuracy. All first bytes
+  and source-only preregistration remain exact.
+
+  One offline index attempt/population passes0.445871/0.170429s with joined
+  groups and removed scratch; actual evaluator commits/bundles bind exact
+  source/index bytes. No download or index retry occurred. First normal0.339s,
+  race1.441s, compile-only0.338s, vet and pinned lint zero issues pass. Root/peer
+  source/denominator/identity/cost review is clear; the premeasurement record
+  wording acknowledges already prepared SCIP. Extract plus verification uses
+  public6 logical cached reads/124,581B/792microseconds and neutral8 reads/
+  33,704B/533microseconds. Preflight hashes/census/IDL/definition joins and held
+  fixture corpus are outside that clock; allocation/RSS/operating envelope are
+  unmeasured. Existing refusal limits remain unchanged. Production work, locks,
+  caches, schema, concurrency and children are unchanged. T52.3 registration,
+  operating/artifact and existing-key signing remain separate.
+
+- **2026-10-18 — T52.3 independent committed Thrift field registration (Ben-routed Mac handoff).**
+  Register signed phebs.thrift.field.apache and phebs.thrift.field.thriftrw
+  claim1.0.0 independently. Compose selected bits before domain deduplication
+  into one scip-thrift-field pass with versions1.4.0-released.apache.1,
+  1.4.0-released.thriftrw.1 or1.4.0-released.apache-thriftrw.1. Stable selection
+  never broadens through the historical provisional switch. Require root
+  committed index.scip, scip-go0.2.7/UTF8, one exact selected generator header
+  and bound SCIP package/type/field/accessor identity before emission. Apache
+  remains derived/source_binding=none; thriftrw retains exact/module_digest.
+  Headers attest input properties, not execution of a generator. Both recipes
+  share existing index/source limits and a single input/binding/emission sweep.
+  Extra work is one bounded package/header-only parse per generated candidate
+  before its existing full parse, one bounded symbol parse per definition and
+  constant startup selected-set composition. No new query-side source parse,
+  full-corpus hash/scan, lock, cache, worker, schema, goroutine or child is added.
+  Neutral field queries admit only selected protocols and their own numeric
+  ranges, including Thrift0 and protobuf-reserved numbers without querying
+  protobuf. Exact version fences cover current/native/legacy/raw/citation and
+  retained proof witnesses even beside explicit independent provisional packs.
+  Withdrawal preserves the surviving recipe; changed shared-domain identity
+  requires ordinary republication before serving, with old custody untouched.
+  Full extractor normal, scoped API/serve normal and race, vet and pinned lint
+  pass; independent source/authority/security/cost review finds no blocker.
+  Lint cleanup removes one unused wrapper and annotates a deliberate deprecated
+  fixture-range reset; behavior is unchanged. Registration supplies no operating,
+  managed-generation, scale or production-signature claim. Each generator's
+  measured promotion and the existing unavailable production key remain pending.
+
+- **2026-10-18 — T51.3a discovered repositories have unpublished evidence
+  (Ben-routed Mac backend handoff).** The first corrected-origin T51.3 native
+  run exposes a real HTTP500: discovery creates a visible repository before
+  its indexed commit exists, while exact extraction storage correctly rejects
+  an empty commit. Keep that strict store boundary. The shared coverage builder
+  now skips publication/outcome/attempt reads only for an exactly empty indexed
+  commit, preserving visible census, unpublished domains and unknown SCIP with
+  no evidence authority or absence claim. Raw evidence skips its matching
+  initial/final publication reads while retaining the final freshly authorized
+  repository/source/revision/unit fence. Nonempty malformed metadata, storage
+  errors and indexed publication confirmation remain unchanged. Source/permission
+  changes during a request still conflict; saved bytes are untouched.
+
+  Focused normal/race checks include authentication, hidden repositories, mixed
+  indexed/unindexed coverage, no borrowed retained authority, strict real-store
+  validation and discovery-to-indexed transition. Vet/pinned lint pass, with
+  independent source/security/cost review clear. Cost is one constant branch
+  per existing repository/domain: empty coverage avoids three store reads per
+  domain/build; raw evidence avoids its two publication reads. Existing visible
+  lists/maps and output cardinality remain; indexed requests, sync, startup,
+  retry/no-op and publication costs are unchanged. No lock/cache/schema/worker/
+  child or new retained state is added. Fresh binary qualification follows;
+  operating promotion and the unavailable production signing key remain open.
+
+- **2026-10-18 — T50.3c bounded comparison mobile repair (Mac presentation handoff).**
+  Actual public-source unit rows overflowed390px to515px because comparison
+  sides inherited auto-minimum grid tracks from nowrap citation labels; an
+  unbroken repeated unit ID also overflowed after track correction. Use
+  minmax(0,1fr), side minWidth0 and metadata overflowWrap:anywhere, keeping full
+  accessible labels/title, source spans, filters and keyboard opening exact.
+  Two local declaration links use the existing primary text token/underline
+  to correct4.38:1 contrast; no global token or claim wording changes. Real
+  retained-response fixture1280/390 and carried open source panel plus filter
+  reset fit exactly, with zero console/page errors and axe0violations/25passes.
+  Four required-identity neutral controls are byte-identical before/after on
+  the same native renderer. Retained Noble baselines differ0.399–0.412% on
+  unchanged main too; leave their bytes exact and report inherited baseline/
+  environment drift without asserting a Noble pass or exclusive platform cause.
+  Bounded integration evidence supports this repair under Ben's no-ceremony
+  direction; final T50.3 exact-binary qualification remains separate. Fourteen
+  UI tests, type checks, lint and Vite production build pass. One test-only
+  unsupported query option was removed after typecheck exposed it. Comparison
+  chunk grows78raw/13gzip bytes; no new request, source read, sync, retry,
+  startup, publication, lock, cache, loop, schema, child or serving cost follows.
+  Interaction checks meet their5s test timeout; precise latency/usability and
+  production release are not inferred. Existing large-chunk warnings persist.

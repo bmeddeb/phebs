@@ -198,7 +198,7 @@ func experimentalProofBundles(cfg *config.Config, proofBundles store.ProofBundle
 // service, or for released Kafka planes, which serve only topic usage through
 // it (T55.2/T56.2).
 func admittedProofBundles(cfg *config.Config, released map[string]bool, proofBundles store.ProofBundleStore) store.ProofBundleStore {
-	if bundles := experimentalProofBundles(cfg, proofBundles); bundles != nil || len(releasedKafkaPlanes(cfg, released)) == 0 && !released["scip-proto-field"] {
+	if bundles := experimentalProofBundles(cfg, proofBundles); bundles != nil || len(releasedKafkaPlanes(cfg, released)) == 0 && !released["scip-proto-field"] && !released["scip-thrift-field"] {
 		return bundles
 	}
 	return proofBundles
@@ -325,6 +325,7 @@ func newServeAPIOptions(d *serveDeps) (api.Options, error) {
 		Evidence: d.evidenceView, ProofBundles: admittedProofBundles(cfg, d.releasedDomains, d.proofBundles),
 		KafkaReleasedPlanes:             releasedKafkaPlanes(cfg, d.releasedDomains),
 		ProtobufFieldReferencesReleased: !provisionalExtractionOn(cfg) && d.releasedDomains["scip-proto-field"],
+		ThriftFieldReferencesReleased:   !provisionalExtractionOn(cfg) && d.releasedDomains["scip-thrift-field"],
 		EvidenceExtractorVersions:       releasedEvidenceVersions(d),
 		KafkaTopicInventoryReleased: releasedKafkaTopics(
 			d.releasedClaims, releasedKafkaPlanes(cfg, d.releasedDomains)),
@@ -442,15 +443,17 @@ func newServeFinalAuthorityReads(d *serveDeps) (t421ExactFinalAuthorityRead, t42
 }
 
 func releasedEvidenceVersions(d *serveDeps) map[string]string {
-	if !d.releasedDomains["scip-proto-field"] {
-		return nil
-	}
+	var versions map[string]string
 	for _, extractor := range d.exs {
-		if extractor.Domain() == "scip-proto-field" {
-			return map[string]string{"scip-proto-field": extractor.Version()}
+		domain := extractor.Domain()
+		if (domain == "scip-proto-field" || domain == "scip-thrift-field") && d.releasedDomains[domain] {
+			if versions == nil {
+				versions = map[string]string{}
+			}
+			versions[domain] = extractor.Version()
 		}
 	}
-	return nil
+	return versions
 }
 
 // newServeMCPServer assembles the read-only MCP tool registry from the API
@@ -462,14 +465,14 @@ func newServeMCPServer(d *serveDeps, apiOpts api.Options) *mcpsdk.Server {
 	var mcpTopicInventory phebsmcp.TopicInventoryQueries
 	if proofService := api.NewProofService(apiOpts); proofService != nil {
 		mcpProofs = proofService
-		if proofService.CompatibilityAvailable() && !apiOpts.ProtobufFieldReferencesReleased && len(apiOpts.KafkaReleasedPlanes) == 0 {
+		if proofService.CompatibilityAvailable() && !apiOpts.ProtobufFieldReferencesReleased && !apiOpts.ThriftFieldReferencesReleased && len(apiOpts.KafkaReleasedPlanes) == 0 {
 			mcpCompatibility = proofService
 		}
 		// The composed Topics inventory is admitted on exactly the boundary its
 		// HTTP routes use: the experimental proof surface, or released planes
 		// beside the released T57.3 Topics claim. Released planes alone keep
 		// listing only find_kafka_topic_usage.
-		if !apiOpts.ProtobufFieldReferencesReleased && len(apiOpts.KafkaReleasedPlanes) == 0 || apiOpts.KafkaTopicInventoryReleased {
+		if !apiOpts.ProtobufFieldReferencesReleased && !apiOpts.ThriftFieldReferencesReleased && len(apiOpts.KafkaReleasedPlanes) == 0 || apiOpts.KafkaTopicInventoryReleased {
 			mcpTopicInventory = proofService
 		}
 	}
@@ -485,6 +488,7 @@ func newServeMCPServer(d *serveDeps, apiOpts api.Options) *mcpsdk.Server {
 		Compatibility:               mcpCompatibility,
 		KafkaTopicUsageOnly:         len(apiOpts.KafkaReleasedPlanes) > 0,
 		ProtobufFieldReferencesOnly: apiOpts.ProtobufFieldReferencesReleased,
+		ThriftFieldReferencesOnly:   apiOpts.ThriftFieldReferencesReleased,
 		KafkaTopicInventoryReleased: apiOpts.KafkaTopicInventoryReleased,
 		WireCompatibility:           apiOpts.WireCompatibility,
 		ContractCatalog:             catalogQueries,

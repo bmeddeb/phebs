@@ -1,0 +1,180 @@
+{
+  "schema": "phebs-t503-requalification-binding-v1",
+  "date": "2026-10-18",
+  "status": "REVIEWED_READY_FOR_ONE_BOUNDED_POSTFIX_MATRIX",
+  "reviewed": true,
+  "plan_digest": "sha256:8acec78a879023e4642e41710a3563c3d4930071239e925798cf1666b5735f9f",
+  "source_commit": "8a70fef5f60411f31d210efd52ab4dcd79385549",
+  "source_tree": "ebbe68f5d6faef8851e3368c268d3280797ce98b",
+  "harness_commit": "c18d924de5d5d6b0cd6de23e7653f35b2240100d",
+  "harness_files": {
+    "requalify.py": "sha256:0756a4ece93583644f064d227895b8666dedb4bcb975ad6e08e4ce7aad727a9f",
+    "requalification_checks.py": "sha256:51a7d57434827beab9e3328d747afef3338ee4942cabf374f849113e45370d1b",
+    "requalification_browser.py": "sha256:dfd5742e3856e908515c42042571702023753644cf4a242cc0570db00a19da6f",
+    "requalification_browser.cjs": "sha256:d5e0a71fb97aa20d211189f7e4542ce4fd5e1dc19364a99cf6cb00a8d169c2d0",
+    "requalification_monitor.py": "sha256:cbffb94a215e78c7210da3d7661ccd0d2627de3946cb4370b9364a786f3b6e5a",
+    "test_requalification.py": "sha256:7b524c5fffde8096bc24404d64006f875da50eeefe3cc5444b411a0cad60c3df"
+  },
+  "binary": {
+    "path": "/tmp/phebs-main-8a70-native-qualification/phebs",
+    "resolved_path": "/private/tmp/phebs-main-8a70-native-qualification/phebs",
+    "bytes": 91131122,
+    "sha256": "sha256:7dab45a9011c60132a80381933242705e44da19b2712421ed4361b67dcca19be",
+    "metadata_sha256": "sha256:fa16a22a9f0b2287414cbd334e388bddd1a432553fe34acf031da21a24a0b322"
+  },
+  "observer": {
+    "path": "/tmp/phebs-main-8a70-native-qualification/native-observer",
+    "resolved_path": "/private/tmp/phebs-main-8a70-native-qualification/native-observer",
+    "bytes": 31576930,
+    "sha256": "sha256:3b25f9b9cabb9cac5087d9e65af54eb7d6bf0643d5bbd33ed9296c621d3fc16e"
+  },
+  "build_receipt": {
+    "path": "/tmp/phebs-main-8a70-native-qualification/build-receipt.json",
+    "sha256": "sha256:161fcde733ac49dc755209b4bdd2ebee7bb657166f780cd380de3a403e0dc15c"
+  },
+  "helper_build_receipt": {
+    "path": "/tmp/phebs-main-8a70-native-qualification/helper-build-receipt.json",
+    "sha256": "sha256:6072dc0c49c32858868f1678017a34a67ce40cfc93303db5bf621019c914ee55"
+  },
+  "tools": {
+    "go": {
+      "path": "/opt/homebrew/bin/go",
+      "resolved_path": "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+      "bytes": 14500160,
+      "sha256": "sha256:3925fc3221ac440ebf7c35361ff663bed0c7bdb2e0a157b75fe993607ffe0a19",
+      "version": "go1.26.5",
+      "version_evidence": "go version go1.26.5 darwin/arm64"
+    },
+    "git": {
+      "path": "/usr/bin/git",
+      "resolved_path": "/usr/bin/git",
+      "bytes": 118640,
+      "sha256": "sha256:b8763cf250e607a778bb4603cecb5b90338814d0a3dfcba0d57b1de242f610e9",
+      "version_evidence": "git version 2.54.0 (Apple Git-157)"
+    },
+    "zoekt_git_index": {
+      "path": "/tmp/phebs-main-8a70-native-qualification/zoekt-git-index",
+      "resolved_path": "/private/tmp/phebs-main-8a70-native-qualification/zoekt-git-index",
+      "bytes": 39081090,
+      "sha256": "sha256:dd216b7e4df21b956a8a3461108ac81ee6cb700799a3decf9c739af2ba003c4d",
+      "version": "same-main-go.mod",
+      "version_evidence": "helper-build-receipt.json"
+    },
+    "focused_index": {
+      "path": "/tmp/phebs-main-8a70-native-qualification/phebs-focused-index",
+      "resolved_path": "/private/tmp/phebs-main-8a70-native-qualification/phebs-focused-index",
+      "bytes": 27295666,
+      "sha256": "sha256:701d83e026ac926d3e5d92a948a68c346c11335ce83c37c31bd62207beb0d8b5",
+      "version": "same-main-go.mod",
+      "version_evidence": "helper-build-receipt.json"
+    },
+    "buf": {
+      "path": "/Users/ben/.codex/worktrees/t445-header/phebs.com/bin/buf",
+      "resolved_path": "/Users/ben/.codex/worktrees/t445-header/phebs.com/bin/buf",
+      "bytes": 77461554,
+      "sha256": "sha256:691b8635ab9c083e38f1d892bf10799ea688070ed8ef8081d9b7907d0a7e4658",
+      "version_evidence": "1.72.0"
+    },
+    "surreal": {
+      "path": "/opt/homebrew/bin/surreal",
+      "resolved_path": "/opt/homebrew/opt/phebs-surreal-3.2.0/surreal",
+      "bytes": 233283488,
+      "sha256": "sha256:ee819dfcedd23035a785ac40f2509f86cbb09fc3255726ad74755b161a3ca0a8",
+      "version": "3.2.0",
+      "version_evidence": "3.2.0 for macos on aarch64"
+    },
+    "node": {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+      "resolved_path": "/private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+      "bytes": 120965360,
+      "sha256": "sha256:ee6fb0e015284d83a91e8ec5213f43a157f8a392b58555301682892ba928c04a",
+      "version": "v24.18.0",
+      "version_evidence": "v24.18.0"
+    },
+    "chrome": {
+      "path": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "resolved_path": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "bytes": 367696,
+      "sha256": "sha256:3972431aa8acff4e590998116c6c3e663e9a4d0eb6efd08fd160df8206db94a6",
+      "version": "155.0.8059.82",
+      "version_evidence": "Source-bound installed-Chrome preflight actual renderer155.0.8059.82, clean exit0 joined teardown"
+    },
+    "chrome_framework": {
+      "path": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/Current/Google Chrome Framework",
+      "resolved_path": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.82/Google Chrome Framework",
+      "bytes": 520002192,
+      "sha256": "sha256:b9aa14e0270a6a96bde855b9765c2a6eb48d0af70da7e9018f9622c4f626ef6c",
+      "version": "155.0.8059.82",
+      "version_evidence": "Source-bound installed-Chrome preflight actual renderer155.0.8059.82, clean exit0 joined teardown"
+    },
+    "openssl": {
+      "path": "/usr/bin/openssl",
+      "resolved_path": "/usr/bin/openssl",
+      "bytes": 1130832,
+      "sha256": "sha256:f81b4fcec5048ea1eceb40fc08f4e06f1668181f0b5bacfa8be27d0da181dcb7",
+      "version_evidence": "LibreSSL 3.3.6"
+    },
+    "vm_stat": {
+      "path": "/usr/bin/vm_stat",
+      "resolved_path": "/usr/bin/vm_stat",
+      "bytes": 101664,
+      "sha256": "sha256:0127fec1de1d99c7f0b0cf185fec048c7fe92d1f1b2ad380882c583f0c921df7",
+      "version_evidence": "Darwin system sampler image; no sample performed during draft prep"
+    }
+  },
+  "ui": {
+    "source_inventory_digest": "sha256:cf10128428a955121d3bb4a8c9b8f58a021ca797191a3cfa137101ecbc452a70",
+    "dist_workspace": "/Users/ben/.codex/worktrees/reviewed-pr-integration/phebs.com",
+    "dist_inventory_digest": "sha256:fd7244df7f204ed88bca5019eaaa9ada91298588cd5322a9321a859066222212",
+    "source_inventory_folders": [
+      "ui/src",
+      "ui/public",
+      "ui/package.json",
+      "ui/package-lock.json"
+    ],
+    "build_receipt_input_digest": "f7dc0177c4dc308c5b02266858d75600e74b6e330da8dab79929720d14260acb",
+    "build_receipt_dist_digest": "d439a3c5bef1663547696aa6ef01b275dec8e8e80f9f4d5acacfb393f798241d",
+    "qualification": "UI source inventories match between current T503 worktree and actual release build workspace. Binary embeds prepared dist; no rebuild performed here."
+  },
+  "node_modules": "/Users/ben/phebs.com/ui/node_modules",
+  "playwright_version": "1.62.1",
+  "browser_preflight": {
+    "path": "/Users/ben/.codex/worktrees/t503-comparison-quality/phebs.com/spike/t503/browser-preflight.json",
+    "sha256": "sha256:d4bb22933e4a8ae249a1c8851e2682800481b7dfb4c308ec37954364c5151ce3"
+  },
+  "browser_package_inventory": {
+    "playwright": {
+      "version": "1.62.1",
+      "package_sha256": "sha256:ca170ec143a88ed3043ac953eb3b2377b2b97304104f4e1e23316684ce2c35af"
+    },
+    "playwright-core": {
+      "version": "1.62.1",
+      "package_sha256": "sha256:07c47543631fef9508760365dee9fbe958c562093ec8d122543949ed231f233f"
+    },
+    "@playwright/test": {
+      "version": "1.62.1",
+      "package_sha256": "sha256:be51f784a5742a1aa075e0173f5f04f189a791cc30c40e3bb18be584f696764e"
+    }
+  },
+  "chrome_bundle_info": {
+    "path": "/Applications/Google Chrome.app/Contents/Info.plist",
+    "sha256": "sha256:855cae43bd1ff192fceaa0afefcde3a6a16cbd22a629a08cc81d54bb07b1b032",
+    "version": "155.0.8059.82"
+  },
+  "pending": [],
+  "production_signing": "PENDING existing unavailable key; no production key, signer or signature",
+  "source_only_preparation": {
+    "note": "Draft source-only counters retained in committed draft; following actual probes executed before product clock",
+    "version_probes_receipt": "/Users/ben/.codex/worktrees/t503-comparison-quality/phebs.com/spike/t503/tool-preflight.json",
+    "version_probes_digest": "sha256:96de5608d73f54b4fc448e079b6744edffc29ca60489ca7bf4733f498eeb10de",
+    "browser_preflight_seconds": 1.437613875,
+    "builds": "Reused exact joined main8a70 build/helper receipts; no further build/index execution"
+  },
+  "review": {
+    "lead": "root",
+    "peer": "receipt_portability",
+    "harness_review": "sha256:c8a0014d8dd97d36a5f73aaac4404b7b80a78fd8c06be680f6d088f1295b4dee",
+    "affected_tests": "T503b reviewed fixture-only correction c6b24715 and exact matching production sources; full scoped validation atspike/t503b/validation.json",
+    "qualification": "Finite selected-source composition/native envelope only; no production signature or generalized accuracy."
+  }
+}

@@ -71,6 +71,34 @@ def filtered_truth(labels, level, filters):
     return result
 
 
+def unit_sample_projection(pages):
+    """Expand actual outer attribution for the frozen occurrence-shaped scorer."""
+    projected = copy.deepcopy(pages)
+    for page in projected:
+        score.require(page["query"]["level"] == "unit", "unit projection received another level")
+        for row in page["rows"]:
+            outer = row.get("unit")
+            if outer is None:
+                continue
+            score.require(row["level"] == "unit" and row["classification"] in {
+                "old_only_evidence", "new_only_evidence", "both_evidence"
+            } and isinstance(outer, dict) and bool(outer.get("id")), "invalid promoted unit row")
+            for side in ("old", "replacement"):
+                for item in row[side]["rows"]:
+                    unit = item["unit"]
+                    score.require(unit.get("state") == "resolved" and not unit.get("reason") and
+                                  not unit.get("candidates") and not unit.get("candidate_total"),
+                                  "promoted sample contains conflicting attribution")
+                    unit.update(candidates=[copy.deepcopy(outer)], candidate_total=1)
+    return projected
+
+
+def check_rows(pages, labels, binding, level, repository):
+    if level == "unit":
+        pages = unit_sample_projection(pages)
+    return score.check_rows(pages, labels, binding, level, repository)
+
+
 def generation_key(generation):
     return tuple(generation.get(key) for key in (
         "repository", "commit", "generation_digest", "candidate_manifest_digest",

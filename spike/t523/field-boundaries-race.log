@@ -1,0 +1,3 @@
+ok  	github.com/bmeddeb/phebs/internal/extract/extractors/thriftfield	1.412s
+ok  	github.com/bmeddeb/phebs/internal/api	1.945s
+ok  	github.com/bmeddeb/phebs/cmd/phebs	4.788s

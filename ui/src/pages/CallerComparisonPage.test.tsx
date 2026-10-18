@@ -415,6 +415,38 @@ test('renders two exact generations, four classifications, and range-only citati
     )
 })
 
+test('keeps long unit and citation identities complete through source opening', async () => {
+  const row = comparisonRow(1, 'old_only_evidence')
+  const unitID = `cu_${'9'.repeat(64)}`
+  const path = `features/${'long-module-segment/'.repeat(8)}client/main.go`
+  row.level = 'unit'
+  row.unit = { id: unitID, build_targets: ['go:example.test/long-module/client'] }
+  row.old.rows[0].source.path = path
+  const page = comparisonPage([row])
+  page.query.level = 'unit'
+  api.fetchCallerComparison.mockResolvedValue(page)
+  api.fetchCallerCitation.mockResolvedValue({
+    schema_version: 'caller-map-citation-v1',
+    generation: generation(oldEndpoint),
+    source: row.old.rows[0].source,
+    content: 'client.Get(ctx, request)',
+  })
+  const params = route()
+  params.set('level', 'unit')
+  renderPage(params)
+
+  const label = `github.com/acme/orders/${path}:2`
+  const citation = await screen.findByRole('button', { name: label })
+  expect(citation.getAttribute('title')).toBe(label)
+  expect(screen.getByText(`unit ${unitID}`).textContent).toBe(`unit ${unitID}`)
+  fireEvent.click(citation)
+  expect((await screen.findByLabelText(`Exact cited bytes for ${label}`)).textContent)
+    .toBe('client.Get(ctx, request)')
+  expect(api.fetchCallerCitation).toHaveBeenCalledWith('exact-citation-protobuf-1', expect.any(AbortSignal))
+  expect(screen.getByRole('link', { name: 'Old endpoint declaration' }).getAttribute('href'))
+    .toBe(`#/file?repo=${encodeURIComponent(oldEndpoint.repository)}&path=idl%2Forders.proto&ref=${commit}&L=4`)
+})
+
 test('forwards every shared filter, comparison level, and classification with a fixed page size', async () => {
   const rendered = renderPage()
   await screen.findByText('Rows 1–4 of 4')

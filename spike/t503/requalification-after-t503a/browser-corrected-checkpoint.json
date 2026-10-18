@@ -1,0 +1,15 @@
+{
+  "schema": "t503-retained-mobile-stop-v1",
+  "harness_source_commit": "96c9cecbb649064ef9b006a36d3564762eb52ede",
+  "outcome": "stopped_no_retry",
+  "seconds": 21.547477,
+  "diagnosis": "Actual390px horizontal overflow. Product repair is PR100; shared discovery repair PR101 also precedes fresh binary qualification.",
+  "quality_scope": "Five selected occurrence sites, four unit classes, four outside-pair exclusions, exact source/MCP and full9source-file processing passed before UI stop. Full operating matrix remains open.",
+  "retained_desktop_image": {
+    "path": "/tmp/phebs-t503-after-t503a-04/browser/screens/comparison-1280.png",
+    "bytes": 189862,
+    "sha256": "3934cea512085940f4a3bac2f9ad5a29abc756e1a0477da174213bded4a04d69"
+  },
+  "controls": "31 pure source/mock controls pass; no new native run.",
+  "signing": "Production key unavailable; no production signing."
+}
