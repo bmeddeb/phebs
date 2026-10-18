@@ -12662,6 +12662,9 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   the already-visible native sources once through existing root/candidate points
   and one-row probes, then rechecks visibility. Existing three-attempt bounds
   remain. Archive reads add local decoded witness/citation checks; raw reads add
-  no source calls. Scratch descriptor/maps are invocation-local, with no new
+  no source calls. Peer cost review corrected a retained header substring with
+  the existing strings.Clone pattern, so it cannot pin the generated source
+  backing bytes across the following proto read. Scratch descriptor/maps are
+  invocation-local, with no new
   numerical heap/SLO claim. Sync/no-op/retry, publication writers, lifecycle,
   shared locks/caches, permanent schema, concurrency and children are unchanged.
