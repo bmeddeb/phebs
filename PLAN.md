@@ -13684,3 +13684,13 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   result, no source/corpus read/hash, child, lock, store, cache, production query/
   tick/startup/retry/publication work. Native observation, protected namespace,
   isolated-volume geometry and new version wiring remain separate prerequisites.
+
+- **2026-10-18 — Linux native execution deferred by Ben.** Source-preparation
+  work continues with bounded Mac checks and Linux compile-only targets. Ben
+  defers actual Linux runs until the office return on2026-10-20. Required kernel,
+  namespace, physical/effective-cgroup, native allocation/restore and readiness
+  proofs remain open; no plan freeze, ceremony or capacity PASS is inferred.
+  H2j pure calculation normal/race/vet, corrected pinned lint and both Linux
+  compile targets pass; `spike/t42h2j/` preserves its first lint stop and the
+  source-equivalent error-text correction. This deferral changes no production
+  work or historical receipt and supplies no production signing authority.

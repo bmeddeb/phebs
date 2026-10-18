@@ -1,0 +1,188 @@
+{
+  "schema": "phebs-t42h2j-source-checks-v1",
+  "recorded_on": "2026-10-18",
+  "handoff": "Ben-authorized Mac preparation for Linux-track source contract",
+  "outcome": "focused-source-checks-passed-after-error-spelling-correction",
+  "first_source_commit": "6be48fee10625f63fbb8caaae3603b40e4a676fc",
+  "corrected_source_commit": "e6d757340dbd8767b8bb655314e8b21ff38163f6",
+  "first_source_sha256": {
+    "spike/t4013/linux_memory_admission.go": "d3463eddef8243715c299ed7fd49582944fee1405f2ea89018ef766ccdc33ecf",
+    "spike/t4013/linux_memory_admission_test.go": "3d2af6ba11e0ee740a0c7be3be14f6eb5a772daf5383729dc5ebf81f30ab2c00"
+  },
+  "corrected_source_sha256": {
+    "spike/t4013/linux_memory_admission.go": "94546004a5184d10a6ee7f68ccbe342896e30fa73eb0060daf00c1d0d7aa429b",
+    "spike/t4013/linux_memory_admission_test.go": "3d2af6ba11e0ee740a0c7be3be14f6eb5a772daf5383729dc5ebf81f30ab2c00"
+  },
+  "correction": "Seven static errors.New initial Linux to linux only; no logic, tests, or numeric budget changed.",
+  "first_stop": {
+    "command": "lint",
+    "exit_code": 1,
+    "findings": "three ST1005 capitalization findings",
+    "receipt": "first-gates/receipt.json"
+  },
+  "carryover": {
+    "race": "passed at first source; source-equivalent error-spelling-only correction; not rerun",
+    "vet": "passed at first source; source-equivalent error-spelling-only correction; not rerun"
+  },
+  "remaining_receipt": "remaining-gates/receipt.json",
+  "wall_seconds": {
+    "first_sequence": 20.859106792,
+    "remaining_sequence": 21.954379167000003
+  },
+  "child_custody": {
+    "launched_groups": 11,
+    "all_joined": true,
+    "all_groups_absent": true
+  },
+  "linux_test_images": {
+    "t4013-linux-arm64.test": {
+      "bytes": 64401893,
+      "sha256": "0695fadd0d9a40c3a4b327ebfc7404fe55e9d206441c3f8266287f1351d085fd",
+      "executed": false
+    },
+    "t4013-linux-amd64.test": {
+      "bytes": 69205547,
+      "sha256": "21b2b1ac4b29a4d3563146a26feb4c1c12ce6797012a86e37556fe11b1aed53d",
+      "executed": false
+    }
+  },
+  "linux_test_images_executed": false,
+  "linux_test_images_removed": true,
+  "claims": {
+    "native_linux_execution": false,
+    "native_host_observation": false,
+    "authenticated_resource_admission": false,
+    "capacity_pass": false,
+    "ceremony_or_release": false,
+    "historical_plan_reinterpretation": false
+  },
+  "linux_execution_deferred_until": "2026-10-20",
+  "cost": "Pure bounded calculator only; <=64 ancestor identities and <=32 scope identities; no I/O/child/lock/cache or active execution wiring. Wall measured, CPU/aggregate peak memory not measured.",
+  "retained_files_excluding_this_outcome": [
+    {
+      "path": "README.md",
+      "bytes": 2846,
+      "sha256": "a3b5994b6617997860407839c3d9d19bab7de05749f062720ca19c0159ff955e"
+    },
+    {
+      "path": "first-gates/lint-version.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "first-gates/lint-version.stdout",
+      "bytes": 154,
+      "sha256": "f6ce18432a72a64b38b7830998527f2c918abfadba447e43ca90225de0b3f242"
+    },
+    {
+      "path": "first-gates/lint.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "first-gates/lint.stdout",
+      "bytes": 702,
+      "sha256": "a6c34e1607e4565cf1dac13b96367f6898a950fbcb1a983312b89cbf70b63905"
+    },
+    {
+      "path": "first-gates/normal.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "first-gates/normal.stdout",
+      "bytes": 49,
+      "sha256": "df2b8326a7b916b155171d497375360d2ae86adaf6fad97ae9b796374f256c16"
+    },
+    {
+      "path": "first-gates/race.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "first-gates/race.stdout",
+      "bytes": 49,
+      "sha256": "23aca08e8e3ccba1f3993f9af423080d96b6675ea1dc63091b67d42e1668b0f4"
+    },
+    {
+      "path": "first-gates/receipt.json",
+      "bytes": 4802,
+      "sha256": "aedae3f5d9e639689c5c58677a30c4b63ca566f4c960463566c7569a103b3a48"
+    },
+    {
+      "path": "first-gates/vet.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "first-gates/vet.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "remaining-gates/compile-linux-amd64.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "remaining-gates/compile-linux-amd64.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "remaining-gates/compile-linux-arm64.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "remaining-gates/compile-linux-arm64.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "remaining-gates/docs-check.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "remaining-gates/docs-check.stdout",
+      "bytes": 179,
+      "sha256": "01740c3926b1130e32dffe61aa14fb036c44e976e104abdeab06f2c5984ea638"
+    },
+    {
+      "path": "remaining-gates/glossary.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "remaining-gates/glossary.stdout",
+      "bytes": 60,
+      "sha256": "f128ad7aef2b6215c4414d1e00b2650f9c42011b1705707b624be1c70d92f095"
+    },
+    {
+      "path": "remaining-gates/lint.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "remaining-gates/lint.stdout",
+      "bytes": 10,
+      "sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+    },
+    {
+      "path": "remaining-gates/normal.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "remaining-gates/normal.stdout",
+      "bytes": 49,
+      "sha256": "00d34145e88490b8e3fb1a46dd199f25363eb80047da840bf7abf1c82243b0ac"
+    },
+    {
+      "path": "remaining-gates/receipt.json",
+      "bytes": 6136,
+      "sha256": "a22339a843ca102f5e447ee1c202e43ae9846f9afb84893be0bf608c2373dbf3"
+    }
+  ]
+}

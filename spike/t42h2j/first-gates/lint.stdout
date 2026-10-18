@@ -1,0 +1,11 @@
+spike/t4013/linux_memory_admission.go:93:36: ST1005: error strings should not be capitalized (staticcheck)
+		return LinuxMemoryCalculation{}, errors.New("Linux memory reservation and headroom exceed supplied capacity or available slack")
+		                                 ^
+spike/t4013/linux_memory_admission.go:106:16: ST1005: error strings should not be capitalized (staticcheck)
+		return 0, 0, errors.New("Linux memory observation is incomplete or invalid")
+		             ^
+spike/t4013/linux_memory_admission.go:113:17: ST1005: error strings should not be capitalized (staticcheck)
+			return 0, 0, errors.New("Linux memory cgroup identity is invalid")
+			             ^
+3 issues:
+* staticcheck: 3

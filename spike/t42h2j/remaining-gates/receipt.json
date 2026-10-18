@@ -1,0 +1,218 @@
+{
+  "source_commit": "e6d757340dbd8767b8bb655314e8b21ff38163f6",
+  "prior_receipt": "/tmp/phebs-t42h2j-validation-rxdpxtre/receipt.json",
+  "race_and_vet": "not_repeated_after_error_spelling_only_correction",
+  "source_before": {
+    "spike/t4013/linux_memory_admission.go": "94546004a5184d10a6ee7f68ccbe342896e30fa73eb0060daf00c1d0d7aa429b",
+    "spike/t4013/linux_memory_admission_test.go": "3d2af6ba11e0ee740a0c7be3be14f6eb5a772daf5383729dc5ebf81f30ab2c00"
+  },
+  "logs": "/tmp/phebs-t42h2j-remaining-02sgysfc",
+  "commands": [
+    {
+      "name": "normal",
+      "argv": [
+        "go",
+        "test",
+        "./spike/t4013",
+        "-run",
+        "^TestLinuxMemoryAdmission",
+        "-count=1",
+        "-timeout=60s"
+      ],
+      "outer_deadline_seconds": 80,
+      "launched": true,
+      "joined": true,
+      "group_absent": true,
+      "environment_overrides": {
+        "GOTOOLCHAIN": "local",
+        "GOPROXY": "off",
+        "GOSUMDB": "off"
+      },
+      "pid": 9782,
+      "exit_code": 0,
+      "wall_seconds": 4.308384709,
+      "stdout": {
+        "bytes": 49,
+        "sha256": "00d34145e88490b8e3fb1a46dd199f25363eb80047da840bf7abf1c82243b0ac"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "name": "lint",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-fv0m6vmf/lint-bin/golangci-lint",
+        "run",
+        "--new-from-rev=052a46b0",
+        "--timeout=90s",
+        "./spike/t4013"
+      ],
+      "outer_deadline_seconds": 100,
+      "launched": true,
+      "joined": true,
+      "group_absent": true,
+      "environment_overrides": {
+        "GOTOOLCHAIN": "local",
+        "GOPROXY": "off",
+        "GOSUMDB": "off"
+      },
+      "pid": 9808,
+      "exit_code": 0,
+      "wall_seconds": 2.442923583,
+      "stdout": {
+        "bytes": 10,
+        "sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "name": "compile-linux-amd64",
+      "argv": [
+        "go",
+        "test",
+        "-c",
+        "./spike/t4013",
+        "-o",
+        "/tmp/phebs-t42h2j-remaining-02sgysfc/t4013-linux-amd64.test"
+      ],
+      "outer_deadline_seconds": 90,
+      "launched": true,
+      "joined": true,
+      "group_absent": true,
+      "environment_overrides": {
+        "GOTOOLCHAIN": "local",
+        "GOPROXY": "off",
+        "GOSUMDB": "off",
+        "GOOS": "linux",
+        "GOARCH": "amd64",
+        "CGO_ENABLED": "0"
+      },
+      "pid": 9828,
+      "exit_code": 0,
+      "wall_seconds": 6.912801167,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "name": "compile-linux-arm64",
+      "argv": [
+        "go",
+        "test",
+        "-c",
+        "./spike/t4013",
+        "-o",
+        "/tmp/phebs-t42h2j-remaining-02sgysfc/t4013-linux-arm64.test"
+      ],
+      "outer_deadline_seconds": 90,
+      "launched": true,
+      "joined": true,
+      "group_absent": true,
+      "environment_overrides": {
+        "GOTOOLCHAIN": "local",
+        "GOPROXY": "off",
+        "GOSUMDB": "off",
+        "GOOS": "linux",
+        "GOARCH": "arm64",
+        "CGO_ENABLED": "0"
+      },
+      "pid": 9975,
+      "exit_code": 0,
+      "wall_seconds": 7.169041957999999,
+      "stdout": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "name": "docs-check",
+      "argv": [
+        "make",
+        "docs-check"
+      ],
+      "outer_deadline_seconds": 90,
+      "launched": true,
+      "joined": true,
+      "group_absent": true,
+      "environment_overrides": {
+        "GOTOOLCHAIN": "local",
+        "GOPROXY": "off",
+        "GOSUMDB": "off"
+      },
+      "pid": 10133,
+      "exit_code": 0,
+      "wall_seconds": 0.9903629999999986,
+      "stdout": {
+        "bytes": 179,
+        "sha256": "01740c3926b1130e32dffe61aa14fb036c44e976e104abdeab06f2c5984ea638"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "name": "glossary",
+      "argv": [
+        "make",
+        "verify-glossary"
+      ],
+      "outer_deadline_seconds": 90,
+      "launched": true,
+      "joined": true,
+      "group_absent": true,
+      "environment_overrides": {
+        "GOTOOLCHAIN": "local",
+        "GOPROXY": "off",
+        "GOSUMDB": "off"
+      },
+      "pid": 10166,
+      "exit_code": 0,
+      "wall_seconds": 0.12703791599999903,
+      "stdout": {
+        "bytes": 60,
+        "sha256": "f128ad7aef2b6215c4414d1e00b2650f9c42011b1705707b624be1c70d92f095"
+      },
+      "stderr": {
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    }
+  ],
+  "native_host_observed": false,
+  "capacity_admitted": false,
+  "outcome": "passed",
+  "source_after": {
+    "spike/t4013/linux_memory_admission.go": "94546004a5184d10a6ee7f68ccbe342896e30fa73eb0060daf00c1d0d7aa429b",
+    "spike/t4013/linux_memory_admission_test.go": "3d2af6ba11e0ee740a0c7be3be14f6eb5a772daf5383729dc5ebf81f30ab2c00"
+  },
+  "source_unchanged": true,
+  "wall_seconds": 21.954379167000003,
+  "compile_only_artifacts": {
+    "t4013-linux-arm64.test": {
+      "bytes": 64401893,
+      "sha256": "0695fadd0d9a40c3a4b327ebfc7404fe55e9d206441c3f8266287f1351d085fd",
+      "executed": false
+    },
+    "t4013-linux-amd64.test": {
+      "bytes": 69205547,
+      "sha256": "21b2b1ac4b29a4d3563146a26feb4c1c12ce6797012a86e37556fe11b1aed53d",
+      "executed": false
+    }
+  },
+  "compile_only_artifacts_removed": true
+}

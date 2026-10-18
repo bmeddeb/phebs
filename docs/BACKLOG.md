@@ -3952,6 +3952,11 @@ limits, malformed/duplicate/unknown ancestry, exhausted current slack and
 missing/overlapping reserves. No host reader, admission token, active plan,
 sampler limit or launcher changes; modeled inputs prove only the calculation.
 Actual host observation, new versions and complete admission remain downstream.
+Pure calculation preparation is checked: focused normal/race, vet, corrected
+pinned lint, both supported Linux compile-only targets, docs and glossary pass.
+The first lint refusal and error-text-only correction stay exact in
+`spike/t42h2j/`. All validation groups joined. No native Linux/capacity authority
+is claimed; Ben defers actual Linux execution until2026-10-20.
 
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over

@@ -1,0 +1,4 @@
+go test ./scripts \
+		-run '^Test(TrackedMarkdownLinksResolve|DocumentationMapReachesTrackedDocs|SealedT111TreeDigest)$' \
+		-count=1
+ok  	github.com/bmeddeb/phebs/scripts	0.667s
