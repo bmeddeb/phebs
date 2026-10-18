@@ -3574,6 +3574,17 @@ field-reference domain whose number rules admit the requested identity.
 
 ### Pack-release status, expiry, suspension and rollback (T48.4)
 
+**Caller Map and Atlas acceptance (2026-10-17, Ben-directed):** bounded
+integration tests suffice for these products and their release bindings under
+the amendment at the start of Epic 47 in [BACKLOG.md](../BACKLOG.md). Blind-label
+rounds, seal/freeze or attended signing ceremonies, long rehearsals and repeated
+operating-envelope runs are not prerequisites. Retain the signed-record loader,
+exact recipe/artifact/source bindings, authorization, expiry and revocation
+checks. Record integration-test qualification without asserting independent
+accuracy or capacity measurements; adapt release artifacts honestly if needed,
+never bypass verification. Existing records and historical results stay intact.
+This is an acceptance-policy change, not activation of an unreleased recipe.
+
 The provisional switches above are development opt-ins. A pack that has been
 through release validation is governed instead by its signed `PackRelease`
 record, selected by

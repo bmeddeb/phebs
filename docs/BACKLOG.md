@@ -16956,6 +16956,36 @@ verified fast-forward and Ben's explicit authorization.
 
 ## Epic 47 · Caller Map production release within measured limits *(Ben-directed, 2026-10-09; follows immediate SCIP availability)*
 
+**Current acceptance amendment (2026-10-17, Ben-directed; also governs Epic 49
+and their release bindings).** Bounded integration tests are sufficient for
+integration and release. This supersedes the older mandatory independent-label,
+seal/freeze ceremony and extended operating-rehearsal requirements below and
+the common promotion bar only for these products. T47.2b/T47.2s and T49.1b's
+unfinished human-label/scoring rounds are optional quality research, not
+release dependencies; keep their sealed artifacts and actual results intact.
+
+T47.3–T47.5 and T49.3–T49.4 close through focused integration coverage of
+ordinary startup with the selected recipe, real-store publication and exact
+reads, allowed/denied access, HTTP/MCP parity, paging/citations, stale or moved
+authority, explicit unsupported/gap states, and release verification/withdrawal.
+Exercise restart, recovery, backup/restore and lifecycle only where the change
+touches those boundaries; reuse unchanged passing coverage, including T47.4's
+existing operating results. UI changes use the existing component/browser
+checks. Use finite test deadlines and small fixtures; investigate failures with
+targeted regressions rather than replaying a long acceptance sequence. No fresh
+corpus draw, label commitment, beacon, attended signing ceremony, full workload
+rehearsal or repeat operating-envelope measurement is required.
+
+Release records still bind the actual recipe, source, implementation/binary and
+test evidence, with valid signatures and the existing expiry/revocation checks.
+Describe qualification as integration-tested and do not fabricate independent
+quality scores or measured limits. T47.5/T49.4 must adapt a release artifact if
+needed to represent that qualification honestly, with integration regressions
+and no verifier bypass. Existing supported identities, limits, missing/stale
+behavior and authorization remain exact. This policy changes no runtime default
+or current release status and grants no merge; it changes no Epic 42, managed
+SCIP evidence, pilot, accuracy or scale result. Steady-state cost: zero.
+
 Ben requests moving Caller Map from experimental/default-dark to supported
 production and explicitly chooses current admitted limits first, with
 large-monorepo claims still gated. This program owns the existing exact
@@ -18345,6 +18375,9 @@ admitted recipe and freshness/authorization identity.
 
 ### Common promotion bar, applied independently
 
+For Caller Map and Atlas, the 2026-10-17 acceptance amendment at the start of
+Epic 47 supersedes the conflicting validation and operating requirements here.
+
 Every product/pack ticket below must: freeze supported claims, non-claims,
 canonical identity/input/tool/schema versions and current numerical ceilings;
 preregister a reproducible personal/public-source population, independently
@@ -18683,6 +18716,10 @@ Remaining gap, not in scope: the evidence browser
 published run only.*
 
 ## Epic 49 · Contract Atlas and declaration production readiness
+
+**Current acceptance (2026-10-17):** use the integration-test amendment at the
+start of Epic 47. The T49.1b label round is optional and does not block
+T49.3/T49.4; older label-dependent release holds below are superseded.
 
 Own `phebs.protobuf.contract` and `phebs.thrift.contract` separately, plus
 the exact bounded declaration discovery/detail surface. Caller Map uses only

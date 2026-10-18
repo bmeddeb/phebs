@@ -12059,3 +12059,23 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   weakening comparisons or promoting a release. Ben explicitly requested
   review and integration of PR #80 in chat; the original branch-only holds
   above are historical checkpoints, not a remaining approval request.
+
+- **2026-10-17 — T47.5 / T49.4 integration-test acceptance (Ben-directed).**
+  Bounded integration tests suffice for Caller Map, Atlas and their release
+  bindings. Supersede mandatory blind-label completion, seal/freeze or attended
+  signing ceremonies, long rehearsals and repeated operating-envelope runs for
+  this scope. T47.2b/T47.2s and T49.1b's human quality rounds become optional
+  research; preserve their sealed bytes and actual outcomes. Close registration
+  and release gaps with focused ordinary-startup, real-store publication/reads,
+  authorization, exact source/generation/citation fencing, paging, HTTP/MCP
+  parity and release-verification/withdrawal integration tests. Exercise
+  recovery/lifecycle where changed; reuse applicable passing coverage and
+  T47.4 measurements. Release artifacts must state integration-test
+  qualification honestly, retaining valid signatures, identity, expiry and
+  revocation checks; adapt artifacts if needed without bypassing the verifier
+  or inventing independent quality/capacity results. The owning amendment is
+  at the start of Epic 47 in `docs/BACKLOG.md`. No runtime activation or main
+  merge follows from this policy. Epic 42, managed SCIP evidence, other
+  products and pilot/scale results retain their scope. Documentation-only
+  steady-state cost is zero across requests, startup, sync, retry, publication,
+  locks, caches, storage and children.

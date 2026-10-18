@@ -508,6 +508,16 @@ authorized subject, delta, and cause as required by the domain contract.
 
 ## 6. Release-time validation
 
+**Caller Map / Atlas amendment (2026-10-17, Ben-directed):** the acceptance
+amendment at the start of Epic 47 in [BACKLOG.md](./BACKLOG.md) makes bounded
+integration tests sufficient for these products' release qualification. Record
+the test scope and actual results as the validation artifact; unfinished blind
+labels and long rehearsals are not release prerequisites. Item 12 below does
+not require new operating measurements for this scope: reuse applicable retained
+measurements, keep current ceilings, and leave unmeasured capacity unclaimed.
+All authenticity, identity, authorization and lifecycle checks still apply.
+This amendment changes no wire schema, existing signed artifact or runtime gate.
+
 Release is blocked unless all checks pass:
 
 1. The signed `PackRelease` verifies and binds the canonical card, manifest,

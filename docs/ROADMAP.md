@@ -133,6 +133,22 @@ resource/readiness admission remain open; no ceremony entry point is enabled.
 
 ## Current product posture
 
+**Caller Map / Atlas sequencing override (2026-10-17, Ben-directed):** bounded
+integration tests suffice for these products and their release bindings. The
+owning amendment at the start of Epic 47 in [BACKLOG.md](./BACKLOG.md) supersedes
+older label-dependent release holds, mandatory ceremonies and extended or
+repeated operating rehearsals in this roadmap. The 1,583-unit Caller Map and
+657-unit protobuf declaration labeling rounds are optional quality research;
+neither blocks T47.3–T47.5 or T49.3–T49.4.
+
+Next: close the actual registration/release gaps with focused ordinary-startup,
+real-store, authorization, exact source/generation, paging/citation, HTTP/MCP
+parity and release-verification/withdrawal integration tests. Reuse passing
+coverage and the existing T47.4 operating result. Record integration-test
+qualification honestly in release artifacts; do not invent independent accuracy
+or measured capacity. No new release is activated by this policy. Epic 42 and
+the separate managed SCIP, pilot and scale programs retain their own scope.
+
 **Caller Map production priority (2026-10-09, Ben-directed):** after immediate
 SCIP operational availability, Epic 47 targets a supported Caller Map release
 for repositories within current admitted limits. Ben explicitly keeps

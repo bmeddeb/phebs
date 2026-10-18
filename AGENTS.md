@@ -115,6 +115,14 @@ bare repos · Vite + React + TS + CodeMirror 6 in `ui/`, embedded in the binary.
   - Shared spine docs stay append-only across tracks. Nothing merges into
     `main` without Ben's explicit request, and the second merger resolves
     conflicts and reruns `make docs-check` and `make verify-glossary`.
+- **Caller Map and Atlas acceptance (2026-10-17, Ben-directed).** Bounded
+  integration tests suffice for Epics 47 and 49 and their release bindings.
+  Do not require long rehearsals, freeze/seal ceremonies, blind-label completion
+  or repeated operating runs to integrate or release these products. Retain
+  authentication, exact source/generation/citation fences and signed-release
+  verification; describe qualification as integration-tested, without inventing
+  independent accuracy or scale results. The owning acceptance amendment in
+  `docs/BACKLOG.md` supersedes older conflicting requirements for this scope.
 - Table-driven tests. Every epic ends demoable via `make dev` — an epic that
   can't be shown end-to-end is not done.
 - Every implementation review includes a steady-state-cost pass: enumerate work
