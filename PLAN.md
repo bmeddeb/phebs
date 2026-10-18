@@ -12316,3 +12316,23 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   changes37,750→40,609 bytes (gzip9,821→10,699); these are build observations,
   not latency or scale bounds. Production signing still binds the actual final
   binary and artifacts when the existing key becomes available.
+
+- **2026-10-18 — T43R.6 independent scope-help control.** Atlas's bounded
+  native accessibility audit exposed a shared nested-interactive defect:
+  `AnalysisScopePanel` put its coverage-help button inside native `<summary>`.
+  Preserve the native disclosure and existing glossary help, moving the help
+  control to a visible sibling outside `<details>` and reserving its own row
+  space. The help can be focused/opened/closed without toggling coverage; native
+  Enter/Space disclosure semantics remain unchanged. This applies once in the
+  shared component used by Search, Contracts, Topics, Caller Map and Impact.
+  A regression checks the independent control, absence of nested interactive
+  descendants, Escape focus return and unchanged closed state. Shared/help/
+  Impact checks pass 27 tests; four other consumer suites pass 63 tests; targeted
+  lint and type checking pass. Bounded rendered/canonical qualification follows;
+  this checkpoint claims no browser or screenshot PASS yet.
+
+  Cost: one static layout wrapper plus the moved existing help wrapper/control;
+  no new state, event listener, layout measurement, request, authority field,
+  source scan, cache, lock, background work, concurrency or child. Existing help
+  portal/listeners retain their opening/closing lifetime. Startup/restart, sync,
+  retry/no-op, publication, memory/disk bounds and evidence meaning are unchanged.

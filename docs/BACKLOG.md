@@ -15266,6 +15266,17 @@ help deployment, bounded cost, exact authority corrections, responsive review,
 and explicit retained-receipt-gate completion exception are recorded in the
 completed backlog.
 
+**T43R.6 · Accessible independent coverage help** *(scheduled 2026-10-18,
+found during T49.4 bounded native QA)* — move the shared coverage-help button
+outside the native summary, preserving a visible independent help target and
+native disclosure semantics. AC: no nested interactive summary descendants;
+help open/close/Escape focus return never changes disclosure state; desktop and
+390px keyboard/overflow/a11y and scoped canonical comparison pass; retain
+existing capabilities, caveats and bounded costs. The shared component fix and
+90 focused shared/consumer tests, lint/type checks are complete on its branch;
+rendered/canonical qualification is pending. The T49.4 inherited audit finding
+is preserved rather than relabelled as a clean full-page result.
+
 ## Epic 44 · Reading surfaces and instance chrome *(planned 2026-08-08 · presentation track)*
 
 Four operator-requested reading and chrome improvements, planned with the

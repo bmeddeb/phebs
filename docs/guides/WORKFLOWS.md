@@ -1175,6 +1175,9 @@ Search, Contracts, Topics, Caller Map, and Impact share the
 scope-aware **Analysis scope & gaps** panel. Expand one repository to inspect
 its active unit name, exact primary/supporting paths, typed-index posture,
 fresh/stale domain publications, durable disposition, and bounded receipt.
+The **Coverage certificate** row expands its disclosure; its separate help
+button opens glossary guidance without changing the disclosure. Both controls
+are keyboard accessible, and Escape returns focus from help to its button.
 Only one repository's paths are mounted at a time. Focused Search and local
 evidence are labeled separately from repository-overlay callers; an
 outside-unit caller is expected overlay evidence, not a focused-search result.

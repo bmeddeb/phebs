@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, expect, test } from 'vitest'
 import { Client } from 'styletron-engine-monolithic'
@@ -257,6 +257,22 @@ test('keeps exact paths behind one repository expansion while exposing v3 outcom
   expect(screen.queryByText(/services\/checkout\/\*\*/)).toBeNull()
   expect(screen.getByText('services/payments/**')).toBeTruthy()
   expect(screen.getByText(/does not widen focused source scope/)).toBeTruthy()
+})
+
+test('keeps certificate help independently accessible without toggling the disclosure', async () => {
+  renderPanel(<AnalysisScopePanel id="independent-help" certificate={certificate} />)
+  const details = screen.getByTestId('coverage-certificate-detail') as HTMLDetailsElement
+  const summary = details.querySelector('summary')!
+  const help = screen.getByRole('button', { name: 'Help for Coverage certificate' })
+  expect(summary.querySelector('button, a, input, select, textarea, [tabindex]')).toBeNull()
+  expect(details.contains(help)).toBe(false)
+  fireEvent.click(help)
+  expect(await screen.findByRole('dialog', { name: 'Coverage certificate help' })).toBeTruthy()
+  expect(details.open).toBe(false)
+  fireEvent.keyDown(document, { key: 'Escape' })
+  expect(screen.queryByRole('dialog', { name: 'Coverage certificate help' })).toBeNull()
+  await waitFor(() => expect(document.activeElement).toBe(help))
+  expect(details.open).toBe(false)
 })
 
 test('renders retained legacy exclusion receipts as recorded work', () => {
