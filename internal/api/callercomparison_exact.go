@@ -105,6 +105,9 @@ func (s *CallerComparisonService) compareExact(
 	if err != nil {
 		return nil, err
 	}
+	if s.opts.CallerComparisonReleased && (oldPack.protocol != "protobuf" || replacementPack.protocol != "protobuf") {
+		return nil, huma.Error503ServiceUnavailable("the released caller comparison supports protobuf endpoint pairs only")
+	}
 	queryDigest := digestJSON(struct {
 		Query CallerComparisonQuery `json:"query"`
 		Size  int                   `json:"page_size"`
@@ -805,7 +808,7 @@ func (s *CallerComparisonService) pageExactCallerComparison(
 	oldGeneration, replacementGeneration :=
 		comparison.old.generation, comparison.replacement.generation
 	return &CallerComparisonPage{
-		SchemaVersion: callerComparisonSchemaVersion, Query: query,
+		SchemaVersion: CallerComparisonSchemaVersion, Query: query,
 		Old: CallerComparisonSnapshot{
 			Endpoint: query.Old, Declaration: &oldDeclaration,
 			Generation: &oldGeneration, MatchingRowsState: "exact",
@@ -1251,7 +1254,7 @@ func (s *CallerComparisonService) buildExactCallerComparisonGapPage(
 		return nil, exactCallerComparisonAuthorityConflict()
 	}
 	return &CallerComparisonPage{
-		SchemaVersion: callerComparisonSchemaVersion, Query: query,
+		SchemaVersion: CallerComparisonSchemaVersion, Query: query,
 		Old: CallerComparisonSnapshot{
 			Endpoint: query.Old, Declaration: oldDeclaration,
 			Generation: &oldGeneration, MatchingRowsState: oldState,

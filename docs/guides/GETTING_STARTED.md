@@ -56,6 +56,13 @@ exact value is printed by `phebs version`, returned by `/api/version`, written
 to backup manifests, and included in startup logs. Release builds refuse a
 non-SemVer `VERSION`.
 
+UI builds also include the user guide. After signing in, open
+`/documentation/docs/README.md` and follow its index/manual/task-guide links.
+`/documentation/` redirects to that index. Markdown, SVGs and the example YAML
+come from the binary's build snapshot; rebuild/restart updates them. Known
+references to excluded repository bytes get an explicit repository-only page
+and public repository link. Non-UI builds contain no embedded documentation.
+
 For an image used by signed pack-release selection, use a clean checkout:
 
 ```bash
