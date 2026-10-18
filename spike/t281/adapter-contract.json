@@ -1,0 +1,948 @@
+{
+  "format": "t281-exact-client-adapter-contract-v1",
+  "recognizer_runs": 0,
+  "admitted_package": "github.com/redis/go-redis/v9",
+  "exact_versions": [
+    "v9.14.1",
+    "v9.17.2"
+  ],
+  "unsupported_version_rule": "Any nearest-module version not equal to one of those exact pins, including v9.7.0, is unknown-client-adapter; no root inheritance, semver-range or major-version inference.",
+  "receiver_proof": "Closed lexical binding contract below: exact nearest module + directory/package + declaration/import/receiver type/field identity. Every shadowed, reassigned, multiply witnessed or otherwise unproved binding abstains as unknown-client-adapter. No alias-name proof, SSA, typechecker, package execution or per-call full-corpus scan.",
+  "key_evaluation": "Literals, same-file immutable constants, and bounded known-format structure only; imported constants/helpers and opaque local dataflow abstain.",
+  "method_rules": [
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "method": "SAdd",
+      "command_rule": "SADD",
+      "go_key_arguments": [
+        1
+      ],
+      "source_path": "set_commands.go",
+      "source_file_sha256": "1fda966933b3172cb8b4f996a97d8dd294b5d687bf6ab1b811f2c23b0e54c447",
+      "source_function_start": 1585,
+      "source_function_end": 1852,
+      "source_function_sha256": "e5460dfe823b1ebe7e79f3ddcb137ef16ea6909f97c3c8c8056eb7429ae59f6e"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "method": "SMembers",
+      "command_rule": "SMEMBERS",
+      "go_key_arguments": [
+        1
+      ],
+      "source_path": "set_commands.go",
+      "source_file_sha256": "1fda966933b3172cb8b4f996a97d8dd294b5d687bf6ab1b811f2c23b0e54c447",
+      "source_function_start": 4055,
+      "source_function_end": 4211,
+      "source_function_sha256": "07352fb80eca18342a9f20c976ec7cd0e49fa8822e7bda63d8d070eeb0a18bb1"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "method": "SIsMember",
+      "command_rule": "SISMEMBER",
+      "go_key_arguments": [
+        1
+      ],
+      "source_path": "set_commands.go",
+      "source_file_sha256": "1fda966933b3172cb8b4f996a97d8dd294b5d687bf6ab1b811f2c23b0e54c447",
+      "source_function_start": 3464,
+      "source_function_end": 3636,
+      "source_function_sha256": "3b20796a4d2f27657338e4b8081324062fed9b1a76beb12ee6c81e97a39dd24e"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "method": "SRem",
+      "command_rule": "SREM",
+      "go_key_arguments": [
+        1
+      ],
+      "source_path": "set_commands.go",
+      "source_file_sha256": "1fda966933b3172cb8b4f996a97d8dd294b5d687bf6ab1b811f2c23b0e54c447",
+      "source_function_start": 5462,
+      "source_function_end": 5729,
+      "source_function_sha256": "f2aabde0a65cc91ecaa7491e7ce35addaa736bee447fdb49eb1aab5ffc6ce6f7"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "method": "ZAdd",
+      "command_rule": "ZADD",
+      "go_key_arguments": [
+        1
+      ],
+      "source_path": "sortedset_commands.go",
+      "source_file_sha256": "8a9751be187fc0d6e097e25f60c75d7c3d565d7ca02253eee8d76cc1ed2f0fa8",
+      "source_function_start": 6829,
+      "source_function_end": 6973,
+      "source_function_sha256": "aacc0b10a13e92fcd50775e8151cb9d516a7d05fab64a178619d1e87de8537b6"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "method": "ZAddXX",
+      "command_rule": "ZADD",
+      "go_key_arguments": [
+        1
+      ],
+      "source_path": "sortedset_commands.go",
+      "source_file_sha256": "8a9751be187fc0d6e097e25f60c75d7c3d565d7ca02253eee8d76cc1ed2f0fa8",
+      "source_function_start": 7750,
+      "source_function_end": 7913,
+      "source_function_sha256": "5ea747d8dc93393d2bda983ac92cffd8edc195b9ee393d41cb3b199d07fcbb89"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "method": "ZScore",
+      "command_rule": "ZSCORE",
+      "go_key_arguments": [
+        1
+      ],
+      "source_path": "sortedset_commands.go",
+      "source_file_sha256": "8a9751be187fc0d6e097e25f60c75d7c3d565d7ca02253eee8d76cc1ed2f0fa8",
+      "source_function_start": 19164,
+      "source_function_end": 19320,
+      "source_function_sha256": "c11d8fc44bcf8b1022b07e52723f707f5dc9996e5365664a9e03d810196475c4"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "method": "ZRem",
+      "command_rule": "ZREM",
+      "go_key_arguments": [
+        1
+      ],
+      "source_path": "sortedset_commands.go",
+      "source_file_sha256": "8a9751be187fc0d6e097e25f60c75d7c3d565d7ca02253eee8d76cc1ed2f0fa8",
+      "source_function_start": 16408,
+      "source_function_end": 16675,
+      "source_function_sha256": "e73cab0f88cdb2b5be38ec91e9e50c9a64cd38f0af8e37ec0805c9e423e14ddb"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "method": "ZRevRangeWithScores",
+      "command_rule": "ZREVRANGE",
+      "go_key_arguments": [
+        1
+      ],
+      "source_path": "sortedset_commands.go",
+      "source_file_sha256": "8a9751be187fc0d6e097e25f60c75d7c3d565d7ca02253eee8d76cc1ed2f0fa8",
+      "source_function_start": 17582,
+      "source_function_end": 17786,
+      "source_function_sha256": "6a4265abf40cff3775f37c0201782a4c22889e022c40ec4174a2cb33ece4af8c"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "method": "Del",
+      "command_rule": "DEL",
+      "go_key_arguments": "explicit arguments1..end; unresolved spread cardinality abstains",
+      "source_path": "generic_commands.go",
+      "source_file_sha256": "3a0d1306b2d5819b5cbcb3d01180ef0c564361afb0ab8c3a115ec1aee252fbee",
+      "source_function_start": 2586,
+      "source_function_end": 2825,
+      "source_function_sha256": "567b1881e971a75f854db4bbad569c7f0a48614c87c325981554b160de994e94"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "method": "HSet",
+      "command_rule": "HSET",
+      "go_key_arguments": [
+        1
+      ],
+      "source_path": "hash_commands.go",
+      "source_file_sha256": "3902b0ae7a02e4cf471fef4b12c4f1ec318e16a78b1b90800532c22562f60003",
+      "source_function_start": 6351,
+      "source_function_end": 6615,
+      "source_function_sha256": "5b8a6a283439e850dea89722a3aa70e0dcca6c0918f4ff79a7545f08cfb27918"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "method": "HVals",
+      "command_rule": "HVALS",
+      "go_key_arguments": [
+        1
+      ],
+      "source_path": "hash_commands.go",
+      "source_file_sha256": "3902b0ae7a02e4cf471fef4b12c4f1ec318e16a78b1b90800532c22562f60003",
+      "source_function_start": 7142,
+      "source_function_end": 7292,
+      "source_function_sha256": "5aacbfbcf825401104da44b6899db41f0dbeb044170717bfdceae9c17b00ec66"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "method": "Get",
+      "command_rule": "GET",
+      "go_key_arguments": [
+        1
+      ],
+      "source_path": "string_commands.go",
+      "source_file_sha256": "2f97ee356857292e1eb6f6c057c67ac258001bd5caf183ec7e60f1ef41820a77",
+      "source_function_start": 2094,
+      "source_function_end": 2230,
+      "source_function_sha256": "f48e32ad4107411faeb34a2045dad372576c9570f7ee65a0c6fd55969c71cfa5"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "method": "Set",
+      "command_rule": "SET",
+      "go_key_arguments": [
+        1
+      ],
+      "source_path": "string_commands.go",
+      "source_file_sha256": "2f97ee356857292e1eb6f6c057c67ac258001bd5caf183ec7e60f1ef41820a77",
+      "source_function_start": 5598,
+      "source_function_end": 6111,
+      "source_function_sha256": "ed4ad181110cb98aa730451d75318435e22b89180ecbdbe77c001b99b2eb2cf4"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "method": "SetNX",
+      "command_rule": "SETNX when expiration is literal0",
+      "go_key_arguments": [
+        1
+      ],
+      "source_path": "string_commands.go",
+      "source_file_sha256": "2f97ee356857292e1eb6f6c057c67ac258001bd5caf183ec7e60f1ef41820a77",
+      "source_function_start": 7998,
+      "source_function_end": 8587,
+      "source_function_sha256": "4aa300132a27811e4c61fe5474a13a01d5933cd273c3ae2a557db3d7c935772a"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "method": "LRange",
+      "command_rule": "LRANGE",
+      "go_key_arguments": [
+        1
+      ],
+      "source_path": "list_commands.go",
+      "source_file_sha256": "1e7fab1dc8ac0e6e17ff75453259e08d18eb236fa0633fa03343dd313d6f2247",
+      "source_function_start": 6689,
+      "source_function_end": 6887,
+      "source_function_sha256": "cdb427dcaf85584bb359359b417e4318477d43cac1ce9b2fe482ae8fb4f5f45f"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "method": "Info",
+      "command_rule": "INFO",
+      "go_key_arguments": [],
+      "source_path": "commands.go",
+      "source_file_sha256": "bab5c91ea3f3e86a8495049c5981499b393e40f5cc4f6a5a427c71d777590b6f",
+      "source_function_start": 15838,
+      "source_function_end": 16105,
+      "source_function_sha256": "293256ac417c0edecaa46356720c47dea81df50e18b3c5d1b2a9cd7d35bce243"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "method": "Ping",
+      "command_rule": "PING",
+      "go_key_arguments": [],
+      "source_path": "commands.go",
+      "source_file_sha256": "bab5c91ea3f3e86a8495049c5981499b393e40f5cc4f6a5a427c71d777590b6f",
+      "source_function_start": 12125,
+      "source_function_end": 12246,
+      "source_function_sha256": "bc7d1ff2c08f848101b5181ae2209bbbd8d9e9854eb4ea7659052fe5e975085d"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "method": "ClusterInfo",
+      "command_rule": "CLUSTER INFO",
+      "go_key_arguments": [],
+      "source_path": "cluster_commands.go",
+      "source_file_sha256": "c7e90b000baa8a0fe4ee599ebb306dddd3ae654bbf3fe66838a57fd80af0ae39",
+      "source_function_start": 3206,
+      "source_function_end": 3345,
+      "source_function_sha256": "57c97117604f25552e60635344faf099010b97888dcadee6cac61bc1b31bc559"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "method": "ClusterKeySlot",
+      "command_rule": "CLUSTER KEYSLOT",
+      "go_key_arguments": [],
+      "source_path": "cluster_commands.go",
+      "source_file_sha256": "c7e90b000baa8a0fe4ee599ebb306dddd3ae654bbf3fe66838a57fd80af0ae39",
+      "source_function_start": 3346,
+      "source_function_end": 3502,
+      "source_function_sha256": "34abe53594da20287bf3cb800f35b05d74918e8b02099b854cf9f01d140dbafa"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "method": "ClusterSlots",
+      "command_rule": "CLUSTER SLOTS",
+      "go_key_arguments": [],
+      "source_path": "cluster_commands.go",
+      "source_file_sha256": "c7e90b000baa8a0fe4ee599ebb306dddd3ae654bbf3fe66838a57fd80af0ae39",
+      "source_function_start": 1779,
+      "source_function_end": 1932,
+      "source_function_sha256": "83d506fb383d6636f3e006d5e4f8343b45f642de4b22a503edc1741677f751f6"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "method": "Publish",
+      "command_rule": "PUBLISH",
+      "go_key_arguments": [],
+      "source_path": "pubsub_commands.go",
+      "source_file_sha256": "34f4f1286408d099a046cccdb144f3a21bf23aa580355eebc3e4ed4e7ce43d93",
+      "source_function_start": 598,
+      "source_function_end": 774,
+      "source_function_sha256": "d5f5061d039de5a3ebdb5ac62d7c3373f0e0b1dd501b1d438711fc31291e25dd"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "method": "Do",
+      "command_rule": "explicit raw argv; no method-name guessing",
+      "go_key_arguments": "from admitted raw command metadata",
+      "source_path": "commands.go",
+      "source_file_sha256": "bab5c91ea3f3e86a8495049c5981499b393e40f5cc4f6a5a427c71d777590b6f",
+      "source_function_start": 12247,
+      "source_function_end": 12376,
+      "source_function_sha256": "a33c623023208a7979e1006e5607bf33ed584dd587508c0c777b1195f2c4452b"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "method": "Eval",
+      "command_rule": "EVAL",
+      "go_key_arguments": "explicit keys argument2 only",
+      "source_path": "scripting_commands.go",
+      "source_file_sha256": "3adf6b05435ec66902097be5f84eb000b30cc92e6b0ff9b48c2798378d6b05c0",
+      "source_function_start": 1467,
+      "source_function_end": 1621,
+      "source_function_sha256": "da7fc026e5a58bc4dda966c0552de62a2c253b828396c325c7208be2e014b2ce"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "method": "EvalSha",
+      "command_rule": "EVALSHA",
+      "go_key_arguments": "explicit keys argument2 only",
+      "source_path": "scripting_commands.go",
+      "source_file_sha256": "3adf6b05435ec66902097be5f84eb000b30cc92e6b0ff9b48c2798378d6b05c0",
+      "source_function_start": 1782,
+      "source_function_end": 1938,
+      "source_function_sha256": "f77e7e1f890e21b0d1804a1f2b39cd3543b03b93cf8cea161d0b189a41605c95"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "method": "FCall",
+      "command_rule": "FCALL",
+      "go_key_arguments": "explicit keys argument2 only",
+      "source_path": "scripting_commands.go",
+      "source_file_sha256": "3adf6b05435ec66902097be5f84eb000b30cc92e6b0ff9b48c2798378d6b05c0",
+      "source_function_start": 5730,
+      "source_function_end": 6000,
+      "source_function_sha256": "e72e05691b26c359d3509e85847a9ee54496f41cd2c6a585554fa39d7d6d44c3"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "method": "Subscribe",
+      "command_rule": "SUBSCRIBE; channels are not pinned Redis data-key specs",
+      "go_key_arguments": [],
+      "source_path": "redis.go",
+      "source_file_sha256": "38ca47393edbee88ea4de80ee6cfd70fd881f1d607795c24e6df72739ae87c50",
+      "source_function_start": 22866,
+      "source_function_end": 23051,
+      "source_function_sha256": "c234c64b11bad05308227df1b48c4c5a78720830ca7b4f6523e93aa558a63856"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "method": "Subscribe",
+      "command_rule": "SUBSCRIBE; channels are not pinned Redis data-key specs",
+      "go_key_arguments": [],
+      "source_path": "pubsub.go",
+      "source_file_sha256": "6acc26a29cc8cd6abe7f9e3adf62345613ab5aefd944b605f60a7d39d71e7b72",
+      "source_function_start": 4051,
+      "source_function_end": 4357,
+      "source_function_sha256": "8c0c02e66b6a92618388199aa8097c888d8e956437472a694fafd10375c50c65"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "method": "SAdd",
+      "command_rule": "SADD",
+      "go_key_arguments": [
+        1
+      ],
+      "source_path": "set_commands.go",
+      "source_file_sha256": "1fda966933b3172cb8b4f996a97d8dd294b5d687bf6ab1b811f2c23b0e54c447",
+      "source_function_start": 1585,
+      "source_function_end": 1852,
+      "source_function_sha256": "e5460dfe823b1ebe7e79f3ddcb137ef16ea6909f97c3c8c8056eb7429ae59f6e"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "method": "SMembers",
+      "command_rule": "SMEMBERS",
+      "go_key_arguments": [
+        1
+      ],
+      "source_path": "set_commands.go",
+      "source_file_sha256": "1fda966933b3172cb8b4f996a97d8dd294b5d687bf6ab1b811f2c23b0e54c447",
+      "source_function_start": 4055,
+      "source_function_end": 4211,
+      "source_function_sha256": "07352fb80eca18342a9f20c976ec7cd0e49fa8822e7bda63d8d070eeb0a18bb1"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "method": "SIsMember",
+      "command_rule": "SISMEMBER",
+      "go_key_arguments": [
+        1
+      ],
+      "source_path": "set_commands.go",
+      "source_file_sha256": "1fda966933b3172cb8b4f996a97d8dd294b5d687bf6ab1b811f2c23b0e54c447",
+      "source_function_start": 3464,
+      "source_function_end": 3636,
+      "source_function_sha256": "3b20796a4d2f27657338e4b8081324062fed9b1a76beb12ee6c81e97a39dd24e"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "method": "SRem",
+      "command_rule": "SREM",
+      "go_key_arguments": [
+        1
+      ],
+      "source_path": "set_commands.go",
+      "source_file_sha256": "1fda966933b3172cb8b4f996a97d8dd294b5d687bf6ab1b811f2c23b0e54c447",
+      "source_function_start": 5462,
+      "source_function_end": 5729,
+      "source_function_sha256": "f2aabde0a65cc91ecaa7491e7ce35addaa736bee447fdb49eb1aab5ffc6ce6f7"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "method": "ZAdd",
+      "command_rule": "ZADD",
+      "go_key_arguments": [
+        1
+      ],
+      "source_path": "sortedset_commands.go",
+      "source_file_sha256": "69d769ee0a6178c7428e94825677d27ff4a7c8b98d6e9010ba66cefb63bde25e",
+      "source_function_start": 6839,
+      "source_function_end": 6983,
+      "source_function_sha256": "aacc0b10a13e92fcd50775e8151cb9d516a7d05fab64a178619d1e87de8537b6"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "method": "ZAddXX",
+      "command_rule": "ZADD",
+      "go_key_arguments": [
+        1
+      ],
+      "source_path": "sortedset_commands.go",
+      "source_file_sha256": "69d769ee0a6178c7428e94825677d27ff4a7c8b98d6e9010ba66cefb63bde25e",
+      "source_function_start": 7760,
+      "source_function_end": 7923,
+      "source_function_sha256": "5ea747d8dc93393d2bda983ac92cffd8edc195b9ee393d41cb3b199d07fcbb89"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "method": "ZScore",
+      "command_rule": "ZSCORE",
+      "go_key_arguments": [
+        1
+      ],
+      "source_path": "sortedset_commands.go",
+      "source_file_sha256": "69d769ee0a6178c7428e94825677d27ff4a7c8b98d6e9010ba66cefb63bde25e",
+      "source_function_start": 19288,
+      "source_function_end": 19444,
+      "source_function_sha256": "c11d8fc44bcf8b1022b07e52723f707f5dc9996e5365664a9e03d810196475c4"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "method": "ZRem",
+      "command_rule": "ZREM",
+      "go_key_arguments": [
+        1
+      ],
+      "source_path": "sortedset_commands.go",
+      "source_file_sha256": "69d769ee0a6178c7428e94825677d27ff4a7c8b98d6e9010ba66cefb63bde25e",
+      "source_function_start": 16532,
+      "source_function_end": 16799,
+      "source_function_sha256": "e73cab0f88cdb2b5be38ec91e9e50c9a64cd38f0af8e37ec0805c9e423e14ddb"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "method": "ZRevRangeWithScores",
+      "command_rule": "ZREVRANGE",
+      "go_key_arguments": [
+        1
+      ],
+      "source_path": "sortedset_commands.go",
+      "source_file_sha256": "69d769ee0a6178c7428e94825677d27ff4a7c8b98d6e9010ba66cefb63bde25e",
+      "source_function_start": 17706,
+      "source_function_end": 17910,
+      "source_function_sha256": "6a4265abf40cff3775f37c0201782a4c22889e022c40ec4174a2cb33ece4af8c"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "method": "Del",
+      "command_rule": "DEL",
+      "go_key_arguments": "explicit arguments1..end; unresolved spread cardinality abstains",
+      "source_path": "generic_commands.go",
+      "source_file_sha256": "3a0d1306b2d5819b5cbcb3d01180ef0c564361afb0ab8c3a115ec1aee252fbee",
+      "source_function_start": 2586,
+      "source_function_end": 2825,
+      "source_function_sha256": "567b1881e971a75f854db4bbad569c7f0a48614c87c325981554b160de994e94"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "method": "HSet",
+      "command_rule": "HSET",
+      "go_key_arguments": [
+        1
+      ],
+      "source_path": "hash_commands.go",
+      "source_file_sha256": "d3e21c1f687cd56d551e18a0abc8d9866cd9f5167f405ecc19f95d7c79aaee5c",
+      "source_function_start": 6371,
+      "source_function_end": 6635,
+      "source_function_sha256": "5b8a6a283439e850dea89722a3aa70e0dcca6c0918f4ff79a7545f08cfb27918"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "method": "HVals",
+      "command_rule": "HVALS",
+      "go_key_arguments": [
+        1
+      ],
+      "source_path": "hash_commands.go",
+      "source_file_sha256": "d3e21c1f687cd56d551e18a0abc8d9866cd9f5167f405ecc19f95d7c79aaee5c",
+      "source_function_start": 7162,
+      "source_function_end": 7312,
+      "source_function_sha256": "5aacbfbcf825401104da44b6899db41f0dbeb044170717bfdceae9c17b00ec66"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "method": "Get",
+      "command_rule": "GET",
+      "go_key_arguments": [
+        1
+      ],
+      "source_path": "string_commands.go",
+      "source_file_sha256": "4283e1cf396a343ad8d89a5a9b2575ead0c898641ecf614525d65a4f39ae0d46",
+      "source_function_start": 5473,
+      "source_function_end": 5609,
+      "source_function_sha256": "f48e32ad4107411faeb34a2045dad372576c9570f7ee65a0c6fd55969c71cfa5"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "method": "Set",
+      "command_rule": "SET",
+      "go_key_arguments": [
+        1
+      ],
+      "source_path": "string_commands.go",
+      "source_file_sha256": "4283e1cf396a343ad8d89a5a9b2575ead0c898641ecf614525d65a4f39ae0d46",
+      "source_function_start": 11020,
+      "source_function_end": 11533,
+      "source_function_sha256": "ed4ad181110cb98aa730451d75318435e22b89180ecbdbe77c001b99b2eb2cf4"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "method": "SetNX",
+      "command_rule": "SETNX when expiration is literal0",
+      "go_key_arguments": [
+        1
+      ],
+      "source_path": "string_commands.go",
+      "source_file_sha256": "4283e1cf396a343ad8d89a5a9b2575ead0c898641ecf614525d65a4f39ae0d46",
+      "source_function_start": 14375,
+      "source_function_end": 14964,
+      "source_function_sha256": "4aa300132a27811e4c61fe5474a13a01d5933cd273c3ae2a557db3d7c935772a"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "method": "LRange",
+      "command_rule": "LRANGE",
+      "go_key_arguments": [
+        1
+      ],
+      "source_path": "list_commands.go",
+      "source_file_sha256": "1e7fab1dc8ac0e6e17ff75453259e08d18eb236fa0633fa03343dd313d6f2247",
+      "source_function_start": 6689,
+      "source_function_end": 6887,
+      "source_function_sha256": "cdb427dcaf85584bb359359b417e4318477d43cac1ce9b2fe482ae8fb4f5f45f"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "method": "Info",
+      "command_rule": "INFO",
+      "go_key_arguments": [],
+      "source_path": "commands.go",
+      "source_file_sha256": "0bfb213c6cd3411be34c745ecdcb788d4ade25f3912aebede6df8d600d635752",
+      "source_function_start": 16732,
+      "source_function_end": 16999,
+      "source_function_sha256": "293256ac417c0edecaa46356720c47dea81df50e18b3c5d1b2a9cd7d35bce243"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "method": "Ping",
+      "command_rule": "PING",
+      "go_key_arguments": [],
+      "source_path": "commands.go",
+      "source_file_sha256": "0bfb213c6cd3411be34c745ecdcb788d4ade25f3912aebede6df8d600d635752",
+      "source_function_start": 12416,
+      "source_function_end": 12537,
+      "source_function_sha256": "bc7d1ff2c08f848101b5181ae2209bbbd8d9e9854eb4ea7659052fe5e975085d"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "method": "ClusterInfo",
+      "command_rule": "CLUSTER INFO",
+      "go_key_arguments": [],
+      "source_path": "cluster_commands.go",
+      "source_file_sha256": "c7e90b000baa8a0fe4ee599ebb306dddd3ae654bbf3fe66838a57fd80af0ae39",
+      "source_function_start": 3206,
+      "source_function_end": 3345,
+      "source_function_sha256": "57c97117604f25552e60635344faf099010b97888dcadee6cac61bc1b31bc559"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "method": "ClusterKeySlot",
+      "command_rule": "CLUSTER KEYSLOT",
+      "go_key_arguments": [],
+      "source_path": "cluster_commands.go",
+      "source_file_sha256": "c7e90b000baa8a0fe4ee599ebb306dddd3ae654bbf3fe66838a57fd80af0ae39",
+      "source_function_start": 3346,
+      "source_function_end": 3502,
+      "source_function_sha256": "34abe53594da20287bf3cb800f35b05d74918e8b02099b854cf9f01d140dbafa"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "method": "ClusterSlots",
+      "command_rule": "CLUSTER SLOTS",
+      "go_key_arguments": [],
+      "source_path": "cluster_commands.go",
+      "source_file_sha256": "c7e90b000baa8a0fe4ee599ebb306dddd3ae654bbf3fe66838a57fd80af0ae39",
+      "source_function_start": 1779,
+      "source_function_end": 1932,
+      "source_function_sha256": "83d506fb383d6636f3e006d5e4f8343b45f642de4b22a503edc1741677f751f6"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "method": "Publish",
+      "command_rule": "PUBLISH",
+      "go_key_arguments": [],
+      "source_path": "pubsub_commands.go",
+      "source_file_sha256": "34f4f1286408d099a046cccdb144f3a21bf23aa580355eebc3e4ed4e7ce43d93",
+      "source_function_start": 598,
+      "source_function_end": 774,
+      "source_function_sha256": "d5f5061d039de5a3ebdb5ac62d7c3373f0e0b1dd501b1d438711fc31291e25dd"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "method": "Do",
+      "command_rule": "explicit raw argv; no method-name guessing",
+      "go_key_arguments": "from admitted raw command metadata",
+      "source_path": "commands.go",
+      "source_file_sha256": "0bfb213c6cd3411be34c745ecdcb788d4ade25f3912aebede6df8d600d635752",
+      "source_function_start": 12538,
+      "source_function_end": 12667,
+      "source_function_sha256": "a33c623023208a7979e1006e5607bf33ed584dd587508c0c777b1195f2c4452b"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "method": "Eval",
+      "command_rule": "EVAL",
+      "go_key_arguments": "explicit keys argument2 only",
+      "source_path": "scripting_commands.go",
+      "source_file_sha256": "3adf6b05435ec66902097be5f84eb000b30cc92e6b0ff9b48c2798378d6b05c0",
+      "source_function_start": 1467,
+      "source_function_end": 1621,
+      "source_function_sha256": "da7fc026e5a58bc4dda966c0552de62a2c253b828396c325c7208be2e014b2ce"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "method": "EvalSha",
+      "command_rule": "EVALSHA",
+      "go_key_arguments": "explicit keys argument2 only",
+      "source_path": "scripting_commands.go",
+      "source_file_sha256": "3adf6b05435ec66902097be5f84eb000b30cc92e6b0ff9b48c2798378d6b05c0",
+      "source_function_start": 1782,
+      "source_function_end": 1938,
+      "source_function_sha256": "f77e7e1f890e21b0d1804a1f2b39cd3543b03b93cf8cea161d0b189a41605c95"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "method": "FCall",
+      "command_rule": "FCALL",
+      "go_key_arguments": "explicit keys argument2 only",
+      "source_path": "scripting_commands.go",
+      "source_file_sha256": "3adf6b05435ec66902097be5f84eb000b30cc92e6b0ff9b48c2798378d6b05c0",
+      "source_function_start": 5730,
+      "source_function_end": 6000,
+      "source_function_sha256": "e72e05691b26c359d3509e85847a9ee54496f41cd2c6a585554fa39d7d6d44c3"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "method": "Subscribe",
+      "command_rule": "SUBSCRIBE; channels are not pinned Redis data-key specs",
+      "go_key_arguments": [],
+      "source_path": "redis.go",
+      "source_file_sha256": "0022d86b69dd4df93473861814015a1122be686aad646d0b32ab4beb9fcd0a13",
+      "source_function_start": 40452,
+      "source_function_end": 40637,
+      "source_function_sha256": "c234c64b11bad05308227df1b48c4c5a78720830ca7b4f6523e93aa558a63856"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "method": "Subscribe",
+      "command_rule": "SUBSCRIBE; channels are not pinned Redis data-key specs",
+      "go_key_arguments": [],
+      "source_path": "pubsub.go",
+      "source_file_sha256": "9fbcfccc86b8029fe1439683e9274acea91569201b807182d3fa87066d640436",
+      "source_function_start": 5114,
+      "source_function_end": 5420,
+      "source_function_sha256": "8c0c02e66b6a92618388199aa8097c888d8e956437472a694fafd10375c50c65"
+    }
+  ],
+  "conditional_rules": {
+    "Set": "SET prefix always; expiration only adds EX/PX/KEEPTTL, never GET. Resolve OW/UPDATE from pinned variable-flags note/public key-spec documentation. Unknown non-key data does not fabricate a concrete key.",
+    "SetNX": "This spike admits only literal expiration0 (SETNX). Other expiration branches remain opaque-helper rather than guess SET NX.",
+    "ZAddXX": "Verified wrapper calls ZAddArgs with XXtrue and caller Members; exact key stays arg1. Shared helper prepends ZADD, never shifts key.",
+    "Script.Run": "Excluded as opaque-helper: fallback EVALSHA/EVAL and script body are not an admitted explicit EVAL vector.",
+    "PubSub": "SUBSCRIBE/PUBLISH operands are channels, not keys; no key/resource/value-kind fact.",
+    "ClusterKeySlot": "Routing argument is not a key-spec usage in frozen metadata; no key existence fact."
+  },
+  "unlisted_methods": "unknown-client-adapter; no CamelCase-to-uppercase inference",
+  "script_passthrough": "Explicit Eval/EvalSha/FCall keys[] literal or same-file immutable array, fixed count and exact key spans only; emits PASSES_REDIS_KEY_TO_SCRIPT, suppresses generic metadata access/kind.",
+  "scope": "Source-derived prospective mapping; no client library imported/linked/executed, no Redis module implementation or metadata, no support beyond exact versioned method subset.",
+  "supporting_helper_witnesses": [
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "source_path": "sortedset_commands.go",
+      "helper": "ZAddArgs",
+      "start": 6412,
+      "end": 6583,
+      "sha256": "98f403781234ebbcc2017a46552d014f0c13b6045a1a6a78eda6eb9fed73e961"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "source_path": "sortedset_commands.go",
+      "helper": "zAddArgs",
+      "start": 5841,
+      "end": 6411,
+      "sha256": "662f34726e4e7d5964c1223d49c489997b7937d7065f9896cc5f93a1390d4429"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "source_path": "scripting_commands.go",
+      "helper": "eval",
+      "start": 2101,
+      "end": 2646,
+      "sha256": "4db37983d5fcf665fdde2ab31d00dec0a5e03f20205142ffa770af833dc1127a"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "source_path": "scripting_commands.go",
+      "helper": "fcallArgs",
+      "start": 6528,
+      "end": 6872,
+      "sha256": "fe0213e651ca87182545396b2d159be5efdbd0fb36c45a5265249eab79f84a84"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "source_path": "sortedset_commands.go",
+      "helper": "ZAddArgs",
+      "start": 6422,
+      "end": 6593,
+      "sha256": "98f403781234ebbcc2017a46552d014f0c13b6045a1a6a78eda6eb9fed73e961"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "source_path": "sortedset_commands.go",
+      "helper": "zAddArgs",
+      "start": 5851,
+      "end": 6421,
+      "sha256": "662f34726e4e7d5964c1223d49c489997b7937d7065f9896cc5f93a1390d4429"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "source_path": "scripting_commands.go",
+      "helper": "eval",
+      "start": 2101,
+      "end": 2646,
+      "sha256": "4db37983d5fcf665fdde2ab31d00dec0a5e03f20205142ffa770af833dc1127a"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "source_path": "scripting_commands.go",
+      "helper": "fcallArgs",
+      "start": 6528,
+      "end": 6872,
+      "sha256": "fe0213e651ca87182545396b2d159be5efdbd0fb36c45a5265249eab79f84a84"
+    }
+  ],
+  "receiver_type_witnesses": [
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "source_path": "universal.go",
+      "source_file_sha256": "5aaca355e019b3ae978bd7a319a2f64be06d374525173ed72a36aa1a722a0fc4",
+      "witness": "UniversalClient",
+      "start": 9166,
+      "end": 9613,
+      "sha256": "26dfc2f2d8610d5a8714261ba905ac44d21f35ace9e3ba4b0b229815d1c63821"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "source_path": "pipeline.go",
+      "source_file_sha256": "cd3f694e529936e86f39be6fe49137b1033fcb083d7cba5e8c218227043610ed",
+      "witness": "Pipeliner",
+      "start": 804,
+      "end": 1649,
+      "sha256": "c4d855047f56aa7d0490cadda75887f87dbb543640599e8cc1675dad5bde9c8e"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "source_path": "redis.go",
+      "source_file_sha256": "38ca47393edbee88ea4de80ee6cfd70fd881f1d607795c24e6df72739ae87c50",
+      "witness": "NewClient",
+      "start": 19891,
+      "end": 20131,
+      "sha256": "5b0657b4c91bd9cd013fb75daa11cbe3d803c95da4c8d217ed18ab694b58fccd"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "source_path": "redis.go",
+      "source_file_sha256": "38ca47393edbee88ea4de80ee6cfd70fd881f1d607795c24e6df72739ae87c50",
+      "witness": "Client.Pipeline",
+      "start": 21205,
+      "end": 21342,
+      "sha256": "8acbc41de22740f1bdad9371a1f0acbd35dc463842fb567cb86cda3c24ebc769"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "source_path": "universal.go",
+      "source_file_sha256": "17b6183a4a6100904e9a2c60ad29aa67c0126e93b1115b83139f43394717732b",
+      "witness": "UniversalClient",
+      "start": 9585,
+      "end": 10032,
+      "sha256": "26dfc2f2d8610d5a8714261ba905ac44d21f35ace9e3ba4b0b229815d1c63821"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "source_path": "pipeline.go",
+      "source_file_sha256": "cd3f694e529936e86f39be6fe49137b1033fcb083d7cba5e8c218227043610ed",
+      "witness": "Pipeliner",
+      "start": 804,
+      "end": 1649,
+      "sha256": "c4d855047f56aa7d0490cadda75887f87dbb543640599e8cc1675dad5bde9c8e"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "source_path": "redis.go",
+      "source_file_sha256": "0022d86b69dd4df93473861814015a1122be686aad646d0b32ab4beb9fcd0a13",
+      "witness": "NewClient",
+      "start": 32700,
+      "end": 35329,
+      "sha256": "6c9e63ba0c08614b61a38f7f8261d142b0f5f34cc7c21f7a8021c55ab75ef35a"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "source_path": "redis.go",
+      "source_file_sha256": "0022d86b69dd4df93473861814015a1122be686aad646d0b32ab4beb9fcd0a13",
+      "witness": "Client.Pipeline",
+      "start": 38316,
+      "end": 38453,
+      "sha256": "8acbc41de22740f1bdad9371a1f0acbd35dc463842fb567cb86cda3c24ebc769"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "source_path": "commands.go",
+      "source_file_sha256": "bab5c91ea3f3e86a8495049c5981499b393e40f5cc4f6a5a427c71d777590b6f",
+      "witness": "Cmdable.Pipeline",
+      "start": 3662,
+      "end": 6341,
+      "sha256": "021e1e6b06ade995a12d8e5b5a8eb37fa6c81c7dee0aa4659f2d63b52e247ad1"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "source_path": "commands.go",
+      "source_file_sha256": "0bfb213c6cd3411be34c745ecdcb788d4ade25f3912aebede6df8d600d635752",
+      "witness": "Cmdable.Pipeline",
+      "start": 3662,
+      "end": 6632,
+      "sha256": "3acdb21e162e78ba27ee988d4f9671afdf9b2d084e5fe601f2fabda2deefe75b"
+    }
+  ],
+  "receiver_binding_contract": {
+    "module": "Resolve the nearest committed go.mod by exact ancestor path before collecting package metadata. Require exactly one direct or indirect go-redis/v9 requirement equal to v9.14.1 or v9.17.2; missing/conflicting requirement, matching client replace directive, duplicate/malformed module metadata or cross-module lookup abstains. This reader interprets committed module declarations only; it neither resolves external go.work/vendor/environment overlays nor claims their runtime build selection. Source outside this explicit module recipe is not an admitted binding.",
+    "imports": "Resolve each file import spec by exact path. Default redis import spelling is admitted only for the exact fixed go-redis/v9 package; explicit aliases refer to that import object. Dot/blank imports, duplicate aliases, conflicting aliases, a lexical identifier shadowing the package name or any selected constructor receiver, and unknown package/type aliases abstain. Never infer package identity from a redis-like variable, suffix or module basename.",
+    "lexical_scope": "Create bounded lexical declaration identities for file/function/receiver/parameter/result/local/block/if/for/range/switch/case/function-literal scopes. Each selector root must resolve to its nearest declaration, not to a map keyed only by spelling. A shadowing unproved local invalidates its own uses even if an outer client binding exists. Unsupported scope/declaration shape abstains for affected sites.",
+    "writes": "A receiver/local constructor binding must have one declaration and one proof. Any assignment, increment/decrement, address escape, multiple definition or closure write to that lexical declaration anywhere in its containing function makes that binding unproved for the whole function, including uses before the write. Selector writes to the selected client field in that function likewise abstain. No control-flow ordering or runtime dynamic-type claim is inferred; local copying rc := c without an explicit admitted type/constructor is not an alias proof.",
+    "admitted_types": [
+      "*github.com/redis/go-redis/v9.Client",
+      "github.com/redis/go-redis/v9.UniversalClient",
+      "github.com/redis/go-redis/v9.Pipeliner"
+    ],
+    "constructors": "An immutable declaration initialized directly by exact imported redis.NewClient proves *redis.Client. A direct Pipeline() call on an already proved admitted client proves redis.Pipeliner through the exact Cmdable/UniversalClient/Client.Pipeline type witnesses. Other factory/helper/TxPipeline/returned-interface/assignment alias chains abstain. Arguments need no execution and do not establish a server connection.",
+    "fields": "Only direct named fields of one uniquely declared named same-package struct are admitted. Lookup key is (nearest module path,directory,package name,receiver named type,field name), with import identity resolved in the field declaration file. Require an exact method receiver or explicitly typed local/parameter of that struct; do not merge fields by name across types/packages. Duplicate type or field declarations, embedded/promoted fields, ambiguous build-tag variants, aliases, generic/unknown types or missing source files abstain. Non-test targets use all retained non-test Go files in the same directory/package without selecting host build tags; test targets add matching same-package test files, never external test packages.",
+    "metadata_cost": "One bounded source-order metadata pass, then bounded command pass. Index module ancestors/import objects/lexical declarations/struct fields once; total retained entries share retained_identity_records=16384, strings share retained_metadata_bytes=8388608, per module/package file lists bounded by archive_members=1024. Name lengths <=4096 bytes and scope depth <=64; exact indexed lookups with at most64 lexical/ancestor probes, no per-call corpus scan/reparse/hash. Overflow refuses atomically as resource-limit; uncertainty uses unknown-client-adapter.",
+    "type_intent_limit": "An admitted static go-redis interface/type identifies the source API contract only, never a deployed concrete client, network connection, actual command execution or dynamic implementation."
+  }
+}

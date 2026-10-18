@@ -1,0 +1,21 @@
+{
+  "records": [
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "path": "licenses/go-redis-v9.14.1-LICENSE",
+      "bytes": 1318,
+      "sha256": "a3a7dff87da3927db65cb4c87b1cfbc96ca2755704461a485d457be7ae300a86",
+      "license": "BSD-2-Clause; reviewed before dependency client source; not Redis module server implementation/metadata"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "path": "licenses/go-redis-v9.17.2-LICENSE",
+      "bytes": 1318,
+      "sha256": "a3a7dff87da3927db65cb4c87b1cfbc96ca2755704461a485d457be7ae300a86",
+      "license": "BSD-2-Clause; reviewed before dependency client source; not Redis module server implementation/metadata"
+    }
+  ],
+  "recognizer_runs": 0
+}

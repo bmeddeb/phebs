@@ -1,0 +1,30 @@
+{
+  "format": "t281-prospective-peer-correction-record-v1",
+  "date": "2026-10-18",
+  "recognizer_runs": 0,
+  "old_preregistration_sha256": "85c3ac8a8e6b1e2b963f97cf7b77b3ef45d27e404d1017fa925561cf714fc770",
+  "before_archive": {
+    "path": "preparation/source-draft-contracts-85c3ac8a.tar.gz",
+    "bytes": 30422,
+    "sha256": "ef2cd9219b7ef2e654a99a534f21e8474fa0909e37066cf25e3c75b960b12325"
+  },
+  "unchanged_initial_artifact_count": 67,
+  "unchanged_public_sources_labels_denominators": true,
+  "unchanged_original_control_sources_and_expectations": 43,
+  "new_control_sources": 17,
+  "new_total_control_sources": 60,
+  "source_only_changes": [
+    "Closed lexical/import/nearest-module/ambiguous-field/writes receiver contract and one-pass bounded metadata lookup",
+    "All37 existing API sites re-reviewed from source with no public label correction",
+    "Exact client interface/constructor return witnesses,2 additional core-client source URL receipts under existing BSD2 license",
+    "Closed FT FLAT/FLOAT32 mandatory options, count/enum/range/duplicate/trailing atomicity; TS avg/sum/retention/labels/bucket subset",
+    "New controls and bounds fixed prospectively, no outcome consultation"
+  ],
+  "not_run": [
+    "Go/Redis/ACL reader or parser",
+    "candidate recognizer/extractor/scorer",
+    "native workload or tests",
+    "application/client/Redis connection or script"
+  ],
+  "qualification": "This is a before-outcome source contract correction. Original draft bytes remain reconstructable from the before archive plus unchanged initial artifacts; no quality, adoption or vendor validation claimed."
+}

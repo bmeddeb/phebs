@@ -12286,3 +12286,28 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   The isolated spike registers no production pack and adds no request, startup,
   sync, retry/no-op, publication, shared lock, cache, worker, schema, persistent
   data or child work. Preparation is bounded one-shot source/hash I/O only.
+
+- **2026-10-18 — T28.1 bounded Redis source-reader contract (Ben-routed Mac handoff).**
+  Accept the source-reviewed decision table and preregistration SHA256
+  `ad9f09d50f77a789dd5e9287ae8194ace2ca0d0937d2ac1e764656710893c518`:
+  seven complete purposive files contain99 independently labelled sites,
+  including37 exact-version core APIs,52 opaque script wrappers,8 unsupported
+  client-version sites and2 unproved extension wrappers. Thirty key expressions
+  have no proved spelling; mode/kind opportunities and unknowns stay separate.
+  Three ACL files supply7 principal/pattern pairs; credentials never become
+  facts or citations. Exact lexical/module/import/type/field identity and write,
+  shadow, escape and ambiguity refusals precede API admission. One bounded
+  metadata pass shares16,384 identities/8MiB, then indexed lookups use at most64
+  scope/ancestor probes. No SSA, client execution or server connection is added.
+  Native FT/TS evidence uses the closed engineering subset in
+  `spike/t281/native-subset.json`; complete vectors validate atomically before
+  any catalog delta. Core Redis7.2.15 metadata remains authoritative; unsupported
+  module/client/version cases abstain. Sixty inert controls plus2 admission
+  controls remain separate from public quality. Preserve the earlier source-only
+  draft in its exact archive; neither correction changes public labels or the43
+  original controls. Isolated implementation/scoring must bind its source before
+  first outcome, retain failures and compare two fresh bounded joined passes.
+  No production reader/pack, manifest adoption, quality or operating result is
+  granted. Runtime request/sync/startup/retry/publication/lock/cache/schema costs
+  remain unchanged; only the isolated finite source pass gains bounded parsing
+  and output work under the recorded30-second/1GiB-observed-RSS envelope.
