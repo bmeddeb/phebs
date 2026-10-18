@@ -81,6 +81,13 @@ def sign_selection(root, binding):
         private.unlink(missing_ok=True)
 
 
+def verify_source_branch(git, path):
+    # Generic live Git sync requires a symbolic default branch; keep the same
+    # branch in both origins so incremental mirror fetch advances HEAD.
+    score.require(qualify.command([git, "symbolic-ref", "--short", "HEAD"], cwd=path).strip() == "input",
+                  "field live source needs the frozen input branch")
+
+
 class FieldMatrix(shared.Matrix):
     """Reuse reviewed HTTP, owned lifecycle, atomic rewrite, MCP and sampler."""
     def __init__(self, root, binding, plan, population, labels, contents, transition, names):
@@ -311,6 +318,8 @@ def execute(args):
     changed = next(f for f in changed_files if f["path"] == transition["path"])
     changed.update(git_blob=transition["new_git_blob"], bytes=changed["bytes"] + len(transition["appended_utf8"].encode()))
     censuses.append(shared.verify_input_repository(binding["tools"]["git"]["path"], transition["local_path"], transition["transition_commit"], transition["transition_tree"], changed_files))
+    for path in (plan["population"]["base_local_path"], transition["local_path"]):
+        verify_source_branch(binding["tools"]["git"]["path"], path)
     os.umask(0o077)
     args.run_root.mkdir(parents=True)
     host = shared.serve.receipts.host_facts()

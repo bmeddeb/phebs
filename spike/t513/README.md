@@ -77,3 +77,13 @@ five bounded selected metadata reads per publication and the existing sampler.
 No corpus/shard scan/reparse/hash occurs per product request because of this
 change. The client does hash its tiny retained public bytes while checking each
 returned atom; those validation costs are not attributed to the product.
+
+The first native result.json stops at the90-second publication deadline with
+no admitted repository scope; it is not a quality or operating PASS. The exact
+Git-only reproduction in git-ref-diagnosis.json identifies a detached default
+branch that generic sync refuses before repository publication. Original server
+logs were deleted, so no retained log cause is asserted. The prospective live
+origin correction changes refs/HEAD only, keeps both frozen commits/trees/file
+bytes exact and adds symbolic-HEAD admission before any new native launch.
+source-branch-review.json records independent review. New attempts use distinct
+roots/results and preserve first-execution-binding.json and the first stop.

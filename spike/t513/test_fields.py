@@ -41,6 +41,16 @@ def projection(value):
 
 
 class FieldHarnessTests(unittest.TestCase):
+    def test_live_source_default_branch_must_be_input(self):
+        for branch in ("input\n", "other\n"):
+            with patch.object(harness.qualify, "command", return_value=branch) as command:
+                if branch.startswith("input"):
+                    harness.verify_source_branch("git", "bound-source")
+                else:
+                    with self.assertRaises(score.Mismatch):
+                        harness.verify_source_branch("git", "bound-source")
+                command.assert_called_once_with(["git", "symbolic-ref", "--short", "HEAD"], cwd="bound-source")
+
     def test_exact_frozen_source_labels_and_transitions(self):
         plan, population, labels, files, contents, transition, names = fields.frozen()
         self.assertEqual(len(labels), 70)

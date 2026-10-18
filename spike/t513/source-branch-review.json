@@ -1,0 +1,11 @@
+{
+  "schema": "phebs-t513-source-branch-review-v1",
+  "date": "2026-10-18",
+  "first_stop_sha256": "7d328e8fc5e8fc748ff88011ed344b037fa078dab790ded71ffad846bdfd6ef0",
+  "outcome": "stopped_no_retry at90s publication deadline/98.7727s total; no field quality or operating PASS.",
+  "diagnosis": "Exact Git-only mirror reproduces detached default-branch lookup failure before syncGeneric UpsertRepo. Original server logs were deleted, so no retained server log cause is asserted.",
+  "correction": "Prospectively make live origins expose refs/heads/input at the same frozen commits; retain old transition ref. Exact commit/tree/eight-file census precedes two symbolic-HEAD preflights before launch.",
+  "source_review": "Root and independent receipt_portability source/authority/cost review clean;14pure/mock controls pass.",
+  "unchanged": "Source/index/labels/thresholds/binary/limits and first stop remain byte-exact.",
+  "cost": "Two bounded joined Git symbolic-ref commands in preparation; no production request/sync/startup/publication cost."
+}

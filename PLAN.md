@@ -13043,3 +13043,18 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   read counters or product operating costs. Immutable source/tool/helper/harness
   binding and the serial native slot precede execution. Quality/operating result,
   release artifacts and existing-key production signing remain separate.
+
+- **2026-10-18 — T51.3 live-origin branch admission correction.** Preserve the
+  first98.7727s stop: its90s field publication deadline expired with zero
+  repository scope, clean server exit0 and all samplers/children joined.
+  Git-only clone--mirror reproduces a detached HEAD for the frozen base origin;
+  generic sync reads its symbolic default branch before UpsertRepo and refuses.
+  Original server logs were removed, so this does not invent a retained log
+  attribution. Prospectively expose the same input branch in base/transition
+  origins at their unchanged frozen commits, preserving source/index/label
+  bytes and the old transition ref. Require exact commit/tree/file census and
+  two symbolic-HEAD preflights before a new native root. Root and independent
+  source/cost review plus14 pure/mock controls pass. Two bounded preparation
+  Git reads add no production cost. Keep all original thresholds/180s bounds,
+  first binding/result and production-signing hold; no failed attempt becomes
+  a PASS and no field quality or operating result is inferred.
