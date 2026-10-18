@@ -13021,3 +13021,25 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   validation timer/socket/observer/client work, no production request, sync,
   startup/restart, retry/no-op, publication, lock, cache, schema or child class.
   Operating/quality/UI/publication results and production signing remain open.
+
+- **2026-10-18 — T51.3 finite field harness admission (Ben-routed Mac handoff).**
+  Accept source-reviewed spike/t513 harness bytes in harness-review.json for
+  one ordinary field-only disposable signed integration selection at exact
+  clean8a70 source/binary. Reuse the already reviewed T503 joined lifecycle,
+  bounded HTTP/MCP, sampler and atomic private URL rewrite without a second
+  engine. Check the unchanged14 public references/56 negatives, generated rows
+  separately, all11 objects over both whole-proof transports, MCP partial and
+  withheld semantics, exact immutable source bytes and old-proof custody.
+  One comment-only publication and one withdrawal restart stay under the
+  original180s wall through joined teardown, fixed request/memory/disk bounds
+  and finite1/4/8-client batches. Twelve source/mock controls plus a prospective
+  joined-failure-retention correction's tempdir controls pass13 checks. Root
+  source/security/authority/cost review is clear. Before any field outcome,
+  retain actual bounded response evidence on a stop while deleting auth/key,
+  configuration, data and server scratch only after exact joins; success removes
+  all scratch. No production code, worker, lock, cache, schema or child class is
+  added. Client validation copies/checks bounded returned facts and performs
+  two full source requests per unique consumer blob/phase; these are not range
+  read counters or product operating costs. Immutable source/tool/helper/harness
+  binding and the serial native slot precede execution. Quality/operating result,
+  release artifacts and existing-key production signing remain separate.
