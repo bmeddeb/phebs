@@ -13058,3 +13058,16 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Git reads add no production cost. Keep all original thresholds/180s bounds,
   first binding/result and production-signing hold; no failed attempt becomes
   a PASS and no field quality or operating result is inferred.
+
+- **2026-10-18 — T51.3 bounded operating harness integration checkpoint
+  (Ben-routed Mac handoff).** The reviewed field harness reuses T50.3 joined
+  ownership/HTTP/sampling and retains immutable-proof/MCP/source semantics.
+  Fourteen pure/mock controls pass. Preserve the98.772724833s detached-origin
+  stop and reviewed live-ref-only correction at unchanged source/index commits.
+  Its one corrected-origin run stops8.692433292s on actual discovery HTTP500,
+  now repaired in T51.3a/PR101; clean server/observer/sampler joins and secret/
+  data removal are retained. Integrate this reusable reviewed source/receipt
+  lineage before independent Thrift/Impact qualification. No test accepts500
+  or invents empty evidence. A fresh source/UI/binary binding precedes the next
+  bounded run. No overall operating, production signature or scale result is
+  claimed; no new production serving, sync, lock/cache/schema or worker cost.

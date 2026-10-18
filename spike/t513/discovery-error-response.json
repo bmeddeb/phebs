@@ -1,0 +1,1 @@
+{"$schema":"http://127.0.0.1:49944/schemas/ErrorModel.json","title":"Internal Server Error","status":500,"detail":"build extraction coverage","errors":[{"message":"latest published run for \"evaluation.local/t511-public\"/\"scip-proto-field\": latest published run: commit is not valid bounded UTF-8"}]}
