@@ -1,0 +1,46 @@
+{
+  "base": {
+    "chunks": 161,
+    "raw": 6768940,
+    "gzip": 1997901,
+    "settings": [
+      {
+        "path": "SettingsPage-DqDtdaSY.js",
+        "raw": 27392,
+        "gzip": 8095
+      }
+    ],
+    "entry": [
+      {
+        "path": "index-bwsalTON.js",
+        "raw": 347438,
+        "gzip": 98882
+      }
+    ]
+  },
+  "candidate": {
+    "chunks": 161,
+    "raw": 6769506,
+    "gzip": 1998122,
+    "settings": [
+      {
+        "path": "SettingsPage-DW-FAK7A.js",
+        "raw": 27958,
+        "gzip": 8208
+      }
+    ],
+    "entry": [
+      {
+        "path": "index-ZAfeP5XZ.js",
+        "raw": 347438,
+        "gzip": 98884
+      }
+    ]
+  },
+  "delta": {
+    "chunks": 0,
+    "raw": 566,
+    "gzip": 221
+  },
+  "new_dependencies": false
+}

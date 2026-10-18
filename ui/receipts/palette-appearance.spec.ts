@@ -82,6 +82,8 @@ async function prepare(page: Page, width: typeof widths[number], theme: typeof T
     await expect.poll(f.pending).toBe(0)
     await expect(page.getByRole('region', { name: 'Code navigation indexing' })).toHaveCount(0)
     await expect(page.locator('vite-error-overlay')).toHaveCount(0)
+    await expect(appearance.getByRole('status')).toHaveCount(0)
+    await expect(appearance.getByRole('button', { name: 'Reload page' })).toHaveCount(0)
   }
   await ready(DEFAULT_PALETTE)
   const readyMillis = Date.now() - navigationStart
@@ -158,5 +160,76 @@ for (const width of widths) {
     expect(f.unexpected).toEqual([])
     expect(f.errors).toEqual([])
     console.log(JSON.stringify({ width, paletteChanges: PALETTE_NAMES, fixtureInteractionMillis: interactionMillis, persistenceReload: true, refusedStoredValues: ['unknown-neutral-palette', '__proto__'] }))
+  })
+}
+
+for (const theme of THEMES) for (const width of widths) {
+  test(`native Appearance unavailable recovery ${theme} ${width}`, async ({ page }, testInfo) => {
+    const f = await prepare(page, width, theme, 'comfortable')
+    const url = page.url()
+    const failedScripts: string[] = []
+    const messages: { type: string; text: string; url: string }[] = []
+    page.on('console', message => {
+      if (message.type() === 'error' || message.type() === 'warning') {
+        messages.push({ type: message.type(), text: message.text(), url: message.location().url })
+      }
+    })
+    const pattern = '**/assets/highlight-*.js'
+    await page.route(pattern, async route => {
+      failedScripts.push(route.request().url())
+      await route.fulfill({ status: 503, contentType: 'application/javascript', body: '/* deliberate receipt-only module failure */' })
+    })
+    await page.reload()
+    const status = f.appearance.getByRole('status')
+    const reload = f.appearance.getByRole('button', { name: 'Reload page', exact: true })
+    await expect(status).toHaveText('Preview unavailable.')
+    await expect(f.appearance.locator('pre')).toHaveJSProperty('textContent', specimenText)
+    await expect(f.appearance.locator('pre')).not.toHaveAttribute('data-palette-ready', 'true')
+    await expect(page.getByText('No API keys.', { exact: true })).toBeVisible()
+    await expect.poll(f.pending).toBe(0)
+    await expect(page).toHaveTitle('phebs · Settings')
+    await expect(page).toHaveURL(url)
+    const requests = [...f.requests]
+    for (let tab = 0; tab < 24; tab++) {
+      await page.keyboard.press('Tab')
+      if (await f.select.evaluate(node => node === document.activeElement)) break
+    }
+    await expect(f.select).toBeFocused()
+    await page.keyboard.press('q')
+    await expect(f.select).toHaveValue('quiet')
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('phebs-palette'))).toBe('quiet')
+    await expect(status).toBeVisible()
+    expect(f.requests).toEqual(requests)
+    await page.evaluate(() => document.fonts.ready)
+    const clearance = await scrollBelowHeader(f.appearance)
+    expect(await f.appearance.evaluate((node, top) => {
+      const bounds = node.getBoundingClientRect()
+      return bounds.top >= top && bounds.bottom <= innerHeight - 12 && bounds.left >= 0 && bounds.right <= innerWidth
+    }, clearance)).toBe(true)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    expect((await reload.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+    const capture = testInfo.outputPath(`palette-preview-unavailable--${theme}--${width}.png`)
+    await page.screenshot({ path: capture, fullPage: false, animations: 'disabled', caret: 'hide' })
+    await testInfo.attach('unavailable-preview-frame', { path: capture, contentType: 'image/png' })
+    await page.unroute(pattern)
+    await page.keyboard.press('Tab')
+    await expect(reload).toBeFocused()
+    expect(await reload.evaluate(node => node.matches(':focus-visible'))).toBe(true)
+    await Promise.all([page.waitForEvent('domcontentloaded'), page.keyboard.press('Enter')])
+    await f.ready('quiet')
+    await expect(status).toHaveCount(0)
+    await expect(reload).toHaveCount(0)
+    await expect(page).toHaveURL(url)
+    expect(f.unexpected).toEqual([])
+    expect(failedScripts.length).toBeGreaterThan(0)
+    expect(failedScripts.length).toBeLessThanOrEqual(2)
+    expect(messages.length).toBe(failedScripts.length)
+    for (const message of messages) {
+      expect(message.type).toBe('error')
+      expect(message.text).toMatch(/^Failed to load resource:.*503/)
+      expect(failedScripts).toContain(message.url)
+    }
+    expect(f.errors).toEqual(messages.map(message => message.text))
+    console.log(JSON.stringify({ width, theme, failedScripts, expectedFaultConsole: messages, reloadPreservedPalette: 'quiet', recovery: true }))
   })
 }

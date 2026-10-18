@@ -1,0 +1,64 @@
+{
+  "source_checkpoint": "a40a4e6d0149b18c35822821500e8e146f54636f",
+  "renderer": "Chrome/155.0.8059.82",
+  "frames": [
+    {
+      "name": "palette-appearance--light--1280--comfortable.png",
+      "previous_path": "spike/t442/appearance-receipts/receipts/author/output/palette.native-native-Appe-e2dd6-rame-light-1280-comfortable-appearance/palette-appearance--light--1280--comfortable.png",
+      "previous_sha256": "ed8f821b828b31965dcc1563d8e479a27730489b9bfea68698de3bef49d9588f",
+      "candidate_sha256": "ed8f821b828b31965dcc1563d8e479a27730489b9bfea68698de3bef49d9588f",
+      "bytes_equal": true
+    },
+    {
+      "name": "palette-appearance--dark--1280--comfortable.png",
+      "previous_path": "spike/t442/appearance-receipts/receipts/author/output/palette.native-native-Appearance-frame-dark-1280-comfortable-appearance/palette-appearance--dark--1280--comfortable.png",
+      "previous_sha256": "a21f47181ece76fb35325ec4389bb927b7cfb16eeb1b8f4e874df0655c404787",
+      "candidate_sha256": "a21f47181ece76fb35325ec4389bb927b7cfb16eeb1b8f4e874df0655c404787",
+      "bytes_equal": true
+    },
+    {
+      "name": "palette-appearance--dark--1280--dense.png",
+      "previous_path": "spike/t442/appearance-receipts/receipts/author/output/palette.native-native-Appearance-frame-dark-1280-dense-appearance/palette-appearance--dark--1280--dense.png",
+      "previous_sha256": "09cedf41a26ad0bb2815ef0e6bd8cc0a04152c9f7c4e74e4a4a3dbe714b4f828",
+      "candidate_sha256": "09cedf41a26ad0bb2815ef0e6bd8cc0a04152c9f7c4e74e4a4a3dbe714b4f828",
+      "bytes_equal": true
+    },
+    {
+      "name": "palette-appearance--dark--390--comfortable.png",
+      "previous_path": "spike/t442/appearance-receipts/receipts/author/output/palette.native-native-Appearance-frame-dark-390-comfortable-appearance/palette-appearance--dark--390--comfortable.png",
+      "previous_sha256": "6dde4963f260b67ff008c7677713de3415c09468d1f58d71bebb56a441d16430",
+      "candidate_sha256": "6dde4963f260b67ff008c7677713de3415c09468d1f58d71bebb56a441d16430",
+      "bytes_equal": true
+    },
+    {
+      "name": "palette-appearance--dark--390--dense.png",
+      "previous_path": "spike/t442/appearance-receipts/receipts/author/output/palette.native-native-Appearance-frame-dark-390-dense-appearance/palette-appearance--dark--390--dense.png",
+      "previous_sha256": "aea775396f24ce32054e5bdcc1dddb072cd209c24215a154ae56301b33be918c",
+      "candidate_sha256": "aea775396f24ce32054e5bdcc1dddb072cd209c24215a154ae56301b33be918c",
+      "bytes_equal": true
+    },
+    {
+      "name": "palette-appearance--light--1280--dense.png",
+      "previous_path": "spike/t442/appearance-receipts/receipts/author/output/palette.native-native-Appearance-frame-light-1280-dense-appearance/palette-appearance--light--1280--dense.png",
+      "previous_sha256": "712b9fea712f209f752d7f000cdca840846dfc7c1b168e1a8954544e04c43dd4",
+      "candidate_sha256": "712b9fea712f209f752d7f000cdca840846dfc7c1b168e1a8954544e04c43dd4",
+      "bytes_equal": true
+    },
+    {
+      "name": "palette-appearance--light--390--comfortable.png",
+      "previous_path": "spike/t442/appearance-receipts/receipts/author/output/palette.native-native-Appearance-frame-light-390-comfortable-appearance/palette-appearance--light--390--comfortable.png",
+      "previous_sha256": "672a914a7f24bd60f5aadcbfc4dfbac5b801293e763315eb60c54c9f87bd7845",
+      "candidate_sha256": "672a914a7f24bd60f5aadcbfc4dfbac5b801293e763315eb60c54c9f87bd7845",
+      "bytes_equal": true
+    },
+    {
+      "name": "palette-appearance--light--390--dense.png",
+      "previous_path": "spike/t442/appearance-receipts/receipts/author/output/palette.native-native-Appearance-frame-light-390-dense-appearance/palette-appearance--light--390--dense.png",
+      "previous_sha256": "7bed10f75834dbca84bd781de30c245cb167955fee4123a2b327fdd717e6b0ef",
+      "candidate_sha256": "7bed10f75834dbca84bd781de30c245cb167955fee4123a2b327fdd717e6b0ef",
+      "bytes_equal": true
+    }
+  ],
+  "all_bytes_equal": true,
+  "canonical_baselines_changed": 0
+}

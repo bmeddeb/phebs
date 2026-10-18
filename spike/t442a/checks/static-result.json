@@ -1,0 +1,75 @@
+{
+  "runs": [
+    {
+      "name": "receipt-types",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "node_modules/typescript/bin/tsc",
+        "--ignoreConfig",
+        "--noEmit",
+        "--strict",
+        "--skipLibCheck",
+        "--target",
+        "es2023",
+        "--lib",
+        "es2023,dom,dom.iterable",
+        "--module",
+        "esnext",
+        "--moduleResolution",
+        "bundler",
+        "--types",
+        "node",
+        "--jsx",
+        "react-jsx",
+        "--allowImportingTsExtensions",
+        "receipts/palette-appearance.spec.ts"
+      ],
+      "limit_seconds": 60,
+      "expected_exit": 0,
+      "pid": 28126,
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "already_exited",
+      "joined": true,
+      "seconds_including_join": 0.7162892080000001,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "lint",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "node_modules/oxlint/bin/oxlint",
+        "src/pages/SettingsPage.tsx",
+        "src/pages/SettingsPage.test.tsx",
+        "receipts/palette-appearance.spec.ts"
+      ],
+      "limit_seconds": 30,
+      "expected_exit": 0,
+      "pid": 28127,
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "already_exited",
+      "joined": true,
+      "seconds_including_join": 0.07761529199999995,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "build",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/npm",
+        "run",
+        "build"
+      ],
+      "limit_seconds": 120,
+      "expected_exit": 0,
+      "pid": 28130,
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "already_exited",
+      "joined": true,
+      "seconds_including_join": 4.11152625,
+      "log_sha256": "71475e830f736ec2626a9c29a9d01cd1d129cf429b72b7055cab9987759de51c"
+    }
+  ],
+  "failed": false
+}

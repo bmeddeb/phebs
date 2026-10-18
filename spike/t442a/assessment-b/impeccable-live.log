@@ -1,0 +1,7 @@
+
+Impeccable live server running on http://localhost:65348
+Token: 86fee195-301c-4377-91af-2bdc247cb1f6
+
+Script: http://localhost:65348/live.js
+Inject: managed by impeccable live-inject; Astro source tags use is:inline automatically.
+Stop:   impeccable live-server stop

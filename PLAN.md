@@ -13868,3 +13868,25 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   existing fixed residue/catalog, byte-walk and store/cursor work. No full
   package/race matrix, Linux #124 acceptance, pressure/restore/whole-phase,
   readiness, freeze/ceremony, scale, SLO or production-signing gate follows.
+
+- **2026-10-18 — T44.2a explicit Appearance preview recovery (Mac track).**
+  A failed lazy language import or tokenizer keeps the four-line plain specimen
+  and announces `Preview unavailable.` with an explicit `Reload page` action.
+  The failure shares the existing exact mode/palette identity and disposed-effect
+  fence, so a late rejected promise cannot replace the current presentation.
+  Full-page reload is deliberate: the language loader caches a rejected promise,
+  making a local rerender an unreliable retry. No raw diagnostic is displayed.
+  Browser-local palette persistence survives; in-memory Settings edits and a
+  newly displayed API token do not. The owning guide names that reload effect.
+  One bounded state update/status/action is added only on failure; the existing
+  four-line tokenization and lazy imports remain the work per mounted specimen
+  and palette/theme change. There is no automatic retry, timer, API request,
+  sync tick, publication transition, schema/store, lock, new cache, corpus scan,
+  disk write, Worker or child process. A user-requested reload repeats ordinary
+  application/Settings startup reads. Bundled JavaScript adds 566 raw/221
+  individually deterministic-gzip bytes, all in existing chunks; Settings is
+  +566/+113 and the initial entry is +0/+2. No dependency or chunk is added.
+  Bounded presentation-only fixtures exercise the failure with a deliberate
+  HTTP503 and distinguish that expected browser resource error from unexpected
+  console/page errors. Historical canonical pixels and #124's Linux obligations
+  remain exact; production signing remains pending.

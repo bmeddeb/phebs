@@ -1,0 +1,402 @@
+{
+  "schema": "phebs-t442-native-qa-v1",
+  "pass": "fresh",
+  "outcome": "passed",
+  "source_checkpoint": "a40a4e6d0149b18c35822821500e8e146f54636f",
+  "scroll_helper_sha256": "1207f1a353b3425ba308bec6806b79326a36f717c4103aac0d0be02fdc308c37",
+  "native_renderer_claim": "Darwin installed Chrome only; no Noble baseline equivalence",
+  "commands": [
+    {
+      "name": "vite",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "/Users/ben/.codex/worktrees/t442a-preview-recovery/phebs.com/ui/node_modules/vite/bin/vite.js",
+        "preview",
+        "/Users/ben/.codex/worktrees/t442a-preview-recovery/phebs.com/ui",
+        "--outDir",
+        "/Users/ben/.codex/worktrees/t442a-preview-recovery/phebs.com/ui/dist",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "64397",
+        "--strictPort"
+      ]
+    },
+    {
+      "name": "chrome",
+      "argv": [
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "--headless=new",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--disable-background-networking",
+        "--disable-component-update",
+        "--disable-sync",
+        "--remote-debugging-address=127.0.0.1",
+        "--remote-debugging-port=0",
+        "--user-data-dir=/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/fresh/private-chrome-profile",
+        "about:blank"
+      ]
+    },
+    {
+      "name": "client",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "/Users/ben/.codex/worktrees/t442a-preview-recovery/phebs.com/ui/node_modules/@playwright/test/cli.js",
+        "test",
+        "--config",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/runner/playwright.config.ts",
+        "--project",
+        "appearance",
+        "--max-failures=1",
+        "--grep",
+        "native Appearance"
+      ]
+    }
+  ],
+  "terminals": {
+    "client": {
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "already_exited",
+      "pid": 30064,
+      "expected_pgid": 30064,
+      "observed_pgid": 30064,
+      "joined": true
+    },
+    "chrome": {
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "sigterm",
+      "pid": 30045,
+      "expected_pgid": 30045,
+      "observed_pgid": 30045,
+      "joined": true
+    },
+    "vite": {
+      "exit_code": 143,
+      "teardown": "clean",
+      "termination_mode": "sigterm",
+      "pid": 30044,
+      "expected_pgid": 30044,
+      "observed_pgid": 30044,
+      "joined": true
+    }
+  },
+  "owners": {
+    "vite": {
+      "pid": 30044,
+      "expected_pgid": 30044,
+      "observed_pgid": 30044
+    },
+    "chrome": {
+      "pid": 30045,
+      "expected_pgid": 30045,
+      "observed_pgid": 30045
+    },
+    "client": {
+      "pid": 30064,
+      "expected_pgid": 30064,
+      "observed_pgid": 30064
+    }
+  },
+  "verified_census": {
+    "production_inputs": {
+      "rows": 118,
+      "digest": "09a1fd1d2bbf6735d13bf394a26a07baa9437dfeb697be9b62fb0377d38a64db"
+    },
+    "production_dist": {
+      "rows": 165,
+      "digest": "cf31b3397ab481812df93e63a68c872c1eb83e86c6c6b9a0ceae46134fec1343"
+    }
+  },
+  "tools": {
+    "node": {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+      "sha256": "ee6fb0e015284d83a91e8ec5213f43a157f8a392b58555301682892ba928c04a"
+    },
+    "chrome_launcher": {
+      "path": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "sha256": "3972431aa8acff4e590998116c6c3e663e9a4d0eb6efd08fd160df8206db94a6"
+    },
+    "axe": {
+      "path": "/Users/ben/phebs.com/ui/node_modules/axe-core/axe.min.js",
+      "sha256": "66a8aaa95a8b044a7fd74a5435873bf04ff65a1ca75567c921b7509742085a14",
+      "version": "4.12.1"
+    },
+    "playwright": "1.62.1"
+  },
+  "started_monotonic": 0.313814583,
+  "renderer": {
+    "Browser": "Chrome/155.0.8059.82",
+    "Protocol-Version": "1.3",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
+    "V8-Version": "15.5.35.23",
+    "WebKit-Version": "537.36 (@c56fe5daef8be123f68808a4bb705ff378cd2019)",
+    "webSocketDebuggerUrl": "ws://127.0.0.1:64403/devtools/browser/a1476aa8-8ab2-429f-8625-ed197959d4b9"
+  },
+  "playwright_stats": {
+    "startTime": "2026-10-18T20:39:44.915Z",
+    "duration": 13941.989000000001,
+    "expected": 12,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "frames": [
+    {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/fresh/output/palette.native-native-Appe-297f4-ailable-recovery-light-1280-appearance/palette-preview-unavailable--light--1280.png",
+      "name": "palette-preview-unavailable--light--1280.png",
+      "bytes": 39258,
+      "sha256": "d28176a64d97490d81a4a1fe88d0ebe69e08f72ad3ac533bb9dce661d0fa7d5b"
+    },
+    {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/fresh/output/palette.native-native-Appe-48e20-vailable-recovery-dark-1280-appearance/palette-preview-unavailable--dark--1280.png",
+      "name": "palette-preview-unavailable--dark--1280.png",
+      "bytes": 39807,
+      "sha256": "26d0f607c3e12ee182720272108a3b93851b93e7d058d1ff53c7b3ba99fedf9a"
+    },
+    {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/fresh/output/palette.native-native-Appe-ad586-vailable-recovery-light-390-appearance/palette-preview-unavailable--light--390.png",
+      "name": "palette-preview-unavailable--light--390.png",
+      "bytes": 32838,
+      "sha256": "5ffd244ff0865f828b726ba20a9eacec0293675d26254ea76e534feb6c43e354"
+    },
+    {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/fresh/output/palette.native-native-Appe-e2dd6-rame-light-1280-comfortable-appearance/palette-appearance--light--1280--comfortable.png",
+      "name": "palette-appearance--light--1280--comfortable.png",
+      "bytes": 37566,
+      "sha256": "ed8f821b828b31965dcc1563d8e479a27730489b9bfea68698de3bef49d9588f"
+    },
+    {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/fresh/output/palette.native-native-Appe-ed7e7-available-recovery-dark-390-appearance/palette-preview-unavailable--dark--390.png",
+      "name": "palette-preview-unavailable--dark--390.png",
+      "bytes": 33517,
+      "sha256": "4e0cf3a32cb4334b669d79a1bb0aa7c37af97d6542a14bc0597e76eb197da75b"
+    },
+    {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/fresh/output/palette.native-native-Appearance-frame-dark-1280-comfortable-appearance/palette-appearance--dark--1280--comfortable.png",
+      "name": "palette-appearance--dark--1280--comfortable.png",
+      "bytes": 38080,
+      "sha256": "a21f47181ece76fb35325ec4389bb927b7cfb16eeb1b8f4e874df0655c404787"
+    },
+    {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/fresh/output/palette.native-native-Appearance-frame-dark-1280-dense-appearance/palette-appearance--dark--1280--dense.png",
+      "name": "palette-appearance--dark--1280--dense.png",
+      "bytes": 38080,
+      "sha256": "09cedf41a26ad0bb2815ef0e6bd8cc0a04152c9f7c4e74e4a4a3dbe714b4f828"
+    },
+    {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/fresh/output/palette.native-native-Appearance-frame-dark-390-comfortable-appearance/palette-appearance--dark--390--comfortable.png",
+      "name": "palette-appearance--dark--390--comfortable.png",
+      "bytes": 32346,
+      "sha256": "6dde4963f260b67ff008c7677713de3415c09468d1f58d71bebb56a441d16430"
+    },
+    {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/fresh/output/palette.native-native-Appearance-frame-dark-390-dense-appearance/palette-appearance--dark--390--dense.png",
+      "name": "palette-appearance--dark--390--dense.png",
+      "bytes": 32339,
+      "sha256": "aea775396f24ce32054e5bdcc1dddb072cd209c24215a154ae56301b33be918c"
+    },
+    {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/fresh/output/palette.native-native-Appearance-frame-light-1280-dense-appearance/palette-appearance--light--1280--dense.png",
+      "name": "palette-appearance--light--1280--dense.png",
+      "bytes": 37538,
+      "sha256": "712b9fea712f209f752d7f000cdca840846dfc7c1b168e1a8954544e04c43dd4"
+    },
+    {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/fresh/output/palette.native-native-Appearance-frame-light-390-comfortable-appearance/palette-appearance--light--390--comfortable.png",
+      "name": "palette-appearance--light--390--comfortable.png",
+      "bytes": 31878,
+      "sha256": "672a914a7f24bd60f5aadcbfc4dfbac5b801293e763315eb60c54c9f87bd7845"
+    },
+    {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/fresh/output/palette.native-native-Appearance-frame-light-390-dense-appearance/palette-appearance--light--390--dense.png",
+      "name": "palette-appearance--light--390--dense.png",
+      "bytes": 31872,
+      "sha256": "7bed10f75834dbca84bd781de30c245cb167955fee4123a2b327fdd717e6b0ef"
+    }
+  ],
+  "audits": [
+    {
+      "title": "native Appearance unavailable recovery light 1280",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "capture_state": "unavailable",
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 15,
+        "incomplete": 0
+      }
+    },
+    {
+      "title": "native Appearance unavailable recovery dark 1280",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "capture_state": "unavailable",
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 15,
+        "incomplete": 0
+      }
+    },
+    {
+      "title": "native Appearance unavailable recovery light 390",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "capture_state": "unavailable",
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 15,
+        "incomplete": 0
+      }
+    },
+    {
+      "title": "native Appearance frame light 1280 comfortable",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "capture_state": "ready",
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 11,
+        "incomplete": 0
+      }
+    },
+    {
+      "title": "native Appearance unavailable recovery dark 390",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "capture_state": "unavailable",
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 15,
+        "incomplete": 0
+      }
+    },
+    {
+      "title": "native Appearance frame dark 1280 comfortable",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "capture_state": "ready",
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 11,
+        "incomplete": 0
+      }
+    },
+    {
+      "title": "native Appearance frame dark 1280 dense",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "capture_state": "ready",
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 11,
+        "incomplete": 0
+      }
+    },
+    {
+      "title": "native Appearance frame dark 390 comfortable",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "capture_state": "ready",
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 11,
+        "incomplete": 0
+      }
+    },
+    {
+      "title": "native Appearance frame dark 390 dense",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "capture_state": "ready",
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 11,
+        "incomplete": 0
+      }
+    },
+    {
+      "title": "native Appearance frame light 1280 dense",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "capture_state": "ready",
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 11,
+        "incomplete": 0
+      }
+    },
+    {
+      "title": "native Appearance frame light 390 comfortable",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "capture_state": "ready",
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 11,
+        "incomplete": 0
+      }
+    },
+    {
+      "title": "native Appearance frame light 390 dense",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "capture_state": "ready",
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 11,
+        "incomplete": 0
+      }
+    }
+  ],
+  "all_owned_groups_joined_cleanly": true,
+  "total_seconds": 15.551865,
+  "final_census": {
+    "production_inputs": {
+      "rows": 118,
+      "digest": "09a1fd1d2bbf6735d13bf394a26a07baa9437dfeb697be9b62fb0377d38a64db"
+    },
+    "production_dist": {
+      "rows": 165,
+      "digest": "cf31b3397ab481812df93e63a68c872c1eb83e86c6c6b9a0ceae46134fec1343"
+    }
+  }
+}

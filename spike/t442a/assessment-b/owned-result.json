@@ -1,0 +1,119 @@
+{
+  "schema": "phebs-t442a-assessment-b-v1",
+  "terminals": {
+    "impeccable-live": {
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "sigterm",
+      "joined": true
+    },
+    "client": {
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "already_exited",
+      "joined": true
+    },
+    "chrome": {
+      "joined": false,
+      "error": "[Errno 1] Operation not permitted",
+      "exit_code": 0
+    },
+    "vite": {
+      "exit_code": 143,
+      "teardown": "clean",
+      "termination_mode": "sigterm",
+      "joined": true
+    }
+  },
+  "owners": {
+    "vite": {
+      "pid": 30975,
+      "pgid": 30975,
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "/Users/ben/.codex/worktrees/t442a-preview-recovery/phebs.com/ui/node_modules/vite/bin/vite.js",
+        "preview",
+        "/Users/ben/.codex/worktrees/t442a-preview-recovery/phebs.com/ui",
+        "--outDir",
+        "/Users/ben/.codex/worktrees/t442a-preview-recovery/phebs.com/ui/dist",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "65298",
+        "--strictPort"
+      ]
+    },
+    "chrome": {
+      "pid": 30995,
+      "pgid": 30995,
+      "argv": [
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "--headless=new",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--disable-background-networking",
+        "--disable-component-update",
+        "--disable-sync",
+        "--remote-debugging-address=127.0.0.1",
+        "--remote-debugging-port=0",
+        "--user-data-dir=/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/assessment-b/private-chrome-profile",
+        "about:blank"
+      ]
+    },
+    "client": {
+      "pid": 31019,
+      "pgid": 31019,
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/assessment-b/client.cjs",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/assessment-b/input.json"
+      ]
+    },
+    "impeccable-live": {
+      "pid": 31036,
+      "pgid": 31036,
+      "argv": [
+        "/Users/ben/.agents/skills/impeccable/scripts/impeccable",
+        "live-server",
+        "--port=65348"
+      ]
+    }
+  },
+  "visible_overlay": false,
+  "live_background_mode": "OwnedChild process, foreground engine; no detached daemon",
+  "mutable_preflight_before_live_server": true,
+  "outcome": "stopped",
+  "all_owned_groups_joined_cleanly": false,
+  "seconds": 13.208,
+  "within90s": true,
+  "cleanup_followup": {
+    "owned_groups": [
+      {
+        "name": "vite",
+        "pgid": 30975,
+        "state": "absent"
+      },
+      {
+        "name": "chrome",
+        "pgid": 30995,
+        "state": "absent"
+      },
+      {
+        "name": "client",
+        "pgid": 31019,
+        "state": "absent"
+      },
+      {
+        "name": "impeccable-live",
+        "pgid": 31036,
+        "state": "absent"
+      }
+    ],
+    "all_owned_groups_absent": true,
+    "probe_monotonic": 0.028263416,
+    "initial_chrome_root_exit_code": 0,
+    "no_rerun": true,
+    "private_profile_removed": true,
+    "final_custody": "all owned roots reaped, all owned groups absent; initial cleanup EPERM retained"
+  }
+}

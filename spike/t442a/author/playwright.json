@@ -1,0 +1,758 @@
+{
+  "config": {
+    "argv": [
+      "/private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+      "/Users/ben/.codex/worktrees/t442a-preview-recovery/phebs.com/ui/node_modules/@playwright/test/cli.js",
+      "test",
+      "--config",
+      "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/runner/playwright.config.ts",
+      "--project",
+      "appearance",
+      "--max-failures=1"
+    ],
+    "configFile": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/runner/playwright.config.ts",
+    "rootDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/runner",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 1,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/author/output",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "setup",
+        "name": "setup",
+        "testDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/runner",
+        "testIgnore": [],
+        "testMatch": [
+          "/auth\\.setup\\.ts/"
+        ],
+        "timeout": 20000
+      },
+      {
+        "outputDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/author/output",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "receipts",
+        "name": "receipts",
+        "testDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/runner",
+        "testIgnore": [],
+        "testMatch": [
+          "/receipts\\.spec\\.ts/"
+        ],
+        "timeout": 20000
+      },
+      {
+        "outputDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/author/output",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "anon",
+        "name": "anon",
+        "testDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/runner",
+        "testIgnore": [],
+        "testMatch": [
+          "/anon\\.spec\\.ts/"
+        ],
+        "timeout": 20000
+      },
+      {
+        "outputDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/author/output",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "typed-index",
+        "name": "typed-index",
+        "testDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/runner",
+        "testIgnore": [],
+        "testMatch": [
+          "/typed-index\\.spec\\.ts/"
+        ],
+        "timeout": 20000
+      },
+      {
+        "outputDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/author/output",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "appearance",
+        "name": "appearance",
+        "testDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/runner",
+        "testIgnore": [],
+        "testMatch": [
+          "/palette\\.native\\.spec\\.ts/"
+        ],
+        "timeout": 20000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/author/playwright.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.62.1",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "palette.native.spec.ts",
+      "file": "palette.native.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "native Appearance frame light 1280 comfortable",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 20000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "appearance",
+              "projectName": "appearance",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1203,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "{\"theme\":\"light\",\"width\":1280,\"height\":800,\"density\":\"comfortable\",\"palette\":\"phebs\",\"fixtureReadyMillis\":315,\"nativeCapture\":\"/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/author/output/palette.native-native-Appe-e2dd6-rame-light-1280-comfortable-appearance/palette-appearance--light--1280--comfortable.png\"}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T20:37:19.938Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "native-appearance-frame",
+                      "contentType": "image/png",
+                      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/author/output/palette.native-native-Appe-e2dd6-rame-light-1280-comfortable-appearance/attachments/native-appearance-frame-3cd48bd0d482e36d25f0b52d5389222b0691981f.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "1aaee7988828f5eff185-d0f2d2f35e91aafdcbb1",
+          "file": "../../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/runner/palette.native.spec.ts",
+          "line": 110,
+          "column": 3
+        },
+        {
+          "title": "native Appearance frame light 1280 dense",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 20000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "appearance",
+              "projectName": "appearance",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1049,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "{\"theme\":\"light\",\"width\":1280,\"height\":800,\"density\":\"dense\",\"palette\":\"phebs\",\"fixtureReadyMillis\":309,\"nativeCapture\":\"/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/author/output/palette.native-native-Appearance-frame-light-1280-dense-appearance/palette-appearance--light--1280--dense.png\"}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T20:37:21.262Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "native-appearance-frame",
+                      "contentType": "image/png",
+                      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/author/output/palette.native-native-Appearance-frame-light-1280-dense-appearance/attachments/native-appearance-frame-c96868081cc4185a79b0ed4adc863d4fea0722ea.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "1aaee7988828f5eff185-659f0223129aad72ce7c",
+          "file": "../../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/runner/palette.native.spec.ts",
+          "line": 110,
+          "column": 3
+        },
+        {
+          "title": "native Appearance frame light 390 comfortable",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 20000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "appearance",
+              "projectName": "appearance",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1122,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "{\"theme\":\"light\",\"width\":390,\"height\":900,\"density\":\"comfortable\",\"palette\":\"phebs\",\"fixtureReadyMillis\":496,\"nativeCapture\":\"/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/author/output/palette.native-native-Appearance-frame-light-390-comfortable-appearance/palette-appearance--light--390--comfortable.png\"}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T20:37:22.325Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "native-appearance-frame",
+                      "contentType": "image/png",
+                      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/author/output/palette.native-native-Appearance-frame-light-390-comfortable-appearance/attachments/native-appearance-frame-f07aa1c727fc09b1248d2ec4084edb558d7afc1f.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "1aaee7988828f5eff185-3ff0c61092718b9e499f",
+          "file": "../../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/runner/palette.native.spec.ts",
+          "line": 110,
+          "column": 3
+        },
+        {
+          "title": "native Appearance frame light 390 dense",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 20000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "appearance",
+              "projectName": "appearance",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1039,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "{\"theme\":\"light\",\"width\":390,\"height\":900,\"density\":\"dense\",\"palette\":\"phebs\",\"fixtureReadyMillis\":475,\"nativeCapture\":\"/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/author/output/palette.native-native-Appearance-frame-light-390-dense-appearance/palette-appearance--light--390--dense.png\"}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T20:37:23.458Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "native-appearance-frame",
+                      "contentType": "image/png",
+                      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/author/output/palette.native-native-Appearance-frame-light-390-dense-appearance/attachments/native-appearance-frame-158347ab58f0101f45ed1fdb390ca8e5bdbce79c.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "1aaee7988828f5eff185-0773baa8d92e8e969151",
+          "file": "../../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/runner/palette.native.spec.ts",
+          "line": 110,
+          "column": 3
+        },
+        {
+          "title": "native Appearance frame dark 1280 comfortable",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 20000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "appearance",
+              "projectName": "appearance",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 737,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "{\"theme\":\"dark\",\"width\":1280,\"height\":800,\"density\":\"comfortable\",\"palette\":\"phebs\",\"fixtureReadyMillis\":183,\"nativeCapture\":\"/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/author/output/palette.native-native-Appearance-frame-dark-1280-comfortable-appearance/palette-appearance--dark--1280--comfortable.png\"}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T20:37:24.508Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "native-appearance-frame",
+                      "contentType": "image/png",
+                      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/author/output/palette.native-native-Appearance-frame-dark-1280-comfortable-appearance/attachments/native-appearance-frame-5678957a089f8fec0a01bb95f9036b534c94763e.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "1aaee7988828f5eff185-027db12b72f91c550985",
+          "file": "../../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/runner/palette.native.spec.ts",
+          "line": 110,
+          "column": 3
+        },
+        {
+          "title": "native Appearance frame dark 1280 dense",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 20000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "appearance",
+              "projectName": "appearance",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 759,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "{\"theme\":\"dark\",\"width\":1280,\"height\":800,\"density\":\"dense\",\"palette\":\"phebs\",\"fixtureReadyMillis\":194,\"nativeCapture\":\"/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/author/output/palette.native-native-Appearance-frame-dark-1280-dense-appearance/palette-appearance--dark--1280--dense.png\"}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T20:37:25.257Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "native-appearance-frame",
+                      "contentType": "image/png",
+                      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/author/output/palette.native-native-Appearance-frame-dark-1280-dense-appearance/attachments/native-appearance-frame-31872885960e0e6df34dbe9986e381b8b2cfabb5.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "1aaee7988828f5eff185-9da8253df19fc998a06b",
+          "file": "../../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/runner/palette.native.spec.ts",
+          "line": 110,
+          "column": 3
+        },
+        {
+          "title": "native Appearance frame dark 390 comfortable",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 20000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "appearance",
+              "projectName": "appearance",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 783,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "{\"theme\":\"dark\",\"width\":390,\"height\":900,\"density\":\"comfortable\",\"palette\":\"phebs\",\"fixtureReadyMillis\":222,\"nativeCapture\":\"/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/author/output/palette.native-native-Appearance-frame-dark-390-comfortable-appearance/palette-appearance--dark--390--comfortable.png\"}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T20:37:26.024Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "native-appearance-frame",
+                      "contentType": "image/png",
+                      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/author/output/palette.native-native-Appearance-frame-dark-390-comfortable-appearance/attachments/native-appearance-frame-d31f575c3d3147bf593df7d7fdec9cf077e2fa79.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "1aaee7988828f5eff185-f44bd4a93bd7666600a0",
+          "file": "../../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/runner/palette.native.spec.ts",
+          "line": 110,
+          "column": 3
+        },
+        {
+          "title": "native Appearance frame dark 390 dense",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 20000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "appearance",
+              "projectName": "appearance",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 767,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "{\"theme\":\"dark\",\"width\":390,\"height\":900,\"density\":\"dense\",\"palette\":\"phebs\",\"fixtureReadyMillis\":165,\"nativeCapture\":\"/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/author/output/palette.native-native-Appearance-frame-dark-390-dense-appearance/palette-appearance--dark--390--dense.png\"}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T20:37:26.816Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "native-appearance-frame",
+                      "contentType": "image/png",
+                      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/author/output/palette.native-native-Appearance-frame-dark-390-dense-appearance/attachments/native-appearance-frame-46c92ed7847493021ea33d16915e121dde2cb380.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "1aaee7988828f5eff185-0b098e5988ecaa512142",
+          "file": "../../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/runner/palette.native.spec.ts",
+          "line": 110,
+          "column": 3
+        },
+        {
+          "title": "keyboard Appearance choice, persistence and guarded fallback 1280",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 20000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "appearance",
+              "projectName": "appearance",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 3356,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "{\"width\":1280,\"paletteChanges\":[\"phebs\",\"quiet\",\"classic\",\"high-contrast\"],\"fixtureInteractionMillis\":[43,33,46,47],\"persistenceReload\":true,\"refusedStoredValues\":[\"unknown-neutral-palette\",\"__proto__\"]}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T20:37:27.592Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "1aaee7988828f5eff185-4f50ee2023cf86dbaec0",
+          "file": "../../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/runner/palette.native.spec.ts",
+          "line": 123,
+          "column": 3
+        },
+        {
+          "title": "keyboard Appearance choice, persistence and guarded fallback 390",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 20000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "appearance",
+              "projectName": "appearance",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 3284,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "{\"width\":390,\"paletteChanges\":[\"phebs\",\"quiet\",\"classic\",\"high-contrast\"],\"fixtureInteractionMillis\":[31,39,31,34],\"persistenceReload\":true,\"refusedStoredValues\":[\"unknown-neutral-palette\",\"__proto__\"]}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T20:37:30.958Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "1aaee7988828f5eff185-ca3d265e2917314b4eab",
+          "file": "../../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/runner/palette.native.spec.ts",
+          "line": 123,
+          "column": 3
+        },
+        {
+          "title": "native Appearance unavailable recovery light 1280",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 20000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "appearance",
+              "projectName": "appearance",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2440,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "{\"width\":1280,\"theme\":\"light\",\"failedScripts\":[\"http://127.0.0.1:63583/assets/highlight-DQ8ytWfb.js\"],\"expectedFaultConsole\":[{\"type\":\"error\",\"text\":\"Failed to load resource: the server responded with a status of 503 (Service Unavailable)\",\"url\":\"http://127.0.0.1:63583/assets/highlight-DQ8ytWfb.js\"}],\"reloadPreservedPalette\":\"quiet\",\"recovery\":true}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T20:37:34.249Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "unavailable-preview-frame",
+                      "contentType": "image/png",
+                      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/author/output/palette.native-native-Appe-297f4-ailable-recovery-light-1280-appearance/attachments/unavailable-preview-frame-562fc7a4c78e24eee49253c295d300bad44696be.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "1aaee7988828f5eff185-7de2843529249cfab384",
+          "file": "../../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/runner/palette.native.spec.ts",
+          "line": 169,
+          "column": 3
+        },
+        {
+          "title": "native Appearance unavailable recovery light 390",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 20000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "appearance",
+              "projectName": "appearance",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2465,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "{\"width\":390,\"theme\":\"light\",\"failedScripts\":[\"http://127.0.0.1:63583/assets/highlight-DQ8ytWfb.js\"],\"expectedFaultConsole\":[{\"type\":\"error\",\"text\":\"Failed to load resource: the server responded with a status of 503 (Service Unavailable)\",\"url\":\"http://127.0.0.1:63583/assets/highlight-DQ8ytWfb.js\"}],\"reloadPreservedPalette\":\"quiet\",\"recovery\":true}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T20:37:36.699Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "unavailable-preview-frame",
+                      "contentType": "image/png",
+                      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/author/output/palette.native-native-Appe-ad586-vailable-recovery-light-390-appearance/attachments/unavailable-preview-frame-2857fddbfaaf4895dbac9a4075b48a0f7729765d.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "1aaee7988828f5eff185-ba9248b42bd85417f0b2",
+          "file": "../../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/runner/palette.native.spec.ts",
+          "line": 169,
+          "column": 3
+        },
+        {
+          "title": "native Appearance unavailable recovery dark 1280",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 20000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "appearance",
+              "projectName": "appearance",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1164,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "{\"width\":1280,\"theme\":\"dark\",\"failedScripts\":[\"http://127.0.0.1:63583/assets/highlight-DQ8ytWfb.js\"],\"expectedFaultConsole\":[{\"type\":\"error\",\"text\":\"Failed to load resource: the server responded with a status of 503 (Service Unavailable)\",\"url\":\"http://127.0.0.1:63583/assets/highlight-DQ8ytWfb.js\"}],\"reloadPreservedPalette\":\"quiet\",\"recovery\":true}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T20:37:39.172Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "unavailable-preview-frame",
+                      "contentType": "image/png",
+                      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/author/output/palette.native-native-Appe-48e20-vailable-recovery-dark-1280-appearance/attachments/unavailable-preview-frame-e0be922a0beec038834fef49802a4970ea56cfbf.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "1aaee7988828f5eff185-a9d2cf876c26c4e9b204",
+          "file": "../../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/runner/palette.native.spec.ts",
+          "line": 169,
+          "column": 3
+        },
+        {
+          "title": "native Appearance unavailable recovery dark 390",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 20000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "appearance",
+              "projectName": "appearance",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1776,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "{\"width\":390,\"theme\":\"dark\",\"failedScripts\":[\"http://127.0.0.1:63583/assets/highlight-DQ8ytWfb.js\"],\"expectedFaultConsole\":[{\"type\":\"error\",\"text\":\"Failed to load resource: the server responded with a status of 503 (Service Unavailable)\",\"url\":\"http://127.0.0.1:63583/assets/highlight-DQ8ytWfb.js\"}],\"reloadPreservedPalette\":\"quiet\",\"recovery\":true}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T20:37:40.348Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "unavailable-preview-frame",
+                      "contentType": "image/png",
+                      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/author/output/palette.native-native-Appe-ed7e7-available-recovery-dark-390-appearance/attachments/unavailable-preview-frame-8858e67d5e144a9eece91485f1bf0a8475d28954.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "1aaee7988828f5eff185-535139df07151d472ba2",
+          "file": "../../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/runner/palette.native.spec.ts",
+          "line": 169,
+          "column": 3
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-18T20:37:19.449Z",
+    "duration": 22701.835,
+    "expected": 14,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

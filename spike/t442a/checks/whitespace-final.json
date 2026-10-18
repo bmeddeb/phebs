@@ -1,0 +1,11 @@
+{
+  "command": [
+    "git",
+    "diff",
+    "--cached",
+    "--check"
+  ],
+  "exit_code": 0,
+  "seconds": 0.027233833,
+  "qualification": "Initial whitespace check correctly found exact raw log whitespace; those4logs are archived as deterministic gzip with decoded hashes, not edited. No product whitespace defect."
+}

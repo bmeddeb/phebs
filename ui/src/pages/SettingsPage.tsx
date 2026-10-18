@@ -268,7 +268,7 @@ function PaletteSpecimen() {
   const [highlight, setHighlight] = useState<{
     mode: Mode
     palette: PaletteName
-    rows: Token[][]
+    rows: Token[][] | null
   } | null>(null)
   useEffect(() => {
     let active = true
@@ -287,25 +287,40 @@ function PaletteSpecimen() {
           rows: SPECIMEN_LINES.map((line) => highlighter.tokenize(line, language, mode, palette)),
         })
       })
-      .catch(() => {})
+      .catch(() => {
+        if (active) setHighlight({ mode, palette, rows: null })
+      })
     return () => { active = false }
   }, [mode, palette])
-  const rows = highlight?.mode === mode && highlight.palette === palette
-    ? highlight.rows
+  const current = highlight?.mode === mode && highlight.palette === palette
+    ? highlight
     : null
+  const rows = current?.rows ?? null
   return (
-    <pre aria-hidden="true" data-palette-ready={rows ? 'true' : undefined} className={css({ margin: 0, padding: '10px 12px', border: `1px solid ${tok.innerSep}`, borderRadius: '6px', backgroundColor: tok.pageBg, color: tok.plainCode, fontFamily: FONTS.MONO, fontSize: '11px', lineHeight: '17px', overflowX: 'auto' })}>
-      {SPECIMEN_LINES.map((line, index) => (
-        <span key={index}>
-          {index > 0 ? '\n' : null}
-          {(rows?.[index] ?? [{ from: 0, to: line.length }]).map((span, spanIndex) => (
-            <span key={spanIndex} style={'color' in span && span.color ? { color: span.color, fontStyle: span.fontStyle } : undefined}>
-              {line.slice(span.from, span.to)}
-            </span>
-          ))}
-        </span>
-      ))}
-    </pre>
+    <div className={css({ minWidth: 0 })}>
+      <pre aria-hidden="true" data-palette-ready={rows ? 'true' : undefined} className={css({ margin: 0, padding: '10px 12px', border: `1px solid ${tok.innerSep}`, borderRadius: '6px', backgroundColor: tok.pageBg, color: tok.plainCode, fontFamily: FONTS.MONO, fontSize: '11px', lineHeight: '17px', overflowX: 'auto' })}>
+        {SPECIMEN_LINES.map((line, index) => (
+          <span key={index}>
+            {index > 0 ? '\n' : null}
+            {(rows?.[index] ?? [{ from: 0, to: line.length }]).map((span, spanIndex) => (
+              <span key={spanIndex} style={'color' in span && span.color ? { color: span.color, fontStyle: span.fontStyle } : undefined}>
+                {line.slice(span.from, span.to)}
+              </span>
+            ))}
+          </span>
+        ))}
+      </pre>
+      {current?.rows === null && (
+        <div className={css({ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px', marginTop: '8px', fontSize: '12px', lineHeight: '18px', color: tok.textSecondary })}>
+          <span role="status">Preview unavailable.</span>
+          <Button type="button" kind={BUTTON_KIND.tertiary} size={SIZE.compact}
+            onClick={() => window.location.reload()}
+            overrides={{ BaseButton: { style: { minHeight: '44px', fontSize: '12px' } } }}>
+            Reload page
+          </Button>
+        </div>
+      )}
+    </div>
   )
 }
 

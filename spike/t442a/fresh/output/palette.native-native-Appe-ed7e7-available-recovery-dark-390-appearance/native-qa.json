@@ -1,0 +1,14 @@
+{
+  "title": "native Appearance unavailable recovery dark 390",
+  "viewport": {
+    "width": 390,
+    "height": 900
+  },
+  "capture_state": "unavailable",
+  "audit": {
+    "version": "4.12.1",
+    "violations": [],
+    "passes": 15,
+    "incomplete": 0
+  }
+}

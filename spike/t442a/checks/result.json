@@ -1,0 +1,59 @@
+{
+  "runs": [
+    {
+      "name": "baseline-regression",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "--maxWorkers=1",
+        "--no-file-parallelism",
+        "src/pages/SettingsPage.test.tsx",
+        "--testNamePattern",
+        "explains language failure",
+        "--bail=1",
+        "--testTimeout=10000"
+      ],
+      "limit_seconds": 30,
+      "expected_exit": 1,
+      "pid": 25053,
+      "exit_code": 1,
+      "teardown": "clean",
+      "termination_mode": "already_exited",
+      "joined": true,
+      "seconds_including_join": 4.326928583,
+      "log_sha256": "ae1b98a3c9f4b9bfc183672da36eba9cb25283b396df3649932bd6578875bacb"
+    },
+    {
+      "name": "focused",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "--maxWorkers=1",
+        "--no-file-parallelism",
+        "src/palette.test.ts",
+        "src/theme.test.ts",
+        "src/pages/SettingsPage.test.tsx",
+        "src/pages/FilePage.test.tsx",
+        "src/pages/SearchPage.test.tsx",
+        "src/pages/ExactCallerCitation.test.tsx",
+        "src/components/kit.test.tsx",
+        "--testNamePattern",
+        "T44.2|palette|syntax palettes",
+        "--testTimeout=10000",
+        "--hookTimeout=10000"
+      ],
+      "limit_seconds": 60,
+      "expected_exit": 0,
+      "pid": 25091,
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "already_exited",
+      "joined": true,
+      "seconds_including_join": 4.285215792000001,
+      "log_sha256": "9ff75a56ca5132f3e590f439c2779a7e1867de8c017c8c4180b2aa792a3b7140"
+    }
+  ],
+  "failed": false
+}

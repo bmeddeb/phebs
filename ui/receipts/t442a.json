@@ -1,0 +1,14 @@
+{
+  "ticket": "T44.2a",
+  "date": "2026-10-18",
+  "source_commit": "a40a4e6d0149b18c35822821500e8e146f54636f",
+  "outcome": "../../spike/t442a/outcome.json",
+  "comparison": "../../spike/t442a/comparison.json",
+  "native_author_cases": 14,
+  "native_fresh_cases": 12,
+  "byte_identical_comparisons": 12,
+  "canonical_baselines_changed": 0,
+  "qualification": "Darwin arm64 Chrome155.0.8059.82 only; no Noble/canonical fullmatrix equivalence",
+  "linux_issue": "https://github.com/bmeddeb/phebs/issues/124",
+  "production_signing": "pending"
+}

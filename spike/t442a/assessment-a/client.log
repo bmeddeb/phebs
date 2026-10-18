@@ -1,0 +1,11 @@
+
+Running 2 tests using 1 worker
+
+(node:29421) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"width":390,"theme":"light","failedScripts":["http://127.0.0.1:63982/assets/highlight-DQ8ytWfb.js"],"expectedFaultConsole":[{"type":"error","text":"Failed to load resource: the server responded with a status of 503 (Service Unavailable)","url":"http://127.0.0.1:63982/assets/highlight-DQ8ytWfb.js"}],"reloadPreservedPalette":"quiet","recovery":true}
+  ✓  1 [appearance] › ../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/assessment-a-runner/palette.native.spec.ts:169:3 › native Appearance unavailable recovery light 390 (3.6s)
+{"width":1280,"theme":"dark","failedScripts":["http://127.0.0.1:63982/assets/highlight-DQ8ytWfb.js"],"expectedFaultConsole":[{"type":"error","text":"Failed to load resource: the server responded with a status of 503 (Service Unavailable)","url":"http://127.0.0.1:63982/assets/highlight-DQ8ytWfb.js"}],"reloadPreservedPalette":"quiet","recovery":true}
+  ✓  2 [appearance] › ../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442a-qa-uz1tx612/assessment-a-runner/palette.native.spec.ts:169:3 › native Appearance unavailable recovery dark 1280 (2.8s)
+
+  2 passed (7.0s)
