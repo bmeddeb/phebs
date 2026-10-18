@@ -26,6 +26,8 @@ async function main() {
     result.chrome_version = browser.version();
     result.playwright_version = require(path.join(input.node_modules, 'playwright/package.json')).version;
     context = await browser.newContext({viewport: {width: 1280, height: 900}, colorScheme: 'light', reducedMotion: 'reduce', locale: 'en-US', timezoneId: 'UTC', extraHTTPHeaders: {Authorization: `Bearer ${input.token}`}});
+    // Install audit instrumentation before navigation; keep the page's CSP.
+    await context.addInitScript({path: input.axe_source});
     page = await context.newPage(); page.setDefaultTimeout(5000);
     page.on('pageerror', error => errors.push(String(error)));
     page.on('console', message => {if (message.type() === 'error') errors.push(message.text());});
@@ -93,7 +95,6 @@ async function main() {
       await page.evaluate(() => document.fonts.ready);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, `Impact horizontal overflow at ${width}`);
       assert.equal(await page.locator('vite-error-overlay, nextjs-portal').count(), 0, 'framework error overlay');
-      await page.addScriptTag({path: input.axe_source});
       const audit = await page.evaluate(async () => {
         const value = await axe.run(document, {runOnly: {type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']}});
         return {violations: value.violations.map(v => ({id: v.id, impact: v.impact, nodes: v.nodes.map(n => ({target: n.target, failureSummary: n.failureSummary}))})), passes: value.passes.length};

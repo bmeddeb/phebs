@@ -1,0 +1,17 @@
+{
+  "joined": true,
+  "terminals": {
+    "client": {
+      "exit_code": 1,
+      "teardown": "clean",
+      "termination_mode": "already_exited"
+    },
+    "chrome": {
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "sigterm"
+    }
+  },
+  "seconds": 3.119581,
+  "private_input_profile_logs_removed": true
+}
