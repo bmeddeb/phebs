@@ -1,0 +1,507 @@
+{
+  "format": "phebs-document-schema-v1",
+  "source_class": "authored",
+  "tables": [
+    {
+      "name": "Orders",
+      "fields": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "tenant"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "owner"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "[]"
+            }
+          ],
+          "type": "money<12,4> (opaque; no conversion)"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "payload"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "value"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "payload"
+            },
+            {
+              "kind": "field",
+              "name": "children"
+            }
+          ],
+          "type": "source:list<opaque-object>"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "payload"
+            },
+            {
+              "kind": "field",
+              "name": "children"
+            },
+            {
+              "kind": "array_element"
+            }
+          ],
+          "type": "opaque-object"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "payload"
+            },
+            {
+              "kind": "field",
+              "name": "children"
+            },
+            {
+              "kind": "array_element"
+            },
+            {
+              "kind": "field",
+              "name": "tags"
+            }
+          ],
+          "type": "source:map<opaque-key,opaque-object>"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "payload"
+            },
+            {
+              "kind": "field",
+              "name": "children"
+            },
+            {
+              "kind": "array_element"
+            },
+            {
+              "kind": "field",
+              "name": "tags"
+            },
+            {
+              "kind": "map_value"
+            }
+          ],
+          "type": "opaque-object"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "payload"
+            },
+            {
+              "kind": "field",
+              "name": "children"
+            },
+            {
+              "kind": "array_element"
+            },
+            {
+              "kind": "field",
+              "name": "tags"
+            },
+            {
+              "kind": "map_value"
+            },
+            {
+              "kind": "field",
+              "name": "[]"
+            }
+          ],
+          "type": "主张<opaque/UTF-8>"
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "tenant"
+            }
+          ]
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ],
+          "direction": "desc"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "prefix-owner",
+          "kind": "opaque::ordered-prefix",
+          "columns": [
+            {
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "owner"
+                }
+              ],
+              "direction": "desc",
+              "prefix_length": 4,
+              "prefix_unit": "source-codepoints"
+            },
+            {
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "tenant"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "ID-only",
+          "kind": "sparse/custom β",
+          "columns": [
+            {
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "associations": [
+        {
+          "name": "purchaser",
+          "target": "客户",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "owner"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "账号"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "billing",
+          "target": "客户",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "owner"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "账号"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "self-parent",
+          "target": "Orders",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "partition_key": [
+        [
+          {
+            "kind": "field",
+            "name": "tenant"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "客户",
+      "fields": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "账号"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "姓名"
+            }
+          ],
+          "type": "opaque:string"
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "账号"
+            }
+          ]
+        }
+      ],
+      "indexes": [],
+      "associations": [
+        {
+          "name": "orders",
+          "target": "Orders",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "账号"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "owner"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "孤立",
+      "fields": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ],
+          "type": "opaque:string"
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ]
+        }
+      ],
+      "indexes": [],
+      "associations": []
+    }
+  ],
+  "views": [
+    {
+      "name": "Summary",
+      "fields": [
+        {
+          "name": "customer",
+          "type": "opaque:string",
+          "sources": [
+            {
+              "kind": "table",
+              "name": "Orders",
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "owner"
+                }
+              ]
+            },
+            {
+              "kind": "table",
+              "name": "客户",
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "账号"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "[]",
+          "type": "opaque-declared-output",
+          "sources": []
+        },
+        {
+          "name": "流水",
+          "type": "not-a-vendor-scalar",
+          "sources": [
+            {
+              "kind": "table",
+              "name": "Orders",
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "customer"
+            }
+          ],
+          "direction": "desc"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "流水"
+            }
+          ]
+        }
+      ],
+      "indexes": [
+        {
+          "name": "view-prefix",
+          "kind": "opaque:view-index",
+          "columns": [
+            {
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "customer"
+                }
+              ],
+              "prefix_length": 2,
+              "prefix_unit": "source-defined-unit"
+            }
+          ]
+        }
+      ],
+      "partition_key": [
+        [
+          {
+            "kind": "field",
+            "name": "customer"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "SummarySubset",
+      "fields": [
+        {
+          "name": "owner",
+          "type": "opaque:string",
+          "sources": [
+            {
+              "kind": "view",
+              "name": "Summary",
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "customer"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "owner"
+            }
+          ]
+        }
+      ],
+      "indexes": []
+    }
+  ]
+}

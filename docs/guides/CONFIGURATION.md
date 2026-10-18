@@ -611,6 +611,22 @@ Map preserves standalone Atlas. Thrift and Kafka retain their own selections.
 Every selected record must match the new binary's actual implementation identity.
 
 
+### Independent caller-comparison admission (T50.2)
+
+Ordinary comparison requires an applicable signed
+`phebs.grpc.caller.comparison` claim and the independently admitted
+`phebs.grpc.caller.go` recipe. The former selects no extractor by itself.
+Withdrawing either withdraws ordinary comparison; withdrawing only comparison
+keeps Caller Map available. The first supported claim accepts two protobuf
+endpoint identities and rejects Thrift/mixed pairs as unavailable before
+publication reads. This restriction also governs mixed released/provisional
+configurations when the comparison claim is admitted.
+
+Provisional protobuf/Thrift switches retain the explicit experimental comparison
+path. Neither ordinary Caller Map nor Atlas admission enables comparison alone.
+T50.3's separate quality/operating result and production signature remain pending;
+this binding and its test keys do not constitute a production release.
+
 ### Caller Map activation and recipe admission (T47.3)
 
 Caller Map's ordinary configuration is a signed `release_selection` record for

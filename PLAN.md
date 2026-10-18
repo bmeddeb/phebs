@@ -12272,6 +12272,39 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   retry/no-op, publication, locks, caches, concurrency and children are unchanged.
   JavaScript delta is zero; the eight PNGs shrink 1,139 bytes collectively.
 
+- **2026-10-18 — T50.2 independent comparison claim admission (Ben's
+  all-ticket Mac handoff).** Bind the frozen `phebs.grpc.caller.comparison`
+  product claim to `compare_operation_callers@caller-comparison-v2` in the
+  existing release registry. Ordinary comparison requires its own applicable
+  verified signed claim plus the independently released protobuf/gRPC Caller
+  Map domains. A claim alone or an experimental caller never supplies that
+  released dependency. Withdrawal/expiry/suspension of comparison preserves
+  Caller Map, and withdrawal of Caller Map withdraws the composed comparison.
+  Provisional switches retain their explicit experimental path; when the
+  released claim is admitted it governs the supported protobuf endpoint pair,
+  including mixed provisional/released configuration. Unsupported Thrift or
+  mixed pairs return unavailable before publication reads. No unrelated proof,
+  Impact, field, Kafka or WIRE product is admitted. The shared API/MCP exact
+  engine retains its two-authority final fence, generation/cursor binding,
+  immutable citations, gap semantics, limits and caches unchanged.
+
+  Nine signed-selection cases pass, including independent withdrawals and
+  experimental dependency exclusion. Positive protobuf and three unsupported
+  pair cases verify early refusal without publication I/O; all exact comparison
+  and existing startup regressions pass. Focused command/API normal checks take
+  1.715s/2.402s, race 3.598s/3.419s, and MCP comparison 0.553s; vet and pinned
+  lint report zero issues. This is implementation preparation, not a T50.3
+  quality/operating result or production release: the separate product result
+  and existing unavailable signing key remain pending. Startup adds one fixed
+  claim-digest row, three bounded map lookups and one options flag; missing
+  dependency logs once at startup. Each admitted request adds one boolean
+  branch and at most two closed protocol comparisons before existing reads.
+  No new sync, retry/no-op, publication, lock, cache invalidation, scan, schema,
+  memory/disk ceiling, worker, concurrency slot or child is introduced.
+
+  Independent source review of T50.2 found no blocking issue; dependency
+  provenance, mixed admission and pre-publication protocol refusal are verified.
+
 - **2026-10-18 — T51.1 committed protobuf field-input preregistration
   (Ben-routed Mac handoff).** Freeze the narrow `scip-proto-field@1.4.0`
   committed SCIP recipe before its first candidate extraction: direct tagged
@@ -12370,6 +12403,214 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   not an installation-wide memory ceiling. Concurrent requests multiply this
   work. No new lock, cache, worker, concurrency, startup/restart, sync, retry/no-op,
   publication, persistent state, disk write or child process is introduced.
+
+- **2026-10-18 — T25.1 authenticated embedded documentation (Ben's
+  all-ticket Mac handoff).** Serve the build's tracked root README/PLAN,
+  top-level docs/guides Markdown, docs SVGs and example YAML under
+  `/documentation/<repo-relative-path>` through existing sessions/API keys.
+  Goldmark/GFM renders once at startup using the already graph-pinned pure-Go
+  dependency. Raw HTML is omitted, unsafe URL schemes inactive, external or
+  nonembedded images are named placeholders and SVG responses are sandboxed.
+  Explicit embed patterns exclude history, fixtures, design handoffs and retained
+  artifact bytes. Preserve relative links and heading fragments. Resolve the
+  original link/exclusion AC tension explicitly: known references outside the
+  selected set get labelled repository-only pages with fixed public GitHub links;
+  unknown paths 404 and no open redirect. This adds no SPA JavaScript, docs search,
+  navigation system, runtime filesystem reads or child. Non-UI builds embed no
+  docs. Public UI assets remain outside session persistence.
+
+  Renderer, exact local-link census, actual session/API-key/CSRF and public-asset
+  isolation normal/race/static tests pass. Native four-appearance browser QA
+  covers 1280/390px light/dark navigation, fragments, SVG, keyboard scrolling and
+  zero axe/console/overflow failures. The source-bound receipt
+  `spike/t251/receipt.json` retains the prior doc tree and both corrected initial
+  fixture/scroll findings; final doc/link/cost census is rerun after this record.
+  Deterministic canonical comparison remains pending and is not inferred from
+  native capture hashes. Immutable rendered pages live until server restart;
+  rebuild/restart updates their snapshot. Initial measured source/cache byte
+  capacity is about 14.4 MB plus map metadata and one-document transient parser/AST
+  buffers, not an RSS/heap ceiling. Per docs GET/HEAD: existing auth/session work,
+  O(1) page lookup and response write, no hashing/corpus work. Other UI requests
+  add one route lookup; queries, sync, retry/no-op, publication, lifecycle, locks,
+  worker concurrency, persistent disk and children are unchanged.
+
+  T25.1's canonical documentation qualification then passed at source
+  `60683660`: four author tests/twelve unmasked captures (12.708s) and four
+  comparison tests/twelve assertions (10.987s) on a fresh actual auth/store
+  fixture. Both fixtures and bridges joined with exit0; no child remains.
+  Pinned Noble image, Node24.18.0, Playwright1.62.1 and Chromium151.0.7922.34
+  retain zero retries and 0.1% tolerance. Lead visually accepted all twelve
+  unchanged PNGs (762,987 bytes); no product UI JS or density option is added.
+  `spike/t251/canonical-receipt.json` binds inputs, reports, renderer and images;
+  the native Chrome functional/a11y receipt remains separately qualified.
+  Owning documentation-only outcome appends do not retrospectively relabel
+  those browser input bytes; final link/cache census is rechecked separately.
+
+- **2026-10-18 — T49.4 protobuf Atlas bounded release preparation and UI
+  closure (Ben-routed Mac handoff).** Retain a declaration-only card, manifest,
+  integration qualification and unsigned production template for
+  `phebs.protobuf.contract`; production activation remains pending the existing
+  Linux signing key. Actual disposable-key signing/selection, exact current-root
+  HTTP/MCP list/detail parity, anonymous401, ordinary UI, source links,
+  desktop/390px keyboard/overflow and revocation404 pass at clean native source
+  `ff080f8438d5de02153a8645cf1cf75b5d95935c` in 6.605s. Both healthy server phases
+  exit0 and teardown cleanly; scratch/key/images are removed. Proposal bytes are
+  tested separately through the actual signer/loader after qualification updates.
+  Preserve the earlier 45s readiness refusal under the fixture's15s polling;
+  the bounded corrected fixture uses supported1s configuration, with no default
+  change. This is integration qualification, never independent accuracy/scale.
+
+  Fix three concrete presentation defects: partitioned current declarations
+  previously inherited a false stale badge from legacy-only coverage; absent
+  released relationship planes appeared as measured zeroes; and Impact links
+  ignored actual capability. Validate exact authority/query/source identity and
+  unavailable sections before rendering, map native detail to its exact root,
+  and preserve source/citation pins and explicit gaps. A zero-minimum grid keeps
+  source tables locally scrollable at390px; empty dependency tables are omitted.
+  No experimental relationship is promoted by declaration-only admission.
+
+  Eight canonical frames (four ordinary-cohort listings, four explicitly
+  intercepted neutral declaration-only details) pass author38.637s and fresh-auth
+  comparison28.972s, nine tests each including setup; zero retries, 0.1% tolerance,
+  no new masks. Lead reviewed all eight images: four listing status updates and
+  four new full-page detail frames. Actual signed source-read evidence and
+  intercepted presentation evidence stay separate in their receipts. Scoped
+  Atlas axe has zero violations; full-page audit retains two inherited shared
+  nested-interactive controls, assigned T43R.6. Mobile contrast audit has one
+  incomplete rule over six offscreen cells, not a claimed global clean pass.
+  Focused UI/manifest, lint/type, signer/load, hashes, docs and glossary pass;
+  no full screenshot matrix or production signature is claimed.
+
+  Cost: existing exact request/auth/publication/source/citation reads, parser
+  deduplication, startup signed census and verifier limits are unchanged. UI
+  validates visible coverage plus at most two authority roots per visible
+  repository with bounded maps/sets, and at most three unavailable sections per
+  selected detail. No new network request/polling, cache, schema, lock, worker,
+  concurrency, source parse, sync/retry/no-op/publication or child. Atlas chunk
+  changes37,750→40,609 bytes (gzip9,821→10,699); these are build observations,
+  not latency or scale bounds. Production signing still binds the actual final
+  binary and artifacts when the existing key becomes available.
+
+- **2026-10-18 — T43R.6 independent scope-help control.** Atlas's bounded
+  native accessibility audit exposed a shared nested-interactive defect:
+  `AnalysisScopePanel` put its coverage-help button inside native `<summary>`.
+  Preserve the native disclosure and existing glossary help, moving the help
+  control to a visible sibling outside `<details>` and reserving its own row
+  space. The help can be focused/opened/closed without toggling coverage; native
+  Enter/Space disclosure semantics remain unchanged. This applies once in the
+  shared component used by Search, Contracts, Topics, Caller Map and Impact.
+  A regression checks the independent control, absence of nested interactive
+  descendants, Escape focus return and unchanged closed state. Shared/help/
+  Impact checks pass 27 tests; four other consumer suites pass 63 tests; targeted
+  lint and type checking pass. Bounded rendered/canonical qualification follows;
+  this checkpoint claims no browser or screenshot PASS yet.
+
+  Cost: two static layout wrappers around the existing help/disclosure controls;
+  no new state, event listener, layout measurement, request, authority field,
+  source scan, cache, lock, background work, concurrency or child. Existing help
+  portal/listeners retain their opening/closing lifetime. Startup/restart, sync,
+  retry/no-op, publication, memory/disk bounds and evidence meaning are unchanged.
+
+  T43R.6 then passed combined-Atlas native full-page keyboard/a11y checks in
+  four desktop/390px light/dark appearances (6.650s). Both native disclosure
+  Enter/Space and independent help/Escape focus return work without overlap or
+  document overflow; console is clean. Each initial mobile offscreen contrast
+  incomplete is retained and passes separately once locally scrolled into view.
+  This closes the inherited nested-interactive defect in the tested combined UI;
+  T49.4's earlier source-bound findings remain exact. Nine pinned-renderer tests
+  including setup compare all eight existing Atlas frames in28.167s, with no
+  baseline changes, retries, new masks or tolerance change. Backend, browser,
+  bridge and renderer join; derived data is removed. Independent source/cost
+  review has no blocking finding. Eight focused suites pass116 tests; lint,
+  type/build, docs/glossary and whitespace pass. Same-toolchain shared component
+  grows174 minified bytes/45 gzip bytes; keyboard walkthroughs are60–93ms local
+  mechanics observations, not a user or latency study. Exact source/harness/
+  image/report hashes and limits live in `ui/receipts/t43r6.json`.
+
+- **2026-10-18 — T27.1 document-schema spike preregistration (Ben's
+  all-ticket Mac handoff).** Adopt the frozen decision table in the required
+  `spike/t271/README.md` as the isolated experiment's input/output contract;
+  production never imports this spike. One strict UTF-8 JSON blob admits only
+  `phebs-document-schema-v1` and mandatory authored/captured source class.
+  Schema-set lineage is exact repository/clean manifest path/format; owner kind
+  and exact name plus structured typed field paths establish stable identity.
+  Commit/blob/citation/source class are provenance; comparison requires equal
+  lineage and source class. Preserve exact Unicode, literal punctuation and
+  array-element/map-value path kinds. Opaque types/index kinds/prefix units
+  imply no vendor semantics; positive signed-64 prefix metadata controls no work.
+  Primary/index columns are ordered with explicit/default ascending direction;
+  partition paths are direction-free primary prefixes, absence undeclared.
+  Distinct table/view output namespaces, view-owned indexes and exact typed
+  source edges are mandatory. Association cycles are legal untraversed edges;
+  view dependencies must be acyclic. Duplicates, unknown/payload properties,
+  malformed Unicode/shape/context, unresolved references, cycles and limits
+  refuse atomically before any output. The frozen precedence fixes one typed
+  source-free refusal. Missing input is a separate request-export workflow.
+  Every declaration/edge cites its complete exact UTF-8 JSON value and bound
+  source tuple; stable semantic facts exclude citation/provenance churn from
+  explicit snapshot comparison. No live-schema/runtime/current-shape claim.
+
+  Freeze phebs-only bounds at 64KiB input, depth32, 16 tables/views, 128 fields
+  per owner, eight path/key/column/pair positions, 128-byte names and 256-byte
+  types/context, 16 indexes/source references, 64 associations, 256 preflight
+  declarations and 192 complete published facts/citations. These are refusal
+  limits, never vendor or measured operating limits. Before reader code or any
+  reader run, lead review verified the 142-file/915,928-byte inventory and all
+  61 public CQL/neutral JSON span round trips against the permitted pinned
+  Apache source; the hand-derived census is 3 tables, 29 fields, 1 view and its
+  6 outputs/source edges, plus schema/key declarations. Synthetic 119-case
+  labels (14 accepted, 104 atomic refusals, 1 missing; 534 declaration labels)
+  and explicit comparison labels predate implementation. Preregistration digest
+  is `7ef0df8be38bc51494e63a57173c120c5ed2e98b832822251bdb9f6ca9555b3b`.
+  Required README/schema/bounds/derivation evidence owns detailed contract
+  bytes; there is no separate design document. This checkpoints inputs only,
+  not implementation acceptance or independent extraction accuracy.
+
+  Expected cost is one bounded byte/token/structure pass, bounded identity maps
+  and at most a 16-node view DAG; association cycles are never recursively read.
+  Two serial fresh-state passes will compare complete facts/citations/catalog/
+  refusal/comparison outputs and report actual bytes/timing/allocation if
+  measured. No source repository scan, runtime query/startup/sync/retry/no-op,
+  publication, lock, cache, database/network, persistent worker or child changes.
+
+- **2026-10-18 — T27.1 bounded neutral reader outcome (Ben-routed Mac
+  handoff).** The isolated implementation conforms to the immutable `e7be4d27`
+  contract, without production imports or new dependencies. Two fresh-state
+  passes each accept 14 cases, atomically refuse 104 and retain one missing
+  artifact workflow; all 534 facts/citations, the complete 61-row public
+  derivation and explicit snapshot differences agree. Canonical output SHA-256
+  is `904465c775546e1c208fbdd4dc727dabfa5560ae7a9bc88c7022526096926577`
+  on both passes. Fixture authors also implemented the reader; these are neutral
+  contract-conformance/determinism results, not independent extraction accuracy
+  or vendor/live-schema validation. The lead independently reviewed the frozen
+  source/contract and implementation. Peer review found Unicode whitespace
+  could pass the JSON tail; the corrected reader permits only SP/HT/CR/LF.
+  Two positive and six atomic-refusal supplemental controls pass outside the
+  frozen population, with unchanged canonical fixture output. Original
+  measurements/demo/verification remain exact; the separate correction and
+  acceptance records identify the corrected source and clean re-review.
+
+  Outcome is GO for this bounded fixture contract only. Required results README
+  demonstrates table/typed-field/key/citation lookup, declared associations and
+  view outputs, missing-export checklist and explicit two-snapshot differences.
+  It supplies no production reader, registry, schema, adapter, CQL parser, live
+  connection, deployment/migration, current-shape, runtime or release claim.
+  A future production ticket needs its own exact Git/auth/publication design.
+
+  Normal/race/vet and pinned lint pass, including the correction. Every read
+  decodes at most 64KiB/depth32, validates bounded maps and a <=16-node view DAG,
+  and publishes at most 192 complete facts/citations. Associations are never
+  traversed. Full-input provenance hashing happens once; nested cited-value
+  hashing processes at most four additional input lengths. Result/catalog
+  encoding duplicates semantic fact bytes; the conservative <16MiB encoding
+  budget is analytical, not a heap/RSS or new admission bound. Largest observed
+  result is 164,567 encoded bytes; maximum observed per-call process allocation
+  delta is 942,056 bytes, not retained heap or peak RSS. Timing/allocation
+  mechanics retain their exact original pre-correction source qualification.
+  Explicit comparison holds two admitted results and bounded maps without
+  source reads/hashing. There is no production request, sync/startup/retry/no-op,
+  publication, shared lock, cache/invalidation, persistent worker, network,
+  database, disk write or child-process cost.
 
 - **2026-10-18 — T51.2 isolated committed protobuf field admission
   (Ben-routed Mac handoff).** Bind `phebs.protobuf.field.go` claim `1.0.0`

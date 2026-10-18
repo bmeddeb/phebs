@@ -1,0 +1,1934 @@
+{
+  "authorship": "All labels fixed by fixture author before reader execution; negatives require atomic refusal, not partial facts.",
+  "cases": [
+    {
+      "id": "authored-rich",
+      "input": "fixtures/positive/authored-rich.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "accepted",
+      "labels": "labels/authored-rich.json",
+      "declarations": 52,
+      "features": [
+        "typed nested object/list/map paths",
+        "literal [] distinct from traversal",
+        "opaque types/kinds/prefix units",
+        "non-ASCII exact names",
+        "descending composite primary key",
+        "partition prefix",
+        "undeclared partition key",
+        "ordered indexes",
+        "view-owned index",
+        "same-pair distinct associations",
+        "self/cyclic association graph",
+        "table with no associations",
+        "multi/zero-source view outputs",
+        "acyclic typed view dependency"
+      ]
+    },
+    {
+      "id": "captured-minimal",
+      "input": "fixtures/positive/captured-minimal.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "accepted",
+      "labels": "labels/captured-minimal.json",
+      "declarations": 4,
+      "features": [
+        "captured source class",
+        "undeclared partition key"
+      ]
+    },
+    {
+      "id": "empty-captured",
+      "input": "fixtures/positive/empty-captured.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "accepted",
+      "labels": "labels/empty-captured.json",
+      "declarations": 1,
+      "features": [
+        "explicit empty snapshot distinct from missing artifact"
+      ]
+    },
+    {
+      "id": "comparison-before",
+      "input": "fixtures/positive/comparison-before.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "accepted",
+      "labels": "labels/comparison-before.json",
+      "declarations": 6,
+      "features": [
+        "explicit comparison old input"
+      ]
+    },
+    {
+      "id": "comparison-after",
+      "input": "fixtures/positive/comparison-after.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "accepted",
+      "labels": "labels/comparison-after.json",
+      "declarations": 6,
+      "features": [
+        "explicit comparison replacement input"
+      ]
+    },
+    {
+      "id": "input-bytes-at-limit",
+      "input": "fixtures/positive/input-bytes-at-limit.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "accepted",
+      "labels": "labels/input-bytes-at-limit.json",
+      "declarations": 4,
+      "features": [
+        "inclusive input byte bound"
+      ]
+    },
+    {
+      "id": "tables-at-limit",
+      "input": "fixtures/positive/tables-at-limit.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "accepted",
+      "labels": "labels/tables-at-limit.json",
+      "declarations": 49,
+      "features": [
+        "inclusive table bound"
+      ]
+    },
+    {
+      "id": "fields-at-limit",
+      "input": "fixtures/positive/fields-at-limit.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "accepted",
+      "labels": "labels/fields-at-limit.json",
+      "declarations": 131,
+      "features": [
+        "inclusive table field bound"
+      ]
+    },
+    {
+      "id": "names-at-limit",
+      "input": "fixtures/positive/names-at-limit.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "accepted",
+      "labels": "labels/names-at-limit.json",
+      "declarations": 4,
+      "features": [
+        "UTF-8 name byte bound",
+        "type byte bound"
+      ]
+    },
+    {
+      "id": "literal-and-kind-identities",
+      "input": "fixtures/positive/literal-and-kind-identities.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "accepted",
+      "labels": "labels/literal-and-kind-identities.json",
+      "declarations": 13,
+      "features": [
+        "composed/decomposed Unicode names remain distinct",
+        "literal punctuation is not filesystem traversal",
+        "table/view namespaces explicitly disjoint"
+      ]
+    },
+    {
+      "id": "path-at-limit",
+      "input": "fixtures/positive/path-at-limit.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "accepted",
+      "labels": "labels/path-at-limit.json",
+      "declarations": 5,
+      "features": [
+        "inclusive structured path depth bound",
+        "flattened path declares no inferred parent fields"
+      ]
+    },
+    {
+      "id": "citations-at-limit",
+      "input": "fixtures/positive/citations-at-limit.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "accepted",
+      "labels": "labels/citations-at-limit.json",
+      "declarations": 192,
+      "features": [
+        "inclusive 192-fact/citation output bound"
+      ]
+    },
+    {
+      "id": "public-captured",
+      "input": "fixtures/positive/public-captured.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "accepted",
+      "labels": "labels/public-captured.json",
+      "declarations": 61,
+      "features": [
+        "hand-derived pinned Apache public reference",
+        "UDT expansion",
+        "set/list/map traversals",
+        "composite/scalar partition keys",
+        "wildcard view output expansion"
+      ]
+    },
+    {
+      "id": "invalid-utf8",
+      "input": "fixtures/negative/invalid-utf8.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_utf8"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "485a930a17e740a37fed6d060df687e99f494c89b8976271f66965d0c0608f18"
+    },
+    {
+      "id": "unpaired-surrogate",
+      "input": "fixtures/negative/unpaired-surrogate.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_unicode_scalar"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "f297cbdc4500f2fc147a91e4729e9dec543b5f573391dcf28f71b49ee5a848da"
+    },
+    {
+      "id": "malformed-json",
+      "input": "fixtures/negative/malformed-json.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_json"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "a4e54678ffcc21fb5b8e89f26ad975d3e07e9b282b211fdcf057f4ff49623e83"
+    },
+    {
+      "id": "trailing-value",
+      "input": "fixtures/negative/trailing-value.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "trailing_bytes"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "3441751decd3763e69e5cace28ba91d640c6543edbf40b06763cbb6c821b7cca"
+    },
+    {
+      "id": "duplicate-root-key",
+      "input": "fixtures/negative/duplicate-root-key.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "duplicate_key"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "0e2f9975be0f2897cf36293d1b2d020b5b92988daa29f7826bd16b3927a33b31"
+    },
+    {
+      "id": "duplicate-nested-key",
+      "input": "fixtures/negative/duplicate-nested-key.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "duplicate_key"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "d9729bf0c310b6b4cf32d7dd75e09f1cd1b2d5fd852dbd406e9a1405c0317093"
+    },
+    {
+      "id": "control-name",
+      "input": "fixtures/negative/control-name.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_text"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "c8f6b97203fbd34d45b1e31832df4771bb86450726d3a5553da14a00e34acc76"
+    },
+    {
+      "id": "blank-name",
+      "input": "fixtures/negative/blank-name.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_text"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "50f65063363efd95812f1c38c54cb19b96922dbe4c5c514586038a15a560adf2"
+    },
+    {
+      "id": "c1-control-name",
+      "input": "fixtures/negative/c1-control-name.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_text"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "6a7cad808daf645ed70935272a29d89cb50bf06af4846b6baaed530e56216563"
+    },
+    {
+      "id": "empty-name",
+      "input": "fixtures/negative/empty-name.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_text"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "aacd008d7aade0e2cfce8b1da6ca3bb853a02099740447261afba7e0e7925dea"
+    },
+    {
+      "id": "empty-type",
+      "input": "fixtures/negative/empty-type.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_text"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "ed61a1c2ea31d5f6e8a7beb39fb1bd64f8ef205d6d8b1b0111fa210b87fc8471"
+    },
+    {
+      "id": "control-type",
+      "input": "fixtures/negative/control-type.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_text"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "00dac9936e339d4c4483c729388369347d9a93d3564ab0598926f34595fa8824"
+    },
+    {
+      "id": "unknown-root-key",
+      "input": "fixtures/negative/unknown-root-key.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "unknown_key"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "eaf97d6f67207b13f47a9782e35eab202892ed68a5ebbca725a8b4c32e5e4928"
+    },
+    {
+      "id": "unknown-nested-key",
+      "input": "fixtures/negative/unknown-nested-key.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "unknown_key"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "67d4224248be41c70c3abbea8f8146c4e8fb99ff247755167e7ce8b841811891"
+    },
+    {
+      "id": "unknown-version",
+      "input": "fixtures/negative/unknown-version.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "unsupported_format"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "6ee8ebe3bc2a4d7b0f4579ed18ed72e44965dfc905332e1128e3f79ad7faebbf"
+    },
+    {
+      "id": "source-class-missing",
+      "input": "fixtures/negative/source-class-missing.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_shape"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "d6b0ee1927989362a0ccc6af510e198222521590159506ba6abf5ff4e02412a1"
+    },
+    {
+      "id": "source-class-unknown",
+      "input": "fixtures/negative/source-class-unknown.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_shape"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "66bfb5e40afe30552060dea70e6c468e0c751ec37e1f6a87a88bc3ac3e38c080"
+    },
+    {
+      "id": "root-array",
+      "input": "fixtures/negative/root-array.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_shape"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "id": "null-table",
+      "input": "fixtures/negative/null-table.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_shape"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "8d9957fbd1b63dd46f05fdec6918ffdd014def1c18f616fa39855d9d34bb7e47"
+    },
+    {
+      "id": "missing-primary-key",
+      "input": "fixtures/negative/missing-primary-key.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_shape"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "3a82ed9ccb95e120ac7677a7375e276410eb793273024fd67b2cf7e1457885d0"
+    },
+    {
+      "id": "empty-primary-key",
+      "input": "fixtures/negative/empty-primary-key.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_shape"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "ef232be05c377bdd237d2309776af273b5821505047b3280c534cdf64434f355"
+    },
+    {
+      "id": "path-string",
+      "input": "fixtures/negative/path-string.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_shape"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "a59faf183076e60e6fa4b5514fa5b4dda88d4610b6ef28a9c39659269373292f"
+    },
+    {
+      "id": "empty-path",
+      "input": "fixtures/negative/empty-path.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_shape"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "9c25f0d8dc6f3c1b0cdab3509793b74ddfb7926bf1d5369c5548e774f8438059"
+    },
+    {
+      "id": "path-starts-traversal",
+      "input": "fixtures/negative/path-starts-traversal.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_shape"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "17ad69d6025af7794b34f898d61ce52b618304e2c14755094dcb6638d785fd91"
+    },
+    {
+      "id": "field-segment-missing-name",
+      "input": "fixtures/negative/field-segment-missing-name.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_shape"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "31031406d9a7198676175d3176518b309fbb167d2812a2007d6cc93a27eb54a0"
+    },
+    {
+      "id": "segment-extra-key",
+      "input": "fixtures/negative/segment-extra-key.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "unknown_key"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "2a917031e2380d36958efc84efd36f042d9c1b4a6e4b14ed0249bc0cae695e02"
+    },
+    {
+      "id": "traversal-with-name",
+      "input": "fixtures/negative/traversal-with-name.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "unknown_key"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "5269aaffa25a9de3d91fd380ad6c64a9aa079998df1d376a2ace30b5e93dccd8"
+    },
+    {
+      "id": "unknown-traversal",
+      "input": "fixtures/negative/unknown-traversal.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_shape"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "407e37b63f65f0f3f49db8ea721b43c902ff881b488a7f5955fbe81917fe842f"
+    },
+    {
+      "id": "partition-not-prefix",
+      "input": "fixtures/negative/partition-not-prefix.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_partition_key"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "598d81eb8ffe896775b253dafad58801d37d957b185b4be04dca72dcf1f9e732"
+    },
+    {
+      "id": "empty-partition",
+      "input": "fixtures/negative/empty-partition.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_partition_key"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "57b591891051d776beed834db77a21b5a1345865f8fb80772a59735222cfb9b2"
+    },
+    {
+      "id": "direction-on-partition",
+      "input": "fixtures/negative/direction-on-partition.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_shape"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "feeb6f998697c996b57d6d648f30b24ea7a0c1f0e121784b32f0520ce8085ee5"
+    },
+    {
+      "id": "invalid-direction-sideways",
+      "input": "fixtures/negative/invalid-direction-sideways.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_shape"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "efbda85d394eda9f633ea71b42629daa8001945b49deec0f6efa61af887450ce"
+    },
+    {
+      "id": "invalid-direction-7",
+      "input": "fixtures/negative/invalid-direction-7.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_shape"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "c27707b859995abd7d96995729d80de26e0f7d0ddbd8af18232906a84da3a4dc"
+    },
+    {
+      "id": "invalid-direction-None",
+      "input": "fixtures/negative/invalid-direction-None.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_shape"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "7e63dcbbeb9d4fdfa01e0477d5f2e08cb28c3d61a6f54920c5c28e94732202cd"
+    },
+    {
+      "id": "invalid-prefix-0",
+      "input": "fixtures/negative/invalid-prefix-0.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_shape"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "00bd72e0d30c98c76e688f92429addd71728808889d952f8c16d7f3c51f7c36f"
+    },
+    {
+      "id": "invalid-prefix--1",
+      "input": "fixtures/negative/invalid-prefix--1.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_shape"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "42ac2403c88b93a6cd5d08b8243cf72084853be78fc4afe2e120a040814408fd"
+    },
+    {
+      "id": "invalid-prefix-1.5",
+      "input": "fixtures/negative/invalid-prefix-1.5.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_shape"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "a5cb52315964c59dc5e226bae18e8ba83a8ebe966f964a7b6e16a915fe763e36"
+    },
+    {
+      "id": "invalid-prefix-4",
+      "input": "fixtures/negative/invalid-prefix-4.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_shape"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "ea3fcedddb52226708463bc223a3d9d0363aaff2a119a26510a22a0d370b2882"
+    },
+    {
+      "id": "invalid-prefix-9223372036854775808",
+      "input": "fixtures/negative/invalid-prefix-9223372036854775808.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_shape"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "4df7dc03023ef52f8ba8e20a29e968e3fc23579314444e75a86d4a57d687530f"
+    },
+    {
+      "id": "prefix-without-unit",
+      "input": "fixtures/negative/prefix-without-unit.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_shape"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "43292db05bdce0e2cd365a3db74732d4011f141a80137030fc2bb8e8358ed199"
+    },
+    {
+      "id": "unit-without-prefix",
+      "input": "fixtures/negative/unit-without-prefix.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_shape"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "52872487edfd7c3acd3acfe44a0037ef3a6e17ae4526359007c18c50432e58cf"
+    },
+    {
+      "id": "prefix-at-integer-limit",
+      "input": "fixtures/positive/prefix-at-integer-limit.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "accepted",
+      "labels": "labels/prefix-at-integer-limit.json",
+      "declarations": 6,
+      "features": [
+        "opaque positive signed-64-bit metadata; no vendor-unit conversion or work allocation"
+      ]
+    },
+    {
+      "id": "duplicate-table",
+      "input": "fixtures/negative/duplicate-table.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "duplicate_declaration"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "f41e600e6774ece9a45ddeccecc4a7072fa100aa88c5ea46ea7ad1d5e1c0612b"
+    },
+    {
+      "id": "duplicate-field",
+      "input": "fixtures/negative/duplicate-field.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "duplicate_declaration"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "32b4b052a07163fab338ac51556c0e715c6bab254edc1702caf9e0ef08bd2d19"
+    },
+    {
+      "id": "duplicate-key-column",
+      "input": "fixtures/negative/duplicate-key-column.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "duplicate_declaration"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "0324effc3a1100bf673fac56ca1da4c1d73be32714c93d6f65a7d92d9917cd7e"
+    },
+    {
+      "id": "duplicate-index",
+      "input": "fixtures/negative/duplicate-index.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "duplicate_declaration"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "11855c94e413561c0ddcc36ff1da8e91e6a1c6f7cd8929fe5337553d2a302886"
+    },
+    {
+      "id": "duplicate-index-column",
+      "input": "fixtures/negative/duplicate-index-column.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "duplicate_declaration"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "adebe98bc18e54b9abfe903c9a99c343b9583b432425a8bbfde4af5009037e5c"
+    },
+    {
+      "id": "duplicate-partition-column",
+      "input": "fixtures/negative/duplicate-partition-column.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "duplicate_declaration"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "bc91be94391b11c85bfd251d1c7608bd43f9bc404676fdf55127d480a0e90744"
+    },
+    {
+      "id": "duplicate-association",
+      "input": "fixtures/negative/duplicate-association.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "duplicate_declaration"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "85739a304898fb842933697b64840e6132aecb09e089460b7097de410449cc38"
+    },
+    {
+      "id": "duplicate-association-pair",
+      "input": "fixtures/negative/duplicate-association-pair.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "duplicate_declaration"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "037dd185c4c27a13c15e6c284e953a9a7a7f6d5ec7d644d218e2c3aada1217bb"
+    },
+    {
+      "id": "duplicate-view",
+      "input": "fixtures/negative/duplicate-view.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "duplicate_declaration"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "569e251c279a126f2dfb0d0ace2a2285f0d52f4afe4733f669fe10b5680b3e30"
+    },
+    {
+      "id": "duplicate-view-output",
+      "input": "fixtures/negative/duplicate-view-output.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "duplicate_declaration"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "0a4db021b10bdce6a13c0f0efecc9b7c58b82f15aba34ec70ed34a0f40bcd23d"
+    },
+    {
+      "id": "duplicate-view-source",
+      "input": "fixtures/negative/duplicate-view-source.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "duplicate_declaration"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "4be2e9dbf2e77406de5c3a3a0b9811ffe1433cf4c1bc8d7d501c7990c005701d"
+    },
+    {
+      "id": "duplicate-view-key",
+      "input": "fixtures/negative/duplicate-view-key.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "duplicate_declaration"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "16eb50a6d975f39ef88561ad35dab5e34034c5a1bbf0372f4aeee46bd4b9266f"
+    },
+    {
+      "id": "unresolved-primary",
+      "input": "fixtures/negative/unresolved-primary.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "unresolved_reference"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "88107629eb15f12c638856092cdc0c30c6d8ffc2cefc4ca4116206d945fafe3d"
+    },
+    {
+      "id": "unresolved-index",
+      "input": "fixtures/negative/unresolved-index.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "unresolved_reference"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "0ce0ac39c0f4ee68c3aca07acc6b1a9bb39f1880e7eb31509464048549ff34c7"
+    },
+    {
+      "id": "unresolved-association-target",
+      "input": "fixtures/negative/unresolved-association-target.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "unresolved_reference"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "761bd211897ae90fbccd72e2763f048975ce64416ee04a858191bafa4c180790"
+    },
+    {
+      "id": "unresolved-association-source-field",
+      "input": "fixtures/negative/unresolved-association-source-field.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "unresolved_reference"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "399c3cb3c6f1adae831fbe678a1a96a21339d02864b6f32085694d4f54389214"
+    },
+    {
+      "id": "unresolved-association-target-field",
+      "input": "fixtures/negative/unresolved-association-target-field.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "unresolved_reference"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "931703bb07a9e76ed63c6e4a8dda54db90d1c824927e7167a4d51fe9f114bc7e"
+    },
+    {
+      "id": "unresolved-view-source-table",
+      "input": "fixtures/negative/unresolved-view-source-table.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "unresolved_reference"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "cf01082c5166cc37c2d147fce91ab8e695724a254d7721406b3d76533997e117"
+    },
+    {
+      "id": "unresolved-view-source-table-field",
+      "input": "fixtures/negative/unresolved-view-source-table-field.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "unresolved_reference"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "3b7253fa091916051b6c9b36d57f92280575297976b4456c2cd5c1be8856224d"
+    },
+    {
+      "id": "unresolved-view-source-view",
+      "input": "fixtures/negative/unresolved-view-source-view.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "unresolved_reference"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "bdcf371e3129c1dc102d42e50af7e47236ca456c08b562d229bb4e2ea992ac9e"
+    },
+    {
+      "id": "unresolved-view-source-view-field",
+      "input": "fixtures/negative/unresolved-view-source-view-field.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "unresolved_reference"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "153ba75af38b979a244f3254e699806d3461c598a526033a6926f987f374704b"
+    },
+    {
+      "id": "unresolved-view-primary",
+      "input": "fixtures/negative/unresolved-view-primary.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "unresolved_reference"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "eca1c724e1ef7f40daf42c9f8ed98690c0ce97f39f115d326044f6c13d9e03c7"
+    },
+    {
+      "id": "unresolved-view-index",
+      "input": "fixtures/negative/unresolved-view-index.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "unresolved_reference"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "8c32d22209507d23d2bac729e0e02cb25cfe821551182b88c73e939c7a9337e6"
+    },
+    {
+      "id": "view-self-cycle",
+      "input": "fixtures/negative/view-self-cycle.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "view_dependency_cycle"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "89af1c9a7a6f83aa4dd906bf0f7991b8b38d136ebf85b879418906402ed02215"
+    },
+    {
+      "id": "view-two-cycle",
+      "input": "fixtures/negative/view-two-cycle.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "view_dependency_cycle"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "f5ed7bfb75c2162133a8b223ce391196932a9e41a56a6438a451d1c1ac240dd0"
+    },
+    {
+      "id": "payload-record",
+      "input": "fixtures/negative/payload-record.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "data_payload_forbidden"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "e2b21bd291354fbfa0d468aa4a5930c250e20c37e0aabf5eaf4831f1724ae189"
+    },
+    {
+      "id": "payload-records",
+      "input": "fixtures/negative/payload-records.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "data_payload_forbidden"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "cfba1d67426163b25742c5829f1f106221409e52fe22661d0beedfe9341c4544"
+    },
+    {
+      "id": "payload-sample",
+      "input": "fixtures/negative/payload-sample.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "data_payload_forbidden"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "81d0f6fcb6675ffa01febf62d13429f0d1ca1d2126ad0df37167cb32bbe0358a"
+    },
+    {
+      "id": "payload-samples",
+      "input": "fixtures/negative/payload-samples.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "data_payload_forbidden"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "413658710cd9098bd4552828b6b61da75ca310d929b4cc65cc76d05c0abe036c"
+    },
+    {
+      "id": "payload-default",
+      "input": "fixtures/negative/payload-default.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "data_payload_forbidden"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "31c77ed02b6bc0bafac5a930693b6b9aaab2bf1c1ca2f5464ae556d978088a7b"
+    },
+    {
+      "id": "payload-defaults",
+      "input": "fixtures/negative/payload-defaults.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "data_payload_forbidden"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "0699e531c7d6f846b41e15a5a8fa55ce0b039ef0662eecbcb07e9ff1a16aff68"
+    },
+    {
+      "id": "payload-example",
+      "input": "fixtures/negative/payload-example.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "data_payload_forbidden"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "cbd3f9340a83fcac6d8d22fb279e75c128e9f483a047d7a8a69c0c33fa5c941d"
+    },
+    {
+      "id": "payload-examples",
+      "input": "fixtures/negative/payload-examples.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "data_payload_forbidden"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "cc879a551c76de6653b438c1ec99bed977fc140bc5f2009ce07e8f6d0995da02"
+    },
+    {
+      "id": "payload-value",
+      "input": "fixtures/negative/payload-value.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "data_payload_forbidden"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "749e6c44edbfbfed4427e7ef57d6c60bbd9507a083e8c8baeb57764de937b4f5"
+    },
+    {
+      "id": "payload-values",
+      "input": "fixtures/negative/payload-values.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "data_payload_forbidden"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "6e9d9a1baeeca4f7646698ebd5d965a9be2ad29897d362537b2a7dc2e72aa9f8"
+    },
+    {
+      "id": "payload-data",
+      "input": "fixtures/negative/payload-data.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "data_payload_forbidden"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "12df79aa5cfbdd206ee941c5f492021d374d4b5d6ebf5780ac367a265d26dedc"
+    },
+    {
+      "id": "payload-documents",
+      "input": "fixtures/negative/payload-documents.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "data_payload_forbidden"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "f8b7dfd997f0b72f58567ef5de98f81ee0b752d9c458fc034ac2fc1378830567"
+    },
+    {
+      "id": "input-bytes-over",
+      "input": "fixtures/negative/input-bytes-over.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "limit_exceeded",
+        "limit": "manifest_bytes"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "e83e894224e14d442474d796859999a6d1afcc87b9362bda5553bfcb34d5eae3"
+    },
+    {
+      "id": "json-depth-over",
+      "input": "fixtures/negative/json-depth-over.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "limit_exceeded",
+        "limit": "json_depth"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "eac9bf029c22e177c74309fb891e3351dccfb04f055127ea82dc2dc3136cd899"
+    },
+    {
+      "id": "tables-over",
+      "input": "fixtures/negative/tables-over.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "limit_exceeded",
+        "limit": "tables"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "84269da843505089e3ff487dae6bc7bce834ac9105026336dcf1afa377005fd9"
+    },
+    {
+      "id": "fields-over",
+      "input": "fixtures/negative/fields-over.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "limit_exceeded",
+        "limit": "fields_per_table"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "b27cc407eed49b0154b2bfd242f52c1942b88ef5767f8f10938830f9bfdac99e"
+    },
+    {
+      "id": "path-depth-over",
+      "input": "fixtures/negative/path-depth-over.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "limit_exceeded",
+        "limit": "path_depth"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "5dce5b210984e7f4fa514d085c2f61238f417d8e635288c19fdc6e475c0109a7"
+    },
+    {
+      "id": "name-bytes-over",
+      "input": "fixtures/negative/name-bytes-over.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "limit_exceeded",
+        "limit": "name_utf8_bytes"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "f30885152f40a0173b14d2b69ae6f9d133a684c588764f75bdb1351f8062d70d"
+    },
+    {
+      "id": "type-bytes-over",
+      "input": "fixtures/negative/type-bytes-over.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "limit_exceeded",
+        "limit": "type_utf8_bytes"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "edb0568437ce7db6b2e252f357d0b4ed18bb73e2f1c1f15095a8699799981b6b"
+    },
+    {
+      "id": "key-width-over",
+      "input": "fixtures/negative/key-width-over.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "limit_exceeded",
+        "limit": "key_width"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "ebbdf3fda7c47c36b4e90f1d960b0b45950fad1d73933ea5ee4fed9da64f74ef"
+    },
+    {
+      "id": "indexes-over",
+      "input": "fixtures/negative/indexes-over.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "limit_exceeded",
+        "limit": "indexes_per_owner"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "898f4c7bf6972704243e91dbe8175bae0c622291f9dc98b3aa9d526215a52ee3"
+    },
+    {
+      "id": "index-columns-over",
+      "input": "fixtures/negative/index-columns-over.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "limit_exceeded",
+        "limit": "index_columns"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "3143f2f86b3ec4791553db177ace549fbcf59fe9845ed43c002d8831ef1d207e"
+    },
+    {
+      "id": "associations-over",
+      "input": "fixtures/negative/associations-over.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "limit_exceeded",
+        "limit": "associations_total"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "13822b3a347a1aeaf2500f324f31c872f66b4a8a3df1cf32ec4c29f0dbaeb5c6"
+    },
+    {
+      "id": "association-fields-over",
+      "input": "fixtures/negative/association-fields-over.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "limit_exceeded",
+        "limit": "association_fields"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "634c5e90db0ae1e4be5887baa90e22e933d33848e44c63f12af2bfa70e387e51"
+    },
+    {
+      "id": "views-over",
+      "input": "fixtures/negative/views-over.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "limit_exceeded",
+        "limit": "views"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "8a116232622ac650ef52a1aeb5c40a9cf8d5799f5938c51ff234f009600b7b7f"
+    },
+    {
+      "id": "view-fields-over",
+      "input": "fixtures/negative/view-fields-over.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "limit_exceeded",
+        "limit": "fields_per_view"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "e34e86ed56f83ffc010ccf7c38d3fa1dff6fb0c15b08424a905f73a4d101ab68"
+    },
+    {
+      "id": "view-sources-over",
+      "input": "fixtures/negative/view-sources-over.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "limit_exceeded",
+        "limit": "sources_per_view_field"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "00fa4a7339ab5339456c261de265c3ab2799aa20e115e48c03a586dab08e9f5a"
+    },
+    {
+      "id": "aggregate-over",
+      "input": "fixtures/negative/aggregate-over.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "limit_exceeded",
+        "limit": "aggregate_declarations"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "7e87afeefd0c465b168e642ec630484b5d58050981addb6a3e03124da82be0b6"
+    },
+    {
+      "id": "citations-over",
+      "input": "fixtures/negative/citations-over.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "limit_exceeded",
+        "limit": "emitted_citations"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "3ece6684c7dc27a733d6c7a7873180a6bbf0caf9f715d5e491d21e559fe69b53"
+    },
+    {
+      "id": "manifest-path-unnormalized",
+      "input": "fixtures/negative/manifest-path-unnormalized.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "./schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "input_context_invalid"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "48701caec856ce8665ef76d1613ec874f2ff2f40c6ce4cf913512af2be208bee"
+    },
+    {
+      "id": "manifest-path-traversal",
+      "input": "fixtures/negative/manifest-path-traversal.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "../schema.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "input_context_invalid"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "48701caec856ce8665ef76d1613ec874f2ff2f40c6ce4cf913512af2be208bee"
+    },
+    {
+      "id": "manifest-path-absolute",
+      "input": "fixtures/negative/manifest-path-absolute.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "/schema.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "input_context_invalid"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "48701caec856ce8665ef76d1613ec874f2ff2f40c6ce4cf913512af2be208bee"
+    },
+    {
+      "id": "manifest-path-backslash",
+      "input": "fixtures/negative/manifest-path-backslash.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema\\document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "input_context_invalid"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "48701caec856ce8665ef76d1613ec874f2ff2f40c6ce4cf913512af2be208bee"
+    },
+    {
+      "id": "context-invalid-commit",
+      "input": "fixtures/negative/context-invalid-commit.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "not-a-commit"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "input_context_invalid"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "48701caec856ce8665ef76d1613ec874f2ff2f40c6ce4cf913512af2be208bee"
+    },
+    {
+      "id": "context-blank-repository",
+      "input": "fixtures/negative/context-blank-repository.json",
+      "context": {
+        "repository": "  ",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "input_context_invalid"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "48701caec856ce8665ef76d1613ec874f2ff2f40c6ce4cf913512af2be208bee"
+    },
+    {
+      "id": "repository-context-over",
+      "input": "fixtures/negative/repository-context-over.json",
+      "context": {
+        "repository": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "limit_exceeded",
+        "limit": "repository_utf8_bytes"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "48701caec856ce8665ef76d1613ec874f2ff2f40c6ce4cf913512af2be208bee"
+    },
+    {
+      "id": "path-context-over",
+      "input": "fixtures/negative/path-context-over.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "limit_exceeded",
+        "limit": "manifest_path_utf8_bytes"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "48701caec856ce8665ef76d1613ec874f2ff2f40c6ce4cf913512af2be208bee"
+    },
+    {
+      "id": "cql-not-admitted",
+      "input": "fixtures/negative/cql-not-admitted.json",
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "refused",
+      "refusal": {
+        "code": "invalid_json"
+      },
+      "expected_facts": 0,
+      "expected_citations": 0,
+      "fixture_sha256": "38992bd1f0882ebefe7e16570d05886ade150bf2036ea6119ab08fc11b3bb39e"
+    },
+    {
+      "id": "missing-artifact",
+      "input": null,
+      "context": {
+        "repository": "example.invalid/neutral/schema",
+        "manifest_path": "schema/document.json",
+        "commit": "1111111111111111111111111111111111111111"
+      },
+      "expect": "missing",
+      "state": "document-schema-artifact-missing",
+      "checklist": "request-schema-export",
+      "expected_facts": 0,
+      "expected_citations": 0
+    }
+  ]
+}

@@ -1,0 +1,1724 @@
+{
+  "format": "phebs-document-schema-v1",
+  "source_class": "authored",
+  "tables": [
+    {
+      "name": "A",
+      "fields": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f0"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f1"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f2"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f3"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f4"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f5"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f6"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f7"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f8"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f9"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f10"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f11"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f12"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f13"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f14"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f15"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f16"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f17"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f18"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f19"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f20"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f21"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f22"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f23"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f24"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f25"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f26"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f27"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f28"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f29"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f30"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f31"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f32"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f33"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f34"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f35"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f36"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f37"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f38"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f39"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f40"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f41"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f42"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f43"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f44"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f45"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f46"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f47"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f48"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f49"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f50"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f51"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f52"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f53"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f54"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f55"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f56"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f57"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f58"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f59"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f60"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f61"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f62"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f63"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f64"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f65"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f66"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f67"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f68"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f69"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f70"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f71"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f72"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f73"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f74"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f75"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f76"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f77"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f78"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f79"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f80"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f81"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f82"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f83"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f84"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f85"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f86"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f87"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f88"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f89"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f90"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f91"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f92"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f93"
+            }
+          ],
+          "type": "opaque:string"
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f0"
+            }
+          ]
+        }
+      ],
+      "indexes": [],
+      "associations": []
+    },
+    {
+      "name": "B",
+      "fields": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f0"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f1"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f2"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f3"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f4"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f5"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f6"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f7"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f8"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f9"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f10"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f11"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f12"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f13"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f14"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f15"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f16"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f17"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f18"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f19"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f20"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f21"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f22"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f23"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f24"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f25"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f26"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f27"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f28"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f29"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f30"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f31"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f32"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f33"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f34"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f35"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f36"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f37"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f38"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f39"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f40"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f41"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f42"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f43"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f44"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f45"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f46"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f47"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f48"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f49"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f50"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f51"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f52"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f53"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f54"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f55"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f56"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f57"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f58"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f59"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f60"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f61"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f62"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f63"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f64"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f65"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f66"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f67"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f68"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f69"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f70"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f71"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f72"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f73"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f74"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f75"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f76"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f77"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f78"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f79"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f80"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f81"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f82"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f83"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f84"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f85"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f86"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f87"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f88"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f89"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f90"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f91"
+            }
+          ],
+          "type": "opaque:string"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f92"
+            }
+          ],
+          "type": "opaque:string"
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "f0"
+            }
+          ]
+        }
+      ],
+      "indexes": [],
+      "associations": []
+    }
+  ],
+  "views": []
+}

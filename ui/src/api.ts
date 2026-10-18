@@ -741,6 +741,8 @@ export interface ContractCatalogPagination {
   next_cursor?: string
 }
 
+export type ContractCatalogAuthority = Schemas['ContractCatalogAuthority']
+
 export interface ContractCatalogList {
   schema_version: string
   query: {
@@ -750,6 +752,7 @@ export interface ContractCatalogList {
     lineage?: string
   }
   items: ContractCatalogItem[]
+  exact_authorities?: ContractCatalogAuthority[] | null
   pagination: ContractCatalogPagination
   coverage_digest: string
   coverage: CoverageCertificate
@@ -834,12 +837,14 @@ export interface ContractCatalogOperation {
   method: string
   operation: string
   declaration: ContractCatalogClaim
+  exact_authority?: ContractCatalogAuthority
   fact_detail: ContractCatalogOperationFactDetail
   request: ContractCatalogMessage
   response: ContractCatalogMessage
   implementations: ContractCatalogRelationship[]
   callers: ContractCatalogRelationship[]
   unresolved_candidates: ContractCatalogRelationship[]
+  unavailable_relationships?: string[] | null
   relationships_truncated: boolean
   relationship_limit_reason?: string
   shape_truncated: boolean

@@ -1,0 +1,1334 @@
+{
+  "format": "phebs-document-schema-v1",
+  "source_class": "authored",
+  "tables": [
+    {
+      "name": "T",
+      "fields": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ],
+          "type": "opaque:string"
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ]
+        }
+      ],
+      "indexes": [],
+      "associations": [
+        {
+          "name": "A0",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A1",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A2",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A3",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A4",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A5",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A6",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A7",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A8",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A9",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A10",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A11",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A12",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A13",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A14",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A15",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A16",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A17",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A18",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A19",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A20",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A21",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A22",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A23",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A24",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A25",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A26",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A27",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A28",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A29",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A30",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A31",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A32",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A33",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A34",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A35",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A36",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A37",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A38",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A39",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A40",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A41",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A42",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A43",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A44",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A45",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A46",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A47",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A48",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A49",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A50",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A51",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A52",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A53",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A54",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A55",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A56",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A57",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A58",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A59",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A60",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A61",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A62",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A63",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "A64",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "views": []
+}

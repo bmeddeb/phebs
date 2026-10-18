@@ -170,6 +170,13 @@ values update and 118 baselines remain untouched. This closes the portability
 implementation on its branch; full-matrix history and production signing retain
 their recorded scope.
 
+**T50.2 comparison admission preparation (2026-10-18):** its independent signed
+claim plus released Caller Map now select the shared exact comparison service
+on the ticket branch. Joint authority/cursor/citation fences are reused;
+unsupported endpoint pairs refuse early. Focused normal/race/MCP/static checks
+pass. Actual quality/operating promotion and signing remain T50.3, not inherited
+from Caller Map or Atlas.
+
 **T51.1 field inputs (2026-10-18):** a source-labelled public population and
 separate authored controls now have reviewed, actual committed evaluator SCIP
 inputs, explicit descriptor/lineage witnesses and prospective finite thresholds.
@@ -193,6 +200,37 @@ legacy-byte, final-fence and release-domain checks pass on its ticket branch.
 The browser exposes exact native authority without inventing legacy runs;
 unadmitted retained domains refuse before storage. Main integration remains a
 separate decision.
+
+**T25.1 embedded docs preparation (2026-10-18):** authenticated build-snapshot
+Markdown/SVG/YAML, exact links and explicit repository-only fallback are
+implemented with normal/race/auth/static and four-appearance browser gates
+passing. Canonical deterministic comparison and final integration remain open;
+this does not add a release or anonymous documentation surface.
+
+**T25.1 documentation browser (2026-10-18):** authenticated embedded docs,
+strict links/content boundaries, native keyboard/a11y and twelve canonical
+captures with fresh-fixture comparison are implemented and reviewed on the
+ticket branch. Repository-only destinations are explicitly labelled; no excluded
+history or fixture bytes are embedded. Main integration remains separate.
+
+**T49.4 Atlas closure (2026-10-18):** signed disposable-key native HTTP/MCP/
+UI/revocation and eight reviewed canonical frames pass on the ticket branch.
+Current partitioned authority, unavailable planes, capabilities and narrow layout
+are repaired. Shared scope-help accessibility is tracked separately as T43R.6;
+production signing remains pending the existing key. No accuracy/scale or
+full-page accessibility claim follows from the scoped integration result.
+
+**T27.1 inputs (2026-10-18):** the document-schema spike has independently
+reviewed, digest-pinned labels and public derivation before reader code or
+execution. The bounded reader and two deterministic passes follow; this is
+isolated spike preparation, with no production pack or live-schema claim.
+
+**T27.1 bounded reader result (2026-10-18):** both frozen 119-case passes,
+534 exact facts/citations and public derivation agree. The JSON whitespace
+review finding is corrected and independently re-reviewed; normal/race/static
+checks pass. The spike is complete on its branch for neutral fixture contract
+conformance only. No production integration or runtime-schema claim follows;
+future production work requires a separately specified ticket.
 
 **Caller Map / Atlas sequencing override (2026-10-17, Ben-directed):** bounded
 integration tests suffice for these products and their release bindings. The

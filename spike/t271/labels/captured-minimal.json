@@ -1,0 +1,82 @@
+{
+  "authorship": "Fixture-author declarative labels, frozen before any reader implementation or run; not independent extraction-accuracy evidence.",
+  "fixture_sha256": "d53b432dd64a8ab9123fa3952d25f840deaa91620a516554a41a269386adf6b9",
+  "declarations": [
+    {
+      "kind": "DECLARES_SCHEMA_SET",
+      "pointer": "",
+      "owner": null,
+      "meaning": {
+        "format": "phebs-document-schema-v1",
+        "source_class": "captured"
+      },
+      "span": {
+        "start": 0,
+        "end": 553,
+        "sha256": "e0e05fc162ac97a760aeed012f92e4f8ce5e2cd781a1d32b54b22d01285d4660"
+      }
+    },
+    {
+      "kind": "DECLARES_TABLE",
+      "pointer": "/tables/0",
+      "owner": {
+        "kind": "table",
+        "name": "T"
+      },
+      "meaning": {
+        "name": "T",
+        "partition_key_state": "undeclared"
+      },
+      "span": {
+        "start": 90,
+        "end": 532,
+        "sha256": "d909e091e8fcdabd4ef93fdb90afbfb806d4c9e7236674805cd8fe61479c0b10"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/0/fields/0",
+      "owner": {
+        "kind": "table",
+        "name": "T"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 137,
+        "end": 301,
+        "sha256": "c0c1dc41f863f03f0e95ed41c591f6f1ad3ac7bf6aac527e9c4df4f6bbb0b66d"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/tables/0/primary_key/0",
+      "owner": {
+        "kind": "table",
+        "name": "T"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "position": 0,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 342,
+        "end": 471,
+        "sha256": "640ade14bb4afc774d88363ad6ec6e8347b86cc995f205711da02fe499327c92"
+      }
+    }
+  ]
+}

@@ -1,0 +1,449 @@
+{
+  "format": "phebs-document-schema-v1",
+  "source_class": "authored",
+  "tables": [
+    {
+      "name": "T0",
+      "fields": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ],
+          "type": "opaque:string"
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ]
+        }
+      ],
+      "indexes": [],
+      "associations": []
+    },
+    {
+      "name": "T1",
+      "fields": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ],
+          "type": "opaque:string"
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ]
+        }
+      ],
+      "indexes": [],
+      "associations": []
+    },
+    {
+      "name": "T2",
+      "fields": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ],
+          "type": "opaque:string"
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ]
+        }
+      ],
+      "indexes": [],
+      "associations": []
+    },
+    {
+      "name": "T3",
+      "fields": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ],
+          "type": "opaque:string"
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ]
+        }
+      ],
+      "indexes": [],
+      "associations": []
+    },
+    {
+      "name": "T4",
+      "fields": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ],
+          "type": "opaque:string"
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ]
+        }
+      ],
+      "indexes": [],
+      "associations": []
+    },
+    {
+      "name": "T5",
+      "fields": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ],
+          "type": "opaque:string"
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ]
+        }
+      ],
+      "indexes": [],
+      "associations": []
+    },
+    {
+      "name": "T6",
+      "fields": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ],
+          "type": "opaque:string"
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ]
+        }
+      ],
+      "indexes": [],
+      "associations": []
+    },
+    {
+      "name": "T7",
+      "fields": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ],
+          "type": "opaque:string"
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ]
+        }
+      ],
+      "indexes": [],
+      "associations": []
+    },
+    {
+      "name": "T8",
+      "fields": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ],
+          "type": "opaque:string"
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ]
+        }
+      ],
+      "indexes": [],
+      "associations": []
+    },
+    {
+      "name": "T9",
+      "fields": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ],
+          "type": "opaque:string"
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ]
+        }
+      ],
+      "indexes": [],
+      "associations": []
+    },
+    {
+      "name": "T10",
+      "fields": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ],
+          "type": "opaque:string"
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ]
+        }
+      ],
+      "indexes": [],
+      "associations": []
+    },
+    {
+      "name": "T11",
+      "fields": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ],
+          "type": "opaque:string"
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ]
+        }
+      ],
+      "indexes": [],
+      "associations": []
+    },
+    {
+      "name": "T12",
+      "fields": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ],
+          "type": "opaque:string"
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ]
+        }
+      ],
+      "indexes": [],
+      "associations": []
+    },
+    {
+      "name": "T13",
+      "fields": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ],
+          "type": "opaque:string"
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ]
+        }
+      ],
+      "indexes": [],
+      "associations": []
+    },
+    {
+      "name": "T14",
+      "fields": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ],
+          "type": "opaque:string"
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ]
+        }
+      ],
+      "indexes": [],
+      "associations": []
+    },
+    {
+      "name": "T15",
+      "fields": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ],
+          "type": "opaque:string"
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ]
+        }
+      ],
+      "indexes": [],
+      "associations": []
+    },
+    {
+      "name": "T16",
+      "fields": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ],
+          "type": "opaque:string"
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ]
+        }
+      ],
+      "indexes": [],
+      "associations": []
+    }
+  ],
+  "views": []
+}

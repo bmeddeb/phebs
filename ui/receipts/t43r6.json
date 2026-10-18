@@ -1,0 +1,214 @@
+{
+  "schema": "phebs-t43r6-canonical-receipts-v1",
+  "date": "2026-10-18",
+  "source_commit": "b4ff7d874a3ac94e5c4010526e54cb417879f34f",
+  "qualification": "Shared scope-help fix over combined Atlas UI. Authenticated native full-page keyboard/a11y presentation checks and unchanged eight-frame pinned comparison; not hosted CI, extraction quality or release authority.",
+  "retries": 0,
+  "max_diff_pixel_ratio": 0.001,
+  "new_masks": false,
+  "runs": [
+    {
+      "mode": "compare",
+      "exit_code": 0,
+      "seconds": 28.167
+    }
+  ],
+  "native": {
+    "exit_code": 0,
+    "seconds": 6.65
+  },
+  "passed": true,
+  "backend_exit_code": 0,
+  "baseline_changes": {},
+  "native_detail": {
+    "renderer": "155.0.8059.82",
+    "qualification": "Authenticated native UI presentation fixture; no extractor or publication-authority claim.",
+    "results": [
+      {
+        "width": 1280,
+        "theme": "light",
+        "keyboard_ms": 93,
+        "violations": 0,
+        "incomplete": [],
+        "individually_visible_contrast_checks": [],
+        "no_document_overflow": true,
+        "help_target_unobscured": true,
+        "console_errors": []
+      },
+      {
+        "width": 1280,
+        "theme": "dark",
+        "keyboard_ms": 75,
+        "violations": 0,
+        "incomplete": [],
+        "individually_visible_contrast_checks": [],
+        "no_document_overflow": true,
+        "help_target_unobscured": true,
+        "console_errors": []
+      },
+      {
+        "width": 390,
+        "theme": "light",
+        "keyboard_ms": 79,
+        "violations": 0,
+        "incomplete": [
+          {
+            "id": "color-contrast",
+            "nodes": 5
+          }
+        ],
+        "individually_visible_contrast_checks": [
+          {
+            "selector": ".css-LSQGM > thead > tr > th:nth-child(3)",
+            "violations": 0,
+            "incomplete": 0
+          },
+          {
+            "selector": ".css-LSQGM > thead > tr > th:nth-child(4)",
+            "violations": 0,
+            "incomplete": 0
+          },
+          {
+            "selector": ".css-drbeGY:nth-child(2)",
+            "violations": 0,
+            "incomplete": 0
+          },
+          {
+            "selector": ".css-jvpxUk:nth-child(3)",
+            "violations": 0,
+            "incomplete": 0
+          },
+          {
+            "selector": ".css-LSQGM > tbody > .css-lhpcTq > .css-drbeGY:nth-child(4)",
+            "violations": 0,
+            "incomplete": 0
+          }
+        ],
+        "no_document_overflow": true,
+        "help_target_unobscured": true,
+        "console_errors": []
+      },
+      {
+        "width": 390,
+        "theme": "dark",
+        "keyboard_ms": 60,
+        "violations": 0,
+        "incomplete": [
+          {
+            "id": "color-contrast",
+            "nodes": 5
+          }
+        ],
+        "individually_visible_contrast_checks": [
+          {
+            "selector": ".css-LSQGM > thead > tr > th:nth-child(3)",
+            "violations": 0,
+            "incomplete": 0
+          },
+          {
+            "selector": ".css-LSQGM > thead > tr > th:nth-child(4)",
+            "violations": 0,
+            "incomplete": 0
+          },
+          {
+            "selector": ".css-hsqoyv:nth-child(2)",
+            "violations": 0,
+            "incomplete": 0
+          },
+          {
+            "selector": ".css-isnWlz:nth-child(3)",
+            "violations": 0,
+            "incomplete": 0
+          },
+          {
+            "selector": ".css-LSQGM > tbody > .css-bLoBss > .css-hsqoyv:nth-child(4)",
+            "violations": 0,
+            "incomplete": 0
+          }
+        ],
+        "no_document_overflow": true,
+        "help_target_unobscured": true,
+        "console_errors": []
+      }
+    ]
+  },
+  "browser_availability": "Browser plugin not available; existing Playwright workflow and installed Chrome used.",
+  "source_files_sha256": {
+    "ui/src/components/AnalysisScopePanel.tsx": "8c088d5f73081d272f9be1964ad895c40c2cde96e8582c6680e4efdf4219ae1a",
+    "ui/src/components/AnalysisScopePanel.test.tsx": "8bf347648d312c61b52b50edf1b9847edf2c10e3168d4b08b546f1e9f2aa788c"
+  },
+  "harness_sha256": {
+    "/tmp/phebs-t43r6-qa.py": "1adf4eb7faa4646c233d20e6306b6b6ab5ddd806e7e5ce23c9b30b1f319275c5",
+    "/tmp/phebs-t43r6-browser.mjs": "9b6161ebc77db003904dac12e1e0fef9ed140554bf6fc64e4357f1b7c5d5eb16"
+  },
+  "runtime": {
+    "canonical_image": "mcr.microsoft.com/playwright:v1.62.1-noble@sha256:c091b21d9fae78c76e85cd4356431e9b018402f172a214fc7d7a5e9a7e29d8ac",
+    "platform": "linux/amd64",
+    "node": "24.18.0",
+    "playwright": "1.62.1",
+    "chromium": "151.0.7922.34",
+    "native_chrome": "155.0.8059.82",
+    "retries": 0,
+    "max_diff_pixel_ratio": 0.001,
+    "new_masks": false
+  },
+  "existing_baselines": {
+    "contract-atlas--dark--comfortable.png": "a2ba7314f356798de6927e5430931e1087cc8875e0de9f8c28c3759a8ff642f4",
+    "contract-atlas--dark--dense.png": "0702dce197c54e8f4f70b538e8a4158fe88b57442743c7aaa8bd44591eb9da39",
+    "contract-atlas--light--comfortable.png": "bfd54bbf5395594b7b1de06269047bd5623b85f09330dba850279b478d283029",
+    "contract-atlas--light--dense.png": "eac25afe8ef4904d332ff750bbe13e9ae3c299070214f51f06c049786ecf51c6",
+    "contract-atlas-declaration-only-desktop--dark--comfortable.png": "3efb406e7dcb1b662ea6a3a82d9e9be8a9e865eb8e5306e7afa04643510ffebe",
+    "contract-atlas-declaration-only-desktop--light--comfortable.png": "56f87fd168bdc82abfb3d54a134f0328609e219a0bad2c40e74d08fbc343b0ec",
+    "contract-atlas-declaration-only-mobile--dark--comfortable.png": "6c77a167348f88cf1d5865203bf7d8df5984b8ec12a63ae2bb97c3421921f6ee",
+    "contract-atlas-declaration-only-mobile--light--comfortable.png": "9daaf07987a1d40a5d65012772b3ae5eb9b92b1b21194dce6946aee6a03a6ad4"
+  },
+  "native_capture_sha256": {
+    "1280-dark.png": "21302edc60dda9f72e8348844e1b9b31420bd6f311d14ad8ff4afaad8e6e03ad",
+    "1280-light.png": "d6fbaed24ce70f5f9b2f3e33dd3b4cd6d3ccca012b8d55a461196b17ba681e54",
+    "390-dark.png": "643f258dda7173df7601b374e49238eab06bd93a60bf69adb7acdfdb0967ee60",
+    "390-light.png": "7b8f7d4059bd1cbfffbff0573930e3be8e5a3f922433093fbfef570bb6cb09da"
+  },
+  "evidence_report_sha256": {
+    "1280-dark-axe.json": "2109a0d7148858b34a05864fe3f96229edf67227260b44b76229d0bc75001a0a",
+    "1280-light-axe.json": "3a50cac75b51a2700d1842c11d3ec9002fa664be5749137d59c8d3e08ed98657",
+    "390-dark-axe.json": "eb6d47270306149ddb1c2910daa40291c4f4001bd93cec11161be379877d8b0b",
+    "390-light-axe.json": "cdaba53e9cbd4da3aa853d405a742e18aa6f27f6064ea74e4ea5d4147bc9b17f",
+    "compare.log": "6a4258944570c45f98ccd1091cc18fb04815b0510f72c347658cf72520b4a3d2",
+    "native-summary.json": "4ce2386cb21126cf06989a3eb402cfd20d78f33b9f877c9c9c6b95e29dd0bd90"
+  },
+  "lead_review": {
+    "date": "2026-10-18",
+    "result": "accepted",
+    "source_peer_review": "Independent agent: no blocking semantic, layout, focus, shared-consumer or cost finding.",
+    "visual_review": "Native390light help target is visible, independently focused and unobscured; all four appearances pass geometry checks. Existing eight canonical frames compare unchanged.",
+    "audit_qualification": "Full-page zero violations in four appearances; initial mobile offscreen contrast incompletes are retained and each affected cell passes a separate visible-cell audit with no violations or incompletes."
+  },
+  "bundle": {
+    "tool": "Vite8.1.4; same repository dependencies",
+    "before_shared_component_js_bytes": 20803,
+    "after_shared_component_js_bytes": 20977,
+    "delta_js_bytes": 174,
+    "before_gzip_bytes": 5460,
+    "after_gzip_bytes": 5505,
+    "delta_gzip_bytes": 45,
+    "all_js_before": 6755385,
+    "all_js_after": 6755559
+  },
+  "checks": {
+    "focused_ui_files": 8,
+    "focused_ui_tests": 116,
+    "ui_seconds": 2.87,
+    "targeted_lint": "pass",
+    "typescript_build": "pass",
+    "independent_review": "no blocking findings",
+    "canonical_tests_including_setup": 9
+  },
+  "teardown": {
+    "backend_exit_code": 0,
+    "browser_contexts_and_browser_closed": true,
+    "ssh_forward_joined": true,
+    "renderer_container_removed": true,
+    "derived_data_removed": true,
+    "temporary_config_and_login_input_removed": true
+  }
+}
