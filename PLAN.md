@@ -13968,3 +13968,39 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   theme transitions, avoiding an intermediate BaseUI button contrast reading.
   This grants no Linux native acceptance, generated-evidence or scale claim,
   production signature, activation or ceremony authority.
+
+
+- **2026-10-18 — T57R.5 exact search/file navigation state (Mac audit).**
+  Ben requests the next bounded Mac audit, focused on search/file navigation,
+  with integration when green and production signing pending. Store search
+  selection by the existing repository/revision/path result key, so folding or
+  streaming into an earlier group cannot substitute another file. Derive its
+  current visible index and move real focus only when that selected key changes.
+  Bind file metadata to its repository before using an unpinned indexed revision;
+  bind symbol positions to repository/path/effective revision before dispatch.
+  This removes crossed-revision source reads and three stale-position requests
+  on route changes without weakening server authority. Only safe positive
+  integer line parameters override Markdown preview; malformed, non-finite,
+  fractional and unsafe values behave as absent. Give the read-only editor a
+  path-specific accessible name. Disable permalink copying until the effective
+  revision is known, avoiding a mutable URL during metadata resolution. Pinned
+  source, normal query/SCIP/source fences,
+  valid deep links and back/forward request semantics stay exact.
+  Cost: selection adds one linear visible-result lookup when that list/key
+  changes and one linear lookup for each j/k update; a key update consequently
+  performs two linear visible-result scans. These scan mounted results, never
+  corpus/source contents, and add no cache/index map. Selection holds one existing
+  result key instead of an ordinal; one obsolete visible-list ref is removed.
+  Metadata merges two state slots into one small repository-bound record;
+  selection adds one source identity to the existing position record. Route
+  changes retain existing metadata reads per repository change and source reads
+  per source change, while avoiding borrowed-revision/tree reads and stale symbol
+  probes. The permalink gate adds no request. Genuine symbol
+  clicks retain the same three requests. Safe-line validation is constant work.
+  Startup/restart, sync, no-op/retry and publication add no backend work, lock,
+  disk state, child, polling or cache invalidation. No new dependency or asset
+  class is introduced. Browser fixtures cover desktop/390px keyboard, precise
+  requests, delayed metadata, back/forward and malformed-line preview; native
+  idle frames compare against main using one renderer. Linux #124, installed
+  SCIP/target proof, signatures, production activation and ceremony remain
+  separate pending obligations.

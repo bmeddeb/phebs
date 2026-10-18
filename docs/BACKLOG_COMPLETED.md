@@ -11314,3 +11314,16 @@ native keyboard/console/WCAG journeys, six unchanged native idle pairs and two
 reviewed Settings pairs reproduced byte-identically. Documentation, glossary,
 whitespace and scoped charter/cost review pass. Canonical Noble baselines and
 Linux/production-signing holds remain exact.
+
+
+## T57R.5 · Search and file navigation repair (2026-10-18)
+
+Ben's Mac audit continuation reproduces nine failures and adds eleven UI controls.
+Selection follows the exact result across folded/streamed groups without focus
+stealing. Unpinned files wait for repository-bound metadata; old symbol positions
+never dispatch on a new source. Invalid line parameters do not override preview,
+the permalink waits for an effective revision, and the read-only source editor
+has a path-specific accessible name. Bounded UI,
+native request/back-forward/keyboard/WCAG, same-renderer pixels, types/lint/build
+and documentation gates are recorded in the owning backlog entry. No backend,
+Linux acceptance, production signature or activation changes.
