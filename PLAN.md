@@ -12347,3 +12347,26 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   primary contributes source quality denominators. These preparation/source
   bindings precede candidate export and scoring. No quality or operating PASS
   is inferred from indexing, source cloning or canonicalization.
+
+- **2026-10-18 — T50.3 first comparison attempt remains failed.** Preserve
+  `spike/t503/baseline-result.json` SHA256
+  `7e63806f9269a357fa056d46ff625a1a764da8930eb74df00d84341607163693`
+  and its exact public source-only checkpoint/labels. The ordinary signed engine
+  ran15.163s with disposable integration key removed before launch; server and
+  observer joined, sampled RSS233,488,384 bytes and minimum observed physical
+  headroom about8.58GB. These samples are not an unobserved peak, numeric heap
+  ceiling, Linux scale result or production signature.
+
+  Offline independent adjudication removed only a checker assertion requiring
+  resolution=scip that the frozen labels never required. Public resolved syntax
+  remains heuristic; scip remains derived. Seventeen negative mutations and
+  positive scip/syntax checker controls pass, with no new product reads and no
+  label/source/threshold changes. The original first stop is never relabelled
+  PASS. Actual captured source membership/sides/classes/tuples are5/5 and all
+  four outside-pair sites remain excluded, but unit attribution is0/5 because
+  direct leaves dropped the committed callback. Unit composition, citation-open,
+  HTTP/MCP/UI and publication-transition results remain unmeasured. Retain the
+  sanitized five-tuple projection, raw response digests and failed private root.
+  T50.3a owns the shared repair; only a reviewed new exact binary/generation
+  binding can authorize one bounded fresh qualification. This evidence record
+  adds no production work, authority, cache/lock/schema or child process.

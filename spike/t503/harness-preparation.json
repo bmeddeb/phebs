@@ -1,0 +1,20 @@
+{
+  "schema": "phebs-t503-harness-preparation-v1",
+  "date": "2026-10-18",
+  "candidate_reads_before_record": 0,
+  "source_label_changes": false,
+  "checkpoint_changes": false,
+  "corrections": [
+    {
+      "old": "API query/checker protocol=grpc",
+      "new": "API query/checker protocol=protobuf",
+      "basis": "Existing public CallerMapEndpoint contract and exactCallerRow map stored protocol grpc to public protobuf (internal/api/callermap_exact.go). Frozen labels retain source wire-family grpc, operations, spans and every expected row unchanged.",
+      "quality_denominator_or_threshold_change": false
+    },
+    {
+      "old": "unrelated capability check compatibility-wire",
+      "new": "wire-compatibility",
+      "basis": "Existing public capability name; prospective harness-only correction before any product output."
+    }
+  ]
+}

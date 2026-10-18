@@ -5491,6 +5491,12 @@ Production registration of the remaining evidence surfaces still requires:
 Until both exist, the implementation remains dark regardless of feature
 completeness or demo quality.
 
+**T50.3 first product attempt (2026-10-18):** source-site composition matched
+5/5 but supplied unit attribution failed0/5. The stop remains immutable; only
+offline checker adjudication followed. T50.3a repairs the dropped projection.
+New product qualification still needs prospectively bound source/binary facts;
+no overall quality, operating, UI or release pass is inferred.
+
 ## On demand
 
 Epic 32 measured the target whole repository and did not trigger P6. P6 remains

@@ -19308,6 +19308,16 @@ lead-owned exact evaluation Git bindings, then the first candidate measurement.
 No quality/operating PASS, production signature, Linux capacity or scale claim
 exists at this checkpoint.
 
+**T50.3 first-attempt outcome (2026-10-18).** Preserve the15.163s joined
+native attempt as failed. Offline review finds5/5 selected source sites and
+source tuples, four correctly excluded outside-pair sites, but0/5 correct unit
+attribution. An extra scip-only checker assertion was prospectively corrected
+to the public resolved syntax/scip contract without new product reads or any
+source/label/threshold change; the original stop remains exact. Unit composition,
+citation opening, HTTP/MCP/UI and transition evidence remain unmeasured.
+T50.3a owns dropped-unit-projection repair; a fresh exact-binary/generation plan
+and unchanged frozen truth precede any new bounded qualification.
+
 ## Epic 51 · Protobuf field-reference production readiness
 
 **T51.1 · Exact field/SCIP identity and independent quality** — depend on
