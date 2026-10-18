@@ -77,12 +77,16 @@ def authority(report, gold, commit, expected=None, unavailable=False):
     score.require(report["unavailable_sections"] == {key: "not_in_supported_shape" for key in SECTIONS}, "operation report broadened unsupported sections")
     score.require(page["schema_version"] == "caller-map-v2" and page["query"] == query(gold) and conclusion["query"] == page["query"] and not any(key in page for key in ("coverage", "coverage_digest", "attribution_digest")), "report query or synthetic coverage differs")
     generation = page["generation"]
-    score.require(generation["repository"] == gold["query"]["endpoint"]["repository"] and generation["plane"] == "repository-overlay" and page["scope"]["repository"] == generation["repository"] and page["scope"]["commit"] == generation.get("commit", "") and page["scope"]["scope_posture"] == "whole-repository" and not page["scope"].get("analysis_unit") and not generation.get("unit_digest"), "report crossed source or invented focused-local scope")
+    scope = page["scope"]
+    score.require(generation["repository"] == gold["query"]["endpoint"]["repository"] and generation["plane"] == "repository-overlay" and scope["repository"] == generation["repository"] and scope["scope_posture"] == "whole-repository" and not scope.get("analysis_unit"), "report crossed repository or invented focused-local scope")
+    for metadata in (scope, generation):
+        if "commit" in metadata:
+            score.require(isinstance(metadata["commit"], str) and re.fullmatch(r"(?:[a-f0-9]{40}|[a-f0-9]{64})", metadata["commit"]), "report source commit malformed")
     score.require(conclusion.get("generation_digest") == generation.get("generation_digest") and page["caveat"] == (GAP_CAVEAT if unavailable else CURRENT_CAVEAT), "report generation/conclusion/owning caveat differs")
     if unavailable:
         score.require(page["matching_rows_state"] == "unavailable" and generation["state"] in ("missing", "stale", "failed") and "declaration" not in page and page["rows"] == [] and "total_matching_rows" not in page and page["pagination"] == {"complete": True} and conclusion["state"] == "unavailable" and conclusion["qualification"] == QUALIFICATIONS["unavailable"], "unavailable report invented declaration, totals, rows or absence")
         return generation
-    score.require(page["matching_rows_state"] == "exact" and generation["state"] == "current" and generation["commit"] == commit, "report authority unavailable/crossed source commit")
+    score.require(page["matching_rows_state"] == "exact" and generation["state"] == "current" and generation["commit"] == commit and scope.get("commit") == commit and not generation.get("unit_digest"), "report authority unavailable/crossed source commit/unit")
     for key in ("generation_digest", "declaration_set_digest", "candidate_manifest_digest", "resolver_manifest_digest", "pair_set_digest", "manifest_digest"):
         score.require(re.fullmatch(r"sha256:[a-f0-9]{64}", generation[key]), "malformed operation generation metadata")
     score.require(type(generation["publication_revision"]) is int and generation["publication_revision"] > 0, "missing exact publication revision")

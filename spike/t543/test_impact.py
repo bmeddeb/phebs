@@ -128,6 +128,46 @@ class ContractControls(unittest.TestCase):
         self.assertEqual(metric["counts"], {"tp": 9, "fn": 0, "fp": 0, "tn": 36})
         self.assertEqual(metric["scoped_empty_queries"], 2)
 
+    def test_unavailable_source_scopes_preserve_missing_and_retained_generations(self):
+        original, gold, binding, _, _ = fixture("empty-unary-greeter")
+        for case in ("unindexed", "indexed_before_resolver", "replacement_indexed"):
+            with self.subTest(case=case):
+                value = copy.deepcopy(original)
+                page = value["caller_page"]
+                page.update(matching_rows_state="unavailable", caveat=impact.GAP_CAVEAT)
+                page.pop("declaration"); page.pop("total_matching_rows")
+                value["conclusion"].update(state="unavailable", qualification=impact.QUALIFICATIONS["unavailable"])
+                if case == "replacement_indexed":
+                    page["generation"]["state"] = "stale"
+                    page["scope"]["commit"] = "f" * 40
+                else:
+                    page["generation"] = {"state": "missing", "plane": "repository-overlay", "repository": page["scope"]["repository"]}
+                    value["conclusion"].pop("generation_digest")
+                    if case == "unindexed": page["scope"].pop("commit")
+                before = copy.deepcopy(value)
+                impact.authority(value, gold, binding["evaluation"]["derived_input_commit"], unavailable=True)
+                self.assertEqual(value, before)
+                page["scope"]["repository"] = "foreign.example/repo"
+                with self.assertRaises(ValueError):
+                    impact.authority(value, gold, binding["evaluation"]["derived_input_commit"], unavailable=True)
+
+    def test_current_scope_mismatch_and_malformed_gap_scope_refuse(self):
+        value, gold, binding, _, _ = fixture()
+        value["caller_page"]["scope"]["commit"] = "f" * 40
+        with self.assertRaises(ValueError):
+            impact.authority(value, gold, binding["evaluation"]["derived_input_commit"])
+        for bad in (None, {}, "unknown", ""):
+            with self.subTest(bad=bad):
+                value, gold, binding, _, _ = fixture("empty-unary-greeter")
+                page = value["caller_page"]
+                page.update(matching_rows_state="unavailable", caveat=impact.GAP_CAVEAT)
+                page.pop("declaration"); page.pop("total_matching_rows")
+                page["generation"]["state"] = "stale"
+                page["scope"]["commit"] = bad
+                value["conclusion"].update(state="unavailable", qualification=impact.QUALIFICATIONS["unavailable"])
+                with self.assertRaises(ValueError):
+                    impact.authority(value, gold, binding["evaluation"]["derived_input_commit"], unavailable=True)
+
     def test_signer_finalizes_both_artifact_sets_first_and_removes_key_on_failure(self):
         with tempfile.TemporaryDirectory() as directory:
             root, calls = Path(directory), []
