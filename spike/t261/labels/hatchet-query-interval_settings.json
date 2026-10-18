@@ -1,0 +1,81 @@
+{
+  "format": "t261-source-labels-v1",
+  "dialect": "postgresql",
+  "repository": "hatchet-dev/hatchet",
+  "commit": "559b5021e418f12ded175f950b709b7fa66be5a5",
+  "source_path": "pkg/repository/sqlcv1/interval_settings.sql",
+  "source_sha256": "9e0ebfa4a954e2865c60e1f57a03952abe0d06cf1aea1c82c8adac4b0e1b1977",
+  "plane": "sql-query",
+  "statements": [
+    {
+      "id": "ListIntervalsByOperationId",
+      "start": 0,
+      "end": 140,
+      "sha256": "7ddea53b5397c32e88fb86f8fc498f14f79061f53adee36b3da236de18bc299d",
+      "syntax_class": "select",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "v1_operation_interval_settings",
+          "quoted": false,
+          "start": 64,
+          "end": 94,
+          "sha256": "357ea55cbf11e761fb47ce1d484e42d208a406deac0edbece4729a5e0ce81a10",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "v1_operation_interval_settings"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "UpsertInterval",
+      "start": 141,
+      "end": 490,
+      "sha256": "8fc3498574faabcc75ecd4cc57751f24f5e2f6f1caa85bb7b62bc4e269352053",
+      "syntax_class": "insert-on-conflict",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "v1_operation_interval_settings",
+          "quoted": false,
+          "start": 182,
+          "end": 212,
+          "sha256": "357ea55cbf11e761fb47ce1d484e42d208a406deac0edbece4729a5e0ce81a10",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "v1_operation_interval_settings"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "ReadInterval",
+      "start": 491,
+      "end": 660,
+      "sha256": "4a84d8ea45c17f1c0080e0b6bdab362f4ca69c39a9c20a40137f0b205d9fd1f0",
+      "syntax_class": "select",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "v1_operation_interval_settings",
+          "quoted": false,
+          "start": 540,
+          "end": 570,
+          "sha256": "357ea55cbf11e761fb47ce1d484e42d208a406deac0edbece4729a5e0ce81a10",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "v1_operation_interval_settings"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    }
+  ],
+  "inventory_notes": [
+    "Entire selected file labelled under preregistered metadata-only stratified sample; no inference to the 30 unsampled query files.",
+    "Exactly one committed sqlc manifest selects all five declarations inputs; names stay quoted/unquoted dialect-specific. Generated sql.go supplies no primary usage."
+  ]
+}

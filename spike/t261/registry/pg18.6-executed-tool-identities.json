@@ -1,0 +1,49 @@
+{
+  "stage": "same admitted image before initdb; mechanically captured first generation",
+  "image_ref": "docker.io/library/postgres@sha256:a63b24165ea0eacced7585766d790ac08bbaefe10a1841f87783a4505d29a69c",
+  "script_sha256": "771558db0a173f378f12fb6a7c212960cb098518684931a104c3ebd3e85534a3",
+  "records": [
+    {
+      "path": "/usr/lib/postgresql/18/bin/postgres",
+      "version": "postgres (PostgreSQL) 18.6 (Debian 18.6-1.pgdg13+2)",
+      "sha256": "c567d1861c8206bb5b0e04b44b65c5c48435b0b836cfb01b8b4f3d542fbdf324"
+    },
+    {
+      "path": "/usr/lib/postgresql/18/bin/initdb",
+      "version": "initdb (PostgreSQL) 18.6 (Debian 18.6-1.pgdg13+2)",
+      "sha256": "a6af30cb45ac1552431cc40b2304002fbe274eb23770f12ea363b646e14b7159"
+    },
+    {
+      "path": "/usr/lib/postgresql/18/bin/psql",
+      "version": "psql (PostgreSQL) 18.6 (Debian 18.6-1.pgdg13+2)",
+      "sha256": "dc783938aa5804c6d331d2fbe19b4ce5f504eae1a1fe046db79210be2173c44f"
+    },
+    {
+      "path": "/usr/lib/postgresql/18/bin/pg_dump",
+      "version": "pg_dump (PostgreSQL) 18.6 (Debian 18.6-1.pgdg13+2)",
+      "sha256": "1f74f820f4cf54a6b92278da6edfa82dae1373e3a2a9311aadb67978b5d80d9b"
+    },
+    {
+      "path": "/usr/lib/postgresql/18/bin/pg_ctl",
+      "version": "pg_ctl (PostgreSQL) 18.6 (Debian 18.6-1.pgdg13+2)",
+      "sha256": "3c1f8a7793f4836748b2943110446b9db4d0b1aa2c19726fd559157b07009bf5"
+    },
+    {
+      "path": "/usr/lib/postgresql/18/bin/pg_isready",
+      "version": "pg_isready (PostgreSQL) 18.6 (Debian 18.6-1.pgdg13+2)",
+      "sha256": "fd8874b1fe24d2af0288880a6d2e4d8b1ba691f729b68d92437b2fc329ea85c3"
+    }
+  ],
+  "core_helper_hash_lines": [
+    "ccbd5106945d1095474e5ee47317266f5918aa37fc671829192a007918b1413a  /bin/bash",
+    "367967c823a0c391e5049b15a67c6a0a629c88b9b6dcdca75ef13ac9d65334b1  /bin/sh",
+    "9099881905b68f7831560a3cccef1a04d475568f985b97da51a9d88db84b9415  /usr/bin/id",
+    "2b910f41d86805c20131df9f5ceec50831db66644b56cfb44facf83e79fbdd61  /usr/bin/cut",
+    "6f977f773468265ba072d0f7e51f5ef74778e483fc65db8ebb685ea2a5d9da79  /usr/bin/mkdir",
+    "f42cf7276848ac3dfd4d90295233c1f12f5cdc7da2e5715e75a15f2c790acbd6  /usr/bin/sleep",
+    "067f08d102fefbcb16fce1c3832136fa964a41e39b7a9570172c1e07ec6adba4  /usr/bin/wc",
+    "42555d3db07aeb2f12acf4085e8a5fee605abf394fe8473508fa279718cd95dd  /usr/bin/cmp",
+    "7911a1f0aec4678c540bd78ff886f48d42790c8689a82ed0ae25ed79ed5dd512  /usr/bin/sha256sum"
+  ],
+  "qualification": "All six PG binaries version18.6 and hashes were emitted/checked before initdb by frozen script. No production dependency or live database identity claim."
+}

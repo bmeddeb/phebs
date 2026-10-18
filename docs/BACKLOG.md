@@ -20906,6 +20906,18 @@ vs. name-only/missing/ambiguous — with no cross-dialect blended percentage;
 double-run bytes identical in both lanes; no production code paths changed
 and no pack registered.
 
+**T26.1 input checkpoint (2026-10-18, Ben-routed Mac handoff).** The complete
+419-file / 4,439,033-byte preregistration is frozen before parser execution.
+Twenty source-only label files account for 909 envelopes, 2,339 declarations
+and 146 table sites; sampled and unsupported populations, four per-dialect
+denominators and 60 separate neutral controls stay explicit. One PostgreSQL18.6
+capture produced two identical1,311-byte schema-only dumps and joined/removed
+its server/container, stopped the unchanged VM and restored context. The earlier
+image-admission stop stays exact. Root authored/reviewed source labels and the
+full prospective contract; parser/grammar results remain unmeasured. Next is
+isolated imported-versus-subset comparison in each dialect, not production
+registration or an accuracy/release claim.
+
 ## Epic 27 · Document schema-manifest evidence *(drafted 2026-07-27 · unscheduled — spike first)*
 
 Make schema-on-write document-store structure useful during everyday ticket

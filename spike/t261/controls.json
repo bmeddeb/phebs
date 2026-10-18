@@ -1,0 +1,1684 @@
+{
+  "format": "t261-controls-v1",
+  "stage": "authored and labelled before candidate/grammar execution",
+  "parser_runs": 0,
+  "recognizer_runs": 0,
+  "cases": [
+    {
+      "dialect": "postgresql",
+      "id": "postgresql-simple-table",
+      "expected_decision": "admit",
+      "expected_reason": null,
+      "source_class": "authored-schema",
+      "manifest_engine": "postgresql",
+      "source_path": "fixtures/controls/postgresql-simple-table.sql",
+      "source_bytes": 58,
+      "source_sha256": "1b2d507b1a036b3ff7a5c841ffb55bb491be7a33264c30adde52744870875ff1",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [
+        {
+          "kind": "table",
+          "name": "parent",
+          "start": 13,
+          "end": 21,
+          "sha256": "e31e1f443ba5da4f95255ccebb05e60d51a158d36f5400090fd6c43c9eb42062",
+          "quoted": true
+        },
+        {
+          "kind": "column",
+          "name": "id",
+          "relation": "parent",
+          "start": 23,
+          "end": 27,
+          "sha256": "2d53b3c21fa5cc786ac46d72b3adf70b60441627a14918f69f8ea164fec2e68b",
+          "quoted": true
+        },
+        {
+          "kind": "primary_key",
+          "name": "@37",
+          "relation": "parent",
+          "columns": [
+            "id"
+          ],
+          "start": 37,
+          "end": 48,
+          "sha256": "b9e20880f50c03abb1b73497f52d9fc10f4ecab6e2d9213f7702b00662a1baf8",
+          "quoted": false
+        }
+      ],
+      "expected_sites": []
+    },
+    {
+      "dialect": "postgresql",
+      "id": "postgresql-nonascii-exact-name",
+      "expected_decision": "admit",
+      "expected_reason": null,
+      "source_class": "authored-schema",
+      "manifest_engine": "postgresql",
+      "source_path": "fixtures/controls/postgresql-nonascii-exact-name.sql",
+      "source_bytes": 41,
+      "source_sha256": "9d6056f8f16d7af9a0221c4fc98556313f1db779076bac0b3e74085a40c838a0",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [
+        {
+          "kind": "table",
+          "name": "Équipe",
+          "start": 13,
+          "end": 22,
+          "sha256": "760f565defa420571d3a70957e3e1986a2860d56a28db564498c82fd0d330754",
+          "quoted": true
+        },
+        {
+          "kind": "column",
+          "name": "clé",
+          "relation": "Équipe",
+          "start": 24,
+          "end": 30,
+          "sha256": "f78084c23e5af1ee894c9d02b8e9184d43ad7da93a7fb9b6d2c2ff6d8fdd93d5",
+          "quoted": true
+        }
+      ],
+      "expected_sites": []
+    },
+    {
+      "dialect": "postgresql",
+      "id": "postgresql-case-distinction",
+      "expected_decision": "admit",
+      "expected_reason": null,
+      "source_class": "authored-schema",
+      "manifest_engine": "postgresql",
+      "source_path": "fixtures/controls/postgresql-case-distinction.sql",
+      "source_bytes": 70,
+      "source_sha256": "927d139e7a7e124156a92d0c401ae901d0c205f99f7847608e43217f55d87b6c",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [
+        {
+          "kind": "table",
+          "name": "Foo",
+          "start": 13,
+          "end": 18,
+          "sha256": "c8ccca56eb0f85ea1c79ce3790eba8754b029236caad6d7c1e92dfd73406de60",
+          "quoted": true
+        },
+        {
+          "kind": "column",
+          "name": "id",
+          "relation": "Foo",
+          "start": 20,
+          "end": 24,
+          "sha256": "2d53b3c21fa5cc786ac46d72b3adf70b60441627a14918f69f8ea164fec2e68b",
+          "quoted": true
+        },
+        {
+          "kind": "table",
+          "name": "foo",
+          "start": 48,
+          "end": 53,
+          "sha256": "b2213295d564916f89a6a42455567c87c3f480fcd7a1c15e220f17d7169a790b",
+          "quoted": true
+        },
+        {
+          "kind": "column",
+          "name": "id",
+          "relation": "foo",
+          "start": 55,
+          "end": 59,
+          "sha256": "2d53b3c21fa5cc786ac46d72b3adf70b60441627a14918f69f8ea164fec2e68b",
+          "quoted": true
+        }
+      ],
+      "expected_sites": []
+    },
+    {
+      "dialect": "postgresql",
+      "id": "postgresql-ordered-distinct-fks",
+      "expected_decision": "admit",
+      "expected_reason": null,
+      "source_class": "authored-schema",
+      "manifest_engine": "postgresql",
+      "source_path": "fixtures/controls/postgresql-ordered-distinct-fks.sql",
+      "source_bytes": 278,
+      "source_sha256": "340c1b5219f24da4e834d8eef3276014b2e0a9413cd80f4ed05d710d8cbde94d",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [
+        {
+          "kind": "table",
+          "name": "parent",
+          "start": 13,
+          "end": 21,
+          "sha256": "e31e1f443ba5da4f95255ccebb05e60d51a158d36f5400090fd6c43c9eb42062",
+          "quoted": true
+        },
+        {
+          "kind": "column",
+          "name": "a",
+          "relation": "parent",
+          "start": 23,
+          "end": 26,
+          "sha256": "ac8d8342bbb2362d13f0a559a3621bb407011368895164b628a54f7fc33fc43c",
+          "quoted": true
+        },
+        {
+          "kind": "column",
+          "name": "b",
+          "relation": "parent",
+          "start": 36,
+          "end": 39,
+          "sha256": "c100f95c1913f9c72fc1f4ef0847e1e723ffe0bde0b36e5f36c13f81fe8c26ed",
+          "quoted": true
+        },
+        {
+          "kind": "primary_key",
+          "name": "@49",
+          "relation": "parent",
+          "columns": [
+            "a",
+            "b"
+          ],
+          "start": 49,
+          "end": 60,
+          "sha256": "b9e20880f50c03abb1b73497f52d9fc10f4ecab6e2d9213f7702b00662a1baf8",
+          "quoted": false
+        },
+        {
+          "kind": "table",
+          "name": "child",
+          "start": 87,
+          "end": 94,
+          "sha256": "0afbc7c3c11c0f7d165fc3801ee0a4f400832fcb600a05f20d7d6a2d860711da",
+          "quoted": true
+        },
+        {
+          "kind": "column",
+          "name": "x",
+          "relation": "child",
+          "start": 96,
+          "end": 99,
+          "sha256": "ba2df4903a2c14e86dc3bcca58911b44ac1d2514b7227bf6eb08cfb978f55a1b",
+          "quoted": true
+        },
+        {
+          "kind": "column",
+          "name": "y",
+          "relation": "child",
+          "start": 109,
+          "end": 112,
+          "sha256": "2bc983a5942276eb00a75e2113a69694318cd28c7de0fc83c0598d9db50eb777",
+          "quoted": true
+        },
+        {
+          "kind": "foreign_key",
+          "name": "fk_first",
+          "relation": "child",
+          "columns": [
+            "x",
+            "y"
+          ],
+          "target_relation": "parent",
+          "target_columns": [
+            "a",
+            "b"
+          ],
+          "start": 133,
+          "end": 143,
+          "sha256": "5b21aba61a29bfdf8334da9c2c939535640ad7d991eabc7ac066f46067e8349c",
+          "quoted": true
+        },
+        {
+          "kind": "foreign_key",
+          "name": "fk_second",
+          "relation": "child",
+          "columns": [
+            "y",
+            "x"
+          ],
+          "target_relation": "parent",
+          "target_columns": [
+            "a",
+            "b"
+          ],
+          "start": 210,
+          "end": 221,
+          "sha256": "21270f8d0222ae6a0deee67af9bb90baccd56c5d675ff02fde043d333702f243",
+          "quoted": true
+        }
+      ],
+      "expected_sites": []
+    },
+    {
+      "dialect": "postgresql",
+      "id": "postgresql-dialect-missing",
+      "expected_decision": "refuse",
+      "expected_reason": "dialect-unavailable",
+      "source_class": "authored-schema",
+      "source_path": "fixtures/controls/postgresql-dialect-missing.sql",
+      "source_bytes": 38,
+      "source_sha256": "24d0640b9400b4f2cc83bd191132babbdfe686e4c1b8d2e27388e816aef0550a",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "postgresql",
+      "id": "postgresql-metadata-conflict",
+      "expected_decision": "refuse",
+      "expected_reason": "metadata-conflict",
+      "source_class": "captured-dump",
+      "manifest_engine": "mysql",
+      "source_path": "fixtures/controls/postgresql-metadata-conflict.sql",
+      "source_bytes": 137,
+      "source_sha256": "6127e011f166c3e721a81405e756c4c244ee8cd82f5e30e0863a2d5e39587c5f",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "postgresql",
+      "id": "postgresql-dump-insert-data",
+      "expected_decision": "refuse",
+      "expected_reason": "data-section",
+      "source_class": "captured-dump",
+      "source_path": "fixtures/controls/postgresql-dump-insert-data.sql",
+      "source_bytes": 170,
+      "source_sha256": "4d5490fd9ff5140ea6d298b3b277194350278ee02f65548b6726cda166a2231a",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "postgresql",
+      "id": "postgresql-dump-replace-data",
+      "expected_decision": "refuse",
+      "expected_reason": "data-section",
+      "source_class": "captured-dump",
+      "source_path": "fixtures/controls/postgresql-dump-replace-data.sql",
+      "source_bytes": 133,
+      "source_sha256": "469ef817c45a425648560e543aebe6dd6f00c64f1abd4a9514353184bea803b6",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "postgresql",
+      "id": "postgresql-dump-load-data",
+      "expected_decision": "refuse",
+      "expected_reason": "data-section",
+      "source_class": "captured-dump",
+      "source_path": "fixtures/controls/postgresql-dump-load-data.sql",
+      "source_bytes": 152,
+      "source_sha256": "0b321bd707dcd36fc65feba60d4de0fc8b5624d8c20410d45e3e1adc2f3b0bfb",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "postgresql",
+      "id": "postgresql-dump-copy-data",
+      "expected_decision": "refuse",
+      "expected_reason": "data-section",
+      "source_class": "captured-dump",
+      "source_path": "fixtures/controls/postgresql-dump-copy-data.sql",
+      "source_bytes": 130,
+      "source_sha256": "edaa81cd06a8c457ccf3832189b3645888ea112e57401c33580b36020dbc7c17",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "postgresql",
+      "id": "postgresql-quoted-data-words",
+      "expected_decision": "admit",
+      "expected_reason": null,
+      "source_class": "captured-dump",
+      "source_path": "fixtures/controls/postgresql-quoted-data-words.sql",
+      "source_bytes": 214,
+      "source_sha256": "cd565d690fdb0b68097c071fe57bc3733ac85f763af57bf98d2cd81c220cbbd2",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [
+        {
+          "kind": "table",
+          "name": "parent",
+          "start": 147,
+          "end": 155,
+          "sha256": "e31e1f443ba5da4f95255ccebb05e60d51a158d36f5400090fd6c43c9eb42062",
+          "quoted": true
+        },
+        {
+          "kind": "column",
+          "name": "note",
+          "relation": "parent",
+          "start": 157,
+          "end": 163,
+          "sha256": "86a431bb16ad4fc733f6a10364bdc60497b32ce829109d65a18aed9cc8cf1b54",
+          "quoted": true
+        }
+      ],
+      "expected_sites": []
+    },
+    {
+      "dialect": "postgresql",
+      "id": "postgresql-generated-duplicate",
+      "expected_decision": "gap",
+      "expected_reason": "generated-duplicate",
+      "source_class": "generated-sql-go",
+      "manifest_engine": "postgresql",
+      "source_path": "fixtures/controls/postgresql-generated-duplicate.sql",
+      "source_bytes": 74,
+      "source_sha256": "07623fe94d6ecdaad537da83482173ff4f8270b8d933f81e4919ba0db546f4fb",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "postgresql",
+      "id": "postgresql-missing-schema",
+      "expected_decision": "refuse",
+      "expected_reason": "schema-artifact-missing",
+      "source_class": "missing",
+      "manifest_engine": "postgresql",
+      "expected_checklist": "request-schema-only-dump",
+      "source_path": "fixtures/controls/postgresql-missing-schema.sql",
+      "source_bytes": 0,
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "postgresql",
+      "id": "postgresql-ambiguous-roots",
+      "expected_decision": "refuse",
+      "expected_reason": "ambiguous-schema-set",
+      "source_class": "authored-query",
+      "manifest_engine": "postgresql",
+      "declaration_sets": [
+        {
+          "manifest": "a/sqlc.yaml",
+          "relations": [
+            "parent"
+          ]
+        },
+        {
+          "manifest": "b/sqlc.yaml",
+          "relations": [
+            "parent"
+          ]
+        }
+      ],
+      "source_path": "fixtures/controls/postgresql-ambiguous-roots.sql",
+      "source_bytes": 22,
+      "source_sha256": "1694cf56ac7bdbc6f9f27a7c53a52086c74120ee54c1a2245d92010919a19a3d",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "postgresql",
+      "id": "postgresql-name-only",
+      "expected_decision": "admit",
+      "expected_reason": null,
+      "source_class": "authored-query",
+      "manifest_engine": "postgresql",
+      "declaration_sets": [],
+      "expected_schema_state": "schema-artifact-missing",
+      "note": "Named authored usage may remain visible beside missing-schema checklist state; no bound/current declaration is invented.",
+      "source_path": "fixtures/controls/postgresql-name-only.sql",
+      "source_bytes": 22,
+      "source_sha256": "1694cf56ac7bdbc6f9f27a7c53a52086c74120ee54c1a2245d92010919a19a3d",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": [
+        {
+          "name": "parent",
+          "access": "read",
+          "expected_binding": "name-only",
+          "start": 14,
+          "end": 20,
+          "sha256": "e47125968b3b71049fbc4802d1e40a71ea1359decfabacf70b34588037d4ff0c",
+          "quoted": false
+        }
+      ]
+    },
+    {
+      "dialect": "postgresql",
+      "id": "postgresql-unknown-declaration",
+      "expected_decision": "gap",
+      "expected_reason": "unknown-declaration",
+      "source_class": "authored-query",
+      "manifest_engine": "postgresql",
+      "declaration_sets": [
+        {
+          "manifest": "sqlc.yaml",
+          "relations": [
+            "parent"
+          ]
+        }
+      ],
+      "expected_unresolved_sites": [
+        "absent"
+      ],
+      "source_path": "fixtures/controls/postgresql-unknown-declaration.sql",
+      "source_bytes": 22,
+      "source_sha256": "27ffbc29120e7c7510ed7e59a9f80075a0725292ab2468684fd7666dca4dae46",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "postgresql",
+      "id": "postgresql-dynamic-identifier",
+      "expected_decision": "gap",
+      "expected_reason": "dynamic-identifier",
+      "source_class": "authored-query",
+      "manifest_engine": "postgresql",
+      "source_path": "fixtures/controls/postgresql-dynamic-identifier.sql",
+      "source_bytes": 24,
+      "source_sha256": "bb308eb0d51d7d24a2e779378d1206caf3938d16a7ccbb75e4e638f5cbd2c672",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "postgresql",
+      "id": "postgresql-unsupported-statement",
+      "expected_decision": "gap",
+      "expected_reason": "unsupported-statement",
+      "source_class": "authored-schema",
+      "manifest_engine": "postgresql",
+      "source_path": "fixtures/controls/postgresql-unsupported-statement.sql",
+      "source_bytes": 40,
+      "source_sha256": "915d1a9a7a71cf5257cf6c385148730445ce1c58f1140154179e8bd3c2e4a828",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "postgresql",
+      "id": "postgresql-missing-parser-position",
+      "expected_decision": "gap",
+      "expected_reason": "parser-gap",
+      "source_class": "authored-query",
+      "manifest_engine": "postgresql",
+      "declaration_sets": [
+        {
+          "manifest": "sqlc.yaml",
+          "relations": [
+            "parent"
+          ]
+        }
+      ],
+      "projection_fault": "omit-source-position",
+      "note": "Projection contract control; a library AST without an exact byte token cannot publish an ungrounded site.",
+      "source_path": "fixtures/controls/postgresql-missing-parser-position.sql",
+      "source_bytes": 22,
+      "source_sha256": "1694cf56ac7bdbc6f9f27a7c53a52086c74120ee54c1a2245d92010919a19a3d",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "postgresql",
+      "id": "postgresql-cte-select",
+      "expected_decision": "admit",
+      "expected_reason": null,
+      "source_class": "authored-query",
+      "manifest_engine": "postgresql",
+      "declaration_sets": [
+        {
+          "manifest": "sqlc.yaml",
+          "relations": [
+            "parent",
+            "child"
+          ]
+        }
+      ],
+      "note": "picked is a lexical CTE alias, not a third physical table.",
+      "source_path": "fixtures/controls/postgresql-cte-select.sql",
+      "source_bytes": 79,
+      "source_sha256": "4ef22349391bb721676a0e2ba5411a525911f3c5c38572d45a800e26c8c7fb38",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": [
+        {
+          "name": "parent",
+          "access": "read",
+          "expected_binding": "unique",
+          "start": 30,
+          "end": 36,
+          "sha256": "e47125968b3b71049fbc4802d1e40a71ea1359decfabacf70b34588037d4ff0c",
+          "quoted": false
+        },
+        {
+          "name": "child",
+          "access": "read",
+          "expected_binding": "unique",
+          "start": 64,
+          "end": 69,
+          "sha256": "ddc9e669194254cef019a29d3619a2c16592e5d52e1a81e98b01bd52319149a3",
+          "quoted": false
+        }
+      ]
+    },
+    {
+      "dialect": "postgresql",
+      "id": "postgresql-insert-select",
+      "expected_decision": "admit",
+      "expected_reason": null,
+      "source_class": "authored-query",
+      "manifest_engine": "postgresql",
+      "declaration_sets": [
+        {
+          "manifest": "sqlc.yaml",
+          "relations": [
+            "parent",
+            "child"
+          ]
+        }
+      ],
+      "source_path": "fixtures/controls/postgresql-insert-select.sql",
+      "source_bytes": 40,
+      "source_sha256": "737cc74e4b66b428cb863f3996fa6ddc2aee6f3d92edf3efeba5171e8cbee909",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": [
+        {
+          "name": "child",
+          "access": "write",
+          "expected_binding": "unique",
+          "start": 12,
+          "end": 17,
+          "sha256": "ddc9e669194254cef019a29d3619a2c16592e5d52e1a81e98b01bd52319149a3",
+          "quoted": false
+        },
+        {
+          "name": "parent",
+          "access": "read",
+          "expected_binding": "unique",
+          "start": 32,
+          "end": 38,
+          "sha256": "e47125968b3b71049fbc4802d1e40a71ea1359decfabacf70b34588037d4ff0c",
+          "quoted": false
+        }
+      ]
+    },
+    {
+      "dialect": "postgresql",
+      "id": "postgresql-update-subquery",
+      "expected_decision": "admit",
+      "expected_reason": null,
+      "source_class": "authored-query",
+      "manifest_engine": "postgresql",
+      "declaration_sets": [
+        {
+          "manifest": "sqlc.yaml",
+          "relations": [
+            "parent",
+            "child"
+          ]
+        }
+      ],
+      "source_path": "fixtures/controls/postgresql-update-subquery.sql",
+      "source_bytes": 47,
+      "source_sha256": "8b8d13568af2793f1bb8c47a0c56324c4a8f2ee19cd1b237a717d0b611bbd95b",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": [
+        {
+          "name": "child",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "start": 7,
+          "end": 12,
+          "sha256": "ddc9e669194254cef019a29d3619a2c16592e5d52e1a81e98b01bd52319149a3",
+          "quoted": false
+        },
+        {
+          "name": "parent",
+          "access": "read",
+          "expected_binding": "unique",
+          "start": 38,
+          "end": 44,
+          "sha256": "e47125968b3b71049fbc4802d1e40a71ea1359decfabacf70b34588037d4ff0c",
+          "quoted": false
+        }
+      ]
+    },
+    {
+      "dialect": "postgresql",
+      "id": "postgresql-malformed-string",
+      "expected_decision": "refuse",
+      "expected_reason": "malformed-input",
+      "source_class": "authored-schema",
+      "manifest_engine": "postgresql",
+      "source_path": "fixtures/controls/postgresql-malformed-string.sql",
+      "source_bytes": 59,
+      "source_sha256": "7298f238563d06adac4b9cba76bf13d6b5c3d31adf1dfcc32c9bbbc1bbe11e13",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "postgresql",
+      "id": "postgresql-input-byte-limit",
+      "expected_decision": "refuse",
+      "expected_reason": "resource-limit",
+      "source_class": "authored-schema",
+      "manifest_engine": "postgresql",
+      "source_path": "fixtures/controls/postgresql-input-byte-limit.sql",
+      "source_bytes": 262145,
+      "source_sha256": "3f291140ab64c9766e11501e4d1906bd7b6d130f506c129c6460396266d025a0",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "mysql",
+      "id": "mysql-simple-table",
+      "expected_decision": "admit",
+      "expected_reason": null,
+      "source_class": "authored-schema",
+      "manifest_engine": "mysql",
+      "source_path": "fixtures/controls/mysql-simple-table.sql",
+      "source_bytes": 58,
+      "source_sha256": "f9331dd173224653358d35c1d05cd64349d3f6652a7032fc54a07b42c7a5577f",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [
+        {
+          "kind": "table",
+          "name": "parent",
+          "start": 13,
+          "end": 21,
+          "sha256": "c675ad199fc5538d251cd74156878578e1f1430df91da9f1b00534117adedddf",
+          "quoted": true
+        },
+        {
+          "kind": "column",
+          "name": "id",
+          "relation": "parent",
+          "start": 23,
+          "end": 27,
+          "sha256": "625b83feca0c8e28d8363a1eae853f51d832fa427d09236e70529cf1d755a5ba",
+          "quoted": true
+        },
+        {
+          "kind": "primary_key",
+          "name": "@37",
+          "relation": "parent",
+          "columns": [
+            "id"
+          ],
+          "start": 37,
+          "end": 48,
+          "sha256": "b9e20880f50c03abb1b73497f52d9fc10f4ecab6e2d9213f7702b00662a1baf8",
+          "quoted": false
+        }
+      ],
+      "expected_sites": []
+    },
+    {
+      "dialect": "mysql",
+      "id": "mysql-nonascii-exact-name",
+      "expected_decision": "admit",
+      "expected_reason": null,
+      "source_class": "authored-schema",
+      "manifest_engine": "mysql",
+      "source_path": "fixtures/controls/mysql-nonascii-exact-name.sql",
+      "source_bytes": 41,
+      "source_sha256": "6e5e545726e3aed5e2073e99a51197823b260322bac764ebeffe8ef92d4e52a4",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [
+        {
+          "kind": "table",
+          "name": "Équipe",
+          "start": 13,
+          "end": 22,
+          "sha256": "a11d0292457f31ba3d23fdcb2360b4491ba0c8370e75789a66f61c891a50dd37",
+          "quoted": true
+        },
+        {
+          "kind": "column",
+          "name": "clé",
+          "relation": "Équipe",
+          "start": 24,
+          "end": 30,
+          "sha256": "f0335e48a4efb6afd18456911b6551e767ea409c6c70ce11c061b527db7500d6",
+          "quoted": true
+        }
+      ],
+      "expected_sites": []
+    },
+    {
+      "dialect": "mysql",
+      "id": "mysql-case-distinction",
+      "expected_decision": "admit",
+      "expected_reason": null,
+      "source_class": "authored-schema",
+      "manifest_engine": "mysql",
+      "source_path": "fixtures/controls/mysql-case-distinction.sql",
+      "source_bytes": 70,
+      "source_sha256": "a07ccf18c7fa09d3c294698d3f2033810ae4fc1d3e9364058e5b6c9fcea5ec38",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [
+        {
+          "kind": "table",
+          "name": "Foo",
+          "start": 13,
+          "end": 18,
+          "sha256": "3417dab13b256e946334aa3b1a78c6fc2dc5064b9fe0891f4c877efd4de59959",
+          "quoted": true
+        },
+        {
+          "kind": "column",
+          "name": "id",
+          "relation": "Foo",
+          "start": 20,
+          "end": 24,
+          "sha256": "625b83feca0c8e28d8363a1eae853f51d832fa427d09236e70529cf1d755a5ba",
+          "quoted": true
+        },
+        {
+          "kind": "table",
+          "name": "foo",
+          "start": 48,
+          "end": 53,
+          "sha256": "6886ec3aa7e818a959faa0fed90299b95300b7a4b2dd4ed9b86603aa8667b0a4",
+          "quoted": true
+        },
+        {
+          "kind": "column",
+          "name": "id",
+          "relation": "foo",
+          "start": 55,
+          "end": 59,
+          "sha256": "625b83feca0c8e28d8363a1eae853f51d832fa427d09236e70529cf1d755a5ba",
+          "quoted": true
+        }
+      ],
+      "expected_sites": []
+    },
+    {
+      "dialect": "mysql",
+      "id": "mysql-ordered-distinct-fks",
+      "expected_decision": "admit",
+      "expected_reason": null,
+      "source_class": "authored-schema",
+      "manifest_engine": "mysql",
+      "source_path": "fixtures/controls/mysql-ordered-distinct-fks.sql",
+      "source_bytes": 278,
+      "source_sha256": "0193b1996e5c9a7ba42375eae33803cf7df372be508825637d96f3f679ff2421",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [
+        {
+          "kind": "table",
+          "name": "parent",
+          "start": 13,
+          "end": 21,
+          "sha256": "c675ad199fc5538d251cd74156878578e1f1430df91da9f1b00534117adedddf",
+          "quoted": true
+        },
+        {
+          "kind": "column",
+          "name": "a",
+          "relation": "parent",
+          "start": 23,
+          "end": 26,
+          "sha256": "954c4fed61e2f25ed40e38a5b0d7c3ec57d89e9358311cb7f807d35ba4f5e129",
+          "quoted": true
+        },
+        {
+          "kind": "column",
+          "name": "b",
+          "relation": "parent",
+          "start": 36,
+          "end": 39,
+          "sha256": "068b84ef59a6dc851f20f71f0629b56d0c06d68b2b13392abf8f006c4e76b2b3",
+          "quoted": true
+        },
+        {
+          "kind": "primary_key",
+          "name": "@49",
+          "relation": "parent",
+          "columns": [
+            "a",
+            "b"
+          ],
+          "start": 49,
+          "end": 60,
+          "sha256": "b9e20880f50c03abb1b73497f52d9fc10f4ecab6e2d9213f7702b00662a1baf8",
+          "quoted": false
+        },
+        {
+          "kind": "table",
+          "name": "child",
+          "start": 87,
+          "end": 94,
+          "sha256": "4569dcc86a61db3e91f1bc56dfb60e1287a054c5570a188a0df7e6ae97db2af1",
+          "quoted": true
+        },
+        {
+          "kind": "column",
+          "name": "x",
+          "relation": "child",
+          "start": 96,
+          "end": 99,
+          "sha256": "948e5532d0e663ef500a941221036dc63f0eae17653883031752ccece49d9a0d",
+          "quoted": true
+        },
+        {
+          "kind": "column",
+          "name": "y",
+          "relation": "child",
+          "start": 109,
+          "end": 112,
+          "sha256": "83fe301ee8b1766771aa066fd834c498763258894d4380a0a836a5219112b1fe",
+          "quoted": true
+        },
+        {
+          "kind": "foreign_key",
+          "name": "fk_first",
+          "relation": "child",
+          "columns": [
+            "x",
+            "y"
+          ],
+          "target_relation": "parent",
+          "target_columns": [
+            "a",
+            "b"
+          ],
+          "start": 133,
+          "end": 143,
+          "sha256": "178a44cdec4748617ecc5ee27cae061c3391cc01069dca6ab5da4e52ff26d84e",
+          "quoted": true
+        },
+        {
+          "kind": "foreign_key",
+          "name": "fk_second",
+          "relation": "child",
+          "columns": [
+            "y",
+            "x"
+          ],
+          "target_relation": "parent",
+          "target_columns": [
+            "a",
+            "b"
+          ],
+          "start": 210,
+          "end": 221,
+          "sha256": "6c486fc99943dc4a1c568cbdf52786d08dab0ab93a2c21cd7a0c0db44449a1ab",
+          "quoted": true
+        }
+      ],
+      "expected_sites": []
+    },
+    {
+      "dialect": "mysql",
+      "id": "mysql-dialect-missing",
+      "expected_decision": "refuse",
+      "expected_reason": "dialect-unavailable",
+      "source_class": "authored-schema",
+      "source_path": "fixtures/controls/mysql-dialect-missing.sql",
+      "source_bytes": 38,
+      "source_sha256": "f49f4f7278a6b1a4e1ff205940cdd047aadc4e748adb52f1dbf05b499f2bd7f6",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "mysql",
+      "id": "mysql-metadata-conflict",
+      "expected_decision": "refuse",
+      "expected_reason": "metadata-conflict",
+      "source_class": "captured-dump",
+      "manifest_engine": "postgresql",
+      "source_path": "fixtures/controls/mysql-metadata-conflict.sql",
+      "source_bytes": 93,
+      "source_sha256": "ada1a9d9dc2603bd709ce93d653c3963075913f6faf308aa3f90d08bc310f445",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "mysql",
+      "id": "mysql-dump-insert-data",
+      "expected_decision": "refuse",
+      "expected_reason": "data-section",
+      "source_class": "captured-dump",
+      "source_path": "fixtures/controls/mysql-dump-insert-data.sql",
+      "source_bytes": 126,
+      "source_sha256": "36f2766c9f219880cb6e3def1f4d5f847202fa561ad97b02985040a11be10503",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "mysql",
+      "id": "mysql-dump-replace-data",
+      "expected_decision": "refuse",
+      "expected_reason": "data-section",
+      "source_class": "captured-dump",
+      "source_path": "fixtures/controls/mysql-dump-replace-data.sql",
+      "source_bytes": 89,
+      "source_sha256": "9356ac2c8b0d813a534178cf6d877c9a75cd51abe4e855fd0607522bc2b9b182",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "mysql",
+      "id": "mysql-dump-load-data",
+      "expected_decision": "refuse",
+      "expected_reason": "data-section",
+      "source_class": "captured-dump",
+      "source_path": "fixtures/controls/mysql-dump-load-data.sql",
+      "source_bytes": 108,
+      "source_sha256": "d91f3547991dcf79e818c9c2de2fb998bd52c57ada8e6c20cde3500f3aae58d6",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "mysql",
+      "id": "mysql-dump-copy-data",
+      "expected_decision": "refuse",
+      "expected_reason": "data-section",
+      "source_class": "captured-dump",
+      "source_path": "fixtures/controls/mysql-dump-copy-data.sql",
+      "source_bytes": 86,
+      "source_sha256": "00bd4832c980ea9a64536211e6d93cd3df11448bb1956c75fdad3c899928f47a",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "mysql",
+      "id": "mysql-quoted-data-words",
+      "expected_decision": "admit",
+      "expected_reason": null,
+      "source_class": "captured-dump",
+      "source_path": "fixtures/controls/mysql-quoted-data-words.sql",
+      "source_bytes": 170,
+      "source_sha256": "17ac1a2e0aac7de3a61b840cb00bc9a1ee35ad141e03cb8839f57a6f6127ab73",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [
+        {
+          "kind": "table",
+          "name": "parent",
+          "start": 103,
+          "end": 111,
+          "sha256": "c675ad199fc5538d251cd74156878578e1f1430df91da9f1b00534117adedddf",
+          "quoted": true
+        },
+        {
+          "kind": "column",
+          "name": "note",
+          "relation": "parent",
+          "start": 113,
+          "end": 119,
+          "sha256": "234240ece6dd53ca87ddfef8cb45bc78d8a178641ef5dced120b4fa49ce9a9d6",
+          "quoted": true
+        }
+      ],
+      "expected_sites": []
+    },
+    {
+      "dialect": "mysql",
+      "id": "mysql-generated-duplicate",
+      "expected_decision": "gap",
+      "expected_reason": "generated-duplicate",
+      "source_class": "generated-sql-go",
+      "manifest_engine": "mysql",
+      "source_path": "fixtures/controls/mysql-generated-duplicate.sql",
+      "source_bytes": 74,
+      "source_sha256": "07623fe94d6ecdaad537da83482173ff4f8270b8d933f81e4919ba0db546f4fb",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "mysql",
+      "id": "mysql-missing-schema",
+      "expected_decision": "refuse",
+      "expected_reason": "schema-artifact-missing",
+      "source_class": "missing",
+      "manifest_engine": "mysql",
+      "expected_checklist": "request-schema-only-dump",
+      "source_path": "fixtures/controls/mysql-missing-schema.sql",
+      "source_bytes": 0,
+      "source_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "mysql",
+      "id": "mysql-ambiguous-roots",
+      "expected_decision": "refuse",
+      "expected_reason": "ambiguous-schema-set",
+      "source_class": "authored-query",
+      "manifest_engine": "mysql",
+      "declaration_sets": [
+        {
+          "manifest": "a/sqlc.yaml",
+          "relations": [
+            "parent"
+          ]
+        },
+        {
+          "manifest": "b/sqlc.yaml",
+          "relations": [
+            "parent"
+          ]
+        }
+      ],
+      "source_path": "fixtures/controls/mysql-ambiguous-roots.sql",
+      "source_bytes": 22,
+      "source_sha256": "1694cf56ac7bdbc6f9f27a7c53a52086c74120ee54c1a2245d92010919a19a3d",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "mysql",
+      "id": "mysql-name-only",
+      "expected_decision": "admit",
+      "expected_reason": null,
+      "source_class": "authored-query",
+      "manifest_engine": "mysql",
+      "declaration_sets": [],
+      "expected_schema_state": "schema-artifact-missing",
+      "note": "Named authored usage may remain visible beside missing-schema checklist state; no bound/current declaration is invented.",
+      "source_path": "fixtures/controls/mysql-name-only.sql",
+      "source_bytes": 22,
+      "source_sha256": "1694cf56ac7bdbc6f9f27a7c53a52086c74120ee54c1a2245d92010919a19a3d",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": [
+        {
+          "name": "parent",
+          "access": "read",
+          "expected_binding": "name-only",
+          "start": 14,
+          "end": 20,
+          "sha256": "e47125968b3b71049fbc4802d1e40a71ea1359decfabacf70b34588037d4ff0c",
+          "quoted": false
+        }
+      ]
+    },
+    {
+      "dialect": "mysql",
+      "id": "mysql-unknown-declaration",
+      "expected_decision": "gap",
+      "expected_reason": "unknown-declaration",
+      "source_class": "authored-query",
+      "manifest_engine": "mysql",
+      "declaration_sets": [
+        {
+          "manifest": "sqlc.yaml",
+          "relations": [
+            "parent"
+          ]
+        }
+      ],
+      "expected_unresolved_sites": [
+        "absent"
+      ],
+      "source_path": "fixtures/controls/mysql-unknown-declaration.sql",
+      "source_bytes": 22,
+      "source_sha256": "27ffbc29120e7c7510ed7e59a9f80075a0725292ab2468684fd7666dca4dae46",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "mysql",
+      "id": "mysql-dynamic-identifier",
+      "expected_decision": "gap",
+      "expected_reason": "dynamic-identifier",
+      "source_class": "authored-query",
+      "manifest_engine": "mysql",
+      "source_path": "fixtures/controls/mysql-dynamic-identifier.sql",
+      "source_bytes": 24,
+      "source_sha256": "bb308eb0d51d7d24a2e779378d1206caf3938d16a7ccbb75e4e638f5cbd2c672",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "mysql",
+      "id": "mysql-unsupported-statement",
+      "expected_decision": "gap",
+      "expected_reason": "unsupported-statement",
+      "source_class": "authored-schema",
+      "manifest_engine": "mysql",
+      "source_path": "fixtures/controls/mysql-unsupported-statement.sql",
+      "source_bytes": 40,
+      "source_sha256": "915d1a9a7a71cf5257cf6c385148730445ce1c58f1140154179e8bd3c2e4a828",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "mysql",
+      "id": "mysql-missing-parser-position",
+      "expected_decision": "gap",
+      "expected_reason": "parser-gap",
+      "source_class": "authored-query",
+      "manifest_engine": "mysql",
+      "declaration_sets": [
+        {
+          "manifest": "sqlc.yaml",
+          "relations": [
+            "parent"
+          ]
+        }
+      ],
+      "projection_fault": "omit-source-position",
+      "note": "Projection contract control; a library AST without an exact byte token cannot publish an ungrounded site.",
+      "source_path": "fixtures/controls/mysql-missing-parser-position.sql",
+      "source_bytes": 22,
+      "source_sha256": "1694cf56ac7bdbc6f9f27a7c53a52086c74120ee54c1a2245d92010919a19a3d",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "mysql",
+      "id": "mysql-cte-select",
+      "expected_decision": "admit",
+      "expected_reason": null,
+      "source_class": "authored-query",
+      "manifest_engine": "mysql",
+      "declaration_sets": [
+        {
+          "manifest": "sqlc.yaml",
+          "relations": [
+            "parent",
+            "child"
+          ]
+        }
+      ],
+      "note": "picked is a lexical CTE alias, not a third physical table.",
+      "source_path": "fixtures/controls/mysql-cte-select.sql",
+      "source_bytes": 79,
+      "source_sha256": "4ef22349391bb721676a0e2ba5411a525911f3c5c38572d45a800e26c8c7fb38",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": [
+        {
+          "name": "parent",
+          "access": "read",
+          "expected_binding": "unique",
+          "start": 30,
+          "end": 36,
+          "sha256": "e47125968b3b71049fbc4802d1e40a71ea1359decfabacf70b34588037d4ff0c",
+          "quoted": false
+        },
+        {
+          "name": "child",
+          "access": "read",
+          "expected_binding": "unique",
+          "start": 64,
+          "end": 69,
+          "sha256": "ddc9e669194254cef019a29d3619a2c16592e5d52e1a81e98b01bd52319149a3",
+          "quoted": false
+        }
+      ]
+    },
+    {
+      "dialect": "mysql",
+      "id": "mysql-insert-select",
+      "expected_decision": "admit",
+      "expected_reason": null,
+      "source_class": "authored-query",
+      "manifest_engine": "mysql",
+      "declaration_sets": [
+        {
+          "manifest": "sqlc.yaml",
+          "relations": [
+            "parent",
+            "child"
+          ]
+        }
+      ],
+      "source_path": "fixtures/controls/mysql-insert-select.sql",
+      "source_bytes": 40,
+      "source_sha256": "737cc74e4b66b428cb863f3996fa6ddc2aee6f3d92edf3efeba5171e8cbee909",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": [
+        {
+          "name": "child",
+          "access": "write",
+          "expected_binding": "unique",
+          "start": 12,
+          "end": 17,
+          "sha256": "ddc9e669194254cef019a29d3619a2c16592e5d52e1a81e98b01bd52319149a3",
+          "quoted": false
+        },
+        {
+          "name": "parent",
+          "access": "read",
+          "expected_binding": "unique",
+          "start": 32,
+          "end": 38,
+          "sha256": "e47125968b3b71049fbc4802d1e40a71ea1359decfabacf70b34588037d4ff0c",
+          "quoted": false
+        }
+      ]
+    },
+    {
+      "dialect": "mysql",
+      "id": "mysql-update-subquery",
+      "expected_decision": "admit",
+      "expected_reason": null,
+      "source_class": "authored-query",
+      "manifest_engine": "mysql",
+      "declaration_sets": [
+        {
+          "manifest": "sqlc.yaml",
+          "relations": [
+            "parent",
+            "child"
+          ]
+        }
+      ],
+      "source_path": "fixtures/controls/mysql-update-subquery.sql",
+      "source_bytes": 47,
+      "source_sha256": "8b8d13568af2793f1bb8c47a0c56324c4a8f2ee19cd1b237a717d0b611bbd95b",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": [
+        {
+          "name": "child",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "start": 7,
+          "end": 12,
+          "sha256": "ddc9e669194254cef019a29d3619a2c16592e5d52e1a81e98b01bd52319149a3",
+          "quoted": false
+        },
+        {
+          "name": "parent",
+          "access": "read",
+          "expected_binding": "unique",
+          "start": 38,
+          "end": 44,
+          "sha256": "e47125968b3b71049fbc4802d1e40a71ea1359decfabacf70b34588037d4ff0c",
+          "quoted": false
+        }
+      ]
+    },
+    {
+      "dialect": "mysql",
+      "id": "mysql-malformed-string",
+      "expected_decision": "refuse",
+      "expected_reason": "malformed-input",
+      "source_class": "authored-schema",
+      "manifest_engine": "mysql",
+      "source_path": "fixtures/controls/mysql-malformed-string.sql",
+      "source_bytes": 59,
+      "source_sha256": "caf4de01b4a2ad44790a72cd45f00d81cf0d08f4ee915a2576b86c432cb3b86b",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "mysql",
+      "id": "mysql-input-byte-limit",
+      "expected_decision": "refuse",
+      "expected_reason": "resource-limit",
+      "source_class": "authored-schema",
+      "manifest_engine": "mysql",
+      "source_path": "fixtures/controls/mysql-input-byte-limit.sql",
+      "source_bytes": 262145,
+      "source_sha256": "3f291140ab64c9766e11501e4d1906bd7b6d130f506c129c6460396266d025a0",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "postgresql",
+      "id": "postgresql-unquoted-ascii-fold",
+      "expected_decision": "admit",
+      "expected_reason": null,
+      "source_class": "authored-schema",
+      "manifest_engine": "postgresql",
+      "source_path": "fixtures/controls/postgresql-unquoted-ascii-fold.sql",
+      "source_bytes": 31,
+      "source_sha256": "981f0843aa34ccda497573bb379469d8ee75cd8e9a703faa66c5d51a2ddfe5f7",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [
+        {
+          "kind": "table",
+          "name": "Foo",
+          "canonical_name": "foo",
+          "start": 13,
+          "end": 16,
+          "sha256": "1cbec737f863e4922cee63cc2ebbfaafcd1cff8b790d8cfd2e6a5d550b648afa",
+          "quoted": false
+        },
+        {
+          "kind": "column",
+          "name": "ID",
+          "relation": "Foo",
+          "canonical_name": "id",
+          "start": 18,
+          "end": 20,
+          "sha256": "3843971dcfdee5083e6289e1bbdbb003e538b5a8a668fc43ae4f19d415ac18a2",
+          "quoted": false
+        }
+      ],
+      "expected_sites": []
+    },
+    {
+      "dialect": "postgresql",
+      "id": "postgresql-delete-using",
+      "expected_decision": "admit",
+      "expected_reason": null,
+      "source_class": "authored-query",
+      "manifest_engine": "postgresql",
+      "declaration_sets": [
+        {
+          "manifest": "sqlc.yaml",
+          "relations": [
+            "parent",
+            "child"
+          ]
+        }
+      ],
+      "source_path": "fixtures/controls/postgresql-delete-using.sql",
+      "source_bytes": 59,
+      "source_sha256": "ff272310f30be4b3bfe684a85b6c4ee81d2bfddffa84eeb56ee9ce784acdfe8b",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": [
+        {
+          "name": "child",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "start": 12,
+          "end": 17,
+          "sha256": "ddc9e669194254cef019a29d3619a2c16592e5d52e1a81e98b01bd52319149a3",
+          "quoted": false
+        },
+        {
+          "name": "parent",
+          "access": "read",
+          "expected_binding": "unique",
+          "start": 24,
+          "end": 30,
+          "sha256": "e47125968b3b71049fbc4802d1e40a71ea1359decfabacf70b34588037d4ff0c",
+          "quoted": false
+        }
+      ]
+    },
+    {
+      "dialect": "postgresql",
+      "id": "postgresql-on-conflict-update",
+      "expected_decision": "admit",
+      "expected_reason": null,
+      "source_class": "authored-query",
+      "manifest_engine": "postgresql",
+      "declaration_sets": [
+        {
+          "manifest": "sqlc.yaml",
+          "relations": [
+            "child"
+          ]
+        }
+      ],
+      "source_path": "fixtures/controls/postgresql-on-conflict-update.sql",
+      "source_bytes": 81,
+      "source_sha256": "a9f2cc69bb6984c58ba6b2721aa8211074a76e3458398cd18b21614179b8b21a",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": [
+        {
+          "name": "child",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "start": 12,
+          "end": 17,
+          "sha256": "ddc9e669194254cef019a29d3619a2c16592e5d52e1a81e98b01bd52319149a3",
+          "quoted": false
+        }
+      ]
+    },
+    {
+      "dialect": "postgresql",
+      "id": "postgresql-procedural-dollar-quote",
+      "expected_decision": "gap",
+      "expected_reason": "procedural-sql",
+      "source_class": "authored-schema",
+      "manifest_engine": "postgresql",
+      "note": "Dollar-quoted inner SQL never supplies a current hidden table.",
+      "source_path": "fixtures/controls/postgresql-procedural-dollar-quote.sql",
+      "source_bytes": 72,
+      "source_sha256": "2fc7e2639b70ad72b9e586579547205417de98c7eef10cd5b584bf777d30e6db",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "postgresql",
+      "id": "postgresql-dump-restrict-wrapper",
+      "expected_decision": "admit",
+      "expected_reason": null,
+      "source_class": "captured-dump",
+      "source_path": "fixtures/controls/postgresql-dump-restrict-wrapper.sql",
+      "source_bytes": 177,
+      "source_sha256": "8d08b7d00a5b43dfd3f939aac130ac5b4aa825189d6c4359c2c6106a7f397422",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [
+        {
+          "kind": "table",
+          "name": "parent",
+          "start": 128,
+          "end": 134,
+          "sha256": "e47125968b3b71049fbc4802d1e40a71ea1359decfabacf70b34588037d4ff0c",
+          "quoted": false
+        },
+        {
+          "kind": "column",
+          "name": "id",
+          "relation": "parent",
+          "start": 136,
+          "end": 138,
+          "sha256": "a56145270ce6b3bebd1dd012b73948677dd618d496488bc608a3cb43ce3547dd",
+          "quoted": false
+        }
+      ],
+      "expected_sites": []
+    },
+    {
+      "dialect": "mysql",
+      "id": "mysql-multi-table-delete",
+      "expected_decision": "admit",
+      "expected_reason": null,
+      "source_class": "authored-query",
+      "manifest_engine": "mysql",
+      "declaration_sets": [
+        {
+          "manifest": "sqlc.yaml",
+          "relations": [
+            "parent",
+            "child"
+          ]
+        }
+      ],
+      "note": "c target resolves through local alias only, no extra literal site.",
+      "source_path": "fixtures/controls/mysql-multi-table-delete.sql",
+      "source_bytes": 50,
+      "source_sha256": "2ff3ae969dd0bc87acc02dd8c2fc347a7f75be76458898483e7a14d1c56db4dc",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": [
+        {
+          "name": "child",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "start": 14,
+          "end": 19,
+          "sha256": "ddc9e669194254cef019a29d3619a2c16592e5d52e1a81e98b01bd52319149a3",
+          "quoted": false
+        },
+        {
+          "name": "parent",
+          "access": "read",
+          "expected_binding": "unique",
+          "start": 27,
+          "end": 33,
+          "sha256": "e47125968b3b71049fbc4802d1e40a71ea1359decfabacf70b34588037d4ff0c",
+          "quoted": false
+        }
+      ]
+    },
+    {
+      "dialect": "mysql",
+      "id": "mysql-on-duplicate-update",
+      "expected_decision": "admit",
+      "expected_reason": null,
+      "source_class": "authored-query",
+      "manifest_engine": "mysql",
+      "declaration_sets": [
+        {
+          "manifest": "sqlc.yaml",
+          "relations": [
+            "child"
+          ]
+        }
+      ],
+      "source_path": "fixtures/controls/mysql-on-duplicate-update.sql",
+      "source_bytes": 73,
+      "source_sha256": "201577e91ef1f506f61f7f49d87d34b0a1f983f8956070fad50b2aab2625ca62",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": [
+        {
+          "name": "child",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "start": 12,
+          "end": 17,
+          "sha256": "ddc9e669194254cef019a29d3619a2c16592e5d52e1a81e98b01bd52319149a3",
+          "quoted": false
+        }
+      ]
+    },
+    {
+      "dialect": "mysql",
+      "id": "mysql-versioned-data-section",
+      "expected_decision": "refuse",
+      "expected_reason": "data-section",
+      "source_class": "captured-dump",
+      "source_path": "fixtures/controls/mysql-versioned-data-section.sql",
+      "source_bytes": 77,
+      "source_sha256": "df87283afb80b0bca71cf657af78375fc06b761cec3233a43bb4761b8b0edf44",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "mysql",
+      "id": "mysql-delimiter-procedure",
+      "expected_decision": "gap",
+      "expected_reason": "procedural-sql",
+      "source_class": "authored-schema",
+      "manifest_engine": "mysql",
+      "note": "Delimiter body remains one procedural envelope, no hidden table facts.",
+      "source_path": "fixtures/controls/mysql-delimiter-procedure.sql",
+      "source_bytes": 98,
+      "source_sha256": "5b9570da21ad2b8b0070d27688bab9ca62a82b607de4a845238b39041f370187",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [],
+      "expected_sites": []
+    },
+    {
+      "dialect": "mysql",
+      "id": "mysql-prefix-generated-column",
+      "expected_decision": "admit",
+      "expected_reason": null,
+      "source_class": "authored-schema",
+      "manifest_engine": "mysql",
+      "note": "Generated expression/type and index prefix unit remain opaque source declarations; no server configuration/runtime semantics.",
+      "source_path": "fixtures/controls/mysql-prefix-generated-column.sql",
+      "source_bytes": 181,
+      "source_sha256": "e11fa08e72eb7f140647332e737a1fa942124da5c4de8d24c6a001bce167557d",
+      "population": "authored-neutral-control; excluded from public-corpus denominators",
+      "expected_objects": [
+        {
+          "kind": "table",
+          "name": "child",
+          "start": 13,
+          "end": 18,
+          "sha256": "ddc9e669194254cef019a29d3619a2c16592e5d52e1a81e98b01bd52319149a3",
+          "quoted": false
+        },
+        {
+          "kind": "column",
+          "name": "name",
+          "relation": "child",
+          "start": 20,
+          "end": 24,
+          "sha256": "82a3537ff0dbce7eec35d69edc3a189ee6f17d82f353a553f9aa96cb0be3ce89",
+          "quoted": false
+        },
+        {
+          "kind": "column",
+          "name": "folded",
+          "relation": "child",
+          "start": 38,
+          "end": 44,
+          "sha256": "bbe900d10e989462b9015766416e926c8b434ccb56ecc2c1ac644d154851826a",
+          "quoted": false
+        },
+        {
+          "kind": "index",
+          "name": "ix_name",
+          "relation": "child",
+          "columns": [
+            "name"
+          ],
+          "prefix_lengths": [
+            8
+          ],
+          "start": 103,
+          "end": 110,
+          "sha256": "e4bd94f7423bdd0a359aaa451ef592b8e73592b974b2dfb4843cc7e3bda62ff8",
+          "quoted": false
+        }
+      ],
+      "expected_sites": []
+    },
+    {
+      "id": "postgresql-invalid-utf8",
+      "dialect": "postgresql",
+      "source_path": "fixtures/controls/postgresql-invalid-utf8.bin",
+      "source_bytes": 27,
+      "source_sha256": "0c4e2dc6f5c5aae222a6bc21bc4e012a275ba586c68d0a8e21f61d8e57046643",
+      "source_class": "authored-schema",
+      "manifest_engine": "postgresql",
+      "expected_decision": "refuse",
+      "expected_reason": "malformed-input",
+      "expected_objects": [],
+      "expected_sites": [],
+      "population": "authored-neutral-control; excluded from public-corpus denominators"
+    },
+    {
+      "id": "mysql-invalid-utf8",
+      "dialect": "mysql",
+      "source_path": "fixtures/controls/mysql-invalid-utf8.bin",
+      "source_bytes": 27,
+      "source_sha256": "0c4e2dc6f5c5aae222a6bc21bc4e012a275ba586c68d0a8e21f61d8e57046643",
+      "source_class": "authored-schema",
+      "manifest_engine": "mysql",
+      "expected_decision": "refuse",
+      "expected_reason": "malformed-input",
+      "expected_objects": [],
+      "expected_sites": [],
+      "population": "authored-neutral-control; excluded from public-corpus denominators"
+    }
+  ]
+}

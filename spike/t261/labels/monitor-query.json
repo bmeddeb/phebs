@@ -1,0 +1,928 @@
+{
+  "format": "t261-source-labels-v1",
+  "dialect": "mysql",
+  "repository": "ntppool/monitor",
+  "commit": "e03c40a06ae8f9bd4906001c2ede0c7296ec8e96",
+  "source_path": "query.sql",
+  "source_sha256": "372c6852573688cc633d0d7ecb1b233f37067172af3cc2487dba7b0dc5a35028",
+  "plane": "sql-query",
+  "statements": [
+    {
+      "id": "GetMonitorsTLSName",
+      "start": 0,
+      "end": 123,
+      "sha256": "d1c5d6ba2738717b19ced33ade3a372f769acda2fdc90d27150d6a6715e41be8",
+      "syntax_class": "select",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "monitors",
+          "quoted": false,
+          "start": 48,
+          "end": 56,
+          "sha256": "e5c19e68e5a39343e18fba64c2e2ab1d85a07554aeac4bce73cd24fbd40b1125",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "monitors"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding."
+    },
+    {
+      "id": "GetMonitorTLSNameIP",
+      "start": 124,
+      "end": 492,
+      "sha256": "8198680a2ac055fefcefcfa90563c721df9a5f7c2080ab26669e7c62883e4088",
+      "syntax_class": "select-join",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "monitors",
+          "quoted": false,
+          "start": 217,
+          "end": 225,
+          "sha256": "e5c19e68e5a39343e18fba64c2e2ab1d85a07554aeac4bce73cd24fbd40b1125",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "monitors"
+        },
+        {
+          "name": "accounts",
+          "quoted": false,
+          "start": 236,
+          "end": 244,
+          "sha256": "bc62a3c14fec277e3dc6b504bf7c6348c2e421f8acc42032deddb0a96070f078",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "accounts"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding."
+    },
+    {
+      "id": "GetServer",
+      "start": 493,
+      "end": 551,
+      "sha256": "1c48df71b3cdec5b636c2dfddac00457520562f2d4eda58e27408753c72cfe7f",
+      "syntax_class": "select",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "servers",
+          "quoted": false,
+          "start": 531,
+          "end": 538,
+          "sha256": "8e3dc1afbc3ec556bb8b13749fb07bf6e431acf8a13f06e0f281566b60c4841f",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "servers"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding."
+    },
+    {
+      "id": "GetServerIP",
+      "start": 552,
+      "end": 612,
+      "sha256": "03282e043f461e3d0522fdaa793e2b0192d087783059b61dba838c6f126912ae",
+      "syntax_class": "select",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "servers",
+          "quoted": false,
+          "start": 592,
+          "end": 599,
+          "sha256": "8e3dc1afbc3ec556bb8b13749fb07bf6e431acf8a13f06e0f281566b60c4841f",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "servers"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding."
+    },
+    {
+      "id": "GetServerScore",
+      "start": 613,
+      "end": 716,
+      "sha256": "de6aa90eb3e01c092c185c36effb14853f07bf0e5eb6bbb0f596cdb28f9cf95b",
+      "syntax_class": "select",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "server_scores",
+          "quoted": false,
+          "start": 656,
+          "end": 669,
+          "sha256": "b906349351c1305078affb6e6bf32a57c5c28114d1436acc3aff76828a619ec5",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "server_scores"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding."
+    },
+    {
+      "id": "UpdateServerScore",
+      "start": 717,
+      "end": 828,
+      "sha256": "0edef89454dff62eacd6bbbc88a10ee5aa5a3e2a92748ff4a3f50275d95ef73e",
+      "syntax_class": "update",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "server_scores",
+          "quoted": false,
+          "start": 757,
+          "end": 770,
+          "sha256": "b906349351c1305078affb6e6bf32a57c5c28114d1436acc3aff76828a619ec5",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "server_scores"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding."
+    },
+    {
+      "id": "UpdateServerScoreQueue",
+      "start": 829,
+      "end": 1074,
+      "sha256": "28abdfb51a87e62cbdfd6b842dcd676a1b8fce6447833740a693f8f74789728e",
+      "syntax_class": "update",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "server_scores",
+          "quoted": false,
+          "start": 874,
+          "end": 887,
+          "sha256": "b906349351c1305078affb6e6bf32a57c5c28114d1436acc3aff76828a619ec5",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "server_scores"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding."
+    },
+    {
+      "id": "InsertServerScore",
+      "start": 1075,
+      "end": 1262,
+      "sha256": "608afca34d5cebf83f3abaa6ef27e4fc46d6cd14f8ec8f150b43bef7cfa77bc1",
+      "syntax_class": "insert-on-duplicate",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "server_scores",
+          "quoted": false,
+          "start": 1120,
+          "end": 1133,
+          "sha256": "b906349351c1305078affb6e6bf32a57c5c28114d1436acc3aff76828a619ec5",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "server_scores"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding. One target occurrence is read-write for ON DUPLICATE KEY UPDATE; VALUES(score_raw) does not introduce another relation."
+    },
+    {
+      "id": "UpdateServerScoreStatus",
+      "start": 1263,
+      "end": 1382,
+      "sha256": "e9dbb5d1ad1f30c7da1caf871d2727ca3f9186d41a45400267eb6692f83cca45",
+      "syntax_class": "update",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "server_scores",
+          "quoted": false,
+          "start": 1309,
+          "end": 1322,
+          "sha256": "b906349351c1305078affb6e6bf32a57c5c28114d1436acc3aff76828a619ec5",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "server_scores"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding."
+    },
+    {
+      "id": "UpdateServerScoreStratum",
+      "start": 1383,
+      "end": 1478,
+      "sha256": "a9f12a859dba107bafe73b382f54c825cae56e4d38617de599e3f0082d0b0a30",
+      "syntax_class": "update",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "server_scores",
+          "quoted": false,
+          "start": 1430,
+          "end": 1443,
+          "sha256": "b906349351c1305078affb6e6bf32a57c5c28114d1436acc3aff76828a619ec5",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "server_scores"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding."
+    },
+    {
+      "id": "UpdateServer",
+      "start": 1479,
+      "end": 1684,
+      "sha256": "f0ad9771afdb32e75a55cf6b964d7002d09b8753e86140e54acd2ab5c7fd8871",
+      "syntax_class": "update",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "servers",
+          "quoted": false,
+          "start": 1514,
+          "end": 1521,
+          "sha256": "8e3dc1afbc3ec556bb8b13749fb07bf6e431acf8a13f06e0f281566b60c4841f",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "servers"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding."
+    },
+    {
+      "id": "UpdateServerStratum",
+      "start": 1685,
+      "end": 1878,
+      "sha256": "d11c357e1d6eaf729aa36519bd7f0bb3850026a30b8edc6249cfbf184eb6b729",
+      "syntax_class": "update",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "servers",
+          "quoted": false,
+          "start": 1727,
+          "end": 1734,
+          "sha256": "8e3dc1afbc3ec556bb8b13749fb07bf6e431acf8a13f06e0f281566b60c4841f",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "servers"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding."
+    },
+    {
+      "id": "GetScorers",
+      "start": 1879,
+      "end": 2092,
+      "sha256": "def76c79cba4f2d96f87c92f11e59dd864698a4a06565fc6d9c552d88f1882d1",
+      "syntax_class": "select-comma-join",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "monitors",
+          "quoted": false,
+          "start": 1987,
+          "end": 1995,
+          "sha256": "e5c19e68e5a39343e18fba64c2e2ab1d85a07554aeac4bce73cd24fbd40b1125",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "monitors"
+        },
+        {
+          "name": "scorer_status",
+          "quoted": false,
+          "start": 1999,
+          "end": 2012,
+          "sha256": "8ccce49742c795e9b0bc2162d4ee8fb08ca5aafab5d35adb077ccd462e452c1e",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "scorer_status"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding."
+    },
+    {
+      "id": "GetScorerStatus",
+      "start": 2093,
+      "end": 2226,
+      "sha256": "1e8efdbc89cc015b62f10cf8ebbb200c65446f1717c4ab51fbfb0d946c0a5a15",
+      "syntax_class": "select-comma-join",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "scorer_status",
+          "quoted": false,
+          "start": 2151,
+          "end": 2164,
+          "sha256": "8ccce49742c795e9b0bc2162d4ee8fb08ca5aafab5d35adb077ccd462e452c1e",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "scorer_status"
+        },
+        {
+          "name": "monitors",
+          "quoted": false,
+          "start": 2168,
+          "end": 2176,
+          "sha256": "e5c19e68e5a39343e18fba64c2e2ab1d85a07554aeac4bce73cd24fbd40b1125",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "monitors"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding."
+    },
+    {
+      "id": "UpdateScorerStatus",
+      "start": 2227,
+      "end": 2328,
+      "sha256": "324aa772054fa17cc9d1d940e094c420dc28eaa80f041f129d971a6fbb402b4e",
+      "syntax_class": "update",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "scorer_status",
+          "quoted": false,
+          "start": 2268,
+          "end": 2281,
+          "sha256": "8ccce49742c795e9b0bc2162d4ee8fb08ca5aafab5d35adb077ccd462e452c1e",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "scorer_status"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding."
+    },
+    {
+      "id": "InsertScorerStatus",
+      "start": 2329,
+      "end": 2454,
+      "sha256": "ad973d7c57c609c3ae072f6d3289e238a3f02cee4a5d539a9a073d020f8ceb03",
+      "syntax_class": "insert-values",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "scorer_status",
+          "quoted": false,
+          "start": 2375,
+          "end": 2388,
+          "sha256": "8ccce49742c795e9b0bc2162d4ee8fb08ca5aafab5d35adb077ccd462e452c1e",
+          "access": "write",
+          "expected_binding": "unique",
+          "declaration_relation": "scorer_status"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding."
+    },
+    {
+      "id": "InsertScorer",
+      "start": 2455,
+      "end": 2771,
+      "sha256": "96e3f45daa46522579b9221326a4906bc78b2930404422e11ee1d25aaa6ecd87",
+      "syntax_class": "insert-values",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "monitors",
+          "quoted": false,
+          "start": 2501,
+          "end": 2509,
+          "sha256": "e5c19e68e5a39343e18fba64c2e2ab1d85a07554aeac4bce73cd24fbd40b1125",
+          "access": "write",
+          "expected_binding": "unique",
+          "declaration_relation": "monitors"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding."
+    },
+    {
+      "id": "GetMinLogScoreID",
+      "start": 2772,
+      "end": 2900,
+      "sha256": "b55dd3bec5ae7da533cef2bc13b2909bef12d63a0e4d99842a1296761235d1e6",
+      "syntax_class": "select",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "log_scores",
+          "quoted": false,
+          "start": 2868,
+          "end": 2878,
+          "sha256": "bbe61f53ec87dc57bf669b3c51c4315e2b5fb2e396bec6d900b8c1356f53120e",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "log_scores"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding."
+    },
+    {
+      "id": "GetScorerLogScores",
+      "start": 2901,
+      "end": 3164,
+      "sha256": "4ee243c5d77896014bd5bb6c75ebab077884fbf04b045f06dd0f88bdcab1df6b",
+      "syntax_class": "select-index-hint",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "log_scores",
+          "quoted": false,
+          "start": 2954,
+          "end": 2964,
+          "sha256": "bbe61f53ec87dc57bf669b3c51c4315e2b5fb2e396bec6d900b8c1356f53120e",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "log_scores"
+        },
+        {
+          "name": "monitors",
+          "quoted": false,
+          "start": 2991,
+          "end": 2999,
+          "sha256": "e5c19e68e5a39343e18fba64c2e2ab1d85a07554aeac4bce73cd24fbd40b1125",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "monitors"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding. USE INDEX(primary) is a source modifier, not another relation."
+    },
+    {
+      "id": "GetScorerNextLogScoreID",
+      "start": 3165,
+      "end": 3600,
+      "sha256": "ace87d5fc5802c278325ec232ea6d3a7aa7e9eebcb4708454e01fa46387046af",
+      "syntax_class": "select-index-hint",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "log_scores",
+          "quoted": false,
+          "start": 3441,
+          "end": 3451,
+          "sha256": "bbe61f53ec87dc57bf669b3c51c4315e2b5fb2e396bec6d900b8c1356f53120e",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "log_scores"
+        },
+        {
+          "name": "monitors",
+          "quoted": false,
+          "start": 3478,
+          "end": 3486,
+          "sha256": "e5c19e68e5a39343e18fba64c2e2ab1d85a07554aeac4bce73cd24fbd40b1125",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "monitors"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding. USE INDEX(primary) is a source modifier, not another relation."
+    },
+    {
+      "id": "GetScorerRecentScores",
+      "start": 3601,
+      "end": 4372,
+      "sha256": "36496375dade4fb76fb1b0885b4451df18530e041a6d3fbaf41c09c4bfbda9cb",
+      "syntax_class": "select-derived-join",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "log_scores",
+          "quoted": false,
+          "start": 3659,
+          "end": 3669,
+          "sha256": "bbe61f53ec87dc57bf669b3c51c4315e2b5fb2e396bec6d900b8c1356f53120e",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "log_scores"
+        },
+        {
+          "name": "log_scores",
+          "quoted": false,
+          "start": 3744,
+          "end": 3754,
+          "sha256": "bbe61f53ec87dc57bf669b3c51c4315e2b5fb2e396bec6d900b8c1356f53120e",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "log_scores"
+        },
+        {
+          "name": "monitors",
+          "quoted": false,
+          "start": 3769,
+          "end": 3777,
+          "sha256": "e5c19e68e5a39343e18fba64c2e2ab1d85a07554aeac4bce73cd24fbd40b1125",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "monitors"
+        },
+        {
+          "name": "server_scores",
+          "quoted": false,
+          "start": 3790,
+          "end": 3803,
+          "sha256": "b906349351c1305078affb6e6bf32a57c5c28114d1436acc3aff76828a619ec5",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "server_scores"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding. Derived alias g is not a physical relation; outer and inner log_scores occurrences remain distinct."
+    },
+    {
+      "id": "UpdateMonitorSeen",
+      "start": 4373,
+      "end": 4458,
+      "sha256": "81783dc55c6a4738691338e93774b0770de7cbfdfcb80a98e0f99c7fc6e51447",
+      "syntax_class": "update",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "monitors",
+          "quoted": false,
+          "start": 4413,
+          "end": 4421,
+          "sha256": "e5c19e68e5a39343e18fba64c2e2ab1d85a07554aeac4bce73cd24fbd40b1125",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "monitors"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding."
+    },
+    {
+      "id": "UpdateMonitorSubmit",
+      "start": 4459,
+      "end": 4563,
+      "sha256": "27b04c713e5f73733b7ff7b3e1f87ce9ceb21c91325215ebc2a5a50d73db6bcd",
+      "syntax_class": "update",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "monitors",
+          "quoted": false,
+          "start": 4501,
+          "end": 4509,
+          "sha256": "e5c19e68e5a39343e18fba64c2e2ab1d85a07554aeac4bce73cd24fbd40b1125",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "monitors"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding."
+    },
+    {
+      "id": "UpdateMonitorVersion",
+      "start": 4564,
+      "end": 4657,
+      "sha256": "4185dc584a8a77c02a0647e63e59005ec31a1d0a00912758da873bf7306dbc41",
+      "syntax_class": "update",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "monitors",
+          "quoted": false,
+          "start": 4607,
+          "end": 4615,
+          "sha256": "e5c19e68e5a39343e18fba64c2e2ab1d85a07554aeac4bce73cd24fbd40b1125",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "monitors"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding."
+    },
+    {
+      "id": "InsertLogScore",
+      "start": 4658,
+      "end": 4820,
+      "sha256": "eb7985d4ed21f17a5944c898d2444905c9eb1d3c122d450f14c4cdcc4f16f56b",
+      "syntax_class": "insert-values",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "log_scores",
+          "quoted": false,
+          "start": 4706,
+          "end": 4716,
+          "sha256": "bbe61f53ec87dc57bf669b3c51c4315e2b5fb2e396bec6d900b8c1356f53120e",
+          "access": "write",
+          "expected_binding": "unique",
+          "declaration_relation": "log_scores"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding."
+    },
+    {
+      "id": "GetServers",
+      "start": 4821,
+      "end": 5660,
+      "sha256": "fcfb9cec1f4cffb11a649b9fd34ea6a95a3e7a41139eac9bbd9af305a847495b",
+      "syntax_class": "select-join",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "servers",
+          "quoted": false,
+          "start": 4867,
+          "end": 4874,
+          "sha256": "8e3dc1afbc3ec556bb8b13749fb07bf6e431acf8a13f06e0f281566b60c4841f",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "servers"
+        },
+        {
+          "name": "server_scores",
+          "quoted": false,
+          "start": 4891,
+          "end": 4904,
+          "sha256": "b906349351c1305078affb6e6bf32a57c5c28114d1436acc3aff76828a619ec5",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "server_scores"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding."
+    },
+    {
+      "id": "GetMonitorPriority",
+      "start": 5661,
+      "end": 6778,
+      "sha256": "abbb4de23a13f6eec1894b55932d4392bf920eb7dc2591b1b8a23026a39177e9",
+      "syntax_class": "select-join",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "log_scores",
+          "quoted": false,
+          "start": 6195,
+          "end": 6205,
+          "sha256": "bbe61f53ec87dc57bf669b3c51c4315e2b5fb2e396bec6d900b8c1356f53120e",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "log_scores"
+        },
+        {
+          "name": "monitors",
+          "quoted": false,
+          "start": 6222,
+          "end": 6230,
+          "sha256": "e5c19e68e5a39343e18fba64c2e2ab1d85a07554aeac4bce73cd24fbd40b1125",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "monitors"
+        },
+        {
+          "name": "server_scores",
+          "quoted": false,
+          "start": 6245,
+          "end": 6258,
+          "sha256": "b906349351c1305078affb6e6bf32a57c5c28114d1436acc3aff76828a619ec5",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "server_scores"
+        },
+        {
+          "name": "accounts",
+          "quoted": false,
+          "start": 6341,
+          "end": 6349,
+          "sha256": "bc62a3c14fec277e3dc6b504bf7c6348c2e421f8acc42032deddb0a96070f078",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "accounts"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding."
+    },
+    {
+      "id": "GetServersMonitorReview",
+      "start": 6779,
+      "end": 6946,
+      "sha256": "b557e0a836bc09437c5a4c0bf360ba9d64a720eed6ec6d32a62a843cd30d7190",
+      "syntax_class": "select",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "servers_monitor_review",
+          "quoted": false,
+          "start": 6840,
+          "end": 6862,
+          "sha256": "e5345d31716675f49dd980533493893d4bb036f0efaa9f3226a56375564f2c57",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "servers_monitor_review"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding."
+    },
+    {
+      "id": "UpdateServersMonitorReview",
+      "start": 6947,
+      "end": 7079,
+      "sha256": "9fe546db827226c0b9e51f584b4889b79fc183916e60365034353582cac3caa3",
+      "syntax_class": "update",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "servers_monitor_review",
+          "quoted": false,
+          "start": 6996,
+          "end": 7018,
+          "sha256": "e5345d31716675f49dd980533493893d4bb036f0efaa9f3226a56375564f2c57",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "servers_monitor_review"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding."
+    },
+    {
+      "id": "UpdateServersMonitorReviewChanged",
+      "start": 7080,
+      "end": 7238,
+      "sha256": "58ef5dd0910dd0ad20f751dd595db2ed9816f04cb331e5a467e21dcf74693603",
+      "syntax_class": "update",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "servers_monitor_review",
+          "quoted": false,
+          "start": 7136,
+          "end": 7158,
+          "sha256": "e5345d31716675f49dd980533493893d4bb036f0efaa9f3226a56375564f2c57",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "servers_monitor_review"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding."
+    },
+    {
+      "id": "GetSystemSetting",
+      "start": 7239,
+      "end": 7321,
+      "sha256": "7fcac23ce0b632954b3f0140c84fd0c243bbec0b020b04457cdd3b1509eeac38",
+      "syntax_class": "select",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "system_settings",
+          "quoted": false,
+          "start": 7288,
+          "end": 7303,
+          "sha256": "7bd9d930d5804a781ddc344f1f86de99cc8b99352ed329dd65397d24b2fe9d23",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "system_settings"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding."
+    },
+    {
+      "id": "UpdateServerScoreConstraintViolation",
+      "start": 7322,
+      "end": 7505,
+      "sha256": "f76dbe8b0041496113c3f5631023025809afdd74550d85effa4248dcf161b5b4",
+      "syntax_class": "update",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "server_scores",
+          "quoted": false,
+          "start": 7381,
+          "end": 7394,
+          "sha256": "b906349351c1305078affb6e6bf32a57c5c28114d1436acc3aff76828a619ec5",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "server_scores"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding."
+    },
+    {
+      "id": "ClearServerScoreConstraintViolation",
+      "start": 7506,
+      "end": 7754,
+      "sha256": "632bbe58ca83c9d5cac6390bbd72540b7ac9bde12cb3594f96e234b6c974d797",
+      "syntax_class": "update",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "server_scores",
+          "quoted": false,
+          "start": 7564,
+          "end": 7577,
+          "sha256": "b906349351c1305078affb6e6bf32a57c5c28114d1436acc3aff76828a619ec5",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "server_scores"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding."
+    },
+    {
+      "id": "UpdateServerScorePauseReason",
+      "start": 7755,
+      "end": 7916,
+      "sha256": "4e58df93a291acbf196c9da21188a0612960a87e58d99d28593780e4c491bf2e",
+      "syntax_class": "update",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "server_scores",
+          "quoted": false,
+          "start": 7806,
+          "end": 7819,
+          "sha256": "b906349351c1305078affb6e6bf32a57c5c28114d1436acc3aff76828a619ec5",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "server_scores"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding."
+    },
+    {
+      "id": "UpdateServerScoreLastConstraintCheck",
+      "start": 7917,
+      "end": 8064,
+      "sha256": "1b4a555d90d76fc24106299981cfea63ccd4c44fb349fd35036ceaff670b86cf",
+      "syntax_class": "update",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "server_scores",
+          "quoted": false,
+          "start": 7976,
+          "end": 7989,
+          "sha256": "b906349351c1305078affb6e6bf32a57c5c28114d1436acc3aff76828a619ec5",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "server_scores"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding."
+    },
+    {
+      "id": "DeleteServerScore",
+      "start": 8066,
+      "end": 8209,
+      "sha256": "c55d972d33e99e728799192cc70309f3d120d01fdf2e025019f00cfdcc59fd3e",
+      "syntax_class": "delete",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "server_scores",
+          "quoted": false,
+          "start": 8156,
+          "end": 8169,
+          "sha256": "b906349351c1305078affb6e6bf32a57c5c28114d1436acc3aff76828a619ec5",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "server_scores"
+        }
+      ],
+      "note": "Exact authored relation sites only; sqlc placeholders/functions and column qualifiers are not table sites. One committed manifest and one matching current declaration root provide unique binding. Final statement has no semicolon; EOF terminates it."
+    }
+  ],
+  "inventory_notes": [
+    "All 36 authored named query blocks and all physical relation-literal occurrences are labelled, without sampling.",
+    "Generated ntpdb/query.sql.go is a separately retained duplicate-negative population; it supplies no primary usage sites.",
+    "No query was executed; labels describe committed source read/write intent, not runtime table access or query results."
+  ]
+}

@@ -1,0 +1,135 @@
+{
+  "format": "t261-source-labels-v1",
+  "dialect": "postgresql",
+  "repository": "hatchet-dev/hatchet",
+  "commit": "559b5021e418f12ded175f950b709b7fa66be5a5",
+  "source_path": "pkg/repository/sqlcv1/pg_health.sql",
+  "source_sha256": "9ef434ca407180e6041b1bc5056cc8715bed698d07e646d53467930b642889d2",
+  "plane": "sql-query",
+  "statements": [
+    {
+      "id": "CheckPGStatStatementsEnabled",
+      "start": 0,
+      "end": 123,
+      "sha256": "bcf9e99ec8970f0521e0294fcaabdb870de4420fb012e68224a25a88f74f1e56",
+      "syntax_class": "select",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "pg_available_extensions",
+          "quoted": false,
+          "start": 64,
+          "end": 87,
+          "sha256": "bd7b5fb67ca5a83b8410300383d030dafd94e05f443f1e9dafeffea92dcaad3c",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "pg_available_extensions"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes. Unique binding is only to explicitly marked committed sqlc tooling stubs; no pg_catalog/live-server identity is inferred."
+    },
+    {
+      "id": "CheckBloat",
+      "start": 124,
+      "end": 924,
+      "sha256": "dffb0b58fc233d7abbc5967fa2a1eba12f21a50abb08ff3d011667250dc48eb9",
+      "syntax_class": "select",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "pg_stat_user_tables",
+          "quoted": false,
+          "start": 687,
+          "end": 706,
+          "sha256": "461303ab641d76a2ca38bb971f6a81852061a8559bb266063d77c7c6a8ec8ed5",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "pg_stat_user_tables"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes. Unique binding is only to explicitly marked committed sqlc tooling stubs; no pg_catalog/live-server identity is inferred."
+    },
+    {
+      "id": "CheckLongRunningQueries",
+      "start": 925,
+      "end": 1302,
+      "sha256": "41c72b421ce901f74612b97ff6608d812a0a131c4a7267cfa43bceee0461ac49",
+      "syntax_class": "select",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "pg_stat_activity",
+          "quoted": false,
+          "start": 1099,
+          "end": 1115,
+          "sha256": "e6ca21117a9fa936ba0b3955c6be9d2e7e8a625bf3fcd46916ba3d1f7a2f2d6c",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "pg_stat_activity"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes. Unique binding is only to explicitly marked committed sqlc tooling stubs; no pg_catalog/live-server identity is inferred."
+    },
+    {
+      "id": "CheckQueryCaches",
+      "start": 1303,
+      "end": 1916,
+      "sha256": "1a6e4a187a1b4b186d2435280752d560cb52e4940ef230e8ccaf13ba8bdde80b",
+      "syntax_class": "select",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "pg_statio_user_tables",
+          "quoted": false,
+          "start": 1806,
+          "end": 1827,
+          "sha256": "20553f2242c5271196e0d3870a636e37aa08e4a7be3292d9290cb20db8561142",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "pg_statio_user_tables"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes. Unique binding is only to explicitly marked committed sqlc tooling stubs; no pg_catalog/live-server identity is inferred."
+    },
+    {
+      "id": "LongRunningVacuum",
+      "start": 1917,
+      "end": 2802,
+      "sha256": "83aff6b2d874b05d7f6def359b5e45aa6921a67878717fde94ae474f7a7701fb",
+      "syntax_class": "select-join",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "pg_stat_progress_vacuum",
+          "quoted": false,
+          "start": 2650,
+          "end": 2673,
+          "sha256": "c4e4f87a21bff924b488e661417b01512fd07e5a2631f946a9a7f3507c95a76f",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "pg_stat_progress_vacuum"
+        },
+        {
+          "name": "pg_stat_activity",
+          "quoted": false,
+          "start": 2685,
+          "end": 2701,
+          "sha256": "e6ca21117a9fa936ba0b3955c6be9d2e7e8a625bf3fcd46916ba3d1f7a2f2d6c",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "pg_stat_activity"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes. Unique binding is only to explicitly marked committed sqlc tooling stubs; no pg_catalog/live-server identity is inferred."
+    }
+  ],
+  "inventory_notes": [
+    "Entire selected file labelled under preregistered metadata-only stratified sample; no inference to the 30 unsampled query files.",
+    "Exactly one committed sqlc manifest selects all five declarations inputs; names stay quoted/unquoted dialect-specific. Generated sql.go supplies no primary usage."
+  ]
+}

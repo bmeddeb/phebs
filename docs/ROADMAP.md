@@ -5477,6 +5477,12 @@ Production registration of the remaining evidence surfaces still requires:
 Until both exist, the implementation remains dark regardless of feature
 completeness or demo quality.
 
+**T26.1 input preparation (2026-10-18):** pinned permissive SQL corpora,
+complete declaration/dump labels, sampled migration/query labels, controls and
+bounded candidate contract are frozen in an immutable checkpoint. Mechanical
+PostgreSQL18.6 fixture capture passed with exact teardown. No candidate parser
+has executed; the two dialect comparisons and measured decision remain next.
+
 ## On demand
 
 Epic 32 measured the target whole repository and did not trigger P6. P6 remains

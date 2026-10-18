@@ -1,0 +1,1482 @@
+{
+  "repository": "hatchet-dev/hatchet",
+  "commit": "559b5021e418f12ded175f950b709b7fa66be5a5",
+  "tree_truncated": false,
+  "files": [
+    {
+      "path": "LICENSE",
+      "sha": "29a2ac2aa87cd720c21e4f72e19f6777e1cdf6d5",
+      "size": 1090
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240115180414_init.sql",
+      "sha": "9eac538ef4be4ba874dbbefe5b928d23715ea878",
+      "size": 24327
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240122014727_v0_6_0.sql",
+      "sha": "4ab706304d7dd71e3fd7c8df7899cf0f16ec1f63",
+      "size": 1763
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240126235456_v0_7_0.sql",
+      "sha": "682f0f2797bbecc41a409834288f73ceec9ea23f",
+      "size": 3925
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240129040510_v0_8_0.sql",
+      "sha": "589bef9d807ddc443faf2ab727ab1530074fa02b",
+      "size": 3206
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240202042355_v0_9_0.sql",
+      "sha": "b11e5918699195507738c0f66584104889d23c56",
+      "size": 3252
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240209132837_v0_10_0.sql",
+      "sha": "e9b097de52993a65b1ec578c8cde7ee497a1c14b",
+      "size": 158
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240215162148_v0_10_2.sql",
+      "sha": "2205379c3e5dc0ef3a9133620e0b6660613298b1",
+      "size": 672
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240216133745_v0_11_0.sql",
+      "sha": "cc4f3ef065a27c59aebb2ddf9f7135c8d8b4048e",
+      "size": 11413
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240226051822_v0_12_0.sql",
+      "sha": "0c0a64d16c92648ff5a71e205debdeb2b8a52c4a",
+      "size": 165
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240227181732_v0_13_0.sql",
+      "sha": "3c311ea193ec266716ed0f910d48d1474663dad9",
+      "size": 353
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240228050417_v0_13_2.sql",
+      "sha": "1f238165fc897a880db9630fa0345bae3dfdfbc0",
+      "size": 306
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240229232811_v0_14_0.sql",
+      "sha": "ad48b809c8d04c5165eb69a79d65f7010c2ffc6c",
+      "size": 820
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240304060408_v0_15_0.sql",
+      "sha": "65f672927c011db990e6cf83366295c091052893",
+      "size": 722
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240320215205_v0_17_0.sql",
+      "sha": "9c60e0e841e8f9bdf283b0004e5b6e441569b35f",
+      "size": 842
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240321215205_v0_17_1.sql",
+      "sha": "7fd4c71a32f20aabae7d680617b7b948a6462522",
+      "size": 842
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240326151030_v0_18_0.sql",
+      "sha": "1bd12a5fbcdeb687adec9596279ecedbd61721f2",
+      "size": 1957
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240331162333_v0_18_1.sql",
+      "sha": "19c5cfa7c0a694355ba774e2fd54c4d8f8c4da60",
+      "size": 407
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240402034010_v0_19_0.sql",
+      "sha": "79e752570501147ccad7bba945c20182b54e9560",
+      "size": 2491
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240424091046_v0_21_9.sql",
+      "sha": "851e53fdac6d30a0384e14461b9b4cdc0d5880cb",
+      "size": 120
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240430161943_v0_22_1.sql",
+      "sha": "078d136ac4dfd355e394d21485d60dfe34814e43",
+      "size": 239
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240503190030_v0_23_0.sql",
+      "sha": "fca4aee2b654c74f4abdb8b0de5ebf7e29cc18a2",
+      "size": 113
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240506194242_v0_24_0.sql",
+      "sha": "08d68d274f1bfd39b56db63617a741f6309512ec",
+      "size": 914
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240507200816_v0_25_0.sql",
+      "sha": "5bd07dcb358c1f1c3e9c6a7e4fcb316609cd2b53",
+      "size": 2936
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240509213608_v0_26_0.sql",
+      "sha": "c629c07997807b2588de9827478cb2442b5fa7b7",
+      "size": 1782
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240514192527_v0_27_0.sql",
+      "sha": "0671f73054f46008338f885c655dc6adb11cc344",
+      "size": 563
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240514203126_v0_28_0.sql",
+      "sha": "bd9a0d3c042974253630d9e5aa730ae125a7817f",
+      "size": 89
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240517204453_v0_28_1.sql",
+      "sha": "43e2749d127c995b8b10e2444c4a0079093141d7",
+      "size": 87
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240520152239_v0_28_2.sql",
+      "sha": "ceafe373cb73f957ea6590b0ec4acdb0f9810a23",
+      "size": 106
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240521205311_v0_28_3.sql",
+      "sha": "d27b4f87f060698e8812e3bcfedb16455c810480",
+      "size": 103
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240531142907_v0_29_0.sql",
+      "sha": "8248cf6f2f004a81f27af6b69897c1940b59fb4d",
+      "size": 93
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240531200417_v_0_30_0.sql",
+      "sha": "01147b55187fa8298e67ac9f173262550b394727",
+      "size": 320
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240531200418_v0_30_1.sql",
+      "sha": "bba21263f19261fe4979f97450b9150170775c84",
+      "size": 2623
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240606145243_v0_31_0.sql",
+      "sha": "b80ec2d9e48bf6e04e63e675fd9d5257e62b0a44",
+      "size": 2387
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240625180548_v0_34_0.sql",
+      "sha": "2dce44c0086d8cbedadf3ca8303d6dc75ca7bedd",
+      "size": 2620
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240626204339_v0_34_2.sql",
+      "sha": "fe0de0c349930394a6f1c7eaeb79faaecd99a0bb",
+      "size": 1990
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240701144852_v0_35_0.sql",
+      "sha": "ca05102a401963132d03ede293ac95365a31fa48",
+      "size": 113
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240703194656_v0_35_1.sql",
+      "sha": "21d5a6f9262f28ecc332b49a5820e5335d949c5e",
+      "size": 2175
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240704211315_v0_35_2.sql",
+      "sha": "50ed7fd7cd0d7976b1c7accc8d083a6a7f0c1ac1",
+      "size": 122
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240712142946_v0_36_0.sql",
+      "sha": "fc603ac55216f364f4654e4ec08fa2f00a31afe1",
+      "size": 1210
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240715154334_v0_37_0.sql",
+      "sha": "d6386beddec4ad77b8d1412938f5c4d90cbcd33c",
+      "size": 105
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240716125857_v0_38_0.sql",
+      "sha": "5a8ec88b1159db1b33f3926bd0e46264c32f2144",
+      "size": 117
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240716143349_v0_39_0.sql",
+      "sha": "bc843252c47da271e7910cff0e929cb74b7cc7a7",
+      "size": 1189
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240726160629_v0_40_0.sql",
+      "sha": "8879ef13d355f64ca1ce6555aa123b45a26ea696",
+      "size": 3846
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240728042317_v0_41_0.sql",
+      "sha": "f77ff7da32e4c47d5fb237dca0a39cf2085f8ecd",
+      "size": 236
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240809131000_v0_42_0.sql",
+      "sha": "1038f07c68af753503d0bfdfb1d7566eaa985a20",
+      "size": 3533
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240812153737_v0_42_1.sql",
+      "sha": "71f78d66759b024fbeae75113dd31d153b29a2a0",
+      "size": 406
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240815151244_v0_42_2.sql",
+      "sha": "19b660733039f2619f751f6a45e7ab689aa1f084",
+      "size": 1044
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240821170947_0_42_3.sql",
+      "sha": "fa338d4bfb45a8d06fad83b104bf4870f1463799",
+      "size": 524
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240823120430_0_42_4.sql",
+      "sha": "fda06a6fbbf066c15bd382e9cb9801756a99e981",
+      "size": 746
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240823204123_0_42_5.sql",
+      "sha": "cfda5a4bd90a3a4e69ecc4378471129b7c7ec842",
+      "size": 296
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240829142550_v0_43_2.sql",
+      "sha": "4631679296455ebb17236b840fc96b47ec8ce243",
+      "size": 219
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240904120327_v0_44_0.sql",
+      "sha": "e2637def4aae4cc2142f9197d4a65a9bdf7970cf",
+      "size": 2120
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240908154802_v0_44_1.sql",
+      "sha": "cbf6c89df2e79cfa30540cedf1be25a132bfdbd7",
+      "size": 394
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240910205843_v0_44_5.sql",
+      "sha": "ecdfd0b735eda083e451a201a4a02e063c65f3d0",
+      "size": 1076
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240911124017_v0_44_6.sql",
+      "sha": "edcc425320e489c997d353ed80b642c5a1504970",
+      "size": 1020
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240911201831_v0_44_7.sql",
+      "sha": "262c8eb007a8a325191f4c44089ba88a184b94b7",
+      "size": 572
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240916115647_v0_44_8.sql",
+      "sha": "76c2785bd4bda1a94f23a84c55518fae853a85f3",
+      "size": 1217
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240918162532_v0_45_0.sql",
+      "sha": "fd0c0baaefe8314653b686846e504be2007818dd",
+      "size": 966
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240923124809_v0_45_4.sql",
+      "sha": "f937183464cc1fe9f9b7c624ba8096a845dcbca9",
+      "size": 106
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240926210650_v0_47_0.sql",
+      "sha": "46c19eb49304f8db9e9619915caaf116823a94a8",
+      "size": 1494
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240927172935_v0_47_1.sql",
+      "sha": "20eae18da89a8d644183c89d12e782d8f346b4ab",
+      "size": 1928
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240928144316_v0_48_0.sql",
+      "sha": "522d0242e4d62f62d59c0aa00e9dd43e260a7d74",
+      "size": 216
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240930202706_v0_48_1.sql",
+      "sha": "0bea9f7221e6c9b87ee808da445fffdbac2ce5dc",
+      "size": 212
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20240930233257_v0_49_0.sql",
+      "sha": "a3d7eed4932d5a1eeaf49d9b5f81c70f5a39a7d0",
+      "size": 96
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20241004122206_v0_49_1.sql",
+      "sha": "e2d7826b66d4c5c797a541ba1955a37daa042a62",
+      "size": 115
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20241008124038_v0_49_2.sql",
+      "sha": "21a3c5e79740c024085b26a75c84ac8dc2eb03ef",
+      "size": 282
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20241011205314_0_49_3.sql",
+      "sha": "9c0470449cdf874100544ec0673c12a792f246b4",
+      "size": 156
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20241014194326_v0_50_0.sql",
+      "sha": "6e795af48ea257a77bbd3490069c4c8017f36d9f",
+      "size": 680
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20241018142125_v0_50_1.sql",
+      "sha": "0b27e46960fbd43bd6b74f3d7313cfee4c3f9b7c",
+      "size": 660
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20241022124210_v0_50_2.sql",
+      "sha": "21c024e2a5f72f3e3d117bfaced1e1fc82b84c68",
+      "size": 712
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20241023112235_v0_50_3.sql",
+      "sha": "dad163501900a78bcafdc07c8a06f1062b8ff246",
+      "size": 767
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20241023223039_v0_50_4.sql",
+      "sha": "b2b67631b214d74f0baf4d5e9f1768bf8d482f1c",
+      "size": 319
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20241025162439_v0_50_5.sql",
+      "sha": "a06dee80393c30b2f4297252e227152b463edad4",
+      "size": 348
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20241029122625_v0_51_0.sql",
+      "sha": "51083960026da99bf50be3dcbd0f21b1b16f085f",
+      "size": 639
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20241107162939_v0_51_2.sql",
+      "sha": "bfe3e87156e6f111f356284e272ae306c3388f8c",
+      "size": 121
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20241114175346_v0_51_3.sql",
+      "sha": "eb8714f01e34b36d99e9700c886c08733a7c694e",
+      "size": 154
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20241121142159_v0_52_0.sql",
+      "sha": "86c1e83b925d46147d151c3767811b86f9fe4e15",
+      "size": 2307
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20241204191714_v0_52_5.sql",
+      "sha": "ca869313902918581b0bdfa2c925a557d0e60b26",
+      "size": 83
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20241206231312_v0_52_12.sql",
+      "sha": "204b8bfc26241be589a253788bcfe62d61c75dcc",
+      "size": 457
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20241216175807_v0_52_13.sql",
+      "sha": "121669dc1de594271ccf20bce0c04f24108f1638",
+      "size": 156
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20241217152316_v0_53_0.sql",
+      "sha": "b5edcd554235cf0550951c7442ef1701f8f4b452",
+      "size": 2423
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250127160736_v0_54_0.sql",
+      "sha": "8effcdee50d58e19444125da25ee6a6f29b5a1c6",
+      "size": 292
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250224162902_v0_55_0.sql",
+      "sha": "13566f73e03c7ad1f5c5a9030722d955614598e0",
+      "size": 344
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250224171706_v1_0_0.sql",
+      "sha": "84c10f8aaf89fb8382e8b39676e259a048b203c1",
+      "size": 64993
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250312151904_v1_0_1.sql",
+      "sha": "728d3df8f07c6a27ba322e65d2621198ea1fb344",
+      "size": 200
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250313202558_v1_0_2.sql",
+      "sha": "3bf05a148d9060cc6ae1a07f4518df369413a509",
+      "size": 5084
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250314162314_v1_0_3.sql",
+      "sha": "4edc1bb807722ec860cece1dd685788f7d64c4f2",
+      "size": 276
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250319143644_v1_0_4.sql",
+      "sha": "fd7fca7bff2280363e87b36e729b3649e298fc96",
+      "size": 8942
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250319192344_v1_0_5.sql",
+      "sha": "8471ade6ac9f36d3b4d90381fef02f7abeea11d9",
+      "size": 9686
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250320210345_v1_0_6.sql",
+      "sha": "10a3acd4ce4eb51162331064769afae482a74d3e",
+      "size": 914
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250321144831_v1_0_7.sql",
+      "sha": "9793e76ed0fc7432b494476b09ead86e5d4062a3",
+      "size": 1523
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250323220955_v1_0_8.sql",
+      "sha": "e66c41bd7e03534104b04298117931789c8f40ce",
+      "size": 1710
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250327185734_v1_0_9.sql",
+      "sha": "3ea82385b21681b5f538dfeab66c7786ac9dd00f",
+      "size": 247
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250404160322_v1_0_10.sql",
+      "sha": "3d21b495f0d7f23094781cf13a9285f6bf207f8a",
+      "size": 11350
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250407012633_v1_0_11.sql",
+      "sha": "5ed6397d0f6d4dd508ec88ea2cc5664237c522d9",
+      "size": 25190
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250414130637_v1_0_12.sql",
+      "sha": "93531a812fdf5fde476c66d4b3343a1d4a6f4e9a",
+      "size": 520
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250415212814_v1_0_13.sql",
+      "sha": "1367f6fb2c8829d495d492d0014daaf19f2160af",
+      "size": 920
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250417143656_v1_0_14.sql",
+      "sha": "38c520f1b43f0125df71ec16532d8a2f71f1f53d",
+      "size": 5766
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250417150604_v1_0_15.sql",
+      "sha": "747e8b0dfd451e9d26c6cbf84dc83df934819b0e",
+      "size": 301
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250426012858_v1_0_16.sql",
+      "sha": "0353f9cd3a14e2716575a67ce8f33268710a0776",
+      "size": 8922
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250507193114_v1_0_17.sql",
+      "sha": "68c4fc995f2261c100eab5a226a5515b76a089f8",
+      "size": 11143
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250509123031_v1_0_18.sql",
+      "sha": "459926fd8230e63c3cad8e0aee383a9f2a10f348",
+      "size": 257
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250511175026_v1_0_19.sql",
+      "sha": "7353b5ece2749860c921adab00be651e80191e99",
+      "size": 3568
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250512141736_v1_0_20.sql",
+      "sha": "70bf982897600fbb63beef7ca60004352962e615",
+      "size": 683
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250519145912_v1_0_21.sql",
+      "sha": "0af4580e76aca1ed870b2f0f43bde4046a94ce3b",
+      "size": 362
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250602191423_v1_0_22.sql",
+      "sha": "4d79a68add2e208f9fb2190016f96078ddd51674",
+      "size": 4241
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250604191556_v1_0_23.sql",
+      "sha": "9b0a0004a4ef4159d34b12bf96ce64561e5a1d0d",
+      "size": 221
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250606213933_v1_0_24.sql",
+      "sha": "5ec1aacd3e8da33dd75a3842a82c929ab1aeb8f3",
+      "size": 255
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250611144858_v1_0_25.sql",
+      "sha": "9eab99bbfa10e416f546db5f1ecbe8e83f260626",
+      "size": 366
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250612173730_v1_0_25.sql",
+      "sha": "c01c41648c25e4ee478c82d9b211a06660d9284d",
+      "size": 378
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250617185713_v1_0_26.sql",
+      "sha": "1004374eb6f1dfa84d675224e2c02680a6df13c9",
+      "size": 273
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250617192510_v1_0_27.sql",
+      "sha": "a86eea32d37cce7ee7eeec9d3464e1ea7027dc47",
+      "size": 537
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250623140133_v1_0_28.sql",
+      "sha": "7db325dc97477cfc077d5a2015e60b24009f26ec",
+      "size": 272
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250717162353_v1_0_29.sql",
+      "sha": "ddda6ec3f6f5365a87c95e93df2a06bef13a6d91",
+      "size": 1596
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250725183217_v1_0_30.sql",
+      "sha": "66f786c7301aa210e34981f3b2888d0b1ce81164",
+      "size": 699
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250726193737_v1_0_31.sql",
+      "sha": "d15e8087a22a0440d864644f0fd550275680304e",
+      "size": 2382
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250726214427_v1_0_32.sql",
+      "sha": "ab3b8ce643c936dfb7fcda1334ed312a4396d022",
+      "size": 1154
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250726225025_v1_0_33.sql",
+      "sha": "e7c7ed8e2a8cee2669b5f5d65c52be1301968d17",
+      "size": 196
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250730194533_v1_0_34.sql",
+      "sha": "5288118f197ac70eeaee2d9543e6b1b6f2b5b511",
+      "size": 915
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250801183812_v1_0_35.sql",
+      "sha": "ce640bffe975333f93c3b60072d341f7770f6229",
+      "size": 234
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250813183355_v1_0_36.sql",
+      "sha": "d812aff0e258776b4717370aca7115a4f9052574",
+      "size": 224
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250817183956_v1_0_37.sql",
+      "sha": "dca9e0f3edf0b887c3ae06578c8466044b67b0e6",
+      "size": 1481
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250818153710_v1_0_38.sql",
+      "sha": "0ff8eda2e987ad4116f17c5dc83ee79cbb903e47",
+      "size": 225
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250822193023_v1_0_39.sql",
+      "sha": "eb82118acde161e87cd8709cef2558da8e317bf0",
+      "size": 8235
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250824131856_v1_0_40.sql",
+      "sha": "9dd79d414ff48187401cae0c8d31632d30ccb6d8",
+      "size": 457
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250904151226_v1_0_41.sql",
+      "sha": "e385dda5766847180faf38c106be8f58469e8ed7",
+      "size": 589
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250912162812_v1_0_42.sql",
+      "sha": "ffb311598b0919b2a190b60ca755ee91a4a16252",
+      "size": 5055
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250912163904_v1_0_43.sql",
+      "sha": "68878cb413bc912d26f78e190e43c7f65970d281",
+      "size": 296
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20250930153446_v1_0_44.sql",
+      "sha": "fabcf68d3e3c2049565b061c9aa8b09af6435e82",
+      "size": 742
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20251001122435_v1_0_45.sql",
+      "sha": "15a6229e94973b196048671326e1cae693201f8e",
+      "size": 261
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20251001155231_v1_0_46.sql",
+      "sha": "c530a6e79a9623972230e857f6c21f694be1a34e",
+      "size": 2998
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20251007220652_v1_0_47.sql",
+      "sha": "a868ec4141a792a82d7b1b6808726e2a1d4a7995",
+      "size": 678
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20251007231452_v1_0_48.sql",
+      "sha": "320c403a5b3e595af3d90a17391c17b1484271c8",
+      "size": 454
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20251008083410_v1_0_49.sql",
+      "sha": "6ef7e0c863f732c2039c48c73b9a04d27f24ec16",
+      "size": 8541
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20251014175925_v1_0_50.sql",
+      "sha": "45e5ffa140363bf7a2844570c858d9aba16bc207",
+      "size": 445
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20251015164344_v1_0_51.sql",
+      "sha": "6b654bf6715cd18fa8c23879bb7b16f5cce0532c",
+      "size": 1316
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20251022151234_v1_0_52.sql",
+      "sha": "ca88bf88fe6d6b81541e2fce2d44b98b0ef74888",
+      "size": 2391
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20251113195351_v1_0_53.sql",
+      "sha": "73db168ecab570d2b69fdc8c1e6b657ba3203aeb",
+      "size": 5917
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20251128190238_v1_0_54.sql",
+      "sha": "fad074ee03bacacb10e8eccbde1e0ddd42c80e57",
+      "size": 9403
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20251205170304_v1_0_55.sql",
+      "sha": "f63a5ea860fdb913e25ceb8745db277af2cf5c21",
+      "size": 403
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20251208161245_v1_0_56.sql",
+      "sha": "a0bbade8e89db6f7b7c6997fb9bac72f7c63f9db",
+      "size": 9549
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20251209220629_v1_0_57.sql",
+      "sha": "006cde7dbc3e1708a778ba85b51a871be97b2bd6",
+      "size": 7202
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20251210193031_v1_0_58.sql",
+      "sha": "f36bbffeb649fad5c15fffc4beeb8cedc9c88dd9",
+      "size": 5977
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20251212170748_v1_0_59.sql",
+      "sha": "a67f1bfdb4626c0e58c1baf5bee2a47ecc6e37fa",
+      "size": 11909
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20251216163945_v1_0_60.sql",
+      "sha": "70293e5a2de01a86e51ffabc3195f6226563b258",
+      "size": 8072
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20251216190909_v1_0_61.sql",
+      "sha": "30c22051a0b1af02b81a9bff36f99467f78074e9",
+      "size": 3101
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20251218153621_v1_0_62.sql",
+      "sha": "467d9876b3813d0a3805da9eb5ec5b38710c751a",
+      "size": 1454
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20251219181211_v1_0_63.sql",
+      "sha": "ecbc0ef2e4f2ed0f9006594c3758f2fc64a2e70b",
+      "size": 3424
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20251222220531_v1_0_64.sql",
+      "sha": "ca5cd4bc0205ec19cb4c7f2e534b3c35563a25ef",
+      "size": 3092
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20251224145920_v1_0_65.sql",
+      "sha": "360470e35fd9c257bc21e30ec3264cc45b9e22ea",
+      "size": 1014
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20251229174938_v1_0_67.sql",
+      "sha": "368d6b6458153e14b43a24abc66dbc7d89b13165",
+      "size": 911
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260106185235_v1_0_68.sql",
+      "sha": "711c745870e66ce459a8981801a2b11ae2bdf940",
+      "size": 736
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260119123835_v1_0_69.sql",
+      "sha": "fe7e8c96fd5f1158d3bffa802dd7c7263cf87a90",
+      "size": 1247
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260121120000_v1_0_70.sql",
+      "sha": "47f77bc23c7490d753cefb45528bd8c3f7b705da",
+      "size": 424
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260128120000_v1_0_71.sql",
+      "sha": "f05d705943e966c566e60d81e160eed649eb9f46",
+      "size": 8630
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260129222533_v1_0_72.sql",
+      "sha": "c898f0829ec6b0c8355b3e13bfba0b0f858608bb",
+      "size": 252
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260129222535_v1_0_73.sql",
+      "sha": "dddea66381d2fabf67edf1931f3bf7f95aa4fc52",
+      "size": 518
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260202185136_v1_0_74.sql",
+      "sha": "b114a615e7db1f6f969e2fcde610748de1d567e9",
+      "size": 10631
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260203170918_v1_0_75.sql",
+      "sha": "2edead53b07203d4a7e574340aee4c73cc68f899",
+      "size": 630
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260210165608_v1_0_76.sql",
+      "sha": "32769c1e2b5a53b520007a15a884611e9b25fa5c",
+      "size": 223
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260215120000_v1_0_78.sql",
+      "sha": "99598dead666e8ec222e3ce4fb7ff343f6b6eb79",
+      "size": 231
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260216000001_v1_0_79_a_multi_slot_schema_and_triggers.sql",
+      "sha": "099a1d83fd4515a2fdf13a4674d76f88621a3e1f",
+      "size": 5295
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260216000002_v1_0_79_b_add_slot_indexes.sql",
+      "sha": "d424f50d9fb45da2d6723876b56e34dd1c7d05a8",
+      "size": 446
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260216000004_v1_0_80_fix_slot_trigger.sql",
+      "sha": "c0cdbbc6a173089d5a390e0e4cb8662450e237ac",
+      "size": 2000
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260219000001_v1_0_81.sql",
+      "sha": "ce05c1a9dcfa5240e246c5707c20b18d9596d1af",
+      "size": 227
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260223180620_v1_0_82.sql",
+      "sha": "4389391313e80b9883c8750bfb3f7b981cb5218e",
+      "size": 478
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260302193424_v1_0_83.sql",
+      "sha": "e1aba014646f36e40116f848439f9488b2f90f99",
+      "size": 24899
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260313020630_v1_0_84.sql",
+      "sha": "dfa614f94d60a84d62c8cfb2f260ef5e66df0dd6",
+      "size": 389
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260313020631_v1_0_85_durable_event_log.sql",
+      "sha": "e639297a8020e89917b5125b8da5650fd44bffd1",
+      "size": 8277
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260313020632_v1_0_86_durable_eviction.sql",
+      "sha": "0d669c1d17f9f7cd82ca4b4008ae4a913fa5a8d9",
+      "size": 633
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260313020633_v1_0_87_readable_status_enum.sql",
+      "sha": "eb36ec204860a50b6a6cf19362cedbecf010e4c8",
+      "size": 322
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260313020634_v1_0_88_status_priority_functions.sql",
+      "sha": "4b09334abaaf97be183b561f31528826564ee130",
+      "size": 881
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260313020635_v1_0_89_olap_evicted_status.sql",
+      "sha": "f191e56d3a69d551f6b56b7a746a56184dda7818",
+      "size": 3638
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260316185928_v1_0_90.sql",
+      "sha": "dfa207220d5383d6076a94d7eb0a4b198960b01a",
+      "size": 2129
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260323184100_v1_0_91.sql",
+      "sha": "f29b4de1d3e52bbb4ebb8e0d16eccacf46b39ec1",
+      "size": 2013
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260331160407_v1_0_93.sql",
+      "sha": "55c2eb11508f5e432f525bb33fefa21256b09344",
+      "size": 289
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260403175605_v1_0_94.sql",
+      "sha": "78b6b4ad535ab9ebaebe842389064dc8eab6d501",
+      "size": 322
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260409022005_v1_0_95.sql",
+      "sha": "201b1830b97fd5df9238198daf0bed4de31183c7",
+      "size": 238
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260409215942_v1_0_96.sql",
+      "sha": "5ab3d627632b3dbdc22464cd5c1d5a0ba4a58c27",
+      "size": 11264
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260417212701_v1_0_97.sql",
+      "sha": "64a287aba3367912abba7fb4e241da53abe807af",
+      "size": 611
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260421184231_v1_0_98.sql",
+      "sha": "ce6a0ecf713bddb15bc7e6abd3605688cc006a69",
+      "size": 837
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260424205453_v1_0_100.sql",
+      "sha": "c824f26955d46518d5089ff13bd24ca6e5e51bb1",
+      "size": 7253
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260427142714_v1_0_101.sql",
+      "sha": "5a378a5f6b63964e26b1b5c7147e256457295a3f",
+      "size": 185
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260427190534_v1_0_102.sql",
+      "sha": "7512b7c641d3c98044ac56b1a0023baa7371c080",
+      "size": 357
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260505155051_v1_0_103.sql",
+      "sha": "e2db24281a4b5daad2a3b0090f3253949234efb5",
+      "size": 1936
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260505195258_v1_0_104.sql",
+      "sha": "9b73c40fe788c2dc15772379e5ea570f8ce959e9",
+      "size": 1120
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260506201345_v1_0_105.sql",
+      "sha": "9d8229c4b2efb52e2d0c4cd0f16fd508391421c4",
+      "size": 868
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260509015727_v1_0_106.sql",
+      "sha": "1c8f644dc50b24cb5dbff62591f71b99b5912711",
+      "size": 37156
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260511174313_v1_0_108.sql",
+      "sha": "6aa634d2b56776b4a85983708f5a60ebba9fdfbc",
+      "size": 43143
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260514175834_v1_0_109.sql",
+      "sha": "c65dea5b1fa63d59f99e03d5af78d85f5011db7b",
+      "size": 2903
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260520204451_v1_0_110.sql",
+      "sha": "b730446dba5a3e253b39a793eda4d9716aebb5f5",
+      "size": 224
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260520213451_v1_0_111.sql",
+      "sha": "b7e2f179a4f3ab19320e7ed53a549bd3389dcb67",
+      "size": 332
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260521213214_v1_0_112.sql",
+      "sha": "ca7f11b6497202f480b9c5800969fd3ec30a21ba",
+      "size": 279
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260522014401_v1_0_113.sql",
+      "sha": "309f535f9e450a0827e68b7a113c94163c9d700d",
+      "size": 1292
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260529131949_v1_0_114.sql",
+      "sha": "ed7cced1f4e206a9b32ac7aab1d356b8219cdd8d",
+      "size": 1543
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260529140000_v1_0_115.sql",
+      "sha": "4aa96741525a41342d2128f179da3007a2a851c7",
+      "size": 203
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260611203244_v1_0_117.sql",
+      "sha": "d9b80e056f7c31a1ae78f9ff465d39810700fac0",
+      "size": 399
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260616000000_v1_0_118.sql",
+      "sha": "3d7511c04b3394228f3b36a5ead55da41e559a3a",
+      "size": 493
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260616120000_v1_0_119.sql",
+      "sha": "9eb3026af5ed445884f2c2c7b13ef4d98d2b76a3",
+      "size": 3369
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260619000000_v1_0_120.sql",
+      "sha": "cdb557bf6a710d4cf08aead1b610b26c710895c4",
+      "size": 2440
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260701180304_v1_0_121.sql",
+      "sha": "ccbb898a024eef1de02bdb379cb6be5623c847b3",
+      "size": 314
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260701211847_v1_0_122.sql",
+      "sha": "c1d967fb26a4a02a5feb50a00d817a2128aaaea7",
+      "size": 1350
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260702145450_v1_0_123.sql",
+      "sha": "f16ec97e0eeaf0c71935c5b0301840e7a4e69744",
+      "size": 5316
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260703125435_v1_0_124.sql",
+      "sha": "3d269bdf7f18ef82e3c6660431ff8f0fdf1e3ca2",
+      "size": 5117
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260707141853_v1_0_125.sql",
+      "sha": "76602ccc4d28d24b2254f3c0843889f2810cc5af",
+      "size": 268
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260713150000_v1_0_126.sql",
+      "sha": "6504d423771badb6ac1e133e627fa53895c2f460",
+      "size": 341
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260713150001_v1_0_127.sql",
+      "sha": "47027d2f560061ae396ac6a50192993a88f011c7",
+      "size": 1568
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260714120000_v1_0_128.sql",
+      "sha": "e2744cf7882609b0e514ae1b9464102bdb9de835",
+      "size": 1788
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260715180517_v1_0_129.sql",
+      "sha": "8598ccde2fe4b30938990231d9bd5188dc81521d",
+      "size": 5819
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260717150345_v1_0_131.sql",
+      "sha": "3879addff79a85c274332e1ac5d59ca4b38eec15",
+      "size": 750
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260719000944_v1_0_132.sql",
+      "sha": "9c37a529555c238f9ca71e6061f4b974a919c268",
+      "size": 358
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260722000000_batching_consolidated_v1_0_133.sql",
+      "sha": "78612e541e98997e401c675eb6f8be2030db4f82",
+      "size": 41808
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260722000001_batch_id_idx_concurrent_v1_0_134.sql",
+      "sha": "c3cf775005b48a3d8f5c03bd9156f53d0fba3334",
+      "size": 292
+    },
+    {
+      "path": "cmd/hatchet-migrate/migrate/migrations/20260724000000_batch_priority_idx_concurrent_v1_0_135.sql",
+      "sha": "12634a48a57a7ed95de4bc8cf1b55e839c233ed7",
+      "size": 318
+    },
+    {
+      "path": "frontend/docs/LICENSE",
+      "sha": "490da1feb81b07debca161f564f3e0a5b12e71e7",
+      "size": 1065
+    },
+    {
+      "path": "pkg/repository/sqlcv1/api_token.sql",
+      "sha": "c5c99faee956c785f11c4badfb9a27d24352f091",
+      "size": 960
+    },
+    {
+      "path": "pkg/repository/sqlcv1/api_token.sql.go",
+      "sha": "fa30472268d6ab5b34a762e11670bc2095b6d3cd",
+      "size": 3517
+    },
+    {
+      "path": "pkg/repository/sqlcv1/concurrency-additional-tables.sql",
+      "sha": "d4b55d3fd2ed85854493e816253e30711d054bf0",
+      "size": 198
+    },
+    {
+      "path": "pkg/repository/sqlcv1/concurrency.sql",
+      "sha": "c741c0168b581142684ab1021c4d5af8b9acb180",
+      "size": 22995
+    },
+    {
+      "path": "pkg/repository/sqlcv1/concurrency.sql.go",
+      "sha": "2ae5ebe414745a832864ae8ae1fddddd9af8aafe",
+      "size": 47494
+    },
+    {
+      "path": "pkg/repository/sqlcv1/dags.sql",
+      "sha": "95460eaa8a67fd3119a323b7fceeeff473025dde",
+      "size": 1595
+    },
+    {
+      "path": "pkg/repository/sqlcv1/dags.sql.go",
+      "sha": "431c76836c54aacd2823c01cb3dd7c57b9a1c81d",
+      "size": 4494
+    },
+    {
+      "path": "pkg/repository/sqlcv1/dispatcher.sql",
+      "sha": "25353997d53d579c53ab4a9af27ff586cec7f1c2",
+      "size": 1291
+    },
+    {
+      "path": "pkg/repository/sqlcv1/dispatcher.sql.go",
+      "sha": "bcccfbb067b5cade56f490312ca7e4577556999f",
+      "size": 6324
+    },
+    {
+      "path": "pkg/repository/sqlcv1/durable_event_log.sql",
+      "sha": "879873380e2724df17685147efd6be0bf7d64329",
+      "size": 9676
+    },
+    {
+      "path": "pkg/repository/sqlcv1/durable_event_log.sql.go",
+      "sha": "e43971ba4139e9ee67962dc17eb4e758913d6bc6",
+      "size": 39931
+    },
+    {
+      "path": "pkg/repository/sqlcv1/filters.sql",
+      "sha": "902070ca749b6e0f73be7d8d42cd5acaff818093",
+      "size": 3362
+    },
+    {
+      "path": "pkg/repository/sqlcv1/filters.sql.go",
+      "sha": "bae38aa13be4e3b3e76762932186e9956f78012c",
+      "size": 10691
+    },
+    {
+      "path": "pkg/repository/sqlcv1/health.sql",
+      "sha": "ec02c8239de04879f2e3fd0feeca69480577bcc7",
+      "size": 53
+    },
+    {
+      "path": "pkg/repository/sqlcv1/health.sql.go",
+      "sha": "8249eeda03e4f7ba4d5028b86b8e97ec5085ecbb",
+      "size": 637
+    },
+    {
+      "path": "pkg/repository/sqlcv1/idempotency-keys.sql",
+      "sha": "7dda8a57687c6d4feaa7e517255d797a3c18824e",
+      "size": 3294
+    },
+    {
+      "path": "pkg/repository/sqlcv1/idempotency-keys.sql.go",
+      "sha": "33004a07963f8b7664c5d205de1d0eb4a4dff1f1",
+      "size": 5816
+    },
+    {
+      "path": "pkg/repository/sqlcv1/interval_settings.sql",
+      "sha": "8078b939d301c2815f3938a5efd94745a8ad1858",
+      "size": 660
+    },
+    {
+      "path": "pkg/repository/sqlcv1/interval_settings.sql.go",
+      "sha": "ac9110383e4f3fd8bd24cf8d8c0182fedb777b06",
+      "size": 2558
+    },
+    {
+      "path": "pkg/repository/sqlcv1/lease.sql",
+      "sha": "79baed48f8ca3ad8204e824c5ae127f3f6ba09af",
+      "size": 1731
+    },
+    {
+      "path": "pkg/repository/sqlcv1/lease.sql.go",
+      "sha": "0beb14641dd7b59e218c9ad1a4823a9c976e8068",
+      "size": 4641
+    },
+    {
+      "path": "pkg/repository/sqlcv1/log_line.sql",
+      "sha": "9bb817162c4e5a9232057766d7b0739a70ac558c",
+      "size": 2638
+    },
+    {
+      "path": "pkg/repository/sqlcv1/log_line.sql.go",
+      "sha": "97d88c775d8000fdcfec9388efd40d12a01c8cb0",
+      "size": 5755
+    },
+    {
+      "path": "pkg/repository/sqlcv1/matches.sql",
+      "sha": "17a372d4f34f67785c463bb42e33886011f4af19",
+      "size": 8203
+    },
+    {
+      "path": "pkg/repository/sqlcv1/matches.sql.go",
+      "sha": "802bf27360558d06bdb8dc512ea833106ffdbe76",
+      "size": 16898
+    },
+    {
+      "path": "pkg/repository/sqlcv1/mq.sql",
+      "sha": "7d65f12c69e27fbd79766673ae4bcaf61bde9ca4",
+      "size": 2592
+    },
+    {
+      "path": "pkg/repository/sqlcv1/mq.sql.go",
+      "sha": "9f45ec7b0773476e275bba00e6228439490c36ad",
+      "size": 6398
+    },
+    {
+      "path": "pkg/repository/sqlcv1/olap.sql",
+      "sha": "265289bfe2cdbe34287c56a1580e5ba3fa1dd92a",
+      "size": 76260
+    },
+    {
+      "path": "pkg/repository/sqlcv1/olap.sql.go",
+      "sha": "587eb7509d2b00674c321a6b68c512aaa8f1bb8b",
+      "size": 144026
+    },
+    {
+      "path": "pkg/repository/sqlcv1/otel.sql",
+      "sha": "f18740a13c046d1c25242e857b54021761adda3e",
+      "size": 3618
+    },
+    {
+      "path": "pkg/repository/sqlcv1/otel.sql.go",
+      "sha": "edb1a4a636e9d2d4ad7014af37ba2c0b03882afd",
+      "size": 7765
+    },
+    {
+      "path": "pkg/repository/sqlcv1/payload-store.sql",
+      "sha": "5c42a5ccba332b43d3e4bb6d30164fe6edd1900c",
+      "size": 6122
+    },
+    {
+      "path": "pkg/repository/sqlcv1/payload-store.sql.go",
+      "sha": "069a147e58b371a68f5dee180dd236870649226c",
+      "size": 15023
+    },
+    {
+      "path": "pkg/repository/sqlcv1/pg_health.sql",
+      "sha": "3e4cf36c80bbdcd1e958dae6139d942f5703d961",
+      "size": 2802
+    },
+    {
+      "path": "pkg/repository/sqlcv1/pg_health.sql.go",
+      "sha": "38620bbe1c760276e528d3d4f1598699d8fdb497",
+      "size": 8138
+    },
+    {
+      "path": "pkg/repository/sqlcv1/queue.sql",
+      "sha": "fbf28f427b612507cd098a760afcb1cd28bba85f",
+      "size": 22048
+    },
+    {
+      "path": "pkg/repository/sqlcv1/queue.sql.go",
+      "sha": "54c8bdcca907cd9f25b503d863117c08547669de",
+      "size": 45214
+    },
+    {
+      "path": "pkg/repository/sqlcv1/rate_limits.sql",
+      "sha": "27f323a55b3d1feeb62105169ee45ca263f57941",
+      "size": 5805
+    },
+    {
+      "path": "pkg/repository/sqlcv1/rate_limits.sql.go",
+      "sha": "20b10566bc1b4be6dc8d8781f3b89c04f2fc5b4c",
+      "size": 12059
+    },
+    {
+      "path": "pkg/repository/sqlcv1/security_check.sql",
+      "sha": "0a2eda7046ad9ad4c9bd89075045ba0f58d8f5bf",
+      "size": 81
+    },
+    {
+      "path": "pkg/repository/sqlcv1/security_check.sql.go",
+      "sha": "bd244f964789831b50b912618c525fb83d0bdc26",
+      "size": 479
+    },
+    {
+      "path": "pkg/repository/sqlcv1/slack.sql",
+      "sha": "b3767bc304e3bc0715eb18c4a6cc68c6ad65ae34",
+      "size": 1003
+    },
+    {
+      "path": "pkg/repository/sqlcv1/slack.sql.go",
+      "sha": "9bb28306968a7111f1ee88ae9f5783b166355bbc",
+      "size": 3628
+    },
+    {
+      "path": "pkg/repository/sqlcv1/sleep.sql",
+      "sha": "497ccb1a24ff865beb38db888b4a97e5a31658ac",
+      "size": 858
+    },
+    {
+      "path": "pkg/repository/sqlcv1/sleep.sql.go",
+      "sha": "b438bcb960b242534c8d5e4c637ae1af1c7e4eaa",
+      "size": 2572
+    },
+    {
+      "path": "pkg/repository/sqlcv1/sns.sql",
+      "sha": "7dc97af0d6fa3c0ab4a2270fe7aab9b9bad1e51e",
+      "size": 748
+    },
+    {
+      "path": "pkg/repository/sqlcv1/sns.sql.go",
+      "sha": "10c6a66a0e1eb036bf7a39c2549896a003c17b15",
+      "size": 3274
+    },
+    {
+      "path": "pkg/repository/sqlcv1/sqlc.yaml",
+      "sha": "ae40cb95a18dfdd507aec33c46a7e0a903e42a2c",
+      "size": 2000
+    },
+    {
+      "path": "pkg/repository/sqlcv1/sync.sql",
+      "sha": "99b04770e0c5b5e58d690b7f00f8abe3c996be0d",
+      "size": 4431
+    },
+    {
+      "path": "pkg/repository/sqlcv1/sync.sql.go",
+      "sha": "43b5b7e519778c71047fce90170da6fde5934396",
+      "size": 13315
+    },
+    {
+      "path": "pkg/repository/sqlcv1/tasks.sql",
+      "sha": "c8f4f63415fc624ae9fb844a8dab2a635ad64354",
+      "size": 43829
+    },
+    {
+      "path": "pkg/repository/sqlcv1/tasks.sql.go",
+      "sha": "a0d1d0b458ad1913bc80109af16922261f62cd1e",
+      "size": 89251
+    },
+    {
+      "path": "pkg/repository/sqlcv1/tenant_entitlements.sql",
+      "sha": "65ab6afef3c30790a97ed530c23c5cf4d3324332",
+      "size": 822
+    },
+    {
+      "path": "pkg/repository/sqlcv1/tenant_entitlements.sql.go",
+      "sha": "30508ffc06e190707c1a91a92d150e95e44f962c",
+      "size": 2641
+    },
+    {
+      "path": "pkg/repository/sqlcv1/tenant_invites.sql",
+      "sha": "9f45472477c98f417ecea822c9241e2f680ad114",
+      "size": 1947
+    },
+    {
+      "path": "pkg/repository/sqlcv1/tenant_invites.sql.go",
+      "sha": "ca55045c4499cc07303b14f43adeddf56db1ade7",
+      "size": 7429
+    },
+    {
+      "path": "pkg/repository/sqlcv1/tenant_limits.sql",
+      "sha": "11eb0547b10824a76b099d080963a90af2e3b5c3",
+      "size": 4488
+    },
+    {
+      "path": "pkg/repository/sqlcv1/tenant_limits.sql.go",
+      "sha": "57266d923881e237ae688681d497bf09b82843d6",
+      "size": 11693
+    },
+    {
+      "path": "pkg/repository/sqlcv1/tenants.sql",
+      "sha": "559af384b41e5ab033c445903009798a7818d26a",
+      "size": 18616
+    },
+    {
+      "path": "pkg/repository/sqlcv1/tenants.sql.go",
+      "sha": "189560f691d10af25a474d33a05db99a09958ba2",
+      "size": 48714
+    },
+    {
+      "path": "pkg/repository/sqlcv1/ticker.sql",
+      "sha": "5716764ad5622ecb7c2090417f6b2a66e4fe470e",
+      "size": 11120
+    },
+    {
+      "path": "pkg/repository/sqlcv1/ticker.sql.go",
+      "sha": "6d87935e0b4ebb4694d9d70c7a2e4606d08297df",
+      "size": 24654
+    },
+    {
+      "path": "pkg/repository/sqlcv1/triggers.sql",
+      "sha": "aabbe79639d4f4e1eca00b4eec31bcd078f64828",
+      "size": 1991
+    },
+    {
+      "path": "pkg/repository/sqlcv1/triggers.sql.go",
+      "sha": "f15c6829d885f253fe28faa0aea3f499ec558f24",
+      "size": 4815
+    },
+    {
+      "path": "pkg/repository/sqlcv1/users.sql",
+      "sha": "ac95a0411efbfc7ece5d5d6192eef2683f80be67",
+      "size": 3378
+    },
+    {
+      "path": "pkg/repository/sqlcv1/users.sql.go",
+      "sha": "0e117ebe9310f3efba97b8f7e4f4326ec081c3b7",
+      "size": 11080
+    },
+    {
+      "path": "pkg/repository/sqlcv1/webhooks.sql",
+      "sha": "69862289070b79d6f33fc17a541b4364ee65c0a6",
+      "size": 2699
+    },
+    {
+      "path": "pkg/repository/sqlcv1/webhooks.sql.go",
+      "sha": "a6b795157d01c9436732ea459faaa567c8108603",
+      "size": 11334
+    },
+    {
+      "path": "pkg/repository/sqlcv1/workers.sql",
+      "sha": "8f71da4fdb4e1f45a761ab102651e9548a473fdb",
+      "size": 17783
+    },
+    {
+      "path": "pkg/repository/sqlcv1/workers.sql.go",
+      "sha": "38fe01a0402cb034efb5119378edc0623e86cc75",
+      "size": 53996
+    },
+    {
+      "path": "pkg/repository/sqlcv1/workflow_schedules.sql",
+      "sha": "604ebd64b6ba900e5c282a999ca4784caf8888ef",
+      "size": 8978
+    },
+    {
+      "path": "pkg/repository/sqlcv1/workflow_schedules.sql.go",
+      "sha": "fca5c2c0470c89d9b3bd246596c715b4961fcab6",
+      "size": 21795
+    },
+    {
+      "path": "pkg/repository/sqlcv1/workflows.sql",
+      "sha": "0e25e78c9946267a95be3e6f3b8dab906f96f71a",
+      "size": 23412
+    },
+    {
+      "path": "pkg/repository/sqlcv1/workflows.sql.go",
+      "sha": "ce6318e1fab23c6ca15565127d9a2d25ec8907f6",
+      "size": 67863
+    },
+    {
+      "path": "sdks/ruby/src/LICENSE.txt",
+      "sha": "4e4e6ffc84db91c871ecf7c00c71ec71050d5a8c",
+      "size": 1093
+    },
+    {
+      "path": "sql/schema/pg-stubs.sql",
+      "sha": "e72c66f975c7bf27104ae59f92da204c25a93446",
+      "size": 3120
+    },
+    {
+      "path": "sql/schema/v0.sql",
+      "sha": "cdc5779bd9d9d5f60c7ea46bacfe409fa33d201c",
+      "size": 65225
+    },
+    {
+      "path": "sql/schema/v1-core.sql",
+      "sha": "565dc96e86dd8fac91a3ee7213c8cc30c410fd97",
+      "size": 90280
+    },
+    {
+      "path": "sql/schema/v1-olap.sql",
+      "sha": "ab319f4457d2464b23b0887ff26bd0faa29f3118",
+      "size": 45131
+    }
+  ]
+}

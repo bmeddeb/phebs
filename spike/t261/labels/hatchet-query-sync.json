@@ -1,0 +1,235 @@
+{
+  "format": "t261-source-labels-v1",
+  "dialect": "postgresql",
+  "repository": "hatchet-dev/hatchet",
+  "commit": "559b5021e418f12ded175f950b709b7fa66be5a5",
+  "source_path": "pkg/repository/sqlcv1/sync.sql",
+  "source_sha256": "f133400f0c475e86421dabe125945fda51e01015993e0bdee5f7ade1ca8c3634",
+  "plane": "sql-query",
+  "statements": [
+    {
+      "id": "SyncUpsertTenant",
+      "start": 0,
+      "end": 1280,
+      "sha256": "5049670ec3b0ec9be24e5a4300c622994e6d4f3fa20f334ef9a3d4fe5dd501a6",
+      "syntax_class": "insert-on-conflict",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "Tenant",
+          "quoted": true,
+          "start": 43,
+          "end": 51,
+          "sha256": "17f3c98c4d88d8757a59be4a0a0d7f47acb98e1a59ae524e7512c61f136a0895",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "Tenant"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "SyncUpdateTenant",
+      "start": 1281,
+      "end": 1741,
+      "sha256": "100861a8b292fa94521b508c92b1993353a5af3d3744aaee5b2e011dad00ceb9",
+      "syntax_class": "update",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "Tenant",
+          "quoted": true,
+          "start": 1319,
+          "end": 1327,
+          "sha256": "17f3c98c4d88d8757a59be4a0a0d7f47acb98e1a59ae524e7512c61f136a0895",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "Tenant"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "SyncSoftDeleteTenant",
+      "start": 1742,
+      "end": 1888,
+      "sha256": "6dc4f51c1eaf9d4ace17f32aefd9ecff38e5aa8db29d7e80b62c4036925f6872",
+      "syntax_class": "update",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "Tenant",
+          "quoted": true,
+          "start": 1785,
+          "end": 1793,
+          "sha256": "17f3c98c4d88d8757a59be4a0a0d7f47acb98e1a59ae524e7512c61f136a0895",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "Tenant"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "SyncListUsers",
+      "start": 1889,
+      "end": 1994,
+      "sha256": "3a06ea0638aa774f1988eeb236a44c002a8c41a7f1168f7e2e5435be41cc7466",
+      "syntax_class": "select",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "User",
+          "quoted": true,
+          "start": 1956,
+          "end": 1962,
+          "sha256": "f59d0ea2e8ec813b4add7a45f4e4fc4fecaa18239ba84fc70f8f2cead37130a8",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "User"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "SyncUpsertUser",
+      "start": 1995,
+      "end": 2490,
+      "sha256": "b71e8b2cb3ec2208d8942116c8f964fc9058d39c4d6ea22b1aceb52d81b76750",
+      "syntax_class": "insert-on-conflict",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "User",
+          "quoted": true,
+          "start": 2036,
+          "end": 2042,
+          "sha256": "f59d0ea2e8ec813b4add7a45f4e4fc4fecaa18239ba84fc70f8f2cead37130a8",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "User"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "SyncUpsertTenantInvite",
+      "start": 2491,
+      "end": 3233,
+      "sha256": "d6aff13899028b11c027c9abcc91ded0380783fe484c188199d72788ad411fb7",
+      "syntax_class": "insert-on-conflict",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "TenantInviteLink",
+          "quoted": true,
+          "start": 2540,
+          "end": 2558,
+          "sha256": "9b4228c7f8b306f44b116185cdbccf4b79891941e1e0eb4055b366510af36b4c",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "TenantInviteLink"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "SyncUpdateTenantInvite",
+      "start": 3234,
+      "end": 3523,
+      "sha256": "e15abd55442bd286eaca216b0443b12c8d952a45792a1c73a83767aa1c2180b9",
+      "syntax_class": "update",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "TenantInviteLink",
+          "quoted": true,
+          "start": 3278,
+          "end": 3296,
+          "sha256": "9b4228c7f8b306f44b116185cdbccf4b79891941e1e0eb4055b366510af36b4c",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "TenantInviteLink"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "SyncUpsertTenantMember",
+      "start": 3524,
+      "end": 3953,
+      "sha256": "ed041699cd4e37a0323d6c8315ce3bbdaf75e0422925d63dd31cf55ddb565ca5",
+      "syntax_class": "insert-on-conflict",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "TenantMember",
+          "quoted": true,
+          "start": 3573,
+          "end": 3587,
+          "sha256": "1f9ec03e522781ba9a18af6121f71b075879c585236067d245075a0545fc12cb",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "TenantMember"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "SyncUpdateTenantMember",
+      "start": 3954,
+      "end": 4133,
+      "sha256": "f1318b38a819b599f868a5d505baa701b4fd74538513c609a8dfb72a912944f2",
+      "syntax_class": "update",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "TenantMember",
+          "quoted": true,
+          "start": 3998,
+          "end": 4012,
+          "sha256": "1f9ec03e522781ba9a18af6121f71b075879c585236067d245075a0545fc12cb",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "TenantMember"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "SyncUpsertTenantAlertingSettings",
+      "start": 4134,
+      "end": 4431,
+      "sha256": "f55a1e4eb171c7be8d771b3f232f056dd5dfa9200d0f41864a882f04df3c37cb",
+      "syntax_class": "insert-on-conflict",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "TenantAlertingSettings",
+          "quoted": true,
+          "start": 4193,
+          "end": 4217,
+          "sha256": "7bd0fffa16d807f1577e559bb809c6a2247da016cfa0a83b51e0764e11f9c564",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "TenantAlertingSettings"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    }
+  ],
+  "inventory_notes": [
+    "Entire selected file labelled under preregistered metadata-only stratified sample; no inference to the 30 unsampled query files.",
+    "Exactly one committed sqlc manifest selects all five declarations inputs; names stay quoted/unquoted dialect-specific. Generated sql.go supplies no primary usage."
+  ]
+}

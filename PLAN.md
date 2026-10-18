@@ -12271,3 +12271,40 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   no bytes, mode or mtime. Production requests, queries, sync, startup/restart,
   retry/no-op, publication, locks, caches, concurrency and children are unchanged.
   JavaScript delta is zero; the eight PNGs shrink 1,139 bytes collectively.
+
+- **2026-10-18 — T26.1 immutable SQL spike inputs (Ben-routed Mac handoff).**
+  Freeze `spike/t261/preregistration.json` SHA256
+  `791585bd54e5a03ccdfbda033884229a48c2006e9ac822ad7265091605e962e9`
+  before any imported parser or bounded grammar execution. The exact inventory
+  is 419 files / 4,439,033 bytes, with permissive notices checked before source
+  reads. Twenty source-only label files cover 909 statement envelopes, 2,339
+  declaration objects and 146 authored query sites with exact hashes/spans and
+  no uncovered noncomment lines. Root independently authored the full public
+  v0 schema labels and reviewed the source/label contract, generated dump,
+  sampling, controls, denominators and decision table. This is finite authored
+  source conformance, not blind or independent population accuracy.
+
+  Keep PostgreSQL's 1,843 public and eight generated declaration objects,
+  43 sampled migration statements, 98 query/binding sites and MySQL's 488
+  declaration objects / 48 query/binding sites separate. MySQL migration
+  coverage is unmeasured. Sixty authored neutral controls remain a separate
+  population. All public bytes and frozen unsupported objects remain in their
+  denominators. The actual PostgreSQL 18.6 fixture capture passed once with
+  two identical 1,311-byte dumps in 0.590s; server/container joined and removed,
+  unchanged VM stopped and context restored. Preserve the earlier image-ID
+  admission stop and prospective correction, without relabelling it as success.
+  The generated fixture is bound to this external Git checkpoint by hash/path;
+  it has no invented upstream commit.
+
+  Next compare one pinned imported parser and one bounded subset grammar per
+  dialect under the frozen common admission, exact-position, gap, two-pass
+  binding and determinism rules. Input256KiB, 4,096 statements, 65,536 tokens,
+  depth64, output8,192 rows/4MiB and set64 blobs/8MiB/16,384 identities are
+  mechanical bounds. Joined candidate children have30s whole-corpus and1GiB
+  observed-RSS stop, with granularity/overshoot disclosed; cold PG/CGO build
+  has240s separate admission. No numeric heap guarantee is inferred for imported
+  parser internals. No production dependency, SQL reader, schema, registration,
+  runtime database claim or automatic production continuation follows.
+  Preparation/checkpoint adds no production query, sync, startup, retry/no-op,
+  publication, lock, cache, worker, disk or child cost. Candidate cost will be
+  measured separately; no parser has run at this checkpoint.

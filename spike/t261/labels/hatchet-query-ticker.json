@@ -1,0 +1,561 @@
+{
+  "format": "t261-source-labels-v1",
+  "dialect": "postgresql",
+  "repository": "hatchet-dev/hatchet",
+  "commit": "559b5021e418f12ded175f950b709b7fa66be5a5",
+  "source_path": "pkg/repository/sqlcv1/ticker.sql",
+  "source_sha256": "1ca06f485bedd4099928b5867ad0a4cf549bbb103bd09714c6f22a8e1a0157fa",
+  "plane": "sql-query",
+  "statements": [
+    {
+      "id": "IsTenantAlertActive",
+      "start": 0,
+      "end": 588,
+      "sha256": "9d4fef17cc9c05effa1119ab6462728740a136f463d8b22dbceccdc8c997c813",
+      "syntax_class": "select-cte",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "TenantAlertingSettings",
+          "quoted": true,
+          "start": 97,
+          "end": 121,
+          "sha256": "7bd0fffa16d807f1577e559bb809c6a2247da016cfa0a83b51e0764e11f9c564",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "TenantAlertingSettings"
+        },
+        {
+          "name": "TenantAlertingSettings",
+          "quoted": true,
+          "start": 513,
+          "end": 537,
+          "sha256": "7bd0fffa16d807f1577e559bb809c6a2247da016cfa0a83b51e0764e11f9c564",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "TenantAlertingSettings"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "CreateTicker",
+      "start": 589,
+      "end": 750,
+      "sha256": "82b9cd3ab6b4dda2980e8ce018bc4d0aa2dd6af60020fc45986633bd7cc3879c",
+      "syntax_class": "insert-values",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "Ticker",
+          "quoted": true,
+          "start": 632,
+          "end": 640,
+          "sha256": "457c4852b6496bdcffbb8e773eb09d756e6b98f970c5fd9a2e1240953a2d17a9",
+          "access": "write",
+          "expected_binding": "unique",
+          "declaration_relation": "Ticker"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "ListNewlyStaleTickers",
+      "start": 751,
+      "end": 990,
+      "sha256": "87647a05e11f02a584a4c64d88a56bbe1ff5542a346908fb881813d4692566af",
+      "syntax_class": "select",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "Ticker",
+          "quoted": true,
+          "start": 824,
+          "end": 832,
+          "sha256": "457c4852b6496bdcffbb8e773eb09d756e6b98f970c5fd9a2e1240953a2d17a9",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "Ticker"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "ListActiveTickers",
+      "start": 991,
+      "end": 1228,
+      "sha256": "39a0b692625a41d239b0baeffc88af26ee20f85d45d26e19647279548d797be2",
+      "syntax_class": "select",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "Ticker",
+          "quoted": true,
+          "start": 1060,
+          "end": 1068,
+          "sha256": "457c4852b6496bdcffbb8e773eb09d756e6b98f970c5fd9a2e1240953a2d17a9",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "Ticker"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "SetTickersInactive",
+      "start": 1229,
+      "end": 1403,
+      "sha256": "5c912f068c9c57b04e5c297ac5b184fd69c888e496f9b06fbfc9788a41664bac",
+      "syntax_class": "update",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "Ticker",
+          "quoted": true,
+          "start": 1274,
+          "end": 1282,
+          "sha256": "457c4852b6496bdcffbb8e773eb09d756e6b98f970c5fd9a2e1240953a2d17a9",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "Ticker"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "ListTickers",
+      "start": 1404,
+      "end": 1752,
+      "sha256": "060854d4e350ac0f48162935552539ce81244b1e223a320c7f94abca97abd673",
+      "syntax_class": "select",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "Ticker",
+          "quoted": true,
+          "start": 1453,
+          "end": 1461,
+          "sha256": "457c4852b6496bdcffbb8e773eb09d756e6b98f970c5fd9a2e1240953a2d17a9",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "Ticker"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "DeactivateTicker",
+      "start": 1753,
+      "end": 1884,
+      "sha256": "b92121a7f58671b2dc48ae5e7ce116395ceaa8ffc0ae0f07f0226a2b0e6dd170",
+      "syntax_class": "update",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "Ticker",
+          "quoted": true,
+          "start": 1795,
+          "end": 1803,
+          "sha256": "457c4852b6496bdcffbb8e773eb09d756e6b98f970c5fd9a2e1240953a2d17a9",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "Ticker"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "UpdateTicker",
+      "start": 1885,
+      "end": 2061,
+      "sha256": "da517eac7a1f4de326eabc21abac719d58383a8d3279ef83b1463a49be1320d3",
+      "syntax_class": "update",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "Ticker",
+          "quoted": true,
+          "start": 1923,
+          "end": 1931,
+          "sha256": "457c4852b6496bdcffbb8e773eb09d756e6b98f970c5fd9a2e1240953a2d17a9",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "Ticker"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "PollCronSchedules",
+      "start": 2062,
+      "end": 4164,
+      "sha256": "89604550ae1486d7de746b617fe247597ab4def6a3c4aa09eeda7c3ad7d11cf2",
+      "syntax_class": "update-cte",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "WorkflowTriggerCronRef",
+          "quoted": true,
+          "start": 2388,
+          "end": 2412,
+          "sha256": "580b683ed273705b8c38c325cdb62ee32ba761c335f73f6dac6fb829cdef18be",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowTriggerCronRef"
+        },
+        {
+          "name": "WorkflowTriggers",
+          "quoted": true,
+          "start": 2446,
+          "end": 2464,
+          "sha256": "47bcc53239c2f68af37436b840a49d9f88dfbb9bec67a44042453815032c15fe",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowTriggers"
+        },
+        {
+          "name": "WorkflowVersion",
+          "quoted": true,
+          "start": 2537,
+          "end": 2554,
+          "sha256": "8a255575dd028ac5fd12ce28410702aff77152c629fcfcd916f60848d9570842",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowVersion"
+        },
+        {
+          "name": "Tenant",
+          "quoted": true,
+          "start": 2632,
+          "end": 2640,
+          "sha256": "17f3c98c4d88d8757a59be4a0a0d7f47acb98e1a59ae524e7512c61f136a0895",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "Tenant"
+        },
+        {
+          "name": "Ticker",
+          "quoted": true,
+          "start": 2924,
+          "end": 2932,
+          "sha256": "457c4852b6496bdcffbb8e773eb09d756e6b98f970c5fd9a2e1240953a2d17a9",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "Ticker"
+        },
+        {
+          "name": "WorkflowVersion",
+          "quoted": true,
+          "start": 3302,
+          "end": 3319,
+          "sha256": "8a255575dd028ac5fd12ce28410702aff77152c629fcfcd916f60848d9570842",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowVersion"
+        },
+        {
+          "name": "WorkflowTriggerCronRef",
+          "quoted": true,
+          "start": 3747,
+          "end": 3771,
+          "sha256": "580b683ed273705b8c38c325cdb62ee32ba761c335f73f6dac6fb829cdef18be",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowTriggerCronRef"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "PollScheduledWorkflows",
+      "start": 4165,
+      "end": 6740,
+      "sha256": "e41864968288b43731985ac7f8b3cd282b6947484494e1ec6b5e22129e404ab1",
+      "syntax_class": "update-cte",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "WorkflowVersion",
+          "quoted": true,
+          "start": 4537,
+          "end": 4554,
+          "sha256": "8a255575dd028ac5fd12ce28410702aff77152c629fcfcd916f60848d9570842",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowVersion"
+        },
+        {
+          "name": "WorkflowTriggerScheduledRef",
+          "quoted": true,
+          "start": 4895,
+          "end": 4924,
+          "sha256": "7ebb0984cfdf303664cc6d38f8fc462c846d913426f6a327cefb0a59c791863c",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowTriggerScheduledRef"
+        },
+        {
+          "name": "WorkflowVersion",
+          "quoted": true,
+          "start": 4963,
+          "end": 4980,
+          "sha256": "8a255575dd028ac5fd12ce28410702aff77152c629fcfcd916f60848d9570842",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowVersion"
+        },
+        {
+          "name": "Workflow",
+          "quoted": true,
+          "start": 5058,
+          "end": 5068,
+          "sha256": "5fa5c70451b7823d34a7160c73497c84878d6e262570cc2ace863b0e95d467a2",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "Workflow"
+        },
+        {
+          "name": "Tenant",
+          "quoted": true,
+          "start": 5139,
+          "end": 5147,
+          "sha256": "17f3c98c4d88d8757a59be4a0a0d7f47acb98e1a59ae524e7512c61f136a0895",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "Tenant"
+        },
+        {
+          "name": "Ticker",
+          "quoted": true,
+          "start": 5588,
+          "end": 5596,
+          "sha256": "457c4852b6496bdcffbb8e773eb09d756e6b98f970c5fd9a2e1240953a2d17a9",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "Ticker"
+        },
+        {
+          "name": "WorkflowRunTriggeredBy",
+          "quoted": true,
+          "start": 5847,
+          "end": 5871,
+          "sha256": "f634bbe34599709adf5948732c9ce735dc83219c8b2cedbde18060f79d8f2fe9",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowRunTriggeredBy"
+        },
+        {
+          "name": "WorkflowTriggerScheduledRef",
+          "quoted": true,
+          "start": 6120,
+          "end": 6149,
+          "sha256": "7ebb0984cfdf303664cc6d38f8fc462c846d913426f6a327cefb0a59c791863c",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowTriggerScheduledRef"
+        },
+        {
+          "name": "WorkflowTriggerScheduledRef",
+          "quoted": true,
+          "start": 6295,
+          "end": 6324,
+          "sha256": "7ebb0984cfdf303664cc6d38f8fc462c846d913426f6a327cefb0a59c791863c",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowTriggerScheduledRef"
+        },
+        {
+          "name": "WorkflowVersion",
+          "quoted": true,
+          "start": 6425,
+          "end": 6442,
+          "sha256": "8a255575dd028ac5fd12ce28410702aff77152c629fcfcd916f60848d9570842",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowVersion"
+        },
+        {
+          "name": "Workflow",
+          "quoted": true,
+          "start": 6517,
+          "end": 6527,
+          "sha256": "5fa5c70451b7823d34a7160c73497c84878d6e262570cc2ace863b0e95d467a2",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "Workflow"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "PollTenantAlerts",
+      "start": 6741,
+      "end": 8326,
+      "sha256": "ed180327da1e814331e7a966ad9b73bf877db7d64736b68cb0a7cd108af60108",
+      "syntax_class": "update-cte",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "TenantAlertingSettings",
+          "quoted": true,
+          "start": 6945,
+          "end": 6969,
+          "sha256": "7bd0fffa16d807f1577e559bb809c6a2247da016cfa0a83b51e0764e11f9c564",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "TenantAlertingSettings"
+        },
+        {
+          "name": "Tenant",
+          "quoted": true,
+          "start": 6997,
+          "end": 7005,
+          "sha256": "17f3c98c4d88d8757a59be4a0a0d7f47acb98e1a59ae524e7512c61f136a0895",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "Tenant"
+        },
+        {
+          "name": "WorkflowRun",
+          "quoted": true,
+          "start": 7417,
+          "end": 7430,
+          "sha256": "651d54f8707a586a4c2c5f0e288bc1f802a63573e7b39f7f4c71cec0c3694243",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "WorkflowRun"
+        },
+        {
+          "name": "TenantAlertingSettings",
+          "quoted": true,
+          "start": 7948,
+          "end": 7972,
+          "sha256": "7bd0fffa16d807f1577e559bb809c6a2247da016cfa0a83b51e0764e11f9c564",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "TenantAlertingSettings"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "PollExpiringTokens",
+      "start": 8328,
+      "end": 9112,
+      "sha256": "19b8f797ab7580247013cd3ae4597c87a582e2dac3a0268654e5610408274ed5",
+      "syntax_class": "update-cte",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "APIToken",
+          "quoted": true,
+          "start": 8459,
+          "end": 8469,
+          "sha256": "286cc6b2874b52d87d27c601e9af03aeff713990099f21b2e5ad5e4b05904b23",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "APIToken"
+        },
+        {
+          "name": "Tenant",
+          "quoted": true,
+          "start": 8493,
+          "end": 8501,
+          "sha256": "17f3c98c4d88d8757a59be4a0a0d7f47acb98e1a59ae524e7512c61f136a0895",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "Tenant"
+        },
+        {
+          "name": "APIToken",
+          "quoted": true,
+          "start": 8903,
+          "end": 8913,
+          "sha256": "286cc6b2874b52d87d27c601e9af03aeff713990099f21b2e5ad5e4b05904b23",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "APIToken"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "PollTenantResourceLimitAlerts",
+      "start": 9113,
+      "end": 11120,
+      "sha256": "3c43fd7d67302f14533ab734df140d919263d02cb5ec60f9d78fafb0ae33e240",
+      "syntax_class": "insert-select-cte",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "TenantResourceLimit",
+          "quoted": true,
+          "start": 9617,
+          "end": 9638,
+          "sha256": "7936b189eb7babfdee02a28990feea5aaa5edfaa7e438ca39fb24d8ccada5194",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "TenantResourceLimit"
+        },
+        {
+          "name": "TenantAlertingSettings",
+          "quoted": true,
+          "start": 9662,
+          "end": 9686,
+          "sha256": "7bd0fffa16d807f1577e559bb809c6a2247da016cfa0a83b51e0764e11f9c564",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "TenantAlertingSettings"
+        },
+        {
+          "name": "Tenant",
+          "quoted": true,
+          "start": 9761,
+          "end": 9769,
+          "sha256": "17f3c98c4d88d8757a59be4a0a0d7f47acb98e1a59ae524e7512c61f136a0895",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "Tenant"
+        },
+        {
+          "name": "TenantResourceLimitAlert",
+          "quoted": true,
+          "start": 10331,
+          "end": 10357,
+          "sha256": "b313419f1fe857a60d97c9f8ade6a58b35d46ff6bad82944bd669ba822aff1ce",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "TenantResourceLimitAlert"
+        },
+        {
+          "name": "TenantResourceLimitAlert",
+          "quoted": true,
+          "start": 10673,
+          "end": 10699,
+          "sha256": "b313419f1fe857a60d97c9f8ade6a58b35d46ff6bad82944bd669ba822aff1ce",
+          "access": "write",
+          "expected_binding": "unique",
+          "declaration_relation": "TenantResourceLimitAlert"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    }
+  ],
+  "inventory_notes": [
+    "Entire selected file labelled under preregistered metadata-only stratified sample; no inference to the 30 unsampled query files.",
+    "Exactly one committed sqlc manifest selects all five declarations inputs; names stay quoted/unquoted dialect-specific. Generated sql.go supplies no primary usage."
+  ]
+}

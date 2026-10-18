@@ -1,0 +1,29 @@
+{
+  "stage": "approved supplementary generator input; not executed",
+  "source_repository": "hatchet-dev/hatchet",
+  "source_commit": "559b5021e418f12ded175f950b709b7fa66be5a5",
+  "source_path": "sql/schema/v0.sql",
+  "source_sha256": "134950caa9f1e12d3143b6857002323809a376841ab3def7fadce3941a64b3ee",
+  "source_statement_span": {
+    "start": 4318,
+    "end": 4668,
+    "sha256": "c56d2ec3f3ad362d99ecbeec736ae2258b4e359d222d1afd54e1cc195a1c7c27"
+  },
+  "fixture_path": "fixtures/requested-pg-input.sql",
+  "fixture_bytes": 658,
+  "fixture_sha256": "dd7153ba4733be4d24b26993f8762d98d05d8754691194c41266f824c2253273",
+  "source_statement_fixture_span": {
+    "start": 307,
+    "end": 657
+  },
+  "declared_objects": {
+    "table": 1,
+    "columns": 6,
+    "primary_key": 1
+  },
+  "qualification": "Supplementary mechanical requested-dump fixture only; the complete five-schema Hatchet declaration corpus is unchanged. No runtime/live-store/source deployment claim.",
+  "planned_server_version": "PostgreSQL18.6",
+  "available_client_version": "pg_dump (PostgreSQL)18.6",
+  "server_or_dump_executions": 0,
+  "root_owns_git_and_db_execution": true
+}

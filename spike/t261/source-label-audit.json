@@ -1,0 +1,202 @@
+{
+  "stage": "source-only static input audit; no SQL parser/recognizer run",
+  "date": "2026-10-18",
+  "checks": [
+    {
+      "path": "labels/generated-pg-dump.json",
+      "source_bytes": 1311,
+      "statements": 16,
+      "objects": 8,
+      "sites": 0,
+      "all_hash_spans_valid": true,
+      "uncovered_noncomment_lines": []
+    },
+    {
+      "path": "labels/hatchet-additional-tables.json",
+      "source_bytes": 198,
+      "statements": 1,
+      "objects": 1,
+      "sites": 0,
+      "all_hash_spans_valid": true,
+      "uncovered_noncomment_lines": []
+    },
+    {
+      "path": "labels/hatchet-migration-20240331162333_v0_18_1.json",
+      "source_bytes": 407,
+      "statements": 3,
+      "objects": 0,
+      "sites": 0,
+      "all_hash_spans_valid": true,
+      "uncovered_noncomment_lines": []
+    },
+    {
+      "path": "labels/hatchet-migration-20240606145243_v0_31_0.json",
+      "source_bytes": 2387,
+      "statements": 8,
+      "objects": 0,
+      "sites": 0,
+      "all_hash_spans_valid": true,
+      "uncovered_noncomment_lines": []
+    },
+    {
+      "path": "labels/hatchet-migration-20250509123031_v1_0_18.json",
+      "source_bytes": 257,
+      "statements": 2,
+      "objects": 0,
+      "sites": 0,
+      "all_hash_spans_valid": true,
+      "uncovered_noncomment_lines": []
+    },
+    {
+      "path": "labels/hatchet-migration-20251216190909_v1_0_61.json",
+      "source_bytes": 3101,
+      "statements": 14,
+      "objects": 0,
+      "sites": 0,
+      "all_hash_spans_valid": true,
+      "uncovered_noncomment_lines": []
+    },
+    {
+      "path": "labels/hatchet-migration-20260316185928_v1_0_90.json",
+      "source_bytes": 2129,
+      "statements": 14,
+      "objects": 0,
+      "sites": 0,
+      "all_hash_spans_valid": true,
+      "uncovered_noncomment_lines": []
+    },
+    {
+      "path": "labels/hatchet-migration-20260707141853_v1_0_125.json",
+      "source_bytes": 268,
+      "statements": 2,
+      "objects": 0,
+      "sites": 0,
+      "all_hash_spans_valid": true,
+      "uncovered_noncomment_lines": []
+    },
+    {
+      "path": "labels/hatchet-pg-stubs.json",
+      "source_bytes": 3120,
+      "statements": 6,
+      "objects": 84,
+      "sites": 0,
+      "all_hash_spans_valid": true,
+      "uncovered_noncomment_lines": []
+    },
+    {
+      "path": "labels/hatchet-query-interval_settings.json",
+      "source_bytes": 660,
+      "statements": 3,
+      "objects": 0,
+      "sites": 3,
+      "all_hash_spans_valid": true,
+      "uncovered_noncomment_lines": []
+    },
+    {
+      "path": "labels/hatchet-query-pg_health.json",
+      "source_bytes": 2802,
+      "statements": 5,
+      "objects": 0,
+      "sites": 6,
+      "all_hash_spans_valid": true,
+      "uncovered_noncomment_lines": []
+    },
+    {
+      "path": "labels/hatchet-query-sleep.json",
+      "source_bytes": 858,
+      "statements": 2,
+      "objects": 0,
+      "sites": 3,
+      "all_hash_spans_valid": true,
+      "uncovered_noncomment_lines": []
+    },
+    {
+      "path": "labels/hatchet-query-sync.json",
+      "source_bytes": 4431,
+      "statements": 10,
+      "objects": 0,
+      "sites": 10,
+      "all_hash_spans_valid": true,
+      "uncovered_noncomment_lines": []
+    },
+    {
+      "path": "labels/hatchet-query-ticker.json",
+      "source_bytes": 11120,
+      "statements": 13,
+      "objects": 0,
+      "sites": 39,
+      "all_hash_spans_valid": true,
+      "uncovered_noncomment_lines": []
+    },
+    {
+      "path": "labels/hatchet-query-workflow_schedules.json",
+      "source_bytes": 8978,
+      "statements": 11,
+      "objects": 0,
+      "sites": 37,
+      "all_hash_spans_valid": true,
+      "uncovered_noncomment_lines": []
+    },
+    {
+      "path": "labels/hatchet-v0.json",
+      "source_bytes": 65225,
+      "statements": 342,
+      "objects": 981,
+      "sites": 0,
+      "all_hash_spans_valid": true,
+      "uncovered_noncomment_lines": []
+    },
+    {
+      "path": "labels/hatchet-v1-core.json",
+      "source_bytes": 90280,
+      "statements": 126,
+      "objects": 546,
+      "sites": 0,
+      "all_hash_spans_valid": true,
+      "uncovered_noncomment_lines": []
+    },
+    {
+      "path": "labels/hatchet-v1-olap.json",
+      "source_bytes": 45131,
+      "statements": 79,
+      "objects": 231,
+      "sites": 0,
+      "all_hash_spans_valid": true,
+      "uncovered_noncomment_lines": []
+    },
+    {
+      "path": "labels/monitor-query.json",
+      "source_bytes": 8209,
+      "statements": 36,
+      "objects": 0,
+      "sites": 48,
+      "all_hash_spans_valid": true,
+      "uncovered_noncomment_lines": []
+    },
+    {
+      "path": "labels/monitor-schema.json",
+      "source_bytes": 36563,
+      "statements": 216,
+      "objects": 488,
+      "sites": 0,
+      "all_hash_spans_valid": true,
+      "uncovered_noncomment_lines": []
+    }
+  ],
+  "totals": {
+    "label_files": 20,
+    "statement_envelopes": 909,
+    "declaration_objects": 2339,
+    "authored_query_sites": 146,
+    "uncovered_noncomment_lines": 0
+  },
+  "qualification": "Valid byte/hash coverage and source-only label consistency; no parser success/accuracy/runtime result.",
+  "source_literal_semantic_checks": {
+    "foreign_keys_order_and_targets": 123,
+    "primary_keys_order_and_inline_citations": 155,
+    "public_unique_manifest_site_bindings": 146,
+    "authored_control_files_hashed": 60,
+    "authored_control_token_spans": 68
+  },
+  "generated_dump_complete_objects": 8
+}
