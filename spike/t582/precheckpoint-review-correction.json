@@ -1,0 +1,80 @@
+{
+  "schema": "t582-precheckpoint-review-correction-v1",
+  "status": "Prospective source-only correction before any immutable checkpoint/candidate execution",
+  "prior_preregistration_sha256": "0736d49631380cf4b59b6d802da41d35c20e7da7333ee5505795714274235ada",
+  "before_files": [
+    {
+      "path": "README.md",
+      "bytes": 11576,
+      "sha256": "eb6dc695626f5f5258f8d21bf3447a06b6716c5b481c9f264290d8653c931d9a"
+    },
+    {
+      "path": "author_source_labels.py",
+      "bytes": 19954,
+      "sha256": "3a9c2535a2461ac1a5a34f515f78cdf28be9931eff92c7efbb4e0876cf819638"
+    },
+    {
+      "path": "public-sites.json",
+      "bytes": 41889,
+      "sha256": "74c18ae54857879e98d5f62d571fb0f7fb9bc7189b80b578e5691b643ef731ea"
+    },
+    {
+      "path": "public-positive-traces.json",
+      "bytes": 4455,
+      "sha256": "fc0cf964a22e7a1a58fe00b1db61c192c1a70734aa7cff63a1efe98ff89c90ac"
+    },
+    {
+      "path": "source-review-notes.json",
+      "bytes": 2623,
+      "sha256": "fdfe1a3a121a8ea7ec1284b61902d6a50d3ced47cf7d17759f8e6b9aefd5451c"
+    },
+    {
+      "path": "preregistration.json",
+      "bytes": 16891,
+      "sha256": "0736d49631380cf4b59b6d802da41d35c20e7da7333ee5505795714274235ada"
+    },
+    {
+      "path": "inputs/authored-context/duplicate-agent.go",
+      "bytes": 11919,
+      "sha256": "3269aaef7f56c23ca9d927b2c455b653b515d1ae79e8d8763fc562401cd187cb"
+    },
+    {
+      "path": "inputs/authored-context/header-string-agent.go",
+      "bytes": 11932,
+      "sha256": "9043903c7bd6c74f95e910ee1464264ec730cdc6723c796f7c65b4377d366807"
+    },
+    {
+      "path": "inputs/authored-context/legacy-agent.go",
+      "bytes": 11899,
+      "sha256": "1fbf11b19557924aa2b6bdc1afc9f0b5c6c67a75f68677e48e508c05ee7edcf1"
+    },
+    {
+      "path": "inputs/authored-context/modern-019-agent.go",
+      "bytes": 11914,
+      "sha256": "041d82d1cf14a05ebe716611fdc44bd959bc8e900fbdb02e4c5706245052249b"
+    },
+    {
+      "path": "inputs/authored-context/unsupported-agent.go",
+      "bytes": 11906,
+      "sha256": "b32da50cda9db2c156d76a7181a2ba0abecd0c6e07165e2c8f3791a89000c785"
+    }
+  ],
+  "findings": [
+    {
+      "reviewer": "receipt_portability",
+      "finding": "Package-level errors.New initializer omitted from claimed full-file census.",
+      "correction": "Include exact transport_udp.go:39 errors.New as an excluded call. Public 102 = 2 supported + 1 construction + 1 unproved + 98 excluded; all other classifications unchanged.",
+      "source_only_audit": "All three files reviewed at package-level declarations: transport has numeric const plus this one value initializer; utils one numeric const; mock_agent no package-level value initializer."
+    },
+    {
+      "reviewer": "receipt_portability",
+      "finding": "Five modified Apache-licensed generated context files lacked prominent in-file modification notices required by LICENSE4(b).",
+      "correction": "Append a neutral prominent modification comment naming each authored change. Preserve tested initial marker bytes / fake-header location; no original public bytes or labels changed."
+    },
+    {
+      "reviewer": "receipt_portability",
+      "finding": "One-unit-per-process/case wording could multiply a30-second global pass cap into54case children.",
+      "correction": "Exactly 2 fresh processes, each 27 sequential units with a new reader/corpus/catalog per unit under one global 30-second process deadline; no per-case reset/retry. Add global 16 MiB offered-source / 16 MiB stdout / 8,192 assertion caps."
+    }
+  ]
+}

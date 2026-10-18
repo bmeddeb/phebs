@@ -1,0 +1,122 @@
+{
+  "schema": "t582-source-supported-candidates-v1",
+  "traces": [
+    {
+      "site": "public-023",
+      "why": "udpSender.client is the selected local UDP wrapper; its EmitBatch body delegates to a generated AgentClient.",
+      "witnesses": [
+        {
+          "path": "inputs/public/transport_udp.go",
+          "start_byte": 1496,
+          "end_byte": 1533,
+          "start_line": 42,
+          "end_line": 42,
+          "text": "client          *utils.AgentClientUDP",
+          "sha256": "c6c57c00813233556814184951298f4735ba355c57837cf1d315ac9ebad34b45"
+        },
+        {
+          "path": "inputs/public/utils/udp_client.go",
+          "start_byte": 4015,
+          "end_byte": 4099,
+          "start_line": 133,
+          "end_line": 133,
+          "text": "func (a *AgentClientUDP) EmitBatch(ctx context.Context, batch *jaeger.Batch) error {",
+          "sha256": "b915247336b143115f2cf53ffbc72455f4f58645ec693be02eefbe5b175e1284"
+        },
+        {
+          "path": "inputs/public/utils/udp_client.go",
+          "start_byte": 1222,
+          "end_byte": 1254,
+          "start_line": 42,
+          "end_line": 42,
+          "text": "client        *agent.AgentClient",
+          "sha256": "7b1a20b9220da2bb6e76de01b6d4b5755fced9f8404007c78672bab90026c3ab"
+        },
+        {
+          "path": "inputs/public/utils/udp_client.go",
+          "start_byte": 2599,
+          "end_byte": 2657,
+          "start_line": 84,
+          "end_line": 84,
+          "text": "agent.NewAgentClientFactory(thriftBuffer, protocolFactory)",
+          "sha256": "7a5d6f5fcae260a249f045ea953cb709d9ea2f59f98f6b999183f6d12985065f"
+        },
+        {
+          "path": "inputs/public/utils/udp_client.go",
+          "start_byte": 4135,
+          "end_byte": 4165,
+          "start_line": 135,
+          "end_line": 135,
+          "text": "a.client.EmitBatch(ctx, batch)",
+          "sha256": "96d03315f806402feb6a9731d1f8d8fad6e9debf39619108e0136ef98164b4a6"
+        }
+      ]
+    },
+    {
+      "site": "public-042",
+      "why": "The client field is explicitly generated AgentClient-typed and initialized by its generated client factory.",
+      "witnesses": [
+        {
+          "path": "inputs/public/utils/udp_client.go",
+          "start_byte": 1222,
+          "end_byte": 1254,
+          "start_line": 42,
+          "end_line": 42,
+          "text": "client        *agent.AgentClient",
+          "sha256": "7b1a20b9220da2bb6e76de01b6d4b5755fced9f8404007c78672bab90026c3ab"
+        },
+        {
+          "path": "inputs/public/utils/udp_client.go",
+          "start_byte": 2599,
+          "end_byte": 2657,
+          "start_line": 84,
+          "end_line": 84,
+          "text": "agent.NewAgentClientFactory(thriftBuffer, protocolFactory)",
+          "sha256": "7a5d6f5fcae260a249f045ea953cb709d9ea2f59f98f6b999183f6d12985065f"
+        },
+        {
+          "path": "inputs/public/utils/udp_client.go",
+          "start_byte": 760,
+          "end_byte": 811,
+          "start_line": 28,
+          "end_line": 28,
+          "text": "\"github.com/uber/jaeger-client-go/thrift-gen/agent\"",
+          "sha256": "18bce43e7b381dbc3329a1f472c2b406304a830bb249b0f1c9a7e535db1a5a0a"
+        }
+      ]
+    },
+    {
+      "site": "public-065",
+      "why": "Unshadowed generated import in MockAgent.serve calls the generated processor constructor; construction only.",
+      "witnesses": [
+        {
+          "path": "inputs/public/testutils/mock_agent.go",
+          "start_byte": 776,
+          "end_byte": 827,
+          "start_line": 29,
+          "end_line": 29,
+          "text": "\"github.com/uber/jaeger-client-go/thrift-gen/agent\"",
+          "sha256": "18bce43e7b381dbc3329a1f472c2b406304a830bb249b0f1c9a7e535db1a5a0a"
+        },
+        {
+          "path": "inputs/public/testutils/mock_agent.go",
+          "start_byte": 2667,
+          "end_byte": 2719,
+          "start_line": 94,
+          "end_line": 94,
+          "text": "func (s *MockAgent) serve(started *sync.WaitGroup) {",
+          "sha256": "4b94b3d0dab79691b27d41bcabf942ac5ad3a0d434e5fe8a08f71b2019f841e3"
+        },
+        {
+          "path": "inputs/public/testutils/mock_agent.go",
+          "start_byte": 2721,
+          "end_byte": 2758,
+          "start_line": 95,
+          "end_line": 95,
+          "text": "handler := agent.NewAgentProcessor(s)",
+          "sha256": "a2b13d597090c0aead42d74fc5f888fb25431ed062f435b67091551841f0ea09"
+        }
+      ]
+    }
+  ]
+}

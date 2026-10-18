@@ -1,0 +1,1457 @@
+{
+  "schema": "t582-explicit-source-call-census-v1",
+  "authoring": "Complete handwritten-file reading then explicit line/callee literal choices; no parser/candidate output.",
+  "sites": [
+    {
+      "id": "public-001",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/transport_udp.go",
+        "start_byte": 1438,
+        "end_byte": 1448,
+        "start_line": 39,
+        "end_line": 39,
+        "text": "errors.New",
+        "sha256": "f188dfa9079df067bbe4c2c338c15b0b8aa109d946813efca35d5b9d010fc366"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-002",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/transport_udp.go",
+        "start_byte": 2905,
+        "end_byte": 2908,
+        "start_line": 71,
+        "end_line": 71,
+        "text": "len",
+        "sha256": "71fa9faaa6f884aa11f4cea21477b2204a48a4fa7f05cecad00a1250eeeffb4c"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-003",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/transport_udp.go",
+        "start_byte": 2953,
+        "end_byte": 2964,
+        "start_line": 72,
+        "end_line": 72,
+        "text": "fmt.Sprintf",
+        "sha256": "45ab4b9ddb4e7c5403e6aea113ebe7cb4492da09ff2fbb7a27b8be733d27561b"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-004",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/transport_udp.go",
+        "start_byte": 3199,
+        "end_byte": 3232,
+        "start_line": 83,
+        "end_line": 83,
+        "text": "thrift.NewTCompactProtocolFactory",
+        "sha256": "08b3188c978ecee60a9f13571dda4a81cdb2a1671af1586e12431e837186146e"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-005",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/transport_udp.go",
+        "start_byte": 3332,
+        "end_byte": 3358,
+        "start_line": 86,
+        "end_line": 86,
+        "text": "thrift.NewTMemoryBufferLen",
+        "sha256": "eff844a73c3ad60296fd827cb65de37a3ed40084111093d449e8432b6f1c0155"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-006",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/transport_udp.go",
+        "start_byte": 3400,
+        "end_byte": 3427,
+        "start_line": 87,
+        "end_line": 87,
+        "text": "protocolFactory.GetProtocol",
+        "sha256": "ed394680a328793985ca09f3277690d2fec7f89b65fa12f80e68c03be0463667"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-007",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/transport_udp.go",
+        "start_byte": 3459,
+        "end_byte": 3492,
+        "start_line": 89,
+        "end_line": 89,
+        "text": "utils.NewAgentClientUDPWithParams",
+        "sha256": "69781cd84da35c1138c9eda466b5186efe30cce331c9638a652bbf4676a65e9e"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-008",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/transport_udp.go",
+        "start_byte": 3959,
+        "end_byte": 3984,
+        "start_line": 105,
+        "end_line": 105,
+        "text": "NewUDPTransportWithParams",
+        "sha256": "f6df97f564ed9c0a5a8fe9387f5561fbc69a48c5a8bd637cea190179bb1e893b"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-009",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/transport_udp.go",
+        "start_byte": 4364,
+        "end_byte": 4384,
+        "start_line": 119,
+        "end_line": 119,
+        "text": "s.thriftBuffer.Reset",
+        "sha256": "c09a54fc77f7e5bb5249b659c6bcbe1d92e8b674c7df7e159f6f4f5cf029de53"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-010",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/transport_udp.go",
+        "start_byte": 4392,
+        "end_byte": 4410,
+        "start_line": 120,
+        "end_line": 120,
+        "text": "thriftStruct.Write",
+        "sha256": "9b56b91bdb1fc2d256b6f1870e651515583a96210213ab77b4fd01d890830899"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-011",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/transport_udp.go",
+        "start_byte": 4411,
+        "end_byte": 4429,
+        "start_line": 120,
+        "end_line": 120,
+        "text": "context.Background",
+        "sha256": "c20446c1c42486f646978855475812647abd102e509e305aa28db39a0312a990"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-012",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/transport_udp.go",
+        "start_byte": 4459,
+        "end_byte": 4477,
+        "start_line": 121,
+        "end_line": 121,
+        "text": "s.thriftBuffer.Len",
+        "sha256": "daa087030086135ac60a3e7d80814f51a842ae2d0322bb04cfb8ae83ba51b67e"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-013",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/transport_udp.go",
+        "start_byte": 4574,
+        "end_byte": 4598,
+        "start_line": 126,
+        "end_line": 126,
+        "text": "BuildJaegerProcessThrift",
+        "sha256": "eec7acc32991e89bd737358f0f960bc1e6171e7c6c6be81ea697d811d9fbb5df"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-014",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/transport_udp.go",
+        "start_byte": 4627,
+        "end_byte": 4655,
+        "start_line": 127,
+        "end_line": 127,
+        "text": "s.calcSizeOfSerializedThrift",
+        "sha256": "7b24dda72e7b8e8262d7624e495491fcbfd8a57c8b94e0385fba8ddcdc6f3d96"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-015",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/transport_udp.go",
+        "start_byte": 4720,
+        "end_byte": 4737,
+        "start_line": 130,
+        "end_line": 130,
+        "text": "BuildJaegerThrift",
+        "sha256": "faed571a11da01804f924c06e297aef2942437975f552f2695ce5a1702f9aaaf"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-016",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/transport_udp.go",
+        "start_byte": 4757,
+        "end_byte": 4785,
+        "start_line": 131,
+        "end_line": 131,
+        "text": "s.calcSizeOfSerializedThrift",
+        "sha256": "7b24dda72e7b8e8262d7624e495491fcbfd8a57c8b94e0385fba8ddcdc6f3d96"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-017",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/transport_udp.go",
+        "start_byte": 4972,
+        "end_byte": 4978,
+        "start_line": 139,
+        "end_line": 139,
+        "text": "append",
+        "sha256": "ae524b54d9b5acbe3bbf0a4f4825bae82bca8b0a474878c2713394ea284ef929"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-018",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/transport_udp.go",
+        "start_byte": 5071,
+        "end_byte": 5078,
+        "start_line": 143,
+        "end_line": 143,
+        "text": "s.Flush",
+        "sha256": "7f73d8c4d762c07a35339d59044935b10f8b4545aa7a7706f9bbd026976322c3"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-019",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/transport_udp.go",
+        "start_byte": 5141,
+        "end_byte": 5148,
+        "start_line": 146,
+        "end_line": 146,
+        "text": "s.Flush",
+        "sha256": "7f73d8c4d762c07a35339d59044935b10f8b4545aa7a7706f9bbd026976322c3"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-020",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/transport_udp.go",
+        "start_byte": 5167,
+        "end_byte": 5173,
+        "start_line": 147,
+        "end_line": 147,
+        "text": "append",
+        "sha256": "ae524b54d9b5acbe3bbf0a4f4825bae82bca8b0a474878c2713394ea284ef929"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-021",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/transport_udp.go",
+        "start_byte": 5311,
+        "end_byte": 5314,
+        "start_line": 153,
+        "end_line": 153,
+        "text": "len",
+        "sha256": "71fa9faaa6f884aa11f4cea21477b2204a48a4fa7f05cecad00a1250eeeffb4c"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-022",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/transport_udp.go",
+        "start_byte": 5392,
+        "end_byte": 5397,
+        "start_line": 158,
+        "end_line": 158,
+        "text": "int64",
+        "sha256": "bc2229666b96007e875c5f62897ee5b7648db2baa5fabf3e771afac323afbd57"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-023",
+      "role": "supported-method-call",
+      "callee": {
+        "path": "inputs/public/transport_udp.go",
+        "start_byte": 5420,
+        "end_byte": 5438,
+        "start_line": 159,
+        "end_line": 159,
+        "text": "s.client.EmitBatch",
+        "sha256": "38651e02035343d0aa3a66111cea9f394ea6519c70ed50866b866e51873aa81d"
+      },
+      "expected": {
+        "predicate": "CALLS_OPERATION",
+        "tier": "heuristic",
+        "scope_hint": "agent",
+        "service_hint": "Agent",
+        "method_hint": "EmitBatch",
+        "wire_hint": "emitBatch"
+      }
+    },
+    {
+      "id": "public-024",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/transport_udp.go",
+        "start_byte": 5439,
+        "end_byte": 5457,
+        "start_line": 159,
+        "end_line": 159,
+        "text": "context.Background",
+        "sha256": "c20446c1c42486f646978855475812647abd102e509e305aa28db39a0312a990"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-025",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/transport_udp.go",
+        "start_byte": 5553,
+        "end_byte": 5564,
+        "start_line": 163,
+        "end_line": 163,
+        "text": "s.makeStats",
+        "sha256": "19ce329a08e88a3db547be0cf194826aa562ad6aa89a939aec15697fadd5a1dd"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-026",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/transport_udp.go",
+        "start_byte": 5573,
+        "end_byte": 5587,
+        "start_line": 165,
+        "end_line": 165,
+        "text": "s.resetBuffers",
+        "sha256": "bace5cc7f764706f4ec147493c52659c841011b03c7c0eecd9bbaecc3c65e86a"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-027",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/transport_udp.go",
+        "start_byte": 5632,
+        "end_byte": 5637,
+        "start_line": 167,
+        "end_line": 167,
+        "text": "int64",
+        "sha256": "bc2229666b96007e875c5f62897ee5b7648db2baa5fabf3e771afac323afbd57"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-028",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/transport_udp.go",
+        "start_byte": 5706,
+        "end_byte": 5720,
+        "start_line": 173,
+        "end_line": 173,
+        "text": "s.client.Close",
+        "sha256": "55516c5a3ae97e1256479c779aed68e8494e995bf45fe0769c1b8d92a598cbfc"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-029",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/transport_udp.go",
+        "start_byte": 6004,
+        "end_byte": 6041,
+        "start_line": 187,
+        "end_line": 187,
+        "text": "s.reporterStats.SpansDroppedFromQueue",
+        "sha256": "664955f979a6e795acc0d586ba758ad4504171862cff955a61b10b09e1f2de21"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-030",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/utils/udp_client.go",
+        "start_byte": 2114,
+        "end_byte": 2131,
+        "start_line": 66,
+        "end_line": 66,
+        "text": "net.SplitHostPort",
+        "sha256": "2975a3b3750bdc88cb8891d5f70699acee4d5968960a146054e8fef91b21dcf2"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-031",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/utils/udp_client.go",
+        "start_byte": 2483,
+        "end_byte": 2509,
+        "start_line": 82,
+        "end_line": 82,
+        "text": "thrift.NewTMemoryBufferLen",
+        "sha256": "eff844a73c3ad60296fd827cb65de37a3ed40084111093d449e8432b6f1c0155"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-032",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/utils/udp_client.go",
+        "start_byte": 2552,
+        "end_byte": 2585,
+        "start_line": 83,
+        "end_line": 83,
+        "text": "thrift.NewTCompactProtocolFactory",
+        "sha256": "08b3188c978ecee60a9f13571dda4a81cdb2a1671af1586e12431e837186146e"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-033",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/utils/udp_client.go",
+        "start_byte": 2599,
+        "end_byte": 2626,
+        "start_line": 84,
+        "end_line": 84,
+        "text": "agent.NewAgentClientFactory",
+        "sha256": "0b19a275f79ee50ef9e0ef20dc9a6356108832b6a5d9d64b9faf145a95395338"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-034",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/utils/udp_client.go",
+        "start_byte": 2755,
+        "end_byte": 2773,
+        "start_line": 90,
+        "end_line": 90,
+        "text": "net.ResolveUDPAddr",
+        "sha256": "81738bc101d9cfe1ec44c2397c7147f7b8fe396ba2882062b56761e17508a72a"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-035",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/utils/udp_client.go",
+        "start_byte": 2857,
+        "end_byte": 2868,
+        "start_line": 95,
+        "end_line": 95,
+        "text": "net.DialUDP",
+        "sha256": "50027b8723844e74005c0bbd06de35a798df77beebab1e89cb8b0c77f2307494"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-036",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/utils/udp_client.go",
+        "start_byte": 2869,
+        "end_byte": 2885,
+        "start_line": 95,
+        "end_line": 95,
+        "text": "destAddr.Network",
+        "sha256": "ec82bfd7649a7ce21141b6347fe8b4ce36628f0ee2ab1b8990326bb2ade373d1"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-037",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/utils/udp_client.go",
+        "start_byte": 3060,
+        "end_byte": 3082,
+        "start_line": 101,
+        "end_line": 101,
+        "text": "newReconnectingUDPConn",
+        "sha256": "5463001405859ea5043a94cc220545f63fe9f2c9a0e8ca4756c86115447150b0"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-038",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/utils/udp_client.go",
+        "start_byte": 3237,
+        "end_byte": 3259,
+        "start_line": 107,
+        "end_line": 107,
+        "text": "connUDP.SetWriteBuffer",
+        "sha256": "5547c5570a9f7047c51172e42662ceb6a02c3b6af452f1684f18d84ecd84a935"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-039",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/utils/udp_client.go",
+        "start_byte": 3650,
+        "end_byte": 3677,
+        "start_line": 121,
+        "end_line": 121,
+        "text": "NewAgentClientUDPWithParams",
+        "sha256": "90169582db706630916b14108ed3283864fc383aef4163566df8c90e1e514702"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-040",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/utils/udp_client.go",
+        "start_byte": 3927,
+        "end_byte": 3937,
+        "start_line": 129,
+        "end_line": 129,
+        "text": "errors.New",
+        "sha256": "f188dfa9079df067bbe4c2c338c15b0b8aa109d946813efca35d5b9d010fc366"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-041",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/utils/udp_client.go",
+        "start_byte": 4101,
+        "end_byte": 4121,
+        "start_line": 134,
+        "end_line": 134,
+        "text": "a.thriftBuffer.Reset",
+        "sha256": "fe9e724b6285959e0750c31400a76e92c5ea25014878c1e45a639174da0a29b1"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-042",
+      "role": "supported-method-call",
+      "callee": {
+        "path": "inputs/public/utils/udp_client.go",
+        "start_byte": 4135,
+        "end_byte": 4153,
+        "start_line": 135,
+        "end_line": 135,
+        "text": "a.client.EmitBatch",
+        "sha256": "590d143cab2e5f5a00c0fafc2ee99ea1584fc607ed94bdf766f1ad9140ef6527"
+      },
+      "expected": {
+        "predicate": "CALLS_OPERATION",
+        "tier": "heuristic",
+        "scope_hint": "agent",
+        "service_hint": "Agent",
+        "method_hint": "EmitBatch",
+        "wire_hint": "emitBatch"
+      }
+    },
+    {
+      "id": "public-043",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/utils/udp_client.go",
+        "start_byte": 4200,
+        "end_byte": 4218,
+        "start_line": 138,
+        "end_line": 138,
+        "text": "a.thriftBuffer.Len",
+        "sha256": "5b2e8742f5d13876d518ef294556843766bed8ddfe8480237afc13d3ab8b6f58"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-044",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/utils/udp_client.go",
+        "start_byte": 4250,
+        "end_byte": 4260,
+        "start_line": 139,
+        "end_line": 139,
+        "text": "fmt.Errorf",
+        "sha256": "c4bce0afb58f2247ef2f9b6af4f8430556e9c6d387f566184b2f4e14a684f748"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-045",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/utils/udp_client.go",
+        "start_byte": 4334,
+        "end_byte": 4352,
+        "start_line": 140,
+        "end_line": 140,
+        "text": "a.thriftBuffer.Len",
+        "sha256": "5b2e8742f5d13876d518ef294556843766bed8ddfe8480237afc13d3ab8b6f58"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-046",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/utils/udp_client.go",
+        "start_byte": 4373,
+        "end_byte": 4376,
+        "start_line": 140,
+        "end_line": 140,
+        "text": "len",
+        "sha256": "71fa9faaa6f884aa11f4cea21477b2204a48a4fa7f05cecad00a1250eeeffb4c"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-047",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/utils/udp_client.go",
+        "start_byte": 4405,
+        "end_byte": 4420,
+        "start_line": 142,
+        "end_line": 142,
+        "text": "a.connUDP.Write",
+        "sha256": "b6bd5a0ca394763d24d85d8f2c9f2b9f12b029a1d20e2f69b58749469dea811f"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-048",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/utils/udp_client.go",
+        "start_byte": 4421,
+        "end_byte": 4441,
+        "start_line": 142,
+        "end_line": 142,
+        "text": "a.thriftBuffer.Bytes",
+        "sha256": "e408ea496e2dc67b4dc81b215ab2e10ebbdeaa9c2f8985f7344748df55c08c21"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-049",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/utils/udp_client.go",
+        "start_byte": 4592,
+        "end_byte": 4607,
+        "start_line": 148,
+        "end_line": 148,
+        "text": "a.connUDP.Close",
+        "sha256": "08964ddf1ed574b8e4ab33a85a047bb086e3767174ebfae6dd3429c85aa98e29"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-050",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 1153,
+        "end_byte": 1175,
+        "start_line": 38,
+        "end_line": 38,
+        "text": "NewTUDPServerTransport",
+        "sha256": "c04f0661f9e73f70cea79b958579d42268d7ce759d973f9e8e055fe0fd7a88ac"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-051",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 1250,
+        "end_byte": 1268,
+        "start_line": 43,
+        "end_line": 43,
+        "text": "newSamplingManager",
+        "sha256": "8dee2f84c6cbdf19ae9021534d58a2ac004cc0fd5ff3c88fc5538c978bfec8cd"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-052",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 1353,
+        "end_byte": 1371,
+        "start_line": 45,
+        "end_line": 45,
+        "text": "httptest.NewServer",
+        "sha256": "12b0439f4f4d8fb54e876021bbe5ff5f3f611d14fa06d6e7b18cf8547f6406b5"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-053",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 1534,
+        "end_byte": 1545,
+        "start_line": 54,
+        "end_line": 54,
+        "text": "started.Add",
+        "sha256": "5c9c9497da85b88b823853f762b9585c6c2c0474458bc211bc16e842ccf80fd8"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-054",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 1553,
+        "end_byte": 1564,
+        "start_line": 55,
+        "end_line": 55,
+        "text": "agent.serve",
+        "sha256": "c3822df56fa8dfca7ddf9edc86889f1f19707dde59e1e9987ac885c79c4e2233"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-055",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 1576,
+        "end_byte": 1588,
+        "start_line": 56,
+        "end_line": 56,
+        "text": "started.Wait",
+        "sha256": "98929b71059b1cb3e545d0dbb2ff343d7870c09ecb9c43acadd45fcaaef56106"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-056",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 1683,
+        "end_byte": 1701,
+        "start_line": 63,
+        "end_line": 63,
+        "text": "atomic.StoreUint32",
+        "sha256": "4f6234593f3f00067d80fa2324649948057c6028a541f62bdf74a9d2191e9452"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-057",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 1718,
+        "end_byte": 1735,
+        "start_line": 64,
+        "end_line": 64,
+        "text": "s.transport.Close",
+        "sha256": "64f418109f80978b9e1e26a2f97b956b8c945540deaffe6b24ac22cee79d00e3"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-058",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 1739,
+        "end_byte": 1758,
+        "start_line": 65,
+        "end_line": 65,
+        "text": "s.samplingSrv.Close",
+        "sha256": "de9461a7942409fee970456a8f4c5d25e792ab83ae73f3fc676c5b73099c4b3f"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-059",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 2232,
+        "end_byte": 2248,
+        "start_line": 81,
+        "end_line": 81,
+        "text": "s.transport.Addr",
+        "sha256": "0ef112d4f91fce9e53e9196ee0af3b6bf838efc46edb3f085494e314cbdde092"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-060",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 2232,
+        "end_byte": 2257,
+        "start_line": 81,
+        "end_line": 81,
+        "text": "s.transport.Addr().String",
+        "sha256": "21798039cb107fe51af15d0596ec2afd37f15b2bf23464673921bf79752cfd77"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-061",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 2422,
+        "end_byte": 2445,
+        "start_line": 86,
+        "end_line": 86,
+        "text": "utils.NewAgentClientUDP",
+        "sha256": "8b4829b81798ae970a8142b6b3e2011aa78b3fadb88de839f8568c6b319032be"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-062",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 2446,
+        "end_byte": 2462,
+        "start_line": 86,
+        "end_line": 86,
+        "text": "s.SpanServerAddr",
+        "sha256": "bf28a604b5b3c0a317da8e1348405a0c312f23eb7e6b677c5bffd654627642cb"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-063",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 2625,
+        "end_byte": 2652,
+        "start_line": 91,
+        "end_line": 91,
+        "text": "s.samplingSrv.Listener.Addr",
+        "sha256": "bed12a1e16f5212fa695929c59df4cb4bf343df3159c3e8979fc9f03ea3c8e28"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-064",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 2625,
+        "end_byte": 2661,
+        "start_line": 91,
+        "end_line": 91,
+        "text": "s.samplingSrv.Listener.Addr().String",
+        "sha256": "fc4c8975ffaf151102700a4fa4816146c7654d167865536cdafbb2f5da3a7757"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-065",
+      "role": "supported-processor-construction",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 2732,
+        "end_byte": 2755,
+        "start_line": 95,
+        "end_line": 95,
+        "text": "agent.NewAgentProcessor",
+        "sha256": "f7a2dca276de60a209266240382650160784aaaf77056784d74943063de3fadc"
+      },
+      "expected": {
+        "predicate": "REGISTERS_THRIFT_SERVICE",
+        "tier": "derived",
+        "scope_hint": "agent",
+        "service_hint": "Agent",
+        "constructor_hint": "NewAgentProcessor"
+      }
+    },
+    {
+      "id": "public-066",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 2776,
+        "end_byte": 2809,
+        "start_line": 96,
+        "end_line": 96,
+        "text": "thrift.NewTCompactProtocolFactory",
+        "sha256": "08b3188c978ecee60a9f13571dda4a81cdb2a1671af1586e12431e837186146e"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-067",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 2820,
+        "end_byte": 2824,
+        "start_line": 97,
+        "end_line": 97,
+        "text": "make",
+        "sha256": "d05aa2a15fb3c40efeeb03bec445393f00074484cf01c8fb2da90ca6695a5531"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-068",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 2895,
+        "end_byte": 2921,
+        "start_line": 98,
+        "end_line": 98,
+        "text": "thrift.NewTMemoryBufferLen",
+        "sha256": "eff844a73c3ad60296fd827cb65de37a3ed40084111093d449e8432b6f1c0155"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-069",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 2950,
+        "end_byte": 2968,
+        "start_line": 100,
+        "end_line": 100,
+        "text": "atomic.StoreUint32",
+        "sha256": "4f6234593f3f00067d80fa2324649948057c6028a541f62bdf74a9d2191e9452"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-070",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 2985,
+        "end_byte": 2997,
+        "start_line": 101,
+        "end_line": 101,
+        "text": "started.Done",
+        "sha256": "6e25d3817b609cac1b08794fb986484d02d75b762a22a9cefb15449c91f4a46b"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-071",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 3005,
+        "end_byte": 3016,
+        "start_line": 102,
+        "end_line": 102,
+        "text": "s.IsServing",
+        "sha256": "764332b466f5829e715d90078025bedc1977b2801c543df9209d30693cf91a14"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-072",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 3033,
+        "end_byte": 3049,
+        "start_line": 103,
+        "end_line": 103,
+        "text": "s.transport.Read",
+        "sha256": "7035329aaee0f7a6682556781f627ddb38c740c4be314016d9341c68a709926b"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-073",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 3076,
+        "end_byte": 3087,
+        "start_line": 105,
+        "end_line": 105,
+        "text": "trans.Write",
+        "sha256": "0a91f343a75c1b9022952bcd739acce8fbd2096a39fb42c19928be7df1c310c1"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-074",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 3112,
+        "end_byte": 3136,
+        "start_line": 106,
+        "end_line": 106,
+        "text": "protocolFact.GetProtocol",
+        "sha256": "e24c9ebb2218d20fdc93641ea603cf4183d72885739bc266c10c60c665e86171"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-075",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 3147,
+        "end_byte": 3162,
+        "start_line": 107,
+        "end_line": 107,
+        "text": "handler.Process",
+        "sha256": "9435e737d501c13392d324dc3f3f5c12b1185bdfd0981e596d66db8845d7880d"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-076",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 3163,
+        "end_byte": 3181,
+        "start_line": 107,
+        "end_line": 107,
+        "text": "context.Background",
+        "sha256": "c20446c1c42486f646978855475812647abd102e509e305aa28db39a0312a990"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-077",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 3389,
+        "end_byte": 3399,
+        "start_line": 115,
+        "end_line": 115,
+        "text": "errors.New",
+        "sha256": "f188dfa9079df067bbe4c2c338c15b0b8aa109d946813efca35d5b9d010fc366"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-078",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 3801,
+        "end_byte": 3813,
+        "start_line": 128,
+        "end_line": 128,
+        "text": "s.mutex.Lock",
+        "sha256": "c0c26d77340a7b6ccdc9cccc393605d426c8823f1efe11ac8344485d77a6c727"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-079",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 3823,
+        "end_byte": 3837,
+        "start_line": 129,
+        "end_line": 129,
+        "text": "s.mutex.Unlock",
+        "sha256": "60ba376325ce45aab39a803aff36c442ed39806fde71130c1c077fd6fd29edc6"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-080",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 3859,
+        "end_byte": 3865,
+        "start_line": 130,
+        "end_line": 130,
+        "text": "append",
+        "sha256": "ae524b54d9b5acbe3bbf0a4f4825bae82bca8b0a474878c2713394ea284ef929"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-081",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 4023,
+        "end_byte": 4040,
+        "start_line": 136,
+        "end_line": 136,
+        "text": "atomic.LoadUint32",
+        "sha256": "c896785fb42e7e1485f3f40d0769b46d167ee9a7355eb7271c1ec5288040357f"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-082",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 4209,
+        "end_byte": 4242,
+        "start_line": 141,
+        "end_line": 141,
+        "text": "s.samplingMgr.AddSamplingStrategy",
+        "sha256": "e388ed34587129909b4b325264e5e10ab9c84b97063f0587d814ac3ff64158b8"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-083",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 4378,
+        "end_byte": 4390,
+        "start_line": 146,
+        "end_line": 146,
+        "text": "s.mutex.Lock",
+        "sha256": "c0c26d77340a7b6ccdc9cccc393605d426c8823f1efe11ac8344485d77a6c727"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-084",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 4400,
+        "end_byte": 4414,
+        "start_line": 147,
+        "end_line": 147,
+        "text": "s.mutex.Unlock",
+        "sha256": "60ba376325ce45aab39a803aff36c442ed39806fde71130c1c077fd6fd29edc6"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-085",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 4423,
+        "end_byte": 4426,
+        "start_line": 148,
+        "end_line": 148,
+        "text": "len",
+        "sha256": "71fa9faaa6f884aa11f4cea21477b2204a48a4fa7f05cecad00a1250eeeffb4c"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-086",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 4456,
+        "end_byte": 4460,
+        "start_line": 149,
+        "end_line": 149,
+        "text": "make",
+        "sha256": "d05aa2a15fb3c40efeeb03bec445393f00074484cf01c8fb2da90ca6695a5531"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-087",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 4485,
+        "end_byte": 4489,
+        "start_line": 150,
+        "end_line": 150,
+        "text": "copy",
+        "sha256": "6f5a6034e770acbfb3f797e6a7eb7948d470d45f9928f92b7d72dc7c45e6d0cd"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-088",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 4637,
+        "end_byte": 4649,
+        "start_line": 156,
+        "end_line": 156,
+        "text": "s.mutex.Lock",
+        "sha256": "c0c26d77340a7b6ccdc9cccc393605d426c8823f1efe11ac8344485d77a6c727"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-089",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 4659,
+        "end_byte": 4673,
+        "start_line": 157,
+        "end_line": 157,
+        "text": "s.mutex.Unlock",
+        "sha256": "60ba376325ce45aab39a803aff36c442ed39806fde71130c1c077fd6fd29edc6"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-090",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 4852,
+        "end_byte": 4863,
+        "start_line": 166,
+        "end_line": 166,
+        "text": "r.URL.Query",
+        "sha256": "e128d6fc5b6844a9174c5bd0228d4f85578a869057e7ab2c49945b63b6487ae7"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-091",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 4881,
+        "end_byte": 4884,
+        "start_line": 167,
+        "end_line": 167,
+        "text": "len",
+        "sha256": "71fa9faaa6f884aa11f4cea21477b2204a48a4fa7f05cecad00a1250eeeffb4c"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-092",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 4904,
+        "end_byte": 4914,
+        "start_line": 168,
+        "end_line": 168,
+        "text": "http.Error",
+        "sha256": "eb63f54259db372ca08d6e416aaee10a494503d477eec0b4ce71057dee03a6e4"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-093",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 4989,
+        "end_byte": 4992,
+        "start_line": 171,
+        "end_line": 171,
+        "text": "len",
+        "sha256": "71fa9faaa6f884aa11f4cea21477b2204a48a4fa7f05cecad00a1250eeeffb4c"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-094",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 5011,
+        "end_byte": 5021,
+        "start_line": 172,
+        "end_line": 172,
+        "text": "http.Error",
+        "sha256": "eb63f54259db372ca08d6e416aaee10a494503d477eec0b4ce71057dee03a6e4"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-095",
+      "role": "unproved-generated-method-name",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 5118,
+        "end_byte": 5147,
+        "start_line": 175,
+        "end_line": 175,
+        "text": "h.manager.GetSamplingStrategy",
+        "sha256": "abf971809c552f601f7bbc50df309459b58aaceede35853d7a83665e99cd5f09"
+      },
+      "expected": {
+        "positive_claims": 0,
+        "state": "unproved receiver: local *samplingManager has no generated-client/delegation witness in the selected input"
+      }
+    },
+    {
+      "id": "public-096",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 5180,
+        "end_byte": 5190,
+        "start_line": 177,
+        "end_line": 177,
+        "text": "http.Error",
+        "sha256": "eb63f54259db372ca08d6e416aaee10a494503d477eec0b4ce71057dee03a6e4"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-097",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 5194,
+        "end_byte": 5205,
+        "start_line": 177,
+        "end_line": 177,
+        "text": "fmt.Sprintf",
+        "sha256": "45ab4b9ddb4e7c5403e6aea113ebe7cb4492da09ff2fbb7a27b8be733d27561b"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-098",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 5304,
+        "end_byte": 5316,
+        "start_line": 180,
+        "end_line": 180,
+        "text": "json.Marshal",
+        "sha256": "8653707aca29cbd43b46fad1b1e8d2eae87780e602ecd620b012a573053b5475"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-099",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 5342,
+        "end_byte": 5352,
+        "start_line": 182,
+        "end_line": 182,
+        "text": "http.Error",
+        "sha256": "eb63f54259db372ca08d6e416aaee10a494503d477eec0b4ce71057dee03a6e4"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-100",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 5435,
+        "end_byte": 5443,
+        "start_line": 185,
+        "end_line": 185,
+        "text": "w.Header",
+        "sha256": "2bc985eee9b8f430b7950dd890837f8fe59c4ddf223a3b15a92a386d5011592d"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-101",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 5435,
+        "end_byte": 5449,
+        "start_line": 185,
+        "end_line": 185,
+        "text": "w.Header().Add",
+        "sha256": "b7dd0772c05beadb9358da5d0b043c4c0abe7b06d984c9792be79fa5cc455757"
+      },
+      "expected": {}
+    },
+    {
+      "id": "public-102",
+      "role": "excluded-other-call",
+      "callee": {
+        "path": "inputs/public/testutils/mock_agent.go",
+        "start_byte": 5500,
+        "end_byte": 5507,
+        "start_line": 186,
+        "end_line": 186,
+        "text": "w.Write",
+        "sha256": "f0a90a0a081be05deb64d4713fc2305c3f057806996abe6760b76d75fe04ec04"
+      },
+      "expected": {}
+    }
+  ]
+}

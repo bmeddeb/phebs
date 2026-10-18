@@ -1,0 +1,570 @@
+{
+  "schema": "t582-finite-source-preregistration-v1",
+  "date": "2026-10-18",
+  "status": "Source inputs/oracle frozen for independent root+peer review; no candidate execution authorized by this file",
+  "source_author": "ticket_dependency_audit (source-derived and exposed; not blind)",
+  "evaluator_source_commit": "4f3e17fbd91d22589c1757c8d04768b6c9562ba7",
+  "claim": "Finite source-supported syntactic Thrift generated-method candidate and processor-construction observations, with explicit unknown/unsupported/ambiguity; no exact operation/receiver/wire/runtime/registration identity",
+  "reader_change_policy": "Evaluate existing reader unchanged first; new adapter may translate representation only after review. Never relabel negatives/unknowns or tune recognizer from outcomes.",
+  "public_population": {
+    "repository": "jaegertracing/jaeger-client-go",
+    "commit": "8d8e8fcfd04de42b8482476abac6a902fca47c18",
+    "archive_sha256": "dd82ffcd67514bc0182d522be7153864aab41c54f3bc6bfb5ab0b3a8f25f3639",
+    "selection": "3 complete handwritten purposive files + all15 complete generated Go context; historical source reused, no random/fresh/blind population inference",
+    "handwritten_files": 3,
+    "generated_go_files": 15,
+    "generated_services": 5,
+    "generated_methods": 6,
+    "call_expressions": 102,
+    "roles": {
+      "excluded-other-call": 98,
+      "supported-method-call": 2,
+      "supported-processor-construction": 1,
+      "unproved-generated-method-name": 1
+    },
+    "public_dynamic_sites": 0,
+    "public_ambiguous_sites": 0,
+    "public_unsupported_generator_sites": 0,
+    "unmeasured": "Unselected archive application files, other repositories, all Go/Thrift-at-large, runtime/deployment/traffic and exact receiver/IDL identity"
+  },
+  "controls": {
+    "cases": 26,
+    "labelled_sites": 23,
+    "roles": {
+      "ambiguous-method-call": 1,
+      "ambiguous-processor-construction": 1,
+      "client-construction-no-positive": 1,
+      "dynamic-no-positive": 3,
+      "lookalike-no-positive": 5,
+      "supported-method-call": 5,
+      "supported-processor-construction": 3,
+      "unsupported-no-positive": 3,
+      "wrapper-outer-no-positive": 1
+    },
+    "malformed_whole_file_gaps": 1,
+    "oversized_whole_file_gaps": 1,
+    "empty_cases": 1,
+    "generated_only_cases": 1,
+    "comment_string_only_cases": 1,
+    "synthetic_header_versions": [
+      "Apache legacy0.14.1",
+      "Apache modern0.19.0"
+    ],
+    "unsupported_named_generator": "CloudWeGo/thriftgo0.4.2 header, authored only"
+  },
+  "admission": {
+    "public_generator": "Apache Thrift Compiler0.14.1 modern-header Go at exact repository pin",
+    "library": "Repository-local github.com/uber/jaeger-client-go/thrift at same pin; no root go.mod/semver or runtime claim",
+    "go_source": "Syntax only; no typecheck/SSA/module downloads/client or server execution",
+    "context_scope": "Case-local explicit complete context list; never pool different cases",
+    "handwritten_source": [
+      "transport_udp.go",
+      "utils/udp_client.go",
+      "testutils/mock_agent.go"
+    ]
+  },
+  "scoring": {
+    "supported_positive_required_fraction": 1.0,
+    "required_gap_and_ambiguity_fraction": 1.0,
+    "maximum_positive_promotions_from_negative_dynamic_unknown_unsupported_or_generated": 0,
+    "maximum_unmatched_or_duplicate_assertions": 0,
+    "maximum_wrong_source_or_target_hint_or_tier": 0,
+    "output_census": "Every assertion, predicate, candidate, gap, source span and coverage state; no predicate/site filtering that hides extras",
+    "silent_unknowns": "Retain denominator and record silence separately; not explicit unresolved or analyzed coverage",
+    "finite_decision": "Any mismatch=>NO-GO, preserved first bytes; no reader/label/bound tuning after output",
+    "promotion": "No T13.1 independent accuracy/promotion or T58.3 common-bar satisfaction inferred, even on finite pass"
+  },
+  "stops": {
+    "source_or_hash_or_license_mismatch": "stop before interpreting quality",
+    "max_build_wall_seconds": 120,
+    "fresh_passes": 2,
+    "max_reader_wall_seconds_per_fresh_pass": 30,
+    "max_go_files_per_case": 64,
+    "max_input_bytes_per_case": 8388608,
+    "max_admitted_go_file_bytes": 4194304,
+    "oversize_case_bytes_offered_only_for_refusal": 4194305,
+    "max_assertions_per_case": 4096,
+    "max_encoded_output_bytes_per_case": 8388608,
+    "max_stderr_bytes": 65536,
+    "max_concurrent_reader_children": 1,
+    "retries": 0,
+    "all_children": "stop and join on every path",
+    "RSS": "observed exact direct-process only, not hard heap guarantee",
+    "CPU": "unmeasured unless an actual later CPU receipt is retained",
+    "process_model": "Exactly two sequential fresh processes; each 27 units, fresh reader/corpus/catalog per unit, under one global 30-second process deadline; no per-case reset/retry",
+    "max_offered_source_bytes_per_pass": 16777216,
+    "max_assertions_per_pass": 8192,
+    "max_stdout_bytes_per_pass": 16777216
+  },
+  "execution_status": {
+    "Go_parser": false,
+    "reader": false,
+    "exporter": false,
+    "scorer": false,
+    "build": false,
+    "generator": false,
+    "application": false,
+    "compiler": false,
+    "runtime_clients_servers": false
+  },
+  "review_requirements": [
+    "Root and peer review every explicit public/control label and all generated/source witnesses before source checkpoint",
+    "Root and peer source review exact exporter/scorer/runner and separate immutable checkpoint before first outputs",
+    "Root supplies sole serialized native/test slot; no execution authorized by source authoring"
+  ],
+  "frozen_span_round_trips": 185,
+  "all_public_generated_headers_checked": [
+    "inputs/public/thrift-gen/agent/GoUnusedProtection__.go",
+    "inputs/public/thrift-gen/agent/agent-consts.go",
+    "inputs/public/thrift-gen/agent/agent.go",
+    "inputs/public/thrift-gen/baggage/GoUnusedProtection__.go",
+    "inputs/public/thrift-gen/baggage/baggage-consts.go",
+    "inputs/public/thrift-gen/baggage/baggage.go",
+    "inputs/public/thrift-gen/jaeger/GoUnusedProtection__.go",
+    "inputs/public/thrift-gen/jaeger/jaeger-consts.go",
+    "inputs/public/thrift-gen/jaeger/jaeger.go",
+    "inputs/public/thrift-gen/sampling/GoUnusedProtection__.go",
+    "inputs/public/thrift-gen/sampling/sampling-consts.go",
+    "inputs/public/thrift-gen/sampling/sampling.go",
+    "inputs/public/thrift-gen/zipkincore/GoUnusedProtection__.go",
+    "inputs/public/thrift-gen/zipkincore/zipkincore-consts.go",
+    "inputs/public/thrift-gen/zipkincore/zipkincore.go"
+  ],
+  "inventory_encoding": "SHA256 of UTF8 JSON rows with sorted object keys, no whitespace, rows sorted lexically by relative path; excludes this self-referential preregistration.json",
+  "inventory_sha256": "1d40fcb0dee9ccdd080042f2367bef618a714b736ced0dee34880aceb0a86c40",
+  "file_count": 63,
+  "total_bytes": 821050,
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 13008,
+      "sha256": "1c15a3216d8f98ac7f6bcb0d41095decc661ce739c07ef785c2192ea217c878f"
+    },
+    {
+      "path": "author_source_labels.py",
+      "bytes": 20687,
+      "sha256": "fcc498ce80d07b8c4ec1043e7f2206ea7fe0b7c65635f4d64b05608e9148a5e6"
+    },
+    {
+      "path": "controls.json",
+      "bytes": 24444,
+      "sha256": "82db4cb821f00ac43633e3428afe1e9d87a0c17ef6219f4ddb96c2b2bb3d4f88"
+    },
+    {
+      "path": "evaluator-source.json",
+      "bytes": 1284,
+      "sha256": "9d58304fb769a3eb96df09aa65eb6ab43e0b319e4225f9d14e588cd6b3af3856"
+    },
+    {
+      "path": "generated-witnesses.json",
+      "bytes": 19338,
+      "sha256": "eb36d385f4b089b66825f1bb33e255e6636f798eedc72bdedd6716fcefa5087e"
+    },
+    {
+      "path": "inputs/authored-context/duplicate-agent.go",
+      "bytes": 12154,
+      "sha256": "bba595c5d78564e13cc55fa83f09b37871f09e160e646acc332eb6392567b737"
+    },
+    {
+      "path": "inputs/authored-context/header-string-agent.go",
+      "bytes": 12175,
+      "sha256": "fe8ae1f92640057c51417b7390eca18ac51968c523476c7c3b1fd587f1105bcf"
+    },
+    {
+      "path": "inputs/authored-context/legacy-agent.go",
+      "bytes": 12137,
+      "sha256": "15eb1f61cc10c2f4fe293e7d21f96851153ed43340106c8c370c0a2d54d86a41"
+    },
+    {
+      "path": "inputs/authored-context/modern-019-agent.go",
+      "bytes": 12164,
+      "sha256": "8a09cabc6f879b390b62e9fcc49f728893a7282e18bf601fc616e148f4f59565"
+    },
+    {
+      "path": "inputs/authored-context/unsupported-agent.go",
+      "bytes": 12142,
+      "sha256": "1374f8f97656bd603c96c90339d7076c7253c94aad6ce7c25e4b40f418034208"
+    },
+    {
+      "path": "inputs/controls/c01-direct-client.go",
+      "bytes": 240,
+      "sha256": "e94447eabb87fdcd1cb11cf99e0b83e70eaaa45edf5b95112aa33b9e2142ea04"
+    },
+    {
+      "path": "inputs/controls/c02-go-defer.go",
+      "bytes": 268,
+      "sha256": "ca60bc1173029a74b9dea498cbb9bf129747c51d8a0885248d98e903b679358c"
+    },
+    {
+      "path": "inputs/controls/c03-constructor.go",
+      "bytes": 218,
+      "sha256": "8a171850a9a453524c73cfd05d8b1be8ef799738ba805e1ca18c23b83e105159"
+    },
+    {
+      "path": "inputs/controls/c04-dot-constructor.go",
+      "bytes": 189,
+      "sha256": "03592411eaf77999dbdbab3da632237ee5a62b616b4d1ae53cd9439fa3451a4c"
+    },
+    {
+      "path": "inputs/controls/c05-foreign-receiver.go",
+      "bytes": 262,
+      "sha256": "a9ca7f8f5364721c3c54e75c4cefc5890c5f23cddcb4f543af9ea8a61d650d53"
+    },
+    {
+      "path": "inputs/controls/c06-local-constructor.go",
+      "bytes": 170,
+      "sha256": "bd228c0925fc758d38abce464bb005028a56edbe9bbfaafdc57d978c8b4d58f5"
+    },
+    {
+      "path": "inputs/controls/c07-foreign-constructor.go",
+      "bytes": 178,
+      "sha256": "6ee8fb33da9712bc5c0ce3fa76a7c844e5ca7214f37d229191be0b9f26ac3522"
+    },
+    {
+      "path": "inputs/controls/c08-shadowed-alias.go",
+      "bytes": 327,
+      "sha256": "05e72d0d9623afd6651559b3308644328a346ea740a164dfa680c07784001379"
+    },
+    {
+      "path": "inputs/controls/c09-method-value.go",
+      "bytes": 255,
+      "sha256": "04c0bbadb55f34ce0b2622081c33cbd4b2eb52fd3a30ade2e4c79c432ae154c2"
+    },
+    {
+      "path": "inputs/controls/c10-constructor-value.go",
+      "bytes": 233,
+      "sha256": "3ba2073a37b5e79eb771ba2d56465ba13718adf825e850aab87b9a65da2b1cb6"
+    },
+    {
+      "path": "inputs/controls/c11-indexed-callback.go",
+      "bytes": 382,
+      "sha256": "9c74c5c3986db3e0d0b834c18094905d138d60812efc090d97f9d737fbcf6de5"
+    },
+    {
+      "path": "inputs/controls/c12-wrapper.go",
+      "bytes": 266,
+      "sha256": "54142e3cbb576b2e2ede1b0caa77cad56e1ecb44bc888ab3a378d24c3fcb2eca"
+    },
+    {
+      "path": "inputs/controls/c13-client-construction.go",
+      "bytes": 215,
+      "sha256": "7dc950d3d1454dfc615884edeb896a5be8f03715f9efd8aaacd4d45fa74e49c2"
+    },
+    {
+      "path": "inputs/controls/c14-method-ambiguity.go",
+      "bytes": 239,
+      "sha256": "1211eac2082342ae56771e9acfdacf50884a7166ceb8b87d94c4d9f8a4e74935"
+    },
+    {
+      "path": "inputs/controls/c15-constructor-ambiguity.go",
+      "bytes": 218,
+      "sha256": "8a171850a9a453524c73cfd05d8b1be8ef799738ba805e1ca18c23b83e105159"
+    },
+    {
+      "path": "inputs/controls/c16-no-context.go",
+      "bytes": 239,
+      "sha256": "1211eac2082342ae56771e9acfdacf50884a7166ceb8b87d94c4d9f8a4e74935"
+    },
+    {
+      "path": "inputs/controls/c17-unsupported-generator.go",
+      "bytes": 239,
+      "sha256": "1211eac2082342ae56771e9acfdacf50884a7166ceb8b87d94c4d9f8a4e74935"
+    },
+    {
+      "path": "inputs/controls/c18-header-string.go",
+      "bytes": 239,
+      "sha256": "1211eac2082342ae56771e9acfdacf50884a7166ceb8b87d94c4d9f8a4e74935"
+    },
+    {
+      "path": "inputs/controls/c19-legacy-header.go",
+      "bytes": 239,
+      "sha256": "1211eac2082342ae56771e9acfdacf50884a7166ceb8b87d94c4d9f8a4e74935"
+    },
+    {
+      "path": "inputs/controls/c20-modern-019-header.go",
+      "bytes": 239,
+      "sha256": "1211eac2082342ae56771e9acfdacf50884a7166ceb8b87d94c4d9f8a4e74935"
+    },
+    {
+      "path": "inputs/controls/c21-malformed.go",
+      "bytes": 94,
+      "sha256": "8c1366e81803ca23f16f1036bed5dc0a0976a3422578b73c3dca95d58ca32e43"
+    },
+    {
+      "path": "inputs/controls/c22-empty.go",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "inputs/controls/c24-comments-strings.go",
+      "bytes": 195,
+      "sha256": "48f85dc22fb8c232878574bdb2afac6edcf92865a3667bd09b624cdae1e9c222"
+    },
+    {
+      "path": "inputs/controls/c25-handler-call.go",
+      "bytes": 383,
+      "sha256": "76cd3c05791e469bfd75f7f97f7aa6706f107ec7e7e23f515a9894129fc9693a"
+    },
+    {
+      "path": "inputs/public/LICENSE",
+      "bytes": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "path": "inputs/public/testutils/mock_agent.go",
+      "bytes": 5542,
+      "sha256": "798374736ded6bbee75889028caad4b148f2bb14e626129bdef3caaf1abd9107"
+    },
+    {
+      "path": "inputs/public/thrift-gen/agent/GoUnusedProtection__.go",
+      "bytes": 107,
+      "sha256": "0cd7d0708a2000005da27c0c3b9bd4d7d9cf25158dd26d4a30f79b5c62a416f8"
+    },
+    {
+      "path": "inputs/public/thrift-gen/agent/agent-consts.go",
+      "bytes": 548,
+      "sha256": "5b3b3271c3703a8d853ba4794db4865c98af283d30273274df246735e20f2932"
+    },
+    {
+      "path": "inputs/public/thrift-gen/agent/agent.go",
+      "bytes": 11914,
+      "sha256": "739a8db70c98c79aafbe3d6f605e519a50d978e8067c4fe67e3537e1adceb080"
+    },
+    {
+      "path": "inputs/public/thrift-gen/baggage/GoUnusedProtection__.go",
+      "bytes": 109,
+      "sha256": "35015be1159ae5d72396844f230a70f7b3dc4b7cc4802f95470d3003653d664d"
+    },
+    {
+      "path": "inputs/public/thrift-gen/baggage/baggage-consts.go",
+      "bytes": 361,
+      "sha256": "1e04940275b71928a6287874de18f71453323d7db64f1798a65f5a6c1f91bf66"
+    },
+    {
+      "path": "inputs/public/thrift-gen/baggage/baggage.go",
+      "bytes": 19975,
+      "sha256": "6ac490399eb38aae6b829bb5c01b1ccd4baa62e1da5b85d8d257b29e82e009af"
+    },
+    {
+      "path": "inputs/public/thrift-gen/jaeger/GoUnusedProtection__.go",
+      "bytes": 108,
+      "sha256": "13aeeefa5045848503e246ddaa38b6d45c83960971f7f41e3e18bcdfed9f441d"
+    },
+    {
+      "path": "inputs/public/thrift-gen/jaeger/jaeger-consts.go",
+      "bytes": 360,
+      "sha256": "598299f2e790ef206d3b4f0f0694ac1acf5ca629bcecbf6249e4386ef7eb1cee"
+    },
+    {
+      "path": "inputs/public/thrift-gen/jaeger/jaeger.go",
+      "bytes": 88028,
+      "sha256": "84aa41eff7830e23021707b4809261a3fa07196285351a8c6506fbd6e9922f46"
+    },
+    {
+      "path": "inputs/public/thrift-gen/sampling/GoUnusedProtection__.go",
+      "bytes": 110,
+      "sha256": "af1260b07ed4cc7efb987de8471a86a975c4cab927341fc754bd842e1953933f"
+    },
+    {
+      "path": "inputs/public/thrift-gen/sampling/sampling-consts.go",
+      "bytes": 362,
+      "sha256": "6418f31d36a8d19326add1eb391321b1fcde770fa83d98dab59aa0a3f23e71ea"
+    },
+    {
+      "path": "inputs/public/thrift-gen/sampling/sampling.go",
+      "bytes": 48733,
+      "sha256": "d551fc830ea6302a2fd81958a7d18d477ceeca30b64bc22e6db1e7cf5806f232"
+    },
+    {
+      "path": "inputs/public/thrift-gen/zipkincore/GoUnusedProtection__.go",
+      "bytes": 112,
+      "sha256": "c4f77a2ed041c07277e145552bd6055c3215f55444629a99db1510982718140e"
+    },
+    {
+      "path": "inputs/public/thrift-gen/zipkincore/zipkincore-consts.go",
+      "bytes": 807,
+      "sha256": "9a94397377f01c46cbf8c35da001ac0e9810a388b58a9c2d545a4ef131db367c"
+    },
+    {
+      "path": "inputs/public/thrift-gen/zipkincore/zipkincore.go",
+      "bytes": 62351,
+      "sha256": "dfc067bf29f6200b5555a39188f90ac99f995f2996aea45256b741ec0bddd472"
+    },
+    {
+      "path": "inputs/public/transport_udp.go",
+      "bytes": 6205,
+      "sha256": "6e5ebbfa2698e1820af25cf63c641a94bfe5dc037f995ad91ab70b3f326f3981"
+    },
+    {
+      "path": "inputs/public/utils/udp_client.go",
+      "bytes": 4612,
+      "sha256": "b20bbf2404f53f684183c46180e8772d7bf24f47a26a7ba9c69e2fdbf676ddbe"
+    },
+    {
+      "path": "inputs/public.tar.gz",
+      "bytes": 232668,
+      "sha256": "dd82ffcd67514bc0182d522be7153864aab41c54f3bc6bfb5ab0b3a8f25f3639"
+    },
+    {
+      "path": "licenses/jaeger-client-go.LICENSE",
+      "bytes": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "path": "oversized-source.json",
+      "bytes": 212,
+      "sha256": "79a513f9694d4f238bb8355c37e50943880b479f4fb086fd4178df87abca13ef"
+    },
+    {
+      "path": "pre-review/preregistration-v0.json",
+      "bytes": 16891,
+      "sha256": "0736d49631380cf4b59b6d802da41d35c20e7da7333ee5505795714274235ada"
+    },
+    {
+      "path": "pre-review/public-sites-v0.json",
+      "bytes": 41889,
+      "sha256": "74c18ae54857879e98d5f62d571fb0f7fb9bc7189b80b578e5691b643ef731ea"
+    },
+    {
+      "path": "precheckpoint-review-correction.json",
+      "bytes": 3531,
+      "sha256": "5ca5e6c99804189136e29ac44030cb17eea73fe38cc5f6a2df2476f8f216933b"
+    },
+    {
+      "path": "public-positive-traces.json",
+      "bytes": 4455,
+      "sha256": "811a0bbe77cacfb2cd68fe8174372f89477187c63547653bd638f300caf5e2fa"
+    },
+    {
+      "path": "public-sites.json",
+      "bytes": 42282,
+      "sha256": "5f680a9668332cd92bc0ab7aefb927a7d7bd1bf471869253a000b6f25fd32918"
+    },
+    {
+      "path": "source-inputs.json",
+      "bytes": 58163,
+      "sha256": "622cbe2debd3645b9d7cbb97adb7fa21bc7860d1717582e92b47c31f169f7df9"
+    },
+    {
+      "path": "source-review-notes.json",
+      "bytes": 2841,
+      "sha256": "fe32e9ae6963acb4c3d7fb33c704d74eafaecff41e2970aac3ff3e6a3f5f756f"
+    }
+  ],
+  "prospective_source_cost": {
+    "units_per_pass": 27,
+    "source_bytes_offered_across_units": 9436787,
+    "units": [
+      {
+        "id": "public",
+        "source_bytes": 250344
+      },
+      {
+        "id": "c01-direct-client",
+        "source_bytes": 234225
+      },
+      {
+        "id": "c02-go-defer",
+        "source_bytes": 234253
+      },
+      {
+        "id": "c03-constructor",
+        "source_bytes": 234203
+      },
+      {
+        "id": "c04-dot-constructor",
+        "source_bytes": 234174
+      },
+      {
+        "id": "c05-foreign-receiver",
+        "source_bytes": 234247
+      },
+      {
+        "id": "c06-local-constructor",
+        "source_bytes": 234155
+      },
+      {
+        "id": "c07-foreign-constructor",
+        "source_bytes": 234163
+      },
+      {
+        "id": "c08-shadowed-alias",
+        "source_bytes": 234312
+      },
+      {
+        "id": "c09-method-value",
+        "source_bytes": 234240
+      },
+      {
+        "id": "c10-constructor-value",
+        "source_bytes": 234218
+      },
+      {
+        "id": "c11-indexed-callback",
+        "source_bytes": 234367
+      },
+      {
+        "id": "c12-wrapper",
+        "source_bytes": 234251
+      },
+      {
+        "id": "c13-client-construction",
+        "source_bytes": 234200
+      },
+      {
+        "id": "c14-method-ambiguity",
+        "source_bytes": 246378
+      },
+      {
+        "id": "c15-constructor-ambiguity",
+        "source_bytes": 246357
+      },
+      {
+        "id": "c16-no-context",
+        "source_bytes": 239
+      },
+      {
+        "id": "c17-unsupported-generator",
+        "source_bytes": 12381
+      },
+      {
+        "id": "c18-header-string",
+        "source_bytes": 12414
+      },
+      {
+        "id": "c19-legacy-header",
+        "source_bytes": 12376
+      },
+      {
+        "id": "c20-modern-019-header",
+        "source_bytes": 12403
+      },
+      {
+        "id": "c21-malformed",
+        "source_bytes": 234079
+      },
+      {
+        "id": "c22-empty",
+        "source_bytes": 233985
+      },
+      {
+        "id": "c23-generated-only",
+        "source_bytes": 233985
+      },
+      {
+        "id": "c24-comments-strings",
+        "source_bytes": 234180
+      },
+      {
+        "id": "c25-handler-call",
+        "source_bytes": 234368
+      },
+      {
+        "id": "c26-oversized",
+        "source_bytes": 4428290
+      }
+    ],
+    "logical_reader_read_bound": "At most twice offered Go bytes under the two-pass reader model; actual reads/accounting retained later. No application/source execution."
+  },
+  "precheckpoint_review_corrections": "precheckpoint-review-correction.json; prior preregistration and incomplete census preserved as superseded preparation in pre-review/. No candidate/scorer/build outcome."
+}

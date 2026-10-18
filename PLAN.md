@@ -13524,3 +13524,20 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   tables distinguish source, execution and final-artifact censuses. No product
   request/sync/startup/retry/publication, lock/cache/schema, worker or child work
   is added; the finite checks are opt-in evidence only.
+
+- **2026-10-18 — T58.2 independent Thrift syntactic preregistration (Ben-routed Mac handoff).**
+  Freeze one licensed historical public source purpose sample and independent
+  authored controls before unchanged-reader execution. Three complete handwritten
+  files plus fifteen generated context files expose102call expressions: two
+  supported wrapper/client candidates, one processor construction, one unproved
+  generated-name site and98exclusions. Twenty-six authored cases retain foreign/
+  local/shadow/handler lookalikes, dynamic/unsupported/ambiguous/file-gap states.
+  Every source label and literal service/method witness is independently reviewed;
+  exposure is disclosed, never blind. Correct the omitted file initializer and
+  derivative modification notices before any candidate output. Two fresh serial
+  processes each get27isolated case catalogs and one30-second pass deadline,
+  not27reset deadlines. All emissions and gaps enter scoring; mismatch means
+  NO-GO without relabeling or reader tuning. No exact operation/receiver/wire/
+  runtime/registration identity or T58.3 release is inferred. Source preparation
+  adds no production request/sync/startup/retry/publication, cache/lock/schema
+  or child work. Adapter review and first finite measurement remain separate.

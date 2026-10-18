@@ -21037,6 +21037,17 @@ scale or SLO claim follows.*
 freeze thriftgo/other admitted generator/library shapes and input identity;
 measure unsupported/dynamic/ambiguous cases and registration claims separately.
 
+**T58.2 source checkpoint (2026-10-18, Ben-routed Mac handoff).**
+`spike/t582/` preregisters102public call expressions plus26authored cases with
+independently reviewed source-derived labels and disclosed reader exposure.
+The public2call candidates/1construction/1unproved site/98exclusions and185
+source witnesses remain separate from inherited field/gRPC results. Correct
+initializer census and Apache derivative notices before candidate output.
+No exact wire/runtime/receiver/registration claim or release follows. Two fresh
+serial unchanged-reader processes each have27isolated units under one30s
+deadline. Exporter/scorer review and immutable execution checkpoint remain
+required; any measured mismatch is retained NO-GO without post-output tuning.
+
 **T58.3 · Independent stable recipe registration and measured promotion** —
 satisfy the common bar per protocol/claim, retain proof/coverage/HTTP/MCP
 parity, and expose only admitted matching evidence. These results neither

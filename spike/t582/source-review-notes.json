@@ -1,0 +1,53 @@
+{
+  "schema": "t582-source-only-oracle-authoring-v1",
+  "date": "2026-10-18",
+  "phase": "prospective, no Go parser/reader/export/scorer/build executed",
+  "read_completely": [
+    "inputs/public/transport_udp.go",
+    "inputs/public/utils/udp_client.go",
+    "inputs/public/testutils/mock_agent.go"
+  ],
+  "generated_review": "All five service/interface/client/processor-constructor sections and six method/Call-literal/processor-map correspondences read; all fifteen generated headers checked by literal line; no generated execution.",
+  "public_call_census_authoring": "102 hand-selected call expressions; nested calls, builtins/conversions and go/defer counted. author_source_labels.py only locates explicit literal text on chosen lines and verifies spans, with no Go grammar/classifier.",
+  "metadata_only_preparation_stop": {
+    "operation": "Select root go.mod from pinned tar metadata",
+    "outcome": "No root go.mod exists; StopIteration before any file write. No parser/build/application executed. No module version inferred; source-inputs unchanged."
+  },
+  "public_unproved_site": {
+    "path": "testutils/mock_agent.go",
+    "line": 175,
+    "callee": "h.manager.GetSamplingStrategy",
+    "receiver_declaration": "manager *samplingManager",
+    "classification": "unproved target; no selected generated-client/delegation witness; neither true RPC nor semantic non-RPC is asserted",
+    "required": "No positive CALLS_OPERATION promotion; silence vs explicit unresolved measured separately"
+  },
+  "helper_checks": {
+    "span_round_trips": 185,
+    "all_exact": true
+  },
+  "independence": "Source-derived labels, known historic corpus and disclosed reader-source exposure; root/peer independent complete review required. No blind or generalized accuracy claim.",
+  "source_shape_unknowns": [
+    "No root go.mod / semver admission for repository-local thrift runtime",
+    "Only public modern Apache0.14.1; legacy and0.19.0 are authored header shapes",
+    "No CloudWeGo thriftgo admission",
+    "No runtime registration/client/traffic or exact IDL/receiver/cross-module identity"
+  ],
+  "public_roles": {
+    "excluded-other-call": 98,
+    "supported-method-call": 2,
+    "supported-processor-construction": 1,
+    "unproved-generated-method-name": 1
+  },
+  "control_roles": {
+    "ambiguous-method-call": 1,
+    "ambiguous-processor-construction": 1,
+    "client-construction-no-positive": 1,
+    "dynamic-no-positive": 3,
+    "lookalike-no-positive": 5,
+    "supported-method-call": 5,
+    "supported-processor-construction": 3,
+    "unsupported-no-positive": 3,
+    "wrapper-outer-no-positive": 1
+  },
+  "independent_review_correction": "See precheckpoint-review-correction.json; initializer added, in-file Apache modification notices appended, global two-pass process bounds clarified before any candidate execution."
+}

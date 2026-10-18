@@ -1,0 +1,788 @@
+{
+  "schema": "t582-independent-authored-controls-v1",
+  "origin": "Authored source controls; no candidate outputs used. Context variants are disclosed byte edits of licensed frozen public Agent Go; not generator executions.",
+  "contexts": {
+    "public": [
+      {
+        "logical_path": "thrift-gen/agent/GoUnusedProtection__.go",
+        "input": "inputs/public/thrift-gen/agent/GoUnusedProtection__.go"
+      },
+      {
+        "logical_path": "thrift-gen/agent/agent-consts.go",
+        "input": "inputs/public/thrift-gen/agent/agent-consts.go"
+      },
+      {
+        "logical_path": "thrift-gen/agent/agent.go",
+        "input": "inputs/public/thrift-gen/agent/agent.go"
+      },
+      {
+        "logical_path": "thrift-gen/baggage/GoUnusedProtection__.go",
+        "input": "inputs/public/thrift-gen/baggage/GoUnusedProtection__.go"
+      },
+      {
+        "logical_path": "thrift-gen/baggage/baggage-consts.go",
+        "input": "inputs/public/thrift-gen/baggage/baggage-consts.go"
+      },
+      {
+        "logical_path": "thrift-gen/baggage/baggage.go",
+        "input": "inputs/public/thrift-gen/baggage/baggage.go"
+      },
+      {
+        "logical_path": "thrift-gen/jaeger/GoUnusedProtection__.go",
+        "input": "inputs/public/thrift-gen/jaeger/GoUnusedProtection__.go"
+      },
+      {
+        "logical_path": "thrift-gen/jaeger/jaeger-consts.go",
+        "input": "inputs/public/thrift-gen/jaeger/jaeger-consts.go"
+      },
+      {
+        "logical_path": "thrift-gen/jaeger/jaeger.go",
+        "input": "inputs/public/thrift-gen/jaeger/jaeger.go"
+      },
+      {
+        "logical_path": "thrift-gen/sampling/GoUnusedProtection__.go",
+        "input": "inputs/public/thrift-gen/sampling/GoUnusedProtection__.go"
+      },
+      {
+        "logical_path": "thrift-gen/sampling/sampling-consts.go",
+        "input": "inputs/public/thrift-gen/sampling/sampling-consts.go"
+      },
+      {
+        "logical_path": "thrift-gen/sampling/sampling.go",
+        "input": "inputs/public/thrift-gen/sampling/sampling.go"
+      },
+      {
+        "logical_path": "thrift-gen/zipkincore/GoUnusedProtection__.go",
+        "input": "inputs/public/thrift-gen/zipkincore/GoUnusedProtection__.go"
+      },
+      {
+        "logical_path": "thrift-gen/zipkincore/zipkincore-consts.go",
+        "input": "inputs/public/thrift-gen/zipkincore/zipkincore-consts.go"
+      },
+      {
+        "logical_path": "thrift-gen/zipkincore/zipkincore.go",
+        "input": "inputs/public/thrift-gen/zipkincore/zipkincore.go"
+      }
+    ],
+    "none": [],
+    "duplicate-agent": [
+      {
+        "logical_path": "thrift-gen/agent/GoUnusedProtection__.go",
+        "input": "inputs/public/thrift-gen/agent/GoUnusedProtection__.go"
+      },
+      {
+        "logical_path": "thrift-gen/agent/agent-consts.go",
+        "input": "inputs/public/thrift-gen/agent/agent-consts.go"
+      },
+      {
+        "logical_path": "thrift-gen/agent/agent.go",
+        "input": "inputs/public/thrift-gen/agent/agent.go"
+      },
+      {
+        "logical_path": "thrift-gen/baggage/GoUnusedProtection__.go",
+        "input": "inputs/public/thrift-gen/baggage/GoUnusedProtection__.go"
+      },
+      {
+        "logical_path": "thrift-gen/baggage/baggage-consts.go",
+        "input": "inputs/public/thrift-gen/baggage/baggage-consts.go"
+      },
+      {
+        "logical_path": "thrift-gen/baggage/baggage.go",
+        "input": "inputs/public/thrift-gen/baggage/baggage.go"
+      },
+      {
+        "logical_path": "thrift-gen/jaeger/GoUnusedProtection__.go",
+        "input": "inputs/public/thrift-gen/jaeger/GoUnusedProtection__.go"
+      },
+      {
+        "logical_path": "thrift-gen/jaeger/jaeger-consts.go",
+        "input": "inputs/public/thrift-gen/jaeger/jaeger-consts.go"
+      },
+      {
+        "logical_path": "thrift-gen/jaeger/jaeger.go",
+        "input": "inputs/public/thrift-gen/jaeger/jaeger.go"
+      },
+      {
+        "logical_path": "thrift-gen/sampling/GoUnusedProtection__.go",
+        "input": "inputs/public/thrift-gen/sampling/GoUnusedProtection__.go"
+      },
+      {
+        "logical_path": "thrift-gen/sampling/sampling-consts.go",
+        "input": "inputs/public/thrift-gen/sampling/sampling-consts.go"
+      },
+      {
+        "logical_path": "thrift-gen/sampling/sampling.go",
+        "input": "inputs/public/thrift-gen/sampling/sampling.go"
+      },
+      {
+        "logical_path": "thrift-gen/zipkincore/GoUnusedProtection__.go",
+        "input": "inputs/public/thrift-gen/zipkincore/GoUnusedProtection__.go"
+      },
+      {
+        "logical_path": "thrift-gen/zipkincore/zipkincore-consts.go",
+        "input": "inputs/public/thrift-gen/zipkincore/zipkincore-consts.go"
+      },
+      {
+        "logical_path": "thrift-gen/zipkincore/zipkincore.go",
+        "input": "inputs/public/thrift-gen/zipkincore/zipkincore.go"
+      },
+      {
+        "logical_path": "thrift-gen/otheragent/otheragent.go",
+        "input": "inputs/authored-context/duplicate-agent.go"
+      }
+    ],
+    "unsupported-agent": [
+      {
+        "logical_path": "thrift-gen/agent/agent.go",
+        "input": "inputs/authored-context/unsupported-agent.go"
+      }
+    ],
+    "header-string-agent": [
+      {
+        "logical_path": "thrift-gen/agent/agent.go",
+        "input": "inputs/authored-context/header-string-agent.go"
+      }
+    ],
+    "legacy-agent": [
+      {
+        "logical_path": "thrift-gen/agent/agent.go",
+        "input": "inputs/authored-context/legacy-agent.go"
+      }
+    ],
+    "modern-019-agent": [
+      {
+        "logical_path": "thrift-gen/agent/agent.go",
+        "input": "inputs/authored-context/modern-019-agent.go"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "id": "c01-direct-client",
+      "kind": "supported-call",
+      "source": "inputs/controls/c01-direct-client.go",
+      "context": "public",
+      "sites": [
+        {
+          "site": {
+            "path": "inputs/controls/c01-direct-client.go",
+            "start_byte": 217,
+            "end_byte": 228,
+            "start_line": 4,
+            "end_line": 4,
+            "text": "c.EmitBatch",
+            "sha256": "6e37ce883859144143dd2074a901a45337d7c029db1f1d1cbbc78e1d4d5fb624"
+          },
+          "role": "supported-method-call",
+          "expected": {
+            "predicate": "CALLS_OPERATION",
+            "tier": "heuristic",
+            "scope_hint": "agent",
+            "service_hint": "Agent",
+            "method_hint": "EmitBatch",
+            "wire_hint": "emitBatch"
+          }
+        }
+      ],
+      "required_file_outcome": null
+    },
+    {
+      "id": "c02-go-defer",
+      "kind": "supported-call",
+      "source": "inputs/controls/c02-go-defer.go",
+      "context": "public",
+      "sites": [
+        {
+          "site": {
+            "path": "inputs/controls/c02-go-defer.go",
+            "start_byte": 217,
+            "end_byte": 228,
+            "start_line": 5,
+            "end_line": 5,
+            "text": "c.EmitBatch",
+            "sha256": "6e37ce883859144143dd2074a901a45337d7c029db1f1d1cbbc78e1d4d5fb624"
+          },
+          "role": "supported-method-call",
+          "expected": {
+            "predicate": "CALLS_OPERATION",
+            "tier": "heuristic",
+            "scope_hint": "agent",
+            "service_hint": "Agent",
+            "method_hint": "EmitBatch",
+            "wire_hint": "emitBatch"
+          }
+        },
+        {
+          "site": {
+            "path": "inputs/controls/c02-go-defer.go",
+            "start_byte": 245,
+            "end_byte": 256,
+            "start_line": 6,
+            "end_line": 6,
+            "text": "c.EmitBatch",
+            "sha256": "6e37ce883859144143dd2074a901a45337d7c029db1f1d1cbbc78e1d4d5fb624"
+          },
+          "role": "supported-method-call",
+          "expected": {
+            "predicate": "CALLS_OPERATION",
+            "tier": "heuristic",
+            "scope_hint": "agent",
+            "service_hint": "Agent",
+            "method_hint": "EmitBatch",
+            "wire_hint": "emitBatch"
+          }
+        }
+      ],
+      "required_file_outcome": null
+    },
+    {
+      "id": "c03-constructor",
+      "kind": "supported-construction",
+      "source": "inputs/controls/c03-constructor.go",
+      "context": "public",
+      "sites": [
+        {
+          "site": {
+            "path": "inputs/controls/c03-constructor.go",
+            "start_byte": 189,
+            "end_byte": 212,
+            "start_line": 4,
+            "end_line": 4,
+            "text": "agent.NewAgentProcessor",
+            "sha256": "f7a2dca276de60a209266240382650160784aaaf77056784d74943063de3fadc"
+          },
+          "role": "supported-processor-construction",
+          "expected": {
+            "predicate": "REGISTERS_THRIFT_SERVICE",
+            "tier": "derived",
+            "scope_hint": "agent",
+            "service_hint": "Agent",
+            "constructor_hint": "NewAgentProcessor"
+          }
+        }
+      ],
+      "required_file_outcome": null
+    },
+    {
+      "id": "c04-dot-constructor",
+      "kind": "supported-construction",
+      "source": "inputs/controls/c04-dot-constructor.go",
+      "context": "public",
+      "sites": [
+        {
+          "site": {
+            "path": "inputs/controls/c04-dot-constructor.go",
+            "start_byte": 166,
+            "end_byte": 183,
+            "start_line": 4,
+            "end_line": 4,
+            "text": "NewAgentProcessor",
+            "sha256": "1d084f82093a92ea01942482b1270c72e8bc19cada48a5ab7856d35e90ddcb82"
+          },
+          "role": "supported-processor-construction",
+          "expected": {
+            "predicate": "REGISTERS_THRIFT_SERVICE",
+            "tier": "derived",
+            "scope_hint": "agent",
+            "service_hint": "Agent",
+            "constructor_hint": "NewAgentProcessor"
+          }
+        }
+      ],
+      "required_file_outcome": null
+    },
+    {
+      "id": "c05-foreign-receiver",
+      "kind": "semantic-lookalike",
+      "source": "inputs/controls/c05-foreign-receiver.go",
+      "context": "public",
+      "sites": [
+        {
+          "site": {
+            "path": "inputs/controls/c05-foreign-receiver.go",
+            "start_byte": 239,
+            "end_byte": 250,
+            "start_line": 6,
+            "end_line": 6,
+            "text": "o.EmitBatch",
+            "sha256": "227d3da757056fef86a91e8958ef57607eb7edba5abde5ff5c7f3250c7f7a617"
+          },
+          "role": "lookalike-no-positive",
+          "expected": {}
+        }
+      ],
+      "required_file_outcome": null
+    },
+    {
+      "id": "c06-local-constructor",
+      "kind": "semantic-lookalike",
+      "source": "inputs/controls/c06-local-constructor.go",
+      "context": "public",
+      "sites": [
+        {
+          "site": {
+            "path": "inputs/controls/c06-local-constructor.go",
+            "start_byte": 145,
+            "end_byte": 167,
+            "start_line": 4,
+            "end_line": 4,
+            "text": "NewAgentProcessor(nil)",
+            "sha256": "d1c73936c79c9778c2c0a5e058de9f6e857226b8738e4fa09cfd7947f3a194e0"
+          },
+          "role": "lookalike-no-positive",
+          "expected": {}
+        }
+      ],
+      "required_file_outcome": null
+    },
+    {
+      "id": "c07-foreign-constructor",
+      "kind": "semantic-lookalike",
+      "source": "inputs/controls/c07-foreign-constructor.go",
+      "context": "public",
+      "sites": [
+        {
+          "site": {
+            "path": "inputs/controls/c07-foreign-constructor.go",
+            "start_byte": 147,
+            "end_byte": 170,
+            "start_line": 4,
+            "end_line": 4,
+            "text": "alien.NewAgentProcessor",
+            "sha256": "bebc1ed157061e2d827873e9b49fef4e9678d199f2c008186c95d78df8585fd2"
+          },
+          "role": "lookalike-no-positive",
+          "expected": {}
+        }
+      ],
+      "required_file_outcome": null
+    },
+    {
+      "id": "c08-shadowed-alias",
+      "kind": "semantic-lookalike",
+      "source": "inputs/controls/c08-shadowed-alias.go",
+      "context": "public",
+      "sites": [
+        {
+          "site": {
+            "path": "inputs/controls/c08-shadowed-alias.go",
+            "start_byte": 296,
+            "end_byte": 324,
+            "start_line": 9,
+            "end_line": 9,
+            "text": "agent.NewAgentProcessor(nil)",
+            "sha256": "b88b03754d0cda569b61b386e86b7d43f0438f5f1b18892e8c1de030ad9c4a70"
+          },
+          "role": "lookalike-no-positive",
+          "expected": {}
+        }
+      ],
+      "required_file_outcome": null
+    },
+    {
+      "id": "c09-method-value",
+      "kind": "dynamic",
+      "source": "inputs/controls/c09-method-value.go",
+      "context": "public",
+      "sites": [
+        {
+          "site": {
+            "path": "inputs/controls/c09-method-value.go",
+            "start_byte": 239,
+            "end_byte": 252,
+            "start_line": 6,
+            "end_line": 6,
+            "text": "call(ctx,nil)",
+            "sha256": "4e8239ce6fd7ad57468d8884ba65ab2cc8e423ede5830ea08a7aac342325fc50"
+          },
+          "role": "dynamic-no-positive",
+          "expected": {}
+        }
+      ],
+      "required_file_outcome": null
+    },
+    {
+      "id": "c10-constructor-value",
+      "kind": "dynamic",
+      "source": "inputs/controls/c10-constructor-value.go",
+      "context": "public",
+      "sites": [
+        {
+          "site": {
+            "path": "inputs/controls/c10-constructor-value.go",
+            "start_byte": 223,
+            "end_byte": 230,
+            "start_line": 6,
+            "end_line": 6,
+            "text": "ctor(h)",
+            "sha256": "65e79766f2dfb234e3572c9cb2d5b90a32d56ccb7b53a573428099f927445bf1"
+          },
+          "role": "dynamic-no-positive",
+          "expected": {}
+        }
+      ],
+      "required_file_outcome": null
+    },
+    {
+      "id": "c11-indexed-callback",
+      "kind": "dynamic",
+      "source": "inputs/controls/c11-indexed-callback.go",
+      "context": "public",
+      "sites": [
+        {
+          "site": {
+            "path": "inputs/controls/c11-indexed-callback.go",
+            "start_byte": 354,
+            "end_byte": 379,
+            "start_line": 6,
+            "end_line": 6,
+            "text": "callbacks[index](ctx,nil)",
+            "sha256": "e4ed21b1a76def4551761fd61b0bd6d4a584d840ff9f1bb2b2f39e455a3bf566"
+          },
+          "role": "dynamic-no-positive",
+          "expected": {}
+        }
+      ],
+      "required_file_outcome": null
+    },
+    {
+      "id": "c12-wrapper",
+      "kind": "wrapper",
+      "source": "inputs/controls/c12-wrapper.go",
+      "context": "public",
+      "sites": [
+        {
+          "site": {
+            "path": "inputs/controls/c12-wrapper.go",
+            "start_byte": 195,
+            "end_byte": 218,
+            "start_line": 4,
+            "end_line": 4,
+            "text": "agent.NewAgentProcessor",
+            "sha256": "f7a2dca276de60a209266240382650160784aaaf77056784d74943063de3fadc"
+          },
+          "role": "supported-processor-construction",
+          "expected": {
+            "predicate": "REGISTERS_THRIFT_SERVICE",
+            "tier": "derived",
+            "scope_hint": "agent",
+            "service_hint": "Agent",
+            "constructor_hint": "NewAgentProcessor"
+          }
+        },
+        {
+          "site": {
+            "path": "inputs/controls/c12-wrapper.go",
+            "start_byte": 256,
+            "end_byte": 263,
+            "start_line": 5,
+            "end_line": 5,
+            "text": "wrap(h)",
+            "sha256": "37f2cb76c4ad12ead30505c87d4943434ba857923519ab90fa7212a694a08fe4"
+          },
+          "role": "wrapper-outer-no-positive",
+          "expected": {}
+        }
+      ],
+      "required_file_outcome": null
+    },
+    {
+      "id": "c13-client-construction",
+      "kind": "excluded",
+      "source": "inputs/controls/c13-client-construction.go",
+      "context": "public",
+      "sites": [
+        {
+          "site": {
+            "path": "inputs/controls/c13-client-construction.go",
+            "start_byte": 176,
+            "end_byte": 203,
+            "start_line": 4,
+            "end_line": 4,
+            "text": "agent.NewAgentClientFactory",
+            "sha256": "0b19a275f79ee50ef9e0ef20dc9a6356108832b6a5d9d64b9faf145a95395338"
+          },
+          "role": "client-construction-no-positive",
+          "expected": {}
+        }
+      ],
+      "required_file_outcome": null
+    },
+    {
+      "id": "c14-method-ambiguity",
+      "kind": "ambiguity",
+      "source": "inputs/controls/c14-method-ambiguity.go",
+      "context": "duplicate-agent",
+      "sites": [
+        {
+          "site": {
+            "path": "inputs/controls/c14-method-ambiguity.go",
+            "start_byte": 216,
+            "end_byte": 227,
+            "start_line": 4,
+            "end_line": 4,
+            "text": "c.EmitBatch",
+            "sha256": "6e37ce883859144143dd2074a901a45337d7c029db1f1d1cbbc78e1d4d5fb624"
+          },
+          "role": "ambiguous-method-call",
+          "expected": {
+            "predicate": "UNRESOLVED_THRIFT_CALL",
+            "candidate_count": 2,
+            "candidates": [
+              {
+                "scope_hint": "agent",
+                "service_hint": "Agent",
+                "wire_hint": "emitBatch"
+              },
+              {
+                "scope_hint": "otheragent",
+                "service_hint": "Agent",
+                "wire_hint": "emitBatch"
+              }
+            ]
+          }
+        }
+      ],
+      "required_file_outcome": null
+    },
+    {
+      "id": "c15-constructor-ambiguity",
+      "kind": "ambiguity",
+      "source": "inputs/controls/c15-constructor-ambiguity.go",
+      "context": "duplicate-agent",
+      "sites": [
+        {
+          "site": {
+            "path": "inputs/controls/c15-constructor-ambiguity.go",
+            "start_byte": 189,
+            "end_byte": 212,
+            "start_line": 4,
+            "end_line": 4,
+            "text": "agent.NewAgentProcessor",
+            "sha256": "f7a2dca276de60a209266240382650160784aaaf77056784d74943063de3fadc"
+          },
+          "role": "ambiguous-processor-construction",
+          "expected": {
+            "predicate": "UNRESOLVED_THRIFT_REGISTRATION",
+            "candidate_count": 2,
+            "candidates": [
+              {
+                "scope_hint": "agent",
+                "service_hint": "Agent"
+              },
+              {
+                "scope_hint": "otheragent",
+                "service_hint": "Agent"
+              }
+            ]
+          }
+        }
+      ],
+      "required_file_outcome": null
+    },
+    {
+      "id": "c16-no-context",
+      "kind": "unsupported-context",
+      "source": "inputs/controls/c16-no-context.go",
+      "context": "none",
+      "sites": [
+        {
+          "site": {
+            "path": "inputs/controls/c16-no-context.go",
+            "start_byte": 216,
+            "end_byte": 227,
+            "start_line": 4,
+            "end_line": 4,
+            "text": "c.EmitBatch",
+            "sha256": "6e37ce883859144143dd2074a901a45337d7c029db1f1d1cbbc78e1d4d5fb624"
+          },
+          "role": "unsupported-no-positive",
+          "expected": {}
+        }
+      ],
+      "required_file_outcome": null
+    },
+    {
+      "id": "c17-unsupported-generator",
+      "kind": "unsupported-context",
+      "source": "inputs/controls/c17-unsupported-generator.go",
+      "context": "unsupported-agent",
+      "sites": [
+        {
+          "site": {
+            "path": "inputs/controls/c17-unsupported-generator.go",
+            "start_byte": 216,
+            "end_byte": 227,
+            "start_line": 4,
+            "end_line": 4,
+            "text": "c.EmitBatch",
+            "sha256": "6e37ce883859144143dd2074a901a45337d7c029db1f1d1cbbc78e1d4d5fb624"
+          },
+          "role": "unsupported-no-positive",
+          "expected": {}
+        }
+      ],
+      "required_file_outcome": null
+    },
+    {
+      "id": "c18-header-string",
+      "kind": "unsupported-context",
+      "source": "inputs/controls/c18-header-string.go",
+      "context": "header-string-agent",
+      "sites": [
+        {
+          "site": {
+            "path": "inputs/controls/c18-header-string.go",
+            "start_byte": 216,
+            "end_byte": 227,
+            "start_line": 4,
+            "end_line": 4,
+            "text": "c.EmitBatch",
+            "sha256": "6e37ce883859144143dd2074a901a45337d7c029db1f1d1cbbc78e1d4d5fb624"
+          },
+          "role": "unsupported-no-positive",
+          "expected": {}
+        }
+      ],
+      "required_file_outcome": null
+    },
+    {
+      "id": "c19-legacy-header",
+      "kind": "synthetic-version",
+      "source": "inputs/controls/c19-legacy-header.go",
+      "context": "legacy-agent",
+      "sites": [
+        {
+          "site": {
+            "path": "inputs/controls/c19-legacy-header.go",
+            "start_byte": 216,
+            "end_byte": 227,
+            "start_line": 4,
+            "end_line": 4,
+            "text": "c.EmitBatch",
+            "sha256": "6e37ce883859144143dd2074a901a45337d7c029db1f1d1cbbc78e1d4d5fb624"
+          },
+          "role": "supported-method-call",
+          "expected": {
+            "predicate": "CALLS_OPERATION",
+            "tier": "heuristic",
+            "scope_hint": "agent",
+            "service_hint": "Agent",
+            "method_hint": "EmitBatch",
+            "wire_hint": "emitBatch"
+          }
+        }
+      ],
+      "required_file_outcome": null
+    },
+    {
+      "id": "c20-modern-019-header",
+      "kind": "synthetic-version",
+      "source": "inputs/controls/c20-modern-019-header.go",
+      "context": "modern-019-agent",
+      "sites": [
+        {
+          "site": {
+            "path": "inputs/controls/c20-modern-019-header.go",
+            "start_byte": 216,
+            "end_byte": 227,
+            "start_line": 4,
+            "end_line": 4,
+            "text": "c.EmitBatch",
+            "sha256": "6e37ce883859144143dd2074a901a45337d7c029db1f1d1cbbc78e1d4d5fb624"
+          },
+          "role": "supported-method-call",
+          "expected": {
+            "predicate": "CALLS_OPERATION",
+            "tier": "heuristic",
+            "scope_hint": "agent",
+            "service_hint": "Agent",
+            "method_hint": "EmitBatch",
+            "wire_hint": "emitBatch"
+          }
+        }
+      ],
+      "required_file_outcome": null
+    },
+    {
+      "id": "c21-malformed",
+      "kind": "file-gap",
+      "source": "inputs/controls/c21-malformed.go",
+      "context": "public",
+      "sites": [],
+      "required_file_outcome": {
+        "predicate": "THRIFT_EXTRACTION_GAP",
+        "reason": "parse_error",
+        "positive_claims": 0
+      }
+    },
+    {
+      "id": "c22-empty",
+      "kind": "empty",
+      "source": "inputs/controls/c22-empty.go",
+      "context": "public",
+      "sites": [],
+      "required_file_outcome": {
+        "gap_claims": 0,
+        "positive_claims": 0
+      }
+    },
+    {
+      "id": "c23-generated-only",
+      "kind": "generated-only",
+      "source": null,
+      "context": "public",
+      "sites": [],
+      "required_file_outcome": {
+        "positive_claims": 0,
+        "gap_claims": 0
+      }
+    },
+    {
+      "id": "c24-comments-strings",
+      "kind": "excluded",
+      "source": "inputs/controls/c24-comments-strings.go",
+      "context": "public",
+      "sites": [],
+      "required_file_outcome": {
+        "positive_claims": 0,
+        "gap_claims": 0
+      }
+    },
+    {
+      "id": "c25-handler-call",
+      "kind": "semantic-lookalike",
+      "source": "inputs/controls/c25-handler-call.go",
+      "context": "public",
+      "sites": [
+        {
+          "site": {
+            "path": "inputs/controls/c25-handler-call.go",
+            "start_byte": 360,
+            "end_byte": 371,
+            "start_line": 6,
+            "end_line": 6,
+            "text": "h.EmitBatch",
+            "sha256": "bcc681c3133d3784ced267fa57ebf735d4c245109eb728822502b9301fbffc31"
+          },
+          "role": "lookalike-no-positive",
+          "expected": {}
+        }
+      ],
+      "required_file_outcome": null
+    },
+    {
+      "id": "c26-oversized",
+      "kind": "file-gap",
+      "source": null,
+      "source_recipe": "oversized-source.json",
+      "context": "public",
+      "sites": [],
+      "required_file_outcome": {
+        "predicate": "THRIFT_EXTRACTION_GAP",
+        "reason": "source_too_large",
+        "positive_claims": 0
+      }
+    }
+  ]
+}

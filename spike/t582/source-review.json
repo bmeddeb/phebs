@@ -1,0 +1,13 @@
+{
+  "schema": "phebs-t582-source-review-v1",
+  "date": "2026-10-18",
+  "preregistration_sha256": "6e9f39ad56cbba47eb4a5ea74630b3a33f8b747ac6c4db7d1256ccaf84fd51e5",
+  "inventory_sha256": "1d40fcb0dee9ccdd080042f2367bef618a714b736ced0dee34880aceb0a86c40",
+  "accepted": "Source freeze only. No exporter/scorer/native/reader execution until separate immutable implementation review.",
+  "root_review": "Read complete public handwritten source and every102call-census label/control expectation; explicit delegation witnesses distinguish two wrapper/client candidates from unproved sampling receiver. Archive/license/provenance/caps and no-tuning policy reviewed. Exact wire/runtime/receiver/registration identity is not claimed.",
+  "peer_review": "receipt_portability read all3files/26controls/five context variants and generated correspondences;185spans checked; no remaining oracle defect after two prospective corrections.",
+  "corrections_before_candidate": "Add omitted errors.New file initializer and five Apache modification notices; retain superseded source-preparation drafts, no candidate output existed.",
+  "process_model": "Exactly two fresh sequential reader children, each with27fresh case-local catalogs and a single30s deadline; no per-case reset, retry or concurrency.",
+  "cost": "Offline syntax parsing only, no production code, typecheck/SSA/module download/generator/client/server; whole-file/gap/output/total-source ceilings explicit.",
+  "next": "Minimum adapter for unchanged reader +all-emission scorer/runner. Failure stays NO-GO, no label or recognizer tuning."
+}

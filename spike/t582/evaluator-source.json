@@ -1,0 +1,23 @@
+{
+  "schema": "t582-prospective-reader-source-v1",
+  "source_commit": "4f3e17fbd91d22589c1757c8d04768b6c9562ba7",
+  "source_tree": "0768a4bac3a6dc16a1575a005c380ce838e0f6d7",
+  "tracked_reader_changes": "",
+  "files": [
+    {
+      "path": "internal/extract/extractors/thriftgo/thriftgo.go",
+      "bytes": 21661,
+      "sha256": "1d9de89d362e357e16dc2efd12e2bcba3677a02ee2e30c033744c6e1bacd2f76",
+      "role": "existing reader source; tests hashed, not used as label truth"
+    },
+    {
+      "path": "internal/extract/extractors/thriftgo/thriftgo_test.go",
+      "bytes": 11001,
+      "sha256": "2b214a0734a8186e2dca0147723cbbd669cbe66227fb3beaf881bdd6af4600e4",
+      "role": "existing reader source; tests hashed, not used as label truth"
+    }
+  ],
+  "adapter_status": "not authored; must be separately reviewed/checkpointed before candidate, without changing frozen truth",
+  "dependency_binding": "Whole evaluator commit/tree fixed; later adapter receipt additionally binds compiled source/dependency/tool metadata.",
+  "prior_exposure": "Author previously read first-pass/name-index comments/setup and pack-card historical limits; not a blind author. Current label authoring uses complete selected application files and explicit generated source spans, not outputs/tests."
+}
