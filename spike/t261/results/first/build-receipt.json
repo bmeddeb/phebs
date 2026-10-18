@@ -1,0 +1,306 @@
+{
+  "git_head_at_build": "004e3224dcd499524fe52692cd14c446144b3c5d",
+  "git_qualification": "source inventory includes uncommitted evaluator bytes; HEAD is checkpoint lineage, not false immutable evaluator provenance",
+  "go_binary_sha256": "3925fc3221ac440ebf7c35361ff663bed0c7bdb2e0a157b75fe993607ffe0a19",
+  "go_version": "go version go1.26.5 darwin/arm64",
+  "host": {
+    "machine": "arm64",
+    "system": "macOS-26.6.2-arm64-arm-64bit"
+  },
+  "input_checkpoint": "1f8970fe58f82bc648bf0e9fe1b7dd5b4443b76c",
+  "input_verification": {
+    "bytes": 4439033,
+    "contract_sha256": "9568cf9cce51f30bfd38c131d4ba8a6502ad9c0a777d743e9b5b6cd330d7031c",
+    "files": 419,
+    "history_sha256": "ad65ad9aa90313cfc371662a3a37cf528c190212d971ebac2bb443c595f5d056",
+    "preregistration_sha256": "791585bd54e5a03ccdfbda033884229a48c2006e9ac822ad7265091605e962e9"
+  },
+  "lanes": {
+    "mysql-imported": {
+      "argv": [
+        "go",
+        "build",
+        "-mod=mod",
+        "-trimpath",
+        "-buildvcs=false",
+        "-o",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t261-40koc7g8/mysql-imported",
+        "."
+      ],
+      "binary": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t261-40koc7g8/mysql-imported",
+      "binary_bytes": 4007634,
+      "binary_sha256": "97dd3a6d474c89ff3cc05f9903cb581cde68e856061d6dc1f52cd836d3d92901",
+      "cwd": "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261/reader/candidates/mysql",
+      "exact_child_wait4_maxrss_bytes": 147963904,
+      "exit": 0,
+      "go_build_info": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t261-40koc7g8/mysql-imported: go1.26.5\n\tpath\tphebs-spike-t261-mysql\n\tmod\tphebs-spike-t261-mysql\t(devel)\t\n\tdep\tgithub.com/xwb1989/sqlparser\tv0.0.0-20180606152119-120387863bf2\th1:zzrxE1FKn5ryBNl9eKOeqQ58Y/Qpo3Q9QNxKHX5uzzQ=\n\tdep\tphebs-spike-t261\tv0.0.0\n\t=>\t../..\t(devel)\t\n\t\n\tbuild\t-buildmode=exe\n\tbuild\t-compiler=gc\n\tbuild\t-trimpath=true\n\tbuild\tCGO_ENABLED=1\n\tbuild\tGOARCH=arm64\n\tbuild\tGOOS=darwin\n\tbuild\tGOARM64=v8.0\n",
+      "joined": true,
+      "output_limit_bytes": 67108864,
+      "peak_observed_rss_bytes": 30441472,
+      "rss_qualification": "observed stop, not hard heap or allocation bound;20ms plus scheduling/measurement overshoot; wait4 peak may exceed sampled current RSS",
+      "rss_stop_bytes": null,
+      "sample_errors": 0,
+      "samples": 16,
+      "sampling_interval_seconds": 0.02,
+      "stderr_bytes": 0,
+      "stderr_limit_bytes": 65536,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stop": null,
+      "wall_limit_seconds": 240,
+      "wall_seconds": 0.414875
+    },
+    "mysql-subset": {
+      "argv": [
+        "go",
+        "build",
+        "-mod=mod",
+        "-trimpath",
+        "-buildvcs=false",
+        "-o",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t261-40koc7g8/mysql-subset",
+        "-ldflags=-X main.Dialect=mysql",
+        "./cmd/subset"
+      ],
+      "binary": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t261-40koc7g8/mysql-subset",
+      "binary_bytes": 3513298,
+      "binary_sha256": "749fbf4aaa7024e6c029535a1c590b93837c1b478b6045b701ef4a13061caad7",
+      "cwd": "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261/reader",
+      "exact_child_wait4_maxrss_bytes": 84590592,
+      "exit": 0,
+      "go_build_info": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t261-40koc7g8/mysql-subset: go1.26.5\n\tpath\tphebs-spike-t261/cmd/subset\n\tmod\tphebs-spike-t261\t(devel)\t\n\tbuild\t-buildmode=exe\n\tbuild\t-compiler=gc\n\tbuild\t-trimpath=true\n\tbuild\tCGO_ENABLED=1\n\tbuild\tGOARCH=arm64\n\tbuild\tGOOS=darwin\n\tbuild\tGOARM64=v8.0\n",
+      "joined": true,
+      "output_limit_bytes": 67108864,
+      "peak_observed_rss_bytes": 28934144,
+      "rss_qualification": "observed stop, not hard heap or allocation bound;20ms plus scheduling/measurement overshoot; wait4 peak may exceed sampled current RSS",
+      "rss_stop_bytes": null,
+      "sample_errors": 0,
+      "samples": 5,
+      "sampling_interval_seconds": 0.02,
+      "stderr_bytes": 0,
+      "stderr_limit_bytes": 65536,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stop": null,
+      "wall_limit_seconds": 240,
+      "wall_seconds": 0.13
+    },
+    "postgresql-imported": {
+      "argv": [
+        "go",
+        "build",
+        "-mod=mod",
+        "-trimpath",
+        "-buildvcs=false",
+        "-o",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t261-40koc7g8/postgresql-imported",
+        "."
+      ],
+      "binary": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t261-40koc7g8/postgresql-imported",
+      "binary_bytes": 14463042,
+      "binary_sha256": "dcdde90d79232cc20e71f9453ccd4e92b7c7101654437d4763c02c5c8e2e5d77",
+      "cwd": "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261/reader/candidates/postgresql",
+      "exact_child_wait4_maxrss_bytes": 347504640,
+      "exit": 0,
+      "go_build_info": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t261-40koc7g8/postgresql-imported: go1.26.5\n\tpath\tphebs-spike-t261-postgresql\n\tmod\tphebs-spike-t261-postgresql\t(devel)\t\n\tdep\tgithub.com/pganalyze/pg_query_go/v6\tv6.2.5\th1:i7dvkA5167th3rXtk0jv9+r5DeJd4GqeGOVKuMTda8s=\n\tdep\tgoogle.golang.org/protobuf\tv1.33.0\th1:uNO2rsAINq/JlFpSdYEKIZ0uKD/R9cpdv0T+yoGwGmI=\n\tdep\tphebs-spike-t261\tv0.0.0\n\t=>\t../..\t(devel)\t\n\t\n\tbuild\t-buildmode=exe\n\tbuild\t-compiler=gc\n\tbuild\t-trimpath=true\n\tbuild\tCGO_ENABLED=1\n\tbuild\tGOARCH=arm64\n\tbuild\tGOOS=darwin\n\tbuild\tGOARM64=v8.0\n",
+      "joined": true,
+      "output_limit_bytes": 67108864,
+      "peak_observed_rss_bytes": 34275328,
+      "rss_qualification": "observed stop, not hard heap or allocation bound;20ms plus scheduling/measurement overshoot; wait4 peak may exceed sampled current RSS",
+      "rss_stop_bytes": null,
+      "sample_errors": 0,
+      "samples": 194,
+      "sampling_interval_seconds": 0.02,
+      "stderr_bytes": 0,
+      "stderr_limit_bytes": 65536,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stop": null,
+      "wall_limit_seconds": 240,
+      "wall_seconds": 5.123934
+    },
+    "postgresql-subset": {
+      "argv": [
+        "go",
+        "build",
+        "-mod=mod",
+        "-trimpath",
+        "-buildvcs=false",
+        "-o",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t261-40koc7g8/postgresql-subset",
+        "-ldflags=-X main.Dialect=postgresql",
+        "./cmd/subset"
+      ],
+      "binary": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t261-40koc7g8/postgresql-subset",
+      "binary_bytes": 3513298,
+      "binary_sha256": "9beb9a21ad32a1db864c2e7bf60f5f912981aea2af49dd68a28dc4d544c3891b",
+      "cwd": "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261/reader",
+      "exact_child_wait4_maxrss_bytes": 83869696,
+      "exit": 0,
+      "go_build_info": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t261-40koc7g8/postgresql-subset: go1.26.5\n\tpath\tphebs-spike-t261/cmd/subset\n\tmod\tphebs-spike-t261\t(devel)\t\n\tbuild\t-buildmode=exe\n\tbuild\t-compiler=gc\n\tbuild\t-trimpath=true\n\tbuild\tCGO_ENABLED=1\n\tbuild\tGOARCH=arm64\n\tbuild\tGOOS=darwin\n\tbuild\tGOARM64=v8.0\n",
+      "joined": true,
+      "output_limit_bytes": 67108864,
+      "peak_observed_rss_bytes": 29032448,
+      "rss_qualification": "observed stop, not hard heap or allocation bound;20ms plus scheduling/measurement overshoot; wait4 peak may exceed sampled current RSS",
+      "rss_stop_bytes": null,
+      "sample_errors": 0,
+      "samples": 17,
+      "sampling_interval_seconds": 0.02,
+      "stderr_bytes": 0,
+      "stderr_limit_bytes": 65536,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stop": null,
+      "wall_limit_seconds": 240,
+      "wall_seconds": 0.435171
+    }
+  },
+  "source_after_build": [
+    {
+      "bytes": 6449,
+      "path": "comparison-contract.json",
+      "sha256": "9568cf9cce51f30bfd38c131d4ba8a6502ad9c0a777d743e9b5b6cd330d7031c"
+    },
+    {
+      "bytes": 179,
+      "path": "reader/candidates/mysql/go.mod",
+      "sha256": "80b1e38b3bb37379c6678249b917ed8085c8d7c4a6dc3165a2739dc69f4dcaf0"
+    },
+    {
+      "bytes": 231,
+      "path": "reader/candidates/mysql/go.sum",
+      "sha256": "4d2770255e36a7367b3f5824061f61254e70be55dbc95eef862d4d897cd51a8a"
+    },
+    {
+      "bytes": 840,
+      "path": "reader/candidates/mysql/main.go",
+      "sha256": "9de7e4fc15ea8ce56bab0721c56a69dde9103848b1c2c9bc189bda3373ecff32"
+    },
+    {
+      "bytes": 219,
+      "path": "reader/candidates/postgresql/go.mod",
+      "sha256": "99cfcd590c61c17a7aef5bc36b0e63f2635788bbb6da3ac7c501969d2dd64e58"
+    },
+    {
+      "bytes": 758,
+      "path": "reader/candidates/postgresql/go.sum",
+      "sha256": "a8635280c8fae499381906a6c28111fee46ed9303c20f5eb6be8bf4f40ce926b"
+    },
+    {
+      "bytes": 1504,
+      "path": "reader/candidates/postgresql/main.go",
+      "sha256": "8bdc681eb66db96d9ae826cf3a1dfd845399390a1491bdf2e7751bf2dd0e957f"
+    },
+    {
+      "bytes": 388,
+      "path": "reader/cmd/subset/main.go",
+      "sha256": "c0c4454bf0bd4a65e6cc18a44fd45c34fbce3aacca295c652c4ad25e37208f2d"
+    },
+    {
+      "bytes": 35,
+      "path": "reader/go.mod",
+      "sha256": "72cb7829d57ecc402b1e1d1d133008a288de03e1b5486deb1fa20e5408d8b291"
+    },
+    {
+      "bytes": 7144,
+      "path": "reader/lexer.go",
+      "sha256": "4f4b6824b60086994a9490f8c0a5d8297d52a49c1f7ecc4549d7b43fe55e7a7c"
+    },
+    {
+      "bytes": 21014,
+      "path": "reader/project.go",
+      "sha256": "77b91107fe4a2eadce49f035fb14464a3cb156733a3c0c7807ce63c93571eee7"
+    },
+    {
+      "bytes": 5509,
+      "path": "reader/reader_test.go",
+      "sha256": "8be6f5bbdc65f4f3168cf338ade4da1c13e0bcb2927ecf646719ddb702480b74"
+    },
+    {
+      "bytes": 11836,
+      "path": "reader/run.go",
+      "sha256": "7981c3fe38d1ab2273111afaef0b97f137fa1c52c6c98758d39df50fda802de9"
+    },
+    {
+      "bytes": 20014,
+      "path": "run_comparison.py",
+      "sha256": "833d3e95f93b43cd957d3dae31538f563d5b841841124eaf425b5e9bc946e3c5"
+    }
+  ],
+  "source_at_build_start": [
+    {
+      "bytes": 6449,
+      "path": "comparison-contract.json",
+      "sha256": "9568cf9cce51f30bfd38c131d4ba8a6502ad9c0a777d743e9b5b6cd330d7031c"
+    },
+    {
+      "bytes": 179,
+      "path": "reader/candidates/mysql/go.mod",
+      "sha256": "80b1e38b3bb37379c6678249b917ed8085c8d7c4a6dc3165a2739dc69f4dcaf0"
+    },
+    {
+      "bytes": 119,
+      "path": "reader/candidates/mysql/go.sum",
+      "sha256": "db46dae82450dc09dadf65f376562df5ab1521a8ffacd48b46be2a35c8b4cbae"
+    },
+    {
+      "bytes": 840,
+      "path": "reader/candidates/mysql/main.go",
+      "sha256": "9de7e4fc15ea8ce56bab0721c56a69dde9103848b1c2c9bc189bda3373ecff32"
+    },
+    {
+      "bytes": 163,
+      "path": "reader/candidates/postgresql/go.mod",
+      "sha256": "befccbe56c54db1302b0a6345705c3611ac6fae4afffabaaa68094709d5a9387"
+    },
+    {
+      "bytes": 758,
+      "path": "reader/candidates/postgresql/go.sum",
+      "sha256": "a8635280c8fae499381906a6c28111fee46ed9303c20f5eb6be8bf4f40ce926b"
+    },
+    {
+      "bytes": 1504,
+      "path": "reader/candidates/postgresql/main.go",
+      "sha256": "8bdc681eb66db96d9ae826cf3a1dfd845399390a1491bdf2e7751bf2dd0e957f"
+    },
+    {
+      "bytes": 388,
+      "path": "reader/cmd/subset/main.go",
+      "sha256": "c0c4454bf0bd4a65e6cc18a44fd45c34fbce3aacca295c652c4ad25e37208f2d"
+    },
+    {
+      "bytes": 35,
+      "path": "reader/go.mod",
+      "sha256": "72cb7829d57ecc402b1e1d1d133008a288de03e1b5486deb1fa20e5408d8b291"
+    },
+    {
+      "bytes": 7144,
+      "path": "reader/lexer.go",
+      "sha256": "4f4b6824b60086994a9490f8c0a5d8297d52a49c1f7ecc4549d7b43fe55e7a7c"
+    },
+    {
+      "bytes": 21014,
+      "path": "reader/project.go",
+      "sha256": "77b91107fe4a2eadce49f035fb14464a3cb156733a3c0c7807ce63c93571eee7"
+    },
+    {
+      "bytes": 5509,
+      "path": "reader/reader_test.go",
+      "sha256": "8be6f5bbdc65f4f3168cf338ade4da1c13e0bcb2927ecf646719ddb702480b74"
+    },
+    {
+      "bytes": 11836,
+      "path": "reader/run.go",
+      "sha256": "7981c3fe38d1ab2273111afaef0b97f137fa1c52c6c98758d39df50fda802de9"
+    },
+    {
+      "bytes": 20014,
+      "path": "run_comparison.py",
+      "sha256": "833d3e95f93b43cd957d3dae31538f563d5b841841124eaf425b5e9bc946e3c5"
+    }
+  ]
+}

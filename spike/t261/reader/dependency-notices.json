@@ -1,0 +1,41 @@
+{
+  "licenses_read_before_imported_build": true,
+  "notices": [
+    {
+      "path": "reader/notices/pg_query_go.LICENSE",
+      "bytes": 1561,
+      "sha256": "7752b24a3cb4bee5270c2ee8a3a7609fd57ce9dccb2e8b5757fdeca04bb03960",
+      "scope": "direct/runtime"
+    },
+    {
+      "path": "reader/notices/pg_query_go.LICENSE.POSTGRESQL",
+      "bytes": 1337,
+      "sha256": "28e429702de70abfa1b7e4cb5d9e486bd9469f1eab5b392f704b65de09334d8d",
+      "scope": "direct/runtime"
+    },
+    {
+      "path": "reader/notices/sqlparser.LICENSE.md",
+      "bytes": 11356,
+      "sha256": "43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1",
+      "scope": "direct/runtime"
+    },
+    {
+      "path": "reader/notices/protobuf.LICENSE",
+      "bytes": 1479,
+      "sha256": "4835612df0098ca95f8e7d9e3bffcb02358d435dbb38057c844c99d7f725eb20",
+      "scope": "direct/runtime"
+    },
+    {
+      "path": "reader/notices/go-cmp.LICENSE",
+      "bytes": 1479,
+      "sha256": "17b5d209ba8f9684257ecfcff87df6ceda6194143a8fbd074f29727cff6f0c40",
+      "scope": "upstream test/module-graph only; not imported by reader"
+    },
+    {
+      "path": "reader/notices/hujson.LICENSE",
+      "bytes": 1478,
+      "sha256": "a125b6c2721809b6c2a8761771932611833008ed8697d752b3e35d36e4bbd83e",
+      "scope": "upstream test/module-graph only; not imported by reader"
+    }
+  ]
+}

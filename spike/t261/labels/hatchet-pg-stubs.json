@@ -1,0 +1,914 @@
+{
+  "format": "t261-source-labels-v1",
+  "dialect": "postgresql",
+  "repository": "hatchet-dev/hatchet",
+  "commit": "559b5021e418f12ded175f950b709b7fa66be5a5",
+  "source_path": "sql/schema/pg-stubs.sql",
+  "source_sha256": "2237ab343ee0bc688e059e6004bd8f55fb2fc99a4301d79b91de76ef3c7a2a2d",
+  "plane": "sql-schema",
+  "statements": [
+    {
+      "id": "view-pg_stat_user_tables",
+      "start": 72,
+      "end": 973,
+      "sha256": "24a8ad2494cc0a725b8877d9df0f05c71a860a3c38a6c07fb259b66a738f6a72",
+      "syntax_class": "create-view",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "view",
+          "name": "pg_stat_user_tables",
+          "quoted": false,
+          "start": 84,
+          "end": 103,
+          "sha256": "461303ab641d76a2ca38bb971f6a81852061a8559bb266063d77c7c6a8ec8ed5",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "relid",
+          "quoted": false,
+          "start": 131,
+          "end": 136,
+          "sha256": "78d8b6da76ce00e7228f27e36faed9d424750e5058ba177017de6635fd273c98",
+          "relation": "pg_stat_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "schemaname",
+          "quoted": false,
+          "start": 156,
+          "end": 166,
+          "sha256": "6c7ad61095aed9d5213637dda4ef2814aeaf99e5cee95e6876818908f919d534",
+          "relation": "pg_stat_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "relname",
+          "quoted": false,
+          "start": 186,
+          "end": 193,
+          "sha256": "93e660d1c6310b642c4d60a2069e8cc7eb42af2a1cf6472dfe297860acddfe74",
+          "relation": "pg_stat_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "seq_scan",
+          "quoted": false,
+          "start": 215,
+          "end": 223,
+          "sha256": "78f3bce73899e979951ab89f1ef4bb88ef320ece10122482e6582366176ec1a8",
+          "relation": "pg_stat_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "seq_tup_read",
+          "quoted": false,
+          "start": 245,
+          "end": 257,
+          "sha256": "cc7d40e36a40211188e7101e3fb08b060fa17d61b414370945bbe630c7502a0e",
+          "relation": "pg_stat_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "idx_scan",
+          "quoted": false,
+          "start": 279,
+          "end": 287,
+          "sha256": "1b85c068b7828c8f41e3529979cb4698b550bbd9f9dfb0b715ab31787a06ec41",
+          "relation": "pg_stat_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "idx_tup_fetch",
+          "quoted": false,
+          "start": 309,
+          "end": 322,
+          "sha256": "e47c3ab0cd27496fc7f477650c18030a11c7371e11320e6bff8fcdeda1556864",
+          "relation": "pg_stat_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "n_tup_ins",
+          "quoted": false,
+          "start": 344,
+          "end": 353,
+          "sha256": "05ec5e36930609a2714e5c2e325f2c4ad54d14f406000cb7c4e501fec3b1177a",
+          "relation": "pg_stat_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "n_tup_upd",
+          "quoted": false,
+          "start": 375,
+          "end": 384,
+          "sha256": "f8d780ad8bbf2be8450e4558153b209dc9f43f30ef07665d8c6f843019aa0b1a",
+          "relation": "pg_stat_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "n_tup_del",
+          "quoted": false,
+          "start": 406,
+          "end": 415,
+          "sha256": "badcf2c38ac494e803aa50909ea0dc4f7d83bba98b081864b04899dc0f3a552f",
+          "relation": "pg_stat_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "n_tup_hot_upd",
+          "quoted": false,
+          "start": 437,
+          "end": 450,
+          "sha256": "f67649d3b43276d8ccc8226b8ede4dd9fc33218be08404bae5255449587457a0",
+          "relation": "pg_stat_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "n_live_tup",
+          "quoted": false,
+          "start": 472,
+          "end": 482,
+          "sha256": "34db6cc0e27b15fe9412602c05ef64637303ac9e84eacf6dcfbd4539aac4597a",
+          "relation": "pg_stat_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "n_dead_tup",
+          "quoted": false,
+          "start": 504,
+          "end": 514,
+          "sha256": "f3b7105c201d6f57a8a945f36bcb349d50d7e0a76bcb8cfa427bc0d08c8f0907",
+          "relation": "pg_stat_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "n_mod_since_analyze",
+          "quoted": false,
+          "start": 536,
+          "end": 555,
+          "sha256": "33ad9780300b05960e0488db062a23942ca7698abe3d9c7675d4dfe17cc9accb",
+          "relation": "pg_stat_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "n_ins_since_vacuum",
+          "quoted": false,
+          "start": 577,
+          "end": 595,
+          "sha256": "5e7e77069054f934f96d8e87e8791cec95ebd40db815ad4fcddba858058d4440",
+          "relation": "pg_stat_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "vacuum_count",
+          "quoted": false,
+          "start": 617,
+          "end": 629,
+          "sha256": "e2b4b6a3b23ad28757508ed981b830ed977e0d5a92452c051c16a3fac371fcf7",
+          "relation": "pg_stat_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "autovacuum_count",
+          "quoted": false,
+          "start": 651,
+          "end": 667,
+          "sha256": "bed96f198eacc3bbe8301529ba4392e4ec2c328da6ce0ea6ee446eacc241aac5",
+          "relation": "pg_stat_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "analyze_count",
+          "quoted": false,
+          "start": 689,
+          "end": 702,
+          "sha256": "d1c55a05ae4ad025e425af8c31a32de08cd7e67f1d07c1946c82da9804bd20d0",
+          "relation": "pg_stat_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "autoanalyze_count",
+          "quoted": false,
+          "start": 724,
+          "end": 741,
+          "sha256": "d8c73b1d15c1ffef07aa8985613a3d029a83755c49ee8edb5fa93dd09798ce74",
+          "relation": "pg_stat_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "last_vacuum",
+          "quoted": false,
+          "start": 781,
+          "end": 792,
+          "sha256": "c6f582b807b13afcb9936f9b7c8f4402bcb710c7bae9dbb615be0d1b345b7c43",
+          "relation": "pg_stat_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "last_autovacuum",
+          "quoted": false,
+          "start": 832,
+          "end": 847,
+          "sha256": "fb8c24ce87ca7602e2452966f336a3cf3303554337c7c7b69a9f3810ff3b9d90",
+          "relation": "pg_stat_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "last_analyze",
+          "quoted": false,
+          "start": 887,
+          "end": 899,
+          "sha256": "3b1420b5e3aec50f412d6bfcd6404400a1dca1b48357399691e454ad8b391200",
+          "relation": "pg_stat_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "last_autoanalyze",
+          "quoted": false,
+          "start": 939,
+          "end": 955,
+          "sha256": "0a4b0ca377d5d66c767a929546063e8b2d0ddf33274d20ba4656d626bac51087",
+          "relation": "pg_stat_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        }
+      ],
+      "note": "Explicit NULL/WHERE false sqlc tooling model; never a real pg_catalog or live PostgreSQL declaration."
+    },
+    {
+      "id": "view-pg_statio_user_tables",
+      "start": 974,
+      "end": 1399,
+      "sha256": "fe9215918ce85e1d3d4b56bf78b9f14a314d88077b091f76b3c30197b72166ea",
+      "syntax_class": "create-view",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "view",
+          "name": "pg_statio_user_tables",
+          "quoted": false,
+          "start": 986,
+          "end": 1007,
+          "sha256": "20553f2242c5271196e0d3870a636e37aa08e4a7be3292d9290cb20db8561142",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "relid",
+          "quoted": false,
+          "start": 1035,
+          "end": 1040,
+          "sha256": "78d8b6da76ce00e7228f27e36faed9d424750e5058ba177017de6635fd273c98",
+          "relation": "pg_statio_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "schemaname",
+          "quoted": false,
+          "start": 1060,
+          "end": 1070,
+          "sha256": "6c7ad61095aed9d5213637dda4ef2814aeaf99e5cee95e6876818908f919d534",
+          "relation": "pg_statio_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "relname",
+          "quoted": false,
+          "start": 1090,
+          "end": 1097,
+          "sha256": "93e660d1c6310b642c4d60a2069e8cc7eb42af2a1cf6472dfe297860acddfe74",
+          "relation": "pg_statio_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "heap_blks_read",
+          "quoted": false,
+          "start": 1119,
+          "end": 1133,
+          "sha256": "06dd008357b344d3adb9ee21be02ea33604bad5c97d69ee57fdb13202c161607",
+          "relation": "pg_statio_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "heap_blks_hit",
+          "quoted": false,
+          "start": 1155,
+          "end": 1168,
+          "sha256": "ce97be1f94b4bf454984f2a25e5ce7d5bda6ba0509bd45de0a4e3151195299fa",
+          "relation": "pg_statio_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "idx_blks_read",
+          "quoted": false,
+          "start": 1190,
+          "end": 1203,
+          "sha256": "8d1217bccc81a88b3d73a97f4a720bd5f1b3831a9da94d89094154a4cc2662f4",
+          "relation": "pg_statio_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "idx_blks_hit",
+          "quoted": false,
+          "start": 1225,
+          "end": 1237,
+          "sha256": "59ae1851aa002714699bfd8e66d31334f317d2c588e320d8ca19ccf8af49fc65",
+          "relation": "pg_statio_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "toast_blks_read",
+          "quoted": false,
+          "start": 1259,
+          "end": 1274,
+          "sha256": "a7d83b13ea04f3861d502241c8cdc899f141d71965c975b37d1f08a16093646b",
+          "relation": "pg_statio_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "toast_blks_hit",
+          "quoted": false,
+          "start": 1296,
+          "end": 1310,
+          "sha256": "492725c3bdd2adea87999a31636b68734385bf6df76c3df4252037c63b58c486",
+          "relation": "pg_statio_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "tidx_blks_read",
+          "quoted": false,
+          "start": 1332,
+          "end": 1346,
+          "sha256": "a940022f54cb00f2626cefe2026ee0853e16e2d8ccf556fdc70ac544f1f65f2c",
+          "relation": "pg_statio_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "tidx_blks_hit",
+          "quoted": false,
+          "start": 1368,
+          "end": 1381,
+          "sha256": "d9e4df1ba34fbec71362cb67051080bd0a2a5d8f3fd352d2f16657098106f5c6",
+          "relation": "pg_statio_user_tables",
+          "source_role": "sqlc-tooling-stub"
+        }
+      ],
+      "note": "Explicit NULL/WHERE false sqlc tooling model; never a real pg_catalog or live PostgreSQL declaration."
+    },
+    {
+      "id": "view-pg_available_extensions",
+      "start": 1400,
+      "end": 1585,
+      "sha256": "c61451f8d7a8a002fc6c9ec157c84f659952f8dbecc6bc71d45b203feca99f61",
+      "syntax_class": "create-view",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "view",
+          "name": "pg_available_extensions",
+          "quoted": false,
+          "start": 1412,
+          "end": 1435,
+          "sha256": "bd7b5fb67ca5a83b8410300383d030dafd94e05f443f1e9dafeffea92dcaad3c",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "name",
+          "quoted": false,
+          "start": 1464,
+          "end": 1468,
+          "sha256": "82a3537ff0dbce7eec35d69edc3a189ee6f17d82f353a553f9aa96cb0be3ce89",
+          "relation": "pg_available_extensions",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "default_version",
+          "quoted": false,
+          "start": 1488,
+          "end": 1503,
+          "sha256": "949d7525900b62e01f213c377120d47fdc87cff93fa472cb40b84df9d22c2596",
+          "relation": "pg_available_extensions",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "installed_version",
+          "quoted": false,
+          "start": 1523,
+          "end": 1540,
+          "sha256": "d3bd5c85e14ac0424042da8963e68dfd6321babb7e31d6870161f9419248c611",
+          "relation": "pg_available_extensions",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "comment",
+          "quoted": false,
+          "start": 1560,
+          "end": 1567,
+          "sha256": "c44bb2fd516909dab78ae0bfedcd5672b131b996c4b7a4328ee55fba170da776",
+          "relation": "pg_available_extensions",
+          "source_role": "sqlc-tooling-stub"
+        }
+      ],
+      "note": "Explicit NULL/WHERE false sqlc tooling model; never a real pg_catalog or live PostgreSQL declaration."
+    },
+    {
+      "id": "view-pg_stat_statements",
+      "start": 1586,
+      "end": 2321,
+      "sha256": "8a49eeed7804aaa309e16c0e7ccb142df31bcda848b9507fe02c97b509788cbb",
+      "syntax_class": "create-view",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "view",
+          "name": "pg_stat_statements",
+          "quoted": false,
+          "start": 1598,
+          "end": 1616,
+          "sha256": "983c807eb973a66d0dc27886530381868dcbc4202511d144e6d7fe1b258b27c2",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "userid",
+          "quoted": false,
+          "start": 1644,
+          "end": 1650,
+          "sha256": "fd14499abf2345243b9d48ce26e77f3e7c0f1117ee62a15c97340411b32c85ee",
+          "relation": "pg_stat_statements",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "dbid",
+          "quoted": false,
+          "start": 1669,
+          "end": 1673,
+          "sha256": "ef9dd9690a3d7ba3d1e188b4c11443185f89010ab581ffa581c9eb6b936f919e",
+          "relation": "pg_stat_statements",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "queryid",
+          "quoted": false,
+          "start": 1695,
+          "end": 1702,
+          "sha256": "42b906ac573c2f126039950b4d69559aaf62c48fe0392bcea00331833d18b0f2",
+          "relation": "pg_stat_statements",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "query",
+          "quoted": false,
+          "start": 1722,
+          "end": 1727,
+          "sha256": "a8b771920b8319e47251d1360f5e880bc18e8d329b0f0d003ea3c7e615558947",
+          "relation": "pg_stat_statements",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "calls",
+          "quoted": false,
+          "start": 1749,
+          "end": 1754,
+          "sha256": "f46f5990ebfadcab199107258b9dadd8711bd7946d8d00091a1073effcf2a843",
+          "relation": "pg_stat_statements",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "total_exec_time",
+          "quoted": false,
+          "start": 1786,
+          "end": 1801,
+          "sha256": "5337d46e6d546b2b5e8554b0a8641d4d27ba37619067071d44da6c2ad3e0fb91",
+          "relation": "pg_stat_statements",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "rows",
+          "quoted": false,
+          "start": 1823,
+          "end": 1827,
+          "sha256": "bc51e9e65d79e1c90ba544ab2eae1044ccdf8c1af7a559ba375cba4276f7d99e",
+          "relation": "pg_stat_statements",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "shared_blks_hit",
+          "quoted": false,
+          "start": 1849,
+          "end": 1864,
+          "sha256": "34a4d2d49c4b5565c2c4318ba0530fbbc7bdb6328dbc5c78d2e06db39248b313",
+          "relation": "pg_stat_statements",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "shared_blks_read",
+          "quoted": false,
+          "start": 1886,
+          "end": 1902,
+          "sha256": "4c3bc6e1639db979d50639ee17fa41ff90271c5c835dae21508fe2d904532895",
+          "relation": "pg_stat_statements",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "shared_blks_dirtied",
+          "quoted": false,
+          "start": 1924,
+          "end": 1943,
+          "sha256": "c90b9617f66afe4a8de2c2f43842026789bdc3dd2ac4dbe8de52eff69e7e0aef",
+          "relation": "pg_stat_statements",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "shared_blks_written",
+          "quoted": false,
+          "start": 1965,
+          "end": 1984,
+          "sha256": "a00b54c7b07d2a5062093ffe34d435a0a64f1f9c3b8dacc7b60822b4cea03754",
+          "relation": "pg_stat_statements",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "local_blks_hit",
+          "quoted": false,
+          "start": 2006,
+          "end": 2020,
+          "sha256": "1ab64b7cdf0f564cd161660f043f947ec6d4e54752bd79173ee3cf310971d536",
+          "relation": "pg_stat_statements",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "local_blks_read",
+          "quoted": false,
+          "start": 2042,
+          "end": 2057,
+          "sha256": "168b0cddeca10c3815ae6dc4aa28eb3b8eba8b75116dd1b16f2a73ef51e32243",
+          "relation": "pg_stat_statements",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "local_blks_dirtied",
+          "quoted": false,
+          "start": 2079,
+          "end": 2097,
+          "sha256": "5c033edd3f1b574f95010f0cdcdce07666faf83fd445e54006e0a47c3292a327",
+          "relation": "pg_stat_statements",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "local_blks_written",
+          "quoted": false,
+          "start": 2119,
+          "end": 2137,
+          "sha256": "6299c7023a47e6b05f478fd005186b3376cdde803412749e4134a903be502c51",
+          "relation": "pg_stat_statements",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "temp_blks_read",
+          "quoted": false,
+          "start": 2159,
+          "end": 2173,
+          "sha256": "7943cf1c4819e5bb943183adbb40d7fe146397a9a9dcc7027e487b1906db7734",
+          "relation": "pg_stat_statements",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "temp_blks_written",
+          "quoted": false,
+          "start": 2195,
+          "end": 2212,
+          "sha256": "f618caf8b25968ac67f418fa7bcdf068653f67ebd9b7bf1abf5ccd9893bfe54f",
+          "relation": "pg_stat_statements",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "blk_read_time",
+          "quoted": false,
+          "start": 2244,
+          "end": 2257,
+          "sha256": "f18794f2a27512b5d620661f72a39c985687d0a8ad2f0c87943758fa1d4af575",
+          "relation": "pg_stat_statements",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "blk_write_time",
+          "quoted": false,
+          "start": 2289,
+          "end": 2303,
+          "sha256": "8c0538a2865452d61a6cb20e606f5985bf844602e80f839bf35f188794222f5b",
+          "relation": "pg_stat_statements",
+          "source_role": "sqlc-tooling-stub"
+        }
+      ],
+      "note": "Explicit NULL/WHERE false sqlc tooling model; never a real pg_catalog or live PostgreSQL declaration."
+    },
+    {
+      "id": "view-pg_stat_progress_vacuum",
+      "start": 2322,
+      "end": 2778,
+      "sha256": "6511fb5ff6e12bf98a45afb98b7c575a974696b1ed1c3db1fc43d0e86c143c21",
+      "syntax_class": "create-view",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "view",
+          "name": "pg_stat_progress_vacuum",
+          "quoted": false,
+          "start": 2334,
+          "end": 2357,
+          "sha256": "c4e4f87a21bff924b488e661417b01512fd07e5a2631f946a9a7f3507c95a76f",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "pid",
+          "quoted": false,
+          "start": 2389,
+          "end": 2392,
+          "sha256": "ce71df4dc560de1e3e3d08a85db646710b493e3106c7af94ae10372d61f9eda8",
+          "relation": "pg_stat_progress_vacuum",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "datid",
+          "quoted": false,
+          "start": 2411,
+          "end": 2416,
+          "sha256": "5776e91098722efc1529a3e9517bdad96ca9de412c3f2f2ec549f3f1b4944b13",
+          "relation": "pg_stat_progress_vacuum",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "datname",
+          "quoted": false,
+          "start": 2436,
+          "end": 2443,
+          "sha256": "0b3b5eb33ea7ab7636f080b23d8c139880deacd1e611d048e171701b228b2cfe",
+          "relation": "pg_stat_progress_vacuum",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "relid",
+          "quoted": false,
+          "start": 2462,
+          "end": 2467,
+          "sha256": "78d8b6da76ce00e7228f27e36faed9d424750e5058ba177017de6635fd273c98",
+          "relation": "pg_stat_progress_vacuum",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "phase",
+          "quoted": false,
+          "start": 2487,
+          "end": 2492,
+          "sha256": "02195b8e989603e4dfb45352b902e8dc34bff40bb228f3c26e56a6ddebdb85ad",
+          "relation": "pg_stat_progress_vacuum",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "heap_blks_total",
+          "quoted": false,
+          "start": 2514,
+          "end": 2529,
+          "sha256": "ad81477360c5bd671c0bfbec828bd0c715efcbabb187c7fc12e6d2a41adafebc",
+          "relation": "pg_stat_progress_vacuum",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "heap_blks_scanned",
+          "quoted": false,
+          "start": 2551,
+          "end": 2568,
+          "sha256": "66876b7ac0229ced45ccc7f331471b69ebc51ab46ca1537fcacdbe5f68824731",
+          "relation": "pg_stat_progress_vacuum",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "heap_blks_vacuumed",
+          "quoted": false,
+          "start": 2590,
+          "end": 2608,
+          "sha256": "391a0c0f8c5b6c04f13ac2ab942614b9d99a72827ca2ba4d999363ec66d7b062",
+          "relation": "pg_stat_progress_vacuum",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "heap_blks_frozen",
+          "quoted": false,
+          "start": 2630,
+          "end": 2646,
+          "sha256": "8d22084cd9fb24fc02db63e5d5b049ab55faa9e4c3b23db2bf30a40eb212c470",
+          "relation": "pg_stat_progress_vacuum",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "index_vacuum_count",
+          "quoted": false,
+          "start": 2668,
+          "end": 2686,
+          "sha256": "cebf7256f544012be5332c87502788a96d56ad2c4703acd141581dfd7aa2163b",
+          "relation": "pg_stat_progress_vacuum",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "max_dead_tuples",
+          "quoted": false,
+          "start": 2708,
+          "end": 2723,
+          "sha256": "a4a19a4057be4e5ce38cdc33db5de8fe7a66d5447c1e19ea21bcce0ff3455a97",
+          "relation": "pg_stat_progress_vacuum",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "num_dead_tuples",
+          "quoted": false,
+          "start": 2745,
+          "end": 2760,
+          "sha256": "f69fb0b69b34cfaed91b8699929fa2262212c601fae7155a45cc451cdff14fe3",
+          "relation": "pg_stat_progress_vacuum",
+          "source_role": "sqlc-tooling-stub"
+        }
+      ],
+      "note": "Explicit NULL/WHERE false sqlc tooling model; never a real pg_catalog or live PostgreSQL declaration."
+    },
+    {
+      "id": "view-pg_stat_activity",
+      "start": 2779,
+      "end": 3120,
+      "sha256": "8224923ca6c50e4edd66ffcee2f6b95c3fd59b03bf29691672689bc77c081258",
+      "syntax_class": "create-view",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "view",
+          "name": "pg_stat_activity",
+          "quoted": false,
+          "start": 2791,
+          "end": 2807,
+          "sha256": "e6ca21117a9fa936ba0b3955c6be9d2e7e8a625bf3fcd46916ba3d1f7a2f2d6c",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "pid",
+          "quoted": false,
+          "start": 2839,
+          "end": 2842,
+          "sha256": "ce71df4dc560de1e3e3d08a85db646710b493e3106c7af94ae10372d61f9eda8",
+          "relation": "pg_stat_activity",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "usename",
+          "quoted": false,
+          "start": 2862,
+          "end": 2869,
+          "sha256": "e5655d7afeacbc0ac8263625a7bc4d80524271f2b54188239b04116341175920",
+          "relation": "pg_stat_activity",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "application_name",
+          "quoted": false,
+          "start": 2889,
+          "end": 2905,
+          "sha256": "7e77de90098b13df10c0f294f76102c814eacc7f00f5976912614790cc88f4b3",
+          "relation": "pg_stat_activity",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "client_addr",
+          "quoted": false,
+          "start": 2925,
+          "end": 2936,
+          "sha256": "49c468a50b5bcb45037b782219eab787a05e71db5d5e6534d51c223f85996fa8",
+          "relation": "pg_stat_activity",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "state",
+          "quoted": false,
+          "start": 2956,
+          "end": 2961,
+          "sha256": "4ba69735ca53765ed6a709edb56c6ea236b7193a3b29a6b390c346f0f4340e4e",
+          "relation": "pg_stat_activity",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "query_start",
+          "quoted": false,
+          "start": 3001,
+          "end": 3012,
+          "sha256": "1d9da915ec295ec114c30dc382a6d671e791ed27ebf45031304b2ac74cff8451",
+          "relation": "pg_stat_activity",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "wait_event_type",
+          "quoted": false,
+          "start": 3032,
+          "end": 3047,
+          "sha256": "ef5b377188a5b96e1d9a9c706d41b739e5b646a61897d606d6ff6e8b2413cbda",
+          "relation": "pg_stat_activity",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "wait_event",
+          "quoted": false,
+          "start": 3067,
+          "end": 3077,
+          "sha256": "cf2bbb4e9bf1e1857587fee8325c8e3aa8319799f4bb3989b4eaad6efd2c5f4f",
+          "relation": "pg_stat_activity",
+          "source_role": "sqlc-tooling-stub"
+        },
+        {
+          "kind": "view_column",
+          "name": "query",
+          "quoted": false,
+          "start": 3097,
+          "end": 3102,
+          "sha256": "a8b771920b8319e47251d1360f5e880bc18e8d329b0f0d003ea3c7e615558947",
+          "relation": "pg_stat_activity",
+          "source_role": "sqlc-tooling-stub"
+        }
+      ],
+      "note": "Explicit NULL/WHERE false sqlc tooling model; never a real pg_catalog or live PostgreSQL declaration."
+    }
+  ],
+  "inventory_notes": [
+    "Complete committed sqlc stub models; exact source role must accompany catalog facts."
+  ]
+}

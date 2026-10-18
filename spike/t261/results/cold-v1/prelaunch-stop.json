@@ -1,0 +1,8 @@
+{
+  "stage": "request-metadata preparation; before any candidate process launch",
+  "candidate_runs": 0,
+  "reason": "strict single-entry sqlc metadata reader expected four-space schema key; committed MySQL manifest uses two-space dash schema as the first mapping field",
+  "source_sha256": "a37251b20194499e60000110e82cc3e346c51ee2b60751aa47e7695d28f1f399",
+  "inputs_changed": false,
+  "parser_retry": false
+}

@@ -1,0 +1,69 @@
+{
+  "format": "t261-source-labels-v1",
+  "dialect": "postgresql",
+  "repository": "hatchet-dev/hatchet",
+  "commit": "559b5021e418f12ded175f950b709b7fa66be5a5",
+  "source_path": "pkg/repository/sqlcv1/sleep.sql",
+  "source_sha256": "792af543d77e4f5fe1264e36189d314f7c6a108d37e31c5fb2b11125a5a14c94",
+  "plane": "sql-query",
+  "statements": [
+    {
+      "id": "CreateDurableSleep",
+      "start": 0,
+      "end": 413,
+      "sha256": "a554c1b5dbac54a059cad4db7ddf9ed22dffcd9a85af654e002931f200c76507",
+      "syntax_class": "insert-select-cte",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "v1_durable_sleep",
+          "quoted": false,
+          "start": 209,
+          "end": 225,
+          "sha256": "5c3f44f388d9b15a4f60833909e2139e7896c67e4ee4ce3208acf05233a6b20c",
+          "access": "write",
+          "expected_binding": "unique",
+          "declaration_relation": "v1_durable_sleep"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    },
+    {
+      "id": "PopDurableSleep",
+      "start": 414,
+      "end": 858,
+      "sha256": "c0b36345991946ee62899554effcd95c9a502d7d68dcd2d8a1f8360be7361dbb",
+      "syntax_class": "delete-cte",
+      "expected_disposition": "query",
+      "objects": [],
+      "sites": [
+        {
+          "name": "v1_durable_sleep",
+          "quoted": false,
+          "start": 503,
+          "end": 519,
+          "sha256": "5c3f44f388d9b15a4f60833909e2139e7896c67e4ee4ce3208acf05233a6b20c",
+          "access": "read",
+          "expected_binding": "unique",
+          "declaration_relation": "v1_durable_sleep"
+        },
+        {
+          "name": "v1_durable_sleep",
+          "quoted": false,
+          "start": 735,
+          "end": 751,
+          "sha256": "5c3f44f388d9b15a4f60833909e2139e7896c67e4ee4ce3208acf05233a6b20c",
+          "access": "read-write",
+          "expected_binding": "unique",
+          "declaration_relation": "v1_durable_sleep"
+        }
+      ],
+      "note": "Each physical relation-literal occurrence retained; CTE/derived aliases, sqlc macros, functions and column qualifiers are not additional table sites. Explicit SELECT sources are read, UPDATE/DELETE target and conflict-update target read-write; plain INSERT target write. No query executes."
+    }
+  ],
+  "inventory_notes": [
+    "Entire selected file labelled under preregistered metadata-only stratified sample; no inference to the 30 unsampled query files.",
+    "Exactly one committed sqlc manifest selects all five declarations inputs; names stay quoted/unquoted dialect-specific. Generated sql.go supplies no primary usage."
+  ]
+}

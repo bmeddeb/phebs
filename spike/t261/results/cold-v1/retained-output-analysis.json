@@ -1,0 +1,127 @@
+{
+  "format": "t261-retained-output-analysis-v1",
+  "lanes": {
+    "mysql-imported": {
+      "binary_bytes": 4007634,
+      "binary_sha256": "97dd3a6d474c89ff3cc05f9903cb581cde68e856061d6dc1f52cd836d3d92901",
+      "cold_build_seconds": 2.08608,
+      "cold_cache_regular_file_bytes": 51852734,
+      "first_output_sha256": "656c8983688f4f856e06d37e4898827aa54e9f774822a1d4f1d4251d742f085b",
+      "frontend_stages": {
+        "binding_gaps": 1,
+        "common_admission_records": 179,
+        "imported_frontend_admitted": 88,
+        "imported_syntax_refusals": 4,
+        "source_projection_gaps": 1
+      },
+      "generated_dump_expected": 0,
+      "generated_dump_matched": 0,
+      "input_hashes_unchanged": true,
+      "max_observed_direct_rss_bytes": 3473408,
+      "max_wait4_direct_child_rss_bytes": 11681792,
+      "migration_exact_events": 0,
+      "migration_statement_gaps": 0,
+      "migration_statements": 0,
+      "output_bytes": 356260,
+      "pair_identical": true,
+      "public_declaration_expected": 488,
+      "public_declaration_matched": 477,
+      "run_walls_seconds": [
+        0.35447,
+        0.024493
+      ],
+      "unexpected_strict_witnesses": 0
+    },
+    "mysql-subset": {
+      "binary_bytes": 3513298,
+      "binary_sha256": "749fbf4aaa7024e6c029535a1c590b93837c1b478b6045b701ef4a13061caad7",
+      "cold_build_seconds": 1.875245,
+      "cold_cache_regular_file_bytes": 47600037,
+      "first_output_sha256": "0dd93e1e36550bb551a343a00a7b60f22da4378a158a448c9ddc30b2298e597d",
+      "frontend_stages": {
+        "binding_gaps": 1,
+        "common_admission_records": 179,
+        "source_projection_gaps": 3
+      },
+      "generated_dump_expected": 0,
+      "generated_dump_matched": 0,
+      "input_hashes_unchanged": true,
+      "max_observed_direct_rss_bytes": 2932736,
+      "max_wait4_direct_child_rss_bytes": 9551872,
+      "migration_exact_events": 0,
+      "migration_statement_gaps": 0,
+      "migration_statements": 0,
+      "output_bytes": 355542,
+      "pair_identical": true,
+      "public_declaration_expected": 488,
+      "public_declaration_matched": 488,
+      "run_walls_seconds": [
+        0.228413,
+        0.02752
+      ],
+      "unexpected_strict_witnesses": 0
+    },
+    "postgresql-imported": {
+      "binary_bytes": 14463042,
+      "binary_sha256": "dcdde90d79232cc20e71f9453ccd4e92b7c7101654437d4763c02c5c8e2e5d77",
+      "cold_build_seconds": 6.485057,
+      "cold_cache_regular_file_bytes": 96877018,
+      "first_output_sha256": "a19ae2c7bda0d530ea4c215414f66c2829f0fbcd9b26908b67095bc0d4d9d9e3",
+      "frontend_stages": {
+        "binding_gaps": 36,
+        "common_admission_records": 332,
+        "imported_frontend_admitted": 2033,
+        "imported_root_category_refusals": 141,
+        "imported_syntax_refusals": 2,
+        "source_projection_gaps": 161
+      },
+      "generated_dump_expected": 8,
+      "generated_dump_matched": 1,
+      "input_hashes_unchanged": true,
+      "max_observed_direct_rss_bytes": 26935296,
+      "max_wait4_direct_child_rss_bytes": 29655040,
+      "migration_exact_events": 24,
+      "migration_statement_gaps": 19,
+      "migration_statements": 43,
+      "output_bytes": 1489448,
+      "pair_identical": true,
+      "public_declaration_expected": 1843,
+      "public_declaration_matched": 1584,
+      "run_walls_seconds": [
+        0.364163,
+        0.100848
+      ],
+      "unexpected_strict_witnesses": 188
+    },
+    "postgresql-subset": {
+      "binary_bytes": 3513298,
+      "binary_sha256": "9beb9a21ad32a1db864c2e7bf60f5f912981aea2af49dd68a28dc4d544c3891b",
+      "cold_build_seconds": 1.908333,
+      "cold_cache_regular_file_bytes": 47600037,
+      "first_output_sha256": "f9895b66c16d2254dd26f391db855e17f6ee2f988b922cf2c422adfcec658924",
+      "frontend_stages": {
+        "binding_gaps": 36,
+        "common_admission_records": 332,
+        "source_projection_gaps": 303
+      },
+      "generated_dump_expected": 8,
+      "generated_dump_matched": 1,
+      "input_hashes_unchanged": true,
+      "max_observed_direct_rss_bytes": 17858560,
+      "max_wait4_direct_child_rss_bytes": 18219008,
+      "migration_exact_events": 24,
+      "migration_statement_gaps": 19,
+      "migration_statements": 43,
+      "output_bytes": 1413931,
+      "pair_identical": true,
+      "public_declaration_expected": 1843,
+      "public_declaration_matched": 1584,
+      "run_walls_seconds": [
+        0.307238,
+        0.075705
+      ],
+      "unexpected_strict_witnesses": 188
+    }
+  },
+  "scope": "No candidate execution; stage counters and costs from unchanged first outputs and reviewed scores"
+}

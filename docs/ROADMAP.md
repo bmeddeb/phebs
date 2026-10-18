@@ -5546,6 +5546,18 @@ Production registration of the remaining evidence surfaces still requires:
 Until both exist, the implementation remains dark regardless of feature
 completeness or demo quality.
 
+**T26.1 input preparation (2026-10-18):** pinned permissive SQL corpora,
+complete declaration/dump labels, sampled migration/query labels, controls and
+bounded candidate contract are frozen in an immutable checkpoint. Mechanical
+PostgreSQL18.6 fixture capture passed with exact teardown. No candidate parser
+has executed; the two dialect comparisons and measured decision remain next.
+
+**T26.1 measured decision (2026-10-18):** the SQL spike is complete with
+partial strict declaration/history coverage and complete sampled query/binding
+witnesses. All paired outputs are deterministic; reviewed boundary/scorer
+corrections pass bounded controls. No production parser or pack is adopted.
+The [report](../spike/t261/results/REPORT.md) preserves every gap, first outcome,
+source snapshot and cost limit. Any production continuation needs a new ticket.
 **T50.3a caller unit repair (2026-10-18):** the direct caller pipeline now
 carries exact committed unit attribution through one bounded shared resolver
 member. Old unit-less catalogs refuse current worker/read admission and rebuild
@@ -5558,6 +5570,16 @@ failure stays retained; new product qualification remains separate.
 offline checker adjudication followed. T50.3a repairs the dropped projection.
 New product qualification still needs prospectively bound source/binary facts;
 no overall quality, operating, UI or release pass is inferred.
+**T52.1 source preparation (2026-10-18):** the finite Apache0.14.1 source/tag/
+IDL oracle is frozen and independently reviewed before indexing. Real offline
+SCIP preparation, evaluator Git bindings and final preregistration review come
+before scoring. Registration and each generator's quality stay separate.
+
+**T52.1 finite Apache qualification (2026-10-18):** public33/266 and separate
+authored11/60/4 frozen reference/negative/unsupported checks pass with all14
+identity witnesses. Normal/race/vet/pinned lint and independent source/cost
+review are clear. This is committed-input conformance only; T52.2's thriftrw
+result and T52.3's admission/operating/signature remain separate.
 
 ## On demand
 

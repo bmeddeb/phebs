@@ -1,0 +1,111 @@
+{
+  "schema": "t521-source-preregistration-v1",
+  "record_date": "2026-10-18",
+  "status": "SOURCE_LABELS_FROZEN_AWAITING_INDEPENDENT_REVIEW_AND_COMMITTED_INDEX_BINDINGS",
+  "owner": "Ben-routed Mac backend handoff; lead independently reviews source labels before first candidate measurement",
+  "recipe": {
+    "pack": "phebs.thrift.field.apache",
+    "extractor": "scip-thrift-field",
+    "extractor_version": "1.4.0",
+    "atom_schema": "t22-v1",
+    "predicate": "REFERENCES_THRIFT_FIELD",
+    "detail": "thrift-field-reference-detail-v1",
+    "declaration_reader": "thrift-contract 1.1.2 (T49.2, including typedef fixes)",
+    "generator": "Apache Thrift Compiler header-declared0.14.1; no regeneration of public bytes claimed",
+    "indexer": "scip-go0.2.7; exact existing binary identity from T511 preparation, rehash before execution",
+    "index_path": "index.scip at evaluation repository root, committed together with exact input sources",
+    "encoding": "UTF8 for prepared real indexes; existing supported decoding controls retain explicit unknown/refusal states",
+    "identity": "SCIP package family sha256(scheme NUL manager NUL package_name), object generatedGoPackage.GeneratedMessage#numericThriftID; IDs0..32767, no name-only family translation",
+    "tier": "derived",
+    "source_binding": "none",
+    "join": "one compiler-marked generated file + unique tagged enclosing Go struct/name/numeric ID + exact definition identifier range/type descriptor + reference occurrence exact source range",
+    "input_limits": {
+      "index_bytes": 33554432,
+      "documents": 50000,
+      "occurrences": 500000,
+      "symbol_bytes": 8192,
+      "generated_source_bytes": 4194304
+    },
+    "registration": "none; T52.3 later, no shared provisional switch promotion",
+    "managed_dependency": "none: committed source+SCIP input only; T45.6 waiver does not establish managed-evidence admission"
+  },
+  "populations": [
+    {
+      "id": "public",
+      "evaluation_repository": "evaluation.local/t521-public",
+      "upstream_repository": "jaegertracing/jaeger-client-go",
+      "upstream_commit": "8d8e8fcfd04de42b8482476abac6a902fca47c18",
+      "module": "github.com/uber/jaeger-client-go",
+      "module_version": "v0.0.0-t521",
+      "scip_package": "github.com/uber/jaeger-client-go",
+      "field_lineage": "contract_scip_package_v1_e3182b50791af8a571ac67d4fb09d693f4a315053b06ea120e985f5a8f79b057",
+      "application": [
+        "jaeger_tag.go",
+        "testutils/sampling_manager.go"
+      ],
+      "positive": 33,
+      "negative": 266,
+      "unsupported": 0,
+      "context": "Retained selected unchanged source module, not the complete upstream application. Evaluator go.mod adds cached OpenTracing1.2.0. No source stubs or application edits. Upstream source commit is provenance only, never the generated SCIP evaluation commit."
+    },
+    {
+      "id": "neutral",
+      "evaluation_repository": "evaluation.local/t521-neutral",
+      "module": "example.com/t521-neutral",
+      "module_version": "v0.0.0-t521",
+      "scip_package": "example.com/t521-neutral",
+      "field_lineage": "contract_scip_package_v1_af62ffc4d1a622c5969a59de199892457a9a239b11fbc4acb0846f62c5758cde",
+      "application": [
+        "use/use.go"
+      ],
+      "positive": 11,
+      "negative": 60,
+      "unsupported": 4,
+      "context": "Evaluator-authored Go tags and IDL controls. Header imitates supported recipe for controlled recognition; no real Apache generator execution or independent public accuracy is claimed."
+    }
+  ],
+  "oracle": {
+    "path": "source-labels.jsonl",
+    "digest": "sha256:4e9c7474bc33e98c1d1f057f8e8cd72f71a5801ca157df873e9dbf1bc87c491f",
+    "counts": {
+      "neutral/negative": 60,
+      "neutral/positive": 11,
+      "neutral/unsupported": 4,
+      "public/negative": 266,
+      "public/positive": 33
+    },
+    "rule": "Complete lexical identifier census in exactly selected handwritten application files; all exact tagged-field uses manually enumerated before any index/extractor execution. Comments/strings excluded except one explicitly unsupported reflection string. Generated emissions counted separately and excluded from public/neutral quality denominators.",
+    "independence": "No SCIP, candidate facts, production extractor/parser or observed result consulted. Tokenizer only locates frozen source spans for explicit field maps. Lead verifies source/code/IDL witnesses independently.",
+    "field_witnesses": {
+      "path": "field-witnesses.json",
+      "digest": "sha256:c3fbee4dd7c9294d6ef577e818f76c7d3fac49748aff724fd4e3b03c448f5bce",
+      "identities": 14,
+      "explicit_idl_fields": 13,
+      "implicit_result_success": 1
+    }
+  },
+  "thresholds": {
+    "positive_recall": 1.0,
+    "positive_identity_and_span_precision": 1.0,
+    "negative_false_positives": 0,
+    "unsupported_exact_or_derived_claims": 0,
+    "family_cross_joins": 0,
+    "input_digest_or_span_mismatch": "stop",
+    "unknown_indexer_symbol_shape": "stop; do not relabel source oracle",
+    "generated_emissions": "record separately; every returned generated occurrence must still satisfy citation and source-authority fences"
+  },
+  "execution_plan": {
+    "phase1": "Independent source-only checkpoint before indexing; no candidate/scoring permitted",
+    "phase2": "When native slot allocated, at most one offline real scip-go child at a time, <=90s per public/neutral input, GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local GOWORK=off GOMAXPROCS=2, no network dependency download. Record exact argv/context/indexed document census/bytes/digests/refusal and child join.",
+    "phase3": "Lead creates actual local evaluation Git source+index commits/bundles; upstream-vs-evaluator bytes remain explicit. Bind40hex evaluation commits and bundle/index hashes before candidate review.",
+    "phase4": "Only after corrected final preregistration accepted: one <=30s child-free extraction/scoring run using committed inputs; preserve every miss/extra/unsupported failure, no post-result labels/threshold changes."
+  },
+  "stop_nonclaims": [
+    "No Apache result transferred from thriftrw T222 or T52.2",
+    "No production registration/signature, managed generation, operating/scale or generalized independent accuracy claim",
+    "No arbitrary inherited ceilings described as measured; finite observed bytes/cost only",
+    "Declaration and SCIP identity families remain distinct. Source-only declaration bridge witnesses are evaluation checks, not an automatic production join."
+  ],
+  "source_manifest": "source-inputs.json",
+  "source_freeze": "source-freeze.json"
+}

@@ -1,0 +1,44 @@
+{
+  "stage": "post-build source/tool observation; not retroactively asserted as pre-execution attestation",
+  "go_env": {
+    "CC": "clang",
+    "CGO_CFLAGS": "-O2 -g",
+    "CGO_ENABLED": "1",
+    "CGO_LDFLAGS": "-O2 -g",
+    "CXX": "clang++",
+    "GOARCH": "arm64",
+    "GOFLAGS": "",
+    "GOMODCACHE": "/Users/ben/go/pkg/mod",
+    "GOOS": "darwin",
+    "GOROOT": "/opt/homebrew/opt/phebs-go-1.26.5",
+    "GOTOOLCHAIN": "auto"
+  },
+  "clang_version": "Apple clang version 21.0.0 (clang-2100.3.34.2)\nTarget: arm64-apple-darwin25.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin\n",
+  "candidate_source_grammar_version": "PG_VERSION_NUM170007; PG17.7, not PG18.6 vendor validation",
+  "files": [
+    {
+      "path": "/opt/homebrew/bin/go",
+      "resolved_path": "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+      "bytes": 14500160,
+      "sha256": "3925fc3221ac440ebf7c35361ff663bed0c7bdb2e0a157b75fe993607ffe0a19"
+    },
+    {
+      "path": "/usr/bin/clang",
+      "resolved_path": "/usr/bin/clang",
+      "bytes": 118640,
+      "sha256": "b8763cf250e607a778bb4603cecb5b90338814d0a3dfcba0d57b1de242f610e9"
+    },
+    {
+      "path": "/Library/Developer/CommandLineTools/usr/bin/clang",
+      "resolved_path": "/Library/Developer/CommandLineTools/usr/bin/clang",
+      "bytes": 124676976,
+      "sha256": "1590ac950a3d627817d09ade5cb60b2115f17a72182a3141e010b4bcc482a0c9"
+    },
+    {
+      "path": "/Users/ben/go/pkg/mod/github.com/pganalyze/pg_query_go/v6@v6.2.5/parser/include/postgres/pg_config.h",
+      "resolved_path": "/Users/ben/go/pkg/mod/github.com/pganalyze/pg_query_go/v6@v6.2.5/parser/include/postgres/pg_config.h",
+      "bytes": 30788,
+      "sha256": "e557d66727155534a798b8c0f37dd9ed7080ff8622aceaf3c946ad003c338564"
+    }
+  ]
+}

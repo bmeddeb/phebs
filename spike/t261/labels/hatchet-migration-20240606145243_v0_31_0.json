@@ -1,0 +1,208 @@
+{
+  "format": "t261-source-labels-v1",
+  "dialect": "postgresql",
+  "repository": "hatchet-dev/hatchet",
+  "commit": "559b5021e418f12ded175f950b709b7fa66be5a5",
+  "source_path": "cmd/hatchet-migrate/migrate/migrations/20240606145243_v0_31_0.sql",
+  "source_sha256": "fcd346a55b90a132120ddda77d8ba94cbf4c965a953dcdd5eb3fab67db5f2eb9",
+  "plane": "sql-migration-event",
+  "statements": [
+    {
+      "id": "migration-L3",
+      "start": 49,
+      "end": 142,
+      "sha256": "0aa45e413efaf09eeb4680a76619e71f0681d089e05d40e76231b4f239f68c01",
+      "syntax_class": "create-enum",
+      "expected_disposition": "migration-event",
+      "direction": "up",
+      "objects": [],
+      "sites": [],
+      "events": [
+        {
+          "predicate": "MIGRATION_CREATES_TYPE",
+          "name": "LimitResource",
+          "quoted": true,
+          "start": 61,
+          "end": 76,
+          "sha256": "13c154325e554ca89e963adcc265109eef6e1b81a72e0daf38375bc7d6268b12"
+        }
+      ],
+      "note": "Explicit source history occurrence in Goose up branch; never execute, fold branches or emit DECLARES_* objects. Stable identity includes source path, statement byte offset and predicate."
+    },
+    {
+      "id": "migration-L5",
+      "start": 193,
+      "end": 268,
+      "sha256": "b2007afffae7740235919ff1a8ebf6c65580330508067caa6304315a78ada7fa",
+      "syntax_class": "create-enum",
+      "expected_disposition": "migration-event",
+      "direction": "up",
+      "objects": [],
+      "sites": [],
+      "events": [
+        {
+          "predicate": "MIGRATION_CREATES_TYPE",
+          "name": "TenantResourceLimitAlertType",
+          "quoted": true,
+          "start": 205,
+          "end": 235,
+          "sha256": "1ece463f9794979da2422df00141e0cc16e9dea5eec0ff745d5e904077a159e8"
+        }
+      ],
+      "note": "Explicit source history occurrence in Goose up branch; never execute, fold branches or emit DECLARES_* objects. Stable identity includes source path, statement byte offset and predicate."
+    },
+    {
+      "id": "migration-L7",
+      "start": 309,
+      "end": 422,
+      "sha256": "218ca47e31b4023b12817d6c5a91cd8f4199097fb0831abc13e0442fc40d855d",
+      "syntax_class": "alter-add-column",
+      "expected_disposition": "migration-event",
+      "direction": "up",
+      "objects": [],
+      "sites": [],
+      "events": [
+        {
+          "predicate": "MIGRATION_ADDS_COLUMN",
+          "name": "enableTenantResourceLimitAlerts",
+          "quoted": true,
+          "start": 357,
+          "end": 390,
+          "sha256": "e92da62b9aa3c9b5387a1d69e1a3592b6619a301c81531bf6287941d8da6d6ab",
+          "relation": "TenantAlertingSettings",
+          "columns": [
+            "enableTenantResourceLimitAlerts"
+          ]
+        }
+      ],
+      "note": "Explicit source history occurrence in Goose up branch; never execute, fold branches or emit DECLARES_* objects. Stable identity includes source path, statement byte offset and predicate."
+    },
+    {
+      "id": "migration-L9",
+      "start": 460,
+      "end": 1085,
+      "sha256": "0cdcb54532b6e28b0341dc365fb80011774a82eb3070a846f83d102facf9efc1",
+      "syntax_class": "create-table",
+      "expected_disposition": "migration-event",
+      "direction": "up",
+      "objects": [],
+      "sites": [],
+      "events": [
+        {
+          "predicate": "MIGRATION_CREATES_TABLE",
+          "name": "TenantResourceLimit",
+          "quoted": true,
+          "start": 473,
+          "end": 494,
+          "sha256": "7936b189eb7babfdee02a28990feea5aaa5edfaa7e438ca39fb24d8ccada5194"
+        }
+      ],
+      "note": "Explicit source history occurrence in Goose up branch; never execute, fold branches or emit DECLARES_* objects. Stable identity includes source path, statement byte offset and predicate."
+    },
+    {
+      "id": "migration-L11",
+      "start": 1162,
+      "end": 1244,
+      "sha256": "61526ff23c7533c84637d760dc8acc3abb66ec425f9862bb98b141ff58d02554",
+      "syntax_class": "create-index",
+      "expected_disposition": "migration-event",
+      "direction": "up",
+      "objects": [],
+      "sites": [],
+      "events": [
+        {
+          "predicate": "MIGRATION_CREATES_INDEX",
+          "name": "TenantResourceLimit_id_key",
+          "quoted": true,
+          "start": 1182,
+          "end": 1210,
+          "sha256": "3eadf697336eaa52b4398928839c9166c1ce458d63cacd4374cd90ff313f542d",
+          "relation": "TenantResourceLimit",
+          "columns": [
+            "id"
+          ]
+        }
+      ],
+      "note": "Explicit source history occurrence in Goose up branch; never execute, fold branches or emit DECLARES_* objects. Stable identity includes source path, statement byte offset and predicate."
+    },
+    {
+      "id": "migration-L13",
+      "start": 1336,
+      "end": 1451,
+      "sha256": "53c8843dd4691c32dc120f31010ab0e1ceb7e80dc3e022670dc46e85547e7215",
+      "syntax_class": "create-index",
+      "expected_disposition": "migration-event",
+      "direction": "up",
+      "objects": [],
+      "sites": [],
+      "events": [
+        {
+          "predicate": "MIGRATION_CREATES_INDEX",
+          "name": "TenantResourceLimit_tenantId_resource_key",
+          "quoted": true,
+          "start": 1356,
+          "end": 1399,
+          "sha256": "59af0d168eddc0191ef28562c1b8712cf41af7a78d0949eee3e78d734e816f48",
+          "relation": "TenantResourceLimit",
+          "columns": [
+            "tenantId",
+            "resource"
+          ]
+        }
+      ],
+      "note": "Explicit source history occurrence in Goose up branch; never execute, fold branches or emit DECLARES_* objects. Stable identity includes source path, statement byte offset and predicate."
+    },
+    {
+      "id": "migration-L15",
+      "start": 1494,
+      "end": 2208,
+      "sha256": "e0a291e17b158c2da9e3afcc2770faaf157a39addfbd8ed1e00a3f380f3d5bb6",
+      "syntax_class": "create-table",
+      "expected_disposition": "migration-event",
+      "direction": "up",
+      "objects": [],
+      "sites": [],
+      "events": [
+        {
+          "predicate": "MIGRATION_CREATES_TABLE",
+          "name": "TenantResourceLimitAlert",
+          "quoted": true,
+          "start": 1507,
+          "end": 1533,
+          "sha256": "b313419f1fe857a60d97c9f8ade6a58b35d46ff6bad82944bd669ba822aff1ce"
+        }
+      ],
+      "note": "Explicit source history occurrence in Goose up branch; never execute, fold branches or emit DECLARES_* objects. Stable identity includes source path, statement byte offset and predicate."
+    },
+    {
+      "id": "migration-L17",
+      "start": 2295,
+      "end": 2387,
+      "sha256": "db7466daf390429812d8b92b8e7ef70a7703d1cedd719b268a1868584c570374",
+      "syntax_class": "create-index",
+      "expected_disposition": "migration-event",
+      "direction": "up",
+      "objects": [],
+      "sites": [],
+      "events": [
+        {
+          "predicate": "MIGRATION_CREATES_INDEX",
+          "name": "TenantResourceLimitAlert_id_key",
+          "quoted": true,
+          "start": 2315,
+          "end": 2348,
+          "sha256": "e99f4816e96e8981ad7d28520483d8cf9a652f3d3e7742330c11339323979151",
+          "relation": "TenantResourceLimitAlert",
+          "columns": [
+            "id"
+          ]
+        }
+      ],
+      "note": "Explicit source history occurrence in Goose up branch; never execute, fold branches or emit DECLARES_* objects. Stable identity includes source path, statement byte offset and predicate."
+    }
+  ],
+  "inventory_notes": [
+    "Entire selected file, both Goose branches, labelled before parser execution. No accuracy inference to 208 unsampled migration files.",
+    "Lane derives from committed sqlc PostgreSQL engine metadata under explicit spike migration-root admission, never grammar sniffing."
+  ]
+}

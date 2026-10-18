@@ -1,0 +1,122 @@
+{
+  "stage": "authorized read-only cached-image identity diagnosis; no container/SQL/parser execution",
+  "initial_receipt_sha256": "48d1266d0f9cb884905abf7cfbc31574a378914dd64125da7a3a24690e7e4266",
+  "image_pulls": 0,
+  "container_executions": 0,
+  "commands": [
+    {
+      "argv": [
+        "/opt/homebrew/bin/colima",
+        "start",
+        "--profile",
+        "t574-receipts"
+      ],
+      "exit_code": 0,
+      "stdout": "time=\"2026-10-18T04:27:21-07:00\" level=info msg=\"Using the existing instance `colima-t574-receipts`\"\ntime=\"2026-10-18T04:27:21-07:00\" level=info msg=\"Starting the instance `colima-t574-receipts` with internal VM driver `vz`\"\ntime=\"2026-10-18T04:27:21-07:00\" level=info msg=\"[hostagent] hostagent socket created at /Users/ben/.colima/_lima/colima-t574-receipts/ha.sock\"\ntime=\"2026-10-18T04:27:21-07:00\" level=info msg=\"[hostagent] Starting VZ (hint: to watch the boot progress, see `/Users/ben/.colima/_lima/colima-t574-receipts/serial*.log`)\"\ntime=\"2026-10-18T04:27:21-07:00\" level=info msg=\"[hostagent] Mounting disk `colima-t574-receipts` on `/mnt/lima-colima-t574-receipts`\"\ntime=\"2026-10-18T04:27:21-07:00\" level=info msg=\"[hostagent] Converting `/Users/ben/.colima/_lima/_disks/colima-t574-receipts/datadisk` (raw) to a raw disk `/Users/ben/.colima/_lima/_disks/colima-t574-receipts/datadisk`\"\ntime=\"2026-10-18T04:27:21-07:00\" level=info msg=\"[hostagent] Setting up Rosetta share\"\ntime=\"2026-10-18T04:27:21-07:00\" level=info msg=\"[hostagent] [VZ] - vm state change: running\"\ntime=\"2026-10-18T04:27:26-07:00\" level=info msg=\"[hostagent] SSH server does not seem to be running on vsock port, using usernet forwarder\"\ntime=\"2026-10-18T04:27:27-07:00\" level=info msg=\"SSH Local Port: 59221\"\ntime=\"2026-10-18T04:27:27-07:00\" level=info msg=\"[hostagent] Waiting for the essential requirement 1 of 3: `ssh`\"\ntime=\"2026-10-18T04:27:27-07:00\" level=info msg=\"[hostagent] The essential requirement 1 of 3 is satisfied\"\ntime=\"2026-10-18T04:27:27-07:00\" level=info msg=\"[hostagent] Waiting for the essential requirement 2 of 3: `user session is ready for ssh`\"\ntime=\"2026-10-18T04:27:27-07:00\" level=info msg=\"[hostagent] The essential requirement 2 of 3 is satisfied\"\ntime=\"2026-10-18T04:27:27-07:00\" level=info msg=\"[hostagent] Waiting for the essential requirement 3 of 3: `Explicitly start ssh ControlMaster`\"\ntime=\"2026-10-18T04:27:27-07:00\" level=info msg=\"[hostagent] The essential requirement 3 of 3 is satisfied\"\ntime=\"2026-10-18T04:27:27-07:00\" level=info msg=\"[hostagent] Waiting for the guest agent to be running\"\ntime=\"2026-10-18T04:27:27-07:00\" level=info msg=\"[hostagent] Forwarding `/var/run/docker.sock` (guest) to `/Users/ben/.colima/t574-receipts/docker.sock` (host)\"\ntime=\"2026-10-18T04:27:27-07:00\" level=info msg=\"[hostagent] Forwarding `/var/run/containerd/containerd.sock` (guest) to `/Users/ben/.colima/t574-receipts/containerd.sock` (host)\"\ntime=\"2026-10-18T04:27:27-07:00\" level=info msg=\"[hostagent] Guest agent is running\"\ntime=\"2026-10-18T04:27:27-07:00\" level=info msg=\"[hostagent] Waiting for the final requirement 1 of 1: `boot scripts must have finished`\"\ntime=\"2026-10-18T04:27:27-07:00\" level=info msg=\"[hostagent] Time sync: guest agent is alive, starting time synchronization\"\ntime=\"2026-10-18T04:27:27-07:00\" level=info msg=\"[hostagent] Not forwarding TCP 192.168.5.3:53\"\ntime=\"2026-10-18T04:27:27-07:00\" level=info msg=\"[hostagent] Forwarding TCP from 127.0.0.1:53 to 127.0.0.1:53\"\ntime=\"2026-10-18T04:27:27-07:00\" level=info msg=\"[hostagent] The final requirement 1 of 1 is satisfied\"\ntime=\"2026-10-18T04:27:27-07:00\" level=info msg=\"READY. Run `limactl shell colima-t574-receipts` to open the shell.\"\ninstalling: 386 OK\ninstalling: amd64 OK\n{\n  \"supported\": [\n    \"linux/arm64\",\n    \"linux/amd64\",\n    \"linux/386\"\n  ],\n  \"emulators\": [\n    \"python3.12\",\n    \"qemu-i386\",\n    \"qemu-x86_64\",\n    \"rosetta\"\n  ]\n}\n  File: /proc/sys/fs/binfmt_misc/rosetta\n  Size: 0         \tBlocks: 0          IO Block: 4096   regular empty file\nDevice: 0,40\tInode: 2811        Links: 1\nAccess: (0644/-rw-r--r--)  Uid: (    0/    root)   Gid: (    0/    root)\nAccess: 2026-10-18 04:27:23.711000000 -0700\nModify: 2026-10-18 04:27:23.711000000 -0700\nChange: 2026-10-18 04:27:23.711000000 -0700\n Birth: -\ncolima-t574-receipts\nSuccessfully created context \"colima-t574-receipts\"\ncolima-t574-receipts\nCurrent context is now \"colima-t574-receipts\"\n",
+      "stderr": "time=\"2026-10-18T04:27:21-07:00\" level=info msg=\"starting colima [profile=t574-receipts]\"\ntime=\"2026-10-18T04:27:21-07:00\" level=info msg=\"runtime: docker\"\ntime=\"2026-10-18T04:27:21-07:00\" level=info msg=\"starting ...\" context=vm\ntime=\"2026-10-18T04:27:28-07:00\" level=info msg=\"provisioning ...\" context=docker\ntime=\"2026-10-18T04:27:28-07:00\" level=info msg=\"starting ...\" context=docker\ntime=\"2026-10-18T04:27:29-07:00\" level=info msg=done\n"
+    },
+    {
+      "argv": [
+        "/opt/homebrew/bin/docker",
+        "--context",
+        "colima-t574-receipts",
+        "image",
+        "inspect",
+        "docker.io/library/postgres@sha256:a63b24165ea0eacced7585766d790ac08bbaefe10a1841f87783a4505d29a69c"
+      ],
+      "exit_code": 0,
+      "stdout": "[\n    {\n        \"Id\": \"sha256:a63b24165ea0eacced7585766d790ac08bbaefe10a1841f87783a4505d29a69c\",\n        \"RepoTags\": [\n            \"postgres@sha256:a63b24165ea0eacced7585766d790ac08bbaefe10a1841f87783a4505d29a69c\"\n        ],\n        \"RepoDigests\": [\n            \"postgres@sha256:a63b24165ea0eacced7585766d790ac08bbaefe10a1841f87783a4505d29a69c\"\n        ],\n        \"Comment\": \"buildkit.dockerfile.v0\",\n        \"Created\": \"2026-10-06T01:35:25.233180549Z\",\n        \"Config\": {\n            \"ExposedPorts\": {\n                \"5432/tcp\": {}\n            },\n            \"Env\": [\n                \"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/lib/postgresql/18/bin\",\n                \"GOSU_VERSION=1.19\",\n                \"LANG=en_US.utf8\",\n                \"PG_MAJOR=18\",\n                \"PG_VERSION=18.6-1.pgdg13+2\",\n                \"PGDATA=/var/lib/postgresql/18/docker\"\n            ],\n            \"Entrypoint\": [\n                \"docker-entrypoint.sh\"\n            ],\n            \"Cmd\": [\n                \"postgres\"\n            ],\n            \"Volumes\": {\n                \"/var/lib/postgresql\": {}\n            },\n            \"StopSignal\": \"SIGINT\"\n        },\n        \"Architecture\": \"arm64\",\n        \"Variant\": \"v8\",\n        \"Os\": \"linux\",\n        \"Size\": 161112194,\n        \"RootFS\": {\n            \"Type\": \"layers\",\n            \"Layers\": [\n                \"sha256:258ba1f62b513e7bb7492d3cc8ce445e4ef176a14980f193f789b6d7270ae61c\",\n                \"sha256:a4a2a2dbaa40fdb7e645c5f3b394348147e2acb34b4bef37facb4bf0b8b71cf3\",\n                \"sha256:fe4a908765e155e429d718b9133056c466f981bb8c1b7a30e2b11f8c025d8f8d\",\n                \"sha256:b81dc9cede5fbf48dbd60117823e0c8dda3a7dde234fc9688b037a7c4a432364\",\n                \"sha256:ba36ccf4ed5f8cb18e4d15b449d2231a56ae3a662baa7c04d84a73f722b60ef7\",\n                \"sha256:e364749ea19eb75bdd8213eafa245d5968a28be2abb1502d06cdef379ece767f\",\n                \"sha256:ccaa618f65c4facd53bc23b3d05cf9cccb09c249a9f12036576901315268505c\",\n                \"sha256:9f1d6bcd9a63791f3c361aa0917662208000e9a002876ceed1b64dfc4b919693\",\n                \"sha256:fe6c54e9194019a80abeb4ae1643d0f4c20bb60f1f80b94ea0fc9b9dcc427bb9\",\n                \"sha256:d4926f7eaa0e14acc41ac6b4c83ec147cc5e6875c5887c6f650a7c5cae054275\",\n                \"sha256:43fb5d440b93d0a947df04dc0aa6632c49550e98dc82aee5d92b8aff077c1f4c\",\n                \"sha256:c1474b3be342f74a0870961c2c573d928547d28639097fbd5eec390d0595fce2\",\n                \"sha256:40fadcf3982d8de14ba2a98401a2b0cd747a577f0650dfcff882fc165d1f6ccf\"\n            ]\n        },\n        \"Metadata\": {\n            \"LastTagTime\": \"2026-10-18T11:25:23.785880815Z\"\n        },\n        \"Descriptor\": {\n            \"mediaType\": \"application/vnd.oci.image.manifest.v1+json\",\n            \"digest\": \"sha256:a63b24165ea0eacced7585766d790ac08bbaefe10a1841f87783a4505d29a69c\",\n            \"size\": 3441\n        },\n        \"Identity\": {\n            \"Pull\": [\n                {\n                    \"Repository\": \"docker.io/library/postgres\"\n                }\n            ]\n        }\n    }\n]\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/opt/homebrew/bin/docker",
+        "context",
+        "use",
+        "colima"
+      ],
+      "exit_code": 0,
+      "stdout": "colima\n",
+      "stderr": "Current context is now \"colima\"\n"
+    },
+    {
+      "argv": [
+        "/opt/homebrew/bin/colima",
+        "stop",
+        "--profile",
+        "t574-receipts"
+      ],
+      "exit_code": 0,
+      "stdout": "Stopping 'docker.service', but its triggering units are still active:\ndocker.socket\ncolima-t574-receipts\ntime=\"2026-10-18T04:27:31-07:00\" level=info msg=\"Sending SIGINT to hostagent process 33395\"\ntime=\"2026-10-18T04:27:31-07:00\" level=info msg=\"Waiting for the host agent and the driver processes to shut down\"\ntime=\"2026-10-18T04:27:31-07:00\" level=info msg=\"[hostagent] Received SIGINT, shutting down the host agent\"\ntime=\"2026-10-18T04:27:31-07:00\" level=info msg=\"[hostagent] Shutting down the host agent\"\ntime=\"2026-10-18T04:27:31-07:00\" level=info msg=\"[hostagent] Stopping forwarding `/var/run/docker.sock` (guest) to `/Users/ben/.colima/t574-receipts/docker.sock` (host)\"\ntime=\"2026-10-18T04:27:31-07:00\" level=info msg=\"[hostagent] Stopping forwarding `/var/run/containerd/containerd.sock` (guest) to `/Users/ben/.colima/t574-receipts/containerd.sock` (host)\"\ntime=\"2026-10-18T04:27:31-07:00\" level=info msg=\"[hostagent] Unmounting disk `colima-t574-receipts`\"\ntime=\"2026-10-18T04:27:31-07:00\" level=info msg=\"[hostagent] Shutting down VZ\"\ntime=\"2026-10-18T04:27:31-07:00\" level=info msg=\"[hostagent] [VZ] - vm state change: stopped\"\ntime=\"2026-10-18T04:27:31-07:00\" level=info msg=\"Waiting for the instance to shut down\"\ntime=\"2026-10-18T04:27:32-07:00\" level=info msg=\"The instance colima-t574-receipts has shut down\"\n",
+      "stderr": "time=\"2026-10-18T04:27:30-07:00\" level=info msg=\"stopping colima [profile=t574-receipts]\"\ntime=\"2026-10-18T04:27:30-07:00\" level=info msg=\"stopping ...\" context=docker\ntime=\"2026-10-18T04:27:30-07:00\" level=info msg=\"stopping ...\" context=vm\ntime=\"2026-10-18T04:27:32-07:00\" level=info msg=done\n"
+    }
+  ],
+  "actual_image_metadata": {
+    "Id": "sha256:a63b24165ea0eacced7585766d790ac08bbaefe10a1841f87783a4505d29a69c",
+    "Descriptor": {
+      "mediaType": "application/vnd.oci.image.manifest.v1+json",
+      "digest": "sha256:a63b24165ea0eacced7585766d790ac08bbaefe10a1841f87783a4505d29a69c",
+      "size": 3441
+    },
+    "RepoDigests": [
+      "postgres@sha256:a63b24165ea0eacced7585766d790ac08bbaefe10a1841f87783a4505d29a69c"
+    ],
+    "Architecture": "arm64",
+    "Variant": "v8",
+    "Os": "linux",
+    "RootFS": {
+      "Type": "layers",
+      "Layers": [
+        "sha256:258ba1f62b513e7bb7492d3cc8ce445e4ef176a14980f193f789b6d7270ae61c",
+        "sha256:a4a2a2dbaa40fdb7e645c5f3b394348147e2acb34b4bef37facb4bf0b8b71cf3",
+        "sha256:fe4a908765e155e429d718b9133056c466f981bb8c1b7a30e2b11f8c025d8f8d",
+        "sha256:b81dc9cede5fbf48dbd60117823e0c8dda3a7dde234fc9688b037a7c4a432364",
+        "sha256:ba36ccf4ed5f8cb18e4d15b449d2231a56ae3a662baa7c04d84a73f722b60ef7",
+        "sha256:e364749ea19eb75bdd8213eafa245d5968a28be2abb1502d06cdef379ece767f",
+        "sha256:ccaa618f65c4facd53bc23b3d05cf9cccb09c249a9f12036576901315268505c",
+        "sha256:9f1d6bcd9a63791f3c361aa0917662208000e9a002876ceed1b64dfc4b919693",
+        "sha256:fe6c54e9194019a80abeb4ae1643d0f4c20bb60f1f80b94ea0fc9b9dcc427bb9",
+        "sha256:d4926f7eaa0e14acc41ac6b4c83ec147cc5e6875c5887c6f650a7c5cae054275",
+        "sha256:43fb5d440b93d0a947df04dc0aa6632c49550e98dc82aee5d92b8aff077c1f4c",
+        "sha256:c1474b3be342f74a0870961c2c573d928547d28639097fbd5eec390d0595fce2",
+        "sha256:40fadcf3982d8de14ba2a98401a2b0cd747a577f0650dfcff882fc165d1f6ccf"
+      ]
+    },
+    "Size": 161112194
+  },
+  "config_digest": "sha256:0336095afa072c685c93021dcfa4a5fee9cbce25ecd65121b58226c787afc0d0",
+  "config_bytes": 10061,
+  "config_rootfs_diff_ids": [
+    "sha256:258ba1f62b513e7bb7492d3cc8ce445e4ef176a14980f193f789b6d7270ae61c",
+    "sha256:a4a2a2dbaa40fdb7e645c5f3b394348147e2acb34b4bef37facb4bf0b8b71cf3",
+    "sha256:fe4a908765e155e429d718b9133056c466f981bb8c1b7a30e2b11f8c025d8f8d",
+    "sha256:b81dc9cede5fbf48dbd60117823e0c8dda3a7dde234fc9688b037a7c4a432364",
+    "sha256:ba36ccf4ed5f8cb18e4d15b449d2231a56ae3a662baa7c04d84a73f722b60ef7",
+    "sha256:e364749ea19eb75bdd8213eafa245d5968a28be2abb1502d06cdef379ece767f",
+    "sha256:ccaa618f65c4facd53bc23b3d05cf9cccb09c249a9f12036576901315268505c",
+    "sha256:9f1d6bcd9a63791f3c361aa0917662208000e9a002876ceed1b64dfc4b919693",
+    "sha256:fe6c54e9194019a80abeb4ae1643d0f4c20bb60f1f80b94ea0fc9b9dcc427bb9",
+    "sha256:d4926f7eaa0e14acc41ac6b4c83ec147cc5e6875c5887c6f650a7c5cae054275",
+    "sha256:43fb5d440b93d0a947df04dc0aa6632c49550e98dc82aee5d92b8aff077c1f4c",
+    "sha256:c1474b3be342f74a0870961c2c573d928547d28639097fbd5eec390d0595fce2",
+    "sha256:40fadcf3982d8de14ba2a98401a2b0cd747a577f0650dfcff882fc165d1f6ccf"
+  ],
+  "config_platform": {
+    "architecture": "arm64",
+    "os": "linux",
+    "variant": "v8"
+  },
+  "prospective_predicates": {
+    "descriptor_matches_pinned_manifest": true,
+    "repo_digest_matches_pinned_manifest": true,
+    "architecture_os_match": true,
+    "exact_config_blob_hash_matches_manifest": true,
+    "rootfs_diff_id_chain_matches_config": true,
+    "runtime_config_matches_pinned_config": true
+  },
+  "actual_id_is_manifest_digest": true,
+  "actual_id_is_config_digest": false,
+  "status": "read-only re-admission metadata passed; lead acceptance required before container launch",
+  "vm_stopped": true,
+  "docker_context_restored": true
+}

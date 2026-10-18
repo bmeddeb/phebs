@@ -1,0 +1,53 @@
+{
+  "schema": "t521-committed-evaluation-inputs-v1",
+  "date": "2026-10-18",
+  "source_checkpoint": "61ff5faa25dfb4f609ecbef6836f69d1741a14fe",
+  "witness_checkpoint": "683a64081ca1f87aa968ed27679989e970561e76",
+  "input_preparation_digest": "sha256:4264edbde5fcf0a99b0bb7e18506c7490df6e5ce85d9ee3544778e3d91e3ebf4",
+  "source_label_digest": "sha256:4e9c7474bc33e98c1d1f057f8e8cd72f71a5801ca157df873e9dbf1bc87c491f",
+  "binding": "Actual local Git source and committed-index commits; no false upstream indexed-commit identity. Exact source/IDL witnesses and preparation remain separate.",
+  "candidate_runs": 0,
+  "populations": [
+    {
+      "population": "public",
+      "evaluation_repository": "evaluation.local/t521-public",
+      "evaluation_directory": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t521-evaluation-kv68rwca/public",
+      "source_commit": "e4465e739634233cbc57210a08e510bbd6240a08",
+      "source_tree": "5273642c6d3ad3ce202c346beff92259508fbbff",
+      "committed_input_commit": "6218bbaca1bd557c45c6aba6dfcd0c741ed1f64b",
+      "committed_input_tree": "a75acafed2a89144418268d6d33290582d89ad0f",
+      "source_files": 38,
+      "added_files": [
+        "index.scip",
+        "go.sum"
+      ],
+      "index_bytes": 839828,
+      "index_digest": "sha256:2bf4030cb6f100e78d78505894e87f464c2ac4a90529ad6555df09c3850ebd28",
+      "bundle_path": "input-bundles/public.bundle",
+      "bundle_bytes": 165582,
+      "bundle_digest": "sha256:d4dd498e0fd9011aefc1d3097bba7024b8f824c3394e9076cbf08102f6b1254f",
+      "bundle_verified": true,
+      "upstream_commit_is_provenance_only": true
+    },
+    {
+      "population": "neutral",
+      "evaluation_repository": "evaluation.local/t521-neutral",
+      "evaluation_directory": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t521-evaluation-kv68rwca/neutral",
+      "source_commit": "d3a2fffd29f1ae8913ad1a0ea2889813d13729ce",
+      "source_tree": "b87a887c2f0adf4050196d03118f3b73148e050c",
+      "committed_input_commit": "34136e8c9f6ee0364cb2dff3a1e78a7d86221721",
+      "committed_input_tree": "bbd02668e587a5d873341b69d87bd7b073316028",
+      "source_files": 5,
+      "added_files": [
+        "index.scip"
+      ],
+      "index_bytes": 10154,
+      "index_digest": "sha256:a2b01df52996dfe5edc2b03d1d0236c879475c2313369f1bcc184791c9f08d55",
+      "bundle_path": "input-bundles/neutral.bundle",
+      "bundle_bytes": 4037,
+      "bundle_digest": "sha256:ea1daaefb122baccdad0cfa45c4a7a5c9114d17c644dece54b1bd2c7beef06da",
+      "bundle_verified": true,
+      "upstream_commit_is_provenance_only": true
+    }
+  ]
+}

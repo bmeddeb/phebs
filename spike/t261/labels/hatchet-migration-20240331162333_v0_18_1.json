@@ -1,0 +1,93 @@
+{
+  "format": "t261-source-labels-v1",
+  "dialect": "postgresql",
+  "repository": "hatchet-dev/hatchet",
+  "commit": "559b5021e418f12ded175f950b709b7fa66be5a5",
+  "source_path": "cmd/hatchet-migrate/migrate/migrations/20240331162333_v0_18_1.sql",
+  "source_sha256": "1bb5e0024ba32497a143dea9abd6134a14f6a03545b0adb8db0ecc654fdc12a1",
+  "plane": "sql-migration-event",
+  "statements": [
+    {
+      "id": "migration-L3",
+      "start": 28,
+      "end": 123,
+      "sha256": "763450f7c6fbe690f5af9a978c81b50b4c95aa9b56e4840df91c4ef9ac0f300b",
+      "syntax_class": "create-table",
+      "expected_disposition": "migration-event",
+      "direction": "up",
+      "objects": [],
+      "sites": [],
+      "events": [
+        {
+          "predicate": "MIGRATION_CREATES_TABLE",
+          "name": "WorkerSemaphore",
+          "quoted": true,
+          "start": 41,
+          "end": 58,
+          "sha256": "00d0bfd0eded8ce26cbabf0f24ee92caa8badc409fdf197efc8d469b42b52a91"
+        }
+      ],
+      "note": "Explicit source history occurrence in Goose up branch; never execute, fold branches or emit DECLARES_* objects. Stable identity includes source path, statement byte offset and predicate."
+    },
+    {
+      "id": "migration-L9",
+      "start": 139,
+      "end": 224,
+      "sha256": "0b9f8ed6b9387d11bc3b28fa9c97ceb35edc6317f75d9a7a5aa68c2d23e04875",
+      "syntax_class": "create-index",
+      "expected_disposition": "migration-event",
+      "direction": "up",
+      "objects": [],
+      "sites": [],
+      "events": [
+        {
+          "predicate": "MIGRATION_CREATES_INDEX",
+          "name": "WorkerSemaphore_workerId_key",
+          "quoted": true,
+          "start": 159,
+          "end": 189,
+          "sha256": "94e26a909a822f446181eb8afd88196dff5cd66d8511c304faa74429ed19e00c",
+          "relation": "WorkerSemaphore",
+          "columns": [
+            "workerId"
+          ]
+        }
+      ],
+      "note": "Explicit source history occurrence in Goose up branch; never execute, fold branches or emit DECLARES_* objects. Stable identity includes source path, statement byte offset and predicate."
+    },
+    {
+      "id": "migration-L12",
+      "start": 242,
+      "end": 407,
+      "sha256": "f5458cb31555e21b242346516869e4e42d6d3b03c58f6f788d4da4215505f735",
+      "syntax_class": "alter-add-fk",
+      "expected_disposition": "migration-event",
+      "direction": "up",
+      "objects": [],
+      "sites": [],
+      "events": [
+        {
+          "predicate": "MIGRATION_ADDS_FOREIGN_KEY",
+          "name": "WorkerSemaphore_workerId_fkey",
+          "quoted": true,
+          "start": 287,
+          "end": 318,
+          "sha256": "f50f5539d707cb64bece5acc25fab559251f1a902af24f450ba571e23f39ba70",
+          "relation": "WorkerSemaphore",
+          "columns": [
+            "workerId"
+          ],
+          "target_relation": "Worker",
+          "target_columns": [
+            "id"
+          ]
+        }
+      ],
+      "note": "Explicit source history occurrence in Goose up branch; never execute, fold branches or emit DECLARES_* objects. Stable identity includes source path, statement byte offset and predicate."
+    }
+  ],
+  "inventory_notes": [
+    "Entire selected file, both Goose branches, labelled before parser execution. No accuracy inference to 208 unsampled migration files.",
+    "Lane derives from committed sqlc PostgreSQL engine metadata under explicit spike migration-root admission, never grammar sniffing."
+  ]
+}

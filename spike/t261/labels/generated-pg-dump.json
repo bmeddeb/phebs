@@ -1,0 +1,276 @@
+{
+  "format": "t261-source-labels-v1",
+  "dialect": "postgresql",
+  "repository": "phebs-t261-public-dispatcher-fixture",
+  "commit": null,
+  "source_origin": "generated-fixture",
+  "evaluation_commit": "The evaluator must bind this exact source hash/path to the lead's immutable preregistration Git checkpoint; no self-referential future commit is fabricated inside its own input.",
+  "source_path": "fixtures/requested-pg18.6-dump.sql",
+  "source_sha256": "712e9380d8b580971cc891b5cfbf3f2b0817b84782e3d67df3118a9877e0d2b2",
+  "plane": "sql-schema",
+  "statements": [
+    {
+      "id": "wrapper-L5",
+      "start": 35,
+      "end": 73,
+      "sha256": "850785b19b0f08bfdb6f2be16411306240d23d3b66bcca2a056fe1509cd87608",
+      "syntax_class": "dump-wrapper",
+      "expected_disposition": "wrapper",
+      "objects": [],
+      "note": "Exact PG18.6 capture/restrict/session wrapper; no query usage/history or execution in the reader."
+    },
+    {
+      "id": "wrapper-L10",
+      "start": 196,
+      "end": 223,
+      "sha256": "b2584317ddd31ae50a9af143880a999020a44018bf16cbe49d529bf502f59e92",
+      "syntax_class": "dump-wrapper",
+      "expected_disposition": "wrapper",
+      "objects": [],
+      "note": "Exact PG18.6 capture/restrict/session wrapper; no query usage/history or execution in the reader."
+    },
+    {
+      "id": "wrapper-L11",
+      "start": 223,
+      "end": 245,
+      "sha256": "f066fdb398275af377685aaaab7602d8d3de73831a954fd25ce9f3576a2ac4ed",
+      "syntax_class": "dump-wrapper",
+      "expected_disposition": "wrapper",
+      "objects": [],
+      "note": "Exact PG18.6 capture/restrict/session wrapper; no query usage/history or execution in the reader."
+    },
+    {
+      "id": "wrapper-L12",
+      "start": 245,
+      "end": 290,
+      "sha256": "26df156ad1f04defc0b55177f4cb3ccd9a81c8a86ec87c8a6fbf888f6fc17bdc",
+      "syntax_class": "dump-wrapper",
+      "expected_disposition": "wrapper",
+      "objects": [],
+      "note": "Exact PG18.6 capture/restrict/session wrapper; no query usage/history or execution in the reader."
+    },
+    {
+      "id": "wrapper-L13",
+      "start": 290,
+      "end": 319,
+      "sha256": "259dbdcc310d66722b722e246c6cb30ba3da659ff58d0973ebb5d9e4f4c703e9",
+      "syntax_class": "dump-wrapper",
+      "expected_disposition": "wrapper",
+      "objects": [],
+      "note": "Exact PG18.6 capture/restrict/session wrapper; no query usage/history or execution in the reader."
+    },
+    {
+      "id": "wrapper-L14",
+      "start": 319,
+      "end": 349,
+      "sha256": "5afeec36cf25e60fcc1dab6a34c3268e3fbfcbdf2ecd8c6b4fae449a6c852ed4",
+      "syntax_class": "dump-wrapper",
+      "expected_disposition": "wrapper",
+      "objects": [],
+      "note": "Exact PG18.6 capture/restrict/session wrapper; no query usage/history or execution in the reader."
+    },
+    {
+      "id": "wrapper-L15",
+      "start": 349,
+      "end": 387,
+      "sha256": "204069feb91a237f80b9df8d16e2198905ad69e2234d9dee0b3baeec24c1beff",
+      "syntax_class": "dump-wrapper",
+      "expected_disposition": "wrapper",
+      "objects": [],
+      "note": "Exact PG18.6 capture/restrict/session wrapper; no query usage/history or execution in the reader."
+    },
+    {
+      "id": "wrapper-L16",
+      "start": 387,
+      "end": 443,
+      "sha256": "283c0ac36b3260c1cab68458e722cf8d9278513a7e6a953d627032ba6f475c71",
+      "syntax_class": "dump-wrapper",
+      "expected_disposition": "wrapper",
+      "objects": [],
+      "note": "Exact PG18.6 capture/restrict/session wrapper; no query usage/history or execution in the reader."
+    },
+    {
+      "id": "wrapper-L17",
+      "start": 443,
+      "end": 478,
+      "sha256": "642b02fb5baa32c0c71db74ac4bf55c9fee975a9540521f6607e174b80795fde",
+      "syntax_class": "dump-wrapper",
+      "expected_disposition": "wrapper",
+      "objects": [],
+      "note": "Exact PG18.6 capture/restrict/session wrapper; no query usage/history or execution in the reader."
+    },
+    {
+      "id": "wrapper-L18",
+      "start": 478,
+      "end": 503,
+      "sha256": "a512b4179fe3edf63b1f357cda8f2b14f1d2e4cb2f1733e9bc1e3406a5aa6185",
+      "syntax_class": "dump-wrapper",
+      "expected_disposition": "wrapper",
+      "objects": [],
+      "note": "Exact PG18.6 capture/restrict/session wrapper; no query usage/history or execution in the reader."
+    },
+    {
+      "id": "wrapper-L19",
+      "start": 503,
+      "end": 538,
+      "sha256": "db18ceffb9d2c93e044341b7d6113bc65974eceaaa64c09e837d08a8b8472cc5",
+      "syntax_class": "dump-wrapper",
+      "expected_disposition": "wrapper",
+      "objects": [],
+      "note": "Exact PG18.6 capture/restrict/session wrapper; no query usage/history or execution in the reader."
+    },
+    {
+      "id": "wrapper-L20",
+      "start": 538,
+      "end": 562,
+      "sha256": "fd92a47e497ee4062b4344ae662bb9a8c4192e7dab377a56be5b18b0efb53f41",
+      "syntax_class": "dump-wrapper",
+      "expected_disposition": "wrapper",
+      "objects": [],
+      "note": "Exact PG18.6 capture/restrict/session wrapper; no query usage/history or execution in the reader."
+    },
+    {
+      "id": "wrapper-L22",
+      "start": 563,
+      "end": 603,
+      "sha256": "cf324987722b9fdfa08758b9f93545a69915c9d3d197ee87618ef122163528b8",
+      "syntax_class": "dump-wrapper",
+      "expected_disposition": "wrapper",
+      "objects": [],
+      "note": "Exact PG18.6 capture/restrict/session wrapper; no query usage/history or execution in the reader."
+    },
+    {
+      "id": "table-public-Dispatcher",
+      "start": 670,
+      "end": 1043,
+      "sha256": "66af7d94120a87f00a8fafc893b0c2400224158a446d515db59dc5080cc1e9db",
+      "syntax_class": "create-table",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "table",
+          "name": "Dispatcher",
+          "quoted": true,
+          "start": 690,
+          "end": 702,
+          "sha256": "0539b568a8a4aa7e37506e2ab09b8d5d944af2cd3f09a1f10630d95f5d94cb82",
+          "schema": "public",
+          "schema_quoted": false
+        },
+        {
+          "kind": "column",
+          "name": "id",
+          "quoted": false,
+          "start": 709,
+          "end": 711,
+          "sha256": "a56145270ce6b3bebd1dd012b73948677dd618d496488bc608a3cb43ce3547dd",
+          "schema": "public",
+          "schema_quoted": false,
+          "relation": "Dispatcher",
+          "type_spelling": "uuid"
+        },
+        {
+          "kind": "column",
+          "name": "createdAt",
+          "quoted": true,
+          "start": 731,
+          "end": 742,
+          "sha256": "e5a268962889a6cb0a325c97c8c921f8075adb96223a5bbe96cb970d2c8f4bc2",
+          "schema": "public",
+          "schema_quoted": false,
+          "relation": "Dispatcher",
+          "type_spelling": "timestamp(3) without time zone"
+        },
+        {
+          "kind": "column",
+          "name": "updatedAt",
+          "quoted": true,
+          "start": 814,
+          "end": 825,
+          "sha256": "c6f43295d5a29d99daa7eb6ca8c46adebf421f610f2dbd357bdc7d88c69ae76e",
+          "schema": "public",
+          "schema_quoted": false,
+          "relation": "Dispatcher",
+          "type_spelling": "timestamp(3) without time zone"
+        },
+        {
+          "kind": "column",
+          "name": "deletedAt",
+          "quoted": true,
+          "start": 897,
+          "end": 908,
+          "sha256": "e1de22cbde46a352409cb0384b9a8ef81e5cf59e17bc8dfb12a05a44ed357a4b",
+          "schema": "public",
+          "schema_quoted": false,
+          "relation": "Dispatcher",
+          "type_spelling": "timestamp(3) without time zone"
+        },
+        {
+          "kind": "column",
+          "name": "lastHeartbeatAt",
+          "quoted": true,
+          "start": 945,
+          "end": 962,
+          "sha256": "d9c9799cfa07388b015f8a2054731b6edfba5c5b9ea7df8d33aae7d714d42746",
+          "schema": "public",
+          "schema_quoted": false,
+          "relation": "Dispatcher",
+          "type_spelling": "timestamp(3) without time zone"
+        },
+        {
+          "kind": "column",
+          "name": "isActive",
+          "quoted": true,
+          "start": 999,
+          "end": 1009,
+          "sha256": "f80dce26151cfc52dbefd95b56adc64dd02fd18a59b658a4cecf2ed47f7ffc0a",
+          "schema": "public",
+          "schema_quoted": false,
+          "relation": "Dispatcher",
+          "type_spelling": "boolean"
+        }
+      ]
+    },
+    {
+      "id": "pk-public-Dispatcher",
+      "start": 1132,
+      "end": 1224,
+      "sha256": "1a1e358508ce642fd049e933a2f452ca08d43fbab69921ec674be5dc6ea62cc6",
+      "syntax_class": "alter-table-add-pk",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "primary_key",
+          "name": "Dispatcher_pkey",
+          "quoted": true,
+          "start": 1188,
+          "end": 1205,
+          "sha256": "bc7678aee156681626ba5b25d556ebd13dd8f19832a62ae35668d8b0c0c7841c",
+          "schema": "public",
+          "schema_quoted": false,
+          "relation": "Dispatcher",
+          "columns": [
+            "id"
+          ]
+        }
+      ],
+      "note": "Captured-dump current constraint, not a migration event; explicit public qualifier retained separately from exact quoted table name."
+    },
+    {
+      "id": "wrapper-L50",
+      "start": 1270,
+      "end": 1310,
+      "sha256": "494be5905c9bc5d004c8e50fab75c1fce6f39d73efab319166b1203d10010f8e",
+      "syntax_class": "dump-wrapper",
+      "expected_disposition": "wrapper",
+      "objects": [],
+      "note": "Exact PG18.6 capture/restrict/session wrapper; no query usage/history or execution in the reader."
+    }
+  ],
+  "inventory_notes": [
+    "Entire measured PG18.6 schema-only output completely hand-labelled after authorized generation and before any SQL parser candidate/grammar run.",
+    "One table/six columns/one named PK;14 explicit wrappers. Public schema qualifier retained as typed metadata, not delimiter-split identity.",
+    "Derived from the exact licensed pinned Hatchet Dispatcher statement; this dump is not falsely attributed to an upstream Hatchet Git blob. Exact upstream derivation lives in pg-generator-input.json; exact runtime/double-dump/teardown receipt in pg-generation-receipt-accepted.json.",
+    "One mechanical supplementary capture only; no live/runtime/vendor/schema accuracy claim."
+  ]
+}

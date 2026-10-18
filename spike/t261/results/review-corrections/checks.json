@@ -1,0 +1,304 @@
+{
+  "checks": {
+    "evaluator": {
+      "argv": [
+        "python3",
+        "-m",
+        "unittest",
+        "runner_test.py"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261",
+      "exact_child_wait4_maxrss_bytes": 16924672,
+      "exit": 0,
+      "go_cache": "inherited host cache; not a cold-build measurement",
+      "joined": true,
+      "output_limit_bytes": 67108864,
+      "peak_observed_rss_bytes": 13795328,
+      "rss_qualification": "observed stop, not hard heap or allocation bound;20ms plus scheduling/measurement overshoot; wait4 peak may exceed sampled current RSS",
+      "rss_stop_bytes": null,
+      "sample_errors": 0,
+      "samples": 2,
+      "sampling_interval_seconds": 0.02,
+      "stderr_bytes": 102,
+      "stderr_limit_bytes": 65536,
+      "stderr_sha256": "56e03afda220e7ba78bbcecf9a2e53a0149cfc3e311fa10bbd01b25e8e5ba671",
+      "stdout_bytes": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stop": null,
+      "wall_limit_seconds": 30,
+      "wall_seconds": 0.061536
+    },
+    "lint": {
+      "argv": [
+        "golangci-lint",
+        "run",
+        "--config",
+        "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/.golangci.yml",
+        "./..."
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261/reader",
+      "exact_child_wait4_maxrss_bytes": 110346240,
+      "exit": 0,
+      "go_cache": "inherited host cache; not a cold-build measurement",
+      "joined": true,
+      "output_limit_bytes": 67108864,
+      "peak_observed_rss_bytes": 97566720,
+      "rss_qualification": "observed stop, not hard heap or allocation bound;20ms plus scheduling/measurement overshoot; wait4 peak may exceed sampled current RSS",
+      "rss_stop_bytes": null,
+      "sample_errors": 0,
+      "samples": 18,
+      "sampling_interval_seconds": 0.02,
+      "stderr_bytes": 0,
+      "stderr_limit_bytes": 65536,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 10,
+      "stdout_sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47",
+      "stop": null,
+      "wall_limit_seconds": 30,
+      "wall_seconds": 0.436579
+    },
+    "normal": {
+      "argv": [
+        "go",
+        "test",
+        "-count=1",
+        "./..."
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261/reader",
+      "exact_child_wait4_maxrss_bytes": 91947008,
+      "exit": 0,
+      "go_cache": "inherited host cache; not a cold-build measurement",
+      "joined": true,
+      "output_limit_bytes": 67108864,
+      "peak_observed_rss_bytes": 31670272,
+      "rss_qualification": "observed stop, not hard heap or allocation bound;20ms plus scheduling/measurement overshoot; wait4 peak may exceed sampled current RSS",
+      "rss_stop_bytes": null,
+      "sample_errors": 0,
+      "samples": 36,
+      "sampling_interval_seconds": 0.02,
+      "stderr_bytes": 0,
+      "stderr_limit_bytes": 65536,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 78,
+      "stdout_sha256": "ca4552598ad45299bb48d33f9db8cdabbef751629424c3d4554c8c056137395c",
+      "stop": null,
+      "wall_limit_seconds": 30,
+      "wall_seconds": 0.955946
+    },
+    "race": {
+      "argv": [
+        "go",
+        "test",
+        "-race",
+        "-count=1",
+        "./..."
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261/reader",
+      "exact_child_wait4_maxrss_bytes": 105054208,
+      "exit": 0,
+      "go_cache": "inherited host cache; not a cold-build measurement",
+      "joined": true,
+      "output_limit_bytes": 67108864,
+      "peak_observed_rss_bytes": 32980992,
+      "rss_qualification": "observed stop, not hard heap or allocation bound;20ms plus scheduling/measurement overshoot; wait4 peak may exceed sampled current RSS",
+      "rss_stop_bytes": null,
+      "sample_errors": 0,
+      "samples": 70,
+      "sampling_interval_seconds": 0.02,
+      "stderr_bytes": 0,
+      "stderr_limit_bytes": 65536,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 78,
+      "stdout_sha256": "59c262f644d2569e6de5dd8c8d54cebf15d8efede041ba2861845cc2e5b2e698",
+      "stop": null,
+      "wall_limit_seconds": 30,
+      "wall_seconds": 1.914755
+    },
+    "vet": {
+      "argv": [
+        "go",
+        "vet",
+        "./..."
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t261-sql-schema-spike/phebs.com/spike/t261/reader",
+      "exact_child_wait4_maxrss_bytes": 33226752,
+      "exit": 0,
+      "go_cache": "inherited host cache; not a cold-build measurement",
+      "joined": true,
+      "output_limit_bytes": 67108864,
+      "peak_observed_rss_bytes": 33128448,
+      "rss_qualification": "observed stop, not hard heap or allocation bound;20ms plus scheduling/measurement overshoot; wait4 peak may exceed sampled current RSS",
+      "rss_stop_bytes": null,
+      "sample_errors": 0,
+      "samples": 5,
+      "sampling_interval_seconds": 0.02,
+      "stderr_bytes": 0,
+      "stderr_limit_bytes": 65536,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stop": null,
+      "wall_limit_seconds": 30,
+      "wall_seconds": 0.121561
+    }
+  },
+  "inputs_after": {
+    "bytes": 4439033,
+    "contract_sha256": "9568cf9cce51f30bfd38c131d4ba8a6502ad9c0a777d743e9b5b6cd330d7031c",
+    "files": 419,
+    "history_sha256": "ad65ad9aa90313cfc371662a3a37cf528c190212d971ebac2bb443c595f5d056",
+    "preregistration_sha256": "791585bd54e5a03ccdfbda033884229a48c2006e9ac822ad7265091605e962e9"
+  },
+  "inputs_before": {
+    "bytes": 4439033,
+    "contract_sha256": "9568cf9cce51f30bfd38c131d4ba8a6502ad9c0a777d743e9b5b6cd330d7031c",
+    "files": 419,
+    "history_sha256": "ad65ad9aa90313cfc371662a3a37cf528c190212d971ebac2bb443c595f5d056",
+    "preregistration_sha256": "791585bd54e5a03ccdfbda033884229a48c2006e9ac822ad7265091605e962e9"
+  },
+  "qualification": "Corrected boundary code and scorer controls only; no corpus parser rerun; direct Go-driver RSS is not aggregate test/compiler-family RSS",
+  "source_after": [
+    {
+      "bytes": 6449,
+      "path": "comparison-contract.json",
+      "sha256": "9568cf9cce51f30bfd38c131d4ba8a6502ad9c0a777d743e9b5b6cd330d7031c"
+    },
+    {
+      "bytes": 179,
+      "path": "reader/candidates/mysql/go.mod",
+      "sha256": "80b1e38b3bb37379c6678249b917ed8085c8d7c4a6dc3165a2739dc69f4dcaf0"
+    },
+    {
+      "bytes": 231,
+      "path": "reader/candidates/mysql/go.sum",
+      "sha256": "4d2770255e36a7367b3f5824061f61254e70be55dbc95eef862d4d897cd51a8a"
+    },
+    {
+      "bytes": 840,
+      "path": "reader/candidates/mysql/main.go",
+      "sha256": "9de7e4fc15ea8ce56bab0721c56a69dde9103848b1c2c9bc189bda3373ecff32"
+    },
+    {
+      "bytes": 219,
+      "path": "reader/candidates/postgresql/go.mod",
+      "sha256": "99cfcd590c61c17a7aef5bc36b0e63f2635788bbb6da3ac7c501969d2dd64e58"
+    },
+    {
+      "bytes": 758,
+      "path": "reader/candidates/postgresql/go.sum",
+      "sha256": "a8635280c8fae499381906a6c28111fee46ed9303c20f5eb6be8bf4f40ce926b"
+    },
+    {
+      "bytes": 1504,
+      "path": "reader/candidates/postgresql/main.go",
+      "sha256": "8bdc681eb66db96d9ae826cf3a1dfd845399390a1491bdf2e7751bf2dd0e957f"
+    },
+    {
+      "bytes": 388,
+      "path": "reader/cmd/subset/main.go",
+      "sha256": "c0c4454bf0bd4a65e6cc18a44fd45c34fbce3aacca295c652c4ad25e37208f2d"
+    },
+    {
+      "bytes": 35,
+      "path": "reader/go.mod",
+      "sha256": "72cb7829d57ecc402b1e1d1d133008a288de03e1b5486deb1fa20e5408d8b291"
+    },
+    {
+      "bytes": 7020,
+      "path": "reader/lexer.go",
+      "sha256": "8bc2c6294a4681d04a293430a5b4932612effb269dc681e6cd0402cc785f050d"
+    },
+    {
+      "bytes": 21014,
+      "path": "reader/project.go",
+      "sha256": "77b91107fe4a2eadce49f035fb14464a3cb156733a3c0c7807ce63c93571eee7"
+    },
+    {
+      "bytes": 6916,
+      "path": "reader/reader_test.go",
+      "sha256": "98675f83670e2e0839954cb47c2899e70b83a48bc9a5357352bbf11b4bb7d265"
+    },
+    {
+      "bytes": 12305,
+      "path": "reader/run.go",
+      "sha256": "51ca412200fe21ac92a69e5a802e231277f6ec9fa037ec3cf43c33a37aaf50b7"
+    },
+    {
+      "bytes": 22696,
+      "path": "run_comparison.py",
+      "sha256": "9e855fcbc60215ccd6cea6cb48024f01ceeaf55d1bc330bb44d20948dba86b90"
+    }
+  ],
+  "source_before": [
+    {
+      "bytes": 6449,
+      "path": "comparison-contract.json",
+      "sha256": "9568cf9cce51f30bfd38c131d4ba8a6502ad9c0a777d743e9b5b6cd330d7031c"
+    },
+    {
+      "bytes": 179,
+      "path": "reader/candidates/mysql/go.mod",
+      "sha256": "80b1e38b3bb37379c6678249b917ed8085c8d7c4a6dc3165a2739dc69f4dcaf0"
+    },
+    {
+      "bytes": 231,
+      "path": "reader/candidates/mysql/go.sum",
+      "sha256": "4d2770255e36a7367b3f5824061f61254e70be55dbc95eef862d4d897cd51a8a"
+    },
+    {
+      "bytes": 840,
+      "path": "reader/candidates/mysql/main.go",
+      "sha256": "9de7e4fc15ea8ce56bab0721c56a69dde9103848b1c2c9bc189bda3373ecff32"
+    },
+    {
+      "bytes": 219,
+      "path": "reader/candidates/postgresql/go.mod",
+      "sha256": "99cfcd590c61c17a7aef5bc36b0e63f2635788bbb6da3ac7c501969d2dd64e58"
+    },
+    {
+      "bytes": 758,
+      "path": "reader/candidates/postgresql/go.sum",
+      "sha256": "a8635280c8fae499381906a6c28111fee46ed9303c20f5eb6be8bf4f40ce926b"
+    },
+    {
+      "bytes": 1504,
+      "path": "reader/candidates/postgresql/main.go",
+      "sha256": "8bdc681eb66db96d9ae826cf3a1dfd845399390a1491bdf2e7751bf2dd0e957f"
+    },
+    {
+      "bytes": 388,
+      "path": "reader/cmd/subset/main.go",
+      "sha256": "c0c4454bf0bd4a65e6cc18a44fd45c34fbce3aacca295c652c4ad25e37208f2d"
+    },
+    {
+      "bytes": 35,
+      "path": "reader/go.mod",
+      "sha256": "72cb7829d57ecc402b1e1d1d133008a288de03e1b5486deb1fa20e5408d8b291"
+    },
+    {
+      "bytes": 7020,
+      "path": "reader/lexer.go",
+      "sha256": "8bc2c6294a4681d04a293430a5b4932612effb269dc681e6cd0402cc785f050d"
+    },
+    {
+      "bytes": 21014,
+      "path": "reader/project.go",
+      "sha256": "77b91107fe4a2eadce49f035fb14464a3cb156733a3c0c7807ce63c93571eee7"
+    },
+    {
+      "bytes": 6916,
+      "path": "reader/reader_test.go",
+      "sha256": "98675f83670e2e0839954cb47c2899e70b83a48bc9a5357352bbf11b4bb7d265"
+    },
+    {
+      "bytes": 12305,
+      "path": "reader/run.go",
+      "sha256": "51ca412200fe21ac92a69e5a802e231277f6ec9fa037ec3cf43c33a37aaf50b7"
+    },
+    {
+      "bytes": 22696,
+      "path": "run_comparison.py",
+      "sha256": "9e855fcbc60215ccd6cea6cb48024f01ceeaf55d1bc330bb44d20948dba86b90"
+    }
+  ]
+}

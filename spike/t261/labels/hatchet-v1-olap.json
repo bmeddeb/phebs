@@ -1,0 +1,3027 @@
+{
+  "format": "t261-source-labels-v1",
+  "dialect": "postgresql",
+  "repository": "hatchet-dev/hatchet",
+  "commit": "559b5021e418f12ded175f950b709b7fa66be5a5",
+  "source_path": "sql/schema/v1-olap.sql",
+  "source_sha256": "a7866f30798c8f69d7411ee752c4eaf5e294ab52e32a1983f5bf28000dcb5765",
+  "plane": "sql-schema",
+  "statements": [
+    {
+      "id": "enum-v1_sticky_strategy_olap",
+      "start": 0,
+      "end": 70,
+      "sha256": "1e48564764e44267732273e38411f5f2a4eef76903d90f81ebcb9160487aab14",
+      "syntax_class": "create-enum",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "enum",
+          "name": "v1_sticky_strategy_olap",
+          "quoted": false,
+          "start": 12,
+          "end": 35,
+          "sha256": "a921a653943214bba76560fad672f2842e80f9a75afbeab5107dfdc43b00776c"
+        }
+      ]
+    },
+    {
+      "id": "enum-v1_readable_status_olap",
+      "start": 71,
+      "end": 211,
+      "sha256": "cedb72b184123b67b3e3d396c86a1428c683df67ed476d6703f065ca0f16104e",
+      "syntax_class": "create-enum",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "enum",
+          "name": "v1_readable_status_olap",
+          "quoted": false,
+          "start": 83,
+          "end": 106,
+          "sha256": "0983375e259a694493b5ae5d24f78c85d6fe21253e8febb0edfe5b78c460464b"
+        }
+      ]
+    },
+    {
+      "id": "gap-L15",
+      "start": 438,
+      "end": 778,
+      "sha256": "5791364c1da2c724f3ca5d4f123357558f19d9849ccbb9c962b5e89d95d7a4e8",
+      "syntax_class": "create-function",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "gap-L27",
+      "start": 779,
+      "end": 1136,
+      "sha256": "8856e5c9faafc65c37d17882e01dfedd1d29629b8599b328e501c8ad4cf4329d",
+      "syntax_class": "create-function",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "gap-L41",
+      "start": 1286,
+      "end": 3073,
+      "sha256": "933b5b6b0a1a116c5370ddaa342162a1a9355c9b2e66348cfd6ff8ac848206b6",
+      "syntax_class": "create-function",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "gap-L104",
+      "start": 3120,
+      "end": 3674,
+      "sha256": "44b27465af9a7cb9981c58ffa07f5eb0b013659c47d2ba979dde26e1548b8fee",
+      "syntax_class": "create-function",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "gap-L123",
+      "start": 3675,
+      "end": 4778,
+      "sha256": "8e6fdd1b0ee23710bdb8971366f472b320b44ce3f59b08c62a6bb5a05b3b9f43",
+      "syntax_class": "create-function",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "gap-L156",
+      "start": 4779,
+      "end": 6314,
+      "sha256": "52f5d8fa143bb678c73fd5a80351622db2ad08afc65480e5588f20027cf8d5ff",
+      "syntax_class": "create-function",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "table-v1_tasks_olap",
+      "start": 6339,
+      "end": 7355,
+      "sha256": "599a76dce53d6b6e7076190717d7bba86b01120bb31e43579cbf3d4da2c277a9",
+      "syntax_class": "create-table",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "table",
+          "name": "v1_tasks_olap",
+          "quoted": false,
+          "start": 6352,
+          "end": 6365,
+          "sha256": "336cd9ed0ac66ca27a190e3dc2e5c573887c145b96d04102f4516d6acb719a7d"
+        },
+        {
+          "kind": "column",
+          "name": "tenant_id",
+          "quoted": false,
+          "start": 6372,
+          "end": 6381,
+          "sha256": "759b6ffea819a48a54ce7629b1ea21b328898ac2c1b460a10f268153d0b362c5",
+          "relation": "v1_tasks_olap"
+        },
+        {
+          "kind": "column",
+          "name": "id",
+          "quoted": false,
+          "start": 6401,
+          "end": 6403,
+          "sha256": "a56145270ce6b3bebd1dd012b73948677dd618d496488bc608a3cb43ce3547dd",
+          "relation": "v1_tasks_olap"
+        },
+        {
+          "kind": "column",
+          "name": "inserted_at",
+          "quoted": false,
+          "start": 6425,
+          "end": 6436,
+          "sha256": "67ff928db12037087fe3a4d5b7de7688f1e242c66a5193926a78375fd56cb3aa",
+          "relation": "v1_tasks_olap"
+        },
+        {
+          "kind": "column",
+          "name": "external_id",
+          "quoted": false,
+          "start": 6489,
+          "end": 6500,
+          "sha256": "47cdfeaae42f13f279752cd35f1217a7b7362e2e885297294f2ec8fe4b7a7d83",
+          "relation": "v1_tasks_olap"
+        },
+        {
+          "kind": "column",
+          "name": "queue",
+          "quoted": false,
+          "start": 6546,
+          "end": 6551,
+          "sha256": "00b109cf1123a591253cc534b17e5268eb8fc2fbb7d6772de7a55c135ef1282f",
+          "relation": "v1_tasks_olap"
+        },
+        {
+          "kind": "column",
+          "name": "action_id",
+          "quoted": false,
+          "start": 6571,
+          "end": 6580,
+          "sha256": "cc62f5c72c8e5c5adceb6888895c0c0eb08aa9b4857bf9457fd635a6c5e4ff8f",
+          "relation": "v1_tasks_olap"
+        },
+        {
+          "kind": "column",
+          "name": "step_id",
+          "quoted": false,
+          "start": 6600,
+          "end": 6607,
+          "sha256": "9548ed1690d9c2968f489e6e8890bd8273cea2497698cd22a56bc17d833569dc",
+          "relation": "v1_tasks_olap"
+        },
+        {
+          "kind": "column",
+          "name": "workflow_id",
+          "quoted": false,
+          "start": 6627,
+          "end": 6638,
+          "sha256": "0965ee2d2322c2379ed73dadb356fa91cf623fdd8425162bcc5c6379be4fa458",
+          "relation": "v1_tasks_olap"
+        },
+        {
+          "kind": "column",
+          "name": "workflow_version_id",
+          "quoted": false,
+          "start": 6658,
+          "end": 6677,
+          "sha256": "9b057aad1b4497f1a3399ef8bb9d180057956f852a1a885fe41a16305193741d",
+          "relation": "v1_tasks_olap"
+        },
+        {
+          "kind": "column",
+          "name": "workflow_run_id",
+          "quoted": false,
+          "start": 6697,
+          "end": 6712,
+          "sha256": "7c1a841a48760aeb004d22a77a225fd5b3aac77569eb4b49463b77b51d21de78",
+          "relation": "v1_tasks_olap"
+        },
+        {
+          "kind": "column",
+          "name": "schedule_timeout",
+          "quoted": false,
+          "start": 6732,
+          "end": 6748,
+          "sha256": "16a2d4020c35331fcc3ea48956b491b0c0b7dd5aa320a053bfe8638c511a9d56",
+          "relation": "v1_tasks_olap"
+        },
+        {
+          "kind": "column",
+          "name": "step_timeout",
+          "quoted": false,
+          "start": 6768,
+          "end": 6780,
+          "sha256": "65ee7e4b1e255828bd31acab547a5da0f07c4dcbce886a5c5d62a1e713205b6b",
+          "relation": "v1_tasks_olap"
+        },
+        {
+          "kind": "column",
+          "name": "priority",
+          "quoted": false,
+          "start": 6791,
+          "end": 6799,
+          "sha256": "3092a5f0dba05ff3cadc3c2c8eeacd47940b1837f9534bc559d19d8435c8b219",
+          "relation": "v1_tasks_olap"
+        },
+        {
+          "kind": "column",
+          "name": "sticky",
+          "quoted": false,
+          "start": 6823,
+          "end": 6829,
+          "sha256": "964a9431ff491fd7e0d7436ea1ed3e76e15d1d2e34fae585cdfca3c57805cf75",
+          "relation": "v1_tasks_olap"
+        },
+        {
+          "kind": "column",
+          "name": "desired_worker_id",
+          "quoted": false,
+          "start": 6868,
+          "end": 6885,
+          "sha256": "9ae9cb011083d4ace1a9fd3e8a8541e80e6e25a72ea7bf0340055314a5a0826f",
+          "relation": "v1_tasks_olap"
+        },
+        {
+          "kind": "column",
+          "name": "display_name",
+          "quoted": false,
+          "start": 6896,
+          "end": 6908,
+          "sha256": "391484accd676559e96a829b843f77a8ac506a0b7b3c6897ce1eb580eecb3087",
+          "relation": "v1_tasks_olap"
+        },
+        {
+          "kind": "column",
+          "name": "input",
+          "quoted": false,
+          "start": 6928,
+          "end": 6933,
+          "sha256": "c96c6d5be8d08a12e7b5cdc1b207fa6b2430974c86803d8891675e76fd992c20",
+          "relation": "v1_tasks_olap"
+        },
+        {
+          "kind": "column",
+          "name": "additional_metadata",
+          "quoted": false,
+          "start": 6954,
+          "end": 6973,
+          "sha256": "616ea296b468b364368ecb4daf37856af0134c6c91c006b101758aea4775bb20",
+          "relation": "v1_tasks_olap"
+        },
+        {
+          "kind": "column",
+          "name": "readable_status",
+          "quoted": false,
+          "start": 6985,
+          "end": 7000,
+          "sha256": "1cfcf9bac9076e0ca173d8828a5903a5c594063c777319cb5492ee46a3b9b7ca",
+          "relation": "v1_tasks_olap"
+        },
+        {
+          "kind": "column",
+          "name": "latest_retry_count",
+          "quoted": false,
+          "start": 7056,
+          "end": 7074,
+          "sha256": "242d196b46c692dfe5e5d2f9c506e92244f3fccfc32e6c97b86e67c6cb9f5631",
+          "relation": "v1_tasks_olap"
+        },
+        {
+          "kind": "column",
+          "name": "latest_worker_id",
+          "quoted": false,
+          "start": 7103,
+          "end": 7119,
+          "sha256": "d02af13c7c89906a252cc74e20bca9a68e857b1a383eaef8e40e75fee24b9abf",
+          "relation": "v1_tasks_olap"
+        },
+        {
+          "kind": "column",
+          "name": "dag_id",
+          "quoted": false,
+          "start": 7130,
+          "end": 7136,
+          "sha256": "15784a6e3da756d08628f291d834e251ed54dd89d671598ccb2dea7e511e3061",
+          "relation": "v1_tasks_olap"
+        },
+        {
+          "kind": "column",
+          "name": "dag_inserted_at",
+          "quoted": false,
+          "start": 7149,
+          "end": 7164,
+          "sha256": "21dcd3bebcc5b71f40f68f8d79a052513b792f504bd5b5ac8602ca03235be1bf",
+          "relation": "v1_tasks_olap"
+        },
+        {
+          "kind": "column",
+          "name": "parent_task_external_id",
+          "quoted": false,
+          "start": 7182,
+          "end": 7205,
+          "sha256": "91a07f29261aa9cfd436b1839f48765210911a1f1f4d3a2a5a65504a972d1b60",
+          "relation": "v1_tasks_olap"
+        },
+        {
+          "kind": "column",
+          "name": "is_durable",
+          "quoted": false,
+          "start": 7216,
+          "end": 7226,
+          "sha256": "c85795737a54937f234560ad2ac7ece2b0b391f34e9ef0e3710b1941fa424a96",
+          "relation": "v1_tasks_olap"
+        },
+        {
+          "kind": "column",
+          "name": "idempotency_key",
+          "quoted": false,
+          "start": 7263,
+          "end": 7278,
+          "sha256": "00ec402d73e2dd8474180ed44caeecfcbd0b5f21d9e6802bde5485cf1eecbb4d",
+          "relation": "v1_tasks_olap"
+        },
+        {
+          "kind": "primary_key",
+          "name": "@7290",
+          "quoted": false,
+          "start": 7290,
+          "end": 7301,
+          "sha256": "b9e20880f50c03abb1b73497f52d9fc10f4ecab6e2d9213f7702b00662a1baf8",
+          "relation": "v1_tasks_olap",
+          "columns": [
+            "inserted_at",
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "index-v1_tasks_olap_workflow_id_idx",
+      "start": 7356,
+      "end": 7442,
+      "sha256": "d47cad69ee5989da0e0ae5c0b85170dcdc4d25332431cc839471887c05259fe4",
+      "syntax_class": "create-index",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "index",
+          "name": "v1_tasks_olap_workflow_id_idx",
+          "quoted": false,
+          "start": 7369,
+          "end": 7398,
+          "sha256": "aed4e33444a3392d19d79c784570be351d2388efab54abb1475a585fc7b0cd55",
+          "relation": "v1_tasks_olap",
+          "columns": [
+            "tenant_id",
+            "workflow_id"
+          ]
+        }
+      ],
+      "note": "Explicit index ordering retained; complete source preserves ASC/DESC, partial predicates and GIN/operator-class syntax. These are declarations only."
+    },
+    {
+      "id": "index-v1_tasks_olap_worker_id_idx",
+      "start": 7442,
+      "end": 7566,
+      "sha256": "fb2df323882a900a807880baf63f617d29e662e01f3e55a52c136698054a46d3",
+      "syntax_class": "create-index",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "index",
+          "name": "v1_tasks_olap_worker_id_idx",
+          "quoted": false,
+          "start": 7455,
+          "end": 7482,
+          "sha256": "2e602a0c8c61d1bff3d56e54d983cf0223720835552ddf83b2ca36d288267475",
+          "relation": "v1_tasks_olap",
+          "columns": [
+            "tenant_id",
+            "latest_worker_id"
+          ]
+        }
+      ],
+      "note": "Explicit index ordering retained; complete source preserves ASC/DESC, partial predicates and GIN/operator-class syntax. These are declarations only."
+    },
+    {
+      "id": "index-ix_v1_tasks_olap_idempotency_key",
+      "start": 7566,
+      "end": 7695,
+      "sha256": "2c58f6ba3f8d2c7a2b2a2621cc24f52d8c1378f9c3edc92fb5b06bbf08d3e3b8",
+      "syntax_class": "create-index",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "index",
+          "name": "ix_v1_tasks_olap_idempotency_key",
+          "quoted": false,
+          "start": 7579,
+          "end": 7611,
+          "sha256": "d7057286f9f7cfbdd655cdffd808d24812538c6af27aa913a8f244b75c26cdcb",
+          "relation": "v1_tasks_olap",
+          "columns": [
+            "idempotency_key",
+            "inserted_at"
+          ]
+        }
+      ],
+      "note": "Explicit index ordering retained; complete source preserves ASC/DESC, partial predicates and GIN/operator-class syntax. These are declarations only."
+    },
+    {
+      "id": "index-ix_v1_tasks_olap_additional_metadata_gin",
+      "start": 7846,
+      "end": 7965,
+      "sha256": "ab1e46120d62868d8f2a42246bf1ed3d12a93cc4b8ce2274cb315a54026d0e93",
+      "syntax_class": "create-index",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "index",
+          "name": "ix_v1_tasks_olap_additional_metadata_gin",
+          "quoted": false,
+          "start": 7859,
+          "end": 7899,
+          "sha256": "e507b28a362de3b8651af5dcc192698e673f5476c6a2ba17e835439d3c04b097",
+          "relation": "v1_tasks_olap",
+          "columns": [
+            "additional_metadata"
+          ]
+        }
+      ],
+      "note": "Explicit index ordering retained; complete source preserves ASC/DESC, partial predicates and GIN/operator-class syntax. These are declarations only."
+    },
+    {
+      "id": "table-v1_dags_olap",
+      "start": 7988,
+      "end": 8563,
+      "sha256": "c676b61bfafd9fea0a90c3da12fe9380df7c016bf7241778f377f1da8cf3072d",
+      "syntax_class": "create-table",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "table",
+          "name": "v1_dags_olap",
+          "quoted": false,
+          "start": 8001,
+          "end": 8013,
+          "sha256": "27a301421baa26bdb1dc772c91f3121eb7aff5d03fe206a1225d6daea59d269c"
+        },
+        {
+          "kind": "column",
+          "name": "id",
+          "quoted": false,
+          "start": 8020,
+          "end": 8022,
+          "sha256": "a56145270ce6b3bebd1dd012b73948677dd618d496488bc608a3cb43ce3547dd",
+          "relation": "v1_dags_olap"
+        },
+        {
+          "kind": "column",
+          "name": "inserted_at",
+          "quoted": false,
+          "start": 8044,
+          "end": 8055,
+          "sha256": "67ff928db12037087fe3a4d5b7de7688f1e242c66a5193926a78375fd56cb3aa",
+          "relation": "v1_dags_olap"
+        },
+        {
+          "kind": "column",
+          "name": "tenant_id",
+          "quoted": false,
+          "start": 8108,
+          "end": 8117,
+          "sha256": "759b6ffea819a48a54ce7629b1ea21b328898ac2c1b460a10f268153d0b362c5",
+          "relation": "v1_dags_olap"
+        },
+        {
+          "kind": "column",
+          "name": "external_id",
+          "quoted": false,
+          "start": 8137,
+          "end": 8148,
+          "sha256": "47cdfeaae42f13f279752cd35f1217a7b7362e2e885297294f2ec8fe4b7a7d83",
+          "relation": "v1_dags_olap"
+        },
+        {
+          "kind": "column",
+          "name": "display_name",
+          "quoted": false,
+          "start": 8168,
+          "end": 8180,
+          "sha256": "391484accd676559e96a829b843f77a8ac506a0b7b3c6897ce1eb580eecb3087",
+          "relation": "v1_dags_olap"
+        },
+        {
+          "kind": "column",
+          "name": "workflow_id",
+          "quoted": false,
+          "start": 8200,
+          "end": 8211,
+          "sha256": "0965ee2d2322c2379ed73dadb356fa91cf623fdd8425162bcc5c6379be4fa458",
+          "relation": "v1_dags_olap"
+        },
+        {
+          "kind": "column",
+          "name": "workflow_version_id",
+          "quoted": false,
+          "start": 8231,
+          "end": 8250,
+          "sha256": "9b057aad1b4497f1a3399ef8bb9d180057956f852a1a885fe41a16305193741d",
+          "relation": "v1_dags_olap"
+        },
+        {
+          "kind": "column",
+          "name": "readable_status",
+          "quoted": false,
+          "start": 8270,
+          "end": 8285,
+          "sha256": "1cfcf9bac9076e0ca173d8828a5903a5c594063c777319cb5492ee46a3b9b7ca",
+          "relation": "v1_dags_olap"
+        },
+        {
+          "kind": "column",
+          "name": "input",
+          "quoted": false,
+          "start": 8341,
+          "end": 8346,
+          "sha256": "c96c6d5be8d08a12e7b5cdc1b207fa6b2430974c86803d8891675e76fd992c20",
+          "relation": "v1_dags_olap"
+        },
+        {
+          "kind": "column",
+          "name": "additional_metadata",
+          "quoted": false,
+          "start": 8367,
+          "end": 8386,
+          "sha256": "616ea296b468b364368ecb4daf37856af0134c6c91c006b101758aea4775bb20",
+          "relation": "v1_dags_olap"
+        },
+        {
+          "kind": "column",
+          "name": "parent_task_external_id",
+          "quoted": false,
+          "start": 8398,
+          "end": 8421,
+          "sha256": "91a07f29261aa9cfd436b1839f48765210911a1f1f4d3a2a5a65504a972d1b60",
+          "relation": "v1_dags_olap"
+        },
+        {
+          "kind": "column",
+          "name": "total_tasks",
+          "quoted": false,
+          "start": 8432,
+          "end": 8443,
+          "sha256": "9cb149d7aa698ee6b5fa9f85283b7bb8c609e42ce9817d82571b594f0a8c4b03",
+          "relation": "v1_dags_olap"
+        },
+        {
+          "kind": "column",
+          "name": "idempotency_key",
+          "quoted": false,
+          "start": 8472,
+          "end": 8487,
+          "sha256": "00ec402d73e2dd8474180ed44caeecfcbd0b5f21d9e6802bde5485cf1eecbb4d",
+          "relation": "v1_dags_olap"
+        },
+        {
+          "kind": "primary_key",
+          "name": "@8498",
+          "quoted": false,
+          "start": 8498,
+          "end": 8509,
+          "sha256": "b9e20880f50c03abb1b73497f52d9fc10f4ecab6e2d9213f7702b00662a1baf8",
+          "relation": "v1_dags_olap",
+          "columns": [
+            "inserted_at",
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "index-v1_dags_olap_workflow_id_idx",
+      "start": 8564,
+      "end": 8648,
+      "sha256": "77098779e677836edc265d6ab9b9055fed52b74bad7c9b6550b200084ea1b164",
+      "syntax_class": "create-index",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "index",
+          "name": "v1_dags_olap_workflow_id_idx",
+          "quoted": false,
+          "start": 8577,
+          "end": 8605,
+          "sha256": "dd308596e01bffea193504483cd8e295abcadec7ae49e7aa7f3b0680d02d34ed",
+          "relation": "v1_dags_olap",
+          "columns": [
+            "tenant_id",
+            "workflow_id"
+          ]
+        }
+      ],
+      "note": "Explicit index ordering retained; complete source preserves ASC/DESC, partial predicates and GIN/operator-class syntax. These are declarations only."
+    },
+    {
+      "id": "enum-v1_run_kind",
+      "start": 8671,
+      "end": 8720,
+      "sha256": "57f9b41d5a6c3c6d926db70dab2a1d5f709715da0de05ffbcb67b3adc9635f7e",
+      "syntax_class": "create-enum",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "enum",
+          "name": "v1_run_kind",
+          "quoted": false,
+          "start": 8683,
+          "end": 8694,
+          "sha256": "f8ff5a54dcc147dec2128c05ded3afe30d1fa57e602bb8cd44a475d9e67a4901"
+        }
+      ]
+    },
+    {
+      "id": "table-v1_runs_olap",
+      "start": 8817,
+      "end": 9352,
+      "sha256": "b2b772c97391b1a321ccd966b74efb228f76d295f645b38b19b485722ad7c79e",
+      "syntax_class": "create-table",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "table",
+          "name": "v1_runs_olap",
+          "quoted": false,
+          "start": 8830,
+          "end": 8842,
+          "sha256": "6355b0382997b8d682d224c59726fce1e21bdf57252ae6c7c8fd1a0cd6140501"
+        },
+        {
+          "kind": "column",
+          "name": "tenant_id",
+          "quoted": false,
+          "start": 8849,
+          "end": 8858,
+          "sha256": "759b6ffea819a48a54ce7629b1ea21b328898ac2c1b460a10f268153d0b362c5",
+          "relation": "v1_runs_olap"
+        },
+        {
+          "kind": "column",
+          "name": "id",
+          "quoted": false,
+          "start": 8878,
+          "end": 8880,
+          "sha256": "a56145270ce6b3bebd1dd012b73948677dd618d496488bc608a3cb43ce3547dd",
+          "relation": "v1_runs_olap"
+        },
+        {
+          "kind": "column",
+          "name": "inserted_at",
+          "quoted": false,
+          "start": 8902,
+          "end": 8913,
+          "sha256": "67ff928db12037087fe3a4d5b7de7688f1e242c66a5193926a78375fd56cb3aa",
+          "relation": "v1_runs_olap"
+        },
+        {
+          "kind": "column",
+          "name": "external_id",
+          "quoted": false,
+          "start": 8966,
+          "end": 8977,
+          "sha256": "47cdfeaae42f13f279752cd35f1217a7b7362e2e885297294f2ec8fe4b7a7d83",
+          "relation": "v1_runs_olap"
+        },
+        {
+          "kind": "column",
+          "name": "readable_status",
+          "quoted": false,
+          "start": 9023,
+          "end": 9038,
+          "sha256": "1cfcf9bac9076e0ca173d8828a5903a5c594063c777319cb5492ee46a3b9b7ca",
+          "relation": "v1_runs_olap"
+        },
+        {
+          "kind": "column",
+          "name": "kind",
+          "quoted": false,
+          "start": 9094,
+          "end": 9098,
+          "sha256": "0b27c158feb36ab18a10ff687909ec730ece6280581dd407e2672359be7725dd",
+          "relation": "v1_runs_olap"
+        },
+        {
+          "kind": "column",
+          "name": "workflow_id",
+          "quoted": false,
+          "start": 9125,
+          "end": 9136,
+          "sha256": "0965ee2d2322c2379ed73dadb356fa91cf623fdd8425162bcc5c6379be4fa458",
+          "relation": "v1_runs_olap"
+        },
+        {
+          "kind": "column",
+          "name": "workflow_version_id",
+          "quoted": false,
+          "start": 9156,
+          "end": 9175,
+          "sha256": "9b057aad1b4497f1a3399ef8bb9d180057956f852a1a885fe41a16305193741d",
+          "relation": "v1_runs_olap"
+        },
+        {
+          "kind": "column",
+          "name": "additional_metadata",
+          "quoted": false,
+          "start": 9195,
+          "end": 9214,
+          "sha256": "616ea296b468b364368ecb4daf37856af0134c6c91c006b101758aea4775bb20",
+          "relation": "v1_runs_olap"
+        },
+        {
+          "kind": "column",
+          "name": "parent_task_external_id",
+          "quoted": false,
+          "start": 9226,
+          "end": 9249,
+          "sha256": "91a07f29261aa9cfd436b1839f48765210911a1f1f4d3a2a5a65504a972d1b60",
+          "relation": "v1_runs_olap"
+        },
+        {
+          "kind": "column",
+          "name": "idempotency_key",
+          "quoted": false,
+          "start": 9260,
+          "end": 9275,
+          "sha256": "00ec402d73e2dd8474180ed44caeecfcbd0b5f21d9e6802bde5485cf1eecbb4d",
+          "relation": "v1_runs_olap"
+        },
+        {
+          "kind": "primary_key",
+          "name": "@9287",
+          "quoted": false,
+          "start": 9287,
+          "end": 9298,
+          "sha256": "b9e20880f50c03abb1b73497f52d9fc10f4ecab6e2d9213f7702b00662a1baf8",
+          "relation": "v1_runs_olap",
+          "columns": [
+            "inserted_at",
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "index-ix_v1_runs_olap_parent_task_external_id",
+      "start": 9353,
+      "end": 9491,
+      "sha256": "25847792259a1b45682f31f4bd6e0e75d7f63b0c98ed8db2a8750e3575386963",
+      "syntax_class": "create-index",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "index",
+          "name": "ix_v1_runs_olap_parent_task_external_id",
+          "quoted": false,
+          "start": 9366,
+          "end": 9405,
+          "sha256": "39bcc8260b39c92659ec2811f9301565bf0d34ac92a095cebcf321992c491320",
+          "relation": "v1_runs_olap",
+          "columns": [
+            "parent_task_external_id"
+          ]
+        }
+      ],
+      "note": "Explicit index ordering retained; complete source preserves ASC/DESC, partial predicates and GIN/operator-class syntax. These are declarations only."
+    },
+    {
+      "id": "index-ix_v1_runs_olap_tenant_ins_at_status",
+      "start": 9491,
+      "end": 9605,
+      "sha256": "e92aafffa3353f6b57f66f00a32250c1d6ccd6fed441ec5754230fade6778b06",
+      "syntax_class": "create-index",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "index",
+          "name": "ix_v1_runs_olap_tenant_ins_at_status",
+          "quoted": false,
+          "start": 9504,
+          "end": 9540,
+          "sha256": "63ab3a8b70802fe8fb702f71f5c5d9b70d664d3c2974ea14cd0a4f225d3fa8af",
+          "relation": "v1_runs_olap",
+          "columns": [
+            "tenant_id",
+            "inserted_at",
+            "readable_status"
+          ]
+        }
+      ],
+      "note": "Explicit index ordering retained; complete source preserves ASC/DESC, partial predicates and GIN/operator-class syntax. These are declarations only."
+    },
+    {
+      "id": "index-ix_v1_runs_olap_idempotency_key",
+      "start": 9605,
+      "end": 9732,
+      "sha256": "e43dc8e6d20aa3e244c9044698e414f6b1a84f21e2bf3fa998c1a27a5cb25f9d",
+      "syntax_class": "create-index",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "index",
+          "name": "ix_v1_runs_olap_idempotency_key",
+          "quoted": false,
+          "start": 9618,
+          "end": 9649,
+          "sha256": "4643fd206b2fbc86388a4a3a95313e5330de57904d6ad47e89656100724a13af",
+          "relation": "v1_runs_olap",
+          "columns": [
+            "idempotency_key",
+            "inserted_at"
+          ]
+        }
+      ],
+      "note": "Explicit index ordering retained; complete source preserves ASC/DESC, partial predicates and GIN/operator-class syntax. These are declarations only."
+    },
+    {
+      "id": "index-ix_v1_runs_olap_additional_metadata_gin",
+      "start": 9883,
+      "end": 10000,
+      "sha256": "6c9e5331a736240fdfc6bcc2c36ba06b3f9fb246764f511c905c0e866973520d",
+      "syntax_class": "create-index",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "index",
+          "name": "ix_v1_runs_olap_additional_metadata_gin",
+          "quoted": false,
+          "start": 9896,
+          "end": 9935,
+          "sha256": "c949868f7a9878f1640bbc533322df11cb424f6091e737096e3441fc334fb1b2",
+          "relation": "v1_runs_olap",
+          "columns": [
+            "additional_metadata"
+          ]
+        }
+      ],
+      "note": "Explicit index ordering retained; complete source preserves ASC/DESC, partial predicates and GIN/operator-class syntax. These are declarations only."
+    },
+    {
+      "id": "table-v1_lookup_table_olap",
+      "start": 10021,
+      "end": 10228,
+      "sha256": "679e548b2c127819433e3db4b71c95e35fe8b5d933405f4c0ddd94d0fca3c047",
+      "syntax_class": "create-table",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "table",
+          "name": "v1_lookup_table_olap",
+          "quoted": false,
+          "start": 10034,
+          "end": 10054,
+          "sha256": "437d49645db7935d794962b9672cc5ad74dbedea881c5ccaed6ba148fea6baf4"
+        },
+        {
+          "kind": "column",
+          "name": "tenant_id",
+          "quoted": false,
+          "start": 10061,
+          "end": 10070,
+          "sha256": "759b6ffea819a48a54ce7629b1ea21b328898ac2c1b460a10f268153d0b362c5",
+          "relation": "v1_lookup_table_olap"
+        },
+        {
+          "kind": "column",
+          "name": "external_id",
+          "quoted": false,
+          "start": 10090,
+          "end": 10101,
+          "sha256": "47cdfeaae42f13f279752cd35f1217a7b7362e2e885297294f2ec8fe4b7a7d83",
+          "relation": "v1_lookup_table_olap"
+        },
+        {
+          "kind": "column",
+          "name": "task_id",
+          "quoted": false,
+          "start": 10121,
+          "end": 10128,
+          "sha256": "14bc7aeea995cfb037517220d0e981df255def7318b07ac0cba6ad82e3ac7ccf",
+          "relation": "v1_lookup_table_olap"
+        },
+        {
+          "kind": "column",
+          "name": "dag_id",
+          "quoted": false,
+          "start": 10141,
+          "end": 10147,
+          "sha256": "15784a6e3da756d08628f291d834e251ed54dd89d671598ccb2dea7e511e3061",
+          "relation": "v1_lookup_table_olap"
+        },
+        {
+          "kind": "column",
+          "name": "inserted_at",
+          "quoted": false,
+          "start": 10160,
+          "end": 10171,
+          "sha256": "67ff928db12037087fe3a4d5b7de7688f1e242c66a5193926a78375fd56cb3aa",
+          "relation": "v1_lookup_table_olap"
+        },
+        {
+          "kind": "primary_key",
+          "name": "@10199",
+          "quoted": false,
+          "start": 10199,
+          "end": 10210,
+          "sha256": "b9e20880f50c03abb1b73497f52d9fc10f4ecab6e2d9213f7702b00662a1baf8",
+          "relation": "v1_lookup_table_olap",
+          "columns": [
+            "external_id"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "table-v1_dag_to_task_olap",
+      "start": 10229,
+      "end": 10478,
+      "sha256": "c721b77d400b302d10a02d69c54e8e5dac9f0431f933e831165faeea13a7b308",
+      "syntax_class": "create-table",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "table",
+          "name": "v1_dag_to_task_olap",
+          "quoted": false,
+          "start": 10242,
+          "end": 10261,
+          "sha256": "e1290e8af33e9c64a7769bdb132951c0cc461fd01b325d0a29e12385a2cf47cb"
+        },
+        {
+          "kind": "column",
+          "name": "dag_id",
+          "quoted": false,
+          "start": 10268,
+          "end": 10274,
+          "sha256": "15784a6e3da756d08628f291d834e251ed54dd89d671598ccb2dea7e511e3061",
+          "relation": "v1_dag_to_task_olap"
+        },
+        {
+          "kind": "column",
+          "name": "dag_inserted_at",
+          "quoted": false,
+          "start": 10296,
+          "end": 10311,
+          "sha256": "21dcd3bebcc5b71f40f68f8d79a052513b792f504bd5b5ac8602ca03235be1bf",
+          "relation": "v1_dag_to_task_olap"
+        },
+        {
+          "kind": "column",
+          "name": "task_id",
+          "quoted": false,
+          "start": 10338,
+          "end": 10345,
+          "sha256": "14bc7aeea995cfb037517220d0e981df255def7318b07ac0cba6ad82e3ac7ccf",
+          "relation": "v1_dag_to_task_olap"
+        },
+        {
+          "kind": "column",
+          "name": "task_inserted_at",
+          "quoted": false,
+          "start": 10367,
+          "end": 10383,
+          "sha256": "b983c3fedf23287ea038d92a562829cbd077e63306bda2bcef2f21283e3cbffc",
+          "relation": "v1_dag_to_task_olap"
+        },
+        {
+          "kind": "primary_key",
+          "name": "@10410",
+          "quoted": false,
+          "start": 10410,
+          "end": 10421,
+          "sha256": "b9e20880f50c03abb1b73497f52d9fc10f4ecab6e2d9213f7702b00662a1baf8",
+          "relation": "v1_dag_to_task_olap",
+          "columns": [
+            "dag_id",
+            "dag_inserted_at",
+            "task_id",
+            "task_inserted_at"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "enum-v1_status_kind",
+      "start": 10503,
+      "end": 10555,
+      "sha256": "dbe5731d9cc4c55705f6dfc0f3ccdf925551b6d81a0f0f8d6d63355964e20952",
+      "syntax_class": "create-enum",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "enum",
+          "name": "v1_status_kind",
+          "quoted": false,
+          "start": 10515,
+          "end": 10529,
+          "sha256": "68cdae7eb408958b95b74cf241492e3263a40052cd8c531e30924741dd6aeca7"
+        }
+      ]
+    },
+    {
+      "id": "table-v1_statuses_olap",
+      "start": 10556,
+      "end": 10892,
+      "sha256": "12758719bcd00e6b3c9dd332469cb44e23b3b456366eaed32c546b38c7769208",
+      "syntax_class": "create-table",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "table",
+          "name": "v1_statuses_olap",
+          "quoted": false,
+          "start": 10569,
+          "end": 10585,
+          "sha256": "1d87408f8a680f8166022a02c9ea6e2a4717f555ee438955d15559dbfe197290"
+        },
+        {
+          "kind": "column",
+          "name": "external_id",
+          "quoted": false,
+          "start": 10592,
+          "end": 10603,
+          "sha256": "47cdfeaae42f13f279752cd35f1217a7b7362e2e885297294f2ec8fe4b7a7d83",
+          "relation": "v1_statuses_olap"
+        },
+        {
+          "kind": "column",
+          "name": "inserted_at",
+          "quoted": false,
+          "start": 10623,
+          "end": 10634,
+          "sha256": "67ff928db12037087fe3a4d5b7de7688f1e242c66a5193926a78375fd56cb3aa",
+          "relation": "v1_statuses_olap"
+        },
+        {
+          "kind": "column",
+          "name": "tenant_id",
+          "quoted": false,
+          "start": 10687,
+          "end": 10696,
+          "sha256": "759b6ffea819a48a54ce7629b1ea21b328898ac2c1b460a10f268153d0b362c5",
+          "relation": "v1_statuses_olap"
+        },
+        {
+          "kind": "column",
+          "name": "workflow_id",
+          "quoted": false,
+          "start": 10716,
+          "end": 10727,
+          "sha256": "0965ee2d2322c2379ed73dadb356fa91cf623fdd8425162bcc5c6379be4fa458",
+          "relation": "v1_statuses_olap"
+        },
+        {
+          "kind": "column",
+          "name": "kind",
+          "quoted": false,
+          "start": 10747,
+          "end": 10751,
+          "sha256": "0b27c158feb36ab18a10ff687909ec730ece6280581dd407e2672359be7725dd",
+          "relation": "v1_statuses_olap"
+        },
+        {
+          "kind": "column",
+          "name": "readable_status",
+          "quoted": false,
+          "start": 10778,
+          "end": 10793,
+          "sha256": "1cfcf9bac9076e0ca173d8828a5903a5c594063c777319cb5492ee46a3b9b7ca",
+          "relation": "v1_statuses_olap"
+        },
+        {
+          "kind": "primary_key",
+          "name": "@10850",
+          "quoted": false,
+          "start": 10850,
+          "end": 10861,
+          "sha256": "b9e20880f50c03abb1b73497f52d9fc10f4ecab6e2d9213f7702b00662a1baf8",
+          "relation": "v1_statuses_olap",
+          "columns": [
+            "external_id",
+            "inserted_at"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "enum-v1_event_type_olap",
+      "start": 10918,
+      "end": 11498,
+      "sha256": "ea44897a7d6633a44d8bfffd47ab3c6d5eaec0aeba38402f428fa5f61c0d8a38",
+      "syntax_class": "create-enum",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "enum",
+          "name": "v1_event_type_olap",
+          "quoted": false,
+          "start": 10930,
+          "end": 10948,
+          "sha256": "453817ef1982993b6f0013ef989a8d202a0cf9c22789b04683b6a73ab5221efa"
+        }
+      ]
+    },
+    {
+      "id": "table-v1_task_events_olap_tmp",
+      "start": 11660,
+      "end": 12199,
+      "sha256": "1ee2a74d82bbac41d31478f49ccc4648035fc6d117ba586361764cc2c3b448ba",
+      "syntax_class": "create-table",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "table",
+          "name": "v1_task_events_olap_tmp",
+          "quoted": false,
+          "start": 11673,
+          "end": 11696,
+          "sha256": "4ef8e56b154d60d847c6aef520eecca38bafb5320443ef643c1750b1eb0325d8"
+        },
+        {
+          "kind": "column",
+          "name": "tenant_id",
+          "quoted": false,
+          "start": 11703,
+          "end": 11712,
+          "sha256": "759b6ffea819a48a54ce7629b1ea21b328898ac2c1b460a10f268153d0b362c5",
+          "relation": "v1_task_events_olap_tmp"
+        },
+        {
+          "kind": "column",
+          "name": "requeue_after",
+          "quoted": false,
+          "start": 11732,
+          "end": 11745,
+          "sha256": "1c33c125b58cfe1e0588a7473bf882bbc8a9f92cc3f3713d312b3ad21ef24b0b",
+          "relation": "v1_task_events_olap_tmp"
+        },
+        {
+          "kind": "column",
+          "name": "requeue_retries",
+          "quoted": false,
+          "start": 11798,
+          "end": 11813,
+          "sha256": "ef721e1a31aaecfa2b264d80d6ec3248af28e5d98e8bc479904e24c2b375d0fe",
+          "relation": "v1_task_events_olap_tmp"
+        },
+        {
+          "kind": "column",
+          "name": "id",
+          "quoted": false,
+          "start": 11842,
+          "end": 11844,
+          "sha256": "a56145270ce6b3bebd1dd012b73948677dd618d496488bc608a3cb43ce3547dd",
+          "relation": "v1_task_events_olap_tmp"
+        },
+        {
+          "kind": "column",
+          "name": "task_id",
+          "quoted": false,
+          "start": 11886,
+          "end": 11893,
+          "sha256": "14bc7aeea995cfb037517220d0e981df255def7318b07ac0cba6ad82e3ac7ccf",
+          "relation": "v1_task_events_olap_tmp"
+        },
+        {
+          "kind": "column",
+          "name": "task_inserted_at",
+          "quoted": false,
+          "start": 11915,
+          "end": 11931,
+          "sha256": "b983c3fedf23287ea038d92a562829cbd077e63306bda2bcef2f21283e3cbffc",
+          "relation": "v1_task_events_olap_tmp"
+        },
+        {
+          "kind": "column",
+          "name": "event_type",
+          "quoted": false,
+          "start": 11958,
+          "end": 11968,
+          "sha256": "a9fa98d13f1cef785e5a9aec76c57e739cb5d9695f0ad42170667c356610ec84",
+          "relation": "v1_task_events_olap_tmp"
+        },
+        {
+          "kind": "column",
+          "name": "readable_status",
+          "quoted": false,
+          "start": 12002,
+          "end": 12017,
+          "sha256": "1cfcf9bac9076e0ca173d8828a5903a5c594063c777319cb5492ee46a3b9b7ca",
+          "relation": "v1_task_events_olap_tmp"
+        },
+        {
+          "kind": "column",
+          "name": "retry_count",
+          "quoted": false,
+          "start": 12056,
+          "end": 12067,
+          "sha256": "dc24d6606b6627759aafd5b3d4ac10f3d4d68ef26d8e022ca5976226ed45e57b",
+          "relation": "v1_task_events_olap_tmp"
+        },
+        {
+          "kind": "column",
+          "name": "worker_id",
+          "quoted": false,
+          "start": 12096,
+          "end": 12105,
+          "sha256": "33d1ed215cbcaa1e44c74d1d5a1453d035e645ecae409f97233ac216f8b3e2cd",
+          "relation": "v1_task_events_olap_tmp"
+        },
+        {
+          "kind": "primary_key",
+          "name": "@12117",
+          "quoted": false,
+          "start": 12117,
+          "end": 12128,
+          "sha256": "b9e20880f50c03abb1b73497f52d9fc10f4ecab6e2d9213f7702b00662a1baf8",
+          "relation": "v1_task_events_olap_tmp",
+          "columns": [
+            "tenant_id",
+            "requeue_after",
+            "task_id",
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gap-L365",
+      "start": 12200,
+      "end": 12823,
+      "sha256": "7178eca5f01d0e618735af985d8a2c1916376497a0cb5ee1c1491c2dd376f299",
+      "syntax_class": "create-function",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "table-v1_task_events_olap",
+      "start": 12824,
+      "end": 13598,
+      "sha256": "9760b91e1b33e41af76844e16e5f6f1d9ec17ebc9669abd2efb0d62fbbd9af5f",
+      "syntax_class": "create-table",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "table",
+          "name": "v1_task_events_olap",
+          "quoted": false,
+          "start": 12837,
+          "end": 12856,
+          "sha256": "b6c6496b515fccef6e5b15f8211d849115ef9366bb1ac834c877cf327fb4bd3e"
+        },
+        {
+          "kind": "column",
+          "name": "tenant_id",
+          "quoted": false,
+          "start": 12863,
+          "end": 12872,
+          "sha256": "759b6ffea819a48a54ce7629b1ea21b328898ac2c1b460a10f268153d0b362c5",
+          "relation": "v1_task_events_olap"
+        },
+        {
+          "kind": "column",
+          "name": "id",
+          "quoted": false,
+          "start": 12892,
+          "end": 12894,
+          "sha256": "a56145270ce6b3bebd1dd012b73948677dd618d496488bc608a3cb43ce3547dd",
+          "relation": "v1_task_events_olap"
+        },
+        {
+          "kind": "column",
+          "name": "inserted_at",
+          "quoted": false,
+          "start": 12936,
+          "end": 12947,
+          "sha256": "67ff928db12037087fe3a4d5b7de7688f1e242c66a5193926a78375fd56cb3aa",
+          "relation": "v1_task_events_olap"
+        },
+        {
+          "kind": "column",
+          "name": "external_id",
+          "quoted": false,
+          "start": 13000,
+          "end": 13011,
+          "sha256": "47cdfeaae42f13f279752cd35f1217a7b7362e2e885297294f2ec8fe4b7a7d83",
+          "relation": "v1_task_events_olap"
+        },
+        {
+          "kind": "column",
+          "name": "task_id",
+          "quoted": false,
+          "start": 13057,
+          "end": 13064,
+          "sha256": "14bc7aeea995cfb037517220d0e981df255def7318b07ac0cba6ad82e3ac7ccf",
+          "relation": "v1_task_events_olap"
+        },
+        {
+          "kind": "column",
+          "name": "task_inserted_at",
+          "quoted": false,
+          "start": 13086,
+          "end": 13102,
+          "sha256": "b983c3fedf23287ea038d92a562829cbd077e63306bda2bcef2f21283e3cbffc",
+          "relation": "v1_task_events_olap"
+        },
+        {
+          "kind": "column",
+          "name": "event_type",
+          "quoted": false,
+          "start": 13129,
+          "end": 13139,
+          "sha256": "a9fa98d13f1cef785e5a9aec76c57e739cb5d9695f0ad42170667c356610ec84",
+          "relation": "v1_task_events_olap"
+        },
+        {
+          "kind": "column",
+          "name": "workflow_id",
+          "quoted": false,
+          "start": 13173,
+          "end": 13184,
+          "sha256": "0965ee2d2322c2379ed73dadb356fa91cf623fdd8425162bcc5c6379be4fa458",
+          "relation": "v1_task_events_olap"
+        },
+        {
+          "kind": "column",
+          "name": "event_timestamp",
+          "quoted": false,
+          "start": 13204,
+          "end": 13219,
+          "sha256": "fd3ef42d23696f369c6ac945d5fa06b899d59b09196fe076f33b956ad337b053",
+          "relation": "v1_task_events_olap"
+        },
+        {
+          "kind": "column",
+          "name": "readable_status",
+          "quoted": false,
+          "start": 13272,
+          "end": 13287,
+          "sha256": "1cfcf9bac9076e0ca173d8828a5903a5c594063c777319cb5492ee46a3b9b7ca",
+          "relation": "v1_task_events_olap"
+        },
+        {
+          "kind": "column",
+          "name": "retry_count",
+          "quoted": false,
+          "start": 13326,
+          "end": 13337,
+          "sha256": "dc24d6606b6627759aafd5b3d4ac10f3d4d68ef26d8e022ca5976226ed45e57b",
+          "relation": "v1_task_events_olap"
+        },
+        {
+          "kind": "column",
+          "name": "error_message",
+          "quoted": false,
+          "start": 13366,
+          "end": 13379,
+          "sha256": "bd13915145ea3756cd9dfd54b0e338d0e17323d10e65aa10fe52c65284a92689",
+          "relation": "v1_task_events_olap"
+        },
+        {
+          "kind": "column",
+          "name": "output",
+          "quoted": false,
+          "start": 13390,
+          "end": 13396,
+          "sha256": "e0ee8bb50685e05fa0f47ed04203ae953fdfd055f5bd2892ea186504254f8c3a",
+          "relation": "v1_task_events_olap"
+        },
+        {
+          "kind": "column",
+          "name": "worker_id",
+          "quoted": false,
+          "start": 13408,
+          "end": 13417,
+          "sha256": "33d1ed215cbcaa1e44c74d1d5a1453d035e645ecae409f97233ac216f8b3e2cd",
+          "relation": "v1_task_events_olap"
+        },
+        {
+          "kind": "column",
+          "name": "additional__event_data",
+          "quoted": false,
+          "start": 13428,
+          "end": 13450,
+          "sha256": "550c07e74cfb0d0617fb1723ed69dea6370c8c033dd89789f9b235facfd44d7c",
+          "relation": "v1_task_events_olap"
+        },
+        {
+          "kind": "column",
+          "name": "additional__event_message",
+          "quoted": false,
+          "start": 13461,
+          "end": 13486,
+          "sha256": "423c05f5768f92bbf23a9f06767b5c9bc4c76222122b541dd0ca403214f21110",
+          "relation": "v1_task_events_olap"
+        },
+        {
+          "kind": "column",
+          "name": "durable_invocation_count",
+          "quoted": false,
+          "start": 13497,
+          "end": 13521,
+          "sha256": "908a51a880ede1676ef948cf2e23432f02577c5e9a44624845079c0cfaf95584",
+          "relation": "v1_task_events_olap"
+        },
+        {
+          "kind": "primary_key",
+          "name": "@13551",
+          "quoted": false,
+          "start": 13551,
+          "end": 13562,
+          "sha256": "b9e20880f50c03abb1b73497f52d9fc10f4ecab6e2d9213f7702b00662a1baf8",
+          "relation": "v1_task_events_olap",
+          "columns": [
+            "task_id",
+            "task_inserted_at",
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "index-v1_task_events_olap_task_id_idx",
+      "start": 13599,
+      "end": 13678,
+      "sha256": "3cc0678a3322276d6a64ede05d73349f71e64fe2afc179c103ce76c5f7498829",
+      "syntax_class": "create-index",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "index",
+          "name": "v1_task_events_olap_task_id_idx",
+          "quoted": false,
+          "start": 13612,
+          "end": 13643,
+          "sha256": "4e4d5b452e4ab069a2f6b16679a6e710825468245d97415d27e358a4fee4f2cc",
+          "relation": "v1_task_events_olap",
+          "columns": [
+            "task_id"
+          ]
+        }
+      ],
+      "note": "Explicit index ordering retained; complete source preserves ASC/DESC, partial predicates and GIN/operator-class syntax. These are declarations only."
+    },
+    {
+      "id": "table-v1_incoming_webhook_validation_failures_olap",
+      "start": 13679,
+      "end": 14127,
+      "sha256": "d20cbe5afa7e9df161a8228776e8e720a72846162774a67d1f61fd441514f65d",
+      "syntax_class": "create-table",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "table",
+          "name": "v1_incoming_webhook_validation_failures_olap",
+          "quoted": false,
+          "start": 13692,
+          "end": 13736,
+          "sha256": "b95c84f07c9c563d9bc45adaed5d96558bed73791e77398d870198a2ae6995c9"
+        },
+        {
+          "kind": "column",
+          "name": "id",
+          "quoted": false,
+          "start": 13743,
+          "end": 13745,
+          "sha256": "a56145270ce6b3bebd1dd012b73948677dd618d496488bc608a3cb43ce3547dd",
+          "relation": "v1_incoming_webhook_validation_failures_olap"
+        },
+        {
+          "kind": "column",
+          "name": "tenant_id",
+          "quoted": false,
+          "start": 13797,
+          "end": 13806,
+          "sha256": "759b6ffea819a48a54ce7629b1ea21b328898ac2c1b460a10f268153d0b362c5",
+          "relation": "v1_incoming_webhook_validation_failures_olap"
+        },
+        {
+          "kind": "column",
+          "name": "incoming_webhook_name",
+          "quoted": false,
+          "start": 13866,
+          "end": 13887,
+          "sha256": "b394de14aa5648b8a58d4e29d80840cbef651daa7a5897600233141d36b06413",
+          "relation": "v1_incoming_webhook_validation_failures_olap"
+        },
+        {
+          "kind": "column",
+          "name": "error",
+          "quoted": false,
+          "start": 13908,
+          "end": 13913,
+          "sha256": "ca00fccfb408989eddc401062c4d1219a6aceb6b9b55412357f1790862e8f178",
+          "relation": "v1_incoming_webhook_validation_failures_olap"
+        },
+        {
+          "kind": "column",
+          "name": "inserted_at",
+          "quoted": false,
+          "start": 13934,
+          "end": 13945,
+          "sha256": "67ff928db12037087fe3a4d5b7de7688f1e242c66a5193926a78375fd56cb3aa",
+          "relation": "v1_incoming_webhook_validation_failures_olap"
+        },
+        {
+          "kind": "column",
+          "name": "updated_at",
+          "quoted": false,
+          "start": 13998,
+          "end": 14008,
+          "sha256": "20f1cce223f68ee645c8c7022dd0ac0ce6528c057cab07084639ce20db849052",
+          "relation": "v1_incoming_webhook_validation_failures_olap"
+        },
+        {
+          "kind": "primary_key",
+          "name": "@14062",
+          "quoted": false,
+          "start": 14062,
+          "end": 14073,
+          "sha256": "b9e20880f50c03abb1b73497f52d9fc10f4ecab6e2d9213f7702b00662a1baf8",
+          "relation": "v1_incoming_webhook_validation_failures_olap",
+          "columns": [
+            "inserted_at",
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "index-v1_incoming_webhook_validation_failures_olap_tenant_id_incoming_webhook_name_idx",
+      "start": 14128,
+      "end": 14306,
+      "sha256": "41be011a5401d3e8a3f7b45408d07a063d159363d93829144bfa8a1045c1fa88",
+      "syntax_class": "create-index",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "index",
+          "name": "v1_incoming_webhook_validation_failures_olap_tenant_id_incoming_webhook_name_idx",
+          "quoted": false,
+          "start": 14141,
+          "end": 14221,
+          "sha256": "bf2c495be0d9d9cfeaf754221ce632d9f0dc6aefcec26b03324e7d46061e0576",
+          "relation": "v1_incoming_webhook_validation_failures_olap",
+          "columns": [
+            "tenant_id",
+            "incoming_webhook_name"
+          ]
+        }
+      ],
+      "note": "Explicit index ordering retained; complete source preserves ASC/DESC, partial predicates and GIN/operator-class syntax. These are declarations only."
+    },
+    {
+      "id": "enum-v1_payload_location_olap",
+      "start": 14385,
+      "end": 14454,
+      "sha256": "ce5bed8cd876f8cd65b8b5fe785c3aac2bee95048463d34b4d28539ad183e3c3",
+      "syntax_class": "create-enum",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "enum",
+          "name": "v1_payload_location_olap",
+          "quoted": false,
+          "start": 14397,
+          "end": 14421,
+          "sha256": "4dc8e8508a19ea8932dffcedcd0da4010189ee9f3c92a3155826af23f0c1c4e5"
+        }
+      ]
+    },
+    {
+      "id": "table-v1_payloads_olap",
+      "start": 14455,
+      "end": 15027,
+      "sha256": "693439d1c8dba1959f90d6195c36458898f861ecacfbde99aa416b48c26be3fa",
+      "syntax_class": "create-table",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "table",
+          "name": "v1_payloads_olap",
+          "quoted": false,
+          "start": 14468,
+          "end": 14484,
+          "sha256": "e6be2d5312a22bbfa34364faed4e0b27a0018de5bbc1532cee815938a5df14c3"
+        },
+        {
+          "kind": "column",
+          "name": "tenant_id",
+          "quoted": false,
+          "start": 14491,
+          "end": 14500,
+          "sha256": "759b6ffea819a48a54ce7629b1ea21b328898ac2c1b460a10f268153d0b362c5",
+          "relation": "v1_payloads_olap"
+        },
+        {
+          "kind": "column",
+          "name": "external_id",
+          "quoted": false,
+          "start": 14520,
+          "end": 14531,
+          "sha256": "47cdfeaae42f13f279752cd35f1217a7b7362e2e885297294f2ec8fe4b7a7d83",
+          "relation": "v1_payloads_olap"
+        },
+        {
+          "kind": "column",
+          "name": "location",
+          "quoted": false,
+          "start": 14552,
+          "end": 14560,
+          "sha256": "e6eaea18e885e1078829b56df34896be5ab51439e8f0ba00cb1624b2c572c10e",
+          "relation": "v1_payloads_olap"
+        },
+        {
+          "kind": "column",
+          "name": "external_location_key",
+          "quoted": false,
+          "start": 14600,
+          "end": 14621,
+          "sha256": "8c4930066a073df934706d3233408709420c4b4aea0d2b7bbe5e462d7e81d46b",
+          "relation": "v1_payloads_olap"
+        },
+        {
+          "kind": "column",
+          "name": "inline_content",
+          "quoted": false,
+          "start": 14632,
+          "end": 14646,
+          "sha256": "7c5d5e71bdb5a20364cc19f114071685bf23b3564a078ed338af3672cb1b09b7",
+          "relation": "v1_payloads_olap"
+        },
+        {
+          "kind": "column",
+          "name": "inserted_at",
+          "quoted": false,
+          "start": 14659,
+          "end": 14670,
+          "sha256": "67ff928db12037087fe3a4d5b7de7688f1e242c66a5193926a78375fd56cb3aa",
+          "relation": "v1_payloads_olap"
+        },
+        {
+          "kind": "column",
+          "name": "updated_at",
+          "quoted": false,
+          "start": 14723,
+          "end": 14733,
+          "sha256": "20f1cce223f68ee645c8c7022dd0ac0ce6528c057cab07084639ce20db849052",
+          "relation": "v1_payloads_olap"
+        },
+        {
+          "kind": "primary_key",
+          "name": "@14787",
+          "quoted": false,
+          "start": 14787,
+          "end": 14798,
+          "sha256": "b9e20880f50c03abb1b73497f52d9fc10f4ecab6e2d9213f7702b00662a1baf8",
+          "relation": "v1_payloads_olap",
+          "columns": [
+            "tenant_id",
+            "external_id",
+            "inserted_at"
+          ]
+        },
+        {
+          "kind": "check",
+          "name": "@14842",
+          "quoted": false,
+          "start": 14842,
+          "end": 14847,
+          "sha256": "2c12824b5f626268a103868c5645801df3b406ef91af87b6b51df1e6e7a622b2",
+          "relation": "v1_payloads_olap",
+          "columns": []
+        }
+      ]
+    },
+    {
+      "id": "index-v1_payloads_olap_external_id_idx",
+      "start": 15028,
+      "end": 15113,
+      "sha256": "320cd856b7918ab2718562636f2465388cd5bfac9282d00b8f10833bf9f816b9",
+      "syntax_class": "create-index",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "index",
+          "name": "v1_payloads_olap_external_id_idx",
+          "quoted": false,
+          "start": 15041,
+          "end": 15073,
+          "sha256": "da06b3494eea5296856c254e675cefa3b6291635f41a69a6cb0d77b1a8ca4fd5",
+          "relation": "v1_payloads_olap",
+          "columns": [
+            "external_id"
+          ]
+        }
+      ],
+      "note": "Explicit index ordering retained; complete source preserves ASC/DESC, partial predicates and GIN/operator-class syntax. These are declarations only."
+    },
+    {
+      "id": "table-v1_payloads_olap_offloaded_block_index",
+      "start": 15114,
+      "end": 15461,
+      "sha256": "c5f69b664d92a8a4920f802ecdcb5739bcadfa8e3710cd37a1138016b30d1936",
+      "syntax_class": "create-table",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "table",
+          "name": "v1_payloads_olap_offloaded_block_index",
+          "quoted": false,
+          "start": 15127,
+          "end": 15165,
+          "sha256": "428c3ca164564c575a223b003375e435e5793171b6b9f2dbbdca99654d70c02d"
+        },
+        {
+          "kind": "column",
+          "name": "payload_inserted_at_date",
+          "quoted": false,
+          "start": 15172,
+          "end": 15196,
+          "sha256": "7137611b22b1f0929b06d849196563806be46bb1ab7351619703f2f0621b21e8",
+          "relation": "v1_payloads_olap_offloaded_block_index"
+        },
+        {
+          "kind": "column",
+          "name": "block_external_id_range",
+          "quoted": false,
+          "start": 15216,
+          "end": 15239,
+          "sha256": "c1eecf89874dd793d2f23e71c3bbdc8c5661adc9ae4b69b4e91a8719b855d32c",
+          "relation": "v1_payloads_olap_offloaded_block_index"
+        },
+        {
+          "kind": "column",
+          "name": "index_file_key",
+          "quoted": false,
+          "start": 15264,
+          "end": 15278,
+          "sha256": "54510f8097cdd589d4a780819a75060a8b30298f7ef50678fa89e9f9d96ab903",
+          "relation": "v1_payloads_olap_offloaded_block_index"
+        },
+        {
+          "kind": "exclusion",
+          "name": "v1_payloads_olap_offloaded_block_index_date_range_excl",
+          "quoted": false,
+          "start": 15309,
+          "end": 15363,
+          "sha256": "ea24f7de2d1e52afed5e976a66a0dea9ef963ea23be83870f93d6ee0dde13296",
+          "relation": "v1_payloads_olap_offloaded_block_index",
+          "columns": [
+            "payload_inserted_at_date",
+            "block_external_id_range"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "index-v1_payloads_olap_offloaded_block_index_uq_index_key",
+      "start": 15462,
+      "end": 15594,
+      "sha256": "df7b162b5b44299357e32901e6594a0a37e1ba2ea4ecdf7910ba9bf8624d86a6",
+      "syntax_class": "create-index",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "index",
+          "name": "v1_payloads_olap_offloaded_block_index_uq_index_key",
+          "quoted": false,
+          "start": 15482,
+          "end": 15533,
+          "sha256": "6a766f90c763c58580ccf87a2c09110353bfa6f51eaa728114c7bc991c3c4bc6",
+          "relation": "v1_payloads_olap_offloaded_block_index",
+          "columns": [
+            "index_file_key"
+          ]
+        }
+      ],
+      "note": "Explicit index ordering retained; complete source preserves ASC/DESC, partial predicates and GIN/operator-class syntax. These are declarations only."
+    },
+    {
+      "id": "table-v1_task_status_updates_tmp",
+      "start": 15754,
+      "end": 16134,
+      "sha256": "7756ca1901f1edaed15ce2e3ae93d4b77ba85fdbbf0e0a7a1a8d081957fda383",
+      "syntax_class": "create-table",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "table",
+          "name": "v1_task_status_updates_tmp",
+          "quoted": false,
+          "start": 15767,
+          "end": 15793,
+          "sha256": "05dcbf980307efb254f73145b261c8792a8b68f438ed083e8bc36bb15f50036a"
+        },
+        {
+          "kind": "column",
+          "name": "tenant_id",
+          "quoted": false,
+          "start": 15800,
+          "end": 15809,
+          "sha256": "759b6ffea819a48a54ce7629b1ea21b328898ac2c1b460a10f268153d0b362c5",
+          "relation": "v1_task_status_updates_tmp"
+        },
+        {
+          "kind": "column",
+          "name": "requeue_after",
+          "quoted": false,
+          "start": 15829,
+          "end": 15842,
+          "sha256": "1c33c125b58cfe1e0588a7473bf882bbc8a9f92cc3f3713d312b3ad21ef24b0b",
+          "relation": "v1_task_status_updates_tmp"
+        },
+        {
+          "kind": "column",
+          "name": "requeue_retries",
+          "quoted": false,
+          "start": 15895,
+          "end": 15910,
+          "sha256": "ef721e1a31aaecfa2b264d80d6ec3248af28e5d98e8bc479904e24c2b375d0fe",
+          "relation": "v1_task_status_updates_tmp"
+        },
+        {
+          "kind": "column",
+          "name": "id",
+          "quoted": false,
+          "start": 15939,
+          "end": 15941,
+          "sha256": "a56145270ce6b3bebd1dd012b73948677dd618d496488bc608a3cb43ce3547dd",
+          "relation": "v1_task_status_updates_tmp"
+        },
+        {
+          "kind": "column",
+          "name": "dag_id",
+          "quoted": false,
+          "start": 15983,
+          "end": 15989,
+          "sha256": "15784a6e3da756d08628f291d834e251ed54dd89d671598ccb2dea7e511e3061",
+          "relation": "v1_task_status_updates_tmp"
+        },
+        {
+          "kind": "column",
+          "name": "dag_inserted_at",
+          "quoted": false,
+          "start": 16011,
+          "end": 16026,
+          "sha256": "21dcd3bebcc5b71f40f68f8d79a052513b792f504bd5b5ac8602ca03235be1bf",
+          "relation": "v1_task_status_updates_tmp"
+        },
+        {
+          "kind": "primary_key",
+          "name": "@16054",
+          "quoted": false,
+          "start": 16054,
+          "end": 16065,
+          "sha256": "b9e20880f50c03abb1b73497f52d9fc10f4ecab6e2d9213f7702b00662a1baf8",
+          "relation": "v1_task_status_updates_tmp",
+          "columns": [
+            "tenant_id",
+            "requeue_after",
+            "dag_id",
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gap-L478",
+      "start": 16135,
+      "end": 16748,
+      "sha256": "c4e5d189150b6a76314e2285c36c02fc834a753b688b857db1dbcb85b0f815d3",
+      "syntax_class": "create-function",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "gap-L502",
+      "start": 16749,
+      "end": 17368,
+      "sha256": "fc804c827d3e33972b82144f1946a2f93d0f3932e6ac17fe56d65c0efdf7394e",
+      "syntax_class": "create-function",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "gap-L529",
+      "start": 17369,
+      "end": 17977,
+      "sha256": "4f24a22cb2a3d7788851a6e141542ac2b7b45d68d9f9b64bb39c8cdb28c065ab",
+      "syntax_class": "create-function",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "table-v1_events_olap",
+      "start": 17995,
+      "end": 18403,
+      "sha256": "5f1aefee1949dced3d2099b4285507dac6ea31daca4d92b95ac8cccbb7573613",
+      "syntax_class": "create-table",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "table",
+          "name": "v1_events_olap",
+          "quoted": false,
+          "start": 18008,
+          "end": 18022,
+          "sha256": "d7e875db84e180082833ce99d35d9527c08fb93b74f2e3662f63c6e7a57e6b67"
+        },
+        {
+          "kind": "column",
+          "name": "tenant_id",
+          "quoted": false,
+          "start": 18029,
+          "end": 18038,
+          "sha256": "759b6ffea819a48a54ce7629b1ea21b328898ac2c1b460a10f268153d0b362c5",
+          "relation": "v1_events_olap"
+        },
+        {
+          "kind": "column",
+          "name": "id",
+          "quoted": false,
+          "start": 18058,
+          "end": 18060,
+          "sha256": "a56145270ce6b3bebd1dd012b73948677dd618d496488bc608a3cb43ce3547dd",
+          "relation": "v1_events_olap"
+        },
+        {
+          "kind": "column",
+          "name": "external_id",
+          "quoted": false,
+          "start": 18111,
+          "end": 18122,
+          "sha256": "47cdfeaae42f13f279752cd35f1217a7b7362e2e885297294f2ec8fe4b7a7d83",
+          "relation": "v1_events_olap"
+        },
+        {
+          "kind": "column",
+          "name": "seen_at",
+          "quoted": false,
+          "start": 18168,
+          "end": 18175,
+          "sha256": "55efecaedf4a4293caff38a7ef082d91a056133c5415ae73cf5ef4578e8f3556",
+          "relation": "v1_events_olap"
+        },
+        {
+          "kind": "column",
+          "name": "key",
+          "quoted": false,
+          "start": 18202,
+          "end": 18205,
+          "sha256": "2c70e12b7a0646f92279f427c7b38e7334d8e5389cff167a1dc30e73f826b683",
+          "relation": "v1_events_olap"
+        },
+        {
+          "kind": "column",
+          "name": "payload",
+          "quoted": false,
+          "start": 18225,
+          "end": 18232,
+          "sha256": "239f59ed55e737c77147cf55ad0c1b030b6d7ee748a7426952f9b852d5a935e5",
+          "relation": "v1_events_olap"
+        },
+        {
+          "kind": "column",
+          "name": "additional_metadata",
+          "quoted": false,
+          "start": 18253,
+          "end": 18272,
+          "sha256": "616ea296b468b364368ecb4daf37856af0134c6c91c006b101758aea4775bb20",
+          "relation": "v1_events_olap"
+        },
+        {
+          "kind": "column",
+          "name": "scope",
+          "quoted": false,
+          "start": 18284,
+          "end": 18289,
+          "sha256": "5f161c9149882e0e10124bc5dd5c11f0fbe8ec452edd52bcec76b01e9252cb33",
+          "relation": "v1_events_olap"
+        },
+        {
+          "kind": "column",
+          "name": "triggering_webhook_name",
+          "quoted": false,
+          "start": 18300,
+          "end": 18323,
+          "sha256": "13ae3c5ed0a02d8d284a876fc028417ee31222dc8af4554449dea3071f90fd3f",
+          "relation": "v1_events_olap"
+        },
+        {
+          "kind": "primary_key",
+          "name": "@18335",
+          "quoted": false,
+          "start": 18335,
+          "end": 18346,
+          "sha256": "b9e20880f50c03abb1b73497f52d9fc10f4ecab6e2d9213f7702b00662a1baf8",
+          "relation": "v1_events_olap",
+          "columns": [
+            "tenant_id",
+            "seen_at",
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "index-v1_events_olap_key_idx",
+      "start": 18404,
+      "end": 18476,
+      "sha256": "2639df9635f67d04973fb851e268dea6c7563c7d552028542e84b7e33ae342c9",
+      "syntax_class": "create-index",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "index",
+          "name": "v1_events_olap_key_idx",
+          "quoted": false,
+          "start": 18417,
+          "end": 18439,
+          "sha256": "5e99c7fe9cb565f9d7b0f348e8b59bfd4fbe692212bd2a927965b7c0078ea605",
+          "relation": "v1_events_olap",
+          "columns": [
+            "tenant_id",
+            "key"
+          ]
+        }
+      ],
+      "note": "Explicit index ordering retained; complete source preserves ASC/DESC, partial predicates and GIN/operator-class syntax. These are declarations only."
+    },
+    {
+      "id": "index-v1_events_olap_scope_idx",
+      "start": 18476,
+      "end": 18576,
+      "sha256": "f588ad2825287af9d928dfc2955b6d1d1aedc68b0c23d6679275068d8d052c6b",
+      "syntax_class": "create-index",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "index",
+          "name": "v1_events_olap_scope_idx",
+          "quoted": false,
+          "start": 18489,
+          "end": 18513,
+          "sha256": "7180c4db64febb965fbce27ee532237bdb650630de545eb1a827a48921cddc34",
+          "relation": "v1_events_olap",
+          "columns": [
+            "tenant_id",
+            "scope"
+          ]
+        }
+      ],
+      "note": "Explicit index ordering retained; complete source preserves ASC/DESC, partial predicates and GIN/operator-class syntax. These are declarations only."
+    },
+    {
+      "id": "table-v1_event_lookup_table_olap",
+      "start": 18577,
+      "end": 18843,
+      "sha256": "3d03b2681d68fd3db6ec350dceeedbcd66da1fb77124e158964dbdf58114a19d",
+      "syntax_class": "create-table",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "table",
+          "name": "v1_event_lookup_table_olap",
+          "quoted": false,
+          "start": 18590,
+          "end": 18616,
+          "sha256": "5668a05fe84be72672a77bdc880760b2abd4b4db7f81a353391a515584bd0767"
+        },
+        {
+          "kind": "column",
+          "name": "tenant_id",
+          "quoted": false,
+          "start": 18623,
+          "end": 18632,
+          "sha256": "759b6ffea819a48a54ce7629b1ea21b328898ac2c1b460a10f268153d0b362c5",
+          "relation": "v1_event_lookup_table_olap"
+        },
+        {
+          "kind": "column",
+          "name": "external_id",
+          "quoted": false,
+          "start": 18652,
+          "end": 18663,
+          "sha256": "47cdfeaae42f13f279752cd35f1217a7b7362e2e885297294f2ec8fe4b7a7d83",
+          "relation": "v1_event_lookup_table_olap"
+        },
+        {
+          "kind": "column",
+          "name": "event_id",
+          "quoted": false,
+          "start": 18683,
+          "end": 18691,
+          "sha256": "57c7c8267db4b2c89f1d3ecdfe37182fc5e9cdb0f70a37a4a5a907c82a1665bd",
+          "relation": "v1_event_lookup_table_olap"
+        },
+        {
+          "kind": "column",
+          "name": "event_seen_at",
+          "quoted": false,
+          "start": 18713,
+          "end": 18726,
+          "sha256": "649e75a9e0123d20332c419af19e4e2642f0d7c8ff651cbda5b6bc8b489bd144",
+          "relation": "v1_event_lookup_table_olap"
+        },
+        {
+          "kind": "primary_key",
+          "name": "@18754",
+          "quoted": false,
+          "start": 18754,
+          "end": 18765,
+          "sha256": "b9e20880f50c03abb1b73497f52d9fc10f4ecab6e2d9213f7702b00662a1baf8",
+          "relation": "v1_event_lookup_table_olap",
+          "columns": [
+            "tenant_id",
+            "external_id",
+            "event_seen_at"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "table-v1_event_to_run_olap",
+      "start": 18844,
+      "end": 19145,
+      "sha256": "c8e11866327343b87a203a73e2b25067c2a0740e19220c31b6afa0f8de094656",
+      "syntax_class": "create-table",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "table",
+          "name": "v1_event_to_run_olap",
+          "quoted": false,
+          "start": 18857,
+          "end": 18877,
+          "sha256": "d7aacfe9bdabba055e3dd5530767a85ecfe3f1fe9e343d798eef6afb495f58f3"
+        },
+        {
+          "kind": "column",
+          "name": "run_id",
+          "quoted": false,
+          "start": 18884,
+          "end": 18890,
+          "sha256": "0cd01327d7ac09a77f4f93c65f5d6d44aa6136a68bc5f02d747c9feed5efea3e",
+          "relation": "v1_event_to_run_olap"
+        },
+        {
+          "kind": "column",
+          "name": "run_inserted_at",
+          "quoted": false,
+          "start": 18912,
+          "end": 18927,
+          "sha256": "82e1a2870f08cd2b1b9028c7af35c5a73d604f2fe73dac061ee64fe019b3fc2a",
+          "relation": "v1_event_to_run_olap"
+        },
+        {
+          "kind": "column",
+          "name": "event_id",
+          "quoted": false,
+          "start": 18954,
+          "end": 18962,
+          "sha256": "57c7c8267db4b2c89f1d3ecdfe37182fc5e9cdb0f70a37a4a5a907c82a1665bd",
+          "relation": "v1_event_to_run_olap"
+        },
+        {
+          "kind": "column",
+          "name": "event_seen_at",
+          "quoted": false,
+          "start": 18984,
+          "end": 18997,
+          "sha256": "649e75a9e0123d20332c419af19e4e2642f0d7c8ff651cbda5b6bc8b489bd144",
+          "relation": "v1_event_to_run_olap"
+        },
+        {
+          "kind": "column",
+          "name": "filter_id",
+          "quoted": false,
+          "start": 19024,
+          "end": 19033,
+          "sha256": "e6ad3eb30aa15952d9244dfe7a57984c04a20c77de45e2a8c84084caf17d3bc6",
+          "relation": "v1_event_to_run_olap"
+        },
+        {
+          "kind": "primary_key",
+          "name": "@19045",
+          "quoted": false,
+          "start": 19045,
+          "end": 19056,
+          "sha256": "b9e20880f50c03abb1b73497f52d9fc10f4ecab6e2d9213f7702b00662a1baf8",
+          "relation": "v1_event_to_run_olap",
+          "columns": [
+            "event_id",
+            "event_seen_at",
+            "run_id",
+            "run_inserted_at"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "enum-v1_cel_evaluation_failure_source",
+      "start": 19146,
+      "end": 19241,
+      "sha256": "4198fb250f9b9d281557c522767d29076d010028ae9cc3e4738c3dd713431c8c",
+      "syntax_class": "create-enum",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "enum",
+          "name": "v1_cel_evaluation_failure_source",
+          "quoted": false,
+          "start": 19158,
+          "end": 19190,
+          "sha256": "d69dd9db2b9dd0943555e177346604ad7492db8388edc354b753b94a261fd4fa"
+        }
+      ]
+    },
+    {
+      "id": "table-v1_cel_evaluation_failures_olap",
+      "start": 19242,
+      "end": 19651,
+      "sha256": "ab38d08595a66db0e751402e45f8cac3aa508f35a7916ddfde1fff8fa2802f62",
+      "syntax_class": "create-table",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "table",
+          "name": "v1_cel_evaluation_failures_olap",
+          "quoted": false,
+          "start": 19255,
+          "end": 19286,
+          "sha256": "41b95633b1beafb2eb8af9504f4ecc6b183a95db97f63f1814f2cc5420db979f"
+        },
+        {
+          "kind": "column",
+          "name": "id",
+          "quoted": false,
+          "start": 19293,
+          "end": 19295,
+          "sha256": "a56145270ce6b3bebd1dd012b73948677dd618d496488bc608a3cb43ce3547dd",
+          "relation": "v1_cel_evaluation_failures_olap"
+        },
+        {
+          "kind": "column",
+          "name": "tenant_id",
+          "quoted": false,
+          "start": 19347,
+          "end": 19356,
+          "sha256": "759b6ffea819a48a54ce7629b1ea21b328898ac2c1b460a10f268153d0b362c5",
+          "relation": "v1_cel_evaluation_failures_olap"
+        },
+        {
+          "kind": "column",
+          "name": "source",
+          "quoted": false,
+          "start": 19377,
+          "end": 19383,
+          "sha256": "41cf6794ba4200b839c53531555f0f3998df4cbb01a4d5cb0b94e3ca5e23947d",
+          "relation": "v1_cel_evaluation_failures_olap"
+        },
+        {
+          "kind": "column",
+          "name": "error",
+          "quoted": false,
+          "start": 19432,
+          "end": 19437,
+          "sha256": "ca00fccfb408989eddc401062c4d1219a6aceb6b9b55412357f1790862e8f178",
+          "relation": "v1_cel_evaluation_failures_olap"
+        },
+        {
+          "kind": "column",
+          "name": "inserted_at",
+          "quoted": false,
+          "start": 19458,
+          "end": 19469,
+          "sha256": "67ff928db12037087fe3a4d5b7de7688f1e242c66a5193926a78375fd56cb3aa",
+          "relation": "v1_cel_evaluation_failures_olap"
+        },
+        {
+          "kind": "column",
+          "name": "updated_at",
+          "quoted": false,
+          "start": 19522,
+          "end": 19532,
+          "sha256": "20f1cce223f68ee645c8c7022dd0ac0ce6528c057cab07084639ce20db849052",
+          "relation": "v1_cel_evaluation_failures_olap"
+        },
+        {
+          "kind": "primary_key",
+          "name": "@19586",
+          "quoted": false,
+          "start": 19586,
+          "end": 19597,
+          "sha256": "b9e20880f50c03abb1b73497f52d9fc10f4ecab6e2d9213f7702b00662a1baf8",
+          "relation": "v1_cel_evaluation_failures_olap",
+          "columns": [
+            "inserted_at",
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gap-L611",
+      "start": 19698,
+      "end": 21152,
+      "sha256": "6c565dfd51563410105536c0a67fd259581f8ec39b07e3941a20da6c94d4520f",
+      "syntax_class": "create-function",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "gap-L679",
+      "start": 21153,
+      "end": 21337,
+      "sha256": "5b1aced8d998bf622581ce57ff8e440e7650606643de5c6b5bcbe4c3f11b1e44",
+      "syntax_class": "create-trigger",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "gap-L685",
+      "start": 21338,
+      "end": 21701,
+      "sha256": "666d49e478204dc4c4773db7bc7bdd15d7324c3aed1ed09be94de4f77065d1a2",
+      "syntax_class": "create-function",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "gap-L703",
+      "start": 21702,
+      "end": 21886,
+      "sha256": "efda01056c5c907c1767a7ce5f79bb8a4243db96ca54b7c82ddb1ec7788816f4",
+      "syntax_class": "create-trigger",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "gap-L709",
+      "start": 21887,
+      "end": 22232,
+      "sha256": "2bf2fe6e70552814e0c262fc8cc02bcb554a407450e64cbdec460a36dcbfab31",
+      "syntax_class": "create-function",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "gap-L728",
+      "start": 22233,
+      "end": 22424,
+      "sha256": "588f0a45f1d002f494d76f5c5af21c30655e2c60a662f7d66244560efe36ddd7",
+      "syntax_class": "create-trigger",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "gap-L734",
+      "start": 22425,
+      "end": 23429,
+      "sha256": "52c6f9ac798d24c9b321dc35f2c2fc3c49f58f3d1fbb9df70652094d87a873d9",
+      "syntax_class": "create-function",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "gap-L785",
+      "start": 23430,
+      "end": 23611,
+      "sha256": "daf788e3c2d08ce30ef7ed868590683b0dbe0599ab25a139b39e975a9673fc4a",
+      "syntax_class": "create-trigger",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "gap-L791",
+      "start": 23612,
+      "end": 23944,
+      "sha256": "8b1b7fb3baea777999761f14d8de4ca1c4d1b643efa0459ef6540f7e9e276631",
+      "syntax_class": "create-function",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "gap-L808",
+      "start": 23945,
+      "end": 24126,
+      "sha256": "35dab49bfa35995141a19d73327424586e1b820e45af4622aa7076e390f1c57a",
+      "syntax_class": "create-trigger",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "gap-L814",
+      "start": 24127,
+      "end": 24470,
+      "sha256": "b8059b838c4923cde025695d1e02f63e1754fd6d5528d98326fcbe3f34ed4fa1",
+      "syntax_class": "create-function",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "gap-L833",
+      "start": 24471,
+      "end": 24659,
+      "sha256": "ae30b40f7e3d912cac3a2bcfb222a519ef68ca22d7deb0ed61c49be60fff16c0",
+      "syntax_class": "create-trigger",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "gap-L839",
+      "start": 24660,
+      "end": 25155,
+      "sha256": "a3dc0b6988ecc5ee4b0afca8cee3ff9afb0d7ba1da1fe4ad957bba7e6bfa2cbf",
+      "syntax_class": "create-function",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "gap-L866",
+      "start": 25156,
+      "end": 25337,
+      "sha256": "29e679a1a2a1b60f62c988563dceed982e2f407453e964f5d0c2138c3ff2e291",
+      "syntax_class": "create-trigger",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "gap-L875",
+      "start": 25563,
+      "end": 26578,
+      "sha256": "3f425025bc947a9eb53180242cd7ab48696fc0baf95dc3ac2003cab32108abde",
+      "syntax_class": "create-function",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "gap-L909",
+      "start": 26579,
+      "end": 26767,
+      "sha256": "6b343a579ebc8ce6c81a14ec361e856cb10bde96a14f89d82bda7c6780f7e862",
+      "syntax_class": "create-trigger",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "gap-L915",
+      "start": 26768,
+      "end": 27209,
+      "sha256": "1b7f1b1c79724bc30d46b67164ce65737ffeb3c036455d75585bb6d6ac71805a",
+      "syntax_class": "create-function",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "gap-L938",
+      "start": 27210,
+      "end": 27415,
+      "sha256": "3863fa996060358b9c64651ff329b9f3398c4fa7ade8b78123fa8eb2e45e48ee",
+      "syntax_class": "create-trigger",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "table-v1_payloads_olap_cutover_job_offset",
+      "start": 27416,
+      "end": 27753,
+      "sha256": "a96c9903b185e835125b40eb9c12cefd8ffd2e83f9130aee16c124aa4de3759f",
+      "syntax_class": "create-table",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "table",
+          "name": "v1_payloads_olap_cutover_job_offset",
+          "quoted": false,
+          "start": 27429,
+          "end": 27464,
+          "sha256": "61cd899f66504d39eabe835dae35763786e7d3448ca333ba3d11845708c5f204"
+        },
+        {
+          "kind": "column",
+          "name": "key",
+          "quoted": false,
+          "start": 27471,
+          "end": 27474,
+          "sha256": "2c70e12b7a0646f92279f427c7b38e7334d8e5389cff167a1dc30e73f826b683",
+          "relation": "v1_payloads_olap_cutover_job_offset"
+        },
+        {
+          "kind": "column",
+          "name": "is_completed",
+          "quoted": false,
+          "start": 27497,
+          "end": 27509,
+          "sha256": "c6548c51deedec1553c94faabbc390375da4f31da83fef6cec0c9a1c78a9f67c",
+          "relation": "v1_payloads_olap_cutover_job_offset"
+        },
+        {
+          "kind": "column",
+          "name": "lease_process_id",
+          "quoted": false,
+          "start": 27546,
+          "end": 27562,
+          "sha256": "7e2a65be5292f9ad7a8d36845f133b1a4100a04848a00db2f0e61cb288cd44e1",
+          "relation": "v1_payloads_olap_cutover_job_offset"
+        },
+        {
+          "kind": "column",
+          "name": "lease_expires_at",
+          "quoted": false,
+          "start": 27608,
+          "end": 27624,
+          "sha256": "907cbb1b3a74c5879124e2f334fdc28a4fd3218ea97248465b5d46690efdb1fc",
+          "relation": "v1_payloads_olap_cutover_job_offset"
+        },
+        {
+          "kind": "column",
+          "name": "last_external_id",
+          "quoted": false,
+          "start": 27666,
+          "end": 27682,
+          "sha256": "da7ab65acaa58776d811263b1fdc647357098ed1fb1c3c6e2babd0c84065c69e",
+          "relation": "v1_payloads_olap_cutover_job_offset"
+        },
+        {
+          "kind": "primary_key",
+          "name": "@27480",
+          "quoted": false,
+          "start": 27480,
+          "end": 27491,
+          "sha256": "b9e20880f50c03abb1b73497f52d9fc10f4ecab6e2d9213f7702b00662a1baf8",
+          "relation": "v1_payloads_olap_cutover_job_offset",
+          "columns": [
+            "key"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gap-L953",
+      "start": 27754,
+      "end": 31858,
+      "sha256": "8aee9a7da9a6c4c4d53bf64837bab8835611fb8a4bfa7658e003891307317e15",
+      "syntax_class": "create-function",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "gap-L1061",
+      "start": 31859,
+      "end": 34002,
+      "sha256": "16dde126a2483437de3dc3da02eaf57b2b2110846d729183255d934e3b515879",
+      "syntax_class": "create-function",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "gap-L1120",
+      "start": 34003,
+      "end": 36735,
+      "sha256": "75321f3d7802e24b2ace016514275ce0a4b843a9f95b49588f26504dc4c50150",
+      "syntax_class": "create-function",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "gap-L1184",
+      "start": 36736,
+      "end": 38291,
+      "sha256": "53c6933f66f9dd7c718e1bbd1f5b0b6ba7491eb516f448b878527bc28a4a519d",
+      "syntax_class": "create-function",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "gap-L1232",
+      "start": 38292,
+      "end": 39495,
+      "sha256": "6705110b7c9d29cc631632593178b5c02b8e5636d384a7ad30008db3f606564f",
+      "syntax_class": "create-function",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "gap-L1275",
+      "start": 39496,
+      "end": 43481,
+      "sha256": "363413f5d48af53b60d6e5c5b4a98ce6f8786ee24dd072499c7f48ddfce49417",
+      "syntax_class": "create-function",
+      "expected_disposition": "procedural-sql",
+      "objects": [],
+      "note": "Procedural SQL is a frozen gap; bodies/dynamic identifiers supply no current declarations or authored-query sites."
+    },
+    {
+      "id": "enum-v1_otel_span_kind",
+      "start": 43482,
+      "end": 43593,
+      "sha256": "e8833d2c6688d69107b056690ff1465e3c7cc6c7ac809c634cf45263921ccce2",
+      "syntax_class": "create-enum",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "enum",
+          "name": "v1_otel_span_kind",
+          "quoted": false,
+          "start": 43494,
+          "end": 43511,
+          "sha256": "79f6e236b605acaf191d9ef2c0aa066f7097e1b29342e558f9a4dd5caca6d703"
+        }
+      ]
+    },
+    {
+      "id": "enum-v1_otel_status_code",
+      "start": 43594,
+      "end": 43660,
+      "sha256": "b73d5c7f4d6d3be8e84795e7a90de8543416e2d5d166a3655fd3793b60a7a754",
+      "syntax_class": "create-enum",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "enum",
+          "name": "v1_otel_status_code",
+          "quoted": false,
+          "start": 43606,
+          "end": 43625,
+          "sha256": "2b7ab680dda77f81ce87445c28dffe28c763f560f68d056be138ae0df2e70d2a"
+        }
+      ]
+    },
+    {
+      "id": "table-v1_otel_trace_olap",
+      "start": 43661,
+      "end": 44488,
+      "sha256": "73bae7d1a484925177aa4b735cc5817c6f7f79671471e837b4a76a6012c2c420",
+      "syntax_class": "create-table",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "table",
+          "name": "v1_otel_trace_olap",
+          "quoted": false,
+          "start": 43674,
+          "end": 43692,
+          "sha256": "b77296d96d9d6087abba8e6caeff46c5d5ca1b09599575291caa9205a1671865"
+        },
+        {
+          "kind": "column",
+          "name": "tenant_id",
+          "quoted": false,
+          "start": 43699,
+          "end": 43708,
+          "sha256": "759b6ffea819a48a54ce7629b1ea21b328898ac2c1b460a10f268153d0b362c5",
+          "relation": "v1_otel_trace_olap"
+        },
+        {
+          "kind": "column",
+          "name": "trace_id",
+          "quoted": false,
+          "start": 43734,
+          "end": 43742,
+          "sha256": "e7f3c28e57123eaebc67ff7cdb4cbc22a5d7b0a260c3cd3e00a5088d62482868",
+          "relation": "v1_otel_trace_olap"
+        },
+        {
+          "kind": "column",
+          "name": "span_id",
+          "quoted": false,
+          "start": 43770,
+          "end": 43777,
+          "sha256": "945783800b81847351a5989473021cb948dc46021bd657aab8db160fba180271",
+          "relation": "v1_otel_trace_olap"
+        },
+        {
+          "kind": "column",
+          "name": "parent_span_id",
+          "quoted": false,
+          "start": 43806,
+          "end": 43820,
+          "sha256": "8b77a53048a32e24977458c679e954741a217d83bd21f178f359a046e904244a",
+          "relation": "v1_otel_trace_olap"
+        },
+        {
+          "kind": "column",
+          "name": "span_name",
+          "quoted": false,
+          "start": 43832,
+          "end": 43841,
+          "sha256": "72e9deb0d2bd12d8c65f48d1b6b57234df26866dcdc98be0aebce5c414967093",
+          "relation": "v1_otel_trace_olap"
+        },
+        {
+          "kind": "column",
+          "name": "span_kind",
+          "quoted": false,
+          "start": 43867,
+          "end": 43876,
+          "sha256": "45f9fad93fdb18fac6f090c6e41509e6dea863ca684c3542e4ae5df69f702890",
+          "relation": "v1_otel_trace_olap"
+        },
+        {
+          "kind": "column",
+          "name": "service_name",
+          "quoted": false,
+          "start": 43937,
+          "end": 43949,
+          "sha256": "d1bc931486f1485f6035cae24400b507cce7995c4800e448ce6a4a2aa03fbaa0",
+          "relation": "v1_otel_trace_olap"
+        },
+        {
+          "kind": "column",
+          "name": "status_code",
+          "quoted": false,
+          "start": 43990,
+          "end": 44001,
+          "sha256": "bbace0edc48b0b036081ec0d482f5d651a0d436e8cdcdaecfe25ed57c9d7cc07",
+          "relation": "v1_otel_trace_olap"
+        },
+        {
+          "kind": "column",
+          "name": "status_message",
+          "quoted": false,
+          "start": 44056,
+          "end": 44070,
+          "sha256": "f2bfc5ca2aabe563bf7388e587d344d8c5f27bf04f205e2419e04587484fc7f5",
+          "relation": "v1_otel_trace_olap"
+        },
+        {
+          "kind": "column",
+          "name": "duration_ns",
+          "quoted": false,
+          "start": 44082,
+          "end": 44093,
+          "sha256": "5f71d546877e81a1fa1ac7b82775c8b7d148cf482d2f83f61d5c5293d9b6f245",
+          "relation": "v1_otel_trace_olap"
+        },
+        {
+          "kind": "column",
+          "name": "resource_attributes",
+          "quoted": false,
+          "start": 44129,
+          "end": 44148,
+          "sha256": "87ab09926f9ff6a02a42a1a071b554ba89ac49a293a346db978c6bd08f7825fa",
+          "relation": "v1_otel_trace_olap"
+        },
+        {
+          "kind": "column",
+          "name": "span_attributes",
+          "quoted": false,
+          "start": 44160,
+          "end": 44175,
+          "sha256": "26e70ea3693b2c289ea03afa192a328b4cf2d4fe9621a96a8c6b462ffff514ec",
+          "relation": "v1_otel_trace_olap"
+        },
+        {
+          "kind": "column",
+          "name": "scope_name",
+          "quoted": false,
+          "start": 44191,
+          "end": 44201,
+          "sha256": "9dc54b6e3758cb23c0349506df1d99dc26ea6b7e099946043079fdb17138ad2b",
+          "relation": "v1_otel_trace_olap"
+        },
+        {
+          "kind": "column",
+          "name": "scope_version",
+          "quoted": false,
+          "start": 44217,
+          "end": 44230,
+          "sha256": "7b2e607e548cb4c9425e7dbe343f71b580759d8277f2be9036ca72f97d80ed1f",
+          "relation": "v1_otel_trace_olap"
+        },
+        {
+          "kind": "column",
+          "name": "task_run_external_id",
+          "quoted": false,
+          "start": 44243,
+          "end": 44263,
+          "sha256": "4c221607e40436033316baa4dc0dee2f3ff5451f91118a6ccdc0a5cc1fcb9bb2",
+          "relation": "v1_otel_trace_olap"
+        },
+        {
+          "kind": "column",
+          "name": "workflow_run_external_id",
+          "quoted": false,
+          "start": 44277,
+          "end": 44301,
+          "sha256": "4d2096eed601d81a51f2dee41326487c72d629604da4cfde3ee285c1fc4efcc3",
+          "relation": "v1_otel_trace_olap"
+        },
+        {
+          "kind": "column",
+          "name": "retry_count",
+          "quoted": false,
+          "start": 44312,
+          "end": 44323,
+          "sha256": "dc24d6606b6627759aafd5b3d4ac10f3d4d68ef26d8e022ca5976226ed45e57b",
+          "relation": "v1_otel_trace_olap"
+        },
+        {
+          "kind": "column",
+          "name": "start_time",
+          "quoted": false,
+          "start": 44356,
+          "end": 44366,
+          "sha256": "8cb8863d0820d03a3e64d0f15203d129c78034830efb9832ebc8eab687c8e320",
+          "relation": "v1_otel_trace_olap"
+        },
+        {
+          "kind": "primary_key",
+          "name": "@44398",
+          "quoted": false,
+          "start": 44398,
+          "end": 44409,
+          "sha256": "b9e20880f50c03abb1b73497f52d9fc10f4ecab6e2d9213f7702b00662a1baf8",
+          "relation": "v1_otel_trace_olap",
+          "columns": [
+            "tenant_id",
+            "trace_id",
+            "start_time",
+            "span_id"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "index-idx_v1_otel_trace_olap_task_lookup",
+      "start": 44489,
+      "end": 44641,
+      "sha256": "2b667bb65611421cd68e44156360afdcae5dce8080cf2e9a274254392e2af77d",
+      "syntax_class": "create-index",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "index",
+          "name": "idx_v1_otel_trace_olap_task_lookup",
+          "quoted": false,
+          "start": 44502,
+          "end": 44536,
+          "sha256": "0bef651051bd61e40ccb0631711a7a03d0c8dc12cf564e7914eae0a3fb27c745",
+          "relation": "v1_otel_trace_olap",
+          "columns": [
+            "tenant_id",
+            "task_run_external_id"
+          ]
+        }
+      ],
+      "note": "Explicit index ordering retained; complete source preserves ASC/DESC, partial predicates and GIN/operator-class syntax. These are declarations only."
+    },
+    {
+      "id": "index-idx_v1_otel_trace_olap_workflow_lookup",
+      "start": 44642,
+      "end": 44806,
+      "sha256": "be738dbc676863e364657b9dd10fd7bf6e9715f2247d73cf3034f0f776625fe3",
+      "syntax_class": "create-index",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "index",
+          "name": "idx_v1_otel_trace_olap_workflow_lookup",
+          "quoted": false,
+          "start": 44655,
+          "end": 44693,
+          "sha256": "e2ff33633b310f46b611f558f2e1853b8f723f855bda2496b0c40fa28e4ea64b",
+          "relation": "v1_otel_trace_olap",
+          "columns": [
+            "tenant_id",
+            "workflow_run_external_id"
+          ]
+        }
+      ],
+      "note": "Explicit index ordering retained; complete source preserves ASC/DESC, partial predicates and GIN/operator-class syntax. These are declarations only."
+    },
+    {
+      "id": "table-v1_otel_trace_lookup_olap",
+      "start": 44807,
+      "end": 45131,
+      "sha256": "2aed46246aab1484ce4e8bbc255bd5f9ccd442c81d3dcf8d718d0c81898a6e4a",
+      "syntax_class": "create-table",
+      "expected_disposition": "declaration",
+      "objects": [
+        {
+          "kind": "table",
+          "name": "v1_otel_trace_lookup_olap",
+          "quoted": false,
+          "start": 44820,
+          "end": 44845,
+          "sha256": "9fd391c7fc10bdb900e8bb82cfad437ff7678d3271ed43055cc20eb2f60cf866"
+        },
+        {
+          "kind": "column",
+          "name": "tenant_id",
+          "quoted": false,
+          "start": 44852,
+          "end": 44861,
+          "sha256": "759b6ffea819a48a54ce7629b1ea21b328898ac2c1b460a10f268153d0b362c5",
+          "relation": "v1_otel_trace_lookup_olap"
+        },
+        {
+          "kind": "column",
+          "name": "external_id",
+          "quoted": false,
+          "start": 44887,
+          "end": 44898,
+          "sha256": "47cdfeaae42f13f279752cd35f1217a7b7362e2e885297294f2ec8fe4b7a7d83",
+          "relation": "v1_otel_trace_lookup_olap"
+        },
+        {
+          "kind": "column",
+          "name": "retry_count",
+          "quoted": false,
+          "start": 44922,
+          "end": 44933,
+          "sha256": "dc24d6606b6627759aafd5b3d4ac10f3d4d68ef26d8e022ca5976226ed45e57b",
+          "relation": "v1_otel_trace_lookup_olap"
+        },
+        {
+          "kind": "column",
+          "name": "trace_id",
+          "quoted": false,
+          "start": 44956,
+          "end": 44964,
+          "sha256": "e7f3c28e57123eaebc67ff7cdb4cbc22a5d7b0a260c3cd3e00a5088d62482868",
+          "relation": "v1_otel_trace_lookup_olap"
+        },
+        {
+          "kind": "column",
+          "name": "start_time",
+          "quoted": false,
+          "start": 44992,
+          "end": 45002,
+          "sha256": "8cb8863d0820d03a3e64d0f15203d129c78034830efb9832ebc8eab687c8e320",
+          "relation": "v1_otel_trace_lookup_olap"
+        },
+        {
+          "kind": "primary_key",
+          "name": "@45034",
+          "quoted": false,
+          "start": 45034,
+          "end": 45045,
+          "sha256": "b9e20880f50c03abb1b73497f52d9fc10f4ecab6e2d9213f7702b00662a1baf8",
+          "relation": "v1_otel_trace_lookup_olap",
+          "columns": [
+            "tenant_id",
+            "external_id",
+            "retry_count",
+            "start_time"
+          ]
+        }
+      ]
+    }
+  ],
+  "inventory_notes": [
+    "Complete authored schema input; function/trigger bodies (including LANGUAGE sql) are explicit procedural gaps and never primary authored-query evidence.",
+    "All explicitly written table/column/key/index/enum/exclusion objects remain in the declaration denominator; implicit identity sequences and dynamic partitions are not invented."
+  ]
+}

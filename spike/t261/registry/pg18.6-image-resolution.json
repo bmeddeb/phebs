@@ -1,0 +1,47 @@
+{
+  "stage": "read-only registry metadata; image not pulled or executed",
+  "date": "2026-10-18",
+  "argv": [
+    "/opt/homebrew/bin/docker",
+    "manifest",
+    "inspect",
+    "--verbose",
+    "docker.io/library/postgres@sha256:a63b24165ea0eacced7585766d790ac08bbaefe10a1841f87783a4505d29a69c"
+  ],
+  "exit_code": 0,
+  "image_ref": "docker.io/library/postgres@sha256:a63b24165ea0eacced7585766d790ac08bbaefe10a1841f87783a4505d29a69c",
+  "descriptor": {
+    "mediaType": "application/vnd.oci.image.manifest.v1+json",
+    "digest": "sha256:a63b24165ea0eacced7585766d790ac08bbaefe10a1841f87783a4505d29a69c",
+    "size": 3441,
+    "platform": {
+      "architecture": "arm64",
+      "os": "linux",
+      "variant": "v8"
+    }
+  },
+  "manifest_sha256": "a63b24165ea0eacced7585766d790ac08bbaefe10a1841f87783a4505d29a69c",
+  "manifest_bytes": 3441,
+  "config": {
+    "mediaType": "application/vnd.oci.image.config.v1+json",
+    "digest": "sha256:0336095afa072c685c93021dcfa4a5fee9cbce25ecd65121b58226c787afc0d0",
+    "size": 10061
+  },
+  "compressed_layer_bytes": 161098692,
+  "pulls": 0,
+  "container_executions": 0,
+  "primary_sources": [
+    "https://hub.docker.com/_/postgres",
+    "https://raw.githubusercontent.com/docker-library/repo-info/master/repos/postgres/remote/18.6.md",
+    "https://raw.githubusercontent.com/docker-library/official-images/master/library/postgres"
+  ],
+  "native_client_observation": {
+    "pg_dump_path": "/opt/homebrew/opt/libpq/bin/pg_dump",
+    "pg_dump_version": "pg_dump (PostgreSQL) 18.6",
+    "pg_dump_sha256": "f21d5b0584715ecf75ba2d400459c946fc1dfc82b8add991aee4327595a0cbed",
+    "psql_path": "/opt/homebrew/opt/libpq/bin/psql",
+    "psql_version": "psql (PostgreSQL) 18.6",
+    "psql_sha256": "34661328090ed7ac45b804ed5d96b9e0517c5be0bd6131fb5b4ab215bf1eba07"
+  },
+  "qualification": "Manifest provenance/platform is verified; actual image config/server/client binary hashes and exact 18.6 version outputs remain mandatory pre-launch checks after separately authorized pull."
+}
