@@ -21047,6 +21047,10 @@ No exact wire/runtime/receiver/registration claim or release follows. Two fresh
 serial unchanged-reader processes each have27isolated units under one30s
 deadline. Exporter/scorer review and immutable execution checkpoint remain
 required; any measured mismatch is retained NO-GO without post-output tuning.
+The evaluator and13whole-call literal representation witnesses now pass root
+and independent peer source review. Immutable candidate contract778d4cb3binds
+all inputs/implementation/tools; planned inert checks and the two finite passes
+remain to execute. Original oracle/preregistration and product reader are exact.
 
 **T58.3 · Independent stable recipe registration and measured promotion** —
 satisfy the common bar per protocol/claim, retain proof/coverage/HTTP/MCP

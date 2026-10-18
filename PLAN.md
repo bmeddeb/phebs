@@ -13541,3 +13541,15 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   runtime/registration identity or T58.3 release is inferred. Source preparation
   adds no production request/sync/startup/retry/publication, cache/lock/schema
   or child work. Adapter review and first finite measurement remain separate.
+
+- **2026-10-18 — T58.2 unchanged-reader evaluator checkpoint.** Source-only
+  exporter/scorer/runner and independent reviews preserve the frozen63inputs
+  and original oracle. Thirteen literal whole-call endpoints close source-span
+  representation without parsing source or changing semantic labels. Register
+  launch custody before Popen and retain scratch whenever join/group absence is
+  unknown. Closed emission census includes generated/unmatched/duplicate/unknown
+  positives and ambiguity candidate lists. Two fresh serial27unit passes each
+  retain one30s global bound; offline build120s, zero retries. Source buffers and
+  direct-PID RSS limits are explicit; no production request/tick/startup/retry/
+  publication, schema/cache/lock or runtime adoption changes. Any mismatch is a
+  retained NO-GO, with no post-output oracle or recognizer tuning.

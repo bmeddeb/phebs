@@ -1,0 +1,194 @@
+{
+  "schema": "t582-unchanged-reader-candidate-contract-v1",
+  "date": "2026-10-18",
+  "status": "Prospective source only; independent root/peer review and immutable implementation checkpoint plus serialized native slot required before tests/build/reader/scoring.",
+  "source_checkpoint": "842fb139edc1fa104c06d66d446b1bfc09a85314",
+  "preregistration_sha256": "6e9f39ad56cbba47eb4a5ea74630b3a33f8b747ac6c4db7d1256ccaf84fd51e5",
+  "frozen_inputs_unchanged": true,
+  "reader": {
+    "package": "github.com/bmeddeb/phebs/internal/extract/extractors/thriftgo",
+    "domain": "thrift-consumer",
+    "version": "1.2.0",
+    "code_changes": false,
+    "input": "Source-only case plan; no truth labels, decision tables, expected classifications or score fields enter the reader",
+    "registration_semantics": "Processor-construction candidate only, no runtime/server registration or traffic",
+    "identity": "Generated-source package/service/wire spellings remain heuristic/derived hints, no exact receiver/IDL/cross-module/wire identity"
+  },
+  "implementation_files": [
+    {
+      "path": "../../go.mod",
+      "bytes": 9366,
+      "sha256": "424c7e1038c71c10676fc3bad01e155ebc5f912a4eea65e90c284b30951a9275"
+    },
+    {
+      "path": "../../go.sum",
+      "bytes": 99030,
+      "sha256": "d7aa72d0c2c4283125d37d4377e74be0e87723735a27015900d23092798b1665"
+    },
+    {
+      "path": "../../internal/extract/extractors/thriftgo/thriftgo.go",
+      "bytes": 21661,
+      "sha256": "1d9de89d362e357e16dc2efd12e2bcba3677a02ee2e30c033744c6e1bacd2f76"
+    },
+    {
+      "path": "../../internal/extract/sdk/attribution.go",
+      "bytes": 3143,
+      "sha256": "634e071d8d6d6865734e1ee319e1fafafd4faeffd527cf264acaf16a6a6f35eb"
+    },
+    {
+      "path": "../../internal/extract/sdk/sdk.go",
+      "bytes": 8439,
+      "sha256": "aebb28d5450088a99e1a6aa21a4f2f4fe615d58574e01280a16978761dfb3541"
+    },
+    {
+      "path": "call-span-witnesses.json",
+      "bytes": 5721,
+      "sha256": "92a86c027cf4da5a2862ba19790d1dfdd6b89abe3689000291fc54894efe9d4d"
+    },
+    {
+      "path": "export/main.go",
+      "bytes": 11333,
+      "sha256": "e0f06298f81494d9b01a8d2e5291ba949e64b3909afa046bc6f76a330aaa097a"
+    },
+    {
+      "path": "export/main_test.go",
+      "bytes": 2002,
+      "sha256": "62f070127b3891c4982fc0de10b414fdea84117a9a2a3b0006faca929ff67e45"
+    },
+    {
+      "path": "go.mod",
+      "bytes": 138,
+      "sha256": "19108c20c167bd46d9e176f029b7f4b1512284bc34402f442b4cf44f0066a36b"
+    },
+    {
+      "path": "run.py",
+      "bytes": 20350,
+      "sha256": "087323f239bceb270e4346cf8aaa687bc2646645e8c80148b6ceca492ffcf90b"
+    },
+    {
+      "path": "score.py",
+      "bytes": 17664,
+      "sha256": "13278aedb81497cf706859cb570a6d7d3ac79afbc19a4064cf5f32d88775cce2"
+    },
+    {
+      "path": "source-review.json",
+      "bytes": 1590,
+      "sha256": "69b790081486c495244d2598f4cb9a2be9fda979f70acfb037ea36988285d72f"
+    },
+    {
+      "path": "test_score.py",
+      "bytes": 5285,
+      "sha256": "18113cf044f7395a1b3ed3be8fdf52c5f61b2e75a644e1e4a978c27331eb0e4b"
+    }
+  ],
+  "go_executable": "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+  "tool_files": [
+    {
+      "path": "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+      "bytes": 14500160,
+      "sha256": "3925fc3221ac440ebf7c35361ff663bed0c7bdb2e0a157b75fe993607ffe0a19"
+    },
+    {
+      "path": "/opt/homebrew/opt/phebs-go-1.26.5/VERSION",
+      "bytes": 35,
+      "sha256": "11b4fb14680701f98ca60fd8464a836ca4374f17896a125f4510ab6ae8cecc9b"
+    },
+    {
+      "path": "/opt/homebrew/opt/phebs-go-1.26.5/pkg/tool/darwin_arm64/asm",
+      "bytes": 4919904,
+      "sha256": "7de57e9965f388f1ee3342a01953fad34fd819c18e2308af0bbbf103b296ea50"
+    },
+    {
+      "path": "/opt/homebrew/opt/phebs-go-1.26.5/pkg/tool/darwin_arm64/compile",
+      "bytes": 24625104,
+      "sha256": "610758d168cd8ab5a69a71d916af6f3a2e6aa1b5c04b491ddd563e32c8ceb78e"
+    },
+    {
+      "path": "/opt/homebrew/opt/phebs-go-1.26.5/pkg/tool/darwin_arm64/link",
+      "bytes": 6335152,
+      "sha256": "698f5f6a84cffa376d0d2d882a620dae7b95dc96e6491bc1864f704dcbd6d4eb"
+    }
+  ],
+  "tool_version_file": "go1.26.5\ntime 2026-07-01T21:24:27Z\n",
+  "module_boundary": "NEW nested go.mod excludes frozen inert/malformed input Go trees from parent ./...; only ./export is built/tested. Local parent replace, standard-library-only transitive reader/SDK, no new external dependency/download/go.sum.",
+  "admission": {
+    "runner_host": "Darwin64-bit native development host only; no Linux/scale/ceremony claim",
+    "reader_processes": 2,
+    "units_per_process": 27,
+    "fresh_state": "New reader/corpus/catalog for each unit; catalog never pooled across cases",
+    "global_reader_wall_seconds_per_process_including_cleanup": 30,
+    "execution_reserve_seconds": 2,
+    "build_wall_seconds_including_cleanup": 120,
+    "binary_metadata_wall_seconds": 5,
+    "maximum_concurrent_reader_children": 1,
+    "retries": 0,
+    "max_offered_source_bytes_per_pass": 16777216,
+    "frozen_offered_source_bytes_per_pass": 9436787,
+    "max_encoded_stdin_plan_bytes": 33554432,
+    "max_go_files_per_unit": 64,
+    "max_source_bytes_per_unit": 8388608,
+    "max_go_blob_bytes": 4194304,
+    "only_refusal_sentinel_bytes": 4194305,
+    "max_assertions_per_unit": 4096,
+    "max_assertions_per_pass": 8192,
+    "max_encoded_output_bytes_per_unit": 8388608,
+    "max_stdout_bytes_per_pass": 16777216,
+    "max_stderr_retained_bytes_per_child": 65536,
+    "build_and_metadata_stdout_retained_bytes": 65536,
+    "output_enforcement": "Exporter preaccounts conservative escaped record size before retention, reserves2MiB metadata per unit, checks encoded unit/global size. Runner bounds retained pipes perFD; on overflow stores bounded prefix and first stop, not a full-output claim.",
+    "stop_join": "Supervised build/Go metadata/reader children pre-register conservative launch custody before Popen; kill owned group on limits/interruption, reap direct child, verify group absence. Any postlaunch exception/unknown custody retains scratch. Six separate readonly Git metadata children use check_output direct-child waits, disclosed without group/family claim.",
+    "CPU": "unmeasured",
+    "RSS": "20ms observed direct-PID samples plus exact direct-child wait4 peak; no hard heap or aggregate compiler-family bound. Python runner lifetime high-water separately retained.",
+    "Git_metadata_qualification": "Six readonly Git direct children (ls-files/status/merge-base/rev-parse HEAD/tree/final HEAD), each5s timeout; outside supervised workload group/RSS ledger. No claim their process groups were sampled/admitted."
+  },
+  "source_fences": "Strict frozen-file byte/hash verification with no symlink aliases; source checkpoint ancestry, clean tracked evaluator bytes and actual build VCS metadata; every emitted raw SDK fact bound to most recent corpus read, immutable blob/span/line/schema. Source fence failure retains bounded raw row and stops before quality.",
+  "emission_and_score": "All27unit outputs and complete footer required. Every raw assertion enters census, including unknown predicates/generated-body/unmatched/duplicate/wrong-tier/hint/unknown-positive rows. All public102 and authored23labelled sites accounted; silence distinct from explicit unresolved/analyzed coverage. Thirteen relevant positive/ambiguity call spans require exact whole-expression endpoints, not containment. Registration ambiguity Detail keys/schema are closed.",
+  "ambiguity_representation": "Group per-operation unresolved call edges at one source site while retaining every raw edge. Frozen registration ambiguity requires source-distinct candidate list; count-only output is a mismatch, no candidate list inferred from truth.",
+  "oracle_policy": "No frozen source/label/bound/threshold changes. Any disagreement is retained NO-GO with first bytes; no recognizer tuning or false-positive exclusions from output.",
+  "determinism": "Two serial fresh complete raw output streams must hash identically; wall/RSS/custody held outside deterministic facts. Score only after both raw outputs are retained.",
+  "cost": {
+    "per_pass": "Bounded stdin plan and decoded source for all units held; one unit catalog/AST/facts at a time; current SDK blob copies coexist with plan source. Catalog and facts become unreachable between units; GC timing is not a hard memory guarantee.",
+    "source_reads": "At most twice each logical file per unit, mandatory at least once; actual per-file counts and logical bytes retained. Disk source verification/materialization repeats bounded frozen reads in runner, not per product request.",
+    "encoding": "One bounded unit JSON buffer, plus fixed footer; prior unit output streamed and not retained by exporter. Python scorer holds one bounded output plus immutable source/plan; two streams compared by file SHA first.",
+    "startup": "Offline Go build with existing cache, not cold; tool/source/binary hashes. Supervised workloads:2reader children+1build+1Go metadata child; compiler descendants share build group. Additionally6readonly Git metadata commands have5s check_output timeout/direct-child wait, no group/family RSS receipt.",
+    "steady_state": "No production query/sync/publication/retry/cache invalidation work, no store, registry, UI, app execution, network, long-lived lock or background worker."
+  },
+  "planned_supplemental_checks": [
+    "GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off GOWORK=off GOENV=off CGO_ENABLED=0 go test -mod=readonly ./export -run \"TestPlanStrictTailAndCatalogAdmission|TestFactRequiresMostRecentExactSource\" -count=1",
+    "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v test_score.py"
+  ],
+  "planned_candidate_cli": "PYTHONDONTWRITEBYTECODE=1 python3 run.py --out /tmp/phebs-t582-first-native-01 --execute-reviewed-contract <reviewed SHA256 of this exact file> > /tmp/phebs-t582-first-native-01.runner.log 2>&1",
+  "exit_semantics": "0 finite-engineering-pass-only,2 measured NO-GO,1 technical stop/preflight failure. NO-GO never means retry.",
+  "production_adoption": false,
+  "release_or_activation_authorized": false,
+  "nonclaims": [
+    "No blind/public-population accuracy",
+    "No T13.1/T58.3 common-bar satisfaction",
+    "No exact caller/field/IDL/receiver/wire/runtime identity",
+    "No release/signature/lookup activation",
+    "No scale/SLO/compiler or generated-application execution"
+  ],
+  "execution_status": "No candidate/source-Go parser, reader/exporter/scorer, tests, builds or application executed. Only the two NEW exporter Go files were formatted; source authoring/reads/hashes and literal source-span helpers ran.",
+  "source_only_review_corrections": {
+    "formatting": "Only NEW export/main.go and export/main_test.go formatted by pinned Go1.26.5 gofmt; no frozen fixture path passed to formatter.",
+    "launch_custody": "Mutable conservative ledger entry registered before Popen; PID/phase/join/group truth updated only when known. Any later exception leaves unknown custody, keeps scratch and retains bounded printable diagnostic. One inert mock control forces postlaunch cleanup exception.",
+    "source_span_endpoints": "13 prospectively hand-selected literal whole-call witnesses close 11 supported +2 ambiguity endpoints. Exact start/end/line check supplements frozen callee labels without changing semantic truth; no Go parser/candidate used.",
+    "registration_ambiguity_detail": "Exact closed schema/constructor/count/candidate dictionary required; missing candidate list remains mismatch. Wrong schema/extra field inert controls added.",
+    "semantic_oracle_or_reader_changes": false
+  },
+  "offline_module_source_review": {
+    "status": "Source inspection only; no module tool, build, download or candidate executed. First actual offline build remains authoritative.",
+    "parent_replace": "github.com/bmeddeb/phebs v0.0.0 => ../..; local parent source exists",
+    "internal_import_admission": "Nested module path github.com/bmeddeb/phebs/spike/t582 is beneath parent github.com/bmeddeb/phebs prefix, permitting its internal packages",
+    "language": "Nested go1.26.0; parent go1.26; pinned tool VERSION go1.26.5",
+    "nonstdlib_import_closure": [
+      "local internal/extract/extractors/thriftgo/thriftgo.go",
+      "local internal/extract/sdk/sdk.go",
+      "local internal/extract/sdk/attribution.go"
+    ],
+    "external_imports_in_that_closure": [],
+    "metadata_policy": "No go.sum authored/expected; -mod=readonly with GOPROXY/GOSUMDB off and GOTOOLCHAIN local. Any missing graph/cache admission is a first build stop, not a download/retry.",
+    "input_scope": "Only ./export builds/tests. Nested module boundary excludes frozen fixture trees from root ./...; never run nested ./... on inert inputs."
+  },
+  "terminal_log_custody": "Planned invocation retains stdout/stderr outside checkout in a fresh lineage log, including bounded sanitized preflight reason if admission fails before result directory creation."
+}

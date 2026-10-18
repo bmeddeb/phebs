@@ -1,0 +1,176 @@
+{
+  "schema": "t582-literal-whole-call-witnesses-v1",
+  "phase": "Prospective source-only representation closure approved before first candidate; original oracle/prereg unchanged.",
+  "authoring": "Thirteen explicit literal expressions selected by hand from frozen source at frozen callee starts. No Go parser, recognizer or candidate output used. Whole-call endpoints supplement source representation only, not semantic classifications.",
+  "witnesses": [
+    {
+      "unit": "public",
+      "site": "public-023",
+      "source_path": "inputs/public/transport_udp.go",
+      "span": {
+        "start_byte": 5420,
+        "end_byte": 5571,
+        "start_line": 159,
+        "end_line": 164,
+        "sha256": "21e899d2aeba5fd2f2cd53f3e9fca75e2327ed251bf481c42238776cff1f639f",
+        "text": "s.client.EmitBatch(context.Background(), &j.Batch{\n\t\tProcess: s.process,\n\t\tSpans:   s.spanBuffer,\n\t\tSeqNo:   &batchSeqNo,\n\t\tStats:   s.makeStats(),\n\t})"
+      }
+    },
+    {
+      "unit": "public",
+      "site": "public-042",
+      "source_path": "inputs/public/utils/udp_client.go",
+      "span": {
+        "start_byte": 4135,
+        "end_byte": 4165,
+        "start_line": 135,
+        "end_line": 135,
+        "sha256": "96d03315f806402feb6a9731d1f8d8fad6e9debf39619108e0136ef98164b4a6",
+        "text": "a.client.EmitBatch(ctx, batch)"
+      }
+    },
+    {
+      "unit": "public",
+      "site": "public-065",
+      "source_path": "inputs/public/testutils/mock_agent.go",
+      "span": {
+        "start_byte": 2732,
+        "end_byte": 2758,
+        "start_line": 95,
+        "end_line": 95,
+        "sha256": "ea417806e7693c420d2f0e91949ab7482e2a708b1682fc2d9fd4b0fdca9f340a",
+        "text": "agent.NewAgentProcessor(s)"
+      }
+    },
+    {
+      "unit": "c01-direct-client",
+      "site": "c01-direct-client/0",
+      "source_path": "inputs/controls/c01-direct-client.go",
+      "span": {
+        "start_byte": 217,
+        "end_byte": 237,
+        "start_line": 4,
+        "end_line": 4,
+        "sha256": "b41870c6351cc4a3ea191899dea831a41d6f2f648d18d9784b8d8d5743c90c73",
+        "text": "c.EmitBatch(ctx,nil)"
+      }
+    },
+    {
+      "unit": "c02-go-defer",
+      "site": "c02-go-defer/0",
+      "source_path": "inputs/controls/c02-go-defer.go",
+      "span": {
+        "start_byte": 217,
+        "end_byte": 237,
+        "start_line": 5,
+        "end_line": 5,
+        "sha256": "b41870c6351cc4a3ea191899dea831a41d6f2f648d18d9784b8d8d5743c90c73",
+        "text": "c.EmitBatch(ctx,nil)"
+      }
+    },
+    {
+      "unit": "c02-go-defer",
+      "site": "c02-go-defer/1",
+      "source_path": "inputs/controls/c02-go-defer.go",
+      "span": {
+        "start_byte": 245,
+        "end_byte": 265,
+        "start_line": 6,
+        "end_line": 6,
+        "sha256": "b41870c6351cc4a3ea191899dea831a41d6f2f648d18d9784b8d8d5743c90c73",
+        "text": "c.EmitBatch(ctx,nil)"
+      }
+    },
+    {
+      "unit": "c03-constructor",
+      "site": "c03-constructor/0",
+      "source_path": "inputs/controls/c03-constructor.go",
+      "span": {
+        "start_byte": 189,
+        "end_byte": 215,
+        "start_line": 4,
+        "end_line": 4,
+        "sha256": "f4d4afcd0777469df5ac46cefd28da2c5a28d949549792dee7033c935e8a5ba2",
+        "text": "agent.NewAgentProcessor(h)"
+      }
+    },
+    {
+      "unit": "c04-dot-constructor",
+      "site": "c04-dot-constructor/0",
+      "source_path": "inputs/controls/c04-dot-constructor.go",
+      "span": {
+        "start_byte": 166,
+        "end_byte": 186,
+        "start_line": 4,
+        "end_line": 4,
+        "sha256": "3463971cb9377e9b06781f50b5520b218aef0525bb5d76987040e40ecb4d499d",
+        "text": "NewAgentProcessor(h)"
+      }
+    },
+    {
+      "unit": "c12-wrapper",
+      "site": "c12-wrapper/0",
+      "source_path": "inputs/controls/c12-wrapper.go",
+      "span": {
+        "start_byte": 195,
+        "end_byte": 221,
+        "start_line": 4,
+        "end_line": 4,
+        "sha256": "f4d4afcd0777469df5ac46cefd28da2c5a28d949549792dee7033c935e8a5ba2",
+        "text": "agent.NewAgentProcessor(h)"
+      }
+    },
+    {
+      "unit": "c14-method-ambiguity",
+      "site": "c14-method-ambiguity/0",
+      "source_path": "inputs/controls/c14-method-ambiguity.go",
+      "span": {
+        "start_byte": 216,
+        "end_byte": 236,
+        "start_line": 4,
+        "end_line": 4,
+        "sha256": "b41870c6351cc4a3ea191899dea831a41d6f2f648d18d9784b8d8d5743c90c73",
+        "text": "c.EmitBatch(ctx,nil)"
+      }
+    },
+    {
+      "unit": "c15-constructor-ambiguity",
+      "site": "c15-constructor-ambiguity/0",
+      "source_path": "inputs/controls/c15-constructor-ambiguity.go",
+      "span": {
+        "start_byte": 189,
+        "end_byte": 215,
+        "start_line": 4,
+        "end_line": 4,
+        "sha256": "f4d4afcd0777469df5ac46cefd28da2c5a28d949549792dee7033c935e8a5ba2",
+        "text": "agent.NewAgentProcessor(h)"
+      }
+    },
+    {
+      "unit": "c19-legacy-header",
+      "site": "c19-legacy-header/0",
+      "source_path": "inputs/controls/c19-legacy-header.go",
+      "span": {
+        "start_byte": 216,
+        "end_byte": 236,
+        "start_line": 4,
+        "end_line": 4,
+        "sha256": "b41870c6351cc4a3ea191899dea831a41d6f2f648d18d9784b8d8d5743c90c73",
+        "text": "c.EmitBatch(ctx,nil)"
+      }
+    },
+    {
+      "unit": "c20-modern-019-header",
+      "site": "c20-modern-019-header/0",
+      "source_path": "inputs/controls/c20-modern-019-header.go",
+      "span": {
+        "start_byte": 216,
+        "end_byte": 236,
+        "start_line": 4,
+        "end_line": 4,
+        "sha256": "b41870c6351cc4a3ea191899dea831a41d6f2f648d18d9784b8d8d5743c90c73",
+        "text": "c.EmitBatch(ctx,nil)"
+      }
+    }
+  ]
+}
