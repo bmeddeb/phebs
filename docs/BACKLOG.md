@@ -20776,6 +20776,22 @@ absent from the binary; the route requires authentication; `make dev` demo —
 open the served `docs/README.md`, follow a link into a task guide and the
 architecture SVG; dated PLAN ADR bullet in the same PR; full merge bar.
 
+**T25.1 implementation checkpoint (2026-10-18, Ben's all-ticket Mac handoff).**
+Authenticated `/documentation/` now renders only the explicit tracked Markdown/
+SVG/YAML set. Raw HTML/unsafe URLs and nonembedded images cannot execute or
+automatically fetch external bytes; unknown routes 404. Known excluded local
+references resolve to labelled repository-only pages, preserving the explicit
+embed exclusion instead of adding fixture/design/retained bytes to the binary.
+The complete T24.1 link census and focused renderer/session/API-key/CSRF/public
+asset normal/race/static tests pass. Native 1280/390px light/dark browser journeys
+pass keyboard/scrolling, links/fragments/SVG and zero axe/console/overflow errors.
+`spike/t251/receipt.json` binds the tested source/doc tree; the final doc census
+is rerun after owning records. Deterministic canonical image comparison remains
+pending, so this is implementation/browser preparation rather than full closure.
+Startup renders a fixed build-time set once and retains immutable pages; docs
+requests reuse existing auth plus O(1) lookup/body write, no disk/corpus/child work.
+The initial byte-capacity mechanics record is not a measured memory ceiling.
+
 ## Epic 26 · SQL schema-set evidence *(drafted 2026-07-27 · unscheduled — spike first)*
 
 Outline relational models from committed repository bytes: declaration-first,

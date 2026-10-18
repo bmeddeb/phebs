@@ -16,6 +16,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"golang.org/x/text/unicode/norm"
 
+	documentation "github.com/bmeddeb/phebs"
 	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/auth"
 	"github.com/bmeddeb/phebs/internal/candidate"
@@ -498,6 +499,11 @@ func newServeHTTPHandlers(d *serveDeps, apiOpts api.Options, finalAuthority, tai
 		apiHandler, mcpHandler = d.exact.state.wrap(apiHandler), d.exact.state.wrap(mcpHandler)
 	}
 
-	handler := t422OwnerHTTPHandler(d.startup.Owners(), newHTTPHandler(d.authService, apiHandler, mcpHandler, promhttp.Handler(), http.FileServerFS(d.dist), d.cfg.Server), d.semanticLaunch)
+	docsHandler, err := documentation.NewHandler()
+	if err != nil {
+		return nil, err
+	}
+	uiHandler := documentationAndUI(d.authService, docsHandler, http.FileServerFS(d.dist))
+	handler := t422OwnerHTTPHandler(d.startup.Owners(), newHTTPHandler(d.authService, apiHandler, mcpHandler, promhttp.Handler(), uiHandler, d.cfg.Server), d.semanticLaunch)
 	return handler, nil
 }

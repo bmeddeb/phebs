@@ -170,6 +170,12 @@ values update and 118 baselines remain untouched. This closes the portability
 implementation on its branch; full-matrix history and production signing retain
 their recorded scope.
 
+**T25.1 embedded docs preparation (2026-10-18):** authenticated build-snapshot
+Markdown/SVG/YAML, exact links and explicit repository-only fallback are
+implemented with normal/race/auth/static and four-appearance browser gates
+passing. Canonical deterministic comparison and final integration remain open;
+this does not add a release or anonymous documentation surface.
+
 **Caller Map / Atlas sequencing override (2026-10-17, Ben-directed):** bounded
 integration tests suffice for these products and their release bindings. The
 owning amendment at the start of Epic 47 in [BACKLOG.md](./BACKLOG.md) supersedes

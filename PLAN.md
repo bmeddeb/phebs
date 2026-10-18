@@ -12271,3 +12271,33 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   no bytes, mode or mtime. Production requests, queries, sync, startup/restart,
   retry/no-op, publication, locks, caches, concurrency and children are unchanged.
   JavaScript delta is zero; the eight PNGs shrink 1,139 bytes collectively.
+
+- **2026-10-18 — T25.1 authenticated embedded documentation (Ben's
+  all-ticket Mac handoff).** Serve the build's tracked root README/PLAN,
+  top-level docs/guides Markdown, docs SVGs and example YAML under
+  `/documentation/<repo-relative-path>` through existing sessions/API keys.
+  Goldmark/GFM renders once at startup using the already graph-pinned pure-Go
+  dependency. Raw HTML is omitted, unsafe URL schemes inactive, external or
+  nonembedded images are named placeholders and SVG responses are sandboxed.
+  Explicit embed patterns exclude history, fixtures, design handoffs and retained
+  artifact bytes. Preserve relative links and heading fragments. Resolve the
+  original link/exclusion AC tension explicitly: known references outside the
+  selected set get labelled repository-only pages with fixed public GitHub links;
+  unknown paths 404 and no open redirect. This adds no SPA JavaScript, docs search,
+  navigation system, runtime filesystem reads or child. Non-UI builds embed no
+  docs. Public UI assets remain outside session persistence.
+
+  Renderer, exact local-link census, actual session/API-key/CSRF and public-asset
+  isolation normal/race/static tests pass. Native four-appearance browser QA
+  covers 1280/390px light/dark navigation, fragments, SVG, keyboard scrolling and
+  zero axe/console/overflow failures. The source-bound receipt
+  `spike/t251/receipt.json` retains the prior doc tree and both corrected initial
+  fixture/scroll findings; final doc/link/cost census is rerun after this record.
+  Deterministic canonical comparison remains pending and is not inferred from
+  native capture hashes. Immutable rendered pages live until server restart;
+  rebuild/restart updates their snapshot. Initial measured source/cache byte
+  capacity is about 14.4 MB plus map metadata and one-document transient parser/AST
+  buffers, not an RSS/heap ceiling. Per docs GET/HEAD: existing auth/session work,
+  O(1) page lookup and response write, no hashing/corpus work. Other UI requests
+  add one route lookup; queries, sync, retry/no-op, publication, lifecycle, locks,
+  worker concurrency, persistent disk and children are unchanged.
