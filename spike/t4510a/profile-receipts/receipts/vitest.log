@@ -1,0 +1,9 @@
+
+ RUN  v4.1.10 /Users/ben/.codex/worktrees/t512-field-registration/phebs.com/ui
+
+
+ Test Files  46 passed (46)
+      Tests  895 passed (895)
+   Start at  08:14:31
+   Duration  27.46s (transform 681ms, setup 83ms, import 3.18s, tests 11.27s, environment 10.14s)
+

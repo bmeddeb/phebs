@@ -16939,6 +16939,22 @@ hierarchy, states, keyboard, copy and motion because this changes only response
 validation. Full UI-suite/browser/accessibility/screenshot/latency closure gates
 have not been performed for this slice; no UI-ticket closure is claimed.
 
+T45.10a presentation closure (2026-10-18): the existing closed profile validators
+and architecture mapping already satisfy the product contract. Receipt coverage
+now exercises both profiles, exact request/CSRF/retry, all nine states, polling,
+unknown/empty refusals, keyboard flow and 390px clearance. All895 UI unit tests,
+production/receipt TypeScript and changed-file lint pass. Native Chrome author19
+and fresh8 pass with zero retries; all16 accessibility audits report zero
+violations, console checks pass, and eight source/renderer-bound frames remain
+below the existing0.001 pixel tolerance (maximum0.000149832). Peer viewed all
+frames; root viewed narrow light and desktop dark. Successful browser/client/
+preview groups are joined and absent. Exact evidence and retained preparation,
+geometry and teardown failures live in `spike/t4510a/profile-receipts/`.
+The shared scroll helper fixes only measured fractional shortfall and retains
+strict clearance. Historical Noble goldens are unchanged; no renderer equivalence
+is claimed. This closes presentation acceptance only. Installed generation,
+Linux host, offline runtime inputs and production release remain separate holds.
+
 **T45.10a closure preparation (2026-10-18, Mac track).** Existing exact-name
 validators/API are unchanged. Both-profile neutral fixtures now cover exact
 request/CSRF/retry/states and unknown/empty refusal. Eight historical ARM

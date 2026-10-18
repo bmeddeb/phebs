@@ -1,0 +1,6 @@
+{
+  "prior_EPERRM_result_preserved": "/tmp/phebs-t4510a-qa-z3azm2qg/target390/result.json",
+  "concrete_source_review": "OwnedChild.stop calls Popen.terminate or killpg after a poll/drain check; original caught string cannot distinguish exact failing syscall. Root cause unestablished; no helper or gate relaxation.",
+  "new_diagnostics": "spawn pid,expected+observed pgid; exact cleanup traceback/returncode; actual owned-child wait and group absence even after stop exception; any exception keeps STOPPED",
+  "helper_sha256": "dfd5742e3856e908515c42042571702023753644cf4a242cc0570db00a19da6f"
+}

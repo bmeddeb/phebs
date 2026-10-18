@@ -1,0 +1,322 @@
+{
+  "schema": "phebs-t4510a-profile-receipt-outcome-v1",
+  "date": "2026-10-18",
+  "status": "PASS_native_presentation_gates_pending_root_integration",
+  "source_checkpoint": "acdce4881f4e3c1dc1dc6375f22b4718feadcf27",
+  "original_fixture_checkpoint": "c89f00c6713ff284f55753159f982326900cd348",
+  "scroll_helper_sha256": "1207f1a353b3425ba308bec6806b79326a36f717c4103aac0d0be02fdc308c37",
+  "claim": "Presentation-only both-profile conformance and deterministic native receipts; no installed runtime/provider, compiler generation, accuracy, scale, release or Noble-equivalence claim.",
+  "static": {
+    "application_types": "PASS once at original checkpoint",
+    "receipt_strict_types": "PASS after TS6 command-only --ignoreConfig admission; original TS5112 retained FAIL",
+    "oxlint": "PASS0issues",
+    "vitest": {
+      "files": 46,
+      "tests": 895,
+      "seconds": 27.46,
+      "rerun_after_scroll_helper": false,
+      "binding": "UI118production inputs unchanged; receipt helper two-line correction independently reviewed and exercised by actual failed390 regression +native19/8"
+    }
+  },
+  "native": {
+    "author": {
+      "cases": 19,
+      "seconds": 60.466451,
+      "playwright_seconds": 57.274071,
+      "report": "receipts/author-final/result.json"
+    },
+    "fresh": {
+      "cases": 8,
+      "seconds": 32.141854,
+      "playwright_seconds": 25.484942,
+      "report": "receipts/fresh-ready/result.json"
+    },
+    "renderer": {
+      "platform": "Darwin arm64",
+      "browser": "Chrome/155.0.8059.82",
+      "playwright": "1.62.1",
+      "node": "24.18.0",
+      "axe": "4.12.1",
+      "browser_plugin": "not available; explicitly authorized installed Chrome+Playwright fallback"
+    },
+    "frame_scope": "both closed native resource profiles \u00d7light/dark\u00d71280/390,comfortable; eight section captures per pass",
+    "audits": {
+      "full_page_audits": 16,
+      "rules_passed_per_audit": 26,
+      "violations": 0,
+      "incomplete": 0,
+      "tags": [
+        "wcag2a",
+        "wcag2aa",
+        "wcag21a",
+        "wcag21aa"
+      ]
+    },
+    "console_errors_native_captures": 0,
+    "keyboard": "actual Tab order to Refresh,Repository,Action,Review then Enter; previewvisible and Generateenabled",
+    "access_controls": "two exactCSRF/retry/all9state flows;4unknown/emptyprofile refusals;emptyinventory;ordinary-user managed/File denial;Filedeep-link focus;unavailablecontrols;failedpurpose re-review/enqueue",
+    "strict_header_clearance": "unchanged section.top>=header.height+12; root correction only integral scroll when measured position was short",
+    "all_owned_process_groups_joined_cleanly": true,
+    "forced_cleanup": false,
+    "successful_private_profiles_removed": true
+  },
+  "pixels": {
+    "frames": 8,
+    "comparison": "receipts/comparison.json",
+    "threshold": 0.2,
+    "maxDiffPixelRatio": 0.001,
+    "maximum_exact_RGBA_difference_ratio": 0.0001498319741432822,
+    "all_exact_RGBA_ratios_below_0_001": true,
+    "masks": 0,
+    "missing_images": 0,
+    "reauthored_canonical_images": 0,
+    "visual_review": "Peer inspected all8author frames; root reviewed dark1280arm64 and light390amd64; no clipping/overlap/anatomy defect",
+    "fresh_images": "Exact original fresh files remain in outside QA root; their hashes/dimensions/pixel counts are retained in comparison.json; only8reviewedauthor images copied here."
+  },
+  "failures_preserved": [
+    {
+      "stage": "standalone TS command admission",
+      "status": "FAIL",
+      "evidence": "receipts/receipt-types.log",
+      "correction": "TS6 --ignoreConfig; no source change or repeated passed tsc-b"
+    },
+    {
+      "stage": "first native outside-wrapper module admission",
+      "status": "FAIL",
+      "evidence": "receipts/author/result.json",
+      "tests_executed": 0,
+      "correction": "outside ESM package boundary"
+    },
+    {
+      "stage": "second native outside-wrapper/gate attempt",
+      "status": "FAIL",
+      "evidence": "receipts/author-module/result.json",
+      "correction": "duplicate archive excluded and unrequested title assertion removed; actual390px half-pixel clearance failure root repaired atacdce; original output not relabeled"
+    },
+    {
+      "stage": "targeted390 regression",
+      "status": "FAIL_teardown",
+      "evidence": "receipts/target390/result.json",
+      "test_outcome": "strict390preview+fullaxe PASS; Chrome EPERM teardown lacked original wait receipt; late absence is not originaljoin evidence"
+    },
+    {
+      "stage": "fresh Chrome control preparation",
+      "status": "FAIL",
+      "evidence": "receipts/fresh/result.json",
+      "tests_executed": 0,
+      "correction": "metadata read uses remaining originally admitted5s readiness window; both ownedgroupscleanjoined"
+    }
+  ],
+  "latency": {
+    "author-final": {
+      "samples": [
+        {
+          "resourceProfile": "native-arm64-bounded-v1",
+          "theme": "light",
+          "width": 1280,
+          "density": "comfortable",
+          "fixtureReadyMillis": 325,
+          "fixturePreviewMillis": 38,
+          "consoleErrors": 0,
+          "nativeCapture": "/tmp/phebs-t4510a-qa-z3azm2qg/author-final/output/profile.native-native-prof-38abf-arm64-bounded-v1-light-1280-typed-index/typed-index-native--native-arm64-bounded-v1--light--1280.png"
+        },
+        {
+          "resourceProfile": "native-arm64-bounded-v1",
+          "theme": "light",
+          "width": 390,
+          "density": "comfortable",
+          "fixtureReadyMillis": 921,
+          "fixturePreviewMillis": 43,
+          "consoleErrors": 0,
+          "nativeCapture": "/tmp/phebs-t4510a-qa-z3azm2qg/author-final/output/profile.native-native-prof-55e1c--arm64-bounded-v1-light-390-typed-index/typed-index-native--native-arm64-bounded-v1--light--390.png"
+        },
+        {
+          "resourceProfile": "native-arm64-bounded-v1",
+          "theme": "dark",
+          "width": 1280,
+          "density": "comfortable",
+          "fixtureReadyMillis": 249,
+          "fixturePreviewMillis": 15,
+          "consoleErrors": 0,
+          "nativeCapture": "/tmp/phebs-t4510a-qa-z3azm2qg/author-final/output/profile.native-native-prof-2017a--arm64-bounded-v1-dark-1280-typed-index/typed-index-native--native-arm64-bounded-v1--dark--1280.png"
+        },
+        {
+          "resourceProfile": "native-arm64-bounded-v1",
+          "theme": "dark",
+          "width": 390,
+          "density": "comfortable",
+          "fixtureReadyMillis": 617,
+          "fixturePreviewMillis": 25,
+          "consoleErrors": 0,
+          "nativeCapture": "/tmp/phebs-t4510a-qa-z3azm2qg/author-final/output/profile.native-native-prof-b7e13-e-arm64-bounded-v1-dark-390-typed-index/typed-index-native--native-arm64-bounded-v1--dark--390.png"
+        },
+        {
+          "resourceProfile": "native-amd64-bounded-v1",
+          "theme": "light",
+          "width": 1280,
+          "density": "comfortable",
+          "fixtureReadyMillis": 1152,
+          "fixturePreviewMillis": 44,
+          "consoleErrors": 0,
+          "nativeCapture": "/tmp/phebs-t4510a-qa-z3azm2qg/author-final/output/profile.native-native-prof-54dd3-amd64-bounded-v1-light-1280-typed-index/typed-index-native--native-amd64-bounded-v1--light--1280.png"
+        },
+        {
+          "resourceProfile": "native-amd64-bounded-v1",
+          "theme": "light",
+          "width": 390,
+          "density": "comfortable",
+          "fixtureReadyMillis": 631,
+          "fixturePreviewMillis": 17,
+          "consoleErrors": 0,
+          "nativeCapture": "/tmp/phebs-t4510a-qa-z3azm2qg/author-final/output/profile.native-native-prof-70275--amd64-bounded-v1-light-390-typed-index/typed-index-native--native-amd64-bounded-v1--light--390.png"
+        },
+        {
+          "resourceProfile": "native-amd64-bounded-v1",
+          "theme": "dark",
+          "width": 1280,
+          "density": "comfortable",
+          "fixtureReadyMillis": 550,
+          "fixturePreviewMillis": 21,
+          "consoleErrors": 0,
+          "nativeCapture": "/tmp/phebs-t4510a-qa-z3azm2qg/author-final/output/profile.native-native-prof-0cfb5--amd64-bounded-v1-dark-1280-typed-index/typed-index-native--native-amd64-bounded-v1--dark--1280.png"
+        },
+        {
+          "resourceProfile": "native-amd64-bounded-v1",
+          "theme": "dark",
+          "width": 390,
+          "density": "comfortable",
+          "fixtureReadyMillis": 1213,
+          "fixturePreviewMillis": 52,
+          "consoleErrors": 0,
+          "nativeCapture": "/tmp/phebs-t4510a-qa-z3azm2qg/author-final/output/profile.native-native-prof-0b26d-e-amd64-bounded-v1-dark-390-typed-index/typed-index-native--native-amd64-bounded-v1--dark--390.png"
+        }
+      ],
+      "ready_millis_min": 249,
+      "ready_millis_max": 1213,
+      "preview_millis_min": 15,
+      "preview_millis_max": 52
+    },
+    "fresh-ready": {
+      "samples": [
+        {
+          "resourceProfile": "native-arm64-bounded-v1",
+          "theme": "light",
+          "width": 1280,
+          "density": "comfortable",
+          "fixtureReadyMillis": 1014,
+          "fixturePreviewMillis": 133,
+          "consoleErrors": 0,
+          "nativeCapture": "/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-38abf-arm64-bounded-v1-light-1280-typed-index/typed-index-native--native-arm64-bounded-v1--light--1280.png"
+        },
+        {
+          "resourceProfile": "native-arm64-bounded-v1",
+          "theme": "light",
+          "width": 390,
+          "density": "comfortable",
+          "fixtureReadyMillis": 851,
+          "fixturePreviewMillis": 28,
+          "consoleErrors": 0,
+          "nativeCapture": "/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-55e1c--arm64-bounded-v1-light-390-typed-index/typed-index-native--native-arm64-bounded-v1--light--390.png"
+        },
+        {
+          "resourceProfile": "native-arm64-bounded-v1",
+          "theme": "dark",
+          "width": 1280,
+          "density": "comfortable",
+          "fixtureReadyMillis": 613,
+          "fixturePreviewMillis": 172,
+          "consoleErrors": 0,
+          "nativeCapture": "/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-2017a--arm64-bounded-v1-dark-1280-typed-index/typed-index-native--native-arm64-bounded-v1--dark--1280.png"
+        },
+        {
+          "resourceProfile": "native-arm64-bounded-v1",
+          "theme": "dark",
+          "width": 390,
+          "density": "comfortable",
+          "fixtureReadyMillis": 1412,
+          "fixturePreviewMillis": 46,
+          "consoleErrors": 0,
+          "nativeCapture": "/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-b7e13-e-arm64-bounded-v1-dark-390-typed-index/typed-index-native--native-arm64-bounded-v1--dark--390.png"
+        },
+        {
+          "resourceProfile": "native-amd64-bounded-v1",
+          "theme": "light",
+          "width": 1280,
+          "density": "comfortable",
+          "fixtureReadyMillis": 724,
+          "fixturePreviewMillis": 70,
+          "consoleErrors": 0,
+          "nativeCapture": "/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-54dd3-amd64-bounded-v1-light-1280-typed-index/typed-index-native--native-amd64-bounded-v1--light--1280.png"
+        },
+        {
+          "resourceProfile": "native-amd64-bounded-v1",
+          "theme": "light",
+          "width": 390,
+          "density": "comfortable",
+          "fixtureReadyMillis": 801,
+          "fixturePreviewMillis": 23,
+          "consoleErrors": 0,
+          "nativeCapture": "/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-70275--amd64-bounded-v1-light-390-typed-index/typed-index-native--native-amd64-bounded-v1--light--390.png"
+        },
+        {
+          "resourceProfile": "native-amd64-bounded-v1",
+          "theme": "dark",
+          "width": 1280,
+          "density": "comfortable",
+          "fixtureReadyMillis": 724,
+          "fixturePreviewMillis": 24,
+          "consoleErrors": 0,
+          "nativeCapture": "/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-0cfb5--amd64-bounded-v1-dark-1280-typed-index/typed-index-native--native-amd64-bounded-v1--dark--1280.png"
+        },
+        {
+          "resourceProfile": "native-amd64-bounded-v1",
+          "theme": "dark",
+          "width": 390,
+          "density": "comfortable",
+          "fixtureReadyMillis": 691,
+          "fixturePreviewMillis": 47,
+          "consoleErrors": 0,
+          "nativeCapture": "/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-0b26d-e-amd64-bounded-v1-dark-390-typed-index/typed-index-native--native-amd64-bounded-v1--dark--390.png"
+        }
+      ],
+      "ready_millis_min": 613,
+      "ready_millis_max": 1412,
+      "preview_millis_min": 23,
+      "preview_millis_max": 172
+    }
+  },
+  "bundle": {
+    "source_commit": "e72e83f245732d516a9807bf5cc9f9e4623f5a76",
+    "production_UI_inputs": 118,
+    "dist_files": 165,
+    "production_source_or_bundle_change": false,
+    "bundle_delta_bytes": 0,
+    "reused_existing_settings_chunk": {
+      "path": "ui/dist/assets/SettingsPage-DqDtdaSY.js",
+      "bytes": 27392,
+      "sha256": "1d17d0c72d6ac4512a6b7295cfb9222511bb8203963f631c7977354dcb925057"
+    },
+    "proof": "receipts/bundle-proof; every source/dist row verified before/after each successful run, no rebuild"
+  },
+  "cost": {
+    "production_per_request_sync_startup_retry_publication": "zero new work; fixture-only parameterization and receipt-only DOM correction",
+    "locks_caches_schema": "no new lock/cache/schema/invalidation",
+    "receipt_preview": "existing fixture route interception; two DOMgeometry reads plus ordinaryscroll and at most one correcting scroll; no polling added",
+    "receipt_state_flows": "two intentionally exercise existing5s last-confirmed polling; no production cadence change",
+    "concurrency": "one worker,zero retries,maxfailures1; one owned Vite,Chrome,client per bounded pass; successful same-session groups joined; original failed EPERM join is not claimed",
+    "bounds": "180s per pass including joined teardown;30s reserved for owned cleanup; no repetition of895suite or successful390case",
+    "memory_disk": "no new production retained allocation; finite8PNGs per capture pass; no process-tree/physical-headroom/Linux-capacity measurement or SLO inferred"
+  },
+  "historical_Noble_baselines": {
+    "typed-index-preview--dark--1280--comfortable.png": "85ed0904a1f147e95edfa0794038e2faa49ef03b94590abe162184095a4335af",
+    "typed-index-preview--dark--1280--dense.png": "84997b06ed36bbeee3ece9bfbf4fc06daa5e5d0789c60d2194aefaef7e443559",
+    "typed-index-preview--dark--390--comfortable.png": "5e5fb267a6938212d1998152e2e6dc8d00fc58d2fbcbd269cc1f4518c4e734af",
+    "typed-index-preview--dark--390--dense.png": "5e5fb267a6938212d1998152e2e6dc8d00fc58d2fbcbd269cc1f4518c4e734af",
+    "typed-index-preview--light--1280--comfortable.png": "7ae663f56b11a4d344d5af9b7405a4c7509c3a5e654813e6c0bdc80dec11d27e",
+    "typed-index-preview--light--1280--dense.png": "7ae663f56b11a4d344d5af9b7405a4c7509c3a5e654813e6c0bdc80dec11d27e",
+    "typed-index-preview--light--390--comfortable.png": "c7bc000a7f99dbd554941072e8e9fb38e0553e605bfa3820be8988a42336900c",
+    "typed-index-preview--light--390--dense.png": "c7bc000a7f99dbd554941072e8e9fb38e0553e605bfa3820be8988a42336900c"
+  },
+  "historical_baseline_bytes_changed": false,
+  "production_signing": "pending existing unavailable production key; no key/signature/activation added"
+}

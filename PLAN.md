@@ -13547,3 +13547,17 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   observation and at most one corrective scroll, no product/bundle/runtime work.
   The failed native geometry and separate wrapper discovery/title preparation
   mistakes remain failures; passed static895tests are not repeated.
+
+- **2026-10-18 — T45.10a bounded presentation closure.** Existing product
+  validators/server profile mapping require no runtime change. Exact request/
+  CSRF/retry/all-state/refusal/keyboard coverage passes, as do895unit tests,
+  TypeScript/lint, author19 and fresh8native Chrome cases. Sixteen accessibility
+  audits report zero violations; eight fresh frames meet the unchanged0.001
+  tolerance (max0.000149832), with all successful owned groups joined/absent.
+  Retain all preparation/geometry/Chrome teardown failures as failures beside
+  the successful receipts. Historical Noble baseline bytes remain unchanged;
+  no cross-renderer equivalence or installed-generation claim follows. Source/
+  bundle proof permits exact e72asset reuse without rebuilding118unchanged UI
+  inputs. Receipt-only work adds no production request/tick/startup/retry/
+  publication, schema/cache/lock or child cost. Production signing and Linux
+  host/runtime admissions remain pending independently.

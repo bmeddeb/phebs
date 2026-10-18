@@ -1,0 +1,121 @@
+{
+  "schema": "phebs-t4510a-native-qa-v1",
+  "pass": "author-module",
+  "outcome": "stopped",
+  "source_checkpoint": "c89f00c6713ff284f55753159f982326900cd348",
+  "native_renderer_claim": "Darwin installed Chrome only; no Noble baseline equivalence",
+  "commands": [
+    {
+      "name": "vite",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "/Users/ben/.codex/worktrees/t512-field-registration/phebs.com/ui/node_modules/vite/bin/vite.js",
+        "preview",
+        "/Users/ben/.codex/worktrees/t512-field-registration/phebs.com/ui",
+        "--outDir",
+        "/Users/ben/.codex/worktrees/t25-embedded-docs/phebs.com/ui/dist",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "61953",
+        "--strictPort"
+      ]
+    },
+    {
+      "name": "chrome",
+      "argv": [
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "--headless=new",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--disable-background-networking",
+        "--disable-component-update",
+        "--disable-sync",
+        "--remote-debugging-address=127.0.0.1",
+        "--remote-debugging-port=0",
+        "--user-data-dir=/tmp/phebs-t4510a-qa-z3azm2qg/author-module/private-chrome-profile",
+        "about:blank"
+      ]
+    },
+    {
+      "name": "client",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "/Users/ben/.codex/worktrees/t512-field-registration/phebs.com/ui/node_modules/@playwright/test/cli.js",
+        "test",
+        "--config",
+        "/tmp/phebs-t4510a-qa-z3azm2qg/playwright.config.ts",
+        "--project",
+        "typed-index",
+        "--grep-invert",
+        "managed indexing (light|dark)"
+      ]
+    }
+  ],
+  "terminals": {
+    "client": {
+      "exit_code": -15,
+      "teardown": "clean",
+      "termination_mode": "sigterm"
+    },
+    "chrome": {
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "sigterm"
+    },
+    "vite": {
+      "exit_code": 143,
+      "teardown": "clean",
+      "termination_mode": "sigterm"
+    }
+  },
+  "verified_census": {
+    "ui-input-census.json": {
+      "rows": 118,
+      "file_sha256": "4cff7b425fcf687a468c8f1d8131a8d06f094312bd232e3d8249843e23fa5ed0"
+    },
+    "ui-dist-census.json": {
+      "rows": 165,
+      "file_sha256": "a6e10fa5ccdde9401d8273cc903b1af171f6fd29453d40843b109efbcec7c335"
+    }
+  },
+  "tools": {
+    "node": {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+      "sha256": "ee6fb0e015284d83a91e8ec5213f43a157f8a392b58555301682892ba928c04a"
+    },
+    "chrome_launcher": {
+      "path": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "sha256": "3972431aa8acff4e590998116c6c3e663e9a4d0eb6efd08fd160df8206db94a6"
+    },
+    "axe": {
+      "path": "/Users/ben/phebs.com/ui/node_modules/axe-core/axe.min.js",
+      "sha256": "66a8aaa95a8b044a7fd74a5435873bf04ff65a1ca75567c921b7509742085a14",
+      "version": "4.12.1"
+    },
+    "playwright": "1.62.1"
+  },
+  "started_monotonic": 0.159548458,
+  "renderer": {
+    "Browser": "Chrome/155.0.8059.82",
+    "Protocol-Version": "1.3",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
+    "V8-Version": "15.5.35.23",
+    "WebKit-Version": "537.36 (@c56fe5daef8be123f68808a4bb705ff378cd2019)",
+    "webSocketDebuggerUrl": "ws://127.0.0.1:61957/devtools/browser/03f36c12-379b-490f-ab1b-082f79b6397e"
+  },
+  "error_type": "KeyboardInterrupt",
+  "error": "",
+  "all_owned_groups_joined_cleanly": true,
+  "total_seconds": 43.047656,
+  "final_census": {
+    "ui-input-census.json": {
+      "rows": 118,
+      "file_sha256": "4cff7b425fcf687a468c8f1d8131a8d06f094312bd232e3d8249843e23fa5ed0"
+    },
+    "ui-dist-census.json": {
+      "rows": 165,
+      "file_sha256": "a6e10fa5ccdde9401d8273cc903b1af171f6fd29453d40843b109efbcec7c335"
+    }
+  }
+}

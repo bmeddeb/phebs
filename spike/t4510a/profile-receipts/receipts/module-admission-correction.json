@@ -1,0 +1,7 @@
+{
+  "first_attempt_result": "/tmp/phebs-t4510a-qa-z3azm2qg/author/result.json",
+  "first_result_sha256": "60e7a3274d41aa8473dfed16df88f7fa5b62189de76ecff37f05c895864a18fa",
+  "first_attempt_tests_executed": 0,
+  "correction": "outside-checkout ESM package boundary only; new author-module root, original driver/wrapper preserved",
+  "unchanged": "frozen source,test bodies,house options,cases,audit,renderer,threshold,no masks"
+}

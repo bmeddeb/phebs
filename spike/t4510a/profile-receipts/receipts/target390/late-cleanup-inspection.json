@@ -1,0 +1,11 @@
+{
+  "schema": "phebs-t4510a-late-cleanup-inspection-v1",
+  "phase": "after_initial_owned_stop_refusal",
+  "original_result_preserved": true,
+  "original_outcome": "stopped",
+  "chrome_log_main_pid": 84702,
+  "main_pid_basis": "retained owned chrome log prefix, not a retroactively recorded Popen identity",
+  "matching_group_rows": [],
+  "matching_profile_processes": [],
+  "not_a_pass": "Later absence cannot establish the original parent-child join or rewrite its EPERM stop."
+}

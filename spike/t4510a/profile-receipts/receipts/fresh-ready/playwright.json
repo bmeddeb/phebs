@@ -1,0 +1,492 @@
+{
+  "config": {
+    "argv": [
+      "/private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+      "/Users/ben/.codex/worktrees/t512-field-registration/phebs.com/ui/node_modules/@playwright/test/cli.js",
+      "test",
+      "--config",
+      "/tmp/phebs-t4510a-qa-z3azm2qg/runner/playwright.config.ts",
+      "--project",
+      "typed-index",
+      "--max-failures=1",
+      "--grep",
+      "native profile preview"
+    ],
+    "configFile": "/tmp/phebs-t4510a-qa-z3azm2qg/runner/playwright.config.ts",
+    "rootDir": "/tmp/phebs-t4510a-qa-z3azm2qg/runner",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 1,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "setup",
+        "name": "setup",
+        "testDir": "/tmp/phebs-t4510a-qa-z3azm2qg/runner",
+        "testIgnore": [],
+        "testMatch": [
+          "/auth\\.setup\\.ts/"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "receipts",
+        "name": "receipts",
+        "testDir": "/tmp/phebs-t4510a-qa-z3azm2qg/runner",
+        "testIgnore": [],
+        "testMatch": [
+          "/receipts\\.spec\\.ts/"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "anon",
+        "name": "anon",
+        "testDir": "/tmp/phebs-t4510a-qa-z3azm2qg/runner",
+        "testIgnore": [],
+        "testMatch": [
+          "/anon\\.spec\\.ts/"
+        ],
+        "timeout": 60000
+      },
+      {
+        "outputDir": "/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "typed-index",
+        "name": "typed-index",
+        "testDir": "/tmp/phebs-t4510a-qa-z3azm2qg/runner",
+        "testIgnore": [],
+        "testMatch": [
+          "/profile\\.native\\.spec\\.ts/"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/playwright.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.62.1",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "profile.native.spec.ts",
+      "file": "profile.native.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "native profile preview native-arm64-bounded-v1 light 1280",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "typed-index",
+              "projectName": "typed-index",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2726,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "{\"resourceProfile\":\"native-arm64-bounded-v1\",\"theme\":\"light\",\"width\":1280,\"density\":\"comfortable\",\"fixtureReadyMillis\":1014,\"fixturePreviewMillis\":133,\"consoleErrors\":0,\"nativeCapture\":\"/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-38abf-arm64-bounded-v1-light-1280-typed-index/typed-index-native--native-arm64-bounded-v1--light--1280.png\"}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T15:33:14.945Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "native-profile-preview",
+                      "contentType": "image/png",
+                      "path": "/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-38abf-arm64-bounded-v1-light-1280-typed-index/attachments/native-profile-preview-ade6fe4e397838e1b104f51f801453b866c20093.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "97a00854300c44c620a7-8f9ce2d609092e7090c9",
+          "file": "../../../private/tmp/phebs-t4510a-qa-z3azm2qg/runner/profile.native.spec.ts",
+          "line": 103,
+          "column": 3
+        },
+        {
+          "title": "native profile preview native-arm64-bounded-v1 light 390",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "typed-index",
+              "projectName": "typed-index",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2878,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "{\"resourceProfile\":\"native-arm64-bounded-v1\",\"theme\":\"light\",\"width\":390,\"density\":\"comfortable\",\"fixtureReadyMillis\":851,\"fixturePreviewMillis\":28,\"consoleErrors\":0,\"nativeCapture\":\"/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-55e1c--arm64-bounded-v1-light-390-typed-index/typed-index-native--native-arm64-bounded-v1--light--390.png\"}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T15:33:18.079Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "native-profile-preview",
+                      "contentType": "image/png",
+                      "path": "/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-55e1c--arm64-bounded-v1-light-390-typed-index/attachments/native-profile-preview-03d8821220686cb443415ba457f1fefcc819e6dd.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "97a00854300c44c620a7-2a7a8b09a88bb119812e",
+          "file": "../../../private/tmp/phebs-t4510a-qa-z3azm2qg/runner/profile.native.spec.ts",
+          "line": 103,
+          "column": 3
+        },
+        {
+          "title": "native profile preview native-arm64-bounded-v1 dark 1280",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "typed-index",
+              "projectName": "typed-index",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 3277,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "{\"resourceProfile\":\"native-arm64-bounded-v1\",\"theme\":\"dark\",\"width\":1280,\"density\":\"comfortable\",\"fixtureReadyMillis\":613,\"fixturePreviewMillis\":172,\"consoleErrors\":0,\"nativeCapture\":\"/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-2017a--arm64-bounded-v1-dark-1280-typed-index/typed-index-native--native-arm64-bounded-v1--dark--1280.png\"}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T15:33:20.982Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "native-profile-preview",
+                      "contentType": "image/png",
+                      "path": "/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-2017a--arm64-bounded-v1-dark-1280-typed-index/attachments/native-profile-preview-8c2a10f8cb69417aedd82080e74e7119cb49c5a2.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "97a00854300c44c620a7-bf258f2235038e6b916c",
+          "file": "../../../private/tmp/phebs-t4510a-qa-z3azm2qg/runner/profile.native.spec.ts",
+          "line": 103,
+          "column": 3
+        },
+        {
+          "title": "native profile preview native-arm64-bounded-v1 dark 390",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "typed-index",
+              "projectName": "typed-index",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 3690,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "{\"resourceProfile\":\"native-arm64-bounded-v1\",\"theme\":\"dark\",\"width\":390,\"density\":\"comfortable\",\"fixtureReadyMillis\":1412,\"fixturePreviewMillis\":46,\"consoleErrors\":0,\"nativeCapture\":\"/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-b7e13-e-arm64-bounded-v1-dark-390-typed-index/typed-index-native--native-arm64-bounded-v1--dark--390.png\"}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T15:33:24.273Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "native-profile-preview",
+                      "contentType": "image/png",
+                      "path": "/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-b7e13-e-arm64-bounded-v1-dark-390-typed-index/attachments/native-profile-preview-380f73259017e0cb683c6a4fab74455a718785af.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "97a00854300c44c620a7-c49715367fbde32db0ff",
+          "file": "../../../private/tmp/phebs-t4510a-qa-z3azm2qg/runner/profile.native.spec.ts",
+          "line": 103,
+          "column": 3
+        },
+        {
+          "title": "native profile preview native-amd64-bounded-v1 light 1280",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "typed-index",
+              "projectName": "typed-index",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2561,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "{\"resourceProfile\":\"native-amd64-bounded-v1\",\"theme\":\"light\",\"width\":1280,\"density\":\"comfortable\",\"fixtureReadyMillis\":724,\"fixturePreviewMillis\":70,\"consoleErrors\":0,\"nativeCapture\":\"/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-54dd3-amd64-bounded-v1-light-1280-typed-index/typed-index-native--native-amd64-bounded-v1--light--1280.png\"}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T15:33:27.993Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "native-profile-preview",
+                      "contentType": "image/png",
+                      "path": "/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-54dd3-amd64-bounded-v1-light-1280-typed-index/attachments/native-profile-preview-39a72904f973fcbe971b8ca78add97b19cf34c48.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "97a00854300c44c620a7-2ca513a5f81a3caa560e",
+          "file": "../../../private/tmp/phebs-t4510a-qa-z3azm2qg/runner/profile.native.spec.ts",
+          "line": 103,
+          "column": 3
+        },
+        {
+          "title": "native profile preview native-amd64-bounded-v1 light 390",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "typed-index",
+              "projectName": "typed-index",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2738,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "{\"resourceProfile\":\"native-amd64-bounded-v1\",\"theme\":\"light\",\"width\":390,\"density\":\"comfortable\",\"fixtureReadyMillis\":801,\"fixturePreviewMillis\":23,\"consoleErrors\":0,\"nativeCapture\":\"/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-70275--amd64-bounded-v1-light-390-typed-index/typed-index-native--native-amd64-bounded-v1--light--390.png\"}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T15:33:30.575Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "native-profile-preview",
+                      "contentType": "image/png",
+                      "path": "/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-70275--amd64-bounded-v1-light-390-typed-index/attachments/native-profile-preview-13a02c6bea1fedf03fb23743f08bd2372dc89dfb.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "97a00854300c44c620a7-8037021a11f0b35aa49e",
+          "file": "../../../private/tmp/phebs-t4510a-qa-z3azm2qg/runner/profile.native.spec.ts",
+          "line": 103,
+          "column": 3
+        },
+        {
+          "title": "native profile preview native-amd64-bounded-v1 dark 1280",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "typed-index",
+              "projectName": "typed-index",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2643,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "{\"resourceProfile\":\"native-amd64-bounded-v1\",\"theme\":\"dark\",\"width\":1280,\"density\":\"comfortable\",\"fixtureReadyMillis\":724,\"fixturePreviewMillis\":24,\"consoleErrors\":0,\"nativeCapture\":\"/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-0cfb5--amd64-bounded-v1-dark-1280-typed-index/typed-index-native--native-amd64-bounded-v1--dark--1280.png\"}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T15:33:33.328Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "native-profile-preview",
+                      "contentType": "image/png",
+                      "path": "/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-0cfb5--amd64-bounded-v1-dark-1280-typed-index/attachments/native-profile-preview-f3b2ceb4e1670ea380a17f85278f1205a77469d9.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "97a00854300c44c620a7-e5c0f870813911b6e29b",
+          "file": "../../../private/tmp/phebs-t4510a-qa-z3azm2qg/runner/profile.native.spec.ts",
+          "line": 103,
+          "column": 3
+        },
+        {
+          "title": "native profile preview native-amd64-bounded-v1 dark 390",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "typed-index",
+              "projectName": "typed-index",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2070,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "{\"resourceProfile\":\"native-amd64-bounded-v1\",\"theme\":\"dark\",\"width\":390,\"density\":\"comfortable\",\"fixtureReadyMillis\":691,\"fixturePreviewMillis\":47,\"consoleErrors\":0,\"nativeCapture\":\"/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-0b26d-e-amd64-bounded-v1-dark-390-typed-index/typed-index-native--native-amd64-bounded-v1--dark--390.png\"}\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T15:33:35.985Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "native-profile-preview",
+                      "contentType": "image/png",
+                      "path": "/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-0b26d-e-amd64-bounded-v1-dark-390-typed-index/attachments/native-profile-preview-b0ffc1522bec89d32a0b7d4efc621d3c6f2b3008.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "97a00854300c44c620a7-63049cc06fb3432dc609",
+          "file": "../../../private/tmp/phebs-t4510a-qa-z3azm2qg/runner/profile.native.spec.ts",
+          "line": 103,
+          "column": 3
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-18T15:33:12.617Z",
+    "duration": 25484.942,
+    "expected": 8,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

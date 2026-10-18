@@ -930,6 +930,10 @@ T45.10a admits both native resource-profile names in Settings, so an available
 amd64 installation can be planned and enqueued from the documented Settings
 path. It adds no execution capability. Installed generation, images, offline
 inputs, privileges, review and integration remain open.
+T45.10a presentation acceptance is complete on2026-10-18:895 UI unit tests,
+19 native browser cases, eight fresh frame comparisons, keyboard/narrow layout,
+console and16 accessibility audits pass. Historical Noble goldens remain exact;
+this closes neither installed generation nor any scale or release gate.
 T45.1a's reviewed neutral harness gate is now PASS at source
 `f7faae99d20f19279bb52c9987045204fa0bb39f`, with exact native containment,
 controller-death recovery, planner/oracle, driver equality, and cleanup evidence

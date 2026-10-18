@@ -1,0 +1,330 @@
+{
+  "schema": "phebs-t4510a-native-qa-v1",
+  "pass": "fresh-ready",
+  "outcome": "passed",
+  "source_checkpoint": "acdce4881f4e3c1dc1dc6375f22b4718feadcf27",
+  "scroll_helper_sha256": "1207f1a353b3425ba308bec6806b79326a36f717c4103aac0d0be02fdc308c37",
+  "native_renderer_claim": "Darwin installed Chrome only; no Noble baseline equivalence",
+  "commands": [
+    {
+      "name": "vite",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "/Users/ben/.codex/worktrees/t512-field-registration/phebs.com/ui/node_modules/vite/bin/vite.js",
+        "preview",
+        "/Users/ben/.codex/worktrees/t512-field-registration/phebs.com/ui",
+        "--outDir",
+        "/Users/ben/.codex/worktrees/t25-embedded-docs/phebs.com/ui/dist",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "53397",
+        "--strictPort"
+      ]
+    },
+    {
+      "name": "chrome",
+      "argv": [
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "--headless=new",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--disable-background-networking",
+        "--disable-component-update",
+        "--disable-sync",
+        "--remote-debugging-address=127.0.0.1",
+        "--remote-debugging-port=0",
+        "--user-data-dir=/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/private-chrome-profile",
+        "about:blank"
+      ]
+    },
+    {
+      "name": "client",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "/Users/ben/.codex/worktrees/t512-field-registration/phebs.com/ui/node_modules/@playwright/test/cli.js",
+        "test",
+        "--config",
+        "/tmp/phebs-t4510a-qa-z3azm2qg/runner/playwright.config.ts",
+        "--project",
+        "typed-index",
+        "--max-failures=1",
+        "--grep",
+        "native profile preview"
+      ]
+    }
+  ],
+  "terminals": {
+    "client": {
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "already_exited",
+      "pid": 91434,
+      "expected_pgid": 91434,
+      "observed_pgid": 91434,
+      "joined": true
+    },
+    "chrome": {
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "sigterm",
+      "pid": 91401,
+      "expected_pgid": 91401,
+      "observed_pgid": 91401,
+      "joined": true
+    },
+    "vite": {
+      "exit_code": 143,
+      "teardown": "clean",
+      "termination_mode": "sigterm",
+      "pid": 91400,
+      "expected_pgid": 91400,
+      "observed_pgid": 91400,
+      "joined": true
+    }
+  },
+  "owners": {
+    "vite": {
+      "pid": 91400,
+      "expected_pgid": 91400,
+      "observed_pgid": 91400
+    },
+    "chrome": {
+      "pid": 91401,
+      "expected_pgid": 91401,
+      "observed_pgid": 91401
+    },
+    "client": {
+      "pid": 91434,
+      "expected_pgid": 91434,
+      "observed_pgid": 91434
+    }
+  },
+  "verified_census": {
+    "ui-input-census.json": {
+      "rows": 118,
+      "file_sha256": "4cff7b425fcf687a468c8f1d8131a8d06f094312bd232e3d8249843e23fa5ed0"
+    },
+    "ui-dist-census.json": {
+      "rows": 165,
+      "file_sha256": "a6e10fa5ccdde9401d8273cc903b1af171f6fd29453d40843b109efbcec7c335"
+    }
+  },
+  "tools": {
+    "node": {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+      "sha256": "ee6fb0e015284d83a91e8ec5213f43a157f8a392b58555301682892ba928c04a"
+    },
+    "chrome_launcher": {
+      "path": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "sha256": "3972431aa8acff4e590998116c6c3e663e9a4d0eb6efd08fd160df8206db94a6"
+    },
+    "axe": {
+      "path": "/Users/ben/phebs.com/ui/node_modules/axe-core/axe.min.js",
+      "sha256": "66a8aaa95a8b044a7fd74a5435873bf04ff65a1ca75567c921b7509742085a14",
+      "version": "4.12.1"
+    },
+    "playwright": "1.62.1"
+  },
+  "started_monotonic": 1.172011166,
+  "renderer": {
+    "Browser": "Chrome/155.0.8059.82",
+    "Protocol-Version": "1.3",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
+    "V8-Version": "15.5.35.23",
+    "WebKit-Version": "537.36 (@c56fe5daef8be123f68808a4bb705ff378cd2019)",
+    "webSocketDebuggerUrl": "ws://127.0.0.1:53417/devtools/browser/5db123d3-0e8e-4c8f-91a0-88b76dcd8ab7"
+  },
+  "playwright_stats": {
+    "startTime": "2026-10-18T15:33:12.617Z",
+    "duration": 25484.942,
+    "expected": 8,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "frames": [
+    {
+      "path": "/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-0b26d-e-amd64-bounded-v1-dark-390-typed-index/typed-index-native--native-amd64-bounded-v1--dark--390.png",
+      "name": "typed-index-native--native-amd64-bounded-v1--dark--390.png",
+      "bytes": 60938,
+      "sha256": "fdbf3a8ce5f8d707f4a97f3e52e85f9e9c1901e6e66aeb5a69cf4857a0dec5ec"
+    },
+    {
+      "path": "/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-0cfb5--amd64-bounded-v1-dark-1280-typed-index/typed-index-native--native-amd64-bounded-v1--dark--1280.png",
+      "name": "typed-index-native--native-amd64-bounded-v1--dark--1280.png",
+      "bytes": 65940,
+      "sha256": "5252bff4039f975d5789dc6f1520d0c26697b5321c2191c8d19ba0f0db05f64f"
+    },
+    {
+      "path": "/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-2017a--arm64-bounded-v1-dark-1280-typed-index/typed-index-native--native-arm64-bounded-v1--dark--1280.png",
+      "name": "typed-index-native--native-arm64-bounded-v1--dark--1280.png",
+      "bytes": 65827,
+      "sha256": "ea653398ff58ee930dc691f644448bceb1a567b9fcaacc922fc7d9219bc306ed"
+    },
+    {
+      "path": "/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-38abf-arm64-bounded-v1-light-1280-typed-index/typed-index-native--native-arm64-bounded-v1--light--1280.png",
+      "name": "typed-index-native--native-arm64-bounded-v1--light--1280.png",
+      "bytes": 65441,
+      "sha256": "4470be2bb42320a1089a93851b865423fce50db379b5e03c584e5fd10b97fd7a"
+    },
+    {
+      "path": "/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-54dd3-amd64-bounded-v1-light-1280-typed-index/typed-index-native--native-amd64-bounded-v1--light--1280.png",
+      "name": "typed-index-native--native-amd64-bounded-v1--light--1280.png",
+      "bytes": 65599,
+      "sha256": "9346d759dc351d1426df2b3149bddfde5407e73bebd10a5f2aa62721f006385e"
+    },
+    {
+      "path": "/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-55e1c--arm64-bounded-v1-light-390-typed-index/typed-index-native--native-arm64-bounded-v1--light--390.png",
+      "name": "typed-index-native--native-arm64-bounded-v1--light--390.png",
+      "bytes": 60260,
+      "sha256": "1f99c1b1baf81bbcfd7350453fd2ee8f7c68ba137bc0a5a285374c6a4bea6e30"
+    },
+    {
+      "path": "/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-70275--amd64-bounded-v1-light-390-typed-index/typed-index-native--native-amd64-bounded-v1--light--390.png",
+      "name": "typed-index-native--native-amd64-bounded-v1--light--390.png",
+      "bytes": 60419,
+      "sha256": "97a763ba2324990855a2008cb07fd78c554e0981a82f8a201d8ac73898497509"
+    },
+    {
+      "path": "/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-b7e13-e-arm64-bounded-v1-dark-390-typed-index/typed-index-native--native-arm64-bounded-v1--dark--390.png",
+      "name": "typed-index-native--native-arm64-bounded-v1--dark--390.png",
+      "bytes": 60833,
+      "sha256": "8897f477e2dac7f023b653df41fdcb3b6a71c11024ea3eebb14ac7b526c59daa"
+    }
+  ],
+  "audits": [
+    {
+      "title": "native profile preview native-amd64-bounded-v1 dark 390",
+      "status": "passed",
+      "errors": [],
+      "viewport": {
+        "width": 390,
+        "height": 1203
+      },
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 26,
+        "incomplete": 0
+      }
+    },
+    {
+      "title": "native profile preview native-amd64-bounded-v1 dark 1280",
+      "status": "passed",
+      "errors": [],
+      "viewport": {
+        "width": 1280,
+        "height": 1143
+      },
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 26,
+        "incomplete": 0
+      }
+    },
+    {
+      "title": "native profile preview native-arm64-bounded-v1 dark 1280",
+      "status": "passed",
+      "errors": [],
+      "viewport": {
+        "width": 1280,
+        "height": 1143
+      },
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 26,
+        "incomplete": 0
+      }
+    },
+    {
+      "title": "native profile preview native-arm64-bounded-v1 light 1280",
+      "status": "passed",
+      "errors": [],
+      "viewport": {
+        "width": 1280,
+        "height": 1143
+      },
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 26,
+        "incomplete": 0
+      }
+    },
+    {
+      "title": "native profile preview native-amd64-bounded-v1 light 1280",
+      "status": "passed",
+      "errors": [],
+      "viewport": {
+        "width": 1280,
+        "height": 1143
+      },
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 26,
+        "incomplete": 0
+      }
+    },
+    {
+      "title": "native profile preview native-arm64-bounded-v1 light 390",
+      "status": "passed",
+      "errors": [],
+      "viewport": {
+        "width": 390,
+        "height": 1203
+      },
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 26,
+        "incomplete": 0
+      }
+    },
+    {
+      "title": "native profile preview native-amd64-bounded-v1 light 390",
+      "status": "passed",
+      "errors": [],
+      "viewport": {
+        "width": 390,
+        "height": 1203
+      },
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 26,
+        "incomplete": 0
+      }
+    },
+    {
+      "title": "native profile preview native-arm64-bounded-v1 dark 390",
+      "status": "passed",
+      "errors": [],
+      "viewport": {
+        "width": 390,
+        "height": 1203
+      },
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 26,
+        "incomplete": 0
+      }
+    }
+  ],
+  "all_owned_groups_joined_cleanly": true,
+  "total_seconds": 32.141854,
+  "final_census": {
+    "ui-input-census.json": {
+      "rows": 118,
+      "file_sha256": "4cff7b425fcf687a468c8f1d8131a8d06f094312bd232e3d8249843e23fa5ed0"
+    },
+    "ui-dist-census.json": {
+      "rows": 165,
+      "file_sha256": "a6e10fa5ccdde9401d8273cc903b1af171f6fd29453d40843b109efbcec7c335"
+    }
+  }
+}

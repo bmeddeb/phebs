@@ -1,0 +1,10 @@
+{
+  "source_checkpoint": "acdce4881f4e3c1dc1dc6375f22b4718feadcf27",
+  "helper_sha256": "1207f1a353b3425ba308bec6806b79326a36f717c4103aac0d0be02fdc308c37",
+  "strict_inequality_unchanged": true,
+  "wrapper_changes": "single explicit wrapper in separate runner dir, archives outside recursive testDir; removed title/body/overlay hooks; only planned native8console+axe hooks;maxfailures1;new finite target390 before author19/fresh8",
+  "first_results_preserved": [
+    "/tmp/phebs-t4510a-qa-z3azm2qg/author/result.json",
+    "/tmp/phebs-t4510a-qa-z3azm2qg/author-module/result.json"
+  ]
+}

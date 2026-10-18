@@ -1,0 +1,78 @@
+{
+  "source_commit": "c89f00c6713ff284f55753159f982326900cd348",
+  "source_before": {
+    "ui/receipts/typed-index.spec.ts": "9493cfd988de39bdb9c28743a8e418a986db822b19a744661c5541251a0beb61",
+    "ui/receipts/README.md": "eff657c81eb35395636531005ba1b1931d20f479aafc0991ca433109c00b2c5d"
+  },
+  "historical_baselines_before": {
+    "typed-index-preview--dark--1280--comfortable.png": "85ed0904a1f147e95edfa0794038e2faa49ef03b94590abe162184095a4335af",
+    "typed-index-preview--dark--1280--dense.png": "84997b06ed36bbeee3ece9bfbf4fc06daa5e5d0789c60d2194aefaef7e443559",
+    "typed-index-preview--dark--390--comfortable.png": "5e5fb267a6938212d1998152e2e6dc8d00fc58d2fbcbd269cc1f4518c4e734af",
+    "typed-index-preview--dark--390--dense.png": "5e5fb267a6938212d1998152e2e6dc8d00fc58d2fbcbd269cc1f4518c4e734af",
+    "typed-index-preview--light--1280--comfortable.png": "7ae663f56b11a4d344d5af9b7405a4c7509c3a5e654813e6c0bdc80dec11d27e",
+    "typed-index-preview--light--1280--dense.png": "7ae663f56b11a4d344d5af9b7405a4c7509c3a5e654813e6c0bdc80dec11d27e",
+    "typed-index-preview--light--390--comfortable.png": "c7bc000a7f99dbd554941072e8e9fb38e0553e605bfa3820be8988a42336900c",
+    "typed-index-preview--light--390--dense.png": "c7bc000a7f99dbd554941072e8e9fb38e0553e605bfa3820be8988a42336900c"
+  },
+  "runs": [
+    {
+      "name": "types",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "node_modules/typescript/bin/tsc",
+        "-b"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t512-field-registration/phebs.com/ui",
+      "wall_seconds": 3.15989,
+      "exit": 0,
+      "joined": true,
+      "log": "/tmp/phebs-t4510a-qa-z3azm2qg/types.log"
+    },
+    {
+      "name": "receipt-types",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "--strict",
+        "--skipLibCheck",
+        "--target",
+        "es2023",
+        "--lib",
+        "es2023,dom,dom.iterable",
+        "--module",
+        "esnext",
+        "--moduleResolution",
+        "bundler",
+        "--types",
+        "node",
+        "--jsx",
+        "react-jsx",
+        "--allowImportingTsExtensions",
+        "receipts/typed-index.spec.ts"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t512-field-registration/phebs.com/ui",
+      "wall_seconds": 0.041284,
+      "exit": 1,
+      "joined": true,
+      "log": "/tmp/phebs-t4510a-qa-z3azm2qg/receipt-types.log"
+    }
+  ],
+  "first_failure_stops": true,
+  "node": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+  "source_after": {
+    "ui/receipts/typed-index.spec.ts": "9493cfd988de39bdb9c28743a8e418a986db822b19a744661c5541251a0beb61",
+    "ui/receipts/README.md": "eff657c81eb35395636531005ba1b1931d20f479aafc0991ca433109c00b2c5d"
+  },
+  "historical_baselines_after": {
+    "typed-index-preview--dark--1280--comfortable.png": "85ed0904a1f147e95edfa0794038e2faa49ef03b94590abe162184095a4335af",
+    "typed-index-preview--dark--1280--dense.png": "84997b06ed36bbeee3ece9bfbf4fc06daa5e5d0789c60d2194aefaef7e443559",
+    "typed-index-preview--dark--390--comfortable.png": "5e5fb267a6938212d1998152e2e6dc8d00fc58d2fbcbd269cc1f4518c4e734af",
+    "typed-index-preview--dark--390--dense.png": "5e5fb267a6938212d1998152e2e6dc8d00fc58d2fbcbd269cc1f4518c4e734af",
+    "typed-index-preview--light--1280--comfortable.png": "7ae663f56b11a4d344d5af9b7405a4c7509c3a5e654813e6c0bdc80dec11d27e",
+    "typed-index-preview--light--1280--dense.png": "7ae663f56b11a4d344d5af9b7405a4c7509c3a5e654813e6c0bdc80dec11d27e",
+    "typed-index-preview--light--390--comfortable.png": "c7bc000a7f99dbd554941072e8e9fb38e0553e605bfa3820be8988a42336900c",
+    "typed-index-preview--light--390--dense.png": "c7bc000a7f99dbd554941072e8e9fb38e0553e605bfa3820be8988a42336900c"
+  },
+  "passed": false
+}
