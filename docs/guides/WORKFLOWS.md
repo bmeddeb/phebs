@@ -1620,3 +1620,20 @@ unavailable under stable admission. Mixed explicit provisional Thrift queries
 keep their own domain and never read the signed protobuf source for a foreign
 lineage. This pack alone exposes no Impact, operation-consumer or compatibility
 report. Production promotion remains pending T51.3 and the signing key.
+
+
+### Browser preferences and copy recovery
+
+If browser privacy settings or storage limits prevent saving preferences, phebs
+still opens and theme, density and palette controls work for the current page.
+Defaults apply when saved choices cannot be read. Unsaved choices may reset on
+reload. Delayed session-status replies cannot replace a newer refresh or undo a
+completed sign-in, setup or sign-out.
+
+Copy controls show success only after the clipboard write completes. If copying
+fails, retry after enabling clipboard access or select the visible text manually;
+repository commit controls expose the full commit after failure. The file
+permalink names its failed copy instead of announcing success. A failed copy
+stays named until retry or a change of the displayed item. Newly created API keys
+retain their separate, selectable manual-copy field and must be copied before
+leaving or reloading Settings.

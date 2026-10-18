@@ -1,3 +1,4 @@
+import { useCopy } from '../useCopy'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useStyletron } from 'baseui'
 import { Spinner } from 'baseui/spinner'
@@ -311,20 +312,18 @@ function Pill({ text, bg, fg }: { text: string; bg: string; fg: string }) {
 function CommitChip({ hash }: { hash: string }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  const [done, setDone] = useState(false)
+  const [state, copy] = useCopy(hash)
+  const done = state === 'done'
   return (
     <button
       type="button"
-      title="Copy commit"
-      onClick={() => {
-        navigator.clipboard?.writeText(hash)
-        setDone(true)
-        setTimeout(() => setDone(false), 1200)
-      }}
+      title={state === 'done' ? 'Commit copied' : state === 'failed' ? 'Copy failed — select the commit to copy manually' : 'Copy commit'}
+      aria-label={state === 'done' ? 'Commit copied' : state === 'failed' ? 'Copy commit failed' : 'Copy commit'}
+      onClick={() => void copy(hash)}
       className={css({ display: 'inline-flex', alignItems: 'center', gap: '5px', fontFamily: FONTS.MONO, fontSize: '11.5px', lineHeight: '15px', color: tok.textSecondary, backgroundColor: tok.hoverFill, border: `1px solid ${tok.cardBorder}`, borderRadius: '5px', padding: '2px 7px', cursor: 'pointer', ':hover': { color: tok.textPrimary } })}
     >
-      {hash.slice(0, 7)}
-      <span className={css({ display: 'flex', color: done ? tok.status.current.solid : tok.textTertiary })}>{done ? <CheckIcon size={12} /> : <CopyIcon size={12} />}</span>
+      {state === 'failed' ? hash : hash.slice(0, 7)}
+      <span className={css({ display: 'flex', color: done ? tok.status.current.solid : state === 'failed' ? tok.status.conflict.text : tok.textTertiary })}>{done ? <CheckIcon size={12} /> : <CopyIcon size={12} />}</span>
     </button>
   )
 }

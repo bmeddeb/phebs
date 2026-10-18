@@ -1,3 +1,4 @@
+import { useCopy } from '../useCopy'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStyletron } from 'baseui'
 import { Input } from 'baseui/input'
@@ -307,6 +308,8 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
     seenFilesRef.current.clear()
   }, [urlQuery, searchGeneration])
 
+  const [pathCopyState, copyPath] = useCopy(visible[selected]?.path)
+
   // keyboard navigation: j/k move a file cursor, Enter opens, y copies, o folds
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -328,7 +331,7 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
           L: String(firstMatchLine(f) ?? 1),
         })
       } else if (e.key === 'y' && selected >= 0 && visible[selected]) {
-        navigator.clipboard?.writeText(visible[selected].path)
+        void copyPath(visible[selected].path)
       } else if (e.key === 'o' && selected >= 0 && visible[selected]) {
         const repo = visible[selected].repo
         setCollapsed((c) => {
@@ -341,7 +344,7 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [visible, selected])
+  }, [visible, selected, copyPath])
 
   // Keep the selected card in view as the collection streams…
   useEffect(() => {
@@ -376,6 +379,7 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
 
   return (
     <div>
+      <span role="status">{pathCopyState === 'done' ? 'Path copied.' : pathCopyState === 'failed' ? 'Copy failed — select the path to copy manually.' : ''}</span>
       <form
         onSubmit={(e) => {
           e.preventDefault()
@@ -1251,17 +1255,15 @@ function matchSpans(line: string, lineNo: number, ranges: Range[]): { from: numb
 function CopyButton({ text, title }: { text: string; title: string }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  const [done, setDone] = useState(false)
+  const [state, copy] = useCopy(text)
+  const done = state === 'done'
   return (
     <button
       type="button"
-      title={title}
-      onClick={() => {
-        navigator.clipboard?.writeText(text)
-        setDone(true)
-        setTimeout(() => setDone(false), 1200)
-      }}
-      className={css({ display: 'flex', border: 'none', background: 'none', cursor: 'pointer', color: done ? tok.status.current.solid : tok.textTertiary, padding: '3px', borderRadius: '6px', ':hover': { color: tok.textPrimary, backgroundColor: tok.hoverFill } })}
+      title={state === 'done' ? 'Copied' : state === 'failed' ? 'Copy failed — select text to copy manually' : title}
+      aria-label={state === 'done' ? `${title}: copied` : state === 'failed' ? `${title}: failed` : title}
+      onClick={() => void copy(text)}
+      className={css({ display: 'flex', border: 'none', background: 'none', cursor: 'pointer', color: done ? tok.status.current.solid : state === 'failed' ? tok.status.conflict.text : tok.textTertiary, padding: '3px', borderRadius: '6px', ':hover': { color: tok.textPrimary, backgroundColor: tok.hoverFill } })}
     >
       {done ? <CheckIcon size={13} /> : <CopyIcon size={13} />}
     </button>

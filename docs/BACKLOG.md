@@ -20851,6 +20851,36 @@ Two bounded catalog comparisons add 6,202 bytes of staging reads; first staging
 adds two serial existing atomic publications, reuse preserves metadata and
 content. No production runtime, identity, concurrency or bundle cost changes.
 
+**T57R.4 ✅ · Mac audit browser-state failures** *(2026-10-18, Ben-directed;
+[Mac issue #130](https://github.com/bmeddeb/phebs/issues/130), independent of
+Linux #124).* Reproduce denied preference storage, obsolete authentication
+status and premature clipboard success before fixing shared presentation code.
+AC: unavailable storage cannot blank the app; current session/CSRF state survives
+older status responses/errors; copy success awaits the actual write, failures
+stay truthful, and older identity/attempt completions cannot set current feedback.
+Retain manual token copying and expose the full commit after copy failure. Run
+bounded UI regressions/types/lint/build, desktop and 390 px keyboard/console/WCAG
+checks, reviewed same-native-renderer pixels, bundle/interaction and steady-state
+cost review, docs/glossary and whitespace gates. No backend or signing changes.
+
+The audit reproduces eight failures before the fix. Current UI checks pass
+918 tests; production and receipt TypeScript and changed-file lint pass. Eight
+native Chrome journeys cover denied read/write storage, delayed status after
+logout and pending/denied clipboard writes at 1280 px and 390 px, with eight clean
+WCAG audits, keyboard focus and no document overflow or app console errors.
+Clipboard settlement after the synthetic write completes is 3–5 ms; this is
+client mechanics, not OS-clipboard or live-authentication evidence. The first
+accessibility sample caught a finite BaseUI theme transition; the settled-state
+check passes without changing contrast tokens. The owning PLAN decision records
+constant browser costs and no new backend work. Eight native idle pairs are reviewed: six are byte-identical to main; two
+Settings frames contain the intentional conditional-persistence wording and
+are byte-identical on a fresh current capture. No mask or threshold changes.
+Docs, glossary and whitespace pass. Charter/cost review finds no unresolved
+issue: hierarchy, density, keyboard, reduced motion, explicit failures and
+copy remain consistent. Historical Noble baselines, Linux #124 and production
+signing remain unchanged; this is scoped native Chrome evidence, not a full
+historical receipt-matrix or live backend result.
+
 **T57R.1 · Inherited gate repairs** *(cross-cutting; found while landing Epic
 57)* — return `make docs-check`, repository-wide lint and
 `internal/investigation` to green without touching the code those findings sit

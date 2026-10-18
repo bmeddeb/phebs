@@ -5,8 +5,17 @@ import { AuthProvider } from './auth'
 import { darkTheme, lightTheme, DensityContext, ModeContext, PaletteContext, type DensityName, type Mode } from './theme'
 import { DEFAULT_PALETTE, isPaletteName, type PaletteName } from './palette'
 
+function readPreference(key: string): string | null {
+  try { return localStorage.getItem(key) } catch { return null }
+}
+
+function savePreference(key: string, value: string) {
+  // Browser privacy settings and quota failures must not disable the app.
+  try { localStorage.setItem(key, value) } catch { /* Keep the in-memory preference. */ }
+}
+
 function initialMode(): Mode {
-  const saved = localStorage.getItem('phebs-theme')
+  const saved = readPreference('phebs-theme')
   if (saved === 'light' || saved === 'dark') return saved
   return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
@@ -14,13 +23,13 @@ function initialMode(): Mode {
 // Density has no media-query analogue: comfortable unless the user chose
 // dense (T43.11).
 function initialDensity(): DensityName {
-  return localStorage.getItem('phebs-density') === 'dense' ? 'dense' : 'comfortable'
+  return readPreference('phebs-density') === 'dense' ? 'dense' : 'comfortable'
 }
 
 // Unknown stored values (e.g. a removed palette) fall back to the default
 // rather than failing (T44.2).
 function initialPalette(): PaletteName {
-  const stored = localStorage.getItem('phebs-palette')
+  const stored = readPreference('phebs-palette')
   return isPaletteName(stored) ? stored : DEFAULT_PALETTE
 }
 
@@ -32,16 +41,16 @@ export default function Root() {
   const [palette, setPalette] = useState<PaletteName>(initialPalette)
 
   useEffect(() => {
-    localStorage.setItem('phebs-theme', mode)
+    savePreference('phebs-theme', mode)
     document.documentElement.style.colorScheme = mode
   }, [mode])
 
   useEffect(() => {
-    localStorage.setItem('phebs-density', density)
+    savePreference('phebs-density', density)
   }, [density])
 
   useEffect(() => {
-    localStorage.setItem('phebs-palette', palette)
+    savePreference('phebs-palette', palette)
   }, [palette])
 
   return (

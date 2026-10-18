@@ -1,10 +1,11 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, expect, test, vi } from 'vitest'
 import { Client } from 'styletron-engine-monolithic'
 import { Provider as StyletronProvider } from 'styletron-react'
 import { BaseProvider, LightTheme } from 'baseui'
 import { AuthProvider, useAuth } from './auth'
 import LoginPage from './pages/LoginPage'
+import { csrfHeaders, notifyAuthRequired, setCSRFToken } from './authSession'
 
 const engine = new Client()
 
@@ -42,6 +43,83 @@ function LoginBoundary() {
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
+  setCSRFToken()
+})
+
+function deferredStatus() {
+  let resolve!: (response: ReturnType<typeof jsonResponse>) => void
+  let reject!: (error: Error) => void
+  const promise = new Promise<ReturnType<typeof jsonResponse>>((yes, no) => { resolve = yes; reject = no })
+  return { promise, resolve, reject }
+}
+
+function SessionProbe() {
+  const auth = useAuth()
+  return <>
+    <div>{auth.status?.authenticated ? 'Signed in' : 'Signed out'}</div>
+    <button onClick={() => void auth.refresh()}>Refresh session</button>
+    <button onClick={() => void auth.login('reader@example.com', 'password')}>Login</button>
+    <button onClick={() => void auth.setup('reader@example.com', 'password', 'setup')}>Setup</button>
+    <button onClick={() => void auth.logout()}>Logout</button>
+  </>
+}
+
+test.each(['success', 'failure'])('late auth-status %s cannot replace a newer signed-out status', async outcome => {
+  const older = deferredStatus()
+  const newer = deferredStatus()
+  vi.stubGlobal('fetch', vi.fn().mockReturnValueOnce(older.promise).mockReturnValueOnce(newer.promise))
+  render(<AuthProvider><SessionProbe /></AuthProvider>)
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh session' }))
+  await act(async () => newer.resolve(jsonResponse(status({ csrf_token: 'current' }))))
+  await act(async () => {
+    if (outcome === 'success') older.resolve(jsonResponse(status({ authenticated: true, csrf_token: 'stale' })))
+    else older.reject(new Error('stale failure'))
+  })
+  expect(screen.getByText('Signed out')).toBeTruthy()
+  expect(csrfHeaders()).toEqual({ 'X-CSRF-Token': 'current' })
+})
+
+test.each(['Login', 'Setup'])('late status cannot undo completed %s', async action => {
+  const older = deferredStatus()
+  vi.stubGlobal('fetch', vi.fn()
+    .mockResolvedValueOnce(jsonResponse(status()))
+    .mockReturnValueOnce(older.promise)
+    .mockResolvedValueOnce(jsonResponse(status({ authenticated: true, csrf_token: 'new-session' }))))
+  render(<AuthProvider><SessionProbe /></AuthProvider>)
+  await act(async () => {})
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh session' }))
+  fireEvent.click(screen.getByRole('button', { name: action }))
+  expect(await screen.findByText('Signed in')).toBeTruthy()
+  await act(async () => older.resolve(jsonResponse(status())))
+  expect(screen.getByText('Signed in')).toBeTruthy()
+  expect(csrfHeaders()).toEqual({ 'X-CSRF-Token': 'new-session' })
+})
+
+test('late authenticated status cannot restore a logged-out session', async () => {
+  const older = deferredStatus()
+  vi.stubGlobal('fetch', vi.fn()
+    .mockResolvedValueOnce(jsonResponse(status({ authenticated: true, csrf_token: 'old-session' })))
+    .mockReturnValueOnce(older.promise)
+    .mockResolvedValueOnce({ ok: true, status: 204 })
+    .mockResolvedValueOnce(jsonResponse(status())))
+  render(<AuthProvider><SessionProbe /></AuthProvider>)
+  expect(await screen.findByText('Signed in')).toBeTruthy()
+  act(() => notifyAuthRequired())
+  fireEvent.click(screen.getByRole('button', { name: 'Logout' }))
+  expect(await screen.findByText('Signed out')).toBeTruthy()
+  await act(async () => older.resolve(jsonResponse(status({ authenticated: true, csrf_token: 'old-session' }))))
+  expect(screen.getByText('Signed out')).toBeTruthy()
+  expect(csrfHeaders()).toEqual({})
+})
+
+test('an unmounted provider cannot replace the current CSRF token', async () => {
+  const older = deferredStatus()
+  vi.stubGlobal('fetch', vi.fn().mockReturnValueOnce(older.promise))
+  const view = render(<AuthProvider><SessionProbe /></AuthProvider>)
+  view.unmount()
+  setCSRFToken('replacement-provider')
+  await act(async () => older.resolve(jsonResponse(status({ authenticated: true, csrf_token: 'stale' }))))
+  expect(csrfHeaders()).toEqual({ 'X-CSRF-Token': 'replacement-provider' })
 })
 
 test('OIDC-only login hides unusable password controls', async () => {
