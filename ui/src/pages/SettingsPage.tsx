@@ -21,7 +21,6 @@ export default function SettingsPage({ isAdmin = false }: { isAdmin?: boolean })
   const [keysLoaded, setKeysLoaded] = useState(false)
   const [name, setName] = useState('')
   const [createdToken, setCreatedToken] = useState('')
-  const [copied, setCopied] = useState(false)
   const [pendingRevoke, setPendingRevoke] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -63,7 +62,6 @@ export default function SettingsPage({ isAdmin = false }: { isAdmin?: boolean })
       setKeys((current) => [result.key, ...current])
       setCreatedToken(result.token)
       setName('')
-      setCopied(false)
     } catch (cause) {
       setError(String(cause))
     } finally {
@@ -139,33 +137,7 @@ export default function SettingsPage({ isAdmin = false }: { isAdmin?: boolean })
         </Notification>
       )}
 
-      {createdToken && (
-        <div className={css({ border: `1px solid ${tok.status.current.solid}`, borderRadius: '8px', padding: '14px', marginBottom: '20px' })}>
-          <div className={css({ fontSize: '12px', fontWeight: 600, color: tok.textSecondary, marginBottom: '8px' })}>
-            New key
-          </div>
-          <div className={css({ fontSize: '12px', color: tok.textTertiary, marginBottom: '8px' })}>
-            Read-only key for PHEBS evidence.
-          </div>
-          <div className={css({ display: 'flex', alignItems: 'center', gap: '8px' })}>
-            <code className={css({ flex: 1, minWidth: 0, fontFamily: FONTS.MONO, fontSize: '12px', overflowWrap: 'anywhere', color: tok.textPrimary })}>
-              {createdToken}
-            </code>
-            <button
-              type="button"
-              title="Copy API key"
-              aria-label="Copy API key"
-              onClick={() => {
-                void navigator.clipboard?.writeText(createdToken)
-                setCopied(true)
-              }}
-              className={css(iconButton(tok))}
-            >
-              {copied ? <CheckIcon /> : <CopyIcon />}
-            </button>
-          </div>
-        </div>
-      )}
+      {createdToken && <CreatedAPIKey key={createdToken} token={createdToken} />}
 
       <form onSubmit={create} className={css({ marginBottom: '28px' })}>
         <div className={css({ display: 'flex', gap: '8px', '@media screen and (max-width: 560px)': { flexDirection: 'column' } })}>
@@ -260,6 +232,44 @@ function AppearanceSection() {
   )
 }
 
+function CreatedAPIKey({ token }: { token: string }) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  const [copyState, setCopyState] = useState<'idle' | 'copying' | 'done' | 'failed'>('idle')
+  const copy = async () => {
+    setCopyState('copying')
+    try {
+      if (!navigator.clipboard?.writeText) {
+        setCopyState('failed')
+        return
+      }
+      await navigator.clipboard.writeText(token)
+      setCopyState('done')
+    } catch {
+      setCopyState('failed')
+    }
+  }
+  return (
+    <div role="group" aria-label="New API key" className={css({ border: `1px solid ${tok.status.current.solid}`, borderRadius: '8px', padding: '14px', marginBottom: '20px' })}>
+      <div className={css({ fontSize: '12px', fontWeight: 600, color: tok.textSecondary, marginBottom: '8px' })}>New key</div>
+      <div className={css({ fontSize: '12px', color: tok.textTertiary, marginBottom: '8px' })}>
+        Read-only key for PHEBS evidence. Copy it now; it is shown only once.
+      </div>
+      <div className={css({ display: 'flex', alignItems: 'center', gap: '8px' })}>
+        <Input value={token} readOnly aria-label="New API key token" autoComplete="off"
+          overrides={{ Root: { style: { flex: 1, minWidth: 0 } }, Input: { style: { fontFamily: FONTS.MONO, fontSize: '12px' } } }} />
+        <button type="button" title="Copy API key" aria-label="Copy API key"
+          disabled={copyState === 'copying'} onClick={() => void copy()} className={css({ ...iconButton(tok), flexShrink: 0, width: '44px', height: '44px' })}>
+          {copyState === 'done' ? <CheckIcon /> : <CopyIcon />}
+        </button>
+      </div>
+      <div role="status" className={css({ marginTop: '8px', fontSize: '12px', lineHeight: '18px', color: tok.textSecondary })}>
+        {copyState === 'copying' ? 'Copying API key…' : copyState === 'done' ? 'API key copied.' : copyState === 'failed' ? 'Copy failed. Select and copy the key above.' : ''}
+      </div>
+    </div>
+  )
+}
+
 function PaletteSpecimen() {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
@@ -318,6 +328,7 @@ function PaletteSpecimen() {
             overrides={{ BaseButton: { style: { minHeight: '44px', fontSize: '12px' } } }}>
             Reload page
           </Button>
+          <span className={css({ flexBasis: '100%' })}>Finish Settings changes and copy any new API key before reloading.</span>
         </div>
       )}
     </div>

@@ -1332,7 +1332,11 @@ whole-repository. Every experimental local-evidence publication and coverage
 read uses the exact indexed commit plus unit digest, so a same-commit scope
 change cannot reuse the previous unit's evidence.
 - **Settings** (`#/settings`) — create, copy once, list, and revoke read-only
-  API keys. Administrators also see the static, non-actionable Bazel-first
+  API keys. Copy success is announced only after the clipboard write completes;
+  if clipboard access fails, the key stays visible for manual selection and
+  copying. Copy any new key before leaving or reloading Settings; it is shown
+  only once. The preview's reload action repeats this reminder.
+  Administrators also see the static, non-actionable Bazel-first
   managed-indexing boundary described above; it is not a generation control.
   The retained `capabilities` metadata field is empty.
 - **Audit** (`#/audit`, administrators only) — the recorded action trail:

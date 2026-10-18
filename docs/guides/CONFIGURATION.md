@@ -798,8 +798,11 @@ or send `[]` when creating a key; a nonempty selection is rejected. Existing
 retired capability values are cleared on upgrade. Keys still inherit only
 their owner's permitted read scope, never administrator or repository access
 on their own. Browser-session mutations remain governed by their existing
-CSRF, authorization, and ownership checks. Token secrets and hashes never
-appear in Settings or `GET /api/auth/keys`.
+CSRF, authorization, and ownership checks. Existing token secrets and hashes
+never appear in key listings or `GET /api/auth/keys`; Settings shows a newly
+created token only once. The copy action announces success after clipboard
+completion, or keeps the token visible with a manual-copy instruction if
+clipboard access fails. Copy the token before leaving or reloading Settings.
 
 Existing `auth.api_key` deployments continue to work during migration. At
 startup phebs imports only that key's hash as `Legacy config key`. Create a
