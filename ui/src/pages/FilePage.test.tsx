@@ -7,8 +7,10 @@ import FilePage from './FilePage'
 import type { SourceFile, TreeEntry } from '../api'
 import { PaletteContext } from '../theme'
 import type { PaletteName } from '../palette'
+import { EditorView } from '@codemirror/view'
 
 interface SourceCall {
+  repo: string
   path: string
   ref: string
   signal: AbortSignal
@@ -20,6 +22,7 @@ const api = vi.hoisted(() => ({
   folderCalls: [] as { path: string; ref: string; signal: AbortSignal }[],
   folders: new Map<string, TreeEntry[]>(),
   statuses: [] as { name: string; indexed_commit_hash?: string; clone_url: string; orphaned: boolean }[],
+  navigationCalls: [] as { repo: string; path: string; ref: string }[],
 }))
 const highlighting = vi.hoisted(() => ({
   highlightStyle: vi.fn(() => ({})),
@@ -27,8 +30,11 @@ const highlighting = vi.hoisted(() => ({
 
 vi.mock('../api', () => ({
   fetchRepoStatus: async () => api.statuses,
-  fetchSource: (_repo: string, path: string, ref: string, signal: AbortSignal) =>
-    new Promise<SourceFile>((resolve) => api.sourceCalls.push({ path, ref, signal, resolve })),
+  fetchSource: (repo: string, path: string, ref: string, signal: AbortSignal) =>
+    new Promise<SourceFile>((resolve) => api.sourceCalls.push({ repo, path, ref, signal, resolve })),
+  fetchDefinition: async (repo: string, ref: string, path: string) => { api.navigationCalls.push({ repo, ref, path }); return { available: false } },
+  fetchReferences: async (repo: string, ref: string, path: string) => { api.navigationCalls.push({ repo, ref, path }); return { available: false, locations: [] } },
+  fetchHover: async (repo: string, ref: string, path: string) => { api.navigationCalls.push({ repo, ref, path }); return { available: false } },
   fetchFolderContents: async (_repo: string, ref: string, path: string, signal: AbortSignal) => {
     api.folderCalls.push({ path, ref, signal })
     return { entries: api.folders.get(path) ?? [] }
@@ -72,10 +78,58 @@ beforeEach(() => {
   api.folderCalls = []
   api.folders = new Map()
   api.statuses = []
+  api.navigationCalls = []
   highlighting.highlightStyle.mockClear()
 })
 
-afterEach(cleanup)
+afterEach(() => { cleanup(); vi.restoreAllMocks() })
+
+test('switching repositories without ref never borrows the previous indexed commit', async () => {
+  api.statuses = [{ name: 'old', indexed_commit_hash: 'old-index', clone_url: '', orphaned: false }]
+  const rendered = render(view('repo=old&path=main.go'))
+  await waitFor(() => expect(api.sourceCalls).toHaveLength(1))
+  api.statuses = [{ name: 'new', indexed_commit_hash: 'new-index', clone_url: '', orphaned: false }]
+  rendered.rerender(view('repo=new&path=main.go'))
+  await waitFor(() => expect(api.sourceCalls.some(call => call.repo === 'new' && call.ref === 'new-index')).toBe(true))
+  expect(api.sourceCalls.filter(call => call.repo === 'new').map(call => call.ref)).toEqual(['new-index'])
+})
+
+test('permalink waits for an indexed revision instead of copying a mutable URL', async () => {
+  api.statuses = [{ name: 'r', indexed_commit_hash: 'indexed-commit', clone_url: '', orphaned: false }]
+  render(view('repo=r&path=main.go'))
+  expect(screen.getByRole('button', { name: 'Permalink' })).toHaveProperty('disabled', true)
+  await waitFor(() => expect(api.sourceCalls).toHaveLength(1))
+  expect(screen.getByRole('button', { name: 'Permalink' })).toHaveProperty('disabled', false)
+})
+
+test('changing files clears symbol selection before issuing any navigation requests', async () => {
+  vi.spyOn(EditorView.prototype, 'posAtCoords').mockReturnValue(0)
+  const rendered = render(view('repo=r&path=old.go&ref=abc123'))
+  await act(async () => api.sourceCalls[0].resolve({ content: 'package old', encoding: 'utf8', size: 11 }))
+  const code = await waitFor(() => {
+    const node = document.querySelector('.cm-content')
+    expect(node).toBeTruthy()
+    return node!
+  })
+  fireEvent.click(code)
+  await waitFor(() => expect(api.navigationCalls).toHaveLength(3))
+  rendered.rerender(view('repo=r&path=new.go&ref=abc123'))
+  expect(api.navigationCalls).toHaveLength(3)
+  expect(screen.queryByRole('complementary', { name: 'Code navigation' })).toBeNull()
+})
+
+test('read-only source has an accessible name tied to its current path', async () => {
+  render(view('repo=r&path=src%2Fmain.go&ref=abc123'))
+  await act(async () => api.sourceCalls[0].resolve({ content: 'package main', encoding: 'utf8', size: 12 }))
+  expect(await screen.findByRole('textbox', { name: 'Source code for src/main.go' })).toHaveProperty('textContent', 'package main')
+})
+
+test.each(['nonsense', 'NaN', 'Infinity', '1.5', '9007199254740992'])('invalid L=%s cannot suppress Markdown preview or name a false line', async line => {
+  render(view(`repo=r&path=README.md&ref=abc123&view=preview&L=${line}`))
+  await act(async () => api.sourceCalls[0].resolve({ content: '# Valid preview', encoding: 'utf8', size: 15 }))
+  expect(await screen.findByRole('heading', { name: 'Valid preview' })).toBeTruthy()
+  expect(screen.queryByText(`L${line}`)).toBeNull()
+})
 
 test('late source responses cannot overwrite the current route', async () => {
   const rendered = render(view('repo=r&path=old.go&ref=old-ref'))

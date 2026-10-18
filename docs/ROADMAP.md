@@ -189,6 +189,14 @@ of #124 and changes no backend or release authority. Its owning backlog/PLAN
 record supplies the regressions and current gates; the Linux, managed-SCIP and
 production-signing holds above remain exact.
 
+**Search/file Mac audit follow-up (2026-10-18, T57R.5 / #132):** the new
+bounded repair keeps search selection on its result identity, prevents borrowed
+repository revisions and stale symbol probes, validates line links, waits for a
+revision before copying permalinks and names the read-only source editor.
+Normal native idle frames remain exact. This
+changes presentation/navigation only; #124, managed-SCIP target/installation
+proof and production signing remain pending.
+
 **All-ticket execution (2026-10-17, Ben-directed):** resolve actual dependencies
 and finish remaining work using three isolated agent lanes plus the lead. The
 current inventory is the T48.1 all-ticket table in [BACKLOG.md](./BACKLOG.md).

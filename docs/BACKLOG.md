@@ -20881,6 +20881,39 @@ copy remain consistent. Historical Noble baselines, Linux #124 and production
 signing remain unchanged; this is scoped native Chrome evidence, not a full
 historical receipt-matrix or live backend result.
 
+**T57R.5 ✅ · Search and file navigation identity repair** *(2026-10-18,
+Ben-directed Mac audit continuation; [Mac issue #132](https://github.com/bmeddeb/phebs/issues/132),
+independent of Linux #124).* AC: reproduce
+selection loss after collapsing an earlier result group, borrowed revision on
+unpinned repository changes, stale symbol requests during cross-file navigation,
+and malformed line-link behavior. Disable unpinned permalink copying while
+metadata resolves. Preserve file selection by immutable result
+identity and keyboard focus by explicit cursor change; bind metadata and symbol
+positions to the current repository/source; admit only safe positive integer
+line links. Pinned source, back/forward, query and scope semantics remain exact.
+Bounded regressions/types/lint/build, desktop/390px keyboard/console/WCAG and
+same-renderer receipts, docs/glossary and steady-state cost review are the merge
+bar. No backend, source authority, production-signing or ceremony changes.
+
+T57R.5 outcome: eight initial regressions and the later unpinned-permalink
+regression fail before their fixes; eleven new UI checks bring the suite to
+929 passing tests. The browser audit also found and
+repaired an unnamed read-only source textbox. Native Chrome journeys cover
+selection after folding, exact repository metadata and stale-symbol refusal,
+back/forward, malformed preview parameters and valid line 3 source highlighting.
+Six same-renderer idle pairs for Search, file source and Markdown preview are
+byte-identical to main; no PNG, mask, threshold or retry changes. Production and
+receipt types, changed-file lint, production build and scoped charter/cost review
+pass. The lazy Search chunk is 74.44 kB (22.38 kB gzip); File is 22.22 kB
+(7.25 kB gzip). Selected-file readiness in the cold fixture is 812–817 ms,
+including lazy loading and assertion polling; this is UI mechanics, not backend latency or a scale
+claim. Six native Chrome journeys and eight WCAG audits pass at desktop/390px,
+with clean app consoles, exact source requests and no document overflow.
+Types/lint/build, docs/glossary and whitespace pass; scoped charter/cost review
+has no unresolved finding.
+The owning PLAN decision names the added visible-result scans and avoided wrong
+requests. Linux #124, historical Noble bytes and production signing stay pending.
+
 **T57R.1 · Inherited gate repairs** *(cross-cutting; found while landing Epic
 57)* — return `make docs-check`, repository-wide lint and
 `internal/investigation` to green without touching the code those findings sit

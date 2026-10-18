@@ -1637,3 +1637,20 @@ permalink names its failed copy instead of announcing success. A failed copy
 stays named until retry or a change of the displayed item. Newly created API keys
 retain their separate, selectable manual-copy field and must be copied before
 leaving or reloading Settings.
+
+
+### Search selection and file navigation
+
+The j/k result cursor follows the same repository, revision and file when an
+earlier repository group is collapsed or receives more streamed results. New
+streamed results do not take focus away from a control you are using. Enter
+opens the selected visible file at its pinned revision and first match line.
+
+An unpinned file URL resolves that repository's indexed revision before reading
+source. Permalink copying waits until that revision is known. Changing
+repositories never borrows the prior repository's revision;
+changing files clears the selected symbol before any definition, reference or
+hover lookup. Browser back/forward uses the same exact source rules. Only safe
+positive integer `L` values select a source line and override Markdown preview;
+invalid values are ignored. Read-only source is named by its path for assistive
+technology.

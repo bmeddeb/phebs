@@ -49,5 +49,6 @@ export default defineConfig({
     { name: 'typed-index', testMatch: /typed-index\.spec\.ts/ },
     { name: 'appearance', testMatch: /palette-appearance\.spec\.ts/ },
     { name: 'browser-state', testMatch: /browser-state\.spec\.ts/ },
+    { name: 'navigation', testMatch: /navigation\.spec\.ts/ },
   ],
 })

@@ -543,6 +543,32 @@ test('collapse guard: j selects from visible files only', async () => {
   expect(hash()).toBe('#/file?repo=github.com/b/two&path=src/index.ts&ref=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb&L=7')
 })
 
+test('collapsing an earlier repository preserves the selected file identity', async () => {
+  await allFiles()
+  key('j')
+  key('j')
+  key('j')
+  fireEvent.click(screen.getByText('github.com/a/one'))
+  await blurInput()
+  key('Enter')
+  expect(hash()).toBe('#/file?repo=github.com/b/two&path=src/index.ts&ref=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb&L=7')
+})
+
+test('streaming into an earlier group preserves selection without stealing focus', async () => {
+  renderSearch()
+  await act(async () => stream.onBatch!(batch([aMain, bIndex])))
+  await blurInput()
+  key('j')
+  key('j')
+  const fold = screen.getByRole('button', { name: /github\.com\/a\/one/, expanded: true })
+  fold.focus()
+  await act(async () => stream.onBatch!(batch([aUtil])))
+  expect(document.activeElement).toBe(fold)
+  await blurInput()
+  key('Enter')
+  expect(hash()).toBe('#/file?repo=github.com/b/two&path=src/index.ts&ref=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb&L=7')
+})
+
 test('typing guard: keys are ignored while the input is focused', async () => {
   await allFiles()
   await act(async () => screen.getByRole<HTMLInputElement>('textbox').focus())

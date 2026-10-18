@@ -74,7 +74,8 @@ export default function FilePage({ params, isAdmin = false }: { params: URLSearc
   const repo = params.get('repo') ?? ''
   const path = params.get('path') ?? ''
   const ref = params.get('ref') ?? ''
-  const line = Number(params.get('L') ?? '0')
+  const requestedLine = Number(params.get('L') ?? '0')
+  const line = Number.isSafeInteger(requestedLine) && requestedLine > 0 ? requestedLine : 0
   // T44.3: markdown files offer a rendered preview. Source is the default;
   // a line deep-link is a source concept, so ?L= forces source even under
   // ?view=preview (line numbers have no meaning in rendered prose).
@@ -83,16 +84,18 @@ export default function FilePage({ params, isAdmin = false }: { params: URLSearc
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const [source, setSource] = useState<SourceState | null>(null)
-  const [meta, setMeta] = useState<RepoStatus | null>(null)
-  const [metaLoaded, setMetaLoaded] = useState(false)
-  const [navPosition, setNavPosition] = useState<SourcePosition | null>(null)
+  const [metadata, setMetadata] = useState<{ repo: string; value: RepoStatus | null } | null>(null)
+  const [selection, setSelection] = useState<(SourcePosition & { identity: string }) | null>(null)
   const [navigation, setNavigation] = useState<CodeNavigationState | null>(null)
   const sourceGeneration = useRef(0)
   const metaGeneration = useRef(0)
   const navGeneration = useRef(0)
+  const meta = metadata?.repo === repo ? metadata.value : null
+  const metaLoaded = metadata?.repo === repo
   const resolvingRef = !ref && !metaLoaded
   const effectiveRef = ref || meta?.indexed_commit_hash || ''
   const sourceIdentity = `${repo}\u0000${path}\u0000${effectiveRef}`
+  const navPosition = selection?.identity === sourceIdentity ? selection : null
   const currentSource = source?.identity === sourceIdentity ? source : null
   const content = currentSource?.kind === 'text' ? currentSource.content : null
   const error = currentSource?.kind === 'error' ? currentSource.message : ''
@@ -102,7 +105,7 @@ export default function FilePage({ params, isAdmin = false }: { params: URLSearc
     const generation = ++sourceGeneration.current
     const controller = new AbortController()
     setSource({ identity: sourceIdentity, kind: 'loading' })
-    setNavPosition(null)
+    setSelection(null)
     setNavigation(null)
     if (resolvingRef) return
     if (!repo || !path) {
@@ -130,17 +133,15 @@ export default function FilePage({ params, isAdmin = false }: { params: URLSearc
   useEffect(() => {
     const generation = ++metaGeneration.current
     const controller = new AbortController()
-    setMeta(null)
-    setMetaLoaded(false)
+    setMetadata(null)
     fetchRepoStatus(controller.signal)
       .then((rows) => {
         if (generation === metaGeneration.current) {
-          setMeta(rows.find((r) => r.name === repo) ?? null)
-          setMetaLoaded(true)
+          setMetadata({ repo, value: rows.find((r) => r.name === repo) ?? null })
         }
       })
       .catch((error) => {
-        if (!isAbortError(error) && generation === metaGeneration.current) setMetaLoaded(true)
+        if (!isAbortError(error) && generation === metaGeneration.current) setMetadata({ repo, value: null })
       })
     return () => controller.abort()
   }, [repo])
@@ -183,8 +184,8 @@ export default function FilePage({ params, isAdmin = false }: { params: URLSearc
   }, [repo, path, effectiveRef, navPosition])
 
   const selectPosition = useCallback((line: number, character: number) => {
-    setNavPosition({ line, character })
-  }, [])
+    setSelection({ identity: sourceIdentity, line, character })
+  }, [sourceIdentity])
 
   return (
     <div>
@@ -408,8 +409,9 @@ function Breadcrumb({
       )}
       <button
         type="button"
+        disabled={!ref}
         onClick={() => void copyLink(permalink)}
-        title={linkState === 'failed' ? 'Clipboard unavailable — retry copying the permalink' : undefined}
+        title={!ref ? 'Waiting for an indexed revision' : linkState === 'failed' ? 'Clipboard unavailable — retry copying the permalink' : undefined}
         className={css(btnStyle(tok))}
       >
         {linkState === 'done' ? 'Link copied' : linkState === 'failed' ? 'Copy failed' : 'Permalink'}
@@ -770,6 +772,7 @@ function CodeViewer({
     languageFor(path).then((lang) => {
       if (cancelled || !host.current) return
       const extensions: Extension[] = [
+        EditorView.contentAttributes.of({ 'aria-label': `Source code for ${path}` }),
         lineNumbers(),
         EditorView.editable.of(false),
         EditorState.readOnly.of(true),

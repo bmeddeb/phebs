@@ -55,7 +55,7 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
   const [phase, setPhase] = useState<Phase>('idle')
   const [error, setError] = useState('')
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
-  const [selected, setSelected] = useState(-1)
+  const [selectedKey, setSelectedKey] = useState('')
   const [searchGeneration, setSearchGeneration] = useState(0)
   const stopRef = useRef<() => void>(() => {})
   const inputRef = useRef<HTMLInputElement>(null)
@@ -101,7 +101,7 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
   // the hash is the source of truth: searching = navigating
   useEffect(() => {
     setInput(urlQuery)
-    setSelected(-1)
+    setSelectedKey('')
     setCollapsed(new Set())
     if (!urlQuery) {
       setPhase('idle')
@@ -282,6 +282,10 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
     () => groups.filter(([repo]) => !collapsed.has(repo)).flatMap(([, fs]) => fs),
     [groups, collapsed],
   )
+  const selected = useMemo(
+    () => visible.findIndex((file) => fileKey(file) === selectedKey),
+    [visible, selectedKey],
+  )
 
   const entering = useMemo(() => {
     const repos = new Set<string>()
@@ -318,9 +322,10 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
       if (interactive || e.metaKey || e.ctrlKey || e.altKey) return
       if (e.key === 'j' || e.key === 'k') {
         e.preventDefault()
-        setSelected((s) => {
-          const next = e.key === 'j' ? s + 1 : s - 1
-          return Math.max(0, Math.min(visible.length - 1, next))
+        setSelectedKey((currentKey) => {
+          const current = visible.findIndex((file) => fileKey(file) === currentKey)
+          const next = Math.max(0, Math.min(visible.length - 1, current + (e.key === 'j' ? 1 : -1)))
+          return visible[next] ? fileKey(visible[next]) : ''
         })
       } else if (e.key === 'Enter' && selected >= 0 && visible[selected]) {
         const f = visible[selected]
@@ -354,13 +359,9 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
   // …but move real keyboard focus ONLY on an explicit cursor change (audit
   // F21): a streamed batch must never steal focus from a link or button the
   // user tabbed into. Rows carry tabIndex -1 for this.
-  const visibleRef = useRef(visible)
-  visibleRef.current = visible
   useEffect(() => {
-    if (selected < 0 || !visibleRef.current[selected]) return
-    rowRefs.current.get(fileKey(visibleRef.current[selected]))?.focus({ preventScroll: true })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected])
+    rowRefs.current.get(selectedKey)?.focus({ preventScroll: true })
+  }, [selectedKey])
 
   const toggleGroup = (repo: string) =>
     setCollapsed((c) => {
