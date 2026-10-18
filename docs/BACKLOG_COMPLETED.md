@@ -11164,3 +11164,15 @@ cover ordinary v1 success, generated positive v2, retained legacy plans,
 failed/unsupported terminal outcomes, configuration widening, decode/reopen
 and fixed pre-change v1 profile/request hash goldens. Independent review has no
 remaining findings. This is a local contract correction, not runtime admission.
+
+## T58.2 · Finite Thrift source assessment (2026-10-18)
+
+The independently reviewed unchanged-reader assessment is complete with
+**NO-GO**, not a successful quality or promotion gate. Two identical streams
+cover125labelled sites and22assertions; six unsupported positive promotions and
+one ambiguity missing candidate identities fail the frozen contract. Eleven
+supported candidates match. Inputs/oracle/reader remain unchanged; no tuning or
+quality retry follows. Actual clean build metadata, first pre-reader admission
+stop, inert controls, raw streams, score, costs and joined custody are retained
+in [T58.2 results](../spike/t582/results/README.md). T58.3 Thrift stable recipe
+registration and promotion stay not releasable on the current name-based reader.

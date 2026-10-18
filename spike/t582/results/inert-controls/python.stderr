@@ -1,0 +1,11 @@
+test_duplicate_json_keys_refused (test_score.CheckerBoundaries) ... ok
+test_exact_tier_and_wrong_lineage_do_not_match (test_score.CheckerBoundaries) ... ok
+test_overlong_span_refused (test_score.CheckerBoundaries) ... ok
+test_postlaunch_cleanup_exception_keeps_unknown_custody (test_score.CheckerBoundaries) ... ok
+test_registration_candidates_not_inferred_from_count (test_score.CheckerBoundaries) ... ok
+test_registration_schema_and_extra_keys_refused (test_score.CheckerBoundaries) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.009s
+
+OK

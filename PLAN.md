@@ -13553,3 +13553,19 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   direct-PID RSS limits are explicit; no production request/tick/startup/retry/
   publication, schema/cache/lock or runtime adoption changes. Any mismatch is a
   retained NO-GO, with no post-output oracle or recognizer tuning.
+
+- **2026-10-18 — T58.2 finite Thrift decision is NO-GO.** Exact clean3feaf78e
+  and unchanged contract778d4cb3yield two identical126,527byte streams in
+  0.390822416s/0.157405375s. All125labelled sites and22raw assertions are scored;
+  eleven supported candidates match, but six unproved/lookalike positive
+  promotions and one count-only constructor ambiguity fail the frozen claim.
+  Retain first bytes and no post-output relabeling/reader tuning. The earlier
+  worktree build stopped before any reader; reuse the existing real.git clean
+  clone workaround at the identical source commit to enforce actual VCS data.
+  Inert controls pass and every launched workload group is joined/absent before
+  scratch removal. T58.3 Thrift stable recipe/promotion remains not releasable on
+  this reader. This finite purposive, source-derived result adds no population
+  accuracy, exact receiver/wire/runtime registration, T13.1 or release claim.
+  No production source, schema/cache/lock, query/sync/startup/retry/publication or
+  child work changes; observed direct reader peak RSS remains about80.4MB,
+  without a hard-heap, aggregate compiler-family, CPU, host-capacity or SLO claim.

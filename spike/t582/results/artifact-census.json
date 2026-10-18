@@ -1,0 +1,128 @@
+{
+  "bytes_excluding_census": 339707,
+  "files_excluding_this_self_referential_census": 24,
+  "rows": [
+    {
+      "bytes": 3247,
+      "path": "README.md",
+      "sha256": "a9270ec2a1684699119dac2d55f9adc9ad8d6aff79f0e488f3f3ecab085c715f"
+    },
+    {
+      "bytes": 0,
+      "path": "admission-stop-worktree-vcs/binary-metadata.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 387,
+      "path": "admission-stop-worktree-vcs/binary-metadata.stdout",
+      "sha256": "828cdb10b6b62e07aee7fbae631055795dd921f3b095059695cb7a0010de6cef"
+    },
+    {
+      "bytes": 0,
+      "path": "admission-stop-worktree-vcs/build.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "admission-stop-worktree-vcs/build.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 9772,
+      "path": "admission-stop-worktree-vcs/receipt.json",
+      "sha256": "d1a57d8a6b137338330fad7d507254e20ee1e0ca25af5ffa314d5b4da4b59f8e"
+    },
+    {
+      "bytes": 0,
+      "path": "admission-stop-worktree-vcs/runner.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "first-reader/binary-metadata.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 553,
+      "path": "first-reader/binary-metadata.stdout",
+      "sha256": "7b76ecef0b45cc2569a8b7ea0f65309e0f3d7ab7e6ba5fb5efa014bfc49e929f"
+    },
+    {
+      "bytes": 0,
+      "path": "first-reader/build.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "first-reader/build.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 126527,
+      "path": "first-reader/pass1.jsonl",
+      "sha256": "e14e23779da5c4e21d0a1997fe9c77f0e4245c5d531f8e7e89033eff2e0e88ae"
+    },
+    {
+      "bytes": 0,
+      "path": "first-reader/pass1.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 126527,
+      "path": "first-reader/pass2.jsonl",
+      "sha256": "e14e23779da5c4e21d0a1997fe9c77f0e4245c5d531f8e7e89033eff2e0e88ae"
+    },
+    {
+      "bytes": 0,
+      "path": "first-reader/pass2.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 14022,
+      "path": "first-reader/receipt.json",
+      "sha256": "d604b40be160aed0c2b10728b1e350992c96423e38c154906e9d0021d0a9a56d"
+    },
+    {
+      "bytes": 0,
+      "path": "first-reader/runner.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 46928,
+      "path": "first-reader/score.json",
+      "sha256": "122a0b4ca99f84c992ee5045b41dce8efba2b39ee51671885506483b75fe4bfa"
+    },
+    {
+      "bytes": 0,
+      "path": "inert-controls/go.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 55,
+      "path": "inert-controls/go.stdout",
+      "sha256": "4f391d0994a1de5c0b0af7501a6a4eeb912e9577391bfef5df5ad2c3cc7fb32f"
+    },
+    {
+      "bytes": 590,
+      "path": "inert-controls/python.stderr",
+      "sha256": "8c0b638c39889b9df12819d02ee2406ca3a2180c1633895463448986f1df8a18"
+    },
+    {
+      "bytes": 0,
+      "path": "inert-controls/python.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 5416,
+      "path": "inert-controls/receipt.json",
+      "sha256": "4f1477262c29ef3b7808eafc111ea660aaca76c1573e6c992ee6e3f5b07ecd14"
+    },
+    {
+      "bytes": 5683,
+      "path": "outcome-cost.json",
+      "sha256": "a4cb3570fd21ef96fd13cad161993f217c1acb8cb6220e491bd689e73b464769"
+    }
+  ],
+  "rows_sha256": "4ef4682c7512bb1390ed7af2cd1e529136c395ae8ed826c96236c0ca5e1881d1",
+  "schema": "t582-retained-result-census-v1"
+}

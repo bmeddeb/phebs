@@ -1,0 +1,130 @@
+{
+  "actual_binary_identity": {
+    "bytes": 4318146,
+    "sha256": "a4b47f90f18ee83fab055c4c1ed56f34e641e328158ad20e97c195e4f5b34adc"
+  },
+  "actual_binary_metadata": "first-reader/binary-metadata.stdout",
+  "actual_build_vcs_modified": false,
+  "actual_build_vcs_revision": "3feaf78e91635b9a811b9e0e201ed979092c1d42",
+  "candidate_contract_sha256": "778d4cb3bca185a9327782a8d241f878da56c36e0439e4988674b0248f981e54",
+  "controls": {
+    "all_passed": true,
+    "go_internal_test_seconds": 0.332,
+    "go_selector_outer_wall_seconds": 0.912245875,
+    "python_outer_wall_seconds": 0.08429483300000007,
+    "python_tests": 6,
+    "receipt": "inert-controls/receipt.json",
+    "rerun_in_clone": false
+  },
+  "cost": {
+    "build_peak_sampled_direct_pid_rss_bytes": 26345472,
+    "build_qualification": "Existing cache, offline, not cold; compiler descendants share build custody but are not covered by sampled direct-driver RSS.",
+    "build_wall_seconds": 0.570226625,
+    "cpu": "unmeasured",
+    "deterministic_double_pass": true,
+    "encoded_stdin_bytes": 12664422,
+    "logical_read_bytes_per_pass": 9482990,
+    "memory_qualification": "Observed direct process values, not a hard heap or aggregate family bound; original OS wait4 values remain in exact receipts without an additional compiler-family claim.",
+    "offered_source_bytes_per_pass": 9436787,
+    "output_bytes_per_pass": 126527,
+    "output_sha256": "e14e23779da5c4e21d0a1997fe9c77f0e4245c5d531f8e7e89033eff2e0e88ae",
+    "production_steady_state_change": "none; offline reader evaluation only, no runtime registration/client/server/store/UI/publication work",
+    "python_direct_runner_lifetime_high_water_bytes": 101285888,
+    "reader_peak_sampled_direct_pid_rss_bytes": [
+      80297984,
+      80379904
+    ],
+    "reader_wall_seconds": [
+      0.390822416,
+      0.15740537499999996
+    ]
+  },
+  "custody": {
+    "all_supervised_children_joined_and_groups_absent": true,
+    "disposable_binary_or_source_clone_retained_in_repository": false,
+    "frozen_inputs_unchanged": true,
+    "git_metadata_qualification": "Six read-only Git metadata calls use check_output with 5s timeout and exact direct-child wait. Their process groups/family RSS are not part of the supervised workload ledger.",
+    "scratch_removed_after_join": true,
+    "source_unchanged": true
+  },
+  "date": "2026-10-18",
+  "decision": "NO-GO",
+  "evaluator_checkpoint": "3feaf78e91635b9a811b9e0e201ed979092c1d42",
+  "failed_sites": [
+    {
+      "reason": "false-positive-promotion",
+      "site": "public-095",
+      "unit": "public"
+    },
+    {
+      "reason": "false-positive-promotion",
+      "site": "c05-foreign-receiver/0",
+      "unit": "c05-foreign-receiver"
+    },
+    {
+      "reason": "false-positive-promotion",
+      "site": "c06-local-constructor/0",
+      "unit": "c06-local-constructor"
+    },
+    {
+      "reason": "false-positive-promotion",
+      "site": "c07-foreign-constructor/0",
+      "unit": "c07-foreign-constructor"
+    },
+    {
+      "reason": "false-positive-promotion",
+      "site": "c08-shadowed-alias/0",
+      "unit": "c08-shadowed-alias"
+    },
+    {
+      "reason": "registration-ambiguity-candidates-not-exposed",
+      "site": "c15-constructor-ambiguity/0",
+      "unit": "c15-constructor-ambiguity"
+    },
+    {
+      "reason": "false-positive-promotion",
+      "site": "c25-handler-call/0",
+      "unit": "c25-handler-call"
+    }
+  ],
+  "limits": [
+    "Source-derived independently reviewed labels, disclosed prior reader exposure; not blind",
+    "One historically reused purposive public repository at Apache0.14.1; legacy0.14.1/modern0.19.0 copies are authored header controls only",
+    "No general/public-population accuracy, confidence, absence or complete repository coverage",
+    "No exact receiver/IDL/wire/cross-module identity or runtime registration/client/traffic claim",
+    "No T13.1/T58.3 promotion/common-bar satisfaction, recipe registration, release, signature or activation",
+    "Current name-based reader remains unsuitable for this frozen observation claim; no reader/label tuning or quality rerun follows"
+  ],
+  "lineage": "Original worktree admission stopped after successful offline build, before any reader pass, because pinned Go recognizes .git directories but not this worktree .git file. Root supplied clean shared clone of SAME evaluator commit, all63input/13implementation rows byte-exact; no source/oracle/bound/code change. Exactly two originally planned reader processes then ran once.",
+  "measurement": {
+    "all_labelled_sites": 125,
+    "authored_labelled_sites": 23,
+    "exact_required_file_gaps": 2,
+    "explicit_gap_failure": false,
+    "false_positive_promotions": 6,
+    "generated_body_or_unmatched_or_duplicate_rows": 0,
+    "independent_authored_cases": 26,
+    "method_ambiguity_raw_edges": 2,
+    "method_ambiguity_source_site": 1,
+    "mismatches": 7,
+    "public_call_census": 102,
+    "raw_assertions": 22,
+    "registration_ambiguity_missing_candidate_identities": 1,
+    "supported_candidates_matched": 11,
+    "units_per_pass": 27
+  },
+  "original_admission_stop": {
+    "all_supervised_joined": true,
+    "reader_passes": 0,
+    "reason": "actual compiled tool/VCS metadata mismatch",
+    "receipt": "admission-stop-worktree-vcs/receipt.json",
+    "scratch_removed": true,
+    "source_unchanged": true
+  },
+  "preregistration_sha256": "6e9f39ad56cbba47eb4a5ea74630b3a33f8b747ac6c4db7d1256ccaf84fd51e5",
+  "production_adoption": false,
+  "reader_changed": false,
+  "recipe_registration_or_release_authorized": false,
+  "schema": "t582-measured-finite-outcome-cost-v1",
+  "source_checkpoint": "842fb139edc1fa104c06d66d446b1bfc09a85314"
+}

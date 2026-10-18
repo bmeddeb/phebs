@@ -1,0 +1,270 @@
+{
+  "all_supervised_workload_children_joined_and_groups_absent": true,
+  "binary": {
+    "bytes": 4318146,
+    "sha256": "35f264f6d00ab163297df475c80f4578ea3fb13465cc07237de3df854d53fdfd"
+  },
+  "binary_metadata_command": {
+    "argv": [
+      "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+      "version",
+      "-m",
+      "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t582-buz4_w7r/reader"
+    ],
+    "cpu_measurement": "unmeasured",
+    "exact_wait4_direct_child_peak_rss_bytes": 14254080,
+    "execution_reserve_seconds": 2,
+    "exit": 0,
+    "joined": true,
+    "launch_attempted": true,
+    "owned_process_group_absent": true,
+    "peak_observed_direct_pid_rss_bytes": 14254080,
+    "phase": "complete",
+    "pid": 95086,
+    "rss_qualification": "Direct driver/parser only; build compiler descendants excluded. Observation, not hard heap or family RSS guarantee.",
+    "rss_sample_errors": 0,
+    "rss_samples": 1,
+    "stderr_bytes": 0,
+    "stderr_observed_bytes": 0,
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stdout_bytes": 387,
+    "stdout_observed_bytes": 387,
+    "stdout_sha256": "828cdb10b6b62e07aee7fbae631055795dd921f3b095059695cb7a0010de6cef",
+    "stop": null,
+    "wall_limit_seconds_including_cleanup": 5,
+    "wall_seconds": 0.008764042000000027
+  },
+  "build": {
+    "argv": [
+      "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+      "build",
+      "-mod=readonly",
+      "-p=1",
+      "-trimpath",
+      "-buildvcs=true",
+      "-o",
+      "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t582-buz4_w7r/reader",
+      "./export"
+    ],
+    "cpu_measurement": "unmeasured",
+    "exact_wait4_direct_child_peak_rss_bytes": 92831744,
+    "execution_reserve_seconds": 2,
+    "exit": 0,
+    "joined": true,
+    "launch_attempted": true,
+    "owned_process_group_absent": true,
+    "peak_observed_direct_pid_rss_bytes": 26624000,
+    "phase": "complete",
+    "pid": 95076,
+    "rss_qualification": "Direct driver/parser only; build compiler descendants excluded. Observation, not hard heap or family RSS guarantee.",
+    "rss_sample_errors": 0,
+    "rss_samples": 22,
+    "stderr_bytes": 0,
+    "stderr_observed_bytes": 0,
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stdout_bytes": 0,
+    "stdout_observed_bytes": 0,
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stop": null,
+    "wall_limit_seconds_including_cleanup": 120,
+    "wall_seconds": 0.47712587500000003
+  },
+  "candidate_contract_sha256": "778d4cb3bca185a9327782a8d241f878da56c36e0439e4988674b0248f981e54",
+  "candidate_input": {
+    "encoded_bytes": 12664422,
+    "offered_source_bytes": 9436787,
+    "oracle_fields_in_candidate_input": false,
+    "sha256": "70307ac8005b0030a94530dc1bfc3144c53406444c5194d348327524801db223",
+    "units": 27
+  },
+  "children": [
+    {
+      "argv": [
+        "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+        "build",
+        "-mod=readonly",
+        "-p=1",
+        "-trimpath",
+        "-buildvcs=true",
+        "-o",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t582-buz4_w7r/reader",
+        "./export"
+      ],
+      "cpu_measurement": "unmeasured",
+      "exact_wait4_direct_child_peak_rss_bytes": 92831744,
+      "execution_reserve_seconds": 2,
+      "exit": 0,
+      "joined": true,
+      "launch_attempted": true,
+      "owned_process_group_absent": true,
+      "peak_observed_direct_pid_rss_bytes": 26624000,
+      "phase": "complete",
+      "pid": 95076,
+      "rss_qualification": "Direct driver/parser only; build compiler descendants excluded. Observation, not hard heap or family RSS guarantee.",
+      "rss_sample_errors": 0,
+      "rss_samples": 22,
+      "stderr_bytes": 0,
+      "stderr_observed_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 0,
+      "stdout_observed_bytes": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stop": null,
+      "wall_limit_seconds_including_cleanup": 120,
+      "wall_seconds": 0.47712587500000003
+    },
+    {
+      "argv": [
+        "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+        "version",
+        "-m",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t582-buz4_w7r/reader"
+      ],
+      "cpu_measurement": "unmeasured",
+      "exact_wait4_direct_child_peak_rss_bytes": 14254080,
+      "execution_reserve_seconds": 2,
+      "exit": 0,
+      "joined": true,
+      "launch_attempted": true,
+      "owned_process_group_absent": true,
+      "peak_observed_direct_pid_rss_bytes": 14254080,
+      "phase": "complete",
+      "pid": 95086,
+      "rss_qualification": "Direct driver/parser only; build compiler descendants excluded. Observation, not hard heap or family RSS guarantee.",
+      "rss_sample_errors": 0,
+      "rss_samples": 1,
+      "stderr_bytes": 0,
+      "stderr_observed_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 387,
+      "stdout_observed_bytes": 387,
+      "stdout_sha256": "828cdb10b6b62e07aee7fbae631055795dd921f3b095059695cb7a0010de6cef",
+      "stop": null,
+      "wall_limit_seconds_including_cleanup": 5,
+      "wall_seconds": 0.008764042000000027
+    }
+  ],
+  "evaluator_git_after": "3feaf78e91635b9a811b9e0e201ed979092c1d42",
+  "evaluator_git_commit": "3feaf78e91635b9a811b9e0e201ed979092c1d42",
+  "evaluator_git_tree": "5f71330dbe2ba1af22ace6ef2623dcc0c206b4fa",
+  "frozen": {
+    "bytes": 821050,
+    "files": 63,
+    "preregistration_sha256": "6e9f39ad56cbba47eb4a5ea74630b3a33f8b747ac6c4db7d1256ccaf84fd51e5",
+    "source_checkpoint": "842fb139edc1fa104c06d66d446b1bfc09a85314"
+  },
+  "frozen_after": {
+    "bytes": 821050,
+    "files": 63,
+    "preregistration_sha256": "6e9f39ad56cbba47eb4a5ea74630b3a33f8b747ac6c4db7d1256ccaf84fd51e5",
+    "source_checkpoint": "842fb139edc1fa104c06d66d446b1bfc09a85314"
+  },
+  "git_metadata_qualification": "Six read-only Git metadata calls use check_output with 5s timeout and exact direct-child wait. Their process groups/family RSS are not part of the supervised workload ledger.",
+  "host": {
+    "machine": "arm64",
+    "platform": "macOS-26.6.2-arm64-arm-64bit"
+  },
+  "outcome": "stopped-no-retry",
+  "passes": [],
+  "python_direct_process_peak_rss_bytes": 100909056,
+  "python_rss_qualification": "Darwin direct runner lifetime high-water value, excludes all child RSS; no hard heap guarantee.",
+  "schema": "t582-first-execution-v1",
+  "scratch_removed_after_join": true,
+  "source_inventory": [
+    {
+      "bytes": 9366,
+      "path": "../../go.mod",
+      "sha256": "424c7e1038c71c10676fc3bad01e155ebc5f912a4eea65e90c284b30951a9275"
+    },
+    {
+      "bytes": 99030,
+      "path": "../../go.sum",
+      "sha256": "d7aa72d0c2c4283125d37d4377e74be0e87723735a27015900d23092798b1665"
+    },
+    {
+      "bytes": 21661,
+      "path": "../../internal/extract/extractors/thriftgo/thriftgo.go",
+      "sha256": "1d9de89d362e357e16dc2efd12e2bcba3677a02ee2e30c033744c6e1bacd2f76"
+    },
+    {
+      "bytes": 3143,
+      "path": "../../internal/extract/sdk/attribution.go",
+      "sha256": "634e071d8d6d6865734e1ee319e1fafafd4faeffd527cf264acaf16a6a6f35eb"
+    },
+    {
+      "bytes": 8439,
+      "path": "../../internal/extract/sdk/sdk.go",
+      "sha256": "aebb28d5450088a99e1a6aa21a4f2f4fe615d58574e01280a16978761dfb3541"
+    },
+    {
+      "bytes": 5721,
+      "path": "call-span-witnesses.json",
+      "sha256": "92a86c027cf4da5a2862ba19790d1dfdd6b89abe3689000291fc54894efe9d4d"
+    },
+    {
+      "bytes": 11333,
+      "path": "export/main.go",
+      "sha256": "e0f06298f81494d9b01a8d2e5291ba949e64b3909afa046bc6f76a330aaa097a"
+    },
+    {
+      "bytes": 2002,
+      "path": "export/main_test.go",
+      "sha256": "62f070127b3891c4982fc0de10b414fdea84117a9a2a3b0006faca929ff67e45"
+    },
+    {
+      "bytes": 138,
+      "path": "go.mod",
+      "sha256": "19108c20c167bd46d9e176f029b7f4b1512284bc34402f442b4cf44f0066a36b"
+    },
+    {
+      "bytes": 20350,
+      "path": "run.py",
+      "sha256": "087323f239bceb270e4346cf8aaa687bc2646645e8c80148b6ceca492ffcf90b"
+    },
+    {
+      "bytes": 17664,
+      "path": "score.py",
+      "sha256": "13278aedb81497cf706859cb570a6d7d3ac79afbc19a4064cf5f32d88775cce2"
+    },
+    {
+      "bytes": 1590,
+      "path": "source-review.json",
+      "sha256": "69b790081486c495244d2598f4cb9a2be9fda979f70acfb037ea36988285d72f"
+    },
+    {
+      "bytes": 5285,
+      "path": "test_score.py",
+      "sha256": "18113cf044f7395a1b3ed3be8fdf52c5f61b2e75a644e1e4a978c27331eb0e4b"
+    }
+  ],
+  "source_unchanged": true,
+  "stop_class": "ValueError",
+  "stop_diagnostic": "actual compiled tool/VCS metadata mismatch",
+  "tools": [
+    {
+      "bytes": 14500160,
+      "path": "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+      "sha256": "3925fc3221ac440ebf7c35361ff663bed0c7bdb2e0a157b75fe993607ffe0a19"
+    },
+    {
+      "bytes": 35,
+      "path": "/opt/homebrew/opt/phebs-go-1.26.5/VERSION",
+      "sha256": "11b4fb14680701f98ca60fd8464a836ca4374f17896a125f4510ab6ae8cecc9b"
+    },
+    {
+      "bytes": 4919904,
+      "path": "/opt/homebrew/opt/phebs-go-1.26.5/pkg/tool/darwin_arm64/asm",
+      "sha256": "7de57e9965f388f1ee3342a01953fad34fd819c18e2308af0bbbf103b296ea50"
+    },
+    {
+      "bytes": 24625104,
+      "path": "/opt/homebrew/opt/phebs-go-1.26.5/pkg/tool/darwin_arm64/compile",
+      "sha256": "610758d168cd8ab5a69a71d916af6f3a2e6aa1b5c04b491ddd563e32c8ceb78e"
+    },
+    {
+      "bytes": 6335152,
+      "path": "/opt/homebrew/opt/phebs-go-1.26.5/pkg/tool/darwin_arm64/link",
+      "sha256": "698f5f6a84cffa376d0d2d882a620dae7b95dc96e6491bc1864f704dcbd6d4eb"
+    }
+  ]
+}

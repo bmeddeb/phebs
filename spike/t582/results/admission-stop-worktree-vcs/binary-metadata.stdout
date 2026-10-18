@@ -1,0 +1,13 @@
+/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t582-buz4_w7r/reader: go1.26.5
+	path	github.com/bmeddeb/phebs/spike/t582/export
+	mod	github.com/bmeddeb/phebs/spike/t582	(devel)	
+	dep	github.com/bmeddeb/phebs	v0.0.0
+	=>	../..	(devel)	
+	
+	build	-buildmode=exe
+	build	-compiler=gc
+	build	-trimpath=true
+	build	CGO_ENABLED=0
+	build	GOARCH=arm64
+	build	GOOS=darwin
+	build	GOARM64=v8.0

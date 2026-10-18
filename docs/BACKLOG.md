@@ -21052,10 +21052,31 @@ and independent peer source review. Immutable candidate contract778d4cb3binds
 all inputs/implementation/tools; planned inert checks and the two finite passes
 remain to execute. Original oracle/preregistration and product reader are exact.
 
+**T58.2 finite decision complete (2026-10-18): NO-GO.** At exact clean source
+`3feaf78e91635b9a811b9e0e201ed979092c1d42`, the two first reader passes took
+0.390822416s and0.157405375s; each emitted126,527bytes with identical SHA-256
+`e14e23779da5c4e21d0a1997fe9c77f0e4245c5d531f8e7e89033eff2e0e88ae`.
+All125labelled sites and22raw assertions enter scoring. Eleven supported
+candidates match, but six unproved/lookalike sites are positively promoted and
+constructor ambiguity exposes a count without its required candidate identities:
+seven mismatches, so the frozen claim fails. No oracle, reader, bound or threshold
+changed after output. Go/Python inert controls pass; build/metadata/two reader
+children joined and groups were absent before scratch removal. Original
+worktree build admission stopped before any reader because Go omitted VCS data;
+the existing clean-clone workaround restored actual clean metadata at the same
+source commit. Both admission and measured records remain retained. This is a
+purposive source-derived finite assessment, not population accuracy, exact wire/
+receiver identity, runtime registration, T13.1 satisfaction or promotion.
+
 **T58.3 · Independent stable recipe registration and measured promotion** —
 satisfy the common bar per protocol/claim, retain proof/coverage/HTTP/MCP
 parity, and expose only admitted matching evidence. These results neither
 promote Epic 47 exact resolution nor all Contract Atlas implementation detail.
+
+T58.3 Thrift posture (2026-10-18): **not releasable on the current name-based
+reader** after T58.2's retained NO-GO. No stable recipe registration, production
+signature or lookup-by-operation activation is created. No further identity round
+or recognizer tuning is selected by this finite assessment.
 
 *T58.3a identity round (2026-10-14, Claude lead, Linux track): **fails
 (underpowered)**. See [GRPC_IDENTITY_QUALITY_PROTOCOL.md](GRPC_IDENTITY_QUALITY_PROTOCOL.md)

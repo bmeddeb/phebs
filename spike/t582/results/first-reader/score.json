@@ -1,0 +1,1695 @@
+{
+  "all_labelled_sites": 125,
+  "all_raw_assertions": 22,
+  "decision": "NO-GO",
+  "denominators": {
+    "authored": {
+      "ambiguous-method-call": 1,
+      "ambiguous-processor-construction": 1,
+      "client-construction-no-positive": 1,
+      "dynamic-no-positive": 3,
+      "lookalike-no-positive": 5,
+      "supported-method-call": 5,
+      "supported-processor-construction": 3,
+      "unsupported-no-positive": 3,
+      "wrapper-outer-no-positive": 1
+    },
+    "exact_identity": "unmeasured",
+    "file_controls": {
+      "comments_strings": 1,
+      "empty": 1,
+      "generated_only": 1,
+      "malformed": 1,
+      "oversized": 1
+    },
+    "public": {
+      "excluded-other-call": 98,
+      "supported-method-call": 2,
+      "supported-processor-construction": 1,
+      "unproved-generated-method-name": 1
+    },
+    "runtime_registration": "unmeasured",
+    "unselected_public_population": "unmeasured"
+  },
+  "emission_census": [
+    {
+      "issues": [],
+      "object": "agent.Agent",
+      "predicate": "REGISTERS_THRIFT_SERVICE",
+      "raw_row": 0,
+      "semantic_disposition": "See owning site state or explicit unmatched/generated/duplicate issue.",
+      "tier": "derived",
+      "unit": "public"
+    },
+    {
+      "issues": [],
+      "object": "/sampling.SamplingManager/getSamplingStrategy",
+      "predicate": "CALLS_OPERATION",
+      "raw_row": 1,
+      "semantic_disposition": "See owning site state or explicit unmatched/generated/duplicate issue.",
+      "tier": "heuristic",
+      "unit": "public"
+    },
+    {
+      "issues": [],
+      "object": "/agent.Agent/emitBatch",
+      "predicate": "CALLS_OPERATION",
+      "raw_row": 2,
+      "semantic_disposition": "See owning site state or explicit unmatched/generated/duplicate issue.",
+      "tier": "heuristic",
+      "unit": "public"
+    },
+    {
+      "issues": [],
+      "object": "/agent.Agent/emitBatch",
+      "predicate": "CALLS_OPERATION",
+      "raw_row": 3,
+      "semantic_disposition": "See owning site state or explicit unmatched/generated/duplicate issue.",
+      "tier": "heuristic",
+      "unit": "public"
+    },
+    {
+      "issues": [],
+      "object": "/agent.Agent/emitBatch",
+      "predicate": "CALLS_OPERATION",
+      "raw_row": 0,
+      "semantic_disposition": "See owning site state or explicit unmatched/generated/duplicate issue.",
+      "tier": "heuristic",
+      "unit": "c01-direct-client"
+    },
+    {
+      "issues": [],
+      "object": "/agent.Agent/emitBatch",
+      "predicate": "CALLS_OPERATION",
+      "raw_row": 0,
+      "semantic_disposition": "See owning site state or explicit unmatched/generated/duplicate issue.",
+      "tier": "heuristic",
+      "unit": "c02-go-defer"
+    },
+    {
+      "issues": [],
+      "object": "/agent.Agent/emitBatch",
+      "predicate": "CALLS_OPERATION",
+      "raw_row": 1,
+      "semantic_disposition": "See owning site state or explicit unmatched/generated/duplicate issue.",
+      "tier": "heuristic",
+      "unit": "c02-go-defer"
+    },
+    {
+      "issues": [],
+      "object": "agent.Agent",
+      "predicate": "REGISTERS_THRIFT_SERVICE",
+      "raw_row": 0,
+      "semantic_disposition": "See owning site state or explicit unmatched/generated/duplicate issue.",
+      "tier": "derived",
+      "unit": "c03-constructor"
+    },
+    {
+      "issues": [],
+      "object": "agent.Agent",
+      "predicate": "REGISTERS_THRIFT_SERVICE",
+      "raw_row": 0,
+      "semantic_disposition": "See owning site state or explicit unmatched/generated/duplicate issue.",
+      "tier": "derived",
+      "unit": "c04-dot-constructor"
+    },
+    {
+      "issues": [],
+      "object": "/agent.Agent/emitBatch",
+      "predicate": "CALLS_OPERATION",
+      "raw_row": 0,
+      "semantic_disposition": "See owning site state or explicit unmatched/generated/duplicate issue.",
+      "tier": "heuristic",
+      "unit": "c05-foreign-receiver"
+    },
+    {
+      "issues": [],
+      "object": "agent.Agent",
+      "predicate": "REGISTERS_THRIFT_SERVICE",
+      "raw_row": 0,
+      "semantic_disposition": "See owning site state or explicit unmatched/generated/duplicate issue.",
+      "tier": "derived",
+      "unit": "c06-local-constructor"
+    },
+    {
+      "issues": [],
+      "object": "agent.Agent",
+      "predicate": "REGISTERS_THRIFT_SERVICE",
+      "raw_row": 0,
+      "semantic_disposition": "See owning site state or explicit unmatched/generated/duplicate issue.",
+      "tier": "derived",
+      "unit": "c07-foreign-constructor"
+    },
+    {
+      "issues": [],
+      "object": "agent.Agent",
+      "predicate": "REGISTERS_THRIFT_SERVICE",
+      "raw_row": 0,
+      "semantic_disposition": "See owning site state or explicit unmatched/generated/duplicate issue.",
+      "tier": "derived",
+      "unit": "c08-shadowed-alias"
+    },
+    {
+      "issues": [],
+      "object": "agent.Agent",
+      "predicate": "REGISTERS_THRIFT_SERVICE",
+      "raw_row": 0,
+      "semantic_disposition": "See owning site state or explicit unmatched/generated/duplicate issue.",
+      "tier": "derived",
+      "unit": "c12-wrapper"
+    },
+    {
+      "issues": [],
+      "object": "/agent.Agent/emitBatch",
+      "predicate": "UNRESOLVED_THRIFT_CALL",
+      "raw_row": 0,
+      "semantic_disposition": "See owning site state or explicit unmatched/generated/duplicate issue.",
+      "tier": "unresolved",
+      "unit": "c14-method-ambiguity"
+    },
+    {
+      "issues": [],
+      "object": "/otheragent.Agent/emitBatch",
+      "predicate": "UNRESOLVED_THRIFT_CALL",
+      "raw_row": 1,
+      "semantic_disposition": "See owning site state or explicit unmatched/generated/duplicate issue.",
+      "tier": "unresolved",
+      "unit": "c14-method-ambiguity"
+    },
+    {
+      "issues": [],
+      "object": "NewAgentProcessor",
+      "predicate": "UNRESOLVED_THRIFT_REGISTRATION",
+      "raw_row": 0,
+      "semantic_disposition": "See owning site state or explicit unmatched/generated/duplicate issue.",
+      "tier": "unresolved",
+      "unit": "c15-constructor-ambiguity"
+    },
+    {
+      "issues": [],
+      "object": "/agent.Agent/emitBatch",
+      "predicate": "CALLS_OPERATION",
+      "raw_row": 0,
+      "semantic_disposition": "See owning site state or explicit unmatched/generated/duplicate issue.",
+      "tier": "heuristic",
+      "unit": "c19-legacy-header"
+    },
+    {
+      "issues": [],
+      "object": "/agent.Agent/emitBatch",
+      "predicate": "CALLS_OPERATION",
+      "raw_row": 0,
+      "semantic_disposition": "See owning site state or explicit unmatched/generated/duplicate issue.",
+      "tier": "heuristic",
+      "unit": "c20-modern-019-header"
+    },
+    {
+      "issues": [],
+      "object": "parse_error",
+      "predicate": "THRIFT_EXTRACTION_GAP",
+      "raw_row": 0,
+      "semantic_disposition": "See owning site state or explicit unmatched/generated/duplicate issue.",
+      "tier": "unresolved",
+      "unit": "c21-malformed"
+    },
+    {
+      "issues": [],
+      "object": "/agent.Agent/emitBatch",
+      "predicate": "CALLS_OPERATION",
+      "raw_row": 0,
+      "semantic_disposition": "See owning site state or explicit unmatched/generated/duplicate issue.",
+      "tier": "heuristic",
+      "unit": "c25-handler-call"
+    },
+    {
+      "issues": [],
+      "object": "source_too_large",
+      "predicate": "THRIFT_EXTRACTION_GAP",
+      "raw_row": 0,
+      "semantic_disposition": "See owning site state or explicit unmatched/generated/duplicate issue.",
+      "tier": "unresolved",
+      "unit": "c26-oversized"
+    }
+  ],
+  "mismatch_count": 7,
+  "mismatches": [
+    {
+      "reason": "false-positive-promotion",
+      "site": "public-095",
+      "unit": "public"
+    },
+    {
+      "reason": "false-positive-promotion",
+      "site": "c05-foreign-receiver/0",
+      "unit": "c05-foreign-receiver"
+    },
+    {
+      "reason": "false-positive-promotion",
+      "site": "c06-local-constructor/0",
+      "unit": "c06-local-constructor"
+    },
+    {
+      "reason": "false-positive-promotion",
+      "site": "c07-foreign-constructor/0",
+      "unit": "c07-foreign-constructor"
+    },
+    {
+      "reason": "false-positive-promotion",
+      "site": "c08-shadowed-alias/0",
+      "unit": "c08-shadowed-alias"
+    },
+    {
+      "reason": "registration-ambiguity-candidates-not-exposed",
+      "site": "c15-constructor-ambiguity/0",
+      "unit": "c15-constructor-ambiguity"
+    },
+    {
+      "reason": "false-positive-promotion",
+      "site": "c25-handler-call/0",
+      "unit": "c25-handler-call"
+    }
+  ],
+  "production_adoption": false,
+  "qualification": "Source-derived independently reviewed finite oracle, historical purposive corpus; no blind/general accuracy, exact identity or runtime claim. T13.1/T58.3 remain unsatisfied.",
+  "registration_release_activation": false,
+  "schema": "t582-finite-source-score-v1",
+  "site_states": [
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-001",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-002",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-003",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-004",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-005",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-006",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-007",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-008",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-009",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-010",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-011",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-012",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-013",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-014",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-015",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-016",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-017",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-018",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-019",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-020",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-021",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-022",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 1,
+      "role": "supported-method-call",
+      "site": "public-023",
+      "state": "matched-supported-candidate",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-024",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-025",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-026",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-027",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-028",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-029",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-030",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-031",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-032",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-033",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-034",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-035",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-036",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-037",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-038",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-039",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-040",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-041",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 1,
+      "role": "supported-method-call",
+      "site": "public-042",
+      "state": "matched-supported-candidate",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-043",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-044",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-045",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-046",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-047",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-048",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-049",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-050",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-051",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-052",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-053",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-054",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-055",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-056",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-057",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-058",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-059",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-060",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-061",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-062",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-063",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-064",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 1,
+      "role": "supported-processor-construction",
+      "site": "public-065",
+      "state": "matched-supported-candidate",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-066",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-067",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-068",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-069",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-070",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-071",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-072",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-073",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-074",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-075",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-076",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-077",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-078",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-079",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-080",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-081",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-082",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-083",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-084",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-085",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-086",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-087",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-088",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-089",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-090",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-091",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-092",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-093",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-094",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 1,
+      "role": "unproved-generated-method-name",
+      "site": "public-095",
+      "state": "false-positive-promotion",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-096",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-097",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-098",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-099",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-100",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-101",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 0,
+      "role": "excluded-other-call",
+      "site": "public-102",
+      "state": "excluded-silent",
+      "unit": "public"
+    },
+    {
+      "raw_rows": 1,
+      "role": "supported-method-call",
+      "site": "c01-direct-client/0",
+      "state": "matched-supported-candidate",
+      "unit": "c01-direct-client"
+    },
+    {
+      "raw_rows": 1,
+      "role": "supported-method-call",
+      "site": "c02-go-defer/0",
+      "state": "matched-supported-candidate",
+      "unit": "c02-go-defer"
+    },
+    {
+      "raw_rows": 1,
+      "role": "supported-method-call",
+      "site": "c02-go-defer/1",
+      "state": "matched-supported-candidate",
+      "unit": "c02-go-defer"
+    },
+    {
+      "raw_rows": 1,
+      "role": "supported-processor-construction",
+      "site": "c03-constructor/0",
+      "state": "matched-supported-candidate",
+      "unit": "c03-constructor"
+    },
+    {
+      "raw_rows": 1,
+      "role": "supported-processor-construction",
+      "site": "c04-dot-constructor/0",
+      "state": "matched-supported-candidate",
+      "unit": "c04-dot-constructor"
+    },
+    {
+      "raw_rows": 1,
+      "role": "lookalike-no-positive",
+      "site": "c05-foreign-receiver/0",
+      "state": "false-positive-promotion",
+      "unit": "c05-foreign-receiver"
+    },
+    {
+      "raw_rows": 1,
+      "role": "lookalike-no-positive",
+      "site": "c06-local-constructor/0",
+      "state": "false-positive-promotion",
+      "unit": "c06-local-constructor"
+    },
+    {
+      "raw_rows": 1,
+      "role": "lookalike-no-positive",
+      "site": "c07-foreign-constructor/0",
+      "state": "false-positive-promotion",
+      "unit": "c07-foreign-constructor"
+    },
+    {
+      "raw_rows": 1,
+      "role": "lookalike-no-positive",
+      "site": "c08-shadowed-alias/0",
+      "state": "false-positive-promotion",
+      "unit": "c08-shadowed-alias"
+    },
+    {
+      "raw_rows": 0,
+      "role": "dynamic-no-positive",
+      "site": "c09-method-value/0",
+      "state": "silent-unproved-or-unsupported-not-analyzed",
+      "unit": "c09-method-value"
+    },
+    {
+      "raw_rows": 0,
+      "role": "dynamic-no-positive",
+      "site": "c10-constructor-value/0",
+      "state": "silent-unproved-or-unsupported-not-analyzed",
+      "unit": "c10-constructor-value"
+    },
+    {
+      "raw_rows": 0,
+      "role": "dynamic-no-positive",
+      "site": "c11-indexed-callback/0",
+      "state": "silent-unproved-or-unsupported-not-analyzed",
+      "unit": "c11-indexed-callback"
+    },
+    {
+      "raw_rows": 1,
+      "role": "supported-processor-construction",
+      "site": "c12-wrapper/0",
+      "state": "matched-supported-candidate",
+      "unit": "c12-wrapper"
+    },
+    {
+      "raw_rows": 0,
+      "role": "wrapper-outer-no-positive",
+      "site": "c12-wrapper/1",
+      "state": "silent-unproved-or-unsupported-not-analyzed",
+      "unit": "c12-wrapper"
+    },
+    {
+      "raw_rows": 0,
+      "role": "client-construction-no-positive",
+      "site": "c13-client-construction/0",
+      "state": "excluded-silent",
+      "unit": "c13-client-construction"
+    },
+    {
+      "raw_rows": 2,
+      "role": "ambiguous-method-call",
+      "site": "c14-method-ambiguity/0",
+      "state": "matched-explicit-ambiguity",
+      "unit": "c14-method-ambiguity"
+    },
+    {
+      "raw_rows": 1,
+      "role": "ambiguous-processor-construction",
+      "site": "c15-constructor-ambiguity/0",
+      "state": "registration-ambiguity-candidates-not-exposed",
+      "unit": "c15-constructor-ambiguity"
+    },
+    {
+      "raw_rows": 0,
+      "role": "unsupported-no-positive",
+      "site": "c16-no-context/0",
+      "state": "silent-unproved-or-unsupported-not-analyzed",
+      "unit": "c16-no-context"
+    },
+    {
+      "raw_rows": 0,
+      "role": "unsupported-no-positive",
+      "site": "c17-unsupported-generator/0",
+      "state": "silent-unproved-or-unsupported-not-analyzed",
+      "unit": "c17-unsupported-generator"
+    },
+    {
+      "raw_rows": 0,
+      "role": "unsupported-no-positive",
+      "site": "c18-header-string/0",
+      "state": "silent-unproved-or-unsupported-not-analyzed",
+      "unit": "c18-header-string"
+    },
+    {
+      "raw_rows": 1,
+      "role": "supported-method-call",
+      "site": "c19-legacy-header/0",
+      "state": "matched-supported-candidate",
+      "unit": "c19-legacy-header"
+    },
+    {
+      "raw_rows": 1,
+      "role": "supported-method-call",
+      "site": "c20-modern-019-header/0",
+      "state": "matched-supported-candidate",
+      "unit": "c20-modern-019-header"
+    },
+    {
+      "raw_rows": 1,
+      "role": "lookalike-no-positive",
+      "site": "c25-handler-call/0",
+      "state": "false-positive-promotion",
+      "unit": "c25-handler-call"
+    }
+  ],
+  "unit_summaries": [
+    {
+      "coverage_qualification": "Only actual SDK reports; zero reports does not assert per-file analyzed coverage.",
+      "coverage_unresolved": 0,
+      "diagnostics": {
+        "ambiguous_calls": 0,
+        "call_expressions_inspected": 102,
+        "call_sites_found": 3,
+        "client_identities": 6,
+        "first_pass_reads": 18,
+        "generated_files_recognized": 15,
+        "processor_identities": 5,
+        "registrations_found": 1,
+        "second_pass_reads": 3
+      },
+      "gap_rows": 0,
+      "raw_assertions": 4,
+      "read_bytes": 266703,
+      "source_outcomes_reported": 0,
+      "unit": "public"
+    },
+    {
+      "coverage_qualification": "Only actual SDK reports; zero reports does not assert per-file analyzed coverage.",
+      "coverage_unresolved": 0,
+      "diagnostics": {
+        "ambiguous_calls": 0,
+        "call_expressions_inspected": 1,
+        "call_sites_found": 1,
+        "client_identities": 6,
+        "first_pass_reads": 16,
+        "generated_files_recognized": 15,
+        "processor_identities": 5,
+        "registrations_found": 0,
+        "second_pass_reads": 1
+      },
+      "gap_rows": 0,
+      "raw_assertions": 1,
+      "read_bytes": 234465,
+      "source_outcomes_reported": 0,
+      "unit": "c01-direct-client"
+    },
+    {
+      "coverage_qualification": "Only actual SDK reports; zero reports does not assert per-file analyzed coverage.",
+      "coverage_unresolved": 0,
+      "diagnostics": {
+        "ambiguous_calls": 0,
+        "call_expressions_inspected": 2,
+        "call_sites_found": 2,
+        "client_identities": 6,
+        "first_pass_reads": 16,
+        "generated_files_recognized": 15,
+        "processor_identities": 5,
+        "registrations_found": 0,
+        "second_pass_reads": 1
+      },
+      "gap_rows": 0,
+      "raw_assertions": 2,
+      "read_bytes": 234521,
+      "source_outcomes_reported": 0,
+      "unit": "c02-go-defer"
+    },
+    {
+      "coverage_qualification": "Only actual SDK reports; zero reports does not assert per-file analyzed coverage.",
+      "coverage_unresolved": 0,
+      "diagnostics": {
+        "ambiguous_calls": 0,
+        "call_expressions_inspected": 1,
+        "call_sites_found": 0,
+        "client_identities": 6,
+        "first_pass_reads": 16,
+        "generated_files_recognized": 15,
+        "processor_identities": 5,
+        "registrations_found": 1,
+        "second_pass_reads": 1
+      },
+      "gap_rows": 0,
+      "raw_assertions": 1,
+      "read_bytes": 234421,
+      "source_outcomes_reported": 0,
+      "unit": "c03-constructor"
+    },
+    {
+      "coverage_qualification": "Only actual SDK reports; zero reports does not assert per-file analyzed coverage.",
+      "coverage_unresolved": 0,
+      "diagnostics": {
+        "ambiguous_calls": 0,
+        "call_expressions_inspected": 1,
+        "call_sites_found": 0,
+        "client_identities": 6,
+        "first_pass_reads": 16,
+        "generated_files_recognized": 15,
+        "processor_identities": 5,
+        "registrations_found": 1,
+        "second_pass_reads": 1
+      },
+      "gap_rows": 0,
+      "raw_assertions": 1,
+      "read_bytes": 234363,
+      "source_outcomes_reported": 0,
+      "unit": "c04-dot-constructor"
+    },
+    {
+      "coverage_qualification": "Only actual SDK reports; zero reports does not assert per-file analyzed coverage.",
+      "coverage_unresolved": 0,
+      "diagnostics": {
+        "ambiguous_calls": 0,
+        "call_expressions_inspected": 1,
+        "call_sites_found": 1,
+        "client_identities": 6,
+        "first_pass_reads": 16,
+        "generated_files_recognized": 15,
+        "processor_identities": 5,
+        "registrations_found": 0,
+        "second_pass_reads": 1
+      },
+      "gap_rows": 0,
+      "raw_assertions": 1,
+      "read_bytes": 234509,
+      "source_outcomes_reported": 0,
+      "unit": "c05-foreign-receiver"
+    },
+    {
+      "coverage_qualification": "Only actual SDK reports; zero reports does not assert per-file analyzed coverage.",
+      "coverage_unresolved": 0,
+      "diagnostics": {
+        "ambiguous_calls": 0,
+        "call_expressions_inspected": 1,
+        "call_sites_found": 0,
+        "client_identities": 6,
+        "first_pass_reads": 16,
+        "generated_files_recognized": 15,
+        "processor_identities": 5,
+        "registrations_found": 1,
+        "second_pass_reads": 1
+      },
+      "gap_rows": 0,
+      "raw_assertions": 1,
+      "read_bytes": 234325,
+      "source_outcomes_reported": 0,
+      "unit": "c06-local-constructor"
+    },
+    {
+      "coverage_qualification": "Only actual SDK reports; zero reports does not assert per-file analyzed coverage.",
+      "coverage_unresolved": 0,
+      "diagnostics": {
+        "ambiguous_calls": 0,
+        "call_expressions_inspected": 1,
+        "call_sites_found": 0,
+        "client_identities": 6,
+        "first_pass_reads": 16,
+        "generated_files_recognized": 15,
+        "processor_identities": 5,
+        "registrations_found": 1,
+        "second_pass_reads": 1
+      },
+      "gap_rows": 0,
+      "raw_assertions": 1,
+      "read_bytes": 234341,
+      "source_outcomes_reported": 0,
+      "unit": "c07-foreign-constructor"
+    },
+    {
+      "coverage_qualification": "Only actual SDK reports; zero reports does not assert per-file analyzed coverage.",
+      "coverage_unresolved": 0,
+      "diagnostics": {
+        "ambiguous_calls": 0,
+        "call_expressions_inspected": 1,
+        "call_sites_found": 0,
+        "client_identities": 6,
+        "first_pass_reads": 16,
+        "generated_files_recognized": 15,
+        "processor_identities": 5,
+        "registrations_found": 1,
+        "second_pass_reads": 1
+      },
+      "gap_rows": 0,
+      "raw_assertions": 1,
+      "read_bytes": 234639,
+      "source_outcomes_reported": 0,
+      "unit": "c08-shadowed-alias"
+    },
+    {
+      "coverage_qualification": "Only actual SDK reports; zero reports does not assert per-file analyzed coverage.",
+      "coverage_unresolved": 0,
+      "diagnostics": {
+        "ambiguous_calls": 0,
+        "call_expressions_inspected": 1,
+        "call_sites_found": 0,
+        "client_identities": 6,
+        "first_pass_reads": 16,
+        "generated_files_recognized": 15,
+        "processor_identities": 5,
+        "registrations_found": 0,
+        "second_pass_reads": 1
+      },
+      "gap_rows": 0,
+      "raw_assertions": 0,
+      "read_bytes": 234495,
+      "source_outcomes_reported": 0,
+      "unit": "c09-method-value"
+    },
+    {
+      "coverage_qualification": "Only actual SDK reports; zero reports does not assert per-file analyzed coverage.",
+      "coverage_unresolved": 0,
+      "diagnostics": {
+        "ambiguous_calls": 0,
+        "call_expressions_inspected": 1,
+        "call_sites_found": 0,
+        "client_identities": 6,
+        "first_pass_reads": 16,
+        "generated_files_recognized": 15,
+        "processor_identities": 5,
+        "registrations_found": 0,
+        "second_pass_reads": 1
+      },
+      "gap_rows": 0,
+      "raw_assertions": 0,
+      "read_bytes": 234451,
+      "source_outcomes_reported": 0,
+      "unit": "c10-constructor-value"
+    },
+    {
+      "coverage_qualification": "Only actual SDK reports; zero reports does not assert per-file analyzed coverage.",
+      "coverage_unresolved": 0,
+      "diagnostics": {
+        "ambiguous_calls": 0,
+        "call_expressions_inspected": 1,
+        "call_sites_found": 0,
+        "client_identities": 6,
+        "first_pass_reads": 16,
+        "generated_files_recognized": 15,
+        "processor_identities": 5,
+        "registrations_found": 0,
+        "second_pass_reads": 1
+      },
+      "gap_rows": 0,
+      "raw_assertions": 0,
+      "read_bytes": 234749,
+      "source_outcomes_reported": 0,
+      "unit": "c11-indexed-callback"
+    },
+    {
+      "coverage_qualification": "Only actual SDK reports; zero reports does not assert per-file analyzed coverage.",
+      "coverage_unresolved": 0,
+      "diagnostics": {
+        "ambiguous_calls": 0,
+        "call_expressions_inspected": 2,
+        "call_sites_found": 0,
+        "client_identities": 6,
+        "first_pass_reads": 16,
+        "generated_files_recognized": 15,
+        "processor_identities": 5,
+        "registrations_found": 1,
+        "second_pass_reads": 1
+      },
+      "gap_rows": 0,
+      "raw_assertions": 1,
+      "read_bytes": 234517,
+      "source_outcomes_reported": 0,
+      "unit": "c12-wrapper"
+    },
+    {
+      "coverage_qualification": "Only actual SDK reports; zero reports does not assert per-file analyzed coverage.",
+      "coverage_unresolved": 0,
+      "diagnostics": {
+        "ambiguous_calls": 0,
+        "call_expressions_inspected": 1,
+        "call_sites_found": 0,
+        "client_identities": 6,
+        "first_pass_reads": 16,
+        "generated_files_recognized": 15,
+        "processor_identities": 5,
+        "registrations_found": 0,
+        "second_pass_reads": 1
+      },
+      "gap_rows": 0,
+      "raw_assertions": 0,
+      "read_bytes": 234415,
+      "source_outcomes_reported": 0,
+      "unit": "c13-client-construction"
+    },
+    {
+      "coverage_qualification": "Only actual SDK reports; zero reports does not assert per-file analyzed coverage.",
+      "coverage_unresolved": 2,
+      "diagnostics": {
+        "ambiguous_calls": 1,
+        "call_expressions_inspected": 1,
+        "call_sites_found": 0,
+        "client_identities": 8,
+        "first_pass_reads": 17,
+        "generated_files_recognized": 16,
+        "processor_identities": 6,
+        "registrations_found": 0,
+        "second_pass_reads": 1
+      },
+      "gap_rows": 0,
+      "raw_assertions": 2,
+      "read_bytes": 246617,
+      "source_outcomes_reported": 0,
+      "unit": "c14-method-ambiguity"
+    },
+    {
+      "coverage_qualification": "Only actual SDK reports; zero reports does not assert per-file analyzed coverage.",
+      "coverage_unresolved": 1,
+      "diagnostics": {
+        "ambiguous_calls": 1,
+        "call_expressions_inspected": 1,
+        "call_sites_found": 0,
+        "client_identities": 8,
+        "first_pass_reads": 17,
+        "generated_files_recognized": 16,
+        "processor_identities": 6,
+        "registrations_found": 0,
+        "second_pass_reads": 1
+      },
+      "gap_rows": 0,
+      "raw_assertions": 1,
+      "read_bytes": 246575,
+      "source_outcomes_reported": 0,
+      "unit": "c15-constructor-ambiguity"
+    },
+    {
+      "coverage_qualification": "Only actual SDK reports; zero reports does not assert per-file analyzed coverage.",
+      "coverage_unresolved": 0,
+      "diagnostics": {
+        "ambiguous_calls": 0,
+        "call_expressions_inspected": 1,
+        "call_sites_found": 0,
+        "client_identities": 0,
+        "first_pass_reads": 1,
+        "generated_files_recognized": 0,
+        "processor_identities": 0,
+        "registrations_found": 0,
+        "second_pass_reads": 1
+      },
+      "gap_rows": 0,
+      "raw_assertions": 0,
+      "read_bytes": 478,
+      "source_outcomes_reported": 0,
+      "unit": "c16-no-context"
+    },
+    {
+      "coverage_qualification": "Only actual SDK reports; zero reports does not assert per-file analyzed coverage.",
+      "coverage_unresolved": 0,
+      "diagnostics": {
+        "ambiguous_calls": 0,
+        "call_expressions_inspected": 119,
+        "call_sites_found": 0,
+        "client_identities": 0,
+        "first_pass_reads": 2,
+        "generated_files_recognized": 0,
+        "processor_identities": 0,
+        "registrations_found": 0,
+        "second_pass_reads": 2
+      },
+      "gap_rows": 0,
+      "raw_assertions": 0,
+      "read_bytes": 24762,
+      "source_outcomes_reported": 0,
+      "unit": "c17-unsupported-generator"
+    },
+    {
+      "coverage_qualification": "Only actual SDK reports; zero reports does not assert per-file analyzed coverage.",
+      "coverage_unresolved": 0,
+      "diagnostics": {
+        "ambiguous_calls": 0,
+        "call_expressions_inspected": 119,
+        "call_sites_found": 0,
+        "client_identities": 0,
+        "first_pass_reads": 2,
+        "generated_files_recognized": 0,
+        "processor_identities": 0,
+        "registrations_found": 0,
+        "second_pass_reads": 2
+      },
+      "gap_rows": 0,
+      "raw_assertions": 0,
+      "read_bytes": 24828,
+      "source_outcomes_reported": 0,
+      "unit": "c18-header-string"
+    },
+    {
+      "coverage_qualification": "Only actual SDK reports; zero reports does not assert per-file analyzed coverage.",
+      "coverage_unresolved": 0,
+      "diagnostics": {
+        "ambiguous_calls": 0,
+        "call_expressions_inspected": 1,
+        "call_sites_found": 1,
+        "client_identities": 2,
+        "first_pass_reads": 2,
+        "generated_files_recognized": 1,
+        "processor_identities": 1,
+        "registrations_found": 0,
+        "second_pass_reads": 1
+      },
+      "gap_rows": 0,
+      "raw_assertions": 1,
+      "read_bytes": 12615,
+      "source_outcomes_reported": 0,
+      "unit": "c19-legacy-header"
+    },
+    {
+      "coverage_qualification": "Only actual SDK reports; zero reports does not assert per-file analyzed coverage.",
+      "coverage_unresolved": 0,
+      "diagnostics": {
+        "ambiguous_calls": 0,
+        "call_expressions_inspected": 1,
+        "call_sites_found": 1,
+        "client_identities": 2,
+        "first_pass_reads": 2,
+        "generated_files_recognized": 1,
+        "processor_identities": 1,
+        "registrations_found": 0,
+        "second_pass_reads": 1
+      },
+      "gap_rows": 0,
+      "raw_assertions": 1,
+      "read_bytes": 12642,
+      "source_outcomes_reported": 0,
+      "unit": "c20-modern-019-header"
+    },
+    {
+      "coverage_qualification": "Only actual SDK reports; zero reports does not assert per-file analyzed coverage.",
+      "coverage_unresolved": 1,
+      "diagnostics": {
+        "ambiguous_calls": 0,
+        "call_expressions_inspected": 0,
+        "call_sites_found": 0,
+        "client_identities": 6,
+        "first_pass_reads": 16,
+        "generated_files_recognized": 15,
+        "processor_identities": 5,
+        "registrations_found": 0,
+        "second_pass_reads": 1
+      },
+      "gap_rows": 1,
+      "raw_assertions": 1,
+      "read_bytes": 234173,
+      "source_outcomes_reported": 0,
+      "unit": "c21-malformed"
+    },
+    {
+      "coverage_qualification": "Only actual SDK reports; zero reports does not assert per-file analyzed coverage.",
+      "coverage_unresolved": 0,
+      "diagnostics": {
+        "ambiguous_calls": 0,
+        "call_expressions_inspected": 0,
+        "call_sites_found": 0,
+        "client_identities": 6,
+        "first_pass_reads": 16,
+        "generated_files_recognized": 15,
+        "processor_identities": 5,
+        "registrations_found": 0,
+        "second_pass_reads": 1
+      },
+      "gap_rows": 0,
+      "raw_assertions": 0,
+      "read_bytes": 233985,
+      "source_outcomes_reported": 0,
+      "unit": "c22-empty"
+    },
+    {
+      "coverage_qualification": "Only actual SDK reports; zero reports does not assert per-file analyzed coverage.",
+      "coverage_unresolved": 0,
+      "diagnostics": {
+        "ambiguous_calls": 0,
+        "call_expressions_inspected": 0,
+        "call_sites_found": 0,
+        "client_identities": 6,
+        "first_pass_reads": 15,
+        "generated_files_recognized": 15,
+        "processor_identities": 5,
+        "registrations_found": 0,
+        "second_pass_reads": 0
+      },
+      "gap_rows": 0,
+      "raw_assertions": 0,
+      "read_bytes": 233985,
+      "source_outcomes_reported": 0,
+      "unit": "c23-generated-only"
+    },
+    {
+      "coverage_qualification": "Only actual SDK reports; zero reports does not assert per-file analyzed coverage.",
+      "coverage_unresolved": 0,
+      "diagnostics": {
+        "ambiguous_calls": 0,
+        "call_expressions_inspected": 0,
+        "call_sites_found": 0,
+        "client_identities": 6,
+        "first_pass_reads": 16,
+        "generated_files_recognized": 15,
+        "processor_identities": 5,
+        "registrations_found": 0,
+        "second_pass_reads": 1
+      },
+      "gap_rows": 0,
+      "raw_assertions": 0,
+      "read_bytes": 234375,
+      "source_outcomes_reported": 0,
+      "unit": "c24-comments-strings"
+    },
+    {
+      "coverage_qualification": "Only actual SDK reports; zero reports does not assert per-file analyzed coverage.",
+      "coverage_unresolved": 0,
+      "diagnostics": {
+        "ambiguous_calls": 0,
+        "call_expressions_inspected": 1,
+        "call_sites_found": 1,
+        "client_identities": 6,
+        "first_pass_reads": 16,
+        "generated_files_recognized": 15,
+        "processor_identities": 5,
+        "registrations_found": 0,
+        "second_pass_reads": 1
+      },
+      "gap_rows": 0,
+      "raw_assertions": 1,
+      "read_bytes": 234751,
+      "source_outcomes_reported": 0,
+      "unit": "c25-handler-call"
+    },
+    {
+      "coverage_qualification": "Only actual SDK reports; zero reports does not assert per-file analyzed coverage.",
+      "coverage_unresolved": 1,
+      "diagnostics": {
+        "ambiguous_calls": 0,
+        "call_expressions_inspected": 0,
+        "call_sites_found": 0,
+        "client_identities": 6,
+        "first_pass_reads": 16,
+        "generated_files_recognized": 15,
+        "processor_identities": 5,
+        "registrations_found": 0,
+        "second_pass_reads": 0
+      },
+      "gap_rows": 1,
+      "raw_assertions": 1,
+      "read_bytes": 4428290,
+      "source_outcomes_reported": 0,
+      "unit": "c26-oversized"
+    }
+  ]
+}

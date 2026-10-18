@@ -651,6 +651,15 @@ and who owns each.
     grants no quality, coverage, release or scale result, and it is not a T11.1
     retry — that round stays terminally closed with `GATE2-V2 NOT_ESTABLISHED`.
 
+  - T58.2 Thrift finite assessment completed2026-10-18: **NO-GO**. Two identical
+    fresh streams cover125labelled sites and22assertions. Eleven supported
+    candidates match, but six unsupported positive promotions and one missing
+    ambiguity-candidate list fail the unchanged contract. Inputs/oracle/reader
+    remain exact; no tuning/rerun. T58.3 Thrift registration/promotion is not
+    releasable on this name-based reader. No runtime/exact identity or population
+    accuracy claim follows; all owned measurement groups joined and scratch is
+    removed.
+
 Everything human-gated is listed above. Agent work proceeds on ungated
 tickets in the meantime.
 
