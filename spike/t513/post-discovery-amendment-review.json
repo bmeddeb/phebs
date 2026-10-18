@@ -1,0 +1,14 @@
+{
+  "schema": "t513-post-discovery-amendment-review-v1",
+  "accepted": true,
+  "date": "2026-10-18",
+  "reviewer": "root independent source/hash/control review",
+  "files": {
+    "qualify_fields.py": "sha256:cefebb2fd673c93969654c4b7d42bd84555bb03a5cc0d32b692678c3ea22906a",
+    "test_fields.py": "sha256:9669cdbc99b6f6acbe214b1878f22a2dae66350238b11ffecb7212e07d97ad05",
+    "README.md": "sha256:b9e659aeaa1b3d468ddb34afdcb1a793af466912eb30f58a07248c23eb499e1d",
+    "post-discovery-execution-amendment.json": "sha256:32ec7cf9237c93a58ea7bf6464cf5e085ef85c792a850bf6ec06b3c3f26cd3d3"
+  },
+  "controls": "16 finite source/mock controls pass; fresh/old/drifted pins and acceptedboolean guards included",
+  "scope": "Only original hardcoded oldimage admission is replaced by exact reviewed amendment matching unchanged originalplan and implementation pins. All ownedfile hashes, exact cleanVCS/source/binary/tool/build/helper checks remain. No input/label/bounds/request/proof/citation/state changes. No new native run."
+}

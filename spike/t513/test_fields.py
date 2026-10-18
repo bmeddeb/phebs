@@ -41,6 +41,40 @@ def projection(value):
 
 
 class FieldHarnessTests(unittest.TestCase):
+    def test_accepted_post_discovery_source_and_image_binding(self):
+        plan = json.loads((fields.HERE / "operating-plan.json").read_text())
+        amendment = json.loads((fields.HERE / "post-discovery-execution-amendment.json").read_text())
+        selected = amendment["implementation_binding"]
+        binding = {"source_commit": selected["source_commit"], "binary": {"path": selected["binary"], "sha256": "sha256:" + selected["binary_sha256"]}}
+        harness.validate_implementation_binding(binding, plan)
+        changes = [
+            lambda b: b.update(source_commit=plan["implementation_binding"]["source_commit"]),
+            lambda b: b["binary"].update(path=plan["implementation_binding"]["binary"]),
+            lambda b: b["binary"].update(sha256="sha256:" + plan["implementation_binding"]["binary_sha256"]),
+        ]
+        for change in changes:
+            bad = copy.deepcopy(binding); change(bad)
+            with self.assertRaises(score.Mismatch): harness.validate_implementation_binding(bad, plan)
+
+    def test_post_discovery_amendment_refuses_original_contract_or_acceptance_drift(self):
+        plan = json.loads((fields.HERE / "operating-plan.json").read_text())
+        amendment = json.loads((fields.HERE / "post-discovery-execution-amendment.json").read_text())
+        selected = amendment["implementation_binding"]
+        binding = {"source_commit": selected["source_commit"], "binary": {"path": selected["binary"], "sha256": "sha256:" + selected["binary_sha256"]}}
+        changes = [
+            lambda a: a.update(schema="other"),
+            lambda a: a.update(accepted=False),
+            lambda a: a.update(accepted=1),
+            lambda a: a.update(original_plan_digest="sha256:" + "0" * 64),
+            lambda a: a["original_implementation_binding"].update(source_commit="0" * 40),
+            lambda a: a["original_implementation_binding"].update(binary="/unreviewed/image"),
+            lambda a: a["original_implementation_binding"].update(binary_sha256="0" * 64),
+        ]
+        for change in changes:
+            bad = copy.deepcopy(amendment); change(bad)
+            with patch.object(harness.checks, "bounded_json", return_value=bad):
+                with self.assertRaises(score.Mismatch): harness.validate_implementation_binding(binding, plan)
+
     def test_live_source_default_branch_must_be_input(self):
         for branch in ("input\n", "other\n"):
             with patch.object(harness.qualify, "command", return_value=branch) as command:

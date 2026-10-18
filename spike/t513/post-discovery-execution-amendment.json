@@ -1,0 +1,38 @@
+{
+  "schema": "phebs-t513-post-discovery-execution-amendment-v1",
+  "date": "2026-10-18",
+  "accepted": true,
+  "authorization": "Lead-approved prospective source-only amendment under Ben-routed Mac backend handoff; this file does not authorize native execution or production signing.",
+  "original_plan_digest": "sha256:71f2d2df416332ed19cbeb8d337327e1e5d7f72593eaeed0e70f15fd169b3268",
+  "original_implementation_binding": {
+    "source_commit": "8a70fef5f60411f31d210efd52ab4dcd79385549",
+    "binary": "/tmp/phebs-main-8a70-native-qualification/phebs",
+    "binary_sha256": "7dab45a9011c60132a80381933242705e44da19b2712421ed4361b67dcca19be",
+    "preparation": "Previously joined source-clean release build with exact VCS metadata, separately retained build/helper/UI receipts; no binary rebuild or repeated indexing needed. Actual receipts/tool hashes/final harness commit bind before execution. Current main changes since8a70 are spike/docs only."
+  },
+  "implementation_binding": {
+    "source_commit": "bbb41b2ccfb3f9b23653aabf41607185aec3efbe",
+    "source_tree": "ade4527a61c06801888eb6fa667b1ad075e5d826",
+    "binary": "/tmp/phebs-main-bbb41b2c-native-qualification/phebs",
+    "binary_sha256": "121c1d07999344166d8631e65a99b06476c1fa0251f8590d2c42dd7da6393481"
+  },
+  "reason": [
+    "PR100 integrates the reviewed mobile Caller Map comparison correction; no field UI/browser claim is added.",
+    "PR101 treats a discovered repository with an empty indexed commit as unpublished coverage before strict extraction-store reads; malformed nonempty commits and store failures still refuse.",
+    "PR105 integrates independently selected operation Impact HTTP/MCP/UI; the field-only selection does not admit its claim and it remains default-dark."
+  ],
+  "unchanged": [
+    "Original operating-plan bytes, protected source/input/index/label/transition bytes, denominators, requests, source/proof/version/permission fences, deadlines and all operating bounds.",
+    "Both exact live origins must still pass unchanged commit/tree/eight-file census and symbolic input-branch admission before launch.",
+    "The first publication-deadline stop and source-corrected HTTP500 stop retain their exact bindings/results; no earlier output is overwritten."
+  ],
+  "retained_prior_artifacts": {
+    "first-execution-binding.json": "sha256:4b0ded077f04bbe99c293708ac5598cdf10f460cd2df9a80c44ecb6d2ae42913",
+    "result.json": "sha256:7d328e8fc5e8fc748ff88011ed344b037fa078dab790ded71ffad846bdfd6ef0",
+    "source-corrected-execution-binding.json": "sha256:96243cd3a143eb2badccbdcd287308ed31112d562c6172e028801b8eca21083e",
+    "result-source-corrected.json": "sha256:5b9ed76f0e1596d2e548566f8fab3a9a02e1650d69d0aba15bce461b7aa05c66",
+    "discovery-stop-checkpoint.json": "sha256:f5ad1623399ea7ede5fa62e1552085ab40dbcefbfca6dcd6877969838f207d51",
+    "discovery-error-response.json": "sha256:de06b87223a3c382d07af5eea46342c92c0cdf9528a3007f8b63dd6c7e4c1b72"
+  },
+  "prospective_preparation": "Outside binding pins this amendment with every owned/reused harness file, clean actual harness HEAD, exact fresh image/tool/helper/build/UI identities. Metadata/hash admission only precedes independent review and separate sole-slot execution authorization. Historical c2de9190 harness lineage remains retained."
+}

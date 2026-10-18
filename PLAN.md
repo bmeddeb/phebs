@@ -13317,3 +13317,18 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   startup, publication, lock, cache, loop, schema, child or serving cost follows.
   Interaction checks meet their5s test timeout; precise latency/usability and
   production release are not inferred. Existing large-chunk warnings persist.
+
+- **2026-10-18 — T51.3 prospective post-discovery execution amendment
+  (Ben-routed Mac handoff).** Preserve the original operating plan and both
+  failed attempts exactly. Its original8a70 binary pin correctly rejects the
+  newly repaired source. A separate accepted amendment binds exact clean
+  bbb41b2c and image121c1d07 after PR100/101/105. Check its original-plan digest
+  and original implementation tuple before its exact new source/path/SHA,
+  hash the amendment with the owned harness, then retain all cleanVCS/tool/
+  build/helper guards. No broad arbitrary-source option is added. Root source
+  review and16finite mocked/hash controls pass, including drift/oldpins and
+  strict acceptedboolean. Fresh helper builds preserve their own actual source
+  receipt. Admission adds one bounded64KiB local JSON read and plan hash only;
+  ordinary production and request costs are unchanged. Source/labels/limits/
+  deadlines/phase and production-signing holds remain exact; the next native
+  result requires its own clean harness/execution binding and serial slot.
