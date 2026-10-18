@@ -1,0 +1,4 @@
+=== RUN   TestT422WorkspaceCleanupNativeComposition
+    t422_workspace_cleanup_native_test.go:32: actual cleanup: objects=24000 shards=600 deleted_units=24605 turns=360 cursor_writes=720 workspace_samples=362 elapsed=2m8.510762875s
+--- PASS: TestT422WorkspaceCleanupNativeComposition (128.51s)
+PASS

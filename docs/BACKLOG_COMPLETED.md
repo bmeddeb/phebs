@@ -11211,3 +11211,30 @@ quality retry follows. Actual clean build metadata, first pre-reader admission
 stop, inert controls, raw streams, score, costs and joined custody are retained
 in [T58.2 results](../spike/t582/results/README.md). T58.3 Thrift stable recipe
 registration and promotion stay not releasable on the current name-based reader.
+
+
+## T57R.1 · Mac native-composition follow-up (complete 2026-10-18)
+
+The three inherited Darwin failures now pass once, without skips, at unchanged
+source `aa5cf5798e43559e6c35b02487f81198b5e23633`. Actual capacity checks return
+normal at 73% used on both the checkout and fixture TMPDIR, below the 75% resume
+threshold; the old 93% refuse diagnostics and their failed outcome remain exact.
+The host already met the precondition; no capacity substitution, source repair
+or deadline extension was used.
+
+Base/cleanup/all-owner test times are 11.07/128.51/232.54 seconds. The cleanup
+fixture reports 24,605 deleted units, 360 turns, 720 cursor writes and 362 workspace
+samples. All-owner reports 600 turns, 603 samples and 1,251 store transactions/
+1,318 rows. Existing assertions preserve private native/SDK/session/EOF joins,
+expected fixture drainage and truthful lower-bound job backlog. Every wrapper
+child also exits 0 and joins with clean group absence; private fixture TMPDIR
+is empty. Fourteen real gate observations are brackets, not a continuous host
+or memory-admission result. Compilation is separate and offline on Go 1.26.5.
+
+[The bounded evidence](../spike/t57r1/mac-native-composition/README.md) binds
+source, tools, exact reports and cleanup. Component fixture caveats remain:
+modeled auth/base owner callbacks, explicit cleanup no-ops, inert files and a
+synthetic catalog. No production/test code or steady-state cost changes; no
+full package/race matrix, Linux #124 acceptance, pressure/restore/whole-phase,
+complete readiness, ceremony, scale, SLO or release result. Production signing
+stays pending independently.

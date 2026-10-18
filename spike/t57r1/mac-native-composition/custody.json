@@ -1,0 +1,120 @@
+{
+  "schema": "phebs-t57r1-mac-native-custody-v1",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 4197,
+      "sha256": "a7a07e2796a02602a59fd3c2a2c401ce40873f59322ec2e055ceee6c18837c4f"
+    },
+    {
+      "path": "capacity-probe.go.txt",
+      "bytes": 895,
+      "sha256": "d000a9cf78ef2cad2b7190324d052e5caeb9d9caeef95caa48c81d676c4cac2b"
+    },
+    {
+      "path": "docs/docs-check.log",
+      "bytes": 179,
+      "sha256": "1a5f1121fc8d6d64153bc6965b1bb256c716451fa3a754aa19ba3fcdc224fb5e"
+    },
+    {
+      "path": "docs/glossary.log",
+      "bytes": 60,
+      "sha256": "f128ad7aef2b6215c4414d1e00b2650f9c42011b1705707b624be1c70d92f095"
+    },
+    {
+      "path": "docs/result.json",
+      "bytes": 918,
+      "sha256": "e41f277fee7d08c6723e3e6bdc4b5b9ae491dd288cb4141d30d1450559a31b0b"
+    },
+    {
+      "path": "logs/TestT422WorkspaceAllOwnersNativeComposition.log",
+      "bytes": 262,
+      "sha256": "3760d5de49a3c4d88f28ceed6d4e0c5f103b3f8d41c05a92a205388c215552b1"
+    },
+    {
+      "path": "logs/TestT422WorkspaceCleanupNativeComposition.log",
+      "bytes": 299,
+      "sha256": "7e8b74481893a907fdbafe716719dab830059df029c3db124753077aaf72dbb3"
+    },
+    {
+      "path": "logs/TestT422WorkspaceNativeComposition.log",
+      "bytes": 104,
+      "sha256": "ee4b9f4944eff1bbfa0b4744a5dab3ca1855bae0d26cc596b0107ce620b8a708"
+    },
+    {
+      "path": "logs/build-capacity-probe.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "logs/capacity-after-1.log",
+      "bytes": 646,
+      "sha256": "258676bbe67a0acc0d34edc833c1780631901a20d708f2ef07da2ce3dc15bf3d"
+    },
+    {
+      "path": "logs/capacity-after-2.log",
+      "bytes": 646,
+      "sha256": "46d433bab46770b26d2aaae831f6cab3fbdeb87e780d353b4c9844598fe4e601"
+    },
+    {
+      "path": "logs/capacity-after-3.log",
+      "bytes": 646,
+      "sha256": "21ec2ddeaa68f918f38b184f3c4e27d802296252eb6d2b34580d7ecf6a4ccd02"
+    },
+    {
+      "path": "logs/capacity-before-1.log",
+      "bytes": 646,
+      "sha256": "356bc5f386fee30c337c78325f4dc118f3c2c2741bd1613d16299c6bd64dac02"
+    },
+    {
+      "path": "logs/capacity-before-2.log",
+      "bytes": 646,
+      "sha256": "4fcfa491972d445dc25942ac7adf6af4e6f20911486ac3273903f32ae087af39"
+    },
+    {
+      "path": "logs/capacity-before-3.log",
+      "bytes": 646,
+      "sha256": "2db5f72dc8999ffaa757e0b5ff6841471628b0f41e84bafb9227a852a0bcfb19"
+    },
+    {
+      "path": "logs/capacity-before-compile.log",
+      "bytes": 646,
+      "sha256": "a866f8d494f4b432a64bd4494e6b32569942094e3c0204d2d17c2c3e4811c0ed"
+    },
+    {
+      "path": "logs/compile-native-tests.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "outcome.json",
+      "bytes": 4407,
+      "sha256": "eee9728fdca117e412e653f272fc0c1fd160f79267dea777f055131b408b8833"
+    },
+    {
+      "path": "plan.json",
+      "bytes": 707,
+      "sha256": "f0dca354a53c89118915538f1994cffb4dccd4f454a3dee93d5a0f440bcb285f"
+    },
+    {
+      "path": "result.json",
+      "bytes": 16212,
+      "sha256": "6b7efebf10c51f5b37080ff46c45260e8082c2642a8bcd49069b05655d20015c"
+    },
+    {
+      "path": "review.json",
+      "bytes": 1074,
+      "sha256": "a7f71f854f5fbed0c62af70df4da10c63016c21b080518785ba5eada0f194932"
+    },
+    {
+      "path": "run-native.py",
+      "bytes": 4162,
+      "sha256": "7d18f8c64e84c286e39100583ca26a85dca3357799afb9648e98620cf7f53689"
+    },
+    {
+      "path": "source.json",
+      "bytes": 1531,
+      "sha256": "45145848afa793b9b2a34f23851a09d17999e79fb891da8944cd6c9857cfbe89"
+    }
+  ]
+}

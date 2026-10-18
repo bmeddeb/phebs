@@ -1,0 +1,105 @@
+{
+  "ticket": "T57R.1 Mac-native follow-up",
+  "date": "2026-10-18",
+  "outcome": "complete",
+  "source_commit": "aa5cf5798e43559e6c35b02487f81198b5e23633",
+  "scope": "Three inherited Darwin component-test failures only; unchanged test and production sources",
+  "tests": [
+    {
+      "test": "TestT422WorkspaceNativeComposition",
+      "seconds_including_wrapper_join": 11.871446,
+      "log": "logs/TestT422WorkspaceNativeComposition.log"
+    },
+    {
+      "test": "TestT422WorkspaceCleanupNativeComposition",
+      "seconds_including_wrapper_join": 128.552063,
+      "log": "logs/TestT422WorkspaceCleanupNativeComposition.log"
+    },
+    {
+      "test": "TestT422WorkspaceAllOwnersNativeComposition",
+      "seconds_including_wrapper_join": 232.5951,
+      "log": "logs/TestT422WorkspaceAllOwnersNativeComposition.log"
+    }
+  ],
+  "native_cases_passed": 3,
+  "skipped": 0,
+  "automatic_retries": 0,
+  "capacity": {
+    "mechanism": "Actual lifecycle.NewGate(path).Check(ctx,0); never NewGateWithProbe",
+    "paths": [
+      "clean Mac checkout",
+      "actual private fixture TMPDIR"
+    ],
+    "observations": 14,
+    "used_percent_min": 73,
+    "used_percent_max": 73,
+    "available_bytes_min": 133928050688,
+    "available_bytes_max": 136140582912,
+    "all_normal_below_resume": true,
+    "qualification": "Seven bracket commands over two directories: samples, not continuous-normality or host-memory admission"
+  },
+  "asserted_cleanup": {
+    "observation_files": 24000,
+    "search_files": 600,
+    "deleted_units": 24605,
+    "owner_turns": 360,
+    "cursor_writes": 720,
+    "workspace_samples": 362
+  },
+  "all_owner_actual_log": {
+    "owner_turns": 600,
+    "workspace_samples": 603,
+    "store_transactions": 1251,
+    "store_rows": 1318
+  },
+  "execution": {
+    "go": "1.26.5 darwin/arm64",
+    "surreal": "3.2.0 macos/aarch64",
+    "compile_offline_seconds": 15.3987,
+    "one_test_binary_compile": true,
+    "original_fixture_limits_seconds": [
+      180,
+      600,
+      600
+    ],
+    "go_test_limits_seconds": [
+      200,
+      630,
+      630
+    ],
+    "outer_process_work_limits_seconds": [
+      215,
+      645,
+      645
+    ],
+    "cleanup": "Every executed child exited0 and joined with clean process-group absence; no signal or forced cleanup; tests also assert their private helper/SDK/session/EOF joins",
+    "fixture_directory_empty": true,
+    "clock_qualification": "Compilation and observations are separate clocks; finished steps fit work_limit+15s reserve. No hard kernel/whole-workload deadline or RSS result is inferred."
+  },
+  "cost": {
+    "production_query_request_sync_startup_retry_publication": "unchanged",
+    "locks_cache_corpus_reads_memory_disk_children": "unchanged",
+    "code_and_test_behavior_delta": 0,
+    "test_only": "One cached cmd/phebs test compile, one tiny probe compile, 14 actual gate observations, 3 serial native helper/Surreal lifetimes. Existing finite residue/catalog seeding, byte walks and store/cursor work only. No corpus indexing or repeated campaign.",
+    "cpu_peak_memory": "Not measured; no claim"
+  },
+  "qualification": [
+    "Base uses 15 supplied owner callbacks and modeled bearer auth; filesystem/cursor store/SDK/FD6/quiescence are real",
+    "Cleanup uses 2 real cleanup owners and 13 explicit no-ops over inert residue",
+    "All-owner fixture uses 10 concrete and 5 closed owners, inert 10,001 relationship files and 4 real catalog generations of 10,000 services/31,500 memberships; truthful durable-job lower-bound/backlog remains asserted",
+    "Historical failed diagnostics and their original 93% used/refuse facts remain failed and unchanged",
+    "No full cmd/phebs suite, race matrix, Linux acceptance, corpus/pressure/restore/whole-phase readiness, ceremony, scale or release result"
+  ],
+  "pending": {
+    "linux_issue": "https://github.com/bmeddeb/phebs/issues/124",
+    "production_signing": "pending; no production key, signature or publication action"
+  },
+  "docs_and_glossary": {
+    "outcome": "passed",
+    "docs_check_seconds_including_join": 1.044356,
+    "glossary_seconds_including_join": 0.531346,
+    "qualification": "Final owning text/custody bookkeeping does not change documentation links/map/sealed bytes."
+  },
+  "primary_history_sha256_before_merge": "ad65ad9aa90313cfc371662a3a37cf528c190212d971ebac2bb443c595f5d056",
+  "independent_source_cost_review": "review.json; clean"
+}

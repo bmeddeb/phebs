@@ -13846,3 +13846,25 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   assessment has no blocker. The retained [T44.2 outcome](spike/t442/appearance-receipts/README.md)
   closes only this Appearance receipt gap; Linux execution, validation labels
   and production signing remain pending independently.
+
+- **2026-10-18 — T57R.1 Mac-native component confirmation after capacity recovery.**
+  Close only the three inherited Darwin component failures on unchanged source
+  `aa5cf5798e43559e6c35b02487f81198b5e23633`. Actual zero-reservation
+  `lifecycle.NewGate(path).Check(ctx,0)` is normal at 73% used and below 75% resume
+  on both checkout and actual fixture TMPDIR. All three existing tests pass
+  once, without skips: base 11.07s, cleanup 128.51s, all-owner 232.54s. Original
+  3/10/10-minute fixture contexts and assertions are unchanged. Fourteen real
+  capacity brackets are samples, not continuous normality or physical-memory
+  admission. The host already met the precondition; no source fix, capacity
+  model or larger deadline was used.
+  Historical failures retain their 93% refuse facts and failed disposition.
+  Exact native/helper/SDK/session/EOF and wrapper joins pass; private fixture
+  TMPDIR is empty. The [bounded outcome](spike/t57r1/mac-native-composition/README.md)
+  records source/tool/test-binary bindings, finite fixture counts and clocks.
+  Steady-state query/request, sync, startup/restart, retry/no-op, publication,
+  lock, cache, corpus reads, memory/disk and child work are unchanged. Test-only
+  work is one offline command-test compile, one temporary probe compile,
+  fourteen gate checks and three serial native helper/Surreal lifetimes plus
+  existing fixed residue/catalog, byte-walk and store/cursor work. No full
+  package/race matrix, Linux #124 acceptance, pressure/restore/whole-phase,
+  readiness, freeze/ceremony, scale, SLO or production-signing gate follows.

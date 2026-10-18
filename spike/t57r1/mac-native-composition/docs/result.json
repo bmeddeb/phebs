@@ -1,0 +1,37 @@
+{
+  "runs": [
+    {
+      "name": "docs-check",
+      "argv": [
+        "make",
+        "docs-check"
+      ],
+      "pid": 19013,
+      "work_limit_seconds": 75,
+      "cleanup_reserve_seconds": 15,
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "already_exited",
+      "joined": true,
+      "seconds_including_cleanup": 1.044356,
+      "log_sha256": "1a5f1121fc8d6d64153bc6965b1bb256c716451fa3a754aa19ba3fcdc224fb5e"
+    },
+    {
+      "name": "glossary",
+      "argv": [
+        "make",
+        "verify-glossary"
+      ],
+      "pid": 19041,
+      "work_limit_seconds": 75,
+      "cleanup_reserve_seconds": 15,
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "already_exited",
+      "joined": true,
+      "seconds_including_cleanup": 0.531346,
+      "log_sha256": "f128ad7aef2b6215c4414d1e00b2650f9c42011b1705707b624be1c70d92f095"
+    }
+  ],
+  "passed": true
+}
