@@ -5569,6 +5569,11 @@ identity witnesses. Normal/race/vet/pinned lint and independent source/cost
 review are clear. This is committed-input conformance only; T52.2's thriftrw
 result and T52.3's admission/operating/signature remain separate.
 
+T52.3 registration update (2026-10-18): independent Apache/thriftrw signed
+recipes compose once with exact selected-set version fences and bounded green
+integration checks. Operating/artifact/signature promotion remains open for
+each generator; production signing awaits the existing key.
+
 ## On demand
 
 Epic 32 measured the target whole repository and did not trigger P6. P6 remains

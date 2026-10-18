@@ -19470,6 +19470,16 @@ generator-specific identity and quality population; no Apache result transfers.
 the current shared experimental switch into explicitly selected admitted
 recipes; satisfy the common bar for each. Either generator may release alone.
 
+Registration slice (2026-10-18, Ben-routed Mac handoff): independent signed
+Apache0.14.1 and thriftrw1.34.0 recipes now compose once on the shared domain
+with three exact selected-set versions. Neither selection inherits the other
+generator through provisional mode. Current/raw/proof/citation/HTTP/MCP fences,
+field0/protocol bounds and withdrawal-survivor behavior pass bounded normal
+and race integration checks; independent source and steady-state-cost review
+is clear. This supplies registration only. Each selected generator's measured
+operating/artifact/production-signature promotion remains open; the existing
+production key is unavailable.
+
 ## Epic 53 · Protobuf Buf WIRE compatibility production readiness
 
 **T53.1 · Verdict/input contract and independent golden changes** — freeze

@@ -9245,3 +9245,31 @@ Raw SCIP read roles include source writes, so semantic read/write accuracy is
 unmeasured. This supplies no runtime-use, deployment, managed generation,
 scale or broad generator coverage claim. T52.3 registration/operating/signing
 remain pending; the independent thriftrw recipe gets its own T52.2 result.
+
+### Independent Thrift field registration (T52.3)
+
+When a verified signed Apache and/or thriftrw field recipe is selected, use
+`GET /api/find_field_references` or MCP `find_field_references` with the exact
+SCIP package lineage, message and explicitly present field number. Thrift
+admits0 through32767; field0 does not activate protobuf. Protobuf's independent
+recipe retains its1-through536870911 bounds and reserved19000-through19999
+exclusion. A Thrift-only selection exposes the neutral field tool and route;
+protobuf-only discovery remains unavailable. Independent Kafka selections may
+coexist without exposing Impact, compatibility or other provisional products.
+
+Raw evidence, direct proof calls, HTTP/MCP, citation atoms and retained bundle
+reads share the exact selected-set version fences. Authorization, current
+source/candidate/root checks and permission confirmation still precede serving
+facts. Missing SCIP reports an explicit gap, a stale or wrong-version native
+root remains unpublished/unavailable, and unsupported selected input fails
+before emission. Zero rows never establish absence or safety. Source opens use
+the cited exact commit and ordinary repository authorization.
+
+Withdraw one generator by the existing signed-selection suspension, retirement,
+expiry or revocation mechanism and restart. The surviving recipe remains
+selected; its changed shared-domain version forces ordinary re-extraction.
+Until that generation publishes, current evidence is unavailable. Former-set
+bundles fail current recipe admission while their immutable bytes and retention
+ownership remain intact. No automatic declaration/SCIP identity translation is
+performed. Stable generator registration supplies no operating, managed-runtime,
+scale or production-signature result; production signing remains pending.

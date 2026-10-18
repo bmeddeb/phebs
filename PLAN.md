@@ -12911,3 +12911,31 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   query/request, sync, startup/restart, retry/no-op, publication, lock, cache,
   schema, memory/disk, concurrency or child cost. No binary rebuild, native
   product qualification, full repository replay or production signing follows.
+
+- **2026-10-18 — T52.3 independent committed Thrift field registration (Ben-routed Mac handoff).**
+  Register signed phebs.thrift.field.apache and phebs.thrift.field.thriftrw
+  claim1.0.0 independently. Compose selected bits before domain deduplication
+  into one scip-thrift-field pass with versions1.4.0-released.apache.1,
+  1.4.0-released.thriftrw.1 or1.4.0-released.apache-thriftrw.1. Stable selection
+  never broadens through the historical provisional switch. Require root
+  committed index.scip, scip-go0.2.7/UTF8, one exact selected generator header
+  and bound SCIP package/type/field/accessor identity before emission. Apache
+  remains derived/source_binding=none; thriftrw retains exact/module_digest.
+  Headers attest input properties, not execution of a generator. Both recipes
+  share existing index/source limits and a single input/binding/emission sweep.
+  Extra work is one bounded package/header-only parse per generated candidate
+  before its existing full parse, one bounded symbol parse per definition and
+  constant startup selected-set composition. No new query-side source parse,
+  full-corpus hash/scan, lock, cache, worker, schema, goroutine or child is added.
+  Neutral field queries admit only selected protocols and their own numeric
+  ranges, including Thrift0 and protobuf-reserved numbers without querying
+  protobuf. Exact version fences cover current/native/legacy/raw/citation and
+  retained proof witnesses even beside explicit independent provisional packs.
+  Withdrawal preserves the surviving recipe; changed shared-domain identity
+  requires ordinary republication before serving, with old custody untouched.
+  Full extractor normal, scoped API/serve normal and race, vet and pinned lint
+  pass; independent source/authority/security/cost review finds no blocker.
+  Lint cleanup removes one unused wrapper and annotates a deliberate deprecated
+  fixture-range reset; behavior is unchanged. Registration supplies no operating,
+  managed-generation, scale or production-signature claim. Each generator's
+  measured promotion and the existing unavailable production key remain pending.
