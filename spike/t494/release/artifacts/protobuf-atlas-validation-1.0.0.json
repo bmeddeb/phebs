@@ -80,7 +80,9 @@
     "ui/src/components/ContractDependencyMap.tsx": "3732eea4b67fd44becdd784f68a717aaf964a382473d32eded5d59f9b9934911",
     "ui/src/components/ContractDependencyMap.test.tsx": "e3ded8e538b722a3ced8fbcac5956eb3e606bfb7d79b7cbbbca7d6b90ebefaf0",
     "ui/receipts/atlasFixture.ts": "17226487215c80b568ec4eb699a1f49c0682aa30839cebdd399e9daf56ed0512",
-    "ui/receipts/atlas-receipts.spec.ts": "afcbcef53c4a7f2ebc017355d4f5cba0d4d80b2f3dbc65e54ea4bbed135c5774"
+    "ui/receipts/atlas-receipts.spec.ts": "c641b332d966dffe7b66a1a76f148d1397667b6e9f79e9abf0a9b9196d814d63",
+    "ui/receipts/routes.ts": "463486f1a5df3ac5cd5f04cf68dce8c48a71497f57cde60b3f4ce5c29763de8e",
+    "ui/src/receiptManifest.test.ts": "88af088a6602cf37f1e29920e1ddae1681889de8d1d927dd096dee61d70c69c2"
   },
   "reused_coverage": [
     "T49.3 exact partitioned-root, moved/stale authority, allowed/denied access, paging and citation coverage; unchanged readers",
@@ -93,8 +95,23 @@
     "production signing and deployment"
   ],
   "real_binary_startup": {
-    "outcome": "pending_post_ui_clean_checkpoint_and_bounded_native_slot",
-    "production_signing": "pending; existing production key unavailable"
+    "outcome": "passed",
+    "source_commit": "ff080f8438d5de02153a8645cf1cf75b5d95935c",
+    "qualification": "Actual clean VCS release build, real artifact signer and loader, disposable key, one neutral committed protobuf file; final UI proof resumes the same already-published fixture.",
+    "receipt": "spike/t494/release/receipts/bounded-startup.json",
+    "receipt_digest": "sha256:7f2d020e7a5cd14d7e49e32b5aada11ce02ab60e1f6dee8e24d156d47d7c96e5",
+    "seconds": 6.605,
+    "checks": [
+      "ordinary exact partitioned authority",
+      "HTTP/MCP list and detail parity",
+      "anonymous 401",
+      "embedded UI 200",
+      "desktop and 390px keyboard/current/unavailable/source-link/no-overflow checks",
+      "revocation withdraws capability and route",
+      "both final server phases graceful exit 0; joined clean teardown"
+    ],
+    "production_signing": "pending; existing production key unavailable and never accessed",
+    "artifact_qualification": "artifact_digests are the exact proposal bytes bound by this native signature; the validation proposal was subsequently finalized with these source-free outcomes. No historical digest was rewritten. Finalized proposal bytes are separately covered by the actual signer/load integration test with synthetic Go-test binary facts."
   },
   "ui_closure": {
     "recorded_date": "2026-10-18",
@@ -168,7 +185,47 @@
         "tests_passed": 35,
         "qualification": "Post native mobile table/availability fix; canonical no-overflow regression captures layout.",
         "duration_seconds": 1.49
+      },
+      {
+        "command": [
+          "npm",
+          "test",
+          "--",
+          "src/receiptManifest.test.ts"
+        ],
+        "exit_code": 0,
+        "tests_passed": 1,
+        "duration_seconds": 0.534,
+        "qualification": "Final receipt matrix cardinality includes all four new Atlas baselines. Unchanged viewport tuples shared with the capture spec; test discovery remains nine cases."
       }
-    ]
+    ],
+    "canonical": {
+      "outcome": "passed",
+      "receipt": "spike/t494/release/receipts/canonical.json",
+      "receipt_digest": "sha256:57e80e3115037022dde2177c1dbade1c82e49e39a0ec080ad6f99bcf7c981251",
+      "source_commit": "ff080f8438d5de02153a8645cf1cf75b5d95935c",
+      "frames": 8,
+      "author_tests": 9,
+      "comparison_tests": 9,
+      "retries": 0,
+      "max_diff_pixel_ratio": 0.001,
+      "new_masks": false,
+      "qualification": "Pinned local Noble AMD64/Node24.18.0/Playwright1.62.1/Chromium151.0.7922.34; four real-cohort listing controls plus four explicitly intercepted neutral declaration-only details, not signed native authority proof."
+    },
+    "scoped_accessibility": {
+      "outcome": "zero_changed_Atlas_violations",
+      "viewports": [
+        1280,
+        390
+      ],
+      "excluded_unchanged_component": "ui/src/components/AnalysisScopePanel.tsx",
+      "full_page_nested_interactive_nodes": 2,
+      "mobile_incomplete": {
+        "rule": "color-contrast",
+        "nodes": 6,
+        "reason": "Horizontally clipped table cells are partially obscured, so automated background determination is unavailable."
+      },
+      "qualification": "No global accessibility-clean claim; inherited shared-panel defect routed separately."
+    }
   }
 }

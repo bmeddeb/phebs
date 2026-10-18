@@ -1,12 +1,10 @@
 import { expect, test } from '@playwright/test'
 import { DEFAULT_PALETTE } from '../src/palette'
 import { installIdentityFixture } from './fixture'
-import { FROZEN_NOW, THEMES } from './routes'
+import { ATLAS_DECLARATION_VIEWPORTS, FROZEN_NOW, THEMES } from './routes'
 import { ATLAS_DECLARATION_PATH, installAtlasDeclarationFixture } from './atlasFixture'
 
-for (const theme of THEMES) for (const [name, width, height] of [
-  ['desktop', 1280, 800], ['mobile', 390, 844],
-] as const) {
+for (const theme of THEMES) for (const [name, width, height] of ATLAS_DECLARATION_VIEWPORTS) {
   test(`contract-atlas-declaration-only-${name} · ${theme} · comfortable`, async ({ page }) => {
     await page.setViewportSize({ width, height })
     await installIdentityFixture(page)

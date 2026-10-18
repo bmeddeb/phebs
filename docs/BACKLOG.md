@@ -19247,6 +19247,24 @@ what it already emitted. Not claimed here: hosted CI execution, the PR #75
 receipt-baseline gap, and the three `TestT422Workspace*NativeComposition` darwin
 failures.*
 
+**T49.4 implementation/UI closure (2026-10-18, Ben-routed Mac handoff).**
+Declaration-only card/manifest/qualification and unsigned record template are
+ready. Clean-source native actual signer/start, exact root/operation HTTP/MCP,
+auth401, desktop/390px source/keyboard/overflow, revocation404 and joined teardown
+pass in6.605s; final proposal signer/load also passes. Eight reviewed canonical
+frames author/fresh-auth compare pass9/9each with zero retries/.001 threshold:
+four current-root listing status updates and four neutral declaration-only
+details. Native source authority and intercepted presentation pixels are
+separate evidence. UI fixes false staleness, unavailable relationship zeroes,
+unsupported links, mobile grid overflow and empty scrolling tables; exact
+runtime validators and focused UI/manifest/lint/type checks pass. Owning PLAN
+records costs, preserved readiness refusal and precise a11y limits: scoped
+Atlas0violations, two inherited shared nested-interactive findings assigned
+T43R.6, one mobile contrast incomplete over six offscreen cells. No global
+accessibility, extraction accuracy or scale PASS is invented. Production
+signature/activation remains PENDING the existing unavailable Linux key;
+implementation integration requires Ben's request, not optional labels.
+
 ## Epic 50 · Caller comparison production readiness
 
 **T50.1 · Exact old/replacement comparison contract and gold cases** — depends

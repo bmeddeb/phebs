@@ -28,6 +28,13 @@ provisional, default deployments remain dark, unresolved relationships are
 abstentions rather than guesses, and no empty result establishes runtime
 absence.
 
+A declaration-only released Atlas selection can show current sealed declaration
+roots without admitting caller, implementation, field or Impact evidence.
+Unavailable relationship sections are labelled explicitly; an absent section is
+not a measured zero population. Native root authority determines current/stale
+state, and links appear only for available capabilities. This release preparation
+still awaits the existing production signing key.
+
 ## Thrift protocol-pack evaluation
 
 The repository includes `phebs-thrift-demo.yaml` as the Epic 19 Thrift

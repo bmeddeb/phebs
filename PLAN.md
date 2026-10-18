@@ -12271,3 +12271,48 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   no bytes, mode or mtime. Production requests, queries, sync, startup/restart,
   retry/no-op, publication, locks, caches, concurrency and children are unchanged.
   JavaScript delta is zero; the eight PNGs shrink 1,139 bytes collectively.
+
+- **2026-10-18 — T49.4 protobuf Atlas bounded release preparation and UI
+  closure (Ben-routed Mac handoff).** Retain a declaration-only card, manifest,
+  integration qualification and unsigned production template for
+  `phebs.protobuf.contract`; production activation remains pending the existing
+  Linux signing key. Actual disposable-key signing/selection, exact current-root
+  HTTP/MCP list/detail parity, anonymous401, ordinary UI, source links,
+  desktop/390px keyboard/overflow and revocation404 pass at clean native source
+  `ff080f8438d5de02153a8645cf1cf75b5d95935c` in 6.605s. Both healthy server phases
+  exit0 and teardown cleanly; scratch/key/images are removed. Proposal bytes are
+  tested separately through the actual signer/loader after qualification updates.
+  Preserve the earlier 45s readiness refusal under the fixture's15s polling;
+  the bounded corrected fixture uses supported1s configuration, with no default
+  change. This is integration qualification, never independent accuracy/scale.
+
+  Fix three concrete presentation defects: partitioned current declarations
+  previously inherited a false stale badge from legacy-only coverage; absent
+  released relationship planes appeared as measured zeroes; and Impact links
+  ignored actual capability. Validate exact authority/query/source identity and
+  unavailable sections before rendering, map native detail to its exact root,
+  and preserve source/citation pins and explicit gaps. A zero-minimum grid keeps
+  source tables locally scrollable at390px; empty dependency tables are omitted.
+  No experimental relationship is promoted by declaration-only admission.
+
+  Eight canonical frames (four ordinary-cohort listings, four explicitly
+  intercepted neutral declaration-only details) pass author38.637s and fresh-auth
+  comparison28.972s, nine tests each including setup; zero retries, 0.1% tolerance,
+  no new masks. Lead reviewed all eight images: four listing status updates and
+  four new full-page detail frames. Actual signed source-read evidence and
+  intercepted presentation evidence stay separate in their receipts. Scoped
+  Atlas axe has zero violations; full-page audit retains two inherited shared
+  nested-interactive controls, assigned T43R.6. Mobile contrast audit has one
+  incomplete rule over six offscreen cells, not a claimed global clean pass.
+  Focused UI/manifest, lint/type, signer/load, hashes, docs and glossary pass;
+  no full screenshot matrix or production signature is claimed.
+
+  Cost: existing exact request/auth/publication/source/citation reads, parser
+  deduplication, startup signed census and verifier limits are unchanged. UI
+  validates visible coverage plus at most two authority roots per visible
+  repository with bounded maps/sets, and at most three unavailable sections per
+  selected detail. No new network request/polling, cache, schema, lock, worker,
+  concurrency, source parse, sync/retry/no-op/publication or child. Atlas chunk
+  changes37,750→40,609 bytes (gzip9,821→10,699); these are build observations,
+  not latency or scale bounds. Production signing still binds the actual final
+  binary and artifacts when the existing key becomes available.

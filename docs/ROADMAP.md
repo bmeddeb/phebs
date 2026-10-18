@@ -170,6 +170,13 @@ values update and 118 baselines remain untouched. This closes the portability
 implementation on its branch; full-matrix history and production signing retain
 their recorded scope.
 
+**T49.4 Atlas closure (2026-10-18):** signed disposable-key native HTTP/MCP/
+UI/revocation and eight reviewed canonical frames pass on the ticket branch.
+Current partitioned authority, unavailable planes, capabilities and narrow layout
+are repaired. Shared scope-help accessibility is tracked separately as T43R.6;
+production signing remains pending the existing key. No accuracy/scale or
+full-page accessibility claim follows from the scoped integration result.
+
 **Caller Map / Atlas sequencing override (2026-10-17, Ben-directed):** bounded
 integration tests suffice for these products and their release bindings. The
 owning amendment at the start of Epic 47 in [BACKLOG.md](./BACKLOG.md) supersedes
