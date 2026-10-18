@@ -1,0 +1,10 @@
+{
+  "outcome": "running",
+  "response_interception": false,
+  "truth_samples_added": 0,
+  "viewports": [],
+  "chrome_version": "155.0.8059.82",
+  "playwright_version": "1.62.1",
+  "reason": "Error: expect(locator).toBeVisible() failed\n\nLocator:  locator('summary').filter({ hasText: /^Source authority and scope$/ }).locator('..').getByText('Exact repository-overlay generation', { exact: true })\nExpected: visible\nReceived: hidden\nTimeout:  5000ms\n\nCall log:\n  - Expect \"to.be.visible\" with timeout 5000ms\n  - waiting for locator('summary').filter({ hasText: /^Source authority and scope$/ }).locator('..').getByText('Exact repository-overlay generation', { exact: true })\n    13 × locator resolved to <span>Exact repository-overlay generation</span>\n       - unexpected value \"hidden\"\n",
+  "console_errors": []
+}

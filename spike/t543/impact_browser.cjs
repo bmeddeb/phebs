@@ -72,7 +72,13 @@ async function main() {
       await page.getByRole('button', {name: 'Unit view', exact: true}).click();
       await expect(page.getByLabel('Caller rows grouped by attributed unit', {exact: true})).toBeVisible();
       await expect(rows).toHaveCount(1);
+      // A URL view change performs an ordinary refetch and remounts the
+      // disclosures. Wait for that response before opening the new tree.
+      const sourceViewResponse = page.waitForResponse(response => new URL(response.url()).pathname === '/api/operation_impact_report' && response.request().method() === 'GET' && response.status() === 200);
       await page.getByRole('button', {name: 'Source view', exact: true}).click();
+      await (await sourceViewResponse).finished();
+      await expect(page.getByRole('button', {name: 'Source view', exact: true})).toHaveAttribute('aria-pressed', 'true');
+      await expect(page.getByRole('status', {name: 'Loading operation impact', exact: true})).toHaveCount(0);
       await expect(rows).toHaveCount(1);
       const authority = await disclose(/^Source authority and scope$/);
       await expect(authority.getByText('Exact repository-overlay generation', {exact: true})).toBeVisible();
