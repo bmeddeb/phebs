@@ -1654,3 +1654,19 @@ hover lookup. Browser back/forward uses the same exact source rules. Only safe
 positive integer `L` values select a source line and override Markdown preview;
 invalid values are ignored. Read-only source is named by its path for assistive
 technology.
+
+### Repository browsing and service navigation
+
+Repository status refreshes three seconds after the preceding automatic read
+finishes. A slow read can complete instead of being canceled by the next poll;
+leaving the page cancels its read and stops polling. The repository explorer
+loads folders on expansion and retains exact revision-bound results for reuse;
+Retry folder repeats that same repository, revision and path.
+
+Service inventory and detail must match the repository and service named in the
+URL before navigation links appear. A mismatched inventory offers Retry; a
+mismatched detail leaves valid inventory available with Retry detail and Clear
+selection. The scope bar reads authority for the current principal and complete
+URL scope. While a new service loads, its links cannot carry the preceding
+service's generation. A verified generation joins the service's links only
+after its own authority read succeeds; an explicit URL generation stays pinned.

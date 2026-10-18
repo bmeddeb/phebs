@@ -130,6 +130,11 @@ export default function ServiceDirectoryPage({ params, relationshipsAvailable = 
           }
           return
         }
+        if (inventoryResult.value.repository.repository !== route.repository ||
+            (inventoryResult.value.services ?? []).some((service) => service.repository !== route.repository)) {
+          setInventoryError('Service inventory authority differs from the requested repository. Retry inventory.')
+          return
+        }
         setInventory(inventoryResult.value)
         if (detailResult.status === 'rejected') {
           if (!isAbortError(detailResult.reason)) {
@@ -138,6 +143,8 @@ export default function ServiceDirectoryPage({ params, relationshipsAvailable = 
           return
         }
         if (detailResult.value && (
+          detailResult.value.service.key !== route.serviceKey ||
+          detailResult.value.service.repository !== route.repository ||
           detailResult.value.repository.repository !== inventoryResult.value.repository.repository ||
           detailResult.value.repository.catalog_generation !== inventoryResult.value.repository.catalog_generation ||
           detailResult.value.repository.catalog_control_revision !== inventoryResult.value.repository.catalog_control_revision ||

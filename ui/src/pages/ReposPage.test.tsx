@@ -28,6 +28,28 @@ beforeEach(() => {
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
+test('slow repository reads finish before the next poll instead of being canceled forever', async () => {
+  vi.useFakeTimers()
+  let finish!: (rows: RepoStatus[]) => void
+  api.fetchRepoStatus.mockImplementationOnce(() => new Promise<RepoStatus[]>(resolve => { finish = resolve }))
+  try {
+    render(<StyletronProvider value={engine}><BaseProvider theme={LightTheme}><ReposPage /></BaseProvider></StyletronProvider>)
+    const signal = api.fetchRepoStatus.mock.calls[0][0] as AbortSignal
+    await act(async () => { await vi.advanceTimersByTimeAsync(9000) })
+    expect(api.fetchRepoStatus).toHaveBeenCalledTimes(1)
+    expect(signal.aborted).toBe(false)
+    await act(async () => finish(repos))
+    expect(screen.getByText(repos[0].name)).toBeTruthy()
+    await act(async () => { await vi.advanceTimersByTimeAsync(2999) })
+    expect(api.fetchRepoStatus).toHaveBeenCalledTimes(1)
+    await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+    expect(api.fetchRepoStatus).toHaveBeenCalledTimes(2)
+  } finally {
+    cleanup()
+    vi.useRealTimers()
+  }
+})
+
 test('commit copy waits for the clipboard before displaying success', async () => {
   let finish!: () => void
   vi.stubGlobal('navigator', { clipboard: { writeText: vi.fn(() => new Promise<void>(resolve => { finish = resolve })) } })

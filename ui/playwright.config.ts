@@ -50,5 +50,6 @@ export default defineConfig({
     { name: 'appearance', testMatch: /palette-appearance\.spec\.ts/ },
     { name: 'browser-state', testMatch: /browser-state\.spec\.ts/ },
     { name: 'navigation', testMatch: /navigation\.spec\.ts/ },
+    { name: 'repository-service', testMatch: /repository-service\.spec\.ts/ },
   ],
 })

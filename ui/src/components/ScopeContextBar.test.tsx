@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { useLayoutEffect } from 'react'
 import { BaseProvider } from 'baseui'
 import { Provider as StyletronProvider } from 'styletron-react'
 import { Client as Styletron } from 'styletron-engine-monolithic'
@@ -35,6 +36,7 @@ const detail = {
   schema: 'phebs-service-detail-v1',
   repository: { repository },
   service: {
+    repository,
     key: 'orders-api',
     status: 'stale',
     changed_at: '2026-08-07T10:00:00Z',
@@ -44,8 +46,8 @@ const detail = {
   memberships: [],
 } as unknown as ServiceDetail
 
-function mount(serviceKey = 'orders-api', generation = '') {
-  return render(
+function view(serviceKey = 'orders-api', generation = '', principal = 'user-a@localhost.test') {
+  return (
     <StyletronProvider value={engine}>
       <BaseProvider theme={lightTheme}>
         <ModeContext.Provider value={{ mode: 'light', toggle: () => {} }}>
@@ -53,15 +55,57 @@ function mount(serviceKey = 'orders-api', generation = '') {
             scope={{ repository, serviceKey, generation }}
             path="/services"
             params={new URLSearchParams({ repository, service_key: serviceKey })}
-            principal="user-a@localhost.test"
+            principal={principal}
           />
         </ModeContext.Provider>
       </BaseProvider>
-    </StyletronProvider>,
+    </StyletronProvider>
   )
 }
+const mount = (serviceKey = 'orders-api', generation = '') => render(view(serviceKey, generation))
 
 describe('ScopeContextBar', () => {
+  it.each(['billing-api', ''])('returning from scope %s waits for a fresh authority read', async intermediate => {
+    api.fetchServiceDetail.mockResolvedValueOnce(detail).mockImplementation(() => new Promise(() => {}))
+    const rendered = render(view())
+    await screen.findByText('stale')
+    rendered.rerender(view(intermediate))
+    rendered.rerender(view())
+    expect(screen.getByText('reading authority…')).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Directory' }).getAttribute('href')).not.toContain('scope_generation')
+  })
+  it('does not carry the previous service generation during the first render of a new scope', async () => {
+    api.fetchServiceDetail.mockResolvedValueOnce(detail).mockImplementation(() => new Promise(() => {}))
+    const observed: string[] = []
+    function Observe({ serviceKey }: { serviceKey: string }) {
+      useLayoutEffect(() => { observed.push(screen.getByRole('link', { name: 'Directory' }).getAttribute('href') ?? '') }, [serviceKey])
+      return view(serviceKey)
+    }
+    const rendered = render(<Observe serviceKey="orders-api" />)
+    await screen.findByText('stale')
+    rendered.rerender(<Observe serviceKey="billing-api" />)
+    expect(observed.at(-1)).toBe('#/services?repository=local%2Ffixtures%2Ft307.bundle&service_key=billing-api')
+  })
+  it.each(['success', 'error'] as const)('ignores a late %s from an abandoned scope read', async outcome => {
+    let finish!: (value: ServiceDetail) => void
+    let fail!: (error: Error) => void
+    api.fetchServiceDetail.mockImplementationOnce(() => new Promise<ServiceDetail>((resolve, reject) => { finish = resolve; fail = reject }))
+      .mockImplementation(() => new Promise(() => {}))
+    const rendered = render(view())
+    const signal = api.fetchServiceDetail.mock.calls[0][2] as AbortSignal
+    rendered.rerender(view('billing-api'))
+    expect(signal.aborted).toBe(true)
+    await act(async () => { if (outcome === 'success') finish(detail); else fail(new Error('old scope failure')) })
+    expect(screen.getByText('reading authority…')).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Directory' }).getAttribute('href')).not.toContain('scope_generation')
+    expect(screen.queryByText('authority unavailable')).toBeNull()
+  })
+  it('refuses a service record from a different repository', async () => {
+    api.fetchServiceDetail.mockResolvedValue({ ...detail, service: { ...detail.service, repository: 'foreign/repo' } })
+    mount()
+    expect(await screen.findByText('authority mismatch')).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Directory' }).getAttribute('href')).not.toContain('scope_generation')
+  })
   it('renders the scope identities and its catalog authority with as-of time', async () => {
     api.fetchServiceDetail.mockResolvedValue(detail)
     mount()

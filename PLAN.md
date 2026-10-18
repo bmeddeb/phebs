@@ -14004,3 +14004,38 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   idle frames compare against main using one renderer. Linux #124, installed
   SCIP/target proof, signatures, production activation and ceremony remain
   separate pending obligations.
+
+- **2026-10-18 — T57R.6 repository polling and service navigation (Mac audit).**
+  Ben requests continued Mac browsing/navigation repair with bounded checks and
+  integration when green. Schedule the repository status poll three seconds
+  after its preceding read settles, rather than canceling slow reads every three
+  seconds. Explicit refresh generation/cancellation stays intact; unmount stops
+  the timer and aborts the active read. Before constructing service navigation,
+  require inventory repository and row identities to match the requested
+  repository, and detail service repository/key identities to match the URL in
+  addition to the existing catalog/state publication fence. Valid inventory
+  remains usable when detail is refused. Bind the shared scope bar's authority
+  state to principal, repository, service key and URL generation during render,
+  and ignore aborted completions before updating authority or recency. Its
+  service record must also belong to the requested repository. A pending new
+  scope cannot inherit the preceding scope's generation, including the first
+  render before passive effects run. Existing URL generation fences and exact
+  retry, source and service-search rules remain intact.
+  Cost: each automatic repository polling cycle holds one read followed by one
+  three-second timer; slow reads reduce poll frequency instead of spawning
+  repeated canceled requests. Manual reindex refresh and existing fan-out are
+  unchanged. Inventory admission adds one linear pass over the returned page
+  (requested page size 50); detail checks are constant work. Scope rendering
+  serializes four identity strings and retains one tagged authority record;
+  its scope-change reset clears that record even for repository-only navigation,
+  so returning to a service waits for a fresh read. Request
+  counts stay exact: the scope bar and directory retain their separate detail
+  reads, and directory retry re-reads its inventory/detail while the unchanged
+  bar does not refetch. Abort checks add no request. Folder laziness, exact
+  revision caches and retry costs are unchanged. Startup/restart, sync ticks,
+  publication and backend no-op/retry add no work, locks, corpus reads, hashing,
+  disk state, children or cache invalidation. No dependency or asset class is
+  added. Scoped native Chrome fixtures cover desktop/390 px keyboard, delayed
+  responses, explicit refusal/retry and back/forward; they establish presentation
+  mechanics only. Linux #124, managed-SCIP installation/target proof and
+  production signing/activation remain pending.
