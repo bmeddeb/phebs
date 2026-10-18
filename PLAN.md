@@ -13013,3 +13013,26 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   retry/no-op and publication costs are unchanged. No lock/cache/schema/worker/
   child or new retained state is added. Fresh binary qualification follows;
   operating promotion and the unavailable production signing key remain open.
+
+- **2026-10-18 — T50.3c bounded comparison mobile repair (Mac presentation handoff).**
+  Actual public-source unit rows overflowed390px to515px because comparison
+  sides inherited auto-minimum grid tracks from nowrap citation labels; an
+  unbroken repeated unit ID also overflowed after track correction. Use
+  minmax(0,1fr), side minWidth0 and metadata overflowWrap:anywhere, keeping full
+  accessible labels/title, source spans, filters and keyboard opening exact.
+  Two local declaration links use the existing primary text token/underline
+  to correct4.38:1 contrast; no global token or claim wording changes. Real
+  retained-response fixture1280/390 and carried open source panel plus filter
+  reset fit exactly, with zero console/page errors and axe0violations/25passes.
+  Four required-identity neutral controls are byte-identical before/after on
+  the same native renderer. Retained Noble baselines differ0.399–0.412% on
+  unchanged main too; leave their bytes exact and report inherited baseline/
+  environment drift without asserting a Noble pass or exclusive platform cause.
+  Bounded integration evidence supports this repair under Ben's no-ceremony
+  direction; final T50.3 exact-binary qualification remains separate. Fourteen
+  UI tests, type checks, lint and Vite production build pass. One test-only
+  unsupported query option was removed after typecheck exposed it. Comparison
+  chunk grows78raw/13gzip bytes; no new request, source read, sync, retry,
+  startup, publication, lock, cache, loop, schema, child or serving cost follows.
+  Interaction checks meet their5s test timeout; precise latency/usability and
+  production release are not inferred. Existing large-chunk warnings persist.

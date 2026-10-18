@@ -1,0 +1,9 @@
+
+ RUN  v4.1.10 /Users/ben/.codex/worktrees/t25-embedded-docs/phebs.com/ui
+
+
+ Test Files  2 passed (2)
+      Tests  14 passed (14)
+   Start at  06:28:02
+   Duration  2.11s (transform 159ms, setup 24ms, import 399ms, tests 1.47s, environment 972ms)
+

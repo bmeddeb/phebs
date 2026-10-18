@@ -1,0 +1,29 @@
+{
+  "qualification": "Actual Playwright comparator counts against unchanged Noble baselines; current native before and fixed images are byteidentical. This identifies inherited baseline/environment drift, not its exclusive platform-vs-source cause.",
+  "rows": [
+    {
+      "case": "light comfortable",
+      "status": "failed",
+      "playwright_changed_pixels": 4087,
+      "exact_ratio": 0.0039912109375
+    },
+    {
+      "case": "light dense",
+      "status": "failed",
+      "playwright_changed_pixels": 4087,
+      "exact_ratio": 0.0039912109375
+    },
+    {
+      "case": "dark comfortable",
+      "status": "failed",
+      "playwright_changed_pixels": 4221,
+      "exact_ratio": 0.0041220703125
+    },
+    {
+      "case": "dark dense",
+      "status": "failed",
+      "playwright_changed_pixels": 4221,
+      "exact_ratio": 0.0041220703125
+    }
+  ]
+}

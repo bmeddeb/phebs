@@ -9291,3 +9291,10 @@ bundles fail current recipe admission while their immutable bytes and retention
 ownership remain intact. No automatic declaration/SCIP identity translation is
 performed. Stable generator registration supplies no operating, managed-runtime,
 scale or production-signature result; production signing remains pending.
+
+### Comparison on small screens (T50.3c)
+
+Comparison source cards and long unit IDs fit narrow screens. Citation chips
+retain the complete path in their accessible name/title; focus a chip and
+press Enter to open its exact cited bytes. Unit identity wrapping and source
+presentation change no evidence, scope, current-generation or absence rules.

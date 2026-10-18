@@ -19377,6 +19377,19 @@ retained in `spike/t503b/`; bounded normal/race/MCP/admission/current-pack tests
 vet, pinned lint and independent source/cost review pass. Production code is
 unchanged; T50.3's native quality/operating result remains separate.
 
+**T50.3c · Keep real comparison identities within small screens** *(2026-10-18,
+Ben-routed Mac presentation handoff; complete)* — the bounded real-source
+journey exposed390px overflow from auto-minimum grid tracks and an unbroken
+unit ID. Constrain the tracks/sides and wrap that existing metadata while
+preserving complete accessible citation labels, exact source bytes and keyboard
+opening. Two scoped declaration links now use an accessible existing text
+token. Real-response fixture390/1280 checks have no overflow or console errors
+and zero accessibility violations;14 focused tests, type/lint/build pass.
+Four neutral controls are byte-identical to main on the same renderer. Their
+0.399–0.412% differences from retained Noble baselines reproduce unchanged on
+main and are inherited baseline/environment drift; no baseline is replaced or
+Noble pass invented. T50.3's source-bound final native matrix stays separate.
+
 ## Epic 51 · Protobuf field-reference production readiness
 
 **T51.1 · Exact field/SCIP identity and independent quality** — depend on

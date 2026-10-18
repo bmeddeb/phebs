@@ -1,0 +1,69 @@
+{
+  "qualification": "Raw RGB differences, separate from Playwright anti-alias-aware comparator threshold.",
+  "rows": [
+    {
+      "name": "caller-comparison-required-identity--dark--comfortable.png",
+      "size": [
+        1280,
+        800
+      ],
+      "raw_changed_pixels": 10810,
+      "raw_changed_ratio": 0.010556640625,
+      "raw_changed_bbox": [
+        21,
+        12,
+        1260,
+        159
+      ],
+      "native_before_after_bytes_equal": true
+    },
+    {
+      "name": "caller-comparison-required-identity--dark--dense.png",
+      "size": [
+        1280,
+        800
+      ],
+      "raw_changed_pixels": 10810,
+      "raw_changed_ratio": 0.010556640625,
+      "raw_changed_bbox": [
+        21,
+        12,
+        1260,
+        159
+      ],
+      "native_before_after_bytes_equal": true
+    },
+    {
+      "name": "caller-comparison-required-identity--light--comfortable.png",
+      "size": [
+        1280,
+        800
+      ],
+      "raw_changed_pixels": 10797,
+      "raw_changed_ratio": 0.0105439453125,
+      "raw_changed_bbox": [
+        21,
+        12,
+        1260,
+        159
+      ],
+      "native_before_after_bytes_equal": true
+    },
+    {
+      "name": "caller-comparison-required-identity--light--dense.png",
+      "size": [
+        1280,
+        800
+      ],
+      "raw_changed_pixels": 10785,
+      "raw_changed_ratio": 0.0105322265625,
+      "raw_changed_bbox": [
+        21,
+        12,
+        1260,
+        159
+      ],
+      "native_before_after_bytes_equal": true
+    }
+  ]
+}
