@@ -154,6 +154,13 @@ reviewed, digest-pinned labels and public derivation before reader code or
 execution. The bounded reader and two deterministic passes follow; this is
 isolated spike preparation, with no production pack or live-schema claim.
 
+**T27.1 bounded reader result (2026-10-18):** both frozen 119-case passes,
+534 exact facts/citations and public derivation agree. The JSON whitespace
+review finding is corrected and independently re-reviewed; normal/race/static
+checks pass. The spike is complete on its branch for neutral fixture contract
+conformance only. No production integration or runtime-schema claim follows;
+future production work requires a separately specified ticket.
+
 **Caller Map / Atlas sequencing override (2026-10-17, Ben-directed):** bounded
 integration tests suffice for these products and their release bindings. The
 owning amendment at the start of Epic 47 in [BACKLOG.md](./BACKLOG.md) supersedes

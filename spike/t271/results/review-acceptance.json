@@ -1,0 +1,15 @@
+{
+  "schema": "phebs-t271-independent-review-acceptance-v1",
+  "date": "2026-10-18",
+  "input_checkpoint": "e7be4d27ea9e4d7a9a0e341205cfa350938f9f18",
+  "input_preregistration_sha256": "7ef0df8be38bc51494e63a57173c120c5ed2e98b832822251bdb9f6ca9555b3b",
+  "review_correction_sha256": "5c7695d1613e6d507929f6a1479f8a61a0c30341ab7466c80d5e5e929db218e8",
+  "reviewers": [
+    "Codex lead source/implementation review",
+    "receipt_portability independent implementation re-review"
+  ],
+  "outcome": "No blocking finding remains after exact JSON tail-whitespace correction. Focused peer check passes in 0.306 seconds. All original inputs/labels and original measurement/demo/verification bytes remain unchanged.",
+  "qualification": "GO for bounded neutral fixture contract conformance only; no independent accuracy, vendor/live schema, production registration, release or scale claim.",
+  "steady_state_cost": "No production path. Exact tail check is one allocation-free scan over at most 65536 bytes; other bounded reader/comparison/serialization costs are recorded in results/README.md.",
+  "history_txt_sha256": "ad65ad9aa90313cfc371662a3a37cf528c190212d971ebac2bb443c595f5d056"
+}

@@ -1,0 +1,63 @@
+{
+  "schema": "phebs-t271-verification-v1",
+  "date": "2026-10-18",
+  "input_checkpoint_commit": "e7be4d27",
+  "preregistration_sha256": "7ef0df8be38bc51494e63a57173c120c5ed2e98b832822251bdb9f6ca9555b3b",
+  "frozen_input_files": 142,
+  "frozen_input_bytes": 915928,
+  "implementation_files_sha256": {
+    "reader.go": "7020eefdae696c45a7fb2d03d93b9d870b9ec8527031e6f5fb2b6b4b74b0ccb6",
+    "validate.go": "3fc1f9c28b054fb6d6de4e1ed7f51a6affd2be6c86bf5fab17c1e1332d6d74b2",
+    "project.go": "6a6f8e0b0fcd15b7781484be06afad38e186bfab10d21873a34f998a4bd0bdc7",
+    "reader_test.go": "c459cf8fb0fd781e6336cbc9811b9bab8d2ac689d11f5af65e5f2c11513a26e0",
+    "results/README.md": "441300b2b2e2eee703b6668d7f2f8a299ca25c0c4e77194dea85b4c2cb84a5d3",
+    "results/measurements.json": "02e81e7700e7bd93debcb114abb89a0754c5773cc29b95357a3fb3734857c195",
+    "results/demo.json": "dcd1565dc3a4bee4c2474749d460a6cca900abf92ae251cb4edaa9ffd3149abc"
+  },
+  "checks": [
+    {
+      "command": "go test ./spike/t271 -count=1 -timeout=30s",
+      "result": "pass",
+      "seconds": 0.22
+    },
+    {
+      "command": "go test -race ./spike/t271 -count=1 -timeout=30s",
+      "result": "pass",
+      "seconds": 1.473
+    },
+    {
+      "command": "go vet ./spike/t271",
+      "result": "pass"
+    },
+    {
+      "command": "go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2 run ./spike/t271 --timeout=1m",
+      "result": "pass",
+      "issues": 0
+    },
+    {
+      "command": "PHEBS_T271_RESULTS=results/measurements.json go test ./spike/t271 -run ^TestFrozenCasesTwice$ -count=1 -timeout=30s",
+      "result": "pass",
+      "seconds": 0.194
+    },
+    {
+      "command": "go test ./spike/t271 -run ^$ -bench ^BenchmarkReadPublicCaptured$ -benchtime=10x -count=1 -timeout=30s",
+      "result": "pass",
+      "seconds": 0.15,
+      "iterations": 10,
+      "nanoseconds_per_operation": 302967,
+      "allocated_bytes_per_operation": 305212,
+      "allocations_per_operation": 5707
+    },
+    {
+      "command": "git diff --check",
+      "result": "pass"
+    }
+  ],
+  "retained_prior_diagnostic": "Initial pinned lint found one De Morgan style simplification; source corrected, then exact normal/race/vet/lint and measured passes were rerun. No frozen fixture/label correction.",
+  "production_changes": false,
+  "new_dependencies": false,
+  "new_child_processes": false,
+  "history_txt_sha256": "ad65ad9aa90313cfc371662a3a37cf528c190212d971ebac2bb443c595f5d056",
+  "independent_implementation_review": "pending lead review; input checkpoint was independently reviewed before implementation",
+  "qualification": "Bounded neutral fixture conformance and determinism only; no independent extraction accuracy, vendor/live-store validation, release or scale claim."
+}

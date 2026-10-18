@@ -12222,3 +12222,42 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   refusal/comparison outputs and report actual bytes/timing/allocation if
   measured. No source repository scan, runtime query/startup/sync/retry/no-op,
   publication, lock, cache, database/network, persistent worker or child changes.
+
+- **2026-10-18 — T27.1 bounded neutral reader outcome (Ben-routed Mac
+  handoff).** The isolated implementation conforms to the immutable `e7be4d27`
+  contract, without production imports or new dependencies. Two fresh-state
+  passes each accept 14 cases, atomically refuse 104 and retain one missing
+  artifact workflow; all 534 facts/citations, the complete 61-row public
+  derivation and explicit snapshot differences agree. Canonical output SHA-256
+  is `904465c775546e1c208fbdd4dc727dabfa5560ae7a9bc88c7022526096926577`
+  on both passes. Fixture authors also implemented the reader; these are neutral
+  contract-conformance/determinism results, not independent extraction accuracy
+  or vendor/live-schema validation. The lead independently reviewed the frozen
+  source/contract and implementation. Peer review found Unicode whitespace
+  could pass the JSON tail; the corrected reader permits only SP/HT/CR/LF.
+  Two positive and six atomic-refusal supplemental controls pass outside the
+  frozen population, with unchanged canonical fixture output. Original
+  measurements/demo/verification remain exact; the separate correction and
+  acceptance records identify the corrected source and clean re-review.
+
+  Outcome is GO for this bounded fixture contract only. Required results README
+  demonstrates table/typed-field/key/citation lookup, declared associations and
+  view outputs, missing-export checklist and explicit two-snapshot differences.
+  It supplies no production reader, registry, schema, adapter, CQL parser, live
+  connection, deployment/migration, current-shape, runtime or release claim.
+  A future production ticket needs its own exact Git/auth/publication design.
+
+  Normal/race/vet and pinned lint pass, including the correction. Every read
+  decodes at most 64KiB/depth32, validates bounded maps and a <=16-node view DAG,
+  and publishes at most 192 complete facts/citations. Associations are never
+  traversed. Full-input provenance hashing happens once; nested cited-value
+  hashing processes at most four additional input lengths. Result/catalog
+  encoding duplicates semantic fact bytes; the conservative <16MiB encoding
+  budget is analytical, not a heap/RSS or new admission bound. Largest observed
+  result is 164,567 encoded bytes; maximum observed per-call process allocation
+  delta is 942,056 bytes, not retained heap or peak RSS. Timing/allocation
+  mechanics retain their exact original pre-correction source qualification.
+  Explicit comparison holds two admitted results and bounded maps without
+  source reads/hashing. There is no production request, sync/startup/retry/no-op,
+  publication, shared lock, cache/invalidation, persistent worker, network,
+  database, disk write or child-process cost.

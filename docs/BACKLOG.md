@@ -21036,6 +21036,20 @@ The owning PLAN adopts identity, graph, refusal, comparison and cost decisions;
 no production reader/pack or measurement PASS exists at this checkpoint.
 Implementation and the two fresh-state bounded passes follow this review.
 
+**T27.1 implementation result (2026-10-18).** The isolated bounded reader,
+canonical catalog and explicit comparison pass both frozen 119-case runs:
+14 accepted, 104 atomic refusals, one missing-export state; 534 exact
+facts/citations per pass and the complete 61-row public derivation agree.
+Canonical output is byte-identical. The results README demonstrates the
+required ticket/citation/missing-artifact workflow and measured cost limits.
+Independent implementation review's JSON-tail-whitespace defect is corrected
+and re-reviewed clean; eight supplemental controls stay outside the original
+population, whose bytes and measurements remain exact. Focused normal/race,
+vet and pinned lint pass. GO is limited to neutral fixture contract conformance;
+there is no independent accuracy, live/vendor schema, production registration,
+CQL parser, runtime, release or scale claim. Detailed original/corrected source
+and review records live under `spike/t271/results/`.
+
 ## Epic 28 · Redis keyspace evidence *(drafted 2026-07-27 · unscheduled — spike first)*
 
 A general Redis keyspace model is out of scope; deterministic Redis
