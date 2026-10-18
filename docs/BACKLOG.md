@@ -15277,6 +15277,16 @@ existing capabilities, caveats and bounded costs. The shared component fix and
 rendered/canonical qualification is pending. The T49.4 inherited audit finding
 is preserved rather than relabelled as a clean full-page result.
 
+**T43R.6 bounded qualification (2026-10-18).** Combined Atlas native1280/390
+light/dark keyboard/focus/overflow and full-page audit pass; mobile offscreen
+contrast incompletes are preserved and individually pass once visible. Existing
+eight canonical frames compare unchanged9/9including setup, zero retries/.001
+and no new masks; no baseline is rewritten.116 focused UI tests, lint/type/build,
+independent source/cost review, docs/glossary and whitespace pass. Shared chunk
++174bytes/+45gzip; no new runtime requests/state/listeners. Source-bound receipt
+is `ui/receipts/t43r6.json`; all test runtime custody is joined/removed. Ready for
+integration after its T49.4 parent and Ben's explicit request.
+
 ## Epic 44 · Reading surfaces and instance chrome *(planned 2026-08-08 · presentation track)*
 
 Four operator-requested reading and chrome improvements, planned with the

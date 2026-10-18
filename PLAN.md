@@ -12331,8 +12331,24 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   lint and type checking pass. Bounded rendered/canonical qualification follows;
   this checkpoint claims no browser or screenshot PASS yet.
 
-  Cost: one static layout wrapper plus the moved existing help wrapper/control;
+  Cost: two static layout wrappers around the existing help/disclosure controls;
   no new state, event listener, layout measurement, request, authority field,
   source scan, cache, lock, background work, concurrency or child. Existing help
   portal/listeners retain their opening/closing lifetime. Startup/restart, sync,
   retry/no-op, publication, memory/disk bounds and evidence meaning are unchanged.
+
+  T43R.6 then passed combined-Atlas native full-page keyboard/a11y checks in
+  four desktop/390px light/dark appearances (6.650s). Both native disclosure
+  Enter/Space and independent help/Escape focus return work without overlap or
+  document overflow; console is clean. Each initial mobile offscreen contrast
+  incomplete is retained and passes separately once locally scrolled into view.
+  This closes the inherited nested-interactive defect in the tested combined UI;
+  T49.4's earlier source-bound findings remain exact. Nine pinned-renderer tests
+  including setup compare all eight existing Atlas frames in28.167s, with no
+  baseline changes, retries, new masks or tolerance change. Backend, browser,
+  bridge and renderer join; derived data is removed. Independent source/cost
+  review has no blocking finding. Eight focused suites pass116 tests; lint,
+  type/build, docs/glossary and whitespace pass. Same-toolchain shared component
+  grows174 minified bytes/45 gzip bytes; keyboard walkthroughs are60–93ms local
+  mechanics observations, not a user or latency study. Exact source/harness/
+  image/report hashes and limits live in `ui/receipts/t43r6.json`.
