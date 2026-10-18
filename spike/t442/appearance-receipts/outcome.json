@@ -1,0 +1,228 @@
+{
+  "ticket": "T44.2",
+  "date": "2026-10-18",
+  "source_commit": "c3003613d87cbf2f123486d8fe587e614ba2d404",
+  "scope": "Complete Settings Appearance native receipts; no product UI source or old canonical PNG changes",
+  "environment": {
+    "platform": "darwin/arm64",
+    "renderer": "Chrome/155.0.8059.82",
+    "node": "24.18.0",
+    "playwright": "1.62.1",
+    "axe": "4.12.1",
+    "browser_plugin": "not available; cached Playwright fallback",
+    "qualification": "Separate source/renderer-bound native lineage; no Noble baseline equivalence, new full canonical matrix, backend authentication or release result"
+  },
+  "gates": {
+    "focused_vitest": {
+      "passed": 297,
+      "filtered_out": 144,
+      "files_passed": 7,
+      "source": "f4fcfb800c90ed5369115513cf3042ee01064713",
+      "qualification": "Production UI inputs unchanged through final source; final receipt mechanics separately exercised"
+    },
+    "final_receipt_types": "pass",
+    "final_receipt_and_config_lint": "pass",
+    "final_discovery": {
+      "project": "appearance",
+      "cases": 10
+    },
+    "author": {
+      "passed": 10,
+      "seconds_including_teardown": 10.960073
+    },
+    "fresh": {
+      "passed": 8,
+      "seconds_including_teardown": 6.886698
+    },
+    "comparison": {
+      "passed": 8,
+      "byte_identical": 8,
+      "max_diff_pixel_ratio": 0.001,
+      "threshold": 0.2,
+      "exact_pixel_differences": 0,
+      "retries": 0,
+      "masks": 0
+    },
+    "axe": {
+      "scope": "Complete Appearance region in both passes",
+      "audits": 16,
+      "violations": 0,
+      "incomplete": 0
+    },
+    "console": "No application warning or error in either successful pass",
+    "owned_groups": "All completed waits and process-group absence clean; no forced cleanup",
+    "docs_and_glossary": "pass; make docs-check 1.673121s, make verify-glossary 0.614840s, all groups joined clean",
+    "whitespace": "Source and owning docs pass. Exact archived stdout/error-context and critique snapshot retain original trailing whitespace; these raw evidence bytes are not normalized."
+  },
+  "behavior": [
+    "Complete heading, select and exact four-line specimen visible below actual header with no local/document overflow",
+    "All four choices via native keyboard type-ahead and visible focus at 1280px and 390px",
+    "Default is already selected; each journey then makes three nondefault transitions",
+    "Live keyword color and ready identity, with no extra API request, reload or URL change during choices",
+    "Actual reload preserves high contrast; unknown-neutral-palette and __proto__ storage fall back to Phebs"
+  ],
+  "critique": {
+    "method": "dual isolated agents",
+    "assessment_a": "t442_design_a",
+    "assessment_b": "t442_detector_b",
+    "score": 34,
+    "max_score": 40,
+    "blocking_findings": 0,
+    "detector_runs": 1,
+    "detector_findings": 0,
+    "overlay": "Mutable title/script preflight and detector injection succeeded in a fresh headless tab; no user-visible overlay claimed",
+    "minor_observations": [
+      "Existing silent plain-code fallback if preview import/tokenization fails (source-defined, not fault-injected)",
+      "30px select touch comfort; no AA target-size failure established"
+    ],
+    "questions": "Skipped: two nonblocking observations within receipt-only scope",
+    "snapshot": "critique.md"
+  },
+  "interaction_mechanics": {
+    "choices": 8,
+    "nondefault_transitions": 6,
+    "samples_ms": [
+      31,
+      17,
+      14,
+      15,
+      14,
+      35,
+      15,
+      15
+    ],
+    "min_ms": 14,
+    "max_ms": 35,
+    "scope": "Navigation through native Tab refocus/type-ahead to exact ready keyword color; local presentation mechanics, no production API/SLO/user-validation claim",
+    "frame_ready_min_ms": 153,
+    "frame_ready_max_ms": 918
+  },
+  "cost": {
+    "production_input_files_exact": 118,
+    "production_dist_files_exact": 165,
+    "bundle_delta_raw_bytes": 0,
+    "bundle_delta_gzip_bytes": 0,
+    "new_dependencies": 0,
+    "default_unfiltered_receipt_suite_adds": 10,
+    "explicit_existing_projects_unchanged": true,
+    "production": "No added query/request, sync tick, startup/restart, retry/no-op, publication, lock, cache invalidation, corpus read/hash, memory/disk or child work",
+    "receipt": "One worker, zero retries, first-failure stop, 180s per native pass including owned-group cleanup; each native case20s. Three keyboard events and one focus assertion per choice. No API/provider/backend work. Native Vite/Chrome/client ownership joins are retained."
+  },
+  "historical_baselines": {
+    "count": 130,
+    "all_bytes_unchanged": true,
+    "closure": "Older desktop Settings frames omit Appearance; narrow indexing frames clip its specimen. These exact images and old failed comparisons stay historical. The new eight complete frames close only Appearance capture."
+  },
+  "retained_stops": [
+    "author-module-stop: outside adapter lacked ESM marker; no tests ran",
+    "author-keyboard-stop: eight frames passed; initial native ArrowDown sequence did not commit Quiet",
+    "author-menu-stop: eight frames passed; Space/ArrowDown/Enter sequence did not commit Quiet",
+    "keyboard-typeahead-run: native buffered prefix prevented second choice until focus reset",
+    "fresh-discovery-stop: anchored grep matched no fully qualified Playwright titles; no tests ran",
+    "critique-a: independent live expectation stopped after ArrowDown+Enter retained Phebs; establishes no UI defect"
+  ],
+  "diagnostics": "Exact first-stop reports/logs remain retained. A short keyboard diagnostic established native popup noncommit and one-letter type-ahead; a later bounded diagnostic proved all four choices with Tab refocus. Successful source uses that proven sequence without changing value/color/storage/API/URL oracles.",
+  "pending": {
+    "linux": "https://github.com/bmeddeb/phebs/issues/124",
+    "production_signing": "pending key availability; no key, signing or release action"
+  },
+  "frames": [
+    {
+      "name": "palette-appearance--dark--1280--comfortable.png",
+      "width": 1280,
+      "height": 800,
+      "author_sha256": "a21f47181ece76fb35325ec4389bb927b7cfb16eeb1b8f4e874df0655c404787",
+      "fresh_sha256": "a21f47181ece76fb35325ec4389bb927b7cfb16eeb1b8f4e874df0655c404787",
+      "bytes_equal": true,
+      "exact_rgba_different_pixels": 0,
+      "passed": true,
+      "author": "spike/t442/appearance-receipts/receipts/author/output/palette.native-native-Appearance-frame-dark-1280-comfortable-appearance/palette-appearance--dark--1280--comfortable.png",
+      "fresh": "spike/t442/appearance-receipts/receipts/fresh/output/palette.native-native-Appearance-frame-dark-1280-comfortable-appearance/palette-appearance--dark--1280--comfortable.png"
+    },
+    {
+      "name": "palette-appearance--dark--1280--dense.png",
+      "width": 1280,
+      "height": 800,
+      "author_sha256": "09cedf41a26ad0bb2815ef0e6bd8cc0a04152c9f7c4e74e4a4a3dbe714b4f828",
+      "fresh_sha256": "09cedf41a26ad0bb2815ef0e6bd8cc0a04152c9f7c4e74e4a4a3dbe714b4f828",
+      "bytes_equal": true,
+      "exact_rgba_different_pixels": 0,
+      "passed": true,
+      "author": "spike/t442/appearance-receipts/receipts/author/output/palette.native-native-Appearance-frame-dark-1280-dense-appearance/palette-appearance--dark--1280--dense.png",
+      "fresh": "spike/t442/appearance-receipts/receipts/fresh/output/palette.native-native-Appearance-frame-dark-1280-dense-appearance/palette-appearance--dark--1280--dense.png"
+    },
+    {
+      "name": "palette-appearance--dark--390--comfortable.png",
+      "width": 390,
+      "height": 900,
+      "author_sha256": "6dde4963f260b67ff008c7677713de3415c09468d1f58d71bebb56a441d16430",
+      "fresh_sha256": "6dde4963f260b67ff008c7677713de3415c09468d1f58d71bebb56a441d16430",
+      "bytes_equal": true,
+      "exact_rgba_different_pixels": 0,
+      "passed": true,
+      "author": "spike/t442/appearance-receipts/receipts/author/output/palette.native-native-Appearance-frame-dark-390-comfortable-appearance/palette-appearance--dark--390--comfortable.png",
+      "fresh": "spike/t442/appearance-receipts/receipts/fresh/output/palette.native-native-Appearance-frame-dark-390-comfortable-appearance/palette-appearance--dark--390--comfortable.png"
+    },
+    {
+      "name": "palette-appearance--dark--390--dense.png",
+      "width": 390,
+      "height": 900,
+      "author_sha256": "aea775396f24ce32054e5bdcc1dddb072cd209c24215a154ae56301b33be918c",
+      "fresh_sha256": "aea775396f24ce32054e5bdcc1dddb072cd209c24215a154ae56301b33be918c",
+      "bytes_equal": true,
+      "exact_rgba_different_pixels": 0,
+      "passed": true,
+      "author": "spike/t442/appearance-receipts/receipts/author/output/palette.native-native-Appearance-frame-dark-390-dense-appearance/palette-appearance--dark--390--dense.png",
+      "fresh": "spike/t442/appearance-receipts/receipts/fresh/output/palette.native-native-Appearance-frame-dark-390-dense-appearance/palette-appearance--dark--390--dense.png"
+    },
+    {
+      "name": "palette-appearance--light--1280--comfortable.png",
+      "width": 1280,
+      "height": 800,
+      "author_sha256": "ed8f821b828b31965dcc1563d8e479a27730489b9bfea68698de3bef49d9588f",
+      "fresh_sha256": "ed8f821b828b31965dcc1563d8e479a27730489b9bfea68698de3bef49d9588f",
+      "bytes_equal": true,
+      "exact_rgba_different_pixels": 0,
+      "passed": true,
+      "author": "spike/t442/appearance-receipts/receipts/author/output/palette.native-native-Appe-e2dd6-rame-light-1280-comfortable-appearance/palette-appearance--light--1280--comfortable.png",
+      "fresh": "spike/t442/appearance-receipts/receipts/fresh/output/palette.native-native-Appe-e2dd6-rame-light-1280-comfortable-appearance/palette-appearance--light--1280--comfortable.png"
+    },
+    {
+      "name": "palette-appearance--light--1280--dense.png",
+      "width": 1280,
+      "height": 800,
+      "author_sha256": "712b9fea712f209f752d7f000cdca840846dfc7c1b168e1a8954544e04c43dd4",
+      "fresh_sha256": "712b9fea712f209f752d7f000cdca840846dfc7c1b168e1a8954544e04c43dd4",
+      "bytes_equal": true,
+      "exact_rgba_different_pixels": 0,
+      "passed": true,
+      "author": "spike/t442/appearance-receipts/receipts/author/output/palette.native-native-Appearance-frame-light-1280-dense-appearance/palette-appearance--light--1280--dense.png",
+      "fresh": "spike/t442/appearance-receipts/receipts/fresh/output/palette.native-native-Appearance-frame-light-1280-dense-appearance/palette-appearance--light--1280--dense.png"
+    },
+    {
+      "name": "palette-appearance--light--390--comfortable.png",
+      "width": 390,
+      "height": 900,
+      "author_sha256": "672a914a7f24bd60f5aadcbfc4dfbac5b801293e763315eb60c54c9f87bd7845",
+      "fresh_sha256": "672a914a7f24bd60f5aadcbfc4dfbac5b801293e763315eb60c54c9f87bd7845",
+      "bytes_equal": true,
+      "exact_rgba_different_pixels": 0,
+      "passed": true,
+      "author": "spike/t442/appearance-receipts/receipts/author/output/palette.native-native-Appearance-frame-light-390-comfortable-appearance/palette-appearance--light--390--comfortable.png",
+      "fresh": "spike/t442/appearance-receipts/receipts/fresh/output/palette.native-native-Appearance-frame-light-390-comfortable-appearance/palette-appearance--light--390--comfortable.png"
+    },
+    {
+      "name": "palette-appearance--light--390--dense.png",
+      "width": 390,
+      "height": 900,
+      "author_sha256": "7bed10f75834dbca84bd781de30c245cb167955fee4123a2b327fdd717e6b0ef",
+      "fresh_sha256": "7bed10f75834dbca84bd781de30c245cb167955fee4123a2b327fdd717e6b0ef",
+      "bytes_equal": true,
+      "exact_rgba_different_pixels": 0,
+      "passed": true,
+      "author": "spike/t442/appearance-receipts/receipts/author/output/palette.native-native-Appearance-frame-light-390-dense-appearance/palette-appearance--light--390--dense.png",
+      "fresh": "spike/t442/appearance-receipts/receipts/fresh/output/palette.native-native-Appearance-frame-light-390-dense-appearance/palette-appearance--light--390--dense.png"
+    }
+  ],
+  "independent_source_cost_review": "review.json; clean"
+}

@@ -1,0 +1,176 @@
+{
+  "schema": "phebs-t442-assessment-b-v1",
+  "outcome": "passed",
+  "commands": [
+    {
+      "name": "vite",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "/Users/ben/.codex/worktrees/t422n-mac-native-closure/phebs.com/ui/node_modules/vite/bin/vite.js",
+        "preview",
+        "/Users/ben/.codex/worktrees/t422n-mac-native-closure/phebs.com/ui",
+        "--outDir",
+        "/Users/ben/.codex/worktrees/t25-embedded-docs/phebs.com/ui/dist",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "60395",
+        "--strictPort"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t422n-mac-native-closure/phebs.com"
+    },
+    {
+      "name": "chrome",
+      "argv": [
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "--headless=new",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--disable-background-networking",
+        "--disable-component-update",
+        "--disable-sync",
+        "--remote-debugging-address=127.0.0.1",
+        "--remote-debugging-port=0",
+        "--user-data-dir=/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/detector/private-chrome-profile",
+        "about:blank"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t422n-mac-native-closure/phebs.com"
+    },
+    {
+      "name": "client",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/detector/browser.cjs"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t422n-mac-native-closure/phebs.com"
+    },
+    {
+      "name": "live-server",
+      "argv": [
+        "/Users/ben/.agents/skills/impeccable/scripts/impeccable",
+        "live-server",
+        "--port=60416"
+      ],
+      "cwd": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/detector/live-workset"
+    }
+  ],
+  "terminals": {
+    "live-server": {
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "sigterm",
+      "pid": 80615,
+      "expected_pgid": 80615,
+      "observed_pgid": 80615,
+      "joined": true
+    },
+    "client": {
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "already_exited",
+      "pid": 80609,
+      "expected_pgid": 80609,
+      "observed_pgid": 80609,
+      "joined": true
+    },
+    "chrome": {
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "sigterm",
+      "pid": 80594,
+      "expected_pgid": 80594,
+      "observed_pgid": 80594,
+      "joined": true
+    },
+    "vite": {
+      "exit_code": 143,
+      "teardown": "clean",
+      "termination_mode": "sigterm",
+      "pid": 80593,
+      "expected_pgid": 80593,
+      "observed_pgid": 80593,
+      "joined": true
+    }
+  },
+  "owners": {
+    "vite": {
+      "pid": 80593,
+      "expected_pgid": 80593,
+      "observed_pgid": 80593
+    },
+    "chrome": {
+      "pid": 80594,
+      "expected_pgid": 80594,
+      "observed_pgid": 80594
+    },
+    "client": {
+      "pid": 80609,
+      "expected_pgid": 80609,
+      "observed_pgid": 80609
+    },
+    "live-server": {
+      "pid": 80615,
+      "expected_pgid": 80615,
+      "observed_pgid": 80615
+    }
+  },
+  "browser_plugin": "unavailable; cached regular Playwright fallback",
+  "user_visible_overlay": false,
+  "initial_census": {
+    "production_inputs": {
+      "rows": 118,
+      "digest": "3faf08ae77ffeb47405efba2a61de1269e5fa212a2e0a0ff4334cfee25ebe9c1"
+    },
+    "production_dist": {
+      "rows": 165,
+      "digest": "b13f4849162509737b09fb50a0fbd8f037fca05ccb35eafdb0711803e101bffe"
+    }
+  },
+  "cli": {
+    "argv": [
+      "/Users/ben/.agents/skills/impeccable/scripts/impeccable",
+      "detect",
+      "--json",
+      "ui/src/pages/SettingsPage.tsx"
+    ],
+    "cwd": "/Users/ben/.codex/worktrees/t422n-mac-native-closure/phebs.com",
+    "pid": 78448,
+    "observed_pgid": 78448,
+    "invocations": 1,
+    "exit_code": 0,
+    "terminal": {
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "already_exited"
+    },
+    "seconds": 0.04151
+  },
+  "cli_findings": [],
+  "renderer": {
+    "Browser": "Chrome/155.0.8059.82",
+    "Protocol-Version": "1.3",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
+    "V8-Version": "15.5.35.23",
+    "WebKit-Version": "537.36 (@c56fe5daef8be123f68808a4bb705ff378cd2019)",
+    "webSocketDebuggerUrl": "ws://127.0.0.1:60401/devtools/browser/aaa3f712-ef24-43e5-bafd-33ec5afbbc44"
+  },
+  "mutable_preflight": {
+    "passed": true,
+    "mutablePreflight": true
+  },
+  "live_server_started_after_mutation": true,
+  "browser_result": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/detector/browser-result.json",
+  "all_owned_groups_joined_cleanly": true,
+  "private_browser_profile_removed": true,
+  "total_seconds": 4.647492,
+  "final_census": {
+    "production_inputs": {
+      "rows": 118,
+      "digest": "3faf08ae77ffeb47405efba2a61de1269e5fa212a2e0a0ff4334cfee25ebe9c1"
+    },
+    "production_dist": {
+      "rows": 165,
+      "digest": "b13f4849162509737b09fb50a0fbd8f037fca05ccb35eafdb0711803e101bffe"
+    }
+  }
+}

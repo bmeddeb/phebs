@@ -1,0 +1,86 @@
+{
+  "runs": [
+    {
+      "name": "focused",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "--maxWorkers=1",
+        "--no-file-parallelism",
+        "src/palette.test.ts",
+        "src/theme.test.ts",
+        "src/pages/SettingsPage.test.tsx",
+        "src/pages/FilePage.test.tsx",
+        "src/pages/SearchPage.test.tsx",
+        "src/pages/ExactCallerCitation.test.tsx",
+        "src/components/kit.test.tsx",
+        "--testNamePattern",
+        "T44.2|palette|syntax palettes",
+        "--testTimeout=10000",
+        "--hookTimeout=10000"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t422n-mac-native-closure/phebs.com/ui",
+      "outer_limit_seconds": 90,
+      "pid": 73078,
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "already_exited",
+      "joined": true,
+      "wall_seconds": 4.1192522920000005,
+      "log_sha256": "4df36bc95e2678f7b1f7c7abfce6b86cc095ca6c6fe69be2673c43830511d3da"
+    },
+    {
+      "name": "receipt-types",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "node_modules/typescript/bin/tsc",
+        "--ignoreConfig",
+        "--noEmit",
+        "--strict",
+        "--skipLibCheck",
+        "--target",
+        "es2023",
+        "--lib",
+        "es2023,dom,dom.iterable",
+        "--module",
+        "esnext",
+        "--moduleResolution",
+        "bundler",
+        "--types",
+        "node",
+        "--jsx",
+        "react-jsx",
+        "--allowImportingTsExtensions",
+        "receipts/palette-appearance.spec.ts"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t422n-mac-native-closure/phebs.com/ui",
+      "outer_limit_seconds": 90,
+      "pid": 73124,
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "already_exited",
+      "joined": true,
+      "wall_seconds": 0.5074222920000002,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "receipt-lint",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "node_modules/oxlint/bin/oxlint",
+        "receipts/palette-appearance.spec.ts"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t422n-mac-native-closure/phebs.com/ui",
+      "outer_limit_seconds": 90,
+      "pid": 73128,
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "already_exited",
+      "joined": true,
+      "wall_seconds": 0.13308995799999934,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "passed": true
+}

@@ -1,0 +1,40 @@
+
+Running 1 test using 1 worker
+
+(node:76660) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [appearance] › ../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/runner/critique-a.spec.ts:106:1 › critique A live keyboard inspection (5.3s)
+Testing stopped early after 1 maximum allowed failures.
+
+
+  1) [appearance] › ../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/runner/critique-a.spec.ts:106:1 › critique A live keyboard inspection 
+
+    Error: expect(locator).toHaveValue(expected) failed
+
+    Locator:  getByRole('region', { name: 'Appearance', exact: true }).getByRole('combobox', { name: 'Code highlight palette', exact: true })
+    Expected: "quiet"
+    Received: "phebs"
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveValue" with timeout 5000ms
+      - waiting for getByRole('region', { name: 'Appearance', exact: true }).getByRole('combobox', { name: 'Code highlight palette', exact: true })
+        14 × locator resolved to <select class="css-dUycxS">…</select>
+           - unexpected value "phebs"
+
+
+      75 |     await expect(page).toHaveTitle('phebs · Settings')
+      76 |     await expect(appearance.getByRole('heading', { name: 'Appearance', exact: true })).toBeVisible()
+    > 77 |     await expect(select).toHaveValue(palette)
+         |                          ^
+      78 |     await expect(specimen).toHaveAttribute('data-palette-ready', 'true')
+      79 |     await expect(specimen).toHaveJSProperty('textContent', specimenText)
+      80 |     await expect(keyword).toHaveCSS('color', rgb(PALETTES[palette][theme].keyword.color))
+        at Object.ready (/private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/runner/critique-a.spec.ts:77:26)
+        at /private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/runner/critique-a.spec.ts:120:5
+
+    Error Context: ../../../../../../var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/critique-a/output/critique-a-critique-A-live-keyboard-inspection-appearance/error-context.md
+
+  1 failed
+    [appearance] › ../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/runner/critique-a.spec.ts:106:1 › critique A live keyboard inspection 
+  1 error was not a part of any test, see above for details

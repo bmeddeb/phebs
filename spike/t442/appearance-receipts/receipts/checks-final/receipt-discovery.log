@@ -1,0 +1,12 @@
+Listing tests:
+  [appearance] › palette-appearance.spec.ts:107:3 › native Appearance frame light 1280 comfortable
+  [appearance] › palette-appearance.spec.ts:107:3 › native Appearance frame light 1280 dense
+  [appearance] › palette-appearance.spec.ts:107:3 › native Appearance frame light 390 comfortable
+  [appearance] › palette-appearance.spec.ts:107:3 › native Appearance frame light 390 dense
+  [appearance] › palette-appearance.spec.ts:107:3 › native Appearance frame dark 1280 comfortable
+  [appearance] › palette-appearance.spec.ts:107:3 › native Appearance frame dark 1280 dense
+  [appearance] › palette-appearance.spec.ts:107:3 › native Appearance frame dark 390 comfortable
+  [appearance] › palette-appearance.spec.ts:107:3 › native Appearance frame dark 390 dense
+  [appearance] › palette-appearance.spec.ts:119:3 › keyboard Appearance choice, persistence and guarded fallback 1280
+  [appearance] › palette-appearance.spec.ts:119:3 › keyboard Appearance choice, persistence and guarded fallback 390
+Total: 10 tests in 1 file

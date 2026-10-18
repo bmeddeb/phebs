@@ -1,0 +1,19 @@
+{
+  "argv": [
+    "/Users/ben/.agents/skills/impeccable/scripts/impeccable",
+    "detect",
+    "--json",
+    "ui/src/pages/SettingsPage.tsx"
+  ],
+  "cwd": "/Users/ben/.codex/worktrees/t422n-mac-native-closure/phebs.com",
+  "pid": 78448,
+  "observed_pgid": 78448,
+  "invocations": 1,
+  "exit_code": 0,
+  "terminal": {
+    "exit_code": 0,
+    "teardown": "clean",
+    "termination_mode": "already_exited"
+  },
+  "seconds": 0.04151
+}

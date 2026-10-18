@@ -1,0 +1,15 @@
+{
+  "ticket": "T44.2",
+  "date": "2026-10-18",
+  "source_commit": "c3003613d87cbf2f123486d8fe587e614ba2d404",
+  "outcome": "../../spike/t442/appearance-receipts/outcome.json",
+  "comparison": "../../spike/t442/appearance-receipts/comparison.json",
+  "custody": "../../spike/t442/appearance-receipts/custody.json",
+  "native_author_cases": 10,
+  "native_fresh_cases": 8,
+  "byte_identical_comparisons": 8,
+  "canonical_baselines_changed": 0,
+  "qualification": "Separate source/renderer-bound native lineage; no Noble baseline equivalence, new full canonical matrix, backend authentication or release result",
+  "linux_issue": "https://github.com/bmeddeb/phebs/issues/124",
+  "production_signing": "pending"
+}

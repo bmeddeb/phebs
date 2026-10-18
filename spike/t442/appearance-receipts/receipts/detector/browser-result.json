@@ -1,0 +1,43 @@
+{
+  "method": "regular cached Playwright with installed headless Chrome",
+  "freshContext": true,
+  "freshPage": true,
+  "mutablePreflight": true,
+  "injection": true,
+  "userVisibleOverlay": false,
+  "console": [
+    {
+      "type": "log",
+      "text": "%c[impeccable] No anti-patterns found. color: #22c55e; font-weight: bold"
+    }
+  ],
+  "pageErrors": [],
+  "requests": [
+    "GET /api/auth/status",
+    "GET /api/version",
+    "GET /api/auth/keys"
+  ],
+  "unexpectedRequests": [],
+  "postInjectionConsole": [
+    {
+      "type": "log",
+      "text": "%c[impeccable] No anti-patterns found. color: #22c55e; font-weight: bold"
+    }
+  ],
+  "impeccableConsole": [
+    {
+      "type": "log",
+      "text": "%c[impeccable] No anti-patterns found. color: #22c55e; font-weight: bold"
+    }
+  ],
+  "overlayDOM": [
+    {
+      "tag": "SCRIPT",
+      "id": "impeccable-mutable-preflight",
+      "className": ""
+    }
+  ],
+  "title": "[Human] phebs · Settings",
+  "url": "http://127.0.0.1:60395/#/settings",
+  "outcome": "passed"
+}

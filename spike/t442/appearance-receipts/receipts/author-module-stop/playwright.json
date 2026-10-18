@@ -1,0 +1,148 @@
+{
+  "config": {
+    "argv": [
+      "/private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+      "/Users/ben/.codex/worktrees/t422n-mac-native-closure/phebs.com/ui/node_modules/@playwright/test/cli.js",
+      "test",
+      "--config",
+      "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/runner/playwright.config.ts",
+      "--project",
+      "appearance",
+      "--max-failures=1"
+    ],
+    "configFile": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/runner/playwright.config.ts",
+    "rootDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/runner",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 1,
+    "metadata": {},
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/author/output",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "setup",
+        "name": "setup",
+        "testDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/runner",
+        "testIgnore": [],
+        "testMatch": [
+          "/auth\\.setup\\.ts/"
+        ],
+        "timeout": 20000
+      },
+      {
+        "outputDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/author/output",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "receipts",
+        "name": "receipts",
+        "testDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/runner",
+        "testIgnore": [],
+        "testMatch": [
+          "/receipts\\.spec\\.ts/"
+        ],
+        "timeout": 20000
+      },
+      {
+        "outputDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/author/output",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "anon",
+        "name": "anon",
+        "testDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/runner",
+        "testIgnore": [],
+        "testMatch": [
+          "/anon\\.spec\\.ts/"
+        ],
+        "timeout": 20000
+      },
+      {
+        "outputDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/author/output",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "typed-index",
+        "name": "typed-index",
+        "testDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/runner",
+        "testIgnore": [],
+        "testMatch": [
+          "/typed-index\\.spec\\.ts/"
+        ],
+        "timeout": 20000
+      },
+      {
+        "outputDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/author/output",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {},
+        "id": "appearance",
+        "name": "appearance",
+        "testDir": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/runner",
+        "testIgnore": [],
+        "testMatch": [
+          "/palette\\.native\\.spec\\.ts/"
+        ],
+        "timeout": 20000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/author/playwright.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.62.1",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [],
+  "errors": [
+    {
+      "message": "SyntaxError: Cannot use 'import.meta' outside a module",
+      "stack": "SyntaxError: Cannot use 'import.meta' outside a module\n    at Object.<anonymous> (/private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/runner/palette.native.spec.ts:3:1)",
+      "location": {
+        "file": "/private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/runner/palette.native.spec.ts",
+        "column": 1,
+        "line": 3
+      },
+      "snippet": "\u001b[90m   at \u001b[39m../../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/runner/palette.native.spec.ts:3\n\n  1 | import { expect, test, type Page } from \"/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/runner/native-fixture.ts\"\n  2 | import { DEFAULT_PALETTE, PALETTES, PALETTE_NAMES, type PaletteName } from \"/Users/ben/.codex/worktrees/t422n-mac-native-closure/phebs.com/ui/src/palette\"\n> 3 | import { scrollBelowHeader } from \"/Users/ben/.codex/worktrees/t422n-mac-native-closure/phebs.com/ui/receipts/fixture\"\n    | ^\n  4 | import { DENSITIES, FROZEN_NOW, THEMES } from \"/Users/ben/.codex/worktrees/t422n-mac-native-closure/phebs.com/ui/receipts/routes\"\n  5 |\n  6 | const widths = [1280, 390] as const"
+    },
+    {
+      "message": "Error: No tests found",
+      "stack": "Error: No tests found"
+    }
+  ],
+  "stats": {
+    "startTime": "2026-10-18T18:47:57.241Z",
+    "duration": 58.28399999999999,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

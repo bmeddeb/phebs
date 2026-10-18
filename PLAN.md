@@ -13817,3 +13817,32 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   a mounted/disk prefix. The existing 48-GiB production reservation cap is exact:
   its zero-byte call observes only the actual capacity latch, while a separate
   checked full-image projection requires the unchanged normal watermark.
+
+- **2026-10-18 — T44.2 Appearance receipt closure (Mac track).** The later
+  T57R.2/T44.5 matrices establish their recorded Settings pixels, but desktop
+  frames omit Appearance and narrow indexing frames clip its specimen. Close
+  the palette ticket with eight targeted, fully visible Appearance frames
+  (1280/390px, both themes and densities) and two keyboard/live-color/storage
+  journeys. Use strict neutral non-administrator page fixtures and the existing
+  source/renderer-bound native lineage: author and fresh contexts compare at
+  zero retries and the existing 0.001 ratio. Keep all Noble goldens and failed
+  comparisons exact; native frames establish no Noble renderer equivalence or
+  full-matrix result. Reuse the unchanged product UI/build and existing contrast
+  and mounted-consumer controls. Only receipt code and evidence change; product
+  bundle/request/query/startup/sync/retry/publication/lock/cache/disk/child costs
+  are unchanged. Browser work is finite and serial under one 180-second ceiling
+  per pass, including owned-group teardown. Linux #124 and production signing
+  remain separate pending work.
+  The final receipt source `c3003613d87cbf2f123486d8fe587e614ba2d404`
+  passes author 10/10 and fresh 8/8 with eight byte-identical pairs, 16 clean
+  Appearance-scoped axe audits, actual keyboard type-ahead/persistence/refusal
+  controls and clean joined teardown. All 130 canonical PNGs, 118 production
+  inputs and 165 bundle files remain exact; the default unfiltered receipt
+  suite gains ten cases. Native popup and buffered-prefix diagnostics stay
+  failed/historical; the passing journey resets native type-ahead with actual
+  Tab/Shift+Tab before each distinct initial. Eight choices (default plus
+  three nondefault transitions at each width) take 14–35ms as local mechanics.
+  Independent source/cost review is clean and the dual-agent design/detector
+  assessment has no blocker. The retained [T44.2 outcome](spike/t442/appearance-receipts/README.md)
+  closes only this Appearance receipt gap; Linux execution, validation labels
+  and production signing remain pending independently.

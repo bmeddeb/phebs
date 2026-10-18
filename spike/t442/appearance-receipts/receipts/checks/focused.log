@@ -1,0 +1,9 @@
+
+ RUN  v4.1.10 /Users/ben/.codex/worktrees/t422n-mac-native-closure/phebs.com/ui
+
+
+ Test Files  7 passed (7)
+      Tests  297 passed | 144 skipped (441)
+   Start at  11:44:37
+   Duration  3.63s (transform 231ms, setup 23ms, import 812ms, tests 526ms, environment 1.85s)
+

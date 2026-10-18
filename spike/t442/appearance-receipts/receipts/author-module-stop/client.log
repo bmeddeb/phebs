@@ -1,0 +1,16 @@
+(node:75676) Warning: Failed to load the ES module: /Users/ben/.codex/worktrees/t422n-mac-native-closure/phebs.com/ui/receipts/fixture.ts. Make sure to set "type": "module" in the nearest package.json file or use the .mjs extension.
+(Use `node --trace-warnings ...` to show where the warning was created)
+SyntaxError: Cannot use 'import.meta' outside a module
+
+   at ../../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/runner/palette.native.spec.ts:3
+
+  1 | import { expect, test, type Page } from "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/runner/native-fixture.ts"
+  2 | import { DEFAULT_PALETTE, PALETTES, PALETTE_NAMES, type PaletteName } from "/Users/ben/.codex/worktrees/t422n-mac-native-closure/phebs.com/ui/src/palette"
+> 3 | import { scrollBelowHeader } from "/Users/ben/.codex/worktrees/t422n-mac-native-closure/phebs.com/ui/receipts/fixture"
+    | ^
+  4 | import { DENSITIES, FROZEN_NOW, THEMES } from "/Users/ben/.codex/worktrees/t422n-mac-native-closure/phebs.com/ui/receipts/routes"
+  5 |
+  6 | const widths = [1280, 390] as const
+    at Object.<anonymous> (/private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/runner/palette.native.spec.ts:3:1)
+Error: No tests found
+

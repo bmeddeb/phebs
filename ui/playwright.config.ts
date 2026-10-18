@@ -47,5 +47,6 @@ export default defineConfig({
     },
     { name: 'anon', testMatch: /anon\.spec\.ts/ },
     { name: 'typed-index', testMatch: /typed-index\.spec\.ts/ },
+    { name: 'appearance', testMatch: /palette-appearance\.spec\.ts/ },
   ],
 })

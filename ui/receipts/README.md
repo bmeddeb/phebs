@@ -374,3 +374,30 @@ service search/directory and relationship routes; the complete 143-case
 matrix was not rerun. [Portability provenance](./t57r3.json)
 records hashes, local pinned-renderer qualification, retained diagnostics,
 cost and teardown. No hosted Actions or production release claim follows.
+
+
+### T44.2 complete Appearance frames
+
+The `appearance` project supplies a strict page-scoped, non-administrator
+reader fixture. It captures the entire Appearance heading, palette select and
+code specimen at 1280×800 and 390×900, in both themes and densities. The two
+keyboard cases choose each palette with native type-ahead after Tab refocus, check live token
+colors without a navigation or API request, reload the saved preference, and
+refuse unknown and inherited-property names. No backend or release authority is
+exercised.
+
+```sh
+npm run receipts -- --project appearance --max-failures=1 --output /tmp/phebs-appearance-author
+npm run receipts -- --project appearance --grep 'native Appearance frame' --max-failures=1 --output /tmp/phebs-appearance-fresh
+```
+
+The ten-case author and eight-case fresh passes emit captures; a separate
+comparison must use the same source, renderer and tools, one worker, zero
+retries and the existing 0.001 ratio. The eight
+`palette-appearance--<theme>--<width>--<density>.png` files form a separate
+native lineage. They add no canonical baseline expectation and never belong in
+`baselines/`. The older desktop Settings frame omits Appearance and the narrow
+indexing frame clips its specimen; their historical pixels remain exact.
+The bounded outcome, comparison, accessibility and cost record is
+[T44.2](./t442.json). A local presentation fixture establishes no production
+API latency, Linux execution, signing or release result.
