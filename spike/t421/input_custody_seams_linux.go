@@ -13,7 +13,9 @@ import (
 // This file supplies the Linux seam implementations for the existing custody
 // machinery. Owned/Protected stay refusal-false: the Darwin immutable-flag
 // custody model is not implemented here, so every flag-dependent caller
-// refuses before creating or flagging anything. Same and systemToolReadOnlyVolume
+// refuses before creating or flagging anything. CopyOwned separately observes
+// ordinary ownership for the mutable verified-copy recipe; it grants no custody.
+// Same and systemToolReadOnlyVolume
 // are real bounded observations used by the fixed-system tool path; neither
 // proves immutability, a vendor signature or safety from a privileged host
 // adversary.
@@ -21,6 +23,14 @@ import (
 func inputCustodyOwned(os.FileInfo) bool { return false }
 
 func inputCustodyProtected(os.FileInfo) bool { return false }
+
+func inputCustodyCopyOwned(info os.FileInfo) bool {
+	if info == nil {
+		return false
+	}
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	return ok && stat != nil && linuxInputCopyOwnerMatches(info.Mode(), stat.Mode, stat.Uid, os.Geteuid(), stat.Nlink)
+}
 
 // inputCustodySame compares every uniform Linux Stat_t identity field plus the
 // FileInfo surface. Linux Stat_t has no Gen or Flags member, so those Darwin

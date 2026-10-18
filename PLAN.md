@@ -13673,6 +13673,19 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   child work changes; observed direct reader peak RSS remains about80.4MB,
   without a hard-heap, aggregate compiler-family, CPU, host-capacity or SLO claim.
 
+- **2026-10-18 — T42.H2h linux ownership observation and protected-input boundary (Mac preparation handoff).**
+  Linux protected-tree custody will use a distinct scoped namespace loan. The
+  issuer owns the fresh bounded copy/read-only transition, closes writers before
+  publication, binds fixed measured helper and namespace/mount roots, retains
+  custody through serialized joined use, and refuses kernel/LSM permission, alias,
+  manifest or drain uncertainty. No host capability/daemon entitlement is granted.
+  Historical constructors and versions stay exact until this separate recipe earns
+  admission. H2h separates real owner/type/link observation for the existing mutable
+  verified-copy walk and preserves unsupported protected-path refusal before scratch.
+  It supplies no namespace constructor or protection authority; native Linux proof
+  remains pending. Existing walk bounds/copy/hash work and constructor locks remain;
+  metadata tests add no product query/tick/startup/retry/publication/child work.
+
 - **2026-10-18 — T42.H2i linux byte observation and allocation seams (Mac preparation handoff).**
   Prepare Linux linked-path logical/allocated-byte observations with real native
   metadata and FSID, sharing the bounded serial traversal while keeping Darwin
