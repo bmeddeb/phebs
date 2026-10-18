@@ -3991,6 +3991,21 @@ The first lint refusal and error-text-only correction stay exact in
 `spike/t42h2j/`. All validation groups joined. No native Linux/capacity authority
 is claimed; Ben defers actual Linux execution until2026-10-20.
 
+**T42.H2m · Owned isolated Linux pressure filesystem** *(2026-10-18, Ben
+all-ticket delegation; flagged Mac source handoff).*
+Implement a distinct root-owned image/loop/private-ext4 owner under the existing
+trusted host-staging boundary. Operator-supplied privilege and a prospective
+exact formatter binding are prerequisites; this work installs or grants neither.
+Retain the owned image, exact loop and native root/workspace identities through
+serialized loans. Non-forced unmount, exact loop-detach and underlay verification
+precede image removal; failed setup or uncertain cleanup retains its actual
+prefix. AC: bounded modeled state/refusal/cleanup tests, supported Linux compile
+checks, and authored but unrun native setup/allocation/teardown controls. No raw
+borrowed mount, callback boolean or observed formatter hash grants authority.
+Standalone ownership does not certify an executor's descendants joined; full
+pressure/restore binding, native geometry and prospective plans remain H2 gates.
+Historical APFS plans/receipts and active entry-point refusals stay exact.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

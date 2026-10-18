@@ -672,6 +672,19 @@ counts grant no protection/isolation or per-range hole proof. No Linux binary,
 allocation, pressure, restore or ceremony ran; actual Linux gates await the
 October20 office return.
 
+T42.H2m prepares an independently owned Linux pressure filesystem through the
+existing root-only trusted host-staging boundary. Unlike input-tree tmpfs,
+mounting a block filesystem requires privilege in the initial user namespace;
+creating an unprivileged namespace does not supply it. The operator must already
+provide the privilege and an exact prospective formatter binding. The owner
+keeps a root-owned image and exact loop/mount/workspace identities, and grants
+only serialized descriptor loans. Cleanup requires non-forced unmount, verified
+loop detach and the original underlay before image removal; uncertainty retains
+custody. A returned callback does not certify joined descendants. No `sudo`
+policy, capability grant, service or host installation is created. Actual Linux
+acceptance, measured filesystem geometry and full pressure/restore/plan binding
+remain pending; historical APFS geometry is unchanged.
+
 On this host, development tools are in `/home/ben/.local/bin`; native amd64
 tools are staged separately under
 `/home/ben/.local/share/phebs-host/native-amd64`. Load the development PATH and

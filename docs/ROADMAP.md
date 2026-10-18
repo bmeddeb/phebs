@@ -138,6 +138,11 @@ T42.H2i prepares linux byte observation and allocation seams.
 T42.H2j prepares prospective aggregate linux memory calculation.
 This is bounded source preparation; actual Linux admission/readiness remains open.
 
+T42.H2m implements a separate root-owned isolated Linux pressure filesystem.
+Existing operator privilege and exact formatter admission remain prerequisites;
+unprivileged input namespaces cannot mount this block filesystem. Source/model
+checks do not establish native geometry, pressure/restore execution or readiness.
+
 ## Current product posture
 
 **All-ticket execution (2026-10-17, Ben-directed):** resolve actual dependencies
