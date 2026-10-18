@@ -1,0 +1,173 @@
+{
+  "format": "t281-authored-expected-kinds-v1",
+  "review_date": "2026-10-18",
+  "source_rule": "Hand-authored from official public command documentation, separate from frozen key-spec metadata. Latest documentation does not admit commands added after the Redis7.2.15 pin. No module implementation or copied module metadata.",
+  "rows": [
+    {
+      "command": "GET",
+      "expected_kind": "string",
+      "source_url": "https://redis.io/docs/latest/commands/get/",
+      "interpretation": "String expectation; SET/SETNX expresses intended new value, not an existing-key type assertion."
+    },
+    {
+      "command": "SET",
+      "expected_kind": "string",
+      "source_url": "https://redis.io/docs/latest/commands/set/",
+      "interpretation": "String expectation; SET/SETNX expresses intended new value, not an existing-key type assertion."
+    },
+    {
+      "command": "SETNX",
+      "expected_kind": "string",
+      "source_url": "https://redis.io/docs/latest/commands/setnx/",
+      "interpretation": "String expectation; SET/SETNX expresses intended new value, not an existing-key type assertion."
+    },
+    {
+      "command": "HSET",
+      "expected_kind": "hash",
+      "source_url": "https://redis.io/docs/latest/commands/hset/",
+      "interpretation": "Hash operation expectation; fields remain operands, not a complete value schema."
+    },
+    {
+      "command": "HGET",
+      "expected_kind": "hash",
+      "source_url": "https://redis.io/docs/latest/commands/hget/",
+      "interpretation": "Hash operation expectation; fields remain operands, not a complete value schema."
+    },
+    {
+      "command": "HVALS",
+      "expected_kind": "hash",
+      "source_url": "https://redis.io/docs/latest/commands/hvals/",
+      "interpretation": "Hash operation expectation; fields remain operands, not a complete value schema."
+    },
+    {
+      "command": "LPUSH",
+      "expected_kind": "list",
+      "source_url": "https://redis.io/docs/latest/commands/lpush/",
+      "interpretation": "List operation expectation."
+    },
+    {
+      "command": "LRANGE",
+      "expected_kind": "list",
+      "source_url": "https://redis.io/docs/latest/commands/lrange/",
+      "interpretation": "List operation expectation."
+    },
+    {
+      "command": "SADD",
+      "expected_kind": "set",
+      "source_url": "https://redis.io/docs/latest/commands/sadd/",
+      "interpretation": "Set operation expectation."
+    },
+    {
+      "command": "SMEMBERS",
+      "expected_kind": "set",
+      "source_url": "https://redis.io/docs/latest/commands/smembers/",
+      "interpretation": "Set operation expectation."
+    },
+    {
+      "command": "SISMEMBER",
+      "expected_kind": "set",
+      "source_url": "https://redis.io/docs/latest/commands/sismember/",
+      "interpretation": "Set operation expectation."
+    },
+    {
+      "command": "SREM",
+      "expected_kind": "set",
+      "source_url": "https://redis.io/docs/latest/commands/srem/",
+      "interpretation": "Set operation expectation."
+    },
+    {
+      "command": "ZADD",
+      "expected_kind": "sorted-set",
+      "source_url": "https://redis.io/docs/latest/commands/zadd/",
+      "interpretation": "Sorted-set operation expectation."
+    },
+    {
+      "command": "ZSCORE",
+      "expected_kind": "sorted-set",
+      "source_url": "https://redis.io/docs/latest/commands/zscore/",
+      "interpretation": "Sorted-set operation expectation."
+    },
+    {
+      "command": "ZREM",
+      "expected_kind": "sorted-set",
+      "source_url": "https://redis.io/docs/latest/commands/zrem/",
+      "interpretation": "Sorted-set operation expectation."
+    },
+    {
+      "command": "ZREVRANGE",
+      "expected_kind": "sorted-set",
+      "source_url": "https://redis.io/docs/latest/commands/zrevrange/",
+      "interpretation": "Sorted-set operation expectation."
+    },
+    {
+      "command": "XREAD",
+      "expected_kind": "stream",
+      "source_url": "https://redis.io/docs/latest/commands/xread/",
+      "interpretation": "Stream operation expectation; stream group is a resource, not entry-field declarations."
+    },
+    {
+      "command": "XADD",
+      "expected_kind": "stream",
+      "source_url": "https://redis.io/docs/latest/commands/xadd/",
+      "interpretation": "Stream operation expectation; stream group is a resource, not entry-field declarations."
+    },
+    {
+      "command": "XGROUP CREATE",
+      "expected_kind": "stream",
+      "source_url": "https://redis.io/docs/latest/commands/xgroup-create/",
+      "interpretation": "Stream operation expectation; stream group is a resource, not entry-field declarations."
+    },
+    {
+      "command": "DEL",
+      "expected_kind": null,
+      "unresolved": "unknown-expected-value-kind",
+      "interpretation": "Generic or argument-dependent kind; preserve separately provable key/access evidence."
+    },
+    {
+      "command": "SORT",
+      "expected_kind": null,
+      "unresolved": "unknown-expected-value-kind",
+      "interpretation": "Generic or argument-dependent kind; preserve separately provable key/access evidence."
+    },
+    {
+      "command": "MIGRATE",
+      "expected_kind": null,
+      "unresolved": "unknown-expected-value-kind",
+      "interpretation": "Generic or argument-dependent kind; preserve separately provable key/access evidence."
+    },
+    {
+      "command": "EXPIRE",
+      "expected_kind": null,
+      "unresolved": "unknown-expected-value-kind",
+      "interpretation": "Generic or argument-dependent kind; preserve separately provable key/access evidence."
+    },
+    {
+      "command": "TYPE",
+      "expected_kind": null,
+      "unresolved": "unknown-expected-value-kind",
+      "interpretation": "Generic or argument-dependent kind; preserve separately provable key/access evidence."
+    },
+    {
+      "command": "EVAL",
+      "expected_kind": null,
+      "interpretation": "Explicit supplied keys are pass-through only. Generic conservative core metadata flags are not script semantics."
+    },
+    {
+      "command": "EVALSHA",
+      "expected_kind": null,
+      "interpretation": "Explicit supplied keys are pass-through only. Generic conservative core metadata flags are not script semantics."
+    },
+    {
+      "command": "FCALL",
+      "expected_kind": null,
+      "interpretation": "Explicit supplied keys are pass-through only. Generic conservative core metadata flags are not script semantics."
+    }
+  ],
+  "module_declaration_projection": {
+    "FT.CREATE": "Explicit ON HASH/JSON describes indexed projection only, not complete value structure; no expected-kind inference from index name.",
+    "TS.CREATE": "Names a time-series resource; no entry-field schema or runtime type.",
+    "TS.CREATERULE": "Explicit source/destination series rule; no script or runtime propagation."
+  },
+  "missing_entry": "unknown-expected-value-kind, never discard otherwise provable key/access evidence",
+  "recognizer_runs": 0
+}

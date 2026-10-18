@@ -1,0 +1,188 @@
+{
+  "format": "t281-acl-source-labels-v1",
+  "repository": "redis/redis",
+  "commit": "316753259b4db132cf494292a1b3a702d9e9ddb2",
+  "scope": "Complete three-file public ACL census; only explicit username/pattern token spans, no line context/grants/credentials or credential hashes",
+  "principal_occurrences": 7,
+  "principal_pattern_pairs": 7,
+  "credential_output_allowance": 0,
+  "public_credential_payload_username_collisions": 2,
+  "collision_rule": "Complete credential-token bytes and credential-origin citations forbidden; identical allowed username bytes remain permitted. Distinct synthetic secrets additionally require payload absence.",
+  "files": [
+    {
+      "source_path": "tests/assets/nodefaultuser.acl",
+      "source_bytes": 60,
+      "source_sha256": "5cb89e592b51f4b8ea1ad0f8792ac20cfebb386cd59465cfe43383dd10dfdea6",
+      "principals": [
+        {
+          "token": "alice",
+          "start": 5,
+          "end": 10,
+          "sha256": "2bd806c97f0e00af1a1fc3328fa763a9269723c8db8fac4f93af71db186d6e90"
+        },
+        {
+          "token": "bob",
+          "start": 35,
+          "end": 38,
+          "sha256": "81b637d8fcd2c6da6359e6963113a1170de795e4b725b84d1e0b4cfd9ec58ce9"
+        }
+      ],
+      "pairs": [
+        {
+          "principal": {
+            "token": "alice",
+            "start": 5,
+            "end": 10,
+            "sha256": "2bd806c97f0e00af1a1fc3328fa763a9269723c8db8fac4f93af71db186d6e90"
+          },
+          "pattern": {
+            "token": "~*",
+            "start": 21,
+            "end": 23,
+            "sha256": "a10c7dfad031acaace34822537594bbf1eeda8bacc5295be75c419d14328518b"
+          },
+          "authorization_intent": "RW"
+        },
+        {
+          "principal": {
+            "token": "bob",
+            "start": 35,
+            "end": 38,
+            "sha256": "81b637d8fcd2c6da6359e6963113a1170de795e4b725b84d1e0b4cfd9ec58ce9"
+          },
+          "pattern": {
+            "token": "~*",
+            "start": 49,
+            "end": 51,
+            "sha256": "a10c7dfad031acaace34822537594bbf1eeda8bacc5295be75c419d14328518b"
+          },
+          "authorization_intent": "RW"
+        }
+      ]
+    },
+    {
+      "source_path": "tests/assets/user.acl",
+      "source_bytes": 122,
+      "source_sha256": "9882d72b60778b222425d4eb76adb3c8c940972c3160c17329500941f25f2a15",
+      "principals": [
+        {
+          "token": "alice",
+          "start": 5,
+          "end": 10,
+          "sha256": "2bd806c97f0e00af1a1fc3328fa763a9269723c8db8fac4f93af71db186d6e90"
+        },
+        {
+          "token": "bob",
+          "start": 49,
+          "end": 52,
+          "sha256": "81b637d8fcd2c6da6359e6963113a1170de795e4b725b84d1e0b4cfd9ec58ce9"
+        },
+        {
+          "token": "default",
+          "start": 92,
+          "end": 99,
+          "sha256": "37a8eec1ce19687d132fe29051dca629d164e2c4958ba141d5f4133a33f0688f"
+        }
+      ],
+      "pairs": [
+        {
+          "principal": {
+            "token": "bob",
+            "start": 49,
+            "end": 52,
+            "sha256": "81b637d8fcd2c6da6359e6963113a1170de795e4b725b84d1e0b4cfd9ec58ce9"
+          },
+          "pattern": {
+            "token": "~set*",
+            "start": 73,
+            "end": 78,
+            "sha256": "5886e0f27516304faf88f788b4d418d8b629dc72579b1bece43aedc45ad9f051"
+          },
+          "authorization_intent": "RW"
+        },
+        {
+          "principal": {
+            "token": "default",
+            "start": 92,
+            "end": 99,
+            "sha256": "37a8eec1ce19687d132fe29051dca629d164e2c4958ba141d5f4133a33f0688f"
+          },
+          "pattern": {
+            "token": "~*",
+            "start": 110,
+            "end": 112,
+            "sha256": "a10c7dfad031acaace34822537594bbf1eeda8bacc5295be75c419d14328518b"
+          },
+          "authorization_intent": "RW"
+        }
+      ]
+    },
+    {
+      "source_path": "tests/assets/userwithselectors.acl",
+      "source_bytes": 63,
+      "source_sha256": "8bffa32c3b6f2260bdd18eab1ab88e0106db6470d5005f867773eea63988db23",
+      "principals": [
+        {
+          "token": "alice",
+          "start": 5,
+          "end": 10,
+          "sha256": "2bd806c97f0e00af1a1fc3328fa763a9269723c8db8fac4f93af71db186d6e90"
+        },
+        {
+          "token": "bob",
+          "start": 31,
+          "end": 34,
+          "sha256": "81b637d8fcd2c6da6359e6963113a1170de795e4b725b84d1e0b4cfd9ec58ce9"
+        }
+      ],
+      "pairs": [
+        {
+          "principal": {
+            "token": "alice",
+            "start": 5,
+            "end": 10,
+            "sha256": "2bd806c97f0e00af1a1fc3328fa763a9269723c8db8fac4f93af71db186d6e90"
+          },
+          "pattern": {
+            "token": "~rw*",
+            "start": 20,
+            "end": 24,
+            "sha256": "b487e21b66371e3af4ab69aaae3e97bd9bcb25fc09b05014dbbd62ef93ed8a07"
+          },
+          "authorization_intent": "RW"
+        },
+        {
+          "principal": {
+            "token": "bob",
+            "start": 31,
+            "end": 34,
+            "sha256": "81b637d8fcd2c6da6359e6963113a1170de795e4b725b84d1e0b4cfd9ec58ce9"
+          },
+          "pattern": {
+            "token": "%W~w*",
+            "start": 44,
+            "end": 49,
+            "sha256": "8c06aceeedf6fdf0d139bedc451f74457c93c3751c35d847d0640c197a88a5ab"
+          },
+          "authorization_intent": "W"
+        },
+        {
+          "principal": {
+            "token": "bob",
+            "start": 31,
+            "end": 34,
+            "sha256": "81b637d8fcd2c6da6359e6963113a1170de795e4b725b84d1e0b4cfd9ec58ce9"
+          },
+          "pattern": {
+            "token": "%R~r*",
+            "start": 57,
+            "end": 62,
+            "sha256": "c84a638933f824f836bdaa45b8af599bf7ca29bfcfb9fb35fa920630a9a53590"
+          },
+          "authorization_intent": "R"
+        }
+      ]
+    }
+  ],
+  "recognizer_runs": 0
+}

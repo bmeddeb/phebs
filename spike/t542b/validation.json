@@ -1,0 +1,7 @@
+{
+  "scope": "T54.2b optional typed bounded HTTP $schema; unknown product keys still rejected",
+  "source": "Pinned Huma DefaultConfig/schema transformer plus real retained HTTP response keys; synthetic oldfixture omitted it",
+  "tests": "83 UIcontrols/3files; types/oxlint; actual HTTP serialization0.790s; vet/pinnedGo lint0issues",
+  "cost": "one constant bounded string check; no new request/source/state/cache/lock/child",
+  "next": "freshUI/binary before firstT543native; production signing pending"
+}

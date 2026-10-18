@@ -1,0 +1,20 @@
+{
+  "argv": [
+    "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+    "test",
+    "./reader",
+    "-run",
+    "^TestSupplementalKeynumAdmission$",
+    "-count=1"
+  ],
+  "exit": 0,
+  "timeout": false,
+  "wall_limit_seconds_including_cleanup": 60,
+  "wall_seconds": 0.9330092919999999,
+  "joined": true,
+  "owned_process_group_absent": true,
+  "stdout_sha256": "ef4770c83b14a41d61df6efe329107744f5997a36d721d342ff93b710a071877",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "source_checkpoint": "3c1305adfac166a6c5a1d5fbc4725ec6e064d05a",
+  "candidate_contract_sha256": "d9161c18a3c819bbb96c3109a28a716f4a0b39f06b67e1a9d9a04bd10243b275"
+}

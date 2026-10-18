@@ -1,0 +1,1374 @@
+{
+  "format": "t281-neutral-controls-v1",
+  "recognizer_runs": 0,
+  "cases": [
+    {
+      "id": "literal-raw-get",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "key_expressions": 1,
+        "resolved_keys": 1,
+        "access": [
+          [
+            "RO",
+            "ACCESS"
+          ]
+        ],
+        "expected_kinds": [
+          "string"
+        ]
+      },
+      "source_path": "fixtures/controls/literal-raw-get.go",
+      "source_bytes": 187,
+      "source_sha256": "da94bd545de0306bf193035b9635d965f538154b52ed29e71ef47de6b86ffd39",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": [
+        {
+          "source_token": {
+            "start": 172,
+            "end": 183,
+            "sha256": "fe7abe18378c6d28684a98d5f4f803f3fc8d8deda70cbe372a495c8d6b8f5da9"
+          },
+          "bytes_base64": "cGxhaW46a2V5"
+        }
+      ]
+    },
+    {
+      "id": "typed-get-exact-second-version",
+      "source_class": "go-source",
+      "version": "v9.17.2",
+      "expected": {
+        "recognized": 1,
+        "key_expressions": 1,
+        "resolved_keys": 1,
+        "access": [
+          [
+            "RO",
+            "ACCESS"
+          ]
+        ],
+        "expected_kinds": [
+          "string"
+        ]
+      },
+      "source_path": "fixtures/controls/typed-get-exact-second-version.go",
+      "source_bytes": 182,
+      "source_sha256": "031b71583641a4680be9f20efe1fa586e1e40817ae29dd773234da4abb9f5f86",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": [
+        {
+          "source_token": {
+            "start": 167,
+            "end": 178,
+            "sha256": "fe7abe18378c6d28684a98d5f4f803f3fc8d8deda70cbe372a495c8d6b8f5da9"
+          },
+          "bytes_base64": "cGxhaW46a2V5"
+        }
+      ]
+    },
+    {
+      "id": "same-file-constant",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "key_expressions": 1,
+        "resolved_keys": 1,
+        "access": [
+          [
+            "RW",
+            "UPDATE"
+          ]
+        ],
+        "expected_kinds": [
+          "hash"
+        ]
+      },
+      "source_path": "fixtures/controls/same-file-constant.go",
+      "source_bytes": 216,
+      "source_sha256": "5a0b42498166469d4b65888e506bcf0d476574587d930677247d8731efe89214",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": [
+        {
+          "source_token": {
+            "start": 169,
+            "end": 179,
+            "sha256": "b6c6598390424353361b24eb309412245012e1909a773a2b4e347b219afc0135"
+          },
+          "bytes_base64": "aGFzaDprZXk="
+        }
+      ]
+    },
+    {
+      "id": "bounded-format",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "key_expressions": 1,
+        "resolved_structures": 1,
+        "format_segments": [
+          {
+            "kind": "literal",
+            "bytes_base64": "c2V0Og=="
+          },
+          {
+            "kind": "parameter",
+            "name": "tenant",
+            "format": "%s"
+          }
+        ],
+        "access": [
+          [
+            "RW",
+            "INSERT"
+          ]
+        ],
+        "expected_kinds": [
+          "set"
+        ]
+      },
+      "source_path": "fixtures/controls/bounded-format.go",
+      "source_bytes": 209,
+      "source_sha256": "bfcae182ea10a883c8034a2503934eb23fee532c400aaccaff259eafcee9f51e",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "dynamic-concatenation",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "key_expressions": 1,
+        "resolved_keys": 0,
+        "gaps": [
+          "dynamic-concatenation"
+        ]
+      },
+      "source_path": "fixtures/controls/dynamic-concatenation.go",
+      "source_bytes": 184,
+      "source_sha256": "941c98e549542b79d2fe73d92b22a23a7d0078f54a9b5b3db7140f42501b3141",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "opaque-key-helper",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "key_expressions": 1,
+        "resolved_keys": 0,
+        "gaps": [
+          "opaque-helper"
+        ]
+      },
+      "source_path": "fixtures/controls/opaque-key-helper.go",
+      "source_bytes": 184,
+      "source_sha256": "ce94ad92455cf95c05b5db2ef30c226134793a40e3097a09f1950bba120711e5",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "runtime-namespace",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "key_expressions": 1,
+        "resolved_keys": 0,
+        "gaps": [
+          "runtime-namespace"
+        ]
+      },
+      "source_path": "fixtures/controls/runtime-namespace.go",
+      "source_bytes": 174,
+      "source_sha256": "121a1c9255509acf60a9487a7d597ae22bed2377a24f6316876a3cba4fbc7b6f",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "unknown-client-major",
+      "source_class": "go-source",
+      "version": "v8.11.5",
+      "expected": {
+        "recognized": 0,
+        "gaps": [
+          "unknown-client-adapter"
+        ]
+      },
+      "source_path": "fixtures/controls/unknown-client-major.go",
+      "source_bytes": 174,
+      "source_sha256": "afb7e95a06f68f1ab0f05dc66cfd4d406463813d5930c53239586a179c4d9f4f",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "unsupported-exact-v9-version",
+      "source_class": "go-source",
+      "version": "v9.7.0",
+      "expected": {
+        "recognized": 0,
+        "gaps": [
+          "unknown-client-adapter"
+        ]
+      },
+      "source_path": "fixtures/controls/unsupported-exact-v9-version.go",
+      "source_bytes": 174,
+      "source_sha256": "e846c65bb38184c910f7130f8ec16d4b906744c0ba54663a7c99c860effd6b08",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "core-after-pin",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 0,
+        "gaps": [
+          "unsupported-core-command-after-pin"
+        ]
+      },
+      "source_path": "fixtures/controls/core-after-pin.go",
+      "source_bytes": 201,
+      "source_sha256": "60937158792360a3a8600cc5612164106d65e5893c202ab64a6e7170f668ac51",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "unadmitted-module-command",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 0,
+        "gaps": [
+          "unsupported-module-command"
+        ]
+      },
+      "source_path": "fixtures/controls/unadmitted-module-command.go",
+      "source_bytes": 190,
+      "source_sha256": "cf7fe079b7b638503da05dc8b3df77645468c337cb164cefbf74b9bffc062e62",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "incomplete-spec-fixed-primary",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "key_expressions": 1,
+        "resolved_keys": 1,
+        "access": [
+          [
+            "RO",
+            "ACCESS"
+          ]
+        ],
+        "gaps": [
+          "incomplete-key-specification",
+          "unknown-expected-value-kind"
+        ],
+        "omitted_unknown_key_positions": true
+      },
+      "source_path": "fixtures/controls/incomplete-spec-fixed-primary.go",
+      "source_bytes": 203,
+      "source_sha256": "a10abe91795d404b436f6221b062e68f81abbdee49952b32088beccf5cbce12b",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": [
+        {
+          "source_token": {
+            "start": 173,
+            "end": 183,
+            "sha256": "f028b4f321e5b8467cc97ca6ab3ef9ba87a49819621e39dbf3cfae3ccde4f222"
+          },
+          "bytes_base64": "bGlzdDprZXk="
+        }
+      ]
+    },
+    {
+      "id": "set-variable-option",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "key_expressions": 1,
+        "resolved_keys": 1,
+        "access": [
+          null
+        ],
+        "gaps": [
+          "variable-access-mode"
+        ],
+        "expected_kinds": [
+          "string"
+        ]
+      },
+      "source_path": "fixtures/controls/set-variable-option.go",
+      "source_bytes": 229,
+      "source_sha256": "d8f7a84472ba9b31f8561bed825a620f8134303f0e5c9c301731c89b78d70ed9",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": [
+        {
+          "source_token": {
+            "start": 183,
+            "end": 190,
+            "sha256": "f5d8e0e62c01d60f4e5f9d105c4ea73f27fa9e4626ed7d4b1078d65cf4096087"
+          },
+          "bytes_base64": "czprZXk="
+        }
+      ]
+    },
+    {
+      "id": "set-get-branch",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "resolved_keys": 1,
+        "access": [
+          [
+            "RW",
+            "ACCESS",
+            "UPDATE"
+          ]
+        ],
+        "expected_kinds": [
+          "string"
+        ]
+      },
+      "source_path": "fixtures/controls/set-get-branch.go",
+      "source_bytes": 197,
+      "source_sha256": "0ee3bf6d83def24d9f8e56626de4a511e648a6a5508c701197ea674c839bf92a",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": [
+        {
+          "source_token": {
+            "start": 172,
+            "end": 179,
+            "sha256": "f5d8e0e62c01d60f4e5f9d105c4ea73f27fa9e4626ed7d4b1078d65cf4096087"
+          },
+          "bytes_base64": "czprZXk="
+        }
+      ]
+    },
+    {
+      "id": "set-no-get-branch",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "resolved_keys": 1,
+        "access": [
+          [
+            "OW",
+            "UPDATE"
+          ]
+        ],
+        "expected_kinds": [
+          "string"
+        ]
+      },
+      "source_path": "fixtures/controls/set-no-get-branch.go",
+      "source_bytes": 191,
+      "source_sha256": "e53e24e7a8ef3f89ae7659e4e77fecce39e265e7bb7be27ddda03b01e269979d",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": [
+        {
+          "source_token": {
+            "start": 172,
+            "end": 179,
+            "sha256": "f5d8e0e62c01d60f4e5f9d105c4ea73f27fa9e4626ed7d4b1078d65cf4096087"
+          },
+          "bytes_base64": "czprZXk="
+        }
+      ]
+    },
+    {
+      "id": "unknown-expected-kind",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "resolved_keys": 1,
+        "access": [
+          [
+            "RM",
+            "DELETE"
+          ]
+        ],
+        "gaps": [
+          "unknown-expected-value-kind"
+        ]
+      },
+      "source_path": "fixtures/controls/unknown-expected-kind.go",
+      "source_bytes": 180,
+      "source_sha256": "6cbe70e4f2bc4b8b515684cc690c900297b7d8139c747f0c933c42f666a0d6b8",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": [
+        {
+          "source_token": {
+            "start": 167,
+            "end": 176,
+            "sha256": "8bc2ea4a0ffc65c4c8198408ff6e0a3df9e85e59c768d5597f56ae837579c0c8"
+          },
+          "bytes_base64": "YW55OmtleQ=="
+        }
+      ]
+    },
+    {
+      "id": "eval-explicit-keys",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "script_passthrough_rows": 2,
+        "key_access_rows": 0,
+        "expected_kind_rows": 0
+      },
+      "source_path": "fixtures/controls/eval-explicit-keys.go",
+      "source_bytes": 218,
+      "source_sha256": "e8a0f18f3713cb4ac0eae0d517dc5d71732e4afa7a418083bf5033ba8b30c2a0",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": [
+        {
+          "source_token": {
+            "start": 188,
+            "end": 200,
+            "sha256": "bd73414d9c606acc1c6a538e286f191199a19f72e7568ea744f72bbb6b4927a2"
+          },
+          "bytes_base64": "c2NyaXB0Om9uZQ=="
+        },
+        {
+          "source_token": {
+            "start": 201,
+            "end": 213,
+            "sha256": "658f847b7d2e10423a63c7f783b3e1d808eacb5f5dd19f0072389111e9cf4f87"
+          },
+          "bytes_base64": "c2NyaXB0OnR3bw=="
+        }
+      ]
+    },
+    {
+      "id": "fcall-explicit-keys",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "script_passthrough_rows": 1,
+        "key_access_rows": 0,
+        "expected_kind_rows": 0
+      },
+      "source_path": "fixtures/controls/fcall-explicit-keys.go",
+      "source_bytes": 207,
+      "source_sha256": "2f9326df43356ab3179f85be68653030b680d6eb635fba38379219fd19d946e3",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": [
+        {
+          "source_token": {
+            "start": 188,
+            "end": 202,
+            "sha256": "700d7e839c4cd39cf76cf99d1738ab251037f1f0de41a0e20d6a585482718d48"
+          },
+          "bytes_base64": "ZnVuY3Rpb246b25l"
+        }
+      ]
+    },
+    {
+      "id": "opaque-script-key-list",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "script_passthrough_rows": 0,
+        "key_cardinality": "unmeasured",
+        "gaps": [
+          "opaque-helper"
+        ]
+      },
+      "source_path": "fixtures/controls/opaque-script-key-list.go",
+      "source_bytes": 196,
+      "source_sha256": "4a9fef80ff466968c306442893f0f3b30125bf3afe07e3d4899df88d594b50be",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "script-run-unproved-wrapper",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 0,
+        "script_passthrough_rows": 0,
+        "gaps": [
+          "opaque-helper"
+        ]
+      },
+      "source_path": "fixtures/controls/script-run-unproved-wrapper.go",
+      "source_bytes": 196,
+      "source_sha256": "55fa0c82bd39408b77edd0710663bf212c10d380e852170351662691fc0b96b4",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "overlapping-prefix-families",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 3,
+        "native_declarations": 2,
+        "resolved_keys": 1,
+        "unique_family_bindings": 0,
+        "gaps": [
+          "ambiguous-key-family"
+        ],
+        "note": "Native index prefixes supply indexed-projection candidates only; no complete value model or deferred neutral manifest."
+      },
+      "source_path": "fixtures/controls/overlapping-prefix-families.go",
+      "source_bytes": 344,
+      "source_sha256": "aac30a4dd81bf78c8c33b73f332312684e9ad9aef28b690c2052a8bcc73e76ed",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": [
+        {
+          "source_token": {
+            "start": 331,
+            "end": 340,
+            "sha256": "f5eae9ce3f4e811e8ea506d2d512d94a5d0cbe4fcc9bc8249fdecc2c4dc73bd0"
+          },
+          "bytes_base64": "ZG9jOmtleQ=="
+        }
+      ]
+    },
+    {
+      "id": "ft-static-projection",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "native_declarations": 1,
+        "index_fields": 2,
+        "complete_value_models": 0
+      },
+      "source_path": "fixtures/controls/ft-static-projection.go",
+      "source_bytes": 261,
+      "source_sha256": "1c09734729ed441d723e277cc91f149037edca3d92ca0436e329ee08dc239c01",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "ft-partial-atomic",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "native_declarations": 0,
+        "index_fields": 0,
+        "gaps": [
+          "runtime-namespace"
+        ]
+      },
+      "source_path": "fixtures/controls/ft-partial-atomic.go",
+      "source_bytes": 303,
+      "source_sha256": "8833af962dc45db00f247fc6ee53bfe9927adb3497164f8105b9d79c3f3e0238",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "ft-unsupported-shape-atomic",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "native_declarations": 0,
+        "index_fields": 0,
+        "gaps": [
+          "unsupported-module-command"
+        ]
+      },
+      "source_path": "fixtures/controls/ft-unsupported-shape-atomic.go",
+      "source_bytes": 250,
+      "source_sha256": "ceb0d8f534054f11ad31836dd21179a57a62057bbd7a4c8a7bb4a030909b7551",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "ts-create",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "native_declarations": 1,
+        "native_kind": "series",
+        "entry_fields": 0
+      },
+      "source_path": "fixtures/controls/ts-create.go",
+      "source_bytes": 240,
+      "source_sha256": "8a2ad6b885775f5b7bc5b22be2f41b11ffe830be39cdba70d1c57cfbc016e53f",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "ts-rule",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "native_declarations": 1,
+        "native_kind": "series-rule",
+        "resource_references": 2,
+        "entry_fields": 0
+      },
+      "source_path": "fixtures/controls/ts-rule.go",
+      "source_bytes": 243,
+      "source_sha256": "0ed1df7d804b40b1475020eaf5798589fc80ea163e25844499f5955145a5fdb6",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "ts-rule-partial-atomic",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "native_declarations": 0,
+        "resource_references": 0,
+        "gaps": [
+          "runtime-namespace"
+        ]
+      },
+      "source_path": "fixtures/controls/ts-rule-partial-atomic.go",
+      "source_bytes": 229,
+      "source_sha256": "678bc64bf08ea70d0f5526977774d364b35474cc2979688924465e0fee836580",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "xgroup-create",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "native_declarations": 1,
+        "native_kind": "stream-group",
+        "resolved_keys": 1,
+        "access": [
+          [
+            "RW",
+            "INSERT"
+          ]
+        ],
+        "expected_kinds": [
+          "stream"
+        ],
+        "entry_fields": 0
+      },
+      "source_path": "fixtures/controls/xgroup-create.go",
+      "source_bytes": 224,
+      "source_sha256": "5a13d426a333511320f410b7a58a19ab6b6551f26b2d05f4f7912b9a278388d1",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": [
+        {
+          "source_token": {
+            "start": 184,
+            "end": 192,
+            "sha256": "5482c9818e6159bc4df8afc87619d87f7ccdb8d9bbc75beb63cc04f66efc93a4"
+          },
+          "bytes_base64": "ZXZlbnRz"
+        }
+      ]
+    },
+    {
+      "id": "array-mutation-not-literal-proof",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 0,
+        "resolved_keys": 0,
+        "gaps": [
+          "opaque-helper"
+        ]
+      },
+      "source_path": "fixtures/controls/array-mutation-not-literal-proof.go",
+      "source_bytes": 226,
+      "source_sha256": "186adf4f6a0d2b1ef9044aebcba215be68621dc21fdc785cc3f7ba5b6f2792ad",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "unlisted-client-method",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 0,
+        "gaps": [
+          "unknown-client-adapter"
+        ]
+      },
+      "source_path": "fixtures/controls/unlisted-client-method.go",
+      "source_bytes": 180,
+      "source_sha256": "7beca7ddbdd59f0c7b6839aba09d7c2b9b7915ac43992d7266cbe35ad827a498",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "unknown-format-specifier",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "resolved_keys": 0,
+        "gaps": [
+          "opaque-helper"
+        ]
+      },
+      "source_path": "fixtures/controls/unknown-format-specifier.go",
+      "source_bytes": 199,
+      "source_sha256": "1381c384443630054ad037d844cf794bcbc0bf73e50041969c47515e9fc12b11",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "binary-safe-key",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "resolved_keys": 1,
+        "access": [
+          [
+            "RO",
+            "ACCESS"
+          ]
+        ],
+        "expected_kinds": [
+          "string"
+        ]
+      },
+      "source_path": "fixtures/controls/binary-safe-key.go",
+      "source_bytes": 188,
+      "source_sha256": "095791358a0461ec51f4d0b18405370c5ac44f30f7b7a6ef20e8e4894bcd0ba3",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": [
+        {
+          "source_token": {
+            "start": 167,
+            "end": 184,
+            "sha256": "c5206ac183884da8c32cb09e1d5319791d854b9b64e12b2ceb07e16129bc4655"
+          },
+          "bytes_base64": "YmluYXJ5OgD/"
+        }
+      ]
+    },
+    {
+      "id": "literal-hash-tags",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 4,
+        "resolved_keys": 4,
+        "hash_tag_bytes_base64": [
+          "dGFn",
+          "YXt9e2xhdGVyfQ==",
+          "e3RhZw==",
+          "eWVz"
+        ],
+        "cluster_claims": 0
+      },
+      "source_path": "fixtures/controls/literal-hash-tags.go",
+      "source_bytes": 248,
+      "source_sha256": "2f381dc2ab77aa1edee4c50f20360b64415fe3dae4adc52ee2dc37a8a006a6ad",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": [
+        {
+          "source_token": {
+            "start": 167,
+            "end": 176,
+            "sha256": "2cc2fdb4d45e0cbb59d9364ce792ae100dd3284b01cee1c566687b1244f21d87"
+          },
+          "bytes_base64": "YXt0YWd9eg=="
+        },
+        {
+          "source_token": {
+            "start": 188,
+            "end": 200,
+            "sha256": "301e2d2464e63ac31edc35b8de74772bd3036f6eae838ebdc8b2cca6a7a8a948"
+          },
+          "bytes_base64": "YXt9e2xhdGVyfQ=="
+        },
+        {
+          "source_token": {
+            "start": 212,
+            "end": 222,
+            "sha256": "e51c7565bbf720a7bf3e0c0f090e6678733936de729d6e97237f2441b0c743e1"
+          },
+          "bytes_base64": "YXt7dGFnfXo="
+        },
+        {
+          "source_token": {
+            "start": 234,
+            "end": 244,
+            "sha256": "04375801a6b830edcbf1b60d63bfab9c4000df9d75ec92767365c3bc4feaed3c"
+          },
+          "bytes_base64": "YX1ie3llc30="
+        }
+      ]
+    },
+    {
+      "id": "format-brace-uncertainty",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "resolved_structures": 1,
+        "hash_tag_state": "argument-dependent; parameter may contain closing brace",
+        "cluster_claims": 0
+      },
+      "source_path": "fixtures/controls/format-brace-uncertainty.go",
+      "source_bytes": 201,
+      "source_sha256": "7a659f3f742ed51a0b509fa35dd667ac723f37d8edfa7c73d0d9341367473962",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "negative-script-count",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "script_passthrough_rows": 0,
+        "gaps": [
+          "incomplete-key-specification"
+        ]
+      },
+      "source_path": "fixtures/controls/negative-script-count.go",
+      "source_bytes": 194,
+      "source_sha256": "e1ba7e060b3e66260315015b78a7cec019eea52a30fb942e52fadfa4d098b102",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "malformed-go",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "decision": "refuse",
+        "boundary_reason": "malformed-input",
+        "all_fact_rows": 0
+      },
+      "source_path": "fixtures/controls/malformed-go.go",
+      "source_bytes": 184,
+      "source_sha256": "f1ec3f5a5f2b2b1937896f91a074cac620d47faf6b21d71f20977308eeaa89f2",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "depth-bound",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "decision": "refuse",
+        "boundary_reason": "resource-limit",
+        "all_fact_rows": 0
+      },
+      "source_path": "fixtures/controls/depth-bound.go",
+      "source_bytes": 294,
+      "source_sha256": "9017ee1c372457b5de65ceb0326eda2daa3494bed4778023cb06f3faf227ab9c",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "input-byte-bound",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "decision": "refuse",
+        "boundary_reason": "resource-limit",
+        "all_fact_rows": 0
+      },
+      "source_path": "fixtures/controls/input-byte-bound.go",
+      "source_bytes": 262145,
+      "source_sha256": "9408817bc040328d1c403ff97e94cea3dfd3a361b2fb7ecc7af75ff3a5157139",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "receiver-shadowed-import",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 0,
+        "resolved_keys": 0,
+        "gaps": [
+          "unknown-client-adapter"
+        ]
+      },
+      "source_path": "fixtures/controls/receiver-shadowed-import.go",
+      "source_bytes": 229,
+      "source_sha256": "7804610213d8050d34137d06bdad11722e49e916fc44ce088af2303ee67d73d8",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "receiver-shadowed-local",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 0,
+        "resolved_keys": 0,
+        "gaps": [
+          "unknown-client-adapter"
+        ]
+      },
+      "source_path": "fixtures/controls/receiver-shadowed-local.go",
+      "source_bytes": 198,
+      "source_sha256": "0127d7cb120629e546ecf9d2cbd8a421f41da8a2c15759bf163e483b30f2c8d9",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "receiver-reassigned",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 0,
+        "resolved_keys": 0,
+        "gaps": [
+          "unknown-client-adapter"
+        ]
+      },
+      "source_path": "fixtures/controls/receiver-reassigned.go",
+      "source_bytes": 193,
+      "source_sha256": "76ee3c293dfddcbcb4ff969eaabf1704abd4c6e84e2612bc9da4b684770ab1f1",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "receiver-ambiguous-field",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 0,
+        "resolved_keys": 0,
+        "gaps": [
+          "unknown-client-adapter"
+        ]
+      },
+      "source_path": "fixtures/controls/receiver-ambiguous-field.go",
+      "source_bytes": 282,
+      "source_sha256": "c9cdaed614c98b24483492e694d1dc9ad94cd373abfe96d32302ecd6fa1145e3",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "receiver-unproved-copy",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 0,
+        "resolved_keys": 0,
+        "gaps": [
+          "unknown-client-adapter"
+        ]
+      },
+      "source_path": "fixtures/controls/receiver-unproved-copy.go",
+      "source_bytes": 182,
+      "source_sha256": "7816e211b6431497ce4570c63932d76f2aa31784d25f5f603f4ddf3363259fa1",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "receiver-exact-constructor",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "resolved_keys": 1,
+        "access": [
+          [
+            "RO",
+            "ACCESS"
+          ]
+        ],
+        "expected_kinds": [
+          "string"
+        ]
+      },
+      "source_path": "fixtures/controls/receiver-exact-constructor.go",
+      "source_bytes": 201,
+      "source_sha256": "c451c383c82d7edf94adaccab217364fb13d787d68a0099f9bdba096125318fd",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": [
+        {
+          "source_token": {
+            "start": 194,
+            "end": 197,
+            "sha256": "37664d5895f78758ec8e94e440b30c9a2cfc68873c28306301b40d6a2f3fefa3"
+          },
+          "bytes_base64": "aw=="
+        }
+      ]
+    },
+    {
+      "id": "ft-flat-vector-closed-positive",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "native_declarations": 1,
+        "index_fields": 1,
+        "complete_value_models": 0
+      },
+      "source_path": "fixtures/controls/ft-flat-vector-closed-positive.go",
+      "source_bytes": 302,
+      "source_sha256": "d8ae1d90339727c944f666374c188713ef2b8bcdd000d108af685fbbd7563d01",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "ft-vector-distance-enum",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "native_declarations": 0,
+        "index_fields": 0,
+        "gaps": [
+          "unsupported-module-command"
+        ]
+      },
+      "source_path": "fixtures/controls/ft-vector-distance-enum.go",
+      "source_bytes": 301,
+      "source_sha256": "752d54559cb8e290e08817b7282efcff5b18704f3d8589cc92a4903c44e2c242",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "ft-vector-zero-dimension",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "native_declarations": 0,
+        "index_fields": 0,
+        "gaps": [
+          "unsupported-module-command"
+        ]
+      },
+      "source_path": "fixtures/controls/ft-vector-zero-dimension.go",
+      "source_bytes": 302,
+      "source_sha256": "a96ffdc98b546137de7fd9d0d31aa0f3e593ba0b960d7e9f50aa7874c7b08329",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "ft-vector-duplicate-attribute",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "native_declarations": 0,
+        "index_fields": 0,
+        "gaps": [
+          "unsupported-module-command"
+        ]
+      },
+      "source_path": "fixtures/controls/ft-vector-duplicate-attribute.go",
+      "source_bytes": 292,
+      "source_sha256": "e1815a3e1ce616f214b327c4b37a2912d7434ad002a45c415f75b3fe95fffd2c",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "ft-vector-count-mismatch",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "native_declarations": 0,
+        "index_fields": 0,
+        "gaps": [
+          "unsupported-module-command"
+        ]
+      },
+      "source_path": "fixtures/controls/ft-vector-count-mismatch.go",
+      "source_bytes": 302,
+      "source_sha256": "fd7cd5fa1708343daf24c37d3755a218350ee57ad903cbf567f0865daec07b75",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "ft-hnsw-outside-narrow-subset",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "native_declarations": 0,
+        "index_fields": 0,
+        "gaps": [
+          "unsupported-module-command"
+        ]
+      },
+      "source_path": "fixtures/controls/ft-hnsw-outside-narrow-subset.go",
+      "source_bytes": 302,
+      "source_sha256": "989f84ba8193f3cce9c236ae582618beef80d4d64e9ce20d9e945f366b76055d",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "ts-aggregator-outside-subset",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "native_declarations": 0,
+        "resource_references": 0,
+        "gaps": [
+          "unsupported-module-command"
+        ]
+      },
+      "source_path": "fixtures/controls/ts-aggregator-outside-subset.go",
+      "source_bytes": 233,
+      "source_sha256": "c28fb0ff89321d5eab67adf7a72b5179fb81d2e9edd17eeaf581d6fa90883599",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "ts-zero-bucket",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "native_declarations": 0,
+        "resource_references": 0,
+        "gaps": [
+          "unsupported-module-command"
+        ]
+      },
+      "source_path": "fixtures/controls/ts-zero-bucket.go",
+      "source_bytes": 230,
+      "source_sha256": "71fcc37b638de2534569e97ecebc41cff58c95d5502bd8f67d9876d21df8aff0",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "ts-duplicate-label",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "native_declarations": 0,
+        "gaps": [
+          "unsupported-module-command"
+        ]
+      },
+      "source_path": "fixtures/controls/ts-duplicate-label.go",
+      "source_bytes": 225,
+      "source_sha256": "b0d9b92ac449d033fe05e6734e8f67613f641664166b39a1311cb2bd01902dd7",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "ts-alignment-outside-subset",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "native_declarations": 0,
+        "resource_references": 0,
+        "gaps": [
+          "unsupported-module-command"
+        ]
+      },
+      "source_path": "fixtures/controls/ts-alignment-outside-subset.go",
+      "source_bytes": 236,
+      "source_sha256": "7701db110fcb5b3f1208192533e7a2d3b8feec2a942f79f71f703811903f706c",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "ts-negative-retention",
+      "source_class": "go-source",
+      "version": "v9.14.1",
+      "expected": {
+        "recognized": 1,
+        "native_declarations": 0,
+        "gaps": [
+          "unsupported-module-command"
+        ]
+      },
+      "source_path": "fixtures/controls/ts-negative-retention.go",
+      "source_bytes": 205,
+      "source_sha256": "2d36ce7da91c42978c57a9cba6adc8ca306ed3316ecbc48d1c902e9c2abe3a2e",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": []
+    },
+    {
+      "id": "acl-adjacent-credentials",
+      "source_class": "acl",
+      "version": null,
+      "expected": {
+        "principal_pattern_pairs": 1,
+        "credential_token_output": 0,
+        "distinct_credential_payload_output": 0,
+        "line_context_output": 0,
+        "grant_output": 0
+      },
+      "source_path": "fixtures/controls/acl-adjacent-credentials.acl",
+      "source_bytes": 162,
+      "source_sha256": "0544d448a8279941b1ac5402100dbf6b989dc24205936bbd07a7c58ababb0506",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": [],
+      "principal_tokens": [
+        {
+          "token": "neutral",
+          "start": 5,
+          "end": 12,
+          "sha256": "7e2372f4115c43bac7248772d891df3dbc830a85aa27eeed933688f61c44226c"
+        }
+      ],
+      "pattern_tokens": [
+        {
+          "token": "~safe:*",
+          "start": 148,
+          "end": 155,
+          "sha256": "81165117122246e7c26ec37e7c750cd37a18010001ba7893ea5726e7c5f87583"
+        }
+      ]
+    },
+    {
+      "id": "acl-selector-permissions",
+      "source_class": "acl",
+      "version": null,
+      "expected": {
+        "principal_pattern_pairs": 3,
+        "credential_token_output": 0,
+        "line_context_output": 0,
+        "grant_output": 0
+      },
+      "source_path": "fixtures/controls/acl-selector-permissions.acl",
+      "source_bytes": 69,
+      "source_sha256": "62471097ae4a988ae5ee69b13cb2dccb1f360c5e6b8f9dcbc3a5f2bb7204a1b5",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": [],
+      "principal_tokens": [
+        {
+          "token": "neutral",
+          "start": 5,
+          "end": 12,
+          "sha256": "7e2372f4115c43bac7248772d891df3dbc830a85aa27eeed933688f61c44226c"
+        }
+      ],
+      "pattern_tokens": [
+        {
+          "token": "%R~read:*",
+          "start": 24,
+          "end": 33,
+          "sha256": "a659d62d54328e2bea1cf9cf1a2a31468af4bdbb3a85a42e4b6a5c26b01e8673"
+        },
+        {
+          "token": "%W~write:*",
+          "start": 41,
+          "end": 51,
+          "sha256": "0da4e9d7b09b2a0502d15ad3b909b2cae40e6ca1d129b2eae7211ad738e47086"
+        },
+        {
+          "token": "%RW~both:*",
+          "start": 58,
+          "end": 68,
+          "sha256": "6e4a003d4cd075515ef61f0429da5e7dda3a060d18b51ae6ee19f0bdaa6b7793"
+        }
+      ]
+    },
+    {
+      "id": "acl-pattern-looking-secret",
+      "source_class": "acl",
+      "version": null,
+      "expected": {
+        "principal_pattern_pairs": 1,
+        "credential_token_output": 0,
+        "distinct_credential_payload_output": 0
+      },
+      "source_path": "fixtures/controls/acl-pattern-looking-secret.acl",
+      "source_bytes": 91,
+      "source_sha256": "97cfebe480cdc956303c3a501e87f03dbd0db661f20bb7636d21416767c080f0",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": [],
+      "principal_tokens": [
+        {
+          "token": "neutral",
+          "start": 5,
+          "end": 12,
+          "sha256": "7e2372f4115c43bac7248772d891df3dbc830a85aa27eeed933688f61c44226c"
+        }
+      ],
+      "pattern_tokens": [
+        {
+          "token": "~safe:*",
+          "start": 83,
+          "end": 90,
+          "sha256": "81165117122246e7c26ec37e7c750cd37a18010001ba7893ea5726e7c5f87583"
+        }
+      ]
+    },
+    {
+      "id": "acl-malformed-quote",
+      "source_class": "acl",
+      "version": null,
+      "expected": {
+        "decision": "refuse",
+        "boundary_reason": "malformed-input",
+        "all_fact_rows": 0
+      },
+      "source_path": "fixtures/controls/acl-malformed-quote.acl",
+      "source_bytes": 39,
+      "source_sha256": "48b07a2fcd0dadbf44952700f89d14fc66de8cd297dad55c02a0747ec97efe3b",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": [],
+      "principal_tokens": [],
+      "pattern_tokens": []
+    },
+    {
+      "id": "acl-token-bound",
+      "source_class": "acl",
+      "version": null,
+      "expected": {
+        "decision": "refuse",
+        "boundary_reason": "resource-limit",
+        "all_fact_rows": 0
+      },
+      "source_path": "fixtures/controls/acl-token-bound.acl",
+      "source_bytes": 4123,
+      "source_sha256": "ea16b7c0dcfb4b8159b808d2d6b763b9d5494dc58e0ee56670743750b2ae5f52",
+      "population": "authored-neutral; separate from public denominators",
+      "key_labels": [],
+      "principal_tokens": [],
+      "pattern_tokens": []
+    }
+  ],
+  "admission_controls": [
+    {
+      "id": "data-bearing-role",
+      "source_path": "fixtures/controls/literal-raw-get.go",
+      "source_class": "rdb-data",
+      "expected": {
+        "decision": "refuse",
+        "boundary_reason": "data-bearing-input",
+        "all_fact_rows": 0
+      },
+      "note": "Inert text assigned an explicitly prohibited input role; no real RDB/AOF data is created or read."
+    },
+    {
+      "id": "missing-input",
+      "source_path": "fixtures/controls/intentionally-missing.go",
+      "source_class": "go-source",
+      "expected": {
+        "decision": "refuse",
+        "boundary_reason": "artifact-missing",
+        "all_fact_rows": 0
+      }
+    }
+  ],
+  "scope": "Inert authored source/ACL inputs and source-literal expectations only. Generated credential tokens remain in input ACL fixtures; labels contain only allowed safe tokens, no secret/context/grants. No Redis/application execution."
+}

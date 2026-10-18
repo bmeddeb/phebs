@@ -1,0 +1,334 @@
+{
+  "format": "t281-source-literal-census-v1",
+  "recognizer_runs": 0,
+  "source_receipt_sha256": "5f530c3358e7e47fddce09c7eab3e50335d1acc5a4b09451167c1bc11f9941a1",
+  "method": "Generic literal/name occurrence search over every scoped Go file, followed by explicit source-role review of every matched call. No Go/Redis grammar, receiver inference or candidate recognition is executed.",
+  "go_files": 380,
+  "searches": [
+    {
+      "search_class": "raw-command-frontier",
+      "ascii_pattern": "\\b(?:Do|NewCmd|Process)\\s*\\("
+    },
+    {
+      "search_class": "native-name",
+      "ascii_pattern": "FT\\.CREATE|TS\\.CREATERULE|TS\\.CREATE|XGROUP|\\b(?:FTCreate|TSCreateRule|TSCreate|XGroupCreate)\\s*\\("
+    }
+  ],
+  "matches": [
+    {
+      "population": "asynq",
+      "source_path": "internal/base/base.go",
+      "source_bytes": 22808,
+      "source_sha256": "00649572d086dfbc327471229658cec516d157f3d0d20c6aa8d5027713e42bef",
+      "source_line": 658,
+      "search_class": "raw-command-frontier",
+      "token": "Do(",
+      "start": 19078,
+      "end": 19081,
+      "sha256": "9bd093c3e6c41e72408d507f41a22c2215de9aab3207de5833bdd870599a9216",
+      "source_review_role": "non-Redis sync.Once negative"
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/proto/asynq.pb.go",
+      "source_bytes": 23033,
+      "source_sha256": "54d54eed4505e221a327399332a8f29c58420e56958fa7885b8ed77e758487ec",
+      "source_line": 683,
+      "search_class": "raw-command-frontier",
+      "token": "Do(",
+      "start": 20596,
+      "end": 20599,
+      "sha256": "9bd093c3e6c41e72408d507f41a22c2215de9aab3207de5833bdd870599a9216",
+      "source_review_role": "non-Redis sync.Once negative"
+    },
+    {
+      "population": "asynq",
+      "source_path": "processor.go",
+      "source_bytes": 15841,
+      "source_sha256": "f7f0450bf40c6de10399a2b3a733ed7352671129198aaf9fbad8484b82e7a5d2",
+      "source_line": 128,
+      "search_class": "raw-command-frontier",
+      "token": "Do(",
+      "start": 3750,
+      "end": 3753,
+      "sha256": "9bd093c3e6c41e72408d507f41a22c2215de9aab3207de5833bdd870599a9216",
+      "source_review_role": "non-Redis sync.Once negative"
+    },
+    {
+      "population": "eino",
+      "source_path": "quickstart/eino_assistant/cmd/einoagent/agent/agent.go",
+      "source_bytes": 5564,
+      "source_sha256": "c69f8512587c6b46a59d7a516f110319e9361bf3cbef1ab551352648a156f701",
+      "source_line": 47,
+      "search_class": "raw-command-frontier",
+      "token": "Do(",
+      "start": 1200,
+      "end": 1203,
+      "sha256": "9bd093c3e6c41e72408d507f41a22c2215de9aab3207de5833bdd870599a9216",
+      "source_review_role": "non-Redis sync.Once negative"
+    },
+    {
+      "population": "eino",
+      "source_path": "quickstart/eino_assistant/cmd/knowledgeindexing/main.go",
+      "source_bytes": 5010,
+      "source_sha256": "7055533c0ea78cd57cd50962cd460325d20f2e301e1f9d9fc985618096f65520",
+      "source_line": 155,
+      "search_class": "raw-command-frontier",
+      "token": "Do(",
+      "start": 4142,
+      "end": 4145,
+      "sha256": "9bd093c3e6c41e72408d507f41a22c2215de9aab3207de5833bdd870599a9216",
+      "source_review_role": "Redis raw Do invocation; exact nested v9.7.0 is unsupported"
+    },
+    {
+      "population": "eino",
+      "source_path": "quickstart/eino_assistant/cmd/knowledgeindexing/main.go",
+      "source_bytes": 5010,
+      "source_sha256": "7055533c0ea78cd57cd50962cd460325d20f2e301e1f9d9fc985618096f65520",
+      "source_line": 180,
+      "search_class": "raw-command-frontier",
+      "token": "Do(",
+      "start": 4713,
+      "end": 4716,
+      "sha256": "9bd093c3e6c41e72408d507f41a22c2215de9aab3207de5833bdd870599a9216",
+      "source_review_role": "Redis raw Do invocation; exact nested v9.7.0 is unsupported"
+    },
+    {
+      "population": "eino",
+      "source_path": "quickstart/eino_assistant/cmd/knowledgeindexing/main.go",
+      "source_bytes": 5010,
+      "source_sha256": "7055533c0ea78cd57cd50962cd460325d20f2e301e1f9d9fc985618096f65520",
+      "source_line": 185,
+      "search_class": "raw-command-frontier",
+      "token": "Do(",
+      "start": 4875,
+      "end": 4878,
+      "sha256": "9bd093c3e6c41e72408d507f41a22c2215de9aab3207de5833bdd870599a9216",
+      "source_review_role": "Redis raw Do invocation; exact nested v9.7.0 is unsupported"
+    },
+    {
+      "population": "eino",
+      "source_path": "quickstart/eino_assistant/cmd/knowledgeindexing/main.go",
+      "source_bytes": 5010,
+      "source_sha256": "7055533c0ea78cd57cd50962cd460325d20f2e301e1f9d9fc985618096f65520",
+      "source_line": 167,
+      "search_class": "native-name",
+      "token": "FT.CREATE",
+      "start": 4442,
+      "end": 4451,
+      "sha256": "d94ad6f5e1b1f7f64f324514670792e6aac1f38d204ad76b8a0dcffff46f4488",
+      "source_review_role": "native FT.CREATE source spelling"
+    },
+    {
+      "population": "eino",
+      "source_path": "quickstart/eino_assistant/pkg/redis/redis.go",
+      "source_bytes": 2549,
+      "source_sha256": "78f1ce43d7e2c119d356af59117beb08277c303a22cd5de90061f8b9f9723d41",
+      "source_line": 42,
+      "search_class": "raw-command-frontier",
+      "token": "Do(",
+      "start": 954,
+      "end": 957,
+      "sha256": "9bd093c3e6c41e72408d507f41a22c2215de9aab3207de5833bdd870599a9216",
+      "source_review_role": "non-Redis sync.Once negative"
+    },
+    {
+      "population": "eino",
+      "source_path": "quickstart/eino_assistant/pkg/redis/redis.go",
+      "source_bytes": 2549,
+      "source_sha256": "78f1ce43d7e2c119d356af59117beb08277c303a22cd5de90061f8b9f9723d41",
+      "source_line": 79,
+      "search_class": "raw-command-frontier",
+      "token": "Do(",
+      "start": 1682,
+      "end": 1685,
+      "sha256": "9bd093c3e6c41e72408d507f41a22c2215de9aab3207de5833bdd870599a9216",
+      "source_review_role": "Redis raw Do invocation; exact nested v9.7.0 is unsupported"
+    },
+    {
+      "population": "eino",
+      "source_path": "quickstart/eino_assistant/pkg/redis/redis.go",
+      "source_bytes": 2549,
+      "source_sha256": "78f1ce43d7e2c119d356af59117beb08277c303a22cd5de90061f8b9f9723d41",
+      "source_line": 104,
+      "search_class": "raw-command-frontier",
+      "token": "Do(",
+      "start": 2252,
+      "end": 2255,
+      "sha256": "9bd093c3e6c41e72408d507f41a22c2215de9aab3207de5833bdd870599a9216",
+      "source_review_role": "Redis raw Do invocation; exact nested v9.7.0 is unsupported"
+    },
+    {
+      "population": "eino",
+      "source_path": "quickstart/eino_assistant/pkg/redis/redis.go",
+      "source_bytes": 2549,
+      "source_sha256": "78f1ce43d7e2c119d356af59117beb08277c303a22cd5de90061f8b9f9723d41",
+      "source_line": 109,
+      "search_class": "raw-command-frontier",
+      "token": "Do(",
+      "start": 2414,
+      "end": 2417,
+      "sha256": "9bd093c3e6c41e72408d507f41a22c2215de9aab3207de5833bdd870599a9216",
+      "source_review_role": "Redis raw Do invocation; exact nested v9.7.0 is unsupported"
+    },
+    {
+      "population": "eino",
+      "source_path": "quickstart/eino_assistant/pkg/redis/redis.go",
+      "source_bytes": 2549,
+      "source_sha256": "78f1ce43d7e2c119d356af59117beb08277c303a22cd5de90061f8b9f9723d41",
+      "source_line": 91,
+      "search_class": "native-name",
+      "token": "FT.CREATE",
+      "start": 1982,
+      "end": 1991,
+      "sha256": "d94ad6f5e1b1f7f64f324514670792e6aac1f38d204ad76b8a0dcffff46f4488",
+      "source_review_role": "native FT.CREATE source spelling"
+    }
+  ],
+  "go_redis_v9_import_source_files": [
+    {
+      "population": "asynq",
+      "source_path": "asynq.go",
+      "source_sha256": "160dcf70e4d13ad0683f4b4f937517d40526eaa254791d35a3db4b96df5cd61d"
+    },
+    {
+      "population": "asynq",
+      "source_path": "asynq_test.go",
+      "source_sha256": "6b099ff44e9d58088b7f9191c96378b79a9a94c4711529f3b5ab86aa9337ec9f"
+    },
+    {
+      "population": "asynq",
+      "source_path": "client.go",
+      "source_sha256": "c8b4a47a88539d3fd3490e14443b9a81f55d1343db5bf317332688c6db39929c"
+    },
+    {
+      "population": "asynq",
+      "source_path": "client_test.go",
+      "source_sha256": "a2ffdf111d0a1f9bbe89aaf94f11d718c320c790be9651ca7020da86230f1423"
+    },
+    {
+      "population": "asynq",
+      "source_path": "inspector.go",
+      "source_sha256": "dd74572dd360e2b7a52d005c0eb595815d12a9b285a3b397885eef1e4eb2c5d7"
+    },
+    {
+      "population": "asynq",
+      "source_path": "inspector_test.go",
+      "source_sha256": "33ebc13ad78743f5cab6024f32d54819ceb7e60d9e51dad5ea74169d61bb1351"
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/base/base.go",
+      "source_sha256": "00649572d086dfbc327471229658cec516d157f3d0d20c6aa8d5027713e42bef"
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/inspect.go",
+      "source_sha256": "f930acb53c6c913457f76461e0e5ee60ae474cdc47cd5e3e1d14d526d1c0c7de"
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/inspect_test.go",
+      "source_sha256": "b6f0cf8e16f2df8653d5562f7ab963be759ba5308104a4272e76bfdd7f5fc193"
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/rdb.go",
+      "source_sha256": "d2d5749dcb44707d8c896c784699a37daeb63c9ba6776ac3adc062cc01b88ef0"
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/rdb_test.go",
+      "source_sha256": "e48790aa06a216c611b025ddc1fe7888df1039d2a0df8bcf6c387b42f06c9e6d"
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/testbroker/testbroker.go",
+      "source_sha256": "181073e6adad4eb4705adc728a94cd5f5d1fdcf7c193aae8a0dffa903cdde1fe"
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/testutil/testutil.go",
+      "source_sha256": "c9a78efcfd0a363fb605938b18b748c85b69c5f7948d8069731621c0142b1851"
+    },
+    {
+      "population": "asynq",
+      "source_path": "periodic_task_manager.go",
+      "source_sha256": "63f459dab15e5c8549c595401bb29867b8c513f109f996a60a10dfd3a486fb46"
+    },
+    {
+      "population": "asynq",
+      "source_path": "scheduler.go",
+      "source_sha256": "1b6ef91c360b9cd6e2abeb534122cae74346b92c5db4e1c79d89b4d6fe6a9f34"
+    },
+    {
+      "population": "asynq",
+      "source_path": "scheduler_test.go",
+      "source_sha256": "7400b52b0613b15b5adf90a317fccdcb0b152ddc89f006f7da2d57cad17b9cda"
+    },
+    {
+      "population": "asynq",
+      "source_path": "server.go",
+      "source_sha256": "0b7068d6b34e5ecdacbcd831f34d97476185bec9a84f6bc00ce546b441dd46c8"
+    },
+    {
+      "population": "asynq",
+      "source_path": "server_test.go",
+      "source_sha256": "0b8adb9f7d9c271d466c1e218afb3537e4004c988e12f6ddce8dea3e7c8ff5e7"
+    },
+    {
+      "population": "asynq",
+      "source_path": "subscriber.go",
+      "source_sha256": "2363492870951e471c62932415370772074045412227c93a3bfd0454798242fe"
+    },
+    {
+      "population": "asynq",
+      "source_path": "tools/asynq/cmd/root.go",
+      "source_sha256": "ad470d3360d61d35b74c00fdfbc87c6b38324154d132d505881f1061dd98e0f3"
+    },
+    {
+      "population": "asynq",
+      "source_path": "x/rate/semaphore.go",
+      "source_sha256": "aaaf9e4de2bfdd38f66d310c8d34a541d9daf955c56713341fe999b457827ead"
+    },
+    {
+      "population": "asynq",
+      "source_path": "x/rate/semaphore_test.go",
+      "source_sha256": "ec3b55f35ab74d211d46582d3ed5d25960d2f0345d102b3f0110fc85cac28433"
+    },
+    {
+      "population": "eino",
+      "source_path": "flow/agent/react/memory_example/memory/redis.go",
+      "source_sha256": "63fe201ab650e05e1df41b6983c4cee3c3fac2315147fb53eae38ce0f566c0ed"
+    },
+    {
+      "population": "eino",
+      "source_path": "quickstart/eino_assistant/cmd/knowledgeindexing/main.go",
+      "source_sha256": "7055533c0ea78cd57cd50962cd460325d20f2e301e1f9d9fc985618096f65520"
+    },
+    {
+      "population": "eino",
+      "source_path": "quickstart/eino_assistant/eino/einoagent/retriever.go",
+      "source_sha256": "9661281ad96e7859cacfda1feeff84a25249efa762eb63b6d94e236dbe718f65"
+    },
+    {
+      "population": "eino",
+      "source_path": "quickstart/eino_assistant/eino/knowledgeindexing/indexer.go",
+      "source_sha256": "8cdada2ec79dce6a1c18c7ab0f95eabb2ab7909defbdb121151ed7b42ad9d2f0"
+    },
+    {
+      "population": "eino",
+      "source_path": "quickstart/eino_assistant/pkg/redis/redis.go",
+      "source_sha256": "78f1ce43d7e2c119d356af59117beb08277c303a22cd5de90061f8b9f9723d41"
+    }
+  ],
+  "counts": {
+    "raw_call_frontier_occurrences": 11,
+    "redis_raw_Do_calls": 6,
+    "nonredis_sync_once_Do_calls": 5,
+    "native_FT_CREATE_spellings": 2,
+    "other_named_native_spellings": 0,
+    "unknown_dynamic_raw_command_sites": 0
+  },
+  "limits": "Exact finite name/raw-call census only; unproved application/Lua/script wrappers remain unknown, not declaration-free. Full source review of two native files is separately retained; complete selected usage labels are independently authored."
+}

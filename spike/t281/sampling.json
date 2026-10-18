@@ -1,0 +1,1924 @@
+{
+  "schema": "t281-source-file-sampling-v2",
+  "date": "2026-10-18",
+  "method": "Prospectively fixed purposive complete-file sample, selected from licensed source review before any recognizer output. Asynq full owning Redis implementation/inspection files; Eino all five files importing github.com/redis/go-redis/v9. No probability or population accuracy inference. Full native declaration and ACL census separate.",
+  "source_receipt_sha256": "5f530c3358e7e47fddce09c7eab3e50335d1acc5a4b09451167c1bc11f9941a1",
+  "recognizer_runs": 0,
+  "old_draft": "preparation/sampling-random-draft.json (non-authoritative metadata-only random preparation)",
+  "records": [
+    {
+      "population": "asynq",
+      "selected": [
+        {
+          "path": "internal/rdb/inspect.go",
+          "bytes": 66087,
+          "source_sha256": "f930acb53c6c913457f76461e0e5ee60ae474cdc47cd5e3e1d14d526d1c0c7de"
+        },
+        {
+          "path": "internal/rdb/rdb.go",
+          "bytes": 55271,
+          "source_sha256": "d2d5749dcb44707d8c896c784699a37daeb63c9ba6776ac3adc062cc01b88ef0"
+        }
+      ],
+      "unsampled": [
+        {
+          "path": "aggregator.go",
+          "bytes": 4902,
+          "source_sha256": "4301e4f33df0e7a0c135ba5e574fe83a148035ebdc577b9662ec1c690e02c75e"
+        },
+        {
+          "path": "aggregator_test.go",
+          "bytes": 5058,
+          "source_sha256": "5dfbf3eb761d5ce600d4ac6c7e2196d7a5a198a4ca40198746ac33e5b2af6d43"
+        },
+        {
+          "path": "asynq.go",
+          "bytes": 17588,
+          "source_sha256": "160dcf70e4d13ad0683f4b4f937517d40526eaa254791d35a3db4b96df5cd61d"
+        },
+        {
+          "path": "asynq_test.go",
+          "bytes": 6796,
+          "source_sha256": "6b099ff44e9d58088b7f9191c96378b79a9a94c4711529f3b5ab86aa9337ec9f"
+        },
+        {
+          "path": "benchmark_test.go",
+          "bytes": 5946,
+          "source_sha256": "ea9d5b9667cf5850d8d3c91b27263c027834307612a073fcefd682dd3dec9874"
+        },
+        {
+          "path": "client.go",
+          "bytes": 20467,
+          "source_sha256": "c8b4a47a88539d3fd3490e14443b9a81f55d1343db5bf317332688c6db39929c"
+        },
+        {
+          "path": "client_test.go",
+          "bytes": 52547,
+          "source_sha256": "a2ffdf111d0a1f9bbe89aaf94f11d718c320c790be9651ca7020da86230f1423"
+        },
+        {
+          "path": "context.go",
+          "bytes": 1308,
+          "source_sha256": "1d7cdace4de7fcf978c00d3760f0432de6e0c4104e345e016f5cfe8502910e57"
+        },
+        {
+          "path": "doc.go",
+          "bytes": 2061,
+          "source_sha256": "b827e7926dac829739fe449fe992ddbabebffc06184d7fcbe0eb5567c7e0d71e"
+        },
+        {
+          "path": "example_test.go",
+          "bytes": 2798,
+          "source_sha256": "8a5393ec8aa37c61f7992ee397eb43f2b284c607129283fa470e338212bcc3c7"
+        },
+        {
+          "path": "forwarder.go",
+          "bytes": 1714,
+          "source_sha256": "8839a71ea09bf81f3c6097fc001a1fbf7fa0daffd93e21711283eaacd137d5fd"
+        },
+        {
+          "path": "forwarder_test.go",
+          "bytes": 4329,
+          "source_sha256": "bba955929489210017d960de4a3014383741a727f5855dac3611c200a58d00c8"
+        },
+        {
+          "path": "healthcheck.go",
+          "bytes": 1758,
+          "source_sha256": "024bc75f258014410d1c24171c6fafbb0908e81fb669087d12ed0edfed9cf994"
+        },
+        {
+          "path": "healthcheck_test.go",
+          "bytes": 2022,
+          "source_sha256": "5e3eee9c2ead84cdd20dcea67cd8a71bf8447c85809acd4cb277e1e1284a1a5d"
+        },
+        {
+          "path": "heartbeat.go",
+          "bytes": 5320,
+          "source_sha256": "634296045528cc810bbfdcda2defbeff282b91d3d1f48fb126e70aa3e91f752a"
+        },
+        {
+          "path": "heartbeat_test.go",
+          "bytes": 10810,
+          "source_sha256": "caeaa79c2f51a981746613de9dd412c7a8a5e232e3b0784f22d986b1661e6226"
+        },
+        {
+          "path": "inspector.go",
+          "bytes": 31138,
+          "source_sha256": "dd74572dd360e2b7a52d005c0eb595815d12a9b285a3b397885eef1e4eb2c5d7"
+        },
+        {
+          "path": "inspector_test.go",
+          "bytes": 99642,
+          "source_sha256": "33ebc13ad78743f5cab6024f32d54819ceb7e60d9e51dad5ea74169d61bb1351"
+        },
+        {
+          "path": "internal/base/base.go",
+          "bytes": 22808,
+          "source_sha256": "00649572d086dfbc327471229658cec516d157f3d0d20c6aa8d5027713e42bef"
+        },
+        {
+          "path": "internal/base/base_test.go",
+          "bytes": 18351,
+          "source_sha256": "9dd61ce2e2d381415e6c697156653ad242636ea918f7fb45dfc44b2ac6f855b5"
+        },
+        {
+          "path": "internal/context/context.go",
+          "bytes": 2451,
+          "source_sha256": "35da5881645b6416bb2aba3c24ca303f87a962588b555d00b4da1bd58a7aa1f5"
+        },
+        {
+          "path": "internal/context/context_test.go",
+          "bytes": 5291,
+          "source_sha256": "e54d50e35f7852b5fecfb53daec080132171120d4775111980747145d59a72e9"
+        },
+        {
+          "path": "internal/errors/errors.go",
+          "bytes": 8739,
+          "source_sha256": "4058739ebfcaa76f30f90a6d18070a1f514e9ced89898e0f7b806e7bdf02d302"
+        },
+        {
+          "path": "internal/errors/errors_test.go",
+          "bytes": 4525,
+          "source_sha256": "0b4a68728c0cb1762cd8ea609a516494a037e54b84e63cc489851c46fe73f1d2"
+        },
+        {
+          "path": "internal/log/log.go",
+          "bytes": 4952,
+          "source_sha256": "b56e2242e0b6fd2d70919412f611bd6509677b03daa16fef2ac8a000a7946b50"
+        },
+        {
+          "path": "internal/log/log_test.go",
+          "bytes": 9552,
+          "source_sha256": "3e632b129cd1faeb100b736f4164c9d4650dcec492c812676bfc5f5eda6ee7cf"
+        },
+        {
+          "path": "internal/proto/asynq.pb.go",
+          "bytes": 23033,
+          "source_sha256": "54d54eed4505e221a327399332a8f29c58420e56958fa7885b8ed77e758487ec"
+        },
+        {
+          "path": "internal/rdb/benchmark_test.go",
+          "bytes": 7180,
+          "source_sha256": "a11ac518ebc0493b968f9ab180ac038182ce5285941a303b91f077be8851604d"
+        },
+        {
+          "path": "internal/rdb/inspect_test.go",
+          "bytes": 153130,
+          "source_sha256": "b6f0cf8e16f2df8653d5562f7ab963be759ba5308104a4272e76bfdd7f5fc193"
+        },
+        {
+          "path": "internal/rdb/rdb_test.go",
+          "bytes": 130309,
+          "source_sha256": "e48790aa06a216c611b025ddc1fe7888df1039d2a0df8bcf6c387b42f06c9e6d"
+        },
+        {
+          "path": "internal/testbroker/testbroker.go",
+          "bytes": 7488,
+          "source_sha256": "181073e6adad4eb4705adc728a94cd5f5d1fdcf7c193aae8a0dffa903cdde1fe"
+        },
+        {
+          "path": "internal/testutil/builder.go",
+          "bytes": 1766,
+          "source_sha256": "dd4e83a7469869a946b22c1c667b450745f67bcacc92f457144aacee2e01628b"
+        },
+        {
+          "path": "internal/testutil/builder_test.go",
+          "bytes": 2154,
+          "source_sha256": "85d3202fca8c610dda130f0a12eece98911b8cc6bc2c01194217a6c2638a055f"
+        },
+        {
+          "path": "internal/testutil/testutil.go",
+          "bytes": 23698,
+          "source_sha256": "c9a78efcfd0a363fb605938b18b748c85b69c5f7948d8069731621c0142b1851"
+        },
+        {
+          "path": "internal/timeutil/timeutil.go",
+          "bytes": 1501,
+          "source_sha256": "472379ff0ea747178a5f649cec917d273c793a115803c8d257c3743c47b4ee44"
+        },
+        {
+          "path": "internal/timeutil/timeutil_test.go",
+          "bytes": 1035,
+          "source_sha256": "09a5bc6a1f9b999db6aecc6dcd4eb7d8725ba9062aaf4f25de03aff5f70d5fec"
+        },
+        {
+          "path": "janitor.go",
+          "bytes": 2017,
+          "source_sha256": "b0b4b046c2df568642606fa46a24630b4eeb5326ad0da85a17424f14b0a63c6c"
+        },
+        {
+          "path": "janitor_test.go",
+          "bytes": 2579,
+          "source_sha256": "28197aeeafd66d680d6ca255d2b4884364497220cac76a92b153c6b35c70afe7"
+        },
+        {
+          "path": "periodic_task_manager.go",
+          "bytes": 7566,
+          "source_sha256": "63f459dab15e5c8549c595401bb29867b8c513f109f996a60a10dfd3a486fb46"
+        },
+        {
+          "path": "periodic_task_manager_test.go",
+          "bytes": 8712,
+          "source_sha256": "3d65407f49d0e12413e26cfede479290d8035d900b8024cee1217e729f981c23"
+        },
+        {
+          "path": "processor.go",
+          "bytes": 15841,
+          "source_sha256": "f7f0450bf40c6de10399a2b3a733ed7352671129198aaf9fbad8484b82e7a5d2"
+        },
+        {
+          "path": "processor_test.go",
+          "bytes": 29302,
+          "source_sha256": "8e3157868eb6d695fc3ad222243f69a86978ecc0a18367ed3ef14ea6ee827371"
+        },
+        {
+          "path": "recoverer.go",
+          "bytes": 3473,
+          "source_sha256": "3c92b8c49528062e0acd78ea2f2a7fc0def0c5c58ffd16599edc86f930d3eb02"
+        },
+        {
+          "path": "recoverer_test.go",
+          "bytes": 7669,
+          "source_sha256": "b64790fc40c493702085432d1acb7e547de7a8670c99dc116a2f9f6a5250ac5e"
+        },
+        {
+          "path": "scheduler.go",
+          "bytes": 10634,
+          "source_sha256": "1b6ef91c360b9cd6e2abeb534122cae74346b92c5db4e1c79d89b4d6fe6a9f34"
+        },
+        {
+          "path": "scheduler_test.go",
+          "bytes": 5267,
+          "source_sha256": "7400b52b0613b15b5adf90a317fccdcb0b152ddc89f006f7da2d57cad17b9cda"
+        },
+        {
+          "path": "servemux.go",
+          "bytes": 4803,
+          "source_sha256": "ca38f7d6d978340cc17060182630b90fee94e018616beef54eb1818e4e913a23"
+        },
+        {
+          "path": "servemux_test.go",
+          "bytes": 4633,
+          "source_sha256": "9abd8c67829979bda3754fdd2951369812d571ea5d2ae9b0a998d8e9c4317d24"
+        },
+        {
+          "path": "server.go",
+          "bytes": 24650,
+          "source_sha256": "0b7068d6b34e5ecdacbcd831f34d97476185bec9a84f6bc00ce546b441dd46c8"
+        },
+        {
+          "path": "server_test.go",
+          "bytes": 6653,
+          "source_sha256": "0b8adb9f7d9c271d466c1e218afb3537e4004c988e12f6ddce8dea3e7c8ff5e7"
+        },
+        {
+          "path": "signals_unix.go",
+          "bytes": 946,
+          "source_sha256": "8e4144f3c89961122bc841c463f0ca2404fdb77c9a3971e67a61bf81bbd28716"
+        },
+        {
+          "path": "signals_windows.go",
+          "bytes": 709,
+          "source_sha256": "dd735be5960442ee5a74fa2ba0efa79d8236b205cb58339442014d08f338777d"
+        },
+        {
+          "path": "subscriber.go",
+          "bytes": 1936,
+          "source_sha256": "2363492870951e471c62932415370772074045412227c93a3bfd0454798242fe"
+        },
+        {
+          "path": "subscriber_test.go",
+          "bytes": 3044,
+          "source_sha256": "4c8fb0ce629f87769f10a947d2b20dfef0dcf9989af05aaa22b90531fde6a0a1"
+        },
+        {
+          "path": "syncer.go",
+          "bytes": 2001,
+          "source_sha256": "49c3b9d327042a830e712b539f50f81ad45b011c91622fb1a53f709fe5e2054d"
+        },
+        {
+          "path": "syncer_test.go",
+          "bytes": 3055,
+          "source_sha256": "0d90d6bd9950399b5f582de8f0572d4e0e3bbfbf3086c3a2532b51eb8ee4e80a"
+        },
+        {
+          "path": "tools/asynq/cmd/cron.go",
+          "bytes": 3528,
+          "source_sha256": "91446a739212877e989e7663f85f4086e3e9495943211228be60c6433fafc84c"
+        },
+        {
+          "path": "tools/asynq/cmd/dash.go",
+          "bytes": 1044,
+          "source_sha256": "da0d0fdab6c8c6fe75233730cc9e8bfdce36910014a904b577dc6718927bf34a"
+        },
+        {
+          "path": "tools/asynq/cmd/dash/dash.go",
+          "bytes": 5188,
+          "source_sha256": "c2e2f0dcb75b86018ab167b1eba45d155ad9c5616c636162b6e5be861d3655d2"
+        },
+        {
+          "path": "tools/asynq/cmd/dash/draw.go",
+          "bytes": 22629,
+          "source_sha256": "d14a0e16e51c0aa2b7ba1ce24a4f15484955bd8a4851dd7064e0f7888212f06c"
+        },
+        {
+          "path": "tools/asynq/cmd/dash/draw_test.go",
+          "bytes": 592,
+          "source_sha256": "0facd4929c1cbbd1001be084dc28395e49e597d94fc4a8148986a4cb4fb3f126"
+        },
+        {
+          "path": "tools/asynq/cmd/dash/fetch.go",
+          "bytes": 4826,
+          "source_sha256": "e095c1912f7d80b4f5175b08be14f943e5e518472840fbb78dfce7f567a25a1f"
+        },
+        {
+          "path": "tools/asynq/cmd/dash/key_event.go",
+          "bytes": 6845,
+          "source_sha256": "1eaf6063cb7a219581dcb24a0f19adb545455360abff91999b98d5f891b0d990"
+        },
+        {
+          "path": "tools/asynq/cmd/dash/key_event_test.go",
+          "bytes": 7070,
+          "source_sha256": "fa82f5f23afca7e40a5c98d4ad3c5c7f2fdabca9bce86d95a5e4fee031b66d3b"
+        },
+        {
+          "path": "tools/asynq/cmd/dash/screen_drawer.go",
+          "bytes": 2108,
+          "source_sha256": "d96e122e6118fa635f770709215d4374023a61f472bdde5605fd15bf08912574"
+        },
+        {
+          "path": "tools/asynq/cmd/dash/table.go",
+          "bytes": 1786,
+          "source_sha256": "7ed7f45787d6443fc0209fc2d882fcd0dddc8ca9354aa3cc94ba88045de21305"
+        },
+        {
+          "path": "tools/asynq/cmd/group.go",
+          "bytes": 1196,
+          "source_sha256": "eef13616610c5028501bc28ffbba0cdeb27b1422c11ee01e67e858321ffbd71d"
+        },
+        {
+          "path": "tools/asynq/cmd/queue.go",
+          "bytes": 7509,
+          "source_sha256": "7bc23c92936c925a0a9b4aa787ff6278a4cde88ba6a63b6bb0bfa66449d36976"
+        },
+        {
+          "path": "tools/asynq/cmd/root.go",
+          "bytes": 14529,
+          "source_sha256": "ad470d3360d61d35b74c00fdfbc87c6b38324154d132d505881f1061dd98e0f3"
+        },
+        {
+          "path": "tools/asynq/cmd/server.go",
+          "bytes": 2822,
+          "source_sha256": "5ebc71064a4b65215be50378bc30de2aaacedb341b31abdad8beaf69b81d09eb"
+        },
+        {
+          "path": "tools/asynq/cmd/stats.go",
+          "bytes": 7227,
+          "source_sha256": "fc2d853ff42507413ef98f11ffd716ecd4e9b262e8c49ae9891419dd98208fe2"
+        },
+        {
+          "path": "tools/asynq/cmd/task.go",
+          "bytes": 23021,
+          "source_sha256": "e5b656d8a18b8e430eeee5950a77936cd78c8618065206d2e4aa51d6c2f53c1c"
+        },
+        {
+          "path": "tools/asynq/main.go",
+          "bytes": 250,
+          "source_sha256": "fe4b37941a1f7e02115e514bdb5d2ad3bd544973a3049d276c3828ded4fb899d"
+        },
+        {
+          "path": "tools/metrics_exporter/main.go",
+          "bytes": 1756,
+          "source_sha256": "0d12f37518598321fe8657b358fb293b961cab420247779b64c8d0ac1fd93c77"
+        },
+        {
+          "path": "x/metrics/metrics.go",
+          "bytes": 4909,
+          "source_sha256": "48f8fd967e6bbee5c301482ea4a9a3a8e1f536e9d37b4a7d6894c285df27101a"
+        },
+        {
+          "path": "x/rate/example_test.go",
+          "bytes": 790,
+          "source_sha256": "366fa37274e25c794d540273fe25c69ed9c06d255e47bcde96e462df2621a7c1"
+        },
+        {
+          "path": "x/rate/semaphore.go",
+          "bytes": 3013,
+          "source_sha256": "aaaf9e4de2bfdd38f66d310c8d34a541d9daf955c56713341fe999b457827ead"
+        },
+        {
+          "path": "x/rate/semaphore_test.go",
+          "bytes": 11548,
+          "source_sha256": "ec3b55f35ab74d211d46582d3ed5d25960d2f0345d102b3f0110fc85cac28433"
+        }
+      ]
+    },
+    {
+      "population": "eino",
+      "selected": [
+        {
+          "path": "flow/agent/react/memory_example/memory/redis.go",
+          "bytes": 2436,
+          "source_sha256": "63fe201ab650e05e1df41b6983c4cee3c3fac2315147fb53eae38ce0f566c0ed"
+        },
+        {
+          "path": "quickstart/eino_assistant/cmd/knowledgeindexing/main.go",
+          "bytes": 5010,
+          "source_sha256": "7055533c0ea78cd57cd50962cd460325d20f2e301e1f9d9fc985618096f65520"
+        },
+        {
+          "path": "quickstart/eino_assistant/eino/einoagent/retriever.go",
+          "bytes": 2429,
+          "source_sha256": "9661281ad96e7859cacfda1feeff84a25249efa762eb63b6d94e236dbe718f65"
+        },
+        {
+          "path": "quickstart/eino_assistant/eino/knowledgeindexing/indexer.go",
+          "bytes": 2333,
+          "source_sha256": "8cdada2ec79dce6a1c18c7ab0f95eabb2ab7909defbdb121151ed7b42ad9d2f0"
+        },
+        {
+          "path": "quickstart/eino_assistant/pkg/redis/redis.go",
+          "bytes": 2549,
+          "source_sha256": "78f1ce43d7e2c119d356af59117beb08277c303a22cd5de90061f8b9f9723d41"
+        }
+      ],
+      "unsampled": [
+        {
+          "path": "adk/agent/ralph-loop/main.go",
+          "bytes": 8611,
+          "source_sha256": "05b615e2755cb60562ce68287f0485993de1f4e4b20122bf54bc036550228aca"
+        },
+        {
+          "path": "adk/agent/ralph-loop/ralph_loop.go",
+          "bytes": 5022,
+          "source_sha256": "ae191d5eb112465b4caf576652df95875fbf6158ed43ab42e8564e56b00fb9ee"
+        },
+        {
+          "path": "adk/agent/ralph-loop/seed.go",
+          "bytes": 7815,
+          "source_sha256": "0256248d7a78a79d69ba736a347d00dbd803fc78997d3d6855baa0b5c7bea421"
+        },
+        {
+          "path": "adk/agentic/research_assistant/agent.go",
+          "bytes": 2288,
+          "source_sha256": "f1ba98cd7c6662d1344c845592a46bac11e75c8166adfedeed65184aba9a7e55"
+        },
+        {
+          "path": "adk/agentic/research_assistant/main.go",
+          "bytes": 2988,
+          "source_sha256": "515b5b0b52ade83e21c5dfd0771834716210c8208d9e010881623c114c9eb188"
+        },
+        {
+          "path": "adk/agentic/research_assistant/model.go",
+          "bytes": 4451,
+          "source_sha256": "0e3888a67cfcdac42b6fded1dd639bcec88e9e68dcb0c3054f65265f83f8e8c7"
+        },
+        {
+          "path": "adk/agentic/research_assistant/prompt.go",
+          "bytes": 2337,
+          "source_sha256": "7c11691d35b3ae7eb33c267a99c0f953c9d9ce975c31be5333a6c1d6ff925426"
+        },
+        {
+          "path": "adk/agentic/research_assistant/tools.go",
+          "bytes": 3259,
+          "source_sha256": "6fb9c6d6864f17d3e290ee0a306ccdf9530a0a7a7b6fd75f2facc03c6520aa9b"
+        },
+        {
+          "path": "adk/agentic/retry_max_output_tokens/agent.go",
+          "bytes": 2143,
+          "source_sha256": "b28f923ec559fc9026b354fb3c934589400f1602bef03f189751faa1fde4457d"
+        },
+        {
+          "path": "adk/agentic/retry_max_output_tokens/main.go",
+          "bytes": 5800,
+          "source_sha256": "daa4329fa7b621c31ec467e6777d36488196038d9efd82993c562ca7540957e5"
+        },
+        {
+          "path": "adk/agentic/retry_max_output_tokens/retry.go",
+          "bytes": 3983,
+          "source_sha256": "57e5688d38d4e8e17d286c7e6206b274246810d148e3392aeb891c5842d6c557"
+        },
+        {
+          "path": "adk/agentic/retry_max_output_tokens/tools.go",
+          "bytes": 5401,
+          "source_sha256": "a5412713a61efde3311a69a0213673c73b95a5586303d9b5aab0591a20845bc4"
+        },
+        {
+          "path": "adk/cancel/graceful-exit/main.go",
+          "bytes": 16664,
+          "source_sha256": "af1ff86451d6a54e9665e2820123acd87ae8add60f8a9d3d91a7bfb16e5e8ac0"
+        },
+        {
+          "path": "adk/common/model/chat_model.go",
+          "bytes": 2905,
+          "source_sha256": "1c43f93c9269237e51337d83e4b22a37aa3cc08f6eddb36fd381fca6a9f4adf6"
+        },
+        {
+          "path": "adk/common/prints/util.go",
+          "bytes": 3645,
+          "source_sha256": "c85a9e436e54e3b3e95309d5c5b16785d941868c53b0906c33997de32ef0414e"
+        },
+        {
+          "path": "adk/common/store/store.go",
+          "bytes": 1085,
+          "source_sha256": "cf5546c37865bd2ed3f18f44fbe879cdc25ad78bcbaf6457f17a3785718ef9a9"
+        },
+        {
+          "path": "adk/common/tool/approval_wrapper.go",
+          "bytes": 2499,
+          "source_sha256": "bd66808e7542b1c1bfd4f1b65035080ba53d82bb15c03182479342386c036e32"
+        },
+        {
+          "path": "adk/common/tool/follow_up_tool.go",
+          "bytes": 2518,
+          "source_sha256": "90ef8a498c58bfa07aac1c41a717e82494965df885e39abdd720fed10635afb0"
+        },
+        {
+          "path": "adk/common/tool/graphtool/examples/1_chain_summarize/main.go",
+          "bytes": 6058,
+          "source_sha256": "089dfa4ec66ad9d90f5ed3626fd27cd74b9e5c95a57fcc1986f9dd26884e0554"
+        },
+        {
+          "path": "adk/common/tool/graphtool/examples/2_graph_research/main.go",
+          "bytes": 7159,
+          "source_sha256": "16ed39b7a72f95a4eb00c4744adb48cacbe6a5155195751cd4683b58d82cbf9a"
+        },
+        {
+          "path": "adk/common/tool/graphtool/examples/3_workflow_order/main.go",
+          "bytes": 9141,
+          "source_sha256": "4b6422a39cce8947bbd4d8bbc97d6b1a210c9d89448a9e86798979344ece7db5"
+        },
+        {
+          "path": "adk/common/tool/graphtool/examples/4_nested_interrupt/main.go",
+          "bytes": 8908,
+          "source_sha256": "3682c9f0c6db03fa79bc3af11317ccdda240dbe01b4f350b86fecaf4ae386cdf"
+        },
+        {
+          "path": "adk/common/tool/graphtool/graph_tool.go",
+          "bytes": 8948,
+          "source_sha256": "805a7a2e0c592e05e251cb9ff03e3979900211f37c56b2c42279d77d020143c1"
+        },
+        {
+          "path": "adk/common/tool/review_edit_wrapper.go",
+          "bytes": 3421,
+          "source_sha256": "628a0a22fa0600bfd7c31229e7119e490b279a276ba63a27cb00d0dad9802415"
+        },
+        {
+          "path": "adk/common/trace/coze_loop.go",
+          "bytes": 2339,
+          "source_sha256": "608c76399b072c2efb706607852fc9c71e78873f6753fb2b9b8d07b38f908de8"
+        },
+        {
+          "path": "adk/helloworld/helloworld.go",
+          "bytes": 2007,
+          "source_sha256": "9e974df7f343fa243bd0a3f4c273e206c5e4b0a4859b3c9ae3f3a2dd130cb906"
+        },
+        {
+          "path": "adk/human-in-the-loop/1_approval/agent.go",
+          "bytes": 2421,
+          "source_sha256": "1372f8d9a8bd859276f993af2dbb7c71f13532535e62063baeb91f06e0a24503"
+        },
+        {
+          "path": "adk/human-in-the-loop/1_approval/main.go",
+          "bytes": 4333,
+          "source_sha256": "849fe6af5fba23f8c4bd27221929194ddf442822830edbbb34390e104f241e22"
+        },
+        {
+          "path": "adk/human-in-the-loop/2_review-and-edit/agent.go",
+          "bytes": 1683,
+          "source_sha256": "209951e9d0bf9b322f6e7a2528f506398de9c4859e21204a28559afc8d49b716"
+        },
+        {
+          "path": "adk/human-in-the-loop/2_review-and-edit/main.go",
+          "bytes": 2663,
+          "source_sha256": "a52f713e668260f0676b172e35c2424b95ab629c7b3f70498a23d13729732ec7"
+        },
+        {
+          "path": "adk/human-in-the-loop/2_review-and-edit/tool.go",
+          "bytes": 1219,
+          "source_sha256": "d50a41147a0f4f1d763c1935aa91ab02b25840fdc1787119d2fbf57e4f59dfe6"
+        },
+        {
+          "path": "adk/human-in-the-loop/3_feedback-loop/main.go",
+          "bytes": 2592,
+          "source_sha256": "515afaedef88bf2b587584e39ab5318a3aa0c0a2184876a101ce615ba8255e7f"
+        },
+        {
+          "path": "adk/human-in-the-loop/3_feedback-loop/reviewer_agent.go",
+          "bytes": 3466,
+          "source_sha256": "c20a41e5b8b9d9515724309976fe5281e7d9ac21fceece655c2e8a985bff37c2"
+        },
+        {
+          "path": "adk/human-in-the-loop/3_feedback-loop/writer_agent.go",
+          "bytes": 1728,
+          "source_sha256": "8cc5bb639171c710f8792c2081f779d89b14b543d02aa26e4a311e0a94ba1aa7"
+        },
+        {
+          "path": "adk/human-in-the-loop/4_follow-up/follow_up_agent.go",
+          "bytes": 2669,
+          "source_sha256": "58b38986a23b9076de2912f937ab776d9f2893d13a50231debdcd2e3532f0676"
+        },
+        {
+          "path": "adk/human-in-the-loop/4_follow-up/main.go",
+          "bytes": 2329,
+          "source_sha256": "33e7cc458fe006383c2a3d9a2127d6ceef35a2e42be220307885d472abcb200e"
+        },
+        {
+          "path": "adk/human-in-the-loop/4_follow-up/trip_planner_agent.go",
+          "bytes": 1626,
+          "source_sha256": "159ca3a90115e7cf5bfe938bc6599efbc484269d333ad7540a9197165ff6be0c"
+        },
+        {
+          "path": "adk/human-in-the-loop/5_supervisor/agent.go",
+          "bytes": 7502,
+          "source_sha256": "69c26deb957d513b4b3229293a1624c3adce8d04a30958b32fe6794f3fee6ad1"
+        },
+        {
+          "path": "adk/human-in-the-loop/5_supervisor/main.go",
+          "bytes": 3460,
+          "source_sha256": "29b57bcfcd3d189dfda7812261001fba8de2730d6807b356368fb51cffae269d"
+        },
+        {
+          "path": "adk/human-in-the-loop/6_plan-execute-replan/agent.go",
+          "bytes": 4964,
+          "source_sha256": "507f34bdb5c936a154014c71e8e62088895247e1e1113de9e30e6fb1a5e301a9"
+        },
+        {
+          "path": "adk/human-in-the-loop/6_plan-execute-replan/main.go",
+          "bytes": 3940,
+          "source_sha256": "640c9031db122f27f6f116f125aeecf574f2adcede9b039cf62292054ecb0620"
+        },
+        {
+          "path": "adk/human-in-the-loop/6_plan-execute-replan/tools.go",
+          "bytes": 10827,
+          "source_sha256": "8a47b2d0188276d68132eecc2c40e09a3c39e32a7c222e103316211ffc777089"
+        },
+        {
+          "path": "adk/human-in-the-loop/7_deep-agents/agent.go",
+          "bytes": 5603,
+          "source_sha256": "bb272b36db8097abf7478b9b7b65bbec50e0c4f0c455502b2c7955bda66a50e3"
+        },
+        {
+          "path": "adk/human-in-the-loop/7_deep-agents/main.go",
+          "bytes": 3563,
+          "source_sha256": "d89e6bd5d761a2b0841c8ee62a5d546f4e9a2b46bfe07b412624b07a7a2a08c6"
+        },
+        {
+          "path": "adk/human-in-the-loop/7_deep-agents/tools.go",
+          "bytes": 6307,
+          "source_sha256": "30c6859cac5a0c58964444762bf90b9bcad4c4ccac13b02f3ece3735d10b3a4e"
+        },
+        {
+          "path": "adk/human-in-the-loop/8_supervisor-plan-execute/agent.go",
+          "bytes": 7918,
+          "source_sha256": "196203f2ffefdfc771dcc9171693736862c207f04261b27039e4fd9575b5d5bb"
+        },
+        {
+          "path": "adk/human-in-the-loop/8_supervisor-plan-execute/main.go",
+          "bytes": 3664,
+          "source_sha256": "e6692bc9177e4d9aad0ea9f8783d3cf53614b499b29b1622631264a55ceef878"
+        },
+        {
+          "path": "adk/human-in-the-loop/8_supervisor-plan-execute/tools.go",
+          "bytes": 8422,
+          "source_sha256": "a9e28ed879b67d9eb04be2eb3d020216213e1feca3044d7e62486164b5c6e482"
+        },
+        {
+          "path": "adk/intro/agent_with_summarization/agent.go",
+          "bytes": 3938,
+          "source_sha256": "e602a0c52c96ab79df4dba87704a6719640c17d02ccca0e776922d8363853d32"
+        },
+        {
+          "path": "adk/intro/agent_with_summarization/tools.go",
+          "bytes": 2143,
+          "source_sha256": "471cc50f5bd3a5ae5171d556f045ccdb7a805d1dcc3232158d101f66898665bf"
+        },
+        {
+          "path": "adk/intro/chatmodel/chatmodel.go",
+          "bytes": 1818,
+          "source_sha256": "38935198048f6fc2a7da18f4c117140f23428b1740c55241eb23afb8a6172f32"
+        },
+        {
+          "path": "adk/intro/chatmodel/subagents/agent.go",
+          "bytes": 1527,
+          "source_sha256": "168df8a30e3f1cdbc48658916880ed1aaa9a9f39e89e5a621613dbff6329dd6a"
+        },
+        {
+          "path": "adk/intro/chatmodel/subagents/ask_for_clarification.go",
+          "bytes": 1936,
+          "source_sha256": "0dc25c530a306c0c6e4960e0e965a46ed2266e53cb16aaf3163d8eca8e069de1"
+        },
+        {
+          "path": "adk/intro/chatmodel/subagents/booksearch.go",
+          "bytes": 1640,
+          "source_sha256": "7b23b18a600069f97d2a6ad639929d864031747c5c3785060bdc43743a4a0b4c"
+        },
+        {
+          "path": "adk/intro/custom/myagent.go",
+          "bytes": 1583,
+          "source_sha256": "22adc529508fbeb6783afc88d10a47d41f78478723c36a8cbf950c3811ac48cb"
+        },
+        {
+          "path": "adk/intro/http-sse-service/main.go",
+          "bytes": 7646,
+          "source_sha256": "545d07104146ad1d4f8b343a57b06cb1c4919227ce15a3d780ed6671c68705f4"
+        },
+        {
+          "path": "adk/intro/session/session_values.go",
+          "bytes": 2494,
+          "source_sha256": "b8ac368bf5439c3a334bcf1f58f64ebfb10ddcb8ee634e95e5864fec161debc8"
+        },
+        {
+          "path": "adk/intro/transfer/subagents/chatmodel.go",
+          "bytes": 2932,
+          "source_sha256": "68a338cf7a2916c241c8292f860a8b7cba9d4cfadfe68daef9c9b525ab5eccf1"
+        },
+        {
+          "path": "adk/intro/transfer/transfer.go",
+          "bytes": 1782,
+          "source_sha256": "99520044c58160ef804b166e5a2d36dd6eeb63740e90025fb6fe2732046428fd"
+        },
+        {
+          "path": "adk/intro/workflow/loop/loop_for_reflection.go",
+          "bytes": 2034,
+          "source_sha256": "9bc79748877e49a5e117ce481189e21c2f4436844cb0f1cc34cf1f6e7bc58fc3"
+        },
+        {
+          "path": "adk/intro/workflow/loop/subagents/chatmodel.go",
+          "bytes": 2865,
+          "source_sha256": "081039ec4e7c41c71353889deafcc42ad0d536433560457b5c59fa513fdf0b54"
+        },
+        {
+          "path": "adk/intro/workflow/parallel/parallel.go",
+          "bytes": 2037,
+          "source_sha256": "fc5426344718b5eefb8150f3546c680c13d54afca23370a84ca05fb804133a6d"
+        },
+        {
+          "path": "adk/intro/workflow/parallel/subagents/chatmodel.go",
+          "bytes": 3962,
+          "source_sha256": "8a1e494a7475d955321bc10ee2d460d776cbbebb6aa209d317a97e1b46ae1c00"
+        },
+        {
+          "path": "adk/intro/workflow/sequential/sequential.go",
+          "bytes": 1957,
+          "source_sha256": "64f72d7af07f029442db9302bcec60881c94359c6f2b1a66405c96c8cd68ea7c"
+        },
+        {
+          "path": "adk/intro/workflow/sequential/subagents/chatmodel.go",
+          "bytes": 1915,
+          "source_sha256": "33093c5665ccc944f3a72b58387e85797be255cbe18a4d27525a9c4343aba480"
+        },
+        {
+          "path": "adk/middlewares/dynamictool/toolsearch/tools.go",
+          "bytes": 4216,
+          "source_sha256": "f8a3ff498b7ed4324fe5ad8ce97ab81d4dc8d40f0e47d7eb576d82adb54450ce"
+        },
+        {
+          "path": "adk/middlewares/dynamictool/toolsearch/toolsearch.go",
+          "bytes": 2110,
+          "source_sha256": "e6afecc4f93847fef1e1aa48ecb56047cbe027a85fcfc97591b4467f8f06c232"
+        },
+        {
+          "path": "adk/middlewares/skill/main.go",
+          "bytes": 2676,
+          "source_sha256": "586e3df553e1b3070702678cc6792fcaa184cb3336c0a040d26397826bf050cc"
+        },
+        {
+          "path": "adk/multiagent/deep/agents/code_agent.go",
+          "bytes": 4255,
+          "source_sha256": "12f1c77f38e2fd8a9bc93400311c267bb1886ca6a134c08d20d8390abb48b070"
+        },
+        {
+          "path": "adk/multiagent/deep/agents/web_search.go",
+          "bytes": 1541,
+          "source_sha256": "6979bee11d106032e28181a11e306bf626048429bba43b5c0ac79d9149171f6c"
+        },
+        {
+          "path": "adk/multiagent/deep/generic/file_preview.go",
+          "bytes": 5082,
+          "source_sha256": "8706c72d3140843d1d30efefed6579f27091b8ac9a38a6eef7e7c31989d9c45a"
+        },
+        {
+          "path": "adk/multiagent/deep/generic/full_plan.go",
+          "bytes": 2360,
+          "source_sha256": "3ada9cbd822018dc6c23352d2eb9105389d1e6866a857fcf9d1bfc5e5f2eddd3"
+        },
+        {
+          "path": "adk/multiagent/deep/generic/plan.go",
+          "bytes": 2311,
+          "source_sha256": "b090c2d3a49afc500ed61695663a76593586d5458601ad31cd0180a1101c064f"
+        },
+        {
+          "path": "adk/multiagent/deep/generic/submit_result.go",
+          "bytes": 1914,
+          "source_sha256": "9e537cd70332ca3b19fae2a271169fa40d4c918f47efc2b5871d5b4226fc4406"
+        },
+        {
+          "path": "adk/multiagent/deep/main.go",
+          "bytes": 6008,
+          "source_sha256": "912fd75d4565ec5a8319bfc8d8d9a50616354df212948c4e031b0db23c14930b"
+        },
+        {
+          "path": "adk/multiagent/deep/operator.go",
+          "bytes": 2289,
+          "source_sha256": "9cc685db18aeb8b59cb98108c888ea88d6ab5b4bef8fbafeb120d662a3bd8f61"
+        },
+        {
+          "path": "adk/multiagent/deep/params/consts.go",
+          "bytes": 854,
+          "source_sha256": "c732dc4446df54ea8a1b01843364fd4de1cb8c850552f95c7fc8b8df9f11fc17"
+        },
+        {
+          "path": "adk/multiagent/deep/params/params.go",
+          "bytes": 2015,
+          "source_sha256": "6b8b5cec06d2a19bcaac0f4bcc7aa84018c768ad3add2c9e43cba3e5d86a1f03"
+        },
+        {
+          "path": "adk/multiagent/deep/tools/bash.go",
+          "bytes": 2651,
+          "source_sha256": "ce2bff2307469684a553e90fe61d7022d6d59d3582a50328936e27a5d6210858"
+        },
+        {
+          "path": "adk/multiagent/deep/tools/edit.go",
+          "bytes": 2605,
+          "source_sha256": "f582c109935ede151ebaf11f43cd0fbaebe5c994a03356164ec82a540580c5b4"
+        },
+        {
+          "path": "adk/multiagent/deep/tools/option.go",
+          "bytes": 739,
+          "source_sha256": "9e3e53096e63cd020fbd2923c54f8ff5d117ec334204a81bf336e75e8d222a28"
+        },
+        {
+          "path": "adk/multiagent/deep/tools/python_runner.go",
+          "bytes": 4194,
+          "source_sha256": "9351103e9f7aeae28429f8740d26bff8b76a654f60ab57e9cd0de655d460947d"
+        },
+        {
+          "path": "adk/multiagent/deep/tools/read.go",
+          "bytes": 3220,
+          "source_sha256": "869279915d9ab6196ee6fdf390eecf7d311a57c8a9e1d4e0d4a1607615fdc6f1"
+        },
+        {
+          "path": "adk/multiagent/deep/tools/read_image.go",
+          "bytes": 3108,
+          "source_sha256": "be4cfcd0bc6f03485ab8fc1f45cf4d9cc5dcc1239a6ec6275eaaa4761e720467"
+        },
+        {
+          "path": "adk/multiagent/deep/tools/submit_result.go",
+          "bytes": 4229,
+          "source_sha256": "f2afb1df372295f7474990c0dd9916c4e73863a9a8fbfb4a9d9b08fe44b3dbc9"
+        },
+        {
+          "path": "adk/multiagent/deep/tools/tree.go",
+          "bytes": 2165,
+          "source_sha256": "bd9b4bfd7cd639edd476f8b79a76cd92d66370f56a913b80f17b1a6d5c6c1b3c"
+        },
+        {
+          "path": "adk/multiagent/deep/tools/wrap.go",
+          "bytes": 5047,
+          "source_sha256": "8d2951e97507b965896d6311a65401fa5f49add269ade3cb14dec3395becb17f"
+        },
+        {
+          "path": "adk/multiagent/deep/utils/model.go",
+          "bytes": 3547,
+          "source_sha256": "2b05bf65a967f4db0f0dd8fb8a1a64094713b346120a7dafba5ad2584845e7e6"
+        },
+        {
+          "path": "adk/multiagent/deep/utils/utils.go",
+          "bytes": 2911,
+          "source_sha256": "fe68edc49defa91acf048f11c818f6ce68717245029f1c388718d5cf3684f3e1"
+        },
+        {
+          "path": "adk/multiagent/integration-excel-agent/agents/executor/code_agent.go",
+          "bytes": 4314,
+          "source_sha256": "e25b1b5ec90372213edfcc8ca1b0f90884f020f8dfcd98b9b9aa92a6aa36df22"
+        },
+        {
+          "path": "adk/multiagent/integration-excel-agent/agents/executor/executor.go",
+          "bytes": 3193,
+          "source_sha256": "c4c6246c668c946844bd159ef2971531ae834749a405e23b66c5b8760d64d8fd"
+        },
+        {
+          "path": "adk/multiagent/integration-excel-agent/agents/executor/web_search.go",
+          "bytes": 1562,
+          "source_sha256": "c71c61b1252419d695a6e96303c2b31b22cc8515846f972afc5aabd23fa352b9"
+        },
+        {
+          "path": "adk/multiagent/integration-excel-agent/agents/planner/planner.go",
+          "bytes": 5049,
+          "source_sha256": "83f733d37564cb43c52488205def0be0e5f547a7e71df6255f95d181283d766a"
+        },
+        {
+          "path": "adk/multiagent/integration-excel-agent/agents/replanner/replanner.go",
+          "bytes": 5277,
+          "source_sha256": "e4db8bd9be57ab914b622f0f7d35c9f3775a94be846e136dcbfd65eadf6fa755"
+        },
+        {
+          "path": "adk/multiagent/integration-excel-agent/agents/report/report_agent.go",
+          "bytes": 5793,
+          "source_sha256": "d5d263724ab09cc2ea033c0cbd33d0a24fa1cd2f0e5cb2be2f1306e62cf8e4ad"
+        },
+        {
+          "path": "adk/multiagent/integration-excel-agent/agents/wrap_plan.go",
+          "bytes": 3862,
+          "source_sha256": "feda9da0ce66b49c68da4dca234c56ac89eaa8bf8c0db6a499432f9eef4ed566"
+        },
+        {
+          "path": "adk/multiagent/integration-excel-agent/generic/file_preview.go",
+          "bytes": 5082,
+          "source_sha256": "8706c72d3140843d1d30efefed6579f27091b8ac9a38a6eef7e7c31989d9c45a"
+        },
+        {
+          "path": "adk/multiagent/integration-excel-agent/generic/full_plan.go",
+          "bytes": 2360,
+          "source_sha256": "3ada9cbd822018dc6c23352d2eb9105389d1e6866a857fcf9d1bfc5e5f2eddd3"
+        },
+        {
+          "path": "adk/multiagent/integration-excel-agent/generic/plan.go",
+          "bytes": 2696,
+          "source_sha256": "15ac9d2f91c0d05c849b34622b8043b182fabd45cd4e24789dcf885e9412e54d"
+        },
+        {
+          "path": "adk/multiagent/integration-excel-agent/generic/submit_result.go",
+          "bytes": 1914,
+          "source_sha256": "9e537cd70332ca3b19fae2a271169fa40d4c918f47efc2b5871d5b4226fc4406"
+        },
+        {
+          "path": "adk/multiagent/integration-excel-agent/main.go",
+          "bytes": 6162,
+          "source_sha256": "6bc8a13915933c06449171e85aad7ce97bbd677854fc6acc6604a64823817086"
+        },
+        {
+          "path": "adk/multiagent/integration-excel-agent/operator.go",
+          "bytes": 2308,
+          "source_sha256": "ac70b74ee588dd8bb055a24e26338713cdf67942189b3986f8d4dbd32bbf137f"
+        },
+        {
+          "path": "adk/multiagent/integration-excel-agent/params/consts.go",
+          "bytes": 854,
+          "source_sha256": "c732dc4446df54ea8a1b01843364fd4de1cb8c850552f95c7fc8b8df9f11fc17"
+        },
+        {
+          "path": "adk/multiagent/integration-excel-agent/params/params.go",
+          "bytes": 2015,
+          "source_sha256": "6b8b5cec06d2a19bcaac0f4bcc7aa84018c768ad3add2c9e43cba3e5d86a1f03"
+        },
+        {
+          "path": "adk/multiagent/integration-excel-agent/tools/bash.go",
+          "bytes": 2670,
+          "source_sha256": "fba60e5081f9e0e734291a6ed49377d9ab73d85fa707501eb813f04b331e5a58"
+        },
+        {
+          "path": "adk/multiagent/integration-excel-agent/tools/edit.go",
+          "bytes": 2884,
+          "source_sha256": "9f166b34cc1a888bf47dbe622934bab8f3afbb2b54dcdd2b9f28e4659b6d9fed"
+        },
+        {
+          "path": "adk/multiagent/integration-excel-agent/tools/option.go",
+          "bytes": 739,
+          "source_sha256": "9e3e53096e63cd020fbd2923c54f8ff5d117ec334204a81bf336e75e8d222a28"
+        },
+        {
+          "path": "adk/multiagent/integration-excel-agent/tools/python_runner.go",
+          "bytes": 4232,
+          "source_sha256": "b02e14001c31b36df5b5fa1c99bb2aa441f6166c4065ddec00203d877440a9f2"
+        },
+        {
+          "path": "adk/multiagent/integration-excel-agent/tools/read.go",
+          "bytes": 3239,
+          "source_sha256": "39cd20863eb0be98f62b28f4c5b070f9d022f845981e6748197913d052341d83"
+        },
+        {
+          "path": "adk/multiagent/integration-excel-agent/tools/read_image.go",
+          "bytes": 3108,
+          "source_sha256": "be4cfcd0bc6f03485ab8fc1f45cf4d9cc5dcc1239a6ec6275eaaa4761e720467"
+        },
+        {
+          "path": "adk/multiagent/integration-excel-agent/tools/submit_result.go",
+          "bytes": 4286,
+          "source_sha256": "bd26150ff4009f877f1ab96caf7fa27f31b641d3bd79de4899dbd6d2da38ed94"
+        },
+        {
+          "path": "adk/multiagent/integration-excel-agent/tools/tree.go",
+          "bytes": 2184,
+          "source_sha256": "bb3a7877961e28258b8d7967974f6ea0bdaa50a400b390f9d1cb411f9429bc34"
+        },
+        {
+          "path": "adk/multiagent/integration-excel-agent/tools/wrap.go",
+          "bytes": 5066,
+          "source_sha256": "f49a7e3e9a70b38824d6d6163dab3960a80cd2b84c80133733bb72af95f1caa2"
+        },
+        {
+          "path": "adk/multiagent/integration-excel-agent/utils/model.go",
+          "bytes": 3477,
+          "source_sha256": "1c200f0ee66ca5d371edc8eefc5f6c733e8e4dd8c2a770314fdfa7a6f09b4f16"
+        },
+        {
+          "path": "adk/multiagent/integration-excel-agent/utils/utils.go",
+          "bytes": 2911,
+          "source_sha256": "fe68edc49defa91acf048f11c818f6ce68717245029f1c388718d5cf3684f3e1"
+        },
+        {
+          "path": "adk/multiagent/integration-project-manager/agent.go",
+          "bytes": 4145,
+          "source_sha256": "1cc8a992f18001fdab768c506726e339962a4aa3092f28e724a4188dfa791a83"
+        },
+        {
+          "path": "adk/multiagent/integration-project-manager/agents/coder.go",
+          "bytes": 4397,
+          "source_sha256": "2aac4f04f68aeef612961478eae331891dfc822de9095037eb5115f68dd235e4"
+        },
+        {
+          "path": "adk/multiagent/integration-project-manager/agents/project_manager.go",
+          "bytes": 2240,
+          "source_sha256": "7da079e6992e28a8f418a2b4d9f8a490cf81c1fa4190deba46ba7e63ff57bf21"
+        },
+        {
+          "path": "adk/multiagent/integration-project-manager/agents/researcher.go",
+          "bytes": 4190,
+          "source_sha256": "9887e25b69d0c18136892b4896a9a251768bfd5841efcb1867976db24c94d386"
+        },
+        {
+          "path": "adk/multiagent/integration-project-manager/agents/reviewer.go",
+          "bytes": 3318,
+          "source_sha256": "8e4b3f31ddbaa5138f67d2172de0a1c4c51e65c5fdf02920c218ac2fdf710df0"
+        },
+        {
+          "path": "adk/multiagent/layered-supervisor/agent.go",
+          "bytes": 8651,
+          "source_sha256": "03aa86b4e1b222f263fb981d03fd3789b36ea03b6c471c7020a8d228f493f217"
+        },
+        {
+          "path": "adk/multiagent/layered-supervisor/layered_supervisor.go",
+          "bytes": 1765,
+          "source_sha256": "9a64f4bbadff3c1248aba32895a6f9e116cff56bcf7d89dba239fb0b4be6caef"
+        },
+        {
+          "path": "adk/multiagent/plan-execute-replan/agent/agent.go",
+          "bytes": 3495,
+          "source_sha256": "b709aae271b39a54bf0d388c84fb59a34c54d78f1981f3e6cae9b1ff5c40de47"
+        },
+        {
+          "path": "adk/multiagent/plan-execute-replan/plan-execute-replan.go",
+          "bytes": 2347,
+          "source_sha256": "6c048e3009f7d1aeccb2e2871a2c53b8d02a412dc7ccb50b53d42064dd697dd9"
+        },
+        {
+          "path": "adk/multiagent/plan-execute-replan/tools/ask_for_clarification.go",
+          "bytes": 1681,
+          "source_sha256": "784f96099349b9b2f8f9331273a8fbc4da01f114196087929d270bfd4bafd368"
+        },
+        {
+          "path": "adk/multiagent/plan-execute-replan/tools/travel_tools.go",
+          "bytes": 12866,
+          "source_sha256": "505d75d17490e97656b07c50f5feb93aee86f70083f82ef9eb8959307ba377be"
+        },
+        {
+          "path": "adk/multiagent/supervisor/agent.go",
+          "bytes": 5187,
+          "source_sha256": "2a1e123b1081b134ea51e4093ad9fb74025f6b55b854a43587f3584d9527a86e"
+        },
+        {
+          "path": "adk/multiagent/supervisor/supervisor.go",
+          "bytes": 1881,
+          "source_sha256": "32411ad7c55204f9d307b0a4dce3d3cf02a9f86f8c2d1e385bdaeeb34a4633d6"
+        },
+        {
+          "path": "components/document/parser/customparser/custom_parser.go",
+          "bytes": 2014,
+          "source_sha256": "9d7a7bf4c49d8174cc22a01c153ee3eea41087e9db7d2f87fa695d7430d58daf"
+        },
+        {
+          "path": "components/document/parser/customparser/parse.go",
+          "bytes": 1159,
+          "source_sha256": "529b0d84d507ed94ad0aa2233f296eec5bfb5a3c89c88f94ff8c2816aae79a23"
+        },
+        {
+          "path": "components/document/parser/extparser/ext_parser.go",
+          "bytes": 2219,
+          "source_sha256": "8b1dc44ab55d3517c132f6ba20d9b137186e40f22397034d0c2e948a5d95e6e4"
+        },
+        {
+          "path": "components/document/parser/textparser/text_parser.go",
+          "bytes": 1046,
+          "source_sha256": "aca8b748ec9cbf5f22ec9ba37919744ef2ed221fa54a27c1732d0abde231a6f9"
+        },
+        {
+          "path": "components/lambda/lambda.go",
+          "bytes": 3943,
+          "source_sha256": "aef5340bcef03570d36b0e15de5252d23cd82987d91a9a798a72e8168787a484"
+        },
+        {
+          "path": "components/model/abtest/ab_router.go",
+          "bytes": 4896,
+          "source_sha256": "f5562d6971d6f79719971d8a621cc13289bfb0672768612be84a8ae04747b014"
+        },
+        {
+          "path": "components/model/abtest/example/main.go",
+          "bytes": 2808,
+          "source_sha256": "302d7be236d4575375f2416c19ffa38f41e7214cbec6b2ef1b2ecdaa507cc80f"
+        },
+        {
+          "path": "components/model/httptransport/curlrt.go",
+          "bytes": 9603,
+          "source_sha256": "a122f7e0a629224c37f29fb84519390c698fd599a9df1d12e109a757903d4f76"
+        },
+        {
+          "path": "components/model/httptransport/example/invoke/main.go",
+          "bytes": 1869,
+          "source_sha256": "7a11f0ddc2fe25a11be7c111174b3023f03d9ce48374b755684d9cd8018fc48b"
+        },
+        {
+          "path": "components/model/httptransport/example/stream/main.go",
+          "bytes": 2113,
+          "source_sha256": "3d177e8eb780b1ec937e33d9efcb9cf396112bf15784163af6435e6e4ab81571"
+        },
+        {
+          "path": "components/prompt/chat_prompt/chat_prompt.go",
+          "bytes": 1827,
+          "source_sha256": "23f68b15fcec1006c7cd462f85a37fe14333d087063fc16fea26ade2eec06b5c"
+        },
+        {
+          "path": "components/retriever/multiquery/main.go",
+          "bytes": 4080,
+          "source_sha256": "b2dfb64967f238abd6a517461f8f11079217b8cefcf6d954a7c569c7203598fe"
+        },
+        {
+          "path": "components/retriever/router/main.go",
+          "bytes": 2517,
+          "source_sha256": "3837ce8b232bb3df95dc3424ce16ffed354bcc62d79ed40658e898a605e8b00d"
+        },
+        {
+          "path": "components/tool/jsonschema/main.go",
+          "bytes": 1627,
+          "source_sha256": "ac116f155a4f40f73d776f941abb1b8673577daab77ccbba999443e0aa98d688"
+        },
+        {
+          "path": "components/tool/mcptool/callresulthandler/main.go",
+          "bytes": 4699,
+          "source_sha256": "e2ce5de620b588ccbba41246de610fd0187136c0ef1970480f0c42d15ce5416b"
+        },
+        {
+          "path": "components/tool/middlewares/errorremover/errorremover.go",
+          "bytes": 3811,
+          "source_sha256": "9e575cd768bfc4e5317877ec5f29f78237104c89df5ded6cb136595d515cda88"
+        },
+        {
+          "path": "components/tool/middlewares/errorremover/example/main.go",
+          "bytes": 3047,
+          "source_sha256": "399d758e166e1b5817c1ccaa202de676ab964bac88ddd0cbf2ebe0e1a09ed848"
+        },
+        {
+          "path": "components/tool/middlewares/jsonfix/example/main.go",
+          "bytes": 2363,
+          "source_sha256": "7c0629b36652dd0ad0b1dd582d0af070c3f66585ea7795f57d484b040ae9c873"
+        },
+        {
+          "path": "components/tool/middlewares/jsonfix/json_fix_middleware.go",
+          "bytes": 3829,
+          "source_sha256": "cf1ea5093a7edeb3645c76b932c37d31419a0c6b485974923ca708a13a75a660"
+        },
+        {
+          "path": "components/tool/middlewares/jsonfix/json_fix_middleware_test.go",
+          "bytes": 5555,
+          "source_sha256": "155084aeffed2e1038a42df9bb6f69b293b263205744b43385c108d6470f9eb9"
+        },
+        {
+          "path": "compose/batch/batch/node.go",
+          "bytes": 8232,
+          "source_sha256": "1e3f3c79156b59d7b1b20fe5e14171d52999150cf38c857b7d6fd5e7bc42c917"
+        },
+        {
+          "path": "compose/batch/batch/options.go",
+          "bytes": 1769,
+          "source_sha256": "ba97ea5a28d592f026cc7763f9b7e8c521d8dbdf91ca9f833b98a0dabb468c73"
+        },
+        {
+          "path": "compose/batch/batch/store.go",
+          "bytes": 2656,
+          "source_sha256": "9496bcf3d8d842ea35fb8e92fd8313e621b69090f4665bb73411b62ff5e5da47"
+        },
+        {
+          "path": "compose/batch/batch/types.go",
+          "bytes": 4375,
+          "source_sha256": "3534734ef9c3216a4e32ad07ba0f09be06930ef90012ebd790813e5ce4be118b"
+        },
+        {
+          "path": "compose/batch/main.go",
+          "bytes": 20236,
+          "source_sha256": "67ce85a850ce0bcc1ee4182d0063d2cd371a2a7c64e0e2feb5f99fc3bc6fb94a"
+        },
+        {
+          "path": "compose/chain/main.go",
+          "bytes": 4809,
+          "source_sha256": "a295bb306e9b69360ee6e3ddfedbd34586c84581d74928a1028a9e93d694ab4f"
+        },
+        {
+          "path": "compose/graph/async_node/main.go",
+          "bytes": 3073,
+          "source_sha256": "ac2589449c73db7bbeaaf9d53c3187560e030ea17c97febc95f978ca40fcc382"
+        },
+        {
+          "path": "compose/graph/async_node/service.go",
+          "bytes": 2231,
+          "source_sha256": "8dbe260fb0ca52b0efe72116e6820b4c3da5cb7bcccc9c9aa8f0b0793420b7ba"
+        },
+        {
+          "path": "compose/graph/react_with_interrupt/main.go",
+          "bytes": 7436,
+          "source_sha256": "ddc8d47f75a47782df0ea96d1748192626c373b19a49474bba26915ff29facf7"
+        },
+        {
+          "path": "compose/graph/simple/graph.go",
+          "bytes": 3620,
+          "source_sha256": "90a88d5057099748d009eee806712e0e8a936c66f1016b696335eba5d25113ea"
+        },
+        {
+          "path": "compose/graph/state/state_graph.go",
+          "bytes": 5254,
+          "source_sha256": "c3cd92bf6ad71ae6680c6948f85a2b6cde7892e2e0bcfaa15f3577ed986adb93"
+        },
+        {
+          "path": "compose/graph/tool_call_once/tool_call_once.go",
+          "bytes": 5457,
+          "source_sha256": "7a4a8d1be7a67744f87cab70cbcf0a49ed6e3a271bd87ac663e8a9acfc8f3937"
+        },
+        {
+          "path": "compose/workflow/1_simple/main.go",
+          "bytes": 2893,
+          "source_sha256": "4eb232eebd371e609dd06422a1a542bf00258740d829da78828f7b7848614e70"
+        },
+        {
+          "path": "compose/workflow/2_field_mapping/main.go",
+          "bytes": 4159,
+          "source_sha256": "09f682abf06263446610e27fccc7a9094b2f7592e0a1764e325684af3f12bc7f"
+        },
+        {
+          "path": "compose/workflow/3_data_only/main.go",
+          "bytes": 2831,
+          "source_sha256": "bbf816f75d5de5711412b7fb0e17a984b39f171209bd03e7d9d8304ae84d40aa"
+        },
+        {
+          "path": "compose/workflow/4_control_only_branch/main.go",
+          "bytes": 3617,
+          "source_sha256": "64a80bec35f208ae7a82a70a346818fb00d11dd548c5d186d4a13526ac359f67"
+        },
+        {
+          "path": "compose/workflow/5_static_values/main.go",
+          "bytes": 3090,
+          "source_sha256": "bd89b12c7266b9150bca70e033cc9702a1954e2c98c5d16665eff0d80a947bef"
+        },
+        {
+          "path": "compose/workflow/6_stream_field_map/main.go",
+          "bytes": 4948,
+          "source_sha256": "1965a5cb6972d7c0c173ccaed8572db8db97d09bfff98003f12f55a92a672f43"
+        },
+        {
+          "path": "devops/debug/chain/chain.go",
+          "bytes": 1521,
+          "source_sha256": "db3908c5372095a63bfc83057e3470cc170109d34c42fbb27106c6a7b6bcf5e1"
+        },
+        {
+          "path": "devops/debug/graph/graph.go",
+          "bytes": 3407,
+          "source_sha256": "e117be9f91f2da7afb64faa5b56875da8438ddab031fbce2ebdabb241218a02a"
+        },
+        {
+          "path": "devops/debug/graph/state_graph.go",
+          "bytes": 2578,
+          "source_sha256": "6fa2c19d3ccc66b30c4666d5fa38b61522676f290af0e964b7827511f22abda9"
+        },
+        {
+          "path": "devops/debug/main.go",
+          "bytes": 2146,
+          "source_sha256": "88fcc718eb7dfdf5727aacbd97599cf027fd9b771acc3eeea48d3eebc21e0be4"
+        },
+        {
+          "path": "devops/visualize/mermaid.go",
+          "bytes": 14017,
+          "source_sha256": "c608370a4469abbb1bd724348a455e5952d5034c2fc180d0d49c01f3c837ad55"
+        },
+        {
+          "path": "flow/agent/deer-go/biz/consts/consts.go",
+          "bytes": 1191,
+          "source_sha256": "71b979e141dc820f4bfb97795f574f7ba91c50ad2a0865ab8e6ec4393347d90c"
+        },
+        {
+          "path": "flow/agent/deer-go/biz/eino/builder.go",
+          "bytes": 4457,
+          "source_sha256": "1c0052a5ae968c644ee313334893f736b4691220f0d591bbb5418685d97ff4a9"
+        },
+        {
+          "path": "flow/agent/deer-go/biz/eino/coder.go",
+          "bytes": 4894,
+          "source_sha256": "aa3e1c157ed593a4d3e84fc89a6be549056175881692a005a6731353b7483dbc"
+        },
+        {
+          "path": "flow/agent/deer-go/biz/eino/coordinator.go",
+          "bytes": 3586,
+          "source_sha256": "57158805b4b8617ebc7b9cc54cc066035d12bd1dc0eff317d3fcfa2cbdd572a5"
+        },
+        {
+          "path": "flow/agent/deer-go/biz/eino/human_feedback.go",
+          "bytes": 1717,
+          "source_sha256": "34ed473633c498e22fee26eea048c82a7b318fe737b5c27b607d4633600f68e0"
+        },
+        {
+          "path": "flow/agent/deer-go/biz/eino/investigator.go",
+          "bytes": 2832,
+          "source_sha256": "8fe56ffd29ff19b0735a3a20feca3efc078339690c3a9975e26e0631779f859a"
+        },
+        {
+          "path": "flow/agent/deer-go/biz/eino/planner.go",
+          "bytes": 3691,
+          "source_sha256": "9a20022ab7d5fa73f524f1a480463dd37fc65beeaf157fa74f6c28d1f30de71d"
+        },
+        {
+          "path": "flow/agent/deer-go/biz/eino/reporter.go",
+          "bytes": 4123,
+          "source_sha256": "1315befdaeeadb68c79ad979bb20fae06bdd38ee6c04a514f6a7d6278fa25662"
+        },
+        {
+          "path": "flow/agent/deer-go/biz/eino/research_team.go",
+          "bytes": 2022,
+          "source_sha256": "46169f5672422041557b85485eaa9d7f69dd28f8738bd4f8b8aed7d6282869d2"
+        },
+        {
+          "path": "flow/agent/deer-go/biz/eino/researcher.go",
+          "bytes": 5522,
+          "source_sha256": "adfed993c57e0fe96112194479dcefd32a4a8ebfd97646283155830cefdc993e"
+        },
+        {
+          "path": "flow/agent/deer-go/biz/handler/deer.go",
+          "bytes": 3663,
+          "source_sha256": "f4ecfbef432e10913ca6f7facdbbbe84f9eccbec1c93bd3c8d31c76dd8c62011"
+        },
+        {
+          "path": "flow/agent/deer-go/biz/infra/llms.go",
+          "bytes": 1783,
+          "source_sha256": "b143a7c557e9800f6dae01d5864fdda2e0a8d2bdb2188f5ea92c3c48833078d5"
+        },
+        {
+          "path": "flow/agent/deer-go/biz/infra/logger.go",
+          "bytes": 5301,
+          "source_sha256": "d38d82b5c2dd6518ec8a7f374f53b2de01b5f0b3a818e4501d307c75697cd198"
+        },
+        {
+          "path": "flow/agent/deer-go/biz/infra/mcp.go",
+          "bytes": 5003,
+          "source_sha256": "d40ac841945b2947297f8a9e93a5970b4160e699a48bdb46c67d126960eca088"
+        },
+        {
+          "path": "flow/agent/deer-go/biz/infra/template.go",
+          "bytes": 1289,
+          "source_sha256": "33789f7e2f18231cec6e44d311722231aa06f1315c45d32fb417838b7a8278a7"
+        },
+        {
+          "path": "flow/agent/deer-go/biz/infra/tracing.go",
+          "bytes": 4414,
+          "source_sha256": "6874fe8695f0f12be09d1c678443e4d63753aabca8f23ae491484ffb209d88aa"
+        },
+        {
+          "path": "flow/agent/deer-go/biz/model/planner.go",
+          "bytes": 1484,
+          "source_sha256": "8946d5651b26f0c4438802bde22e441c6a060064185ab14eb031bf371fc59585"
+        },
+        {
+          "path": "flow/agent/deer-go/biz/model/server_model.go",
+          "bytes": 3230,
+          "source_sha256": "721be99c598cc6f5875ff51a5923b26911bee467edc5638809075f84ad955c59"
+        },
+        {
+          "path": "flow/agent/deer-go/biz/model/state.go",
+          "bytes": 2787,
+          "source_sha256": "d737ccc30113fb962da2689803394c0fd0ebdd9232ff2e6147a4d8378648b2c6"
+        },
+        {
+          "path": "flow/agent/deer-go/biz/model/state_test.go",
+          "bytes": 1314,
+          "source_sha256": "73e4e55effcb8d79d1a336e2ac3de2a6116ef35b21e825e7f499dea088f253dd"
+        },
+        {
+          "path": "flow/agent/deer-go/biz/util/util.go",
+          "bytes": 849,
+          "source_sha256": "b7eef8da7c09c90328ec904ce081f3e69376479a6e633c9c0f0ca2f274b1a170"
+        },
+        {
+          "path": "flow/agent/deer-go/conf/config.go",
+          "bytes": 2432,
+          "source_sha256": "5f7115bb5a3b2e5ba10888d9563dc4e148cecfe2f015ce24d049e993d86f158d"
+        },
+        {
+          "path": "flow/agent/deer-go/main.go",
+          "bytes": 4413,
+          "source_sha256": "53d54fc212ff69662169fa2a818886efd81dc76ece835594349b3a37fa30835b"
+        },
+        {
+          "path": "flow/agent/deer-go/router.go",
+          "bytes": 929,
+          "source_sha256": "e579bb05a3c7389b57a8562a6b86df340a72c5fdb1a5e7ad58d24743b2ab1aaf"
+        },
+        {
+          "path": "flow/agent/deer-go/router_gen.go",
+          "bytes": 818,
+          "source_sha256": "cf3bc94b0753856f277c9c31298b375519c6fa1f54dbcf7656c89ed221528242"
+        },
+        {
+          "path": "flow/agent/manus/log.go",
+          "bytes": 3607,
+          "source_sha256": "9dde888294d54ae5f2c5b08a8a744b300219f4b570c620f0fc59c8bbebf997f8"
+        },
+        {
+          "path": "flow/agent/manus/manus.go",
+          "bytes": 13430,
+          "source_sha256": "0d144e541742ee002cf6d47a302085aeaf5266afcca7a968a3b94b9e3b678aba"
+        },
+        {
+          "path": "flow/agent/manus/prompt.go",
+          "bytes": 2179,
+          "source_sha256": "580a6115045d218aa7a68698b49aaf5574d3b466a576edb8a37a13bc4bad8003"
+        },
+        {
+          "path": "flow/agent/multiagent/host/journal/answer_with_journal_specialist.go",
+          "bytes": 3770,
+          "source_sha256": "1689d69c2b43da2507b4cdb7b49824b949190912509e3084f8641640e221b6f0"
+        },
+        {
+          "path": "flow/agent/multiagent/host/journal/host.go",
+          "bytes": 1210,
+          "source_sha256": "86d8e7f5a654bc52464376b81f36d41e2d2f2347ad38d9a4b94bc3a0a28f7ca0"
+        },
+        {
+          "path": "flow/agent/multiagent/host/journal/main.go",
+          "bytes": 3203,
+          "source_sha256": "08b2b07df1992acd9017c67a51fbbdcf75e6f06b96ac74ae960573ec20f65d1c"
+        },
+        {
+          "path": "flow/agent/multiagent/host/journal/read_journal_specialist.go",
+          "bytes": 2307,
+          "source_sha256": "47bb40cd7532eac89eee1d83ef267cd4f7e252706d7540a3a4055b1ce6f14a2c"
+        },
+        {
+          "path": "flow/agent/multiagent/host/journal/write_journal_specialist.go",
+          "bytes": 4125,
+          "source_sha256": "4a5e6caf58d61c95ca2725a4a9d289189e67fa1ead681e9c2485be72d03c6510"
+        },
+        {
+          "path": "flow/agent/multiagent/plan_execute/compose.go",
+          "bytes": 10889,
+          "source_sha256": "adcc6fffda5164b39912846ca269a3ab43ca7dda1a1752d7a4be90a72adecf38"
+        },
+        {
+          "path": "flow/agent/multiagent/plan_execute/debug/debug_output.go",
+          "bytes": 1694,
+          "source_sha256": "ae15a6ba8c5ee08684d8f3daa93b55eb6838bcdbbab7bf5abfab7252be818912"
+        },
+        {
+          "path": "flow/agent/multiagent/plan_execute/debug/mock_model.go",
+          "bytes": 3198,
+          "source_sha256": "2158018d1ca3e1b392eacee7da043e2a4207bdf928aeaa3e49863704de6b103c"
+        },
+        {
+          "path": "flow/agent/multiagent/plan_execute/main.go",
+          "bytes": 8930,
+          "source_sha256": "89b98e783e224964d14c5381530471f2aebbdf2326e45d2a25a3dea1d1e6339e"
+        },
+        {
+          "path": "flow/agent/multiagent/plan_execute/prompt/prompt.go",
+          "bytes": 9788,
+          "source_sha256": "c5818b2b5bddd7c63ca84f3253c35a2e08726f2755dfff5fac9e49dbe03bf616"
+        },
+        {
+          "path": "flow/agent/multiagent/plan_execute/tools/data.go",
+          "bytes": 19460,
+          "source_sha256": "775ab0b329d2f9b9ba88be90fc567e320cf4513982ab415d9cf7e7dbbbb88a02"
+        },
+        {
+          "path": "flow/agent/multiagent/plan_execute/tools/theme_park.go",
+          "bytes": 27817,
+          "source_sha256": "17dbb34ae70db4d240246749a8a23a3c3d9c1ff1d353f8f34ae29738f00f532c"
+        },
+        {
+          "path": "flow/agent/multiagent/plan_execute/tools/tools.go",
+          "bytes": 4413,
+          "source_sha256": "5dbed6409a253f5cc94709df120ac425b6d1280ca83c9f26dfc5b403b44adc72"
+        },
+        {
+          "path": "flow/agent/react/agentic/callback.go",
+          "bytes": 4605,
+          "source_sha256": "101e075ccdfd680deae73d4671f02b7808e3cbaa2c3a72bf001ccdbbcba3d4f2"
+        },
+        {
+          "path": "flow/agent/react/agentic/main.go",
+          "bytes": 4411,
+          "source_sha256": "3958e3b7a375574f4b37d36b0bc018178b3acf99fe117071b7d618e318ee20aa"
+        },
+        {
+          "path": "flow/agent/react/agentic/react.go",
+          "bytes": 8763,
+          "source_sha256": "cd7f76fa27b2e4cc0934307119f420c7c8a70b9350cdfe8f8515ada023b283d8"
+        },
+        {
+          "path": "flow/agent/react/agentic/tools.go",
+          "bytes": 4221,
+          "source_sha256": "887fba86289b420126f2e9965a0fb5ab36466e897ae2d5faf37b238972b5636e"
+        },
+        {
+          "path": "flow/agent/react/dynamic_option_example/dynamic/model.go",
+          "bytes": 5030,
+          "source_sha256": "850fe0fabe46a4d3f68c0c13dc21b8b7d3c1b457116ef28edbbbcb8c7b50873b"
+        },
+        {
+          "path": "flow/agent/react/dynamic_option_example/dynamic/state.go",
+          "bytes": 2192,
+          "source_sha256": "08c238aa0a5194afd75bbe3deec6b94b2ad9e564adefb44fa7c398d2a5874a54"
+        },
+        {
+          "path": "flow/agent/react/dynamic_option_example/main.go",
+          "bytes": 9697,
+          "source_sha256": "2ad8ed64dd428e37425415207edd07a70fd9d577a58d594abf6399280b4ebe5d"
+        },
+        {
+          "path": "flow/agent/react/memory_example/main.go",
+          "bytes": 5550,
+          "source_sha256": "712e4d389820acad9bfa2891786a5bd27df4b6cf77407db213b7bc3bd5522207"
+        },
+        {
+          "path": "flow/agent/react/memory_example/memory/inmem.go",
+          "bytes": 2155,
+          "source_sha256": "c8517b4b3bd90a0bf3c09ff8b29d9a81a671eca4d838c8d9d63e43d85fb5800d"
+        },
+        {
+          "path": "flow/agent/react/memory_example/memory/store.go",
+          "bytes": 1827,
+          "source_sha256": "1a2159442982e8954daf9ad90be3e19c92f91f02f795af319b4fcd77367e6385"
+        },
+        {
+          "path": "flow/agent/react/react.go",
+          "bytes": 7684,
+          "source_sha256": "8f1c37129db3b0f1f2b09fc903a7e9af776176cfe1925a4fbcf7f153244b5535"
+        },
+        {
+          "path": "flow/agent/react/tools/service.go",
+          "bytes": 7725,
+          "source_sha256": "22a0f99de2dd97d37733393d10709e553dc817687e9199ca32c96beca6490f91"
+        },
+        {
+          "path": "flow/agent/react/tools/tools.go",
+          "bytes": 4163,
+          "source_sha256": "1ad8d39d7d2b6f82610aade3df1a8ac640759e8b4df994ef35669a8440cdf05f"
+        },
+        {
+          "path": "flow/agent/react/unknown_tool_handler_example/main.go",
+          "bytes": 3641,
+          "source_sha256": "623a65204da2762c10e75c26814ec5abb021ee23d5fa5f547f2d8f83b7029b82"
+        },
+        {
+          "path": "flow/agent/react/unknown_tool_handler_example/tools/sum.go",
+          "bytes": 1582,
+          "source_sha256": "c056ad1fccede85d2e25b73047cbeb6006f5a9224e527dff7cff71e9744a9189"
+        },
+        {
+          "path": "internal/gptr/ptr.go",
+          "bytes": 654,
+          "source_sha256": "11a1b911b9fec9ebc5dfed1d6b0c0a3f974f0cd5091845752a3379cce362e44e"
+        },
+        {
+          "path": "internal/logs/logger.go",
+          "bytes": 1746,
+          "source_sha256": "67d580aca28a79f1e96afcacbb81dadf38ffacfc740f5042ebf5f16fe7e6a33b"
+        },
+        {
+          "path": "quickstart/chat/generate.go",
+          "bytes": 1202,
+          "source_sha256": "3f5213a98da70bdee37b06d49095559cd666ed7d154f0c50cd72fb2bcf98e9ab"
+        },
+        {
+          "path": "quickstart/chat/main.go",
+          "bytes": 1291,
+          "source_sha256": "4395ac27eb677eddd169187107082d8465b8de759110d3c4a4141c2a0ca775d9"
+        },
+        {
+          "path": "quickstart/chat/ollama.go",
+          "bytes": 1110,
+          "source_sha256": "61261410371199bb565a488242c947c7b7d35c476511cb687390c75c86902e96"
+        },
+        {
+          "path": "quickstart/chat/openai.go",
+          "bytes": 1187,
+          "source_sha256": "0fa8b949d4e5dfadfff2f69b2e0b2d892a5f486866392ce62e5ecb393684aaea"
+        },
+        {
+          "path": "quickstart/chat/stream.go",
+          "bytes": 955,
+          "source_sha256": "80e568c23fdf8ec3d176c441017d4e6004a4d537cf1b606457d619175df18941"
+        },
+        {
+          "path": "quickstart/chat/template.go",
+          "bytes": 3329,
+          "source_sha256": "6b55ddd78c7a35a3fc170595b07ce40b167e2ae7b58e48710aa1a0bf2c9f5f58"
+        },
+        {
+          "path": "quickstart/chatwitheino/a2ui/streamer.go",
+          "bytes": 16381,
+          "source_sha256": "b18b8bbdd283aa93b8e86f6a7b57fd8b885afa66d9443e726db9767ca65b39db"
+        },
+        {
+          "path": "quickstart/chatwitheino/a2ui/streamer_test.go",
+          "bytes": 2929,
+          "source_sha256": "1edb24c03d9488b475f49624f073cb88c562eb39cec66a0507cd3462d9835580"
+        },
+        {
+          "path": "quickstart/chatwitheino/a2ui/types.go",
+          "bytes": 3721,
+          "source_sha256": "d332bb4f89a6c77e5990660df6cc47b9b788c6d23b5d90dab61db54a35a5e82c"
+        },
+        {
+          "path": "quickstart/chatwitheino/agent.go",
+          "bytes": 5037,
+          "source_sha256": "d4f5f9bbff6b2291df3fa899d286c0fe0ae9ac96d0ed625b2d826b60d44176ff"
+        },
+        {
+          "path": "quickstart/chatwitheino/chatmodel/model.go",
+          "bytes": 3408,
+          "source_sha256": "05d7ecc833568d6559bf8fd9e160f33d5b2c0ca06e5459d6fe2c4e7685079e6e"
+        },
+        {
+          "path": "quickstart/chatwitheino/cmd/ch01/main.go",
+          "bytes": 2176,
+          "source_sha256": "c0800759ed94684edd8fe4672d501c5c7961f390d35783ad71a6718c92164704"
+        },
+        {
+          "path": "quickstart/chatwitheino/cmd/ch02/main.go",
+          "bytes": 2606,
+          "source_sha256": "5bd1f77b9ae28726f30ce164b60d0627709f65efcab4accd6701aec9b5425c7b"
+        },
+        {
+          "path": "quickstart/chatwitheino/cmd/ch03/main.go",
+          "bytes": 3722,
+          "source_sha256": "c575bb7be7e32090412ee46d2bd77667ac69db90c670555dffa4cab82266ff9c"
+        },
+        {
+          "path": "quickstart/chatwitheino/cmd/ch04/main.go",
+          "bytes": 5189,
+          "source_sha256": "219a92fdce9762f286770d3036c6fda9ce470e65e8519594f81c870b380257ab"
+        },
+        {
+          "path": "quickstart/chatwitheino/cmd/ch05/main.go",
+          "bytes": 5255,
+          "source_sha256": "9d222d567a77780c96f9457ac600e99e71c2a03ac995771d46f426bdf07f6115"
+        },
+        {
+          "path": "quickstart/chatwitheino/cmd/ch06/main.go",
+          "bytes": 6161,
+          "source_sha256": "f4dac74f36935dc9e24c060448e1b2d70df0bbf9b83d05343220e9ae32ee1c16"
+        },
+        {
+          "path": "quickstart/chatwitheino/cmd/ch07/main.go",
+          "bytes": 11286,
+          "source_sha256": "944df83e8e14ae35de9df838b0160e1a15a4839db928b99710d2a1045978af8f"
+        },
+        {
+          "path": "quickstart/chatwitheino/cmd/ch08/main.go",
+          "bytes": 11709,
+          "source_sha256": "9fbf5719573676fa2fb6225957b62b63f9610a2d60535b15ecec01b2280e7d91"
+        },
+        {
+          "path": "quickstart/chatwitheino/cmd/ch09/main.go",
+          "bytes": 12803,
+          "source_sha256": "5c5049f6c82716e89fb9a0f49c44be699506f46fbad977ea180561ef28c13c98"
+        },
+        {
+          "path": "quickstart/chatwitheino/cmd/ch10/main.go",
+          "bytes": 17719,
+          "source_sha256": "270ac54e45b1720bcc262643069f6466f6ae2f4169387fac7cffcf3df715a354"
+        },
+        {
+          "path": "quickstart/chatwitheino/helpers/eventloop.go",
+          "bytes": 4437,
+          "source_sha256": "06f817cce1c5ffd0b71fc5cc8f98c459389694d0fa9bd93f8a325965c36e68d7"
+        },
+        {
+          "path": "quickstart/chatwitheino/helpers/middleware.go",
+          "bytes": 3204,
+          "source_sha256": "35aad8383807000c5084c13e7647cf087b3a0d0fa12d4432eb455d4f12c15f88"
+        },
+        {
+          "path": "quickstart/chatwitheino/helpers/retry.go",
+          "bytes": 1540,
+          "source_sha256": "e8a06740dd7b0c771a675908fd040d3350807ae5d5b6133ff3a83fce1c13f99d"
+        },
+        {
+          "path": "quickstart/chatwitheino/main.go",
+          "bytes": 3972,
+          "source_sha256": "9507666f4c7d793a109815af8de793e34c9473948ca91b5af7a42b53a8661f87"
+        },
+        {
+          "path": "quickstart/chatwitheino/mem/store.go",
+          "bytes": 7514,
+          "source_sha256": "cec291982e425ac01e18f8e06d4282483901903f6237396cb0a420a192b0e3de"
+        },
+        {
+          "path": "quickstart/chatwitheino/msgops/construct.go",
+          "bytes": 3295,
+          "source_sha256": "dc20041008a702443157c9bdd6b1b68f8bd501b97f26f62c95d11e8f2cc7c4b0"
+        },
+        {
+          "path": "quickstart/chatwitheino/msgops/extract.go",
+          "bytes": 8041,
+          "source_sha256": "64693117ff785a2827024823333b87df2fb79519481501608d009eddce2861e3"
+        },
+        {
+          "path": "quickstart/chatwitheino/msgops/kind.go",
+          "bytes": 2404,
+          "source_sha256": "a83c46e08f4a63ecd54daeb58853fe55ee0e4300d158f571d8060d35e186ae33"
+        },
+        {
+          "path": "quickstart/chatwitheino/msgops/msgops_test.go",
+          "bytes": 6641,
+          "source_sha256": "354bd21aca388d93e98790fbf0274ec3b6931c8f77a25244e74abb87e074a05b"
+        },
+        {
+          "path": "quickstart/chatwitheino/msgops/normalize.go",
+          "bytes": 3594,
+          "source_sha256": "319ec0e4175042d62cd78868399ef315aec40d45ce62e4060b6a6c6b407703d9"
+        },
+        {
+          "path": "quickstart/chatwitheino/msgops/variant.go",
+          "bytes": 4773,
+          "source_sha256": "459b5961e300e0c7abd5f5440ebf16cf65bc73d021e4696c7e001639fd0cf5d8"
+        },
+        {
+          "path": "quickstart/chatwitheino/rag/rag.go",
+          "bytes": 12990,
+          "source_sha256": "b7bbfc1f66bd26e8c398e8528e27e808f25d2a7e223210d9ff51a298333633c0"
+        },
+        {
+          "path": "quickstart/chatwitheino/scripts/sync_eino_ext_skills.go",
+          "bytes": 5841,
+          "source_sha256": "248a22b9012c5bce5b739c4505d939fd11482c69aebeebc7b4a61478ddb6e591"
+        },
+        {
+          "path": "quickstart/chatwitheino/server/server.go",
+          "bytes": 28217,
+          "source_sha256": "62219dc622bf3bfa139103ff49bfffde2465b676914953465f077252e7e61aef"
+        },
+        {
+          "path": "quickstart/chatwitheino/server/server_test.go",
+          "bytes": 17436,
+          "source_sha256": "2699e8431c40ec20552caaea50853a1fc6a0b8d0dfb2bc9223be5e6cb53c815a"
+        },
+        {
+          "path": "quickstart/chatwitheino/smoketest/main.go",
+          "bytes": 4355,
+          "source_sha256": "c774f2d36bb5f9eb10b96cff296db1faf9064f7645c31d36e6650ec551950788"
+        },
+        {
+          "path": "quickstart/eino_assistant/cmd/einoagent/agent/agent.go",
+          "bytes": 5564,
+          "source_sha256": "c69f8512587c6b46a59d7a516f110319e9361bf3cbef1ab551352648a156f701"
+        },
+        {
+          "path": "quickstart/eino_assistant/cmd/einoagent/agent/server.go",
+          "bytes": 5356,
+          "source_sha256": "9761e04b3e255a410715b53af9245a181bda9a8bae1cbf051e7576d050dd3ea4"
+        },
+        {
+          "path": "quickstart/eino_assistant/cmd/einoagent/main.go",
+          "bytes": 3471,
+          "source_sha256": "a9e9c571ec4529bf5b4e535adc22a61ba0158c830d8aed0fbe40d882c088b9eb"
+        },
+        {
+          "path": "quickstart/eino_assistant/cmd/einoagent/task/server.go",
+          "bytes": 2402,
+          "source_sha256": "62f1a925153e4a39d217d255a264fd43d8ba5476f4fe9c9427c2129b0084fb57"
+        },
+        {
+          "path": "quickstart/eino_assistant/cmd/einoagentcli/main.go",
+          "bytes": 7377,
+          "source_sha256": "96ed98eba22ac29465076e3be80a3f778f8908ddb76d70a4aaa104181facc025"
+        },
+        {
+          "path": "quickstart/eino_assistant/eino/einoagent/embedding.go",
+          "bytes": 1234,
+          "source_sha256": "983fa9c813b41ba3bd2dc1326d9f4686d0766d38cbde26dd3c0c6e9ee7b46baf"
+        },
+        {
+          "path": "quickstart/eino_assistant/eino/einoagent/flow.go",
+          "bytes": 1455,
+          "source_sha256": "ffc78329f7950410310327e37e9a8532f290462447b687e3e413cb5484caf8d6"
+        },
+        {
+          "path": "quickstart/eino_assistant/eino/einoagent/lambda_func.go",
+          "bytes": 1213,
+          "source_sha256": "49927793ea55d24ca1ab8dd4b4010e6f8be2535e1972011f94b5f25aee998dd0"
+        },
+        {
+          "path": "quickstart/eino_assistant/eino/einoagent/model.go",
+          "bytes": 1078,
+          "source_sha256": "43b7fd11f89748c5bee56ecb1dbcadf5b6d34e8281e9d54e251dfbf726dce1a6"
+        },
+        {
+          "path": "quickstart/eino_assistant/eino/einoagent/orchestration.go",
+          "bytes": 2344,
+          "source_sha256": "7b3608e06ce4217d72c0b5e944a38758e034da6b92b79cc7b3b5c12acb574eda"
+        },
+        {
+          "path": "quickstart/eino_assistant/eino/einoagent/prompt.go",
+          "bytes": 2470,
+          "source_sha256": "1b2fa13d7815c325748c65e4bbe76e6b21c28e19426082e76400a524b881abdb"
+        },
+        {
+          "path": "quickstart/eino_assistant/eino/einoagent/tools_node.go",
+          "bytes": 2583,
+          "source_sha256": "24fb41f8abe287157e35040bef03329cb80abd98a113b5ca4934e880024ed84f"
+        },
+        {
+          "path": "quickstart/eino_assistant/eino/einoagent/types.go",
+          "bytes": 817,
+          "source_sha256": "de1b94866d0610804685658957ff7013b194ed580d1487c33a2100a595d711b4"
+        },
+        {
+          "path": "quickstart/eino_assistant/eino/knowledgeindexing/embedding.go",
+          "bytes": 1245,
+          "source_sha256": "90aef6d785ffdaf5ef2543f7c521c32e0e4616e81b5a69625bda18a05d9d79b9"
+        },
+        {
+          "path": "quickstart/eino_assistant/eino/knowledgeindexing/loader.go",
+          "bytes": 1118,
+          "source_sha256": "b7aac2572adacc7e5ca3256a1e4641a4787ab46cc1d7d64798ae1e3ece4097eb"
+        },
+        {
+          "path": "quickstart/eino_assistant/eino/knowledgeindexing/orchestration.go",
+          "bytes": 1877,
+          "source_sha256": "83c681f5f6aa8e8567b3d036d56fc8bb9bc1288bce218c65450090bb75a71e29"
+        },
+        {
+          "path": "quickstart/eino_assistant/eino/knowledgeindexing/transformer.go",
+          "bytes": 1257,
+          "source_sha256": "ece8b04f741a3405f07ff374761de51a2ad0dfc072526df176db0ed60e5c3ccb"
+        },
+        {
+          "path": "quickstart/eino_assistant/pkg/env/env.go",
+          "bytes": 995,
+          "source_sha256": "38aa88976ddfacf193f3be014da68b26abf79dc3e5a25dae6efe6ace79bb13b7"
+        },
+        {
+          "path": "quickstart/eino_assistant/pkg/mem/simple.go",
+          "bytes": 4419,
+          "source_sha256": "b0c75e9c985715c4238d472a51e797a92a66350df6f0a6685fd3355b9dbae47b"
+        },
+        {
+          "path": "quickstart/eino_assistant/pkg/tool/einotool/einotool.go",
+          "bytes": 7221,
+          "source_sha256": "5257ca1ca226590ba1cf92f1fbad6a30b640cc0121dfa6e392c69a8eb53b028e"
+        },
+        {
+          "path": "quickstart/eino_assistant/pkg/tool/einotool/templates/http_agent/client/main.go",
+          "bytes": 2474,
+          "source_sha256": "9b25c4c79d2390b1deabedafd8014b98299b674c4688c08ece4632c906ca9d98"
+        },
+        {
+          "path": "quickstart/eino_assistant/pkg/tool/einotool/templates/http_agent/main.go",
+          "bytes": 5660,
+          "source_sha256": "18296e1ca140a36aa1f43909d5696e513c47a4e3833103b0b8916f3035a501c0"
+        },
+        {
+          "path": "quickstart/eino_assistant/pkg/tool/einotool/templates/react_agent/main.go",
+          "bytes": 3861,
+          "source_sha256": "0c12e17d26c64410939b3476ba80ca487fd42a32d51e1b12ffc0079458219bd0"
+        },
+        {
+          "path": "quickstart/eino_assistant/pkg/tool/einotool/templates/simple_llm/main.go",
+          "bytes": 3529,
+          "source_sha256": "c711ab706e0bd06f26a8e20dec767abad43479f673cef61040848a585bfbbb26"
+        },
+        {
+          "path": "quickstart/eino_assistant/pkg/tool/gitclone/gitclone.go",
+          "bytes": 4862,
+          "source_sha256": "99c4244adf7237d1ce94b61ff4ea408a8ea9fc97abd2be7f8dd68997808631c3"
+        },
+        {
+          "path": "quickstart/eino_assistant/pkg/tool/open/open.go",
+          "bytes": 2873,
+          "source_sha256": "9faa9d217427acbdc28e5363463fcb6f34d0ceb7481b63f85f982d167b5ee6bf"
+        },
+        {
+          "path": "quickstart/eino_assistant/pkg/tool/task/storage.go",
+          "bytes": 6531,
+          "source_sha256": "da892073c36651d2c5a1dc5171696d6da1afbb6a1277b3f22e66ea0b8dcfc434"
+        },
+        {
+          "path": "quickstart/eino_assistant/pkg/tool/task/task.go",
+          "bytes": 5367,
+          "source_sha256": "850ad86bfcbb54cf59803b974a5254da693d63c17bdb3bbed949496408480727"
+        },
+        {
+          "path": "quickstart/todoagent/main.go",
+          "bytes": 6978,
+          "source_sha256": "3493591826c336f58742023caf8760f8c0da67787ba4ece310af92d9879c2f35"
+        }
+      ]
+    }
+  ]
+}

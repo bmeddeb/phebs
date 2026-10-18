@@ -1,0 +1,308 @@
+{
+  "acl_public": {
+    "pairs": 7,
+    "principals": 7,
+    "safe_source_census_matches": true
+  },
+  "control_results": [
+    {
+      "id": "literal-raw-get",
+      "mismatches": 0
+    },
+    {
+      "id": "typed-get-exact-second-version",
+      "mismatches": 0
+    },
+    {
+      "id": "same-file-constant",
+      "mismatches": 0
+    },
+    {
+      "id": "bounded-format",
+      "mismatches": 0
+    },
+    {
+      "id": "dynamic-concatenation",
+      "mismatches": 0
+    },
+    {
+      "id": "opaque-key-helper",
+      "mismatches": 0
+    },
+    {
+      "id": "runtime-namespace",
+      "mismatches": 0
+    },
+    {
+      "id": "unknown-client-major",
+      "mismatches": 0
+    },
+    {
+      "id": "unsupported-exact-v9-version",
+      "mismatches": 0
+    },
+    {
+      "id": "core-after-pin",
+      "mismatches": 0
+    },
+    {
+      "id": "unadmitted-module-command",
+      "mismatches": 0
+    },
+    {
+      "id": "incomplete-spec-fixed-primary",
+      "mismatches": 0
+    },
+    {
+      "id": "set-variable-option",
+      "mismatches": 0
+    },
+    {
+      "id": "set-get-branch",
+      "mismatches": 0
+    },
+    {
+      "id": "set-no-get-branch",
+      "mismatches": 0
+    },
+    {
+      "id": "unknown-expected-kind",
+      "mismatches": 0
+    },
+    {
+      "id": "eval-explicit-keys",
+      "mismatches": 0
+    },
+    {
+      "id": "fcall-explicit-keys",
+      "mismatches": 0
+    },
+    {
+      "id": "opaque-script-key-list",
+      "mismatches": 0
+    },
+    {
+      "id": "script-run-unproved-wrapper",
+      "mismatches": 0
+    },
+    {
+      "id": "overlapping-prefix-families",
+      "mismatches": 0
+    },
+    {
+      "id": "ft-static-projection",
+      "mismatches": 0
+    },
+    {
+      "id": "ft-partial-atomic",
+      "mismatches": 0
+    },
+    {
+      "id": "ft-unsupported-shape-atomic",
+      "mismatches": 0
+    },
+    {
+      "id": "ts-create",
+      "mismatches": 0
+    },
+    {
+      "id": "ts-rule",
+      "mismatches": 0
+    },
+    {
+      "id": "ts-rule-partial-atomic",
+      "mismatches": 0
+    },
+    {
+      "id": "xgroup-create",
+      "mismatches": 0
+    },
+    {
+      "id": "array-mutation-not-literal-proof",
+      "mismatches": 0
+    },
+    {
+      "id": "unlisted-client-method",
+      "mismatches": 0
+    },
+    {
+      "id": "unknown-format-specifier",
+      "mismatches": 0
+    },
+    {
+      "id": "binary-safe-key",
+      "mismatches": 0
+    },
+    {
+      "id": "literal-hash-tags",
+      "mismatches": 0
+    },
+    {
+      "id": "format-brace-uncertainty",
+      "mismatches": 0
+    },
+    {
+      "id": "negative-script-count",
+      "mismatches": 0
+    },
+    {
+      "id": "malformed-go",
+      "mismatches": 0
+    },
+    {
+      "id": "depth-bound",
+      "mismatches": 0
+    },
+    {
+      "id": "input-byte-bound",
+      "mismatches": 0
+    },
+    {
+      "id": "receiver-shadowed-import",
+      "mismatches": 0
+    },
+    {
+      "id": "receiver-shadowed-local",
+      "mismatches": 0
+    },
+    {
+      "id": "receiver-reassigned",
+      "mismatches": 0
+    },
+    {
+      "id": "receiver-ambiguous-field",
+      "mismatches": 0
+    },
+    {
+      "id": "receiver-unproved-copy",
+      "mismatches": 0
+    },
+    {
+      "id": "receiver-exact-constructor",
+      "mismatches": 0
+    },
+    {
+      "id": "ft-flat-vector-closed-positive",
+      "mismatches": 0
+    },
+    {
+      "id": "ft-vector-distance-enum",
+      "mismatches": 0
+    },
+    {
+      "id": "ft-vector-zero-dimension",
+      "mismatches": 0
+    },
+    {
+      "id": "ft-vector-duplicate-attribute",
+      "mismatches": 0
+    },
+    {
+      "id": "ft-vector-count-mismatch",
+      "mismatches": 0
+    },
+    {
+      "id": "ft-hnsw-outside-narrow-subset",
+      "mismatches": 0
+    },
+    {
+      "id": "ts-aggregator-outside-subset",
+      "mismatches": 0
+    },
+    {
+      "id": "ts-zero-bucket",
+      "mismatches": 0
+    },
+    {
+      "id": "ts-duplicate-label",
+      "mismatches": 0
+    },
+    {
+      "id": "ts-alignment-outside-subset",
+      "mismatches": 0
+    },
+    {
+      "id": "ts-negative-retention",
+      "mismatches": 0
+    },
+    {
+      "id": "acl-adjacent-credentials",
+      "mismatches": 0
+    },
+    {
+      "id": "acl-selector-permissions",
+      "mismatches": 0
+    },
+    {
+      "id": "acl-pattern-looking-secret",
+      "mismatches": 0
+    },
+    {
+      "id": "acl-malformed-quote",
+      "mismatches": 0
+    },
+    {
+      "id": "acl-token-bound",
+      "mismatches": 0
+    },
+    {
+      "id": "data-bearing-role",
+      "mismatches": 0
+    },
+    {
+      "id": "missing-input",
+      "mismatches": 0
+    }
+  ],
+  "credential_failures": 0,
+  "credential_token_scans": 7,
+  "mismatches": [
+    {
+      "class": "complete-sample-site-census",
+      "identity": "internal/rdb/inspect.go"
+    },
+    {
+      "class": "complete-sample-site-census",
+      "identity": "flow/agent/react/memory_example/memory/redis.go"
+    },
+    {
+      "class": "complete-sample-site-census",
+      "identity": "quickstart/eino_assistant/pkg/redis/redis.go"
+    }
+  ],
+  "native_public": {
+    "admitted_exact_version_sites": 0,
+    "atomic_complete_source_shapes": 0,
+    "candidate_emitted_native_facts": 0,
+    "known_source_sites": 2,
+    "static_resource_names": 1
+  },
+  "observed_public_sample": {
+    "observed_command_sites": 102,
+    "observed_concrete_keys": 0,
+    "observed_known_kinds": 27,
+    "observed_position_modes": 30,
+    "observed_recognized_commands": 37
+  },
+  "outcome": "quality-gaps-no-production-adoption",
+  "public_denominators": {
+    "admitted_core_api_sites": 37,
+    "command_or_unresolved_sites": 99,
+    "expected_kind_known": 27,
+    "expected_kind_opportunities": 30,
+    "expected_mode_resolved": 30,
+    "expected_resolved_key_expressions": 0,
+    "explicit_script_key_passthrough_opportunities": 0,
+    "known_key_argument_expressions": 30,
+    "opaque_script_wrapper_sites": 52,
+    "provable_access_mode_opportunities": 30,
+    "uniquely_bindable_spelling_or_family_opportunities": 0,
+    "unknown_client_version_sites": 8,
+    "unknown_expected_kind": 3,
+    "unmeasured_script_wrapper_sites": 52,
+    "unproved_extension_wrapper_sites": 2
+  },
+  "qualification": "Finite frozen source expectations only; no runtime Redis/client/generator, production registration, independent population accuracy or scale result. Generated/opaque/unmeasured quantities remain separate.",
+  "schema": "t281-finite-source-score-v1",
+  "source_span_round_trips": 558
+}

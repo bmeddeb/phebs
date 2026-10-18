@@ -1,0 +1,11 @@
+spike/t281/reader/go_source.go:276:54: SA1019: ast.Object has been deprecated since Go 1.22 and an alternative has been available since Go 1.0: The relationship between Idents and Objects cannot be correctly computed without type information. For example, the expression T{K: 0} may denote a struct, map, slice, or array literal, depending on the type of T. If T is a struct, then K refers to a field of T, whereas for the other types it refers to a value in the environment. (staticcheck)
+func (g *goFile) objectType(id *ast.Ident, seen map[*ast.Object]bool, depth int) fieldType {
+                                                     ^
+spike/t281/reader/go_source.go:314:49: SA1019: ast.Object has been deprecated since Go 1.22 and an alternative has been available since Go 1.0: The relationship between Idents and Objects cannot be correctly computed without type information. For example, the expression T{K: 0} may denote a struct, map, slice, or array literal, depending on the type of T. If T is a struct, then K refers to a field of T, whereas for the other types it refers to a value in the environment. (staticcheck)
+func (g *goFile) receiver(x ast.Expr, seen map[*ast.Object]bool, depth int) fieldType {
+                                                ^
+spike/t281/reader/go_source.go:537:31: SA1019: ast.Object has been deprecated since Go 1.22 and an alternative has been available since Go 1.0: The relationship between Idents and Objects cannot be correctly computed without type information. For example, the expression T{K: 0} may denote a struct, map, slice, or array literal, depending on the type of T. If T is a struct, then K refers to a field of T, whereas for the other types it refers to a value in the environment. (staticcheck)
+		typ := g.receiver(s.X, map[*ast.Object]bool{}, 0)
+		                            ^
+3 issues:
+* staticcheck: 3
