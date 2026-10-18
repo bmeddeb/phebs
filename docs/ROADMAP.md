@@ -5558,6 +5558,10 @@ under pack1.2.0; historical artifact custody stays intact. Bounded regression
 and independent source/cost review precede integration. T50.3's earlier unit
 failure stays retained; new product qualification remains separate.
 
+**T52.2 source checkpoint (2026-10-18):** independent thriftrw source labels,
+embedded-IDL/field witnesses and permissive provenance are reviewed before
+indexing. Public4/31 and separate authored15/62/4 checks are frozen; actual
+index/input commits, first quality measurement and T52.3 remain next.
 **T52.1 source preparation (2026-10-18):** the finite Apache0.14.1 source/tag/
 IDL oracle is frozen and independently reviewed before indexing. Real offline
 SCIP preparation, evaluator Git bindings and final preregistration review come
@@ -5568,6 +5572,12 @@ authored11/60/4 frozen reference/negative/unsupported checks pass with all14
 identity witnesses. Normal/race/vet/pinned lint and independent source/cost
 review are clear. This is committed-input conformance only; T52.2's thriftrw
 result and T52.3's admission/operating/signature remain separate.
+
+**T52.2 finite thriftrw qualification (2026-10-18):** public4/31 and separate
+authored15/62/4 source gates pass with all18 definition witnesses and exact
+module-digest bindings. Normal/race/vet/pinned lint and independent review are
+clear. T52.3 can implement independent Apache/RW stable selection; operating
+and existing-key production signing remain distinct.
 
 T52.3 registration update (2026-10-18): independent Apache/thriftrw signed
 recipes compose once with exact selected-set version fences and bounded green

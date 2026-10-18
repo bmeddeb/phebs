@@ -19466,6 +19466,24 @@ managed/runtime/scale result follows.
 **T52.2 · thriftrw field contract and independent quality** — separate
 generator-specific identity and quality population; no Apache result transfers.
 
+*2026-10-18 checkpoint:* source-only thriftrw1.34.0 recipe and exact retained
+Cadence health mapper/IDL plus separate authored controls are independently
+reviewed. All15 source files/52,650 bytes,116 spans, three embedded Raw/SHA1
+equalities and nine field/eighteen definition witnesses agree. Public4/31 and
+authored15/62/4 positive/negative/unsupported populations are frozen before
+indexing. Existing gitlink provenance and the fresh metadata403 remain explicit.
+No SCIP or candidate output exists yet; actual evaluator commits, bounded index
+preparation, extraction quality and T52.3 admission/operating/signing stay open.
+
+*2026-10-18 qualified outcome:* T52.2 completes its independent finite leaf.
+First actual evaluator inputs pass public4/31 and authored15/62/4 gates, all3
+Raw/SHA1/nine field/eighteen real definition witnesses, zero wrong/duplicate
+consumer emissions and exact citations. Generated49/7 and raw read roles stay
+separate. First normal0.339s/race1.441s, vet, pinned lint and independent root/
+peer source/cost review pass. `spike/t522/outcome-cost.json` retains exact input/
+result/checkpoint and cost scopes. No production registration, operating or
+signature is inferred; T52.3 remains the next independent selection boundary.
+
 **T52.3 · Independent stable registration and measured promotion** — split
 the current shared experimental switch into explicitly selected admitted
 recipes; satisfy the common bar for each. Either generator may release alone.

@@ -1,0 +1,439 @@
+{
+  "schema": "t522-source-field-witness-v1",
+  "record_date": "2026-10-18",
+  "candidate_runs": 0,
+  "indexer_runs": 0,
+  "generator_runs": 0,
+  "modules": [
+    {
+      "population": "public",
+      "generated_path": ".gen/go/health/health.go",
+      "generated_digest": "sha256:360126ead92a8dd481e094fed6aad98c6375afff6d31710e5c6401071eeb1291",
+      "idl_population": "idl",
+      "idl_path": "thrift/health.thrift",
+      "idl_digest": "sha256:176ca3246b757f381f8baf46c3bab328dfd4175b9730712850b10644d0b5169d",
+      "embedded_raw_digest": "sha256:176ca3246b757f381f8baf46c3bab328dfd4175b9730712850b10644d0b5169d",
+      "embedded_sha1": "8d52f05c157e47bef27c86d2133e1cdb475f8024",
+      "embedded_raw_literal_span": [
+        6491,
+        7867
+      ],
+      "name": "health",
+      "package": "github.com/uber/cadence/.gen/go/health",
+      "file_path": "health.thrift",
+      "scope": "health",
+      "scope_basis": "No go namespace; exact embedded health.thrift basename"
+    },
+    {
+      "population": "neutral",
+      "generated_path": "gen/packet.go",
+      "generated_digest": "sha256:849a00059670dd9369b56f521e1f6c0062132619b01de4174d0bfbeb1b2aa8a1",
+      "idl_population": "neutral",
+      "idl_path": "idl/packet.thrift",
+      "idl_digest": "sha256:05362b263d8ee63501763535e6d853e4a5eb51006e222f37dbe3c3b366772846",
+      "embedded_raw_digest": "sha256:05362b263d8ee63501763535e6d853e4a5eb51006e222f37dbe3c3b366772846",
+      "embedded_sha1": "add3300b733e31f22ee05fe41e1298f57de3c63b",
+      "embedded_raw_literal_span": [
+        1675,
+        1944
+      ],
+      "name": "packet",
+      "package": "example.com/t522-neutral/packet",
+      "file_path": "packet.thrift",
+      "scope": "packet",
+      "scope_basis": "namespace go packet"
+    },
+    {
+      "population": "neutral",
+      "generated_path": "renamed/packet.go",
+      "generated_digest": "sha256:69c8ce9fd204396525a319114c39df0b2df51a634d559078935ddea2dcda1aa1",
+      "idl_population": "neutral",
+      "idl_path": "idl/renamed.thrift",
+      "idl_digest": "sha256:46f16aa627ad8361c702a13af5d6b65fafe5ba502eda54c3c18d6f6141d37161",
+      "embedded_raw_digest": "sha256:46f16aa627ad8361c702a13af5d6b65fafe5ba502eda54c3c18d6f6141d37161",
+      "embedded_sha1": "2cbfef329ff52d153e104a9f63fa41775bb1eb13",
+      "embedded_raw_literal_span": [
+        775,
+        853
+      ],
+      "name": "packet",
+      "package": "example.com/t522-neutral/packet",
+      "file_path": "packet.thrift",
+      "scope": "packet",
+      "scope_basis": "namespace go packet"
+    }
+  ],
+  "fields": [
+    {
+      "population": "public",
+      "generated_path": ".gen/go/health/health.go",
+      "generated_digest": "sha256:360126ead92a8dd481e094fed6aad98c6375afff6d31710e5c6401071eeb1291",
+      "scope": "health",
+      "generated_message": "HealthStatus",
+      "go_name": "Ok",
+      "thrift_name": "ok",
+      "field_number": 1,
+      "object": "health.HealthStatus#1",
+      "bindings": [
+        {
+          "identifier": "Ok",
+          "kind": "field",
+          "span": [
+            372,
+            374
+          ]
+        },
+        {
+          "identifier": "GetOk",
+          "kind": "accessor",
+          "span": [
+            5806,
+            5811
+          ]
+        }
+      ],
+      "wire_id_span": [
+        1130,
+        1131
+      ],
+      "idl_population": "idl",
+      "idl_path": "thrift/health.thrift",
+      "idl_digest": "sha256:176ca3246b757f381f8baf46c3bab328dfd4175b9730712850b10644d0b5169d",
+      "idl_span": [
+        1238,
+        1262
+      ],
+      "idl_basis": "Explicit source field number/name; type spelling retained exactly"
+    },
+    {
+      "population": "public",
+      "generated_path": ".gen/go/health/health.go",
+      "generated_digest": "sha256:360126ead92a8dd481e094fed6aad98c6375afff6d31710e5c6401071eeb1291",
+      "scope": "health",
+      "generated_message": "HealthStatus",
+      "go_name": "Msg",
+      "thrift_name": "msg",
+      "field_number": 2,
+      "object": "health.HealthStatus#2",
+      "bindings": [
+        {
+          "identifier": "Msg",
+          "kind": "field",
+          "span": [
+            406,
+            409
+          ]
+        },
+        {
+          "identifier": "GetMsg",
+          "kind": "accessor",
+          "span": [
+            5973,
+            5979
+          ]
+        },
+        {
+          "identifier": "IsSetMsg",
+          "kind": "accessor",
+          "span": [
+            6124,
+            6132
+          ]
+        }
+      ],
+      "wire_id_span": [
+        1288,
+        1289
+      ],
+      "idl_population": "idl",
+      "idl_path": "thrift/health.thrift",
+      "idl_digest": "sha256:176ca3246b757f381f8baf46c3bab328dfd4175b9730712850b10644d0b5169d",
+      "idl_span": [
+        1263,
+        1289
+      ],
+      "idl_basis": "Explicit source field number/name; type spelling retained exactly"
+    },
+    {
+      "population": "public",
+      "generated_path": ".gen/go/health/health.go",
+      "generated_digest": "sha256:360126ead92a8dd481e094fed6aad98c6375afff6d31710e5c6401071eeb1291",
+      "scope": "health",
+      "generated_message": "Meta_Health_Result",
+      "go_name": "Success",
+      "thrift_name": "success",
+      "field_number": 0,
+      "object": "health.Meta_Health_Result#0",
+      "bindings": [
+        {
+          "identifier": "Success",
+          "kind": "field",
+          "span": [
+            14216,
+            14223
+          ]
+        },
+        {
+          "identifier": "GetSuccess",
+          "kind": "accessor",
+          "span": [
+            19589,
+            19599
+          ]
+        },
+        {
+          "identifier": "IsSetSuccess",
+          "kind": "accessor",
+          "span": [
+            19772,
+            19784
+          ]
+        }
+      ],
+      "wire_id_span": [
+        14977,
+        14978
+      ],
+      "idl_population": "idl",
+      "idl_path": "thrift/health.thrift",
+      "idl_digest": "sha256:176ca3246b757f381f8baf46c3bab328dfd4175b9730712850b10644d0b5169d",
+      "idl_span": [
+        1308,
+        1333
+      ],
+      "idl_basis": "Explicit non-void service return; implicit success field0 convention, not a written field0 declaration"
+    },
+    {
+      "population": "neutral",
+      "generated_path": "gen/packet.go",
+      "generated_digest": "sha256:849a00059670dd9369b56f521e1f6c0062132619b01de4174d0bfbeb1b2aa8a1",
+      "scope": "packet",
+      "generated_message": "Envelope",
+      "go_name": "Key",
+      "thrift_name": "key",
+      "field_number": 1,
+      "object": "packet.Envelope#1",
+      "bindings": [
+        {
+          "identifier": "Key",
+          "kind": "field",
+          "span": [
+            264,
+            267
+          ]
+        },
+        {
+          "identifier": "GetKey",
+          "kind": "accessor",
+          "span": [
+            743,
+            749
+          ]
+        },
+        {
+          "identifier": "IsSetKey",
+          "kind": "accessor",
+          "span": [
+            795,
+            803
+          ]
+        }
+      ],
+      "wire_id_span": [
+        430,
+        431
+      ],
+      "idl_population": "neutral",
+      "idl_path": "idl/packet.thrift",
+      "idl_digest": "sha256:05362b263d8ee63501763535e6d853e4a5eb51006e222f37dbe3c3b366772846",
+      "idl_span": [
+        37,
+        62
+      ],
+      "idl_basis": "Explicit source field number/name; type spelling retained exactly"
+    },
+    {
+      "population": "neutral",
+      "generated_path": "gen/packet.go",
+      "generated_digest": "sha256:849a00059670dd9369b56f521e1f6c0062132619b01de4174d0bfbeb1b2aa8a1",
+      "scope": "packet",
+      "generated_message": "Envelope",
+      "go_name": "Count",
+      "thrift_name": "count",
+      "field_number": 7,
+      "object": "packet.Envelope#7",
+      "bindings": [
+        {
+          "identifier": "Count",
+          "kind": "field",
+          "span": [
+            279,
+            284
+          ]
+        }
+      ],
+      "wire_id_span": [
+        492,
+        493
+      ],
+      "idl_population": "neutral",
+      "idl_path": "idl/packet.thrift",
+      "idl_digest": "sha256:05362b263d8ee63501763535e6d853e4a5eb51006e222f37dbe3c3b366772846",
+      "idl_span": [
+        63,
+        86
+      ],
+      "idl_basis": "Explicit source field number/name; type spelling retained exactly"
+    },
+    {
+      "population": "neutral",
+      "generated_path": "gen/packet.go",
+      "generated_digest": "sha256:849a00059670dd9369b56f521e1f6c0062132619b01de4174d0bfbeb1b2aa8a1",
+      "scope": "packet",
+      "generated_message": "Envelope",
+      "go_name": "Ready",
+      "thrift_name": "ready",
+      "field_number": 9,
+      "object": "packet.Envelope#9",
+      "bindings": [
+        {
+          "identifier": "Ready",
+          "kind": "field",
+          "span": [
+            296,
+            301
+          ]
+        }
+      ],
+      "wire_id_span": [
+        547,
+        548
+      ],
+      "idl_population": "neutral",
+      "idl_path": "idl/packet.thrift",
+      "idl_digest": "sha256:05362b263d8ee63501763535e6d853e4a5eb51006e222f37dbe3c3b366772846",
+      "idl_span": [
+        87,
+        111
+      ],
+      "idl_basis": "Explicit source field number/name; type spelling retained exactly"
+    },
+    {
+      "population": "neutral",
+      "generated_path": "gen/packet.go",
+      "generated_digest": "sha256:849a00059670dd9369b56f521e1f6c0062132619b01de4174d0bfbeb1b2aa8a1",
+      "scope": "packet",
+      "generated_message": "Envelope",
+      "go_name": "Payload",
+      "thrift_name": "payload",
+      "field_number": 13,
+      "object": "packet.Envelope#13",
+      "bindings": [
+        {
+          "identifier": "Payload",
+          "kind": "field",
+          "span": [
+            312,
+            319
+          ]
+        }
+      ],
+      "wire_id_span": [
+        607,
+        609
+      ],
+      "idl_population": "neutral",
+      "idl_path": "idl/packet.thrift",
+      "idl_digest": "sha256:05362b263d8ee63501763535e6d853e4a5eb51006e222f37dbe3c3b366772846",
+      "idl_span": [
+        112,
+        141
+      ],
+      "idl_basis": "Explicit source field number/name; type spelling retained exactly"
+    },
+    {
+      "population": "neutral",
+      "generated_path": "gen/packet.go",
+      "generated_digest": "sha256:849a00059670dd9369b56f521e1f6c0062132619b01de4174d0bfbeb1b2aa8a1",
+      "scope": "packet",
+      "generated_message": "Probe_Check_Result",
+      "go_name": "Success",
+      "thrift_name": "success",
+      "field_number": 0,
+      "object": "packet.Probe_Check_Result#0",
+      "bindings": [
+        {
+          "identifier": "Success",
+          "kind": "field",
+          "span": [
+            920,
+            927
+          ]
+        },
+        {
+          "identifier": "GetSuccess",
+          "kind": "accessor",
+          "span": [
+            1172,
+            1182
+          ]
+        }
+      ],
+      "wire_id_span": [
+        1040,
+        1041
+      ],
+      "idl_population": "neutral",
+      "idl_path": "idl/packet.thrift",
+      "idl_digest": "sha256:05362b263d8ee63501763535e6d853e4a5eb51006e222f37dbe3c3b366772846",
+      "idl_span": [
+        234,
+        250
+      ],
+      "idl_basis": "Explicit non-void service return; implicit success field0 convention, not a written field0 declaration"
+    },
+    {
+      "population": "neutral",
+      "generated_path": "renamed/packet.go",
+      "generated_digest": "sha256:69c8ce9fd204396525a319114c39df0b2df51a634d559078935ddea2dcda1aa1",
+      "scope": "packet",
+      "generated_message": "Envelope",
+      "go_name": "Identifier",
+      "thrift_name": "identifier",
+      "field_number": 1,
+      "object": "packet.Envelope#1",
+      "bindings": [
+        {
+          "identifier": "Identifier",
+          "kind": "field",
+          "span": [
+            260,
+            270
+          ]
+        },
+        {
+          "identifier": "GetIdentifier",
+          "kind": "accessor",
+          "span": [
+            504,
+            517
+          ]
+        }
+      ],
+      "wire_id_span": [
+        372,
+        373
+      ],
+      "idl_population": "neutral",
+      "idl_path": "idl/renamed.thrift",
+      "idl_digest": "sha256:46f16aa627ad8361c702a13af5d6b65fafe5ba502eda54c3c18d6f6141d37161",
+      "idl_span": [
+        37,
+        69
+      ],
+      "idl_basis": "Explicit source field number/name; type spelling retained exactly"
+    }
+  ],
+  "rename_control": "The two authored packet.Envelope#1 entries keep numeric identity across key\u2192identifier and matching field/accessor renames; no name-derived family rewrite.",
+  "nonclaims": "Static source-only witnesses do not establish actual SCIP definition joins or production declaration-family translation. Module.Package is retained provenance, never silently equated to the independent SCIP package family."
+}

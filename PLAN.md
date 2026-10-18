@@ -12813,6 +12813,32 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   reviews have no remaining blocker. No product requalification, full repository
   suite, Linux rehearsal or production signing is inferred from these tests.
 
+- **2026-10-18 — T52.2 independent thriftrw source checkpoint (Ben-routed Mac
+  handoff).** Freeze `spike/t522/preregistration.json` SHA256
+  `7067eb9e6ccb5ecb24d9c9064ce54c17d5d872a71a2989971da6a84b519e38ac`
+  before indexing or candidate extraction. Root independently checks the
+  unchanged permissively licensed Cadence health mapper, internal/generated
+  types and retained IDL, plus separate authored controls. All15 retained
+  source files/52,650 bytes and116 source-label spans/digests/lines agree:
+  public4 positive/31 negative; authored15 positive/62 negative/4 unsupported.
+  Three exact embedded Raw/SHA1 equalities, nine numeric field identities and
+  eighteen field/accessor positions are checked independently of SCIP. The
+  retained T22.1 gitlink pin is provenance; a fresh metadata403 is disclosed,
+  not retried or represented as a fresh verification.
+
+  The committed-input recipe is thriftrw1.34.0/scip-go0.2.7 over exact source
+  bytes, including explicit result-success field0, nonsequential IDs and a
+  number-preserving rename. `module_digest` exactness requires the unique
+  embedded-IDL/wire-ID/SCIP-definition joins. SCIP package and declaration
+  families remain distinct; no automatic bridge, Apache-quality transfer or
+  source-semantic read/write claim follows. Root has not indexed or scored
+  this checkpoint. One offline90s index attempt per population, actual evaluator
+  Git/bundle binding and independent harness review precede one30s extraction.
+  Preserve first failures and all denominators. Existing32MiB index/50,000
+  document/500,000 occurrence/8KiB symbol/4MiB generated-source refusals remain.
+  Preparation changes no production request, sync, startup, retry/no-op,
+  publication, lock, cache, schema, worker or child behavior. Registration,
+  operating qualification and existing-key production signing remain T52.3.
 - **2026-10-18 — T52.1 Apache Thrift source-only field checkpoint
   (Ben-routed Mac handoff).** Freeze unchanged public Jaeger0.14.1 generated
   inputs and two handwritten application files, independently checked against
@@ -12911,6 +12937,30 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   query/request, sync, startup/restart, retry/no-op, publication, lock, cache,
   schema, memory/disk, concurrency or child cost. No binary rebuild, native
   product qualification, full repository replay or production signing follows.
+
+- **2026-10-18 — T52.2 finite thriftrw field qualification (Ben-routed Mac
+  handoff).** The first independently reviewed committed-input measurement
+  passes public4/4 references with31 clean negatives and separate authored
+  15/15 with62 clean negatives/4 unsupported. Three embedded Raw/SHA1 modules,
+  nine numeric fields and eighteen unique SCIP definitions agree. Source-
+  specific key-to-identifier rename retains numeric identity; exact/module_digest
+  never becomes a declaration-family bridge. Generated49/7 emissions remain
+  separately source/schema/identity checked without a recall oracle; raw SCIP
+  read classifications establish no semantic-write accuracy. All first bytes
+  and source-only preregistration remain exact.
+
+  One offline index attempt/population passes0.445871/0.170429s with joined
+  groups and removed scratch; actual evaluator commits/bundles bind exact
+  source/index bytes. No download or index retry occurred. First normal0.339s,
+  race1.441s, compile-only0.338s, vet and pinned lint zero issues pass. Root/peer
+  source/denominator/identity/cost review is clear; the premeasurement record
+  wording acknowledges already prepared SCIP. Extract plus verification uses
+  public6 logical cached reads/124,581B/792microseconds and neutral8 reads/
+  33,704B/533microseconds. Preflight hashes/census/IDL/definition joins and held
+  fixture corpus are outside that clock; allocation/RSS/operating envelope are
+  unmeasured. Existing refusal limits remain unchanged. Production work, locks,
+  caches, schema, concurrency and children are unchanged. T52.3 registration,
+  operating/artifact and existing-key signing remain separate.
 
 - **2026-10-18 — T52.3 independent committed Thrift field registration (Ben-routed Mac handoff).**
   Register signed phebs.thrift.field.apache and phebs.thrift.field.thriftrw
