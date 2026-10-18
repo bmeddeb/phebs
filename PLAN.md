@@ -13720,6 +13720,46 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   source-equivalent error-text correction. This deferral changes no production
   work or historical receipt and supplies no production signing authority.
 
+- **2026-10-18 — T42.H2l native Linux memory observation (Mac source handoff).**
+  Add a fixed-root read-only observer for H2j, authenticating the true cgroup-v2
+  hierarchy root and complete ancestry rather than trusting caller paths,
+  namespace equality or a namespace-relative mount-root spelling. The hierarchy
+  root has an explicit absent-counter form; it is not an observed `memory.max`
+  literal or zero current use. Bound parsing and ancestor depth, bracket native
+  identity/membership/limits, and conservatively combine paired available/current
+  values. Unsupported or changing facts refuse with zero output. This is an
+  observation, not process ownership, enforced reservation, plan admission or a
+  sampler limit. No child, write, cgroup mutation, capability provisioning, cache,
+  lock, store/schema, corpus scan, production request/tick/startup/retry or
+  publication work is added. Native Linux proof remains deferred by Ben; legacy
+  contracts and active entry-point refusals stay exact.
+  The root witness uses the kernel's
+  [non-root-only `cgroup.type` registration](https://github.com/torvalds/linux/blob/v7.0/kernel/cgroup/cgroup.c#L5094-L5124)
+  alongside held cgroupfs/mount identities and mandatory root files, consistent
+  with the [cgroup-v2 interfaces and namespace ABI](https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html).
+  Authenticated proc `self`/`thread-self` links must translate to this process and
+  locked thread before numeric proc paths are selected. Each explicit observation
+  performs two serial passes over at most 64 ancestors, with 128-byte controls,
+  64-KiB meminfo, 8-KiB membership and 256-KiB/4,096-row mountinfo caps. Each
+  non-root ancestor adds eight control reads across both passes plus native
+  descriptor metadata; at most 74 additional FDs are held. One OS-thread lock
+  spans the cooperative five-second context cap; this is no hard syscall
+  deadline, atomic sample, ongoing capacity guarantee or execution reservation.
+
+- **2026-10-18 — T42.H2n current dispatch/config inventory closure (Mac handoff).**
+  Keep the frozen sixteen-site core dispatch contract exact while repairing its
+  independent typed source checker for `WithEnv`/stdout adapters and their current
+  forwarding locations. Enumerate each separately admitted managed-tool launch
+  explicitly; do not exclude packages or accept unknown/aliased boundaries. The
+  checker analyzes Darwin arm64 and Linux amd64 source/types without executing a
+  Linux binary. Close the epoch parser's missing `ManagedSCIP == nil` condition
+  with a valid ordinary-config regression. Generated config already omits the
+  selection and exact-mode runtime guards refuse it; no installed writer bypass
+  is asserted. Historical plan/receipt bytes, roles, IDs and limits stay exact.
+  Tests add two serial source/type/AST passes; private config parsing adds one
+  pointer comparison and no I/O. No product query/tick/startup/retry/publication,
+  child, cache, lock, store/schema, install, release or capacity behavior changes.
+
 - **2026-10-18 — T42.H2k owned read-only Linux input-tree loan (Mac source handoff).**
   Implement H2h's distinct scoped tree recipe with one fixed measured/sealed
   helper. Fresh bounded tmpfs copies exist only in its private unprivileged

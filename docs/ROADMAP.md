@@ -138,6 +138,15 @@ T42.H2i prepares linux byte observation and allocation seams.
 T42.H2j prepares prospective aggregate linux memory calculation.
 This is bounded source preparation; actual Linux admission/readiness remains open.
 
+T42.H2l implements the fixed-root Linux physical/effective-cgroup observer.
+Its source/model, scoped static and both Linux compile-only checks pass; native proof remains
+deferred until Ben's office return. Complete ancestry, source-owned reservations,
+prospective versions and actual admission/readiness remain separate gates.
+
+T42.H2n repairs the inherited source launch-inventory check and closes the
+epoch config's managed-installation exclusion. Both supported host-source
+inventories remain exact; no runtime site, plan limit or native gate is widened.
+
 T42.H2k implements the distinct owned read-only Linux input-tree loan next.
 Its fixed helper copies inside a private namespace, closes writers, protects the
 mount and joins before publication. Source/model checks proceed on the Mac;
