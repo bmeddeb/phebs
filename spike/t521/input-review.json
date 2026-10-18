@@ -1,0 +1,15 @@
+{
+  "schema": "t521-final-input-review-v1",
+  "date": "2026-10-18",
+  "result": "accepted before first extractor/candidate/scorer run",
+  "final_preregistration_digest": "sha256:82938e1d57f7b90bbfbf111184c475efdf6422ef987aec0b8a203d4a0a069c1b",
+  "checks": [
+    "all authority/file/index/bundle digests and lengths agree",
+    "lead-created actual source+index Git commits/trees and verified bundles",
+    "all original source/tag/IDL/label bytes unchanged",
+    "offline tool/argv/exit/join and full indexed-document census recorded",
+    "one90s indexing attempt per population with no new network dependency",
+    "derived Apache/source_bindingnone and separate finite populations/unsupported exclusions stay exact"
+  ],
+  "findings": []
+}

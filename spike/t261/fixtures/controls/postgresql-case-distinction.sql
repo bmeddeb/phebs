@@ -1,0 +1,2 @@
+CREATE TABLE "Foo" ("id" INTEGER);
+CREATE TABLE "foo" ("id" INTEGER);

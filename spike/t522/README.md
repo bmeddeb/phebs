@@ -66,3 +66,29 @@ lock or cache work. Existing reader refusal bounds are recorded, not presented
 as measured scale ceilings. T52.3 registration, managed inputs, operating
 qualification and production signing remain separate; the production key is
 still unavailable.
+
+## Qualified outcome after the retained source checkpoint
+
+The independently reviewed first candidate measurement at harness0143db66
+passes the unchanged finite source gates: public4/4 positives with31 clean
+negatives; authored15/15 with62 clean negatives and4 clean unsupported sites.
+All3 Raw/SHA1 modules,9 numeric fields and18 unique real SCIP definitions agree.
+Generated emissions49/7 remain separate, without a generated recall oracle.
+Every role is raw SCIP read, including source writes; semantic read/write
+accuracy is unmeasured. Original source/labels/witnesses/thresholds remain exact.
+
+The actual evaluator inputs are public01726539645e3bab1c04a4633b806dead7a0c97a
+and neutral85cc3f7f57bd339e5c1f3dd715a78a6dc6259f57; upstream pins remain source
+provenance. The source-only statements above describe the earlier checkpoint.
+One offline index attempt/population passed and joined; no preparation was
+replayed. The first normal package passes0.339s, required race1.441s, compile-
+only0.338s; vet and repository-pinned lint2.12.2 are clean. First-result bytes
+remain unchanged after race. Independent root/peer source and cost review is
+clear. `outcome-cost.json` records all measured scopes and limits.
+
+Public6 logical cached reads/124,581 bytes/792 microseconds and neutral8 reads/
+33,704 bytes/533 microseconds cover Extract plus streaming verification, not
+isolated CPU, filesystem I/O or whole-process memory. No operating, generalized
+accuracy, production registration or signing claim follows. T52.3 owns stable
+selection and promotion for each independent generator; the production key
+remains unavailable.

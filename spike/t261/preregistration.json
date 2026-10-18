@@ -1,0 +1,2128 @@
+{
+  "format": "t261-preregistration-v1",
+  "stage": "complete immutable input proposal; lead review/checkpoint required before first parser/grammar run",
+  "date": "2026-10-18",
+  "parser_runs": 0,
+  "recognizer_runs": 0,
+  "generated_dump_executions": 1,
+  "initial_image_admission_stops": 1,
+  "final_declaration_denominators": {
+    "postgresql_public_manifest": 1843,
+    "postgresql_generated_dump": 8,
+    "mysql_public_dump": 488
+  },
+  "migration_denominators": {
+    "postgresql_selected_statements": 43,
+    "mysql_real_corpus": 0,
+    "mysql_qualification": "unmeasured; no migration corpus"
+  },
+  "query_site_denominators": {
+    "postgresql": 98,
+    "mysql": 48
+  },
+  "binding_opportunity_denominators": {
+    "postgresql": 98,
+    "mysql": 48
+  },
+  "authored_controls": {
+    "postgresql": 30,
+    "mysql": 30
+  },
+  "files": [
+    {
+      "path": ".gitignore",
+      "bytes": 13,
+      "sha256": "32dae3052f331ee34d628ef535709b301259a45df7c7522c4d35dcf49873f00b"
+    },
+    {
+      "path": "LABEL_FORMAT.md",
+      "bytes": 4719,
+      "sha256": "14f12fcb04ca161152c6131e26cf86f6cabadfcde027f0c44da809b3f03ee709"
+    },
+    {
+      "path": "README.md",
+      "bytes": 19259,
+      "sha256": "67ecc9e8512023f2a96f2a55f1cf677bf6fb69a6c06302b30008fa95abdaaf84"
+    },
+    {
+      "path": "audit_source_labels.py",
+      "bytes": 2789,
+      "sha256": "875c852c5494900b8b593f4bb3689c7bf0bf5e9491dfba9279e7eea2eb322f63"
+    },
+    {
+      "path": "author_controls.py",
+      "bytes": 13888,
+      "sha256": "13fef87b82b96e546fa57905e4fdeae519c5df4ce59b22acab0d3f3849d6182d"
+    },
+    {
+      "path": "author_generated_dump_labels.py",
+      "bytes": 3748,
+      "sha256": "a2dc0a6333e35811d08f548fc5d0aeebeaba3e56788c963d0354cddfc3db7476"
+    },
+    {
+      "path": "author_migration_labels.py",
+      "bytes": 7037,
+      "sha256": "09049de267b976175aeca1b6abf5447d31af7e02200ee1dd225c69cd2411bd14"
+    },
+    {
+      "path": "author_mysql_labels.py",
+      "bytes": 18184,
+      "sha256": "f6af0d200faab5a7b8404d8bb5ce1824ef6fdd930ddd892e5eb5245254943faf"
+    },
+    {
+      "path": "author_mysql_query_labels.py",
+      "bytes": 6288,
+      "sha256": "ee487bad3e345dde3e797997462b31ebb80959a0bf8af3b3d94f41ab6df01514"
+    },
+    {
+      "path": "author_pg_labels.py",
+      "bytes": 31872,
+      "sha256": "c350219c600d24ff47852adc444dad911edaa3fbebded9027e34a24354100fcb"
+    },
+    {
+      "path": "author_pg_query_labels.py",
+      "bytes": 7608,
+      "sha256": "cb999389bc68af6d231972f16d17f82459d157ce12bb0793106c7f41dea0c198"
+    },
+    {
+      "path": "candidate-licenses.json",
+      "bytes": 1539,
+      "sha256": "60fbc61a49548f157b9d88c50f6cd5df36ecdf2e04c1c610dfa4e56926ad8a28"
+    },
+    {
+      "path": "controls.json",
+      "bytes": 57263,
+      "sha256": "e092892d5448a70ef1539e3eaddd05c6d8ddb394fdda6dd81661fb56bbe8f0cc"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240115180414_init.sql",
+      "bytes": 24327,
+      "sha256": "506bd4f78a33d663df64e0476a10464ac37fdf10549ce52ba2994b9b9e095747"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240122014727_v0_6_0.sql",
+      "bytes": 1763,
+      "sha256": "a68c9e17f4d30c062e3a4209b64d2e8d920a30792712715e8ce874ae22685ac2"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240126235456_v0_7_0.sql",
+      "bytes": 3925,
+      "sha256": "01a1c96f783bb442c1497ca531862cb17ec837a10db8dae4becb1cf84d9ce4b2"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240129040510_v0_8_0.sql",
+      "bytes": 3206,
+      "sha256": "8ce62188d1dd108ccbfac19aae003b7623fe31a3177cd4ed90abe4211281a7c3"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240202042355_v0_9_0.sql",
+      "bytes": 3252,
+      "sha256": "46b8f1cc7ecb1b0981ddcad9910f0c95f18de6fe2fd674b0e0d86e8f629286f7"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240209132837_v0_10_0.sql",
+      "bytes": 158,
+      "sha256": "09af69d8d8db9c23f815305396ff76b1962bc92a219ea9763dce5e2b19c84112"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240215162148_v0_10_2.sql",
+      "bytes": 672,
+      "sha256": "b62d041a885462fc2d689f38291a1d0699d379e8aafd9e2ad623840e9ca38b31"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240216133745_v0_11_0.sql",
+      "bytes": 11413,
+      "sha256": "e4512b90d7b256b3b8886dbfa9e09d0be04bcd7f9302793c5a863da6a602331e"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240226051822_v0_12_0.sql",
+      "bytes": 165,
+      "sha256": "b5b20b5bd4e000652cd1b492fbe4469bb5bc17d8657de237e274d572ddf462db"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240227181732_v0_13_0.sql",
+      "bytes": 353,
+      "sha256": "11b8cc49513ef5163080182c8dc22c7731456c63690e1fa83c66087d97f67bd0"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240228050417_v0_13_2.sql",
+      "bytes": 306,
+      "sha256": "69583532df7a5b196129dab4952262acd787d70e4dff3935fbc78679636a152f"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240229232811_v0_14_0.sql",
+      "bytes": 820,
+      "sha256": "50dd529068d28c7712b179edf913a2ec55210a90dfd74e4c388411beb9f403f8"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240304060408_v0_15_0.sql",
+      "bytes": 722,
+      "sha256": "1db0fb26b4bc7fc4c6b8b520de7d31cdda230c6fa64f21dfc8967cddb2496f68"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240320215205_v0_17_0.sql",
+      "bytes": 842,
+      "sha256": "2ac3dcb8899264e2109e2a0c504f2970185d2222169aff5eb3df2977ac7ba422"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240321215205_v0_17_1.sql",
+      "bytes": 842,
+      "sha256": "edd77272c2e1a3244546d8f82d9f7197ff32bd379a1f37932c571785f5de58ad"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240326151030_v0_18_0.sql",
+      "bytes": 1957,
+      "sha256": "db0258288c049ce64b93439cd86f5e189563295dd8fcb8c26e5362576c207974"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240331162333_v0_18_1.sql",
+      "bytes": 407,
+      "sha256": "1bb5e0024ba32497a143dea9abd6134a14f6a03545b0adb8db0ecc654fdc12a1"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240402034010_v0_19_0.sql",
+      "bytes": 2491,
+      "sha256": "72b14ed1ab4407e0ad1c6951eb09f687503c378c2aae507adb7e590083ee7373"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240424091046_v0_21_9.sql",
+      "bytes": 120,
+      "sha256": "09f5cbe8e5464323eb7c2a2ad89db24145ae2b05ffe1fb5e082dbd332a14defc"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240430161943_v0_22_1.sql",
+      "bytes": 239,
+      "sha256": "13e105ad5c65e565d234d1d9eda30561018909edc0517bc2bdfc1e174adb71c5"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240503190030_v0_23_0.sql",
+      "bytes": 113,
+      "sha256": "2047a231e43f2899c8278d20731c9c0eb8cd83bb080b155e87d7c890551da83f"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240506194242_v0_24_0.sql",
+      "bytes": 914,
+      "sha256": "b4c52c493673a2a37c0f6316128cfbbaeb05b20beb72a0d75533e631ce22a011"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240507200816_v0_25_0.sql",
+      "bytes": 2936,
+      "sha256": "34d54573ab7fa33da2d548e86abfddacb987be0bdd8bff53227999681cf07259"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240509213608_v0_26_0.sql",
+      "bytes": 1782,
+      "sha256": "41232fd69b3b0a01dab092581853e1027177bfc6e98ae92622c8abfa64c58a2e"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240514192527_v0_27_0.sql",
+      "bytes": 563,
+      "sha256": "9ca5c2464e6086ea578ac42442e6ae8f341bf783c0c748953eeeb4667e280913"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240514203126_v0_28_0.sql",
+      "bytes": 89,
+      "sha256": "db7df3abc3f71dc43cb6472ca184ae0e88fcba947a0014faed9973160bddda10"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240517204453_v0_28_1.sql",
+      "bytes": 87,
+      "sha256": "e00e2d6fb716e676c173c28ed342f28bba33fc003e71c9549881ea445aa20dda"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240520152239_v0_28_2.sql",
+      "bytes": 106,
+      "sha256": "31e0988df9f5ed161d05436572d6d5a8ad871037b3971fcf42daf5bab7d98e33"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240521205311_v0_28_3.sql",
+      "bytes": 103,
+      "sha256": "f048d864c2d8d632490123d8a48ea2c7c64406870e6a9144ab08279f1c330e53"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240531142907_v0_29_0.sql",
+      "bytes": 93,
+      "sha256": "dae04b7bd7038a639f019964fc4f2818c1b01ed88d06a5f17dd8aeee64ca636f"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240531200417_v_0_30_0.sql",
+      "bytes": 320,
+      "sha256": "29e1dd3d89dbc5851c3167c6ee35c82bce0323085220ec0ed2a3a188d2dd8390"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240531200418_v0_30_1.sql",
+      "bytes": 2623,
+      "sha256": "4f3ae2c3646f583047e4dc4ee6328376bf6a6c7f2422ac7626c23b2dac44fd38"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240606145243_v0_31_0.sql",
+      "bytes": 2387,
+      "sha256": "fcd346a55b90a132120ddda77d8ba94cbf4c965a953dcdd5eb3fab67db5f2eb9"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240625180548_v0_34_0.sql",
+      "bytes": 2620,
+      "sha256": "09026119dc38ab62535710d3eaff6512f85e4ee616f464c0258bdb673d016713"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240626204339_v0_34_2.sql",
+      "bytes": 1990,
+      "sha256": "4db77b464c887aa5b7b2ba5632892710329278e093470e2f01f9e07e673980db"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240701144852_v0_35_0.sql",
+      "bytes": 113,
+      "sha256": "b1ef57e4c65563f7d3bf68d35db96054954721d29f35cf942ad1c2e68f0649d2"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240703194656_v0_35_1.sql",
+      "bytes": 2175,
+      "sha256": "2a6f32a1b0fd608b022ae19ad77a800f7eccab5e7e966fd0726dfb6e490c2c0f"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240704211315_v0_35_2.sql",
+      "bytes": 122,
+      "sha256": "77b221c46fedb3ef0a66265929846890baffb9f64b1817da782dea1f46dee31e"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240712142946_v0_36_0.sql",
+      "bytes": 1210,
+      "sha256": "bd406ce30656d0f98b29a05fc953c7405b4038fd12d1910b1b983344f357b129"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240715154334_v0_37_0.sql",
+      "bytes": 105,
+      "sha256": "a0f3f493167eb81e85a8883164e7d2a3481bdb8c92adb833f75df7a214c57f93"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240716125857_v0_38_0.sql",
+      "bytes": 117,
+      "sha256": "0357fc8dc2c636be2fa67cd3f63c7c8d1113083826fa5c0e43337f98cc38048b"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240716143349_v0_39_0.sql",
+      "bytes": 1189,
+      "sha256": "436f9ffba34e99ae2fe862cc3aa660bcd1d1213ff7f0fd17d0a31d6b43a40dd0"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240726160629_v0_40_0.sql",
+      "bytes": 3846,
+      "sha256": "bb47a3803681e076d3fa73482430fab4022e8f241272eac7a1883ed26581da75"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240728042317_v0_41_0.sql",
+      "bytes": 236,
+      "sha256": "efce79088df9259da6205bc775764ba7fe725617b9f54eb9b25043353acc848f"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240809131000_v0_42_0.sql",
+      "bytes": 3533,
+      "sha256": "48592a9797915294f71117eb0a2126a0f12f98342fbb825d59159bdfa75060f1"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240812153737_v0_42_1.sql",
+      "bytes": 406,
+      "sha256": "ae07cbf27b5bcfb582deabe3ce2b0b6c7d46c7d1105fea54c1960a872c258dfe"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240815151244_v0_42_2.sql",
+      "bytes": 1044,
+      "sha256": "e541c3d3d7f95aaf13c691118ce5260a8c4fcdca30f8c7cf336e5539f66c2c5f"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240821170947_0_42_3.sql",
+      "bytes": 524,
+      "sha256": "6515601c5a1656ca14377d709132bfb422db8d2b1deada033d6f1cc96b07ad92"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240823120430_0_42_4.sql",
+      "bytes": 746,
+      "sha256": "0ad6fa6f148200b85b256af2c64b23e9b863ae0e853eec5858a84749fb3d6433"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240823204123_0_42_5.sql",
+      "bytes": 296,
+      "sha256": "d43809028b5caf1197a926fef8b2528cfe032adbd00241a5a35d1770e70ad7fe"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240829142550_v0_43_2.sql",
+      "bytes": 219,
+      "sha256": "ae3777aa8e663ff46db3ca5c6a5464576fed418a7a19475c61c429efa7b0d23e"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240904120327_v0_44_0.sql",
+      "bytes": 2120,
+      "sha256": "8141e0bc622bb1b8d47bf0a33de249785c12f927eec6809c0ea924b5aec84d55"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240908154802_v0_44_1.sql",
+      "bytes": 394,
+      "sha256": "607d539b81dd984243c8503b6b6bc954d668dff10cda62c93a9532a4452d2786"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240910205843_v0_44_5.sql",
+      "bytes": 1076,
+      "sha256": "3ae3e4bb429ba20e8a73f5ef6fad573bc7aaa2e95ce73d439836851cf61acd86"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240911124017_v0_44_6.sql",
+      "bytes": 1020,
+      "sha256": "3bf783c2b4194bfad49af718284e62c2439fd00243357075dab4228ab5e8edc9"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240911201831_v0_44_7.sql",
+      "bytes": 572,
+      "sha256": "31c5474a35057d3cc492ed572024b86289d2fbdd93f4979161a252eda8f498ef"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240916115647_v0_44_8.sql",
+      "bytes": 1217,
+      "sha256": "dc49e08ffc02c3bc12af90b4429974f42a313a7009efaf10e918f5a6b8ef24cc"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240918162532_v0_45_0.sql",
+      "bytes": 966,
+      "sha256": "57dfd289874cfa12d09e6e4a5a53e9c2fcb069d750cccb653ec28622f7a860eb"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240923124809_v0_45_4.sql",
+      "bytes": 106,
+      "sha256": "9f350fb795d8dbb20df6dd77069c523dcd1368b07d86d8270a2e3c4709a9ff05"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240926210650_v0_47_0.sql",
+      "bytes": 1494,
+      "sha256": "e14d477eff3a849a22c3d0f845d246b6b7ff1f7745fce1b6a116055dfe870df3"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240927172935_v0_47_1.sql",
+      "bytes": 1928,
+      "sha256": "114816b697655bd9e12e5bf8ac6ce406349e4c69375754c4784b4cd63e3daf50"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240928144316_v0_48_0.sql",
+      "bytes": 216,
+      "sha256": "49f2a3b718c0959ef0564d992a09d10be9743f607bcd5d992422f536741a409d"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240930202706_v0_48_1.sql",
+      "bytes": 212,
+      "sha256": "a5199d776ffe1a7acf320587297588e70a9124ebeb6cf25e4aea24ab4fedf92a"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20240930233257_v0_49_0.sql",
+      "bytes": 96,
+      "sha256": "5418ce1ac95962f030ad521ea94b3596645f1d9863baf7352e9d0f3501f19d6e"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20241004122206_v0_49_1.sql",
+      "bytes": 115,
+      "sha256": "7b679b1f03c50ef037a13b87ceacfaa651bfc0e85b7d1aeab261a6d2956945f8"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20241008124038_v0_49_2.sql",
+      "bytes": 282,
+      "sha256": "1ab210aaaa976c4b16c47a840037dfc21319378b1264473df3b2a57c7183c70f"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20241011205314_0_49_3.sql",
+      "bytes": 156,
+      "sha256": "306231a3f8eaf9734757c85c5ffb3153819245d6b8af7e9a448ac2a23dc5415d"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20241014194326_v0_50_0.sql",
+      "bytes": 680,
+      "sha256": "9d948c91ba0f2732b5d2c382f062c4a9518c7bfc222a1d2ae0d8e536c2d14391"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20241018142125_v0_50_1.sql",
+      "bytes": 660,
+      "sha256": "33c957efa0b09b749fe0ec2ea4479c2714be93c10f2f11feaf88689688b3323a"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20241022124210_v0_50_2.sql",
+      "bytes": 712,
+      "sha256": "e7092678238e59b94a77098bfe9cb4793150a124a17b43e5f626ee100175c532"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20241023112235_v0_50_3.sql",
+      "bytes": 767,
+      "sha256": "e31cdb6af77446e61a55d9e759cd233d8d96713490d6856b7e4afe29d321d44a"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20241023223039_v0_50_4.sql",
+      "bytes": 319,
+      "sha256": "48e1eeaeb1cf01dbcaad5526fdd083c1c273fcfa00bd723fabc7e3d38a4d174e"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20241025162439_v0_50_5.sql",
+      "bytes": 348,
+      "sha256": "e37d93efefbd05a23001fe768efecd26154473259537f8f08888a4fb6c47c8d0"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20241029122625_v0_51_0.sql",
+      "bytes": 639,
+      "sha256": "be9d752b62fa660d18732c3407ca3641ea16575b9b4dd12b408e7348562691df"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20241107162939_v0_51_2.sql",
+      "bytes": 121,
+      "sha256": "e70cafadc33ed8c555e6160377b699802142e666e2bb945accee1858a5d07391"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20241114175346_v0_51_3.sql",
+      "bytes": 154,
+      "sha256": "abfba55fe228f5c93912bb0ef221ef0356e5b61bd9b23c889bb00a5bbe5d4930"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20241121142159_v0_52_0.sql",
+      "bytes": 2307,
+      "sha256": "0651a3dddb2d8cfae3838cee4886214f03052927b4f148f56e359004a214e13f"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20241204191714_v0_52_5.sql",
+      "bytes": 83,
+      "sha256": "7ed80268cfc380bdc3f0c36d1662ca3c1c0ee585873d814ea11437b275aea5d0"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20241206231312_v0_52_12.sql",
+      "bytes": 457,
+      "sha256": "72e7b571d25a157eefc2876febbed8922de41c183228446c094b69184d45bf44"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20241216175807_v0_52_13.sql",
+      "bytes": 156,
+      "sha256": "6fabfaf4f2106b3bad60554bcbb5d74f14284d613cf672faa2b8d85db614e4a7"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20241217152316_v0_53_0.sql",
+      "bytes": 2423,
+      "sha256": "2b5170439062f68ee486b39ed9074934e0f9387f5ea0e8f6dc215b773b8165e7"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250127160736_v0_54_0.sql",
+      "bytes": 292,
+      "sha256": "55674bbddb23d106229d8eddc4184d35742cd5b8e3659fbec28da04afdc804c2"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250224162902_v0_55_0.sql",
+      "bytes": 344,
+      "sha256": "bfd415933370832f8f6234544d04f55c228d6506650637bafb5cf137e5ecba39"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250224171706_v1_0_0.sql",
+      "bytes": 64993,
+      "sha256": "df228bb347980276b55804a7b685211f6b530c713bc4a40f9d1c13d548f9798a"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250312151904_v1_0_1.sql",
+      "bytes": 200,
+      "sha256": "70bb3faaa149fd2701c65185e115bfe1698a6e5d62f88bae12d1324546f5e497"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250313202558_v1_0_2.sql",
+      "bytes": 5084,
+      "sha256": "432b1bf56033dbbac88e80329148e2bba5293e3f1bca4270d1d26a9fbcd3cc1b"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250314162314_v1_0_3.sql",
+      "bytes": 276,
+      "sha256": "848d56c8ea7dfc33cf6184e78367f44f25e6401804415deba62e48556ceb562b"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250319143644_v1_0_4.sql",
+      "bytes": 8942,
+      "sha256": "6a5db2e758296a3c09b5fd1cebcb9e1fdb891bfc27ed242f58447c2e11fd1fa6"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250319192344_v1_0_5.sql",
+      "bytes": 9686,
+      "sha256": "ac0bfa09c513cadab32e5fc9cf91d3d18096ea6e37b910be8c27625e7fb61559"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250320210345_v1_0_6.sql",
+      "bytes": 914,
+      "sha256": "a11c406ce50f24c33a204d557fbd7538025db50d6fa12e4135dcbbd262edc3cb"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250321144831_v1_0_7.sql",
+      "bytes": 1523,
+      "sha256": "cb71c23b4c8bb3ee55479fc3fc7ba8b86f1853d9bfbdb7043042844a20954aa5"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250323220955_v1_0_8.sql",
+      "bytes": 1710,
+      "sha256": "7b9fa59f65ee5973a62510ad17306370a87d6e7dcf1ab7c63d8b7d5cfbd7c47e"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250327185734_v1_0_9.sql",
+      "bytes": 247,
+      "sha256": "5e51b24cdece9aa74c738bacc9a97c7dce9a33b1d0f4dcbd39c01b9da7d7e5ec"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250404160322_v1_0_10.sql",
+      "bytes": 11350,
+      "sha256": "5512d3b826882c0d881e0bb4a5fe448055bfe01bab6080a42e3c917898bfbdde"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250407012633_v1_0_11.sql",
+      "bytes": 25190,
+      "sha256": "89e201edb4f461d98e47051ed95462f37f45e1d544003319636390e899bbabce"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250414130637_v1_0_12.sql",
+      "bytes": 520,
+      "sha256": "b25ada901a1bc78b4e7c8f89fd61ce1597b44e2bd00cffbe97567e152f8eb7e0"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250415212814_v1_0_13.sql",
+      "bytes": 920,
+      "sha256": "7e833b6e0c120abecf7df85278d2898c89c14979c1404ff315f86597f090ec25"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250417143656_v1_0_14.sql",
+      "bytes": 5766,
+      "sha256": "55943af68b50854f1c491f7d10fb44e8de5e6c10ae28a08bed4f02ad6f47b78c"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250417150604_v1_0_15.sql",
+      "bytes": 301,
+      "sha256": "20f2dd8768ef8625f3b37ed5035f82ab049ce2ef0512b922586289e041d9bdec"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250426012858_v1_0_16.sql",
+      "bytes": 8922,
+      "sha256": "0cab10c9b71dcf23145f8024b7b365bf87ec06eb0d0ec35d40947a1fe05affff"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250507193114_v1_0_17.sql",
+      "bytes": 11143,
+      "sha256": "0b4a8f7d65301e08a1479689b7f15fb18e7804dd05777043e5a1141bdcc5e9d8"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250509123031_v1_0_18.sql",
+      "bytes": 257,
+      "sha256": "f18b49dd2bf9f1b4d20ba29d5302edd905a4a819b234e7d51ef9338661aa8a6f"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250511175026_v1_0_19.sql",
+      "bytes": 3568,
+      "sha256": "4f7f402bfe674d36a5309aed4b4d20f2e6e1cae9c9bf1d26847812d136fac018"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250512141736_v1_0_20.sql",
+      "bytes": 683,
+      "sha256": "e4e152b36e7bab38c673ae1c692e75de555e71830347623adfc2f16643f09e1f"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250519145912_v1_0_21.sql",
+      "bytes": 362,
+      "sha256": "8e9aa8581d630ea32697c9ac3c5cc8899c6d0ec565f0fdb707892784cea4689c"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250602191423_v1_0_22.sql",
+      "bytes": 4241,
+      "sha256": "16256f06b4d2c642a7574501b1cfe292772b60eaa0dbe89c26efaeb61b7e4f38"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250604191556_v1_0_23.sql",
+      "bytes": 221,
+      "sha256": "ff68dd36cdc0adeaa866d2cc003c0a98f26e983452df9825d78f01023b2ee21f"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250606213933_v1_0_24.sql",
+      "bytes": 255,
+      "sha256": "a28b857321976046193574aba7e7a316ad5299861cdca8121c0c38d6f65fc93d"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250611144858_v1_0_25.sql",
+      "bytes": 366,
+      "sha256": "42d3046a12246f2e86f96b0b19892c4c8ce0e773b6ec11fa013de9d2605f861b"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250612173730_v1_0_25.sql",
+      "bytes": 378,
+      "sha256": "274d2857e197a8518cefb5ce03ae22c43e61160d9a460e3f86c18828548e3d68"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250617185713_v1_0_26.sql",
+      "bytes": 273,
+      "sha256": "7e9eb3fa1a9ba44ab6988882190c0523314e254a5e6fe6b2844453e5fa9dceea"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250617192510_v1_0_27.sql",
+      "bytes": 537,
+      "sha256": "1172141238869c3ab5f865da7aecf5e64462ac4bc0685a5fb3a30edb5fecebb8"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250623140133_v1_0_28.sql",
+      "bytes": 272,
+      "sha256": "96a670330f4eb599281f5e703cf9357d238bc7a78c92349704d0f348926a2c82"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250717162353_v1_0_29.sql",
+      "bytes": 1596,
+      "sha256": "13dd82118d133724d04c5256e6f183901ae7fbaf43029da88f0e2342d582bde2"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250725183217_v1_0_30.sql",
+      "bytes": 699,
+      "sha256": "b1674dfe9a0bad0086a7e46bd6cf1af9050b6dffa80212ad0dfcbe0165997bb4"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250726193737_v1_0_31.sql",
+      "bytes": 2382,
+      "sha256": "142719294b163059dfc0b6b4214ac434b1d61350b7eaf3bf1cf99c43b75b2257"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250726214427_v1_0_32.sql",
+      "bytes": 1154,
+      "sha256": "70ef333be9b0606074d4625e03db4f5cd7c99593e17bb0d254da36c57e274f81"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250726225025_v1_0_33.sql",
+      "bytes": 196,
+      "sha256": "176f4ef6ad6d5b6e8bb65a015f09811d01dab01deda0b6ac1702739fcf45ac37"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250730194533_v1_0_34.sql",
+      "bytes": 915,
+      "sha256": "83ab507171448175e2f32179df59421fd4d8860f29ec4a572a6fe7840d42513d"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250801183812_v1_0_35.sql",
+      "bytes": 234,
+      "sha256": "54520307a47b4656d89f8a077461767971c1a984d92c2349eaea67868cb74efc"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250813183355_v1_0_36.sql",
+      "bytes": 224,
+      "sha256": "1db0c53b592e6c2cb7b5b22bc359a989dcd0ea8e83b2408185a930a7b17e006d"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250817183956_v1_0_37.sql",
+      "bytes": 1481,
+      "sha256": "792f510bd2adaac3a4c7793a8908bcfe82bb03dd31d1e7f866efb851e4b60f39"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250818153710_v1_0_38.sql",
+      "bytes": 225,
+      "sha256": "b76266029cd0898f6d573644659f16adda33916c16baeedb6be64e91ed769ae7"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250822193023_v1_0_39.sql",
+      "bytes": 8235,
+      "sha256": "21ff3f052ede7e2f733cfb7586a3ce781ce7a3aa507c22cc198e6875c2a2145a"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250824131856_v1_0_40.sql",
+      "bytes": 457,
+      "sha256": "e18b937a4d1a6e824c65e82e4834dce3e9855a72a3af0d9246ddae92b8163ed4"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250904151226_v1_0_41.sql",
+      "bytes": 589,
+      "sha256": "59b5b2efbe16229747879b51e047148d538c53d34f34e7118deb27c353966fc2"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250912162812_v1_0_42.sql",
+      "bytes": 5055,
+      "sha256": "eb38f5da5ac4e5574269e90d68fca9f85b0221271dd6bb9743e2426bf0a73c55"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250912163904_v1_0_43.sql",
+      "bytes": 296,
+      "sha256": "76c2239bd4da853f8ee6a866ca6947002cffdf59495c8b9a27e4278e2afc907a"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20250930153446_v1_0_44.sql",
+      "bytes": 742,
+      "sha256": "f6b3a3fa02e850d91f38bd506f262acee050f6a161eb8ce04a7cdcb212eddf52"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20251001122435_v1_0_45.sql",
+      "bytes": 261,
+      "sha256": "e0966efd5f4c849cc1f0c6651b3e5e6d77023d492912eb611e26d2618206fe1f"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20251001155231_v1_0_46.sql",
+      "bytes": 2998,
+      "sha256": "e98599eb4e97aaff3ffd8efa6126ebd6f0be3ebdda7b1ad3f7365bd8a3efb911"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20251007220652_v1_0_47.sql",
+      "bytes": 678,
+      "sha256": "b610f231022a95eea1a29ed9b5bac13cc43efa61936a1d1f64d0c85f7f37b99d"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20251007231452_v1_0_48.sql",
+      "bytes": 454,
+      "sha256": "10b6403defb979af2d9a553d2956597cbea77d8e77e882e0402eea1124d11b3f"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20251008083410_v1_0_49.sql",
+      "bytes": 8541,
+      "sha256": "83715da4743f7e18565ba61cf7e53475a28aaadce63189596d66ee9ddfd399ea"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20251014175925_v1_0_50.sql",
+      "bytes": 445,
+      "sha256": "db4d4ff2fad6d21aec4e4abca9e469e4d64d30e518b0562bfa4ad8a52c085895"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20251015164344_v1_0_51.sql",
+      "bytes": 1316,
+      "sha256": "0b3d1d7ec9e66e1d595ca0649ac3eced08be48bf395d7e9ca043e19caec5c98e"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20251022151234_v1_0_52.sql",
+      "bytes": 2391,
+      "sha256": "1092a9dea8a27b63453cf6711840b15ab46c614c41fbd51aab96a22c177b3474"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20251113195351_v1_0_53.sql",
+      "bytes": 5917,
+      "sha256": "58c02bd5fdb087a419d94cb9b27bdeba40581a7b59ec70386db67f3aa27c7fdc"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20251128190238_v1_0_54.sql",
+      "bytes": 9403,
+      "sha256": "0438ee14faae4e6d29e529e59d078bc9a1df69e6e6f6e43ef82d019f45eb4683"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20251205170304_v1_0_55.sql",
+      "bytes": 403,
+      "sha256": "99752103478ccb6f47a051ceef0733d66a73c08b392548e92ca2aef5d4879c6f"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20251208161245_v1_0_56.sql",
+      "bytes": 9549,
+      "sha256": "72fdcd05f57e7e919767e9565fe7040a2c05ed026d25ad1a6f7b1cac103d8531"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20251209220629_v1_0_57.sql",
+      "bytes": 7202,
+      "sha256": "8879a004b93cb86ede0bd7d3fc486fffff568d325d56dd870f92b70e1407c7d1"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20251210193031_v1_0_58.sql",
+      "bytes": 5977,
+      "sha256": "aa72d2f600efc9039accb5c5cfa0523ddecf6ec2789dce3d953e5f6767e0757a"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20251212170748_v1_0_59.sql",
+      "bytes": 11909,
+      "sha256": "9a6e2418a48e7e265a109e1f2d620cb7ef757087ed94697257fff245296b829c"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20251216163945_v1_0_60.sql",
+      "bytes": 8072,
+      "sha256": "82555bb758dd125d17a9c6edcde1d4f86a573ac47ebbd4d8f478cdeff792a61e"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20251216190909_v1_0_61.sql",
+      "bytes": 3101,
+      "sha256": "b37f8fc40c4b711803883befe6b648656fe67268f344bb478b8e2e0315bb4678"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20251218153621_v1_0_62.sql",
+      "bytes": 1454,
+      "sha256": "fa830d12da43a24a4ecf47fa63277dcb65cb69091823b36a6760bc015024aec4"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20251219181211_v1_0_63.sql",
+      "bytes": 3424,
+      "sha256": "b8ae01fcf149b63d9672cf3e44fe57e8aa7551fb2d16fbe0e5cbc3e4763a7e0d"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20251222220531_v1_0_64.sql",
+      "bytes": 3092,
+      "sha256": "e62f877e8fc087006f0e026b1ddb4ca2e6d215ee723025d374aa02d1721a412a"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20251224145920_v1_0_65.sql",
+      "bytes": 1014,
+      "sha256": "9d3b99d86208d1ac73659fde765301e106849d4340b2d866159173f06f4ebbd3"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20251229174938_v1_0_67.sql",
+      "bytes": 911,
+      "sha256": "8f1b948b1532144acdd54e94dc6bf675ad7fbbb79d07766702f5cac106318256"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260106185235_v1_0_68.sql",
+      "bytes": 736,
+      "sha256": "e1ddfb5580e88f300ef3ad674b126e75f2018c1b4487214bbc3cc5e3ee213299"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260119123835_v1_0_69.sql",
+      "bytes": 1247,
+      "sha256": "ecdb6f5b347f5b2ce3c824c4ca84ecb2491843612915257bbff6ba4ea0bbe384"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260121120000_v1_0_70.sql",
+      "bytes": 424,
+      "sha256": "524852d445165bb90abd541d047575cac98b8f6c7816485301a2030b3f39c943"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260128120000_v1_0_71.sql",
+      "bytes": 8630,
+      "sha256": "3e9c5dcf341702da809a86ce00bffd5d9cab46f1c5ccb3d66e6e2f60ac0fee6c"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260129222533_v1_0_72.sql",
+      "bytes": 252,
+      "sha256": "72594a54cc0db1a07ce7d72a37b06e0965eb4cce7d72700f14c703fdfe35b002"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260129222535_v1_0_73.sql",
+      "bytes": 518,
+      "sha256": "0b03ef90da171b50156cc27968a61c0fd16923c2c422c72aeda4abd2526c474f"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260202185136_v1_0_74.sql",
+      "bytes": 10631,
+      "sha256": "b0733c7c69632f811ef63e3680b60504f9cfc5dad30c508dd7db74231af1fd83"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260203170918_v1_0_75.sql",
+      "bytes": 630,
+      "sha256": "2f60717be1450b4a3a913661ecf46a9430d69a66e3bbd5fbdb012abfc59ec111"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260210165608_v1_0_76.sql",
+      "bytes": 223,
+      "sha256": "4c37725e7008b43df547df0dc1ab81d3109797f5a725b2f72a5b2ed6ba95fa6d"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260215120000_v1_0_78.sql",
+      "bytes": 231,
+      "sha256": "35151ef9943faba7fc6b08948cfafb72f52b11a00c422c54dc45c97cf05f7637"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260216000001_v1_0_79_a_multi_slot_schema_and_triggers.sql",
+      "bytes": 5295,
+      "sha256": "ab83a41a7fc6374bf1e31cc85eba43b0cf66e456a7e880bd93bc4d65434c3b5a"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260216000002_v1_0_79_b_add_slot_indexes.sql",
+      "bytes": 446,
+      "sha256": "5fd35f18733b8eab22b3874c70f82c00c24f5acaa42b153914e5c3aee3be4105"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260216000004_v1_0_80_fix_slot_trigger.sql",
+      "bytes": 2000,
+      "sha256": "5566da75adf1049e08aafb61164012d75853d0f0d165c75037f4fc16e755aa68"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260219000001_v1_0_81.sql",
+      "bytes": 227,
+      "sha256": "3c3b7386d971573035c545c75ea83554b9c8c46d18ae803291f636a0ca2f977e"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260223180620_v1_0_82.sql",
+      "bytes": 478,
+      "sha256": "5df8f46d2d1a0175a817a97273e69661e175c2de4a1170e2e37a9f0a687a1f91"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260302193424_v1_0_83.sql",
+      "bytes": 24899,
+      "sha256": "3ea83307ff52ad95eb96d70ede6507f01d6f9ae1167075dba359465c037bf227"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260313020630_v1_0_84.sql",
+      "bytes": 389,
+      "sha256": "ccd848be18a18725babe078a36486d438dc1353ca7934d8d0e44521aa5f3f8c4"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260313020631_v1_0_85_durable_event_log.sql",
+      "bytes": 8277,
+      "sha256": "f6713da0647d9b5e38c9e2666a6e44236c951344d986e64593a06efef52a63ce"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260313020632_v1_0_86_durable_eviction.sql",
+      "bytes": 633,
+      "sha256": "611d24a12714b2e05e1a407a813fbeada1bba37a630ec9cbeba842848215c52f"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260313020633_v1_0_87_readable_status_enum.sql",
+      "bytes": 322,
+      "sha256": "c03d85553fa42cd9de0c1cd3d8bb1d936feff5972a6584491ad521d9c217beb5"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260313020634_v1_0_88_status_priority_functions.sql",
+      "bytes": 881,
+      "sha256": "3bc3768e962c6852822faecdcc5f37891b1396a8034e82db862a966c6b0120ef"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260313020635_v1_0_89_olap_evicted_status.sql",
+      "bytes": 3638,
+      "sha256": "a16c05c2b18bb7599788afb1f72ae2b175c8698d37f6fc694b0801a501479b36"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260316185928_v1_0_90.sql",
+      "bytes": 2129,
+      "sha256": "ed2980ffe48f97babc171ea393f9bac606c9e2752f5c0dfc7dc98b5e59b68680"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260323184100_v1_0_91.sql",
+      "bytes": 2013,
+      "sha256": "391fc661b72e4f72342ff4394a07de351998ae2a396616b712f5f23029111a82"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260331160407_v1_0_93.sql",
+      "bytes": 289,
+      "sha256": "a043fc7984b45f088cf74264323d1f614bce527f5d3428b85b02d0f4303c44ac"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260403175605_v1_0_94.sql",
+      "bytes": 322,
+      "sha256": "fa7cbbd48de10b253d519e369da9a18a14f90103b53bff43083be20af975a253"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260409022005_v1_0_95.sql",
+      "bytes": 238,
+      "sha256": "da5b8a794b0edb6632b2d5cceb9501d65fa51de9d32ea2ac8156e626c96addd9"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260409215942_v1_0_96.sql",
+      "bytes": 11264,
+      "sha256": "4a7997e4573b9aa32c6097ada24f88589cbe3470bec9be37ae3e7a7abcd60ba8"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260417212701_v1_0_97.sql",
+      "bytes": 611,
+      "sha256": "399842003a6805a426640918e6ef62f0960b0126fde1d290d1e24e8632ff739e"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260421184231_v1_0_98.sql",
+      "bytes": 837,
+      "sha256": "7841b02cf1fe70c7eafacfce7edb1b4f935d17c32044cf85545c34c488d46efe"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260424205453_v1_0_100.sql",
+      "bytes": 7253,
+      "sha256": "93981042538fa3d9516c44d05136b41c2c4b41a7079a828032d57106a88a4dde"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260427142714_v1_0_101.sql",
+      "bytes": 185,
+      "sha256": "5bc1ce6de4eaf4a7ac456fa9f9e37bb559378d96dbba6e0893901307b969cc20"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260427190534_v1_0_102.sql",
+      "bytes": 357,
+      "sha256": "25625fbbabc7e06f64ae52877a20efed5187e462b7569171371e27583764b728"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260505155051_v1_0_103.sql",
+      "bytes": 1936,
+      "sha256": "a42c203af0f069a85e8d422a2e312ec34d95657e732b273489ee04c5b4390bc0"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260505195258_v1_0_104.sql",
+      "bytes": 1120,
+      "sha256": "f7a2b8c13a0cdd3a4c942d46e9cdbc4a80c0736e4e9bf24f5b4d421dedafc536"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260506201345_v1_0_105.sql",
+      "bytes": 868,
+      "sha256": "0e421e2607cb92323a288dcdef36571e3744971f856e5a161578a4eabdd0d369"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260509015727_v1_0_106.sql",
+      "bytes": 37156,
+      "sha256": "0f4f08ccab7b64b059590d1b08170f9cc521d43004b3205e1d98eba6094847d6"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260511174313_v1_0_108.sql",
+      "bytes": 43143,
+      "sha256": "eb33191dddd4a1a543c4657a133bf192ec7abb058c8635b07caa8f29f0cfc0fc"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260514175834_v1_0_109.sql",
+      "bytes": 2903,
+      "sha256": "6d3bae560d9986b9846ac00eeda5613cfa9f53939888d85a29ee1cc1610b2dcd"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260520204451_v1_0_110.sql",
+      "bytes": 224,
+      "sha256": "7c5dcac05f7a8020985e2267af40fc62a64acce81bea9aebe1a05426afacbccc"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260520213451_v1_0_111.sql",
+      "bytes": 332,
+      "sha256": "54913c7ec372825661cab097038e35660831e7f5c7eda524ef580675ea09acf4"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260521213214_v1_0_112.sql",
+      "bytes": 279,
+      "sha256": "34c9f05ac76943829412cd0cf33be1325072a9407ef8ce61f42cc72c884ad846"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260522014401_v1_0_113.sql",
+      "bytes": 1292,
+      "sha256": "184928f48b1d55ef80d8d63e1094eda4e293ca145bb4aa278d413bc86295a2e1"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260529131949_v1_0_114.sql",
+      "bytes": 1543,
+      "sha256": "093120ef57d5ea25ea18e6f900b8b9e71dc5ff866084ddceb6272632d518c15f"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260529140000_v1_0_115.sql",
+      "bytes": 203,
+      "sha256": "2f332471f97127c145a7755cc83143acc34495175df3b5edc7042a935d36d627"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260611203244_v1_0_117.sql",
+      "bytes": 399,
+      "sha256": "bf1757b67dfc0632b465329b858434b71cdb3e3c12410a3e5c3c9a16cebb5201"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260616000000_v1_0_118.sql",
+      "bytes": 493,
+      "sha256": "0a9b7cab7676bae25abb6ebb8cb31df2a858fa42150bb30a4bb38633fab8963f"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260616120000_v1_0_119.sql",
+      "bytes": 3369,
+      "sha256": "7c26f4f5ba6cea7abf0a614d79a958370f67b812f65800e738f497dbd2507f50"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260619000000_v1_0_120.sql",
+      "bytes": 2440,
+      "sha256": "370f86e5a441c7666ffb7899d6bc427cfc4e417f06636826700af530a8594f05"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260701180304_v1_0_121.sql",
+      "bytes": 314,
+      "sha256": "0e7db8eeef7440cd3e4471714b90627aa69482b0ba642edee1c024870527f712"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260701211847_v1_0_122.sql",
+      "bytes": 1350,
+      "sha256": "39f3a0753f62ac815bc04a95feb503268b4c9f770cb16e0496d905aac3e0ef1a"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260702145450_v1_0_123.sql",
+      "bytes": 5316,
+      "sha256": "87a9c1fb67c5c120dc8c3ca67aef38ca5b298216e9215c98e35e7f1d4f32b080"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260703125435_v1_0_124.sql",
+      "bytes": 5117,
+      "sha256": "53ddfe153e77c883bd596536203f29c813a2240889c225ef10c3ccbe8385eb77"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260707141853_v1_0_125.sql",
+      "bytes": 268,
+      "sha256": "d77d236bd5935f9749e469de7e3aa78980ceb6bc33675db27ab0eaa626575007"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260713150000_v1_0_126.sql",
+      "bytes": 341,
+      "sha256": "e39e8398a7dc3623a5dba535131de12ae00066542ca65a400173514ca9d5c8c5"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260713150001_v1_0_127.sql",
+      "bytes": 1568,
+      "sha256": "a0e5397e5d488985006023adcb079075b88904b01c2dd902d98c9c2e4a900d1b"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260714120000_v1_0_128.sql",
+      "bytes": 1788,
+      "sha256": "5fff3650e62caca36956599c66624c93e656412227ee2b8bc86dad58b1043280"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260715180517_v1_0_129.sql",
+      "bytes": 5819,
+      "sha256": "672510cc13b05e8985f1ab8c20e582168ae2dd7b8656842947417ef2d2fa0fc5"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260717150345_v1_0_131.sql",
+      "bytes": 750,
+      "sha256": "c7003a78b4c19582e8e2ebff810169053fcd4330857fa7e41fd42f5aaf7c035e"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260719000944_v1_0_132.sql",
+      "bytes": 358,
+      "sha256": "7bfc76359a743929dd5098518855bbdb115db8e61ead4a145a947bc7656db156"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260722000000_batching_consolidated_v1_0_133.sql",
+      "bytes": 41808,
+      "sha256": "5f9dc53cc4cacb7e64deea347ee077775024c5601e56a3cf3e8bf255abd17972"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260722000001_batch_id_idx_concurrent_v1_0_134.sql",
+      "bytes": 292,
+      "sha256": "c9ef7072140a46ec8d4e81abff662650a05506cc7e8840974a9fbf8a10ca2b13"
+    },
+    {
+      "path": "corpus/hatchet/cmd/hatchet-migrate/migrate/migrations/20260724000000_batch_priority_idx_concurrent_v1_0_135.sql",
+      "bytes": 318,
+      "sha256": "9a00f7e31b314f715320ea2f2da46c8dadcf9cab4f861a63974c7dd98fd0c088"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/api_token.sql",
+      "bytes": 960,
+      "sha256": "41d9e8a20a0622d986cfecc73eadab1ec1dfd84b2aa2dda8d12603a35ded1fc5"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/api_token.sql.go",
+      "bytes": 3517,
+      "sha256": "3f9233cc3c3cdae8dbb090aafb50a097fb9395b75a7a06a0aa87a83a4f6f111f"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/concurrency-additional-tables.sql",
+      "bytes": 198,
+      "sha256": "fedaff4fb95028825ba4e5549bbe3b92c08fe5fe0208a99579a9492f8ccb131a"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/concurrency.sql",
+      "bytes": 22995,
+      "sha256": "767df192a889bd45abacd9af84baa56234b35567f14b660f7d82ee5deee8d23b"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/concurrency.sql.go",
+      "bytes": 47494,
+      "sha256": "dad852e657adc4159102be2c635ef2be24b2dcc26e28e903df645dd72e7b2bbe"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/dags.sql",
+      "bytes": 1595,
+      "sha256": "0a292df0960293e8c1965e545ec8dbf2484b85ae6410d0ac7e61aeab04976c29"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/dags.sql.go",
+      "bytes": 4494,
+      "sha256": "17a75749fe8c66eb8001d5fafff387493bedd33fcac374765c8c071778da3373"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/dispatcher.sql",
+      "bytes": 1291,
+      "sha256": "2fdb250a9de33f6512a0854e2bb9636515034bd4a1cc038fd2a348ded1ea212f"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/dispatcher.sql.go",
+      "bytes": 6324,
+      "sha256": "1d638d0e3141ce6e731d9a87a695dda1dafdd3bd43eec161e995b692bca7e57f"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/durable_event_log.sql",
+      "bytes": 9676,
+      "sha256": "7620105f9bc9b9465ddeeb80a7cb3297f6231e2278426dd482609e388ae9ba6b"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/durable_event_log.sql.go",
+      "bytes": 39931,
+      "sha256": "61e86d0ae7c1aa390bcdb435534a1a422eb7311fa4f0b906a68aac2419f3be90"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/filters.sql",
+      "bytes": 3362,
+      "sha256": "d9c54dbb23554ac45028996525e947d24e59171aae936d37567cfd32f25e13a3"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/filters.sql.go",
+      "bytes": 10691,
+      "sha256": "80580a1ef9a0fa6939d5f92ed2aba10590e146585a32a936b099a6a3fa5ef498"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/health.sql",
+      "bytes": 53,
+      "sha256": "2f1b95095881dd718b39200860859e57440b7419563d339c6ae923c8bd85aafa"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/health.sql.go",
+      "bytes": 637,
+      "sha256": "b122c20e4f0f9cc093e536759363ea9108d4bde684bbcbdbe3b19956262c8ade"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/idempotency-keys.sql",
+      "bytes": 3294,
+      "sha256": "c440a30e0f2d392b55481c7a779da3cf8ac42031c09baf7e05845cf24d48f72a"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/idempotency-keys.sql.go",
+      "bytes": 5816,
+      "sha256": "0470af1959737b024d214c66b57abca67826c791267882508d3f8753d66ed086"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/interval_settings.sql",
+      "bytes": 660,
+      "sha256": "9e0ebfa4a954e2865c60e1f57a03952abe0d06cf1aea1c82c8adac4b0e1b1977"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/interval_settings.sql.go",
+      "bytes": 2558,
+      "sha256": "98b5e1c357434688e7b90b4ce81036dcc15a42c0929030f801e238e0185343af"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/lease.sql",
+      "bytes": 1731,
+      "sha256": "a0ace19e3e0f26a0b1f4c904b135e364ec7d7b130f6cbdaae7284fcad80cb7bf"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/lease.sql.go",
+      "bytes": 4641,
+      "sha256": "0ac0759d31188b600119e59fe310a3b10801cdfeb4d7ebc50dc6336a1a570fcd"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/log_line.sql",
+      "bytes": 2638,
+      "sha256": "b71a1482ddccc8cde0bcda3cd2ddd4eaa44ab2e58ab846357ba49a3bddb93b31"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/log_line.sql.go",
+      "bytes": 5755,
+      "sha256": "409e47e6ba4a8934677362c255721698d9e5771aa2c82970f48f53f4be8d52f8"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/matches.sql",
+      "bytes": 8203,
+      "sha256": "e50c53c17265836a2eb8549d3114ab4fa4f7579787fba701af6e83a5a5a8d5c8"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/matches.sql.go",
+      "bytes": 16898,
+      "sha256": "d45a60e39b2e20e675e360c19ec55fb8b24b56c23cd6044ad910311bf62802d6"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/mq.sql",
+      "bytes": 2592,
+      "sha256": "1b0dcd3c8802d3de892e988809c7a79e83a9b2a97879ef98b967d1025452e3c0"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/mq.sql.go",
+      "bytes": 6398,
+      "sha256": "292313fc68bec18c2a60e2bee4f27a36db89312e3593a197c11193cad5618ebf"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/olap.sql",
+      "bytes": 76260,
+      "sha256": "360a73cb36f32a3683e4d69edc11eb38aa3d0e739a3f4f85dd00b27ce28a3169"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/olap.sql.go",
+      "bytes": 144026,
+      "sha256": "d56cb6c0c3f3cc4ef80e3e7a42eac91383a9ca630de96cb1833003536c38771f"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/otel.sql",
+      "bytes": 3618,
+      "sha256": "7f0895d9fe7dc4baf04de949a8471673de1f197efd974497cb2b1eee70741f11"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/otel.sql.go",
+      "bytes": 7765,
+      "sha256": "d082dacc0be08c16a2538f864831961e763cfe78bea3df0391b108b114211992"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/payload-store.sql",
+      "bytes": 6122,
+      "sha256": "45a7f31d909b4d080f5971612a82a9f3d428cdd4abfd328dfb7112be5c95b335"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/payload-store.sql.go",
+      "bytes": 15023,
+      "sha256": "f324f582ead9ab7d106d318247b03728fb38e18eef984878f082f09e2e9b85cf"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/pg_health.sql",
+      "bytes": 2802,
+      "sha256": "9ef434ca407180e6041b1bc5056cc8715bed698d07e646d53467930b642889d2"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/pg_health.sql.go",
+      "bytes": 8138,
+      "sha256": "f8944df0d4b2ba7129aca99c3aa751b1e601169523e98b2f6402213af379b146"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/queue.sql",
+      "bytes": 22048,
+      "sha256": "aa43e6bde398da9340f997252e02bd0c80e56983523b5b620e439b5a639dc1f1"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/queue.sql.go",
+      "bytes": 45214,
+      "sha256": "e81fec4f73a64aa63ec3ec2e4463330cf4e55884b7d03b192167777d6e0722eb"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/rate_limits.sql",
+      "bytes": 5805,
+      "sha256": "6236d263e20a3700eb42c344bbbfd3b8027895cc65cf465b62e2bc4319b7a7fe"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/rate_limits.sql.go",
+      "bytes": 12059,
+      "sha256": "c407561fc8ea8c131eb6a9447bd082859974c3f775eb7f268900c645db6819f7"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/security_check.sql",
+      "bytes": 81,
+      "sha256": "7ce7451e8a8e07bbb66d493807485ce39854701053b64e6d3d9a602a6759ae95"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/security_check.sql.go",
+      "bytes": 479,
+      "sha256": "785142e8c01066d20109922f1ce3c5bf640a0f3261f05ce8e57a1f3f2ebe02ca"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/slack.sql",
+      "bytes": 1003,
+      "sha256": "4145a6b0fe6e58b361556b4e1e734b63a92f97a80d572657924fc2e41a80a238"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/slack.sql.go",
+      "bytes": 3628,
+      "sha256": "3afaf92437b389124fb60373bdf6ea94b39d055538094a19fe734b2e84a48443"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/sleep.sql",
+      "bytes": 858,
+      "sha256": "792af543d77e4f5fe1264e36189d314f7c6a108d37e31c5fb2b11125a5a14c94"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/sleep.sql.go",
+      "bytes": 2572,
+      "sha256": "6047da6602c9897a13dfd5f8734f1d7c317e4b08b978ccaa08c934b159c1604b"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/sns.sql",
+      "bytes": 748,
+      "sha256": "61e30cd7eb44bf01a65b3badeb8a2219c42f32bd6d908e2641df07331c2e47dd"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/sns.sql.go",
+      "bytes": 3274,
+      "sha256": "07a503cb260413b7b1c6cd849ccefbd75861c804aaf0df76b02b93953346ec15"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/sqlc.yaml",
+      "bytes": 2000,
+      "sha256": "7ae52c9398c3e5941dd8cde0e3b712f696bcb442ada5b4f19675de12a004394e"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/sync.sql",
+      "bytes": 4431,
+      "sha256": "f133400f0c475e86421dabe125945fda51e01015993e0bdee5f7ade1ca8c3634"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/sync.sql.go",
+      "bytes": 13315,
+      "sha256": "d8af8e027f51736b954c2ce5df73ef39b20f7ffd4973e5af4e65432102203c40"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/tasks.sql",
+      "bytes": 43829,
+      "sha256": "588735744710bda4c2d798e4b4d6312b69c7860961c3420e1d9eb0f573ac28c1"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/tasks.sql.go",
+      "bytes": 89251,
+      "sha256": "70b21d8478b5feee8178b6775c437a1d30e2e2aefed55e24c383e9c6320a252a"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/tenant_entitlements.sql",
+      "bytes": 822,
+      "sha256": "cfc3ca96c53ae6a9d57c34053ef02681323e026b83d4c2f09c379d76cb59ca02"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/tenant_entitlements.sql.go",
+      "bytes": 2641,
+      "sha256": "b0060faa1dc351e9e6e6c3d7592a73a3d62c11e41ca8df18fd0130f58310acff"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/tenant_invites.sql",
+      "bytes": 1947,
+      "sha256": "e60ed61e2369bcd714aab95bff1ea6eb9f31d5c20b5a2c482dab73bc6be5e5ca"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/tenant_invites.sql.go",
+      "bytes": 7429,
+      "sha256": "1760da924b6c5637c5c27de484c36f877c68796d9fc9b46502eb4568dbe68f45"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/tenant_limits.sql",
+      "bytes": 4488,
+      "sha256": "44aafb4e2d26ff13028dd54103a1c15d2b80f86455b8bce464b94138d1645fec"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/tenant_limits.sql.go",
+      "bytes": 11693,
+      "sha256": "e29528dc98d6dd321f826c9bb8cc384d58d30b2b6956f03ca8edbdf1ee15b1ce"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/tenants.sql",
+      "bytes": 18616,
+      "sha256": "be97fe2b3d76f7c6113687d6708f00cb648cb7330b040222d8db56f6f51a96ec"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/tenants.sql.go",
+      "bytes": 48714,
+      "sha256": "00323dee36667a5877951b2b96d432759ec7657ecad7f1a1bb37dcdcb4872149"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/ticker.sql",
+      "bytes": 11120,
+      "sha256": "1ca06f485bedd4099928b5867ad0a4cf549bbb103bd09714c6f22a8e1a0157fa"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/ticker.sql.go",
+      "bytes": 24654,
+      "sha256": "a55fd22f692d2d43b458c6a383354ca7c8d97adf04c67fda247096f297ec2e6e"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/triggers.sql",
+      "bytes": 1991,
+      "sha256": "5ba7a6cb1a242358cfd08a3eb69b1e79d460213503965e181c5cddff31222039"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/triggers.sql.go",
+      "bytes": 4815,
+      "sha256": "ed2f0f96a5c863c97bcb68299c2886f731c971d4594b098084666555df82348d"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/users.sql",
+      "bytes": 3378,
+      "sha256": "c9001dd926ee86ea485d4841ebd8ef5b05d828d82d364ea7a2361c3e2ca0fd4a"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/users.sql.go",
+      "bytes": 11080,
+      "sha256": "09c1166343e8d8b165dcbafdd54d4d1b769fbb598b8e68180682716e1fdf0b5f"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/webhooks.sql",
+      "bytes": 2699,
+      "sha256": "690a9e7f4f9fa8cc4468283768527027af0b7ab97ce6f4a791e9d69460defdc2"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/webhooks.sql.go",
+      "bytes": 11334,
+      "sha256": "92fb0118f61620780e92f91b07859c65cf347ea8b8ccda724bc0cb8464caa6bd"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/workers.sql",
+      "bytes": 17783,
+      "sha256": "5f95c8fc77499aa9a633fdebd4b84bc8dfb4bf10857cf92252fe95ff805f22fe"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/workers.sql.go",
+      "bytes": 53996,
+      "sha256": "175ce6dc8f833df355d643756fc9ca8258aec4b3cf2c008e138ad63826eaca31"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/workflow_schedules.sql",
+      "bytes": 8978,
+      "sha256": "1cfa31155de3363fecd65e8dac42e10ff07e1b8e9be1a4d2b7522010e74b60e9"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/workflow_schedules.sql.go",
+      "bytes": 21795,
+      "sha256": "2247c7a0ac2f528e1929c780e65ca831d9b1f4c081d71669d497ca25fe5f5620"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/workflows.sql",
+      "bytes": 23412,
+      "sha256": "3f642e76504c7a264b5c64cc875f1e85d29854b9d6137ef4284885684dc845c1"
+    },
+    {
+      "path": "corpus/hatchet/pkg/repository/sqlcv1/workflows.sql.go",
+      "bytes": 67863,
+      "sha256": "94646a873c3e011f504a7b64001008b2f161608c7c76030645b7dd5d6ea7e7f3"
+    },
+    {
+      "path": "corpus/hatchet/sql/schema/pg-stubs.sql",
+      "bytes": 3120,
+      "sha256": "2237ab343ee0bc688e059e6004bd8f55fb2fc99a4301d79b91de76ef3c7a2a2d"
+    },
+    {
+      "path": "corpus/hatchet/sql/schema/v0.sql",
+      "bytes": 65225,
+      "sha256": "134950caa9f1e12d3143b6857002323809a376841ab3def7fadce3941a64b3ee"
+    },
+    {
+      "path": "corpus/hatchet/sql/schema/v1-core.sql",
+      "bytes": 90280,
+      "sha256": "cc45a6de6d56ae7eeea4995d238f734ef6ac344f224784f8fc0b5210283d2c38"
+    },
+    {
+      "path": "corpus/hatchet/sql/schema/v1-olap.sql",
+      "bytes": 45131,
+      "sha256": "a7866f30798c8f69d7411ee752c4eaf5e294ab52e32a1983f5bf28000dcb5765"
+    },
+    {
+      "path": "corpus/monitor/ntpdb/query.sql.go",
+      "bytes": 30823,
+      "sha256": "638bc0254b7237de8472eabd56eb6070c6947e1e8dd2c7199142556efd67d020"
+    },
+    {
+      "path": "corpus/monitor/query.sql",
+      "bytes": 8209,
+      "sha256": "372c6852573688cc633d0d7ecb1b233f37067172af3cc2487dba7b0dc5a35028"
+    },
+    {
+      "path": "corpus/monitor/schema.sql",
+      "bytes": 36563,
+      "sha256": "a412f7979753558d9e6b4637fcd80bba16eefa8cca6162fdf3c9f333ca999e72"
+    },
+    {
+      "path": "corpus/monitor/sqlc.yaml",
+      "bytes": 733,
+      "sha256": "84ab724943b70c77f104de34b60b1a1224e3df9a98cd9b9a23d19d7a62877302"
+    },
+    {
+      "path": "corpus-files.json",
+      "bytes": 114960,
+      "sha256": "c13b497c18ebb29b59b55d82c34b6bb35a939b3769fa7e681c034c79c3e33120"
+    },
+    {
+      "path": "fixtures/controls/mysql-ambiguous-roots.sql",
+      "bytes": 22,
+      "sha256": "1694cf56ac7bdbc6f9f27a7c53a52086c74120ee54c1a2245d92010919a19a3d"
+    },
+    {
+      "path": "fixtures/controls/mysql-case-distinction.sql",
+      "bytes": 70,
+      "sha256": "a07ccf18c7fa09d3c294698d3f2033810ae4fc1d3e9364058e5b6c9fcea5ec38"
+    },
+    {
+      "path": "fixtures/controls/mysql-cte-select.sql",
+      "bytes": 79,
+      "sha256": "4ef22349391bb721676a0e2ba5411a525911f3c5c38572d45a800e26c8c7fb38"
+    },
+    {
+      "path": "fixtures/controls/mysql-delimiter-procedure.sql",
+      "bytes": 98,
+      "sha256": "5b9570da21ad2b8b0070d27688bab9ca62a82b607de4a845238b39041f370187"
+    },
+    {
+      "path": "fixtures/controls/mysql-dialect-missing.sql",
+      "bytes": 38,
+      "sha256": "f49f4f7278a6b1a4e1ff205940cdd047aadc4e748adb52f1dbf05b499f2bd7f6"
+    },
+    {
+      "path": "fixtures/controls/mysql-dump-copy-data.sql",
+      "bytes": 86,
+      "sha256": "00bd4832c980ea9a64536211e6d93cd3df11448bb1956c75fdad3c899928f47a"
+    },
+    {
+      "path": "fixtures/controls/mysql-dump-insert-data.sql",
+      "bytes": 126,
+      "sha256": "36f2766c9f219880cb6e3def1f4d5f847202fa561ad97b02985040a11be10503"
+    },
+    {
+      "path": "fixtures/controls/mysql-dump-load-data.sql",
+      "bytes": 108,
+      "sha256": "d91f3547991dcf79e818c9c2de2fb998bd52c57ada8e6c20cde3500f3aae58d6"
+    },
+    {
+      "path": "fixtures/controls/mysql-dump-replace-data.sql",
+      "bytes": 89,
+      "sha256": "9356ac2c8b0d813a534178cf6d877c9a75cd51abe4e855fd0607522bc2b9b182"
+    },
+    {
+      "path": "fixtures/controls/mysql-dynamic-identifier.sql",
+      "bytes": 24,
+      "sha256": "bb308eb0d51d7d24a2e779378d1206caf3938d16a7ccbb75e4e638f5cbd2c672"
+    },
+    {
+      "path": "fixtures/controls/mysql-generated-duplicate.sql",
+      "bytes": 74,
+      "sha256": "07623fe94d6ecdaad537da83482173ff4f8270b8d933f81e4919ba0db546f4fb"
+    },
+    {
+      "path": "fixtures/controls/mysql-input-byte-limit.sql",
+      "bytes": 262145,
+      "sha256": "3f291140ab64c9766e11501e4d1906bd7b6d130f506c129c6460396266d025a0"
+    },
+    {
+      "path": "fixtures/controls/mysql-insert-select.sql",
+      "bytes": 40,
+      "sha256": "737cc74e4b66b428cb863f3996fa6ddc2aee6f3d92edf3efeba5171e8cbee909"
+    },
+    {
+      "path": "fixtures/controls/mysql-invalid-utf8.bin",
+      "bytes": 27,
+      "sha256": "0c4e2dc6f5c5aae222a6bc21bc4e012a275ba586c68d0a8e21f61d8e57046643"
+    },
+    {
+      "path": "fixtures/controls/mysql-malformed-string.sql",
+      "bytes": 59,
+      "sha256": "caf4de01b4a2ad44790a72cd45f00d81cf0d08f4ee915a2576b86c432cb3b86b"
+    },
+    {
+      "path": "fixtures/controls/mysql-metadata-conflict.sql",
+      "bytes": 93,
+      "sha256": "ada1a9d9dc2603bd709ce93d653c3963075913f6faf308aa3f90d08bc310f445"
+    },
+    {
+      "path": "fixtures/controls/mysql-missing-parser-position.sql",
+      "bytes": 22,
+      "sha256": "1694cf56ac7bdbc6f9f27a7c53a52086c74120ee54c1a2245d92010919a19a3d"
+    },
+    {
+      "path": "fixtures/controls/mysql-missing-schema.sql",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "fixtures/controls/mysql-multi-table-delete.sql",
+      "bytes": 50,
+      "sha256": "2ff3ae969dd0bc87acc02dd8c2fc347a7f75be76458898483e7a14d1c56db4dc"
+    },
+    {
+      "path": "fixtures/controls/mysql-name-only.sql",
+      "bytes": 22,
+      "sha256": "1694cf56ac7bdbc6f9f27a7c53a52086c74120ee54c1a2245d92010919a19a3d"
+    },
+    {
+      "path": "fixtures/controls/mysql-nonascii-exact-name.sql",
+      "bytes": 41,
+      "sha256": "6e5e545726e3aed5e2073e99a51197823b260322bac764ebeffe8ef92d4e52a4"
+    },
+    {
+      "path": "fixtures/controls/mysql-on-duplicate-update.sql",
+      "bytes": 73,
+      "sha256": "201577e91ef1f506f61f7f49d87d34b0a1f983f8956070fad50b2aab2625ca62"
+    },
+    {
+      "path": "fixtures/controls/mysql-ordered-distinct-fks.sql",
+      "bytes": 278,
+      "sha256": "0193b1996e5c9a7ba42375eae33803cf7df372be508825637d96f3f679ff2421"
+    },
+    {
+      "path": "fixtures/controls/mysql-prefix-generated-column.sql",
+      "bytes": 181,
+      "sha256": "e11fa08e72eb7f140647332e737a1fa942124da5c4de8d24c6a001bce167557d"
+    },
+    {
+      "path": "fixtures/controls/mysql-quoted-data-words.sql",
+      "bytes": 170,
+      "sha256": "17ac1a2e0aac7de3a61b840cb00bc9a1ee35ad141e03cb8839f57a6f6127ab73"
+    },
+    {
+      "path": "fixtures/controls/mysql-simple-table.sql",
+      "bytes": 58,
+      "sha256": "f9331dd173224653358d35c1d05cd64349d3f6652a7032fc54a07b42c7a5577f"
+    },
+    {
+      "path": "fixtures/controls/mysql-unknown-declaration.sql",
+      "bytes": 22,
+      "sha256": "27ffbc29120e7c7510ed7e59a9f80075a0725292ab2468684fd7666dca4dae46"
+    },
+    {
+      "path": "fixtures/controls/mysql-unsupported-statement.sql",
+      "bytes": 40,
+      "sha256": "915d1a9a7a71cf5257cf6c385148730445ce1c58f1140154179e8bd3c2e4a828"
+    },
+    {
+      "path": "fixtures/controls/mysql-update-subquery.sql",
+      "bytes": 47,
+      "sha256": "8b8d13568af2793f1bb8c47a0c56324c4a8f2ee19cd1b237a717d0b611bbd95b"
+    },
+    {
+      "path": "fixtures/controls/mysql-versioned-data-section.sql",
+      "bytes": 77,
+      "sha256": "df87283afb80b0bca71cf657af78375fc06b761cec3233a43bb4761b8b0edf44"
+    },
+    {
+      "path": "fixtures/controls/postgresql-ambiguous-roots.sql",
+      "bytes": 22,
+      "sha256": "1694cf56ac7bdbc6f9f27a7c53a52086c74120ee54c1a2245d92010919a19a3d"
+    },
+    {
+      "path": "fixtures/controls/postgresql-case-distinction.sql",
+      "bytes": 70,
+      "sha256": "927d139e7a7e124156a92d0c401ae901d0c205f99f7847608e43217f55d87b6c"
+    },
+    {
+      "path": "fixtures/controls/postgresql-cte-select.sql",
+      "bytes": 79,
+      "sha256": "4ef22349391bb721676a0e2ba5411a525911f3c5c38572d45a800e26c8c7fb38"
+    },
+    {
+      "path": "fixtures/controls/postgresql-delete-using.sql",
+      "bytes": 59,
+      "sha256": "ff272310f30be4b3bfe684a85b6c4ee81d2bfddffa84eeb56ee9ce784acdfe8b"
+    },
+    {
+      "path": "fixtures/controls/postgresql-dialect-missing.sql",
+      "bytes": 38,
+      "sha256": "24d0640b9400b4f2cc83bd191132babbdfe686e4c1b8d2e27388e816aef0550a"
+    },
+    {
+      "path": "fixtures/controls/postgresql-dump-copy-data.sql",
+      "bytes": 130,
+      "sha256": "edaa81cd06a8c457ccf3832189b3645888ea112e57401c33580b36020dbc7c17"
+    },
+    {
+      "path": "fixtures/controls/postgresql-dump-insert-data.sql",
+      "bytes": 170,
+      "sha256": "4d5490fd9ff5140ea6d298b3b277194350278ee02f65548b6726cda166a2231a"
+    },
+    {
+      "path": "fixtures/controls/postgresql-dump-load-data.sql",
+      "bytes": 152,
+      "sha256": "0b321bd707dcd36fc65feba60d4de0fc8b5624d8c20410d45e3e1adc2f3b0bfb"
+    },
+    {
+      "path": "fixtures/controls/postgresql-dump-replace-data.sql",
+      "bytes": 133,
+      "sha256": "469ef817c45a425648560e543aebe6dd6f00c64f1abd4a9514353184bea803b6"
+    },
+    {
+      "path": "fixtures/controls/postgresql-dump-restrict-wrapper.sql",
+      "bytes": 177,
+      "sha256": "8d08b7d00a5b43dfd3f939aac130ac5b4aa825189d6c4359c2c6106a7f397422"
+    },
+    {
+      "path": "fixtures/controls/postgresql-dynamic-identifier.sql",
+      "bytes": 24,
+      "sha256": "bb308eb0d51d7d24a2e779378d1206caf3938d16a7ccbb75e4e638f5cbd2c672"
+    },
+    {
+      "path": "fixtures/controls/postgresql-generated-duplicate.sql",
+      "bytes": 74,
+      "sha256": "07623fe94d6ecdaad537da83482173ff4f8270b8d933f81e4919ba0db546f4fb"
+    },
+    {
+      "path": "fixtures/controls/postgresql-input-byte-limit.sql",
+      "bytes": 262145,
+      "sha256": "3f291140ab64c9766e11501e4d1906bd7b6d130f506c129c6460396266d025a0"
+    },
+    {
+      "path": "fixtures/controls/postgresql-insert-select.sql",
+      "bytes": 40,
+      "sha256": "737cc74e4b66b428cb863f3996fa6ddc2aee6f3d92edf3efeba5171e8cbee909"
+    },
+    {
+      "path": "fixtures/controls/postgresql-invalid-utf8.bin",
+      "bytes": 27,
+      "sha256": "0c4e2dc6f5c5aae222a6bc21bc4e012a275ba586c68d0a8e21f61d8e57046643"
+    },
+    {
+      "path": "fixtures/controls/postgresql-malformed-string.sql",
+      "bytes": 59,
+      "sha256": "7298f238563d06adac4b9cba76bf13d6b5c3d31adf1dfcc32c9bbbc1bbe11e13"
+    },
+    {
+      "path": "fixtures/controls/postgresql-metadata-conflict.sql",
+      "bytes": 137,
+      "sha256": "6127e011f166c3e721a81405e756c4c244ee8cd82f5e30e0863a2d5e39587c5f"
+    },
+    {
+      "path": "fixtures/controls/postgresql-missing-parser-position.sql",
+      "bytes": 22,
+      "sha256": "1694cf56ac7bdbc6f9f27a7c53a52086c74120ee54c1a2245d92010919a19a3d"
+    },
+    {
+      "path": "fixtures/controls/postgresql-missing-schema.sql",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "fixtures/controls/postgresql-name-only.sql",
+      "bytes": 22,
+      "sha256": "1694cf56ac7bdbc6f9f27a7c53a52086c74120ee54c1a2245d92010919a19a3d"
+    },
+    {
+      "path": "fixtures/controls/postgresql-nonascii-exact-name.sql",
+      "bytes": 41,
+      "sha256": "9d6056f8f16d7af9a0221c4fc98556313f1db779076bac0b3e74085a40c838a0"
+    },
+    {
+      "path": "fixtures/controls/postgresql-on-conflict-update.sql",
+      "bytes": 81,
+      "sha256": "a9f2cc69bb6984c58ba6b2721aa8211074a76e3458398cd18b21614179b8b21a"
+    },
+    {
+      "path": "fixtures/controls/postgresql-ordered-distinct-fks.sql",
+      "bytes": 278,
+      "sha256": "340c1b5219f24da4e834d8eef3276014b2e0a9413cd80f4ed05d710d8cbde94d"
+    },
+    {
+      "path": "fixtures/controls/postgresql-procedural-dollar-quote.sql",
+      "bytes": 72,
+      "sha256": "2fc7e2639b70ad72b9e586579547205417de98c7eef10cd5b584bf777d30e6db"
+    },
+    {
+      "path": "fixtures/controls/postgresql-quoted-data-words.sql",
+      "bytes": 214,
+      "sha256": "cd565d690fdb0b68097c071fe57bc3733ac85f763af57bf98d2cd81c220cbbd2"
+    },
+    {
+      "path": "fixtures/controls/postgresql-simple-table.sql",
+      "bytes": 58,
+      "sha256": "1b2d507b1a036b3ff7a5c841ffb55bb491be7a33264c30adde52744870875ff1"
+    },
+    {
+      "path": "fixtures/controls/postgresql-unknown-declaration.sql",
+      "bytes": 22,
+      "sha256": "27ffbc29120e7c7510ed7e59a9f80075a0725292ab2468684fd7666dca4dae46"
+    },
+    {
+      "path": "fixtures/controls/postgresql-unquoted-ascii-fold.sql",
+      "bytes": 31,
+      "sha256": "981f0843aa34ccda497573bb379469d8ee75cd8e9a703faa66c5d51a2ddfe5f7"
+    },
+    {
+      "path": "fixtures/controls/postgresql-unsupported-statement.sql",
+      "bytes": 40,
+      "sha256": "915d1a9a7a71cf5257cf6c385148730445ce1c58f1140154179e8bd3c2e4a828"
+    },
+    {
+      "path": "fixtures/controls/postgresql-update-subquery.sql",
+      "bytes": 47,
+      "sha256": "8b8d13568af2793f1bb8c47a0c56324c4a8f2ee19cd1b237a717d0b611bbd95b"
+    },
+    {
+      "path": "fixtures/generate-pg18-container.sh",
+      "bytes": 2672,
+      "sha256": "771558db0a173f378f12fb6a7c212960cb098518684931a104c3ebd3e85534a3"
+    },
+    {
+      "path": "fixtures/requested-pg-input.sql",
+      "bytes": 658,
+      "sha256": "dd7153ba4733be4d24b26993f8762d98d05d8754691194c41266f824c2253273"
+    },
+    {
+      "path": "fixtures/requested-pg18.6-dump.sql",
+      "bytes": 1311,
+      "sha256": "712e9380d8b580971cc891b5cfbf3f2b0817b84782e3d67df3118a9877e0d2b2"
+    },
+    {
+      "path": "generate_pg_dump.py",
+      "bytes": 11614,
+      "sha256": "d754a91c7008533a6578cec7d754c6933d73a55ae660874ee98878763ad9f949"
+    },
+    {
+      "path": "inventory/hatchet.json",
+      "bytes": 48615,
+      "sha256": "2c8520ce45f30ce8b08ec9419b92a5521c40a39af0e3f8fdf75c9c1114af32c0"
+    },
+    {
+      "path": "inventory/monitor.json",
+      "bytes": 727,
+      "sha256": "e4cecffc2dfd0d9da5066dced4df62599c9ed661b1e2ef6fb26d9f21cba97f8f"
+    },
+    {
+      "path": "labels/generated-pg-dump.json",
+      "bytes": 10326,
+      "sha256": "fd0cb9ae9c1bb6bf1add843d78f718ff4382f5d0f1b29c30a47cb4f21a7d508f"
+    },
+    {
+      "path": "labels/hatchet-additional-tables.json",
+      "bytes": 1337,
+      "sha256": "1c8d48349ca9802861468ce4ef0deb790e0100e09ffd3281d0ee13f23ccc0454"
+    },
+    {
+      "path": "labels/hatchet-migration-20240331162333_v0_18_1.json",
+      "bytes": 3456,
+      "sha256": "b68646c0566132906e9e88db5b65a6e68a1a86342aaf72aba3ac57dd130ecbba"
+    },
+    {
+      "path": "labels/hatchet-migration-20240606145243_v0_31_0.json",
+      "bytes": 7752,
+      "sha256": "9a8b6f0869d8b634099595167a5a86948779137f176298db906b1cdd45d36f0f"
+    },
+    {
+      "path": "labels/hatchet-migration-20250509123031_v1_0_18.json",
+      "bytes": 2517,
+      "sha256": "6828e76275efd9930c97a730db6b177933dfe38de427286a9e27a35d5c1627d1"
+    },
+    {
+      "path": "labels/hatchet-migration-20251216190909_v1_0_61.json",
+      "bytes": 11704,
+      "sha256": "248499f08a129da0250900ea49c619bae1da4a2ec8abbb39e32004d8a6ee9731"
+    },
+    {
+      "path": "labels/hatchet-migration-20260316185928_v1_0_90.json",
+      "bytes": 11937,
+      "sha256": "a798b8f7ce395739b2ef50b7ab98db5222307e92372b17e928292a701882b461"
+    },
+    {
+      "path": "labels/hatchet-migration-20260707141853_v1_0_125.json",
+      "bytes": 2557,
+      "sha256": "4396b0130d62d53c725fe3d9d4ef951b7c6024d0db6308819ab8b0b522725834"
+    },
+    {
+      "path": "labels/hatchet-pg-stubs.json",
+      "bytes": 31224,
+      "sha256": "01f1c94c99a944784473681ce3c87c9554a0666dbb06055b5c6d8d0506d1e738"
+    },
+    {
+      "path": "labels/hatchet-query-interval_settings.json",
+      "bytes": 3587,
+      "sha256": "bcdcdd69907a40d77924b883b285d683bd8bcbfe4c44c6e34eb143686f921d86"
+    },
+    {
+      "path": "labels/hatchet-query-pg_health.json",
+      "bytes": 6362,
+      "sha256": "027ab9b4f8ec49afe48e92d2f19e1cf265004068bae658df4f163c5c998ee50a"
+    },
+    {
+      "path": "labels/hatchet-query-sleep.json",
+      "bytes": 2904,
+      "sha256": "f743f24e37be4df78384427bf2fa964e662a7f2cb3949b6e70f8c1b9731d7ed6"
+    },
+    {
+      "path": "labels/hatchet-query-sync.json",
+      "bytes": 10053,
+      "sha256": "603973bf7a4ab54b072f6ad6b614c6a769a9fd1cefeb702caafd608eec13a0a5"
+    },
+    {
+      "path": "labels/hatchet-query-ticker.json",
+      "bytes": 21640,
+      "sha256": "cc367b8f0a5313622a79f98e899fc221bce69914b0390f4b98f93edd409d5d6a"
+    },
+    {
+      "path": "labels/hatchet-query-workflow_schedules.json",
+      "bytes": 20112,
+      "sha256": "ab7fd1fe70d5311478b0b56c5c009bc501c816b4d87b6b0f3840f4085d6422eb"
+    },
+    {
+      "path": "labels/hatchet-v0.json",
+      "bytes": 437573,
+      "sha256": "7d137a6036890b734b74c3bdbaf037947d8d724ff19d1c64cf76a921a4743554"
+    },
+    {
+      "path": "labels/hatchet-v1-core.json",
+      "bytes": 211740,
+      "sha256": "645fb54c686b3b09303b4b247e8caff84e0b8dededefde9c71ab54383f238895"
+    },
+    {
+      "path": "labels/hatchet-v1-olap.json",
+      "bytes": 100709,
+      "sha256": "bfbdd84f874da4c2eb3be20d232917bcd5cadad16f8ee686a99eacb141cfe11d"
+    },
+    {
+      "path": "labels/monitor-query.json",
+      "bytes": 35347,
+      "sha256": "be1a1414e2f0c966c8b657f8643d12a05c419838126fea0142ee54a83bfc8196"
+    },
+    {
+      "path": "labels/monitor-schema.json",
+      "bytes": 227207,
+      "sha256": "ce644dbaa4ed83d981c99705efb229661271e6bdd708c3b57e4eda5723550aaa"
+    },
+    {
+      "path": "license-checks.json",
+      "bytes": 1598,
+      "sha256": "42df6ce795e956650fbfb38903a8ffb5ba21f3470123a7d53b7dcf531d19e6da"
+    },
+    {
+      "path": "licenses/hatchet.LICENSE",
+      "bytes": 1090,
+      "sha256": "7388b34bd1ad4b9db3c72dcb73f434ea27c88e5ca8f02a24d4f970c906d79be3"
+    },
+    {
+      "path": "licenses/monitor.LICENSE",
+      "bytes": 1077,
+      "sha256": "bdba81813d16a063e0965e2e8a8765e417e3f6ae14fc878e2a3b50cb4cdbf39c"
+    },
+    {
+      "path": "licenses/mysql-sqlparser.LICENSE.md",
+      "bytes": 11356,
+      "sha256": "43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1"
+    },
+    {
+      "path": "licenses/pg-query-go.LICENSE",
+      "bytes": 1561,
+      "sha256": "7752b24a3cb4bee5270c2ee8a3a7609fd57ce9dccb2e8b5757fdeca04bb03960"
+    },
+    {
+      "path": "licenses/pg-query-go.LICENSE.POSTGRESQL",
+      "bytes": 1337,
+      "sha256": "28e429702de70abfa1b7e4cb5d9e486bd9469f1eab5b392f704b65de09334d8d"
+    },
+    {
+      "path": "pg-container-generator-plan.json",
+      "bytes": 4941,
+      "sha256": "c2293680068ad6d4e4f1eeedcd7cbfc34ae177ac03b5047717ca91bca3234218"
+    },
+    {
+      "path": "pg-generation-receipt-accepted.json",
+      "bytes": 17448,
+      "sha256": "982cc115d3ee8bf225f0a9cc43203759a1e45271449e2658320f8fe10bebd699"
+    },
+    {
+      "path": "pg-generation-receipt.json",
+      "bytes": 6586,
+      "sha256": "48d1266d0f9cb884905abf7cfbc31574a378914dd64125da7a3a24690e7e4266"
+    },
+    {
+      "path": "pg-generator-input.json",
+      "bytes": 1148,
+      "sha256": "bd7c60c2cc397fc886f34aad27b5f59f323420614d8056d93bbe527606bdd3b3"
+    },
+    {
+      "path": "pg-generator-plan.json",
+      "bytes": 2932,
+      "sha256": "69727e2968c36ab9c1a0f0fcca09049afac5509de27be098f0d0bc83bf5e5961"
+    },
+    {
+      "path": "preparation/admission-v1-container-plan.json",
+      "bytes": 3972,
+      "sha256": "22c8a9218aeacabf5161a3ba144d7b645ca1050755366cb75c972c42e26316b9"
+    },
+    {
+      "path": "preparation/admission-v1-generate-pg18-container.sh",
+      "bytes": 2672,
+      "sha256": "771558db0a173f378f12fb6a7c212960cb098518684931a104c3ebd3e85534a3"
+    },
+    {
+      "path": "preparation/admission-v1-generate_pg_dump.py",
+      "bytes": 10210,
+      "sha256": "af98726cbb1ef74b49435406f08e16c63f37bde9b2f623de317ee55ee569daaa"
+    },
+    {
+      "path": "registry/pg18.6-cached-image-inspect.json",
+      "bytes": 3060,
+      "sha256": "6ecd40d9816bf785e0ad15c4fcd3000b8eac5faa17ebdab45d3e9a0381147e6c"
+    },
+    {
+      "path": "registry/pg18.6-executed-tool-identities.json",
+      "bytes": 2610,
+      "sha256": "bc4e565934625e935c9417d5d7f34e03d5dcae67dbfb58601b073a383c25dfae"
+    },
+    {
+      "path": "registry/pg18.6-generation-vm-start.json",
+      "bytes": 4791,
+      "sha256": "98ff394cc1bae63ba14bac659e10ddc2d777c1d033242089ff96a11624ff8808"
+    },
+    {
+      "path": "registry/pg18.6-image-resolution.json",
+      "bytes": 2014,
+      "sha256": "4b6bd177ff98be6c7bcef4e14d3c9c6f20546bab6c4d1bc6b9c9f7207a8f20a2"
+    },
+    {
+      "path": "registry/pg18.6-linux-arm64-config.json",
+      "bytes": 10061,
+      "sha256": "0336095afa072c685c93021dcfa4a5fee9cbce25ecd65121b58226c787afc0d0"
+    },
+    {
+      "path": "registry/pg18.6-linux-arm64-manifest.json",
+      "bytes": 3441,
+      "sha256": "a63b24165ea0eacced7585766d790ac08bbaefe10a1841f87783a4505d29a69c"
+    },
+    {
+      "path": "registry/pg18.6-readmission.json",
+      "bytes": 14311,
+      "sha256": "0109b6ed907c2b9052b96002df24137aea679ebdbd26079cea363293098e000c"
+    },
+    {
+      "path": "sampling.json",
+      "bytes": 257077,
+      "sha256": "47ae818731c9e248a58eb4386984a05c05291cad0f8dfbd117e8a8132e9b4d3e"
+    },
+    {
+      "path": "source-label-audit.json",
+      "bytes": 5403,
+      "sha256": "15ea38d5f91a1a44f7da6ae77590ee4c04ae2f13fac66ceae421368fcc00dd1b"
+    }
+  ]
+}

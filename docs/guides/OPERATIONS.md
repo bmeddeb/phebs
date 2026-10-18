@@ -9231,3 +9231,17 @@ restore and lifecycle custody still recognize old artifacts. Missing unit
 snapshots remain unavailable; invalid snapshots fail materialization atomically.
 Only admitted repository-overlay source path/OID mappings annotate caller facts;
 this supplies no focused-local, runtime ownership or deployment claim.
+
+### Apache Thrift field-input qualification
+
+The [T52.1 qualification](../../spike/t521/README.md) binds unchanged Apache
+Thrift0.14.1 generated Go/tag inputs, real scip-go0.2.7 committed indexes and
+two public handwritten sources, with separate authored controls. Its finite
+33 public/11 authored positive sites and negative/unsupported controls agree
+with exact numeric field and citation witnesses. References remain derived
+with source_binding=none; external IDLs do not create an automatic declaration/
+SCIP lineage bridge. Field0 is retained as an explicit result-slot control.
+Raw SCIP read roles include source writes, so semantic read/write accuracy is
+unmeasured. This supplies no runtime-use, deployment, managed generation,
+scale or broad generator coverage claim. T52.3 registration/operating/signing
+remain pending; the independent thriftrw recipe gets its own T52.2 result.

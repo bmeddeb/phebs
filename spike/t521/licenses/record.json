@@ -1,0 +1,10 @@
+{
+  "schema": "t521-additional-license-v1",
+  "module": "github.com/opentracing/opentracing-go",
+  "version": "v1.2.0",
+  "license": "Apache-2.0",
+  "url": "https://raw.githubusercontent.com/opentracing/opentracing-go/v1.2.0/LICENSE",
+  "digest": "sha256:a34a9a108d9fc8b415ff4d2185c4dd1f9d260539fcf2c78e06732506fd89d54c",
+  "module_zip_hash": "h1:uEJPy/1a5RIPAJ0Ov+OIO8OxWu77jEv+1B0VhjKrZUs=",
+  "source_use": "Cached index-preparation dependency only; its application/library source is outside the scored population."
+}

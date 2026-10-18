@@ -1,0 +1,22 @@
+{
+  "child_outputs": {
+    "mysql-imported-pass1.json": "656c8983688f4f856e06d37e4898827aa54e9f774822a1d4f1d4251d742f085b",
+    "mysql-imported-pass2.json": "656c8983688f4f856e06d37e4898827aa54e9f774822a1d4f1d4251d742f085b",
+    "mysql-subset-pass1.json": "0dd93e1e36550bb551a343a00a7b60f22da4378a158a448c9ddc30b2298e597d",
+    "mysql-subset-pass2.json": "0dd93e1e36550bb551a343a00a7b60f22da4378a158a448c9ddc30b2298e597d",
+    "postgresql-imported-pass1.json": "a19ae2c7bda0d530ea4c215414f66c2829f0fbcd9b26908b67095bc0d4d9d9e3",
+    "postgresql-imported-pass2.json": "a19ae2c7bda0d530ea4c215414f66c2829f0fbcd9b26908b67095bc0d4d9d9e3",
+    "postgresql-subset-pass1.json": "f9895b66c16d2254dd26f391db855e17f6ee2f988b922cf2c422adfcec658924",
+    "postgresql-subset-pass2.json": "f9895b66c16d2254dd26f391db855e17f6ee2f988b922cf2c422adfcec658924"
+  },
+  "inputs": {
+    "bytes": 4439033,
+    "contract_sha256": "9568cf9cce51f30bfd38c131d4ba8a6502ad9c0a777d743e9b5b6cd330d7031c",
+    "files": 419,
+    "history_sha256": "ad65ad9aa90313cfc371662a3a37cf528c190212d971ebac2bb443c595f5d056",
+    "preregistration_sha256": "791585bd54e5a03ccdfbda033884229a48c2006e9ac822ad7265091605e962e9"
+  },
+  "output_sha256": "6cd6461c8877d519f53095eddfdf6acb4bd5c612f3c6748d2b2d740562a7cc29",
+  "qualification": "Scorer-only null-as-empty collection correction after first evaluator stop; candidate outputs/run receipts unchanged; no labels, thresholds or semantic matching changed",
+  "scorer_sha256": "5f73990b8d42a7f41a19980e560e3468f7111ff879ac090ecdda3446bcadb078"
+}

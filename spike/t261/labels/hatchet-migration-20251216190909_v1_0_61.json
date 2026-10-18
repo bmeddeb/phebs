@@ -1,0 +1,281 @@
+{
+  "format": "t261-source-labels-v1",
+  "dialect": "postgresql",
+  "repository": "hatchet-dev/hatchet",
+  "commit": "559b5021e418f12ded175f950b709b7fa66be5a5",
+  "source_path": "cmd/hatchet-migrate/migrate/migrations/20251216190909_v1_0_61.sql",
+  "source_sha256": "b37f8fc40c4b711803883befe6b648656fe67268f344bb478b8e2e0315bb4678",
+  "plane": "sql-migration-event",
+  "statements": [
+    {
+      "id": "migration-L3",
+      "start": 38,
+      "end": 65,
+      "sha256": "4fbb44d496f9e4b3ebdc66bf1dcfec6dc6b753baf25fd4484713bcedc52a7be1",
+      "syntax_class": "drop-table",
+      "expected_disposition": "migration-event",
+      "direction": "up",
+      "objects": [],
+      "sites": [],
+      "events": [
+        {
+          "predicate": "MIGRATION_DROPS_TABLE",
+          "name": "v1_payload_wal",
+          "quoted": false,
+          "start": 49,
+          "end": 63,
+          "sha256": "82dd94adb9cc9b113fab640d4e2300b24885867a239d0ab81e014f47ceecbacd"
+        }
+      ],
+      "note": "Explicit source history occurrence in Goose up branch; never execute, fold branches or emit DECLARES_* objects. Stable identity includes source path, statement byte offset and predicate."
+    },
+    {
+      "id": "migration-L4",
+      "start": 65,
+      "end": 101,
+      "sha256": "2cca639c46cb3e0ee6e71c7a8383cfe44e8fdb9ff3f2a1cb1a78e788bb27e2e0",
+      "syntax_class": "drop-type",
+      "expected_disposition": "migration-event",
+      "direction": "up",
+      "objects": [],
+      "sites": [],
+      "events": [
+        {
+          "predicate": "MIGRATION_DROPS_TYPE",
+          "name": "v1_payload_wal_operation",
+          "quoted": false,
+          "start": 75,
+          "end": 99,
+          "sha256": "6b743119fbc488d451748ac2d1b6c0d50460d32d6db191a34de5b24f5b3d12dc"
+        }
+      ],
+      "note": "Explicit source history occurrence in Goose up branch; never execute, fold branches or emit DECLARES_* objects. Stable identity includes source path, statement byte offset and predicate."
+    },
+    {
+      "id": "migration-L5",
+      "start": 101,
+      "end": 143,
+      "sha256": "42b30cf3270bdff230234383d3ecdc4e9d38cd62721e7792a3317c4d9298830f",
+      "syntax_class": "drop-table",
+      "expected_disposition": "migration-event",
+      "direction": "up",
+      "objects": [],
+      "sites": [],
+      "events": [
+        {
+          "predicate": "MIGRATION_DROPS_TABLE",
+          "name": "v1_payload_cutover_queue_item",
+          "quoted": false,
+          "start": 112,
+          "end": 141,
+          "sha256": "71c10dea1a333fba340e1da5123356789766655c60f4a5bfbb66ebca483111c0"
+        }
+      ],
+      "note": "Explicit source history occurrence in Goose up branch; never execute, fold branches or emit DECLARES_* objects. Stable identity includes source path, statement byte offset and predicate."
+    },
+    {
+      "id": "migration-L6",
+      "start": 143,
+      "end": 210,
+      "sha256": "c73ea0415d67edcb89b5d12874c8ff6bf52b833b2477dda82838e3636cf8e6c0",
+      "syntax_class": "drop-function",
+      "expected_disposition": "unsupported-statement",
+      "direction": "up",
+      "objects": [],
+      "sites": [],
+      "events": [],
+      "note": "Explicit source history occurrence in Goose up branch; never execute, fold branches or emit DECLARES_* objects. Stable identity includes source path, statement byte offset and predicate. Function/procedural syntax or partition-creation calls are frozen gaps, never evidence of dynamically created tables or current shape."
+    },
+    {
+      "id": "migration-L7",
+      "start": 210,
+      "end": 292,
+      "sha256": "a98fb06825d93cc809986effbe18117003ac4d50aebc9faa1f2d7481d20f9c3d",
+      "syntax_class": "drop-function",
+      "expected_disposition": "unsupported-statement",
+      "direction": "up",
+      "objects": [],
+      "sites": [],
+      "events": [],
+      "note": "Explicit source history occurrence in Goose up branch; never execute, fold branches or emit DECLARES_* objects. Stable identity includes source path, statement byte offset and predicate. Function/procedural syntax or partition-creation calls are frozen gaps, never evidence of dynamically created tables or current shape."
+    },
+    {
+      "id": "migration-L12",
+      "start": 356,
+      "end": 433,
+      "sha256": "d1ffd06f0591a18e5ebcc4ced55026f3e014f585c419f0d754afaaf5461bca4a",
+      "syntax_class": "create-enum",
+      "expected_disposition": "migration-event",
+      "direction": "down",
+      "objects": [],
+      "sites": [],
+      "events": [
+        {
+          "predicate": "MIGRATION_CREATES_TYPE",
+          "name": "v1_payload_wal_operation",
+          "quoted": false,
+          "start": 368,
+          "end": 392,
+          "sha256": "6b743119fbc488d451748ac2d1b6c0d50460d32d6db191a34de5b24f5b3d12dc"
+        }
+      ],
+      "note": "Explicit source history occurrence in Goose down branch; never execute, fold branches or emit DECLARES_* objects. Stable identity includes source path, statement byte offset and predicate."
+    },
+    {
+      "id": "migration-L14",
+      "start": 434,
+      "end": 1094,
+      "sha256": "186f72cc6b8850406618c831e45a4d21fec91dc4ec027a1221429af8516734e7",
+      "syntax_class": "create-table",
+      "expected_disposition": "migration-event",
+      "direction": "down",
+      "objects": [],
+      "sites": [],
+      "events": [
+        {
+          "predicate": "MIGRATION_CREATES_TABLE",
+          "name": "v1_payload_wal",
+          "quoted": false,
+          "start": 447,
+          "end": 461,
+          "sha256": "82dd94adb9cc9b113fab640d4e2300b24885867a239d0ab81e014f47ceecbacd"
+        }
+      ],
+      "note": "Explicit source history occurrence in Goose down branch; never execute, fold branches or emit DECLARES_* objects. Stable identity includes source path, statement byte offset and predicate."
+    },
+    {
+      "id": "migration-L28",
+      "start": 1095,
+      "end": 1220,
+      "sha256": "b993c4bf24e3072810888ca39689172e5cf4d3c489ff9bdfef4f2fc9890f6400",
+      "syntax_class": "create-index",
+      "expected_disposition": "migration-event",
+      "direction": "down",
+      "objects": [],
+      "sites": [],
+      "events": [
+        {
+          "predicate": "MIGRATION_CREATES_INDEX",
+          "name": "v1_payload_wal_payload_lookup_idx",
+          "quoted": false,
+          "start": 1108,
+          "end": 1141,
+          "sha256": "a33c4c9010a504080727be34909effd4be036ef7904f4f3b0e9a6170f51c69ba",
+          "relation": "v1_payload_wal",
+          "columns": [
+            "payload_id",
+            "payload_inserted_at",
+            "payload_type",
+            "tenant_id"
+          ]
+        }
+      ],
+      "note": "Explicit source history occurrence in Goose down branch; never execute, fold branches or emit DECLARES_* objects. Stable identity includes source path, statement byte offset and predicate."
+    },
+    {
+      "id": "migration-L29",
+      "start": 1220,
+      "end": 1300,
+      "sha256": "9935f2b9d573e802a58e5b348080cbb87cab88f27773b97fbbe0c8a8ef8a7da3",
+      "syntax_class": "create-index",
+      "expected_disposition": "migration-event",
+      "direction": "down",
+      "objects": [],
+      "sites": [],
+      "events": [
+        {
+          "predicate": "MIGRATION_CREATES_INDEX",
+          "name": "v1_payload_wal_poll_idx",
+          "quoted": false,
+          "start": 1233,
+          "end": 1256,
+          "sha256": "2a403e2a8fc824a1f52088482895a384b6754a422b491608f5c4912e3900029b",
+          "relation": "v1_payload_wal",
+          "columns": [
+            "tenant_id",
+            "offload_at"
+          ]
+        }
+      ],
+      "note": "Explicit source history occurrence in Goose down branch; never execute, fold branches or emit DECLARES_* objects. Stable identity includes source path, statement byte offset and predicate."
+    },
+    {
+      "id": "migration-L31",
+      "start": 1301,
+      "end": 1362,
+      "sha256": "98b5786a96d4743f4eaf17d336dc0714776dc00f0a433656b0a06c03822b75c7",
+      "syntax_class": "select-function-call",
+      "expected_disposition": "unsupported-statement",
+      "direction": "down",
+      "objects": [],
+      "sites": [],
+      "events": [],
+      "note": "Explicit source history occurrence in Goose down branch; never execute, fold branches or emit DECLARES_* objects. Stable identity includes source path, statement byte offset and predicate. Function/procedural syntax or partition-creation calls are frozen gaps, never evidence of dynamically created tables or current shape."
+    },
+    {
+      "id": "migration-L33",
+      "start": 1363,
+      "end": 1718,
+      "sha256": "51b4debfdedb31726d8a671cbc784ffac86ece75edeb42a2fac0f2744e98ed5a",
+      "syntax_class": "create-table",
+      "expected_disposition": "migration-event",
+      "direction": "down",
+      "objects": [],
+      "sites": [],
+      "events": [
+        {
+          "predicate": "MIGRATION_CREATES_TABLE",
+          "name": "v1_payload_cutover_queue_item",
+          "quoted": false,
+          "start": 1376,
+          "end": 1405,
+          "sha256": "71c10dea1a333fba340e1da5123356789766655c60f4a5bfbb66ebca483111c0"
+        }
+      ],
+      "note": "Explicit source history occurrence in Goose down branch; never execute, fold branches or emit DECLARES_* objects. Stable identity includes source path, statement byte offset and predicate."
+    },
+    {
+      "id": "migration-L43",
+      "start": 1719,
+      "end": 1795,
+      "sha256": "01c3a431341c2572110a6755cc041bf75daaa3bfa6f7fc596ee8f06c976cccc6",
+      "syntax_class": "select-function-call",
+      "expected_disposition": "unsupported-statement",
+      "direction": "down",
+      "objects": [],
+      "sites": [],
+      "events": [],
+      "note": "Explicit source history occurrence in Goose down branch; never execute, fold branches or emit DECLARES_* objects. Stable identity includes source path, statement byte offset and predicate. Function/procedural syntax or partition-creation calls are frozen gaps, never evidence of dynamically created tables or current shape."
+    },
+    {
+      "id": "migration-L45",
+      "start": 1796,
+      "end": 2399,
+      "sha256": "04b8ba602141c2bf4400d6f885744b5cff42e9d5c81c43293cf563989909920e",
+      "syntax_class": "create-function",
+      "expected_disposition": "procedural-sql",
+      "direction": "down",
+      "objects": [],
+      "sites": [],
+      "events": [],
+      "note": "Explicit source history occurrence in Goose down branch; never execute, fold branches or emit DECLARES_* objects. Stable identity includes source path, statement byte offset and predicate. Function/procedural syntax or partition-creation calls are frozen gaps, never evidence of dynamically created tables or current shape."
+    },
+    {
+      "id": "migration-L74",
+      "start": 2400,
+      "end": 3078,
+      "sha256": "305656734932faf45b7f7ef9d6e3451435ad2ee9cbc2163945b3cfa7ef5aef2b",
+      "syntax_class": "create-function",
+      "expected_disposition": "procedural-sql",
+      "direction": "down",
+      "objects": [],
+      "sites": [],
+      "events": [],
+      "note": "Explicit source history occurrence in Goose down branch; never execute, fold branches or emit DECLARES_* objects. Stable identity includes source path, statement byte offset and predicate. Function/procedural syntax or partition-creation calls are frozen gaps, never evidence of dynamically created tables or current shape."
+    }
+  ],
+  "inventory_notes": [
+    "Entire selected file, both Goose branches, labelled before parser execution. No accuracy inference to 208 unsampled migration files.",
+    "Lane derives from committed sqlc PostgreSQL engine metadata under explicit spike migration-root admission, never grammar sniffing."
+  ]
+}

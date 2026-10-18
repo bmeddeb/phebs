@@ -1,0 +1,7 @@
+{
+  "path": "runner_test.py",
+  "sha256": "d750effd5321448381434e317337b1afddc1c928fd84254bada7ccc2b5873952",
+  "bytes": 2658,
+  "checks_sha256": "8fd51264103022ef0949862fafe4483c7daa05268bf2dddccc4b31e57a5191f2",
+  "scope": "Four evaluator/metadata contract tests including direction/envelope and known bool default; fixture SQL labels unchanged"
+}

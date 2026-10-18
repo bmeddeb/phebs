@@ -1,0 +1,44 @@
+{
+  "date": "2026-10-18",
+  "qualification": "License-first metadata preparation only; no schema content fetched or parser execution at this checkpoint.",
+  "records": [
+    {
+      "id": "hatchet",
+      "repository": "hatchet-dev/hatchet",
+      "commit": "559b5021e418f12ded175f950b709b7fa66be5a5",
+      "root_license": "MIT",
+      "license_bytes": 1090,
+      "license_sha256": "7388b34bd1ad4b9db3c72dcb73f434ea27c88e5ca8f02a24d4f970c906d79be3",
+      "license_checked_before_application_or_schema_content": true,
+      "license_paths_in_tree": [
+        "LICENSE",
+        "frontend/docs/LICENSE",
+        "sdks/ruby/src/LICENSE.txt"
+      ],
+      "relevant_path_license_override": false,
+      "inventory_sha256": "2c8520ce45f30ce8b08ec9419b92a5521c40a39af0e3f8fdf75c9c1114af32c0",
+      "sql_files": 255,
+      "sql_bytes": 1180566,
+      "parser_runs": 0,
+      "candidate_execution": false
+    },
+    {
+      "id": "monitor",
+      "repository": "ntppool/monitor",
+      "commit": "e03c40a06ae8f9bd4906001c2ede0c7296ec8e96",
+      "root_license": "MIT-style permission grant",
+      "license_bytes": 1077,
+      "license_sha256": "bdba81813d16a063e0965e2e8a8765e417e3f6ae14fc878e2a3b50cb4cdbf39c",
+      "license_checked_before_application_or_schema_content": true,
+      "license_paths_in_tree": [
+        "LICENSE"
+      ],
+      "relevant_path_license_override": false,
+      "inventory_sha256": "e4cecffc2dfd0d9da5066dced4df62599c9ed661b1e2ef6fb26d9f21cba97f8f",
+      "sql_files": 2,
+      "sql_bytes": 44772,
+      "parser_runs": 0,
+      "candidate_execution": false
+    }
+  ]
+}
