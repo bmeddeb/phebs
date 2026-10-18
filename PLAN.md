@@ -12997,3 +12997,17 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   validation timer/socket/observer/client work, no production request, sync,
   startup/restart, retry/no-op, publication, lock, cache, schema or child class.
   Operating/quality/UI/publication results and production signing remain open.
+
+- **2026-10-18 — T50.3 preparation-tool admission correction (Ben-routed
+  Mac handoff).** The first post-repair preparation stops in0.008086s before
+  any key, server, data, native phase or product read: the lead bound system
+  LibreSSL3.3.6, which lacks Ed25519. Preserve that result and exact binding.
+  Prospectively select the original qualifier's existing Homebrew OpenSSL3.6.3
+  image after a bounded algorithm-list probe confirms Ed25519 without creating
+  a key. Independent read/hash review accepts this sole tool correction.
+  All source/index/labels/thresholds,180s native bounds, harness, binary,
+  helpers and UI remain exact; reuse the joined1.437614s Chrome preflight and
+  scoped green gates. A distinct root/result carries one fresh preparation
+  and one native matrix if launch succeeds, with the same first-stop rule.
+  No quality or operating outcome is inferred from preparation, and production
+  signing remains pending. No production work or authority changes.
