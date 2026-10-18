@@ -28,9 +28,13 @@ type LinuxMemoryObservation struct {
 // source-free SHA-256 bindings supplied by the observer. The root has no parent;
 // every later parent is the preceding identity. Unlimited represents literal
 // memory.max=max and requires LimitBytes=0; CurrentBytes remains mandatory.
+// HierarchyRoot is a distinct supplied ABI-exempt root form: its counters are
+// absent, so Unlimited=false and both numeric fields must be zero. Only a native
+// observer can establish that root shape; the calculation authenticates nothing.
 type LinuxMemoryCgroupObservation struct {
 	Identity       string `json:"identity"`
 	ParentIdentity string `json:"parent_identity"`
+	HierarchyRoot  bool   `json:"hierarchy_root,omitempty"`
 	Unlimited      bool   `json:"unlimited"`
 	LimitBytes     int64  `json:"limit_bytes"`
 	CurrentBytes   int64  `json:"current_bytes"`
@@ -108,19 +112,25 @@ func linuxMemoryCapacity(observation LinuxMemoryObservation) (int64, int64, erro
 	capacity, available := observation.PhysicalBytes, observation.AvailableBytes
 	identities := make(map[string]struct{}, len(observation.CgroupAncestors))
 	parent := ""
-	for _, ancestor := range observation.CgroupAncestors {
+	for index, ancestor := range observation.CgroupAncestors {
 		if !digestIdentity(ancestor.Identity) {
 			return 0, 0, errors.New("linux memory cgroup identity is invalid")
 		}
-		if _, duplicate := identities[ancestor.Identity]; duplicate || ancestor.ParentIdentity != parent ||
-			ancestor.CurrentBytes < 0 || ancestor.LimitBytes < 0 ||
+		if _, duplicate := identities[ancestor.Identity]; duplicate || ancestor.ParentIdentity != parent {
+			return 0, 0, errors.New("linux memory cgroup ancestry or limit is invalid")
+		}
+		if ancestor.HierarchyRoot {
+			if index != 0 || ancestor.Unlimited || ancestor.LimitBytes != 0 || ancestor.CurrentBytes != 0 {
+				return 0, 0, errors.New("linux memory hierarchy root has a parent or counters")
+			}
+		} else if ancestor.CurrentBytes < 0 || ancestor.LimitBytes < 0 ||
 			ancestor.Unlimited && ancestor.LimitBytes != 0 ||
 			!ancestor.Unlimited && (ancestor.LimitBytes == 0 || ancestor.CurrentBytes > ancestor.LimitBytes) {
 			return 0, 0, errors.New("linux memory cgroup ancestry or limit is invalid")
 		}
 		identities[ancestor.Identity] = struct{}{}
 		parent = ancestor.Identity
-		if !ancestor.Unlimited {
+		if !ancestor.HierarchyRoot && !ancestor.Unlimited {
 			capacity = min(capacity, ancestor.LimitBytes)
 			available = min(available, ancestor.LimitBytes-ancestor.CurrentBytes)
 		}

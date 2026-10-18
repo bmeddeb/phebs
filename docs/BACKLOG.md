@@ -3991,6 +3991,24 @@ The first lint refusal and error-text-only correction stay exact in
 `spike/t42h2j/`. All validation groups joined. No native Linux/capacity authority
 is claimed; Ben defers actual Linux execution until2026-10-20.
 
+**T42.H2l · Native Linux memory and complete cgroup observation** *(2026-10-18,
+Ben all-ticket delegation; flagged Mac source handoff).*
+Implement the fixed-root, read-only native observer feeding H2j. Authenticate
+the real cgroup-v2 hierarchy root and all enforcing ancestors; namespace equality
+or an apparent mount root alone cannot establish completeness. Represent the
+hierarchy root's absent memory counters explicitly, bracket membership, native
+objects and limits, and conservatively combine bounded physical/current samples.
+AC: modeled successful/refusal/cleanup cases pass normally and with race;
+supported Linux targets compile; native tests are authored but remain unrun until
+Ben's office return. No caller path/completeness assertion, swap credit, cgroup
+mutation, admission token, active plan/sampler change or child launch. Native
+acceptance, source-owned reservations and prospective version wiring remain H2
+gates, not conclusions from modeled tests.
+Exact source `3c9fcfc5` passes focused normal/race, vet, scoped pinned lint,
+both Linux compile-only targets, docs and glossary. The first serial sequence
+and joined groups are retained in `spike/t42h2l/`; no Linux image was executed.
+Native facts, admission and parent H2 readiness remain unpassed.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared
