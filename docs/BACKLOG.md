@@ -3991,6 +3991,25 @@ The first lint refusal and error-text-only correction stay exact in
 `spike/t42h2j/`. All validation groups joined. No native Linux/capacity authority
 is claimed; Ben defers actual Linux execution until2026-10-20.
 
+**T42.H2k · Owned read-only Linux input-tree loan** *(2026-10-18, Ben all-ticket
+delegation; flagged Mac source handoff).*
+Implement a distinct protected-tree constructor through one fixed measured,
+sealed helper in a private unprivileged user/mount namespace. The helper owns
+fresh bounded tmpfs copies, closes writers before read-only transition and
+protected-manifest verification, transfers the exact read-only root descriptor,
+and joins before publication. The descriptor pins the protected mount after
+helper exit; serialized loans expose no ordinary host path. AC: bounded protocol,
+malformed/cleanup/lifetime controls pass on the Mac; supported Linux targets
+compile; real namespace, mutation-refusal, descriptor-transfer and joined-use
+tests are authored but unrun until Ben's office return. Failed or uncertain
+construction retains custody and stays unusable. No privilege provisioning,
+borrowed mutable bind mount, caller boolean, current Go/Git admission, legacy
+constructor relaxation or active plan/launcher change; full H2 admission and
+native proof remain pending.
+Required helper tests use the explicit `phebs_t42_native` build tag so ordinary
+CI cannot launch target qualification implicitly. Under that tag, missing exact
+helper/kernel prerequisites fail; compile-only checks include the tagged tests.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

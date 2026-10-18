@@ -672,6 +672,22 @@ counts grant no protection/isolation or per-range hole proof. No Linux binary,
 allocation, pressure, restore or ceremony ran; actual Linux gates await the
 October20 office return.
 
+T42.H2k prepares the distinct read-only Linux tree recipe selected by H2h.
+A measured sealed helper creates fresh bounded copies inside its private
+unprivileged namespace, closes writers, protects the mount, verifies the
+protected manifest and transfers its read-only root descriptor. Publication
+requires the actual helper to join; the held descriptor keeps the protected
+mount alive after helper exit. A serialized loan grants descriptor access only;
+its trusted consumer must join commands and release any copies before returning.
+Failed construction or uncertain drain retains unusable custody. No `sudo`,
+capability policy, service, borrowed host mount or ordinary host path is issued.
+Mac controls and Linux cross-compilation leave actual kernel/LSM/native proof
+pending, along with Go/Git consumers, prospective plans and execution admission.
+The target tests require `-tags phebs_t42_native` and an exact clean-source
+`PHEBS_T42_INPUT_TREE_REQUEST`; missing prerequisites fail under that tag.
+Default CI exercises portable/default controls without launching namespace
+qualification. Tagged Linux compile-only results still establish no native PASS.
+
 On this host, development tools are in `/home/ben/.local/bin`; native amd64
 tools are staged separately under
 `/home/ben/.local/share/phebs-host/native-amd64`. Load the development PATH and

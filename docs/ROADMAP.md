@@ -138,6 +138,11 @@ T42.H2i prepares linux byte observation and allocation seams.
 T42.H2j prepares prospective aggregate linux memory calculation.
 This is bounded source preparation; actual Linux admission/readiness remains open.
 
+T42.H2k implements the distinct owned read-only Linux input-tree loan next.
+Its fixed helper copies inside a private namespace, closes writers, protects the
+mount and joins before publication. Source/model checks proceed on the Mac;
+real namespace acceptance and ordinary tool/plan integration remain pending.
+
 ## Current product posture
 
 **All-ticket execution (2026-10-17, Ben-directed):** resolve actual dependencies
