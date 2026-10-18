@@ -1,0 +1,82 @@
+{
+  "authorship": "Fixture-author declarative labels, frozen before any reader implementation or run; not independent extraction-accuracy evidence.",
+  "fixture_sha256": "7e19244959ce379f1e44cdbbb1ca4267bb5ac1fc88d42a02e83c4290341b1719",
+  "declarations": [
+    {
+      "kind": "DECLARES_SCHEMA_SET",
+      "pointer": "",
+      "owner": null,
+      "meaning": {
+        "format": "phebs-document-schema-v1",
+        "source_class": "authored"
+      },
+      "span": {
+        "start": 0,
+        "end": 1048,
+        "sha256": "84bd5f12fdf2a41f48fd14540adf26f9bf185f12255bb94451de7bffa257b4cf"
+      }
+    },
+    {
+      "kind": "DECLARES_TABLE",
+      "pointer": "/tables/0",
+      "owner": {
+        "kind": "table",
+        "name": "T"
+      },
+      "meaning": {
+        "name": "T",
+        "partition_key_state": "undeclared"
+      },
+      "span": {
+        "start": 90,
+        "end": 1027,
+        "sha256": "241c16c19c37022b5bd98209ecd1760da8b67d246e27dc7518a751d8bc7718f9"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/0/fields/0",
+      "owner": {
+        "kind": "table",
+        "name": "T"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"
+          }
+        ],
+        "type": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "span": {
+        "start": 137,
+        "end": 670,
+        "sha256": "f47d95437e6caf56d6edaa8347c05a6b41ba5d320978fbadc6bc3038e155e42a"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/tables/0/primary_key/0",
+      "owner": {
+        "kind": "table",
+        "name": "T"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"
+          }
+        ],
+        "position": 0,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 711,
+        "end": 966,
+        "sha256": "5da8df8a499bf0b93eb8300f83782a7584d89fb37e7231d7af81d2a3cabca9d6"
+      }
+    }
+  ]
+}

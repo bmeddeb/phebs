@@ -20,7 +20,8 @@ export default function ContractDependencyMap({
   const tok = usePhebsTokens()
   const layout = layoutDependencyEdges(operation)
   const edges = layout.edges
-  const complete = !operation.relationships_truncated
+  const unavailable = operation.unavailable_relationships ?? []
+  const complete = !operation.relationships_truncated && unavailable.length === 0
 
   return (
     <section aria-labelledby="focused-dependency-heading">
@@ -59,9 +60,16 @@ export default function ContractDependencyMap({
           fontSize: '11px',
           lineHeight: '16px',
         })}>
-          {edges.length} edges · {complete ? 'complete bounded set' : 'truncated bounded set'}
+          {edges.length} edges · {unavailable.length > 0 ? 'relationship sections unavailable' : complete ? 'complete bounded set' : 'truncated bounded set'}
         </span>
       </div>
+
+      {unavailable.length > 0 && (
+        <p role="status" className={css({ color: tok.textSecondary, fontSize: '11px', lineHeight: '18px' })}>
+          Relationship evidence unavailable: {unavailable.map((section) => section.replaceAll('_', ' ')).join(', ')}.
+          {' '}These sections are not admitted by the selected recipe; no absence conclusion follows.
+        </p>
+      )}
 
       {edges.length === 0 ? (
         <div
@@ -76,13 +84,13 @@ export default function ContractDependencyMap({
             lineHeight: '18px',
           })}
         >
-          No implementation, caller, or unresolved-candidate edge was returned
+          {unavailable.length > 0 ? 'No admitted relationship edges are displayed.' : <>No implementation, caller, or unresolved-candidate edge was returned
           for this operation within {operation.coverage.repository_count} visible
           repositories and coverage {shortDigest(operation.coverage_digest)}.
           {' '}
           {complete
             ? 'The bounded relationship set is complete; this is still not evidence of runtime absence.'
-            : 'The bounded relationship set is truncated, so omitted rows may exist.'}
+            : 'The bounded relationship set is truncated, so omitted rows may exist.'}</>}
         </div>
       ) : (
         <>
@@ -180,8 +188,8 @@ export default function ContractDependencyMap({
         </>
       )}
 
-      <div className={css({
-        marginTop: edges.length === 0 ? '10px' : '12px',
+      {edges.length > 0 && <div className={css({
+        marginTop: '12px',
         overflowX: 'auto',
       })}>
         <table
@@ -276,7 +284,7 @@ export default function ContractDependencyMap({
             ))}
           </tbody>
         </table>
-      </div>
+      </div>}
 
       <div className={css({
         marginTop: '8px',
@@ -286,7 +294,7 @@ export default function ContractDependencyMap({
       })}>
         Scope: {operation.coverage.repository_count} visible repositories ·
         coverage {shortDigest(operation.coverage_digest)} ·
-        {complete ? ' relationship projection complete within its bound' : ' relationship projection truncated'}
+        {unavailable.length > 0 ? ' relationship projection unavailable' : complete ? ' relationship projection complete within its bound' : ' relationship projection truncated'}
       </div>
     </section>
   )

@@ -1,0 +1,19 @@
+{
+  "schema": "t521-post-result-style-correction-v1",
+  "date": "2026-10-18",
+  "first_result_checkpoint": "42d8c553c135a65a5e6caa466a06a85e44b3f4f2",
+  "first_result_digest": "sha256:e1febf98dfae1d880ff664a066f21863e1d5dbb73d4d8dde222a6977a937e902",
+  "original_preregistration_digest": "sha256:090c9e5b7ef41286599e58e40b46169b071b6a074abe265ff309b010d676ae6f",
+  "original_harness_digest": "sha256:a5f76167c7e17f8e57a8269be503f7c19ab82d6432c40b25e65e9db6206931af",
+  "new_harness_digest": "sha256:ad50dad731dc6814503d683f4bbea736a29136926a9847cb3f33a3cdaf1cd36a",
+  "new_preregistration_digest": "sha256:27c9645e345646efbc5eb9320431e06657a4ba056a3cbd87fad1c717389765d4",
+  "change": "Pinned lint QF1001 requires equivalent DeMorgan rewrite of source-census exception. Same boolean predicate; no threshold, label, source, input, witness, extractor or scoring meaning changes. Original result/source/preregistration are retained at their exact Git checkpoint.",
+  "verification": {
+    "normal_seconds": 0.423,
+    "race_seconds": 1.393,
+    "pinned_lint": "2.12.2; zero issues",
+    "vet": "clean before equivalent style correction",
+    "original_result_unchanged": true,
+    "record_result_environment": "absent for regressions; no overwrite/new first-result population"
+  }
+}

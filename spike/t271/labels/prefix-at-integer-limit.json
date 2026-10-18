@@ -1,0 +1,126 @@
+{
+  "authorship": "Fixture-author declarative labels, frozen before any reader implementation or run; not independent extraction-accuracy evidence.",
+  "fixture_sha256": "7f1f77add84111b7245e4751da5f76e2a0e600d7b1a57eae74d4524ad43ee4ad",
+  "declarations": [
+    {
+      "kind": "DECLARES_SCHEMA_SET",
+      "pointer": "",
+      "owner": null,
+      "meaning": {
+        "format": "phebs-document-schema-v1",
+        "source_class": "authored"
+      },
+      "span": {
+        "start": 0,
+        "end": 939,
+        "sha256": "358bcd93b17f09bee3cc428dab07e1b50dfeaf01dfe10fcedc565e226e581872"
+      }
+    },
+    {
+      "kind": "DECLARES_TABLE",
+      "pointer": "/tables/0",
+      "owner": {
+        "kind": "table",
+        "name": "T"
+      },
+      "meaning": {
+        "name": "T",
+        "partition_key_state": "undeclared"
+      },
+      "span": {
+        "start": 90,
+        "end": 918,
+        "sha256": "007e2652df9d42ff99417de6d9a47f70aac87baa01abf78b8ca431a9024eadd2"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/0/fields/0",
+      "owner": {
+        "kind": "table",
+        "name": "T"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 137,
+        "end": 301,
+        "sha256": "c0c1dc41f863f03f0e95ed41c591f6f1ad3ac7bf6aac527e9c4df4f6bbb0b66d"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/tables/0/primary_key/0",
+      "owner": {
+        "kind": "table",
+        "name": "T"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "position": 0,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 342,
+        "end": 471,
+        "sha256": "640ade14bb4afc774d88363ad6ec6e8347b86cc995f205711da02fe499327c92"
+      }
+    },
+    {
+      "kind": "DECLARES_INDEX",
+      "pointer": "/tables/0/indexes/0",
+      "owner": {
+        "kind": "table",
+        "name": "T"
+      },
+      "meaning": {
+        "name": "I",
+        "kind": "opaque",
+        "position": 0
+      },
+      "span": {
+        "start": 508,
+        "end": 878,
+        "sha256": "686abfb18d261897e34e06e73445d7cc7e18b48e5e60adf77c013b07b2d46f68"
+      }
+    },
+    {
+      "kind": "DECLARES_INDEX_COLUMN",
+      "pointer": "/tables/0/indexes/0/columns/0",
+      "owner": {
+        "kind": "table",
+        "name": "T",
+        "index": "I"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "prefix_length": 9223372036854775807,
+        "prefix_unit": "opaque-source-unit",
+        "direction": "asc",
+        "position": 0
+      },
+      "span": {
+        "start": 596,
+        "end": 856,
+        "sha256": "d9e504c81b4a23e4695b3414fcdd227724bcf080b6a2e42f547cb82c3a58db48"
+      }
+    }
+  ]
+}

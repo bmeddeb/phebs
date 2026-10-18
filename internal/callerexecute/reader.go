@@ -521,6 +521,9 @@ func (reader *PublicationReader) boundResolver(
 	if pointer == nil {
 		return nil, errors.New("resolver catalog store returned a nil pointer")
 	}
+	if !reader.adapters.currentResolverPacks(pointer.ResolverPacks) {
+		return nil, errPublicationReadTransition
+	}
 	if pointer.Repository != generation.Repository ||
 		pointer.HeadCommit != generation.HeadCommit ||
 		pointer.UnitDigest != generation.UnitDigest ||

@@ -1,0 +1,15 @@
+{
+  "repository": "https://github.com/jeffreyscarpenter/cassandra-guide",
+  "commit": "bed58e7e51768f9f30dd435e74f31e5b3b2649a4",
+  "path": "resources/reservation.cql",
+  "git_blob": "2c1c098ff706f63f28be772514e7b7a664878774",
+  "bytes": 2218,
+  "sha256": "38992bd1f0882ebefe7e16570d05886ade150bf2036ea6119ab08fc11b3bb39e",
+  "license": "Apache-2.0",
+  "copyright": "Copyright (C) 2016 Jeff Carpenter",
+  "license_evidence": "Original file header retained verbatim; canonical Apache license text included from https://www.apache.org/licenses/LICENSE-2.0.txt",
+  "license_sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+  "source_url": "https://raw.githubusercontent.com/jeffreyscarpenter/cassandra-guide/bed58e7e51768f9f30dd435e74f31e5b3b2649a4/resources/reservation.cql",
+  "semantics_reference": "https://cassandra.apache.org/doc/3.11/cassandra/cql/ddl.html#clustering-order",
+  "qualification": "External derivation oracle only; no admitted CQL input, Cassandra pack, live store, adapter or vendor-limit validation."
+}

@@ -1,0 +1,70 @@
+{
+  "schema": "phebs-t271-review-correction-v1",
+  "date": "2026-10-18",
+  "finding": {
+    "severity": "P2",
+    "source": "independent implementation review via lead",
+    "problem": "bytes.TrimSpace admitted non-JSON Unicode/ASCII whitespace after the parsed root value",
+    "correction": "Accept exactly SP, HT, CR and LF in the remaining tail; any other byte atomically refuses as trailing_bytes."
+  },
+  "input_checkpoint": "e7be4d27",
+  "preregistration_sha256": "7ef0df8be38bc51494e63a57173c120c5ed2e98b832822251bdb9f6ca9555b3b",
+  "frozen_inputs_and_labels_changed": false,
+  "original_measurements_preserved": true,
+  "original_measurements_sha256": "02e81e7700e7bd93debcb114abb89a0754c5773cc29b95357a3fb3734857c195",
+  "original_demo_sha256": "dcd1565dc3a4bee4c2474749d460a6cca900abf92ae251cb4edaa9ffd3149abc",
+  "original_verification_sha256": "708a564b22fd18893d6beafeac2f3e0126efef6d2e22aaac4e65b64c4754186f",
+  "corrected_source_files_sha256": {
+    "reader.go": "9cca2be9ffa38514e71f45fd377a37022152badf01281ab4284ae8f7848ab67e",
+    "validate.go": "3fc1f9c28b054fb6d6de4e1ed7f51a6affd2be6c86bf5fab17c1e1332d6d74b2",
+    "project.go": "6a6f8e0b0fcd15b7781484be06afad38e186bfab10d21873a34f998a4bd0bdc7",
+    "reader_test.go": "e1bf8c55f7cc4132f81b009853e8140822c2d6cba0b461a14a750a33f15d3fb3",
+    "results/README.md": "5bcb0d5ee972f7254e3d48ffbb95c2b857b63619fc02a90ac00eb8c065d825d3"
+  },
+  "supplemental_regression": {
+    "test": "TestJSONTailWhitespace",
+    "outside_frozen_quality_population": true,
+    "accepted": [
+      "empty",
+      "SP/HT/CR/LF"
+    ],
+    "atomic_trailing_bytes_refusals": [
+      "vertical tab",
+      "form feed",
+      "nonbreaking space",
+      "em space",
+      "next line",
+      "line separator"
+    ],
+    "partial_facts_citations_catalog_rows": 0
+  },
+  "checks": [
+    {
+      "command": "go test ./spike/t271 -count=1 -timeout=30s -v",
+      "result": "pass",
+      "seconds": 0.405,
+      "output_sha256": "3aae4aac6facaed9a681c5ff82027bb5e07a37ddaed53d118d78ab19c5d022bc"
+    },
+    {
+      "command": "go test -race ./spike/t271 -count=1 -timeout=30s",
+      "result": "pass",
+      "seconds": 1.591
+    },
+    {
+      "command": "go vet ./spike/t271",
+      "result": "pass"
+    },
+    {
+      "command": "go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2 run ./spike/t271 --timeout=1m",
+      "result": "pass",
+      "issues": 0
+    },
+    {
+      "command": "git diff --check",
+      "result": "pass"
+    }
+  ],
+  "corrected_frozen_cases_canonical_sha256": "904465c775546e1c208fbdd4dc727dabfa5560ae7a9bc88c7022526096926577",
+  "cost": "One explicit byte scan of the bounded remaining tail, at most 65,536 bytes, with no new allocation, I/O, worker, cache or production path. Original finite mechanics measurements remain qualified to their recorded pre-correction source.",
+  "independent_rereview": "pending lead/peer confirmation"
+}

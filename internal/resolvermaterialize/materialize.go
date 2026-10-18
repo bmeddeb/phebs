@@ -81,6 +81,7 @@ type generatedPlan struct {
 	modules          map[string]string
 	parsedSymbols    map[string]generatedSymbolParse
 	blobs            *blobBudget
+	units            *consumerUnitPlan
 }
 
 type generatedSymbolParse struct {
@@ -157,7 +158,7 @@ func (budget *blobBudget) load(
 
 // Build streams one deterministic stage. It never walks a repository tree:
 // candidate replay supplies every admitted path/OID, and ReadBlob is invoked
-// only for go.mod, the two fixed generated-attribution inputs, and mapped
+// only for go.mod, the three fixed attribution inputs, and mapped
 // generated base-lane Go sources retained by the v1.1 symbol projection.
 func Build(ctx context.Context, request BuildRequest) (*resolvercatalog.Prepared, error) {
 	if err := validateBuildRequest(request); err != nil {
@@ -199,6 +200,10 @@ func Build(ctx context.Context, request BuildRequest) (*resolvercatalog.Prepared
 		},
 	); err != nil {
 		return nil, fmt.Errorf("materialize Go modules: %w", err)
+	}
+
+	if err := emitConsumerUnits(ctx, stage, plan); err != nil {
+		return nil, err
 	}
 
 	declarations := declarationInputsByProtocol(request.Declarations)
@@ -338,14 +343,14 @@ func discoverGeneratedInputs(
 		parsedSymbols:   make(map[string]generatedSymbolParse),
 		blobs:           budget,
 	}
-	fixed := make(map[string]extract.CandidateManifestFile, 2)
+	fixed := make(map[string]extract.CandidateManifestFile, 3)
 	caller := request.Registry.adapters[0]
 	err := request.Manifest.ForEachRepositoryFile(
 		ctx, caller.callerDomain, caller.callerVersion,
 		func(file extract.CandidateManifestFile) error {
 			switch file.Path {
 			case resolverinput.LayoutSnapshotPath,
-				resolverinput.GeneratedFromSnapshotPath:
+				resolverinput.GeneratedFromSnapshotPath, extract.ConsumerUnitSnapshotPath:
 				if err := validateInputFile(file); err != nil {
 					return err
 				}
@@ -436,6 +441,10 @@ func discoverGeneratedInputs(
 				}
 			}
 		}
+	}
+	plan.units, err = discoverConsumerUnits(ctx, fixed[extract.ConsumerUnitSnapshotPath], budget)
+	if err != nil {
+		return nil, err
 	}
 	return plan, nil
 }
@@ -566,6 +575,9 @@ func emitModulesAndValidateGeneratedPaths(
 		ctx, caller.callerDomain, caller.callerVersion,
 		func(file extract.CandidateManifestFile) error {
 			if err := ctx.Err(); err != nil {
+				return err
+			}
+			if err := plan.units.observe(file, plan); err != nil {
 				return err
 			}
 			if file.SourceLane == candidate.SourceLaneBase &&

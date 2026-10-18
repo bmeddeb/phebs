@@ -26,6 +26,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/repowork"
 	"github.com/bmeddeb/phebs/internal/resolvercatalog"
 	"github.com/bmeddeb/phebs/internal/resolvercatalogid"
+	"github.com/bmeddeb/phebs/internal/resolvermaterialize"
 	"github.com/bmeddeb/phebs/internal/store"
 	reposync "github.com/bmeddeb/phebs/internal/sync"
 )
@@ -502,6 +503,7 @@ func newWorkerHarness(t *testing.T, leafCount int) workerHarness {
 			DeclarationSetDigest: digest('e'), CandidateManifestDigest: plan.digest,
 			GenerationDigest: digest('f'), ManifestDigest: digest('1'),
 			AuthorityDigest: digest('2'),
+			ResolverPacks:   []store.ResolverCatalogPack{{Name: resolvermaterialize.GoModulePackName, Version: resolvermaterialize.PackVersion}, {Name: resolvermaterialize.GRPCGeneratedPackName, Version: resolvermaterialize.PackVersion}},
 			ControlRevision: 1, WriterSchema: resolvercatalogid.WriterSchema,
 		},
 	}

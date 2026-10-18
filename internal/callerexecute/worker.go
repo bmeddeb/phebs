@@ -1236,6 +1236,9 @@ func currentJobAuthority(
 	if err != nil {
 		return nil, false, err
 	}
+	if !registry.currentResolverPacks(resolverPointer.ResolverPacks) {
+		return nil, false, nil
+	}
 	resolverCurrent, err := state.ResolverCatalogPublicationCurrent(
 		ctx, *resolverPointer,
 	)

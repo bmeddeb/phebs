@@ -1,0 +1,17 @@
+{
+  "schema": "t521-independent-source-review-v1",
+  "date": "2026-10-18",
+  "label_digest": "sha256:4e9c7474bc33e98c1d1f057f8e8cd72f71a5801ca157df873e9dbf1bc87c491f",
+  "reviewer": "lead source review before indexer/candidate output",
+  "checked": [
+    "all48 source-freeze files and370645bytes",
+    "all374 exact label spans/digests/lines and unique ranges",
+    "complete unchanged jaeger_tag.go and sampling_manager.go handwritten source",
+    "generated0.14.1 Tag and sampling struct numeric/name/type tags against external pinned IDL",
+    "all authored positive/lookalike/accessor/reflection/duplicate-ID/field-zero controls",
+    "different SCIP/declaration families, derived tier and source_binding none",
+    "bounded offline index and distinct future evaluation Git identities before scoring"
+  ],
+  "result": "accepted for bounded input indexing only; no measured candidate or public accuracy result",
+  "findings": []
+}

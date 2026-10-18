@@ -242,157 +242,161 @@ export function AnalysisScopePanel({
       )}
 
       {(relevantRepositories.length > 0 || hasCoverage) && (
-        <details
-          data-testid={hasCoverage ? 'coverage-certificate-detail' : 'analysis-scope-detail'}
-          className={css({ borderTop: `1px solid ${tok.innerSep}` })}
-        >
-          <summary className={css({
-            minHeight: '40px',
-            boxSizing: 'border-box',
-            padding: '8px 12px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            cursor: 'pointer',
-            color: tok.textSecondary,
-            fontSize: '11px',
-            ':hover': { color: tok.textPrimary, backgroundColor: tok.hoverFill },
-            ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '-2px' },
-          })}>
-            <span className={css({ fontWeight: 650 })}>
-              {hasCoverage ? 'Coverage certificate' : 'Exact repository scope'}
-            </span>
-            {hasCoverage && (
+        <div className={css({ position: 'relative' })}>
+          <details
+            data-testid={hasCoverage ? 'coverage-certificate-detail' : 'analysis-scope-detail'}
+            className={css({ borderTop: `1px solid ${tok.innerSep}` })}
+          >
+            <summary className={css({
+              minHeight: '40px',
+              boxSizing: 'border-box',
+              padding: hasCoverage ? '8px 48px 8px 12px' : '8px 12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: 'pointer',
+              color: tok.textSecondary,
+              fontSize: '11px',
+              ':hover': { color: tok.textPrimary, backgroundColor: tok.hoverFill },
+              ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '-2px' },
+            })}>
+              <span className={css({ fontWeight: 650 })}>
+                {hasCoverage ? 'Coverage certificate' : 'Exact repository scope'}
+              </span>
+              <span className={css({
+                minWidth: 0,
+                marginLeft: 'auto',
+                color: tok.textTertiary,
+                fontFamily: FONTS.MONO,
+                fontSize: '11px',
+                overflowWrap: 'anywhere',
+                textAlign: 'right',
+                '@media screen and (max-width: 620px)': { display: 'none' },
+              })}>
+                {hasCoverage
+                  ? certificateIdentitySummary(allCertificates)
+                  : `${focusedCount} focused / ${relevantRepositories.length - focusedCount} whole`}
+              </span>
+            </summary>
+            <div className={css({ borderTop: `1px solid ${tok.innerSep}` })}>
+              {mountedRepositories.map((candidate, index) => {
+                const expanded = expandedRepository === candidate.repository
+                const detailID = `${id}-repository-${index}-${safeID(candidate.repository)}`
+                return (
+                  <div key={candidate.repository} className={css({
+                    borderBottom: `1px solid ${tok.innerSep}`,
+                    ':last-child': { borderBottom: 'none' },
+                  })}>
+                    <button
+                      type="button"
+                      aria-expanded={expanded}
+                      aria-controls={expanded ? detailID : undefined}
+                      onClick={() => setExpandedRepository(
+                        expanded ? '' : candidate.repository,
+                      )}
+                      className={css({
+                        width: '100%',
+                        minHeight: '44px',
+                        display: 'grid',
+                        gridTemplateColumns: 'minmax(0, 1fr) auto',
+                        gap: '12px',
+                        alignItems: 'center',
+                        padding: '8px 12px',
+                        border: 'none',
+                        backgroundColor: 'transparent',
+                        color: tok.textPrimary,
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        ':hover': { backgroundColor: tok.hoverFill },
+                        ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '-2px' },
+                        '@media screen and (max-width: 620px)': {
+                          gridTemplateColumns: '1fr',
+                          gap: '4px',
+                        },
+                      })}
+                    >
+                      <span className={css({ minWidth: 0 })}>
+                        <span className={css({
+                          display: 'block',
+                          overflowWrap: 'anywhere',
+                          fontSize: '11px',
+                          fontWeight: 650,
+                        })}>{candidate.repository}</span>
+                        <span className={css({
+                          display: 'block',
+                          marginTop: '2px',
+                          color: tok.textTertiary,
+                          fontSize: '11px',
+                        })}>
+                          {candidate.unit
+                            ? `service unit ${candidate.unit.name}`
+                            : 'whole-repository scope'}
+                        </span>
+                      </span>
+                      <span className={css({
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'flex-end',
+                        gap: '6px',
+                        flexWrap: 'wrap',
+                        '@media screen and (max-width: 620px)': { justifyContent: 'flex-start' },
+                      })}>
+                        <StatusChip tone={candidate.posture === 'focused' ? 'blue' : 'neutral'}>
+                          {candidate.posture}
+                        </StatusChip>
+                        {candidate.runs.some((run) => !run.fresh) && (
+                          <StatusChip tone="amber">stale or unpublished</StatusChip>
+                        )}
+                        <span aria-hidden="true" className={css({ color: tok.gutter })}>
+                          {expanded ? '▾' : '▸'}
+                        </span>
+                      </span>
+                    </button>
+                    {expanded && (
+                      <RepositoryDetail id={detailID} repository={candidate} />
+                    )}
+                  </div>
+                )
+              })}
+              {mountedRepositories.length === 0 && hasCoverage && (
+                <div
+                  role="status"
+                  data-testid="coverage-certificate-empty-universe"
+                  className={css({
+                    padding: '10px 12px',
+                    color: tok.textSecondary,
+                    fontSize: '11px',
+                    lineHeight: '16px',
+                  })}
+                >
+                  Coverage certificate reports 0 repository rows for this answer.
+                </div>
+              )}
+              {omittedRepositories > 0 && (
+                <div role="status" className={css({
+                  padding: '9px 12px',
+                  color: tok.status.stale.text,
+                  fontSize: '11px',
+                  lineHeight: '16px',
+                })}>
+                  DOM bound reached: {omittedRepositories}{' '}
+                  {omittedRepositories === 1
+                    ? 'additional repository is'
+                    : 'additional repositories are'} not mounted. Narrow
+                  this surface by repository to inspect its exact scope.
+                </div>
+              )}
+            </div>
+          </details>
+          {hasCoverage && (
+            <div className={css({ position: 'absolute', top: '9px', right: '12px' })}>
               <SectionHelp
                 termId="coverage_certificate"
                 enabledCapabilities={coverageCapabilities}
               />
-            )}
-            <span className={css({
-              minWidth: 0,
-              marginLeft: 'auto',
-              color: tok.textTertiary,
-              fontFamily: FONTS.MONO,
-              fontSize: '11px',
-              overflowWrap: 'anywhere',
-              textAlign: 'right',
-              '@media screen and (max-width: 620px)': { display: 'none' },
-            })}>
-              {hasCoverage
-                ? certificateIdentitySummary(allCertificates)
-                : `${focusedCount} focused / ${relevantRepositories.length - focusedCount} whole`}
-            </span>
-          </summary>
-          <div className={css({ borderTop: `1px solid ${tok.innerSep}` })}>
-            {mountedRepositories.map((candidate, index) => {
-              const expanded = expandedRepository === candidate.repository
-              const detailID = `${id}-repository-${index}-${safeID(candidate.repository)}`
-              return (
-                <div key={candidate.repository} className={css({
-                  borderBottom: `1px solid ${tok.innerSep}`,
-                  ':last-child': { borderBottom: 'none' },
-                })}>
-                  <button
-                    type="button"
-                    aria-expanded={expanded}
-                    aria-controls={expanded ? detailID : undefined}
-                    onClick={() => setExpandedRepository(
-                      expanded ? '' : candidate.repository,
-                    )}
-                    className={css({
-                      width: '100%',
-                      minHeight: '44px',
-                      display: 'grid',
-                      gridTemplateColumns: 'minmax(0, 1fr) auto',
-                      gap: '12px',
-                      alignItems: 'center',
-                      padding: '8px 12px',
-                      border: 'none',
-                      backgroundColor: 'transparent',
-                      color: tok.textPrimary,
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                      ':hover': { backgroundColor: tok.hoverFill },
-                      ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '-2px' },
-                      '@media screen and (max-width: 620px)': {
-                        gridTemplateColumns: '1fr',
-                        gap: '4px',
-                      },
-                    })}
-                  >
-                    <span className={css({ minWidth: 0 })}>
-                      <span className={css({
-                        display: 'block',
-                        overflowWrap: 'anywhere',
-                        fontSize: '11px',
-                        fontWeight: 650,
-                      })}>{candidate.repository}</span>
-                      <span className={css({
-                        display: 'block',
-                        marginTop: '2px',
-                        color: tok.textTertiary,
-                        fontSize: '11px',
-                      })}>
-                        {candidate.unit
-                          ? `service unit ${candidate.unit.name}`
-                          : 'whole-repository scope'}
-                      </span>
-                    </span>
-                    <span className={css({
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'flex-end',
-                      gap: '6px',
-                      flexWrap: 'wrap',
-                      '@media screen and (max-width: 620px)': { justifyContent: 'flex-start' },
-                    })}>
-                      <StatusChip tone={candidate.posture === 'focused' ? 'blue' : 'neutral'}>
-                        {candidate.posture}
-                      </StatusChip>
-                      {candidate.runs.some((run) => !run.fresh) && (
-                        <StatusChip tone="amber">stale or unpublished</StatusChip>
-                      )}
-                      <span aria-hidden="true" className={css({ color: tok.gutter })}>
-                        {expanded ? '▾' : '▸'}
-                      </span>
-                    </span>
-                  </button>
-                  {expanded && (
-                    <RepositoryDetail id={detailID} repository={candidate} />
-                  )}
-                </div>
-              )
-            })}
-            {mountedRepositories.length === 0 && hasCoverage && (
-              <div
-                role="status"
-                data-testid="coverage-certificate-empty-universe"
-                className={css({
-                  padding: '10px 12px',
-                  color: tok.textSecondary,
-                  fontSize: '11px',
-                  lineHeight: '16px',
-                })}
-              >
-                Coverage certificate reports 0 repository rows for this answer.
-              </div>
-            )}
-            {omittedRepositories > 0 && (
-              <div role="status" className={css({
-                padding: '9px 12px',
-                color: tok.status.stale.text,
-                fontSize: '11px',
-                lineHeight: '16px',
-              })}>
-                DOM bound reached: {omittedRepositories}{' '}
-                {omittedRepositories === 1
-                  ? 'additional repository is'
-                  : 'additional repositories are'} not mounted. Narrow
-                this surface by repository to inspect its exact scope.
-              </div>
-            )}
-          </div>
-        </details>
+            </div>
+          )}
+        </div>
       )}
 
       {gaps.length > 0 && (

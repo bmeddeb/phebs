@@ -1,0 +1,179 @@
+{
+  "Schema": "t521-first-field-quality-v1",
+  "PreregistrationDigest": "sha256:090c9e5b7ef41286599e58e40b46169b071b6a074abe265ff309b010d676ae6f",
+  "CostScope": "Extract plus streaming verification/counters; precomputed input digests and line starts, no child; wall time not isolated CPU",
+  "Results": [
+    {
+      "Population": "public",
+      "Commit": "6218bbaca1bd557c45c6aba6dfcd0c741ed1f64b",
+      "Positive": 33,
+      "Negative": 266,
+      "Unsupported": 0,
+      "Matched": 33,
+      "GeneratedEmissions": 353,
+      "AllEmissions": 386,
+      "Reads": 13,
+      "ReadBytes": 1122604,
+      "WallMicros": 6178,
+      "ApplicationRoles": {
+        "read": 33
+      },
+      "GeneratedRoles": {
+        "read": 353
+      },
+      "Mismatches": null,
+      "Missing": null,
+      "Witnesses": [
+        {
+          "Object": "jaeger.Tag#1",
+          "GeneratedPath": "thrift-gen/jaeger/jaeger.go",
+          "IDLPath": "thrift/jaeger.thrift",
+          "Symbol": "scip-go gomod github.com/uber/jaeger-client-go v0.0.0-t521 `github.com/uber/jaeger-client-go/thrift-gen/jaeger`/Tag#Key.",
+          "ThriftName": "key",
+          "DefinitionStart": 2986,
+          "DefinitionEnd": 2989
+        },
+        {
+          "Object": "jaeger.Tag#2",
+          "GeneratedPath": "thrift-gen/jaeger/jaeger.go",
+          "IDLPath": "thrift/jaeger.thrift",
+          "Symbol": "scip-go gomod github.com/uber/jaeger-client-go v0.0.0-t521 `github.com/uber/jaeger-client-go/thrift-gen/jaeger`/Tag#VType.",
+          "ThriftName": "vType",
+          "DefinitionStart": 3045,
+          "DefinitionEnd": 3050
+        },
+        {
+          "Object": "jaeger.Tag#3",
+          "GeneratedPath": "thrift-gen/jaeger/jaeger.go",
+          "IDLPath": "thrift/jaeger.thrift",
+          "Symbol": "scip-go gomod github.com/uber/jaeger-client-go v0.0.0-t521 `github.com/uber/jaeger-client-go/thrift-gen/jaeger`/Tag#VStr.",
+          "ThriftName": "vStr",
+          "DefinitionStart": 3113,
+          "DefinitionEnd": 3117
+        },
+        {
+          "Object": "jaeger.Tag#4",
+          "GeneratedPath": "thrift-gen/jaeger/jaeger.go",
+          "IDLPath": "thrift/jaeger.thrift",
+          "Symbol": "scip-go gomod github.com/uber/jaeger-client-go v0.0.0-t521 `github.com/uber/jaeger-client-go/thrift-gen/jaeger`/Tag#VDouble.",
+          "ThriftName": "vDouble",
+          "DefinitionStart": 3178,
+          "DefinitionEnd": 3185
+        },
+        {
+          "Object": "jaeger.Tag#5",
+          "GeneratedPath": "thrift-gen/jaeger/jaeger.go",
+          "IDLPath": "thrift/jaeger.thrift",
+          "Symbol": "scip-go gomod github.com/uber/jaeger-client-go v0.0.0-t521 `github.com/uber/jaeger-client-go/thrift-gen/jaeger`/Tag#VBool.",
+          "ThriftName": "vBool",
+          "DefinitionStart": 3256,
+          "DefinitionEnd": 3261
+        },
+        {
+          "Object": "jaeger.Tag#6",
+          "GeneratedPath": "thrift-gen/jaeger/jaeger.go",
+          "IDLPath": "thrift/jaeger.thrift",
+          "Symbol": "scip-go gomod github.com/uber/jaeger-client-go v0.0.0-t521 `github.com/uber/jaeger-client-go/thrift-gen/jaeger`/Tag#VLong.",
+          "ThriftName": "vLong",
+          "DefinitionStart": 3323,
+          "DefinitionEnd": 3328
+        },
+        {
+          "Object": "sampling.SamplingStrategyResponse#1",
+          "GeneratedPath": "thrift-gen/sampling/sampling.go",
+          "IDLPath": "thrift/sampling.thrift",
+          "Symbol": "scip-go gomod github.com/uber/jaeger-client-go v0.0.0-t521 `github.com/uber/jaeger-client-go/thrift-gen/sampling`/SamplingStrategyResponse#StrategyType.",
+          "ThriftName": "strategyType",
+          "DefinitionStart": 26389,
+          "DefinitionEnd": 26401
+        },
+        {
+          "Object": "sampling.SamplingStrategyResponse#2",
+          "GeneratedPath": "thrift-gen/sampling/sampling.go",
+          "IDLPath": "thrift/sampling.thrift",
+          "Symbol": "scip-go gomod github.com/uber/jaeger-client-go v0.0.0-t521 `github.com/uber/jaeger-client-go/thrift-gen/sampling`/SamplingStrategyResponse#ProbabilisticSampling.",
+          "ThriftName": "probabilisticSampling",
+          "DefinitionStart": 26498,
+          "DefinitionEnd": 26519
+        },
+        {
+          "Object": "sampling.ProbabilisticSamplingStrategy#1",
+          "GeneratedPath": "thrift-gen/sampling/sampling.go",
+          "IDLPath": "thrift/sampling.thrift",
+          "Symbol": "scip-go gomod github.com/uber/jaeger-client-go v0.0.0-t521 `github.com/uber/jaeger-client-go/thrift-gen/sampling`/ProbabilisticSamplingStrategy#SamplingRate.",
+          "ThriftName": "samplingRate",
+          "DefinitionStart": 1846,
+          "DefinitionEnd": 1858
+        }
+      ]
+    },
+    {
+      "Population": "neutral",
+      "Commit": "34136e8c9f6ee0364cb2dff3a1e78a7d86221721",
+      "Positive": 11,
+      "Negative": 60,
+      "Unsupported": 4,
+      "Matched": 11,
+      "GeneratedEmissions": 1,
+      "AllEmissions": 12,
+      "Reads": 6,
+      "ReadBytes": 12876,
+      "WallMicros": 79,
+      "ApplicationRoles": {
+        "read": 11
+      },
+      "GeneratedRoles": {
+        "read": 1
+      },
+      "Mismatches": null,
+      "Missing": null,
+      "Witnesses": [
+        {
+          "Object": "neutral.Parcel#1",
+          "GeneratedPath": "gen/parcel.go",
+          "IDLPath": "idl/parcel.thrift",
+          "Symbol": "scip-go gomod example.com/t521-neutral v0.0.0-t521 `example.com/t521-neutral/gen`/Parcel#Code.",
+          "ThriftName": "code",
+          "DefinitionStart": 175,
+          "DefinitionEnd": 179
+        },
+        {
+          "Object": "neutral.Parcel#7",
+          "GeneratedPath": "gen/parcel.go",
+          "IDLPath": "idl/parcel.thrift",
+          "Symbol": "scip-go gomod example.com/t521-neutral v0.0.0-t521 `example.com/t521-neutral/gen`/Parcel#Count.",
+          "ThriftName": "count",
+          "DefinitionStart": 215,
+          "DefinitionEnd": 220
+        },
+        {
+          "Object": "neutral.Parcel#9",
+          "GeneratedPath": "gen/parcel.go",
+          "IDLPath": "idl/parcel.thrift",
+          "Symbol": "scip-go gomod example.com/t521-neutral v0.0.0-t521 `example.com/t521-neutral/gen`/Parcel#Tags.",
+          "ThriftName": "tags",
+          "DefinitionStart": 248,
+          "DefinitionEnd": 252
+        },
+        {
+          "Object": "neutral.Parcel#13",
+          "GeneratedPath": "gen/parcel.go",
+          "IDLPath": "idl/parcel.thrift",
+          "Symbol": "scip-go gomod example.com/t521-neutral v0.0.0-t521 `example.com/t521-neutral/gen`/Parcel#Attrs.",
+          "ThriftName": "attrs",
+          "DefinitionStart": 281,
+          "DefinitionEnd": 286
+        },
+        {
+          "Object": "neutral.MessengerSendResult#0",
+          "GeneratedPath": "gen/parcel.go",
+          "IDLPath": "idl/parcel.thrift",
+          "Symbol": "scip-go gomod example.com/t521-neutral v0.0.0-t521 `example.com/t521-neutral/gen`/MessengerSendResult#Success.",
+          "ThriftName": "success",
+          "DefinitionStart": 416,
+          "DefinitionEnd": 423
+        }
+      ]
+    }
+  ]
+}

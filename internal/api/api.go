@@ -103,12 +103,12 @@ type Options struct {
 	// insufficient because Kafka- or field-only deployments must not advertise
 	// an unreachable Caller Map.
 	CallerMapEnabled bool
-	// CallerComparisonEnabled records that caller comparison is explicitly
-	// admitted. It never follows Caller Map's ordinary activation: a released
-	// Caller Map recipe enables Caller Map alone, and the experimental
-	// protobuf/Thrift switches are its only present admission (Epic 50 owns
-	// comparison promotion through its own release).
+	// CallerComparisonEnabled records explicit comparison admission, through
+	// either its own signed claim plus released Caller Map or provisional switches.
 	CallerComparisonEnabled bool
+	// CallerComparisonReleased restricts the selected claim to its supported
+	// protobuf endpoint pairs, including when provisional switches are also on.
+	CallerComparisonReleased bool
 	// CallerReader is the sole T30.6j product read boundary over an exact
 	// complete caller-generation publication. Serve shares its underlying
 	// publication registry with the worker and lifecycle reconcilers so an
@@ -159,10 +159,11 @@ type Options struct {
 	// only for a released recipe with no declaration domain (T55.2: a released
 	// Kafka producer must not expose Atlas, which Epic 49 owns).
 	ContractCatalogUnadmitted bool
-	// CatalogReleasedDomains, when non-empty, marks Contract Atlas admitted
-	// solely by released recipes (T49.3): its coverage describes exactly these
-	// catalog domains, and an operation names every relationship section a
-	// missing domain would feed unavailable instead of returning it empty.
+	// CatalogReleasedDomains contains every extractor domain admitted by
+	// verified recipes in release-only mode. Raw evidence refuses other
+	// domains before storage; Atlas describes intersecting catalog domains
+	// and names unadmitted relationship sections unavailable. Empty keeps
+	// the explicit provisional evidence surface unrestricted.
 	CatalogReleasedDomains []string
 	// KafkaReleasedPlanes, when non-empty, marks a proof service admitted
 	// solely by released Kafka planes ("producer", "consumer"; T55.2/T56.2). It
@@ -170,6 +171,12 @@ type Options struct {
 	// reads, names every other plane unavailable in the census, and registers
 	// no other proof, Impact or compatibility surface.
 	KafkaReleasedPlanes []string
+	// ProtobufFieldReferencesReleased restricts proof products to the signed field
+	// recipe (plus independently released Kafka planes), preserving nil defaults.
+	ProtobufFieldReferencesReleased bool
+	// EvidenceExtractorVersions fences admitted domains to exact extraction
+	// versions, including raw reads and retained bundles. Nil is unrestricted.
+	EvidenceExtractorVersions map[string]string
 	// KafkaTopicInventoryReleased additionally admits the composed Topics
 	// inventory on that released surface: a verified phebs.kafka.topics record
 	// with both planes released (T57.3). It has no effect without them.
