@@ -1,0 +1,160 @@
+{
+  "format": "t281-pre-outcome-projection-witnesses-v1",
+  "recognizer_runs": 0,
+  "source_checkpoint": "c525a50f",
+  "frozen_controls_unchanged": true,
+  "qualification": "Supplemental exact projection witnesses for the six existing positive native controls; no public labels, populations, thresholds or source bytes change. Independent lead source review precedes candidate execution.",
+  "cases": [
+    {
+      "id": "overlapping-prefix-families",
+      "source_path": "fixtures/controls/overlapping-prefix-families.go",
+      "source_sha256": "aac30a4dd81bf78c8c33b73f332312684e9ad9aef28b690c2052a8bcc73e76ed",
+      "expected_native_projection": [
+        {
+          "kind": "index",
+          "name": "aWR4QQ==",
+          "prefixes": [
+            "ZG9jOg=="
+          ],
+          "fields": [
+            {
+              "name": "bmFtZQ==",
+              "kind": "TEXT"
+            }
+          ],
+          "options": {
+            "on": "HASH"
+          }
+        },
+        {
+          "kind": "index",
+          "name": "aWR4Qg==",
+          "prefixes": [
+            "ZG9jOg=="
+          ],
+          "fields": [
+            {
+              "name": "bmFtZQ==",
+              "kind": "TEXT"
+            }
+          ],
+          "options": {
+            "on": "HASH"
+          }
+        }
+      ],
+      "basis": "Explicit literal values in the already frozen inert fixture, hand-authored before candidate outputs; citation spans independently round-trip. No candidate/parser output consulted."
+    },
+    {
+      "id": "ft-static-projection",
+      "source_path": "fixtures/controls/ft-static-projection.go",
+      "source_sha256": "1c09734729ed441d723e277cc91f149037edca3d92ca0436e329ee08dc239c01",
+      "expected_native_projection": [
+        {
+          "kind": "index",
+          "name": "aW5kZXg=",
+          "prefixes": [
+            "ZG9jOg=="
+          ],
+          "fields": [
+            {
+              "name": "bmFtZQ==",
+              "kind": "TEXT"
+            },
+            {
+              "name": "d2VpZ2h0",
+              "kind": "NUMERIC"
+            }
+          ],
+          "options": {
+            "on": "HASH"
+          }
+        }
+      ],
+      "basis": "Explicit literal values in the already frozen inert fixture, hand-authored before candidate outputs; citation spans independently round-trip. No candidate/parser output consulted."
+    },
+    {
+      "id": "ft-flat-vector-closed-positive",
+      "source_path": "fixtures/controls/ft-flat-vector-closed-positive.go",
+      "source_sha256": "d8ae1d90339727c944f666374c188713ef2b8bcdd000d108af685fbbd7563d01",
+      "expected_native_projection": [
+        {
+          "kind": "index",
+          "name": "aW5kZXg=",
+          "prefixes": [
+            "ZG9jOg=="
+          ],
+          "fields": [
+            {
+              "name": "dg==",
+              "kind": "VECTOR",
+              "options": {
+                "TYPE": "FLOAT32",
+                "DIM": "3",
+                "DISTANCE_METRIC": "COSINE"
+              }
+            }
+          ],
+          "options": {
+            "on": "HASH"
+          }
+        }
+      ],
+      "basis": "Explicit literal values in the already frozen inert fixture, hand-authored before candidate outputs; citation spans independently round-trip. No candidate/parser output consulted."
+    },
+    {
+      "id": "ts-create",
+      "source_path": "fixtures/controls/ts-create.go",
+      "source_sha256": "8a2ad6b885775f5b7bc5b22be2f41b11ffe830be39cdba70d1c57cfbc016e53f",
+      "expected_native_projection": [
+        {
+          "kind": "series",
+          "name": "dGVtcGVyYXR1cmU=",
+          "options": {
+            "retention_milliseconds": "1000",
+            "label_base64:c2Vuc29y": "bmV1dHJhbA=="
+          }
+        }
+      ],
+      "basis": "Explicit literal values in the already frozen inert fixture, hand-authored before candidate outputs; citation spans independently round-trip. No candidate/parser output consulted."
+    },
+    {
+      "id": "ts-rule",
+      "source_path": "fixtures/controls/ts-rule.go",
+      "source_sha256": "0ed1df7d804b40b1475020eaf5798589fc80ea163e25844499f5955145a5fdb6",
+      "expected_native_projection": [
+        {
+          "kind": "series-rule",
+          "name": "dGVtcGVyYXR1cmU=",
+          "references": [
+            "dGVtcGVyYXR1cmU=",
+            "dGVtcGVyYXR1cmU6YXZn"
+          ],
+          "options": {
+            "aggregation": "avg",
+            "bucket_milliseconds": "60000"
+          }
+        }
+      ],
+      "basis": "Explicit literal values in the already frozen inert fixture, hand-authored before candidate outputs; citation spans independently round-trip. No candidate/parser output consulted."
+    },
+    {
+      "id": "xgroup-create",
+      "source_path": "fixtures/controls/xgroup-create.go",
+      "source_sha256": "5a13d426a333511320f410b7a58a19ab6b6551f26b2d05f4f7912b9a278388d1",
+      "expected_native_projection": [
+        {
+          "kind": "stream-group",
+          "name": "cHJvY2Vzc29ycw==",
+          "references": [
+            "ZXZlbnRz"
+          ],
+          "options": {
+            "start_id": "0"
+          }
+        }
+      ],
+      "basis": "Explicit literal values in the already frozen inert fixture, hand-authored before candidate outputs; citation spans independently round-trip. No candidate/parser output consulted."
+    }
+  ]
+}

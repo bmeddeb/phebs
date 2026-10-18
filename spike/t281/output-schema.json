@@ -1,0 +1,502 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "t281-output-jsonl-v1",
+  "$defs": {
+    "span": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "end": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "sha256"
+      ],
+      "additionalProperties": false
+    },
+    "segment": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "literal",
+            "parameter"
+          ]
+        },
+        "literal": {
+          "type": "string",
+          "contentEncoding": "base64",
+          "maxLength": 5464
+        },
+        "name": {
+          "type": "string"
+        },
+        "format": {
+          "enum": [
+            "%s",
+            "%d"
+          ]
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false
+    },
+    "value": {
+      "type": "object",
+      "properties": {
+        "bytes": {
+          "type": "string",
+          "contentEncoding": "base64",
+          "maxLength": 5464
+        },
+        "segments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/segment"
+          },
+          "maxItems": 32
+        },
+        "state": {
+          "enum": [
+            "literal",
+            "structure",
+            "unresolved"
+          ]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "span": {
+          "$ref": "#/$defs/span"
+        }
+      },
+      "required": [
+        "state",
+        "span"
+      ],
+      "additionalProperties": false
+    },
+    "key": {
+      "type": "object",
+      "properties": {
+        "position": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "value": {
+          "$ref": "#/$defs/value"
+        },
+        "access": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "enum": [
+              "RO",
+              "RW",
+              "OW",
+              "RM",
+              "ACCESS",
+              "UPDATE",
+              "INSERT",
+              "DELETE"
+            ]
+          },
+          "maxItems": 8
+        },
+        "expected_kind": {
+          "type": "string"
+        },
+        "kind_gap": {
+          "type": "string"
+        },
+        "hash_tag": {
+          "type": "string",
+          "contentEncoding": "base64",
+          "maxLength": 5464
+        },
+        "hash_tag_state": {
+          "type": "string"
+        },
+        "script_pass": {
+          "type": "boolean"
+        },
+        "predicate": {
+          "enum": [
+            "OBSERVES_REDIS_KEY_ARGUMENT",
+            "PASSES_REDIS_KEY_TO_SCRIPT"
+          ]
+        }
+      },
+      "required": [
+        "position",
+        "value",
+        "access",
+        "predicate"
+      ],
+      "additionalProperties": false
+    },
+    "site": {
+      "type": "object",
+      "properties": {
+        "method": {
+          "type": "string"
+        },
+        "span": {
+          "$ref": "#/$defs/span"
+        },
+        "recognized": {
+          "type": "boolean"
+        },
+        "command": {
+          "type": "string"
+        },
+        "gaps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 10
+        },
+        "keys": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/key"
+          },
+          "maxItems": 64
+        },
+        "key_cardinality": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "method",
+        "span",
+        "recognized",
+        "gaps",
+        "keys"
+      ],
+      "additionalProperties": false
+    },
+    "field": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "contentEncoding": "base64",
+          "maxLength": 5464
+        },
+        "kind": {
+          "enum": [
+            "TEXT",
+            "TAG",
+            "NUMERIC",
+            "VECTOR"
+          ]
+        },
+        "options": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "span": {
+          "$ref": "#/$defs/span"
+        }
+      },
+      "required": [
+        "name",
+        "kind",
+        "span"
+      ],
+      "additionalProperties": false
+    },
+    "native": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "index",
+            "series",
+            "series-rule",
+            "stream-group"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "contentEncoding": "base64",
+          "maxLength": 5464
+        },
+        "source": {
+          "$ref": "#/$defs/span"
+        },
+        "prefixes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "contentEncoding": "base64",
+            "maxLength": 5464
+          },
+          "maxItems": 8
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/field"
+          },
+          "maxItems": 32
+        },
+        "references": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "contentEncoding": "base64",
+            "maxLength": 5464
+          },
+          "maxItems": 2
+        },
+        "options": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "source"
+      ],
+      "additionalProperties": false
+    },
+    "acl-token": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string",
+          "contentEncoding": "base64",
+          "maxLength": 5464
+        },
+        "span": {
+          "$ref": "#/$defs/span"
+        }
+      },
+      "required": [
+        "token",
+        "span"
+      ],
+      "additionalProperties": false
+    },
+    "acl-pair": {
+      "type": "object",
+      "properties": {
+        "principal": {
+          "$ref": "#/$defs/acl-token"
+        },
+        "pattern": {
+          "$ref": "#/$defs/acl-token"
+        },
+        "intent": {
+          "enum": [
+            "R",
+            "W",
+            "RW"
+          ]
+        }
+      },
+      "required": [
+        "principal",
+        "pattern",
+        "intent"
+      ],
+      "additionalProperties": false
+    },
+    "blob": {
+      "type": "object",
+      "properties": {
+        "population": {
+          "type": "string"
+        },
+        "repository": {
+          "type": "string"
+        },
+        "commit": {
+          "type": "string"
+        },
+        "module_path": {
+          "type": "string"
+        },
+        "client_version": {
+          "type": "string"
+        },
+        "source_scope": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "path": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "role": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "processed",
+            "refused"
+          ]
+        },
+        "boundary": {
+          "type": "string"
+        },
+        "sites": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/site"
+          },
+          "maxItems": 8192
+        },
+        "native": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/native"
+          },
+          "maxItems": 8192
+        },
+        "principals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/acl-token"
+          },
+          "maxItems": 256
+        },
+        "acl_pairs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/acl-pair"
+          },
+          "maxItems": 8192
+        }
+      },
+      "required": [
+        "population",
+        "repository",
+        "commit",
+        "path",
+        "sha256",
+        "role",
+        "status",
+        "sites",
+        "native",
+        "principals",
+        "acl_pairs"
+      ],
+      "additionalProperties": false
+    },
+    "binding": {
+      "type": "object",
+      "properties": {
+        "population": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/span"
+        },
+        "state": {
+          "enum": [
+            "unbound",
+            "bound-indexed-projection",
+            "ambiguous-key-family"
+          ]
+        },
+        "candidates": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "maxItems": 16384
+        }
+      },
+      "required": [
+        "population",
+        "path",
+        "source",
+        "state",
+        "candidates"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "blob"
+        },
+        "blob": {
+          "$ref": "#/$defs/blob"
+        }
+      },
+      "required": [
+        "type",
+        "blob"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "binding"
+        },
+        "binding": {
+          "$ref": "#/$defs/binding"
+        }
+      },
+      "required": [
+        "type",
+        "binding"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "end"
+        },
+        "files": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "type",
+        "files"
+      ],
+      "additionalProperties": false
+    }
+  ]
+}

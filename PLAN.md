@@ -12311,3 +12311,24 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   granted. Runtime request/sync/startup/retry/publication/lock/cache/schema costs
   remain unchanged; only the isolated finite source pass gains bounded parsing
   and output work under the recorded30-second/1GiB-observed-RSS envelope.
+
+- **2026-10-18 — T28.1 isolated reader implementation checkpoint
+  (Ben-routed Mac backend handoff).** Root independently reviews13 files/
+  102,314B of stdlib-only nested-module reader, finite scorer and joined runner
+  against unchanged c525a50f source truth. The six supplemental native
+  projections match existing frozen inert fixtures; public labels and original
+  controls do not change. Prospective review corrects script-only predicates,
+  full manifest admission, module/version/scope echoes and atomic KEYNUM bounds
+  before any output. Exact candidate contract d9161c18 binds reviewed source
+  and tools. No build, test, parser prediction or scorer has run yet.
+
+  One supplementary inert boundary selftest precedes one offline build and two
+  fresh30s source-reader processes; first stops stay retained with no silent
+  retry. Credential scanning precedes publishing even failed child output.
+  Go source/AST is held one blob at a time through two passes; retained bounded
+  metadata and compressed prefix nodes replace per-key full-catalog scans.
+  Parent/source/output object overhead is separate; encoded4MiB blob bounds
+  follow allocation, and sampled1GiB direct-child RSS is not a hard heap or
+  aggregate family cap. This experiment adds no production query, sync, retry,
+  startup, publication, lock/cache/schema/worker or dependency. No Redis/client/
+  source application is executed or production manifest/registration adopted.

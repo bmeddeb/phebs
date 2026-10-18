@@ -1,0 +1,152 @@
+{
+  "format": "t281-reader-candidate-contract-v1",
+  "date": "2026-10-18",
+  "status": "AWAITING_INDEPENDENT_EXACT_SOURCE_REVIEW_AND_CHECKPOINT_BEFORE_BUILD_OR_CANDIDATE",
+  "candidate_runs": 0,
+  "source_input_checkpoint": "c525a50f",
+  "input_preregistration_sha256": "ad9f09d50f77a789dd5e9287ae8194ace2ca0d0937d2ac1e764656710893c518",
+  "implementation_files": [
+    {
+      "path": "go.mod",
+      "bytes": 40,
+      "sha256": "e840c8a22b98c88a61f70cfa552b9d904820e549da6eac9b46eb052b08d58473"
+    },
+    {
+      "path": "output-schema.json",
+      "bytes": 10094,
+      "sha256": "0cc0b1227e4e3f50388543d2d106e63aff6ea1974ac6301f9294afdd6c311955"
+    },
+    {
+      "path": "projection-witnesses.json",
+      "bytes": 5362,
+      "sha256": "58d02a79a297b35090d0f8a8b9d07b4b586b3ae636cba93c31c1f15b3f714cbf"
+    },
+    {
+      "path": "reader/acl.go",
+      "bytes": 3889,
+      "sha256": "52e79266eb95980df6675e462a91d4b63ec35e316a3aa048045b1c4d29c9aae7"
+    },
+    {
+      "path": "reader/command.go",
+      "bytes": 10628,
+      "sha256": "bf188dbd012140f93b72f89d6ed1f607379e037dc78befdb09feda882be27955"
+    },
+    {
+      "path": "reader/command_test.go",
+      "bytes": 2367,
+      "sha256": "ca69e52e4aa9d567fdf1fe2ed256f850e0db4b63f7d59800f43d68f630698076"
+    },
+    {
+      "path": "reader/go_source.go",
+      "bytes": 15552,
+      "sha256": "160b30b667ec2a3e9b8b67fd8be65ea06522dd886ce2d65f85c076d431e5cabc"
+    },
+    {
+      "path": "reader/main.go",
+      "bytes": 6109,
+      "sha256": "233b25447d8e52b87e13c553cbcc47e4e96196b4deef161c8d1b331009aaf84d"
+    },
+    {
+      "path": "reader/model.go",
+      "bytes": 7850,
+      "sha256": "ce6f7f8edaa8a6754b4b477094cd74b6a9156688ab549f8fd3ec8bffb611b10a"
+    },
+    {
+      "path": "reader/native.go",
+      "bytes": 4969,
+      "sha256": "2a04ecbec203ff5134bdf6cb101bc14eff94093f06ca1082cc3fcb8b585b5da8"
+    },
+    {
+      "path": "reader/prefix.go",
+      "bytes": 1654,
+      "sha256": "a5494b944de62f0a738039ecba4cb6487406fec438c798d08f10a3a6f1f93a25"
+    },
+    {
+      "path": "run_spike.py",
+      "bytes": 15694,
+      "sha256": "b343dc488e31188b70d6e9fe9f4967c4b9d588e4d26e9c53cbb6811a314fcaf6"
+    },
+    {
+      "path": "score_outputs.py",
+      "bytes": 18106,
+      "sha256": "0aeaf8703c30abf77287d610e34a8e2e42e49f05d25e6f2df7f2099e4a330b4c"
+    }
+  ],
+  "go_tool": {
+    "path": "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+    "bytes": 14500160,
+    "sha256": "3925fc3221ac440ebf7c35361ff663bed0c7bdb2e0a157b75fe993607ffe0a19"
+  },
+  "compiler_tools": [
+    {
+      "path": "/opt/homebrew/opt/phebs-go-1.26.5/pkg/tool/darwin_arm64/asm",
+      "bytes": 4919904,
+      "sha256": "7de57e9965f388f1ee3342a01953fad34fd819c18e2308af0bbbf103b296ea50"
+    },
+    {
+      "path": "/opt/homebrew/opt/phebs-go-1.26.5/pkg/tool/darwin_arm64/compile",
+      "bytes": 24625104,
+      "sha256": "610758d168cd8ab5a69a71d916af6f3a2e6aa1b5c04b491ddd563e32c8ceb78e"
+    },
+    {
+      "path": "/opt/homebrew/opt/phebs-go-1.26.5/pkg/tool/darwin_arm64/link",
+      "bytes": 6335152,
+      "sha256": "698f5f6a84cffa376d0d2d882a620dae7b95dc96e6491bc1864f704dcbd6d4eb"
+    }
+  ],
+  "input_contract": {
+    "manifest": "t281-reader-input-v1",
+    "provider": "run_spike.materialize verifies exact public Git/SHA bytes and controls before writing private hash-addressed immutable blobs. The reader receives source/module/role provenance only, never oracle/expectations. Core392 JSON bytes remain source-bound at the sole pin.",
+    "neutral_modules": "Virtual evaluator go.mod renders each already-frozen control version metadata. No original source/fixture is edited, no dependency imported/executed and no public version inherited.",
+    "aggregate_members": 1024,
+    "aggregate_source_bytes": 8388608,
+    "manifest_json_bytes": 2097152,
+    "root": "Owned700 private scratch; flat digest filenames, regular-file/size/hash admission on every source read; no extraction traversal or source execution."
+  },
+  "output_contract": {
+    "schema": "output-schema.json",
+    "stream": "JSONL closed blob/binding/end records; deterministic source order, no clocks/process IDs/runtime root in payload. Two fresh processes read identical verified bytes.",
+    "script_predicate": "PASSES_REDIS_KEY_TO_SCRIPT; no inherited access flags or expected value kind. Other rows are position-specific OBSERVES_REDIS_KEY_ARGUMENT evidence, including explicit unresolved spellings.",
+    "native": "Complete projection rows only after frozen literal grammar/atomic admission. supplemental projection-witnesses.json hand-binds all values of six existing positive native controls before outputs, with unchanged frozen labels/thresholds.",
+    "acl": "Streaming transient token coordinates; discard credential/grant tokens, retain only username/pattern bytes+spans and authorization intent; closed schema/source oracle plus global token/base64 scan independently verify safety.",
+    "identity": "Repository+nearest module+go-redis/v9 source scope remains distinct from commit/blob/span provenance; client version is binding provenance. Concrete native-prefix bindings use a reserved compressed prefix index, preserve overlap ambiguity. Format key structures remain structured and do not claim concrete spelling or universal family membership."
+  },
+  "reader_cost": {
+    "startup": "One module/core metadata admission plus one Go metadata pass, then one source/command/ACL pass. At most one source blob/AST active; raw source/AST is not cached across files/passes. Parent evaluator separately holds bounded source bytes for oracle checks.",
+    "per_blob": "SHA256 on each bounded source read; standard Go lexical/AST parsing twice for Go files, bounded identifier/constant/scope/index work; selected source span hashes. One output encoding normally; a resource refusal re-encodes only its fixed empty shape.",
+    "retained": "Core392 structured key specs plus one shared16,384 entry/8MiB metadata budget, maps/slice overhead additional. Reserve two compressed-prefix nodes per prefix before publication; retained source-derived literal bytes only, no credential or raw source cache. Output streamed, no full []BlobResults.",
+    "binding": "Compressed prefix insertion once, one bounded key traversal plus returned declaration matches per concrete key; no per-key corpus scan/source read/full source hash. Scope prevents cross-repository/module family joins.",
+    "bounds": "Frozen source/token/depth/AST/argv/key/fmt/ACL/fact/output limits. Per-blob4MiB encoded cap is after allocation, batch32MiB; observed childRSS1GiB every20ms is not a hard heap/allocation guarantee.",
+    "parent": "Parent materializes <=8MiB input, retains it for independent source joins; bounded32MiB outputs/JSON objects have additional Python object overhead. Direct-child RSS is not aggregate parent/build-family RSS.",
+    "production": "No query/sync/retry/no-op/publication/startup worker, lock, cache, database/schema, Git/indexer/Redis/client/application child or production dependency/registry change."
+  },
+  "execution": {
+    "authority": "Independent root source/harness/projection/identity review and immutable checkpoint, then explicit serialized native slot. This file alone authorizes nothing.",
+    "argv": "python3 spike/t281/run_spike.py --lineage <fresh-name> --execute-reviewed-contract <this-exact-sha256>",
+    "build": "One offline CGO0 stdlib-only Go build under60s with2s cleanup reserve; inherited cache, not cold. Record actual evaluator HEAD, exact source/tool/compiler and binary hash/Go metadata separately from input checkpoint.",
+    "passes": "Two fresh child-free parser processes, each30s including2s cleanup reserve,1GiB observed direct-PID RSS stop,20ms sampling; source/output/cost/CPU/teardown receipts separate from deterministic bytes.",
+    "first_stop": "No retry/semantic tuning/label/control/threshold drift. Preserve first build/read/quality results and all safe bytes. Every child/group must join before source scratch deletion; uncertain custody retains private runtime. Safety-failing output retains digest/count only, never credential-bearing artifacts.",
+    "security_output": "Child output staged privately. Scan all candidate stdout/stderr even on terminal errors for credential tokens and their base64 representations before artifact publication; distinct synthetic payloads and hash payloads additionally absent. Public username/payload collisions remain exact safe-token provenance only.",
+    "result": "first score may honestly report source gaps/no production adoption. Completed child execution is distinct from quality success. No precision/recall/population/scale transfer from other products."
+  },
+  "qualification": {
+    "public_labels_unchanged": true,
+    "original_controls_unchanged": true,
+    "source_scope": "Same seven public usage files/99sites/30known key expressions;2native sites and3ACL files/7pairs;60authored source controls plus2admission controls separate. All original793 archive blobs checked, all380 Go files traversed without inferred general accuracy.",
+    "unmeasured": "52opaque script-wrapper key cardinalities and0unique public spelling/family opportunities remain unmeasured. No model-class reader, runtime existence/type or deployment assertion.",
+    "manifest": "No phebs-redis-keyspace-v1 design/schema/adapter or production registration. Any native structural gap verdict is only a later requested-artifact design decision under the frozen criterion."
+  },
+  "source_review_note": {
+    "phase": "prospective corrections before any build or candidate outcome",
+    "reviewer": "independent lead source review; final correction/checkpoint pending",
+    "corrections": [
+      "Script key rows explicitly use PASSES_REDIS_KEY_TO_SCRIPT with access:null and no expected_kind; the closed schema permits null.",
+      "Manifest admission reads one overflow sentinel before decode, enforces full2MiB bound and exact decoder EOF.",
+      "Public sample scorer checks exact nearest module path, actual client version and repository/module source scope.",
+      "Canonical literal KEYNUM counts above64 atomically refuse resource-limit; negative or noncanonical syntax stays semantic incomplete-key-specification."
+    ],
+    "supplemental_controls": "reader/command_test.go: at-limit64, over-limit65, very large quoted canonical decimal Redis Do scalar count and negative semantic count; authored but not executed. Quoting preserves the large canonical value within the literal contract. Original controls/labels/denominators unchanged.",
+    "projection_review": "Lead independently read all six complete native projections against frozen source fixture bytes; no oracle objection.",
+    "execution": "No build, test, candidate, scorer or materialization has run."
+  }
+}
