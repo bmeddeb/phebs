@@ -12556,3 +12556,20 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   bounds remain. Preparation/checkpoint changes no production query, startup,
   sync, retry/no-op, publication, lock, cache, worker, schema, disk or child cost;
   actual input preparation and finite extraction cost remain to measure.
+
+  T52.1 input preparation then passed one offline scip-go0.2.7 attempt per
+  population: public0.458s/839,828 bytes and neutral0.111s/10,154 bytes. Eight
+  public and three neutral documents match unchanged retained source bytes;
+  both children joined, process groups were absent and owned scratch removed.
+  Root independently created and verified distinct evaluator source/index Git
+  commits and complete bundles. Public committed-index revision is
+  `6218bbaca1bd557c45c6aba6dfcd0c741ed1f64b`; neutral is
+  `34136e8c9f6ee0364cb2dff3a1e78a7d86221721`. Upstream source and external IDL
+  remain provenance only, with no false upstream index commit. Final reviewed
+  preregistration SHA256
+  `82938e1d57f7b90bbfbf111184c475efdf6422ef987aec0b8a203d4a0a069c1b`
+  freezes actual bindings before one child-free30s extraction/quality measurement.
+  Exact original source/label/witness bytes and thresholds remain unchanged.
+  Timed extraction includes streaming verification callbacks; preflight hashing,
+  source/definition witnesses and line preparation remain outside that wall
+  observation. No isolated-CPU, operating/SLO or generalized accuracy follows.

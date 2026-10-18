@@ -19403,6 +19403,14 @@ actual evaluator source/index commits and final binding review precede scoring.
 No Apache result transfers from thriftrw, and no production registration,
 operating qualification or signature follows from preparation.
 
+**T52.1 final input binding (2026-10-18).** Both bounded offline index
+preparations passed once and joined; eight public/three neutral indexed documents
+match the frozen sources. Root created distinct actual evaluator source/index
+commits and verified both bundles. Final preregistration82938e1d binds every
+source/index/label/witness/tool byte before one child-free30s extraction/quality
+measurement. No candidate/scorer has run and no production registration or
+operating/signature result exists at this checkpoint.
+
 **T52.2 · thriftrw field contract and independent quality** — separate
 generator-specific identity and quality population; no Apache result transfers.
 
