@@ -170,6 +170,19 @@ values update and 118 baselines remain untouched. This closes the portability
 implementation on its branch; full-matrix history and production signing retain
 their recorded scope.
 
+**T50.2 comparison admission preparation (2026-10-18):** its independent signed
+claim plus released Caller Map now select the shared exact comparison service
+on the ticket branch. Joint authority/cursor/citation fences are reused;
+unsupported endpoint pairs refuse early. Focused normal/race/MCP/static checks
+pass. Actual quality/operating promotion and signing remain T50.3, not inherited
+from Caller Map or Atlas.
+
+**T48.5a raw evidence (2026-10-18):** implementation and bounded real-root,
+legacy-byte, final-fence and release-domain checks pass on its ticket branch.
+The browser exposes exact native authority without inventing legacy runs;
+unadmitted retained domains refuse before storage. Main integration remains a
+separate decision.
+
 **T25.1 embedded docs preparation (2026-10-18):** authenticated build-snapshot
 Markdown/SVG/YAML, exact links and explicit repository-only fallback are
 implemented with normal/race/auth/static and four-appearance browser gates

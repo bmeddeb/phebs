@@ -12272,6 +12272,74 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   retry/no-op, publication, locks, caches, concurrency and children are unchanged.
   JavaScript delta is zero; the eight PNGs shrink 1,139 bytes collectively.
 
+- **2026-10-18 — T50.2 independent comparison claim admission (Ben's
+  all-ticket Mac handoff).** Bind the frozen `phebs.grpc.caller.comparison`
+  product claim to `compare_operation_callers@caller-comparison-v2` in the
+  existing release registry. Ordinary comparison requires its own applicable
+  verified signed claim plus the independently released protobuf/gRPC Caller
+  Map domains. A claim alone or an experimental caller never supplies that
+  released dependency. Withdrawal/expiry/suspension of comparison preserves
+  Caller Map, and withdrawal of Caller Map withdraws the composed comparison.
+  Provisional switches retain their explicit experimental path; when the
+  released claim is admitted it governs the supported protobuf endpoint pair,
+  including mixed provisional/released configuration. Unsupported Thrift or
+  mixed pairs return unavailable before publication reads. No unrelated proof,
+  Impact, field, Kafka or WIRE product is admitted. The shared API/MCP exact
+  engine retains its two-authority final fence, generation/cursor binding,
+  immutable citations, gap semantics, limits and caches unchanged.
+
+  Nine signed-selection cases pass, including independent withdrawals and
+  experimental dependency exclusion. Positive protobuf and three unsupported
+  pair cases verify early refusal without publication I/O; all exact comparison
+  and existing startup regressions pass. Focused command/API normal checks take
+  1.715s/2.402s, race 3.598s/3.419s, and MCP comparison 0.553s; vet and pinned
+  lint report zero issues. This is implementation preparation, not a T50.3
+  quality/operating result or production release: the separate product result
+  and existing unavailable signing key remain pending. Startup adds one fixed
+  claim-digest row, three bounded map lookups and one options flag; missing
+  dependency logs once at startup. Each admitted request adds one boolean
+  branch and at most two closed protocol comparisons before existing reads.
+  No new sync, retry/no-op, publication, lock, cache invalidation, scan, schema,
+  memory/disk ceiling, worker, concurrency slot or child is introduced.
+
+  Independent source review of T50.2 found no blocking issue; dependency
+  provenance, mixed admission and pre-publication protocol refusal are verified.
+
+- **2026-10-18 — T48.5a exact raw partitioned evidence (Ben-routed Mac
+  handoff).** `/api/evidence` keeps its legacy publication preference and exact
+  legacy response bytes. Only an absent legacy run selects the existing sealed
+  partitioned root and bounded locator reader. Native rows carry
+  `exact_authority` instead of a fabricated legacy `run`; additive
+  `partitioned_root_count` never inflates `published_run_count`. Empty current
+  roots remain explicit; stale or foreign candidates supply no approximate rows.
+  Verify native presence/absence and immutable authority again after complete
+  reads, then retain the existing final authorization, indexed commit, scope and
+  evidence-revision fences. A moved/retired/new root refuses the whole response.
+  Reuse the verified recipe domain list as a pre-storage raw-domain allowlist;
+  an unrelated retained provisional domain must not become available because
+  another product is released. Explicit provisional mode remains unrestricted.
+  The enabled schema pins optional legacy run/native authority/count; no raw
+  evidence UI/MCP/generated-client consumer exists to update.
+
+  Focused native/legacy, absence/transition, permission, scope/ABA, complete
+  5,000/5,001-row and release-domain checks pass; lead repetition is 0.706s.
+  Actual SurrealDB two-chunk sealed-root/locator and root-transition proof passed
+  in 1.431s and joined its child. Focused race is 2.279s; vet, repository-pinned
+  lint (zero issues), docs, glossary and whitespace pass. Independent direct
+  source/cost review found and closed the release-domain admission gap; no full
+  suite, ceremony, production signature or extraction-quality claim follows.
+
+  Cost: rejected release domains do one bounded recipe-membership check and
+  zero storage reads; unrestricted mode adds the empty-list branch. A native
+  repository uses existing root/candidate point selection, a fenced probe, a
+  complete derived assertion page capped at 5,000 and final authority selection.
+  No source corpus, root blob or derived generation is newly scanned or hashed.
+  Native snapshot membership/final checks are O(visible repositories); retained
+  rows remain O(visible repositories × 5,000), the existing per-repository bound,
+  not an installation-wide memory ceiling. Concurrent requests multiply this
+  work. No new lock, cache, worker, concurrency, startup/restart, sync, retry/no-op,
+  publication, persistent state, disk write or child process is introduced.
+
 - **2026-10-18 — T25.1 authenticated embedded documentation (Ben's
   all-ticket Mac handoff).** Serve the build's tracked root README/PLAN,
   top-level docs/guides Markdown, docs SVGs and example YAML under

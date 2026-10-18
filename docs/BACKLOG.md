@@ -18863,6 +18863,22 @@ preserve legacy-only response bytes, existing page bounds and denied-source
 behavior. Keep any additive API authority fields and generated clients aligned;
 focused real-root/read/final-fence tests and steady-state-cost review pass.
 
+**T48.5a implementation result (2026-10-18).** Current/empty partitioned
+roots now appear with explicit `exact_authority`, optional absent legacy `run`
+and additive `partitioned_root_count`; legacy-only bytes and read order remain
+exact. Reuse the existing sealed source/locator reader and 5,000-row complete-or-
+error bound. Final native presence/root checks plus existing permission,
+indexed-commit, scope and evidence-revision fences refuse transitions, including
+an absent root becoming current. Release-only raw domains are restricted to the
+existing verified recipe list before any storage read; retained unrelated
+consumer/field/Kafka roots cannot leak through declaration/Caller Map admission.
+Focused normal (lead 0.706s), race (2.279s), actual two-chunk SurrealDB root/read/
+transition proof (1.431s, joined child), vet, pinned lint, docs and glossary pass.
+Source/cost review is complete; owning PLAN records the per-repository retained
+row bound and unchanged steady-state work. Enabled-schema assertions cover the
+additive fields; there is no raw UI/MCP/generated client to regenerate. Ready on
+its ticket branch; integration still requires Ben's request.
+
 ## Epic 49 · Contract Atlas and declaration production readiness
 
 **Current acceptance (2026-10-17):** use the integration-test amendment at the
@@ -19273,6 +19289,22 @@ pass. No production behavior, resource ceiling or per-request work changes.
 **T50.2 · Stable comparison registration and joint generation fencing** —
 retain two-publication authorization, cursor/lease/citation binding and
 generation drift/refusal; unsupported endpoint pairs are unavailable.
+
+**T50.2 implementation checkpoint (2026-10-18, Ben's all-ticket Mac handoff).**
+The independent frozen comparison claim is in the verified release registry.
+Ordinary comparison requires both that claim and the released protobuf Caller
+Map recipe; a comparison record alone or provisional caller cannot satisfy it.
+Expiry/suspension/revocation preserves independent products. Admitted comparison
+supports protobuf pairs only, including mixed provisional/released startup;
+unsupported pairs are unavailable before publication reads. Existing joint
+generation, visibility, cursor and exact citation fences remain unchanged.
+Nine signed-selection cases, three unsupported-pair negatives with a supported
+positive control, all exact comparison tests and MCP output tests pass normally/
+under focused race; vet and pinned lint are clean. Per-request work adds only
+a boolean and two protocol comparisons; startup adds a fixed claim row and
+bounded dependency lookups, no worker/lock/cache/schema/child. This prepares
+admission only: T50.3's direct quality/operating result and production signature
+remain pending, and Caller Map/Atlas's bounded-test amendment does not waive them.
 
 **T50.3 · Measured comparison promotion** — satisfy the common bar on real
 old/replacement source, concurrent publication and bounded combined read cost;
