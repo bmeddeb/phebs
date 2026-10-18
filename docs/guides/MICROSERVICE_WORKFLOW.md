@@ -30,8 +30,12 @@ The development cohort deliberately keeps two authorities separate:
   its other explicit states are `svc.proposed`, `svc.conflicted`, and the
   removed `svc.shipping` successor lineage. See the retained
   [search demo](../fixtures/t34.4-service-search/README.md).
-- `t307-neutral-service` is the focused extraction and workflow-state cohort.
-  It supplies the five identities used by the four change stories below.
+- `t307-neutral-service` is the default whole-repository evidence and
+  workflow-state cohort. It supplies the five identities used by the four
+  change stories below, with ordinary source/search/service/relationship
+  authority. `make dev PHEBS_DEV_COHORT=focused` retains its separate focused
+  Search/evidence demonstration; T307 services/relationships are unavailable
+  in that mode. It does not implement focused service-pipeline support.
 
 Do not carry a service key or generation from one repository into the other.
 The T37.5 relationship receipt is a separate three-repository source-free
@@ -42,7 +46,7 @@ The workflow-state catalog contains five intentionally different identities:
 
 | Service | Catalog state | Purpose in the walkthrough |
 |---|---|---|
-| `orders-api` | accepted | current RPC service and focused search scope |
+| `orders-api` | accepted | current RPC service and exact service-search scope |
 | `orders-events` | accepted | shared-source Kafka-facing service |
 | `returns-proposal` | proposal | explicit unaccepted candidate for an add story |
 | `billing-control` | conflict | visible authority-conflict failure state |

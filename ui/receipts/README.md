@@ -99,7 +99,7 @@ machine — otherwise macOS and Ubuntu CI can never share one baseline set.
 
   The receipt launch explicitly selects whole-repository indexing for both
   bundles and their retained catalogs. It clears demo injectors so this
-  presentation cohort stays independent of the default focused pipeline.
+  presentation launch stays explicit and independent of demo environment binding.
   Strict real-cohort readiness remains mandatory. The staging script copies
   the bundles and operator catalogs into the fixed root; ordinary `make dev` / `make dev-api` honor the pre-set
   `PHEBS_T307_NEUTRAL_SERVICE_REPO` / `PHEBS_T344_SERVICE_SEARCH_REPO`
@@ -226,9 +226,12 @@ The unchanged strict setup checks both exact HEADs, settled jobs, current
 required services and complete orders-api relationship authority before capture.
 The configuration digest and bundle/chunk metrics are in the evidence record.
 
-The default focused T30.7 configuration separately indexed but lacked its v2
+The historical default focused T30.7 configuration separately indexed but lacked its v2
 source-generation control, leaving service/relationship authority unavailable.
-That diagnostic is not a receipt PASS or focused-pipeline closure. The ordinary
+That diagnostic is not a receipt PASS or focused-pipeline closure. T45.8c changes
+`make dev`/`make dev-api` to explicit whole mode for both retained bundles;
+`PHEBS_DEV_COHORT=focused` keeps this separate unavailable focused pipeline.
+The retained `t458b.json` limitation and source bytes remain unchanged. The ordinary
 neutral data uses a disposable 1 GiB APFS volume with unchanged disk admission
 limits; it proves this small cohort only. Chromium runs in the untouched pinned
 AMD64 image under Rosetta in a temporary 2-CPU/6-GiB renderer VM. A TCP bridge to

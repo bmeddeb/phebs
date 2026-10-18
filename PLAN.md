@@ -13507,3 +13507,22 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   plus UI validator/rendered controls and focused normal/race pass. This adds
   constant metadata comparisons only, no read/query/sync/startup/retry, persistent
   state, lock/cache, worker, child, source traversal or bound increase.
+
+- **2026-10-18 — T45.8c neutral development cohort repair (Ben-routed Mac handoff).**
+  The historical focused default cannot publish whole-repository v2 service/
+  relationship authority: the indexer, observation planner and query compiler
+  deliberately refuse that composition. Do not synthesize control files or
+  weaken those guards. Make dev/dev-api explicitly select the existing whole
+  pipeline for both retained neutral repositories; focused remains a closed
+  explicit opt-in with visible unavailable T307services/relationships. Direct
+  fixture environment with no selector preserves legacy focused behavior. Empty/
+  unknown selections and configured-unit collisions refuse before mutation.
+  Keep exact catalog/source/connection guards and original failed receipts.
+  Whole mode exposes nine T307files, including external caller/bulk sentinel,
+  rather than seven focused files, and runs existing whole source/search and
+  service/relationship planning. T323fourteen-file behavior stays exact. One
+  startup env lookup/closed comparison and bounded fixture scope checks add no
+  request/sync/retry/cache/schema/lock/child class. Existing ordinary reindex/
+  stale-state transitions handle reused dev data; never manually erase authority.
+  Focused normal/race, eight smoke controls and static gates pass; one prospective
+  180s real-binary two-cohort readiness/search/citation smoke remains to execute.

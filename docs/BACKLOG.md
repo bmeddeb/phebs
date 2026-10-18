@@ -16530,6 +16530,17 @@ Actions is account-disabled; local pinned-renderer evidence is not hosted CI.
 Ordinary serve remains unavailable; the T45.6 waiver and all scale/release
 boundaries stay exact. No main integration is claimed.
 
+**T45.8c · Align the neutral default with whole service authority** *(2026-10-18,
+Ben-routed Mac handoff).* The historical focused-default service/relationship
+refusal is structural, not a stale image. Keep all whole-authority guards and
+make dev/dev-api explicitly select whole for retained T307/T323cohorts. Closed
+focused opt-in preserves the focused Search demo with unavailable T307service
+authority. Exact fixture/catalog/collision guards remain. Whole deliberately
+exposes outside/sentinel files; no focused support or release claim follows.
+Focused config/normal/race/static gates and eight harness controls pass.
+`spike/t458c/` retains the prospective one180s exact-image smoke plan; native
+readiness, scoped search, citation and joined teardown remain to execute.
+
 **T45.9 · Generated-SCIP evidence integration and product-scale closure**
 *(needs T45.5, T45.6, and T45.8b; T45.7 is optional)* — decide separately
 whether generated bundle members may feed SCIP-derived evidence. If GO,

@@ -848,10 +848,13 @@ func bindSyntheticThriftFieldDemo(cfg *config.Config, fixture string) error {
 }
 
 // bindT307NeutralServiceDemo is the make-dev-only bridge from one retained,
-// cloneable neutral repository into the ordinary focused-index, extraction,
+// cloneable neutral repository into ordinary whole/focused indexing, extraction,
 // resolver, and caller-overlay pipelines. The bridge is explicit so ordinary
 // serve startup and production configuration remain unchanged.
-func bindT307NeutralServiceDemo(cfg *config.Config, fixture string) error {
+func bindT307NeutralServiceDemo(cfg *config.Config, fixture string, cohort devCohort) error {
+	if err := cohort.validate(); err != nil {
+		return err
+	}
 	if fixture == "" {
 		return nil
 	}
@@ -878,21 +881,15 @@ func bindT307NeutralServiceDemo(cfg *config.Config, fixture string) error {
 	if err != nil {
 		return fmt.Errorf("derive T30.7 neutral service repository: %w", err)
 	}
-	desiredUnit := analysisunit.Config{
-		Name:    "orders-service",
-		Primary: []string{"service/orders"},
-		Supporting: []string{
-			"api/orders.proto",
-			"gen/ordersv1/orders_grpc.pb.go",
-			"generated-from-snapshot.json",
-			"go.mod",
-		},
-	}
+	desiredUnit := t307DemoAnalysisUnit()
 	desiredCanonical, err := desiredUnit.Scope(repository).Canonical()
 	if err != nil {
 		return fmt.Errorf("validate T30.7 neutral service scope: %w", err)
 	}
 	if existing, ok := cfg.AnalysisUnits[repository]; ok {
+		if cohort == devCohortWhole {
+			return fmt.Errorf("T30.7 whole-repository demo %q already has an analysis unit", repository)
+		}
 		existingCanonical, canonicalErr := existing.Scope(repository).Canonical()
 		if canonicalErr != nil || string(existingCanonical) != string(desiredCanonical) ||
 			existing.TypedIndex != nil {
@@ -930,10 +927,12 @@ func bindT307NeutralServiceDemo(cfg *config.Config, fixture string) error {
 			URL:  fixture,
 		})
 	}
-	if cfg.AnalysisUnits == nil {
-		cfg.AnalysisUnits = make(map[string]analysisunit.Config, 1)
+	if cohort == devCohortFocused {
+		if cfg.AnalysisUnits == nil {
+			cfg.AnalysisUnits = make(map[string]analysisunit.Config, 1)
+		}
+		cfg.AnalysisUnits[repository] = desiredUnit
 	}
-	cfg.AnalysisUnits[repository] = desiredUnit
 	cfg.Experimental.ProvisionalProtoExtraction = true
 	cfg.Experimental.ProvisionalKafkaExtraction = true
 	return nil
@@ -946,7 +945,11 @@ func bindT307NeutralServiceDemo(cfg *config.Config, fixture string) error {
 func bindT335ServiceDirectoryDemo(
 	cfg *config.Config,
 	fixture, catalogPath string,
+	cohort devCohort,
 ) error {
+	if err := cohort.validate(); err != nil {
+		return err
+	}
 	if catalogPath == "" {
 		return nil
 	}
@@ -985,8 +988,15 @@ func bindT335ServiceDirectoryDemo(
 		}
 	}
 	unit, unitBound := cfg.AnalysisUnits[repository]
-	if !connected || !unitBound || unit.Name != "orders-service" {
+	if !connected || cohort == devCohortWhole && unitBound || cohort == devCohortFocused && !unitBound {
 		return errors.New("T33.5 service directory demo requires the bound T30.7 neutral cohort")
+	}
+	if cohort == devCohortFocused {
+		canonical, canonicalErr := unit.Scope(repository).Canonical()
+		desired, desiredErr := t307DemoAnalysisUnit().Scope(repository).Canonical()
+		if canonicalErr != nil || desiredErr != nil || string(canonical) != string(desired) || unit.TypedIndex != nil {
+			return errors.New("T33.5 service directory demo requires the exact orders-service analysis unit")
+		}
 	}
 	raw, err := os.ReadFile(catalogPath)
 	if err != nil {

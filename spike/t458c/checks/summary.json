@@ -1,0 +1,132 @@
+{
+  "source_before": {
+    "Makefile": "7faad34298fe20a668efd4f980363f4784398657e17162c395e06fa13f268bd5",
+    "cmd/phebs/dev_cohort.go": "8784713bb562b9b8557d19eafce21569b47b4163a5656e8e36e230c0f3a8dc85",
+    "cmd/phebs/dev_cohort_test.go": "8da8222cf07e27e89d2f1a7e84a7890ed1a3e7d9159ff7a887aca2b8fa8826d2",
+    "cmd/phebs/main.go": "0b62da59870a4bd53cead0b33cb0244a0db8a70151ef1a6015775da4c89c3749",
+    "cmd/phebs/serve_config.go": "972a8897b99d421db283c2ccb233627d14c43266553ce7411ffc4af76bb79be8",
+    "cmd/phebs/t307_demo_test.go": "f1758fab8c77773e7f9d8dfafee39c43dd6cd14ecf36aea30eb350b7649f6b40",
+    "spike/t458c/preregistration.json": "4c4066d873d381cc162082fef1fe5148f984649b1421a33172b6c4c7c894df52",
+    "spike/t458c/smoke.py": "5632f3c230385083057c264629272a1692a660a476d3a542fb9c1837cba649fd",
+    "spike/t458c/test_smoke.py": "383614805b2fefd8fde6922f2003a061d848d485405118339b8a345cf9c0f064",
+    "spike/t458c/README.md": "dd1b8df3dcbbf7aaa3a7647d3575299d676a1acdee332d2f7d89676de642c181"
+  },
+  "environment": {
+    "GOMAXPROCS": "2",
+    "GOTOOLCHAIN": "local",
+    "PYTHONDONTWRITEBYTECODE": "1"
+  },
+  "runs": [
+    {
+      "name": "go-normal",
+      "argv": [
+        "go",
+        "test",
+        "-p",
+        "1",
+        "./cmd/phebs",
+        "-run",
+        "^(TestDevCohort|TestLoadServeDevCohort|TestBindT307|TestBindT335|TestT307NeutralServiceFixture|TestT335ServiceDirectoryCatalog)",
+        "-count=1",
+        "-timeout=90s"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com",
+      "wall_seconds": 22.091507,
+      "exit": 0,
+      "joined": true,
+      "log": "/tmp/phebs-t458c-checks-yqhvsvdy/go-normal.log"
+    },
+    {
+      "name": "go-race",
+      "argv": [
+        "go",
+        "test",
+        "-race",
+        "-p",
+        "1",
+        "./cmd/phebs",
+        "-run",
+        "^(TestDevCohort|TestLoadServeDevCohort|TestBindT307|TestBindT335|TestT307NeutralServiceFixture|TestT335ServiceDirectoryCatalog)",
+        "-count=1",
+        "-timeout=90s"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com",
+      "wall_seconds": 34.212592,
+      "exit": 0,
+      "joined": true,
+      "log": "/tmp/phebs-t458c-checks-yqhvsvdy/go-race.log"
+    },
+    {
+      "name": "python-mocks",
+      "argv": [
+        "python3",
+        "-m",
+        "unittest",
+        "-v",
+        "test_smoke.py"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com/spike/t458c",
+      "wall_seconds": 0.132342,
+      "exit": 0,
+      "joined": true,
+      "log": "/tmp/phebs-t458c-checks-yqhvsvdy/python-mocks.log"
+    },
+    {
+      "name": "go-vet",
+      "argv": [
+        "go",
+        "vet",
+        "-p",
+        "1",
+        "./cmd/phebs"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com",
+      "wall_seconds": 3.651952,
+      "exit": 0,
+      "joined": true,
+      "log": "/tmp/phebs-t458c-checks-yqhvsvdy/go-vet.log"
+    },
+    {
+      "name": "lint-version",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-fv0m6vmf/lint-bin/golangci-lint",
+        "--version"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com",
+      "wall_seconds": 0.130954,
+      "exit": 0,
+      "joined": true,
+      "log": "/tmp/phebs-t458c-checks-yqhvsvdy/lint-version.log"
+    },
+    {
+      "name": "go-lint",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-fv0m6vmf/lint-bin/golangci-lint",
+        "run",
+        "./cmd/phebs",
+        "--concurrency=2",
+        "--timeout=90s"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com",
+      "wall_seconds": 4.06926,
+      "exit": 0,
+      "joined": true,
+      "log": "/tmp/phebs-t458c-checks-yqhvsvdy/go-lint.log"
+    }
+  ],
+  "first_failure_stops_sequence": true,
+  "source_after": {
+    "Makefile": "7faad34298fe20a668efd4f980363f4784398657e17162c395e06fa13f268bd5",
+    "cmd/phebs/dev_cohort.go": "8784713bb562b9b8557d19eafce21569b47b4163a5656e8e36e230c0f3a8dc85",
+    "cmd/phebs/dev_cohort_test.go": "8da8222cf07e27e89d2f1a7e84a7890ed1a3e7d9159ff7a887aca2b8fa8826d2",
+    "cmd/phebs/main.go": "0b62da59870a4bd53cead0b33cb0244a0db8a70151ef1a6015775da4c89c3749",
+    "cmd/phebs/serve_config.go": "972a8897b99d421db283c2ccb233627d14c43266553ce7411ffc4af76bb79be8",
+    "cmd/phebs/t307_demo_test.go": "f1758fab8c77773e7f9d8dfafee39c43dd6cd14ecf36aea30eb350b7649f6b40",
+    "spike/t458c/preregistration.json": "4c4066d873d381cc162082fef1fe5148f984649b1421a33172b6c4c7c894df52",
+    "spike/t458c/smoke.py": "5632f3c230385083057c264629272a1692a660a476d3a542fb9c1837cba649fd",
+    "spike/t458c/test_smoke.py": "383614805b2fefd8fde6922f2003a061d848d485405118339b8a345cf9c0f064",
+    "spike/t458c/README.md": "dd1b8df3dcbbf7aaa3a7647d3575299d676a1acdee332d2f7d89676de642c181"
+  },
+  "source_unchanged": true,
+  "passed": true
+}
