@@ -15266,6 +15266,27 @@ help deployment, bounded cost, exact authority corrections, responsive review,
 and explicit retained-receipt-gate completion exception are recorded in the
 completed backlog.
 
+**T43R.6 · Accessible independent coverage help** *(scheduled 2026-10-18,
+found during T49.4 bounded native QA)* — move the shared coverage-help button
+outside the native summary, preserving a visible independent help target and
+native disclosure semantics. AC: no nested interactive summary descendants;
+help open/close/Escape focus return never changes disclosure state; desktop and
+390px keyboard/overflow/a11y and scoped canonical comparison pass; retain
+existing capabilities, caveats and bounded costs. The shared component fix and
+90 focused shared/consumer tests, lint/type checks are complete on its branch;
+rendered/canonical qualification is pending. The T49.4 inherited audit finding
+is preserved rather than relabelled as a clean full-page result.
+
+**T43R.6 bounded qualification (2026-10-18).** Combined Atlas native1280/390
+light/dark keyboard/focus/overflow and full-page audit pass; mobile offscreen
+contrast incompletes are preserved and individually pass once visible. Existing
+eight canonical frames compare unchanged9/9including setup, zero retries/.001
+and no new masks; no baseline is rewritten.116 focused UI tests, lint/type/build,
+independent source/cost review, docs/glossary and whitespace pass. Shared chunk
++174bytes/+45gzip; no new runtime requests/state/listeners. Source-bound receipt
+is `ui/receipts/t43r6.json`; all test runtime custody is joined/removed. Ready for
+integration after its T49.4 parent and Ben's explicit request.
+
 ## Epic 44 · Reading surfaces and instance chrome *(planned 2026-08-08 · presentation track)*
 
 Four operator-requested reading and chrome improvements, planned with the
@@ -19263,6 +19284,24 @@ what it already emitted. Not claimed here: hosted CI execution, the PR #75
 receipt-baseline gap, and the three `TestT422Workspace*NativeComposition` darwin
 failures.*
 
+**T49.4 implementation/UI closure (2026-10-18, Ben-routed Mac handoff).**
+Declaration-only card/manifest/qualification and unsigned record template are
+ready. Clean-source native actual signer/start, exact root/operation HTTP/MCP,
+auth401, desktop/390px source/keyboard/overflow, revocation404 and joined teardown
+pass in6.605s; final proposal signer/load also passes. Eight reviewed canonical
+frames author/fresh-auth compare pass9/9each with zero retries/.001 threshold:
+four current-root listing status updates and four neutral declaration-only
+details. Native source authority and intercepted presentation pixels are
+separate evidence. UI fixes false staleness, unavailable relationship zeroes,
+unsupported links, mobile grid overflow and empty scrolling tables; exact
+runtime validators and focused UI/manifest/lint/type checks pass. Owning PLAN
+records costs, preserved readiness refusal and precise a11y limits: scoped
+Atlas0violations, two inherited shared nested-interactive findings assigned
+T43R.6, one mobile contrast incomplete over six offscreen cells. No global
+accessibility, extraction accuracy or scale PASS is invented. Production
+signature/activation remains PENDING the existing unavailable Linux key;
+implementation integration requires Ben's request, not optional labels.
+
 ## Epic 50 · Caller comparison production readiness
 
 **T50.1 · Exact old/replacement comparison contract and gold cases** — depends
@@ -19289,6 +19328,22 @@ pass. No production behavior, resource ceiling or per-request work changes.
 **T50.2 · Stable comparison registration and joint generation fencing** —
 retain two-publication authorization, cursor/lease/citation binding and
 generation drift/refusal; unsupported endpoint pairs are unavailable.
+
+**T50.2 implementation checkpoint (2026-10-18, Ben's all-ticket Mac handoff).**
+The independent frozen comparison claim is in the verified release registry.
+Ordinary comparison requires both that claim and the released protobuf Caller
+Map recipe; a comparison record alone or provisional caller cannot satisfy it.
+Expiry/suspension/revocation preserves independent products. Admitted comparison
+supports protobuf pairs only, including mixed provisional/released startup;
+unsupported pairs are unavailable before publication reads. Existing joint
+generation, visibility, cursor and exact citation fences remain unchanged.
+Nine signed-selection cases, three unsupported-pair negatives with a supported
+positive control, all exact comparison tests and MCP output tests pass normally/
+under focused race; vet and pinned lint are clean. Per-request work adds only
+a boolean and two protocol comparisons; startup adds a fixed claim row and
+bounded dependency lookups, no worker/lock/cache/schema/child. This prepares
+admission only: T50.3's direct quality/operating result and production signature
+remain pending, and Caller Map/Atlas's bounded-test amendment does not waive them.
 
 **T50.3 · Measured comparison promotion** — satisfy the common bar on real
 old/replacement source, concurrent publication and bounded combined read cost;
@@ -20814,6 +20869,33 @@ resolves in the served site; excluded fixture and design-handoff bytes are
 absent from the binary; the route requires authentication; `make dev` demo —
 open the served `docs/README.md`, follow a link into a task guide and the
 architecture SVG; dated PLAN ADR bullet in the same PR; full merge bar.
+
+**T25.1 implementation checkpoint (2026-10-18, Ben's all-ticket Mac handoff).**
+Authenticated `/documentation/` now renders only the explicit tracked Markdown/
+SVG/YAML set. Raw HTML/unsafe URLs and nonembedded images cannot execute or
+automatically fetch external bytes; unknown routes 404. Known excluded local
+references resolve to labelled repository-only pages, preserving the explicit
+embed exclusion instead of adding fixture/design/retained bytes to the binary.
+The complete T24.1 link census and focused renderer/session/API-key/CSRF/public
+asset normal/race/static tests pass. Native 1280/390px light/dark browser journeys
+pass keyboard/scrolling, links/fragments/SVG and zero axe/console/overflow errors.
+`spike/t251/receipt.json` binds the tested source/doc tree; the final doc census
+is rerun after owning records. Deterministic canonical image comparison remains
+pending, so this is implementation/browser preparation rather than full closure.
+Startup renders a fixed build-time set once and retains immutable pages; docs
+requests reuse existing auth plus O(1) lookup/body write, no disk/corpus/child work.
+The initial byte-capacity mechanics record is not a measured memory ceiling.
+
+**T25.1 canonical closure (2026-10-18).** Four tests/twelve unmasked captures
+and a fresh real-auth/store comparison pass at source `60683660`; author12.708s,
+comparison10.987s. Exact pinned renderer and thresholds are unchanged. Both
+fixture servers/stores/bridges joined exit0; all twelve PNGs are visually reviewed
+and accepted (762,987 bytes). Native Chrome keyboard/overflow/a11y evidence
+remains separate; production UI JavaScript is unchanged. Source-bound receipts
+preserve earlier failures and pre-outcome document bytes; a final link/cache
+census follows documentation-only outcome/base integration. Implementation and
+bounded qualification are complete on its ticket branch, ready for review;
+main integration still requires Ben's request.
 
 ## Epic 26 · SQL schema-set evidence *(drafted 2026-07-27 · unscheduled — spike first)*
 

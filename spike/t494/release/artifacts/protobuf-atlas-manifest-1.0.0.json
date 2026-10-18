@@ -1,0 +1,39 @@
+{
+  "schema": "phebs-extractor-pack-manifest-v1",
+  "pack_id": "phebs.protobuf.contract",
+  "pack_claim_version": "1.0.0",
+  "qualification": "bounded-integration-tests",
+  "recipe": {
+    "registry": "cmd/phebs packRecipes",
+    "extractors": [
+      "proto-contract@4.0.0"
+    ]
+  },
+  "identity": "File-scoped provisional repository/path declaration lineage; no canonical descriptor or module identity.",
+  "surfaces": {
+    "capability": "contract-atlas",
+    "ui": "/contracts",
+    "http": [
+      "/api/contract_atlas",
+      "/api/contract_atlas/operation"
+    ],
+    "mcp_tools": [
+      "search_contract_operations",
+      "get_contract_operation"
+    ]
+  },
+  "excluded": [
+    "caller evidence",
+    "implementation evidence",
+    "caller comparison",
+    "Contract Impact",
+    "field references",
+    "Thrift declarations",
+    "Kafka",
+    "WIRE verdicts",
+    "cross-file import linking",
+    "independent extraction accuracy",
+    "runtime use and retirement safety"
+  ],
+  "limits": "Existing source/parser, candidate, publication, page, detail and citation bounds; no ceiling widened; no new measured capacity or SLO."
+}

@@ -1,0 +1,176 @@
+{
+  "schema": "phebs-t494-bounded-integration-v1",
+  "recorded_date": "2026-10-18",
+  "source_commit": "ff080f8438d5de02153a8645cf1cf75b5d95935c",
+  "binary_digest": "sha256:38dd83bb08b2f148ef41e581d3ceff802fa8dc56a3aa4a27e5a7d221806ebfba",
+  "qualification": "ordinary signed-selection startup; disposable integration key; one neutral committed protobuf file; no production release",
+  "production_signing": "pending; existing production key unavailable and never accessed",
+  "resumed_already_published_fixture": true,
+  "fixture_job_poll_interval": "1s; ordinary supported configuration, production default unchanged",
+  "historical_preparation_refusals": [
+    {
+      "stage": "disposable_key_generation",
+      "tool": "macOS system OpenSSL",
+      "reason": "Ed25519 unavailable",
+      "server_started": false
+    },
+    {
+      "stage": "source_readiness",
+      "fixture_job_poll_interval": "15s",
+      "deadline_seconds": 45,
+      "last_catalog_status": 200,
+      "outcome": "deadline before derivation publication",
+      "ready_seconds": 7.189,
+      "wall_seconds": 52.402,
+      "stop_mode": "hard_kill",
+      "signal": 9,
+      "teardown": "killed_stray_members"
+    }
+  ],
+  "checks": {
+    "items": 2,
+    "exact_partitioned_root": true,
+    "legacy_certificate_unpublished": true,
+    "http_mcp_list_parity": true,
+    "http_mcp_detail_parity": true,
+    "anonymous_status": 401,
+    "embedded_ui_status": 200,
+    "unavailable_relationships": [
+      "implementations",
+      "callers",
+      "unresolved_candidates"
+    ],
+    "revoked_atlas_status": 404
+  },
+  "browser": {
+    "browser": "Installed system Chrome channel; functional/a11y QA only, canonical pixels recorded separately.",
+    "fallback": "Browser plugin not available",
+    "console_errors": 0,
+    "console_warnings": [],
+    "checks": [
+      {
+        "viewport": {
+          "width": 1280,
+          "height": 900
+        },
+        "page_identity": true,
+        "not_blank": true,
+        "framework_overlay_absent": true,
+        "keyboard_operation_selection": true,
+        "exact_current_authority": true,
+        "unavailable_relationships": true,
+        "unrelated_links_absent": true,
+        "immutable_source_link": true,
+        "document_overflow": false,
+        "axe_version": "4.12.1",
+        "axe_violations": 0,
+        "axe_incomplete": 0,
+        "axe_scope": "Changed Atlas states; unchanged shared AnalysisScopePanel excluded.",
+        "full_page_violations": [
+          {
+            "id": "nested-interactive",
+            "node_count": 2
+          }
+        ],
+        "interaction_seconds": 1.31
+      },
+      {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "page_identity": true,
+        "not_blank": true,
+        "framework_overlay_absent": true,
+        "keyboard_operation_selection": true,
+        "exact_current_authority": true,
+        "unavailable_relationships": true,
+        "unrelated_links_absent": true,
+        "immutable_source_link": true,
+        "document_overflow": false,
+        "axe_version": "4.12.1",
+        "axe_violations": 0,
+        "axe_incomplete": 1,
+        "axe_scope": "Changed Atlas states; unchanged shared AnalysisScopePanel excluded.",
+        "full_page_violations": [
+          {
+            "id": "nested-interactive",
+            "node_count": 2
+          }
+        ],
+        "interaction_seconds": 0.78,
+        "axe_incomplete_details": [
+          {
+            "rule": "color-contrast",
+            "nodes": 6,
+            "reason": "Horizontally clipped source-table cells are partially obscured; axe cannot determine their background color. No color-contrast violation was reported."
+          }
+        ]
+      }
+    ],
+    "screenshots": [
+      "desktop.png",
+      "mobile.png"
+    ],
+    "node": "v26.7.0",
+    "screenshot_qualification": "Native functional proof only; full-page captures after keyboard focus can place sticky header at its scrolled position. Canonical presentation frames are separate."
+  },
+  "phases": [
+    {
+      "step": "admitted-resume-5",
+      "outcome": "success",
+      "exit_code": 0,
+      "stop_mode": "graceful",
+      "ready_seconds": 1.046,
+      "teardown": "clean"
+    },
+    {
+      "step": "revoked",
+      "outcome": "success",
+      "exit_code": 0,
+      "stop_mode": "graceful",
+      "ready_seconds": 0.78,
+      "teardown": "clean"
+    }
+  ],
+  "artifact_digests": {
+    "kafka-consumer-card-1.0.4.md": "sha256:7129ba3f63a964f35cea2f854c44ad530c6cfe9ec95716b4914cafceae4bd484",
+    "kafka-consumer-manifest-1.0.4.json": "sha256:187f0f065a77d17e96dd70a4c886d5d9ac83dee7233b2f5fee978445d97b2dfe",
+    "kafka-consumer-validation-1.0.4.json": "sha256:0ab5ccd6ca1195fd9836637fda2b4d9fecc5ac2cbf1d901d5706c5ad8767c7db",
+    "kafka-producer-card-1.0.5.md": "sha256:be92e80d3b0f58679eff00862cb18a9a27bf6ca295f3c6f887df9cc9864576af",
+    "kafka-producer-manifest-1.0.5.json": "sha256:d56545f565791f4640b2f592f221db6914fbb53483e703a87954b28e8628296f",
+    "kafka-producer-validation-1.0.5.json": "sha256:46e98ea0752035eaa67210f92987a3f6c9f2168f298788272364eb76a327070b",
+    "kafka-topics-card-1.0.3.md": "sha256:87581730dcb3698f6816229752dedf4b6ef369e0b466d2a72cf3e0dbbd6bcb65",
+    "kafka-topics-manifest-1.0.3.json": "sha256:e934afb0789bb312324b18c2c1ae6784c8b44049c7b78652589dd2ef3e8e2f84",
+    "kafka-topics-validation-1.0.3.json": "sha256:3f97046118a2bfd59126e87ef9f28fd32c3d241f06951287addee872b5806e7d",
+    "protobuf-atlas-card-1.0.0.md": "sha256:542392d340f836e10324f88f548169cf719bc0a6a155ad29ce98983764f5c386",
+    "protobuf-atlas-manifest-1.0.0.json": "sha256:df4b6f27ab877050da5ac2495652e7d83a90df91e99269fb9b2a391e9b303b27",
+    "protobuf-atlas-validation-1.0.0.json": "sha256:ffa66aa453eb425c215417382f92d466f945fc3064a3d3f87d196c4e858168e1",
+    "thrift-contract-card-1.0.2.md": "sha256:dddbb3f58acc99880019bd3ee845c732091f60d888579327f0f1fadfbc189193",
+    "thrift-contract-manifest-1.0.2.json": "sha256:eb09bcde73e634383e1eeaae5ac6e7f1af5eb668e5eb7f23522f3c680331954b",
+    "thrift-contract-validation-1.0.2.json": "sha256:b997779a72114e218eb6a4bb5838217ccefc3d528c12c39a922768d20569f359",
+    "wire-buf-card-1.0.2.md": "sha256:cd7d96b5d11a8595999584096dd8fa7be13d8d6189d9db32c543e834396bb5d5",
+    "wire-buf-manifest-1.0.2.json": "sha256:3be771ce5bf1b563c563a44aa733d272d581c69f6fe29c3ac6a9c1a755fdc448",
+    "wire-buf-validation-1.0.2.json": "sha256:3e1e58e987cce3b42412b1c4fc46e144082c293debc0adf4d86214eb6a6c86cb"
+  },
+  "seconds": 6.605,
+  "build": {
+    "ui_build_seconds": 3.645,
+    "release_build_seconds": 7.08
+  },
+  "browser_preparation_and_diagnostic_stops": [
+    "Default bundled headless browser absent; installed Chrome channel used after preflight.",
+    "Inline axe injection refused by unchanged CSP; audit used a same-origin test-routed external script.",
+    "Full-page shared-panel nested-interactive findings retained; scoped changed-Atlas audit excludes unchanged panel.",
+    "390px detail min-content grid overflow diagnosed793px; zero-minimum column fixed and verified390px.",
+    "Zero-edge dependency table was an unfocusable scroller; empty table omitted and unavailable footer corrected."
+  ],
+  "bundle": {
+    "atlas_bytes": 40609,
+    "atlas_gzip_bytes": 10699,
+    "previous_atlas_bytes": 37750,
+    "previous_atlas_gzip_bytes": 9821,
+    "qualification": "Exact previous T44.5 source-matched build compared with this build; no production latency claim."
+  },
+  "artifact_qualification": "artifact_digests are the exact proposal bytes bound by this native signature; the validation proposal was subsequently finalized with these source-free outcomes. No historical digest was rewritten. Finalized proposal bytes are separately covered by the actual signer/load integration test with synthetic Go-test binary facts."
+}
