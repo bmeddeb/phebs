@@ -177,6 +177,13 @@ unsupported endpoint pairs refuse early. Focused normal/race/MCP/static checks
 pass. Actual quality/operating promotion and signing remain T50.3, not inherited
 from Caller Map or Atlas.
 
+**T50.3 comparison inputs (2026-10-18):** independent agent source-only review
+accepts the immutable twelve-artifact checkpoint before indexing/predictions.
+Five selected public source sites and four outside-pair negatives have frozen
+labels, supplied unit composition and finite thresholds. Actual evaluation Git
+bindings precede scoring; measured quality, local operating results and the
+production signature remain pending. No Linux/scale result follows.
+
 **Caller Map / Atlas sequencing override (2026-10-17, Ben-directed):** bounded
 integration tests suffice for these products and their release bindings. The
 owning amendment at the start of Epic 47 in [BACKLOG.md](./BACKLOG.md) supersedes

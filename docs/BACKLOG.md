@@ -19294,6 +19294,20 @@ remain pending, and Caller Map/Atlas's bounded-test amendment does not waive the
 old/replacement source, concurrent publication and bounded combined read cost;
 release requires its own result even when both Caller Maps are released.
 
+**T50.3 immutable preregistration (2026-10-18, Ben-routed Mac handoff).**
+The lead's independent source-only review accepts
+`spike/t503/checkpoint.json` SHA-256
+`54b1377c20d2422f93756dedea56ef30aa1df0e6114d41fd646558ef4cd3ab29`
+and all twelve bound artifacts before predictions. Nine actual method sites
+supply five selected and four excluded sites; occurrence classes are two old,
+three new, while four supplied-unit rows cover old/new/both/unresolved.
+Evaluator-selected endpoints and package units claim no upstream migration or
+deployment truth. The finite quality/read/operating matrix and stops are frozen;
+absent real classes stay unavailable. Next: serialized offline indexing,
+lead-owned exact evaluation Git bindings, then the first candidate measurement.
+No quality/operating PASS, production signature, Linux capacity or scale claim
+exists at this checkpoint.
+
 ## Epic 51 · Protobuf field-reference production readiness
 
 **T51.1 · Exact field/SCIP identity and independent quality** — depend on

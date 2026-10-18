@@ -1,0 +1,25 @@
+{
+  "version": "t20-generated-from-v1",
+  "mappings": [
+    {
+      "generated_path": "features/proto/echo/echo.pb.go",
+      "declaration_path": "features/proto/echo/echo.proto",
+      "generator_relative_path": "examples/features/proto/echo/echo.proto"
+    },
+    {
+      "generated_path": "features/proto/echo/echo_grpc.pb.go",
+      "declaration_path": "features/proto/echo/echo.proto",
+      "generator_relative_path": "examples/features/proto/echo/echo.proto"
+    },
+    {
+      "generated_path": "helloworld/helloworld/helloworld.pb.go",
+      "declaration_path": "helloworld/helloworld/helloworld.proto",
+      "generator_relative_path": "examples/helloworld/helloworld/helloworld.proto"
+    },
+    {
+      "generated_path": "helloworld/helloworld/helloworld_grpc.pb.go",
+      "declaration_path": "helloworld/helloworld/helloworld.proto",
+      "generator_relative_path": "examples/helloworld/helloworld/helloworld.proto"
+    }
+  ]
+}

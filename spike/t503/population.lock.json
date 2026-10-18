@@ -1,0 +1,151 @@
+{
+  "schema": "phebs-t503-public-population-v1",
+  "selected_date": "2026-10-18",
+  "upstream": {
+    "repository": "https://github.com/grpc/grpc-go",
+    "commit": "5f1ccf56ea5ec964bbf447a10b561214f86387a6",
+    "license": "Apache-2.0",
+    "license_path": "LICENSE"
+  },
+  "selection": "Complete committed source of four preselected real example clients, their two declaration/client packages, and required data helper. No Phebs output was consulted. Original Go/proto/stub bytes remain unchanged; evaluator root strips examples/ uniformly. Upstream module files are context only; evaluator module dependency pins are explicit separate inputs.",
+  "files": [
+    {
+      "path": "LICENSE",
+      "url": "https://raw.githubusercontent.com/grpc/grpc-go/5f1ccf56ea5ec964bbf447a10b561214f86387a6/LICENSE",
+      "bytes": 11358,
+      "sha256": "sha256:cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "git_blob": "d645695673349e3947e8e5ae42332d0ac3164cd7",
+      "role": "license",
+      "derived_path": "LICENSE"
+    },
+    {
+      "path": "examples/data/data.go",
+      "url": "https://raw.githubusercontent.com/grpc/grpc-go/5f1ccf56ea5ec964bbf447a10b561214f86387a6/examples/data/data.go",
+      "bytes": 1250,
+      "sha256": "sha256:d088b7e127ad41acdf1e267515b003b7ce1a292c217954265be0a122e12ca367",
+      "git_blob": "c583755fdf347534678bcaeb1759a68bb9e3af32",
+      "role": "support",
+      "derived_path": "data/data.go"
+    },
+    {
+      "path": "examples/features/interceptor/client/main.go",
+      "url": "https://raw.githubusercontent.com/grpc/grpc-go/5f1ccf56ea5ec964bbf447a10b561214f86387a6/examples/features/interceptor/client/main.go",
+      "bytes": 5061,
+      "sha256": "sha256:67a96c9ce41464119ed93fab70bebb50cb96accdecaca43d8f9a0cf43a6bf641",
+      "git_blob": "feb59bf1a2eb28207d093d9d77b5a6930f1ecf10",
+      "role": "application",
+      "derived_path": "features/interceptor/client/main.go"
+    },
+    {
+      "path": "examples/features/metadata/client/main.go",
+      "url": "https://raw.githubusercontent.com/grpc/grpc-go/5f1ccf56ea5ec964bbf447a10b561214f86387a6/examples/features/metadata/client/main.go",
+      "bytes": 8453,
+      "sha256": "sha256:26aceadb046196cf67fc5f790f2d6dc4e5f74ae1a919002b6fb6686db41c4fa7",
+      "git_blob": "861e3eece26840007f3204f41ab5689de2e94d2b",
+      "role": "application",
+      "derived_path": "features/metadata/client/main.go"
+    },
+    {
+      "path": "examples/features/multiplex/client/main.go",
+      "url": "https://raw.githubusercontent.com/grpc/grpc-go/5f1ccf56ea5ec964bbf447a10b561214f86387a6/examples/features/multiplex/client/main.go",
+      "bytes": 2414,
+      "sha256": "sha256:4fd071c359f34dd525a7125e9ef2eaf7ba871828eec21b574467bfb7b9224a7e",
+      "git_blob": "d5a432e16b120abf18af05b204d4b2bff4f65ae6",
+      "role": "application",
+      "derived_path": "features/multiplex/client/main.go"
+    },
+    {
+      "path": "examples/features/proto/echo/echo.pb.go",
+      "url": "https://raw.githubusercontent.com/grpc/grpc-go/5f1ccf56ea5ec964bbf447a10b561214f86387a6/examples/features/proto/echo/echo.pb.go",
+      "bytes": 7621,
+      "sha256": "sha256:782b379b30abb36abc05916e65516a261a266a8d8e8c1e42adc606a2a86a6f34",
+      "git_blob": "7733f9759bd6f45a8aaef8814e0ee68483a4ae9a",
+      "role": "generated",
+      "derived_path": "features/proto/echo/echo.pb.go"
+    },
+    {
+      "path": "examples/features/proto/echo/echo.proto",
+      "url": "https://raw.githubusercontent.com/grpc/grpc-go/5f1ccf56ea5ec964bbf447a10b561214f86387a6/examples/features/proto/echo/echo.proto",
+      "bytes": 1420,
+      "sha256": "sha256:e1eb8e11c7c1b273a7c025eedb88064b40c11517b3413d364893e0e4df4fed83",
+      "git_blob": "2dde5633e2dd44414e1c08aaf6e505b62d262414",
+      "role": "declaration",
+      "derived_path": "features/proto/echo/echo.proto"
+    },
+    {
+      "path": "examples/features/proto/echo/echo_grpc.pb.go",
+      "url": "https://raw.githubusercontent.com/grpc/grpc-go/5f1ccf56ea5ec964bbf447a10b561214f86387a6/examples/features/proto/echo/echo_grpc.pb.go",
+      "bytes": 10887,
+      "sha256": "sha256:af593380d0cb47c95469db614f42c582a21c6028e04cae1f84a3da7a96e57a40",
+      "git_blob": "88677bda7966e657ed57e9af3807e035255554ac",
+      "role": "generated",
+      "derived_path": "features/proto/echo/echo_grpc.pb.go"
+    },
+    {
+      "path": "examples/go.mod",
+      "url": "https://raw.githubusercontent.com/grpc/grpc-go/5f1ccf56ea5ec964bbf447a10b561214f86387a6/examples/go.mod",
+      "bytes": 4628,
+      "sha256": "sha256:3f9c81c762eb8b53ef3083bab9cee4f3ecc09d1befbaaba6bbe98f179b347acc",
+      "git_blob": "5c8f8c9ca9fdc2d83ec7f6727f73d6aafc0a11fc",
+      "role": "upstream-module-context",
+      "derived_path": null
+    },
+    {
+      "path": "examples/go.sum",
+      "url": "https://raw.githubusercontent.com/grpc/grpc-go/5f1ccf56ea5ec964bbf447a10b561214f86387a6/examples/go.sum",
+      "bytes": 567170,
+      "sha256": "sha256:dc988dbdfc25a42032ff7612ffb1cfd2ea3bcb8ed2ad002a5cc5f52b069d08b0",
+      "git_blob": "351cb5a91cf1fcccdcc151edf8ac8f95e5c64386",
+      "role": "upstream-module-context",
+      "derived_path": null
+    },
+    {
+      "path": "examples/helloworld/greeter_client/main.go",
+      "url": "https://raw.githubusercontent.com/grpc/grpc-go/5f1ccf56ea5ec964bbf447a10b561214f86387a6/examples/helloworld/greeter_client/main.go",
+      "bytes": 1610,
+      "sha256": "sha256:5539f38f560ab26ce11514cd81f941fb80f4ca9a88754aaaf40d89bbc92e3e30",
+      "git_blob": "d746840e6036c5de0f8a45c2fc2c19ecd7c0540d",
+      "role": "application",
+      "derived_path": "helloworld/greeter_client/main.go"
+    },
+    {
+      "path": "examples/helloworld/helloworld/helloworld.pb.go",
+      "url": "https://raw.githubusercontent.com/grpc/grpc-go/5f1ccf56ea5ec964bbf447a10b561214f86387a6/examples/helloworld/helloworld/helloworld.pb.go",
+      "bytes": 6873,
+      "sha256": "sha256:d365b6dd964d474e5e3d50ef1b8bedb6d728a0377eb7926ef6fee6dfdeb1a59a",
+      "git_blob": "48555f9136a55d547f4726d278afe64d2f2e52b2",
+      "role": "generated",
+      "derived_path": "helloworld/helloworld/helloworld.pb.go"
+    },
+    {
+      "path": "examples/helloworld/helloworld/helloworld.proto",
+      "url": "https://raw.githubusercontent.com/grpc/grpc-go/5f1ccf56ea5ec964bbf447a10b561214f86387a6/examples/helloworld/helloworld/helloworld.proto",
+      "bytes": 1170,
+      "sha256": "sha256:0e59e0b552d35f8b801e02811c3fcd3dd45dbf1a593c5ff6f2f679863219b257",
+      "git_blob": "692ef9deda0751d3d9be9d8a4a3c5a10d7ede385",
+      "role": "declaration",
+      "derived_path": "helloworld/helloworld/helloworld.proto"
+    },
+    {
+      "path": "examples/helloworld/helloworld/helloworld_grpc.pb.go",
+      "url": "https://raw.githubusercontent.com/grpc/grpc-go/5f1ccf56ea5ec964bbf447a10b561214f86387a6/examples/helloworld/helloworld/helloworld_grpc.pb.go",
+      "bytes": 4993,
+      "sha256": "sha256:e1de746d9f7c0fa108c370c420cbe1a630a8cf7ae55e43a2d946dc5589c6993d",
+      "git_blob": "bf8263b0ad5678ea2d376ece21ca7c6686620578",
+      "role": "generated",
+      "derived_path": "helloworld/helloworld/helloworld_grpc.pb.go"
+    }
+  ],
+  "bounds": {
+    "download_file_bytes": 1048576,
+    "download_total_bytes": 14680064,
+    "corpus_source_files": 12,
+    "application_go_files": 4,
+    "support_go_files": 1,
+    "generated_go_files": 4,
+    "declaration_proto_files": 2,
+    "production_inventory_max_files": 200000,
+    "production_source_blob_max_bytes": 10485760,
+    "production_index_max_bytes": 67108864
+  }
+}

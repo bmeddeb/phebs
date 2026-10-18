@@ -12304,3 +12304,32 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
 
   Independent source review of T50.2 found no blocking issue; dependency
   provenance, mixed admission and pre-publication protocol refusal are verified.
+
+- **2026-10-18 — T50.3 source-only comparison preregistration (Ben-routed
+  Mac handoff).** The lead independently reviews the four unchanged public
+  grpc-go clients and their pinned Apache-2.0 declaration/generated/support
+  inputs before any prediction. All nine real generated-method selectors,
+  receiver/declaration identities and exact byte ranges agree with the frozen
+  labels: five selected sites, four outside-pair negatives, five occurrence
+  rows and four explicitly supplied package-unit rows. The selected old/new
+  endpoint roles are evaluator choices, not an upstream migration or API
+  equivalence claim; unavailable unit attribution stays unresolved. Accept
+  checkpoint `54b1377c20d2422f93756dedea56ef30aa1df0e6114d41fd646558ef4cd3ab29`
+  and its twelve artifact digests without changing labels. This is independent
+  agent source review, not independent-human validation. Zero real classes
+  remain unmeasured; mechanics tests never enlarge quality denominators.
+
+  Freeze the finite quality thresholds, exact HTTP/MCP/citation and joint
+  publication matrix, no-retry stops and local operating bounds in
+  `spike/t503/preregistration.json`. The observed RSS bound means maximum
+  sampled RSS, never an unseen transient peak or enforcement guarantee;
+  unavailable required measurements stop operating qualification. A serialized
+  offline indexer may now prepare committed inputs. Before candidate export or
+  scoring, record distinct actual evaluation source/derived Git commits, trees,
+  blob census and bundles; upstream is provenance only. This small Darwin-local
+  product qualification is not a Linux capacity result, rehearsal, historical
+  rerun, SLO or scale result. Production signing remains pending the existing
+  unavailable key. No production code, schema, requests, sync ticks, retries,
+  startup work, locks, caches, publication, concurrency or children change;
+  preparation and qualification are one-shot bounded work. Actual quality and
+  operating outcomes remain pending and must not be inferred from this freeze.
