@@ -1,0 +1,1025 @@
+{
+  "ticket": "T44.5",
+  "date": "2026-10-17",
+  "base_commit": "8dd39fda2f38c79e2d0d7bfc392a8b5c6155243f",
+  "source_commit": "61877837b6919703dddabd1fa1c5f62e50580f79",
+  "environment": {
+    "image": "mcr.microsoft.com/playwright:v1.62.1-noble@sha256:c091b21d9fae78c76e85cd4356431e9b018402f172a214fc7d7a5e9a7e29d8ac",
+    "manifest_sha256_verified": true,
+    "canonical_node": "24.18.0",
+    "backend": "Go 1.26.5 darwin/arm64; SurrealDB 3.2.0; embedded UI",
+    "renderer": "local VZ/Rosetta; 2 CPUs, 6 GiB VM; container limited to 4 GiB",
+    "browser_plugin": "not available; house Playwright; native Chrome used for functional/design QA only",
+    "hosted_ci": false,
+    "retries": 0,
+    "max_diff_pixel_ratio": 0.001,
+    "playwright": "1.62.1",
+    "chromium": "151.0.7922.34",
+    "renderer_platform": "linux/x64"
+  },
+  "native_confirmation": {
+    "startTime": "2026-10-18T00:25:22.930Z",
+    "duration": 24884.81,
+    "expected": 33,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "native_qa": {
+    "cases": 33,
+    "header_cases": 32,
+    "roles": [
+      "admin presentation",
+      "ordinary-user presentation"
+    ],
+    "viewports": [
+      1280,
+      960,
+      640,
+      390
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "densities": [
+      "comfortable",
+      "dense"
+    ],
+    "axe_version": "4.12.1",
+    "axe_scope": "changed header only",
+    "violations": 0,
+    "console_errors": 0,
+    "document_overflow": 0,
+    "checks": [
+      "named nav and icon links",
+      "current-page and native titles",
+      "admin presentation gating",
+      "44px narrow controls",
+      "keyboard Enter with visible focus",
+      "existing Cmd/Ctrl+K entries",
+      "all five code links fit at 390px",
+      "loaded File sticky toolbar offset",
+      "focused Settings indexing anchor offset"
+    ],
+    "qualification": "Role fixtures test presentation only; API authorization is unchanged and not re-proven by role fixtures."
+  },
+  "interaction_mechanics": {
+    "samples": 64,
+    "median_ms": 26.907,
+    "p95_ms": 33.897,
+    "max_ms": 36.184,
+    "claim": "native keyboard navigation mechanics, not a production SLO or user-validation result"
+  },
+  "bundle": {
+    "before_js_raw": 6751109,
+    "before_js_gzip": 1993033,
+    "delta_js_raw": 1685,
+    "delta_js_individual_gzip": 509,
+    "chunks_before": 161,
+    "chunks_after": 161,
+    "new_dependencies": 0
+  },
+  "critique": {
+    "method": "dual isolated agents",
+    "assessment_a": "t445_design_review",
+    "assessment_b": "t445_detector_review",
+    "design_score": 32,
+    "design_score_possible": 36,
+    "blocking_findings": 0,
+    "detector_runs": 1,
+    "detector_warnings": 1,
+    "detector_false_positive": "Inherited FilePage Markdown blockquote border-left:3px; unchanged and outside T44.5.",
+    "overlay": "Native mutable preflight failed on read-only document.title; no live server or injected overlay claimed. Product CSP and browser flags unchanged.",
+    "final_minor_correction": "Narrow code-link gap 12 -> 10px; confirmation proves all links fit at 390px.",
+    "reviewed_ui_source_commit": "25a79a32a72d570f62c0842ff4ba036d3907e325",
+    "receipt_only_followup": "Rendered-header scroll helper and clearance assertions added after design review; full canonical matrices exercise both callers. Product source unchanged."
+  },
+  "gates": {
+    "ui_tests": 766,
+    "new_ui_cases": 4,
+    "make_ci_ui": "pass on unchanged confirmation: generated-client check, unit tests, lint/build, embedded Go build, actual Settings driver callbacks",
+    "docs_and_glossary": "pass",
+    "whitespace": "pass",
+    "receipt_helper": "Both capture callers pass rendered-header clearance assertions in complete canonical author and comparison; lint and docs/glossary pass after the helper correction."
+  },
+  "retained_diagnostics": {
+    "service_directory_unit": "One initial full run failed unchanged keyboard active-row assertion; isolated 19 tests and unchanged complete ci-ui confirmation pass. No Service Directory source edit.",
+    "initial_offset_qa": "32 header cases pass; offset check ran before File content loaded and asserted scrollY>0. Corrected test requires loaded file contents first.",
+    "replacement_boot_race": "One confirmation started before replacement listener and failed ERR_CONNECTION_REFUSED; 32 skipped. Retained; actual 33-case confirmation only after HTTP health 200.",
+    "registry_transport": "Untouched pinned image download slow; registry TLS probes timed out. Redirected pilot also timed out and was not used as an image layer.",
+    "unused_manifest_cli": "An auxiliary Docker manifest-inspect CLI failed digest verification; the actual pinned Docker pull completed with exact digest, independently SHA-256-verified raw manifest, and inspected running image. No alternate image used.",
+    "partial_author": "Operator selected --update-snapshots=changed, which retained below-threshold old headers. Interrupted; all 20 partial PNG changes restored before explicit --update-snapshots=all from another fresh data directory. No partial author PNG carried forward; comparison masks/threshold/retries unchanged.",
+    "capture_offsets": "Receipt-only scroll routines assumed 53px header/80px clearance. Corrected both callers through measured-header helper and pre-screenshot clearance assertions; second diagnostic interrupted before any screenshot capture before any PNG write. Runtime/UI source unchanged from ui_source_commit."
+  },
+  "baseline_before_sha256": {
+    "analytics--dark--dense.png": "1633e8229e16ec92d3c5628513c609b021df550545b9655eb7005c8ba64824db",
+    "search-service-390--dark--dense.png": "3c35296e4a7e9acb57f5633de040ad4f362c1653ec405b600dd84fd7bfdabf8a",
+    "search--dark--dense.png": "4fea168b4275dd2dfaacd25c650a6117ab5192d9299a09877a13c0804c09430e",
+    "caller-comparison-required-identity--dark--comfortable.png": "30792db80fdcf1916ab383f421d94ab67bab85d94c7627790944ce17f7f21cbb",
+    "blame--dark--dense.png": "8ade37c7d8c87420c83edcec687350d971a6a9a304164e392ce7307bc1ae15eb",
+    "typed-index-preview--dark--1280--dense.png": "85ed0904a1f147e95edfa0794038e2faa49ef03b94590abe162184095a4335af",
+    "contract-atlas--dark--dense.png": "0fc118be57410886c4c8cc3c50e1c90ac14e7e505f97d9554389ea4df0a4db75",
+    "audit--light--comfortable.png": "416232d5f0bd3f521b8431c7cb6a0f109d45dd8b1158c88f939b862547141187",
+    "kafka-topics--dark--dense.png": "80801e9de7f64263755cffa5dbc55c685e69263f7a152b1823efda1d1541c301",
+    "typed-index-preview--light--1280--comfortable.png": "7ae663f56b11a4d344d5af9b7405a4c7509c3a5e654813e6c0bdc80dec11d27e",
+    "search-results--light--comfortable.png": "efb847e83454f2229b656a830bddaf2d7fbe1a155ba097825073495e3463e513",
+    "relationship-explorer-service--dark--dense.png": "9b6834cc1dbde83395bcbd2fd709c04756743dbd899ba1e85a00d332325312dc",
+    "relationship-explorer--light--comfortable.png": "d58ea65b46dc8a5e1418bdaf858035dc6d204da833c39997cbe8a009e5932576",
+    "caller-comparison-required-identity--dark--dense.png": "011595072cd2ae2e044351cf9a1dc8ec0d3cb564087cf999560062d210530110",
+    "settings-indexing-390--dark--comfortable.png": "0103fa723bd04d6e7ad8db403582522c7a3550c247b724df1e5e6bd6e77a6ee3",
+    "typed-index-preview--light--390--dense.png": "cfcf31b86e50ce0d9ca3e6bf86b89acc32982daf868ffc9d8276e14cff21f5bc",
+    "search-service--light--comfortable.png": "76298a9ca4356119bb29e44d6eff012b4d8e4edfc3f94089bd3492b4745f1020",
+    "analytics--light--dense.png": "c0c2dd6304f0469e0d6b08b3eb80bf0421af3ebc95b1b7c8c9cc7128b7a202ec",
+    "search-service--dark--dense.png": "bb390cb4c9bf8822717978b912a36647b7628d1ddee245b8f180dd2798f485d9",
+    "file--light--dense.png": "f4efb6d38f52e1fb770faed50f26d58aa37623e73093ac203dc79afc5a7efdee",
+    "caller-map-required-identity--light--dense.png": "61a9187be247f87055a28e3eb7dec3240a01398ee20f166ecf43be98a765b363",
+    "commit--dark--comfortable.png": "f4b953eecd3d66ccbf9866bb5cc2dca413ba0219ac6b472cbfebd31f5e1e82e4",
+    "service-directory--light--comfortable.png": "d629ff0467234be106e12a081d7518d7e0caa56a0253bee2c70696881a945657",
+    "contract-atlas--light--comfortable.png": "e96db9c86cafcb815152d3dd75490e6aab2cc5262f9d4f6737724d25176bd72d",
+    "search-results--dark--dense.png": "2bf4fb6fb26986a6f3046c0af43dc56935d1b82fda8928065db0dd915efefee3",
+    "search-service-authority-390--light--dense.png": "3439a17ce062464ebb474a267e5a6d254de1c52f4915090fb0e601ddc0ddb191",
+    "settings--light--dense.png": "b502b5a1919455df8b7135da0c7ab5202a7cf983d90977b04eb7f0bb58041832",
+    "settings--dark--dense.png": "865b4f9c550473caa119d73e866b533642cb94b87a2c86c6e78b5bebb6bf7308",
+    "search-service-390--light--comfortable.png": "7513f3fb07ee9be937ef7289482085edf61b2bd2d7e36d6e1f17401713f496ed",
+    "kafka-topic-usage--dark--comfortable.png": "5441538b8a5a631c9255b2b3a35e6564868493ed59178ffad2d41e5a2e42d25f",
+    "blame--dark--comfortable.png": "b069ed5a0357d7864094cb813c01130a592aeb938cb2ca3a636bce897abb7f9e",
+    "search-service-authority--dark--comfortable.png": "bc0101641456d3b6a4482324e6e304ba2a9df0cbc90a719db926ab0eea629460",
+    "typed-index-preview--dark--1280--comfortable.png": "85ed0904a1f147e95edfa0794038e2faa49ef03b94590abe162184095a4335af",
+    "search-results-authority--light--comfortable.png": "3783247889b5712c8a881781c9deaddc86af736b308105427288a1006a0a34d9",
+    "search-service--light--dense.png": "34afa34e88f291fe369615e87a67ad196bf5247364a2c03a32b6b8b8219a4b5d",
+    "relationship-explorer-service-expanded--dark--comfortable.png": "9c522a5c0ffded2f595dd63d56af0a87a0568000d8338a8593a46208db212162",
+    "settings--dark--comfortable.png": "b510526dff3d000dabc9c99db850b58b43ffcdf9ed2463543d817a69cc3b9825",
+    "relationship-explorer-service--dark--comfortable.png": "474d5903b6178d22c1433180ec10604943e75655eaf14a6c048b92da420204db",
+    "login--dark.png": "200cb55f2cd24402da9e26b1d0d35c534c96c1ff54c32655fe958e189ffd2148",
+    "search-results-authority--light--dense.png": "876df41aa1a5b2b98f1d95b9cacd4e48a2c865da54aa8f96895eb714c3d4682f",
+    "relationship-explorer-service-expanded--dark--dense.png": "28074832ab5b1000b83d6a83a19e3f36384c4030f194f10c884688fef786e9b3",
+    "login--light.png": "13047c9d2086e005ff13a415aeb5ffb918fdaa7da86fbc1428a585391a8234b0",
+    "blame--light--comfortable.png": "ad6e2c4f5a08b776f0fa92f16e5c6603bb071597c66162c9c63b1a53bf401a9b",
+    "search-service-authority-390--dark--dense.png": "a533a5d07c40a616add06eb2afd0d45eb7372bc01a49d4169dc7aa9b9671fb97",
+    "relationship-explorer--dark--dense.png": "bef540a8a594b63d5d67f44c2c79159e86ad79e010911f4cc209421033d8e83a",
+    "kafka-topics--light--comfortable.png": "c9c5915be0f46da1f50ef22e21a92fe47f37d2f2692edd37a59326017cfa593f",
+    "relationship-explorer-service-expanded--light--comfortable.png": "e91b06d30f4cea6a2a58ad795f5b66ec59004d4244d3061c61b383884cb3a44b",
+    "kafka-topic-usage-expanded-390--dark--comfortable.png": "0f89eef042bdfe115286c1801e542ed2c38bdf61f3e4eddc0b99594da5606e8d",
+    "kafka-topic-usage-expanded-390--light--comfortable.png": "6c089f8ef02de40ed9f84e3db5ef877521f029fb0479077bbdbf4caa1b424cb8",
+    "command-navigator--light--comfortable.png": "b2e282c3cb5c56f63060dd0222ec5b2168e7f25d155a1a76a3c190eb1ccd8be8",
+    "caller-map-required-identity--dark--dense.png": "a782be4c25b9cba883a9caaf5a2836b86085813f3d7a28b4cfebae482f58ceb8",
+    "typed-index-preview--dark--390--comfortable.png": "631b346c6c5974011d03548b25f20a9667266fc3caf4dfa80c534d9ba16c7a55",
+    "search-service-390--dark--comfortable.png": "d911d7ea24d5b22e5dd25b264aa6738b6752a713d61c386f2c1b484d6376280a",
+    "search-results-authority--dark--comfortable.png": "12810d3d20d8fb7b5191fb25484d0515acb544b0207c82a1118eb6bd33a67fba",
+    "search-service-authority--light--comfortable.png": "76fa43460f1c30fa64a7004014df39f8abadda74f2a5af9c5c87a22ff269ba2e",
+    "file--light--comfortable.png": "6d6297fa46c62ea48108256d3ed5f4f7925a269f8b6e9dfa979f5a34cd7fa7dc",
+    "command-navigator--dark--dense.png": "dae2e22099b9f5edb484392c495c6f057ffbbacd088608cda0d91a6860ba94f3",
+    "search-results--light--dense.png": "8415b804dd1e003c9a301e6dcbd151c366ef4ac45f93a9ca3f334f4eb869cb38",
+    "audit--dark--comfortable.png": "56c59434ac8b75c46a2738a0d58b9d173376e308c2c562c67aeb0dbad9d4e88b",
+    "impact--dark--dense.png": "0552280a6d4297f3c8941d76e6f07d75bbff45f2682570e5231afc5fb32b9ce9",
+    "search--light--dense.png": "ebd10779d25b000107ae9445051db4f41b9c66fc70089e8a76ab8933c0de20d2",
+    "history--light--dense.png": "2c802d96eeb6376beadcc6add277be50ccd8d5bd7ed0b67755bed718ed73954b",
+    "settings-indexing-390--light--dense.png": "df95288fbc2e06d7d2bfcef73c923ed5543582657f6f683cecd2f4226d8b9fe6",
+    "settings-indexing-390--light--comfortable.png": "3de33b1eb013420d861cd33d377568adf4afbeb95b71feadc37c5ff18898669e",
+    "search-service-authority-390--light--comfortable.png": "aaf1326c4af550f60d8901e80f6abcd245ac0ccf7f4b707b2bce71c0ae4c18b3",
+    "search-service-authority--light--dense.png": "ec21b9cfb9c7317b66386784c70864ad205588e496918e27cc52e6e6c3efa620",
+    "typed-index-preview--light--390--comfortable.png": "6804965b9eed6140153e1543940efa0c32a72f4dafe565754cf5c83ef05f25cd",
+    "commit--light--dense.png": "7b8274555fbae14246a180202266c126f3182d0e8624d5bead9074094e0ba3a0",
+    "search-service-390--light--dense.png": "984265f7a44d863ebce68a4349513e4759696be42ca0ad19c44015abec26b1f3",
+    "impact--light--dense.png": "b2c8c0d4502ce3b763350b9a7fd922c3a63707a8ad4c8b3b7bc4f04699963d5d",
+    "repos--light--dense.png": "387c0ab8a69138757fa6c5c09bfaa74a5723feed5747868168db7ab6907fcb41",
+    "history--dark--comfortable.png": "d461ce02dae3b473db90955c8a0364d76f731705ebf1be8049114776f880d867",
+    "search-results-authority--dark--dense.png": "22a449073ec7648e71b639de6f6e9c148fddca9f0f99587a79040c5049e401c6",
+    "repos--dark--comfortable.png": "1547c325ae2e3d373ca4702fedbdde9bcc2eddbeac134c15c0e4f6264fd4e780",
+    "repos--dark--dense.png": "8c8274401ee9ed383b7dd243d38a2efbe13f7e82e00c01caca38ded6732dc42e",
+    "kafka-topic-usage--light--comfortable.png": "523daccf55fd2cec055c86b451158a9c24dfa05c8551ac847daad5f9fddd696a",
+    "impact--dark--comfortable.png": "0a612c6b1e3974dc0f6129d1de8657a2269b641c551d17cd0d9ac345b00e303a",
+    "analytics--dark--comfortable.png": "03ff06af6b01c2b1ef6351eacef8d6c28e8ba933e3a0907f3c4c2e431629c6f9",
+    "command-navigator--dark--comfortable.png": "c242bc52b591c6a6cff0ff7b666ddea88f4e305b8df92f011923eae15e933360",
+    "command-navigator--light--dense.png": "bb05f293e54c832beb4cd07988a7f561ecbd46de99eade490b33c9a60887cbc4",
+    "markdown-preview--light--dense.png": "0976a2ea9b4465eec0d5ff3b57c93c6486e9e6faed34c14194df5a835e04909d",
+    "settings--light--comfortable.png": "6bb3cc8b7a4819ae4a7d03b27a944ad73486965fa28e8186f6150424d6332551",
+    "search-service-authority-390--dark--comfortable.png": "954433baf03c1ca6ff13a58adf4677e3705d5bb21ed15ef6864538207ae7c20f",
+    "history--light--comfortable.png": "4c753d9891e533d05faa3f06dedd97f43ff9ee55e61890b209cf5e64b79c244b",
+    "markdown-preview--dark--dense.png": "ad4816d0287f5d80914938cf8abb65bfea006f6f45894232cb070276ae696069",
+    "search-service--dark--comfortable.png": "46d593e79b58337fe764514bf554f3eaf97e4a1eddea0f1a3653423546d29198",
+    "caller-map-required-identity--dark--comfortable.png": "1ccbba18224ced76bf01fa1d60b1ca5b6210b1732befbbd611e292243c929cb2",
+    "audit--dark--dense.png": "265b4897002dace3996b003c7aaad38342896eb171640e50b1a5fe1036ede178",
+    "search--dark--comfortable.png": "1a0dfd9ef44fad0a3f66be7196b1ccd261f7798a0f549c6df9378b4e63f1d550",
+    "history--dark--dense.png": "6b330a32ef017c77d5f1b4da4682ef6257d4c3ac3dec688acb0fe4b1218270b0",
+    "search--light--comfortable.png": "0d2eb35a03f7b78574b4bf14d8560e468ec5bb23c333c7434f46694ab2043fd2",
+    "search-service-authority--dark--dense.png": "1507b016ff7db819bd6ca52f62ecf95be187d07d25cca0c7f91eaa0ca3607e85",
+    "settings-indexing-390--dark--dense.png": "1bca9c7c28e2795b13bfe35bf6b9648302df53efeda6a7c09bc929f4063c3638",
+    "analytics--light--comfortable.png": "2726a16774f745f0edcbb41b8b57a19159512954692746ae8f468e6454a3a4fa",
+    "caller-comparison-required-identity--light--comfortable.png": "739dfa96ca2a4e152b8d55289349991cd66361a2696a6a6e69788720a707cc79",
+    "relationship-explorer--light--dense.png": "e37ff46a3bda7be0323ad7603c981b90ea8b644091badf4e0136f26fb28a921e",
+    "typed-index-preview--light--1280--dense.png": "7ae663f56b11a4d344d5af9b7405a4c7509c3a5e654813e6c0bdc80dec11d27e",
+    "markdown-preview--dark--comfortable.png": "d8120e8c8f208288659a2af7209fc9433555eefd046201978296f11f3e02e8b8",
+    "kafka-topics--dark--comfortable.png": "335ff8238424e58e8293a80d05535869a2bc38d63e2b9ebe2ddd67deacf6cb61",
+    "kafka-topic-usage-expanded-390--dark--dense.png": "951090e45e537eb34762b85f78b13204d653ac700aea965346d59a10b5bd905e",
+    "relationship-explorer-service--light--dense.png": "56632f37d3a3a358e9c6fb20b818b1b44a46e64842e03074778249bc003c8bba",
+    "kafka-topics--light--dense.png": "d617c49ede01a57e82e90e06af5f9e96d0ab44773ac8adcfb841410a63f4ba29",
+    "commit--light--comfortable.png": "308110aa912bed4d9b3f050c7b606b29d386ce6648dc730e12701ea29c984de0",
+    "contract-atlas--dark--comfortable.png": "0b85c5d67e7473f33fd862f138445ae28406e0354c0320a6149a7ab93e441af7",
+    "repos--light--comfortable.png": "2fb1524de6fbbc8964024ab4b2b0d2cef6c5c579e7615e8be3118b7f5499059f",
+    "relationship-explorer-service-expanded--light--dense.png": "9f988ac90d99c9fb86e30277ffb510d563a0aaf3b63eded4f8e26ab5b354cc20",
+    "audit--light--dense.png": "6fa1485c850bd28c36a72957cf5db04fa28d90561a6b2c84d8f1475174740a7f",
+    "relationship-explorer--dark--comfortable.png": "4dbdbc6ffef6389bf1b7105e440d0bfa045fb02f2d83ca0ab3218d9e4a2ea42a",
+    "kafka-topic-usage--dark--dense.png": "f5a1bcb2f8eef04bec6e12349d73a8daa1c12f5c986d9ad7f919b853b0ce358a",
+    "typed-index-preview--dark--390--dense.png": "9ceb6f54a8e6af0568202f8358550bd60f0de89574d457935e2a868ea6bab59b",
+    "kafka-topic-usage--light--dense.png": "568c243c8f5ef66d450e14f303fc9cee9288be970bace460dceb5ad258080969",
+    "service-directory--dark--dense.png": "39b84e26ad682ff5da38895ee90c8b4f5d3ae9ca7da884f050e53feed5cb532b",
+    "impact--light--comfortable.png": "b42e2b94a0f207eb7d0794edf36b25d765ed105d9f6928d54a79a77ed6a9c822",
+    "file--dark--comfortable.png": "de6515b382f064a4d436b25b2e821bb6bfe0a5204e4e93ff83ae76f21c4af82c",
+    "caller-map-required-identity--light--comfortable.png": "1e23ef0315a2bf3fd225e6ef6a8933dd75574eb90ef186dad4d44c77e53d7d40",
+    "search-results--dark--comfortable.png": "a7ba531ab610a88c2ad7a83f343cdfcd17acbe8cce864f539d68a3756718e9a1",
+    "commit--dark--dense.png": "bc8b23c95b33f57e2f3e44d6da2aaf779bdb68a9666de3615bb20c527a91feec",
+    "relationship-explorer-service--light--comfortable.png": "5cac74acb591bba710c1e68b353b05ca8750c8153361406ec72b7eadbe73f9c6",
+    "contract-atlas--light--dense.png": "612d9fdbf98c3e24666bfcf2c9657534553a6599d296129264394ffe8f3745a3",
+    "service-directory--dark--comfortable.png": "4898b45ef1ea4f9eb61a7f9da41d091187787859e1ec66de702c8c4674d3bb3b",
+    "service-directory--light--dense.png": "33fa9a93e10c274296dd71b07ac0a105cd4a1fe72edc615938044d78f3e86b15",
+    "caller-comparison-required-identity--light--dense.png": "2b024e248e2c6f22900d739363e9072725785b57a8575e37d9d46fcc192f5042",
+    "blame--light--dense.png": "5e5f781f77f4d93490574a6d2162707908c1efe69749e76f9d479eba7a914b24",
+    "kafka-topic-usage-expanded-390--light--dense.png": "f6d1ad2a44dc99d568ff06d2bb4df9fadfceb78cf3769e81422afa91af3ef660",
+    "markdown-preview--light--comfortable.png": "4923d2f985b48fc908e60d1556038980f2ef859d28d0f5bcd647710630f055be",
+    "file--dark--dense.png": "0ba063bef1053818fb7d08c01bba503dc1871d9b6b975b15d01ca57bcc33efc3"
+  },
+  "author": {
+    "startTime": "2026-10-18T00:47:37.955Z",
+    "duration": 402088.172,
+    "expected": 135,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "comparison": {
+    "startTime": "2026-10-18T00:55:36.578Z",
+    "duration": 428776.909,
+    "expected": 135,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "baseline_after_sha256": {
+    "analytics--dark--comfortable.png": "1a101d1315d2b9452dcb232233e24e7589d22bbc5483a53145e58254f9d2db50",
+    "analytics--dark--dense.png": "6797773143f694e162adb2f9973a91320e3940f1ed1571445b97ce3f45835cf0",
+    "analytics--light--comfortable.png": "9dd5661c9a3aacf9a2026b67a0082028c28bcdef4947cef6515bda7e210ab81b",
+    "analytics--light--dense.png": "241374c14c2915c1ae508362a659491d5c46a12ed8a122de55018123977322cc",
+    "audit--dark--comfortable.png": "b36ec2eac35a8369522b0d2153c5b2afa6c3313c31d6539912e7fda9e3699d3e",
+    "audit--dark--dense.png": "0422a368f5ce09719435fc23ecf75c208d7419a5ff04da1a0518eede1041bf15",
+    "audit--light--comfortable.png": "a275b9f2597857b2aa5f88e3a649debdd74eeebe1675277f92fe4522dbc9bcb5",
+    "audit--light--dense.png": "d963ad0ad0c6ce9230da69606d4e90dfca3e7dd053556a61e2b59b0f5ff8701e",
+    "blame--dark--comfortable.png": "e4cc75630dab15f337d7a13fcb761f94aad96ca68dac5fb66ef7b725ec776e7b",
+    "blame--dark--dense.png": "e40137501ceb69810a1b59ba160fb0e51d5b2efe140989348808167317409589",
+    "blame--light--comfortable.png": "00c99a64f2d88753c22a6aea2ca231f71a527235adad8235e421c6f7ff5162f1",
+    "blame--light--dense.png": "94ffb8dc69b0a15e7d203e486246be0e1a990fd12c2d89bc79472c2bc66d952e",
+    "caller-comparison-required-identity--dark--comfortable.png": "489bea40d8098e29687f21975958932424c289c278443c76a8afda50e15ebb36",
+    "caller-comparison-required-identity--dark--dense.png": "15aa0797ceef5b6dcef48fc24c3a56217179d9b1fa8bce465a83fea4676b03aa",
+    "caller-comparison-required-identity--light--comfortable.png": "833d5c74c4c4632b921396535da26aed6460d9e6a9b27cb671a7cc405d71435d",
+    "caller-comparison-required-identity--light--dense.png": "0effaec0308587f288af2574009f53ee481bdee5d30cf59839ca89d19bd6e5ef",
+    "caller-map-required-identity--dark--comfortable.png": "f31e85f7d1d8ab6b50b9fb6b0e58bf3b386c9ee40a262e82645b557ff93a7522",
+    "caller-map-required-identity--dark--dense.png": "cb15b1f7453224ef9b2a3704086d94d95aad88bc588f0e8f02f2106c66d577d5",
+    "caller-map-required-identity--light--comfortable.png": "9fad6fb12ae7da79e2b70d56579e8e4e896fe9b6bddb79318d5370cfdc4cbe6e",
+    "caller-map-required-identity--light--dense.png": "b90fda32b549687ce2c48e21f1a39ba7e0bfee07ebc724b6444e4c6b4a39e2cd",
+    "command-navigator--dark--comfortable.png": "e63f8d674c2a2cd423076e195f6c54f34a41919d737105cebf7ebc929290fed2",
+    "command-navigator--dark--dense.png": "011f2b9cd3c3604eb8d05f7ef8904aa71a1c4d5711a775b37967e529d6db920c",
+    "command-navigator--light--comfortable.png": "599ee8f28b325300479f5380d4b3dce9ff9b64d0d578435c8474b909ac8e6620",
+    "command-navigator--light--dense.png": "98b3c93991a050812290c3dbea9a3dd6954893471cf1604a038d5ed77744989b",
+    "commit--dark--comfortable.png": "2d8c329fb383ee114fe1b4cba07b4389750cc6f843d44d55a6bdf4fad0598558",
+    "commit--dark--dense.png": "ecd50214ef13179d239a004321c1aa266187adb499a8c95556da26a7a593a584",
+    "commit--light--comfortable.png": "880b539196a268a757fbf785408d1cd76757febb957508bd9910d89d6b6c68ed",
+    "commit--light--dense.png": "10767e63e9943bc5247c9da82d5a7e4816eb000760019f06a3de02437fd32e18",
+    "contract-atlas--dark--comfortable.png": "5a5a7c10892c757133ff0cc4905fc04d6ea46015b203cb6fb3f5994b637a15d5",
+    "contract-atlas--dark--dense.png": "41e1eef153eeee43b6deb35b2323e76befa5aef18b99992fb3510d8c00cb0a1e",
+    "contract-atlas--light--comfortable.png": "b591062a9e08d00211ea6834f48fc4917cf0d9870252b200a4e2aae946d9b4be",
+    "contract-atlas--light--dense.png": "a788896b7284f126212b3342a8ea4cd950c8f966f1fd131ede697b1af772c975",
+    "file--dark--comfortable.png": "f339f80988d590a43275a6e5bf039399a6aa77b6def4cb73dad31793f8629659",
+    "file--dark--dense.png": "5c9800f2761b429461218699e5de917e1c4a90d5a47575f62fe4ee9cf8caf2c3",
+    "file--light--comfortable.png": "be3da88654c36602f95a95373f2325754b8cf4bbeb08d3042dcecc2b0594b684",
+    "file--light--dense.png": "d5731c64d74d005ce067842e331eedad923bfe39beb4a9445d4608921d79a944",
+    "history--dark--comfortable.png": "aa46374c644459502fd9901ca670709f12f10ce38e16a6ea92b02615b0aeea79",
+    "history--dark--dense.png": "63f765725910f602884f06e415544e30f68dd05ec74f9b93c9c146df6ab1950b",
+    "history--light--comfortable.png": "bcf9a55c2997f08a8aaa79135cf5fe4a8dd175596ce1fad3893d480b7def5064",
+    "history--light--dense.png": "93eadc0f2778a7be199396e7b1bc1e5d088d048823d90ec3c3d585f2449215bd",
+    "impact--dark--comfortable.png": "667fde8094c32d3fb27b16761eee9cd3913e36fc20147889d23d490fa2fcea39",
+    "impact--dark--dense.png": "289c5d32496cad8f37774d17f41bee36838919819fbc6a22407f6ef306529f61",
+    "impact--light--comfortable.png": "4dccd10b6b3dab03cbc4e23a165fe949808110f01ac449830e3b3162b5881f16",
+    "impact--light--dense.png": "ac8951c7367d6047aba3fe40c71a044419db3fb1a05ba5741483e98c9800e986",
+    "kafka-topic-usage--dark--comfortable.png": "6b332770db906dd43856298596a178e71d4c53ddd10f4bb6bb01be6fcea05e74",
+    "kafka-topic-usage--dark--dense.png": "065a346b9c92b7f75892f6a2e92ebe20bbd953ea4889af71b2c27ff2da345fe4",
+    "kafka-topic-usage--light--comfortable.png": "b436c27478d1f8b9af32df71cbcdb3e301812ea08b2cc02ec0add9d1d20fc392",
+    "kafka-topic-usage--light--dense.png": "f74c6fe82519048a90d07ebcf9916a858b652dd72908d3f6bfae3c74f0c92253",
+    "kafka-topic-usage-expanded-390--dark--comfortable.png": "445725441841712eb5e0fd219db97e1b79e70eb0cebd16dea4e65dcbe1760098",
+    "kafka-topic-usage-expanded-390--dark--dense.png": "5e4d44208c2b9ca10eb495832e7461c236bebaa61a146d22cae06792914010d8",
+    "kafka-topic-usage-expanded-390--light--comfortable.png": "46660e6a1a59158a49ecdb4e3c1bf54f0a6c83dd102d631467dddc818929fb01",
+    "kafka-topic-usage-expanded-390--light--dense.png": "10aac53efd7f504b941f06e7bad26a694e70ad4a5e2f22795bd88d1155496484",
+    "kafka-topics--dark--comfortable.png": "76c269b5355475ce3b651a56b3cc503a16a69555fb4db6c72b34148b723bf00f",
+    "kafka-topics--dark--dense.png": "5fd8136232aeda907ae2a9640dfc99f30171347dc9aa948535e16152a3f8c396",
+    "kafka-topics--light--comfortable.png": "4e59f6f389482df4b85feff04170a8cbd40260fa702dd30d610541f5a51ff8a1",
+    "kafka-topics--light--dense.png": "4d56d8ddfa89b6be8cc3dbd6a199b47662e33093702c755a3c5c648e233640d7",
+    "login--dark.png": "200cb55f2cd24402da9e26b1d0d35c534c96c1ff54c32655fe958e189ffd2148",
+    "login--light.png": "13047c9d2086e005ff13a415aeb5ffb918fdaa7da86fbc1428a585391a8234b0",
+    "markdown-preview--dark--comfortable.png": "7870fabafe2cf8112bc69d82c8b7f7469fcdbc0e5e27ea59bc7cd505b1486a7b",
+    "markdown-preview--dark--dense.png": "90d988f99c62cc7448ac5b608ab1cd78fe1e1108b71f80d7b73c9ac7619a873f",
+    "markdown-preview--light--comfortable.png": "3a69f55379e72a5e629c846be3c6e682ea581921d189c5a7853c48c55c29c14a",
+    "markdown-preview--light--dense.png": "013ec8320e31ef7fd9388f22431190e816b3ae31c43f2d6cf3751d3c0d795075",
+    "relationship-explorer--dark--comfortable.png": "52d5a8fade53d572ac588d37204532d0d2949985b0a9774e86f6e1f662e29dc1",
+    "relationship-explorer--dark--dense.png": "ebeb86a8af8f3922829f66c74a532fa4e2214199d065edfa992dcc60644319af",
+    "relationship-explorer--light--comfortable.png": "883e4e2141f2a1130c562113e0b748be7b13c3e9a07dd35aea24ecdee39ae123",
+    "relationship-explorer--light--dense.png": "cb972b6824522216bc921dc8f12a3f7873f3d1cb76c01d33327a47aed108f8b5",
+    "relationship-explorer-service--dark--comfortable.png": "d8d319fe0c32ba703060862461c9e76ee5c04065b080b80537cd23b3a0e9ce27",
+    "relationship-explorer-service--dark--dense.png": "b3d93ea1528edd2dd46cb1e62992d79b446a60cc1ff912fe891c1efd956ad8f8",
+    "relationship-explorer-service--light--comfortable.png": "445d8e07d8f41dd1877347374fc29226eff4f8d96688a07a0a9c8d21a3a47d11",
+    "relationship-explorer-service--light--dense.png": "d9eb4a0add35f7b60f5b75e95b4a20cbdc0449384c573aad23b2882a9ce39a11",
+    "relationship-explorer-service-expanded--dark--comfortable.png": "315ce99129a128b794e5e8db39b61ceb23bf9b967d4b0dade9dcd1f44bfec596",
+    "relationship-explorer-service-expanded--dark--dense.png": "d7e4366b7cb698f7cb013cd8d82c399aea59d36998d163d3469601b669a96910",
+    "relationship-explorer-service-expanded--light--comfortable.png": "6f1e06da74d1d2950df883553fef205a312a50eb6ac6cd879ac4df061e19730d",
+    "relationship-explorer-service-expanded--light--dense.png": "e8886c0c7a3997491de6d26125fb27cc67c74f97c52157214e51c99d650b7b0a",
+    "repos--dark--comfortable.png": "d9f81cdb02fa1f05838a79765a7a9d6d84b0e2b941fabff8282825199514a8ad",
+    "repos--dark--dense.png": "868e6f89defed9b336ed678646e86ac54c325fa77e6564437a88ae7335dda22f",
+    "repos--light--comfortable.png": "8341b2ec209e219b7f6575d2338739e4c0b64662f576f1895882f5936f84da70",
+    "repos--light--dense.png": "0041905276d24b008ebc9b7a3bf15d6973cb8c4d2fe29915c6a4067a0de468cc",
+    "search--dark--comfortable.png": "b390f0818a810a95fb3dd68c5bf4361b27c561f8ecde2b6bc7491ecd623f2f4e",
+    "search--dark--dense.png": "b9c19277df70ec375b1a0a6c53485e1aa97abb64bcfecf4545db915dfe493f10",
+    "search--light--comfortable.png": "a56a2f765bbb69c76694fdfdbb45c9e1e96b7d1ace324b97530f383d39758635",
+    "search--light--dense.png": "d5dbad5b08104cb51c75b39be2187116214e4e7a70eac32d67d954e27ea17678",
+    "search-results--dark--comfortable.png": "d0060ed1442547114d045c310e08efc79452e284a5fbdc2d36070b2f5da3164b",
+    "search-results--dark--dense.png": "84d158e7768a38cce221c7518a2da39c6e3cce0d7b779a0bba5be81488003c89",
+    "search-results--light--comfortable.png": "71fb5a99af703d397128e985a72178ec8dd0f981edde74e28d8a7c81ab2bc182",
+    "search-results--light--dense.png": "6d280901b16ad50729ef1ce06c6309df5c52691001eb42cb9f19f71b79be079e",
+    "search-results-authority--dark--comfortable.png": "d86b491af43886f19c0a5cf6939c7adc4c6ca6c2336ef03d532a318b5d043753",
+    "search-results-authority--dark--dense.png": "87a0945d62499e25c89ab74582644c7e1ddb6c3dd802bf35ca448622a5d9601e",
+    "search-results-authority--light--comfortable.png": "bee7b92edab8156d6d407993b28338818f1078ead81e106b1db9c2e760f2a054",
+    "search-results-authority--light--dense.png": "5c51b56310985986893032405eb5aee3dcc2b0212ccab981da4bf443303c3061",
+    "search-service--dark--comfortable.png": "11b634ba8b07dd2c9f7aa18efc5737f66271a835f9f9f4996bd856b268efcc7a",
+    "search-service--dark--dense.png": "5a236c52064034b49640e2b77f8cffa0d39aa3cf5e325eacf511f81404d0c3c0",
+    "search-service--light--comfortable.png": "a18e9fea1ea81c8961b9fce06272c9d47276327aeba1bc3cb8881a10a4f8a908",
+    "search-service--light--dense.png": "a762114c97e26d083b0846464147ac21fffb6dbb3ff515c9c5930231cdb6b6e9",
+    "search-service-390--dark--comfortable.png": "ea4a96b2dd6ddebb57e4500fbff6d5629d1f2dea00933efd36019e86bf695789",
+    "search-service-390--dark--dense.png": "9b1913c4c01eea08ff9b3fd8b4480f9bf3e8c79b79b96c93e0c5c475c77a10ca",
+    "search-service-390--light--comfortable.png": "17cce833cfb639c0925dbfb8a5ef3f808f81e85211dcad54a67ee47680f1a68d",
+    "search-service-390--light--dense.png": "732ec765f1a68bddf6c3c0a5fcf020d4546e48ead4bceff7dc71f7e3f94d3fc4",
+    "search-service-authority--dark--comfortable.png": "205433740b6613550b94140cb29315abb1f07ee3c821ffced8078be8c11a3711",
+    "search-service-authority--dark--dense.png": "8ad7e6b4964d5efeaa0f231368b4d2d787beea0e94b7a318766eaa00cbb2373f",
+    "search-service-authority--light--comfortable.png": "3352da70665ca078c4c0ae88c774c10c13ff26fd7cfbeb5bc9217e37a63460b8",
+    "search-service-authority--light--dense.png": "c7317287ceda8fdcea90d41510b63a8681f932edc4d539e97f8a03dc6acbdda7",
+    "search-service-authority-390--dark--comfortable.png": "25fb26b5a444fc4c20c4528dc7e342a6b53fe2376d978a9f04a1812be0e64ccd",
+    "search-service-authority-390--dark--dense.png": "61e550a461306fcd5ff846504542d4fd5264dc346dcfa4b544670085e94f49d0",
+    "search-service-authority-390--light--comfortable.png": "db78128f94697e7055600570cdbc658fc42d8ef5c323198113c26193484dd37b",
+    "search-service-authority-390--light--dense.png": "4ce4eb70dfe05a1ec3bdcf9fcc317cb1b780af6ce4135224f4c07a4a8b4401f6",
+    "service-directory--dark--comfortable.png": "223c3e96b4eeff7311a855142f5137c1b41394f037fb201547e3d3923ae5db20",
+    "service-directory--dark--dense.png": "98639c5f7ffac2e84b2eec8b31919e547826e069ea0a001418260ed6489f6ed1",
+    "service-directory--light--comfortable.png": "104e69f8e969b2d5d6aa0b7474483a8a9239bad59089eb3a80de1adb3b3d5b53",
+    "service-directory--light--dense.png": "32d350bc03161294cce0fd92a2d7e2aea63391b2aa8615606ca999ca7084cd38",
+    "settings--dark--comfortable.png": "9748fbf8193617aeba0f479d6d270f583500f3c8bf400a4de767a98e55c6a264",
+    "settings--dark--dense.png": "af79e00e855ba1462994b03ec61cd0fafafc3208a5729f1167e99c2963ff5952",
+    "settings--light--comfortable.png": "c9f0cd90f44047abb86e89353d422b9974b429a1089bd806029be1d8c396a0a8",
+    "settings--light--dense.png": "33a67b9ad8ca996da81cf30ab4d4785a382fc656091e5cf59a99d69ecfade346",
+    "settings-indexing-390--dark--comfortable.png": "2810a5f0dea1c95873b6c091095b8dcf9d07edeb3d8bb9aa9c0e9ab92a0b409a",
+    "settings-indexing-390--dark--dense.png": "78b0e736f317670d133749cd5f85244fc9fd982bc5c3377f5905255e3848b217",
+    "settings-indexing-390--light--comfortable.png": "a5f3a406b29d56d435df28be8cd66934bbf7c0235b42f462ac874ae4bcf99512",
+    "settings-indexing-390--light--dense.png": "76b7c9025265a4b9495dcbe0f42e6090a0d5be5337b11d1d887dd981ece72f65",
+    "typed-index-preview--dark--1280--comfortable.png": "85ed0904a1f147e95edfa0794038e2faa49ef03b94590abe162184095a4335af",
+    "typed-index-preview--dark--1280--dense.png": "84997b06ed36bbeee3ece9bfbf4fc06daa5e5d0789c60d2194aefaef7e443559",
+    "typed-index-preview--dark--390--comfortable.png": "5e5fb267a6938212d1998152e2e6dc8d00fc58d2fbcbd269cc1f4518c4e734af",
+    "typed-index-preview--dark--390--dense.png": "5e5fb267a6938212d1998152e2e6dc8d00fc58d2fbcbd269cc1f4518c4e734af",
+    "typed-index-preview--light--1280--comfortable.png": "7ae663f56b11a4d344d5af9b7405a4c7509c3a5e654813e6c0bdc80dec11d27e",
+    "typed-index-preview--light--1280--dense.png": "7ae663f56b11a4d344d5af9b7405a4c7509c3a5e654813e6c0bdc80dec11d27e",
+    "typed-index-preview--light--390--comfortable.png": "c7bc000a7f99dbd554941072e8e9fb38e0553e605bfa3820be8988a42336900c",
+    "typed-index-preview--light--390--dense.png": "c7bc000a7f99dbd554941072e8e9fb38e0553e605bfa3820be8988a42336900c"
+  },
+  "limits": [
+    "No full Go/race/native ceremony suite.",
+    "No physical touch-device or full screen-reader run; accessibility checks scoped to header.",
+    "No main merge, release, quality-label, scale or focused-pipeline closure.",
+    "No hosted Actions, physical touch-device or complete screen-reader validation; native role fixtures establish presentation only."
+  ],
+  "native_tab_order": {
+    "startTime": "2026-10-18T00:35:01.954Z",
+    "duration": 2261.951,
+    "expected": 4,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "native_tab_order_scope": "Actual Tab from brand through every header control; 1280/390px, admin/ordinary presentation, visible focus and viewport containment.",
+  "cohort": {
+    "repositories": [
+      "local/tmp/phebs-receipts-fixtures/t307-neutral-service.bundle",
+      "local/tmp/phebs-receipts-fixtures/t323-neutral-corpus.bundle"
+    ],
+    "heads": [
+      "b7f443ed7e89dbaede855a6cfd30767bbe13dfbb",
+      "4ac5335893fc18a1243b60a005faa1f09268d858"
+    ],
+    "profile": "explicit whole repository; unchanged operator catalogs; provisional protobuf/Kafka; no analysis units or typed runtime",
+    "author_and_compare_use_distinct_fresh_data_directories": true,
+    "strict_setup": "unchanged exact cohort, settled jobs, required current services and complete orders-api relationships"
+  },
+  "partial_author": {
+    "startTime": "2026-10-18T00:42:59.208Z",
+    "duration": 193106.179,
+    "expected": 66,
+    "skipped": 69,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "ui_source_commit": "25a79a32a72d570f62c0842ff4ba036d3907e325",
+  "offset_author_diagnostic": {
+    "startTime": "2026-10-18T00:46:25.647Z",
+    "duration": 51411.424,
+    "expected": 1,
+    "skipped": 134,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "baseline_commit": "d97da4cb7f3c30f8a0da734ec3ef168261a1ccd2",
+  "baseline_review": {
+    "total": 126,
+    "changed": 121,
+    "unchanged": [
+      "login--dark.png",
+      "login--light.png",
+      "typed-index-preview--dark--1280--comfortable.png",
+      "typed-index-preview--light--1280--comfortable.png",
+      "typed-index-preview--light--1280--dense.png"
+    ],
+    "desktop_body_differences": [
+      {
+        "file": "contract-atlas--dark--comfortable.png",
+        "before_sha256": "0b85c5d67e7473f33fd862f138445ae28406e0354c0320a6149a7ab93e441af7",
+        "after_sha256": "5a5a7c10892c757133ff0cc4905fc04d6ea46015b203cb6fb3f5994b637a15d5",
+        "size": [
+          1280,
+          800
+        ],
+        "changed": true,
+        "changed_bbox": [
+          122,
+          12,
+          1261,
+          735
+        ],
+        "body_changed_pixels_below_53": 2131
+      },
+      {
+        "file": "contract-atlas--dark--dense.png",
+        "before_sha256": "0fc118be57410886c4c8cc3c50e1c90ac14e7e505f97d9554389ea4df0a4db75",
+        "after_sha256": "41e1eef153eeee43b6deb35b2323e76befa5aef18b99992fb3510d8c00cb0a1e",
+        "size": [
+          1280,
+          800
+        ],
+        "changed": true,
+        "changed_bbox": [
+          122,
+          12,
+          1261,
+          735
+        ],
+        "body_changed_pixels_below_53": 2131
+      },
+      {
+        "file": "contract-atlas--light--comfortable.png",
+        "before_sha256": "e96db9c86cafcb815152d3dd75490e6aab2cc5262f9d4f6737724d25176bd72d",
+        "after_sha256": "b591062a9e08d00211ea6834f48fc4917cf0d9870252b200a4e2aae946d9b4be",
+        "size": [
+          1280,
+          800
+        ],
+        "changed": true,
+        "changed_bbox": [
+          122,
+          12,
+          1261,
+          735
+        ],
+        "body_changed_pixels_below_53": 2121
+      },
+      {
+        "file": "contract-atlas--light--dense.png",
+        "before_sha256": "612d9fdbf98c3e24666bfcf2c9657534553a6599d296129264394ffe8f3745a3",
+        "after_sha256": "a788896b7284f126212b3342a8ea4cd950c8f966f1fd131ede697b1af772c975",
+        "size": [
+          1280,
+          800
+        ],
+        "changed": true,
+        "changed_bbox": [
+          122,
+          12,
+          1261,
+          735
+        ],
+        "body_changed_pixels_below_53": 2121
+      },
+      {
+        "file": "kafka-topic-usage--dark--comfortable.png",
+        "before_sha256": "5441538b8a5a631c9255b2b3a35e6564868493ed59178ffad2d41e5a2e42d25f",
+        "after_sha256": "6b332770db906dd43856298596a178e71d4c53ddd10f4bb6bb01be6fcea05e74",
+        "size": [
+          1280,
+          800
+        ],
+        "changed": true,
+        "changed_bbox": [
+          406,
+          12,
+          1224,
+          658
+        ],
+        "body_changed_pixels_below_53": 558
+      },
+      {
+        "file": "kafka-topic-usage--dark--dense.png",
+        "before_sha256": "f5a1bcb2f8eef04bec6e12349d73a8daa1c12f5c986d9ad7f919b853b0ce358a",
+        "after_sha256": "065a346b9c92b7f75892f6a2e92ebe20bbd953ea4889af71b2c27ff2da345fe4",
+        "size": [
+          1280,
+          800
+        ],
+        "changed": true,
+        "changed_bbox": [
+          406,
+          12,
+          1224,
+          658
+        ],
+        "body_changed_pixels_below_53": 558
+      },
+      {
+        "file": "kafka-topic-usage--light--comfortable.png",
+        "before_sha256": "523daccf55fd2cec055c86b451158a9c24dfa05c8551ac847daad5f9fddd696a",
+        "after_sha256": "b436c27478d1f8b9af32df71cbcdb3e301812ea08b2cc02ec0add9d1d20fc392",
+        "size": [
+          1280,
+          800
+        ],
+        "changed": true,
+        "changed_bbox": [
+          406,
+          12,
+          1224,
+          658
+        ],
+        "body_changed_pixels_below_53": 558
+      },
+      {
+        "file": "kafka-topic-usage--light--dense.png",
+        "before_sha256": "568c243c8f5ef66d450e14f303fc9cee9288be970bace460dceb5ad258080969",
+        "after_sha256": "f74c6fe82519048a90d07ebcf9916a858b652dd72908d3f6bfae3c74f0c92253",
+        "size": [
+          1280,
+          800
+        ],
+        "changed": true,
+        "changed_bbox": [
+          406,
+          12,
+          1224,
+          658
+        ],
+        "body_changed_pixels_below_53": 558
+      },
+      {
+        "file": "markdown-preview--light--dense.png",
+        "before_sha256": "0976a2ea9b4465eec0d5ff3b57c93c6486e9e6faed34c14194df5a835e04909d",
+        "after_sha256": "013ec8320e31ef7fd9388f22431190e816b3ae31c43f2d6cf3751d3c0d795075",
+        "size": [
+          1280,
+          800
+        ],
+        "changed": true,
+        "changed_bbox": [
+          21,
+          12,
+          1224,
+          144
+        ],
+        "body_changed_pixels_below_53": 4
+      },
+      {
+        "file": "relationship-explorer-service--dark--comfortable.png",
+        "before_sha256": "474d5903b6178d22c1433180ec10604943e75655eaf14a6c048b92da420204db",
+        "after_sha256": "d8d319fe0c32ba703060862461c9e76ee5c04065b080b80537cd23b3a0e9ce27",
+        "size": [
+          1280,
+          800
+        ],
+        "changed": true,
+        "changed_bbox": [
+          406,
+          12,
+          1259,
+          403
+        ],
+        "body_changed_pixels_below_53": 2
+      },
+      {
+        "file": "relationship-explorer-service--dark--dense.png",
+        "before_sha256": "9b6834cc1dbde83395bcbd2fd709c04756743dbd899ba1e85a00d332325312dc",
+        "after_sha256": "b3d93ea1528edd2dd46cb1e62992d79b446a60cc1ff912fe891c1efd956ad8f8",
+        "size": [
+          1280,
+          800
+        ],
+        "changed": true,
+        "changed_bbox": [
+          406,
+          12,
+          1224,
+          261
+        ],
+        "body_changed_pixels_below_53": 5
+      },
+      {
+        "file": "relationship-explorer-service--light--dense.png",
+        "before_sha256": "56632f37d3a3a358e9c6fb20b818b1b44a46e64842e03074778249bc003c8bba",
+        "after_sha256": "d9eb4a0add35f7b60f5b75e95b4a20cbdc0449384c573aad23b2882a9ce39a11",
+        "size": [
+          1280,
+          800
+        ],
+        "changed": true,
+        "changed_bbox": [
+          406,
+          12,
+          1260,
+          403
+        ],
+        "body_changed_pixels_below_53": 19
+      },
+      {
+        "file": "search-results--dark--comfortable.png",
+        "before_sha256": "a7ba531ab610a88c2ad7a83f343cdfcd17acbe8cce864f539d68a3756718e9a1",
+        "after_sha256": "d0060ed1442547114d045c310e08efc79452e284a5fbdc2d36070b2f5da3164b",
+        "size": [
+          1280,
+          800
+        ],
+        "changed": true,
+        "changed_bbox": [
+          20,
+          12,
+          1224,
+          220
+        ],
+        "body_changed_pixels_below_53": 2
+      },
+      {
+        "file": "search-results--light--comfortable.png",
+        "before_sha256": "efb847e83454f2229b656a830bddaf2d7fbe1a155ba097825073495e3463e513",
+        "after_sha256": "71fb5a99af703d397128e985a72178ec8dd0f981edde74e28d8a7c81ab2bc182",
+        "size": [
+          1280,
+          800
+        ],
+        "changed": true,
+        "changed_bbox": [
+          21,
+          12,
+          1224,
+          220
+        ],
+        "body_changed_pixels_below_53": 5
+      },
+      {
+        "file": "search-results--light--dense.png",
+        "before_sha256": "8415b804dd1e003c9a301e6dcbd151c366ef4ac45f93a9ca3f334f4eb869cb38",
+        "after_sha256": "6d280901b16ad50729ef1ce06c6309df5c52691001eb42cb9f19f71b79be079e",
+        "size": [
+          1280,
+          800
+        ],
+        "changed": true,
+        "changed_bbox": [
+          21,
+          12,
+          1224,
+          220
+        ],
+        "body_changed_pixels_below_53": 5
+      },
+      {
+        "file": "search-results-authority--light--dense.png",
+        "before_sha256": "876df41aa1a5b2b98f1d95b9cacd4e48a2c865da54aa8f96895eb714c3d4682f",
+        "after_sha256": "5c51b56310985986893032405eb5aee3dcc2b0212ccab981da4bf443303c3061",
+        "size": [
+          1280,
+          800
+        ],
+        "changed": true,
+        "changed_bbox": [
+          26,
+          12,
+          1224,
+          391
+        ],
+        "body_changed_pixels_below_53": 3
+      },
+      {
+        "file": "search-service-authority--dark--comfortable.png",
+        "before_sha256": "bc0101641456d3b6a4482324e6e304ba2a9df0cbc90a719db926ab0eea629460",
+        "after_sha256": "205433740b6613550b94140cb29315abb1f07ee3c821ffced8078be8c11a3711",
+        "size": [
+          1280,
+          800
+        ],
+        "changed": true,
+        "changed_bbox": [
+          406,
+          12,
+          1256,
+          443
+        ],
+        "body_changed_pixels_below_53": 2642
+      },
+      {
+        "file": "search-service-authority--dark--dense.png",
+        "before_sha256": "1507b016ff7db819bd6ca52f62ecf95be187d07d25cca0c7f91eaa0ca3607e85",
+        "after_sha256": "8ad7e6b4964d5efeaa0f231368b4d2d787beea0e94b7a318766eaa00cbb2373f",
+        "size": [
+          1280,
+          800
+        ],
+        "changed": true,
+        "changed_bbox": [
+          406,
+          12,
+          1256,
+          443
+        ],
+        "body_changed_pixels_below_53": 2642
+      },
+      {
+        "file": "search-service-authority--light--comfortable.png",
+        "before_sha256": "76fa43460f1c30fa64a7004014df39f8abadda74f2a5af9c5c87a22ff269ba2e",
+        "after_sha256": "3352da70665ca078c4c0ae88c774c10c13ff26fd7cfbeb5bc9217e37a63460b8",
+        "size": [
+          1280,
+          800
+        ],
+        "changed": true,
+        "changed_bbox": [
+          406,
+          12,
+          1256,
+          443
+        ],
+        "body_changed_pixels_below_53": 2592
+      },
+      {
+        "file": "search-service-authority--light--dense.png",
+        "before_sha256": "ec21b9cfb9c7317b66386784c70864ad205588e496918e27cc52e6e6c3efa620",
+        "after_sha256": "c7317287ceda8fdcea90d41510b63a8681f932edc4d539e97f8a03dc6acbdda7",
+        "size": [
+          1280,
+          800
+        ],
+        "changed": true,
+        "changed_bbox": [
+          406,
+          12,
+          1256,
+          443
+        ],
+        "body_changed_pixels_below_53": 2592
+      },
+      {
+        "file": "settings--dark--comfortable.png",
+        "before_sha256": "b510526dff3d000dabc9c99db850b58b43ffcdf9ed2463543d817a69cc3b9825",
+        "after_sha256": "9748fbf8193617aeba0f479d6d270f583500f3c8bf400a4de767a98e55c6a264",
+        "size": [
+          1280,
+          800
+        ],
+        "changed": true,
+        "changed_bbox": [
+          201,
+          12,
+          1224,
+          719
+        ],
+        "body_changed_pixels_below_53": 6
+      },
+      {
+        "file": "settings--light--dense.png",
+        "before_sha256": "b502b5a1919455df8b7135da0c7ab5202a7cf983d90977b04eb7f0bb58041832",
+        "after_sha256": "33a67b9ad8ca996da81cf30ab4d4785a382fc656091e5cf59a99d69ecfade346",
+        "size": [
+          1280,
+          800
+        ],
+        "changed": true,
+        "changed_bbox": [
+          201,
+          12,
+          1224,
+          719
+        ],
+        "body_changed_pixels_below_53": 26
+      }
+    ],
+    "unique_header_strips": 55,
+    "review_method": "All five full-page contact sheets and six full-resolution strip sheets inspected; larger body-difference regions inspected side by side; no PNG pixel edits.",
+    "desktop_full_pages": 102,
+    "desktop_body_identical": 80,
+    "body_digest_value_captures": 12,
+    "body_raster_captures": 10,
+    "panel_raster_captures": 5,
+    "small_body_metrics": [
+      {
+        "file": "markdown-preview--light--dense.png",
+        "pixels": 4,
+        "pixels_channel_delta_over_15": 1,
+        "max_channel_delta": 23,
+        "bbox": [
+          21,
+          88,
+          240,
+          91
+        ]
+      },
+      {
+        "file": "relationship-explorer-service--dark--comfortable.png",
+        "pixels": 2,
+        "pixels_channel_delta_over_15": 0,
+        "max_channel_delta": 1,
+        "bbox": [
+          1258,
+          273,
+          1259,
+          350
+        ]
+      },
+      {
+        "file": "relationship-explorer-service--dark--dense.png",
+        "pixels": 5,
+        "pixels_channel_delta_over_15": 0,
+        "max_channel_delta": 1,
+        "bbox": [
+          713,
+          206,
+          733,
+          208
+        ]
+      },
+      {
+        "file": "relationship-explorer-service--light--dense.png",
+        "pixels": 19,
+        "pixels_channel_delta_over_15": 0,
+        "max_channel_delta": 2,
+        "bbox": [
+          1253,
+          270,
+          1260,
+          350
+        ]
+      },
+      {
+        "file": "search-results--dark--comfortable.png",
+        "pixels": 2,
+        "pixels_channel_delta_over_15": 0,
+        "max_channel_delta": 1,
+        "bbox": [
+          20,
+          165,
+          22,
+          167
+        ]
+      },
+      {
+        "file": "search-results--light--comfortable.png",
+        "pixels": 5,
+        "pixels_channel_delta_over_15": 0,
+        "max_channel_delta": 1,
+        "bbox": [
+          21,
+          89,
+          22,
+          167
+        ]
+      },
+      {
+        "file": "search-results--light--dense.png",
+        "pixels": 5,
+        "pixels_channel_delta_over_15": 0,
+        "max_channel_delta": 1,
+        "bbox": [
+          21,
+          89,
+          22,
+          167
+        ]
+      },
+      {
+        "file": "search-results-authority--light--dense.png",
+        "pixels": 3,
+        "pixels_channel_delta_over_15": 0,
+        "max_channel_delta": 1,
+        "bbox": [
+          26,
+          333,
+          280,
+          338
+        ]
+      },
+      {
+        "file": "settings--dark--comfortable.png",
+        "pixels": 6,
+        "pixels_channel_delta_over_15": 0,
+        "max_channel_delta": 1,
+        "bbox": [
+          201,
+          506,
+          1079,
+          666
+        ]
+      },
+      {
+        "file": "settings--light--dense.png",
+        "pixels": 26,
+        "pixels_channel_delta_over_15": 0,
+        "max_channel_delta": 1,
+        "bbox": [
+          201,
+          505,
+          1080,
+          666
+        ]
+      },
+      {
+        "file": "typed-index-preview--dark--1280--dense.png",
+        "pixels": 6,
+        "pixels_channel_delta_over_15": 0,
+        "max_channel_delta": 1,
+        "bbox": [
+          0,
+          384,
+          879,
+          417
+        ]
+      },
+      {
+        "file": "typed-index-preview--dark--390--comfortable.png",
+        "pixels": 13,
+        "pixels_channel_delta_over_15": 0,
+        "max_channel_delta": 3,
+        "bbox": [
+          0,
+          180,
+          357,
+          1060
+        ]
+      },
+      {
+        "file": "typed-index-preview--dark--390--dense.png",
+        "pixels": 19,
+        "pixels_channel_delta_over_15": 0,
+        "max_channel_delta": 3,
+        "bbox": [
+          0,
+          180,
+          357,
+          1060
+        ]
+      },
+      {
+        "file": "typed-index-preview--light--390--comfortable.png",
+        "pixels": 20,
+        "pixels_channel_delta_over_15": 0,
+        "max_channel_delta": 3,
+        "bbox": [
+          0,
+          552,
+          358,
+          1061
+        ]
+      },
+      {
+        "file": "typed-index-preview--light--390--dense.png",
+        "pixels": 53,
+        "pixels_channel_delta_over_15": 0,
+        "max_channel_delta": 3,
+        "bbox": [
+          0,
+          122,
+          358,
+          1061
+        ]
+      }
+    ],
+    "generation_values": "Contract Atlas coverage/publication, Kafka publication and service authority Catalog digest values differ from the prior-source capture. Catalog generation binds the selected operator catalog source path; current source paths remain identical across author and fresh comparison. No schema/content/caveat change; digest values remain unmasked and compared.",
+    "mobile": "16 authenticated full-page mobile captures use the 105px header including border, adjusted page origin and explicit Settings target clearance."
+  },
+  "author_command": "npm run receipts -- --reporter=list,json --update-snapshots=all",
+  "comparison_command": "npm run receipts -- --reporter=list,json",
+  "receipt_tooling_cost": "Capture-only helper performs one header geometry read, one scrollIntoView and one scrollBy; poll asserts target top. No production work added.",
+  "comparison_baseline_updates": 0,
+  "evidence_sha256": {
+    "author.json": "17e7c5294c024525908cdde138b5b81a94e1f2b490267324be7f915f8f005b6c",
+    "comparison.json": "4326f5893ea5160d79bd74075c277755309e28fedd112900a8c9247e211377eb",
+    "qa.json": "42839e4587826c69dc71efdac330a4e600708a068f592f7d5be8770a0ac6579d",
+    "qa/tabs-report.json": "55df4768aa58258815567ac970e8b1f0055ac955bbd142e4d7cfe6c720f113aa",
+    "ci-ui-confirmation.log": "9e1cc31dca5cf3aad50aa310b49b2e1ac64f42cfaeda5da4e712fcb28b2566bb",
+    "ci-ui.log": "390090981f82953f3bb7fabf9f39c62b99fe20d5c9ba792b943b9efc6ee41967",
+    "partial-author.json": "3fd367e353a08fd265b9f32f9b5f6207d43ee6f3ac256a1ae83b9da5629e7414",
+    "offset-diagnostic-author.json": "1899bc07de322efacd7626a69cf58b3c09deef1e5fc3f226cd009a119950de93"
+  }
+}

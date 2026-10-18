@@ -15516,6 +15516,22 @@ JavaScript aggregate grows by 1,685 raw/509 individually gzipped bytes across
 the unchanged 161 chunks, with no dependency added. Final browser confirmation
 and reviewed canonical PNGs remain pending.*
 
+
+*Final T44.5 outcome (2026-10-17): implementation-complete on
+`ux/t44.5-header-icons`, awaiting Ben's integration request. Complete canonical
+full-author and independent fresh-data comparison each pass 135/135; the
+PNG-only reviewed commit changes 121 images, with five byte-identical controls.
+A shared capture-only scroll helper now measures the real header and both
+callers assert clearance. Native QA passes 33/33 plus four real Tab journeys;
+header-scoped axe reports no violations, both isolated critiques find no
+blocker, and complete `make ci-ui` passes 766 tests on the unchanged
+confirmation. The earlier Service Directory assertion failure, premature
+File probe, boot race and interrupted author diagnostics remain retained.
+[Receipt provenance](../ui/receipts/t445.json) records hashes, body-difference
+classification, bundle/interaction measurements and limits. Masks, zero
+retries and 0.1% tolerance remain exact. No main merge, validation-label,
+focused-pipeline, release or scale closure is claimed.*
+
 ## Epic 45 · Bazel-first managed SCIP generation *(planned after Epics 40–42 · cross-track)*
 
 Phebs is purpose-built for massive, service-dense monorepositories. This epic

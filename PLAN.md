@@ -11990,3 +11990,37 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   second author diagnostic was stopped before any PNG was written for this
   capture-offset correction. Only the final explicit full author set is
   reviewed and committed, with both diagnostics retained.
+
+  Final T44.5 closure (2026-10-17): UI source `25a79a32` and receipt-only
+  correction `61877837` pass the full canonical author and independent
+  fresh-data comparison, each 135/135 with zero skips, retries or flaky
+  results. PNG-only commit `d97da4cb` contains the one reviewed refresh:
+  121 changed PNGs, with both login controls and three desktop panel images
+  byte-identical. All 116 authenticated full-page captures receive the header
+  change. Of 102 desktop full-page images, 80 have identical body pixels below
+  the header; twelve also show generation digest values and ten differ by
+  only 2–26 body pixels. Five panel-only images differ by 6–53 pixels with
+  channel deltas at most three. Larger body regions, all contact sheets and
+  full-resolution header strips were reviewed. No schema, caveat, mask,
+  retry or tolerance changes accompany those pixels; unmasked digest values
+  pass the fresh-data comparison.
+
+  Native confirmation passes 33/33 across both presentation roles, themes,
+  densities and 1280/960/640/390px, including header-scoped axe 4.12.1 and
+  loaded File/Settings offset checks. Four actual Tab-order journeys pass
+  across desktop/mobile and both roles. Sixty-four local keyboard samples
+  measure 26.907 ms median, 33.897 ms p95 and 36.184 ms maximum; these are
+  mechanics, not a production SLO. The final aggregate bundle delta stays
+  +1,685 raw/+509 individually gzipped bytes, with 161 chunks and no new
+  dependency. The capture-only helper adds one geometry read and two scroll
+  operations per requested capture, with a bounded target-position check;
+  production costs remain as recorded above.
+
+  `ui/receipts/t445.json` retains source/baseline identities, per-file hashes,
+  review metrics, all successful gate counts and earlier failed/interrupted
+  diagnostics. Browser-plugin absence uses house Playwright; native Chrome
+  supplies functional/design evidence and only pinned Linux Chromium authors
+  canonical PNGs. This completes implementation on the ticket branch and
+  requests review, not integration. Full Go/race/native ceremony, hosted
+  Actions, physical touch and a full screen-reader run are not claimed;
+  focused-pipeline closure and validation labels remain separate.

@@ -2436,6 +2436,15 @@ The narrow two-row header preserves 44px controls and matching sticky/anchor
 offsets. Its independent review and full reviewed receipt refresh remain the
 owning T44.5 closure gates; this note claims no new integration or release.
 
+T44.5 implementation closure (2026-10-17, Mac): the ticket branch now passes
+both canonical 135/135 matrices over separate fresh data directories, the
+reviewed 121-PNG refresh, native 33-case QA and four Tab-order journeys. Header
+and capture offsets account for the narrow two-row layout; existing masks,
+zero retries and 0.1% tolerance remain unchanged. Full UI CI passes 766 tests;
+retained diagnostics and the bounded evidence are in
+[the T44.5 receipt](../ui/receipts/t445.json). The branch is ready for review;
+integration still requires Ben's request and no validation label is advanced.
+
 T43R.1 completed in the presentation track on 2026-08-30. The adopted type-floor
 rule keeps interface text at 11px or larger and permits one named 10px token
 only for supplementary, non-interactive machine metadata whose essential

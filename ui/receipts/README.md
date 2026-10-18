@@ -287,3 +287,15 @@ are local pinned-renderer checks, not hosted Actions or focused-pipeline closure
 Forty subsequent captures in one persistent pinned browser pass with no
 console/page/request errors. Eight fresh desktop/mobile palette and keyboard
 relationship/citation journeys pass without overflow or errors.
+
+T44.5's header refresh uses a shared capture-only scroll helper that measures
+its rendered height and requires Settings targets to clear it before capture.
+The final explicit full author (`--update-snapshots=all`) and independent
+comparison over another fresh data directory each pass 135/135. The one
+reviewed PNG commit changes 121 images; both login controls and three desktop
+panel images remain byte-identical. Existing masks, zero retries and 0.1%
+tolerance are unchanged. [T44.5 provenance](./t445.json) records both source
+commits, all before/after hashes, scoped accessibility/keyboard checks,
+bundle measurements, generation-value and minor raster differences, and
+retained failed/interrupted diagnostics. These remain local pinned-renderer
+checks and do not close the separate focused pipeline or validation labels.
