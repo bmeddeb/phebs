@@ -13282,3 +13282,23 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   startup, publication, lock, cache, loop, schema, child or serving cost follows.
   Interaction checks meet their5s test timeout; precise latency/usability and
   production release are not inferred. Existing large-chunk warnings persist.
+
+- **2026-10-18 — T52.3 prospective independent Thrift operating matrix
+  (Ben-routed Mac handoff).** Root/peer source review accepts the exact
+  48-file1,291,607B two-origin binding and180s selected-set plan before any
+  prediction. Reuse accepted T50.3 ownership/HTTP/resource and T51.3 canonical/
+  cleanup helpers repository-relatively. Three starts select Apache, both and
+  RW survivor; all current roots/source epochs remain coherent even for zero
+  facts. Fixed positive-identity queries must recover33/4consumer spans with
+  no extras within those queries; prior266/31negative labels are original
+  direct full-stream context, not a new native negative-recall result. Field0
+  queries establish numeric transport admission only unless individually
+  returned source facts are proved; zero establishes no reference or absence.
+  Finalize all6disposable artifact files before either signature. Private key
+  deletion precedes ordinary serve, and joined teardown precedes data removal.
+  Five inert synthetic controls pass; no product/native prediction has run.
+  Client source hashing/checks, three server phases and finite1/4/8whole-proof
+  batches add only bounded opt-in evaluator work, no new production reader,
+  source scan, lock/cache/schema/worker or child. Existing selected-set changes
+  rebuild the shared domain once per repository. Actual fresh image/binding,
+  measured operating artifacts and existing-key production signing remain open.

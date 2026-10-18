@@ -19564,6 +19564,12 @@ is clear. This supplies registration only. Each selected generator's measured
 operating/artifact/production-signature promotion remains open; the existing
 production key is unavailable.
 
+*T52.3 operating preparation (2026-10-18):* independently reviewed source/
+plan and5synthetic controls freeze a small Apache→both→RW-survivor matrix over
+48exact input files. Native fixed-query positives33/4 and prior direct negative
+labels remain separate; field0 is transport mechanics only. Fresh image/binding,
+first measured operating outcome and production signature remain pending.
+
 ## Epic 53 · Protobuf Buf WIRE compatibility production readiness
 
 **T53.1 · Verdict/input contract and independent golden changes** — freeze

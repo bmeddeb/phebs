@@ -1,0 +1,409 @@
+{
+  "schema": "phebs-t523-frozen-public-input-binding-v1",
+  "date": "2026-10-18",
+  "status": "prospective_source_inventory_pending_lead_Git_census_confirmation",
+  "records": [
+    {
+      "generator": "apache",
+      "source_ticket": "t521",
+      "repository": "evaluation.local/t521-public",
+      "local_path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t521-evaluation-kv68rwca/public",
+      "commit": "6218bbaca1bd557c45c6aba6dfcd0c741ed1f64b",
+      "tree": "a75acafed2a89144418268d6d33290582d89ad0f",
+      "bundle": "spike/t521/input-bundles/public.bundle",
+      "bundle_digest": "sha256:d4dd498e0fd9011aefc1d3097bba7024b8f824c3394e9076cbf08102f6b1254f",
+      "files": [
+        {
+          "path": "LICENSE",
+          "bytes": 11357,
+          "digest": "sha256:c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+          "git_blob": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+          "retained_path": "spike/t521/testdata/public/LICENSE"
+        },
+        {
+          "path": "go.mod",
+          "bytes": 105,
+          "digest": "sha256:7812715efed3039621809000de4ca94c6b801c6139c5f62e7a204eaed63caac9",
+          "git_blob": "491a8da94a8088a731ec90558ef47931b2252e00",
+          "retained_path": "spike/t521/testdata/public/go.mod"
+        },
+        {
+          "path": "go.sum",
+          "bytes": 193,
+          "digest": "sha256:427b9b2f6afd0a292b1236e5d403fe0f233dc20c056f02fb6d56bc093873f747",
+          "git_blob": "2da3471a7776c8ff9fe14b941f533c0d47417a9b",
+          "retained_path": "spike/t521/prepared/public/go.sum"
+        },
+        {
+          "path": "index.scip",
+          "bytes": 839828,
+          "digest": "sha256:2bf4030cb6f100e78d78505894e87f464c2ac4a90529ad6555df09c3850ebd28",
+          "git_blob": "13922afe71355ad5b84a34da85f7ee80bcbaacf4",
+          "retained_path": "spike/t521/prepared/public/index.scip"
+        },
+        {
+          "path": "jaeger_tag.go",
+          "bytes": 2538,
+          "digest": "sha256:94635d6f7ab873a4a884936ee0c2cdc31cb9edd8e5b3cffe7cdf45f0b4c5441c",
+          "git_blob": "868b2a5b5465a2a634379096f6b5c852f5d6a0ab",
+          "retained_path": "spike/t521/testdata/public/jaeger_tag.go"
+        },
+        {
+          "path": "testutils/sampling_manager.go",
+          "bytes": 1619,
+          "digest": "sha256:4bebe55774e3c0596ef37ca892863698b1657fda6a55c5d6c65fdeae80ab66d8",
+          "git_blob": "391a44ea041772307f243f9d615530b998b7ec85",
+          "retained_path": "spike/t521/testdata/public/testutils/sampling_manager.go"
+        },
+        {
+          "path": "thrift-gen/jaeger/GoUnusedProtection__.go",
+          "bytes": 108,
+          "digest": "sha256:13aeeefa5045848503e246ddaa38b6d45c83960971f7f41e3e18bcdfed9f441d",
+          "git_blob": "fe45a9f9ad2272d914163b018b4b7a3a3b36a15c",
+          "retained_path": "spike/t521/testdata/public/thrift-gen/jaeger/GoUnusedProtection__.go"
+        },
+        {
+          "path": "thrift-gen/jaeger/jaeger-consts.go",
+          "bytes": 360,
+          "digest": "sha256:598299f2e790ef206d3b4f0f0694ac1acf5ca629bcecbf6249e4386ef7eb1cee",
+          "git_blob": "b6ce85570b6fc4433b990f7b3bf9797849672608",
+          "retained_path": "spike/t521/testdata/public/thrift-gen/jaeger/jaeger-consts.go"
+        },
+        {
+          "path": "thrift-gen/jaeger/jaeger.go",
+          "bytes": 88028,
+          "digest": "sha256:84aa41eff7830e23021707b4809261a3fa07196285351a8c6506fbd6e9922f46",
+          "git_blob": "d55cca0241e7f52d0acf350ce332aba7681c663c",
+          "retained_path": "spike/t521/testdata/public/thrift-gen/jaeger/jaeger.go"
+        },
+        {
+          "path": "thrift-gen/sampling/GoUnusedProtection__.go",
+          "bytes": 110,
+          "digest": "sha256:af1260b07ed4cc7efb987de8471a86a975c4cab927341fc754bd842e1953933f",
+          "git_blob": "015ad4b067473bdfbf65ee70e997dac859d846b8",
+          "retained_path": "spike/t521/testdata/public/thrift-gen/sampling/GoUnusedProtection__.go"
+        },
+        {
+          "path": "thrift-gen/sampling/sampling-consts.go",
+          "bytes": 362,
+          "digest": "sha256:6418f31d36a8d19326add1eb391321b1fcde770fa83d98dab59aa0a3f23e71ea",
+          "git_blob": "5cc762824e18fa542bd53dbe1d0d5aecd2e190c8",
+          "retained_path": "spike/t521/testdata/public/thrift-gen/sampling/sampling-consts.go"
+        },
+        {
+          "path": "thrift-gen/sampling/sampling.go",
+          "bytes": 48733,
+          "digest": "sha256:d551fc830ea6302a2fd81958a7d18d477ceeca30b64bc22e6db1e7cf5806f232",
+          "git_blob": "3bffa5b8eea977cef812c4331885d9ec330ad99a",
+          "retained_path": "spike/t521/testdata/public/thrift-gen/sampling/sampling.go"
+        },
+        {
+          "path": "thrift/application_exception.go",
+          "bytes": 4562,
+          "digest": "sha256:9c7e70b8c8d384012cbdb45bc07e17c77aa184e1308fa11ed1250ed5cd84315a",
+          "git_blob": "32d5b0147a2f001e6855472447fbc32c175d6f35",
+          "retained_path": "spike/t521/testdata/public/thrift/application_exception.go"
+        },
+        {
+          "path": "thrift/binary_protocol.go",
+          "bytes": 13617,
+          "digest": "sha256:db706eb9a60c077870aaef054e7d2a338f08840a68631bc699020b3550165c1b",
+          "git_blob": "45c880d32f8fd444e41662f06697cacff72683e1",
+          "retained_path": "spike/t521/testdata/public/thrift/binary_protocol.go"
+        },
+        {
+          "path": "thrift/client.go",
+          "bytes": 2924,
+          "digest": "sha256:ffb7ac3daf852297146e7d622c57e088b9ae8afec6f0f1070c8f9054a7439933",
+          "git_blob": "ea2c01fdadbf12b846b298a460675e185b0dbc2b",
+          "retained_path": "spike/t521/testdata/public/thrift/client.go"
+        },
+        {
+          "path": "thrift/compact_protocol.go",
+          "bytes": 24857,
+          "digest": "sha256:483cc6a3a011515d4e7b27ff70b863fda966556f21c4de6e0f8e3711170d8878",
+          "git_blob": "a49225dabfb545e95ef4f82a40787507f8cdabeb",
+          "retained_path": "spike/t521/testdata/public/thrift/compact_protocol.go"
+        },
+        {
+          "path": "thrift/configuration.go",
+          "bytes": 12231,
+          "digest": "sha256:f3f3965e020e13add922f872d0b34291ec75e41734622ea7062426e8333f5c34",
+          "git_blob": "454d9f3774829ce6df9bad8d0c803387628ae2c6",
+          "retained_path": "spike/t521/testdata/public/thrift/configuration.go"
+        },
+        {
+          "path": "thrift/context.go",
+          "bytes": 877,
+          "digest": "sha256:460e8631b6e71e6c2ae3854fc9c864db999bc94edff808f238c04f91347ef8fd",
+          "git_blob": "d15c1bcf8949ceed10dcc847fec839d577345d4a",
+          "retained_path": "spike/t521/testdata/public/thrift/context.go"
+        },
+        {
+          "path": "thrift/exception.go",
+          "bytes": 3160,
+          "digest": "sha256:8320c3ed5cdaf01e834a919e7fd59542a1115e4dbcea3bdb6df915056b65b086",
+          "git_blob": "53bf862ea5bc8b2b69b00fa91e08aae4c33b4048",
+          "retained_path": "spike/t521/testdata/public/thrift/exception.go"
+        },
+        {
+          "path": "thrift/header_context.go",
+          "bytes": 2991,
+          "digest": "sha256:d19a438724fd7ca22aec9a44136b5960f0b8fa7da29bbdf56a769a8fb1921db6",
+          "git_blob": "ca25568823678f164de7d3d2a1d0fb7e068dabf4",
+          "retained_path": "spike/t521/testdata/public/thrift/header_context.go"
+        },
+        {
+          "path": "thrift/header_protocol.go",
+          "bytes": 10646,
+          "digest": "sha256:e8dbf39fb14a73b764ff67196bd0bff6996cf80a52bf48b222e0cbe33dfeb87f",
+          "git_blob": "878041f8df18d9d4790b1dde3a643068206f30fa",
+          "retained_path": "spike/t521/testdata/public/thrift/header_protocol.go"
+        },
+        {
+          "path": "thrift/header_transport.go",
+          "bytes": 22580,
+          "digest": "sha256:97f9770c8d96b04ce83dcd1226bfb212550d623d8b36ce3e3ed08e8ea71ba560",
+          "git_blob": "f5736df42762f068996e043e86f5959795d422d2",
+          "retained_path": "spike/t521/testdata/public/thrift/header_transport.go"
+        },
+        {
+          "path": "thrift/logger.go",
+          "bytes": 1780,
+          "digest": "sha256:e81994052fe01a71e7d9945565757b25be876587dabb0ca6ce6afb241581440d",
+          "git_blob": "50d44ec8eae445c70ec5970edc989321a1c35e04",
+          "retained_path": "spike/t521/testdata/public/thrift/logger.go"
+        },
+        {
+          "path": "thrift/memory_buffer.go",
+          "bytes": 2074,
+          "digest": "sha256:3d410eaf677dd9399338212b830de1bc396f851c052c66f9c13986804a6e9d28",
+          "git_blob": "5936d27303794d63f01e3b0fbe9d910e1450e8f8",
+          "retained_path": "spike/t521/testdata/public/thrift/memory_buffer.go"
+        },
+        {
+          "path": "thrift/messagetype.go",
+          "bytes": 1106,
+          "digest": "sha256:1bfe4644d9d3b67f3c9109d5005777783e21759cce0a134d549729e259d41f1c",
+          "git_blob": "25ab2e98a256e84b175b2d894a795a1f6cc7f5c4",
+          "retained_path": "spike/t521/testdata/public/thrift/messagetype.go"
+        },
+        {
+          "path": "thrift/numeric.go",
+          "bytes": 3973,
+          "digest": "sha256:9acff6ecbd5f732da3fbef7064043fe2ce23d360f1dee239c41fd54abcb3c47d",
+          "git_blob": "e4512d204c0d2199dede8cf5db2f8855bd6f9946",
+          "retained_path": "spike/t521/testdata/public/thrift/numeric.go"
+        },
+        {
+          "path": "thrift/processor_factory.go",
+          "bytes": 2471,
+          "digest": "sha256:58c138c2612550010fe60917b6d3c7b185b2bf9ae38a5ceddbdaaf9f18227aad",
+          "git_blob": "245a3ccfc986837a11afbf98bd5e6b95e0c2fb29",
+          "retained_path": "spike/t521/testdata/public/thrift/processor_factory.go"
+        },
+        {
+          "path": "thrift/protocol.go",
+          "bytes": 5652,
+          "digest": "sha256:92fab2234679a3b9575a81466500ca736b78bd12c423fcfd613db2b7e54f2f2c",
+          "git_blob": "0a69bd4162d3fc977cdc1ea8c03adbd2891ae126",
+          "retained_path": "spike/t521/testdata/public/thrift/protocol.go"
+        },
+        {
+          "path": "thrift/protocol_exception.go",
+          "bytes": 2414,
+          "digest": "sha256:30a31de7957d7602259cbb186bba930983c6dafe33f2491b76325fa52a61f13b",
+          "git_blob": "9dcf4bfd94cac9a6695fbcf4024069ac7c41838d",
+          "retained_path": "spike/t521/testdata/public/thrift/protocol_exception.go"
+        },
+        {
+          "path": "thrift/protocol_factory.go",
+          "bytes": 956,
+          "digest": "sha256:f52875baa83a7719f29ec815911e4d96c60d74a32828db92f311afea24398aac",
+          "git_blob": "c40f796d886ac91f1bff9bad58b79e6e69120a6f",
+          "retained_path": "spike/t521/testdata/public/thrift/protocol_factory.go"
+        },
+        {
+          "path": "thrift/response_helper.go",
+          "bytes": 3052,
+          "digest": "sha256:cd9cc8a307f605d87152bec5d6bb47bd4cc0a677cd366c8f801edd9774d04eac",
+          "git_blob": "02f061395679afde1c5c0a6844d20e211e3967c3",
+          "retained_path": "spike/t521/testdata/public/thrift/response_helper.go"
+        },
+        {
+          "path": "thrift/rich_transport.go",
+          "bytes": 1792,
+          "digest": "sha256:6e5ea70bbdf61e35a6e564013f666ed0f69befc70c390c6a5892cce6d8159f62",
+          "git_blob": "83fdf29f5cb32c98a55e26b234b3c4104231bdea",
+          "retained_path": "spike/t521/testdata/public/thrift/rich_transport.go"
+        },
+        {
+          "path": "thrift/serializer.go",
+          "bytes": 3415,
+          "digest": "sha256:41df8a6bbe8acb53278909ddcc3751c6fb34903022faeded20cc1cf633b759d4",
+          "git_blob": "c44979094c6d802218ae76532a6cee585384eeee",
+          "retained_path": "spike/t521/testdata/public/thrift/serializer.go"
+        },
+        {
+          "path": "thrift/server_transport.go",
+          "bytes": 1318,
+          "digest": "sha256:73d3b81269c69c08d9bff61279cd6160fa017f3c82de252bee349364340f1b2f",
+          "git_blob": "51c40b64a1d9cec1a489a01e875f2925e2508669",
+          "retained_path": "spike/t521/testdata/public/thrift/server_transport.go"
+        },
+        {
+          "path": "thrift/simple_json_protocol.go",
+          "bytes": 36888,
+          "digest": "sha256:4e14e9f730d4cdb627b5a50b432ce460710babb9b47f0881685a97c66953f224",
+          "git_blob": "d1a8154532dbad535e1a759cb296be5baa9e4472",
+          "retained_path": "spike/t521/testdata/public/thrift/simple_json_protocol.go"
+        },
+        {
+          "path": "thrift/simple_server.go",
+          "bytes": 9733,
+          "digest": "sha256:12b7ed9d46c6d5f0803c6d5d59327240d3111d7522fd181f2668fa84057d0e51",
+          "git_blob": "563cbfc694a4a43eac718de0507a8dd69ea19f5f",
+          "retained_path": "spike/t521/testdata/public/thrift/simple_server.go"
+        },
+        {
+          "path": "thrift/transport.go",
+          "bytes": 1792,
+          "digest": "sha256:9e73026fed866f202e7b0a2b424b337fc04e6a3e6d631f0414bc041186b717c6",
+          "git_blob": "ba2738a8df111f75e312b66d3a2d8e9bdf254e4d",
+          "retained_path": "spike/t521/testdata/public/thrift/transport.go"
+        },
+        {
+          "path": "thrift/transport_exception.go",
+          "bytes": 2779,
+          "digest": "sha256:14472f23d5e52969320b7bf56fc24b166df961dacfe8e0738390eb5aebae4081",
+          "git_blob": "0a3f07646d35128c01078a3453d51733b93b23a5",
+          "retained_path": "spike/t521/testdata/public/thrift/transport_exception.go"
+        },
+        {
+          "path": "thrift/transport_factory.go",
+          "bytes": 1432,
+          "digest": "sha256:d5b66c9b62437e84f18e7407e464b5cb0f335eaef62770d77dd4b373c0580526",
+          "git_blob": "c805807940a13f0375be561d8c2cd0a0455e096f",
+          "retained_path": "spike/t521/testdata/public/thrift/transport_factory.go"
+        },
+        {
+          "path": "thrift/type.go",
+          "bytes": 1534,
+          "digest": "sha256:dffb9d5b56e1de91621e5fce389cee0ede1510a799855a0b0a196e518f882469",
+          "git_blob": "4292ffcadb130e9fd17776fd9d5a5d509d4bb73e",
+          "retained_path": "spike/t521/testdata/public/thrift/type.go"
+        }
+      ],
+      "field_lineage": "contract_scip_package_v1_e3182b50791af8a571ac67d4fb09d693f4a315053b06ea120e985f5a8f79b057",
+      "module_version": "v0.0.0-t521",
+      "application": [
+        "jaeger_tag.go",
+        "testutils/sampling_manager.go"
+      ],
+      "objects": {
+        "jaeger.Tag#1": 10,
+        "jaeger.Tag#2": 10,
+        "jaeger.Tag#3": 2,
+        "jaeger.Tag#5": 1,
+        "jaeger.Tag#6": 5,
+        "jaeger.Tag#4": 2,
+        "sampling.SamplingStrategyResponse#1": 1,
+        "sampling.SamplingStrategyResponse#2": 1,
+        "sampling.ProbabilisticSamplingStrategy#1": 1
+      },
+      "positive": 33,
+      "negative": 266,
+      "tier": "derived",
+      "source_binding": "none",
+      "generated_prefix": "thrift-gen/",
+      "generated_count_scope": "Every returned generated span/source/version checked separately; no complete generated recall oracle",
+      "qualification": "Existing actual evaluator source plus committed SCIP, distinct from upstream provenance; no new generation/index/source/classifier execution.",
+      "symbolic_head": "refs/heads/committed-input"
+    },
+    {
+      "generator": "thriftrw",
+      "source_ticket": "t522",
+      "repository": "evaluation.local/t522-public",
+      "local_path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t522-evaluation-lrzbjv2q/public",
+      "commit": "01726539645e3bab1c04a4633b806dead7a0c97a",
+      "tree": "0f1ba4058ea5163990a396cca653c5547735ec7a",
+      "bundle": "spike/t522/input-bundles/public.bundle",
+      "bundle_digest": "sha256:7dff0ce34e006a5db0ebbefec15da93140c105a847a0d917c459b67c0ce2efa2",
+      "files": [
+        {
+          "path": ".gen/go/health/health.go",
+          "bytes": 20279,
+          "digest": "sha256:360126ead92a8dd481e094fed6aad98c6375afff6d31710e5c6401071eeb1291",
+          "git_blob": "7f1f1ed3ea51b3b5cb7e8b7c3e384e0576474f5e",
+          "retained_path": "spike/t522/testdata/public/.gen/go/health/health.go"
+        },
+        {
+          "path": "LICENSE",
+          "bytes": 11356,
+          "digest": "sha256:43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1",
+          "git_blob": "f49a4e16e68b128803cc2dcea614603632b04eac",
+          "retained_path": "spike/t522/testdata/public/LICENSE"
+        },
+        {
+          "path": "NOTICE",
+          "bytes": 1081,
+          "digest": "sha256:53d86f4fec2e8c6dc15f2e452dfaafcb11a30abcf06ba665ae28c0cf63922d0a",
+          "git_blob": "464bdf814bc32481519f481f1764a55cd29ae0c4",
+          "retained_path": "spike/t522/testdata/public/NOTICE"
+        },
+        {
+          "path": "common/types/health.go",
+          "bytes": 1283,
+          "digest": "sha256:7133addfa3fbfa85787ce06e7386d6da83d7414ceffd190ea84df93fd2755259",
+          "git_blob": "c83321be85774e1882ef701f4cf70f0807a58cb1",
+          "retained_path": "spike/t522/testdata/public/common/types/health.go"
+        },
+        {
+          "path": "common/types/mapper/thrift/health.go",
+          "bytes": 1692,
+          "digest": "sha256:590da41af2161a96865324c25ccf124768e9cada246bd12a78aabb69b99a66f6",
+          "git_blob": "93c0cc3f09fdb8a75d93a5e000c2c4e84c124a9e",
+          "retained_path": "spike/t522/testdata/public/common/types/mapper/thrift/health.go"
+        },
+        {
+          "path": "go.mod",
+          "bytes": 140,
+          "digest": "sha256:358a79bc91579c6de226d2555a28d9eed228399a50254131677d959a2c5cf39b",
+          "git_blob": "8f82d5cb169ccf111c1e3133d2d5e2c09f93eacb",
+          "retained_path": "spike/t522/testdata/public/go.mod"
+        },
+        {
+          "path": "go.sum",
+          "bytes": 473,
+          "digest": "sha256:6ef7b0d90adc88cab4a54a14a7d8f778020e8a2de5405a4a88549a747ae1f356",
+          "git_blob": "9fd24bb2075883b84d340ea2378f5af9e4be46c6",
+          "retained_path": "spike/t522/prepared/public/go.sum"
+        },
+        {
+          "path": "index.scip",
+          "bytes": 79356,
+          "digest": "sha256:62e0d423a13ff36f0eef3f0937fb56f66f695fc0fa8ee262f40cba36d7410403",
+          "git_blob": "1645d4639e9834ff24244a1ca02e82228587a359",
+          "retained_path": "spike/t522/prepared/public/index.scip"
+        }
+      ],
+      "field_lineage": "contract_scip_package_v1_7d154878e9bf2a86ee12cc1f26284c96edd999119d482f2c5cfa3ce4f133bd7b",
+      "module_version": "v0.0.0-t522",
+      "application": [
+        "common/types/mapper/thrift/health.go"
+      ],
+      "objects": {
+        "health.HealthStatus#1": 2,
+        "health.HealthStatus#2": 2
+      },
+      "positive": 4,
+      "negative": 31,
+      "tier": "exact",
+      "source_binding": "module_digest",
+      "generated_prefix": ".gen/go/",
+      "generated_count_scope": "Every returned generated span/source/version checked separately; no complete generated recall oracle",
+      "qualification": "Existing actual evaluator source plus committed SCIP, distinct from upstream provenance; no new generation/index/source/classifier execution.",
+      "symbolic_head": "refs/heads/evaluation"
+    }
+  ]
+}
