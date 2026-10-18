@@ -170,12 +170,11 @@ values update and 118 baselines remain untouched. This closes the portability
 implementation on its branch; full-matrix history and production signing retain
 their recorded scope.
 
-<<<<<<< HEAD
 **T28.1 source preparation (2026-10-18):** pinned permissive licenses and
 all scoped metadata/ACL/application bytes are verified before recognition.
 Labels, separate denominators and contract decisions must freeze before the
 first reader run. No production recipe or manifest GO is claimed.
-=======
+
 **T50.2 comparison admission preparation (2026-10-18):** its independent signed
 claim plus released Caller Map now select the shared exact comparison service
 on the ticket branch. Joint authority/cursor/citation fences are reused;
@@ -244,7 +243,6 @@ Five selected public source sites and four outside-pair negatives have frozen
 labels, supplied unit composition and finite thresholds. Actual evaluation Git
 bindings precede scoring; measured quality, local operating results and the
 production signature remain pending. No Linux/scale result follows.
->>>>>>> main
 
 **Caller Map / Atlas sequencing override (2026-10-17, Ben-directed):** bounded
 integration tests suffice for these products and their release bindings. The
@@ -5631,13 +5629,12 @@ Standalone remains the supported development and small-deployment profile.
 - silent filesystem-wide repository discovery;
 - treating runtime telemetry or static evidence as a substitute for the other.
 
-<<<<<<< HEAD
 **T28.1 measured Redis spike (2026-10-18):** deterministic two-pass source
 evidence and ACL safety close the finite spike with no production adoption.
 Three extra unresolved frontier sites prevent qualityPASS; manifest design and
 object mapping remain deferred. No Redis query surface, dependency or pack
 is registered. First source/outputs and all failed assertions stay retained.
-=======
+
 **T54.2 isolated operation Impact (2026-10-18):** independent own-claim plus
 actual released CallerMap admission, one exact shared read and bounded fail-closed
 UI/MCP are implemented with scoped normal/race/UI/static checks and source/cost
@@ -5648,4 +5645,3 @@ separate; no field/WIRE/legacy shape or component accuracy transfers.
 represent visible unindexed repositories as unpublished, preserving strict store
 validation and final authorization/source fences. Bounded checks and independent
 review pass. A fresh binary operating run and production signing remain open.
->>>>>>> main
