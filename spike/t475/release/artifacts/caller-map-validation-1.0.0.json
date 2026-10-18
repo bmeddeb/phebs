@@ -126,6 +126,13 @@
     }
   ],
   "real_binary_startup": {
+    "outcome": "passed_with_disposable_integration_key",
+    "source_commit": "0384da4534425ed55141bdf2a806c64e09b51623",
+    "receipt": "spike/t475/release/receipts/vcs-build.json",
+    "sha256": "8ffd8daa5dc9c17cfe2f6b8ae23ee0e6c06e9942193ef053bf460f5d29ec616b",
+    "production_signing": "pending; production key unavailable"
+  },
+  "historical_real_binary_startup_refusal": {
     "outcome": "refused_before_signing_or_launch",
     "receipt": "spike/t475/release/receipts/bounded-startup.json",
     "sha256": "057733317f02035a6cfed3f54fdde691003a946da08305184d79e63f7aba8da2"

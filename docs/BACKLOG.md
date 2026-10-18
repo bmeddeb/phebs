@@ -18377,6 +18377,22 @@ objects, two source-status checks and one binary metadata read. Runtime request,
 sync, startup/restart, retry/no-op, publication, lock, cache and child costs are
 unchanged.
 
+**T47.5 VCS prerequisite closed (2026-10-17).** Exact build-fix source
+`0384da4534425ed55141bdf2a806c64e09b51623` builds the real embedded-UI Phebs
+image from the clean managed worktree in 7.202 seconds, with native Go metadata
+naming that commit, `vcs=git` and `vcs.modified=false`. The bounded real-binary
+integration check passes in 10.299 seconds: actual `release-sign` derives and
+self-verifies those facts with a disposable test key, ordinary startup exposes
+Caller Map over authenticated HTTP/MCP, unrelated comparison/Impact stay dark,
+and revocation withdraws Caller Map. Both server runs exit cleanly; test key,
+records and scratch are removed. No production key is accessed or generated.
+`spike/t475/release/receipts/vcs-build.json` retains the source, binary digest,
+metadata, checks and durations; the original refusal receipt remains exact.
+All script-package tests (3.188 seconds), focused release-identity/signing tests
+(0.674 seconds), vet, pinned lint, shell syntax, docs and glossary pass.
+This supersedes only the missing-VCS prerequisite above. Production signing
+remains pending the existing Linux key, and PR #81 remains unmerged.
+
 ## Epic 48 · Shared production-promotion machinery and execution plan *(Ben-directed, 2026-10-09)*
 
 Ben requests a fast plan that starts a production epic for every currently

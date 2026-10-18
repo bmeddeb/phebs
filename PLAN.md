@@ -12129,3 +12129,15 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   worktrees; Git objects are borrowed locally without network access. Runtime
   requests, sync, startup/restart, retry/no-op, publication, locks, caches,
   persistent state and child costs are unchanged.
+
+  Exact build-fix source `0384da4534425ed55141bdf2a806c64e09b51623` then
+  produced the real Phebs image in 7.202 seconds with actual matching Git
+  revision and explicit clean metadata. The bounded disposable-key real-binary
+  check passed signing/self-verification, authenticated HTTP/MCP Caller Map
+  admission, revocation and clean server shutdown in 10.299 seconds. Its key,
+  records and scratch were removed; production key access/signing remains
+  pending. The source-free `spike/t475/release/receipts/vcs-build.json` binds
+  source, binary digest, metadata, results and durations. The earlier refusal
+  remains exact. Full script-package and focused release-identity tests,
+  scoped vet/pinned lint, shell syntax, docs and glossary pass. No new
+  quality/scale claim, production signature, merge or release follows.

@@ -1,0 +1,59 @@
+{
+  "source_commit": "0384da4534425ed55141bdf2a806c64e09b51623",
+  "build_seconds": 7.202,
+  "vcs": {
+    "vcs": "git",
+    "vcs.revision": "0384da4534425ed55141bdf2a806c64e09b51623",
+    "vcs.time": "2026-10-18T03:40:16Z",
+    "vcs.modified": "false"
+  },
+  "production_signing": "pending; existing production key unavailable and never accessed",
+  "schema": "phebs-t475-vcs-build-v1",
+  "qualification": "disposable integration key; no production release",
+  "checks": [
+    "actual release-sign derives clean binary identity and self-verifies",
+    {
+      "revoked": false,
+      "capabilities": [
+        "contract-atlas",
+        "contract-caller-map",
+        "service-catalog-v2",
+        "service-relationships-v1"
+      ],
+      "caller_mcp_tools_present": true,
+      "anonymous_rejected": true,
+      "embedded_ui_served": true
+    },
+    {
+      "revoked": true,
+      "capabilities": [
+        "service-catalog-v2"
+      ],
+      "caller_mcp_tools_present": false,
+      "anonymous_rejected": true,
+      "embedded_ui_served": true
+    }
+  ],
+  "binary_digest": "sha256:4852f2560251e7c207c99c263403cb10a07c98644ff080e78c52a2b6dbb14746",
+  "clean_shutdown": true,
+  "smoke_seconds": 10.299,
+  "bounded_tests": {
+    "script_package_seconds": 3.188,
+    "release_identity_tests_seconds": 0.674,
+    "commands": [
+      "go test ./scripts -count=1 -timeout=2m",
+      "go test ./cmd/phebs -run ^Test(BuildFacts|SignRelease|CallerMapRelease) -count=1 -timeout=2m",
+      "go vet ./scripts",
+      "go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2 run ./scripts --timeout=2m",
+      "sh -n scripts/build-release-binary.sh",
+      "make docs-check",
+      "make verify-glossary"
+    ],
+    "all_exit_codes": 0
+  },
+  "build_files": {
+    "Makefile": "1e6716933cf6889065366ef9166edd582324433a5ad226353931075a197536ee",
+    "scripts/build-release-binary.sh": "814460c6dee241961ba2bfa7f9ca546565a2e2da6ae667c5bd3d826d44274b06",
+    "scripts/build_release_binary_test.go": "805805ac43c91484e19ef827e97e3738ca9739a7befdbd4a2011e4e360df2c73"
+  }
+}

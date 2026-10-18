@@ -172,6 +172,14 @@ the image. Bounded integration tests pass; the earlier refusal stays retained.
 Production signing still waits for the existing Linux key, with no new key or
 runtime-verifier exception.
 
+**T47.5 VCS prerequisite closed (2026-10-17):** source `0384da45` produces the
+real clean, correctly stamped image in 7.202 seconds. A 10.299-second disposable-
+key check passes actual signing/self-verification, authenticated ordinary
+Caller Map HTTP/MCP exposure, revocation and clean shutdown. The source-bound
+receipt is `spike/t475/release/receipts/vcs-build.json`; original failed evidence
+stays exact. Only production signing on the unavailable existing key and ticket
+integration remain open; no production signature or release is claimed.
+
 **Caller Map production priority (2026-10-09, Ben-directed):** after immediate
 SCIP operational availability, Epic 47 targets a supported Caller Map release
 for repositories within current admitted limits. Ben explicitly keeps
