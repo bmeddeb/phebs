@@ -70,6 +70,18 @@ async function main() {
       await page.getByRole('textbox', {name: 'Path prefix', exact: true}).fill('');
       await page.getByRole('button', {name: 'Apply filters', exact: true}).click();
       await expect(rows).toHaveCount(4);
+      const boundary = page.getByTestId('caller-comparison-page').locator('details').filter({
+        has: page.locator('summary', {hasText: /^Repository-overlay static source evidence only/}),
+      });
+      await expect(boundary).toHaveCount(1);
+      if (await boundary.getAttribute('open') === null) {
+        const summary = boundary.locator(':scope > summary');
+        await summary.focus();
+        await expect(summary).toBeFocused();
+        await page.keyboard.press('Enter');
+      }
+      await expect(boundary).toHaveJSProperty('open', true);
+      await expect(boundary.locator('p').filter({hasText: /runtime.*completeness/i})).toBeVisible();
       const text = await page.getByTestId('caller-comparison-page').innerText();
       assert.match(text, /runtime/i);
       assert.match(text, /completeness/i);

@@ -13029,3 +13029,18 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   harness bytes prospectively before one new finite matrix; no silent retry.
   The response-bound client copy adds no production request, sync, startup,
   publication, lock, cache, schema or child cost. Production signing is pending.
+
+- **2026-10-18 — T50.3 browser disclosure checker correction.** Preserve the
+  22.239436s native stop and its unchanged raw/UI/terminal evidence. Source
+  quality, all five exact citations and HTTP/MCP/paging/filter checks passed
+  before the browser asserted text inside the existing closed ClaimBoundary.
+  Correct only the browser test to focus/Enter the actual scoped disclosure,
+  prove it opened and verify its visible runtime/completeness paragraph.
+  Keep the original text assertions. Root and independent peer source review
+  confirm the current UI/API contract and remaining publication/revocation
+  journey; no product defect or product change follows. Bind the corrected
+  two harness files before one fresh bounded matrix. Prior stops never become
+  PASS and unexecuted phases remain unmeasured. All source truth, thresholds,
+  input/binary/tool bytes and180-second envelope remain exact. Cost changes
+  only by one real disclosure interaction per viewport; production work and
+  production-signing status are unchanged.
