@@ -11327,3 +11327,16 @@ has a path-specific accessible name. Bounded UI,
 native request/back-forward/keyboard/WCAG, same-renderer pixels, types/lint/build
 and documentation gates are recorded in the owning backlog entry. No backend,
 Linux acceptance, production signature or activation changes.
+
+## T57R.6 · Repository polling and service navigation repair (2026-10-18)
+
+Ben's continued Mac audit reproduces nine original failures and adds thirteen UI checks.
+Slow repository reads settle before the next automatic poll. Directory
+inventory/row and detail service identities must match the requested URL;
+invalid detail leaves valid inventory usable. The shared scope bar binds
+authority to principal and complete URL identity before render and ignores
+aborted completions, preserving exact generation links. Lazy pinned folder
+browsing, nested retry/cache reuse and late-response isolation pass. The owning
+backlog records 942 passing UI tests, ten native journeys, eighteen WCAG audits,
+eight byte-identical idle pairs, types/lint/build and documentation/cost review.
+No backend, Linux acceptance, production signing or activation changes.

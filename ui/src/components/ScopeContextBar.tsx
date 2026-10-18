@@ -38,17 +38,20 @@ export function ScopeContextBar({ scope, path, params, principal }: {
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  const [authority, setAuthority] = useState<Authority>({ state: 'loading' })
+  const identity = JSON.stringify([principal, scope.repository, scope.serviceKey, scope.generation])
+  const [read, setRead] = useState<{ identity: string; value: Authority } | null>(null)
+  const authority: Authority = read?.identity === identity ? read.value : { state: 'loading' }
   const service = scope.serviceKey
 
   useEffect(() => {
+    setRead(null)
     if (!scope.repository || !scope.serviceKey) return
     const controller = new AbortController()
-    setAuthority({ state: 'loading' })
     fetchServiceDetail(scope.repository, scope.serviceKey, controller.signal)
       .then((detail) => {
-        if (detail.repository.repository !== scope.repository || detail.service.key !== scope.serviceKey) {
-          setAuthority({ state: 'mismatch', reason: 'authority response identity differs from the scoped service' })
+        if (controller.signal.aborted) return
+        if (detail.repository.repository !== scope.repository || detail.service.repository !== scope.repository || detail.service.key !== scope.serviceKey) {
+          setRead({ identity, value: { state: 'mismatch', reason: 'authority response identity differs from the scoped service' } })
           return
         }
         const current = detail.service.active_desired_generation ?? ''
@@ -56,21 +59,21 @@ export function ScopeContextBar({ scope, path, params, principal }: {
         // scope identity enter the recent list.
         rememberScope(principal, { ...scope, generation: scope.generation || current })
         if (scope.generation && current && current !== scope.generation) {
-          setAuthority({ state: 'moved', pinned: scope.generation, current, detail })
+          setRead({ identity, value: { state: 'moved', pinned: scope.generation, current, detail } })
           return
         }
-        setAuthority({ state: 'ready', detail })
+        setRead({ identity, value: { state: 'ready', detail } })
       })
       .catch((cause) => {
-        if (!isAbortError(cause)) {
-          setAuthority({ state: 'unavailable', reason: cause instanceof Error ? cause.message : String(cause) })
+        if (!controller.signal.aborted && !isAbortError(cause)) {
+          setRead({ identity, value: { state: 'unavailable', reason: cause instanceof Error ? cause.message : String(cause) } })
         }
       })
     return () => controller.abort()
-    // Identity fields and the principal are the real dependencies; the scope
-    // object is re-derived every render.
+    // The identity binds the principal and all scope fields; the scope object
+    // is re-derived every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scope.repository, scope.serviceKey, scope.generation, principal])
+  }, [identity])
 
   const clearScope = () => {
     const next = new URLSearchParams(params)

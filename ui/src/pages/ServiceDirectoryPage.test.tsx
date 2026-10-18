@@ -177,6 +177,29 @@ test('keeps inventory usable when an exact detail deep link is unavailable', asy
   await waitFor(() => expect(api.fetchServiceDetail).toHaveBeenCalledTimes(2))
 })
 
+test.each(['repository', 'row'] as const)('refuses inventory with a foreign %s identity before creating service links', async kind => {
+  const value = inventory()
+  if (kind === 'repository') value.repository.repository = 'example.invalid/foreign'
+  else value.services![0].repository = 'example.invalid/foreign'
+  api.fetchServiceInventory.mockResolvedValueOnce(value)
+  renderPage(new URLSearchParams({ repository: repositoryName }))
+  expect(await screen.findByText('Service inventory authority differs from the requested repository. Retry inventory.')).toBeTruthy()
+  expect(screen.queryByRole('option', { name: /Orders API/ })).toBeNull()
+  expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy()
+})
+
+test.each([
+  ['key', { key: 'other-service' }],
+  ['repository', { repository: 'example.invalid/foreign' }],
+] satisfies [string, Partial<ServiceRecord>][])('refuses detail with a foreign service %s while keeping the inventory usable', async (_name, identity) => {
+  api.fetchServiceDetail.mockResolvedValueOnce({ ...detail(), service: record(identity) })
+  renderPage(new URLSearchParams({ repository: repositoryName, service_key: 'orders-api' }), true)
+  expect(await screen.findByText('Service authority changed while loading. Retry detail.')).toBeTruthy()
+  expect(screen.getByRole('option', { name: /Orders API/ })).toBeTruthy()
+  expect(screen.queryByRole('link', { name: 'Search this service' })).toBeNull()
+  expect(api.fetchServiceRelationships).not.toHaveBeenCalled()
+})
+
 test.each([
   ['repository identity', { repository: 'example.invalid/other' }],
   ['catalog generation', { catalog_generation: `sha256:${'9'.repeat(64)}` }],

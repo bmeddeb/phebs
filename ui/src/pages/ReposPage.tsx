@@ -41,10 +41,16 @@ export default function ReposPage({ isAdmin = false, serviceDirectoryAvailable =
   }, [])
 
   useEffect(() => {
-    void refresh()
-    const id = setInterval(() => void refresh(), POLL_MS)
+    let active = true
+    let id: ReturnType<typeof setTimeout>
+    const poll = async () => {
+      await refresh()
+      if (active) id = setTimeout(() => void poll(), POLL_MS)
+    }
+    void poll()
     return () => {
-      clearInterval(id)
+      active = false
+      clearTimeout(id)
       refreshController.current?.abort()
     }
   }, [refresh])

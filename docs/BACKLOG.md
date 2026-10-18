@@ -20914,6 +20914,44 @@ has no unresolved finding.
 The owning PLAN decision names the added visible-result scans and avoided wrong
 requests. Linux #124, historical Noble bytes and production signing stay pending.
 
+**T57R.6 ✅ · Repository polling and service navigation repair** *(2026-10-18,
+Ben-directed Mac audit continuation;
+[Mac issue #134](https://github.com/bmeddeb/phebs/issues/134), independent of
+Linux #124).* AC: reproduce slow repository polling starvation and crossed
+service inventory/detail identities; verify lazy pinned folder browsing,
+nested retry/cache reuse and late-response isolation. Schedule automatic status
+polls after the previous read settles, retain explicit refresh/unmount fences,
+refuse foreign repository/service identities before creating navigation links,
+and keep valid inventory usable on detail refusal. Bind scope-bar authority to
+the current principal and URL identity before render; old completions cannot
+restore authority or supply another service's generation. Preserve exact
+retry/back-forward and service-search links. Bounded UI, types/lint/build,
+desktop/390 px keyboard/console/WCAG, same-renderer pixels, documentation,
+glossary and charter/steady-state-cost review are the merge bar. No backend,
+signing or ceremony work.
+
+T57R.6 outcome: nine regression cases fail against their original source;
+thirteen new UI checks include leave/return scope controls and bring the suite
+to 942 passing tests across 49 files (19.98s). Ten native Chrome 155 journeys pass,
+including eighteen clean
+WCAG audits, exact folder/service requests, held slow reads, keyboard selection,
+refusal/retry and back/forward at 1280 px and 390 px. Consoles are clean and
+documents do not overflow. Eight native idle pairs for Repositories, the
+repository explorer, service inventory and selected detail are reviewed and
+byte-identical to main; no canonical baseline, mask, threshold or retry changes.
+Browser plugin not available; repo Playwright uses native Chrome. Types,
+changed-file lint, production build, docs/glossary and whitespace pass. Existing
+large-chunk build warnings remain. Current lazy Repositories/Service directory
+chunks are 9.79/47.93 kB (3.12/12.25 kB gzip); the shared entry is 347.90 kB
+(100.39 kB gzip). The fixture repository-to-selected-service journey takes
+about 0.8–0.9s including lazy loading, keyboard steps and assertion polling; it is
+UI mechanics, not live backend latency, user validation or scale evidence.
+Charter review finds no unresolved hierarchy, density, state, keyboard, motion
+or copy issue. The owning PLAN decision records polling frequency/concurrency,
+the page-bounded identity scan and unchanged two-reader scope/detail costs.
+Historical Noble bytes, Linux #124, managed-SCIP proof and production signing
+remain pending.
+
 **T57R.1 · Inherited gate repairs** *(cross-cutting; found while landing Epic
 57)* — return `make docs-check`, repository-wide lint and
 `internal/investigation` to green without touching the code those findings sit
