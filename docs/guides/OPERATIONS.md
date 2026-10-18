@@ -9373,3 +9373,12 @@ During startup or publication replacement, operation Impact may show the current
 indexed source scope beside an absent or older caller generation. This remains
 unavailable with no rows, totals or declaration; it is not zero callers. Exact
 current evidence requires matching source commit and analysis-unit digest.
+
+Current comparison and field artifact evidence is reconciled under
+`spike/t484/current-product-evidence/`. Reuse is limited to the exact unchanged
+mechanism and retained source scope. Backup restores generic caller/resolver
+custody; native extraction roots are derived, cleared and unavailable until an
+ordinary exact rebuild. A disposable draft signer/load check grants no
+production trust. Before production signing, review final approved bytes and
+derive their exact census with the binary being released; any byte change
+invalidates the draft census. The existing production key remains unavailable.

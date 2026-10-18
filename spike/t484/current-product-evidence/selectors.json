@@ -1,0 +1,60 @@
+{
+  "schema": "phebs-current-product-finite-selectors-v1",
+  "status": "PROPOSED_NOT_RUN",
+  "execution_authorized_by_this_file": false,
+  "owner": "root; serialize after active T542c lane",
+  "rule": "Run at most once when no adequate exact scoped retained green record is available; retain source/command/exit/wall/log hashes. No corpus/index/native browser, full repository gate, ballast, ceremony, huge live backup or new quality population.",
+  "steps": [
+    {
+      "id": "shared-filesystem-publication-recovery-and-archive",
+      "argv": [
+        "go",
+        "test",
+        "-p",
+        "1",
+        "./internal/callerpublication",
+        "./internal/resolvercatalog",
+        "./internal/extractionpublication",
+        "-run",
+        "^(TestCrashBoundariesRecoverOrAbandonMarkedPublication|TestCallerPublicationArchiveExactRestore|TestCallerPublicationArchiveOmitsIncompleteAndUnreferencedState|TestCleanupStagesAndReconcileCrashBoundaries|TestCatalogArchiveExactAndBoundedOmissions|TestRecoverStagesRetiresCurrentCompatibleAndSparseWithoutDeleting|TestStageLifecycleHonorsGraceCountAndCollectingResume|TestStageLifecycleEnforcesEveryControllerLimit)$",
+        "-count=1",
+        "-timeout=30s"
+      ],
+      "scope": "Small real temporary filesystem and callback crash seams; archive exactness/omissions, stage preservation and controller caps. This is not a real SIGKILL run or full DB backup.",
+      "external_children": "No intentional server/indexer/native sampler/browser children."
+    },
+    {
+      "id": "shared-pressure-and-backup-lock-policy",
+      "argv": [
+        "go",
+        "test",
+        "-p",
+        "1",
+        "./internal/lifecycle",
+        "-run",
+        "^(TestGateWatermarksProjectionAndHysteresis|TestGateUnavailableAndRootHardening|TestGenerationOwnerHonorsAggregateQueryBudgetAndBackupLock|TestRunnerControlPressureUsesSameGateWithoutExtraTurns)$",
+        "-count=1",
+        "-timeout=30s"
+      ],
+      "scope": "Injected capacity observations drive production pressure/hysteresis/refusal/backup-lock paths. No disk fill or physical host pressure."
+    },
+    {
+      "id": "offline-restore-clear-policy",
+      "argv": [
+        "go",
+        "test",
+        "-p",
+        "1",
+        "./internal/store",
+        "-run",
+        "^(TestRestoreClearNativeIDValidation|TestRestoreClearPagePrefixAndCancellation|TestRestoreClearClosedWriterGuards|TestRestoreClearCallerExactPairing)$",
+        "-count=1",
+        "-timeout=30s"
+      ],
+      "scope": "Pure mocked transport controls for bounded offline clears, prefix/cancellation and writer pairing. No live DB import/backup. The separate native SQL test already exists but is not included in this fast selector list."
+    }
+  ],
+  "if_native_SQL_receipt_needed": "Use an already retained exact source-scoped TestRestoreClearNativePagesAndCallerPairing record; if none can be located, request a separately serialized tiny store selector, not a full live backup campaign. No such new native run is authorized here.",
+  "stop_policy": "First failure remains failure; no automatic retry or widening. A failed selector requires diagnosis and a separately reviewed correction.",
+  "final_census_owner": "Root will separately author final-draft-census.json and disposable signer/load metadata after final draft freeze. These future checks remain pending."
+}
