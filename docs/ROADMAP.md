@@ -170,6 +170,12 @@ values update and 118 baselines remain untouched. This closes the portability
 implementation on its branch; full-matrix history and production signing retain
 their recorded scope.
 
+**T48.5a raw evidence (2026-10-18):** implementation and bounded real-root,
+legacy-byte, final-fence and release-domain checks pass on its ticket branch.
+The browser exposes exact native authority without inventing legacy runs;
+unadmitted retained domains refuse before storage. Main integration remains a
+separate decision.
+
 **Caller Map / Atlas sequencing override (2026-10-17, Ben-directed):** bounded
 integration tests suffice for these products and their release bindings. The
 owning amendment at the start of Epic 47 in [BACKLOG.md](./BACKLOG.md) supersedes

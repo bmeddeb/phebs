@@ -18863,6 +18863,22 @@ preserve legacy-only response bytes, existing page bounds and denied-source
 behavior. Keep any additive API authority fields and generated clients aligned;
 focused real-root/read/final-fence tests and steady-state-cost review pass.
 
+**T48.5a implementation result (2026-10-18).** Current/empty partitioned
+roots now appear with explicit `exact_authority`, optional absent legacy `run`
+and additive `partitioned_root_count`; legacy-only bytes and read order remain
+exact. Reuse the existing sealed source/locator reader and 5,000-row complete-or-
+error bound. Final native presence/root checks plus existing permission,
+indexed-commit, scope and evidence-revision fences refuse transitions, including
+an absent root becoming current. Release-only raw domains are restricted to the
+existing verified recipe list before any storage read; retained unrelated
+consumer/field/Kafka roots cannot leak through declaration/Caller Map admission.
+Focused normal (lead 0.706s), race (2.279s), actual two-chunk SurrealDB root/read/
+transition proof (1.431s, joined child), vet, pinned lint, docs and glossary pass.
+Source/cost review is complete; owning PLAN records the per-repository retained
+row bound and unchanged steady-state work. Enabled-schema assertions cover the
+additive fields; there is no raw UI/MCP/generated client to regenerate. Ready on
+its ticket branch; integration still requires Ben's request.
+
 ## Epic 49 · Contract Atlas and declaration production readiness
 
 **Current acceptance (2026-10-17):** use the integration-test amendment at the
