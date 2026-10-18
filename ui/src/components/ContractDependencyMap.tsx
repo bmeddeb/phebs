@@ -188,8 +188,8 @@ export default function ContractDependencyMap({
         </>
       )}
 
-      <div className={css({
-        marginTop: edges.length === 0 ? '10px' : '12px',
+      {edges.length > 0 && <div className={css({
+        marginTop: '12px',
         overflowX: 'auto',
       })}>
         <table
@@ -284,7 +284,7 @@ export default function ContractDependencyMap({
             ))}
           </tbody>
         </table>
-      </div>
+      </div>}
 
       <div className={css({
         marginTop: '8px',
@@ -294,7 +294,7 @@ export default function ContractDependencyMap({
       })}>
         Scope: {operation.coverage.repository_count} visible repositories ·
         coverage {shortDigest(operation.coverage_digest)} ·
-        {complete ? ' relationship projection complete within its bound' : ' relationship projection truncated'}
+        {unavailable.length > 0 ? ' relationship projection unavailable' : complete ? ' relationship projection complete within its bound' : ' relationship projection truncated'}
       </div>
     </section>
   )

@@ -77,10 +77,10 @@
     "ui/src/App.tsx": "6e291a07677352532aff98a281ebd78a914c06500d41de94dde7833edbecf186",
     "ui/src/pages/ContractAtlasPage.tsx": "3ba266011a74db34749047bd7ae459bb9d83898bbf6e12f3a242301cebc0cf51",
     "ui/src/pages/ContractAtlasPage.test.tsx": "ff14af8e558d7d9931e8a135f1a133b6088f22c4eb0bd8251f11a615c4d0867a",
-    "ui/src/components/ContractDependencyMap.tsx": "af9f0c4428fa73099a06ddd8c5e775a93c2fdebd8ae447d54174283c4456f348",
-    "ui/src/components/ContractDependencyMap.test.tsx": "068d63461dc100f1aff2bda62f844844fdace989c52e5485de04c8275bec0696",
+    "ui/src/components/ContractDependencyMap.tsx": "3732eea4b67fd44becdd784f68a717aaf964a382473d32eded5d59f9b9934911",
+    "ui/src/components/ContractDependencyMap.test.tsx": "e3ded8e538b722a3ced8fbcac5956eb3e606bfb7d79b7cbbbca7d6b90ebefaf0",
     "ui/receipts/atlasFixture.ts": "17226487215c80b568ec4eb699a1f49c0682aa30839cebdd399e9daf56ed0512",
-    "ui/receipts/atlas-receipts.spec.ts": "b21736e2db873fb3297eb7f87fa653e170db6a85e88f68fb421a0a2020de2d72"
+    "ui/receipts/atlas-receipts.spec.ts": "afcbcef53c4a7f2ebc017355d4f5cba0d4d80b2f3dbc65e54ea4bbed135c5774"
   },
   "reused_coverage": [
     "T49.3 exact partitioned-root, moved/stale authority, allowed/denied access, paging and citation coverage; unchanged readers",
@@ -103,7 +103,8 @@
       "Unavailable relationship sections remain named unavailable, never a complete empty relationship set.",
       "Impact and Caller Map handoffs follow their actual capabilities.",
       "Present authority metadata validates shape, exact source tuples, unique visible roots and echoed filters; malformed/null/crossed metadata and contradictory unavailable sections fail closed. Root metadata describes all visible coverage even for filtered item pages.",
-      "Detail grid uses a zero-minimum column so narrow viewports keep source tables locally scrollable; native layout diagnosis corrected document width793px to390px."
+      "Detail grid uses a zero-minimum column so narrow viewports keep source tables locally scrollable; native layout diagnosis corrected document width793px to390px.",
+      "Zero relationship edges no longer render an empty horizontal table; unavailable footer stays unavailable rather than truncated."
     ],
     "checks": [
       {
@@ -153,6 +154,21 @@
       "nodes": 2,
       "reason": "SectionHelp is nested inside native summary; shared component unchanged by T49.4.",
       "qualification": "Retained full-page findings; changed-Atlas audit excludes unchanged shared panel; no global clean-accessibility claim."
-    }
+    },
+    "additional_checks": [
+      {
+        "command": [
+          "npm",
+          "test",
+          "--",
+          "src/components/ContractDependencyMap.test.tsx",
+          "src/pages/ContractAtlasPage.test.tsx"
+        ],
+        "exit_code": 0,
+        "tests_passed": 35,
+        "qualification": "Post native mobile table/availability fix; canonical no-overflow regression captures layout.",
+        "duration_seconds": 1.49
+      }
+    ]
   }
 }

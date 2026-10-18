@@ -193,4 +193,6 @@ test('unreleased relationship sections stay unavailable instead of a complete em
   expect(screen.getByTestId('dependency-map-empty').textContent).toBe('No admitted relationship edges are displayed.')
   expect(screen.queryByText(/complete bounded set/)).toBeNull()
   expect(screen.queryByText(/bounded relationship set is complete/)).toBeNull()
+  expect(screen.queryByText(/relationship projection truncated/)).toBeNull()
+  expect(screen.queryByRole('table')).toBeNull()
 })

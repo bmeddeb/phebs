@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { DEFAULT_PALETTE } from '../src/palette'
-import { installIdentityFixture, scrollBelowHeader } from './fixture'
+import { installIdentityFixture } from './fixture'
 import { FROZEN_NOW, THEMES } from './routes'
 import { ATLAS_DECLARATION_PATH, installAtlasDeclarationFixture } from './atlasFixture'
 
@@ -26,8 +26,7 @@ for (const theme of THEMES) for (const [name, width, height] of [
     await expect(detail.getByText(/Relationship evidence unavailable: implementations, callers, unresolved candidates/)).toBeVisible()
     await expect(detail.getByRole('link', { name: 'Analyze impact' })).toHaveCount(0)
     await expect(detail.getByRole('link', { name: 'View callers' })).toHaveCount(0)
-    await scrollBelowHeader(detail)
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false)
-    await expect(page).toHaveScreenshot(`contract-atlas-declaration-only-${name}--${theme}--comfortable.png`)
+    await expect(page).toHaveScreenshot(`contract-atlas-declaration-only-${name}--${theme}--comfortable.png`, { fullPage: true })
   })
 }
