@@ -60,6 +60,9 @@ def readiness(observation, population):
         if inventory is None:
             return False
         require(inventory.get("schema") == "phebs-service-inventory-v1" and inventory.get("repository", {}).get("repository") == selected["repository"] and inventory["repository"].get("catalog_service_count") == 5 and isinstance(inventory.get("services"), list), "malformed service inventory")
+        repository = inventory["repository"]
+        authority = repository.get("authority", {})
+        require(repository.get("source_commit") == selected["commit"] and authority.get("kind") == "operator" and authority.get("id") == selected["catalog_id"] and authority.get("version") == selected["catalog_version"], "service inventory source/catalog authority differs")
         current = {row["key"] for row in inventory["services"] if row.get("disposition") == "accepted" and row.get("status") == "current" and row.get("removed") is False}
         if not set(selected["required_services"]) <= current:
             return False
@@ -112,7 +115,7 @@ class Smoke:
         self.root, self.binding, self.plan = root, binding, plan
         self.deadline = checks.Deadline(plan["bounds"]["total_seconds"])
         self.session, self.monitor, self.server_groups_drained = None, None, True
-        self.report = {"schema": "phebs-t458c-neutral-whole-smoke-v1", "outcome": "preparing", "reads": [], "phases": [], "claim": "Bounded neutral integration only; no focused service support, accuracy, scale, managed provider or production release claim."}
+        self.report = {"schema": "phebs-t458c-neutral-whole-smoke-v1", "outcome": "preparing", "http_calls": 0, "health_reads": [], "reads": [], "phases": [], "claim": "Bounded neutral integration only; no focused service support, accuracy, scale, managed provider or production release claim."}
         self.raw = root / "private-raw"
         self.raw_bytes = 0
         self.config_path = root / "config.json"
@@ -142,12 +145,18 @@ class Smoke:
         require(remaining > 0, "smoke work deadline reached; cleanup reserve retained")
         return min(maximum, remaining)
 
+    def reserve_http_call(self):
+        calls = self.report["http_calls"]
+        require(calls < self.plan["bounds"]["http_calls"], "HTTP call bound exceeded")
+        self.report["http_calls"] = calls + 1
+
     def get(self, path, params=None, authenticated=True):
         bounds = self.plan["bounds"]
-        require(len(self.report["reads"]) < bounds["http_calls"], "HTTP call bound exceeded")
         require(self.raw_bytes + bounds["response_bytes"] <= bounds["private_raw_bytes"], "private raw cannot reserve the next bounded response")
+        timeout = self.work_timeout(bounds["request_seconds"])
+        self.reserve_http_call()
         before = time.monotonic()
-        status, raw, _ = shared.http(self.base, path, params, self.token if authenticated else None, self.work_timeout(bounds["request_seconds"]), bounds["response_bytes"])
+        status, raw, _ = shared.http(self.base, path, params, self.token if authenticated else None, timeout, bounds["response_bytes"])
         require(self.raw_bytes + len(raw) <= bounds["private_raw_bytes"], "private raw aggregate bound exceeded")
         name = "response-%04d.json" % (len(self.report["reads"]) + 1)
         (self.raw / name).write_bytes(raw); self.raw_bytes += len(raw)
@@ -157,17 +166,30 @@ class Smoke:
     def record_terminal(self, phase, session, terminal):
         shared.Matrix.record_terminal(self, phase, session, terminal)
 
+    def readiness_health(self, base, path, params=None, token=None, timeout=60):
+        remaining = self.plan["bounds"]["startup_seconds"] - (time.monotonic() - self.session.clock)
+        require(remaining > 0, "HTTP readiness deadline exceeded")
+        timeout = self.work_timeout(min(timeout, remaining))
+        self.reserve_http_call()
+        before = time.monotonic()
+        observation = {"path": path}
+        try:
+            status, raw, _ = shared.http(base, path, params, token, timeout, self.plan["bounds"]["response_bytes"])
+            observation.update(status=status, bytes=len(raw))
+            return status, raw
+        except BaseException as error:
+            observation["error_type"] = type(error).__name__
+            raise
+        finally:
+            observation["seconds"] = round(time.monotonic() - before, 6)
+            self.report["health_reads"].append(observation)
+
     def start(self):
         phase = {"phase": "neutral-whole", "ready_seconds": None}; self.report["phases"].append(phase)
         self.session = shared.OwnedServeSession(self.root / "harness", "neutral-whole", [self.binding["binary"]["path"], "serve", "-config", str(self.config_path)], self.base, env=self.env, ready_timeout_s=self.work_timeout(self.plan["bounds"]["startup_seconds"]), stop_timeout_s=8)
         self.server_groups_drained = False
         original = shared.serve.http_get
-        def ready(base, path, params=None, token=None, timeout=60):
-            remaining = self.plan["bounds"]["startup_seconds"] - (time.monotonic() - self.session.clock)
-            require(remaining > 0, "HTTP readiness deadline exceeded")
-            status, raw, _ = shared.http(base, path, params, token, self.work_timeout(min(timeout, remaining)), self.plan["bounds"]["response_bytes"])
-            return status, raw
-        shared.serve.http_get = ready
+        shared.serve.http_get = self.readiness_health
         try:
             self.session.start()
         except BaseException:

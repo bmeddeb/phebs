@@ -1,0 +1,14 @@
+test_citation_checks_actual_blob_span_and_page_generation (test_smoke.SmokeControls) ... ok
+test_exact_cohort_and_pending_states (test_smoke.SmokeControls) ... ok
+test_expired_clock_still_joins_before_refusing (test_smoke.SmokeControls) ... ok
+test_failed_cleanup_retains_only_raw_and_diagnostic_after_join (test_smoke.SmokeControls) ... ok
+test_malformed_crossed_and_failed_states_refuse (test_smoke.SmokeControls) ... ok
+test_recorder_refuses_before_an_unretainable_request (test_smoke.SmokeControls) ... ok
+test_service_authority_cannot_fall_back_or_cross_source (test_smoke.SmokeControls) ... ok
+test_stop_reserves_helper_tail_and_rejects_forced_cleanup (test_smoke.SmokeControls) ... ok
+test_total_http_cap_covers_health_get_and_failed_attempts (test_smoke.SmokeControls) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.005s
+
+OK

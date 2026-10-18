@@ -1,0 +1,38 @@
+{
+  "schema": "phebs-t458c-prospective-peer-correction-checks-v1",
+  "date": "2026-10-18",
+  "scope": "Harness-only total HTTP admission and actual service source/catalog projection guards; no Go/parser/native/browser/build execution.",
+  "corrections": [
+    "One pre-request total counter covers health and ordinary API requests, including failed connection attempts;400unchanged.",
+    "Both inventory source_commit and operator kind/id/version must match frozen population."
+  ],
+  "plan_digest": "sha256:4c4066d873d381cc162082fef1fe5148f984649b1421a33172b6c4c7c894df52",
+  "protected_inputs_unchanged": true,
+  "production_source_unchanged_from_existing_green_checks": true,
+  "source_files": {
+    "spike/t458c/smoke.py": "sha256:46d4c51cbdcfae74098f948c7f6ba592f24c2e22c44d6de69b0ceac38664ef09",
+    "spike/t458c/test_smoke.py": "sha256:68098ccfc20718ccbd192786ab93c7625a728af4ed512f565b6b62fdd8f2a156",
+    "spike/t458c/README.md": "sha256:c6608df43945503dee4b01394863236195472ad0aa9fd8b9b190fcb49052f00d"
+  },
+  "argv": [
+    "python3",
+    "-m",
+    "unittest",
+    "-v",
+    "test_smoke.py"
+  ],
+  "environment": {
+    "PYTHONDONTWRITEBYTECODE": "1"
+  },
+  "outcome": "passed",
+  "tests": 9,
+  "unittest_reported_seconds": 0.005,
+  "outer_wall_seconds": "not separately measured",
+  "log": {
+    "path": "spike/t458c/checks/http-total-and-catalog-mocks.log",
+    "digest": "sha256:fce4e8b21ff817fa1769d8f97e8ed7ae33b5f497ed4e3f8081a98b5da49dd368"
+  },
+  "no_native_children_launched": true,
+  "existing_checks_summary_digest": "sha256:dd0d4c93f18a72961191275147dfcad433b29ea436398f6b43d96d6df0ee5af0",
+  "root_checkpoint_review": "pending; no native execution authorized by this record"
+}

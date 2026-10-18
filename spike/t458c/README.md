@@ -106,3 +106,26 @@ pinned lint and docs/glossary checks. The independent focused planning bypass
 and whole-to-focused search-root retirement tests remain the intentional
 runtime contract, not bugs to weaken. Broad command suites and historical
 ceremonies are outside this leaf.
+
+## Prospective peer-review corrections
+
+Before the first native smoke, the startup health callback and ordinary API
+reads now reserve from one shared 400-call counter before issuing each request.
+Connection failures consume a call too. The receipt records the total and
+bounded health metadata (status/body length or error type plus elapsed time),
+without retaining healthy response bodies. This closes the earlier gap where
+health probes were outside the recorded-read count; it changes no bound.
+
+Both service inventories must also report the frozen source commit and exact
+operator catalog kind/ID/version. The existing production binders already pin
+those source/catalog inputs; this guard checks their actual HTTP projection.
+Crossed commit, catalog ID/version and authority kind are refused in the pure
+malformed-envelope controls for both repositories. No fixture bytes, supported
+cohort or acceptance predicate is weakened.
+
+The nine pure smoke controls passed once (unittest-reported 0.005 seconds),
+including the shared health/API cap, failed health attempt and before-request
+refusal checks. `checks/http-total-and-catalog-mocks.json` binds that supplemental
+source/log record; earlier Go/race/vet/lint and eight-control logs remain exact.
+The preregistration and protected input bytes remain unchanged. Root review and
+a new immutable harness checkpoint still precede the single native smoke.
