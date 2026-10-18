@@ -12728,3 +12728,28 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   the focused catalog regression1.173s. Root and independent peer source/cost
   reviews have no remaining blocker. No product requalification, full repository
   suite, Linux rehearsal or production signing is inferred from these tests.
+
+- **2026-10-18 — T51.3 bounded field-product operating plan (Ben-routed Mac
+  handoff).** Prospectively reuse the exact source-reviewed T51.1 public
+  committed SCIP/source population under the selected1.4.0-released.1 OpenAPI
+  recipe. Fourteen consumer sites/56 negatives remain finite conformance;
+  generated locations stay separate and unsupported authored1.36.12 controls
+  are not promoted. Bind the clean main8a70 binary and joined build/helper
+  receipts, with no repeated indexing/build, before one180s total native
+  matrix. Startup30s/publication90s, cold2s/warm1s,8parallel requests,1MiB
+  response,2GiB observed RSS,4GiB physical headroom,512MiB allocated data and
+  2GiB free disk are prospective local refusal bounds, not production SLOs.
+
+  Peer source review corrects the plan before execution: immutable admitted
+  old proofs remain readable as pinned old content after ordinary publication;
+  fresh queries bind new authority. MCP v1.0 projects facts/provenance and
+  deliberately retains partial/withheld coverage; it has no bundle-by-ID tool.
+  Verify the referenced HTTP proof, not raw transport-envelope equality. Source
+  HTTP/read_file reads a complete exact-commit blob and clients slice atoms;
+  no field-specific range service or unobserved read counter is claimed.
+  Field concurrency batches are whole proofs, without pagination. One frozen
+  comment-only evaluator transition and named withdrawal restart test current
+  and retained identities. Corrected joined-monitor/whole-request deadline
+  controls, independent harness review and actual execution remain prerequisites.
+  No production runtime, schema, lock, cache, worker or child class changes.
+  Existing-key production signing remains pending; this plan grants no release.

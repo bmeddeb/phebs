@@ -19417,6 +19417,14 @@ signature promotion; this implementation alone activates no unsigned pack.
 **T51.3 · Measured field-reference promotion** — satisfy the common bar and
 publish exact supported generators, input formats, operating bounds and expiry.
 
+*2026-10-18 preparation:* `spike/t513/operating-plan.json` prospectively binds
+the T51.1 public14/56 source oracle to the actual stable OpenAPI recipe, one
+180s native matrix, exact HTTP/MCP projections/source reads, bounded whole-proof
+concurrency, a comment-only publication and withdrawal restart. Independent
+plan review corrected immutable-proof/MCP semantics before execution. Harness,
+execution binding, operating result/artifacts and production signature remain
+open; no product run or production promotion has occurred.
+
 ## Epic 52 · Thrift field-reference production readiness
 
 **T52.1 · Apache Thrift field contract and independent quality** — freeze
