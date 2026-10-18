@@ -5,7 +5,7 @@ import { operationQuery, operationReport } from './test-fixtures/operationImpact
 afterEach(() => vi.unstubAllGlobals())
 
 test('sends one authenticated exact query and validates its unchanged response', async () => {
-  const report = operationReport()
+  const report = { ...operationReport(), $schema: 'http://localhost/api/schemas/OperationImpactReport.json' }
   report.caller_page.query.owner = 'team-a'
   report.conclusion.query.owner = 'team-a'
   const read = vi.fn().mockResolvedValue({ ok: true, json: async () => report })

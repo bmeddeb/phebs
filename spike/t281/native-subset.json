@@ -1,0 +1,59 @@
+{
+  "format": "t281-prospective-native-subset-v1",
+  "date": "2026-10-18",
+  "recognizer_runs": 0,
+  "source_policy": "Phebs-authored narrow interpretation of official prose/examples only; no Redis module implementation or metadata bytes are fetched, copied, linked or executed. Newer website features do not broaden the Redis7.2.15 core pin.",
+  "references": [
+    "https://redis.io/docs/latest/commands/ft.create/",
+    "https://redis.io/docs/latest/develop/ai/search-and-query/vectors/",
+    "https://redis.io/docs/latest/commands/ts.create/",
+    "https://redis.io/docs/latest/commands/ts.createrule/"
+  ],
+  "common": {
+    "vector": "Complete ordered vector under256elements, every admitted native operand a literal or resolved same-file immutable constant; no format parameters, dynamic suffixes, evaluated options or omitted unknown positions.",
+    "case": "Match command/structural keyword/closed enum tokens using ASCII-only case-insensitive comparison. Preserve all resource/key/prefix/field/label value bytes exactly; no Unicode case folding.",
+    "strings": "Identity/key/prefix/field/label names must be nonempty binary-safe values of at most4096bytes; label values may be empty but share4096byte bound. These are admission limits, not Redis vendor limits.",
+    "integers": "Only canonical ASCII base10 decimal 0 or nonzero digit followed by digits, represented by a Go integer literal or an exact string literal/constant. No sign, leading zeros, hexadecimal, exponent, floating-point, underscore, expression evaluation, overflow or coercion. Check spelling/length/range before conversion.",
+    "duplicates": "Reject repeated named options, vector attribute keys, identical prefixes, field identifiers or TS label names within one vector, even if repeated values agree. Never choose first/last or merge options.",
+    "failure_order": "First require exact receiver/module/import/lexical admission; unsupported client stops as unknown-client-adapter. Then validate the entire native vector before any declaration/schema/reference/catalog delta. An unproved component retains its frozen runtime-namespace/opaque-helper/dynamic-concatenation reason. A fully literal but unknown/unsupported option, enum, bad count/arity/duplicate/range/trailing shape is unsupported-module-command for this named FT/TS subset; this does not assert Redis itself rejects the command. Generic source/budget failure remains zero-blob resource-limit/malformed-input.",
+    "atomicity": "A rejected vector publishes zero native declaration/schema/field/resource-reference facts and mutates no binding catalog prefix. Independent completely proved core usage in the same blob may survive only its own fences. No default/inherited server setting is invented."
+  },
+  "FT.CREATE": {
+    "grammar": "FT.CREATE index ON (HASH|JSON) PREFIX count prefix{count} SCHEMA field{1..32}; no omitted ON/PREFIX, no options before/between these sections, no aliases, filters, language/score/temporary/noindex modifiers or unlisted trailing arguments.",
+    "prefix_count": "1..8, exactly that many following prefix operands, all distinct.",
+    "ordinary_fields": "Each distinct field identifier followed by exactly TEXT, TAG or NUMERIC, with no field options. JSON identifiers remain exact projection strings; no JSONPath evaluator or complete document model.",
+    "vector_field": "field VECTOR FLAT 6 attributes; FLAT only, exactly three mandatory pairs TYPE FLOAT32, DIM dimension, DISTANCE_METRIC metric. Pair order may vary; each appears exactly once. Count6 counts following attribute operands, not pairs; consume exactly6 before another complete schema field or end.",
+    "vector_enums": {
+      "algorithm": [
+        "FLAT"
+      ],
+      "type": [
+        "FLOAT32"
+      ],
+      "distance_metric": [
+        "L2",
+        "IP",
+        "COSINE"
+      ]
+    },
+    "dimension": "1..4096, engineering admission only. DIM0/outside-bound/unknown literal are not accepted. HNSW/SVS-VAMANA/other types/optional attributes remain unsupported-module-command in this spike.",
+    "output": "One index plus its complete admitted indexed projection/prefixes, never complete values or data-field schema beyond that projection."
+  },
+  "TS.CREATE": {
+    "grammar": "TS.CREATE key [RETENTION milliseconds] [LABELS label value ...]; RETENTION at most once and before LABELS. LABELS, when present, consumes exactly1..8pairs to end, all distinct label names. Key-only and omitted RETENTION are admitted as unspecified retention, never inferred global/default0.",
+    "retention": "0..2147483647 milliseconds, engineering admission only; literal0 explicitly records no-expiry retention intent as documented, not runtime state.",
+    "unsupported": "ENCODING, CHUNK_SIZE, DUPLICATE_POLICY, IGNORE, odd label arity, duplicate labels/RETENTION, reversed sections and any unlisted options/trailing operands refuse atomically.",
+    "output": "One series resource with only supplied retention/labels; no sample/entry fields or existence/type claim."
+  },
+  "TS.CREATERULE": {
+    "grammar": "TS.CREATERULE source destination AGGREGATION aggregator bucket; exactly6operands including command, source and destination nonempty and byte-distinct; no alignment timestamp or trailing options.",
+    "aggregators": [
+      "avg",
+      "sum"
+    ],
+    "bucket": "1..2147483647 milliseconds, engineering admission only. All other aggregators (including otherwise documented Redis choices), zero/negative/outside-bound/unknown bucket and optional alignment refuse atomically.",
+    "output": "One explicit rule with both resource references and supplied aggregation/bucket; no live source/destination validation or propagation."
+  },
+  "public_oracle": "Unchanged2FT.CREATE source sites remain nearest-modulev9.7.0 unknown-client-adapter,0admitted/atomic-complete. RuntimeDIM remains independently unproved. Narrowing named literal shapes before any recognition changes no public label/denominator.",
+  "qualification": "Prospective source contract only; this artifact neither validates Redis/server syntax nor grants a quality/adoption result."
+}

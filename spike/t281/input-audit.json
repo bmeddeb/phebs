@@ -1,0 +1,20 @@
+{
+  "format": "t281-source-only-input-audit-v1",
+  "recognizer_runs": 0,
+  "immutable_git_sha256_files": 793,
+  "immutable_source_bytes": 3600148,
+  "chosen_literal_span_round_trips": 279,
+  "selected_complete_files": 7,
+  "selected_source_bytes": 136115,
+  "usage_sites": 99,
+  "known_key_expressions": 30,
+  "public_acl_principals": 7,
+  "public_acl_pairs": 7,
+  "native_sites": 2,
+  "inert_source_controls": 60,
+  "admission_controls": 2,
+  "adapter_method_witnesses": 56,
+  "adapter_helper_witnesses": 8,
+  "receiver_type_witnesses": 10,
+  "scope": "Custody, chosen literal ranges, module/version and inventory checks only; no parser/recognizer, output safety or candidate quality measured."
+}

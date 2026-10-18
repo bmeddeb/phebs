@@ -1,0 +1,352 @@
+{
+  "acl_public": {
+    "pairs": 7,
+    "principals": 7,
+    "safe_source_census_matches": true
+  },
+  "all99_labelled_sites_present": true,
+  "artifacts": [
+    {
+      "bytes": 9308,
+      "path": "results/first-native-01/README-addendum.md",
+      "sha256": "ee4c22151df572503338625252030ae3082382ae432a735384ab7146a5d7bb2f"
+    },
+    {
+      "bytes": 0,
+      "path": "results/first-native-01/build.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "results/first-native-01/build.stdout",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 484258,
+      "path": "results/first-native-01/pass1.jsonl",
+      "sha256": "4f402423b30529252d4e776bf46c19237b1510b0c00ecfdeb7bbe37fa94942c5"
+    },
+    {
+      "bytes": 0,
+      "path": "results/first-native-01/pass1.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 484258,
+      "path": "results/first-native-01/pass2.jsonl",
+      "sha256": "4f402423b30529252d4e776bf46c19237b1510b0c00ecfdeb7bbe37fa94942c5"
+    },
+    {
+      "bytes": 0,
+      "path": "results/first-native-01/pass2.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 8909,
+      "path": "results/first-native-01/receipt.json",
+      "sha256": "ba39bd3ecf0efc657010cfeb5246c5ec0f35a719c5c482b4376785faf11506e9"
+    },
+    {
+      "bytes": 6435,
+      "path": "results/first-native-01/score.json",
+      "sha256": "790e09686c79f86e45ccb49720e0d2dd1a48e27c8932ea39f38d147ffbb78ea1"
+    },
+    {
+      "bytes": 677,
+      "path": "results/supplemental-first-01/receipt.json",
+      "sha256": "66802a4aaba1319361ec0e99b291644e57c3dd823a5734dc847bbeb8f7c20995"
+    },
+    {
+      "bytes": 41,
+      "path": "results/supplemental-first-01/test.stdout",
+      "sha256": "ef4770c83b14a41d61df6efe329107744f5997a36d721d342ff93b710a071877"
+    },
+    {
+      "bytes": 0,
+      "path": "results/supplemental-first-01/test.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "binary_sha256": "c9a5dbc3a69f42c6e941f0212b0dc6b8fe2eef5ca2935a6845fb2eb25d8b7514",
+  "candidate_contract_sha256": "d9161c18a3c819bbb96c3109a28a716f4a0b39f06b67e1a9d9a04bd10243b275",
+  "candidate_reruns": 0,
+  "cleanup": {
+    "all_children_joined": true,
+    "all_owned_process_groups_absent": true,
+    "native_slot_released": true,
+    "retained_binary": false,
+    "scratch_removed_after_join": true
+  },
+  "controls": {
+    "admission": 2,
+    "authored_source": 60,
+    "mismatched_cases": 0,
+    "supplemental_is_separate_from_public_denominators": true,
+    "supplemental_result": "pass; test0.322s outer0.933s",
+    "supplemental_selector": "^TestSupplementalKeynumAdmission$"
+  },
+  "cost": {
+    "build": {
+      "argv": [
+        "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+        "build",
+        "-trimpath",
+        "-buildvcs=true",
+        "-o",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t281-ok8_xgqz/reader",
+        "./reader"
+      ],
+      "exact_child_wait4_maxrss_bytes": 86753280,
+      "execution_reserve_seconds": 2,
+      "exit": 0,
+      "joined": true,
+      "observed_rss_limit_bytes": null,
+      "owned_process_group_absent": true,
+      "peak_observed_direct_pid_rss_bytes": 26935296,
+      "rss_qualification": "Observed direct-PID samples plus exact wait4 direct-child peak; not a hard heap cap. Build excludes compiler descendants; parser has no child-producing imports. No aggregate family RSS claim.",
+      "rss_sample_errors": 0,
+      "rss_samples": 21,
+      "sample_interval_ms": 20,
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_bytes": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stop": null,
+      "wall_limit_seconds_including_cleanup": 60,
+      "wall_seconds": 0.5012453750000001
+    },
+    "cache": "Inherited offline build cache; no cold claim.",
+    "fresh_passes": [
+      {
+        "argv": [
+          "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t281-ok8_xgqz/reader"
+        ],
+        "exact_child_wait4_maxrss_bytes": 13369344,
+        "execution_reserve_seconds": 2,
+        "exit": 0,
+        "joined": true,
+        "observed_rss_limit_bytes": 1073741824,
+        "owned_process_group_absent": true,
+        "peak_observed_direct_pid_rss_bytes": 13369344,
+        "rss_qualification": "Observed direct-PID samples plus exact wait4 direct-child peak; not a hard heap cap. Build excludes compiler descendants; parser has no child-producing imports. No aggregate family RSS claim.",
+        "rss_sample_errors": 0,
+        "rss_samples": 18,
+        "sample_interval_ms": 20,
+        "stderr_bytes": 0,
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 484258,
+        "stdout_sha256": "4f402423b30529252d4e776bf46c19237b1510b0c00ecfdeb7bbe37fa94942c5",
+        "stop": null,
+        "wall_limit_seconds_including_cleanup": 30,
+        "wall_seconds": 0.432176667
+      },
+      {
+        "argv": [
+          "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t281-ok8_xgqz/reader"
+        ],
+        "exact_child_wait4_maxrss_bytes": 12926976,
+        "execution_reserve_seconds": 2,
+        "exit": 0,
+        "joined": true,
+        "observed_rss_limit_bytes": 1073741824,
+        "owned_process_group_absent": true,
+        "peak_observed_direct_pid_rss_bytes": 12926976,
+        "rss_qualification": "Observed direct-PID samples plus exact wait4 direct-child peak; not a hard heap cap. Build excludes compiler descendants; parser has no child-producing imports. No aggregate family RSS claim.",
+        "rss_sample_errors": 0,
+        "rss_samples": 8,
+        "sample_interval_ms": 20,
+        "stderr_bytes": 0,
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 484258,
+        "stdout_sha256": "4f402423b30529252d4e776bf46c19237b1510b0c00ecfdeb7bbe37fa94942c5",
+        "stop": null,
+        "wall_limit_seconds_including_cleanup": 30,
+        "wall_seconds": 0.17962866700000002
+      }
+    ],
+    "parent": "Python source/output/JSON object memory not measured; direct-child RSS is not aggregate parent or compiler-family memory.",
+    "production": "No request/sync/retry/no-op/startup/publication/lock/cache/worker/schema/DB/registry change.",
+    "reader": "Two Go parses per file; one bounded metadata admission/pass, one streamed source/command/ACL pass.16,384entries/8MiB metadata plus overhead; compressed prefix index, no per-key corpus read/hash/scan.4MiB encoded blob cap after allocation;32MiB batch."
+  },
+  "credential_safety": {
+    "credential_token_scans": 7,
+    "failures": 0,
+    "qualification": "Only safe token provenance is retained where public credential payload equals an allowed username; full credential tokens and credential-origin spans/context are forbidden. Distinct authored secret/hash payloads absent.",
+    "token_spans_or_context_retained": false
+  },
+  "date": "2026-10-18",
+  "evaluator_git": "3c1305adfac166a6c5a1d5fbc4725ec6e064d05a",
+  "exact_output": {
+    "binding_records": 16,
+    "blob_records": 911,
+    "bytes_each": 484258,
+    "sha256_each": "4f402423b30529252d4e776bf46c19237b1510b0c00ecfdeb7bbe37fa94942c5",
+    "span_round_trips": 558,
+    "terminal_records": 1
+  },
+  "first_results_preserved": true,
+  "format": "t281-first-outcome-cost-v1",
+  "frozen_inputs": {
+    "bytes": 1907003,
+    "files": 96,
+    "preregistration_sha256": "ad9f09d50f77a789dd5e9287ae8194ace2ca0d0937d2ac1e764656710893c518",
+    "source_checkpoint": "c525a50f"
+  },
+  "implementation_checkpoint": "3c1305adfac166a6c5a1d5fbc4725ec6e064d05a",
+  "native_public": {
+    "admitted_exact_version_sites": 0,
+    "atomic_complete_source_shapes": 0,
+    "candidate_emitted_native_facts": 0,
+    "known_source_sites": 2,
+    "static_resource_names": 1
+  },
+  "outcome": "quality-gaps-no-production-adoption",
+  "population_and_frozen_shape": {
+    "asynq / admitted-go-redis-core-api": {
+      "known_expected_kinds": 25,
+      "known_key_expressions": 28,
+      "labelled_sites": 35,
+      "matched_sites": 35,
+      "recognized_commands": 35,
+      "resolved_access_modes": 28,
+      "resolved_key_spellings": 0
+    },
+    "asynq / opaque-script-wrapper": {
+      "known_expected_kinds": 0,
+      "known_key_expressions": 0,
+      "labelled_sites": 52,
+      "matched_sites": 52,
+      "recognized_commands": 0,
+      "resolved_access_modes": 0,
+      "resolved_key_spellings": 0
+    },
+    "eino / admitted-go-redis-core-api": {
+      "known_expected_kinds": 2,
+      "known_key_expressions": 2,
+      "labelled_sites": 2,
+      "matched_sites": 2,
+      "recognized_commands": 2,
+      "resolved_access_modes": 2,
+      "resolved_key_spellings": 0
+    },
+    "eino / unproved-client-library-wrapper": {
+      "known_expected_kinds": 0,
+      "known_key_expressions": 0,
+      "labelled_sites": 2,
+      "matched_sites": 2,
+      "recognized_commands": 0,
+      "resolved_access_modes": 0,
+      "resolved_key_spellings": 0
+    },
+    "eino / unsupported-exact-client-version": {
+      "known_expected_kinds": 0,
+      "known_key_expressions": 0,
+      "labelled_sites": 8,
+      "matched_sites": 8,
+      "recognized_commands": 0,
+      "resolved_access_modes": 0,
+      "resolved_key_spellings": 0
+    }
+  },
+  "post_outcome_source_or_label_changes": false,
+  "public_frozen_denominators": {
+    "admitted_core_api_sites": 37,
+    "command_or_unresolved_sites": 99,
+    "expected_kind_known": 27,
+    "expected_kind_opportunities": 30,
+    "expected_mode_resolved": 30,
+    "expected_resolved_key_expressions": 0,
+    "explicit_script_key_passthrough_opportunities": 0,
+    "known_key_argument_expressions": 30,
+    "opaque_script_wrapper_sites": 52,
+    "provable_access_mode_opportunities": 30,
+    "uniquely_bindable_spelling_or_family_opportunities": 0,
+    "unknown_client_version_sites": 8,
+    "unknown_expected_kind": 3,
+    "unmeasured_script_wrapper_sites": 52,
+    "unproved_extension_wrapper_sites": 2
+  },
+  "public_input_population": {
+    "files": 793,
+    "go_files_traversed": 380,
+    "quality_sample_files": 7,
+    "quality_sample_source_bytes": 136115,
+    "source_bytes": 3600148
+  },
+  "public_observed_sample": {
+    "observed_command_sites": 102,
+    "observed_concrete_keys": 0,
+    "observed_known_kinds": 27,
+    "observed_position_modes": 30,
+    "observed_recognized_commands": 37
+  },
+  "remaining": [
+    "Independent lead outcome/criterion review and owning spine/guide integration.",
+    "Focused repository-required vet/lint of isolated reader not yet run.",
+    "Any correction of three frontier errors must be separately reviewed and preserve first outputs/score; no corpus rerun performed."
+  ],
+  "scope": "Offline source-only diagnosis and report over frozen licensed inputs and first retained bytes; not another candidate/scorer run.",
+  "source_input_checkpoint": "c525a50f",
+  "source_stability": {
+    "all96_frozen_artifacts_unchanged": true,
+    "git_head_unchanged": true,
+    "implementation_unchanged": true
+  },
+  "unexpected_public_sites": [
+    {
+      "emitted_gaps": [
+        "unknown-client-adapter"
+      ],
+      "emitted_method": "ClusterKeySlot",
+      "key_facts": 0,
+      "offline_source_diagnosis": "Application RDB wrapper r.ClusterKeySlot, not proved client API; known method-name frontier emits unknown adapter.",
+      "population": "asynq",
+      "source_path": "internal/rdb/inspect.go",
+      "source_sha256": "f930acb53c6c913457f76461e0e5ee60ae474cdc47cd5e3e1d14d526d1c0c7de",
+      "source_span": {
+        "end": 65727,
+        "sha256": "f71741e48111ac5c007c911ec23d392f6093c9361f392963834a164bb1a00141",
+        "start": 65713
+      }
+    },
+    {
+      "emitted_gaps": [
+        "opaque-helper"
+      ],
+      "emitted_method": "Run",
+      "key_facts": 0,
+      "offline_source_diagnosis": "miniredis.Run constructor; unconditional Run spelling branch emits opaque helper without receiver identity.",
+      "population": "eino",
+      "source_path": "flow/agent/react/memory_example/memory/redis.go",
+      "source_sha256": "63fe201ab650e05e1df41b6983c4cee3c3fac2315147fb53eae38ce0f566c0ed",
+      "source_span": {
+        "end": 2271,
+        "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26",
+        "start": 2268
+      }
+    },
+    {
+      "emitted_gaps": [
+        "unknown-client-adapter"
+      ],
+      "emitted_method": "Do",
+      "key_facts": 0,
+      "offline_source_diagnosis": "sync.Once initOnce.Do; known frozen non-Redis negative enters arbitrary Do frontier.",
+      "population": "eino",
+      "source_path": "quickstart/eino_assistant/pkg/redis/redis.go",
+      "source_sha256": "78f1ce43d7e2c119d356af59117beb08277c303a22cd5de90061f8b9f9723d41",
+      "source_span": {
+        "end": 956,
+        "sha256": "30094e0bec0046da8f925ebda9575f3d8377a75692436516260782fafd709a6f",
+        "start": 954
+      }
+    }
+  ],
+  "verdict": {
+    "object_mapping": "defer/no reader; no cross-language or runtime feasibility assertion",
+    "production_adoption": "NO-GO",
+    "quality": "Finite positive joins37/30/27 match; complete sample emission fails due3extra zero-key unresolved sites; no generalized accuracy or scale result.",
+    "requested_artifact_manifest_design": "INCONCLUSIVE/DEFER; no design authorization. Frozen criterion requires persistent public structural gap after correct admitted adapters. Both known public native sites use unadmittedv9.7.0; runtime config.Dimension/name-prefix source evidence motivates possible later investigation but does not satisfy that measured condition. No corpus/version editing, manifest schema, loader or registration."
+  },
+  "cpu_measurement": "Unmeasured: retained first receipts contain wall time and qualified direct-child RSS only; prospective CPU receipt wording is not a measured CPU claim."
+}

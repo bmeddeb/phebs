@@ -1,0 +1,752 @@
+{
+  "format": "t281-prospective-receiver-source-review-v1",
+  "recognizer_runs": 0,
+  "public_labels_unchanged": true,
+  "public_core_sites": 37,
+  "classes": {
+    "same-package-RDB.client": 34,
+    "immutable-pipeline-local": 1,
+    "same-package-RedisStore.cli": 2
+  },
+  "source_witnesses": [
+    {
+      "repository": "hibiken/asynq",
+      "commit": "d135f1439bee74e989b7f9b41ecd542cc87f024a",
+      "source_path": "internal/rdb/rdb.go",
+      "source_sha256": "d2d5749dcb44707d8c896c784699a37daeb63c9ba6776ac3adc062cc01b88ef0",
+      "source_bytes": 55271,
+      "line": 29,
+      "token": "RDB",
+      "span": {
+        "start": 745,
+        "end": 748,
+        "sha256": "a80212916f3f4d9c01b2d782973ad879e0236d09028f60cbb1f8e046690f19f9"
+      }
+    },
+    {
+      "repository": "hibiken/asynq",
+      "commit": "d135f1439bee74e989b7f9b41ecd542cc87f024a",
+      "source_path": "internal/rdb/rdb.go",
+      "source_sha256": "d2d5749dcb44707d8c896c784699a37daeb63c9ba6776ac3adc062cc01b88ef0",
+      "source_bytes": 55271,
+      "line": 30,
+      "token": "redis.UniversalClient",
+      "span": {
+        "start": 775,
+        "end": 796,
+        "sha256": "395724202c6c68160b2f5f1a0937ba3e66fbb27219482f2c232769a5d6555546"
+      }
+    },
+    {
+      "repository": "hibiken/asynq",
+      "commit": "d135f1439bee74e989b7f9b41ecd542cc87f024a",
+      "source_path": "internal/rdb/rdb.go",
+      "source_sha256": "d2d5749dcb44707d8c896c784699a37daeb63c9ba6776ac3adc062cc01b88ef0",
+      "source_bytes": 55271,
+      "line": 187,
+      "token": "r.client.Pipeline()",
+      "span": {
+        "start": 5764,
+        "end": 5783,
+        "sha256": "cde35623c8923fea3d5f63cca6f2c6c4e3436a8f7d459b572a3b5132a8a4fca8"
+      }
+    },
+    {
+      "repository": "cloudwego/eino-examples",
+      "commit": "6dc0d214c0eb392babf2d001e9be85f57ac10952",
+      "source_path": "flow/agent/react/memory_example/memory/redis.go",
+      "source_sha256": "63fe201ab650e05e1df41b6983c4cee3c3fac2315147fb53eae38ce0f566c0ed",
+      "source_bytes": 2436,
+      "line": 29,
+      "token": "RedisStore",
+      "span": {
+        "start": 856,
+        "end": 866,
+        "sha256": "0c7966c35f7d5a09ab6d1a1ebee2440b7d01d7d8ccb9b9aef68af4de33c2cd11"
+      }
+    },
+    {
+      "repository": "cloudwego/eino-examples",
+      "commit": "6dc0d214c0eb392babf2d001e9be85f57ac10952",
+      "source_path": "flow/agent/react/memory_example/memory/redis.go",
+      "source_sha256": "63fe201ab650e05e1df41b6983c4cee3c3fac2315147fb53eae38ce0f566c0ed",
+      "source_bytes": 2436,
+      "line": 30,
+      "token": "*redis.Client",
+      "span": {
+        "start": 881,
+        "end": 894,
+        "sha256": "3c2d199b264647a4b017b85d6bb7e8b652afb03dd153ee8e7b9fef22ea98c8ab"
+      }
+    }
+  ],
+  "sites": [
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/rdb.go",
+      "site_id": "L62-Ping",
+      "method_token": {
+        "start": 1538,
+        "end": 1542,
+        "sha256": "6a4c3a4483b0448883299321ec2677f99a20afbf6a60bc5447bf2243d23b7152"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 1529,
+        "end": 1537,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/rdb.go",
+      "site_id": "L118-SAdd",
+      "method_token": {
+        "start": 3430,
+        "end": 3434,
+        "sha256": "4bf42e1dcaa68fdab5b4149e0367aa87c47ae55bbeb29b3dbf8143dab35fd2d7"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 3421,
+        "end": 3429,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/rdb.go",
+      "site_id": "L205-SAdd",
+      "method_token": {
+        "start": 6336,
+        "end": 6340,
+        "sha256": "4bf42e1dcaa68fdab5b4149e0367aa87c47ae55bbeb29b3dbf8143dab35fd2d7"
+      },
+      "receiver": "pipe",
+      "receiver_token": {
+        "start": 6331,
+        "end": 6335,
+        "sha256": "4008294739162e8f0119134dd262e35165d4a3bda08f59f97b6fdb9c5b4e655d"
+      },
+      "proof_class": "immutable-pipeline-local",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/rdb.go",
+      "site_id": "L295-SAdd",
+      "method_token": {
+        "start": 8890,
+        "end": 8894,
+        "sha256": "4bf42e1dcaa68fdab5b4149e0367aa87c47ae55bbeb29b3dbf8143dab35fd2d7"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 8881,
+        "end": 8889,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/rdb.go",
+      "site_id": "L653-SAdd",
+      "method_token": {
+        "start": 20149,
+        "end": 20153,
+        "sha256": "4bf42e1dcaa68fdab5b4149e0367aa87c47ae55bbeb29b3dbf8143dab35fd2d7"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 20140,
+        "end": 20148,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/rdb.go",
+      "site_id": "L718-SAdd",
+      "method_token": {
+        "start": 22014,
+        "end": 22018,
+        "sha256": "4bf42e1dcaa68fdab5b4149e0367aa87c47ae55bbeb29b3dbf8143dab35fd2d7"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 22005,
+        "end": 22013,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/rdb.go",
+      "site_id": "L778-SAdd",
+      "method_token": {
+        "start": 23754,
+        "end": 23758,
+        "sha256": "4bf42e1dcaa68fdab5b4149e0367aa87c47ae55bbeb29b3dbf8143dab35fd2d7"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 23745,
+        "end": 23753,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/rdb.go",
+      "site_id": "L840-SAdd",
+      "method_token": {
+        "start": 25663,
+        "end": 25667,
+        "sha256": "4bf42e1dcaa68fdab5b4149e0367aa87c47ae55bbeb29b3dbf8143dab35fd2d7"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 25654,
+        "end": 25662,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/rdb.go",
+      "site_id": "L1137-SMembers",
+      "method_token": {
+        "start": 35049,
+        "end": 35057,
+        "sha256": "5e6c023c9b30ee335e613d1bba4426c6c231292e4dc69604f09acc8d9bcf5710"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 35040,
+        "end": 35048,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/rdb.go",
+      "site_id": "L1312-ZScore",
+      "method_token": {
+        "start": 41561,
+        "end": 41567,
+        "sha256": "637206e4484fabb81c0a2e0737f4dbc6b2ecbb02adf149615786bad53757fe69"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 41552,
+        "end": 41560,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/rdb.go",
+      "site_id": "L1477-ZAddXX",
+      "method_token": {
+        "start": 47598,
+        "end": 47604,
+        "sha256": "e86ce6bd28b4bf90b3d7ed9fd762d15ba19c807aad08f94e33a2146aeb80cd57"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 47589,
+        "end": 47597,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/rdb.go",
+      "site_id": "L1519-ZAdd",
+      "method_token": {
+        "start": 49198,
+        "end": 49202,
+        "sha256": "a22285b21c91a7f709791d83df1ddd3d9d7d47ee52934a2abfe84cdb22b99724"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 49189,
+        "end": 49197,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/rdb.go",
+      "site_id": "L1522-ZAdd",
+      "method_token": {
+        "start": 49411,
+        "end": 49415,
+        "sha256": "a22285b21c91a7f709791d83df1ddd3d9d7d47ee52934a2abfe84cdb22b99724"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 49402,
+        "end": 49410,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/rdb.go",
+      "site_id": "L1541-ZRem",
+      "method_token": {
+        "start": 50234,
+        "end": 50238,
+        "sha256": "6ff4cddc4bcc5d57ba109132e5c1fbb08f7073afe7c032a5882bb977b5e797d3"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 50225,
+        "end": 50233,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/rdb.go",
+      "site_id": "L1544-ZRem",
+      "method_token": {
+        "start": 50403,
+        "end": 50407,
+        "sha256": "6ff4cddc4bcc5d57ba109132e5c1fbb08f7073afe7c032a5882bb977b5e797d3"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 50394,
+        "end": 50402,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/rdb.go",
+      "site_id": "L1575-ZAdd",
+      "method_token": {
+        "start": 51540,
+        "end": 51544,
+        "sha256": "a22285b21c91a7f709791d83df1ddd3d9d7d47ee52934a2abfe84cdb22b99724"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 51531,
+        "end": 51539,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/rdb.go",
+      "site_id": "L1587-ZRem",
+      "method_token": {
+        "start": 52095,
+        "end": 52099,
+        "sha256": "6ff4cddc4bcc5d57ba109132e5c1fbb08f7073afe7c032a5882bb977b5e797d3"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 52086,
+        "end": 52094,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/rdb.go",
+      "site_id": "L1590-Del",
+      "method_token": {
+        "start": 52265,
+        "end": 52268,
+        "sha256": "730ead39c4cd4aaa3e5a0678309604c6a51db2b31b58bda4ba93a07aa9c2336f"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 52256,
+        "end": 52264,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/rdb.go",
+      "site_id": "L1600-Subscribe",
+      "method_token": {
+        "start": 52624,
+        "end": 52633,
+        "sha256": "cc0e38da9c41790bffef1b88af32d39ac285edce93da766810edc237cb2f1625"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 52615,
+        "end": 52623,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/rdb.go",
+      "site_id": "L1614-Publish",
+      "method_token": {
+        "start": 53115,
+        "end": 53122,
+        "sha256": "859390eb495b2ead7f05f0f799546c71435b2db31dbe082adecc3426fffc3391"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 53106,
+        "end": 53114,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/rdb.go",
+      "site_id": "L1656-Del",
+      "method_token": {
+        "start": 54679,
+        "end": 54682,
+        "sha256": "730ead39c4cd4aaa3e5a0678309604c6a51db2b31b58bda4ba93a07aa9c2336f"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 54670,
+        "end": 54678,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/rdb.go",
+      "site_id": "L1667-HSet",
+      "method_token": {
+        "start": 55093,
+        "end": 55097,
+        "sha256": "6d49f1cf97ac6a51891a3836c09e73c2e622b9d5cb02609755af61ecd65516a2"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 55084,
+        "end": 55092,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/inspect.go",
+      "site_id": "L22-SMembers",
+      "method_token": {
+        "start": 477,
+        "end": 485,
+        "sha256": "5e6c023c9b30ee335e613d1bba4426c6c231292e4dc69604f09acc8d9bcf5710"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 468,
+        "end": 476,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/inspect.go",
+      "site_id": "L422-Info",
+      "method_token": {
+        "start": 12428,
+        "end": 12432,
+        "sha256": "170322a32f3c35b2c61576a5553d352d7b3c8ae7086dab78f15fc891a28c067c"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 12419,
+        "end": 12427,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/inspect.go",
+      "site_id": "L431-ClusterInfo",
+      "method_token": {
+        "start": 12669,
+        "end": 12680,
+        "sha256": "a0206994fc016e6733a1c9f1d0ed19a64ccc6b3cba378b482233c8216a6fac37"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 12660,
+        "end": 12668,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/inspect.go",
+      "site_id": "L822-SIsMember",
+      "method_token": {
+        "start": 25149,
+        "end": 25158,
+        "sha256": "1a6becd63d72bdf9fddd2c82811e3ffb7e2e1132a64359ce19a13982ee7ad2ed"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 25140,
+        "end": 25148,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/inspect.go",
+      "site_id": "L1934-SRem",
+      "method_token": {
+        "start": 60405,
+        "end": 60409,
+        "sha256": "1db2be9c4c985a5e95bcf26a1561a7d695860e855921ec7b3a3cff2b47e847d0"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 60396,
+        "end": 60404,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/inspect.go",
+      "site_id": "L1968-Get",
+      "method_token": {
+        "start": 61566,
+        "end": 61569,
+        "sha256": "5fb9c3aba7ad5106939f35121cc8f086584593fbfb75b8f4015260655b7376f8"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 61557,
+        "end": 61565,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/inspect.go",
+      "site_id": "L2002-HVals",
+      "method_token": {
+        "start": 62661,
+        "end": 62666,
+        "sha256": "72a10e4054bcf6b3250ff5ab06b91264c82b28c174ff3a7109b2ddfd240fa9ff"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 62652,
+        "end": 62660,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/inspect.go",
+      "site_id": "L2037-LRange",
+      "method_token": {
+        "start": 63673,
+        "end": 63679,
+        "sha256": "b27c1e0a1582fe83e2f479dcf385ca99d185a5377edda5e8046b4f21b4ee24d1"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 63664,
+        "end": 63672,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/inspect.go",
+      "site_id": "L2055-ZRevRangeWithScores",
+      "method_token": {
+        "start": 64221,
+        "end": 64240,
+        "sha256": "eac6feec5b438c7837bd920c4a7e1fcfeab105b77dc69371cf7b0a229209f220"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 64212,
+        "end": 64220,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/inspect.go",
+      "site_id": "L2077-SetNX",
+      "method_token": {
+        "start": 64793,
+        "end": 64798,
+        "sha256": "beeb4c673eb09bb48c407ec7b4eefac3fe6efb1b4c381e80cd675ad8b692424d"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 64784,
+        "end": 64792,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/inspect.go",
+      "site_id": "L2090-Del",
+      "method_token": {
+        "start": 65139,
+        "end": 65142,
+        "sha256": "730ead39c4cd4aaa3e5a0678309604c6a51db2b31b58bda4ba93a07aa9c2336f"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 65130,
+        "end": 65138,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/inspect.go",
+      "site_id": "L2103-ClusterKeySlot",
+      "method_token": {
+        "start": 65500,
+        "end": 65514,
+        "sha256": "f71741e48111ac5c007c911ec23d392f6093c9361f392963834a164bb1a00141"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 65491,
+        "end": 65499,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "asynq",
+      "source_path": "internal/rdb/inspect.go",
+      "site_id": "L2112-ClusterSlots",
+      "method_token": {
+        "start": 65804,
+        "end": 65816,
+        "sha256": "86303614e532daeb24be99c4b107761bedfe6899b495580982ed53f42bc606e6"
+      },
+      "receiver": "r.client",
+      "receiver_token": {
+        "start": 65795,
+        "end": 65803,
+        "sha256": "34007287bb300160311a2964e63cdf0c424367e7225afa4a8af924e2f17895a0"
+      },
+      "proof_class": "same-package-RDB.client",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "eino",
+      "source_path": "flow/agent/react/memory_example/memory/redis.go",
+      "site_id": "L43-Set",
+      "method_token": {
+        "start": 1214,
+        "end": 1217,
+        "sha256": "b6f6f3ad07b3c05fa0bbbbf2e3d257ff1e3e31a83efbe2c9369cd008594f94e0"
+      },
+      "receiver": "s.cli",
+      "receiver_token": {
+        "start": 1208,
+        "end": 1213,
+        "sha256": "57aa2e6f48a9ca6996045cf0d58e0fb02449e37584f261b396533186d7f963ac"
+      },
+      "proof_class": "same-package-RedisStore.cli",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    },
+    {
+      "population": "eino",
+      "source_path": "flow/agent/react/memory_example/memory/redis.go",
+      "site_id": "L48-Get",
+      "method_token": {
+        "start": 1437,
+        "end": 1440,
+        "sha256": "5fb9c3aba7ad5106939f35121cc8f086584593fbfb75b8f4015260655b7376f8"
+      },
+      "receiver": "s.cli",
+      "receiver_token": {
+        "start": 1431,
+        "end": 1436,
+        "sha256": "57aa2e6f48a9ca6996045cf0d58e0fb02449e37584f261b396533186d7f963ac"
+      },
+      "proof_class": "same-package-RedisStore.cli",
+      "review": "Explicit source-only review: selected receiver import/type/field witness is unique; selected lexical root is not shadowed/reassigned/address-escaped in its function. No alias-name inference or candidate output."
+    }
+  ],
+  "verdict": "All37 public API labels remain justified under the newly closed prospective lexical contract. No public oracle correction. This is source review only; candidate binding success remains unmeasured."
+}

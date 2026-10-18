@@ -1,0 +1,11 @@
+spike/t281/reader/go_source.go:21:18: SA1019: ast.Object has been deprecated since Go 1.22 and an alternative has been available since Go 1.0: The relationship between Idents and Objects cannot be correctly computed without type information. For example, the expression T{K: 0} may denote a struct, map, slice, or array literal, depending on the type of T. If T is a struct, then K refers to a field of T, whereas for the other types it refers to a value in the environment. (staticcheck)
+	constant   map[*ast.Object]ast.Expr
+	                ^
+spike/t281/reader/go_source.go:22:18: SA1019: ast.Object has been deprecated since Go 1.22 and an alternative has been available since Go 1.0: The relationship between Idents and Objects cannot be correctly computed without type information. For example, the expression T{K: 0} may denote a struct, map, slice, or array literal, depending on the type of T. If T is a struct, then K refers to a field of T, whereas for the other types it refers to a value in the environment. (staticcheck)
+	bad        map[*ast.Object]bool
+	                ^
+spike/t281/reader/go_source.go:105:104: SA1019: ast.Object has been deprecated since Go 1.22 and an alternative has been available since Go 1.0: The relationship between Idents and Objects cannot be correctly computed without type information. For example, the expression T{K: 0} may denote a struct, map, slice, or array literal, depending on the type of T. If T is a struct, then K refers to a field of T, whereas for the other types it refers to a value in the environment. (staticcheck)
+	g := &goFile{f: f, raw: raw, set: set, tree: tree, e: e, imports: map[string]string{}, constant: map[*ast.Object]ast.Expr{}, bad: map[*ast.Object]bool{}}
+	                                                                                                      ^
+3 issues:
+* staticcheck: 3

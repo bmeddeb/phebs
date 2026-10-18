@@ -1,0 +1,248 @@
+{
+  "format": "t281-adapter-source-receipt-v1",
+  "recognizer_runs": 0,
+  "license_receipt": "client-license-receipt.json",
+  "scope": "Official BSD-2-Clause Go client core wrapper source read only; no Redis server/module implementation or module metadata. Source files are referenced by immutable URL/digest, not vendored implementation.",
+  "references": [
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "path": "generic_commands.go",
+      "source_url": "https://raw.githubusercontent.com/redis/go-redis/512579f2e7582d5a248a5c221006e814a2c83e0b/generic_commands.go",
+      "bytes": 10944,
+      "sha256": "3a0d1306b2d5819b5cbcb3d01180ef0c564361afb0ab8c3a115ec1aee252fbee"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "path": "set_commands.go",
+      "source_url": "https://raw.githubusercontent.com/redis/go-redis/512579f2e7582d5a248a5c221006e814a2c83e0b/set_commands.go",
+      "bytes": 6684,
+      "sha256": "1fda966933b3172cb8b4f996a97d8dd294b5d687bf6ab1b811f2c23b0e54c447"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "path": "sortedset_commands.go",
+      "source_url": "https://raw.githubusercontent.com/redis/go-redis/512579f2e7582d5a248a5c221006e814a2c83e0b/sortedset_commands.go",
+      "bytes": 23139,
+      "sha256": "8a9751be187fc0d6e097e25f60c75d7c3d565d7ca02253eee8d76cc1ed2f0fa8"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "path": "hash_commands.go",
+      "source_url": "https://raw.githubusercontent.com/redis/go-redis/512579f2e7582d5a248a5c221006e814a2c83e0b/hash_commands.go",
+      "bytes": 23019,
+      "sha256": "3902b0ae7a02e4cf471fef4b12c4f1ec318e16a78b1b90800532c22562f60003"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "path": "list_commands.go",
+      "source_url": "https://raw.githubusercontent.com/redis/go-redis/512579f2e7582d5a248a5c221006e814a2c83e0b/list_commands.go",
+      "bytes": 8963,
+      "sha256": "1e7fab1dc8ac0e6e17ff75453259e08d18eb236fa0633fa03343dd313d6f2247"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "path": "string_commands.go",
+      "source_url": "https://raw.githubusercontent.com/redis/go-redis/512579f2e7582d5a248a5c221006e814a2c83e0b/string_commands.go",
+      "bytes": 9737,
+      "sha256": "2f97ee356857292e1eb6f6c057c67ac258001bd5caf183ec7e60f1ef41820a77"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "path": "scripting_commands.go",
+      "source_url": "https://raw.githubusercontent.com/redis/go-redis/512579f2e7582d5a248a5c221006e814a2c83e0b/scripting_commands.go",
+      "bytes": 6872,
+      "sha256": "3adf6b05435ec66902097be5f84eb000b30cc92e6b0ff9b48c2798378d6b05c0"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "path": "cluster_commands.go",
+      "source_url": "https://raw.githubusercontent.com/redis/go-redis/512579f2e7582d5a248a5c221006e814a2c83e0b/cluster_commands.go",
+      "bytes": 5842,
+      "sha256": "c7e90b000baa8a0fe4ee599ebb306dddd3ae654bbf3fe66838a57fd80af0ae39"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "path": "redis.go",
+      "source_url": "https://raw.githubusercontent.com/redis/go-redis/512579f2e7582d5a248a5c221006e814a2c83e0b/redis.go",
+      "bytes": 25540,
+      "sha256": "38ca47393edbee88ea4de80ee6cfd70fd881f1d607795c24e6df72739ae87c50"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "path": "generic_commands.go",
+      "source_url": "https://raw.githubusercontent.com/redis/go-redis/d3e7d4c51b1a4507089118eddd8d94b1cbe5b394/generic_commands.go",
+      "bytes": 10944,
+      "sha256": "3a0d1306b2d5819b5cbcb3d01180ef0c564361afb0ab8c3a115ec1aee252fbee"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "path": "set_commands.go",
+      "source_url": "https://raw.githubusercontent.com/redis/go-redis/d3e7d4c51b1a4507089118eddd8d94b1cbe5b394/set_commands.go",
+      "bytes": 6684,
+      "sha256": "1fda966933b3172cb8b4f996a97d8dd294b5d687bf6ab1b811f2c23b0e54c447"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "path": "sortedset_commands.go",
+      "source_url": "https://raw.githubusercontent.com/redis/go-redis/d3e7d4c51b1a4507089118eddd8d94b1cbe5b394/sortedset_commands.go",
+      "bytes": 23263,
+      "sha256": "69d769ee0a6178c7428e94825677d27ff4a7c8b98d6e9010ba66cefb63bde25e"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "path": "hash_commands.go",
+      "source_url": "https://raw.githubusercontent.com/redis/go-redis/d3e7d4c51b1a4507089118eddd8d94b1cbe5b394/hash_commands.go",
+      "bytes": 23039,
+      "sha256": "d3e21c1f687cd56d551e18a0abc8d9866cd9f5167f405ecc19f95d7c79aaee5c"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "path": "list_commands.go",
+      "source_url": "https://raw.githubusercontent.com/redis/go-redis/d3e7d4c51b1a4507089118eddd8d94b1cbe5b394/list_commands.go",
+      "bytes": 8963,
+      "sha256": "1e7fab1dc8ac0e6e17ff75453259e08d18eb236fa0633fa03343dd313d6f2247"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "path": "string_commands.go",
+      "source_url": "https://raw.githubusercontent.com/redis/go-redis/d3e7d4c51b1a4507089118eddd8d94b1cbe5b394/string_commands.go",
+      "bytes": 25070,
+      "sha256": "4283e1cf396a343ad8d89a5a9b2575ead0c898641ecf614525d65a4f39ae0d46"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "path": "scripting_commands.go",
+      "source_url": "https://raw.githubusercontent.com/redis/go-redis/d3e7d4c51b1a4507089118eddd8d94b1cbe5b394/scripting_commands.go",
+      "bytes": 6872,
+      "sha256": "3adf6b05435ec66902097be5f84eb000b30cc92e6b0ff9b48c2798378d6b05c0"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "path": "cluster_commands.go",
+      "source_url": "https://raw.githubusercontent.com/redis/go-redis/d3e7d4c51b1a4507089118eddd8d94b1cbe5b394/cluster_commands.go",
+      "bytes": 5842,
+      "sha256": "c7e90b000baa8a0fe4ee599ebb306dddd3ae654bbf3fe66838a57fd80af0ae39"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "path": "redis.go",
+      "source_url": "https://raw.githubusercontent.com/redis/go-redis/d3e7d4c51b1a4507089118eddd8d94b1cbe5b394/redis.go",
+      "bytes": 47612,
+      "sha256": "0022d86b69dd4df93473861814015a1122be686aad646d0b32ab4beb9fcd0a13"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "path": "commands.go",
+      "source_url": "https://raw.githubusercontent.com/redis/go-redis/512579f2e7582d5a248a5c221006e814a2c83e0b/commands.go",
+      "bytes": 20092,
+      "sha256": "bab5c91ea3f3e86a8495049c5981499b393e40f5cc4f6a5a427c71d777590b6f"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "path": "pubsub_commands.go",
+      "source_url": "https://raw.githubusercontent.com/redis/go-redis/512579f2e7582d5a248a5c221006e814a2c83e0b/pubsub_commands.go",
+      "bytes": 2247,
+      "sha256": "34f4f1286408d099a046cccdb144f3a21bf23aa580355eebc3e4ed4e7ce43d93"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "path": "script.go",
+      "source_url": "https://raw.githubusercontent.com/redis/go-redis/512579f2e7582d5a248a5c221006e814a2c83e0b/script.go",
+      "bytes": 2428,
+      "sha256": "97a6cc1625344ab8f1dae957266732a90d725b3b9f01567ac2f378a35f4dbcbe"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "path": "pipeline.go",
+      "source_url": "https://raw.githubusercontent.com/redis/go-redis/512579f2e7582d5a248a5c221006e814a2c83e0b/pipeline.go",
+      "bytes": 3691,
+      "sha256": "cd3f694e529936e86f39be6fe49137b1033fcb083d7cba5e8c218227043610ed"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "path": "commands.go",
+      "source_url": "https://raw.githubusercontent.com/redis/go-redis/d3e7d4c51b1a4507089118eddd8d94b1cbe5b394/commands.go",
+      "bytes": 21718,
+      "sha256": "0bfb213c6cd3411be34c745ecdcb788d4ade25f3912aebede6df8d600d635752"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "path": "pubsub_commands.go",
+      "source_url": "https://raw.githubusercontent.com/redis/go-redis/d3e7d4c51b1a4507089118eddd8d94b1cbe5b394/pubsub_commands.go",
+      "bytes": 2247,
+      "sha256": "34f4f1286408d099a046cccdb144f3a21bf23aa580355eebc3e4ed4e7ce43d93"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "path": "script.go",
+      "source_url": "https://raw.githubusercontent.com/redis/go-redis/d3e7d4c51b1a4507089118eddd8d94b1cbe5b394/script.go",
+      "bytes": 2428,
+      "sha256": "97a6cc1625344ab8f1dae957266732a90d725b3b9f01567ac2f378a35f4dbcbe"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "path": "pipeline.go",
+      "source_url": "https://raw.githubusercontent.com/redis/go-redis/d3e7d4c51b1a4507089118eddd8d94b1cbe5b394/pipeline.go",
+      "bytes": 3691,
+      "sha256": "cd3f694e529936e86f39be6fe49137b1033fcb083d7cba5e8c218227043610ed"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "path": "pubsub.go",
+      "source_url": "https://raw.githubusercontent.com/redis/go-redis/512579f2e7582d5a248a5c221006e814a2c83e0b/pubsub.go",
+      "bytes": 16810,
+      "sha256": "6acc26a29cc8cd6abe7f9e3adf62345613ab5aefd944b605f60a7d39d71e7b72"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "path": "pubsub.go",
+      "source_url": "https://raw.githubusercontent.com/redis/go-redis/d3e7d4c51b1a4507089118eddd8d94b1cbe5b394/pubsub.go",
+      "bytes": 19494,
+      "sha256": "9fbcfccc86b8029fe1439683e9274acea91569201b807182d3fa87066d640436"
+    },
+    {
+      "version": "v9.14.1",
+      "commit": "512579f2e7582d5a248a5c221006e814a2c83e0b",
+      "path": "universal.go",
+      "source_url": "https://raw.githubusercontent.com/redis/go-redis/512579f2e7582d5a248a5c221006e814a2c83e0b/universal.go",
+      "bytes": 10839,
+      "sha256": "5aaca355e019b3ae978bd7a319a2f64be06d374525173ed72a36aa1a722a0fc4"
+    },
+    {
+      "version": "v9.17.2",
+      "commit": "d3e7d4c51b1a4507089118eddd8d94b1cbe5b394",
+      "path": "universal.go",
+      "source_url": "https://raw.githubusercontent.com/redis/go-redis/d3e7d4c51b1a4507089118eddd8d94b1cbe5b394/universal.go",
+      "bytes": 11258,
+      "sha256": "17b6183a4a6100904e9a2c60ad29aa67c0126e93b1115b83139f43394717732b"
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+user neutral on nopass (%R~read:* +get) (%W~write:* +set) %RW~both:*

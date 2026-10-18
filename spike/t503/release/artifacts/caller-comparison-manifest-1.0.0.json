@@ -1,0 +1,113 @@
+{
+  "schema": "phebs-verdict-claim-manifest-v1",
+  "status": "DRAFT_UNSIGNED_PRODUCTION_SIGNATURE_PENDING",
+  "pack_id": "phebs.grpc.caller.comparison",
+  "pack_claim_version": "1.0.0",
+  "implementation_row": "phebs.grpc.caller.comparison compare_operation_callers@caller-comparison-v2",
+  "qualification": "finite-selected-public-source-composition-and-bounded-integration",
+  "production_release_signed": false,
+  "production_activation": false,
+  "admission": "Fixed cmd/phebs releasedClaims registry; verified signed selection for comparison AND released protobuf Caller Map recipe are both required. This draft is not a selection or release record.",
+  "dependency": {
+    "pack_id": "phebs.grpc.caller.go",
+    "recipe": [
+      "proto-contract@4.0.0",
+      "grpc-caller@1.6.0-released.1"
+    ],
+    "caller_algorithm": "1.6.0",
+    "resolver_packs": [
+      "go-module@1.2.0",
+      "grpc-generated-attribution@1.2.0"
+    ]
+  },
+  "input_contract": {
+    "protocols": [
+      "protobuf/gRPC endpoint pairs"
+    ],
+    "source": "Current exact authorized repository-overlay publications over committed SCIP/generated clients/declarations and optional committed consumer-unit snapshot. Unknown or unsupported input never becomes inferred runtime truth.",
+    "unit_schema": "t20-unit-snapshot-v1",
+    "response_schema": "caller-comparison-v2",
+    "citation_schema": "caller-map-citation-v1",
+    "selected_measurement_endpoints": [
+      "/helloworld.Greeter/SayHello",
+      "/grpc.examples.echo.Echo/UnaryEcho"
+    ],
+    "quality_scope": "5selected sites/4unit rows/4outside-pair negatives/9source files, each counted once; duplicate repository role is authority mechanics only.",
+    "resolution_tier": "syntax/heuristic; no SCIP promotion"
+  },
+  "surfaces": {
+    "capability": "contract-caller-comparison",
+    "http": "GET /api/compare_operation_callers",
+    "mcp_tool": "compare_operation_callers",
+    "ui": "/compare-callers",
+    "citation": "Existing exact authenticated read_operation_caller_citation engine; both sides separately authorized."
+  },
+  "existing_serving_bounds": {
+    "combined_scanned_records": 50000,
+    "page_rows": 100,
+    "page_citation_hydrations": 100,
+    "samples_per_side": 4,
+    "exact_read_slots": 8,
+    "citation_read_slots": 2,
+    "index_build_slots": 1,
+    "cached_indexes": 8,
+    "cached_bindings": 8,
+    "index_identity_bytes_each": 134217728,
+    "binding_lifetime_seconds": 300,
+    "cursor_bytes": 16384,
+    "qualification": "Existing ceiling constants; identity payload budget excludes Go/record/map overhead. No ceiling widened."
+  },
+  "measured_native_bounds": {
+    "index_seconds": 60,
+    "index_bytes": 8388608,
+    "evaluation_tree_files": 32,
+    "evaluation_tree_bytes": 16777216,
+    "repositories": 2,
+    "parallel_comparison_requests": 8,
+    "http_response_bytes": 262144,
+    "cold_request_seconds": 2,
+    "warm_request_seconds": 1,
+    "startup_seconds": 30,
+    "publication_seconds": 90,
+    "complete_native_seconds": 180,
+    "derived_allocated_disk_bytes": 536870912,
+    "minimum_available_physical_headroom_bytes": 4294967296,
+    "minimum_free_disk_bytes": 2147483648,
+    "source_blobs_read_per_citation": 1,
+    "process_tree_sampled_max_rss_bytes": 2147483648
+  },
+  "measured_binary": {
+    "phebs_source_commit": "bbb41b2ccfb3f9b23653aabf41607185aec3efbe",
+    "phebs_binary_digest": "sha256:121c1d07999344166d8631e65a99b06476c1fa0251f8590d2c42dd7da6393481",
+    "pack_implementation_digest": "sha256:bb2dcc25ff017afb98aeba3adbf2596f5bcd64efaf6a4602b7e937c66413c4ea",
+    "toolchain_digest": "sha256:c6652a655b5c51d1ce66b001a3f82f118b97fecfca54705e3b7313d6c8b82dba"
+  },
+  "non_claims": [
+    "upstream migration/equivalence/replacement semantics",
+    "runtime use/topology/deployment/owner/retirement truth",
+    "complete inventory or empty-result absence",
+    "generalized precision/recall, unseen-corpus accuracy or scale/SLO",
+    "Thrift/cross-protocol comparison, Impact/field/Kafka/WIRE admission",
+    "new managed-SCIP admission",
+    "production signing or activation"
+  ],
+  "expiry_revalidation": {
+    "proposed_expires_at": "2027-01-15T23:59:59Z",
+    "status": "Proposed only; final owner approval/signature pending.",
+    "revalidate_on": [
+      "caller/declaration/comparison algorithm or schema",
+      "resolver/client/input recipe or accepted protocol",
+      "source/admission/authorization semantics",
+      "supported numerical ceilings or reader/citation/lease behavior"
+    ],
+    "withdrawal": "Revoke future comparison release ID and restart; Caller Map dependency withdrawal also withdraws comparison without withdrawing independent products."
+  },
+  "evidence": {
+    "outcome": "spike/t503/requalification-after-mobile-fix/result.json",
+    "outcome_sha256": "sha256:baebfa1616a5dab071977f640ca8eed0408e9181ce8e3ff894c9d43cbb5150ec",
+    "outcome_cost": "spike/t503/requalification-after-mobile-fix/outcome-cost.json",
+    "outcome_cost_sha256": "sha256:4d878941e599ab14ba6d6733bb9a511a3909bce60c325bd75727199e71446158",
+    "card": "caller-comparison-card-1.0.0.md",
+    "validation": "caller-comparison-validation-1.0.0.json"
+  }
+}

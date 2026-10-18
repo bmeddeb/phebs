@@ -19349,6 +19349,18 @@ remain pending, and Caller Map/Atlas's bounded-test amendment does not waive the
 old/replacement source, concurrent publication and bounded combined read cost;
 release requires its own result even when both Caller Maps are released.
 
+**T50.3 finite outcome (2026-10-18, Ben-routed Mac handoff).** The reviewed
+`bbb41b2c` image passes its 39.450236s bounded ordinary-runtime matrix: five
+selected syntax/heuristic sites, four supplied-unit rows, four outside-pair
+negatives, exact HTTP/MCP/source/UI and two publication transitions. Each
+transition retains eight concurrent exact-epoch reads and stale cursor/citation
+refusal. Withdrawal and all child joins pass. Exact receipt, source/build/UI
+bindings and unsigned card/manifest/validation drafts are retained under
+`spike/t503/requalification-after-mobile-fix/` and `spike/t503/release/artifacts/`.
+Root reviewed hashes, scope, custody and steady-state cost. No production
+activation/signature or generalized accuracy/scale claim follows; common-bar
+evidence reconciliation and the existing unavailable production key remain.
+
 **T50.3a · Preserve committed consumer units through direct caller leaves**
 *(2026-10-18, Ben-routed Mac handoff)* — T50.3's first bounded product attempt
 returned the five expected source sites but all five lacked unit attribution:
@@ -19833,6 +19845,12 @@ progress state and declaration locator gaps. Normal/race,135UI controls, correct
 type/lint/vet/pinned Go lint pass. Startup and request cost stay bounded with no
 new store/cache/worker/child. Actual composed quality/operating result and
 production signature remain T54.1/T54.3; registration alone activates no claim.
+
+**T54.2b · Accept real HTTP schema metadata** *(2026-10-18; complete).*
+Pinned Huma adds top-level$schema to HTTP responses. The Impact guard now
+accepts that optional bounded string while retaining closed product keys and
+malformed-metadata refusal. Real HTTP serialization and83focused UI/type/lint/
+static controls pass; first composed native qualification uses a fresh image.
 
 **T54.3 · Measured Impact promotion** — satisfy the common bar per report
 shape; one shape may release without claiming the others. Dependencies are
@@ -21561,6 +21579,25 @@ receipts, labels, decision table, and measurements committed under
 byte-identical; every refusal lands in the frozen vocabulary; an output scan
 proves ACL credential tokens absent; no production code path changed and no
 pack registered.
+
+**T28.1 source preparation (2026-10-18, Ben-routed Mac handoff).** Exact
+permissive licenses and 793 scoped files / 3,600,148 source bytes are verified
+against pinned Git blobs and retained digests before recognition. Core metadata
+stays at the specified Redis 7.2.15 tree; module code/metadata never enters.
+Nested v9.7.0 client modules remain explicit unsupported-version census inputs.
+Source-only labels, sampling, denominators, semantic decisions, recognizers and
+measurements remain pending. There is no implementation or quality PASS yet.
+
+**T28.1 measured outcome (2026-10-18; complete as a spike, no production
+adoption).** Two fresh outputs/citations/censuses are byte-identical; all62
+controls and7ACL pairs pass with zero credential-retention failure. All99
+labelled public sites are present, but3 extra unresolved zero-fact frontier
+rows prevent qualityPASS. Recognized37commands/30key positions and access
+flags/27known kinds match independently; no spelling/family/runtime accuracy
+is inferred. Retain the first quality failures, exact contract/source/outcomes,
+joined cleanup and separate lint-only correction. Manifest design and object
+mapping stay deferred; unsupported native versions do not meet the frozen
+correct-adapter criterion. No production pack/schema/dependency/reader is added.
 
 ## Deliberate non-goals
 

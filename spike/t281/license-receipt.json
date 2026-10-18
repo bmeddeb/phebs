@@ -1,0 +1,53 @@
+{
+  "schema": "phebs-t281-source-license-receipt-v1",
+  "date": "2026-10-18",
+  "records": [
+    {
+      "name": "redis",
+      "repository": "redis/redis",
+      "commit": "316753259b4db132cf494292a1b3a702d9e9ddb2",
+      "path": "COPYING",
+      "git_blob": "a381681a1c2524ed586c6a87dfeb9ccdf1e86ded",
+      "bytes": 1487,
+      "sha256": "97f0a15b7bbae580d2609dad2e11f1956ae167be296ab60f4691ab9c30ee9828",
+      "retained": "licenses/redis-COPYING",
+      "nested_override_paths": [
+        "deps/fpconv/LICENSE.txt",
+        "deps/hdr_histogram/COPYING.txt",
+        "deps/hdr_histogram/LICENSE.txt",
+        "deps/hiredis/COPYING",
+        "deps/jemalloc/COPYING"
+      ],
+      "license_review": "Permissive license verified before any application or command-metadata source read; dependency-license paths outside selected corpus remain excluded."
+    },
+    {
+      "name": "asynq",
+      "repository": "hibiken/asynq",
+      "commit": "d135f1439bee74e989b7f9b41ecd542cc87f024a",
+      "path": "LICENSE",
+      "git_blob": "1983da2e4cc5de3e4d0a30e620a8429c8d71adf2",
+      "bytes": 1071,
+      "sha256": "eb4e388868ffc171de2f42cda88885210d65b26f17865f3616b43b1f101a8a3e",
+      "retained": "licenses/asynq-LICENSE",
+      "nested_override_paths": [],
+      "license_review": "Permissive license verified before any application or command-metadata source read; dependency-license paths outside selected corpus remain excluded."
+    },
+    {
+      "name": "eino",
+      "repository": "cloudwego/eino-examples",
+      "commit": "6dc0d214c0eb392babf2d001e9be85f57ac10952",
+      "path": "LICENSE-APACHE",
+      "git_blob": "66a27ec5ff940d3a9652d2948746ebac4c9d0188",
+      "bytes": 10174,
+      "sha256": "69849221bfb90053de2134ef5e6d540287b4b98062326492f1f96f5da685524b",
+      "retained": "licenses/eino-LICENSE-APACHE",
+      "nested_override_paths": [
+        ".licenserc.yaml"
+      ],
+      "license_review": "Permissive license verified before any application or command-metadata source read; dependency-license paths outside selected corpus remain excluded."
+    }
+  ],
+  "recognizer_runs": 0,
+  "module_implementation_or_metadata_permitted": false,
+  "qualification": "Redis command metadata only at frozen BSD 7.2.15 pin; later/source-available versions prohibited. Named module recognizers derive from official docs only."
+}

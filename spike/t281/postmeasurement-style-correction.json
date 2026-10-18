@@ -1,0 +1,132 @@
+{
+  "format": "t281-postmeasurement-style-correction-v1",
+  "date": "2026-10-18",
+  "original_measured_source_checkpoint": "3c1305adfac166a6c5a1d5fbc4725ec6e064d05a",
+  "original_candidate_contract_sha256": "d9161c18a3c819bbb96c3109a28a716f4a0b39f06b67e1a9d9a04bd10243b275",
+  "frozen_preregistration_sha256": "ad9f09d50f77a789dd5e9287ae8194ace2ca0d0937d2ac1e764656710893c518",
+  "frozen96_inputs_unchanged": true,
+  "changes": [
+    {
+      "path": "reader/acl.go",
+      "before": {
+        "bytes": 3889,
+        "sha256": "52e79266eb95980df6675e462a91d4b63ec35e316a3aa048045b1c4d29c9aae7"
+      },
+      "after": {
+        "bytes": 3885,
+        "sha256": "ff7c71ec4f49b1eb2071e11aaa4e2d0aa3cbab1fb34450c476880787d761e803"
+      }
+    },
+    {
+      "path": "reader/command.go",
+      "before": {
+        "bytes": 10628,
+        "sha256": "bf188dbd012140f93b72f89d6ed1f607379e037dc78befdb09feda882be27955"
+      },
+      "after": {
+        "bytes": 10621,
+        "sha256": "8ef13b19a72b480967988e57c233c2ed82010b00cc4265da4906c15a14a95445"
+      }
+    },
+    {
+      "path": "reader/go_source.go",
+      "before": {
+        "bytes": 15552,
+        "sha256": "160b30b667ec2a3e9b8b67fd8be65ea06522dd886ce2d65f85c076d431e5cabc"
+      },
+      "after": {
+        "bytes": 15858,
+        "sha256": "0e4aa105bf6e4ba07527eb4edb88f32815c1faf3acd585ecdba1f31a925b5e28"
+      }
+    }
+  ],
+  "reason": "Repository-pinned lint reported six staticcheck findings; lead requested only behavior-equivalent style cleanup after first measurement.",
+  "equivalence": [
+    "Two bytes.IndexAny(v,quotes)>=0 predicates become bytes.ContainsAny(v,quotes), preserving exact byte membership truth.",
+    "The mutually exclusive literal/structure/default comparisons become a tagged switch on the same local v.State with identical branch bodies.",
+    "Three line-scoped staticcheck suppressions justify intentional deprecated ast.Object lexical parser identity. No typechecker, dependency, receiver rule or executable statement is changed by the comments."
+  ],
+  "original_measurement_artifacts": [
+    {
+      "path": "results/first-native-01/pass1.jsonl",
+      "bytes": 484258,
+      "sha256": "4f402423b30529252d4e776bf46c19237b1510b0c00ecfdeb7bbe37fa94942c5"
+    },
+    {
+      "path": "results/first-native-01/pass1.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "results/first-native-01/pass2.jsonl",
+      "bytes": 484258,
+      "sha256": "4f402423b30529252d4e776bf46c19237b1510b0c00ecfdeb7bbe37fa94942c5"
+    },
+    {
+      "path": "results/first-native-01/pass2.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "results/first-native-01/receipt.json",
+      "bytes": 8909,
+      "sha256": "ba39bd3ecf0efc657010cfeb5246c5ec0f35a719c5c482b4376785faf11506e9"
+    },
+    {
+      "path": "results/first-native-01/score.json",
+      "bytes": 6435,
+      "sha256": "790e09686c79f86e45ccb49720e0d2dd1a48e27c8932ea39f38d147ffbb78ea1"
+    },
+    {
+      "path": "results/first-native-01/build.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "results/first-native-01/build.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "results/supplemental-first-01/receipt.json",
+      "bytes": 677,
+      "sha256": "66802a4aaba1319361ec0e99b291644e57c3dd823a5734dc847bbeb8f7c20995"
+    },
+    {
+      "path": "results/supplemental-first-01/test.stdout",
+      "bytes": 41,
+      "sha256": "ef4770c83b14a41d61df6efe329107744f5997a36d721d342ff93b710a071877"
+    },
+    {
+      "path": "results/supplemental-first-01/test.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "source_binding_qualification": "The original candidate-contract remains unchanged and binds the first executed source only. The corrected three-file hashes identify a later style tree; the original runner rejects that tree under its unchanged inventory. Do not relabel first measurements as corrected-source results.",
+  "quality_qualification": "No candidate, parser, scorer or corpus rerun; no rescore or new quality claim. First quality-gaps-no-production-adoption result and all mismatches remain exact.",
+  "execution": "Only authoring/gofmt and literal/hash verification performed for this correction; root owns later bounded supplemental selftest/race/vet/lint. No tests/build/native/Git/spine from this agent.",
+  "lint_input_log": {
+    "path": "/tmp/phebs-t281-lint.log",
+    "bytes": 2356,
+    "sha256": "9f55a1e6f534766773d99b8a3280f3d07e041da48c830e5c6e2ec28a50840958"
+  },
+  "followup": "Pinned lint exposes additional intentional ast.Object uses after first cleanup; final6 exact-line staticcheck suppressions explain lexical-only binding. No file-wide suppression, semantic tuning or public candidate rescore.",
+  "final_files": [
+    {
+      "path": "reader/acl.go",
+      "bytes": 3885,
+      "sha256": "ff7c71ec4f49b1eb2071e11aaa4e2d0aa3cbab1fb34450c476880787d761e803"
+    },
+    {
+      "path": "reader/command.go",
+      "bytes": 10621,
+      "sha256": "8ef13b19a72b480967988e57c233c2ed82010b00cc4265da4906c15a14a95445"
+    },
+    {
+      "path": "reader/go_source.go",
+      "bytes": 16162,
+      "sha256": "480f37e57d1cd995a6a4587d944f6fb277496c0bace88e141bbf00df12f4de99"
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "schema": "t281-source-review-notes-v1",
+  "date": "2026-10-18",
+  "recognizer_runs": 0,
+  "source_license_scope": "unchanged frozen793-file source corpus only",
+  "status": "prospective review notes, not final labels/denominators/preregistration or candidate outcomes",
+  "named_declaration_sources": [
+    {
+      "population": "eino",
+      "path": "quickstart/eino_assistant/cmd/knowledgeindexing/main.go",
+      "source_bytes": 5010,
+      "source_sha256": "7055533c0ea78cd57cd50962cd460325d20f2e301e1f9d9fc985618096f65520",
+      "command_token_span": [
+        4441,
+        4452
+      ],
+      "command_token_sha256": "1ed744dbb559594b74e96c0f605c1fa0a9b723be259ce5b6550c4d79fcf3672d",
+      "kind": "source-only prospective native index declaration",
+      "module_path": "quickstart/eino_assistant/go.mod",
+      "module_sha256": "8bb522f291ce6510b7710a0d725e718fbbf6ed6ddcffe63b56c3f0842c10b769",
+      "actual_client": "github.com/redis/go-redis/v9 v9.7.0",
+      "adapter_posture": "outside proposed exact v9.14.1/v9.17.2 adapter; retain unknown-client-adapter outcome rather than inherit rootv9.17.2",
+      "source_review": "indexName is bounded-format of runtime config fields; no concrete resource identity. Prefix and vector dimension also runtime-supplied."
+    },
+    {
+      "population": "eino",
+      "path": "quickstart/eino_assistant/pkg/redis/redis.go",
+      "source_bytes": 2549,
+      "source_sha256": "78f1ce43d7e2c119d356af59117beb08277c303a22cd5de90061f8b9f9723d41",
+      "command_token_span": [
+        1981,
+        1992
+      ],
+      "command_token_sha256": "1ed744dbb559594b74e96c0f605c1fa0a9b723be259ce5b6550c4d79fcf3672d",
+      "kind": "source-only prospective native index declaration",
+      "module_path": "quickstart/eino_assistant/go.mod",
+      "module_sha256": "8bb522f291ce6510b7710a0d725e718fbbf6ed6ddcffe63b56c3f0842c10b769",
+      "actual_client": "github.com/redis/go-redis/v9 v9.7.0",
+      "adapter_posture": "outside proposed exact v9.14.1/v9.17.2 adapter; retain unknown-client-adapter outcome rather than inherit rootv9.17.2",
+      "source_review": "indexName is fmt.Sprintf of two same-file constants (eino:doc: + vector_index); dimension is runtime-supplied, so declaration shape admission must preserve partial-fact atomicity."
+    }
+  ],
+  "coverage_limit": "Manual source-body review of the two FT.CREATE files after all-Go literal/name search; no claim dynamic command construction is exhaustively classified. Full source-only declaration/unknown-command census and frozen usage labels still required.",
+  "sampling_note": "sampling.json is an uncommitted metadata-only draft; Eino random files mostly lack Redis use. Final usage sample must be fixed before recognition, separate from complete named-declaration census.",
+  "no_execution": "No application, Redis, recognizer, parser or candidate was executed."
+}

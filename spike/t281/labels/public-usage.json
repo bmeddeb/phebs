@@ -1,0 +1,2259 @@
+{
+  "format": "t281-usage-source-labels-v1",
+  "scope": "Complete command/frontier census in seven prospectively fixed files; no generalization to other Go files, hidden Lua/script operations or runtime Redis",
+  "files": [
+    {
+      "repository": "hibiken/asynq",
+      "commit": "d135f1439bee74e989b7f9b41ecd542cc87f024a",
+      "source_path": "internal/rdb/rdb.go",
+      "source_sha256": "d2d5749dcb44707d8c896c784699a37daeb63c9ba6776ac3adc062cc01b88ef0",
+      "source_bytes": 55271,
+      "population": "asynq",
+      "module_path": "go.mod",
+      "module_sha256": "16d4c7186ee752e0bf49d22ef36e11df49453c6b549ce0a0c102e52607f32b5e",
+      "actual_client": "github.com/redis/go-redis/v9",
+      "actual_version": "v9.14.1",
+      "sites": [
+        {
+          "id": "L62-Ping",
+          "method": "Ping",
+          "method_token": {
+            "start": 1538,
+            "end": 1542,
+            "sha256": "6a4c3a4483b0448883299321ec2677f99a20afbf6a60bc5447bf2243d23b7152"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "PING",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": []
+        },
+        {
+          "id": "L66-Run",
+          "method": "Run",
+          "method_token": {
+            "start": 1717,
+            "end": 1720,
+            "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L74-Run",
+          "method": "Run",
+          "method_token": {
+            "start": 2129,
+            "end": 2132,
+            "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L118-SAdd",
+          "method": "SAdd",
+          "method_token": {
+            "start": 3430,
+            "end": 3434,
+            "sha256": "4bf42e1dcaa68fdab5b4149e0367aa87c47ae55bbeb29b3dbf8143dab35fd2d7"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "SADD",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": [
+            {
+              "go_argument_index": 1,
+              "expression_span": {
+                "start": 3440,
+                "end": 3454,
+                "sha256": "8b98c437a84b7960d021ee6c2b0f2fb7e9ff95b1300383d611e484e8a680b3a9"
+              },
+              "expected_resolution": "unresolved",
+              "expected_reason": "opaque-helper",
+              "expected_access_flags": [
+                "RW",
+                "INSERT"
+              ],
+              "expected_kind": "set",
+              "expected_kind_reason": null,
+              "expected_binding": "unresolved",
+              "note": "Imported helper/constant is outside same-file constant evaluation."
+            }
+          ]
+        },
+        {
+          "id": "L132-runScriptWithErrorCode",
+          "method": "runScriptWithErrorCode",
+          "method_token": {
+            "start": 3806,
+            "end": 3828,
+            "sha256": "caa710eab5dc38b48b97c6672eb8b6d6661c9a507fb7a1e5d8af698bfb210a71"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L205-SAdd",
+          "method": "SAdd",
+          "method_token": {
+            "start": 6336,
+            "end": 6340,
+            "sha256": "4bf42e1dcaa68fdab5b4149e0367aa87c47ae55bbeb29b3dbf8143dab35fd2d7"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "SADD",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": [
+            {
+              "go_argument_index": 1,
+              "expression_span": {
+                "start": 6346,
+                "end": 6360,
+                "sha256": "8b98c437a84b7960d021ee6c2b0f2fb7e9ff95b1300383d611e484e8a680b3a9"
+              },
+              "expected_resolution": "unresolved",
+              "expected_reason": "opaque-helper",
+              "expected_access_flags": [
+                "RW",
+                "INSERT"
+              ],
+              "expected_kind": "set",
+              "expected_kind_reason": null,
+              "expected_binding": "unresolved",
+              "note": "Imported helper/constant is outside same-file constant evaluation."
+            }
+          ]
+        },
+        {
+          "id": "L217-Run",
+          "method": "Run",
+          "method_token": {
+            "start": 6701,
+            "end": 6704,
+            "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L224-Run",
+          "method": "Run",
+          "method_token": {
+            "start": 6939,
+            "end": 6942,
+            "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L295-SAdd",
+          "method": "SAdd",
+          "method_token": {
+            "start": 8890,
+            "end": 8894,
+            "sha256": "4bf42e1dcaa68fdab5b4149e0367aa87c47ae55bbeb29b3dbf8143dab35fd2d7"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "SADD",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": [
+            {
+              "go_argument_index": 1,
+              "expression_span": {
+                "start": 8900,
+                "end": 8914,
+                "sha256": "8b98c437a84b7960d021ee6c2b0f2fb7e9ff95b1300383d611e484e8a680b3a9"
+              },
+              "expected_resolution": "unresolved",
+              "expected_reason": "opaque-helper",
+              "expected_access_flags": [
+                "RW",
+                "INSERT"
+              ],
+              "expected_kind": "set",
+              "expected_kind_reason": null,
+              "expected_binding": "unresolved",
+              "note": "Imported helper/constant is outside same-file constant evaluation."
+            }
+          ]
+        },
+        {
+          "id": "L311-runScriptWithErrorCode",
+          "method": "runScriptWithErrorCode",
+          "method_token": {
+            "start": 9305,
+            "end": 9327,
+            "sha256": "caa710eab5dc38b48b97c6672eb8b6d6661c9a507fb7a1e5d8af698bfb210a71"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L370-Run",
+          "method": "Run",
+          "method_token": {
+            "start": 11176,
+            "end": 11179,
+            "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L477-runScript",
+          "method": "runScript",
+          "method_token": {
+            "start": 14560,
+            "end": 14569,
+            "sha256": "e1e5fa7f855338fa1617a996d9c0e47e7ffd7741d743f596631c08a7bbb0db74"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L479-runScript",
+          "method": "runScript",
+          "method_token": {
+            "start": 14622,
+            "end": 14631,
+            "sha256": "e1e5fa7f855338fa1617a996d9c0e47e7ffd7741d743f596631c08a7bbb0db74"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L587-runScript",
+          "method": "runScript",
+          "method_token": {
+            "start": 18063,
+            "end": 18072,
+            "sha256": "e1e5fa7f855338fa1617a996d9c0e47e7ffd7741d743f596631c08a7bbb0db74"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L589-runScript",
+          "method": "runScript",
+          "method_token": {
+            "start": 18135,
+            "end": 18144,
+            "sha256": "e1e5fa7f855338fa1617a996d9c0e47e7ffd7741d743f596631c08a7bbb0db74"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L618-runScript",
+          "method": "runScript",
+          "method_token": {
+            "start": 19096,
+            "end": 19105,
+            "sha256": "e1e5fa7f855338fa1617a996d9c0e47e7ffd7741d743f596631c08a7bbb0db74"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L653-SAdd",
+          "method": "SAdd",
+          "method_token": {
+            "start": 20149,
+            "end": 20153,
+            "sha256": "4bf42e1dcaa68fdab5b4149e0367aa87c47ae55bbeb29b3dbf8143dab35fd2d7"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "SADD",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": [
+            {
+              "go_argument_index": 1,
+              "expression_span": {
+                "start": 20159,
+                "end": 20173,
+                "sha256": "8b98c437a84b7960d021ee6c2b0f2fb7e9ff95b1300383d611e484e8a680b3a9"
+              },
+              "expected_resolution": "unresolved",
+              "expected_reason": "opaque-helper",
+              "expected_access_flags": [
+                "RW",
+                "INSERT"
+              ],
+              "expected_kind": "set",
+              "expected_kind_reason": null,
+              "expected_binding": "unresolved",
+              "note": "Imported helper/constant is outside same-file constant evaluation."
+            }
+          ]
+        },
+        {
+          "id": "L669-runScriptWithErrorCode",
+          "method": "runScriptWithErrorCode",
+          "method_token": {
+            "start": 20570,
+            "end": 20592,
+            "sha256": "caa710eab5dc38b48b97c6672eb8b6d6661c9a507fb7a1e5d8af698bfb210a71"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L718-SAdd",
+          "method": "SAdd",
+          "method_token": {
+            "start": 22014,
+            "end": 22018,
+            "sha256": "4bf42e1dcaa68fdab5b4149e0367aa87c47ae55bbeb29b3dbf8143dab35fd2d7"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "SADD",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": [
+            {
+              "go_argument_index": 1,
+              "expression_span": {
+                "start": 22024,
+                "end": 22038,
+                "sha256": "8b98c437a84b7960d021ee6c2b0f2fb7e9ff95b1300383d611e484e8a680b3a9"
+              },
+              "expected_resolution": "unresolved",
+              "expected_reason": "opaque-helper",
+              "expected_access_flags": [
+                "RW",
+                "INSERT"
+              ],
+              "expected_kind": "set",
+              "expected_kind_reason": null,
+              "expected_binding": "unresolved",
+              "note": "Imported helper/constant is outside same-file constant evaluation."
+            }
+          ]
+        },
+        {
+          "id": "L736-runScriptWithErrorCode",
+          "method": "runScriptWithErrorCode",
+          "method_token": {
+            "start": 22509,
+            "end": 22531,
+            "sha256": "caa710eab5dc38b48b97c6672eb8b6d6661c9a507fb7a1e5d8af698bfb210a71"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L778-SAdd",
+          "method": "SAdd",
+          "method_token": {
+            "start": 23754,
+            "end": 23758,
+            "sha256": "4bf42e1dcaa68fdab5b4149e0367aa87c47ae55bbeb29b3dbf8143dab35fd2d7"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "SADD",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": [
+            {
+              "go_argument_index": 1,
+              "expression_span": {
+                "start": 23764,
+                "end": 23778,
+                "sha256": "8b98c437a84b7960d021ee6c2b0f2fb7e9ff95b1300383d611e484e8a680b3a9"
+              },
+              "expected_resolution": "unresolved",
+              "expected_reason": "opaque-helper",
+              "expected_access_flags": [
+                "RW",
+                "INSERT"
+              ],
+              "expected_kind": "set",
+              "expected_kind_reason": null,
+              "expected_binding": "unresolved",
+              "note": "Imported helper/constant is outside same-file constant evaluation."
+            }
+          ]
+        },
+        {
+          "id": "L792-runScriptWithErrorCode",
+          "method": "runScriptWithErrorCode",
+          "method_token": {
+            "start": 24124,
+            "end": 24146,
+            "sha256": "caa710eab5dc38b48b97c6672eb8b6d6661c9a507fb7a1e5d8af698bfb210a71"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L840-SAdd",
+          "method": "SAdd",
+          "method_token": {
+            "start": 25663,
+            "end": 25667,
+            "sha256": "4bf42e1dcaa68fdab5b4149e0367aa87c47ae55bbeb29b3dbf8143dab35fd2d7"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "SADD",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": [
+            {
+              "go_argument_index": 1,
+              "expression_span": {
+                "start": 25673,
+                "end": 25687,
+                "sha256": "8b98c437a84b7960d021ee6c2b0f2fb7e9ff95b1300383d611e484e8a680b3a9"
+              },
+              "expected_resolution": "unresolved",
+              "expected_reason": "opaque-helper",
+              "expected_access_flags": [
+                "RW",
+                "INSERT"
+              ],
+              "expected_kind": "set",
+              "expected_kind_reason": null,
+              "expected_binding": "unresolved",
+              "note": "Imported helper/constant is outside same-file constant evaluation."
+            }
+          ]
+        },
+        {
+          "id": "L856-runScriptWithErrorCode",
+          "method": "runScriptWithErrorCode",
+          "method_token": {
+            "start": 26072,
+            "end": 26094,
+            "sha256": "caa710eab5dc38b48b97c6672eb8b6d6661c9a507fb7a1e5d8af698bfb210a71"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L948-runScript",
+          "method": "runScript",
+          "method_token": {
+            "start": 28859,
+            "end": 28868,
+            "sha256": "e1e5fa7f855338fa1617a996d9c0e47e7ffd7741d743f596631c08a7bbb0db74"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L1050-runScript",
+          "method": "runScript",
+          "method_token": {
+            "start": 32044,
+            "end": 32053,
+            "sha256": "e1e5fa7f855338fa1617a996d9c0e47e7ffd7741d743f596631c08a7bbb0db74"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L1104-Run",
+          "method": "Run",
+          "method_token": {
+            "start": 33923,
+            "end": 33926,
+            "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L1137-SMembers",
+          "method": "SMembers",
+          "method_token": {
+            "start": 35049,
+            "end": 35057,
+            "sha256": "5e6c023c9b30ee335e613d1bba4426c6c231292e4dc69604f09acc8d9bcf5710"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "SMEMBERS",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": [
+            {
+              "go_argument_index": 1,
+              "expression_span": {
+                "start": 35080,
+                "end": 35101,
+                "sha256": "0d23fd51d2b38a9a1a43701555b16918c31d875ca3eeb4f36626b33cc9eb5ab2"
+              },
+              "expected_resolution": "unresolved",
+              "expected_reason": "opaque-helper",
+              "expected_access_flags": [
+                "RO",
+                "ACCESS"
+              ],
+              "expected_kind": "set",
+              "expected_kind_reason": null,
+              "expected_binding": "unresolved",
+              "note": "Imported helper/constant is outside same-file constant evaluation."
+            }
+          ]
+        },
+        {
+          "id": "L1256-runScriptWithErrorCode",
+          "method": "runScriptWithErrorCode",
+          "method_token": {
+            "start": 39670,
+            "end": 39692,
+            "sha256": "caa710eab5dc38b48b97c6672eb8b6d6661c9a507fb7a1e5d8af698bfb210a71"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L1295-Run",
+          "method": "Run",
+          "method_token": {
+            "start": 40887,
+            "end": 40890,
+            "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L1312-ZScore",
+          "method": "ZScore",
+          "method_token": {
+            "start": 41561,
+            "end": 41567,
+            "sha256": "637206e4484fabb81c0a2e0737f4dbc6b2ecbb02adf149615786bad53757fe69"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "ZSCORE",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": [
+            {
+              "go_argument_index": 1,
+              "expression_span": {
+                "start": 41573,
+                "end": 41603,
+                "sha256": "676fe479c2122c1d7e825cb2e01b195132866d4030b6e0b2ab39a018c90dc382"
+              },
+              "expected_resolution": "unresolved",
+              "expected_reason": "opaque-helper",
+              "expected_access_flags": [
+                "RO",
+                "ACCESS"
+              ],
+              "expected_kind": "sorted-set",
+              "expected_kind_reason": null,
+              "expected_binding": "unresolved",
+              "note": "Imported helper/constant is outside same-file constant evaluation."
+            }
+          ]
+        },
+        {
+          "id": "L1347-runScript",
+          "method": "runScript",
+          "method_token": {
+            "start": 42787,
+            "end": 42796,
+            "sha256": "e1e5fa7f855338fa1617a996d9c0e47e7ffd7741d743f596631c08a7bbb0db74"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L1372-runScript",
+          "method": "runScript",
+          "method_token": {
+            "start": 43799,
+            "end": 43808,
+            "sha256": "e1e5fa7f855338fa1617a996d9c0e47e7ffd7741d743f596631c08a7bbb0db74"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L1414-Run",
+          "method": "Run",
+          "method_token": {
+            "start": 45260,
+            "end": 45263,
+            "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L1446-Run",
+          "method": "Run",
+          "method_token": {
+            "start": 46298,
+            "end": 46301,
+            "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L1477-ZAddXX",
+          "method": "ZAddXX",
+          "method_token": {
+            "start": 47598,
+            "end": 47604,
+            "sha256": "e86ce6bd28b4bf90b3d7ed9fd762d15ba19c807aad08f94e33a2146aeb80cd57"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "ZADD",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": [
+            {
+              "go_argument_index": 1,
+              "expression_span": {
+                "start": 47627,
+                "end": 47647,
+                "sha256": "ccd0ec7de2b41abc02fa95610b1ef3f4b5e4921fbb5d176545c35ebfa9489c3a"
+              },
+              "expected_resolution": "unresolved",
+              "expected_reason": "opaque-helper",
+              "expected_access_flags": [
+                "RW",
+                "UPDATE"
+              ],
+              "expected_kind": "sorted-set",
+              "expected_kind_reason": null,
+              "expected_binding": "unresolved",
+              "note": "Imported helper/constant is outside same-file constant evaluation."
+            }
+          ]
+        },
+        {
+          "id": "L1519-ZAdd",
+          "method": "ZAdd",
+          "method_token": {
+            "start": 49198,
+            "end": 49202,
+            "sha256": "a22285b21c91a7f709791d83df1ddd3d9d7d47ee52934a2abfe84cdb22b99724"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "ZADD",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": [
+            {
+              "go_argument_index": 1,
+              "expression_span": {
+                "start": 49208,
+                "end": 49223,
+                "sha256": "9c38459bd8c42d3ab65f250cc4aca5e4e247c365283e3e6e41c68bf0cf0de900"
+              },
+              "expected_resolution": "unresolved",
+              "expected_reason": "opaque-helper",
+              "expected_access_flags": [
+                "RW",
+                "UPDATE"
+              ],
+              "expected_kind": "sorted-set",
+              "expected_kind_reason": null,
+              "expected_binding": "unresolved",
+              "note": "Imported helper/constant is outside same-file constant evaluation."
+            }
+          ]
+        },
+        {
+          "id": "L1522-ZAdd",
+          "method": "ZAdd",
+          "method_token": {
+            "start": 49411,
+            "end": 49415,
+            "sha256": "a22285b21c91a7f709791d83df1ddd3d9d7d47ee52934a2abfe84cdb22b99724"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "ZADD",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": [
+            {
+              "go_argument_index": 1,
+              "expression_span": {
+                "start": 49421,
+                "end": 49436,
+                "sha256": "19464347f9386029ee5848c2af0ad60a31ce2f57b7b8eeb8910daba93274b9e7"
+              },
+              "expected_resolution": "unresolved",
+              "expected_reason": "opaque-helper",
+              "expected_access_flags": [
+                "RW",
+                "UPDATE"
+              ],
+              "expected_kind": "sorted-set",
+              "expected_kind_reason": null,
+              "expected_binding": "unresolved",
+              "note": "Imported helper/constant is outside same-file constant evaluation."
+            }
+          ]
+        },
+        {
+          "id": "L1525-runScript",
+          "method": "runScript",
+          "method_token": {
+            "start": 49614,
+            "end": 49623,
+            "sha256": "e1e5fa7f855338fa1617a996d9c0e47e7ffd7741d743f596631c08a7bbb0db74"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L1541-ZRem",
+          "method": "ZRem",
+          "method_token": {
+            "start": 50234,
+            "end": 50238,
+            "sha256": "6ff4cddc4bcc5d57ba109132e5c1fbb08f7073afe7c032a5882bb977b5e797d3"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "ZREM",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": [
+            {
+              "go_argument_index": 1,
+              "expression_span": {
+                "start": 50244,
+                "end": 50259,
+                "sha256": "9c38459bd8c42d3ab65f250cc4aca5e4e247c365283e3e6e41c68bf0cf0de900"
+              },
+              "expected_resolution": "unresolved",
+              "expected_reason": "opaque-helper",
+              "expected_access_flags": [
+                "RW",
+                "DELETE"
+              ],
+              "expected_kind": "sorted-set",
+              "expected_kind_reason": null,
+              "expected_binding": "unresolved",
+              "note": "Imported helper/constant is outside same-file constant evaluation."
+            }
+          ]
+        },
+        {
+          "id": "L1544-ZRem",
+          "method": "ZRem",
+          "method_token": {
+            "start": 50403,
+            "end": 50407,
+            "sha256": "6ff4cddc4bcc5d57ba109132e5c1fbb08f7073afe7c032a5882bb977b5e797d3"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "ZREM",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": [
+            {
+              "go_argument_index": 1,
+              "expression_span": {
+                "start": 50413,
+                "end": 50428,
+                "sha256": "19464347f9386029ee5848c2af0ad60a31ce2f57b7b8eeb8910daba93274b9e7"
+              },
+              "expected_resolution": "unresolved",
+              "expected_reason": "opaque-helper",
+              "expected_access_flags": [
+                "RW",
+                "DELETE"
+              ],
+              "expected_kind": "sorted-set",
+              "expected_kind_reason": null,
+              "expected_binding": "unresolved",
+              "note": "Imported helper/constant is outside same-file constant evaluation."
+            }
+          ]
+        },
+        {
+          "id": "L1547-runScript",
+          "method": "runScript",
+          "method_token": {
+            "start": 50562,
+            "end": 50571,
+            "sha256": "e1e5fa7f855338fa1617a996d9c0e47e7ffd7741d743f596631c08a7bbb0db74"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L1575-ZAdd",
+          "method": "ZAdd",
+          "method_token": {
+            "start": 51540,
+            "end": 51544,
+            "sha256": "a22285b21c91a7f709791d83df1ddd3d9d7d47ee52934a2abfe84cdb22b99724"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "ZADD",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": [
+            {
+              "go_argument_index": 1,
+              "expression_span": {
+                "start": 51550,
+                "end": 51568,
+                "sha256": "201f67c31925a5ab253fbfe1a301850dc2f702a07395b5dff5367afac6f69b9f"
+              },
+              "expected_resolution": "unresolved",
+              "expected_reason": "opaque-helper",
+              "expected_access_flags": [
+                "RW",
+                "UPDATE"
+              ],
+              "expected_kind": "sorted-set",
+              "expected_kind_reason": null,
+              "expected_binding": "unresolved",
+              "note": "Imported helper/constant is outside same-file constant evaluation."
+            }
+          ]
+        },
+        {
+          "id": "L1579-runScript",
+          "method": "runScript",
+          "method_token": {
+            "start": 51748,
+            "end": 51757,
+            "sha256": "e1e5fa7f855338fa1617a996d9c0e47e7ffd7741d743f596631c08a7bbb0db74"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L1587-ZRem",
+          "method": "ZRem",
+          "method_token": {
+            "start": 52095,
+            "end": 52099,
+            "sha256": "6ff4cddc4bcc5d57ba109132e5c1fbb08f7073afe7c032a5882bb977b5e797d3"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "ZREM",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": [
+            {
+              "go_argument_index": 1,
+              "expression_span": {
+                "start": 52105,
+                "end": 52123,
+                "sha256": "201f67c31925a5ab253fbfe1a301850dc2f702a07395b5dff5367afac6f69b9f"
+              },
+              "expected_resolution": "unresolved",
+              "expected_reason": "opaque-helper",
+              "expected_access_flags": [
+                "RW",
+                "DELETE"
+              ],
+              "expected_kind": "sorted-set",
+              "expected_kind_reason": null,
+              "expected_binding": "unresolved",
+              "note": "Imported helper/constant is outside same-file constant evaluation."
+            }
+          ]
+        },
+        {
+          "id": "L1590-Del",
+          "method": "Del",
+          "method_token": {
+            "start": 52265,
+            "end": 52268,
+            "sha256": "730ead39c4cd4aaa3e5a0678309604c6a51db2b31b58bda4ba93a07aa9c2336f"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "DEL",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": [
+            {
+              "go_argument_index": 1,
+              "expression_span": {
+                "start": 52274,
+                "end": 52277,
+                "sha256": "2c70e12b7a0646f92279f427c7b38e7334d8e5389cff167a1dc30e73f826b683"
+              },
+              "expected_resolution": "unresolved",
+              "expected_reason": "runtime-namespace",
+              "expected_access_flags": [
+                "RM",
+                "DELETE"
+              ],
+              "expected_kind": null,
+              "expected_kind_reason": "unknown-expected-value-kind",
+              "expected_binding": "unresolved",
+              "note": "Parameter/local runtime spelling is not followed across helper/iteration/function boundaries."
+            }
+          ]
+        },
+        {
+          "id": "L1600-Subscribe",
+          "method": "Subscribe",
+          "method_token": {
+            "start": 52624,
+            "end": 52633,
+            "sha256": "cc0e38da9c41790bffef1b88af32d39ac285edce93da766810edc237cb2f1625"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "SUBSCRIBE",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": []
+        },
+        {
+          "id": "L1614-Publish",
+          "method": "Publish",
+          "method_token": {
+            "start": 53115,
+            "end": 53122,
+            "sha256": "859390eb495b2ead7f05f0f799546c71435b2db31dbe082adecc3426fffc3391"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "PUBLISH",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": []
+        },
+        {
+          "id": "L1648-runScript",
+          "method": "runScript",
+          "method_token": {
+            "start": 54321,
+            "end": 54330,
+            "sha256": "e1e5fa7f855338fa1617a996d9c0e47e7ffd7741d743f596631c08a7bbb0db74"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L1656-Del",
+          "method": "Del",
+          "method_token": {
+            "start": 54679,
+            "end": 54682,
+            "sha256": "730ead39c4cd4aaa3e5a0678309604c6a51db2b31b58bda4ba93a07aa9c2336f"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "DEL",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": [
+            {
+              "go_argument_index": 1,
+              "expression_span": {
+                "start": 54688,
+                "end": 54691,
+                "sha256": "2c70e12b7a0646f92279f427c7b38e7334d8e5389cff167a1dc30e73f826b683"
+              },
+              "expected_resolution": "unresolved",
+              "expected_reason": "runtime-namespace",
+              "expected_access_flags": [
+                "RM",
+                "DELETE"
+              ],
+              "expected_kind": null,
+              "expected_kind_reason": "unknown-expected-value-kind",
+              "expected_binding": "unresolved",
+              "note": "Parameter/local runtime spelling is not followed across helper/iteration/function boundaries."
+            }
+          ]
+        },
+        {
+          "id": "L1667-HSet",
+          "method": "HSet",
+          "method_token": {
+            "start": 55093,
+            "end": 55097,
+            "sha256": "6d49f1cf97ac6a51891a3836c09e73c2e622b9d5cb02609755af61ecd65516a2"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "HSET",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": [
+            {
+              "go_argument_index": 1,
+              "expression_span": {
+                "start": 55103,
+                "end": 55110,
+                "sha256": "4e5ea2423761603ceecd28da06364a38013c4caf46d2e77a8b91d882de4749e3"
+              },
+              "expected_resolution": "unresolved",
+              "expected_reason": "runtime-namespace",
+              "expected_access_flags": [
+                "RW",
+                "UPDATE"
+              ],
+              "expected_kind": "hash",
+              "expected_kind_reason": null,
+              "expected_binding": "unresolved",
+              "note": "Parameter/local runtime spelling is not followed across helper/iteration/function boundaries."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "repository": "hibiken/asynq",
+      "commit": "d135f1439bee74e989b7f9b41ecd542cc87f024a",
+      "source_path": "internal/rdb/inspect.go",
+      "source_sha256": "f930acb53c6c913457f76461e0e5ee60ae474cdc47cd5e3e1d14d526d1c0c7de",
+      "source_bytes": 66087,
+      "population": "asynq",
+      "module_path": "go.mod",
+      "module_sha256": "16d4c7186ee752e0bf49d22ef36e11df49453c6b549ce0a0c102e52607f32b5e",
+      "actual_client": "github.com/redis/go-redis/v9",
+      "actual_version": "v9.14.1",
+      "sites": [
+        {
+          "id": "L22-SMembers",
+          "method": "SMembers",
+          "method_token": {
+            "start": 477,
+            "end": 485,
+            "sha256": "5e6c023c9b30ee335e613d1bba4426c6c231292e4dc69604f09acc8d9bcf5710"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "SMEMBERS",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": [
+            {
+              "go_argument_index": 1,
+              "expression_span": {
+                "start": 508,
+                "end": 522,
+                "sha256": "8b98c437a84b7960d021ee6c2b0f2fb7e9ff95b1300383d611e484e8a680b3a9"
+              },
+              "expected_resolution": "unresolved",
+              "expected_reason": "opaque-helper",
+              "expected_access_flags": [
+                "RO",
+                "ACCESS"
+              ],
+              "expected_kind": "set",
+              "expected_kind_reason": null,
+              "expected_binding": "unresolved",
+              "note": "Imported helper/constant is outside same-file constant evaluation."
+            }
+          ]
+        },
+        {
+          "id": "L171-Run",
+          "method": "Run",
+          "method_token": {
+            "start": 5137,
+            "end": 5140,
+            "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L355-Run",
+          "method": "Run",
+          "method_token": {
+            "start": 10330,
+            "end": 10333,
+            "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L400-Run",
+          "method": "Run",
+          "method_token": {
+            "start": 11753,
+            "end": 11756,
+            "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L422-Info",
+          "method": "Info",
+          "method_token": {
+            "start": 12428,
+            "end": 12432,
+            "sha256": "170322a32f3c35b2c61576a5553d352d7b3c8ae7086dab78f15fc891a28c067c"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "INFO",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": []
+        },
+        {
+          "id": "L431-ClusterInfo",
+          "method": "ClusterInfo",
+          "method_token": {
+            "start": 12669,
+            "end": 12680,
+            "sha256": "a0206994fc016e6733a1c9f1d0ed19a64ccc6b3cba378b482233c8216a6fac37"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "CLUSTER INFO",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": []
+        },
+        {
+          "id": "L511-Run",
+          "method": "Run",
+          "method_token": {
+            "start": 15067,
+            "end": 15070,
+            "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L597-Run",
+          "method": "Run",
+          "method_token": {
+            "start": 17623,
+            "end": 17626,
+            "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L698-Run",
+          "method": "Run",
+          "method_token": {
+            "start": 20775,
+            "end": 20778,
+            "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L822-SIsMember",
+          "method": "SIsMember",
+          "method_token": {
+            "start": 25149,
+            "end": 25158,
+            "sha256": "1a6becd63d72bdf9fddd2c82811e3ffb7e2e1132a64359ce19a13982ee7ad2ed"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "SISMEMBER",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": [
+            {
+              "go_argument_index": 1,
+              "expression_span": {
+                "start": 25181,
+                "end": 25195,
+                "sha256": "8b98c437a84b7960d021ee6c2b0f2fb7e9ff95b1300383d611e484e8a680b3a9"
+              },
+              "expected_resolution": "unresolved",
+              "expected_reason": "opaque-helper",
+              "expected_access_flags": [
+                "RO"
+              ],
+              "expected_kind": "set",
+              "expected_kind_reason": null,
+              "expected_binding": "unresolved",
+              "note": "Imported helper/constant is outside same-file constant evaluation."
+            }
+          ]
+        },
+        {
+          "id": "L850-Run",
+          "method": "Run",
+          "method_token": {
+            "start": 26164,
+            "end": 26167,
+            "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L980-Run",
+          "method": "Run",
+          "method_token": {
+            "start": 30470,
+            "end": 30473,
+            "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L1058-Run",
+          "method": "Run",
+          "method_token": {
+            "start": 33011,
+            "end": 33014,
+            "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L1111-Run",
+          "method": "Run",
+          "method_token": {
+            "start": 34589,
+            "end": 34592,
+            "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L1204-Run",
+          "method": "Run",
+          "method_token": {
+            "start": 37679,
+            "end": 37682,
+            "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L1259-Run",
+          "method": "Run",
+          "method_token": {
+            "start": 39495,
+            "end": 39498,
+            "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L1351-Run",
+          "method": "Run",
+          "method_token": {
+            "start": 42686,
+            "end": 42689,
+            "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L1416-Run",
+          "method": "Run",
+          "method_token": {
+            "start": 44800,
+            "end": 44803,
+            "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L1497-Run",
+          "method": "Run",
+          "method_token": {
+            "start": 47212,
+            "end": 47215,
+            "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L1581-Run",
+          "method": "Run",
+          "method_token": {
+            "start": 50065,
+            "end": 50068,
+            "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L1687-Run",
+          "method": "Run",
+          "method_token": {
+            "start": 53384,
+            "end": 53387,
+            "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L1731-Run",
+          "method": "Run",
+          "method_token": {
+            "start": 54639,
+            "end": 54642,
+            "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L1772-Run",
+          "method": "Run",
+          "method_token": {
+            "start": 55809,
+            "end": 55812,
+            "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L1924-Run",
+          "method": "Run",
+          "method_token": {
+            "start": 60084,
+            "end": 60087,
+            "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L1934-SRem",
+          "method": "SRem",
+          "method_token": {
+            "start": 60405,
+            "end": 60409,
+            "sha256": "1db2be9c4c985a5e95bcf26a1561a7d695860e855921ec7b3a3cff2b47e847d0"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "SREM",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": [
+            {
+              "go_argument_index": 1,
+              "expression_span": {
+                "start": 60432,
+                "end": 60446,
+                "sha256": "8b98c437a84b7960d021ee6c2b0f2fb7e9ff95b1300383d611e484e8a680b3a9"
+              },
+              "expected_resolution": "unresolved",
+              "expected_reason": "opaque-helper",
+              "expected_access_flags": [
+                "RW",
+                "DELETE"
+              ],
+              "expected_kind": "set",
+              "expected_kind_reason": null,
+              "expected_binding": "unresolved",
+              "note": "Imported helper/constant is outside same-file constant evaluation."
+            }
+          ]
+        },
+        {
+          "id": "L1958-Run",
+          "method": "Run",
+          "method_token": {
+            "start": 61283,
+            "end": 61286,
+            "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L1968-Get",
+          "method": "Get",
+          "method_token": {
+            "start": 61566,
+            "end": 61569,
+            "sha256": "5fb9c3aba7ad5106939f35121cc8f086584593fbfb75b8f4015260655b7376f8"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "GET",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": [
+            {
+              "go_argument_index": 1,
+              "expression_span": {
+                "start": 61592,
+                "end": 61595,
+                "sha256": "2c70e12b7a0646f92279f427c7b38e7334d8e5389cff167a1dc30e73f826b683"
+              },
+              "expected_resolution": "unresolved",
+              "expected_reason": "runtime-namespace",
+              "expected_access_flags": [
+                "RO",
+                "ACCESS"
+              ],
+              "expected_kind": "string",
+              "expected_kind_reason": null,
+              "expected_binding": "unresolved",
+              "note": "Parameter/local runtime spelling is not followed across helper/iteration/function boundaries."
+            }
+          ]
+        },
+        {
+          "id": "L1992-Run",
+          "method": "Run",
+          "method_token": {
+            "start": 62258,
+            "end": 62261,
+            "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L2002-HVals",
+          "method": "HVals",
+          "method_token": {
+            "start": 62661,
+            "end": 62666,
+            "sha256": "72a10e4054bcf6b3250ff5ab06b91264c82b28c174ff3a7109b2ddfd240fa9ff"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "HVALS",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": [
+            {
+              "go_argument_index": 1,
+              "expression_span": {
+                "start": 62689,
+                "end": 62692,
+                "sha256": "2c70e12b7a0646f92279f427c7b38e7334d8e5389cff167a1dc30e73f826b683"
+              },
+              "expected_resolution": "unresolved",
+              "expected_reason": "runtime-namespace",
+              "expected_access_flags": [
+                "RO",
+                "ACCESS"
+              ],
+              "expected_kind": "hash",
+              "expected_kind_reason": null,
+              "expected_binding": "unresolved",
+              "note": "Parameter/local runtime spelling is not followed across helper/iteration/function boundaries."
+            }
+          ]
+        },
+        {
+          "id": "L2027-Run",
+          "method": "Run",
+          "method_token": {
+            "start": 63383,
+            "end": 63386,
+            "sha256": "00d60e31a4e6b8344d4201f25a6a7dee770713107f6d097abb01559d32b17f26"
+          },
+          "shape": "opaque-script-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "key_cardinality": "unmeasured behind wrapper; not zero keys",
+          "expected_script_passthrough_rows": 0,
+          "note": "No Lua body analysis. Script.Run may choose EVALSHA/EVAL; application wrappers are unproved. No inherited access/kind or key-cardinality inference."
+        },
+        {
+          "id": "L2037-LRange",
+          "method": "LRange",
+          "method_token": {
+            "start": 63673,
+            "end": 63679,
+            "sha256": "b27c1e0a1582fe83e2f479dcf385ca99d185a5377edda5e8046b4f21b4ee24d1"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "LRANGE",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": [
+            {
+              "go_argument_index": 1,
+              "expression_span": {
+                "start": 63702,
+                "end": 63705,
+                "sha256": "2c70e12b7a0646f92279f427c7b38e7334d8e5389cff167a1dc30e73f826b683"
+              },
+              "expected_resolution": "unresolved",
+              "expected_reason": "runtime-namespace",
+              "expected_access_flags": [
+                "RO",
+                "ACCESS"
+              ],
+              "expected_kind": "list",
+              "expected_kind_reason": null,
+              "expected_binding": "unresolved",
+              "note": "Parameter/local runtime spelling is not followed across helper/iteration/function boundaries."
+            }
+          ]
+        },
+        {
+          "id": "L2055-ZRevRangeWithScores",
+          "method": "ZRevRangeWithScores",
+          "method_token": {
+            "start": 64221,
+            "end": 64240,
+            "sha256": "eac6feec5b438c7837bd920c4a7e1fcfeab105b77dc69371cf7b0a229209f220"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "ZREVRANGE",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": [
+            {
+              "go_argument_index": 1,
+              "expression_span": {
+                "start": 64263,
+                "end": 64266,
+                "sha256": "2c70e12b7a0646f92279f427c7b38e7334d8e5389cff167a1dc30e73f826b683"
+              },
+              "expected_resolution": "unresolved",
+              "expected_reason": "runtime-namespace",
+              "expected_access_flags": [
+                "RO",
+                "ACCESS"
+              ],
+              "expected_kind": "sorted-set",
+              "expected_kind_reason": null,
+              "expected_binding": "unresolved",
+              "note": "Parameter/local runtime spelling is not followed across helper/iteration/function boundaries."
+            }
+          ]
+        },
+        {
+          "id": "L2077-SetNX",
+          "method": "SetNX",
+          "method_token": {
+            "start": 64793,
+            "end": 64798,
+            "sha256": "beeb4c673eb09bb48c407ec7b4eefac3fe6efb1b4c381e80cd675ad8b692424d"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "SETNX",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": [
+            {
+              "go_argument_index": 1,
+              "expression_span": {
+                "start": 64821,
+                "end": 64824,
+                "sha256": "2c70e12b7a0646f92279f427c7b38e7334d8e5389cff167a1dc30e73f826b683"
+              },
+              "expected_resolution": "unresolved",
+              "expected_reason": "runtime-namespace",
+              "expected_access_flags": [
+                "OW",
+                "INSERT"
+              ],
+              "expected_kind": "string",
+              "expected_kind_reason": null,
+              "expected_binding": "unresolved",
+              "note": "Parameter/local runtime spelling is not followed across helper/iteration/function boundaries."
+            }
+          ],
+          "branch": "literal expiration0 maps to SETNX, not SET NX"
+        },
+        {
+          "id": "L2090-Del",
+          "method": "Del",
+          "method_token": {
+            "start": 65139,
+            "end": 65142,
+            "sha256": "730ead39c4cd4aaa3e5a0678309604c6a51db2b31b58bda4ba93a07aa9c2336f"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "DEL",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": [
+            {
+              "go_argument_index": 1,
+              "expression_span": {
+                "start": 65165,
+                "end": 65168,
+                "sha256": "2c70e12b7a0646f92279f427c7b38e7334d8e5389cff167a1dc30e73f826b683"
+              },
+              "expected_resolution": "unresolved",
+              "expected_reason": "runtime-namespace",
+              "expected_access_flags": [
+                "RM",
+                "DELETE"
+              ],
+              "expected_kind": null,
+              "expected_kind_reason": "unknown-expected-value-kind",
+              "expected_binding": "unresolved",
+              "note": "Parameter/local runtime spelling is not followed across helper/iteration/function boundaries."
+            }
+          ]
+        },
+        {
+          "id": "L2103-ClusterKeySlot",
+          "method": "ClusterKeySlot",
+          "method_token": {
+            "start": 65500,
+            "end": 65514,
+            "sha256": "f71741e48111ac5c007c911ec23d392f6093c9361f392963834a164bb1a00141"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "CLUSTER KEYSLOT",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": [],
+          "note": "Routing operand is not a Redis data-key specification in the pinned core metadata; no usage key fact."
+        },
+        {
+          "id": "L2112-ClusterSlots",
+          "method": "ClusterSlots",
+          "method_token": {
+            "start": 65804,
+            "end": 65816,
+            "sha256": "86303614e532daeb24be99c4b107761bedfe6899b495580982ed53f42bc606e6"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "CLUSTER SLOTS",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": []
+        }
+      ]
+    },
+    {
+      "repository": "cloudwego/eino-examples",
+      "commit": "6dc0d214c0eb392babf2d001e9be85f57ac10952",
+      "source_path": "flow/agent/react/memory_example/memory/redis.go",
+      "source_sha256": "63fe201ab650e05e1df41b6983c4cee3c3fac2315147fb53eae38ce0f566c0ed",
+      "source_bytes": 2436,
+      "population": "eino",
+      "module_path": "go.mod",
+      "module_sha256": "149602f7ca610cd0fa53b0cd474dfa08bbf62d53d926aacc4766d2ae41d931eb",
+      "actual_client": "github.com/redis/go-redis/v9",
+      "actual_version": "v9.17.2",
+      "sites": [
+        {
+          "id": "L43-Set",
+          "method": "Set",
+          "method_token": {
+            "start": 1214,
+            "end": 1217,
+            "sha256": "b6f6f3ad07b3c05fa0bbbbf2e3d257ff1e3e31a83efbe2c9369cd008594f94e0"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "SET",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": [
+            {
+              "go_argument_index": 1,
+              "expression_span": {
+                "start": 1223,
+                "end": 1232,
+                "sha256": "b0538d762cb1174b74aab704b9274b0030c262447d37947cfc3d5d63e2c924c0"
+              },
+              "expected_resolution": "unresolved",
+              "expected_reason": "runtime-namespace",
+              "expected_access_flags": [
+                "OW",
+                "UPDATE"
+              ],
+              "expected_kind": "string",
+              "expected_kind_reason": null,
+              "expected_binding": "unresolved",
+              "note": "Parameter/local runtime spelling is not followed across helper/iteration/function boundaries."
+            }
+          ],
+          "branch": "Set API has no GET branch; only expiry options vary; flags OW/UPDATE under documented SET variable-flags rule"
+        },
+        {
+          "id": "L48-Get",
+          "method": "Get",
+          "method_token": {
+            "start": 1437,
+            "end": 1440,
+            "sha256": "5fb9c3aba7ad5106939f35121cc8f086584593fbfb75b8f4015260655b7376f8"
+          },
+          "shape": "admitted-go-redis-core-api",
+          "expected_command": "GET",
+          "expected_command_recognized": true,
+          "expected_unresolved": null,
+          "keys": [
+            {
+              "go_argument_index": 1,
+              "expression_span": {
+                "start": 1446,
+                "end": 1455,
+                "sha256": "b0538d762cb1174b74aab704b9274b0030c262447d37947cfc3d5d63e2c924c0"
+              },
+              "expected_resolution": "unresolved",
+              "expected_reason": "runtime-namespace",
+              "expected_access_flags": [
+                "RO",
+                "ACCESS"
+              ],
+              "expected_kind": "string",
+              "expected_kind_reason": null,
+              "expected_binding": "unresolved",
+              "note": "Parameter/local runtime spelling is not followed across helper/iteration/function boundaries."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "repository": "cloudwego/eino-examples",
+      "commit": "6dc0d214c0eb392babf2d001e9be85f57ac10952",
+      "source_path": "quickstart/eino_assistant/cmd/knowledgeindexing/main.go",
+      "source_sha256": "7055533c0ea78cd57cd50962cd460325d20f2e301e1f9d9fc985618096f65520",
+      "source_bytes": 5010,
+      "population": "eino",
+      "module_path": "quickstart/eino_assistant/go.mod",
+      "module_sha256": "8bb522f291ce6510b7710a0d725e718fbbf6ed6ddcffe63b56c3f0842c10b769",
+      "actual_client": "github.com/redis/go-redis/v9",
+      "actual_version": "v9.7.0",
+      "sites": [
+        {
+          "id": "L148-Ping",
+          "method": "Ping",
+          "method_token": {
+            "start": 3921,
+            "end": 3925,
+            "sha256": "6a4c3a4483b0448883299321ec2677f99a20afbf6a60bc5447bf2243d23b7152"
+          },
+          "shape": "unsupported-exact-client-version",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "unknown-client-adapter",
+          "keys": [],
+          "note": "Nearest nested module is v9.7.0; root v9.17.2 must not be inherited."
+        },
+        {
+          "id": "L155-Do",
+          "method": "Do",
+          "method_token": {
+            "start": 4142,
+            "end": 4144,
+            "sha256": "30094e0bec0046da8f925ebda9575f3d8377a75692436516260782fafd709a6f"
+          },
+          "shape": "unsupported-exact-client-version",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "unknown-client-adapter",
+          "keys": [],
+          "note": "Nearest nested module is v9.7.0; root v9.17.2 must not be inherited.",
+          "source_command_intent": "FT.INFO",
+          "vector_shape": "literal-command"
+        },
+        {
+          "id": "L180-Do",
+          "method": "Do",
+          "method_token": {
+            "start": 4713,
+            "end": 4715,
+            "sha256": "30094e0bec0046da8f925ebda9575f3d8377a75692436516260782fafd709a6f"
+          },
+          "shape": "unsupported-exact-client-version",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "unknown-client-adapter",
+          "keys": [],
+          "note": "Nearest nested module is v9.7.0; root v9.17.2 must not be inherited.",
+          "source_command_intent": "FT.CREATE",
+          "vector_shape": "same-file-array"
+        },
+        {
+          "id": "L185-Do",
+          "method": "Do",
+          "method_token": {
+            "start": 4875,
+            "end": 4877,
+            "sha256": "30094e0bec0046da8f925ebda9575f3d8377a75692436516260782fafd709a6f"
+          },
+          "shape": "unsupported-exact-client-version",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "unknown-client-adapter",
+          "keys": [],
+          "note": "Nearest nested module is v9.7.0; root v9.17.2 must not be inherited.",
+          "source_command_intent": "FT.INFO",
+          "vector_shape": "literal-command"
+        }
+      ]
+    },
+    {
+      "repository": "cloudwego/eino-examples",
+      "commit": "6dc0d214c0eb392babf2d001e9be85f57ac10952",
+      "source_path": "quickstart/eino_assistant/pkg/redis/redis.go",
+      "source_sha256": "78f1ce43d7e2c119d356af59117beb08277c303a22cd5de90061f8b9f9723d41",
+      "source_bytes": 2549,
+      "population": "eino",
+      "module_path": "quickstart/eino_assistant/go.mod",
+      "module_sha256": "8bb522f291ce6510b7710a0d725e718fbbf6ed6ddcffe63b56c3f0842c10b769",
+      "actual_client": "github.com/redis/go-redis/v9",
+      "actual_version": "v9.7.0",
+      "sites": [
+        {
+          "id": "L72-Ping",
+          "method": "Ping",
+          "method_token": {
+            "start": 1478,
+            "end": 1482,
+            "sha256": "6a4c3a4483b0448883299321ec2677f99a20afbf6a60bc5447bf2243d23b7152"
+          },
+          "shape": "unsupported-exact-client-version",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "unknown-client-adapter",
+          "keys": [],
+          "note": "Nearest nested module is v9.7.0; root v9.17.2 must not be inherited."
+        },
+        {
+          "id": "L79-Do",
+          "method": "Do",
+          "method_token": {
+            "start": 1682,
+            "end": 1684,
+            "sha256": "30094e0bec0046da8f925ebda9575f3d8377a75692436516260782fafd709a6f"
+          },
+          "shape": "unsupported-exact-client-version",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "unknown-client-adapter",
+          "keys": [],
+          "note": "Nearest nested module is v9.7.0; root v9.17.2 must not be inherited.",
+          "source_command_intent": "FT.INFO",
+          "vector_shape": "literal-command"
+        },
+        {
+          "id": "L104-Do",
+          "method": "Do",
+          "method_token": {
+            "start": 2252,
+            "end": 2254,
+            "sha256": "30094e0bec0046da8f925ebda9575f3d8377a75692436516260782fafd709a6f"
+          },
+          "shape": "unsupported-exact-client-version",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "unknown-client-adapter",
+          "keys": [],
+          "note": "Nearest nested module is v9.7.0; root v9.17.2 must not be inherited.",
+          "source_command_intent": "FT.CREATE",
+          "vector_shape": "same-file-array"
+        },
+        {
+          "id": "L109-Do",
+          "method": "Do",
+          "method_token": {
+            "start": 2414,
+            "end": 2416,
+            "sha256": "30094e0bec0046da8f925ebda9575f3d8377a75692436516260782fafd709a6f"
+          },
+          "shape": "unsupported-exact-client-version",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "unknown-client-adapter",
+          "keys": [],
+          "note": "Nearest nested module is v9.7.0; root v9.17.2 must not be inherited.",
+          "source_command_intent": "FT.INFO",
+          "vector_shape": "literal-command"
+        }
+      ]
+    },
+    {
+      "repository": "cloudwego/eino-examples",
+      "commit": "6dc0d214c0eb392babf2d001e9be85f57ac10952",
+      "source_path": "quickstart/eino_assistant/eino/einoagent/retriever.go",
+      "source_sha256": "9661281ad96e7859cacfda1feeff84a25249efa762eb63b6d94e236dbe718f65",
+      "source_bytes": 2429,
+      "population": "eino",
+      "module_path": "quickstart/eino_assistant/go.mod",
+      "module_sha256": "8bb522f291ce6510b7710a0d725e718fbbf6ed6ddcffe63b56c3f0842c10b769",
+      "actual_client": "github.com/redis/go-redis/v9",
+      "actual_version": "v9.7.0",
+      "sites": [
+        {
+          "id": "L76-NewRetriever",
+          "method": "NewRetriever",
+          "method_token": {
+            "start": 2346,
+            "end": 2358,
+            "sha256": "b3398368551cc0aaed9ec80c08fd2a8797fa785686517db78678b48fbe9c9f0e"
+          },
+          "shape": "unproved-client-library-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "note": "The redis identifier denotes an Eino extension package, not go-redis. No method-to-command or model-class implementation inferred."
+        }
+      ]
+    },
+    {
+      "repository": "cloudwego/eino-examples",
+      "commit": "6dc0d214c0eb392babf2d001e9be85f57ac10952",
+      "source_path": "quickstart/eino_assistant/eino/knowledgeindexing/indexer.go",
+      "source_sha256": "8cdada2ec79dce6a1c18c7ab0f95eabb2ab7909defbdb121151ed7b42ad9d2f0",
+      "source_bytes": 2333,
+      "population": "eino",
+      "module_path": "quickstart/eino_assistant/go.mod",
+      "module_sha256": "8bb522f291ce6510b7710a0d725e718fbbf6ed6ddcffe63b56c3f0842c10b769",
+      "actual_client": "github.com/redis/go-redis/v9",
+      "actual_version": "v9.7.0",
+      "sites": [
+        {
+          "id": "L81-NewIndexer",
+          "method": "NewIndexer",
+          "method_token": {
+            "start": 2252,
+            "end": 2262,
+            "sha256": "000ae9fbc33191e3d7965f8a982467d107a62f1f7a2e8b9ffd1414f1506ed36c"
+          },
+          "shape": "unproved-client-library-wrapper",
+          "expected_command": null,
+          "expected_command_recognized": false,
+          "expected_unresolved": "opaque-helper",
+          "keys": [],
+          "note": "The redis identifier denotes an Eino extension package, not go-redis. No method-to-command or model-class implementation inferred."
+        }
+      ]
+    }
+  ],
+  "denominators": {
+    "command_or_unresolved_sites": 99,
+    "admitted_core_api_sites": 37,
+    "opaque_script_wrapper_sites": 52,
+    "unknown_client_version_sites": 8,
+    "unproved_extension_wrapper_sites": 2,
+    "known_key_argument_expressions": 30,
+    "expected_resolved_key_expressions": 0,
+    "provable_access_mode_opportunities": 30,
+    "expected_mode_resolved": 30,
+    "expected_kind_opportunities": 30,
+    "expected_kind_known": 27,
+    "unknown_expected_kind": 3,
+    "explicit_script_key_passthrough_opportunities": 0,
+    "unmeasured_script_wrapper_sites": 52,
+    "uniquely_bindable_spelling_or_family_opportunities": 0
+  },
+  "recognizer_runs": 0,
+  "quality_qualification": "Source expectations only, not measured candidate success. Resolved access/kind describes the admitted command argument position even when its actual key bytes remain unproved; no concrete key usage fact is manufactured."
+}

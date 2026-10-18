@@ -12272,6 +12272,95 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   retry/no-op, publication, locks, caches, concurrency and children are unchanged.
   JavaScript delta is zero; the eight PNGs shrink 1,139 bytes collectively.
 
+- **2026-10-18 — T28.1 source/license preparation (Ben-routed Mac handoff).**
+  Before any recognizer runs, verify the frozen BSD Redis 7.2.15 COPYING blob
+  and command tree plus the pinned Asynq MIT and Eino Apache-2.0 licenses. Retain
+  392 core command JSONs, three public ACL safety fixtures and every scoped
+  application Go/module/sum file: 793 exact Git blobs / 3,600,148 source bytes,
+  with per-file SHA-256 and three compressed archives. No later Redis or module
+  implementation/metadata enters. Whole-file selection precedes recognition;
+  nested v9.7.0 client modules remain explicit unsupported-version populations
+  rather than inheriting the root v9.14.1/v9.17.2 adapter decision or disappearing.
+  Source-only labels, sampling, separate denominators and semantic decisions
+  remain pending; no parser, recognizer, quality or manifest GO result exists.
+  The isolated spike registers no production pack and adds no request, startup,
+  sync, retry/no-op, publication, shared lock, cache, worker, schema, persistent
+  data or child work. Preparation is bounded one-shot source/hash I/O only.
+
+- **2026-10-18 — T28.1 bounded Redis source-reader contract (Ben-routed Mac handoff).**
+  Accept the source-reviewed decision table and preregistration SHA256
+  `ad9f09d50f77a789dd5e9287ae8194ace2ca0d0937d2ac1e764656710893c518`:
+  seven complete purposive files contain99 independently labelled sites,
+  including37 exact-version core APIs,52 opaque script wrappers,8 unsupported
+  client-version sites and2 unproved extension wrappers. Thirty key expressions
+  have no proved spelling; mode/kind opportunities and unknowns stay separate.
+  Three ACL files supply7 principal/pattern pairs; credentials never become
+  facts or citations. Exact lexical/module/import/type/field identity and write,
+  shadow, escape and ambiguity refusals precede API admission. One bounded
+  metadata pass shares16,384 identities/8MiB, then indexed lookups use at most64
+  scope/ancestor probes. No SSA, client execution or server connection is added.
+  Native FT/TS evidence uses the closed engineering subset in
+  `spike/t281/native-subset.json`; complete vectors validate atomically before
+  any catalog delta. Core Redis7.2.15 metadata remains authoritative; unsupported
+  module/client/version cases abstain. Sixty inert controls plus2 admission
+  controls remain separate from public quality. Preserve the earlier source-only
+  draft in its exact archive; neither correction changes public labels or the43
+  original controls. Isolated implementation/scoring must bind its source before
+  first outcome, retain failures and compare two fresh bounded joined passes.
+  No production reader/pack, manifest adoption, quality or operating result is
+  granted. Runtime request/sync/startup/retry/publication/lock/cache/schema costs
+  remain unchanged; only the isolated finite source pass gains bounded parsing
+  and output work under the recorded30-second/1GiB-observed-RSS envelope.
+
+- **2026-10-18 — T28.1 isolated reader implementation checkpoint
+  (Ben-routed Mac backend handoff).** Root independently reviews13 files/
+  102,314B of stdlib-only nested-module reader, finite scorer and joined runner
+  against unchanged c525a50f source truth. The six supplemental native
+  projections match existing frozen inert fixtures; public labels and original
+  controls do not change. Prospective review corrects script-only predicates,
+  full manifest admission, module/version/scope echoes and atomic KEYNUM bounds
+  before any output. Exact candidate contract d9161c18 binds reviewed source
+  and tools. No build, test, parser prediction or scorer has run yet.
+
+  One supplementary inert boundary selftest precedes one offline build and two
+  fresh30s source-reader processes; first stops stay retained with no silent
+  retry. Credential scanning precedes publishing even failed child output.
+  Go source/AST is held one blob at a time through two passes; retained bounded
+  metadata and compressed prefix nodes replace per-key full-catalog scans.
+  Parent/source/output object overhead is separate; encoded4MiB blob bounds
+  follow allocation, and sampled1GiB direct-child RSS is not a hard heap or
+  aggregate family cap. This experiment adds no production query, sync, retry,
+  startup, publication, lock/cache/schema/worker or dependency. No Redis/client/
+  source application is executed or production manifest/registration adopted.
+
+- **2026-10-18 — T28.1 measured Redis spike; no production adoption
+  (Ben-routed Mac handoff).** The first offline build0.501s and two fresh
+  joined reader passes0.432/0.180s emit identical484,258B outputs at source
+  3c1305ad. All99 public labelled sites are present; three extra unresolved
+  zero-fact frontier rows (RDB wrapper ClusterKeySlot, miniredis.Run and
+  sync.Once.Do) prevent a site-census quality pass. Retain that failed finite
+  quality result without retuning source truth or predictions. Exact recognized
+  37commands,30position/access rows and27known/3unknown kinds match; spellings
+  and family opportunities remain unproved/unmeasured. All60 authored plus two
+  admission controls and seven ACL pairs pass; credential scans retain no
+  credential token, payload or unsafe output. Twelve result-manifest artifacts,
+  citations/censuses and deterministic outputs independently verify exact.
+
+  Current candidate/production adoption is NO-GO. Manifest design is
+  INCONCLUSIVE/DEFER with no authorization: both public native sites use an
+  unadmittedv9.7 adapter, so source-only dynamic DIM motivation does not meet
+  the frozen correctly-admitted-adapter measurement criterion. Object mapping
+  remains deferred. No pack, schema, loader, production dependency or reader
+  is added. The measured spike can close its stated AC without claiming
+  quality success or designing the next product. All children/groups joined;
+  scratch deletion followed join. Peak direct reader RSS13,369,344/12,926,976B
+  excludes parent/build-family overhead; wall/RSS are qualified and CPU remains
+  unmeasured. Original inputs/contract/first outcomes stay exact. Postmeasurement
+  lint-only equivalent source cleanup has separate hashes, without rescoring
+  public output or rewriting the original source binding. Production request,
+  sync, startup, retry/no-op, publication, lock/cache/schema and child cost is
+  unchanged; isolated evaluation costs remain in the retained outcome addendum.
+
 - **2026-10-18 — T26.1 immutable SQL spike inputs (Ben-routed Mac handoff).**
   Freeze `spike/t261/preregistration.json` SHA256
   `791585bd54e5a03ccdfbda033884229a48c2006e9ac822ad7265091605e962e9`
@@ -13332,3 +13421,29 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   ordinary production and request costs are unchanged. Source/labels/limits/
   deadlines/phase and production-signing holds remain exact; the next native
   result requires its own clean harness/execution binding and serial slot.
+
+- **2026-10-18 — T54.2b admit the real HTTP schema envelope
+  (Mac presentation handoff).** Pre-outcome T54.3 review confirms the pinned
+  Huma DefaultConfig injects top-level$schema metadata, also present in retained
+  real HTTP output. The new strict Impact guard accepted only product keys,
+  so it would reject the ordinary HTTP envelope despite synthetic fixture
+  checks. Admit only an optional bounded string$schema beside the existing
+  exact keys; keep unknown product fields and malformed/oversized metadata
+  rejected. A fetch-boundary control now includes the actual envelope field,
+  and the real Huma HTTP regression asserts its presence before typed decoding.
+  Eighty-three focused UI controls, type/lint, bounded HTTP0.790s, vet and pinned
+  lint pass. No extra request, source read, state, store/cache, lock, worker or
+  child follows; validation adds one constant bounded-string check. Prior
+  T54.2 receipts remain exact. A fresh UI/binary binding precedes the first
+  composed native run; no failed product attempt or release result is invented.
+
+- **2026-10-18 — T50.3 finite outcome and unsigned artifacts (Ben-routed Mac handoff).**
+  Preserve the first successful 39.450236s direct comparison matrix with exact
+  `bbb41b2c` binary/source/UI/tool bindings and all earlier stops. Five selected
+  syntax/heuristic sites, four supplied-unit rows, four outside-pair negatives,
+  HTTP/MCP/citations, 1280/390px interaction, two independent publication changes
+  and independent withdrawal pass; all owned groups/clients join. Retain exact
+  sampled resource limits and CPU/unsampled-peak caveats. Unsigned draft artifacts
+  do not activate a release; common-bar reconciliation and production signing
+  remain separate. This retention adds no request/sync/startup/retry/publication,
+  lock/cache/schema or child work.
