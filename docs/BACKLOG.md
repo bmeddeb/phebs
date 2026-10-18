@@ -18501,6 +18501,55 @@ tickets; prerequisites have no dependency cycle or unrelated all-packs gate;
 no runtime/default/status/UI/historical artifact changes; docs/glossary and
 whitespace pass. Cost: no new runtime work or resources.
 
+**T48.1 all-ticket execution inventory (2026-10-17, Ben-directed).** Ben's
+all-ticket request schedules the formerly unscheduled Epics 25–28 and routes
+implementation across tracks here. Each receiving backend ticket records its
+Mac handoff. The lead owns Git/spine edits; three isolated agent lanes plus the
+lead work independently, serializing expensive native/package/race execution.
+Preparation can consume an implemented supported identity before its production
+signature exists; it cannot activate that identity without the exact signature.
+The existing production key remains unavailable. This inventory supersedes
+stale sequencing text, not the actual historical evidence or owning merge bars.
+
+| Remaining ticket or leaf | Actual dependency and next observable outcome |
+|---|---|
+| T42.H2, after implemented a–g | Linux immutable-input capability/admission, isolated pressure/allocation/restore, prospective Linux plan and physical/cgroup admission; finite native proof requires that host |
+| T42.2o / T42.2v / T42.2 | H2 plus exact source/host/tool/freeze bindings and authorized complete execution; retain historical V5 failures and do not replay huge Darwin workloads |
+| T42.3 | Actual T42.2 receipt, then topology/posture and neutral closure; retired Workbench language cannot revive that product |
+| T45.7 current-host cohort / T45.10 | Existing implementation plus admitted compiler/offline installation, host privileges and installed generation/navigation/teardown proof |
+| T45.9 product-scale closure | Eligible 5,000-service/12-GB target and host; managed extraction-evidence STOP remains exact |
+| T45.10a presentation closure | Existing exact-profile validators plus applicable UI/browser/accessibility/receipt evidence; no installed-generation claim |
+| T47.5 | Implementation merged in PR #81; only production signing/release closure remains |
+| T48.5a | Repair raw evidence browser over current partitioned roots, authorization/final fences and legacy-compatible bytes |
+| T49.3 | Independent protobuf-only Atlas recipe admission and signed-selection isolation tests; no label dependency |
+| T49.4 | T49.3, integration-qualified protobuf artifacts and UI/HTTP/MCP closure; production signature remains separate |
+| T50.1 | Implemented T47 identity; freeze comparison contract and independently check exact source/unit gold cases |
+| T50.2 | T50.1, stable claim registration and two-side generation/cursor/citation admission |
+| T50.3 | T50.2 plus its own direct quality/operating result and production signature; Caller Map's result does not substitute |
+| T51.1 | T49.1 plus an explicitly supported committed SCIP/generator input and independent field-quality result; no managed-evidence dependency inferred |
+| T51.2 / T51.3 | T51.1, isolated field registration/source fences, then scoped validation/artifact/signature closure |
+| T52.1 / T52.2 | Released T49.2 plus separate Apache/thriftrw input/identity contracts and quality results; independent generator leaves |
+| T52.3 | Each selected generator's passing result, separate recipe admission and release; neither waits for the other |
+| T54.1 | Freeze a supported report shape and directly measure composed output; only its claimed caller/field/WIRE inputs are dependencies |
+| T54.2 / T54.3 | T54.1 plus admitted inputs actually consumed by that shape, then own result and signature |
+| T57R.3 | Pin operator catalog fixture paths and prove comparison from two checkout roots without weakening identity or pixel checks |
+| T58.2 / Thrift part of T58.3 | Prospective Thrift syntactic claim and independent identity/quality result; no gRPC result transfers |
+| T25.1 | Authenticated embedded docs, safe GFM rendering, local links and explicit excluded bytes; independent |
+| T26.1 | Freeze pinned SQL corpus/licenses, independent labels/sampling/denominators before parser comparison; spike only |
+| T27.1 | Freeze neutral schema/fixtures/labels and public CQL derivation before bounded reader; spike only |
+| T28.1 | Freeze pinned Redis metadata/corpus/licenses/labels/denominators before recognition; credential non-retention, spike only |
+
+T47.2b/T47.2s and T49.1b human rounds are optional research, not dependencies.
+T45.6's target gate is waived, not passed; it does not block T45.7/T45.10.
+T58's name-based gRPC release is closed as not releasable, with exact identity
+deferred to Caller Map; no new round or weakened claim is scheduled. Completed
+Epics 0–24, 29–41, 43–44, 46, 53, 55–57 and completed prerequisites above are
+not reopened by historical headings. T49.2's top-level-map typedef defect is
+already fixed. The focused neutral demo's missing v2 source-generation control
+remains a separate T45.8 diagnostic, not a screenshot-baseline defect. Each
+leaf is complete only against its own ACs; external inputs and missing release
+signatures stay visibly pending. No main merge or production release is implied.
+
 **T48.2 · Prospective signed release enforcement and stable recipe selection**
 *(first shared implementation; needs T48.1)* — implement the current
 design-only release boundary for fixed in-tree modules. PR-sized slices own
@@ -18804,6 +18853,15 @@ Gates: `internal/api` normally (10.8 s) and under race (58.4 s), and
 Remaining gap, not in scope: the evidence browser
 (`EvidenceRepositoryView`, `evidence.go`) still reads the latest legacy
 published run only.*
+
+**T48.5a · Exact partitioned raw evidence browser** *(scheduled 2026-10-17,
+Ben's all-ticket Mac handoff)* — close that raw-browser gap using existing
+exact source selection and locator readers. AC: current partitioned roots are
+visible; absent/stale/foreign roots never substitute approximate evidence;
+authorization precedes repository reads and a moved root refuses before response;
+preserve legacy-only response bytes, existing page bounds and denied-source
+behavior. Keep any additive API authority fields and generated clients aligned;
+focused real-root/read/final-fence tests and steady-state-cost review pass.
 
 ## Epic 49 · Contract Atlas and declaration production readiness
 
@@ -20063,6 +20121,14 @@ paths; same-root fresh-data checks therefore do not establish portability.
 Keep production identity, strict cohort checks, masks, zero retries and 0.1%
 tolerance intact. This receipt-tooling work requires no Caller Map/Atlas
 validation labels and does not promote a released claim.*
+
+**T57R.3 · Checkout-independent receipt catalog fixtures** *(scheduled
+2026-10-17, Ben's all-ticket request)* — implement the preceding portability
+follow-up in receipt tooling. AC: local and CI boot use identical fixed catalog
+paths; staging is fail closed; fresh runs from two checkout roots compare the
+same catalog authority and representative pixels. Review any changed canonical
+baselines without new masks, retries or tolerance changes. Production SourcePath
+identity and the separate focused pipeline remain intact.
 
 **T57R.1 · Inherited gate repairs** *(cross-cutting; found while landing Epic
 57)* — return `make docs-check`, repository-wide lint and

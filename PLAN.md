@@ -12151,3 +12151,28 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   production release pending; no replacement key, verifier exception, long
   rehearsal, accuracy or capacity claim follows. This adds documentation only
   and no runtime or build cost beyond the owning implementation records above.
+
+- **2026-10-17 — All-ticket dependency resolution and parallel implementation
+  (Ben-directed, T48.1 upkeep).** Ben requests completion of all remaining
+  tickets with as many independent agents as dependencies allow. This schedules
+  the previously unscheduled T25.1/T26.1/T27.1/T28.1 and routes implementation
+  across machine tracks here; receiving backend tickets record the Mac handoff.
+  The lead serializes Git and shared-spine edits, isolates agent worktrees and
+  assigns disjoint files; at most one expensive native/package/race workload
+  runs at a time. Three agent lanes plus the lead are the available concurrency.
+  Contract and registration preparation depends on implemented identities and
+  verified interfaces, not on possession of the production signing key.
+  Production activation still requires its exact signed record; the existing
+  unavailable Linux key remains pending, never replaced. Caller Map/Atlas use
+  bounded integration under their owning amendment; this does not waive other
+  products' independent quality/input gates or Linux-native scale admission.
+  Optional human-label research is not a product dependency. Preserve all
+  historical STOP, waived, failed and not-releasable outcomes; do not turn them
+  into passes or reopen the retired gRPC syntactic lookup/managed-evidence paths.
+  Number the two actual unnumbered defects T48.5a (partitioned raw evidence
+  browser) and T57R.3 (receipt catalog-root portability), reusing existing exact
+  readers and fixture staging respectively. The active execution/dependency
+  inventory lives in Epic 48 of BACKLOG and current ROADMAP; every leaf retains
+  its own acceptance, tests, cost review and PR. Main merges, production signing,
+  host entitlement and large execution remain subject to their existing explicit
+  authorization. This planning change adds no runtime work or resource cost.

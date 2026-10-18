@@ -133,6 +133,22 @@ resource/readiness admission remain open; no ceremony entry point is enabled.
 
 ## Current product posture
 
+**All-ticket execution (2026-10-17, Ben-directed):** resolve actual dependencies
+and finish remaining work using three isolated agent lanes plus the lead. The
+current inventory is the T48.1 all-ticket table in [BACKLOG.md](./BACKLOG.md).
+It schedules Epics 25–28 and records the Mac handoff for backend implementation.
+First wave: independent protobuf Atlas admission, receipt catalog portability
+(T57R.3), and the dependency audit; the completed audit lane then takes T25.1.
+The lead prepares T50.1 comparison contracts/gold cases and serializes spine/Git
+changes. Roll ready leaves forward as their interfaces and tests are verified.
+Production signing stays pending the existing unavailable key; it does not block
+contract/implementation preparation. Linux-native admission/execution, installed
+SCIP inputs and other products' independent quality results remain real gates.
+Optional Caller Map/Atlas labels, the waived T45.6 target gate, fixed Thrift
+typedef code and closed gRPC syntactic lookup are not new work dependencies.
+No historical failure is relabelled and no main merge, release or scale execution
+authorization is inferred. Expensive host tests run serially.
+
 **Caller Map / Atlas sequencing override (2026-10-17, Ben-directed):** bounded
 integration tests suffice for these products and their release bindings. The
 owning amendment at the start of Epic 47 in [BACKLOG.md](./BACKLOG.md) supersedes
