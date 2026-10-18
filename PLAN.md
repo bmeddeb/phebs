@@ -13672,3 +13672,15 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   No production source, schema/cache/lock, query/sync/startup/retry/publication or
   child work changes; observed direct reader peak RSS remains about80.4MB,
   without a hard-heap, aggregate compiler-family, CPU, host-capacity or SLO claim.
+
+- **2026-10-18 — T42.H2j prospective aggregate linux memory calculation (Mac preparation handoff).**
+  Prepare a pure bounded aggregate-memory calculation shared by prospective
+  T40/T42 Linux admission. Supplied physical/current-available bytes, complete
+  cgroup-v2 ancestor limits/current use and source-owned role/concurrency budgets
+  must fit effective capacity plus explicit headroom with checked arithmetic and
+  no swap credit. Supplied facts are not authenticated by this calculation. It
+  issues no execution authority and changes no active plan/sampler/launcher;
+  historical versions remain exact. Linear bounded vectors, constant scalar
+  result, no source/corpus read/hash, child, lock, store, cache, production query/
+  tick/startup/retry/publication work. Native observation, protected namespace,
+  isolated-volume geometry and new version wiring remain separate prerequisites.

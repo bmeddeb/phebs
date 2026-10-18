@@ -3941,6 +3941,18 @@ covered by `TestLinuxExternalDelegationProbeRefusesBeforeLaunching` and by the
 retained H2e observer tests. No `t421.test`, `go test` or SurrealDB process and
 no port-65499 listener survived the sequence.
 
+**T42.H2j · Prospective aggregate Linux memory calculation** *(2026-10-18, Ben all-ticket
+delegation; flagged Mac preparation handoff).*
+Add one pure bounded calculation over supplied physical/available bytes,
+complete cgroup-v2 ancestry and exact process-role/concurrency reservations.
+Reuse checked arithmetic; refuse unknown/overflow/overlap/missing coverage or
+capacity/headroom/slack excess, return zero on failure, count no swap. AC: small
+table controls cover equality/one-byte overflow, tighter ancestor, unlimited
+limits, malformed/duplicate/unknown ancestry, exhausted current slack and
+missing/overlapping reserves. No host reader, admission token, active plan,
+sampler limit or launcher changes; modeled inputs prove only the calculation.
+Actual host observation, new versions and complete admission remain downstream.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared
