@@ -1,0 +1,596 @@
+{
+  "schema": "phebs-t513-scoped-outcome-cost-v1",
+  "date": "2026-10-18",
+  "status": "finite_scoped_composition_pass_unsigned_release_drafts_pending_review",
+  "owner": "Ben Meddeb",
+  "handoff": "Ben-routed Mac backend handoff under all-ticket goal; production signing remains on the unavailable existing Linux key.",
+  "review_status": "Root accepted first finite result; new outcome/draft artifacts await final independent lead review. No independent-human/statistical review claimed.",
+  "retained_success": {
+    "path": "result-after-discovery-fix.json",
+    "digest": "sha256:184a8ac1a3a20e269161e6db094fcaec2784d475f2bd64efa390687d9173ad61",
+    "bytes": 110931,
+    "outcome": "passed_finite_field_composition_darwin_only_production_signing_pending"
+  },
+  "retained_execution_binding": {
+    "path": "after-discovery-execution-binding.json",
+    "digest": "sha256:64db281be4ae9ca7edb46ff531049d5db18960f640ca83ef60a206feba600c79",
+    "bytes": 9574
+  },
+  "implementation": {
+    "source_commit": "bbb41b2ccfb3f9b23653aabf41607185aec3efbe",
+    "source_tree": "ade4527a61c06801888eb6fa667b1ad075e5d826",
+    "binary_digest": "sha256:121c1d07999344166d8631e65a99b06476c1fa0251f8590d2c42dd7da6393481",
+    "harness_commit": "7d931eb4f73c146cb4e8ec74c2cad5b5c57337e8",
+    "plan_digest": "sha256:71f2d2df416332ed19cbeb8d337327e1e5d7f72593eaeed0e70f15fd169b3268",
+    "binding_digest": "sha256:64db281be4ae9ca7edb46ff531049d5db18960f640ca83ef60a206feba600c79"
+  },
+  "quality_scope": {
+    "native_queried_identities": 11,
+    "native_consumer_spans_expected": 14,
+    "native_consumer_spans_matched": 14,
+    "native_extra_wrong_duplicate_consumer_facts_within_queried_identities": 0,
+    "native_global_negative_field_recall": "NOT_MEASURED; only the11 preregistered positive field identities were queried. The56 negative source labels are prior T511 direct full-stream quality context, not a fresh native global negative census.",
+    "original_receipt_wording": "The immutable receipt retains quality.frozen_negative_sites=56 and false_positives=0. Read these through this narrower interpretation; no original receipt bytes are changed.",
+    "generated_unique_spans": 11,
+    "generated_quality_denominator": "Separate; exact source/version/span/role and duplicate checks only, no complete generated oracle or recall claim.",
+    "prior_T511_quality": {
+      "artifact": "spike/t511/result.json",
+      "digest": "sha256:e848bf4098fb4d3282dac6e88dea567ebd37a89a03aa35886f01cdb44db6d955",
+      "public": {
+        "positive": 14,
+        "matched": 14,
+        "negative": 56
+      },
+      "authored": {
+        "positive": 17,
+        "matched": 17,
+        "negative": 7,
+        "unsupported": 12
+      },
+      "qualification": "Prior direct extractor full-stream evaluation with independently reviewed source labels. The authored1.36.12/7.36.2 population does not expand the stable1.36.11/5.27.1 recipe. This native run is composition over reused public source, not a fresh independent population."
+    }
+  },
+  "source_population": {
+    "repository": "evaluation.local/t511-public",
+    "public_base_commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+    "public_transition_commit": "cd72bf6914988aed1974bd8bfcc744f4d08ccfd2",
+    "base_files": 8,
+    "base_source_bytes": 174204,
+    "transition_source_bytes": 174283,
+    "upstream_source_repository": "https://github.com/grpc/grpc-go",
+    "upstream_source_commit": "397e45edaa68f8763773bbaaf539cf7894169cd2",
+    "upstream_module_version": "google.golang.org/grpc v1.80.0",
+    "qualification": "Evaluation commits contain selected exact upstream source plus evaluator-prepared committed index/go.sum. They are not upstream history or generator execution attestations."
+  },
+  "surfaces": {
+    "http_and_mcp_field_endpoints": [
+      "find_proto_field_references",
+      "find_field_references"
+    ],
+    "object_endpoint_pairs": 22,
+    "warm_reads_per_object_endpoint": 5,
+    "immutable_http_proof_ids_verified": 22,
+    "anonymous_field_request": 401,
+    "withdrawn_field_http_statuses": [
+      404,
+      404
+    ],
+    "discovery_withdrawn": true,
+    "current_source_transports": [
+      "GET /api/source full immutable blob",
+      "MCP read_file full immutable blob"
+    ],
+    "blob_read_caveat": "One complete immutable blob per transport request by source-code contract; no instrumented source-open counter. Client hashes and slices exact atom ranges. No field range-citation endpoint is claimed.",
+    "mcp_semantics": "Exact fact projection, partial/withheld processing and absence eligibility false retained. No MCP proof-by-ID tool."
+  },
+  "publication_transition": {
+    "old_immutable_byte_identical": true,
+    "new_authority": {
+      "repository": "evaluation.local/t511-public",
+      "domain": "scip-proto-field",
+      "run_id": "b1056832a8fa16d43f5329277693759f",
+      "commit": "cd72bf6914988aed1974bd8bfcc744f4d08ccfd2",
+      "plan_digest": "sha256:de56f30dd4f4cf7e449ef33ba7d6274fe73bda9055f00bcd277f62c2d447150d",
+      "root_digest": "sha256:94ec176b13e509796db8dc2a24d7c7b7a02da12d010da343a90ecf004c7eb186"
+    },
+    "unchanged_consumer_truth": 14,
+    "additional_quality_denominator": 0,
+    "new_consumer_source_digest": "sha256:331805b0a45eabfd1206a7fac5e1d256a15a2a39da34577d3162fa2a12d971df",
+    "new_source_atom_slices": 2,
+    "qualification": "One prebound79-byte comment append, one ordinary authenticated webhook/fetch and current publication. No source/ref/index mutation during measurement; no semantic migration claim."
+  },
+  "operating": {
+    "host": {
+      "sysname": "Darwin",
+      "machine": "arm64",
+      "cpu_count": 10,
+      "physical_memory_bytes": 25769803776
+    },
+    "matrix_seconds_including_teardown": 23.872118833,
+    "bounds": {
+      "complete_native_seconds": 180,
+      "startup_seconds": 30,
+      "publication_seconds": 90,
+      "cold_request_seconds": 2,
+      "warm_request_seconds": 1,
+      "parallel_requests": 8,
+      "http_response_bytes": 1048576,
+      "process_tree_sampled_max_rss_bytes": 2147483648,
+      "minimum_available_physical_headroom_bytes": 4294967296,
+      "minimum_free_disk_bytes": 2147483648,
+      "derived_allocated_disk_bytes": 536870912,
+      "source_blobs_read_per_citation": 1,
+      "repositories": 1
+    },
+    "phases": [
+      {
+        "phase": "field-baseline",
+        "ready_seconds": 7.524,
+        "wall_seconds": 22.187,
+        "sampled_tree_rss_bytes": 236716032,
+        "sampled_descendants": 2,
+        "sampled_derived_allocated_bytes": 3362816,
+        "minimum_sampled_available_physical_bytes": 7385595904,
+        "rss_samples": 69,
+        "physical_samples": 14,
+        "terminal": {
+          "outcome": "success",
+          "exit_code": 0,
+          "teardown": "clean",
+          "wall_seconds": 22.187
+        },
+        "server_group_drained": true,
+        "ownership": {
+          "sampling_thread_joined": true,
+          "host_children": [
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            }
+          ],
+          "forced_sampling_cancellation": false,
+          "observer": {
+            "exit_code": 0,
+            "joined": true,
+            "forced": false
+          }
+        }
+      },
+      {
+        "phase": "field-withdrawn",
+        "ready_seconds": 1.297,
+        "wall_seconds": 1.662,
+        "sampled_tree_rss_bytes": 202489856,
+        "sampled_descendants": 1,
+        "sampled_derived_allocated_bytes": 3198976,
+        "minimum_sampled_available_physical_bytes": 7843610624,
+        "rss_samples": 1,
+        "physical_samples": 1,
+        "terminal": {
+          "outcome": "success",
+          "exit_code": 0,
+          "teardown": "clean",
+          "wall_seconds": 1.662
+        },
+        "server_group_drained": true,
+        "ownership": {
+          "sampling_thread_joined": true,
+          "host_children": [
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            }
+          ],
+          "forced_sampling_cancellation": false,
+          "observer": {
+            "exit_code": 0,
+            "joined": true,
+            "forced": false
+          }
+        }
+      }
+    ],
+    "whole_proof_concurrency_batches": [
+      {
+        "clients": 1,
+        "whole_proof_requests": 1,
+        "wall_seconds": 0.017108,
+        "requests_per_second": 58.453754399882214
+      },
+      {
+        "clients": 4,
+        "whole_proof_requests": 4,
+        "wall_seconds": 0.033511,
+        "requests_per_second": 119.3649771280234
+      },
+      {
+        "clients": 8,
+        "whole_proof_requests": 8,
+        "wall_seconds": 0.058885,
+        "requests_per_second": 135.85802836036325
+      }
+    ],
+    "http_observations": {
+      "/api/find_field_references": {
+        "requests": 73,
+        "status_counts": {
+          "200": 72,
+          "404": 1
+        },
+        "max_observed_seconds": 0.055193,
+        "max_response_bytes": 9226
+      },
+      "/api/find_proto_field_references": {
+        "requests": 130,
+        "status_counts": {
+          "200": 128,
+          "401": 1,
+          "404": 1
+        },
+        "max_observed_seconds": 0.058425,
+        "max_response_bytes": 9232
+      },
+      "/api/mcp": {
+        "requests": 27,
+        "status_counts": {
+          "200": 27
+        },
+        "max_observed_seconds": 0.030661,
+        "max_response_bytes": 61426
+      },
+      "/api/proof_bundles/pb_0bdc903f2a61008b5cf28d5acc71fa2fb3e9a90cc5210ecaf0b2dd0beadb2422": {
+        "requests": 1,
+        "status_counts": {
+          "200": 1
+        },
+        "max_observed_seconds": 0.000832,
+        "max_response_bytes": 7521
+      },
+      "/api/proof_bundles/pb_1788b0537978acb8a4938c5f8c28155e6dd7aaa553dd5a45bac71b9c29603d71": {
+        "requests": 1,
+        "status_counts": {
+          "200": 1
+        },
+        "max_observed_seconds": 0.000731,
+        "max_response_bytes": 5703
+      },
+      "/api/proof_bundles/pb_178a16ad8b84eed430c0d71ae13021161b4dead40279f73701bf02d577162095": {
+        "requests": 1,
+        "status_counts": {
+          "200": 1
+        },
+        "max_observed_seconds": 0.000958,
+        "max_response_bytes": 9226
+      },
+      "/api/proof_bundles/pb_199593fbf8374b7d9bd8c1fb0736099ef4ffde3386475e3a2386942bd85f0975": {
+        "requests": 1,
+        "status_counts": {
+          "200": 1
+        },
+        "max_observed_seconds": 0.000905,
+        "max_response_bytes": 9232
+      },
+      "/api/proof_bundles/pb_25d831441f202adae670019d41d147eb0b88f7ad00c0d83dd49b824fb825835a": {
+        "requests": 1,
+        "status_counts": {
+          "200": 1
+        },
+        "max_observed_seconds": 0.000857,
+        "max_response_bytes": 5701
+      },
+      "/api/proof_bundles/pb_26a55854285f8c4ad7fca9409473961155b5e7d22b4eba088773278cfc7799b8": {
+        "requests": 1,
+        "status_counts": {
+          "200": 1
+        },
+        "max_observed_seconds": 0.000833,
+        "max_response_bytes": 5706
+      },
+      "/api/proof_bundles/pb_482c52d71653d078443466784dbd4cf72614f1c261f8838b3bfc8822c13e8d46": {
+        "requests": 1,
+        "status_counts": {
+          "200": 1
+        },
+        "max_observed_seconds": 0.000796,
+        "max_response_bytes": 5709
+      },
+      "/api/proof_bundles/pb_5af80f59229d0d916f18806af09a35e3c3ac59021b220fa2dabf32da2a0c3723": {
+        "requests": 1,
+        "status_counts": {
+          "200": 1
+        },
+        "max_observed_seconds": 0.000829,
+        "max_response_bytes": 5701
+      },
+      "/api/proof_bundles/pb_656fb7f943b9f2fef240f96a61945fe557539e64c969057bf67a025997356ab5": {
+        "requests": 1,
+        "status_counts": {
+          "200": 1
+        },
+        "max_observed_seconds": 0.000743,
+        "max_response_bytes": 5705
+      },
+      "/api/proof_bundles/pb_7a01ed088beb080a65a09a1a82899ae99b667bfe3b7dec5798e3b6c1458f5714": {
+        "requests": 1,
+        "status_counts": {
+          "200": 1
+        },
+        "max_observed_seconds": 0.000862,
+        "max_response_bytes": 5794
+      },
+      "/api/proof_bundles/pb_9fdfea2e9e33ae4ca57d669889afbeece53c9b381c13af572fbb4b0b3ec1d5cc": {
+        "requests": 1,
+        "status_counts": {
+          "200": 1
+        },
+        "max_observed_seconds": 0.000822,
+        "max_response_bytes": 5693
+      },
+      "/api/proof_bundles/pb_a26dba939917e538f6762be3bd5c803bec64653597ef299049f9202e7491855d": {
+        "requests": 1,
+        "status_counts": {
+          "200": 1
+        },
+        "max_observed_seconds": 0.00095,
+        "max_response_bytes": 5699
+      },
+      "/api/proof_bundles/pb_a46af69262d978e544f02f1a3d3e0862b50d4d9459d7df700708d3dd940c81b3": {
+        "requests": 1,
+        "status_counts": {
+          "200": 1
+        },
+        "max_observed_seconds": 0.000761,
+        "max_response_bytes": 5699
+      },
+      "/api/proof_bundles/pb_a8677e096e7c35bc13303189ccad615f82066bba95f1e617da450008cee64faa": {
+        "requests": 2,
+        "status_counts": {
+          "200": 2
+        },
+        "max_observed_seconds": 0.001612,
+        "max_response_bytes": 7527
+      },
+      "/api/proof_bundles/pb_a940c04fd73214ab3d41e448549a5b70d05bcdd47498e57fc5a48ab55bc331cb": {
+        "requests": 1,
+        "status_counts": {
+          "200": 1
+        },
+        "max_observed_seconds": 0.000753,
+        "max_response_bytes": 5800
+      },
+      "/api/proof_bundles/pb_ae686aaeb825c84e044569014760bb71d956a485f2e4ebb76bbe0956fddd25e2": {
+        "requests": 1,
+        "status_counts": {
+          "200": 1
+        },
+        "max_observed_seconds": 0.0009,
+        "max_response_bytes": 5700
+      },
+      "/api/proof_bundles/pb_afdd16a5c08940ada6c35de888e224a32a955426361d77483b92f39cb4f7d9c0": {
+        "requests": 1,
+        "status_counts": {
+          "200": 1
+        },
+        "max_observed_seconds": 0.000818,
+        "max_response_bytes": 5692
+      },
+      "/api/proof_bundles/pb_ba78375d9aeb2e53e71a9af08c108e352aefaeab58a2934791e841ac32b69d9d": {
+        "requests": 1,
+        "status_counts": {
+          "200": 1
+        },
+        "max_observed_seconds": 0.000907,
+        "max_response_bytes": 5705
+      },
+      "/api/proof_bundles/pb_d149a67d21db22cca8f6dfe5e20293b94b6e4ccc51349a0b41b289e196fe6aa6": {
+        "requests": 1,
+        "status_counts": {
+          "200": 1
+        },
+        "max_observed_seconds": 0.001076,
+        "max_response_bytes": 7527
+      },
+      "/api/proof_bundles/pb_e71435b2ba4aed815459cef0ff7816453393f530d662322a35c5de14f7374690": {
+        "requests": 1,
+        "status_counts": {
+          "200": 1
+        },
+        "max_observed_seconds": 0.000847,
+        "max_response_bytes": 5698
+      },
+      "/api/proof_bundles/pb_eff76b3c0da1791cd59984f4ae9d3e3742c99929367d416e53528e0f0ce4575d": {
+        "requests": 1,
+        "status_counts": {
+          "200": 1
+        },
+        "max_observed_seconds": 0.000892,
+        "max_response_bytes": 5695
+      },
+      "/api/proof_bundles/pb_f6519594c087bacb6d3bfb64bfb1c0c5fabd269ddd578de859525a96029df18e": {
+        "requests": 1,
+        "status_counts": {
+          "200": 1
+        },
+        "max_observed_seconds": 0.000895,
+        "max_response_bytes": 5711
+      },
+      "/api/proof_bundles/pb_f8f1310fbc264f5515a7329710081bcdb6930895c71049f139ca99e56cc7d910": {
+        "requests": 1,
+        "status_counts": {
+          "200": 1
+        },
+        "max_observed_seconds": 0.000797,
+        "max_response_bytes": 5707
+      },
+      "/api/source": {
+        "requests": 2,
+        "status_counts": {
+          "200": 2
+        },
+        "max_observed_seconds": 0.036698,
+        "max_response_bytes": 5219
+      },
+      "/api/version": {
+        "requests": 2,
+        "status_counts": {
+          "200": 2
+        },
+        "max_observed_seconds": 0.001146,
+        "max_response_bytes": 162
+      },
+      "/api/webhook": {
+        "requests": 1,
+        "status_counts": {
+          "202": 1
+        },
+        "max_observed_seconds": 0.006323,
+        "max_response_bytes": 61
+      }
+    },
+    "http_request_count": 259,
+    "status_counts": {
+      "200": 255,
+      "401": 1,
+      "202": 1,
+      "404": 2
+    },
+    "measurement_qualification": "Sequential native observations after healthy HTTP only, every0.2s RSS and1s physical/disk. Startup and teardown included in global wall but not RSS sampling. Available physical=page_size*(free+inactive+speculative), no compressor/swap credit. Peaks are observed samples, not atomic/transient maxima or hard enforcement. CPU and parent/client memory unmeasured. Fixed1/4/8 batches are descriptive observations, not sustained rates/SLO. Cold means first successful object/endpoint response after publication probes; shared/process caches may already be warm.",
+    "headroom_preflight": {
+      "available_physical_bytes": 7459749888,
+      "page_size": 16384,
+      "pages": {
+        "free": 5826,
+        "inactive": 421518,
+        "speculative": 27963
+      },
+      "formula": "page_size*(free+inactive+speculative); compressor and swap excluded"
+    },
+    "free_disk_preflight_bytes": 223206133760
+  },
+  "steady_cost": {
+    "per_request": "Existing authorization, visible/current-source/version selection and bounded SQL point/page pre/page/post authority fences, filtered assertion/evidence reads, then canonical proof serialization/hash/persistence and final confirmation. Existing5000-assertion/20000-evidence bounds; no new full-root/corpus/source hash, scan, cache or lock from these records. General source opens read a complete immutable blob once per transport request; client source hashing/slicing is validation work.",
+    "sync_tick": "Existing source/candidate reconciliation and exact current-root reuse; no job/scan/child added by outcome or artifacts.",
+    "startup_restart": "Existing bounded signed-selection verification/recipe admission and source/version invalidation; this fixture added a disposable field-only selection and one withdrawal restart. No new persistent startup work.",
+    "retry_noop": "No retry performed. Existing same-generation/no-op behavior unchanged; source/expected-version mismatch remains unavailable and cannot become exact empty.",
+    "publication_transition": "Existing worker reads bounded committed root SCIP/generated/source inputs, publishes one complete field domain, and current readers fence old/new authority. Five selected metadata reads per captured publication, not a full result replay. Comment transition repeated existing extraction/publication once; no new lock/cache schema.",
+    "locks_cache_concurrency": "Production lock and cache behavior unchanged; at most8 finite client requests. One server/store lineage plus exact ordinary indexer children per phase, one persistent native observer and one owned vm_stat child at a time. All sampler/observer/server groups joined before deletion.",
+    "memory_disk_children": "Existing reader64MiB SCIP,100000documents,1000000occurrences,16KiBsymbol,4MiBproto and4MiBgenerated bounds, plus derived maps/AST/encoding overhead; these are input bounds, not global hard heap caps. Test response1MiB, sampled treeRSS2GiB, sampled derived512MiB, physical headroom4GiB, disk2GiB admission were not widened. Reported observed maxima exclude startup/teardown/transient peaks.",
+    "new_artifact_work": "Only retained byte copies and draft metadata/text; no production code/config/registry/dependency/status change."
+  },
+  "cleanup": {
+    "native_attempts_this_binding": 1,
+    "retries": 0,
+    "all_owned_children_joined": true,
+    "all_forced_flags": false,
+    "server_groups_drained": true,
+    "independent_post_join_group_absence": "os.killpg(pgid,0) returned ProcessLookupError for70893 and71003 after harness join.",
+    "private_scratch_removed_after_join": true,
+    "disposable_integration_key": "Removed before serving; no production key accessed or production signature produced."
+  },
+  "preserved": {
+    "protected_artifacts": {
+      "spike/t511/preregistration.json": "sha256:171f577d1a79f8c8e44325b92182fd7444fc827644bac8138bcce1103fe1ada0",
+      "spike/t511/source-labels.jsonl": "sha256:3988617e8ba5f9cf5218bd2bd67d1f921cbb2ed484a4d8d421b31fcff5c253c3",
+      "spike/t511/declarations.json": "sha256:c1964244656b6e95aaaa6bea77496e07934ffde59fc49493e81f6ed7a765cc73",
+      "spike/t511/committed-inputs.json": "sha256:694cb6c096fa4d8536e6ff61b042979eee4d02e8ffb87a7a47fe7de87c8240aa",
+      "spike/t511/result.json": "sha256:e848bf4098fb4d3282dac6e88dea567ebd37a89a03aa35886f01cdb44db6d955",
+      "spike/t513/planned-transition.json": "sha256:1d24d793e948f3eaffe9518ecdd0196144f7587c9604cf44740a17545e0b27fb",
+      "spike/t513/transition.bundle": "sha256:fce066909bccfc84b4037d50d2c39565b0d3c29d8f2f6cbfaa817942ae691887"
+    },
+    "original_plan_digest": "sha256:71f2d2df416332ed19cbeb8d337327e1e5d7f72593eaeed0e70f15fd169b3268",
+    "first_stop_digest": "sha256:7d328e8fc5e8fc748ff88011ed344b037fa078dab790ded71ffad846bdfd6ef0",
+    "source_corrected_http500_stop_digest": "sha256:5b9ed76f0e1596d2e548566f8fab3a9a02e1650d69d0aba15bce461b7aa05c66",
+    "labels_or_thresholds_changed": false,
+    "success_receipt_rewritten": false
+  },
+  "release": {
+    "artifact_directory": "release-drafts/",
+    "artifact_status": "DRAFT_UNSIGNED_NOT_ACTIVE",
+    "production_signature": false,
+    "production_record_or_selection_written": false,
+    "proposed_expiry": "2027-01-16T23:59:59Z",
+    "remaining": [
+      "Independent final review of claim/manifest/validation/common-bar reuse and owner/operations integration",
+      "Machine-derived complete artifact/implementation/tool census bound to actual release binary by existing release path",
+      "Existing production signing key available, exact signature verified, and deliberate operator installation; no unsigned activation"
+    ]
+  },
+  "not_established": [
+    "Production signature, production release or installed selection",
+    "Generalized extraction precision/recall or a new global negative field census",
+    "Semantic read/write, runtime use, complete inventory, safe removal, compatibility or migration completion",
+    "Automatic declaration-lineage to SCIP-package-family bridge",
+    "Managed/generated-at-runtime SCIP extraction authority",
+    "Thrift, Caller Map, caller comparison, consumer, Atlas, Impact, Kafka or WIRE admission",
+    "Dedicated field UI/browser claim",
+    "Sustained throughput, latency SLO, Linux capacity or scale",
+    "Cold process/cache benchmark, transient RSS peak, hard heap/physical-memory cap or CPU measurement"
+  ]
+}

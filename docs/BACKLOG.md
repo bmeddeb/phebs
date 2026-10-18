@@ -19494,6 +19494,17 @@ cleanup helpers and14 pure/mock controls pass. First detached-origin and later
 corrected-origin discovery HTTP500 stops remain exact. T51.3a repairs the latter;
 a fresh binary/binding and actual operating/artifact/signature closure remain.
 
+**T51.3 finite outcome (2026-10-18, Ben-routed Mac handoff).** A narrow
+prospective fresh-image amendment preserves original plan/source/label bytes.
+The reviewed `bbb41b2c` image passes in23.872118833s: eleven queried field
+identities/fourteen consumer spans, HTTP/MCP endpoints, immutable proof/source,
+publication and withdrawal. Zero extras is query-scoped; prior T51.1 full-stream
+negatives remain separate. Generated facts imply no recall or semantic write.
+All children join and scratch is removed. Exact receipt/binding, scoped outcome
+and unsigned drafts are retained in `spike/t513/`. Root and independent peer
+review find no artifact defect; common-bar evidence reconciliation and existing
+production key/signature remain separate.
+
 **T51.3a · Discovered-repository coverage repair** *(2026-10-18, complete;
 Ben-routed Mac backend handoff).* A first corrected-origin T51.3 run exposed an
 HTTP500 before the repository had an indexed commit. Shared coverage now reports

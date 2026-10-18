@@ -13447,3 +13447,16 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   do not activate a release; common-bar reconciliation and production signing
   remain separate. This retention adds no request/sync/startup/retry/publication,
   lock/cache/schema or child work.
+
+- **2026-10-18 — T51.3 finite field result (Ben-routed Mac handoff).**
+  Retain the original plan/labels and both prior stops unchanged. A prospective
+  exact fresh-image amendment admits the clean `bbb41b2c` image after discovery
+  repair. Its first corrected matrix passes in23.872118833s with eleven queried
+  identities/fourteen consumer spans, HTTP/MCP/proof/source, publication change
+  and withdrawal; all groups join and scratch is removed. Native zero extras
+  is query-scoped, distinct from previous full-stream negatives; generated facts
+  imply no recall or semantic write. Root and peer review retain exact unsigned
+  artifacts without production activation. The amendment adds bounded64KiB
+  local JSON/hash admission only; no production request/tick/startup/retry/
+  publication, lock/cache/schema or child work. Common-bar reconciliation and
+  the existing production signature remain separate.

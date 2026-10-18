@@ -1,0 +1,3000 @@
+{
+  "schema": "phebs-t513-finite-operating-v1",
+  "date": "2026-10-18",
+  "outcome": "passed_finite_field_composition_darwin_only_production_signing_pending",
+  "reads": [
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.010571,
+      "bytes": 1121,
+      "raw_digest": "sha256:eb3196f399f45e857679fd0d750a60b53829ca64b4cc566b59546810c51e9f4e"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.010941,
+      "bytes": 1121,
+      "raw_digest": "sha256:eb3196f399f45e857679fd0d750a60b53829ca64b4cc566b59546810c51e9f4e"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.010469,
+      "bytes": 1121,
+      "raw_digest": "sha256:eb3196f399f45e857679fd0d750a60b53829ca64b4cc566b59546810c51e9f4e"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.009867,
+      "bytes": 1121,
+      "raw_digest": "sha256:eb3196f399f45e857679fd0d750a60b53829ca64b4cc566b59546810c51e9f4e"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.012717,
+      "bytes": 1121,
+      "raw_digest": "sha256:eb3196f399f45e857679fd0d750a60b53829ca64b4cc566b59546810c51e9f4e"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.005386,
+      "bytes": 1438,
+      "raw_digest": "sha256:d977bae634a8824b630409963e174e5eedfd33079e20bb4e6d70bf5a8b7db201"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.009316,
+      "bytes": 1438,
+      "raw_digest": "sha256:d977bae634a8824b630409963e174e5eedfd33079e20bb4e6d70bf5a8b7db201"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.010401,
+      "bytes": 1498,
+      "raw_digest": "sha256:075dd9697cae76044061069a2a3b292c8c66e2ced31c78f2b6c22b44c6e23735"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.025455,
+      "bytes": 1498,
+      "raw_digest": "sha256:075dd9697cae76044061069a2a3b292c8c66e2ced31c78f2b6c22b44c6e23735"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.010982,
+      "bytes": 1498,
+      "raw_digest": "sha256:075dd9697cae76044061069a2a3b292c8c66e2ced31c78f2b6c22b44c6e23735"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.02324,
+      "bytes": 1498,
+      "raw_digest": "sha256:075dd9697cae76044061069a2a3b292c8c66e2ced31c78f2b6c22b44c6e23735"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.009533,
+      "bytes": 1498,
+      "raw_digest": "sha256:075dd9697cae76044061069a2a3b292c8c66e2ced31c78f2b6c22b44c6e23735"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.007431,
+      "bytes": 1498,
+      "raw_digest": "sha256:075dd9697cae76044061069a2a3b292c8c66e2ced31c78f2b6c22b44c6e23735"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.014007,
+      "bytes": 1498,
+      "raw_digest": "sha256:075dd9697cae76044061069a2a3b292c8c66e2ced31c78f2b6c22b44c6e23735"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.02288,
+      "bytes": 1498,
+      "raw_digest": "sha256:075dd9697cae76044061069a2a3b292c8c66e2ced31c78f2b6c22b44c6e23735"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.02146,
+      "bytes": 1498,
+      "raw_digest": "sha256:075dd9697cae76044061069a2a3b292c8c66e2ced31c78f2b6c22b44c6e23735"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.026784,
+      "bytes": 1498,
+      "raw_digest": "sha256:075dd9697cae76044061069a2a3b292c8c66e2ced31c78f2b6c22b44c6e23735"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.010393,
+      "bytes": 1498,
+      "raw_digest": "sha256:075dd9697cae76044061069a2a3b292c8c66e2ced31c78f2b6c22b44c6e23735"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.022494,
+      "bytes": 1498,
+      "raw_digest": "sha256:075dd9697cae76044061069a2a3b292c8c66e2ced31c78f2b6c22b44c6e23735"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.013449,
+      "bytes": 1662,
+      "raw_digest": "sha256:ff7d70f8bdacbf9f1298b5eff7720f61dc9c58e63c7808cff4b2a4a14f964984"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.02156,
+      "bytes": 1662,
+      "raw_digest": "sha256:ff7d70f8bdacbf9f1298b5eff7720f61dc9c58e63c7808cff4b2a4a14f964984"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.022065,
+      "bytes": 1662,
+      "raw_digest": "sha256:ff7d70f8bdacbf9f1298b5eff7720f61dc9c58e63c7808cff4b2a4a14f964984"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.019925,
+      "bytes": 1662,
+      "raw_digest": "sha256:ff7d70f8bdacbf9f1298b5eff7720f61dc9c58e63c7808cff4b2a4a14f964984"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.018058,
+      "bytes": 1662,
+      "raw_digest": "sha256:ff7d70f8bdacbf9f1298b5eff7720f61dc9c58e63c7808cff4b2a4a14f964984"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.022288,
+      "bytes": 1662,
+      "raw_digest": "sha256:ff7d70f8bdacbf9f1298b5eff7720f61dc9c58e63c7808cff4b2a4a14f964984"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.011352,
+      "bytes": 1662,
+      "raw_digest": "sha256:ff7d70f8bdacbf9f1298b5eff7720f61dc9c58e63c7808cff4b2a4a14f964984"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.038983,
+      "bytes": 7527,
+      "raw_digest": "sha256:b0b12bbb3eafe5fb7839082c8a3c0c32d18696207562f534810fe6d860f8b6b9"
+    },
+    {
+      "path": "/api/version",
+      "status": 200,
+      "seconds": 0.001081,
+      "bytes": 162,
+      "raw_digest": "sha256:268579a2a6f15753c52985dd745b313e41198197295d039a4812d093cb1d20cb"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.004808,
+      "bytes": 61426,
+      "raw_digest": "sha256:6483de387f4d7c33bfd558b1f106e340fd6e6a0fdcd38c77014eeb149fc97819"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 401,
+      "seconds": 0.000586,
+      "bytes": 36,
+      "raw_digest": "sha256:981ec6aa5b1d3cbd4bc50c6b4c98f877de8334eed519c19bd8463d78e03e8d5a"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.019974,
+      "bytes": 7527,
+      "raw_digest": "sha256:b0b12bbb3eafe5fb7839082c8a3c0c32d18696207562f534810fe6d860f8b6b9"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.017182,
+      "bytes": 15779,
+      "raw_digest": "sha256:563a4a7d384a0e36465de4a991c1c2426f4d6eb3b79872be1ed4fe641b25ca6a"
+    },
+    {
+      "path": "/api/proof_bundles/pb_a8677e096e7c35bc13303189ccad615f82066bba95f1e617da450008cee64faa",
+      "status": 200,
+      "seconds": 0.001079,
+      "bytes": 7527,
+      "raw_digest": "sha256:b0b12bbb3eafe5fb7839082c8a3c0c32d18696207562f534810fe6d860f8b6b9"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.013174,
+      "bytes": 7527,
+      "raw_digest": "sha256:b0b12bbb3eafe5fb7839082c8a3c0c32d18696207562f534810fe6d860f8b6b9"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.013421,
+      "bytes": 7527,
+      "raw_digest": "sha256:b0b12bbb3eafe5fb7839082c8a3c0c32d18696207562f534810fe6d860f8b6b9"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.016352,
+      "bytes": 7527,
+      "raw_digest": "sha256:b0b12bbb3eafe5fb7839082c8a3c0c32d18696207562f534810fe6d860f8b6b9"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.014985,
+      "bytes": 7527,
+      "raw_digest": "sha256:b0b12bbb3eafe5fb7839082c8a3c0c32d18696207562f534810fe6d860f8b6b9"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.013348,
+      "bytes": 7527,
+      "raw_digest": "sha256:b0b12bbb3eafe5fb7839082c8a3c0c32d18696207562f534810fe6d860f8b6b9"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.013849,
+      "bytes": 7521,
+      "raw_digest": "sha256:217d1c57a00a40cfbefff4d1462cdb9b7824481bd17cfc6a709b9102aa49c5d3"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.01347,
+      "bytes": 15787,
+      "raw_digest": "sha256:b1975dfa63a873eca1a4aada4594bb091d4c5004d8c0f317d5e00e64f83505ac"
+    },
+    {
+      "path": "/api/proof_bundles/pb_0bdc903f2a61008b5cf28d5acc71fa2fb3e9a90cc5210ecaf0b2dd0beadb2422",
+      "status": 200,
+      "seconds": 0.000832,
+      "bytes": 7521,
+      "raw_digest": "sha256:217d1c57a00a40cfbefff4d1462cdb9b7824481bd17cfc6a709b9102aa49c5d3"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.01297,
+      "bytes": 7521,
+      "raw_digest": "sha256:217d1c57a00a40cfbefff4d1462cdb9b7824481bd17cfc6a709b9102aa49c5d3"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.014048,
+      "bytes": 7521,
+      "raw_digest": "sha256:217d1c57a00a40cfbefff4d1462cdb9b7824481bd17cfc6a709b9102aa49c5d3"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.014131,
+      "bytes": 7521,
+      "raw_digest": "sha256:217d1c57a00a40cfbefff4d1462cdb9b7824481bd17cfc6a709b9102aa49c5d3"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.012678,
+      "bytes": 7521,
+      "raw_digest": "sha256:217d1c57a00a40cfbefff4d1462cdb9b7824481bd17cfc6a709b9102aa49c5d3"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.012422,
+      "bytes": 7521,
+      "raw_digest": "sha256:217d1c57a00a40cfbefff4d1462cdb9b7824481bd17cfc6a709b9102aa49c5d3"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.012373,
+      "bytes": 5800,
+      "raw_digest": "sha256:cc2c26ae5b28e7fcf10225a02b32422ed48d69d88a9ecee7c2ffec0817bfec9f"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.013178,
+      "bytes": 12267,
+      "raw_digest": "sha256:bc4a2c80ce22e36a253f9a8a17d71598d89b4a29bb14c2a35fbc7c45dec8e4c9"
+    },
+    {
+      "path": "/api/proof_bundles/pb_a940c04fd73214ab3d41e448549a5b70d05bcdd47498e57fc5a48ab55bc331cb",
+      "status": 200,
+      "seconds": 0.000753,
+      "bytes": 5800,
+      "raw_digest": "sha256:cc2c26ae5b28e7fcf10225a02b32422ed48d69d88a9ecee7c2ffec0817bfec9f"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.012958,
+      "bytes": 5800,
+      "raw_digest": "sha256:cc2c26ae5b28e7fcf10225a02b32422ed48d69d88a9ecee7c2ffec0817bfec9f"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.013139,
+      "bytes": 5800,
+      "raw_digest": "sha256:cc2c26ae5b28e7fcf10225a02b32422ed48d69d88a9ecee7c2ffec0817bfec9f"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.012392,
+      "bytes": 5800,
+      "raw_digest": "sha256:cc2c26ae5b28e7fcf10225a02b32422ed48d69d88a9ecee7c2ffec0817bfec9f"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.012528,
+      "bytes": 5800,
+      "raw_digest": "sha256:cc2c26ae5b28e7fcf10225a02b32422ed48d69d88a9ecee7c2ffec0817bfec9f"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.014423,
+      "bytes": 5800,
+      "raw_digest": "sha256:cc2c26ae5b28e7fcf10225a02b32422ed48d69d88a9ecee7c2ffec0817bfec9f"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.012989,
+      "bytes": 5794,
+      "raw_digest": "sha256:6f081db902dc3f148cb35695f8a06e8750af5949f2919f166e926d1e1ba0afb7"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.014947,
+      "bytes": 12275,
+      "raw_digest": "sha256:c9061318adafff53cc68535ae726200994f2d37f3f18f845198b2f9d335b29c1"
+    },
+    {
+      "path": "/api/proof_bundles/pb_7a01ed088beb080a65a09a1a82899ae99b667bfe3b7dec5798e3b6c1458f5714",
+      "status": 200,
+      "seconds": 0.000862,
+      "bytes": 5794,
+      "raw_digest": "sha256:6f081db902dc3f148cb35695f8a06e8750af5949f2919f166e926d1e1ba0afb7"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.01341,
+      "bytes": 5794,
+      "raw_digest": "sha256:6f081db902dc3f148cb35695f8a06e8750af5949f2919f166e926d1e1ba0afb7"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.01183,
+      "bytes": 5794,
+      "raw_digest": "sha256:6f081db902dc3f148cb35695f8a06e8750af5949f2919f166e926d1e1ba0afb7"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.012654,
+      "bytes": 5794,
+      "raw_digest": "sha256:6f081db902dc3f148cb35695f8a06e8750af5949f2919f166e926d1e1ba0afb7"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.013207,
+      "bytes": 5794,
+      "raw_digest": "sha256:6f081db902dc3f148cb35695f8a06e8750af5949f2919f166e926d1e1ba0afb7"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.013881,
+      "bytes": 5794,
+      "raw_digest": "sha256:6f081db902dc3f148cb35695f8a06e8750af5949f2919f166e926d1e1ba0afb7"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.012586,
+      "bytes": 5698,
+      "raw_digest": "sha256:68557f5fa1a53e8072cef0a14a7ff4dc32a5ab5a69e7023c357f30e058f611c6"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.012943,
+      "bytes": 12123,
+      "raw_digest": "sha256:103a3ac21dd6cea9584e71332c48b396e0db3010395d65aea8ead74af52fe6d8"
+    },
+    {
+      "path": "/api/proof_bundles/pb_e71435b2ba4aed815459cef0ff7816453393f530d662322a35c5de14f7374690",
+      "status": 200,
+      "seconds": 0.000847,
+      "bytes": 5698,
+      "raw_digest": "sha256:68557f5fa1a53e8072cef0a14a7ff4dc32a5ab5a69e7023c357f30e058f611c6"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.014006,
+      "bytes": 5698,
+      "raw_digest": "sha256:68557f5fa1a53e8072cef0a14a7ff4dc32a5ab5a69e7023c357f30e058f611c6"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.013454,
+      "bytes": 5698,
+      "raw_digest": "sha256:68557f5fa1a53e8072cef0a14a7ff4dc32a5ab5a69e7023c357f30e058f611c6"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.013449,
+      "bytes": 5698,
+      "raw_digest": "sha256:68557f5fa1a53e8072cef0a14a7ff4dc32a5ab5a69e7023c357f30e058f611c6"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.012743,
+      "bytes": 5698,
+      "raw_digest": "sha256:68557f5fa1a53e8072cef0a14a7ff4dc32a5ab5a69e7023c357f30e058f611c6"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.014016,
+      "bytes": 5698,
+      "raw_digest": "sha256:68557f5fa1a53e8072cef0a14a7ff4dc32a5ab5a69e7023c357f30e058f611c6"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.013659,
+      "bytes": 5692,
+      "raw_digest": "sha256:040c16cc31edb5c6a0570245422f409ebf9c5f2a1810f394e30101e26f68799b"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.015326,
+      "bytes": 12131,
+      "raw_digest": "sha256:38a7de686efcab95cca9377d2b606e853335b3103f1cc38538a91f1dd874f540"
+    },
+    {
+      "path": "/api/proof_bundles/pb_afdd16a5c08940ada6c35de888e224a32a955426361d77483b92f39cb4f7d9c0",
+      "status": 200,
+      "seconds": 0.000818,
+      "bytes": 5692,
+      "raw_digest": "sha256:040c16cc31edb5c6a0570245422f409ebf9c5f2a1810f394e30101e26f68799b"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.012781,
+      "bytes": 5692,
+      "raw_digest": "sha256:040c16cc31edb5c6a0570245422f409ebf9c5f2a1810f394e30101e26f68799b"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.012448,
+      "bytes": 5692,
+      "raw_digest": "sha256:040c16cc31edb5c6a0570245422f409ebf9c5f2a1810f394e30101e26f68799b"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.014218,
+      "bytes": 5692,
+      "raw_digest": "sha256:040c16cc31edb5c6a0570245422f409ebf9c5f2a1810f394e30101e26f68799b"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.013001,
+      "bytes": 5692,
+      "raw_digest": "sha256:040c16cc31edb5c6a0570245422f409ebf9c5f2a1810f394e30101e26f68799b"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.013857,
+      "bytes": 5692,
+      "raw_digest": "sha256:040c16cc31edb5c6a0570245422f409ebf9c5f2a1810f394e30101e26f68799b"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.01572,
+      "bytes": 9232,
+      "raw_digest": "sha256:1b1455aece935ee293e2c70ef0149835c036cc511d5b66c408f27e90d7da6ccf"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.018674,
+      "bytes": 19263,
+      "raw_digest": "sha256:2bccba19916990f4a1cc2a073fcef26afd1d43694e751263ff1c21e03c8fa96d"
+    },
+    {
+      "path": "/api/proof_bundles/pb_199593fbf8374b7d9bd8c1fb0736099ef4ffde3386475e3a2386942bd85f0975",
+      "status": 200,
+      "seconds": 0.000905,
+      "bytes": 9232,
+      "raw_digest": "sha256:1b1455aece935ee293e2c70ef0149835c036cc511d5b66c408f27e90d7da6ccf"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.015884,
+      "bytes": 9232,
+      "raw_digest": "sha256:1b1455aece935ee293e2c70ef0149835c036cc511d5b66c408f27e90d7da6ccf"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.014477,
+      "bytes": 9232,
+      "raw_digest": "sha256:1b1455aece935ee293e2c70ef0149835c036cc511d5b66c408f27e90d7da6ccf"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.015833,
+      "bytes": 9232,
+      "raw_digest": "sha256:1b1455aece935ee293e2c70ef0149835c036cc511d5b66c408f27e90d7da6ccf"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.016987,
+      "bytes": 9232,
+      "raw_digest": "sha256:1b1455aece935ee293e2c70ef0149835c036cc511d5b66c408f27e90d7da6ccf"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.016038,
+      "bytes": 9232,
+      "raw_digest": "sha256:1b1455aece935ee293e2c70ef0149835c036cc511d5b66c408f27e90d7da6ccf"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.01612,
+      "bytes": 9226,
+      "raw_digest": "sha256:55195e4f7308a2672df0cbd68f4ce30a75e1def94b29cac8e671f2083769bd6e"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.017651,
+      "bytes": 19271,
+      "raw_digest": "sha256:7681bfccd4dcf82769003747472b7854901744d5fd9d2b2bf7d98f9ac6b95e5a"
+    },
+    {
+      "path": "/api/proof_bundles/pb_178a16ad8b84eed430c0d71ae13021161b4dead40279f73701bf02d577162095",
+      "status": 200,
+      "seconds": 0.000958,
+      "bytes": 9226,
+      "raw_digest": "sha256:55195e4f7308a2672df0cbd68f4ce30a75e1def94b29cac8e671f2083769bd6e"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.016295,
+      "bytes": 9226,
+      "raw_digest": "sha256:55195e4f7308a2672df0cbd68f4ce30a75e1def94b29cac8e671f2083769bd6e"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.01577,
+      "bytes": 9226,
+      "raw_digest": "sha256:55195e4f7308a2672df0cbd68f4ce30a75e1def94b29cac8e671f2083769bd6e"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.017072,
+      "bytes": 9226,
+      "raw_digest": "sha256:55195e4f7308a2672df0cbd68f4ce30a75e1def94b29cac8e671f2083769bd6e"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.015756,
+      "bytes": 9226,
+      "raw_digest": "sha256:55195e4f7308a2672df0cbd68f4ce30a75e1def94b29cac8e671f2083769bd6e"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.016679,
+      "bytes": 9226,
+      "raw_digest": "sha256:55195e4f7308a2672df0cbd68f4ce30a75e1def94b29cac8e671f2083769bd6e"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.01421,
+      "bytes": 5706,
+      "raw_digest": "sha256:7ca3c7127c8696a613cef299978442051024cc4af0765ad4b75663988b3cfa9e"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.014464,
+      "bytes": 12123,
+      "raw_digest": "sha256:f5ee1a663cab716327a8742b8cc23aa4e45e536bbd154eb2e20162a9a8eb9b36"
+    },
+    {
+      "path": "/api/proof_bundles/pb_26a55854285f8c4ad7fca9409473961155b5e7d22b4eba088773278cfc7799b8",
+      "status": 200,
+      "seconds": 0.000833,
+      "bytes": 5706,
+      "raw_digest": "sha256:7ca3c7127c8696a613cef299978442051024cc4af0765ad4b75663988b3cfa9e"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.014761,
+      "bytes": 5706,
+      "raw_digest": "sha256:7ca3c7127c8696a613cef299978442051024cc4af0765ad4b75663988b3cfa9e"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.013466,
+      "bytes": 5706,
+      "raw_digest": "sha256:7ca3c7127c8696a613cef299978442051024cc4af0765ad4b75663988b3cfa9e"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.013751,
+      "bytes": 5706,
+      "raw_digest": "sha256:7ca3c7127c8696a613cef299978442051024cc4af0765ad4b75663988b3cfa9e"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.014198,
+      "bytes": 5706,
+      "raw_digest": "sha256:7ca3c7127c8696a613cef299978442051024cc4af0765ad4b75663988b3cfa9e"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.013237,
+      "bytes": 5706,
+      "raw_digest": "sha256:7ca3c7127c8696a613cef299978442051024cc4af0765ad4b75663988b3cfa9e"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.013279,
+      "bytes": 5700,
+      "raw_digest": "sha256:57549f61882c9fd409a63cf015af5b7f2fd71030bd6d6a7ee7915b7e2423f93b"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.013085,
+      "bytes": 12131,
+      "raw_digest": "sha256:4e6bdefabe9ffcd21c93df62e42e21edf2acdce55b34c35216b93fdc5ea052bc"
+    },
+    {
+      "path": "/api/proof_bundles/pb_ae686aaeb825c84e044569014760bb71d956a485f2e4ebb76bbe0956fddd25e2",
+      "status": 200,
+      "seconds": 0.0009,
+      "bytes": 5700,
+      "raw_digest": "sha256:57549f61882c9fd409a63cf015af5b7f2fd71030bd6d6a7ee7915b7e2423f93b"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.012728,
+      "bytes": 5700,
+      "raw_digest": "sha256:57549f61882c9fd409a63cf015af5b7f2fd71030bd6d6a7ee7915b7e2423f93b"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.013874,
+      "bytes": 5700,
+      "raw_digest": "sha256:57549f61882c9fd409a63cf015af5b7f2fd71030bd6d6a7ee7915b7e2423f93b"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.012729,
+      "bytes": 5700,
+      "raw_digest": "sha256:57549f61882c9fd409a63cf015af5b7f2fd71030bd6d6a7ee7915b7e2423f93b"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.013066,
+      "bytes": 5700,
+      "raw_digest": "sha256:57549f61882c9fd409a63cf015af5b7f2fd71030bd6d6a7ee7915b7e2423f93b"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.014087,
+      "bytes": 5700,
+      "raw_digest": "sha256:57549f61882c9fd409a63cf015af5b7f2fd71030bd6d6a7ee7915b7e2423f93b"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.013724,
+      "bytes": 5699,
+      "raw_digest": "sha256:3613a1a18e8d18054c5472e771868df84ce24d55317f04e8f075d316193c8b9b"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.013986,
+      "bytes": 12131,
+      "raw_digest": "sha256:61816c35e5440cb7b91d3d3a3355e365d8238c49e80bcb238ffefe76a0a2b498"
+    },
+    {
+      "path": "/api/proof_bundles/pb_a26dba939917e538f6762be3bd5c803bec64653597ef299049f9202e7491855d",
+      "status": 200,
+      "seconds": 0.00095,
+      "bytes": 5699,
+      "raw_digest": "sha256:3613a1a18e8d18054c5472e771868df84ce24d55317f04e8f075d316193c8b9b"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.013451,
+      "bytes": 5699,
+      "raw_digest": "sha256:3613a1a18e8d18054c5472e771868df84ce24d55317f04e8f075d316193c8b9b"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.013294,
+      "bytes": 5699,
+      "raw_digest": "sha256:3613a1a18e8d18054c5472e771868df84ce24d55317f04e8f075d316193c8b9b"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.012472,
+      "bytes": 5699,
+      "raw_digest": "sha256:3613a1a18e8d18054c5472e771868df84ce24d55317f04e8f075d316193c8b9b"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.013675,
+      "bytes": 5699,
+      "raw_digest": "sha256:3613a1a18e8d18054c5472e771868df84ce24d55317f04e8f075d316193c8b9b"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.013813,
+      "bytes": 5699,
+      "raw_digest": "sha256:3613a1a18e8d18054c5472e771868df84ce24d55317f04e8f075d316193c8b9b"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.013156,
+      "bytes": 5693,
+      "raw_digest": "sha256:b4cd0b2bc4eb3fdc899d70c0b15d351960648f1442fe610d173026d5e931437a"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.013236,
+      "bytes": 12139,
+      "raw_digest": "sha256:518d99fa8d66b05a266a7f93568b0e156c2f3d41512430e33e4417e258790bbc"
+    },
+    {
+      "path": "/api/proof_bundles/pb_9fdfea2e9e33ae4ca57d669889afbeece53c9b381c13af572fbb4b0b3ec1d5cc",
+      "status": 200,
+      "seconds": 0.000822,
+      "bytes": 5693,
+      "raw_digest": "sha256:b4cd0b2bc4eb3fdc899d70c0b15d351960648f1442fe610d173026d5e931437a"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.012727,
+      "bytes": 5693,
+      "raw_digest": "sha256:b4cd0b2bc4eb3fdc899d70c0b15d351960648f1442fe610d173026d5e931437a"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.012788,
+      "bytes": 5693,
+      "raw_digest": "sha256:b4cd0b2bc4eb3fdc899d70c0b15d351960648f1442fe610d173026d5e931437a"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.013652,
+      "bytes": 5693,
+      "raw_digest": "sha256:b4cd0b2bc4eb3fdc899d70c0b15d351960648f1442fe610d173026d5e931437a"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.01402,
+      "bytes": 5693,
+      "raw_digest": "sha256:b4cd0b2bc4eb3fdc899d70c0b15d351960648f1442fe610d173026d5e931437a"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.014085,
+      "bytes": 5693,
+      "raw_digest": "sha256:b4cd0b2bc4eb3fdc899d70c0b15d351960648f1442fe610d173026d5e931437a"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.013115,
+      "bytes": 5709,
+      "raw_digest": "sha256:2fd03854325872bc7b6c514ca86bfef0ccf1a800d9ab69c560eb8fe04c9f36bf"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.013542,
+      "bytes": 12131,
+      "raw_digest": "sha256:bee66b3c2db311c057976ac76fdaba4e788fe649fde7164b49fbf756364627ff"
+    },
+    {
+      "path": "/api/proof_bundles/pb_482c52d71653d078443466784dbd4cf72614f1c261f8838b3bfc8822c13e8d46",
+      "status": 200,
+      "seconds": 0.000796,
+      "bytes": 5709,
+      "raw_digest": "sha256:2fd03854325872bc7b6c514ca86bfef0ccf1a800d9ab69c560eb8fe04c9f36bf"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.012299,
+      "bytes": 5709,
+      "raw_digest": "sha256:2fd03854325872bc7b6c514ca86bfef0ccf1a800d9ab69c560eb8fe04c9f36bf"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.013586,
+      "bytes": 5709,
+      "raw_digest": "sha256:2fd03854325872bc7b6c514ca86bfef0ccf1a800d9ab69c560eb8fe04c9f36bf"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.012691,
+      "bytes": 5709,
+      "raw_digest": "sha256:2fd03854325872bc7b6c514ca86bfef0ccf1a800d9ab69c560eb8fe04c9f36bf"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.013137,
+      "bytes": 5709,
+      "raw_digest": "sha256:2fd03854325872bc7b6c514ca86bfef0ccf1a800d9ab69c560eb8fe04c9f36bf"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.013033,
+      "bytes": 5709,
+      "raw_digest": "sha256:2fd03854325872bc7b6c514ca86bfef0ccf1a800d9ab69c560eb8fe04c9f36bf"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.012963,
+      "bytes": 5703,
+      "raw_digest": "sha256:493d3e6439f0235fb499340992aa6d1e0ff38b49fa07432b72c90b3044dc1daa"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.012536,
+      "bytes": 12139,
+      "raw_digest": "sha256:0d0fb9cef78bc97a5a635b9a5dbc1e5932ddb56fcc9ca98e1fc60676efb18181"
+    },
+    {
+      "path": "/api/proof_bundles/pb_1788b0537978acb8a4938c5f8c28155e6dd7aaa553dd5a45bac71b9c29603d71",
+      "status": 200,
+      "seconds": 0.000731,
+      "bytes": 5703,
+      "raw_digest": "sha256:493d3e6439f0235fb499340992aa6d1e0ff38b49fa07432b72c90b3044dc1daa"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.0136,
+      "bytes": 5703,
+      "raw_digest": "sha256:493d3e6439f0235fb499340992aa6d1e0ff38b49fa07432b72c90b3044dc1daa"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.013998,
+      "bytes": 5703,
+      "raw_digest": "sha256:493d3e6439f0235fb499340992aa6d1e0ff38b49fa07432b72c90b3044dc1daa"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.013607,
+      "bytes": 5703,
+      "raw_digest": "sha256:493d3e6439f0235fb499340992aa6d1e0ff38b49fa07432b72c90b3044dc1daa"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.013395,
+      "bytes": 5703,
+      "raw_digest": "sha256:493d3e6439f0235fb499340992aa6d1e0ff38b49fa07432b72c90b3044dc1daa"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.014018,
+      "bytes": 5703,
+      "raw_digest": "sha256:493d3e6439f0235fb499340992aa6d1e0ff38b49fa07432b72c90b3044dc1daa"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.013085,
+      "bytes": 5711,
+      "raw_digest": "sha256:16e1de242bc1b1ed3d42c8021c8c211e9dd379b1501ce18b2adf39ed1f98a0ce"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.015295,
+      "bytes": 12131,
+      "raw_digest": "sha256:5f86087688b1e3e9422374bc921fb86f6eca2f2927841faee4ffa618f62222b4"
+    },
+    {
+      "path": "/api/proof_bundles/pb_f6519594c087bacb6d3bfb64bfb1c0c5fabd269ddd578de859525a96029df18e",
+      "status": 200,
+      "seconds": 0.000895,
+      "bytes": 5711,
+      "raw_digest": "sha256:16e1de242bc1b1ed3d42c8021c8c211e9dd379b1501ce18b2adf39ed1f98a0ce"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.013441,
+      "bytes": 5711,
+      "raw_digest": "sha256:16e1de242bc1b1ed3d42c8021c8c211e9dd379b1501ce18b2adf39ed1f98a0ce"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.013571,
+      "bytes": 5711,
+      "raw_digest": "sha256:16e1de242bc1b1ed3d42c8021c8c211e9dd379b1501ce18b2adf39ed1f98a0ce"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.014047,
+      "bytes": 5711,
+      "raw_digest": "sha256:16e1de242bc1b1ed3d42c8021c8c211e9dd379b1501ce18b2adf39ed1f98a0ce"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.014985,
+      "bytes": 5711,
+      "raw_digest": "sha256:16e1de242bc1b1ed3d42c8021c8c211e9dd379b1501ce18b2adf39ed1f98a0ce"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.013982,
+      "bytes": 5711,
+      "raw_digest": "sha256:16e1de242bc1b1ed3d42c8021c8c211e9dd379b1501ce18b2adf39ed1f98a0ce"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.014167,
+      "bytes": 5705,
+      "raw_digest": "sha256:bc139519e74c80c89374f78dbf573d219aff9d7557a45e45c549a70af569cb25"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.014167,
+      "bytes": 12139,
+      "raw_digest": "sha256:9d322a31867d4fdd5bd647052ff32f1a57b4a0a4be2ba9dfe0dcb77f0fca8b57"
+    },
+    {
+      "path": "/api/proof_bundles/pb_ba78375d9aeb2e53e71a9af08c108e352aefaeab58a2934791e841ac32b69d9d",
+      "status": 200,
+      "seconds": 0.000907,
+      "bytes": 5705,
+      "raw_digest": "sha256:bc139519e74c80c89374f78dbf573d219aff9d7557a45e45c549a70af569cb25"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.013308,
+      "bytes": 5705,
+      "raw_digest": "sha256:bc139519e74c80c89374f78dbf573d219aff9d7557a45e45c549a70af569cb25"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.013258,
+      "bytes": 5705,
+      "raw_digest": "sha256:bc139519e74c80c89374f78dbf573d219aff9d7557a45e45c549a70af569cb25"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.013498,
+      "bytes": 5705,
+      "raw_digest": "sha256:bc139519e74c80c89374f78dbf573d219aff9d7557a45e45c549a70af569cb25"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.013332,
+      "bytes": 5705,
+      "raw_digest": "sha256:bc139519e74c80c89374f78dbf573d219aff9d7557a45e45c549a70af569cb25"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.01376,
+      "bytes": 5705,
+      "raw_digest": "sha256:bc139519e74c80c89374f78dbf573d219aff9d7557a45e45c549a70af569cb25"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.012473,
+      "bytes": 5705,
+      "raw_digest": "sha256:0506853cd7bedf35420361b9a7b5f19760d396076b2e338af34dd9136d820163"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.012923,
+      "bytes": 12131,
+      "raw_digest": "sha256:a0806b5c2e2c6da120504c2f49fab289282f5fb657a065a85191cd147906eabc"
+    },
+    {
+      "path": "/api/proof_bundles/pb_656fb7f943b9f2fef240f96a61945fe557539e64c969057bf67a025997356ab5",
+      "status": 200,
+      "seconds": 0.000743,
+      "bytes": 5705,
+      "raw_digest": "sha256:0506853cd7bedf35420361b9a7b5f19760d396076b2e338af34dd9136d820163"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.013351,
+      "bytes": 5705,
+      "raw_digest": "sha256:0506853cd7bedf35420361b9a7b5f19760d396076b2e338af34dd9136d820163"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.013195,
+      "bytes": 5705,
+      "raw_digest": "sha256:0506853cd7bedf35420361b9a7b5f19760d396076b2e338af34dd9136d820163"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.012122,
+      "bytes": 5705,
+      "raw_digest": "sha256:0506853cd7bedf35420361b9a7b5f19760d396076b2e338af34dd9136d820163"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.012081,
+      "bytes": 5705,
+      "raw_digest": "sha256:0506853cd7bedf35420361b9a7b5f19760d396076b2e338af34dd9136d820163"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.013124,
+      "bytes": 5705,
+      "raw_digest": "sha256:0506853cd7bedf35420361b9a7b5f19760d396076b2e338af34dd9136d820163"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.012368,
+      "bytes": 5699,
+      "raw_digest": "sha256:9ef0ecae13b5b8b47285c286fc55101a351334b415ea99143f9c4900146352c2"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.013935,
+      "bytes": 12139,
+      "raw_digest": "sha256:f109686e170c7f0cd6c57b4a51a5ba78461459d3c78e13ff3cd5dfa842f08f88"
+    },
+    {
+      "path": "/api/proof_bundles/pb_a46af69262d978e544f02f1a3d3e0862b50d4d9459d7df700708d3dd940c81b3",
+      "status": 200,
+      "seconds": 0.000761,
+      "bytes": 5699,
+      "raw_digest": "sha256:9ef0ecae13b5b8b47285c286fc55101a351334b415ea99143f9c4900146352c2"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.013038,
+      "bytes": 5699,
+      "raw_digest": "sha256:9ef0ecae13b5b8b47285c286fc55101a351334b415ea99143f9c4900146352c2"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.01267,
+      "bytes": 5699,
+      "raw_digest": "sha256:9ef0ecae13b5b8b47285c286fc55101a351334b415ea99143f9c4900146352c2"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.013784,
+      "bytes": 5699,
+      "raw_digest": "sha256:9ef0ecae13b5b8b47285c286fc55101a351334b415ea99143f9c4900146352c2"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.013412,
+      "bytes": 5699,
+      "raw_digest": "sha256:9ef0ecae13b5b8b47285c286fc55101a351334b415ea99143f9c4900146352c2"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.012996,
+      "bytes": 5699,
+      "raw_digest": "sha256:9ef0ecae13b5b8b47285c286fc55101a351334b415ea99143f9c4900146352c2"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.012636,
+      "bytes": 5707,
+      "raw_digest": "sha256:f009322d2c898adb00bff6ea330917792bc14b0ac881ce28613a3b91e057c9e2"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.01278,
+      "bytes": 12131,
+      "raw_digest": "sha256:f6dae0e9b54fc28bcd3a36a48d85907b63e6752ed27e7bfd10fb7753a596a2ec"
+    },
+    {
+      "path": "/api/proof_bundles/pb_f8f1310fbc264f5515a7329710081bcdb6930895c71049f139ca99e56cc7d910",
+      "status": 200,
+      "seconds": 0.000797,
+      "bytes": 5707,
+      "raw_digest": "sha256:f009322d2c898adb00bff6ea330917792bc14b0ac881ce28613a3b91e057c9e2"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.013598,
+      "bytes": 5707,
+      "raw_digest": "sha256:f009322d2c898adb00bff6ea330917792bc14b0ac881ce28613a3b91e057c9e2"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.012923,
+      "bytes": 5707,
+      "raw_digest": "sha256:f009322d2c898adb00bff6ea330917792bc14b0ac881ce28613a3b91e057c9e2"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.012912,
+      "bytes": 5707,
+      "raw_digest": "sha256:f009322d2c898adb00bff6ea330917792bc14b0ac881ce28613a3b91e057c9e2"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.012684,
+      "bytes": 5707,
+      "raw_digest": "sha256:f009322d2c898adb00bff6ea330917792bc14b0ac881ce28613a3b91e057c9e2"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.01374,
+      "bytes": 5707,
+      "raw_digest": "sha256:f009322d2c898adb00bff6ea330917792bc14b0ac881ce28613a3b91e057c9e2"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.013771,
+      "bytes": 5701,
+      "raw_digest": "sha256:8eb3e1576f073ae6b7cec92dd97c2d886c84cef0525b5fa2d3bb6f33ae3872a0"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.013439,
+      "bytes": 12139,
+      "raw_digest": "sha256:94af89dbe38509d2d38a6210dba3577f64e6cf8047f956e1b06636f6503b1b1b"
+    },
+    {
+      "path": "/api/proof_bundles/pb_25d831441f202adae670019d41d147eb0b88f7ad00c0d83dd49b824fb825835a",
+      "status": 200,
+      "seconds": 0.000857,
+      "bytes": 5701,
+      "raw_digest": "sha256:8eb3e1576f073ae6b7cec92dd97c2d886c84cef0525b5fa2d3bb6f33ae3872a0"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.014096,
+      "bytes": 5701,
+      "raw_digest": "sha256:8eb3e1576f073ae6b7cec92dd97c2d886c84cef0525b5fa2d3bb6f33ae3872a0"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.014028,
+      "bytes": 5701,
+      "raw_digest": "sha256:8eb3e1576f073ae6b7cec92dd97c2d886c84cef0525b5fa2d3bb6f33ae3872a0"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.013557,
+      "bytes": 5701,
+      "raw_digest": "sha256:8eb3e1576f073ae6b7cec92dd97c2d886c84cef0525b5fa2d3bb6f33ae3872a0"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.01331,
+      "bytes": 5701,
+      "raw_digest": "sha256:8eb3e1576f073ae6b7cec92dd97c2d886c84cef0525b5fa2d3bb6f33ae3872a0"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.013621,
+      "bytes": 5701,
+      "raw_digest": "sha256:8eb3e1576f073ae6b7cec92dd97c2d886c84cef0525b5fa2d3bb6f33ae3872a0"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.014252,
+      "bytes": 5701,
+      "raw_digest": "sha256:8fd21dbcb12babc32fb7f4278bb547a890b3f2fe909dcb4bae537d256715efb5"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.014511,
+      "bytes": 12131,
+      "raw_digest": "sha256:a18c1d4b8f7075cb0a60372e6fbba8968141c5969ed2c28551b30a14b6443f12"
+    },
+    {
+      "path": "/api/proof_bundles/pb_5af80f59229d0d916f18806af09a35e3c3ac59021b220fa2dabf32da2a0c3723",
+      "status": 200,
+      "seconds": 0.000829,
+      "bytes": 5701,
+      "raw_digest": "sha256:8fd21dbcb12babc32fb7f4278bb547a890b3f2fe909dcb4bae537d256715efb5"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.01369,
+      "bytes": 5701,
+      "raw_digest": "sha256:8fd21dbcb12babc32fb7f4278bb547a890b3f2fe909dcb4bae537d256715efb5"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.01498,
+      "bytes": 5701,
+      "raw_digest": "sha256:8fd21dbcb12babc32fb7f4278bb547a890b3f2fe909dcb4bae537d256715efb5"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.013167,
+      "bytes": 5701,
+      "raw_digest": "sha256:8fd21dbcb12babc32fb7f4278bb547a890b3f2fe909dcb4bae537d256715efb5"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.013653,
+      "bytes": 5701,
+      "raw_digest": "sha256:8fd21dbcb12babc32fb7f4278bb547a890b3f2fe909dcb4bae537d256715efb5"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.012479,
+      "bytes": 5701,
+      "raw_digest": "sha256:8fd21dbcb12babc32fb7f4278bb547a890b3f2fe909dcb4bae537d256715efb5"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.013351,
+      "bytes": 5695,
+      "raw_digest": "sha256:8d78a25129885b371df558bba8895bbac993eae395995620930b0e5ca275dfcd"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.013514,
+      "bytes": 12139,
+      "raw_digest": "sha256:291f3e93c5241de270b7f385b9445ca229bbe454a0f789c1b84688f942aae339"
+    },
+    {
+      "path": "/api/proof_bundles/pb_eff76b3c0da1791cd59984f4ae9d3e3742c99929367d416e53528e0f0ce4575d",
+      "status": 200,
+      "seconds": 0.000892,
+      "bytes": 5695,
+      "raw_digest": "sha256:8d78a25129885b371df558bba8895bbac993eae395995620930b0e5ca275dfcd"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.01297,
+      "bytes": 5695,
+      "raw_digest": "sha256:8d78a25129885b371df558bba8895bbac993eae395995620930b0e5ca275dfcd"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.012908,
+      "bytes": 5695,
+      "raw_digest": "sha256:8d78a25129885b371df558bba8895bbac993eae395995620930b0e5ca275dfcd"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.013886,
+      "bytes": 5695,
+      "raw_digest": "sha256:8d78a25129885b371df558bba8895bbac993eae395995620930b0e5ca275dfcd"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.014122,
+      "bytes": 5695,
+      "raw_digest": "sha256:8d78a25129885b371df558bba8895bbac993eae395995620930b0e5ca275dfcd"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.012392,
+      "bytes": 5695,
+      "raw_digest": "sha256:8d78a25129885b371df558bba8895bbac993eae395995620930b0e5ca275dfcd"
+    },
+    {
+      "path": "/api/source",
+      "status": 200,
+      "seconds": 0.03116,
+      "bytes": 5138,
+      "raw_digest": "sha256:20ce25efb586dba16b56eb8d6c053395953d160d2de88057a36db023dd59da9b"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.029773,
+      "bytes": 10660,
+      "raw_digest": "sha256:1ef29dd905b8027a3a9db3b08a73d49221bde98559af5c9bec1697f4662b48f8"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.016357,
+      "bytes": 7527,
+      "raw_digest": "sha256:b0b12bbb3eafe5fb7839082c8a3c0c32d18696207562f534810fe6d860f8b6b9"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.023707,
+      "bytes": 5698,
+      "raw_digest": "sha256:68557f5fa1a53e8072cef0a14a7ff4dc32a5ab5a69e7023c357f30e058f611c6"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.025358,
+      "bytes": 5794,
+      "raw_digest": "sha256:6f081db902dc3f148cb35695f8a06e8750af5949f2919f166e926d1e1ba0afb7"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.029602,
+      "bytes": 7527,
+      "raw_digest": "sha256:b0b12bbb3eafe5fb7839082c8a3c0c32d18696207562f534810fe6d860f8b6b9"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.032638,
+      "bytes": 9226,
+      "raw_digest": "sha256:55195e4f7308a2672df0cbd68f4ce30a75e1def94b29cac8e671f2083769bd6e"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.041839,
+      "bytes": 5698,
+      "raw_digest": "sha256:68557f5fa1a53e8072cef0a14a7ff4dc32a5ab5a69e7023c357f30e058f611c6"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.044224,
+      "bytes": 5794,
+      "raw_digest": "sha256:6f081db902dc3f148cb35695f8a06e8750af5949f2919f166e926d1e1ba0afb7"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.043826,
+      "bytes": 5705,
+      "raw_digest": "sha256:bc139519e74c80c89374f78dbf573d219aff9d7557a45e45c549a70af569cb25"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.048067,
+      "bytes": 5693,
+      "raw_digest": "sha256:b4cd0b2bc4eb3fdc899d70c0b15d351960648f1442fe610d173026d5e931437a"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.054615,
+      "bytes": 5706,
+      "raw_digest": "sha256:7ca3c7127c8696a613cef299978442051024cc4af0765ad4b75663988b3cfa9e"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.054755,
+      "bytes": 5709,
+      "raw_digest": "sha256:2fd03854325872bc7b6c514ca86bfef0ccf1a800d9ab69c560eb8fe04c9f36bf"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 200,
+      "seconds": 0.055193,
+      "bytes": 9226,
+      "raw_digest": "sha256:55195e4f7308a2672df0cbd68f4ce30a75e1def94b29cac8e671f2083769bd6e"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.058425,
+      "bytes": 7527,
+      "raw_digest": "sha256:b0b12bbb3eafe5fb7839082c8a3c0c32d18696207562f534810fe6d860f8b6b9"
+    },
+    {
+      "path": "/api/webhook",
+      "status": 202,
+      "seconds": 0.006323,
+      "bytes": 61,
+      "raw_digest": "sha256:35e095017b7330c854175c7b9870e3614984aad6b1f33ad1583ef9a974760ec3"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.013628,
+      "bytes": 7527,
+      "raw_digest": "sha256:b0b12bbb3eafe5fb7839082c8a3c0c32d18696207562f534810fe6d860f8b6b9"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.017529,
+      "bytes": 7527,
+      "raw_digest": "sha256:b0b12bbb3eafe5fb7839082c8a3c0c32d18696207562f534810fe6d860f8b6b9"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.039941,
+      "bytes": 7527,
+      "raw_digest": "sha256:b0b12bbb3eafe5fb7839082c8a3c0c32d18696207562f534810fe6d860f8b6b9"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.01036,
+      "bytes": 1498,
+      "raw_digest": "sha256:a2df0cfa00feaae9092597a147cd9d6716a069705ae050ea30f5d05a6d28d654"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.01137,
+      "bytes": 1498,
+      "raw_digest": "sha256:a2df0cfa00feaae9092597a147cd9d6716a069705ae050ea30f5d05a6d28d654"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.026035,
+      "bytes": 1498,
+      "raw_digest": "sha256:a2df0cfa00feaae9092597a147cd9d6716a069705ae050ea30f5d05a6d28d654"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.016852,
+      "bytes": 1498,
+      "raw_digest": "sha256:a2df0cfa00feaae9092597a147cd9d6716a069705ae050ea30f5d05a6d28d654"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.023536,
+      "bytes": 1498,
+      "raw_digest": "sha256:a2df0cfa00feaae9092597a147cd9d6716a069705ae050ea30f5d05a6d28d654"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.019423,
+      "bytes": 1498,
+      "raw_digest": "sha256:a2df0cfa00feaae9092597a147cd9d6716a069705ae050ea30f5d05a6d28d654"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.025547,
+      "bytes": 1662,
+      "raw_digest": "sha256:e9939831466ec9cb29fbaa1c178f2dd742f431f8e9a1b0b599328139f76a3d5f"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.022332,
+      "bytes": 1662,
+      "raw_digest": "sha256:e9939831466ec9cb29fbaa1c178f2dd742f431f8e9a1b0b599328139f76a3d5f"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.023893,
+      "bytes": 1662,
+      "raw_digest": "sha256:e9939831466ec9cb29fbaa1c178f2dd742f431f8e9a1b0b599328139f76a3d5f"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.021833,
+      "bytes": 1662,
+      "raw_digest": "sha256:e9939831466ec9cb29fbaa1c178f2dd742f431f8e9a1b0b599328139f76a3d5f"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.021761,
+      "bytes": 1662,
+      "raw_digest": "sha256:e9939831466ec9cb29fbaa1c178f2dd742f431f8e9a1b0b599328139f76a3d5f"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.017967,
+      "bytes": 1662,
+      "raw_digest": "sha256:e9939831466ec9cb29fbaa1c178f2dd742f431f8e9a1b0b599328139f76a3d5f"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.015358,
+      "bytes": 1662,
+      "raw_digest": "sha256:e9939831466ec9cb29fbaa1c178f2dd742f431f8e9a1b0b599328139f76a3d5f"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.033773,
+      "bytes": 7527,
+      "raw_digest": "sha256:3f7528e09010cee7a4516eb938618973b0dc2129fec60277a6adec634d772afb"
+    },
+    {
+      "path": "/api/proof_bundles/pb_a8677e096e7c35bc13303189ccad615f82066bba95f1e617da450008cee64faa",
+      "status": 200,
+      "seconds": 0.001612,
+      "bytes": 7527,
+      "raw_digest": "sha256:b0b12bbb3eafe5fb7839082c8a3c0c32d18696207562f534810fe6d860f8b6b9"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.019446,
+      "bytes": 15779,
+      "raw_digest": "sha256:3c0c6d08e2c119f823fc6c7969b5ad769023345697ec2557bafb5da33cc6dc67"
+    },
+    {
+      "path": "/api/proof_bundles/pb_d149a67d21db22cca8f6dfe5e20293b94b6e4ccc51349a0b41b289e196fe6aa6",
+      "status": 200,
+      "seconds": 0.001076,
+      "bytes": 7527,
+      "raw_digest": "sha256:3f7528e09010cee7a4516eb938618973b0dc2129fec60277a6adec634d772afb"
+    },
+    {
+      "path": "/api/source",
+      "status": 200,
+      "seconds": 0.036698,
+      "bytes": 5219,
+      "raw_digest": "sha256:ba408ab138f339ab60e01afd731dc163a5c7fc5d5538501aca57818d18491fcb"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.030661,
+      "bytes": 10824,
+      "raw_digest": "sha256:f9f17332113a05f7b2d9ba079e8cacc2b0e66ed38c61ab0a4e34fa45efc2b6cc"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.015909,
+      "bytes": 7527,
+      "raw_digest": "sha256:3f7528e09010cee7a4516eb938618973b0dc2129fec60277a6adec634d772afb"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.013342,
+      "bytes": 5800,
+      "raw_digest": "sha256:c5ee5a132512cda361ad83d7f353c4acbe73da40782ddfb7c2065eedfcfb0534"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.012778,
+      "bytes": 5698,
+      "raw_digest": "sha256:a12dd7de5248f66be89b50b945b244989cf89fb1908214d1e7f12df736a9908a"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.016354,
+      "bytes": 9232,
+      "raw_digest": "sha256:3398f71b89af98bda6339b551a377f50c5a80598a94ca1be2804a2944c449734"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.012788,
+      "bytes": 5706,
+      "raw_digest": "sha256:011445214d9e9c8dc526956147d115ac0e3ad65164863cb1257cb67697ca0458"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.014024,
+      "bytes": 5699,
+      "raw_digest": "sha256:d396b9f09314600689aafcbdf783ea10e72b0e6a06ed5e91cd339295fc6af4e2"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.012757,
+      "bytes": 5709,
+      "raw_digest": "sha256:b2700ecee3f08c603c4736d80c3efe5c24ec6dc1a538c98b3ca7f01b9043d111"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.014404,
+      "bytes": 5711,
+      "raw_digest": "sha256:28b910f30597fd0ad655e4517cfac164f6a4bb205378ec5cee590e748853a1ec"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.013651,
+      "bytes": 5705,
+      "raw_digest": "sha256:6ab2c901377ed4956d1470dc979fbec6a36457f22cb66a21fbd5e6a846e6684c"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.012885,
+      "bytes": 5707,
+      "raw_digest": "sha256:a78d667d839b8818d29a3b4b5019132d7c498ee2bf82a6985374ef890a55ac2b"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 200,
+      "seconds": 0.014195,
+      "bytes": 5701,
+      "raw_digest": "sha256:d0c0d772142a111488403b58937f3d266eb70d36ede8198ddbeeb7a62136c35f"
+    },
+    {
+      "path": "/api/version",
+      "status": 200,
+      "seconds": 0.001146,
+      "bytes": 134,
+      "raw_digest": "sha256:ee87da1ba883f579b972afc3df55e6f9fbdc646d09e1b4e2397eadd1ac82053d"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.002775,
+      "bytes": 31077,
+      "raw_digest": "sha256:8efdae7748a8c65523340ec3c2a82408d69e681ee81b01f23a8cdaf8d3b6c1ce"
+    },
+    {
+      "path": "/api/find_proto_field_references",
+      "status": 404,
+      "seconds": 0.000551,
+      "bytes": 19,
+      "raw_digest": "sha256:b16e15764b8bc06c5c3f9f19bc8b99fa48e7894aa5a6ccdad65da49bbf564793"
+    },
+    {
+      "path": "/api/find_field_references",
+      "status": 404,
+      "seconds": 0.000508,
+      "bytes": 19,
+      "raw_digest": "sha256:b16e15764b8bc06c5c3f9f19bc8b99fa48e7894aa5a6ccdad65da49bbf564793"
+    }
+  ],
+  "phases": [
+    {
+      "phase": "field-baseline",
+      "ready_seconds": 7.524,
+      "operating": {
+        "rss_samples": 69,
+        "sampled_max_tree_rss_bytes": 236716032,
+        "sampled_max_descendants": 2,
+        "minimum_available_physical_bytes": 7385595904,
+        "physical_samples": 14,
+        "physical_formula": "page_size*(free+inactive+speculative); compressor and swap excluded",
+        "sampled_max_data_allocated_bytes": 3362816,
+        "rss_cadence_seconds": 0.2,
+        "host_disk_cadence_seconds": 1,
+        "qualification": "Sequential native samples after HTTP readiness; not an atomic tree snapshot, transient peak or hard enforcement. Startup before HTTP readiness and teardown are not RSS-sampled. No swap credit.",
+        "ownership": {
+          "sampling_thread_joined": true,
+          "host_children": [
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            }
+          ],
+          "forced_sampling_cancellation": false,
+          "observer": {
+            "exit_code": 0,
+            "joined": true,
+            "forced": false
+          }
+        }
+      },
+      "terminal": {
+        "outcome": "success",
+        "exit_code": 0,
+        "teardown": "clean",
+        "wall_seconds": 22.187
+      },
+      "owned_pgid": 70893,
+      "server_group_drained": true
+    },
+    {
+      "phase": "field-withdrawn",
+      "ready_seconds": 1.297,
+      "operating": {
+        "rss_samples": 1,
+        "sampled_max_tree_rss_bytes": 202489856,
+        "sampled_max_descendants": 1,
+        "minimum_available_physical_bytes": 7843610624,
+        "physical_samples": 1,
+        "physical_formula": "page_size*(free+inactive+speculative); compressor and swap excluded",
+        "sampled_max_data_allocated_bytes": 3198976,
+        "rss_cadence_seconds": 0.2,
+        "host_disk_cadence_seconds": 1,
+        "qualification": "Sequential native samples after HTTP readiness; not an atomic tree snapshot, transient peak or hard enforcement. Startup before HTTP readiness and teardown are not RSS-sampled. No swap credit.",
+        "ownership": {
+          "sampling_thread_joined": true,
+          "host_children": [
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            }
+          ],
+          "forced_sampling_cancellation": false,
+          "observer": {
+            "exit_code": 0,
+            "joined": true,
+            "forced": false
+          }
+        }
+      },
+      "terminal": {
+        "outcome": "success",
+        "exit_code": 0,
+        "teardown": "clean",
+        "wall_seconds": 1.662
+      },
+      "owned_pgid": 71003,
+      "server_group_drained": true
+    }
+  ],
+  "production_signing": "pending; no production key or production signature",
+  "qualification": "Finite selected public source conformance and measured Darwin local envelope only; production signing pending. No dedicated field UI/browser claim.",
+  "host": {
+    "sysname": "Darwin",
+    "machine": "arm64",
+    "cpu_count": 10,
+    "physical_memory_bytes": 25769803776
+  },
+  "headroom_preflight": {
+    "available_physical_bytes": 7459749888,
+    "page_size": 16384,
+    "pages": {
+      "free": 5826,
+      "inactive": 421518,
+      "speculative": 27963
+    },
+    "formula": "page_size*(free+inactive+speculative); compressor and swap excluded"
+  },
+  "free_disk_preflight_bytes": 223206133760,
+  "bounds": {
+    "complete_native_seconds": 180,
+    "startup_seconds": 30,
+    "publication_seconds": 90,
+    "cold_request_seconds": 2,
+    "warm_request_seconds": 1,
+    "parallel_requests": 8,
+    "http_response_bytes": 1048576,
+    "process_tree_sampled_max_rss_bytes": 2147483648,
+    "minimum_available_physical_headroom_bytes": 4294967296,
+    "minimum_free_disk_bytes": 2147483648,
+    "derived_allocated_disk_bytes": 536870912,
+    "source_blobs_read_per_citation": 1,
+    "repositories": 1
+  },
+  "input_censuses": [
+    {
+      "commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+      "tree": "ae63dc5eac24e67584f5024ac14d7bb0e7ba76e8",
+      "files": 8,
+      "bytes": 174204,
+      "census_digest": "sha256:1ffee62e455e0e893671f5ad51fa1f2130b0af850f5eae878bab066536d15d6c"
+    },
+    {
+      "commit": "cd72bf6914988aed1974bd8bfcc744f4d08ccfd2",
+      "tree": "b4d6c7366ce97329bd87a8b81be50e94ffd917f7",
+      "files": 8,
+      "bytes": 174283,
+      "census_digest": "sha256:d8621c99cb7995625778763999fc528aba881f82347a7cb12e6c7df31cf8ba3a"
+    }
+  ],
+  "plan_digest": "sha256:71f2d2df416332ed19cbeb8d337327e1e5d7f72593eaeed0e70f15fd169b3268",
+  "binding_digest": "sha256:64db281be4ae9ca7edb46ff531049d5db18960f640ca83ef60a206feba600c79",
+  "source_commit": "bbb41b2ccfb3f9b23653aabf41607185aec3efbe",
+  "binary_metadata": "/tmp/phebs-main-bbb41b2c-native-qualification/phebs: go1.26.5\n\tpath\tgithub.com/bmeddeb/phebs/cmd/phebs\n\tmod\tgithub.com/bmeddeb/phebs\tv0.2.1-0.20261018140456-bbb41b2ccfb3\t\n\tdep\tgithub.com/RoaringBitmap/roaring/v2\tv2.19.0\th1:zsWtVE+biht4eVl0YDLvykUqGkftR3Qc5UCbeKB4UQ4=\n\tdep\tgithub.com/alexedwards/scs/v2\tv2.9.0\th1:xa05mVpwTBm1iLeTMNFfAWpKUm4fXAW7CeAViqBVS90=\n\tdep\tgithub.com/beorn7/perks\tv1.0.1\th1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=\n\tdep\tgithub.com/bits-and-blooms/bitset\tv1.24.4\th1:95H15Og1clikBrKr/DuzMXkQzECs1M6hhoGXLwLQOZE=\n\tdep\tgithub.com/bmatcuk/doublestar/v4\tv4.10.0\th1:zU9WiOla1YA122oLM6i4EXvGW62DvKZVxIe6TYWexEs=\n\tdep\tgithub.com/bufbuild/protocompile\tv0.14.2-0.20260716165721-bb5762d29672\th1:6xykiXQPoF/hhOjAhwiHQ0kgcAvrDZw0Tjl1VQkpu5c=\n\tdep\tgithub.com/cespare/xxhash/v2\tv2.3.0\th1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=\n\tdep\tgithub.com/cockroachdb/errors\tv1.11.3\th1:5bA+k2Y6r+oz/6Z/RFlNeVCesGARKuC6YymtcDrbC/I=\n\tdep\tgithub.com/cockroachdb/logtags\tv0.0.0-20241215232642-bb51bb14a506\th1:ASDL+UJcILMqgNeV5jiqR4j+sTuvQNHdf2chuKj1M5k=\n\tdep\tgithub.com/cockroachdb/redact\tv1.1.5\th1:u1PMllDkdFfPWaNGMyLD1+so+aq3uUItthCFqzwPJ30=\n\tdep\tgithub.com/coreos/go-oidc/v3\tv3.16.0\th1:qRQUCFstKpXwmEjDQTIbyY/5jF00+asXzSkmkoa/mow=\n\tdep\tgithub.com/danielgtaylor/huma/v2\tv2.38.0\th1:fb0WZCatnaiHLphMQDDWDjygNxfMkX/ENma3QsRl7vY=\n\tdep\tgithub.com/dustin/go-humanize\tv1.0.1\th1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkpeCY=\n\tdep\tgithub.com/fatih/color\tv1.19.0\th1:Zp3PiM21/9Ld6FzSKyL5c/BULoe/ONr9KlbYVOfG8+w=\n\tdep\tgithub.com/fsnotify/fsnotify\tv1.8.0\th1:dAwr6QBTBZIkG8roQaJjGof0pp0EeF+tNV7YBP3F/8M=\n\tdep\tgithub.com/fxamacker/cbor/v2\tv2.9.2\th1:X4Ksno9+x3cz0TZv69ec1hxP/+tymuR8PXQJyDwfh78=\n\tdep\tgithub.com/getsentry/sentry-go\tv0.31.1\th1:ELVc0h7gwyhnXHDouXkhqTFSO5oslsRDk0++eyE0KJ4=\n\tdep\tgithub.com/go-enry/go-enry/v2\tv2.9.6\th1:np63eOtMV56zfYDHnFVgpEVOk8fr2kmylcMnAZUDbSs=\n\tdep\tgithub.com/go-jose/go-jose/v4\tv4.1.3\th1:CVLmWDhDVRa6Mi/IgCgaopNosCaHz7zrMeF9MlZRkrs=\n\tdep\tgithub.com/gofrs/flock\tv0.13.0\th1:95JolYOvGMqeH31+FC7D2+uULf6mG61mEZ/A8dRYMzw=\n\tdep\tgithub.com/gofrs/uuid\tv4.4.0+incompatible\th1:3qXRTX8/NbyulANqlc0lchS1gqAVxRgsuW1YrTJupqA=\n\tdep\tgithub.com/gogo/protobuf\tv1.3.2\th1:Ov1cvc58UF3b5XjBnZv7+opcTcQFZebYjWzi34vdm4Q=\n\tdep\tgithub.com/google/go-cmp\tv0.7.0\th1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=\n\tdep\tgithub.com/google/jsonschema-go\tv0.4.3\th1:/DBOLZTfDow7pe2GmaJNhltueGTtDKICi8V8p+DQPd0=\n\tdep\tgithub.com/google/uuid\tv1.6.0\th1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=\n\tdep\tgithub.com/gorilla/websocket\tv1.5.3\th1:saDtZ6Pbx/0u+bgYQ3q96pZgCzfhKXGPqt7kZ72aNNg=\n\tdep\tgithub.com/grafana/regexp\tv0.0.0-20240607082908-2cb410fa05da\th1:BML5sNe+bw2uO8t8cQSwe5QhvoP04eHPF7bnaQma0Kw=\n\tdep\tgithub.com/grpc-ecosystem/go-grpc-middleware/v2\tv2.3.3\th1:B+8ClL/kCQkRiU82d9xajRPKYMrB7E0MbtzWVi1K4ns=\n\tdep\tgithub.com/kr/pretty\tv0.3.1\th1:flRD4NNwYAUpkphVc1HcthR4KEIFJ65n8Mw5qdRn3LE=\n\tdep\tgithub.com/kr/text\tv0.2.0\th1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=\n\tdep\tgithub.com/mattn/go-colorable\tv0.1.15\th1:+u9SLTRGnXv73cEsnsmoZBom+dMU88B2M0aDcWy0/jY=\n\tdep\tgithub.com/mattn/go-isatty\tv0.0.23\th1:cYwCQTQf3HB6xUC+BtyCLZNr7IzbOmoZbmssVNzSyiQ=\n\tdep\tgithub.com/modelcontextprotocol/go-sdk\tv1.6.1\th1:0zOSupjKUxPKSocPT1Wtago+mUHU2/uZ4xSOY0FGReU=\n\tdep\tgithub.com/mschoch/smat\tv0.2.0\th1:8imxQsjDm8yFEAVBe7azKmKSgzSkZXDuKkSq9374khM=\n\tdep\tgithub.com/munnerz/goautoneg\tv0.0.0-20191010083416-a7dc8b61c822\th1:C3w9PqII01/Oq1c1nUAm88MOHcQC9l5mIlSMApZMrHA=\n\tdep\tgithub.com/opentracing/opentracing-go\tv1.2.0\th1:uEJPy/1a5RIPAJ0Ov+OIO8OxWu77jEv+1B0VhjKrZUs=\n\tdep\tgithub.com/pkg/errors\tv0.9.1\th1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=\n\tdep\tgithub.com/prometheus/client_golang\tv1.23.2\th1:Je96obch5RDVy3FDMndoUsjAhG5Edi49h0RJWRi/o0o=\n\tdep\tgithub.com/prometheus/client_model\tv0.6.2\th1:oBsgwpGs7iVziMvrGhE53c/GrLUsZdHnqNwqPLxwZyk=\n\tdep\tgithub.com/prometheus/common\tv0.66.1\th1:h5E0h5/Y8niHc5DlaLlWLArTQI7tMrsfQjHV+d9ZoGs=\n\tdep\tgithub.com/rogpeppe/go-internal\tv1.14.1\th1:UQB4HGPB6osV0SQTLymcB4TgvyWu6ZyliaW0tI/otEQ=\n\tdep\tgithub.com/rs/xid\tv1.6.0\th1:fV591PaemRlL6JfRxGDEPl69wICngIQ3shQtzfy2gxU=\n\tdep\tgithub.com/scip-code/scip/bindings/go/scip\tv0.9.0\th1:C0LVhTl9Gw+2UC4d7RZdvB0iWUkaOyRA1fQW1CrhsMA=\n\tdep\tgithub.com/segmentio/asm\tv1.2.1\th1:DTNbBqs57ioxAD4PrArqftgypG4/qNpXoJx8TVXxPR0=\n\tdep\tgithub.com/segmentio/encoding\tv0.5.4\th1:OW1VRern8Nw6ITAtwSZ7Idrl3MXCFwXHPgqESYfvNt0=\n\tdep\tgithub.com/sourcegraph/beaut\tv0.0.0-20240611013027-627e4c25335a\th1:j/CQ27s679M9wRGBRJYyXGrfkYuQA6VMnD7R08mHD9c=\n\tdep\tgithub.com/sourcegraph/go-ctags\tv0.0.0-20250729094530-349a251d78d8\th1:hpCD/FvbXLR7/034fKD0CQ8LmT4zoQfT2DzJIjqMzUI=\n\tdep\tgithub.com/sourcegraph/log\tv0.0.0-20241024013702-574f7079c888\th1:9PUH8Hn8mVhPTtRKqot1HHsbLRDP0H2A+FSyuRumP2Q=\n\tdep\tgithub.com/sourcegraph/zoekt\tv0.0.0-20260709064101-33f1f18af292\th1:HsoQyVl9olsjSqA0YddekTbCJOsfn9bUeu//bLg6fa8=\n\tdep\tgithub.com/surrealdb/surrealdb.go\tv1.5.1\th1:5uyGYkwjO9p3UEdRBroWGhw5PpLuJorenmeB9GtGWKo=\n\tdep\tgithub.com/tetratelabs/wazero\tv1.12.0\th1:DuWcpNu/FzgEXgGBDp8J1Spc+CWOvvtvVyjKlaZopYU=\n\tdep\tgithub.com/wasilibs/go-re2\tv1.10.0\th1:vQZEBYZOCA9jdBMmrO4+CvqyCj0x4OomXTJ4a5/urQ0=\n\tdep\tgithub.com/wasilibs/wazero-helpers\tv0.0.0-20240620070341-3dff1577cd52\th1:OvLBa8SqJnZ6P+mjlzc2K7PM22rRUPE1x32G9DTPrC4=\n\tdep\tgithub.com/x448/float16\tv0.8.4\th1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=\n\tdep\tgithub.com/yosida95/uritemplate/v3\tv3.0.2\th1:Ed3Oyj9yrmi9087+NczuL5BwkIc4wvTb5zIM+UJPGz4=\n\tdep\tgithub.com/yuin/goldmark\tv1.4.13\th1:fVcFKWvrslecOb/tg+Cc05dkeYx540o0FuFt3nUVDoE=\n\tdep\tgo.uber.org/atomic\tv1.11.0\th1:ZvwS0R+56ePWxUNi+Atn9dWONBPp/AUETXlHW0DxSjE=\n\tdep\tgo.uber.org/multierr\tv1.11.0\th1:blXXJkSxSSfBVBlC76pxqeO+LN3aDfLQo+309xJstO0=\n\tdep\tgo.uber.org/thriftrw\tv1.34.0\th1:F6aIyIg6B1+fx7aiylVyqDdTG8mtLQfREfOdlm6u+mI=\n\tdep\tgo.uber.org/zap\tv1.28.0\th1:IZzaP1Fv73/T/pBMLk4VutPl36uNC+OSUh3JLG3FIjo=\n\tdep\tgo.yaml.in/yaml/v2\tv2.4.2\th1:DzmwEr2rDGHl7lsFgAHxmNz/1NlQ7xLIrlN2h5d1eGI=\n\tdep\tgolang.org/x/crypto\tv0.54.0\th1:YLIA59K4fiNzHzjnZt2tUJQjQtUWfWbeHBqKtk3eScw=\n\tdep\tgolang.org/x/mod\tv0.38.0\th1:MECBjubtXD7yj4HrhIUcywNaGeNVUdfVnxmPajOk4yk=\n\tdep\tgolang.org/x/net\tv0.57.0\th1:K5+3DljvIuDG9/Jv9rvyMywYNFCQ9RSUY6OOTTkT+tE=\n\tdep\tgolang.org/x/oauth2\tv0.36.0\th1:peZ/1z27fi9hUOFCAZaHyrpWG5lwe0RJEEEeH0ThlIs=\n\tdep\tgolang.org/x/sync\tv0.22.0\th1:SZjpbeLmrCk4xhRSZFNZW5gFUeCeFgjekvI/+gfScek=\n\tdep\tgolang.org/x/sys\tv0.47.0\th1:o7XGOvZQCADBQQ4Y7VNq2dRWQR7JmOUW8Kxx4ZsNgWs=\n\tdep\tgolang.org/x/text\tv0.40.0\th1:Ub2Z6/xjgF1WrYQz2nuITOEegKFtiIy+rieRJ5lHZKs=\n\tdep\tgoogle.golang.org/genproto/googleapis/rpc\tv0.0.0-20260715232425-e75dac1f907d\th1:Jkpk39hlTZOIp3RbfvNX9R8Hv+Sw0X89nlU/xFOErsc=\n\tdep\tgoogle.golang.org/grpc\tv1.80.0\th1:Xr6m2WmWZLETvUNvIUmeD5OAagMw3FiKmMlTdViWsHM=\n\tdep\tgoogle.golang.org/protobuf\tv1.36.11\th1:fV6ZwhNocDyBLK0dj+fg8ektcVegBBuEolpbTQyBNVE=\n\tdep\tgopkg.in/yaml.v3\tv3.0.1\th1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=\n\tbuild\t-buildmode=exe\n\tbuild\t-compiler=gc\n\tbuild\t-tags=ui\n\tbuild\t-trimpath=true\n\tbuild\tCGO_ENABLED=1\n\tbuild\tGOARCH=arm64\n\tbuild\tGOOS=darwin\n\tbuild\tGOARM64=v8.0\n\tbuild\tvcs=git\n\tbuild\tvcs.revision=bbb41b2ccfb3f9b23653aabf41607185aec3efbe\n\tbuild\tvcs.time=2026-10-18T14:04:56Z\n\tbuild\tvcs.modified=false\n",
+  "binary_digest": "sha256:121c1d07999344166d8631e65a99b06476c1fa0251f8590d2c42dd7da6393481",
+  "executed_tool_bindings": {
+    "go": {
+      "path": "/opt/homebrew/bin/go",
+      "resolved_path": "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+      "bytes": 14500160,
+      "sha256": "sha256:3925fc3221ac440ebf7c35361ff663bed0c7bdb2e0a157b75fe993607ffe0a19",
+      "version": "go1.26.5",
+      "version_evidence": "go version go1.26.5 darwin/arm64"
+    },
+    "git": {
+      "path": "/usr/bin/git",
+      "resolved_path": "/usr/bin/git",
+      "bytes": 118640,
+      "sha256": "sha256:b8763cf250e607a778bb4603cecb5b90338814d0a3dfcba0d57b1de242f610e9",
+      "version_evidence": "git version 2.54.0 (Apple Git-157)"
+    },
+    "zoekt_git_index": {
+      "path": "/private/tmp/phebs-main-bbb41b2c-native-qualification/zoekt-git-index",
+      "resolved_path": "/private/tmp/phebs-main-bbb41b2c-native-qualification/zoekt-git-index",
+      "bytes": 39081090,
+      "sha256": "sha256:dd216b7e4df21b956a8a3461108ac81ee6cb700799a3decf9c739af2ba003c4d",
+      "version": "same-bound-source-go.mod",
+      "version_evidence": "fresh helper-build-receipt.json at bbb41b2ccfb3f9b23653aabf41607185aec3efbe"
+    },
+    "focused_index": {
+      "path": "/private/tmp/phebs-main-bbb41b2c-native-qualification/phebs-focused-index",
+      "resolved_path": "/private/tmp/phebs-main-bbb41b2c-native-qualification/phebs-focused-index",
+      "bytes": 27295666,
+      "sha256": "sha256:701d83e026ac926d3e5d92a948a68c346c11335ce83c37c31bd62207beb0d8b5",
+      "version": "same-bound-source-go.mod",
+      "version_evidence": "fresh helper-build-receipt.json at bbb41b2ccfb3f9b23653aabf41607185aec3efbe"
+    },
+    "buf": {
+      "path": "/Users/ben/.codex/worktrees/t445-header/phebs.com/bin/buf",
+      "resolved_path": "/Users/ben/.codex/worktrees/t445-header/phebs.com/bin/buf",
+      "bytes": 77461554,
+      "sha256": "sha256:691b8635ab9c083e38f1d892bf10799ea688070ed8ef8081d9b7907d0a7e4658",
+      "version_evidence": "1.72.0"
+    },
+    "surreal": {
+      "path": "/opt/homebrew/bin/surreal",
+      "resolved_path": "/opt/homebrew/opt/phebs-surreal-3.2.0/surreal",
+      "bytes": 233283488,
+      "sha256": "sha256:ee819dfcedd23035a785ac40f2509f86cbb09fc3255726ad74755b161a3ca0a8",
+      "version": "3.2.0",
+      "version_evidence": "3.2.0 for macos on aarch64"
+    },
+    "openssl": {
+      "path": "/opt/homebrew/opt/openssl@3/bin/openssl",
+      "resolved_path": "/opt/homebrew/Cellar/openssl@3/3.6.3/bin/openssl",
+      "bytes": 880512,
+      "sha256": "sha256:103fc7706cf6646f226d96f29242d81890363499afc730e7ef1fadd64b3a123c",
+      "version_evidence": "OpenSSL3.6.3/library3.6.3"
+    },
+    "vm_stat": {
+      "path": "/usr/bin/vm_stat",
+      "resolved_path": "/usr/bin/vm_stat",
+      "bytes": 101664,
+      "sha256": "sha256:0127fec1de1d99c7f0b0cf185fec048c7fe92d1f1b2ad380882c583f0c921df7",
+      "version_evidence": "Darwin system sampler image; no sample performed during draft prep"
+    }
+  },
+  "observer_binding": {
+    "path": "/tmp/phebs-main-bbb41b2c-native-qualification/native-observer",
+    "resolved_path": "/private/tmp/phebs-main-bbb41b2c-native-qualification/native-observer",
+    "bytes": 31576930,
+    "sha256": "sha256:f043bfc9cd88f7dfe4e02f93c9702556c8a0377a015e18a9467d5cae3dcfad4c"
+  },
+  "signed_disposable_field_selection": {
+    "record": {
+      "release_schema_version": "1.0",
+      "release_id": "rel-phebs.protobuf.field.go-1.0.0",
+      "release_version": "1.0.0",
+      "pack_id": "phebs.protobuf.field.go",
+      "pack_claim_version": "1.0.0",
+      "card": {
+        "artifact_id": "protobuf-fields-card-1.0.0.md",
+        "digest": "sha256:20d0e8c381ab415bb634a31e87c984caa4791a2905ac3b58830fce2540637d79"
+      },
+      "manifest": {
+        "artifact_id": "protobuf-fields-manifest-1.0.0.json",
+        "digest": "sha256:a30b8821aa8ad13151e8072d6ff042a4b4679cf8d51c04b8979c1b16a10cbfa0"
+      },
+      "implementation": {
+        "phebs_source_commit": "bbb41b2ccfb3f9b23653aabf41607185aec3efbe",
+        "phebs_binary_digest": "sha256:121c1d07999344166d8631e65a99b06476c1fa0251f8590d2c42dd7da6393481",
+        "pack_implementation_digest": "sha256:bb2dcc25ff017afb98aeba3adbf2596f5bcd64efaf6a4602b7e937c66413c4ea",
+        "toolchain_digest": "sha256:c6652a655b5c51d1ce66b001a3f82f118b97fecfca54705e3b7313d6c8b82dba"
+      },
+      "referenced_artifacts_root_digest": "sha256:135ad72b465108ed0482dd0d6a4493405a43651f36c6ee2c2ce6283ecc157865",
+      "validation": {
+        "artifact_id": "protobuf-fields-validation-1.0.0.json",
+        "digest": "sha256:ce30d91459b4b08435feae41fd16fd68ef4bf0615e7eb40fcba6dd913adbd4f5",
+        "applies": true,
+        "expires_at": "2027-01-16T23:59:59Z",
+        "expiry_trigger": null
+      },
+      "derived_status": "released",
+      "approved_at": "2026-10-18T00:00:00Z",
+      "approval_records": [
+        "t513-disposable-key-measurement-only"
+      ],
+      "canonicalization": {
+        "algorithm": "phebs-canonical-json",
+        "version": "1"
+      },
+      "signature": {
+        "key_id": "t513-integration-only",
+        "algorithm": "ed25519",
+        "value": "aN5Xam4YhES0hFMTTiYSacKUt9z1H7y85GJht+oEdw9CJLFWQidyL93KZSgw4h39AeSmOiU3Y5KuZ1hCyd5lDw=="
+      }
+    },
+    "record_digest": "sha256:a2b99c7d5247df86f316c417627089d8312098305ad13c6deabec02ac0dbb32b"
+  },
+  "publication_metadata": [
+    {
+      "authority": {
+        "repository": "evaluation.local/t511-public",
+        "domain": "scip-proto-field",
+        "run_id": "f5fd4de759b4c583746138dcaa47ebef",
+        "commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+        "plan_digest": "sha256:46cf112b5175ca9f3ea3e8d3a129eda57ce2da55c6e76e35ea4d0c585bc6a042",
+        "root_digest": "sha256:51763d47687d5f3c6e6f0a217b0548592354762ec22ee15e028ff0b4439b6603"
+      },
+      "candidate_manifest_digest": "sha256:daebd818838fbda64567754a59a92f9e2d6da6961881880f4835d8a86f680919",
+      "candidate_generation_digest": "sha256:e5da7ca6d5d285cb48b311edd21c514770efac13dfcd0c150fc6a404a2026293",
+      "source_generation_digest": "sha256:0272e552751dd91b1d9f05510c9f6a5494ce16a128487fa2666bd7be7ace8fac",
+      "observation_generation_digest": "sha256:072cb5ae34ab0832d3f97a80f511a3d78f8bb8b7be63f53c2ade75266e8d34e4",
+      "generation_digest": "sha256:a5566c98d763c002cba73c96614c5a221af84c6a71b07418e8c870c1b2d022a7",
+      "root_totals": {
+        "facts": 25,
+        "rows": 50,
+        "references": 25,
+        "canonical_bytes": 22107,
+        "encoded_bytes": 22107,
+        "member_bytes": 1021,
+        "members": 1
+      },
+      "plan_bytes_digest": "sha256:1167d109a30a2c02279fc573428e996cfdfac98825230301b72ad87eddde0ace"
+    },
+    {
+      "authority": {
+        "repository": "evaluation.local/t511-public",
+        "domain": "scip-proto-field",
+        "run_id": "b1056832a8fa16d43f5329277693759f",
+        "commit": "cd72bf6914988aed1974bd8bfcc744f4d08ccfd2",
+        "plan_digest": "sha256:de56f30dd4f4cf7e449ef33ba7d6274fe73bda9055f00bcd277f62c2d447150d",
+        "root_digest": "sha256:94ec176b13e509796db8dc2a24d7c7b7a02da12d010da343a90ecf004c7eb186"
+      },
+      "candidate_manifest_digest": "sha256:7ec6d27c358bfba2473981d91461e1d9804f70590ec005001e0ab233c5c5679a",
+      "candidate_generation_digest": "sha256:e493d1bf49dafe39f585b3be02a143154afcf9f25cb7e5179142df2e528927ba",
+      "source_generation_digest": "sha256:d5926fecebc7c898f159e69ec18e3d26745662da628729e751fe7814654f67b2",
+      "observation_generation_digest": "sha256:d1245e18d53eb31368669b1778da9ba1f3d2daa9b6ae0005f0d7b601b26c6f23",
+      "generation_digest": "sha256:21b511a363b82eabc63d26fff96b1a640d1de0c37a4bd5e8efb6f3898c3bbae2",
+      "root_totals": {
+        "facts": 25,
+        "rows": 50,
+        "references": 25,
+        "canonical_bytes": 22107,
+        "encoded_bytes": 22107,
+        "member_bytes": 1021,
+        "members": 1
+      },
+      "plan_bytes_digest": "sha256:9ddbb905e76f450a58fd732ede3c7a37d9c4ac1a1c59e22900103fac91d8de54"
+    }
+  ],
+  "discovery": [
+    {
+      "field_enabled": true,
+      "capabilities": [
+        "protobuf-field-references",
+        "service-catalog-v2"
+      ],
+      "tools": [
+        "blame",
+        "diff",
+        "find_definitions",
+        "find_field_references",
+        "find_proto_field_references",
+        "find_references",
+        "get_commit",
+        "get_observation_progress",
+        "get_service",
+        "hover",
+        "list_commits",
+        "list_repos",
+        "list_services",
+        "read_file",
+        "search_code"
+      ]
+    },
+    {
+      "field_enabled": false,
+      "capabilities": [
+        "service-catalog-v2"
+      ],
+      "tools": [
+        "blame",
+        "diff",
+        "find_definitions",
+        "find_references",
+        "get_commit",
+        "get_observation_progress",
+        "get_service",
+        "hover",
+        "list_commits",
+        "list_repos",
+        "list_services",
+        "read_file",
+        "search_code"
+      ]
+    }
+  ],
+  "quality": {
+    "public_positives": 14,
+    "consumer_unique_spans": 14,
+    "frozen_negative_sites": 56,
+    "false_positives": 0,
+    "generated_unique_spans_outside_quality_denominator": 11,
+    "objects_both_endpoints": [
+      {
+        "endpoint": "find_proto_field_references",
+        "object": "grpc.go.profiling.v1alpha.EnableRequest#1",
+        "authority": {
+          "repository": "evaluation.local/t511-public",
+          "domain": "scip-proto-field",
+          "run_id": "f5fd4de759b4c583746138dcaa47ebef",
+          "commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+          "plan_digest": "sha256:46cf112b5175ca9f3ea3e8d3a129eda57ce2da55c6e76e35ea4d0c585bc6a042",
+          "root_digest": "sha256:51763d47687d5f3c6e6f0a217b0548592354762ec22ee15e028ff0b4439b6603"
+        },
+        "consumer_spans": [
+          [
+            "profiling/service/service.go",
+            3259,
+            3266
+          ],
+          [
+            "profiling/service/service.go",
+            3429,
+            3436
+          ]
+        ],
+        "generated_spans_outside_quality_denominator": [
+          [
+            "profiling/proto/service.pb.go",
+            2549,
+            2556
+          ]
+        ],
+        "proof_id": "pb_a8677e096e7c35bc13303189ccad615f82066bba95f1e617da450008cee64faa",
+        "bundle_digest": "sha256:a8677e096e7c35bc13303189ccad615f82066bba95f1e617da450008cee64faa",
+        "warm_reads": 5
+      },
+      {
+        "endpoint": "find_field_references",
+        "object": "grpc.go.profiling.v1alpha.EnableRequest#1",
+        "authority": {
+          "repository": "evaluation.local/t511-public",
+          "domain": "scip-proto-field",
+          "run_id": "f5fd4de759b4c583746138dcaa47ebef",
+          "commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+          "plan_digest": "sha256:46cf112b5175ca9f3ea3e8d3a129eda57ce2da55c6e76e35ea4d0c585bc6a042",
+          "root_digest": "sha256:51763d47687d5f3c6e6f0a217b0548592354762ec22ee15e028ff0b4439b6603"
+        },
+        "consumer_spans": [
+          [
+            "profiling/service/service.go",
+            3259,
+            3266
+          ],
+          [
+            "profiling/service/service.go",
+            3429,
+            3436
+          ]
+        ],
+        "generated_spans_outside_quality_denominator": [
+          [
+            "profiling/proto/service.pb.go",
+            2549,
+            2556
+          ]
+        ],
+        "proof_id": "pb_0bdc903f2a61008b5cf28d5acc71fa2fb3e9a90cc5210ecaf0b2dd0beadb2422",
+        "bundle_digest": "sha256:0bdc903f2a61008b5cf28d5acc71fa2fb3e9a90cc5210ecaf0b2dd0beadb2422",
+        "warm_reads": 5
+      },
+      {
+        "endpoint": "find_proto_field_references",
+        "object": "grpc.go.profiling.v1alpha.GetStreamStatsResponse#1",
+        "authority": {
+          "repository": "evaluation.local/t511-public",
+          "domain": "scip-proto-field",
+          "run_id": "f5fd4de759b4c583746138dcaa47ebef",
+          "commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+          "plan_digest": "sha256:46cf112b5175ca9f3ea3e8d3a129eda57ce2da55c6e76e35ea4d0c585bc6a042",
+          "root_digest": "sha256:51763d47687d5f3c6e6f0a217b0548592354762ec22ee15e028ff0b4439b6603"
+        },
+        "consumer_spans": [
+          [
+            "profiling/service/service.go",
+            4731,
+            4742
+          ]
+        ],
+        "generated_spans_outside_quality_denominator": [
+          [
+            "profiling/proto/service.pb.go",
+            6174,
+            6185
+          ]
+        ],
+        "proof_id": "pb_a940c04fd73214ab3d41e448549a5b70d05bcdd47498e57fc5a48ab55bc331cb",
+        "bundle_digest": "sha256:a940c04fd73214ab3d41e448549a5b70d05bcdd47498e57fc5a48ab55bc331cb",
+        "warm_reads": 5
+      },
+      {
+        "endpoint": "find_field_references",
+        "object": "grpc.go.profiling.v1alpha.GetStreamStatsResponse#1",
+        "authority": {
+          "repository": "evaluation.local/t511-public",
+          "domain": "scip-proto-field",
+          "run_id": "f5fd4de759b4c583746138dcaa47ebef",
+          "commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+          "plan_digest": "sha256:46cf112b5175ca9f3ea3e8d3a129eda57ce2da55c6e76e35ea4d0c585bc6a042",
+          "root_digest": "sha256:51763d47687d5f3c6e6f0a217b0548592354762ec22ee15e028ff0b4439b6603"
+        },
+        "consumer_spans": [
+          [
+            "profiling/service/service.go",
+            4731,
+            4742
+          ]
+        ],
+        "generated_spans_outside_quality_denominator": [
+          [
+            "profiling/proto/service.pb.go",
+            6174,
+            6185
+          ]
+        ],
+        "proof_id": "pb_7a01ed088beb080a65a09a1a82899ae99b667bfe3b7dec5798e3b6c1458f5714",
+        "bundle_digest": "sha256:7a01ed088beb080a65a09a1a82899ae99b667bfe3b7dec5798e3b6c1458f5714",
+        "warm_reads": 5
+      },
+      {
+        "endpoint": "find_proto_field_references",
+        "object": "grpc.go.profiling.v1alpha.Stat#1",
+        "authority": {
+          "repository": "evaluation.local/t511-public",
+          "domain": "scip-proto-field",
+          "run_id": "f5fd4de759b4c583746138dcaa47ebef",
+          "commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+          "plan_digest": "sha256:46cf112b5175ca9f3ea3e8d3a129eda57ce2da55c6e76e35ea4d0c585bc6a042",
+          "root_digest": "sha256:51763d47687d5f3c6e6f0a217b0548592354762ec22ee15e028ff0b4439b6603"
+        },
+        "consumer_spans": [
+          [
+            "profiling/service/service.go",
+            3849,
+            3853
+          ]
+        ],
+        "generated_spans_outside_quality_denominator": [
+          [
+            "profiling/proto/service.pb.go",
+            10649,
+            10653
+          ]
+        ],
+        "proof_id": "pb_e71435b2ba4aed815459cef0ff7816453393f530d662322a35c5de14f7374690",
+        "bundle_digest": "sha256:e71435b2ba4aed815459cef0ff7816453393f530d662322a35c5de14f7374690",
+        "warm_reads": 5
+      },
+      {
+        "endpoint": "find_field_references",
+        "object": "grpc.go.profiling.v1alpha.Stat#1",
+        "authority": {
+          "repository": "evaluation.local/t511-public",
+          "domain": "scip-proto-field",
+          "run_id": "f5fd4de759b4c583746138dcaa47ebef",
+          "commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+          "plan_digest": "sha256:46cf112b5175ca9f3ea3e8d3a129eda57ce2da55c6e76e35ea4d0c585bc6a042",
+          "root_digest": "sha256:51763d47687d5f3c6e6f0a217b0548592354762ec22ee15e028ff0b4439b6603"
+        },
+        "consumer_spans": [
+          [
+            "profiling/service/service.go",
+            3849,
+            3853
+          ]
+        ],
+        "generated_spans_outside_quality_denominator": [
+          [
+            "profiling/proto/service.pb.go",
+            10649,
+            10653
+          ]
+        ],
+        "proof_id": "pb_afdd16a5c08940ada6c35de888e224a32a955426361d77483b92f39cb4f7d9c0",
+        "bundle_digest": "sha256:afdd16a5c08940ada6c35de888e224a32a955426361d77483b92f39cb4f7d9c0",
+        "warm_reads": 5
+      },
+      {
+        "endpoint": "find_proto_field_references",
+        "object": "grpc.go.profiling.v1alpha.Stat#2",
+        "authority": {
+          "repository": "evaluation.local/t511-public",
+          "domain": "scip-proto-field",
+          "run_id": "f5fd4de759b4c583746138dcaa47ebef",
+          "commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+          "plan_digest": "sha256:46cf112b5175ca9f3ea3e8d3a129eda57ce2da55c6e76e35ea4d0c585bc6a042",
+          "root_digest": "sha256:51763d47687d5f3c6e6f0a217b0548592354762ec22ee15e028ff0b4439b6603"
+        },
+        "consumer_spans": [
+          [
+            "profiling/service/service.go",
+            3872,
+            3878
+          ],
+          [
+            "profiling/service/service.go",
+            3998,
+            4004
+          ],
+          [
+            "profiling/service/service.go",
+            4024,
+            4030
+          ]
+        ],
+        "generated_spans_outside_quality_denominator": [
+          [
+            "profiling/proto/service.pb.go",
+            10735,
+            10741
+          ]
+        ],
+        "proof_id": "pb_199593fbf8374b7d9bd8c1fb0736099ef4ffde3386475e3a2386942bd85f0975",
+        "bundle_digest": "sha256:199593fbf8374b7d9bd8c1fb0736099ef4ffde3386475e3a2386942bd85f0975",
+        "warm_reads": 5
+      },
+      {
+        "endpoint": "find_field_references",
+        "object": "grpc.go.profiling.v1alpha.Stat#2",
+        "authority": {
+          "repository": "evaluation.local/t511-public",
+          "domain": "scip-proto-field",
+          "run_id": "f5fd4de759b4c583746138dcaa47ebef",
+          "commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+          "plan_digest": "sha256:46cf112b5175ca9f3ea3e8d3a129eda57ce2da55c6e76e35ea4d0c585bc6a042",
+          "root_digest": "sha256:51763d47687d5f3c6e6f0a217b0548592354762ec22ee15e028ff0b4439b6603"
+        },
+        "consumer_spans": [
+          [
+            "profiling/service/service.go",
+            3872,
+            3878
+          ],
+          [
+            "profiling/service/service.go",
+            3998,
+            4004
+          ],
+          [
+            "profiling/service/service.go",
+            4024,
+            4030
+          ]
+        ],
+        "generated_spans_outside_quality_denominator": [
+          [
+            "profiling/proto/service.pb.go",
+            10735,
+            10741
+          ]
+        ],
+        "proof_id": "pb_178a16ad8b84eed430c0d71ae13021161b4dead40279f73701bf02d577162095",
+        "bundle_digest": "sha256:178a16ad8b84eed430c0d71ae13021161b4dead40279f73701bf02d577162095",
+        "warm_reads": 5
+      },
+      {
+        "endpoint": "find_proto_field_references",
+        "object": "grpc.go.profiling.v1alpha.Stat#3",
+        "authority": {
+          "repository": "evaluation.local/t511-public",
+          "domain": "scip-proto-field",
+          "run_id": "f5fd4de759b4c583746138dcaa47ebef",
+          "commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+          "plan_digest": "sha256:46cf112b5175ca9f3ea3e8d3a129eda57ce2da55c6e76e35ea4d0c585bc6a042",
+          "root_digest": "sha256:51763d47687d5f3c6e6f0a217b0548592354762ec22ee15e028ff0b4439b6603"
+        },
+        "consumer_spans": [
+          [
+            "profiling/service/service.go",
+            3925,
+            3933
+          ]
+        ],
+        "generated_spans_outside_quality_denominator": [
+          [
+            "profiling/proto/service.pb.go",
+            10824,
+            10832
+          ]
+        ],
+        "proof_id": "pb_26a55854285f8c4ad7fca9409473961155b5e7d22b4eba088773278cfc7799b8",
+        "bundle_digest": "sha256:26a55854285f8c4ad7fca9409473961155b5e7d22b4eba088773278cfc7799b8",
+        "warm_reads": 5
+      },
+      {
+        "endpoint": "find_field_references",
+        "object": "grpc.go.profiling.v1alpha.Stat#3",
+        "authority": {
+          "repository": "evaluation.local/t511-public",
+          "domain": "scip-proto-field",
+          "run_id": "f5fd4de759b4c583746138dcaa47ebef",
+          "commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+          "plan_digest": "sha256:46cf112b5175ca9f3ea3e8d3a129eda57ce2da55c6e76e35ea4d0c585bc6a042",
+          "root_digest": "sha256:51763d47687d5f3c6e6f0a217b0548592354762ec22ee15e028ff0b4439b6603"
+        },
+        "consumer_spans": [
+          [
+            "profiling/service/service.go",
+            3925,
+            3933
+          ]
+        ],
+        "generated_spans_outside_quality_denominator": [
+          [
+            "profiling/proto/service.pb.go",
+            10824,
+            10832
+          ]
+        ],
+        "proof_id": "pb_ae686aaeb825c84e044569014760bb71d956a485f2e4ebb76bbe0956fddd25e2",
+        "bundle_digest": "sha256:ae686aaeb825c84e044569014760bb71d956a485f2e4ebb76bbe0956fddd25e2",
+        "warm_reads": 5
+      },
+      {
+        "endpoint": "find_proto_field_references",
+        "object": "grpc.go.profiling.v1alpha.Timer#1",
+        "authority": {
+          "repository": "evaluation.local/t511-public",
+          "domain": "scip-proto-field",
+          "run_id": "f5fd4de759b4c583746138dcaa47ebef",
+          "commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+          "plan_digest": "sha256:46cf112b5175ca9f3ea3e8d3a129eda57ce2da55c6e76e35ea4d0c585bc6a042",
+          "root_digest": "sha256:51763d47687d5f3c6e6f0a217b0548592354762ec22ee15e028ff0b4439b6603"
+        },
+        "consumer_spans": [
+          [
+            "profiling/service/service.go",
+            3559,
+            3563
+          ]
+        ],
+        "generated_spans_outside_quality_denominator": [
+          [
+            "profiling/proto/service.pb.go",
+            8418,
+            8422
+          ]
+        ],
+        "proof_id": "pb_a26dba939917e538f6762be3bd5c803bec64653597ef299049f9202e7491855d",
+        "bundle_digest": "sha256:a26dba939917e538f6762be3bd5c803bec64653597ef299049f9202e7491855d",
+        "warm_reads": 5
+      },
+      {
+        "endpoint": "find_field_references",
+        "object": "grpc.go.profiling.v1alpha.Timer#1",
+        "authority": {
+          "repository": "evaluation.local/t511-public",
+          "domain": "scip-proto-field",
+          "run_id": "f5fd4de759b4c583746138dcaa47ebef",
+          "commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+          "plan_digest": "sha256:46cf112b5175ca9f3ea3e8d3a129eda57ce2da55c6e76e35ea4d0c585bc6a042",
+          "root_digest": "sha256:51763d47687d5f3c6e6f0a217b0548592354762ec22ee15e028ff0b4439b6603"
+        },
+        "consumer_spans": [
+          [
+            "profiling/service/service.go",
+            3559,
+            3563
+          ]
+        ],
+        "generated_spans_outside_quality_denominator": [
+          [
+            "profiling/proto/service.pb.go",
+            8418,
+            8422
+          ]
+        ],
+        "proof_id": "pb_9fdfea2e9e33ae4ca57d669889afbeece53c9b381c13af572fbb4b0b3ec1d5cc",
+        "bundle_digest": "sha256:9fdfea2e9e33ae4ca57d669889afbeece53c9b381c13af572fbb4b0b3ec1d5cc",
+        "warm_reads": 5
+      },
+      {
+        "endpoint": "find_proto_field_references",
+        "object": "grpc.go.profiling.v1alpha.Timer#2",
+        "authority": {
+          "repository": "evaluation.local/t511-public",
+          "domain": "scip-proto-field",
+          "run_id": "f5fd4de759b4c583746138dcaa47ebef",
+          "commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+          "plan_digest": "sha256:46cf112b5175ca9f3ea3e8d3a129eda57ce2da55c6e76e35ea4d0c585bc6a042",
+          "root_digest": "sha256:51763d47687d5f3c6e6f0a217b0548592354762ec22ee15e028ff0b4439b6603"
+        },
+        "consumer_spans": [
+          [
+            "profiling/service/service.go",
+            3584,
+            3592
+          ]
+        ],
+        "generated_spans_outside_quality_denominator": [
+          [
+            "profiling/proto/service.pb.go",
+            8504,
+            8512
+          ]
+        ],
+        "proof_id": "pb_482c52d71653d078443466784dbd4cf72614f1c261f8838b3bfc8822c13e8d46",
+        "bundle_digest": "sha256:482c52d71653d078443466784dbd4cf72614f1c261f8838b3bfc8822c13e8d46",
+        "warm_reads": 5
+      },
+      {
+        "endpoint": "find_field_references",
+        "object": "grpc.go.profiling.v1alpha.Timer#2",
+        "authority": {
+          "repository": "evaluation.local/t511-public",
+          "domain": "scip-proto-field",
+          "run_id": "f5fd4de759b4c583746138dcaa47ebef",
+          "commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+          "plan_digest": "sha256:46cf112b5175ca9f3ea3e8d3a129eda57ce2da55c6e76e35ea4d0c585bc6a042",
+          "root_digest": "sha256:51763d47687d5f3c6e6f0a217b0548592354762ec22ee15e028ff0b4439b6603"
+        },
+        "consumer_spans": [
+          [
+            "profiling/service/service.go",
+            3584,
+            3592
+          ]
+        ],
+        "generated_spans_outside_quality_denominator": [
+          [
+            "profiling/proto/service.pb.go",
+            8504,
+            8512
+          ]
+        ],
+        "proof_id": "pb_1788b0537978acb8a4938c5f8c28155e6dd7aaa553dd5a45bac71b9c29603d71",
+        "bundle_digest": "sha256:1788b0537978acb8a4938c5f8c28155e6dd7aaa553dd5a45bac71b9c29603d71",
+        "warm_reads": 5
+      },
+      {
+        "endpoint": "find_proto_field_references",
+        "object": "grpc.go.profiling.v1alpha.Timer#3",
+        "authority": {
+          "repository": "evaluation.local/t511-public",
+          "domain": "scip-proto-field",
+          "run_id": "f5fd4de759b4c583746138dcaa47ebef",
+          "commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+          "plan_digest": "sha256:46cf112b5175ca9f3ea3e8d3a129eda57ce2da55c6e76e35ea4d0c585bc6a042",
+          "root_digest": "sha256:51763d47687d5f3c6e6f0a217b0548592354762ec22ee15e028ff0b4439b6603"
+        },
+        "consumer_spans": [
+          [
+            "profiling/service/service.go",
+            3617,
+            3626
+          ]
+        ],
+        "generated_spans_outside_quality_denominator": [
+          [
+            "profiling/proto/service.pb.go",
+            8594,
+            8603
+          ]
+        ],
+        "proof_id": "pb_f6519594c087bacb6d3bfb64bfb1c0c5fabd269ddd578de859525a96029df18e",
+        "bundle_digest": "sha256:f6519594c087bacb6d3bfb64bfb1c0c5fabd269ddd578de859525a96029df18e",
+        "warm_reads": 5
+      },
+      {
+        "endpoint": "find_field_references",
+        "object": "grpc.go.profiling.v1alpha.Timer#3",
+        "authority": {
+          "repository": "evaluation.local/t511-public",
+          "domain": "scip-proto-field",
+          "run_id": "f5fd4de759b4c583746138dcaa47ebef",
+          "commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+          "plan_digest": "sha256:46cf112b5175ca9f3ea3e8d3a129eda57ce2da55c6e76e35ea4d0c585bc6a042",
+          "root_digest": "sha256:51763d47687d5f3c6e6f0a217b0548592354762ec22ee15e028ff0b4439b6603"
+        },
+        "consumer_spans": [
+          [
+            "profiling/service/service.go",
+            3617,
+            3626
+          ]
+        ],
+        "generated_spans_outside_quality_denominator": [
+          [
+            "profiling/proto/service.pb.go",
+            8594,
+            8603
+          ]
+        ],
+        "proof_id": "pb_ba78375d9aeb2e53e71a9af08c108e352aefaeab58a2934791e841ac32b69d9d",
+        "bundle_digest": "sha256:ba78375d9aeb2e53e71a9af08c108e352aefaeab58a2934791e841ac32b69d9d",
+        "warm_reads": 5
+      },
+      {
+        "endpoint": "find_proto_field_references",
+        "object": "grpc.go.profiling.v1alpha.Timer#4",
+        "authority": {
+          "repository": "evaluation.local/t511-public",
+          "domain": "scip-proto-field",
+          "run_id": "f5fd4de759b4c583746138dcaa47ebef",
+          "commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+          "plan_digest": "sha256:46cf112b5175ca9f3ea3e8d3a129eda57ce2da55c6e76e35ea4d0c585bc6a042",
+          "root_digest": "sha256:51763d47687d5f3c6e6f0a217b0548592354762ec22ee15e028ff0b4439b6603"
+        },
+        "consumer_spans": [
+          [
+            "profiling/service/service.go",
+            3663,
+            3669
+          ]
+        ],
+        "generated_spans_outside_quality_denominator": [
+          [
+            "profiling/proto/service.pb.go",
+            8682,
+            8688
+          ]
+        ],
+        "proof_id": "pb_656fb7f943b9f2fef240f96a61945fe557539e64c969057bf67a025997356ab5",
+        "bundle_digest": "sha256:656fb7f943b9f2fef240f96a61945fe557539e64c969057bf67a025997356ab5",
+        "warm_reads": 5
+      },
+      {
+        "endpoint": "find_field_references",
+        "object": "grpc.go.profiling.v1alpha.Timer#4",
+        "authority": {
+          "repository": "evaluation.local/t511-public",
+          "domain": "scip-proto-field",
+          "run_id": "f5fd4de759b4c583746138dcaa47ebef",
+          "commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+          "plan_digest": "sha256:46cf112b5175ca9f3ea3e8d3a129eda57ce2da55c6e76e35ea4d0c585bc6a042",
+          "root_digest": "sha256:51763d47687d5f3c6e6f0a217b0548592354762ec22ee15e028ff0b4439b6603"
+        },
+        "consumer_spans": [
+          [
+            "profiling/service/service.go",
+            3663,
+            3669
+          ]
+        ],
+        "generated_spans_outside_quality_denominator": [
+          [
+            "profiling/proto/service.pb.go",
+            8682,
+            8688
+          ]
+        ],
+        "proof_id": "pb_a46af69262d978e544f02f1a3d3e0862b50d4d9459d7df700708d3dd940c81b3",
+        "bundle_digest": "sha256:a46af69262d978e544f02f1a3d3e0862b50d4d9459d7df700708d3dd940c81b3",
+        "warm_reads": 5
+      },
+      {
+        "endpoint": "find_proto_field_references",
+        "object": "grpc.go.profiling.v1alpha.Timer#5",
+        "authority": {
+          "repository": "evaluation.local/t511-public",
+          "domain": "scip-proto-field",
+          "run_id": "f5fd4de759b4c583746138dcaa47ebef",
+          "commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+          "plan_digest": "sha256:46cf112b5175ca9f3ea3e8d3a129eda57ce2da55c6e76e35ea4d0c585bc6a042",
+          "root_digest": "sha256:51763d47687d5f3c6e6f0a217b0548592354762ec22ee15e028ff0b4439b6603"
+        },
+        "consumer_spans": [
+          [
+            "profiling/service/service.go",
+            3694,
+            3701
+          ]
+        ],
+        "generated_spans_outside_quality_denominator": [
+          [
+            "profiling/proto/service.pb.go",
+            8768,
+            8775
+          ]
+        ],
+        "proof_id": "pb_f8f1310fbc264f5515a7329710081bcdb6930895c71049f139ca99e56cc7d910",
+        "bundle_digest": "sha256:f8f1310fbc264f5515a7329710081bcdb6930895c71049f139ca99e56cc7d910",
+        "warm_reads": 5
+      },
+      {
+        "endpoint": "find_field_references",
+        "object": "grpc.go.profiling.v1alpha.Timer#5",
+        "authority": {
+          "repository": "evaluation.local/t511-public",
+          "domain": "scip-proto-field",
+          "run_id": "f5fd4de759b4c583746138dcaa47ebef",
+          "commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+          "plan_digest": "sha256:46cf112b5175ca9f3ea3e8d3a129eda57ce2da55c6e76e35ea4d0c585bc6a042",
+          "root_digest": "sha256:51763d47687d5f3c6e6f0a217b0548592354762ec22ee15e028ff0b4439b6603"
+        },
+        "consumer_spans": [
+          [
+            "profiling/service/service.go",
+            3694,
+            3701
+          ]
+        ],
+        "generated_spans_outside_quality_denominator": [
+          [
+            "profiling/proto/service.pb.go",
+            8768,
+            8775
+          ]
+        ],
+        "proof_id": "pb_25d831441f202adae670019d41d147eb0b88f7ad00c0d83dd49b824fb825835a",
+        "bundle_digest": "sha256:25d831441f202adae670019d41d147eb0b88f7ad00c0d83dd49b824fb825835a",
+        "warm_reads": 5
+      },
+      {
+        "endpoint": "find_proto_field_references",
+        "object": "grpc.go.profiling.v1alpha.Timer#6",
+        "authority": {
+          "repository": "evaluation.local/t511-public",
+          "domain": "scip-proto-field",
+          "run_id": "f5fd4de759b4c583746138dcaa47ebef",
+          "commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+          "plan_digest": "sha256:46cf112b5175ca9f3ea3e8d3a129eda57ce2da55c6e76e35ea4d0c585bc6a042",
+          "root_digest": "sha256:51763d47687d5f3c6e6f0a217b0548592354762ec22ee15e028ff0b4439b6603"
+        },
+        "consumer_spans": [
+          [
+            "profiling/service/service.go",
+            3738,
+            3742
+          ]
+        ],
+        "generated_spans_outside_quality_denominator": [
+          [
+            "profiling/proto/service.pb.go",
+            8852,
+            8856
+          ]
+        ],
+        "proof_id": "pb_5af80f59229d0d916f18806af09a35e3c3ac59021b220fa2dabf32da2a0c3723",
+        "bundle_digest": "sha256:5af80f59229d0d916f18806af09a35e3c3ac59021b220fa2dabf32da2a0c3723",
+        "warm_reads": 5
+      },
+      {
+        "endpoint": "find_field_references",
+        "object": "grpc.go.profiling.v1alpha.Timer#6",
+        "authority": {
+          "repository": "evaluation.local/t511-public",
+          "domain": "scip-proto-field",
+          "run_id": "f5fd4de759b4c583746138dcaa47ebef",
+          "commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+          "plan_digest": "sha256:46cf112b5175ca9f3ea3e8d3a129eda57ce2da55c6e76e35ea4d0c585bc6a042",
+          "root_digest": "sha256:51763d47687d5f3c6e6f0a217b0548592354762ec22ee15e028ff0b4439b6603"
+        },
+        "consumer_spans": [
+          [
+            "profiling/service/service.go",
+            3738,
+            3742
+          ]
+        ],
+        "generated_spans_outside_quality_denominator": [
+          [
+            "profiling/proto/service.pb.go",
+            8852,
+            8856
+          ]
+        ],
+        "proof_id": "pb_eff76b3c0da1791cd59984f4ae9d3e3742c99929367d416e53528e0f0ce4575d",
+        "bundle_digest": "sha256:eff76b3c0da1791cd59984f4ae9d3e3742c99929367d416e53528e0f0ce4575d",
+        "warm_reads": 5
+      }
+    ],
+    "immutable_proofs_verified": [
+      "pb_0bdc903f2a61008b5cf28d5acc71fa2fb3e9a90cc5210ecaf0b2dd0beadb2422",
+      "pb_1788b0537978acb8a4938c5f8c28155e6dd7aaa553dd5a45bac71b9c29603d71",
+      "pb_178a16ad8b84eed430c0d71ae13021161b4dead40279f73701bf02d577162095",
+      "pb_199593fbf8374b7d9bd8c1fb0736099ef4ffde3386475e3a2386942bd85f0975",
+      "pb_25d831441f202adae670019d41d147eb0b88f7ad00c0d83dd49b824fb825835a",
+      "pb_26a55854285f8c4ad7fca9409473961155b5e7d22b4eba088773278cfc7799b8",
+      "pb_482c52d71653d078443466784dbd4cf72614f1c261f8838b3bfc8822c13e8d46",
+      "pb_5af80f59229d0d916f18806af09a35e3c3ac59021b220fa2dabf32da2a0c3723",
+      "pb_656fb7f943b9f2fef240f96a61945fe557539e64c969057bf67a025997356ab5",
+      "pb_7a01ed088beb080a65a09a1a82899ae99b667bfe3b7dec5798e3b6c1458f5714",
+      "pb_9fdfea2e9e33ae4ca57d669889afbeece53c9b381c13af572fbb4b0b3ec1d5cc",
+      "pb_a26dba939917e538f6762be3bd5c803bec64653597ef299049f9202e7491855d",
+      "pb_a46af69262d978e544f02f1a3d3e0862b50d4d9459d7df700708d3dd940c81b3",
+      "pb_a8677e096e7c35bc13303189ccad615f82066bba95f1e617da450008cee64faa",
+      "pb_a940c04fd73214ab3d41e448549a5b70d05bcdd47498e57fc5a48ab55bc331cb",
+      "pb_ae686aaeb825c84e044569014760bb71d956a485f2e4ebb76bbe0956fddd25e2",
+      "pb_afdd16a5c08940ada6c35de888e224a32a955426361d77483b92f39cb4f7d9c0",
+      "pb_ba78375d9aeb2e53e71a9af08c108e352aefaeab58a2934791e841ac32b69d9d",
+      "pb_e71435b2ba4aed815459cef0ff7816453393f530d662322a35c5de14f7374690",
+      "pb_eff76b3c0da1791cd59984f4ae9d3e3742c99929367d416e53528e0f0ce4575d",
+      "pb_f6519594c087bacb6d3bfb64bfb1c0c5fabd269ddd578de859525a96029df18e",
+      "pb_f8f1310fbc264f5515a7329710081bcdb6930895c71049f139ca99e56cc7d910"
+    ],
+    "source_reads": [
+      {
+        "path": "profiling/service/service.go",
+        "commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+        "blob_digest": "sha256:949728b78ac582ec2c796bf0fb3c4dfcc4ad0db0f288efe9efce4a46860b54a7",
+        "unique_consumer_atoms_sliced": 14,
+        "transports": [
+          "GET /api/source full blob",
+          "MCP read_file full blob"
+        ],
+        "blob_read_count": "one full immutable blob per transport request by source-code contract; no instrumented counter"
+      }
+    ],
+    "cold_caveat": "first success per object/endpoint after explicit publication probes; process/shared caches may be warm"
+  },
+  "whole_proof_concurrency": [
+    {
+      "clients": 1,
+      "whole_proof_requests": 1,
+      "wall_seconds": 0.017108,
+      "requests_per_second": 58.453754399882214
+    },
+    {
+      "clients": 4,
+      "whole_proof_requests": 4,
+      "wall_seconds": 0.033511,
+      "requests_per_second": 119.3649771280234
+    },
+    {
+      "clients": 8,
+      "whole_proof_requests": 8,
+      "wall_seconds": 0.058885,
+      "requests_per_second": 135.85802836036325
+    }
+  ],
+  "publication_transition": {
+    "old_proof": "pb_a8677e096e7c35bc13303189ccad615f82066bba95f1e617da450008cee64faa",
+    "new_proof": "pb_d149a67d21db22cca8f6dfe5e20293b94b6e4ccc51349a0b41b289e196fe6aa6",
+    "old_immutable_byte_identical": true,
+    "new_authority": {
+      "repository": "evaluation.local/t511-public",
+      "domain": "scip-proto-field",
+      "run_id": "b1056832a8fa16d43f5329277693759f",
+      "commit": "cd72bf6914988aed1974bd8bfcc744f4d08ccfd2",
+      "plan_digest": "sha256:de56f30dd4f4cf7e449ef33ba7d6274fe73bda9055f00bcd277f62c2d447150d",
+      "root_digest": "sha256:94ec176b13e509796db8dc2a24d7c7b7a02da12d010da343a90ecf004c7eb186"
+    },
+    "new_source": [
+      {
+        "path": "profiling/service/service.go",
+        "commit": "cd72bf6914988aed1974bd8bfcc744f4d08ccfd2",
+        "blob_digest": "sha256:331805b0a45eabfd1206a7fac5e1d256a15a2a39da34577d3162fa2a12d971df",
+        "unique_consumer_atoms_sliced": 2,
+        "transports": [
+          "GET /api/source full blob",
+          "MCP read_file full blob"
+        ],
+        "blob_read_count": "one full immutable blob per transport request by source-code contract; no instrumented counter"
+      }
+    ],
+    "unchanged_consumer_truth": 14,
+    "quality_denominator_added": 0
+  },
+  "private_scratch_removed_after_join": true,
+  "seconds": 23.872118833
+}

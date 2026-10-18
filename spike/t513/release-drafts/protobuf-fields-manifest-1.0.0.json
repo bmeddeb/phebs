@@ -1,0 +1,104 @@
+{
+  "schema": "phebs-extractor-pack-manifest-v1",
+  "artifact_status": "DRAFT_UNSIGNED_NOT_ACTIVE",
+  "pack_id": "phebs.protobuf.field.go",
+  "pack_claim_version": "1.0.0",
+  "owner": "Ben Meddeb",
+  "qualification": "finite-selected-public-source-conformance-and-bounded-Darwin-composition",
+  "recipe": {
+    "registry": "cmd/phebs packRecipes / protobufFieldRecipe",
+    "extractors": [
+      "scip-proto-field@1.4.0-released.1"
+    ],
+    "committed_input": {
+      "index_path": "index.scip at repository root",
+      "indexer_metadata": "scip-go0.2.7 / UTF8",
+      "proto": "proto3",
+      "generated_go_api": "Open API / protogen=open.v1",
+      "header_versions": {
+        "protoc_gen_go": "1.36.11",
+        "protoc": "5.27.1"
+      },
+      "header_qualification": "Source admission only; not generator execution attestation.",
+      "required_witnesses": [
+        "current authorized committed source/generated/SCIP blobs",
+        "unique generated raw descriptor matching source and exact numeric field/name",
+        "exact SCIP generated-definition symbol/range/package identity"
+      ]
+    }
+  },
+  "identity": {
+    "lineage": "contract_scip_package_v1 over SCIP gomod package namespace",
+    "object": "fully qualified message + # + positive numeric field number",
+    "field_number_range": [
+      1,
+      536870911
+    ],
+    "declaration_bridge": "None automatic; separate declaration family requires explicit exact witnesses.",
+    "predicate": "REFERENCES_PROTO_FIELD",
+    "tier": "exact",
+    "semantic_roles": "Raw supplied SCIP role vocabulary only; no semantic write accuracy claim."
+  },
+  "surfaces": {
+    "capability": "protobuf-field-references",
+    "http": [
+      "GET /api/find_proto_field_references",
+      "GET /api/find_field_references for selected protobuf domain",
+      "GET /api/proof_bundles/{id}",
+      "GET /api/source at exact permitted commit"
+    ],
+    "mcp_tools": [
+      "find_proto_field_references",
+      "find_field_references for selected protobuf domain",
+      "read_file"
+    ],
+    "proof": "proof-bundle-v1; exact source/run/plan/root/expected-version fences; by-ID through HTTP only",
+    "ui": "No dedicated field UI or browser claim"
+  },
+  "uncertainty": "Missing input/publication remains explicit unpublished/unavailable; unsupported/conflicting inputs refuse without partial facts. MCP keeps partial/withheld coverage and absence eligibilityfalse. Empty results cannot prove global field absence.",
+  "isolation": "Own verified claim required. No automatic declaration bridge or unrelated pack activation; current and retained reads preserve exact authorization/source/version fences.",
+  "existing_input_and_query_ceilings": {
+    "scip_bytes": 67108864,
+    "documents": 100000,
+    "occurrences": 1000000,
+    "symbol_bytes": 16384,
+    "proto_bytes": 4194304,
+    "generated_file_bytes": 4194304,
+    "proof_query_assertions": 5000,
+    "proof_query_evidence": 20000,
+    "field_pagination": false
+  },
+  "measured_scope": {
+    "repository": "evaluation.local/t511-public",
+    "module": "google.golang.org/grpc v1.80.0",
+    "base_commit": "6c4c4b5897f11fb26619fc980c114b286c679606",
+    "queried_positive_field_identities": 11,
+    "positive_consumer_spans": 14,
+    "generated_spans_separate": 11,
+    "native_negative_claim": "0extra/wrong/duplicate within queried11identities only. PriorT51156negative direct full-stream labels are separate context.",
+    "operating": "One8file174204B repository, one79B comment transition, two ordinary startup phases and finite1/4/8whole-proof batches on Darwinarm64. No sustained/general operating limit or Linux/scale claim."
+  },
+  "validation_artifact_id": "protobuf-fields-validation-1.0.0.json",
+  "revalidation": {
+    "proposed_expires_at": "2027-01-16T23:59:59Z",
+    "triggers": [
+      "source/extractor/recipe/schema/version or supported construct change",
+      "SCIP/generator input/authority change",
+      "authorization/source/proof regression",
+      "operating bound failure or confirmed evidence error"
+    ],
+    "withdrawal": "Governing signed suspension/revocation/expiry withdraws recipe on existing admission/restart path; no provisional fallback satisfies stable version. Historical bytes are not rewritten."
+  },
+  "not_claimed": [
+    "Production signature, production release or installed selection",
+    "Generalized extraction precision/recall or a new global negative field census",
+    "Semantic read/write, runtime use, complete inventory, safe removal, compatibility or migration completion",
+    "Automatic declaration-lineage to SCIP-package-family bridge",
+    "Managed/generated-at-runtime SCIP extraction authority",
+    "Thrift, Caller Map, caller comparison, consumer, Atlas, Impact, Kafka or WIRE admission",
+    "Dedicated field UI/browser claim",
+    "Sustained throughput, latency SLO, Linux capacity or scale",
+    "Cold process/cache benchmark, transient RSS peak, hard heap/physical-memory cap or CPU measurement"
+  ],
+  "release_requirement": "This manifest is an unsigned artifact, not a PackRelease. Existing signer/verifier must bind exact approved card/manifest/implementation/binary/validation/census digests before operator installation."
+}

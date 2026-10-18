@@ -9357,3 +9357,8 @@ under `spike/t503/requalification-after-mobile-fix/` and
 `spike/t503/release/artifacts/`. These drafts grant no production activation;
 use only an exact owner-approved signed release selection. Prior stops, sampled
 resource limitations and supplied-unit caveats remain in the retained addendum.
+
+T51.3 retains its finite field outcome and unsigned drafts under `spike/t513/`.
+Native zero extras is limited to eleven queried positive identities; previous
+full-stream negative quality remains separate. Generated facts imply no recall
+or semantic-write guarantee. These drafts grant no production activation.

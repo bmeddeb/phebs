@@ -1,0 +1,161 @@
+{
+  "source_commit": "bbb41b2ccfb3f9b23653aabf41607185aec3efbe",
+  "source_tree": "ade4527a61c06801888eb6fa667b1ad075e5d826",
+  "binary": {
+    "path": "/tmp/phebs-main-bbb41b2c-native-qualification/phebs",
+    "resolved_path": "/private/tmp/phebs-main-bbb41b2c-native-qualification/phebs",
+    "bytes": 91357234,
+    "sha256": "sha256:121c1d07999344166d8631e65a99b06476c1fa0251f8590d2c42dd7da6393481",
+    "metadata_sha256": "sha256:8f232b4c76b11ba690ff4c4bc1f73b462c1978dc45b7607deda0ac0415641a28"
+  },
+  "observer": {
+    "path": "/tmp/phebs-main-bbb41b2c-native-qualification/native-observer",
+    "resolved_path": "/private/tmp/phebs-main-bbb41b2c-native-qualification/native-observer",
+    "bytes": 31576930,
+    "sha256": "sha256:f043bfc9cd88f7dfe4e02f93c9702556c8a0377a015e18a9467d5cae3dcfad4c"
+  },
+  "build_receipt": {
+    "path": "/tmp/phebs-main-bbb41b2c-native-qualification/build-receipt.json",
+    "sha256": "sha256:75861c18c95fa5ed404496c1bec9c1e8292b5920bb4ea33080ef76a7805710c2"
+  },
+  "helper_build_receipt": {
+    "path": "/tmp/phebs-main-bbb41b2c-native-qualification/helper-build-receipt.json",
+    "sha256": "sha256:db9ecd10fb6157f91ef21a6d7a7944ec50ae6bbf41e9173069a343ff726158f6"
+  },
+  "schema": "phebs-t513-execution-binding-v1",
+  "reviewed": true,
+  "plan_digest": "sha256:71f2d2df416332ed19cbeb8d337327e1e5d7f72593eaeed0e70f15fd169b3268",
+  "harness_commit": "7d931eb4f73c146cb4e8ec74c2cad5b5c57337e8",
+  "tools": {
+    "go": {
+      "path": "/opt/homebrew/bin/go",
+      "resolved_path": "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+      "bytes": 14500160,
+      "sha256": "sha256:3925fc3221ac440ebf7c35361ff663bed0c7bdb2e0a157b75fe993607ffe0a19",
+      "version": "go1.26.5",
+      "version_evidence": "go version go1.26.5 darwin/arm64"
+    },
+    "git": {
+      "path": "/usr/bin/git",
+      "resolved_path": "/usr/bin/git",
+      "bytes": 118640,
+      "sha256": "sha256:b8763cf250e607a778bb4603cecb5b90338814d0a3dfcba0d57b1de242f610e9",
+      "version_evidence": "git version 2.54.0 (Apple Git-157)"
+    },
+    "zoekt_git_index": {
+      "path": "/tmp/phebs-main-bbb41b2c-native-qualification/zoekt-git-index",
+      "resolved_path": "/private/tmp/phebs-main-bbb41b2c-native-qualification/zoekt-git-index",
+      "bytes": 39081090,
+      "sha256": "sha256:dd216b7e4df21b956a8a3461108ac81ee6cb700799a3decf9c739af2ba003c4d",
+      "version": "same-bound-source-go.mod",
+      "version_evidence": "fresh helper-build-receipt.json at bbb41b2ccfb3f9b23653aabf41607185aec3efbe"
+    },
+    "focused_index": {
+      "path": "/tmp/phebs-main-bbb41b2c-native-qualification/phebs-focused-index",
+      "resolved_path": "/private/tmp/phebs-main-bbb41b2c-native-qualification/phebs-focused-index",
+      "bytes": 27295666,
+      "sha256": "sha256:701d83e026ac926d3e5d92a948a68c346c11335ce83c37c31bd62207beb0d8b5",
+      "version": "same-bound-source-go.mod",
+      "version_evidence": "fresh helper-build-receipt.json at bbb41b2ccfb3f9b23653aabf41607185aec3efbe"
+    },
+    "buf": {
+      "path": "/Users/ben/.codex/worktrees/t445-header/phebs.com/bin/buf",
+      "resolved_path": "/Users/ben/.codex/worktrees/t445-header/phebs.com/bin/buf",
+      "bytes": 77461554,
+      "sha256": "sha256:691b8635ab9c083e38f1d892bf10799ea688070ed8ef8081d9b7907d0a7e4658",
+      "version_evidence": "1.72.0"
+    },
+    "surreal": {
+      "path": "/opt/homebrew/bin/surreal",
+      "resolved_path": "/opt/homebrew/opt/phebs-surreal-3.2.0/surreal",
+      "bytes": 233283488,
+      "sha256": "sha256:ee819dfcedd23035a785ac40f2509f86cbb09fc3255726ad74755b161a3ca0a8",
+      "version": "3.2.0",
+      "version_evidence": "3.2.0 for macos on aarch64"
+    },
+    "openssl": {
+      "path": "/opt/homebrew/opt/openssl@3/bin/openssl",
+      "resolved_path": "/opt/homebrew/Cellar/openssl@3/3.6.3/bin/openssl",
+      "bytes": 880512,
+      "sha256": "sha256:103fc7706cf6646f226d96f29242d81890363499afc730e7ef1fadd64b3a123c",
+      "version_evidence": "OpenSSL3.6.3/library3.6.3"
+    },
+    "vm_stat": {
+      "path": "/usr/bin/vm_stat",
+      "resolved_path": "/usr/bin/vm_stat",
+      "bytes": 101664,
+      "sha256": "sha256:0127fec1de1d99c7f0b0cf185fec048c7fe92d1f1b2ad380882c583f0c921df7",
+      "version_evidence": "Darwin system sampler image; no sample performed during draft prep"
+    }
+  },
+  "harness_files": {
+    "qualify_fields.py": "sha256:cefebb2fd673c93969654c4b7d42bd84555bb03a5cc0d32b692678c3ea22906a",
+    "field_checks.py": "sha256:576bf3c8ee05494f07f0c93ce993907b7540e186fa1a9a4a7a04ddc113258027",
+    "test_fields.py": "sha256:9669cdbc99b6f6acbe214b1878f22a2dae66350238b11ffecb7212e07d97ad05",
+    "README.md": "sha256:b9e659aeaa1b3d468ddb34afdcb1a793af466912eb30f58a07248c23eb499e1d",
+    "post-discovery-execution-amendment.json": "sha256:32ec7cf9237c93a58ea7bf6464cf5e085ef85c792a850bf6ec06b3c3f26cd3d3"
+  },
+  "reused_t503_files": {
+    "requalification_browser.cjs": "sha256:9b133499ec4f501296122bb640970857f0e165becf622e54fe983c754b8a9131",
+    "requalification_browser.py": "sha256:dfd5742e3856e908515c42042571702023753644cf4a242cc0570db00a19da6f",
+    "requalification_checks.py": "sha256:9da204dfe253aff62d9350d00ec825fc935786044e13362436438a152329aa7d",
+    "requalification_monitor.py": "sha256:cbffb94a215e78c7210da3d7661ccd0d2627de3946cb4370b9364a786f3b6e5a",
+    "requalify.py": "sha256:d9b7707b04db89e74afd7dd3c3bfb56c0c9263fce4a5f355ef3cd277ea0ba175",
+    "test_requalification.py": "sha256:a61ec2e51e7cba63fcbbdc893f39672204feead42cce6677735834638a99d2c0",
+    "qualify.py": "sha256:831d13fb28ae0054257da74b87f1298bf1df7067e75190a6fa66fe53fec92089",
+    "score.py": "sha256:9fe189b544eb877b55ba064104a489109c1416e6ea29289951d51a512d14ad30"
+  },
+  "review": "Root accepted and checkpointed the prospective discovery-source amendment at 7d931eb4f73c146cb4e8ec74c2cad5b5c57337e8 after16pure controls/docs/glossary; actual fresh image/build/helper/UI/tool/harness metadata and hashes are refreshed here. Original plan, input/labels/transition/bounds and both prior stops remain exact. Outside binding metadata admission only; root independent validation and separate sole native slot authorization required before execution.",
+  "source_branch_correction": {
+    "path": "spike/t513/source-branch-correction.json",
+    "sha256": "sha256:3d66df27380cd6fe873ce1c3116cec92f492d269028f8ebda5566cf027674f6f",
+    "review": "sha256:220378fcea4f821475849af70baf3556a942af699961e3865fb7871a83fec0ba",
+    "retained_first_stop": "sha256:7d328e8fc5e8fc748ff88011ed344b037fa078dab790ded71ffad846bdfd6ef0"
+  },
+  "ui": {
+    "source_inventory_digest": "sha256:deee16ccfda1420e2b81ba9d1472cf5ac93453836ad232ee0f01b9dfdaed9895",
+    "dist_workspace": "/Users/ben/.codex/worktrees/t25-embedded-docs/phebs.com",
+    "dist_inventory_digest": "sha256:201cb259d6a1fa4b49005239308bade6f44823587185311d30f2564d4d7389af",
+    "source_files_in_build_receipt_census": 118,
+    "dist_files": 165,
+    "build_receipt_input_digest": "11dc2ce1ac993e129f9021481d437cded3514c9168ce93ed91a2f3d85bc5454b",
+    "build_receipt_dist_digest": "0fc14910d614b7682798d5cba4fab5012c733780a1b5bf4b86955c8b7887014f",
+    "dist_census": {
+      "path": "/tmp/phebs-main-bbb41b2c-native-qualification/ui-dist-census.json",
+      "sha256": "sha256:9beef5bb6a56e397d6733f3fd50e70e8bf868bda52b29ec1f59f66eb87631d39"
+    },
+    "node_version_from_build_receipt": "v24.18.0",
+    "npm_version_from_build_receipt": "11.16.0",
+    "qualification": "Fresh build receipt and actual source/dist metadata only; no field UI/browser claim or browser execution."
+  },
+  "execution_amendment": {
+    "path": "spike/t513/post-discovery-execution-amendment.json",
+    "sha256": "sha256:32ec7cf9237c93a58ea7bf6464cf5e085ef85c792a850bf6ec06b3c3f26cd3d3",
+    "review": "sha256:3f647002d095721e90d708e3fd3c245cac2c69c8b2bd38577329ed05787b285c",
+    "controls": "sha256:15dbe03505bcc696bc21aaf450f7d6692c3aee41cbef16cf1db25819466a9ef8"
+  },
+  "source_input_preflight": {
+    "path": "/tmp/phebs-t513-binding-input-preflight.json",
+    "sha256": "sha256:e0ee3258b7e67c9a445942098f4134b40ad6f46fde3b434fb6ca2af94919e4db",
+    "qualification": "Both unchanged eight-file live origins verified pristine on symbolic input branch at exact base/transition commits/trees; execute repeats admission before product launch."
+  },
+  "prior_execution_bindings": {
+    "outside_source_corrected": {
+      "path": "/tmp/phebs-t513-execution-binding-source-corrected.json",
+      "sha256": "sha256:96243cd3a143eb2badccbdcd287308ed31112d562c6172e028801b8eca21083e"
+    },
+    "retained_artifacts": {
+      "first-execution-binding.json": "sha256:4b0ded077f04bbe99c293708ac5598cdf10f460cd2df9a80c44ecb6d2ae42913",
+      "result.json": "sha256:7d328e8fc5e8fc748ff88011ed344b037fa078dab790ded71ffad846bdfd6ef0",
+      "source-corrected-execution-binding.json": "sha256:96243cd3a143eb2badccbdcd287308ed31112d562c6172e028801b8eca21083e",
+      "result-source-corrected.json": "sha256:5b9ed76f0e1596d2e548566f8fab3a9a02e1650d69d0aba15bce461b7aa05c66",
+      "discovery-stop-checkpoint.json": "sha256:f5ad1623399ea7ede5fa62e1552085ab40dbcefbfca6dcd6877969838f207d51",
+      "discovery-error-response.json": "sha256:de06b87223a3c382d07af5eea46342c92c0cdf9528a3007f8b63dd6c7e4c1b72"
+    }
+  },
+  "native_execution_authorized": true,
+  "root_admission": {
+    "prospective_binding_sha256": "6ed32c5226d3b768e5da560e398e07c7777e6aa026dedbf64c79f67e5747f6f5",
+    "review": "root independent exact amendment/source/hash/bounds admission passed; approve one fresh field matrix with first-stop/no-retry; production signing pending"
+  }
+}
