@@ -199,8 +199,10 @@ func TestReleaseLoadBindingsForDerivesEveryField(t *testing.T) {
 	if want := testReleaseDigest("go-toolchain go1.26.1\n"); opts.Implementation.ToolchainDigest != want {
 		t.Fatalf("ToolchainDigest = %s, want %s", opts.Implementation.ToolchainDigest, want)
 	}
-	// The test swaps the recipes out; the T57.3 Topics and T53.3 Buf WIRE claims are the remaining rows.
-	if want := testReleaseDigest("phebs.kafka.topics list_kafka_topics@kafka-topic-inventory-v1\n" +
+	// The test swaps recipes out; independent product claims remain bound.
+	if want := testReleaseDigest("phebs.contract.impact.operation build_operation_impact_report@contract-impact-operation-v1\n" +
+		"phebs.grpc.caller.comparison compare_operation_callers@caller-comparison-v2\n" +
+		"phebs.kafka.topics list_kafka_topics@kafka-topic-inventory-v1\n" +
 		"phebs.protobuf.wire.buf check_wire_compatibility@buf-1.72.0-WIRE\n"); opts.Implementation.PackImplementationDigest != want {
 		t.Fatalf("PackImplementationDigest = %s, want the bound-claim digest %s", opts.Implementation.PackImplementationDigest, want)
 	}

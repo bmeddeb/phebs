@@ -1,0 +1,13 @@
+
+> ui@0.0.0 test
+> vitest run --run src/operationImpactContract.test.ts src/operationImpactApi.test.ts src/pages/OperationImpactPage.test.tsx src/pages/ContractAtlasPage.test.tsx src/pages/CallerMapPage.test.tsx src/pages/ImpactPage.test.tsx
+
+
+ RUN  v4.1.10 /Users/ben/.codex/worktrees/t511-protobuf-fields/phebs.com/ui
+
+
+ Test Files  6 passed (6)
+      Tests  135 passed (135)
+   Start at  06:58:41
+   Duration  2.45s (transform 609ms, setup 96ms, import 1.26s, tests 3.93s, environment 2.46s)
+

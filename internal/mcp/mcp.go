@@ -77,6 +77,7 @@ type Options struct {
 	ContractCatalog  ContractCatalogQueries
 	CallerMap        CallerMapQueries
 	CallerComparison CallerComparisonQueries
+	OperationImpact  OperationImpactQueries
 	// ServiceDirectory is the same T33.4 store-backed service supplied to
 	// Huma. Nil keeps the tools undiscoverable.
 	ServiceDirectory ServiceDirectoryQueries
@@ -200,6 +201,7 @@ func NewServer(opts Options) *sdk.Server {
 	registerWireCompatibilityTool(s, opts)
 	registerCallerMapTools(s, opts)
 	registerCallerComparisonTool(s, opts)
+	registerOperationImpactTool(s, opts)
 	registerServiceDirectoryTools(s, opts)
 	registerObservationProgressTool(s, opts)
 	registerRelationshipTools(s, opts)

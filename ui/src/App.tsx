@@ -110,7 +110,9 @@ export default function App() {
   }
   if (!status || (status.auth_required && !status.authenticated)) return <LoginPage />
 
-  const impactAvailable = capabilities.includes('contract-impact-report')
+  const legacyImpactAvailable = capabilities.includes('contract-impact-report')
+  const operationImpactAvailable = capabilities.includes('contract-impact-operation')
+  const impactAvailable = legacyImpactAvailable || operationImpactAvailable
   const contractsAvailable = capabilities.includes('contract-atlas')
   const callerMapAvailable = capabilities.includes('contract-caller-map')
   const callerComparisonAvailable = capabilities.includes('contract-caller-comparison')
@@ -144,7 +146,7 @@ export default function App() {
     { label: 'Contract atlas', path: '/contracts', available: capability('contract-atlas') },
     { label: 'Caller map', path: '/callers', available: capability('contract-caller-map') },
     { label: 'Caller comparison', path: '/compare-callers', available: capability('contract-caller-comparison') },
-    { label: 'Contract impact', path: '/impact', available: capability('contract-impact-report') },
+    { label: 'Contract impact', path: '/impact', available: !capabilitiesLoaded || capabilitiesError ? 'unknown' : impactAvailable },
     { label: 'Kafka topics', path: '/topics', available: capability('kafka-topic-usage') },
     { label: 'Audit log', path: '/audit', available: status.user?.is_admin === true },
     { label: 'Analytics', path: '/analytics', available: status.user?.is_admin === true },
@@ -160,10 +162,10 @@ export default function App() {
   else if (path.startsWith('/relationships')) page = gate(serviceRelationshipsAvailable, 'The relationship explorer', () => <RelationshipExplorerPage params={params} />)
   else if (path.startsWith('/audit')) page = <AuditPage isAdmin={status.user?.is_admin === true} />
   else if (path.startsWith('/analytics')) page = <AnalyticsPage isAdmin={status.user?.is_admin === true} />
-  else if (path.startsWith('/contracts')) page = gate(contractsAvailable, 'The contract atlas', () => <ContractAtlasPage params={params} callerMapAvailable={callerMapAvailable} impactAvailable={impactAvailable} />)
-  else if (path.startsWith('/callers')) page = gate(callerMapAvailable, 'The caller map', () => <CallerMapPage params={params} comparisonAvailable={callerComparisonAvailable} />)
+  else if (path.startsWith('/contracts')) page = gate(contractsAvailable, 'The contract atlas', () => <ContractAtlasPage params={params} callerMapAvailable={callerMapAvailable} impactAvailable={legacyImpactAvailable} operationImpactAvailable={operationImpactAvailable} />)
+  else if (path.startsWith('/callers')) page = gate(callerMapAvailable, 'The caller map', () => <CallerMapPage params={params} comparisonAvailable={callerComparisonAvailable} operationImpactAvailable={operationImpactAvailable} />)
   else if (path.startsWith('/compare-callers')) page = gate(callerComparisonAvailable, 'Caller comparison', () => <CallerComparisonPage params={params} />)
-  else if (path.startsWith('/impact')) page = gate(impactAvailable, 'The impact report', () => <ImpactPage params={params} compatibilityAvailable={compatibilityAvailable} capabilities={capabilities} />)
+  else if (path.startsWith('/impact')) page = gate(params.has('shape') ? operationImpactAvailable : impactAvailable, 'The impact report', () => <ImpactPage params={params} compatibilityAvailable={compatibilityAvailable} capabilities={capabilities} />)
   else if (path.startsWith('/topics')) page = gate(topicsAvailable, 'Kafka topic usage', () => <KafkaTopicsPage params={params} inventoryAvailable={capabilities.includes('kafka-topic-inventory')} />)
   else if (path.startsWith('/settings')) page = <SettingsPage isAdmin={status.user?.is_admin === true} />
   else page = <SearchPage params={params} />

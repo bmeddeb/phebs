@@ -5595,3 +5595,9 @@ Standalone remains the supported development and small-deployment profile.
 - anonymous access;
 - silent filesystem-wide repository discovery;
 - treating runtime telemetry or static evidence as a substitute for the other.
+
+**T54.2 isolated operation Impact (2026-10-18):** independent own-claim plus
+actual released CallerMap admission, one exact shared read and bounded fail-closed
+UI/MCP are implemented with scoped normal/race/UI/static checks and source/cost
+review passing. Direct composed quality/operating and production signing remain
+separate; no field/WIRE/legacy shape or component accuracy transfers.

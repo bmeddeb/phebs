@@ -6,6 +6,7 @@
 
 import type { components } from './api.generated'
 import { csrfHeaders, notifyAuthRequired } from './authSession'
+import { validateOperationImpactReport } from './operationImpactContract'
 
 export type Schemas = components['schemas']
 
@@ -931,6 +932,8 @@ export interface CallerMapGeneration {
   pair_count?: number
   result_count?: number
   abstention_count?: number
+  coverage_record_count?: number
+  covered_candidate_count?: number
   canonical_bytes?: number
   record_counts?: {
     candidate_records: number
@@ -998,6 +1001,19 @@ export interface CallerMapPage {
   attribution_digest?: string
   coverage?: CoverageCertificate
   caveat: string
+}
+
+export interface OperationImpactReport {
+  schema_version: 'contract-impact-operation-v1'
+  shape: 'operation_callers'
+  caller_page: CallerMapPage
+  conclusion: {
+    state: 'evidence_present' | 'exact_empty' | 'unavailable'
+    query: CallerMapQuery
+    generation_digest?: string
+    qualification: string
+  }
+  unavailable_sections: Record<'field_references' | 'proposed_change' | 'implementations' | 'wire_verdict' | 'matching_syntactic_calls' | 'saved_report', 'not_in_supported_shape'>
 }
 
 export interface CallerComparisonQuery {
@@ -1405,6 +1421,24 @@ export const fetchContractCallers = (
   })}`,
   signal,
 )
+
+export const fetchOperationImpactReport = (
+  endpoint: CallerMapEndpoint,
+  filters: Omit<Partial<CallerMapQuery>, 'endpoint'>,
+  pageSize = 50,
+  cursor = '',
+  signal?: AbortSignal,
+) => getJSON<unknown>(
+  `/api/operation_impact_report?${query({
+    shape: 'operation_callers', protocol: endpoint.protocol,
+    repository: endpoint.repository, lineage: endpoint.declaration_lineage,
+    operation: endpoint.operation, ...filters, page_size: pageSize, cursor,
+  })}`,
+  signal,
+).then((report) => validateOperationImpactReport(report, {
+  endpoint, ...filters, freshness: filters.freshness ?? 'any',
+  resolution: filters.resolution ?? 'any', ordering: filters.ordering ?? 'source',
+}, pageSize === 0 ? 50 : pageSize))
 
 export const fetchCallerCitation = (
   citation: string,

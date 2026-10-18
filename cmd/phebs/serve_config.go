@@ -163,9 +163,12 @@ var releasedClaims = map[string]string{
 	wireCompatibilityPackID: "check_wire_compatibility@buf-" + compat.Version + "-" + compat.Policy,
 	kafkaTopicsPackID:       "list_kafka_topics@" + api.TopicInventorySchemaVersion, // T57.3
 	callerComparisonPackID:  "compare_operation_callers@" + api.CallerComparisonSchemaVersion,
+	operationImpactPackID:   "build_operation_impact_report@" + api.OperationImpactSchemaVersion,
 }
 
 const callerComparisonPackID = "phebs.grpc.caller.comparison"
+const operationImpactPackID = "phebs.contract.impact.operation"
+const operationImpactClaimVersion = "1.0.0"
 
 // kafkaProducerPackID is the T55.1 site-coverage card
 // (docs/KAFKA_PRODUCER_QUALITY_PROTOCOL.md): the kafka-producer plane alone.
@@ -287,6 +290,12 @@ func releasedExtractors(ctx context.Context, cfg *config.Config) ([]extract.Extr
 	released := make([]extract.Extractor, 0, selection.Count())
 	claims := map[string]bool{}
 	for _, packID := range selection.PackIDs() {
+		if packID == operationImpactPackID {
+			record, _ := selection.Released(packID)
+			if record.PackClaimVersion != operationImpactClaimVersion {
+				return nil, nil, fmt.Errorf("unsupported operation Impact claim version %q", record.PackClaimVersion)
+			}
+		}
 		if packID == protobufFieldPackID {
 			record, _ := selection.Released(packID)
 			if record.PackClaimVersion != protobufFieldClaimVersion {

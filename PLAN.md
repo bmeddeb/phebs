@@ -12918,3 +12918,38 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   timer, child, lock, cache or source read is added; per-request work is one
   existing bounded page plus fixed wrapper metadata. Production signing remains
   pending the existing unavailable key.
+
+- **2026-10-18 — T54.2 isolated operation Impact registration
+  (Ben-routed Mac backend/presentation handoff).** Select only the reviewed
+  contract-impact-operation-v1/operation_callers shape through its own verified
+  phebs.contract.impact.operation1.0.0 claim and the actual released protobuf
+  CallerMap recipe. Reuse the already constructed exact CallerMap service:
+  one List call supplies declaration, generation, rows, filters, cursor and
+  citations; no second Atlas query or inherited component-quality claim. Atlas
+  product withdrawal alone does not withdraw declarations consumed by CallerMap.
+  Legacy report-v2 remains separately experimental. HTTP/MCP/UI expose only
+  this selected shape, constant scoped conclusions and six explicitly unavailable
+  sections, with no fallback from malformed/mixed/saved/unsupported shapes.
+
+  The UI reuses CallerMap grouping/paging/source opening, carries current
+  filters/cursor/view/page size into Impact, and validates one bounded100-row
+  response before rendering. Preserve unavailable ID-only attribution; resolved
+  requires one attributed candidate with no conflicting hop. Optional rendered
+  metadata, complete progress, exact declaration/run/atom locators, generation/
+  source/citation and scope fences reject crossed or malformed responses.
+  Missing/stale pages cannot smuggle declaration links or exact-empty claims.
+  Root/peer review corrections have focused controls. Normal/race API/MCP/
+  serve checks,135UI tests, corrected type checks, UI lint, vet and pinned Go
+  lint pass. Initial missing local UI tools, type-narrowing failure and stale
+  unavailable fixture are retained separately; the latter now matches the real
+  producer, with strict validation intact.
+
+  Startup adds one fixed claim lookup and bounded recipe-version scan. Each
+  request adds constant wrapper fields around the existing page pointer; no
+  second reader, row copy, store, cache/index, lock, worker or child is added.
+  UI validation walks at most100rows×64candidates×four64-value attribution
+  vectors plus bounded metadata/strings; JSON allocation precedes this check
+  and is not a hard response-byte bound. Sync/retry/no-op/publication and
+  existing authorization/source read costs remain unchanged. Composed source/
+  native/UI operating evidence remains T54.1/T54.3; no production signature
+  or accuracy/release/scale result follows from registration.

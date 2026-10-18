@@ -109,6 +109,10 @@ type Options struct {
 	// CallerComparisonReleased restricts the selected claim to its supported
 	// protobuf endpoint pairs, including when provisional switches are also on.
 	CallerComparisonReleased bool
+	// OperationImpactEnabled requires the independent signed operation-report
+	// claim and its actual released Caller Map recipe. Provisional flags do not
+	// substitute for either dependency.
+	OperationImpactEnabled bool
 	// CallerReader is the sole T30.6j product read boundary over an exact
 	// complete caller-generation publication. Serve shares its underlying
 	// publication registry with the worker and lifecycle reconcilers so an
@@ -123,6 +127,7 @@ type Options struct {
 	ContractCatalog  *ContractCatalogService
 	CallerMap        *CallerMapService
 	CallerComparison *CallerComparisonService
+	OperationImpact  *OperationImpactService
 	// ServiceDirectory is the T33.4 authorization-first catalog/state read
 	// service shared with MCP. Production binds the store-backed instance;
 	// nil leaves both routes and capability discovery absent.
@@ -218,6 +223,9 @@ func apiCapabilities(opts Options) []string {
 	if opts.CallerComparison != nil || NewCallerComparisonService(opts) != nil {
 		capabilities = append(capabilities, callerComparisonCapability)
 	}
+	if opts.OperationImpact != nil {
+		capabilities = append(capabilities, operationImpactCapability)
+	}
 	if opts.WireCompatibility != nil {
 		capabilities = append(capabilities, "wire-compatibility")
 	}
@@ -244,6 +252,9 @@ func New(opts Options) http.Handler {
 	}
 	if opts.CallerComparison == nil {
 		opts.CallerComparison = NewCallerComparisonService(opts)
+	}
+	if opts.OperationImpact == nil {
+		opts.OperationImpact = NewOperationImpactService(opts)
 	}
 	mux := http.NewServeMux()
 	cfg := huma.DefaultConfig("phebs", opts.Version)
@@ -506,6 +517,7 @@ func New(opts Options) http.Handler {
 	registerContractCatalogAPI(api, opts)
 	registerCallerMapAPI(api, opts)
 	registerCallerComparisonAPI(api, opts)
+	registerOperationImpactAPI(api, opts)
 	registerServiceDirectoryAPI(api, opts)
 	registerObservationProgressAPI(api, opts)
 	registerExtractionProgressAPI(api, opts)
