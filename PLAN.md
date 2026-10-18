@@ -12301,3 +12301,15 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   O(1) page lookup and response write, no hashing/corpus work. Other UI requests
   add one route lookup; queries, sync, retry/no-op, publication, lifecycle, locks,
   worker concurrency, persistent disk and children are unchanged.
+
+  T25.1's canonical documentation qualification then passed at source
+  `60683660`: four author tests/twelve unmasked captures (12.708s) and four
+  comparison tests/twelve assertions (10.987s) on a fresh actual auth/store
+  fixture. Both fixtures and bridges joined with exit0; no child remains.
+  Pinned Noble image, Node24.18.0, Playwright1.62.1 and Chromium151.0.7922.34
+  retain zero retries and 0.1% tolerance. Lead visually accepted all twelve
+  unchanged PNGs (762,987 bytes); no product UI JS or density option is added.
+  `spike/t251/canonical-receipt.json` binds inputs, reports, renderer and images;
+  the native Chrome functional/a11y receipt remains separately qualified.
+  Owning documentation-only outcome appends do not retrospectively relabel
+  those browser input bytes; final link/cache census is rechecked separately.

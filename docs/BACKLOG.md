@@ -20792,6 +20792,17 @@ Startup renders a fixed build-time set once and retains immutable pages; docs
 requests reuse existing auth plus O(1) lookup/body write, no disk/corpus/child work.
 The initial byte-capacity mechanics record is not a measured memory ceiling.
 
+**T25.1 canonical closure (2026-10-18).** Four tests/twelve unmasked captures
+and a fresh real-auth/store comparison pass at source `60683660`; author12.708s,
+comparison10.987s. Exact pinned renderer and thresholds are unchanged. Both
+fixture servers/stores/bridges joined exit0; all twelve PNGs are visually reviewed
+and accepted (762,987 bytes). Native Chrome keyboard/overflow/a11y evidence
+remains separate; production UI JavaScript is unchanged. Source-bound receipts
+preserve earlier failures and pre-outcome document bytes; a final link/cache
+census follows documentation-only outcome/base integration. Implementation and
+bounded qualification are complete on its ticket branch, ready for review;
+main integration still requires Ben's request.
+
 ## Epic 26 · SQL schema-set evidence *(drafted 2026-07-27 · unscheduled — spike first)*
 
 Outline relational models from committed repository bytes: declaration-first,
