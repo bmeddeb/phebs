@@ -178,6 +178,22 @@ func TestExecutionEpochConfigRefusesSemanticDrift(t *testing.T) {
 	}
 }
 
+func TestExecutionEpochConfigRefusesManagedInstallation(t *testing.T) {
+	plan := accountingTestPlan(t)
+	epoch, source := epochTestSelection(t, 0)
+	raw, err := epochConfigBytes(plan, epoch, source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw = append(raw, []byte("managed_scip:\n  manifest: /private/fixture/installation.json\n  sha256: sha256:"+strings.Repeat("a", 64)+"\n")...)
+	if cfg, err := config.ParseLiteral(raw); err != nil || cfg.ManagedSCIP == nil {
+		t.Fatal("managed installation fixture must be valid ordinary configuration", err)
+	}
+	if cfg, err := parseEpochConfigBytes(plan, epoch, source, raw); err == nil || cfg != nil {
+		t.Fatal("unaccounted managed installation admitted by epoch projection")
+	}
+}
+
 func TestExecutionEpochConfigRefusesMissingAuthority(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()

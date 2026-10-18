@@ -263,6 +263,16 @@ func digestExecutionReferenceFD(ctx context.Context, file *os.File) (string, err
 }
 
 func referenceToolRoleForSchema(role, schema, sourceCommit string) (packagePath, modulePath, version, sum, recipe string, err error) {
+	// This private helper recipe is not a historical or active ceremony plan.
+	// Neither the helper role in a plan nor another role with this recipe is valid.
+	if schema == linuxInputTreeRecipe {
+		if role != linuxInputTreeRole || !validCommit(sourceCommit) {
+			err = errors.New("reference input-tree helper recipe is invalid")
+			return
+		}
+		packagePath = "github.com/bmeddeb/phebs/spike/t421/cmd/input-tree-helper"
+		return
+	}
 	if schema != "" && !knownPlanSchema(schema) {
 		err = errors.New("reference build plan schema is unavailable")
 		return

@@ -3991,6 +3991,65 @@ The first lint refusal and error-text-only correction stay exact in
 `spike/t42h2j/`. All validation groups joined. No native Linux/capacity authority
 is claimed; Ben defers actual Linux execution until2026-10-20.
 
+**T42.H2l · Native Linux memory and complete cgroup observation** *(2026-10-18,
+Ben all-ticket delegation; flagged Mac source handoff).*
+Implement the fixed-root, read-only native observer feeding H2j. Authenticate
+the real cgroup-v2 hierarchy root and all enforcing ancestors; namespace equality
+or an apparent mount root alone cannot establish completeness. Represent the
+hierarchy root's absent memory counters explicitly, bracket membership, native
+objects and limits, and conservatively combine bounded physical/current samples.
+AC: modeled successful/refusal/cleanup cases pass normally and with race;
+supported Linux targets compile; native tests are authored but remain unrun until
+Ben's office return. No caller path/completeness assertion, swap credit, cgroup
+mutation, admission token, active plan/sampler change or child launch. Native
+acceptance, source-owned reservations and prospective version wiring remain H2
+gates, not conclusions from modeled tests.
+Exact source `3c9fcfc5` passes focused normal/race, vet, scoped pinned lint,
+both Linux compile-only targets, docs and glossary. The first serial sequence
+and joined groups are retained in `spike/t42h2l/`; no Linux image was executed.
+Native facts, admission and parent H2 readiness remain unpassed.
+
+**T42.H2n · Close current dispatch and epoch-config inventory** *(2026-10-18,
+Ben all-ticket delegation; flagged Mac source handoff).*
+Repair the inherited typed launch-inventory checker for current stdout and
+password adapters and exact forwarding locations. Keep the sixteen frozen core
+sites/roles/IDs unchanged; enumerate the separately admitted managed-tooling
+boundaries explicitly and retain unknown/aliased-call detection. Analyze Darwin
+arm64 and Linux amd64 source/types without executing a Linux binary. Reject a
+valid `managed_scip` selection in the closed epoch config projection. AC: both
+source inventories and alias controls, valid-config regression and existing
+config refusals pass; original failures remain qualified historical evidence.
+This adds no installed runtime, tool, native authority or plan/receipt field.
+Both exact source inventories and the alias control pass, as do the valid
+managed-selection regression, existing config refusals, focused race, vet,
+scoped pinned lint, docs and glossary. `spike/t42h2n/` preserves original
+failures, carried source-identical checks and final joined groups. No Linux
+binary or native workload was executed.
+
+**T42.H2k · Owned read-only Linux input-tree loan** *(2026-10-18, Ben all-ticket
+delegation; flagged Mac source handoff).*
+Implement a distinct protected-tree constructor through one fixed measured,
+sealed helper in a private unprivileged user/mount namespace. The helper owns
+fresh bounded tmpfs copies, closes writers before read-only transition and
+protected-manifest verification, transfers the exact read-only root descriptor,
+and joins before publication. The descriptor pins the protected mount after
+helper exit; serialized loans expose no ordinary host path. AC: bounded protocol,
+malformed/cleanup/lifetime controls pass on the Mac; supported Linux targets
+compile; real namespace, mutation-refusal, descriptor-transfer and joined-use
+tests are authored but unrun until Ben's office return. Failed or uncertain
+construction retains custody and stays unusable. No privilege provisioning,
+borrowed mutable bind mount, caller boolean, current Go/Git admission, legacy
+constructor relaxation or active plan/launcher change; full H2 admission and
+native proof remain pending.
+Required helper tests use the explicit `phebs_t42_native` build tag so ordinary
+CI cannot launch target qualification implicitly. Under that tag, missing exact
+helper/kernel prerequisites fail; compile-only checks include the tagged tests.
+Exact source `94a49c6e` passes six portable controls normally and with race,
+Darwin and tagged Linux static checks, pinned scoped lint, both tagged Linux
+compile-only targets and helper builds, docs and glossary. `spike/t42h2k/`
+retains the first fourteen serial steps; every group joined and all four Linux
+outputs were removed without execution. Native qualification remains pending.
+
 **T42.H2m · Owned isolated Linux pressure filesystem** *(2026-10-18, Ben
 all-ticket delegation; flagged Mac source handoff).*
 Implement a distinct root-owned image/loop/private-ext4 owner under the existing

@@ -1,0 +1,10 @@
+=== RUN   TestProductionDispatchSitesMatchActualBoundaries
+=== RUN   TestProductionDispatchSitesMatchActualBoundaries/darwin/arm64
+=== RUN   TestProductionDispatchSitesMatchActualBoundaries/linux/amd64
+--- PASS: TestProductionDispatchSitesMatchActualBoundaries (47.66s)
+    --- PASS: TestProductionDispatchSitesMatchActualBoundaries/darwin/arm64 (19.30s)
+    --- PASS: TestProductionDispatchSitesMatchActualBoundaries/linux/amd64 (28.36s)
+=== RUN   TestProductionDispatchInventoryFindsUnlistedAndAliasedLaunches
+--- PASS: TestProductionDispatchInventoryFindsUnlistedAndAliasedLaunches (0.42s)
+PASS
+ok  	github.com/bmeddeb/phebs/spike/t421	48.909s
