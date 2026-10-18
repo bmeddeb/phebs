@@ -16530,6 +16530,29 @@ Actions is account-disabled; local pinned-renderer evidence is not hosted CI.
 Ordinary serve remains unavailable; the T45.6 waiver and all scale/release
 boundaries stay exact. No main integration is claimed.
 
+**T45.8c · Align the neutral default with whole service authority** *(2026-10-18,
+Ben-routed Mac handoff).* The historical focused-default service/relationship
+refusal is structural, not a stale image. Keep all whole-authority guards and
+make dev/dev-api explicitly select whole for retained T307/T323cohorts. Closed
+focused opt-in preserves the focused Search demo with unavailable T307service
+authority. Exact fixture/catalog/collision guards remain. Whole deliberately
+exposes outside/sentinel files; no focused support or release claim follows.
+Focused config/normal/race/static gates and eight harness controls pass.
+`spike/t458c/` retains the prospective one180s exact-image smoke plan; native
+readiness, scoped search, citation and joined teardown remain to execute.
+
+T45.8c completion (2026-10-18): one clean-image native run passed in20.344438s
+under the180s ceiling, with85total HTTP calls including startup attempts. Both
+retained HEADs and operator catalogs matched; required services became current,
+orders-api relationships complete/nonempty, anonymous service search refused401,
+exact scoped search and whole outside-unit sentinel passed, and a relationship
+citation matched its live root/projection and immutable retained blob/span.
+Graceful exit0, joined group absence and private runtime cleanup passed. Focused
+normal/race/vet/lint and nine pure harness controls also pass; no repeat or long
+rehearsal was needed. Exact evidence is `spike/t458c/success/`. This closes the
+neutral default repair; historical T45.8b failure stays exact, focused authority
+remains unavailable, and native managed generation/scale/release gates stay open.
+
 **T45.9 · Generated-SCIP evidence integration and product-scale closure**
 *(needs T45.5, T45.6, and T45.8b; T45.7 is optional)* — decide separately
 whether generated bundle members may feed SCIP-derived evidence. If GO,
@@ -19928,6 +19951,30 @@ metadata comparison only. Fresh exact UI/binary qualification remains T54.3.
 **T54.3 · Measured Impact promotion** — satisfy the common bar per report
 shape; one shape may release without claiming the others. Dependencies are
 the specific inputs it actually consumes, not every experimental pack.
+
+**T54.3 frozen preparation (2026-10-18, Ben-routed Mac handoff).**
+`spike/t543/qualification-plan.json` binds the unchanged T54.1 population and
+labels to one direct new-report matrix, exact HTTP/MCP/citations/unit joins,
+actual 1280/390px interaction, publication/cursor change and independent own/
+consumed-input withdrawal. Nine pure/mock controls pass. One180s deadline
+includes all owned joins and cleanup. Four new neutral current/unavailable
+light/dark frames require author review and fresh native-renderer comparison.
+No native quality, operating, canonical or production signature pass is inferred
+from preparation; prior legacy pixels and source outcomes stay exact.
+
+**T54.1/T54.3 finite operation outcome (2026-10-18, Ben-routed Mac handoff).**
+Direct composed quality now measures9positive/36wrong-operation memberships
+across5RPCs plus2scoped-empty queries; no component result transfers. Exact
+`e72e83f2` image passes33.758060458s ordinary HTTP/MCP/source/citation/paging/
+publication/withdrawal and actual1280/390keyboard/UI/a11y matrix. All rows
+remain syntax/heuristic; supplied units imply no deployment/owner truth. Three
+server groups/browser/client/samplers join before private teardown. Four new
+neutral current/unavailable light/dark native author/visual-review/fresh
+comparison frames pass separately. Earlier two checker stops remain exact;
+CSP remains unchanged. `spike/t543/success/` and `release/` retain exact result,
+bindings, root-reviewed unsigned artifacts/census and scoped common-bar reuse.
+No Noble/globalaccuracy/scale/other-shape claim follows. Existing production
+key/signature and final production artifact/publication decision remain pending.
 
 ## Epic 55 · Kafka producer-evidence production readiness
 

@@ -1,0 +1,1377 @@
+{
+  "schema": "phebs-t458c-neutral-whole-smoke-v1",
+  "outcome": "passed",
+  "http_calls": 85,
+  "health_reads": [
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.005254
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.000867
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.000516
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.000471
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.000441
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.00049
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.000393
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.025233
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.000359
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.000406
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.000421
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.000455
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.000462
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.000821
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.00047
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.000465
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.000433
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.000454
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.000454
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.000473
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.000527
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.000472
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.000552
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.000466
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.000486
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.000563
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.000664
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.000452
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.000476
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.000446
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.000492
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.0004
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.000477
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.00055
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.000824
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.003698
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.00059
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.001554
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.000889
+    },
+    {
+      "path": "/api/health",
+      "error_type": "ConnectionRefusedError",
+      "seconds": 0.001564
+    },
+    {
+      "path": "/api/health",
+      "status": 200,
+      "bytes": 78,
+      "seconds": 0.002603
+    }
+  ],
+  "reads": [
+    {
+      "path": "/api/repo-status",
+      "status": 200,
+      "bytes": 3,
+      "seconds": 0.008831,
+      "raw_digest": "sha256:37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "/api/services",
+      "status": 404,
+      "bytes": 131,
+      "seconds": 0.002548,
+      "raw_digest": "sha256:3551624fd10280bc79f122f7934a389532f04c787c8007c86a58c38c5c458296"
+    },
+    {
+      "path": "/api/services",
+      "status": 404,
+      "bytes": 131,
+      "seconds": 0.002519,
+      "raw_digest": "sha256:3551624fd10280bc79f122f7934a389532f04c787c8007c86a58c38c5c458296"
+    },
+    {
+      "path": "/api/service-relationships",
+      "status": 404,
+      "bytes": 137,
+      "seconds": 0.002219,
+      "raw_digest": "sha256:2853e49a54677219d52f3b504052f2cb6af71a42c6f0d3f92253b708656a79fa"
+    },
+    {
+      "path": "/api/repo-status",
+      "status": 200,
+      "bytes": 1742,
+      "seconds": 0.004666,
+      "raw_digest": "sha256:73beb67435e8674249af4ecff15dfc679fba9bbc291e62db69beab259dd64962"
+    },
+    {
+      "path": "/api/services",
+      "status": 404,
+      "bytes": 123,
+      "seconds": 0.003622,
+      "raw_digest": "sha256:5a067a49b296b0f62650ab2b6207bcf35251f9ae792e431472a3ac6a4d68bd86"
+    },
+    {
+      "path": "/api/services",
+      "status": 404,
+      "bytes": 123,
+      "seconds": 0.004567,
+      "raw_digest": "sha256:5a067a49b296b0f62650ab2b6207bcf35251f9ae792e431472a3ac6a4d68bd86"
+    },
+    {
+      "path": "/api/service-relationships",
+      "status": 404,
+      "bytes": 137,
+      "seconds": 0.003302,
+      "raw_digest": "sha256:2853e49a54677219d52f3b504052f2cb6af71a42c6f0d3f92253b708656a79fa"
+    },
+    {
+      "path": "/api/repo-status",
+      "status": 200,
+      "bytes": 2450,
+      "seconds": 0.004073,
+      "raw_digest": "sha256:adfcd2edd71ccc43b49aa3f80ad03e4026db8024a9848b63193e16839c57b16a"
+    },
+    {
+      "path": "/api/services",
+      "status": 200,
+      "bytes": 5479,
+      "seconds": 0.007259,
+      "raw_digest": "sha256:b0044d25f4f50036df0f07c074ac920eaafe07e9569e0700b266e00aa462c1d1"
+    },
+    {
+      "path": "/api/services",
+      "status": 200,
+      "bytes": 5304,
+      "seconds": 0.006671,
+      "raw_digest": "sha256:e18cdbdb7dc3d8ec06e8b9a42ad7b73a4e3777c2b73350aa7e240c7d997f3ffa"
+    },
+    {
+      "path": "/api/service-relationships",
+      "status": 200,
+      "bytes": 1011,
+      "seconds": 0.009626,
+      "raw_digest": "sha256:2f731039558005afdb0f6791784d8801395bddf504eff4bbebc3487fd025bfae"
+    },
+    {
+      "path": "/api/repo-status",
+      "status": 200,
+      "bytes": 2646,
+      "seconds": 0.003821,
+      "raw_digest": "sha256:33f99d6486d45f2a3837e365ca540005833706131c18abb14173e64d749b8273"
+    },
+    {
+      "path": "/api/services",
+      "status": 200,
+      "bytes": 5479,
+      "seconds": 0.009093,
+      "raw_digest": "sha256:b0044d25f4f50036df0f07c074ac920eaafe07e9569e0700b266e00aa462c1d1"
+    },
+    {
+      "path": "/api/services",
+      "status": 200,
+      "bytes": 5304,
+      "seconds": 0.006014,
+      "raw_digest": "sha256:e18cdbdb7dc3d8ec06e8b9a42ad7b73a4e3777c2b73350aa7e240c7d997f3ffa"
+    },
+    {
+      "path": "/api/service-relationships",
+      "status": 200,
+      "bytes": 1011,
+      "seconds": 0.003289,
+      "raw_digest": "sha256:2f731039558005afdb0f6791784d8801395bddf504eff4bbebc3487fd025bfae"
+    },
+    {
+      "path": "/api/repo-status",
+      "status": 200,
+      "bytes": 2646,
+      "seconds": 0.006052,
+      "raw_digest": "sha256:3b3f87a67a998de87560d9e98752441d3c2df355428287e863027ae63ffe719c"
+    },
+    {
+      "path": "/api/services",
+      "status": 200,
+      "bytes": 5479,
+      "seconds": 0.009844,
+      "raw_digest": "sha256:b0044d25f4f50036df0f07c074ac920eaafe07e9569e0700b266e00aa462c1d1"
+    },
+    {
+      "path": "/api/services",
+      "status": 200,
+      "bytes": 5304,
+      "seconds": 0.009996,
+      "raw_digest": "sha256:e18cdbdb7dc3d8ec06e8b9a42ad7b73a4e3777c2b73350aa7e240c7d997f3ffa"
+    },
+    {
+      "path": "/api/service-relationships",
+      "status": 200,
+      "bytes": 2913,
+      "seconds": 0.005782,
+      "raw_digest": "sha256:7580852138248c127b79a20ad37c260cd9e5d129bcad42fa7d844be6ed1f487b"
+    },
+    {
+      "path": "/api/repo-status",
+      "status": 200,
+      "bytes": 2640,
+      "seconds": 0.003738,
+      "raw_digest": "sha256:f06e942917f3750d621e67160b1cc2804b2dd747a44434fd200d0b8001cb3093"
+    },
+    {
+      "path": "/api/services",
+      "status": 200,
+      "bytes": 5479,
+      "seconds": 0.005674,
+      "raw_digest": "sha256:b0044d25f4f50036df0f07c074ac920eaafe07e9569e0700b266e00aa462c1d1"
+    },
+    {
+      "path": "/api/services",
+      "status": 200,
+      "bytes": 5304,
+      "seconds": 0.007111,
+      "raw_digest": "sha256:e18cdbdb7dc3d8ec06e8b9a42ad7b73a4e3777c2b73350aa7e240c7d997f3ffa"
+    },
+    {
+      "path": "/api/service-relationships",
+      "status": 200,
+      "bytes": 2913,
+      "seconds": 0.005942,
+      "raw_digest": "sha256:7580852138248c127b79a20ad37c260cd9e5d129bcad42fa7d844be6ed1f487b"
+    },
+    {
+      "path": "/api/repo-status",
+      "status": 200,
+      "bytes": 2640,
+      "seconds": 0.003643,
+      "raw_digest": "sha256:f06e942917f3750d621e67160b1cc2804b2dd747a44434fd200d0b8001cb3093"
+    },
+    {
+      "path": "/api/services",
+      "status": 200,
+      "bytes": 5479,
+      "seconds": 0.00655,
+      "raw_digest": "sha256:b0044d25f4f50036df0f07c074ac920eaafe07e9569e0700b266e00aa462c1d1"
+    },
+    {
+      "path": "/api/services",
+      "status": 200,
+      "bytes": 5304,
+      "seconds": 0.01521,
+      "raw_digest": "sha256:e18cdbdb7dc3d8ec06e8b9a42ad7b73a4e3777c2b73350aa7e240c7d997f3ffa"
+    },
+    {
+      "path": "/api/service-relationships",
+      "status": 200,
+      "bytes": 2707,
+      "seconds": 0.005954,
+      "raw_digest": "sha256:260cb917a5cbed63e5f489078293891704d826382327397a8ee4ce6598fe0ce9"
+    },
+    {
+      "path": "/api/repo-status",
+      "status": 200,
+      "bytes": 2686,
+      "seconds": 0.011946,
+      "raw_digest": "sha256:ac87a8a05127ac3af48f1b449f020f5c0dfdf39050d096580220ccfe3f9988ac"
+    },
+    {
+      "path": "/api/services",
+      "status": 200,
+      "bytes": 5479,
+      "seconds": 0.013985,
+      "raw_digest": "sha256:b0044d25f4f50036df0f07c074ac920eaafe07e9569e0700b266e00aa462c1d1"
+    },
+    {
+      "path": "/api/services",
+      "status": 200,
+      "bytes": 5304,
+      "seconds": 0.012339,
+      "raw_digest": "sha256:e18cdbdb7dc3d8ec06e8b9a42ad7b73a4e3777c2b73350aa7e240c7d997f3ffa"
+    },
+    {
+      "path": "/api/service-relationships",
+      "status": 200,
+      "bytes": 2707,
+      "seconds": 0.009021,
+      "raw_digest": "sha256:260cb917a5cbed63e5f489078293891704d826382327397a8ee4ce6598fe0ce9"
+    },
+    {
+      "path": "/api/repo-status",
+      "status": 200,
+      "bytes": 2726,
+      "seconds": 0.006903,
+      "raw_digest": "sha256:64763bf3f46a069b052b48914210bfc164ac0acd5df45bf1795a47f8f1cdd24f"
+    },
+    {
+      "path": "/api/services",
+      "status": 200,
+      "bytes": 5479,
+      "seconds": 0.023568,
+      "raw_digest": "sha256:b0044d25f4f50036df0f07c074ac920eaafe07e9569e0700b266e00aa462c1d1"
+    },
+    {
+      "path": "/api/services",
+      "status": 200,
+      "bytes": 5304,
+      "seconds": 0.025845,
+      "raw_digest": "sha256:e18cdbdb7dc3d8ec06e8b9a42ad7b73a4e3777c2b73350aa7e240c7d997f3ffa"
+    },
+    {
+      "path": "/api/service-relationships",
+      "status": 200,
+      "bytes": 2707,
+      "seconds": 0.023502,
+      "raw_digest": "sha256:260cb917a5cbed63e5f489078293891704d826382327397a8ee4ce6598fe0ce9"
+    },
+    {
+      "path": "/api/repo-status",
+      "status": 200,
+      "bytes": 2720,
+      "seconds": 0.004012,
+      "raw_digest": "sha256:44326f74eaa6b7dd38325c393cee12243bb225c8c3021ae7a38603c257225e27"
+    },
+    {
+      "path": "/api/services",
+      "status": 200,
+      "bytes": 5479,
+      "seconds": 0.008,
+      "raw_digest": "sha256:b0044d25f4f50036df0f07c074ac920eaafe07e9569e0700b266e00aa462c1d1"
+    },
+    {
+      "path": "/api/services",
+      "status": 200,
+      "bytes": 5304,
+      "seconds": 0.006571,
+      "raw_digest": "sha256:e18cdbdb7dc3d8ec06e8b9a42ad7b73a4e3777c2b73350aa7e240c7d997f3ffa"
+    },
+    {
+      "path": "/api/service-relationships",
+      "status": 200,
+      "bytes": 12609,
+      "seconds": 0.007477,
+      "raw_digest": "sha256:0f03951ff308701e2d79ce593fdf8321f25bcaaf9050db51bfa43b4a051da0d7"
+    },
+    {
+      "path": "/api/search",
+      "status": 401,
+      "bytes": 36,
+      "seconds": 0.001186,
+      "raw_digest": "sha256:981ec6aa5b1d3cbd4bc50c6b4c98f877de8334eed519c19bd8463d78e03e8d5a"
+    },
+    {
+      "path": "/api/search",
+      "status": 200,
+      "bytes": 3142,
+      "seconds": 0.029939,
+      "raw_digest": "sha256:eb9ee69b5399f494658f3e508a7cdd15a925042493d6366ddde21f54d1672c53"
+    },
+    {
+      "path": "/api/search",
+      "status": 200,
+      "bytes": 1150,
+      "seconds": 0.013256,
+      "raw_digest": "sha256:9fad4dfcc5ccdbf245fb41c62a02ea51bd3ad5ebac70293364c9bb85ad2457a4"
+    },
+    {
+      "path": "/api/service-relationship-citation",
+      "status": 200,
+      "bytes": 1695,
+      "seconds": 0.024822,
+      "raw_digest": "sha256:8e9b64d7eb1ca71376ea519442a7c076588e49119c660de66efc388e6f15446a"
+    }
+  ],
+  "phases": [
+    {
+      "phase": "neutral-whole",
+      "ready_seconds": 10.17,
+      "terminal": {
+        "outcome": "success",
+        "exit_code": 0,
+        "teardown": "clean",
+        "wall_seconds": 20.15
+      },
+      "owned_pgid": 92776,
+      "server_group_drained": true
+    }
+  ],
+  "claim": "Bounded neutral integration only; no focused service support, accuracy, scale, managed provider or production release claim.",
+  "readiness": {
+    "repositories": [
+      {
+        "name": "local/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com/docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle",
+        "clone_url": "/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com/docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle",
+        "default_branch": "main",
+        "is_fork": false,
+        "is_archived": false,
+        "is_public": false,
+        "indexed_at": "2026-10-18T15:35:35Z",
+        "indexed_commit_hash": "b7f443ed7e89dbaede855a6cfd30767bbe13dfbb",
+        "indexed_revisions": [
+          {
+            "selector": "HEAD",
+            "branch": "HEAD",
+            "commit": "b7f443ed7e89dbaede855a6cfd30767bbe13dfbb"
+          }
+        ],
+        "latest_indexing_job_status": "done",
+        "external_code_host_type": "git",
+        "orphaned": false,
+        "connections": [
+          "t30-service-scope-demo"
+        ],
+        "last_index_job": {
+          "target": "local/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com/docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle",
+          "status": "done",
+          "attempts": 0,
+          "created_at": "2026-10-18T15:35:34.219091Z",
+          "claimed_by": "Bens-MacBook-Air.local-92776",
+          "claimed_at": "2026-10-18T15:35:34.635376Z",
+          "heartbeat_at": "2026-10-18T15:35:34.635377Z",
+          "finished_at": "2026-10-18T15:35:35.147031Z"
+        },
+        "last_index_job_state": "exact",
+        "last_extraction_job": {
+          "status": "done",
+          "attempts": 0
+        },
+        "last_extraction_job_state": "exact",
+        "last_caller_job": {
+          "status": "done",
+          "attempts": 0
+        },
+        "last_caller_job_state": "exact",
+        "last_resolver_job": {
+          "status": "done",
+          "attempts": 0
+        },
+        "last_resolver_job_state": "exact"
+      },
+      {
+        "name": "local/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com/spike/t323/t323-neutral-corpus.bundle",
+        "clone_url": "/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com/spike/t323/t323-neutral-corpus.bundle",
+        "default_branch": "main",
+        "is_fork": false,
+        "is_archived": false,
+        "is_public": false,
+        "indexed_at": "2026-10-18T15:35:35Z",
+        "indexed_commit_hash": "4ac5335893fc18a1243b60a005faa1f09268d858",
+        "indexed_revisions": [
+          {
+            "selector": "HEAD",
+            "branch": "HEAD",
+            "commit": "4ac5335893fc18a1243b60a005faa1f09268d858"
+          }
+        ],
+        "latest_indexing_job_status": "done",
+        "external_code_host_type": "git",
+        "orphaned": false,
+        "connections": [
+          "t34-service-search-demo"
+        ],
+        "last_index_job": {
+          "target": "local/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com/spike/t323/t323-neutral-corpus.bundle",
+          "status": "done",
+          "attempts": 0,
+          "created_at": "2026-10-18T15:35:34.34673Z",
+          "claimed_by": "Bens-MacBook-Air.local-92776",
+          "claimed_at": "2026-10-18T15:35:35.153553Z",
+          "heartbeat_at": "2026-10-18T15:35:35.153554Z",
+          "finished_at": "2026-10-18T15:35:35.556548Z"
+        },
+        "last_index_job_state": "exact",
+        "last_extraction_job": {
+          "status": "done",
+          "attempts": 0
+        },
+        "last_extraction_job_state": "exact",
+        "last_caller_job": {
+          "status": "done",
+          "attempts": 0
+        },
+        "last_caller_job_state": "exact",
+        "last_resolver_job": {
+          "status": "done",
+          "attempts": 0
+        },
+        "last_resolver_job_state": "exact"
+      }
+    ],
+    "t307Services": {
+      "$schema": "http://127.0.0.1:58149/schemas/ServiceInventory.json",
+      "schema": "phebs-service-inventory-v1",
+      "repository": {
+        "repository": "local/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com/docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle",
+        "source_kind": "operator",
+        "source_commit": "b7f443ed7e89dbaede855a6cfd30767bbe13dfbb",
+        "source_file_count": 9,
+        "accepted_file_count": 7,
+        "unowned_file_count": 2,
+        "authority": {
+          "kind": "operator",
+          "id": "t335-demo",
+          "version": "v1"
+        },
+        "catalog_digest": "sha256:8d82e26cbebafa3062791389818e29b537ddcac8b4f789b27cc3cca82badcd84",
+        "catalog_generation": "sha256:1f0235ea2127a39bd746a841ffb804f52e927b0e7a7dff6d98ad493ac91bf59a",
+        "catalog_control_revision": 1,
+        "state_control_revision": 2,
+        "catalog_service_count": 5,
+        "live_service_count": 4,
+        "current_count": 2,
+        "stale_count": 0,
+        "unavailable_count": 1,
+        "conflict_count": 1,
+        "tombstone_count": 1,
+        "published_at": "2026-10-18T15:35:35Z",
+        "state_updated_at": "2026-10-18T15:35:35Z"
+      },
+      "filters": {
+        "repository": "local/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com/docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle"
+      },
+      "services": [
+        {
+          "repository": "local/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com/docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle",
+          "key": "billing-control",
+          "display_name": "Billing control",
+          "disposition": "conflict",
+          "origin": "base",
+          "reason": "two neutral authority claims remain unresolved",
+          "successor_count": 0,
+          "incarnation": 1,
+          "desired_generation": "sha256:315e54a1a7cd9617c80a77d4617b3abc3380bace2e107698409bde427473b4a7",
+          "desired_source_generation": "sha256:ccee1bd307899916022ff58cde92983f3c608eeb957f9f3f37ec804cda0dc287",
+          "desired_catalog_generation": "sha256:1f0235ea2127a39bd746a841ffb804f52e927b0e7a7dff6d98ad493ac91bf59a",
+          "status": "conflict",
+          "removed": false,
+          "membership_count": 1,
+          "distinct_path_count": 1,
+          "role_counts": {
+            "primary": 1,
+            "supporting": 0,
+            "shared": 0,
+            "generated": 0,
+            "typed": 0
+          },
+          "state_digest": "sha256:92211a6f01d6ac7e9ee32fe90c105ee35ee1640d3ad6fdd66c46aea6d4412a06",
+          "control_revision": 1,
+          "changed_at": "2026-10-18T15:35:35Z"
+        },
+        {
+          "repository": "local/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com/docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle",
+          "key": "orders-api",
+          "display_name": "Orders API",
+          "disposition": "accepted",
+          "origin": "base",
+          "successor_count": 0,
+          "incarnation": 1,
+          "desired_generation": "sha256:1f0cb8662153bc1098bfa44c68e6ab4c05c850ae2016a32cbe64acf6fcf72bc7",
+          "desired_source_generation": "sha256:ccee1bd307899916022ff58cde92983f3c608eeb957f9f3f37ec804cda0dc287",
+          "desired_catalog_generation": "sha256:1f0235ea2127a39bd746a841ffb804f52e927b0e7a7dff6d98ad493ac91bf59a",
+          "active_desired_generation": "sha256:1f0cb8662153bc1098bfa44c68e6ab4c05c850ae2016a32cbe64acf6fcf72bc7",
+          "active_source_generation": "sha256:ccee1bd307899916022ff58cde92983f3c608eeb957f9f3f37ec804cda0dc287",
+          "active_catalog_generation": "sha256:1f0235ea2127a39bd746a841ffb804f52e927b0e7a7dff6d98ad493ac91bf59a",
+          "status": "current",
+          "removed": false,
+          "membership_count": 6,
+          "distinct_path_count": 5,
+          "role_counts": {
+            "primary": 1,
+            "supporting": 2,
+            "shared": 2,
+            "generated": 1,
+            "typed": 0
+          },
+          "state_digest": "sha256:95c162339bda2b85cd8fc2a240484d834a519c5f5116c24786ef7972a3eefb54",
+          "control_revision": 2,
+          "changed_at": "2026-10-18T15:35:35Z"
+        },
+        {
+          "repository": "local/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com/docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle",
+          "key": "orders-events",
+          "display_name": "Orders events",
+          "disposition": "accepted",
+          "origin": "base",
+          "successor_count": 0,
+          "incarnation": 1,
+          "desired_generation": "sha256:28c0121c121263760a58a5970231c28ad41029fef0d1ea499f76d926dbd1572a",
+          "desired_source_generation": "sha256:ccee1bd307899916022ff58cde92983f3c608eeb957f9f3f37ec804cda0dc287",
+          "desired_catalog_generation": "sha256:1f0235ea2127a39bd746a841ffb804f52e927b0e7a7dff6d98ad493ac91bf59a",
+          "active_desired_generation": "sha256:28c0121c121263760a58a5970231c28ad41029fef0d1ea499f76d926dbd1572a",
+          "active_source_generation": "sha256:ccee1bd307899916022ff58cde92983f3c608eeb957f9f3f37ec804cda0dc287",
+          "active_catalog_generation": "sha256:1f0235ea2127a39bd746a841ffb804f52e927b0e7a7dff6d98ad493ac91bf59a",
+          "status": "current",
+          "removed": false,
+          "membership_count": 3,
+          "distinct_path_count": 3,
+          "role_counts": {
+            "primary": 1,
+            "supporting": 1,
+            "shared": 1,
+            "generated": 0,
+            "typed": 0
+          },
+          "state_digest": "sha256:d4621ff94d664e05e90dbfa6fe2c3474278371bd40213c8678f6f1e87f71bed8",
+          "control_revision": 2,
+          "changed_at": "2026-10-18T15:35:35Z"
+        },
+        {
+          "repository": "local/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com/docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle",
+          "key": "returns-proposal",
+          "display_name": "Returns proposal",
+          "disposition": "proposal",
+          "origin": "base",
+          "reason": "neutral candidate retained for directory-state demonstration",
+          "successor_count": 0,
+          "incarnation": 1,
+          "desired_generation": "sha256:74f2a8babb331c23fd8c07f07094be6450ebc0bcd07497ad76a3436168756f6f",
+          "desired_source_generation": "sha256:ccee1bd307899916022ff58cde92983f3c608eeb957f9f3f37ec804cda0dc287",
+          "desired_catalog_generation": "sha256:1f0235ea2127a39bd746a841ffb804f52e927b0e7a7dff6d98ad493ac91bf59a",
+          "status": "unavailable",
+          "removed": false,
+          "membership_count": 1,
+          "distinct_path_count": 1,
+          "role_counts": {
+            "primary": 1,
+            "supporting": 0,
+            "shared": 0,
+            "generated": 0,
+            "typed": 0
+          },
+          "state_digest": "sha256:6b9b50c95b53ff77789c9891c4c5505bef020e7ca4fbe9cea5f088f4002d5181",
+          "control_revision": 1,
+          "changed_at": "2026-10-18T15:35:35Z"
+        }
+      ],
+      "pagination": {
+        "order": "service_key:asc",
+        "page_size": 100,
+        "returned": 4
+      }
+    },
+    "t323Services": {
+      "$schema": "http://127.0.0.1:58149/schemas/ServiceInventory.json",
+      "schema": "phebs-service-inventory-v1",
+      "repository": {
+        "repository": "local/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com/spike/t323/t323-neutral-corpus.bundle",
+        "source_kind": "operator",
+        "source_commit": "4ac5335893fc18a1243b60a005faa1f09268d858",
+        "source_file_count": 14,
+        "accepted_file_count": 8,
+        "unowned_file_count": 6,
+        "authority": {
+          "kind": "operator",
+          "id": "t344-demo",
+          "version": "v1"
+        },
+        "catalog_digest": "sha256:09e585dee6f6e59d40aabe8318eef96e6177576b2fbcb636f84f2003d34eab63",
+        "catalog_generation": "sha256:27af14adf24888467c6af12d15cb5e6eaf5254bdfa7822e428152768f836b5aa",
+        "catalog_control_revision": 1,
+        "state_control_revision": 2,
+        "catalog_service_count": 5,
+        "live_service_count": 4,
+        "current_count": 2,
+        "stale_count": 0,
+        "unavailable_count": 1,
+        "conflict_count": 1,
+        "tombstone_count": 1,
+        "published_at": "2026-10-18T15:35:35Z",
+        "state_updated_at": "2026-10-18T15:35:35Z"
+      },
+      "filters": {
+        "repository": "local/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com/spike/t323/t323-neutral-corpus.bundle"
+      },
+      "services": [
+        {
+          "repository": "local/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com/spike/t323/t323-neutral-corpus.bundle",
+          "key": "svc.conflicted",
+          "display_name": "Conflicted service",
+          "disposition": "conflict",
+          "origin": "base",
+          "reason": "two neutral authority claims remain unresolved",
+          "successor_count": 0,
+          "incarnation": 1,
+          "desired_generation": "sha256:1bf3d1461c2761b6ad5a055ed22a11c7ecd220fc5406f24fc85e465d7045ba46",
+          "desired_source_generation": "sha256:acad9f60804ea705ac6aa704831e51c215477e7803a06c0a9f05015ec87c9f14",
+          "desired_catalog_generation": "sha256:27af14adf24888467c6af12d15cb5e6eaf5254bdfa7822e428152768f836b5aa",
+          "status": "conflict",
+          "removed": false,
+          "membership_count": 1,
+          "distinct_path_count": 1,
+          "role_counts": {
+            "primary": 1,
+            "supporting": 0,
+            "shared": 0,
+            "generated": 0,
+            "typed": 0
+          },
+          "state_digest": "sha256:65f0360cf9d81233395c8c52e3a92f020a7c8d99ebe3b469af40a3306426f00f",
+          "control_revision": 1,
+          "changed_at": "2026-10-18T15:35:35Z"
+        },
+        {
+          "repository": "local/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com/spike/t323/t323-neutral-corpus.bundle",
+          "key": "svc.fulfillment",
+          "display_name": "Fulfillment",
+          "disposition": "accepted",
+          "origin": "base",
+          "successor_count": 0,
+          "incarnation": 1,
+          "desired_generation": "sha256:ca51bd77f902a4bc4972ea8baa243bf0dc8276513f96ca2dc58aa3d120d0df2d",
+          "desired_source_generation": "sha256:acad9f60804ea705ac6aa704831e51c215477e7803a06c0a9f05015ec87c9f14",
+          "desired_catalog_generation": "sha256:27af14adf24888467c6af12d15cb5e6eaf5254bdfa7822e428152768f836b5aa",
+          "active_desired_generation": "sha256:ca51bd77f902a4bc4972ea8baa243bf0dc8276513f96ca2dc58aa3d120d0df2d",
+          "active_source_generation": "sha256:acad9f60804ea705ac6aa704831e51c215477e7803a06c0a9f05015ec87c9f14",
+          "active_catalog_generation": "sha256:27af14adf24888467c6af12d15cb5e6eaf5254bdfa7822e428152768f836b5aa",
+          "status": "current",
+          "removed": false,
+          "membership_count": 3,
+          "distinct_path_count": 3,
+          "role_counts": {
+            "primary": 1,
+            "supporting": 0,
+            "shared": 2,
+            "generated": 0,
+            "typed": 0
+          },
+          "state_digest": "sha256:fe9058e76ee41b39a5ddb9f6cf6fff26769ab92583df9a58a8fcbd88b2c07d83",
+          "control_revision": 2,
+          "changed_at": "2026-10-18T15:35:35Z"
+        },
+        {
+          "repository": "local/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com/spike/t323/t323-neutral-corpus.bundle",
+          "key": "svc.orders-api",
+          "display_name": "Orders API",
+          "disposition": "accepted",
+          "origin": "base",
+          "successor_count": 0,
+          "incarnation": 1,
+          "desired_generation": "sha256:70749547368fb960fe9bf84e926dc0dd9cdc3be2b87975e3e1ceee0a14a9917d",
+          "desired_source_generation": "sha256:acad9f60804ea705ac6aa704831e51c215477e7803a06c0a9f05015ec87c9f14",
+          "desired_catalog_generation": "sha256:27af14adf24888467c6af12d15cb5e6eaf5254bdfa7822e428152768f836b5aa",
+          "active_desired_generation": "sha256:70749547368fb960fe9bf84e926dc0dd9cdc3be2b87975e3e1ceee0a14a9917d",
+          "active_source_generation": "sha256:acad9f60804ea705ac6aa704831e51c215477e7803a06c0a9f05015ec87c9f14",
+          "active_catalog_generation": "sha256:27af14adf24888467c6af12d15cb5e6eaf5254bdfa7822e428152768f836b5aa",
+          "status": "current",
+          "removed": false,
+          "membership_count": 8,
+          "distinct_path_count": 6,
+          "role_counts": {
+            "primary": 1,
+            "supporting": 3,
+            "shared": 2,
+            "generated": 1,
+            "typed": 1
+          },
+          "state_digest": "sha256:b21b11dc3c5bc61b230a6661696b79f4b3f82dbb470ac995587ea3dabaf17023",
+          "control_revision": 2,
+          "changed_at": "2026-10-18T15:35:35Z"
+        },
+        {
+          "repository": "local/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com/spike/t323/t323-neutral-corpus.bundle",
+          "key": "svc.proposed",
+          "display_name": "Proposed service",
+          "disposition": "proposal",
+          "origin": "base",
+          "reason": "neutral proposal has not been accepted",
+          "successor_count": 0,
+          "incarnation": 1,
+          "desired_generation": "sha256:a6f5831fb8d667322f5f61e4137a212751440f760267dbd011f3a3107fffcaef",
+          "desired_source_generation": "sha256:acad9f60804ea705ac6aa704831e51c215477e7803a06c0a9f05015ec87c9f14",
+          "desired_catalog_generation": "sha256:27af14adf24888467c6af12d15cb5e6eaf5254bdfa7822e428152768f836b5aa",
+          "status": "unavailable",
+          "removed": false,
+          "membership_count": 1,
+          "distinct_path_count": 1,
+          "role_counts": {
+            "primary": 1,
+            "supporting": 0,
+            "shared": 0,
+            "generated": 0,
+            "typed": 0
+          },
+          "state_digest": "sha256:2b2838dc8166814f40968634e4375e995b7e64389d359bf9f44d2d31f2ff617e",
+          "control_revision": 1,
+          "changed_at": "2026-10-18T15:35:35Z"
+        }
+      ],
+      "pagination": {
+        "order": "service_key:asc",
+        "page_size": 100,
+        "returned": 4
+      }
+    },
+    "relationships": {
+      "$schema": "http://127.0.0.1:58149/schemas/RelationshipPage.json",
+      "schema": "phebs-service-relationship-page-v1",
+      "query": {
+        "repositories": [
+          "local/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com/docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle"
+        ],
+        "service_key": "orders-api",
+        "view": "all"
+      },
+      "rows_state": "nonempty",
+      "roots": [
+        {
+          "repository": "local/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com/docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle",
+          "state": "complete",
+          "root_schema": "phebs-relationship-root-v2",
+          "generation": "sha256:b59fd18ea5edfefb494dd0d7b573a73a0f0d8c4a832d565958b78febbfe2e288",
+          "root_digest": "sha256:1a9bcb02836f830779e60a361060f472610ff489168ca79be61773e1ea245552",
+          "authority_digest": "sha256:be7e8f8fb83508328f68f069f00e8ae2db8bbd74354e4a1532829e313b6b76cd",
+          "authority": {
+            "repository": "local/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com/docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle",
+            "catalog_generation_digest": "sha256:1f0235ea2127a39bd746a841ffb804f52e927b0e7a7dff6d98ad493ac91bf59a",
+            "catalog_digest": "sha256:8d82e26cbebafa3062791389818e29b537ddcac8b4f789b27cc3cca82badcd84",
+            "catalog_source_generation": "sha256:ccee1bd307899916022ff58cde92983f3c608eeb957f9f3f37ec804cda0dc287",
+            "service_state_set_digest": "sha256:fdc222944833d4352abdf7a46b907dc3872f7e97910ea683110cdc6ced119a18",
+            "service_state_summary_digest": "sha256:5be5cbe9b8066c4d54b645351f63084ec1bbe34ab71b8dd96a7da0ff6ccaafdc",
+            "service_state_control_revision": 2,
+            "observation_generation_digest": "sha256:92951aef60236b899d8071448dd190b5547fa27acf64bbc8715a835b114934de",
+            "observation_manifest_digest": "sha256:b8c558db39c9dc19fa3ffd3cb945633aa1a0c337590f709d1d9fed6f23553e92",
+            "observation_source_digest": "sha256:1108b0f22c73e40047b6be9a4e6d405ad55478f10266649609d1bada3909f7dc",
+            "resolver_generation_digest": "sha256:d967435f7e3d2cf48c7713cf96a339235560f5af20dc778e16739fd8959ff966",
+            "resolver_root_digest": "sha256:2a84ab884b01d7a3113740a58eef5aa5191c646d2bdeabe4378c44f9aeb569da",
+            "rpc_generation_digest": "sha256:2e636df189c2d2ac118bf80876a49ae318ce2c3a003dfffa5ccb4e6f204f1923",
+            "rpc_root_digest": "sha256:0ae5bfb8dfedc938ed9227029ac0623426d972b5ae76e22544248e07757f0391",
+            "kafka_generation_digest": "sha256:f5b29d8a73f3e9415e1b208a7b082a94168dec09a810e17cd70956e8975b502c",
+            "kafka_root_digest": "sha256:66bc8c5ead7d73635e001cc28d602fabe2405b92160c5029a7ea3412b6bdaece",
+            "policy_digest": "sha256:f343bd124f5d0e370a1f27171bdcc49772f5486b26faba68051dc6530233bcff",
+            "upstream": {
+              "schema": "phebs-downstream-upstream-authority-v2",
+              "repository": "local/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com/docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle",
+              "observation": {
+                "version": "observation-v2",
+                "repository": "local/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com/docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle",
+                "source_generation_digest": "sha256:1108b0f22c73e40047b6be9a4e6d405ad55478f10266649609d1bada3909f7dc",
+                "source_root_digest": "sha256:56d23b3441901b2062d622394187ffae7e17bf3b5f4e20d596e5da755ea3d5d9",
+                "observation_generation_digest": "sha256:92951aef60236b899d8071448dd190b5547fa27acf64bbc8715a835b114934de",
+                "observation_root_digest": "sha256:b8c558db39c9dc19fa3ffd3cb945633aa1a0c337590f709d1d9fed6f23553e92",
+                "partition_policy_digest": "sha256:48ac2209897adb7a399564ad8bbf3406c79696217c270cb5ead5c50ec95754d1",
+                "observation_policy_digest": "sha256:b0563c9ea6a4fc22a338a326216cfe77b4ae2ecbcf30bfa0617782308e0e3b7f",
+                "inventory_policy_digest": "sha256:ffd6deeb58cbdfb3072d7a7c5028357d1e3f53deded473b602e822b20dd3a1ff",
+                "record_count": 5,
+                "observed_count": 5
+              },
+              "required_domain_count": 6,
+              "published_domain_count": 6,
+              "gaps": [
+                {
+                  "domain": "grpc-caller",
+                  "version": "1.6.0",
+                  "disposition": "unavailable_prerequisite"
+                },
+                {
+                  "domain": "scip-proto-field",
+                  "version": "1.4.0",
+                  "disposition": "unavailable_prerequisite"
+                }
+              ],
+              "digest": "sha256:51956de14e782c4c1dcdbecd87e0c04c33c92035626c8b569596c96f14b11e7d"
+            }
+          },
+          "service_key": "orders-api",
+          "service_incarnation": 1,
+          "service_generation": "sha256:1f0cb8662153bc1098bfa44c68e6ab4c05c850ae2016a32cbe64acf6fcf72bc7",
+          "reference_count": 4,
+          "repository_complete": true,
+          "all_services_complete": true
+        }
+      ],
+      "rows": [
+        {
+          "repository": "local/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com/docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle",
+          "service_key": "orders-api",
+          "service_incarnation": 1,
+          "service_generation": "sha256:1f0cb8662153bc1098bfa44c68e6ab4c05c850ae2016a32cbe64acf6fcf72bc7",
+          "kind": "kafka",
+          "plane": "producer",
+          "class": "literal",
+          "lookup_key": "orders.created.v1",
+          "participation": [
+            "source"
+          ],
+          "counterpart_services": [],
+          "projection_digest": "sha256:ee38560b8fe014008c7e647a62f490b1253cc03cf694709622a44ab8022fa656",
+          "posting_digest": "sha256:55d06d9c11b87ae33028a7a98348ca4ff967754d2d880ac5331001839baa9f1c",
+          "source": {
+            "path": "service/orders/kafka.go",
+            "unowned": false,
+            "claims": [
+              {
+                "service_key": "orders-api",
+                "disposition": "accepted",
+                "roles": [
+                  {
+                    "role": "primary",
+                    "origin": "base"
+                  }
+                ]
+              },
+              {
+                "service_key": "orders-events",
+                "disposition": "accepted",
+                "roles": [
+                  {
+                    "role": "primary",
+                    "origin": "base"
+                  }
+                ]
+              }
+            ]
+          },
+          "evidence": {
+            "kind": "kafka",
+            "plane": "producer",
+            "class": "literal",
+            "path": "service/orders/kafka.go",
+            "object_id": "6ae0961f97c2d0c83c00c58c53e4f66b7dc1d46c",
+            "content_digest": "sha256:12ac5fc7d65c5f269d4e4ac089660d95c3b7ef057420621270c5129016bbe67c",
+            "span": {
+              "start_byte": 180,
+              "end_byte": 199,
+              "start_line": 10,
+              "end_line": 10
+            },
+            "source_role": "production",
+            "topic_spelling": "orders.created.v1",
+            "library": "sarama",
+            "shape": "ProducerMessage",
+            "binding": "literal",
+            "posting_digest": "sha256:55d06d9c11b87ae33028a7a98348ca4ff967754d2d880ac5331001839baa9f1c"
+          },
+          "citation": "eyJzY2hlbWEiOiJwaGVicy1zZXJ2aWNlLXJlbGF0aW9uc2hpcC1jaXRhdGlvbi12MSIsImJpbmRpbmciOiJwNjlxUnhvWVM5UzBKbkJNYlNwTmVoWFIiLCJyZXBvc2l0b3J5IjoibG9jYWwvVXNlcnMvYmVuLy5jb2RleC93b3JrdHJlZXMvdDU3cjItcmVjZWlwdC1wb3J0YWJpbGl0eS9waGVicy5jb20vZG9jcy9maXh0dXJlcy90MzAuNy1uZXV0cmFsLXNlcnZpY2UvdDMwNy1uZXV0cmFsLXNlcnZpY2UuYnVuZGxlIiwic291cmNlIjowLCJwcm9qZWN0aW9uIjoic2hhMjU2OmVlMzg1NjBiOGZlMDE0MDA4YzdlNjQ3YTYyZjQ5MGIxMjUzY2MwM2NmNjk0NzA5NjIyYTQ0YWI4MDIyZmE2NTYifQ.SAb-dXETUbbabj4Ni_013tkDcHtLeQTlayeXeAt7MeI"
+        },
+        {
+          "repository": "local/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com/docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle",
+          "service_key": "orders-api",
+          "service_incarnation": 1,
+          "service_generation": "sha256:1f0cb8662153bc1098bfa44c68e6ab4c05c850ae2016a32cbe64acf6fcf72bc7",
+          "kind": "rpc",
+          "plane": "grpc",
+          "class": "resolved",
+          "lookup_key": "/demo.orders.v1.Orders/Create",
+          "participation": [
+            "target"
+          ],
+          "counterpart_services": [],
+          "projection_digest": "sha256:568de0dd802883696c600973aa79af6eab3e2a08294bf471ae650525a79a3bca",
+          "posting_digest": "sha256:16b6cb26e6d5c23988d8625e8677e7fe2b6a5738e10646749d2c64ff4a928677",
+          "source": {
+            "path": "consumers/external/caller.go",
+            "unowned": true,
+            "claims": [
+              {
+                "service_key": "returns-proposal",
+                "disposition": "proposal",
+                "roles": [
+                  {
+                    "role": "primary",
+                    "origin": "base"
+                  }
+                ]
+              }
+            ]
+          },
+          "target": {
+            "path": "api/orders.proto",
+            "unowned": false,
+            "claims": [
+              {
+                "service_key": "orders-api",
+                "disposition": "accepted",
+                "roles": [
+                  {
+                    "role": "supporting",
+                    "origin": "base"
+                  }
+                ]
+              },
+              {
+                "service_key": "orders-events",
+                "disposition": "accepted",
+                "roles": [
+                  {
+                    "role": "supporting",
+                    "origin": "base"
+                  }
+                ]
+              }
+            ]
+          },
+          "evidence": {
+            "kind": "rpc",
+            "plane": "grpc",
+            "class": "resolved",
+            "path": "consumers/external/caller.go",
+            "object_id": "97d6033f970201536d367bac59f7dba1e22b8fb5",
+            "content_digest": "sha256:81503df1e6a3b61b6d5ba9e153f20fa49e175ddfdf8d2ab6f5572c55e2656fed",
+            "span": {
+              "start_byte": 341,
+              "end_byte": 354,
+              "start_line": 12,
+              "end_line": 12
+            },
+            "source_role": "production",
+            "operation": "/demo.orders.v1.Orders/Create",
+            "declaration_path": "api/orders.proto",
+            "declaration_lineage": "provisional_repo_path_v1_1851e0b824e2c228dd95e877f9963f76170f34595e3ed10ae879508abf94abaa",
+            "resolver_record_digests": [
+              "sha256:116ad8ecf7605e5ca192a04f47daea0afee339de06780b85550b87329ec17872"
+            ],
+            "posting_digest": "sha256:16b6cb26e6d5c23988d8625e8677e7fe2b6a5738e10646749d2c64ff4a928677"
+          },
+          "citation": "eyJzY2hlbWEiOiJwaGVicy1zZXJ2aWNlLXJlbGF0aW9uc2hpcC1jaXRhdGlvbi12MSIsImJpbmRpbmciOiJwNjlxUnhvWVM5UzBKbkJNYlNwTmVoWFIiLCJyZXBvc2l0b3J5IjoibG9jYWwvVXNlcnMvYmVuLy5jb2RleC93b3JrdHJlZXMvdDU3cjItcmVjZWlwdC1wb3J0YWJpbGl0eS9waGVicy5jb20vZG9jcy9maXh0dXJlcy90MzAuNy1uZXV0cmFsLXNlcnZpY2UvdDMwNy1uZXV0cmFsLXNlcnZpY2UuYnVuZGxlIiwic291cmNlIjowLCJwcm9qZWN0aW9uIjoic2hhMjU2OjU2OGRlMGRkODAyODgzNjk2YzYwMDk3M2FhNzlhZjZlYWIzZTJhMDgyOTRiZjQ3MWFlNjUwNTI1YTc5YTNiY2EifQ.lHu-k1zxoSsiqNqKzS8sLEo9pXuLFIjvBi3kmjUlfE4"
+        },
+        {
+          "repository": "local/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com/docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle",
+          "service_key": "orders-api",
+          "service_incarnation": 1,
+          "service_generation": "sha256:1f0cb8662153bc1098bfa44c68e6ab4c05c850ae2016a32cbe64acf6fcf72bc7",
+          "kind": "kafka",
+          "plane": "producer",
+          "class": "literal",
+          "lookup_key": "orders.test-only.v1",
+          "participation": [
+            "source"
+          ],
+          "counterpart_services": [],
+          "projection_digest": "sha256:3a44523ea64ddad63d72ad6cb9e3378e7a37e518c7d17fe053903845e37e7deb",
+          "posting_digest": "sha256:c80e32f4bae332b22bc08302addf475c46be80ae212cfdf7c5faef1a132aa93f",
+          "source": {
+            "path": "service/orders/fixture_test.go",
+            "unowned": false,
+            "claims": [
+              {
+                "service_key": "orders-api",
+                "disposition": "accepted",
+                "roles": [
+                  {
+                    "role": "primary",
+                    "origin": "base"
+                  }
+                ]
+              }
+            ]
+          },
+          "evidence": {
+            "kind": "kafka",
+            "plane": "producer",
+            "class": "literal",
+            "path": "service/orders/fixture_test.go",
+            "object_id": "753cf5ff57e13b22849f96c4fd0ffdc71ab61051",
+            "content_digest": "sha256:cfa463b07911cdbffa8a5ff80f32f2a5fe27a4b17197d472e4f9615b663b48c6",
+            "span": {
+              "start_byte": 271,
+              "end_byte": 292,
+              "start_line": 9,
+              "end_line": 9
+            },
+            "source_role": "test",
+            "topic_spelling": "orders.test-only.v1",
+            "library": "sarama",
+            "shape": "ProducerMessage",
+            "binding": "literal",
+            "posting_digest": "sha256:c80e32f4bae332b22bc08302addf475c46be80ae212cfdf7c5faef1a132aa93f"
+          },
+          "citation": "eyJzY2hlbWEiOiJwaGVicy1zZXJ2aWNlLXJlbGF0aW9uc2hpcC1jaXRhdGlvbi12MSIsImJpbmRpbmciOiJwNjlxUnhvWVM5UzBKbkJNYlNwTmVoWFIiLCJyZXBvc2l0b3J5IjoibG9jYWwvVXNlcnMvYmVuLy5jb2RleC93b3JrdHJlZXMvdDU3cjItcmVjZWlwdC1wb3J0YWJpbGl0eS9waGVicy5jb20vZG9jcy9maXh0dXJlcy90MzAuNy1uZXV0cmFsLXNlcnZpY2UvdDMwNy1uZXV0cmFsLXNlcnZpY2UuYnVuZGxlIiwic291cmNlIjowLCJwcm9qZWN0aW9uIjoic2hhMjU2OjNhNDQ1MjNlYTY0ZGRhZDYzZDcyYWQ2Y2I5ZTMzNzhlN2EzN2U1MThjN2QxN2ZlMDUzOTAzODQ1ZTM3ZTdkZWIifQ.TkpDP57SBJRwCgn0VWiLgX-N-oUBZ6hocqwT4m8WzeI"
+        },
+        {
+          "repository": "local/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com/docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle",
+          "service_key": "orders-api",
+          "service_incarnation": 1,
+          "service_generation": "sha256:1f0cb8662153bc1098bfa44c68e6ab4c05c850ae2016a32cbe64acf6fcf72bc7",
+          "kind": "kafka",
+          "plane": "consumer",
+          "class": "literal",
+          "lookup_key": "orders.created.v1",
+          "participation": [
+            "source"
+          ],
+          "counterpart_services": [],
+          "projection_digest": "sha256:d754ea621b2f8920dcdb7425e1daf6211214e2714d66b73b562534925a91411d",
+          "posting_digest": "sha256:0dd1fe2a178f9f2f79db2e75658730677247f4046ecab43383744e1109b3c2f6",
+          "source": {
+            "path": "service/orders/kafka.go",
+            "unowned": false,
+            "claims": [
+              {
+                "service_key": "orders-api",
+                "disposition": "accepted",
+                "roles": [
+                  {
+                    "role": "primary",
+                    "origin": "base"
+                  }
+                ]
+              },
+              {
+                "service_key": "orders-events",
+                "disposition": "accepted",
+                "roles": [
+                  {
+                    "role": "primary",
+                    "origin": "base"
+                  }
+                ]
+              }
+            ]
+          },
+          "evidence": {
+            "kind": "kafka",
+            "plane": "consumer",
+            "class": "literal",
+            "path": "service/orders/kafka.go",
+            "object_id": "6ae0961f97c2d0c83c00c58c53e4f66b7dc1d46c",
+            "content_digest": "sha256:12ac5fc7d65c5f269d4e4ac089660d95c3b7ef057420621270c5129016bbe67c",
+            "span": {
+              "start_byte": 361,
+              "end_byte": 380,
+              "start_line": 18,
+              "end_line": 18
+            },
+            "source_role": "production",
+            "topic_spelling": "orders.created.v1",
+            "library": "sarama",
+            "shape": "Consume-slice",
+            "binding": "literal",
+            "posting_digest": "sha256:0dd1fe2a178f9f2f79db2e75658730677247f4046ecab43383744e1109b3c2f6"
+          },
+          "citation": "eyJzY2hlbWEiOiJwaGVicy1zZXJ2aWNlLXJlbGF0aW9uc2hpcC1jaXRhdGlvbi12MSIsImJpbmRpbmciOiJwNjlxUnhvWVM5UzBKbkJNYlNwTmVoWFIiLCJyZXBvc2l0b3J5IjoibG9jYWwvVXNlcnMvYmVuLy5jb2RleC93b3JrdHJlZXMvdDU3cjItcmVjZWlwdC1wb3J0YWJpbGl0eS9waGVicy5jb20vZG9jcy9maXh0dXJlcy90MzAuNy1uZXV0cmFsLXNlcnZpY2UvdDMwNy1uZXV0cmFsLXNlcnZpY2UuYnVuZGxlIiwic291cmNlIjowLCJwcm9qZWN0aW9uIjoic2hhMjU2OmQ3NTRlYTYyMWIyZjg5MjBkY2RiNzQyNWUxZGFmNjIxMTIxNGUyNzE0ZDY2YjczYjU2MjUzNDkyNWE5MTQxMWQifQ.25ER3HDe6Uo6riEMZJLHPDWjySAsdrWTMCOYpyTLD64"
+        }
+      ],
+      "coverage": {
+        "authorized_repositories": 1,
+        "complete_roots": 1,
+        "empty_roots": 0,
+        "failed_roots": 0,
+        "unavailable_roots": 0,
+        "scanned_references": 4,
+        "returned_rows": 4,
+        "truncated": false
+      },
+      "pagination": {
+        "order": "repository,reference_digest:asc",
+        "page_size": 100,
+        "returned": 4
+      },
+      "caveat": "Static source evidence only; no runtime topology, completeness, migration-complete, decommissioning-safety, or release claim."
+    }
+  },
+  "service_search": {
+    "schema": "phebs-search-scope-v1",
+    "kind": "service",
+    "repository": "local/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com/docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle",
+    "service_key": "orders-api",
+    "service_status": "current",
+    "membership_policy": "accepted-roles-union-shared-included-unowned-excluded-v1",
+    "expression_digest": "sha256:2c7125763f4508c6cd44b96f5838f32697d747c18403ddccdd710e442cfe0f20",
+    "service_authority": {
+      "schema": "phebs-service-query-authority-v1",
+      "predicate_policy": "exact-service-placement-prefix-v1",
+      "topology_policy": "zoekt-direct-whole-repository-v1",
+      "repository": "local/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com/docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle",
+      "service_key": "orders-api",
+      "status": "current",
+      "incarnation": 1,
+      "revision_selector": "HEAD",
+      "revision_branch": "HEAD",
+      "revision_commit": "b7f443ed7e89dbaede855a6cfd30767bbe13dfbb",
+      "expression_digest": "sha256:d9a188a10231f78a5078ed9734ba1a70f36c75a1f2096228144e960151344eac",
+      "current_catalog_generation": "sha256:1f0235ea2127a39bd746a841ffb804f52e927b0e7a7dff6d98ad493ac91bf59a",
+      "catalog_control_revision": 1,
+      "active_catalog_generation": "sha256:1f0235ea2127a39bd746a841ffb804f52e927b0e7a7dff6d98ad493ac91bf59a",
+      "active_source_generation": "sha256:ccee1bd307899916022ff58cde92983f3c608eeb957f9f3f37ec804cda0dc287",
+      "active_desired_generation": "sha256:1f0cb8662153bc1098bfa44c68e6ab4c05c850ae2016a32cbe64acf6fcf72bc7",
+      "service_state_digest": "sha256:95c162339bda2b85cd8fc2a240484d834a519c5f5116c24786ef7972a3eefb54",
+      "service_state_revision": 2,
+      "state_summary_digest": "sha256:5be5cbe9b8066c4d54b645351f63084ec1bbe34ab71b8dd96a7da0ff6ccaafdc",
+      "state_summary_revision": 2,
+      "repository_source_generation": "sha256:1108b0f22c73e40047b6be9a4e6d405ad55478f10266649609d1bada3909f7dc",
+      "repository_search_generation": "sha256:2e8f117bbcd2e85bac0278773fa6fbc58aa7231d8bf2711f81d28d0ecd7149fc",
+      "path_digest": "sha256:f3da70b995bee6a2630bc8ca4464b4779d05d2c1ef872dc7f8d3b7523f510717",
+      "path_count": 5,
+      "path_bytes": 94,
+      "predicate_atoms": 5,
+      "predicate_bytes": 159,
+      "digest": "sha256:dc1bd68c0d3128fe4ef40c11a2a027b39657ea725653bdbf9903edba24331961"
+    },
+    "revisions": [
+      {
+        "repository": "local/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com/docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle",
+        "commit": "b7f443ed7e89dbaede855a6cfd30767bbe13dfbb"
+      }
+    ],
+    "result_set_digest": "sha256:9f3fa247921bbde5b448e9a56986164f46089fef0b8f5a3142ce1fbe69ac0dbf",
+    "result_files": 1,
+    "result_matches": 1,
+    "digest": "sha256:d6549ac57eb396c04b48aa5dde2907194caed97c48f776fdef6e9d27a18d5386"
+  },
+  "whole_sentinel": {
+    "schema": "phebs-search-scope-v1",
+    "kind": "all_code",
+    "membership_policy": "visible-indexed-repositories-v1",
+    "expression_digest": "sha256:bcd87d6e9165c9b39eb9854768cf455dea122f208a5c21dc04842a6282afaddc",
+    "revisions": [
+      {
+        "repository": "local/Users/ben/.codex/worktrees/t57r2-receipt-portability/phebs.com/docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle",
+        "commit": "b7f443ed7e89dbaede855a6cfd30767bbe13dfbb"
+      }
+    ],
+    "result_set_digest": "sha256:28c1d2017445ec2912a14cffa10f92cea496c1a01ea5b3eebf28ba0a69f57530",
+    "result_files": 1,
+    "result_matches": 1,
+    "digest": "sha256:8baa8b4ec6e438742bfb9a8cfd35b3d6973d832b667a7c8e71d71c6569534aa4"
+  },
+  "relationship_citation": {
+    "path": "service/orders/kafka.go",
+    "object_id": "6ae0961f97c2d0c83c00c58c53e4f66b7dc1d46c",
+    "content_digest": "sha256:12ac5fc7d65c5f269d4e4ac089660d95c3b7ef057420621270c5129016bbe67c",
+    "start_byte": 180,
+    "end_byte": 199,
+    "root_digest": "sha256:1a9bcb02836f830779e60a361060f472610ff489168ca79be61773e1ea245552"
+  },
+  "total_seconds": 20.344438,
+  "execution_binding_digest": "sha256:60c4449788a290555569c710c078240d573ebfdf3e228f253f3ba9ed9770d21a",
+  "plan_digest": "sha256:4c4066d873d381cc162082fef1fe5148f984649b1421a33172b6c4c7c894df52"
+}

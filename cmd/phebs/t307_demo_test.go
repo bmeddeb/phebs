@@ -35,7 +35,7 @@ func TestBindT307NeutralServiceDemoIsExplicitAndPipelineBacked(t *testing.T) {
 
 	t.Run("ordinary serve remains unchanged", func(t *testing.T) {
 		cfg := &config.Config{}
-		if err := bindT307NeutralServiceDemo(cfg, ""); err != nil {
+		if err := bindT307NeutralServiceDemo(cfg, "", devCohortFocused); err != nil {
 			t.Fatal(err)
 		}
 		if !reflect.DeepEqual(cfg, &config.Config{}) {
@@ -45,7 +45,7 @@ func TestBindT307NeutralServiceDemoIsExplicitAndPipelineBacked(t *testing.T) {
 
 	t.Run("exact bundle registers the real scoped pipelines", func(t *testing.T) {
 		cfg := &config.Config{}
-		if err := bindT307NeutralServiceDemo(cfg, fixture); err != nil {
+		if err := bindT307NeutralServiceDemo(cfg, fixture, devCohortFocused); err != nil {
 			t.Fatal(err)
 		}
 		if len(cfg.Connections) != 1 ||
@@ -84,7 +84,7 @@ func TestBindT307NeutralServiceDemoIsExplicitAndPipelineBacked(t *testing.T) {
 	t.Run("repeat binding is idempotent", func(t *testing.T) {
 		cfg := &config.Config{}
 		for range 2 {
-			if err := bindT307NeutralServiceDemo(cfg, fixture); err != nil {
+			if err := bindT307NeutralServiceDemo(cfg, fixture, devCohortFocused); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -97,7 +97,7 @@ func TestBindT307NeutralServiceDemoIsExplicitAndPipelineBacked(t *testing.T) {
 		cfg := &config.Config{Connections: []config.Connection{{
 			Name: "already-present", Type: "git", URL: fixture,
 		}}}
-		if err := bindT307NeutralServiceDemo(cfg, fixture); err != nil {
+		if err := bindT307NeutralServiceDemo(cfg, fixture, devCohortFocused); err != nil {
 			t.Fatal(err)
 		}
 		if len(cfg.Connections) != 1 || len(cfg.AnalysisUnits) != 1 {
@@ -165,13 +165,13 @@ func TestBindT307NeutralServiceDemoIsExplicitAndPipelineBacked(t *testing.T) {
 		for _, row := range rows {
 			t.Run(row.name, func(t *testing.T) {
 				if row.cfg == nil {
-					if err := bindT307NeutralServiceDemo(nil, row.fixture); err == nil {
+					if err := bindT307NeutralServiceDemo(nil, row.fixture, devCohortFocused); err == nil {
 						t.Fatal("nil config succeeded")
 					}
 					return
 				}
 				before := cloneT307Config(row.cfg)
-				if err := bindT307NeutralServiceDemo(row.cfg, row.fixture); err == nil {
+				if err := bindT307NeutralServiceDemo(row.cfg, row.fixture, devCohortFocused); err == nil {
 					t.Fatalf("invalid fixture setting %q succeeded", row.fixture)
 				}
 				if !reflect.DeepEqual(*row.cfg, before) {
@@ -363,7 +363,7 @@ func TestBindT335ServiceDirectoryDemoIsExplicitAndCatalogBacked(t *testing.T) {
 
 	t.Run("ordinary serve remains unchanged", func(t *testing.T) {
 		cfg := &config.Config{}
-		if err := bindT335ServiceDirectoryDemo(cfg, "", ""); err != nil {
+		if err := bindT335ServiceDirectoryDemo(cfg, "", "", devCohortFocused); err != nil {
 			t.Fatal(err)
 		}
 		if !reflect.DeepEqual(cfg, &config.Config{}) {
@@ -373,11 +373,11 @@ func TestBindT335ServiceDirectoryDemoIsExplicitAndCatalogBacked(t *testing.T) {
 
 	t.Run("exact companion catalog selects the ordinary v2 ingestion path", func(t *testing.T) {
 		cfg := &config.Config{}
-		if err := bindT307NeutralServiceDemo(cfg, fixture); err != nil {
+		if err := bindT307NeutralServiceDemo(cfg, fixture, devCohortFocused); err != nil {
 			t.Fatal(err)
 		}
 		for range 2 {
-			if err := bindT335ServiceDirectoryDemo(cfg, fixture, catalogPath); err != nil {
+			if err := bindT335ServiceDirectoryDemo(cfg, fixture, catalogPath, devCohortFocused); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -410,7 +410,7 @@ func TestBindT335ServiceDirectoryDemoIsExplicitAndCatalogBacked(t *testing.T) {
 		}
 		bound := func() *config.Config {
 			cfg := &config.Config{}
-			if err := bindT307NeutralServiceDemo(cfg, fixture); err != nil {
+			if err := bindT307NeutralServiceDemo(cfg, fixture, devCohortFocused); err != nil {
 				t.Fatal(err)
 			}
 			return cfg
@@ -443,13 +443,13 @@ func TestBindT335ServiceDirectoryDemoIsExplicitAndCatalogBacked(t *testing.T) {
 		for _, row := range rows {
 			t.Run(row.name, func(t *testing.T) {
 				if row.cfg == nil {
-					if err := bindT335ServiceDirectoryDemo(nil, row.fixture, row.catalog); err == nil {
+					if err := bindT335ServiceDirectoryDemo(nil, row.fixture, row.catalog, devCohortFocused); err == nil {
 						t.Fatal("nil config succeeded")
 					}
 					return
 				}
 				before := cloneT307Config(row.cfg)
-				if err := bindT335ServiceDirectoryDemo(row.cfg, row.fixture, row.catalog); err == nil {
+				if err := bindT335ServiceDirectoryDemo(row.cfg, row.fixture, row.catalog, devCohortFocused); err == nil {
 					t.Fatal("invalid T33.5 demo setting succeeded")
 				}
 				if !reflect.DeepEqual(*row.cfg, before) {

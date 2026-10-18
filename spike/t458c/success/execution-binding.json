@@ -1,0 +1,89 @@
+{
+  "schema": "phebs-t458c-execution-binding-v1",
+  "reviewed": true,
+  "plan_digest": "sha256:4c4066d873d381cc162082fef1fe5148f984649b1421a33172b6c4c7c894df52",
+  "source_commit": "bfaa56834a2d4ab47bd81b820ef5754b0845f4ed",
+  "harness_commit": "bfaa56834a2d4ab47bd81b820ef5754b0845f4ed",
+  "harness_files": {
+    "spike/t458c/smoke.py": "sha256:46d4c51cbdcfae74098f948c7f6ba592f24c2e22c44d6de69b0ceac38664ef09",
+    "spike/t458c/test_smoke.py": "sha256:68098ccfc20718ccbd192786ab93c7625a728af4ed512f565b6b62fdd8f2a156",
+    "spike/t458c/README.md": "sha256:c6608df43945503dee4b01394863236195472ad0aa9fd8b9b190fcb49052f00d",
+    "spike/t503/qualify.py": "sha256:831d13fb28ae0054257da74b87f1298bf1df7067e75190a6fa66fe53fec92089",
+    "spike/t503/requalification_browser.cjs": "sha256:9b133499ec4f501296122bb640970857f0e165becf622e54fe983c754b8a9131",
+    "spike/t503/requalification_browser.py": "sha256:dfd5742e3856e908515c42042571702023753644cf4a242cc0570db00a19da6f",
+    "spike/t503/requalification_checks.py": "sha256:9da204dfe253aff62d9350d00ec825fc935786044e13362436438a152329aa7d",
+    "spike/t503/requalification_monitor.py": "sha256:cbffb94a215e78c7210da3d7661ccd0d2627de3946cb4370b9364a786f3b6e5a",
+    "spike/t503/requalify.py": "sha256:d9b7707b04db89e74afd7dd3c3bfb56c0c9263fce4a5f355ef3cd277ea0ba175",
+    "spike/t503/score.py": "sha256:9fe189b544eb877b55ba064104a489109c1416e6ea29289951d51a512d14ad30",
+    "spike/t503/test_requalification.py": "sha256:a61ec2e51e7cba63fcbbdc893f39672204feead42cce6677735834638a99d2c0",
+    "pilot/validation/serve.py": "sha256:39f22c6f56350f39bd11bdb3866400c6418bda8d95ed9812d5ed3992dbd0ff29",
+    "pilot/validation/receipts.py": "sha256:25c5f9459819c61b81ba6986c6445b13ba566836b92f36ce2a916e554b6bf99c",
+    "pilot/validation/corpus.py": "sha256:cd21f2f065500cfe9407f61d8f6b7a8a733013320e17764c5c73fae230dceede"
+  },
+  "implementation_files": {
+    "Makefile": "sha256:7faad34298fe20a668efd4f980363f4784398657e17162c395e06fa13f268bd5",
+    "cmd/phebs/dev_cohort.go": "sha256:8784713bb562b9b8557d19eafce21569b47b4163a5656e8e36e230c0f3a8dc85",
+    "cmd/phebs/main.go": "sha256:0b62da59870a4bd53cead0b33cb0244a0db8a70151ef1a6015775da4c89c3749",
+    "cmd/phebs/serve_config.go": "sha256:972a8897b99d421db283c2ccb233627d14c43266553ce7411ffc4af76bb79be8"
+  },
+  "binary": {
+    "path": "/tmp/phebs-t458c-bfaa5683-native-qualification/phebs",
+    "bytes": 91406930,
+    "sha256": "sha256:c5573b5c4d62a2fe20e442489196b89dd7f6bd69a6cedadd1c04430279bb044d",
+    "metadata_sha256": "sha256:b0d3c89b4902163d9b7bbfe727a9d85631862a2a7bbbaa37c9d7db3cbbfec82a"
+  },
+  "tools": {
+    "go": {
+      "path": "/opt/homebrew/bin/go",
+      "resolved_path": "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+      "bytes": 14500160,
+      "sha256": "sha256:3925fc3221ac440ebf7c35361ff663bed0c7bdb2e0a157b75fe993607ffe0a19",
+      "version": "go1.26.5",
+      "version_evidence": "go version go1.26.5 darwin/arm64"
+    },
+    "git": {
+      "path": "/usr/bin/git",
+      "resolved_path": "/usr/bin/git",
+      "bytes": 118640,
+      "sha256": "sha256:b8763cf250e607a778bb4603cecb5b90338814d0a3dfcba0d57b1de242f610e9",
+      "version_evidence": "git version 2.54.0 (Apple Git-157)"
+    },
+    "surreal": {
+      "path": "/opt/homebrew/bin/surreal",
+      "resolved_path": "/opt/homebrew/opt/phebs-surreal-3.2.0/surreal",
+      "bytes": 233283488,
+      "sha256": "sha256:ee819dfcedd23035a785ac40f2509f86cbb09fc3255726ad74755b161a3ca0a8",
+      "version": "3.2.0",
+      "version_evidence": "3.2.0 for macos on aarch64"
+    },
+    "buf": {
+      "path": "/Users/ben/.codex/worktrees/t445-header/phebs.com/bin/buf",
+      "resolved_path": "/Users/ben/.codex/worktrees/t445-header/phebs.com/bin/buf",
+      "bytes": 77461554,
+      "sha256": "sha256:691b8635ab9c083e38f1d892bf10799ea688070ed8ef8081d9b7907d0a7e4658",
+      "version_evidence": "1.72.0"
+    },
+    "zoekt_git_index": {
+      "path": "/tmp/phebs-main-bbb41b2c-native-qualification/zoekt-git-index",
+      "resolved_path": "/private/tmp/phebs-main-bbb41b2c-native-qualification/zoekt-git-index",
+      "bytes": 39081090,
+      "sha256": "sha256:dd216b7e4df21b956a8a3461108ac81ee6cb700799a3decf9c739af2ba003c4d",
+      "version": "same-bbb41b2c-go.mod",
+      "version_evidence": "fresh helper-build-receipt.json; inherited-cache build, no cold claim"
+    },
+    "focused_index": {
+      "path": "/tmp/phebs-main-bbb41b2c-native-qualification/phebs-focused-index",
+      "resolved_path": "/private/tmp/phebs-main-bbb41b2c-native-qualification/phebs-focused-index",
+      "bytes": 27295666,
+      "sha256": "sha256:701d83e026ac926d3e5d92a948a68c346c11335ce83c37c31bd62207beb0d8b5",
+      "version": "same-bbb41b2c-go.mod",
+      "version_evidence": "fresh helper-build-receipt.json; inherited-cache build, no cold claim"
+    }
+  },
+  "build_receipt": {
+    "path": "/tmp/phebs-t458c-bfaa5683-native-qualification/build-receipt.json",
+    "sha256": "sha256:5a7e870908c81e2a3bf24ef57a4952651a86becf699efee7ce9a6ffffbd5c80b"
+  },
+  "helper_provenance": "Exact BBB helper images reused; actual BBB source/Go dependency provenance retained, no current-source rebuild claim.",
+  "scope": "One180s neutral whole integration, no browser/sampler/restart/signing/scale/accuracy claim."
+}

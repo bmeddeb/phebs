@@ -1,0 +1,15 @@
+{
+  "joined": {
+    "client": {
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "already_exited"
+    },
+    "chrome": {
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "sigterm"
+    }
+  },
+  "seconds": 1.53096225
+}

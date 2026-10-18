@@ -18,6 +18,14 @@ RELEASE_COMMIT ?= $(shell git rev-parse HEAD)
 RELEASE_STAGE = $(RELEASE_ROOT)/.build-$(VERSION)-$(TARGET_GOOS)-$(TARGET_GOARCH)
 RELEASE_BUNDLE = $(RELEASE_ROOT)/phebs-$(VERSION)-$(TARGET_GOOS)-$(TARGET_GOARCH)
 T2014_RESULTS_PATH ?= /private/tmp/phebs-t20.14-results.json
+PHEBS_DEV_COHORT ?= whole
+ifneq (,$(filter dev dev-api,$(MAKECMDGOALS)))
+ifneq ($(PHEBS_DEV_COHORT),whole)
+ifneq ($(PHEBS_DEV_COHORT),focused)
+$(error PHEBS_DEV_COHORT must be exactly whole or focused; an explicit empty value is invalid)
+endif
+endif
+endif
 
 .PHONY: dev dev-api build release-binary clean validate-version validate-release-version validate-release-target \
 	release verify-release smoke-release test ui-test ui-receipts ui-receipts-update lint ui db-server \
@@ -41,11 +49,13 @@ bin/buf: go.mod go.sum | bin ## compatibility child, pinned by the same go.mod a
 # the fixture paths; an explicitly set PHEBS_T307_NEUTRAL_SERVICE_REPO or
 # PHEBS_T344_SERVICE_SEARCH_REPO wins over the checkout default below so the
 # server derives the documented deterministic repository identities.
-# Unset, behavior is exactly the old checkout-relative default.
+# make dev selects whole-repository indexing. PHEBS_DEV_COHORT=focused keeps
+# the focused Search demo, whose service/relationship authority is unavailable.
 dev: bin/zoekt-git-index bin/phebs-focused-index bin/buf ui ## boot phebs with embedded UI (ARGS="-config phebs.yaml" for flags)
 	PHEBS_ZOEKT_GIT_INDEX=$(abspath bin/zoekt-git-index) \
 		PHEBS_FOCUSED_INDEX=$(abspath bin/phebs-focused-index) \
 		PHEBS_BUF=$(abspath bin/buf) \
+		PHEBS_DEV_COHORT='$(PHEBS_DEV_COHORT)' \
 		PHEBS_T307_NEUTRAL_SERVICE_REPO=$(or $(PHEBS_T307_NEUTRAL_SERVICE_REPO),$(abspath docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle)) \
 		PHEBS_T335_SERVICE_CATALOG=$(abspath docs/fixtures/t33.5-service-directory/t335-service-catalog.json) \
 		PHEBS_T344_SERVICE_SEARCH_REPO=$(or $(PHEBS_T344_SERVICE_SEARCH_REPO),$(abspath spike/t323/t323-neutral-corpus.bundle)) \
@@ -58,6 +68,7 @@ dev-api: bin/zoekt-git-index bin/phebs-focused-index bin/buf ## backend-only loo
 	PHEBS_ZOEKT_GIT_INDEX=$(abspath bin/zoekt-git-index) \
 		PHEBS_FOCUSED_INDEX=$(abspath bin/phebs-focused-index) \
 		PHEBS_BUF=$(abspath bin/buf) \
+		PHEBS_DEV_COHORT='$(PHEBS_DEV_COHORT)' \
 		PHEBS_T307_NEUTRAL_SERVICE_REPO=$(or $(PHEBS_T307_NEUTRAL_SERVICE_REPO),$(abspath docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle)) \
 		PHEBS_T335_SERVICE_CATALOG=$(abspath docs/fixtures/t33.5-service-directory/t335-service-catalog.json) \
 		PHEBS_T344_SERVICE_SEARCH_REPO=$(or $(PHEBS_T344_SERVICE_SEARCH_REPO),$(abspath spike/t323/t323-neutral-corpus.bundle)) \

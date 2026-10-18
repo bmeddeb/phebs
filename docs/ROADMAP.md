@@ -5665,3 +5665,16 @@ separate from common-bar evidence reconciliation and production signing.
 ordinary integration passes in34.816796958s with33/37/4positive consumer spans,
 exact HTTP/MCP/proofs/source and clean teardown. Six unsigned artifact drafts
 remain separate from common-bar reconciliation and production signing.
+
+**T54.3 finite operation Impact outcome (2026-10-18):** direct composition
+9/36memberships+2scopedempty and33.758060458s ordinary integration pass, plus
+4newneutralnativecanonicalframes author/review/freshcomparison. Exact receipts,
+prior checker stops and unsigned artifacts/census are retained; production
+signing remains pending. This closes directT54.1quality only for operation_callers.
+
+T45.8c neutral-default integration is complete (2026-10-18). Development recipes
+select whole indexing for the retained service cohort; explicit focused opt-in
+keeps its narrower Search demo and unavailable service/relationship authority.
+The one20.344438s native integration passed exact readiness, scoped/whole search,
+relationship citation and graceful joined teardown. This adds no managed
+provider, Linux capacity, scale or production release claim.

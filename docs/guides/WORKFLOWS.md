@@ -432,19 +432,28 @@ the coverage certificate, then use Search, SCIP navigation, and History
 independently. PHEBS provides evidence; Cortana owns change organization and
 human decisions. Historical Workbench fixture receipts remain archival only.
 
-## Neutral focused-service development cohort
+## Neutral development cohorts
 
-`make dev` and `make dev-api` bind one retained neutral Git bundle through the
-ordinary sync, focused-index, candidate, extraction, resolver, caller-leaf,
-and complete-publication paths. They also select the
-companion T33.5 operator catalog through the ordinary catalog ingestion and
-service-state reconciliation paths; there is no directory response fixture.
-The repository's active `orders-service` analysis unit selects
+`make dev` and `make dev-api` explicitly select `PHEBS_DEV_COHORT=whole`.
+Both retained neutral repositories use ordinary whole-repository indexing,
+source/search-generation publication, catalog ingestion, service activation,
+and relationship reads. T307 keeps its exact T33.5 operator catalog and
+provisional protobuf/Kafka evidence; T323 keeps its separate T34.4 catalog.
+There is no directory or relationship response fixture. Wait for exact indexed
+HEADs and current service/relationship authority before following the walkthrough.
+
+Use `make dev PHEBS_DEV_COHORT=focused` (or `make dev-api` with the same
+selector) for the separate focused Search/evidence demo. Its T307 service-search
+and relationship authority remain unavailable: focused indexing deliberately
+publishes no direct whole-search source generation. This option does not claim
+focused service-pipeline support. T323 remains whole-repository in either mode.
+In focused mode the repository's active `orders-service` analysis unit selects
 `service/orders`, its protobuf/generated supporting files, snapshot, and
 `go.mod`. It deliberately leaves an unrelated bulk needle and one real gRPC
-caller outside the focused shard. The former is absent from Search; the latter
-remains visible only through the separately labeled repository-overlay Caller
-Map generation. One `_test.go` file is classified and reported as excluded
+caller outside the focused shard. In focused mode the former is absent from Search; the latter remains
+visible only through the separately labeled repository-overlay Caller Map
+generation. In default whole mode both files are searchable, Search carries a
+whole-repository receipt, and no `orders-service` focused scope is attached. One `_test.go` file is classified and reported as excluded
 `go_test` evidence. Protobuf declarations, the in-unit registration, and Kafka
 producer/consumer facts are extracted from committed source rather than
 projected by a response fixture.
@@ -459,7 +468,13 @@ does not attach the current analysis-unit digest or paths to those results.
 The recipes explicitly clear the Contract Atlas and Thrift-field fixture
 bindings. Contracts uses the same store-derived evidence
 and authorization fences as an ordinary provisional instance. Ordinary
-`phebs serve` remains unchanged and default-dark. The exact source and evidence
+`phebs serve` with no demo environment remains unchanged and default-dark. An
+absent `PHEBS_DEV_COHORT` retains the historical focused binding when T307 demo
+environment variables are supplied directly; explicit empty, unknown, padded,
+or differently cased values refuse. Whole mode refuses an already configured
+analysis unit instead of deleting it. On a reused development data directory,
+a mode change uses the ordinary reindex/publication transition; wait for its
+exact authority, or use a fresh data directory. The exact source and evidence
 demo steps are retained in the
 [T30.7 cohort README](../fixtures/t30.7-neutral-service/README.md); the catalog
 census, directory steps, receipt, and non-claims are retained in the

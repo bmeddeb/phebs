@@ -1,0 +1,22 @@
+{
+  "schema": "phebs-t543-plan-review-v1",
+  "date": "2026-10-18",
+  "plan_digest": "sha256:52c681221b1824b8e7804953b133a7b91fcef9323e199af44fe4d0e2664277cf",
+  "accepted": true,
+  "scope": "Prospective finite new operation_callers report quality, actual ordinary HTTP/MCP/UI/source/publication/dependency and joined teardown only; no production signing, Linux/scale/global accuracy claim.",
+  "root_review": "Reviewed frozen labels/inputs, full own and reused harness, strict report authority/caveats, all owned-child cleanup, actual build/UI/tool binding and costs. Existing original labels/protected bytes unchanged.",
+  "independent_peer": "t493_protobuf_atlas source review; canonical group key fidelity correction applied before first rendering. Final peer summary retained separately.",
+  "controls": "9 pure/mock controls passed before candidate/native output; source syntax checked.",
+  "canonical": "Four new native-renderer current/unavailable \u00d7 light/dark comfortable frames; author then root visual review then fresh comparison. No legacy-v2 or Noble equivalence claim.",
+  "files": {
+    "spike/t543/README.md": "sha256:c83385cbba055cd5e1dc1ba22879df69e9c134d32ae6862f8dde3d780b4bce01",
+    "spike/t543/impact_browser.cjs": "sha256:ee5804c0ddcdbd21b311377a9ed3236b35fcf8edfd950b48e2a0b9fb6f7806e1",
+    "spike/t543/impact_browser.py": "sha256:14dcc0cc9cbb338dd2787feabfa03b3902563c644ee384f735dbadd024de4b41",
+    "spike/t543/impact_checks.py": "sha256:be09e7791cd3d8397c1b6e0b9ebd6c61d52f1e7e8c9c3805bb27ac5d84a78bac",
+    "spike/t543/planned-transition.json": "sha256:1fb8589f99b6e25d1c99ec1751860fce97ba76ad0f452e601bbe50bb38fb5eed",
+    "spike/t543/qualification-plan.json": "sha256:52c681221b1824b8e7804953b133a7b91fcef9323e199af44fe4d0e2664277cf",
+    "spike/t543/qualify_impact.py": "sha256:76a3a883f7487ca40d8d2b6c55c15f9b652f57b5dfdcf48fb591904e35c3003d",
+    "spike/t543/test_impact.py": "sha256:c46ccb1602b86a2c11a5199d64cb225163d1ec06cee238b794ef58533edb02d0",
+    "spike/t543/transition.bundle": "sha256:f6e7f99912d2d1d4305a43ce96c8097392173b8e18d8f9c1bcf0aac3c803c73f"
+  }
+}

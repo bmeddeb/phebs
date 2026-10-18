@@ -1,0 +1,33 @@
+{
+  "schema": "phebs-t543-final-unsigned-draft-census-v1",
+  "status": "FROZEN_UNSIGNED_DRAFT_ONLY",
+  "pack_id": "phebs.contract.impact.operation",
+  "pack_claim_version": "1.0.0",
+  "implementation": {
+    "phebs_source_commit": "e72e83f245732d516a9807bf5cc9f9e4623f5a76",
+    "phebs_binary_digest": "sha256:9afde64013cd2c920fa009395064f4a80a0fe501c467054cbc43ccbabce035e4",
+    "pack_implementation_digest": "sha256:bb2dcc25ff017afb98aeba3adbf2596f5bcd64efaf6a4602b7e937c66413c4ea",
+    "toolchain_digest": "sha256:c6652a655b5c51d1ce66b001a3f82f118b97fecfca54705e3b7313d6c8b82dba"
+  },
+  "artifacts": [
+    {
+      "artifact_id": "operation-impact-card-1.0.0.md",
+      "bytes": 6361,
+      "sha256": "sha256:393802d37f29ce64252f1d3931423318bfc8e10d1a42970812ba66725964e624"
+    },
+    {
+      "artifact_id": "operation-impact-manifest-1.0.0.json",
+      "bytes": 6170,
+      "sha256": "sha256:0fba1faca25ab5d2e13e575858e355db1a802b5e92357d6519c4f176658b2971"
+    },
+    {
+      "artifact_id": "operation-impact-validation-1.0.0.json",
+      "bytes": 26000,
+      "sha256": "sha256:22fe71eb88e73d401953c1fe0bce989c1f39a2f1af525229a4b86de55385a08e"
+    }
+  ],
+  "referenced_artifacts_root_digest": "sha256:deaa91824a66521b4d382daf391cd01ddd8cca541ab009c6eec550003de277ee",
+  "scope": "These exact draft bytes are independently source/cost/receipt reviewed by root; no production signature or activation. Native integration signatures bind earlier prospective placeholder bytes only.",
+  "signer_reuse": "T484ordinary signer/loader exact-draft controls apply only to their recorded scope; no new self-load of these final3drafts claimed. Production release-sign derives and verifies actual final approved bytes/census against its running image once the existing key is available.",
+  "production_signing": "pending existing unavailable key and final production artifact/publication decision"
+}

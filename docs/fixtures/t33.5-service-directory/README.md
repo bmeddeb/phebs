@@ -31,6 +31,13 @@ an existing directory to exercise exact retry/no-op behavior:
 make dev
 ```
 
+Default `make dev` explicitly selects whole-repository T307 indexing. Wait for
+its exact source/search generation and catalog reconciliation before expecting
+current accepted services. `PHEBS_DEV_COHORT=focused` retains the separate
+focused Search/evidence demo; catalog metadata remains inspectable but active
+service-search/relationship authority is unavailable. No focused support or
+manifest repair is implied. Whole mode refuses configured analysis units.
+
 After the neutral repository is indexed and catalog reconciliation settles:
 
 1. Open **Repos** and choose **Services** for

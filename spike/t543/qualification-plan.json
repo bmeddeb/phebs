@@ -1,0 +1,178 @@
+{
+  "schema": "phebs-t543-operation-impact-plan-v1",
+  "date": "2026-10-18",
+  "status": "prospective_pending_independent_source_review_and_exact_binding",
+  "execution_authorized_by_this_file": false,
+  "production_signing": "PENDING existing unavailable Linux key; disposable integration signer only after reviewed immutable binding and serialized slot",
+  "claim": {
+    "shape": "operation_callers",
+    "schema": "contract-impact-operation-v1",
+    "pack_id": "phebs.contract.impact.operation",
+    "claim_version": "1.0.0",
+    "implementation_identity": "build_operation_impact_report@contract-impact-operation-v1",
+    "dependency": "Actual verified phebs.grpc.caller.go recipe: proto-contract4.0.0/grpc-caller1.6.0-released.1, resolver packs go-module+grpc-generated-attribution1.2.0. No standalone Atlas product dependency.",
+    "surfaces": [
+      "GET /api/operation_impact_report",
+      "MCP build_operation_impact_report",
+      "existing HTTP/MCP exact caller citations",
+      "actual1280/390 operation Impact UI"
+    ],
+    "nonclaims": [
+      "runtime impact/traffic/deployment inventory",
+      "caller or consumer absence, completeness, migration equivalence/completion or safe retirement",
+      "field/change/implementation/WIRE/matching/saved-report modes",
+      "durable report store, proof archive/pin or historical v2 migration",
+      "component accuracy transfer, Linux capacity, scale, SLO or production activation"
+    ]
+  },
+  "protected_artifacts": {
+    "spike/t541/README.md": "sha256:9b66f6c2af1057367795f6c949fc8a12919225c01092bf263b3a4da1dff910e7",
+    "spike/t541/base.bundle": "sha256:ee5fe200ee7319d46118fdb51ae138c6bb83d1b823906199af3f7317f314fc72",
+    "spike/t541/check_source.py": "sha256:af961945dabb80ea1bdcc910d5281ab097fb14139f7264cca4c94c8843410e23",
+    "spike/t541/checkpoint.json": "sha256:ca9a784f4c8ae501a7a069c493981c269c9358889e9d76a1614239ee59345eda",
+    "spike/t541/contract.json": "sha256:a90e0e39f93d1a7c92c2e4f590e6a0b4c93f277117ac174665cb6646fbeba1ce",
+    "spike/t541/input-binding.json": "sha256:90f3cd5d719853240bb20eb6be00cb029d51c74c2c8d8ab91dfae17d50a5e6cb",
+    "spike/t541/oracle.json": "sha256:be2218e58b220f365c4d3c0f72ef0b7d56f0a2215e810676caedadbfd27709cb",
+    "spike/t541/qualification-plan.json": "sha256:7b58908eb8a9f4926a54c843c03f20777438d7975d2af520379e7dc1ec1397b4",
+    "spike/t541/source-check.json": "sha256:160256c06f193d2f2017e3824cfcdc7623ab77b1e4c1a430a663237e66be4946",
+    "spike/t541/source-review.json": "sha256:a4a347904b476eef8d3f461a206379b3b01f41383bcecbe15f6c54aa11e5b54e",
+    "spike/t541/test_source.py": "sha256:0e668d5b5a20f56d8c3c225309dad8f63a96451658766187aa802254a7c9258c",
+    "spike/t543/planned-transition.json": "sha256:1fb8589f99b6e25d1c99ec1751860fce97ba76ad0f452e601bbe50bb38fb5eed",
+    "spike/t543/transition.bundle": "sha256:f6e7f99912d2d1d4305a43ce96c8097392173b8e18d8f9c1bcf0aac3c803c73f"
+  },
+  "population": {
+    "input_binding": "spike/t541/input-binding.json",
+    "oracle": "spike/t541/oracle.json",
+    "source_review": "spike/t541/source-review.json",
+    "base_commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+    "base_tree": "a0d73c675a066f2e969c1caa2db205576108d57e",
+    "repository": "evaluation.local/t503-public",
+    "files": 19,
+    "bytes": 316648,
+    "go_files": 9,
+    "application_go_files": 4,
+    "declarations": 5,
+    "sites": 9,
+    "source_basis": "Original public grpc-go Apache2.0 bytes and evaluator module/generated-from/layout/unit snapshots remain distinct; reuse committed canonical SCIP, no fetch/index/generator/new source classifier. Unit IDs/targets are supplied evaluator metadata, no deployment reality.",
+    "transition": "Exact already-frozen T503 primary comment-only transition5b187e7b79f5580a8918f8c0b34fb3350b447c97 after baseline only. One source path changes after original EOF; original selectors/declarations/labels and original base bundle remain unchanged."
+  },
+  "quality": {
+    "oracle_unchanged": true,
+    "direct_report_scoring": true,
+    "thresholds": {
+      "positive_memberships": [
+        9,
+        9
+      ],
+      "negative_wrong_operation_memberships": [
+        36,
+        36
+      ],
+      "declaration_identity_and_source": [
+        5,
+        5
+      ],
+      "unique_exact_citations": [
+        9,
+        9
+      ],
+      "supplied_unit_states": [
+        9,
+        9
+      ],
+      "unit_resolved": [
+        5,
+        5
+      ],
+      "unit_unavailable": [
+        4,
+        4
+      ],
+      "scoped_empty_queries": [
+        2,
+        2
+      ],
+      "go_source_processing": [
+        9,
+        9
+      ],
+      "extra_unknown_duplicate_crossed_noncurrent_facts": 0
+    },
+    "paging": [
+      1,
+      2,
+      100
+    ],
+    "queries": "All seven frozen queries. Five complete endpoint queries supply9positive/36negative memberships; the two path-prefix empties are separately scored and never pooled as universal negative sites. All continuations exhaust exact snapshots and preserve full endpoint/filter/generation/manifest/revision/source tuple. HTTP/MCP/paging/browser repeats add0truth samples.",
+    "resolution": "Frozen source says resolved. Accept current supported syntax/heuristic or scip/derived discriminators and report counts; never require scip merely because static edge resolves. No real abstentions/ambiguity exist in these nine labels.",
+    "unavailable_units": "Four source sites retain mapping_has_no_attribution. An ID-only snapshot candidate may remain, with no invented owner/service/deployment. Five resolved supplied IDs/targets must match oracle exactly.",
+    "metrics": "Per-operation and per-file TP/FN/FP/TN, composed precision/recall and descriptive95%Wilson intervals over the actual frozen memberships only. Partial first stops report only completed checks; no independent sampling/population/general accuracy inference.",
+    "declarations": "One shared CallerMap report resolves each declaration. Compare exact identity/source spans to all5frozen RPC witnesses and read the2unique immutable proto blobs once per transport; no second Atlas report query or synthetic coverage certificate. Require the actual report declaration run to match the proto-contract publication already bound inside the selected resolver catalog; reuse its existing bounded metadata capture.",
+    "citations": "Read9unique exact occurrence capabilities through HTTP and read_operation_caller_citation MCP; require entire generation equality, source.run_id==generation_digest, exact repo/commit/OID/blob/range/line and actual selector bytes.",
+    "unavailable_sections": [
+      "field_references",
+      "proposed_change",
+      "implementations",
+      "wire_verdict",
+      "matching_syntactic_calls",
+      "saved_report"
+    ],
+    "mechanics": "Named version-bound T542 and reused exact-reader normal/race/current-root/permission/cursor/citation/recovery/hard-death/backup/restore/pressure tests remain separate gates, not new public quality samples.",
+    "latency_comparison": "Cold is first successful size1 response per query after explicit probes; warm is five size100 firstpages per operation. Sizes and individual read receipts are stated; no same-payload cold/warm speedup is inferred."
+  },
+  "bounds": {
+    "complete_native_seconds": 180,
+    "startup_seconds": 30,
+    "publication_seconds": 90,
+    "cold_request_seconds": 2,
+    "warm_request_seconds": 1,
+    "warm_reads": 5,
+    "parallel_requests": 8,
+    "http_response_bytes": 262144,
+    "process_tree_sampled_max_rss_bytes": 2147483648,
+    "minimum_available_physical_headroom_bytes": 4294967296,
+    "minimum_free_disk_bytes": 2147483648,
+    "derived_allocated_disk_bytes": 536870912,
+    "browser_seconds": 25,
+    "repositories": 1,
+    "evaluation_tree_files": 19,
+    "evaluation_tree_bytes": 16777216
+  },
+  "matrix": [
+    "Pre-output protected-byte/census/license review; own immutable harness+plan review; exact base/transition pristine origin commits/trees with same live symbolic HEAD, final clean source/UI/binary/helper/tool/installed-Chrome bindings and preflight. No source/index/ref edits or download.",
+    "One fresh private data/auth/cache root, two independent disposable signed records (Impact and CallerMap) binding the same complete artifact census. Remove private key before serve; global180clock begins before signing through joined cleanup.",
+    "Ordinary stable baseline, no experimental flags: healthyHTTP<=30s; coherent exact report<=90s; directly score5operations\u00d7page_sizes1,2,100 and2scoped empties,9citations throughHTTP/MCP,5declaration sources,9source-processed Go files, all six unavailable sections. Anonymous401; unsupported/mixed inputs refuse without legacy fallback.",
+    "Five warm firstpages/operation<=1s, first success/operation called cold<=2s only after explicit publication probes and disclosed cache warming. One finite1/4/8-client firstpage batch reports observed latency/throughput, no SLO inference.",
+    "One actual installed-Chrome journey at1280/390: exact CallerMap endpoint\u2192Impact link preserving active page_size100, then supported report page_size1 URL deep link for paging. Check expected counts/resolution/unit uncertainty, source/unit views, real filter/clear, keyboard exact source, native disclosure, no horizontal overflow/console/framework errors and scoped WCAG audit. No intercepted responses. Keep actual screenshots distinct from deterministic canonical comparison.",
+    "After baseline source quality, activate only the frozen comment transition via same-branch atomic URL rewrite+authenticated webhook; eight parallel report firstpages may be coherent before/after epochs or explicit unavailable/404/409. Require new exact source/unit/caller authority; old cursor and changed-file citation409; fresh citation binds new blob; rerun same memberships without adding denominator.",
+    "Two bounded restarts: revoke own Impact record, keep CallerMap exact; then revoke consumed CallerMap, withdraw both Impact and CallerMap. Atlas-product independence is already a separately named T542 signed integration gate, not a fourth native restart. Unrelated stable/provisional surfaces remain independently dark.",
+    "First failure stops/no silent retry/relabel/input/threshold changes. Reuse reviewed totalHTTP/lifecycle/process+host sampler/browser ownership and T513 failure retention. Join all groups/threads before removing data/auth/config/rewrite/key/artifacts/logs. Success removes scratch; failure retains bounded private-raw+source-free diagnostics. Any forced/unjoined cleanup or missing physical/process/disk observation remains stopped."
+  ],
+  "sampling": "Darwin arm64 actual host only, observed process-tree RSS sampled max every0.2s, physical free+inactive+speculative and allocated data every1s; no transient-peak/hard-limit inference, no swap/compressor credit. RSS excludes startup/teardown;180s includes both and cleanup. No Linux/cgroup/scale claim.",
+  "canonical_gate": {
+    "status": "pending separately scoped deterministic comparison",
+    "reason": "Existing impact PNGs are historical experimental v2, not a baseline for the new operation shape. Source-owned T543 canonical spec/neutral transport fixtures must be reviewed separately before author+fresh comparison. No product/source-quality result from intercepted fixture pixels.",
+    "scope": "Exactly4neutral canonical frames: light/dark x current/unavailable at1280x800 comfortable density, retries0/maxDiff0.001/no new mask. Bind the actual available native renderer/host honestly; no Ubuntu/Noble claim. Actual native UI1280/390 remains the separate responsive journey; exact-empty HTTP/MCP and component controls remain separate. No canonical empty/mobile frame, full receipt matrix or long ceremony."
+  },
+  "release_gate": "No production activation. Final measured card/manifest/validation must bind exact own/dependency/source/UI/binary/tool/result/reviewer/expiry digests; expiry2027-01-16 or input/recipe/tool/source/security/bound drift suspends. Actual production signature stays pending existing key.",
+  "steady_cost": "No production code. One existing List per report; constant metadata wrapper. Harness bounds one source repository, three owned server starts, one comment transition, at most8parallel requests, all fixed labels and up to3pages per endpoint at size1,9unique source capabilities per transport,2unique proto source blobs per transport, bounded source/candidate metadata and shared process/headroom sampler. No new product schema/cache/lock/query engine/indexer/generator/read-side join. Client verification/browser costs are separate from server request latency/sampleRSS.",
+  "private_ui_evidence": {
+    "location": "Fresh private sibling of result JSON outside deleted data/auth scratch",
+    "max_png_files": 3,
+    "max_png_bytes_each": 4194304,
+    "max_json_files": 2,
+    "max_json_bytes_each": 65536,
+    "semantics": "Actual-source screenshots/results only, not canonical fixture baselines; profiles/private input/logs removed after browser/client join before data/auth cleanup. No source-bearing screenshot is asserted source-free."
+  },
+  "prerequisites": {
+    "helpers": "Exact reviewed T503/T513 sources now on main0a1567bd must be integrated repository-relatively, then all imported bytes bound before execution. No other-worktree fallback.",
+    "source_origins": "Root must record and verify the exact base+transition actual source paths/commits/trees with same live symbolic HEAD before native binding; no ref mutation by this harness.",
+    "browser": "Root binds existing Node/Playwright/Chrome/axe files plus successful installed-Chrome preflight; no fetch/install/download. Browser/native slot not held or consumed by this draft.",
+    "code_and_source": "T542 reviewed implementation and T513a empty-scope prerequisite plus current UI corrections must be clean and built; no stale binary assumed."
+  },
+  "review_ownership": {
+    "owner": "Ben Meddeb; root coordinates routed Mac backend/presentation handoff",
+    "independent_reviewer": "Pending separate source-only review before any outcome",
+    "production_release_fields": "No blank/pending field grants release; final measured artifacts require exact owner/reviewer/date/expiry/result bindings."
+  }
+}

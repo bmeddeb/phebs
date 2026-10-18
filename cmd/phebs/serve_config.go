@@ -58,18 +58,23 @@ func loadServeConfig(semanticLaunch *t422SemanticLaunch, flags *serveFlags) (*co
 		return nil, nil, err
 	}
 	reportT4013Startup("config_loaded")
+	cohortValue, cohortPresent := os.LookupEnv("PHEBS_DEV_COHORT")
+	cohort, err := parseDevCohort(cohortValue, cohortPresent)
+	if err != nil {
+		return nil, nil, err
+	}
 	if fixture := os.Getenv("PHEBS_T307_NEUTRAL_SERVICE_REPO"); fixture != "" {
-		if err := bindT307NeutralServiceDemo(cfg, fixture); err != nil {
+		if err := bindT307NeutralServiceDemo(cfg, fixture, cohort); err != nil {
 			return nil, nil, err
 		}
 		log.Printf(
-			"WARNING: neutral T30.7 focused-service demo enabled from %s; provisional evidence remains validation-gated",
-			fixture,
+			"WARNING: neutral T30.7 %s demo enabled from %s; provisional evidence remains validation-gated",
+			cohort, fixture,
 		)
 	}
 	if catalog := os.Getenv("PHEBS_T335_SERVICE_CATALOG"); catalog != "" {
 		fixture := os.Getenv("PHEBS_T307_NEUTRAL_SERVICE_REPO")
-		if err := bindT335ServiceDirectoryDemo(cfg, fixture, catalog); err != nil {
+		if err := bindT335ServiceDirectoryDemo(cfg, fixture, catalog, cohort); err != nil {
 			return nil, nil, err
 		}
 		log.Printf(
