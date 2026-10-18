@@ -11980,3 +11980,13 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   header QA passes both roles, themes/densities and four widths, including
   header-scoped axe 4.12.1. A premature File offset probe is corrected to wait
   for loaded content. Native confirmation and canonical PNG review follow.
+
+  Canonical capture inspection found two receipt-only scroll routines still
+  assumed the former header clearance. They now share a rendered-header-height
+  helper and assert the captured target clears it before taking the screenshot;
+  masks, retries and comparison tolerance do not change. An initial
+  changed-only author command was interrupted and its partial PNGs restored
+  because below-threshold header differences would retain stale images. A
+  second author diagnostic was stopped before any PNG was written for this
+  capture-offset correction. Only the final explicit full author set is
+  reviewed and committed, with both diagnostics retained.

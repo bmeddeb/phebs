@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { TYPED_PROVIDERS, TYPED_STATES } from '../src/typedIndex'
+import { scrollBelowHeader } from './fixture'
 import { DENSITIES, THEMES, TYPED_INDEX_WIDTHS } from './routes'
 
 // Presentation fixtures only: these never install a runtime or execute a provider.
@@ -74,8 +75,8 @@ for (const theme of THEMES) for (const width of TYPED_INDEX_WIDTHS) for (const d
     // Capture the complete panel below sticky chrome without masking anatomy.
     const bounds = await section.boundingBox()
     if (bounds) await page.setViewportSize({ width, height: Math.ceil(bounds.height) + 160 })
-    await section.evaluate(node => window.scrollTo(0, window.scrollY + node.getBoundingClientRect().top - 80))
-    await expect.poll(() => section.evaluate(node => node.getBoundingClientRect().top)).toBeGreaterThanOrEqual(64)
+    const clearance = await scrollBelowHeader(section)
+    await expect.poll(() => section.evaluate(node => node.getBoundingClientRect().top)).toBeGreaterThanOrEqual(clearance)
     await expect(section).toHaveScreenshot(`typed-index-preview--${theme}--${width}--${density}.png`)
     expect(await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)).toBe(true)
     expect(await section.locator('select').evaluateAll(nodes => nodes.every(node => !!(node as HTMLSelectElement).labels?.length))).toBe(true)

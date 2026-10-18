@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { DENSITIES, FROZEN_NOW, REPO_SEARCH_GENERATION, ROUTES, THEMES, type ReceiptRoute } from './routes'
 import { DEFAULT_PALETTE } from '../src/palette'
-import { installIdentityFixture, installReceiptFixture } from './fixture'
+import { installIdentityFixture, installReceiptFixture, scrollBelowHeader } from './fixture'
 
 type ReceiptWindow = typeof window & { __phebsReceiptPending?: number }
 
@@ -99,12 +99,8 @@ async function capture(page: Page, route: ReceiptRoute, theme: (typeof THEMES)[n
   if (route.scrollIntoView) {
     const target = page.locator(route.scrollIntoView).first()
     await expect(target, `required scroll target missing: ${route.scrollIntoView}`).toBeVisible()
-    await target.evaluate((node) => {
-      node.scrollIntoView({ block: 'start', inline: 'nearest' })
-      // The application header is 53px tall. Keep the target below it and
-      // pin a little breathing room so the reviewed heading is never hidden.
-      window.scrollBy(0, -64)
-    })
+    const clearance = await scrollBelowHeader(target)
+    await expect.poll(() => target.evaluate(node => node.getBoundingClientRect().top)).toBeGreaterThanOrEqual(clearance)
   }
   if (route.expand) {
     await page.$$eval('main details', (nodes) => nodes.forEach((node) => { (node as HTMLDetailsElement).open = true }))

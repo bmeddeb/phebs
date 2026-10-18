@@ -1,11 +1,21 @@
 import { readFileSync } from 'node:fs'
-import type { Page, Route } from '@playwright/test'
+import type { Locator, Page, Route } from '@playwright/test'
 import { FROZEN_NOW, MARKDOWN_PREVIEW_FIXTURE, type ReceiptRoute } from './routes'
 
 const MARKDOWN_PREVIEW_SOURCE = readFileSync(
   new URL('./fixtures/markdown-preview.md', import.meta.url),
   'utf8',
 )
+
+// Capture targets must clear the rendered desktop or narrow sticky header.
+export async function scrollBelowHeader(target: Locator): Promise<number> {
+  return target.evaluate(node => {
+    const clearance = document.querySelector('header')!.getBoundingClientRect().height + 12
+    node.scrollIntoView({ block: 'start', inline: 'nearest' })
+    window.scrollBy(0, -clearance)
+    return clearance
+  })
+}
 
 async function fulfillJSON(route: Route, value: unknown, status = 200) {
   await route.fulfill({
