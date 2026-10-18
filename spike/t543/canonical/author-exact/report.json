@@ -1,0 +1,221 @@
+{
+  "config": {
+    "argv": [
+      "/private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+      "/Users/ben/.codex/worktrees/t511-protobuf-fields/phebs.com/ui/node_modules/@playwright/test/cli.js",
+      "test",
+      "--config",
+      "/Users/ben/.codex/worktrees/t511-protobuf-fields/phebs.com/ui/t543-native.config.ts",
+      "--reporter=list,json",
+      "--update-snapshots=all"
+    ],
+    "configFile": "/Users/ben/.codex/worktrees/t511-protobuf-fields/phebs.com/ui/t543-native.config.ts",
+    "rootDir": "/Users/ben/.codex/worktrees/t511-protobuf-fields/phebs.com/ui/receipts",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/tmp/phebs-t543-canonical/author-exact/tests",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "t543-native",
+        "name": "t543-native",
+        "testDir": "/Users/ben/.codex/worktrees/t511-protobuf-fields/phebs.com/ui/receipts",
+        "testIgnore": [],
+        "testMatch": [
+          "/operation-impact-receipts\\.spec\\.ts/"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list"
+      ],
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "all",
+    "updateSourceMethod": "patch",
+    "version": "1.62.1",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "operation-impact-receipts.spec.ts",
+      "file": "operation-impact-receipts.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "operation-impact-current-desktop · light · comfortable",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "t543-native",
+              "projectName": "t543-native",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1702,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T14:46:45.167Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e84bb46c899216208f4a-e6eb862cb0b24ae395be",
+          "file": "operation-impact-receipts.spec.ts",
+          "line": 24,
+          "column": 3
+        },
+        {
+          "title": "operation-impact-unavailable-desktop · light · comfortable",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "t543-native",
+              "projectName": "t543-native",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1394,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T14:46:47.519Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e84bb46c899216208f4a-d01d625dfb4452746292",
+          "file": "operation-impact-receipts.spec.ts",
+          "line": 24,
+          "column": 3
+        },
+        {
+          "title": "operation-impact-current-desktop · dark · comfortable",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "t543-native",
+              "projectName": "t543-native",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1446,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T14:46:48.924Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e84bb46c899216208f4a-ad7e708b35403fc37e45",
+          "file": "operation-impact-receipts.spec.ts",
+          "line": 24,
+          "column": 3
+        },
+        {
+          "title": "operation-impact-unavailable-desktop · dark · comfortable",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "t543-native",
+              "projectName": "t543-native",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1375,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T14:46:50.378Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e84bb46c899216208f4a-1acf8b2cba04591b0eda",
+          "file": "operation-impact-receipts.spec.ts",
+          "line": 24,
+          "column": 3
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-18T14:46:44.979Z",
+    "duration": 6924.403,
+    "expected": 4,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}
