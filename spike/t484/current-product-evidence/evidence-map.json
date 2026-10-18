@@ -1,0 +1,463 @@
+{
+  "schema": "phebs-current-product-common-bar-map-v1",
+  "date": "2026-10-18",
+  "ticket": "T48.4 current product evidence documentation closure",
+  "status": "SOURCE_ONLY_MAPPING_SHARED_SELECTORS_AND_FINAL_CENSUS_PENDING",
+  "capture_commit": "6e38710c6b6476e62cf3033e15bb25511b22adda",
+  "authority": "Ben-routed Mac all-ticket scope; root owns execution/Git/shared spine. This mapping neither waives gates nor creates any new pass, release, signature or operating claim.",
+  "source_scope_artifact": "source-scope.json",
+  "historical_green_summaries": [
+    {
+      "path": "PLAN.md",
+      "section": "2026-10-18 T50.3a committed unit attribution in caller leaves",
+      "source_commit": "c720ac99cf07b0a242875318c591fb1690a25957",
+      "section_sha256": "sha256:a8d7fba6224408378f874536703677ec932999b4af171c29f2b6790a9c68ac04",
+      "section_byte_identical_to_recorded_checkpoint": true,
+      "evidence_kind": "recorded_green_summary; raw command logs not asserted available",
+      "recorded_results": {
+        "resolvermaterialize_normal_seconds": 10.847,
+        "callerexecute_normal_seconds": 7.265,
+        "resolvermaterialize_race_seconds": 27.209,
+        "callerexecute_race_seconds": 7.598,
+        "historical_resolver_archive_controls_seconds": 0.867
+      },
+      "reuse_limit": "Unchanged worker recovery/catalog/archive mechanisms and existing opaque member format. Does not create fresh actual SIGKILL, pressure, whole-backup or current binary native results."
+    },
+    {
+      "path": "docs/BACKLOG.md",
+      "section": "T47.2i deterministic whole-scope caller ownership across typed-domain partitions",
+      "source_commit": "13f07c388ffadc5e13916299e675d98315930adf",
+      "evidence_kind": "recorded green package summary; raw log not asserted available",
+      "recorded_scope": "internal/callerpublication package passed0.377s; selected archive/lifecycle source and tests are byte-identical at that checkpoint and current checkout.",
+      "source_comparison_paths": [
+        "internal/callerpublication/archive.go",
+        "internal/callerpublication/archive_test.go",
+        "internal/callerpublication/lifecycle.go",
+        "internal/callerpublication/lifecycle_test.go"
+      ],
+      "reuse_limit": "Generic caller leaf custody/archive/crash semantics only; no new caller attribution accuracy or real fresh SIGKILL observation."
+    }
+  ],
+  "product_native_records": [
+    {
+      "ticket": "T50.3",
+      "receipt": {
+        "path": "spike/t503/requalification-after-mobile-fix/result.json",
+        "capture_workspace": "this checkout",
+        "available_in_mapping_checkout": true,
+        "bytes": 141960,
+        "sha256": "sha256:baebfa1616a5dab071977f640ca8eed0408e9181ce8e3ff894c9d43cbb5150ec",
+        "kind": "exact_native_receipt"
+      },
+      "draft_or_outcome": {
+        "path": "spike/t503/release/artifacts/caller-comparison-validation-1.0.0.json",
+        "capture_workspace": "this checkout",
+        "available_in_mapping_checkout": true,
+        "bytes": 14663,
+        "sha256": "sha256:3a186c37be85fe9a91a7c176094367f920589588486457427e58f6aa1e4da034",
+        "kind": "unsigned_draft_or_outcome"
+      },
+      "source_commit": "bbb41b2ccfb3f9b23653aabf41607185aec3efbe",
+      "outcome": "passed_finite_darwin_composition_integration_only_production_signing_pending",
+      "host": {
+        "sysname": "Darwin",
+        "machine": "arm64",
+        "cpu_count": 10,
+        "physical_memory_bytes": 25769803776
+      },
+      "only_observed_scope": true
+    },
+    {
+      "ticket": "T51.3",
+      "receipt": {
+        "path": "spike/t513/result-after-discovery-fix.json",
+        "capture_workspace": "/Users/ben/.codex/worktrees/t512-field-registration/phebs.com",
+        "available_in_mapping_checkout": false,
+        "bytes": 110931,
+        "sha256": "sha256:184a8ac1a3a20e269161e6db094fcaec2784d475f2bd64efa390687d9173ad61",
+        "kind": "exact_native_receipt"
+      },
+      "draft_or_outcome": {
+        "path": "spike/t513/release-drafts/protobuf-fields-validation-1.0.0.json",
+        "capture_workspace": "/Users/ben/.codex/worktrees/t512-field-registration/phebs.com",
+        "available_in_mapping_checkout": false,
+        "bytes": 9841,
+        "sha256": "sha256:c21b8407757d4eccad3efbdb8b78b9e56814fcaf5eee861e3e65c7bdcfedbba3",
+        "kind": "unsigned_draft_or_outcome"
+      },
+      "source_commit": "bbb41b2ccfb3f9b23653aabf41607185aec3efbe",
+      "outcome": "passed_finite_field_composition_darwin_only_production_signing_pending",
+      "host": {
+        "sysname": "Darwin",
+        "machine": "arm64",
+        "cpu_count": 10,
+        "physical_memory_bytes": 25769803776
+      },
+      "only_observed_scope": true
+    },
+    {
+      "ticket": "T52.3",
+      "receipt": {
+        "path": "spike/t523/release/receipts/finite-operating-first.json",
+        "capture_workspace": "/Users/ben/.codex/worktrees/t503a-caller-unit-projection/phebs.com",
+        "available_in_mapping_checkout": false,
+        "bytes": 211611,
+        "sha256": "sha256:4414404b8bd0d36a6231cfee38da8819f613cd62c8781999251c32a6de9675a4",
+        "kind": "exact_native_receipt"
+      },
+      "draft_or_outcome": {
+        "path": "spike/t523/operating-outcome-cost.json",
+        "capture_workspace": "/Users/ben/.codex/worktrees/t503a-caller-unit-projection/phebs.com",
+        "available_in_mapping_checkout": false,
+        "bytes": 36336,
+        "sha256": "sha256:d290f59a3ec79246319385943154966f2ad628ac8b90d20678312eb09599b05a",
+        "kind": "unsigned_draft_or_outcome"
+      },
+      "source_commit": "bbb41b2ccfb3f9b23653aabf41607185aec3efbe",
+      "outcome": "passed_finite_thrift_composition_darwin_only_production_signing_pending",
+      "host": {
+        "sysname": "Darwin",
+        "machine": "arm64",
+        "cpu_count": 10,
+        "physical_memory_bytes": 25769803776
+      },
+      "only_observed_scope": true
+    }
+  ],
+  "product_scopes": {
+    "T50.3": {
+      "claims": [
+        "phebs.grpc.caller.comparison"
+      ],
+      "quality": "Five selected public caller sites, four outside-pair sites and four supplied unit rows; evaluator roles/units are not deployment or migration truth. Nine quality source files are distinct from the19-file complete processing/input census; concurrent copy and transitions add no quality denominator.",
+      "native": "Ordinary admission, independent sides/source/generation/cursor/citation, HTTP/MCP/UI390/1280, bounded concurrency, publication and dependency withdrawal only.",
+      "source": "Exact measured BBB binary/tool/input/host receipts only."
+    },
+    "T51.3": {
+      "claims": [
+        "phebs.protobuf.field.go"
+      ],
+      "quality": "Eleven positive field identities/14consumer spans;0extra/wrong/duplicate within those queries. Prior56negative direct full-stream T511 labels are context, not new native global negative recall. Generated11 spans separate/no recall.",
+      "native": "Both field HTTP/MCP endpoints, immutable HTTP proof, general source HTTP/MCP, current publication and graceful withdrawal. No dedicated field UI/browser.",
+      "source": "Eight-file174204B base tree, eight-file174283B comment transition. Exact committed SCIP/header recipe; no generator execution attestation."
+    },
+    "T52.3": {
+      "claims": [
+        "phebs.thrift.field.apache",
+        "phebs.thrift.field.thriftrw"
+      ],
+      "quality": "Fixed nine Apache positive identities and two thriftrw identities plus generated-only field0; no new global negative-field census. Prior direct T521/T522 negatives remain separate. Apache derived/source_binding=none and RW exact/module_digest remain distinct.",
+      "native": "Apache-only, both, then RW survivor; independent signed selection and changed shared-domain versions. No declaration bridge, semantic-write or dedicated field UI claim.",
+      "source": "Apache40-file1175947B and RW8-file115660B input censuses include index/support files, not quality denominators. No generator execution or installed-generation inference."
+    }
+  },
+  "gate_mapping": [
+    {
+      "gate": "input_and_execution_census",
+      "status": "EXACT_OBSERVED_NATIVE_SCOPE",
+      "evidence": "Per-product native/execution bindings retain immutable Git commit/tree/file censuses and actual binary/tool/helper/UI where applicable plus observed host.",
+      "limit": "No scope/host/binary transfer to a newer image or Linux capacity; input file counts are not source-quality denominators or a release artifact census."
+    },
+    {
+      "gate": "publication_crash_recovery",
+      "status": "REUSABLE_UNCHANGED_MECHANISMS_WITH_HISTORICAL_RECORDS",
+      "evidence": [
+        "T503a green summary and source comparisons for resolver/caller worker recovery",
+        "T47.2i green callerpublication package summary with exact source comparisons"
+      ],
+      "limit": "Bounded filesystem/store-callback crash seams and immutable custody. Historical harness hard-kill receipts do not become a fresh actual SIGKILL test of these products.",
+      "next": "Attach reused scope; use finite selectors only if exact retained execution detail is required."
+    },
+    {
+      "gate": "archive_and_restore",
+      "status": "REUSABLE_GENERIC_CUSTODY_WITH_DERIVED_FIELD_ROOT_RESET",
+      "evidence": [
+        "resolvercatalog archive/lifecycle exact source comparison at T503a green checkpoint",
+        "callerpublication archive/lifecycle exact source comparison at T47.2i green package checkpoint",
+        "current field/T523 retained proof/version admission records"
+      ],
+      "limit": "recovery.go archives resolver/caller precious custody; store/restore_clear.go resets extraction_domain_root/candidate controls. Current native field roots are rebuilt, not byte-exact archived. Unpublished until exact reconstruction; no instant restored authority or universal negative.",
+      "next": "Reference generic custody and version controls. Pure offline clear selectors proposed if no adequate retained record is found; no huge live backup."
+    },
+    {
+      "gate": "pressure_and_controller_bounds",
+      "status": "EXACT_CURRENT_GREEN_RECORD_TO_ATTACH_OR_FAST_SELECTOR_PENDING",
+      "evidence": "Production capacity/backup-lock/stage bound test sources are hashed, but source existence alone is not a passing execution record. T503b alone does not cover pressure.",
+      "next": "Use selectors.json once, serially, with injected capacity and temporary filesystem bounds; no ballast or ceremony."
+    },
+    {
+      "gate": "final_draft_artifact_census",
+      "status": "PENDING_ROOT_DERIVATION_AFTER_FINAL_DRAFT_FREEZE",
+      "evidence": "Existing release_identity/sign derivation and tests are hashed; native integration signatures bind earlier prospective artifacts, not these final drafts.",
+      "next": "Root derives exact flat12-artifact census and one four-pack disposable signer/self-load check using measured BBB image; retains test-only metadata and deletes disposable key. No future result claimed."
+    },
+    {
+      "gate": "production_signature_and_installation",
+      "status": "PENDING_EXISTING_UNAVAILABLE_KEY",
+      "next": "Actual owner approval, exact production signature/verification and deliberate operator installation only after applicable gates. No replacement key, active PackRelease or activation authored here."
+    }
+  ],
+  "reserved_root_filenames": [
+    "final-draft-census.json",
+    "disposable-signer-load-receipt.json",
+    "disposable-sign-load-receipt.json"
+  ],
+  "cost": "Source/hash documentation only. Proposed selectors reuse small temporary filesystem/capacity/mock controls and serial package execution, without added product query/sync/startup/retry/publication/lock/cache/schema/worker work. No operating wall/RSS/CPU/scale observation is created.",
+  "remaining": "Root checks source/gate reuse, runs only the finite selector subset needed, then authors actual census/disposable metadata. Production signing remains separate and pending.",
+  "prior_scoped_records_and_logs": [
+    {
+      "path": "spike/t503b/validation.json",
+      "capture_workspace": "this checkout",
+      "available_in_mapping_checkout": true,
+      "bytes": 2936,
+      "sha256": "sha256:cb72909a55d0100bd1ee1c8131ffdfaf7c8f1f42953b2d1e41983f36525816e6",
+      "kind": "retained_record",
+      "scope": "Comparison normal/race, MCP, signed admission and old-pack refusal; no crash/backup/pressure proof.",
+      "source_commit": "cb099b26fbb78070cbaa9a0eb66949e464d67220",
+      "source_file_hash_matches_current": true,
+      "recorded_outcome": "only the explicitly reported scope; no inferred broader gate"
+    },
+    {
+      "path": "spike/t503b/check-1.log",
+      "capture_workspace": "this checkout",
+      "available_in_mapping_checkout": true,
+      "bytes": 51,
+      "sha256": "sha256:ba3ce0fd05936c0b351fdf444e0baaa81d3526639e33862feb38dab5c52bb2d9",
+      "kind": "green_execution_log",
+      "argv": [
+        "go",
+        "test",
+        "-p",
+        "1",
+        "-race",
+        "./internal/api",
+        "-run",
+        "^TestExactCaller",
+        "-count=1",
+        "-timeout=2m"
+      ],
+      "exit": 0,
+      "recorded_wall_seconds": 36.753223,
+      "scope": "Only the exact command recorded by T503b; no broader package/native claim.",
+      "recorded_outcome": "pass per retained command/exit/log digest"
+    },
+    {
+      "path": "spike/t503b/check-2.log",
+      "capture_workspace": "this checkout",
+      "available_in_mapping_checkout": true,
+      "bytes": 50,
+      "sha256": "sha256:9191af12b81e15de4d056380d924cc8992f6bd84f13929db60c8f2814225405c",
+      "kind": "green_execution_log",
+      "argv": [
+        "go",
+        "test",
+        "-p",
+        "1",
+        "./internal/mcp",
+        "-run",
+        "^TestCallerComparisonTool",
+        "-count=1",
+        "-timeout=2m"
+      ],
+      "exit": 0,
+      "recorded_wall_seconds": 6.14378,
+      "scope": "Only the exact command recorded by T503b; no broader package/native claim.",
+      "recorded_outcome": "pass per retained command/exit/log digest"
+    },
+    {
+      "path": "spike/t503b/check-3.log",
+      "capture_workspace": "this checkout",
+      "available_in_mapping_checkout": true,
+      "bytes": 47,
+      "sha256": "sha256:c5032f5d05ce9b334cc076fa996853d03c1a4d61a41aa3c8e6972c968a218ded",
+      "kind": "green_execution_log",
+      "argv": [
+        "go",
+        "test",
+        "-p",
+        "1",
+        "./cmd/phebs",
+        "-run",
+        "^TestCallerComparisonReleasedAdmission$",
+        "-count=1",
+        "-timeout=2m"
+      ],
+      "exit": 0,
+      "recorded_wall_seconds": 11.583651,
+      "scope": "Only the exact command recorded by T503b; no broader package/native claim.",
+      "recorded_outcome": "pass per retained command/exit/log digest"
+    },
+    {
+      "path": "spike/t503b/check-4.log",
+      "capture_workspace": "this checkout",
+      "available_in_mapping_checkout": true,
+      "bytes": 60,
+      "sha256": "sha256:3a41b5aa91a69de09a2bd3972cb961f4d2b79aaa5ecf57ee8740f182c8bff119",
+      "kind": "green_execution_log",
+      "argv": [
+        "go",
+        "test",
+        "-p",
+        "1",
+        "./internal/callerexecute",
+        "-run",
+        "^TestCallerUnitsRuntimeRejectsStoreCurrentOldPack$",
+        "-count=1",
+        "-timeout=30s"
+      ],
+      "exit": 0,
+      "recorded_wall_seconds": 2.155216,
+      "scope": "Only the exact command recorded by T503b; no broader package/native claim.",
+      "recorded_outcome": "pass per retained command/exit/log digest"
+    },
+    {
+      "path": "spike/t503b/check-5.log",
+      "capture_workspace": "this checkout",
+      "available_in_mapping_checkout": true,
+      "bytes": 0,
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "kind": "green_execution_log",
+      "argv": [
+        "go",
+        "vet",
+        "./internal/api"
+      ],
+      "exit": 0,
+      "recorded_wall_seconds": 1.183232,
+      "scope": "Only the exact command recorded by T503b; no broader package/native claim.",
+      "recorded_outcome": "pass per retained command/exit/log digest"
+    },
+    {
+      "path": "spike/t503b/check-6.log",
+      "capture_workspace": "this checkout",
+      "available_in_mapping_checkout": true,
+      "bytes": 10,
+      "sha256": "sha256:e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47",
+      "kind": "green_execution_log",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-fv0m6vmf/lint-bin/golangci-lint",
+        "run",
+        "./internal/api/..."
+      ],
+      "exit": 0,
+      "recorded_wall_seconds": 3.033055,
+      "scope": "Only the exact command recorded by T503b; no broader package/native claim.",
+      "recorded_outcome": "pass per retained command/exit/log digest"
+    },
+    {
+      "path": "spike/t523/validation.json",
+      "capture_workspace": "this checkout",
+      "available_in_mapping_checkout": true,
+      "bytes": 1641,
+      "sha256": "sha256:b41a12eb64d047009907aa4199db319d37bfe30e4aa00fc45c40e41e9376fa45",
+      "kind": "retained_record",
+      "scope": "Independent signed committed Apache/thriftrw registration and exact read admission only.",
+      "source_comparison": "Current field admission test/reader paths are separately hashed in source-scope.json; this record reports its original normal/race scopes only.",
+      "recorded_outcome": "only the explicitly reported scope; no inferred broader gate"
+    },
+    {
+      "path": "spike/t523/extractor-normal.log",
+      "capture_workspace": "this checkout",
+      "available_in_mapping_checkout": true,
+      "bytes": 77,
+      "sha256": "sha256:aa4e9448a734777a9a43b948547f749d6dfe9307a75ed1267bc2fa86f96965c9",
+      "kind": "execution_log",
+      "scope": "Exact registration command/log scope from spike/t523/validation.json.",
+      "recorded_outcome": "only the explicitly reported scope; no inferred broader gate"
+    },
+    {
+      "path": "spike/t523/field-boundaries-normal.log",
+      "capture_workspace": "this checkout",
+      "available_in_mapping_checkout": true,
+      "bytes": 97,
+      "sha256": "sha256:2635ff1cffcf67502d2012ad3f1abd78241cbedc78732f4fc582fde415aeaba0",
+      "kind": "execution_log",
+      "scope": "Exact registration command/log scope from spike/t523/validation.json.",
+      "recorded_outcome": "only the explicitly reported scope; no inferred broader gate"
+    },
+    {
+      "path": "spike/t523/field-boundaries-race.log",
+      "capture_workspace": "this checkout",
+      "available_in_mapping_checkout": true,
+      "bytes": 174,
+      "sha256": "sha256:b88460a79727d3d26e5a985e4868502cb18c84aaa8c85d53c331ebd4b6aa096b",
+      "kind": "execution_log",
+      "scope": "Exact registration command/log scope from spike/t523/validation.json.",
+      "recorded_outcome": "only the explicitly reported scope; no inferred broader gate"
+    },
+    {
+      "path": "spike/t523/vet.log",
+      "capture_workspace": "this checkout",
+      "available_in_mapping_checkout": true,
+      "bytes": 0,
+      "sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "kind": "execution_log",
+      "scope": "Exact registration command/log scope from spike/t523/validation.json.",
+      "recorded_outcome": "only the explicitly reported scope; no inferred broader gate"
+    },
+    {
+      "path": "spike/t523/lint.log",
+      "capture_workspace": "this checkout",
+      "available_in_mapping_checkout": true,
+      "bytes": 374,
+      "sha256": "sha256:e8ae87004a255f55528dbe7dd38d4303b13b742cba4366b0c43169d818b9e075",
+      "kind": "execution_log",
+      "scope": "Initial lint log is retained failure context; only lint-corrected is zero issues.",
+      "recorded_outcome": "initial lint issues; NOT a green gate"
+    },
+    {
+      "path": "spike/t523/lint-corrected.log",
+      "capture_workspace": "this checkout",
+      "available_in_mapping_checkout": true,
+      "bytes": 10,
+      "sha256": "sha256:e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47",
+      "kind": "execution_log",
+      "scope": "Exact registration command/log scope from spike/t523/validation.json.",
+      "recorded_outcome": "only the explicitly reported scope; no inferred broader gate"
+    },
+    {
+      "path": "spike/t513a/validation.json",
+      "capture_workspace": "this checkout",
+      "available_in_mapping_checkout": true,
+      "bytes": 1002,
+      "sha256": "sha256:54e0c0b37e1ad9bdde7142722a0081af685491da18756e09b342eff7234b6808",
+      "kind": "retained_record",
+      "scope": "Recorded green shared discovery/unindexed source-fence normal/race/store/vet/lint summary; not backup/pressure or a new product quality run.",
+      "raw_log_qualification": "This summary carries command/results, not invented raw log custody.",
+      "recorded_outcome": "only the explicitly reported scope; no inferred broader gate"
+    },
+    {
+      "path": "spike/t503/requalification-after-t503a/regression-checks.json",
+      "capture_workspace": "this checkout",
+      "available_in_mapping_checkout": true,
+      "bytes": 760,
+      "sha256": "sha256:2529b7fd20581fd05e6f5e123a43b2d56a24febdab66e5324152fcabc979b357",
+      "kind": "retained_failed_execution_summary",
+      "recorded_outcome": "FAIL; preserved, never reused as green",
+      "source_commit": "8a70fef5f60411f31d210efd52ab4dcd79385549",
+      "scope": "Original comparison fixture regression stopped before the T503b repair."
+    },
+    {
+      "path": "spike/t503/requalification-after-t503a/regression-1.log",
+      "capture_workspace": "this checkout",
+      "available_in_mapping_checkout": true,
+      "bytes": 6342,
+      "sha256": "sha256:84d917cb9711bff4b2dd056ffec0bdb0c003e1c2a4e02ae9349088f8577fc0e6",
+      "kind": "retained_failed_execution_log",
+      "recorded_outcome": "FAIL; original exit1",
+      "argv": [
+        "go",
+        "test",
+        "-p",
+        "1",
+        "./internal/api",
+        "-run",
+        "^TestExactCallerComparison",
+        "-count=1",
+        "-timeout=2m"
+      ],
+      "scope": "Original failed check; T503b correction evidence is separately named."
+    }
+  ],
+  "scope_note": "All file hashes are this capture snapshot. Owning product drafts not yet present in this checkout are explicitly marked external; their paths/digests are not claims that integration or final-census freeze has occurred. Later draft changes need root review and refreshed final census."
+}

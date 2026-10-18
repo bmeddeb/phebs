@@ -1,0 +1,302 @@
+{
+  "schema": "phebs-t484-final-unsigned-draft-census-v1",
+  "qualification": "Exact unsigned draft bytes and disposable signer/load self-check only; not production authority.",
+  "source_commit": "bbb41b2ccfb3f9b23653aabf41607185aec3efbe",
+  "binary_sha256": "sha256:121c1d07999344166d8631e65a99b06476c1fa0251f8590d2c42dd7da6393481",
+  "referenced_artifacts_root_digest": "sha256:e1ebd78998a52076a8272475e7f495b0fd3351f7e08437e1631fc02b4520ec5f",
+  "artifacts": [
+    {
+      "artifact_id": "apache-card-1.0.0.md",
+      "source_path": "spike/t523/release/artifacts/apache-card-1.0.0.md",
+      "bytes": 4157,
+      "sha256": "sha256:dac445db14dd1f3bb589c356f6b97d84677360f4b01d725be2e1129a239d9ce6"
+    },
+    {
+      "artifact_id": "apache-manifest-1.0.0.json",
+      "source_path": "spike/t523/release/artifacts/apache-manifest-1.0.0.json",
+      "bytes": 7322,
+      "sha256": "sha256:2cd5e5e57f1017e53f5318d5cfaf1020cec70ca63600cb9d9998168b4cab9f62"
+    },
+    {
+      "artifact_id": "apache-validation-1.0.0.json",
+      "source_path": "spike/t523/release/artifacts/apache-validation-1.0.0.json",
+      "bytes": 11724,
+      "sha256": "sha256:372530cd2483b2ebffe168606d3907b83a4e7d10f45d20ba3f043e275af0c076"
+    },
+    {
+      "artifact_id": "caller-comparison-card-1.0.0.md",
+      "source_path": "spike/t503/release/artifacts/caller-comparison-card-1.0.0.md",
+      "bytes": 4355,
+      "sha256": "sha256:f52f5991499b41bc1679a8038abb705021033df644a3ca2196d29bd2888d8dc7"
+    },
+    {
+      "artifact_id": "caller-comparison-manifest-1.0.0.json",
+      "source_path": "spike/t503/release/artifacts/caller-comparison-manifest-1.0.0.json",
+      "bytes": 5169,
+      "sha256": "sha256:eac25ef8d28eaa1e9afeabc9637237c21befc0e2f0bf68faafcce7c2d248f479"
+    },
+    {
+      "artifact_id": "caller-comparison-validation-1.0.0.json",
+      "source_path": "spike/t503/release/artifacts/caller-comparison-validation-1.0.0.json",
+      "bytes": 14663,
+      "sha256": "sha256:3a186c37be85fe9a91a7c176094367f920589588486457427e58f6aa1e4da034"
+    },
+    {
+      "artifact_id": "protobuf-fields-card-1.0.0.md",
+      "source_path": "spike/t513/release-drafts/protobuf-fields-card-1.0.0.md",
+      "bytes": 7191,
+      "sha256": "sha256:f745916bddb2bdf6c96823ac834132f7e897112f62e8dc4d001cc99d6a07c244"
+    },
+    {
+      "artifact_id": "protobuf-fields-manifest-1.0.0.json",
+      "source_path": "spike/t513/release-drafts/protobuf-fields-manifest-1.0.0.json",
+      "bytes": 5222,
+      "sha256": "sha256:280f2165532801f7661ae89f82271b999874cc71731455fc84bf8a098b5d7968"
+    },
+    {
+      "artifact_id": "protobuf-fields-validation-1.0.0.json",
+      "source_path": "spike/t513/release-drafts/protobuf-fields-validation-1.0.0.json",
+      "bytes": 9841,
+      "sha256": "sha256:c21b8407757d4eccad3efbdb8b78b9e56814fcaf5eee861e3e65c7bdcfedbba3"
+    },
+    {
+      "artifact_id": "thriftrw-card-1.0.0.md",
+      "source_path": "spike/t523/release/artifacts/thriftrw-card-1.0.0.md",
+      "bytes": 4185,
+      "sha256": "sha256:64a2949ca15e4a3804ea1a497d96cffde73eb9c26adc5e6e70b82892ad715d2c"
+    },
+    {
+      "artifact_id": "thriftrw-manifest-1.0.0.json",
+      "source_path": "spike/t523/release/artifacts/thriftrw-manifest-1.0.0.json",
+      "bytes": 7365,
+      "sha256": "sha256:84fd6eb60d413ace883b5be1e31bd08d657b5bdf84d74308e9794c51b713b86e"
+    },
+    {
+      "artifact_id": "thriftrw-validation-1.0.0.json",
+      "source_path": "spike/t523/release/artifacts/thriftrw-validation-1.0.0.json",
+      "bytes": 11724,
+      "sha256": "sha256:02431ec10d4126c14a91de6d14dfc68be97ed95dd3bbdd6bebe7b83a2d7655eb"
+    }
+  ],
+  "records": [
+    {
+      "pack_id": "phebs.grpc.caller.comparison",
+      "record_sha256": "sha256:5c6bcdfd6a676a103a1632406df7d3329491ff78e7ce0236b157f3cf8dda889c",
+      "implementation": {
+        "phebs_source_commit": "bbb41b2ccfb3f9b23653aabf41607185aec3efbe",
+        "phebs_binary_digest": "sha256:121c1d07999344166d8631e65a99b06476c1fa0251f8590d2c42dd7da6393481",
+        "pack_implementation_digest": "sha256:bb2dcc25ff017afb98aeba3adbf2596f5bcd64efaf6a4602b7e937c66413c4ea",
+        "toolchain_digest": "sha256:c6652a655b5c51d1ce66b001a3f82f118b97fecfca54705e3b7313d6c8b82dba"
+      },
+      "card": {
+        "artifact_id": "caller-comparison-card-1.0.0.md",
+        "digest": "sha256:f52f5991499b41bc1679a8038abb705021033df644a3ca2196d29bd2888d8dc7"
+      },
+      "manifest": {
+        "artifact_id": "caller-comparison-manifest-1.0.0.json",
+        "digest": "sha256:eac25ef8d28eaa1e9afeabc9637237c21befc0e2f0bf68faafcce7c2d248f479"
+      },
+      "validation": {
+        "artifact_id": "caller-comparison-validation-1.0.0.json",
+        "digest": "sha256:3a186c37be85fe9a91a7c176094367f920589588486457427e58f6aa1e4da034",
+        "applies": true,
+        "expires_at": "2027-01-15T23:59:59Z",
+        "expiry_trigger": null
+      },
+      "referenced_artifacts_root_digest": "sha256:e1ebd78998a52076a8272475e7f495b0fd3351f7e08437e1631fc02b4520ec5f",
+      "loader_self_check": "PASS through ordinary release-sign loader; record/test key discarded without serving"
+    },
+    {
+      "pack_id": "phebs.protobuf.field.go",
+      "record_sha256": "sha256:70e0f91b668fafc848077378c7b4f5c2c781328b70b549c948083be02a010269",
+      "implementation": {
+        "phebs_source_commit": "bbb41b2ccfb3f9b23653aabf41607185aec3efbe",
+        "phebs_binary_digest": "sha256:121c1d07999344166d8631e65a99b06476c1fa0251f8590d2c42dd7da6393481",
+        "pack_implementation_digest": "sha256:bb2dcc25ff017afb98aeba3adbf2596f5bcd64efaf6a4602b7e937c66413c4ea",
+        "toolchain_digest": "sha256:c6652a655b5c51d1ce66b001a3f82f118b97fecfca54705e3b7313d6c8b82dba"
+      },
+      "card": {
+        "artifact_id": "protobuf-fields-card-1.0.0.md",
+        "digest": "sha256:f745916bddb2bdf6c96823ac834132f7e897112f62e8dc4d001cc99d6a07c244"
+      },
+      "manifest": {
+        "artifact_id": "protobuf-fields-manifest-1.0.0.json",
+        "digest": "sha256:280f2165532801f7661ae89f82271b999874cc71731455fc84bf8a098b5d7968"
+      },
+      "validation": {
+        "artifact_id": "protobuf-fields-validation-1.0.0.json",
+        "digest": "sha256:c21b8407757d4eccad3efbdb8b78b9e56814fcaf5eee861e3e65c7bdcfedbba3",
+        "applies": true,
+        "expires_at": "2027-01-15T23:59:59Z",
+        "expiry_trigger": null
+      },
+      "referenced_artifacts_root_digest": "sha256:e1ebd78998a52076a8272475e7f495b0fd3351f7e08437e1631fc02b4520ec5f",
+      "loader_self_check": "PASS through ordinary release-sign loader; record/test key discarded without serving"
+    },
+    {
+      "pack_id": "phebs.thrift.field.apache",
+      "record_sha256": "sha256:e74a382804ccd7937af38229f678f76d2468b07f43181fdba5a94a7355922546",
+      "implementation": {
+        "phebs_source_commit": "bbb41b2ccfb3f9b23653aabf41607185aec3efbe",
+        "phebs_binary_digest": "sha256:121c1d07999344166d8631e65a99b06476c1fa0251f8590d2c42dd7da6393481",
+        "pack_implementation_digest": "sha256:bb2dcc25ff017afb98aeba3adbf2596f5bcd64efaf6a4602b7e937c66413c4ea",
+        "toolchain_digest": "sha256:c6652a655b5c51d1ce66b001a3f82f118b97fecfca54705e3b7313d6c8b82dba"
+      },
+      "card": {
+        "artifact_id": "apache-card-1.0.0.md",
+        "digest": "sha256:dac445db14dd1f3bb589c356f6b97d84677360f4b01d725be2e1129a239d9ce6"
+      },
+      "manifest": {
+        "artifact_id": "apache-manifest-1.0.0.json",
+        "digest": "sha256:2cd5e5e57f1017e53f5318d5cfaf1020cec70ca63600cb9d9998168b4cab9f62"
+      },
+      "validation": {
+        "artifact_id": "apache-validation-1.0.0.json",
+        "digest": "sha256:372530cd2483b2ebffe168606d3907b83a4e7d10f45d20ba3f043e275af0c076",
+        "applies": true,
+        "expires_at": "2027-01-15T23:59:59Z",
+        "expiry_trigger": null
+      },
+      "referenced_artifacts_root_digest": "sha256:e1ebd78998a52076a8272475e7f495b0fd3351f7e08437e1631fc02b4520ec5f",
+      "loader_self_check": "PASS through ordinary release-sign loader; record/test key discarded without serving"
+    },
+    {
+      "pack_id": "phebs.thrift.field.thriftrw",
+      "record_sha256": "sha256:100f659ecbd494463628d008bc2551a6195d8118b1b6190b6e83e31b1a8a9615",
+      "implementation": {
+        "phebs_source_commit": "bbb41b2ccfb3f9b23653aabf41607185aec3efbe",
+        "phebs_binary_digest": "sha256:121c1d07999344166d8631e65a99b06476c1fa0251f8590d2c42dd7da6393481",
+        "pack_implementation_digest": "sha256:bb2dcc25ff017afb98aeba3adbf2596f5bcd64efaf6a4602b7e937c66413c4ea",
+        "toolchain_digest": "sha256:c6652a655b5c51d1ce66b001a3f82f118b97fecfca54705e3b7313d6c8b82dba"
+      },
+      "card": {
+        "artifact_id": "thriftrw-card-1.0.0.md",
+        "digest": "sha256:64a2949ca15e4a3804ea1a497d96cffde73eb9c26adc5e6e70b82892ad715d2c"
+      },
+      "manifest": {
+        "artifact_id": "thriftrw-manifest-1.0.0.json",
+        "digest": "sha256:84fd6eb60d413ace883b5be1e31bd08d657b5bdf84d74308e9794c51b713b86e"
+      },
+      "validation": {
+        "artifact_id": "thriftrw-validation-1.0.0.json",
+        "digest": "sha256:02431ec10d4126c14a91de6d14dfc68be97ed95dd3bbdd6bebe7b83a2d7655eb",
+        "applies": true,
+        "expires_at": "2027-01-15T23:59:59Z",
+        "expiry_trigger": null
+      },
+      "referenced_artifacts_root_digest": "sha256:e1ebd78998a52076a8272475e7f495b0fd3351f7e08437e1631fc02b4520ec5f",
+      "loader_self_check": "PASS through ordinary release-sign loader; record/test key discarded without serving"
+    }
+  ],
+  "runs": [
+    {
+      "argv": [
+        "/opt/homebrew/opt/openssl@3/bin/openssl",
+        "genpkey",
+        "-algorithm",
+        "ED25519",
+        "-out",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t484-final-draft-check-m7oaid_5/disposable-only.pem"
+      ],
+      "exit": 0,
+      "seconds": 0.011174000000000003,
+      "joined": true,
+      "group_absent": true,
+      "stdout_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "argv": [
+        "/tmp/phebs-main-bbb41b2c-native-qualification/phebs",
+        "release-sign",
+        "-template",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t484-final-draft-check-m7oaid_5/caller-comparison-disposable-template.json",
+        "-key",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t484-final-draft-check-m7oaid_5/disposable-only.pem",
+        "-key-id",
+        "t484-disposable-draft-check-only",
+        "-artifacts",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t484-final-draft-check-m7oaid_5/artifacts",
+        "-out",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t484-final-draft-check-m7oaid_5/selection/caller-comparison.json"
+      ],
+      "exit": 0,
+      "seconds": 0.23891904199999997,
+      "joined": true,
+      "group_absent": true,
+      "stdout_sha256": "sha256:21b17d9d58a7d0ad52331937e02943a6ba35c462449c6145d680c2789d2b9af0",
+      "stderr_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "argv": [
+        "/tmp/phebs-main-bbb41b2c-native-qualification/phebs",
+        "release-sign",
+        "-template",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t484-final-draft-check-m7oaid_5/protobuf-fields-disposable-template.json",
+        "-key",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t484-final-draft-check-m7oaid_5/disposable-only.pem",
+        "-key-id",
+        "t484-disposable-draft-check-only",
+        "-artifacts",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t484-final-draft-check-m7oaid_5/artifacts",
+        "-out",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t484-final-draft-check-m7oaid_5/selection/protobuf-fields.json"
+      ],
+      "exit": 0,
+      "seconds": 0.099043084,
+      "joined": true,
+      "group_absent": true,
+      "stdout_sha256": "sha256:f453f1fca0b17169030e060899b6ff460e5a16f11ee58596f495278572d93660",
+      "stderr_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "argv": [
+        "/tmp/phebs-main-bbb41b2c-native-qualification/phebs",
+        "release-sign",
+        "-template",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t484-final-draft-check-m7oaid_5/apache-disposable-template.json",
+        "-key",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t484-final-draft-check-m7oaid_5/disposable-only.pem",
+        "-key-id",
+        "t484-disposable-draft-check-only",
+        "-artifacts",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t484-final-draft-check-m7oaid_5/artifacts",
+        "-out",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t484-final-draft-check-m7oaid_5/selection/apache.json"
+      ],
+      "exit": 0,
+      "seconds": 0.09787829200000003,
+      "joined": true,
+      "group_absent": true,
+      "stdout_sha256": "sha256:d394f61491b01d21ff987afe9b31e13145c86b6166bdacc82fbbd50e397ba719",
+      "stderr_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "argv": [
+        "/tmp/phebs-main-bbb41b2c-native-qualification/phebs",
+        "release-sign",
+        "-template",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t484-final-draft-check-m7oaid_5/thriftrw-disposable-template.json",
+        "-key",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t484-final-draft-check-m7oaid_5/disposable-only.pem",
+        "-key-id",
+        "t484-disposable-draft-check-only",
+        "-artifacts",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t484-final-draft-check-m7oaid_5/artifacts",
+        "-out",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t484-final-draft-check-m7oaid_5/selection/thriftrw.json"
+      ],
+      "exit": 0,
+      "seconds": 0.09782645900000003,
+      "joined": true,
+      "group_absent": true,
+      "stdout_sha256": "sha256:abfb1292f66507adc8e8898f1666858cfdc370499932e1869bcf25a4faadc146",
+      "stderr_sha256": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "production_signing": "pending existing unavailable production key; final owner publication/approved artifact bytes must be reviewed and re-censused before actual signature",
+  "work": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t484-final-draft-check-m7oaid_5",
+  "outcome": "passed_four_exact_draft_bindings_and_loader_self_checks",
+  "private_key_removed": true,
+  "scratch_removed": true
+}

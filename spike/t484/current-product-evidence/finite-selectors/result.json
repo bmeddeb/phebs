@@ -1,0 +1,68 @@
+{
+  "schema": "phebs-t484-finite-selector-result-v1",
+  "source_commit": "6e38710c6b6476e62cf3033e15bb25511b22adda",
+  "plan_sha256": "sha256:08174a7d18a529f10692098a1f0bd7bd83a40228901692a704f93ed2a04f260d",
+  "qualification": "Existing deterministic filesystem/archive, capacity-probe and mocked offline-clear controls. No real hard-kill, physical pressure, huge backup or product-quality execution.",
+  "runs": [
+    {
+      "id": "shared-filesystem-publication-recovery-and-archive",
+      "argv": [
+        "go",
+        "test",
+        "-p",
+        "1",
+        "./internal/callerpublication",
+        "./internal/resolvercatalog",
+        "./internal/extractionpublication",
+        "-run",
+        "^(TestCrashBoundariesRecoverOrAbandonMarkedPublication|TestCallerPublicationArchiveExactRestore|TestCallerPublicationArchiveOmitsIncompleteAndUnreferencedState|TestCleanupStagesAndReconcileCrashBoundaries|TestCatalogArchiveExactAndBoundedOmissions|TestRecoverStagesRetiresCurrentCompatibleAndSparseWithoutDeleting|TestStageLifecycleHonorsGraceCountAndCollectingResume|TestStageLifecycleEnforcesEveryControllerLimit)$",
+        "-count=1",
+        "-timeout=30s"
+      ],
+      "exit": 0,
+      "seconds": 10.970416333,
+      "joined": true,
+      "group_absent": true,
+      "log_sha256": "sha256:8fccb38b1da477618364a409548baabb04e75d1b34d396ae2ff9975879eef8c7"
+    },
+    {
+      "id": "shared-pressure-and-backup-lock-policy",
+      "argv": [
+        "go",
+        "test",
+        "-p",
+        "1",
+        "./internal/lifecycle",
+        "-run",
+        "^(TestGateWatermarksProjectionAndHysteresis|TestGateUnavailableAndRootHardening|TestGenerationOwnerHonorsAggregateQueryBudgetAndBackupLock|TestRunnerControlPressureUsesSameGateWithoutExtraTurns)$",
+        "-count=1",
+        "-timeout=30s"
+      ],
+      "exit": 0,
+      "seconds": 2.4691146669999995,
+      "joined": true,
+      "group_absent": true,
+      "log_sha256": "sha256:98ce38d5305742e8ed483ec3f47308542240759b146260e50a61d9d2dbaddea1"
+    },
+    {
+      "id": "offline-restore-clear-policy",
+      "argv": [
+        "go",
+        "test",
+        "-p",
+        "1",
+        "./internal/store",
+        "-run",
+        "^(TestRestoreClearNativeIDValidation|TestRestoreClearPagePrefixAndCancellation|TestRestoreClearClosedWriterGuards|TestRestoreClearCallerExactPairing)$",
+        "-count=1",
+        "-timeout=30s"
+      ],
+      "exit": 0,
+      "seconds": 10.180675334,
+      "joined": true,
+      "group_absent": true,
+      "log_sha256": "sha256:1afe707f181079a7d0e180a122e0b6d634d57d7f95a246d199196a0c82b87cc6"
+    }
+  ],
+  "outcome": "passed_all_three_finite_existing_selector_steps"
+}
