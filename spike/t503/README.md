@@ -96,3 +96,11 @@ signature are distinct requirements.
 Steady-state product work is unchanged. The preparation tool performs bounded
 one-shot source reads/downloads and file writes. It introduces no production
 request, worker, sync tick, lock, cache, schema, publication or child process.
+
+The post-fix stop in `requalification-after-t503a/result-tool-corrected.json`
+is retained. `unit-checker-adjudication.json` explains the checker's mistaken
+expectation of repeated attribution inside unit citation samples and records
+offline scoring of saved responses. The representation adapter copies actual
+outer attribution only; frozen labels, scorer and thresholds stay exact. The
+stopped attempt gains no PASS, UI, transition or revocation result. A distinct
+prospective binding and output are required for the corrected finite matrix.

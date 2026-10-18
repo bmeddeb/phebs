@@ -13011,3 +13011,21 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   and one native matrix if launch succeeds, with the same first-stop rule.
   No quality or operating outcome is inferred from preparation, and production
   signing remains pending. No production work or authority changes.
+
+- **2026-10-18 — T50.3 promoted-unit checker correction (Ben-routed Mac handoff).**
+  Retain the16.725757s post-fix native stop and its exact execution binding.
+  The checker failed on deliberately omitted inner `candidates`: current unit
+  comparison rows serialize the single proved attribution once on the outer
+  row, as the existing API regression requires. Independent source review
+  confirms all4 resolved samples' actual outer IDs/targets and the unchanged
+  unavailable sample; no product defect follows from this checker exception.
+  A client-only deep-copy adapter expands only actual outer attribution for
+  the unchanged frozen scorer. It rejects contradictory sample metadata and
+  never uses gold labels to create facts. Offline retained output matches5
+  occurrence rows and4 unit classes covering the same5 source sites; this
+  does not pass the stopped attempt or measure remaining phases. Preserve
+  frozen source, labels, scorer, binary, bounds and prior results. Twenty-five
+  pure/mock checks and independent projection/cost review pass. Bind corrected
+  harness bytes prospectively before one new finite matrix; no silent retry.
+  The response-bound client copy adds no production request, sync, startup,
+  publication, lock, cache, schema or child cost. Production signing is pending.

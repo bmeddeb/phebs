@@ -416,7 +416,7 @@ class Matrix:
                     cursor = next_cursor
                 else:
                     raise ValueError("finite source census pagination overflow")
-                rows, citations = score.check_rows(pages, self.labels, self.inputs, level, repository)
+                rows, citations = checks.check_rows(pages, self.labels, self.inputs, level, repository)
                 if full_rows is None:
                     full_rows = rows
                     for key, token in citations.items():
@@ -429,7 +429,7 @@ class Matrix:
                         score.require(status == 200, "warm comparison refused")
                         warm_page = json.loads(warm)
                         checks.assert_quality_authorities(warm_page, first, commits)
-                        score.check_rows([warm_page], self.labels, self.inputs, level, repository)
+                        checks.check_rows([warm_page], self.labels, self.inputs, level, repository)
             output[level] = {"rows": len(full_rows), "classes": dict(Counter(r["classification"] for r in full_rows)), "row_metric": score.exact_metric(len(full_rows)), "site_metric": score.exact_metric(5), "resolution_tiers": dict(Counter(item["resolution"] + "/" + item["tier"] for r in full_rows for s in ("old", "replacement") for item in r[s]["rows"]))}
             unit = next(s["unit"]["id"] for s in self.labels["sites"] if s["path"] == "features/multiplex/client/main.go")
             filters = [{"classification": c} for c in ("old_only_evidence", "new_only_evidence", "both_evidence", "unresolved")]
@@ -440,7 +440,7 @@ class Matrix:
                 page = json.loads(raw)
                 checks.assert_quality_authorities(page, first, commits)
                 score.require(all(page["query"].get(k) == v for k, v in selected.items()), "applied filter echo differs")
-                score.check_rows([page], checks.filtered_truth(self.labels, level, selected), self.inputs, level, repository)
+                checks.check_rows([page], checks.filtered_truth(self.labels, level, selected), self.inputs, level, repository)
         output["source_processing"] = checks.source_accounting(self.root / "source-outcomes", repository, self.inputs)
         output["outside_pair_exclusion"] = score.exact_metric(4)
         output["unit_attribution"] = score.exact_metric(5)

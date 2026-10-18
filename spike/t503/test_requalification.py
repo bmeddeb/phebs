@@ -27,6 +27,28 @@ def page(old='old0', new='new0'):
 
 
 class RequalificationTests(unittest.TestCase):
+    def test_unit_projection_uses_only_actual_outer_candidate_without_mutation(self):
+        resolved = {"level": "unit", "classification": "both_evidence", "unit": {"id": "actual", "build_targets": ["pkg"]},
+                    "old": {"rows": [{"unit": {"state": "resolved"}}]},
+                    "replacement": {"rows": [{"unit": {"state": "resolved"}}]}}
+        unavailable = {"level": "unit", "classification": "unresolved", "old": {"rows": [{"unit": {"state": "unavailable", "reason": "mapping_has_no_attribution", "candidates": [{"id": "placeholder"}]}}]}, "replacement": {"rows": []}}
+        pages = [{"query": {"level": "unit"}, "rows": [resolved, unavailable]}]
+        original = copy.deepcopy(pages)
+        projected = checks.unit_sample_projection(pages)
+        self.assertEqual(pages, original)
+        self.assertEqual(projected[0]["rows"][0]["old"]["rows"][0]["unit"], {"state": "resolved", "candidates": [resolved["unit"]], "candidate_total": 1})
+        self.assertEqual(projected[0]["rows"][1], unavailable)
+        for mutate in (
+            lambda p: p[0]["query"].update(level="occurrence"),
+            lambda p: p[0]["rows"][0].update(classification="unresolved"),
+            lambda p: p[0]["rows"][0]["unit"].pop("id"),
+            lambda p: p[0]["rows"][0]["old"]["rows"][0]["unit"].update(candidates=[{"id": "foreign"}]),
+            lambda p: p[0]["rows"][0]["old"]["rows"][0]["unit"].update(state="unavailable"),
+            lambda p: p[0]["rows"][0]["old"]["rows"][0]["unit"].update(candidate_total=2),
+        ):
+            changed = copy.deepcopy(pages); mutate(changed)
+            with self.assertRaises(score.Mismatch): checks.unit_sample_projection(changed)
+
     def test_deadline_never_resets_for_phases_or_cleanup(self):
         clock = [10]
         deadline = checks.Deadline(180, lambda: clock[0])
