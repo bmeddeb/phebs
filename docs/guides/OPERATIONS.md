@@ -9245,3 +9245,56 @@ Raw SCIP read roles include source writes, so semantic read/write accuracy is
 unmeasured. This supplies no runtime-use, deployment, managed generation,
 scale or broad generator coverage claim. T52.3 registration/operating/signing
 remain pending; the independent thriftrw recipe gets its own T52.2 result.
+
+### Newly discovered repositories and evidence coverage (T51.3a)
+
+A visible repository can be discovered before its first HEAD is indexed.
+During that interval, proof and extraction-coverage responses retain it in
+the visible repository census, omit an indexed commit, mark each requested
+domain `unpublished` and keep SCIP availability `unknown`. They return no
+facts, extractor witness or exact publication authority for that repository.
+Raw `/api/evidence` similarly counts the visible repository without adding a
+published repository row. These are unavailable publication states, not
+evidence of zero callers or field/topic uses.
+
+Once indexing completes, ordinary extraction/source selection can advance the
+answer. A source, publication or permission change during a response still
+conflicts and requires a fresh request. Malformed nonempty commit metadata and
+storage failures remain errors; they are not converted into unpublished
+coverage. Authentication, source/version checks, immutable saved proof bytes
+and citation access remain governed by their existing boundaries.
+
+### Independent Thrift field registration (T52.3)
+
+When a verified signed Apache and/or thriftrw field recipe is selected, use
+`GET /api/find_field_references` or MCP `find_field_references` with the exact
+SCIP package lineage, message and explicitly present field number. Thrift
+admits0 through32767; field0 does not activate protobuf. Protobuf's independent
+recipe retains its1-through536870911 bounds and reserved19000-through19999
+exclusion. A Thrift-only selection exposes the neutral field tool and route;
+protobuf-only discovery remains unavailable. Independent Kafka selections may
+coexist without exposing Impact, compatibility or other provisional products.
+
+Raw evidence, direct proof calls, HTTP/MCP, citation atoms and retained bundle
+reads share the exact selected-set version fences. Authorization, current
+source/candidate/root checks and permission confirmation still precede serving
+facts. Missing SCIP reports an explicit gap, a stale or wrong-version native
+root remains unpublished/unavailable, and unsupported selected input fails
+before emission. Zero rows never establish absence or safety. Source opens use
+the cited exact commit and ordinary repository authorization.
+
+Withdraw one generator by the existing signed-selection suspension, retirement,
+expiry or revocation mechanism and restart. The surviving recipe remains
+selected; its changed shared-domain version forces ordinary re-extraction.
+Until that generation publishes, current evidence is unavailable. Former-set
+bundles fail current recipe admission while their immutable bytes and retention
+ownership remain intact. No automatic declaration/SCIP identity translation is
+performed. Stable generator registration supplies no operating, managed-runtime,
+scale or production-signature result; production signing remains pending.
+
+### Comparison on small screens (T50.3c)
+
+Comparison source cards and long unit IDs fit narrow screens. Citation chips
+retain the complete path in their accessible name/title; focus a chip and
+press Enter to open its exact cited bytes. Unit identity wrapping and source
+presentation change no evidence, scope, current-generation or absence rules.

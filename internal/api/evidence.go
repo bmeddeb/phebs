@@ -99,6 +99,12 @@ func registerEvidence(api huma.API, opts Options) {
 		native, partitioned := opts.Evidence.(partitionedCatalogStore)
 		partitionedSnapshot := make(map[string]*ContractCatalogAuthority)
 		for _, repo := range visible {
+			if repo.IndexedCommitHash == "" {
+				// No indexed HEAD means no exact publication scope. Keep the
+				// repository in the visible census, with no published row.
+				publicationSnapshot[repo.Name] = nil
+				continue
+			}
 			scope := currentEvidenceScope(repo, in.Domain)
 			run, err := opts.Evidence.LatestPublishedRun(ctx, scope)
 			if errors.Is(err, store.ErrNotFound) {
@@ -316,6 +322,14 @@ func confirmEvidencePublicationSnapshot(
 			return huma.Error409Conflict(
 				"evidence publication set changed while building the response; retry",
 			)
+		}
+		if repo.IndexedCommitHash == "" {
+			if initial != nil {
+				return huma.Error409Conflict("unindexed repository claimed an evidence publication; retry")
+			}
+			// The final visible-scope comparison below this helper still
+			// refuses an empty-to-indexed or permission transition.
+			continue
 		}
 		current, err := evidence.LatestPublishedRun(
 			ctx,

@@ -1,0 +1,306 @@
+{
+  "schema": "t522-offline-input-preparation-v1",
+  "record_date": "2026-10-18",
+  "source_checkpoint": "d8274b0f54db394593efbeef931f99f740428a02",
+  "command_plan_digest": "sha256:359c1c973ca16a8ceace478e83392a9d9d0a573205b4d8a4e21ac3890801c122",
+  "source_only_labels_digest": "sha256:e1d795ca436c432b46a084ebfaf0703da0ea046321f59376fc66ba2c88643eeb",
+  "tool": {
+    "path": "/Users/ben/go/bin/scip-go",
+    "bytes": 17881650,
+    "digest": "sha256:05b4f5086b0953268a86ddee21e53233d7fc35fa4234d4c5b30ef7faec2beb80",
+    "declared_version": "0.2.7",
+    "identity_source": "Exact existing scip-go binary rehashed2026-10-18 without execution; matching bytes retain the BuildInfo identity previously recorded in T511/T521 preparation, not their quality results",
+    "go_build_info": {
+      "go_version": "go1.26.5",
+      "main_path": "github.com/scip-code/scip-go/cmd/scip-go",
+      "module": "github.com/scip-code/scip-go",
+      "version": "v0.2.7",
+      "module_sum": "h1:gcHFnhoMCdp3C/0xvCn9QFuTsF/W3JSR5cLVf7uG+Us=",
+      "GOOS": "darwin",
+      "GOARCH": "arm64",
+      "GOARM64": "v8.0",
+      "CGO_ENABLED": "1"
+    }
+  },
+  "scratch_root": "/tmp/phebs-t522-inputs-d8274b0f",
+  "candidate_runs": 0,
+  "generator_runs": 0,
+  "runs": [
+    {
+      "population": "public",
+      "argv": [
+        "/Users/ben/go/bin/scip-go",
+        "index",
+        "--module-root=/tmp/phebs-t522-inputs-d8274b0f/public",
+        "--repository-remote=evaluation.local/t522-public",
+        "--module-path=github.com/uber/cadence",
+        "--module-version=v0.0.0-t522",
+        "--skip-implementations",
+        "--skip-tests",
+        "--output=/tmp/phebs-t522-inputs-d8274b0f/public/index.scip",
+        "./common/types/mapper/thrift",
+        "./common/types",
+        "./.gen/go/health"
+      ],
+      "working_directory": "/tmp/phebs-t522-inputs-d8274b0f/public",
+      "environment": {
+        "GOPROXY": "off",
+        "GOSUMDB": "off",
+        "GOTOOLCHAIN": "local",
+        "GOWORK": "off",
+        "GOFLAGS": "-mod=mod",
+        "GOMAXPROCS": "2"
+      },
+      "source_before": {
+        ".gen/go/health/health.go": {
+          "bytes": 20279,
+          "digest": "sha256:360126ead92a8dd481e094fed6aad98c6375afff6d31710e5c6401071eeb1291"
+        },
+        "LICENSE": {
+          "bytes": 11356,
+          "digest": "sha256:43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1"
+        },
+        "NOTICE": {
+          "bytes": 1081,
+          "digest": "sha256:53d86f4fec2e8c6dc15f2e452dfaafcb11a30abcf06ba665ae28c0cf63922d0a"
+        },
+        "common/types/health.go": {
+          "bytes": 1283,
+          "digest": "sha256:7133addfa3fbfa85787ce06e7386d6da83d7414ceffd190ea84df93fd2755259"
+        },
+        "common/types/mapper/thrift/health.go": {
+          "bytes": 1692,
+          "digest": "sha256:590da41af2161a96865324c25ccf124768e9cada246bd12a78aabb69b99a66f6"
+        },
+        "go.mod": {
+          "bytes": 140,
+          "digest": "sha256:358a79bc91579c6de226d2555a28d9eed228399a50254131677d959a2c5cf39b"
+        }
+      },
+      "timeout_seconds": 90,
+      "attempts": 1,
+      "root_child_pid": 44278,
+      "wall_seconds": 0.445871,
+      "user_seconds": 0.122024,
+      "system_seconds": 0.127043,
+      "exact_root_wait4_max_rss_bytes": 32702464,
+      "rss_scope": "Darwin wait4 rusage maximum for terminated indexer root; not sampled aggregate process-family peak",
+      "exit_status": 0,
+      "stop_reason": "",
+      "root_child_joined": true,
+      "process_group_absent": true,
+      "source_unchanged": true,
+      "added_paths": [
+        "go.sum",
+        "index.scip"
+      ],
+      "unexpected_added_paths": [],
+      "index.scip": {
+        "path": "prepared/public/index.scip",
+        "bytes": 79356,
+        "digest": "sha256:62e0d423a13ff36f0eef3f0937fb56f66f695fc0fa8ee262f40cba36d7410403"
+      },
+      "go.sum": {
+        "path": "prepared/public/go.sum",
+        "bytes": 473,
+        "digest": "sha256:6ef7b0d90adc88cab4a54a14a7d8f778020e8a2de5405a4a88549a747ae1f356"
+      },
+      "log_bytes": 147,
+      "log_digest": "sha256:c4943f11f1c2a1ee8bc95f63aa819d1f241b7858c10092b0638e43e43a31c2ac",
+      "index_metadata": {
+        "tool": "scip-go",
+        "version": "0.2.7",
+        "arguments": [
+          "index",
+          "--module-root=/tmp/phebs-t522-inputs-d8274b0f/public",
+          "--repository-remote=evaluation.local/t522-public",
+          "--module-path=github.com/uber/cadence",
+          "--module-version=v0.0.0-t522",
+          "--skip-implementations",
+          "--skip-tests",
+          "--output=/tmp/phebs-t522-inputs-d8274b0f/public/index.scip",
+          "./common/types/mapper/thrift",
+          "./common/types",
+          "./.gen/go/health"
+        ],
+        "project_root": "file:///tmp/phebs-t522-inputs-d8274b0f/public",
+        "text_encoding_enum": 1
+      },
+      "indexed_documents": [
+        {
+          "path": ".gen/go/health/health.go",
+          "occurrences": 844,
+          "position_encoding_enum": 0,
+          "retained_source": true,
+          "source_digest": "sha256:360126ead92a8dd481e094fed6aad98c6375afff6d31710e5c6401071eeb1291"
+        },
+        {
+          "path": "common/types/health.go",
+          "occurrences": 4,
+          "position_encoding_enum": 0,
+          "retained_source": true,
+          "source_digest": "sha256:7133addfa3fbfa85787ce06e7386d6da83d7414ceffd190ea84df93fd2755259"
+        },
+        {
+          "path": "common/types/mapper/thrift/health.go",
+          "occurrences": 33,
+          "position_encoding_enum": 0,
+          "retained_source": true,
+          "source_digest": "sha256:590da41af2161a96865324c25ccf124768e9cada246bd12a78aabb69b99a66f6"
+        }
+      ],
+      "indexed_documents_count": 3,
+      "indexed_occurrences_count": 881,
+      "external_symbols_count": 0,
+      "indexed_documents_absent_from_retained_input": []
+    },
+    {
+      "population": "neutral",
+      "argv": [
+        "/Users/ben/go/bin/scip-go",
+        "index",
+        "--module-root=/tmp/phebs-t522-inputs-d8274b0f/neutral",
+        "--repository-remote=evaluation.local/t522-neutral",
+        "--module-path=example.com/t522-neutral",
+        "--module-version=v0.0.0-t522",
+        "--skip-implementations",
+        "--skip-tests",
+        "--output=/tmp/phebs-t522-inputs-d8274b0f/neutral/index.scip",
+        "./gen",
+        "./renamed",
+        "./plain",
+        "./use"
+      ],
+      "working_directory": "/tmp/phebs-t522-inputs-d8274b0f/neutral",
+      "environment": {
+        "GOPROXY": "off",
+        "GOSUMDB": "off",
+        "GOTOOLCHAIN": "local",
+        "GOWORK": "off",
+        "GOFLAGS": "-mod=mod",
+        "GOMAXPROCS": "2"
+      },
+      "source_before": {
+        "gen/packet.go": {
+          "bytes": 1945,
+          "digest": "sha256:849a00059670dd9369b56f521e1f6c0062132619b01de4174d0bfbeb1b2aa8a1"
+        },
+        "go.mod": {
+          "bytes": 81,
+          "digest": "sha256:d7eab8314fdd5e54551dba0aa9691637b05a3a580b3c7566542db7df7b46a6b7"
+        },
+        "idl/packet.thrift": {
+          "bytes": 253,
+          "digest": "sha256:05362b263d8ee63501763535e6d853e4a5eb51006e222f37dbe3c3b366772846"
+        },
+        "idl/renamed.thrift": {
+          "bytes": 72,
+          "digest": "sha256:46f16aa627ad8361c702a13af5d6b65fafe5ba502eda54c3c18d6f6141d37161"
+        },
+        "plain/packet.go": {
+          "bytes": 120,
+          "digest": "sha256:45de7025f1496bb61d1cecbbc01fb430b82ecdae13a95401eb6fe29d6e3b18dc"
+        },
+        "renamed/packet.go": {
+          "bytes": 854,
+          "digest": "sha256:69c8ce9fd204396525a319114c39df0b2df51a634d559078935ddea2dcda1aa1"
+        },
+        "use/use.go": {
+          "bytes": 801,
+          "digest": "sha256:32af0a8c9775a166bb9d0ab677965bf4b38a32ff8036315b4a1b62a61ad6b9dc"
+        }
+      },
+      "timeout_seconds": 90,
+      "attempts": 1,
+      "root_child_pid": 44304,
+      "wall_seconds": 0.170429,
+      "user_seconds": 0.07733,
+      "system_seconds": 0.07438199999999999,
+      "exact_root_wait4_max_rss_bytes": 26820608,
+      "rss_scope": "Darwin wait4 rusage maximum for terminated indexer root; not sampled aggregate process-family peak",
+      "exit_status": 0,
+      "stop_reason": "",
+      "root_child_joined": true,
+      "process_group_absent": true,
+      "source_unchanged": true,
+      "added_paths": [
+        "go.sum",
+        "index.scip"
+      ],
+      "unexpected_added_paths": [],
+      "index.scip": {
+        "path": "prepared/neutral/index.scip",
+        "bytes": 26384,
+        "digest": "sha256:76ff481f38f61cc0940924d5fcd7dde90615c3a89c813c4ec8cb298b91416a0f"
+      },
+      "go.sum": {
+        "path": "prepared/neutral/go.sum",
+        "bytes": 161,
+        "digest": "sha256:3560a549b5a07a5ef860f4e60607b71061359cdb5699c7c77441f33d4f6c2a1b"
+      },
+      "log_bytes": 147,
+      "log_digest": "sha256:387300326803a676d24333c233f1772721eef6c44f19ae07d6e9a1c7589c2ec4",
+      "index_metadata": {
+        "tool": "scip-go",
+        "version": "0.2.7",
+        "arguments": [
+          "index",
+          "--module-root=/tmp/phebs-t522-inputs-d8274b0f/neutral",
+          "--repository-remote=evaluation.local/t522-neutral",
+          "--module-path=example.com/t522-neutral",
+          "--module-version=v0.0.0-t522",
+          "--skip-implementations",
+          "--skip-tests",
+          "--output=/tmp/phebs-t522-inputs-d8274b0f/neutral/index.scip",
+          "./gen",
+          "./renamed",
+          "./plain",
+          "./use"
+        ],
+        "project_root": "file:///tmp/phebs-t522-inputs-d8274b0f/neutral",
+        "text_encoding_enum": 1
+      },
+      "indexed_documents": [
+        {
+          "path": "gen/packet.go",
+          "occurrences": 124,
+          "position_encoding_enum": 0,
+          "retained_source": true,
+          "source_digest": "sha256:849a00059670dd9369b56f521e1f6c0062132619b01de4174d0bfbeb1b2aa8a1"
+        },
+        {
+          "path": "plain/packet.go",
+          "occurrences": 4,
+          "position_encoding_enum": 0,
+          "retained_source": true,
+          "source_digest": "sha256:45de7025f1496bb61d1cecbbc01fb430b82ecdae13a95401eb6fe29d6e3b18dc"
+        },
+        {
+          "path": "renamed/packet.go",
+          "occurrences": 42,
+          "position_encoding_enum": 0,
+          "retained_source": true,
+          "source_digest": "sha256:69c8ce9fd204396525a319114c39df0b2df51a634d559078935ddea2dcda1aa1"
+        },
+        {
+          "path": "use/use.go",
+          "occurrences": 65,
+          "position_encoding_enum": 0,
+          "retained_source": true,
+          "source_digest": "sha256:32af0a8c9775a166bb9d0ab677965bf4b38a32ff8036315b4a1b62a61ad6b9dc"
+        }
+      ],
+      "indexed_documents_count": 4,
+      "indexed_occurrences_count": 235,
+      "external_symbols_count": 0,
+      "indexed_documents_absent_from_retained_input": []
+    }
+  ],
+  "frozen_source_files": 15,
+  "frozen_source_bytes": 52650,
+  "outcome": "offline_index_preparation_complete_pending_evaluator_git_binding",
+  "scratch_logical_bytes_before_removal": 146331,
+  "frozen_source_unchanged_after": true,
+  "scratch_removed": true,
+  "static_census_qualification": "Lightweight protobuf wire census only; no extractor, binding, classification or quality scoring executed. Deleted scratch project roots are index provenance only."
+}

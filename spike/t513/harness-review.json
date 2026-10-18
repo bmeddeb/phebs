@@ -1,0 +1,31 @@
+{
+  "schema": "phebs-t513-harness-review-v1",
+  "date": "2026-10-18",
+  "decision": "Root complete source/authority/security/cost review accepted for first finite candidate, after exact binding and serialized native slot.",
+  "source_review": "Actual proof-bundle-v1 canonical storage, HTTP/MCP projection, full immutable source transport, field identity/tier, current native metadata, publication and withdrawal contracts read. No label or threshold changes.",
+  "cleanup_correction": "Before any outcome, preserve actual bounded private response bodies plus source-free diagnostic after joined stop; delete auth/config/key/data/server scratch. Successful runs delete whole scratch. No new request-budget abstraction.",
+  "pure_controls": "13 static/mock/tempdir checks passed by author; no product/native/browser/index/build execution.",
+  "files": {
+    "qualify_fields.py": {
+      "bytes": 26856,
+      "sha256": "sha256:c691320f7698ad3fa4ee9902232e00fa6405172a8134080044bc9bd374d9428a"
+    },
+    "field_checks.py": {
+      "bytes": 15647,
+      "sha256": "sha256:576bf3c8ee05494f07f0c93ce993907b7540e186fa1a9a4a7a04ddc113258027"
+    },
+    "test_fields.py": {
+      "bytes": 14681,
+      "sha256": "sha256:f4308947312479074cde4af3c4c2c7a0e3e6e50923d73b7858fcc2920bd55e28"
+    },
+    "README.md": {
+      "bytes": 5377,
+      "sha256": "sha256:b3aff9b90818e4cec3825a08fc50458b1246702400578de83c32a06879603501"
+    }
+  },
+  "production_signing": "pending existing unavailable key",
+  "not_measured": [
+    "Field operating matrix",
+    "Publication/withdrawal native proof"
+  ]
+}

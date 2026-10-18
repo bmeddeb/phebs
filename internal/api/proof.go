@@ -346,7 +346,7 @@ func registerProofAPI(api huma.API, opts Options) {
 		return
 	}
 	if releasedProofOnly(opts) {
-		if opts.ProtobufFieldReferencesReleased {
+		if opts.ProtobufFieldReferencesReleased || opts.ThriftFieldReferencesReleased {
 			registerFieldReferenceAPI(api, service)
 		}
 		if len(opts.KafkaReleasedPlanes) > 0 {
@@ -419,13 +419,15 @@ func registerFieldReferenceAPI(api huma.API, service *ProofService) {
 		Message     string `query:"message" required:"true" minLength:"1" maxLength:"1024" example:"shop.Cart"`
 		FieldNumber int    `query:"field_number" required:"true" minimum:"1" maximum:"536870911" example:"1"`
 	}
-	huma.Get(api, "/api/find_proto_field_references", func(ctx context.Context, in *fieldIn) (*proofOut, error) {
-		envelope, err := service.FindProtoFieldReferences(ctx, in.Lineage, in.Message, in.FieldNumber)
-		if err != nil {
-			return nil, err
-		}
-		return &proofOut{Body: *envelope}, nil
-	})
+	if !releasedProofOnly(service.opts) || service.opts.ProtobufFieldReferencesReleased {
+		huma.Get(api, "/api/find_proto_field_references", func(ctx context.Context, in *fieldIn) (*proofOut, error) {
+			envelope, err := service.FindProtoFieldReferences(ctx, in.Lineage, in.Message, in.FieldNumber)
+			if err != nil {
+				return nil, err
+			}
+			return &proofOut{Body: *envelope}, nil
+		})
+	}
 
 	type neutralFieldIn struct {
 		Lineage     string           `query:"lineage" required:"true" minLength:"1" maxLength:"1024"`

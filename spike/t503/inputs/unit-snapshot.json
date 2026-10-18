@@ -1,0 +1,28 @@
+{
+  "version": "t20-unit-snapshot-v1",
+  "mappings": [
+    {
+      "source_path": "helloworld/greeter_client/main.go",
+      "build_targets": [
+        "go:google.golang.org/grpc/examples/helloworld/greeter_client"
+      ]
+    },
+    {
+      "source_path": "features/interceptor/client/main.go",
+      "build_targets": [
+        "go:google.golang.org/grpc/examples/features/interceptor/client"
+      ]
+    },
+    {
+      "source_path": "features/multiplex/client/main.go",
+      "build_targets": [
+        "go:google.golang.org/grpc/examples/features/multiplex/client"
+      ]
+    },
+    {
+      "source_path": "features/metadata/client/main.go",
+      "state": "unavailable",
+      "source": "unit-snapshot-v1"
+    }
+  ]
+}

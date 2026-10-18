@@ -1,0 +1,1586 @@
+{
+  "schema": "phebs-t503-postfix-matrix-v1",
+  "date": "2026-10-18",
+  "outcome": "stopped_no_retry",
+  "reads": [
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 404,
+      "seconds": 0.007582,
+      "bytes": 135,
+      "raw_digest": "sha256:418aa45efdf007f6ef4892a0bf52c2025fee958a19887279b5d2afa2c24697dd"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 404,
+      "seconds": 0.003928,
+      "bytes": 135,
+      "raw_digest": "sha256:418aa45efdf007f6ef4892a0bf52c2025fee958a19887279b5d2afa2c24697dd"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 404,
+      "seconds": 0.003577,
+      "bytes": 135,
+      "raw_digest": "sha256:418aa45efdf007f6ef4892a0bf52c2025fee958a19887279b5d2afa2c24697dd"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.003188,
+      "bytes": 1798,
+      "raw_digest": "sha256:38867cb9095b5e26442cdafe1240fc8a5ca8b9ab8dac892d8608552b0e3cacb2"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.005157,
+      "bytes": 1798,
+      "raw_digest": "sha256:38867cb9095b5e26442cdafe1240fc8a5ca8b9ab8dac892d8608552b0e3cacb2"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.004356,
+      "bytes": 1798,
+      "raw_digest": "sha256:38867cb9095b5e26442cdafe1240fc8a5ca8b9ab8dac892d8608552b0e3cacb2"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.002976,
+      "bytes": 1798,
+      "raw_digest": "sha256:38867cb9095b5e26442cdafe1240fc8a5ca8b9ab8dac892d8608552b0e3cacb2"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.008316,
+      "bytes": 1798,
+      "raw_digest": "sha256:38867cb9095b5e26442cdafe1240fc8a5ca8b9ab8dac892d8608552b0e3cacb2"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.006875,
+      "bytes": 1798,
+      "raw_digest": "sha256:38867cb9095b5e26442cdafe1240fc8a5ca8b9ab8dac892d8608552b0e3cacb2"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.00672,
+      "bytes": 1798,
+      "raw_digest": "sha256:38867cb9095b5e26442cdafe1240fc8a5ca8b9ab8dac892d8608552b0e3cacb2"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.003627,
+      "bytes": 1798,
+      "raw_digest": "sha256:38867cb9095b5e26442cdafe1240fc8a5ca8b9ab8dac892d8608552b0e3cacb2"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.008363,
+      "bytes": 1798,
+      "raw_digest": "sha256:38867cb9095b5e26442cdafe1240fc8a5ca8b9ab8dac892d8608552b0e3cacb2"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.008549,
+      "bytes": 1798,
+      "raw_digest": "sha256:38867cb9095b5e26442cdafe1240fc8a5ca8b9ab8dac892d8608552b0e3cacb2"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.009277,
+      "bytes": 1798,
+      "raw_digest": "sha256:38867cb9095b5e26442cdafe1240fc8a5ca8b9ab8dac892d8608552b0e3cacb2"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.004421,
+      "bytes": 1798,
+      "raw_digest": "sha256:38867cb9095b5e26442cdafe1240fc8a5ca8b9ab8dac892d8608552b0e3cacb2"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.003302,
+      "bytes": 1798,
+      "raw_digest": "sha256:38867cb9095b5e26442cdafe1240fc8a5ca8b9ab8dac892d8608552b0e3cacb2"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.002684,
+      "bytes": 1798,
+      "raw_digest": "sha256:38867cb9095b5e26442cdafe1240fc8a5ca8b9ab8dac892d8608552b0e3cacb2"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.007642,
+      "bytes": 1798,
+      "raw_digest": "sha256:38867cb9095b5e26442cdafe1240fc8a5ca8b9ab8dac892d8608552b0e3cacb2"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.009377,
+      "bytes": 1798,
+      "raw_digest": "sha256:38867cb9095b5e26442cdafe1240fc8a5ca8b9ab8dac892d8608552b0e3cacb2"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.00271,
+      "bytes": 1798,
+      "raw_digest": "sha256:38867cb9095b5e26442cdafe1240fc8a5ca8b9ab8dac892d8608552b0e3cacb2"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.008132,
+      "bytes": 1798,
+      "raw_digest": "sha256:38867cb9095b5e26442cdafe1240fc8a5ca8b9ab8dac892d8608552b0e3cacb2"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.008885,
+      "bytes": 1798,
+      "raw_digest": "sha256:38867cb9095b5e26442cdafe1240fc8a5ca8b9ab8dac892d8608552b0e3cacb2"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.022246,
+      "bytes": 1798,
+      "raw_digest": "sha256:38867cb9095b5e26442cdafe1240fc8a5ca8b9ab8dac892d8608552b0e3cacb2"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.002585,
+      "bytes": 1798,
+      "raw_digest": "sha256:38867cb9095b5e26442cdafe1240fc8a5ca8b9ab8dac892d8608552b0e3cacb2"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.0095,
+      "bytes": 1798,
+      "raw_digest": "sha256:38867cb9095b5e26442cdafe1240fc8a5ca8b9ab8dac892d8608552b0e3cacb2"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.005566,
+      "bytes": 2694,
+      "raw_digest": "sha256:136dfc9f59ca0ce8db9c5c51c583d9dcfb8a5668e2ba1af15f23f67c27d1e1b4"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.026766,
+      "bytes": 2694,
+      "raw_digest": "sha256:136dfc9f59ca0ce8db9c5c51c583d9dcfb8a5668e2ba1af15f23f67c27d1e1b4"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.022726,
+      "bytes": 2694,
+      "raw_digest": "sha256:136dfc9f59ca0ce8db9c5c51c583d9dcfb8a5668e2ba1af15f23f67c27d1e1b4"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.02136,
+      "bytes": 2694,
+      "raw_digest": "sha256:136dfc9f59ca0ce8db9c5c51c583d9dcfb8a5668e2ba1af15f23f67c27d1e1b4"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.00919,
+      "bytes": 2694,
+      "raw_digest": "sha256:136dfc9f59ca0ce8db9c5c51c583d9dcfb8a5668e2ba1af15f23f67c27d1e1b4"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.01226,
+      "bytes": 2694,
+      "raw_digest": "sha256:136dfc9f59ca0ce8db9c5c51c583d9dcfb8a5668e2ba1af15f23f67c27d1e1b4"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.006217,
+      "bytes": 2694,
+      "raw_digest": "sha256:136dfc9f59ca0ce8db9c5c51c583d9dcfb8a5668e2ba1af15f23f67c27d1e1b4"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.047758,
+      "bytes": 15552,
+      "raw_digest": "sha256:3a01fa998678a8c2e8050bc45fcde89f808a3c516258f08233d32c8fcdd5f7a2"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.026686,
+      "bytes": 9074,
+      "raw_digest": "sha256:69f743fa2036e00c4b42cc949f2e975e7f054f7fbfe77f9c5ed6bee05cf1ec44"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.015236,
+      "bytes": 9027,
+      "raw_digest": "sha256:7915d5386012b6afa209dd0a09a62655c3f4ff66855934bf311899f55210eb09"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.021225,
+      "bytes": 9049,
+      "raw_digest": "sha256:26195e459fc86d233a53826d27571ac04403dd651a639cb65316f92b0d4221a0"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.020708,
+      "bytes": 9066,
+      "raw_digest": "sha256:7be01550e493ddfe8c4773c3f198b57b1be3dafde565265aa3cb31b9af99a4c4"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.019174,
+      "bytes": 7832,
+      "raw_digest": "sha256:02cdff3c38eb28448eb1ee3e7298356d2dc8e19f477439aef76ea72235c42182"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.051769,
+      "bytes": 1813,
+      "raw_digest": "sha256:26a9820a4254e9f50b6322dbe4623a905ab66fe0a69934a1ff4142248db1fbe0"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.056684,
+      "bytes": 3733,
+      "raw_digest": "sha256:921fdbaa68522bbb8890265189ea5dbddb58ef2a938d9c5c2298405a8620e186"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.052971,
+      "bytes": 1803,
+      "raw_digest": "sha256:48097297cde4a0ba008ea4b5aba490c4acfa98e2e47cc3039932e1aa1a5aa9b6"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.478608,
+      "bytes": 3713,
+      "raw_digest": "sha256:da4a1ceb04bebf84b8510c24fd2e8b2532dd8b7b96d9b040f8bfbac1c7db5571"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.074403,
+      "bytes": 1803,
+      "raw_digest": "sha256:871869668e7f049a5d52434c0c9055324c7e7ff055703f6d057e21581e79ef44"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.057986,
+      "bytes": 3713,
+      "raw_digest": "sha256:1e78f2e8558f6417322993372688c6d9bd94141de52f2337d83d28c9aa004f56"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.057654,
+      "bytes": 1809,
+      "raw_digest": "sha256:4bf2f5f1148824514a8dbef9dcaec5c9f5cc7ee4d5b2d9dfbe13fbb8278f7143"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.051225,
+      "bytes": 3725,
+      "raw_digest": "sha256:1823b4ad5395e70b5b5981be436f50e7ed8b1be0091ad64da3abf0f17dd04476"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.051054,
+      "bytes": 1803,
+      "raw_digest": "sha256:8a127413dd6882a353998f49d9066aae3f489c6f8af0086511afd28360cb44c2"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.055142,
+      "bytes": 3713,
+      "raw_digest": "sha256:232c9174947943c9bf5ec743c8cb8408257406b64e2c43257903338e6fbbf893"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.021639,
+      "bytes": 10977,
+      "raw_digest": "sha256:60f7d89142df6d922b23e638a598d55455d84f9860537c27871b99e95a528789"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.021859,
+      "bytes": 10991,
+      "raw_digest": "sha256:50ba1cd7f9bffece8e9d432363f3dbb7170083a2a049b31ed51945985481af6b"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.018666,
+      "bytes": 7832,
+      "raw_digest": "sha256:c8114a755b7720f7fd2a560fb282e5fb6d90916f562dd302a4170f718f6521a8"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.024734,
+      "bytes": 15552,
+      "raw_digest": "sha256:924ca935875eb19c8fca4d35464bdebc7ebfe58f19ed13a4bf484c81f74e8ac3"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.02388,
+      "bytes": 32207,
+      "raw_digest": "sha256:cfc4f938c880b917e59a1b268393468a1657acd6763398c12659fca29f60bd65"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.020133,
+      "bytes": 15552,
+      "raw_digest": "sha256:12a55567c48529c0fb00b44a4224e7b3df8da715c9ab2242d28282823acd2787"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.020156,
+      "bytes": 15552,
+      "raw_digest": "sha256:c15aeb10af42335cbc9b0bd0e0c94282986c74336921944b4efaac5c3bdb1895"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.019816,
+      "bytes": 15552,
+      "raw_digest": "sha256:c273b3fc7019f3359e14067c786c596096e915e5b634aef2d16a5275ed9f312c"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.017962,
+      "bytes": 15552,
+      "raw_digest": "sha256:fbc23cd50032c3065e2983fecad9856b60e8e5a13aa0adf03de9460104075210"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.032265,
+      "bytes": 15552,
+      "raw_digest": "sha256:fab41b77b3274cf74e8d27692696b0183697ae72131978fbd74024a9b5638732"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.018724,
+      "bytes": 9794,
+      "raw_digest": "sha256:b029dad3c2938f3817a8fddd74d541e61f2de1594868a332c246d2214cf1ac9b"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.023293,
+      "bytes": 11739,
+      "raw_digest": "sha256:ce37ed05a2b00953089660d24d13767956282c422dc01612a752cc8c6fa9a2fc"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.023646,
+      "bytes": 5941,
+      "raw_digest": "sha256:9fd8f808512abc4497cbe36ae1df03883190b83a95b85c4752be1d29c99f1793"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.023329,
+      "bytes": 5938,
+      "raw_digest": "sha256:89ba8fd80d7ce247650dad83b4511ba8a0921ded618b1b6fbcf0a5d2a992d2f4"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.013346,
+      "bytes": 9817,
+      "raw_digest": "sha256:28c567ebb22df33622321a30ad5c4b4b3deb485fc1f76d632bc373d6498c1227"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.023896,
+      "bytes": 9851,
+      "raw_digest": "sha256:0ec9d8ed1407c853139e54bbc7aa18064c3e97d23719ae960ac0720d3cabde11"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.024931,
+      "bytes": 5985,
+      "raw_digest": "sha256:689bf91c08d444c39a0555332089b6709e3cb6d4ba0047aa29947dda59b6ef96"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.022693,
+      "bytes": 9015,
+      "raw_digest": "sha256:4d8755075c303945bb12a320913fb51c93c3cb0be62c5dde7672adf65f3149c9"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.020713,
+      "bytes": 9019,
+      "raw_digest": "sha256:be870e9412d4a28b6d95e5e26c42d5ac9953efede55fcbb0771d284c4a41afa9"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.018653,
+      "bytes": 10423,
+      "raw_digest": "sha256:0df27364eb9164efdad37d6018be1b0caf9dfadb97e36107107c1cd052bc9dbd"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.021895,
+      "bytes": 7775,
+      "raw_digest": "sha256:8061831c9fd3e7c68910f20b32ab041517fa9309667d510e8c3e66f37dcc71d1"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.061207,
+      "bytes": 1813,
+      "raw_digest": "sha256:26a9820a4254e9f50b6322dbe4623a905ab66fe0a69934a1ff4142248db1fbe0"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.051779,
+      "bytes": 3733,
+      "raw_digest": "sha256:921fdbaa68522bbb8890265189ea5dbddb58ef2a938d9c5c2298405a8620e186"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.059618,
+      "bytes": 1803,
+      "raw_digest": "sha256:48097297cde4a0ba008ea4b5aba490c4acfa98e2e47cc3039932e1aa1a5aa9b6"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.062483,
+      "bytes": 3713,
+      "raw_digest": "sha256:da4a1ceb04bebf84b8510c24fd2e8b2532dd8b7b96d9b040f8bfbac1c7db5571"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.05943,
+      "bytes": 1803,
+      "raw_digest": "sha256:871869668e7f049a5d52434c0c9055324c7e7ff055703f6d057e21581e79ef44"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.049621,
+      "bytes": 3713,
+      "raw_digest": "sha256:1e78f2e8558f6417322993372688c6d9bd94141de52f2337d83d28c9aa004f56"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.050659,
+      "bytes": 1809,
+      "raw_digest": "sha256:4bf2f5f1148824514a8dbef9dcaec5c9f5cc7ee4d5b2d9dfbe13fbb8278f7143"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.050509,
+      "bytes": 3725,
+      "raw_digest": "sha256:1823b4ad5395e70b5b5981be436f50e7ed8b1be0091ad64da3abf0f17dd04476"
+    },
+    {
+      "path": "/api/contract_callers/citation",
+      "status": 200,
+      "seconds": 0.044872,
+      "bytes": 1803,
+      "raw_digest": "sha256:8a127413dd6882a353998f49d9066aae3f489c6f8af0086511afd28360cb44c2"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.047705,
+      "bytes": 3713,
+      "raw_digest": "sha256:232c9174947943c9bf5ec743c8cb8408257406b64e2c43257903338e6fbbf893"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.023271,
+      "bytes": 10916,
+      "raw_digest": "sha256:5b99fb28c69a735c026e15a1ae00b4b5c9565e3989cda7edae68eecbee50c04f"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.017479,
+      "bytes": 11080,
+      "raw_digest": "sha256:a66516fa722303dc97a2d30ab2874233c61e628bc8db0bb872f7a99b2d82d256"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.02572,
+      "bytes": 14878,
+      "raw_digest": "sha256:55e36afd14eef79e280d5b63dc531515efe2ce00f2fb71c361b7e91ace1414ee"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.024723,
+      "bytes": 30813,
+      "raw_digest": "sha256:a317e2f94866cf1512f96a4c169744f53a6ba987818aa82d0909d64b5e48dec4"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.021873,
+      "bytes": 14878,
+      "raw_digest": "sha256:62274c6d864bdd12d3c180d4927619aad4d8e9b61863b258b177e82bc6ee4637"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.018356,
+      "bytes": 14878,
+      "raw_digest": "sha256:37fcb08ad159428c36ac61b0e002d8a381d42cfad00e1db43459ef80da091833"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.016338,
+      "bytes": 14878,
+      "raw_digest": "sha256:6bd108afab0aec07faae7b34e928166d0a7bdfdef9f825016a3645ab110e9c8c"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.020493,
+      "bytes": 14878,
+      "raw_digest": "sha256:db4ace2bf03325a23eb3abee75f688214c9618c6ec779989e6c4bdb2328ee176"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.023367,
+      "bytes": 14878,
+      "raw_digest": "sha256:2185710d53c952cc61ed38fa6755008768c2f4a29873822cc80888c2edaed464"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.019157,
+      "bytes": 7812,
+      "raw_digest": "sha256:413047ef7994bb9677d58073dbd80c2d5bb57e9e9ad324452156b5799da71668"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.021654,
+      "bytes": 7835,
+      "raw_digest": "sha256:fd65de5bc22045ba0c1631f7138d166ff859f951ab7ce6133ce25d9995e6f231"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.015451,
+      "bytes": 9239,
+      "raw_digest": "sha256:5660b59a013cb841f67d146baca0633d3affb84a8ba3f7e017677efb7e4f12e9"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.023758,
+      "bytes": 7832,
+      "raw_digest": "sha256:433b9f93cd814a34f589939e646a6abf1f03b4cb109012e266cc5a8d42072426"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.021112,
+      "bytes": 9249,
+      "raw_digest": "sha256:47117ad22379e5d9b004d6e24f429a659c615acd16e5cfb050dd8c2d3f294651"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.014702,
+      "bytes": 9283,
+      "raw_digest": "sha256:139df289ba13da1c88ed210074416f94311369908a53b752d4dd3e9587fc3de5"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.022265,
+      "bytes": 5979,
+      "raw_digest": "sha256:e6d1fbe70dbd2ea90c9b43f28fe6998a696332680815c0f3a79d812603d50a48"
+    },
+    {
+      "path": "/api/compare_operation_callers",
+      "status": 401,
+      "seconds": 0.000452,
+      "bytes": 36,
+      "raw_digest": "sha256:981ec6aa5b1d3cbd4bc50c6b4c98f877de8334eed519c19bd8463d78e03e8d5a"
+    },
+    {
+      "path": "/api/version",
+      "status": 200,
+      "seconds": 0.000479,
+      "bytes": 235,
+      "raw_digest": "sha256:0ce6fdd7bb201c87c73e348dff6ef4e9b1e3d74563e12719e33af42b19b569be"
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "seconds": 0.004693,
+      "bytes": 73198,
+      "raw_digest": "sha256:e367e52835916efeb3b1828c07bffdaaa95531d224ba049b939eccd949f0b90c"
+    }
+  ],
+  "phases": [
+    {
+      "phase": "postfix-baseline",
+      "ready_seconds": 7.741,
+      "operating": {
+        "rss_samples": 68,
+        "sampled_max_tree_rss_bytes": 239239168,
+        "sampled_max_descendants": 2,
+        "minimum_available_physical_bytes": 7297957888,
+        "physical_samples": 14,
+        "physical_formula": "page_size*(free+inactive+speculative); compressor and swap excluded",
+        "sampled_max_data_allocated_bytes": 3526656,
+        "rss_cadence_seconds": 0.2,
+        "host_disk_cadence_seconds": 1,
+        "qualification": "Sequential native samples after HTTP readiness; not an atomic tree snapshot, transient peak or hard enforcement. Startup before HTTP readiness and teardown are not RSS-sampled. No swap credit.",
+        "ownership": {
+          "sampling_thread_joined": true,
+          "host_children": [
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            },
+            {
+              "exit_code": 0,
+              "joined": true,
+              "forced": false
+            }
+          ],
+          "forced_sampling_cancellation": false,
+          "observer": {
+            "exit_code": 0,
+            "joined": true,
+            "forced": false
+          }
+        }
+      },
+      "terminal": {
+        "outcome": "success",
+        "exit_code": 0,
+        "teardown": "clean",
+        "wall_seconds": 22.223
+      },
+      "owned_pgid": 54446,
+      "server_group_drained": true
+    }
+  ],
+  "production_signing": "pending; no production key or production signature",
+  "input_censuses_before_launch": [
+    {
+      "role": "primary",
+      "repository": "evaluation.local/t503-public",
+      "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+      "tree": "a0d73c675a066f2e969c1caa2db205576108d57e",
+      "files": 19,
+      "bytes": 316648,
+      "census_digest": "sha256:18891698bfb2873c21d794e1d1652902f36be06fcca4ed2e017d52d13164383b"
+    },
+    {
+      "role": "concurrent_copy",
+      "repository": "evaluation.local/t503-public-copy",
+      "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+      "tree": "a0d73c675a066f2e969c1caa2db205576108d57e",
+      "files": 19,
+      "bytes": 316648,
+      "census_digest": "sha256:18891698bfb2873c21d794e1d1652902f36be06fcca4ed2e017d52d13164383b"
+    },
+    {
+      "role": "primary_prospective_transition",
+      "repository": "evaluation.local/t503-public",
+      "commit": "5b187e7b79f5580a8918f8c0b34fb3350b447c97",
+      "tree": "965232d0b63975a25a6537d220ac1f6fc00c6d70",
+      "files": 19,
+      "bytes": 316718,
+      "census_digest": "sha256:d2d744a1cbea958fd9ad201b809ebf6b64853faab8e6d3c1118ae4e48204cb25"
+    },
+    {
+      "role": "concurrent_copy_prospective_transition",
+      "repository": "evaluation.local/t503-public-copy",
+      "commit": "cd064619232a149ee00374fadad0759cf12528c0",
+      "tree": "071ab5e3793d50a32966246a651818b7d10a2e71",
+      "files": 19,
+      "bytes": 316722,
+      "census_digest": "sha256:9f712925ab4c4165f6399a3a7bb8817dbaa0019d5e78d4eb75b8879e855a6b0e"
+    }
+  ],
+  "host": {
+    "sysname": "Darwin",
+    "machine": "arm64",
+    "cpu_count": 10,
+    "physical_memory_bytes": 25769803776
+  },
+  "bounds": {
+    "index_seconds": 60,
+    "index_bytes": 8388608,
+    "evaluation_tree_files": 32,
+    "evaluation_tree_bytes": 16777216,
+    "repositories": 2,
+    "parallel_comparison_requests": 8,
+    "http_response_bytes": 262144,
+    "cold_request_seconds": 2,
+    "warm_request_seconds": 1,
+    "startup_seconds": 30,
+    "publication_seconds": 90,
+    "complete_native_seconds": 180,
+    "derived_allocated_disk_bytes": 536870912,
+    "minimum_available_physical_headroom_bytes": 4294967296,
+    "minimum_free_disk_bytes": 2147483648,
+    "source_blobs_read_per_citation": 1,
+    "process_tree_sampled_max_rss_bytes": 2147483648
+  },
+  "free_disk_preflight_bytes": 230844366848,
+  "executed_tools": {
+    "go": {
+      "path": "/opt/homebrew/bin/go",
+      "resolved_path": "/opt/homebrew/opt/phebs-go-1.26.5/bin/go",
+      "bytes": 14500160,
+      "sha256": "sha256:3925fc3221ac440ebf7c35361ff663bed0c7bdb2e0a157b75fe993607ffe0a19",
+      "version": "go1.26.5",
+      "version_evidence": "go version go1.26.5 darwin/arm64"
+    },
+    "git": {
+      "path": "/usr/bin/git",
+      "resolved_path": "/usr/bin/git",
+      "bytes": 118640,
+      "sha256": "sha256:b8763cf250e607a778bb4603cecb5b90338814d0a3dfcba0d57b1de242f610e9",
+      "version_evidence": "git version 2.54.0 (Apple Git-157)"
+    },
+    "zoekt_git_index": {
+      "path": "/private/tmp/phebs-main-8a70-native-qualification/zoekt-git-index",
+      "resolved_path": "/private/tmp/phebs-main-8a70-native-qualification/zoekt-git-index",
+      "bytes": 39081090,
+      "sha256": "sha256:dd216b7e4df21b956a8a3461108ac81ee6cb700799a3decf9c739af2ba003c4d",
+      "version": "same-main-go.mod",
+      "version_evidence": "helper-build-receipt.json"
+    },
+    "focused_index": {
+      "path": "/private/tmp/phebs-main-8a70-native-qualification/phebs-focused-index",
+      "resolved_path": "/private/tmp/phebs-main-8a70-native-qualification/phebs-focused-index",
+      "bytes": 27295666,
+      "sha256": "sha256:701d83e026ac926d3e5d92a948a68c346c11335ce83c37c31bd62207beb0d8b5",
+      "version": "same-main-go.mod",
+      "version_evidence": "helper-build-receipt.json"
+    },
+    "buf": {
+      "path": "/Users/ben/.codex/worktrees/t445-header/phebs.com/bin/buf",
+      "resolved_path": "/Users/ben/.codex/worktrees/t445-header/phebs.com/bin/buf",
+      "bytes": 77461554,
+      "sha256": "sha256:691b8635ab9c083e38f1d892bf10799ea688070ed8ef8081d9b7907d0a7e4658",
+      "version_evidence": "1.72.0"
+    },
+    "surreal": {
+      "path": "/opt/homebrew/bin/surreal",
+      "resolved_path": "/opt/homebrew/opt/phebs-surreal-3.2.0/surreal",
+      "bytes": 233283488,
+      "sha256": "sha256:ee819dfcedd23035a785ac40f2509f86cbb09fc3255726ad74755b161a3ca0a8",
+      "version": "3.2.0",
+      "version_evidence": "3.2.0 for macos on aarch64"
+    },
+    "node": {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+      "resolved_path": "/private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+      "bytes": 120965360,
+      "sha256": "sha256:ee6fb0e015284d83a91e8ec5213f43a157f8a392b58555301682892ba928c04a",
+      "version": "v24.18.0",
+      "version_evidence": "v24.18.0"
+    },
+    "chrome": {
+      "path": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "resolved_path": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "bytes": 367696,
+      "sha256": "sha256:3972431aa8acff4e590998116c6c3e663e9a4d0eb6efd08fd160df8206db94a6",
+      "version": "155.0.8059.82",
+      "version_evidence": "Source-bound installed-Chrome preflight actual renderer155.0.8059.82, clean exit0 joined teardown"
+    },
+    "chrome_framework": {
+      "path": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/Current/Google Chrome Framework",
+      "resolved_path": "/Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/155.0.8059.82/Google Chrome Framework",
+      "bytes": 520002192,
+      "sha256": "sha256:b9aa14e0270a6a96bde855b9765c2a6eb48d0af70da7e9018f9622c4f626ef6c",
+      "version": "155.0.8059.82",
+      "version_evidence": "Source-bound installed-Chrome preflight actual renderer155.0.8059.82, clean exit0 joined teardown"
+    },
+    "openssl": {
+      "path": "/opt/homebrew/opt/openssl@3/bin/openssl",
+      "resolved_path": "/opt/homebrew/Cellar/openssl@3/3.6.3/bin/openssl",
+      "bytes": 880512,
+      "sha256": "sha256:103fc7706cf6646f226d96f29242d81890363499afc730e7ef1fadd64b3a123c",
+      "version_evidence": "OpenSSL3.6.3/library3.6.3"
+    },
+    "vm_stat": {
+      "path": "/usr/bin/vm_stat",
+      "resolved_path": "/usr/bin/vm_stat",
+      "bytes": 101664,
+      "sha256": "sha256:0127fec1de1d99c7f0b0cf185fec048c7fe92d1f1b2ad380882c583f0c921df7",
+      "version_evidence": "Darwin system sampler image; no sample performed during draft prep"
+    }
+  },
+  "observer": {
+    "path": "/tmp/phebs-main-8a70-native-qualification/native-observer",
+    "resolved_path": "/private/tmp/phebs-main-8a70-native-qualification/native-observer",
+    "bytes": 31576930,
+    "sha256": "sha256:3b25f9b9cabb9cac5087d9e65af54eb7d6bf0643d5bbd33ed9296c621d3fc16e"
+  },
+  "source_commit": "8a70fef5f60411f31d210efd52ab4dcd79385549",
+  "source_tree": "ebbe68f5d6faef8851e3368c268d3280797ce98b",
+  "binary_digest": "sha256:7dab45a9011c60132a80381933242705e44da19b2712421ed4361b67dcca19be",
+  "binary_metadata": "/tmp/phebs-main-8a70-native-qualification/phebs: go1.26.5\n\tpath\tgithub.com/bmeddeb/phebs/cmd/phebs\n\tmod\tgithub.com/bmeddeb/phebs\tv0.2.1-0.20261018114706-8a70fef5f604\t\n\tdep\tgithub.com/RoaringBitmap/roaring/v2\tv2.19.0\th1:zsWtVE+biht4eVl0YDLvykUqGkftR3Qc5UCbeKB4UQ4=\n\tdep\tgithub.com/alexedwards/scs/v2\tv2.9.0\th1:xa05mVpwTBm1iLeTMNFfAWpKUm4fXAW7CeAViqBVS90=\n\tdep\tgithub.com/beorn7/perks\tv1.0.1\th1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=\n\tdep\tgithub.com/bits-and-blooms/bitset\tv1.24.4\th1:95H15Og1clikBrKr/DuzMXkQzECs1M6hhoGXLwLQOZE=\n\tdep\tgithub.com/bmatcuk/doublestar/v4\tv4.10.0\th1:zU9WiOla1YA122oLM6i4EXvGW62DvKZVxIe6TYWexEs=\n\tdep\tgithub.com/bufbuild/protocompile\tv0.14.2-0.20260716165721-bb5762d29672\th1:6xykiXQPoF/hhOjAhwiHQ0kgcAvrDZw0Tjl1VQkpu5c=\n\tdep\tgithub.com/cespare/xxhash/v2\tv2.3.0\th1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=\n\tdep\tgithub.com/cockroachdb/errors\tv1.11.3\th1:5bA+k2Y6r+oz/6Z/RFlNeVCesGARKuC6YymtcDrbC/I=\n\tdep\tgithub.com/cockroachdb/logtags\tv0.0.0-20241215232642-bb51bb14a506\th1:ASDL+UJcILMqgNeV5jiqR4j+sTuvQNHdf2chuKj1M5k=\n\tdep\tgithub.com/cockroachdb/redact\tv1.1.5\th1:u1PMllDkdFfPWaNGMyLD1+so+aq3uUItthCFqzwPJ30=\n\tdep\tgithub.com/coreos/go-oidc/v3\tv3.16.0\th1:qRQUCFstKpXwmEjDQTIbyY/5jF00+asXzSkmkoa/mow=\n\tdep\tgithub.com/danielgtaylor/huma/v2\tv2.38.0\th1:fb0WZCatnaiHLphMQDDWDjygNxfMkX/ENma3QsRl7vY=\n\tdep\tgithub.com/dustin/go-humanize\tv1.0.1\th1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkpeCY=\n\tdep\tgithub.com/fatih/color\tv1.19.0\th1:Zp3PiM21/9Ld6FzSKyL5c/BULoe/ONr9KlbYVOfG8+w=\n\tdep\tgithub.com/fsnotify/fsnotify\tv1.8.0\th1:dAwr6QBTBZIkG8roQaJjGof0pp0EeF+tNV7YBP3F/8M=\n\tdep\tgithub.com/fxamacker/cbor/v2\tv2.9.2\th1:X4Ksno9+x3cz0TZv69ec1hxP/+tymuR8PXQJyDwfh78=\n\tdep\tgithub.com/getsentry/sentry-go\tv0.31.1\th1:ELVc0h7gwyhnXHDouXkhqTFSO5oslsRDk0++eyE0KJ4=\n\tdep\tgithub.com/go-enry/go-enry/v2\tv2.9.6\th1:np63eOtMV56zfYDHnFVgpEVOk8fr2kmylcMnAZUDbSs=\n\tdep\tgithub.com/go-jose/go-jose/v4\tv4.1.3\th1:CVLmWDhDVRa6Mi/IgCgaopNosCaHz7zrMeF9MlZRkrs=\n\tdep\tgithub.com/gofrs/flock\tv0.13.0\th1:95JolYOvGMqeH31+FC7D2+uULf6mG61mEZ/A8dRYMzw=\n\tdep\tgithub.com/gofrs/uuid\tv4.4.0+incompatible\th1:3qXRTX8/NbyulANqlc0lchS1gqAVxRgsuW1YrTJupqA=\n\tdep\tgithub.com/gogo/protobuf\tv1.3.2\th1:Ov1cvc58UF3b5XjBnZv7+opcTcQFZebYjWzi34vdm4Q=\n\tdep\tgithub.com/google/go-cmp\tv0.7.0\th1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=\n\tdep\tgithub.com/google/jsonschema-go\tv0.4.3\th1:/DBOLZTfDow7pe2GmaJNhltueGTtDKICi8V8p+DQPd0=\n\tdep\tgithub.com/google/uuid\tv1.6.0\th1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=\n\tdep\tgithub.com/gorilla/websocket\tv1.5.3\th1:saDtZ6Pbx/0u+bgYQ3q96pZgCzfhKXGPqt7kZ72aNNg=\n\tdep\tgithub.com/grafana/regexp\tv0.0.0-20240607082908-2cb410fa05da\th1:BML5sNe+bw2uO8t8cQSwe5QhvoP04eHPF7bnaQma0Kw=\n\tdep\tgithub.com/grpc-ecosystem/go-grpc-middleware/v2\tv2.3.3\th1:B+8ClL/kCQkRiU82d9xajRPKYMrB7E0MbtzWVi1K4ns=\n\tdep\tgithub.com/kr/pretty\tv0.3.1\th1:flRD4NNwYAUpkphVc1HcthR4KEIFJ65n8Mw5qdRn3LE=\n\tdep\tgithub.com/kr/text\tv0.2.0\th1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=\n\tdep\tgithub.com/mattn/go-colorable\tv0.1.15\th1:+u9SLTRGnXv73cEsnsmoZBom+dMU88B2M0aDcWy0/jY=\n\tdep\tgithub.com/mattn/go-isatty\tv0.0.23\th1:cYwCQTQf3HB6xUC+BtyCLZNr7IzbOmoZbmssVNzSyiQ=\n\tdep\tgithub.com/modelcontextprotocol/go-sdk\tv1.6.1\th1:0zOSupjKUxPKSocPT1Wtago+mUHU2/uZ4xSOY0FGReU=\n\tdep\tgithub.com/mschoch/smat\tv0.2.0\th1:8imxQsjDm8yFEAVBe7azKmKSgzSkZXDuKkSq9374khM=\n\tdep\tgithub.com/munnerz/goautoneg\tv0.0.0-20191010083416-a7dc8b61c822\th1:C3w9PqII01/Oq1c1nUAm88MOHcQC9l5mIlSMApZMrHA=\n\tdep\tgithub.com/opentracing/opentracing-go\tv1.2.0\th1:uEJPy/1a5RIPAJ0Ov+OIO8OxWu77jEv+1B0VhjKrZUs=\n\tdep\tgithub.com/pkg/errors\tv0.9.1\th1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=\n\tdep\tgithub.com/prometheus/client_golang\tv1.23.2\th1:Je96obch5RDVy3FDMndoUsjAhG5Edi49h0RJWRi/o0o=\n\tdep\tgithub.com/prometheus/client_model\tv0.6.2\th1:oBsgwpGs7iVziMvrGhE53c/GrLUsZdHnqNwqPLxwZyk=\n\tdep\tgithub.com/prometheus/common\tv0.66.1\th1:h5E0h5/Y8niHc5DlaLlWLArTQI7tMrsfQjHV+d9ZoGs=\n\tdep\tgithub.com/rogpeppe/go-internal\tv1.14.1\th1:UQB4HGPB6osV0SQTLymcB4TgvyWu6ZyliaW0tI/otEQ=\n\tdep\tgithub.com/rs/xid\tv1.6.0\th1:fV591PaemRlL6JfRxGDEPl69wICngIQ3shQtzfy2gxU=\n\tdep\tgithub.com/scip-code/scip/bindings/go/scip\tv0.9.0\th1:C0LVhTl9Gw+2UC4d7RZdvB0iWUkaOyRA1fQW1CrhsMA=\n\tdep\tgithub.com/segmentio/asm\tv1.2.1\th1:DTNbBqs57ioxAD4PrArqftgypG4/qNpXoJx8TVXxPR0=\n\tdep\tgithub.com/segmentio/encoding\tv0.5.4\th1:OW1VRern8Nw6ITAtwSZ7Idrl3MXCFwXHPgqESYfvNt0=\n\tdep\tgithub.com/sourcegraph/beaut\tv0.0.0-20240611013027-627e4c25335a\th1:j/CQ27s679M9wRGBRJYyXGrfkYuQA6VMnD7R08mHD9c=\n\tdep\tgithub.com/sourcegraph/go-ctags\tv0.0.0-20250729094530-349a251d78d8\th1:hpCD/FvbXLR7/034fKD0CQ8LmT4zoQfT2DzJIjqMzUI=\n\tdep\tgithub.com/sourcegraph/log\tv0.0.0-20241024013702-574f7079c888\th1:9PUH8Hn8mVhPTtRKqot1HHsbLRDP0H2A+FSyuRumP2Q=\n\tdep\tgithub.com/sourcegraph/zoekt\tv0.0.0-20260709064101-33f1f18af292\th1:HsoQyVl9olsjSqA0YddekTbCJOsfn9bUeu//bLg6fa8=\n\tdep\tgithub.com/surrealdb/surrealdb.go\tv1.5.1\th1:5uyGYkwjO9p3UEdRBroWGhw5PpLuJorenmeB9GtGWKo=\n\tdep\tgithub.com/tetratelabs/wazero\tv1.12.0\th1:DuWcpNu/FzgEXgGBDp8J1Spc+CWOvvtvVyjKlaZopYU=\n\tdep\tgithub.com/wasilibs/go-re2\tv1.10.0\th1:vQZEBYZOCA9jdBMmrO4+CvqyCj0x4OomXTJ4a5/urQ0=\n\tdep\tgithub.com/wasilibs/wazero-helpers\tv0.0.0-20240620070341-3dff1577cd52\th1:OvLBa8SqJnZ6P+mjlzc2K7PM22rRUPE1x32G9DTPrC4=\n\tdep\tgithub.com/x448/float16\tv0.8.4\th1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=\n\tdep\tgithub.com/yosida95/uritemplate/v3\tv3.0.2\th1:Ed3Oyj9yrmi9087+NczuL5BwkIc4wvTb5zIM+UJPGz4=\n\tdep\tgithub.com/yuin/goldmark\tv1.4.13\th1:fVcFKWvrslecOb/tg+Cc05dkeYx540o0FuFt3nUVDoE=\n\tdep\tgo.uber.org/atomic\tv1.11.0\th1:ZvwS0R+56ePWxUNi+Atn9dWONBPp/AUETXlHW0DxSjE=\n\tdep\tgo.uber.org/multierr\tv1.11.0\th1:blXXJkSxSSfBVBlC76pxqeO+LN3aDfLQo+309xJstO0=\n\tdep\tgo.uber.org/thriftrw\tv1.34.0\th1:F6aIyIg6B1+fx7aiylVyqDdTG8mtLQfREfOdlm6u+mI=\n\tdep\tgo.uber.org/zap\tv1.28.0\th1:IZzaP1Fv73/T/pBMLk4VutPl36uNC+OSUh3JLG3FIjo=\n\tdep\tgo.yaml.in/yaml/v2\tv2.4.2\th1:DzmwEr2rDGHl7lsFgAHxmNz/1NlQ7xLIrlN2h5d1eGI=\n\tdep\tgolang.org/x/crypto\tv0.54.0\th1:YLIA59K4fiNzHzjnZt2tUJQjQtUWfWbeHBqKtk3eScw=\n\tdep\tgolang.org/x/mod\tv0.38.0\th1:MECBjubtXD7yj4HrhIUcywNaGeNVUdfVnxmPajOk4yk=\n\tdep\tgolang.org/x/net\tv0.57.0\th1:K5+3DljvIuDG9/Jv9rvyMywYNFCQ9RSUY6OOTTkT+tE=\n\tdep\tgolang.org/x/oauth2\tv0.36.0\th1:peZ/1z27fi9hUOFCAZaHyrpWG5lwe0RJEEEeH0ThlIs=\n\tdep\tgolang.org/x/sync\tv0.22.0\th1:SZjpbeLmrCk4xhRSZFNZW5gFUeCeFgjekvI/+gfScek=\n\tdep\tgolang.org/x/sys\tv0.47.0\th1:o7XGOvZQCADBQQ4Y7VNq2dRWQR7JmOUW8Kxx4ZsNgWs=\n\tdep\tgolang.org/x/text\tv0.40.0\th1:Ub2Z6/xjgF1WrYQz2nuITOEegKFtiIy+rieRJ5lHZKs=\n\tdep\tgoogle.golang.org/genproto/googleapis/rpc\tv0.0.0-20260715232425-e75dac1f907d\th1:Jkpk39hlTZOIp3RbfvNX9R8Hv+Sw0X89nlU/xFOErsc=\n\tdep\tgoogle.golang.org/grpc\tv1.80.0\th1:Xr6m2WmWZLETvUNvIUmeD5OAagMw3FiKmMlTdViWsHM=\n\tdep\tgoogle.golang.org/protobuf\tv1.36.11\th1:fV6ZwhNocDyBLK0dj+fg8ektcVegBBuEolpbTQyBNVE=\n\tdep\tgopkg.in/yaml.v3\tv3.0.1\th1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=\n\tbuild\t-buildmode=exe\n\tbuild\t-compiler=gc\n\tbuild\t-tags=ui\n\tbuild\t-trimpath=true\n\tbuild\tCGO_ENABLED=1\n\tbuild\tGOARCH=arm64\n\tbuild\tGOOS=darwin\n\tbuild\tGOARM64=v8.0\n\tbuild\tvcs=git\n\tbuild\tvcs.revision=8a70fef5f60411f31d210efd52ab4dcd79385549\n\tbuild\tvcs.time=2026-10-18T11:47:06Z\n\tbuild\tvcs.modified=false\n",
+  "binding_digest": "sha256:e087ba788fb9b0117c0e0cb2526b1e500efb6987806e671db2c979e10320aa7b",
+  "plan_digest": "sha256:8acec78a879023e4642e41710a3563c3d4930071239e925798cf1666b5735f9f",
+  "first_attempt_digest": "sha256:7e63806f9269a357fa056d46ff625a1a764da8930eb74df00d84341607163693",
+  "labels_digest": "sha256:db84af5c81cad0526677a058d602523049e000d2b960262f5bb6e547d77bcd26",
+  "headroom_preflight": {
+    "available_physical_bytes": 7688437760,
+    "page_size": 16384,
+    "pages": {
+      "free": 3972,
+      "inactive": 450501,
+      "speculative": 14792
+    },
+    "formula": "page_size*(free+inactive+speculative); compressor and swap excluded"
+  },
+  "signed_records": [
+    {
+      "pack": "phebs.grpc.caller.go",
+      "record_digest": "sha256:f7062c36a33fcf8e1c7985f50b5b99a29c457a21b127a9a15bac585aa4fc5382",
+      "record": {
+        "release_schema_version": "1.0",
+        "release_id": "rel-phebs.grpc.caller.go-1.0.0",
+        "release_version": "1.0.0",
+        "pack_id": "phebs.grpc.caller.go",
+        "pack_claim_version": "1.0.0",
+        "card": {
+          "artifact_id": "caller-map-card-1.0.0.md",
+          "digest": "sha256:46d032ed71236a1f32dc67d9bc0eca3a0a83e8c385d8988abee7609f37b7f397"
+        },
+        "manifest": {
+          "artifact_id": "caller-map-manifest-1.0.0.json",
+          "digest": "sha256:89c9b414961352483a5c28fb45f38d8b886042ae6dd54f968ca1d1580598c640"
+        },
+        "implementation": {
+          "phebs_source_commit": "8a70fef5f60411f31d210efd52ab4dcd79385549",
+          "phebs_binary_digest": "sha256:7dab45a9011c60132a80381933242705e44da19b2712421ed4361b67dcca19be",
+          "pack_implementation_digest": "sha256:b58de55cafe2bdfc192110aa0fac7f0ce59bf03aa68237aa45b4f6ce1815e8ff",
+          "toolchain_digest": "sha256:c6652a655b5c51d1ce66b001a3f82f118b97fecfca54705e3b7313d6c8b82dba"
+        },
+        "referenced_artifacts_root_digest": "sha256:f0fc078760f06aa1251f559328011013f80b9c5dcde1b9da39216af530453167",
+        "validation": {
+          "artifact_id": "caller-map-validation-1.0.0.json",
+          "digest": "sha256:abc969d0321bb67ccba283a6c9ff33f49e3071224edda507758460e195f89834",
+          "applies": true,
+          "expires_at": "2027-01-15T23:59:59Z",
+          "expiry_trigger": null
+        },
+        "derived_status": "released",
+        "approved_at": "2026-10-18T00:00:00Z",
+        "approval_records": [
+          "t503-postfix-disposable-key-measurement-only"
+        ],
+        "canonicalization": {
+          "algorithm": "phebs-canonical-json",
+          "version": "1"
+        },
+        "signature": {
+          "key_id": "t503-postfix-integration-only",
+          "algorithm": "ed25519",
+          "value": "2dEZolDqeJn2000rzz5va8Op7F/HQ8uPZrlOAnSTtiCn2R1X3fLzqcqFw+7UJAVVElXwf5GQRKR2ZbpnH7AEDg=="
+        }
+      }
+    },
+    {
+      "pack": "phebs.grpc.caller.comparison",
+      "record_digest": "sha256:b30b8faaf922af36998441bf25e79ad6d15a2ee3c36f7001b6c1d918d427a614",
+      "record": {
+        "release_schema_version": "1.0",
+        "release_id": "rel-phebs.grpc.caller.comparison-1.0.0",
+        "release_version": "1.0.0",
+        "pack_id": "phebs.grpc.caller.comparison",
+        "pack_claim_version": "1.0.0",
+        "card": {
+          "artifact_id": "caller-comparison-card-1.0.0.md",
+          "digest": "sha256:19c62808095d36e21e7228564e836e64e810ee82aab2789619a2ef8c884662da"
+        },
+        "manifest": {
+          "artifact_id": "caller-comparison-manifest-1.0.0.json",
+          "digest": "sha256:35fa4f5d828fd9d540d15bd9edf94b0fdbca2cfa53c51f782569160e40144e63"
+        },
+        "implementation": {
+          "phebs_source_commit": "8a70fef5f60411f31d210efd52ab4dcd79385549",
+          "phebs_binary_digest": "sha256:7dab45a9011c60132a80381933242705e44da19b2712421ed4361b67dcca19be",
+          "pack_implementation_digest": "sha256:b58de55cafe2bdfc192110aa0fac7f0ce59bf03aa68237aa45b4f6ce1815e8ff",
+          "toolchain_digest": "sha256:c6652a655b5c51d1ce66b001a3f82f118b97fecfca54705e3b7313d6c8b82dba"
+        },
+        "referenced_artifacts_root_digest": "sha256:f0fc078760f06aa1251f559328011013f80b9c5dcde1b9da39216af530453167",
+        "validation": {
+          "artifact_id": "caller-comparison-validation-1.0.0.json",
+          "digest": "sha256:a2c3baa241e12bfdb11abdba0c303477e6a1baeefc2400ab2b831a3bc0d78772",
+          "applies": true,
+          "expires_at": "2027-01-15T23:59:59Z",
+          "expiry_trigger": null
+        },
+        "derived_status": "released",
+        "approved_at": "2026-10-18T00:00:00Z",
+        "approval_records": [
+          "t503-postfix-disposable-key-measurement-only"
+        ],
+        "canonicalization": {
+          "algorithm": "phebs-canonical-json",
+          "version": "1"
+        },
+        "signature": {
+          "key_id": "t503-postfix-integration-only",
+          "algorithm": "ed25519",
+          "value": "PSqmcpvN4L14yCv1Hko+twbo4HzWK55gdrnv1Lw09+sO8hJQOKnMyHZsHMvOUM26mzPKaqKRkMpi8MsQrbZxCw=="
+        }
+      }
+    }
+  ],
+  "qualification": "Finite Darwin-local selected public-source composition; no upstream migration/equivalence, deployment/runtime/retirement, global accuracy or Linux scale inference.",
+  "preparation_seconds": 0.255443,
+  "initial_authorities": {
+    "old": {
+      "state": "current",
+      "plane": "repository-overlay",
+      "repository": "evaluation.local/t503-public",
+      "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+      "generation_digest": "sha256:0e89feb2688028767172dbae48cbf2d99446e75fea603066dc403ebb3dfba982",
+      "declaration_set_digest": "sha256:f0a88a5859c031af6a87938502fdb17162df766f3d5a889a1d66dc4983ded5cd",
+      "candidate_manifest_digest": "sha256:110562e26806486c22637368839d8858595a476f741dfadbd21de375d4e55bb4",
+      "resolver_manifest_digest": "sha256:b23f0fcc1fc833a29aca5c2bb269345944b5c08cff56baff96e4215331668aa0",
+      "pair_set_digest": "sha256:9e26910ab968c1827fcaaebf812a46ec341235e99cfe474a47075348372f2a72",
+      "manifest_digest": "sha256:1629b09963119466f8509383b32e8ac347c6f407f05b4229b9eca013d2e684c2",
+      "publication_revision": 1,
+      "pair_count": 3,
+      "result_count": 9,
+      "abstention_count": 6,
+      "coverage_record_count": 1,
+      "covered_candidate_count": 3,
+      "canonical_bytes": 18523,
+      "partition_progress": {
+        "state": "complete",
+        "settled_pair_count": 3,
+        "succeeded_pair_count": 3,
+        "refused_pair_count": 0,
+        "total_pair_count": 3
+      }
+    },
+    "replacement": {
+      "state": "current",
+      "plane": "repository-overlay",
+      "repository": "evaluation.local/t503-public",
+      "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+      "generation_digest": "sha256:0e89feb2688028767172dbae48cbf2d99446e75fea603066dc403ebb3dfba982",
+      "declaration_set_digest": "sha256:f0a88a5859c031af6a87938502fdb17162df766f3d5a889a1d66dc4983ded5cd",
+      "candidate_manifest_digest": "sha256:110562e26806486c22637368839d8858595a476f741dfadbd21de375d4e55bb4",
+      "resolver_manifest_digest": "sha256:b23f0fcc1fc833a29aca5c2bb269345944b5c08cff56baff96e4215331668aa0",
+      "pair_set_digest": "sha256:9e26910ab968c1827fcaaebf812a46ec341235e99cfe474a47075348372f2a72",
+      "manifest_digest": "sha256:1629b09963119466f8509383b32e8ac347c6f407f05b4229b9eca013d2e684c2",
+      "publication_revision": 1,
+      "pair_count": 3,
+      "result_count": 9,
+      "abstention_count": 6,
+      "coverage_record_count": 1,
+      "covered_candidate_count": 3,
+      "canonical_bytes": 18523,
+      "partition_progress": {
+        "state": "complete",
+        "settled_pair_count": 3,
+        "succeeded_pair_count": 3,
+        "refused_pair_count": 0,
+        "total_pair_count": 3
+      }
+    }
+  },
+  "resolver_units": [
+    {
+      "repository": "evaluation.local/t503-public",
+      "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+      "resolver_generation": "sha256:163510a739b58d3c56b87a575287e460cc4d2a816a188b90541d19fca279b20c",
+      "resolver_authority": "sha256:b23f0fcc1fc833a29aca5c2bb269345944b5c08cff56baff96e4215331668aa0",
+      "pack_set_digest": "sha256:f2042fea6780e4ef3c6e5823b7779350e19c67099db2ef73ffd858df89d413ad",
+      "unit_member_digest": "sha256:01c6a794fe9dce1c3072558cb59db5a7a770b60e67bfba90c30dac1dbcc69000",
+      "unit_input": {
+        "input_digest": "sha256:23b21c02ee9ca6afacebc12774bed65d450e238df2fbad03e19696a60d656864",
+        "input_object_id": "bec863cd04d297a334ff9bd322c63f9200b126ae",
+        "input_path": "unit-snapshot.json",
+        "kind": "consumer_unit_input",
+        "mapping_total": 4,
+        "pack": "go-module",
+        "pack_version": "1.2.0",
+        "record_schema": "phebs-resolver-consumer-unit-v1",
+        "schema": "phebs-resolver-catalog-record-v1",
+        "state": "resolved"
+      },
+      "materialization_policy": {
+        "consumer_unit_record_schema": "phebs-resolver-consumer-unit-v1",
+        "consumer_unit_scope": "selected-caller-overlay-path-oid-v1",
+        "declaration_record_schema": "phebs-resolver-declaration-target-v1",
+        "generated_ordering": "declaration-input-mapping-symbol-sorted-candidates-invocation-v2",
+        "generated_record_schema": "phebs-resolver-generated-attribution-v2",
+        "generated_symbol_identity_accounting": "catalog-wide-unique-source-plus-descriptor-v1",
+        "generated_symbol_record_schema": "phebs-resolver-generated-go-symbol-v1",
+        "max_consumer_unit_identity_bytes": 16777216,
+        "max_consumer_unit_mappings": 25000,
+        "max_consumer_unit_member_bytes": 16777216,
+        "max_consumer_unit_snapshot_bytes": 4194304,
+        "max_declaration_path_bytes": 16777216,
+        "max_declaration_records": 25000,
+        "max_generated_candidate_bytes": 16777216,
+        "max_generated_candidate_bytes_per_selector": 131072,
+        "max_generated_candidate_expansions": 25000,
+        "max_generated_candidates_per_selector": 1024,
+        "max_generated_mappings": 25000,
+        "max_generated_symbol_descriptors": 100000,
+        "max_generated_symbol_identity_bytes": 33554432,
+        "max_generated_symbol_source_bytes": 4194304,
+        "max_generated_symbol_sources": 25000,
+        "max_generator_invocations": 128,
+        "max_go_module_bytes": 4194304,
+        "max_input_blob_bytes": 536870912,
+        "max_input_blob_reads": 100000,
+        "max_layout_roots": 128,
+        "max_snapshot_blob_bytes": 10485760,
+        "module_ordering": "candidate-caller-order-v1",
+        "module_parsing": "single-line-strict-token-factored-unsupported-v1",
+        "module_record_schema": "phebs-resolver-go-module-v1",
+        "name": "phebs-resolver-materialization-policy-v2",
+        "protocol_member_schema": "phebs-resolver-protocol-member-v2",
+        "snapshot_decoding": "exact-unique-keys-bounded-stream-v1",
+        "state_vocabulary": "resolved-unavailable-ambiguous-unsupported-v1",
+        "timeout_milliseconds": 300000
+      },
+      "catalog_identity": {
+        "repository": "evaluation.local/t503-public",
+        "commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+        "unit_digest": "",
+        "declarations": [
+          {
+            "domain": "proto-contract",
+            "run_id": "c67ffb9b83f8e4665864ee3e48b7956b",
+            "generation_digest": "sha256:7c7908e87fc1eaa8e1dfd2fe4ed93c9ba100ec30cac76caf1aa021037c0a085d",
+            "authority_schema": "phebs-partitioned-extraction-domain-v1",
+            "plan_digest": "sha256:920204445331267bb5c905ce6a2291dafd4fea0c7bdd099084244cba72a37c6e",
+            "root_digest": "sha256:7c7908e87fc1eaa8e1dfd2fe4ed93c9ba100ec30cac76caf1aa021037c0a085d"
+          }
+        ],
+        "declaration_set_digest": "sha256:f0a88a5859c031af6a87938502fdb17162df766f3d5a889a1d66dc4983ded5cd",
+        "candidate_manifest_digest": "sha256:110562e26806486c22637368839d8858595a476f741dfadbd21de375d4e55bb4",
+        "source_lane_policy": "candidate-source-lane-base-v1",
+        "resolver_packs": [
+          {
+            "name": "go-module",
+            "version": "1.2.0"
+          },
+          {
+            "name": "grpc-generated-attribution",
+            "version": "1.2.0"
+          }
+        ],
+        "resolver_pack_set_digest": "sha256:f2042fea6780e4ef3c6e5823b7779350e19c67099db2ef73ffd858df89d413ad",
+        "catalog_policy": {
+          "name": "phebs-resolver-catalog-policy-v2",
+          "record_schema": "phebs-resolver-catalog-record-v1",
+          "record_ordering": "member-name-then-emission-v1",
+          "max_declaration_publications": 16,
+          "max_resolver_packs": 16,
+          "max_members": 256,
+          "max_records_per_member": 100000,
+          "max_records": 1000000,
+          "max_record_bytes": 1048576,
+          "max_metadata_bytes": 65536,
+          "max_manifest_bytes": 1048576,
+          "max_member_content_bytes": 67108864,
+          "max_catalog_content_bytes": 536870912,
+          "max_memory_bytes": 67108864,
+          "max_directory_entries": 32768,
+          "max_staging_disk_bytes": 545259520,
+          "max_publication_disk_bytes": 1084227584,
+          "max_open_files": 2
+        },
+        "catalog_policy_digest": "sha256:232d212b178fb3a08a7cb8ccf47df9d330c0173873dd26c21cdbc78df3e7d84a",
+        "generation_digest": "sha256:163510a739b58d3c56b87a575287e460cc4d2a816a188b90541d19fca279b20c"
+      }
+    }
+  ],
+  "caller_authorities": [
+    {
+      "generation_identity": {
+        "schema": "phebs-caller-generation-v2",
+        "repository": "evaluation.local/t503-public",
+        "head_commit": "dba5bcf2480ea04b7e775905c098a45acadd5b8e",
+        "unit_digest": "",
+        "declaration_set_digest": "sha256:f0a88a5859c031af6a87938502fdb17162df766f3d5a889a1d66dc4983ded5cd",
+        "candidate_manifest_digest": "sha256:110562e26806486c22637368839d8858595a476f741dfadbd21de375d4e55bb4",
+        "candidate_policy_digest": "sha256:4df27648658cd6d26f7d0b68fed52b4017dbce6909c628dc183cebd71ab1eb94",
+        "source_lane_policy": "candidate-source-lane-base-v1",
+        "resolver_generation_digest": "sha256:163510a739b58d3c56b87a575287e460cc4d2a816a188b90541d19fca279b20c",
+        "resolver_manifest_digest": "sha256:b23f0fcc1fc833a29aca5c2bb269345944b5c08cff56baff96e4215331668aa0",
+        "caller_policy": {
+          "name": "phebs-direct-caller-leaf-policy-v3",
+          "leaf_adapter": "direct-syntax-zero-fact-coverage-v3",
+          "source_lane_policy": "candidate-source-lane-base-v1",
+          "max_caller_domains": 16,
+          "max_expected_pairs": 16384,
+          "max_result_records_per_pair": 12500,
+          "max_abstention_records_per_pair": 4096,
+          "max_record_bytes": 1048576,
+          "max_canonical_bytes_per_pair": 67108864,
+          "max_metadata_bytes": 65536,
+          "max_staging_bytes_per_pair": 68157440,
+          "max_aggregate_result_records": 100000,
+          "max_aggregate_abstention_records": 100000,
+          "max_aggregate_canonical_bytes": 536870912,
+          "max_aggregate_staging_bytes": 545259520,
+          "max_repository_directory_entries": 65536,
+          "max_direct_source_bytes": 4194304,
+          "max_source_blob_bytes_per_pair": 67108864,
+          "publication_memory_design_bytes": 134217728,
+          "max_open_files": 5,
+          "worker_timeout_milliseconds": 300000,
+          "max_coverage_records_per_pair": 1,
+          "max_aggregate_coverage_records": 16384,
+          "max_aggregate_covered_candidates": 67108864
+        },
+        "caller_policy_digest": "sha256:dbc7ed598f775156d80bf1880df325a22cfe4350f5a2ca5696bf16f559f727c9",
+        "extractors": [
+          {
+            "domain": "grpc-caller",
+            "version": "1.6.0-released.1",
+            "leaf_adapter_version": "direct-syntax-zero-fact-coverage-v3"
+          }
+        ],
+        "extractor_set_digest": "sha256:8025688ad011e5a535e4936f449da41005a68f7de48ae413febba356484ba021",
+        "digest": "sha256:0e89feb2688028767172dbae48cbf2d99446e75fea603066dc403ebb3dfba982",
+        "upstream": {
+          "schema": "phebs-downstream-upstream-authority-v2",
+          "repository": "evaluation.local/t503-public",
+          "observation": {
+            "version": "observation-v2",
+            "repository": "evaluation.local/t503-public",
+            "source_generation_digest": "sha256:9afdc4297bd84b7bbe997d146edb4eae7050b388fe2f4cb066fe15b3292d731f",
+            "source_root_digest": "sha256:bdf6369e1860dab44ab0c32136e39b50efa5eeaab6faa4714adc970172285254",
+            "observation_generation_digest": "sha256:7e0f35934d3a4d82335d51e036a89276df5dad235fda73bcd365b0191d6cdf42",
+            "observation_root_digest": "sha256:33b44dedbe0f197227e971d40e7418f903d6967a1fcb2dac34472ac547de97ea",
+            "partition_policy_digest": "sha256:48ac2209897adb7a399564ad8bbf3406c79696217c270cb5ead5c50ec95754d1",
+            "observation_policy_digest": "sha256:b0563c9ea6a4fc22a338a326216cfe77b4ae2ecbcf30bfa0617782308e0e3b7f",
+            "inventory_policy_digest": "sha256:ffd6deeb58cbdfb3072d7a7c5028357d1e3f53deded473b602e822b20dd3a1ff",
+            "record_count": 9,
+            "observed_count": 9
+          },
+          "required": [
+            {
+              "domain": "grpc-caller",
+              "version": "1.6.0-released.1"
+            }
+          ],
+          "domains": [
+            {
+              "domain": "grpc-caller",
+              "version": "1.6.0-released.1",
+              "plan_digest": "sha256:69d8f5afc0800900a7f99e56132e92054689a2c77fb3f7d0f2492cfc767f7950",
+              "root_digest": "sha256:058db7b7aeb1dad1788db44bdb455b918a309b375c0da0e0e3cee4e6719eeaac",
+              "run_id": "67f1d3dcd10b6eb8664bf1bee09903b7",
+              "disposition": "success",
+              "candidate_manifest_digest": "sha256:110562e26806486c22637368839d8858595a476f741dfadbd21de375d4e55bb4",
+              "candidate_partition_root_digest": "sha256:f031de9f31d95be936d596decae74e55ccfe263fd895216f52898a30c1d242e7",
+              "candidate_policy_digest": "sha256:4df27648658cd6d26f7d0b68fed52b4017dbce6909c628dc183cebd71ab1eb94",
+              "source_generation_digest": "sha256:9afdc4297bd84b7bbe997d146edb4eae7050b388fe2f4cb066fe15b3292d731f",
+              "observation_generation_digest": "sha256:7e0f35934d3a4d82335d51e036a89276df5dad235fda73bcd365b0191d6cdf42",
+              "extraction_policy_digest": "sha256:4df27648658cd6d26f7d0b68fed52b4017dbce6909c628dc183cebd71ab1eb94",
+              "domain_index_digest": "sha256:ac80302c306d349336affb323e71d608aa3faceb34c096d1a4aef7b35676b37f",
+              "domain_schedule_digest": "sha256:22c9eb055a82ea71928c50a581a0e8678298ae98173529bb41507cad4f35daea"
+            }
+          ],
+          "provenance_digest": "sha256:26e366c946c41c8e75da8e847ebef8fe70eb2c676830a3e53a676c5457323f61",
+          "digest": "sha256:0efdbba581d2a610678332270d15b7bc0494880dfc1dcd9172332d4b93197ccf"
+        },
+        "upstream_digest": "sha256:0efdbba581d2a610678332270d15b7bc0494880dfc1dcd9172332d4b93197ccf"
+      },
+      "manifest_digest": "sha256:1629b09963119466f8509383b32e8ac347c6f407f05b4229b9eca013d2e684c2",
+      "pair_set_digest": "sha256:9e26910ab968c1827fcaaebf812a46ec341235e99cfe474a47075348372f2a72",
+      "aggregate": {
+        "pair_count": 3,
+        "artifact_count": 3,
+        "result_count": 9,
+        "abstention_count": 6,
+        "canonical_bytes": 18523,
+        "staging_bytes": 18523,
+        "peak_open_files": 5,
+        "coverage_record_count": 1,
+        "covered_candidate_count": 3
+      },
+      "manifest_bytes_digest": "sha256:90aa218ff4ea6e8b39f692eaf67a26a0fd6821ecc507bdc205bf4ca4ff91b56d",
+      "publication_revision": 1
+    }
+  ],
+  "cold_first_exact_response": {
+    "occurrence": {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.047758,
+      "bytes": 15552,
+      "raw_digest": "sha256:3a01fa998678a8c2e8050bc45fcde89f808a3c516258f08233d32c8fcdd5f7a2"
+    },
+    "unit": {
+      "path": "/api/compare_operation_callers",
+      "status": 200,
+      "seconds": 0.022693,
+      "bytes": 9015,
+      "raw_digest": "sha256:4d8755075c303945bb12a320913fb51c93c3cb0be62c5dde7672adf65f3149c9"
+    }
+  },
+  "quality": {
+    "occurrence": {
+      "rows": 5,
+      "classes": {
+        "new_only_evidence": 3,
+        "old_only_evidence": 2
+      },
+      "row_metric": {
+        "numerator": 5,
+        "denominator": 5,
+        "observed_rate": 1.0,
+        "wilson95": [
+          0.5655175352168251,
+          1
+        ],
+        "qualification": "Selected finite census only; interval is descriptive, not a confidence-bound pass."
+      },
+      "site_metric": {
+        "numerator": 5,
+        "denominator": 5,
+        "observed_rate": 1.0,
+        "wilson95": [
+          0.5655175352168251,
+          1
+        ],
+        "qualification": "Selected finite census only; interval is descriptive, not a confidence-bound pass."
+      },
+      "resolution_tiers": {
+        "syntax/heuristic": 5
+      }
+    },
+    "unit": {
+      "rows": 4,
+      "classes": {
+        "new_only_evidence": 1,
+        "unresolved": 1,
+        "both_evidence": 1,
+        "old_only_evidence": 1
+      },
+      "row_metric": {
+        "numerator": 4,
+        "denominator": 4,
+        "observed_rate": 1.0,
+        "wilson95": [
+          0.5101091635454027,
+          1
+        ],
+        "qualification": "Selected finite census only; interval is descriptive, not a confidence-bound pass."
+      },
+      "site_metric": {
+        "numerator": 5,
+        "denominator": 5,
+        "observed_rate": 1.0,
+        "wilson95": [
+          0.5655175352168251,
+          1
+        ],
+        "qualification": "Selected finite census only; interval is descriptive, not a confidence-bound pass."
+      },
+      "resolution_tiers": {
+        "syntax/heuristic": 5
+      }
+    },
+    "source_processing": {
+      "unique_files": 9,
+      "complete_observations": [
+        {
+          "run_id": "67f1d3dcd10b6eb8664bf1bee09903b7",
+          "plan_digest": "sha256:69d8f5afc0800900a7f99e56132e92054689a2c77fb3f7d0f2492cfc767f7950",
+          "rows": [
+            {
+              "path": "data/data.go",
+              "state": "analyzed",
+              "reason": "source_scan_complete",
+              "blob_digest": "sha256:d088b7e127ad41acdf1e267515b003b7ce1a292c217954265be0a122e12ca367"
+            },
+            {
+              "path": "features/interceptor/client/main.go",
+              "state": "analyzed",
+              "reason": "source_scan_complete",
+              "blob_digest": "sha256:67a96c9ce41464119ed93fab70bebb50cb96accdecaca43d8f9a0cf43a6bf641"
+            },
+            {
+              "path": "features/metadata/client/main.go",
+              "state": "analyzed",
+              "reason": "source_scan_complete",
+              "blob_digest": "sha256:26aceadb046196cf67fc5f790f2d6dc4e5f74ae1a919002b6fb6686db41c4fa7"
+            },
+            {
+              "path": "features/multiplex/client/main.go",
+              "state": "analyzed",
+              "reason": "source_scan_complete",
+              "blob_digest": "sha256:4fd071c359f34dd525a7125e9ef2eaf7ba871828eec21b574467bfb7b9224a7e"
+            },
+            {
+              "path": "features/proto/echo/echo.pb.go",
+              "state": "analyzed",
+              "reason": "source_scan_complete",
+              "blob_digest": "sha256:782b379b30abb36abc05916e65516a261a266a8d8e8c1e42adc606a2a86a6f34"
+            },
+            {
+              "path": "features/proto/echo/echo_grpc.pb.go",
+              "state": "analyzed",
+              "reason": "source_scan_complete",
+              "blob_digest": "sha256:af593380d0cb47c95469db614f42c582a21c6028e04cae1f84a3da7a96e57a40"
+            },
+            {
+              "path": "helloworld/greeter_client/main.go",
+              "state": "analyzed",
+              "reason": "source_scan_complete",
+              "blob_digest": "sha256:5539f38f560ab26ce11514cd81f941fb80f4ca9a88754aaaf40d89bbc92e3e30"
+            },
+            {
+              "path": "helloworld/helloworld/helloworld.pb.go",
+              "state": "analyzed",
+              "reason": "source_scan_complete",
+              "blob_digest": "sha256:d365b6dd964d474e5e3d50ef1b8bedb6d728a0377eb7926ef6fee6dfdeb1a59a"
+            },
+            {
+              "path": "helloworld/helloworld/helloworld_grpc.pb.go",
+              "state": "analyzed",
+              "reason": "source_scan_complete",
+              "blob_digest": "sha256:e1de746d9f7c0fa108c370c420cbe1a630a8cf7ae55e43a2d946dc5589c6993d"
+            }
+          ],
+          "sha256": "sha256:6db587f6ead268ccc25b067e82db18afa6a892268c252b8337a108436aceb3ef"
+        }
+      ],
+      "quality_denominator": 9
+    },
+    "outside_pair_exclusion": {
+      "numerator": 4,
+      "denominator": 4,
+      "observed_rate": 1.0,
+      "wilson95": [
+        0.5101091635454027,
+        1
+      ],
+      "qualification": "Selected finite census only; interval is descriptive, not a confidence-bound pass."
+    },
+    "unit_attribution": {
+      "numerator": 5,
+      "denominator": 5,
+      "observed_rate": 1.0,
+      "wilson95": [
+        0.5655175352168251,
+        1
+      ],
+      "qualification": "Selected finite census only; interval is descriptive, not a confidence-bound pass."
+    },
+    "citation_integrity": {
+      "numerator": 5,
+      "denominator": 5,
+      "observed_rate": 1.0,
+      "wilson95": [
+        0.5655175352168251,
+        1
+      ],
+      "qualification": "Selected finite census only; interval is descriptive, not a confidence-bound pass."
+    },
+    "per_file": {
+      "features/interceptor/client/main.go": {
+        "selected_sites": 1,
+        "outside_pair": 1,
+        "all_checked": true
+      },
+      "features/metadata/client/main.go": {
+        "selected_sites": 1,
+        "outside_pair": 3,
+        "all_checked": true
+      },
+      "features/multiplex/client/main.go": {
+        "selected_sites": 2,
+        "outside_pair": 0,
+        "all_checked": true
+      },
+      "helloworld/greeter_client/main.go": {
+        "selected_sites": 1,
+        "outside_pair": 0,
+        "all_checked": true
+      }
+    }
+  },
+  "dependency_checks": [
+    {
+      "caller_map": true,
+      "comparison": true,
+      "capabilities": [
+        "contract-atlas",
+        "contract-caller-comparison",
+        "contract-caller-map",
+        "service-catalog-v2",
+        "service-relationships-v1"
+      ],
+      "mcp_tools": [
+        "blame",
+        "compare_operation_callers",
+        "compare_service_relationships",
+        "diff",
+        "find_definitions",
+        "find_references",
+        "get_commit",
+        "get_contract_operation",
+        "get_observation_progress",
+        "get_service",
+        "hover",
+        "list_commits",
+        "list_operation_callers",
+        "list_repos",
+        "list_service_relationships",
+        "list_services",
+        "read_file",
+        "read_operation_caller_citation",
+        "read_service_relationship_citation",
+        "search_code",
+        "search_contract_operations"
+      ]
+    }
+  ],
+  "reason": "Playwright source UI/preflight failed",
+  "seconds": 22.239436
+}

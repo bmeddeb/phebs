@@ -1,0 +1,50 @@
+{
+  "schema": "phebs-t513-git-ref-diagnosis-v1",
+  "date": "2026-10-18",
+  "retained_first_stop_sha256": "7d328e8fc5e8fc748ff88011ed344b037fa078dab790ded71ffad846bdfd6ef0",
+  "observations": [
+    {
+      "command": [
+        "git",
+        "clone",
+        "--mirror",
+        "bound-source",
+        "private-scratch"
+      ],
+      "exit": 0,
+      "seconds": 0.059181,
+      "stdout": "",
+      "stderr": "Cloning into bare repository '<private-mirror>'...",
+      "joined": true
+    },
+    {
+      "command": [
+        "git",
+        "-C",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t513-ref-diagnosis-nshdrwxv/mirror.git",
+        "symbolic-ref"
+      ],
+      "exit": 128,
+      "seconds": 0.008085,
+      "stdout": "",
+      "stderr": "fatal: ref HEAD is not a symbolic ref",
+      "joined": true
+    },
+    {
+      "command": [
+        "git",
+        "-C",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t513-ref-diagnosis-nshdrwxv/mirror.git",
+        "rev-parse"
+      ],
+      "exit": 0,
+      "seconds": 0.007323,
+      "stdout": "6c4c4b5897f11fb26619fc980c114b286c679606",
+      "stderr": "",
+      "joined": true
+    }
+  ],
+  "production_source": "internal/sync/git.go:278-280 calls symbolic-ref on mirror; detached input HEAD is not a supported live Git origin default branch.",
+  "qualification": "Bounded Git-only reproduction of the source fixture failure mechanism, no product/native replay or assertion that deleted original server logs retained a cause. Original source commits/trees/files/labels unchanged.",
+  "scratch_removed": true
+}

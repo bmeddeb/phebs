@@ -232,6 +232,13 @@ checks pass. The spike is complete on its branch for neutral fixture contract
 conformance only. No production integration or runtime-schema claim follows;
 future production work requires a separately specified ticket.
 
+**T50.3 comparison inputs (2026-10-18):** independent agent source-only review
+accepts the immutable twelve-artifact checkpoint before indexing/predictions.
+Five selected public source sites and four outside-pair negatives have frozen
+labels, supplied unit composition and finite thresholds. Actual evaluation Git
+bindings precede scoring; measured quality, local operating results and the
+production signature remain pending. No Linux/scale result follows.
+
 **Caller Map / Atlas sequencing override (2026-10-17, Ben-directed):** bounded
 integration tests suffice for these products and their release bindings. The
 owning amendment at the start of Epic 47 in [BACKLOG.md](./BACKLOG.md) supersedes
@@ -5558,6 +5565,16 @@ under pack1.2.0; historical artifact custody stays intact. Bounded regression
 and independent source/cost review precede integration. T50.3's earlier unit
 failure stays retained; new product qualification remains separate.
 
+**T50.3 first product attempt (2026-10-18):** source-site composition matched
+5/5 but supplied unit attribution failed0/5. The stop remains immutable; only
+offline checker adjudication followed. T50.3a repairs the dropped projection.
+New product qualification still needs prospectively bound source/binary facts;
+no overall quality, operating, UI or release pass is inferred.
+
+**T52.2 source checkpoint (2026-10-18):** independent thriftrw source labels,
+embedded-IDL/field witnesses and permissive provenance are reviewed before
+indexing. Public4/31 and separate authored15/62/4 checks are frozen; actual
+index/input commits, first quality measurement and T52.3 remain next.
 **T52.1 source preparation (2026-10-18):** the finite Apache0.14.1 source/tag/
 IDL oracle is frozen and independently reviewed before indexing. Real offline
 SCIP preparation, evaluator Git bindings and final preregistration review come
@@ -5568,6 +5585,17 @@ authored11/60/4 frozen reference/negative/unsupported checks pass with all14
 identity witnesses. Normal/race/vet/pinned lint and independent source/cost
 review are clear. This is committed-input conformance only; T52.2's thriftrw
 result and T52.3's admission/operating/signature remain separate.
+
+**T52.2 finite thriftrw qualification (2026-10-18):** public4/31 and separate
+authored15/62/4 source gates pass with all18 definition witnesses and exact
+module-digest bindings. Normal/race/vet/pinned lint and independent review are
+clear. T52.3 can implement independent Apache/RW stable selection; operating
+and existing-key production signing remain distinct.
+
+T52.3 registration update (2026-10-18): independent Apache/thriftrw signed
+recipes compose once with exact selected-set version fences and bounded green
+integration checks. Operating/artifact/signature promotion remains open for
+each generator; production signing awaits the existing key.
 
 ## On demand
 
@@ -5595,3 +5623,8 @@ Standalone remains the supported development and small-deployment profile.
 - anonymous access;
 - silent filesystem-wide repository discovery;
 - treating runtime telemetry or static evidence as a substitute for the other.
+
+**T51.3a discovery repair (2026-10-18):** shared proof coverage and raw evidence
+represent visible unindexed repositories as unpublished, preserving strict store
+validation and final authorization/source fences. Bounded checks and independent
+review pass. A fresh binary operating run and production signing remain open.

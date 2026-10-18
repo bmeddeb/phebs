@@ -1,0 +1,331 @@
+{
+  "schema": "phebs-t503-source-labels-v1",
+  "authored_date": "2026-10-18",
+  "independent_review": "pending; no candidate export or scoring permitted until exact checkpoint accepted",
+  "scope": "Selected roles do not assert upstream migration, API equivalence, runtime use, complete production inventory or retirement safety. Public source bodies are unchanged; unit assignments and module dependency inputs are evaluator authored.",
+  "endpoints": {
+    "old": {
+      "protocol": "grpc",
+      "wire_operation": "/helloworld.Greeter/SayHello",
+      "declaration_path": "helloworld/helloworld/helloworld.proto",
+      "declaration_object": "helloworld.Greeter/SayHello",
+      "generated_path": "helloworld/helloworld/helloworld_grpc.pb.go"
+    },
+    "replacement": {
+      "protocol": "grpc",
+      "wire_operation": "/grpc.examples.echo.Echo/UnaryEcho",
+      "declaration_path": "features/proto/echo/echo.proto",
+      "declaration_object": "grpc.examples.echo.Echo/UnaryEcho",
+      "generated_path": "features/proto/echo/echo_grpc.pb.go"
+    }
+  },
+  "sites": [
+    {
+      "site_id": "features/interceptor/client/main.go:3590-3606",
+      "path": "features/interceptor/client/main.go",
+      "upstream_path": "examples/features/interceptor/client/main.go",
+      "upstream_blob_sha256": "sha256:67a96c9ce41464119ed93fab70bebb50cb96accdecaca43d8f9a0cf43a6bf641",
+      "start_byte": 3590,
+      "end_byte": 3606,
+      "start_line": 115,
+      "end_line": 115,
+      "selector": "client.UnaryEcho",
+      "wire_operation": "/grpc.examples.echo.Echo/UnaryEcho",
+      "pair_side": "replacement",
+      "expected_resolution": "resolved",
+      "unit": {
+        "state": "resolved",
+        "id": "au_9439cbc5675ce77294613145d56bd6d01064f47b19e56804684be204c10b379a",
+        "build_targets": [
+          "go:google.golang.org/grpc/examples/features/interceptor/client"
+        ]
+      },
+      "rationale": "Exact imported generated-client method call; source receiver type/constructor and checked-in client FullMethodName match this committed declaration. Unit values are evaluator-authored package attribution, never deployment reality."
+    },
+    {
+      "site_id": "features/interceptor/client/main.go:3919-3952",
+      "path": "features/interceptor/client/main.go",
+      "upstream_path": "examples/features/interceptor/client/main.go",
+      "upstream_blob_sha256": "sha256:67a96c9ce41464119ed93fab70bebb50cb96accdecaca43d8f9a0cf43a6bf641",
+      "start_byte": 3919,
+      "end_byte": 3952,
+      "start_line": 125,
+      "end_line": 125,
+      "selector": "client.BidirectionalStreamingEcho",
+      "wire_operation": "/grpc.examples.echo.Echo/BidirectionalStreamingEcho",
+      "pair_side": "outside_pair",
+      "expected_resolution": "resolved",
+      "unit": {
+        "state": "resolved",
+        "id": "au_9439cbc5675ce77294613145d56bd6d01064f47b19e56804684be204c10b379a",
+        "build_targets": [
+          "go:google.golang.org/grpc/examples/features/interceptor/client"
+        ]
+      },
+      "rationale": "Exact imported generated-client method call; source receiver type/constructor and checked-in client FullMethodName match this committed declaration. Unit values are evaluator-authored package attribution, never deployment reality."
+    },
+    {
+      "site_id": "features/metadata/client/main.go:1453-1464",
+      "path": "features/metadata/client/main.go",
+      "upstream_path": "examples/features/metadata/client/main.go",
+      "upstream_blob_sha256": "sha256:26aceadb046196cf67fc5f790f2d6dc4e5f74ae1a919002b6fb6686db41c4fa7",
+      "start_byte": 1453,
+      "end_byte": 1464,
+      "start_line": 51,
+      "end_line": 51,
+      "selector": "c.UnaryEcho",
+      "wire_operation": "/grpc.examples.echo.Echo/UnaryEcho",
+      "pair_side": "replacement",
+      "expected_resolution": "resolved",
+      "unit": {
+        "state": "unavailable",
+        "reason": "mapping_has_no_attribution"
+      },
+      "rationale": "Exact imported generated-client method call; source receiver type/constructor and checked-in client FullMethodName match this committed declaration. Unit values are evaluator-authored package attribution, never deployment reality."
+    },
+    {
+      "site_id": "features/metadata/client/main.go:2678-2699",
+      "path": "features/metadata/client/main.go",
+      "upstream_path": "examples/features/metadata/client/main.go",
+      "upstream_blob_sha256": "sha256:26aceadb046196cf67fc5f790f2d6dc4e5f74ae1a919002b6fb6686db41c4fa7",
+      "start_byte": 2678,
+      "end_byte": 2699,
+      "start_line": 92,
+      "end_line": 92,
+      "selector": "c.ServerStreamingEcho",
+      "wire_operation": "/grpc.examples.echo.Echo/ServerStreamingEcho",
+      "pair_side": "outside_pair",
+      "expected_resolution": "resolved",
+      "unit": {
+        "state": "unavailable",
+        "reason": "mapping_has_no_attribution"
+      },
+      "rationale": "Exact imported generated-client method call; source receiver type/constructor and checked-in client FullMethodName match this committed declaration. Unit values are evaluator-authored package attribution, never deployment reality."
+    },
+    {
+      "site_id": "features/metadata/client/main.go:4418-4439",
+      "path": "features/metadata/client/main.go",
+      "upstream_path": "examples/features/metadata/client/main.go",
+      "upstream_blob_sha256": "sha256:26aceadb046196cf67fc5f790f2d6dc4e5f74ae1a919002b6fb6686db41c4fa7",
+      "start_byte": 4418,
+      "end_byte": 4439,
+      "start_line": 155,
+      "end_line": 155,
+      "selector": "c.ClientStreamingEcho",
+      "wire_operation": "/grpc.examples.echo.Echo/ClientStreamingEcho",
+      "pair_side": "outside_pair",
+      "expected_resolution": "resolved",
+      "unit": {
+        "state": "unavailable",
+        "reason": "mapping_has_no_attribution"
+      },
+      "rationale": "Exact imported generated-client method call; source receiver type/constructor and checked-in client FullMethodName match this committed declaration. Unit values are evaluator-authored package attribution, never deployment reality."
+    },
+    {
+      "site_id": "features/metadata/client/main.go:6231-6259",
+      "path": "features/metadata/client/main.go",
+      "upstream_path": "examples/features/metadata/client/main.go",
+      "upstream_blob_sha256": "sha256:26aceadb046196cf67fc5f790f2d6dc4e5f74ae1a919002b6fb6686db41c4fa7",
+      "start_byte": 6231,
+      "end_byte": 6259,
+      "start_line": 218,
+      "end_line": 218,
+      "selector": "c.BidirectionalStreamingEcho",
+      "wire_operation": "/grpc.examples.echo.Echo/BidirectionalStreamingEcho",
+      "pair_side": "outside_pair",
+      "expected_resolution": "resolved",
+      "unit": {
+        "state": "unavailable",
+        "reason": "mapping_has_no_attribution"
+      },
+      "rationale": "Exact imported generated-client method call; source receiver type/constructor and checked-in client FullMethodName match this committed declaration. Unit values are evaluator-authored package attribution, never deployment reality."
+    },
+    {
+      "site_id": "features/multiplex/client/main.go:1282-1292",
+      "path": "features/multiplex/client/main.go",
+      "upstream_path": "examples/features/multiplex/client/main.go",
+      "upstream_blob_sha256": "sha256:4fd071c359f34dd525a7125e9ef2eaf7ba871828eec21b574467bfb7b9224a7e",
+      "start_byte": 1282,
+      "end_byte": 1292,
+      "start_line": 43,
+      "end_line": 43,
+      "selector": "c.SayHello",
+      "wire_operation": "/helloworld.Greeter/SayHello",
+      "pair_side": "old",
+      "expected_resolution": "resolved",
+      "unit": {
+        "state": "resolved",
+        "id": "au_1708d0bd8c3cd2a1099790102b179f46c5fcbf67c4e2a23412bb65b4ff224be2",
+        "build_targets": [
+          "go:google.golang.org/grpc/examples/features/multiplex/client"
+        ]
+      },
+      "rationale": "Exact imported generated-client method call; source receiver type/constructor and checked-in client FullMethodName match this committed declaration. Unit values are evaluator-authored package attribution, never deployment reality."
+    },
+    {
+      "site_id": "features/multiplex/client/main.go:1604-1620",
+      "path": "features/multiplex/client/main.go",
+      "upstream_path": "examples/features/multiplex/client/main.go",
+      "upstream_blob_sha256": "sha256:4fd071c359f34dd525a7125e9ef2eaf7ba871828eec21b574467bfb7b9224a7e",
+      "start_byte": 1604,
+      "end_byte": 1620,
+      "start_line": 53,
+      "end_line": 53,
+      "selector": "client.UnaryEcho",
+      "wire_operation": "/grpc.examples.echo.Echo/UnaryEcho",
+      "pair_side": "replacement",
+      "expected_resolution": "resolved",
+      "unit": {
+        "state": "resolved",
+        "id": "au_1708d0bd8c3cd2a1099790102b179f46c5fcbf67c4e2a23412bb65b4ff224be2",
+        "build_targets": [
+          "go:google.golang.org/grpc/examples/features/multiplex/client"
+        ]
+      },
+      "rationale": "Exact imported generated-client method call; source receiver type/constructor and checked-in client FullMethodName match this committed declaration. Unit values are evaluator-authored package attribution, never deployment reality."
+    },
+    {
+      "site_id": "helloworld/greeter_client/main.go:1456-1466",
+      "path": "helloworld/greeter_client/main.go",
+      "upstream_path": "examples/helloworld/greeter_client/main.go",
+      "upstream_blob_sha256": "sha256:5539f38f560ab26ce11514cd81f941fb80f4ca9a88754aaaf40d89bbc92e3e30",
+      "start_byte": 1456,
+      "end_byte": 1466,
+      "start_line": 55,
+      "end_line": 55,
+      "selector": "c.SayHello",
+      "wire_operation": "/helloworld.Greeter/SayHello",
+      "pair_side": "old",
+      "expected_resolution": "resolved",
+      "unit": {
+        "state": "resolved",
+        "id": "au_3b21c319bce883977589a6fd651789a8a16a2fe2a1b6466815e51b98cbef7234",
+        "build_targets": [
+          "go:google.golang.org/grpc/examples/helloworld/greeter_client"
+        ]
+      },
+      "rationale": "Exact imported generated-client method call; source receiver type/constructor and checked-in client FullMethodName match this committed declaration. Unit values are evaluator-authored package attribution, never deployment reality."
+    }
+  ],
+  "expected_occurrence_rows": [
+    {
+      "site_ids": [
+        "helloworld/greeter_client/main.go:1456-1466"
+      ],
+      "classification": "old_only_evidence",
+      "old_count": 1,
+      "replacement_count": 0
+    },
+    {
+      "site_ids": [
+        "features/interceptor/client/main.go:3590-3606"
+      ],
+      "classification": "new_only_evidence",
+      "old_count": 0,
+      "replacement_count": 1
+    },
+    {
+      "site_ids": [
+        "features/multiplex/client/main.go:1282-1292"
+      ],
+      "classification": "old_only_evidence",
+      "old_count": 1,
+      "replacement_count": 0
+    },
+    {
+      "site_ids": [
+        "features/multiplex/client/main.go:1604-1620"
+      ],
+      "classification": "new_only_evidence",
+      "old_count": 0,
+      "replacement_count": 1
+    },
+    {
+      "site_ids": [
+        "features/metadata/client/main.go:1453-1464"
+      ],
+      "classification": "new_only_evidence",
+      "old_count": 0,
+      "replacement_count": 1
+    }
+  ],
+  "expected_unit_rows": [
+    {
+      "source_path": "helloworld/greeter_client/main.go",
+      "site_ids": [
+        "helloworld/greeter_client/main.go:1456-1466"
+      ],
+      "classification": "old_only_evidence",
+      "unit_id": "au_3b21c319bce883977589a6fd651789a8a16a2fe2a1b6466815e51b98cbef7234",
+      "old_count": 1,
+      "replacement_count": 0,
+      "rationale": "One independently declared package candidate groups this file only."
+    },
+    {
+      "source_path": "features/interceptor/client/main.go",
+      "site_ids": [
+        "features/interceptor/client/main.go:3590-3606"
+      ],
+      "classification": "new_only_evidence",
+      "unit_id": "au_9439cbc5675ce77294613145d56bd6d01064f47b19e56804684be204c10b379a",
+      "old_count": 0,
+      "replacement_count": 1,
+      "rationale": "One independently declared package candidate groups this file only."
+    },
+    {
+      "source_path": "features/multiplex/client/main.go",
+      "site_ids": [
+        "features/multiplex/client/main.go:1282-1292",
+        "features/multiplex/client/main.go:1604-1620"
+      ],
+      "classification": "both_evidence",
+      "unit_id": "au_1708d0bd8c3cd2a1099790102b179f46c5fcbf67c4e2a23412bb65b4ff224be2",
+      "old_count": 1,
+      "replacement_count": 1,
+      "rationale": "One independently declared package candidate groups this file only."
+    },
+    {
+      "source_path": "features/metadata/client/main.go",
+      "site_ids": [
+        "features/metadata/client/main.go:1453-1464"
+      ],
+      "classification": "unresolved",
+      "unit_id": null,
+      "old_count": 0,
+      "replacement_count": 1,
+      "rationale": "Explicit unavailable unit attribution retains the real replacement occurrence as unresolved; it is not a new-only resolved unit."
+    }
+  ],
+  "denominators": {
+    "public_application_files": 4,
+    "all_public_go_files": 9,
+    "generated_method_call_sites": 9,
+    "selected_pair_sites": 5,
+    "old_sites": 2,
+    "replacement_sites": 3,
+    "outside_pair_sites": 4,
+    "occurrence_rows": 5,
+    "occurrence_classes": {
+      "old_only_evidence": 2,
+      "new_only_evidence": 3,
+      "both_evidence": 0,
+      "unresolved": 0
+    },
+    "unit_rows": 4,
+    "unit_classes": {
+      "old_only_evidence": 1,
+      "new_only_evidence": 1,
+      "both_evidence": 1,
+      "unresolved": 1
+    },
+    "unique_citation_sites": 5,
+    "extractor_unresolved_sites": 0
+  },
+  "absent_real_families": [
+    "same immutable occurrence on both endpoint sides",
+    "extractor abstention",
+    "ambiguous unit candidates",
+    "cross-repository unit equivalence (never supported)"
+  ],
+  "mechanics_only_coverage": "Existing T50.1/T50.2 exact comparison regressions cover absent real families; no quality metric is borrowed from them."
+}

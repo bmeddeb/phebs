@@ -1,0 +1,107 @@
+{
+  "schema": "phebs-t503c-native-neutral-control-v1",
+  "qualification": "Native renderer diagnosis against unchanged Noble baselines; not a canonical Noble result or product quality measurement.",
+  "work": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t503c-controls-90cuxbnw",
+  "node": "v24.18.0",
+  "chrome": "Google Chrome 155.0.8059.82",
+  "playwright": "1.62.1",
+  "source_commit": "58912f3c0c2f5ee15172e79f0d15f9058b6daa00",
+  "before_commit": "58912f3c0c2f5ee15172e79f0d15f9058b6daa00",
+  "baseline_hashes": {
+    "caller-comparison-required-identity--light--comfortable.png": "833d5c74c4c4632b921396535da26aed6460d9e6a9b27cb671a7cc405d71435d",
+    "caller-comparison-required-identity--light--dense.png": "0effaec0308587f288af2574009f53ee481bdee5d30cf59839ca89d19bd6e5ef",
+    "caller-comparison-required-identity--dark--comfortable.png": "489bea40d8098e29687f21975958932424c289c278443c76a8afda50e15ebb36",
+    "caller-comparison-required-identity--dark--dense.png": "15aa0797ceef5b6dcef48fc24c3a56217179d9b1fa8bce465a83fea4676b03aa"
+  },
+  "sources": {
+    "/Users/ben/.codex/worktrees/t25-embedded-docs/phebs.com": "f08a286daf371cf899cd452b89a1689d90a49e572c9ab5ed095d21546a04ccc8",
+    "/Users/ben/phebs.com": "b672693aa11c885c31851e79b1fe05cdcb8e03637b88a999e7cd0c7745c3cded"
+  },
+  "retries": 0,
+  "max_diff_pixel_ratio": 0.001,
+  "runs": [
+    {
+      "phase": "fixed",
+      "source": "/Users/ben/.codex/worktrees/t25-embedded-docs/phebs.com",
+      "exit_code": 1,
+      "seconds": 9.083,
+      "screens": {
+        "caller-comparison-required-identity--light--comfortable.png": "1875006d5eb5b3bd170d56375137bfeb3f41bac96d1087a93c2f0017c3547f94",
+        "caller-comparison-required-identity--light--dense.png": "2481e837631ccd97d128bc4e7b53c7c0232a538449cb7949a89ccb5df6a7ca97",
+        "caller-comparison-required-identity--dark--comfortable.png": "d49ea1257fe1053d8c7684ea61ded7008a598965752ef820cda14f8221450050",
+        "caller-comparison-required-identity--dark--dense.png": "2a4766b6775d703d84cf615849102133abebf2db8b9537cf9289e9f7fe635b64"
+      },
+      "stats": {
+        "startTime": "2026-10-18T13:34:53.441Z",
+        "duration": 8424.488,
+        "expected": 0,
+        "skipped": 0,
+        "unexpected": 4,
+        "flaky": 0
+      }
+    },
+    {
+      "phase": "main-before",
+      "source": "/Users/ben/phebs.com",
+      "exit_code": 0,
+      "seconds": 7.368,
+      "screens": {
+        "caller-comparison-required-identity--light--comfortable.png": "1875006d5eb5b3bd170d56375137bfeb3f41bac96d1087a93c2f0017c3547f94",
+        "caller-comparison-required-identity--light--dense.png": "2481e837631ccd97d128bc4e7b53c7c0232a538449cb7949a89ccb5df6a7ca97",
+        "caller-comparison-required-identity--dark--comfortable.png": "d49ea1257fe1053d8c7684ea61ded7008a598965752ef820cda14f8221450050",
+        "caller-comparison-required-identity--dark--dense.png": "2a4766b6775d703d84cf615849102133abebf2db8b9537cf9289e9f7fe635b64"
+      },
+      "stats": {
+        "startTime": "2026-10-18T13:35:02.830Z",
+        "duration": 6682.9349999999995,
+        "expected": 4,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      }
+    }
+  ],
+  "joined": {
+    "fixed-client": {
+      "exit_code": 1,
+      "teardown": "clean",
+      "termination_mode": "already_exited"
+    },
+    "fixed-vite": {
+      "exit_code": 143,
+      "teardown": "clean",
+      "termination_mode": "sigterm"
+    },
+    "fixed-chrome": {
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "sigterm"
+    },
+    "main-before-client": {
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "already_exited"
+    },
+    "main-before-vite": {
+      "exit_code": 143,
+      "teardown": "clean",
+      "termination_mode": "sigterm"
+    },
+    "chrome": {
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "sigterm"
+    },
+    "backend": {
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "sigterm"
+    }
+  },
+  "downloads": 0,
+  "repositories": 0,
+  "baseline_hashes_unchanged": true,
+  "native_before_after_byte_identical": true,
+  "history_unchanged": true,
+  "wall_seconds": 25.282
+}

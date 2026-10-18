@@ -1,0 +1,93 @@
+{
+  "schema": "t522-source-label-freeze-v1",
+  "record_date": "2026-10-18",
+  "candidate_executed": false,
+  "indexer_executed": false,
+  "generator_executed": false,
+  "counts": {
+    "neutral/negative": 62,
+    "neutral/positive": 15,
+    "neutral/unsupported": 4,
+    "public/negative": 31,
+    "public/positive": 4
+  },
+  "labels_digest": "sha256:e1d795ca436c432b46a084ebfaf0703da0ea046321f59376fc66ba2c88643eeb",
+  "labels_bytes": 46182,
+  "files": [
+    {
+      "path": "testdata/idl/LICENSE",
+      "bytes": 11356,
+      "digest": "sha256:43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1"
+    },
+    {
+      "path": "testdata/idl/thrift/health.thrift",
+      "bytes": 1337,
+      "digest": "sha256:176ca3246b757f381f8baf46c3bab328dfd4175b9730712850b10644d0b5169d"
+    },
+    {
+      "path": "testdata/neutral/gen/packet.go",
+      "bytes": 1945,
+      "digest": "sha256:849a00059670dd9369b56f521e1f6c0062132619b01de4174d0bfbeb1b2aa8a1"
+    },
+    {
+      "path": "testdata/neutral/go.mod",
+      "bytes": 81,
+      "digest": "sha256:d7eab8314fdd5e54551dba0aa9691637b05a3a580b3c7566542db7df7b46a6b7"
+    },
+    {
+      "path": "testdata/neutral/idl/packet.thrift",
+      "bytes": 253,
+      "digest": "sha256:05362b263d8ee63501763535e6d853e4a5eb51006e222f37dbe3c3b366772846"
+    },
+    {
+      "path": "testdata/neutral/idl/renamed.thrift",
+      "bytes": 72,
+      "digest": "sha256:46f16aa627ad8361c702a13af5d6b65fafe5ba502eda54c3c18d6f6141d37161"
+    },
+    {
+      "path": "testdata/neutral/plain/packet.go",
+      "bytes": 120,
+      "digest": "sha256:45de7025f1496bb61d1cecbbc01fb430b82ecdae13a95401eb6fe29d6e3b18dc"
+    },
+    {
+      "path": "testdata/neutral/renamed/packet.go",
+      "bytes": 854,
+      "digest": "sha256:69c8ce9fd204396525a319114c39df0b2df51a634d559078935ddea2dcda1aa1"
+    },
+    {
+      "path": "testdata/neutral/use/use.go",
+      "bytes": 801,
+      "digest": "sha256:32af0a8c9775a166bb9d0ab677965bf4b38a32ff8036315b4a1b62a61ad6b9dc"
+    },
+    {
+      "path": "testdata/public/.gen/go/health/health.go",
+      "bytes": 20279,
+      "digest": "sha256:360126ead92a8dd481e094fed6aad98c6375afff6d31710e5c6401071eeb1291"
+    },
+    {
+      "path": "testdata/public/LICENSE",
+      "bytes": 11356,
+      "digest": "sha256:43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1"
+    },
+    {
+      "path": "testdata/public/NOTICE",
+      "bytes": 1081,
+      "digest": "sha256:53d86f4fec2e8c6dc15f2e452dfaafcb11a30abcf06ba665ae28c0cf63922d0a"
+    },
+    {
+      "path": "testdata/public/common/types/health.go",
+      "bytes": 1283,
+      "digest": "sha256:7133addfa3fbfa85787ce06e7386d6da83d7414ceffd190ea84df93fd2755259"
+    },
+    {
+      "path": "testdata/public/common/types/mapper/thrift/health.go",
+      "bytes": 1692,
+      "digest": "sha256:590da41af2161a96865324c25ccf124768e9cada246bd12a78aabb69b99a66f6"
+    },
+    {
+      "path": "testdata/public/go.mod",
+      "bytes": 140,
+      "digest": "sha256:358a79bc91579c6de226d2555a28d9eed228399a50254131677d959a2c5cf39b"
+    }
+  ]
+}

@@ -1,0 +1,214 @@
+{
+  "schema": "phebs-t503-preregistration-v1",
+  "date": "2026-10-18",
+  "status": "preregistered_pending_independent_review_no_predictions_or_scores",
+  "claim": {
+    "id": "phebs.grpc.caller.comparison",
+    "implementation": "compare_operation_callers@caller-comparison-v2",
+    "envelope": "caller-comparison-v2",
+    "caller_recipe": [
+      "proto-contract@4.0.0",
+      "grpc-caller@1.6.0-released.1"
+    ],
+    "caller_algorithm": "1.6.0",
+    "schemas": [
+      "t20-caller-v1",
+      "t20-layout-snapshot-v1",
+      "t20-generated-from-v1",
+      "t20-unit-snapshot-v1"
+    ],
+    "scope": "Exact comparison composition over one deliberately small complete public-source population, supported committed inputs and explicitly selected old/replacement roles. No upstream replacement equivalence, migration-history, runtime-use, deployment-unit, global extraction-accuracy or scale claim.",
+    "source_truth": "Nine actual generated-method calls across four unchanged public client files; five selected endpoint sites, four outside-pair negatives. Source-only labels must be independently reviewed before indexer, extractor, candidate export or scoring.",
+    "unit_truth": "Three explicit evaluator-authored Go package units and one explicit unavailable mapping. Package attribution tests supplied metadata composition; it does not infer production logical services/deployments/owners."
+  },
+  "inputs": {
+    "population": "population.lock.json",
+    "labels": "labels.json",
+    "evaluator_inputs": "inputs/",
+    "upstream_commit": "5f1ccf56ea5ec964bbf447a10b561214f86387a6",
+    "root_mapping": "Uniformly strip examples/ from original public paths; retain all original bytes, paths and hashes in origin.json. Original upstream Go module files are bound as context but not consumed.",
+    "evaluator_go_module": "google.golang.org/grpc/examples; explicit dependencies in inputs/go.mod and inputs/go.sum replace upstream workspace dependency replacements. No source-body patch or stub generation.",
+    "scip_tool": {
+      "version": "scip-go0.2.7",
+      "module": "github.com/scip-code/scip-go@v0.2.7",
+      "module_sum": "h1:gcHFnhoMCdp3C/0xvCn9QFuTsF/W3JSR5cLVf7uG+Us=",
+      "sha256": "05b4f5086b0953268a86ddee21e53233d7fc35fa4234d4c5b30ef7faec2beb80",
+      "build_go": "go1.26.5",
+      "platform": "darwin/arm64"
+    },
+    "go_tool": {
+      "version": "go1.26.5",
+      "sha256": "3925fc3221ac440ebf7c35361ff663bed0c7bdb2e0a157b75fe993607ffe0a19",
+      "platform": "darwin/arm64"
+    },
+    "index_environment": {
+      "GOPROXY": "off",
+      "GOSUMDB": "off",
+      "GOTOOLCHAIN": "local",
+      "GOWORK": "off",
+      "GOFLAGS": "-mod=readonly",
+      "GOMAXPROCS": "2",
+      "CGO_ENABLED": "1",
+      "GOOS": "darwin",
+      "GOARCH": "arm64"
+    },
+    "index_command": [
+      "scip-go",
+      "--module-root",
+      "<evaluation-root>",
+      "--repository-remote",
+      "github.com/grpc/grpc-go",
+      "--module-path",
+      "google.golang.org/grpc/examples",
+      "--module-version",
+      "v0.0.0-t503-public-comparison.1",
+      "--skip-implementations",
+      "--skip-tests",
+      "--output",
+      "<raw-index>"
+    ],
+    "canonicalization": "Reuse spike/t472/derivation/merge with one root run; no occurrence/symbol/SCIP payload invention. Reuse fixed snapshot contracts and production decoders. Record exact tool/source hashes and raw/canonical index counts/digests.",
+    "git_boundary": "Assembler does not mutate Git. Before serving, lead records distinct evaluation Git source and derived-input commits, tree, bundle digest, exact path/blob census and repository-role bindings. Neither evaluation commit is represented as the upstream commit. These bindings and independent label approval are mandatory before candidate export/scoring."
+  },
+  "metrics": [
+    {
+      "name": "selected-occurrence recall",
+      "denominator": 5,
+      "numerator": "Expected exact immutable public source spans returned on the correct endpoint side with the correct declaration lineage.",
+      "threshold": "5/5; zero missed sites"
+    },
+    {
+      "name": "selected-occurrence precision",
+      "denominator": "Every emitted selected comparison occurrence; expected5",
+      "numerator": "Returned sites exactly matching source-only labels, source tuples, side and declaration.",
+      "threshold": "5/5 and no extra or duplicate site; any unsupported extra fails"
+    },
+    {
+      "name": "outside-pair exclusion",
+      "denominator": 4,
+      "numerator": "Real generated-method calls for other operations absent from selected comparison populations.",
+      "threshold": "4/4"
+    },
+    {
+      "name": "occurrence classification",
+      "denominator": 5,
+      "numerator": "Exact old/new membership and old_only_evidence/new_only_evidence class.",
+      "threshold": "5/5; old_only2,new_only3; both/unresolved zero real denominators reported unavailable"
+    },
+    {
+      "name": "unit composition",
+      "denominator": 4,
+      "numerator": "Exact supplied unit ID or explicit unresolved occurrence, class, side counts and complete selected source membership.",
+      "threshold": "4/4; one old-only,one both,one new-only,one unresolved; no cross-unit join"
+    },
+    {
+      "name": "unit attribution",
+      "denominator": 5,
+      "numerator": "Each selected call preserves its supplied candidate ID/build target or unavailable reason without inventing a deployment/service.",
+      "threshold": "5/5"
+    },
+    {
+      "name": "exact citation integrity",
+      "denominator": 5,
+      "numerator": "Unique immutable source sites opened via actual citation route; commit, path, Git blob, SHA256, byte/line ranges and returned selector bytes all exact.",
+      "threshold": "5/5; both levels must reference the same exact site set"
+    },
+    {
+      "name": "population/accounting",
+      "denominator": 9,
+      "numerator": "All public Go files reconciled to explicit analyzed/generated/excluded/failure outcomes; four application files+support helper+four generated files accounted.",
+      "threshold": "9/9 accounted; no missing/partial/failed application or support source; no unsupported declared state hidden as zero"
+    },
+    {
+      "name": "uncertainty",
+      "denominator": 9,
+      "numerator": "Source-only unlabelable generated-method sites before exclusions.",
+      "threshold": "0 unsure; any reviewer uncertainty stops before predictions"
+    }
+  ],
+  "reporting": "Report exact numerators/denominators, per-file results and confusion tables. For nonzero binary denominators report Wilson95 intervals beside observed rates, with no confidence-bound pass claim. Zero/absent real classes are unavailable and covered only by separately named synthetic mechanics tests. No metric may pool away a failing file/class. Repeated pagination/transport reads do not increase the independent source denominator.",
+  "read_matrix": {
+    "primary": "Same-repository selected old/new pair, occurrence and unit levels, page sizes1/2/100, all pages; classification and path/unit filters checked against frozen rows. HTTP and MCP output parity, authenticated UI selection/source opening; denied/anonymous reads and unsupported unrelated surfaces.",
+    "two_publication": "Use a separately named duplicate evaluation repository only as a concurrency/authority probe; do not double quality denominators. Cross-repository unit namespaces must never join.",
+    "concurrent_publication": [
+      "Acquire cursor with both current publications; publish a new exact source commit on old repository, require conflict/typed unavailable for old cursor and no mixed page.",
+      "Repeat independently for replacement repository. Use one evaluator-comment-only commit after frozen source quality scoring; preserve source selector bytes/index spans and record changed Git blob.",
+      "During each one publication transition, issue at most8 parallel first-page reads; every response must be coherent old/old or new/new authority or explicit unavailable/conflict. Old continuation must refuse.",
+      "Permissions change before final serialization and hidden-source reads remain mandatory focused regression gates; exact citations must reauthorize."
+    ],
+    "no_retry_rule": "Single planned execution per binding. Failed product/quality/threshold checks stop; no silent resampling, source edits, label changes or repeated threshold attempts."
+  },
+  "retained_boundaries": {
+    "normal_and_race": [
+      "go test ./internal/api -run ^TestExactCallerComparison -count=1 -timeout=2m",
+      "go test -race ./internal/api -run ^TestExactCallerComparison -count=1 -timeout=2m",
+      "go test ./internal/mcp -run ^TestCallerComparisonTool -count=1 -timeout=2m",
+      "go test ./cmd/phebs -run ^TestCallerComparisonReleasedAdmission$ -count=1 -timeout=2m"
+    ],
+    "reused_gates": [
+      "TestExactCallerComparisonFencesIndependentSidesAndAuthorizesBothFirst",
+      "TestExactCallerComparisonGapAndCursorTransitions",
+      "TestExactCallerComparisonBoundsPageWideCitationHydration",
+      "TestExactCallerComparisonCombinedScanBoundary",
+      "TestExactCallerComparisonPositionsStopAtCapPlusOne",
+      "TestExactCallerComparisonChargesOtherResolvedLineages",
+      "Existing exact Caller Map citation, hard-death/recovery, backup/restore and pressure/cache invalidation gates at same unchanged implementation version. Reuse only exact scoped evidence, never infer a new execution."
+    ],
+    "new_native": "Ordinary startup with both actual verified comparison and caller selections using disposable key; no experimental switch. Restart/withdraw comparison while Caller Map remains, then withdraw caller dependency. Production signing key never accessed."
+  },
+  "operating": {
+    "qualification": "Darwin-local small public-source input/read operating result only, not Linux capacity evidence, rehearsal, historical rerun, production SLO or scale. Actual host/source/tools/build/bindings must be recorded. Linux-targeted release/scale evidence remains unavailable.",
+    "observed_host_preparation": {
+      "platform": "darwin/arm64",
+      "physical_memory_bytes": 25769803776,
+      "swap_as_headroom": false
+    },
+    "scheduling": "One indexer/native workload at a time; lead assigns slot. GOMAXPROCS2, no parallel source derivations.",
+    "bounds": {
+      "index_seconds": 60,
+      "index_bytes": 8388608,
+      "evaluation_tree_files": 32,
+      "evaluation_tree_bytes": 16777216,
+      "repositories": 2,
+      "parallel_comparison_requests": 8,
+      "http_response_bytes": 262144,
+      "cold_request_seconds": 2,
+      "warm_request_seconds": 1,
+      "startup_seconds": 30,
+      "publication_seconds": 90,
+      "complete_native_seconds": 180,
+      "derived_allocated_disk_bytes": 536870912,
+      "minimum_available_physical_headroom_bytes": 4294967296,
+      "minimum_free_disk_bytes": 2147483648,
+      "source_blobs_read_per_citation": 1,
+      "process_tree_sampled_max_rss_bytes": 2147483648
+    },
+    "samples": "Record one cold first-page per level, five warm first-page samples per level, every page1 continuation and all five unique citations; report each value and maximum, no percentile/SLO claim. Measure sampled process-tree RSS with existing supported sampler and filesystem allocated data. If a required measurement is unavailable, report operating qualification unavailable and stop release closure.",
+    "static_ceilings": "Existing50,000 combined bucket positions,100 rows/page,100 hydrated records/page,4 citations/side/row,8 active exact reads,2 citation reads,8index/8binding/200,000position/128MiBidentity-per-index and five-minute cursors unchanged. Existing bound tests verify ceilings; this small source run does not demonstrate operation at those ceilings.",
+    "rss_qualification": "The 2 GiB bound applies to the maximum observed process-tree RSS sample. It is neither a proven transient peak nor a hard enforcement limit. Sampling cadence, successful observations and unavailable measurements are recorded. Minimum 4 GiB actually observed available physical headroom remains mandatory; swap receives no credit. A required unavailable measurement stops operating/release qualification."
+  },
+  "stops": [
+    "Independent review missing, checkpoint/input/label/source/tool hash drift or unknown required field.",
+    "Any missing dependency, parser/SCIP error, source omission, span/source mismatch, version-skewed binding or malformed input; no synthetic repair.",
+    "Any wrong/missing/extra row, side, class, unit, citation or denied-source leak.",
+    "Any partial/stale/failed/unknown state presented as exact empty success.",
+    "Any mixed authority, accepted stale cursor, hidden source opening or unsupported product activation.",
+    "Any prospective resource/time/read bound exceeded or required operating measurement unavailable.",
+    "Any surviving server, child, key, tunnel or scratch-source custody after terminal cleanup."
+  ],
+  "review": {
+    "owner": "Ben Meddeb",
+    "author": "Codex Mac agent",
+    "independent_source_label_reviewer": "pending exact checkpoint review by another agent; no independent-human claim",
+    "expiry": "2027-01-15",
+    "revalidation": [
+      "source population/root mapping/module pins",
+      "SCIP/tool/Go environment",
+      "caller/declaration/comparison algorithm or schema",
+      "identity/authz/generation/cursor/citation contract",
+      "any numerical ceiling, threshold or expected label"
+    ],
+    "suspension": "No production release before its own applicable signature. On a verified released selection, revoke comparison release ID and restart; withdraw caller dependency likewise withdraws comparison while independent products retain their own decisions."
+  },
+  "steady_state_cost": "No production code change is proposed. Qualification source download/materialization, index generation, reads and measurements are one-shot bounded work. Existing request/index/binding locks, cold-build serialization, cache invalidation, sync/startup/retry/publication/children and memory/disk ceilings remain unchanged. Final measured report must enumerate actual observed read/build/start/restart/no-op/transition work separately."
+}

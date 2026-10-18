@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/hex"
-	"slices"
 	"sort"
 	"strings"
 
@@ -35,11 +34,11 @@ func proofSourceExtractors(certificate *extract.CoverageCertificate, sources cat
 }
 
 func releasedProofOnly(opts Options) bool {
-	return opts.ProtobufFieldReferencesReleased || len(opts.KafkaReleasedPlanes) > 0
+	return opts.ProtobufFieldReferencesReleased || opts.ThriftFieldReferencesReleased || len(opts.KafkaReleasedPlanes) > 0
 }
 
-func admittedFieldIdentity(opts Options, lineage string) error {
-	if opts.EvidenceExtractorVersions["scip-proto-field"] == "" {
+func admittedFieldIdentity(opts Options, domain, lineage string) error {
+	if opts.EvidenceExtractorVersions[domain] == "" {
 		return nil
 	}
 	value, ok := strings.CutPrefix(lineage, "contract_scip_package_v1_")
@@ -52,12 +51,21 @@ func admittedFieldIdentity(opts Options, lineage string) error {
 	return nil
 }
 
+func releasedFieldDomain(opts Options, domain string) bool {
+	return domain == "scip-proto-field" && opts.ProtobufFieldReferencesReleased ||
+		domain == "scip-thrift-field" && opts.ThriftFieldReferencesReleased
+}
+
 // All transports and direct proof/report calls converge here before visibility
 // or source reads. A released recipe cannot inherit the provisional umbrella.
 func admitProofQuery(opts Options, query ProofQuery) error {
-	if query.Kind == "find_proto_field_references" || query.Kind == "find_field_references" && slices.Contains(query.Domains, "scip-proto-field") {
-		if err := admittedFieldIdentity(opts, query.Lineage); err != nil {
-			return err
+	if query.Kind == "find_proto_field_references" || query.Kind == "find_field_references" {
+		for _, domain := range query.Domains {
+			if domain == "scip-proto-field" || domain == "scip-thrift-field" {
+				if err := admittedFieldIdentity(opts, domain, query.Lineage); err != nil {
+					return err
+				}
+			}
 		}
 	}
 	if !releasedProofOnly(opts) {
@@ -68,11 +76,21 @@ func admitProofQuery(opts Options, query ProofQuery) error {
 		allowed["kafka-"+plane] = true
 	}
 	switch query.Kind {
-	case "find_proto_field_references", "find_field_references":
+	case "find_proto_field_references":
 		if !opts.ProtobufFieldReferencesReleased {
-			return huma.Error503ServiceUnavailable("field references unavailable")
+			return huma.Error503ServiceUnavailable("protobuf field references unavailable")
 		}
 		allowed = map[string]bool{"scip-proto-field": true}
+	case "find_field_references":
+		if !opts.ProtobufFieldReferencesReleased && !opts.ThriftFieldReferencesReleased {
+			return huma.Error503ServiceUnavailable("field references unavailable")
+		}
+		allowed = map[string]bool{}
+		for _, domain := range []string{"scip-proto-field", "scip-thrift-field"} {
+			if releasedFieldDomain(opts, domain) {
+				allowed[domain] = true
+			}
+		}
 	case "find_kafka_topic_usage":
 		if len(opts.KafkaReleasedPlanes) == 0 {
 			return huma.Error503ServiceUnavailable("Kafka topic usage unavailable")
@@ -120,7 +138,14 @@ func validateExpectedEvidenceVersions(opts Options, bundle *ProofBundle) error {
 		}
 	}
 	for _, assertion := range bundle.Assertions {
-		if expected := opts.EvidenceExtractorVersions["scip-proto-field"]; assertion.Predicate == "REFERENCES_PROTO_FIELD" && expected != "" && versions[assertion.Repo+"\x00"+assertion.RunID] != expected {
+		domain := ""
+		switch assertion.Predicate {
+		case "REFERENCES_PROTO_FIELD":
+			domain = "scip-proto-field"
+		case "REFERENCES_THRIFT_FIELD":
+			domain = "scip-thrift-field"
+		}
+		if expected := opts.EvidenceExtractorVersions[domain]; expected != "" && versions[assertion.Repo+"\x00"+assertion.RunID] != expected {
 			return huma.Error409Conflict("evidence recipe witness unavailable")
 		}
 	}
