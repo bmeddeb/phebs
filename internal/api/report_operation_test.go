@@ -1,6 +1,7 @@
 package api_test
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/url"
 	"testing"
@@ -20,6 +21,12 @@ func TestOperationImpactExactHTTPAndSharedCitation(t *testing.T) {
 	code, body := catalogHTTP(t, handler, "/api/operation_impact_report?"+values.Encode(), &report)
 	if code != http.StatusOK || report.SchemaVersion != api.OperationImpactSchemaVersion || report.Conclusion.State != "evidence_present" || len(report.CallerPage.Rows) != 1 || report.CallerPage.Pagination.Complete || report.CallerPage.Coverage != nil || report.CallerPage.CoverageDigest != "" {
 		t.Fatalf("status=%d body=%s report=%+v", code, body, report)
+	}
+	var transport struct {
+		Schema string `json:"$schema"`
+	}
+	if err := json.Unmarshal([]byte(body), &transport); err != nil || transport.Schema == "" {
+		t.Fatalf("missing Huma HTTP schema metadata: body=%s err=%v", body, err)
 	}
 	citation, err := fixture.service.ReadCitation(t.Context(), report.CallerPage.Rows[0].Source.Citation)
 	if err != nil || citation.Content != "call00000()" {

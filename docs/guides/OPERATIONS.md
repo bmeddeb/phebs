@@ -9296,6 +9296,9 @@ malformed response displays an error and retains no partial facts. This
 implementation alone establishes no composed quality, operating, scale or
 production-signing result.
 
+HTTP schema-envelope metadata is accepted without broadening the supported
+report shape. Malformed metadata and unknown report fields still fail closed.
+
 ### Newly discovered repositories and evidence coverage (T51.3a)
 
 A visible repository can be discovered before its first HEAD is indexed.

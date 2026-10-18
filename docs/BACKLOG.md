@@ -19834,6 +19834,12 @@ type/lint/vet/pinned Go lint pass. Startup and request cost stay bounded with no
 new store/cache/worker/child. Actual composed quality/operating result and
 production signature remain T54.1/T54.3; registration alone activates no claim.
 
+**T54.2b · Accept real HTTP schema metadata** *(2026-10-18; complete).*
+Pinned Huma adds top-level$schema to HTTP responses. The Impact guard now
+accepts that optional bounded string while retaining closed product keys and
+malformed-metadata refusal. Real HTTP serialization and83focused UI/type/lint/
+static controls pass; first composed native qualification uses a fresh image.
+
 **T54.3 · Measured Impact promotion** — satisfy the common bar per report
 shape; one shape may release without claiming the others. Dependencies are
 the specific inputs it actually consumes, not every experimental pack.

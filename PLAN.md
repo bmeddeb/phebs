@@ -13317,3 +13317,18 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   startup, publication, lock, cache, loop, schema, child or serving cost follows.
   Interaction checks meet their5s test timeout; precise latency/usability and
   production release are not inferred. Existing large-chunk warnings persist.
+
+- **2026-10-18 — T54.2b admit the real HTTP schema envelope
+  (Mac presentation handoff).** Pre-outcome T54.3 review confirms the pinned
+  Huma DefaultConfig injects top-level$schema metadata, also present in retained
+  real HTTP output. The new strict Impact guard accepted only product keys,
+  so it would reject the ordinary HTTP envelope despite synthetic fixture
+  checks. Admit only an optional bounded string$schema beside the existing
+  exact keys; keep unknown product fields and malformed/oversized metadata
+  rejected. A fetch-boundary control now includes the actual envelope field,
+  and the real Huma HTTP regression asserts its presence before typed decoding.
+  Eighty-three focused UI controls, type/lint, bounded HTTP0.790s, vet and pinned
+  lint pass. No extra request, source read, state, store/cache, lock, worker or
+  child follows; validation adds one constant bounded-string check. Prior
+  T54.2 receipts remain exact. A fresh UI/binary binding precedes the first
+  composed native run; no failed product attempt or release result is invented.

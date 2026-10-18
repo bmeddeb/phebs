@@ -68,6 +68,8 @@ test.each([
 
 test.each<[string, (report: OperationImpactReport) => void]>([
   ['query', (r) => { r.caller_page.query.endpoint.operation = '/shop.Cart/Other' }],
+  ['malformed HTTP schema metadata', (r) => { Object.assign(r, { $schema: {} }) }],
+  ['oversized HTTP schema metadata', (r) => { Object.assign(r, { $schema: 'x'.repeat(4097) }) }],
   ['conclusion query', (r) => { r.conclusion.query.owner = 'foreign-owner' }],
   ['generation', (r) => { r.conclusion.generation_digest = `sha256:${'f'.repeat(64)}` }],
   ['source run', (r) => { r.caller_page.rows[0].source.run_id = `sha256:${'f'.repeat(64)}` }],
