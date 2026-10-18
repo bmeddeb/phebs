@@ -1,0 +1,132 @@
+{
+  "schema": "phebs-t458c-preregistration-v1",
+  "date": "2026-10-18",
+  "status": "prospective_unexecuted_root_review_required",
+  "authorization": "Ben all-ticket request routes this Mac backend handoff; no production release/signing authorization.",
+  "claim": "Bounded neutral demo integration; supersedes only focused-default demo selection. Focused service/relationship authority remains unavailable; original failures remain exact.",
+  "selection": {
+    "make_default": "whole",
+    "explicit_opt_in": "focused",
+    "absent_selector_with_direct_demo_environment": "legacy focused",
+    "explicit_empty_or_unknown": "refuse before demo mutation",
+    "ordinary_serve_without_demo_environment": "unchanged default-dark",
+    "configured_unit_in_whole_mode": "refuse, never delete"
+  },
+  "population": [
+    {
+      "name": "t307",
+      "bundle": "docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle",
+      "commit": "b7f443ed7e89dbaede855a6cfd30767bbe13dfbb",
+      "regular_files": 9,
+      "bundle_bytes": 2833,
+      "required_services": [
+        "orders-api",
+        "orders-events"
+      ],
+      "catalog_id": "t335-demo",
+      "catalog_version": "v1"
+    },
+    {
+      "name": "t323",
+      "bundle": "spike/t323/t323-neutral-corpus.bundle",
+      "commit": "4ac5335893fc18a1243b60a005faa1f09268d858",
+      "regular_files": 14,
+      "bundle_bytes": 6771,
+      "required_services": [
+        "svc.orders-api",
+        "svc.fulfillment"
+      ],
+      "catalog_id": "t344-demo",
+      "catalog_version": "v1"
+    }
+  ],
+  "demo_environment": {
+    "PHEBS_T307_NEUTRAL_SERVICE_REPO": "docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle",
+    "PHEBS_T335_SERVICE_CATALOG": "docs/fixtures/t33.5-service-directory/t335-service-catalog.json",
+    "PHEBS_T344_SERVICE_SEARCH_REPO": "spike/t323/t323-neutral-corpus.bundle",
+    "PHEBS_T344_SERVICE_SEARCH_CATALOG": "docs/fixtures/t34.4-service-search/t344-service-catalog.json"
+  },
+  "bounds": {
+    "total_seconds": 180,
+    "cleanup_reserve_seconds": 15,
+    "startup_seconds": 30,
+    "publication_seconds": 90,
+    "request_seconds": 5,
+    "response_bytes": 2097152,
+    "http_calls": 400,
+    "private_raw_bytes": 33554432,
+    "poll_seconds": 1,
+    "server_starts": 1,
+    "goprocs": 2,
+    "graceful_stop_seconds": 8,
+    "existing_reap_drain_tail_seconds": 7
+  },
+  "matrix": [
+    "strict actual two-repository retained HEAD/job readiness",
+    "five-identity service catalogs; two required accepted current services per repository",
+    "complete nonempty orders-api relationship root",
+    "anonymous service search returns401",
+    "authenticated orders-api service search has exact source/search authority and pinned source",
+    "All code whole-mode bulk sentinel visible at exact HEAD",
+    "one live relationship citation matches same page root/projection and retained exact Git blob/span",
+    "graceful exit0, joined owned process group, remove secrets/data/scratch"
+  ],
+  "first_stops": [
+    "unexpected, duplicate or wrong-HEAD repository",
+    "any failed/canceled projected pipeline job",
+    "malformed/crossed HTTP envelope or non-pending refusal",
+    "missing current service/complete relationship authority at the fixed deadline",
+    "service query falls back to All code or has wrong generation/source",
+    "wrong citation generation/blob/digest/span",
+    "any wall/call/response/raw bound crossed",
+    "any forced cleanup, lost owner or unjoined group"
+  ],
+  "custody": {
+    "source_inputs": "retained original bytes; no source author/index/generator execution",
+    "runtime_config": "minimal private config; production demo environment supplies connections/catalogs/experimental flags",
+    "sync_cadence": "fixture-only explicit1s polling, unchanged product default",
+    "success": "remove private runtime root after joined teardown; write exclusive0600 result outside it",
+    "failure": "preserve bounded private raw/source-free diagnostics only after join; remove API key/config/data/server scratch; undrained ownership retains custody and stops",
+    "retry": "fresh root/output required; preserve first failure, no silent rerun",
+    "teardown_budget": "grace min(8,max(0,actual global remaining-7)); preserve joined cleanup on failure; any forced cleanup or exceeded180s remains stopped"
+  },
+  "cost_scope": {
+    "production": "startup selection only; existing whole pipeline costs for9-file T307;14-file T323 unchanged; no new request/tick/cache/schema/lock/child work",
+    "harness": "single local server, serial capped HTTP reads; no observer/browser/restart/no-op extension",
+    "not_measured": [
+      "process-tree peak RSS",
+      "physical headroom/cgroup capacity",
+      "Linux capacity",
+      "source extraction accuracy",
+      "scale/SLO",
+      "managed provider execution",
+      "production release/signing"
+    ]
+  },
+  "protected_files": {
+    "ui/receipts/t458b.json": "sha256:669aa8a4e4e75ea154740a0648a8bd9b1f5604121e042c3582ec387270095eba",
+    "docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle": "sha256:4cbc49a956b913e63914d014d210a063febdf90f5265ddb09fde3c569b1a1461",
+    "docs/fixtures/t30.7-neutral-service/receipt.json": "sha256:3be3d252efe44131e81f9b6dda526a5ef02068aa3b2175f32f30890ef0cebf0c",
+    "docs/fixtures/t33.5-service-directory/t335-service-catalog.json": "sha256:7c495f76ed5660cc7f00d58a3089a77da2ebb860c7a22af6a76218a031f66ff0",
+    "docs/fixtures/t33.5-service-directory/receipt.json": "sha256:a1384c9576eca45201e46a2d61e87fff643bedc3bee594aff334dab605b51233",
+    "spike/t323/t323-neutral-corpus.bundle": "sha256:8d70693ee440ff7683f8c3a39cc9b6565dd265cbc546d40e961759f2237617fa",
+    "docs/fixtures/t34.4-service-search/t344-service-catalog.json": "sha256:3308dd76d476a1dde641c3d5e794ba25288b450f81d0abcb6ea0cd1a64719e94",
+    "docs/fixtures/t34.4-service-search/receipt.json": "sha256:8eccc54f541e52d33308e0a1ad22fac1ee6b2130185f47ca397435bee47a2e12",
+    "docs/fixtures/t30.7-neutral-service/repo/api/orders.proto": "sha256:2dd492dae6917dba888106a228918beb53f839a450ce573d012df531c2abf3c0",
+    "docs/fixtures/t30.7-neutral-service/repo/bulk/irrelevant.txt": "sha256:413d31f70eddf36d02c518c3d6676d8fbd55550a4b5ecf8b3e49f8e6c7837ebe",
+    "docs/fixtures/t30.7-neutral-service/repo/consumers/external/caller.go": "sha256:81503df1e6a3b61b6d5ba9e153f20fa49e175ddfdf8d2ab6f5572c55e2656fed",
+    "docs/fixtures/t30.7-neutral-service/repo/gen/ordersv1/orders_grpc.pb.go": "sha256:0648dca1fd7f1f3f0b5a15542f9a92d8c347b93748d760b5c6496e22aa401f3e",
+    "docs/fixtures/t30.7-neutral-service/repo/generated-from-snapshot.json": "sha256:b88001eaa62c8f9efa655503ef432b2ca5c08bfe92a391069cdca0c41f0a4a92",
+    "docs/fixtures/t30.7-neutral-service/repo/go.mod": "sha256:12bbec87b10a478773b0bcd1a64420b1cceaa8c5b44bc594b1974fa2bed42a6f",
+    "docs/fixtures/t30.7-neutral-service/repo/service/orders/fixture_test.go": "sha256:cfa463b07911cdbffa8a5ff80f32f2a5fe27a4b17197d472e4f9615b663b48c6",
+    "docs/fixtures/t30.7-neutral-service/repo/service/orders/kafka.go": "sha256:12ac5fc7d65c5f269d4e4ac089660d95c3b7ef057420621270c5129016bbe67c",
+    "docs/fixtures/t30.7-neutral-service/repo/service/orders/service.go": "sha256:8c5e5cf82ba7f5944939804d40a33e6600bc111515009c7cb31b53ae8b58515f"
+  },
+  "pre_execution_requirements": [
+    "root independent source review",
+    "focused normal/race/format/vet/pinned-lint plus mock/docs/glossary controls under assigned slot",
+    "immutable exact implementation/harness checkpoint",
+    "outside reviewed clean binary/tool/source binding",
+    "root native slot authorization"
+  ]
+}

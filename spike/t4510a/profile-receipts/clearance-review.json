@@ -1,0 +1,10 @@
+{
+  "schema": "phebs-t4510a-clearance-correction-v1",
+  "date": "2026-10-18",
+  "reason": "Actual390px strict clearance117px versus target116.5px after native integer scroll rounding. Earlier source/gates unchanged; partial first QA is not a pass.",
+  "scope": "Shared scrollBelowHeader has two receipt callers. Measure actual target after ordinary scroll; only if short add floor(shortfall) correction. Already-cleared targets retain their original scroll/pixels; strict>=header+12gate retained. No tolerance relaxation/baseline change/product code.",
+  "review": "Root inspected helper and both callers; native failed bounds retained. Temporary wrapper duplicate discovery and unrequested title assertion are separate preparation mistakes and removed from next wrapper.",
+  "cost": "One extra bounded geometry observation and at most one local scroll in receipt-only code. No production query/state/I/O/process or frontend bundle change.",
+  "helper_sha256": "sha256:1207f1a353b3425ba308bec6806b79326a36f717c4103aac0d0be02fdc308c37",
+  "verification": "First exact failed390px case then remaining19case QA/8fresh frames; do not repeat895passedtests for receipt-helper geometry."
+}

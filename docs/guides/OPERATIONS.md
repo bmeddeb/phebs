@@ -3883,11 +3883,12 @@ completion, decommission safety, or release readiness.
 
 ### Source-free All code/service-search walkthrough
 
-`make dev` and `make dev-api` also bind the retained T32.3 bundle and the exact
+`make dev` and `make dev-api` bind the retained T32.3 bundle and the exact
 `docs/fixtures/t34.4-service-search/t344-service-catalog.json` as a separate
 ordinary whole-repository cohort. Startup pins both file names and catalog
-bytes, rejects a focused-unit or catalog collision, and leaves every
-experimental evidence flag disabled. Ordinary `phebs serve` does not select
+bytes and rejects a focused-unit or catalog collision. This T323 binding adds
+no experimental evidence flag; the separate T307 binding enables provisional
+protobuf/Kafka extraction in both development modes. Ordinary `phebs serve` does not select
 this cohort unless both `PHEBS_T344_SERVICE_SEARCH_REPO` and
 `PHEBS_T344_SERVICE_SEARCH_CATALOG` name the exact clean absolute files.
 
@@ -6042,8 +6043,8 @@ rehearsal pass or ceremony freeze; V1/V2 remain exact.
 
 | Target               | Does                                                                                                                                                    |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `make dev`           | build UI + pinned whole/focused zoekt and Buf children; bind the retained neutral `orders-service` bundle and T33.5 service catalog through ordinary indexing, evidence, catalog, default-on bounded lifecycle, and caller-overlay paths; expose administrator lifecycle pressure/owner status in Settings without seeding historical rows; explicitly disable synthetic response fixtures; run with embedded UI |
-| `make dev-api`       | backend-only loop over the same neutral focused-service/catalog cohort and real store-derived paths (placeholder UI page, fast)                                           |
+| `make dev`           | build UI + pinned whole/focused zoekt and Buf children; explicitly select `PHEBS_DEV_COHORT=whole` for both retained neutral bundles/catalogs through ordinary whole indexing, evidence, catalog, default-on bounded lifecycle, and caller-overlay paths; expose administrator lifecycle pressure/owner status in Settings without seeding historical rows; explicitly disable synthetic response fixtures; run with embedded UI |
+| `make dev-api`       | backend-only loop over the same explicit whole-repository neutral cohort and real store-derived paths (placeholder UI page, fast)                                           |
 | `make build`         | version-stamped `./phebs` plus same-module `bin/zoekt-git-index`, `bin/phebs-focused-index`, and `bin/buf`; pass `VERSION=vX.Y.Z` for a release                                    |
 | `make clean`         | from a verified phebs checkout working directory, remove `phebs`, `coverage.out`, the three named `bin/` children, `ui/dist`, and reserved `dist/.build-*`, `dist/phebs-*`, and `dist/.phebs-*.tmp-*` outputs; preserve data, configuration, dependencies/caches, other `bin`/`dist` entries, and custom release roots outside those namespaces |
 | `make release`       | assemble a new host-native `dist/phebs-<version>-<target>` directory and canonical digest manifest; requires v-prefixed `VERSION`                       |
@@ -6056,6 +6057,18 @@ rehearsal pass or ceremony freeze; V1/V2 remain exact.
 | `make ui`            | production UI build only                                                                                                                                |
 | `make db-server`     | SurrealDB in server mode via docker compose (testing only)                                                                                              |
 | `make verify-glossary` | regenerate the canonical Go, TypeScript, schema, MCP, and MANUAL glossary bytes in memory and reject checked-in drift                                |
+
+`make dev PHEBS_DEV_COHORT=focused` and `make dev-api PHEBS_DEV_COHORT=focused`
+retain the focused `orders-service` Search/evidence demo; its services and
+relationships remain unavailable because a focused index is not direct whole
+source/search authority. The default whole mode also makes T307's external
+caller and bulk sentinel searchable. Explicit empty/unknown cohort selectors
+refuse. Direct demo environment binding without a selector preserves legacy
+focused behavior; ordinary serve without demo environment is unchanged. Whole
+mode refuses configured analysis units, never removes them. When switching
+modes on existing development data, wait for ordinary reindex/publication
+reconciliation or select a fresh data directory; no manual manifest repair is
+required or admitted.
 
 Compatibility, indexer and search test bootstraps remove only their own
 temporary fallback-tool directories after normal test returns and joined build
@@ -9382,3 +9395,12 @@ ordinary exact rebuild. A disposable draft signer/load check grants no
 production trust. Before production signing, review final approved bytes and
 derive their exact census with the binary being released; any byte change
 invalidates the draft census. The existing production key remains unavailable.
+
+Operation Impact retains its own direct finite source-quality/ordinary-runtime
+result and unsigned release artifacts at `spike/t543/success/` and
+`spike/t543/release/`. Other report sections remain unavailable. Source/row
+authority does not promote syntax evidence into runtime impact or completeness.
+Native responsive journey frames and four separate neutral canonical frames
+have distinct scopes; no Noble or legacy-v2 equivalence is implied. Drafts
+grant no production activation; final approved bytes must be re-censused and
+signed/verified with the released binary when the existing key is available.

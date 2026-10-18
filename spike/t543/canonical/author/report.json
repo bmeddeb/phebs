@@ -1,0 +1,281 @@
+{
+  "config": {
+    "argv": [
+      "/private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+      "/Users/ben/.codex/worktrees/t511-protobuf-fields/phebs.com/ui/node_modules/@playwright/test/cli.js",
+      "test",
+      "--config",
+      "/Users/ben/.codex/worktrees/t511-protobuf-fields/phebs.com/ui/t543-native.config.ts",
+      "--reporter=list,json",
+      "--update-snapshots=all"
+    ],
+    "configFile": "/Users/ben/.codex/worktrees/t511-protobuf-fields/phebs.com/ui/t543-native.config.ts",
+    "rootDir": "/Users/ben/.codex/worktrees/t511-protobuf-fields/phebs.com/ui/receipts",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/tmp/phebs-t543-canonical/author/tests",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "t543-native",
+        "name": "t543-native",
+        "testDir": "/Users/ben/.codex/worktrees/t511-protobuf-fields/phebs.com/ui/receipts",
+        "testIgnore": [],
+        "testMatch": [
+          "/operation-impact-receipts\\.spec\\.ts/"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list"
+      ],
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "all",
+    "updateSourceMethod": "patch",
+    "version": "1.62.1",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "operation-impact-receipts.spec.ts",
+      "file": "operation-impact-receipts.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "operation-impact-current-desktop · light · comfortable",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "t543-native",
+              "projectName": "t543-native",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1767,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "A snapshot doesn't exist at /Users/ben/.codex/worktrees/t511-protobuf-fields/phebs.com/spike/t543/canonical/baselines/operation-impact-current-desktop--light--comfortable.png, writing actual.\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T14:38:37.019Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "operation-impact-current-desktop--light--comfortable-expected.png",
+                      "contentType": "image/png",
+                      "path": "/Users/ben/.codex/worktrees/t511-protobuf-fields/phebs.com/spike/t543/canonical/baselines/operation-impact-current-desktop--light--comfortable.png"
+                    },
+                    {
+                      "name": "operation-impact-current-desktop--light--comfortable-actual.png",
+                      "contentType": "image/png",
+                      "path": "/tmp/phebs-t543-canonical/author/tests/operation-impact-receipts--27ee5-sktop-·-light-·-comfortable-t543-native/operation-impact-current-desktop--light--comfortable-actual.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e84bb46c899216208f4a-e6eb862cb0b24ae395be",
+          "file": "operation-impact-receipts.spec.ts",
+          "line": 24,
+          "column": 3
+        },
+        {
+          "title": "operation-impact-unavailable-desktop · light · comfortable",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "t543-native",
+              "projectName": "t543-native",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1374,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "A snapshot doesn't exist at /Users/ben/.codex/worktrees/t511-protobuf-fields/phebs.com/spike/t543/canonical/baselines/operation-impact-unavailable-desktop--light--comfortable.png, writing actual.\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T14:38:39.722Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "operation-impact-unavailable-desktop--light--comfortable-expected.png",
+                      "contentType": "image/png",
+                      "path": "/Users/ben/.codex/worktrees/t511-protobuf-fields/phebs.com/spike/t543/canonical/baselines/operation-impact-unavailable-desktop--light--comfortable.png"
+                    },
+                    {
+                      "name": "operation-impact-unavailable-desktop--light--comfortable-actual.png",
+                      "contentType": "image/png",
+                      "path": "/tmp/phebs-t543-canonical/author/tests/operation-impact-receipts--467f0-sktop-·-light-·-comfortable-t543-native/operation-impact-unavailable-desktop--light--comfortable-actual.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e84bb46c899216208f4a-d01d625dfb4452746292",
+          "file": "operation-impact-receipts.spec.ts",
+          "line": 24,
+          "column": 3
+        },
+        {
+          "title": "operation-impact-current-desktop · dark · comfortable",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "t543-native",
+              "projectName": "t543-native",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1439,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "A snapshot doesn't exist at /Users/ben/.codex/worktrees/t511-protobuf-fields/phebs.com/spike/t543/canonical/baselines/operation-impact-current-desktop--dark--comfortable.png, writing actual.\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T14:38:41.102Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "operation-impact-current-desktop--dark--comfortable-expected.png",
+                      "contentType": "image/png",
+                      "path": "/Users/ben/.codex/worktrees/t511-protobuf-fields/phebs.com/spike/t543/canonical/baselines/operation-impact-current-desktop--dark--comfortable.png"
+                    },
+                    {
+                      "name": "operation-impact-current-desktop--dark--comfortable-actual.png",
+                      "contentType": "image/png",
+                      "path": "/tmp/phebs-t543-canonical/author/tests/operation-impact-receipts--97486-esktop-·-dark-·-comfortable-t543-native/operation-impact-current-desktop--dark--comfortable-actual.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e84bb46c899216208f4a-ad7e708b35403fc37e45",
+          "file": "operation-impact-receipts.spec.ts",
+          "line": 24,
+          "column": 3
+        },
+        {
+          "title": "operation-impact-unavailable-desktop · dark · comfortable",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "t543-native",
+              "projectName": "t543-native",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1335,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "A snapshot doesn't exist at /Users/ben/.codex/worktrees/t511-protobuf-fields/phebs.com/spike/t543/canonical/baselines/operation-impact-unavailable-desktop--dark--comfortable.png, writing actual.\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-18T14:38:42.546Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "operation-impact-unavailable-desktop--dark--comfortable-expected.png",
+                      "contentType": "image/png",
+                      "path": "/Users/ben/.codex/worktrees/t511-protobuf-fields/phebs.com/spike/t543/canonical/baselines/operation-impact-unavailable-desktop--dark--comfortable.png"
+                    },
+                    {
+                      "name": "operation-impact-unavailable-desktop--dark--comfortable-actual.png",
+                      "contentType": "image/png",
+                      "path": "/tmp/phebs-t543-canonical/author/tests/operation-impact-receipts--0078e-esktop-·-dark-·-comfortable-t543-native/operation-impact-unavailable-desktop--dark--comfortable-actual.png"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "e84bb46c899216208f4a-1acf8b2cba04591b0eda",
+          "file": "operation-impact-receipts.spec.ts",
+          "line": 24,
+          "column": 3
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-18T14:38:36.761Z",
+    "duration": 7277.95,
+    "expected": 4,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

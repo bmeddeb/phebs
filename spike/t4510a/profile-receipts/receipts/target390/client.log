@@ -1,0 +1,9 @@
+
+Running 1 test using 1 worker
+
+(node:84723) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"resourceProfile":"native-arm64-bounded-v1","theme":"light","width":390,"density":"comfortable","fixtureReadyMillis":183,"fixturePreviewMillis":34,"consoleErrors":0,"nativeCapture":"/tmp/phebs-t4510a-qa-z3azm2qg/target390/output/profile.native-native-prof-55e1c--arm64-bounded-v1-light-390-typed-index/typed-index-native--native-arm64-bounded-v1--light--390.png"}
+  ✓  1 [typed-index] › ../../../../../../private/tmp/phebs-t4510a-qa-z3azm2qg/runner/profile.native.spec.ts:103:3 › native profile preview native-arm64-bounded-v1 light 390 (812ms)
+
+  1 passed (1.1s)

@@ -1,0 +1,115 @@
+{
+  "schema": "phebs-t4510a-native-qa-v1",
+  "pass": "fresh",
+  "outcome": "stopped",
+  "source_checkpoint": "acdce4881f4e3c1dc1dc6375f22b4718feadcf27",
+  "scroll_helper_sha256": "1207f1a353b3425ba308bec6806b79326a36f717c4103aac0d0be02fdc308c37",
+  "native_renderer_claim": "Darwin installed Chrome only; no Noble baseline equivalence",
+  "commands": [
+    {
+      "name": "vite",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "/Users/ben/.codex/worktrees/t512-field-registration/phebs.com/ui/node_modules/vite/bin/vite.js",
+        "preview",
+        "/Users/ben/.codex/worktrees/t512-field-registration/phebs.com/ui",
+        "--outDir",
+        "/Users/ben/.codex/worktrees/t25-embedded-docs/phebs.com/ui/dist",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "52993",
+        "--strictPort"
+      ]
+    },
+    {
+      "name": "chrome",
+      "argv": [
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "--headless=new",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--disable-background-networking",
+        "--disable-component-update",
+        "--disable-sync",
+        "--remote-debugging-address=127.0.0.1",
+        "--remote-debugging-port=0",
+        "--user-data-dir=/tmp/phebs-t4510a-qa-z3azm2qg/fresh/private-chrome-profile",
+        "about:blank"
+      ]
+    }
+  ],
+  "terminals": {
+    "chrome": {
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "sigterm",
+      "pid": 91003,
+      "expected_pgid": 91003,
+      "observed_pgid": 91003,
+      "joined": true
+    },
+    "vite": {
+      "exit_code": 143,
+      "teardown": "clean",
+      "termination_mode": "sigterm",
+      "pid": 90987,
+      "expected_pgid": 90987,
+      "observed_pgid": 90987,
+      "joined": true
+    }
+  },
+  "owners": {
+    "vite": {
+      "pid": 90987,
+      "expected_pgid": 90987,
+      "observed_pgid": 90987
+    },
+    "chrome": {
+      "pid": 91003,
+      "expected_pgid": 91003,
+      "observed_pgid": 91003
+    }
+  },
+  "verified_census": {
+    "ui-input-census.json": {
+      "rows": 118,
+      "file_sha256": "4cff7b425fcf687a468c8f1d8131a8d06f094312bd232e3d8249843e23fa5ed0"
+    },
+    "ui-dist-census.json": {
+      "rows": 165,
+      "file_sha256": "a6e10fa5ccdde9401d8273cc903b1af171f6fd29453d40843b109efbcec7c335"
+    }
+  },
+  "tools": {
+    "node": {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+      "sha256": "ee6fb0e015284d83a91e8ec5213f43a157f8a392b58555301682892ba928c04a"
+    },
+    "chrome_launcher": {
+      "path": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "sha256": "3972431aa8acff4e590998116c6c3e663e9a4d0eb6efd08fd160df8206db94a6"
+    },
+    "axe": {
+      "path": "/Users/ben/phebs.com/ui/node_modules/axe-core/axe.min.js",
+      "sha256": "66a8aaa95a8b044a7fd74a5435873bf04ff65a1ca75567c921b7509742085a14",
+      "version": "4.12.1"
+    },
+    "playwright": "1.62.1"
+  },
+  "started_monotonic": 0.992106625,
+  "error_type": "timeout",
+  "error": "timed out",
+  "all_owned_groups_joined_cleanly": true,
+  "total_seconds": 4.289077,
+  "final_census": {
+    "ui-input-census.json": {
+      "rows": 118,
+      "file_sha256": "4cff7b425fcf687a468c8f1d8131a8d06f094312bd232e3d8249843e23fa5ed0"
+    },
+    "ui-dist-census.json": {
+      "rows": 165,
+      "file_sha256": "a6e10fa5ccdde9401d8273cc903b1af171f6fd29453d40843b109efbcec7c335"
+    }
+  }
+}

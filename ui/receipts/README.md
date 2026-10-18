@@ -99,7 +99,7 @@ machine — otherwise macOS and Ubuntu CI can never share one baseline set.
 
   The receipt launch explicitly selects whole-repository indexing for both
   bundles and their retained catalogs. It clears demo injectors so this
-  presentation cohort stays independent of the default focused pipeline.
+  presentation launch stays explicit and independent of demo environment binding.
   Strict real-cohort readiness remains mandatory. The staging script copies
   the bundles and operator catalogs into the fixed root; ordinary `make dev` / `make dev-api` honor the pre-set
   `PHEBS_T307_NEUTRAL_SERVICE_REPO` / `PHEBS_T344_SERVICE_SEARCH_REPO`
@@ -214,6 +214,51 @@ The existing repository-list fetch is parsed before its 4,096-row admission chec
 only active selected status repeats at five seconds. Fixture response timings
 measure a local presentation path and are not production API or native-work SLOs.
 
+### T45.10a two-profile presentation checks
+
+The same page-scoped fixture now supplies either exact admitted resource profile:
+`native-arm64-bounded-v1` or `native-amd64-bounded-v1`. Each profile exercises
+exact preview and CSRF-bound enqueue/retry requests, all nine states and
+last-confirmed polling. Four refusal cases cover an unknown or empty profile
+on an available status or preview. An empty repository inventory makes no
+managed status request and offers no review or generation action; an unavailable
+status with empty profile fields remains readable. These are presentation
+controls, with no compiler, installed runtime or generated-navigation inference.
+
+The project has 27 cases: the eight existing ARM64 canonical screenshot cases,
+eight native QA preview captures (two profiles × two themes × desktop/390px,
+comfortable density), two exact interaction/state flows, four malformed-profile
+refusals, one empty inventory and four existing workflow/access controls. The
+eight historical `typed-index-preview--…` names and baseline PNGs are unchanged.
+Native QA captures are attachments named
+`typed-index-native--<profile>--<theme>--<width>.png` under the test output path;
+they add no canonical baseline expectations or baseline-count requirement.
+
+For a separate native lineage, use an output directory outside the checkout:
+
+```sh
+npm run receipts -- --project typed-index --grep 'native profile preview' --output /tmp/phebs-typed-index-native-author
+```
+
+Author and fresh captures must use the same reviewed source, renderer, viewport
+and preferences, with independently retained source/tool hashes and the existing
+zero-retry, 0.1% difference limit. The capture tests themselves emit images; they
+do not assert that a later comparison or accessibility audit passed. Native
+images do not establish Noble/Chromium baseline equivalence and must not be
+copied into `baselines/`. Browser, accessibility, comparison and measured timing
+outcomes remain pending until the bounded run is recorded. Browser plugin not
+available in the source-preparation session; the existing Playwright dependency
+is used without additional browser or accessibility installations.
+
+`fixtureReadyMillis` covers navigation through the keyboard-ready Review action.
+`fixturePreviewMillis` stops immediately after the exact preview is visible and
+Generate is enabled, before font readiness, geometry checks or capture. It is a
+local fixture interaction measurement, not API latency or native generation time.
+The source change adds no production request, poll, lock, cache, sync/startup,
+publication, compiler or provider work. The existing one-worker, zero-retry
+receipt bounds apply; only the two active-state flows intentionally wait for the
+existing five-second polling intervals.
+
 
 T45.8b canonical evidence is retained in `t458b.json`: eight preview fixture
 pixels and eight ordinary Settings pixels were authored and compared with the
@@ -226,9 +271,12 @@ The unchanged strict setup checks both exact HEADs, settled jobs, current
 required services and complete orders-api relationship authority before capture.
 The configuration digest and bundle/chunk metrics are in the evidence record.
 
-The default focused T30.7 configuration separately indexed but lacked its v2
+The historical default focused T30.7 configuration separately indexed but lacked its v2
 source-generation control, leaving service/relationship authority unavailable.
-That diagnostic is not a receipt PASS or focused-pipeline closure. The ordinary
+That diagnostic is not a receipt PASS or focused-pipeline closure. T45.8c changes
+`make dev`/`make dev-api` to explicit whole mode for both retained bundles;
+`PHEBS_DEV_COHORT=focused` keeps this separate unavailable focused pipeline.
+The retained `t458b.json` limitation and source bytes remain unchanged. The ordinary
 neutral data uses a disposable 1 GiB APFS volume with unchanged disk admission
 limits; it proves this small cohort only. Chromium runs in the untouched pinned
 AMD64 image under Rosetta in a temporary 2-CPU/6-GiB renderer VM. A TCP bridge to

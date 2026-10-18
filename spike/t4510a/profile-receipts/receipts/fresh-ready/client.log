@@ -1,0 +1,23 @@
+
+Running 8 tests using 1 worker
+
+(node:91449) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"resourceProfile":"native-arm64-bounded-v1","theme":"light","width":1280,"density":"comfortable","fixtureReadyMillis":1014,"fixturePreviewMillis":133,"consoleErrors":0,"nativeCapture":"/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-38abf-arm64-bounded-v1-light-1280-typed-index/typed-index-native--native-arm64-bounded-v1--light--1280.png"}
+  ✓  1 [typed-index] › ../../../../../../private/tmp/phebs-t4510a-qa-z3azm2qg/runner/profile.native.spec.ts:103:3 › native profile preview native-arm64-bounded-v1 light 1280 (2.7s)
+{"resourceProfile":"native-arm64-bounded-v1","theme":"light","width":390,"density":"comfortable","fixtureReadyMillis":851,"fixturePreviewMillis":28,"consoleErrors":0,"nativeCapture":"/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-55e1c--arm64-bounded-v1-light-390-typed-index/typed-index-native--native-arm64-bounded-v1--light--390.png"}
+  ✓  2 [typed-index] › ../../../../../../private/tmp/phebs-t4510a-qa-z3azm2qg/runner/profile.native.spec.ts:103:3 › native profile preview native-arm64-bounded-v1 light 390 (2.9s)
+{"resourceProfile":"native-arm64-bounded-v1","theme":"dark","width":1280,"density":"comfortable","fixtureReadyMillis":613,"fixturePreviewMillis":172,"consoleErrors":0,"nativeCapture":"/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-2017a--arm64-bounded-v1-dark-1280-typed-index/typed-index-native--native-arm64-bounded-v1--dark--1280.png"}
+  ✓  3 [typed-index] › ../../../../../../private/tmp/phebs-t4510a-qa-z3azm2qg/runner/profile.native.spec.ts:103:3 › native profile preview native-arm64-bounded-v1 dark 1280 (3.3s)
+{"resourceProfile":"native-arm64-bounded-v1","theme":"dark","width":390,"density":"comfortable","fixtureReadyMillis":1412,"fixturePreviewMillis":46,"consoleErrors":0,"nativeCapture":"/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-b7e13-e-arm64-bounded-v1-dark-390-typed-index/typed-index-native--native-arm64-bounded-v1--dark--390.png"}
+  ✓  4 [typed-index] › ../../../../../../private/tmp/phebs-t4510a-qa-z3azm2qg/runner/profile.native.spec.ts:103:3 › native profile preview native-arm64-bounded-v1 dark 390 (3.7s)
+{"resourceProfile":"native-amd64-bounded-v1","theme":"light","width":1280,"density":"comfortable","fixtureReadyMillis":724,"fixturePreviewMillis":70,"consoleErrors":0,"nativeCapture":"/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-54dd3-amd64-bounded-v1-light-1280-typed-index/typed-index-native--native-amd64-bounded-v1--light--1280.png"}
+  ✓  5 [typed-index] › ../../../../../../private/tmp/phebs-t4510a-qa-z3azm2qg/runner/profile.native.spec.ts:103:3 › native profile preview native-amd64-bounded-v1 light 1280 (2.6s)
+{"resourceProfile":"native-amd64-bounded-v1","theme":"light","width":390,"density":"comfortable","fixtureReadyMillis":801,"fixturePreviewMillis":23,"consoleErrors":0,"nativeCapture":"/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-70275--amd64-bounded-v1-light-390-typed-index/typed-index-native--native-amd64-bounded-v1--light--390.png"}
+  ✓  6 [typed-index] › ../../../../../../private/tmp/phebs-t4510a-qa-z3azm2qg/runner/profile.native.spec.ts:103:3 › native profile preview native-amd64-bounded-v1 light 390 (2.7s)
+{"resourceProfile":"native-amd64-bounded-v1","theme":"dark","width":1280,"density":"comfortable","fixtureReadyMillis":724,"fixturePreviewMillis":24,"consoleErrors":0,"nativeCapture":"/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-0cfb5--amd64-bounded-v1-dark-1280-typed-index/typed-index-native--native-amd64-bounded-v1--dark--1280.png"}
+  ✓  7 [typed-index] › ../../../../../../private/tmp/phebs-t4510a-qa-z3azm2qg/runner/profile.native.spec.ts:103:3 › native profile preview native-amd64-bounded-v1 dark 1280 (2.6s)
+{"resourceProfile":"native-amd64-bounded-v1","theme":"dark","width":390,"density":"comfortable","fixtureReadyMillis":691,"fixturePreviewMillis":47,"consoleErrors":0,"nativeCapture":"/tmp/phebs-t4510a-qa-z3azm2qg/fresh-ready/output/profile.native-native-prof-0b26d-e-amd64-bounded-v1-dark-390-typed-index/typed-index-native--native-amd64-bounded-v1--dark--390.png"}
+  ✓  8 [typed-index] › ../../../../../../private/tmp/phebs-t4510a-qa-z3azm2qg/runner/profile.native.spec.ts:103:3 › native profile preview native-amd64-bounded-v1 dark 390 (2.1s)
+
+  8 passed (25.5s)

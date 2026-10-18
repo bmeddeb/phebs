@@ -1,0 +1,45 @@
+{
+  "stage": "author",
+  "renderer": "native installed Chrome, no Noble equivalence",
+  "source_commit": "5b0a480912a6e5b05c4dae004685bffc5f61243b",
+  "passed": true,
+  "stats": {
+    "startTime": "2026-10-18T14:38:36.761Z",
+    "duration": 7277.95,
+    "expected": 4,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "seconds": 8.103668041999999,
+  "joined": {
+    "client": {
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "already_exited"
+    },
+    "vite": {
+      "exit_code": 143,
+      "teardown": "clean",
+      "termination_mode": "sigterm"
+    }
+  },
+  "images": {
+    "operation-impact-current-desktop--dark--comfortable.png": {
+      "bytes": 221014,
+      "sha256": "8d0cd02388e0e2df6593e511df7d89f42faf394db2ce130a091f353fb9dd94db"
+    },
+    "operation-impact-current-desktop--light--comfortable.png": {
+      "bytes": 220284,
+      "sha256": "62837400531bde93ef96d106e2f674492739b729e1d05de37a613557ff5af99b"
+    },
+    "operation-impact-unavailable-desktop--dark--comfortable.png": {
+      "bytes": 128689,
+      "sha256": "4e70c23aae0f07f65e09d7a1eb0ba1bcc51ee40757c3e39f892faae0d60c295f"
+    },
+    "operation-impact-unavailable-desktop--light--comfortable.png": {
+      "bytes": 128090,
+      "sha256": "930d46235a9a054191d2e18b6d19c5bb15c62d745bfb3b14bb3f80054b9f76b2"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "schema": "phebs-t543-gap-checker-review-v1",
+  "accepted": true,
+  "scope": "Preserve missing/retained unavailable scope separately; exact current remains commit/unit bound. No plan/labels/source/input/threshold changes.",
+  "controls": "11pure/mock controls pass; product actual HTTP/normal/race/UI checks retained in T54.2c.",
+  "peer": "t493_protobuf_atlas implementation and full source/cost report; root independently reviewed actual branch and transition controls.",
+  "files": {
+    "spike/t543/impact_checks.py": "sha256:b351bcb0a6647f1fa900dee76d0989dd2fbe4e140a41b54c94511a344321a8c0",
+    "spike/t543/test_impact.py": "sha256:33b6245c956a4e1d6a4be2395889f96ca3b8261a2f0b2807ce1ad526dee55d9e"
+  }
+}

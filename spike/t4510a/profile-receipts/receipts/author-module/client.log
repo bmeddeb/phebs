@@ -1,0 +1,36 @@
+
+Running 38 tests using 1 worker
+
+(node:83921) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"resourceProfile":"native-arm64-bounded-v1","theme":"light","width":1280,"density":"comfortable","fixtureReadyMillis":223,"fixturePreviewMillis":39,"consoleErrors":0,"nativeCapture":"/tmp/phebs-t4510a-qa-z3azm2qg/author-module/output/preparation-01-profile.nat-73ad9-arm64-bounded-v1-light-1280-typed-index/typed-index-native--native-arm64-bounded-v1--light--1280.png"}
+  ✘   1 [typed-index] › ../../../../../../private/tmp/phebs-t4510a-qa-z3azm2qg/preparation-01/profile.native.spec.ts:103:3 › native profile preview native-arm64-bounded-v1 light 1280 (550ms)
+(node:83929) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   2 [typed-index] › ../../../../../../private/tmp/phebs-t4510a-qa-z3azm2qg/preparation-01/profile.native.spec.ts:103:3 › native profile preview native-arm64-bounded-v1 light 390 (5.3s)
+(node:83948) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"resourceProfile":"native-arm64-bounded-v1","theme":"dark","width":1280,"density":"comfortable","fixtureReadyMillis":154,"fixturePreviewMillis":10,"consoleErrors":0,"nativeCapture":"/tmp/phebs-t4510a-qa-z3azm2qg/author-module/output/preparation-01-profile.nat-2214b--arm64-bounded-v1-dark-1280-typed-index/typed-index-native--native-arm64-bounded-v1--dark--1280.png"}
+  ✘   3 [typed-index] › ../../../../../../private/tmp/phebs-t4510a-qa-z3azm2qg/preparation-01/profile.native.spec.ts:103:3 › native profile preview native-arm64-bounded-v1 dark 1280 (416ms)
+(node:83953) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   4 [typed-index] › ../../../../../../private/tmp/phebs-t4510a-qa-z3azm2qg/preparation-01/profile.native.spec.ts:103:3 › native profile preview native-arm64-bounded-v1 dark 390 (5.3s)
+(node:83971) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"resourceProfile":"native-amd64-bounded-v1","theme":"light","width":1280,"density":"comfortable","fixtureReadyMillis":184,"fixturePreviewMillis":10,"consoleErrors":0,"nativeCapture":"/tmp/phebs-t4510a-qa-z3azm2qg/author-module/output/preparation-01-profile.nat-10ae6-amd64-bounded-v1-light-1280-typed-index/typed-index-native--native-amd64-bounded-v1--light--1280.png"}
+  ✘   5 [typed-index] › ../../../../../../private/tmp/phebs-t4510a-qa-z3azm2qg/preparation-01/profile.native.spec.ts:103:3 › native profile preview native-amd64-bounded-v1 light 1280 (453ms)
+(node:83979) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   6 [typed-index] › ../../../../../../private/tmp/phebs-t4510a-qa-z3azm2qg/preparation-01/profile.native.spec.ts:103:3 › native profile preview native-amd64-bounded-v1 light 390 (5.3s)
+(node:84003) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"resourceProfile":"native-amd64-bounded-v1","theme":"dark","width":1280,"density":"comfortable","fixtureReadyMillis":158,"fixturePreviewMillis":11,"consoleErrors":0,"nativeCapture":"/tmp/phebs-t4510a-qa-z3azm2qg/author-module/output/preparation-01-profile.nat-28eb2--amd64-bounded-v1-dark-1280-typed-index/typed-index-native--native-amd64-bounded-v1--dark--1280.png"}
+  ✘   7 [typed-index] › ../../../../../../private/tmp/phebs-t4510a-qa-z3azm2qg/preparation-01/profile.native.spec.ts:103:3 › native profile preview native-amd64-bounded-v1 dark 1280 (424ms)
+(node:84008) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   8 [typed-index] › ../../../../../../private/tmp/phebs-t4510a-qa-z3azm2qg/preparation-01/profile.native.spec.ts:103:3 › native profile preview native-amd64-bounded-v1 dark 390 (5.3s)
+(node:84021) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   9 [typed-index] › ../../../../../../private/tmp/phebs-t4510a-qa-z3azm2qg/preparation-01/profile.native.spec.ts:113:49 › exact request retry, all states and last-good polling native-arm64-bounded-v1 (11.6s)
+(node:84047) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)

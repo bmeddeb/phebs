@@ -1,0 +1,18 @@
+{
+  "preserved_result": "/tmp/phebs-t4510a-qa-z3azm2qg/fresh/result.json",
+  "result_sha256": "ecb8f6597e2465c918de1e1e351fef151ffa4240df0ed565cf34e29ed73d2f30",
+  "before_client_or_tests": true,
+  "old_probe_timeout_seconds": 1,
+  "new_probe_timeout": "remaining originally admitted5s Chrome readiness window",
+  "unchanged": [
+    "source",
+    "Chrome image",
+    "node/PW/axe",
+    "pageDate",
+    "8capture matrix",
+    "180s joined global",
+    "pixel0.001",
+    "no masks",
+    "historicalPNGbytes"
+  ]
+}

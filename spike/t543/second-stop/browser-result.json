@@ -1,0 +1,12 @@
+{
+  "outcome": "running",
+  "response_interception": false,
+  "truth_samples_added": 0,
+  "viewports": [],
+  "chrome_version": "155.0.8059.82",
+  "playwright_version": "1.62.1",
+  "reason": "Error: page.addScriptTag: Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-sBQQVWS32A8tbhNKpCBuwCex38BrQRI5iiUHRmhDr28='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+  "console_errors": [
+    "Executing inline script violates the following Content Security Policy directive 'script-src 'self''. Either the 'unsafe-inline' keyword, a hash ('sha256-sBQQVWS32A8tbhNKpCBuwCex38BrQRI5iiUHRmhDr28='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked."
+  ]
+}

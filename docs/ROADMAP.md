@@ -939,6 +939,10 @@ T45.10a admits both native resource-profile names in Settings, so an available
 amd64 installation can be planned and enqueued from the documented Settings
 path. It adds no execution capability. Installed generation, images, offline
 inputs, privileges, review and integration remain open.
+T45.10a presentation acceptance is complete on2026-10-18:895 UI unit tests,
+19 native browser cases, eight fresh frame comparisons, keyboard/narrow layout,
+console and16 accessibility audits pass. Historical Noble goldens remain exact;
+this closes neither installed generation nor any scale or release gate.
 T45.1a's reviewed neutral harness gate is now PASS at source
 `f7faae99d20f19279bb52c9987045204fa0bb39f`, with exact native containment,
 controller-death recovery, planner/oracle, driver equality, and cleanup evidence
@@ -5670,3 +5674,16 @@ separate from common-bar evidence reconciliation and production signing.
 ordinary integration passes in34.816796958s with33/37/4positive consumer spans,
 exact HTTP/MCP/proofs/source and clean teardown. Six unsigned artifact drafts
 remain separate from common-bar reconciliation and production signing.
+
+**T54.3 finite operation Impact outcome (2026-10-18):** direct composition
+9/36memberships+2scopedempty and33.758060458s ordinary integration pass, plus
+4newneutralnativecanonicalframes author/review/freshcomparison. Exact receipts,
+prior checker stops and unsigned artifacts/census are retained; production
+signing remains pending. This closes directT54.1quality only for operation_callers.
+
+T45.8c neutral-default integration is complete (2026-10-18). Development recipes
+select whole indexing for the retained service cohort; explicit focused opt-in
+keeps its narrower Search demo and unavailable service/relationship authority.
+The one20.344438s native integration passed exact readiness, scoped/whole search,
+relationship citation and graceful joined teardown. This adds no managed
+provider, Linux capacity, scale or production release claim.

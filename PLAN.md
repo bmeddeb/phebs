@@ -13457,6 +13457,21 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   T54.2 receipts remain exact. A fresh UI/binary binding precedes the first
   composed native run; no failed product attempt or release result is invented.
 
+- **2026-10-18 — T54.3 prospective bounded Impact qualification (Ben-routed Mac handoff).**
+  Freeze one operation_callers matrix over the existing T54.1 licensed nineteen
+  source files: five RPCs, nine positive and thirty-six wrong-operation
+  memberships, two scoped-empty queries, exact source and supplied-unit joins.
+  No component result transfers. Bind one current clean image with real HTTP
+  schema metadata, exact tools and shared helper provenance; use three ordinary
+  startup/withdrawal phases and one existing comment publication transition
+  under a single 180-second deadline including browser/child joins. New neutral
+  current/unavailable light/dark frames use the actual native renderer and a
+  fresh comparison; legacy-v2/Noble pixels do not qualify this shape. No release
+  or activation follows until its own measured artifacts and signature exist.
+  Production serving stays unchanged: one existing Caller Map page plus constant
+  wrapper, no new cache/store/worker/child. The opt-in matrix alone adds bounded
+  queries, one transition, sampling and renderer work under recorded limits.
+
 - **2026-10-18 — T50.3 finite outcome and unsigned artifacts (Ben-routed Mac handoff).**
   Preserve the first successful 39.450236s direct comparison matrix with exact
   `bbb41b2c` binary/source/UI/tool bindings and all earlier stops. Five selected
@@ -13508,6 +13523,25 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   constant metadata comparisons only, no read/query/sync/startup/retry, persistent
   state, lock/cache, worker, child, source traversal or bound increase.
 
+- **2026-10-18 — T45.8c neutral development cohort repair (Ben-routed Mac handoff).**
+  The historical focused default cannot publish whole-repository v2 service/
+  relationship authority: the indexer, observation planner and query compiler
+  deliberately refuse that composition. Do not synthesize control files or
+  weaken those guards. Make dev/dev-api explicitly select the existing whole
+  pipeline for both retained neutral repositories; focused remains a closed
+  explicit opt-in with visible unavailable T307services/relationships. Direct
+  fixture environment with no selector preserves legacy focused behavior. Empty/
+  unknown selections and configured-unit collisions refuse before mutation.
+  Keep exact catalog/source/connection guards and original failed receipts.
+  Whole mode exposes nine T307files, including external caller/bulk sentinel,
+  rather than seven focused files, and runs existing whole source/search and
+  service/relationship planning. T323fourteen-file behavior stays exact. One
+  startup env lookup/closed comparison and bounded fixture scope checks add no
+  request/sync/retry/cache/schema/lock/child class. Existing ordinary reindex/
+  stale-state transitions handle reused dev data; never manually erase authority.
+  Focused normal/race, eight smoke controls and static gates pass; one prospective
+  180s real-binary two-cohort readiness/search/citation smoke remains to execute.
+
 - **2026-10-18 — T48.4 scoped common-product evidence closure (Ben-routed Mac handoff).**
   Reuse existing green recovery/archive/version/citation mechanisms only after
   exact source-scope comparison; new unit/field selected-set semantics keep their
@@ -13524,6 +13558,75 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   tables distinguish source, execution and final-artifact censuses. No product
   request/sync/startup/retry/publication, lock/cache/schema, worker or child work
   is added; the finite checks are opt-in evidence only.
+
+- **2026-10-18 — T54.3 direct operation Impact qualification (Ben-routed Mac handoff).**
+  Exact e72image passes33.758060458s finite ordinary-runtime matrix: five RPCs,
+  nine positive/thirty-six wrong-operation memberships, two scoped-empty queries,
+  exact source/citations/declaration and supplied-unit joins; all observed rows
+  remain syntax/heuristic. HTTP/MCP/paging, eight coherent before-or-after epoch
+  reads, stale cursor/changed citation409, actual1280/390keyboard/filter/source/
+  unit flows, WCAG0violations, own/input withdrawal and all joins pass. Four
+  separate neutral current/unavailable light/dark native author/visual-review/
+  fresh-comparison frames pass, without Noble/legacy-v2 equivalence. Preserve
+  both earlier checker stops, async view remount and blocked inline audit;
+  synchronize refetch and use init instrumentation without weakening CSP.
+  Record exact sampled resource/CPU/peak limits, all source/tool/build bindings
+  and frozen unsigned artifacts/census. Direct T54.1 composition quality closes
+  only this shape; production signing/activation remains pending. Existing
+  List/read/citation/recovery mechanisms retain scoped source-mapped gates.
+  Serving adds constant wrapper metadata, no second read, row scan, writer,
+  cache/store/schema/lock/worker/child; UI validation/render stays page bounded.
+
+- **2026-10-18 — T45.8c neutral whole default accepted (Ben-routed Mac handoff).**
+  One clean bfaa5683native image passed the preregistered finite integration in
+  20.344438s with85total HTTP calls. Actual demo binders populated exact retained
+  HEADs/catalogs, required current services, complete relationships, authorized
+  exact service search, All code outside-unit sentinel and immutable live
+  citation. Exit0, group absence and secret/data cleanup passed. Prior focused
+  failures remain exact and focused authority guards are unchanged. No repeated
+  campaign or production signature was needed. Whole T307initial indexing uses
+  nine files rather than seven focused files; T323fourteen files are unchanged.
+  One startup selector read/closed comparison adds no per-query/tick/retry/
+  publication/cache/schema/lock or child-class work. Retained evidence lives in
+  `spike/t458c/success/`; managed generation, host/scale and release claims remain
+  separately gated.
+
+- **2026-10-18 — T45.10a presentation closure preparation (Mac track).**
+  Keep both exact profile validators and architecture mapping unchanged. Extend
+  the neutral fixture through both admitted resource names, exact request/CSRF/
+  retry/all-state paths and unknown/empty refusal. Preserve eight historical ARM
+  canonical names and bytes; new profile-preview captures get a separate native
+  source/renderer-bound author, visual review and fresh comparison, never Noble
+  equivalence or copied baselines. Preview mechanics timing stops before font/
+  geometry/capture work. All118production UI inputs match the retained e72build,
+  so only that exact unchanged bundle/source measurement may be reused. Full
+  applicable UI/keyboard/390px/console/a11y/fresh-frame gates remain to execute
+  before closure. Fixture-only work adds no production request/sync/startup/
+  retry/publication, schema/cache/lock/worker or child cost.
+
+- **2026-10-18 — T45.10a native receipt clearance correction.**
+  The first390px QA measured116.5px below a strict117px sticky-header clearance.
+  After the existing scroll, measure actual target top and apply a floored
+  negative correction only when short. Preserve already-cleared scroll positions,
+  strict clearance inequality and all historical pixels; do not loosen tolerance.
+  The shared helper has two receipt callers. Added cost is one local geometry
+  observation and at most one corrective scroll, no product/bundle/runtime work.
+  The failed native geometry and separate wrapper discovery/title preparation
+  mistakes remain failures; passed static895tests are not repeated.
+
+- **2026-10-18 — T45.10a bounded presentation closure.** Existing product
+  validators/server profile mapping require no runtime change. Exact request/
+  CSRF/retry/all-state/refusal/keyboard coverage passes, as do895unit tests,
+  TypeScript/lint, author19 and fresh8native Chrome cases. Sixteen accessibility
+  audits report zero violations; eight fresh frames meet the unchanged0.001
+  tolerance (max0.000149832), with all successful owned groups joined/absent.
+  Retain all preparation/geometry/Chrome teardown failures as failures beside
+  the successful receipts. Historical Noble baseline bytes remain unchanged;
+  no cross-renderer equivalence or installed-generation claim follows. Source/
+  bundle proof permits exact e72asset reuse without rebuilding118unchanged UI
+  inputs. Receipt-only work adds no production request/tick/startup/retry/
+  publication, schema/cache/lock or child cost. Production signing and Linux
+  host/runtime admissions remain pending independently.
 
 - **2026-10-18 — T58.2 independent Thrift syntactic preregistration (Ben-routed Mac handoff).**
   Freeze one licensed historical public source purpose sample and independent

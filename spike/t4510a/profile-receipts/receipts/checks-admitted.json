@@ -1,0 +1,63 @@
+{
+  "adjudication": "Root approves TS6 --ignoreConfig only; prior TS5112 command/first checks retained, no repeated tsc-b",
+  "runs": [
+    {
+      "name": "receipt-types-admitted",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "node_modules/typescript/bin/tsc",
+        "--ignoreConfig",
+        "--noEmit",
+        "--strict",
+        "--skipLibCheck",
+        "--target",
+        "es2023",
+        "--lib",
+        "es2023,dom,dom.iterable",
+        "--module",
+        "esnext",
+        "--moduleResolution",
+        "bundler",
+        "--types",
+        "node",
+        "--jsx",
+        "react-jsx",
+        "--allowImportingTsExtensions",
+        "receipts/typed-index.spec.ts"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t512-field-registration/phebs.com/ui",
+      "wall_seconds": 0.668658,
+      "exit": 0,
+      "joined": true,
+      "log": "/tmp/phebs-t4510a-qa-z3azm2qg/receipt-types-admitted.log"
+    },
+    {
+      "name": "oxlint",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "node_modules/oxlint/bin/oxlint",
+        "receipts/typed-index.spec.ts"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t512-field-registration/phebs.com/ui",
+      "wall_seconds": 0.078053,
+      "exit": 0,
+      "joined": true,
+      "log": "/tmp/phebs-t4510a-qa-z3azm2qg/oxlint.log"
+    },
+    {
+      "name": "vitest",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "--maxWorkers=1"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t512-field-registration/phebs.com/ui",
+      "wall_seconds": 27.760127,
+      "exit": 0,
+      "joined": true,
+      "log": "/tmp/phebs-t4510a-qa-z3azm2qg/vitest.log"
+    }
+  ],
+  "passed": true
+}
