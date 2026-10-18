@@ -41,6 +41,9 @@ func (service *FieldReferenceService) buildProtoProofBundle(
 	if err != nil {
 		return nil, huma.Error400BadRequest(err.Error())
 	}
+	if err := admittedFieldIdentity(service.opts, field.Lineage); err != nil {
+		return nil, err
+	}
 	field = fields[0]
 	number := field.Number
 	return service.buildProto(
@@ -74,6 +77,30 @@ func (service *FieldReferenceService) buildNeutralProofBundle(
 		return nil, huma.Error400BadRequest(err.Error())
 	}
 	packs := fieldReferencePacks(field.Number)
+	if err := admittedFieldIdentity(service.opts, field.Lineage); err != nil {
+		if service.opts.ProtobufFieldReferencesReleased {
+			return nil, err
+		}
+		// Explicit provisional mode retains its independently available
+		// Thrift queries. A foreign lineage never queries the stable
+		// protobuf domain and is never translated into its identity family.
+		other := packs[:0]
+		for _, pack := range packs {
+			if pack.fieldReferenceDomain != "scip-proto-field" {
+				other = append(other, pack)
+			}
+		}
+		packs = other
+		if len(packs) == 0 {
+			return nil, err
+		}
+	}
+	if service.opts.ProtobufFieldReferencesReleased {
+		if err := validateFieldIdentity(field.Lineage, field.Message, field.Number); err != nil {
+			return nil, huma.Error400BadRequest(err.Error())
+		}
+		packs = []protocolPack{protocolPacks[0]}
+	}
 	domains := make([]string, 0, len(packs))
 	filters := make([]assertionFilter, 0, len(packs))
 	for _, pack := range packs {

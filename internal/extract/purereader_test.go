@@ -45,6 +45,9 @@ var extractorImportAllowlist = map[string]bool{
 	"github.com/bufbuild/protocompile/parser":    true,
 	"github.com/bufbuild/protocompile/reporter":  true,
 	"github.com/scip-code/scip/bindings/go/scip": true,
+	// Pure in-process decoding of committed generated FileDescriptorProto bytes.
+	"google.golang.org/protobuf/proto":              true,
+	"google.golang.org/protobuf/types/descriptorpb": true,
 
 	// In-process Thrift IDL parsing for the T19.2 thriftdecl extractor.
 	// Parser-only packages: no codegen, no I/O, no process execution.

@@ -1,0 +1,54 @@
+{
+  "before": "comparison-before",
+  "after": "comparison-after",
+  "same_external_manifest_path": true,
+  "expected": [
+    {
+      "change": "added",
+      "kind": "DECLARES_FIELD",
+      "table": "Queue",
+      "path": [
+        {
+          "kind": "field",
+          "name": "new β"
+        }
+      ]
+    },
+    {
+      "change": "removed",
+      "kind": "DECLARES_FIELD",
+      "table": "Queue",
+      "path": [
+        {
+          "kind": "field",
+          "name": "old"
+        }
+      ]
+    },
+    {
+      "change": "changed",
+      "kind": "DECLARES_FIELD",
+      "table": "Queue",
+      "path": [
+        {
+          "kind": "field",
+          "name": "stable"
+        }
+      ],
+      "before_type": "opaque:string",
+      "after_type": "opaque:bytes"
+    }
+  ],
+  "unchanged_identity": {
+    "table": "Queue",
+    "path": [
+      {
+        "kind": "field",
+        "name": "id"
+      }
+    ]
+  },
+  "source_class_mismatch": "comparison_source_class_mismatch",
+  "different_lineage": "comparison_lineage_mismatch",
+  "claim": "explicit snapshot differences only; neither snapshot is called live or current"
+}

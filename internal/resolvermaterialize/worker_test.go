@@ -663,8 +663,8 @@ func TestWorkerSettledEmptyDeclarationPublishesEmptyAuthority(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := len(publication.Manifest().Members); got != 2 {
-		t.Fatalf("empty authority members = %d, want module plus grpc", got)
+	if got := len(publication.Manifest().Members); got != 3 {
+		t.Fatalf("empty authority members = %d, want module plus unit projection plus grpc", got)
 	}
 }
 
@@ -696,8 +696,8 @@ func TestWorkerFirstPublish(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open first publication: %v", err)
 	}
-	if got := len(publication.Manifest().Members); got != 2 {
-		t.Fatalf("published members = %d; want module plus grpc", got)
+	if got := len(publication.Manifest().Members); got != 3 {
+		t.Fatalf("published members = %d; want module plus unit projection plus grpc", got)
 	}
 	if len(fixture.provider.openInputs) != 1 || !slices.Equal(
 		fixture.provider.openInputs[0].Domains,
@@ -755,7 +755,7 @@ func TestWorkerWarmCachedNoOpSkipsStrictInputs(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, pack := range fixture.state.pointer.ResolverPacks {
-		if pack.Version != "1.1.1" {
+		if pack.Version != PackVersion {
 			t.Fatalf("warm current fixture has obsolete resolver pack: %+v", pack)
 		}
 	}
@@ -787,14 +787,14 @@ func TestWorkerWarmCachedNoOpSkipsStrictInputs(t *testing.T) {
 	}
 }
 
-func TestResolverPack111ChangesOnlyVersionBoundIdentity(t *testing.T) {
+func TestResolverPack120ChangesVersionBoundIdentity(t *testing.T) {
 	registry := newMaterializeTestRegistry(t, ProtocolGRPC, ProtocolThrift)
 	packs := registry.Packs()
 	if len(packs) != 3 {
 		t.Fatalf("current registry packs = %+v, want all three", packs)
 	}
 	for _, pack := range packs {
-		if pack.Version != "1.1.1" {
+		if pack.Version != PackVersion {
 			t.Fatalf("current registry has obsolete resolver pack: %+v", pack)
 		}
 	}
@@ -802,7 +802,7 @@ func TestResolverPack111ChangesOnlyVersionBoundIdentity(t *testing.T) {
 	current := newMaterializeTestIdentity(t, registry, testManifestDigest, declarations)
 	oldPacks := slices.Clone(packs)
 	for index := range oldPacks {
-		oldPacks[index].Version = "1.1.0"
+		oldPacks[index].Version = "1.1.1"
 	}
 	prior, err := resolvercatalog.NewIdentity(current.Repository, current.Commit, current.UnitDigest,
 		current.CandidateManifestDigest, current.Declarations, oldPacks)

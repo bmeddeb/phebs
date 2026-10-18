@@ -171,6 +171,12 @@ type Options struct {
 	// reads, names every other plane unavailable in the census, and registers
 	// no other proof, Impact or compatibility surface.
 	KafkaReleasedPlanes []string
+	// ProtobufFieldReferencesReleased restricts proof products to the signed field
+	// recipe (plus independently released Kafka planes), preserving nil defaults.
+	ProtobufFieldReferencesReleased bool
+	// EvidenceExtractorVersions fences admitted domains to exact extraction
+	// versions, including raw reads and retained bundles. Nil is unrestricted.
+	EvidenceExtractorVersions map[string]string
 	// KafkaTopicInventoryReleased additionally admits the composed Topics
 	// inventory on that released surface: a verified phebs.kafka.topics record
 	// with both planes released (T57.3). It has no effect without them.

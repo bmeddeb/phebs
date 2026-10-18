@@ -1,0 +1,1084 @@
+{
+  "method": "Hand-derived declarations and literal span lookup, before any JSON reader run; no CQL parser or vendor adapter.",
+  "rows": [
+    {
+      "kind": "DECLARES_SCHEMA_SET",
+      "json_pointer": "",
+      "json_span": {
+        "start": 0,
+        "end": 11256
+      },
+      "cql_spans": [
+        {
+          "start": 767,
+          "end": 794,
+          "text": "CREATE KEYSPACE reservation"
+        }
+      ],
+      "decision": "Neutral lineage uses external repository/path/format. Keyspace spelling survives only in exact qualified table/view names; replication settings are not neutral declarations."
+    },
+    {
+      "kind": "DECLARES_TABLE",
+      "json_pointer": "/tables/0",
+      "json_span": {
+        "start": 90,
+        "end": 1982
+      },
+      "cql_spans": [
+        {
+          "start": 1011,
+          "end": 1062,
+          "text": "CREATE TABLE reservation.reservations_by_hotel_date"
+        }
+      ],
+      "decision": "Exact qualified source name; no database, service or runtime identity."
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "json_pointer": "/tables/0/fields/0",
+      "json_span": {
+        "start": 174,
+        "end": 335
+      },
+      "cql_spans": [
+        {
+          "start": 1069,
+          "end": 1082,
+          "text": "hotel_id text"
+        }
+      ],
+      "decision": "Exact column spelling and opaque CQL type spelling, without a vendor type reader."
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "json_pointer": "/tables/0/fields/1",
+      "json_span": {
+        "start": 345,
+        "end": 508
+      },
+      "cql_spans": [
+        {
+          "start": 1088,
+          "end": 1103,
+          "text": "start_date date"
+        }
+      ],
+      "decision": "Exact column spelling and opaque CQL type spelling, without a vendor type reader."
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "json_pointer": "/tables/0/fields/2",
+      "json_span": {
+        "start": 518,
+        "end": 679
+      },
+      "cql_spans": [
+        {
+          "start": 1109,
+          "end": 1122,
+          "text": "end_date date"
+        }
+      ],
+      "decision": "Exact column spelling and opaque CQL type spelling, without a vendor type reader."
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "json_pointer": "/tables/0/fields/3",
+      "json_span": {
+        "start": 689,
+        "end": 857
+      },
+      "cql_spans": [
+        {
+          "start": 1128,
+          "end": 1148,
+          "text": "room_number smallint"
+        }
+      ],
+      "decision": "Exact column spelling and opaque CQL type spelling, without a vendor type reader."
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "json_pointer": "/tables/0/fields/4",
+      "json_span": {
+        "start": 867,
+        "end": 1034
+      },
+      "cql_spans": [
+        {
+          "start": 1154,
+          "end": 1173,
+          "text": "confirm_number text"
+        }
+      ],
+      "decision": "Exact column spelling and opaque CQL type spelling, without a vendor type reader."
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "json_pointer": "/tables/0/fields/5",
+      "json_span": {
+        "start": 1044,
+        "end": 1205
+      },
+      "cql_spans": [
+        {
+          "start": 1179,
+          "end": 1192,
+          "text": "guest_id uuid"
+        }
+      ],
+      "decision": "Exact column spelling and opaque CQL type spelling, without a vendor type reader."
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "json_pointer": "/tables/0/primary_key/0",
+      "json_span": {
+        "start": 1246,
+        "end": 1381
+      },
+      "cql_spans": [
+        {
+          "start": 1212,
+          "end": 1220,
+          "text": "hotel_id"
+        }
+      ],
+      "decision": "Source key order and scalar/composite partition grouping are explicit. Direction omitted in neutral input defaults asc; that is not an ordering/runtime claim about partition keys."
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "json_pointer": "/tables/0/primary_key/1",
+      "json_span": {
+        "start": 1391,
+        "end": 1528
+      },
+      "cql_spans": [
+        {
+          "start": 1222,
+          "end": 1232,
+          "text": "start_date"
+        }
+      ],
+      "decision": "Source key order and scalar/composite partition grouping are explicit. Direction omitted in neutral input defaults asc; that is not an ordering/runtime claim about partition keys."
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "json_pointer": "/tables/0/primary_key/2",
+      "json_span": {
+        "start": 1538,
+        "end": 1676
+      },
+      "cql_spans": [
+        {
+          "start": 1235,
+          "end": 1246,
+          "text": "room_number"
+        }
+      ],
+      "decision": "Source key order and scalar/composite partition grouping are explicit. Direction omitted in neutral input defaults asc; that is not an ordering/runtime claim about partition keys."
+    },
+    {
+      "kind": "DECLARES_PARTITION_KEY",
+      "json_pointer": "/tables/0/partition_key/0",
+      "json_span": {
+        "start": 1766,
+        "end": 1861
+      },
+      "cql_spans": [
+        {
+          "start": 1212,
+          "end": 1220,
+          "text": "hotel_id"
+        }
+      ],
+      "decision": "Source key order and scalar/composite partition grouping are explicit. Direction omitted in neutral input defaults asc; that is not an ordering/runtime claim about partition keys."
+    },
+    {
+      "kind": "DECLARES_PARTITION_KEY",
+      "json_pointer": "/tables/0/partition_key/1",
+      "json_span": {
+        "start": 1871,
+        "end": 1968
+      },
+      "cql_spans": [
+        {
+          "start": 1222,
+          "end": 1232,
+          "text": "start_date"
+        }
+      ],
+      "decision": "Source key order and scalar/composite partition grouping are explicit. Direction omitted in neutral input defaults asc; that is not an ordering/runtime claim about partition keys."
+    },
+    {
+      "kind": "DECLARES_TABLE",
+      "json_pointer": "/tables/1",
+      "json_span": {
+        "start": 1988,
+        "end": 3810
+      },
+      "cql_spans": [
+        {
+          "start": 1630,
+          "end": 1676,
+          "text": "CREATE TABLE reservation.reservations_by_guest"
+        }
+      ],
+      "decision": "Exact qualified source name; no database, service or runtime identity."
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "json_pointer": "/tables/1/fields/0",
+      "json_span": {
+        "start": 2067,
+        "end": 2235
+      },
+      "cql_spans": [
+        {
+          "start": 1683,
+          "end": 1703,
+          "text": "guest_last_name text"
+        }
+      ],
+      "decision": "Exact column spelling and opaque CQL type spelling, without a vendor type reader."
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "json_pointer": "/tables/1/fields/1",
+      "json_span": {
+        "start": 2245,
+        "end": 2406
+      },
+      "cql_spans": [
+        {
+          "start": 1709,
+          "end": 1722,
+          "text": "hotel_id text"
+        }
+      ],
+      "decision": "Exact column spelling and opaque CQL type spelling, without a vendor type reader."
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "json_pointer": "/tables/1/fields/2",
+      "json_span": {
+        "start": 2416,
+        "end": 2579
+      },
+      "cql_spans": [
+        {
+          "start": 1728,
+          "end": 1743,
+          "text": "start_date date"
+        }
+      ],
+      "decision": "Exact column spelling and opaque CQL type spelling, without a vendor type reader."
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "json_pointer": "/tables/1/fields/3",
+      "json_span": {
+        "start": 2589,
+        "end": 2750
+      },
+      "cql_spans": [
+        {
+          "start": 1749,
+          "end": 1762,
+          "text": "end_date date"
+        }
+      ],
+      "decision": "Exact column spelling and opaque CQL type spelling, without a vendor type reader."
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "json_pointer": "/tables/1/fields/4",
+      "json_span": {
+        "start": 2760,
+        "end": 2928
+      },
+      "cql_spans": [
+        {
+          "start": 1768,
+          "end": 1788,
+          "text": "room_number smallint"
+        }
+      ],
+      "decision": "Exact column spelling and opaque CQL type spelling, without a vendor type reader."
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "json_pointer": "/tables/1/fields/5",
+      "json_span": {
+        "start": 2938,
+        "end": 3105
+      },
+      "cql_spans": [
+        {
+          "start": 1794,
+          "end": 1813,
+          "text": "confirm_number text"
+        }
+      ],
+      "decision": "Exact column spelling and opaque CQL type spelling, without a vendor type reader."
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "json_pointer": "/tables/1/fields/6",
+      "json_span": {
+        "start": 3115,
+        "end": 3276
+      },
+      "cql_spans": [
+        {
+          "start": 1819,
+          "end": 1832,
+          "text": "guest_id uuid"
+        }
+      ],
+      "decision": "Exact column spelling and opaque CQL type spelling, without a vendor type reader."
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "json_pointer": "/tables/1/primary_key/0",
+      "json_span": {
+        "start": 3317,
+        "end": 3459
+      },
+      "cql_spans": [
+        {
+          "start": 1852,
+          "end": 1867,
+          "text": "guest_last_name"
+        }
+      ],
+      "decision": "Source key order and scalar/composite partition grouping are explicit. Direction omitted in neutral input defaults asc; that is not an ordering/runtime claim about partition keys."
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "json_pointer": "/tables/1/primary_key/1",
+      "json_span": {
+        "start": 3469,
+        "end": 3604
+      },
+      "cql_spans": [
+        {
+          "start": 1870,
+          "end": 1878,
+          "text": "hotel_id"
+        }
+      ],
+      "decision": "Source key order and scalar/composite partition grouping are explicit. Direction omitted in neutral input defaults asc; that is not an ordering/runtime claim about partition keys."
+    },
+    {
+      "kind": "DECLARES_PARTITION_KEY",
+      "json_pointer": "/tables/1/partition_key/0",
+      "json_span": {
+        "start": 3694,
+        "end": 3796
+      },
+      "cql_spans": [
+        {
+          "start": 1852,
+          "end": 1867,
+          "text": "guest_last_name"
+        }
+      ],
+      "decision": "Source key order and scalar/composite partition grouping are explicit. Direction omitted in neutral input defaults asc; that is not an ordering/runtime claim about partition keys."
+    },
+    {
+      "kind": "DECLARES_TABLE",
+      "json_pointer": "/tables/2",
+      "json_span": {
+        "start": 3816,
+        "end": 8026
+      },
+      "cql_spans": [
+        {
+          "start": 1937,
+          "end": 1968,
+          "text": "CREATE TABLE reservation.guests"
+        }
+      ],
+      "decision": "Exact qualified source name; no database, service or runtime identity."
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "json_pointer": "/tables/2/fields/0",
+      "json_span": {
+        "start": 3880,
+        "end": 4041
+      },
+      "cql_spans": [
+        {
+          "start": 1975,
+          "end": 1988,
+          "text": "guest_id uuid"
+        }
+      ],
+      "decision": "Exact column spelling and opaque CQL type spelling, without a vendor type reader."
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "json_pointer": "/tables/2/fields/1",
+      "json_span": {
+        "start": 4051,
+        "end": 4214
+      },
+      "cql_spans": [
+        {
+          "start": 2006,
+          "end": 2021,
+          "text": "first_name text"
+        }
+      ],
+      "decision": "Exact column spelling and opaque CQL type spelling, without a vendor type reader."
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "json_pointer": "/tables/2/fields/2",
+      "json_span": {
+        "start": 4224,
+        "end": 4386
+      },
+      "cql_spans": [
+        {
+          "start": 2027,
+          "end": 2041,
+          "text": "last_name text"
+        }
+      ],
+      "decision": "Exact column spelling and opaque CQL type spelling, without a vendor type reader."
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "json_pointer": "/tables/2/fields/3",
+      "json_span": {
+        "start": 4396,
+        "end": 4554
+      },
+      "cql_spans": [
+        {
+          "start": 2047,
+          "end": 2057,
+          "text": "title text"
+        }
+      ],
+      "decision": "Exact column spelling and opaque CQL type spelling, without a vendor type reader."
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "json_pointer": "/tables/2/fields/4",
+      "json_span": {
+        "start": 4564,
+        "end": 4728
+      },
+      "cql_spans": [
+        {
+          "start": 2063,
+          "end": 2079,
+          "text": "emails set<text>"
+        }
+      ],
+      "decision": "Exact column spelling and opaque CQL type spelling, without a vendor type reader."
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "json_pointer": "/tables/2/fields/5",
+      "json_span": {
+        "start": 4738,
+        "end": 4910
+      },
+      "cql_spans": [
+        {
+          "start": 2085,
+          "end": 2109,
+          "text": "phone_numbers list<text>"
+        }
+      ],
+      "decision": "Exact column spelling and opaque CQL type spelling, without a vendor type reader."
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "json_pointer": "/tables/2/fields/6",
+      "json_span": {
+        "start": 4920,
+        "end": 5104
+      },
+      "cql_spans": [
+        {
+          "start": 2115,
+          "end": 2151,
+          "text": "addresses map<text, frozen<address>>"
+        }
+      ],
+      "decision": "Exact column spelling and opaque CQL type spelling, without a vendor type reader."
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "json_pointer": "/tables/2/fields/7",
+      "json_span": {
+        "start": 5114,
+        "end": 5281
+      },
+      "cql_spans": [
+        {
+          "start": 2157,
+          "end": 2176,
+          "text": "confirm_number text"
+        }
+      ],
+      "decision": "Exact column spelling and opaque CQL type spelling, without a vendor type reader."
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "json_pointer": "/tables/2/fields/8",
+      "json_span": {
+        "start": 5291,
+        "end": 5517
+      },
+      "cql_spans": [
+        {
+          "start": 2063,
+          "end": 2079,
+          "text": "emails set<text>"
+        }
+      ],
+      "decision": "Set/list both use neutral array_element with no ordering claim; map_value never traverses map keys. Type spelling remains opaque."
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "json_pointer": "/tables/2/fields/9",
+      "json_span": {
+        "start": 5527,
+        "end": 5760
+      },
+      "cql_spans": [
+        {
+          "start": 2085,
+          "end": 2109,
+          "text": "phone_numbers list<text>"
+        }
+      ],
+      "decision": "Set/list both use neutral array_element with no ordering claim; map_value never traverses map keys. Type spelling remains opaque."
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "json_pointer": "/tables/2/fields/10",
+      "json_span": {
+        "start": 5770,
+        "end": 6006
+      },
+      "cql_spans": [
+        {
+          "start": 2115,
+          "end": 2151,
+          "text": "addresses map<text, frozen<address>>"
+        }
+      ],
+      "decision": "Set/list both use neutral array_element with no ordering claim; map_value never traverses map keys. Type spelling remains opaque."
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "json_pointer": "/tables/2/fields/11",
+      "json_span": {
+        "start": 6016,
+        "end": 6332
+      },
+      "cql_spans": [
+        {
+          "start": 912,
+          "end": 923,
+          "text": "street text"
+        },
+        {
+          "start": 2115,
+          "end": 2151,
+          "text": "addresses map<text, frozen<address>>"
+        }
+      ],
+      "decision": "Manual address UDT definition/use expansion under addresses/map_value; no runtime CQL parsing or canonical vendor-type claim."
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "json_pointer": "/tables/2/fields/12",
+      "json_span": {
+        "start": 6342,
+        "end": 6656
+      },
+      "cql_spans": [
+        {
+          "start": 929,
+          "end": 938,
+          "text": "city text"
+        },
+        {
+          "start": 2115,
+          "end": 2151,
+          "text": "addresses map<text, frozen<address>>"
+        }
+      ],
+      "decision": "Manual address UDT definition/use expansion under addresses/map_value; no runtime CQL parsing or canonical vendor-type claim."
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "json_pointer": "/tables/2/fields/13",
+      "json_span": {
+        "start": 6666,
+        "end": 6993
+      },
+      "cql_spans": [
+        {
+          "start": 944,
+          "end": 966,
+          "text": "state_or_province text"
+        },
+        {
+          "start": 2115,
+          "end": 2151,
+          "text": "addresses map<text, frozen<address>>"
+        }
+      ],
+      "decision": "Manual address UDT definition/use expansion under addresses/map_value; no runtime CQL parsing or canonical vendor-type claim."
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "json_pointer": "/tables/2/fields/14",
+      "json_span": {
+        "start": 7003,
+        "end": 7324
+      },
+      "cql_spans": [
+        {
+          "start": 972,
+          "end": 988,
+          "text": "postal_code text"
+        },
+        {
+          "start": 2115,
+          "end": 2151,
+          "text": "addresses map<text, frozen<address>>"
+        }
+      ],
+      "decision": "Manual address UDT definition/use expansion under addresses/map_value; no runtime CQL parsing or canonical vendor-type claim."
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "json_pointer": "/tables/2/fields/15",
+      "json_span": {
+        "start": 7334,
+        "end": 7651
+      },
+      "cql_spans": [
+        {
+          "start": 994,
+          "end": 1006,
+          "text": "country text"
+        },
+        {
+          "start": 2115,
+          "end": 2151,
+          "text": "addresses map<text, frozen<address>>"
+        }
+      ],
+      "decision": "Manual address UDT definition/use expansion under addresses/map_value; no runtime CQL parsing or canonical vendor-type claim."
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "json_pointer": "/tables/2/primary_key/0",
+      "json_span": {
+        "start": 7692,
+        "end": 7827
+      },
+      "cql_spans": [
+        {
+          "start": 1975,
+          "end": 2000,
+          "text": "guest_id uuid PRIMARY KEY"
+        }
+      ],
+      "decision": "Source key order and scalar/composite partition grouping are explicit. Direction omitted in neutral input defaults asc; that is not an ordering/runtime claim about partition keys."
+    },
+    {
+      "kind": "DECLARES_PARTITION_KEY",
+      "json_pointer": "/tables/2/partition_key/0",
+      "json_span": {
+        "start": 7917,
+        "end": 8012
+      },
+      "cql_spans": [
+        {
+          "start": 1975,
+          "end": 2000,
+          "text": "guest_id uuid PRIMARY KEY"
+        }
+      ],
+      "decision": "Source key order and scalar/composite partition grouping are explicit. Direction omitted in neutral input defaults asc; that is not an ordering/runtime claim about partition keys."
+    },
+    {
+      "kind": "DECLARES_VIEW",
+      "json_pointer": "/views/0",
+      "json_span": {
+        "start": 8049,
+        "end": 11250
+      },
+      "cql_spans": [
+        {
+          "start": 1309,
+          "end": 1374,
+          "text": "CREATE MATERIALIZED VIEW reservation.reservations_by_confirmation"
+        }
+      ],
+      "decision": "Exact qualified source name; no database, service or runtime identity."
+    },
+    {
+      "kind": "DECLARES_VIEW_FIELD",
+      "json_pointer": "/views/0/fields/0",
+      "json_span": {
+        "start": 8135,
+        "end": 8508
+      },
+      "cql_spans": [
+        {
+          "start": 1382,
+          "end": 1434,
+          "text": "SELECT * FROM reservation.reservations_by_hotel_date"
+        },
+        {
+          "start": 1069,
+          "end": 1082,
+          "text": "hotel_id text"
+        }
+      ],
+      "decision": "Manual wildcard expansion into six own output names with exact source-field references; null filters are not represented or inferred as a runtime freshness guarantee."
+    },
+    {
+      "kind": "DECLARES_VIEW_SOURCE",
+      "json_pointer": "/views/0/fields/0/sources/0",
+      "json_span": {
+        "start": 8228,
+        "end": 8486
+      },
+      "cql_spans": [
+        {
+          "start": 1382,
+          "end": 1434,
+          "text": "SELECT * FROM reservation.reservations_by_hotel_date"
+        },
+        {
+          "start": 1069,
+          "end": 1082,
+          "text": "hotel_id text"
+        }
+      ],
+      "decision": "Manual wildcard expansion into six own output names with exact source-field references; null filters are not represented or inferred as a runtime freshness guarantee."
+    },
+    {
+      "kind": "DECLARES_VIEW_FIELD",
+      "json_pointer": "/views/0/fields/1",
+      "json_span": {
+        "start": 8518,
+        "end": 8895
+      },
+      "cql_spans": [
+        {
+          "start": 1382,
+          "end": 1434,
+          "text": "SELECT * FROM reservation.reservations_by_hotel_date"
+        },
+        {
+          "start": 1088,
+          "end": 1103,
+          "text": "start_date date"
+        }
+      ],
+      "decision": "Manual wildcard expansion into six own output names with exact source-field references; null filters are not represented or inferred as a runtime freshness guarantee."
+    },
+    {
+      "kind": "DECLARES_VIEW_SOURCE",
+      "json_pointer": "/views/0/fields/1/sources/0",
+      "json_span": {
+        "start": 8613,
+        "end": 8873
+      },
+      "cql_spans": [
+        {
+          "start": 1382,
+          "end": 1434,
+          "text": "SELECT * FROM reservation.reservations_by_hotel_date"
+        },
+        {
+          "start": 1088,
+          "end": 1103,
+          "text": "start_date date"
+        }
+      ],
+      "decision": "Manual wildcard expansion into six own output names with exact source-field references; null filters are not represented or inferred as a runtime freshness guarantee."
+    },
+    {
+      "kind": "DECLARES_VIEW_FIELD",
+      "json_pointer": "/views/0/fields/2",
+      "json_span": {
+        "start": 8905,
+        "end": 9278
+      },
+      "cql_spans": [
+        {
+          "start": 1382,
+          "end": 1434,
+          "text": "SELECT * FROM reservation.reservations_by_hotel_date"
+        },
+        {
+          "start": 1109,
+          "end": 1122,
+          "text": "end_date date"
+        }
+      ],
+      "decision": "Manual wildcard expansion into six own output names with exact source-field references; null filters are not represented or inferred as a runtime freshness guarantee."
+    },
+    {
+      "kind": "DECLARES_VIEW_SOURCE",
+      "json_pointer": "/views/0/fields/2/sources/0",
+      "json_span": {
+        "start": 8998,
+        "end": 9256
+      },
+      "cql_spans": [
+        {
+          "start": 1382,
+          "end": 1434,
+          "text": "SELECT * FROM reservation.reservations_by_hotel_date"
+        },
+        {
+          "start": 1109,
+          "end": 1122,
+          "text": "end_date date"
+        }
+      ],
+      "decision": "Manual wildcard expansion into six own output names with exact source-field references; null filters are not represented or inferred as a runtime freshness guarantee."
+    },
+    {
+      "kind": "DECLARES_VIEW_FIELD",
+      "json_pointer": "/views/0/fields/3",
+      "json_span": {
+        "start": 9288,
+        "end": 9671
+      },
+      "cql_spans": [
+        {
+          "start": 1382,
+          "end": 1434,
+          "text": "SELECT * FROM reservation.reservations_by_hotel_date"
+        },
+        {
+          "start": 1128,
+          "end": 1148,
+          "text": "room_number smallint"
+        }
+      ],
+      "decision": "Manual wildcard expansion into six own output names with exact source-field references; null filters are not represented or inferred as a runtime freshness guarantee."
+    },
+    {
+      "kind": "DECLARES_VIEW_SOURCE",
+      "json_pointer": "/views/0/fields/3/sources/0",
+      "json_span": {
+        "start": 9388,
+        "end": 9649
+      },
+      "cql_spans": [
+        {
+          "start": 1382,
+          "end": 1434,
+          "text": "SELECT * FROM reservation.reservations_by_hotel_date"
+        },
+        {
+          "start": 1128,
+          "end": 1148,
+          "text": "room_number smallint"
+        }
+      ],
+      "decision": "Manual wildcard expansion into six own output names with exact source-field references; null filters are not represented or inferred as a runtime freshness guarantee."
+    },
+    {
+      "kind": "DECLARES_VIEW_FIELD",
+      "json_pointer": "/views/0/fields/4",
+      "json_span": {
+        "start": 9681,
+        "end": 10066
+      },
+      "cql_spans": [
+        {
+          "start": 1382,
+          "end": 1434,
+          "text": "SELECT * FROM reservation.reservations_by_hotel_date"
+        },
+        {
+          "start": 1154,
+          "end": 1173,
+          "text": "confirm_number text"
+        }
+      ],
+      "decision": "Manual wildcard expansion into six own output names with exact source-field references; null filters are not represented or inferred as a runtime freshness guarantee."
+    },
+    {
+      "kind": "DECLARES_VIEW_SOURCE",
+      "json_pointer": "/views/0/fields/4/sources/0",
+      "json_span": {
+        "start": 9780,
+        "end": 10044
+      },
+      "cql_spans": [
+        {
+          "start": 1382,
+          "end": 1434,
+          "text": "SELECT * FROM reservation.reservations_by_hotel_date"
+        },
+        {
+          "start": 1154,
+          "end": 1173,
+          "text": "confirm_number text"
+        }
+      ],
+      "decision": "Manual wildcard expansion into six own output names with exact source-field references; null filters are not represented or inferred as a runtime freshness guarantee."
+    },
+    {
+      "kind": "DECLARES_VIEW_FIELD",
+      "json_pointer": "/views/0/fields/5",
+      "json_span": {
+        "start": 10076,
+        "end": 10449
+      },
+      "cql_spans": [
+        {
+          "start": 1382,
+          "end": 1434,
+          "text": "SELECT * FROM reservation.reservations_by_hotel_date"
+        },
+        {
+          "start": 1179,
+          "end": 1192,
+          "text": "guest_id uuid"
+        }
+      ],
+      "decision": "Manual wildcard expansion into six own output names with exact source-field references; null filters are not represented or inferred as a runtime freshness guarantee."
+    },
+    {
+      "kind": "DECLARES_VIEW_SOURCE",
+      "json_pointer": "/views/0/fields/5/sources/0",
+      "json_span": {
+        "start": 10169,
+        "end": 10427
+      },
+      "cql_spans": [
+        {
+          "start": 1382,
+          "end": 1434,
+          "text": "SELECT * FROM reservation.reservations_by_hotel_date"
+        },
+        {
+          "start": 1179,
+          "end": 1192,
+          "text": "guest_id uuid"
+        }
+      ],
+      "decision": "Manual wildcard expansion into six own output names with exact source-field references; null filters are not represented or inferred as a runtime freshness guarantee."
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "json_pointer": "/views/0/primary_key/0",
+      "json_span": {
+        "start": 10490,
+        "end": 10631
+      },
+      "cql_spans": [
+        {
+          "start": 1577,
+          "end": 1591,
+          "text": "confirm_number"
+        }
+      ],
+      "decision": "Source key order and scalar/composite partition grouping are explicit. Direction omitted in neutral input defaults asc; that is not an ordering/runtime claim about partition keys."
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "json_pointer": "/views/0/primary_key/1",
+      "json_span": {
+        "start": 10641,
+        "end": 10776
+      },
+      "cql_spans": [
+        {
+          "start": 1593,
+          "end": 1601,
+          "text": "hotel_id"
+        }
+      ],
+      "decision": "Source key order and scalar/composite partition grouping are explicit. Direction omitted in neutral input defaults asc; that is not an ordering/runtime claim about partition keys."
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "json_pointer": "/views/0/primary_key/2",
+      "json_span": {
+        "start": 10786,
+        "end": 10923
+      },
+      "cql_spans": [
+        {
+          "start": 1603,
+          "end": 1613,
+          "text": "start_date"
+        }
+      ],
+      "decision": "Source key order and scalar/composite partition grouping are explicit. Direction omitted in neutral input defaults asc; that is not an ordering/runtime claim about partition keys."
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "json_pointer": "/views/0/primary_key/3",
+      "json_span": {
+        "start": 10933,
+        "end": 11071
+      },
+      "cql_spans": [
+        {
+          "start": 1615,
+          "end": 1626,
+          "text": "room_number"
+        }
+      ],
+      "decision": "Source key order and scalar/composite partition grouping are explicit. Direction omitted in neutral input defaults asc; that is not an ordering/runtime claim about partition keys."
+    },
+    {
+      "kind": "DECLARES_PARTITION_KEY",
+      "json_pointer": "/views/0/partition_key/0",
+      "json_span": {
+        "start": 11135,
+        "end": 11236
+      },
+      "cql_spans": [
+        {
+          "start": 1577,
+          "end": 1591,
+          "text": "confirm_number"
+        }
+      ],
+      "decision": "Source key order and scalar/composite partition grouping are explicit. Direction omitted in neutral input defaults asc; that is not an ordering/runtime claim about partition keys."
+    }
+  ],
+  "remaining_source_forms": [
+    {
+      "form": "license/comments",
+      "disposition": "Original bytes/notice retained; no neutral data assertion."
+    },
+    {
+      "form": "CREATE TYPE address",
+      "disposition": "All five members explicitly expanded at addresses/map_value; source definition and use both cited."
+    },
+    {
+      "form": "replication options and WITH comment strings",
+      "disposition": "Outside neutral structural declaration vocabulary; not copied as data/default/example payload."
+    },
+    {
+      "form": "view WHERE NOT NULL",
+      "disposition": "Outside round-one declaration-only semantics; no implicit nullability/filter/runtime statement."
+    }
+  ]
+}

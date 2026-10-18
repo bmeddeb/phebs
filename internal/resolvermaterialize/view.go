@@ -142,6 +142,7 @@ func OpenCallerResolvers(
 	generatedSources := make(map[string]string)
 	identityBytes := 0
 	descriptorCount := 0
+	units := &consumerUnitView{}
 	publication, err := resolvercatalog.OpenWithVisitor(
 		ctx, root, expected,
 		func(
@@ -149,6 +150,9 @@ func OpenCallerResolvers(
 			_ int,
 			raw json.RawMessage,
 		) error {
+			if member.Name == ConsumerUnitMemberName {
+				return units.visit(raw)
+			}
 			current, selected := routes[member.Name]
 			if !selected {
 				return nil
@@ -253,6 +257,10 @@ func OpenCallerResolvers(
 	slices.SortFunc(sources, func(left, right gocaller.GeneratedSourceIdentity) int {
 		return strings.Compare(left.Path+"\x00"+left.ObjectID, right.Path+"\x00"+right.ObjectID)
 	})
+	unitLookup, err := units.finish(ctx, publication)
+	if err != nil {
+		return nil, nil, err
+	}
 	for protocol, view := range views {
 		view.resolver, err = gocaller.NewDirectResolverWithGeneratedSources(
 			ctx, string(protocol), view.descriptors, sources,
@@ -260,6 +268,7 @@ func OpenCallerResolvers(
 		if err != nil {
 			return nil, nil, fmt.Errorf("compile caller resolver %q: %w", protocol, err)
 		}
+		view.resolver = view.resolver.WithConsumerUnits(unitLookup)
 	}
 	return publication, views, nil
 }

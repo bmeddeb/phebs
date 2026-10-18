@@ -104,7 +104,7 @@ func registerEvidence(api huma.API, opts Options) {
 			if errors.Is(err, store.ErrNotFound) {
 				publicationSnapshot[repo.Name] = nil
 				if partitioned && repo.IndexedCommitHash != "" {
-					selected, selectErr := partitionedCatalogSource(ctx, opts.Evidence, native, repo, in.Domain)
+					selected, selectErr := partitionedCatalogSource(ctx, opts.Evidence, native, repo, in.Domain, opts.EvidenceExtractorVersions[in.Domain])
 					if errors.Is(selectErr, store.ErrNotFound) {
 						partitionedSnapshot[repo.Name] = nil
 						continue
@@ -146,6 +146,9 @@ func registerEvidence(api huma.API, opts Options) {
 				run.Domain != scope.Domain ||
 				run.Status != "published" {
 				return nil, huma.Error500InternalServerError("latest published evidence run is inconsistent")
+			}
+			if expected := opts.EvidenceExtractorVersions[in.Domain]; expected != "" && run.Extractor != expected {
+				return nil, huma.Error409Conflict("evidence recipe generation unavailable")
 			}
 			snapshot := copyEvidenceRun(*run)
 			publicationSnapshot[repo.Name] = &snapshot
@@ -189,7 +192,7 @@ func registerEvidence(api huma.API, opts Options) {
 			if !selected {
 				continue
 			}
-			current, confirmErr := partitionedCatalogSource(ctx, opts.Evidence, native, repo, in.Domain)
+			current, confirmErr := partitionedCatalogSource(ctx, opts.Evidence, native, repo, in.Domain, opts.EvidenceExtractorVersions[in.Domain])
 			if errors.Is(confirmErr, store.ErrNotFound) && initial == nil {
 				continue
 			}

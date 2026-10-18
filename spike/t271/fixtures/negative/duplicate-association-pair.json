@@ -1,0 +1,68 @@
+{
+  "format": "phebs-document-schema-v1",
+  "source_class": "authored",
+  "tables": [
+    {
+      "name": "T",
+      "fields": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ],
+          "type": "opaque:string"
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ]
+        }
+      ],
+      "indexes": [],
+      "associations": [
+        {
+          "name": "self",
+          "target": "T",
+          "fields": [
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            },
+            {
+              "source": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ],
+              "target": [
+                {
+                  "kind": "field",
+                  "name": "id"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "views": []
+}

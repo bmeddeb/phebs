@@ -19349,6 +19349,25 @@ remain pending, and Caller Map/Atlas's bounded-test amendment does not waive the
 old/replacement source, concurrent publication and bounded combined read cost;
 release requires its own result even when both Caller Maps are released.
 
+**T50.3a · Preserve committed consumer units through direct caller leaves**
+*(2026-10-18, Ben-routed Mac handoff)* — T50.3's first bounded product attempt
+returned the five expected source sites but all five lacked unit attribution:
+`consumer_unit_projection_unavailable`. Preserve that failure. Materialize one
+bounded protocol-neutral unit member from the exact candidate's committed
+`unit-snapshot.json`, bind admitted caller paths to source OIDs and supply the
+existing direct-scan unit callback. Reuse existing normalization/IDs/ambiguity/
+line precedence; no read-side join or inferred unit authority. Resolver packs
+advance1.1.1→1.2.0 so old unit-less catalogs cannot remain current. Both worker
+and reader early-return paths must reject old packs before cold-open/reconcile.
+Missing input remains explicit; malformed/duplicate/conflicting/unsupported or
+over-bound input refuses atomically. Preserve historical generic artifact,
+archive/restore and lifecycle custody. AC: source OID, shared protocol member,
+focused repository overlay, absent/ambiguous/per-line/malformed and overflow
+controls; warm old-pack refusal at both boundaries; bounded normal/race and
+historical custody tests; direct/independent source and steady-cost review.
+T50.3 quality/operating/publication-transition qualification remains separate
+and must use new prospectively bound exact inputs after this fix integrates.
+
 ## Epic 51 · Protobuf field-reference production readiness
 
 **T51.1 · Exact field/SCIP identity and independent quality** — depend on
@@ -19382,6 +19401,18 @@ registration, operating/SLO or release claim follows. T51.2 is the next leaf.
 **T51.2 · Stable field reader registration and source fencing** — isolate
 this recipe from the provisional proto umbrella; preserve exact committed
 source, declaration, SCIP, authorization and gap identity.
+
+**T51.2 implementation result (2026-10-18, Ben-routed Mac handoff).** The
+signed field-only recipe selects distinct `1.4.0-released.1` and the T51.1 public
+committed input recipe. Pre-emission metadata/header/descriptor/source checks,
+legacy/native expected-version fences, raw reads, direct/HTTP/MCP/citation and
+archived proofs are implemented. Public authority bytes stay compatible; no
+automatic declaration-to-SCIP bridge or unrelated consumer/Impact/Thrift release
+is added. Mixed explicit provisional surfaces remain available, while foreign
+neutral identities exclude stable protobuf reads. Normal/race, two bounded
+joined real-store integrations, vet/pinned lint and source/cost review pass.
+Original T51.1 evidence stays exact. T51.3 still owns operating/production
+signature promotion; this implementation alone activates no unsigned pack.
 
 **T51.3 · Measured field-reference promotion** — satisfy the common bar and
 publish exact supported generators, input formats, operating bounds and expiry.
@@ -21223,6 +21254,30 @@ either snapshot live or current; the retained README demonstrates the
 locate-table → inspect-key/field → copy-citation ticket workflow and the
 missing-artifact checklist; no private dialect, adapter, CQL parser,
 production code path, pack registration, or runtime claim is added.
+
+**T27.1 input checkpoint (2026-10-18, Ben-routed Mac handoff).** Before any
+reader implementation/run, the required README decision table, schema, bounds,
+119 cases, 534 declaration labels and complete 61-row public derivation are
+frozen. Lead independently reviewed source/semantics and verified all public
+literal CQL/JSON spans and the 142-file/915,928-byte inventory. Preregistration
+SHA256 is `7ef0df8be38bc51494e63a57173c120c5ed2e98b832822251bdb9f6ca9555b3b`.
+The owning PLAN adopts identity, graph, refusal, comparison and cost decisions;
+no production reader/pack or measurement PASS exists at this checkpoint.
+Implementation and the two fresh-state bounded passes follow this review.
+
+**T27.1 implementation result (2026-10-18).** The isolated bounded reader,
+canonical catalog and explicit comparison pass both frozen 119-case runs:
+14 accepted, 104 atomic refusals, one missing-export state; 534 exact
+facts/citations per pass and the complete 61-row public derivation agree.
+Canonical output is byte-identical. The results README demonstrates the
+required ticket/citation/missing-artifact workflow and measured cost limits.
+Independent implementation review's JSON-tail-whitespace defect is corrected
+and re-reviewed clean; eight supplemental controls stay outside the original
+population, whose bytes and measurements remain exact. Focused normal/race,
+vet and pinned lint pass. GO is limited to neutral fixture contract conformance;
+there is no independent accuracy, live/vendor schema, production registration,
+CQL parser, runtime, release or scale claim. Detailed original/corrected source
+and review records live under `spike/t271/results/`.
 
 ## Epic 28 · Redis keyspace evidence *(drafted 2026-07-27 · unscheduled — spike first)*
 
