@@ -160,7 +160,10 @@ var packRecipes = map[string]func() []extract.Extractor{
 var releasedClaims = map[string]string{
 	wireCompatibilityPackID: "check_wire_compatibility@buf-" + compat.Version + "-" + compat.Policy,
 	kafkaTopicsPackID:       "list_kafka_topics@" + api.TopicInventorySchemaVersion, // T57.3
+	callerComparisonPackID:  "compare_operation_callers@" + api.CallerComparisonSchemaVersion,
 }
+
+const callerComparisonPackID = "phebs.grpc.caller.comparison"
 
 // kafkaProducerPackID is the T55.1 site-coverage card
 // (docs/KAFKA_PRODUCER_QUALITY_PROTOCOL.md): the kafka-producer plane alone.
