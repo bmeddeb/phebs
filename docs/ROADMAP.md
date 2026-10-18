@@ -149,6 +149,11 @@ typedef code and closed gRPC syntactic lookup are not new work dependencies.
 No historical failure is relabelled and no main merge, release or scale execution
 authorization is inferred. Expensive host tests run serially.
 
+**T27.1 inputs (2026-10-18):** the document-schema spike has independently
+reviewed, digest-pinned labels and public derivation before reader code or
+execution. The bounded reader and two deterministic passes follow; this is
+isolated spike preparation, with no production pack or live-schema claim.
+
 **Caller Map / Atlas sequencing override (2026-10-17, Ben-directed):** bounded
 integration tests suffice for these products and their release bindings. The
 owning amendment at the start of Epic 47 in [BACKLOG.md](./BACKLOG.md) supersedes

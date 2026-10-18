@@ -1,0 +1,1174 @@
+{
+  "authorship": "Fixture-author declarative labels, frozen before any reader implementation or run; not independent extraction-accuracy evidence.",
+  "fixture_sha256": "1af876153b154d1e88a17a33a0bb8ecefc2a5791fbc17b96971a315b3cb33a59",
+  "declarations": [
+    {
+      "kind": "DECLARES_SCHEMA_SET",
+      "pointer": "",
+      "owner": null,
+      "meaning": {
+        "format": "phebs-document-schema-v1",
+        "source_class": "authored"
+      },
+      "span": {
+        "start": 0,
+        "end": 10336,
+        "sha256": "cc325a784a86989edfcc57803179ac7e44b3c861d6327b658b012cae5219d4f1"
+      }
+    },
+    {
+      "kind": "DECLARES_TABLE",
+      "pointer": "/tables/0",
+      "owner": {
+        "kind": "table",
+        "name": "Orders"
+      },
+      "meaning": {
+        "name": "Orders",
+        "partition_key_state": "declared"
+      },
+      "span": {
+        "start": 90,
+        "end": 6124,
+        "sha256": "7274fbfe6b62b0fc3d491efb3c203965a6b818aa4d620c1dbf379110a50a32d1"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/0/fields/0",
+      "owner": {
+        "kind": "table",
+        "name": "Orders"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "tenant"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 142,
+        "end": 310,
+        "sha256": "ddb0b4d1dc5dc5ec854726495ea1de64c83b0de09f9c6f67aea2726a38ae3dd6"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/0/fields/1",
+      "owner": {
+        "kind": "table",
+        "name": "Orders"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 320,
+        "end": 484,
+        "sha256": "c0c1dc41f863f03f0e95ed41c591f6f1ad3ac7bf6aac527e9c4df4f6bbb0b66d"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/0/fields/2",
+      "owner": {
+        "kind": "table",
+        "name": "Orders"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "owner"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 494,
+        "end": 661,
+        "sha256": "739bf3cf34d7dfd055083e291771e33e9837844bd19c8e638960ed7097939853"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/0/fields/3",
+      "owner": {
+        "kind": "table",
+        "name": "Orders"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "[]"
+          }
+        ],
+        "type": "money<12,4> (opaque; no conversion)"
+      },
+      "span": {
+        "start": 671,
+        "end": 857,
+        "sha256": "94d3aec8c5aca87a60e298aeb46a40588abcbf94207770a73ffb577f61aface2"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/0/fields/4",
+      "owner": {
+        "kind": "table",
+        "name": "Orders"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "payload"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 867,
+        "end": 1036,
+        "sha256": "dbdba35dc183f1c3aff353664a24ed1dda0a3dbfd465f07f4314b3f79b961f34"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/0/fields/5",
+      "owner": {
+        "kind": "table",
+        "name": "Orders"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "value"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 1046,
+        "end": 1213,
+        "sha256": "11a66122056a81fdd3e3bb2bab64757853bb7fa20632429eb14e394272d85c40"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/0/fields/6",
+      "owner": {
+        "kind": "table",
+        "name": "Orders"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "payload"
+          },
+          {
+            "kind": "field",
+            "name": "children"
+          }
+        ],
+        "type": "source:list<opaque-object>"
+      },
+      "span": {
+        "start": 1223,
+        "end": 1498,
+        "sha256": "c4e1e2f6ed527879d7d652e44e8d4a1450ae617c02c224e8e81b72128ee56143"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/0/fields/7",
+      "owner": {
+        "kind": "table",
+        "name": "Orders"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "payload"
+          },
+          {
+            "kind": "field",
+            "name": "children"
+          },
+          {
+            "kind": "array_element"
+          }
+        ],
+        "type": "opaque-object"
+      },
+      "span": {
+        "start": 1508,
+        "end": 1837,
+        "sha256": "d80203f94cf90ed397e1a0d6497640f545fc58504f92be0df15add47ac62960e"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/0/fields/8",
+      "owner": {
+        "kind": "table",
+        "name": "Orders"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "payload"
+          },
+          {
+            "kind": "field",
+            "name": "children"
+          },
+          {
+            "kind": "array_element"
+          },
+          {
+            "kind": "field",
+            "name": "tags"
+          }
+        ],
+        "type": "source:map<opaque-key,opaque-object>"
+      },
+      "span": {
+        "start": 1847,
+        "end": 2288,
+        "sha256": "ddb5deb3bb0497fe85d5ada2d640a4e0c9276343ea3c5b6931a8881152eeba9a"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/0/fields/9",
+      "owner": {
+        "kind": "table",
+        "name": "Orders"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "payload"
+          },
+          {
+            "kind": "field",
+            "name": "children"
+          },
+          {
+            "kind": "array_element"
+          },
+          {
+            "kind": "field",
+            "name": "tags"
+          },
+          {
+            "kind": "map_value"
+          }
+        ],
+        "type": "opaque-object"
+      },
+      "span": {
+        "start": 2298,
+        "end": 2779,
+        "sha256": "3e0d27f0ead8200d8553ee44d4f60954a366ea35e1667cac176c2629df31c779"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/0/fields/10",
+      "owner": {
+        "kind": "table",
+        "name": "Orders"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "payload"
+          },
+          {
+            "kind": "field",
+            "name": "children"
+          },
+          {
+            "kind": "array_element"
+          },
+          {
+            "kind": "field",
+            "name": "tags"
+          },
+          {
+            "kind": "map_value"
+          },
+          {
+            "kind": "field",
+            "name": "[]"
+          }
+        ],
+        "type": "主张<opaque/UTF-8>"
+      },
+      "span": {
+        "start": 2789,
+        "end": 3364,
+        "sha256": "97116b2c90d4943133dc03f0f945150d9bc96cc2f70e133cecf03b20c679bb92"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/tables/0/primary_key/0",
+      "owner": {
+        "kind": "table",
+        "name": "Orders"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "tenant"
+          }
+        ],
+        "position": 0,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 3405,
+        "end": 3538,
+        "sha256": "7daadf0485bb1dff2a1bc393fc7deb3db4225c7af4937dc1ff668d4dcee94644"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/tables/0/primary_key/1",
+      "owner": {
+        "kind": "table",
+        "name": "Orders"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "position": 1,
+        "direction": "desc"
+      },
+      "span": {
+        "start": 3548,
+        "end": 3708,
+        "sha256": "3e835b54a7d3c91938ef9715019fdc4dcda16b58f08535742e1f8dc63bfef818"
+      }
+    },
+    {
+      "kind": "DECLARES_PARTITION_KEY",
+      "pointer": "/tables/0/partition_key/0",
+      "owner": {
+        "kind": "table",
+        "name": "Orders"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "tenant"
+          }
+        ],
+        "position": 0
+      },
+      "span": {
+        "start": 6017,
+        "end": 6110,
+        "sha256": "8439430f23f5c5989e8561d048fc2c5431dc00594bd3eb441989ad1787f6eecb"
+      }
+    },
+    {
+      "kind": "DECLARES_INDEX",
+      "pointer": "/tables/0/indexes/0",
+      "owner": {
+        "kind": "table",
+        "name": "Orders"
+      },
+      "meaning": {
+        "name": "prefix-owner",
+        "kind": "opaque::ordered-prefix",
+        "position": 0
+      },
+      "span": {
+        "start": 3745,
+        "end": 4336,
+        "sha256": "09a58fe8511969c16bae1b830aa4aba2d76e5e61ecf4ed739e32b694bf9b4175"
+      }
+    },
+    {
+      "kind": "DECLARES_INDEX_COLUMN",
+      "pointer": "/tables/0/indexes/0/columns/0",
+      "owner": {
+        "kind": "table",
+        "name": "Orders",
+        "index": "prefix-owner"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "owner"
+          }
+        ],
+        "direction": "desc",
+        "prefix_length": 4,
+        "prefix_unit": "source-codepoints",
+        "position": 0
+      },
+      "span": {
+        "start": 3860,
+        "end": 4139,
+        "sha256": "3024a47780546269d9bd2a8a1225bb0a0a0224b53e39be3bdcdb3ad63395fa9f"
+      }
+    },
+    {
+      "kind": "DECLARES_INDEX_COLUMN",
+      "pointer": "/tables/0/indexes/0/columns/1",
+      "owner": {
+        "kind": "table",
+        "name": "Orders",
+        "index": "prefix-owner"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "tenant"
+          }
+        ],
+        "direction": "asc",
+        "position": 1
+      },
+      "span": {
+        "start": 4153,
+        "end": 4314,
+        "sha256": "fbe8e8568ae736dcfda010b2fac731bdc3ec993b07a7a0883c9517b86f32bc9a"
+      }
+    },
+    {
+      "kind": "DECLARES_INDEX",
+      "pointer": "/tables/0/indexes/1",
+      "owner": {
+        "kind": "table",
+        "name": "Orders"
+      },
+      "meaning": {
+        "name": "ID-only",
+        "kind": "sparse/custom β",
+        "position": 1
+      },
+      "span": {
+        "start": 4346,
+        "end": 4629,
+        "sha256": "45661a58c5090fd2cfba8c96ee95e68a13ce0d4323205154e935d27f5441882c"
+      }
+    },
+    {
+      "kind": "DECLARES_INDEX_COLUMN",
+      "pointer": "/tables/0/indexes/1/columns/0",
+      "owner": {
+        "kind": "table",
+        "name": "Orders",
+        "index": "ID-only"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "direction": "asc",
+        "position": 0
+      },
+      "span": {
+        "start": 4450,
+        "end": 4607,
+        "sha256": "b0e199227a894f37974eab6c27d7ba66ff06ca42535afd3b019e333e36aaf977"
+      }
+    },
+    {
+      "kind": "DECLARES_ASSOCIATION",
+      "pointer": "/tables/0/associations/0",
+      "owner": {
+        "kind": "table",
+        "name": "Orders"
+      },
+      "meaning": {
+        "name": "purchaser",
+        "target": "客户"
+      },
+      "span": {
+        "start": 4671,
+        "end": 5101,
+        "sha256": "f8930d3e3bb3522095e42c05712694a7fed354a92da84ae4a4f008ca46670081"
+      }
+    },
+    {
+      "kind": "DECLARES_ASSOCIATION_FIELD",
+      "pointer": "/tables/0/associations/0/fields/0",
+      "owner": {
+        "kind": "table",
+        "name": "Orders",
+        "association": "purchaser"
+      },
+      "meaning": {
+        "source": [
+          {
+            "kind": "field",
+            "name": "owner"
+          }
+        ],
+        "target": [
+          {
+            "kind": "field",
+            "name": "账号"
+          }
+        ]
+      },
+      "span": {
+        "start": 4768,
+        "end": 5079,
+        "sha256": "4c1204846ad77b3f88a4db59c4a1c042c5b60178c720fa7b418b2c1122be61b1"
+      }
+    },
+    {
+      "kind": "DECLARES_ASSOCIATION",
+      "pointer": "/tables/0/associations/1",
+      "owner": {
+        "kind": "table",
+        "name": "Orders"
+      },
+      "meaning": {
+        "name": "billing",
+        "target": "客户"
+      },
+      "span": {
+        "start": 5111,
+        "end": 5539,
+        "sha256": "c0f81d3449cafc3c8f0ad0881d20288336bb187a21dd6ac274f72093b893149d"
+      }
+    },
+    {
+      "kind": "DECLARES_ASSOCIATION_FIELD",
+      "pointer": "/tables/0/associations/1/fields/0",
+      "owner": {
+        "kind": "table",
+        "name": "Orders",
+        "association": "billing"
+      },
+      "meaning": {
+        "source": [
+          {
+            "kind": "field",
+            "name": "owner"
+          }
+        ],
+        "target": [
+          {
+            "kind": "field",
+            "name": "账号"
+          }
+        ]
+      },
+      "span": {
+        "start": 5206,
+        "end": 5517,
+        "sha256": "4c1204846ad77b3f88a4db59c4a1c042c5b60178c720fa7b418b2c1122be61b1"
+      }
+    },
+    {
+      "kind": "DECLARES_ASSOCIATION",
+      "pointer": "/tables/0/associations/2",
+      "owner": {
+        "kind": "table",
+        "name": "Orders"
+      },
+      "meaning": {
+        "name": "self-parent",
+        "target": "Orders"
+      },
+      "span": {
+        "start": 5549,
+        "end": 5974,
+        "sha256": "19eb63a78fc2254fd1ad6aa825ce46ee98160b55252277f7975d135f05286355"
+      }
+    },
+    {
+      "kind": "DECLARES_ASSOCIATION_FIELD",
+      "pointer": "/tables/0/associations/2/fields/0",
+      "owner": {
+        "kind": "table",
+        "name": "Orders",
+        "association": "self-parent"
+      },
+      "meaning": {
+        "source": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "target": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ]
+      },
+      "span": {
+        "start": 5648,
+        "end": 5952,
+        "sha256": "8a3c13c0b319db52223280a1715ce83fa938eba6c146e350221c2dca547c17a6"
+      }
+    },
+    {
+      "kind": "DECLARES_TABLE",
+      "pointer": "/tables/1",
+      "owner": {
+        "kind": "table",
+        "name": "客户"
+      },
+      "meaning": {
+        "name": "客户",
+        "partition_key_state": "undeclared"
+      },
+      "span": {
+        "start": 6130,
+        "end": 7206,
+        "sha256": "66dc9e3a986b2a846db7f0fee6a57185b5d502376168bfba417648c9baa38d66"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/1/fields/0",
+      "owner": {
+        "kind": "table",
+        "name": "客户"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "账号"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 6182,
+        "end": 6350,
+        "sha256": "733224102d7db7986559b98e71347168670895d53e51ff48978257617de3d0bd"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/1/fields/1",
+      "owner": {
+        "kind": "table",
+        "name": "客户"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "姓名"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 6360,
+        "end": 6528,
+        "sha256": "d5c2fc6d443cd38fecaba1b578b8cb00db9a993bbe3a4113d848b4699ce89785"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/tables/1/primary_key/0",
+      "owner": {
+        "kind": "table",
+        "name": "客户"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "账号"
+          }
+        ],
+        "position": 0,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 6569,
+        "end": 6702,
+        "sha256": "4c5aeed9f23ff2c146a145499402df4ee85148b21d1f6591e2c6b5e74d52bd0a"
+      }
+    },
+    {
+      "kind": "DECLARES_ASSOCIATION",
+      "pointer": "/tables/1/associations/0",
+      "owner": {
+        "kind": "table",
+        "name": "客户"
+      },
+      "meaning": {
+        "name": "orders",
+        "target": "Orders"
+      },
+      "span": {
+        "start": 6765,
+        "end": 7192,
+        "sha256": "16964f048c1e609543d27a7c05d7416dc97f5f808bac9faa5744225ec5af9d72"
+      }
+    },
+    {
+      "kind": "DECLARES_ASSOCIATION_FIELD",
+      "pointer": "/tables/1/associations/0/fields/0",
+      "owner": {
+        "kind": "table",
+        "name": "客户",
+        "association": "orders"
+      },
+      "meaning": {
+        "source": [
+          {
+            "kind": "field",
+            "name": "账号"
+          }
+        ],
+        "target": [
+          {
+            "kind": "field",
+            "name": "owner"
+          }
+        ]
+      },
+      "span": {
+        "start": 6859,
+        "end": 7170,
+        "sha256": "620c752e75fb58a8c0d991a7a42210a2a9de530ba6bd601fba228afaa639b24c"
+      }
+    },
+    {
+      "kind": "DECLARES_TABLE",
+      "pointer": "/tables/2",
+      "owner": {
+        "kind": "table",
+        "name": "孤立"
+      },
+      "meaning": {
+        "name": "孤立",
+        "partition_key_state": "undeclared"
+      },
+      "span": {
+        "start": 7212,
+        "end": 7659,
+        "sha256": "9422352647edddc8d79f23ab71408e59ba3d6b67552848b86261733f3707bf84"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/2/fields/0",
+      "owner": {
+        "kind": "table",
+        "name": "孤立"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 7264,
+        "end": 7428,
+        "sha256": "c0c1dc41f863f03f0e95ed41c591f6f1ad3ac7bf6aac527e9c4df4f6bbb0b66d"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/tables/2/primary_key/0",
+      "owner": {
+        "kind": "table",
+        "name": "孤立"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "position": 0,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 7469,
+        "end": 7598,
+        "sha256": "640ade14bb4afc774d88363ad6ec6e8347b86cc995f205711da02fe499327c92"
+      }
+    },
+    {
+      "kind": "DECLARES_VIEW",
+      "pointer": "/views/0",
+      "owner": {
+        "kind": "view",
+        "name": "Summary"
+      },
+      "meaning": {
+        "name": "Summary",
+        "partition_key_state": "declared"
+      },
+      "span": {
+        "start": 7682,
+        "end": 9710,
+        "sha256": "10e0de99c52fbf1e8fe8dd10062ded23adceed74cd6008ef8bb6b875948f9592"
+      }
+    },
+    {
+      "kind": "DECLARES_VIEW_FIELD",
+      "pointer": "/views/0/fields/0",
+      "owner": {
+        "kind": "view",
+        "name": "Summary"
+      },
+      "meaning": {
+        "name": "customer",
+        "type": "opaque:string",
+        "position": 0
+      },
+      "span": {
+        "start": 7735,
+        "end": 8320,
+        "sha256": "8966db26541b67349d7dfdfd4a25bf1cef39e3c3d84168965ac6f52d1a7c0dae"
+      }
+    },
+    {
+      "kind": "DECLARES_VIEW_SOURCE",
+      "pointer": "/views/0/fields/0/sources/0",
+      "owner": {
+        "kind": "view",
+        "name": "Summary",
+        "field": "customer"
+      },
+      "meaning": {
+        "kind": "table",
+        "name": "Orders",
+        "path": [
+          {
+            "kind": "field",
+            "name": "owner"
+          }
+        ]
+      },
+      "span": {
+        "start": 7837,
+        "end": 8060,
+        "sha256": "5001e90a576305d194783a0735924a6cc50971bff98c75fe8dac78895f8516f6"
+      }
+    },
+    {
+      "kind": "DECLARES_VIEW_SOURCE",
+      "pointer": "/views/0/fields/0/sources/1",
+      "owner": {
+        "kind": "view",
+        "name": "Summary",
+        "field": "customer"
+      },
+      "meaning": {
+        "kind": "table",
+        "name": "客户",
+        "path": [
+          {
+            "kind": "field",
+            "name": "账号"
+          }
+        ]
+      },
+      "span": {
+        "start": 8074,
+        "end": 8298,
+        "sha256": "77789c7d3f1a111e9decee1b4cb26c800fde1f8a0034568d4aec25474d6ffec2"
+      }
+    },
+    {
+      "kind": "DECLARES_VIEW_FIELD",
+      "pointer": "/views/0/fields/1",
+      "owner": {
+        "kind": "view",
+        "name": "Summary"
+      },
+      "meaning": {
+        "name": "[]",
+        "type": "opaque-declared-output",
+        "position": 1
+      },
+      "span": {
+        "start": 8330,
+        "end": 8433,
+        "sha256": "4a5c6b5120feb7571773c8004f77e5bb263f6559a060f1bb5011321b10c2ee4a"
+      }
+    },
+    {
+      "kind": "DECLARES_VIEW_FIELD",
+      "pointer": "/views/0/fields/2",
+      "owner": {
+        "kind": "view",
+        "name": "Summary"
+      },
+      "meaning": {
+        "name": "流水",
+        "type": "not-a-vendor-scalar",
+        "position": 2
+      },
+      "span": {
+        "start": 8443,
+        "end": 8791,
+        "sha256": "8cf9755240d45e9ae02ed2fd28fbdd9b218b7086c8bd1379d8b19522e906be27"
+      }
+    },
+    {
+      "kind": "DECLARES_VIEW_SOURCE",
+      "pointer": "/views/0/fields/2/sources/0",
+      "owner": {
+        "kind": "view",
+        "name": "Summary",
+        "field": "流水"
+      },
+      "meaning": {
+        "kind": "table",
+        "name": "Orders",
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ]
+      },
+      "span": {
+        "start": 8549,
+        "end": 8769,
+        "sha256": "eafef49870e248d46ccf1518e40094e401749a18c88ebafd885a688a408deec8"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/views/0/primary_key/0",
+      "owner": {
+        "kind": "view",
+        "name": "Summary"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "customer"
+          }
+        ],
+        "position": 0,
+        "direction": "desc"
+      },
+      "span": {
+        "start": 8832,
+        "end": 8998,
+        "sha256": "08b19958b536d0252f9cc49fc6e67ebad7037076951008ea1e3cd145c579cd8b"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/views/0/primary_key/1",
+      "owner": {
+        "kind": "view",
+        "name": "Summary"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "流水"
+          }
+        ],
+        "position": 1,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 9008,
+        "end": 9141,
+        "sha256": "20386b04531197928aebf110960c26c6b5a038a9138cb7a2aca545f5dd9c434c"
+      }
+    },
+    {
+      "kind": "DECLARES_PARTITION_KEY",
+      "pointer": "/views/0/partition_key/0",
+      "owner": {
+        "kind": "view",
+        "name": "Summary"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "customer"
+          }
+        ],
+        "position": 0
+      },
+      "span": {
+        "start": 9601,
+        "end": 9696,
+        "sha256": "e792d2b0c28ffbfd476f94ef5cc3f8da47f47a66ecc775c65c62baaec7d0e1c3"
+      }
+    },
+    {
+      "kind": "DECLARES_INDEX",
+      "pointer": "/views/0/indexes/0",
+      "owner": {
+        "kind": "view",
+        "name": "Summary"
+      },
+      "meaning": {
+        "name": "view-prefix",
+        "kind": "opaque:view-index",
+        "position": 0
+      },
+      "span": {
+        "start": 9178,
+        "end": 9558,
+        "sha256": "6fb94d2ce12d2b5aca2a480ec0faa80236943ee91128199a2d67d318871b0ab2"
+      }
+    },
+    {
+      "kind": "DECLARES_INDEX_COLUMN",
+      "pointer": "/views/0/indexes/0/columns/0",
+      "owner": {
+        "kind": "view",
+        "name": "Summary",
+        "index": "view-prefix"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "customer"
+          }
+        ],
+        "prefix_length": 2,
+        "prefix_unit": "source-defined-unit",
+        "direction": "asc",
+        "position": 0
+      },
+      "span": {
+        "start": 9287,
+        "end": 9536,
+        "sha256": "f49ae63b50e3e26944b588438cd9d1d2c9e1936707a5df3e28a8e02723614972"
+      }
+    },
+    {
+      "kind": "DECLARES_VIEW",
+      "pointer": "/views/1",
+      "owner": {
+        "kind": "view",
+        "name": "SummarySubset"
+      },
+      "meaning": {
+        "name": "SummarySubset",
+        "partition_key_state": "undeclared"
+      },
+      "span": {
+        "start": 9716,
+        "end": 10330,
+        "sha256": "381501ba51dda70701695dfe8a3f45afd82ff106699be00aae3914b8deaa4946"
+      }
+    },
+    {
+      "kind": "DECLARES_VIEW_FIELD",
+      "pointer": "/views/1/fields/0",
+      "owner": {
+        "kind": "view",
+        "name": "SummarySubset"
+      },
+      "meaning": {
+        "name": "owner",
+        "type": "opaque:string",
+        "position": 0
+      },
+      "span": {
+        "start": 9775,
+        "end": 10122,
+        "sha256": "b1a3768f39f966088079527d510e7d2d56e7234afcb03293e4ca552b8df50e05"
+      }
+    },
+    {
+      "kind": "DECLARES_VIEW_SOURCE",
+      "pointer": "/views/1/fields/0/sources/0",
+      "owner": {
+        "kind": "view",
+        "name": "SummarySubset",
+        "field": "owner"
+      },
+      "meaning": {
+        "kind": "view",
+        "name": "Summary",
+        "path": [
+          {
+            "kind": "field",
+            "name": "customer"
+          }
+        ]
+      },
+      "span": {
+        "start": 9874,
+        "end": 10100,
+        "sha256": "7b074b703078c69b8c1d0f089257790ce86ecd34d47d0632f4baa16e4d8f54ed"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/views/1/primary_key/0",
+      "owner": {
+        "kind": "view",
+        "name": "SummarySubset"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "owner"
+          }
+        ],
+        "position": 0,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 10163,
+        "end": 10295,
+        "sha256": "0d66165580339379ca281124c461a9141b31ede0eea59b5b7238fb4ccdb497eb"
+      }
+    }
+  ]
+}

@@ -21026,6 +21026,16 @@ locate-table → inspect-key/field → copy-citation ticket workflow and the
 missing-artifact checklist; no private dialect, adapter, CQL parser,
 production code path, pack registration, or runtime claim is added.
 
+**T27.1 input checkpoint (2026-10-18, Ben-routed Mac handoff).** Before any
+reader implementation/run, the required README decision table, schema, bounds,
+119 cases, 534 declaration labels and complete 61-row public derivation are
+frozen. Lead independently reviewed source/semantics and verified all public
+literal CQL/JSON spans and the 142-file/915,928-byte inventory. Preregistration
+SHA256 is `7ef0df8be38bc51494e63a57173c120c5ed2e98b832822251bdb9f6ca9555b3b`.
+The owning PLAN adopts identity, graph, refusal, comparison and cost decisions;
+no production reader/pack or measurement PASS exists at this checkpoint.
+Implementation and the two fresh-state bounded passes follow this review.
+
 ## Epic 28 · Redis keyspace evidence *(drafted 2026-07-27 · unscheduled — spike first)*
 
 A general Redis keyspace model is out of scope; deterministic Redis

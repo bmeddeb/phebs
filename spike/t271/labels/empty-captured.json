@@ -1,0 +1,20 @@
+{
+  "authorship": "Fixture-author declarative labels, frozen before any reader implementation or run; not independent extraction-accuracy evidence.",
+  "fixture_sha256": "766e77f2909eb8a0d3058f21c72de4f0c30abc887a198117b09a419175806171",
+  "declarations": [
+    {
+      "kind": "DECLARES_SCHEMA_SET",
+      "pointer": "",
+      "owner": null,
+      "meaning": {
+        "format": "phebs-document-schema-v1",
+        "source_class": "captured"
+      },
+      "span": {
+        "start": 0,
+        "end": 103,
+        "sha256": "a6e7d518f79ce4a59c8831ca340ef2c61ba5f1e55a5e8f596228ded436e69d5c"
+      }
+    }
+  ]
+}

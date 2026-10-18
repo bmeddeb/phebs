@@ -12176,3 +12176,49 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   its own acceptance, tests, cost review and PR. Main merges, production signing,
   host entitlement and large execution remain subject to their existing explicit
   authorization. This planning change adds no runtime work or resource cost.
+
+- **2026-10-18 — T27.1 document-schema spike preregistration (Ben's
+  all-ticket Mac handoff).** Adopt the frozen decision table in the required
+  `spike/t271/README.md` as the isolated experiment's input/output contract;
+  production never imports this spike. One strict UTF-8 JSON blob admits only
+  `phebs-document-schema-v1` and mandatory authored/captured source class.
+  Schema-set lineage is exact repository/clean manifest path/format; owner kind
+  and exact name plus structured typed field paths establish stable identity.
+  Commit/blob/citation/source class are provenance; comparison requires equal
+  lineage and source class. Preserve exact Unicode, literal punctuation and
+  array-element/map-value path kinds. Opaque types/index kinds/prefix units
+  imply no vendor semantics; positive signed-64 prefix metadata controls no work.
+  Primary/index columns are ordered with explicit/default ascending direction;
+  partition paths are direction-free primary prefixes, absence undeclared.
+  Distinct table/view output namespaces, view-owned indexes and exact typed
+  source edges are mandatory. Association cycles are legal untraversed edges;
+  view dependencies must be acyclic. Duplicates, unknown/payload properties,
+  malformed Unicode/shape/context, unresolved references, cycles and limits
+  refuse atomically before any output. The frozen precedence fixes one typed
+  source-free refusal. Missing input is a separate request-export workflow.
+  Every declaration/edge cites its complete exact UTF-8 JSON value and bound
+  source tuple; stable semantic facts exclude citation/provenance churn from
+  explicit snapshot comparison. No live-schema/runtime/current-shape claim.
+
+  Freeze phebs-only bounds at 64KiB input, depth32, 16 tables/views, 128 fields
+  per owner, eight path/key/column/pair positions, 128-byte names and 256-byte
+  types/context, 16 indexes/source references, 64 associations, 256 preflight
+  declarations and 192 complete published facts/citations. These are refusal
+  limits, never vendor or measured operating limits. Before reader code or any
+  reader run, lead review verified the 142-file/915,928-byte inventory and all
+  61 public CQL/neutral JSON span round trips against the permitted pinned
+  Apache source; the hand-derived census is 3 tables, 29 fields, 1 view and its
+  6 outputs/source edges, plus schema/key declarations. Synthetic 119-case
+  labels (14 accepted, 104 atomic refusals, 1 missing; 534 declaration labels)
+  and explicit comparison labels predate implementation. Preregistration digest
+  is `7ef0df8be38bc51494e63a57173c120c5ed2e98b832822251bdb9f6ca9555b3b`.
+  Required README/schema/bounds/derivation evidence owns detailed contract
+  bytes; there is no separate design document. This checkpoints inputs only,
+  not implementation acceptance or independent extraction accuracy.
+
+  Expected cost is one bounded byte/token/structure pass, bounded identity maps
+  and at most a 16-node view DAG; association cycles are never recursively read.
+  Two serial fresh-state passes will compare complete facts/citations/catalog/
+  refusal/comparison outputs and report actual bytes/timing/allocation if
+  measured. No source repository scan, runtime query/startup/sync/retry/no-op,
+  publication, lock, cache, database/network, persistent worker or child changes.

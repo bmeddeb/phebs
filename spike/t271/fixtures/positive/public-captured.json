@@ -1,0 +1,562 @@
+{
+  "format": "phebs-document-schema-v1",
+  "source_class": "captured",
+  "tables": [
+    {
+      "name": "reservation.reservations_by_hotel_date",
+      "fields": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "hotel_id"
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "start_date"
+            }
+          ],
+          "type": "date"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "end_date"
+            }
+          ],
+          "type": "date"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "room_number"
+            }
+          ],
+          "type": "smallint"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "confirm_number"
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "guest_id"
+            }
+          ],
+          "type": "uuid"
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "hotel_id"
+            }
+          ]
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "start_date"
+            }
+          ]
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "room_number"
+            }
+          ]
+        }
+      ],
+      "indexes": [],
+      "associations": [],
+      "partition_key": [
+        [
+          {
+            "kind": "field",
+            "name": "hotel_id"
+          }
+        ],
+        [
+          {
+            "kind": "field",
+            "name": "start_date"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "reservation.reservations_by_guest",
+      "fields": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "guest_last_name"
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "hotel_id"
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "start_date"
+            }
+          ],
+          "type": "date"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "end_date"
+            }
+          ],
+          "type": "date"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "room_number"
+            }
+          ],
+          "type": "smallint"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "confirm_number"
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "guest_id"
+            }
+          ],
+          "type": "uuid"
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "guest_last_name"
+            }
+          ]
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "hotel_id"
+            }
+          ]
+        }
+      ],
+      "indexes": [],
+      "associations": [],
+      "partition_key": [
+        [
+          {
+            "kind": "field",
+            "name": "guest_last_name"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "reservation.guests",
+      "fields": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "guest_id"
+            }
+          ],
+          "type": "uuid"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "first_name"
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "last_name"
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "title"
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "emails"
+            }
+          ],
+          "type": "set<text>"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "phone_numbers"
+            }
+          ],
+          "type": "list<text>"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "addresses"
+            }
+          ],
+          "type": "map<text, frozen<address>>"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "confirm_number"
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "emails"
+            },
+            {
+              "kind": "array_element"
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "phone_numbers"
+            },
+            {
+              "kind": "array_element"
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "addresses"
+            },
+            {
+              "kind": "map_value"
+            }
+          ],
+          "type": "frozen<address>"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "addresses"
+            },
+            {
+              "kind": "map_value"
+            },
+            {
+              "kind": "field",
+              "name": "street"
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "addresses"
+            },
+            {
+              "kind": "map_value"
+            },
+            {
+              "kind": "field",
+              "name": "city"
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "addresses"
+            },
+            {
+              "kind": "map_value"
+            },
+            {
+              "kind": "field",
+              "name": "state_or_province"
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "addresses"
+            },
+            {
+              "kind": "map_value"
+            },
+            {
+              "kind": "field",
+              "name": "postal_code"
+            }
+          ],
+          "type": "text"
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "addresses"
+            },
+            {
+              "kind": "map_value"
+            },
+            {
+              "kind": "field",
+              "name": "country"
+            }
+          ],
+          "type": "text"
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "guest_id"
+            }
+          ]
+        }
+      ],
+      "indexes": [],
+      "associations": [],
+      "partition_key": [
+        [
+          {
+            "kind": "field",
+            "name": "guest_id"
+          }
+        ]
+      ]
+    }
+  ],
+  "views": [
+    {
+      "name": "reservation.reservations_by_confirmation",
+      "fields": [
+        {
+          "name": "hotel_id",
+          "type": "text",
+          "sources": [
+            {
+              "kind": "table",
+              "name": "reservation.reservations_by_hotel_date",
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "hotel_id"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "start_date",
+          "type": "date",
+          "sources": [
+            {
+              "kind": "table",
+              "name": "reservation.reservations_by_hotel_date",
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "start_date"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "end_date",
+          "type": "date",
+          "sources": [
+            {
+              "kind": "table",
+              "name": "reservation.reservations_by_hotel_date",
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "end_date"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "room_number",
+          "type": "smallint",
+          "sources": [
+            {
+              "kind": "table",
+              "name": "reservation.reservations_by_hotel_date",
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "room_number"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "confirm_number",
+          "type": "text",
+          "sources": [
+            {
+              "kind": "table",
+              "name": "reservation.reservations_by_hotel_date",
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "confirm_number"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "guest_id",
+          "type": "uuid",
+          "sources": [
+            {
+              "kind": "table",
+              "name": "reservation.reservations_by_hotel_date",
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "guest_id"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "confirm_number"
+            }
+          ]
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "hotel_id"
+            }
+          ]
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "start_date"
+            }
+          ]
+        },
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "room_number"
+            }
+          ]
+        }
+      ],
+      "indexes": [],
+      "partition_key": [
+        [
+          {
+            "kind": "field",
+            "name": "confirm_number"
+          }
+        ]
+      ]
+    }
+  ]
+}
