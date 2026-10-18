@@ -9382,3 +9382,12 @@ ordinary exact rebuild. A disposable draft signer/load check grants no
 production trust. Before production signing, review final approved bytes and
 derive their exact census with the binary being released; any byte change
 invalidates the draft census. The existing production key remains unavailable.
+
+Operation Impact retains its own direct finite source-quality/ordinary-runtime
+result and unsigned release artifacts at `spike/t543/success/` and
+`spike/t543/release/`. Other report sections remain unavailable. Source/row
+authority does not promote syntax evidence into runtime impact or completeness.
+Native responsive journey frames and four separate neutral canonical frames
+have distinct scopes; no Noble or legacy-v2 equivalence is implied. Drafts
+grant no production activation; final approved bytes must be re-censused and
+signed/verified with the released binary when the existing key is available.
