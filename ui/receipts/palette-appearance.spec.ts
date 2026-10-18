@@ -267,7 +267,7 @@ for (const theme of THEMES) for (const width of widths) {
     await focusCopy()
     await page.keyboard.press('Shift+Tab')
     await expect(token).toBeFocused()
-    await page.keyboard.press('Meta+a')
+    await page.keyboard.press('ControlOrMeta+a')
     expect(await token.evaluate(node => [(node as HTMLInputElement).selectionStart, (node as HTMLInputElement).selectionEnd])).toEqual([0, syntheticToken.length])
     const privateFailure = 'private clipboard diagnostic must not render'
     await page.evaluate(message => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: () => Promise.reject(new Error(message)) } }), privateFailure)
