@@ -90,7 +90,7 @@ func EvaluateLinuxMemoryAdmission(observation LinuxMemoryObservation, contract L
 		return LinuxMemoryCalculation{}, fmt.Errorf("sum Linux memory reservation and headroom: %w", err)
 	}
 	if required > capacity || required > available {
-		return LinuxMemoryCalculation{}, errors.New("Linux memory reservation and headroom exceed supplied capacity or available slack")
+		return LinuxMemoryCalculation{}, errors.New("linux memory reservation and headroom exceed supplied capacity or available slack")
 	}
 	return LinuxMemoryCalculation{
 		EffectiveCapacityBytes: capacity, AvailableBytes: available,
@@ -103,20 +103,20 @@ func linuxMemoryCapacity(observation LinuxMemoryObservation) (int64, int64, erro
 	if observation.PhysicalBytes <= 0 || observation.AvailableBytes < 0 ||
 		observation.AvailableBytes > observation.PhysicalBytes || !observation.CgroupAncestryComplete ||
 		len(observation.CgroupAncestors) == 0 || len(observation.CgroupAncestors) > maxLinuxMemoryAncestors {
-		return 0, 0, errors.New("Linux memory observation is incomplete or invalid")
+		return 0, 0, errors.New("linux memory observation is incomplete or invalid")
 	}
 	capacity, available := observation.PhysicalBytes, observation.AvailableBytes
 	identities := make(map[string]struct{}, len(observation.CgroupAncestors))
 	parent := ""
 	for _, ancestor := range observation.CgroupAncestors {
 		if !digestIdentity(ancestor.Identity) {
-			return 0, 0, errors.New("Linux memory cgroup identity is invalid")
+			return 0, 0, errors.New("linux memory cgroup identity is invalid")
 		}
 		if _, duplicate := identities[ancestor.Identity]; duplicate || ancestor.ParentIdentity != parent ||
 			ancestor.CurrentBytes < 0 || ancestor.LimitBytes < 0 ||
 			ancestor.Unlimited && ancestor.LimitBytes != 0 ||
 			!ancestor.Unlimited && (ancestor.LimitBytes == 0 || ancestor.CurrentBytes > ancestor.LimitBytes) {
-			return 0, 0, errors.New("Linux memory cgroup ancestry or limit is invalid")
+			return 0, 0, errors.New("linux memory cgroup ancestry or limit is invalid")
 		}
 		identities[ancestor.Identity] = struct{}{}
 		parent = ancestor.Identity
@@ -131,7 +131,7 @@ func linuxMemoryCapacity(observation LinuxMemoryObservation) (int64, int64, erro
 func linuxMemoryReservations(contract LinuxMemoryContract) (int64, error) {
 	if contract.HostHeadroomBytes <= 0 || len(contract.RequiredScopes) == 0 ||
 		len(contract.RequiredScopes) > maxLinuxMemoryScopes || len(contract.Reservations) != len(contract.RequiredScopes) {
-		return 0, errors.New("Linux memory reservation census or headroom is invalid")
+		return 0, errors.New("linux memory reservation census or headroom is invalid")
 	}
 	names := make(map[string]struct{}, len(contract.RequiredScopes))
 	previous := ""
@@ -141,12 +141,12 @@ func linuxMemoryReservations(contract LinuxMemoryContract) (int64, error) {
 		if !validLinuxMemoryScope(scope.Name) || scope.Name <= previous || scope.MaximumConcurrent <= 0 ||
 			reservation.Scope != scope.Name || reservation.MaximumConcurrent != scope.MaximumConcurrent ||
 			reservation.BytesPerInstance <= 0 {
-			return 0, errors.New("Linux memory scope or matching reservation is invalid")
+			return 0, errors.New("linux memory scope or matching reservation is invalid")
 		}
 		for offset := 0; offset < len(scope.Name); offset++ {
 			if scope.Name[offset] == '/' {
 				if _, overlaps := names[scope.Name[:offset]]; overlaps {
-					return 0, errors.New("Linux memory reservation scopes overlap")
+					return 0, errors.New("linux memory reservation scopes overlap")
 				}
 			}
 		}
