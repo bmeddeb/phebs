@@ -53,12 +53,12 @@ machine — otherwise macOS and Ubuntu CI can never share one baseline set.
       kind: operator
       id: t335-demo
       version: v1
-      path: "$(pwd)/docs/fixtures/t33.5-service-directory/t335-service-catalog.json"
+      path: "$PHEBS_T335_SERVICE_CATALOG"
     "local$PHEBS_T344_SERVICE_SEARCH_REPO":
       kind: operator
       id: t344-demo
       version: v1
-      path: "$(pwd)/docs/fixtures/t34.4-service-search/t344-service-catalog.json"
+      path: "$PHEBS_T344_SERVICE_SEARCH_CATALOG"
   experimental:
     provisional_proto_extraction: true
     provisional_kafka_extraction: true
@@ -101,11 +101,16 @@ machine — otherwise macOS and Ubuntu CI can never share one baseline set.
   bundles and their retained catalogs. It clears demo injectors so this
   presentation cohort stays independent of the default focused pipeline.
   Strict real-cohort readiness remains mandatory. The staging script copies
-  the bundles into the fixed root; ordinary `make dev` / `make dev-api` honor the pre-set
+  the bundles and operator catalogs into the fixed root; ordinary `make dev` / `make dev-api` honor the pre-set
   `PHEBS_T307_NEUTRAL_SERVICE_REPO` / `PHEBS_T344_SERVICE_SEARCH_REPO`
   paths and fall back to the checkout-relative defaults when unset.
   Production repository-identity semantics (`internal/sync` RepoName) are
   unchanged — only the receipt environment's input to that rule is fixed.
+  The exported `PHEBS_T335_SERVICE_CATALOG` and
+  `PHEBS_T344_SERVICE_SEARCH_CATALOG` paths also bind operator catalog
+  `SourcePath` independently of the checkout. Production generation identity
+  still includes that path; identical catalog bytes in different checkout
+  paths must not be treated as the same source authority.
 
 - **Staging safety contract.** The fixture root is a shared `/tmp` path,
   so the staging script validates before every write: the root must be a
@@ -114,10 +119,10 @@ machine — otherwise macOS and Ubuntu CI can never share one baseline set.
   Existing roots are never chmodded automatically; inspect an old root and
   stop its receipt runs before changing its permissions. Each destination
   is refused if it is a symlink, a non-regular file, or not owned by the current user. A
-  staged bundle whose bytes already match the source is reused untouched.
-  A staged bundle whose bytes **differ** is refused, never truncated or
+  staged fixture whose bytes already match the source is reused untouched.
+  A staged fixture whose bytes **differ** is refused, never truncated or
   overwritten in place — remove it by hand if restaging is intended. New
-  bundles publish through the POSIX `link` utility from a complete temp file
+  fixtures publish through the POSIX `link` utility from a complete temp file
   in that directory: publication never replaces an existing name or follows
   a destination symlink. A simultaneous publisher revalidates and reuses an
   identical winner, or refuses differing bytes. No lock or stale-lock recovery
@@ -187,7 +192,7 @@ pinned or masked — the fixture root is only the repository-identity piece:
 | Settings lifecycle values (disk pressure, capacity badge) | precise `[data-volatile="lifecycle"]` / status masks |
 | Physical search generation in the service-authority drawer | Require the exact field and SHA-256 shape, then mask only its value; label, geometry, revision and all other authority values remain compared |
 | Indexing transitions ("Indexing…", "Cloning") | `awaitAbsent` terminal-state guards; `Failed` is terminal and fails the capture |
-| Fixture content drift | the t307 bundle pin (`T307_COMMIT`) binds the content |
+| Fixture content drift | the t307 bundle pin (`T307_COMMIT`) binds the content; operator catalogs stage at the same fixed root, preserving their generation's `SourcePath` binding across checkouts |
 | Markdown-preview surface | page-scoped synthetic fixture (`receipt-fixture/markdown-preview`), never instance state |
 
 ## T45.8b managed-index workflow fixtures
@@ -307,3 +312,17 @@ four native mobile checks preserve the existing static layout. No PNG changes.
 The recorded 135/135 canonical matrices remain bound to their original source,
 and the new cases are native functional evidence. Cross-checkout catalog-path
 portability remains a separate inherited receipt-environment follow-up.
+
+T57R.3 closes the portability follow-up by staging both operator catalogs beside the two
+bundles and selects their exported fixed paths in local and CI receipt boots.
+The production `SourcePath` generation binding stays intact. Native captures
+pass 18/18 across the ticket worktree and a disposable second fixture root;
+canonical authoring passes 9/9 and fresh second-root comparison passes 33/33.
+Both real catalog authorities match exactly across all four fresh instances.
+The eight reviewed authority images update Catalog generation text; all other
+118 PNGs remain byte-identical. Existing masks, strict cohort checks, zero
+retries and 0.1% tolerance are unchanged. The bounded comparison covers the
+service search/directory and relationship routes; the complete 143-case
+matrix was not rerun. [Portability provenance](./t57r3.json)
+records hashes, local pinned-renderer qualification, retained diagnostics,
+cost and teardown. No hosted Actions or production release claim follows.

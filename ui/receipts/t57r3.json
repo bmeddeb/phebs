@@ -1,0 +1,310 @@
+{
+  "ticket": "T57R.3",
+  "date": "2026-10-18",
+  "base_commit": "cfc4c504ec8abbf250472cf73b56bd157508fc1b",
+  "source_files": {
+    ".github/workflows/ci.yml": "sha256:4166c0d8282206be91643c7dbdfd3cb53531bf9c700869cde821a7bbe7d8e115",
+    "scripts/ci_contract_test.go": "sha256:5bfd1038e4c55174bfff48ca68666320a5faa1186e632a350fa9c44d4b2356ba",
+    "scripts/stage-receipt-fixtures.sh": "sha256:d6874fa112915f10b8df8c062ecc1bcc7b2c3101b4378e57d8982662ff65d071",
+    "scripts/test-stage-receipt-fixtures.sh": "sha256:8fef8d63d7dd321d2265e2217d4d7d9a8d492b239ce1b81ceb5f447fc4970665",
+    "ui/receipts/fixtureRoot.ts": "sha256:829736963eb51e2392c3d70ce4306af820ba140a373e5caa6fd08c9a3624e2fe",
+    "ui/playwright.config.ts": "sha256:47901432b6d9174b8b7b1af08e90133fd56240fbb822f9fc9c76df3722ae97e1",
+    "ui/receipts/auth.setup.ts": "sha256:cffb4c9ff9080d4906c35be94b3b6180415fb60f44f8190a211e1112461a970b",
+    "ui/receipts/receipts.spec.ts": "sha256:bcf4827b2f9e068ceb8f675c7338496a076c4439e28bef867eb1cc3aaae473d7",
+    "ui/receipts/routes.ts": "sha256:436d039be8e3a9730d5aea16655a0fd48225292ad74e3350e324340e3457329a"
+  },
+  "environment": {
+    "image": "mcr.microsoft.com/playwright:v1.62.1-noble@sha256:c091b21d9fae78c76e85cd4356431e9b018402f172a214fc7d7a5e9a7e29d8ac",
+    "inspected_repo_digest_matches": true,
+    "playwright": "1.62.1",
+    "chromium": "151.0.7922.34",
+    "node": "24.18.0",
+    "renderer": "local VZ/Rosetta; 2 CPUs, 6 GiB VM; 4 GiB container cap",
+    "backend": "Go 1.26.5 darwin/arm64; SurrealDB 3.2.0; embedded unchanged UI",
+    "browser_plugin": "not available; repository Playwright flow",
+    "hosted_ci": false,
+    "retries": 0,
+    "max_diff_pixel_ratio": 0.001,
+    "network_downloads": 0
+  },
+  "cross_root_method": {
+    "root_a": "ticket worktree",
+    "root_b": "disposable second checkout-fixture root containing unchanged bundles/catalogs and a copy of the staging helper",
+    "same_binary_and_ui": true,
+    "fresh_data_per_run": true,
+    "serial_ordinary_servers": 4,
+    "setup": "Unchanged exact two-repository, settled-job, current-service and complete orders-api relationship checks before each run",
+    "staged_catalogs": [
+      "/tmp/phebs-receipts-fixtures/t335-service-catalog.json",
+      "/tmp/phebs-receipts-fixtures/t344-service-catalog.json"
+    ],
+    "production_source_path_binding": "unchanged",
+    "observed_authorities_identical": true,
+    "observed_authorities": {
+      "local/tmp/phebs-receipts-fixtures/t307-neutral-service.bundle": {
+        "catalog_digest": "sha256:8d82e26cbebafa3062791389818e29b537ddcac8b4f789b27cc3cca82badcd84",
+        "catalog_generation": "sha256:9f140703f0ec1986eec26608ca20ab864e2a08dcff0dc2a3355682371de37720",
+        "catalog_control_revision": 1,
+        "catalog_service_count": 5
+      },
+      "local/tmp/phebs-receipts-fixtures/t323-neutral-corpus.bundle": {
+        "catalog_digest": "sha256:09e585dee6f6e59d40aabe8318eef96e6177576b2fbcb636f84f2003d34eab63",
+        "catalog_generation": "sha256:769e4fb05633a98948429736e071f46ad56678be0db16c64d10a12234f4cac06",
+        "catalog_control_revision": 1,
+        "catalog_service_count": 5
+      }
+    }
+  },
+  "canonical_author": {
+    "startTime": "2026-10-18T04:11:55.264Z",
+    "duration": 80613.086,
+    "expected": 9,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "canonical_fresh_second_root_comparison": {
+    "startTime": "2026-10-18T04:13:25.199Z",
+    "duration": 134993.655,
+    "expected": 33,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "native_first_root": {
+    "startTime": "2026-10-18T04:04:05.880Z",
+    "duration": 79191.894,
+    "expected": 9,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "native_fresh_second_root_comparison": {
+    "startTime": "2026-10-18T04:05:33.355Z",
+    "duration": 66712.361,
+    "expected": 9,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "canonical_scope": [
+    "search-service",
+    "search-service-authority",
+    "search-service-390",
+    "search-service-authority-390",
+    "service-directory",
+    "relationship-explorer",
+    "relationship-explorer-service",
+    "relationship-explorer-service-expanded"
+  ],
+  "review": {
+    "images_changed": 8,
+    "other_images_byte_identical": 118,
+    "png_byte_delta": -1139,
+    "classification": "Eight expected Catalog generation text updates from the fixed operator SourcePath. Source revision, labels, layout, caveats and masks preserved. Desktop additionally has <=8/255 channel raster variation in unchanged digest glyphs; mobile differences are confined to the Catalog value. All eight before/after crops visually reviewed.",
+    "images": [
+      {
+        "name": "search-service-authority--dark--comfortable.png",
+        "before": "205433740b6613550b94140cb29315abb1f07ee3c821ffced8078be8c11a3711",
+        "after": "412d1374423e01e322666e4aa89a5fb4c7341e3fa62aaa30369a42edab5a1a42",
+        "size_before": 126391,
+        "size_after": 126531,
+        "significant_difference_bbox": [
+          920,
+          268,
+          1255,
+          293
+        ],
+        "raw_difference_bbox": [
+          919,
+          268,
+          1256,
+          444
+        ],
+        "max_channel_difference_outside_catalog": 8
+      },
+      {
+        "name": "search-service-authority--dark--dense.png",
+        "before": "8ad7e6b4964d5efeaa0f231368b4d2d787beea0e94b7a318766eaa00cbb2373f",
+        "after": "72c630984a3487123a5773db9f1d546e66915b723e3b098f6318e235543908c6",
+        "size_before": 126372,
+        "size_after": 126513,
+        "significant_difference_bbox": [
+          920,
+          268,
+          1255,
+          293
+        ],
+        "raw_difference_bbox": [
+          919,
+          268,
+          1256,
+          444
+        ],
+        "max_channel_difference_outside_catalog": 8
+      },
+      {
+        "name": "search-service-authority--light--comfortable.png",
+        "before": "3352da70665ca078c4c0ae88c774c10c13ff26fd7cfbeb5bc9217e37a63460b8",
+        "after": "b62a4f135f57e70602a6a0fc3e2e2e6d779926304d966fdfb17eac2d02fd8d67",
+        "size_before": 123091,
+        "size_after": 123204,
+        "significant_difference_bbox": [
+          920,
+          268,
+          1255,
+          293
+        ],
+        "raw_difference_bbox": [
+          919,
+          268,
+          1256,
+          443
+        ],
+        "max_channel_difference_outside_catalog": 8
+      },
+      {
+        "name": "search-service-authority--light--dense.png",
+        "before": "c7317287ceda8fdcea90d41510b63a8681f932edc4d539e97f8a03dc6acbdda7",
+        "after": "e4d95c6f4b46f96c2829e9d76718c28feb5841a629acaa15ae92a2068acbedce",
+        "size_before": 123079,
+        "size_after": 123191,
+        "significant_difference_bbox": [
+          920,
+          268,
+          1255,
+          293
+        ],
+        "raw_difference_bbox": [
+          919,
+          268,
+          1256,
+          443
+        ],
+        "max_channel_difference_outside_catalog": 8
+      },
+      {
+        "name": "search-service-authority-390--dark--comfortable.png",
+        "before": "25fb26b5a444fc4c20c4528dc7e342a6b53fe2376d978a9f04a1812be0e64ccd",
+        "after": "1f59f24e100ac126a2ce5b4d9a331215366a930bf83742746ee9f7697478df34",
+        "size_before": 52484,
+        "size_after": 52134,
+        "significant_difference_bbox": [
+          140,
+          303,
+          365,
+          328
+        ],
+        "raw_difference_bbox": [
+          140,
+          303,
+          365,
+          328
+        ],
+        "max_channel_difference_outside_catalog": 0
+      },
+      {
+        "name": "search-service-authority-390--dark--dense.png",
+        "before": "61e550a461306fcd5ff846504542d4fd5264dc346dcfa4b544670085e94f49d0",
+        "after": "bb7e237a9bed594fee373e9712ec44311b30939d746fe80509845b2743db9480",
+        "size_before": 52446,
+        "size_after": 52098,
+        "significant_difference_bbox": [
+          140,
+          303,
+          365,
+          328
+        ],
+        "raw_difference_bbox": [
+          140,
+          303,
+          365,
+          328
+        ],
+        "max_channel_difference_outside_catalog": 0
+      },
+      {
+        "name": "search-service-authority-390--light--comfortable.png",
+        "before": "db78128f94697e7055600570cdbc658fc42d8ef5c323198113c26193484dd37b",
+        "after": "70fae1adf298100760597442331b86648ad4b78cdd1677541486cdf1fc7f68da",
+        "size_before": 52806,
+        "size_after": 52332,
+        "significant_difference_bbox": [
+          140,
+          303,
+          365,
+          328
+        ],
+        "raw_difference_bbox": [
+          140,
+          303,
+          365,
+          328
+        ],
+        "max_channel_difference_outside_catalog": 0
+      },
+      {
+        "name": "search-service-authority-390--light--dense.png",
+        "before": "4ce4eb70dfe05a1ec3bdcf9fcc317cb1b780af6ce4135224f4c07a4a8b4401f6",
+        "after": "73f5e33f4faac7d01a1cc3d9fc2e23b7b56f98c6f62577f000587d1697fcbf03",
+        "size_before": 52762,
+        "size_after": 52289,
+        "significant_difference_bbox": [
+          140,
+          303,
+          365,
+          328
+        ],
+        "raw_difference_bbox": [
+          140,
+          303,
+          365,
+          328
+        ],
+        "max_channel_difference_outside_catalog": 0
+      }
+    ]
+  },
+  "gates": {
+    "staging_shell": "27/27 passed; one existing wrong-owner root setup skipped because it requires uid0",
+    "fixture_root_unit_tests": 7,
+    "scripts_package": "pass, count=1, timeout 2m, 4.794s",
+    "pure_servicecatalog_package": "pass, count=1, timeout 1m, 0.416s",
+    "scripts_vet": "pass",
+    "scripts_pinned_lint": "v2.12.2; zero issues",
+    "fixture_comment_lint": "pass",
+    "shell_syntax": "pass",
+    "docs_check": "pass",
+    "glossary": "pass",
+    "whitespace": "pass"
+  },
+  "retained_diagnostics": [
+    "Two native harness preflights stopped before capture: initial config needed 0600 and an anchored grep matched no full titles;both corrected without product/oracle changes.",
+    "Initial canonical SSH multiplex command returned after registering a tunnel; it was explicitly canceled and replaced with a dedicated tunnel.",
+    "Initial 33-case canonical diagnostic hit its 120s outer cap after expected Catalog text mismatches and passing controls;retained as incomplete. Final author selected only 8 affected images;fresh complete 33-case comparison passed within210s.",
+    "A manifest-inspect CLI refused digest verification;actual cached image RepoDigest and runtime versions were inspected and matched the retained pin. No alternate image or download used."
+  ],
+  "steady_state_cost": {
+    "requests_queries_sync_ticks": "unchanged",
+    "production_startup_restart_retry_noop_publication": "unchanged",
+    "locks_cache_concurrency": "unchanged; no new lock, cache, worker or child",
+    "receipt_preparation": "Two additional bounded cmp reads totaling 6202 bytes. First staging adds two create-only files totaling 6202 bytes, one existing serial temp-copy/chmod/link sequence per file. Reuse preserves bytes, mode and mtime. No repeated corpus/shard read or hash.",
+    "browser_matrix": "scoped 33 tests;full 143-case matrix not rerun",
+    "javascript_delta_bytes": 0
+  },
+  "teardown": {
+    "all_four_servers_exit": 0,
+    "surreal_children_joined": true,
+    "ssh_tunnel_closed": true,
+    "renderer_container_removed": true,
+    "renderer_vm_stopped": true,
+    "previous_docker_context_restored": true,
+    "temporary_credentials_removed": true
+  },
+  "limits": [
+    "Local canonical renderer evidence, not hosted Actions.",
+    "Full screenshot, Go, native and ceremony suites not rerun.",
+    "No validation-label, release-promotion, production-signing or scale claim."
+  ],
+  "execution_local_date": "2026-10-17"
+}

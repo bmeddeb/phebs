@@ -1,8 +1,7 @@
 #!/bin/sh
-# Stage the neutral-demo receipt bundles at the fixed, documented receipt
-# fixture root so the dev instance derives the same `local/...` repository
-# identities on every machine (macOS checkout, Ubuntu CI, or any other
-# checkout location).
+# Stage receipt bundles and operator catalogs at the fixed receipt root.
+# Bundle paths bind repository names; catalog SourcePath binds generations.
+# Both inputs must be identical across checkout locations.
 #
 # The fixture root is defined once, in ui/receipts/fixtureRoot.ts
 # (RECEIPT_FIXTURE_ROOT); this script extracts it from there and fails
@@ -16,9 +15,9 @@
 #   * a missing root is created with mkdir -m 700, then re-validated;
 #   * each destination is inspected BEFORE writing: symlinks, non-regular
 #     files, and files not owned by the current user are refused;
-#   * a staged bundle whose bytes already match the source is reused
+#   * a staged fixture whose bytes already match the source is reused
 #     untouched (content, mtime, and mode preserved);
-#   * a staged bundle whose bytes differ is refused, never truncated or
+#   * a staged fixture whose bytes differ is refused, never truncated or
 #     overwritten in place -- remove it by hand if restaging is intended;
 #   * first publication hard-links a complete temp file into place without
 #     replacement; a losing publisher revalidates the winner's bytes.
@@ -51,12 +50,16 @@ esac
 
 t307_src="$repo_root/docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle"
 t323_src="$repo_root/spike/t323/t323-neutral-corpus.bundle"
+t335_catalog_src="$repo_root/docs/fixtures/t33.5-service-directory/t335-service-catalog.json"
+t344_catalog_src="$repo_root/docs/fixtures/t34.4-service-search/t344-service-catalog.json"
 t307_dst="$fixture_root/t307-neutral-service.bundle"
 t323_dst="$fixture_root/t323-neutral-corpus.bundle"
+t335_catalog_dst="$fixture_root/t335-service-catalog.json"
+t344_catalog_dst="$fixture_root/t344-service-catalog.json"
 
-for src in "$t307_src" "$t323_src"; do
+for src in "$t307_src" "$t323_src" "$t335_catalog_src" "$t344_catalog_src"; do
   if [ ! -f "$src" ]; then
-    printf 'stage-receipt-fixtures: missing fixture bundle %s\n' "$src" >&2
+    printf 'stage-receipt-fixtures: missing fixture %s\n' "$src" >&2
     exit 1
   fi
 done
@@ -127,7 +130,7 @@ reuse_existing() {
       refuse "destination $dst is not owned by uid $(id -u)"
     fi
     if cmp -s "$src" "$dst"; then
-      printf 'stage-receipt-fixtures: reusing identical staged bundle %s\n' "$dst" >&2
+      printf 'stage-receipt-fixtures: reusing identical staged fixture %s\n' "$dst" >&2
       return 0
     fi
     refuse "destination $dst exists with different bytes; refusing to overwrite in place (remove it first to restage)"
@@ -159,13 +162,17 @@ stage_one() {
 
 stage_one "$t307_src" "$t307_dst"
 stage_one "$t323_src" "$t323_dst"
+stage_one "$t335_catalog_src" "$t335_catalog_dst"
+stage_one "$t344_catalog_src" "$t344_catalog_dst"
 
 if [ "$mode" = "--env" ]; then
   # Stdout carries ONLY the export lines in --env mode: every diagnostic
-  # above goes to stderr so eval sees exactly the two assignments.
+  # above goes to stderr so eval sees exactly the four assignments.
   printf 'export PHEBS_T307_NEUTRAL_SERVICE_REPO=%s\n' "'$t307_dst'"
   printf 'export PHEBS_T344_SERVICE_SEARCH_REPO=%s\n' "'$t323_dst'"
+  printf 'export PHEBS_T335_SERVICE_CATALOG=%s\n' "'$t335_catalog_dst'"
+  printf 'export PHEBS_T344_SERVICE_SEARCH_CATALOG=%s\n' "'$t344_catalog_dst'"
 else
   printf 'staged receipt fixtures at %s\n' "$fixture_root"
-  printf '  %s\n  %s\n' "$t307_dst" "$t323_dst"
+  printf '  %s\n' "$t307_dst" "$t323_dst" "$t335_catalog_dst" "$t344_catalog_dst"
 fi

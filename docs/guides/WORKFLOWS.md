@@ -307,6 +307,12 @@ not ask for a typed operation string. The comparison is available only with
 the authenticated `contract-caller-comparison` capability and remains under
 the existing **Impact** navigation item.
 
+T50.1 freezes the first prospective supported comparison contract over two
+complete protobuf/gRPC Caller Map endpoint identities and the T47.5 committed
+input recipe. This contract and its neutral gold tests do not activate ordinary
+comparison: separate T50.2 admission and T50.3 validation/signing remain pending.
+Caller Map or standalone Atlas admission alone enables no comparison claim.
+
 T30.6k moves this route onto the same exact caller engine as Caller Map. Both
 endpoint repositories are authorized before either caller pointer,
 publication directory, or repository-specific cache is read. For a current

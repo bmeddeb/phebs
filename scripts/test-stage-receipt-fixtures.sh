@@ -91,13 +91,17 @@ skel="$(make_skeleton d6-success)"
 set -- $(staged_paths "$skel"); t307_dst="$1"; t323_dst="$2"; fakeroot="$3"
 out="$work/d6-success.out"
 if sh "$skel/scripts/stage-receipt-fixtures.sh" --env >"$out" 2>"$work/d6-success.err"; then
-  if [ "$(wc -l <"$out")" -eq 2 ] \
+  if [ "$(wc -l <"$out")" -eq 4 ] \
     && grep -qx "export PHEBS_T307_NEUTRAL_SERVICE_REPO='$t307_dst'" "$out" \
     && grep -qx "export PHEBS_T344_SERVICE_SEARCH_REPO='$t323_dst'" "$out" \
+    && grep -qx "export PHEBS_T335_SERVICE_CATALOG='$fakeroot/t335-service-catalog.json'" "$out" \
+    && grep -qx "export PHEBS_T344_SERVICE_SEARCH_CATALOG='$fakeroot/t344-service-catalog.json'" "$out" \
     && [ -f "$t307_dst" ] && [ -f "$t323_dst" ] \
     && cmp -s "$repo_root/docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle" "$t307_dst" \
     && cmp -s "$repo_root/spike/t323/t323-neutral-corpus.bundle" "$t323_dst" \
     && mode644 "$t307_dst" && mode644 "$t323_dst" \
+    && cmp -s "$repo_root/docs/fixtures/t33.5-service-directory/t335-service-catalog.json" "$fakeroot/t335-service-catalog.json" \
+    && cmp -s "$repo_root/docs/fixtures/t34.4-service-search/t344-service-catalog.json" "$fakeroot/t344-service-catalog.json" \
     && no_temp_leftovers "$fakeroot"; then
     ok "d6: successful staging returns 0 and emits the expected exports"
   else
@@ -372,6 +376,8 @@ for race_kind in identical differing; do
     # Replace only this skeleton's docs symlink, never the real fixture.
     rm "$second/docs"
     mkdir -p "$second/docs/fixtures/t30.7-neutral-service"
+    cp -R "$repo_root/docs/fixtures/t33.5-service-directory" "$second/docs/fixtures/"
+    cp -R "$repo_root/docs/fixtures/t34.4-service-search" "$second/docs/fixtures/"
     printf 'different bundle bytes\n' >"$second/docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle"
   fi
   STAGING_TEST_BARRIER="$first/barrier" PATH="$work/bin:$PATH" \
@@ -433,6 +439,55 @@ for collision in directory symlink; do
     bad "r4: $collision publication collision refuses without traversal" "ready=$ready exit=$collision_rc"
   fi
 done
+
+# Catalogs use the same create-only publication and safety checks as bundles.
+for catalog in t335 t344; do
+  skel="$(make_skeleton "catalog-$catalog")"
+  fakeroot="$skel/fixture-root"
+  sh "$skel/scripts/stage-receipt-fixtures.sh" --env >"$skel/initial" 2>"$skel/err"
+  target="$fakeroot/$catalog-service-catalog.json"
+  touch -t 200001010000 "$target" "$skel/reference"
+  if sh "$skel/scripts/stage-receipt-fixtures.sh" --env >"$skel/reused" 2>"$skel/err" \
+    && same_mtime "$target" "$skel/reference" && cmp -s "$skel/initial" "$skel/reused"; then
+    ok "catalog: $catalog identical bytes and exports reused untouched"
+  else
+    bad "catalog: $catalog identical bytes and exports reused untouched" "restage changed input"
+  fi
+  printf 'different catalog bytes\n' >"$target"
+  cp "$target" "$skel/tampered"
+  if sh "$skel/scripts/stage-receipt-fixtures.sh" --env >"$skel/out" 2>"$skel/err"; then
+    bad "catalog: $catalog differing bytes refused" "staging overwrote catalog"
+  elif cmp -s "$target" "$skel/tampered" && [ ! -s "$skel/out" ]; then
+    ok "catalog: $catalog differing bytes refused without exports"
+  else
+    bad "catalog: $catalog differing bytes refused" "catalog changed or partial exports emitted"
+  fi
+  rm "$target"
+  ln -s "$skel/tampered" "$target"
+  if sh "$skel/scripts/stage-receipt-fixtures.sh" --env >"$skel/out" 2>"$skel/err"; then
+    bad "catalog: $catalog symlink refused" "staging followed catalog symlink"
+  elif [ -L "$target" ] && [ "$(cat "$skel/tampered")" = 'different catalog bytes' ] \
+    && [ ! -s "$skel/out" ]; then
+    ok "catalog: $catalog symlink refused without exports"
+  else
+    bad "catalog: $catalog symlink refused" "target changed or partial exports emitted"
+  fi
+done
+
+# Two checkout roots must select identical operator SourcePath inputs.
+first="$(make_skeleton checkout-a)"
+second="$(make_skeleton checkout-b)"
+shared_root="$first/fixture-root"
+printf "export const RECEIPT_FIXTURE_ROOT = '%s'\n" "$shared_root" >"$second/ui/receipts/fixtureRoot.ts"
+if sh "$first/scripts/stage-receipt-fixtures.sh" --env >"$first/out" 2>"$first/err" \
+  && sh "$second/scripts/stage-receipt-fixtures.sh" --env >"$second/out" 2>"$second/err" \
+  && cmp -s "$first/out" "$second/out" \
+  && grep -qx "export PHEBS_T335_SERVICE_CATALOG='$shared_root/t335-service-catalog.json'" "$second/out" \
+  && grep -qx "export PHEBS_T344_SERVICE_SEARCH_CATALOG='$shared_root/t344-service-catalog.json'" "$second/out"; then
+  ok "catalog: two checkout roots select identical source paths and bytes"
+else
+  bad "catalog: two checkout roots select identical source paths and bytes" "staging depends on checkout root"
+fi
 
 # ---------------------------------------------------------------- summary
 printf '%s\n' "----"

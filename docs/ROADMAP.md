@@ -149,6 +149,27 @@ typedef code and closed gRPC syntactic lookup are not new work dependencies.
 No historical failure is relabelled and no main merge, release or scale execution
 authorization is inferred. Expensive host tests run serially.
 
+**T49.3 protobuf binding (2026-10-17):** the independent declaration-only
+recipe and signed-selection isolation tests are implementation-complete on
+its ticket branch. Normal/race, exact-root/authz/paging, MCP and static checks
+pass. T49.4 qualification/UI closure follows; production signing still waits
+for the existing key. Caller Map discovery and Thrift remain independently
+admitted, and labels remain optional.
+
+**T50.1 comparison preparation (2026-10-17):** freeze the supported two-endpoint
+protobuf/gRPC comparison contract and exact source/unit gold cases on the
+implemented T47 identity. T50.2 stable admission can follow those reviewed
+interfaces without waiting for the production key. T50.3 still owns its direct
+quality/operating result and signature; no comparison release follows from
+Caller Map/Atlas's integration-test amendment.
+
+**T57R.3 portability closure (2026-10-18):** fixed staged operator catalog
+paths preserve production SourcePath authority across checkouts. Native and
+scoped canonical comparisons pass across fresh roots; eight reviewed Catalog
+values update and 118 baselines remain untouched. This closes the portability
+implementation on its branch; full-matrix history and production signing retain
+their recorded scope.
+
 **T27.1 inputs (2026-10-18):** the document-schema spike has independently
 reviewed, digest-pinned labels and public derivation before reader code or
 execution. The bounded reader and two deterministic passes follow; this is

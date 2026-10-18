@@ -3572,6 +3572,11 @@ protobuf-only and byte-stable; the protocol-neutral `find_field_references`
 route, impact report, and MCP tool fan out across every registered
 field-reference domain whose number rules admit the requested identity.
 
+Screenshot receipt setup stages both neutral bundles and operator catalogs at
+the fixed fixture root. Use the checked `--env` output and receipt configuration
+in [the receipt guide](../../ui/receipts/README.md); checkout-relative operator
+paths change catalog generation authority and cannot share those baselines.
+
 ### Pack-release status, expiry, suspension and rollback (T48.4)
 
 Build signable binaries with `make release-binary` from a clean checkout or

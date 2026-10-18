@@ -140,16 +140,16 @@ func newServeExtractionRegistries(d *serveDeps) error {
 }
 
 // packRecipes is the fixed in-tree registry mapping a canonical pack identifier
-// to the extractors that implement it. A recipe is bound only in the same change
-// that records its first passing released record (the Kafka producer, T55.3);
-// binding one earlier would assert an authorization that does not exist. There is no
+// to the extractors that implement it. Binding a recipe permits a verified
+// signed selection to admit it; registration alone admits nothing. There is no
 // third-party loader and no manifest-selected arbitrary code: a released pack
 // resolves only through this exact in-tree registry.
 var packRecipes = map[string]func() []extract.Extractor{
-	callerMapPackID:      callerMapRecipe,      // T47.5: signed integration-test qualification
-	kafkaProducerPackID:  kafkaProducerRecipe,  // T55.3: bound beside its first signed record
-	kafkaConsumerPackID:  kafkaConsumerRecipe,  // T56.3: bound beside its first signed record
-	thriftContractPackID: thriftContractRecipe, // T49.3: bound beside its first signed record
+	callerMapPackID:        callerMapRecipe,        // T47.5: signed integration-test qualification
+	protobufContractPackID: protobufContractRecipe, // T49.3: independent declaration-only admission
+	kafkaProducerPackID:    kafkaProducerRecipe,    // T55.3: bound beside its first signed record
+	kafkaConsumerPackID:    kafkaConsumerRecipe,    // T56.3: bound beside its first signed record
+	thriftContractPackID:   thriftContractRecipe,   // T49.3: bound beside its first signed record
 }
 
 // releasedClaims is the fixed in-tree registry of released product claims that
@@ -196,6 +196,14 @@ const thriftContractPackID = "phebs.thrift.contract"
 // unavailable.
 func thriftContractRecipe() []extract.Extractor {
 	return []extract.Extractor{thriftdecl.New()}
+}
+
+// protobufContractPackID names the declaration-only Atlas pack; Caller Map
+// separately carries the same declaration extractor for its discovery.
+const protobufContractPackID = "phebs.protobuf.contract"
+
+func protobufContractRecipe() []extract.Extractor {
+	return []extract.Extractor{protodecl.New()}
 }
 
 // wireCompatibilityPackID is the T53.3 claim card in

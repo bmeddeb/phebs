@@ -19170,6 +19170,20 @@ binary `75803641`** (Thrift protocol §14).
 promotion bar for each selected protocol and the declared UI/HTTP/MCP surface.
 One protocol may release while the other remains explicitly unavailable.
 
+**T49.3 protobuf binding complete (2026-10-17, Ben's all-ticket Mac handoff).**
+The independent fixed recipe selects only `proto-contract@4.0.0` after signed
+selection verification. Ten admission cases cover ordinary API/MCP assembly,
+expiry/suspension/revocation, Caller Map deduplication and independent Thrift/
+Kafka preservation. Focused command normal (1.007s), race (3.154s), existing
+release/startup regressions (1.228s), six exact Atlas root/authz/paging/gap tests
+(2.163s), strict MCP output, vet and pinned lint (zero issues) pass. Lead
+re-verification passes. No label round or long rehearsal is required. T49.4
+qualification artifacts/UI closure and actual production signing remain open.
+No new runtime scan, lock, cache, child or worker is introduced; only one fixed
+startup registry row and selected declaration constructor are added, with
+existing domain deduplication. Configuration guide describes independent
+admission and withdrawal; compiled registration alone activates nothing.
+
 **T49R.1 · Inherited generated-client drift** *(cross-cutting; found while
 reviewing PRs #75 and #76, Mac track)* — regenerate `ui/openapi.json` and
 `ui/src/api.generated.ts` from the Go spec so `npm run gen:api:check` and
@@ -19239,6 +19253,22 @@ failures.*
 on the supported Epic 47 identity; independently validate source/unit unions,
 `old_only_evidence`, `both_evidence`, `new_only_evidence` and unresolved states.
 No comparison asserts migration completion or decommission safety.
+
+**T50.1 contract/gold checkpoint (2026-10-17, Ben's all-ticket Mac handoff).**
+The dated PLAN contract freezes the first prospective protobuf/gRPC comparison
+recipe, source/unit union identities, explicit unresolved/unavailable behavior,
+two-side authorization/generation/cursor/citation fences and existing bounds.
+New `TestExactCallerComparisonFrozenSourceAndUnitGold` pins the complete neutral
+source/unit row identities and side membership through one-row pagination;
+existing comparison regressions cover independent side drift, hidden sources,
+missing/failed/stale input, exact citation reads and scan/hydration bounds.
+These are composition mechanics/gold cases, not independent caller extraction
+accuracy or T50.3 promotion. Stable admission remains T50.2; actual per-product
+quality, operating evidence and production signing remain T50.3. An independent
+agent reviewed the gold labels from fixture/source construction without reading
+the classifier and accepted them. Exact comparison tests pass 2.902s, focused
+gold race 2.782s; vet, pinned lint (zero issues), docs, glossary and whitespace
+pass. No production behavior, resource ceiling or per-request work changes.
 
 **T50.2 · Stable comparison registration and joint generation fencing** —
 retain two-publication authorization, cursor/lease/citation binding and
@@ -20129,6 +20159,22 @@ paths; staging is fail closed; fresh runs from two checkout roots compare the
 same catalog authority and representative pixels. Review any changed canonical
 baselines without new masks, retries or tolerance changes. Production SourcePath
 identity and the separate focused pipeline remain intact.
+
+**T57R.3 outcome (2026-10-18).** Both operator catalogs stage through the
+existing owner-only/create-only helper and local/CI boots use their exported
+fixed paths. Production SourcePath identity remains exact. Four fresh ordinary
+instances across two roots have identical real catalog authorities. Native 18/18,
+canonical author 9/9 (80.613s) and fresh-root comparison 33/33 (134.994s) pass,
+with existing strict cohort checks, masks, zero retries and 0.1% tolerance. Eight
+Catalog-value PNGs are reviewed by agent and lead; 118 controls are byte-identical.
+Provenance `ui/receipts/t57r3.json` preserves October 17 execution dates; this
+is local canonical evidence, not hosted Actions or a full 143-case rerun.
+Staging 27 pass plus one existing privilege-only skip, fixture-root 7 unit checks,
+full scripts 4.794s, vet, pinned lint, shell syntax, docs/glossary and whitespace
+pass. All task servers, renderer and temporary credentials are cleaned up.
+Two bounded catalog comparisons add 6,202 bytes of staging reads; first staging
+adds two serial existing atomic publications, reuse preserves metadata and
+content. No production runtime, identity, concurrency or bundle cost changes.
 
 **T57R.1 · Inherited gate repairs** *(cross-cutting; found while landing Epic
 57)* — return `make docs-check`, repository-wide lint and

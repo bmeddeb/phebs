@@ -7,7 +7,7 @@
 // baseline — checkout-bound, so a macOS checkout and Ubuntu CI could never
 // share one image set.
 //
-// Instead, receipt runs stage the neutral-demo bundles at this fixed,
+// Instead, receipt runs stage the neutral-demo bundles and operator catalogs at this fixed,
 // documented root before booting the dev instance
 // (scripts/stage-receipt-fixtures.sh), and `make dev` / `make dev-api`
 // honor the staged paths when the fixture env vars are pre-set. The
@@ -17,6 +17,8 @@
 // fixed. The string is identical on macOS and Linux, so one baseline set
 // serves every supported renderer — baselines are produced in the Ubuntu CI
 // rendering environment (see ui/receipts/README.md).
+// Catalog paths also bind production SourcePath authority; fixing only the
+// bundle path would leave service generations dependent on checkout location.
 //
 // This constant is the single source of truth: the staging script extracts
 // it from this file, and routes.ts derives every neutral-demo repository

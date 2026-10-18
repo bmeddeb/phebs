@@ -12177,6 +12177,101 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   host entitlement and large execution remain subject to their existing explicit
   authorization. This planning change adds no runtime work or resource cost.
 
+- **2026-10-17 — T49.3 independent protobuf Atlas recipe (Ben's all-ticket
+  Mac handoff).** Bind `phebs.protobuf.contract` to `proto-contract@4.0.0`
+  alone through the unchanged verified signed selection. Shared declaration
+  domains deduplicate when Caller Map is also selected; independent withdrawal
+  preserves the other selected product's discovery. No caller, implementation,
+  field or Impact authority follows. Bounded signed-selection normal/race,
+  exact-root/stale/authz/paging and strict MCP regressions pass; direct review
+  finds no blocking issue. Production signing and T49.4 qualification remain
+  separate; optional labels do not block this binding. Cost: one registry row
+  in the existing startup implementation digest and one selected constructor;
+  no additional request, sync, retry/no-op, publication, lock, cache, schema,
+  disk scan, child or concurrency work. Existing exact Atlas read costs stay
+  unchanged. Each selected release must be signed for the actual new binary.
+
+- **2026-10-17 — T50.1 supported comparison contract and gold cases
+  (Ben's all-ticket Mac handoff).** Freeze the first prospective comparison
+  shape over two complete, authorized protobuf/gRPC Caller Map endpoints from
+  the T47.5 committed-input recipe (`proto-contract@4.0.0`, caller algorithm
+  `1.6.0`, released admission `1.6.0-released.1`). Each endpoint is the exact
+  protocol, declaration repository, provisional repository/path lineage and
+  canonical wire operation, not a method-name, owner or logical-service match.
+  The prospective product claim ID is `phebs.grpc.caller.comparison`; its
+  implementation version is `compare_operation_callers@caller-comparison-v2`.
+  The product envelope stays `caller-comparison-v2`; no schema or algorithm
+  changes. T50.2 owns stable admission and rejects unsupported endpoint pairs;
+  T50.3 still needs its own direct quality/operating result and signature.
+
+  At occurrence level, union identity is repository, immutable indexed commit,
+  path and exact byte range. At unit level, only one consistent resolved unit
+  candidate permits grouping by repository and exact unit ID; common owner or
+  logical-service text never joins populations across repositories. Ambiguous,
+  missing-unit and extractor-abstention occurrences remain unresolved. Old-only,
+  both and new-only label retained evidence in the two selected populations;
+  unresolved stays explicit even when present on both sides. If either complete
+  generation is missing, stale or failed, the whole page has unavailable rows,
+  no numeric total and no continuation; a gap is never an empty exact population.
+  Both repositories are authorized before either publication is opened and
+  jointly confirmed with immutable descriptors before serialization. Cursor
+  authority includes both generations, permissions, query and page size; a
+  transition on either side refuses continuation. Citations reuse exact Caller
+  Map source reads and authorization, never approximate HEAD bytes. No result
+  establishes runtime use, completeness, migration completion or safe retirement.
+
+  Frozen response bounds reuse the existing implementation: default 50/max 100
+  classified rows; four citations per side per row; at most 100 hydrated records
+  per page; 50,000 combined bucket positions including other-lineage scan work;
+  shared eight reverse indexes (128 MiB identity ceiling each), eight compact
+  bindings/200,000 retained positions, five-minute process-local cursor lifetime,
+  eight admitted exact reads and two citation reads. These are refusal/retention
+  ceilings, not measured operating capacity. One same-repository generation is
+  opened/indexed once; two repositories require two. A cold reverse-index miss
+  scans and verifies the whole bounded derived caller generation (at most 200,000
+  result/abstention records), never the repository source corpus. One shared
+  index-build slot serializes cold construction; exact-key negative cache entries
+  prevent unchanged deterministic refusals from repeating that scan. Cached
+  first-page work scans the bounded endpoint union, retains compact
+  classification/sample positions and
+  hydrates only the requested page. Continuation rechecks both authorities and
+  reuses those retained indexes; transitions, expiry/restart and pressure evict
+  according to existing policies. Existing registry/cache mutexes cover bounded
+  bookkeeping; no lock, invalidation scheme, sync tick, startup/retry worker,
+  publication, child, corpus read, disk or memory ceiling changes in this ticket.
+
+  The independent neutral gold ledger labels five existing committed source
+  records: old-only0–11, new-only12–23, paired both24–35, and abstention48–59;
+  the paired records share exact span/unit, and abstention is visible on both
+  sides without becoming resolved. New paged checks pin exact source/unit keys,
+  both side counts, class, attribution and immutable citation identity. Existing
+  independent-side/gap/authorization/scan/cursor/citation tests are reused. This
+  verifies comparison mechanics, not extraction accuracy or T50.3 promotion.
+  A separate agent checked the labels using only fixture/source construction,
+  without reading the grouping/classifier. All exact comparison regressions pass
+  in 2.902s, the new gold test under race in 2.782s; vet, pinned lint (zero issues),
+  docs, glossary and whitespace pass. No production behavior changes.
+
+- **2026-10-18 — T57R.3 checkout-independent receipt catalog authority.**
+  Stage the two retained operator catalog JSONs beside the two neutral bundles
+  at the fixed receipt root and select their exported paths in local and CI
+  boots. Bundle pinning alone did not pin operator SourcePath, so different
+  checkout roots legitimately produced different catalog generations. Reuse
+  existing validated private-root, exact-byte reuse and atomic create-only
+  publication; mismatched bytes, symlinks and unsafe ownership still refuse
+  before exports. Production generation hashing, masks, strict cohort readiness,
+  zero retries and 0.1% tolerance remain exact. Four fresh ordinary servers have
+  equal real catalog authorities across checkout roots. Local pinned-renderer
+  author 9/9 and fresh-root comparison 33/33, plus native 18/18 pass; eight reviewed
+  Catalog-value images update and 118 controls stay byte-identical. Preserve
+  October 17 execution timestamps under the October 18 closure record in
+  `ui/receipts/t57r3.json`; no full 143-case, hosted Actions or release result is
+  inferred. Cost: two additional bounded cmp reads totaling 6,202 bytes; first
+  staging adds two existing serial copy/chmod/link publications; reuse changes
+  no bytes, mode or mtime. Production requests, queries, sync, startup/restart,
+  retry/no-op, publication, locks, caches, concurrency and children are unchanged.
+  JavaScript delta is zero; the eight PNGs shrink 1,139 bytes collectively.
+
 - **2026-10-18 — T27.1 document-schema spike preregistration (Ben's
   all-ticket Mac handoff).** Adopt the frozen decision table in the required
   `spike/t271/README.md` as the isolated experiment's input/output contract;
