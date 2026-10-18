@@ -1,0 +1,593 @@
+{
+  "schema": "phebs-t541-operation-composition-oracle-v1",
+  "date": "2026-10-18",
+  "status": "FROZEN_PROPOSED_SOURCE_ONLY_AWAITING_INDEPENDENT_REVIEW",
+  "candidate_output_consulted": false,
+  "derivation": "New report memberships and conclusion/uncertainty labels authored from unchanged public IDL/generated clients/application bytes and supplied unit snapshot. Existing independently source-reviewed T503 site coordinates are reused as source truth only, never as a composed Impact result. No Impact candidate exists or has been run.",
+  "declarations": [
+    {
+      "operation": "/helloworld.Greeter/SayHello",
+      "endpoint": {
+        "protocol": "protobuf",
+        "repository": "evaluation.local/t503-public",
+        "declaration_lineage": "provisional_repo_path_v1_638282c35011d6ab092ccfdff2d6ee65322335d7a80e2e84dba2ac347eb710f0",
+        "operation": "/helloworld.Greeter/SayHello"
+      },
+      "declaration": {
+        "path": "helloworld/helloworld/helloworld.proto",
+        "git_blob": "692ef9deda0751d3d9be9d8a4a3c5a10d7ede385",
+        "blob_digest": "sha256:0e59e0b552d35f8b801e02811c3fcd3dd45dbf1a593c5ff6f2f679863219b257",
+        "start_byte": 925,
+        "end_byte": 976,
+        "start_line": 27,
+        "end_line": 27,
+        "statement": "rpc SayHello (HelloRequest) returns (HelloReply) {}",
+        "object": "helloworld.Greeter/SayHello",
+        "client_streaming": false,
+        "server_streaming": false
+      },
+      "generated_path": "helloworld/helloworld/helloworld_grpc.pb.go",
+      "generated_wire_literal": "/helloworld.Greeter/SayHello"
+    },
+    {
+      "operation": "/grpc.examples.echo.Echo/UnaryEcho",
+      "endpoint": {
+        "protocol": "protobuf",
+        "repository": "evaluation.local/t503-public",
+        "declaration_lineage": "provisional_repo_path_v1_0484ee2c646aef1cf54a9cb9d0351134344764c2838ffee73a075807f2c41272",
+        "operation": "/grpc.examples.echo.Echo/UnaryEcho"
+      },
+      "declaration": {
+        "path": "features/proto/echo/echo.proto",
+        "git_blob": "2dde5633e2dd44414e1c08aaf6e505b62d262414",
+        "blob_digest": "sha256:e1eb8e11c7c1b273a7c025eedb88064b40c11517b3413d364893e0e4df4fed83",
+        "start_byte": 982,
+        "end_byte": 1034,
+        "start_line": 38,
+        "end_line": 38,
+        "statement": "rpc UnaryEcho(EchoRequest) returns (EchoResponse) {}",
+        "object": "grpc.examples.echo.Echo/UnaryEcho",
+        "client_streaming": false,
+        "server_streaming": false
+      },
+      "generated_path": "features/proto/echo/echo_grpc.pb.go",
+      "generated_wire_literal": "/grpc.examples.echo.Echo/UnaryEcho"
+    },
+    {
+      "operation": "/grpc.examples.echo.Echo/ServerStreamingEcho",
+      "endpoint": {
+        "protocol": "protobuf",
+        "repository": "evaluation.local/t503-public",
+        "declaration_lineage": "provisional_repo_path_v1_0484ee2c646aef1cf54a9cb9d0351134344764c2838ffee73a075807f2c41272",
+        "operation": "/grpc.examples.echo.Echo/ServerStreamingEcho"
+      },
+      "declaration": {
+        "path": "features/proto/echo/echo.proto",
+        "git_blob": "2dde5633e2dd44414e1c08aaf6e505b62d262414",
+        "blob_digest": "sha256:e1eb8e11c7c1b273a7c025eedb88064b40c11517b3413d364893e0e4df4fed83",
+        "start_byte": 1088,
+        "end_byte": 1157,
+        "start_line": 40,
+        "end_line": 40,
+        "statement": "rpc ServerStreamingEcho(EchoRequest) returns (stream EchoResponse) {}",
+        "object": "grpc.examples.echo.Echo/ServerStreamingEcho",
+        "client_streaming": false,
+        "server_streaming": true
+      },
+      "generated_path": "features/proto/echo/echo_grpc.pb.go",
+      "generated_wire_literal": "/grpc.examples.echo.Echo/ServerStreamingEcho"
+    },
+    {
+      "operation": "/grpc.examples.echo.Echo/ClientStreamingEcho",
+      "endpoint": {
+        "protocol": "protobuf",
+        "repository": "evaluation.local/t503-public",
+        "declaration_lineage": "provisional_repo_path_v1_0484ee2c646aef1cf54a9cb9d0351134344764c2838ffee73a075807f2c41272",
+        "operation": "/grpc.examples.echo.Echo/ClientStreamingEcho"
+      },
+      "declaration": {
+        "path": "features/proto/echo/echo.proto",
+        "git_blob": "2dde5633e2dd44414e1c08aaf6e505b62d262414",
+        "blob_digest": "sha256:e1eb8e11c7c1b273a7c025eedb88064b40c11517b3413d364893e0e4df4fed83",
+        "start_byte": 1211,
+        "end_byte": 1280,
+        "start_line": 42,
+        "end_line": 42,
+        "statement": "rpc ClientStreamingEcho(stream EchoRequest) returns (EchoResponse) {}",
+        "object": "grpc.examples.echo.Echo/ClientStreamingEcho",
+        "client_streaming": true,
+        "server_streaming": false
+      },
+      "generated_path": "features/proto/echo/echo_grpc.pb.go",
+      "generated_wire_literal": "/grpc.examples.echo.Echo/ClientStreamingEcho"
+    },
+    {
+      "operation": "/grpc.examples.echo.Echo/BidirectionalStreamingEcho",
+      "endpoint": {
+        "protocol": "protobuf",
+        "repository": "evaluation.local/t503-public",
+        "declaration_lineage": "provisional_repo_path_v1_0484ee2c646aef1cf54a9cb9d0351134344764c2838ffee73a075807f2c41272",
+        "operation": "/grpc.examples.echo.Echo/BidirectionalStreamingEcho"
+      },
+      "declaration": {
+        "path": "features/proto/echo/echo.proto",
+        "git_blob": "2dde5633e2dd44414e1c08aaf6e505b62d262414",
+        "blob_digest": "sha256:e1eb8e11c7c1b273a7c025eedb88064b40c11517b3413d364893e0e4df4fed83",
+        "start_byte": 1334,
+        "end_byte": 1417,
+        "start_line": 44,
+        "end_line": 44,
+        "statement": "rpc BidirectionalStreamingEcho(stream EchoRequest) returns (stream EchoResponse) {}",
+        "object": "grpc.examples.echo.Echo/BidirectionalStreamingEcho",
+        "client_streaming": true,
+        "server_streaming": true
+      },
+      "generated_path": "features/proto/echo/echo_grpc.pb.go",
+      "generated_wire_literal": "/grpc.examples.echo.Echo/BidirectionalStreamingEcho"
+    }
+  ],
+  "sites": [
+    {
+      "site_id": "features/interceptor/client/main.go:3590-3606",
+      "path": "features/interceptor/client/main.go",
+      "upstream_path": "examples/features/interceptor/client/main.go",
+      "upstream_blob_sha256": "sha256:67a96c9ce41464119ed93fab70bebb50cb96accdecaca43d8f9a0cf43a6bf641",
+      "start_byte": 3590,
+      "end_byte": 3606,
+      "start_line": 115,
+      "end_line": 115,
+      "selector": "client.UnaryEcho",
+      "wire_operation": "/grpc.examples.echo.Echo/UnaryEcho",
+      "expected_resolution": "resolved",
+      "unit": {
+        "state": "resolved",
+        "id": "au_9439cbc5675ce77294613145d56bd6d01064f47b19e56804684be204c10b379a",
+        "build_targets": [
+          "go:google.golang.org/grpc/examples/features/interceptor/client"
+        ]
+      },
+      "declaration_operation": "/grpc.examples.echo.Echo/UnaryEcho",
+      "unit_values_are_evaluator_authored": true,
+      "rationale": "Source receiver constructor/interface plus unchanged checked-in generated FullMethodName and selected .proto RPC establish this static source edge. Expected unit is supplied committed package metadata; no deployment or runtime ownership is inferred."
+    },
+    {
+      "site_id": "features/interceptor/client/main.go:3919-3952",
+      "path": "features/interceptor/client/main.go",
+      "upstream_path": "examples/features/interceptor/client/main.go",
+      "upstream_blob_sha256": "sha256:67a96c9ce41464119ed93fab70bebb50cb96accdecaca43d8f9a0cf43a6bf641",
+      "start_byte": 3919,
+      "end_byte": 3952,
+      "start_line": 125,
+      "end_line": 125,
+      "selector": "client.BidirectionalStreamingEcho",
+      "wire_operation": "/grpc.examples.echo.Echo/BidirectionalStreamingEcho",
+      "expected_resolution": "resolved",
+      "unit": {
+        "state": "resolved",
+        "id": "au_9439cbc5675ce77294613145d56bd6d01064f47b19e56804684be204c10b379a",
+        "build_targets": [
+          "go:google.golang.org/grpc/examples/features/interceptor/client"
+        ]
+      },
+      "declaration_operation": "/grpc.examples.echo.Echo/BidirectionalStreamingEcho",
+      "unit_values_are_evaluator_authored": true,
+      "rationale": "Source receiver constructor/interface plus unchanged checked-in generated FullMethodName and selected .proto RPC establish this static source edge. Expected unit is supplied committed package metadata; no deployment or runtime ownership is inferred."
+    },
+    {
+      "site_id": "features/metadata/client/main.go:1453-1464",
+      "path": "features/metadata/client/main.go",
+      "upstream_path": "examples/features/metadata/client/main.go",
+      "upstream_blob_sha256": "sha256:26aceadb046196cf67fc5f790f2d6dc4e5f74ae1a919002b6fb6686db41c4fa7",
+      "start_byte": 1453,
+      "end_byte": 1464,
+      "start_line": 51,
+      "end_line": 51,
+      "selector": "c.UnaryEcho",
+      "wire_operation": "/grpc.examples.echo.Echo/UnaryEcho",
+      "expected_resolution": "resolved",
+      "unit": {
+        "state": "unavailable",
+        "reason": "mapping_has_no_attribution"
+      },
+      "declaration_operation": "/grpc.examples.echo.Echo/UnaryEcho",
+      "unit_values_are_evaluator_authored": true,
+      "rationale": "Source receiver constructor/interface plus unchanged checked-in generated FullMethodName and selected .proto RPC establish this static source edge. Expected unit is supplied committed package metadata; no deployment or runtime ownership is inferred."
+    },
+    {
+      "site_id": "features/metadata/client/main.go:2678-2699",
+      "path": "features/metadata/client/main.go",
+      "upstream_path": "examples/features/metadata/client/main.go",
+      "upstream_blob_sha256": "sha256:26aceadb046196cf67fc5f790f2d6dc4e5f74ae1a919002b6fb6686db41c4fa7",
+      "start_byte": 2678,
+      "end_byte": 2699,
+      "start_line": 92,
+      "end_line": 92,
+      "selector": "c.ServerStreamingEcho",
+      "wire_operation": "/grpc.examples.echo.Echo/ServerStreamingEcho",
+      "expected_resolution": "resolved",
+      "unit": {
+        "state": "unavailable",
+        "reason": "mapping_has_no_attribution"
+      },
+      "declaration_operation": "/grpc.examples.echo.Echo/ServerStreamingEcho",
+      "unit_values_are_evaluator_authored": true,
+      "rationale": "Source receiver constructor/interface plus unchanged checked-in generated FullMethodName and selected .proto RPC establish this static source edge. Expected unit is supplied committed package metadata; no deployment or runtime ownership is inferred."
+    },
+    {
+      "site_id": "features/metadata/client/main.go:4418-4439",
+      "path": "features/metadata/client/main.go",
+      "upstream_path": "examples/features/metadata/client/main.go",
+      "upstream_blob_sha256": "sha256:26aceadb046196cf67fc5f790f2d6dc4e5f74ae1a919002b6fb6686db41c4fa7",
+      "start_byte": 4418,
+      "end_byte": 4439,
+      "start_line": 155,
+      "end_line": 155,
+      "selector": "c.ClientStreamingEcho",
+      "wire_operation": "/grpc.examples.echo.Echo/ClientStreamingEcho",
+      "expected_resolution": "resolved",
+      "unit": {
+        "state": "unavailable",
+        "reason": "mapping_has_no_attribution"
+      },
+      "declaration_operation": "/grpc.examples.echo.Echo/ClientStreamingEcho",
+      "unit_values_are_evaluator_authored": true,
+      "rationale": "Source receiver constructor/interface plus unchanged checked-in generated FullMethodName and selected .proto RPC establish this static source edge. Expected unit is supplied committed package metadata; no deployment or runtime ownership is inferred."
+    },
+    {
+      "site_id": "features/metadata/client/main.go:6231-6259",
+      "path": "features/metadata/client/main.go",
+      "upstream_path": "examples/features/metadata/client/main.go",
+      "upstream_blob_sha256": "sha256:26aceadb046196cf67fc5f790f2d6dc4e5f74ae1a919002b6fb6686db41c4fa7",
+      "start_byte": 6231,
+      "end_byte": 6259,
+      "start_line": 218,
+      "end_line": 218,
+      "selector": "c.BidirectionalStreamingEcho",
+      "wire_operation": "/grpc.examples.echo.Echo/BidirectionalStreamingEcho",
+      "expected_resolution": "resolved",
+      "unit": {
+        "state": "unavailable",
+        "reason": "mapping_has_no_attribution"
+      },
+      "declaration_operation": "/grpc.examples.echo.Echo/BidirectionalStreamingEcho",
+      "unit_values_are_evaluator_authored": true,
+      "rationale": "Source receiver constructor/interface plus unchanged checked-in generated FullMethodName and selected .proto RPC establish this static source edge. Expected unit is supplied committed package metadata; no deployment or runtime ownership is inferred."
+    },
+    {
+      "site_id": "features/multiplex/client/main.go:1282-1292",
+      "path": "features/multiplex/client/main.go",
+      "upstream_path": "examples/features/multiplex/client/main.go",
+      "upstream_blob_sha256": "sha256:4fd071c359f34dd525a7125e9ef2eaf7ba871828eec21b574467bfb7b9224a7e",
+      "start_byte": 1282,
+      "end_byte": 1292,
+      "start_line": 43,
+      "end_line": 43,
+      "selector": "c.SayHello",
+      "wire_operation": "/helloworld.Greeter/SayHello",
+      "expected_resolution": "resolved",
+      "unit": {
+        "state": "resolved",
+        "id": "au_1708d0bd8c3cd2a1099790102b179f46c5fcbf67c4e2a23412bb65b4ff224be2",
+        "build_targets": [
+          "go:google.golang.org/grpc/examples/features/multiplex/client"
+        ]
+      },
+      "declaration_operation": "/helloworld.Greeter/SayHello",
+      "unit_values_are_evaluator_authored": true,
+      "rationale": "Source receiver constructor/interface plus unchanged checked-in generated FullMethodName and selected .proto RPC establish this static source edge. Expected unit is supplied committed package metadata; no deployment or runtime ownership is inferred."
+    },
+    {
+      "site_id": "features/multiplex/client/main.go:1604-1620",
+      "path": "features/multiplex/client/main.go",
+      "upstream_path": "examples/features/multiplex/client/main.go",
+      "upstream_blob_sha256": "sha256:4fd071c359f34dd525a7125e9ef2eaf7ba871828eec21b574467bfb7b9224a7e",
+      "start_byte": 1604,
+      "end_byte": 1620,
+      "start_line": 53,
+      "end_line": 53,
+      "selector": "client.UnaryEcho",
+      "wire_operation": "/grpc.examples.echo.Echo/UnaryEcho",
+      "expected_resolution": "resolved",
+      "unit": {
+        "state": "resolved",
+        "id": "au_1708d0bd8c3cd2a1099790102b179f46c5fcbf67c4e2a23412bb65b4ff224be2",
+        "build_targets": [
+          "go:google.golang.org/grpc/examples/features/multiplex/client"
+        ]
+      },
+      "declaration_operation": "/grpc.examples.echo.Echo/UnaryEcho",
+      "unit_values_are_evaluator_authored": true,
+      "rationale": "Source receiver constructor/interface plus unchanged checked-in generated FullMethodName and selected .proto RPC establish this static source edge. Expected unit is supplied committed package metadata; no deployment or runtime ownership is inferred."
+    },
+    {
+      "site_id": "helloworld/greeter_client/main.go:1456-1466",
+      "path": "helloworld/greeter_client/main.go",
+      "upstream_path": "examples/helloworld/greeter_client/main.go",
+      "upstream_blob_sha256": "sha256:5539f38f560ab26ce11514cd81f941fb80f4ca9a88754aaaf40d89bbc92e3e30",
+      "start_byte": 1456,
+      "end_byte": 1466,
+      "start_line": 55,
+      "end_line": 55,
+      "selector": "c.SayHello",
+      "wire_operation": "/helloworld.Greeter/SayHello",
+      "expected_resolution": "resolved",
+      "unit": {
+        "state": "resolved",
+        "id": "au_3b21c319bce883977589a6fd651789a8a16a2fe2a1b6466815e51b98cbef7234",
+        "build_targets": [
+          "go:google.golang.org/grpc/examples/helloworld/greeter_client"
+        ]
+      },
+      "declaration_operation": "/helloworld.Greeter/SayHello",
+      "unit_values_are_evaluator_authored": true,
+      "rationale": "Source receiver constructor/interface plus unchanged checked-in generated FullMethodName and selected .proto RPC establish this static source edge. Expected unit is supplied committed package metadata; no deployment or runtime ownership is inferred."
+    }
+  ],
+  "queries": [
+    {
+      "query_id": "operation-1",
+      "query": {
+        "endpoint": {
+          "protocol": "protobuf",
+          "repository": "evaluation.local/t503-public",
+          "declaration_lineage": "provisional_repo_path_v1_638282c35011d6ab092ccfdff2d6ee65322335d7a80e2e84dba2ac347eb710f0",
+          "operation": "/helloworld.Greeter/SayHello"
+        }
+      },
+      "expected_site_ids": [
+        "features/multiplex/client/main.go:1282-1292",
+        "helloworld/greeter_client/main.go:1456-1466"
+      ],
+      "excluded_site_ids": [
+        "features/interceptor/client/main.go:3590-3606",
+        "features/interceptor/client/main.go:3919-3952",
+        "features/metadata/client/main.go:1453-1464",
+        "features/metadata/client/main.go:2678-2699",
+        "features/metadata/client/main.go:4418-4439",
+        "features/metadata/client/main.go:6231-6259",
+        "features/multiplex/client/main.go:1604-1620"
+      ],
+      "expected_total_matching_rows": 2,
+      "expected_conclusion_state": "evidence_present",
+      "unavailable_sections": [
+        "field_references",
+        "proposed_change",
+        "implementations",
+        "wire_verdict",
+        "matching_syntactic_calls",
+        "saved_report"
+      ]
+    },
+    {
+      "query_id": "operation-2",
+      "query": {
+        "endpoint": {
+          "protocol": "protobuf",
+          "repository": "evaluation.local/t503-public",
+          "declaration_lineage": "provisional_repo_path_v1_0484ee2c646aef1cf54a9cb9d0351134344764c2838ffee73a075807f2c41272",
+          "operation": "/grpc.examples.echo.Echo/UnaryEcho"
+        }
+      },
+      "expected_site_ids": [
+        "features/interceptor/client/main.go:3590-3606",
+        "features/metadata/client/main.go:1453-1464",
+        "features/multiplex/client/main.go:1604-1620"
+      ],
+      "excluded_site_ids": [
+        "features/interceptor/client/main.go:3919-3952",
+        "features/metadata/client/main.go:2678-2699",
+        "features/metadata/client/main.go:4418-4439",
+        "features/metadata/client/main.go:6231-6259",
+        "features/multiplex/client/main.go:1282-1292",
+        "helloworld/greeter_client/main.go:1456-1466"
+      ],
+      "expected_total_matching_rows": 3,
+      "expected_conclusion_state": "evidence_present",
+      "unavailable_sections": [
+        "field_references",
+        "proposed_change",
+        "implementations",
+        "wire_verdict",
+        "matching_syntactic_calls",
+        "saved_report"
+      ]
+    },
+    {
+      "query_id": "operation-3",
+      "query": {
+        "endpoint": {
+          "protocol": "protobuf",
+          "repository": "evaluation.local/t503-public",
+          "declaration_lineage": "provisional_repo_path_v1_0484ee2c646aef1cf54a9cb9d0351134344764c2838ffee73a075807f2c41272",
+          "operation": "/grpc.examples.echo.Echo/ServerStreamingEcho"
+        }
+      },
+      "expected_site_ids": [
+        "features/metadata/client/main.go:2678-2699"
+      ],
+      "excluded_site_ids": [
+        "features/interceptor/client/main.go:3590-3606",
+        "features/interceptor/client/main.go:3919-3952",
+        "features/metadata/client/main.go:1453-1464",
+        "features/metadata/client/main.go:4418-4439",
+        "features/metadata/client/main.go:6231-6259",
+        "features/multiplex/client/main.go:1282-1292",
+        "features/multiplex/client/main.go:1604-1620",
+        "helloworld/greeter_client/main.go:1456-1466"
+      ],
+      "expected_total_matching_rows": 1,
+      "expected_conclusion_state": "evidence_present",
+      "unavailable_sections": [
+        "field_references",
+        "proposed_change",
+        "implementations",
+        "wire_verdict",
+        "matching_syntactic_calls",
+        "saved_report"
+      ]
+    },
+    {
+      "query_id": "operation-4",
+      "query": {
+        "endpoint": {
+          "protocol": "protobuf",
+          "repository": "evaluation.local/t503-public",
+          "declaration_lineage": "provisional_repo_path_v1_0484ee2c646aef1cf54a9cb9d0351134344764c2838ffee73a075807f2c41272",
+          "operation": "/grpc.examples.echo.Echo/ClientStreamingEcho"
+        }
+      },
+      "expected_site_ids": [
+        "features/metadata/client/main.go:4418-4439"
+      ],
+      "excluded_site_ids": [
+        "features/interceptor/client/main.go:3590-3606",
+        "features/interceptor/client/main.go:3919-3952",
+        "features/metadata/client/main.go:1453-1464",
+        "features/metadata/client/main.go:2678-2699",
+        "features/metadata/client/main.go:6231-6259",
+        "features/multiplex/client/main.go:1282-1292",
+        "features/multiplex/client/main.go:1604-1620",
+        "helloworld/greeter_client/main.go:1456-1466"
+      ],
+      "expected_total_matching_rows": 1,
+      "expected_conclusion_state": "evidence_present",
+      "unavailable_sections": [
+        "field_references",
+        "proposed_change",
+        "implementations",
+        "wire_verdict",
+        "matching_syntactic_calls",
+        "saved_report"
+      ]
+    },
+    {
+      "query_id": "operation-5",
+      "query": {
+        "endpoint": {
+          "protocol": "protobuf",
+          "repository": "evaluation.local/t503-public",
+          "declaration_lineage": "provisional_repo_path_v1_0484ee2c646aef1cf54a9cb9d0351134344764c2838ffee73a075807f2c41272",
+          "operation": "/grpc.examples.echo.Echo/BidirectionalStreamingEcho"
+        }
+      },
+      "expected_site_ids": [
+        "features/interceptor/client/main.go:3919-3952",
+        "features/metadata/client/main.go:6231-6259"
+      ],
+      "excluded_site_ids": [
+        "features/interceptor/client/main.go:3590-3606",
+        "features/metadata/client/main.go:1453-1464",
+        "features/metadata/client/main.go:2678-2699",
+        "features/metadata/client/main.go:4418-4439",
+        "features/multiplex/client/main.go:1282-1292",
+        "features/multiplex/client/main.go:1604-1620",
+        "helloworld/greeter_client/main.go:1456-1466"
+      ],
+      "expected_total_matching_rows": 2,
+      "expected_conclusion_state": "evidence_present",
+      "unavailable_sections": [
+        "field_references",
+        "proposed_change",
+        "implementations",
+        "wire_verdict",
+        "matching_syntactic_calls",
+        "saved_report"
+      ]
+    },
+    {
+      "query_id": "empty-sayhello-metadata",
+      "query": {
+        "endpoint": {
+          "protocol": "protobuf",
+          "repository": "evaluation.local/t503-public",
+          "declaration_lineage": "provisional_repo_path_v1_638282c35011d6ab092ccfdff2d6ee65322335d7a80e2e84dba2ac347eb710f0",
+          "operation": "/helloworld.Greeter/SayHello"
+        },
+        "path_prefix": "features/metadata/client/"
+      },
+      "expected_site_ids": [],
+      "excluded_site_ids": [
+        "features/interceptor/client/main.go:3590-3606",
+        "features/interceptor/client/main.go:3919-3952",
+        "features/metadata/client/main.go:1453-1464",
+        "features/metadata/client/main.go:2678-2699",
+        "features/metadata/client/main.go:4418-4439",
+        "features/metadata/client/main.go:6231-6259",
+        "features/multiplex/client/main.go:1282-1292",
+        "features/multiplex/client/main.go:1604-1620",
+        "helloworld/greeter_client/main.go:1456-1466"
+      ],
+      "expected_total_matching_rows": 0,
+      "expected_conclusion_state": "exact_empty",
+      "scope_qualification": "Exact filtered-empty over this declared source population; no general caller-absence claim.",
+      "unavailable_sections": [
+        "field_references",
+        "proposed_change",
+        "implementations",
+        "wire_verdict",
+        "matching_syntactic_calls",
+        "saved_report"
+      ]
+    },
+    {
+      "query_id": "empty-unary-greeter",
+      "query": {
+        "endpoint": {
+          "protocol": "protobuf",
+          "repository": "evaluation.local/t503-public",
+          "declaration_lineage": "provisional_repo_path_v1_0484ee2c646aef1cf54a9cb9d0351134344764c2838ffee73a075807f2c41272",
+          "operation": "/grpc.examples.echo.Echo/UnaryEcho"
+        },
+        "path_prefix": "helloworld/greeter_client/"
+      },
+      "expected_site_ids": [],
+      "excluded_site_ids": [
+        "features/interceptor/client/main.go:3590-3606",
+        "features/interceptor/client/main.go:3919-3952",
+        "features/metadata/client/main.go:1453-1464",
+        "features/metadata/client/main.go:2678-2699",
+        "features/metadata/client/main.go:4418-4439",
+        "features/metadata/client/main.go:6231-6259",
+        "features/multiplex/client/main.go:1282-1292",
+        "features/multiplex/client/main.go:1604-1620",
+        "helloworld/greeter_client/main.go:1456-1466"
+      ],
+      "expected_total_matching_rows": 0,
+      "expected_conclusion_state": "exact_empty",
+      "scope_qualification": "Exact filtered-empty over this declared source population; no general caller-absence claim.",
+      "unavailable_sections": [
+        "field_references",
+        "proposed_change",
+        "implementations",
+        "wire_verdict",
+        "matching_syntactic_calls",
+        "saved_report"
+      ]
+    }
+  ],
+  "denominators": {
+    "declarations": 5,
+    "unique_source_sites": 9,
+    "application_files": 4,
+    "all_processed_go_files": 9,
+    "positive_query_site_memberships": 9,
+    "negative_query_site_memberships": 36,
+    "complete_endpoint_queries": 5,
+    "scoped_empty_queries": 2,
+    "unique_source_citations": 9,
+    "unit_state_rows": 9,
+    "unit_resolved_rows": 5,
+    "unit_unavailable_rows": 4,
+    "real_extractor_abstentions": 0
+  },
+  "absent_real_families": [
+    "extractor abstentions",
+    "ambiguous supplied units",
+    "processing failures",
+    "publication races",
+    "denied source",
+    "overflow"
+  ],
+  "absent_family_policy": "Exercise absent states in separately labelled integration mechanics fixtures; their cases do not increase real-source quality denominators.",
+  "independence_gate": "Lead/source-only peer checks all five RPC declaration spans, nine source selectors, generated wire constants, seven query memberships and supplied unit states before any composed candidate/read/scoring."
+}

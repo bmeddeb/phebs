@@ -12893,3 +12893,28 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   selected generator's distinct stable admission. Production runtime work is
   unchanged; only opt-in/ordinary test fixture evaluation adds source/index
   preflight, existing extraction and local counters, with no child or service.
+
+- **2026-10-18 — T54.1 exact operation Impact composition contract (Ben-routed Mac handoff).**
+  Select the bounded `operation_callers` view in `spike/t541/contract.json`:
+  one shared exact CallerMapService.List call supplies declaration, rows,
+  generation, scope, filters, paging and uncertainty without a second Atlas
+  query, classifier, regrouping or durable report store. Its independent
+  Impact claim and verified Caller Map recipe are both required; a separately
+  selected Atlas product record is not a dependency of the consumed declaration
+  extractor. Legacy experimental v2 reports and retained proof bytes stay exact.
+  The new typed HTTP/MCP/UI view preserves absent legacy certificates and
+  distinguishes scoped evidence, exact filtered empty and unavailable authority.
+  Six unsupported report sections remain explicitly unavailable. Current source,
+  cursor, citation, permission, version and bounded-reader fences apply unchanged.
+  Source checkpoint SHA256
+  `ca9a784f4c8ae501a7a069c493981c269c9358889e9d76a1614239ee59345eda`
+  binds19 exact licensed files,5 RPCs,9 source sites,36 wrong-operation exclusions
+  and2 scoped empty queries;5 supplied units and4 unavailable units remain
+  independent source truth. Root and peer source review accept preparation only.
+  T54.2 implements the shared view and meaningful bounded regressions before
+  direct composed quality or the prospective180-second operating matrix.
+  No component score, runtime-impact claim, universal absence, quality pass or
+  production release transfers from Caller Map. No new schema, pin, worker,
+  timer, child, lock, cache or source read is added; per-request work is one
+  existing bounded page plus fixed wrapper metadata. Production signing remains
+  pending the existing unavailable key.

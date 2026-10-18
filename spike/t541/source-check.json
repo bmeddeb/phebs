@@ -1,0 +1,16 @@
+{
+  "schema": "phebs-t541-source-check-v1",
+  "date": "2026-10-18",
+  "outcome": "frozen_source_coordinates_verified_no_predictions",
+  "files": 19,
+  "rpc_declarations": 5,
+  "source_sites": 9,
+  "query_memberships": {
+    "positive": 9,
+    "negative": 36,
+    "filtered_empty_queries": 2
+  },
+  "report_predictions_read": 0,
+  "native_runs": 0,
+  "qualification": "Source-coordinate/internal-census verification only. Independent review, actual composed quality and operating measurement remain pending."
+}

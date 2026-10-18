@@ -1,0 +1,84 @@
+{
+  "schema": "phebs-t541-prospective-qualification-v1",
+  "date": "2026-10-18",
+  "status": "SOURCE_ONLY_NO_EXECUTION_AUTHORITY",
+  "quality_result": "NOT_MEASURED",
+  "operating_result": "NOT_MEASURED",
+  "production_signing": "PENDING_EXISTING_KEY",
+  "inputs": "Exact input-binding.json and source-only oracle.json checkpoint; reuse unchanged canonical committed SCIP. No fetch, regeneration, relabeling or population edits after checkpoint.",
+  "pre_execution": [
+    "Independent source-only review of all5RPCs/9sites/7queries and supplied units",
+    "Freeze exact T54.2 implementation/harness/binary/UI/tool/license/source/recipe/host bindings and accepted checkpoint before first candidate read",
+    "Explicit lead native slot and private disposable integration selection; remove private key before ordinary launch",
+    "Retain first failure/no silent rerun, threshold change, source fix or oracle edit. A needed correction gets a separate prospective adjudication and new source binding."
+  ],
+  "quality": {
+    "population": "One real public evaluation repository,5declaredRPCs and9generated-method call sites in4complete application files;9Go files processed. Small complete selected-source census, no upstream population or general extraction inference.",
+    "thresholds": {
+      "composed_positive_memberships": {
+        "denominator": 9,
+        "required_correct": 9
+      },
+      "composed_negative_memberships": {
+        "denominator": 36,
+        "required_correct": 36
+      },
+      "declaration_identity_and_source": {
+        "denominator": 5,
+        "required_correct": 5
+      },
+      "unique_citation_bytes_and_generation": {
+        "denominator": 9,
+        "required_correct": 9
+      },
+      "unit_states_and_supplied_ids": {
+        "denominator": 9,
+        "required_correct": 9,
+        "resolved": 5,
+        "unavailable": 4
+      },
+      "scoped_empty_queries_with_caveats": {
+        "denominator": 2,
+        "required_correct": 2
+      },
+      "all_go_source_processing": {
+        "denominator": 9,
+        "required_correct": 9
+      }
+    },
+    "reporting": "Directly score actual composed output against oracle, not product of CallerMap/Atlas metrics. Per-operation/file confusion/census, precision/recall, unit states, exact source citations and descriptive Wilson intervals. Repeated paging/MCP/UI reads never add truth samples.",
+    "finite_matrix": [
+      "All5endpoint queries complete at page_size1,2,100 using every continuation; preserve exact query/initial generation/source tuple on every page",
+      "Open9unique source citations via existing HTTP and MCP; verify repo/commit/run/generation/object/blob/byte+line range and actual selector bytes; distinguish syntax/heuristic from scip/derived without promotion",
+      "Two source-derived path-prefix filtered-empty queries retain exact total0/current generation/caveat and never generalize absence",
+      "Verify actual shared report HTTP/MCP parity and read-only registration; unsupported field/change/implementations/WIRE/saved modes visibly unavailable",
+      "At1280and390, perform exact endpoint choice, filter/clear, page continuation and keyboard exact-source opening with same expected report counts/classes and no overflow/console errors",
+      "Separate labelled mechanics regressions cover absent real abstention/ambiguity/gap/stale/failure/overflow/denied states; do not pool them into public quality denominators"
+    ]
+  },
+  "operating": {
+    "host": "Bounded Darwin-local qualification on actual measured host, as routed by Ben. Record actual physical RAM, no swap credit; no Linux/cgroup/scale inference. Any explicitly Linux release/capacity claim remains pending its own host evidence.",
+    "single_attempt": true,
+    "native_wall_seconds_including_joined_teardown": 180,
+    "startup_seconds_each": 30,
+    "publication_seconds_each": 90,
+    "cold_report_request_seconds": 2,
+    "warm_report_request_seconds": 1,
+    "warm_first_page_reads": 5,
+    "response_bytes_observed_max": 262144,
+    "server_tree_sampled_max_rss_bytes": 2147483648,
+    "available_physical_min_bytes": 4294967296,
+    "free_disk_preflight_min_bytes": 2147483648,
+    "derived_allocated_disk_sampled_max_bytes": 536870912,
+    "sampling": "Reuse reviewed bounded sampler ownership/cancellation; maximum observed samples, not transient peak or hard enforcement. Record cadence, startup/teardown exclusions and all child joins. Missing measurement stops.",
+    "finite_matrix": [
+      "One ordinary signed disposable Impact+CallerMap selection over exact public base repository, fresh auth/data/cache; no experimental flags",
+      "Quality/read/UI matrix once, first cold report and5warm firstpages recorded separately from earlier readiness/source index warming",
+      "One already-frozen comment-only primary source transition from T503 after baseline quality; at most8parallel exact firstpages. Accept before/after coherent epochs or explicit conflict/unavailable only; old cursor and changed-side citation refuse, fresh citation binds new blob",
+      "Named restart revoking Impact keeps Caller Map; revoking Caller Map withdraws dependent Impact; independent Atlas product revocation alone cannot remove consumed proto-contract when CallerMap remains admitted. Prefer coexistence/revocation unit/integration fixtures for redundant combinations",
+      "Gracefully join healthy server/store/indexer/observer/browser/client/host samplers; forced cleanup remains stopped. Prove groups/threads drained before deleting derived custody. Retain source-free first failure evidence, no production key."
+    ]
+  },
+  "reusable_exact_boundaries": "Name exact reviewed normal/race/permission/current-root/cursor/citation/hard-death/recovery/backup/restore/pressure tests for the actual reused reader at final implementation source. Do not replay ceremonies or infer passing new boundaries from a fixture alone.",
+  "expiry_and_suspension": "Review owner/independent reviewer and expiry dates must be filled in measured T54.3 artifacts. Any dependency release expiry/revocation, algorithm/schema/policy/tool/source identity change, unjoined custody, bound breach or unresolved report-integrity finding suspends the selected shape until scoped revalidation. No blank field is treated as production release authority."
+}
