@@ -103,7 +103,7 @@ func walkGoBuildTree(ctx context.Context, root *os.Root, selection string, visit
 	for cursor := 0; cursor < len(queue); cursor++ {
 		path := queue[cursor]
 		info, err := referenceModuleFileInfo(root, path)
-		if ctx.Err() != nil || err != nil || !inputCustodyOwned(info) ||
+		if ctx.Err() != nil || err != nil || !inputCustodyCopyOwned(info) ||
 			len(path) > maxInputCustodyPathBytes || strings.ContainsAny(path, "\x00\r\n") {
 			return ErrExecutionGoBuildCustody
 		}

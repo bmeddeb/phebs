@@ -10,6 +10,7 @@ import (
 func inputCustodyOwned(os.FileInfo) bool             { return false }
 func inputCustodyProtected(os.FileInfo) bool         { return false }
 func inputCustodySame(os.FileInfo, os.FileInfo) bool { return false }
+func inputCustodyCopyOwned(os.FileInfo) bool         { return false }
 
 func inputCustodyFlag(*os.File, bool) error {
 	return errors.New("input custody requires Darwin file protection")

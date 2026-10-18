@@ -3941,6 +3941,17 @@ covered by `TestLinuxExternalDelegationProbeRefusesBeforeLaunching` and by the
 retained H2e observer tests. No `t421.test`, `go test` or SurrealDB process and
 no port-65499 listener survived the sequence.
 
+**T42.H2h · Linux ownership observation and protected-input boundary** *(2026-10-18, Ben all-ticket
+delegation; flagged Mac preparation handoff).*
+Separate real Linux ownership/type/link metadata from protection for the existing
+bounded mutable verified-copy path. Preserve every protection/volume refusal and
+Darwin constructor gate; unsupported protected path construction refuses before
+creating/copying scratch. AC: small portable malformed metadata controls, Linux
+native verified-copy/pre-copy-refusal tests authored, supported Linux compile
+checks, unchanged Darwin source/behavior and focused applicable gates. Linux
+native tests remain explicitly pending on this Mac; metadata observation supplies
+no protected namespace, tool dispatch or ceremony authority.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared
