@@ -4,7 +4,7 @@ import { fetchFolderContents } from './api'
 import type { RepoStatus, TreeEntry } from './api'
 import { langColor } from './lang'
 import { href } from './router'
-import { usePhebsTokens, FONTS } from './theme'
+import { usePhebsTokens, FONTS, HEADER_LAYOUT } from './theme'
 import { ancestorFolders, isAbortError } from './util'
 import { ChevronDown, ChevronRight } from './icons'
 
@@ -124,6 +124,10 @@ export function RepositoryTree({
         overflowY: standalone ? 'auto' : 'visible',
         paddingTop: '4px',
         paddingBottom: '4px',
+        [HEADER_LAYOUT.narrowQuery]: standalone ? {
+          top: `calc(${HEADER_LAYOUT.narrowHeight} + 16px)`,
+          maxHeight: `calc(100vh - ${HEADER_LAYOUT.narrowHeight} - 32px)`,
+        } : {},
         '@media screen and (max-width: 720px)': standalone ? {
           width: '100%',
           position: 'static',
@@ -470,6 +474,10 @@ export default function RepositoryBrowser({
           border: `1px solid ${tok.cardBorder}`,
           borderRadius: '8px',
           backgroundColor: tok.pageBg,
+          [HEADER_LAYOUT.narrowQuery]: {
+            top: `calc(${HEADER_LAYOUT.narrowHeight} + 16px)`,
+            maxHeight: `calc(100vh - ${HEADER_LAYOUT.narrowHeight} - 32px)`,
+          },
           '@media screen and (max-width: 720px)': {
             display: mobileOpen ? 'block' : 'none',
             position: 'static',

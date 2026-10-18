@@ -12024,3 +12024,16 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   requests review, not integration. Full Go/race/native ceremony, hosted
   Actions, physical touch and a full screen-reader run are not claimed;
   focused-pipeline closure and validation labels remain separate.
+
+  Integration review (2026-10-17) caught two remaining repository-sidebar
+  offsets at 68px while the 721–960px header is 105px including its border.
+  Both RepositoryTree and the Search explorer now derive their narrow sticky
+  top and viewport height budget from the shared header geometry; their
+  existing <=720px static layout and wider-desktop values remain unchanged.
+  Four new browser regressions first fail at top 68 versus header bottom 105.
+  The committed matrix also covers both breakpoint edges, 721/800/960/961px,
+  on Search and File, using explicit tall-layout fixtures without changing
+  repository contents. This is static CSS with no new listener, request,
+  poll, lock, cache, child, persistent state or production memory/disk work;
+  the screenshot harness alone adds eight bounded scroll checks. Existing
+  1280px/390px baseline geometry is unchanged, so no PNG is re-authored.

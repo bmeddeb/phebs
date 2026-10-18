@@ -120,6 +120,26 @@ for (const theme of THEMES) {
   }
 }
 
+for (const width of [721, 800, 960, 961]) for (const surface of ['search', 'file']) {
+  test(`repository sidebar clears header · ${surface} · ${width}`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 480 })
+    await installIdentityFixture(page)
+    await page.goto(`/#${ROUTES.find(route => route.name === surface)!.path}`)
+    const sidebar = surface === 'file'
+      ? page.getByRole('navigation', { name: 'Repository files' })
+      : page.locator('#search-repository-explorer')
+    await expect(sidebar).toBeVisible()
+    // The neutral cohort is short; provide scroll extent without changing its contents.
+    await sidebar.evaluate(node => { node.parentElement!.style.minHeight = '1600px' })
+    await page.evaluate(() => window.scrollTo(0, 350))
+    expect(await page.evaluate(() => scrollY)).toBeGreaterThan(300)
+    const headerBottom = await page.locator('header').evaluate(node => node.getBoundingClientRect().bottom)
+    const bounds = await sidebar.boundingBox()
+    expect(bounds!.y).toBeGreaterThanOrEqual(headerBottom)
+    expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(480)
+  })
+}
+
 // Keep a real lazy chunk outstanding beyond Playwright's ordinary 5s assertion
 // budget. DOM quiet alone must not turn an uncolored specimen into a receipt.
 test('settings waits for its delayed palette chunk', async ({ page }) => {
