@@ -15502,6 +15502,17 @@ and already highlighted in every variant. No baseline byte changed. This
 supersedes the authentication blocker only: T44.2 remains open without a clean
 retained comparison, baseline refresh, completion, merge, or integration.
 
+T44.2 closure follow-up (2026-10-18, Mac track): later T57R.2/T44.5
+comparisons do not by themselves close Appearance visibility: the desktop
+Settings image stops above it, and the 390px indexing image clips its specimen.
+The next bounded gate supplies eight complete Appearance captures across both
+widths/themes/densities in the existing source/renderer-bound native lineage,
+plus keyboard choice, live recoloring, storage/reload and invalid-value guards.
+All historical Noble PNGs and failed comparisons remain exact. Focused existing
+palette/contrast/mounted-consumer tests and author/fresh native comparison are
+required before the owning closure record; Linux execution and signing stay
+pending independently.
+
 **T44.3 · Markdown source and preview** — a Markdown | Preview segmented
 control on the file viewer for markdown files. AC: view state in the URL
 (`view=preview`), source is the default, and `?L=` line deep-links force
