@@ -12370,3 +12370,57 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   not an installation-wide memory ceiling. Concurrent requests multiply this
   work. No new lock, cache, worker, concurrency, startup/restart, sync, retry/no-op,
   publication, persistent state, disk write or child process is introduced.
+
+- **2026-10-18 — T51.2 isolated committed protobuf field admission
+  (Ben-routed Mac handoff).** Bind `phebs.protobuf.field.go` claim `1.0.0`
+  through the existing verified selection to the distinct
+  `scip-proto-field@1.4.0-released.1` reader. Missing selection adds no field
+  reader/input/worker work. The supported committed recipe is repository-root
+  `index.scip`, declared scip-go0.2.7 UTF8, proto3 Open API and unique declared
+  protoc-gen-go1.36.11/protoc5.27.1 headers. Reuse the existing SCIP parse,
+  generated Go AST and field symbol/tag join; before any emit, require exact
+  generated descriptor/source path, full message, numeric and named field census.
+  Missing SCIP stays explicit `scip-index-absent`; unsupported/conflicting input
+  refuses atomically, including both empty/nonempty duplicate-descriptor orders.
+  These are declared input properties, not proof a generator executed.
+
+  Version-specific legacy/native selection, listing/locators, direct/HTTP/MCP
+  proofs, exact citations, raw reads and immutable archived bundles preserve
+  committed source, authorization and exact generation fences. Reuse the native
+  run's existing SQL pre/page/post boundary for the expected version; keep its
+  six-key public authority shape unchanged. Existing BundleExtractor witnesses
+  carry the attested version, including zero-row native roots. No provisional
+  run/atom becomes stable. Only the two field queries are admitted by this pack;
+  independently signed Kafka surfaces retain their own selection. No operation
+  consumer, Impact/report, compatibility, Thrift or field-zero surface follows.
+  Strict lowercase 64-hex SCIP-package lineage remains distinct from declaration
+  lineage, with no automatic bridge. Explicit provisional proto/Thrift mode
+  retains its independently allowed surface; a neutral foreign-family request
+  excludes the stable protobuf domain rather than querying or translating it.
+
+  Source/serializer/caller/cost review found no remaining blocker. Six signed
+  startup cases plus mixed/provisional controls, direct/HTTP/MCP/domain/lineage,
+  citation/archive/version and final source-movement tests pass. Wrong native
+  versions retain explicit unpublished/non-fresh coverage, without a fabricated
+  exact-empty authority. Real store version fencing passes in 1.416s; existing exact
+  raw-root integration passes in 1.277s and both join their one child. Final normal
+  reader/API/command selectors pass in 0.383/0.620/0.832s and race
+  1.369/1.756/3.427s, serial with 30s package deadlines. Pinned changed-package
+  lint reports zero issues; no new schema/client/UI bytes are required. Frozen
+  T51.1 labels/inputs/result stay exact. Production operating/signature closure
+  remains T51.3; no production release or broader generator support is claimed.
+
+  Cost: selected startup adds one fixed registry/claim check and one domain
+  version entry. Extraction adds bounded header/descriptor checks and local maps:
+  descriptor/source<=4MiB, protobuf recursion256, proto lexical preflight<=500k
+  tokens/depth128; existing index64MiB/100k documents/1M occurrences and source
+  caps remain. There is no second SCIP/Go parse or new source/index/tool child.
+  Queries add bounded local identity/domain/witness checks; each existing native
+  SQL fence adds an optional version comparison, without an extra page query or
+  full-root/source read/hash. Versioned proof persistence additionally reselects
+  the already-visible native sources once through existing root/candidate points
+  and one-row probes, then rechecks visibility. Existing three-attempt bounds
+  remain. Archive reads add local decoded witness/citation checks; raw reads add
+  no source calls. Scratch descriptor/maps are invocation-local, with no new
+  numerical heap/SLO claim. Sync/no-op/retry, publication writers, lifecycle,
+  shared locks/caches, permanent schema, concurrency and children are unchanged.

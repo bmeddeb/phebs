@@ -22,6 +22,9 @@ type PartitionedAssertionAuthority struct {
 	UnitDigest              string
 	CandidateManifestDigest string
 	CandidatePolicyDigest   string
+	// ExpectedExtractor optionally fences a version-specific admitted reader.
+	// Empty preserves legacy/native provisional behavior.
+	ExpectedExtractor string
 }
 
 // This compact point-read projection deliberately does not fetch or decode the
@@ -35,6 +38,7 @@ WHERE schema = $root_schema AND repository = $repo AND domain = $domain
 	AND run_id IN (SELECT VALUE run_id FROM $run_rid
 		WHERE run_id = $run_id AND run_id = record::id(id)
 		AND repo = $repo AND domain = $domain AND commit = $commit
+ AND ($expected_extractor = '' OR extractor = $expected_extractor)
 		AND (unit_digest ?? '') = $unit_digest
 		AND status = 'staged' AND published_key = NONE
 		AND (partition_sealed ?? false) = true AND (partition_active ?? false) = false
@@ -152,7 +156,8 @@ func partitionedAssertionVariables(authority PartitionedAssertionAuthority) map[
 		"run_rid": extractionRunID(authority.RunID), "run_id": authority.RunID,
 		"repo_rid": repoID(authority.Repository), "repo": authority.Repository,
 		"domain": authority.Domain, "commit": authority.Commit, "unit_digest": authority.UnitDigest,
-		"plan_digest": authority.PlanDigest, "root_digest": authority.RootDigest,
+		"expected_extractor": authority.ExpectedExtractor,
+		"plan_digest":        authority.PlanDigest, "root_digest": authority.RootDigest,
 		"candidate_rid":    candidateManifestPublicationID(authority.Repository),
 		"candidate_digest": authority.CandidateManifestDigest, "candidate_policy_digest": authority.CandidatePolicyDigest,
 		"store_schema_version": evidenceStoreSchemaVersion, "evidence_format_version": evidenceFormatVersion,
@@ -242,7 +247,7 @@ func validatePartitionedAssertionQuery(q AssertionQuery, authority PartitionedAs
 			return 0, errors.New("list partitioned assertions: invalid authority digest")
 		}
 	}
-	for _, value := range []string{authority.Repository, authority.Domain, authority.RunID, q.Predicate, q.Subject, q.Object, q.ObjectPrefix, q.Lineage} {
+	for _, value := range []string{authority.Repository, authority.Domain, authority.RunID, authority.ExpectedExtractor, q.Predicate, q.Subject, q.Object, q.ObjectPrefix, q.Lineage} {
 		if !utf8.ValidString(value) || len(value) > maxEvidenceIdentityBytes || strings.TrimSpace(value) != value {
 			return 0, errors.New("list partitioned assertions: invalid bounded query value")
 		}

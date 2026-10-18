@@ -9213,3 +9213,10 @@ semantic write classification. Declaration repository/path and SCIP module
 package lineages remain distinct and require explicit exact witnesses to join.
 This result does not activate fields: stable registration/source fencing and
 product operating/signed promotion remain pending under T51.2/T51.3.
+
+T51.2 subsequently implements the isolated stable reader and source/version
+fences, with bounded normal/race and joined store integrations. Its declared
+header recipe remains the public 1.36.11/5.27.1 control; authored 1.36.12/7.36.2
+controls do not widen admission. T51.3 still owns operating and production
+signature promotion. Existing historical qualification/measurement bytes are
+preserved; no metadata or timing sample is relabelled as a production release.

@@ -60,6 +60,9 @@ type Options struct {
 	// matching an HTTP proof service admitted only by released Kafka planes
 	// (T55.2/T56.2).
 	KafkaTopicUsageOnly bool
+	// ProtobufFieldReferencesOnly admits the two field tools alongside any
+	// separately selected Kafka tools, without the provisional proof umbrella.
+	ProtobufFieldReferencesOnly bool
 	// KafkaTopicInventoryReleased lets TopicInventory register beside
 	// KafkaTopicUsageOnly: a verified phebs.kafka.topics record with both
 	// planes released (T57.3).
@@ -205,30 +208,7 @@ func NewServer(opts Options) *sdk.Server {
 	return s
 }
 
-func registerProofTools(s *sdk.Server, opts Options) {
-	if opts.Proofs == nil {
-		return
-	}
-	if opts.KafkaTopicUsageOnly {
-		registerKafkaTopicUsageTool(s, opts)
-		return
-	}
-
-	type operationIn struct {
-		Operation string `json:"operation" jsonschema:"canonical fully-qualified RPC operation /scope.Service/method (gRPC or Thrift)"`
-	}
-	sdk.AddTool(s, &sdk.Tool{
-		Name:         "find_operation_consumers",
-		Description:  "Find matching static call evidence for one bare canonical RPC operation across the registered consumer domains (gRPC and Thrift). This operation-name query does not establish declaration identity or a known-caller roster. Returns envelope v1.0 with permission-scoped facts, extractor abstentions, exact proof references, separate coverage dimensions, and server-rendered qualifications; it cannot establish absence or safety.",
-		OutputSchema: proofEnvelopeSchema("mcp-payload-contract-edges-v1.0.json"),
-	}, func(ctx context.Context, _ *sdk.CallToolRequest, in operationIn) (*sdk.CallToolResult, investigation.Envelope, error) {
-		result, err := opts.Proofs.FindOperationConsumersMCP(ctx, in.Operation)
-		if err != nil {
-			return nil, investigation.Envelope{}, err
-		}
-		return nil, *result, nil
-	})
-
+func registerFieldReferenceTools(s *sdk.Server, opts Options) {
 	type fieldIn struct {
 		Lineage     string `json:"lineage" jsonschema:"canonical contract lineage id from extracted protobuf/SCIP evidence"`
 		Message     string `json:"message" jsonschema:"fully-qualified protobuf message name, e.g. shop.Cart"`
@@ -272,6 +252,39 @@ func registerProofTools(s *sdk.Server, opts Options) {
 		}
 		return nil, *result, nil
 	})
+
+}
+
+func registerProofTools(s *sdk.Server, opts Options) {
+	if opts.Proofs == nil {
+		return
+	}
+	if opts.KafkaTopicUsageOnly || opts.ProtobufFieldReferencesOnly {
+		if opts.ProtobufFieldReferencesOnly {
+			registerFieldReferenceTools(s, opts)
+		}
+		if opts.KafkaTopicUsageOnly {
+			registerKafkaTopicUsageTool(s, opts)
+		}
+		return
+	}
+
+	type operationIn struct {
+		Operation string `json:"operation" jsonschema:"canonical fully-qualified RPC operation /scope.Service/method (gRPC or Thrift)"`
+	}
+	sdk.AddTool(s, &sdk.Tool{
+		Name:         "find_operation_consumers",
+		Description:  "Find matching static call evidence for one bare canonical RPC operation across the registered consumer domains (gRPC and Thrift). This operation-name query does not establish declaration identity or a known-caller roster. Returns envelope v1.0 with permission-scoped facts, extractor abstentions, exact proof references, separate coverage dimensions, and server-rendered qualifications; it cannot establish absence or safety.",
+		OutputSchema: proofEnvelopeSchema("mcp-payload-contract-edges-v1.0.json"),
+	}, func(ctx context.Context, _ *sdk.CallToolRequest, in operationIn) (*sdk.CallToolResult, investigation.Envelope, error) {
+		result, err := opts.Proofs.FindOperationConsumersMCP(ctx, in.Operation)
+		if err != nil {
+			return nil, investigation.Envelope{}, err
+		}
+		return nil, *result, nil
+	})
+
+	registerFieldReferenceTools(s, opts)
 
 	registerKafkaTopicUsageTool(s, opts)
 

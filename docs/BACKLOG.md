@@ -19328,6 +19328,18 @@ registration, operating/SLO or release claim follows. T51.2 is the next leaf.
 this recipe from the provisional proto umbrella; preserve exact committed
 source, declaration, SCIP, authorization and gap identity.
 
+**T51.2 implementation result (2026-10-18, Ben-routed Mac handoff).** The
+signed field-only recipe selects distinct `1.4.0-released.1` and the T51.1 public
+committed input recipe. Pre-emission metadata/header/descriptor/source checks,
+legacy/native expected-version fences, raw reads, direct/HTTP/MCP/citation and
+archived proofs are implemented. Public authority bytes stay compatible; no
+automatic declaration-to-SCIP bridge or unrelated consumer/Impact/Thrift release
+is added. Mixed explicit provisional surfaces remain available, while foreign
+neutral identities exclude stable protobuf reads. Normal/race, two bounded
+joined real-store integrations, vet/pinned lint and source/cost review pass.
+Original T51.1 evidence stays exact. T51.3 still owns operating/production
+signature promotion; this implementation alone activates no unsigned pack.
+
 **T51.3 · Measured field-reference promotion** — satisfy the common bar and
 publish exact supported generators, input formats, operating bounds and expiry.
 

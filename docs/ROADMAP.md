@@ -182,6 +182,12 @@ citation witnesses. Independent review and bounded checks are complete. T51.2
 stable production input/surface isolation can proceed; operating and signing
 remain separate, with no broad generator or semantic-write accuracy claim.
 
+**T51.2 field admission (2026-10-18):** the isolated signed recipe, exact
+committed-input checks and source/version/authorization fences are implemented
+and reviewed with bounded normal/race/store/MCP tests. Mixed explicit provisional
+surfaces remain available; no identity bridge or other product is promoted.
+T51.3 operating and production signing remain separate.
+
 **T48.5a raw evidence (2026-10-18):** implementation and bounded real-root,
 legacy-byte, final-fence and release-domain checks pass on its ticket branch.
 The browser exposes exact native authority without inventing legacy runs;
