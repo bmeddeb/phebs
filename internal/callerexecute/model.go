@@ -11,6 +11,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/callerleaf"
 	"github.com/bmeddeb/phebs/internal/extract"
+	"github.com/bmeddeb/phebs/internal/resolvermaterialize"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -225,4 +226,34 @@ func ExpectedPairs(
 	}
 	digest, err := callerleaf.PairSetDigest(generation, identities)
 	return result, digest, err
+}
+
+// currentResolverPacks refuses stale semantic catalogs before a warm complete
+// publication or no-op path can bypass the cold catalog decoder. Historical
+// artifact decoding and custody remain independent of current admission.
+func (registry *Registry) currentResolverPacks(packs []store.ResolverCatalogPack) bool {
+	if registry == nil || len(packs) != len(registry.adapters)+1 {
+		return false
+	}
+	seenModule := false
+	for index, pack := range packs {
+		if pack.Version != resolvermaterialize.PackVersion || (index > 0 && packs[index-1].Name >= pack.Name) {
+			return false
+		}
+		if pack.Name == resolvermaterialize.GoModulePackName {
+			seenModule = true
+			continue
+		}
+		matched := false
+		for _, adapter := range registry.adapters {
+			if (adapter.Protocol == "grpc" && pack.Name == resolvermaterialize.GRPCGeneratedPackName) || (adapter.Protocol == "thrift" && pack.Name == resolvermaterialize.ThriftGeneratedPackName) {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			return false
+		}
+	}
+	return seenModule
 }

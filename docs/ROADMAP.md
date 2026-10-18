@@ -5509,6 +5509,13 @@ Production registration of the remaining evidence surfaces still requires:
 Until both exist, the implementation remains dark regardless of feature
 completeness or demo quality.
 
+**T50.3a caller unit repair (2026-10-18):** the direct caller pipeline now
+carries exact committed unit attribution through one bounded shared resolver
+member. Old unit-less catalogs refuse current worker/read admission and rebuild
+under pack1.2.0; historical artifact custody stays intact. Bounded regression
+and independent source/cost review precede integration. T50.3's earlier unit
+failure stays retained; new product qualification remains separate.
+
 ## On demand
 
 Epic 32 measured the target whole repository and did not trigger P6. P6 remains

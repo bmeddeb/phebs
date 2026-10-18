@@ -12426,3 +12426,58 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   changes37,750→40,609 bytes (gzip9,821→10,699); these are build observations,
   not latency or scale bounds. Production signing still binds the actual final
   binary and artifacts when the existing key becomes available.
+
+- **2026-10-18 — T50.3a committed unit attribution in caller leaves
+  (Ben-routed Mac handoff).** Repair the direct caller pipeline once at resolver
+  materialization: read the exact candidate-bound unit snapshot once, reuse
+  existing normalized unit IDs and ambiguity/line precedence, publish one
+  mandatory protocol-neutral `go-unit-attribution-v1.ndjson` member and bind
+  each retained mapping to admitted caller source path/OID. The existing single
+  cold catalog visitor validates it, and the existing one-generation cache
+  shares one immutable path/line index across protocols and leaves. Bind source
+  OID before opening/hashing a selected source blob; pass the existing direct
+  scanner callback. Keep repository-overlay attribution, including admitted
+  InUnit=false source; existing generated/test/catalog exclusions stay exact.
+  Mapping-only paths cannot grant source authority. Globally validate snapshot
+  syntax/duplicates/conflicts, explicitly count unverified mappings excluded
+  from admitted caller metadata, and perform no per-mapping Git/tree probe.
+
+  Missing snapshot publishes an explicit unavailable input record; malformed,
+  unsupported or over-bound inputs publish no new catalog/pointer. Streaming
+  decoding enforces4MiB input,25,000 mappings and64 values per vector before
+  overflow append; existing4KiB string/1MiB record limits remain. Encoded member
+  and conservative retained identity/index accounting are each capped16MiB;
+  these are mechanical accounting bounds, not a numeric heap/RSS guarantee.
+  Resolver pack1.2.0 rekeys packset/catalog/caller generation and pairs. Worker
+  currentJobAuthority and publication-reader boundResolver compare the closed
+  expected packs before an old1.1.1 store-current pointer can bypass cold open.
+  Historical generic decoding, archive/restore and lifecycle ownership remain
+  unchanged. No API field, assertion tier, label, citation or read-side join
+  changes. Preserve T50.3's actual5/5 source-site but0/5 unit-attribution failure;
+  future product qualification binds a new exact binary/generation prospectively.
+
+  Cost: a present snapshot adds one candidate-OID git cat-file blob child/read
+  of at most4MiB, hash and streamed normalization during existing materialization
+  replay and repository/mirror lock/deadline. Absence adds no blob child/read.
+  Charge the existing100,000-read/512MiB aggregate budget, plus candidate
+  metadata checks during its existing replay; no consumer source reread or
+  per-mapping child. First catalog open adds one member validation/index build
+  in the existing visitor; the existing generation cache shares it, with no
+  new invalidation policy. Per leaf adds one path/OID lookup; per call selects
+  one exact-line or line0 bucket and defensively copies its selected candidates,
+  rather than scanning every mapping per file. Warm worker/reader points add
+  at most16 closed pack comparisons, no I/O. Query reads retain immutable leaf
+  details only. Preserved unit metadata can increase record/index/copy/response
+  bytes within unchanged candidate/row/1MiBrecord/128MiBindex limits. Publication
+  adds one bounded catalog member and ordinary new generation/pair work. A
+  malformed same-binding retry repeats the bounded snapshot read/decode.
+  Existing locks, concurrency, sync/retry/no-op policy, lifecycle, store schema
+  and child classes remain unchanged; no new lock, timer or goroutine is added.
+
+  Full normal resolver/caller packages pass10.847/7.265s; full race
+  27.209/7.598s and scanner race1.374s. Shared projection plus legacy attribution
+  race passes3.900s; historical resolver/archive controls0.867s. Scoped vet and
+  repository-pinned lint2.12.2 are clean; one style-only correction then passes
+  the focused catalog regression1.173s. Root and independent peer source/cost
+  reviews have no remaining blocker. No product requalification, full repository
+  suite, Linux rehearsal or production signing is inferred from these tests.

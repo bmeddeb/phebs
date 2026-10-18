@@ -284,6 +284,15 @@ func (s *monorepoAttributionSource) loadUnits(
 	ctx context.Context,
 	inputs []unitMappingInput,
 ) error {
+	return s.loadUnitsWithPresence(ctx, inputs, s.lookup.containsRegular, nil)
+}
+
+func (s *monorepoAttributionSource) loadUnitsWithPresence(
+	ctx context.Context,
+	inputs []unitMappingInput,
+	contains func(context.Context, string) (bool, error),
+	observe func(string, sdk.ConsumerUnitCandidate) error,
+) error {
 	if len(inputs) > maxAttributionMappings {
 		return fmt.Errorf("more than %d unit mappings", maxAttributionMappings)
 	}
@@ -293,7 +302,7 @@ func (s *monorepoAttributionSource) loadUnits(
 		if err := checkCorpusPath(input.SourcePath); err != nil {
 			return fmt.Errorf("mapping %d source path: %w", index, err)
 		}
-		present, err := s.lookup.containsRegular(ctx, input.SourcePath)
+		present, err := contains(ctx, input.SourcePath)
 		if err != nil {
 			return fmt.Errorf(
 				"mapping %d inspect source path %q: %w", index, input.SourcePath, err)
@@ -351,6 +360,11 @@ func (s *monorepoAttributionSource) loadUnits(
 		derivedState := unitCandidateState(candidate)
 		if input.State != "" && input.State != derivedState {
 			return fmt.Errorf("mapping %d state %q does not match derived %q", index, input.State, derivedState)
+		}
+		if observe != nil {
+			if err := observe(input.SourcePath, candidate); err != nil {
+				return err
+			}
 		}
 		s.units[input.SourcePath] = append(s.units[input.SourcePath], unitRecord{
 			line: input.StartLine, candidate: candidate,
@@ -653,6 +667,10 @@ func (s *monorepoAttributionSource) ConsumerUnits(
 			State: sdk.AttributionStateUnavailable, Reason: "no_unit_mapping",
 		}
 	}
+	return consumerUnitAttribution(selected)
+}
+
+func consumerUnitAttribution(selected []unitRecord) sdk.ConsumerUnitAttribution {
 	candidates := make([]sdk.ConsumerUnitCandidate, 0, len(selected))
 	state := sdk.AttributionStateResolved
 	for _, record := range selected {

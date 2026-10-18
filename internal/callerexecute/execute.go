@@ -87,6 +87,10 @@ func ExecutePair(ctx context.Context, request ExecuteRequest) error {
 					request.Stage, file, callerleaf.CoverageGapSourceTooLarge,
 				)
 			}
+			consumerUnits, err := request.Resolver.ConsumerUnitsForSource(file.Path, file.ObjectID)
+			if err != nil {
+				return fmt.Errorf("%w: %v", ErrImmutableLeafInput, err)
+			}
 			if err := request.Stage.ObserveSourceBlob(file.DeclaredBytes); err != nil {
 				return err
 			}
@@ -119,6 +123,7 @@ func ExecutePair(ctx context.Context, request ExecuteRequest) error {
 				gocaller.DirectScanRequest{
 					Protocol: request.Protocol, Path: file.Path, Blob: blob,
 					Resolver:              request.Resolver,
+					ConsumerUnits:         consumerUnits,
 					ResolverCatalogDigest: request.ResolverCatalogDigest,
 				},
 				func(fact sdk.Fact) error {

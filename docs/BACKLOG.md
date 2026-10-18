@@ -19328,6 +19328,25 @@ remain pending, and Caller Map/Atlas's bounded-test amendment does not waive the
 old/replacement source, concurrent publication and bounded combined read cost;
 release requires its own result even when both Caller Maps are released.
 
+**T50.3a · Preserve committed consumer units through direct caller leaves**
+*(2026-10-18, Ben-routed Mac handoff)* — T50.3's first bounded product attempt
+returned the five expected source sites but all five lacked unit attribution:
+`consumer_unit_projection_unavailable`. Preserve that failure. Materialize one
+bounded protocol-neutral unit member from the exact candidate's committed
+`unit-snapshot.json`, bind admitted caller paths to source OIDs and supply the
+existing direct-scan unit callback. Reuse existing normalization/IDs/ambiguity/
+line precedence; no read-side join or inferred unit authority. Resolver packs
+advance1.1.1→1.2.0 so old unit-less catalogs cannot remain current. Both worker
+and reader early-return paths must reject old packs before cold-open/reconcile.
+Missing input remains explicit; malformed/duplicate/conflicting/unsupported or
+over-bound input refuses atomically. Preserve historical generic artifact,
+archive/restore and lifecycle custody. AC: source OID, shared protocol member,
+focused repository overlay, absent/ambiguous/per-line/malformed and overflow
+controls; warm old-pack refusal at both boundaries; bounded normal/race and
+historical custody tests; direct/independent source and steady-cost review.
+T50.3 quality/operating/publication-transition qualification remains separate
+and must use new prospectively bound exact inputs after this fix integrates.
+
 ## Epic 51 · Protobuf field-reference production readiness
 
 **T51.1 · Exact field/SCIP identity and independent quality** — depend on

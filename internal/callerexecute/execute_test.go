@@ -2,6 +2,7 @@ package callerexecute
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"slices"
@@ -11,6 +12,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/extract"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
+	"github.com/bmeddeb/phebs/internal/extract/sdk"
 )
 
 type executeTestPlan struct {
@@ -395,6 +397,18 @@ func TestExecutePairResultKeepsFullDescriptorPresentArtifact(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	units, err := extract.DecodeConsumerUnitSnapshot(t.Context(), `{"version":"t20-unit-snapshot-v1","mappings":[{"source_path":"consumer/call.go","build_targets":["go:demo"]}]}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	unitChecks := 0
+	resolver = resolver.WithConsumerUnits(func(path, objectID string) (func(string, int) sdk.ConsumerUnitAttribution, error) {
+		unitChecks++
+		if path == files[0].Path && objectID != files[0].ObjectID {
+			return nil, fmt.Errorf("wrong source OID")
+		}
+		return units.ConsumerUnits, nil
+	})
 	err = ExecutePair(t.Context(), ExecuteRequest{
 		RepositoryDir: "/unused", Plan: plan, Pair: pairs[0],
 		Protocol: "grpc", ResolverCatalogDigest: generation.ResolverManifestDigest,
@@ -425,6 +439,39 @@ func TestExecutePairResultKeepsFullDescriptorPresentArtifact(t *testing.T) {
 		receipt.OutOfLeafReads != 0 {
 		t.Fatalf("receipt = %+v", receipt)
 	}
+	if unitChecks != 2 {
+		t.Fatalf("unit source checks=%d want2eligible files only", unitChecks)
+	}
+	publication, err := prepared.Install(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	results := 0
+	if err := publication.ScanRecords(t.Context(), generation, pairs[0].Identity, func(_ callerleaf.RecordReference, record callerleaf.Record) error {
+		if record.Fact == nil {
+			return nil
+		}
+		var detail struct {
+			UnitState      string `json:"unit_state"`
+			UnitCandidates []struct {
+				BuildTargets []string `json:"build_targets"`
+			} `json:"unit_candidates"`
+		}
+		if err := json.Unmarshal([]byte(record.Fact.Assertion.Detail), &detail); err != nil {
+			return err
+		}
+		if detail.UnitState != "resolved" || len(detail.UnitCandidates) != 1 || !slices.Equal(detail.UnitCandidates[0].BuildTargets, []string{"go:demo"}) {
+			t.Fatalf("direct leaf discarded committed units=%+v", detail)
+		}
+		results++
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if results != 1 {
+		t.Fatalf("resolved leaf results=%d want1", results)
+	}
+
 }
 
 func TestExecutePairUnresolvedFactKeepsFullDescriptorPresentArtifact(t *testing.T) {

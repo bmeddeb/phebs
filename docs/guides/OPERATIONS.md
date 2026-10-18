@@ -9200,3 +9200,12 @@ the exact socket, image, and `--inputs` directory from that owner. Recovery
 checks daemon and container identity, stops/removes only that exact owner,
 and confirms absence before clearing the journal. Preserve inputs when that
 proof fails; do not use daemon-wide pruning or container-name guesses.
+
+T50.3a advances resolver packs to1.2.0 and includes a bounded, exact committed
+consumer-unit projection. Retained1.1.1 catalogs cannot satisfy current caller
+worker/read admission; ordinary reconciliation builds the new generation.
+During that transition, unavailable evidence stays explicit. Historical backup,
+restore and lifecycle custody still recognize old artifacts. Missing unit
+snapshots remain unavailable; invalid snapshots fail materialization atomically.
+Only admitted repository-overlay source path/OID mappings annotate caller facts;
+this supplies no focused-local, runtime ownership or deployment claim.
