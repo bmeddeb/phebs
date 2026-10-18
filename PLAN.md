@@ -13524,3 +13524,16 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   tables distinguish source, execution and final-artifact censuses. No product
   request/sync/startup/retry/publication, lock/cache/schema, worker or child work
   is added; the finite checks are opt-in evidence only.
+
+- **2026-10-18 — T45.10a presentation closure preparation (Mac track).**
+  Keep both exact profile validators and architecture mapping unchanged. Extend
+  the neutral fixture through both admitted resource names, exact request/CSRF/
+  retry/all-state paths and unknown/empty refusal. Preserve eight historical ARM
+  canonical names and bytes; new profile-preview captures get a separate native
+  source/renderer-bound author, visual review and fresh comparison, never Noble
+  equivalence or copied baselines. Preview mechanics timing stops before font/
+  geometry/capture work. All118production UI inputs match the retained e72build,
+  so only that exact unchanged bundle/source measurement may be reused. Full
+  applicable UI/keyboard/390px/console/a11y/fresh-frame gates remain to execute
+  before closure. Fixture-only work adds no production request/sync/startup/
+  retry/publication, schema/cache/lock/worker or child cost.

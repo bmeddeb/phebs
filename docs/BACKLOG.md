@@ -16939,6 +16939,14 @@ hierarchy, states, keyboard, copy and motion because this changes only response
 validation. Full UI-suite/browser/accessibility/screenshot/latency closure gates
 have not been performed for this slice; no UI-ticket closure is claimed.
 
+**T45.10a closure preparation (2026-10-18, Mac track).** Existing exact-name
+validators/API are unchanged. Both-profile neutral fixtures now cover exact
+request/CSRF/retry/states and unknown/empty refusal. Eight historical ARM
+golden expectations stay exact; separate native captures need author review
+and fresh source/renderer-bound comparison. `spike/t4510a/profile-receipts/`
+records scope and source identity. Full applicable UI/type/lint/browser/a11y/
+latency checks remain pending; no installed-generation or release claim.
+
 ## Epic 46 · Retire Investigations and Change Workbench *(user-directed cross-track de-scope, 2026-09-25)*
 
 PHEBS remains an evidence provider. Cortana owns change organization,

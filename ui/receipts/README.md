@@ -214,6 +214,51 @@ The existing repository-list fetch is parsed before its 4,096-row admission chec
 only active selected status repeats at five seconds. Fixture response timings
 measure a local presentation path and are not production API or native-work SLOs.
 
+### T45.10a two-profile presentation checks
+
+The same page-scoped fixture now supplies either exact admitted resource profile:
+`native-arm64-bounded-v1` or `native-amd64-bounded-v1`. Each profile exercises
+exact preview and CSRF-bound enqueue/retry requests, all nine states and
+last-confirmed polling. Four refusal cases cover an unknown or empty profile
+on an available status or preview. An empty repository inventory makes no
+managed status request and offers no review or generation action; an unavailable
+status with empty profile fields remains readable. These are presentation
+controls, with no compiler, installed runtime or generated-navigation inference.
+
+The project has 27 cases: the eight existing ARM64 canonical screenshot cases,
+eight native QA preview captures (two profiles × two themes × desktop/390px,
+comfortable density), two exact interaction/state flows, four malformed-profile
+refusals, one empty inventory and four existing workflow/access controls. The
+eight historical `typed-index-preview--…` names and baseline PNGs are unchanged.
+Native QA captures are attachments named
+`typed-index-native--<profile>--<theme>--<width>.png` under the test output path;
+they add no canonical baseline expectations or baseline-count requirement.
+
+For a separate native lineage, use an output directory outside the checkout:
+
+```sh
+npm run receipts -- --project typed-index --grep 'native profile preview' --output /tmp/phebs-typed-index-native-author
+```
+
+Author and fresh captures must use the same reviewed source, renderer, viewport
+and preferences, with independently retained source/tool hashes and the existing
+zero-retry, 0.1% difference limit. The capture tests themselves emit images; they
+do not assert that a later comparison or accessibility audit passed. Native
+images do not establish Noble/Chromium baseline equivalence and must not be
+copied into `baselines/`. Browser, accessibility, comparison and measured timing
+outcomes remain pending until the bounded run is recorded. Browser plugin not
+available in the source-preparation session; the existing Playwright dependency
+is used without additional browser or accessibility installations.
+
+`fixtureReadyMillis` covers navigation through the keyboard-ready Review action.
+`fixturePreviewMillis` stops immediately after the exact preview is visible and
+Generate is enabled, before font readiness, geometry checks or capture. It is a
+local fixture interaction measurement, not API latency or native generation time.
+The source change adds no production request, poll, lock, cache, sync/startup,
+publication, compiler or provider work. The existing one-worker, zero-retry
+receipt bounds apply; only the two active-state flows intentionally wait for the
+existing five-second polling intervals.
+
 
 T45.8b canonical evidence is retained in `t458b.json`: eight preview fixture
 pixels and eight ordinary Settings pixels were authored and compared with the

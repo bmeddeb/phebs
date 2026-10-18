@@ -1,0 +1,31 @@
+{
+  "schema": "phebs-t4510a-profile-receipt-plan-v1",
+  "date": "2026-10-18",
+  "status": "prospective_source_review_accepted_tests_not_run",
+  "owner": "Root lead; receipt_portability source author",
+  "scope": "Exactly both existing native resource profile names, request/CSRF/retry/all-state/unknown-empty boundaries. No product/API/validator, installer/managed-generation/scale/release change.",
+  "root_review": "Fixture parametrization reflects existing closed-name validation; historical8ARMcanonical names/bytes untouched. New native preview captures are separate, no Noble/baseline transfer.",
+  "fixture_files": {
+    "ui/receipts/typed-index.spec.ts": "sha256:9493cfd988de39bdb9c28743a8e418a986db822b19a744661c5541251a0beb61",
+    "ui/receipts/README.md": "sha256:eff657c81eb35395636531005ba1b1931d20f479aafc0991ca433109c00b2c5d"
+  },
+  "preserved_historical_baselines": {
+    "typed-index-preview--dark--1280--comfortable.png": "85ed0904a1f147e95edfa0794038e2faa49ef03b94590abe162184095a4335af",
+    "typed-index-preview--dark--1280--dense.png": "84997b06ed36bbeee3ece9bfbf4fc06daa5e5d0789c60d2194aefaef7e443559",
+    "typed-index-preview--dark--390--comfortable.png": "5e5fb267a6938212d1998152e2e6dc8d00fc58d2fbcbd269cc1f4518c4e734af",
+    "typed-index-preview--dark--390--dense.png": "5e5fb267a6938212d1998152e2e6dc8d00fc58d2fbcbd269cc1f4518c4e734af",
+    "typed-index-preview--light--1280--comfortable.png": "7ae663f56b11a4d344d5af9b7405a4c7509c3a5e654813e6c0bdc80dec11d27e",
+    "typed-index-preview--light--1280--dense.png": "7ae663f56b11a4d344d5af9b7405a4c7509c3a5e654813e6c0bdc80dec11d27e",
+    "typed-index-preview--light--390--comfortable.png": "c7bc000a7f99dbd554941072e8e9fb38e0553e605bfa3820be8988a42336900c",
+    "typed-index-preview--light--390--dense.png": "c7bc000a7f99dbd554941072e8e9fb38e0553e605bfa3820be8988a42336900c"
+  },
+  "production_source_identity": "All118trackedUIinputs exact to measured e72 binary/UI build census. Reuse build/bundle result only within that unchanged scope; no rebuild needed for fixture/prose changes.",
+  "gates": [
+    "Types +receipt strict standalone types +UIlint +full Vitest once",
+    "19noncanonicalbrowsercases including8nativecaptures +WCAG +keyboard +overflow +cleanconsole",
+    "root/peervisual review8nativeframes",
+    "8freshsame-source/renderer/time/layoutcaptures;0.1%pixel ceiling no masks or reauthoring",
+    "Recordmechanics latency stoppingatpreviewreadiness;no usability/productionexecution inference"
+  ],
+  "cost": "Existing production work unchanged. Fixture19casepass has2intentional5spollflows. Fresh8capturecomparison is finite, onebrowserworker/zero retries; no new production children/cache/schema."
+}
