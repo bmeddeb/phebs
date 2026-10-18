@@ -263,6 +263,24 @@ func releasedCallerComparison(claims, domains map[string]bool) bool {
 	return true
 }
 
+func releasedOperationImpact(d *serveDeps) bool {
+	if !d.releasedClaims[operationImpactPackID] {
+		return false
+	}
+	if d.releasedDomains["proto-contract"] && d.releasedDomains["grpc-caller"] {
+		declaration, caller := false, false
+		for _, ex := range d.exs {
+			declaration = declaration || ex.Domain() == "proto-contract" && ex.Version() == "4.0.0"
+			caller = caller || ex.Domain() == "grpc-caller" && ex.Version() == "1.6.0-released.1"
+		}
+		if declaration && caller {
+			return true
+		}
+	}
+	log.Printf("release selection: %s withdrawn: operation Impact needs the current released protobuf Caller Map recipe", operationImpactPackID)
+	return false
+}
+
 // admittedWireCompatibility admits the standalone Buf WIRE verdict (T53.2)
 // under the same dark switches as the proof-enriched check, or ordinarily when
 // a verified released record selects its claim (T53.3). A released claim never
@@ -336,6 +354,7 @@ func newServeAPIOptions(d *serveDeps) (api.Options, error) {
 		CallerComparisonEnabled: comparisonReleased || cfg.Experimental.ProvisionalProtoExtraction ||
 			cfg.Experimental.ProvisionalThriftExtraction,
 		CallerComparisonReleased: comparisonReleased,
+		OperationImpactEnabled:   releasedOperationImpact(d),
 		CallerReader:             d.callerReader,
 		ProofBundleRetention:     cfg.ProofBundles.RetentionFor(),
 		Compatibility:            d.compatibility, Visible: d.visibleFor,
@@ -372,6 +391,7 @@ func newServeAPIOptions(d *serveDeps) (api.Options, error) {
 	apiOpts.ContractCatalog = api.NewContractCatalogService(apiOpts)
 	apiOpts.CallerMap = api.NewCallerMapService(apiOpts)
 	apiOpts.CallerComparison = api.NewCallerComparisonService(apiOpts)
+	apiOpts.OperationImpact = api.NewOperationImpactService(apiOpts)
 	apiOpts.ServiceDirectory = api.NewRuntimeServiceDirectoryService(
 		apiOpts, d.serviceStateV3Reader,
 	)
@@ -460,6 +480,10 @@ func releasedEvidenceVersions(d *serveDeps) map[string]string {
 // options, so MCP advertises exactly the proof, compatibility, Contract Atlas,
 // Caller Map and comparison services the API constructed.
 func newServeMCPServer(d *serveDeps, apiOpts api.Options) *mcpsdk.Server {
+	var operationImpact phebsmcp.OperationImpactQueries
+	if apiOpts.OperationImpact != nil {
+		operationImpact = apiOpts.OperationImpact
+	}
 	var mcpProofs phebsmcp.ProofQueries
 	var mcpCompatibility phebsmcp.CompatibilityQueries
 	var mcpTopicInventory phebsmcp.TopicInventoryQueries
@@ -494,6 +518,7 @@ func newServeMCPServer(d *serveDeps, apiOpts api.Options) *mcpsdk.Server {
 		ContractCatalog:             catalogQueries,
 		CallerMap:                   callerMapQueries,
 		CallerComparison:            comparisonQueries,
+		OperationImpact:             operationImpact,
 		ServiceDirectory:            apiOpts.ServiceDirectory,
 		ObservationProgress:         apiOpts.ObservationProgress,
 		Relationships:               apiOpts.Relationships,

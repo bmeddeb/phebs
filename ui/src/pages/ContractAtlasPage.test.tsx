@@ -337,6 +337,7 @@ function tree(
   params: URLSearchParams,
   callerMapAvailable: boolean,
   impactAvailable = false,
+  operationImpactAvailable = false,
 ) {
   return (
     <StyletronProvider value={engine}>
@@ -345,6 +346,7 @@ function tree(
           params={params}
           callerMapAvailable={callerMapAvailable}
           impactAvailable={impactAvailable}
+          operationImpactAvailable={operationImpactAvailable}
         />
       </BaseProvider>
     </StyletronProvider>
@@ -382,6 +384,22 @@ beforeEach(() => {
 })
 
 afterEach(cleanup)
+
+test('stable operation Impact discovery carries the full selected declaration identity', async () => {
+  render(tree(new URLSearchParams({
+    sel_repository: detail.repository, sel_lineage: detail.declaration_lineage,
+    sel_operation: detail.operation, sel_protocol: 'protobuf',
+  }), true, false, true))
+  await screen.findByTestId('contract-operation-detail')
+  const link = screen.getByRole('link', { name: 'Inspect operation impact' })
+  const params = new URLSearchParams(link.getAttribute('href')?.split('?')[1])
+  expect(params.get('shape')).toBe('operation_callers')
+  expect(params.get('protocol')).toBe('protobuf')
+  expect(params.get('repository')).toBe(detail.repository)
+  expect(params.get('lineage')).toBe(detail.declaration_lineage)
+  expect(params.get('operation')).toBe(detail.operation)
+  expect(screen.queryByRole('link', { name: 'Analyze impact' })).toBeNull()
+})
 
 test('browses duplicate declarations through stable bounded pages', async () => {
   const view = page()

@@ -6,10 +6,12 @@ import { Notification, KIND as NOTIFICATION_KIND } from 'baseui/notification'
 import { Spinner } from 'baseui/spinner'
 import {
   fetchContractCallers,
+  fetchOperationImpactReport,
   type CallerMapEndpoint,
   type CallerMapPage as CallerMapResponse,
   type CallerMapRow,
   type CallerMapUnitCandidate,
+  type OperationImpactReport,
 } from '../api'
 import { ContractIcon, OpenIcon } from '../icons'
 import { href, navigate } from '../router'
@@ -20,7 +22,6 @@ import { ClaimBoundary, StatusChip } from '../components/kit'
 import { CALLER_ROWS_UNAVAILABLE_ADDENDUM } from '../caveats'
 import { AnalysisScopePanel } from '../components/AnalysisScopePanel'
 
-const pageSize = 100
 const maxCursorHistory = 500
 
 type Freshness = 'any' | 'fresh' | 'stale'
@@ -52,12 +53,18 @@ const emptyFilters: CallerFilters = {
 export default function CallerMapPage({
   params,
   comparisonAvailable = false,
+  operationImpact = false,
+  operationImpactAvailable = false,
 }: {
   params: URLSearchParams
   comparisonAvailable?: boolean
+  operationImpact?: boolean
+  operationImpactAvailable?: boolean
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
+  const requestedPageSize = Number(params.get('page_size') ?? 100)
+  const pageSize = operationImpact ? (requestedPageSize === 0 ? 50 : requestedPageSize) : 100
   const endpoint = endpointFromParams(params)
   const endpointKey = endpoint
     ? [
@@ -77,6 +84,7 @@ export default function CallerMapPage({
   const view = params.get('view') === 'group' ? 'group' as const : 'source' as const
   const [draftFilters, setDraftFilters] = useState<CallerFilters>(appliedFilters)
   const [page, setPage] = useState<CallerMapResponse | null>(null)
+  const [report, setReport] = useState<OperationImpactReport | null>(null)
   const [reload, setReload] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -91,6 +99,7 @@ export default function CallerMapPage({
   useEffect(() => {
     cursorStack.current = cursor ? ['', cursor] : ['']
     setPage(null)
+    setReport(null)
     // The stack reseeds only on an endpoint change; the cursor read is
     // deliberate initialization, not a dependency.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -104,25 +113,34 @@ export default function CallerMapPage({
     setLoading(true)
     setError('')
     setPage(null)
-    fetchContractCallers(
+    setReport(null)
+    const filters = {
+      unit: appliedFilters.unit || undefined,
+      owner: appliedFilters.owner || undefined,
+      path_prefix: appliedFilters.pathPrefix || undefined,
+      code_role: appliedFilters.codeRole || undefined,
+      tier: appliedFilters.tier || undefined,
+      freshness: appliedFilters.freshness,
+      resolution: appliedFilters.resolution,
+      ordering: appliedFilters.ordering,
+    }
+    const read = operationImpact
+      ? fetchOperationImpactReport(endpoint, filters, pageSize, cursor, controller.signal)
+          .then((result) => ({ page: result.caller_page, report: result }))
+      : fetchContractCallers(
       endpoint,
-      {
-        unit: appliedFilters.unit || undefined,
-        owner: appliedFilters.owner || undefined,
-        path_prefix: appliedFilters.pathPrefix || undefined,
-        code_role: appliedFilters.codeRole || undefined,
-        tier: appliedFilters.tier || undefined,
-        freshness: appliedFilters.freshness,
-        resolution: appliedFilters.resolution,
-        ordering: appliedFilters.ordering,
-      },
+      filters,
       pageSize,
       cursor,
       controller.signal,
-    )
-      .then(setPage)
+    ).then((result) => ({ page: result, report: null }))
+    read.then((result) => {
+      if (request.current !== controller || controller.signal.aborted) return
+      setPage(result.page)
+      setReport(result.report)
+    })
       .catch((cause) => {
-        if (!isAbortError(cause)) {
+        if (request.current === controller && !isAbortError(cause)) {
           setError(cause instanceof Error ? cause.message : String(cause))
         }
       })
@@ -133,11 +151,13 @@ export default function CallerMapPage({
         }
       })
     return () => controller.abort()
-  }, [endpointKey, appliedFilters, cursor, reload]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [endpointKey, appliedFilters, cursor, reload, operationImpact, pageSize]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const routeTo = (filters: CallerFilters, nextCursor: string, nextView: 'source' | 'group' = view) => {
     if (!endpoint) return
-    navigate('/callers', {
+    navigate(operationImpact ? '/impact' : '/callers', {
+      ...(operationImpact ? { shape: 'operation_callers' } : {}),
+      ...(operationImpact && params.has('page_size') ? { page_size: params.get('page_size') ?? '' } : {}),
       protocol: endpoint.protocol,
       repository: endpoint.repository,
       lineage: endpoint.declaration_lineage,
@@ -197,8 +217,9 @@ export default function CallerMapPage({
           kind={NOTIFICATION_KIND.negative}
           overrides={{ Body: { style: { width: 'auto', margin: 0 } } }}
         >
-          Caller Map requires a protocol, declaration repository, declaration
-          lineage, and canonical operation selected from Contracts.
+          {operationImpact ? 'Operation impact' : 'Caller Map'} requires a protocol,
+          declaration repository, declaration lineage, and canonical operation
+          selected from Contracts.
         </Notification>
         <a
           href="#/contracts"
@@ -225,7 +246,20 @@ export default function CallerMapPage({
         endpoint={endpoint}
         page={page}
         comparisonAvailable={comparisonAvailable}
+        operationImpact={operationImpact}
+        operationImpactAvailable={operationImpactAvailable}
+        operationImpactHref={href('/impact', {
+          shape: 'operation_callers', protocol: endpoint.protocol, repository: endpoint.repository,
+          lineage: endpoint.declaration_lineage, operation: endpoint.operation,
+          ...callerFilterParams(appliedFilters), page_size: String(pageSize),
+          ...(cursor ? { cursor } : {}), ...(view === 'group' ? { view: 'group' } : {}),
+        })}
       />
+
+      {report && <div role="status" aria-live="polite" className={css({ marginBottom: '16px', color: tok.textSecondary, fontSize: '13px', lineHeight: '20px', maxWidth: '75ch' })}>
+        <StatusChip tone={report.conclusion.state === 'unavailable' ? 'blue' : 'neutral'}>{humanize(report.conclusion.state)}</StatusChip>
+        <p>{report.conclusion.qualification}</p>
+      </div>}
 
       <CallerFilterPanel
         draft={draftFilters}
@@ -241,7 +275,7 @@ export default function CallerMapPage({
           overrides={{ Body: { style: { width: 'auto', marginLeft: 0, marginRight: 0 } } }}
         >
           <div>
-            <strong>{staleCursor ? 'Caller snapshot changed.' : 'Caller Map request failed.'}</strong>
+            <strong>{staleCursor ? 'Caller snapshot changed.' : operationImpact ? 'Operation impact request failed.' : 'Caller Map request failed.'}</strong>
             <div className={css({ marginTop: '4px', overflowWrap: 'anywhere' })}>
               {error}
             </div>
@@ -277,7 +311,7 @@ export default function CallerMapPage({
       {loading && (
         <div
           role="status"
-          aria-label="Loading Caller Map"
+          aria-label={operationImpact ? 'Loading operation impact' : 'Loading Caller Map'}
           className={css({
             minHeight: '220px',
             display: 'grid',
@@ -292,7 +326,7 @@ export default function CallerMapPage({
 
       {!loading && page && (
         <>
-          <GenerationStatus page={page} />
+          {!operationImpact && <><GenerationStatus page={page} />
           <AnalysisScopePanel
             id="caller-map-analysis-scope"
             certificate={page.coverage}
@@ -300,10 +334,11 @@ export default function CallerMapPage({
             callerGeneration={page.generation}
             eyebrow="Focused declarations and repository-overlay callers"
             compact
-          />
+          /></>}
           <PageProgress
             page={page}
             pageIndex={pageIndex}
+            pageSize={pageSize}
             view={view}
             onView={(nextView) => routeTo(appliedFilters, cursor, nextView)}
             onReviewUnresolved={reviewUnresolved}
@@ -316,6 +351,15 @@ export default function CallerMapPage({
             onPrevious={previousPage}
             onNext={nextPage}
           />
+          {operationImpact && <details className={css({ marginTop: '16px', color: tok.textSecondary, fontSize: '12px' })}>
+            <summary className={css({ cursor: 'pointer', padding: '8px 0', ':focus-visible': { outline: `2px solid ${tok.accent}` } })}>Source authority and scope</summary>
+            <GenerationStatus page={page} />
+            <AnalysisScopePanel id="operation-impact-analysis-scope" scopes={page.scope ? [page.scope] : []} callerGeneration={page.generation} eyebrow="Exact source authority" compact />
+          </details>}
+          {report && <details className={css({ marginTop: '8px', color: tok.textSecondary, fontSize: '12px', lineHeight: '20px' })}>
+            <summary className={css({ cursor: 'pointer', padding: '8px 0', ':focus-visible': { outline: `2px solid ${tok.accent}` } })}>Other report sections · unavailable</summary>
+            <ul>{Object.keys(report.unavailable_sections).map((section) => <li key={section}>{humanize(section)}: not in this supported report shape.</li>)}</ul>
+          </details>}
           <div className={css({ marginTop: '14px' })}>
             <ClaimBoundary caveat={page.caveat} />
           </div>
@@ -368,10 +412,16 @@ function EndpointHeader({
   endpoint,
   page,
   comparisonAvailable,
+  operationImpact,
+  operationImpactAvailable,
+  operationImpactHref,
 }: {
   endpoint: CallerMapEndpoint
   page: CallerMapResponse | null
   comparisonAvailable: boolean
+  operationImpact: boolean
+  operationImpactAvailable: boolean
+  operationImpactHref: string
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
@@ -395,7 +445,7 @@ function EndpointHeader({
             letterSpacing: '0.05em',
             textTransform: 'uppercase',
           })}>
-            Caller Map
+            {operationImpact ? 'Operation impact' : 'Caller Map'}
           </span>
         </div>
         <h1 className={css({
@@ -424,6 +474,7 @@ function EndpointHeader({
         </div>
       </div>
       <div className={css({ display: 'flex', gap: '8px', flexWrap: 'wrap' })}>
+        {operationImpactAvailable && !operationImpact && endpoint.protocol === 'protobuf' && <a className={css(linkButtonStyle(tok))} href={operationImpactHref}>Inspect operation impact</a>}
         {comparisonAvailable && (
           <a className={css(linkButtonStyle(tok))} href={href('/compare-callers', {
             old_protocol: endpoint.protocol,
@@ -735,12 +786,14 @@ function GenerationStatus({ page }: { page: CallerMapResponse }) {
 function PageProgress({
   page,
   pageIndex,
+  pageSize,
   view,
   onView,
   onReviewUnresolved,
 }: {
   page: CallerMapResponse
   pageIndex: number
+  pageSize: number
   view: 'source' | 'group'
   onView: (view: 'source' | 'group') => void
   onReviewUnresolved: () => void

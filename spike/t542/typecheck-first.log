@@ -1,0 +1,38 @@
+src/operationImpactContract.ts(27,22): error TS18046: 'value' is of type 'unknown'.
+src/operationImpactContract.ts(27,60): error TS18046: 'value' is of type 'unknown'.
+src/operationImpactContract.ts(28,17): error TS18046: 'value' is of type 'unknown'.
+src/operationImpactContract.ts(31,112): error TS18046: 'value' is of type 'unknown'.
+src/operationImpactContract.ts(42,11): error TS18046: 'value' is of type 'unknown'.
+src/operationImpactContract.ts(45,9): error TS18046: 'value' is of type 'unknown'.
+src/operationImpactContract.ts(52,19): error TS18047: 'value' is possibly 'null'.
+src/operationImpactContract.ts(52,25): error TS2339: Property 'settled_pair_count' does not exist on type '{}'.
+src/operationImpactContract.ts(52,64): error TS18047: 'value' is possibly 'null'.
+src/operationImpactContract.ts(52,70): error TS2339: Property 'settled_pair_count' does not exist on type '{}'.
+src/operationImpactContract.ts(53,21): error TS18047: 'value' is possibly 'null'.
+src/operationImpactContract.ts(53,27): error TS2339: Property 'succeeded_pair_count' does not exist on type '{}'.
+src/operationImpactContract.ts(53,68): error TS18047: 'value' is possibly 'null'.
+src/operationImpactContract.ts(53,74): error TS2339: Property 'succeeded_pair_count' does not exist on type '{}'.
+src/operationImpactContract.ts(54,19): error TS18047: 'value' is possibly 'null'.
+src/operationImpactContract.ts(54,25): error TS2339: Property 'refused_pair_count' does not exist on type '{}'.
+src/operationImpactContract.ts(54,64): error TS18047: 'value' is possibly 'null'.
+src/operationImpactContract.ts(54,70): error TS2339: Property 'refused_pair_count' does not exist on type '{}'.
+src/operationImpactContract.ts(55,17): error TS18047: 'value' is possibly 'null'.
+src/operationImpactContract.ts(55,23): error TS2339: Property 'total_pair_count' does not exist on type '{}'.
+src/operationImpactContract.ts(57,7): error TS18047: 'value' is possibly 'null'.
+src/operationImpactContract.ts(57,13): error TS2339: Property 'state' does not exist on type '{}'.
+src/operationImpactContract.ts(57,58): error TS18047: 'value' is possibly 'null'.
+src/operationImpactContract.ts(57,64): error TS2339: Property 'state' does not exist on type '{}'.
+src/operationImpactContract.ts(57,147): error TS18047: 'value' is possibly 'null'.
+src/operationImpactContract.ts(57,153): error TS2339: Property 'state' does not exist on type '{}'.
+src/operationImpactContract.ts(58,20): error TS18047: 'value' is possibly 'null'.
+src/operationImpactContract.ts(58,26): error TS2339: Property 'refusals' does not exist on type '{}'.
+src/operationImpactContract.ts(58,56): error TS18047: 'value' is possibly 'null'.
+src/operationImpactContract.ts(58,62): error TS2339: Property 'refusals' does not exist on type '{}'.
+src/operationImpactContract.ts(66,42): error TS18047: 'value' is possibly 'null'.
+src/operationImpactContract.ts(66,48): error TS2339: Property 'state' does not exist on type '{}'.
+src/operationImpactContract.ts(84,16): error TS18046: 'value' is of type 'unknown'.
+src/operationImpactContract.ts(86,9): error TS18046: 'value' is of type 'unknown'.
+src/operationImpactContract.ts(89,162): error TS18046: 'value' is of type 'unknown'.
+src/operationImpactContract.ts(108,16): error TS18046: 'value' is of type 'unknown'.
+src/operationImpactContract.ts(108,48): error TS18046: 'value' is of type 'unknown'.
+src/operationImpactContract.ts(112,20): error TS18046: 'value' is of type 'unknown'.

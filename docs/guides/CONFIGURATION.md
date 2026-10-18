@@ -1566,6 +1566,28 @@ one five-minute deadline. These explicit installation bounds do not establish
 the 5,000-service/12-GB target. Historical exact-control ceremony launches refuse
 this configuration instead of accepting unaccounted work.
 
+### Operation Impact release selection (T54.2)
+
+The stable operation view requires its own verified
+`phebs.contract.impact.operation` claim version1.0.0, bound to
+`build_operation_impact_report@contract-impact-operation-v1`, and the actual
+released protobuf Caller Map recipe: `proto-contract@4.0.0` plus
+`grpc-caller@1.6.0-released.1`. Selection uses the existing signed release
+manifest and verification path; there is no new YAML loader or key location.
+
+Missing, expired, revoked, suspended or mismatched claims keep the HTTP route,
+MCP tool and `contract-impact-operation` capability absent. Provisional flags
+cannot substitute for either release dependency. Withdrawal of a separately
+selected Atlas product does not remove the declaration reader already admitted
+by Caller Map. Other field, comparison, WIRE and Topics selections do not
+activate or expand operation Impact. The retained experimental v2 Impact
+surface remains independently governed by its existing experimental setting.
+
+See [Exact operation Impact view](OPERATIONS.md#exact-operation-impact-view-t542)
+for endpoint identity, paging, citation and uncertainty behavior. Production
+activation/signature and the independent composed quality/operating gates
+remain separate from this registration implementation.
+
 ### Independent committed Thrift field recipes (T52.3)
 
 The signed release-selection registry has independent

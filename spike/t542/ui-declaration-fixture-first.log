@@ -1,0 +1,53 @@
+
+> ui@0.0.0 test
+> vitest run --run src/operationImpactContract.test.ts src/operationImpactApi.test.ts src/pages/OperationImpactPage.test.tsx src/pages/ContractAtlasPage.test.tsx src/pages/CallerMapPage.test.tsx src/pages/ImpactPage.test.tsx
+
+
+ RUN  v4.1.10 /Users/ben/.codex/worktrees/t511-protobuf-fields/phebs.com/ui
+
+ ❯ src/operationImpactContract.test.ts (63 tests | 5 failed) 22ms
+   × keeps exact-empty and unavailable envelopes distinct 2ms
+   × unavailable evidence retains honest progress without a current-generation conclusion: { state: 'unavailable' } 1ms
+   × unavailable evidence retains honest progress without a current-generation conclusion: { state: 'partial', settled_pair_count: 1, succeeded_pair_count: 1 } 2ms
+   × unavailable evidence retains honest progress without a current-generation conclusion: { state: 'partial', total_pair_count: 2, settled_pair_count: 1, succeeded_pair_count: 1, refused_pair_count: +0 } 0ms
+   × unavailable evidence retains honest progress without a current-generation conclusion: { state: 'complete', total_pair_count: 1, settled_pair_count: 1, refused_pair_count: 1 } 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/operationImpactContract.test.ts > keeps exact-empty and unavailable envelopes distinct
+Error: Operation impact authority or bounded response is inconsistent. Retry this page.
+ ❯ invalid src/operationImpactContract.ts:12:35
+     10| const text = (value: unknown, max = 4096): value is string => typeof v…
+     11| const keys = (value: Record<string, unknown>, allowed: readonly string…
+     12| function invalid(): never { throw new Error('Operation impact authorit…
+       |                                   ^
+     13|
+     14| function sameQuery(value: unknown, expected: CallerMapQuery): boolean {
+ ❯ validateOperationImpactReport src/operationImpactContract.ts:115:255
+ ❯ src/operationImpactContract.test.ts:16:10
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  src/operationImpactContract.test.ts > unavailable evidence retains honest progress without a current-generation conclusion: { state: 'unavailable' }
+ FAIL  src/operationImpactContract.test.ts > unavailable evidence retains honest progress without a current-generation conclusion: { state: 'partial', settled_pair_count: 1, succeeded_pair_count: 1 }
+ FAIL  src/operationImpactContract.test.ts > unavailable evidence retains honest progress without a current-generation conclusion: { state: 'partial', total_pair_count: 2, settled_pair_count: 1, succeeded_pair_count: 1, refused_pair_count: +0 }
+ FAIL  src/operationImpactContract.test.ts > unavailable evidence retains honest progress without a current-generation conclusion: { state: 'complete', total_pair_count: 1, settled_pair_count: 1, refused_pair_count: 1 }
+Error: Operation impact authority or bounded response is inconsistent. Retry this page.
+ ❯ invalid src/operationImpactContract.ts:12:35
+     10| const text = (value: unknown, max = 4096): value is string => typeof v…
+     11| const keys = (value: Record<string, unknown>, allowed: readonly string…
+     12| function invalid(): never { throw new Error('Operation impact authorit…
+       |                                   ^
+     13|
+     14| function sameQuery(value: unknown, expected: CallerMapQuery): boolean {
+ ❯ validateOperationImpactReport src/operationImpactContract.ts:115:255
+ ❯ src/operationImpactContract.test.ts:65:10
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+
+ Test Files  1 failed | 5 passed (6)
+      Tests  5 failed | 130 passed (135)
+   Start at  06:57:43
+   Duration  2.72s (transform 999ms, setup 79ms, import 2.10s, tests 3.50s, environment 3.48s)
+

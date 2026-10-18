@@ -9246,6 +9246,56 @@ unmeasured. This supplies no runtime-use, deployment, managed generation,
 scale or broad generator coverage claim. T52.3 registration/operating/signing
 remain pending; the independent thriftrw recipe gets its own T52.2 result.
 
+### Exact operation Impact view (T54.2)
+
+When the server admits the independent operation Impact claim and its released
+protobuf Caller Map dependency, select **Inspect operation impact** from an
+exact protobuf operation in Contracts or Caller Map. The link includes the
+protocol, repository, declaration lineage and canonical operation. A bare
+operation name cannot select this view.
+
+The view shows one bounded page of the same static Caller Map evidence and
+its source scope. Filters, grouping and the opaque continuation cursor remain
+in the URL. **Source authority and scope** discloses the exact publication and
+scope below the rows. Source chips read only the existing authorized immutable
+byte range; an expired or changed citation offers a row refresh. A changed
+cursor offers **Restart from first page** while retaining the selected endpoint
+and filters.
+
+The report preserves syntax/heuristic resolution, extractor abstentions and
+ambiguous or unavailable unit attribution. An unavailable unit may retain a
+supplied ID-only candidate with `mapping_has_no_attribution`; that candidate
+does not establish an owner, service or deployment. **Exact empty** means no
+matching static evidence in the exact filtered scope. **Unavailable** has no
+caller total and cannot establish zero callers. Neither state proves runtime
+absence, completeness, migration completion or safe retirement.
+
+Field references, proposed changes, implementations, WIRE verdicts, matching
+syntactic calls and saved reports remain named unavailable in this shape,
+even if another product is selected. The retained experimental v2 Impact
+forms and saved bundles use their existing capability and routes separately.
+This view creates no durable report or historical pin.
+
+HTTP clients use `GET /api/operation_impact_report` with
+`shape=operation_callers`, `protocol=protobuf`, `repository`, `lineage` and
+`operation`, plus the existing Caller Map filters. `page_size` defaults to50
+and admits at most100; continuation requires the exact returned cursor and
+same query/page size. MCP clients use `build_operation_impact_report` with
+the same inputs and `declaration_lineage` spelling, then
+`read_operation_caller_citation` for a returned citation. Both return
+`contract-impact-operation-v1`, containing the unmodified `caller_page`, a
+generation/query-bound conclusion and six fixed unavailable sections. Mixed
+field/change/bundle inputs refuse instead of broadening the report.
+
+The report calls the shared exact Caller Map service once and adds fixed
+metadata. It adds no worker, source scan, second Atlas query, durable store,
+cache or child process. Existing authorization, source/current-generation,
+permission, paging and citation fences still govern every request. The UI
+validates the complete bounded page before displaying rows; a crossed or
+malformed response displays an error and retains no partial facts. This
+implementation alone establishes no composed quality, operating, scale or
+production-signing result.
+
 ### Newly discovered repositories and evidence coverage (T51.3a)
 
 A visible repository can be discovered before its first HEAD is indexed.

@@ -325,18 +325,19 @@ func TestMergeExtractorsCallerMapRecipeGovernsMixedProvenance(t *testing.T) {
 // /api/version capabilities and whether MCP lists the Caller Map, comparison
 // and proof tools.
 type servedCallerSurfaces struct {
-	capabilities       []string
-	callerMapTool      bool
-	comparisonTool     bool
-	comparisonReleased bool
-	proofTool          bool
-	topicTool          bool
-	wireTool           bool
-	listTopicsTool     bool
-	readInventoryTool  bool
-	atlasTools         int // search_contract_operations and get_contract_operation
-	callerMapEnabled   bool
-	callerMapServiced  bool
+	capabilities        []string
+	callerMapTool       bool
+	comparisonTool      bool
+	comparisonReleased  bool
+	operationImpactTool bool
+	proofTool           bool
+	topicTool           bool
+	wireTool            bool
+	listTopicsTool      bool
+	readInventoryTool   bool
+	atlasTools          int // search_contract_operations and get_contract_operation
+	callerMapEnabled    bool
+	callerMapServiced   bool
 }
 
 // serveCallerSurfaces drives one startup through the production assembly and
@@ -415,6 +416,8 @@ func serveCallerSurfaces(t *testing.T, cfg *config.Config) servedCallerSurfaces 
 			served.callerMapTool = true
 		case "compare_operation_callers":
 			served.comparisonTool = true
+		case "build_operation_impact_report":
+			served.operationImpactTool = true
 		case "find_operation_consumers":
 			served.proofTool = true
 		case "check_wire_compatibility":

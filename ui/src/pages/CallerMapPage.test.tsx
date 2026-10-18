@@ -300,13 +300,14 @@ function callerPage(
   }
 }
 
-function pageElement(params = route(), comparisonAvailable = false) {
+function pageElement(params = route(), comparisonAvailable = false, operationImpactAvailable = false) {
   return (
     <StyletronProvider value={engine}>
       <BaseProvider theme={LightTheme}>
         <CallerMapPage
           params={params}
           comparisonAvailable={comparisonAvailable}
+          operationImpactAvailable={operationImpactAvailable}
         />
       </BaseProvider>
     </StyletronProvider>
@@ -339,6 +340,18 @@ beforeEach(() => {
 })
 
 afterEach(cleanup)
+
+test('Impact entry preserves the exact current query, cursor, effective page size and view', async () => {
+  const params = route()
+  const state = { unit: 'unit-a', owner: 'team-a', path_prefix: 'src/a/', code_role: 'test', tier: 'heuristic', freshness: 'fresh', resolution: 'syntax', ordering: 'unit', cursor: 'opaque-exact-cursor', view: 'group', page_size: '100' }
+  for (const [key, value] of Object.entries(state)) params.set(key, value)
+  render(pageElement(params, false, true))
+  const link = await screen.findByRole('link', { name: 'Inspect operation impact' })
+  const target = new URLSearchParams(link.getAttribute('href')?.split('?')[1])
+  expect(target.get('shape')).toBe('operation_callers')
+  for (const [key, value] of params) expect(target.get(key)).toBe(value)
+  expect(api.fetchContractCallers).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ owner: 'team-a', resolution: 'syntax' }), 100, 'opaque-exact-cursor', expect.any(AbortSignal))
+})
 
 test('requires a complete Contract Atlas identity before making a request', () => {
   renderPage(new URLSearchParams({ operation }))

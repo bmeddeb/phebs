@@ -1,0 +1,57 @@
+package api_test
+
+import (
+	"net/http"
+	"net/url"
+	"testing"
+
+	"github.com/bmeddeb/phebs/internal/api"
+)
+
+func TestOperationImpactExactHTTPAndSharedCitation(t *testing.T) {
+	fixture := newExactCallerAPIFixture(t, 2)
+	opts := fixture.serviceOptions()
+	opts.CallerMap = fixture.service
+	opts.OperationImpactEnabled = true
+	opts.OperationImpact = api.NewOperationImpactService(opts)
+	handler := api.New(opts)
+	values := url.Values{"shape": {"operation_callers"}, "protocol": {"protobuf"}, "repository": {fixture.repository}, "lineage": {exactCallerLineage}, "operation": {exactCallerOperation}, "page_size": {"1"}}
+	var report api.OperationImpactReport
+	code, body := catalogHTTP(t, handler, "/api/operation_impact_report?"+values.Encode(), &report)
+	if code != http.StatusOK || report.SchemaVersion != api.OperationImpactSchemaVersion || report.Conclusion.State != "evidence_present" || len(report.CallerPage.Rows) != 1 || report.CallerPage.Pagination.Complete || report.CallerPage.Coverage != nil || report.CallerPage.CoverageDigest != "" {
+		t.Fatalf("status=%d body=%s report=%+v", code, body, report)
+	}
+	citation, err := fixture.service.ReadCitation(t.Context(), report.CallerPage.Rows[0].Source.Citation)
+	if err != nil || citation.Content != "call00000()" {
+		t.Fatalf("shared citation=%+v err=%v", citation, err)
+	}
+	values.Set("cursor", report.CallerPage.Pagination.NextCursor)
+	code, body = catalogHTTP(t, handler, "/api/operation_impact_report?"+values.Encode(), &report)
+	if code != http.StatusOK || !report.CallerPage.Pagination.Complete || len(report.CallerPage.Rows) != 1 {
+		t.Fatalf("continuation=%d %s", code, body)
+	}
+	values.Del("cursor")
+	values.Set("owner", "no-owner")
+	code, body = catalogHTTP(t, handler, "/api/operation_impact_report?"+values.Encode(), &report)
+	if code != http.StatusOK || report.Conclusion.State != "exact_empty" || report.CallerPage.TotalMatchingRows == nil || *report.CallerPage.TotalMatchingRows != 0 {
+		t.Fatalf("empty=%d %s", code, body)
+	}
+	values.Del("owner")
+	for _, extra := range []string{"&field_number=0", "&bundle=retained", "&shape=operation_callers", "&unknown=value"} {
+		code, body = catalogHTTP(t, handler, "/api/operation_impact_report?"+values.Encode()+extra, nil)
+		if code != http.StatusBadRequest {
+			t.Fatalf("mixed input=%d %s", code, body)
+		}
+	}
+	fixture.store.currentRevision++
+	report = api.OperationImpactReport{}
+	code, body = catalogHTTP(t, handler, "/api/operation_impact_report?"+values.Encode(), &report)
+	if code != http.StatusOK || report.Conclusion.State != "unavailable" || report.CallerPage.TotalMatchingRows != nil {
+		t.Fatalf("gap=%d %s", code, body)
+	}
+	fixture.visible[fixture.repository] = false
+	code, body = catalogHTTP(t, handler, "/api/operation_impact_report?"+values.Encode(), nil)
+	if code != http.StatusNotFound {
+		t.Fatalf("denied=%d %s", code, body)
+	}
+}

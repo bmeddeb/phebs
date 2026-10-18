@@ -91,10 +91,12 @@ export default function ContractAtlasPage({
   params,
   callerMapAvailable = false,
   impactAvailable = false,
+  operationImpactAvailable = false,
 }: {
   params: URLSearchParams
   callerMapAvailable?: boolean
   impactAvailable?: boolean
+  operationImpactAvailable?: boolean
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
@@ -567,6 +569,7 @@ export default function ContractAtlasPage({
               selected={selectedForDetail}
               callerMapAvailable={callerMapAvailable}
               impactAvailable={impactAvailable}
+              operationImpactAvailable={operationImpactAvailable}
             />
           )}
         </section>
@@ -738,11 +741,13 @@ function OperationDetail({
   selected,
   callerMapAvailable,
   impactAvailable,
+  operationImpactAvailable,
 }: {
   operation: ContractCatalogOperation
   selected: ContractCatalogItem
   callerMapAvailable: boolean
   impactAvailable: boolean
+  operationImpactAvailable: boolean
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
@@ -810,11 +815,14 @@ function OperationDetail({
                 View callers
               </a>
             )}
-            {impactAvailable && <a
-              href={href('/impact', { operation: operation.operation })}
+            {(impactAvailable || operationImpactAvailable && selected.protocol === 'protobuf') && <a
+              href={href('/impact', operationImpactAvailable && selected.protocol === 'protobuf' ? {
+                shape: 'operation_callers', protocol: selected.protocol, repository: selected.repository,
+                lineage: selected.declaration_lineage, operation: selected.operation ?? operation.operation,
+              } : { operation: operation.operation })}
               className={css(operationLinkStyle(tok))}
             >
-              Analyze impact
+              {operationImpactAvailable && selected.protocol === 'protobuf' ? 'Inspect operation impact' : 'Analyze impact'}
             </a>}
           </div>
         </div>

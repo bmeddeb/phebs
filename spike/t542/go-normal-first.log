@@ -1,0 +1,7 @@
+--- FAIL: TestOperationImpactExactHTTPAndSharedCitation (0.17s)
+    callermap_exact_publication_test.go:329: serving publication fixture is structurally incomplete: &{Availability:stale ExpectedGeneration:{Repository:github.com/acme/exact-callers HeadCommit: UnitDigest: DeclarationSetDigest: CandidateManifestDigest: CandidatePolicyDigest: CandidateControlRevision:0 ResolverGenerationDigest: ResolverManifestDigest: ResolverControlRevision:0 ResolverWriterSchema: SourceLanePolicy: CallerPolicyDigest: ExtractorSetDigest: UpstreamDigest: Digest:} Admission:<nil> Progress:<nil> Resolver:<nil> Publication:0x6871b6add0e0 Summary:0x6871b6add2c0 State:<nil> Revision:1 lease:<nil> once:{_:{} done:{_:{} v:0} m:{_:{} mu:{state:0 sema:0}}} scalarFailureFence:false}
+FAIL
+FAIL	github.com/bmeddeb/phebs/internal/api	0.911s
+ok  	github.com/bmeddeb/phebs/internal/mcp	0.505s
+ok  	github.com/bmeddeb/phebs/cmd/phebs	0.857s
+FAIL

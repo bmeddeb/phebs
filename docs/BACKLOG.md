@@ -19829,6 +19829,17 @@ missing/stale/unreleased inputs remain visibly unavailable. Preserve exact
 source, coverage and citations; a supported report never asserts migration
 completion, universal consumer absence or safe retirement.
 
+**T54.2 implementation checkpoint (2026-10-18, Ben-routed Mac handoff).**
+The independent operation_callers signed recipe consumes the existing exact
+released CallerMap once and preserves its source/query/cursor/citation fences.
+HTTP/MCP/UI expose the narrow versioned shape with scoped conclusions and
+explicit unavailable sections; legacy experimental Impact stays separate.
+Independent review closes malformed optional metadata, contradictory unit/
+progress state and declaration locator gaps. Normal/race,135UI controls, corrected
+type/lint/vet/pinned Go lint pass. Startup and request cost stay bounded with no
+new store/cache/worker/child. Actual composed quality/operating result and
+production signature remain T54.1/T54.3; registration alone activates no claim.
+
 **T54.3 · Measured Impact promotion** — satisfy the common bar per report
 shape; one shape may release without claiming the others. Dependencies are
 the specific inputs it actually consumes, not every experimental pack.
