@@ -1,0 +1,18 @@
+{
+  "format": "t503-after-mobile-binding-source-preflight-v1",
+  "outcome": "passed_read_hash_source_metadata_only",
+  "binding_path": "/tmp/phebs-t503-execution-binding-after-mobile-fix.json",
+  "binding_sha256": "sha256:32045aba346f585b43f63c8391f4e1eea901096bc7cec932cfe6897ac2095f2c",
+  "source_commit": "bbb41b2ccfb3f9b23653aabf41607185aec3efbe",
+  "harness_commit": "bbb41b2ccfb3f9b23653aabf41607185aec3efbe",
+  "source_tree": "ade4527a61c06801888eb6fa667b1ad075e5d826",
+  "frozen_artifacts_exact": true,
+  "actual_build_input_digest_reproduced": true,
+  "actual_fresh_dist_census_and_complete_embedded_bytes_verified": true,
+  "validate_binding": "passed; only source/hash/Git/go-version-m metadata checks, no main invocation",
+  "native_product_browser_signing_executions": 0,
+  "checkout_writes": 0,
+  "git_mutations": 0,
+  "source_clean_after": true,
+  "qualification": "Prospective preparation; no current mobile, source-quality or release PASS. Root independent final review/slot required."
+}

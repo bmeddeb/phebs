@@ -1,0 +1,9 @@
+
+ RUN  v4.1.10 /Users/ben/.codex/worktrees/t511-protobuf-fields/phebs.com/ui
+
+
+ Test Files  2 passed (2)
+      Tests  97 passed (97)
+   Start at  07:44:35
+   Duration  1.26s (transform 146ms, setup 23ms, import 280ms, tests 442ms, environment 1.00s)
+

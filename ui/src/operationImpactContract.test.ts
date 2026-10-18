@@ -16,6 +16,44 @@ test.each([emptyOperationReport, unavailableOperationReport])('keeps exact-empty
   expect(validateOperationImpactReport(report, operationQuery, 50)).toBe(report)
 })
 
+function focusedScope(report: OperationImpactReport, digest: string) {
+  report.caller_page.scope!.scope_posture = 'focused'
+  report.caller_page.scope!.analysis_unit = {
+    schema: 'analysis-unit-v1', name: 'current-unit', digest,
+    primary_paths: ['client/'], supporting_paths: [], primary_path_count: 1, supporting_path_count: 0,
+    search_index_posture: 'focused', typed_index_posture: 'unavailable',
+  }
+}
+
+test.each<[string, (report: OperationImpactReport) => void]>([
+  ['unindexed source', r => { delete r.caller_page.scope!.commit; delete r.caller_page.generation!.commit; r.caller_page.generation!.state = 'missing' }],
+  ['indexed before resolver', r => { delete r.caller_page.generation!.commit; r.caller_page.generation!.state = 'missing' }],
+  ['replacement indexed before caller', r => { r.caller_page.scope!.commit = 'f'.repeat(40) }],
+  ['new focused scope', r => { focusedScope(r, `sha256:${'c'.repeat(64)}`) }],
+  ['replaced focused scope', r => { focusedScope(r, `sha256:${'c'.repeat(64)}`); r.caller_page.generation!.unit_digest = `sha256:${'d'.repeat(64)}` }],
+  ['removed focused scope', r => { r.caller_page.generation!.unit_digest = `sha256:${'d'.repeat(64)}` }],
+])('retains unavailable current scope and noncurrent generation separately: %s', (_, change) => {
+  const report = unavailableOperationReport()
+  change(report)
+  const scope = structuredClone(report.caller_page.scope), generation = structuredClone(report.caller_page.generation)
+  expect(validateOperationImpactReport(report, operationQuery, 50)).toBe(report)
+  expect(report.caller_page.scope).toEqual(scope)
+  expect(report.caller_page.generation).toEqual(generation)
+  expect(report.conclusion.state).toBe('unavailable')
+  expect(report.caller_page.rows).toEqual([])
+  expect(report.caller_page.total_matching_rows).toBeUndefined()
+  expect(report.caller_page.declaration).toBeUndefined()
+})
+
+test('current focused evidence requires its exact scope commit and unit digest', () => {
+  const report = operationReport(), digest = `sha256:${'c'.repeat(64)}`
+  focusedScope(report, digest)
+  report.caller_page.generation!.unit_digest = digest
+  expect(validateOperationImpactReport(report, operationQuery, 50)).toBe(report)
+  report.caller_page.generation!.unit_digest = `sha256:${'d'.repeat(64)}`
+  expect(() => validateOperationImpactReport(report, operationQuery, 50)).toThrow(/authority or bounded response/)
+})
+
 test('retains ambiguous candidates, abstention and generated Git SHA256 object IDs', () => {
   const report = operationReport(), row = report.caller_page.rows[0]
   row.unit = { state: 'ambiguous', reason: 'multiple_matching_units', candidate_total: 2, candidates: [{ id: 'unit-a' }, { id: 'unit-b' }] }
@@ -72,6 +110,14 @@ test.each<[string, (report: OperationImpactReport) => void]>([
   ['oversized HTTP schema metadata', (r) => { Object.assign(r, { $schema: 'x'.repeat(4097) }) }],
   ['conclusion query', (r) => { r.conclusion.query.owner = 'foreign-owner' }],
   ['generation', (r) => { r.conclusion.generation_digest = `sha256:${'f'.repeat(64)}` }],
+  ['current scope commit', r => { r.caller_page.scope!.commit = 'f'.repeat(40) }],
+  ['current missing scope commit', r => { delete r.caller_page.scope!.commit }],
+  ['current removed scope unit', r => { r.caller_page.generation!.unit_digest = `sha256:${'d'.repeat(64)}` }],
+  ['unavailable foreign scope', r => { Object.assign(r, unavailableOperationReport()); r.caller_page.scope!.repository = 'foreign.example/repo' }],
+  ['unavailable scope commit null', r => { Object.assign(r, unavailableOperationReport()); r.caller_page.scope!.commit = null as never }],
+  ['unavailable scope commit object', r => { Object.assign(r, unavailableOperationReport()); r.caller_page.scope!.commit = {} as never }],
+  ['unavailable scope commit grammar', r => { Object.assign(r, unavailableOperationReport()); r.caller_page.scope!.commit = 'unknown' }],
+  ['unavailable focused unit grammar', r => { Object.assign(r, unavailableOperationReport()); focusedScope(r, 'unknown') }],
   ['source run', (r) => { r.caller_page.rows[0].source.run_id = `sha256:${'f'.repeat(64)}` }],
   ['source blob', (r) => { r.caller_page.rows[0].source.atom_id = `sha256:${'f'.repeat(64)}` }],
   ['missing object', (r) => { delete r.caller_page.rows[0].source.object_id }],

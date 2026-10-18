@@ -19349,6 +19349,18 @@ remain pending, and Caller Map/Atlas's bounded-test amendment does not waive the
 old/replacement source, concurrent publication and bounded combined read cost;
 release requires its own result even when both Caller Maps are released.
 
+**T50.3 finite outcome (2026-10-18, Ben-routed Mac handoff).** The reviewed
+`bbb41b2c` image passes its 39.450236s bounded ordinary-runtime matrix: five
+selected syntax/heuristic sites, four supplied-unit rows, four outside-pair
+negatives, exact HTTP/MCP/source/UI and two publication transitions. Each
+transition retains eight concurrent exact-epoch reads and stale cursor/citation
+refusal. Withdrawal and all child joins pass. Exact receipt, source/build/UI
+bindings and unsigned card/manifest/validation drafts are retained under
+`spike/t503/requalification-after-mobile-fix/` and `spike/t503/release/artifacts/`.
+Root reviewed hashes, scope, custody and steady-state cost. No production
+activation/signature or generalized accuracy/scale claim follows; common-bar
+evidence reconciliation and the existing unavailable production key remain.
+
 **T50.3a · Preserve committed consumer units through direct caller leaves**
 *(2026-10-18, Ben-routed Mac handoff)* — T50.3's first bounded product attempt
 returned the five expected source sites but all five lacked unit attribution:
@@ -19482,6 +19494,17 @@ cleanup helpers and14 pure/mock controls pass. First detached-origin and later
 corrected-origin discovery HTTP500 stops remain exact. T51.3a repairs the latter;
 a fresh binary/binding and actual operating/artifact/signature closure remain.
 
+**T51.3 finite outcome (2026-10-18, Ben-routed Mac handoff).** A narrow
+prospective fresh-image amendment preserves original plan/source/label bytes.
+The reviewed `bbb41b2c` image passes in23.872118833s: eleven queried field
+identities/fourteen consumer spans, HTTP/MCP endpoints, immutable proof/source,
+publication and withdrawal. Zero extras is query-scoped; prior T51.1 full-stream
+negatives remain separate. Generated facts imply no recall or semantic write.
+All children join and scratch is removed. Exact receipt/binding, scoped outcome
+and unsigned drafts are retained in `spike/t513/`. Root and independent peer
+review find no artifact defect; common-bar evidence reconciliation and existing
+production key/signature remain separate.
+
 **T51.3a · Discovered-repository coverage repair** *(2026-10-18, complete;
 Ben-routed Mac backend handoff).* A first corrected-origin T51.3 run exposed an
 HTTP500 before the repository had an indexed commit. Shared coverage now reports
@@ -19563,6 +19586,24 @@ and race integration checks; independent source and steady-state-cost review
 is clear. This supplies registration only. Each selected generator's measured
 operating/artifact/production-signature promotion remains open; the existing
 production key is unavailable.
+
+*T52.3 operating preparation (2026-10-18):* independently reviewed source/
+plan and5synthetic controls freeze a small Apache→both→RW-survivor matrix over
+48exact input files. Native fixed-query positives33/4 and prior direct negative
+labels remain separate; field0 is transport mechanics only. Fresh image/binding,
+first measured operating outcome and production signature remain pending.
+
+**T52.3 finite outcome (2026-10-18, Ben-routed Mac handoff).** The first
+reviewed matrix passes in34.816796958s on exact `bbb41b2c` image: Apache only,
+both generators, then RW survivor after Apache withdrawal. Positive consumer
+spans are33/37/4 with no extras within queried identities. Prior266/31full-stream
+negative labels remain separate. Selected field0returns25source-validated
+generated facts and0when unselected, without a generated recall/absence claim.
+Old both-version proof404, exact survivor metadata, HTTP/MCP/proof/source,
+all three clean server joins and private scratch removal pass. Exact receipt,
+reviewed binding, scoped outcome/cost and six unsigned artifacts are retained
+under `spike/t523/`. Root and independent peer artifact review pass; common-bar
+evidence reconciliation and existing production key/signatures remain separate.
 
 ## Epic 53 · Protobuf Buf WIRE compatibility production readiness
 
@@ -19839,6 +19880,14 @@ Pinned Huma adds top-level$schema to HTTP responses. The Impact guard now
 accepts that optional bounded string while retaining closed product keys and
 malformed-metadata refusal. Real HTTP serialization and83focused UI/type/lint/
 static controls pass; first composed native qualification uses a fresh image.
+
+**T54.2c · Preserve legitimate unavailable source epochs** *(2026-10-18,
+complete; Ben-routed Mac handoff).* Keep current indexed scope separate from
+absent/old caller authority while unavailable; never emit rows, totals or a
+declaration. Exact/current reports still require matching commit and unit.
+Actual Caller Map→HTTP transition controls, strict mismatches, rendered UI,
+validator normal/race/type/lint and bounded mocked checks pass. Cost is constant
+metadata comparison only. Fresh exact UI/binary qualification remains T54.3.
 
 **T54.3 · Measured Impact promotion** — satisfy the common bar per report
 shape; one shape may release without claiming the others. Dependencies are

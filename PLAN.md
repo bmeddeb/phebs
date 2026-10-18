@@ -13407,6 +13407,41 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Interaction checks meet their5s test timeout; precise latency/usability and
   production release are not inferred. Existing large-chunk warnings persist.
 
+- **2026-10-18 — T52.3 prospective independent Thrift operating matrix
+  (Ben-routed Mac handoff).** Root/peer source review accepts the exact
+  48-file1,291,607B two-origin binding and180s selected-set plan before any
+  prediction. Reuse accepted T50.3 ownership/HTTP/resource and T51.3 canonical/
+  cleanup helpers repository-relatively. Three starts select Apache, both and
+  RW survivor; all current roots/source epochs remain coherent even for zero
+  facts. Fixed positive-identity queries must recover33/4consumer spans with
+  no extras within those queries; prior266/31negative labels are original
+  direct full-stream context, not a new native negative-recall result. Field0
+  queries establish numeric transport admission only unless individually
+  returned source facts are proved; zero establishes no reference or absence.
+  Finalize all6disposable artifact files before either signature. Private key
+  deletion precedes ordinary serve, and joined teardown precedes data removal.
+  Five inert synthetic controls pass; no product/native prediction has run.
+  Client source hashing/checks, three server phases and finite1/4/8whole-proof
+  batches add only bounded opt-in evaluator work, no new production reader,
+  source scan, lock/cache/schema/worker or child. Existing selected-set changes
+  rebuild the shared domain once per repository. Actual fresh image/binding,
+  measured operating artifacts and existing-key production signing remain open.
+
+- **2026-10-18 — T51.3 prospective post-discovery execution amendment
+  (Ben-routed Mac handoff).** Preserve the original operating plan and both
+  failed attempts exactly. Its original8a70 binary pin correctly rejects the
+  newly repaired source. A separate accepted amendment binds exact clean
+  bbb41b2c and image121c1d07 after PR100/101/105. Check its original-plan digest
+  and original implementation tuple before its exact new source/path/SHA,
+  hash the amendment with the owned harness, then retain all cleanVCS/tool/
+  build/helper guards. No broad arbitrary-source option is added. Root source
+  review and16finite mocked/hash controls pass, including drift/oldpins and
+  strict acceptedboolean. Fresh helper builds preserve their own actual source
+  receipt. Admission adds one bounded64KiB local JSON read and plan hash only;
+  ordinary production and request costs are unchanged. Source/labels/limits/
+  deadlines/phase and production-signing holds remain exact; the next native
+  result requires its own clean harness/execution binding and serial slot.
+
 - **2026-10-18 — T54.2b admit the real HTTP schema envelope
   (Mac presentation handoff).** Pre-outcome T54.3 review confirms the pinned
   Huma DefaultConfig injects top-level$schema metadata, also present in retained
@@ -13436,3 +13471,54 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Production serving stays unchanged: one existing Caller Map page plus constant
   wrapper, no new cache/store/worker/child. The opt-in matrix alone adds bounded
   queries, one transition, sampling and renderer work under recorded limits.
+
+- **2026-10-18 — T50.3 finite outcome and unsigned artifacts (Ben-routed Mac handoff).**
+  Preserve the first successful 39.450236s direct comparison matrix with exact
+  `bbb41b2c` binary/source/UI/tool bindings and all earlier stops. Five selected
+  syntax/heuristic sites, four supplied-unit rows, four outside-pair negatives,
+  HTTP/MCP/citations, 1280/390px interaction, two independent publication changes
+  and independent withdrawal pass; all owned groups/clients join. Retain exact
+  sampled resource limits and CPU/unsampled-peak caveats. Unsigned draft artifacts
+  do not activate a release; common-bar reconciliation and production signing
+  remain separate. This retention adds no request/sync/startup/retry/publication,
+  lock/cache/schema or child work.
+
+- **2026-10-18 — T51.3 finite field result (Ben-routed Mac handoff).**
+  Retain the original plan/labels and both prior stops unchanged. A prospective
+  exact fresh-image amendment admits the clean `bbb41b2c` image after discovery
+  repair. Its first corrected matrix passes in23.872118833s with eleven queried
+  identities/fourteen consumer spans, HTTP/MCP/proof/source, publication change
+  and withdrawal; all groups join and scratch is removed. Native zero extras
+  is query-scoped, distinct from previous full-stream negatives; generated facts
+  imply no recall or semantic write. Root and peer review retain exact unsigned
+  artifacts without production activation. The amendment adds bounded64KiB
+  local JSON/hash admission only; no production request/tick/startup/retry/
+  publication, lock/cache/schema or child work. Common-bar reconciliation and
+  the existing production signature remain separate.
+
+- **2026-10-18 — T52.3 finite Thrift field outcome (Ben-routed Mac handoff).**
+  Retain the first34.816796958s exact-binary result: Apache-only, both and RW
+  survivor selections recover33/37/4consumer spans within queried identities,
+  ordinary HTTP/MCP/source/proofs and independent withdrawal. Prior266/31
+  full-stream negative labels stay separate. Field0returns25exactly validated
+  generated facts only when selected, establishing transport/source mechanics
+  without generated recall. Old both-version proof404and survivor republication
+  preserve exact selected-set metadata. All servers, observers and sampling
+  children join before private scratch removal. Root/peer-reviewed unsigned
+  cards/manifests/validation retain scope and resource/CPU caveats; original
+  disposable records cannot sign these new artifacts. No product request/sync/
+  retry/publication, cache/lock/schema/worker or child changes. Common-bar
+  evidence reconciliation and existing production-key signatures remain open.
+
+- **2026-10-18 — T54.2c preserve unavailable caller source epochs (Ben-routed Mac handoff).**
+  A current indexed repository scope may coexist with absent or retained stale
+  caller generation. Impact formerly compared those commits before checking
+  availability, turning legitimate gaps into500; UI likewise rejected them.
+  Preserve both scopes unchanged for unavailable rows and require no declaration,
+  rows or totals. Enforce exact commit/unit equality for current evidence only;
+  keep selected repository identity, metadata validation and all source fences.
+  Actual shared Caller Map→HTTP controls cover unindexed, indexed-before-resolver
+  and replacement-indexed/old-caller states; strict current mismatch controls
+  plus UI validator/rendered controls and focused normal/race pass. This adds
+  constant metadata comparisons only, no read/query/sync/startup/retry, persistent
+  state, lock/cache, worker, child, source traversal or bound increase.

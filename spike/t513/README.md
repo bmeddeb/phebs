@@ -42,13 +42,14 @@ root in the terminal report. Data, configuration/token/webhook secrets, Git
 rewrite, keys, artifacts/selections and server logs are removed. A refused drain
 retains custody and records the refusal. No first output may be overwritten.
 
-Before execution the lead must review and commit these four files and supply
+Before execution the lead must review and commit the owned harness files and supply
 an outside-checkout `phebs-t513-execution-binding-v1` with `reviewed=true`:
 
 - Exact `plan_digest`, clean current `harness_commit`, hashes of `harness_files`
-  (`qualify_fields.py`, `field_checks.py`, `test_fields.py`, `README.md`) and
+  (`qualify_fields.py`, `field_checks.py`, `test_fields.py`, `README.md`,
+  `post-discovery-execution-amendment.json`) and
   `reused_t503_files` (the six reviewed T503 files plus `qualify.py`, `score.py`).
-- Actual source `8a70fef5f60411f31d210efd52ab4dcd79385549`, binary, native observer,
+- Actual source selected by the accepted execution amendment, binary, native observer,
   native VCS metadata digest and joined build/helper receipts. Existing prepared
   main images may be reused only with their exact bytes/source receipts.
 - Exact absolute path, size and SHA256 for every selected tool, including Go,
@@ -62,6 +63,15 @@ an outside-checkout `phebs-t513-execution-binding-v1` with `reviewed=true`:
   retained bytes before the ordinary `ls-tree`/HEAD/pristine check. No new Git
   source/ref/index mutation is part of measurement; only a private atomic URL
   rewrite selects the prebound transition before its authenticated webhook.
+
+The original operating plan and its `8a70fef5` image pins remain exact.
+`post-discovery-execution-amendment.json` prospectively binds the fresh clean
+`bbb41b2c` image after the discovered/unindexed coverage repair and the reviewed
+mobile and default-dark Impact integrations. Admission checks the original plan
+digest and implementation pins before selecting the amendment's exact source,
+image path and SHA. The amendment is itself included in the outside binding's
+owned-file hashes; it changes no source population, labels, deadlines or bounds.
+Both earlier stopped attempts and their execution bindings remain retained.
 
 The executable entry point also requires `--execute-reviewed-binding` and the
 serialized lead slot. A disposable integration key signs exactly one field

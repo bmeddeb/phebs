@@ -1,0 +1,36 @@
+{
+  "schema": "t523-independent-operating-plan-review-v1",
+  "date": "2026-10-18",
+  "accepted": true,
+  "plan_digest": "sha256:d1a20eb1d6ccdecaedfe285746f914098bf83924ddced31c6f10a3d153973ead",
+  "reviewers": "root + independent t493 peer",
+  "files": {
+    "OPERATING_README.md": {
+      "bytes": 7865,
+      "sha256": "sha256:1cda963ee6f4a022fd95f69d1fd02f3dc1097c62f1dddc7ffd83857b044bd4e3"
+    },
+    "qualify_thrift_fields.py": {
+      "bytes": 22694,
+      "sha256": "sha256:036e3aa3f560e8574298d119d24e5832f269d6b7b1062f5e10dcc1c65853e330"
+    },
+    "operating-inputs.json": {
+      "bytes": 19004,
+      "sha256": "sha256:85f37b9428f7ddf3aa2642d18925135135ead023cbbdcd4f9f46b045bc260945"
+    },
+    "test_operating.py": {
+      "bytes": 7803,
+      "sha256": "sha256:90ed1643df3b8c49369fadcecd4af6c3a6ae6430591f50edf1b24a6686e311b5"
+    },
+    "operating-plan.json": {
+      "bytes": 13725,
+      "sha256": "sha256:d1a20eb1d6ccdecaedfe285746f914098bf83924ddced31c6f10a3d153973ead"
+    },
+    "operating_checks.py": {
+      "bytes": 18563,
+      "sha256": "sha256:5a967b802e0502ab95570b5451a456ade3164282b8ad134c7c47cf89e5f4a77f"
+    }
+  },
+  "scope": "48 exact files/1291607B; fixed native positive identities, 33Apache/4RW consumer opportunities; prior266/31negative labels retain only their original direct full-stream scope. Field0 is numeric transport mechanics with no new recall/absence claim.",
+  "reviews": "Selected-set versions, all visible roots including zero-fact roots, source/tier/module binding, one shared pass, frozen6artifact signing census, immutable/current proof withdrawal, exact source transports, bounded clocks/ownership/cleanup/cost. Five pure synthetic controls pass; no product prediction/native run.",
+  "next": "Fresh clean binary/tool/helper/source binding and explicit serialized execution precede first matrix. Production key/signature pending."
+}

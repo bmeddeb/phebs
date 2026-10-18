@@ -5645,3 +5645,19 @@ separate; no field/WIRE/legacy shape or component accuracy transfers.
 represent visible unindexed repositories as unpublished, preserving strict store
 validation and final authorization/source fences. Bounded checks and independent
 review pass. A fresh binary operating run and production signing remain open.
+
+**T50.3 finite outcome (2026-10-18):** direct comparison quality, publication,
+HTTP/MCP/source and 1280/390px UI integration pass in 39.450236s with exact
+`bbb41b2c` bindings. Receipt and unsigned artifacts are retained; common-bar
+evidence reconciliation and production signing remain. No activation or scale
+claim is inferred.
+
+**T51.3 finite outcome (2026-10-18):** field integration passes in23.872118833s
+with eleven queried identities/fourteen spans, exact HTTP/MCP/source/proofs,
+publication/withdrawal and clean teardown. Receipt and unsigned artifacts remain
+separate from common-bar evidence reconciliation and production signing.
+
+**T52.3 finite outcome (2026-10-18):** independent Apache/both/RW-survivor
+ordinary integration passes in34.816796958s with33/37/4positive consumer spans,
+exact HTTP/MCP/proofs/source and clean teardown. Six unsigned artifact drafts
+remain separate from common-bar reconciliation and production signing.

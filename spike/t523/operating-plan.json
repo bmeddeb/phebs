@@ -1,0 +1,155 @@
+{
+  "schema": "phebs-t523-operating-plan-v1",
+  "date": "2026-10-18",
+  "status": "prospective_pending_independent_review_harness_and_exact_binding",
+  "execution_authorized_by_this_file": false,
+  "owner": "Ben Meddeb; routed Mac backend handoff under all-ticket goal",
+  "production_signing": "PENDING existing unavailable Linux key; disposable integration signing only after exact review",
+  "claim": {
+    "pack_ids": [
+      "phebs.thrift.field.apache",
+      "phebs.thrift.field.thriftrw"
+    ],
+    "claim_versions": [
+      "1.0.0",
+      "1.0.0"
+    ],
+    "domain": "scip-thrift-field",
+    "recipe": "Exact committed root index.scip from scip-go0.2.7/UTF8 and original generated/source bytes. Apache header0.14.1 =>derived/none; thriftrw1.34.0 embedded Raw/SHA1+unique SCIP/wire identity=>exact/module_digest. Headers are declared input, not generator execution attestation.",
+    "surfaces": [
+      "find_field_references HTTP",
+      "find_field_references MCP v1.0 projection",
+      "immutable proofs by HTTP ID",
+      "general source GET /api/source and MCP read_file at exact committed revision"
+    ],
+    "unavailable": [
+      "protobuf field tool/route",
+      "Caller Map/comparison",
+      "Atlas declaration-family bridge",
+      "Impact",
+      "WIRE/compatibility",
+      "Kafka",
+      "managed generation",
+      "dedicated field product UI"
+    ],
+    "nonclaims": [
+      "No source-semantic read/write classification accuracy from raw SCIP roles",
+      "No runtime use, completeness, migration, compatibility or removal conclusion",
+      "Generated-only emissions have no recall oracle and never join public denominators",
+      "No generalized accuracy, production signature, Linux capacity, scale or SLO"
+    ]
+  },
+  "protected_artifacts": {
+    "spike/t521/preregistration.json": "sha256:f4dfae65136ae6611f4c9486ae0f8cbcced66fc9e2f054c9f1ab80317e1ce958",
+    "spike/t521/source-inputs.json": "sha256:fcbf1db6d2d5eb9ce12682e72ecb52d1e9b4401b7161c5ae5446541b4c5ae4d9",
+    "spike/t521/source-freeze.json": "sha256:12b50be4851c98426b1bca620be4a4e1bb14b121128527637f423cf5cc8d7f25",
+    "spike/t521/source-labels.jsonl": "sha256:4e9c7474bc33e98c1d1f057f8e8cd72f71a5801ca157df873e9dbf1bc87c491f",
+    "spike/t521/field-witnesses.json": "sha256:c3fbee4dd7c9294d6ef577e818f76c7d3fac49748aff724fd4e3b03c448f5bce",
+    "spike/t521/committed-inputs.json": "sha256:9d451ee6e52f559f7073dc969c3c74e9b290c6f845cca34504dd35a08d63a6c4",
+    "spike/t521/first-result.json": "sha256:e1febf98dfae1d880ff664a066f21863e1d5dbb73d4d8dde222a6977a937e902",
+    "spike/t521/outcome-cost.json": "sha256:f0d16356d9533d62b06b59b5ca4048a1f99a1799422a86d0ad47e87a445ded30",
+    "spike/t521/licenses/record.json": "sha256:9cf72e943925ecb6b94db0feec888f7c4a7ebcf520796a7817cb79604c3f63a9",
+    "spike/t521/input-bundles/public.bundle": "sha256:d4dd498e0fd9011aefc1d3097bba7024b8f824c3394e9076cbf08102f6b1254f",
+    "spike/t522/preregistration.json": "sha256:7067eb9e6ccb5ecb24d9c9064ce54c17d5d872a71a2989971da6a84b519e38ac",
+    "spike/t522/source-inputs.json": "sha256:59d373f859659fe173e168d2557463014370ac70f2ca613b2b608af7d208cde3",
+    "spike/t522/source-freeze.json": "sha256:9e0a7d831bc362ba934d00397de4626c4f9d0109d7c6721859eecc8e6efd0adb",
+    "spike/t522/source-labels.jsonl": "sha256:e1d795ca436c432b46a084ebfaf0703da0ea046321f59376fc66ba2c88643eeb",
+    "spike/t522/field-witnesses.json": "sha256:ee5f5b420fadf08492aeade8225d304b54d10a687ecb1fdf159da01ebc511e90",
+    "spike/t522/committed-inputs.json": "sha256:be48e56803a17ee10128e63ac2c437b3549afc9d9d3887086be9bf6b8785046e",
+    "spike/t522/first-result.json": "sha256:fb56ce29a3a1c38a4bf999f328669f068b6245d4635152b35f8c15b08f3dd4c4",
+    "spike/t522/outcome-cost.json": "sha256:1e36c96d7bcc274b10db86d6959ae710d292cc577b7c98e99586ea75954820d9",
+    "spike/t522/licenses/record.json": "sha256:62fedbf99b043c47b5df5bf946843d223e3d897f7f7c2f967b2367604e76786c",
+    "spike/t522/input-bundles/public.bundle": "sha256:7dff0ce34e006a5db0ebbefec15da93140c105a847a0d917c459b67c0ce2efa2",
+    "spike/t523/extractor-normal.log": "sha256:aa4e9448a734777a9a43b948547f749d6dfe9307a75ed1267bc2fa86f96965c9",
+    "spike/t523/field-boundaries-normal.log": "sha256:2635ff1cffcf67502d2012ad3f1abd78241cbedc78732f4fc582fde415aeaba0",
+    "spike/t523/field-boundaries-race.log": "sha256:b88460a79727d3d26e5a985e4868502cb18c84aaa8c85d53c331ebd4b6aa096b",
+    "spike/t523/lint-corrected.log": "sha256:e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47",
+    "spike/t523/lint.log": "sha256:e8ae87004a255f55528dbe7dd38d4303b13b742cba4366b0c43169d818b9e075",
+    "spike/t523/operating-inputs.json": "sha256:85f37b9428f7ddf3aa2642d18925135135ead023cbbdcd4f9f46b045bc260945",
+    "spike/t523/validation.json": "sha256:b41a12eb64d047009907aa4199db319d37bfe30e4aa00fc45c40e41e9376fa45",
+    "spike/t523/vet.log": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "input_binding": "spike/t523/operating-inputs.json",
+  "quality": {
+    "oracle": "Unchanged independently source-reviewed T521 public33/266 and T522 public4/31 with frozen field witnesses; native composition, no new population or independent accuracy transfer. Authored neutral prior results retain their separate scope, not rerun or pooled.",
+    "thresholds": {
+      "consumer_reference_precision_recall": 1.0,
+      "negative_wrong_duplicate_extra_consumer_facts": 0,
+      "source_identity_version_tier_or_projection_mismatches": 0,
+      "missing_failed_or_noncurrent_authority": "stop; never exact-empty",
+      "unselected_generator_emissions": 0,
+      "generated_emissions": "Validate every returned source/span/version/detail separately without a generated recall metric"
+    },
+    "field0": "Existing public thriftrw Meta_Health_Result#0 is a numeric-zero transport-admission mechanics query only, with no generated-reference recall denominator or consumer opportunity. Zero returned facts make no live-reference or source/runtime absence claim. Record any returned generated facts only as individually source/span-validated references; do not require a new field0 label or fixture.",
+    "native_query_scope": "Fixed nine Apache positive field identities, two thriftrw positive identities plus existing public generated-only field0. Require all frozen positive spans and no extra consumer span in those whole-proof responses. These queries do not inventory unqueried field identities; original full-stream direct T521/T522 negative-site evidence remains separately scoped, not rerun or pooled.",
+    "generated_metadata_limitation": "Pinned scip-go references have raw read roles, not semantic read truth. Existing codeRole identifies .gen/go as generated; Apache thrift-gen paths retain production role without a SCIP Generated bit. Validate that existing metadata while excluding generated-source paths from consumer denominators; no Apache generated-role detection claim.",
+    "receipt_scope": "Each phase carries native_query_scope, native positive opportunities/verified spans and extra consumer facts within those fixed queries. Prior frozen negative-site counts remain separately named prior_frozen_negative_sites, not new native full-stream opportunities or a new negative-site score."
+  },
+  "phases": [
+    {
+      "name": "apache-only",
+      "selected": [
+        "apache"
+      ],
+      "version": "1.4.0-released.apache.1",
+      "revoked": [
+        "rel-phebs.thrift.field.thriftrw-1.0.0"
+      ]
+    },
+    {
+      "name": "both",
+      "selected": [
+        "apache",
+        "thriftrw"
+      ],
+      "version": "1.4.0-released.apache-thriftrw.1",
+      "revoked": []
+    },
+    {
+      "name": "rw-survivor",
+      "selected": [
+        "thriftrw"
+      ],
+      "version": "1.4.0-released.thriftrw.1",
+      "revoked": [
+        "rel-phebs.thrift.field.apache-1.0.0"
+      ]
+    }
+  ],
+  "bounds": {
+    "complete_native_seconds": 180,
+    "startup_seconds": 30,
+    "publication_seconds": 90,
+    "cold_request_seconds": 2,
+    "warm_request_seconds": 1,
+    "parallel_requests": 8,
+    "http_response_bytes": 1048576,
+    "process_tree_sampled_max_rss_bytes": 2147483648,
+    "minimum_available_physical_headroom_bytes": 4294967296,
+    "minimum_free_disk_bytes": 2147483648,
+    "derived_allocated_disk_bytes": 536870912,
+    "repositories": 2,
+    "evaluation_tree_files": 48,
+    "evaluation_tree_bytes": 16777216,
+    "source_blobs_read_per_citation": 1,
+    "evaluation_tree_files_per_repository": 64
+  },
+  "matrix": [
+    "Before output, verify protected artifacts; exact existing evaluator commits/trees/bundles, exact symbolic HEAD per independent repository, and48-file1,291,607-byte complete census. Own admission caps64 regular files/repository plus16MiB aggregate; T503 shared32-file bound is unchanged. No source/index/ref/bundle mutation, indexer/generator invocation or preparation fetch. Final source/UI/binary/native-tool/helper/harness identity is reviewed separately after mobile prerequisite; no stale8a70 image is presumed.",
+    "Create one fresh private data/auth/rewrite/selection root. Start the single180-second clock before disposable signing and keep it through joined teardown. Freeze all six pack artifacts before either signature, sign exactly two separate Thrift packs with one disposable integration key, remove private key before serve. Three ordinary phases exercise all selected-set versions and one real withdrawal survivor; no fourth restart or invented source transition. Each phase uses the same two fixed committed repositories.",
+    "Require healthy HTTP<=30s and exact selected-set roots for both repositories<=90s per phase, then query the frozen positive field identities plus public RWfield0 through neutral HTTP and MCP. For selected generators require all frozen positive spans/identities and zero extra consumer spans within those fixed queries; original full-stream negative-site evidence remains separately scoped. For unselected generators require0facts under coherent current selected-set metadata, report pack unavailable rather than source absence. Validate all additional generated sources/spans/version/tier/detail separately, preserving the documented Apache code_role limitation.",
+    "Bind every successful proof to the same current selected-set version, full native root/run/plan/commit tuple and exact source atoms. Verify MCP fact/provenance projections and HTTP immutable proofs, keeping MCP partial/withheld coverage/no-absence/no-deployment states. General source APIs each open one full immutable blob per transport request; slice every unique selected consumer atom client-side, with no instrumented blob-read counter or range service claim.",
+    "Record first successful response/object as cold after explicit probes, plus five warm reads/object. In both phase only, finite1/4/8-client whole-proof batches over existing objects; report observed latency/throughput, no confidence/SLO inference. Field APIs have no pagination.",
+    "Anonymous401, only thrift-field-references discovery and neutral field tool, no protobuf or unrelated admission. On each selected-set change require a new current version; previous both-version immutable proof becomes404 after RWsurvivor while exact historical bytes/custody remain covered by registration regressions. Verify surviving RW facts retain exact/module_digest and Apache emits0; no fallback or old-set reuse.",
+    "First failure remains stopped with original raw evidence; no silent retry/relabel/threshold change. Reuse joined T503 lifecycle/total-HTTP/sampler and accepted T513 failure retention. After owned group/sampler join, remove data/config/token/webhook/rewrite/key/artifacts/server logs; failures retain bounded private-raw and source-free hash/phase diagnostics, success removes root. Forced/unjoined cleanup is stop; wall includes cleanup."
+  ],
+  "sampling": "Reuse existing native observer every0.2s after healthy HTTP; vm_stat physical free+inactive+speculative and allocated data every1s. Process-tree RSS is maximum observed samples, not transient peak/hard enforcement; startup/teardown excluded from RSS and included in180s wall. No swap/compressor credit. Missing measurement stops.",
+  "dependencies": {
+    "registered_implementation": "PR99 main58912f3c; final clean source/UI/binary bindings must be set after T50.3c integrates",
+    "reused_helpers": "Reviewed T503 HTTP/OwnedServeSession/JoinedMonitor/Matrix, accepted T513 cleanup/canonical utilities; repository-relative files must be integrated and hashed before import/execution, no absolute-worktree fallback",
+    "public_inputs": "Already frozen permissive source/index bundles only; original upstream revisions remain provenance, evaluator module/context remains explicit",
+    "test_evidence": "Existing spike/t523 registration logs remain byte-identical; this plan authorizes no tests, candidate, native or signing by itself"
+  },
+  "expiry": "2027-01-16; revalidate on input/recipe/tool/source/security or operating-bound drift",
+  "steady_cost": "No production code. Startup selection changes intentionally invalidate one shared-domain generation via version identity; one extractor pass per selected set, never one per pack. Three bounded owned server phases, two fixed repositories, no publication-source mutation. Harness does per-returned-atom bounded linear source/span checks and tiny retained-source hashes, one bounded metadata capture/repository/phase, two full source transports per unique consumer commit/path, finite parallel8 requests and reused sampling. No new product schema/cache/worker/lock/query scan/child class; client verification costs are separate from product latency and observed process samples."
+}

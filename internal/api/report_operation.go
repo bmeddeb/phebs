@@ -95,14 +95,24 @@ func validateOperationImpactPage(page *CallerMapPage, query CallerMapQuery, page
 	if pageSize == 0 {
 		pageSize = callerMapDefaultPage
 	}
-	if page == nil || page.SchemaVersion != exactCallerMapSchemaVersion || page.Query != query || page.Generation == nil || page.Scope == nil || page.Rows == nil || len(page.Rows) > pageSize || !stringIn(page.Generation.State, "current", "missing", "stale", "failed") || page.Generation.Repository != query.Endpoint.Repository || page.Generation.Plane != exactCallerMapPlane || page.Scope.Repository != query.Endpoint.Repository || page.Scope.Commit != page.Generation.Commit || page.Coverage != nil || page.CoverageDigest != "" || page.AttributionDigest != "" || page.Caveat == "" {
+	if page == nil || page.SchemaVersion != exactCallerMapSchemaVersion || page.Query != query || page.Generation == nil || page.Scope == nil || page.Rows == nil || len(page.Rows) > pageSize || !stringIn(page.Generation.State, "current", "missing", "stale", "failed") || page.Generation.Repository != query.Endpoint.Repository || page.Generation.Plane != exactCallerMapPlane || page.Scope.Repository != query.Endpoint.Repository || page.Coverage != nil || page.CoverageDigest != "" || page.AttributionDigest != "" || page.Caveat == "" {
 		return errors.New("invalid exact caller page metadata")
 	}
 	if page.MatchingRowsState == "unavailable" {
-		if page.Generation.State == "current" || len(page.Rows) != 0 || page.TotalMatchingRows != nil || !page.Pagination.Complete || page.Pagination.NextCursor != "" {
+		// Scope describes the present indexed repository. An unavailable caller
+		// generation may be absent or retained from a different commit/unit.
+		// Keep both unchanged, without declaration locators or a zero count.
+		if page.Generation.State == "current" || page.Declaration != nil || len(page.Rows) != 0 || page.TotalMatchingRows != nil || !page.Pagination.Complete || page.Pagination.NextCursor != "" {
 			return errors.New("unavailable caller page claimed rows or totals")
 		}
 		return nil
+	}
+	unitDigest := ""
+	if page.Scope.AnalysisUnit != nil {
+		unitDigest = page.Scope.AnalysisUnit.Digest
+	}
+	if page.Scope.Commit != page.Generation.Commit || unitDigest != page.Generation.UnitDigest {
+		return errors.New("exact caller scope differs from current generation")
 	}
 	if page.MatchingRowsState != "exact" || page.Generation.State != "current" || page.Generation.GenerationDigest == "" || page.TotalMatchingRows == nil || *page.TotalMatchingRows < len(page.Rows) || *page.TotalMatchingRows > exactCallerMapBindingRefs || (page.Pagination.Complete && page.Pagination.NextCursor != "") || (!page.Pagination.Complete && (page.Pagination.NextCursor == "" || len(page.Rows) != pageSize)) || (*page.TotalMatchingRows == 0 && !page.Pagination.Complete) || (*page.TotalMatchingRows > 0 && len(page.Rows) == 0) {
 		return errors.New("invalid exact caller generation/count metadata")

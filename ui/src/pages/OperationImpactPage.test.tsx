@@ -7,6 +7,7 @@ import ImpactPage from './ImpactPage'
 import { ModeContext } from '../theme'
 import { emptyOperationReport, operationQuery, operationReport, unavailableOperationReport } from '../test-fixtures/operationImpact'
 import type { OperationImpactReport } from '../api'
+import { validateOperationImpactReport } from '../operationImpactContract'
 
 const api = vi.hoisted(() => ({
   fetchOperationImpactReport: vi.fn(), fetchCallerCitation: vi.fn(), fetchContractCallers: vi.fn(),
@@ -68,6 +69,23 @@ test.each([emptyOperationReport, unavailableOperationReport])('distinguishes exa
   await screen.findByText(report.conclusion.qualification)
   expect(screen.queryAllByTestId('caller-map-row')).toHaveLength(0)
   expect(screen.getByText(report.conclusion.state === 'unavailable' ? 'Caller totals unavailable' : 'No matching static evidence')).toBeTruthy()
+})
+
+test('a replacement source with retained caller metadata stays unavailable through fetch validation and display', async () => {
+  const report = unavailableOperationReport()
+  report.caller_page.scope!.commit = 'f'.repeat(40)
+  api.fetchOperationImpactReport.mockResolvedValue(validateOperationImpactReport(report, operationQuery, 100))
+  render(tree())
+  await screen.findByText(report.conclusion.qualification)
+  expect(screen.getByText('Caller totals unavailable')).toBeTruthy()
+  expect(screen.queryAllByTestId('caller-map-row')).toHaveLength(0)
+  expect(screen.queryByRole('link', { name: 'Declaration' })).toBeNull()
+  expect(screen.queryByText('No matching static evidence')).toBeNull()
+  fireEvent.click(screen.getByText('Source authority and scope'))
+  const generation = screen.getByTestId('caller-map-generation')
+  expect(within(generation).getByText('Complete caller generation unavailable')).toBeTruthy()
+  expect(within(generation).getByText('stale · revision unavailable')).toBeTruthy()
+  expect(within(generation).queryByText('Exact repository-overlay generation')).toBeNull()
 })
 
 const unsupported: Record<string, string>[] = [

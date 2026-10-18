@@ -17,15 +17,23 @@ import qualify
 import score
 
 HERE, REPO = fields.HERE, fields.REPO
-OWN_FILES = ("qualify_fields.py", "field_checks.py", "test_fields.py", "README.md")
+OWN_FILES = ("qualify_fields.py", "field_checks.py", "test_fields.py", "README.md", "post-discovery-execution-amendment.json")
 REUSED_FILES = (*sorted(shared.HARNESS_FILES), "qualify.py", "score.py")
 DARK_CAPABILITIES = (shared.DARK_CAPABILITIES - {"protobuf-field-references"}) | {"contract-caller-map", "contract-caller-comparison", "contract-atlas"}
 DARK_TOOLS = (shared.DARK_TOOLS - set(fields.ENDPOINTS)) | {"list_operation_callers", "compare_operation_callers", "find_operation_consumers", "get_extraction_coverage", "list_contracts", "read_contract"}
 
 
+def validate_implementation_binding(binding, plan):
+    amendment = checks.bounded_json(HERE / "post-discovery-execution-amendment.json", 65536)
+    score.require(amendment["schema"] == "phebs-t513-post-discovery-execution-amendment-v1" and amendment["accepted"] is True, "field execution amendment not accepted")
+    score.require(amendment["original_plan_digest"] == checks.sha(HERE / "operating-plan.json") and amendment["original_implementation_binding"] == plan["implementation_binding"], "field original implementation contract drift")
+    selected = amendment["implementation_binding"]
+    score.require(binding["source_commit"] == selected["source_commit"] and binding["binary"]["path"] == selected["binary"] and binding["binary"]["sha256"] == "sha256:" + selected["binary_sha256"], "field amended implementation binding drift")
+
+
 def validate_binding(binding, plan):
     score.require(binding["schema"] == "phebs-t513-execution-binding-v1" and binding["reviewed"] is True and binding["plan_digest"] == checks.sha(HERE / "operating-plan.json"), "field execution binding not reviewed")
-    score.require(binding["source_commit"] == plan["implementation_binding"]["source_commit"] and binding["binary"]["sha256"] == "sha256:" + plan["implementation_binding"]["binary_sha256"], "field implementation binding drift")
+    validate_implementation_binding(binding, plan)
     score.require(qualify.command(["git", "rev-parse", "HEAD"], cwd=REPO).strip() == binding["harness_commit"] and not qualify.command(["git", "status", "--porcelain", "--untracked-files=no"], cwd=REPO).strip(), "field harness is not the reviewed clean commit")
     score.require(set(binding["harness_files"]) == set(OWN_FILES) and set(binding["reused_t503_files"]) == set(REUSED_FILES), "field binding omits owned/reused code")
     for folder, items in ((HERE, binding["harness_files"]), (REPO / "spike/t503", binding["reused_t503_files"])):

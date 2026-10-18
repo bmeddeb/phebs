@@ -9351,3 +9351,25 @@ Comparison source cards and long unit IDs fit narrow screens. Citation chips
 retain the complete path in their accessible name/title; focus a chip and
 press Enter to open its exact cited bytes. Unit identity wrapping and source
 presentation change no evidence, scope, current-generation or absence rules.
+
+T50.3 now retains a finite direct comparison outcome and unsigned release drafts
+under `spike/t503/requalification-after-mobile-fix/` and
+`spike/t503/release/artifacts/`. These drafts grant no production activation;
+use only an exact owner-approved signed release selection. Prior stops, sampled
+resource limitations and supplied-unit caveats remain in the retained addendum.
+
+T51.3 retains its finite field outcome and unsigned drafts under `spike/t513/`.
+Native zero extras is limited to eleven queried positive identities; previous
+full-stream negative quality remains separate. Generated facts imply no recall
+or semantic-write guarantee. These drafts grant no production activation.
+
+T52.3 retains independent Apache/RW finite operating results and unsigned drafts
+in `spike/t523/release/`. Revoking Apache rebuilds the surviving RW domain;
+old both-version proofs refuse while retained custody remains. Field0generated
+facts are transport/source witnesses without a recall/absence guarantee.
+These drafts grant no production activation or signature.
+
+During startup or publication replacement, operation Impact may show the current
+indexed source scope beside an absent or older caller generation. This remains
+unavailable with no rows, totals or declaration; it is not zero callers. Exact
+current evidence requires matching source commit and analysis-unit digest.
