@@ -1,0 +1,257 @@
+{
+  "schema": "t521-source-label-freeze-v1",
+  "record_date": "2026-10-18",
+  "counts": {
+    "neutral/negative": 60,
+    "neutral/positive": 11,
+    "neutral/unsupported": 4,
+    "public/negative": 266,
+    "public/positive": 33
+  },
+  "labels_digest": "sha256:4e9c7474bc33e98c1d1f057f8e8cd72f71a5801ca157df873e9dbf1bc87c491f",
+  "labels_bytes": 128621,
+  "candidate_executed": false,
+  "indexer_executed": false,
+  "files": [
+    {
+      "path": "testdata/idl/LICENSE",
+      "bytes": 11357,
+      "digest": "sha256:c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "path": "testdata/idl/thrift/agent.thrift",
+      "bytes": 964,
+      "digest": "sha256:58bb3adbd62e57c7dcb44a8fb7ced14ea9cf017b9547a264a2820799c94ea02b"
+    },
+    {
+      "path": "testdata/idl/thrift/jaeger.thrift",
+      "bytes": 4504,
+      "digest": "sha256:745e62946cbe5f17e299d1306d182fdecfca9a27c73327408e378ef20b43367d"
+    },
+    {
+      "path": "testdata/idl/thrift/sampling.thrift",
+      "bytes": 2467,
+      "digest": "sha256:eddcae5369ea9af50c08eb2d0859973c9ecd6726a2aad3b5f4eec06bbfbb8513"
+    },
+    {
+      "path": "testdata/idl/thrift/zipkincore.thrift",
+      "bytes": 13742,
+      "digest": "sha256:a019adde1354e34453dd2da23b1568f01f77e739b84717d64d8f145d8826bbf8"
+    },
+    {
+      "path": "testdata/neutral/fake/parcel.go",
+      "bytes": 126,
+      "digest": "sha256:fc1cd634735664098549013388ae35272fa78c522e703e2e49ef0ffa3f2ae3a0"
+    },
+    {
+      "path": "testdata/neutral/gen/parcel.go",
+      "bytes": 618,
+      "digest": "sha256:7ff6556c7d8da13ebfd416e9679c0f6a692877266a9a28d02dac5c0ac6c1d352"
+    },
+    {
+      "path": "testdata/neutral/go.mod",
+      "bytes": 43,
+      "digest": "sha256:a76bc5a9484c44e48c1bac6355cffc2f51372cc2579d8128a40bbb63f2b1db22"
+    },
+    {
+      "path": "testdata/neutral/idl/parcel.thrift",
+      "bytes": 218,
+      "digest": "sha256:41be613eda524dcd1e3f1c6cd15e9408e04d5eee44d7f2b8b0f03bd876e08ae0"
+    },
+    {
+      "path": "testdata/neutral/use/use.go",
+      "bytes": 680,
+      "digest": "sha256:e2ee225dca2277e447f288b99405ddbf6a5b3c66625f8d49edbdb84d5a96434f"
+    },
+    {
+      "path": "testdata/public/LICENSE",
+      "bytes": 11357,
+      "digest": "sha256:c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "path": "testdata/public/go.mod",
+      "bytes": 105,
+      "digest": "sha256:7812715efed3039621809000de4ca94c6b801c6139c5f62e7a204eaed63caac9"
+    },
+    {
+      "path": "testdata/public/jaeger_tag.go",
+      "bytes": 2538,
+      "digest": "sha256:94635d6f7ab873a4a884936ee0c2cdc31cb9edd8e5b3cffe7cdf45f0b4c5441c"
+    },
+    {
+      "path": "testdata/public/testutils/sampling_manager.go",
+      "bytes": 1619,
+      "digest": "sha256:4bebe55774e3c0596ef37ca892863698b1657fda6a55c5d6c65fdeae80ab66d8"
+    },
+    {
+      "path": "testdata/public/thrift/application_exception.go",
+      "bytes": 4562,
+      "digest": "sha256:9c7e70b8c8d384012cbdb45bc07e17c77aa184e1308fa11ed1250ed5cd84315a"
+    },
+    {
+      "path": "testdata/public/thrift/binary_protocol.go",
+      "bytes": 13617,
+      "digest": "sha256:db706eb9a60c077870aaef054e7d2a338f08840a68631bc699020b3550165c1b"
+    },
+    {
+      "path": "testdata/public/thrift/client.go",
+      "bytes": 2924,
+      "digest": "sha256:ffb7ac3daf852297146e7d622c57e088b9ae8afec6f0f1070c8f9054a7439933"
+    },
+    {
+      "path": "testdata/public/thrift/compact_protocol.go",
+      "bytes": 24857,
+      "digest": "sha256:483cc6a3a011515d4e7b27ff70b863fda966556f21c4de6e0f8e3711170d8878"
+    },
+    {
+      "path": "testdata/public/thrift/configuration.go",
+      "bytes": 12231,
+      "digest": "sha256:f3f3965e020e13add922f872d0b34291ec75e41734622ea7062426e8333f5c34"
+    },
+    {
+      "path": "testdata/public/thrift/context.go",
+      "bytes": 877,
+      "digest": "sha256:460e8631b6e71e6c2ae3854fc9c864db999bc94edff808f238c04f91347ef8fd"
+    },
+    {
+      "path": "testdata/public/thrift/exception.go",
+      "bytes": 3160,
+      "digest": "sha256:8320c3ed5cdaf01e834a919e7fd59542a1115e4dbcea3bdb6df915056b65b086"
+    },
+    {
+      "path": "testdata/public/thrift/header_context.go",
+      "bytes": 2991,
+      "digest": "sha256:d19a438724fd7ca22aec9a44136b5960f0b8fa7da29bbdf56a769a8fb1921db6"
+    },
+    {
+      "path": "testdata/public/thrift/header_protocol.go",
+      "bytes": 10646,
+      "digest": "sha256:e8dbf39fb14a73b764ff67196bd0bff6996cf80a52bf48b222e0cbe33dfeb87f"
+    },
+    {
+      "path": "testdata/public/thrift/header_transport.go",
+      "bytes": 22580,
+      "digest": "sha256:97f9770c8d96b04ce83dcd1226bfb212550d623d8b36ce3e3ed08e8ea71ba560"
+    },
+    {
+      "path": "testdata/public/thrift/logger.go",
+      "bytes": 1780,
+      "digest": "sha256:e81994052fe01a71e7d9945565757b25be876587dabb0ca6ce6afb241581440d"
+    },
+    {
+      "path": "testdata/public/thrift/memory_buffer.go",
+      "bytes": 2074,
+      "digest": "sha256:3d410eaf677dd9399338212b830de1bc396f851c052c66f9c13986804a6e9d28"
+    },
+    {
+      "path": "testdata/public/thrift/messagetype.go",
+      "bytes": 1106,
+      "digest": "sha256:1bfe4644d9d3b67f3c9109d5005777783e21759cce0a134d549729e259d41f1c"
+    },
+    {
+      "path": "testdata/public/thrift/numeric.go",
+      "bytes": 3973,
+      "digest": "sha256:9acff6ecbd5f732da3fbef7064043fe2ce23d360f1dee239c41fd54abcb3c47d"
+    },
+    {
+      "path": "testdata/public/thrift/processor_factory.go",
+      "bytes": 2471,
+      "digest": "sha256:58c138c2612550010fe60917b6d3c7b185b2bf9ae38a5ceddbdaaf9f18227aad"
+    },
+    {
+      "path": "testdata/public/thrift/protocol.go",
+      "bytes": 5652,
+      "digest": "sha256:92fab2234679a3b9575a81466500ca736b78bd12c423fcfd613db2b7e54f2f2c"
+    },
+    {
+      "path": "testdata/public/thrift/protocol_exception.go",
+      "bytes": 2414,
+      "digest": "sha256:30a31de7957d7602259cbb186bba930983c6dafe33f2491b76325fa52a61f13b"
+    },
+    {
+      "path": "testdata/public/thrift/protocol_factory.go",
+      "bytes": 956,
+      "digest": "sha256:f52875baa83a7719f29ec815911e4d96c60d74a32828db92f311afea24398aac"
+    },
+    {
+      "path": "testdata/public/thrift/response_helper.go",
+      "bytes": 3052,
+      "digest": "sha256:cd9cc8a307f605d87152bec5d6bb47bd4cc0a677cd366c8f801edd9774d04eac"
+    },
+    {
+      "path": "testdata/public/thrift/rich_transport.go",
+      "bytes": 1792,
+      "digest": "sha256:6e5ea70bbdf61e35a6e564013f666ed0f69befc70c390c6a5892cce6d8159f62"
+    },
+    {
+      "path": "testdata/public/thrift/serializer.go",
+      "bytes": 3415,
+      "digest": "sha256:41df8a6bbe8acb53278909ddcc3751c6fb34903022faeded20cc1cf633b759d4"
+    },
+    {
+      "path": "testdata/public/thrift/server_transport.go",
+      "bytes": 1318,
+      "digest": "sha256:73d3b81269c69c08d9bff61279cd6160fa017f3c82de252bee349364340f1b2f"
+    },
+    {
+      "path": "testdata/public/thrift/simple_json_protocol.go",
+      "bytes": 36888,
+      "digest": "sha256:4e14e9f730d4cdb627b5a50b432ce460710babb9b47f0881685a97c66953f224"
+    },
+    {
+      "path": "testdata/public/thrift/simple_server.go",
+      "bytes": 9733,
+      "digest": "sha256:12b7ed9d46c6d5f0803c6d5d59327240d3111d7522fd181f2668fa84057d0e51"
+    },
+    {
+      "path": "testdata/public/thrift/transport.go",
+      "bytes": 1792,
+      "digest": "sha256:9e73026fed866f202e7b0a2b424b337fc04e6a3e6d631f0414bc041186b717c6"
+    },
+    {
+      "path": "testdata/public/thrift/transport_exception.go",
+      "bytes": 2779,
+      "digest": "sha256:14472f23d5e52969320b7bf56fc24b166df961dacfe8e0738390eb5aebae4081"
+    },
+    {
+      "path": "testdata/public/thrift/transport_factory.go",
+      "bytes": 1432,
+      "digest": "sha256:d5b66c9b62437e84f18e7407e464b5cb0f335eaef62770d77dd4b373c0580526"
+    },
+    {
+      "path": "testdata/public/thrift/type.go",
+      "bytes": 1534,
+      "digest": "sha256:dffb9d5b56e1de91621e5fce389cee0ede1510a799855a0b0a196e518f882469"
+    },
+    {
+      "path": "testdata/public/thrift-gen/jaeger/GoUnusedProtection__.go",
+      "bytes": 108,
+      "digest": "sha256:13aeeefa5045848503e246ddaa38b6d45c83960971f7f41e3e18bcdfed9f441d"
+    },
+    {
+      "path": "testdata/public/thrift-gen/jaeger/jaeger-consts.go",
+      "bytes": 360,
+      "digest": "sha256:598299f2e790ef206d3b4f0f0694ac1acf5ca629bcecbf6249e4386ef7eb1cee"
+    },
+    {
+      "path": "testdata/public/thrift-gen/jaeger/jaeger.go",
+      "bytes": 88028,
+      "digest": "sha256:84aa41eff7830e23021707b4809261a3fa07196285351a8c6506fbd6e9922f46"
+    },
+    {
+      "path": "testdata/public/thrift-gen/sampling/GoUnusedProtection__.go",
+      "bytes": 110,
+      "digest": "sha256:af1260b07ed4cc7efb987de8471a86a975c4cab927341fc754bd842e1953933f"
+    },
+    {
+      "path": "testdata/public/thrift-gen/sampling/sampling-consts.go",
+      "bytes": 362,
+      "digest": "sha256:6418f31d36a8d19326add1eb391321b1fcde770fa83d98dab59aa0a3f23e71ea"
+    },
+    {
+      "path": "testdata/public/thrift-gen/sampling/sampling.go",
+      "bytes": 48733,
+      "digest": "sha256:d551fc830ea6302a2fd81958a7d18d477ceeca30b64bc22e6db1e7cf5806f232"
+    }
+  ]
+}

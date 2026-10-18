@@ -19392,6 +19392,17 @@ publish exact supported generators, input formats, operating bounds and expiry.
 generator versions, stable field IDs, symbol/tag binding and unsupported shapes;
 depend on the selected T49.2 declaration and independently admitted SCIP recipe.
 
+**T52.1 source checkpoint (2026-10-18, Ben-routed Mac handoff).** Exact
+permissive source preparation and independent source/tag/IDL review freeze
+48 files /370,645 bytes: two unchanged public handwritten files plus exact
+Apache0.14.1 generated/runtime inputs and separate authored controls. Source-only
+labels contain33public positives/266lexical identifier negatives and separate
+11authored positives/60negatives/4unsupported sites. No indexer, candidate or
+scorer has run. Bounded offline index preparation follows this checkpoint;
+actual evaluator source/index commits and final binding review precede scoring.
+No Apache result transfers from thriftrw, and no production registration,
+operating qualification or signature follows from preparation.
+
 **T52.2 · thriftrw field contract and independent quality** — separate
 generator-specific identity and quality population; no Apache result transfers.
 

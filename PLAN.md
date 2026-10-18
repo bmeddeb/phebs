@@ -12526,3 +12526,33 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   grows174 minified bytes/45 gzip bytes; keyboard walkthroughs are60–93ms local
   mechanics observations, not a user or latency study. Exact source/harness/
   image/report hashes and limits live in `ui/receipts/t43r6.json`.
+
+- **2026-10-18 — T52.1 Apache Thrift source-only field checkpoint
+  (Ben-routed Mac handoff).** Freeze unchanged public Jaeger0.14.1 generated
+  inputs and two handwritten application files, independently checked against
+  their exact generated tags and external pinned IDL. All applicable Apache2
+  licenses were checked before source reads and retained. The selected derivative
+  module adds only evaluator go.mod and cached OpenTracing1.2.0; it does not
+  replace application code with stubs or claim the full upstream application.
+  Source-freeze48 files /370,645 bytes and all374 label spans/digests/lines
+  validate. Source-only labels SHA256
+  `4e9c7474bc33e98c1d1f057f8e8cd72f71a5801ca157df873e9dbf1bc87c491f`
+  freeze public33positive/266negative and separate authored11positive/
+  60negative/4unsupported. Negative counts are the complete lexical identifier
+  census of the three selected handwritten files, not independent deployments
+  or a generalized false-positive estimate. Generated emissions remain separate.
+
+  Header-declared Apache0.14.1 and real scip-go0.2.7 root committed index inputs
+  are the prospective recipe. Exact generated tag/SCIP symbol/type/span joins
+  keep numeric identity including field0, tier derived and source_binding none.
+  External declaration witnesses do not bridge different lineage families.
+  No regeneration, managed generation, production admission/signature or Thrift
+  generator-wide accuracy follows. Independently reviewed source-only positives,
+  negatives, accessor/reflection/duplicate-ID/lookalike controls precede any
+  indexer/candidate output. Next prepare at most one offline90s real index child
+  per population, bind actual evaluator source/index Git commits and bundle
+  hashes, then independently review final bindings before the first30s scorer.
+  Existing index32MiB/50kdocuments/500koccurrences/8KiBsymbols/4MiBsource refusal
+  bounds remain. Preparation/checkpoint changes no production query, startup,
+  sync, retry/no-op, publication, lock, cache, worker, schema, disk or child cost;
+  actual input preparation and finite extraction cost remain to measure.

@@ -5521,6 +5521,11 @@ Production registration of the remaining evidence surfaces still requires:
 Until both exist, the implementation remains dark regardless of feature
 completeness or demo quality.
 
+**T52.1 source preparation (2026-10-18):** the finite Apache0.14.1 source/tag/
+IDL oracle is frozen and independently reviewed before indexing. Real offline
+SCIP preparation, evaluator Git bindings and final preregistration review come
+before scoring. Registration and each generator's quality stay separate.
+
 ## On demand
 
 Epic 32 measured the target whole repository and did not trigger P6. P6 remains
