@@ -159,6 +159,29 @@ checks do not establish native geometry, pressure/restore execution or readiness
 
 ## Current product posture
 
+**Current scheduling snapshot (2026-10-18, T48.1a):** merged main through
+[PR #128](https://github.com/bmeddeb/phebs/pull/128) contains the scheduled
+independent Mac implementation and presentation leaves. The
+[current inventory](./BACKLOG.md#t481a-current-inventory) supersedes the
+remaining-work and branch/integration statuses in earlier dated dispatch notes
+below, while retaining their historical facts and qualification scopes.
+
+Next: [Linux office handoff #124](https://github.com/bmeddeb/phebs/issues/124)
+mechanism qualification → remaining T42.H2 consumer/executor/resource admission
+→ T42.2v restored launch → complete readiness → T42.2o fresh freeze → separately
+authorized execution → T42.3 posture. Installed managed SCIP (T45.7/T45.10) still
+needs admitted compiler/sysroot/offline inputs and actual installed navigation/
+teardown proof; T45.9 still needs the eligible 5,000-service/12-GB target and
+host. T45.10a's presentation acceptance is complete independently.
+
+Production artifact/signature/publication closure for T47.5, T49.4, T50.3,
+T51.3, T52.3 and T54.3 remains pending the existing unavailable production key
+and the exact owning production decision. Scoped results and unsigned drafts
+remain intact. T25–28's recorded outcomes and the T58 not-releasable decisions
+are complete for their scope; optional labels and future polish add no current
+Mac dependency. No additional independent Mac implementation leaf is scheduled
+in this snapshot. This reconciliation changes no runtime or release posture.
+
 **All-ticket execution (2026-10-17, Ben-directed):** resolve actual dependencies
 and finish remaining work using three isolated agent lanes plus the lead. The
 current inventory is the T48.1 all-ticket table in [BACKLOG.md](./BACKLOG.md).

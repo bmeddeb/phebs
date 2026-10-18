@@ -11278,3 +11278,24 @@ individually gzipped bytes, with no new chunk/dependency. All 130 historical
 canonical hashes stay unchanged. [Evidence](../spike/t442b/README.md) establishes
 presentation mechanics with synthetic tokens and a substituted clipboard API;
 no OS clipboard-content, backend-auth, Linux #124 or signing claim follows.
+
+
+## T48.1a · Current dependency reconciliation (complete 2026-10-18)
+
+The [current inventory](./BACKLOG.md#t481a-current-inventory) reconciles merged
+main through PR #128 with the old all-ticket dispatch table. Scheduled Mac
+implementation/presentation leaves and finite spike/NO-GO outcomes retain their
+own scope. Remaining work is the Linux #124 sequence, installed managed-SCIP
+and eligible-target inputs/proof, and exact production artifact/signature/
+publication closure. Production signing stays pending; labels stay optional.
+
+Earlier dispatch rows, signed/failed receipts and parent release obligations
+remain unchanged. The leading ROADMAP snapshot directs current task selection
+here so historical branch-stage wording cannot reopen integrated work. This
+is documentation-only, with existing bounded authenticated rendering and no
+runtime/UI/API/release change. Bounded documentation/glossary/whitespace and
+ancestry/link checks plus independent factual/cost review apply; no long
+rehearsal or browser matrix is needed for this change.
+
+Documentation, glossary and whitespace gates pass; 39 merge witnesses are
+verified main ancestors. Independent factual/cost review has no finding.

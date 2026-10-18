@@ -13914,3 +13914,25 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Bundled JavaScript adds 792 raw/237 individually deterministic-gzip bytes;
   Settings is +792/+260, the initial entry +0/-3, with unchanged chunk/dependency
   counts. Host-fixture interaction timings remain mechanics evidence only.
+
+
+- **2026-10-18 — T48.1a reconcile current scheduling against merged main (Mac documentation).**
+  Use the dated T48.1a inventory in BACKLOG and the leading ROADMAP snapshot
+  for current remaining work after integrated main `1099768e`/PR #128. Preserve
+  the earlier dispatch tables and branch-stage records as historical evidence.
+  Integrated implementation, scoped qualification, completed spikes and retained
+  NO-GO decisions are distinct from parent production closure. The scheduled
+  independent Mac lane is complete; next actions retain #124's Linux mechanism,
+  H2 consumer/executor/admission and restored-launch/readiness/freeze order,
+  plus separate installed-SCIP/eligible-target and production-signing holds.
+  Caller Map/Atlas labels stay optional and name-based T58 recipes stay not
+  releasable. Do not infer a new feature, identity round, waiver, release or
+  ceremony authorization from a stale heading or this reconciliation.
+  This changes documentation only. Runtime code, UI/bundles, APIs, jobs,
+  source/publication authority, release artifacts and historical receipts are
+  unchanged. The next binary carries updated documentation bytes through the
+  existing bounded authenticated document renderer; no new query, sync,
+  startup/restart, retry/no-op or publication work class, lock, cache, corpus
+  scan, child or persistent state is added. Bounded docs/glossary/whitespace,
+  merged-ancestry/link checks and independent factual review are the gates;
+  no historical execution or UI matrix is repeated.
