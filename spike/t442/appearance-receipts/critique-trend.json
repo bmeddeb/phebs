@@ -1,0 +1,15 @@
+[
+  {
+    "target": "T44.2 Settings Appearance",
+    "total_score": 34,
+    "max_score": 40,
+    "na_heuristics": "",
+    "p0_count": 0,
+    "p1_count": 0,
+    "target_identity": "file:/Users/ben/phebs.com/ui/src/pages/SettingsPage.tsx",
+    "target_fingerprint": "sha256:7a0af8d21ea621fab995692414600ce3b06d381fe898414a6dc1b31463c2b8e4",
+    "target_path": "/Users/ben/phebs.com/ui/src/pages/SettingsPage.tsx",
+    "timestamp": "2026-10-18T18-56-09Z",
+    "slug": "ui-src-pages-settingspage-tsx"
+  }
+]

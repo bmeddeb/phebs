@@ -1,0 +1,150 @@
+{
+  "schema": "phebs-t442-native-qa-v1",
+  "pass": "author",
+  "outcome": "stopped",
+  "source_checkpoint": "b0c683288a14c8055eade43fa7f84653832e84e6",
+  "scroll_helper_sha256": "1207f1a353b3425ba308bec6806b79326a36f717c4103aac0d0be02fdc308c37",
+  "native_renderer_claim": "Darwin installed Chrome only; no Noble baseline equivalence",
+  "commands": [
+    {
+      "name": "vite",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "/Users/ben/.codex/worktrees/t422n-mac-native-closure/phebs.com/ui/node_modules/vite/bin/vite.js",
+        "preview",
+        "/Users/ben/.codex/worktrees/t422n-mac-native-closure/phebs.com/ui",
+        "--outDir",
+        "/Users/ben/.codex/worktrees/t25-embedded-docs/phebs.com/ui/dist",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "59779",
+        "--strictPort"
+      ]
+    },
+    {
+      "name": "chrome",
+      "argv": [
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "--headless=new",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--disable-background-networking",
+        "--disable-component-update",
+        "--disable-sync",
+        "--remote-debugging-address=127.0.0.1",
+        "--remote-debugging-port=0",
+        "--user-data-dir=/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/author/private-chrome-profile",
+        "about:blank"
+      ]
+    },
+    {
+      "name": "client",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "/Users/ben/.codex/worktrees/t422n-mac-native-closure/phebs.com/ui/node_modules/@playwright/test/cli.js",
+        "test",
+        "--config",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/runner/playwright.config.ts",
+        "--project",
+        "appearance",
+        "--max-failures=1"
+      ]
+    }
+  ],
+  "terminals": {
+    "client": {
+      "exit_code": 1,
+      "teardown": "clean",
+      "termination_mode": "already_exited",
+      "pid": 77569,
+      "expected_pgid": 77569,
+      "observed_pgid": 77569,
+      "joined": true
+    },
+    "chrome": {
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "sigterm",
+      "pid": 77450,
+      "expected_pgid": 77450,
+      "observed_pgid": 77450,
+      "joined": true
+    },
+    "vite": {
+      "exit_code": 143,
+      "teardown": "clean",
+      "termination_mode": "sigterm",
+      "pid": 77448,
+      "expected_pgid": 77448,
+      "observed_pgid": 77448,
+      "joined": true
+    }
+  },
+  "owners": {
+    "vite": {
+      "pid": 77448,
+      "expected_pgid": 77448,
+      "observed_pgid": 77448
+    },
+    "chrome": {
+      "pid": 77450,
+      "expected_pgid": 77450,
+      "observed_pgid": 77450
+    },
+    "client": {
+      "pid": 77569,
+      "expected_pgid": 77569,
+      "observed_pgid": 77569
+    }
+  },
+  "verified_census": {
+    "production_inputs": {
+      "rows": 118,
+      "digest": "3faf08ae77ffeb47405efba2a61de1269e5fa212a2e0a0ff4334cfee25ebe9c1"
+    },
+    "production_dist": {
+      "rows": 165,
+      "digest": "b13f4849162509737b09fb50a0fbd8f037fca05ccb35eafdb0711803e101bffe"
+    }
+  },
+  "tools": {
+    "node": {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+      "sha256": "ee6fb0e015284d83a91e8ec5213f43a157f8a392b58555301682892ba928c04a"
+    },
+    "chrome_launcher": {
+      "path": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "sha256": "3972431aa8acff4e590998116c6c3e663e9a4d0eb6efd08fd160df8206db94a6"
+    },
+    "axe": {
+      "path": "/Users/ben/phebs.com/ui/node_modules/axe-core/axe.min.js",
+      "sha256": "66a8aaa95a8b044a7fd74a5435873bf04ff65a1ca75567c921b7509742085a14",
+      "version": "4.12.1"
+    },
+    "playwright": "1.62.1"
+  },
+  "started_monotonic": 0.297017125,
+  "renderer": {
+    "Browser": "Chrome/155.0.8059.82",
+    "Protocol-Version": "1.3",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
+    "V8-Version": "15.5.35.23",
+    "WebKit-Version": "537.36 (@c56fe5daef8be123f68808a4bb705ff378cd2019)",
+    "webSocketDebuggerUrl": "ws://127.0.0.1:59798/devtools/browser/6d02a4ac-36de-499d-ad5b-6d4cd957600a"
+  },
+  "error_type": "AssertionError",
+  "error": "Playwright pass failed; first failure retained",
+  "all_owned_groups_joined_cleanly": true,
+  "total_seconds": 13.96268,
+  "final_census": {
+    "production_inputs": {
+      "rows": 118,
+      "digest": "3faf08ae77ffeb47405efba2a61de1269e5fa212a2e0a0ff4334cfee25ebe9c1"
+    },
+    "production_dist": {
+      "rows": 165,
+      "digest": "b13f4849162509737b09fb50a0fbd8f037fca05ccb35eafdb0711803e101bffe"
+    }
+  }
+}

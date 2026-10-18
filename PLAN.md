@@ -13833,3 +13833,16 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   are unchanged. Browser work is finite and serial under one 180-second ceiling
   per pass, including owned-group teardown. Linux #124 and production signing
   remain separate pending work.
+  The final receipt source `c3003613d87cbf2f123486d8fe587e614ba2d404`
+  passes author 10/10 and fresh 8/8 with eight byte-identical pairs, 16 clean
+  Appearance-scoped axe audits, actual keyboard type-ahead/persistence/refusal
+  controls and clean joined teardown. All 130 canonical PNGs, 118 production
+  inputs and 165 bundle files remain exact; the default unfiltered receipt
+  suite gains ten cases. Native popup and buffered-prefix diagnostics stay
+  failed/historical; the passing journey resets native type-ahead with actual
+  Tab/Shift+Tab before each distinct initial. Eight choices (default plus
+  three nondefault transitions at each width) take 14–35ms as local mechanics.
+  Independent source/cost review is clean and the dual-agent design/detector
+  assessment has no blocker. The retained [T44.2 outcome](spike/t442/appearance-receipts/README.md)
+  closes only this Appearance receipt gap; Linux execution, validation labels
+  and production signing remain pending independently.

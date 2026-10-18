@@ -2657,6 +2657,17 @@ no PNG is re-authored. Ben requested PR #80 integration. The next Mac receipt
 follow-up is cross-checkout portability: pin catalog input paths and verify
 from two roots, independently of the pending Caller Map/Atlas labels.
 
+T44.2 Appearance closure (2026-10-18, Mac): eight complete native Appearance
+frames now cover both widths/themes/densities; author 10/10 and fresh 8/8 pass
+with every pair byte-identical. Scoped accessibility, real keyboard choices,
+persistence/invalid-value guards, focused contrast/mounted-consumer tests and
+independent review pass. The old desktop frame omits Appearance and the narrow
+indexing frame clips it; those exact historical pixels remain unchanged. This
+separate native receipt lineage closes the owning visibility gap without a new
+full Noble matrix or product UI/bundle change. See
+[the T44.2 outcome](../spike/t442/appearance-receipts/README.md). Linux #124 and
+production signing remain pending; no validation label is advanced.
+
 T43R.1 completed in the presentation track on 2026-08-30. The adopted type-floor
 rule keeps interface text at 11px or larger and permits one named 10px token
 only for supplementary, non-interactive machine metadata whose essential

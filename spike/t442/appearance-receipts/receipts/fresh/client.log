@@ -1,0 +1,23 @@
+
+Running 8 tests using 1 worker
+
+(node:80468) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"theme":"light","width":1280,"height":800,"density":"comfortable","palette":"phebs","fixtureReadyMillis":166,"nativeCapture":"/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/fresh/output/palette.native-native-Appe-e2dd6-rame-light-1280-comfortable-appearance/palette-appearance--light--1280--comfortable.png"}
+  ✓  1 [appearance] › ../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/runner/palette.native.spec.ts:107:3 › native Appearance frame light 1280 comfortable (665ms)
+{"theme":"light","width":1280,"height":800,"density":"dense","palette":"phebs","fixtureReadyMillis":149,"nativeCapture":"/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/fresh/output/palette.native-native-Appearance-frame-light-1280-dense-appearance/palette-appearance--light--1280--dense.png"}
+  ✓  2 [appearance] › ../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/runner/palette.native.spec.ts:107:3 › native Appearance frame light 1280 dense (660ms)
+{"theme":"light","width":390,"height":900,"density":"comfortable","palette":"phebs","fixtureReadyMillis":152,"nativeCapture":"/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/fresh/output/palette.native-native-Appearance-frame-light-390-comfortable-appearance/palette-appearance--light--390--comfortable.png"}
+  ✓  3 [appearance] › ../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/runner/palette.native.spec.ts:107:3 › native Appearance frame light 390 comfortable (619ms)
+{"theme":"light","width":390,"height":900,"density":"dense","palette":"phebs","fixtureReadyMillis":148,"nativeCapture":"/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/fresh/output/palette.native-native-Appearance-frame-light-390-dense-appearance/palette-appearance--light--390--dense.png"}
+  ✓  4 [appearance] › ../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/runner/palette.native.spec.ts:107:3 › native Appearance frame light 390 dense (657ms)
+{"theme":"dark","width":1280,"height":800,"density":"comfortable","palette":"phebs","fixtureReadyMillis":142,"nativeCapture":"/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/fresh/output/palette.native-native-Appearance-frame-dark-1280-comfortable-appearance/palette-appearance--dark--1280--comfortable.png"}
+  ✓  5 [appearance] › ../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/runner/palette.native.spec.ts:107:3 › native Appearance frame dark 1280 comfortable (651ms)
+{"theme":"dark","width":1280,"height":800,"density":"dense","palette":"phebs","fixtureReadyMillis":140,"nativeCapture":"/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/fresh/output/palette.native-native-Appearance-frame-dark-1280-dense-appearance/palette-appearance--dark--1280--dense.png"}
+  ✓  6 [appearance] › ../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/runner/palette.native.spec.ts:107:3 › native Appearance frame dark 1280 dense (624ms)
+{"theme":"dark","width":390,"height":900,"density":"comfortable","palette":"phebs","fixtureReadyMillis":143,"nativeCapture":"/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/fresh/output/palette.native-native-Appearance-frame-dark-390-comfortable-appearance/palette-appearance--dark--390--comfortable.png"}
+  ✓  7 [appearance] › ../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/runner/palette.native.spec.ts:107:3 › native Appearance frame dark 390 comfortable (623ms)
+{"theme":"dark","width":390,"height":900,"density":"dense","palette":"phebs","fixtureReadyMillis":145,"nativeCapture":"/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/fresh/output/palette.native-native-Appearance-frame-dark-390-dense-appearance/palette-appearance--dark--390--dense.png"}
+  ✓  8 [appearance] › ../../../../../../private/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442-appearance-835thdfq/runner/palette.native.spec.ts:107:3 › native Appearance frame dark 390 dense (630ms)
+
+  8 passed (5.5s)

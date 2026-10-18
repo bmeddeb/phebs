@@ -1,0 +1,78 @@
+{
+  "runs": [
+    {
+      "name": "receipt-types",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "node_modules/typescript/bin/tsc",
+        "--ignoreConfig",
+        "--noEmit",
+        "--strict",
+        "--skipLibCheck",
+        "--target",
+        "es2023",
+        "--lib",
+        "es2023,dom,dom.iterable",
+        "--module",
+        "esnext",
+        "--moduleResolution",
+        "bundler",
+        "--types",
+        "node",
+        "--jsx",
+        "react-jsx",
+        "--allowImportingTsExtensions",
+        "receipts/palette-appearance.spec.ts",
+        "playwright.config.ts"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t422n-mac-native-closure/phebs.com/ui",
+      "outer_limit_seconds": 90,
+      "pid": 80649,
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "already_exited",
+      "joined": true,
+      "wall_seconds": 0.504789375,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "receipt-lint",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "node_modules/oxlint/bin/oxlint",
+        "receipts/palette-appearance.spec.ts",
+        "playwright.config.ts"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t422n-mac-native-closure/phebs.com/ui",
+      "outer_limit_seconds": 90,
+      "pid": 80653,
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "already_exited",
+      "joined": true,
+      "wall_seconds": 0.07825237499999993,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "receipt-discovery",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "node_modules/@playwright/test/cli.js",
+        "test",
+        "--project",
+        "appearance",
+        "--list"
+      ],
+      "cwd": "/Users/ben/.codex/worktrees/t422n-mac-native-closure/phebs.com/ui",
+      "outer_limit_seconds": 90,
+      "pid": 80654,
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "already_exited",
+      "joined": true,
+      "wall_seconds": 0.3463062499999999,
+      "log_sha256": "68ff1f63da718dc70c113f69a0899f714e0ae8bfa1559b86090508e12c394ef7"
+    }
+  ],
+  "passed": true
+}

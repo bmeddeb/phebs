@@ -9704,6 +9704,41 @@ baseline-refresh authorization, or approval to retain a noncanonical
 bare-unavailable or not-found state. No additional baseline update, clean
 retained comparison, merge, or integration is claimed.
 
+**T44.2 ✅ · Highlight palette preference** *(completed 2026-10-18)* —
+the shipped four-palette preference now has complete retained Appearance
+coverage. The separate Mac native lineage captures the heading, select and full
+specimen at 1280×800 and 390×900 in both themes and densities. Author 10/10 and
+fresh 8/8 pass; all eight pairs are byte-identical under the existing 0.001
+limit, without masks or retries. All 16 Appearance-scoped axe audits have zero
+violations or incomplete checks. Keyboard type-ahead, visible focus, exact live
+color, zero added API/navigation during choice, reload persistence and unknown/
+inherited-name fallback pass at both widths. The first choice confirms the
+existing default; each journey then makes three nondefault transitions.
+
+Seven existing palette/contrast/mounted-consumer files pass 297 focused tests;
+144 unrelated cases are intentionally filtered out. Final receipt/config types,
+lint and exact ten-case discovery pass. Independent source/cost review is clean;
+design review scores 34/40 with no blocker and the single detector scan reports
+zero findings. The existing silent plain-code fallback and compact 30px select
+remain nonblocking observations, not newly introduced product behavior.
+
+All 118 production inputs and 165 built files are unchanged: bundle delta is
+zero, with no dependency or added production request, tick, startup, retry,
+publication, lock, cache, memory/disk or child work. Eight keyboard-choice
+mechanics samples are 14–35ms; these are local fixture observations, not an SLO.
+The new receipt project adds ten cases to unfiltered receipt runs. Native passes
+own one Vite, Chrome and client group each under a 180-second ceiling including
+joined teardown. Earlier module/discovery/native-picker failures remain exact
+and failed; actual type-ahead with Tab refocus is the passing sequence.
+
+The [receipt](../ui/receipts/t442.json) and
+[bounded outcome](../spike/t442/appearance-receipts/README.md) bind source,
+renderer, exact frames, comparison, critique, first failures and cleanup. All
+130 historical canonical PNGs remain byte-for-byte unchanged; this native
+lineage supplies the missing complete Appearance frames and establishes no
+Noble equivalence or fresh full canonical matrix. Linux #124, validation labels
+and production signing are unchanged and pending independently.
+
 **T43R.4 ✅ · Bounded errors everywhere (S2)** *(completed 2026-08-31; needs
 T43R.3)* — exact implementation commit `0ec15f0` moves the catalog surfaces'
 existing formatter into one shared `boundedError` helper and applies it to the

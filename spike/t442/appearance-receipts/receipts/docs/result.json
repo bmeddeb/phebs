@@ -1,0 +1,36 @@
+{
+  "source": "c3003613d87cbf2f123486d8fe587e614ba2d404 plus staged closure docs/evidence",
+  "runs": [
+    {
+      "name": "docs-check",
+      "argv": [
+        "make",
+        "docs-check"
+      ],
+      "pid": 83325,
+      "outer_limit_seconds": 90,
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "already_exited",
+      "joined": true,
+      "seconds": 1.6731211670000001,
+      "log_sha256": "95ae2966820f5b294b593a6c651e4e737d0ee7c458cdbbb6e195956a5527fc37"
+    },
+    {
+      "name": "glossary",
+      "argv": [
+        "make",
+        "verify-glossary"
+      ],
+      "pid": 83349,
+      "outer_limit_seconds": 90,
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "already_exited",
+      "joined": true,
+      "seconds": 0.61483975,
+      "log_sha256": "f128ad7aef2b6215c4414d1e00b2650f9c42011b1705707b624be1c70d92f095"
+    }
+  ],
+  "passed": true
+}

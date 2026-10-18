@@ -15439,7 +15439,7 @@ loading, shared bounded citation highlighting, exact-caller identity and race
 fences, bundle/interaction cost, and the explicit retained-receipt-gate
 completion exception are recorded in the completed backlog.
 
-**T44.2 · Highlight palette preference** *(needs T44.1)* — a curated
+**T44.2 ✅ · Highlight palette preference** *(completed 2026-10-18; needs T44.1)* — a curated
 palette registry over the single highlight module. AC: the current
 palette ships as the default plus at least three curated alternatives,
 each defining all seven roles in both themes; every palette passes the
@@ -15512,6 +15512,22 @@ All historical Noble PNGs and failed comparisons remain exact. Focused existing
 palette/contrast/mounted-consumer tests and author/fresh native comparison are
 required before the owning closure record; Linux execution and signing stay
 pending independently.
+
+T44.2 closure (2026-10-18, Mac track): the targeted source/renderer-bound
+native author passes 10/10 and fresh passes 8/8, within 10.960073s and 6.886698s
+including joined teardown. All eight complete Appearance pairs are byte-identical,
+with zero masks/retries at the unchanged 0.001 comparison limit. Sixteen scoped
+axe audits have zero violations or incomplete checks. Actual keyboard type-ahead
+at both widths verifies all four choices, live colors without API/navigation,
+persistence and guarded fallback. Focused existing controls pass 297 tests in
+seven files; final receipt types/lint and ten-case discovery pass. The two
+independent critiques find no blocker. Product bundle delta is zero and every
+historical PNG remains exact. This closes the Appearance capture gap through a
+separate native lineage; it claims no Noble equivalence or fresh full canonical
+matrix. [T44.2 receipt](../ui/receipts/t442.json) retains the original failed
+attempts, final comparison, visual binding, cost and cleanup evidence. Unfiltered
+receipt runs gain ten cases; existing explicitly selected projects are unchanged.
+Linux #124 and production signing remain pending independently.
 
 **T44.3 · Markdown source and preview** — a Markdown | Preview segmented
 control on the file viewer for markdown files. AC: view state in the URL

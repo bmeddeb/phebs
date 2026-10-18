@@ -1,0 +1,860 @@
+{
+  "schema": "phebs-t442-appearance-custody-v1",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 5044,
+      "sha256": "a5c294b1e4bb8203233fbd37727712a7e72f87d0e91d201300d89500bbe69d6e"
+    },
+    {
+      "path": "comparison.json",
+      "bytes": 7563,
+      "sha256": "f4ddc614341382b828d844891b7f268d6a0b33b69a863371316cda5b61ba61f4"
+    },
+    {
+      "path": "critique-persistence.json",
+      "bytes": 194,
+      "sha256": "69daa7e5ec413c6f7f55603cddbd32248dbd6a2c391ef253a02e9d8381c6b703"
+    },
+    {
+      "path": "critique-trend.json",
+      "bytes": 503,
+      "sha256": "ed7e16f3af899bfe9799cb9f86ab8dba1c55059513cbd976855ac2e85cc0a88c"
+    },
+    {
+      "path": "critique.md",
+      "bytes": 2326,
+      "sha256": "3c4357d717a4db461ebd3889be759f96bf04c81c8523f998df0b3e9dadcf1caa"
+    },
+    {
+      "path": "outcome.json",
+      "bytes": 12128,
+      "sha256": "d9810f877d7a82b7271dd517dbfca6ef4bd249441c21498ed7227da56defb3b3"
+    },
+    {
+      "path": "plan.initial.json",
+      "bytes": 66924,
+      "sha256": "2542a2b38f8bbe6fb6cf0e013fb6e98ad56798b60bc5c14a451e55d3bd014bc9"
+    },
+    {
+      "path": "plan.json",
+      "bytes": 67023,
+      "sha256": "397c7230f08bd34a4b953f2ecb8d5c64a3ee5ccdc85ae989c7daa9866a4842e7"
+    },
+    {
+      "path": "receipts/author/chrome.log",
+      "bytes": 20550,
+      "sha256": "8e22700542564518ccd79b4d199c843a60791e6cb8b71fd08f3cc01125547f7d"
+    },
+    {
+      "path": "receipts/author/client.log",
+      "bytes": 5560,
+      "sha256": "2e59d2cbddb87591baf349532c5b0735dc0dadeddf3f2c74474da5ff7e42af0e"
+    },
+    {
+      "path": "receipts/author/output/.last-run.json",
+      "bytes": 45,
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903"
+    },
+    {
+      "path": "receipts/author/output/palette.native-native-Appe-e2dd6-rame-light-1280-comfortable-appearance/native-qa.json",
+      "bytes": 263,
+      "sha256": "64c5d76d2630edf79c2b2479f944bb5581529d973f5c8af85b8915c5363023f5"
+    },
+    {
+      "path": "receipts/author/output/palette.native-native-Appe-e2dd6-rame-light-1280-comfortable-appearance/palette-appearance--light--1280--comfortable.png",
+      "bytes": 37566,
+      "sha256": "ed8f821b828b31965dcc1563d8e479a27730489b9bfea68698de3bef49d9588f"
+    },
+    {
+      "path": "receipts/author/output/palette.native-native-Appearance-frame-dark-1280-comfortable-appearance/native-qa.json",
+      "bytes": 262,
+      "sha256": "8344297641e1be7a021fa971714d501235577232a7381d31dbea90d27bd76f6e"
+    },
+    {
+      "path": "receipts/author/output/palette.native-native-Appearance-frame-dark-1280-comfortable-appearance/palette-appearance--dark--1280--comfortable.png",
+      "bytes": 38080,
+      "sha256": "a21f47181ece76fb35325ec4389bb927b7cfb16eeb1b8f4e874df0655c404787"
+    },
+    {
+      "path": "receipts/author/output/palette.native-native-Appearance-frame-dark-1280-dense-appearance/native-qa.json",
+      "bytes": 256,
+      "sha256": "99a39503f8a62d8f1da2cded337fb40f7b2263ce831a857363cafdaa0861d3ba"
+    },
+    {
+      "path": "receipts/author/output/palette.native-native-Appearance-frame-dark-1280-dense-appearance/palette-appearance--dark--1280--dense.png",
+      "bytes": 38080,
+      "sha256": "09cedf41a26ad0bb2815ef0e6bd8cc0a04152c9f7c4e74e4a4a3dbe714b4f828"
+    },
+    {
+      "path": "receipts/author/output/palette.native-native-Appearance-frame-dark-390-comfortable-appearance/native-qa.json",
+      "bytes": 260,
+      "sha256": "6060c7aedf2454c23078af55b2ae384468e1df7f17f5ad02cbd92304ff1be0c6"
+    },
+    {
+      "path": "receipts/author/output/palette.native-native-Appearance-frame-dark-390-comfortable-appearance/palette-appearance--dark--390--comfortable.png",
+      "bytes": 32346,
+      "sha256": "6dde4963f260b67ff008c7677713de3415c09468d1f58d71bebb56a441d16430"
+    },
+    {
+      "path": "receipts/author/output/palette.native-native-Appearance-frame-dark-390-dense-appearance/native-qa.json",
+      "bytes": 254,
+      "sha256": "b8fa6758b27d9c1cc2fd8fd3915409c339d99f69734d55404ea1db5f43bf9d18"
+    },
+    {
+      "path": "receipts/author/output/palette.native-native-Appearance-frame-dark-390-dense-appearance/palette-appearance--dark--390--dense.png",
+      "bytes": 32339,
+      "sha256": "aea775396f24ce32054e5bdcc1dddb072cd209c24215a154ae56301b33be918c"
+    },
+    {
+      "path": "receipts/author/output/palette.native-native-Appearance-frame-light-1280-dense-appearance/native-qa.json",
+      "bytes": 257,
+      "sha256": "1f64f1cf0b606f218f40696e51c96aa6f19b456f3dd44bc1e15287af2522dbcb"
+    },
+    {
+      "path": "receipts/author/output/palette.native-native-Appearance-frame-light-1280-dense-appearance/palette-appearance--light--1280--dense.png",
+      "bytes": 37538,
+      "sha256": "712b9fea712f209f752d7f000cdca840846dfc7c1b168e1a8954544e04c43dd4"
+    },
+    {
+      "path": "receipts/author/output/palette.native-native-Appearance-frame-light-390-comfortable-appearance/native-qa.json",
+      "bytes": 261,
+      "sha256": "0398af03a2f1c7ba6489f98f87ab55a76d49a945d251cdf22516ae5590848f46"
+    },
+    {
+      "path": "receipts/author/output/palette.native-native-Appearance-frame-light-390-comfortable-appearance/palette-appearance--light--390--comfortable.png",
+      "bytes": 31878,
+      "sha256": "672a914a7f24bd60f5aadcbfc4dfbac5b801293e763315eb60c54c9f87bd7845"
+    },
+    {
+      "path": "receipts/author/output/palette.native-native-Appearance-frame-light-390-dense-appearance/native-qa.json",
+      "bytes": 255,
+      "sha256": "c63192e205b7bc77f9d53617e1917270cbe4e3db2e19813fc53b290a9b6710be"
+    },
+    {
+      "path": "receipts/author/output/palette.native-native-Appearance-frame-light-390-dense-appearance/palette-appearance--light--390--dense.png",
+      "bytes": 31872,
+      "sha256": "7bed10f75834dbca84bd781de30c245cb167955fee4123a2b327fdd717e6b0ef"
+    },
+    {
+      "path": "receipts/author/playwright.json",
+      "bytes": 24114,
+      "sha256": "e50f8675c911122f46d0ce0b8574f9add9c712072138016b030528fefa3f393c"
+    },
+    {
+      "path": "receipts/author/result.json",
+      "bytes": 10838,
+      "sha256": "b58861418ec3ac81a2e3fa2dbad9b3827f9f28db780fa5d36df4ba3b38c8b6ec"
+    },
+    {
+      "path": "receipts/author/vite.log",
+      "bytes": 40,
+      "sha256": "07964ae2e356d6d367ff29916ef2f6ac56b7e506f26047a21782240d55d4b3f5"
+    },
+    {
+      "path": "receipts/author-keyboard-stop/chrome.log",
+      "bytes": 18865,
+      "sha256": "16c850bea23eebf474b6268ff6a11594989f5994d8fd5e7312397642edc320c4"
+    },
+    {
+      "path": "receipts/author-keyboard-stop/client.log",
+      "bytes": 7161,
+      "sha256": "3aca793a7bfbfc4515a3baa1e32345628442fe995bbca35a0e5e6a434b63212d"
+    },
+    {
+      "path": "receipts/author-keyboard-stop/output/.last-run.json",
+      "bytes": 96,
+      "sha256": "660a42d283a2ea1681ec61120e4648d747922917768c60f0e23e4d812fe34584"
+    },
+    {
+      "path": "receipts/author-keyboard-stop/output/palette.native-keyboard-Ap-21ad7-e-and-guarded-fallback-1280-appearance/error-context.md",
+      "bytes": 11197,
+      "sha256": "ea04112276a7a7ebffdf221259e726c098a441a882bbdc18eaced1fbdf0cac71"
+    },
+    {
+      "path": "receipts/author-keyboard-stop/output/palette.native-native-Appe-e2dd6-rame-light-1280-comfortable-appearance/native-qa.json",
+      "bytes": 263,
+      "sha256": "64c5d76d2630edf79c2b2479f944bb5581529d973f5c8af85b8915c5363023f5"
+    },
+    {
+      "path": "receipts/author-keyboard-stop/output/palette.native-native-Appearance-frame-dark-1280-comfortable-appearance/native-qa.json",
+      "bytes": 262,
+      "sha256": "8344297641e1be7a021fa971714d501235577232a7381d31dbea90d27bd76f6e"
+    },
+    {
+      "path": "receipts/author-keyboard-stop/output/palette.native-native-Appearance-frame-dark-1280-dense-appearance/native-qa.json",
+      "bytes": 256,
+      "sha256": "99a39503f8a62d8f1da2cded337fb40f7b2263ce831a857363cafdaa0861d3ba"
+    },
+    {
+      "path": "receipts/author-keyboard-stop/output/palette.native-native-Appearance-frame-dark-390-comfortable-appearance/native-qa.json",
+      "bytes": 260,
+      "sha256": "6060c7aedf2454c23078af55b2ae384468e1df7f17f5ad02cbd92304ff1be0c6"
+    },
+    {
+      "path": "receipts/author-keyboard-stop/output/palette.native-native-Appearance-frame-dark-390-dense-appearance/native-qa.json",
+      "bytes": 254,
+      "sha256": "b8fa6758b27d9c1cc2fd8fd3915409c339d99f69734d55404ea1db5f43bf9d18"
+    },
+    {
+      "path": "receipts/author-keyboard-stop/output/palette.native-native-Appearance-frame-light-1280-dense-appearance/native-qa.json",
+      "bytes": 257,
+      "sha256": "1f64f1cf0b606f218f40696e51c96aa6f19b456f3dd44bc1e15287af2522dbcb"
+    },
+    {
+      "path": "receipts/author-keyboard-stop/output/palette.native-native-Appearance-frame-light-390-comfortable-appearance/native-qa.json",
+      "bytes": 261,
+      "sha256": "0398af03a2f1c7ba6489f98f87ab55a76d49a945d251cdf22516ae5590848f46"
+    },
+    {
+      "path": "receipts/author-keyboard-stop/output/palette.native-native-Appearance-frame-light-390-dense-appearance/native-qa.json",
+      "bytes": 255,
+      "sha256": "c63192e205b7bc77f9d53617e1917270cbe4e3db2e19813fc53b290a9b6710be"
+    },
+    {
+      "path": "receipts/author-keyboard-stop/playwright.json",
+      "bytes": 28606,
+      "sha256": "76a42cb71b5cb2a165c200a68eb9cf4a90d423052497c00475e8dd4db47819db"
+    },
+    {
+      "path": "receipts/author-keyboard-stop/result.json",
+      "bytes": 4929,
+      "sha256": "3a3b78d2091830180bb165890ae402ec17ec51246f669e03705c19f4a9fb0f43"
+    },
+    {
+      "path": "receipts/author-keyboard-stop/vite.log",
+      "bytes": 40,
+      "sha256": "cd06353c12a2971016e1b9a41bf7f2a96aac85707ba8a7d3cfba9ea9c6a42dc4"
+    },
+    {
+      "path": "receipts/author-menu-stop/chrome.log",
+      "bytes": 19363,
+      "sha256": "c2d858d8aee58e362db590e396da01152b1f737227d347295f50ebcb62318413"
+    },
+    {
+      "path": "receipts/author-menu-stop/client.log",
+      "bytes": 7161,
+      "sha256": "b49d5c81e187c579e03cf28088b347423003bb5feabca17a51a5517a79c64b15"
+    },
+    {
+      "path": "receipts/author-menu-stop/output/.last-run.json",
+      "bytes": 96,
+      "sha256": "660a42d283a2ea1681ec61120e4648d747922917768c60f0e23e4d812fe34584"
+    },
+    {
+      "path": "receipts/author-menu-stop/output/palette.native-keyboard-Ap-21ad7-e-and-guarded-fallback-1280-appearance/error-context.md",
+      "bytes": 11380,
+      "sha256": "76bdfbd10604154b70806e4c45669021887781b299020ce05f1d61cb06840bf7"
+    },
+    {
+      "path": "receipts/author-menu-stop/output/palette.native-native-Appe-e2dd6-rame-light-1280-comfortable-appearance/native-qa.json",
+      "bytes": 263,
+      "sha256": "64c5d76d2630edf79c2b2479f944bb5581529d973f5c8af85b8915c5363023f5"
+    },
+    {
+      "path": "receipts/author-menu-stop/output/palette.native-native-Appearance-frame-dark-1280-comfortable-appearance/native-qa.json",
+      "bytes": 262,
+      "sha256": "8344297641e1be7a021fa971714d501235577232a7381d31dbea90d27bd76f6e"
+    },
+    {
+      "path": "receipts/author-menu-stop/output/palette.native-native-Appearance-frame-dark-1280-dense-appearance/native-qa.json",
+      "bytes": 256,
+      "sha256": "99a39503f8a62d8f1da2cded337fb40f7b2263ce831a857363cafdaa0861d3ba"
+    },
+    {
+      "path": "receipts/author-menu-stop/output/palette.native-native-Appearance-frame-dark-390-comfortable-appearance/native-qa.json",
+      "bytes": 260,
+      "sha256": "6060c7aedf2454c23078af55b2ae384468e1df7f17f5ad02cbd92304ff1be0c6"
+    },
+    {
+      "path": "receipts/author-menu-stop/output/palette.native-native-Appearance-frame-dark-390-dense-appearance/native-qa.json",
+      "bytes": 254,
+      "sha256": "b8fa6758b27d9c1cc2fd8fd3915409c339d99f69734d55404ea1db5f43bf9d18"
+    },
+    {
+      "path": "receipts/author-menu-stop/output/palette.native-native-Appearance-frame-light-1280-dense-appearance/native-qa.json",
+      "bytes": 257,
+      "sha256": "1f64f1cf0b606f218f40696e51c96aa6f19b456f3dd44bc1e15287af2522dbcb"
+    },
+    {
+      "path": "receipts/author-menu-stop/output/palette.native-native-Appearance-frame-light-390-comfortable-appearance/native-qa.json",
+      "bytes": 261,
+      "sha256": "0398af03a2f1c7ba6489f98f87ab55a76d49a945d251cdf22516ae5590848f46"
+    },
+    {
+      "path": "receipts/author-menu-stop/output/palette.native-native-Appearance-frame-light-390-dense-appearance/native-qa.json",
+      "bytes": 255,
+      "sha256": "c63192e205b7bc77f9d53617e1917270cbe4e3db2e19813fc53b290a9b6710be"
+    },
+    {
+      "path": "receipts/author-menu-stop/playwright.json",
+      "bytes": 28597,
+      "sha256": "b16cdbce772c179e489f685352a14b06696217a6df7c9091ac08731242b7ebd7"
+    },
+    {
+      "path": "receipts/author-menu-stop/result.json",
+      "bytes": 4928,
+      "sha256": "b749d04555d593ee0c33e4149b957ab4ce6fe855d63dcaef6f72a364d5e7054b"
+    },
+    {
+      "path": "receipts/author-menu-stop/vite.log",
+      "bytes": 40,
+      "sha256": "1ae5f8137c93947d114f7838b85664fdcc93e933aaa52fbaf83464b1e5828f4f"
+    },
+    {
+      "path": "receipts/author-module-stop/chrome.log",
+      "bytes": 1848,
+      "sha256": "d1dcacbd913779c84eedc8e7b67072658764baceffc887dd9750328859e23111"
+    },
+    {
+      "path": "receipts/author-module-stop/client.log",
+      "bytes": 1312,
+      "sha256": "219b6b9e2cbf00d5c9fa9fee5fa61c9d2bba30cd5edd95fbc05dcd829eb6da25"
+    },
+    {
+      "path": "receipts/author-module-stop/output/.last-run.json",
+      "bytes": 45,
+      "sha256": "e22df5d0991eb28c09093b1e678b3fa8cd1fab48185d38e67cf79fb6e63ad5ea"
+    },
+    {
+      "path": "receipts/author-module-stop/playwright.json",
+      "bytes": 5637,
+      "sha256": "e3ec7f39c05270a33e380b196e99ccaa1873de447523ba15357e31dade5c397b"
+    },
+    {
+      "path": "receipts/author-module-stop/result.json",
+      "bytes": 4928,
+      "sha256": "a6c933284e88a6e0b0979d93d0bae0fc7ff9ea3c078aceb9d7732e7ebc178463"
+    },
+    {
+      "path": "receipts/author-module-stop/vite.log",
+      "bytes": 40,
+      "sha256": "a2e736992e76d9eccceec03a6aa1561a144075456da8261ee51c25cd66cf36b0"
+    },
+    {
+      "path": "receipts/checks/focused.log",
+      "bytes": 271,
+      "sha256": "4df36bc95e2678f7b1f7c7abfce6b86cc095ca6c6fe69be2673c43830511d3da"
+    },
+    {
+      "path": "receipts/checks/receipt-lint.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "receipts/checks/receipt-types.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "receipts/checks/receipt.json",
+      "bytes": 2819,
+      "sha256": "d255f1dd84b6e8ae8eb31bf1dbcf384cfaa80a860b02a0ca7fed398733c1d127"
+    },
+    {
+      "path": "receipts/checks-final/receipt-discovery.log",
+      "bytes": 1076,
+      "sha256": "68ff1f63da718dc70c113f69a0899f714e0ae8bfa1559b86090508e12c394ef7"
+    },
+    {
+      "path": "receipts/checks-final/receipt-lint.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "receipts/checks-final/receipt-types.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "receipts/checks-final/receipt.json",
+      "bytes": 2491,
+      "sha256": "351447d5faccd323f22de8f77945ce11ab842f5b87b2a1397f745554c8ae4438"
+    },
+    {
+      "path": "receipts/critique-a/chrome.log",
+      "bytes": 5955,
+      "sha256": "d4fbfbef57732476fa7d3f3120946bb639b68c7597cbad27ad32a545a9081e76"
+    },
+    {
+      "path": "receipts/critique-a/client.log",
+      "bytes": 2556,
+      "sha256": "83026aa13422613f0fbac76e30ed7ebbdc85064e3fa0b63833a40e1050600b5d"
+    },
+    {
+      "path": "receipts/critique-a/output/.last-run.json",
+      "bytes": 96,
+      "sha256": "394681fb0ac7328db14f94b4eb4fde73dea23ad097a7138e4a1963e1dcf4cde5"
+    },
+    {
+      "path": "receipts/critique-a/output/critique-a-critique-A-live-keyboard-inspection-appearance/error-context.md",
+      "bytes": 9576,
+      "sha256": "d01446b7bce18a95531b67291c3e4ee0e647d2ffee4ab541368d027bc8fea9f1"
+    },
+    {
+      "path": "receipts/critique-a/playwright.json",
+      "bytes": 11284,
+      "sha256": "166d76a7dabdc1f694b07ee1466161665fd4d6d51f3eb942a0d43eb381e76dfa"
+    },
+    {
+      "path": "receipts/critique-a/result.json",
+      "bytes": 4936,
+      "sha256": "241fd90c3310700d22e1f47f74815b6858fc4608f6a5e000eefc44599d3cefd3"
+    },
+    {
+      "path": "receipts/critique-a/vite.log",
+      "bytes": 40,
+      "sha256": "29386dc3eb60948b46fe87d64f19b52c8f554c967447ad28074a5235c2091b1e"
+    },
+    {
+      "path": "receipts/detector/browser-result.json",
+      "bytes": 1028,
+      "sha256": "0e50c91ba099af5f32318bce2e23347e02113d8ea6aff3074577116b78b593a4"
+    },
+    {
+      "path": "receipts/detector/browser.cjs",
+      "bytes": 5081,
+      "sha256": "aebd27f4c47bf8c80473f18c36592e624fd155f467b895efec205327072e7647"
+    },
+    {
+      "path": "receipts/detector/chrome.log",
+      "bytes": 6594,
+      "sha256": "abd1feb3449a91a668256b39ab665fe81b430aa912cbebd743b72c74e2df134e"
+    },
+    {
+      "path": "receipts/detector/cli-terminal.json",
+      "bytes": 431,
+      "sha256": "657d1a50c0ac3cd4730120eddf7a91a80547f55346cb3490d8172799c0d717db"
+    },
+    {
+      "path": "receipts/detector/cli.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "receipts/detector/cli.log",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "receipts/detector/client.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "receipts/detector/headless-injected.png",
+      "bytes": 37566,
+      "sha256": "ed8f821b828b31965dcc1563d8e479a27730489b9bfea68698de3bef49d9588f"
+    },
+    {
+      "path": "receipts/detector/live-server.log",
+      "bytes": 268,
+      "sha256": "5764fc008eb9ce001a012acb8b8bdd64d01095e6a07f102b34f6ccaa6d65c230"
+    },
+    {
+      "path": "receipts/detector/live.json",
+      "bytes": 49,
+      "sha256": "e72b5f45ef82d2f8512a4400a237cf365ef54233e2cadb4a144f37e6fb08137d"
+    },
+    {
+      "path": "receipts/detector/preflight.json",
+      "bytes": 39,
+      "sha256": "1e384a094be0167a6f148f6f9477e93f72d08b5132eb5158afa42a411b27e862"
+    },
+    {
+      "path": "receipts/detector/result.json",
+      "bytes": 5386,
+      "sha256": "24b64f034551b8727d2b4faeac15b77b72ceb0885058549fab9dee665ddb2d0f"
+    },
+    {
+      "path": "receipts/detector/run-owned.py",
+      "bytes": 7743,
+      "sha256": "3238fd6cd35cce911d7670b38f10d8bcd229a76022b7e6374a9a0d6fb3dc13d8"
+    },
+    {
+      "path": "receipts/detector/vite.log",
+      "bytes": 40,
+      "sha256": "f310efd454d26abc2ccbfee49f083b8fa5656550ab8244b8bbaf6f8e0c602def"
+    },
+    {
+      "path": "receipts/docs/docs-check.log",
+      "bytes": 179,
+      "sha256": "95ae2966820f5b294b593a6c651e4e737d0ee7c458cdbbb6e195956a5527fc37"
+    },
+    {
+      "path": "receipts/docs/glossary.log",
+      "bytes": 60,
+      "sha256": "f128ad7aef2b6215c4414d1e00b2650f9c42011b1705707b624be1c70d92f095"
+    },
+    {
+      "path": "receipts/docs/result.json",
+      "bytes": 912,
+      "sha256": "be613dd94de2975f6d1436ad31e999c0a487b3c4c507beb014106de2cb3e83a4"
+    },
+    {
+      "path": "receipts/fresh/chrome.log",
+      "bytes": 17750,
+      "sha256": "1d5201e9d6955fc3398b18dcecd92f37c432567936e883c0b59180d2df7ff3bb"
+    },
+    {
+      "path": "receipts/fresh/client.log",
+      "bytes": 4647,
+      "sha256": "9dfb7dc9e8ddb41fc68f14999f2a88ba7dc87a6e8bd9ef856c00ea21073164fd"
+    },
+    {
+      "path": "receipts/fresh/output/.last-run.json",
+      "bytes": 45,
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903"
+    },
+    {
+      "path": "receipts/fresh/output/palette.native-native-Appe-e2dd6-rame-light-1280-comfortable-appearance/native-qa.json",
+      "bytes": 263,
+      "sha256": "64c5d76d2630edf79c2b2479f944bb5581529d973f5c8af85b8915c5363023f5"
+    },
+    {
+      "path": "receipts/fresh/output/palette.native-native-Appe-e2dd6-rame-light-1280-comfortable-appearance/palette-appearance--light--1280--comfortable.png",
+      "bytes": 37566,
+      "sha256": "ed8f821b828b31965dcc1563d8e479a27730489b9bfea68698de3bef49d9588f"
+    },
+    {
+      "path": "receipts/fresh/output/palette.native-native-Appearance-frame-dark-1280-comfortable-appearance/native-qa.json",
+      "bytes": 262,
+      "sha256": "8344297641e1be7a021fa971714d501235577232a7381d31dbea90d27bd76f6e"
+    },
+    {
+      "path": "receipts/fresh/output/palette.native-native-Appearance-frame-dark-1280-comfortable-appearance/palette-appearance--dark--1280--comfortable.png",
+      "bytes": 38080,
+      "sha256": "a21f47181ece76fb35325ec4389bb927b7cfb16eeb1b8f4e874df0655c404787"
+    },
+    {
+      "path": "receipts/fresh/output/palette.native-native-Appearance-frame-dark-1280-dense-appearance/native-qa.json",
+      "bytes": 256,
+      "sha256": "99a39503f8a62d8f1da2cded337fb40f7b2263ce831a857363cafdaa0861d3ba"
+    },
+    {
+      "path": "receipts/fresh/output/palette.native-native-Appearance-frame-dark-1280-dense-appearance/palette-appearance--dark--1280--dense.png",
+      "bytes": 38080,
+      "sha256": "09cedf41a26ad0bb2815ef0e6bd8cc0a04152c9f7c4e74e4a4a3dbe714b4f828"
+    },
+    {
+      "path": "receipts/fresh/output/palette.native-native-Appearance-frame-dark-390-comfortable-appearance/native-qa.json",
+      "bytes": 260,
+      "sha256": "6060c7aedf2454c23078af55b2ae384468e1df7f17f5ad02cbd92304ff1be0c6"
+    },
+    {
+      "path": "receipts/fresh/output/palette.native-native-Appearance-frame-dark-390-comfortable-appearance/palette-appearance--dark--390--comfortable.png",
+      "bytes": 32346,
+      "sha256": "6dde4963f260b67ff008c7677713de3415c09468d1f58d71bebb56a441d16430"
+    },
+    {
+      "path": "receipts/fresh/output/palette.native-native-Appearance-frame-dark-390-dense-appearance/native-qa.json",
+      "bytes": 254,
+      "sha256": "b8fa6758b27d9c1cc2fd8fd3915409c339d99f69734d55404ea1db5f43bf9d18"
+    },
+    {
+      "path": "receipts/fresh/output/palette.native-native-Appearance-frame-dark-390-dense-appearance/palette-appearance--dark--390--dense.png",
+      "bytes": 32339,
+      "sha256": "aea775396f24ce32054e5bdcc1dddb072cd209c24215a154ae56301b33be918c"
+    },
+    {
+      "path": "receipts/fresh/output/palette.native-native-Appearance-frame-light-1280-dense-appearance/native-qa.json",
+      "bytes": 257,
+      "sha256": "1f64f1cf0b606f218f40696e51c96aa6f19b456f3dd44bc1e15287af2522dbcb"
+    },
+    {
+      "path": "receipts/fresh/output/palette.native-native-Appearance-frame-light-1280-dense-appearance/palette-appearance--light--1280--dense.png",
+      "bytes": 37538,
+      "sha256": "712b9fea712f209f752d7f000cdca840846dfc7c1b168e1a8954544e04c43dd4"
+    },
+    {
+      "path": "receipts/fresh/output/palette.native-native-Appearance-frame-light-390-comfortable-appearance/native-qa.json",
+      "bytes": 261,
+      "sha256": "0398af03a2f1c7ba6489f98f87ab55a76d49a945d251cdf22516ae5590848f46"
+    },
+    {
+      "path": "receipts/fresh/output/palette.native-native-Appearance-frame-light-390-comfortable-appearance/palette-appearance--light--390--comfortable.png",
+      "bytes": 31878,
+      "sha256": "672a914a7f24bd60f5aadcbfc4dfbac5b801293e763315eb60c54c9f87bd7845"
+    },
+    {
+      "path": "receipts/fresh/output/palette.native-native-Appearance-frame-light-390-dense-appearance/native-qa.json",
+      "bytes": 255,
+      "sha256": "c63192e205b7bc77f9d53617e1917270cbe4e3db2e19813fc53b290a9b6710be"
+    },
+    {
+      "path": "receipts/fresh/output/palette.native-native-Appearance-frame-light-390-dense-appearance/palette-appearance--light--390--dense.png",
+      "bytes": 31872,
+      "sha256": "7bed10f75834dbca84bd781de30c245cb167955fee4123a2b327fdd717e6b0ef"
+    },
+    {
+      "path": "receipts/fresh/playwright.json",
+      "bytes": 21111,
+      "sha256": "ff16069cc33d66c1127bc26760d9b22b75c6222a640ff798c99df7a7b4594ac2"
+    },
+    {
+      "path": "receipts/fresh/result.json",
+      "bytes": 10879,
+      "sha256": "8b260e78d7ca284734989732d671354ce658f8ccdd2b2b671e8abff6853e26f1"
+    },
+    {
+      "path": "receipts/fresh/vite.log",
+      "bytes": 40,
+      "sha256": "f3de6211df9b70b9bf360335a70d9de0ae5a48e919bf4f26008e52be85378167"
+    },
+    {
+      "path": "receipts/fresh-discovery-stop/chrome.log",
+      "bytes": 1848,
+      "sha256": "024e1cba83c5d18afe4039021f86286a23e896c4517435b116dbe540267731db"
+    },
+    {
+      "path": "receipts/fresh-discovery-stop/client.log",
+      "bytes": 23,
+      "sha256": "bef44b71926303f638fcf3917875642de7e01f8828d85d994561945390fde863"
+    },
+    {
+      "path": "receipts/fresh-discovery-stop/output/.last-run.json",
+      "bytes": 45,
+      "sha256": "e22df5d0991eb28c09093b1e678b3fa8cd1fab48185d38e67cf79fb6e63ad5ea"
+    },
+    {
+      "path": "receipts/fresh-discovery-stop/playwright.json",
+      "bytes": 4331,
+      "sha256": "7d6f2aff4f9822abefd9e985e444717211f83e2a49dfe78853a9d1fa6de20f79"
+    },
+    {
+      "path": "receipts/fresh-discovery-stop/result.json",
+      "bytes": 4980,
+      "sha256": "891bbd79180fb808893a4e287e4abc07c197b9aad58bb8184cda0f8b65d9c16a"
+    },
+    {
+      "path": "receipts/fresh-discovery-stop/vite.log",
+      "bytes": 40,
+      "sha256": "fdd19a2ac9339cf48ea286c00da1ad114bc5847c48c184b39ede403e927d5501"
+    },
+    {
+      "path": "receipts/keyboard-diagnostic/package.json",
+      "bytes": 18,
+      "sha256": "1239d4d885dcad42201a27ed9324f8f0f760b78700d8db9ced39a511cffe7eae"
+    },
+    {
+      "path": "receipts/keyboard-diagnostic/palette.native.spec.ts",
+      "bytes": 6522,
+      "sha256": "ad6c4a519c1e348cf216393519aa504be2f531e60517dfa73a4e330ad3bfc996"
+    },
+    {
+      "path": "receipts/keyboard-diagnostic/playwright.config.ts",
+      "bytes": 763,
+      "sha256": "86f75c55c13e3fef674afe3488c64f5547e9499352cb621fe0f6b75ef14bbab0"
+    },
+    {
+      "path": "receipts/keyboard-diagnostic/run.py",
+      "bytes": 7580,
+      "sha256": "7f370867ad29c7f232b1433d8409fa11cc15ddf5fc2d9ab8616c97ccd250fe49"
+    },
+    {
+      "path": "receipts/keyboard-diagnostic-run/chrome.log",
+      "bytes": 3956,
+      "sha256": "b31550bfe27c997f333ecb71689aa4b5659275c08bf869cdb90e2dd91d9bfebd"
+    },
+    {
+      "path": "receipts/keyboard-diagnostic-run/client.log",
+      "bytes": 1713,
+      "sha256": "b9de88665f5dbb8e77afdf01bd0c1cdd87366dc56beca0e44c9abe2653bd681f"
+    },
+    {
+      "path": "receipts/keyboard-diagnostic-run/output/.last-run.json",
+      "bytes": 45,
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903"
+    },
+    {
+      "path": "receipts/keyboard-diagnostic-run/playwright.json",
+      "bytes": 7553,
+      "sha256": "3df74593db3ddb05c2e30d8f78308c9e3e08980a7aa642e4556de82ac6f8c160"
+    },
+    {
+      "path": "receipts/keyboard-diagnostic-run/result.json",
+      "bytes": 4879,
+      "sha256": "ff8e9ce2129b0467f50449958b12f869c01f9da1317370d37ff6141d51fb6efe"
+    },
+    {
+      "path": "receipts/keyboard-diagnostic-run/vite.log",
+      "bytes": 40,
+      "sha256": "54bd8723402b1bdd2b51e38ac1bb2c99261a84065769fc2e53bf68b89eeb4b9d"
+    },
+    {
+      "path": "receipts/keyboard-focus/package.json",
+      "bytes": 18,
+      "sha256": "1239d4d885dcad42201a27ed9324f8f0f760b78700d8db9ced39a511cffe7eae"
+    },
+    {
+      "path": "receipts/keyboard-focus/palette.native.spec.ts",
+      "bytes": 6608,
+      "sha256": "7a61341596507011212f75ab5f28deb32f5ff57a94f1996fdcb304ee60f93940"
+    },
+    {
+      "path": "receipts/keyboard-focus/playwright.config.ts",
+      "bytes": 758,
+      "sha256": "fb78e18526af9281fdb16236e6e63927de738efc90c9729c57c0f487730abbc8"
+    },
+    {
+      "path": "receipts/keyboard-focus/run.py",
+      "bytes": 7570,
+      "sha256": "aa2f415dc58f1983102f61e7db33a3ee09ea5a53b486d8702f3c09d34c7e1b6d"
+    },
+    {
+      "path": "receipts/keyboard-focus-run/chrome.log",
+      "bytes": 3248,
+      "sha256": "7a5154cc9e3e2099adca3768c662facbc8174fe35498e7788895839bc71534b5"
+    },
+    {
+      "path": "receipts/keyboard-focus-run/client.log",
+      "bytes": 810,
+      "sha256": "5410a680f8bf579a78ec1151453cad913585e456807b03ed5cf6e9b6a4674d5d"
+    },
+    {
+      "path": "receipts/keyboard-focus-run/output/.last-run.json",
+      "bytes": 45,
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903"
+    },
+    {
+      "path": "receipts/keyboard-focus-run/playwright.json",
+      "bytes": 6402,
+      "sha256": "d2590bcd0a0d90d3e1405023e6fbc699652acc0f0c90c89614b09178e7826226"
+    },
+    {
+      "path": "receipts/keyboard-focus-run/result.json",
+      "bytes": 4864,
+      "sha256": "c5048314d52fc159e82527849539df4e738239690b2e0b955702baeb51ffbfce"
+    },
+    {
+      "path": "receipts/keyboard-focus-run/vite.log",
+      "bytes": 40,
+      "sha256": "16880d6e6fe275a6deb822da850840be5da9d1e5e4aece4a70939f06e1c3b9cc"
+    },
+    {
+      "path": "receipts/keyboard-typeahead/package.json",
+      "bytes": 18,
+      "sha256": "1239d4d885dcad42201a27ed9324f8f0f760b78700d8db9ced39a511cffe7eae"
+    },
+    {
+      "path": "receipts/keyboard-typeahead/palette.native.spec.ts",
+      "bytes": 6487,
+      "sha256": "025893264514802ace14abef3474c652680e2aecc6660d3651c61050b29efece"
+    },
+    {
+      "path": "receipts/keyboard-typeahead/playwright.config.ts",
+      "bytes": 762,
+      "sha256": "9f80afe986cfe78d89b4fab600d77ad501c0c61bd4a1e910a214dfbffc392cff"
+    },
+    {
+      "path": "receipts/keyboard-typeahead/run.py",
+      "bytes": 7578,
+      "sha256": "ada8a14ded5be5863396c9eb470aec055b260f6d31a0568cee8e4d0e2e2ffd51"
+    },
+    {
+      "path": "receipts/keyboard-typeahead-run/chrome.log",
+      "bytes": 5955,
+      "sha256": "3c58ebeac1a26f1146716d347a028ea687297361bf64f3b976d515fbb522b594"
+    },
+    {
+      "path": "receipts/keyboard-typeahead-run/client.log",
+      "bytes": 2253,
+      "sha256": "4a0051095c4792d7ab593e06b599c970a2e19de6a5bf9b11636e8bf440e33279"
+    },
+    {
+      "path": "receipts/keyboard-typeahead-run/output/.last-run.json",
+      "bytes": 96,
+      "sha256": "e6e1c4272d602eaf799a0f3e17eb8b75e643b4616feeeb922f80c186de81af04"
+    },
+    {
+      "path": "receipts/keyboard-typeahead-run/output/palette.native-native-keyboard-diagnostic-appearance/error-context.md",
+      "bytes": 7604,
+      "sha256": "d34d0dc6eac90946f9c78fe0c8b1e21e6ab8c2c135fcaff4eff04d6b03ec5f55"
+    },
+    {
+      "path": "receipts/keyboard-typeahead-run/playwright.json",
+      "bytes": 10866,
+      "sha256": "ff61eced0791ba75c22f0412b8096e38aace27ba524d4d9572f8d3dcc78a0165"
+    },
+    {
+      "path": "receipts/keyboard-typeahead-run/result.json",
+      "bytes": 4972,
+      "sha256": "59a20ff00e9ba7d5bf5ba3c486e94db4199a1a17d04a69cf456f7ef94d3d5b21"
+    },
+    {
+      "path": "receipts/keyboard-typeahead-run/vite.log",
+      "bytes": 40,
+      "sha256": "ae1baf32f907ff9359e111d4dfa80a6e91a0eaa58ccac72801c6766b9ae1ec72"
+    },
+    {
+      "path": "receipts/runner/compare.cjs",
+      "bytes": 3180,
+      "sha256": "b4ac95339cdf8985892de5eae1173d4394048b26ed468147c050294675589031"
+    },
+    {
+      "path": "receipts/runner/critique-a.config.ts",
+      "bytes": 740,
+      "sha256": "9614bea3f690cdf2c80381c0489746e6bfb0c2f36d18a22eebf284da627d9171"
+    },
+    {
+      "path": "receipts/runner/critique-a.spec.ts",
+      "bytes": 7271,
+      "sha256": "f721c18d235edcee91891897af3e229eaeb279bbad22f9897ee3286a0c198d68"
+    },
+    {
+      "path": "receipts/runner/manifest.json",
+      "bytes": 1773,
+      "sha256": "7ebaac681a23a126545ab2b2d41c0d4be61c22a79df9c3aebb6d07a022124da4"
+    },
+    {
+      "path": "receipts/runner/native-fixture.ts",
+      "bytes": 1833,
+      "sha256": "89f2c35b667e83208664bc0384052e3cb230b2e9af8c626c81873621984cbd5d"
+    },
+    {
+      "path": "receipts/runner/package.json",
+      "bytes": 18,
+      "sha256": "1239d4d885dcad42201a27ed9324f8f0f760b78700d8db9ced39a511cffe7eae"
+    },
+    {
+      "path": "receipts/runner/palette.native.spec.ts",
+      "bytes": 8878,
+      "sha256": "352a112b42d60b410c3a6590060335643d11653045d0369933d966ec7e1e110d"
+    },
+    {
+      "path": "receipts/runner/playwright.config.ts",
+      "bytes": 750,
+      "sha256": "8dc065bc4d02254bc3ea37fcd8625e66d7f30f6c6a088e0dff0fda11f2c58eee"
+    },
+    {
+      "path": "receipts/runner/run-critique-a-owned.py",
+      "bytes": 7804,
+      "sha256": "a96e929d246313378ba5d3e48f6e0629c5071c090cba0176a39bcccf21e7b664"
+    },
+    {
+      "path": "receipts/runner/run-native-owned.py",
+      "bytes": 8676,
+      "sha256": "49ed9f4b399af84cfbce028b9bcd9cbdb260375934d415b8736e83f32efb6ba4"
+    },
+    {
+      "path": "review.json",
+      "bytes": 1140,
+      "sha256": "74b145a9a8758b20e3d38930739a9482add9735581df3813c71d00b4b5d14d20"
+    },
+    {
+      "path": "run-checks-final.py",
+      "bytes": 2341,
+      "sha256": "4a556d03a92f4e697c1b46f74b94f3debbb5af8b7b87872452761fc807a6b76c"
+    },
+    {
+      "path": "run-checks.py",
+      "bytes": 2558,
+      "sha256": "3d95ed35fcbe287a342f2213bf2617e9c6afc3b6ed2fb4ac596f54cbed985668"
+    },
+    {
+      "path": "visual-review-binding.json",
+      "bytes": 2614,
+      "sha256": "26f6bc15b3d75e1c7611ee851906d99aaa0b2f1aecc160c90d55decd72d5cf5c"
+    }
+  ]
+}

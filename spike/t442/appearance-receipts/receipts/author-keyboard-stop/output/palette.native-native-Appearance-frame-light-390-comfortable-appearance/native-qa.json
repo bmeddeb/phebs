@@ -1,0 +1,15 @@
+{
+  "title": "native Appearance frame light 390 comfortable",
+  "status": "passed",
+  "errors": [],
+  "viewport": {
+    "width": 390,
+    "height": 900
+  },
+  "audit": {
+    "version": "4.12.1",
+    "violations": [],
+    "passes": 11,
+    "incomplete": 0
+  }
+}

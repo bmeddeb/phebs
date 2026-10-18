@@ -1,0 +1,18 @@
+{
+  "reference": "spike/t4510a/profile-receipts/receipts/harness",
+  "adaptations": "Task/source/QA paths, exact plan census, Appearance test and capture census, 20s case timeout, native Appearance axe region. Spec imports only mechanically rebound; assertions unchanged.",
+  "files": {
+    "run-critique-a-owned.py": "a96e929d246313378ba5d3e48f6e0629c5071c090cba0176a39bcccf21e7b664",
+    "palette.native.spec.ts": "352a112b42d60b410c3a6590060335643d11653045d0369933d966ec7e1e110d",
+    "run-native-owned.py": "49ed9f4b399af84cfbce028b9bcd9cbdb260375934d415b8736e83f32efb6ba4",
+    "compare.cjs": "b4ac95339cdf8985892de5eae1173d4394048b26ed468147c050294675589031",
+    "native-fixture.ts": "89f2c35b667e83208664bc0384052e3cb230b2e9af8c626c81873621984cbd5d",
+    "package.json": "1239d4d885dcad42201a27ed9324f8f0f760b78700d8db9ced39a511cffe7eae",
+    "playwright.config.ts": "8dc065bc4d02254bc3ea37fcd8625e66d7f30f6c6a088e0dff0fda11f2c58eee",
+    "critique-a.spec.ts": "f721c18d235edcee91891897af3e229eaeb279bbad22f9897ee3286a0c198d68",
+    "critique-a.config.ts": "9614bea3f690cdf2c80381c0489746e6bfb0c2f36d18a22eebf284da627d9171"
+  },
+  "adapter_correction": "First attempt stopped during module loading before tests: missing ESM package.json. Added the unchanged ESM marker from the existing harness. First stop retained in author-module-stop.",
+  "source_correction": "c3003613 uses proven native type-ahead with Tab/Shift+Tab to reset its prefix. Popup and buffered-type-ahead diagnostics remain retained; all value/color/no-API/no-navigation/storage oracles unchanged.",
+  "fresh_discovery_correction": "Playwright grep matches full project/file/test identity, so ^native excluded every test. Removed only the anchor; no test ran in retained fresh-discovery-stop."
+}
