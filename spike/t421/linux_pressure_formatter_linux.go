@@ -31,10 +31,10 @@ type linuxPressureFormatter struct {
 	info     os.FileInfo
 	resolved string
 	expected string
-	paths    []linuxPressureFormatterPath
+	paths    []linuxPressureFormatterComponent
 }
 
-type linuxPressureFormatterPath struct {
+type linuxPressureFormatterComponent struct {
 	path   string
 	info   os.FileInfo
 	target string
@@ -43,10 +43,10 @@ type linuxPressureFormatterPath struct {
 // Follow only the fixed recipe path, recording its complete bounded symlink
 // and directory chain. Distro mkfs.ext4 -> mke2fs links are admitted; arbitrary
 // caller-selected executable paths and group/world-writable components are not.
-func linuxPressureFormatterChain(ctx context.Context) (string, []linuxPressureFormatterPath, error) {
+func linuxPressureFormatterChain(ctx context.Context) (string, []linuxPressureFormatterComponent, error) {
 	pending := strings.Split(strings.TrimPrefix(linuxPressureFormatterPath, "/"), "/")
 	current := "/"
-	var paths []linuxPressureFormatterPath
+	var paths []linuxPressureFormatterComponent
 	links := 0
 	for len(pending) > 0 {
 		if linuxPressureContext(ctx) != nil || len(paths) >= 128 {
@@ -66,7 +66,7 @@ func linuxPressureFormatterChain(ctx context.Context) (string, []linuxPressureFo
 			info.Mode()&os.ModeSymlink == 0 && stat.Mode&(unix.S_ISUID|unix.S_ISGID|0o022) != 0 {
 			return "", nil, ErrLinuxPressure
 		}
-		entry := linuxPressureFormatterPath{path: current, info: info}
+		entry := linuxPressureFormatterComponent{path: current, info: info}
 		if info.Mode()&os.ModeSymlink != 0 {
 			links++
 			if links > 16 {
