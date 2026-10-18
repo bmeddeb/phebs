@@ -9368,3 +9368,8 @@ in `spike/t523/release/`. Revoking Apache rebuilds the surviving RW domain;
 old both-version proofs refuse while retained custody remains. Field0generated
 facts are transport/source witnesses without a recall/absence guarantee.
 These drafts grant no production activation or signature.
+
+During startup or publication replacement, operation Impact may show the current
+indexed source scope beside an absent or older caller generation. This remains
+unavailable with no rows, totals or declaration; it is not zero callers. Exact
+current evidence requires matching source commit and analysis-unit digest.

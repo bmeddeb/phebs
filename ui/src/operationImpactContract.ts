@@ -80,13 +80,17 @@ function validateGeneration(value: Record<string, unknown>) {
 }
 
 function validateScope(value: unknown, generation: Record<string, unknown>) {
-  if (!record(value) || value.repository !== generation.repository || value.commit !== generation.commit || !oneOf(value.scope_posture, ['whole-repository', 'focused'])) invalid()
+  if (!record(value) || value.repository !== generation.repository || value.commit !== undefined && !commit(value.commit) || !oneOf(value.scope_posture, ['whole-repository', 'focused'])) invalid()
+  // This is the present indexed scope. Missing/stale caller metadata may
+  // describe no generation or an older commit/unit; it never supplies rows.
+  const current = generation.state === 'current'
+  if (current && value.commit !== generation.commit) invalid()
   const unit = value.analysis_unit
   if (unit === undefined) {
-    if (value.scope_posture !== 'whole-repository' || generation.unit_digest) invalid()
+    if (value.scope_posture !== 'whole-repository' || current && generation.unit_digest) invalid()
     return
   }
-  if (!record(unit) || !text(unit.schema) || !text(unit.name) || !digest(unit.digest) || unit.digest !== generation.unit_digest || unit.search_index_posture !== value.scope_posture || !text(unit.typed_index_posture)) invalid()
+  if (!record(unit) || !text(unit.schema) || !text(unit.name) || !digest(unit.digest) || current && unit.digest !== generation.unit_digest || unit.search_index_posture !== value.scope_posture || !text(unit.typed_index_posture)) invalid()
   if (unit.typed_index !== undefined && (!record(unit.typed_index) || !text(unit.typed_index.kind) || !text(unit.typed_index.path))) invalid()
   let paths = 0, bytes = 0
   for (const key of ['primary', 'supporting']) {

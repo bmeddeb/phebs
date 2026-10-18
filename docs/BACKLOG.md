@@ -19881,6 +19881,14 @@ accepts that optional bounded string while retaining closed product keys and
 malformed-metadata refusal. Real HTTP serialization and83focused UI/type/lint/
 static controls pass; first composed native qualification uses a fresh image.
 
+**T54.2c · Preserve legitimate unavailable source epochs** *(2026-10-18,
+complete; Ben-routed Mac handoff).* Keep current indexed scope separate from
+absent/old caller authority while unavailable; never emit rows, totals or a
+declaration. Exact/current reports still require matching commit and unit.
+Actual Caller Map→HTTP transition controls, strict mismatches, rendered UI,
+validator normal/race/type/lint and bounded mocked checks pass. Cost is constant
+metadata comparison only. Fresh exact UI/binary qualification remains T54.3.
+
 **T54.3 · Measured Impact promotion** — satisfy the common bar per report
 shape; one shape may release without claiming the others. Dependencies are
 the specific inputs it actually consumes, not every experimental pack.

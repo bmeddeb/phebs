@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/bmeddeb/phebs/internal/api"
@@ -60,5 +61,45 @@ func TestOperationImpactExactHTTPAndSharedCitation(t *testing.T) {
 	code, body = catalogHTTP(t, handler, "/api/operation_impact_report?"+values.Encode(), nil)
 	if code != http.StatusNotFound {
 		t.Fatalf("denied=%d %s", code, body)
+	}
+}
+
+func TestOperationImpactUnavailableSourceTransitionsHTTP(t *testing.T) {
+	for _, test := range []struct {
+		name, generationState string
+		configure             func(*exactCallerAPIFixture)
+	}{
+		{"indexed before resolver", "missing", func(f *exactCallerAPIFixture) {
+			f.store.candidate, f.store.resolver, f.store.publication = nil, nil, nil
+		}},
+		{"not indexed", "missing", func(f *exactCallerAPIFixture) {
+			f.store.repos[0].IndexedCommitHash = ""
+			f.store.publication = nil
+		}},
+		{"indexed replacement with retained caller", "stale", func(f *exactCallerAPIFixture) {
+			f.store.repos[0].IndexedCommitHash = strings.Repeat("f", 40)
+		}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			fixture := newExactCallerAPIFixture(t, 1)
+			test.configure(fixture)
+			page, err := fixture.service.List(t.Context(), fixture.query, 1, "")
+			if err != nil || page.Generation.State != test.generationState || page.MatchingRowsState != "unavailable" {
+				t.Fatalf("shared Caller Map gap=%+v err=%v", page, err)
+			}
+			opts := fixture.serviceOptions()
+			opts.CallerMap, opts.OperationImpactEnabled = fixture.service, true
+			opts.OperationImpact = api.NewOperationImpactService(opts)
+			values := url.Values{"shape": {"operation_callers"}, "protocol": {"protobuf"}, "repository": {fixture.repository}, "lineage": {exactCallerLineage}, "operation": {exactCallerOperation}, "page_size": {"1"}}
+			var report api.OperationImpactReport
+			code, body := catalogHTTP(t, api.New(opts), "/api/operation_impact_report?"+values.Encode(), &report)
+			if code != http.StatusOK || report.CallerPage == nil {
+				t.Fatalf("gap HTTP=%d %s", code, body)
+			}
+			actual := report.CallerPage
+			if report.Conclusion.State != "unavailable" || actual.Generation.State != test.generationState || actual.Scope.Commit != page.Scope.Commit || actual.Generation.Commit != page.Generation.Commit || actual.Declaration != nil || actual.TotalMatchingRows != nil || len(actual.Rows) != 0 || !actual.Pagination.Complete {
+				t.Fatalf("gap was promoted or rewritten: %s", body)
+			}
+		})
 	}
 }

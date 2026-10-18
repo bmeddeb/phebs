@@ -13494,3 +13494,16 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   disposable records cannot sign these new artifacts. No product request/sync/
   retry/publication, cache/lock/schema/worker or child changes. Common-bar
   evidence reconciliation and existing production-key signatures remain open.
+
+- **2026-10-18 — T54.2c preserve unavailable caller source epochs (Ben-routed Mac handoff).**
+  A current indexed repository scope may coexist with absent or retained stale
+  caller generation. Impact formerly compared those commits before checking
+  availability, turning legitimate gaps into500; UI likewise rejected them.
+  Preserve both scopes unchanged for unavailable rows and require no declaration,
+  rows or totals. Enforce exact commit/unit equality for current evidence only;
+  keep selected repository identity, metadata validation and all source fences.
+  Actual shared Caller Map→HTTP controls cover unindexed, indexed-before-resolver
+  and replacement-indexed/old-caller states; strict current mismatch controls
+  plus UI validator/rendered controls and focused normal/race pass. This adds
+  constant metadata comparisons only, no read/query/sync/startup/retry, persistent
+  state, lock/cache, worker, child, source traversal or bound increase.

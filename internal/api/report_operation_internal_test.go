@@ -5,6 +5,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/bmeddeb/phebs/internal/analysisunit"
 )
 
 type operationImpactCallerStub struct {
@@ -60,12 +62,20 @@ func TestOperationImpactEmptyUnavailableAndInvalidPages(t *testing.T) {
 		}, false},
 		{"crossed query", "", func(p *CallerMapPage) { p.Query.Endpoint.Repository = "secret.example/repo" }, true},
 		{"crossed source", "", func(p *CallerMapPage) { p.Generation.Repository = "secret.example/repo" }, true},
+		{"crossed current commit", "", func(p *CallerMapPage) { p.Scope.Commit = strings.Repeat("c", 40) }, true},
 		{"oversized page", "", func(p *CallerMapPage) { p.Rows = make([]CallerMapRow, 101); p.TotalMatchingRows = callerMapTotal(101) }, true},
 		{"unavailable zero", "", func(p *CallerMapPage) {
 			p.Generation.State = "stale"
 			p.MatchingRowsState = "unavailable"
 			p.Rows = []CallerMapRow{}
 			p.TotalMatchingRows = callerMapTotal(0)
+		}, true},
+		{"unavailable declaration", "", func(p *CallerMapPage) {
+			p.Generation.State = "stale"
+			p.MatchingRowsState = "unavailable"
+			p.Rows = []CallerMapRow{}
+			p.TotalMatchingRows = nil
+			p.Declaration = &ContractCatalogClaim{}
 		}, true},
 		{"legacy bytes", "", func(p *CallerMapPage) { p.SchemaVersion = "caller-map-v1" }, true},
 		{"invented certificate", "", func(p *CallerMapPage) { p.CoverageDigest = "synthetic" }, true},
@@ -82,6 +92,43 @@ func TestOperationImpactEmptyUnavailableAndInvalidPages(t *testing.T) {
 			}
 			if !test.refuse && report.Conclusion.State != test.want {
 				t.Fatalf("conclusion=%+v", report.Conclusion)
+			}
+		})
+	}
+}
+
+func TestOperationImpactScopeUnitBinding(t *testing.T) {
+	for _, test := range []struct {
+		name, generationState, scopeDigest, generationDigest string
+		refuse                                               bool
+	}{
+		{name: "current whole", generationState: "current"},
+		{name: "current focused", generationState: "current", scopeDigest: "unit-new", generationDigest: "unit-new"},
+		{name: "current changed unit", generationState: "current", scopeDigest: "unit-new", generationDigest: "unit-old", refuse: true},
+		{name: "current removed unit", generationState: "current", generationDigest: "unit-old", refuse: true},
+		{name: "current added unit", generationState: "current", scopeDigest: "unit-new", refuse: true},
+		{name: "stale changed unit", generationState: "stale", scopeDigest: "unit-new", generationDigest: "unit-old"},
+		{name: "missing added unit", generationState: "missing", scopeDigest: "unit-new"},
+		{name: "failed removed unit", generationState: "failed", generationDigest: "unit-old"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			page := operationImpactTestPage()
+			page.Generation.State, page.Generation.UnitDigest = test.generationState, test.generationDigest
+			if test.scopeDigest != "" {
+				page.Scope.ScopePosture = analysisunit.SearchIndexFocused
+				page.Scope.AnalysisUnit = &analysisunit.State{Digest: test.scopeDigest}
+			}
+			if test.generationState != "current" {
+				page.MatchingRowsState, page.TotalMatchingRows = "unavailable", nil
+				page.Rows = []CallerMapRow{}
+			}
+			stub := &operationImpactCallerStub{page: page}
+			report, err := (&OperationImpactService{callers: stub}).Build(t.Context(), operationImpactShape, page.Query, 100, "")
+			if (err != nil) != test.refuse || stub.calls != 1 {
+				t.Fatalf("report=%+v calls=%d err=%v", report, stub.calls, err)
+			}
+			if !test.refuse && (report.CallerPage != page || test.generationState != "current" && report.Conclusion.State != "unavailable") {
+				t.Fatal("scope or unavailable generation was rewritten")
 			}
 		})
 	}

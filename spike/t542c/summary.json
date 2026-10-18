@@ -1,0 +1,93 @@
+[
+  {
+    "name": "go-normal",
+    "argv": [
+      "go",
+      "test",
+      "-p",
+      "1",
+      "./internal/api",
+      "-run",
+      "^TestOperationImpact",
+      "-count=1",
+      "-timeout=45s"
+    ],
+    "cwd": "/Users/ben/.codex/worktrees/t511-protobuf-fields/phebs.com",
+    "exit_code": 0,
+    "seconds": 8.986906,
+    "log": "/tmp/phebs-t542c-checks-_eywbblc/go-normal.log"
+  },
+  {
+    "name": "go-race",
+    "argv": [
+      "go",
+      "test",
+      "-race",
+      "-p",
+      "1",
+      "./internal/api",
+      "-run",
+      "^TestOperationImpact",
+      "-count=1",
+      "-timeout=45s"
+    ],
+    "cwd": "/Users/ben/.codex/worktrees/t511-protobuf-fields/phebs.com",
+    "exit_code": 0,
+    "seconds": 11.946797,
+    "log": "/tmp/phebs-t542c-checks-_eywbblc/go-race.log"
+  },
+  {
+    "name": "ui-controls",
+    "argv": [
+      "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+      "node_modules/vitest/vitest.mjs",
+      "run",
+      "src/operationImpactContract.test.ts",
+      "src/pages/OperationImpactPage.test.tsx"
+    ],
+    "cwd": "/Users/ben/.codex/worktrees/t511-protobuf-fields/phebs.com/ui",
+    "exit_code": 0,
+    "seconds": 1.641212,
+    "log": "/tmp/phebs-t542c-checks-_eywbblc/ui-controls.log"
+  },
+  {
+    "name": "ui-types",
+    "argv": [
+      "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+      "node_modules/typescript/bin/tsc",
+      "-b"
+    ],
+    "cwd": "/Users/ben/.codex/worktrees/t511-protobuf-fields/phebs.com/ui",
+    "exit_code": 0,
+    "seconds": 2.948631,
+    "log": "/tmp/phebs-t542c-checks-_eywbblc/ui-types.log"
+  },
+  {
+    "name": "ui-lint",
+    "argv": [
+      "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+      "node_modules/oxlint/bin/oxlint",
+      "src/operationImpactContract.ts",
+      "src/operationImpactContract.test.ts",
+      "src/pages/OperationImpactPage.test.tsx"
+    ],
+    "cwd": "/Users/ben/.codex/worktrees/t511-protobuf-fields/phebs.com/ui",
+    "exit_code": 0,
+    "seconds": 0.077316,
+    "log": "/tmp/phebs-t542c-checks-_eywbblc/ui-lint.log"
+  },
+  {
+    "name": "python-controls",
+    "argv": [
+      "python3",
+      "-m",
+      "unittest",
+      "-v",
+      "test_impact.py"
+    ],
+    "cwd": "/Users/ben/.codex/worktrees/t511-protobuf-fields/phebs.com/spike/t543",
+    "exit_code": 0,
+    "seconds": 0.124795,
+    "log": "/tmp/phebs-t542c-checks-_eywbblc/python-controls.log"
+  }
+]
