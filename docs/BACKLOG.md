@@ -3941,6 +3941,39 @@ covered by `TestLinuxExternalDelegationProbeRefusesBeforeLaunching` and by the
 retained H2e observer tests. No `t421.test`, `go test` or SurrealDB process and
 no port-65499 listener survived the sequence.
 
+**T42.H2h · Linux ownership observation and protected-input boundary** *(2026-10-18, Ben all-ticket
+delegation; flagged Mac preparation handoff).*
+Separate real Linux ownership/type/link metadata from protection for the existing
+bounded mutable verified-copy path. Preserve every protection/volume refusal and
+Darwin constructor gate; unsupported protected path construction refuses before
+creating/copying scratch. AC: small portable malformed metadata controls, Linux
+native verified-copy/pre-copy-refusal tests authored, supported Linux compile
+checks, unchanged Darwin source/behavior and focused applicable gates. Linux
+native tests remain explicitly pending on this Mac; metadata observation supplies
+no protected namespace, tool dispatch or ceremony authority.
+Source-preparation checks pass:30modeled metadata controls, existing Darwin
+copy refusals normally/with race, vet/pinned lint and both supported Linux
+compilations. An explicit value-preserving Nlink conversion fixes the first
+arm64 compile refusal; original failure is retained. `spike/t42h2h/` records
+the scope. Four native Linux tests remain unrun, deferred by Ben until2026-10-20.
+
+**T42.H2i · Linux byte observation and allocation seams** *(2026-10-18, Ben all-ticket
+delegation; flagged Mac preparation handoff).*
+Share existing bounded serial custody-byte traversal across Darwin/Linux while
+retaining platform-specific native identity fields; borrowed observations grant
+no ownership, protection or volume authority. Add the existing Linux
+fallocate/truncate/sync pattern behind the narrow pressure allocation seam.
+AC: portable bounds/refusal and unchanged Darwin native checks pass, Linux tiny
+file/walk tests are authored, supported Linux compile checks pass, cancellation
+and partial-maxima semantics stay exact. No image mount, ballast campaign,
+geometry, restored workspace or active Linux ceremony entry point is enabled;
+actual Linux native/pressure acceptance remains pending.
+Prepared source passes Darwin normal/race, vet, pinned lint including Linux
+analysis and both Linux compile-only targets. `spike/t42h2i/` retains first
+failure/correction, all exact bounded checks and joined groups. Linux native,
+allocation/volume/restore and parent H2 acceptance remain explicitly pending
+Ben's October20 office return; no frozen geometry or entry point is enabled.
+
 **T42.H2j · Prospective aggregate Linux memory calculation** *(2026-10-18, Ben all-ticket
 delegation; flagged Mac preparation handoff).*
 Add one pure bounded calculation over supplied physical/available bytes,

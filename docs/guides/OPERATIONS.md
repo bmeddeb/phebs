@@ -651,6 +651,27 @@ prerequisites before freeze or execution.
 The source-free exact-commit record is
 [`delegation-location-rehearsal-1.json`](../../spike/t42h2g/delegation-location-rehearsal-1.json).
 
+T42.H2h source preparation (2026-10-18, flagged Mac handoff) separates Linux
+metadata-only ownership for the bounded mutable verified-copy path. Its two
+copy checks use actual owner/type/link metadata; protected path constructors,
+immutable flags, volume custody, Git/Go tool admission and Linux freeze remain
+refused. The earlier H2g refusal above describes its exact historical source.
+A successful mutable copy grants no protected bytes or namespace. Future Linux
+protection uses a distinct owned read-only namespace loan, requiring a measured
+helper, writer closure, exact root/manifest/alias checks and joined use/teardown;
+no host capability or daemon entitlement is provisioned. Actual Linux native
+checks and full protected-tree construction remain pending.
+
+T42.H2i prepares Linux metadata byte observations through the shared borrowed
+observer and a bounded delta-allocation seam. Darwin generation/flag/union
+checks and historical geometry stay exact. Darwin normal/race, scoped vet,
+native and Linux-targeted pinned lint and both Linux compile-only targets pass;
+[T42.H2i evidence](../../spike/t42h2i/README.md) preserves the first arm64 compile
+failure and its value-preserving correction. Borrowed FSID and aggregate block
+counts grant no protection/isolation or per-range hole proof. No Linux binary,
+allocation, pressure, restore or ceremony ran; actual Linux gates await the
+October20 office return.
+
 On this host, development tools are in `/home/ben/.local/bin`; native amd64
 tools are staged separately under
 `/home/ben/.local/share/phebs-host/native-amd64`. Load the development PATH and

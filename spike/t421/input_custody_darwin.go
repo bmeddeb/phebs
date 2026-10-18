@@ -22,6 +22,8 @@ func inputCustodyOwned(info os.FileInfo) bool {
 		stat.Mode&unix.S_IFMT == unix.S_IFDIR && info.IsDir()
 }
 
+func inputCustodyCopyOwned(info os.FileInfo) bool { return inputCustodyOwned(info) }
+
 func inputCustodyProtected(info os.FileInfo) bool {
 	return inputCustodyOwned(info) && info.Sys().(*syscall.Stat_t).Flags&unix.UF_IMMUTABLE != 0
 }

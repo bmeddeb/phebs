@@ -227,7 +227,7 @@ func copyExecutionInput(ctx context.Context, root *os.Root, input ExecutionInput
 		return nil, 0, ErrExecutionInputCustody
 	}
 	openedInfo, err := file.Stat()
-	if err != nil || !inputCustodySame(writtenInfo, openedInfo) || !inputCustodyOwned(openedInfo) {
+	if err != nil || !inputCustodySame(writtenInfo, openedInfo) || !inputCustodyCopyOwned(openedInfo) {
 		_ = file.Close()
 		return nil, 0, ErrExecutionInputCustody
 	}

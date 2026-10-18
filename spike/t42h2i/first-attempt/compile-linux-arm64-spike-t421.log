@@ -1,0 +1,2 @@
+# github.com/bmeddeb/phebs/spike/t421 [github.com/bmeddeb/phebs/spike/t421.test]
+spike/t421/input_custody_seams_linux.go:32:105: cannot use stat.Nlink (variable of type uint32) as uint64 value in argument to linuxInputCopyOwnerMatches
