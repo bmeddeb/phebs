@@ -1,0 +1,255 @@
+{
+  "schema": "t251-embedded-documentation-receipt-v1",
+  "date": "2026-10-18",
+  "qualification": "bounded integration, native functional browser and accessibility checks; no canonical pixel, release or scale claim",
+  "base_commit": "cfc4c504ec8abbf250472cf73b56bd157508fc1b",
+  "source_files_sha256": {
+    "documentation.go": "22b81dcea9bc9822ace36137513a83030b7edb16241f1f21e73d9c019662548d",
+    "documentation_embed.go": "7417acbca8d5cee5d6b4f9ecb0a3112c11a4d4b17ffe2fd5ebd3e0aed26773ba",
+    "documentation_stub.go": "05858d46f85003495c79985281ee3aa80571051ed3792688254d167d8a774c69",
+    "documentation_test.go": "61ad5969000b824b28713e78480064e236dcf37bbbe5f2f79ea5ae318ff11776",
+    "documentation_embed_test.go": "ffe830bf940b766a29102f7179d56ee9c51a4279766276b104005892e81c7a36",
+    "cmd/phebs/serve_api.go": "810e6a10702059e955c56a1aeab49b8a4009e0da588c6ed5c18010fa763b8c17",
+    "cmd/phebs/serve_docs.go": "9b0e3cd8acc289ca605df4ce5b3f65eb4e1dbe3000d4f4b5a3e9c4db90890506",
+    "cmd/phebs/serve_docs_test.go": "b4c5e0991316df6c4c0bae7cde3506b081cf8d6a665e06c458cb366839141301",
+    "cmd/phebs/serve_docs_browser_test.go": "f698b2f75e1edf45c8fccc82d6b22785d76cd86aa02609b3ac921a5d0850cf49",
+    "scripts/embedded_docs_contract_test.go": "94780243381c6550fd946622c32202bd37973c426243bac6bea54dac3cc22b1e",
+    "go.mod": "424c7e1038c71c10676fc3bad01e155ebc5f912a4eea65e90c284b30951a9275",
+    "go.sum": "d7aa72d0c2c4283125d37d4377e74be0e87723735a27015900d23092798b1665"
+  },
+  "embedded_document_tree_sha256": "e970e772befb79773c1978fc13cbfb42f251a01de03b32d8680bc5c7e30bf25d",
+  "input_boundary": "This receipt binds the existing documentation tree before the owning PLAN/BACKLOG/guide outcome append. The lead reruns the final exact link and cost census after that documentation-only append; the browser record is not retrospectively relabelled.",
+  "scope": {
+    "route": "/documentation/<repository-relative-path>",
+    "embedded_files": 56,
+    "markdown_sources": 51,
+    "embedded_source_bytes": 6878201,
+    "excluded": [
+      "history.txt",
+      "docs/fixtures/",
+      "docs/design_handoff_phebs_brand_and_ui/",
+      "spike/",
+      "non-Markdown/SVG/YAML source bytes"
+    ],
+    "nonembedded_references": "Only references actually named by embedded documents receive a repository-only landing page, linking to the fixed public repository. Unknown routes404; no open redirect."
+  },
+  "link_census": {
+    "test": "go test -tags ui ./scripts -run ^TestEmbeddedDocumentationLinksResolve$ -count=1 -timeout=30s",
+    "oracle": "existing T24.1 documentTargets/resolveDocumentTarget over every selected tracked Markdown source; browser URL resolution preserves relative targets",
+    "sources": 51,
+    "local_link_occurrences": 421,
+    "embedded_targets": 275,
+    "repository_only_targets": 146,
+    "failures": 0,
+    "seconds": 0.27
+  },
+  "startup_cache": {
+    "cached_pages": 170,
+    "cached_payload_bytes": 7417162,
+    "cached_byte_slice_capacity": 7532288,
+    "startup_render_ms": 96.29825,
+    "qualification": "One local mechanics sample; not a latency or heap SLO. Counts/capacities are exact for the bound build inputs; map/object overhead and transient parser/AST allocations are additional.",
+    "lifetime": "Immutable pages live for this server; source/parser/AST construction is startup-only. Restart rebuilds from the binary snapshot. No per-request parsing, filesystem read, corpus scan, hash, cache mutation or new child."
+  },
+  "checks": [
+    {
+      "command": "go test . -count=1 -timeout=30s",
+      "result": "pass",
+      "seconds": 0.874,
+      "qualification": "preceded final keyboard-focus output correction; corrected UI-tagged normal/race covers it"
+    },
+    {
+      "command": "go test -tags ui . ./scripts -run Test(Documentation|EmbeddedDocumentation) -count=1 -timeout=30s -v",
+      "result": "pass",
+      "root_package_seconds": 0.594,
+      "scripts_package_seconds": 1.2
+    },
+    {
+      "command": "go test ./cmd/phebs -run ^TestDocumentationAuthenticationAndPublicAssetIsolation$ -count=1 -timeout=2m",
+      "result": "pass",
+      "seconds": 3.144
+    },
+    {
+      "command": "go test -tags ui ./cmd/phebs -run ^TestDocumentationAuthenticationAndPublicAssetIsolation$ -count=1 -timeout=2m",
+      "result": "pass",
+      "seconds": 4.913
+    },
+    {
+      "command": "go test -race -tags ui . -count=1 -timeout=30s",
+      "result": "pass",
+      "seconds": 2.588
+    },
+    {
+      "command": "go vet -tags ui . ./cmd/phebs ./scripts",
+      "result": "pass"
+    },
+    {
+      "command": "go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2 run . ./cmd/phebs ./scripts --build-tags ui --timeout=2m",
+      "result": "pass",
+      "issues": 0
+    },
+    {
+      "command": "git diff --check",
+      "result": "pass"
+    }
+  ],
+  "browser": {
+    "schema": "t251-browser-functional-v1",
+    "renderer": "155.0.8059.82",
+    "qualification": "native functional and accessibility checks; no canonical pixel-baseline claim",
+    "appearances": [
+      {
+        "width": 1280,
+        "colorScheme": "light",
+        "geometry": {
+          "viewport": 1280,
+          "document": 1280,
+          "main": 725.625
+        },
+        "wcagViolations": 0,
+        "consoleErrors": 0,
+        "externalRequests": 0,
+        "elapsedMs": 1383,
+        "journey": "authenticated index \u2192 manual \u2192 getting started \u2192 manual \u2192 root README#architecture \u2192 SVG; repository-only landing; Tab/Enter"
+      },
+      {
+        "width": 1280,
+        "colorScheme": "dark",
+        "geometry": {
+          "viewport": 1280,
+          "document": 1280,
+          "main": 725.625
+        },
+        "wcagViolations": 0,
+        "consoleErrors": 0,
+        "externalRequests": 0,
+        "elapsedMs": 1230,
+        "journey": "authenticated index \u2192 manual \u2192 getting started \u2192 manual \u2192 root README#architecture \u2192 SVG; repository-only landing; Tab/Enter"
+      },
+      {
+        "width": 390,
+        "colorScheme": "light",
+        "geometry": {
+          "viewport": 390,
+          "document": 390,
+          "main": 358
+        },
+        "wcagViolations": 0,
+        "consoleErrors": 0,
+        "externalRequests": 0,
+        "elapsedMs": 1122,
+        "journey": "authenticated index \u2192 manual \u2192 getting started \u2192 manual \u2192 root README#architecture \u2192 SVG; repository-only landing; Tab/Enter"
+      },
+      {
+        "width": 390,
+        "colorScheme": "dark",
+        "geometry": {
+          "viewport": 390,
+          "document": 390,
+          "main": 358
+        },
+        "wcagViolations": 0,
+        "consoleErrors": 0,
+        "externalRequests": 0,
+        "elapsedMs": 1112,
+        "journey": "authenticated index \u2192 manual \u2192 getting started \u2192 manual \u2192 root README#architecture \u2192 SVG; repository-only landing; Tab/Enter"
+      }
+    ],
+    "executed_qa_script_sha256": "771b2ab09da4f54ee509419970467e9eca6a99c571d530e02eede5dd6bf0adf6",
+    "captures_sha256": {
+      "guide-1280-dark.png": "503281484d15c9bfaf17a903d2550f56cbaadca0f76b32b4a5ea8aa868f75d0b",
+      "guide-1280-light.png": "0589dc71b719b3a204be166d8750288ee0849e600a2294a33e94af0b9ad5e0ea",
+      "guide-390-dark.png": "372f81896ea7daf13c692da494a5e990eb6c864983343d483b48e23c867f75e9",
+      "guide-390-light.png": "61bc87e343628923540c5a83c156105c7513e73319616d50d0366b7dce52beb0",
+      "index-1280-dark.png": "8423794734b32a4867b1a9b5db1e16186866f30bc693eb3e36acb66d9cc318c3",
+      "index-1280-light.png": "af8ecaf3e06a8b83eb21753ca9b37ebb0be226e08623fda4c011980c90669f9e",
+      "index-390-dark.png": "78c5e21b498d3fe3f63fa925e1cbba5dfe10318cf6f1a3bb47eca58d95741da2",
+      "index-390-light.png": "24a7f8464a776e466f4933e55a720ca06a38781302711e0d7db5cbb9bdbdaa07"
+    }
+  },
+  "prior_failures": {
+    "qualification": "retained diagnostics, not a PASS",
+    "startup_attempt": {
+      "result": "refused before server/browser launch",
+      "error": "run surreal version: signal: killed",
+      "elapsed_seconds": 5.09,
+      "cause": "not established",
+      "unchanged_version_probe": "3.2.0 for macos on aarch64; exit0"
+    },
+    "browser_attempt": {
+      "phase": "Getting Started desktop light axe",
+      "violation": "scrollable-region-focusable",
+      "impact": "serious",
+      "nodes": 1,
+      "server_teardown": "joined; fixture exit0"
+    },
+    "correction": "Focusable generated tables and code blocks with visible focus; no JavaScript"
+  },
+  "teardown": {
+    "server_fixture_seconds": 22.29,
+    "package_seconds": 23.048,
+    "test_exit_code": 0,
+    "browser_closed": true,
+    "http_server_joined": true,
+    "surreal_child_joined": true,
+    "matching_test_surreal_processes_afterward": 0
+  },
+  "limits": [
+    "Native Chrome155, Node26 and package-matched Playwright1.62.1 are functional evidence, not canonical Noble pixel evidence.",
+    "No full Go suite, historical rehearsal, production signing or release activation.",
+    "Repository-only destinations deliberately do not serve excluded bytes; their fixed public-repository links are explicitly labelled.",
+    "Existing application UI assets were copied unchanged only to satisfy the ui-tagged fixture compilation; the walkthrough served no SPA assets."
+  ],
+  "lead_final_document_checks": {
+    "date": "2026-10-18",
+    "base_commit": "35ab102eba28183fa210e24619c4e0e97a040490",
+    "qualification": "Exact documentation-only append census; preserves the earlier native functional browser record and its original input binding. Canonical pixel comparison remains pending.",
+    "embedded_tree_sha256": "476c2846a0f05bd804f9de9f9679f96ebcbefec5bada0ec267fa858e451caf7d",
+    "tree_digest_encoding": "UTF-8 sorted repository-relative path, NUL, lowercase SHA256 of file bytes, newline, concatenated and SHA256 hashed",
+    "embedded_files": 56,
+    "embedded_source_bytes": 6891507,
+    "link_census": {
+      "test": "go test -tags ui ./scripts -run ^TestEmbeddedDocumentationLinksResolve$ -count=1 -v -timeout=1m",
+      "sources": 51,
+      "local_link_occurrences": 422,
+      "embedded_targets": 276,
+      "repository_only_targets": 146,
+      "failures": 0,
+      "seconds": 0.679
+    },
+    "startup_cache": {
+      "test": "go test -tags ui . -run ^TestEmbeddedDocumentationScopeAndIndex$ -count=1 -v -timeout=1m",
+      "cached_pages": 170,
+      "cached_payload_bytes": 7431304,
+      "cached_byte_slice_capacity": 7548928,
+      "startup_render_ms": 84.974083,
+      "seconds": 0.403,
+      "qualification": "One mechanics sample, not an RSS, heap or latency bound; metadata and transient parser allocations are additional."
+    }
+  },
+  "post_outcome_base_document_census": {
+    "date": "2026-10-18",
+    "base_commit": "31bde809f5ce860e937fbf4450184a2cdb59a2ca",
+    "qualification": "Documentation-only outcome/base update; earlier browser records keep their original input binding. No runtime implementation changed during rebase.",
+    "embedded_tree_sha256": "abc8a8eac700a71455d0793dcf871a4c06ca6547d35da79566928ac03c512c5b",
+    "tree_digest_encoding": "UTF-8 sorted repository-relative path, NUL, lowercase SHA256 of file bytes, newline, concatenated and SHA256 hashed",
+    "embedded_files": 56,
+    "embedded_source_bytes": 6906583,
+    "link_census": {
+      "markdown_sources": 51,
+      "local_link_occurrences": 423,
+      "embedded_targets": 276,
+      "repository_only_targets": 147,
+      "failures": 0,
+      "package_seconds": 0.8
+    },
+    "startup_cache": {
+      "cached_pages": 171,
+      "cached_payload_bytes": 7449023,
+      "cached_byte_slice_capacity": 7559424,
+      "startup_render_ms": 85.70225,
+      "package_seconds": 0.497,
+      "qualification": "One mechanics sample; map/object overhead and transient parser allocations are additional."
+    }
+  }
+}

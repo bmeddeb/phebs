@@ -28,6 +28,13 @@ provisional, default deployments remain dark, unresolved relationships are
 abstentions rather than guesses, and no empty result establishes runtime
 absence.
 
+A declaration-only released Atlas selection can show current sealed declaration
+roots without admitting caller, implementation, field or Impact evidence.
+Unavailable relationship sections are labelled explicitly; an absent section is
+not a measured zero population. Native root authority determines current/stale
+state, and links appear only for available capabilities. This release preparation
+still awaits the existing production signing key.
+
 ## Thrift protocol-pack evaluation
 
 The repository includes `phebs-thrift-demo.yaml` as the Epic 19 Thrift
@@ -310,7 +317,8 @@ the existing **Impact** navigation item.
 T50.1 freezes the first prospective supported comparison contract over two
 complete protobuf/gRPC Caller Map endpoint identities and the T47.5 committed
 input recipe. This contract and its neutral gold tests do not activate ordinary
-comparison: separate T50.2 admission and T50.3 validation/signing remain pending.
+comparison: T50.2 prepares independent signed admission, while T50.3's separate
+validation/operating result and production signing remain pending.
 Caller Map or standalone Atlas admission alone enables no comparison claim.
 
 T30.6k moves this route onto the same exact caller engine as Caller Map. Both
@@ -1168,6 +1176,9 @@ Search, Contracts, Topics, Caller Map, and Impact share the
 scope-aware **Analysis scope & gaps** panel. Expand one repository to inspect
 its active unit name, exact primary/supporting paths, typed-index posture,
 fresh/stale domain publications, durable disposition, and bounded receipt.
+The **Coverage certificate** row expands its disclosure; its separate help
+button opens glossary guidance without changing the disclosure. Both controls
+are keyboard accessible, and Escape returns focus from help to its button.
 Only one repository's paths are mounted at a time. Focused Search and local
 evidence are labeled separately from repository-overlay callers; an
 outside-unit caller is expected overlay evidence, not a focused-search result.
@@ -1358,6 +1369,20 @@ state. Nothing on this page is a completeness claim.
 The UI uses its DB-backed session cookie and automatically supplies CSRF
 tokens on mutations. A `401` clears stale authenticated state and returns to
 the login view.
+
+## Exact raw evidence
+
+When evidence is enabled, authenticated `GET /api/evidence?domain=<domain>`
+returns complete evidence for caller-visible repositories. Each repository has
+an exact legacy `run` or a sealed partitioned `exact_authority`; native rows
+omit `run`. `published_run_count` counts legacy runs and
+`partitioned_root_count` counts native roots. An empty current root is distinct
+from an unavailable or stale root. The 5,000-assertion bound applies per
+repository; an exceeded bound or authority change refuses the whole response.
+Retry after a publication transition. Release-only deployments admit only the
+domains in their verified recipes; unrelated retained provisional evidence is
+unavailable. These rows describe retained source evidence, never runtime use or
+completeness.
 
 ## HTTP API
 

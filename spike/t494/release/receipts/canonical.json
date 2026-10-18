@@ -1,0 +1,184 @@
+{
+  "schema": "phebs-t494-canonical-receipts-v1",
+  "date": "2026-10-18",
+  "source_commit": "ff080f8438d5de02153a8645cf1cf75b5d95935c",
+  "qualification": "Local pinned Noble AMD64 renderer; four actual ordinary-cohort listing controls plus four intercepted neutral declaration-only detail frames. The intercepted detail fixture proves presentation only; actual signed source authority is established separately by bounded-startup.json. This is not a hosted CI run or an extraction accuracy result.",
+  "retries": 0,
+  "max_diff_pixel_ratio": 0.001,
+  "new_masks": false,
+  "runs": [
+    {
+      "mode": "author",
+      "exit_code": 0,
+      "seconds": 38.637,
+      "stats": {
+        "startTime": "2026-10-18T10:15:14.758Z",
+        "duration": 37662.411,
+        "expected": 9,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      }
+    },
+    {
+      "mode": "compare",
+      "exit_code": 0,
+      "seconds": 28.972,
+      "stats": {
+        "startTime": "2026-10-18T10:15:53.361Z",
+        "duration": 28026.855,
+        "expected": 9,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      }
+    }
+  ],
+  "passed": true,
+  "backend_exit_code": 0,
+  "baseline_changes": {
+    "contract-atlas--dark--dense.png": {
+      "before": "41e1eef153eeee43b6deb35b2323e76befa5aef18b99992fb3510d8c00cb0a1e",
+      "after": "0702dce197c54e8f4f70b538e8a4158fe88b57442743c7aaa8bd44591eb9da39"
+    },
+    "contract-atlas--light--comfortable.png": {
+      "before": "b591062a9e08d00211ea6834f48fc4917cf0d9870252b200a4e2aae946d9b4be",
+      "after": "bfd54bbf5395594b7b1de06269047bd5623b85f09330dba850279b478d283029"
+    },
+    "contract-atlas-declaration-only-mobile--light--comfortable.png": {
+      "before": null,
+      "after": "9daaf07987a1d40a5d65012772b3ae5eb9b92b1b21194dce6946aee6a03a6ad4"
+    },
+    "contract-atlas-declaration-only-desktop--light--comfortable.png": {
+      "before": null,
+      "after": "56f87fd168bdc82abfb3d54a134f0328609e219a0bad2c40e74d08fbc343b0ec"
+    },
+    "contract-atlas-declaration-only-mobile--dark--comfortable.png": {
+      "before": null,
+      "after": "6c77a167348f88cf1d5865203bf7d8df5984b8ec12a63ae2bb97c3421921f6ee"
+    },
+    "contract-atlas-declaration-only-desktop--dark--comfortable.png": {
+      "before": null,
+      "after": "3efb406e7dcb1b662ea6a3a82d9e9be8a9e865eb8e5306e7afa04643510ffebe"
+    },
+    "contract-atlas--dark--comfortable.png": {
+      "before": "5a5a7c10892c757133ff0cc4905fc04d6ea46015b203cb6fb3f5994b637a15d5",
+      "after": "a2ba7314f356798de6927e5430931e1087cc8875e0de9f8c28c3759a8ff642f4"
+    },
+    "contract-atlas--light--dense.png": {
+      "before": "a788896b7284f126212b3342a8ea4cd950c8f966f1fd131ede697b1af772c975",
+      "after": "eac25afe8ef4904d332ff750bbe13e9ae3c299070214f51f06c049786ecf51c6"
+    }
+  },
+  "runtime": {
+    "image": "mcr.microsoft.com/playwright@sha256:c091b21d9fae78c76e85cd4356431e9b018402f172a214fc7d7a5e9a7e29d8ac",
+    "platform": "linux/amd64",
+    "node": "24.18.0",
+    "playwright": "1.62.1",
+    "chromium": "151.0.7922.34",
+    "host_bridge": "Dedicated joined SSH reverse forward on trustworthy VM loopback; no authentication or CSP bypass."
+  },
+  "scope": {
+    "frames": 8,
+    "existing_listing_controls": 4,
+    "new_detail_frames": 4,
+    "desktop": {
+      "width": 1280,
+      "height": 800
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844
+    },
+    "detail_capture": "full page",
+    "listing_variants": [
+      "light comfortable",
+      "light dense",
+      "dark comfortable",
+      "dark dense"
+    ],
+    "detail_variants": [
+      "desktop light comfortable",
+      "desktop dark comfortable",
+      "mobile light comfortable",
+      "mobile dark comfortable"
+    ]
+  },
+  "commands": {
+    "preflight": [
+      "node",
+      "node_modules/@playwright/test/cli.js",
+      "test",
+      "--config",
+      "atlas.canonical.config.ts",
+      "--project",
+      "receipts",
+      "--grep",
+      "contract-atlas(?: \u00b7|declaration|-)",
+      "--list"
+    ],
+    "common": [
+      "node",
+      "node_modules/@playwright/test/cli.js",
+      "test",
+      "--config",
+      "atlas.canonical.config.ts",
+      "--project",
+      "receipts",
+      "--grep",
+      "contract-atlas(?: \u00b7|declaration|-)",
+      "--reporter=list,json"
+    ],
+    "author_addition": [
+      "--update-snapshots=all"
+    ],
+    "config_override": "Imports unchanged playwright.config; snapshotPathTemplate=/work/receipts/baselines/{arg}{ext}, outputDir=/work/receipts/.artifacts/t494-canonical-output. No other config override."
+  },
+  "fixture": {
+    "cohort": "Two unchanged staged neutral repository bundles and exact fixed operator catalogs; ordinary house auth setup validates real cohort readiness. Experimental protobuf/Kafka extraction is explicit in this screenshot cohort only.",
+    "poll_interval": "1s; supported fixture configuration, production default unchanged",
+    "authentication": "New browser/auth state for comparison; same already-published ephemeral cohort. No independent-store portability claim.",
+    "detail_interception": "atlasFixture.ts changes only version/capability and Atlas API payloads for four new declaration-only states; house authentication remains real."
+  },
+  "changed_baseline_reason": "Four existing listing controls refresh the authority strip to show current partitioned declaration roots instead of treating unpublished legacy runs as the only authority. Four new full-page detail frames capture exact-current and named unavailable relationship states, capability-gated handoffs, and mobile local scrolling.",
+  "source_files": {
+    "ui/receipts/atlasFixture.ts": "sha256:17226487215c80b568ec4eb699a1f49c0682aa30839cebdd399e9daf56ed0512",
+    "ui/receipts/atlas-receipts.spec.ts": "sha256:afcbcef53c4a7f2ebc017355d4f5cba0d4d80b2f3dbc65e54ea4bbed135c5774",
+    "ui/receipts/receipts.spec.ts": "sha256:bcf4827b2f9e068ceb8f675c7338496a076c4439e28bef867eb1cc3aaae473d7",
+    "ui/receipts/auth.setup.ts": "sha256:cffb4c9ff9080d4906c35be94b3b6180415fb60f44f8190a211e1112461a970b",
+    "ui/playwright.config.ts": "sha256:47901432b6d9174b8b7b1af08e90133fd56240fbb822f9fc9c76df3722ae97e1",
+    "ui/receipts/routes.ts": "sha256:436d039be8e3a9730d5aea16655a0fd48225292ad74e3350e324340e3457329a"
+  },
+  "historical_preparation_stop": {
+    "outcome": "no_tests_selected",
+    "reason": "An anchored grep failed discovery before pixels were captured. Removed the anchor and verified the exact nine-case selection with --list before authoring.",
+    "baselines_changed": false
+  },
+  "teardown": {
+    "server_exit_code": 0,
+    "server_joined": true,
+    "bridge_joined": true,
+    "renderer_container_removed": true,
+    "auth_and_config_removed": true,
+    "docker_context_restored": true,
+    "atlas_server_or_bridge_survivors": false,
+    "vm_image_cache": "Retained for the next T25 bounded receipt leaf."
+  },
+  "post_capture_manifest_maintenance": {
+    "qualification": "Moved the same desktop1280x800/mobile390x844 constant tuples to the executable routes manifest and included them in baseline cardinality; no capture behavior or product source changed. Original executed hashes above remain exact.",
+    "final_source_files": {
+      "ui/receipts/routes.ts": "sha256:463486f1a5df3ac5cd5f04cf68dce8c48a71497f57cde60b3f4ce5c29763de8e",
+      "ui/receipts/atlas-receipts.spec.ts": "sha256:c641b332d966dffe7b66a1a76f148d1397667b6e9f79e9abf0a9b9196d814d63",
+      "ui/src/receiptManifest.test.ts": "sha256:88af088a6602cf37f1e29920e1ddae1681889de8d1d927dd096dee61d70c69c2"
+    },
+    "checks": {
+      "manifest_test": {
+        "passed": 1,
+        "duration_seconds": 0.534
+      },
+      "lint": "passed",
+      "typecheck": "passed",
+      "test_discovery": "same9cases including auth setup"
+    }
+  }
+}
