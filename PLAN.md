@@ -13890,3 +13890,27 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   HTTP503 and distinguish that expected browser resource error from unexpected
   console/page errors. Historical canonical pixels and #124's Linux obligations
   remain exact; production signing remains pending.
+
+- **2026-10-18 — T44.2b truthful one-time key-copy feedback (Mac track).**
+  Await the browser clipboard write before claiming success; missing APIs,
+  synchronous throws and promise rejection keep the token available in a
+  labeled read-only house input with an announced manual-copy instruction.
+  Disable repeat copy while that write is pending. Scope the display component
+  by token identity so completion from a replaced key cannot set current
+  feedback. No raw clipboard diagnostic is shown. The preview's explicit
+  full-page reload now carries its copy-first/finish-edits reminder inline;
+  it still clears in-memory Settings state and cannot recover a lost secret.
+  One displayed token retains one constant-size local copy state; each explicit
+  click performs at most one existing browser clipboard call and two state
+  updates. There is no automatic retry, timer, new API request, query, sync,
+  publication, store/schema, persistent cache, disk, lock, corpus, Worker or
+  child work. An unresolved browser write can retain its closure/token until
+  settlement; no cancellation/timeout claim is made. Keyed unmount isolates
+  presentation without persisting the secret. The copy target is 44px and the
+  fallback permits keyboard selection. Neutral browser fixtures substitute the
+  clipboard API and establish presentation mechanics, not host OS clipboard
+  contents, real authentication or a signing/release result. Historical
+  baselines remain exact; #124 and production signing stay pending.
+  Bundled JavaScript adds 792 raw/237 individually deterministic-gzip bytes;
+  Settings is +792/+260, the initial entry +0/-3, with unchanged chunk/dependency
+  counts. Host-fixture interaction timings remain mechanics evidence only.

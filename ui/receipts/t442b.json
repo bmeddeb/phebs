@@ -1,0 +1,15 @@
+{
+  "ticket": "T44.2b",
+  "date": "2026-10-18",
+  "source_commit": "ad6cbe082f43ce7cab89a27cf18d59feb46ece15",
+  "test_correction_commit": "154fc1aa6156709e853cc81ea083f2feb30da608",
+  "outcome": "../../spike/t442b/outcome.json",
+  "comparison": "../../spike/t442b/comparison.json",
+  "native_author_cases": 8,
+  "native_fresh_cases": 8,
+  "byte_identical_comparisons": 12,
+  "canonical_baselines_changed": 0,
+  "qualification": "Darwin Chrome155 neutral mocked APIs and substituted browser clipboard; no host clipboard contents, real authentication, full canonical matrix, Linux or release result",
+  "production_signing": "pending",
+  "linux_issue": "https://github.com/bmeddeb/phebs/issues/124"
+}

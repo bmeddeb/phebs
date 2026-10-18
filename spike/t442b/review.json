@@ -1,0 +1,7 @@
+{
+  "reviewer": "ticket_dependency_audit",
+  "source": "ad6cbe082f43ce7cab89a27cf18d59feb46ece15",
+  "outcome": "no_blocking_findings",
+  "cost": "Constant local state per displayed key; at most1clipboard call and2state updates per explicit click; no additional API/query/startup/sync/no-op/publication/store/lock/cache/corpus/worker/child work. Unsettled browser promises may retain closure/token; no cancellation claim.",
+  "scope": "Settings key-copy feedback, readonly manual selection, token identity, inline reload reminder and owning guides/receipt"
+}

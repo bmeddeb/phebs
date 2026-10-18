@@ -1,0 +1,14 @@
+{
+  "title": "native API key copying light 1280",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  },
+  "capture_state": "api-key-copy-done--light--1280",
+  "audit": {
+    "version": "4.12.1",
+    "violations": [],
+    "passes": 15,
+    "incomplete": 0
+  }
+}

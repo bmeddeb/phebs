@@ -1,0 +1,138 @@
+{
+  "schema": "phebs-t442b-assessment-b-browser-v1",
+  "outcome": "passed",
+  "contexts": [
+    {
+      "theme": "light",
+      "width": 390,
+      "preview": false,
+      "requests": [
+        "GET /api/auth/status",
+        "GET /api/version",
+        "GET /api/auth/keys",
+        "POST /api/auth/keys"
+      ],
+      "unexpected": [],
+      "console": [
+        {
+          "type": "log",
+          "text": "%c[impeccable] No anti-patterns found. color: #22c55e; font-weight: bold",
+          "args": [
+            "%c[impeccable] No anti-patterns found.",
+            "color: #22c55e; font-weight: bold"
+          ]
+        }
+      ],
+      "pageerrors": [],
+      "clipboardWrites": [],
+      "mutable_preflight": true,
+      "full_readonly_selection": [
+        0,
+        49
+      ],
+      "status": "Copy failed. Select and copy the key above.",
+      "copy_enabled": true,
+      "bounds": {
+        "top": 480,
+        "bottom": 645,
+        "left": 16,
+        "right": 374,
+        "height": 900,
+        "width": 390,
+        "overflow": false
+      },
+      "injection_succeeded": true,
+      "overlay_dom": [],
+      "name": "key-copy-failure-light-390",
+      "screenshot": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/assessment-b/key-copy-failure-light-390.png",
+      "keyboard_failure_to_success": true,
+      "retry_status": "API key copied."
+    },
+    {
+      "theme": "dark",
+      "width": 1280,
+      "preview": false,
+      "requests": [
+        "GET /api/auth/status",
+        "GET /api/version",
+        "GET /api/auth/keys",
+        "POST /api/auth/keys"
+      ],
+      "unexpected": [],
+      "console": [
+        {
+          "type": "log",
+          "text": "%c[impeccable] No anti-patterns found. color: #22c55e; font-weight: bold",
+          "args": [
+            "%c[impeccable] No anti-patterns found.",
+            "color: #22c55e; font-weight: bold"
+          ]
+        }
+      ],
+      "pageerrors": [],
+      "clipboardWrites": [],
+      "mutable_preflight": true,
+      "full_readonly_selection": [
+        0,
+        49
+      ],
+      "status": "API key copied.",
+      "copy_enabled": true,
+      "clipboardText": "phebs_receipt.synthetic-key-for-presentation-only",
+      "bounds": {
+        "top": 353,
+        "bottom": 503,
+        "left": 200,
+        "right": 1080,
+        "height": 800,
+        "width": 1280,
+        "overflow": false
+      },
+      "injection_succeeded": true,
+      "overlay_dom": [],
+      "name": "key-copy-success-dark-1280",
+      "screenshot": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/assessment-b/key-copy-success-dark-1280.png"
+    },
+    {
+      "theme": "light",
+      "width": 1280,
+      "preview": true,
+      "requests": [
+        "GET /api/auth/status",
+        "GET /api/version",
+        "GET /api/auth/keys"
+      ],
+      "unexpected": [],
+      "console": [
+        {
+          "type": "log",
+          "text": "%c[impeccable] No anti-patterns found. color: #22c55e; font-weight: bold",
+          "args": [
+            "%c[impeccable] No anti-patterns found.",
+            "color: #22c55e; font-weight: bold"
+          ]
+        }
+      ],
+      "pageerrors": [],
+      "clipboardWrites": [],
+      "mutable_preflight": true,
+      "reminder": "Finish Settings changes and copy any new API key before reloading.",
+      "reload_height": 44,
+      "bounds": {
+        "top": 73,
+        "bottom": 347,
+        "left": 200,
+        "right": 1080,
+        "height": 800,
+        "width": 1280,
+        "overflow": false
+      },
+      "injection_succeeded": true,
+      "overlay_dom": [],
+      "name": "preview-reminder-light-1280",
+      "screenshot": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/assessment-b/preview-reminder-light-1280.png"
+    }
+  ],
+  "browser_visibility": "headless fallback; no user-visible Human tab",
+  "browser_version": "155.0.8059.82"
+}

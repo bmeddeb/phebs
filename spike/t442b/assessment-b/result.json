@@ -1,0 +1,292 @@
+{
+  "schema": "phebs-t442b-assessment-b-custody-v1",
+  "outcome": "passed",
+  "owners": {
+    "vite": {
+      "pid": 44662,
+      "expected_pgid": 44662,
+      "observed_pgid": 44662,
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "/Users/ben/.codex/worktrees/t442b-key-copy/phebs.com/ui/node_modules/vite/bin/vite.js",
+        "preview",
+        "/Users/ben/.codex/worktrees/t442b-key-copy/phebs.com/ui",
+        "--outDir",
+        "/Users/ben/.codex/worktrees/t442b-key-copy/phebs.com/ui/dist",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "57545",
+        "--strictPort"
+      ]
+    },
+    "impeccable": {
+      "pid": 44663,
+      "expected_pgid": 44663,
+      "observed_pgid": 44663,
+      "argv": [
+        "/Users/ben/.agents/skills/impeccable/scripts/impeccable",
+        "live-server",
+        "--port=57546"
+      ]
+    },
+    "chrome": {
+      "pid": 44672,
+      "expected_pgid": 44672,
+      "observed_pgid": 44672,
+      "argv": [
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "--headless=new",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--disable-background-networking",
+        "--disable-component-update",
+        "--disable-sync",
+        "--remote-debugging-address=127.0.0.1",
+        "--remote-debugging-port=0",
+        "--user-data-dir=/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/assessment-b/private-chrome-profile",
+        "about:blank"
+      ]
+    },
+    "client": {
+      "pid": 44693,
+      "expected_pgid": 44693,
+      "observed_pgid": 44693,
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/assessment-b/client.cjs"
+      ]
+    }
+  },
+  "terminals": {
+    "client": {
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "already_exited",
+      "pid": 44693,
+      "expected_pgid": 44693,
+      "observed_pgid": 44693,
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/assessment-b/client.cjs"
+      ],
+      "joined": true
+    },
+    "chrome": {
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "sigterm",
+      "pid": 44672,
+      "expected_pgid": 44672,
+      "observed_pgid": 44672,
+      "argv": [
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "--headless=new",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--disable-background-networking",
+        "--disable-component-update",
+        "--disable-sync",
+        "--remote-debugging-address=127.0.0.1",
+        "--remote-debugging-port=0",
+        "--user-data-dir=/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/assessment-b/private-chrome-profile",
+        "about:blank"
+      ],
+      "joined": true
+    },
+    "impeccable": {
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "sigterm",
+      "pid": 44663,
+      "expected_pgid": 44663,
+      "observed_pgid": 44663,
+      "argv": [
+        "/Users/ben/.agents/skills/impeccable/scripts/impeccable",
+        "live-server",
+        "--port=57546"
+      ],
+      "joined": true
+    },
+    "vite": {
+      "exit_code": 143,
+      "teardown": "clean",
+      "termination_mode": "sigterm",
+      "pid": 44662,
+      "expected_pgid": 44662,
+      "observed_pgid": 44662,
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "/Users/ben/.codex/worktrees/t442b-key-copy/phebs.com/ui/node_modules/vite/bin/vite.js",
+        "preview",
+        "/Users/ben/.codex/worktrees/t442b-key-copy/phebs.com/ui",
+        "--outDir",
+        "/Users/ben/.codex/worktrees/t442b-key-copy/phebs.com/ui/dist",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "57545",
+        "--strictPort"
+      ],
+      "joined": true
+    }
+  },
+  "source_sha256": "0118d8bc37150a6c50672d2e5a5313dd77556d1eb2b97d822b1913e6738b42f6",
+  "detector": {
+    "invocations": 1,
+    "exit_code": 0,
+    "json": []
+  },
+  "native_renderer_claim": "Darwin installed Chrome; headless fallback only; no visible Human tab",
+  "live_server_mode": "foreground command owned in background process group; no detached daemon",
+  "renderer": {
+    "Browser": "Chrome/155.0.8059.82",
+    "Protocol-Version": "1.3",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
+    "V8-Version": "15.5.35.23",
+    "WebKit-Version": "537.36 (@c56fe5daef8be123f68808a4bb705ff378cd2019)",
+    "webSocketDebuggerUrl": "ws://127.0.0.1:57579/devtools/browser/c422b7b9-e580-44fd-9a52-05e1b80096dc"
+  },
+  "browser_result": {
+    "schema": "phebs-t442b-assessment-b-browser-v1",
+    "outcome": "passed",
+    "contexts": [
+      {
+        "theme": "light",
+        "width": 390,
+        "preview": false,
+        "requests": [
+          "GET /api/auth/status",
+          "GET /api/version",
+          "GET /api/auth/keys",
+          "POST /api/auth/keys"
+        ],
+        "unexpected": [],
+        "console": [
+          {
+            "type": "log",
+            "text": "%c[impeccable] No anti-patterns found. color: #22c55e; font-weight: bold",
+            "args": [
+              "%c[impeccable] No anti-patterns found.",
+              "color: #22c55e; font-weight: bold"
+            ]
+          }
+        ],
+        "pageerrors": [],
+        "clipboardWrites": [],
+        "mutable_preflight": true,
+        "full_readonly_selection": [
+          0,
+          49
+        ],
+        "status": "Copy failed. Select and copy the key above.",
+        "copy_enabled": true,
+        "bounds": {
+          "top": 480,
+          "bottom": 645,
+          "left": 16,
+          "right": 374,
+          "height": 900,
+          "width": 390,
+          "overflow": false
+        },
+        "injection_succeeded": true,
+        "overlay_dom": [],
+        "name": "key-copy-failure-light-390",
+        "screenshot": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/assessment-b/key-copy-failure-light-390.png",
+        "keyboard_failure_to_success": true,
+        "retry_status": "API key copied."
+      },
+      {
+        "theme": "dark",
+        "width": 1280,
+        "preview": false,
+        "requests": [
+          "GET /api/auth/status",
+          "GET /api/version",
+          "GET /api/auth/keys",
+          "POST /api/auth/keys"
+        ],
+        "unexpected": [],
+        "console": [
+          {
+            "type": "log",
+            "text": "%c[impeccable] No anti-patterns found. color: #22c55e; font-weight: bold",
+            "args": [
+              "%c[impeccable] No anti-patterns found.",
+              "color: #22c55e; font-weight: bold"
+            ]
+          }
+        ],
+        "pageerrors": [],
+        "clipboardWrites": [],
+        "mutable_preflight": true,
+        "full_readonly_selection": [
+          0,
+          49
+        ],
+        "status": "API key copied.",
+        "copy_enabled": true,
+        "clipboardText": "phebs_receipt.synthetic-key-for-presentation-only",
+        "bounds": {
+          "top": 353,
+          "bottom": 503,
+          "left": 200,
+          "right": 1080,
+          "height": 800,
+          "width": 1280,
+          "overflow": false
+        },
+        "injection_succeeded": true,
+        "overlay_dom": [],
+        "name": "key-copy-success-dark-1280",
+        "screenshot": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/assessment-b/key-copy-success-dark-1280.png"
+      },
+      {
+        "theme": "light",
+        "width": 1280,
+        "preview": true,
+        "requests": [
+          "GET /api/auth/status",
+          "GET /api/version",
+          "GET /api/auth/keys"
+        ],
+        "unexpected": [],
+        "console": [
+          {
+            "type": "log",
+            "text": "%c[impeccable] No anti-patterns found. color: #22c55e; font-weight: bold",
+            "args": [
+              "%c[impeccable] No anti-patterns found.",
+              "color: #22c55e; font-weight: bold"
+            ]
+          }
+        ],
+        "pageerrors": [],
+        "clipboardWrites": [],
+        "mutable_preflight": true,
+        "reminder": "Finish Settings changes and copy any new API key before reloading.",
+        "reload_height": 44,
+        "bounds": {
+          "top": 73,
+          "bottom": 347,
+          "left": 200,
+          "right": 1080,
+          "height": 800,
+          "width": 1280,
+          "overflow": false
+        },
+        "injection_succeeded": true,
+        "overlay_dom": [],
+        "name": "preview-reminder-light-1280",
+        "screenshot": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/assessment-b/preview-reminder-light-1280.png"
+      }
+    ],
+    "browser_visibility": "headless fallback; no user-visible Human tab",
+    "browser_version": "155.0.8059.82"
+  },
+  "all_owned_groups_joined_cleanly": true,
+  "profile_removed": true,
+  "source_final_sha256": "0118d8bc37150a6c50672d2e5a5313dd77556d1eb2b97d822b1913e6738b42f6",
+  "total_seconds": 13.837457
+}

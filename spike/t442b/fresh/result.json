@@ -1,0 +1,402 @@
+{
+  "schema": "phebs-t442-native-qa-v1",
+  "pass": "fresh",
+  "outcome": "passed",
+  "source_checkpoint": "ad6cbe082f43ce7cab89a27cf18d59feb46ece15",
+  "scroll_helper_sha256": "1207f1a353b3425ba308bec6806b79326a36f717c4103aac0d0be02fdc308c37",
+  "native_renderer_claim": "Darwin installed Chrome only; no Noble baseline equivalence",
+  "commands": [
+    {
+      "name": "vite",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "/Users/ben/.codex/worktrees/t442b-key-copy/phebs.com/ui/node_modules/vite/bin/vite.js",
+        "preview",
+        "/Users/ben/.codex/worktrees/t442b-key-copy/phebs.com/ui",
+        "--outDir",
+        "/Users/ben/.codex/worktrees/t442b-key-copy/phebs.com/ui/dist",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "55852",
+        "--strictPort"
+      ]
+    },
+    {
+      "name": "chrome",
+      "argv": [
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "--headless=new",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--disable-background-networking",
+        "--disable-component-update",
+        "--disable-sync",
+        "--remote-debugging-address=127.0.0.1",
+        "--remote-debugging-port=0",
+        "--user-data-dir=/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/fresh/private-chrome-profile",
+        "about:blank"
+      ]
+    },
+    {
+      "name": "client",
+      "argv": [
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+        "/Users/ben/.codex/worktrees/t442b-key-copy/phebs.com/ui/node_modules/@playwright/test/cli.js",
+        "test",
+        "--config",
+        "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/runner/playwright.config.ts",
+        "--project",
+        "appearance",
+        "--max-failures=1",
+        "--grep",
+        "native Appearance unavailable|native API key copying"
+      ]
+    }
+  ],
+  "terminals": {
+    "client": {
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "already_exited",
+      "pid": 43200,
+      "expected_pgid": 43200,
+      "observed_pgid": 43200,
+      "joined": true
+    },
+    "chrome": {
+      "exit_code": 0,
+      "teardown": "clean",
+      "termination_mode": "sigterm",
+      "pid": 43181,
+      "expected_pgid": 43181,
+      "observed_pgid": 43181,
+      "joined": true
+    },
+    "vite": {
+      "exit_code": 143,
+      "teardown": "clean",
+      "termination_mode": "sigterm",
+      "pid": 43180,
+      "expected_pgid": 43180,
+      "observed_pgid": 43180,
+      "joined": true
+    }
+  },
+  "owners": {
+    "vite": {
+      "pid": 43180,
+      "expected_pgid": 43180,
+      "observed_pgid": 43180
+    },
+    "chrome": {
+      "pid": 43181,
+      "expected_pgid": 43181,
+      "observed_pgid": 43181
+    },
+    "client": {
+      "pid": 43200,
+      "expected_pgid": 43200,
+      "observed_pgid": 43200
+    }
+  },
+  "verified_census": {
+    "production_inputs": {
+      "rows": 118,
+      "digest": "1891ba2865b10035ccc156ad4e36b66a12544c876b78953aabfca6163665a827"
+    },
+    "production_dist": {
+      "rows": 165,
+      "digest": "a136bfa76bb6572abd8a5a5649274ce3e43e7c3807f3e19f3c3ccf816a235626"
+    }
+  },
+  "tools": {
+    "node": {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t574-tools-gbrqb_vk/node-v24.18.0-darwin-arm64/bin/node",
+      "sha256": "ee6fb0e015284d83a91e8ec5213f43a157f8a392b58555301682892ba928c04a"
+    },
+    "chrome_launcher": {
+      "path": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "sha256": "3972431aa8acff4e590998116c6c3e663e9a4d0eb6efd08fd160df8206db94a6"
+    },
+    "axe": {
+      "path": "/Users/ben/phebs.com/ui/node_modules/axe-core/axe.min.js",
+      "sha256": "66a8aaa95a8b044a7fd74a5435873bf04ff65a1ca75567c921b7509742085a14",
+      "version": "4.12.1"
+    },
+    "playwright": "1.62.1"
+  },
+  "started_monotonic": 0.586561,
+  "renderer": {
+    "Browser": "Chrome/155.0.8059.82",
+    "Protocol-Version": "1.3",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
+    "V8-Version": "15.5.35.23",
+    "WebKit-Version": "537.36 (@c56fe5daef8be123f68808a4bb705ff378cd2019)",
+    "webSocketDebuggerUrl": "ws://127.0.0.1:55877/devtools/browser/a8399cb9-fbeb-46bf-8d4c-b3c810beb5af"
+  },
+  "playwright_stats": {
+    "startTime": "2026-10-18T21:06:05.049Z",
+    "duration": 19566.734,
+    "expected": 8,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "frames": [
+    {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/fresh/output/palette.native-native-API-key-copying-dark-1280-appearance/api-key-copy-done--dark--1280.png",
+      "name": "api-key-copy-done--dark--1280.png",
+      "bytes": 54925,
+      "sha256": "abb6e14498c68c9e8915889c7594fcbbd8e12f52135e257c79cd47021ab998db"
+    },
+    {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/fresh/output/palette.native-native-API-key-copying-dark-1280-appearance/api-key-copy-failed--dark--1280.png",
+      "name": "api-key-copy-failed--dark--1280.png",
+      "bytes": 56255,
+      "sha256": "4ad49932ae7a3c822dd6404ba3adabf06fc570d39546fd681d5e5453bafbba60"
+    },
+    {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/fresh/output/palette.native-native-API-key-copying-dark-390-appearance/api-key-copy-done--dark--390.png",
+      "name": "api-key-copy-done--dark--390.png",
+      "bytes": 46558,
+      "sha256": "9b0b02d602612911e371ab169788f3af94a33854ba04e2035a57910b57c65eab"
+    },
+    {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/fresh/output/palette.native-native-API-key-copying-dark-390-appearance/api-key-copy-failed--dark--390.png",
+      "name": "api-key-copy-failed--dark--390.png",
+      "bytes": 47745,
+      "sha256": "624a0c0567d26e0a2da6563545dc8c55fafeebd16c260fe759cf8927471ed7e9"
+    },
+    {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/fresh/output/palette.native-native-API-key-copying-light-1280-appearance/api-key-copy-done--light--1280.png",
+      "name": "api-key-copy-done--light--1280.png",
+      "bytes": 54250,
+      "sha256": "0394959f0145558d97a76aacbd6905b2b58c76653980445af3c790c957492dee"
+    },
+    {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/fresh/output/palette.native-native-API-key-copying-light-1280-appearance/api-key-copy-failed--light--1280.png",
+      "name": "api-key-copy-failed--light--1280.png",
+      "bytes": 55415,
+      "sha256": "3d9664f752a764ffe16850e1f1f580834cdba377954f128c215a8cc984404989"
+    },
+    {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/fresh/output/palette.native-native-API-key-copying-light-390-appearance/api-key-copy-done--light--390.png",
+      "name": "api-key-copy-done--light--390.png",
+      "bytes": 46020,
+      "sha256": "366099b101d6084e1f40ac3d675bd5425810e86c02e94f6e65e0f06567aa878d"
+    },
+    {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/fresh/output/palette.native-native-API-key-copying-light-390-appearance/api-key-copy-failed--light--390.png",
+      "name": "api-key-copy-failed--light--390.png",
+      "bytes": 46908,
+      "sha256": "11674ebe5820054b7685a818d04740f104338dd2b59d67fdee39f76803a26c8c"
+    },
+    {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/fresh/output/palette.native-native-Appe-297f4-ailable-recovery-light-1280-appearance/palette-preview-unavailable--light--1280.png",
+      "name": "palette-preview-unavailable--light--1280.png",
+      "bytes": 43629,
+      "sha256": "7f8c934e51ab880fcab3176d38e78263010cecc38c5a7acf048369d839e5e582"
+    },
+    {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/fresh/output/palette.native-native-Appe-48e20-vailable-recovery-dark-1280-appearance/palette-preview-unavailable--dark--1280.png",
+      "name": "palette-preview-unavailable--dark--1280.png",
+      "bytes": 44153,
+      "sha256": "475b91775ca4d338d0bdd4852f2ed50583dffff609a301ec3813165d06c64d19"
+    },
+    {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/fresh/output/palette.native-native-Appe-ad586-vailable-recovery-light-390-appearance/palette-preview-unavailable--light--390.png",
+      "name": "palette-preview-unavailable--light--390.png",
+      "bytes": 36900,
+      "sha256": "0e08ab4e6a55cce60bda0e657709db85af4f765cd1a9b6f95831ed42d0d106f5"
+    },
+    {
+      "path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t442b-qa-rg7rva8k/fresh/output/palette.native-native-Appe-ed7e7-available-recovery-dark-390-appearance/palette-preview-unavailable--dark--390.png",
+      "name": "palette-preview-unavailable--dark--390.png",
+      "bytes": 37596,
+      "sha256": "df1ce239ab3b4fd9df105abae9ede11b6474fa04c22d81d69ea3adba7aadae71"
+    }
+  ],
+  "audits": [
+    {
+      "title": "native API key copying dark 1280",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "capture_state": "api-key-copy-done--dark--1280",
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 15,
+        "incomplete": 0
+      }
+    },
+    {
+      "title": "native API key copying dark 1280",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "capture_state": "api-key-copy-failed--dark--1280",
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 14,
+        "incomplete": 0
+      }
+    },
+    {
+      "title": "native API key copying dark 390",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "capture_state": "api-key-copy-done--dark--390",
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 15,
+        "incomplete": 0
+      }
+    },
+    {
+      "title": "native API key copying dark 390",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "capture_state": "api-key-copy-failed--dark--390",
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 14,
+        "incomplete": 0
+      }
+    },
+    {
+      "title": "native API key copying light 1280",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "capture_state": "api-key-copy-done--light--1280",
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 15,
+        "incomplete": 0
+      }
+    },
+    {
+      "title": "native API key copying light 1280",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "capture_state": "api-key-copy-failed--light--1280",
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 14,
+        "incomplete": 0
+      }
+    },
+    {
+      "title": "native API key copying light 390",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "capture_state": "api-key-copy-done--light--390",
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 15,
+        "incomplete": 0
+      }
+    },
+    {
+      "title": "native API key copying light 390",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "capture_state": "api-key-copy-failed--light--390",
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 14,
+        "incomplete": 0
+      }
+    },
+    {
+      "title": "native Appearance unavailable recovery light 1280",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "capture_state": "palette-preview-unavailable--light--1280",
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 15,
+        "incomplete": 0
+      }
+    },
+    {
+      "title": "native Appearance unavailable recovery dark 1280",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "capture_state": "palette-preview-unavailable--dark--1280",
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 15,
+        "incomplete": 0
+      }
+    },
+    {
+      "title": "native Appearance unavailable recovery light 390",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "capture_state": "palette-preview-unavailable--light--390",
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 15,
+        "incomplete": 0
+      }
+    },
+    {
+      "title": "native Appearance unavailable recovery dark 390",
+      "viewport": {
+        "width": 390,
+        "height": 900
+      },
+      "capture_state": "palette-preview-unavailable--dark--390",
+      "audit": {
+        "version": "4.12.1",
+        "violations": [],
+        "passes": 15,
+        "incomplete": 0
+      }
+    }
+  ],
+  "all_owned_groups_joined_cleanly": true,
+  "total_seconds": 22.723108,
+  "final_census": {
+    "production_inputs": {
+      "rows": 118,
+      "digest": "1891ba2865b10035ccc156ad4e36b66a12544c876b78953aabfca6163665a827"
+    },
+    "production_dist": {
+      "rows": 165,
+      "digest": "a136bfa76bb6572abd8a5a5649274ce3e43e7c3807f3e19f3c3ccf816a235626"
+    }
+  }
+}
