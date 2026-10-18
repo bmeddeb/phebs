@@ -18781,6 +18781,10 @@ tickets; prerequisites have no dependency cycle or unrelated all-packs gate;
 no runtime/default/status/UI/historical artifact changes; docs/glossary and
 whitespace pass. Cost: no new runtime work or resources.
 
+The [T48.1a current inventory](#t481a-current-inventory) supersedes the remaining-work
+status in the following dated dispatch table. Its historical scope and evidence
+stay unchanged.
+
 **T48.1 all-ticket execution inventory (2026-10-17, Ben-directed).** Ben's
 all-ticket request schedules the formerly unscheduled Epics 25–28 and routes
 implementation across tracks here. Each receiving backend ticket records its
@@ -18829,6 +18833,57 @@ already fixed. The focused neutral demo's missing v2 source-generation control
 remains a separate T45.8 diagnostic, not a screenshot-baseline defect. Each
 leaf is complete only against its own ACs; external inputs and missing release
 signatures stay visibly pending. No main merge or production release is implied.
+
+### T48.1a current inventory
+
+**T48.1a ✅ · Reconcile integrated work and remaining dependencies** *(completed 2026-10-18,
+Mac documentation follow-up; independent of #124).* Snapshot: merged main
+`1099768e485bf0d3dace2e6229c0f60a2a5efe16` through PR #128. The scheduled
+independent Mac implementation and presentation leaves are complete. Earlier
+"on its branch", "integration pending" and dispatch-table statements retain
+their dated history; this snapshot supplies current sequencing.
+
+AC: trace the old dispatch rows to merged ancestry and owning outcomes; separate
+completed implementation/scoped qualification from remaining production gates;
+preserve closed NO-GO/waiver/optional-research dispositions; retain #124's order,
+production-signing hold and all historical bytes; pass independent factual/cost
+review, bounded documentation/glossary and whitespace checks. No runtime, UI,
+receipt, release artifact or acceptance threshold changes belong to this ticket.
+
+| Remaining lane | Tickets and dependency order | Next observable result / hold |
+|---|---|---|
+| Linux mechanisms | T42.H2h/i/k/l/m native qualification → remaining T42.H2 consumer/executor ownership, pressure/restore, prospective versions and aggregate reservations | Run the finite native checks on the designated Linux host after the office return; H2j arithmetic and H2n source inventory/config repairs are already checked. [Linux handoff #124](https://github.com/bmeddeb/phebs/issues/124) owns commands and prerequisites. |
+| Linux readiness and posture | T42.H2 → T42.2v restored launch → complete readiness → T42.2o fresh source/host/tool freeze → separately authorized execution → T42.3 | Actual native facts and complete readiness remain required. No ceremony, scale or release result is inferred from source/model checks or the completed Darwin component tests. |
+| Installed managed SCIP | T45.7 / T45.10 | Supply admitted compiler/sysroot/offline installation and current-host installed-generation/navigation/teardown proof. T45.10a presentation is complete; its UI acceptance does not supply installation authority. |
+| Managed target qualification | T45.9 | Bind an eligible authorized 5,000-service/12-GB target and host. Preserve the generated-evidence STOP and the T45.6 waiver as unpassed. This lane is separate from #124's kernel checks. |
+| Production artifact/signature/publication | T47.5, T49.4, T50.3, T51.3, T52.3, T54.3 | Preserve scoped qualification and unsigned drafts. The existing production key is unavailable; exact final production artifact/signature/publication closure remains pending. Key availability alone does not activate a recipe. |
+
+The following former dispatch leaves have integrated outcomes. Parent promotion
+tickets in the table above remain open for their stated production obligations.
+
+| Integrated group | Recorded outcome / merge witness |
+|---|---|
+| T48.1 dependency plan; T48.4 shared product reconciliation | [PR #82](https://github.com/bmeddeb/phebs/pull/82), [PR #112](https://github.com/bmeddeb/phebs/pull/112); [current-product evidence](../spike/t484/current-product-evidence/README.md). |
+| T49.3 / T49.4 protobuf Atlas implementation and scoped UI qualification; T43R.6 help | [PR #83](https://github.com/bmeddeb/phebs/pull/83), [PR #89](https://github.com/bmeddeb/phebs/pull/89), [PR #90](https://github.com/bmeddeb/phebs/pull/90). Production signing stays pending. |
+| T48.5a exact raw evidence reads | [PR #87](https://github.com/bmeddeb/phebs/pull/87), with current partitioned authority and legacy-byte fences. |
+| T50.1 / T50.2 and T50.3 bounded comparison result | [PR #84](https://github.com/bmeddeb/phebs/pull/84), [PR #86](https://github.com/bmeddeb/phebs/pull/86), [PR #108](https://github.com/bmeddeb/phebs/pull/108); unsigned production closure remains pending. |
+| T51.1 / T51.2 and T51.3 bounded protobuf field result | [PR #91](https://github.com/bmeddeb/phebs/pull/91), [PR #93](https://github.com/bmeddeb/phebs/pull/93), [PR #109](https://github.com/bmeddeb/phebs/pull/109); unsigned production closure remains pending. |
+| T52.1 / T52.2 and T52.3 independent Thrift field admission/result | [PR #95](https://github.com/bmeddeb/phebs/pull/95), [PR #98](https://github.com/bmeddeb/phebs/pull/98), [PR #99](https://github.com/bmeddeb/phebs/pull/99), [PR #110](https://github.com/bmeddeb/phebs/pull/110); unsigned production closure remains pending. |
+| T54.1 / T54.2 and T54.3 direct-operation Impact result | [PR #104](https://github.com/bmeddeb/phebs/pull/104), [PR #105](https://github.com/bmeddeb/phebs/pull/105), [PR #113](https://github.com/bmeddeb/phebs/pull/113); unsigned production closure remains pending. |
+| T25.1 embedded docs; T26.1 / T27.1 / T28.1 spikes | [PR #88](https://github.com/bmeddeb/phebs/pull/88), [PR #96](https://github.com/bmeddeb/phebs/pull/96), [PR #92](https://github.com/bmeddeb/phebs/pull/92), [PR #106](https://github.com/bmeddeb/phebs/pull/106). The three spike outcomes do not select production adoption. |
+| T45.8c neutral demo; T45.10a two-profile presentation | [PR #114](https://github.com/bmeddeb/phebs/pull/114), [PR #115](https://github.com/bmeddeb/phebs/pull/115); [demo result](../spike/t458c/success/README.md), [presentation result](../spike/t4510a/profile-receipts/README.md). Host installation and target-scale proof remain separate. |
+| T57R.3 portability; T44.2 Appearance; T57R.1 Darwin follow-up; T44.2a/b recovery | [PR #85](https://github.com/bmeddeb/phebs/pull/85), [PR #125](https://github.com/bmeddeb/phebs/pull/125), [PR #126](https://github.com/bmeddeb/phebs/pull/126), [PR #127](https://github.com/bmeddeb/phebs/pull/127), [PR #128](https://github.com/bmeddeb/phebs/pull/128). Retained historical failures and native/Noble renderer distinctions remain exact. |
+| T58 finite syntactic decisions | [Thrift NO-GO, PR #116](https://github.com/bmeddeb/phebs/pull/116); T58.3's recorded gRPC decision defers exact identity to Caller Map. Both name-based release paths remain not releasable; no further identity round or recognizer tuning is selected. |
+
+Caller Map/Atlas blind-label rounds remain optional research. Historical headings,
+an unsigned draft, a closed NO-GO or optional UI polish do not schedule another
+Mac implementation leaf. New product/adoption/identity work needs its own ticket;
+the current remaining lanes above keep their real host, input and signing holds.
+
+Closure: bounded documentation, glossary and whitespace checks pass; all 39
+referenced merge witnesses are ancestors of the snapshot. Independent factual
+and cost review has no finding. Only four shared documentation files change;
+Linux #124 and production signing remain pending.
 
 **T48.2 · Prospective signed release enforcement and stable recipe selection**
 *(first shared implementation; needs T48.1)* — implement the current
