@@ -3941,6 +3941,18 @@ covered by `TestLinuxExternalDelegationProbeRefusesBeforeLaunching` and by the
 retained H2e observer tests. No `t421.test`, `go test` or SurrealDB process and
 no port-65499 listener survived the sequence.
 
+**T42.H2i · Linux byte observation and allocation seams** *(2026-10-18, Ben all-ticket
+delegation; flagged Mac preparation handoff).*
+Share existing bounded serial custody-byte traversal across Darwin/Linux while
+retaining platform-specific native identity fields; borrowed observations grant
+no ownership, protection or volume authority. Add the existing Linux
+fallocate/truncate/sync pattern behind the narrow pressure allocation seam.
+AC: portable bounds/refusal and unchanged Darwin native checks pass, Linux tiny
+file/walk tests are authored, supported Linux compile checks pass, cancellation
+and partial-maxima semantics stay exact. No image mount, ballast campaign,
+geometry, restored workspace or active Linux ceremony entry point is enabled;
+actual Linux native/pressure acceptance remains pending.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

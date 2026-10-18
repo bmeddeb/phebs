@@ -131,6 +131,9 @@ immutable-flag input-custody model, isolated pressure/allocation/restore
 adapters, new Linux-bound plan versions and aggregate physical/effective-cgroup
 resource/readiness admission remain open; no ceremony entry point is enabled.
 
+T42.H2i prepares linux byte observation and allocation seams.
+This is bounded source preparation; actual Linux admission/readiness remains open.
+
 ## Current product posture
 
 **All-ticket execution (2026-10-17, Ben-directed):** resolve actual dependencies

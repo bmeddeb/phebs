@@ -13672,3 +13672,15 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   No production source, schema/cache/lock, query/sync/startup/retry/publication or
   child work changes; observed direct reader peak RSS remains about80.4MB,
   without a hard-heap, aggregate compiler-family, CPU, host-capacity or SLO claim.
+
+- **2026-10-18 — T42.H2i linux byte observation and allocation seams (Mac preparation handoff).**
+  Prepare Linux linked-path logical/allocated-byte observations with real native
+  metadata and FSID, sharing the bounded serial traversal while keeping Darwin
+  Gen/Flags/union checks exact. Borrowed roots remain observations only. A narrow
+  Linux allocation seam reuses bounded fallocate/truncate/sync; no privileged
+  volume owner is added. Preserve cancellation, sticky failure/partial maxima and
+  all source/restore guards. Native Linux proof remains pending; no historical
+  APFS geometry/version changes or pressure run is authorized. Traversal reads
+  metadata only with existing path/descriptor/serial bounds; allocation retains
+  its fixed admitted byte limit. No product request/tick/publication/cache/schema
+  or new helper/worker class is introduced.

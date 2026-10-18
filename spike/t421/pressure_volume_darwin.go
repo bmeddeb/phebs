@@ -23,8 +23,6 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-var errPressureVolume = errors.New("execution pressure volume unavailable or retained")
-
 // This is rehearsal-volume custody, not full launcher admission. Populated
 // release requires the bound successful rehearsal and closed input owners;
 // full outer-stage accounting and durable hard-death supervision remain open.
