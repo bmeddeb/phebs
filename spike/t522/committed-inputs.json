@@ -1,0 +1,137 @@
+{
+  "schema": "t522-real-evaluator-inputs-v1",
+  "date": "2026-10-18",
+  "source_checkpoint": "d8274b0f54db394593efbeef931f99f740428a02",
+  "input_preparation_digest": "sha256:f7138b6161540a0b31c0bcce9a8ccb308ac4ae0d97eaea4ce1f971d8d89c1005",
+  "qualification": "Actual evaluator source/input Git commits and complete verified bundles; upstream pins are source provenance only. Exact source+SCIP bytes before candidate extraction or scoring.",
+  "records": [
+    {
+      "population": "public",
+      "repository": "evaluation.local/t522-public",
+      "local_path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t522-evaluation-lrzbjv2q/public",
+      "source_commit": "15eb1621f4fca081405ccc52fa1d96e7faa4b822",
+      "evaluation_commit": "01726539645e3bab1c04a4633b806dead7a0c97a",
+      "evaluation_tree": "0f1ba4058ea5163990a396cca653c5547735ec7a",
+      "bundle": "input-bundles/public.bundle",
+      "bundle_bytes": 22615,
+      "bundle_digest": "sha256:7dff0ce34e006a5db0ebbefec15da93140c105a847a0d917c459b67c0ce2efa2",
+      "files": [
+        {
+          "path": ".gen/go/health/health.go",
+          "bytes": 20279,
+          "digest": "sha256:360126ead92a8dd481e094fed6aad98c6375afff6d31710e5c6401071eeb1291",
+          "git_blob": "7f1f1ed3ea51b3b5cb7e8b7c3e384e0576474f5e"
+        },
+        {
+          "path": "LICENSE",
+          "bytes": 11356,
+          "digest": "sha256:43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1",
+          "git_blob": "f49a4e16e68b128803cc2dcea614603632b04eac"
+        },
+        {
+          "path": "NOTICE",
+          "bytes": 1081,
+          "digest": "sha256:53d86f4fec2e8c6dc15f2e452dfaafcb11a30abcf06ba665ae28c0cf63922d0a",
+          "git_blob": "464bdf814bc32481519f481f1764a55cd29ae0c4"
+        },
+        {
+          "path": "common/types/health.go",
+          "bytes": 1283,
+          "digest": "sha256:7133addfa3fbfa85787ce06e7386d6da83d7414ceffd190ea84df93fd2755259",
+          "git_blob": "c83321be85774e1882ef701f4cf70f0807a58cb1"
+        },
+        {
+          "path": "common/types/mapper/thrift/health.go",
+          "bytes": 1692,
+          "digest": "sha256:590da41af2161a96865324c25ccf124768e9cada246bd12a78aabb69b99a66f6",
+          "git_blob": "93c0cc3f09fdb8a75d93a5e000c2c4e84c124a9e"
+        },
+        {
+          "path": "go.mod",
+          "bytes": 140,
+          "digest": "sha256:358a79bc91579c6de226d2555a28d9eed228399a50254131677d959a2c5cf39b",
+          "git_blob": "8f82d5cb169ccf111c1e3133d2d5e2c09f93eacb"
+        },
+        {
+          "path": "go.sum",
+          "bytes": 473,
+          "digest": "sha256:6ef7b0d90adc88cab4a54a14a7d8f778020e8a2de5405a4a88549a747ae1f356",
+          "git_blob": "9fd24bb2075883b84d340ea2378f5af9e4be46c6"
+        },
+        {
+          "path": "index.scip",
+          "bytes": 79356,
+          "digest": "sha256:62e0d423a13ff36f0eef3f0937fb56f66f695fc0fa8ee262f40cba36d7410403",
+          "git_blob": "1645d4639e9834ff24244a1ca02e82228587a359"
+        }
+      ]
+    },
+    {
+      "population": "neutral",
+      "repository": "evaluation.local/t522-neutral",
+      "local_path": "/var/folders/wc/7grj940960386yt8vjsvv4dm0000gn/T/phebs-t522-evaluation-lrzbjv2q/neutral",
+      "source_commit": "5de531d4971e305988548f71868e144e67ca18ea",
+      "evaluation_commit": "85cc3f7f57bd339e5c1f3dd715a78a6dc6259f57",
+      "evaluation_tree": "60233ecc26e22b54e2dda291c40b83b6fc57c1c0",
+      "bundle": "input-bundles/neutral.bundle",
+      "bundle_bytes": 6370,
+      "bundle_digest": "sha256:51349a3ad2ee461a76413b5e9f3f22991d4e8fe282eae064c06d31045fccf35f",
+      "files": [
+        {
+          "path": "gen/packet.go",
+          "bytes": 1945,
+          "digest": "sha256:849a00059670dd9369b56f521e1f6c0062132619b01de4174d0bfbeb1b2aa8a1",
+          "git_blob": "84af58b023644df74ca59fff89cac47cc5892213"
+        },
+        {
+          "path": "go.mod",
+          "bytes": 81,
+          "digest": "sha256:d7eab8314fdd5e54551dba0aa9691637b05a3a580b3c7566542db7df7b46a6b7",
+          "git_blob": "04259dfa4164518e646fba9509b926ee8ebc3268"
+        },
+        {
+          "path": "go.sum",
+          "bytes": 161,
+          "digest": "sha256:3560a549b5a07a5ef860f4e60607b71061359cdb5699c7c77441f33d4f6c2a1b",
+          "git_blob": "48da771d9468f2ef45d5b8030f725f9e387cafdf"
+        },
+        {
+          "path": "idl/packet.thrift",
+          "bytes": 253,
+          "digest": "sha256:05362b263d8ee63501763535e6d853e4a5eb51006e222f37dbe3c3b366772846",
+          "git_blob": "c963f3003655a8df8ed370b02606a5eaa229f7f8"
+        },
+        {
+          "path": "idl/renamed.thrift",
+          "bytes": 72,
+          "digest": "sha256:46f16aa627ad8361c702a13af5d6b65fafe5ba502eda54c3c18d6f6141d37161",
+          "git_blob": "a2bb56921252e403e580c2d0be93d9273d41de0c"
+        },
+        {
+          "path": "index.scip",
+          "bytes": 26384,
+          "digest": "sha256:76ff481f38f61cc0940924d5fcd7dde90615c3a89c813c4ec8cb298b91416a0f",
+          "git_blob": "2db936f90809192f4404d18be4f7b9fd408a4236"
+        },
+        {
+          "path": "plain/packet.go",
+          "bytes": 120,
+          "digest": "sha256:45de7025f1496bb61d1cecbbc01fb430b82ecdae13a95401eb6fe29d6e3b18dc",
+          "git_blob": "dbb4edc48980eb54fcdaef088d60ca95fc5ce40b"
+        },
+        {
+          "path": "renamed/packet.go",
+          "bytes": 854,
+          "digest": "sha256:69c8ce9fd204396525a319114c39df0b2df51a634d559078935ddea2dcda1aa1",
+          "git_blob": "a8d855a5981e7825a37c2fd8e27451dc8190f0cc"
+        },
+        {
+          "path": "use/use.go",
+          "bytes": 801,
+          "digest": "sha256:32af0a8c9775a166bb9d0ab677965bf4b38a32ff8036315b4a1b62a61ad6b9dc",
+          "git_blob": "25e846fdf8635bc77af20685ad8d450ece0e0106"
+        }
+      ]
+    }
+  ]
+}
