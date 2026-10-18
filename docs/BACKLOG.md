@@ -3968,6 +3968,11 @@ file/walk tests are authored, supported Linux compile checks pass, cancellation
 and partial-maxima semantics stay exact. No image mount, ballast campaign,
 geometry, restored workspace or active Linux ceremony entry point is enabled;
 actual Linux native/pressure acceptance remains pending.
+Prepared source passes Darwin normal/race, vet, pinned lint including Linux
+analysis and both Linux compile-only targets. `spike/t42h2i/` retains first
+failure/correction, all exact bounded checks and joined groups. Linux native,
+allocation/volume/restore and parent H2 acceptance remain explicitly pending
+Ben's October20 office return; no frozen geometry or entry point is enabled.
 
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over

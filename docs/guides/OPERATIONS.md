@@ -662,6 +662,16 @@ helper, writer closure, exact root/manifest/alias checks and joined use/teardown
 no host capability or daemon entitlement is provisioned. Actual Linux native
 checks and full protected-tree construction remain pending.
 
+T42.H2i prepares Linux metadata byte observations through the shared borrowed
+observer and a bounded delta-allocation seam. Darwin generation/flag/union
+checks and historical geometry stay exact. Darwin normal/race, scoped vet,
+native and Linux-targeted pinned lint and both Linux compile-only targets pass;
+[T42.H2i evidence](../../spike/t42h2i/README.md) preserves the first arm64 compile
+failure and its value-preserving correction. Borrowed FSID and aggregate block
+counts grant no protection/isolation or per-range hole proof. No Linux binary,
+allocation, pressure, restore or ceremony ran; actual Linux gates await the
+October20 office return.
+
 On this host, development tools are in `/home/ben/.local/bin`; native amd64
 tools are staged separately under
 `/home/ben/.local/share/phebs-host/native-amd64`. Load the development PATH and

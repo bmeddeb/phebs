@@ -1,0 +1,71 @@
+{
+  "files": [
+    {
+      "path": "first-attempt/affected-pinned-lint.log",
+      "bytes": 10,
+      "sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+    },
+    {
+      "path": "first-attempt/affected-vet.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "first-attempt/compile-linux-amd64-internal-custodybytes.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "first-attempt/compile-linux-amd64-spike-t421.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "first-attempt/compile-linux-arm64-internal-custodybytes.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "first-attempt/compile-linux-arm64-spike-t421.log",
+      "bytes": 235,
+      "sha256": "c8dbb591571ec0ed70481cd8cc5620f181748cf269ca6745593b990a51c8bdcb"
+    },
+    {
+      "path": "first-attempt/custodybytes-normal.log",
+      "bytes": 33413,
+      "sha256": "e85da735afa2a99f571449293ffb6a537918db13018d4ef34e7575903a4e88e0"
+    },
+    {
+      "path": "first-attempt/custodybytes-race.log",
+      "bytes": 33427,
+      "sha256": "c913541b7cf5349f0a9f32ee2edb6306f5dd75b788e5ad1e101b5256e1033bee"
+    },
+    {
+      "path": "first-attempt/go-version.log",
+      "bytes": 33,
+      "sha256": "278375c8a03c34bb0f855154850de7c4f217fd3b8cdf37986819e3f05d0a4c33"
+    },
+    {
+      "path": "first-attempt/lint-version.log",
+      "bytes": 154,
+      "sha256": "f6ce18432a72a64b38b7830998527f2c918abfadba447e43ca90225de0b3f242"
+    },
+    {
+      "path": "first-attempt/summary.json",
+      "bytes": 165282,
+      "sha256": "1e0714dfbd839d3108fdaa3afe78cd09089b7bd7a67def36a2084970386e56d2"
+    },
+    {
+      "path": "first-attempt/t421-focused-normal.log",
+      "bytes": 62406,
+      "sha256": "f163bea7a0c36950d8ec8a4ad4834a6e039c5b350028ff128d1c1503f130c281"
+    },
+    {
+      "path": "first-attempt/t421-focused-race.log",
+      "bytes": 62424,
+      "sha256": "b6e495b1c04a96a088cf5387ef9619dd35557fcb73388d5d83609d760a7c2983"
+    }
+  ],
+  "files_count": 13,
+  "bytes": 357384
+}
