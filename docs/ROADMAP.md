@@ -149,6 +149,13 @@ typedef code and closed gRPC syntactic lookup are not new work dependencies.
 No historical failure is relabelled and no main merge, release or scale execution
 authorization is inferred. Expensive host tests run serially.
 
+**T49.3 protobuf binding (2026-10-17):** the independent declaration-only
+recipe and signed-selection isolation tests are implementation-complete on
+its ticket branch. Normal/race, exact-root/authz/paging, MCP and static checks
+pass. T49.4 qualification/UI closure follows; production signing still waits
+for the existing key. Caller Map discovery and Thrift remain independently
+admitted, and labels remain optional.
+
 **Caller Map / Atlas sequencing override (2026-10-17, Ben-directed):** bounded
 integration tests suffice for these products and their release bindings. The
 owning amendment at the start of Epic 47 in [BACKLOG.md](./BACKLOG.md) supersedes

@@ -592,9 +592,23 @@ toolchain digest, and the content digest of its in-tree pack-recipe registry;
 resolver, both computed from the bytes actually present. A governing `released`
 record must name exactly those values; a record signed for another binary,
 toolchain or artifact set refuses startup with an unresolved-reference or
-digest-mismatch cause rather than loading approximately. The in-tree recipe
-registry still ships empty, so no released record has yet earned a bound recipe
-and the gate stays dark: implemented, not absent.
+digest-mismatch cause rather than loading approximately. A fixed in-tree recipe
+is necessary but admits nothing without its applicable verified selection.
+
+### Independent protobuf Atlas admission (T49.3)
+
+Select `phebs.protobuf.contract` to admit `proto-contract@4.0.0` alone through
+the signed release path. It enables protobuf declaration discovery/detail in
+Atlas and its HTTP/MCP tools; caller, implementation, field and Impact evidence
+remain unavailable unless independently admitted. No experimental switch is
+needed. Production signing is pending the existing unavailable Linux key; the
+compiled binding alone is not a production release.
+
+Caller Map separately carries the same declaration extractor for its discovery.
+Selecting both parses the declaration domain once. Withdrawing standalone Atlas
+preserves that discovery while Caller Map remains admitted; withdrawing Caller
+Map preserves standalone Atlas. Thrift and Kafka retain their own selections.
+Every selected record must match the new binary's actual implementation identity.
 
 
 ### Caller Map activation and recipe admission (T47.3)

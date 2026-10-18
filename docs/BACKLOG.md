@@ -19170,6 +19170,20 @@ binary `75803641`** (Thrift protocol §14).
 promotion bar for each selected protocol and the declared UI/HTTP/MCP surface.
 One protocol may release while the other remains explicitly unavailable.
 
+**T49.3 protobuf binding complete (2026-10-17, Ben's all-ticket Mac handoff).**
+The independent fixed recipe selects only `proto-contract@4.0.0` after signed
+selection verification. Ten admission cases cover ordinary API/MCP assembly,
+expiry/suspension/revocation, Caller Map deduplication and independent Thrift/
+Kafka preservation. Focused command normal (1.007s), race (3.154s), existing
+release/startup regressions (1.228s), six exact Atlas root/authz/paging/gap tests
+(2.163s), strict MCP output, vet and pinned lint (zero issues) pass. Lead
+re-verification passes. No label round or long rehearsal is required. T49.4
+qualification artifacts/UI closure and actual production signing remain open.
+No new runtime scan, lock, cache, child or worker is introduced; only one fixed
+startup registry row and selected declaration constructor are added, with
+existing domain deduplication. Configuration guide describes independent
+admission and withdrawal; compiled registration alone activates nothing.
+
 **T49R.1 · Inherited generated-client drift** *(cross-cutting; found while
 reviewing PRs #75 and #76, Mac track)* — regenerate `ui/openapi.json` and
 `ui/src/api.generated.ts` from the Go spec so `npm run gen:api:check` and

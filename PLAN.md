@@ -12176,3 +12176,17 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   its own acceptance, tests, cost review and PR. Main merges, production signing,
   host entitlement and large execution remain subject to their existing explicit
   authorization. This planning change adds no runtime work or resource cost.
+
+- **2026-10-17 — T49.3 independent protobuf Atlas recipe (Ben's all-ticket
+  Mac handoff).** Bind `phebs.protobuf.contract` to `proto-contract@4.0.0`
+  alone through the unchanged verified signed selection. Shared declaration
+  domains deduplicate when Caller Map is also selected; independent withdrawal
+  preserves the other selected product's discovery. No caller, implementation,
+  field or Impact authority follows. Bounded signed-selection normal/race,
+  exact-root/stale/authz/paging and strict MCP regressions pass; direct review
+  finds no blocking issue. Production signing and T49.4 qualification remain
+  separate; optional labels do not block this binding. Cost: one registry row
+  in the existing startup implementation digest and one selected constructor;
+  no additional request, sync, retry/no-op, publication, lock, cache, schema,
+  disk scan, child or concurrency work. Existing exact Atlas read costs stay
+  unchanged. Each selected release must be signed for the actual new binary.
