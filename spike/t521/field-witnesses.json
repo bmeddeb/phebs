@@ -1,0 +1,341 @@
+{
+  "schema": "t521-source-field-witness-v1",
+  "fields": [
+    {
+      "population": "public",
+      "generated_path": "thrift-gen/jaeger/jaeger.go",
+      "generated_message": "Tag",
+      "go_name": "Key",
+      "thrift_name": "key",
+      "field_number": 1,
+      "generated_identifier_span": [
+        2986,
+        2989
+      ],
+      "generated_source_digest": "sha256:84aa41eff7830e23021707b4809261a3fa07196285351a8c6506fbd6e9922f46",
+      "idl_population": "idl",
+      "idl_path": "thrift/jaeger.thrift",
+      "idl_witness_span": [
+        977,
+        1000
+      ],
+      "idl_source_digest": "sha256:745e62946cbe5f17e299d1306d182fdecfca9a27c73327408e378ef20b43367d",
+      "witness_kind": "explicit_idl_field",
+      "identity_relation": "independent evaluation witness only; source and SCIP families stay distinct",
+      "field_tier": "derived",
+      "source_binding": "none"
+    },
+    {
+      "population": "public",
+      "generated_path": "thrift-gen/jaeger/jaeger.go",
+      "generated_message": "Tag",
+      "go_name": "VType",
+      "thrift_name": "vType",
+      "field_number": 2,
+      "generated_identifier_span": [
+        3045,
+        3050
+      ],
+      "generated_source_digest": "sha256:84aa41eff7830e23021707b4809261a3fa07196285351a8c6506fbd6e9922f46",
+      "idl_population": "idl",
+      "idl_path": "thrift/jaeger.thrift",
+      "idl_witness_span": [
+        1003,
+        1028
+      ],
+      "idl_source_digest": "sha256:745e62946cbe5f17e299d1306d182fdecfca9a27c73327408e378ef20b43367d",
+      "witness_kind": "explicit_idl_field",
+      "identity_relation": "independent evaluation witness only; source and SCIP families stay distinct",
+      "field_tier": "derived",
+      "source_binding": "none"
+    },
+    {
+      "population": "public",
+      "generated_path": "thrift-gen/jaeger/jaeger.go",
+      "generated_message": "Tag",
+      "go_name": "VStr",
+      "thrift_name": "vStr",
+      "field_number": 3,
+      "generated_identifier_span": [
+        3113,
+        3117
+      ],
+      "generated_source_digest": "sha256:84aa41eff7830e23021707b4809261a3fa07196285351a8c6506fbd6e9922f46",
+      "idl_population": "idl",
+      "idl_path": "thrift/jaeger.thrift",
+      "idl_witness_span": [
+        1031,
+        1055
+      ],
+      "idl_source_digest": "sha256:745e62946cbe5f17e299d1306d182fdecfca9a27c73327408e378ef20b43367d",
+      "witness_kind": "explicit_idl_field",
+      "identity_relation": "independent evaluation witness only; source and SCIP families stay distinct",
+      "field_tier": "derived",
+      "source_binding": "none"
+    },
+    {
+      "population": "public",
+      "generated_path": "thrift-gen/jaeger/jaeger.go",
+      "generated_message": "Tag",
+      "go_name": "VDouble",
+      "thrift_name": "vDouble",
+      "field_number": 4,
+      "generated_identifier_span": [
+        3178,
+        3185
+      ],
+      "generated_source_digest": "sha256:84aa41eff7830e23021707b4809261a3fa07196285351a8c6506fbd6e9922f46",
+      "idl_population": "idl",
+      "idl_path": "thrift/jaeger.thrift",
+      "idl_witness_span": [
+        1058,
+        1085
+      ],
+      "idl_source_digest": "sha256:745e62946cbe5f17e299d1306d182fdecfca9a27c73327408e378ef20b43367d",
+      "witness_kind": "explicit_idl_field",
+      "identity_relation": "independent evaluation witness only; source and SCIP families stay distinct",
+      "field_tier": "derived",
+      "source_binding": "none"
+    },
+    {
+      "population": "public",
+      "generated_path": "thrift-gen/jaeger/jaeger.go",
+      "generated_message": "Tag",
+      "go_name": "VBool",
+      "thrift_name": "vBool",
+      "field_number": 5,
+      "generated_identifier_span": [
+        3256,
+        3261
+      ],
+      "generated_source_digest": "sha256:84aa41eff7830e23021707b4809261a3fa07196285351a8c6506fbd6e9922f46",
+      "idl_population": "idl",
+      "idl_path": "thrift/jaeger.thrift",
+      "idl_witness_span": [
+        1088,
+        1113
+      ],
+      "idl_source_digest": "sha256:745e62946cbe5f17e299d1306d182fdecfca9a27c73327408e378ef20b43367d",
+      "witness_kind": "explicit_idl_field",
+      "identity_relation": "independent evaluation witness only; source and SCIP families stay distinct",
+      "field_tier": "derived",
+      "source_binding": "none"
+    },
+    {
+      "population": "public",
+      "generated_path": "thrift-gen/jaeger/jaeger.go",
+      "generated_message": "Tag",
+      "go_name": "VLong",
+      "thrift_name": "vLong",
+      "field_number": 6,
+      "generated_identifier_span": [
+        3323,
+        3328
+      ],
+      "generated_source_digest": "sha256:84aa41eff7830e23021707b4809261a3fa07196285351a8c6506fbd6e9922f46",
+      "idl_population": "idl",
+      "idl_path": "thrift/jaeger.thrift",
+      "idl_witness_span": [
+        1116,
+        1141
+      ],
+      "idl_source_digest": "sha256:745e62946cbe5f17e299d1306d182fdecfca9a27c73327408e378ef20b43367d",
+      "witness_kind": "explicit_idl_field",
+      "identity_relation": "independent evaluation witness only; source and SCIP families stay distinct",
+      "field_tier": "derived",
+      "source_binding": "none"
+    },
+    {
+      "population": "public",
+      "generated_path": "thrift-gen/sampling/sampling.go",
+      "generated_message": "SamplingStrategyResponse",
+      "go_name": "StrategyType",
+      "thrift_name": "strategyType",
+      "field_number": 1,
+      "generated_identifier_span": [
+        26389,
+        26401
+      ],
+      "generated_source_digest": "sha256:d551fc830ea6302a2fd81958a7d18d477ceeca30b64bc22e6db1e7cf5806f232",
+      "idl_population": "idl",
+      "idl_path": "thrift/sampling.thrift",
+      "idl_witness_span": [
+        2119,
+        2164
+      ],
+      "idl_source_digest": "sha256:eddcae5369ea9af50c08eb2d0859973c9ecd6726a2aad3b5f4eec06bbfbb8513",
+      "witness_kind": "explicit_idl_field",
+      "identity_relation": "independent evaluation witness only; source and SCIP families stay distinct",
+      "field_tier": "derived",
+      "source_binding": "none"
+    },
+    {
+      "population": "public",
+      "generated_path": "thrift-gen/sampling/sampling.go",
+      "generated_message": "SamplingStrategyResponse",
+      "go_name": "ProbabilisticSampling",
+      "thrift_name": "probabilisticSampling",
+      "field_number": 2,
+      "generated_identifier_span": [
+        26498,
+        26519
+      ],
+      "generated_source_digest": "sha256:d551fc830ea6302a2fd81958a7d18d477ceeca30b64bc22e6db1e7cf5806f232",
+      "idl_population": "idl",
+      "idl_path": "thrift/sampling.thrift",
+      "idl_witness_span": [
+        2169,
+        2232
+      ],
+      "idl_source_digest": "sha256:eddcae5369ea9af50c08eb2d0859973c9ecd6726a2aad3b5f4eec06bbfbb8513",
+      "witness_kind": "explicit_idl_field",
+      "identity_relation": "independent evaluation witness only; source and SCIP families stay distinct",
+      "field_tier": "derived",
+      "source_binding": "none"
+    },
+    {
+      "population": "public",
+      "generated_path": "thrift-gen/sampling/sampling.go",
+      "generated_message": "ProbabilisticSamplingStrategy",
+      "go_name": "SamplingRate",
+      "thrift_name": "samplingRate",
+      "field_number": 1,
+      "generated_identifier_span": [
+        1846,
+        1858
+      ],
+      "generated_source_digest": "sha256:d551fc830ea6302a2fd81958a7d18d477ceeca30b64bc22e6db1e7cf5806f232",
+      "idl_population": "idl",
+      "idl_path": "thrift/sampling.thrift",
+      "idl_witness_span": [
+        989,
+        1020
+      ],
+      "idl_source_digest": "sha256:eddcae5369ea9af50c08eb2d0859973c9ecd6726a2aad3b5f4eec06bbfbb8513",
+      "witness_kind": "explicit_idl_field",
+      "identity_relation": "independent evaluation witness only; source and SCIP families stay distinct",
+      "field_tier": "derived",
+      "source_binding": "none"
+    },
+    {
+      "population": "neutral",
+      "generated_path": "gen/parcel.go",
+      "generated_message": "Parcel",
+      "go_name": "Code",
+      "thrift_name": "code",
+      "field_number": 1,
+      "generated_identifier_span": [
+        175,
+        179
+      ],
+      "generated_source_digest": "sha256:7ff6556c7d8da13ebfd416e9679c0f6a692877266a9a28d02dac5c0ac6c1d352",
+      "idl_population": "neutral",
+      "idl_path": "idl/parcel.thrift",
+      "idl_witness_span": [
+        40,
+        63
+      ],
+      "idl_source_digest": "sha256:41be613eda524dcd1e3f1c6cd15e9408e04d5eee44d7f2b8b0f03bd876e08ae0",
+      "witness_kind": "explicit_idl_field",
+      "identity_relation": "independent evaluation witness only; source and SCIP families stay distinct",
+      "field_tier": "derived",
+      "source_binding": "none"
+    },
+    {
+      "population": "neutral",
+      "generated_path": "gen/parcel.go",
+      "generated_message": "Parcel",
+      "go_name": "Count",
+      "thrift_name": "count",
+      "field_number": 7,
+      "generated_identifier_span": [
+        215,
+        220
+      ],
+      "generated_source_digest": "sha256:7ff6556c7d8da13ebfd416e9679c0f6a692877266a9a28d02dac5c0ac6c1d352",
+      "idl_population": "neutral",
+      "idl_path": "idl/parcel.thrift",
+      "idl_witness_span": [
+        66,
+        87
+      ],
+      "idl_source_digest": "sha256:41be613eda524dcd1e3f1c6cd15e9408e04d5eee44d7f2b8b0f03bd876e08ae0",
+      "witness_kind": "explicit_idl_field",
+      "identity_relation": "independent evaluation witness only; source and SCIP families stay distinct",
+      "field_tier": "derived",
+      "source_binding": "none"
+    },
+    {
+      "population": "neutral",
+      "generated_path": "gen/parcel.go",
+      "generated_message": "Parcel",
+      "go_name": "Tags",
+      "thrift_name": "tags",
+      "field_number": 9,
+      "generated_identifier_span": [
+        248,
+        252
+      ],
+      "generated_source_digest": "sha256:7ff6556c7d8da13ebfd416e9679c0f6a692877266a9a28d02dac5c0ac6c1d352",
+      "idl_population": "neutral",
+      "idl_path": "idl/parcel.thrift",
+      "idl_witness_span": [
+        90,
+        119
+      ],
+      "idl_source_digest": "sha256:41be613eda524dcd1e3f1c6cd15e9408e04d5eee44d7f2b8b0f03bd876e08ae0",
+      "witness_kind": "explicit_idl_field",
+      "identity_relation": "independent evaluation witness only; source and SCIP families stay distinct",
+      "field_tier": "derived",
+      "source_binding": "none"
+    },
+    {
+      "population": "neutral",
+      "generated_path": "gen/parcel.go",
+      "generated_message": "Parcel",
+      "go_name": "Attrs",
+      "thrift_name": "attrs",
+      "field_number": 13,
+      "generated_identifier_span": [
+        281,
+        286
+      ],
+      "generated_source_digest": "sha256:7ff6556c7d8da13ebfd416e9679c0f6a692877266a9a28d02dac5c0ac6c1d352",
+      "idl_population": "neutral",
+      "idl_path": "idl/parcel.thrift",
+      "idl_witness_span": [
+        122,
+        160
+      ],
+      "idl_source_digest": "sha256:41be613eda524dcd1e3f1c6cd15e9408e04d5eee44d7f2b8b0f03bd876e08ae0",
+      "witness_kind": "explicit_idl_field",
+      "identity_relation": "independent evaluation witness only; source and SCIP families stay distinct",
+      "field_tier": "derived",
+      "source_binding": "none"
+    },
+    {
+      "population": "neutral",
+      "generated_path": "gen/parcel.go",
+      "generated_message": "MessengerSendResult",
+      "go_name": "Success",
+      "thrift_name": "success",
+      "field_number": 0,
+      "generated_identifier_span": [
+        416,
+        423
+      ],
+      "generated_source_digest": "sha256:7ff6556c7d8da13ebfd416e9679c0f6a692877266a9a28d02dac5c0ac6c1d352",
+      "idl_population": "neutral",
+      "idl_path": "idl/parcel.thrift",
+      "idl_witness_span": [
+        186,
+        215
+      ],
+      "idl_source_digest": "sha256:41be613eda524dcd1e3f1c6cd15e9408e04d5eee44d7f2b8b0f03bd876e08ae0",
+      "witness_kind": "implicit_service_result_success_slot",
+      "identity_relation": "independent evaluation witness only; source and SCIP families stay distinct",
+      "field_tier": "derived",
+      "source_binding": "none"
+    }
+  ]
+}

@@ -75,7 +75,14 @@
       "public/positive": 33
     },
     "rule": "Complete lexical identifier census in exactly selected handwritten application files; all exact tagged-field uses manually enumerated before any index/extractor execution. Comments/strings excluded except one explicitly unsupported reflection string. Generated emissions counted separately and excluded from public/neutral quality denominators.",
-    "independence": "No SCIP, candidate facts, production extractor/parser or observed result consulted. Tokenizer only locates frozen source spans for explicit field maps. Lead verifies source/code/IDL witnesses independently."
+    "independence": "No SCIP, candidate facts, production extractor/parser or observed result consulted. Tokenizer only locates frozen source spans for explicit field maps. Lead verifies source/code/IDL witnesses independently.",
+    "field_witnesses": {
+      "path": "field-witnesses.json",
+      "digest": "sha256:c3fbee4dd7c9294d6ef577e818f76c7d3fac49748aff724fd4e3b03c448f5bce",
+      "identities": 14,
+      "explicit_idl_fields": 13,
+      "implicit_result_success": 1
+    }
   },
   "thresholds": {
     "positive_recall": 1.0,
