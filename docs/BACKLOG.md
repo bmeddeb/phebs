@@ -19407,6 +19407,19 @@ quality and desktop interaction before stopping on mobile overflow, repaired
 by T50.3c. T51.3a repairs a separate discovery coverage defect. Fresh binary
 qualification, the remaining operating matrix and production signing remain open.
 
+**T50.3c · Keep real comparison identities within small screens** *(2026-10-18,
+Ben-routed Mac presentation handoff; complete)* — the bounded real-source
+journey exposed390px overflow from auto-minimum grid tracks and an unbroken
+unit ID. Constrain the tracks/sides and wrap that existing metadata while
+preserving complete accessible citation labels, exact source bytes and keyboard
+opening. Two scoped declaration links now use an accessible existing text
+token. Real-response fixture390/1280 checks have no overflow or console errors
+and zero accessibility violations;14 focused tests, type/lint/build pass.
+Four neutral controls are byte-identical to main on the same renderer. Their
+0.399–0.412% differences from retained Noble baselines reproduce unchanged on
+main and are inherited baseline/environment drift; no baseline is replaced or
+Noble pass invented. T50.3's source-bound final native matrix stays separate.
+
 ## Epic 51 · Protobuf field-reference production readiness
 
 **T51.1 · Exact field/SCIP identity and independent quality** — depend on
@@ -19456,6 +19469,16 @@ signature promotion; this implementation alone activates no unsigned pack.
 **T51.3 · Measured field-reference promotion** — satisfy the common bar and
 publish exact supported generators, input formats, operating bounds and expiry.
 
+**T51.3a · Discovered-repository coverage repair** *(2026-10-18, complete;
+Ben-routed Mac backend handoff).* A first corrected-origin T51.3 run exposed an
+HTTP500 before the repository had an indexed commit. Shared coverage now reports
+unpublished/SCIP unknown without querying invalid extraction scopes; raw
+evidence retains census with no published row. Final source/permission fences
+and strict nonempty-error behavior remain. Focused normal/race (including one
+real-store discovery transition), vet/pinned lint and independent source/cost
+review pass. This repairs discovery only; T51.3's fresh-binary operating result
+and production signature remain separate.
+
 ## Epic 52 · Thrift field-reference production readiness
 
 **T52.1 · Apache Thrift field contract and independent quality** — freeze
@@ -19496,9 +19519,37 @@ managed/runtime/scale result follows.
 **T52.2 · thriftrw field contract and independent quality** — separate
 generator-specific identity and quality population; no Apache result transfers.
 
+*2026-10-18 checkpoint:* source-only thriftrw1.34.0 recipe and exact retained
+Cadence health mapper/IDL plus separate authored controls are independently
+reviewed. All15 source files/52,650 bytes,116 spans, three embedded Raw/SHA1
+equalities and nine field/eighteen definition witnesses agree. Public4/31 and
+authored15/62/4 positive/negative/unsupported populations are frozen before
+indexing. Existing gitlink provenance and the fresh metadata403 remain explicit.
+No SCIP or candidate output exists yet; actual evaluator commits, bounded index
+preparation, extraction quality and T52.3 admission/operating/signing stay open.
+
+*2026-10-18 qualified outcome:* T52.2 completes its independent finite leaf.
+First actual evaluator inputs pass public4/31 and authored15/62/4 gates, all3
+Raw/SHA1/nine field/eighteen real definition witnesses, zero wrong/duplicate
+consumer emissions and exact citations. Generated49/7 and raw read roles stay
+separate. First normal0.339s/race1.441s, vet, pinned lint and independent root/
+peer source/cost review pass. `spike/t522/outcome-cost.json` retains exact input/
+result/checkpoint and cost scopes. No production registration, operating or
+signature is inferred; T52.3 remains the next independent selection boundary.
+
 **T52.3 · Independent stable registration and measured promotion** — split
 the current shared experimental switch into explicitly selected admitted
 recipes; satisfy the common bar for each. Either generator may release alone.
+
+Registration slice (2026-10-18, Ben-routed Mac handoff): independent signed
+Apache0.14.1 and thriftrw1.34.0 recipes now compose once on the shared domain
+with three exact selected-set versions. Neither selection inherits the other
+generator through provisional mode. Current/raw/proof/citation/HTTP/MCP fences,
+field0/protocol bounds and withdrawal-survivor behavior pass bounded normal
+and race integration checks; independent source and steady-state-cost review
+is clear. This supplies registration only. Each selected generator's measured
+operating/artifact/production-signature promotion remains open; the existing
+production key is unavailable.
 
 ## Epic 53 · Protobuf Buf WIRE compatibility production readiness
 

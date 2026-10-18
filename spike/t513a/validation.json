@@ -1,0 +1,12 @@
+{
+  "ticket": "T51.3a",
+  "handoff": "Ben-routed Mac backend",
+  "normal_command": "go test -p 1 -count=1 -timeout=120s -run 'Test(CoverageCertificate.*Unindexed|Evidence.*Unindexed|Proof.*Unindexed|.*Unindexed.*)' ./internal/extract ./internal/api",
+  "race_command": "go test -race -p 1 -count=1 -timeout=120s -run 'Test(CoverageCertificate(Unindexed|NonemptyCommit|DiscoveredRepositoryRealStore)|Evidence(Unindexed|NonemptyCommit)|ProofUnindexed)' ./internal/extract ./internal/api",
+  "normal": "pass",
+  "race": "pass; includes real-store discovery/indexing and malformed nonempty commits",
+  "vet": "go vet ./internal/extract ./internal/api; pass",
+  "lint": "repository-pinned golangci-lint2.12.2 run ./internal/extract/... ./internal/api/...; 0 issues",
+  "review": "root + independent peer source, authorization, state transitions and steady-state cost; no remaining findings",
+  "qualification": "Discovery repair only. Fresh binary operating result and production signing remain pending."
+}

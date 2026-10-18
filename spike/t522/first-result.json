@@ -1,0 +1,251 @@
+{
+  "Schema": "t522-first-field-quality-v1",
+  "CandidateContractDigest": "sha256:2cdcac1badbfdc2668e2955a6b496546740cb61cc2b452da1905f5b935983270",
+  "CostScope": "Extract plus streaming verification/counters; precomputed input digests and line starts, no child; wall time not isolated CPU",
+  "Results": [
+    {
+      "Population": "public",
+      "Commit": "01726539645e3bab1c04a4633b806dead7a0c97a",
+      "Positive": 4,
+      "Negative": 31,
+      "Unsupported": 0,
+      "Matched": 4,
+      "GeneratedEmissions": 49,
+      "AllEmissions": 53,
+      "Reads": 6,
+      "ReadBytes": 124581,
+      "WallMicros": 792,
+      "ApplicationRoles": {
+        "read": 4
+      },
+      "GeneratedRoles": {
+        "read": 49
+      },
+      "Mismatches": null,
+      "Missing": null,
+      "Witnesses": [
+        {
+          "Object": "health.HealthStatus#1",
+          "GeneratedPath": ".gen/go/health/health.go",
+          "IDLPath": "thrift/health.thrift",
+          "Symbol": "scip-go gomod github.com/uber/cadence v0.0.0-t522 `github.com/uber/cadence/.gen/go/health`/HealthStatus#Ok.",
+          "Identifier": "Ok",
+          "Kind": "field",
+          "ThriftName": "ok",
+          "DefinitionStart": 372,
+          "DefinitionEnd": 374
+        },
+        {
+          "Object": "health.HealthStatus#1",
+          "GeneratedPath": ".gen/go/health/health.go",
+          "IDLPath": "thrift/health.thrift",
+          "Symbol": "scip-go gomod github.com/uber/cadence v0.0.0-t522 `github.com/uber/cadence/.gen/go/health`/HealthStatus#GetOk().",
+          "Identifier": "GetOk",
+          "Kind": "accessor",
+          "ThriftName": "ok",
+          "DefinitionStart": 5806,
+          "DefinitionEnd": 5811
+        },
+        {
+          "Object": "health.HealthStatus#2",
+          "GeneratedPath": ".gen/go/health/health.go",
+          "IDLPath": "thrift/health.thrift",
+          "Symbol": "scip-go gomod github.com/uber/cadence v0.0.0-t522 `github.com/uber/cadence/.gen/go/health`/HealthStatus#Msg.",
+          "Identifier": "Msg",
+          "Kind": "field",
+          "ThriftName": "msg",
+          "DefinitionStart": 406,
+          "DefinitionEnd": 409
+        },
+        {
+          "Object": "health.HealthStatus#2",
+          "GeneratedPath": ".gen/go/health/health.go",
+          "IDLPath": "thrift/health.thrift",
+          "Symbol": "scip-go gomod github.com/uber/cadence v0.0.0-t522 `github.com/uber/cadence/.gen/go/health`/HealthStatus#GetMsg().",
+          "Identifier": "GetMsg",
+          "Kind": "accessor",
+          "ThriftName": "msg",
+          "DefinitionStart": 5973,
+          "DefinitionEnd": 5979
+        },
+        {
+          "Object": "health.HealthStatus#2",
+          "GeneratedPath": ".gen/go/health/health.go",
+          "IDLPath": "thrift/health.thrift",
+          "Symbol": "scip-go gomod github.com/uber/cadence v0.0.0-t522 `github.com/uber/cadence/.gen/go/health`/HealthStatus#IsSetMsg().",
+          "Identifier": "IsSetMsg",
+          "Kind": "accessor",
+          "ThriftName": "msg",
+          "DefinitionStart": 6124,
+          "DefinitionEnd": 6132
+        },
+        {
+          "Object": "health.Meta_Health_Result#0",
+          "GeneratedPath": ".gen/go/health/health.go",
+          "IDLPath": "thrift/health.thrift",
+          "Symbol": "scip-go gomod github.com/uber/cadence v0.0.0-t522 `github.com/uber/cadence/.gen/go/health`/Meta_Health_Result#Success.",
+          "Identifier": "Success",
+          "Kind": "field",
+          "ThriftName": "success",
+          "DefinitionStart": 14216,
+          "DefinitionEnd": 14223
+        },
+        {
+          "Object": "health.Meta_Health_Result#0",
+          "GeneratedPath": ".gen/go/health/health.go",
+          "IDLPath": "thrift/health.thrift",
+          "Symbol": "scip-go gomod github.com/uber/cadence v0.0.0-t522 `github.com/uber/cadence/.gen/go/health`/Meta_Health_Result#GetSuccess().",
+          "Identifier": "GetSuccess",
+          "Kind": "accessor",
+          "ThriftName": "success",
+          "DefinitionStart": 19589,
+          "DefinitionEnd": 19599
+        },
+        {
+          "Object": "health.Meta_Health_Result#0",
+          "GeneratedPath": ".gen/go/health/health.go",
+          "IDLPath": "thrift/health.thrift",
+          "Symbol": "scip-go gomod github.com/uber/cadence v0.0.0-t522 `github.com/uber/cadence/.gen/go/health`/Meta_Health_Result#IsSetSuccess().",
+          "Identifier": "IsSetSuccess",
+          "Kind": "accessor",
+          "ThriftName": "success",
+          "DefinitionStart": 19772,
+          "DefinitionEnd": 19784
+        }
+      ]
+    },
+    {
+      "Population": "neutral",
+      "Commit": "85cc3f7f57bd339e5c1f3dd715a78a6dc6259f57",
+      "Positive": 15,
+      "Negative": 62,
+      "Unsupported": 4,
+      "Matched": 15,
+      "GeneratedEmissions": 7,
+      "AllEmissions": 22,
+      "Reads": 8,
+      "ReadBytes": 33704,
+      "WallMicros": 533,
+      "ApplicationRoles": {
+        "read": 15
+      },
+      "GeneratedRoles": {
+        "read": 7
+      },
+      "Mismatches": null,
+      "Missing": null,
+      "Witnesses": [
+        {
+          "Object": "packet.Envelope#1",
+          "GeneratedPath": "gen/packet.go",
+          "IDLPath": "idl/packet.thrift",
+          "Symbol": "scip-go gomod example.com/t522-neutral v0.0.0-t522 `example.com/t522-neutral/gen`/Envelope#Key.",
+          "Identifier": "Key",
+          "Kind": "field",
+          "ThriftName": "key",
+          "DefinitionStart": 264,
+          "DefinitionEnd": 267
+        },
+        {
+          "Object": "packet.Envelope#1",
+          "GeneratedPath": "gen/packet.go",
+          "IDLPath": "idl/packet.thrift",
+          "Symbol": "scip-go gomod example.com/t522-neutral v0.0.0-t522 `example.com/t522-neutral/gen`/Envelope#GetKey().",
+          "Identifier": "GetKey",
+          "Kind": "accessor",
+          "ThriftName": "key",
+          "DefinitionStart": 743,
+          "DefinitionEnd": 749
+        },
+        {
+          "Object": "packet.Envelope#1",
+          "GeneratedPath": "gen/packet.go",
+          "IDLPath": "idl/packet.thrift",
+          "Symbol": "scip-go gomod example.com/t522-neutral v0.0.0-t522 `example.com/t522-neutral/gen`/Envelope#IsSetKey().",
+          "Identifier": "IsSetKey",
+          "Kind": "accessor",
+          "ThriftName": "key",
+          "DefinitionStart": 795,
+          "DefinitionEnd": 803
+        },
+        {
+          "Object": "packet.Envelope#7",
+          "GeneratedPath": "gen/packet.go",
+          "IDLPath": "idl/packet.thrift",
+          "Symbol": "scip-go gomod example.com/t522-neutral v0.0.0-t522 `example.com/t522-neutral/gen`/Envelope#Count.",
+          "Identifier": "Count",
+          "Kind": "field",
+          "ThriftName": "count",
+          "DefinitionStart": 279,
+          "DefinitionEnd": 284
+        },
+        {
+          "Object": "packet.Envelope#9",
+          "GeneratedPath": "gen/packet.go",
+          "IDLPath": "idl/packet.thrift",
+          "Symbol": "scip-go gomod example.com/t522-neutral v0.0.0-t522 `example.com/t522-neutral/gen`/Envelope#Ready.",
+          "Identifier": "Ready",
+          "Kind": "field",
+          "ThriftName": "ready",
+          "DefinitionStart": 296,
+          "DefinitionEnd": 301
+        },
+        {
+          "Object": "packet.Envelope#13",
+          "GeneratedPath": "gen/packet.go",
+          "IDLPath": "idl/packet.thrift",
+          "Symbol": "scip-go gomod example.com/t522-neutral v0.0.0-t522 `example.com/t522-neutral/gen`/Envelope#Payload.",
+          "Identifier": "Payload",
+          "Kind": "field",
+          "ThriftName": "payload",
+          "DefinitionStart": 312,
+          "DefinitionEnd": 319
+        },
+        {
+          "Object": "packet.Probe_Check_Result#0",
+          "GeneratedPath": "gen/packet.go",
+          "IDLPath": "idl/packet.thrift",
+          "Symbol": "scip-go gomod example.com/t522-neutral v0.0.0-t522 `example.com/t522-neutral/gen`/Probe_Check_Result#Success.",
+          "Identifier": "Success",
+          "Kind": "field",
+          "ThriftName": "success",
+          "DefinitionStart": 920,
+          "DefinitionEnd": 927
+        },
+        {
+          "Object": "packet.Probe_Check_Result#0",
+          "GeneratedPath": "gen/packet.go",
+          "IDLPath": "idl/packet.thrift",
+          "Symbol": "scip-go gomod example.com/t522-neutral v0.0.0-t522 `example.com/t522-neutral/gen`/Probe_Check_Result#GetSuccess().",
+          "Identifier": "GetSuccess",
+          "Kind": "accessor",
+          "ThriftName": "success",
+          "DefinitionStart": 1172,
+          "DefinitionEnd": 1182
+        },
+        {
+          "Object": "packet.Envelope#1",
+          "GeneratedPath": "renamed/packet.go",
+          "IDLPath": "idl/renamed.thrift",
+          "Symbol": "scip-go gomod example.com/t522-neutral v0.0.0-t522 `example.com/t522-neutral/renamed`/Envelope#Identifier.",
+          "Identifier": "Identifier",
+          "Kind": "field",
+          "ThriftName": "identifier",
+          "DefinitionStart": 260,
+          "DefinitionEnd": 270
+        },
+        {
+          "Object": "packet.Envelope#1",
+          "GeneratedPath": "renamed/packet.go",
+          "IDLPath": "idl/renamed.thrift",
+          "Symbol": "scip-go gomod example.com/t522-neutral v0.0.0-t522 `example.com/t522-neutral/renamed`/Envelope#GetIdentifier().",
+          "Identifier": "GetIdentifier",
+          "Kind": "accessor",
+          "ThriftName": "identifier",
+          "DefinitionStart": 504,
+          "DefinitionEnd": 517
+        }
+      ]
+    }
+  ]
+}

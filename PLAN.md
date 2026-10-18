@@ -12878,6 +12878,33 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   T50.3a owns the shared repair; only a reviewed new exact binary/generation
   binding can authorize one bounded fresh qualification. This evidence record
   adds no production work, authority, cache/lock/schema or child process.
+
+- **2026-10-18 — T52.2 independent thriftrw source checkpoint (Ben-routed Mac
+  handoff).** Freeze `spike/t522/preregistration.json` SHA256
+  `7067eb9e6ccb5ecb24d9c9064ce54c17d5d872a71a2989971da6a84b519e38ac`
+  before indexing or candidate extraction. Root independently checks the
+  unchanged permissively licensed Cadence health mapper, internal/generated
+  types and retained IDL, plus separate authored controls. All15 retained
+  source files/52,650 bytes and116 source-label spans/digests/lines agree:
+  public4 positive/31 negative; authored15 positive/62 negative/4 unsupported.
+  Three exact embedded Raw/SHA1 equalities, nine numeric field identities and
+  eighteen field/accessor positions are checked independently of SCIP. The
+  retained T22.1 gitlink pin is provenance; a fresh metadata403 is disclosed,
+  not retried or represented as a fresh verification.
+
+  The committed-input recipe is thriftrw1.34.0/scip-go0.2.7 over exact source
+  bytes, including explicit result-success field0, nonsequential IDs and a
+  number-preserving rename. `module_digest` exactness requires the unique
+  embedded-IDL/wire-ID/SCIP-definition joins. SCIP package and declaration
+  families remain distinct; no automatic bridge, Apache-quality transfer or
+  source-semantic read/write claim follows. Root has not indexed or scored
+  this checkpoint. One offline90s index attempt per population, actual evaluator
+  Git/bundle binding and independent harness review precede one30s extraction.
+  Preserve first failures and all denominators. Existing32MiB index/50,000
+  document/500,000 occurrence/8KiB symbol/4MiB generated-source refusals remain.
+  Preparation changes no production request, sync, startup, retry/no-op,
+  publication, lock, cache, schema, worker or child behavior. Registration,
+  operating qualification and existing-key production signing remain T52.3.
 - **2026-10-18 — T52.1 Apache Thrift source-only field checkpoint
   (Ben-routed Mac handoff).** Freeze unchanged public Jaeger0.14.1 generated
   inputs and two handwritten application files, independently checked against
@@ -13057,3 +13084,102 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   its existing ownership boundaries. A fresh clean binary/source/UI binding
   precedes the next bounded run; no full matrix, production signature or scale
   pass is claimed. Helpers add opt-in evaluator work only, no serving cost.
+
+- **2026-10-18 — T52.2 finite thriftrw field qualification (Ben-routed Mac
+  handoff).** The first independently reviewed committed-input measurement
+  passes public4/4 references with31 clean negatives and separate authored
+  15/15 with62 clean negatives/4 unsupported. Three embedded Raw/SHA1 modules,
+  nine numeric fields and eighteen unique SCIP definitions agree. Source-
+  specific key-to-identifier rename retains numeric identity; exact/module_digest
+  never becomes a declaration-family bridge. Generated49/7 emissions remain
+  separately source/schema/identity checked without a recall oracle; raw SCIP
+  read classifications establish no semantic-write accuracy. All first bytes
+  and source-only preregistration remain exact.
+
+  One offline index attempt/population passes0.445871/0.170429s with joined
+  groups and removed scratch; actual evaluator commits/bundles bind exact
+  source/index bytes. No download or index retry occurred. First normal0.339s,
+  race1.441s, compile-only0.338s, vet and pinned lint zero issues pass. Root/peer
+  source/denominator/identity/cost review is clear; the premeasurement record
+  wording acknowledges already prepared SCIP. Extract plus verification uses
+  public6 logical cached reads/124,581B/792microseconds and neutral8 reads/
+  33,704B/533microseconds. Preflight hashes/census/IDL/definition joins and held
+  fixture corpus are outside that clock; allocation/RSS/operating envelope are
+  unmeasured. Existing refusal limits remain unchanged. Production work, locks,
+  caches, schema, concurrency and children are unchanged. T52.3 registration,
+  operating/artifact and existing-key signing remain separate.
+
+- **2026-10-18 — T52.3 independent committed Thrift field registration (Ben-routed Mac handoff).**
+  Register signed phebs.thrift.field.apache and phebs.thrift.field.thriftrw
+  claim1.0.0 independently. Compose selected bits before domain deduplication
+  into one scip-thrift-field pass with versions1.4.0-released.apache.1,
+  1.4.0-released.thriftrw.1 or1.4.0-released.apache-thriftrw.1. Stable selection
+  never broadens through the historical provisional switch. Require root
+  committed index.scip, scip-go0.2.7/UTF8, one exact selected generator header
+  and bound SCIP package/type/field/accessor identity before emission. Apache
+  remains derived/source_binding=none; thriftrw retains exact/module_digest.
+  Headers attest input properties, not execution of a generator. Both recipes
+  share existing index/source limits and a single input/binding/emission sweep.
+  Extra work is one bounded package/header-only parse per generated candidate
+  before its existing full parse, one bounded symbol parse per definition and
+  constant startup selected-set composition. No new query-side source parse,
+  full-corpus hash/scan, lock, cache, worker, schema, goroutine or child is added.
+  Neutral field queries admit only selected protocols and their own numeric
+  ranges, including Thrift0 and protobuf-reserved numbers without querying
+  protobuf. Exact version fences cover current/native/legacy/raw/citation and
+  retained proof witnesses even beside explicit independent provisional packs.
+  Withdrawal preserves the surviving recipe; changed shared-domain identity
+  requires ordinary republication before serving, with old custody untouched.
+  Full extractor normal, scoped API/serve normal and race, vet and pinned lint
+  pass; independent source/authority/security/cost review finds no blocker.
+  Lint cleanup removes one unused wrapper and annotates a deliberate deprecated
+  fixture-range reset; behavior is unchanged. Registration supplies no operating,
+  managed-generation, scale or production-signature claim. Each generator's
+  measured promotion and the existing unavailable production key remain pending.
+
+- **2026-10-18 — T51.3a discovered repositories have unpublished evidence
+  (Ben-routed Mac backend handoff).** The first corrected-origin T51.3 native
+  run exposes a real HTTP500: discovery creates a visible repository before
+  its indexed commit exists, while exact extraction storage correctly rejects
+  an empty commit. Keep that strict store boundary. The shared coverage builder
+  now skips publication/outcome/attempt reads only for an exactly empty indexed
+  commit, preserving visible census, unpublished domains and unknown SCIP with
+  no evidence authority or absence claim. Raw evidence skips its matching
+  initial/final publication reads while retaining the final freshly authorized
+  repository/source/revision/unit fence. Nonempty malformed metadata, storage
+  errors and indexed publication confirmation remain unchanged. Source/permission
+  changes during a request still conflict; saved bytes are untouched.
+
+  Focused normal/race checks include authentication, hidden repositories, mixed
+  indexed/unindexed coverage, no borrowed retained authority, strict real-store
+  validation and discovery-to-indexed transition. Vet/pinned lint pass, with
+  independent source/security/cost review clear. Cost is one constant branch
+  per existing repository/domain: empty coverage avoids three store reads per
+  domain/build; raw evidence avoids its two publication reads. Existing visible
+  lists/maps and output cardinality remain; indexed requests, sync, startup,
+  retry/no-op and publication costs are unchanged. No lock/cache/schema/worker/
+  child or new retained state is added. Fresh binary qualification follows;
+  operating promotion and the unavailable production signing key remain open.
+
+- **2026-10-18 — T50.3c bounded comparison mobile repair (Mac presentation handoff).**
+  Actual public-source unit rows overflowed390px to515px because comparison
+  sides inherited auto-minimum grid tracks from nowrap citation labels; an
+  unbroken repeated unit ID also overflowed after track correction. Use
+  minmax(0,1fr), side minWidth0 and metadata overflowWrap:anywhere, keeping full
+  accessible labels/title, source spans, filters and keyboard opening exact.
+  Two local declaration links use the existing primary text token/underline
+  to correct4.38:1 contrast; no global token or claim wording changes. Real
+  retained-response fixture1280/390 and carried open source panel plus filter
+  reset fit exactly, with zero console/page errors and axe0violations/25passes.
+  Four required-identity neutral controls are byte-identical before/after on
+  the same native renderer. Retained Noble baselines differ0.399–0.412% on
+  unchanged main too; leave their bytes exact and report inherited baseline/
+  environment drift without asserting a Noble pass or exclusive platform cause.
+  Bounded integration evidence supports this repair under Ben's no-ceremony
+  direction; final T50.3 exact-binary qualification remains separate. Fourteen
+  UI tests, type checks, lint and Vite production build pass. One test-only
+  unsupported query option was removed after typecheck exposed it. Comparison
+  chunk grows78raw/13gzip bytes; no new request, source read, sync, retry,
+  startup, publication, lock, cache, loop, schema, child or serving cost follows.
+  Interaction checks meet their5s test timeout; precise latency/usability and
+  production release are not inferred. Existing large-chunk warnings persist.

@@ -1,0 +1,103 @@
+{
+  "schema": "t522-source-inputs-v1",
+  "record_date": "2026-10-18",
+  "candidate_runs": 0,
+  "indexer_runs": 0,
+  "source_context": "Only selected unchanged health mapper/types/generated files; no full Cadence application claim. Evaluator module bytes are explicit. Upstream Git pins are source provenance only; lead will create evaluator source/index commits after any reviewed offline index preparation.",
+  "corpus_selection": "Actual bidirectional application mapper chosen before indexing or candidate output; same-named internal fields remain negatives.",
+  "gitlink": {
+    "repository": "uber/cadence",
+    "commit": "98f3d45ec820380dadae38206753777a7417709f",
+    "path": "idls",
+    "target": "ee96c0aebffaea083bdeab66b62c7e18291045f3",
+    "authority": "Existing pinned T221 source metadata; independent Raw/SHA1/source witnesses are frozen before candidate execution, no T221/T222 result transfer"
+  },
+  "files": [
+    {
+      "population": "public",
+      "repository": "uber/cadence",
+      "upstream_commit": "98f3d45ec820380dadae38206753777a7417709f",
+      "source_path": "LICENSE",
+      "url": "https://raw.githubusercontent.com/uber/cadence/98f3d45ec820380dadae38206753777a7417709f/LICENSE",
+      "authored": false,
+      "path": "testdata/public/LICENSE",
+      "bytes": 11356,
+      "digest": "sha256:43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1"
+    },
+    {
+      "population": "public",
+      "repository": "uber/cadence",
+      "upstream_commit": "98f3d45ec820380dadae38206753777a7417709f",
+      "source_path": "NOTICE",
+      "url": "https://raw.githubusercontent.com/uber/cadence/98f3d45ec820380dadae38206753777a7417709f/NOTICE",
+      "authored": false,
+      "path": "testdata/public/NOTICE",
+      "bytes": 1081,
+      "digest": "sha256:53d86f4fec2e8c6dc15f2e452dfaafcb11a30abcf06ba665ae28c0cf63922d0a"
+    },
+    {
+      "population": "public",
+      "repository": "uber/cadence",
+      "upstream_commit": "98f3d45ec820380dadae38206753777a7417709f",
+      "source_path": "common/types/mapper/thrift/health.go",
+      "url": "https://raw.githubusercontent.com/uber/cadence/98f3d45ec820380dadae38206753777a7417709f/common/types/mapper/thrift/health.go",
+      "authored": false,
+      "path": "testdata/public/common/types/mapper/thrift/health.go",
+      "bytes": 1692,
+      "digest": "sha256:590da41af2161a96865324c25ccf124768e9cada246bd12a78aabb69b99a66f6"
+    },
+    {
+      "population": "public",
+      "repository": "uber/cadence",
+      "upstream_commit": "98f3d45ec820380dadae38206753777a7417709f",
+      "source_path": "common/types/health.go",
+      "url": "https://raw.githubusercontent.com/uber/cadence/98f3d45ec820380dadae38206753777a7417709f/common/types/health.go",
+      "authored": false,
+      "path": "testdata/public/common/types/health.go",
+      "bytes": 1283,
+      "digest": "sha256:7133addfa3fbfa85787ce06e7386d6da83d7414ceffd190ea84df93fd2755259"
+    },
+    {
+      "population": "public",
+      "repository": "uber/cadence",
+      "upstream_commit": "98f3d45ec820380dadae38206753777a7417709f",
+      "source_path": ".gen/go/health/health.go",
+      "url": "https://raw.githubusercontent.com/uber/cadence/98f3d45ec820380dadae38206753777a7417709f/.gen/go/health/health.go",
+      "authored": false,
+      "path": "testdata/public/.gen/go/health/health.go",
+      "bytes": 20279,
+      "digest": "sha256:360126ead92a8dd481e094fed6aad98c6375afff6d31710e5c6401071eeb1291"
+    },
+    {
+      "population": "idl",
+      "repository": "cadence-workflow/cadence-idl",
+      "upstream_commit": "ee96c0aebffaea083bdeab66b62c7e18291045f3",
+      "source_path": "LICENSE",
+      "url": "https://raw.githubusercontent.com/cadence-workflow/cadence-idl/ee96c0aebffaea083bdeab66b62c7e18291045f3/LICENSE",
+      "authored": false,
+      "path": "testdata/idl/LICENSE",
+      "bytes": 11356,
+      "digest": "sha256:43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1"
+    },
+    {
+      "population": "idl",
+      "repository": "cadence-workflow/cadence-idl",
+      "upstream_commit": "ee96c0aebffaea083bdeab66b62c7e18291045f3",
+      "source_path": "thrift/health.thrift",
+      "url": "https://raw.githubusercontent.com/cadence-workflow/cadence-idl/ee96c0aebffaea083bdeab66b62c7e18291045f3/thrift/health.thrift",
+      "authored": false,
+      "path": "testdata/idl/thrift/health.thrift",
+      "bytes": 1337,
+      "digest": "sha256:176ca3246b757f381f8baf46c3bab328dfd4175b9730712850b10644d0b5169d"
+    },
+    {
+      "population": "public",
+      "source_path": "go.mod",
+      "authored": true,
+      "purpose": "Selected unchanged source module with cached dependencies; not the full upstream build context and no application source stub",
+      "path": "testdata/public/go.mod",
+      "bytes": 140,
+      "digest": "sha256:358a79bc91579c6de226d2555a28d9eed228399a50254131677d959a2c5cf39b"
+    }
+  ]
+}

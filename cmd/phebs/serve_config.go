@@ -19,6 +19,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/extract/extractors/protodecl"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/scipfield"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/thriftdecl"
+	"github.com/bmeddeb/phebs/internal/extract/extractors/thriftfield"
 	"github.com/bmeddeb/phebs/internal/packrelease"
 	"github.com/bmeddeb/phebs/internal/resolvermaterialize"
 )
@@ -146,12 +147,14 @@ func newServeExtractionRegistries(d *serveDeps) error {
 // third-party loader and no manifest-selected arbitrary code: a released pack
 // resolves only through this exact in-tree registry.
 var packRecipes = map[string]func() []extract.Extractor{
-	protobufFieldPackID:    protobufFieldRecipe,    // T51.2: exact committed Open API recipe; signature still required
-	callerMapPackID:        callerMapRecipe,        // T47.5: signed integration-test qualification
-	protobufContractPackID: protobufContractRecipe, // T49.3: independent declaration-only admission
-	kafkaProducerPackID:    kafkaProducerRecipe,    // T55.3: bound beside its first signed record
-	kafkaConsumerPackID:    kafkaConsumerRecipe,    // T56.3: bound beside its first signed record
-	thriftContractPackID:   thriftContractRecipe,   // T49.3: bound beside its first signed record
+	protobufFieldPackID:     protobufFieldRecipe, // T51.2: exact committed Open API recipe; signature still required
+	apacheThriftFieldPackID: apacheThriftFieldRecipe,
+	thriftRWFieldPackID:     thriftRWFieldRecipe,
+	callerMapPackID:         callerMapRecipe,        // T47.5: signed integration-test qualification
+	protobufContractPackID:  protobufContractRecipe, // T49.3: independent declaration-only admission
+	kafkaProducerPackID:     kafkaProducerRecipe,    // T55.3: bound beside its first signed record
+	kafkaConsumerPackID:     kafkaConsumerRecipe,    // T56.3: bound beside its first signed record
+	thriftContractPackID:    thriftContractRecipe,   // T49.3: bound beside its first signed record
 }
 
 // releasedClaims is the fixed in-tree registry of released product claims that
@@ -221,6 +224,20 @@ func protobufFieldRecipe() []extract.Extractor {
 	return []extract.Extractor{scipfield.NewCommittedOpenAPI()}
 }
 
+const (
+	apacheThriftFieldPackID = "phebs.thrift.field.apache"
+	thriftRWFieldPackID     = "phebs.thrift.field.thriftrw"
+	thriftFieldClaimVersion = "1.0.0"
+)
+
+func apacheThriftFieldRecipe() []extract.Extractor {
+	return []extract.Extractor{thriftfield.NewCommittedApache()}
+}
+
+func thriftRWFieldRecipe() []extract.Extractor {
+	return []extract.Extractor{thriftfield.NewCommittedThriftRW()}
+}
+
 // wireCompatibilityPackID is the T53.3 claim card in
 // docs/WIRE_COMPATIBILITY_PROTOCOL.md §9: never report a wire-breaking change
 // as compatible, conservative only in the two disclosed classes.
@@ -286,12 +303,25 @@ func releasedExtractors(ctx context.Context, cfg *config.Config) ([]extract.Extr
 	}
 	released := make([]extract.Extractor, 0, selection.Count())
 	claims := map[string]bool{}
+	var apacheFields, rwFields bool
 	for _, packID := range selection.PackIDs() {
 		if packID == protobufFieldPackID {
 			record, _ := selection.Released(packID)
 			if record.PackClaimVersion != protobufFieldClaimVersion {
 				return nil, nil, fmt.Errorf("unsupported protobuf field claim version %q", record.PackClaimVersion)
 			}
+		}
+		if packID == apacheThriftFieldPackID || packID == thriftRWFieldPackID {
+			if _, ok := packRecipes[packID]; !ok {
+				return nil, nil, fmt.Errorf("released Thrift field pack %q has no fixed in-tree recipe", packID)
+			}
+			record, _ := selection.Released(packID)
+			if record.PackClaimVersion != thriftFieldClaimVersion {
+				return nil, nil, fmt.Errorf("unsupported Thrift field claim version %q", record.PackClaimVersion)
+			}
+			apacheFields = apacheFields || packID == apacheThriftFieldPackID
+			rwFields = rwFields || packID == thriftRWFieldPackID
+			continue
 		}
 		if _, claim := releasedClaims[packID]; claim {
 			claims[packID] = true
@@ -305,6 +335,16 @@ func releasedExtractors(ctx context.Context, cfg *config.Config) ([]extract.Extr
 			)
 		}
 		released = append(released, recipe()...)
+	}
+	// Compose before domain de-duplication: two independent signed recipes
+	// share one domain, one input pass and an exact selected-set version.
+	switch {
+	case apacheFields && rwFields:
+		released = append(released, thriftfield.NewCommittedApacheThriftRW())
+	case apacheFields:
+		released = append(released, thriftfield.NewCommittedApache())
+	case rwFields:
+		released = append(released, thriftfield.NewCommittedThriftRW())
 	}
 	return released, claims, nil
 }

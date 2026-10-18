@@ -703,7 +703,7 @@ function ComparisonRows({ page, onRefreshRows }: { page: ComparisonResponse; onR
             {row.key}
           </div>
           {row.unit && (
-            <div className={css({ marginTop: '5px', color: tok.textTertiary, fontSize: '11px' })}>
+            <div className={css({ marginTop: '5px', color: tok.textTertiary, fontSize: '11px', overflowWrap: 'anywhere' })}>
               unit {row.unit.id}
               {row.unit.logical_services?.length ? ` · ${row.unit.logical_services.join(', ')}` : ''}
               {row.unit.owners?.length ? ` · ${row.unit.owners.join(', ')}` : ''}
@@ -711,10 +711,10 @@ function ComparisonRows({ page, onRefreshRows }: { page: ComparisonResponse; onR
           )}
           <div className={css({
             display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
+            gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
             gap: '10px',
             marginTop: '9px',
-            '@media screen and (max-width: 680px)': { gridTemplateColumns: '1fr' },
+            '@media screen and (max-width: 680px)': { gridTemplateColumns: 'minmax(0, 1fr)' },
           })}>
             <ComparisonSide label="Old evidence" side={row.old} onRefreshRows={onRefreshRows} />
             <ComparisonSide label="Replacement evidence" side={row.replacement} onRefreshRows={onRefreshRows} />
@@ -730,6 +730,7 @@ function ComparisonSide({ label, side, onRefreshRows }: { label: string; side: C
   const tok = usePhebsTokens()
   return (
     <section aria-label={label} className={css({
+      minWidth: 0,
       padding: '9px',
       border: `1px solid ${tok.cardBorder}`,
       backgroundColor: tok.bandBg,
@@ -849,9 +850,9 @@ function EndpointIdentity({
             alignItems: 'center',
             gap: '4px',
             marginTop: '6px',
-            color: tok.accent,
+            color: tok.textPrimary,
             fontSize: '11px',
-            textDecoration: 'none',
+            textDecoration: 'underline',
             ':hover': { textDecoration: 'underline' },
             ':focus-visible': { outline: `2px solid ${tok.accent}` },
           })}
