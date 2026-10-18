@@ -226,5 +226,30 @@
       "seconds": 0.403,
       "qualification": "One mechanics sample, not an RSS, heap or latency bound; metadata and transient parser allocations are additional."
     }
+  },
+  "post_outcome_base_document_census": {
+    "date": "2026-10-18",
+    "base_commit": "31bde809f5ce860e937fbf4450184a2cdb59a2ca",
+    "qualification": "Documentation-only outcome/base update; earlier browser records keep their original input binding. No runtime implementation changed during rebase.",
+    "embedded_tree_sha256": "abc8a8eac700a71455d0793dcf871a4c06ca6547d35da79566928ac03c512c5b",
+    "tree_digest_encoding": "UTF-8 sorted repository-relative path, NUL, lowercase SHA256 of file bytes, newline, concatenated and SHA256 hashed",
+    "embedded_files": 56,
+    "embedded_source_bytes": 6906583,
+    "link_census": {
+      "markdown_sources": 51,
+      "local_link_occurrences": 423,
+      "embedded_targets": 276,
+      "repository_only_targets": 147,
+      "failures": 0,
+      "package_seconds": 0.8
+    },
+    "startup_cache": {
+      "cached_pages": 171,
+      "cached_payload_bytes": 7449023,
+      "cached_byte_slice_capacity": 7559424,
+      "startup_render_ms": 85.70225,
+      "package_seconds": 0.497,
+      "qualification": "One mechanics sample; map/object overhead and transient parser allocations are additional."
+    }
   }
 }
