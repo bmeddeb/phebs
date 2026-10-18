@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package t511.v1;
+option go_package = "example.com/t511/schema";
+
+message Item {
+  string value = 1;
+  optional int32 count = 2;
+  repeated string labels = 3;
+  map<string, string> attributes = 4;
+  message Nested { string value = 1; }
+  Nested nested = 5;
+  oneof choice { string text = 6; int64 number = 7; }
+}

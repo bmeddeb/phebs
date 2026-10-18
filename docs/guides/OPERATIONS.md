@@ -9201,6 +9201,28 @@ checks daemon and container identity, stops/removes only that exact owner,
 and confirms absence before clearing the journal. Preserve inputs when that
 proof fails; do not use daemon-wide pruning or container-name guesses.
 
+### Protobuf field-input qualification
+
+The [T51.1 qualification](../../spike/t511/README.md) records a finite public
+Go proto3 Open-API field population and separate authored controls. It binds
+committed source/generated/SCIP bytes, scip-go0.2.7 and header-reported generator
+versions, with exact numeric field/descriptor/source witnesses. Evaluator Git
+commits are distinct from upstream source provenance. SCIP read/write roles are
+reported as supplied by the indexer; assignment syntax does not establish a
+semantic write classification. Declaration repository/path and SCIP module
+package lineages remain distinct and require explicit exact witnesses to join.
+This result does not activate fields: stable registration/source fencing and
+product operating/signed promotion remain pending under T51.2/T51.3.
+
+T51.2 subsequently implements the isolated stable reader and source/version
+fences, with bounded normal/race and joined store integrations. Its declared
+header recipe remains the public 1.36.11/5.27.1 control; authored 1.36.12/7.36.2
+controls do not widen admission. T51.3 still owns operating and production
+signature promotion. Existing historical qualification/measurement bytes are
+preserved; no metadata or timing sample is relabelled as a production release.
+
+### Caller unit-attribution cutover (T50.3a)
+
 T50.3a advances resolver packs to1.2.0 and includes a bounded, exact committed
 consumer-unit projection. Retained1.1.1 catalogs cannot satisfy current caller
 worker/read admission; ordinary reconciliation builds the new generation.

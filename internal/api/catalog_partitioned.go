@@ -112,6 +112,10 @@ func selectExactSources(
 	visible []store.Repo,
 	domains []string,
 ) (catalogSources, error) {
+	return selectExactSourcesWithVersions(ctx, evidence, certificate, visible, domains, nil)
+}
+
+func selectExactSourcesWithVersions(ctx context.Context, evidence store.EvidenceStore, certificate *extract.CoverageCertificate, visible []store.Repo, domains []string, versions map[string]string) (catalogSources, error) {
 	sources := make(catalogSources)
 	native, partitioned := evidence.(partitionedCatalogStore)
 	repos := make(map[string]store.Repo, len(visible))
@@ -122,6 +126,9 @@ func selectExactSources(
 		for _, domain := range domains {
 			key := catalogSourceKey{repository.Repository, domain}
 			if run, ok := certificateRun(repository, domain); ok && run.Status == "published" {
+				if expected := versions[domain]; expected != "" && run.Extractor != expected {
+					return nil, fmt.Errorf("extraction recipe generation is unavailable: %w", store.ErrConflict)
+				}
 				sources[key] = catalogSource{run: run, evidence: evidence, nonEmpty: run.AssertionCount > 0}
 				continue
 			}
@@ -129,7 +136,7 @@ func selectExactSources(
 			if !partitioned || !ok || repo.IndexedCommitHash == "" {
 				continue
 			}
-			source, err := partitionedCatalogSource(ctx, evidence, native, repo, domain)
+			source, err := partitionedCatalogSource(ctx, evidence, native, repo, domain, versions[domain])
 			if errors.Is(err, store.ErrNotFound) {
 				continue
 			}
@@ -148,6 +155,7 @@ func partitionedCatalogSource(
 	native partitionedCatalogStore,
 	repo store.Repo,
 	domain string,
+	expectedExtractor string,
 ) (catalogSource, error) {
 	// Bounded point reads: the root reference never transfers the canonical
 	// plan/root bytes, and the candidate pointer supplies the policy digest.
@@ -173,6 +181,7 @@ func partitionedCatalogSource(
 		PlanDigest: root.PlanDigest, RootDigest: root.RootDigest,
 		Commit: repo.IndexedCommitHash, UnitDigest: unit,
 		CandidateManifestDigest: root.CandidateDigest, CandidatePolicyDigest: manifest.PolicyDigest,
+		ExpectedExtractor: expectedExtractor,
 	}
 	view := catalogPartitionedEvidence{EvidenceStore: evidence, native: native, authority: authority}
 	// One bounded probe proves the root current under the store fence before
@@ -185,7 +194,7 @@ func partitionedCatalogSource(
 	}
 	return catalogSource{
 		run: extract.CertificateRun{
-			Domain: domain, RunID: root.RunID, Commit: repo.IndexedCommitHash, Fresh: true,
+			Domain: domain, RunID: root.RunID, Commit: repo.IndexedCommitHash, Fresh: true, Extractor: expectedExtractor,
 		},
 		evidence: view,
 		authority: &ContractCatalogAuthority{

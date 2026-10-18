@@ -1,0 +1,87 @@
+{
+  "format": "phebs-document-schema-v1",
+  "source_class": "authored",
+  "tables": [
+    {
+      "name": "T",
+      "fields": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ],
+          "type": "opaque:string"
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ]
+        }
+      ],
+      "indexes": [],
+      "associations": []
+    }
+  ],
+  "views": [
+    {
+      "name": "V",
+      "fields": [
+        {
+          "name": "id",
+          "type": "opaque:string",
+          "sources": [
+            {
+              "kind": "view",
+              "name": "Other",
+              "path": [
+                {
+                  "kind": "field",
+                  "name": "missing"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "Other",
+      "fields": [
+        {
+          "name": "id",
+          "type": "opaque:string",
+          "sources": []
+        }
+      ],
+      "primary_key": [
+        {
+          "path": [
+            {
+              "kind": "field",
+              "name": "id"
+            }
+          ]
+        }
+      ],
+      "indexes": []
+    }
+  ]
+}

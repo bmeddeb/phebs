@@ -54,10 +54,21 @@ const (
 // New returns the stateless extractor.
 func New() sdk.Extractor { return extractor{} }
 
-type extractor struct{}
+// NewCommittedOpenAPI admits only the T51.1 frozen committed input recipe.
+// Its distinct version prevents provisional publications from serving it.
+func NewCommittedOpenAPI() sdk.Extractor { return extractor{released: true} }
 
-func (extractor) Domain() string        { return domain }
-func (extractor) Version() string       { return version }
+const CommittedOpenAPIVersion = "1.4.0-released.1"
+
+type extractor struct{ released bool }
+
+func (extractor) Domain() string { return domain }
+func (reader extractor) Version() string {
+	if reader.released {
+		return CommittedOpenAPIVersion
+	}
+	return version
+}
 func (extractor) Candidate(string) bool { return false }
 
 type indexedOccurrence struct {
@@ -100,7 +111,7 @@ type fieldBinding struct {
 	dependencyVersion string
 }
 
-func (extractor) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) (sdk.Coverage, error) {
+func (reader extractor) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) (sdk.Coverage, error) {
 	paths := make(map[string]struct{})
 	if err := corpus.WalkFiles(ctx, func(filePath string) error {
 		paths[filePath] = struct{}{}
@@ -119,7 +130,10 @@ func (extractor) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) 
 	if !input.Present {
 		return sdk.Coverage{Protocols: []string{"scip-index-absent"}}, nil
 	}
-	documents, exclusions, err := parseIndexScoped(ctx, input.Content, corpus)
+	if reader.released && input.Path != indexPath {
+		return sdk.Coverage{}, errors.New("committed protobuf field recipe requires repository-root index.scip")
+	}
+	documents, exclusions, err := parseIndexAdmitted(ctx, input.Content, corpus, reader.released)
 	if err != nil {
 		return sdk.Coverage{}, fmt.Errorf("parse %s: %w", input.Path, err)
 	}
@@ -127,7 +141,7 @@ func (extractor) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) 
 	// read; raw index bytes remain owned only by the trusted current-read slot.
 	input = sdk.SCIPInput{}
 
-	bindings, err := bindGeneratedFields(ctx, corpus, paths, documents)
+	bindings, err := bindGeneratedFields(ctx, corpus, paths, documents, reader.released)
 	if err != nil {
 		return sdk.Coverage{}, err
 	}
@@ -156,6 +170,10 @@ func parseIndexScoped(
 	content string,
 	corpus sdk.Corpus,
 ) ([]indexedDocument, sdk.Coverage, error) {
+	return parseIndexAdmitted(ctx, content, corpus, false)
+}
+
+func parseIndexAdmitted(ctx context.Context, content string, corpus sdk.Corpus, released bool) ([]indexedDocument, sdk.Coverage, error) {
 	byPath := make(map[string]*indexedDocument)
 	encodings := make(map[string]scip.PositionEncoding)
 	excludedPaths := make(map[string]struct{})
@@ -173,6 +191,9 @@ func parseIndexScoped(
 				return errors.New("metadata appears more than once")
 			}
 			metadataSeen = true
+			if released && (metadata.GetToolInfo().GetName() != "scip-go" || metadata.GetToolInfo().GetVersion() != "0.2.7" || metadata.GetTextDocumentEncoding() != scip.TextEncoding_UTF8) {
+				return errors.New("committed protobuf field recipe requires scip-go 0.2.7 UTF8 input")
+			}
 			switch metadata.GetTextDocumentEncoding() {
 			case scip.TextEncoding_UnspecifiedTextEncoding:
 			case scip.TextEncoding_UTF8:
@@ -211,6 +232,9 @@ func parseIndexScoped(
 			encoding := doc.GetPositionEncoding()
 			if encoding == scip.PositionEncoding_UnspecifiedPositionEncoding {
 				encoding = metadataEncoding
+			}
+			if released && encoding != scip.PositionEncoding_UTF8CodeUnitOffsetFromLineStart {
+				return fmt.Errorf("committed protobuf field recipe requires UTF8 document %q", doc.GetRelativePath())
 			}
 			if !validEncoding(encoding) {
 				return fmt.Errorf("document %q has unspecified position encoding", doc.GetRelativePath())
@@ -312,6 +336,7 @@ func bindGeneratedFields(
 	corpus sdk.Corpus,
 	paths map[string]struct{},
 	documents []indexedDocument,
+	released bool,
 ) (map[string]fieldBinding, error) {
 	protoCache := make(map[string]map[string]protoField)
 	candidates := make(map[string][]fieldBinding)
@@ -330,7 +355,11 @@ func bindGeneratedFields(
 		if err != nil {
 			return nil, fmt.Errorf("read generated document %q: %w", doc.path, err)
 		}
-		generatorRelativePath, definitions, err := generatedDefinitions(ctx, doc, blob.Content)
+		var admission *generatedAdmission
+		if released {
+			admission = &generatedAdmission{}
+		}
+		generatorRelativePath, definitions, err := generatedDefinitions(ctx, doc, blob.Content, admission)
 		if err != nil {
 			return nil, fmt.Errorf("generated document %q: %w", doc.path, err)
 		}
@@ -340,6 +369,9 @@ func bindGeneratedFields(
 			continue
 		}
 		protoPath := protoSources[generatorRelativePath]
+		if released && (protoPath == "" || protoPath != generatorRelativePath) {
+			return nil, errors.New("committed protobuf field recipe requires one repository-root source proto")
+		}
 		if protoPath == "" {
 			continue
 		}
@@ -349,17 +381,28 @@ func bindGeneratedFields(
 			if err != nil {
 				return nil, fmt.Errorf("read source proto %q: %w", protoPath, err)
 			}
-			fields, err = parseProtoFields(ctx, protoPath, protoBlob.Content)
+			fields, err = parseProtoFields(ctx, protoPath, protoBlob.Content, released)
 			if err != nil {
 				return nil, fmt.Errorf("source proto %q: %w", protoPath, err)
 			}
 			protoBlob = sdk.Blob{}
 			protoCache[protoPath] = fields
 		}
+		if admission != nil {
+			if err := admission.confirm(protoPath, fields); err != nil {
+				return nil, err
+			}
+		}
 		for _, definition := range definitions {
 			field, ok := fields[protoFieldKey(definition.field.messageGo, definition.field.number, definition.field.protoName)]
 			if !ok {
 				continue
+			}
+			if released {
+				symbol, parseErr := scip.ParseSymbol(definition.symbol)
+				if parseErr != nil || symbol.GetScheme() != "scip-go" || symbol.GetPackage().GetManager() != "gomod" || symbol.GetPackage().GetVersion() == "" {
+					return nil, errors.New("unsupported committed protobuf SCIP symbol package")
+				}
 			}
 			lineage, dependencyVersion, ok := symbolIdentity(
 				definition.symbol, definition.field.messageGo, definition.identifier,
@@ -393,7 +436,7 @@ func bindGeneratedFields(
 	return bindings, nil
 }
 
-func generatedDefinitions(ctx context.Context, doc indexedDocument, content string) (string, []generatedDefinition, error) {
+func generatedDefinitions(ctx context.Context, doc indexedDocument, content string, admission *generatedAdmission) (string, []generatedDefinition, error) {
 	if len(content) > maxGeneratedBytes {
 		return "", nil, fmt.Errorf("source exceeds %d-byte generated parser limit", maxGeneratedBytes)
 	}
@@ -405,6 +448,11 @@ func generatedDefinitions(ctx context.Context, doc indexedDocument, content stri
 	parsed, err := parser.ParseFile(fset, doc.path, content, parser.SkipObjectResolution)
 	if err != nil {
 		return "", nil, fmt.Errorf("parse Go: %w", err)
+	}
+	if admission != nil {
+		if err := admission.read(ctx, fset, parsed, content); err != nil {
+			return "", nil, err
+		}
 	}
 	fields := make(map[string]generatedField)
 	var spans []struct {
@@ -515,12 +563,17 @@ func generatedDefinitions(ctx context.Context, doc indexedDocument, content stri
 	return protoPath, definitions, nil
 }
 
-func parseProtoFields(ctx context.Context, protoPath, content string) (map[string]protoField, error) {
+func parseProtoFields(ctx context.Context, protoPath, content string, released bool) (map[string]protoField, error) {
 	if len(content) > maxProtoBytes {
 		return nil, fmt.Errorf("source exceeds %d-byte proto parser limit", maxProtoBytes)
 	}
 	if err := ctx.Err(); err != nil {
 		return nil, err
+	}
+	if released {
+		if err := preflightCommittedProto(ctx, content); err != nil {
+			return nil, err
+		}
 	}
 	handler := reporter.NewHandler(nil)
 	fileNode, err := protoparser.Parse(protoPath, strings.NewReader(content), handler)
@@ -529,6 +582,9 @@ func parseProtoFields(ctx context.Context, protoPath, content string) (map[strin
 	}
 	if fileNode == nil {
 		return nil, errors.New("parse returned no file")
+	}
+	if released && (fileNode.Syntax == nil || fileNode.Edition != nil || fileNode.Syntax.Syntax.AsString() != "proto3") {
+		return nil, errors.New("committed protobuf field recipe requires explicit proto3 syntax")
 	}
 	var packageName string
 	for _, declaration := range fileNode.Decls {

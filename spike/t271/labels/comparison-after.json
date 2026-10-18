@@ -1,0 +1,126 @@
+{
+  "authorship": "Fixture-author declarative labels, frozen before any reader implementation or run; not independent extraction-accuracy evidence.",
+  "fixture_sha256": "ba1b7ba78fa42c622924673090b918c586e9cb9864477883bdcd8b1a2d2f37ba",
+  "declarations": [
+    {
+      "kind": "DECLARES_SCHEMA_SET",
+      "pointer": "",
+      "owner": null,
+      "meaning": {
+        "format": "phebs-document-schema-v1",
+        "source_class": "authored"
+      },
+      "span": {
+        "start": 0,
+        "end": 912,
+        "sha256": "67ef3e55788cdf4c2ba959a7367abeb8f565bf2f0e94ef3cfd52fe4273633393"
+      }
+    },
+    {
+      "kind": "DECLARES_TABLE",
+      "pointer": "/tables/0",
+      "owner": {
+        "kind": "table",
+        "name": "Queue"
+      },
+      "meaning": {
+        "name": "Queue",
+        "partition_key_state": "undeclared"
+      },
+      "span": {
+        "start": 90,
+        "end": 891,
+        "sha256": "9ebb64f2b99cecadf2caf740dfa72d0ebf1637198b263c2764db8e5c83fb1c24"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/0/fields/0",
+      "owner": {
+        "kind": "table",
+        "name": "Queue"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 141,
+        "end": 305,
+        "sha256": "c0c1dc41f863f03f0e95ed41c591f6f1ad3ac7bf6aac527e9c4df4f6bbb0b66d"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/0/fields/1",
+      "owner": {
+        "kind": "table",
+        "name": "Queue"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "new β"
+          }
+        ],
+        "type": "opaque:string"
+      },
+      "span": {
+        "start": 315,
+        "end": 483,
+        "sha256": "9fb77cd7ccd77dae4e16e3f90fc5bc32afe79da0430bbe4d005cb150749bda19"
+      }
+    },
+    {
+      "kind": "DECLARES_FIELD",
+      "pointer": "/tables/0/fields/2",
+      "owner": {
+        "kind": "table",
+        "name": "Queue"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "stable"
+          }
+        ],
+        "type": "opaque:bytes"
+      },
+      "span": {
+        "start": 493,
+        "end": 660,
+        "sha256": "58302492e17a42ec7729aac626ad9ef43e2d1fb597c78d4d35d9bd2f0201d32b"
+      }
+    },
+    {
+      "kind": "DECLARES_PRIMARY_KEY",
+      "pointer": "/tables/0/primary_key/0",
+      "owner": {
+        "kind": "table",
+        "name": "Queue"
+      },
+      "meaning": {
+        "path": [
+          {
+            "kind": "field",
+            "name": "id"
+          }
+        ],
+        "position": 0,
+        "direction": "asc"
+      },
+      "span": {
+        "start": 701,
+        "end": 830,
+        "sha256": "640ade14bb4afc774d88363ad6ec6e8347b86cc995f205711da02fe499327c92"
+      }
+    }
+  ]
+}

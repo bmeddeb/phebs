@@ -1176,6 +1176,9 @@ Search, Contracts, Topics, Caller Map, and Impact share the
 scope-aware **Analysis scope & gaps** panel. Expand one repository to inspect
 its active unit name, exact primary/supporting paths, typed-index posture,
 fresh/stale domain publications, durable disposition, and bounded receipt.
+The **Coverage certificate** row expands its disclosure; its separate help
+button opens glossary guidance without changing the disclosure. Both controls
+are keyboard accessible, and Escape returns focus from help to its button.
 Only one repository's paths are mounted at a time. Focused Search and local
 evidence are labeled separately from repository-overlay callers; an
 outside-unit caller is expected overlay evidence, not a focused-search result.
@@ -1417,8 +1420,8 @@ by omitting `auth.api_key`. Always open: `/api/health`, `/api/version`,
 | `/api/webhook`                                                      | POST            | code-host push/repository events, HMAC-authed (no bearer); 404 unless `webhook.secret` set     |
 | `/api/mcp`                                                          | POST/GET/DELETE | MCP over Streamable HTTP; bearer-authed (see [Agents (MCP)](#agents-mcp))                                               |
 | `/api/find_operation_consumers?operation=`                          | GET             | experimental permission-scoped bare-operation matching-call proof bundle                        |
-| `/api/find_proto_field_references?lineage=&message=&field_number=`  | GET             | experimental permission-scoped protobuf-field-reference proof bundle                           |
-| `/api/find_field_references?lineage=&message=&field_number=`        | GET             | experimental permission-scoped protocol-neutral field-reference proof bundle                    |
+| `/api/find_proto_field_references?lineage=&message=&field_number=`  | GET             | permission-scoped protobuf-field proof; provisional or verified T51.2 recipe                           |
+| `/api/find_field_references?lineage=&message=&field_number=`        | GET             | permission-scoped field proof; signed protobuf recipe or explicit provisional support                    |
 | `/api/find_kafka_topic_usage?topic=`                                | GET             | experimental permission-scoped Kafka topic-usage proof bundle with an always-present unresolved census |
 | `/api/list_kafka_topics`                                            | GET             | experimental composed Kafka topic inventory across the admitted planes, as one immutable proof bundle |
 | `/api/topic_inventory/{id}?page_size=&cursor=`                      | GET             | experimental reauthorized page of that inventory, with separate per-plane publication, coverage and quality state |
@@ -1526,7 +1529,7 @@ Caller Map, comparison, proof, search, SCIP, and history reads.
 | `diff`             | structured file statistics plus a unified patch, capped at 2 MiB with `truncated`                                                                                                                                                                           |
 | `find_operation_consumers` | MCP envelope v1.0 with matching static call evidence for one bare canonical `/package.Service/Method`; it does not establish declaration identity or a known-caller roster |
 | `find_proto_field_references` | MCP envelope v1.0 for `(lineage, message, field_number)`; field names remain versioned attributes rather than identity |
-| `find_field_references` | MCP envelope v1.0 for one protocol-neutral `(lineage, message, field_number)`; facts retain `proto_field` or `thrift_field` identity and exact citations, and field 0 is valid |
+| `find_field_references` | MCP envelope v1.0 for one protocol-neutral `(lineage, message, field_number)`; facts retain `proto_field` or `thrift_field` identity and exact citations; Thrift field 0 requires explicit provisional support |
 | `find_kafka_topic_usage` | MCP envelope v1.0 for one Kafka topic spelling; facts are producer/consumer evidence rows, the persisted bundle carries the per-shape-class unresolved census, and the answer is never a completeness claim |
 | `list_kafka_topics` | composes the source-spelled topic inventory across the admitted Kafka planes and returns its first page, with each plane's separate publication, coverage and quality state; answers which topics exist, which `find_kafka_topic_usage` cannot because it needs a spelling you already know |
 | `read_topic_inventory` | one reauthorized page of an already-composed immutable inventory by `bundle_id`, with `page_size` and an opaque `cursor`; re-checks visibility and canonical bytes per call, so losing access to a cited repository returns not-found rather than its rows |
@@ -1579,3 +1582,18 @@ or the equivalent `.mcp.json`:
 ```
 
 Any MCP client speaking Streamable HTTP works the same way.
+
+### Read admitted protobuf field evidence (T51.2)
+
+With the applicable signed field recipe, copy the exact
+`contract_scip_package_v1_<64 lowercase hex>` lineage from authorized
+`/api/evidence?domain=scip-proto-field` rows, plus full message and positive
+numeric field ID. Supply those values to either field-reference HTTP/MCP query;
+retain its source commit, exact authority, proof/citation and explicit coverage
+gaps. A declaration repository/path lineage cannot be substituted. Missing or
+wrong-version publications provide no stable facts; unpublished coverage is
+not an exact empty population. Archived proofs from a provisional recipe are
+unavailable under stable admission. Mixed explicit provisional Thrift queries
+keep their own domain and never read the signed protobuf source for a foreign
+lineage. This pack alone exposes no Impact, operation-consumer or compatibility
+report. Production promotion remains pending T51.3 and the signing key.

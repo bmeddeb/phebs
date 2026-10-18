@@ -12305,6 +12305,70 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Independent source review of T50.2 found no blocking issue; dependency
   provenance, mixed admission and pre-publication protocol refusal are verified.
 
+- **2026-10-18 — T51.1 committed protobuf field-input preregistration
+  (Ben-routed Mac handoff).** Freeze the narrow `scip-proto-field@1.4.0`
+  committed SCIP recipe before its first candidate extraction: direct tagged
+  proto3 Open-API Go selectors/composite keys and receiver-bound getters, with
+  exact numeric message/field identity. Reflection/dynamic/unknown/oneof,
+  opaque/hybrid/other generator/language shapes remain outside this recipe.
+  Raw SCIP role precedence is reported, never semantic write accuracy.
+  Declaration repository/path and SCIP module-package families remain distinct;
+  a bridge needs one exact source/index snapshot, generated source-path/tag/
+  descriptor and global definition/package witnesses, not names or equal lineage.
+  Descriptor source/name/number census must agree with the independent source
+  oracle; ambiguity/missing/crossed witnesses abstain. This checkpoints a
+  test-only bridge contract, not a production cross-family reader or release.
+
+  Source-only labels precede index preparation and scoring: the exact public
+  grpc-go v1.80.0 profiling source has 14 positive/56 negative sites; separate
+  authored controls have 17 positive/7 negative/12 unsupported sites. Lead
+  checked the source/proto identities and every labelled byte/digest range;
+  the 19-declaration oracle is independent of the candidate extractor. Freeze
+  100% finite precision/recall/identity/citation agreement, zero extra/duplicate/
+  wrong/negative/unsupported emissions and descriptor disagreements. Report all
+  consumer-path emissions, including outside enumerated spans; generated-file
+  emissions are separate, not silently included in quality denominators. No
+  broad generator accuracy or production/operating claim follows.
+
+  Pinned scip-go0.2.7/Go1.26.5 inputs are evaluator-generated over retained
+  source bytes; public header-reported generator1.36.11/protoc5.27.1 bytes are
+  unmodified, while authored controls use pinned generator1.36.12/protoc36.2.
+  Upstream source commit `397e45edaa68f8763773bbaaf539cf7894169cd2` cannot own a
+  locally generated index. Retain real evaluator source/index Git bundles:
+  public `6c4c4b5897f11fb26619fc980c114b286c679606` and neutral
+  `a0c1c9f337f11cdafd4231a16a2cc53d10768d89`, under evaluation repository labels.
+  Lead verified every committed blob against frozen digests. Preparation context
+  and all five retained indexed documents are explicit; no missing source is
+  invented. Corrected preregistration SHA256 is
+  `171f577d1a79f8c8e44325b92182fd7444fc827644bac8138bcce1103fe1ada0`;
+  source-only labels remain `3988617e8ba5f9cf5218bd2bd67d1f921cbb2ed484a4d8d421b31fcff5c253c3`.
+
+  The first measurement stays serial, child-free and30s bounded, enforcing
+  frozen input/label digests before scoring. Input preparation was offline,
+  one scip-go child at a time/GOMAXPROCS2/90s bound; both children joined.
+  Existing 64MiB index,100,000-document/1,000,000-occurrence,16KiB symbol and
+  4MiB proto/generated-file ceilings remain refusal bounds. No production
+  request/startup/sync/retry/no-op/publication, lock, cache, state, scheduler,
+  concurrency or child cost changes. Actual finite results, T51.2 source fences
+  and T51.3 operating/signed closure remain separate after this checkpoint.
+
+  T51.1's first candidate measurement then passes the unchanged finite gates:
+  public14/14 positive references and56 clean negatives; authored17/17 positives,
+  7 clean negatives and12 clean unsupported sites. All19 descriptor/source
+  identities and22 unique generated-definition witnesses agree; generated-only
+  emissions11/7 remain outside quality denominators. All31 consumer roles are
+  raw SCIP read, including assignment controls; no semantic-write accuracy follows.
+  Preserve the first result and preregistration; normal0.324s, race1.414s, vet,
+  pinned lint0issues and independent source/denominator/identity review pass.
+  A review wording correction clarifies1665/315µs are extractor-plus-streaming-
+  verification wall observations: callbacks hash each fact's source and count
+  line prefixes, including generated emissions. Preflight/descriptor/definition
+  witness work is outside those timed regions. Each extraction makes five corpus
+  reads,161,951/59,966 bytes; these are finite fixture observations, no SLO or
+  production headroom claim. No production code, source fence, registration,
+  schema, lock, cache, worker, disk publication or child behavior changes.
+  T51.2 production admission and T51.3 operating/signed promotion remain pending.
+
 - **2026-10-18 — T48.5a exact raw partitioned evidence (Ben-routed Mac
   handoff).** `/api/evidence` keeps its legacy publication preference and exact
   legacy response bytes. Only an absent legacy run selects the existing sealed
@@ -12426,6 +12490,189 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   changes37,750→40,609 bytes (gzip9,821→10,699); these are build observations,
   not latency or scale bounds. Production signing still binds the actual final
   binary and artifacts when the existing key becomes available.
+
+- **2026-10-18 — T43R.6 independent scope-help control.** Atlas's bounded
+  native accessibility audit exposed a shared nested-interactive defect:
+  `AnalysisScopePanel` put its coverage-help button inside native `<summary>`.
+  Preserve the native disclosure and existing glossary help, moving the help
+  control to a visible sibling outside `<details>` and reserving its own row
+  space. The help can be focused/opened/closed without toggling coverage; native
+  Enter/Space disclosure semantics remain unchanged. This applies once in the
+  shared component used by Search, Contracts, Topics, Caller Map and Impact.
+  A regression checks the independent control, absence of nested interactive
+  descendants, Escape focus return and unchanged closed state. Shared/help/
+  Impact checks pass 27 tests; four other consumer suites pass 63 tests; targeted
+  lint and type checking pass. Bounded rendered/canonical qualification follows;
+  this checkpoint claims no browser or screenshot PASS yet.
+
+  Cost: two static layout wrappers around the existing help/disclosure controls;
+  no new state, event listener, layout measurement, request, authority field,
+  source scan, cache, lock, background work, concurrency or child. Existing help
+  portal/listeners retain their opening/closing lifetime. Startup/restart, sync,
+  retry/no-op, publication, memory/disk bounds and evidence meaning are unchanged.
+
+  T43R.6 then passed combined-Atlas native full-page keyboard/a11y checks in
+  four desktop/390px light/dark appearances (6.650s). Both native disclosure
+  Enter/Space and independent help/Escape focus return work without overlap or
+  document overflow; console is clean. Each initial mobile offscreen contrast
+  incomplete is retained and passes separately once locally scrolled into view.
+  This closes the inherited nested-interactive defect in the tested combined UI;
+  T49.4's earlier source-bound findings remain exact. Nine pinned-renderer tests
+  including setup compare all eight existing Atlas frames in28.167s, with no
+  baseline changes, retries, new masks or tolerance change. Backend, browser,
+  bridge and renderer join; derived data is removed. Independent source/cost
+  review has no blocking finding. Eight focused suites pass116 tests; lint,
+  type/build, docs/glossary and whitespace pass. Same-toolchain shared component
+  grows174 minified bytes/45 gzip bytes; keyboard walkthroughs are60–93ms local
+  mechanics observations, not a user or latency study. Exact source/harness/
+  image/report hashes and limits live in `ui/receipts/t43r6.json`.
+
+- **2026-10-18 — T27.1 document-schema spike preregistration (Ben's
+  all-ticket Mac handoff).** Adopt the frozen decision table in the required
+  `spike/t271/README.md` as the isolated experiment's input/output contract;
+  production never imports this spike. One strict UTF-8 JSON blob admits only
+  `phebs-document-schema-v1` and mandatory authored/captured source class.
+  Schema-set lineage is exact repository/clean manifest path/format; owner kind
+  and exact name plus structured typed field paths establish stable identity.
+  Commit/blob/citation/source class are provenance; comparison requires equal
+  lineage and source class. Preserve exact Unicode, literal punctuation and
+  array-element/map-value path kinds. Opaque types/index kinds/prefix units
+  imply no vendor semantics; positive signed-64 prefix metadata controls no work.
+  Primary/index columns are ordered with explicit/default ascending direction;
+  partition paths are direction-free primary prefixes, absence undeclared.
+  Distinct table/view output namespaces, view-owned indexes and exact typed
+  source edges are mandatory. Association cycles are legal untraversed edges;
+  view dependencies must be acyclic. Duplicates, unknown/payload properties,
+  malformed Unicode/shape/context, unresolved references, cycles and limits
+  refuse atomically before any output. The frozen precedence fixes one typed
+  source-free refusal. Missing input is a separate request-export workflow.
+  Every declaration/edge cites its complete exact UTF-8 JSON value and bound
+  source tuple; stable semantic facts exclude citation/provenance churn from
+  explicit snapshot comparison. No live-schema/runtime/current-shape claim.
+
+  Freeze phebs-only bounds at 64KiB input, depth32, 16 tables/views, 128 fields
+  per owner, eight path/key/column/pair positions, 128-byte names and 256-byte
+  types/context, 16 indexes/source references, 64 associations, 256 preflight
+  declarations and 192 complete published facts/citations. These are refusal
+  limits, never vendor or measured operating limits. Before reader code or any
+  reader run, lead review verified the 142-file/915,928-byte inventory and all
+  61 public CQL/neutral JSON span round trips against the permitted pinned
+  Apache source; the hand-derived census is 3 tables, 29 fields, 1 view and its
+  6 outputs/source edges, plus schema/key declarations. Synthetic 119-case
+  labels (14 accepted, 104 atomic refusals, 1 missing; 534 declaration labels)
+  and explicit comparison labels predate implementation. Preregistration digest
+  is `7ef0df8be38bc51494e63a57173c120c5ed2e98b832822251bdb9f6ca9555b3b`.
+  Required README/schema/bounds/derivation evidence owns detailed contract
+  bytes; there is no separate design document. This checkpoints inputs only,
+  not implementation acceptance or independent extraction accuracy.
+
+  Expected cost is one bounded byte/token/structure pass, bounded identity maps
+  and at most a 16-node view DAG; association cycles are never recursively read.
+  Two serial fresh-state passes will compare complete facts/citations/catalog/
+  refusal/comparison outputs and report actual bytes/timing/allocation if
+  measured. No source repository scan, runtime query/startup/sync/retry/no-op,
+  publication, lock, cache, database/network, persistent worker or child changes.
+
+- **2026-10-18 — T27.1 bounded neutral reader outcome (Ben-routed Mac
+  handoff).** The isolated implementation conforms to the immutable `e7be4d27`
+  contract, without production imports or new dependencies. Two fresh-state
+  passes each accept 14 cases, atomically refuse 104 and retain one missing
+  artifact workflow; all 534 facts/citations, the complete 61-row public
+  derivation and explicit snapshot differences agree. Canonical output SHA-256
+  is `904465c775546e1c208fbdd4dc727dabfa5560ae7a9bc88c7022526096926577`
+  on both passes. Fixture authors also implemented the reader; these are neutral
+  contract-conformance/determinism results, not independent extraction accuracy
+  or vendor/live-schema validation. The lead independently reviewed the frozen
+  source/contract and implementation. Peer review found Unicode whitespace
+  could pass the JSON tail; the corrected reader permits only SP/HT/CR/LF.
+  Two positive and six atomic-refusal supplemental controls pass outside the
+  frozen population, with unchanged canonical fixture output. Original
+  measurements/demo/verification remain exact; the separate correction and
+  acceptance records identify the corrected source and clean re-review.
+
+  Outcome is GO for this bounded fixture contract only. Required results README
+  demonstrates table/typed-field/key/citation lookup, declared associations and
+  view outputs, missing-export checklist and explicit two-snapshot differences.
+  It supplies no production reader, registry, schema, adapter, CQL parser, live
+  connection, deployment/migration, current-shape, runtime or release claim.
+  A future production ticket needs its own exact Git/auth/publication design.
+
+  Normal/race/vet and pinned lint pass, including the correction. Every read
+  decodes at most 64KiB/depth32, validates bounded maps and a <=16-node view DAG,
+  and publishes at most 192 complete facts/citations. Associations are never
+  traversed. Full-input provenance hashing happens once; nested cited-value
+  hashing processes at most four additional input lengths. Result/catalog
+  encoding duplicates semantic fact bytes; the conservative <16MiB encoding
+  budget is analytical, not a heap/RSS or new admission bound. Largest observed
+  result is 164,567 encoded bytes; maximum observed per-call process allocation
+  delta is 942,056 bytes, not retained heap or peak RSS. Timing/allocation
+  mechanics retain their exact original pre-correction source qualification.
+  Explicit comparison holds two admitted results and bounded maps without
+  source reads/hashing. There is no production request, sync/startup/retry/no-op,
+  publication, shared lock, cache/invalidation, persistent worker, network,
+  database, disk write or child-process cost.
+
+- **2026-10-18 — T51.2 isolated committed protobuf field admission
+  (Ben-routed Mac handoff).** Bind `phebs.protobuf.field.go` claim `1.0.0`
+  through the existing verified selection to the distinct
+  `scip-proto-field@1.4.0-released.1` reader. Missing selection adds no field
+  reader/input/worker work. The supported committed recipe is repository-root
+  `index.scip`, declared scip-go0.2.7 UTF8, proto3 Open API and unique declared
+  protoc-gen-go1.36.11/protoc5.27.1 headers. Reuse the existing SCIP parse,
+  generated Go AST and field symbol/tag join; before any emit, require exact
+  generated descriptor/source path, full message, numeric and named field census.
+  Missing SCIP stays explicit `scip-index-absent`; unsupported/conflicting input
+  refuses atomically, including both empty/nonempty duplicate-descriptor orders.
+  These are declared input properties, not proof a generator executed.
+
+  Version-specific legacy/native selection, listing/locators, direct/HTTP/MCP
+  proofs, exact citations, raw reads and immutable archived bundles preserve
+  committed source, authorization and exact generation fences. Reuse the native
+  run's existing SQL pre/page/post boundary for the expected version; keep its
+  six-key public authority shape unchanged. Existing BundleExtractor witnesses
+  carry the attested version, including zero-row native roots. No provisional
+  run/atom becomes stable. Only the two field queries are admitted by this pack;
+  independently signed Kafka surfaces retain their own selection. No operation
+  consumer, Impact/report, compatibility, Thrift or field-zero surface follows.
+  Strict lowercase 64-hex SCIP-package lineage remains distinct from declaration
+  lineage, with no automatic bridge. Explicit provisional proto/Thrift mode
+  retains its independently allowed surface; a neutral foreign-family request
+  excludes the stable protobuf domain rather than querying or translating it.
+
+  Source/serializer/caller/cost review found no remaining blocker. Six signed
+  startup cases plus mixed/provisional controls, direct/HTTP/MCP/domain/lineage,
+  citation/archive/version and final source-movement tests pass. Wrong native
+  versions retain explicit unpublished/non-fresh coverage, without a fabricated
+  exact-empty authority. Real store version fencing passes in 1.416s; existing exact
+  raw-root integration passes in 1.277s and both join their one child. Final normal
+  reader/API/command selectors pass in 0.383/0.620/0.832s and race
+  1.369/1.756/3.427s, serial with 30s package deadlines. Pinned changed-package
+  lint reports zero issues; no new schema/client/UI bytes are required. Frozen
+  T51.1 labels/inputs/result stay exact. Production operating/signature closure
+  remains T51.3; no production release or broader generator support is claimed.
+
+  Cost: selected startup adds one fixed registry/claim check and one domain
+  version entry. Extraction adds bounded header/descriptor checks and local maps:
+  descriptor/source<=4MiB, protobuf recursion256, proto lexical preflight<=500k
+  tokens/depth128; existing index64MiB/100k documents/1M occurrences and source
+  caps remain. There is no second SCIP/Go parse or new source/index/tool child.
+  Queries add bounded local identity/domain/witness checks; each existing native
+  SQL fence adds an optional version comparison, without an extra page query or
+  full-root/source read/hash. Versioned proof persistence additionally reselects
+  the already-visible native sources once through existing root/candidate points
+  and one-row probes, then rechecks visibility. Existing three-attempt bounds
+  remain. Archive reads add local decoded witness/citation checks; raw reads add
+  no source calls. Peer cost review corrected a retained header substring with
+  the existing strings.Clone pattern, so it cannot pin the generated source
+  backing bytes across the following proto read. Scratch descriptor/maps are
+  invocation-local, with no new
+  numerical heap/SLO claim. Sync/no-op/retry, publication writers, lifecycle,
+  shared locks/caches, permanent schema, concurrency and children are unchanged.
+
+  After convergence with main e09a5dec, the corrected exact field tree passes
+  the same reader/API/command selectors in0.445/0.573/0.812s, plus documentation,
+  glossary and whitespace checks. Peer recheck closes the sole retained-header
+  finding. No test or review finding remains for this implementation.
 
 - **2026-10-18 — T50.3a committed unit attribution in caller leaves
   (Ben-routed Mac handoff).** Repair the direct caller pipeline once at resolver

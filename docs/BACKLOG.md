@@ -15266,6 +15266,27 @@ help deployment, bounded cost, exact authority corrections, responsive review,
 and explicit retained-receipt-gate completion exception are recorded in the
 completed backlog.
 
+**T43R.6 · Accessible independent coverage help** *(scheduled 2026-10-18,
+found during T49.4 bounded native QA)* — move the shared coverage-help button
+outside the native summary, preserving a visible independent help target and
+native disclosure semantics. AC: no nested interactive summary descendants;
+help open/close/Escape focus return never changes disclosure state; desktop and
+390px keyboard/overflow/a11y and scoped canonical comparison pass; retain
+existing capabilities, caveats and bounded costs. The shared component fix and
+90 focused shared/consumer tests, lint/type checks are complete on its branch;
+rendered/canonical qualification is pending. The T49.4 inherited audit finding
+is preserved rather than relabelled as a clean full-page result.
+
+**T43R.6 bounded qualification (2026-10-18).** Combined Atlas native1280/390
+light/dark keyboard/focus/overflow and full-page audit pass; mobile offscreen
+contrast incompletes are preserved and individually pass once visible. Existing
+eight canonical frames compare unchanged9/9including setup, zero retries/.001
+and no new masks; no baseline is rewritten.116 focused UI tests, lint/type/build,
+independent source/cost review, docs/glossary and whitespace pass. Shared chunk
++174bytes/+45gzip; no new runtime requests/state/listeners. Source-bound receipt
+is `ui/receipts/t43r6.json`; all test runtime custody is joined/removed. Ready for
+integration after its T49.4 parent and Ben's explicit request.
+
 ## Epic 44 · Reading surfaces and instance chrome *(planned 2026-08-08 · presentation track)*
 
 Four operator-requested reading and chrome improvements, planned with the
@@ -19354,9 +19375,44 @@ T49.1 and an admitted SCIP input recipe; freeze generator/indexer/version,
 descriptor field identity, reflection/dynamic/unknown exclusions and direct
 reference quality. Managed navigation authority alone is insufficient.
 
+**T51.1 preregistration checkpoint (2026-10-18, Ben-routed Mac handoff).**
+The source/SCIP/generator/descriptor recipe, separate lineage bridge and strict
+positive/negative/unsupported exclusions are frozen in `spike/t511` before any
+candidate run. Lead reviewed public14/56 and separate neutral17/7/12 source
+labels, all exact spans/digests and actual evaluator Git source/index bundles;
+upstream397e45ed is source provenance only. Corrected preregistration digest is
+`171f577d1a79f8c8e44325b92182fd7444fc827644bac8138bcce1103fe1ada0`.
+Prospective finite thresholds are100% agreement and zero extra/duplicate/wrong/
+negative/unsupported facts; generated emissions stay separately reported. A
+child-free30s measurement follows the immutable checkpoint. No quality PASS,
+production bridge/registration, operating result or signature exists yet.
+
+**T51.1 finite result (2026-10-18).** First measurement passes frozen public
+14/14 positive +56 negative and separate authored17/17 positive +7 negative/
+12 unsupported sites, with all19 descriptor/source identities and22 exact
+unique definition witnesses. Generated-only emissions11/7 are separately
+reported; raw SCIP role semantics do not establish semantic writes. The original
+result/preregistration/labels remain exact. Normal/race, vet, pinned lint and
+independent identity/denominator/source/cost review pass; the only review wording
+gap is corrected without rerunning or relabelling. The source/index bundles and
+narrow supported recipe complete T51.1 on its branch; no production bridge,
+registration, operating/SLO or release claim follows. T51.2 is the next leaf.
+
 **T51.2 · Stable field reader registration and source fencing** — isolate
 this recipe from the provisional proto umbrella; preserve exact committed
 source, declaration, SCIP, authorization and gap identity.
+
+**T51.2 implementation result (2026-10-18, Ben-routed Mac handoff).** The
+signed field-only recipe selects distinct `1.4.0-released.1` and the T51.1 public
+committed input recipe. Pre-emission metadata/header/descriptor/source checks,
+legacy/native expected-version fences, raw reads, direct/HTTP/MCP/citation and
+archived proofs are implemented. Public authority bytes stay compatible; no
+automatic declaration-to-SCIP bridge or unrelated consumer/Impact/Thrift release
+is added. Mixed explicit provisional surfaces remain available, while foreign
+neutral identities exclude stable protobuf reads. Normal/race, two bounded
+joined real-store integrations, vet/pinned lint and source/cost review pass.
+Original T51.1 evidence stays exact. T51.3 still owns operating/production
+signature promotion; this implementation alone activates no unsigned pack.
 
 **T51.3 · Measured field-reference promotion** — satisfy the common bar and
 publish exact supported generators, input formats, operating bounds and expiry.
@@ -21167,6 +21223,30 @@ either snapshot live or current; the retained README demonstrates the
 locate-table → inspect-key/field → copy-citation ticket workflow and the
 missing-artifact checklist; no private dialect, adapter, CQL parser,
 production code path, pack registration, or runtime claim is added.
+
+**T27.1 input checkpoint (2026-10-18, Ben-routed Mac handoff).** Before any
+reader implementation/run, the required README decision table, schema, bounds,
+119 cases, 534 declaration labels and complete 61-row public derivation are
+frozen. Lead independently reviewed source/semantics and verified all public
+literal CQL/JSON spans and the 142-file/915,928-byte inventory. Preregistration
+SHA256 is `7ef0df8be38bc51494e63a57173c120c5ed2e98b832822251bdb9f6ca9555b3b`.
+The owning PLAN adopts identity, graph, refusal, comparison and cost decisions;
+no production reader/pack or measurement PASS exists at this checkpoint.
+Implementation and the two fresh-state bounded passes follow this review.
+
+**T27.1 implementation result (2026-10-18).** The isolated bounded reader,
+canonical catalog and explicit comparison pass both frozen 119-case runs:
+14 accepted, 104 atomic refusals, one missing-export state; 534 exact
+facts/citations per pass and the complete 61-row public derivation agree.
+Canonical output is byte-identical. The results README demonstrates the
+required ticket/citation/missing-artifact workflow and measured cost limits.
+Independent implementation review's JSON-tail-whitespace defect is corrected
+and re-reviewed clean; eight supplemental controls stay outside the original
+population, whose bytes and measurements remain exact. Focused normal/race,
+vet and pinned lint pass. GO is limited to neutral fixture contract conformance;
+there is no independent accuracy, live/vendor schema, production registration,
+CQL parser, runtime, release or scale claim. Detailed original/corrected source
+and review records live under `spike/t271/results/`.
 
 ## Epic 28 · Redis keyspace evidence *(drafted 2026-07-27 · unscheduled — spike first)*
 

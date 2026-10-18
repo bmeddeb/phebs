@@ -720,6 +720,25 @@ cache-invalidation path, no file read, hashing, child process, or bounded
 memory and disk cost. Activation remains gated until T47.5 promotion, with
 the T47.4 operating acceptance separate.
 
+### Signed protobuf field references (T51.2)
+
+An applicable verified `phebs.protobuf.field.go` claim `1.0.0` selects only the
+committed Open-API protobuf field reader `1.4.0-released.1`. It requires a
+repository-root committed `index.scip` declaring scip-go0.2.7/UTF8, proto3,
+protoc-gen-go1.36.11/protoc5.27.1 generated headers and exact matching source
+and descriptor field identities. The headers describe committed inputs;
+they do not attest a generator execution. Missing SCIP remains an explicit gap;
+unsupported or conflicting inputs refuse without partial facts.
+
+The pack exposes `find_proto_field_references` and `find_field_references`
+through HTTP/MCP, exact citations and immutable proofs. Use the exact
+SCIP-package lineage from permitted field evidence; a declaration lineage is a
+different family. Field 0 and Thrift require separately enabled provisional
+support. This recipe supplies no automatic identity bridge, consumers, Impact
+or compatibility product. Existing signed-selection expiry/revocation and
+restart behavior applies. T51.3 operating qualification and production signing
+remain pending; registration supplies no unsigned activation.
+
 ### Authentication
 
 Authentication is always required for the UI, application API, and MCP. A
