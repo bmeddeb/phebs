@@ -12271,3 +12271,50 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   no bytes, mode or mtime. Production requests, queries, sync, startup/restart,
   retry/no-op, publication, locks, caches, concurrency and children are unchanged.
   JavaScript delta is zero; the eight PNGs shrink 1,139 bytes collectively.
+
+- **2026-10-18 — T51.1 committed protobuf field-input preregistration
+  (Ben-routed Mac handoff).** Freeze the narrow `scip-proto-field@1.4.0`
+  committed SCIP recipe before its first candidate extraction: direct tagged
+  proto3 Open-API Go selectors/composite keys and receiver-bound getters, with
+  exact numeric message/field identity. Reflection/dynamic/unknown/oneof,
+  opaque/hybrid/other generator/language shapes remain outside this recipe.
+  Raw SCIP role precedence is reported, never semantic write accuracy.
+  Declaration repository/path and SCIP module-package families remain distinct;
+  a bridge needs one exact source/index snapshot, generated source-path/tag/
+  descriptor and global definition/package witnesses, not names or equal lineage.
+  Descriptor source/name/number census must agree with the independent source
+  oracle; ambiguity/missing/crossed witnesses abstain. This checkpoints a
+  test-only bridge contract, not a production cross-family reader or release.
+
+  Source-only labels precede index preparation and scoring: the exact public
+  grpc-go v1.80.0 profiling source has 14 positive/56 negative sites; separate
+  authored controls have 17 positive/7 negative/12 unsupported sites. Lead
+  checked the source/proto identities and every labelled byte/digest range;
+  the 19-declaration oracle is independent of the candidate extractor. Freeze
+  100% finite precision/recall/identity/citation agreement, zero extra/duplicate/
+  wrong/negative/unsupported emissions and descriptor disagreements. Report all
+  consumer-path emissions, including outside enumerated spans; generated-file
+  emissions are separate, not silently included in quality denominators. No
+  broad generator accuracy or production/operating claim follows.
+
+  Pinned scip-go0.2.7/Go1.26.5 inputs are evaluator-generated over retained
+  source bytes; public header-reported generator1.36.11/protoc5.27.1 bytes are
+  unmodified, while authored controls use pinned generator1.36.12/protoc36.2.
+  Upstream source commit `397e45edaa68f8763773bbaaf539cf7894169cd2` cannot own a
+  locally generated index. Retain real evaluator source/index Git bundles:
+  public `6c4c4b5897f11fb26619fc980c114b286c679606` and neutral
+  `a0c1c9f337f11cdafd4231a16a2cc53d10768d89`, under evaluation repository labels.
+  Lead verified every committed blob against frozen digests. Preparation context
+  and all five retained indexed documents are explicit; no missing source is
+  invented. Corrected preregistration SHA256 is
+  `171f577d1a79f8c8e44325b92182fd7444fc827644bac8138bcce1103fe1ada0`;
+  source-only labels remain `3988617e8ba5f9cf5218bd2bd67d1f921cbb2ed484a4d8d421b31fcff5c253c3`.
+
+  The first measurement stays serial, child-free and30s bounded, enforcing
+  frozen input/label digests before scoring. Input preparation was offline,
+  one scip-go child at a time/GOMAXPROCS2/90s bound; both children joined.
+  Existing 64MiB index,100,000-document/1,000,000-occurrence,16KiB symbol and
+  4MiB proto/generated-file ceilings remain refusal bounds. No production
+  request/startup/sync/retry/no-op/publication, lock, cache, state, scheduler,
+  concurrency or child cost changes. Actual finite results, T51.2 source fences
+  and T51.3 operating/signed closure remain separate after this checkpoint.

@@ -19285,6 +19285,18 @@ T49.1 and an admitted SCIP input recipe; freeze generator/indexer/version,
 descriptor field identity, reflection/dynamic/unknown exclusions and direct
 reference quality. Managed navigation authority alone is insufficient.
 
+**T51.1 preregistration checkpoint (2026-10-18, Ben-routed Mac handoff).**
+The source/SCIP/generator/descriptor recipe, separate lineage bridge and strict
+positive/negative/unsupported exclusions are frozen in `spike/t511` before any
+candidate run. Lead reviewed public14/56 and separate neutral17/7/12 source
+labels, all exact spans/digests and actual evaluator Git source/index bundles;
+upstream397e45ed is source provenance only. Corrected preregistration digest is
+`171f577d1a79f8c8e44325b92182fd7444fc827644bac8138bcce1103fe1ada0`.
+Prospective finite thresholds are100% agreement and zero extra/duplicate/wrong/
+negative/unsupported facts; generated emissions stay separately reported. A
+child-free30s measurement follows the immutable checkpoint. No quality PASS,
+production bridge/registration, operating result or signature exists yet.
+
 **T51.2 · Stable field reader registration and source fencing** — isolate
 this recipe from the provisional proto umbrella; preserve exact committed
 source, declaration, SCIP, authorization and gap identity.

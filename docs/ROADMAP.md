@@ -170,6 +170,12 @@ values update and 118 baselines remain untouched. This closes the portability
 implementation on its branch; full-matrix history and production signing retain
 their recorded scope.
 
+**T51.1 field inputs (2026-10-18):** a source-labelled public population and
+separate authored controls now have reviewed, actual committed evaluator SCIP
+inputs, explicit descriptor/lineage witnesses and prospective finite thresholds.
+The first measurement follows this checkpoint; production registration and
+operating/signing closure remain distinct.
+
 **Caller Map / Atlas sequencing override (2026-10-17, Ben-directed):** bounded
 integration tests suffice for these products and their release bindings. The
 owning amendment at the start of Epic 47 in [BACKLOG.md](./BACKLOG.md) supersedes
