@@ -13507,3 +13507,20 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   plus UI validator/rendered controls and focused normal/race pass. This adds
   constant metadata comparisons only, no read/query/sync/startup/retry, persistent
   state, lock/cache, worker, child, source traversal or bound increase.
+
+- **2026-10-18 — T48.4 scoped common-product evidence closure (Ben-routed Mac handoff).**
+  Reuse existing green recovery/archive/version/citation mechanisms only after
+  exact source-scope comparison; new unit/field selected-set semantics keep their
+  own normal/race/native gates. Three existing bounded selector steps pass once:
+  filesystem crash seams/archive/stage10.970s, capacity-probe/backup-lock2.469s
+  and mocked offline restore clear10.181s. These are not a new real hard-kill,
+  physical-pressure or full live backup campaign. Restore clears derived native
+  extraction roots until exact ordinary rebuild, while generic archive custody
+  and proof/version fences remain exact. Census twelve frozen unsigned draft
+  artifacts for four measured product packs; one disposable key verifies each
+  exact binary/implementation/artifact binding through the ordinary loader, then
+  all key/records/scratch are deleted without serving. Production signing and
+  final owner-approved production bytes/publication remain pending. Retained
+  tables distinguish source, execution and final-artifact censuses. No product
+  request/sync/startup/retry/publication, lock/cache/schema, worker or child work
+  is added; the finite checks are opt-in evidence only.

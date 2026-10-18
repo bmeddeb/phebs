@@ -18831,6 +18831,18 @@ matches parsing: `path` requires `artifacts_path`, while `artifacts_path`
 alone can be staged. Query/request, sync, retry/no-op, publication, lock,
 persistent-cache, corpus/shard, disk-write and child costs remain unchanged.*
 
+**T48.4 current-product reconciliation (2026-10-18).** Exact source-scope
+comparisons and prior green logs map unchanged recovery/archive/reader custody
+to current comparison, protobuf fields and independent Apache/RW fields. Three
+existing finite selector steps pass once; no large failure campaign is added.
+`spike/t484/current-product-evidence/` retains the mapping, source hashes, logs
+and root review. Twelve unsigned draft artifacts/four packs pass exact measured
+binary/implementation/census signer-loader checks using one discarded disposable
+key; no record is installed or served. Derived extraction roots remain
+unpublished after restore until ordinary exact rebuild; no immediate-current
+field-root restore is claimed. Production key/signing and final production
+artifact/publication approval remain separate.
+
 **T48.5 · Exact partitioned reads for every proof surface** *(Linux track,
 2026-10-13)* — every current extraction mode publishes partitioned roots, so a
 proof surface that reads only legacy runs answers with no evidence on a real

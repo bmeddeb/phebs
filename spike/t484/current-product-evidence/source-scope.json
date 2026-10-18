@@ -1,0 +1,871 @@
+{
+  "schema": "phebs-current-product-source-scope-v1",
+  "date": "2026-10-18",
+  "capture_commit": "6e38710c6b6476e62cf3033e15bb25511b22adda",
+  "authority": "Read-only source/hash comparison; no test or product execution performed by this mapping.",
+  "reference_commits": {
+    "caller_unit_cutover": "c720ac99cf07b0a242875318c591fb1690a25957",
+    "caller_archive_regression": "13f07c388ffadc5e13916299e675d98315930adf",
+    "comparison_fixture_gate": "cb099b26fbb78070cbaa9a0eb66949e464d67220",
+    "measured_native_source": "bbb41b2ccfb3f9b23653aabf41607185aec3efbe"
+  },
+  "production_delta_from_measured_source": [
+    "internal/api/report_operation_test.go"
+  ],
+  "production_delta_qualification": "Only a test file differs in cmd/internal/go.mod/go.sum. This supports unchanged production mechanism review; it is not a new executable/VCS/native-run identity.",
+  "selected_source_comparisons": [
+    {
+      "path": "go.mod",
+      "bytes": 9366,
+      "sha256": "sha256:424c7e1038c71c10676fc3bad01e155ebc5f912a4eea65e90c284b30951a9275",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": true
+        },
+        "caller_archive_regression": {
+          "present": true,
+          "byte_identical": false,
+          "sha256": "sha256:71afc76e3fc46c6fc3b9364fe10d4a9149e7b40bbb7cc84d5401f4d459ae6662"
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": true
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "go.sum",
+      "bytes": 99030,
+      "sha256": "sha256:d7aa72d0c2c4283125d37d4377e74be0e87723735a27015900d23092798b1665",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": true
+        },
+        "caller_archive_regression": {
+          "present": true,
+          "byte_identical": true
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": true
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "internal/resolvermaterialize/worker.go",
+      "bytes": 24447,
+      "sha256": "sha256:c129eac8f4bce189533c8e1d3a221edac8fe5131c58ed8025d1a2c52bbbc86ba",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": true
+        },
+        "caller_archive_regression": {
+          "present": true,
+          "byte_identical": true
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": true
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "internal/resolvermaterialize/worker_test.go",
+      "bytes": 46020,
+      "sha256": "sha256:85a10e98d27835a3f18454e3eacfdaf843525b0ecba05bfbf0cf13285c7ce9bb",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": true
+        },
+        "caller_archive_regression": {
+          "present": true,
+          "byte_identical": false,
+          "sha256": "sha256:c9e609d172cfc18e1507df55582b082411eb9711fe55b4ab0f48cbc09177198c"
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": true
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "internal/resolvermaterialize/consumer_units.go",
+      "bytes": 10140,
+      "sha256": "sha256:0b75258a1f7823ae799a81f74745a52dc160bf157f8ef48d8a2c33198797686b",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": true
+        },
+        "caller_archive_regression": {
+          "present": false,
+          "byte_identical": false,
+          "sha256": null
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": true
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "internal/resolvermaterialize/consumer_units_test.go",
+      "bytes": 8906,
+      "sha256": "sha256:ea230d1b62920c76acce8bff064a92a3f5d7c0e42652fc75910efa254e441401",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": true
+        },
+        "caller_archive_regression": {
+          "present": false,
+          "byte_identical": false,
+          "sha256": null
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": true
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "internal/callerexecute/worker.go",
+      "bytes": 68374,
+      "sha256": "sha256:1726865997e6a95ac56555f92195ccc9890e2b9f54b55ba8b3ab8b56fc02e776",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": true
+        },
+        "caller_archive_regression": {
+          "present": true,
+          "byte_identical": false,
+          "sha256": "sha256:6a76de0c23d83f0249bd0417bf2f6f52f649a4d319df6b8837891b4821f4be33"
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": true
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "internal/callerexecute/worker_test.go",
+      "bytes": 74902,
+      "sha256": "sha256:afb32df07c5b02c22645edd5f7a5d83b320b8a9e74420b316f9ac7c273dfe989",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": true
+        },
+        "caller_archive_regression": {
+          "present": true,
+          "byte_identical": false,
+          "sha256": "sha256:8a0567724a438e07aa4b09363abd36c08c3bd62f6afda4190bbc2dfdea3f0339"
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": true
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "internal/callerexecute/consumer_units_test.go",
+      "bytes": 1940,
+      "sha256": "sha256:97966fd23aa5afabaae4c2a28c1cdda320f3a4a6787cb224fbbe36fc4d0aaf79",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": true
+        },
+        "caller_archive_regression": {
+          "present": false,
+          "byte_identical": false,
+          "sha256": null
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": true
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "internal/resolvercatalog/lifecycle.go",
+      "bytes": 36822,
+      "sha256": "sha256:1ba47597374c41b2d609de3beb992f8081e375885adabc310f807a7d0853cbf0",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": true
+        },
+        "caller_archive_regression": {
+          "present": true,
+          "byte_identical": true
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": true
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "internal/resolvercatalog/lifecycle_test.go",
+      "bytes": 57612,
+      "sha256": "sha256:60691af9bed3917f712a9a359e3e4c5154ea8c5574132fce21eec410cb60ee16",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": true
+        },
+        "caller_archive_regression": {
+          "present": true,
+          "byte_identical": true
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": true
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "internal/resolvercatalog/archive.go",
+      "bytes": 17883,
+      "sha256": "sha256:ec6cb4f4976dd3672d311e9a506e20b50c809c447acdd6592a57f32919f87431",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": true
+        },
+        "caller_archive_regression": {
+          "present": true,
+          "byte_identical": true
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": true
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "internal/callerpublication/lifecycle.go",
+      "bytes": 37696,
+      "sha256": "sha256:a2c90270bcc2b33b5a958d2a544d1830e64b0617cf28631f106fa2392bf0bb5c",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": true
+        },
+        "caller_archive_regression": {
+          "present": true,
+          "byte_identical": true
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": true
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "internal/callerpublication/lifecycle_test.go",
+      "bytes": 35662,
+      "sha256": "sha256:6c1afe3a354846523bbc71df4163dbb08b355c0199ae6d42e443d10a50a5cebd",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": true
+        },
+        "caller_archive_regression": {
+          "present": true,
+          "byte_identical": true
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": true
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "internal/callerpublication/archive.go",
+      "bytes": 33495,
+      "sha256": "sha256:9edcc7545a530afea6a0213764eb97680cc1a630a34b893c2da67f237bc59a7a",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": true
+        },
+        "caller_archive_regression": {
+          "present": true,
+          "byte_identical": true
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": true
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "internal/callerpublication/archive_test.go",
+      "bytes": 9204,
+      "sha256": "sha256:5230d344214b50ce603eca584c83672fe51e10597c5496c97b393649920e0ecb",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": true
+        },
+        "caller_archive_regression": {
+          "present": true,
+          "byte_identical": true
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": true
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "internal/extractionpublication/lifecycle.go",
+      "bytes": 42005,
+      "sha256": "sha256:dcbc6a81a43fde30879ab4a40d8771aec077b8ffb5ebdffab9ff9d9be8b0290c",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": true
+        },
+        "caller_archive_regression": {
+          "present": true,
+          "byte_identical": true
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": true
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "internal/extractionpublication/lifecycle_test.go",
+      "bytes": 24098,
+      "sha256": "sha256:f5b55bd5f46263bd775d7de3afee8f68e8ea88164f0886e497d53ebcafdf6897",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": true
+        },
+        "caller_archive_regression": {
+          "present": true,
+          "byte_identical": true
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": true
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "internal/extractionpublication/recovery_preparation.go",
+      "bytes": 19925,
+      "sha256": "sha256:f30a11af93414c55beb2373cae404b9737fe0156f03d8fa66f1d3b3c66476e23",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": true
+        },
+        "caller_archive_regression": {
+          "present": true,
+          "byte_identical": true
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": true
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "internal/extractionpublication/recovery_preparation_integration_test.go",
+      "bytes": 31217,
+      "sha256": "sha256:5221e0b80f7e394589542e73d2ff176d843278639465c3552967f5424d9e90ef",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": true
+        },
+        "caller_archive_regression": {
+          "present": true,
+          "byte_identical": true
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": true
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "internal/lifecycle/capacity.go",
+      "bytes": 5398,
+      "sha256": "sha256:21fe60b9bcd9560e0bf0e29f877b326a5ce65cbebc9bc8f18062f7bce08622e3",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": true
+        },
+        "caller_archive_regression": {
+          "present": true,
+          "byte_identical": true
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": true
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "internal/lifecycle/lifecycle_test.go",
+      "bytes": 30771,
+      "sha256": "sha256:aa7f32140a2c3185ffd55da9e2c8b8a980e50c320cee076783b2416344c3357b",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": true
+        },
+        "caller_archive_regression": {
+          "present": true,
+          "byte_identical": true
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": true
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "internal/lifecycle/runner_control_test.go",
+      "bytes": 19896,
+      "sha256": "sha256:41539855bf8d6f924bc11a958e05d94716c53a38f55a1514473d0d7476418f16",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": true
+        },
+        "caller_archive_regression": {
+          "present": true,
+          "byte_identical": true
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": true
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "internal/store/restore_clear.go",
+      "bytes": 10367,
+      "sha256": "sha256:62e0cbbc1273a56631fbe06f58e61c246ac0bfa6bf7f1b7b40378a86cef1ac0c",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": true
+        },
+        "caller_archive_regression": {
+          "present": true,
+          "byte_identical": true
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": true
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "internal/store/restore_clear_test.go",
+      "bytes": 23231,
+      "sha256": "sha256:0428cae4a9849483b84202bc6ce8c40d806ca436e305d785de8050068a2f8216",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": true
+        },
+        "caller_archive_regression": {
+          "present": true,
+          "byte_identical": true
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": true
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "internal/recovery/recovery.go",
+      "bytes": 61456,
+      "sha256": "sha256:ffc106cb046f8edda6b0ceb64091f6ed313539a0b1e0927731466c6e3fc500a1",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": true
+        },
+        "caller_archive_regression": {
+          "present": true,
+          "byte_identical": true
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": true
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "internal/recovery/recovery_test.go",
+      "bytes": 68448,
+      "sha256": "sha256:03b2f58f49b169207a9928a87df2b88152428d92a4a8c2fd03462e8300aa7408",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": true
+        },
+        "caller_archive_regression": {
+          "present": true,
+          "byte_identical": true
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": true
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "internal/api/callercomparison_exact_publication_test.go",
+      "bytes": 23888,
+      "sha256": "sha256:643a2afa742418423dd7b60411c12dc8103bc166f48e1d3ad014bc991634e7bb",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": true
+        },
+        "caller_archive_regression": {
+          "present": true,
+          "byte_identical": true
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": true
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "internal/api/callermap_exact_publication_test.go",
+      "bytes": 53381,
+      "sha256": "sha256:e57a7e53d40a29b66d1ba1baee4ba6465d27c98d41bf283e0bdb08ac307d8d07",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": false,
+          "sha256": "sha256:e6ea1bd4a91d69b4bef12654c26b960d250d40d6d72b63339a685bb86da29ad4"
+        },
+        "caller_archive_regression": {
+          "present": true,
+          "byte_identical": false,
+          "sha256": "sha256:e6ea1bd4a91d69b4bef12654c26b960d250d40d6d72b63339a685bb86da29ad4"
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": false,
+          "sha256": "sha256:e6ea1bd4a91d69b4bef12654c26b960d250d40d6d72b63339a685bb86da29ad4"
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "internal/api/field_admission_test.go",
+      "bytes": 11492,
+      "sha256": "sha256:435ec440bab70bc34bfc7bb091d18ad02f0051af45df26f4dbfb91a623d4d78d",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": false,
+          "byte_identical": false,
+          "sha256": null
+        },
+        "caller_archive_regression": {
+          "present": false,
+          "byte_identical": false,
+          "sha256": null
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": true
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "internal/api/thrift_field_admission_test.go",
+      "bytes": 13316,
+      "sha256": "sha256:813a62498ca343d366a72dde0e7ff323b5b3ddfeb817f3a29a74a22def0aa574",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": false,
+          "byte_identical": false,
+          "sha256": null
+        },
+        "caller_archive_regression": {
+          "present": false,
+          "byte_identical": false,
+          "sha256": null
+        },
+        "comparison_fixture_gate": {
+          "present": false,
+          "byte_identical": false,
+          "sha256": null
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "internal/api/thrift_field_witness_test.go",
+      "bytes": 1286,
+      "sha256": "sha256:c80b16c66394e3775bed3e34c0ff371e50cd7c4b8056fabc393d8ba68707ff81",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": false,
+          "byte_identical": false,
+          "sha256": null
+        },
+        "caller_archive_regression": {
+          "present": false,
+          "byte_identical": false,
+          "sha256": null
+        },
+        "comparison_fixture_gate": {
+          "present": false,
+          "byte_identical": false,
+          "sha256": null
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "cmd/phebs/release_identity.go",
+      "bytes": 7400,
+      "sha256": "sha256:26353eb92b6a528379fff61f01991efcbde6b5f4b5cbc973000ab4d19198b7f8",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": true
+        },
+        "caller_archive_regression": {
+          "present": true,
+          "byte_identical": false,
+          "sha256": "sha256:71da67ca023a12678e5efea954fe730e5932f6008bc84f839e9315072824cccf"
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": true
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "cmd/phebs/release_identity_test.go",
+      "bytes": 18626,
+      "sha256": "sha256:5179543a8a91380cedf60d8420bde76d018ae4e47776af6d29a09142fff914b2",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": false,
+          "sha256": "sha256:b9832ba047583fbca5b5ed5b22816415e2709323df4d1e3288a998fd76e3fcc8"
+        },
+        "caller_archive_regression": {
+          "present": true,
+          "byte_identical": false,
+          "sha256": "sha256:1aa70e7cf63c4e5df0c0823809ec9013807154feb879a3518c145e8f0776538d"
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": false,
+          "sha256": "sha256:b9832ba047583fbca5b5ed5b22816415e2709323df4d1e3288a998fd76e3fcc8"
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "cmd/phebs/release_sign.go",
+      "bytes": 5387,
+      "sha256": "sha256:8d753a9bd39afdd5c11af10695a060a38b3078e72fcdf10c95b36a6d89cf69cc",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": true
+        },
+        "caller_archive_regression": {
+          "present": false,
+          "byte_identical": false,
+          "sha256": null
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": true
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    },
+    {
+      "path": "cmd/phebs/release_sign_test.go",
+      "bytes": 4190,
+      "sha256": "sha256:58d749f2f7353f88c8130a679e0d42ab01a0149d55b586fbd9f9c53463ecb80e",
+      "historical_comparison": {
+        "caller_unit_cutover": {
+          "present": true,
+          "byte_identical": true
+        },
+        "caller_archive_regression": {
+          "present": false,
+          "byte_identical": false,
+          "sha256": null
+        },
+        "comparison_fixture_gate": {
+          "present": true,
+          "byte_identical": true
+        },
+        "measured_native_source": {
+          "present": true,
+          "byte_identical": true
+        }
+      }
+    }
+  ],
+  "comparison_limit": "Exact listed files only, not an assertion of transitive whole-program or historical binary identity. A mismatched or absent historical file is explicit and cannot be reused as byte-identical."
+}
