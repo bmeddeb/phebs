@@ -4004,6 +4004,10 @@ Ben's office return. No caller path/completeness assertion, swap credit, cgroup
 mutation, admission token, active plan/sampler change or child launch. Native
 acceptance, source-owned reservations and prospective version wiring remain H2
 gates, not conclusions from modeled tests.
+Exact source `3c9fcfc5` passes focused normal/race, vet, scoped pinned lint,
+both Linux compile-only targets, docs and glossary. The first serial sequence
+and joined groups are retained in `spike/t42h2l/`; no Linux image was executed.
+Native facts, admission and parent H2 readiness remain unpassed.
 
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over

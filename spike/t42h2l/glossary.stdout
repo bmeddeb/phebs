@@ -1,0 +1,1 @@
+go run ./internal/glossary/cmd/glossary-gen -verify -root .

@@ -138,8 +138,8 @@ T42.H2i prepares linux byte observation and allocation seams.
 T42.H2j prepares prospective aggregate linux memory calculation.
 This is bounded source preparation; actual Linux admission/readiness remains open.
 
-T42.H2l implements the fixed-root Linux physical/effective-cgroup observer next.
-Its source and modeled checks can proceed on the Mac; native proof remains
+T42.H2l implements the fixed-root Linux physical/effective-cgroup observer.
+Its source/model, scoped static and both Linux compile-only checks pass; native proof remains
 deferred until Ben's office return. Complete ancestry, source-owned reservations,
 prospective versions and actual admission/readiness remain separate gates.
 
