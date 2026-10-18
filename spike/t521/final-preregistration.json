@@ -46,6 +46,10 @@
     {
       "path": "licenses/record.json",
       "digest": "sha256:9cf72e943925ecb6b94db0feec888f7c4a7ebcf520796a7817cb79604c3f63a9"
+    },
+    {
+      "path": "quality_test.go",
+      "digest": "sha256:a5f76167c7e17f8e57a8269be503f7c19ab82d6432c40b25e65e9db6206931af"
     }
   ],
   "recipe": {
@@ -476,5 +480,6 @@
     "No production registration/signature, managed generation, operating/scale or generalized independent accuracy claim",
     "No arbitrary inherited ceilings described as measured; finite observed bytes/cost only",
     "Declaration and SCIP identity families remain distinct. Source-only declaration bridge witnesses are evaluation checks, not an automatic production join."
-  ]
+  ],
+  "harness_digest": "sha256:a5f76167c7e17f8e57a8269be503f7c19ab82d6432c40b25e65e9db6206931af"
 }

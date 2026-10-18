@@ -12573,3 +12573,12 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Timed extraction includes streaming verification callbacks; preflight hashing,
   source/definition witnesses and line preparation remain outside that wall
   observation. No isolated-CPU, operating/SLO or generalized accuracy follows.
+
+  A separate pre-execution harness supplement binds the exact quality test;
+  its only preregistration delta adds that harness digest/authority record.
+  The earlier input checkpoint remains byte-exact in Git and all source,
+  labels, witnesses, thresholds and index bindings remain unchanged. Lead
+  complete harness review checks exhaustive application emissions/negatives,
+  unique definition witnesses, exact streaming citations and separate generated
+  counts. A static SCIP constant-name correction precedes any compilation or
+  candidate output. Candidate execution awaits its serialized bounded slot.
