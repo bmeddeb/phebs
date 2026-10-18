@@ -12141,3 +12141,13 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   remains exact. Full script-package and focused release-identity tests,
   scoped vet/pinned lint, shell syntax, docs and glossary pass. No new
   quality/scale claim, production signature, merge or release follows.
+
+- **2026-10-17 — PR #81 preparation integration, production signing pending
+  (Ben-directed).** Ben explicitly authorizes merging the reviewed Caller Map
+  admission and VCS build correction independently of production signing.
+  Fresh bounded integration, focused race, vet and pinned lint pass; direct
+  review finds no blocking issue. The existing source-bound real-binary receipt
+  applies to unchanged implementation files. Keep the unavailable Linux key and
+  production release pending; no replacement key, verifier exception, long
+  rehearsal, accuracy or capacity claim follows. This adds documentation only
+  and no runtime or build cost beyond the owning implementation records above.

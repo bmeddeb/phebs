@@ -180,6 +180,13 @@ receipt is `spike/t475/release/receipts/vcs-build.json`; original failed evidenc
 stays exact. Only production signing on the unavailable existing key and ticket
 integration remain open; no production signature or release is claimed.
 
+**PR #81 integration authorization (2026-10-17):** Ben requests merge of the
+reviewed Caller Map admission and VCS build preparation. Fresh bounded
+integration, focused race and static checks pass; direct review finds no
+blocking issue. Production signing remains pending, so T47.5 release closure
+is still open. Next implementation is the remaining protobuf Atlas binding in
+T49.3/T49.4 using bounded integration tests; labels are optional.
+
 **Caller Map production priority (2026-10-09, Ben-directed):** after immediate
 SCIP operational availability, Epic 47 targets a supported Caller Map release
 for repositories within current admitted limits. Ben explicitly keeps

@@ -18393,6 +18393,21 @@ All script-package tests (3.188 seconds), focused release-identity/signing tests
 This supersedes only the missing-VCS prerequisite above. Production signing
 remains pending the existing Linux key, and PR #81 remains unmerged.
 
+**T47.5 review and integration authorization (2026-10-17, PR #81).** Ben
+explicitly requests merge of the implementation while production signing stays
+pending. Direct review of `6f558a65` finds no blocking issue, including the
+startup/replacement and steady-state-cost pass. Fresh bounded script, command,
+release/caller execution, exact API/MCP and real-store stale-authority tests
+pass, as do focused command race (11.535 seconds), vet, pinned lint (zero
+issues), shell syntax and retained source/receipt digest checks. OCR supplies
+no review: its configured external provider rejects authentication (HTTP 401).
+The earlier real-binary receipt remains applicable to unchanged implementation
+files; no long rehearsal or production signing is repeated. This authorizes
+integration of the preparation, not a production release or closure of T47.5.
+Next implementation: the remaining protobuf Atlas recipe/release binding in
+T49.3/T49.4, with bounded HTTP/MCP integration and optional labels; production
+signing remains a separate pending step.
+
 ## Epic 48 · Shared production-promotion machinery and execution plan *(Ben-directed, 2026-10-09)*
 
 Ben requests a fast plan that starts a production epic for every currently
