@@ -103,12 +103,12 @@ type Options struct {
 	// insufficient because Kafka- or field-only deployments must not advertise
 	// an unreachable Caller Map.
 	CallerMapEnabled bool
-	// CallerComparisonEnabled records that caller comparison is explicitly
-	// admitted. It never follows Caller Map's ordinary activation: a released
-	// Caller Map recipe enables Caller Map alone, and the experimental
-	// protobuf/Thrift switches are its only present admission (Epic 50 owns
-	// comparison promotion through its own release).
+	// CallerComparisonEnabled records explicit comparison admission, through
+	// either its own signed claim plus released Caller Map or provisional switches.
 	CallerComparisonEnabled bool
+	// CallerComparisonReleased restricts the selected claim to its supported
+	// protobuf endpoint pairs, including when provisional switches are also on.
+	CallerComparisonReleased bool
 	// CallerReader is the sole T30.6j product read boundary over an exact
 	// complete caller-generation publication. Serve shares its underlying
 	// publication registry with the worker and lifecycle reconcilers so an

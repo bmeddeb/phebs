@@ -19274,6 +19274,22 @@ pass. No production behavior, resource ceiling or per-request work changes.
 retain two-publication authorization, cursor/lease/citation binding and
 generation drift/refusal; unsupported endpoint pairs are unavailable.
 
+**T50.2 implementation checkpoint (2026-10-18, Ben's all-ticket Mac handoff).**
+The independent frozen comparison claim is in the verified release registry.
+Ordinary comparison requires both that claim and the released protobuf Caller
+Map recipe; a comparison record alone or provisional caller cannot satisfy it.
+Expiry/suspension/revocation preserves independent products. Admitted comparison
+supports protobuf pairs only, including mixed provisional/released startup;
+unsupported pairs are unavailable before publication reads. Existing joint
+generation, visibility, cursor and exact citation fences remain unchanged.
+Nine signed-selection cases, three unsupported-pair negatives with a supported
+positive control, all exact comparison tests and MCP output tests pass normally/
+under focused race; vet and pinned lint are clean. Per-request work adds only
+a boolean and two protocol comparisons; startup adds a fixed claim row and
+bounded dependency lookups, no worker/lock/cache/schema/child. This prepares
+admission only: T50.3's direct quality/operating result and production signature
+remain pending, and Caller Map/Atlas's bounded-test amendment does not waive them.
+
 **T50.3 · Measured comparison promotion** — satisfy the common bar on real
 old/replacement source, concurrent publication and bounded combined read cost;
 release requires its own result even when both Caller Maps are released.

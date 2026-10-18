@@ -251,6 +251,17 @@ func releasedKafkaTopics(claims map[string]bool, planes []string) bool {
 	return true
 }
 
+func releasedCallerComparison(claims, domains map[string]bool) bool {
+	if !claims[callerComparisonPackID] {
+		return false
+	}
+	if !domains["proto-contract"] || !domains["grpc-caller"] {
+		log.Printf("release selection: %s withdrawn: its comparison needs the released protobuf Caller Map recipe", callerComparisonPackID)
+		return false
+	}
+	return true
+}
+
 // admittedWireCompatibility admits the standalone Buf WIRE verdict (T53.2)
 // under the same dark switches as the proof-enriched check, or ordinarily when
 // a verified released record selects its claim (T53.3). A released claim never
@@ -289,6 +300,7 @@ func newServeAPIOptions(d *serveDeps) (api.Options, error) {
 		typedAdmitted = d.typedRuntime.registry.admits
 		typedProvider = d.typedRuntime.registry.provider
 	}
+	comparisonReleased := releasedCallerComparison(d.releasedClaims, d.releasedDomains)
 	apiOpts := api.Options{
 		Version:                     version,
 		TypedIndexAvailable:         d.typedRuntime != nil,
@@ -317,11 +329,12 @@ func newServeAPIOptions(d *serveDeps) (api.Options, error) {
 		ContractCatalogUnadmitted: !provisionalExtractionOn(cfg) &&
 			!d.releasedDomains["proto-contract"] && !d.releasedDomains["thrift-contract"],
 		CallerMapEnabled: d.callerRegistry.Enabled(),
-		CallerComparisonEnabled: cfg.Experimental.ProvisionalProtoExtraction ||
+		CallerComparisonEnabled: comparisonReleased || cfg.Experimental.ProvisionalProtoExtraction ||
 			cfg.Experimental.ProvisionalThriftExtraction,
-		CallerReader:         d.callerReader,
-		ProofBundleRetention: cfg.ProofBundles.RetentionFor(),
-		Compatibility:        d.compatibility, Visible: d.visibleFor,
+		CallerComparisonReleased: comparisonReleased,
+		CallerReader:             d.callerReader,
+		ProofBundleRetention:     cfg.ProofBundles.RetentionFor(),
+		Compatibility:            d.compatibility, Visible: d.visibleFor,
 		WireCompatibility: admittedWireCompatibility(cfg, d.releasedClaims, d.compatibility),
 		Principal: func(ctx context.Context) string {
 			principal, ok := auth.PrincipalFromContext(ctx)

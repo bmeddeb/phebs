@@ -12271,3 +12271,36 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   no bytes, mode or mtime. Production requests, queries, sync, startup/restart,
   retry/no-op, publication, locks, caches, concurrency and children are unchanged.
   JavaScript delta is zero; the eight PNGs shrink 1,139 bytes collectively.
+
+- **2026-10-18 — T50.2 independent comparison claim admission (Ben's
+  all-ticket Mac handoff).** Bind the frozen `phebs.grpc.caller.comparison`
+  product claim to `compare_operation_callers@caller-comparison-v2` in the
+  existing release registry. Ordinary comparison requires its own applicable
+  verified signed claim plus the independently released protobuf/gRPC Caller
+  Map domains. A claim alone or an experimental caller never supplies that
+  released dependency. Withdrawal/expiry/suspension of comparison preserves
+  Caller Map, and withdrawal of Caller Map withdraws the composed comparison.
+  Provisional switches retain their explicit experimental path; when the
+  released claim is admitted it governs the supported protobuf endpoint pair,
+  including mixed provisional/released configuration. Unsupported Thrift or
+  mixed pairs return unavailable before publication reads. No unrelated proof,
+  Impact, field, Kafka or WIRE product is admitted. The shared API/MCP exact
+  engine retains its two-authority final fence, generation/cursor binding,
+  immutable citations, gap semantics, limits and caches unchanged.
+
+  Nine signed-selection cases pass, including independent withdrawals and
+  experimental dependency exclusion. Positive protobuf and three unsupported
+  pair cases verify early refusal without publication I/O; all exact comparison
+  and existing startup regressions pass. Focused command/API normal checks take
+  1.715s/2.402s, race 3.598s/3.419s, and MCP comparison 0.553s; vet and pinned
+  lint report zero issues. This is implementation preparation, not a T50.3
+  quality/operating result or production release: the separate product result
+  and existing unavailable signing key remain pending. Startup adds one fixed
+  claim-digest row, three bounded map lookups and one options flag; missing
+  dependency logs once at startup. Each admitted request adds one boolean
+  branch and at most two closed protocol comparisons before existing reads.
+  No new sync, retry/no-op, publication, lock, cache invalidation, scan, schema,
+  memory/disk ceiling, worker, concurrency slot or child is introduced.
+
+  Independent source review of T50.2 found no blocking issue; dependency
+  provenance, mixed admission and pre-publication protocol refusal are verified.

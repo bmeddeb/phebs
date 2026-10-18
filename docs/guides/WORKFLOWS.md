@@ -310,7 +310,8 @@ the existing **Impact** navigation item.
 T50.1 freezes the first prospective supported comparison contract over two
 complete protobuf/gRPC Caller Map endpoint identities and the T47.5 committed
 input recipe. This contract and its neutral gold tests do not activate ordinary
-comparison: separate T50.2 admission and T50.3 validation/signing remain pending.
+comparison: T50.2 prepares independent signed admission, while T50.3's separate
+validation/operating result and production signing remain pending.
 Caller Map or standalone Atlas admission alone enables no comparison claim.
 
 T30.6k moves this route onto the same exact caller engine as Caller Map. Both
