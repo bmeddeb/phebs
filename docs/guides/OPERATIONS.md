@@ -672,6 +672,24 @@ counts grant no protection/isolation or per-range hole proof. No Linux binary,
 allocation, pressure, restore or ceremony ran; actual Linux gates await the
 October20 office return.
 
+T42.H2l prepares the native Linux memory observer without caller-selected paths
+or ancestry assertions. The real cgroup-v2 root must be authenticated before
+walking all enforcing ancestors; an equal namespace or apparent `/` mount root
+does not suffice. The root's absent memory counters are explicit rather than
+invented `max`/zero measurements. Bounded paired samples require unchanged
+membership, native identity and limits, using the lower available bytes and
+higher current use without claiming an atomic snapshot or future reservation.
+Modeled Mac checks and Linux cross-compilation do not supply native acceptance.
+This observer grants no execution authority, changes no cgroup, and leaves
+historical plans, active launchers and production signing unchanged.
+The observer refuses an inherited proc mount whose kernel current-task links do
+not match the local PID/TID. It reads at most 64 ancestors in two serial passes,
+holds at most 74 additional descriptors, and uses a cooperative five-second
+context cap. Unsupported `openat2`/mount identity support, hidden ancestors,
+overlays, disabled/threaded memory domains, drift and denial refuse with zero
+output. Required native qualification is a separate explicit
+`T42H2L_NATIVE=1` run with zero skips; ordinary opt-in skips are not evidence.
+
 T42.H2n repairs the historical launch-inventory test against today's adapters.
 It still checks exactly sixteen frozen runtime sites and their constant IDs,
 and separately names each managed-tooling launch boundary instead of excluding
