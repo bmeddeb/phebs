@@ -21063,7 +21063,7 @@ byte-identical; no canonical PNG, mask, threshold or retry changes. Production
 and receipt types, changed-file lint, Vite build, docs/glossary and whitespace
 pass. Settings/entry bundles are 29.11/349.21 kB (8.69/100.75 kB gzip), versus
 main's 28.76/347.90 kB (8.54/100.39 kB gzip); inherited large-chunk warnings
-remain. Exact key-list retry fixture timings are 18–35 ms including keyboard
+remain. Exact key-list retry fixture timings are 32–35 ms including keyboard
 and assertion polling. Charter review finds no unresolved hierarchy, density,
 state, keyboard, motion or copy defect in the changed flows. PLAN records
 request/render/cancellation and steady-state costs. No live identity-provider,
