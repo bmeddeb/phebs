@@ -11340,3 +11340,16 @@ browsing, nested retry/cache reuse and late-response isolation pass. The owning
 backlog records 942 passing UI tests, ten native journeys, eighteen WCAG audits,
 eight byte-identical idle pairs, types/lint/build and documentation/cost review.
 No backend, Linux acceptance, production signing or activation changes.
+
+## T57R.7 · Caller Map and Atlas navigation repair (2026-10-18)
+
+Ben's Mac audit reproduces eleven failures and adds eleven UI integration
+checks. Caller Map reuses evidence across display-only navigation and reads
+changed filters once; comparison rejects abandoned completions. Atlas binds
+catalog/detail to current URL identity including protocol, clears abandoned
+selection, refuses crossed legacy endpoints and supplies exact retry actions.
+The owning backlog records 953 passing UI tests, ten native journeys, sixteen
+WCAG audits, eight byte-identical idle pairs, types/lint/build, documentation
+and charter/cost review. One initial citation wait timed out in the parallel
+suite; unchanged isolated checks and the complete serial suite pass.
+Linux #124, managed-SCIP proof and production signing remain pending.

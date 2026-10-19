@@ -113,10 +113,14 @@ export default function ContractAtlasPage({
     operation: params.get('sel_operation') ?? '',
     protocol: params.get('sel_protocol') ?? '',
   }), [params])
-  const selectionKey = `${selection.repository}\u0000${selection.lineage}\u0000${selection.operation}`
+  const selectionKey = JSON.stringify(selection)
   const [draftFilters, setDraftFilters] = useState<CatalogFilters>(appliedFilters)
-  const [catalog, setCatalog] = useState<ContractCatalogList | null>(null)
-  const [operation, setOperation] = useState<ContractCatalogOperation | null>(null)
+  const [catalogRead, setCatalog] = useState<{ filtersKey: string; cursor: string; value: ContractCatalogList } | null>(null)
+  const catalog = catalogRead?.filtersKey === filtersKey && catalogRead.cursor === cursorParam ? catalogRead.value : null
+  const [operationRead, setOperation] = useState<{ selectionKey: string; value: ContractCatalogOperation } | null>(null)
+  const operation = operationRead?.selectionKey === selectionKey ? operationRead.value : null
+  const [listReload, setListReload] = useState(0)
+  const [detailReload, setDetailReload] = useState(0)
   const [listLoading, setListLoading] = useState(false)
   const [detailLoading, setDetailLoading] = useState(false)
   const [listError, setListError] = useState('')
@@ -134,7 +138,10 @@ export default function ContractAtlasPage({
     listRequest.current?.abort()
     const controller = new AbortController()
     const generation = ++listGeneration.current
+    const requestedFiltersKey = JSON.stringify(filters)
+    const previous = catalogRead
     listRequest.current = controller
+    setCatalog(null)
     setListLoading(true)
     setListError('')
     fetchContractCatalog(
@@ -149,14 +156,17 @@ export default function ContractAtlasPage({
       controller.signal,
     )
       .then((result) => {
-        if (generation !== listGeneration.current) return
+        if (generation !== listGeneration.current || controller.signal.aborted) return
         validateCatalogAuthorities(result, filters)
-        setCatalog((current) => append && current
-          ? { ...result, items: mergeCatalogItems(current.items, result.items) }
-          : result)
+        setCatalog({
+          filtersKey: requestedFiltersKey, cursor,
+          value: append && previous?.filtersKey === requestedFiltersKey
+            ? { ...result, items: mergeCatalogItems(previous.value.items, result.items) }
+            : result,
+        })
       })
       .catch((cause) => {
-        if (generation === listGeneration.current && !isAbortError(cause)) {
+        if (generation === listGeneration.current && !controller.signal.aborted && !isAbortError(cause)) {
           setListError(cause instanceof Error ? cause.message : String(cause))
         }
       })
@@ -197,20 +207,20 @@ export default function ContractAtlasPage({
     loadCatalog(appliedFilters, cursorParam, continuing)
     return () => listRequest.current?.abort()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtersKey, cursorParam])
+  }, [filtersKey, cursorParam, listReload])
 
   // The selected operation is fetched from its URL identity, independent of
   // which catalog page the item sits on.
   useEffect(() => {
+    const generation = ++detailGeneration.current
+    detailRequest.current?.abort()
     if (!selection.repository || !selection.lineage || !selection.operation) {
       setOperation(null)
       setDetailError('')
       setDetailLoading(false)
       return
     }
-    detailRequest.current?.abort()
     const controller = new AbortController()
-    const generation = ++detailGeneration.current
     detailRequest.current = controller
     setOperation(null)
     setDetailLoading(true)
@@ -222,11 +232,11 @@ export default function ContractAtlasPage({
       controller.signal,
     )
       .then((result) => {
+        if (generation !== detailGeneration.current || controller.signal.aborted) return
         const authority = result.exact_authority
-        if (authority !== undefined && (
+        if (result.repository !== selection.repository || result.declaration_lineage !== selection.lineage ||
+          result.operation !== '/' + selection.operation.replace(/^\//, '') || (authority !== undefined && (
           !isCatalogAuthority(authority) ||
-          result.repository !== selection.repository || result.declaration_lineage !== selection.lineage ||
-          result.operation !== '/' + selection.operation.replace(/^\//, '') ||
           authority.repository !== result.repository ||
           authority.run_id !== result.declaration.run_id ||
           !['proto-contract', 'thrift-contract'].includes(authority.domain) ||
@@ -235,17 +245,17 @@ export default function ContractAtlasPage({
           result.declaration.sources.length === 0 ||
           result.declaration.sources.some((source) => source.repository !== authority.repository ||
             source.run_id !== authority.run_id || source.commit !== authority.commit)
-        )) throw new Error('Operation evidence authority does not match its pinned source. Retry the selection.')
+        ))) throw new Error('Operation evidence authority does not match its pinned source. Retry the selection.')
         const unavailable = result.unavailable_relationships
         if (unavailable !== undefined && (
           !Array.isArray(unavailable) || unavailable.length > 3 || new Set(unavailable).size !== unavailable.length ||
           unavailable.some((section) => !['implementations', 'callers', 'unresolved_candidates'].includes(section) ||
             !Array.isArray(result[section as 'implementations']) || result[section as 'implementations'].length > 0)
         )) throw new Error('Operation relationship availability is inconsistent. Retry the selection.')
-        if (generation === detailGeneration.current) setOperation(result)
+        setOperation({ selectionKey, value: result })
       })
       .catch((cause) => {
-        if (generation === detailGeneration.current && !isAbortError(cause)) {
+        if (generation === detailGeneration.current && !controller.signal.aborted && !isAbortError(cause)) {
           setDetailError(cause instanceof Error ? cause.message : String(cause))
         }
       })
@@ -257,7 +267,7 @@ export default function ContractAtlasPage({
       })
     return () => controller.abort()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectionKey])
+  }, [selectionKey, detailReload])
 
   const groups = useMemo(
     () => groupCatalogItems(catalog?.items ?? []),
@@ -300,7 +310,8 @@ export default function ContractAtlasPage({
     return catalog?.items.find((item) =>
       item.repository === selection.repository &&
       item.declaration_lineage === selection.lineage &&
-      item.operation === selection.operation) ?? null
+      item.operation === selection.operation &&
+      (!selection.protocol || item.protocol === selection.protocol)) ?? null
   }, [catalog?.items, selection])
   const selectedID = selectedItem ? catalogItemID(selectedItem) : ''
   // The protocol is authority carried in the selection URL, never inferred
@@ -425,6 +436,11 @@ export default function ContractAtlasPage({
       {listError && (
         <Notification kind={NOTIFICATION_KIND.negative} overrides={{ Body: { style: { width: 'auto', marginLeft: 0, marginRight: 0 } } }}>
           {listError}
+          <div className={css({ marginTop: '10px' })}>
+            <Button type="button" size={BUTTON_SIZE.mini} kind={BUTTON_KIND.secondary} onClick={() => setListReload((value) => value + 1)}>
+              Retry catalog page
+            </Button>
+          </div>
         </Notification>
       )}
 
@@ -543,6 +559,11 @@ export default function ContractAtlasPage({
           {detailError && (
             <Notification kind={NOTIFICATION_KIND.negative} overrides={{ Body: { style: { width: 'auto', marginLeft: 0, marginRight: 0 } } }}>
               {detailError}
+              <div className={css({ marginTop: '10px' })}>
+                <Button type="button" size={BUTTON_SIZE.mini} kind={BUTTON_KIND.secondary} onClick={() => setDetailReload((value) => value + 1)}>
+                  Retry selection
+                </Button>
+              </div>
             </Notification>
           )}
           {!detailLoading && !detailError && !operation && (

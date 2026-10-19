@@ -365,9 +365,11 @@ function ComparisonResults({
       cursor,
       controller.signal,
     )
-      .then(setPage)
+      .then((result) => {
+        if (request.current === controller && !controller.signal.aborted) setPage(result)
+      })
       .catch((cause) => {
-        if (!isAbortError(cause)) {
+        if (request.current === controller && !controller.signal.aborted && !isAbortError(cause)) {
           setError(cause instanceof Error ? cause.message : String(cause))
         }
       })

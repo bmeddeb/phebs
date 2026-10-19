@@ -151,7 +151,7 @@ export default function CallerMapPage({
         }
       })
     return () => controller.abort()
-  }, [endpointKey, appliedFilters, cursor, reload, operationImpact, pageSize]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [endpointKey, filtersKey, cursor, reload, operationImpact, pageSize]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const routeTo = (filters: CallerFilters, nextCursor: string, nextView: 'source' | 'group' = view) => {
     if (!endpoint) return
@@ -167,31 +167,32 @@ export default function CallerMapPage({
       ...(nextView === 'group' ? { view: 'group' } : {}),
     })
   }
-  const resetPagination = () => {
+  const resetPagination = (filters = appliedFilters) => {
     cursorStack.current = ['']
-    // A first-page 409 leaves cursor === '' unchanged, so no effect dep
-    // moves; the reload counter guarantees restart always refetches.
-    setReload((generation) => generation + 1)
+    // Only an unchanged first-page query needs an explicit reload; a changed
+    // URL must not first refetch the preceding query.
+    if (!cursor && JSON.stringify(filters) === filtersKey) setReload((generation) => generation + 1)
   }
   const applyFilters = (event: React.FormEvent) => {
     event.preventDefault()
-    resetPagination()
-    routeTo({
+    const next = {
       ...draftFilters,
       unit: draftFilters.unit.trim(),
       owner: draftFilters.owner.trim(),
       pathPrefix: draftFilters.pathPrefix.trim(),
-    }, '')
+    }
+    resetPagination(next)
+    routeTo(next, '')
   }
   const clearFilters = () => {
     setDraftFilters(emptyFilters)
-    resetPagination()
+    resetPagination(emptyFilters)
     routeTo(emptyFilters, '')
   }
   const reviewUnresolved = () => {
     const next = { ...appliedFilters, resolution: 'unresolved' as const }
     setDraftFilters(next)
-    resetPagination()
+    resetPagination(next)
     routeTo(next, '')
   }
   const stackIndex = cursorStack.current.lastIndexOf(cursor)
