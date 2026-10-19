@@ -39,7 +39,19 @@ async function readStatus(res: Response): Promise<AuthStatus> {
   if (!res.ok) {
     throw new Error(await responseError(res, `authentication failed (${res.status})`))
   }
-  return res.json() as Promise<AuthStatus>
+  const next: unknown = await res.json()
+  if (!next || typeof next !== 'object' || Array.isArray(next)) throw new Error('Invalid authentication status. Retry authentication.')
+  const value = next as Record<string, unknown>
+  if (['authenticated', 'auth_required', 'setup_required', 'oidc_enabled', 'password_enabled'].some(key => typeof value[key] !== 'boolean') ||
+    (value.csrf_token !== undefined && typeof value.csrf_token !== 'string')) throw new Error('Invalid authentication status. Retry authentication.')
+  if (value.user !== undefined) {
+    const user = value.user as Record<string, unknown> | null
+    if (!user || typeof user !== 'object' || Array.isArray(user) || typeof user.id !== 'string' || typeof user.email !== 'string' ||
+      typeof user.is_admin !== 'boolean' || (user.display_name !== undefined && typeof user.display_name !== 'string')) {
+      throw new Error('Invalid authentication status. Retry authentication.')
+    }
+  }
+  return value as unknown as AuthStatus
 }
 
 async function responseError(res: Response, fallback: string): Promise<string> {
@@ -59,6 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const statusGeneration = useRef({ value: 0 })
+  const actionGeneration = useRef({ value: 0, controller: null as AbortController | null })
 
   const applyStatus = useCallback((next: AuthStatus) => {
     setCSRFToken(next.csrf_token)
@@ -86,44 +99,68 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const handleRequired = () => void refresh()
     window.addEventListener(AUTH_REQUIRED_EVENT, handleRequired)
     const pending = statusGeneration.current
+    const actions = actionGeneration.current
     return () => {
       pending.value++
+      actions.value++
+      actions.controller?.abort()
       window.removeEventListener(AUTH_REQUIRED_EVENT, handleRequired)
     }
   }, [refresh])
 
-  const login = useCallback(async (email: string, password: string) => {
-    const next = await readStatus(await authRequest('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    }))
+  const authenticate = useCallback(async (url: string, body: Record<string, string>) => {
+    const actions = actionGeneration.current
+    const generation = ++actions.value
+    actions.controller?.abort()
+    const controller = new AbortController()
+    actions.controller = controller
     statusGeneration.current.value++
-    applyStatus(next)
+    try {
+      const next = await readStatus(await authRequest(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      }))
+      if (generation !== actions.value) return
+      statusGeneration.current.value++
+      applyStatus(next)
+      setLoading(false)
+    } catch (cause) {
+      if (generation === actions.value) throw cause
+    } finally {
+      if (generation === actions.value) actions.controller = null
+    }
   }, [applyStatus])
 
-  const setup = useCallback(async (email: string, password: string, setupToken: string) => {
-    const next = await readStatus(await authRequest('/api/auth/setup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, setup_token: setupToken }),
-    }))
-    statusGeneration.current.value++
-    applyStatus(next)
-  }, [applyStatus])
+  const login = useCallback((email: string, password: string) =>
+    authenticate('/api/auth/login', { email, password }), [authenticate])
+
+  const setup = useCallback((email: string, password: string, setupToken: string) =>
+    authenticate('/api/auth/setup', { email, password, setup_token: setupToken }), [authenticate])
 
   const logout = useCallback(async () => {
+    const actions = actionGeneration.current
+    const generation = ++actions.value
+    actions.controller?.abort()
+    const controller = new AbortController()
+    actions.controller = controller
     statusGeneration.current.value++
     try {
       const res = await authRequest('/api/auth/logout', {
         method: 'POST',
         headers: csrfHeaders(),
+        signal: controller.signal,
       })
+      if (generation !== actionGeneration.current.value) return
       if (!res.ok) throw new Error(await responseError(res, `logout failed (${res.status})`))
       await refresh()
     } catch (cause) {
+      if (generation !== actionGeneration.current.value) return
       setError(cause instanceof Error ? cause.message : String(cause))
       throw cause
+    } finally {
+      if (generation === actions.value) actions.controller = null
     }
   }, [refresh])
 

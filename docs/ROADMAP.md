@@ -218,6 +218,14 @@ saved failures have exact retry, operation handoffs follow history, and invalid
 optional topic decoration cannot crash citations. Bounded integration remains
 the merge bar. Linux #124, managed-SCIP proof and production signing stay pending.
 
+**Settings/authentication Mac audit follow-up (2026-10-19, T57R.9 / #140):**
+obsolete authentication actions cannot overwrite newer client session/CSRF
+state. Invalid status fields refuse with an exact retry; user/role changes reset
+private presentation and capability ownership. Settings waits for initial key
+inventory, retries its failed reads independently and removes matching revoked
+one-time secrets. Linux #124, managed-SCIP proof and production signing remain
+pending; bounded integration supplies the Mac merge bar.
+
 **All-ticket execution (2026-10-17, Ben-directed):** resolve actual dependencies
 and finish remaining work using three isolated agent lanes plus the lead. The
 current inventory is the T48.1 all-ticket table in [BACKLOG.md](./BACKLOG.md).

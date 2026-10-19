@@ -48,11 +48,15 @@ export default function App() {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const { status, loading, error: authError, logout } = useAuth()
+  const principal = JSON.stringify([status?.auth_required, status?.user?.id, status?.user?.is_admin === true])
+  const [capabilityPrincipal, setCapabilityPrincipal] = useState('')
   const [capabilities, setCapabilities] = useState<string[]>([])
-  const [capabilitiesLoaded, setCapabilitiesLoaded] = useState(false)
+  const [capabilitiesReady, setCapabilitiesLoaded] = useState(false)
   const [capabilitiesError, setCapabilitiesError] = useState(false)
   const [capabilitiesAttempt, setCapabilitiesAttempt] = useState(0)
   const [navigatorOpen, setNavigatorOpen] = useState(false)
+  const capabilitiesLoaded = capabilitiesReady && capabilityPrincipal === principal
+  const currentCapabilities = capabilitiesLoaded ? capabilities : []
 
   // T43.9: Cmd/Ctrl+K opens the keyboard navigator; the existing '/' search
   // focus stays untouched.
@@ -97,29 +101,29 @@ export default function App() {
         if (active && !isAbortError(cause)) setCapabilitiesError(true)
       })
       .finally(() => {
-        if (active) setCapabilitiesLoaded(true)
+        if (active) { setCapabilityPrincipal(principal); setCapabilitiesLoaded(true) }
       })
     return () => {
       active = false
       controller.abort()
     }
-  }, [status?.authenticated, capabilitiesAttempt])
+  }, [status?.authenticated, principal, capabilitiesAttempt])
 
   if (loading) {
     return <div className={css({ minHeight: '100vh', display: 'grid', placeItems: 'center', backgroundColor: tok.pageBg })}><BrandLoader /></div>
   }
   if (!status || (status.auth_required && !status.authenticated)) return <LoginPage />
 
-  const legacyImpactAvailable = capabilities.includes('contract-impact-report')
-  const operationImpactAvailable = capabilities.includes('contract-impact-operation')
+  const legacyImpactAvailable = currentCapabilities.includes('contract-impact-report')
+  const operationImpactAvailable = currentCapabilities.includes('contract-impact-operation')
   const impactAvailable = legacyImpactAvailable || operationImpactAvailable
-  const contractsAvailable = capabilities.includes('contract-atlas')
-  const callerMapAvailable = capabilities.includes('contract-caller-map')
-  const callerComparisonAvailable = capabilities.includes('contract-caller-comparison')
-  const compatibilityAvailable = capabilities.includes('contract-compatibility')
-  const topicsAvailable = capabilities.includes('kafka-topic-usage')
-  const servicesAvailable = capabilities.includes('service-catalog-v2')
-  const serviceRelationshipsAvailable = capabilities.includes('service-relationships-v1')
+  const contractsAvailable = currentCapabilities.includes('contract-atlas')
+  const callerMapAvailable = currentCapabilities.includes('contract-caller-map')
+  const callerComparisonAvailable = currentCapabilities.includes('contract-caller-comparison')
+  const compatibilityAvailable = currentCapabilities.includes('contract-compatibility')
+  const topicsAvailable = currentCapabilities.includes('kafka-topic-usage')
+  const servicesAvailable = currentCapabilities.includes('service-catalog-v2')
+  const serviceRelationshipsAvailable = currentCapabilities.includes('service-relationships-v1')
   // Capability-gated prefixes never fall through to Search: absent capability
   // renders a terminal boundary page under the original URL. A failed read is
   // distinct: transport failure cannot establish capability absence.
@@ -137,7 +141,7 @@ export default function App() {
   // A loading or failed capability read cannot establish absence: those
   // destinations stay listed as 'unknown' (their gate pages explain).
   const capability = (name: string): boolean | 'unknown' =>
-    !capabilitiesLoaded || capabilitiesError ? 'unknown' : capabilities.includes(name)
+    !capabilitiesLoaded || capabilitiesError ? 'unknown' : currentCapabilities.includes(name)
   const navigatorSurfaces: NavigatorSurface[] = [
     { label: 'Search', path: '/', available: true },
     { label: 'Repositories', path: '/repos', available: true },
@@ -165,15 +169,15 @@ export default function App() {
   else if (path.startsWith('/contracts')) page = gate(contractsAvailable, 'The contract atlas', () => <ContractAtlasPage params={params} callerMapAvailable={callerMapAvailable} impactAvailable={legacyImpactAvailable} operationImpactAvailable={operationImpactAvailable} />)
   else if (path.startsWith('/callers')) page = gate(callerMapAvailable, 'The caller map', () => <CallerMapPage params={params} comparisonAvailable={callerComparisonAvailable} operationImpactAvailable={operationImpactAvailable} />)
   else if (path.startsWith('/compare-callers')) page = gate(callerComparisonAvailable, 'Caller comparison', () => <CallerComparisonPage params={params} />)
-  else if (path.startsWith('/impact')) page = gate(params.has('shape') ? operationImpactAvailable : impactAvailable, 'The impact report', () => <ImpactPage params={params} compatibilityAvailable={compatibilityAvailable} capabilities={capabilities} />)
-  else if (path.startsWith('/topics')) page = gate(topicsAvailable, 'Kafka topic usage', () => <KafkaTopicsPage params={params} inventoryAvailable={capabilities.includes('kafka-topic-inventory')} />)
+  else if (path.startsWith('/impact')) page = gate(params.has('shape') ? operationImpactAvailable : impactAvailable, 'The impact report', () => <ImpactPage params={params} compatibilityAvailable={compatibilityAvailable} capabilities={currentCapabilities} />)
+  else if (path.startsWith('/topics')) page = gate(topicsAvailable, 'Kafka topic usage', () => <KafkaTopicsPage params={params} inventoryAvailable={currentCapabilities.includes('kafka-topic-inventory')} />)
   else if (path.startsWith('/settings')) page = <SettingsPage isAdmin={status.user?.is_admin === true} />
   else page = <SearchPage params={params} />
 
   const compactMain = path.startsWith('/file') || path.startsWith('/repos') || path.startsWith('/services') || path.startsWith('/relationships')
 
   return (
-    <div className={css({ minHeight: '100vh', backgroundColor: tok.pageBg })}>
+    <div key={principal} className={css({ minHeight: '100vh', backgroundColor: tok.pageBg })}>
       <Header path={path} email={status.user?.email ?? ''} isAdmin={status.user?.is_admin === true} contractsAvailable={contractsAvailable} impactAvailable={impactAvailable} topicsAvailable={topicsAvailable} onLogout={() => void logout().catch(() => {})} />
       {scope && <ScopeContextBar scope={scope} path={path} params={params} principal={status.user?.email ?? ''} />}
       {navigatorOpen && (

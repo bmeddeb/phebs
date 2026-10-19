@@ -14119,3 +14119,60 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   and presentation mechanics only. It does not validate backend extraction,
   accuracy or scale. Historical receipts, Linux #124, managed-SCIP proof and
   production signing/activation remain pending.
+
+- **2026-10-19 — T57R.9 Settings and authentication state ownership (Mac audit).**
+  Ben requests bounded integration and merge when green, preserving history.txt
+  and keeping production signing pending. Auth status/login/setup responses must
+  contain the five boolean method/session flags, an optional string CSRF token
+  and correctly typed optional user fields. Invalid fields cannot establish UI
+  session state or supply a CSRF header. Login/setup share their existing POST
+  path handling; each auth action owns a separate generation from status reads.
+  A newer action or provider cleanup invalidates old login/setup/logout results;
+  an obsolete logout cannot start a status refresh or report a newer session's
+  error. Superseding or unmounting also aborts the action fetch, preventing a
+  delayed response from applying an obsolete browser cookie; a bounded native
+  cookie-ordering regression proves why state-generation checks alone fail.
+  Starting and completing a current login/setup fences older status reads.
+  Same-origin credentials, server authentication, CSRF and SSO routes are exact.
+  Failed status reads have an explicit authentication retry without reloading.
+  The authenticated presentation tree is keyed by auth-required state, user ID
+  and administrator role. A changed principal drops component-local private
+  state, including one-time keys, while capability reads are newly owned by that
+  identity and old capabilities cannot be borrowed before the new read settles.
+  Same-principal refresh retains the existing presentation. Browser appearance
+  preferences remain browser preferences, not principal authority.
+  Settings waits for successful initial key inventory before allowing creation,
+  so its delayed snapshot cannot erase a newly created key. Failed inventory and
+  lifecycle reads have separate exact retries; aborted read completions cannot
+  restore results/errors. A confirmed revoke removes its matching one-time token
+  only; other keys' tokens remain available to copy. Busy key handlers refuse a
+  second ordinary in-flight write. Creation clears only its submitted name,
+  preserving a next name drafted while the request was pending. These are
+  presentation fences, not a change to the server's session, key or
+  authorization authority.
+  Cost: one auth-action counter and at most one current action controller per
+  provider, aborting its predecessor and clearing the controller after settlement;
+  constant generation comparisons, five boolean checks plus fixed optional
+  user/token checks per auth response,
+  and serialization of three principal fields per App render. The capability
+  owner adds one identity string; initial reads stay unchanged and a changed
+  user/role adds one version read and remounts the current private view with its
+  existing reads. Same-principal refresh adds no page or version read. Auth HTTP
+  request issuance is unchanged; superseded client fetches are aborted. Old
+  requests may still finish on the server; cancellation is not rollback, and
+  obsolete action responses cannot write newer client state or browser cookies.
+  Obsolete logout removes its follow-up status read. Settings adds two scalar
+  retry counters, one independent
+  list-error string and the created key metadata reference beside its existing
+  token. The existing key array, create prepend and revoke filter costs remain
+  unchanged; no key payload is duplicated. Each explicit read retry adds one
+  owning request; key creation/revocation add no inventory reread. The initial
+  key wait adds no request. Principal changes invalidate component-local caches
+  by unmounting their owner; theme preferences and module caches remain. No new
+  poll, background timer, server query, lock, corpus/shard read, hash, disk state,
+  child or dependency is added to ordinary query/request, sync, restart,
+  no-op/retry or publication paths beyond the explicit UI reads above.
+  Bounded component/native-browser checks establish client session, CSRF-header,
+  navigation and refusal/retry mechanics only, not live identity-provider,
+  backend security, extraction accuracy or scale evidence. Linux #124, installed
+  managed-SCIP proof and production signing/activation remain pending.

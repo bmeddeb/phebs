@@ -229,6 +229,7 @@ test('key creation is read only', async () => {
 })
 
 async function createKey(name = 'Clipboard client') {
+  await waitFor(() => expect((screen.getByRole('button', { name: 'Create key' }) as HTMLButtonElement).disabled).toBe(false))
   fireEvent.change(screen.getByRole('textbox', { name: 'Key name' }), { target: { value: name } })
   fireEvent.click(screen.getByRole('button', { name: 'Create key' }))
   expect((await screen.findByRole('textbox', { name: 'New API key token' }) as HTMLInputElement).value).toBe('phebs_new.secret')
@@ -325,4 +326,62 @@ test('capacity-unavailable uses the closed blue status tone', async () => {
   const badge = matches.find((match) => match.getAttribute('role') === 'status')
   expect(badge).toBeTruthy()
   expect(badge?.getAttribute('data-tone')).toBe('blue')
+})
+
+test('key creation waits for the initial inventory instead of racing its snapshot', async () => {
+  let resolve!: (value: { keys: [] }) => void
+  api.fetchAPIKeys.mockImplementationOnce(() => new Promise<{ keys: [] }>(done => { resolve = done }))
+  renderPage()
+  fireEvent.change(screen.getByRole('textbox', { name: 'Key name' }), { target: { value: 'New client' } })
+  expect((screen.getByRole('button', { name: 'Create key' }) as HTMLButtonElement).disabled).toBe(true)
+  fireEvent.submit(screen.getByRole('button', { name: 'Create key' }).closest('form')!)
+  expect(api.createAPIKey).not.toHaveBeenCalled()
+  await act(async () => { resolve({ keys: [] }) })
+  fireEvent.click(screen.getByRole('button', { name: 'Create key' }))
+  expect(await screen.findByText('New client')).toBeTruthy()
+})
+
+test('a failed key inventory has an exact retry and does not enable creation', async () => {
+  api.fetchAPIKeys.mockRejectedValueOnce(new Error('key listing offline'))
+  renderPage()
+  await screen.findByText(/key listing offline/)
+  expect((screen.getByRole('button', { name: 'Create key' }) as HTMLButtonElement).disabled).toBe(true)
+  fireEvent.click(screen.getByRole('button', { name: 'Retry API keys' }))
+  await screen.findByText('Read-only client')
+  expect(screen.queryByText(/key listing offline/)).toBeNull()
+  expect(api.fetchAPIKeys).toHaveBeenCalledTimes(2)
+  expect(api.createAPIKey).not.toHaveBeenCalled()
+})
+
+test.each(['new-key', 'read-key'])('revoking %s removes only its matching one-time secret', async id => {
+  renderPage()
+  await screen.findByText('Read-only client')
+  await createKey('New client')
+  fireEvent.click(screen.getByRole('button', { name: `Revoke ${id === 'new-key' ? 'New client' : 'Read-only client'}` }))
+  fireEvent.click(screen.getByRole('button', { name: 'Revoke' }))
+  await waitFor(() => expect(screen.queryByRole('button', { name: 'Revoke' })).toBeNull())
+  if (id === 'new-key') expect(screen.queryByRole('textbox', { name: 'New API key token' })).toBeNull()
+  else expect(screen.getByRole('textbox', { name: 'New API key token' })).toBeTruthy()
+})
+
+test('lifecycle failures retry only the administrator status read', async () => {
+  api.fetchLifecycleStatus.mockRejectedValueOnce(new Error('lifecycle offline'))
+  renderPage(true)
+  await screen.findByText(/lifecycle offline/)
+  fireEvent.click(screen.getByRole('button', { name: 'Retry lifecycle status' }))
+  await screen.findByText('Collecting')
+  expect(api.fetchLifecycleStatus).toHaveBeenCalledTimes(2)
+  expect(api.fetchAPIKeys).toHaveBeenCalledTimes(1)
+})
+
+test('a completed key creation preserves the next name drafted during the request', async () => {
+  let resolve!: (value: unknown) => void
+  api.createAPIKey.mockImplementationOnce(() => new Promise(done => { resolve = done }))
+  renderPage()
+  await screen.findByText('Read-only client')
+  fireEvent.change(screen.getByRole('textbox', { name: 'Key name' }), { target: { value: 'First client' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Create key' }))
+  fireEvent.change(screen.getByRole('textbox', { name: 'Key name' }), { target: { value: 'Next client' } })
+  await act(async () => resolve({ key: { id: 'new-key', name: 'First client', prefix: 'phebs_new', created_at: '2026-10-19T12:00:00Z' }, token: 'phebs_new.secret' }))
+  expect((screen.getByRole('textbox', { name: 'Key name' }) as HTMLInputElement).value).toBe('Next client')
 })

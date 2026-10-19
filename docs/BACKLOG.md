@@ -21030,6 +21030,46 @@ keyboard, motion or qualification copy. The owning PLAN entry records request,
 render, cancellation and resource cost. These are client mechanics; Linux #124,
 managed-SCIP proof and production signing/activation remain pending.
 
+**T57R.9 ✅ · Settings and authentication state ownership** *(2026-10-19,
+Ben-directed Mac audit; [Mac issue #140](https://github.com/bmeddeb/phebs/issues/140),
+independent of Linux #124).* AC: reproduce obsolete login/setup/logout writes to
+session/CSRF state, invalid authentication fields, absent auth retry, retained
+private Settings state across user/role changes, initial key-list/write races,
+missing inventory/lifecycle retries and retained revoked one-time secrets.
+Fence obsolete auth actions and provider cleanup, retain same-origin/CSRF/SSO
+contracts, key private presentation/capabilities by principal, preserve ordinary
+same-principal refresh, gate initial key writes and retry only the failed read.
+A revoke removes only its matching token. Bounded component/native integration,
+types/lint/build, desktop/390 px keyboard/console/WCAG, same-renderer pixels,
+guide/ADR, charter and steady-state-cost review are the merge bar. Merge when
+green is Ben-authorized; production signing remains pending. No label,
+rehearsal, ceremony, backend crossing or installed SCIP execution is required.
+
+T57R.9 outcome: fifteen initial regression cases fail before repair. Nineteen
+new component checks cover action/status ownership, malformed flags, private
+principal changes, exact retries, initial list/write order, matching revoke and
+preserved next-name drafts. The complete serial UI suite passes 991 tests in
+50 files (29.61s). Review's real-browser cookie reproduction fails even with
+state-generation guards alone: a delayed logout clears a newer login's cookie.
+Aborting the obsolete action fixes that case; cancellation is not server
+rollback. The isolated next-name draft case also fails before its correction.
+Fourteen native Chrome integration journeys pass in 17.9s at 1280 px/light and
+390 px/dark, with twenty-two clean WCAG audits, keyboard/identity/CSRF/cookie and
+request-count checks, no overflow or app console errors. Each deliberately
+injected HTTP 503 resource diagnostic is asserted separately. Browser plugin
+not available; repo Playwright uses native Chrome. Ten normal main/fixed pairs
+(Settings reader/admin, password login, setup and SSO-only) are reviewed and
+byte-identical; no canonical PNG, mask, threshold or retry changes. Production
+and receipt types, changed-file lint, Vite build, docs/glossary and whitespace
+pass. Settings/entry bundles are 29.11/349.21 kB (8.69/100.75 kB gzip), versus
+main's 28.76/347.90 kB (8.54/100.39 kB gzip); inherited large-chunk warnings
+remain. Exact key-list retry fixture timings are 32–35 ms including keyboard
+and assertion polling. Charter review finds no unresolved hierarchy, density,
+state, keyboard, motion or copy defect in the changed flows. PLAN records
+request/render/cancellation and steady-state costs. No live identity-provider,
+backend security, accuracy or scale result follows; Linux #124, installed
+managed-SCIP proof and production signing/activation remain pending.
+
 **T57R.1 · Inherited gate repairs** *(cross-cutting; found while landing Epic
 57)* — return `make docs-check`, repository-wide lint and
 `internal/investigation` to green without touching the code those findings sit

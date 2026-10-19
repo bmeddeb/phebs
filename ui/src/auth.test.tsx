@@ -60,7 +60,8 @@ function SessionProbe() {
     <button onClick={() => void auth.refresh()}>Refresh session</button>
     <button onClick={() => void auth.login('reader@example.com', 'password')}>Login</button>
     <button onClick={() => void auth.setup('reader@example.com', 'password', 'setup')}>Setup</button>
-    <button onClick={() => void auth.logout()}>Logout</button>
+    <button onClick={() => void auth.logout().catch(() => {})}>Logout</button>
+    <div>{auth.error}</div>
   </>
 }
 
@@ -229,6 +230,74 @@ test('session logout carries the CSRF token returned by auth status', async () =
       credentials: 'same-origin',
       method: 'POST',
       headers: { 'X-CSRF-Token': 'csrf-logout' },
+      signal: expect.any(AbortSignal),
     },
   ])
+})
+
+test.each(['Login', 'Setup', 'Logout'])('unmounted %s cannot replace another provider token', async action => {
+  const pending = deferredStatus()
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(jsonResponse(status())).mockReturnValueOnce(pending.promise))
+  const view = render(<AuthProvider><SessionProbe /></AuthProvider>)
+  await act(async () => {})
+  fireEvent.click(screen.getByRole('button', { name: action }))
+  const signal = (vi.mocked(fetch).mock.calls[1][1] as RequestInit).signal!
+  view.unmount()
+  expect(signal.aborted).toBe(true)
+  setCSRFToken('replacement-provider')
+  await act(async () => pending.resolve(jsonResponse(status({ authenticated: true, csrf_token: 'obsolete-action' }))))
+  expect(csrfHeaders()).toEqual({ 'X-CSRF-Token': 'replacement-provider' })
+})
+
+test('a pending login cannot restore the session after logout', async () => {
+  const pending = deferredStatus()
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(jsonResponse(status())).mockReturnValueOnce(pending.promise)
+    .mockResolvedValueOnce(jsonResponse({})).mockResolvedValueOnce(jsonResponse(status({ csrf_token: 'signed-out' }))))
+  render(<AuthProvider><SessionProbe /></AuthProvider>)
+  await act(async () => {})
+  fireEvent.click(screen.getByRole('button', { name: 'Login' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Logout' }))
+  await act(async () => {})
+  await act(async () => pending.resolve(jsonResponse(status({ authenticated: true, csrf_token: 'obsolete-login' }))))
+  expect(screen.getByText('Signed out')).toBeTruthy()
+  expect(csrfHeaders()).toEqual({ 'X-CSRF-Token': 'signed-out' })
+})
+
+test.each(['success', 'failure'])('obsolete logout %s cannot replace a newer login', async outcome => {
+  const pending = deferredStatus()
+  const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse(status({ authenticated: true, csrf_token: 'original' })))
+    .mockReturnValueOnce(pending.promise).mockResolvedValueOnce(jsonResponse(status({ authenticated: true, csrf_token: 'new-login' })))
+    .mockResolvedValue(jsonResponse(status()))
+  vi.stubGlobal('fetch', fetchMock)
+  render(<AuthProvider><SessionProbe /></AuthProvider>)
+  await screen.findByText('Signed in')
+  fireEvent.click(screen.getByRole('button', { name: 'Logout' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Login' }))
+  await act(async () => {})
+  await act(async () => pending.resolve(jsonResponse(outcome === 'success' ? {} : { error: 'obsolete logout failure' }, outcome === 'success')))
+  expect(screen.getByText('Signed in')).toBeTruthy()
+  expect(screen.queryByText('obsolete logout failure')).toBeNull()
+  expect(csrfHeaders()).toEqual({ 'X-CSRF-Token': 'new-login' })
+  expect(fetchMock).toHaveBeenCalledTimes(3)
+})
+
+test('authentication status failure can retry without reloading the page', async () => {
+  const fetchMock = vi.fn().mockRejectedValueOnce(new Error('status temporarily offline')).mockResolvedValueOnce(jsonResponse(status()))
+  vi.stubGlobal('fetch', fetchMock)
+  renderLogin()
+  await screen.findByText(/status temporarily offline/)
+  fireEvent.click(screen.getByRole('button', { name: 'Retry authentication' }))
+  await screen.findByRole('textbox', { name: 'Email' })
+  expect(screen.queryByText(/status temporarily offline/)).toBeNull()
+  expect(fetchMock).toHaveBeenCalledTimes(2)
+})
+
+test.each([
+  { auth_required: 'false' }, { csrf_token: {} }, { user: { id: 'crossed', is_admin: 'yes' } },
+])('invalid authentication fields %j cannot establish a session', async invalid => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(status(invalid))))
+  renderLogin()
+  expect(await screen.findByText(/Invalid authentication status/)).toBeTruthy()
+  expect(screen.queryByText('Authenticated application')).toBeNull()
+  expect(csrfHeaders()).toEqual({})
 })

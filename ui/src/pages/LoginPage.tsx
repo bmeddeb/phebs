@@ -5,12 +5,13 @@ import { Input } from 'baseui/input'
 import { Notification, KIND as NOTIFICATION_KIND } from 'baseui/notification'
 import { useAuth } from '../auth'
 import { BrandLockup } from '../Brand'
+import { ErrorNotice } from '../components/kit'
 import { usePhebsTokens } from '../theme'
 
 export default function LoginPage() {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  const { status, error: statusError, login, setup } = useAuth()
+  const { status, error: statusError, login, setup, refresh } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [setupToken, setSetupToken] = useState('')
@@ -63,9 +64,10 @@ export default function LoginPage() {
         <h1 className={css({ fontSize: '18px', lineHeight: '24px', fontWeight: 600, color: tok.textPrimary, marginTop: 0, marginBottom: '16px' })}>
           {firstRun ? 'Set up administrator' : 'Sign in'}
         </h1>
-        {(error || statusError) && (
+        {statusError && <ErrorNotice onRetry={() => { setError(''); void refresh() }} retryLabel="Retry authentication">{statusError}</ErrorNotice>}
+        {error && (
           <Notification kind={NOTIFICATION_KIND.negative} overrides={{ Body: { style: { width: 'auto', marginLeft: 0, marginRight: 0 } } }}>
-            {error || statusError}
+            {error}
           </Notification>
         )}
         <form noValidate onSubmit={submit} className={css({ display: 'grid', gap: '12px' })}>
