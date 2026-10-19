@@ -1622,3 +1622,22 @@ unavailable without rewriting their custody bytes.
 reader only when no signed Thrift field recipe governs that shared domain.
 Other explicitly enabled provisional domains remain independent. A signed
 Apache selection cannot inherit unsigned thriftrw evidence through this switch.
+
+### Settings and session recovery (2026-10-19)
+
+A failed or invalid authentication-status read offers **Retry authentication**
+without a full page reload. A new sign-in/setup/sign-out action supersedes older
+client responses and aborts obsolete action requests so a late response cannot
+replace a newer browser session cookie. Server work already accepted is not
+rolled back; the server continues to enforce authentication and CSRF.
+Changing the authenticated user or administrator role clears private page state,
+including any displayed one-time key, and rechecks instance capabilities. A
+normal refresh for the same user and role preserves Settings state. Copy a new
+key before leaving Settings or changing sessions; listings never reveal it.
+
+**Create key** waits for the initial key list. A completed creation preserves
+a different next key name typed while its request was pending. **Retry API keys** and
+**Retry lifecycle status** repeat only their failed read. Confirmed revocation
+removes the matching newly-created key's displayed token; revoking another key
+does not remove it. These UI checks do not admit a managed indexing installation
+or complete production signing.

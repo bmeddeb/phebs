@@ -11365,3 +11365,16 @@ nineteen new component checks, 972 passing UI tests, twelve native journeys,
 sixteen WCAG audits, ten byte-identical normal pairs and types/lint/build/docs/
 glossary/charter/cost review. Linux #124, managed-SCIP proof and production
 signing/activation remain pending.
+
+## T57R.9 · Settings and authentication state ownership (2026-10-19)
+
+Ben's Mac audit fences and aborts obsolete authentication actions, including a
+browser-proven delayed logout cookie overwrite, rejects invalid status fields
+and supplies exact status retries. User/role changes reset private presentation
+and capability ownership while same-principal refresh preserves it. Settings
+waits for initial key inventory, retries reads independently, clears a matching
+revoked one-time token and preserves a next-name draft during creation.
+The owning backlog records nineteen new checks, 991 passing UI tests, fourteen
+native journeys, twenty-two WCAG audits, ten byte-identical normal pairs and
+types/lint/build/docs/glossary/charter/cost review. Linux #124, managed-SCIP
+installation proof and production signing/activation remain pending.

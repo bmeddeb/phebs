@@ -5,9 +5,9 @@ import { Input } from 'baseui/input'
 import { Notification, KIND as NOTIFICATION_KIND } from 'baseui/notification'
 import { Spinner } from 'baseui/spinner'
 import { createAPIKey, fetchAPIKeys, fetchLifecycleStatus, revokeAPIKey } from '../api'
-import type { APIKeySummary, LifecycleStatus } from '../api'
+import type { APIKeySummary, CreatedAPIKey, LifecycleStatus } from '../api'
 import { CheckIcon, CopyIcon, KeyIcon, TrashIcon } from '../icons'
-import { StatusWord, LoadingBlock, StatusChip } from '../components/kit'
+import { StatusWord, LoadingBlock, StatusChip, ErrorNotice } from '../components/kit'
 import { usePhebsTokens, useMode, usePalette, FONTS, TYPE, type Mode } from '../theme'
 import { PALETTES, PALETTE_NAMES, isPaletteName, type PaletteName } from '../palette'
 import type { Token } from '../highlight'
@@ -20,7 +20,10 @@ export default function SettingsPage({ isAdmin = false }: { isAdmin?: boolean })
   const [keys, setKeys] = useState<APIKeySummary[]>([])
   const [keysLoaded, setKeysLoaded] = useState(false)
   const [name, setName] = useState('')
-  const [createdToken, setCreatedToken] = useState('')
+  const [created, setCreated] = useState<CreatedAPIKey | null>(null)
+  const [keysError, setKeysError] = useState('')
+  const [keysAttempt, setKeysAttempt] = useState(0)
+  const [lifecycleAttempt, setLifecycleAttempt] = useState(0)
   const [pendingRevoke, setPendingRevoke] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -29,39 +32,44 @@ export default function SettingsPage({ isAdmin = false }: { isAdmin?: boolean })
 
   useEffect(() => {
     const controller = new AbortController()
+    setKeysLoaded(false)
+    setKeysError('')
     fetchAPIKeys(controller.signal)
       .then(({ keys: rows }) => {
+        if (controller.signal.aborted) return
         setKeys(rows)
         setKeysLoaded(true)
       })
       .catch((cause) => {
-        if (!isAbortError(cause)) setError(String(cause))
+        if (!controller.signal.aborted && !isAbortError(cause)) setKeysError(String(cause))
       })
     return () => controller.abort()
-  }, [])
+  }, [keysAttempt])
 
   useEffect(() => {
+    setLifecycleStatus(null)
+    setLifecycleError('')
     if (!isAdmin) return
     const controller = new AbortController()
     fetchLifecycleStatus(controller.signal)
-      .then(setLifecycleStatus)
+      .then(next => { if (!controller.signal.aborted) setLifecycleStatus(next) })
       .catch((cause) => {
-        if (!isAbortError(cause)) setLifecycleError(String(cause))
+        if (!controller.signal.aborted && !isAbortError(cause)) setLifecycleError(String(cause))
       })
     return () => controller.abort()
-  }, [isAdmin])
+  }, [isAdmin, lifecycleAttempt])
 
   const create = async (event: React.FormEvent) => {
     event.preventDefault()
     const trimmed = name.trim()
-    if (!trimmed) return
+    if (!trimmed || !keysLoaded || busy) return
     setBusy(true)
     setError('')
     try {
       const result = await createAPIKey(trimmed)
       setKeys((current) => [result.key, ...current])
-      setCreatedToken(result.token)
-      setName('')
+      setCreated(result)
+      setName(current => current.trim() === trimmed ? '' : current)
     } catch (cause) {
       setError(String(cause))
     } finally {
@@ -70,12 +78,14 @@ export default function SettingsPage({ isAdmin = false }: { isAdmin?: boolean })
   }
 
   const revoke = async (id: string) => {
+    if (busy) return
     setBusy(true)
     setError('')
     try {
       await revokeAPIKey(id)
       setKeys((current) => current.filter((key) => key.id !== id))
       setPendingRevoke('')
+      setCreated(current => current?.key.id === id ? null : current)
     } catch (cause) {
       setError(String(cause))
     } finally {
@@ -107,9 +117,9 @@ export default function SettingsPage({ isAdmin = false }: { isAdmin?: boolean })
             )}
           </div>
           {lifecycleError ? (
-            <Notification kind={NOTIFICATION_KIND.negative} overrides={{ Body: { style: { width: 'auto', marginLeft: 0, marginRight: 0 } } }}>
+            <ErrorNotice onRetry={() => setLifecycleAttempt(value => value + 1)} retryLabel="Retry lifecycle status">
               Lifecycle status unavailable: {lifecycleError}
-            </Notification>
+            </ErrorNotice>
           ) : !lifecycleStatus ? (
             <div role="status" aria-label="Loading lifecycle status" className={css({ minHeight: '96px', display: 'grid', placeItems: 'center', border: `1px solid ${tok.cardBorder}`, borderRadius: '8px' })}>
               <Spinner $size="small" />
@@ -137,19 +147,20 @@ export default function SettingsPage({ isAdmin = false }: { isAdmin?: boolean })
         </Notification>
       )}
 
-      {createdToken && <CreatedAPIKey key={createdToken} token={createdToken} />}
+      {keysError && <ErrorNotice onRetry={() => setKeysAttempt(value => value + 1)} retryLabel="Retry API keys">API keys unavailable: {keysError}</ErrorNotice>}
+      {created && <CreatedAPIKey key={created.token} token={created.token} />}
 
       <form onSubmit={create} className={css({ marginBottom: '28px' })}>
         <div className={css({ display: 'flex', gap: '8px', '@media screen and (max-width: 560px)': { flexDirection: 'column' } })}>
           <div className={css({ flex: 1 })}>
             <Input value={name} onChange={(event) => setName(event.currentTarget.value)} placeholder="Key name" aria-label="Key name" />
           </div>
-          <Button type="submit" isLoading={busy}>Create key</Button>
+          <Button type="submit" isLoading={busy} disabled={!keysLoaded || busy}>Create key</Button>
         </div>
       </form>
 
       <div className={css({ borderTop: `1px solid ${tok.cardBorder}` })}>
-        {!keysLoaded && !error && (
+        {!keysLoaded && !keysError && (
           <LoadingBlock label="Loading API keys…" />
         )}
         {keysLoaded && keys.length === 0 && (
