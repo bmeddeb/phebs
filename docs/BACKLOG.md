@@ -21109,6 +21109,46 @@ that existing limitation. These are client integration results, not backend
 security, accuracy or scale evidence. Linux #124, managed-SCIP installation proof
 and production signing/activation remain pending.
 
+**T57R.11 · Code navigation and history read integrity** *(Mac audit;
+2026-10-19, #144)* — Ben directs bounded integration and merge when green.
+Own History/Blame/Commit presentation by repository/path/ref, abort and discard
+abandoned reads, pin the diff to resolved commit metadata/first parent, provide
+exact manual retries, and refuse invalid or crossed Git/SCIP responses. Keep
+read-only code lookup, patch scrolling and repeated blame links keyboard usable.
+Types/lint/build, bounded UI/native desktop/390 px keyboard/console/WCAG,
+same-renderer pixel review, owning guide/ADR and steady-state-cost review are
+the merge bar. Preserve history.txt; production signing stays pending. No
+backend crossing, Linux run, ceremony or validation label is required.
+
+T57R.11 outcome: initial regression runs reproduce seven history/view failures,
+twenty-one accepted invalid/crossed response cases and missing keyboard lookup.
+Thirty-five new checks bring the serial UI suite to 1,059 tests in 52 files
+(31.73s), including a non-BMP UTF-16 caret case, first-parent binding, nullable
+compatibility, empty blame, retry and late-response controls. JSDOM's absent
+Range geometry is stubbed only in the component test; actual caret/scroll
+behavior is checked in native Chrome. Sixteen native journeys pass in 21.0s
+at 1280 px/light and 390 px/dark, with twenty-eight clean WCAG audits, exact
+request counts, moving-ref diff pinning, source-link fences, delayed replies,
+back/forward, keyboard actions, no document overflow and no unexpected app
+console diagnostics. Injected HTTP 503 resource diagnostics are asserted
+separately. Visual review identifies patch focus clipping; the corrected inset
+outline and expanded Home/End/Up/Down/read-only/focus-retention checks pass the
+four affected native journeys. Browser plugin unavailable; repo Playwright uses
+native Chrome. Eight normal main/fixed pairs (File, History, Commit and Blame)
+are reviewed and byte-identical. No canonical PNG, mask, threshold, retry or
+dependency changes. Production/receipt types, scoped lint, Vite build,
+docs/glossary and whitespace pass. File/History/Commit/Blame/entry bundles are
+23.05/4.56/7.76/3.39/354.19 kB (7.58/1.89/2.82/1.48/102.08 kB gzip), versus
+main's 22.23/4.52/7.32/2.97/350.48 kB (7.26/1.86/2.64/1.35/101.16 kB gzip).
+Inherited large-chunk warnings remain. Fixture history retry times are 9–37 ms
+including keyboard/assertion polling; metadata-to-diff uses one dependent round
+trip with no extra request. Scoped code/charter review has no remaining finding;
+PLAN records validation scans/sets, retained history memory, request/concurrency,
+caret/editor-rebuild and no-op costs. These are client mechanics results,
+not live backend security, SCIP installation, extraction accuracy or scale
+evidence. Linux #124, installed managed-SCIP proof and production
+signing/activation remain pending.
+
 **T57R.1 · Inherited gate repairs** *(cross-cutting; found while landing Epic
 57)* — return `make docs-check`, repository-wide lint and
 `internal/investigation` to green without touching the code those findings sit

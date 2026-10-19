@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { useStyletron } from 'baseui'
-import { Notification, KIND as NOTIFICATION_KIND } from 'baseui/notification'
 import { Spinner } from 'baseui/spinner'
 import { fetchCommit, fetchDiff } from '../api'
 import type { CommitResult, DiffResult, GitFileChange } from '../api'
 import { href } from '../router'
 import { CommitIcon, WarningIcon } from '../icons'
-import { FONTS, usePhebsTokens } from '../theme'
-import { isAbortError } from '../util'
+import { FONTS, focusRing, usePhebsTokens } from '../theme'
+import { boundedError, isAbortError } from '../util'
 import { SectionHelp } from '../components/SectionHelp'
+import { ErrorNotice } from '../components/kit'
 
 const HISTORY_EVIDENCE_CAPABILITIES: ReadonlySet<string> = new Set(['history'])
 
@@ -17,28 +17,35 @@ export default function CommitPage({ params }: { params: URLSearchParams }) {
   const repo = params.get('repo') ?? ''
   const ref = params.get('ref') ?? ''
   const path = params.get('path') ?? ''
+  return <CommitPageRead key={JSON.stringify([repo, ref, path])} repo={repo} ref={ref} path={path} />
+}
+
+function CommitPageRead({ repo, ref, path }: { repo: string; ref: string; path: string }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const [commit, setCommit] = useState<CommitResult | null>(null)
   const [diff, setDiff] = useState<DiffResult | null>(null)
   const [error, setError] = useState('')
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     const controller = new AbortController()
     setCommit(null)
     setDiff(null)
     setError('')
-    Promise.all([
-      fetchCommit(repo, ref, controller.signal),
-      fetchDiff(repo, ref, '', path, controller.signal),
-    ]).then(([commitResult, diffResult]) => {
+    fetchCommit(repo, ref, controller.signal).then(async commitResult => {
+      if (controller.signal.aborted) return
+      // Resolve a moving ref once; its diff must describe the same commit.
+      const diffResult = await fetchDiff(repo, commitResult.revision, '', path, controller.signal)
+      if (controller.signal.aborted) return
+      if (diffResult.head !== commitResult.revision || (diffResult.base ?? '') !== (commitResult.commit.parent_ids?.[0] ?? '')) throw new Error('Invalid commit diff response')
       setCommit(commitResult)
       setDiff(diffResult)
-    }).catch((cause) => {
-      if (!isAbortError(cause)) setError(String(cause))
+    }).catch(cause => {
+      if (!controller.signal.aborted && !isAbortError(cause)) setError(boundedError(cause))
     })
     return () => controller.abort()
-  }, [repo, ref, path])
+  }, [repo, ref, path, attempt])
 
   return (
     <div className={css({ maxWidth: '1200px', margin: '0 auto' })}>
@@ -51,7 +58,7 @@ export default function CommitPage({ params }: { params: URLSearchParams }) {
           triggerLabel="Commit"
         />
       </div>
-      {error && <Notification kind={NOTIFICATION_KIND.negative}>{error}</Notification>}
+      {error && <ErrorNotice onRetry={() => setAttempt(value => value + 1)} retryLabel="Retry commit">{error}</ErrorNotice>}
       {!commit && !error && <Spinner $size="small" />}
       {commit && (
         <>
@@ -170,7 +177,7 @@ function PatchView({ diff }: { diff: DiffResult }) {
                 </span>
               )}
             </div>
-            <div className={css({ overflowX: 'auto', overscrollBehaviorX: 'contain' })}>
+            <div role="group" aria-label={`${patchGroupHeading(group)} patch text`} tabIndex={0} className={css({ overflowX: 'auto', overscrollBehaviorX: 'contain', ':focus-visible': { ...focusRing(tok), outlineOffset: '-2px' } })}>
               <PatchLines lines={group.lines} lineClasses={lineClasses} />
             </div>
           </section>

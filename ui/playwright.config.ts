@@ -51,6 +51,7 @@ export default defineConfig({
     { name: 'browser-state', testMatch: /browser-state\.spec\.ts/ },
     { name: 'navigation', testMatch: /navigation\.spec\.ts/ },
     { name: 'repository-service', testMatch: /repository-service\.spec\.ts/ },
+    { name: 'code-history-audit', testMatch: /code-history-audit\.spec\.ts/ },
     { name: 'audit-analytics-audit', testMatch: /audit-analytics-audit\.spec\.ts/ },
     { name: 'settings-auth-audit', testMatch: /settings-auth-audit\.spec\.ts/ },
     { name: 'impact-kafka-audit', testMatch: /impact-kafka-audit\.spec\.ts/ },

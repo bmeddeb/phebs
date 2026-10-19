@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useStyletron } from 'baseui'
 import { Button, KIND as BUTTON_KIND } from 'baseui/button'
-import { Notification, KIND as NOTIFICATION_KIND } from 'baseui/notification'
 import { Spinner } from 'baseui/spinner'
 import { fetchCommits } from '../api'
 import type { GitCommit } from '../api'
@@ -10,6 +9,7 @@ import { CommitIcon } from '../icons'
 import { FONTS, usePhebsTokens } from '../theme'
 import { boundedError, isAbortError, repoFilter } from '../util'
 import { SectionHelp } from '../components/SectionHelp'
+import { ErrorNotice } from '../components/kit'
 
 const HISTORY_EVIDENCE_CAPABILITIES: ReadonlySet<string> = new Set(['history'])
 
@@ -17,70 +17,62 @@ export default function HistoryPage({ params }: { params: URLSearchParams }) {
   const repo = params.get('repo') ?? ''
   const path = params.get('path') ?? ''
   const ref = params.get('ref') ?? ''
+  return <HistoryPageRead key={JSON.stringify([repo, path, ref])} repo={repo} path={path} ref={ref} />
+}
+
+function HistoryPageRead({ repo, path, ref }: { repo: string; path: string; ref: string }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  const generation = useRef(0)
-  const requestKey = `${repo}\u0000${ref}\u0000${path}`
-  const latestRequestKey = useRef(requestKey)
   const loadMoreController = useRef<AbortController | null>(null)
-  latestRequestKey.current = requestKey
   const [commits, setCommits] = useState<GitCommit[]>([])
   const [revision, setRevision] = useState(ref)
   const [hasMore, setHasMore] = useState(false)
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState('')
+  const [attempt, setAttempt] = useState(0)
 
-  useEffect(() => {
-    const current = ++generation.current
-    const currentRequestKey = requestKey
-    const controller = new AbortController()
+  const cancelMore = useCallback(() => {
     loadMoreController.current?.abort()
     loadMoreController.current = null
+  }, [])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    cancelMore()
     setLoading(true)
     setLoadingMore(false)
     setError('')
     setCommits([])
+    setRevision(ref)
+    setHasMore(false)
     fetchCommits(repo, ref, path, 50, 0, controller.signal)
-      .then((result) => {
-        if (current !== generation.current || currentRequestKey !== latestRequestKey.current) return
-        // The wire schema marks the commit list nullable (Go slice); null
-        // renders as an empty page.
+      .then(result => {
+        if (controller.signal.aborted) return
         setCommits(result.commits ?? [])
         setRevision(result.revision)
         setHasMore(result.has_more)
       })
-      .catch((cause) => {
-        if (!isAbortError(cause) && current === generation.current && currentRequestKey === latestRequestKey.current) {
-          setError(boundedError(cause))
-        }
-      })
-      .finally(() => {
-        if (current === generation.current && currentRequestKey === latestRequestKey.current) setLoading(false)
-      })
-    return () => {
-      controller.abort()
-      loadMoreController.current?.abort()
-    }
-  }, [repo, ref, path, requestKey])
+      .catch(cause => { if (!controller.signal.aborted && !isAbortError(cause)) setError(boundedError(cause)) })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false) })
+    return () => { controller.abort(); cancelMore() }
+  }, [repo, ref, path, attempt, cancelMore])
 
   const loadMore = async () => {
-    const current = generation.current
-    const currentRequestKey = requestKey
+    if (loadMoreController.current) return
     const controller = new AbortController()
-    loadMoreController.current?.abort()
     loadMoreController.current = controller
     setLoadingMore(true)
     setError('')
     try {
       const result = await fetchCommits(repo, revision, path, 50, commits.length, controller.signal)
-      if (controller.signal.aborted || current !== generation.current || currentRequestKey !== latestRequestKey.current) return
-      setCommits((current) => [...current, ...(result.commits ?? [])])
+      if (controller.signal.aborted) return
+      const ids = new Set(commits.map(commit => commit.id))
+      if ((result.commits ?? []).some(commit => ids.has(commit.id))) throw new Error('Invalid history response: overlapping commits')
+      setCommits(current => [...current, ...(result.commits ?? [])])
       setHasMore(result.has_more)
     } catch (cause) {
-      if (!isAbortError(cause) && current === generation.current && currentRequestKey === latestRequestKey.current) {
-        setError(boundedError(cause))
-      }
+      if (!controller.signal.aborted && !isAbortError(cause)) setError(boundedError(cause))
     } finally {
       if (loadMoreController.current === controller) {
         loadMoreController.current = null
@@ -93,9 +85,7 @@ export default function HistoryPage({ params }: { params: URLSearchParams }) {
     <div className={css({ maxWidth: '1040px', margin: '0 auto' })}>
       <HistoryHeader repo={repo} path={path} ref={revision} />
       {error && (
-        <Notification kind={NOTIFICATION_KIND.negative} overrides={{ Body: { style: { width: 'auto', minWidth: 0, marginLeft: 0, marginRight: 0, overflowWrap: 'anywhere' } } }}>
-          {error}
-        </Notification>
+        <ErrorNotice onRetry={() => commits.length ? void loadMore() : setAttempt(value => value + 1)} retryLabel="Retry history page">{error}</ErrorNotice>
       )}
       {loading ? <Spinner $size="small" /> : (
         <div className={css({ borderTop: `1px solid ${tok.cardBorder}` })}>
@@ -136,9 +126,9 @@ export default function HistoryPage({ params }: { params: URLSearchParams }) {
           ))}
         </div>
       )}
-      {hasMore && (
+      {!loading && !error && hasMore && (
         <div className={css({ marginTop: '18px' })}>
-          <Button kind={BUTTON_KIND.secondary} isLoading={loadingMore} onClick={() => void loadMore()}>Load more</Button>
+          <Button kind={BUTTON_KIND.secondary} isLoading={loadingMore} disabled={loadingMore} onClick={() => void loadMore()}>Load more</Button>
         </div>
       )}
     </div>

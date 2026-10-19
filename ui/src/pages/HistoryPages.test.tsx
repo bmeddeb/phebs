@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { Client } from 'styletron-engine-monolithic'
 import { Provider as StyletronProvider } from 'styletron-react'
@@ -17,7 +17,7 @@ const fixture = vi.hoisted(() => {
     author: { name: 'Ada', email: 'ada@example.com', time: '2026-07-11T10:00:00Z' },
     committer: { name: 'Ada', email: 'ada@example.com', time: '2026-07-11T10:00:00Z' },
   }
-  return { commit, fetchCommits: vi.fn(), fetchCommit: vi.fn(), fetchDiff: vi.fn() }
+  return { commit, fetchCommits: vi.fn(), fetchCommit: vi.fn(), fetchDiff: vi.fn(), fetchBlame: vi.fn() }
 })
 
 vi.mock('../api', async (importOriginal) => ({
@@ -25,13 +25,7 @@ vi.mock('../api', async (importOriginal) => ({
   fetchCommits: fixture.fetchCommits,
   fetchCommit: fixture.fetchCommit,
   fetchDiff: fixture.fetchDiff,
-  fetchBlame: async () => ({
-    revision: fixture.commit.id,
-    path: 'src/new.go',
-    lines: [{ line: 1, original_line: 1, commit_id: fixture.commit.id, original_path: 'src/new.go', content: 'package main' }],
-    commits: [fixture.commit],
-    truncated: false,
-  }),
+  fetchBlame: fixture.fetchBlame,
 }))
 
 const engine = new Client()
@@ -42,6 +36,7 @@ const page = (child: React.ReactNode) => (
 )
 
 beforeEach(() => {
+  fixture.fetchBlame.mockReset().mockResolvedValue({ revision: fixture.commit.id, path: 'src/new.go', lines: [{ line: 1, original_line: 1, commit_id: fixture.commit.id, original_path: 'src/new.go', content: 'package main' }], commits: [fixture.commit], truncated: false })
   fixture.fetchCommits.mockReset()
   fixture.fetchCommits.mockResolvedValue({ revision: fixture.commit.id, commits: [fixture.commit], offset: 0, has_more: false })
   fixture.fetchCommit.mockReset()
@@ -83,7 +78,7 @@ test('history bounds an initial request failure', async () => {
   render(page(<HistoryPage params={new URLSearchParams('repo=example.com%2Facme%2Fapp')} />))
 
   const alert = await screen.findByRole('alert')
-  expect(alert.textContent?.trim()).toBe('initial history failure')
+  expect(within(alert).getByText('initial history failure', { exact: true })).toBeTruthy()
   expect(document.body.textContent).not.toContain('Error: initial history failure')
   expect(document.body.textContent).not.toContain('No commits are visible')
 })
@@ -100,7 +95,7 @@ test('history bounds a load-more request failure', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Load more' }))
 
   const alert = await screen.findByRole('alert')
-  expect(alert.textContent?.trim()).toBe(expected)
+  expect(within(alert).getByText(expected, { exact: true })).toBeTruthy()
   expect(expected).toHaveLength(512)
   expect(document.body.textContent).not.toContain('Error: load-more failure')
   expect(screen.getByRole('link', { name: /Add launch status/ })).toBeTruthy()
@@ -297,4 +292,83 @@ test('blame maps source lines to commit metadata', async () => {
   expect(within(helpDialog).queryByText('Implementation evidence is unavailable because search, code navigation, and history capabilities are not available.')).toBeNull()
   const commitLink = screen.getByRole('link', { name: /Ada aaaaaaaa/ })
   expect(commitLink.getAttribute('href')).toBe(`#/commit?repo=example.com%2Facme%2Fapp&ref=${fixture.commit.id}`)
+})
+
+test('history retries an initial failure without reloading or changing its URL request', async () => {
+  fixture.fetchCommits.mockRejectedValueOnce(new Error('history offline'))
+  render(page(<HistoryPage params={new URLSearchParams('repo=r&path=src/new.go&ref=main')} />))
+  fireEvent.click(await screen.findByRole('button', { name: 'Retry history page' }))
+  await screen.findByText('Add launch status')
+  expect(fixture.fetchCommits.mock.calls.map(call => call.slice(0, 5))).toEqual([['r', 'main', 'src/new.go', 50, 0], ['r', 'main', 'src/new.go', 50, 0]])
+})
+
+test('a new history route cannot load more using the old revision or leave old links active', async () => {
+  fixture.fetchCommits.mockResolvedValueOnce({ revision: fixture.commit.id, commits: [fixture.commit], offset: 0, has_more: true }).mockReturnValueOnce(new Promise(() => {}))
+  const mounted = render(page(<HistoryPage params={new URLSearchParams('repo=old&path=src/new.go')} />))
+  await screen.findByText('Add launch status')
+  mounted.rerender(page(<HistoryPage params={new URLSearchParams('repo=new&path=other.go&ref=main')} />))
+  expect(screen.queryByRole('button', { name: 'Load more' })).toBeNull()
+  expect(screen.getByRole('link', { name: 'other.go' }).getAttribute('href')).toContain('ref=main')
+})
+
+test('commit resolves a mutable ref before requesting its exact diff', async () => {
+  let resolve!: (value: unknown) => void
+  fixture.fetchCommit.mockReturnValueOnce(new Promise(yes => { resolve = yes }))
+  render(page(<CommitPage params={new URLSearchParams('repo=r&ref=main&path=src/new.go')} />))
+  expect(fixture.fetchDiff).not.toHaveBeenCalled()
+  await act(async () => resolve({ revision: fixture.commit.id, commit: fixture.commit, changes: [] }))
+  await screen.findByRole('heading', { name: 'Add launch status' })
+  expect(fixture.fetchDiff).toHaveBeenCalledWith('r', fixture.commit.id, '', 'src/new.go', expect.anything())
+})
+
+test.each(['success', 'failure'])('abandoned blame cannot restore late %s on a new path', async outcome => {
+  let resolve!: (value: unknown) => void
+  let reject!: (reason: Error) => void
+  fixture.fetchBlame.mockImplementationOnce(() => new Promise((yes, no) => { resolve = yes; reject = no }))
+    .mockResolvedValueOnce({ revision: 'b'.repeat(40), path: 'current.go', lines: [{ line: 1, original_line: 1, commit_id: fixture.commit.id, original_path: 'current.go', content: 'current source' }], commits: [fixture.commit], truncated: false })
+  const mounted = render(page(<BlamePage params={new URLSearchParams('repo=r&path=old.go')} />))
+  const signal = fixture.fetchBlame.mock.calls[0][3] as AbortSignal
+  mounted.rerender(page(<BlamePage params={new URLSearchParams('repo=r&path=current.go')} />))
+  await screen.findByText('current source')
+  expect(signal.aborted).toBe(true)
+  await act(async () => { if (outcome === 'failure') reject(new Error('obsolete blame failure')); else resolve({ revision: fixture.commit.id, path: 'old.go', lines: [{ line: 1, commit_id: fixture.commit.id, content: 'obsolete source' }], commits: [], truncated: false }) })
+  expect(screen.queryByText('obsolete source')).toBeNull()
+  expect(screen.queryByText('obsolete blame failure')).toBeNull()
+  expect(screen.getByRole('link', { name: 'current.go' }).getAttribute('href')).toContain('ref=' + 'b'.repeat(40))
+})
+
+test('an abandoned commit cannot launch a diff or restore old metadata', async () => {
+  let resolve!: (value: unknown) => void
+  fixture.fetchCommit.mockReturnValueOnce(new Promise(yes => { resolve = yes }))
+  const mounted = render(page(<CommitPage params={new URLSearchParams('repo=old&ref=main')} />))
+  mounted.rerender(page(<CommitPage params={new URLSearchParams('repo=current&ref=' + fixture.commit.id)} />))
+  await screen.findByRole('heading', { name: 'Add launch status' })
+  await act(async () => resolve({ revision: 'b'.repeat(40), commit: { ...fixture.commit, subject: 'obsolete metadata' }, changes: [] }))
+  expect(screen.queryByRole('heading', { name: 'obsolete metadata' })).toBeNull()
+  expect(fixture.fetchDiff.mock.calls.map(call => call[0])).toEqual(['current'])
+})
+
+test.each(['blame', 'commit'])('%s errors are bounded and retry exactly the current view', async kind => {
+  const detail = 'x'.repeat(600)
+  if (kind === 'blame') fixture.fetchBlame.mockRejectedValueOnce(new Error(detail))
+  else fixture.fetchCommit.mockRejectedValueOnce(new Error(detail))
+  render(page(kind === 'blame' ? <BlamePage params={new URLSearchParams('repo=r&path=src/new.go')} /> : <CommitPage params={new URLSearchParams('repo=r&ref=main')} />))
+  expect(await screen.findByText(detail.slice(0, 511) + '…', { exact: true })).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: kind === 'blame' ? 'Retry blame' : 'Retry commit' }))
+  if (kind === 'blame') await screen.findByText('package main')
+  else await screen.findByRole('heading', { name: 'Add launch status' })
+  expect(screen.queryByRole('alert')).toBeNull()
+})
+
+test('commit refuses a diff from a different parent', async () => {
+  fixture.fetchDiff.mockResolvedValueOnce({ head: fixture.commit.id, base: 'c'.repeat(40), files: [], patch: 'wrong parent', truncated: false })
+  render(page(<CommitPage params={new URLSearchParams('repo=r&ref=' + fixture.commit.id)} />))
+  expect(await screen.findByText('Invalid commit diff response', { exact: true })).toBeTruthy()
+  expect(screen.queryByText('wrong parent')).toBeNull()
+})
+
+test('empty blame is an explicit scoped state', async () => {
+  fixture.fetchBlame.mockResolvedValueOnce({ revision: fixture.commit.id, path: 'empty.go', lines: null, commits: null, truncated: false })
+  render(page(<BlamePage params={new URLSearchParams('repo=r&path=empty.go')} />))
+  expect(await screen.findByText('No blame lines returned for this path at this revision.')).toBeTruthy()
 })

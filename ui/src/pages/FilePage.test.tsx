@@ -22,7 +22,8 @@ const api = vi.hoisted(() => ({
   folderCalls: [] as { path: string; ref: string; signal: AbortSignal }[],
   folders: new Map<string, TreeEntry[]>(),
   statuses: [] as { name: string; indexed_commit_hash?: string; clone_url: string; orphaned: boolean }[],
-  navigationCalls: [] as { repo: string; path: string; ref: string }[],
+  navigationCalls: [] as { repo: string; path: string; ref: string; line: number; character: number }[],
+  definition: vi.fn(),
 }))
 const highlighting = vi.hoisted(() => ({
   highlightStyle: vi.fn(() => ({})),
@@ -32,9 +33,9 @@ vi.mock('../api', () => ({
   fetchRepoStatus: async () => api.statuses,
   fetchSource: (repo: string, path: string, ref: string, signal: AbortSignal) =>
     new Promise<SourceFile>((resolve) => api.sourceCalls.push({ repo, path, ref, signal, resolve })),
-  fetchDefinition: async (repo: string, ref: string, path: string) => { api.navigationCalls.push({ repo, ref, path }); return { available: false } },
-  fetchReferences: async (repo: string, ref: string, path: string) => { api.navigationCalls.push({ repo, ref, path }); return { available: false, locations: [] } },
-  fetchHover: async (repo: string, ref: string, path: string) => { api.navigationCalls.push({ repo, ref, path }); return { available: false } },
+  fetchDefinition: async (repo: string, ref: string, path: string, line: number, character: number) => { api.navigationCalls.push({ repo, ref, path, line, character }); return api.definition() },
+  fetchReferences: async (repo: string, ref: string, path: string, line: number, character: number) => { api.navigationCalls.push({ repo, ref, path, line, character }); return { available: false, locations: [] } },
+  fetchHover: async (repo: string, ref: string, path: string, line: number, character: number) => { api.navigationCalls.push({ repo, ref, path, line, character }); return { available: false } },
   fetchFolderContents: async (_repo: string, ref: string, path: string, signal: AbortSignal) => {
     api.folderCalls.push({ path, ref, signal })
     return { entries: api.folders.get(path) ?? [] }
@@ -74,15 +75,19 @@ const view = (params: string, palette: PaletteName = 'phebs') => (
 )
 
 beforeEach(() => {
+  // JSDOM has no range geometry; native browser checks cover real caret motion.
+  Object.defineProperty(Range.prototype, 'getClientRects', { configurable: true, value: () => [] })
+  Object.defineProperty(Range.prototype, 'getBoundingClientRect', { configurable: true, value: () => new DOMRect() })
   api.sourceCalls = []
   api.folderCalls = []
   api.folders = new Map()
   api.statuses = []
   api.navigationCalls = []
+  api.definition.mockReset().mockResolvedValue({ available: false })
   highlighting.highlightStyle.mockClear()
 })
 
-afterEach(() => { cleanup(); vi.restoreAllMocks() })
+afterEach(() => { cleanup(); vi.restoreAllMocks(); Reflect.deleteProperty(Range.prototype, 'getClientRects'); Reflect.deleteProperty(Range.prototype, 'getBoundingClientRect') })
 
 test('switching repositories without ref never borrows the previous indexed commit', async () => {
   api.statuses = [{ name: 'old', indexed_commit_hash: 'old-index', clone_url: '', orphaned: false }]
@@ -364,4 +369,29 @@ test('beyond the diagram cap, excess fences stay code without mounting renderers
   expect(await screen.findByText(/N20-->M20/)).toBeTruthy()
   expect(screen.getByText(/N21-->M21/)).toBeTruthy()
   expect(renderSpy.mock.calls.length - before).toBeLessThanOrEqual(20)
+})
+
+test('failed code navigation retries the selected position without refetching source', async () => {
+  vi.spyOn(EditorView.prototype, 'posAtCoords').mockReturnValue(0)
+  api.definition.mockRejectedValueOnce(new Error('lookup offline'))
+  render(view('repo=r&path=main.go&ref=abc123'))
+  await act(async () => api.sourceCalls[0].resolve({ content: 'package main', encoding: 'utf8', size: 12 }))
+  fireEvent.click(await screen.findByRole('textbox', { name: 'Source code for main.go' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Retry code navigation' }))
+  await screen.findByText('SCIP data is not available for this revision.')
+  expect(api.sourceCalls).toHaveLength(1)
+  expect(api.navigationCalls).toHaveLength(6)
+  expect(api.navigationCalls.every(call => call.ref === 'abc123' && call.line === 0 && call.character === 0)).toBe(true)
+})
+
+test('the read-only source viewer supports keyboard position lookup without editing', async () => {
+  render(view('repo=r&path=main.go&ref=abc123'))
+  await act(async () => api.sourceCalls[0].resolve({ content: '😀 main', encoding: 'utf8', size: 9 }))
+  const source = await screen.findByRole('textbox', { name: 'Source code for main.go' })
+  expect(source.tabIndex).toBe(0)
+  fireEvent.keyDown(source, { key: 'ArrowRight' })
+  fireEvent.keyDown(source, { key: 'Enter' })
+  await waitFor(() => expect(api.navigationCalls).toHaveLength(3))
+  expect(api.navigationCalls.every(call => call.line === 0 && call.character === 2)).toBe(true)
+  expect(source.textContent).toBe('😀 main')
 })

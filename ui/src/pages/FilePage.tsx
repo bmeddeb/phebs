@@ -29,9 +29,10 @@ import { MARKDOWN_PREVIEW_MAX_UNITS } from '../markdownBounds'
 import type { MarkdownSegment } from '../markdownSanitize'
 import { href, navigate } from '../router'
 import { CopyIcon, CheckIcon, CommitIcon, SearchIcon } from '../icons'
-import { fileFilter, humanSize, isAbortError, relTime, repoFilter } from '../util'
+import { boundedError, fileFilter, humanSize, isAbortError, relTime, repoFilter } from '../util'
 import { RepositoryTree } from '../RepositoryBrowser'
 import { SectionHelp } from '../components/SectionHelp'
+import { ErrorNotice } from '../components/kit'
 
 const FILE_EVIDENCE_CAPABILITIES: ReadonlySet<string> = new Set(['source-search'])
 
@@ -41,6 +42,7 @@ interface SourcePosition {
 }
 
 interface CodeNavigationState {
+  position: SourcePosition
   loading: boolean
   definition?: Omit<DefinitionResult, 'location'> & { location?: CodeLocation }
   references?: Omit<ReferencesResult, 'locations'> & { locations: CodeLocation[] }
@@ -50,16 +52,9 @@ interface CodeNavigationState {
 
 type WireLocation = Schemas['Location']
 
-const POSITION_ENCODINGS: readonly string[] = ['utf8', 'utf16', 'utf32']
-
-// The wire schema leaves location encoding an open string; the UI requests
-// utf16 (see fetchDefinition/fetchReferences) and only models the three
-// encodings it can convert. Unknown values fall back to the requested utf16.
+// Encodings are validated at the fetch boundary before narrowing the wire type.
 function toCodeLocation(location: WireLocation): CodeLocation {
-  const encoding: PositionEncoding = POSITION_ENCODINGS.includes(location.encoding)
-    ? location.encoding as PositionEncoding
-    : 'utf16'
-  return { ...location, encoding }
+  return { ...location, encoding: location.encoding as PositionEncoding }
 }
 
 type SourceState =
@@ -96,6 +91,7 @@ export default function FilePage({ params, isAdmin = false }: { params: URLSearc
   const effectiveRef = ref || meta?.indexed_commit_hash || ''
   const sourceIdentity = `${repo}\u0000${path}\u0000${effectiveRef}`
   const navPosition = selection?.identity === sourceIdentity ? selection : null
+  const currentNavigation = navigation?.position === navPosition ? navigation : null
   const currentSource = source?.identity === sourceIdentity ? source : null
   const content = currentSource?.kind === 'text' ? currentSource.content : null
   const error = currentSource?.kind === 'error' ? currentSource.message : ''
@@ -150,18 +146,19 @@ export default function FilePage({ params, isAdmin = false }: { params: URLSearc
     const generation = ++navGeneration.current
     const controller = new AbortController()
     if (!navPosition || !repo || !path || !effectiveRef) return
-    setNavigation({ loading: true })
+    setNavigation({ position: navPosition, loading: true })
     Promise.all([
       fetchDefinition(repo, effectiveRef, path, navPosition.line, navPosition.character, controller.signal),
       fetchReferences(repo, effectiveRef, path, navPosition.line, navPosition.character, controller.signal),
       fetchHover(repo, effectiveRef, path, navPosition.line, navPosition.character, controller.signal),
     ])
       .then(([definition, references, hover]) => {
-        if (generation === navGeneration.current) {
+        if (!controller.signal.aborted && generation === navGeneration.current) {
           // Normalize the wire locations once: the schema marks the list
           // nullable and leaves encoding open, while the panel below works
           // with non-null CodeLocation rows.
           setNavigation({
+            position: navPosition,
             loading: false,
             definition: definition && {
               ...definition,
@@ -176,8 +173,8 @@ export default function FilePage({ params, isAdmin = false }: { params: URLSearc
         }
       })
       .catch((error) => {
-        if (!isAbortError(error) && generation === navGeneration.current) {
-          setNavigation({ loading: false, error: String(error) })
+        if (!controller.signal.aborted && !isAbortError(error) && generation === navGeneration.current) {
+          setNavigation({ position: navPosition, loading: false, error: boundedError(error) })
         }
       })
     return () => controller.abort()
@@ -217,6 +214,7 @@ export default function FilePage({ params, isAdmin = false }: { params: URLSearc
                     path={path}
                     focusLine={line}
                     selectedLine={navPosition ? navPosition.line + 1 : 0}
+                    selectedCharacter={navPosition?.character ?? 0}
                     onPosition={selectPosition}
                   />
                 )}
@@ -224,7 +222,8 @@ export default function FilePage({ params, isAdmin = false }: { params: URLSearc
               {navPosition && (
                 <CodeNavigationPanel
                   position={navPosition}
-                  navigation={navigation}
+                  navigation={currentNavigation}
+                  onRetry={() => selectPosition(navPosition.line, navPosition.character)}
                   indexingHref={isAdmin ? href('/settings', { repo, section: 'code-navigation-indexing' }) : undefined}
                 />
               )}
@@ -240,10 +239,12 @@ function CodeNavigationPanel({
   position,
   navigation,
   indexingHref,
+  onRetry,
 }: {
   position: SourcePosition
   navigation: CodeNavigationState | null
   indexingHref?: string
+  onRetry: () => void
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
@@ -284,9 +285,7 @@ function CodeNavigationPanel({
       <div className={css({ padding: '12px' })}>
         {navigation?.loading && <Spinner $size="small" />}
         {navigation?.error && (
-          <Notification kind={KIND.negative} overrides={{ Body: { style: { width: 'auto', margin: 0 } } }}>
-            {navigation.error}
-          </Notification>
+          <ErrorNotice onRetry={onRetry} retryLabel="Retry code navigation">{navigation.error}</ErrorNotice>
         )}
         {unavailable && <PanelMessage>SCIP data is not available for this revision.{indexingHref && <><br /><a href={indexingHref}>Open code navigation indexing</a></>}</PanelMessage>}
         {empty && <PanelMessage>No precise symbol exists at this position.</PanelMessage>}
@@ -745,12 +744,14 @@ function CodeViewer({
   path,
   focusLine,
   selectedLine,
+  selectedCharacter,
   onPosition,
 }: {
   content: string
   path: string
   focusLine: number
   selectedLine: number
+  selectedCharacter: number
   onPosition: (line: number, character: number) => void
 }) {
   const [css] = useStyletron()
@@ -758,6 +759,7 @@ function CodeViewer({
   const { palette } = usePalette()
   const tok = usePhebsTokens()
   const host = useRef<HTMLDivElement>(null)
+  const restoreFocus = useRef(false)
 
   useEffect(() => {
     if (!host.current) return
@@ -772,13 +774,14 @@ function CodeViewer({
     languageFor(path).then((lang) => {
       if (cancelled || !host.current) return
       const extensions: Extension[] = [
-        EditorView.contentAttributes.of({ 'aria-label': `Source code for ${path}` }),
+        EditorView.contentAttributes.of({ 'aria-label': `Source code for ${path}`, 'aria-readonly': 'true', tabindex: '0' }),
         lineNumbers(),
         EditorView.editable.of(false),
         EditorState.readOnly.of(true),
         syntaxHighlighting(highlightStyle(mode, palette)),
         EditorView.theme(
           {
+            '&.cm-focused': { outline: `2px solid ${tok.accent}`, outlineOffset: '-2px' },
             '&': { fontSize: '12.5px', lineHeight: '18px', color: tok.plainCode, backgroundColor: tok.pageBg },
             '.cm-content': { fontFamily: 'ui-monospace, "SF Mono", Menlo, Monaco, monospace', lineHeight: '18px' },
             '.cm-gutters': { backgroundColor: 'transparent', border: 'none', color: tok.gutter },
@@ -799,6 +802,25 @@ function CodeViewer({
       }
 
       extensions.push(EditorView.domEventHandlers({
+        keydown(event, activeView) {
+          if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return false
+          const selection = activeView.state.selection.main
+          if (event.key === 'Enter') {
+            const line = activeView.state.doc.lineAt(selection.head)
+            onPosition(line.number - 1, selection.head - line.from)
+          } else {
+            const next = event.key === 'ArrowLeft' || event.key === 'ArrowRight'
+              ? activeView.moveByChar(selection, event.key === 'ArrowRight')
+              : event.key === 'ArrowUp' || event.key === 'ArrowDown'
+                ? activeView.moveVertically(selection, event.key === 'ArrowDown')
+                : event.key === 'Home' || event.key === 'End'
+                  ? activeView.moveToLineBoundary(selection, event.key === 'End') : null
+            if (!next) return false
+            activeView.dispatch({ selection: next, scrollIntoView: true })
+          }
+          event.preventDefault()
+          return true
+        },
         click(event, activeView) {
           if (!activeView.contentDOM.contains(event.target as Node)) return false
           const offset = activeView.posAtCoords({ x: event.clientX, y: event.clientY })
@@ -810,9 +832,10 @@ function CodeViewer({
       }))
 
       view = new EditorView({
-        state: EditorState.create({ doc: content, extensions }),
+        state: EditorState.create({ doc: content, extensions, selection: { anchor: anchor < 0 ? 0 : Math.min(anchor + selectedCharacter, probe.doc.lineAt(anchor).to) } }),
         parent: host.current,
       })
+      if (restoreFocus.current) view.focus()
       if (anchor >= 0) {
         view.dispatch({ effects: EditorView.scrollIntoView(anchor, { y: 'center' }) })
       }
@@ -820,9 +843,10 @@ function CodeViewer({
 
     return () => {
       cancelled = true
+      restoreFocus.current = view?.hasFocus ?? false
       view?.destroy()
     }
-  }, [content, path, focusLine, selectedLine, onPosition, mode, palette, tok])
+  }, [content, path, focusLine, selectedLine, selectedCharacter, onPosition, mode, palette, tok])
 
   return <div ref={host} className={css({ overflow: 'hidden', borderBottomLeftRadius: '8px', borderBottomRightRadius: '8px' })} />
 }

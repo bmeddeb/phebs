@@ -11390,3 +11390,15 @@ unavailable. The audit scroll region supports keyboard access. The owning
 backlog records bounded UI/native integration, screenshot, documentation and
 steady-state-cost gates. Linux #124, managed-SCIP proof and production
 signing/activation remain pending.
+
+
+## T57R.11 · Code navigation and history read integrity (2026-10-19)
+
+Ben's continued Mac audit pins commit diffs to resolved metadata/first parent,
+resets history/blame/commit state by route, rejects abandoned completions and
+adds exact manual retries. Shared fetch boundaries refuse crossed or malformed
+Git/SCIP results. The read-only viewer supports keyboard positioning/Enter
+lookup; patch scrolling and repeated blame links retain keyboard accessibility.
+The owning backlog records bounded UI/native, screenshot, type/lint/build,
+documentation and charter/cost checks. Linux #124, managed-SCIP installation
+proof and production signing/activation remain pending.

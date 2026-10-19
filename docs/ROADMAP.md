@@ -234,6 +234,14 @@ UTC bucket date, and the wide audit table supports keyboard scrolling. Bounded
 integration supplies the merge bar; Linux #124, managed-SCIP proof and production
 signing/activation remain pending.
 
+**Code navigation/history Mac audit follow-up (2026-10-19, T57R.11 / #144):**
+route-owned history, blame and commit reads discard abandoned results and retry
+exactly. Commit diffs follow resolved immutable metadata and its first parent;
+crossed/malformed response identity refuses before rendering. Source lookup and
+patch scrolling support the keyboard. Bounded integration supplies the merge
+bar; Linux #124, installed managed-SCIP proof and production signing remain
+pending.
+
 **All-ticket execution (2026-10-17, Ben-directed):** resolve actual dependencies
 and finish remaining work using three isolated agent lanes plus the lead. The
 current inventory is the T48.1 all-ticket table in [BACKLOG.md](./BACKLOG.md).
