@@ -14176,3 +14176,50 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   navigation and refusal/retry mechanics only, not live identity-provider,
   backend security, extraction accuracy or scale evidence. Linux #124, installed
   managed-SCIP proof and production signing/activation remain pending.
+
+
+- **2026-10-19 — T57R.10 audit log and analytics read recovery (Mac audit).**
+  Ben requests bounded integration and merge when green, preserving history.txt
+  and leaving production signing pending. Audit pagination retains the next raw
+  offset independently of displayed deduplicated rows. Manual retry repeats the
+  failed offset, keeping confirmed previous pages visible; overlapping pages
+  deduplicate IDs. Existing live offset pagination can still skip rows pruned
+  between reads; stable cursors are not introduced. The latest audit controller
+  is aborted on replacement, navigation or access loss, and cleanup invalidates
+  its generation. Analytics clears previous data before a new read and fences
+  abandoned results/errors. Its manual retry repeats the fixed 30-day read.
+  Neither page polls or automatically retries. Admin notices dispatch no read;
+  principal ownership and server authentication/authorization stay exact.
+  The shared API boundary refuses malformed audit events, duplicate page IDs,
+  non-progressing empty pages, invalid counts/dates and oversized arrays before
+  rendering. Audit arrays are bounded by the requested limit (UI 50); analytics
+  daily buckets by requested days (UI 30), repository entries by the server's
+  existing ten-row cap. Null slices remain compatible. Numeric values outside
+  JavaScript safe integers refuse rather than claim an imprecise count. Daily
+  dates must be valid, unique and ascending; no new aggregate equality or
+  extraction/accuracy claim is inferred. The latest-day tile names the returned
+  UTC date; absent daily counts are explicitly unavailable rather than zero.
+  The audit table's horizontal scroll region is a named keyboard stop with the
+  house focus indicator. Both pages reuse bounded ErrorNotice manual retries.
+  Cost: one audit offset scalar and one current controller reference, one
+  analytics retry scalar, and constant generation checks per completion. Each
+  explicit retry adds one existing audit-page or analytics request; initial
+  reads and successful Load more request counts stay unchanged. Superseded
+  client reads are aborted, without claiming server rollback. Per response,
+  validation scans at most 50 events with six optional string checks, one date
+  parse and one ID set, or at most 30 day buckets and ten repository rows with
+  bounded date/count checks and a repository-name set. Other API callers retain
+  their requested supported bounds. Existing audit append deduplication scans
+  retained rows once per successful next page and allocates its existing ID set
+  and new array; the UI has no new total scroll cap. Existing analytics bar and
+  repository render scans remain. New validation sets are discarded after each
+  response, not cached; private arrays reset with their owning access state.
+  No payload is duplicated persistently. Formatting the latest bucket adds one
+  date label; the keyboard region adds no work when idle. Startup/restart, sync
+  tick, publication and ordinary query/request/no-op paths gain no server work,
+  lock, corpus/shard read, hash, persistent cache, disk state, child process,
+  background timer or dependency. Screenshot fixtures establish presentation
+  and navigation mechanics only. Historical canonical PNGs, masks and thresholds
+  stay exact; analytics' visible UTC label is an intentional same-renderer delta.
+  Linux #124, managed-SCIP installation proof and production signing/activation
+  remain pending. No backend ownership crossing or Linux run is required.

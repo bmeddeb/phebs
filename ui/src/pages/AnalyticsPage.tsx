@@ -3,12 +3,12 @@
 // palette (single-series magnitude → one accent hue, no legend needed).
 import { useEffect, useRef, useState } from 'react'
 import { useStyletron } from 'baseui'
-import { Notification, KIND } from 'baseui/notification'
 import { Spinner } from 'baseui/spinner'
 import { fetchAnalytics, type AnalyticsSummary } from '../api'
 import { usePhebsTokens } from '../theme'
 import { ChartIcon } from '../icons'
 import { boundedError, isAbortError } from '../util'
+import { ErrorNotice } from '../components/kit'
 
 const DAYS = 30
 
@@ -19,8 +19,11 @@ export default function AnalyticsPage({ isAdmin }: { isAdmin: boolean }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const generation = useRef(0)
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
+    setSummary(null)
+    setError('')
     if (!isAdmin) return
     const gen = ++generation.current
     const controller = new AbortController()
@@ -38,18 +41,17 @@ export default function AnalyticsPage({ isAdmin }: { isAdmin: boolean }) {
       .finally(() => {
         if (gen === generation.current) setLoading(false)
       })
-    return () => controller.abort()
-  }, [isAdmin])
+    return () => { generation.current = gen + 1; controller.abort() }
+  }, [isAdmin, attempt])
 
   if (!isAdmin) {
     return <div className={css({ color: tok.textTertiary, padding: '32px 0' })}>Analytics requires administrator access.</div>
   }
 
-  // The wire schema marks these arrays nullable (Go slices); a null page
-  // renders as empty, matching the previous non-null assumption.
+  // Nullable wire slices stay compatible; absent daily counts are a gap.
   const daily = summary?.daily ?? []
   const topRepos = summary?.top_repos ?? []
-  const today = daily.at(-1)?.count ?? 0
+  const latest = daily.at(-1)
 
   return (
     <div className={css({ maxWidth: '880px', margin: '0 auto' })}>
@@ -62,22 +64,20 @@ export default function AnalyticsPage({ isAdmin }: { isAdmin: boolean }) {
       </div>
 
       {error && (
-        <Notification kind={KIND.negative} overrides={{ Body: { style: { width: 'auto', minWidth: 0, overflowWrap: 'anywhere' } } }}>
-          {error}
-        </Notification>
+        <ErrorNotice onRetry={() => setAttempt(value => value + 1)} retryLabel="Retry analytics">{error}</ErrorNotice>
       )}
-      {loading && <Spinner $size="small" />}
+      {loading && <span role="status" aria-label="Loading analytics"><Spinner $size="small" /></span>}
 
-      {summary && !loading && (
+      {summary && !loading && !error && (
         <>
           <div className={css({ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '28px' })}>
             <Tile label={`Searches (${DAYS}d)`} value={String(summary.total_searches)} />
-            <Tile label="Searches today" value={String(today)} />
+            <Tile label={latest ? `Searches on ${latest.date} (UTC)` : 'Latest day (UTC)'} value={latest ? String(latest.count) : 'Unavailable'} />
             <Tile label="Avg duration" value={`${summary.avg_duration_ms} ms`} />
           </div>
 
           <SectionTitle text="Searches per day" />
-          <DailyBars daily={daily} />
+          {daily.length ? <DailyBars daily={daily} /> : <div className={css({ color: tok.textTertiary, padding: '12px 0 28px' })}>No daily counts returned.</div>}
 
           <SectionTitle text="Top repositories in results" />
           {topRepos.length === 0 ? (

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { Client } from 'styletron-engine-monolithic'
 import { Provider as StyletronProvider } from 'styletron-react'
@@ -23,14 +23,14 @@ const event = (i: number, extra: Partial<AuditEvent> = {}): AuditEvent => ({
 
 const engine = new Client()
 
-const page = (isAdmin = true) =>
-  render(
+const view = (isAdmin = true) => (
     <StyletronProvider value={engine}>
       <BaseProvider theme={LightTheme}>
         <AuditPage isAdmin={isAdmin} />
       </BaseProvider>
-    </StyletronProvider>,
+    </StyletronProvider>
   )
+const page = (isAdmin = true) => render(view(isAdmin))
 
 beforeEach(() => {
   api.fetchAudit.mockReset()
@@ -76,4 +76,74 @@ test('non-admins get a notice, no fetch', () => {
   page(false)
   expect(screen.getByText(/requires administrator access/)).toBeTruthy()
   expect(api.fetchAudit).not.toHaveBeenCalled()
+})
+
+test('paging advances by received rows even when a shifted page is deduplicated', async () => {
+  api.fetchAudit
+    .mockResolvedValueOnce({ events: [event(1), event(2)], has_more: true })
+    .mockResolvedValueOnce({ events: [event(2), event(3)], has_more: true })
+    .mockResolvedValueOnce({ events: [event(4)], has_more: false })
+  page()
+  fireEvent.click(await screen.findByRole('button', { name: 'Load more' }))
+  await waitFor(() => expect(screen.getAllByRole('row')).toHaveLength(4))
+  fireEvent.click(await screen.findByRole('button', { name: 'Load more' }))
+  await waitFor(() => expect(screen.getAllByRole('row')).toHaveLength(5))
+  expect(api.fetchAudit.mock.calls.map(call => call[0])).toEqual([0, 2, 4])
+})
+
+test('initial and append failures retry the failed offset without automatic requests', async () => {
+  api.fetchAudit
+    .mockRejectedValueOnce(new Error('unavailable'))
+    .mockResolvedValueOnce({ events: [event(1), event(2)], has_more: true })
+    .mockRejectedValueOnce(new Error('next page unavailable'))
+    .mockResolvedValueOnce({ events: [event(3)], has_more: false })
+  page()
+  fireEvent.click(await screen.findByRole('button', { name: 'Retry audit page' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Load more' }))
+  const retry = await screen.findByRole('button', { name: 'Retry audit page' })
+  expect(screen.getAllByRole('row')).toHaveLength(3)
+  expect(screen.queryByRole('button', { name: 'Load more' })).toBeNull()
+  expect(api.fetchAudit).toHaveBeenCalledTimes(3)
+  fireEvent.click(retry)
+  await waitFor(() => expect(screen.getAllByRole('row')).toHaveLength(4))
+  expect(api.fetchAudit.mock.calls.map(call => call[0])).toEqual([0, 0, 2, 2])
+  expect(screen.queryByRole('alert')).toBeNull()
+})
+
+test.each(['success', 'failure'])('access loss aborts the latest page and fences its late %s', async outcome => {
+  let resolve!: (value: unknown) => void
+  let reject!: (reason: Error) => void
+  api.fetchAudit
+    .mockResolvedValueOnce({ events: [event(1)], has_more: true })
+    .mockImplementationOnce(() => new Promise((yes, no) => { resolve = yes; reject = no }))
+    .mockResolvedValueOnce({ events: [event(9, { action: 'current session' })], has_more: false })
+  const mounted = page()
+  fireEvent.click(await screen.findByRole('button', { name: 'Load more' }))
+  const signal = api.fetchAudit.mock.calls[1][2] as AbortSignal
+  mounted.rerender(view(false))
+  expect(signal.aborted).toBe(true)
+  mounted.rerender(view(true))
+  await screen.findByText('current session')
+  await act(async () => {
+    if (outcome === 'success') resolve({ events: [event(2, { action: 'obsolete session' })], has_more: true })
+    else reject(new Error('obsolete failure'))
+  })
+  expect(screen.queryByText('auth.login')).toBeNull()
+  expect(screen.queryByText('obsolete session')).toBeNull()
+  expect(screen.queryByText('obsolete failure')).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Load more' })).toBeNull()
+})
+
+test('audit failures use the shared bounded error display', async () => {
+  const detail = 'x'.repeat(600)
+  api.fetchAudit.mockRejectedValueOnce(new Error(detail))
+  page()
+  expect(await screen.findByText(`${detail.slice(0, 511)}…`, { exact: true })).toBeTruthy()
+})
+
+test('audit table scrolling is a named keyboard stop', async () => {
+  api.fetchAudit.mockResolvedValueOnce({ events: [event(1)], has_more: false })
+  page()
+  await screen.findByText('auth.login')
+  expect(screen.getByRole('region', { name: 'Audit events' }).tabIndex).toBe(0)
 })

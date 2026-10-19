@@ -1357,10 +1357,40 @@ export const postReindex = (repo: string, force: boolean) =>
   })
 
 export const fetchAudit = (offset: number, limit = 50, signal?: AbortSignal) =>
-  getJSON<AuditPage>(`/api/audit?${query({ offset, limit })}`, signal)
+  getJSON<unknown>(`/api/audit?${query({ offset, limit })}`, signal).then((page) => {
+    if (!isRecord(page) || typeof page.has_more !== 'boolean' ||
+      !(page.events === null || (Array.isArray(page.events) && page.events.length <= (limit || 50) &&
+        page.events.every(event => isRecord(event) && typeof event.id === 'string' && event.id !== '' &&
+          typeof event.action === 'string' && event.action !== '' && Number.isSafeInteger(event.status) &&
+          typeof event.created_at === 'string' && Number.isFinite(Date.parse(event.created_at)) &&
+          ['actor_email', 'actor_id', 'api_key_id', 'auth_method', 'source_ip', 'target'].every(key =>
+            event[key] === undefined || typeof event[key] === 'string')) &&
+        new Set(page.events.map(event => event.id)).size === page.events.length)) ||
+      (page.has_more && !(page.events as unknown[] | null)?.length)) {
+      throw new Error('Invalid audit response')
+    }
+    return page as AuditPage
+  })
+
+function isSafeCount(value: unknown): value is number {
+  return isCount(value) && Number.isSafeInteger(value)
+}
 
 export const fetchAnalytics = (days = 30, signal?: AbortSignal) =>
-  getJSON<AnalyticsSummary>(`/api/analytics?${query({ days })}`, signal)
+  getJSON<unknown>(`/api/analytics?${query({ days })}`, signal).then((summary) => {
+    if (!isRecord(summary) || !isSafeCount(summary.total_searches) || !isSafeCount(summary.avg_duration_ms) ||
+      !(summary.daily === null || (Array.isArray(summary.daily) && summary.daily.length <= (days || 30) &&
+        summary.daily.every((day, index, daily) => isRecord(day) && typeof day.date === 'string' &&
+          /^\d{4}-\d{2}-\d{2}$/.test(day.date) && Number.isFinite(Date.parse(day.date)) &&
+          new Date(day.date).toISOString().slice(0, 10) === day.date && isSafeCount(day.count) &&
+          (index === 0 || daily[index - 1].date < day.date)))) ||
+      !(summary.top_repos === null || (Array.isArray(summary.top_repos) && summary.top_repos.length <= 10 &&
+        summary.top_repos.every(repo => isRecord(repo) && typeof repo.name === 'string' && repo.name !== '' && isSafeCount(repo.count)) &&
+        new Set(summary.top_repos.map(repo => repo.name)).size === summary.top_repos.length))) {
+      throw new Error('Invalid analytics response')
+    }
+    return summary as AnalyticsSummary
+  })
 
 export const fetchVersion = (signal?: AbortSignal) =>
   getJSON<VersionInfo>('/api/version', signal)

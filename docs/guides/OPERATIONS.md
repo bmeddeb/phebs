@@ -2208,6 +2208,15 @@ prunes old events at boot and twice a day; `"0"` disables pruning. Webhook
 deliveries are not audited — they are machine traffic with no principal, and
 their effects are visible as jobs.
 
+The UI requests 50 events at a time. **Load more** advances by the raw received
+page length even when new arrivals shift a previously seen event into a later
+page. Overlaps are deduplicated; offset pagination can still skip rows deleted
+by retention during browsing. Reopen the page for a fresh first page.
+**Retry audit page** repeats the failed offset. Confirmed earlier rows remain
+visible if the next page fails. The wide **Audit events** region is a named
+keyboard stop; arrow keys scroll its columns. Malformed/oversized pages and
+repeated IDs within a page refuse with an alert rather than partial new rows.
+
 ### Analytics — zero telemetry
 
 Every completed search (UI, API, SSE, and MCP alike — they share one search
@@ -2221,7 +2230,16 @@ If the dashboard request fails, it shows an alert rather than zero or empty
 usage. One synthetic leading `Error:` prefix is removed, displayed detail is
 capped at 512 UTF-16 code units, and unbroken metadata wraps within the
 viewport. This display bound is not sensitive-data redaction and adds no
-automatic retry.
+automatic retry. **Retry analytics** repeats only the 30-day aggregate read.
+The latest-day tile names its returned date in UTC, so an old snapshot cannot
+claim a count for the viewer's current local day. Missing daily slices show
+**Unavailable** and **No daily counts returned.**; measured zero buckets retain
+their zero tick. Malformed, negative, unsafe-integer or oversized summaries
+refuse with an alert before rendering totals. Both admin pages abort abandoned
+reads and discard their late results/errors on access loss or navigation; this
+is a presentation fence, with administrator authorization still enforced by
+the server. They do not poll or automatically refresh an open snapshot. Audit
+errors use the same 512-code-unit display bound; it is not redaction.
 
 ### Job system
 
