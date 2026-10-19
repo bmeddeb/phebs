@@ -14223,3 +14223,66 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   stay exact; analytics' visible UTC label is an intentional same-renderer delta.
   Linux #124, managed-SCIP installation proof and production signing/activation
   remain pending. No backend ownership crossing or Linux run is required.
+
+
+- **2026-10-19 — T57R.11 code navigation and history read integrity (Mac audit).**
+  Ben directs bounded integration and merge when green, preserves history.txt
+  and keeps production signing pending. History, Blame and Commit presentation
+  reads are owned by the complete repository/path/ref tuple from the first
+  render. Changing that tuple remounts the read owner and aborts its current
+  controller(s); ignored cancellation still cannot publish late results/errors
+  or launch a later dependent diff read. History resets paging on replacement,
+  uses exact manual first/next-page retry and rejects overlap with retained
+  immutable pages. It does not silently deduplicate a contradictory pinned
+  history. Blame and Commit use the same bounded manual retry notice.
+  Commit metadata resolves the supplied ref first; only its immutable revision
+  is sent to the diff endpoint. The result's head and first-parent base must
+  match that metadata, including the empty base of a root commit. This adds
+  one dependent round trip, not a request or a server consistency claim.
+  Shared fetch boundaries validate rendered Git metadata, exact requested
+  revisions/offsets and blame paths/line-to-commit references. Commit pages
+  respect their requested limit capped at 200, blame rows/metadata at 50,000,
+  and patch display at 2 Mi UTF-16 code units (the server's existing producer
+  limit remains 2 MiB of raw patch bytes). Existing server source/output bounds
+  remain authoritative; client checks do not claim a new metadata byte budget.
+  Nullable slices remain compatible. An empty blame result is explicit.
+  Code-navigation results validate availability, relative location paths,
+  repository/revision identity, ordered nonnegative int32 positions, recognized
+  encodings, up to 500 references and up to 256 hover documentation parts.
+  Unknown encodings refuse instead of being silently interpreted as UTF-16.
+  Symbol lookup state belongs to its selected source position; abandoned
+  completions cannot restore older evidence. Manual retry repeats the three
+  existing position reads in parallel without refetching source. Arrow/Home/End
+  keys move the read-only viewer caret locally; Enter explicitly looks up its
+  UTF-16 position. Editing remains disabled, focus/caret survive the existing
+  editor rebuild, wide patch bodies are keyboard stops, and visually repeated
+  blame links retain accessible names. No producer, authority or claim changes.
+  Cost: three small route-owner wrappers serialize three URL strings each and
+  remount only when that tuple changes; unrelated renders keep their existing
+  reads. Three scalar retry counters and one current code-position owner
+  reference accompany existing state. Every manual history/blame retry adds
+  its one original read; commit retry reads metadata then its pinned diff.
+  A failed/abandoned metadata read starts no diff. History keeps one initial
+  and at most one next-page controller; each other mounted read owns one, and
+  code-navigation's three requests share their existing controller. Cleanup
+  aborts them without claiming server rollback. Per successful next page,
+  history adds a set scan over retained commit IDs and tests at most 50 new IDs;
+  existing append/render memory remains proportional to retained rows. Git
+  validation scans the received metadata and existing parent/change lists;
+  blame adds an ID set over at most 50,000 commits and one at-most-50,000-line
+  scan. Patch length checking is constant-time in JS string code units; it
+  performs no new encoding/hash pass. Navigation validation scans at most 500
+  location paths/ranges and 256 documentation parts, with fixed optional-field
+  checks and no source reads. Those sets are transient; no payload is cached or
+  persistently duplicated. Source position ownership and caret restoration add
+  one object reference and one focus boolean per viewer. Each key move uses
+  existing CodeMirror caret/selection/layout operations; only Enter dispatches
+  the existing three lookups. The editor's existing selected-line rebuild cost
+  remains, now retaining its selected character and keyboard focus. No new
+  background timer, dependency, lock, corpus/shard read, disk state, child or
+  publication/sync/startup work is added. Server request implementations stay
+  unchanged; explicit UI retries above repeat their existing backend work.
+  Idle/no-op requests remain unchanged. Private state dies with its owning route/principal.
+  Bounded client/native integration proves these mechanics only, not live SCIP
+  installation, backend security, extraction accuracy or scale. Linux #124,
+  managed-SCIP installation proof and production signing/activation stay pending.

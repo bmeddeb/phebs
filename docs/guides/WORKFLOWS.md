@@ -921,6 +921,16 @@ reference responses stop at 500 locations and set `truncated`, and hover
 content is capped at 64 KiB. The UI uses UTF-16 offsets (matching browser
 strings), while the HTTP API can request UTF-8, UTF-16, or UTF-32 conversion.
 
+Click a source position to inspect its definition, references and hover. For
+keyboard use, Tab into the read-only source viewer, move with arrow keys or
+Home/End, then press Enter to look up that position. Moving the caret alone
+sends no lookup. **Retry code navigation** repeats the selected position's
+three reads at the same revision without reloading source. A new position or
+file abandons the previous lookup; its late results cannot replace the current
+panel. Locations must match the requested repository and immutable revision,
+with valid relative paths, ranges and recognized encodings. Invalid responses
+refuse with an alert rather than a guessed encoding or crossed source link.
+
 Position encoding is document-local. A document that leaves it unspecified or
 uses an unknown encoding is omitted from the navigation snapshot instead of
 making every valid document in the committed index unavailable. Its document,
@@ -1155,8 +1165,20 @@ History failures use the same bounded presentation as catalog failures: one
 synthetic leading `Error:` prefix is removed, displayed detail is capped at 512
 UTF-16 code units, and unbroken metadata wraps within the viewport. An initial
 failure is not reported as **No commits**; a later page failure leaves already
-loaded commits visible and the existing **Load more** action remains the only
-page-retry path. This display bound is not sensitive-data redaction.
+loaded commits visible. **Retry history page** repeats the failed initial
+request or the exact pinned next-page offset. **Retry blame** and **Retry
+commit** repeat their current view. These are manual actions, with no polling
+or automatic retry. This display bound also applies to blame, commit and
+code-navigation failures; it is not sensitive-data redaction.
+
+Changing repository, path or ref resets the owning history, blame or commit
+view immediately and aborts its reads. History pages validate their returned
+offset/revision; repeated or non-progressing pages refuse instead of adding
+duplicate commits. The commit view resolves metadata first, then requests its
+diff using that immutable commit and checks the returned first parent. Invalid
+metadata or a crossed diff refuses before displaying a mixed view. Blame
+checks its returned path/revision and line-to-commit metadata; an empty result
+states **No blame lines returned for this path at this revision.**
 
 The Commit page presents patch text as labelled file regions. File identity,
 status, and statistics come from the structured diff response in its existing
@@ -1164,7 +1186,9 @@ order; the raw `diff --git` line starts a visual region but is not parsed into
 path authority. A headerless patch uses file identity only when the response
 contains exactly one file. Unmatched prelude or truncated metadata stays
 visible as `Patch prelude`, `Patch`, or `File N`. Every patch line remains in
-original order, and each file body owns its horizontal scroll. Offscreen file
+original order, and each file body owns a keyboard-focusable horizontal scroll
+region. Repeated blame rows retain named commit links for keyboard/screen-reader
+users. Offscreen file
 regions use browser content containment to defer layout and paint; this does
 not virtualize or remove the complete patch DOM.
 

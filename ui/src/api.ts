@@ -1580,8 +1580,41 @@ export async function revokeAPIKey(id: string): Promise<void> {
   if (!res.ok) throw new Error((await res.text()) || `revoke key failed (${res.status})`)
 }
 
+function isGitRevision(value: unknown, requested = ''): value is string {
+  return typeof value === 'string' && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(value) &&
+    (!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/i.test(requested) || value === requested.toLowerCase())
+}
+
+function isGitIdentity(value: unknown): boolean {
+  return isRecord(value) && typeof value.name === 'string' && typeof value.email === 'string' &&
+    typeof value.time === 'string' && Number.isFinite(Date.parse(value.time))
+}
+
+function isGitCommit(value: unknown): value is GitCommit {
+  return isRecord(value) && isGitRevision(value.id) && typeof value.short_id === 'string' &&
+    typeof value.subject === 'string' && typeof value.message === 'string' &&
+    (value.parent_ids === null || (Array.isArray(value.parent_ids) && value.parent_ids.every(id => isGitRevision(id)))) &&
+    isGitIdentity(value.author) && isGitIdentity(value.committer)
+}
+
+function isGitChange(value: unknown): boolean {
+  return isRecord(value) && typeof value.status === 'string' && isNonEmptyString(value.path) &&
+    (value.old_path === undefined || typeof value.old_path === 'string') &&
+    ['additions', 'deletions', 'similarity'].every(key => value[key] === undefined || isSafeCount(value[key])) &&
+    (value.binary === undefined || typeof value.binary === 'boolean')
+}
+
 export const fetchBlame = (repo: string, path: string, ref: string, signal?: AbortSignal) =>
-  getJSON<BlameResult>(`/api/blame?${query({ repo, path, ref })}`, signal)
+  getJSON<BlameResult>(`/api/blame?${query({ repo, path, ref })}`, signal).then(result => {
+    if (!isRecord(result) || !isGitRevision(result.revision, ref) || result.path !== path || typeof result.truncated !== 'boolean' ||
+      !(result.commits === null || (Array.isArray(result.commits) && result.commits.length <= 50_000 && result.commits.every(isGitCommit))) ||
+      !(result.lines === null || (Array.isArray(result.lines) && result.lines.length <= 50_000))) throw new Error('Invalid blame response')
+    const ids = new Set((result.commits ?? []).map(commit => commit.id))
+    if ((result.lines ?? []).some((line, index) => !isRecord(line) || line.line !== index + 1 ||
+      !isSafeCount(line.original_line) || line.original_line < 1 || !ids.has(line.commit_id) ||
+      typeof line.original_path !== 'string' || typeof line.content !== 'string')) throw new Error('Invalid blame response')
+    return result
+  })
 
 export const fetchCommits = (
   repo: string,
@@ -1593,10 +1626,20 @@ export const fetchCommits = (
 ) => getJSON<CommitListResult>(
   `/api/commits?${query({ repo, ref, path, limit, offset })}`,
   signal,
-)
+).then(result => {
+  if (!isRecord(result) || !isGitRevision(result.revision, ref) || result.offset !== offset || typeof result.has_more !== 'boolean' ||
+    !(result.commits === null || (Array.isArray(result.commits) && result.commits.length <= Math.min(limit || 50, 200) &&
+      result.commits.every(isGitCommit) && new Set(result.commits.map(commit => commit.id)).size === result.commits.length)) ||
+    (result.has_more && !result.commits?.length)) throw new Error('Invalid history response')
+  return result
+})
 
 export const fetchCommit = (repo: string, ref: string, signal?: AbortSignal) =>
-  getJSON<CommitResult>(`/api/commit?${query({ repo, ref })}`, signal)
+  getJSON<CommitResult>(`/api/commit?${query({ repo, ref })}`, signal).then(result => {
+    if (!isRecord(result) || !isGitRevision(result.revision, ref) || !isGitCommit(result.commit) || result.commit.id !== result.revision ||
+      !(result.changes === null || (Array.isArray(result.changes) && result.changes.every(isGitChange)))) throw new Error('Invalid commit response')
+    return result
+  })
 
 export const fetchDiff = (
   repo: string,
@@ -1604,7 +1647,27 @@ export const fetchDiff = (
   base = '',
   path = '',
   signal?: AbortSignal,
-) => getJSON<DiffResult>(`/api/diff?${query({ repo, head, base, path })}`, signal)
+) => getJSON<DiffResult>(`/api/diff?${query({ repo, head, base, path })}`, signal).then(result => {
+  if (!isRecord(result) || !isGitRevision(result.head, head) ||
+    (base !== '' && !isGitRevision(result.base, base)) ||
+    typeof result.patch !== 'string' || result.patch.length > (2 << 20) || typeof result.truncated !== 'boolean' ||
+    !(result.files === null || (Array.isArray(result.files) && result.files.every(isGitChange)))) throw new Error('Invalid diff response')
+  return result
+})
+
+function isCodeRange(value: unknown): boolean {
+  if (!isRecord(value) || !isRecord(value.start) || !isRecord(value.end)) return false
+  const { start, end } = value
+  return isSafeCount(start.line) && isSafeCount(start.character) && isSafeCount(end.line) && isSafeCount(end.character) &&
+    (end.line > start.line || (end.line === start.line && end.character >= start.character)) &&
+    Math.max(start.line, start.character, end.line, end.character) <= 2_147_483_647
+}
+
+function isCodeLocation(value: unknown, repo: string, ref: string): boolean {
+  return isRecord(value) && value.repo === repo && value.revision === ref.toLowerCase() && isNonEmptyString(value.path) &&
+    !value.path.includes('\\') && !value.path.includes('\0') && value.path.split('/').every(part => part !== '' && part !== '.' && part !== '..') &&
+    typeof value.encoding === 'string' && ['utf8', 'utf16', 'utf32'].includes(value.encoding) && isCodeRange(value.range)
+}
 
 const codePositionQuery = (
   repo: string,
@@ -1624,7 +1687,12 @@ export const fetchDefinition = (
 ) => getJSON<DefinitionResult>(
   `/api/find_definitions?${codePositionQuery(repo, ref, path, line, character)}`,
   signal,
-)
+).then(result => {
+  if (!isRecord(result) || typeof result.available !== 'boolean' ||
+    (result.symbol !== undefined && typeof result.symbol !== 'string') ||
+    (result.location != null && (!result.available || !isCodeLocation(result.location, repo, ref)))) throw new Error('Invalid code navigation response')
+  return result
+})
 
 export const fetchReferences = (
   repo: string,
@@ -1636,7 +1704,13 @@ export const fetchReferences = (
 ) => getJSON<ReferencesResult>(
   `/api/find_references?${codePositionQuery(repo, ref, path, line, character)}`,
   signal,
-)
+).then(result => {
+  if (!isRecord(result) || typeof result.available !== 'boolean' ||
+    (result.truncated !== undefined && typeof result.truncated !== 'boolean') ||
+    !(result.locations === null || (result.locations === undefined ? !result.available : Array.isArray(result.locations) && result.locations.length <= 500 &&
+      (!result.locations.length || result.available) && result.locations.every(location => isCodeLocation(location, repo, ref))))) throw new Error('Invalid code navigation response')
+  return result
+})
 
 export const fetchHover = (
   repo: string,
@@ -1648,7 +1722,17 @@ export const fetchHover = (
 ) => getJSON<HoverResult>(
   `/api/hover?${codePositionQuery(repo, ref, path, line, character)}`,
   signal,
-)
+).then(result => {
+  if (!isRecord(result) || typeof result.available !== 'boolean' ||
+    (result.hover != null && (!result.available || !isRecord(result.hover) || typeof result.hover.symbol !== 'string' ||
+      !isCodeRange(result.hover.range) || !['utf8', 'utf16', 'utf32'].includes(result.hover.encoding) ||
+      ['display_name', 'kind', 'signature', 'language'].some(key => {
+        const value = (result.hover as unknown as Record<string, unknown>)[key]
+        return value !== undefined && typeof value !== 'string'
+      }) || (result.hover.documentation != null && (!Array.isArray(result.hover.documentation) ||
+        result.hover.documentation.length > 256 || !result.hover.documentation.every(text => typeof text === 'string')))))) throw new Error('Invalid code navigation response')
+  return result
+})
 
 // streamSearch subscribes to /api/stream_search; each `results` batch is
 // delivered as it arrives (T4.3 per-shard flush shows up here as
