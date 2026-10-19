@@ -204,6 +204,13 @@ new scope cannot borrow the prior scope's generation or obsolete completions.
 Bounded native browsing, retry and back/forward checks pass with unchanged idle
 pixels. Linux #124, managed-SCIP proof and production signing remain pending.
 
+**Caller Map/Atlas Mac audit follow-up (2026-10-18, T57R.7 / #136):** bounded
+navigation repair removes redundant Caller Map reads, rejects obsolete caller
+comparison completions, binds Atlas catalog/detail to current URL identity and
+adds exact failure retries. Existing source/citation and partitioned authority
+checks remain strict. Linux #124, managed-SCIP proof and production signing
+remain pending; validation labels and ceremonies add no integration dependency.
+
 **All-ticket execution (2026-10-17, Ben-directed):** resolve actual dependencies
 and finish remaining work using three isolated agent lanes plus the lead. The
 current inventory is the T48.1 all-ticket table in [BACKLOG.md](./BACKLOG.md).

@@ -14039,3 +14039,42 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   responses, explicit refusal/retry and back/forward; they establish presentation
   mechanics only. Linux #124, managed-SCIP installation/target proof and
   production signing/activation remain pending.
+
+- **2026-10-18 — T57R.7 Caller Map and Atlas request navigation (Mac audit).**
+  Ben requests a bounded integration audit and integration when green, with
+  production signing pending. Caller Map and its operation-impact composition
+  key reads by semantic filters rather than a newly allocated URL object; a
+  display-view change performs no evidence read. Changed filters navigate before
+  reading their intended query, while an unchanged first-page Apply/restart
+  retains one explicit reload. Atlas binds catalog presentation to filters and
+  cursor, and detail presentation to the complete selection including protocol.
+  Every new catalog read clears its displayed predecessor and captures the
+  settled prior page only for a valid in-session append. Failed replacement
+  queries expose no preceding-query rows. Clearing selection invalidates and
+  aborts its pending read before the incomplete-selection return; obsolete
+  success/error completions cannot restore it. Legacy operation detail must
+  match the requested repository, lineage and canonical operation, in addition
+  to the unchanged optional exact-root/source and relationship-availability
+  checks. Catalog/detail failures have explicit same-URL retry actions. A retry
+  renders its exact bounded page, rather than promising to reconstruct prior
+  in-memory pagination. Related comparison successes and errors must still own
+  the active controller before changing the rendered query.
+  Cost: Caller Map view/equivalent-URL renders remove a read; changed filters
+  remove the redundant preceding-query read. Filter comparison serializes the
+  existing fixed filter record only on reset actions. Atlas adds constant-size
+  request-identity tags and two scalar retry counters, one filter serialization
+  per list request, and constant legacy endpoint comparisons. Protocol-only
+  selection changes now perform their required single detail read; Clear adds
+  no request. Each retry reads only its owning plane. Existing row accumulation,
+  cursor-chain growth and merge scans are unchanged; the pending list closure
+  retains a reference to the preceding settled rows until it settles, without
+  duplicating their content except for the existing append merge. One current
+  catalog controller and one current detail controller remain; replacement
+  requests abort their predecessors. Comparison guards add no read or cache.
+  Server request work, startup/restart, sync tick, no-op/retry and publication
+  are unchanged: no new lock, corpus/shard read, hashing, disk state, child or
+  dependency. UI read changes are limited to the explicit cases above.
+  Bounded component and native-browser integration establishes UI mechanics,
+  exact request/citation behavior and refusal/retry only, not independent
+  accuracy or scale. Historical receipts, Linux #124, managed-SCIP proof and
+  production signatures/activation remain pending.

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { Client } from 'styletron-engine-monolithic'
 import { Provider as StyletronProvider } from 'styletron-react'
@@ -385,6 +385,69 @@ beforeEach(() => {
 
 afterEach(cleanup)
 
+const selectedParams = (protocol = 'protobuf') => new URLSearchParams({
+  sel_repository: detail.repository, sel_lineage: detail.declaration_lineage,
+  sel_operation: detail.operation, sel_protocol: protocol,
+})
+
+test.each(['success', 'error'] as const)('clearing an Atlas selection ignores its late %s', async outcome => {
+  let finish!: (value: ContractCatalogOperation) => void
+  let fail!: (cause: Error) => void
+  api.fetchContractOperation.mockImplementation(() => new Promise<ContractCatalogOperation>((resolve, reject) => { finish = resolve; fail = reject }))
+  const view = page(selectedParams(), true)
+  const signal = api.fetchContractOperation.mock.calls[0][3] as AbortSignal
+  view.rerender(tree(new URLSearchParams(), true))
+  expect(signal.aborted).toBe(true)
+  await act(async () => { if (outcome === 'success') finish(detail); else fail(new Error('abandoned operation failure')) })
+  expect(screen.queryByTestId('contract-operation-detail')).toBeNull()
+  expect(screen.queryByText('abandoned operation failure')).toBeNull()
+  expect(screen.getByText('Select an operation', { exact: true })).toBeTruthy()
+})
+
+test('changing only the selected protocol revalidates the operation authority', async () => {
+  api.fetchContractOperation.mockResolvedValue({ ...detail, exact_authority: partitionedAuthority() })
+  const view = page(selectedParams())
+  await screen.findByTestId('contract-operation-detail')
+  view.rerender(tree(selectedParams('thrift'), false))
+  expect(await screen.findByText('Operation evidence authority does not match its pinned source. Retry the selection.')).toBeTruthy()
+  expect(screen.queryByTestId('contract-operation-detail')).toBeNull()
+})
+
+test('a failed new catalog filter cannot retain rows from the previous query', async () => {
+  api.fetchContractCatalog.mockReset().mockResolvedValueOnce(firstPage).mockRejectedValueOnce(new Error('catalog temporarily unavailable'))
+  const view = page()
+  await screen.findByText('3 rows')
+  view.rerender(tree(new URLSearchParams({ protocol: 'thrift' }), false))
+  expect(await screen.findByText('catalog temporarily unavailable')).toBeTruthy()
+  expect(screen.queryByRole('listitem', { name: /Get/ })).toBeNull()
+  expect(screen.getByText('0 rows')).toBeTruthy()
+})
+
+test('legacy operation detail still has to match the selected endpoint', async () => {
+  api.fetchContractOperation.mockResolvedValue({ ...detail, operation: '/demo.Catalog/Foreign' })
+  page(selectedParams())
+  expect(await screen.findByText('Operation evidence authority does not match its pinned source. Retry the selection.')).toBeTruthy()
+  expect(screen.queryByTestId('contract-operation-detail')).toBeNull()
+})
+
+test('a failed catalog page offers an exact retry without changing the URL', async () => {
+  api.fetchContractCatalog.mockReset().mockRejectedValueOnce(new Error('catalog retry failure')).mockResolvedValueOnce(firstPage)
+  page()
+  await screen.findByText('catalog retry failure')
+  fireEvent.click(screen.getByRole('button', { name: 'Retry catalog page' }))
+  expect(await screen.findByText('3 rows')).toBeTruthy()
+  expect(api.fetchContractCatalog.mock.calls[1].slice(0, 3)).toEqual(api.fetchContractCatalog.mock.calls[0].slice(0, 3))
+})
+
+test('a failed operation selection offers an exact retry', async () => {
+  api.fetchContractOperation.mockReset().mockRejectedValueOnce(new Error('selection retry failure')).mockResolvedValueOnce(detail)
+  page(selectedParams())
+  await screen.findByText('selection retry failure')
+  fireEvent.click(screen.getByRole('button', { name: 'Retry selection' }))
+  expect(await screen.findByTestId('contract-operation-detail')).toBeTruthy()
+  expect(api.fetchContractOperation.mock.calls[1].slice(0, 3)).toEqual(api.fetchContractOperation.mock.calls[0].slice(0, 3))
+})
+
 test('stable operation Impact discovery carries the full selected declaration identity', async () => {
   render(tree(new URLSearchParams({
     sel_repository: detail.repository, sel_lineage: detail.declaration_lineage,
@@ -562,6 +625,9 @@ test('ignores an operation response after a newer selection', async () => {
 test('renders a thrift operation with oneway chip, field 0, and union badge', async () => {
   const thriftDetail: ContractCatalogOperation = {
     ...detail,
+    repository: 'github.com/acme/idl',
+    declaration_lineage: 'lineage-t',
+    declaration: claim('github.com/acme/idl', 'emit-decl', 'DECLARES_OPERATION', 'agent.Agent/emitBatch', 'lineage-t', 'exact', 'idl/agent.thrift'),
     operation: '/agent.Agent/emitBatch',
     service_fqn: 'agent.Agent',
     method: 'emitBatch',
@@ -618,10 +684,10 @@ test('renders a thrift operation with oneway chip, field 0, and union badge', as
     },
   }
   vi.mocked(api.fetchContractOperation).mockResolvedValue(thriftDetail)
-  const view = page()
-  await screen.findByText('3 rows')
-  fireEvent.click(screen.getAllByRole('listitem')[0])
-  rerenderFromHash(view)
+  page(new URLSearchParams({
+    sel_repository: thriftDetail.repository, sel_lineage: thriftDetail.declaration_lineage,
+    sel_operation: thriftDetail.operation, sel_protocol: 'thrift',
+  }))
   await screen.findByTestId('contract-operation-detail')
   expect(screen.getByText('oneway')).toBeTruthy()
   expect(screen.queryByText('client stream')).toBeNull()

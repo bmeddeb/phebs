@@ -31,7 +31,7 @@ function declaration(service = false): ContractCatalogClaim {
     sources_truncated: false,
   }
 }
-const list: ContractCatalogList = {
+export const atlasDeclarationList: ContractCatalogList = {
   schema_version: 'contract-catalog-v1', query: {},
   items: [
     { kind: 'service', protocol: 'protobuf', repository, declaration_lineage: lineage,
@@ -42,7 +42,7 @@ const list: ContractCatalogList = {
   exact_authorities: [authority], pagination: { complete: true, truncated: false },
   coverage_digest: coverage.digest, coverage, caveat,
 }
-const detail: ContractCatalogOperation = {
+export const atlasDeclarationDetail: ContractCatalogOperation = {
   schema_version: 'contract-catalog-v1', repository, declaration_lineage: lineage,
   service_fqn: 'demo.v1.Catalog', method: 'Get', operation,
   declaration: declaration(), exact_authority: authority,
@@ -68,7 +68,7 @@ export async function installAtlasDeclarationFixture(page: Page) {
   }))
   await page.route('**/api/contract_atlas**', route => {
     const url = new URL(route.request().url())
-    const value = url.pathname.endsWith('/operation') ? detail : list
+    const value = url.pathname.endsWith('/operation') ? atlasDeclarationDetail : atlasDeclarationList
     return route.fulfill({ contentType: 'application/json', body: JSON.stringify(value) })
   })
 }

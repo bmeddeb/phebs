@@ -1670,3 +1670,21 @@ selection. The scope bar reads authority for the current principal and complete
 URL scope. While a new service loads, its links cannot carry the preceding
 service's generation. A verified generation joins the service's links only
 after its own authority read succeeds; an explicit URL generation stays pinned.
+
+### Caller Map and Atlas navigation
+
+Caller Map's Source view and Unit view reuse the current evidence page. Applying
+changed filters reads the new query once; reapplying the same first-page query
+or restarting a changed snapshot still refreshes it. A late response or error
+from an abandoned caller comparison cannot replace the current query.
+
+Atlas shows catalog rows only for the current filters and cursor, and operation
+detail only for the complete selected identity, including protocol. A failed
+replacement query does not retain the preceding query's rows. Clearing a
+selection cancels its read; a late completion cannot reopen it. Legacy detail
+must match the selected repository, lineage and operation, while exact-root
+responses retain their pinned source checks. Retry catalog page and Retry
+selection repeat the same authorized request without changing the URL. Retrying
+a catalog continuation renders that bounded page; earlier in-memory page
+accumulation is not reconstructed. Source links remain pinned, and caller
+citations never fall back to whole-file access.

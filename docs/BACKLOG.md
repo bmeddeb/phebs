@@ -20952,6 +20952,46 @@ the page-bounded identity scan and unchanged two-reader scope/detail costs.
 Historical Noble bytes, Linux #124, managed-SCIP proof and production signing
 remain pending.
 
+**T57R.7 ✅ · Caller Map and Atlas request navigation repair** *(2026-10-18,
+Ben-directed Mac audit continuation;
+[Mac issue #136](https://github.com/bmeddeb/phebs/issues/136), independent of
+Linux #124).* AC: reproduce Caller Map view/equivalent-URL refetches and
+preceding-query reads during filter application; Atlas abandoned selection
+success/error, missing protocol revalidation, retained prior-query rows,
+crossed legacy endpoint detail and absent exact retry actions. Related caller
+comparison completions must not replace a newer query. Bind rendered evidence
+to current URL identity, preserve exact source/citation and partitioned-root
+checks, retain unchanged first-page restart and bounded pagination semantics,
+and provide exact catalog/selection retries. Bounded component/browser
+integration, types/lint/build, desktop/390 px keyboard/console/WCAG,
+same-renderer pixels, docs/glossary and charter/steady-state-cost review are the
+merge bar. No label, rehearsal, ceremony or production signing prerequisite is
+introduced; production signing remains pending.
+
+T57R.7 outcome: eleven regression cases fail before their corresponding fixes.
+The complete serial UI suite passes 953 tests across 49 files in 30.10s; the
+eleven new checks cover request counts, abandoned success/error, protocol,
+legacy endpoint, replacement-query and exact retry behavior. One existing
+Thrift fixture is corrected to select the operation/repository it actually
+returns. An earlier parallel suite had one long-identity comparison-citation
+wait timeout; its unchanged isolated case/package and the complete serial
+suite pass without increasing timeouts or changing assertions. Ten native
+Chrome 155 integration journeys pass in 18.0s at 1280 px and 390 px, with
+sixteen clean WCAG audits, keyboard/back-forward proof, exact request counts,
+crossed citation refusal and no whole-file fallback, clean consoles and no
+document overflow. Browser plugin not available; repo Playwright uses native
+Chrome. Eight native idle pairs for Caller Map source/unit and Atlas list/detail
+are reviewed and byte-identical to main; no canonical PNG, mask, threshold or
+retry changes. Production/receipt types, changed-file lint, production build,
+docs/glossary and whitespace pass. Lazy Caller Map/comparison/Atlas chunks are
+25.03/22.55/41.65 kB (7.24/6.45/11.03 kB gzip); the shared entry is 347.90 kB
+(100.39 kB gzip). Existing large-chunk warnings remain. View/back round-trip
+fixture timings are 37–55 ms, including keyboard steps and assertion polling;
+the owning PLAN decision records cost. These are client mechanics, not backend,
+accuracy or scale results. Charter review
+finds no unresolved hierarchy, density, state, keyboard, motion or copy issue.
+Linux #124, managed-SCIP proof and production signing/activation remain pending.
+
 **T57R.1 · Inherited gate repairs** *(cross-cutting; found while landing Epic
 57)* — return `make docs-check`, repository-wide lint and
 `internal/investigation` to green without touching the code those findings sit

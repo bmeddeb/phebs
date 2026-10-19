@@ -321,6 +321,24 @@ beforeEach(() => {
 
 afterEach(cleanup)
 
+test.each(['success', 'error'] as const)('an abandoned comparison %s cannot replace the current query', async outcome => {
+  let finish!: (value: ComparisonResponse) => void
+  let fail!: (cause: Error) => void
+  api.fetchCallerComparison.mockReset()
+    .mockImplementationOnce(() => new Promise<ComparisonResponse>((resolve, reject) => { finish = resolve; fail = reject }))
+    .mockResolvedValueOnce(comparisonPage([comparisonRow(1, 'old_only_evidence'), comparisonRow(2, 'both_evidence')]))
+  const rendered = renderPage()
+  const signal = api.fetchCallerComparison.mock.calls[0][5] as AbortSignal
+  const next = route()
+  next.set('owner', 'current-team')
+  rendered.rerender(pageElement(next))
+  expect(signal.aborted).toBe(true)
+  await screen.findByText('Rows 1–2 of 2')
+  await act(async () => { if (outcome === 'success') finish(comparisonPage([comparisonRow(3, 'new_only_evidence')])); else fail(new Error('abandoned comparison failure')) })
+  expect(screen.getByText('Rows 1–2 of 2')).toBeTruthy()
+  expect(screen.queryByText('abandoned comparison failure')).toBeNull()
+})
+
 test('requires an exact old endpoint without performing discovery or comparison', () => {
   renderPage(new URLSearchParams({ old_operation: oldEndpoint.operation }))
   expect(screen.getByText(/requires an exact old endpoint/)).toBeTruthy()

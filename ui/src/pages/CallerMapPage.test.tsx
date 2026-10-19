@@ -341,6 +341,28 @@ beforeEach(() => {
 
 afterEach(cleanup)
 
+test('view changes and equivalent URL objects reuse the current caller page', async () => {
+  const rendered = renderPage()
+  await screen.findByText('Rows 1–3 of 3')
+  rendered.rerender(pageElement(route()))
+  const grouped = route()
+  grouped.set('view', 'group')
+  rendered.rerender(pageElement(grouped))
+  expect(await screen.findByLabelText('Caller rows grouped by attributed unit')).toBeTruthy()
+  expect(api.fetchContractCallers).toHaveBeenCalledTimes(1)
+})
+
+test('applying changed filters does not first reread the old caller query', async () => {
+  const rendered = renderPage()
+  await screen.findByText('Rows 1–3 of 3')
+  fireEvent.change(screen.getByLabelText('Owner'), { target: { value: 'team-new' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Apply filters' }))
+  expect(api.fetchContractCallers).toHaveBeenCalledTimes(1)
+  rendered.rerender(pageElement(hashParams()))
+  await waitFor(() => expect(api.fetchContractCallers).toHaveBeenCalledTimes(2))
+  expect(api.fetchContractCallers.mock.calls[1][1].owner).toBe('team-new')
+})
+
 test('Impact entry preserves the exact current query, cursor, effective page size and view', async () => {
   const params = route()
   const state = { unit: 'unit-a', owner: 'team-a', path_prefix: 'src/a/', code_role: 'test', tier: 'heuristic', freshness: 'fresh', resolution: 'syntax', ordering: 'unit', cursor: 'opaque-exact-cursor', view: 'group', page_size: '100' }
