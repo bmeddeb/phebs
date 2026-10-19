@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { Client } from 'styletron-engine-monolithic'
 import { Provider as StyletronProvider } from 'styletron-react'
@@ -6,6 +6,7 @@ import { BaseProvider, LightTheme } from 'baseui'
 import ImpactPage from './ImpactPage'
 import type { ContractImpactReport } from '../api'
 import { glossaryTerms } from '../glossary.generated'
+import { impactCommit as commit, impactReport as report } from '../test-fixtures/impactKafka'
 
 const api = vi.hoisted(() => ({
   fetchOperationImpact: vi.fn(),
@@ -15,129 +16,6 @@ const api = vi.hoisted(() => ({
 }))
 
 vi.mock('../api', () => api)
-
-const commit = '0123456789abcdef0123456789abcdef01234567'
-const report: ContractImpactReport = {
-  schema_version: 'contract-impact-report-v2',
-  bundle_id: `pb_${'a'.repeat(64)}`,
-  query: {
-    kind: 'contract_impact_operation',
-    operation: '/shop.Cart/Get',
-    domains: ['grpc-consumer'],
-  },
-  conclusion: {
-    text: 'Resolved or matching call evidence was found within the stated evidence scope.',
-    coverage_digest: `sha256:${'b'.repeat(64)}`,
-  },
-  resolved_evidence: [],
-  matching_call_evidence: [{
-    kind: 'operation_call',
-    domain: 'grpc-consumer',
-    protocol: 'protobuf',
-    assertion_id: 'assertion-known',
-    evidence_atom_id: 'atom-known',
-    predicate: 'CALLS_OPERATION',
-    object: '/shop.Cart/Get',
-    repository: 'github.com/acme/cart-client',
-    commit,
-    path: 'client/cart.go',
-    start_byte: 100,
-    end_byte: 116,
-    start_line: 27,
-    end_line: 27,
-    tier: 'heuristic',
-    code_role: 'production',
-    classification: 'matching_call_evidence',
-    reason: 'operation object matched without declaration identity',
-    fresh: true,
-  }],
-  extractor_abstentions: [{
-    kind: 'unresolved_candidate',
-    domain: 'grpc-consumer',
-    protocol: 'protobuf',
-    assertion_id: 'assertion-unresolved',
-    evidence_atom_id: 'atom-unresolved',
-    predicate: 'UNRESOLVED_GRPC_CALL',
-    object: 'Get',
-    repository: 'github.com/acme/cart-client',
-    commit,
-    path: 'client/ambiguous.go',
-    start_byte: 200,
-    end_byte: 219,
-    start_line: 41,
-    end_line: 41,
-    tier: 'unresolved',
-    code_role: 'test',
-    classification: 'extractor_abstention',
-    reason: 'method Get matches 2 generated services',
-    fresh: false,
-  }],
-  coverage: {
-    schema_version: 'coverage-certificate-v1',
-    domains: ['grpc-consumer'],
-    repository_count: 2,
-    repositories: [{
-      repository: 'github.com/acme/cart-client',
-      indexed_commit: commit,
-      scip_index: 'absent',
-      runs: [{
-        domain: 'grpc-consumer',
-        status: 'published',
-        run_id: 'run-known',
-        extractor: 'grpcgo',
-        commit,
-        fresh: true,
-        protocols: ['grpc'],
-        corpus_file_count: 4,
-        candidate_file_count: 2,
-        read_file_count: 2,
-        read_bytes: 512,
-        unresolved_count: 1,
-        assertion_count: 2,
-        atom_count: 2,
-      }],
-    }, {
-      repository: 'github.com/acme/web',
-      indexed_commit: commit,
-      scip_index: 'absent',
-      runs: [{
-        domain: 'grpc-consumer',
-        status: 'absent',
-        fresh: false,
-        corpus_file_count: 1,
-        candidate_file_count: 0,
-        read_file_count: 0,
-        read_bytes: 0,
-        unresolved_count: 0,
-        assertion_count: 0,
-        atom_count: 0,
-      }],
-    }],
-    digest: `sha256:${'b'.repeat(64)}`,
-  },
-  coverage_rows: [{
-    repository: 'github.com/acme/cart-client',
-    domain: 'grpc-consumer',
-    state: 'covered',
-    indexed_commit: commit,
-    evidence_commit: commit,
-    assertion_count: 2,
-    unresolved_count: 1,
-    candidate_file_count: 2,
-    read_file_count: 2,
-  }, {
-    repository: 'github.com/acme/web',
-    domain: 'grpc-consumer',
-    state: 'unsupported',
-    reason: 'no published evidence for this domain',
-    indexed_commit: commit,
-    assertion_count: 0,
-    unresolved_count: 0,
-    candidate_file_count: 0,
-    read_file_count: 0,
-  }],
-  caveat: 'Evidence is bounded to visible repositories and recorded extractor coverage.',
-}
 
 const engine = new Client()
 
@@ -351,4 +229,77 @@ test('Atlas handoff pre-populates an operation without automatically submitting 
   expect((screen.getByLabelText('Canonical operation') as HTMLInputElement).value)
     .toBe('/shop.Cart/Get')
   expect(api.fetchOperationImpact).not.toHaveBeenCalled()
+})
+
+function reroute(view: ReturnType<typeof page>, query: string) {
+  view.rerender(<StyletronProvider value={engine}><BaseProvider theme={LightTheme}>
+    <ImpactPage params={new URLSearchParams(query)} compatibilityAvailable={false} capabilities={['contract-impact-report']} />
+  </BaseProvider></StyletronProvider>)
+}
+
+test('a failed replacement hides the preceding saved report', async () => {
+  const view = page(new URLSearchParams(`bundle=${report.bundle_id}`))
+  await screen.findByText(report.conclusion.text)
+  api.fetchSavedImpact.mockRejectedValueOnce(new Error('replacement unavailable'))
+  reroute(view, 'bundle=pb_replacement')
+  await screen.findByText(/replacement unavailable/)
+  expect(screen.queryByText(report.conclusion.text)).toBeNull()
+})
+
+test.each(['success', 'error'])('clearing a saved report rejects its late %s', async (outcome) => {
+  let resolve!: (value: ContractImpactReport) => void
+  let reject!: (reason: Error) => void
+  api.fetchSavedImpact.mockImplementationOnce(() => new Promise<ContractImpactReport>((yes, no) => { resolve = yes; reject = no }))
+  const view = page(new URLSearchParams(`bundle=${report.bundle_id}`))
+  reroute(view, '')
+  await act(async () => { if (outcome === 'success') resolve(report); else reject(new Error('abandoned saved report')) })
+  expect(screen.queryByText(report.conclusion.text)).toBeNull()
+  expect(screen.queryByText(/abandoned saved report/)).toBeNull()
+})
+
+test('an abandoned manual report cannot navigate back to Impact', async () => {
+  let resolve!: (value: ContractImpactReport) => void
+  api.fetchOperationImpact.mockImplementationOnce(() => new Promise<ContractImpactReport>(yes => { resolve = yes }))
+  const view = page(new URLSearchParams('operation=%2Fshop.Cart%2FGet'))
+  fireEvent.click(screen.getByRole('button', { name: 'Build report' }))
+  const signal = api.fetchOperationImpact.mock.calls[0][1] as AbortSignal
+  view.unmount()
+  window.location.hash = '#/topics'
+  await act(async () => { resolve(report) })
+  expect(window.location.hash).toBe('#/topics')
+  expect(signal.aborted).toBe(true)
+})
+
+test('back and forward operation handoffs update the draft without building reports', () => {
+  const view = page(new URLSearchParams('operation=%2Fshop.Cart%2FGet'))
+  reroute(view, 'operation=%2Fshop.Cart%2FPut')
+  expect((screen.getByLabelText('Canonical operation') as HTMLInputElement).value).toBe('/shop.Cart/Put')
+  expect(api.fetchOperationImpact).not.toHaveBeenCalled()
+})
+
+test('saved reports reject a different bundle identity', async () => {
+  api.fetchSavedImpact.mockResolvedValueOnce({ ...report, bundle_id: 'pb_crossed' })
+  page(new URLSearchParams(`bundle=${report.bundle_id}`))
+  expect(await screen.findByText(/different saved report/)).toBeTruthy()
+  expect(screen.queryByText(report.conclusion.text)).toBeNull()
+})
+
+test('saved report retry reauthorizes only the selected bundle', async () => {
+  api.fetchSavedImpact.mockRejectedValueOnce(new Error('temporary report failure'))
+  page(new URLSearchParams(`bundle=${report.bundle_id}`))
+  await screen.findByText(/temporary report failure/)
+  fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+  await screen.findByText(report.conclusion.text)
+  expect(api.fetchSavedImpact.mock.calls.map(call => call[0])).toEqual([report.bundle_id, report.bundle_id])
+  expect(api.fetchOperationImpact).not.toHaveBeenCalled()
+})
+
+test('manual validation on a saved URL never offers a retry of the preceding bundle', async () => {
+  page(new URLSearchParams(`bundle=${report.bundle_id}`))
+  await screen.findByText(report.conclusion.text)
+  fireEvent.click(screen.getByRole('button', { name: 'Build report' }))
+  await screen.findByText('Enter a canonical /package.Service/Method operation.')
+  expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull()
+  expect(screen.queryByText(report.conclusion.text)).toBeNull()
+  expect(api.fetchSavedImpact).toHaveBeenCalledTimes(1)
 })

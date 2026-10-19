@@ -211,6 +211,13 @@ adds exact failure retries. Existing source/citation and partitioned authority
 checks remain strict. Linux #124, managed-SCIP proof and production signing
 remain pending; validation labels and ceremonies add no integration dependency.
 
+**Impact/Topics Mac audit follow-up (2026-10-18, T57R.8 / #138):** obsolete
+Impact and Kafka reads cannot restore old evidence/errors or redirect after
+navigation. Saved Impact bundles and topic usage echo their requested identity;
+saved failures have exact retry, operation handoffs follow history, and invalid
+optional topic decoration cannot crash citations. Bounded integration remains
+the merge bar. Linux #124, managed-SCIP proof and production signing stay pending.
+
 **All-ticket execution (2026-10-17, Ben-directed):** resolve actual dependencies
 and finish remaining work using three isolated agent lanes plus the lead. The
 current inventory is the T48.1 all-ticket table in [BACKLOG.md](./BACKLOG.md).

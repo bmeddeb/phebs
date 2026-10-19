@@ -36,7 +36,13 @@ interface TopicDetail {
 function parseDetail(raw?: string): TopicDetail {
   if (!raw) return {}
   try {
-    return JSON.parse(raw) as TopicDetail
+    const detail: unknown = JSON.parse(raw)
+    if (!detail || typeof detail !== 'object' || Array.isArray(detail)) return {}
+    for (const key of ['libraries', 'shapes', 'bindings', 'group_ids'] as const) {
+      const value = (detail as Record<string, unknown>)[key]
+      if (value !== undefined && (!Array.isArray(value) || value.some((item) => typeof item !== 'string'))) return {}
+    }
+    return detail as TopicDetail
   } catch {
     return {}
   }
@@ -66,10 +72,15 @@ export default function KafkaTopicsPage({ params, inventoryAvailable = false }: 
     const controller = new AbortController()
     activeRequest.current = controller
     setLoading(true)
+    setEnvelope(null)
     setError('')
     fetchKafkaTopicUsage(value, controller.signal)
       .then((result) => {
-        if (generation === requestGeneration.current) setEnvelope(result)
+        if (generation !== requestGeneration.current) return
+        if (result.bundle.query.kind !== 'find_kafka_topic_usage' || result.bundle.query.topic !== value) {
+          throw new Error('The answer names a different topic than the one requested.')
+        }
+        setEnvelope(result)
       })
       .catch((cause) => {
         if (generation === requestGeneration.current && !isAbortError(cause)) {
@@ -85,22 +96,26 @@ export default function KafkaTopicsPage({ params, inventoryAvailable = false }: 
           setLoading(false)
         }
       })
-    return controller
+  }, [])
+
+  const cancelRequest = useCallback(() => {
+    activeRequest.current?.abort()
+    requestGeneration.current++
   }, [])
 
   useEffect(() => {
     setTopic(linkedTopic)
+    setError('')
     if (!linkedTopic) {
       // Leaving a topic for the inventory must not keep its answer on screen.
-      activeRequest.current?.abort()
-      requestGeneration.current++
+      cancelRequest()
       setEnvelope(null)
       setLoading(false)
-      return
+    } else {
+      runQuery(linkedTopic)
     }
-    const controller = runQuery(linkedTopic)
-    return () => controller.abort()
-  }, [linkedTopic, runQuery])
+    return cancelRequest
+  }, [linkedTopic, runQuery, cancelRequest])
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault()
@@ -120,7 +135,7 @@ export default function KafkaTopicsPage({ params, inventoryAvailable = false }: 
     navigate('/topics', { topic: value })
   }
 
-  const bundle = envelope?.bundle
+  const bundle = envelope?.bundle.query.topic === linkedTopic ? envelope.bundle : undefined
   const producers = (bundle?.assertions ?? []).filter((row) => row.predicate === 'PRODUCES_TO_TOPIC')
   const consumers = (bundle?.assertions ?? []).filter((row) => row.predicate === 'CONSUMES_FROM_TOPIC')
 
@@ -154,7 +169,7 @@ export default function KafkaTopicsPage({ params, inventoryAvailable = false }: 
       {loading && <Spinner $size="small" aria-label="Loading topic usage" />}
 
       {!linkedTopic && inventoryAvailable && (
-        <TopicInventory inventory={params.get('inventory') ?? ''} cursor={params.get('cursor') ?? ''} />
+        <TopicInventory key={JSON.stringify([params.get('inventory'), params.get('cursor')])} inventory={params.get('inventory') ?? ''} cursor={params.get('cursor') ?? ''} />
       )}
       {linkedTopic && inventoryAvailable && (
         <p className={css({ margin: '0 0 12px', fontSize: '12px' })}>
@@ -393,15 +408,18 @@ function TopicInventory({ inventory, cursor }: { inventory: string; cursor: stri
     setError('')
     const load = inventory
       ? fetchTopicInventoryPage(inventory, cursor, controller.signal).then((page) => {
+        if (controller.signal.aborted) return
         const problem = inventoryProblem(page, inventory)
         if (problem) throw new Error(problem)
         setReport(page)
       })
       // Compose once, then address the immutable bundle from the URL so
       // reload and back/forward reproduce the same inventory.
-      : composeKafkaTopicInventory(controller.signal).then((envelope) => replaceRoute('/topics', { inventory: envelope.id }))
+      : composeKafkaTopicInventory(controller.signal).then((envelope) => {
+        if (!controller.signal.aborted) replaceRoute('/topics', { inventory: envelope.id })
+      })
     load.catch((cause) => {
-      if (!isAbortError(cause)) setError(String(cause))
+      if (!controller.signal.aborted && !isAbortError(cause)) setError(String(cause))
     })
     return () => controller.abort()
   }, [inventory, cursor, attempt])
