@@ -21070,6 +21070,45 @@ request/render/cancellation and steady-state costs. No live identity-provider,
 backend security, accuracy or scale result follows; Linux #124, installed
 managed-SCIP proof and production signing/activation remain pending.
 
+**T57R.10 · Audit pagination and analytics read recovery** *(Mac audit;
+2026-10-19, #142)* — Ben directs bounded integration and merge when green.
+Advance audit wire offsets independently of deduplicated rows; retry failed
+pages and analytics reads exactly, abort and fence abandoned admin reads,
+refuse invalid/oversized JSON, name the latest UTC bucket and distinguish a
+missing slice from measured zero. Keep the wide audit table keyboard usable.
+Types/lint/build, bounded UI/native integration, desktop/390 px keyboard/
+console/WCAG, same-renderer pixel review, owning guides/ADR and steady-state
+cost review are the merge bar. Preserve history.txt; production signing stays
+pending. No Linux run, ceremony, label or backend crossing is required.
+
+T57R.10 outcome: thirty initial regression cases fail before repair. Thirty-three
+new checks cover raw offsets after overlap, exact initial/append/30-day retries,
+late success/error isolation, nullable slices, malformed/oversized responses,
+bounded errors, explicit UTC labels and keyboard scroll semantics. The complete
+serial UI suite passes 1,024 tests in 51 files (31.24s). Native browser checks
+find an additional inherited mobile audit scroll-region keyboard failure; the
+named focusable region and house focus indicator repair it. Twelve final native
+Chrome journeys pass in 19.7s at 1280 px/light and 390 px/dark, with twenty-six
+clean WCAG audits, keyboard scroll/action, back/forward, exact request counts,
+access-loss and delayed-response checks, no page overflow or app console errors.
+Deliberately injected HTTP 503 resource diagnostics are asserted separately.
+Browser plugin unavailable; repo Playwright uses native Chrome. Two normal audit
+main/fixed pairs are byte-identical; two analytics pairs show only the reviewed
+UTC label change. All four fixed/repeat pairs are byte-identical. Canonical
+analytics receipts already mask their usage body; no canonical PNG, mask,
+threshold or retry setting changes. Production/receipt types, scoped lint,
+Vite build, documentation/glossary and whitespace pass. Audit/analytics/entry
+bundles are 5.11/4.78/350.48 kB (1.77/1.78/101.16 kB gzip), versus main's
+4.82/4.53/349.21 kB (1.68/1.71/100.76 kB gzip); inherited large-chunk warnings
+remain. Fixture retry timings are 31–36 ms for audit and 33–38 ms for analytics,
+including keyboard and assertion polling. Scoped charter review finds no open
+hierarchy, density, keyboard, motion, copy or state-completeness issue. PLAN
+records bounded validation, retained-row deduplication, cancellation and request
+costs. Offset paging can still skip rows pruned mid-scroll; the guide records
+that existing limitation. These are client integration results, not backend
+security, accuracy or scale evidence. Linux #124, managed-SCIP installation proof
+and production signing/activation remain pending.
+
 **T57R.1 · Inherited gate repairs** *(cross-cutting; found while landing Epic
 57)* — return `make docs-check`, repository-wide lint and
 `internal/investigation` to green without touching the code those findings sit

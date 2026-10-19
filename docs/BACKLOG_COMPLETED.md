@@ -11378,3 +11378,15 @@ The owning backlog records nineteen new checks, 991 passing UI tests, fourteen
 native journeys, twenty-two WCAG audits, ten byte-identical normal pairs and
 types/lint/build/docs/glossary/charter/cost review. Linux #124, managed-SCIP
 installation proof and production signing/activation remain pending.
+
+
+## T57R.10 · Audit pagination and analytics read recovery (2026-10-19)
+
+Ben's continued Mac audit corrects audit wire offsets after overlap
+deduplication, adds exact page/30-day manual retries and discards abandoned
+admin reads. Bounded JSON validation refuses malformed rows/counts, the
+latest-day tile names its returned UTC date and missing daily slices remain
+unavailable. The audit scroll region supports keyboard access. The owning
+backlog records bounded UI/native integration, screenshot, documentation and
+steady-state-cost gates. Linux #124, managed-SCIP proof and production
+signing/activation remain pending.

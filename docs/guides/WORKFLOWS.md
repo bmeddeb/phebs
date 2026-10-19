@@ -1342,10 +1342,17 @@ change cannot reuse the previous unit's evidence.
 - **Audit** (`#/audit`, administrators only) — the recorded action trail:
 logins (including failures), setup, logout, API-key lifecycle, and every
 mutating API operation, newest first with actor, target, status, and
-source IP.
+source IP. Use **Load more** for the next page and **Retry audit page** after
+a failed read; already confirmed rows stay visible on a next-page failure. The
+wide **Audit events** region is keyboard focusable for horizontal scrolling.
+Live offset paging deduplicates overlapping rows but can skip rows pruned
+while browsing; reopen the page for a fresh first page.
 - **Analytics** (`#/analytics`, administrators only) — 30-day search volume,
 searches per day, average duration, and the repositories appearing most in
-results — computed entirely from local usage events.
+results — computed entirely from local usage events. The latest-day tile names
+the returned UTC date; absent daily counts show **Unavailable**, not zero.
+**Retry analytics** repeats a failed 30-day read without reloading. Neither
+admin page automatically retries failed reads or refreshes its snapshot.
 - **Contracts** (`#/contracts`, experimental) — browse provisional protobuf
 service declarations without first knowing an operation identifier. Exact
 repository/package/protocol/lineage filters lead to a service → operation

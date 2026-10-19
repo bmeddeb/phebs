@@ -1,12 +1,12 @@
 // T10.1: admin-only audit trail — newest-first table over GET /api/audit.
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useStyletron } from 'baseui'
-import { Notification, KIND } from 'baseui/notification'
 import { Spinner } from 'baseui/spinner'
 import { fetchAudit, type AuditEvent } from '../api'
-import { usePhebsTokens } from '../theme'
+import { focusRing, usePhebsTokens } from '../theme'
 import { AuditIcon } from '../icons'
-import { isAbortError, relTime } from '../util'
+import { boundedError, isAbortError, relTime } from '../util'
+import { ErrorNotice } from '../components/kit'
 
 const PAGE = 50
 
@@ -18,10 +18,15 @@ export default function AuditPage({ isAdmin }: { isAdmin: boolean }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const generation = useRef(0)
+  const request = useRef<AbortController | null>(null)
+  const [nextOffset, setNextOffset] = useState(0)
 
   const load = useCallback((offset: number) => {
+    request.current?.abort()
     const gen = ++generation.current
     const controller = new AbortController()
+    request.current = controller
+    setError('')
     setLoading(true)
     fetchAudit(offset, PAGE, controller.signal)
       .then((page) => {
@@ -31,31 +36,40 @@ export default function AuditPage({ isAdmin }: { isAdmin: boolean }) {
         const events = page.events ?? []
         // New events arriving between pages shift offset paging; dedupe by id
         // so a shifted page never renders duplicate rows.
-        // ponytail: rows pruned mid-scroll can still be skipped; move to a
-        // created_at cursor if that ever matters.
+        // shortcut: pruning mid-scroll may skip rows; use a created_at cursor
+        // if stable pagination becomes required.
         setEvents((prev) => {
           if (offset === 0) return events
           const seen = new Set(prev.map((e) => e.id))
           return [...prev, ...events.filter((e) => !seen.has(e.id))]
         })
+        setNextOffset(offset + events.length)
         setHasMore(page.has_more)
         setError('')
       })
       .catch((cause) => {
         if (gen !== generation.current || isAbortError(cause)) return
-        setError(String(cause))
+        setError(boundedError(cause))
       })
       .finally(() => {
-        if (gen === generation.current) setLoading(false)
+        if (gen === generation.current) { request.current = null; setLoading(false) }
       })
-    return controller
+  }, [])
+
+  const cancel = useCallback(() => {
+    ++generation.current
+    request.current?.abort()
+    request.current = null
   }, [])
 
   useEffect(() => {
-    if (!isAdmin) return
-    const controller = load(0)
-    return () => controller.abort()
-  }, [load, isAdmin])
+    setEvents([])
+    setHasMore(false)
+    setNextOffset(0)
+    setError('')
+    if (isAdmin) load(0)
+    return cancel
+  }, [load, cancel, isAdmin])
 
   if (!isAdmin) {
     return <div className={css({ color: tok.textTertiary, padding: '32px 0' })}>The audit log requires administrator access.</div>
@@ -69,15 +83,13 @@ export default function AuditPage({ isAdmin }: { isAdmin: boolean }) {
       </div>
 
       {error && (
-        <Notification kind={KIND.negative} overrides={{ Body: { style: { width: 'auto' } } }}>
-          {error}
-        </Notification>
+        <ErrorNotice onRetry={() => load(nextOffset)} retryLabel="Retry audit page">{error}</ErrorNotice>
       )}
 
       {!loading && !error && events.length === 0 ? (
         <div className={css({ color: tok.textTertiary, padding: '32px 0' })}>No recorded actions yet.</div>
       ) : (
-        <div className={css({ overflowX: 'auto' })}>
+        <div role="region" aria-label="Audit events" tabIndex={0} className={css({ overflowX: 'auto', ':focus-visible': focusRing(tok) })}>
           {/* Fixed layout: column geometry is declared, never derived from
               event content — one long target must not reflow the table
               anatomy (long values ellipsize in place, full value on title). */}
@@ -101,11 +113,11 @@ export default function AuditPage({ isAdmin }: { isAdmin: boolean }) {
       )}
 
       <div className={css({ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 0' })}>
-        {loading && <Spinner $size="small" />}
-        {!loading && hasMore && (
+        {loading && <span role="status" aria-label="Loading audit page"><Spinner $size="small" /></span>}
+        {!loading && !error && hasMore && (
           <button
             type="button"
-            onClick={() => load(events.length)}
+            onClick={() => load(nextOffset)}
             className={css({ fontSize: '13px', color: tok.textSecondary, backgroundColor: tok.fill, border: 'none', borderRadius: '8px', padding: '8px 14px', cursor: 'pointer', ':hover': { backgroundColor: tok.hoverFill, color: tok.textPrimary } })}
           >
             Load more

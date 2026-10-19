@@ -226,6 +226,14 @@ inventory, retries its failed reads independently and removes matching revoked
 one-time secrets. Linux #124, managed-SCIP proof and production signing remain
 pending; bounded integration supplies the Mac merge bar.
 
+**Audit/analytics Mac audit follow-up (2026-10-19, T57R.10 / #142):**
+audit offsets advance by raw received rows after overlap deduplication; failed
+pages and analytics reads retry exactly and abandoned reads are discarded.
+Invalid admin JSON refuses before rendering, the latest-day tile names its
+UTC bucket date, and the wide audit table supports keyboard scrolling. Bounded
+integration supplies the merge bar; Linux #124, managed-SCIP proof and production
+signing/activation remain pending.
+
 **All-ticket execution (2026-10-17, Ben-directed):** resolve actual dependencies
 and finish remaining work using three isolated agent lanes plus the lead. The
 current inventory is the T48.1 all-ticket table in [BACKLOG.md](./BACKLOG.md).
