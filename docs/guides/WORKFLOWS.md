@@ -1688,3 +1688,19 @@ selection repeat the same authorized request without changing the URL. Retrying
 a catalog continuation renders that bounded page; earlier in-memory page
 accumulation is not reconstructed. Source links remain pinned, and caller
 citations never fall back to whole-file access.
+
+### Impact and Topics navigation recovery (2026-10-18)
+
+Changing a saved Impact bundle clears the preceding report, and a crossed bundle
+identity is refused. **Retry** on a saved-report error reauthorizes that same
+bundle. A new manual report clears its predecessor; leaving Impact cancels the
+active report and prevents a late response from taking you back. Atlas operation
+handoffs follow back/forward in the unsubmitted operation draft.
+
+Topics discards abandoned inventory compositions, cursor pages and usage reads.
+Returning to inventory clears a topic-query error. A usage answer must name the
+requested spelling; **Query** retries that spelling. Invalid optional library,
+shape, binding or group decoration is omitted while exact supporting source
+citations remain visible. The unresolved census still leads, and plane zeros
+retain their measured/unmeasured distinction. These navigation repairs add no
+runtime, accuracy, completeness or release claim.

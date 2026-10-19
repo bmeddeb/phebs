@@ -20992,6 +20992,44 @@ accuracy or scale results. Charter review
 finds no unresolved hierarchy, density, state, keyboard, motion or copy issue.
 Linux #124, managed-SCIP proof and production signing/activation remain pending.
 
+**T57R.8 ✅ · Impact and Kafka Topics request lifecycle repair** *(2026-10-18,
+Ben-directed Mac audit; [Mac issue #138](https://github.com/bmeddeb/phebs/issues/138),
+independent of Linux #124).* AC: reproduce abandoned saved/manual Impact reads,
+retained replacement reports, unsynchronized operation handoffs, crossed saved
+identities and absent exact saved retries; reproduce obsolete Kafka inventory
+composition/cursor completions, retained usage errors, crossed spelling reads,
+uncancelled same-topic retries and malformed optional detail crashes. Bind
+presentation to current URL identity, invalidate/abort abandoned reads, preserve
+all exact citations, census and plane qualifications, and retry the owning read.
+Bounded component/native-browser integration, types/lint/build, desktop/390 px
+keyboard/console/WCAG, same-renderer pixels, guide/ADR, charter and steady-state
+cost review are the merge bar. Merge when green is Ben-authorized; signing stays
+pending and no validation-label or ceremony prerequisite is introduced.
+
+T57R.8 outcome: the initial pre-fix replay has fourteen failing cases,
+including two render crashes. Nineteen added component checks cover obsolete
+success/error, exact response identity, retry ownership, operation history and
+optional detail shapes; review additionally pins that manual validation on a
+saved URL never retries its old bundle. The complete serial UI suite passes
+972 tests across 49 files in 48.24s. Twelve native Chrome 155 journeys pass in
+21.7s at 1280 px/light and 390 px/dark, with sixteen clean WCAG audits,
+keyboard/back-forward/request/citation checks, no document overflow or app
+console errors. The deliberately injected HTTP 503's single native resource
+console entry is asserted separately. Two initial browser assertions were
+corrected for the existing stable Impact fixture's actual heading/citation and
+that expected HTTP diagnostic. Browser plugin unavailable; repo Playwright
+uses native Chrome. Ten normal idle pairs (Impact form/saved/isolated operation,
+Topics inventory/usage) are reviewed and byte-identical to main; no canonical
+PNG, mask, threshold or retry changes. Production and receipt types, changed-file
+lint, production build, docs/glossary and whitespace pass. Impact/Topics lazy
+chunks are 25.57/17.10 kB (7.59/5.44 kB gzip), +0.34/+0.52 kB versus main;
+shared entry 347.90 kB (100.38 kB gzip). Existing large-chunk warnings remain.
+Saved retry fixture timings are 23–48 ms including keyboard/assertion polling.
+Charter review finds no unresolved change to hierarchy, density, states,
+keyboard, motion or qualification copy. The owning PLAN entry records request,
+render, cancellation and resource cost. These are client mechanics; Linux #124,
+managed-SCIP proof and production signing/activation remain pending.
+
 **T57R.1 · Inherited gate repairs** *(cross-cutting; found while landing Epic
 57)* — return `make docs-check`, repository-wide lint and
 `internal/investigation` to green without touching the code those findings sit

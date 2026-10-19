@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useStyletron } from 'baseui'
 import { Button } from 'baseui/button'
 import { Input } from 'baseui/input'
@@ -17,7 +17,7 @@ import {
 } from '../api'
 import { ImpactIcon, OpenIcon } from '../icons'
 import { SectionHelp } from '../components/SectionHelp'
-import { ClaimBoundary } from '../components/kit'
+import { ClaimBoundary, ErrorNotice } from '../components/kit'
 import { AnalysisScopePanel } from '../components/AnalysisScopePanel'
 import { type GlossaryTermId } from '../glossary.generated'
 import { FONTS, TYPE, usePhebsTokens } from '../theme'
@@ -88,27 +88,41 @@ function LegacyImpactPage({ params, compatibilityAvailable, capabilities }: {
   const [fieldProtocol, setFieldProtocol] = useState<FieldProtocol>('protobuf')
   const [before, setBefore] = useState('[]')
   const [after, setAfter] = useState('[]')
-  const [report, setReport] = useState<ContractImpactReport | null>(null)
+  const [reportState, setReport] = useState<{ key: string; value: ContractImpactReport } | null>(null)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useState<{ message: string; saved: boolean } | null>(null)
   const requestGeneration = useRef(0)
   const activeRequest = useRef<AbortController | null>(null)
   const savedID = params.get('bundle') ?? ''
+  const linkedOperation = params.get('operation') ?? ''
+  const requestKey = JSON.stringify([savedID, linkedOperation])
+  const report = reportState?.key === requestKey ? reportState.value : null
+  const [attempt, setAttempt] = useState(0)
+
+  const cancelRequest = useCallback(() => {
+    activeRequest.current?.abort()
+    requestGeneration.current++
+  }, [])
+
+  useEffect(() => setOperation(linkedOperation), [linkedOperation])
 
   useEffect(() => {
-    if (!savedID) return
     activeRequest.current?.abort()
     const generation = ++requestGeneration.current
+    setReport(null)
+    setLoading(Boolean(savedID))
+    setError(null)
+    if (!savedID) return cancelRequest
     const controller = new AbortController()
     activeRequest.current = controller
-    setLoading(true)
-    setError('')
     fetchSavedImpact(savedID, controller.signal)
       .then((result) => {
-        if (generation === requestGeneration.current) setReport(result)
+        if (generation !== requestGeneration.current) return
+        if (result.bundle_id !== savedID) throw new Error('The answer names a different saved report than the one requested.')
+        setReport({ key: requestKey, value: result })
       })
       .catch((cause) => {
-        if (generation === requestGeneration.current && !isAbortError(cause)) setError(String(cause))
+        if (generation === requestGeneration.current && !isAbortError(cause)) setError({ message: String(cause), saved: true })
       })
       .finally(() => {
         if (generation === requestGeneration.current) {
@@ -116,12 +130,12 @@ function LegacyImpactPage({ params, compatibilityAvailable, capabilities }: {
           setLoading(false)
         }
       })
-    return () => controller.abort()
-  }, [savedID])
+    return cancelRequest
+  }, [savedID, requestKey, attempt, cancelRequest])
 
   const selectMode = (next: Mode) => {
     setMode(next)
-    setError('')
+    setError(null)
   }
 
   const submit = async (event: React.FormEvent) => {
@@ -131,7 +145,8 @@ function LegacyImpactPage({ params, compatibilityAvailable, capabilities }: {
     const controller = new AbortController()
     activeRequest.current = controller
     setLoading(true)
-    setError('')
+    setReport(null)
+    setError(null)
     try {
       let result: ContractImpactReport
       if (mode === 'operation') {
@@ -153,11 +168,11 @@ function LegacyImpactPage({ params, compatibilityAvailable, capabilities }: {
         }, controller.signal)
       }
       if (generation !== requestGeneration.current) return
-      setReport(result)
+      setReport({ key: requestKey, value: result })
       navigate('/impact', { bundle: result.bundle_id })
     } catch (cause) {
       if (generation === requestGeneration.current && !isAbortError(cause)) {
-        setError(cause instanceof Error ? cause.message : String(cause))
+        setError({ message: cause instanceof Error ? cause.message : String(cause), saved: false })
       }
     } finally {
       if (generation === requestGeneration.current) {
@@ -260,9 +275,9 @@ function LegacyImpactPage({ params, compatibilityAvailable, capabilities }: {
       </form>
 
       {error && (
-        <Notification kind={NOTIFICATION_KIND.negative} overrides={{ Body: { style: { width: 'auto', marginLeft: 0, marginRight: 0 } } }}>
-          {error}
-        </Notification>
+        <ErrorNotice onRetry={error.saved ? () => setAttempt((value) => value + 1) : undefined}>
+          {error.message}
+        </ErrorNotice>
       )}
       {loading && !report && <Spinner $size="small" />}
       {report && <ReportView report={report} capabilities={capabilities} />}

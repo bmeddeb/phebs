@@ -14078,3 +14078,44 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   exact request/citation behavior and refusal/retry only, not independent
   accuracy or scale. Historical receipts, Linux #124, managed-SCIP proof and
   production signatures/activation remain pending.
+
+- **2026-10-18 — T57R.8 Impact and Kafka Topics request lifecycle (Mac audit).**
+  Ben requests bounded integration and merge when green, independently of Linux
+  #124, with production signing pending. Legacy Impact keys rendered reports by
+  saved bundle and operation handoff; changing that identity clears the previous
+  report, error and loading state. Saved reads must return the selected bundle.
+  Cleanup invalidates the request generation and aborts the latest active read,
+  including a manually submitted report, so a late success cannot navigate away
+  from another page and a late failure cannot restore an abandoned error. URL
+  operation changes update the unsubmitted draft. Saved errors offer a retry
+  that reauthorizes only that exact bundle; manual form failures never offer a
+  retry of an old saved bundle. Starting any new report removes its
+  predecessor; operation-impact's isolated caller composition stays unchanged.
+  Topics similarly owns the latest usage retry through cleanup, checks the
+  returned query kind and exact spelling, and clears topic errors on return to
+  inventory. Usage presentation is spelling-bound. Inventory children are keyed
+  by immutable bundle and cursor; every completion checks its aborted signal
+  before presenting rows/errors or replacing the URL after composition. Invalid
+  optional library/shape/binding/group metadata is omitted using the existing
+  malformed-detail fallback; it supplies no evidence authority and cannot remove
+  the assertion's exact supporting citations. Census, plane states, quality
+  qualifications, scope and source links retain their existing contracts.
+  Cost: one constant-size report-identity wrapper and serialization of two URL
+  strings per legacy Impact render, one error-origin flag, one retry counter,
+  two constant identity comparisons per successful usage read, and one bundle/cursor key per Topics
+  render. Each parsed detail adds four optional-field checks and a linear scan
+  of their existing string-array entries; existing JSON parsing, evidence maps
+  and citation scans remain. No new cache or duplicated report payload. Each
+  mounted plane retains at most one active controller; replacements and cleanup
+  abort the current one. Inventory navigation remounts its bounded page instead
+  of lending a prior page's state. A retry performs exactly its existing saved
+  report, usage or 50-row inventory read; operation handoffs add no read and
+  abandoned composition adds no follow-up page request. Startup/restart, sync
+  tick, publication, ordinary no-op and server request work remain unchanged.
+  No lock, corpus/shard read, hash, disk state, child process or dependency is
+  added. Tests share their pre-existing neutral report fixtures with browser
+  integration; none of those fixtures establish new quality claims.
+  Bounded UI integration establishes navigation, cancellation, refusal/retry
+  and presentation mechanics only. It does not validate backend extraction,
+  accuracy or scale. Historical receipts, Linux #124, managed-SCIP proof and
+  production signing/activation remain pending.

@@ -1,9 +1,10 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { Client } from 'styletron-engine-monolithic'
 import { Provider as StyletronProvider } from 'styletron-react'
 import { BaseProvider, LightTheme } from 'baseui'
 import type { ProofBundleEnvelope, TopicInventoryReport } from '../api'
+import { zeroCensus, kafkaUsage as envelope, kafkaInventory as inventory } from '../test-fixtures/impactKafka'
 
 const api = vi.hoisted(() => ({
   fetchKafkaTopicUsage: vi.fn(),
@@ -15,126 +16,6 @@ vi.mock('../api', () => api)
 import KafkaTopicsPage from './KafkaTopicsPage'
 
 const engine = new Client()
-
-const zeroCensus = {
-  'ambiguous-library-import': 0,
-  'call-expr': 0,
-  'invalid-topic-literal': 0,
-  'non-literal-expr': 0,
-  'selector-expr': 0,
-  'unresolved-ident': 0,
-}
-
-const envelope: ProofBundleEnvelope = {
-  id: 'pb_test',
-  bundle: {
-    schema_version: 'proof-bundle-v1',
-    query: { kind: 'find_kafka_topic_usage', topic: 'orders-v1', domains: ['kafka-consumer', 'kafka-producer'] },
-    assertions: [
-      {
-        id: 'produces', predicate: 'PRODUCES_TO_TOPIC', subject: 'svc/producer.go',
-        object: 'topic:orders-v1', tier: 'derived', repo: 'example.com/app',
-        // Two supporting atoms: the extractor merges same-file sites into
-        // one assertion, and the page must cite every site.
-        supporting: ['atom-1', 'atom-2'], run_id: 'run-p',
-        detail: '{"schema":"kafka-topic-evidence-detail-v1","libraries":["sarama"],"import_paths":["github.com/IBM/sarama"],"shapes":["ProducerMessage"],"bindings":["literal","same-file-const"]}',
-      },
-      {
-        id: 'consumes', predicate: 'CONSUMES_FROM_TOPIC', subject: 'svc/consumer.go',
-        object: 'topic:orders-v1', tier: 'heuristic', repo: 'example.com/app',
-        supporting: ['atom-3'], run_id: 'run-c',
-        detail: '{"schema":"kafka-topic-evidence-detail-v1","libraries":["segmentio"],"import_paths":["github.com/segmentio/kafka-go"],"shapes":["ReaderConfig.Topic"],"bindings":["literal"],"group_ids":["billing"]}',
-      },
-    ],
-    evidence: [
-      {
-        repository: 'example.com/app', run_id: 'run-p',
-        atom: {
-          atom_id: 'atom-1', schema_version: 't23-v1', blob_digest: 'sha256:x',
-          start_byte: 10, end_byte: 21, rule_id: 'kafkago-topic-v1',
-          extractor_version: '1.0.0', adapter_config_digest: 'sha256:y',
-          fact_fingerprint: 'f', first_seen: '2026-07-26T00:00:00Z',
-        },
-        occurrences: [{
-          occurrence_id: 'occ-1', atom_id: 'atom-1', repo: 'example.com/app',
-          commit: 'c0ffee', path: 'svc/producer.go', start_line: 12, end_line: 12,
-          visibility_scope: 'default', run_id: 'run-p', observed_at: '2026-07-26T00:00:00Z',
-        }],
-      },
-      {
-        repository: 'example.com/app', run_id: 'run-p',
-        atom: {
-          atom_id: 'atom-2', schema_version: 't23-v1', blob_digest: 'sha256:x',
-          start_byte: 40, end_byte: 51, rule_id: 'kafkago-topic-v1',
-          extractor_version: '1.0.0', adapter_config_digest: 'sha256:y',
-          fact_fingerprint: 'f', first_seen: '2026-07-26T00:00:00Z',
-        },
-        occurrences: [{
-          occurrence_id: 'occ-2', atom_id: 'atom-2', repo: 'example.com/app',
-          commit: 'c0ffee', path: 'svc/producer.go', start_line: 30, end_line: 30,
-          visibility_scope: 'default', run_id: 'run-p', observed_at: '2026-07-26T00:00:00Z',
-        }],
-      },
-    ],
-    unresolved_census: {
-      schema_version: 'kafka-topic-census-v1',
-      producer: { ...zeroCensus, 'call-expr': 3 },
-      consumer: { ...zeroCensus },
-      published_runs: 2,
-      producer_published_runs: 1,
-      consumer_published_runs: 1,
-      truncated: ['producer:call-expr'],
-    },
-    coverage: {
-      schema_version: 'coverage-certificate-v1',
-      domains: [],
-      repository_count: 1,
-      repositories: [{
-        repository: 'example.com/app',
-        indexed_commit: 'c0ffee',
-        scip_index: 'absent',
-        runs: [],
-      }],
-      digest: 'sha256:z',
-    },
-    extractor_versions: [],
-    caveat: 'Source evidence only; never a completeness claim.',
-  },
-}
-
-const quality = {
-  card: 'phebs.kafka.producer', claim: 'site coverage', protocol: 'docs/KAFKA_PRODUCER_QUALITY_PROTOCOL.md',
-  measured: ['762/762 sites'], unmeasured: ['topic-name precision'],
-}
-
-const inventory: TopicInventoryReport = {
-  schema_version: 'kafka-topic-inventory-v1',
-  bundle_id: 'pb_inv',
-  planes: [
-    { plane: 'producer', domain: 'kafka-producer', released: true, state: 'served', quality, published_runs: 1, repositories: 1, topic_count: 1, site_count: 2 },
-    { plane: 'consumer', domain: 'kafka-consumer', released: true, state: 'served', quality: { ...quality, card: 'phebs.kafka.consumer' }, published_runs: 1, repositories: 1, topic_count: 1, site_count: 1 },
-  ],
-  topics: [
-    {
-      topic: 'orders-v1',
-      producer: {
-        state: 'served', sites: 2, files: 1, omitted_citations: 3,
-        citations: [{ repository: 'example.com/app', commit: 'c0ffee1234567890', run_id: 'run-p', assertion_id: 'a1', path: 'svc/producer.go', sites: 2 }],
-      },
-      consumer: { state: 'none', sites: 0, files: 0 },
-    },
-    {
-      topic: 'payments',
-      producer: { state: 'none', sites: 0, files: 0 },
-      consumer: { state: 'served', sites: 1, files: 1 },
-    },
-  ],
-  pagination: { order: 'topic ascending', page_size: 50, returned: 2, total: 3, complete: false, next_cursor: 'cur2' },
-  unresolved_census: { ...envelope.bundle.unresolved_census! },
-  coverage: envelope.bundle.coverage,
-  truncated: ['producer:topic-scan'],
-  caveat: 'Composed source-spelled topic inventory. A topic is a source spelling, never a broker, cluster, environment, or runtime identity, and a topic absent from this inventory is not proven absent from the system.',
-}
 
 function page(hash: string, inventoryAvailable = false) {
   window.location.hash = hash
@@ -208,7 +89,7 @@ test('zero published runs renders the no-run explanation, never affirmative zero
       },
     },
   })
-  page('#/topics?topic=unknown-topic')
+  page('#/topics?topic=orders-v1')
   const census = await screen.findByTestId('unresolved-census')
   expect(census.textContent).toContain('No Kafka extraction run has published')
   expect(census.textContent).not.toContain('could not be resolved from source')
@@ -349,4 +230,69 @@ test('leaving a topic for the inventory clears the topic answer', async () => {
   )
   await screen.findByTestId('topic-inventory')
   expect(screen.queryByTestId('topic-usage')).toBeNull()
+})
+
+function reroute(view: ReturnType<typeof page>, query: string) {
+  view.rerender(<StyletronProvider value={engine}><BaseProvider theme={LightTheme}>
+    <KafkaTopicsPage params={new URLSearchParams(query)} inventoryAvailable />
+  </BaseProvider></StyletronProvider>)
+}
+
+test('returning to inventory clears the topic error', async () => {
+  api.fetchKafkaTopicUsage.mockRejectedValueOnce(new Error('topic unavailable'))
+  const view = page('#/topics?topic=orders-v1', true)
+  await screen.findByText(/topic unavailable/)
+  reroute(view, 'inventory=pb_inv')
+  await screen.findByRole('link', { name: 'orders-v1' })
+  expect(screen.queryByText(/topic unavailable/)).toBeNull()
+})
+
+test('an abandoned inventory composition cannot replace topic navigation', async () => {
+  let resolve!: (value: ProofBundleEnvelope) => void
+  api.composeKafkaTopicInventory.mockImplementationOnce(() => new Promise<ProofBundleEnvelope>(yes => { resolve = yes }))
+  const view = page('#/topics', true)
+  reroute(view, 'topic=orders-v1')
+  window.location.hash = '#/topics?topic=orders-v1'
+  await act(async () => { resolve(envelope) })
+  expect(window.location.hash).toBe('#/topics?topic=orders-v1')
+})
+
+test.each(['success', 'error'])('a replaced inventory cursor ignores late %s', async (outcome) => {
+  let resolve!: (value: TopicInventoryReport) => void
+  let reject!: (reason: Error) => void
+  api.fetchTopicInventoryPage.mockImplementationOnce(() => new Promise<TopicInventoryReport>((yes, no) => { resolve = yes; reject = no }))
+  const view = page('#/topics?inventory=pb_inv', true)
+  api.fetchTopicInventoryPage.mockResolvedValueOnce({ ...inventory, topics: [], pagination: { ...inventory.pagination, returned: 0, complete: true, next_cursor: undefined } })
+  reroute(view, 'inventory=pb_inv&cursor=cur2')
+  await screen.findByText('No literal topic spelling resolved in scope')
+  await act(async () => { if (outcome === 'success') resolve(inventory); else reject(new Error('abandoned cursor')) })
+  expect(screen.getByText('No literal topic spelling resolved in scope')).toBeTruthy()
+  expect(screen.queryByText(/abandoned cursor/)).toBeNull()
+  expect(screen.queryByRole('link', { name: 'orders-v1' })).toBeNull()
+})
+
+test('topic usage refuses a response for a different spelling', async () => {
+  page('#/topics?topic=payments')
+  expect(await screen.findByText(/different topic/)).toBeTruthy()
+  expect(screen.queryByTestId('topic-usage')).toBeNull()
+})
+
+test('unmount aborts the current same-topic retry', async () => {
+  const view = page('#/topics?topic=orders-v1')
+  await screen.findByTestId('topic-usage')
+  let resolve!: (value: ProofBundleEnvelope) => void
+  api.fetchKafkaTopicUsage.mockImplementationOnce(() => new Promise<ProofBundleEnvelope>(yes => { resolve = yes }))
+  fireEvent.submit(screen.getByRole('button', { name: 'Query' }).closest('form') as HTMLFormElement)
+  const signal = api.fetchKafkaTopicUsage.mock.calls[1][1] as AbortSignal
+  view.unmount()
+  await act(async () => { resolve(envelope) })
+  expect(signal.aborted).toBe(true)
+})
+
+test.each(['null', '[]', '{"libraries":"sarama"}', '{"shapes":[{}]}', '{"group_ids":42}'])('malformed optional detail %s cannot remove exact citations', async (detail) => {
+  api.fetchKafkaTopicUsage.mockResolvedValueOnce({ ...envelope, bundle: { ...envelope.bundle, assertions: [{ ...envelope.bundle.assertions[0], detail }] } })
+  page('#/topics?topic=orders-v1')
+  expect(await screen.findByRole('link', { name: 'example.com/app/svc/producer.go:12' })).toBeTruthy()
+  expect(screen.getByRole('link', { name: 'example.com/app/svc/producer.go:30' })).toBeTruthy()
+  expect(screen.queryByText(/\[object Object\]/)).toBeNull()
 })

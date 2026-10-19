@@ -11353,3 +11353,15 @@ WCAG audits, eight byte-identical idle pairs, types/lint/build, documentation
 and charter/cost review. One initial citation wait timed out in the parallel
 suite; unchanged isolated checks and the complete serial suite pass.
 Linux #124, managed-SCIP proof and production signing remain pending.
+
+## T57R.8 · Impact and Kafka Topics lifecycle repair (2026-10-18)
+
+Ben's Mac audit closes abandoned Impact/Kafka reads that could restore previous
+results/errors or redirect navigation. Reports and topic usage check requested
+identity; operation handoffs follow history, saved-report errors retry exactly,
+and malformed optional topic detail cannot crash supporting citations. Manual
+validation errors never retry an older saved bundle. The owning backlog records
+nineteen new component checks, 972 passing UI tests, twelve native journeys,
+sixteen WCAG audits, ten byte-identical normal pairs and types/lint/build/docs/
+glossary/charter/cost review. Linux #124, managed-SCIP proof and production
+signing/activation remain pending.
