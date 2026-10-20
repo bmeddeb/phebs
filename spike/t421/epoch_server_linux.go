@@ -26,6 +26,8 @@ type linuxEpochServer struct {
 	closeErr         error
 	session          *linuxEpochSessionAuthority
 	sessionEmpty     bool
+	owner            *linuxEpochHeldFlow // Immutable after successful capture.
+	run              *ExecutionEpochOneRun
 }
 
 // Root cancellation depends only on the successfully pinned owned Start.
@@ -120,7 +122,7 @@ func (adapter *linuxEpochCoordinator) startWait(ctx context.Context, run *Execut
 			time.Sleep(time.Second)
 		}
 		server.sessionEmpty = true
-		waited <- errors.Join(sessionErr, handle.Wait())
+		waited <- errors.Join(sessionErr, adapter.held.resources.waitOwnedRoot(server.session, handle))
 	}()
 	return waited, errors.Join(server.pinErr, server.sessionErr, meterErr)
 }
@@ -131,6 +133,9 @@ func (adapter *linuxEpochCoordinator) finish(run *ExecutionEpochOneRun, waited <
 	}
 	var result error
 	if !joined && server.pinErr == nil {
+		if adapter.held.resources.armOwnedStop(context.Background(), server.session) != nil {
+			result = ErrExecutionEpochOne
+		}
 		if err := unix.PidfdSendSignal(server.pidfd, unix.SIGTERM, nil, 0); err != nil && !errors.Is(err, unix.ESRCH) {
 			result = ErrExecutionEpochOne
 		}

@@ -252,6 +252,13 @@ reducing the workload, payload charges or kernel/cache/host slack. Joined-error
 propagation and actual-closed cleanup corrections still need exact source gates,
 independent review and the same full native acceptance.
 
+Exact `9ee06e75` passed its 22 pre-native gates. A later confirmed shutdown
+classification race needs a bounded current-anchor correction before the next
+full native run: retain expected unreaped roots in the whole census without
+claiming their executable image. Prospective private policy v3 retains v2's
+4-GiB bound and complete workload. c.c/PR #156 remains unqualified until the
+correction's focused gates, independent review and full native acceptance pass.
+
 
 Next: [Linux office handoff #124](https://github.com/bmeddeb/phebs/issues/124)
 mechanism qualification → remaining T42.H2 consumer/executor/resource admission

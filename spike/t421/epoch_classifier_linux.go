@@ -32,6 +32,11 @@ func (held *linuxEpochHeldFlow) gauge(ctx context.Context, pid int, birth string
 		images = append(images, linuxEpochClassImage{image, "git"})
 	}
 	classes := []string{"controller", "git", "phebs", "sh", "surreal", "t422-author", "zoekt-git-index"}
+	if pid == held.controllerPID {
+		// Private prospective Linux observation, never a V1-V5 exec class.
+		classes = append(classes, linuxEpochOwnedDefunctClass)
+		slices.Sort(classes)
+	}
 	gauge := &ProcessObservationGauge{rootPID: pid, expectedRootStartIdentity: row.StartIdentity, rootObservedName: row.ObservedName, probe: t4013.ObserveProcessTreeRecords, nameClasses: map[string]int{}, observation: ProcessObservation{MeasurementKind: "sampled_observation", NativeHistory: "not_established", SimultaneousBounds: "not_established", Classes: make([]ProcessObservationClass, len(classes))}}
 	for i, class := range classes {
 		gauge.observation.Classes[i].Class = class
@@ -39,6 +44,11 @@ func (held *linuxEpochHeldFlow) gauge(ctx context.Context, pid int, birth string
 	gauge.classify = func(checkCtx context.Context, observed t4013.NativeProcessRecord) (int, bool) {
 		class, ok := linuxEpochClassifyRow(checkCtx, observed, images)
 		if !ok {
+			// The resource probe holds probeGate through this complete census.
+			// Startup's own live controller row never takes this branch.
+			if pid == held.controllerPID && observed.PID != pid && held.resources != nil {
+				return held.resources.ownedDefunctClass(checkCtx, gauge, observed)
+			}
 			return 0, false
 		}
 		index, present := slices.BinarySearch(classes, class)

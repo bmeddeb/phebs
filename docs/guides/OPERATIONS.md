@@ -499,6 +499,17 @@ transports remain alive for genuine terminal exchanges, Wait/EOF and receiver
 joins. Their owner ends the settlement lifetime only after those controls close.
 Canceled or failed controls still refuse; cancellation never establishes a join.
 
+The next private Linux policy v3 keeps sampling through server cleanup. A
+source-armed expected stop may classify the exact still-unreaped original child
+as `owned-defunct`, using fresh pidfd/WNOWAIT, birth, parent, name, SID and
+namespace checks. Its census row, count and sampled RSS remain intact; this is
+a custody/state observation at classification, with no post-death executable
+claim. Unknown or unexpected deaths still refuse. Final genuine Wait shares
+the existing census gate; slow Wait/pump/accounting settlement can still exceed
+the unchanged two-second probe deadline and refuse. No timeout or memory bound
+is relaxed. Historical receipt validators are unchanged, and full native
+composition remains required before c.c can qualify.
+
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
 It binds `c07bc930` and is preserved unchanged, so it no longer describes the

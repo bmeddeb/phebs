@@ -4598,6 +4598,17 @@ settlement: keep accounting transports live through actual terminal exchanges,
 Wait/EOF/receiver joins and close, without suppressing canceled-control errors.
 Focused mechanical control tests do not replace full composed acceptance.
 
+Exact `9ee06e75` subsequently passed all 22 pre-native gates, with two retained
+Darwin-only skips in each broad epoch suite. Source inspection then found that
+the whole-controller classifier rejects the intentionally unreaped server root
+during shutdown. Prospective private policy v3 retains that full census row and
+RSS under a current-anchor `owned-defunct` category after a source-armed stop;
+unknown/unexpected deaths and every live-image fence remain strict. Registry
+and genuine reap serialize with census/classification, without suspending
+cleanup sampling. Historical receipt validators remain unchanged. Focused
+real-child/race qualification, independent review and the full native gate are
+still required; these pre-native passes do not close c.c or parent H2.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

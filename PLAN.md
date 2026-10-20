@@ -15519,3 +15519,43 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   the unchanged full composed native acceptance remain mandatory. This change
   closes no parent H2, full preparation/compiler resource admission, pressure/
   restore, readiness/freeze, ceremony, scale/SLO or production release gate.
+
+- **2026-10-20 — T42.H2r.c.c keeps expected unreaped roots in Linux observations.**
+  Exact `9ee06e75` passed all 22 pre-native gates; its normal/race epoch suites
+  each retain two historical Darwin-only skips. A subsequent source inspection
+  found a shutdown integration defect before the next full native attempt:
+  the complete whole-controller census deliberately includes an exited server
+  retained by WNOWAIT, while the live-image classifier rejects that defunct row.
+  Keep the census and observation active through session cleanup. Prospective
+  private resource policy v3 adds an `owned-defunct` custody/state category only
+  to the whole-controller gauge, without changing v2's 4-GiB RSS constraint,
+  full workload, payload charges, separate allowances or slack rules.
+
+  An expected stop is source-armed before the native finish signal. Acceptance
+  requires the current registered original child, its original open pidfd and
+  fresh WNOWAIT SIGCHLD evidence, exact birth/parent/name, original SID and PID
+  namespace, and current zombie state. Retain the original coherent census row,
+  count and RSS, including positive RSS observed before the exit. The category
+  describes custody/state at classification; it attests neither a post-death
+  executable image nor zero RSS at census time. Unarmed, unknown, foreign,
+  reaped or mismatched roots still refuse. Every row still live at classification
+  retains exact held-image checks. Historical class enums, receipt validators
+  and V1–V5 remain unchanged;
+  this private Linux observation grants no formal receipt/profile admission.
+
+  The existing probe gate serializes registry publication and final genuine
+  Handle.Wait against complete native census/classification. It is not held
+  throughout graceful exit or descendant drain. Final Wait includes real pipe
+  pumps and accounting settlement: a hold beyond an observer's unchanged
+  two-second cooperative deadline can honestly refuse; there is no sampling
+  blackout, timeout extension, split Wait or fabricated join. Private registry
+  state remains bounded by the same three server lifetimes and returns only
+  after actual joins, with one extra class slot in the whole gauge. Per sample
+  the added work is a bounded registry lookup;
+  only an expected defunct candidate adds bounded current-anchor checks.
+  No query/request, sync, startup, retry/no-op or publication work, child,
+  payload hash, source scan, cache, persistent schema or memory reservation is
+  added. Required real-child transition/refusal and reap/sample synchronization
+  tests, affected normal/race/static checks, exact-source independent review
+  and full native composition remain open. Unchanged connected-package gates
+  may carry only through exact source-blob binding, without claiming new runs.
