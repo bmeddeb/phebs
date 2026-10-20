@@ -163,7 +163,8 @@ func TestLinuxEpochResourceOperationFailureAndKeeperClose(t *testing.T) {
 	}
 	b := &linuxEpochResourceAdmission{}
 	b.namespaces[0].file = file
-	if b.closeCustody() == nil || b.closeCustody() == nil || b.Close() == nil || !b.closed || b.namespaces[0].file != nil {
+	firstClose, repeatedClose := b.closeCustody(), b.closeCustody()
+	if firstClose == nil || repeatedClose == nil || b.Close() == nil || !b.closed || b.namespaces[0].file != nil {
 		t.Fatal("actual keeper-close failure lost its sticky status")
 	}
 }
