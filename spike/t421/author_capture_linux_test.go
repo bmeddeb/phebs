@@ -28,15 +28,16 @@ func TestLinuxAuthorCaptureFixedChild(t *testing.T) {
 	if inputs != nil || err == nil || unix.Fstat(6, &after) != nil || !sameLinuxInputStat(before6, after) {
 		os.Exit(125)
 	}
-	if mode == "ordinary" {
+	switch mode {
+	case "ordinary":
 		if unix.Fstat(5, &after) != nil || !sameLinuxInputStat(before5, after) {
 			os.Exit(125)
 		}
-	} else if mode == "partial" {
+	case "partial":
 		if !errors.Is(unix.Fstat(5, &after), unix.EBADF) {
 			os.Exit(125)
 		}
-	} else {
+	default:
 		os.Exit(125)
 	}
 	_, _ = fmt.Fprintln(os.Stdout, "unproven descriptors preserved; owned partial input released")

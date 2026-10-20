@@ -14997,3 +14997,14 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   isolated test child per tiny-engine unit gate; no parent/host policy, runtime
   query/tick/publication or corpus/accounting bound changes. Fresh immutable
   normal/race/static/review and required native gates remain mandatory.
+
+  Immutable `38a6256ff005dcc26a6d52af84de25c089c196df` passed focused normal
+  and race (zero skips), author-command, tagged wire-shape and tagged vet. The
+  serial gate then stopped on one scoped-lint QF1003 finding in the capture
+  refusal test's mode conditional. Preserve raw
+  `/home/ben/phebs-rehearsals/t42h2rb-private-mask.7rldko1p`: every wrapper
+  actually joined with an empty session; lint returned 1 and no required native
+  ran. Replace only that equivalent conditional with a tagged switch, then
+  recheck affected capture normal/race and static/docs gates at the new source.
+  Production bytes, creation-mask correction and earlier passing mechanisms
+  remain unchanged; independent correction review and full native remain gates.
