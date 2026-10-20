@@ -1,0 +1,348 @@
+{
+  "schema": "t42-linux-live-borrow-cold-rss-refusal-v1",
+  "source_commit": "e934dd6e8f99e2e2694f5316af39d864026b0a7d",
+  "source_tree": "aa15154defb6fe773a579495e5f7912db81ce718",
+  "raw_root": "/home/ben/phebs-rehearsals/t42h2rcc-v5-native-templates-uvjg64xv",
+  "actual_tool_session": 91039,
+  "actual_tool_exit": 1,
+  "wrapper": {
+    "expected_policy_digest_observed": false,
+    "source_commit": "e934dd6e8f99e2e2694f5316af39d864026b0a7d",
+    "pid": 946534,
+    "actual_wait_exit_code": 1,
+    "sampled_session_members_after_wait": [],
+    "elapsed_seconds": 2194.315298956004,
+    "available_after": 129205796864,
+    "complete_child_history": "not established by wrapper SID observation",
+    "status": "terminal wrapper returned; internal custody depends on actual test evidence"
+  },
+  "native_driver": {
+    "path": "/home/ben/phebs-rehearsals/t42h2rcc-v5-native-templates-uvjg64xv/preparation/driver/native-driver.test",
+    "source_commit": "e934dd6e8f99e2e2694f5316af39d864026b0a7d",
+    "sha256": "42677d4826db4c1776954307603ff79672f8acf8f39a3a355b54b4be1f03e4ac",
+    "bytes": 89969678
+  },
+  "source_archive": {
+    "source_commit": "e934dd6e8f99e2e2694f5316af39d864026b0a7d",
+    "source_tree": "aa15154defb6fe773a579495e5f7912db81ce718",
+    "manifest_sha256": "3763522ed57337b07d890146e35ac2280247d3bbed818f6285fcd5012a518dc5",
+    "current_manifest_entries_verified": 2716,
+    "archive": "/home/ben/phebs-rehearsals/t42h2rcc-v5-native-templates-uvjg64xv/full-native/exact-failed-source-e934dd6e.tar.gz",
+    "archive_bytes": 71882805,
+    "archive_sha256": "9cfa87aa64d241f9a39f25b85176fb14688827c4c13aac04459bbd36c579c88a",
+    "archive_regular_members": 5834,
+    "archive_members": 6666,
+    "archive_pid": 975202,
+    "actual_wait_exit_code": 0,
+    "session_members_after_wait": [],
+    "elapsed_seconds": 4.482439265004359,
+    "foreign_files": "not modified; committed archive has committed bytes, current foreign working copies retained separately",
+    "fixture": "retained unmodified"
+  },
+  "initial_memory": {
+    "physical_bytes": 15991848960,
+    "available_bytes": 9412493312,
+    "effective_capacity_bytes": 15991848960,
+    "payload_bytes": 2056572928,
+    "required_bytes": 8499023872,
+    "whole_rss_limit_bytes": 4294967296,
+    "private_policy_sha256": "9a0a41e8476adbd9ce58352a1e38d4d7b059820bbcc1816b327f5c68bda9d554",
+    "admitted": true
+  },
+  "protected_reference_comparisons": [
+    {
+      "role": "t422-author",
+      "sha256": "60e9d0cecd5e175abdfa5f592d02a2ec48b4c8fc881400c5425952f8d22c03fe",
+      "pid": 956199,
+      "actual_wait_joined": true,
+      "session_empty": true
+    },
+    {
+      "role": "phebs",
+      "sha256": "f920f8ed70d86993120091f8e47c69e8d4d2eb14c8501476c9efc89fa035a8cc",
+      "pid": 960588,
+      "actual_wait_joined": true,
+      "session_empty": true
+    },
+    {
+      "role": "zoekt-git-index",
+      "sha256": "002edf2036ad86011376b86d8f82fc5ab4e9ec918f3f05766f42646761219793",
+      "pid": 964555,
+      "actual_wait_joined": true,
+      "session_empty": true
+    }
+  ],
+  "fixed_failure_step": "cold-to-warm",
+  "first_private_resource_refusal": "process-observation-notify",
+  "resource_checks": 7083,
+  "trace_failure_snapshot_available": false,
+  "whole_meter": {
+    "joined": true,
+    "rss_limit_exceeded": true,
+    "private_gauge_refusal": "",
+    "saved_snapshot_refused": true,
+    "what_is_proved": "At least one completed available sequential controller-plus-descendant census RSS sum exceeded the unchanged 4-GiB threshold.",
+    "exact_current_or_high_water_bytes": "not retained in output",
+    "offending_pid_class_or_first_meter_time": "not established",
+    "not_proved": [
+      "unique physical memory usage",
+      "OOM",
+      "culprit process or class",
+      "index completion",
+      "all child histories"
+    ]
+  },
+  "actual_author_A": {
+    "pid": 968646,
+    "stage": "complete",
+    "started": true,
+    "joined": true,
+    "session_empty": true,
+    "actual_wait_observed": true,
+    "actual_wait_failed": false,
+    "process_state_observed": true,
+    "exit_code": 0,
+    "signal": 0
+  },
+  "actual_server_sessions": [
+    968861,
+    0,
+    0,
+    0,
+    0
+  ],
+  "server_epoch_1": {
+    "phase": "cold",
+    "success": false,
+    "native_stop": "exit status 1; dispatch admission transport unavailable",
+    "dispatch_and_store_terminal_settlement": "failed; not a successful protocol closure",
+    "output_log_sha256": "c33595442acee803b990e664f97d40be7cff9e82efb185aa94ed675cda4a6395",
+    "pre_offer_I2_markers": 1787667,
+    "I2_meaning": "indexing progress markers, not successfully indexed files or RSS attribution"
+  },
+  "known_pid_or_sid_rows_at_retention_audit": [],
+  "process_absence_limit": "Observed absence is not complete history or substitute for genuine Wait/accounting settlement.",
+  "wrapper_policy_diagnostic": {
+    "raw_result": false,
+    "cause": "run.py compared resource_policy=<bare hash> but native output uses resource_policy=sha256:<hash>.",
+    "actual_expected_prefixed_policy_observed": true,
+    "effect": "independent wrapper predicate bug; it does not explain or supersede native exit1/RSS refusal. Raw wrapper and result remain exact."
+  },
+  "failed_fixture_retained": "/home/ben/phebs-rehearsals/t42h2rcc-v5-native-templates-uvjg64xv/full-native/tmp/phebs-linux-live-epochs-437682873",
+  "prospective_work": "Log the already-saved joined whole/server process snapshots without re-probing. Establish memory attribution and a source-owned optimization under unchanged resource/workload/deadline gates before fresh full acceptance. No unchanged full retry.",
+  "limits": "No c.c/parent H2 completion, integration, readiness, freeze, ceremony or scale result. Preserve original failed source, fixture and raw bytes; do not infer a process culprit or change thresholds from this boolean.",
+  "raw_control_files": [
+    {
+      "path": "full-native/run.py",
+      "bytes": 5508,
+      "sha256": "a78391a79cd0e22e3c96696c4089b3f05d6b4809cdc777b6272d29415f192511"
+    },
+    {
+      "path": "full-native/invocation.json",
+      "bytes": 6093,
+      "sha256": "01b5bcda3cdf4192e81b51f5d4917cc91fcbd13dbcc7c85ac113a0adc9861ba7"
+    },
+    {
+      "path": "full-native/native.stdout",
+      "bytes": 12744,
+      "sha256": "833c433012bfebdaafd638c90755d15823bce239b918347ed32f7856ba21b065"
+    },
+    {
+      "path": "full-native/native.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "full-native/result.json",
+      "bytes": 441,
+      "sha256": "98822591284fcf36828df277e96661bea8a552d4d94ea515659b27d6ae22d155"
+    },
+    {
+      "path": "full-native/terminal-failure-retention-audit.json",
+      "bytes": 2736,
+      "sha256": "2a9fad66b4431f3cb8d5f258a6fd2d6159491da5dc0618a56a817a551f1fb9ce"
+    },
+    {
+      "path": "full-native/exact-failed-source-archive-audit.json",
+      "bytes": 862,
+      "sha256": "7998325cdf584ec57754d273f47cb9835e0e741165b24b313795642860adebb8"
+    },
+    {
+      "path": "full-native/source-archive.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "full-native/tmp/phebs-linux-live-epochs-437682873/joined-server-1.log",
+      "bytes": 5425899,
+      "sha256": "c33595442acee803b990e664f97d40be7cff9e82efb185aa94ed675cda4a6395"
+    },
+    {
+      "path": "h2rc-cc-integration-coverage-e934dd6e.json",
+      "bytes": 14463,
+      "sha256": "6045c4455effc9f29814fab64503c0966821e464d61215bae9f8e452f2d18246"
+    }
+  ],
+  "source_binding": [
+    {
+      "path": "go.mod",
+      "bytes": 9366,
+      "sha256": "424c7e1038c71c10676fc3bad01e155ebc5f912a4eea65e90c284b30951a9275"
+    },
+    {
+      "path": "go.sum",
+      "bytes": 99030,
+      "sha256": "d7aa72d0c2c4283125d37d4377e74be0e87723735a27015900d23092798b1665"
+    },
+    {
+      "path": "internal/indexer/indexer.go",
+      "bytes": 35373,
+      "sha256": "59f3e70ee26b770f1fb3f233650b467a49896c42e44c77277450f8d0df73bcae"
+    },
+    {
+      "path": "spike/t421/author_custody_run_linux.go",
+      "bytes": 18983,
+      "sha256": "27f8cec1f69c4b8415efcc066f457316726b47957a5dd1fb6bd14b5507f72231"
+    },
+    {
+      "path": "spike/t421/author_launch_linux.go",
+      "bytes": 2605,
+      "sha256": "3c66f100ef45b8f232f9ddf0a17371e32b63b82c894a360a748402506d644047"
+    },
+    {
+      "path": "spike/t421/epoch_classifier_linux.go",
+      "bytes": 9413,
+      "sha256": "76dd04ccd106fdeb08087b8f8730368a12b14644d3be12e3fdeeae5314dd4f4c"
+    },
+    {
+      "path": "spike/t421/epoch_classifier_linux_test.go",
+      "bytes": 9143,
+      "sha256": "735b1c780fc424c07242798dda519a6062f0493fc224a0bcd52b31d89e6e912a"
+    },
+    {
+      "path": "spike/t421/epoch_coordinator_linux.go",
+      "bytes": 9366,
+      "sha256": "6ec6650c9b63360050be87e97760ff0b82ff1126c84d56958fc0eba229d951a6"
+    },
+    {
+      "path": "spike/t421/epoch_flow_linux.go",
+      "bytes": 16010,
+      "sha256": "7f4c4368575effb08fc67f643973d280f8766960a13798656adf7c1b1d84969e"
+    },
+    {
+      "path": "spike/t421/epoch_flow_native_linux_test.go",
+      "bytes": 19813,
+      "sha256": "bc44250a493a5acba55d6ef0d173f94650d78ca827c398e2bde6d6b269a0b5f6"
+    },
+    {
+      "path": "spike/t421/epoch_launch.go",
+      "bytes": 65198,
+      "sha256": "d5e360fbb3b6ab155aab82a87a7fcd5b1bea5d290e3dcc8daef63ce7317791b0"
+    },
+    {
+      "path": "spike/t421/epoch_native_adapter.go",
+      "bytes": 1115,
+      "sha256": "e0c53cf4f54d8ad85d4238bfa9a6fa93bed98ba00b37d365aa9e4b94a25c7c07"
+    },
+    {
+      "path": "spike/t421/epoch_process_observation.go",
+      "bytes": 18593,
+      "sha256": "68fc93cf61b4baec8be6f925aef74904fde1429d739ead607ad1ab0fb49b4086"
+    },
+    {
+      "path": "spike/t421/epoch_server_linux.go",
+      "bytes": 4313,
+      "sha256": "cc0219b294f409952b2de6df81db40c1f0152be8e322bee0b669c6e560649bc4"
+    },
+    {
+      "path": "spike/t421/epoch_trace_actor_linux.go",
+      "bytes": 11365,
+      "sha256": "aa0c31e669f4f30afd6ad1d12fefea7a2d2e09731949f4d2478d37371098cc03"
+    },
+    {
+      "path": "spike/t421/epoch_trace_census_linux.go",
+      "bytes": 1842,
+      "sha256": "7104d7b8f355a3722a55537347b1e276f9128491006bc7a6a10d8b77d88d9ce8"
+    },
+    {
+      "path": "spike/t421/epoch_trace_census_linux_test.go",
+      "bytes": 6735,
+      "sha256": "e1379610e3a2cb363dd3d9c3614d3be87c2a30b50a62997e77567b91f9c42ca8"
+    },
+    {
+      "path": "spike/t421/epoch_trace_descriptor_linux_test.go",
+      "bytes": 2020,
+      "sha256": "698b5a6fdc378df04831b7900de799ecbf73d655138491eaeb1583aa06e71fbe"
+    },
+    {
+      "path": "spike/t421/epoch_trace_events_linux.go",
+      "bytes": 18172,
+      "sha256": "566f7994f41d1dba77fa6d1a3f9ad8062f7f447bdbbb9997394facc8263009b5"
+    },
+    {
+      "path": "spike/t421/epoch_trace_fixture_linux_test.go",
+      "bytes": 7028,
+      "sha256": "f0372e8278d3260e678042d1df80369f7742e4fc8ace147e1944f4f79408bcf9"
+    },
+    {
+      "path": "spike/t421/epoch_trace_gate_linux_test.go",
+      "bytes": 5930,
+      "sha256": "13b78d8d60f6a72ef2f588e7884d660b5241e21ce57ec563ae356baa93793bf4"
+    },
+    {
+      "path": "spike/t421/epoch_trace_group_linux.go",
+      "bytes": 11778,
+      "sha256": "4c66bac6fc1a56737f6274cf6b7894bd026b462de7f3ae6e5013775c4e6a037d"
+    },
+    {
+      "path": "spike/t421/epoch_trace_group_linux_test.go",
+      "bytes": 14127,
+      "sha256": "5ce7257ebfc7e7d83c9ce3f3c7b0949a1f397fd90cca6ffec7f0aa8b92583117"
+    },
+    {
+      "path": "spike/t421/epoch_trace_initial_linux.go",
+      "bytes": 2480,
+      "sha256": "ad5e528eacc67dd85f52cdfb9cb10a766597aa6a06225add04a734f983c8b7a0"
+    },
+    {
+      "path": "spike/t421/epoch_trace_linux.go",
+      "bytes": 12799,
+      "sha256": "6cb9aa264eeca21225506764b510ab2d7d5002bd80b7035c102ac0cac3d3d883"
+    },
+    {
+      "path": "spike/t421/epoch_trace_linux_test.go",
+      "bytes": 16592,
+      "sha256": "3ed9194e3c0006f96a38eb9704b96a1c7575b47eab70f91e588f077703813e20"
+    },
+    {
+      "path": "spike/t421/epoch_trace_poll_linux_test.go",
+      "bytes": 7328,
+      "sha256": "7f6e3ce831e2bec62b6569116da93e66ff85d96b8c75a1066434227577701acc"
+    },
+    {
+      "path": "spike/t421/epoch_trace_proof_linux.go",
+      "bytes": 4502,
+      "sha256": "5e069b36e22dd0f0afe8351124b8531c85c5022fea76debf936dcd5443cbc144"
+    },
+    {
+      "path": "spike/t421/epoch_trace_signal_native_linux_test.go",
+      "bytes": 14914,
+      "sha256": "0963cb991a34abd13f7b5ab9390fbaebf083b91d0cbd8722e920e421167687e7"
+    },
+    {
+      "path": "spike/t421/linux_epoch_resource_policy.go",
+      "bytes": 18866,
+      "sha256": "72be430207c1b1a802a1ec80fbb1e1b8af8456d78de1dcd7ac4aaa7bd42fde23"
+    },
+    {
+      "path": "spike/t421/linux_epoch_resource_policy_test.go",
+      "bytes": 13014,
+      "sha256": "889814e2fbc752d1a69cd46fde4df21ae8524934eaba09adab7475c71320b2cd"
+    },
+    {
+      "path": "spike/t421/process_observation.go",
+      "bytes": 10849,
+      "sha256": "2be036d2ba1eaa3a357ad315f346b2fb39a6c347285222e0c6f449d1b2480d5b"
+    }
+  ]
+}

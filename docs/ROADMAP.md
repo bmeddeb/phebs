@@ -346,6 +346,23 @@ failure remains retained. The [v5 record](../spike/t42h2r/event-trace-v5-bounded
 binds these results. Fresh exact-source full native composition remains open;
 PR #156 and parent H2/readiness/freeze do not advance from bounded tests alone.
 
+
+Exact `e934dd6e` then passed all three protected comparisons, fresh v5 memory
+admission and author A's genuine Wait0/empty session, but failed cold indexing
+after 2,194.315s. The joined whole meter reported a completed sampled RSS sum
+above the unchanged 4-GiB limit; exact bytes, first meter and process/class
+attribution were not printed. No trace/census refusal or OOM is established.
+The [cold RSS failure record](../spike/t42h2r/live-borrow-cold-rss-failure-linux-20261020.json)
+retains source/raw bytes, the failed fixture and subsequent accounting failures.
+A separate wrapper hash-prefix predicate was false despite the exact prefixed
+policy digest in stdout; it does not supersede the native failure. The native
+failure logger now prints already-saved joined whole/server snapshots without
+re-probing. Memory attribution/optimization and fresh full acceptance remain
+open; the logging change authorizes no unchanged rerun or limit relaxation.
+The two focused diagnostic controls pass normally and with race; tagged vet/
+lint, docs/glossary and whitespace also pass, with clean independent review.
+These are diagnostic checks only; no memory or full-composition pass follows.
+
 Production artifact/signature/publication closure for T47.5, T49.4, T50.3,
 T51.3, T52.3 and T54.3 remains pending the existing unavailable production key
 and the exact owning production decision. Scoped results and unsigned drafts

@@ -4739,6 +4739,23 @@ retains every failed prefix and current source binding. This completes bounded
 mechanical qualification only. Current-source full native composition remains
 the merge gate for draft #156; parent H2/readiness/freeze remain open.
 
+
+Exact `e934dd6e` then passed all three protected comparisons, fresh v5 memory
+admission and author A's genuine Wait0/empty session, but failed cold indexing
+after 2,194.315s. The joined whole meter reported a completed sampled RSS sum
+above the unchanged 4-GiB limit; exact bytes, first meter and process/class
+attribution were not printed. No trace/census refusal or OOM is established.
+The [cold RSS failure record](../spike/t42h2r/live-borrow-cold-rss-failure-linux-20261020.json)
+retains source/raw bytes, the failed fixture and subsequent accounting failures.
+A separate wrapper hash-prefix predicate was false despite the exact prefixed
+policy digest in stdout; it does not supersede the native failure. The native
+failure logger now prints already-saved joined whole/server snapshots without
+re-probing. Memory attribution/optimization and fresh full acceptance remain
+open; the logging change authorizes no unchanged rerun or limit relaxation.
+The two focused diagnostic controls pass normally and with race; tagged vet/
+lint, docs/glossary and whitespace also pass, with clean independent review.
+These are diagnostic checks only; no memory or full-composition pass follows.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

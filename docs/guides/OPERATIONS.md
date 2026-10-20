@@ -627,6 +627,21 @@ host/resource fences. They supply no full native, parent H2, readiness/freeze
 or scale pass. Require the fresh runtime policy digest to match the v5 source
 binding; never reuse an old supplied image or treat wrapper PID absence as join.
 
+Exact `e934dd6e` subsequently failed during cold indexing after protected
+comparisons, fresh memory admission and author A's genuine Wait0 passed. The
+joined whole meter recorded an accepted sampled RSS sum above 4 GiB. Exact
+bytes and process attribution were omitted from the retained log; this is no
+OOM or classifier-failure claim. The [failure record](../../spike/t42h2r/live-borrow-cold-rss-failure-linux-20261020.json)
+preserves source/raw bytes and the failed fixture. A separate wrapper hash-prefix
+comparison was false although the expected prefixed policy digest is in stdout.
+Preserve both failures. Future native failure reporting prints saved joined
+whole/server process snapshots without another probe. Establish a source-owned
+memory correction before fresh acceptance; do not rerun unchanged, raise the RSS
+threshold or reduce the workload to turn this safety stop into a pass.
+The focused saved-state and unjoined-state controls pass normally and with
+race, with tagged vet/lint and documentation checks. They qualify the failure
+reporting only; full composition and a memory correction remain open.
+
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
 It binds `c07bc930` and is preserved unchanged, so it no longer describes the

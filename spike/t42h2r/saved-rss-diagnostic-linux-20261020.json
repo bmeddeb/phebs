@@ -1,0 +1,348 @@
+{
+  "schema": "t42-linux-saved-rss-failure-diagnostic-v1",
+  "base_commit": "e934dd6e8f99e2e2694f5316af39d864026b0a7d",
+  "qualification_source": "Explicit source hashes over the modified worktree; not a full native run of the base commit. Final immutable checkpoint verification follows.",
+  "scope": "Test-only joined whole/server saved RSS reporting and two mechanical controls; every non-test runtime Go file is unchanged.",
+  "raw_root": "/home/ben/phebs-rehearsals/t42h2rcc-cold-rss-diag-z17df6n5",
+  "gates": [
+    {
+      "name": "diagnostic-normal",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-json",
+        "-tags=phebs_t42_native",
+        "./spike/t421",
+        "-count=1",
+        "-timeout=60s",
+        "-run",
+        "^TestLinuxEpoch(TraceNativeFailureDiagnosticRetainsUnjoinedSnapshot|NativeFailureDiagnosticReadsOnlyJoinedSavedRSS)$"
+      ],
+      "pid": 976743,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 107.30990603800456,
+      "available_before": 129130127360,
+      "available_after": 129129238528
+    },
+    {
+      "name": "diagnostic-race",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-race",
+        "-json",
+        "-tags=phebs_t42_native",
+        "./spike/t421",
+        "-count=1",
+        "-timeout=60s",
+        "-run",
+        "^TestLinuxEpoch(TraceNativeFailureDiagnosticRetainsUnjoinedSnapshot|NativeFailureDiagnosticReadsOnlyJoinedSavedRSS)$"
+      ],
+      "pid": 983676,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 146.34910403100366,
+      "available_before": 129129234432,
+      "available_after": 129128869888
+    },
+    {
+      "name": "tagged-vet",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "vet",
+        "-tags=phebs_t42_native",
+        "./spike/t421"
+      ],
+      "pid": 990565,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 17.700589754997054,
+      "available_before": 129128869888,
+      "available_after": 129128857600
+    },
+    {
+      "name": "tagged-lint",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/golangci-lint-2.12.2/golangci-lint",
+        "run",
+        "--new-from-rev=290e1518a4a192d0a3494c3ed9fa2eb39a450355",
+        "--build-tags=phebs_t42_native",
+        "--timeout=4m",
+        "./spike/t421/..."
+      ],
+      "pid": 993508,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 63.246677405011724,
+      "available_before": 129128857600,
+      "available_after": 129099362304
+    },
+    {
+      "name": "docs-glossary",
+      "argv": [
+        "make",
+        "docs-check",
+        "verify-glossary"
+      ],
+      "pid": 993816,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 2.262845463003032,
+      "available_before": 129099362304,
+      "available_after": 129099345920
+    },
+    {
+      "name": "whitespace",
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "pid": 993916,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 0.26718566099589225,
+      "available_before": 129099345920,
+      "available_after": 129099345920
+    },
+    {
+      "name": "post-cost-docs-glossary",
+      "argv": [
+        "make",
+        "docs-check",
+        "verify-glossary"
+      ],
+      "pid": 994234,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 1.5808099080022657
+    },
+    {
+      "name": "post-cost-whitespace",
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "pid": 994315,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 0.2758970959985163
+    }
+  ],
+  "tests": {
+    "normal_pass": 2,
+    "race_pass": 2,
+    "skip": 0,
+    "failure": 0,
+    "meaning": "One existing unjoined-state guard and one new joined saved-overshoot/no-new-probe control in each mode; these are not operational native workload qualification."
+  },
+  "source_identical_carry": {
+    "raw_initial_manifest": "source.json",
+    "final_manifest": "post-cost-source.json",
+    "changed_after_functional_gates": [
+      "PLAN.md",
+      "docs/BACKLOG.md",
+      "docs/ROADMAP.md",
+      "docs/guides/OPERATIONS.md"
+    ],
+    "all_other_manifest_entries_unchanged": true,
+    "reason": "Owning prose explicitly charges existing meter/gauge snapshot locks and bounded clones; focused/static code gates carry exact code, corrected documents passed fresh docs/glossary/whitespace."
+  },
+  "review": {
+    "independent_reviewer": "review_h2m_extent",
+    "before_cost_wording_correction": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    },
+    "lead_found_cost_record_omission": "Corrected no-lock wording to charge failure-only joined-server snapshot meter/gauge locks and bounded slice clones.",
+    "final_source_identical_evidence_review": "required before commit; recorded separately to avoid self-referential artifact rewriting"
+  },
+  "cost": "Failure reporting only: reuse existing whole snapshot; add one saved snapshot per joined server, taking its existing meter/gauge locks and cloning at most15phase rows with bounded class counts, then format after release. No new probe, native action, timer, child, FD, payload hash or ordinary product work.",
+  "retained_failure": {
+    "path": "spike/t42h2r/live-borrow-cold-rss-failure-linux-20261020.json",
+    "sha256": "ec4dfeb2b18c61ddfd6df197e981274bbe014240c0e030b96c7f0442765ac5f8",
+    "actual_full_native_outcome": "FAILED at e934 cold RSS threshold; no unchanged retry"
+  },
+  "limits": "This does not attribute the old RSS breach, optimize memory, qualify composition/cleanup accounting, authorize integration, close H2/readiness/freeze or permit a ceremony. No full native attempt was launched in these gates.",
+  "source_binding": [
+    {
+      "path": "PLAN.md",
+      "bytes": 3034065,
+      "sha256": "7e74f7e9531c0c12655cb01286418b03b7a67fc9ac16468e2a77ad439cae040e"
+    },
+    {
+      "path": "docs/BACKLOG.md",
+      "bytes": 1597991,
+      "sha256": "63ece8b8fbaa8418db0fff67be52c2eef9403e71d5d0f6c9edb85f8f68d4e30e"
+    },
+    {
+      "path": "docs/ROADMAP.md",
+      "bytes": 414675,
+      "sha256": "6e10d2d107a6ee19d0f1f9818524e813594378d953d1cebb3113e9b33704ebe2"
+    },
+    {
+      "path": "docs/guides/OPERATIONS.md",
+      "bytes": 655617,
+      "sha256": "69c20b7f9a67d89c588dce963234abdf071998740e877901f3a0f0f68b94f349"
+    },
+    {
+      "path": "spike/t421/epoch_flow_native_linux_test.go",
+      "bytes": 21621,
+      "sha256": "520b9253c17602f1ca27fefa87e6915edf67ddc5f952b986e4eddacbca23f4b7"
+    },
+    {
+      "path": "go.mod",
+      "bytes": 9366,
+      "sha256": "424c7e1038c71c10676fc3bad01e155ebc5f912a4eea65e90c284b30951a9275"
+    },
+    {
+      "path": "go.sum",
+      "bytes": 99030,
+      "sha256": "d7aa72d0c2c4283125d37d4377e74be0e87723735a27015900d23092798b1665"
+    },
+    {
+      "path": "spike/t42h2r/live-borrow-cold-rss-failure-linux-20261020.json",
+      "bytes": 13100,
+      "sha256": "ec4dfeb2b18c61ddfd6df197e981274bbe014240c0e030b96c7f0442765ac5f8"
+    }
+  ],
+  "raw_control_files": [
+    {
+      "name": "diagnostic-normal.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "diagnostic-normal.stdout",
+      "bytes": 7563,
+      "sha256": "ec9fef551e1af42a146dffa602cd5ceb6600ba4596ab399d6d932685d25f11ec"
+    },
+    {
+      "name": "diagnostic-race.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "diagnostic-race.stdout",
+      "bytes": 7565,
+      "sha256": "06cfc25196add0e5cac60e50ceda246ce14145000fe49eedd31c1b97c8f94fae"
+    },
+    {
+      "name": "docs-glossary.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "docs-glossary.stdout",
+      "bytes": 237,
+      "sha256": "4522596798e763e2a166bb186dc8077b847d9127d2cff347962f50563c9e25f8"
+    },
+    {
+      "name": "failed-native-receipt.json",
+      "bytes": 13100,
+      "sha256": "ec4dfeb2b18c61ddfd6df197e981274bbe014240c0e030b96c7f0442765ac5f8"
+    },
+    {
+      "name": "post-cost-docs-glossary.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "post-cost-docs-glossary.stdout",
+      "bytes": 237,
+      "sha256": "801226182e5030a716d18dc2f3689e27bc2b4ae72e6599f76930078106b161fc"
+    },
+    {
+      "name": "post-cost-results.json",
+      "bytes": 553,
+      "sha256": "f97139b97e067d91028b0e200169d1f14a618c79a6ccc2f4baac2bd0731b0770"
+    },
+    {
+      "name": "post-cost-source.json",
+      "bytes": 307682,
+      "sha256": "b6788dd3cf6c7fb24ddcc9b678668b4452f2bed6bb635c14d7028618e15fe0ec"
+    },
+    {
+      "name": "post-cost-whitespace.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "post-cost-whitespace.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "progress.json",
+      "bytes": 58,
+      "sha256": "853b597b8b74e9363a78395d085a4b4bb32297c4f083223c979ef8c2802a69c9"
+    },
+    {
+      "name": "results.json",
+      "bytes": 2899,
+      "sha256": "1d71315f48336aa2577e7e94c16d8149b7f8996746c5fb30db97269ee27f98ff"
+    },
+    {
+      "name": "run.py",
+      "bytes": 3972,
+      "sha256": "eb6b29e51df515db6c2c9806cba8e9a84198c733d19cf299f91e28e2ac9f32ce"
+    },
+    {
+      "name": "source.diff",
+      "bytes": 11070,
+      "sha256": "e7ff47f75c14df2c26d89fa3425e2e1909d612ebfe0ca4cb5949bbd4f6af33f1"
+    },
+    {
+      "name": "source.json",
+      "bytes": 307682,
+      "sha256": "57cfe91d35d046c630f123736874b2c057fa887e6682413e84b808688dd41baa"
+    },
+    {
+      "name": "tagged-lint.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "tagged-lint.stdout",
+      "bytes": 10,
+      "sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+    },
+    {
+      "name": "tagged-vet.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "tagged-vet.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "terminal.json",
+      "bytes": 212,
+      "sha256": "93052b2481fdc5133d49a83208c345e769193f3bde3a00dc694c949419509e5c"
+    },
+    {
+      "name": "whitespace.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "whitespace.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

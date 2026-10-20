@@ -16011,3 +16011,51 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   source/cost review clean. Full current-source composition still precedes
   integration; H2 consumer/executor, pressure/restore, readiness and fresh
   freeze remain open. No ceremony execution or scale result follows.
+
+
+- **2026-10-20 — T42.H2r.c.c retains the cold RSS refusal before optimization.**
+  Exact `e934dd6e` completed all three protected reference comparisons, fresh
+  v5 memory admission (9,412,493,312 available / 8,499,023,872 required bytes),
+  and author A's genuine Wait0 and empty session. Its full native gate then
+  failed in `cold-to-warm` after 2,194.315 seconds. The joined whole meter
+  reported `RSSLimitExceeded=true`, which requires an available completed
+  sequential controller-plus-descendant RSS census above the unchanged
+  4,294,967,296-byte limit. The gauge retained no private census refusal and
+  the trace reported no first failure. This establishes a sampled aggregate
+  RSS safety stop, not OOM, unique physical usage, an exact overshoot, the
+  first offending meter, or a culprit process/class. The generic first resource
+  label is `process-observation-notify`; accounting transports subsequently
+  failed during cancellation. Only the first server started. No cold authority,
+  later epoch, successful terminal protocol or composed acceptance follows.
+
+  `spike/t42h2r/live-borrow-cold-rss-failure-linux-20261020.json` retains the
+  failed source archive, raw controls, joined server output and source bindings.
+  The wrapper independently compared an unprefixed expected policy hash with
+  the native `sha256:` form. The expected prefixed v5 digest is present in
+  stdout; the false wrapper field does not explain or supersede native exit1.
+  Preserve the original wrapper/result and fix that comparison only in a fresh
+  future invocation. No unchanged full retry or threshold/workload/cadence/
+  deadline change follows from this failure.
+
+  The existing joined meter snapshots already hold aggregate current/high-water
+  bytes, completed census counts and class counts. Print those saved whole and
+  joined server snapshots in the native failure logger. Take no new sample,
+  inspect no unjoined mutable state and grant no acceptance authority. This is
+  test-only failure reporting: at most the existing fifteen phase rows and
+  bounded class counts per joined meter. Each added joined-server snapshot
+  acquires the existing meter/gauge mutexes and clones those bounded slices;
+  formatting occurs after their release. It adds no ordinary product request,
+  sync, startup, retry/no-op, publication, cache, child, descriptor,
+  source/payload read or hash. No per-process/class RSS history was retained,
+  so these logging changes cannot recover that missing evidence from this run.
+  Memory attribution and a justified source-owned optimization, bounded gates,
+  independent review and fresh complete acceptance still precede integration.
+
+  The saved-diagnostic correction passes both focused controls normally and
+  with race, tagged vet/lint, documentation/glossary and whitespace. Every
+  gate root returned zero with an empty sampled session and unchanged source.
+  Independent source/cost/evidence review found no open issue. A documentation
+  correction explicitly charges the new failure-only snapshot locks/clones;
+  exact documentation gates and final source-identical review still precede
+  this checkpoint's commit. These checks qualify diagnostics only, not a
+  memory optimization, new full native attempt or integration.

@@ -4,9 +4,11 @@ package t421
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"testing"
 	"time"
@@ -416,7 +418,7 @@ func logLinuxEpochNativeFailure(t *testing.T, flow *LinuxExecutionEpochFlow, bas
 	if flow.held != nil && flow.held.whole != nil {
 		t.Logf("whole private process refusal=%q", flow.held.whole.gauge.privateRefusal())
 		prefix, err := flow.held.whole.snapshot() // Joined saved state only; no new sample.
-		t.Logf("whole private joined=%t RSS_limit_exceeded=%t saved_refusal=%t", prefix.Joined, prefix.RSSLimitExceeded, err != nil)
+		t.Logf("whole private joined=%t RSS_limit_exceeded=%t saved_refusal=%t phase_observations=%+v", prefix.Joined, prefix.RSSLimitExceeded, err != nil, prefix.Phases)
 	}
 	author := flow.request.Epochs.author
 	author.mu.Lock()
@@ -441,6 +443,10 @@ func logLinuxEpochNativeFailure(t *testing.T, flow *LinuxExecutionEpochFlow, bas
 				run.mu.Lock()
 				t.Logf("private epoch=%d failure=%v native_stop=%v admission=%+v", run.epoch.Epoch, run.err, run.nativeStopErr, run.stopDiagnostic)
 				run.mu.Unlock()
+				if run.processObservation != nil {
+					prefix, err := run.processObservation.snapshot() // Joined saved state only; no new sample.
+					t.Logf("private epoch=%d saved_process_observation=%+v saved_error=%v", run.epoch.Epoch, prefix, err)
+				}
 				if run.output != nil {
 					raw := run.output.buffer.Bytes()
 					path := filepath.Join(base, fmt.Sprintf("joined-server-%d.log", run.epoch.Epoch))
@@ -470,5 +476,34 @@ func TestLinuxEpochTraceNativeFailureDiagnosticRetainsUnjoinedSnapshot(t *testin
 	case <-flow.done:
 		t.Fatal("diagnostic fabricated worker join")
 	default:
+	}
+}
+
+func TestLinuxEpochNativeFailureDiagnosticReadsOnlyJoinedSavedRSS(t *testing.T) {
+	gauge, rows := observationFixture(t)
+	rows[1].RSSBytes = int64(linuxEpochRSSReservation)
+	if _, err := gauge.acceptRows(rows); err != nil {
+		t.Fatal(err)
+	}
+	before := gauge.Observation()
+	probes := 0
+	gauge.probe = func(context.Context, int) ([]t4013.NativeProcessRecord, error) {
+		probes++
+		return nil, ErrExecutionEpochOne
+	}
+	meter := &epochProcessObservation{gauge: gauge, phase: 2, closed: true,
+		result: ExecutionServerProcessObservation{Joined: true, RSSLimitExceeded: true}}
+	done := make(chan struct{})
+	close(done)
+	run := &ExecutionEpochOneRun{epoch: ExecutionEpochConfig{Epoch: 1}, done: done, processObservation: meter}
+	flow := &LinuxExecutionEpochFlow{done: done, core: &ExecutionEpochOne{},
+		request: LinuxExecutionEpochRequest{Epochs: &LinuxExecutionEpochConfigCustody{author: &LinuxExecutionAuthorCustody{}}},
+		held:    &linuxEpochHeldFlow{whole: meter, servers: map[*ExecutionEpochOneRun]*linuxEpochServer{run: {}}}}
+	logLinuxEpochNativeFailure(t, flow, "joined-saved-diagnostic-control")
+	prefix, err := meter.snapshot()
+	if !errors.Is(err, errEpochProcessRSS) || probes != 0 || !reflect.DeepEqual(before, gauge.Observation()) ||
+		!prefix.Joined || !prefix.RSSLimitExceeded || len(prefix.Phases) != 1 ||
+		prefix.Phases[0].Observation.ObservedRSSBytes != linuxEpochRSSReservation+4096 {
+		t.Fatal("joined diagnostic changed or re-probed the retained overshoot", prefix, err, probes)
 	}
 }
