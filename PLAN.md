@@ -14341,3 +14341,35 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Ordinary query/request, sync tick, startup/restart, retry/no-op, publication,
   schema/cache and corpus/shard work remain unchanged. Cross-owner concurrency,
   memfd/tmpfs/cache and execution reservations remain subsequent H2 admission.
+
+- **2026-10-19 — T42.H2p protected Linux Git resources (Linux #124).**
+  Add a distinct seven-image Git owner over H2k's descriptor-only read-only
+  tree. Observe the actual selected Git/core and all six matching installed
+  builtin aliases before and after copying. Seal one core, materialize seven
+  fixed regular aliases in private sibling staging, verify each protected
+  alias's full digest and probe protected version, exec-path and builtins
+  before publishing identity. The Git owner precedes the tree in lock order;
+  its loan spans the complete trusted joined callback and supplies a fresh
+  closed file-transport environment for child FD3. It grants no command,
+  repository, shell/library/other-helper, session/executor or plan admission.
+  All probes execute protected descriptors and retain any uncertain PID/join
+  prefix; Close must observe it drained and H2k closed before releasing the
+  protected tree or removing
+  unchanged recorded scratch entries and empty directories. Unknown or replaced
+  entries retain cleanup custody; a sticky refusal can outlive actual release.
+  No recursive, forced or lazy cleanup is introduced. Historical Darwin
+  immutable-path recipes and Linux entry-point refusals stay exact.
+  Constructor cost: two sealed-core probe roots and three protected-tree probe
+  roots, one H2k constructor helper, repeated bounded core/seven-alias hashing,
+  one sealed core (at most 256 MiB), seven mutable copies and seven protected
+  tmpfs copies (each set at most 1.75 GiB), seven file syncs, H2k transfer/hash
+  and verification, and seven protected-alias hashes. Page cache and tmpfs are
+  separate aggregate-reservation obligations; these are ceilings, not admission.
+  Successful construction releases the sealed core and mutable file copies.
+  Published loans do constant kernel tree/descriptor checks, bounded path checks
+  and fresh environment construction, with no payload hash or source read.
+  Existing mutexes cover the whole callback; there is no hard callback bound or
+  global owner/construction concurrency allowance. Ordinary query/request,
+  sync, startup/restart, retry/no-op, publication, schema and caches gain no
+  registered production work. Go SDK/build ownership, operational executor
+  joining, full pressure/restore and prospective aggregate plans remain H2 work.

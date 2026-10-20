@@ -56,7 +56,8 @@ func ProtectLinuxExecutionReferenceTool(ctx context.Context, request ReferenceTo
 // ProtectLinuxExecutionExternalTool supports only the SurrealDB direct image.
 // The closed version probe executes the sealed FD, with no ambient environment
 // or PATH image selection. Version syntax is observation, not vendor attestation.
-// Git/Go helper/SDK recipes and fixed-system/signer tools remain unimplemented.
+// Git resources use the distinct ProtectLinuxExecutionGit tree owner; this
+// direct-image constructor admits no Git/Go SDK or fixed-system/signer recipe.
 // Uncertain probe drain/removal returns non-nil unusable cleanup custody;
 // retain it and retry Close, never dispose scratch or the keeper prematurely.
 func ProtectLinuxExecutionExternalTool(ctx context.Context, role, binary string) (*LinuxExecutionToolCustody, error) {

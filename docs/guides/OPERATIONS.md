@@ -138,6 +138,35 @@ loan API. The single-input wrapper follows the same path at n=1. These are
 per-owner bounds; aggregate RSS, memfd/cache and concurrent-owner reservations
 remain required before Linux execution admission.
 
+T42.H2p adds a separate `ProtectLinuxExecutionGit` owner for the actual Git
+core and its six matching builtin aliases, copied into H2k's read-only tree.
+It checks all original alias digests before and after construction, hashes all
+seven protected images, and probes the protected version, exec-path and required
+builtins. `WithGit` lends the root and a fresh closed file-transport environment;
+attach that root as the first `ExtraFiles` entry (child FD3) and execute
+`/proc/self/fd/3/core/git`. All children and descendants must join before the
+callback returns. Do not reenter Git/tree methods or escape descriptors. Home
+and temporary directories remain mutable trusted workspace inputs. This owner
+grants no command/repository admission, shell/library/other-helper closure,
+operational executor drain certificate or ceremony authority.
+
+The Git mutex precedes the tree mutex and spans complete joined use. Explicit
+construction creates two sealed-core probe roots, three protected-tree roots and
+one H2k constructor helper, repeatedly hashes the bounded source/core aliases,
+materializes and syncs seven regular files, transfers/verifies H2k copies, and
+hashes all seven protected aliases. Its transient payload ceilings are one
+256-MiB sealed core, 1.75 GiB of mutable files/page cache and 1.75 GiB of
+protected tmpfs, plus bounded census/transfer buffers and the separately owned
+helper image. These are separate costs for later aggregate reservation, not a
+host allowance. Success releases the sealed core and mutable files. Loans add
+constant kernel/tree checks and bounded workspace checks/environment allocation;
+they do no payload hashing or original-source reads. Every constructor probe executes a protected descriptor; uncertainty retains
+the actual session prefix and sealed/tree custody. Close observes it drained and H2k closed
+before releasing tree/scratch; it removes unchanged recorded entries and then
+empty directories. Unknown or replaced entries refuse cleanup and remain owned.
+No recursive/forced/lazy cleanup or production caller is added. Go build/SDK,
+executor ownership, full pressure/restore and prospective plans remain pending.
+
 The ELF header screen and joined neutral executable prove only this primitive;
 they do not admit tools, loader/library/helper closure, a signer, environment,
 argv or ceremony dispatch. The screen admits only ELF64 LSB EI_VERSION 1

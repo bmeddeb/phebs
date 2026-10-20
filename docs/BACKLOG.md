@@ -4124,6 +4124,29 @@ pinned scoped lint, documentation/glossary and whitespace pass. The
 exact source/tool/host, outcomes and local raw-log hashes. This closes only
 the atomic same-owner primitive; the remaining H2 gates above stay pending.
 
+**T42.H2p · Protected Linux Git core and builtin aliases** *(next H2 consumer
+prerequisite, 2026-10-19; needs H2b/H2k native facts).* Implement a distinct
+seven-image read-only tree owner without relaxing the historical Darwin
+constructor. AC: bind every installed alias to the actual selected core before
+and after construction; sealed-core materialization, protected-alias digests and
+protected version/exec-path/builtin probes; descriptor-only joined-use loan with
+closed environment; unprivileged native local clone/fetch and exact commit/
+content checks through inherited FD3; closed-loan sticky refusal; malformed
+requests and changed/unknown scratch entries refuse; uncertain constructor-probe
+sessions retain cleanup custody until drained; focused normal/race, tagged
+native, static, docs and independent custody/cost review. Caller command,
+repository, shell/library/helper closure and executor/plan authority remain
+separate. Lock order is Git owner then tree, through the whole callback.
+Construction bounds one sealed core to 256 MiB plus seven mutable and seven
+protected copies to 1.75 GiB each; page cache, tmpfs and concurrency still need
+aggregate admission. It adds seven file syncs, repeated bounded source-alias and
+protected-alias reads, two sealed-core probe roots, three protected-tree roots and
+one H2k constructor helper. Successful publication releases mutable copies and
+the sealed core. Loans recheck only kernel/tree/descriptor and bounded workspace
+paths and construct a fresh environment. Close joins probe/helper custody before
+exact nonrecursive scratch cleanup; unknown/replaced entries remain retained.
+No production request/tick/startup/retry/publication caller is registered.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared
