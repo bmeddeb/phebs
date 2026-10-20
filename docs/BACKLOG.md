@@ -4431,6 +4431,46 @@ integration. The qualified diagnostic grants no author/bootstrap/source owner:
 H2r.b implements the standalone serial author; shared-controller/live-server
 binding remains a later slice, with every parent H2r AC preserved.
 
+
+**T42.H2r.b · Standalone Linux serial author/source owner** *(after qualified
+H2r.a; implementation prospective, 2026-10-20).* ACs:
+
+- Accept only genuine Linux Git/Go owners, their reference-issued current-source
+  author and bounded sealed V3/V4 plan with exact source ancestry. Preserve all
+  historical Darwin/v1-v2 contracts and global Linux path-protection refusals.
+- Own fresh private mutable parent/source/home/tmp descriptors and a native
+  exclusive lease, using full-width Linux device/inode/mount/filesystem/namespace
+  observations. Root/lease replacement or linked controls refuse and retain the
+  original inode/prefix. Close joins tracked use before descriptor release and
+  never deletes source bytes.
+- Use a distinct closed authenticated Linux request, proven sealed CLOEXEC image/
+  plan FDs 5/6 captured before bootstrap, DA01/PC01 sockets 3/4, qualified literal
+  controller-held H2p route, unchanged three-control environment and no nested
+  extra files. Preserve genuine StartAuthor/Handle.Wait and exact 4/3/3 Git.
+- Require three actual current-source reference-built author CLI lifetimes for
+  full A/B/A-return, 2,031,604 regular leaves, exact manifests/commits/trees and
+  canonical measured response/EOF. Authenticate terminal Pause echo and natural
+  producer close before actual Wait/session drain and final controller fence.
+- Keep source and complete Build/Git/image/plan loans through all actual joins,
+  including cancellation/early exit/pin failure and uncertain prefixes. Use owned
+  pidfds and callback joins, with no bare-PID or timeout-as-join fallback. Avoid
+  owner reentry from dispatch hooks. Reject concurrent use, fourth revision,
+  caller authority and all retries after sticky failure; preserve actual results.
+- Pass meaningful normal/race full-width/closed-wire, native-root/lease drift,
+  ownership/retention, actual tiny metered 4/3/3 engine progression, cancellation-
+  before-pin and isolated real EMFILE controls; tagged/static/docs/glossary,
+  independent source/custody/cost and source-identical receipt review. Required
+  native driver has no skip and must rebuild the actual current-source author;
+  the historical 71761b33 candidate cannot exercise this new entry. No gate is
+  claimed passed by the implementation record.
+
+**T42.H2r.c · Shared-controller/live-server Linux author binding** *(after
+qualified H2r.b).* Own Linux AuthorNextOn producer 7/8/9 accounting, shared parent
+launch, live-server borrower/epoch/config identity and source-lease lifetime
+composition. Preserve every remaining parent H2r AC; b's standalone completion
+cannot substitute for this binding or any executor/profile/pressure/restore,
+aggregate H2, readiness/freeze or ceremony gate.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

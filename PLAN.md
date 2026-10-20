@@ -14876,3 +14876,77 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Linux serial author/source custody with actual A/B/A-return and 4/3/3 Git;
   shared-controller/live-server binding follows separately. No broader H2 or
   authenticated author/dispatch, readiness/freeze or ceremony authority follows.
+
+
+- **2026-10-20 — T42.H2r.b standalone Linux serial author/source owner.**
+  After H2r.a's qualified controller-held Git route, implement the actual Linux
+  author vertical separately from H2r.c shared-controller/live-server binding.
+  Only genuine Linux Git, its protected Go input owner, the reference-issued
+  `t422-author` image from that owner and a sealed canonical plan can construct
+  this consumer. Bind plan-source ancestry and the actual clean reference source;
+  caller paths, BuildInfo or a response alone issue no authority. A new closed
+  `t422-author-request-linux-v1` wire retains full-width device/inode/mount,
+  filesystem and mount-namespace identity. Historical Darwin/v1-v2 wires and
+  global Linux immutable-path refusal seams remain exact.
+
+  Reuse the existing fixed corpus stream/hash/manifest/continuity engine through
+  a private Linux state seam; retain historical default branches. The Linux CLI
+  captures proven sealed image/plan descriptors 5/6 before bootstrap allocations,
+  marks them close-on-exec, and authenticates the canonical request before opening
+  source paths. Unproven descriptors are not adopted or closed. DA01/PC01 retain
+  sockets 3/4. Nested Git gets no extra files and uses the literal controller-held
+  protected root route, without resolving it to the covered host placeholder.
+  H2p's complete three-control environment remains unchanged. The standalone
+  terminal recipe requires the Pause echo, the child's own natural DA close,
+  actual root Wait and empty session, then final accounting fence; no checkpoint
+  replaces terminal completion. Actual A/B/A-return must retain canonical measured
+  responses, exact manifests/commits/trees, full 2,031,604-leaf inventories and
+  direct Git budgets 4/3/3.
+
+  One native lease and four held root descriptors cover parent/source/home/tmp.
+  Same-owner protection excludes external writes; identity/ownership/continuity
+  checks detect drift and grant no hostile same-user filesystem sandbox. Source
+  cleanup is explicit caller custody: Close releases descriptors only after the
+  tracked worker joins, never recursively deletes retained source. The fixed loan
+  order is Builds, Git/tree, author image, sealed plan; those locks span actual
+  joined use. Dispatch checks inspect already-held descriptors, lineage and root/
+  lease snapshots, without reentering owner APIs or rehashing SDK/modules. The
+  parent uses H2q.c pin-before-Wait; each nested Git pins while unreaped and keeps
+  its genuine Handle.Wait/DA settlement. Cancellation uses owned pidfds only and
+  joins its callback before fd close. Linux commands use no CommandContext watcher.
+  A deadline returns no mechanical Start/join evidence for an unfinished attempt:
+  its worker retains every loan and exact source prefix until actual Wait/session
+  drain, while Results publishes the eventual observed prefix. One failure is
+  sticky; there is no retry, future revision or concurrent queued author.
+
+  Costs are preparation/author only; no query, sync tick, startup/restart, retry/
+  no-op, publication, schema or cache invalidation changes. Construction reads/
+  hashes <=256 KiB sealed plan and performs existing synchronous frozen-plan
+  decoding once, with context checks before/after; each of three actual CLIs
+  independently decodes the same plan and regenerates 31,602 addition descriptors.
+  Each CLI hashes its selected sealed image once (<=256 MiB) and checks seals
+  and native identities per dispatch, without full SDK/module hashing. Cold
+  author streams <=2 GiB raw blobs, while every revision reads the complete
+  2,031,604-record Git tree inventory; B/return do not become small inventory
+  reads. Mutable Git objects/packs/indexes, reference-build workspace, protected
+  SDK/modules/source and sealed images are charged separately: the raw-blob bound
+  is no allocated-disk or aggregate-memory bound. Three outer author roots and
+  ten serial direct Git roots are additional to prerequisite construction/build
+  children. At most one author and one nested Git are active; existing phase
+  deadlines apply. Requests/responses are <=16/4 KiB, stderr <=8 KiB, stream
+  writer 64 KiB, and at most three defensive results plus one previous response
+  and one bounded completion diagnostic are retained. The required native driver
+  adds three serial source-metadata walks, each with a five-minute observation
+  context, reporting logical/allocated bytes after joined use; these are not
+  unique physical allocation or whole-phase peaks. Socket/PC/DA receivers,
+  Wait/output pumps, launching thread and owned pidfds remain until joined;
+  uncertain drain can retain locks and resources indefinitely. No full H2,
+  executor/profile/pressure/restore, freeze, signing or ceremony claim follows.
+
+  This is prospective implementation: focused normal/race/refusal/static,
+  independent custody/cost review and the required current-source actual CLI
+  three-lifetime native gate remain unexecuted/pending. Tiny unit fixtures test
+  mechanisms only; the required native gate must use the full frozen population,
+  genuine newly reference-built current-source author and complete source/hash
+  receipts. H2r.c owns all shared-controller/live-server/epoch binding ACs, without
+  waiving any parent H2r or H2 gate.

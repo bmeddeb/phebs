@@ -361,6 +361,42 @@ and its frozen raw evidence; final evidence review precedes integration. Five
 Trace2 exits are observed rows, not a complete history. Actual Linux author/
 source ownership and authenticated bootstrap remain separate work.
 
+
+H2r.b prospectively qualifies the standalone actual Linux author/source owner.
+Prepare fresh current-source `PHEBS_T42_GO_REFERENCE_REQUEST` and
+`PHEBS_T42_REFERENCE_CANDIDATE_REQUEST` for the helper and `t422-author`, plus
+qualified `PHEBS_T42_INPUT_TREE_REQUEST`. Helper/author must select the same clean
+source, SDK, offline modules and ancestry. The older 71761b33 candidate has no
+Linux entry and is unsuitable. After immutable-source focused/static and
+independent custody/cost review, the required full-population driver is:
+
+```bash
+go test -tags phebs_t42_native ./spike/t421 -count=1 -timeout=3h \
+  -run '^TestLinuxAuthorRequiredNativeThreeLifetimes$' -v
+```
+
+This command is prospective and has not run. It performs a genuine protected
+reference build, seals a canonical full-population plan, and executes A, B and
+A-return through three actual authenticated CLI lifetimes. Require exact 4/3/3
+Git attempts, 2,031,604-leaf inventories, canonical observed response/EOF,
+terminal Pause/natural close, actual root Wait and empty sessions. Controls remain
+3/4, sealed image/plan 5/6 are CLOEXEC, and nested Git uses the literal protected
+controller route with no extra files. Original SDK/modules/source stay available
+and unchanged on the host. Qualify with fresh actual disk/resource observations;
+<=2 GiB raw blob content does not bound Git allocation, protected inputs or peak
+build workspace. Three bounded joined-source metadata samples report observed
+logical/allocated bytes, without a phase-peak or unique-physical-byte claim.
+
+A timeout's immediate mechanical result is unavailable while the worker is
+unfinished; it is not evidence that no child started. Retain the worker, complete
+input loans, source lease and exact private prefix until actual joining; inspect
+private mutable fields only after done. Close cancels/waits but deletes no source.
+On success the driver verifies the close barrier before exact fixture cleanup;
+failed/unknown prefixes remain retained. Never retry unchanged failed native
+source or close prerequisite helpers before dependent owners release. This gate
+qualifies standalone author ownership only; H2r.c shared-controller/live-server
+binding and all broader H2/readiness/freeze/ceremony gates remain open.
+
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
 It binds `c07bc930` and is preserved unchanged, so it no longer describes the

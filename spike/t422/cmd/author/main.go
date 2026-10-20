@@ -34,6 +34,11 @@ func run() (retErr error) {
 	if len(os.Args) != 1 {
 		return t421.ErrExecutionCorpusAuthor
 	}
+	inputs, err := captureAuthorInputs()
+	if err != nil {
+		return t421.ErrExecutionCorpusAuthor
+	}
+	defer func() { retErr = errors.Join(retErr, closeAuthorInputs(inputs)) }()
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 	lifetime, err := dispatchadmission.BootstrapAuthor(ctx)
@@ -48,7 +53,7 @@ func run() (retErr error) {
 	if err != nil {
 		return t421.ErrExecutionCorpusAuthor
 	}
-	author, err := t421.OpenExecutionCorpusAuthorRequest(ctx, raw)
+	author, err := openAuthorInputs(ctx, raw, inputs)
 	if err != nil {
 		return t421.ErrExecutionCorpusAuthor
 	}

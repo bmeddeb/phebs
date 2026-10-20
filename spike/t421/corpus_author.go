@@ -26,12 +26,23 @@ type AuthoredExecutionRevision struct {
 	Manifest     AuthoredSourceManifest `json:"manifest"`
 }
 
+type corpusAuthorWait interface{ Wait() error }
+
+type corpusAuthorPlatformState interface {
+	check(context.Context, *ExecutionCorpusAuthor) error
+	owned(os.FileInfo) bool
+	checkPlan(context.Context, *ExecutionCorpusAuthor) error
+	prepare(context.Context, *exec.Cmd) error
+	start(context.Context, *exec.Cmd, func(context.Context, *exec.Cmd) (dispatchadmission.Handle, error)) (corpusAuthorWait, error)
+}
+
 // ExecutionCorpusAuthor advances one new private bare repository A -> B -> A.
 // It holds no writable source FD between commands and never authors a future
 // revision. The launcher still owns the source mutation lease, enclosing volume
 // and parent-held tool/input custody; this object is not a freeze binding.
 // Close releases its directory descriptor, never deletes retained source.
 type ExecutionCorpusAuthor struct {
+	platform  corpusAuthorPlatformState
 	mu        sync.Mutex
 	lifetime  context.Context
 	source    *corpusAuthorSource
@@ -216,6 +227,9 @@ func corpusAuthorContextError(ctx context.Context) error {
 }
 
 func (author *ExecutionCorpusAuthor) checkRoot(ctx context.Context) error {
+	if author.platform != nil {
+		return author.platform.check(ctx, author)
+	}
 	if ctx == nil || ctx.Err() != nil || author.closed || author.err != nil || author.root == nil || author.rootInfo == nil {
 		return ErrExecutionCorpusAuthor
 	}
@@ -224,7 +238,7 @@ func (author *ExecutionCorpusAuthor) checkRoot(ctx context.Context) error {
 		return ErrExecutionCorpusAuthor
 	}
 	info, err := os.Lstat(author.directory)
-	if err != nil || !info.IsDir() || info.Mode().Perm() != 0o700 || !inputCustodyOwned(info) || !os.SameFile(info, author.rootInfo) {
+	if err != nil || !info.IsDir() || info.Mode().Perm() != 0o700 || !author.owned(info) || !os.SameFile(info, author.rootInfo) {
 		return ErrExecutionCorpusAuthor
 	}
 	current, err := author.root.Stat()
@@ -248,7 +262,7 @@ func (author *ExecutionCorpusAuthor) checkContinuity(ctx context.Context, commit
 	}
 	for _, path := range []string{"refs", "refs/heads", "refs/tags", "objects", "objects/info"} {
 		info, err := os.Lstat(filepath.Join(author.directory, path))
-		if err != nil || !info.IsDir() || !inputCustodyOwned(info) {
+		if err != nil || !info.IsDir() || !author.owned(info) {
 			return ErrExecutionCorpusAuthor
 		}
 	}
@@ -315,7 +329,7 @@ func (author *ExecutionCorpusAuthor) readControl(path string, maximum int64) (re
 		}
 	}()
 	before, err := file.Stat()
-	if err != nil || !before.Mode().IsRegular() || !inputCustodyOwned(before) || before.Size() > maximum {
+	if err != nil || !before.Mode().IsRegular() || !author.owned(before) || before.Size() > maximum {
 		return nil, ErrExecutionCorpusAuthor
 	}
 	raw, err := io.ReadAll(io.LimitReader(file, maximum+1))
@@ -330,11 +344,15 @@ func (author *ExecutionCorpusAuthor) readControl(path string, maximum int64) (re
 
 // This is the single source-owned author dispatch site, not four invented
 // subcommand sites. Pipe handling and Wait stay with the command owner.
-func (author *ExecutionCorpusAuthor) startGit(ctx context.Context, command *exec.Cmd) (dispatchadmission.Handle, error) {
+func (author *ExecutionCorpusAuthor) startGit(ctx context.Context, command *exec.Cmd) (corpusAuthorWait, error) {
 	if author.checkRoot(ctx) != nil {
-		return dispatchadmission.Handle{}, ErrExecutionCorpusAuthor
+		return nil, ErrExecutionCorpusAuthor
 	}
-	return author.start(ctx, command)
+	if author.platform != nil {
+		return author.platform.start(ctx, command, author.start)
+	}
+	handle, err := author.start(ctx, command)
+	return &handle, err
 }
 
 func (author *ExecutionCorpusAuthor) command(ctx context.Context, index int) (*exec.Cmd, context.CancelFunc, error) {
@@ -349,9 +367,18 @@ func (author *ExecutionCorpusAuthor) command(ctx context.Context, index int) (*e
 	}
 	commandCtx, cancel := context.WithCancel(ctx)
 	command := exec.CommandContext(commandCtx, author.gitPath, args...)
+	if author.platform != nil {
+		command = exec.Command(author.gitPath, args...)
+	}
 	command.Dir = author.directory
 	command.WaitDelay = time.Second
-	if err := prepareReferenceCommand(command); err != nil {
+	var prepareErr error
+	if author.platform != nil {
+		prepareErr = author.platform.prepare(commandCtx, command)
+	} else {
+		prepareErr = prepareReferenceCommand(command)
+	}
+	if prepareErr != nil {
 		cancel()
 		return nil, nil, ErrExecutionCorpusAuthor
 	}
@@ -481,4 +508,11 @@ func (source *corpusAuthorSource) manifest(physical PhysicalRevision, inventory 
 		RegularFiles:      source.profile.Physical.CombinedRegularFiles, TreeInventory: inventory,
 		TreeObjectID: physical.ExpectedTree, CommitBytesSHA256: commitSHA256,
 	}
+}
+
+func (author *ExecutionCorpusAuthor) owned(info os.FileInfo) bool {
+	if author.platform != nil {
+		return author.platform.owned(info)
+	}
+	return inputCustodyOwned(info)
 }

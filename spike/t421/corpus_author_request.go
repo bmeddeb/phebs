@@ -231,16 +231,21 @@ func resumeCorpusAuthor(ctx context.Context, source *corpusAuthorSource, request
 	if err != nil || identity != request.SourceIdentity || source == nil || start == nil || !executionGitAbsolutePath(gitPath) {
 		return fail()
 	}
-	author.source, author.gitPath, author.start, author.requestRevision = source, gitPath, start, request.Revision
-	author.observeChanges = request.Schema == ExecutionCorpusAuthorObservedRequestSchema
-	for author.next < len(source.revisions) && source.revisions[author.next].Name != request.Revision {
+	return resumeCorpusAuthorState(ctx, author, source, request.Revision, request.Previous, request.Schema == ExecutionCorpusAuthorObservedRequestSchema, gitPath, start)
+}
+
+func resumeCorpusAuthorState(ctx context.Context, author *ExecutionCorpusAuthor, source *corpusAuthorSource, revision string, previousResponse *ExecutionCorpusAuthorResponse, observed bool, gitPath string, start func(context.Context, *exec.Cmd) (dispatchadmission.Handle, error)) (*ExecutionCorpusAuthor, error) {
+	fail := func() (*ExecutionCorpusAuthor, error) { _ = author.Close(); return nil, ErrExecutionCorpusAuthor }
+	author.source, author.gitPath, author.start, author.requestRevision = source, gitPath, start, revision
+	author.observeChanges = observed
+	for author.next < len(source.revisions) && source.revisions[author.next].Name != revision {
 		author.next++
 	}
 	if author.next == len(source.revisions) {
 		return fail()
 	}
 	if author.next == 0 {
-		if request.Previous != nil {
+		if previousResponse != nil {
 			return fail()
 		}
 		entries, err := author.root.ReadDir(1)
@@ -248,10 +253,10 @@ func resumeCorpusAuthor(ctx context.Context, source *corpusAuthorSource, request
 			return fail()
 		}
 	} else {
-		if request.Previous == nil || !validExecutionSHA256(request.Previous.ConfigSHA256) {
+		if previousResponse == nil || !validExecutionSHA256(previousResponse.ConfigSHA256) {
 			return fail()
 		}
-		previous := request.Previous.Result
+		previous := previousResponse.Result
 		physical := source.revisions[author.next-1]
 		parent := ""
 		if author.next > 1 {
@@ -263,7 +268,7 @@ func resumeCorpusAuthor(ctx context.Context, source *corpusAuthorSource, request
 			previous.Manifest != source.manifest(physical, physical.ExpectedTreeInventory, SHA256(raw)) {
 			return fail()
 		}
-		author.previous, author.config = previous, request.Previous.ConfigSHA256
+		author.previous, author.config = previous, previousResponse.ConfigSHA256
 		if author.checkContinuity(ctx, previous.Commit) != nil {
 			return fail()
 		}
@@ -302,6 +307,9 @@ func readCorpusAuthorPlan(ctx context.Context, path, digest string) (*os.File, o
 }
 
 func (author *ExecutionCorpusAuthor) checkPlan(ctx context.Context) error {
+	if author.platform != nil {
+		return author.platform.checkPlan(ctx, author)
+	}
 	if author.planFile == nil {
 		return nil // The original in-process constructor owns already-decoded plan bytes.
 	}

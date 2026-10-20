@@ -162,9 +162,22 @@ func readAuthorCustodyPlan(ctx context.Context, inputs *ExecutionInputCustody) (
 	return path, raw, nil
 }
 
+type authorPlanProjection struct {
+	expected  [3]AuthoredExecutionRevision
+	deadlines [3]time.Duration
+	phases    [3]uint32
+}
+
 func (custody *ExecutionAuthorCustody) bindPlan(plan Plan) error {
+	projection, err := projectAuthorPlan(plan)
+	custody.expected, custody.deadlines, custody.phases = projection.expected, projection.deadlines, projection.phases
+	return err
+}
+
+func projectAuthorPlan(plan Plan) (authorPlanProjection, error) {
+	var projection authorPlanProjection
 	if len(plan.Revisions.Physical) != 3 {
-		return ErrExecutionAuthorCustody
+		return projection, ErrExecutionAuthorCustody
 	}
 	// Only the manifest projection is reused; the parent does not regenerate
 	// 31,602 author descriptors or repeat the child's full streamed census.
@@ -173,31 +186,31 @@ func (custody *ExecutionAuthorCustody) bindPlan(plan Plan) error {
 	for index, name := range []string{"a", "b", "a-return"} {
 		physical := plan.Revisions.Physical[index]
 		if physical.Name != name {
-			return ErrExecutionAuthorCustody
+			return projection, ErrExecutionAuthorCustody
 		}
 		raw, err := canonicalGitCommitBytesFor(physical.ExpectedTree, parent, physical.CommitMessage, source.recipe)
 		if err != nil || gitSHA1ObjectID("commit", raw) != physical.ExpectedCommit {
-			return ErrExecutionAuthorCustody
+			return projection, ErrExecutionAuthorCustody
 		}
-		custody.expected[index] = AuthoredExecutionRevision{Name: name, Commit: physical.ExpectedCommit,
+		projection.expected[index] = AuthoredExecutionRevision{Name: name, Commit: physical.ExpectedCommit,
 			Tree: physical.ExpectedTree, ParentCommit: parent, Manifest: source.manifest(physical, physical.ExpectedTreeInventory, SHA256(raw))}
 		phase := []string{"cold", "physical_delta_b", "return_a"}[index]
 		for phaseIndex, candidate := range plan.PhaseOrder {
 			if candidate == phase {
-				custody.phases[index] = uint32(phaseIndex + 1)
+				projection.phases[index] = uint32(phaseIndex + 1)
 			}
 		}
 		for _, deadline := range plan.PhaseDeadlines {
 			if deadline.Phase == phase && deadline.DeadlineMS > 0 && deadline.DeadlineMS <= uint64(math.MaxInt64/int64(time.Millisecond)) {
-				custody.deadlines[index] = time.Duration(deadline.DeadlineMS) * time.Millisecond
+				projection.deadlines[index] = time.Duration(deadline.DeadlineMS) * time.Millisecond
 			}
 		}
-		if custody.deadlines[index] == 0 || custody.phases[index] == 0 {
-			return ErrExecutionAuthorCustody
+		if projection.deadlines[index] == 0 || projection.phases[index] == 0 {
+			return projection, ErrExecutionAuthorCustody
 		}
 		parent = physical.ExpectedCommit
 	}
-	return nil
+	return projection, nil
 }
 
 func (custody *ExecutionAuthorCustody) createRoots(ctx context.Context) error {
