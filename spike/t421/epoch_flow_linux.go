@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"runtime"
+	"runtime/debug"
 	"sync"
 
 	"github.com/bmeddeb/phebs/internal/custodybytes"
@@ -134,6 +136,10 @@ func (flow *LinuxExecutionEpochFlow) work() {
 		flow.mu.Lock()
 		flow.core, flow.held = core, held
 		flow.mu.Unlock()
+		flow.step = "preparation-memory-release"
+		if e = held.releasePreparationMemory(flow.lifetime); e != nil {
+			return &linuxEpochOperationFailure{e}
+		}
 		flow.step = "resource-admission"
 		held.resources, e = admitLinuxEpochResources(flow.lifetime, held, flow.cancel)
 		if e != nil {
@@ -188,6 +194,20 @@ func (flow *LinuxExecutionEpochFlow) work() {
 	flow.request.Epochs.borrowedBy = nil
 	flow.request.Epochs.mu.Unlock()
 	author.mu.Unlock()
+}
+
+// Retire unused preparation heap once, with all real loan owners still rooted.
+// This is not admission credit; the following observation must independently fit.
+func (held *linuxEpochHeldFlow) releasePreparationMemory(ctx context.Context) error {
+	if ctx == nil || ctx.Err() != nil || held == nil {
+		return ErrExecutionEpochOne
+	}
+	debug.FreeOSMemory() // Includes GC; synchronous and not context-interruptible.
+	runtime.KeepAlive(held)
+	if ctx.Err() != nil {
+		return ErrExecutionEpochOne
+	}
+	return nil
 }
 
 func newLinuxEpochCoordinator(owner *LinuxExecutionEpochFlow, held *linuxEpochHeldFlow, plan Plan) (_ *ExecutionEpochOne, retErr error) {

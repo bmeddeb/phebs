@@ -524,6 +524,18 @@ race must be reproduced and closed through source-owned lifecycle custody
 before another full composed attempt. Memory, deadline and refusal bounds stay
 unchanged; pre-native passes establish no composed qualification.
 
+The next exact `c92ea2de` attempt refused initial memory admission before
+operational author/server launch, after all three protected comparisons joined.
+Its [memory-refusal record](../../spike/t42h2r/live-borrow-memory-refusal-linux-20261020.json)
+retains the failed fixture and actual observation separately from derived
+requirement arithmetic. Preparation now collects/scavenges unused Go heap once
+with genuine loans still held, before fresh native admission; it promises no
+memory reduction and grants no credit against the unchanged full formula.
+Cancellation is checked around this synchronous, non-interruptible checkpoint.
+Private logs retain saved component footprints and build inventory, including
+refusals, without rescanning. The old author cause and extra payload attribution
+remain unknown; finite-child custody still precedes another full native run.
+
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
 It binds `c07bc930` and is preserved unchanged, so it no longer describes the

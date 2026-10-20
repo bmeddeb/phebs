@@ -24,6 +24,67 @@ func TestLinuxEpochFlowRequiresGenuineOwners(t *testing.T) {
 	}
 }
 
+func TestLinuxEpochPreparationMemoryReleasePreservesLoans(t *testing.T) {
+	held := linuxEpochWorkspaceFixture(t)
+	if held.openWorkspace() != nil {
+		t.Fatal("actual owned workspace")
+	}
+	defer func() { _ = held.workspace.file.Close() }()
+	tools, plan := linuxEpochLoanTools(t)
+	var images func(int) error
+	images = func(index int) error {
+		if index < len(tools) {
+			return tools[index].WithImage(t.Context(), tools[index].identity.Role, func(_ ExecutionToolIdentity, image *os.File) error {
+				held.images[index], held.tools[index] = image, tools[index]
+				return images(index + 1)
+			})
+		}
+		return plan.WithInput(t.Context(), "plan", func(file *os.File) error {
+			held.plan = file
+			before, err := io.ReadAll(io.NewSectionReader(file, 0, MaxPlanBytes))
+			if err != nil || len(before) == 0 {
+				t.Fatal("actual sealed input bytes", err)
+			}
+			// A real collection/scavenge runs under genuine sealed loans and an
+			// owned root. It grants no authority and promises no memory reduction.
+			if err := held.releasePreparationMemory(t.Context()); err != nil {
+				return err
+			}
+			after, err := io.ReadAll(io.NewSectionReader(file, 0, MaxPlanBytes))
+			if err != nil || !bytes.Equal(before, after) || held.checkWorkspace() != nil {
+				t.Fatal("collection changed bytes or owned-root identity", err)
+			}
+			for _, image := range held.images {
+				if _, err := image.Stat(); err != nil {
+					t.Fatal("collection retired a held image", err)
+				}
+			}
+			return nil
+		})
+	}
+	if err := images(0); err != nil {
+		t.Fatal("real loan post-use validation", err)
+	}
+	for _, tool := range tools {
+		if tool.Close() != nil || !tool.input.closed {
+			t.Fatal("explicit image keeper retirement")
+		}
+	}
+	if plan.Close() != nil || !plan.closed {
+		t.Fatal("explicit input retirement")
+	}
+	canceled, cancel := context.WithCancel(t.Context())
+	cancel()
+	for _, ctx := range []context.Context{nil, canceled} {
+		if held.releasePreparationMemory(ctx) == nil {
+			t.Fatal("invalid context reached checkpoint")
+		}
+	}
+	if (*linuxEpochHeldFlow)(nil).releasePreparationMemory(t.Context()) == nil {
+		t.Fatal("missing owner reached checkpoint")
+	}
+}
+
 func TestLinuxEpochControlSettlementOutlivesOperationCancellation(t *testing.T) {
 	for _, canceled := range []string{"operation", "settlement"} {
 		t.Run(canceled, func(t *testing.T) {

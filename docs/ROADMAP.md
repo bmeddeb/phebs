@@ -281,6 +281,14 @@ needs admitted compiler/sysroot/offline inputs and actual installed navigation/
 teardown proof; T45.9 still needs the eligible 5,000-service/12-GB target and
 host. T45.10a's presentation acceptance is complete independently.
 
+T42.H2r.c.c exact `c92ea2de` next stopped at initial memory admission before
+operational author/server launch: a derived 94,277,632-byte deficit under the
+unchanged policy, after three joined reference comparisons. A one-shot
+preparation-heap collection/scavenge precedes fresh admission prospectively;
+all payload charges and limits remain. Per-component diagnostics are retained
+on future runs. Payload growth remains unattributed, and finite-child custody
+and full composed acceptance stay open.
+
 Production artifact/signature/publication closure for T47.5, T49.4, T50.3,
 T51.3, T52.3 and T54.3 remains pending the existing unavailable production key
 and the exact owning production decision. Scoped results and unsigned drafts

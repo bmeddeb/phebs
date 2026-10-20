@@ -4622,6 +4622,21 @@ bounded qualification and source-owned lifecycle synchronization. Cleanup and
 private first-refusal/actual-Wait diagnostics are being corrected. No unchanged
 full-native retry or composed pass is authorized by the pre-native gates.
 
+
+Exact `c92ea2de` passed all three full reference comparisons, then refused
+initial memory admission before operational author/server launch in
+1,272.284s. Available memory was 8,403,984,384 bytes and payload 2,055,811,072;
+the unchanged formula derives 8,498,262,016 required and a 94,277,632-byte
+deficit. The rejected calculation fields themselves stayed zero. The
+[memory-refusal receipt](../spike/t42h2r/live-borrow-memory-refusal-linux-20261020.json)
+binds source and retained raw controls; failed custody is preserved. The
+140,976,128-byte payload increase is unattributed. A prospective one-shot
+source-owned collection/scavenge before fresh admission retains all loans,
+charges and bounds. Private saved per-tree/image footprint and build inventory
+make future attribution possible without rescanning. It promises no reclaim;
+finite-author/nested-Git lifecycle synchronization, full composed acceptance
+and every later H2/readiness/freeze gate remain open.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

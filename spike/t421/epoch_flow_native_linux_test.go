@@ -187,6 +187,7 @@ func TestLinuxEpochRequiredNativeLiveBorrow(t *testing.T) {
 		t.Fatal("protected builds", base)
 	}
 	inventory := builds.Inventory()
+	t.Logf("private prepared build_inventory=%+v", inventory)
 	for i, request := range candidates {
 		if i == 2 {
 			tools[i], err = builds.ProtectReferenceToolV3(t.Context(), parent, roles[i], request.Binary, helper)
@@ -260,6 +261,7 @@ func TestLinuxEpochRequiredNativeLiveBorrow(t *testing.T) {
 	resources := flow.held.resources
 	resources.mu.Lock()
 	t.Logf("resource_policy=%s whole_rss_limit=%d physical_bytes=%d available_bytes=%d effective_capacity_bytes=%d payload_bytes=%d required_bytes=%d", resources.policySHA, resources.RSSLimit(), resources.initial.PhysicalBytes, resources.initial.AvailableBytes, resources.calculation.EffectiveCapacityBytes, resources.footprint.PayloadBytes, resources.calculation.RequiredBytes)
+	t.Logf("private admitted footprint=%+v", resources.footprint)
 	resources.mu.Unlock()
 	if author.Close(t.Context()) == nil || epochs.Close(t.Context()) == nil {
 		t.Fatal("whole-flow borrower lost owner barriers")
@@ -396,6 +398,7 @@ func logLinuxEpochNativeFailure(t *testing.T, flow *LinuxExecutionEpochFlow, bas
 	if flow.held != nil && flow.held.resources != nil {
 		a := flow.held.resources
 		t.Logf("private resource policy=%s initial=%+v calculation=%+v payload_bytes=%d checks=%d", a.policySHA, a.initial, a.calculation, a.footprint.PayloadBytes, a.checks)
+		t.Logf("private saved footprint=%+v", a.footprint)
 		t.Logf("private first resource refusal=%q", a.privateRefusal())
 	}
 	if flow.held != nil && flow.held.whole != nil {

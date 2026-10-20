@@ -15612,3 +15612,37 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   image checks, process bound, RSS/slack limits and deadlines. New tests must
   exercise an actually failed and joined ticker/control under sealed loans,
   actual keeper failure, first-refusal stickiness and genuine Wait status.
+
+- **2026-10-20 — T42.H2r.c.c preparation-memory boundary and refusal evidence.**
+  Exact `c92ea2de` passed all three full protected reference comparisons, then
+  stopped in 1,272.284 seconds before operational author/server launch with the
+  saved first predicate `initial-memory-admission`. Observed available memory
+  was 8,403,984,384 bytes and charged payload 2,055,811,072 bytes. The unchanged
+  4-GiB RSS + payload + 1-GiB kernel/cache + 1-GiB host formula derives a
+  requirement of 8,498,262,016 and deficit of 94,277,632 bytes; the rejected
+  calculation struct itself remained zero. The retained memory-refusal receipt
+  binds raw controls and exact source; the failed fixture remains. The payload
+  increase of 140,976,128 bytes over `909abcea` is unattributed: no component
+  inventory survived either run. The new refusal does not explain the old
+  author failure or close finite-child lifecycle custody.
+
+  Prospectively call `debug.FreeOSMemory()` once in the source-owned worker
+  after loans/coordinator construction and before initial admission. It already
+  performs collection plus scavenging; do not duplicate GC, repeat on refusal,
+  credit owned memory, loosen bounds or promise reclaimed bytes. Keep genuine
+  owners reachable through the checkpoint and check cancellation on either
+  side. Explicit constructor/helper retirement remains mandatory. Admission
+  still uses the fresh complete native observation and exact immutable payload.
+  Retain the existing four-tree/five-image footprint and preparation inventory
+  privately before cleanup, including refusal paths; no new scan or hash.
+
+  Cost: one process-wide collection and scavenging attempt, with heap traversal,
+  runtime heap locks and possible global pauses, per preparation-to-operation
+  transition. It is synchronous and not context-interruptible. Existing whole
+  loan locks remain held; no operational sampler or child has begun. There is
+  no added request/query, sync, publication, retry, ongoing probe, cache/schema
+  or child work. The private native driver prints bounded saved metadata only.
+  A bounded real sealed-loan/owned-root test verifies byte/identity/postcheck
+  and explicit retirement preservation, without asserting an RSS reduction.
+  Focused gates and review remain required; another full composed attempt also
+  requires closing the separate finite-author/nested-Git lifecycle gap.
