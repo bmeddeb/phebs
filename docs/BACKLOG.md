@@ -4362,6 +4362,36 @@ implemented plain author role; optional V3 overlay gets no new native claim.
 Linux author/executor consumers, pressure/restore, complete source-owned
 aggregate admission and all downstream readiness/freeze gates remain open.
 
+**T42.H2r · Linux serial author consumer and mutable-source owner** *(next H2
+consumer after qualified H2q, 2026-10-20).* Consume genuine Linux Git, protected
+Go build lineage, its reference-issued author image and sealed plan. Own a fresh
+private mutable bare source and exclusive native mutation lease; prove actual
+A → B → A-return with unchanged manifests/commits/trees, canonical response and
+terminal handshakes and exact 4/3/3 Git budgets. Linux source identities retain
+full-width native device/inode/mount facts. Keep borrowed inputs and source
+ownership through actual Wait/session drain, including cancellation and unknown
+prefixes. Preserve historical Darwin types/wires and global Linux path-based
+protection refusals. Executor/server/profile/pressure/restore and prospective
+aggregate admission remain subsequent gates.
+
+**T42.H2r.a · Controller-held protected Git route diagnostic** *(first bounded
+H2r prerequisite; needs qualified H2p/H2k).* Before choosing an author route,
+prove whether one fixed unprivileged child can execute the genuine H2p Git
+image through its live controller's held-root `/proc/<pid>/fd/<fd>/core`
+route while the child's own descriptors 3/4 hold close-on-exec control sockets.
+Nested Git must receive no extra files, preserve the complete H2p environment,
+match image/digest/version/exec-path and fixed neutral output, and actually join
+with empty sessions before loans release. Parent/child request and response are
+bounded and fixed; no arbitrary command selection. Keep uncertain ownership and
+failed receipts, with no fallback or timeout-as-join. Focused shape/refusal,
+static, required native zero-skip and independent custody/cost/receipt gates
+are mandatory. This is a layout diagnostic using a fixed test child, not an
+actual author, authenticated dispatch, source owner or admission capability.
+Retain H2p's actual complete three-control environment and the fixed
+`core.commitGraph=false` probe argv; do not conflate the reference-build
+four-control environment with H2p's loan. Actual authenticated Linux author
+bootstrap/source semantics remain distinct downstream implementation work.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

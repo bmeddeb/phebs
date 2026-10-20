@@ -314,6 +314,25 @@ do not repeat this passed workload. H2q is a qualified component. Linux author/
 executor consumption, pressure/restore, aggregate admission and downstream
 readiness/freeze remain separate required work; no supplied author was executed.
 
+H2r.a next checks the prospective controller-held Git route using a fixed sealed
+test child. With the independently rebuildable `PHEBS_T42_INPUT_TREE_REQUEST`
+prepared, run only after focused/static and independent review gates pass:
+
+```bash
+go test -tags phebs_t42_native ./spike/t421 -count=1 -timeout=25m \
+  -run '^TestLinuxAuthorGitRouteRequiredNativeControllerDescriptor$' -v
+```
+
+Child socket descriptors 3/4 are close-on-exec collision controls, not DA01/PC01
+admission. The literal controller `/proc/<pid>/fd/<fd>/core` route must not be
+resolved to the covered H2k placeholder. Eight fixed direct Git commands and
+the tiny file-transport/pack chain must join before resource release. A timeout
+retains the worker, image/Git/helper loans and exact private fixture; no fallback
+or cleanup-by-timeout applies. This diagnostic preserves the public FD3 runtime
+contract and proves no actual author, mutable-source owner, bootstrap/loader
+closure, aggregate admission or readiness. Required native qualification is
+pending; preserve any first failure without an unchanged retry.
+
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
 It binds `c07bc930` and is preserved unchanged, so it no longer describes the

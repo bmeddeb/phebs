@@ -14747,3 +14747,57 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   restored-launch/full readiness and fresh freeze remain mandatory. Ben's
   standing green-PR instruction authorizes qualified integration, with no
   ceremony or production signing/activation authorization.
+
+
+- **2026-10-20 — T42.H2r.a prospective controller-held Git route diagnostic.**
+  With H2q integrated through PR #150, first qualify the narrow descriptor route
+  needed by the distinct Linux serial author consumer. A fixed unprivileged
+  test child holds close-on-exec control sockets at 3/4 and executes only fixed
+  Git probes through a live controller-held H2p root, without nested extra FDs.
+  Bind the root/image/digest/version/exec-path and fixed neutral output; retain
+  every root/helper loan, worker and launching thread until actual child/Git
+  Wait and empty sessions. A deadline supplies no join, and unknown custody
+  remains retained. The diagnostic issues no author/tool/executor authority.
+  Its eventual native result selects a route only within its observed scope;
+  a refusal is retained without a fallback or invented cause.
+  Preserve H2p's actual complete three-control Git environment and the fixed
+  `core.commitGraph=false` probe argv used by the existing source transport.
+  The separate Go reference-build environment has four controls; it is not the
+  H2p loan environment. This diagnostic proves no authenticated author bootstrap
+  or mutable-source semantics, which remain explicit downstream work.
+  Cost is preparation-only: existing independently verified H2k helper/H2p tree,
+  one fixed test-child image and serial fixed Git probes, held descriptors and
+  bounded request/output buffers. Exact child/probe counts and complete costs
+  will be recorded with the implementation. No production query, tick, startup,
+  retry/no-op, publication, schema or cache invalidation is changed. Full author
+  source ownership, executor/pressure/restore, aggregate admission and readiness/
+  freeze remain open; this is no ceremony or production release authorization.
+
+  The diagnostic implementation keeps the public `WithGit` FD3 contract exact;
+  a test-local guarded H2p root loan observes the prospective controller route.
+  One sealed self-test image holds only diagnostic bytes, not reference-issued
+  tool authority. A nonce READY/image-match/ACK precedes use. Child descriptors
+  3/4 remain occupied close-on-exec sockets and 5 is the close-on-exec image;
+  Git receives no extra files. Eight serial direct roots run version, exec-path,
+  init, one fixed fast-import, source HEAD, file clone, mirror HEAD and content.
+  Trace observations require actual upload-pack and protected pack-objects;
+  at most 32 successful Trace2 child-exit rows describe observed descendants,
+  not an exhaustive independent history. Local transport also uses `/bin/sh`;
+  this test admits no shell/helper/library closure. Git groups stay in the
+  diagnostic root session; actual root Wait and full session drain precede loan
+  release, with cancellation joined before owned pidfd close. Parent socket
+  peer ends close immediately after successful Start so early child exit can
+  reach the READY receiver without an artificial local peer retaining it.
+  Cost adds one selected private Git copy, two host-original digest passes,
+  seven routed alias SHA/header reads, and explicit whole-test-image SHA plus
+  the existing sealed copy/hash pass. The test image has a separate 256-MiB
+  file ceiling; its memfd/page-cache/image memory is outside the H2k tree bound.
+  The prerequisite helper reference build and H2p staging/tree costs remain
+  separately charged. Request is <=4 KiB; each Git stdout/stderr <=16/64 KiB,
+  aggregate trace <=128 KiB, controller stdout/stderr <=16/512 KiB. One worker,
+  Wait goroutine and output/stdin pumps coexist with the locked launching thread,
+  four socket endpoints, borrowed root/image FDs, pidfd and prerequisite owners.
+  Git/tree/image locks span joined use; unknown drain retains them indefinitely.
+  Source/mirror contain one fixed 28-byte blob/commit plus generated metadata.
+  No extra SDK/module copy or production caller is introduced by the diagnostic.
+  Focused normal/race/static, exact review and required native gates remain open.
