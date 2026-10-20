@@ -15282,3 +15282,40 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Add both bounded normal and actual five-release native regressions. The
   remainder source/custody/cost review found no issues. Corrections, refreshed
   immutable gates and re-review remain mandatory before integration.
+
+- **2026-10-20 — T42.H2r.c.b protected Linux epoch inputs qualified.** Exact
+  corrected source `f10b5aa54d0004a36e03df424795312d05844aef` passed all fourteen
+  serial normal/race, tagged shape/vet, pinned lint, docs/glossary, supported
+  Linux/Darwin arm64 compile-only and native-driver-build gates. Epoch normal
+  and race each report 51 passing rows and zero skips; both actual-loader pairs
+  pass. Independent exact-source custody/cost re-review reports every severity
+  zero. Cross artifacts were hashed and removed only after actual joins; neither
+  was executed.
+
+  The required bounded native input-owner test passed in 190.42s with zero
+  skips. Two actual H2k construction roots joined with empty sessions before
+  publication: three catalogs total 22,755,996 bytes, five configs total 5,992
+  bytes. All eight protected payloads retained exact hashes, literal embedded
+  catalog routing, regular0400 final components and EROFS write refusal. Four
+  writable roots, five distinct ordered reservations, duplicate/out-of-order
+  and nonsticky epoch-six refusal, active-use mechanical close refusal,
+  borrowed source/plan continuity and exact cleanup passed. Host propagation
+  stayed unchanged. The wrapper actually returned zero with an empty session;
+  all three recorded driver/constructor PIDs are absent and private TMP is
+  empty. These two construction roots are not complete child history: the
+  separate exact-helper reference admission also runs Go/compiler/Git work.
+  The driver binary was hashed and retired after actual wrapper Wait.
+
+  The first native wrapper selected the repository root rather than the package
+  directory and failed before input construction on missing retained
+  plan-v2.json. It actually returned one with an empty session. Preserve that
+  setup failure; the passing invocation changes only cwd with identical driver
+  and source bytes. The source-free receipt at
+  `spike/t42h2r/epoch-inputs-linux-20261020.json` binds eight source hashes and
+  126 raw hashes, the earlier cleanup/lint/review failures, exact locked archive
+  repair and unchanged c.a/b receipts. Final evidence-only review precedes
+  integration. This qualifies the bounded input owner, not a reference-issued
+  actual author or tracked live-server borrower. c.c, parent c/H2r/H2,
+  executor/profile, pressure/restore, source-owned aggregate admission, restored
+  launch/readiness/freeze, ceremony and production signing/activation remain
+  open. Historical plan/receipt bytes and their memory contracts stay exact.

@@ -226,6 +226,15 @@ and six source hashes. The topic branch and integration worktree are retired.
 Current Linux work is c.b protected epoch inputs; c.c actual live-server borrow
 composition and every broader H2/readiness/freeze gate remain pending.
 
+c.b's corrected `f10b5aa5` passes all fourteen serial pre-native gates and
+zero-finding source review. Required bounded native input ownership passes in
+190.42s with eight protected inputs, four writable roots, five ordered listeners,
+actual joins/empty sessions and clean teardown. Its
+[receipt](../spike/t42h2r/epoch-inputs-linux-20261020.json) preserves failures and
+exact bindings; evidence review/integration precedes c.c. Full reference-author
+and live-server composition, prospective Linux memory reservations and all
+broader H2/readiness/freeze gates remain pending.
+
 
 Next: [Linux office handoff #124](https://github.com/bmeddeb/phebs/issues/124)
 mechanism qualification → remaining T42.H2 consumer/executor/resource admission

@@ -454,6 +454,16 @@ server, aggregate admission, readiness/freeze or ceremony authority. Its bounded
 native fixture proves the input owner's kernel mechanics, not reference-issued
 actual-author authority. Source gates and independent review remain required.
 
+The c.b [qualified input-owner receipt](../../spike/t42h2r/epoch-inputs-linux-20261020.json)
+binds exact source `f10b5aa5`, fourteen pre-native gates and a 190.42s required
+native pass with zero skips. Run an already-built native package test from
+`spike/t421`, where its retained plan fixture lives; a repository-root wrapper
+failed before construction and remains recorded. The passed test checks actual
+protected mounts/routes, EROFS, ordered reservations, helper joins and exact
+cleanup. Its fixed private author-root/sealed-plan fixture grants no actual
+reference-author or live-server authority. Final evidence review precedes
+integration; full c.c and prospective source-owned memory admission remain open.
+
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
 It binds `c07bc930` and is preserved unchanged, so it no longer describes the

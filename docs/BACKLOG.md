@@ -4543,6 +4543,16 @@ must share the complete server lifetime. Required bounded native ownership,
 normal/race/refusal and independent custody/cost/evidence gates qualify only this
 input owner; no server or aggregate admission is issued.
 
+Exact c.b source `f10b5aa5` passes fourteen serial pre-native gates, all supported
+compile-only checks and independent source/custody/cost review with zero findings.
+The required actual H2k input-owner gate passes in 190.42s with zero skips: eight
+protected inputs, four writable roots, five ordered reservations, read-only and
+literal-route checks, actual joins/empty sessions and exact cleanup. The
+[receipt](../spike/t42h2r/epoch-inputs-linux-20261020.json) binds eight source and
+126 raw hashes, including the corrected wrapper-cwd setup failure. Final
+evidence review precedes integration. This mechanical native fixture does not
+issue reference-author or live-server authority; c.c remains mandatory.
+
 **T42.H2r.c.c · Linux live-server author/epoch borrow composition** *(after c.a
 and c.b).* Complete the parent c ACs with one tracked joined loan scope across
 Build/Git/image/plan and server use; dispatch hooks consume already-held internal
