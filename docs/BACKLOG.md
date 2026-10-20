@@ -20817,7 +20817,7 @@ Actual Caller Map→HTTP transition controls, strict mismatches, rendered UI,
 validator normal/race/type/lint and bounded mocked checks pass. Cost is constant
 metadata comparison only. Fresh exact UI/binary qualification remains T54.3.
 
-**T54.3 · Measured Impact promotion** — satisfy the common bar per report
+**T54.3 ✅ · Measured Impact promotion** — satisfy the common bar per report
 shape; one shape may release without claiming the others. Dependencies are
 the specific inputs it actually consumes, not every experimental pack.
 
@@ -20844,6 +20844,28 @@ CSP remains unchanged. `spike/t543/success/` and `release/` retain exact result,
 bindings, root-reviewed unsigned artifacts/census and scoped common-bar reuse.
 No Noble/globalaccuracy/scale/other-shape claim follows. Existing production
 key/signature and final production artifact/publication decision remain pending.
+
+**T54.3 signed release closure (2026-10-20, Linux #124).** Ben's request to
+ship experimental/dark features authorizes the reviewed scoped release. The
+[experimental Linux amd64 package](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) publishes direct-operation Impact with
+production signatures over exact clean source `290e1518a4a192d0a3494c3ed9fa2eb39a450355`,
+Go 1.26.5, executable/artifact/implementation bindings and the existing trust
+anchor. The [receipt](../spike/t543/release/linux-20261020/receipt.json) and signed
+records retain exact identities and expiry. This closes this ticket's final
+artifact/signature/publication hold; earlier dated pending-key statements remain
+historical. Default startup stays dark; installation/restart uses explicit
+verified selection. Existing instance deployment is operator-specific.
+
+The common final gate passed 194 bounded test cases without skips, all twelve
+record self-loads, real selected startup/restart/withdrawal, anonymous visibility
+and authorization, plus empty-state sync/index/search/pinned-browse/default-dark
+release smoke. All three selection servers waited with status0 and no observed
+survivor; descendant observation is sampled. Seven new records and five exact
+existing-release rebindings share the complete 57-file artifact directory.
+Historical quality/operating evidence and uncertainty remain exact; current
+registration smoke adds no independent accuracy, Linux capacity, scale, SLO or
+T42 readiness result. No production implementation, numerical bound, query,
+sync, retry/no-op, publication, lock, cache or child class changes.
 
 ## Epic 55 · Kafka producer-evidence production readiness
 
