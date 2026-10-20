@@ -3,6 +3,7 @@
 package t421
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -135,13 +136,25 @@ func linuxEpochTraceIdentityOf(pid int) (linuxEpochTraceIdentity, error) {
 func (value linuxEpochTraceIdentity) sameLifetime(other linuxEpochTraceIdentity) bool {
 	return value.pid == other.pid && value.tgid == other.tgid && value.parent == other.parent && value.tracer == other.tracer && value.sid == other.sid && value.birth == other.birth && value.namespace != nil && other.namespace != nil && os.SameFile(value.namespace, other.namespace)
 }
-func linuxEpochTracePoll(fd int) (int16, error) {
-	polls := []unix.PollFd{{Fd: int32(fd), Events: unix.POLLIN | unix.POLLHUP}}
-	_, err := unix.Poll(polls, 0)
-	if err != nil || polls[0].Revents&(unix.POLLERR|unix.POLLNVAL) != 0 {
-		return 0, errors.Join(ErrExecutionEpochOne, err)
+
+// Ordinary actor probes retry only actual EINTR on the same fd and the same
+// existing turn context. No syscall attempt introduces another timer/budget.
+func linuxEpochTracePoll(ctx context.Context, fd int) (int16, error) {
+	return linuxEpochTracePollResult(linuxEpochClassifierPoll(ctx, fd))
+}
+
+// Cleanup has no operational probe context. Make exactly one actual attempt;
+// its caller may discard only EINTR at its existing fifty-millisecond wait.
+func linuxEpochTracePollOnce(fd int) (int16, error) {
+	return linuxEpochTracePollResult(linuxEpochClassifierPollOnce(context.Background(), fd))
+}
+
+func linuxEpochTracePollResult(result linuxEpochClassifierPollResult) (int16, error) {
+	validCount := result.n == 0 && result.revents == 0 || result.n == 1 && result.revents != 0
+	if result.syscallErr != nil || result.contextErr != nil || !validCount || result.revents&^int16(unix.POLLIN|unix.POLLHUP) != 0 {
+		return 0, fmt.Errorf("%s: %w", result.refusal("trace/pidfd"), errors.Join(ErrExecutionEpochOne, result.syscallErr, result.contextErr))
 	}
-	return polls[0].Revents, nil
+	return result.revents, nil
 }
 
 // Only genuine held resource admission can issue this owner. It neither owns
@@ -166,11 +179,13 @@ type linuxEpochTraceLeader struct {
 	parentBirth        string
 	verified           bool // Initial inherited/exec image checked before continuation.
 	termSent, killSent bool
+	exiting            bool
 }
 type linuxEpochTraceTask struct {
-	original linuxEpochTraceIdentity
-	initial  bool
-	leader   *linuxEpochTraceLeader
+	original   linuxEpochTraceIdentity
+	initial    bool
+	reconciled bool // Current dying-group stop; no recovered creation history.
+	leader     *linuxEpochTraceLeader
 }
 type linuxEpochTraceEvent struct {
 	tid, group, event int
@@ -201,6 +216,7 @@ type linuxEpochTraceRoot struct {
 	observerReady, observerDone, exited    chan struct{}
 	exitSeen, stopping, graceful, unknown  bool
 	observerJoined                         bool
+	detached                               map[int]linuxEpochTraceIdentity // Witnessed EXIT, bounded current records.
 	pending                                map[int]*linuxEpochTraceLeader
 	stopCallback                           func() bool
 	callbackDone                           chan struct{}

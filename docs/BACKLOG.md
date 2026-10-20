@@ -4669,6 +4669,76 @@ remain retained, including the unattributed first constructor failure. This is
 not the full operational native qualification: actual current-source full
 composition still precedes merge/parent closure. PR #156 remains draft.
 
+
+Exact `67434d94` then passed all three protected reference comparisons and fresh
+memory admission (9,394,249,728 available / 8,498,782,208 required bytes), but its
+full native attempt stopped in author A after 1,280.725s. The first refusal is
+controller `classify/live-before`; poll count, event mask and errno were not
+recorded, so EINTR remains unproved. The author subsequently had a genuine
+SIGKILL Wait, root join and empty session; no completed response or server
+launch follows. The [failure record](../spike/t42h2r/live-borrow-controller-poll-failure-linux-20261020.json)
+retains exact raw/source bytes and the failed fixture. A narrow same-pidfd,
+same-context EINTR retry and numeric private diagnostics require bounded real
+kernel controls, independent review and fresh full acceptance. Every other
+readiness/image/deadline predicate stays strict. No unchanged retry, merge or
+parent closure follows from the earlier bounded passes.
+
+The next bounded correction prefix passed 52 nodes, including actual classifier
+and close-reuse controls, then failed its Git-parent genuine root Wait. The
+application Git Wait0/ACK completed, but the leader remained Z with one still
+traced/stopped nonleader in its TGID. The [bounded failure record](../spike/t42h2r/event-trace-v4-git-parent-failure-linux-20261020.json)
+separates those current observations from missing creation history and from
+outer timeout/absence. The Go-parent control passed; no broad race or later gate
+ran. Thread-group closure still needs a source-owned correction and review.
+
+Prospective private policy v5 restricts late current nonleader custody to an
+original unreaped, identity-bound dying TGID with the same actor tracer, parent,
+SID and namespace. A bounded task census and current held-image checks precede
+any owned-stop continuation. It recovers no missing creation history and adopts
+no unknown process leader. The existing sampler gate spans dying-group drain
+through actual terminal CLD; a Z leader with live siblings still has no zero-RSS
+exemption. Actual root Wait status, global TID/process bounds and two-second
+refusal stay exact. A real omitted-registration kernel control, independent
+review, complete affected gates and full composition remain required.
+The first real v5 control reached partial-Z refusal and actual group terminal
+evidence, then failed a transient active-map assertion before root Wait. Its
+exact failed prefix is retained. The corrected test observes the actual bounded
+stop event and current EXIT witness/active task; missing mechanical coverage
+still fails, while proven terminal custody proceeds to genuine Wait/HUP/DA
+cleanup. Neither the outer timeout nor current absence proves those joins.
+An explicit native-only fixed Python/ctypes two-thread control must also
+exercise the real delivery-stop/SIGKILL continuation through the production
+wrapper and require actual SIGKILL Wait/HUP/session/DA closure. It adds no
+production interpreter admission; the separate Go control still requires
+natural Wait0. Both actual stop kinds and full composition remain mandatory.
+A subsequent final prefix passed 110 normal nodes but failed the Go-parent
+race case on its unchanged 12-second context; 108 race nodes passed, two failed.
+Its missing sample/actor timing prevents attributing the cause. Source review
+separately found polling tracer gate acquisition can miss repeated sampler
+handoffs. Queue the actor within the existing two-second turn budget, preserve
+all ownership/observer ordering, and keep the fixture cadence/deadlines exact.
+Gate timeout cancels qualification without inventing kernel death or releasing
+loans. Complete current-source gates and full composition remain open.
+Queued-gate controls passed eight normal/eight race nodes; the unchanged
+stress prefix then retained a concrete EINTR at its trace live-parent pidfd
+poll and failed the second Git-parent case. That evidence does not attribute
+older refusals. Contextual trace polls must share the same-fd/same-context
+EINTR continuation, while existing no-context cleanup loops discard only that
+interrupted attempt and wait on their existing tick before a new real poll.
+Other errors/readiness checks stay strict; no deadline, timer or credit is
+added. Fresh controls, unchanged stress and full qualification remain open.
+
+The shared-poll/gate correction now passes eleven normal/race controls and
+three unchanged real Go/Git repetitions per mode, followed by 121 affected
+normal and 121 race nodes and two native controls in each mode, without skips.
+The sole final source delta is two explanatory lint comments on deliberate
+nil-context tests; independent review verifies byte-identical functional carry.
+Fresh tagged lint/vet, docs/glossary/whitespace and the three other supported
+64-bit compile-only targets pass. The [v5 bounded record](../spike/t42h2r/event-trace-v5-bounded-linux-20261020.json)
+retains every failed prefix and current source binding. This completes bounded
+mechanical qualification only. Current-source full native composition remains
+the merge gate for draft #156; parent H2/readiness/freeze remain open.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

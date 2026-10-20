@@ -1,0 +1,265 @@
+{
+  "schema": "t42-linux-live-borrow-controller-poll-refusal-v1",
+  "source_commit": "67434d94138340a66a1245b150be759b7d4b578e",
+  "raw_root": "/home/ben/phebs-rehearsals/t42h2rcc-v4-full-native-xmf3bsa3",
+  "actual_tool_session": 19016,
+  "actual_tool_exit": 1,
+  "wrapper": {
+    "source_commit": "67434d94138340a66a1245b150be759b7d4b578e",
+    "pid": 845859,
+    "actual_wait_exit_code": 1,
+    "sampled_session_members_after_wait": [],
+    "elapsed_seconds": 1280.7253773989942,
+    "available_after": 129077886976,
+    "complete_child_history": "not established by wrapper SID observation",
+    "status": "terminal wrapper returned; internal custody depends on actual test evidence"
+  },
+  "native_driver": {
+    "path": "/home/ben/phebs-rehearsals/t42h2rcc-v4-native-preparation-_7t7xbeb/driver/native-driver.test",
+    "source_commit": "67434d94138340a66a1245b150be759b7d4b578e",
+    "sha256": "0b64a51d934d30187f5cb8ff20cd517820b67ed2e589f25d71b545e76b861745",
+    "bytes": 89735936
+  },
+  "source_archive": {
+    "retained_path": "failed-source-67434d94.tar.gz",
+    "decompressed_sha256": "485e9a7dc0d33d045f3a72efef53b9e36491c552fa1aaecc9d196fd12274d2bd",
+    "decompressed_bytes": 170792960,
+    "compressed_bytes": 67321226,
+    "initial_audit_sha256": "c7882ae1c68034c8bc0455f5a0c0914f0a8927424e63413e71186add480ba098"
+  },
+  "initial_memory": {
+    "physical_bytes": 15991848960,
+    "available_bytes": 9394249728,
+    "payload_bytes": 2056331264,
+    "required_bytes": 8498782208,
+    "whole_rss_limit_bytes": 4294967296,
+    "admitted": true
+  },
+  "reference_comparisons": [
+    {
+      "role": "t422-author",
+      "sha256": "de70684b3ed530d1e8c7cfdfafb030191e5b3d783f35a0c699c1826201fede44",
+      "pid": 854221,
+      "actual_wait_joined": true,
+      "session_empty": true
+    },
+    {
+      "role": "phebs",
+      "sha256": "ce41ab79c53c5a5d5e7af6d7c3b4b7947d2f2f3317f6d553e2a22d4ecffbd15d",
+      "pid": 857856,
+      "actual_wait_joined": true,
+      "session_empty": true
+    },
+    {
+      "role": "zoekt-git-index",
+      "sha256": "002edf2036ad86011376b86d8f82fc5ab4e9ec918f3f05766f42646761219793",
+      "pid": 861715,
+      "actual_wait_joined": true,
+      "session_empty": true
+    }
+  ],
+  "fixed_failure_step": "author-a",
+  "first_private_resource_refusal": "classify/live-before PID=845859 parent=845841 birth=\"6180522\" name=\"native-driver.t\" RSS=118280192",
+  "resource_checks": 182,
+  "poll_count_errno_and_revents": "not recorded; original syscall result unestablished",
+  "eintr_attribution": "plausible only; not established by retained evidence",
+  "trace_failure_snapshot_available": false,
+  "actual_author": {
+    "pid": 865622,
+    "started": true,
+    "completed_response": false,
+    "joined": true,
+    "session_empty": true,
+    "stage": "response",
+    "first_refusal": "response-read-error",
+    "actual_wait_observed": true,
+    "actual_wait_failed": true,
+    "process_state_observed": true,
+    "exit_code": -1,
+    "signal": 9
+  },
+  "actual_server_sessions": [
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "failed_fixture_retained": "/home/ben/phebs-rehearsals/t42h2rcc-v4-full-native-xmf3bsa3/tmp/phebs-linux-live-epochs-2300248665",
+  "limits": "No full composed acceptance, parent H2 closure, readiness, freeze or complete short-lived child history. Author SIGKILL followed resource cancellation and does not identify the first classifier cause. Fixture and source bytes retained; no unchanged retry.",
+  "prospective_correction": "Record poll count/revents/numeric errno; retry only EINTR on same descriptor within same context/deadline, with all identity/image/readiness fences unchanged. Trace poll helper remains strict. Bounded real-pidfd controls, exact qualification and fresh full native acceptance remain required.",
+  "raw_control_files": [
+    {
+      "name": "run.py",
+      "bytes": 5060,
+      "sha256": "07506315cc5777f75644a33a3e17982abb1acdccc503509dd983d46acac07eee"
+    },
+    {
+      "name": "invocation.json",
+      "bytes": 5507,
+      "sha256": "073869e48014eb7a57ef26ed83b5c9cf79863ab624cfb71e92c7950c8a465ca1"
+    },
+    {
+      "name": "native.stdout",
+      "bytes": 12237,
+      "sha256": "7ae1b3817fdbdd9f4e795867e785aab0dce7879f875328bb99fa1f824f00d569"
+    },
+    {
+      "name": "native.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "result.json",
+      "bytes": 398,
+      "sha256": "0574664f5ce809ea095b822a72f01610192d1947373af55207e1a8ec46219370"
+    },
+    {
+      "name": "terminal-audit-initial.json",
+      "bytes": 1350,
+      "sha256": "c7882ae1c68034c8bc0455f5a0c0914f0a8927424e63413e71186add480ba098"
+    },
+    {
+      "name": "terminal-audit.json",
+      "bytes": 1805,
+      "sha256": "336eb70823752c4b7adb87e34eb7ad988f42e9c81de637fdccbc2d500338fa9c"
+    },
+    {
+      "name": "failed-source-67434d94.tar.gz",
+      "bytes": 67321226,
+      "sha256": "1bd4bc97da02267aef9ab93942c050aa417f99b2687f7fcb718af17f4c3284e2"
+    }
+  ],
+  "source_binding": [
+    {
+      "path": "PLAN.md",
+      "bytes": 3014454,
+      "sha256": "69ebba7d4b3b2126c9278fa4e5480de74b11120e4a4b4ae92ddfcdd82d4ed77a"
+    },
+    {
+      "path": "docs/BACKLOG.md",
+      "bytes": 1591687,
+      "sha256": "004eb4f7e2a4258087bc75d9a9f564b1ab3567e2968080b98c997f51d54b1a77"
+    },
+    {
+      "path": "docs/ROADMAP.md",
+      "bytes": 410594,
+      "sha256": "9f5774c17cf7590735507b861c6eefdeeaa8d3b03b3e59c31ccd38812260c4da"
+    },
+    {
+      "path": "docs/guides/OPERATIONS.md",
+      "bytes": 650326,
+      "sha256": "bd3445644e2bbebc11e749e88780651582f3290d45262c62ab21649fd7fda809"
+    },
+    {
+      "path": "go.mod",
+      "bytes": 9366,
+      "sha256": "424c7e1038c71c10676fc3bad01e155ebc5f912a4eea65e90c284b30951a9275"
+    },
+    {
+      "path": "go.sum",
+      "bytes": 99030,
+      "sha256": "d7aa72d0c2c4283125d37d4377e74be0e87723735a27015900d23092798b1665"
+    },
+    {
+      "path": "spike/t421/author_custody_run_linux.go",
+      "bytes": 18983,
+      "sha256": "27f8cec1f69c4b8415efcc066f457316726b47957a5dd1fb6bd14b5507f72231"
+    },
+    {
+      "path": "spike/t421/author_launch_linux.go",
+      "bytes": 2605,
+      "sha256": "3c66f100ef45b8f232f9ddf0a17371e32b63b82c894a360a748402506d644047"
+    },
+    {
+      "path": "spike/t421/epoch_classifier_linux.go",
+      "bytes": 6433,
+      "sha256": "bbb9ff3c0e1e3ec7fae2ab5011de3dea8450634d7ef042b47accc6c5f2575cd9"
+    },
+    {
+      "path": "spike/t421/epoch_coordinator_linux.go",
+      "bytes": 9366,
+      "sha256": "6ec6650c9b63360050be87e97760ff0b82ff1126c84d56958fc0eba229d951a6"
+    },
+    {
+      "path": "spike/t421/epoch_flow_linux.go",
+      "bytes": 16010,
+      "sha256": "7f4c4368575effb08fc67f643973d280f8766960a13798656adf7c1b1d84969e"
+    },
+    {
+      "path": "spike/t421/epoch_flow_native_linux_test.go",
+      "bytes": 19813,
+      "sha256": "bc44250a493a5acba55d6ef0d173f94650d78ca827c398e2bde6d6b269a0b5f6"
+    },
+    {
+      "path": "spike/t421/epoch_launch.go",
+      "bytes": 65198,
+      "sha256": "d5e360fbb3b6ab155aab82a87a7fcd5b1bea5d290e3dcc8daef63ce7317791b0"
+    },
+    {
+      "path": "spike/t421/epoch_native_adapter.go",
+      "bytes": 1115,
+      "sha256": "e0c53cf4f54d8ad85d4238bfa9a6fa93bed98ba00b37d365aa9e4b94a25c7c07"
+    },
+    {
+      "path": "spike/t421/epoch_server_linux.go",
+      "bytes": 4313,
+      "sha256": "b0a641adf4fd9c7ff7abc3d922a90c7ecc6f4da3879f7951d8146020e1a251e5"
+    },
+    {
+      "path": "spike/t421/epoch_trace_actor_linux.go",
+      "bytes": 10314,
+      "sha256": "11990c9cee13f9a3f29d7a3810ada2c93ed8321d51df5e4c97c60eb83a4eaf90"
+    },
+    {
+      "path": "spike/t421/epoch_trace_census_linux.go",
+      "bytes": 1842,
+      "sha256": "7104d7b8f355a3722a55537347b1e276f9128491006bc7a6a10d8b77d88d9ce8"
+    },
+    {
+      "path": "spike/t421/epoch_trace_census_linux_test.go",
+      "bytes": 6725,
+      "sha256": "0ad5c2c7747e6991fd2419b64adeaa6d030c042cd3ed047ca990e11990371b60"
+    },
+    {
+      "path": "spike/t421/epoch_trace_events_linux.go",
+      "bytes": 16311,
+      "sha256": "8b75cda4d4131bf24d9abbbb168c7f4976a74ddffdce72873c9c89ff717a83e7"
+    },
+    {
+      "path": "spike/t421/epoch_trace_fixture_linux_test.go",
+      "bytes": 7028,
+      "sha256": "f0372e8278d3260e678042d1df80369f7742e4fc8ace147e1944f4f79408bcf9"
+    },
+    {
+      "path": "spike/t421/epoch_trace_initial_linux.go",
+      "bytes": 2293,
+      "sha256": "bde4b14ee7f46fbfda85759947b5c20a5900bcb90fd5589d6f9d84ab475a3eab"
+    },
+    {
+      "path": "spike/t421/epoch_trace_linux.go",
+      "bytes": 11799,
+      "sha256": "07081ba0b79391b2070a68bf2771de499b0503d18d17916f16343e60b358d5af"
+    },
+    {
+      "path": "spike/t421/epoch_trace_linux_test.go",
+      "bytes": 15939,
+      "sha256": "7ea18a1ff3130e47fffd246bfa0a2790bd1336d9a8bc105cdf71886226738a39"
+    },
+    {
+      "path": "spike/t421/epoch_trace_proof_linux.go",
+      "bytes": 4463,
+      "sha256": "0694c158306f5a6e4e30c8e77699f6bb790d7bb6519c6cf54910fd333baea8e9"
+    },
+    {
+      "path": "spike/t421/linux_epoch_resource_policy.go",
+      "bytes": 17619,
+      "sha256": "b44d17fd367206b54303c72230d09bcd18017c31323fb3f40c6e03956987603c"
+    },
+    {
+      "path": "spike/t421/linux_epoch_resource_policy_test.go",
+      "bytes": 13014,
+      "sha256": "2b983fdb24026909ca534fafb5c868ed45b3c3c8c955f6f76ec98572b10cb2c9"
+    }
+  ]
+}

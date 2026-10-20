@@ -54,19 +54,23 @@ func (root *linuxEpochTraceRoot) cleanupInitial() {
 		}
 		terminal, err := linuxEpochTraceWait(pid, unix.WEXITED|unix.WNOWAIT)
 		if err == nil && terminal.terminal(pid) {
-			mask, e := linuxEpochTracePoll(root.pidfd)
-			if e == nil && mask&unix.POLLIN != 0 && mask&unix.POLLHUP == 0 {
-				if !root.exitSeen {
-					root.exitSeen = true
-					close(root.exited)
+			mask, e := linuxEpochTracePollOnce(root.pidfd)
+			if !errors.Is(e, unix.EINTR) {
+				if e == nil && mask&unix.POLLIN != 0 && mask&unix.POLLHUP == 0 {
+					if !root.exitSeen {
+						root.exitSeen = true
+						close(root.exited)
+					}
+					root.waitRoot(true)
+					return
 				}
-				root.waitRoot(true)
-				return
+				root.refuse("initial-cleanup-pidfd")
+				for {
+					<-ticker.C
+				}
 			}
-			root.refuse("initial-cleanup-pidfd")
-			for {
-				<-ticker.C
-			}
+			// An interrupted attempt asserts no readiness and consumes no
+			// terminal status. Recheck only after the existing wake/tick.
 		}
 		if err != nil && !errors.Is(err, unix.EINTR) {
 			root.refuse("initial-cleanup-terminal")

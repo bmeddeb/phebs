@@ -15780,3 +15780,234 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   prefixes and the unattributed first constructor refusal remain exact.
   These tests grant no operational host/image admission. Full current-source
   native composition still precedes merge, parent H2 closure and readiness.
+
+
+- **2026-10-20 — T42.H2r.c.c retained controller-poll refusal.**
+  Exact `67434d94` passed all three independent protected reference comparisons
+  and fresh v4 memory admission: 9,394,249,728 available bytes against
+  8,498,782,208 required, including 2,056,331,264 payload bytes. Its full native
+  attempt stopped in author A after 1,280.725 seconds. The first resource
+  refusal is `classify/live-before` for the live controller, not a trace-failure
+  snapshot or an RSS excess. The classifier collapsed syscall error, count and
+  event mask; their actual values were not retained. EINTR is plausible but is
+  not established. The genuine author Wait subsequently reported SIGKILL with
+  actual root join and empty session; no completed author response or server
+  launch follows. Keep the exact failed fixture and compressed source archive.
+  The record is
+  `spike/t42h2r/live-borrow-controller-poll-failure-linux-20261020.json`.
+
+  Prospectively retain numeric poll count, event mask and errno in private
+  first-refusal diagnostics. Retry only EINTR on the same pidfd under the same
+  context and unchanged two-second probe deadline; reset the poll fields and
+  check that context before each syscall and after success. Retry no census,
+  source identity or executable-image observation. Readiness, invalid objects,
+  other errors and unavailable context still refuse. The separate trace poll
+  helper remains strict on interruption; this change claims no generic syscall
+  robustness or recovered original errno. Normal observations add context checks;
+  an interruption adds only another zero-timeout poll within that same budget.
+  Initial gauge construction uses the existing two-second cooperative probe
+  limit even when its flow-lifetime caller has no deadline; it adds one child
+  context/timer at construction, clipped by any earlier caller deadline. The
+  long-lived meter keeps its original parent context. Existing sampled turns
+  keep their same probe context; no per-tick timer is added by this correction.
+  No new lock, persistent state, child, hash, payload credit, RSS bound, ordinary
+  product request, sync, startup, retry/no-op or publication cost is introduced.
+  Real live/dead/closed pidfd and deadline controls, exact bounded
+  qualification, independent review and a fresh full composed native pass remain
+  mandatory before integration, parent H2 closure or readiness.
+
+  A separate source review found a latent descriptor-retirement error path:
+  after a failed pending-child close, later turns could poll or close that same
+  numeric slot again. It is not established as this run's cause. Disarm the
+  original capability before the close and retain its pending actor/loans on
+  error; later retirement refuses before any native use of the retired integer.
+  A real descriptor-reuse control checks both successful and failed first closes
+  without overwriting an occupied foreign slot. Successful retirement adds only
+  one private integer assignment and guard; no lock, census, cache, schema or
+  ordinary product cost changes. The original failed prefix stays unchanged.
+
+  The next four-Go-file bounded correction prefix passed 52 completed nodes,
+  including real classifier pidfd/Wait and close-reuse controls, then its
+  Git-parent trace control failed to reach genuine root Wait. The Go-parent
+  control passed genuine application Wait17/root Wait0. The Git child had
+  genuine application Wait0 and consumed its ACK, but root875192 later remained
+  Z with nonleader875207 still traced/stopped in the same TGID. Selected native
+  facts survive in the tool transcript and a transcribed record, not retained
+  raw proc files; the post-terminal observation found those PIDs absent and
+  proves no internal join. The actor's first snapshot retained only one task;
+  its recent-event ring is physical circular storage, not a chronological array.
+  A suppressed clone notification is not established. The 90.061s test timeout
+  and 197.521s wrapper result are retained at
+  `spike/t42h2r/event-trace-v4-git-parent-failure-linux-20261020.json`. No race or
+  later gate ran. Original v4 receipt/source bytes remain exact. Exact bounded
+  qualification and any prospective thread-group reconciliation remain open.
+
+
+- **2026-10-20 — T42.H2r.c.c prospective v5 dying-group custody.**
+  Retain the failed v4 prefix; no missing creation notification is retroactively
+  inferred. Permit only late current NONLEADER custody inside an already-owned
+  dying process group, after registered sibling tasks have drained. The original
+  process leader stays reserved by its original unreaped pidfd and exact
+  birth/real-parent/SID/pid-namespace/tracer binding. A bounded census of that
+  TGID's own task directory must refuse unknown process leaders, other TGIDs,
+  other tracers, untraced tasks or unavailable identities. Bracket each missing
+  nonleader's current birth/name and group binding, and check its actual allowed
+  held executable/mm before publishing custody or continuing its owned stop.
+  This proves current cleanup authority only, not the clone event, original
+  creation instant, earlier executable image or complete task history.
+
+  Keep the existing probe gate across the dying leader's exit through actual
+  whole-group terminal CLD. An observed Z leader with a live sibling supplies no
+  zero-RSS category. Service proven late nonleaders only to drain the dying
+  group; their real stop and actual terminal handling remain mandatory. Preserve
+  the genuine root Wait status exactly: a SIGKILL or accounting error cannot be
+  normalized into natural Wait0. Existing raw terminal-copy/real-parent reap,
+  original-SID drain, DA/SA settlement, observer/callback/notifier and sole root
+  Handle.Wait joins still precede loan release. Unknown groups retain ownership.
+  A slow transition still exceeds the existing two-second cooperative sampler
+  budget and refuses; no blackout, added grace, higher memory bound or payload
+  credit is selected. All v1–v4 source/policy/receipt bytes remain exact.
+
+  Bound current task-directory work by the existing global 1,024-TID limit and
+  overflow sentinel. A witnessed nonleader EXIT-detach transfers its existing
+  global TID reservation to current bounded metadata until absence, new birth or
+  actual group CLD retires it. These witnesses grant no signal, continuation or
+  reattach authority and form no cumulative history. Each turn can read at most
+  1,024 retained-witness stat records of at most 4 KiB. Dying-leader sibling
+  selection costs O(registered leaders × registered tasks), with bounds 128 and
+  1,024; group-directory entries across that turn share a 1,024-entry budget plus
+  overflow sentinel. Initial adoption checks the actual held mm twice, and later
+  owned stops repeat current metadata/image checks. This extends existing
+  probe-gate contention during exit. It adds one per-leader Boolean, one
+  per-task Boolean and bounded current-witness map/identity backing; all remain
+  charged to the same 4-GiB controller RSS. No new timer, absolute group-duration
+  promise, host task discovery, syscall tracing, corpus/payload hashing, process
+  pidfd, worker or goroutine is introduced. Existing fixed-policy JSON/hash calls
+  now process the larger v5 contract; there are no new policy-hash call sites or
+  payload scans. Existing two-second sampling attempts, next-tick scheduling and
+  cooperative syscall semantics stay exact; cleanup can still retain unknown
+  custody longer. There is no ordinary request/sync/publication/cache/schema
+  change. A deterministic own-Go kernel control must withhold one actual
+  attached nonleader registration, prove the Z/stopped-sibling boundary, then
+  require genuine natural root DA Wait0 and empty-session/owner closure through
+  this path. Refusal controls and independent source/cost review precede exact
+  bounded normal/race/lint/vet/docs/glossary/platform gates and another full
+  current-source composition. This is implementation authority, not native
+  qualification, parent H2/readiness/freeze completion or ceremony execution.
+
+  The first real v5 control reached the required partial-Z refusal and later
+  actual group terminal evidence, but its transient active-map assertion failed
+  before genuine root Wait. The 90-second outer timeout and failed source/raw
+  prefix remain retained. A test-only correction observes the actual bounded
+  stop-event delta and its current EXIT witness or active reconciled slot,
+  records the exercised stop kind, and still fails missing branch coverage.
+  Once actual terminal custody is proved, coverage assertions no longer prevent
+  the sole genuine Wait/HUP/DA cleanup. Exact natural Wait0 remains mandatory;
+  the failed prefix supplies no root Wait, HUP or settlement result.
+
+  Qualify the other real cleanup branch with a fixed, explicit native-only
+  Python/ctypes control on this host. Hold its actual installed interpreter
+  image only as mechanical fixture identity, never as production tool admission.
+  Require actual original-main-TID equality and exactly two current threads;
+  retain the worker's real SIGUSR1 delivery stop while the original main thread
+  exits through pthread_exit. The resulting bound Z/nonterminal-pidfd group
+  must pass the production wrapper's no-registered-siblings gate and consume
+  the actual stop before CONT(SIGKILL). Require the original genuine Wait to
+  report SIGKILL, plus HUP, session drain and DA/owner closure; it cannot be
+  normalized into natural Wait0. The separate Go control keeps its natural
+  Wait0 oracle. The interpreter/stdlib dependency exists only under the explicit
+  Linux native test tag, adds no production dependency or compiler procurement,
+  and neither fixture establishes earlier creation/executable history. Both
+  controls and their exercised stop kinds precede complete exact-source gates.
+
+  A later exact-source bounded prefix passed all 110 normal nodes but refused
+  the Go-parent race case when its original 12-second context expired during
+  Sample after construction succeeded. The 108 race passes and two failure
+  nodes, empty first-refusal snapshot and empty fixture output are retained.
+  Sample count, current actor state and syscall durations were not captured;
+  neither tracer starvation nor a specific slow native call is established.
+  The separate signal control passed normal/race with actual event0/SIGKILL
+  Wait/HUP/session/DA closure; those passes do not qualify the failed suite.
+
+  Source review independently identifies an unfair handoff opportunity: the
+  tracer tries the gate nonblockingly and waits for a coalesced wake or 50-ms
+  fallback, while a sampler can queue and reacquire repeatedly. Queue each
+  unowned actor acquisition under the existing two-second turn context,
+  including the wait and subsequent native work in that same budget. Bound
+  pre-Start acquisition by the same existing timeout clipped to its caller;
+  a failed acquisition starts no child. Preserve pre/post context checks and
+  existing pending-HUP/dying-group gate ownership. A gate timeout latches
+  refusal/cancellation but does not invent unknown kernel state or release
+  custody; later bounded turns still service retained cleanup. Observer join
+  remains outside the gate; use the next normal queued turn and its one context
+  for the final fresh session proof. Do not lengthen the 12-second fixture,
+  its 10-ms concurrent-census cadence, the two-second production probe or the
+  50-ms fallback. Queuing removes the polling handoff race, not Go scheduling
+  latency or native-syscall uncertainty, and adds no completion-time promise.
+
+  Move the existing per-turn context/timer before acquisition rather than add
+  a second wait-plus-work budget. Initial acquisition adds one clipped context
+  while replacing repeated sleep timers; final proof uses a later ordinary
+  turn rather than a nested extra context. At most two existing actors can
+  queue, with no owner/gauge mutex held while waiting. Stop/grace wakes may
+  remain buffered during the existing two-second cooperative acquisition
+  budget. There is no new channel, goroutine, child, pidfd, corpus read/hash,
+  payload credit, memory allowance or ordinary query/sync/publication cost.
+  The fixed-policy JSON/hash grows at its existing call sites. Gate deadline,
+  cancellation, ownership and actual contender-handoff controls plus unchanged
+  real Go/Git concurrent-census normal/race gates precede qualification.
+
+  Queued-gate mechanics passed eight normal and eight race nodes. The unchanged
+  Go/Git stress prefix then stopped in its second Git-parent case: 595 completed
+  samples, no application report by the same 12-second deadline, and a retained
+  first trace refusal in group reconciliation. Its named leader/live-pidfd path
+  returned EINTR. The error-path mask zero is not a successful live observation.
+  The failed source/raw prefix and 90-second outer retention timeout remain
+  exact; no original natural root Wait or completed stress-race result follows.
+  This concrete interrupted trace poll does not retroactively identify the
+  earlier full-native controller refusal or the earlier race timeout.
+
+  Use the existing shared zero-timeout pidfd syscall-result/continuation
+  mechanism for contextual trace polls as well as classification. Retry only
+  EINTR on the same still-owned descriptor and same existing turn/probe context,
+  recreating the PollFd each attempt; never restart the deadline or accept an
+  interrupted mask. Thread that context through live-parent/leader, terminal,
+  group, retirement and signal checks. Keep every other errno, invalid/result
+  count, POLLERR/NVAL, readiness and identity/image fence strict. Successful
+  readiness/HUP still requires an actual successful poll. The two existing
+  no-context cleanup loops perform one real strict poll per existing attempt: a
+  pure EINTR discards that attempt and reaches the existing wake/tick before a
+  new real poll. Initial cleanup rechecks its unconsumed actual CLD; the sole
+  Wait watcher retains its original descriptor/gate/loans until real HUP. These
+  are already retained cleanup, not extra validation time or success on refusal.
+  Other failures remain sticky. The whole sampler's two-second blocked-gate
+  refusal, 50-ms fallback and genuine Wait/transport/observer joins are unchanged.
+
+  This shared correction adds context checks and bounded numeric poll refusal
+  detail, and one immediate fresh zero-timeout poll per EINTR in a contextual
+  attempt. Normal successful polls remain one syscall; no per-poll timer, new
+  context, worker, channel, descriptor, full-source read/hash, payload credit or
+  ordinary product cost is added. Cleanup interruption uses its existing
+  wake/ticker instead of an inner unbounded retry. Real live/unreaped/reaped
+  pidfds, invalid/closed descriptors, actual cancellation/deadline, and a lower
+  EINTR-result seam followed by a real same-fd poll must qualify the shared
+  mechanism before unchanged stress and complete source gates resume.
+
+  The corrected shared-poll/gate controls passed eleven normal and eleven race
+  nodes, followed by three unchanged real Go/Git repetitions in each mode
+  (nine nodes per mode), with genuine original Wait/HUP/DA closure. The complete
+  affected suite passed 121 normal and 121 race nodes, with both explicit native
+  controls passing normal/race; there were no skips. Lint then refused the two
+  deliberate nil-context negative tests. Exactly two explanatory test-only
+  lint comments were added; removing them restores the archived exact bytes,
+  with every other source unchanged. Independent review accepts that functional
+  carry and retains the failed lint prefix. Fresh tagged lint/vet,
+  documentation/glossary/whitespace and all three other supported 64-bit
+  compile-only targets pass. The source-bound record is
+  `spike/t42h2r/event-trace-v5-bounded-linux-20261020.json`. The source-derived
+  private policy digest is
+  `9a0a41e8476adbd9ce58352a1e38d4d7b059820bbcc1816b327f5c68bda9d554`;
+  fresh native runtime output must agree. These are bounded mechanics, with
+  source/cost review clean. Full current-source composition still precedes
+  integration; H2 consumer/executor, pressure/restore, readiness and fresh
+  freeze remain open. No ceremony execution or scale result follows.

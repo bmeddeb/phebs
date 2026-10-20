@@ -305,6 +305,47 @@ review. The [bounded record](../spike/t42h2r/event-trace-v4-bounded-linux-202610
 retains earlier failures and the original memory/deadline gates. Full composed
 native acceptance remains open in draft #156; H2/readiness/freeze do not advance.
 
+The actual `67434d94` full composition then stopped at author A after protected
+rebuilds and fresh memory admission passed. Its first refusal is a controller
+pidfd live-before check; the original poll count/mask/errno are unavailable and
+EINTR remains unproved. Actual author Wait/join/session closure was recorded;
+no server launched. The [failure record](../spike/t42h2r/live-borrow-controller-poll-failure-linux-20261020.json)
+retains the exact fixture and source archive. PR #156 is draft with a failed
+local native status; narrow diagnostic/interruption handling and fresh complete
+qualification remain pending.
+
+That correction prefix passed its actual classifier/close-reuse controls, but
+its bounded Git-parent trace failed root Wait with a Z leader and still-traced
+nonleader. The [record](../spike/t42h2r/event-trace-v4-git-parent-failure-linux-20261020.json)
+retains the exact failed prefix; race/later gates remain unrun. No full native
+or integration advance follows.
+The first v5 mechanical control reached partial-Z refusal and actual group
+terminal evidence, but failed its transient-map assertion before genuine root
+Wait. A test-only observation correction retains that failed prefix and the
+exact Wait0 oracle; bounded qualification and full composition remain open.
+The distinct delivery-stop continuation needs an explicit native-only fixed
+two-thread interpreter control and actual SIGKILL Wait/joins, preserving the
+separate Go natural-Wait0 check and all production admission boundaries.
+The final prefix then passed normal but failed its unchanged Go-parent race
+context. Its cause remains unproved. Source-owned queued gate acquisition
+removes a separately identified polling handoff gap within the same existing
+two-second turn budget; cadence, strict predicates and real joins stay exact.
+No complete affected-gate or full-composition pass follows yet.
+The next stress prefix captured a concrete interrupted trace pidfd poll after
+queued-gate controls passed. Share bounded same-context EINTR continuation for
+normal trace work; existing cleanup loops discard only that interrupted attempt
+and reach their existing wake/tick. Earlier causes stay unproved, all other
+fences stay strict, and source qualification remains pending.
+
+The corrected v5 bounded mechanics now pass 121 normal and 121 race nodes,
+two native controls per mode, three unchanged Go/Git repetitions per mode,
+tagged lint/vet, docs/glossary/whitespace and supported 64-bit compilation,
+with no skips and clean source/cost review. Two explicit negative-test lint
+comments are the independently verified functional carry; the earlier lint
+failure remains retained. The [v5 record](../spike/t42h2r/event-trace-v5-bounded-linux-20261020.json)
+binds these results. Fresh exact-source full native composition remains open;
+PR #156 and parent H2/readiness/freeze do not advance from bounded tests alone.
+
 Production artifact/signature/publication closure for T47.5, T49.4, T50.3,
 T51.3, T52.3 and T54.3 remains pending the existing unavailable production key
 and the exact owning production decision. Scoped results and unsigned drafts

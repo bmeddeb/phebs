@@ -191,11 +191,12 @@ func TestLinuxEpochTraceGoAndGitGenuineWaits(t *testing.T) {
 			defer cancel()
 			var report linuxEpochTraceFixtureReport
 			samples := 0
+			sampleStarted := time.Now()
 			for {
 				select {
 				case root.owner.admission.probeGate <- struct{}{}:
 				case <-ctx.Done():
-					t.Fatal("sample gate", ctx.Err())
+					t.Fatalf("sample gate: root=%d tracer=%d samples=%d elapsed=%v context=%v", root.original.pid, root.tid, samples, time.Since(sampleStarted), ctx.Err())
 				}
 				gauge, _, err := held.gauge(ctx, held.controllerPID, held.controllerStart)
 				constructorFailed := err != nil
@@ -205,10 +206,14 @@ func TestLinuxEpochTraceGoAndGitGenuineWaits(t *testing.T) {
 				<-root.owner.admission.probeGate
 				if err != nil {
 					gaugeRefusal := "constructor-not-returned"
+					var observation ProcessObservation
 					if gauge != nil {
 						gaugeRefusal = gauge.privateRefusal()
+						observation = gauge.Observation()
 					}
-					t.Fatalf("complete concurrent native census/classifier: constructorFailed=%t error=%v resource=%q gauge=%q trace=%+v", constructorFailed, err, held.resources.privateRefusal(), gaugeRefusal, root.owner.failure())
+					// PID/TID are immutable after initial Start publication. Samples
+					// and elapsed are local; both retained diagnostic copies lock.
+					t.Fatalf("complete concurrent native census/classifier: root=%d tracer=%d samples=%d elapsed=%v context=%v constructorFailed=%t error=%v resource=%q gauge=%q observation=%+v trace=%+v", root.original.pid, root.tid, samples, time.Since(sampleStarted), ctx.Err(), constructorFailed, err, held.resources.privateRefusal(), gaugeRefusal, observation, root.owner.failure())
 				}
 				samples++
 				var ready bool
@@ -218,7 +223,7 @@ func TestLinuxEpochTraceGoAndGitGenuineWaits(t *testing.T) {
 				}
 				select {
 				case <-ctx.Done():
-					t.Fatal("fixed genuine-parent report unavailable", ctx.Err())
+					t.Fatalf("fixed genuine-parent report unavailable: root=%d tracer=%d samples=%d elapsed=%v context=%v", root.original.pid, root.tid, samples, time.Since(sampleStarted), ctx.Err())
 				case <-time.After(10 * time.Millisecond):
 				}
 			}
@@ -257,7 +262,7 @@ func TestLinuxEpochTraceGoAndGitGenuineWaits(t *testing.T) {
 				t.Fatal("unregistered original pin accepted")
 			}
 			original := root.owner.leaders[root.original.pid]
-			if original == nil || original.root != root || root.liveLeader(original) != nil {
+			if original == nil || original.root != root || root.liveLeader(ctx, original) != nil {
 				<-root.owner.admission.probeGate
 				t.Fatal("original live ACK handle unavailable")
 			}
@@ -277,7 +282,7 @@ func TestLinuxEpochTraceGoAndGitGenuineWaits(t *testing.T) {
 				_ = unix.Close(ackFD)
 				t.Fatal("genuine root Wait unavailable", ctx.Err())
 			}
-			mask, pe := linuxEpochTracePoll(ackFD)
+			mask, pe := linuxEpochTracePoll(ctx, ackFD)
 			ce := unix.Close(ackFD)
 			if e != nil || pe != nil || ce != nil || mask&unix.POLLHUP == 0 || !root.waitReturned || root.command.ProcessState == nil || root.command.ProcessState.ExitCode() != 0 {
 				t.Fatal("actual root Wait/HUP", e, pe, ce, mask)

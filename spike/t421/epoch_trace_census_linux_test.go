@@ -157,7 +157,7 @@ func TestLinuxEpochTraceFinalCensusRefusesUnknownZombie(t *testing.T) {
 	}
 	second.joined = true
 	outstanding--
-	mask, err := linuxEpochTracePoll(second.fd)
+	mask, err := linuxEpochTracePoll(ctx, second.fd)
 	if err != nil || mask&unix.POLLHUP == 0 {
 		t.Fatal("second original HUP", mask, err)
 	}
@@ -171,7 +171,7 @@ func TestLinuxEpochTraceFinalCensusRefusesUnknownZombie(t *testing.T) {
 	}
 	first.joined = true
 	outstanding--
-	mask, err = linuxEpochTracePoll(first.fd)
+	mask, err = linuxEpochTracePoll(ctx, first.fd)
 	if err != nil || mask&unix.POLLHUP == 0 {
 		t.Fatal("first original HUP", mask, err)
 	}

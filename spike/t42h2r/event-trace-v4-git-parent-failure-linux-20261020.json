@@ -1,0 +1,148 @@
+{
+  "schema": "t42-linux-event-trace-v4-git-parent-refusal-v1",
+  "base_commit": "67434d94138340a66a1245b150be759b7d4b578e",
+  "qualification_source": "uncommitted 4-Go-file correction; full exact source archive retained",
+  "changed_go_source_binding": [
+    {
+      "path": "spike/t421/epoch_classifier_linux.go",
+      "sha256": "7ebd9fed5f3d334e7bb17fd7593506273ef23d1f417618a4df20c35e5bb44800"
+    },
+    {
+      "path": "spike/t421/epoch_classifier_linux_test.go",
+      "sha256": "735b1c780fc424c07242798dda519a6062f0493fc224a0bcd52b31d89e6e912a"
+    },
+    {
+      "path": "spike/t421/epoch_trace_events_linux.go",
+      "sha256": "97543c9ff98b04b918b57a2519a4256f9e7f020625b3f2f2e0855a2ab2c69dbd"
+    },
+    {
+      "path": "spike/t421/epoch_trace_descriptor_linux_test.go",
+      "sha256": "698b5a6fdc378df04831b7900de799ecbf73d655138491eaeb1583aa06e71fbe"
+    }
+  ],
+  "raw_root": "/home/ben/phebs-rehearsals/t42h2rcc-controller-poll-0ab87pwj",
+  "actual_tool_session": 94459,
+  "actual_tool_exit": 1,
+  "wrapper": {
+    "name": "focused-normal",
+    "argv": [
+      "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+      "test",
+      "./spike/t421",
+      "-run",
+      "^Test(LinuxEpoch(Trace|Classifier|PreparationMemory|Joined|UnknownJoin|ControlSettlement|Resource|AuthorPrivate|FiniteExit)|LinuxAuthorShared|LinuxRootWait|ExecutionAuthorShared)",
+      "-count=1",
+      "-timeout=90s",
+      "-v"
+    ],
+    "base_commit": "67434d94138340a66a1245b150be759b7d4b578e",
+    "pid": 868270,
+    "actual_wait_exit_code": 1,
+    "session_members_after_wait": [],
+    "elapsed_seconds": 197.5209482989958,
+    "available_before": 129169797120,
+    "available_after": 129169022976,
+    "source_changed": [],
+    "scope": "bounded affected gates; sampled SID is not complete child history"
+  },
+  "package_elapsed_seconds": 90.061,
+  "completed_pass_nodes": 52,
+  "full_suite_pass": false,
+  "race_and_later_gates": "not run after failure",
+  "first_trace_refusal_stage": "owned-stop",
+  "first_trace_refusal_cause": "signal cancellation liveness check found original group leader Z",
+  "first_snapshot": {
+    "root_pid": 875192,
+    "tracer_tid": 875041,
+    "tasks": 1,
+    "pending": 0,
+    "active_tids": 1,
+    "events": 57
+  },
+  "go_parent_control": {
+    "root_pid": 875176,
+    "application_child_pid": 875186,
+    "application_wait_exit": 17,
+    "concurrent_samples": 53,
+    "trace_events": 85,
+    "actual_root_wait_observed": true
+  },
+  "git_parent_control": {
+    "root_pid": 875192,
+    "application_child_pid": 875206,
+    "application_wait_exit": 0,
+    "ack_consumed": true,
+    "actual_root_wait_observed": false,
+    "trace_unknown_retained_until_outer_deadline": true
+  },
+  "later_current_kernel_observation": {
+    "utc": "2026-10-20 20:26:46 UTC",
+    "state": "Z",
+    "threads": 2,
+    "tracer_tid": 875041,
+    "task_ids": [
+      875192,
+      875207
+    ]
+  },
+  "later_current_stopped_sibling_observation": {
+    "observed_before_test_terminal": true,
+    "pid": 875207,
+    "tgid": 875192,
+    "parent": 875036,
+    "tracer_tid": 875041,
+    "birth": "6386758",
+    "state": "t",
+    "rss_kib": 57380
+  },
+  "native_observation_limit": "Selected facts transcribed from successful tool outputs, not retained raw proc bytes; after-terminal raw observation found all selected PIDs absent. Neither is genuine root Wait proof.",
+  "ring_order": "Physical fixed ring; chronological head is Events%32. Do not read physical array as chronological.",
+  "scope_limits": "Mechanical own-image/host-Git control only, no genuine runtime admission. A missing clone-notification mechanism remains a hypothesis. No actual root Wait inferred from outer timeout, EXITKILL or later absent PID. This is distinct from the prior full-native controller-poll refusal.",
+  "raw_control_files": [
+    {
+      "name": "run.py",
+      "bytes": 4195,
+      "sha256": "5ed31ae85c3aade31c76d8809bd4eaa3ec77f2658d6ea02685892fe25d1de67e"
+    },
+    {
+      "name": "source.json",
+      "bytes": 307108,
+      "sha256": "54273c83cd5a2df1755be866514a02e9062bbba828158460e7a7a3db2be3d1bf"
+    },
+    {
+      "name": "source.tar.gz",
+      "bytes": 8551303,
+      "sha256": "4969b9264ae9dc5bb487dc44dd42a76f8699d2eb188b83618d44033fb9c6a84b"
+    },
+    {
+      "name": "focused-normal.stdout",
+      "bytes": 17717,
+      "sha256": "2c5ccf23bd2787e6520779b06cc91150118759c466c56e8b6f683e0f59afc0aa"
+    },
+    {
+      "name": "focused-normal.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "results.json",
+      "bytes": 794,
+      "sha256": "76cd6e39e692006ee0188dc224f88e8fe5a7132597ddaa840fea18f9c3890360"
+    },
+    {
+      "name": "terminal.json",
+      "bytes": 130,
+      "sha256": "32ea2d897ee7fb418985acf9778652080c9f5590a705e5e32b1257c4841edabc"
+    },
+    {
+      "name": "failed-terminal-audit.json",
+      "bytes": 2071,
+      "sha256": "dcddef5eefc0e247ab8c1cf243997a0c5ac8cb7f322da0c416bc9627927ef180"
+    },
+    {
+      "name": "owned-tmp/epoch-trace-output-1721643584",
+      "bytes": 273,
+      "sha256": "1400584e818a3529d402ee6f66b2449e9aa24ed1dfdec4763ec6337347fe84ad"
+    }
+  ]
+}

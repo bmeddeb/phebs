@@ -12,7 +12,7 @@ import (
 )
 
 type linuxEpochServer struct {
-	trace            *linuxEpochTraceRoot // Non-nil only for the bound v4 flow. Actor owns pidfd/Wait.
+	trace            *linuxEpochTraceRoot // Non-nil only for the admitted flow. Actor owns pidfd/Wait.
 	pidfd            int
 	pinErr           error
 	sessionErr       error

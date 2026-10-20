@@ -570,6 +570,63 @@ failure logging preserves locked first-cause snapshots while an unknown worker
 still holds its loans; it reads no unjoined mutable actor state. Neither a
 failure snapshot nor test completion substitutes for genuine native joins.
 
+The full `67434d94` attempt passed protected tool comparisons and initial memory
+admission, then refused author A on a controller pidfd live-before check. Its
+original poll count, mask and errno are unknown; do not call it an EINTR proof.
+The author actually joined after cancellation, but no server started. Preserve
+that failed fixture. Prospective private diagnostics keep numeric poll results;
+only EINTR may be retried on the same descriptor with the same context/deadline.
+Dead/invalid descriptors and every identity/image fence remain strict. These
+mechanics still need real pidfd controls, exact gates and full native acceptance;
+no operator entitlement, relaxed memory bound or unchanged retry is selected.
+A separate pending-child close error now disarms its descriptor capability
+before close; unknown custody retains its actor and loans instead of retrying a
+potentially reused integer. This safety correction does not identify the earlier
+controller poll failure.
+
+A separate bounded Git-parent trace then stalled with a Z leader and a sibling
+still traced/stopped in that same group. Its root Wait is unproved. Prospective
+private v5 may reconcile only current nonleaders under the original unreaped
+TGID/pidfd and exact tracer/parent/SID/namespace/held-image checks. It adopts no
+process leader or missing creation history. The existing sample gate must span
+dying-group cleanup to actual whole-group terminal evidence; no Z-row zero-RSS
+substitution or extended probe window is allowed. Real root Wait status and all
+transport/session joins remain mandatory. Source qualification is pending.
+The first v5 control failed a transient-map coverage assertion after actual
+group terminal evidence; its genuine root Wait was not reached. Preserve that
+failed prefix. A corrected coverage observation must record the actual stop
+kind and complete genuine Wait/HUP/DA cleanup once terminal custody is proved;
+an outer timeout or missing PID cannot substitute for those results.
+The explicit Linux native signal-stop control uses the already installed
+Python/ctypes solely as a fixed two-thread kernel fixture, with its actual
+interpreter image held. It must refuse a different thread shape and prove
+actual SIGKILL Wait/HUP/session/DA closure. This is no production interpreter
+selection or tool admission; the separate Go exit control still requires
+natural Wait0. No extra operator privilege or compiler installation is needed.
+A later full affected race prefix expired its unchanged Go-parent context.
+Preserve the failed raw/source evidence; its missing timing does not establish
+the cause. Prospective actor acquisition now queues under the same two-second
+turn context used for native work, preserving held dying/pending gates and
+release-before-observer-join. A timeout refuses qualification and retains
+custody; it cannot become a kernel-death assertion or a longer probe window.
+No operator deadline/cadence change is selected. Fresh exact gates remain open.
+The next retained stress prefix identifies EINTR in a trace pidfd poll; it does
+not identify the earlier controller refusal. Normal trace work retries only
+EINTR on the same descriptor and existing context. Existing retained cleanup
+loops instead discard the interrupted attempt and reach their existing tick
+before a fresh real poll; they never infer readiness/HUP or release loans from
+EINTR. Other errors remain strict, with no added timer or validation grace.
+
+The v5 [bounded qualification record](../../spike/t42h2r/event-trace-v5-bounded-linux-20261020.json)
+now binds the real natural-Wait0 and delivery-stop/SIGKILL9 controls, 121 normal
+and 121 race nodes, two native controls per mode, unchanged repeated Go/Git
+closure and static/platform checks. Two explanatory nil-context test comments
+are the only functional-gate carry; all failures remain retained. These results
+permit a fresh immutable-source full composition attempt under the unchanged
+host/resource fences. They supply no full native, parent H2, readiness/freeze
+or scale pass. Require the fresh runtime policy digest to match the v5 source
+binding; never reuse an old supplied image or treat wrapper PID absence as join.
+
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
 It binds `c07bc930` and is preserved unchanged, so it no longer describes the

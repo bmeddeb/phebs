@@ -4,6 +4,7 @@ package t421
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -21,6 +22,11 @@ type linuxEpochClassImage struct {
 }
 
 func (held *linuxEpochHeldFlow) gauge(ctx context.Context, pid int, birth string) (*ProcessObservationGauge, string, error) {
+	if ctx == nil || ctx.Err() != nil {
+		return nil, "", ErrExecutionEpochOne
+	}
+	initial, cancel := context.WithTimeout(ctx, epochProcessProbeTimeout)
+	defer cancel()
 	row, err := linuxEpochProcessRow(pid)
 	if err != nil || birth != "" && row.StartIdentity != birth {
 		return nil, "", ErrExecutionEpochOne
@@ -66,7 +72,7 @@ func (held *linuxEpochHeldFlow) gauge(ctx context.Context, pid int, birth string
 		index, present := slices.BinarySearch(classes, class)
 		return index, present
 	}
-	if _, ok := gauge.classify(ctx, row); !ok {
+	if _, ok := gauge.classify(initial, row); !ok {
 		return nil, "", ErrExecutionEpochOne
 	}
 	return gauge, row.ObservedName, nil
@@ -89,11 +95,6 @@ func linuxEpochClassifyRowDetail(ctx context.Context, row t4013.NativeProcessRec
 		return "", "pidfd-open"
 	}
 	defer func() { _ = unix.Close(pidfd) }()
-	live := func() bool {
-		p := []unix.PollFd{{Fd: int32(pidfd), Events: unix.POLLIN}}
-		n, e := unix.Poll(p, 0)
-		return e == nil && n == 0 && p[0].Revents == 0
-	}
 	before, err := linuxEpochProcessRow(row.PID)
 	if err != nil {
 		return "", "row-before"
@@ -101,8 +102,8 @@ func linuxEpochClassifyRowDetail(ctx context.Context, row t4013.NativeProcessRec
 	if !linuxEpochSameProcessRow(row, before) {
 		return "", "binding-before"
 	}
-	if !live() {
-		return "", "live-before"
+	if observed := linuxEpochClassifierPoll(ctx, pidfd); !observed.live() {
+		return "", observed.refusal("live-before")
 	}
 	actual, err := os.Open("/proc/" + strconv.Itoa(row.PID) + "/exe")
 	if err != nil {
@@ -139,14 +140,86 @@ func linuxEpochClassifyRowDetail(ctx context.Context, row t4013.NativeProcessRec
 	if !linuxEpochSameProcessRow(row, after) {
 		return "", "binding-after"
 	}
-	if !live() {
-		return "", "live-after"
+	if observed := linuxEpochClassifierPoll(ctx, pidfd); !observed.live() {
+		return "", observed.refusal("live-after")
 	}
 	if ctx.Err() != nil {
 		return "", "context-after"
 	}
 	return class, ""
 }
+
+// Private syscall result, never caller-supplied process/image authority. Only
+// an interrupted syscall may reach another real zero-timeout poll. The trace
+// actor shares this engine and applies its separate IN/HUP result predicates.
+type linuxEpochClassifierPollResult struct {
+	n                      int
+	revents                int16
+	syscallErr, contextErr error
+}
+
+func (result linuxEpochClassifierPollResult) live() bool {
+	return result.syscallErr == nil && result.contextErr == nil && result.n == 0 && result.revents == 0
+}
+func (result linuxEpochClassifierPollResult) refusal(stage string) string {
+	errnoNumber := int64(0)
+	if result.syscallErr != nil {
+		var errno unix.Errno
+		if errors.As(result.syscallErr, &errno) {
+			errnoNumber = int64(errno)
+		} else {
+			errnoNumber = -1
+		}
+	}
+	canceled := errors.Is(result.contextErr, context.Canceled)
+	deadline := errors.Is(result.contextErr, context.DeadlineExceeded)
+	return fmt.Sprintf("%s poll_n=%d poll_revents=%d poll_errno=%d context_canceled=%t context_deadline=%t context_other=%t", stage, result.n, uint16(result.revents), errnoNumber, canceled, deadline, result.contextErr != nil && !canceled && !deadline)
+}
+func linuxEpochClassifierPoll(ctx context.Context, pidfd int) linuxEpochClassifierPollResult {
+	return linuxEpochClassifierPollContinue(ctx, pidfd, linuxEpochClassifierPollOnce(ctx, pidfd))
+}
+func linuxEpochClassifierPollOnce(ctx context.Context, pidfd int) linuxEpochClassifierPollResult {
+	result := linuxEpochClassifierPollResult{n: -1}
+	if ctx == nil {
+		result.contextErr = ErrExecutionEpochOne
+		return result
+	}
+	if result.contextErr = ctx.Err(); result.contextErr != nil {
+		return result
+	}
+	if pidfd < 0 {
+		result.syscallErr = unix.EBADF
+		return result
+	}
+	// Recreate the record on every attempt: no undefined interrupted revents
+	// can enter a later successful result. Poll never waits or changes ctx.
+	polls := [1]unix.PollFd{{Fd: int32(pidfd), Events: unix.POLLIN}}
+	result.n, result.syscallErr = unix.Poll(polls[:], 0)
+	result.revents = polls[0].Revents
+	result.contextErr = ctx.Err()
+	return result
+}
+
+// This narrow lower syscall-result seam permits a deterministic EINTR control
+// followed by an actual same-fd poll, without fake alive results, function
+// callbacks or global mutable hooks. Runtime supplies its actual first result.
+func linuxEpochClassifierPollContinue(ctx context.Context, pidfd int, result linuxEpochClassifierPollResult) linuxEpochClassifierPollResult {
+	for {
+		if ctx == nil {
+			result.contextErr = ErrExecutionEpochOne
+			return result
+		}
+		if err := ctx.Err(); err != nil {
+			result.contextErr = err
+			return result
+		}
+		if result.contextErr != nil || !errors.Is(result.syscallErr, unix.EINTR) {
+			return result
+		}
+		result = linuxEpochClassifierPollOnce(ctx, pidfd)
+	}
+}
+
 func linuxEpochSameProcessRow(a, b t4013.NativeProcessRecord) bool {
 	return a.PID == b.PID && a.ParentPID == b.ParentPID && a.StartIdentity == b.StartIdentity && a.ObservedName == b.ObservedName
 }

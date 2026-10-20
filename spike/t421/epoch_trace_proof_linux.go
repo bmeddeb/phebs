@@ -27,7 +27,7 @@ func (root *linuxEpochTraceRoot) terminalProof(ctx context.Context, leader *linu
 	if !leader.original.sameLifetime(before) || before.state != "Z" || before.tracer != root.tid || before.namespace == nil || !os.SameFile(before.namespace, root.owner.held.pidNamespace) {
 		return zero, fmt.Errorf("terminal/binding-before pid=%d group=%d parent=%d tracer=%d sid=%d state=%s birth=%s expected-parent=%d expected-tracer=%d expected-sid=%d expected-birth=%s: %w", before.pid, before.tgid, before.parent, before.tracer, before.sid, before.state, before.birth, leader.original.parent, root.tid, leader.original.sid, leader.original.birth, ErrExecutionEpochOne)
 	}
-	mask, err := linuxEpochTracePoll(leader.fd)
+	mask, err := linuxEpochTracePoll(ctx, leader.fd)
 	if err != nil || mask&unix.POLLIN == 0 || mask&unix.POLLHUP != 0 {
 		return zero, fmt.Errorf("terminal/pidfd mask=%d: %w", mask, errors.Join(ErrExecutionEpochOne, err))
 	}
@@ -57,8 +57,8 @@ func (root *linuxEpochTraceRoot) terminalProof(ctx context.Context, leader *linu
 		if e != nil || controller.StartIdentity != leader.parentBirth {
 			return zero, fmt.Errorf("terminal/controller-current: %w", errors.Join(ErrExecutionEpochOne, e))
 		}
-	} else if root.liveParent(leader) != nil {
-		return zero, fmt.Errorf("terminal/parent-live: %w", ErrExecutionEpochOne)
+	} else if err = root.liveParent(ctx, leader); err != nil {
+		return zero, fmt.Errorf("terminal/parent-live: %w", errors.Join(ErrExecutionEpochOne, err))
 	}
 	if ctx.Err() != nil {
 		return zero, ctx.Err()

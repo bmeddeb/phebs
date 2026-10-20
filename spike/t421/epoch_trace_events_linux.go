@@ -31,8 +31,13 @@ func (root *linuxEpochTraceRoot) serve() {
 			root.graceful = true
 		default:
 		}
-		if root.tryGate() {
-			ctx, cancel := context.WithTimeout(context.Background(), epochProcessProbeTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), epochProcessProbeTimeout)
+		if err := root.acquireGate(ctx); err != nil {
+			// No kernel wait/CONT occurred. Keep any older pending/exit token
+			// and all loans; later bounded cleanup can still service the root.
+			root.refuse("probe-gate-acquire", err)
+			root.stopping = true
+		} else {
 			terminal, err := root.turn(ctx)
 			if err != nil {
 				root.refuse("event-turn", err)
@@ -41,6 +46,10 @@ func (root *linuxEpochTraceRoot) serve() {
 			}
 			if err = root.retireReaped(ctx); err != nil {
 				root.refuse("parent-reap", err)
+				root.unknown = true
+			}
+			if err = root.reconcileExitingGroups(ctx); err != nil {
+				root.refuse("group-reconciliation", err)
 				root.unknown = true
 			}
 			if err = root.signalLeaves(ctx); err != nil {
@@ -61,12 +70,13 @@ func (root *linuxEpochTraceRoot) serve() {
 						// may own that mutex while waiting for this gate.
 						<-root.observerDone
 						root.observerJoined = true
+						// A fresh normal turn queues for the gate and performs the
+						// final proof within that turn's existing two-second budget.
+						continue
 					}
 				}
-				if root.observerJoined && root.tryGate() {
-					check, cc := context.WithTimeout(context.Background(), epochProcessProbeTimeout)
-					empty, e := root.sessionEmpty(check)
-					cc()
+				if root.observerJoined {
+					empty, e := root.sessionEmpty(ctx)
 					if empty && e == nil {
 						cancel()
 						root.waitRoot(false)
@@ -76,13 +86,13 @@ func (root *linuxEpochTraceRoot) serve() {
 					root.unknown = true
 				}
 			}
-			cancel()
 			// Once a tracer terminal copy has made the application parent's native
 			// reap possible, no sample may enter until that original pidfd reaches HUP.
-			if len(root.pending) == 0 {
+			if len(root.pending) == 0 && !root.holdExitingGroupGate() {
 				root.releaseGate()
 			}
 		}
+		cancel()
 		select {
 		case <-root.wake:
 		case <-ticker.C:
@@ -100,6 +110,9 @@ func (root *linuxEpochTraceRoot) turn(ctx context.Context) (bool, error) {
 	}
 	sort.Ints(ids)
 	terminalRoot := false
+	if err := root.retireDetached(ctx); err != nil {
+		return false, err
+	}
 	for _, tid := range ids {
 		if ctx.Err() != nil {
 			return false, ctx.Err()
@@ -121,39 +134,12 @@ func (root *linuxEpochTraceRoot) turn(ctx context.Context) (bool, error) {
 			if stop.code != 4 || stop.pid != int32(tid) || stop.uid != uint32(os.Getuid()) {
 				return false, ErrExecutionEpochOne
 			}
-			event, signal := int(stop.status)>>8, int(stop.status)&255
-			if err = root.record(tid, task.original.tgid, event, task.original.birth); err != nil {
-				return false, err
-			}
-			if event != 0 {
-				if err = root.event(ctx, tid, task, event); err != nil {
-					return false, err
-				}
-				continue
-			}
-			if task.initial && signal == int(unix.SIGSTOP) {
-				if err = root.allowedImage(ctx, tid, nil); err != nil {
-					return false, err
-				}
-				task.initial = false
-				if err = unix.PtraceCont(tid, 0); err != nil {
-					return false, err
-				}
-				continue
-			}
-			task.initial = false
-			var information unix.Siginfo
-			_, _, errno := unix.Syscall6(unix.SYS_PTRACE, unix.PTRACE_GETSIGINFO, uintptr(tid), 0, uintptr(unsafe.Pointer(&information)), 0, 0)
-			if errno != 0 || information.Signo != int32(signal) {
-				return false, ErrExecutionEpochOne
-			}
-			// Genuine application/runtime delivery stops are forwarded, including
-			// SIGTRAP. An auto-child SIGSTOP is suppressed only in its initial slot.
-			if err = unix.PtraceCont(tid, signal); err != nil {
+			if err = root.stopped(ctx, tid, task, stop); err != nil {
 				return false, err
 			}
 			continue
 		}
+
 		terminal, err := linuxEpochTraceWait(tid, unix.WEXITED|unix.WNOWAIT)
 		if errors.Is(err, unix.EINTR) && !fallback {
 			continue
@@ -166,6 +152,9 @@ func (root *linuxEpochTraceRoot) turn(ctx context.Context) (bool, error) {
 				fresh, e := linuxEpochTraceIdentityOf(tid)
 				if e != nil || !task.original.sameLifetime(fresh) {
 					return false, ErrExecutionEpochOne
+				}
+				if fresh.state == "Z" && task.leader != nil {
+					root.markExiting(task.leader)
 				}
 				if terminal.signo != 0 && (terminal.signo != int32(unix.SIGCHLD) || terminal.pid != int32(tid) || terminal.uid != uint32(os.Getuid())) {
 					return false, ErrExecutionEpochOne
@@ -184,6 +173,8 @@ func (root *linuxEpochTraceRoot) turn(ctx context.Context) (bool, error) {
 			if _, err = root.terminalProof(ctx, task.leader); err != nil {
 				return false, err
 			}
+			root.retireDetachedGroup(tid)
+			task.leader.exiting = false
 			terminalRoot = true
 			if !root.exitSeen {
 				root.exitSeen = true
@@ -198,7 +189,7 @@ func (root *linuxEpochTraceRoot) turn(ctx context.Context) (bool, error) {
 			if _, err = root.terminalProof(ctx, task.leader); err != nil {
 				return false, err
 			}
-			if err = root.liveParent(task.leader); err != nil {
+			if err = root.liveParent(ctx, task.leader); err != nil {
 				return false, err
 			}
 		}
@@ -213,10 +204,43 @@ func (root *linuxEpochTraceRoot) turn(ctx context.Context) (bool, error) {
 		// target a status that has already been consumed.
 		root.removeTask(tid)
 		if task.leader != nil {
+			root.retireDetachedGroup(tid)
+			task.leader.exiting = false
 			root.pending[tid] = task.leader
 		}
 	}
 	return terminalRoot, nil
+}
+
+// The stop has been consumed by this creating actor. Mechanical kernel tests
+// use the same dispatcher while withholding one known CLONE notification.
+func (root *linuxEpochTraceRoot) stopped(ctx context.Context, tid int, task *linuxEpochTraceTask, stop linuxEpochTraceSiginfo) error {
+	event, signal := int(stop.status)>>8, int(stop.status)&255
+	if err := root.record(tid, task.original.tgid, event, task.original.birth); err != nil {
+		return err
+	}
+	if task.reconciled {
+		return root.continueReconciled(ctx, tid, task, event, signal)
+	}
+	if event != 0 {
+		return root.event(ctx, tid, task, event)
+	}
+	if task.initial && signal == int(unix.SIGSTOP) {
+		if err := root.allowedImage(ctx, tid, nil); err != nil {
+			return err
+		}
+		task.initial = false
+		return unix.PtraceCont(tid, 0)
+	}
+	task.initial = false
+	var information unix.Siginfo
+	_, _, errno := unix.Syscall6(unix.SYS_PTRACE, unix.PTRACE_GETSIGINFO, uintptr(tid), 0, uintptr(unsafe.Pointer(&information)), 0, 0)
+	if errno != 0 || information.Signo != int32(signal) {
+		return ErrExecutionEpochOne
+	}
+	// Genuine application/runtime delivery stops are forwarded, including
+	// SIGTRAP. An auto-child SIGSTOP is suppressed only in its initial slot.
+	return unix.PtraceCont(tid, signal)
 }
 
 func (root *linuxEpochTraceRoot) event(ctx context.Context, tid int, task *linuxEpochTraceTask, event int) error {
@@ -254,6 +278,7 @@ func (root *linuxEpochTraceRoot) event(ctx context.Context, tid int, task *linux
 		}
 	case unix.PTRACE_EVENT_EXIT:
 		if fresh.pid == fresh.tgid {
+			root.markExiting(task.leader)
 			// Keep the real parent stopped before exit_mm until already-reaped
 			// children have their original HUP/live-parent proof recorded.
 			if e := root.retireReaped(ctx); e != nil {
@@ -271,7 +296,7 @@ func (root *linuxEpochTraceRoot) event(ctx context.Context, tid int, task *linux
 			if e := unix.PtraceDetach(tid); e != nil {
 				return e
 			}
-			root.removeTask(tid)
+			root.rememberDetached(tid, fresh)
 			return nil
 		}
 	default:
@@ -300,7 +325,7 @@ func (root *linuxEpochTraceRoot) register(ctx context.Context, tid int, creator 
 		if fresh.parent != creator.original.tgid || parent == nil || parent.root != root || len(root.owner.leaders) >= linuxEpochTraceMaxLeaders {
 			return ErrExecutionEpochOne
 		}
-		if err = root.liveLeader(parent); err != nil {
+		if err = root.liveLeader(ctx, parent); err != nil {
 			return err
 		}
 		fd, e := unix.PidfdOpen(tid, 0)
@@ -341,7 +366,13 @@ func (root *linuxEpochTraceRoot) removeTask(tid int) {
 	root.owner.tids--
 	root.owner.mu.Unlock()
 }
-func (root *linuxEpochTraceRoot) liveLeader(leader *linuxEpochTraceLeader) error {
+func (root *linuxEpochTraceRoot) liveLeader(ctx context.Context, leader *linuxEpochTraceLeader) error {
+	if ctx == nil {
+		return ErrExecutionEpochOne
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	if leader == nil || leader.root != root || leader.fd < 0 {
 		return ErrExecutionEpochOne
 	}
@@ -349,7 +380,7 @@ func (root *linuxEpochTraceRoot) liveLeader(leader *linuxEpochTraceLeader) error
 	if err != nil || !leader.original.sameLifetime(before) || before.state == "Z" {
 		return fmt.Errorf("leader/live-before pid=%d fresh=%+v: %w", leader.original.pid, before, errors.Join(ErrExecutionEpochOne, err))
 	}
-	mask, err := linuxEpochTracePoll(leader.fd)
+	mask, err := linuxEpochTracePoll(ctx, leader.fd)
 	if err != nil || mask != 0 {
 		return fmt.Errorf("leader/live-pidfd mask=%d: %w", mask, errors.Join(ErrExecutionEpochOne, err))
 	}
@@ -357,31 +388,37 @@ func (root *linuxEpochTraceRoot) liveLeader(leader *linuxEpochTraceLeader) error
 	if err != nil || !before.sameLifetime(after) || after.state == "Z" {
 		return fmt.Errorf("leader/live-after pid=%d state=%s: %w", leader.original.pid, after.state, errors.Join(ErrExecutionEpochOne, err))
 	}
-	return nil
+	return ctx.Err()
 }
-func (root *linuxEpochTraceRoot) liveParent(leader *linuxEpochTraceLeader) error {
+func (root *linuxEpochTraceRoot) liveParent(ctx context.Context, leader *linuxEpochTraceLeader) error {
 	parent := root.owner.leaders[leader.original.parent]
 	if parent == nil || parent.original.birth != leader.parentBirth {
 		return ErrExecutionEpochOne
 	}
-	return root.liveLeader(parent)
+	return root.liveLeader(ctx, parent)
 }
 func (root *linuxEpochTraceRoot) retireReaped(ctx context.Context) error {
 	for pid, leader := range root.pending {
-		if ctx.Err() != nil || root.liveParent(leader) != nil {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		if leader.fd < 0 {
 			return ErrExecutionEpochOne
 		}
-		mask, err := linuxEpochTracePoll(leader.fd)
+		if err := root.liveParent(ctx, leader); err != nil {
+			return fmt.Errorf("retire/parent-before: %w", err)
+		}
+		mask, err := linuxEpochTracePoll(ctx, leader.fd)
 		if err != nil {
 			return err
 		}
 		if mask&unix.POLLHUP == 0 {
 			continue
 		}
-		if root.liveParent(leader) != nil {
-			return ErrExecutionEpochOne
+		if err = root.liveParent(ctx, leader); err != nil {
+			return fmt.Errorf("retire/parent-after: %w", err)
 		}
-		if err = unix.Close(leader.fd); err != nil {
+		if err = leader.closeFD(); err != nil {
 			return err
 		}
 		delete(root.owner.leaders, pid)
@@ -389,6 +426,17 @@ func (root *linuxEpochTraceRoot) retireReaped(ctx context.Context) error {
 	}
 	return nil
 }
+
+func (leader *linuxEpochTraceLeader) closeFD() error {
+	if leader == nil || leader.fd < 0 {
+		return ErrExecutionEpochOne
+	}
+	fd := leader.fd
+	// A failed Linux close may release the slot; never reuse its integer.
+	leader.fd = -1
+	return unix.Close(fd)
+}
+
 func (root *linuxEpochTraceRoot) signalLeaves(ctx context.Context) error {
 	if !root.stopping && !root.graceful {
 		return nil
@@ -397,7 +445,7 @@ func (root *linuxEpochTraceRoot) signalLeaves(ctx context.Context) error {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		if leader.root != root || root.pending[pid] != nil {
+		if leader.root != root || root.pending[pid] != nil || leader.exiting || pid == root.original.pid && root.exitSeen {
 			continue
 		}
 		root.currentTID = pid
@@ -429,14 +477,14 @@ func (root *linuxEpochTraceRoot) signalLeaves(ctx context.Context) error {
 		if signal == unix.SIGTERM && leader.termSent || signal == unix.SIGKILL && leader.killSent {
 			continue
 		}
-		mask, err := linuxEpochTracePoll(leader.fd)
+		mask, err := linuxEpochTracePoll(ctx, leader.fd)
 		if err != nil {
 			return fmt.Errorf("stop/pidfd-poll pid=%d: %w", pid, err)
 		}
 		if mask != 0 {
 			continue
 		}
-		if err = root.liveLeader(leader); err != nil {
+		if err = root.liveLeader(ctx, leader); err != nil {
 			return fmt.Errorf("stop/live-leader pid=%d: %w", pid, err)
 		}
 		if ctx.Err() != nil {
@@ -490,11 +538,15 @@ func (root *linuxEpochTraceRoot) waitRoot(initial bool) {
 		ticker := time.NewTicker(linuxEpochTraceFallback)
 		defer ticker.Stop()
 		for {
-			mask, err := linuxEpochTracePoll(root.pidfd)
+			mask, err := linuxEpochTracePollOnce(root.pidfd)
 			if err != nil {
 				// Refusal never transfers/retires the original root or gate.
 				// This watcher stays joined to the still-owned genuine Wait.
-				root.owner.admission.failDetail("trace/root-reap-poll")
+				if !errors.Is(err, unix.EINTR) {
+					root.owner.admission.failDetail("trace/root-reap-poll")
+				}
+				// EINTR proves nothing; a fresh real attempt follows only
+				// the existing cleanup tick, with gate/pidfd/loans retained.
 				<-ticker.C
 				continue
 			}

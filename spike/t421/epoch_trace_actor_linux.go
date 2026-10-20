@@ -75,6 +75,33 @@ func (root *linuxEpochTraceRoot) tryGate() bool {
 		return false
 	}
 }
+
+// Queue behind an existing complete census instead of repeatedly missing its
+// free gaps. Only this actor reads/writes gateOwned; no owner/gauge mutex may be
+// held while waiting. The same caller context also bounds the subsequent turn.
+func (root *linuxEpochTraceRoot) acquireGate(ctx context.Context) error {
+	if ctx == nil || root == nil || root.owner == nil || root.owner.admission == nil || root.owner.admission.probeGate == nil {
+		return ErrExecutionEpochOne
+	}
+	if err := ctx.Err(); err != nil {
+		return err // In particular, never release an older owned token here.
+	}
+	if root.gateOwned {
+		return nil
+	}
+	select {
+	case root.owner.admission.probeGate <- struct{}{}:
+		if err := ctx.Err(); err != nil {
+			<-root.owner.admission.probeGate
+			return err
+		}
+		root.gateOwned = true
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
 func (root *linuxEpochTraceRoot) releaseGate() {
 	if root.gateOwned {
 		root.gateOwned = false
@@ -153,11 +180,16 @@ func (root *linuxEpochTraceRoot) run(operation context.Context) {
 	// Every returning path below has completed actual native ownership. Unknown
 	// ptrace/capture state stays in this actor; thread death is never a join.
 	root.tid = unix.Gettid()
-	for !root.tryGate() {
-		select {
-		case <-root.wake:
-		case <-time.After(linuxEpochTraceFallback):
-		}
+	gateCtx, gateCancel := context.WithTimeout(operation, epochProcessProbeTimeout)
+	gateErr := root.acquireGate(gateCtx)
+	gateCancel()
+	if gateErr != nil {
+		root.refuse("initial-gate", gateErr)
+		root.started <- gateErr
+		root.completeNoStart()
+		runtime.UnlockOSThread()
+		root.publishDone()
+		return
 	}
 	if root.owner.admission.Check(operation) != nil {
 		root.releaseGate()
