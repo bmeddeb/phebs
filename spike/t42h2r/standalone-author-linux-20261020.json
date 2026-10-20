@@ -1,0 +1,1287 @@
+{
+  "ticket": "T42.H2r.b",
+  "status": "PASS_REQUIRED_NATIVE_STANDALONE_LINUX_SERIAL_AUTHOR",
+  "source_commit": "722c772b1e230bb08fba74742ee97a03a440bae6",
+  "source_tree": "5cdbc7d4fdc700d4f7fcc5707a883cbe9191c814",
+  "source_file_sha256": {
+    "spike/t421/author_capture_linux_test.go": "0e37b8141752634b0256ab890963704af5ad0776c923740e0c9a1ae1c07984bf",
+    "spike/t421/author_command_linux_test.go": "2046519e8c1f02d06465d104c8264526d6eb73bba3fb4ccf10b36b0eeb0ba332",
+    "spike/t421/author_custody.go": "7be9fba50b147bf37d47a9e7fc9a257452f501900dc173324475edffa00fca98",
+    "spike/t421/author_custody_linux.go": "0bf158c77b07070fa1f8838ad4e5abec520ee4807a06aa983d3225234fe6230e",
+    "spike/t421/author_custody_linux_test.go": "671aadb40d21b41e014cf943f1ab36a09b8b6fc63b20f66d59bcc71bfc1a5f08",
+    "spike/t421/author_custody_native_linux_test.go": "73a551c83f0c702b33fcd0d48452883352aec81e8e57b2b017105e41bdccbd4d",
+    "spike/t421/author_custody_run_linux.go": "071752ab28045c7f6d95b87b4dffecef8d7893bf2b5be7650435de3677203373",
+    "spike/t421/author_request_linux.go": "fe29bf04614715bf422c004ce99bb31337020c557fff6e413b1b0f08151d56af",
+    "spike/t421/corpus_author.go": "f5f3256fb943dcc57fa3a0a091bd7a8d7c6cfd372c4b5e408794524ff23bb75f",
+    "spike/t421/corpus_author_request.go": "fc3adcd71bc04490053b3570b4a876c1e9b9d5d425c1e25142fb609b1128ce7e",
+    "spike/t422/cmd/author/inputs_linux.go": "0f75c2582b545e294ea4255afe50951a88bd98ea591e5f31d6f1836256d664b8",
+    "spike/t422/cmd/author/inputs_other.go": "50fa7dafe4fccaa18c14c51e737600524e9ed505c68c86514fc13db8d8547fac",
+    "spike/t422/cmd/author/main.go": "046bacb1636862440de411736718a0178ada94f9d72d295e99715f7ac025b06a"
+  },
+  "production_go_identical_to_full_normal_race_source": "38a6256ff005dcc26a6d52af84de25c089c196df",
+  "scope": "standalone Linux source/author owner; shared-controller/live-server H2r.c remains open",
+  "host": {
+    "uid": 1000,
+    "kernel": "7.0.0-38-generic",
+    "physical_memory_bytes": 15991848960,
+    "available_disk_bytes": 133019910144
+  },
+  "visible_cgroup_ancestry": {
+    "/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/app.slice/app-org.chromium.Chromium-5747.scope": {
+      "memory.max": "max",
+      "memory.high": "max",
+      "memory.current": "7068295168",
+      "memory.swap.max": "max",
+      "memory.swap.current": "852172800",
+      "pids.max": "15107",
+      "pids.current": "429"
+    },
+    "/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/app.slice": {
+      "memory.max": "max",
+      "memory.high": "max",
+      "memory.current": "9168805888",
+      "memory.swap.max": "max",
+      "memory.swap.current": "1282084864",
+      "pids.max": "max",
+      "pids.current": "725"
+    },
+    "/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service": {
+      "memory.max": "max",
+      "memory.high": "max",
+      "memory.current": "10991726592",
+      "memory.swap.max": "max",
+      "memory.swap.current": "1321684992",
+      "pids.max": "max",
+      "pids.current": "1027"
+    },
+    "/sys/fs/cgroup/user.slice/user-1000.slice": {
+      "memory.max": "max",
+      "memory.high": "max",
+      "memory.current": "10994610176",
+      "memory.swap.max": "max",
+      "memory.swap.current": "1321684992",
+      "pids.max": "33236",
+      "pids.current": "1039"
+    },
+    "/sys/fs/cgroup/user.slice": {
+      "memory.max": "max",
+      "memory.high": "max",
+      "memory.current": "11060449280",
+      "memory.swap.max": "max",
+      "memory.swap.current": "1322012672",
+      "pids.max": "max",
+      "pids.current": "1039"
+    },
+    "/sys/fs/cgroup": {}
+  },
+  "inherited_controller_umask": "0002",
+  "physical_memory_swap_credit_bytes": 0,
+  "disk_prerequisite_bytes": 128849018880,
+  "pre_gates_38a6256f": [
+    {
+      "name": "focused-normal",
+      "source_commit": "38a6256ff005dcc26a6d52af84de25c089c196df",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "./spike/t421",
+        "-run",
+        "^Test(LinuxAuthor|CorpusAuthor)",
+        "-count=1",
+        "-timeout=180s",
+        "-v"
+      ],
+      "pid": 335436,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 3.948753595352173
+    },
+    {
+      "name": "focused-race",
+      "source_commit": "38a6256ff005dcc26a6d52af84de25c089c196df",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-race",
+        "./spike/t421",
+        "-run",
+        "^Test(LinuxAuthor|CorpusAuthor)",
+        "-count=1",
+        "-timeout=240s",
+        "-v"
+      ],
+      "pid": 335531,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 144.7645719051361
+    },
+    {
+      "name": "author-command",
+      "source_commit": "38a6256ff005dcc26a6d52af84de25c089c196df",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "./spike/t422/cmd/author",
+        "-count=1",
+        "-timeout=90s",
+        "-v"
+      ],
+      "pid": 342385,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 9.851115703582764
+    },
+    {
+      "name": "tagged-shape",
+      "source_commit": "38a6256ff005dcc26a6d52af84de25c089c196df",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-tags=phebs_t42_native",
+        "./spike/t421",
+        "-run",
+        "^TestLinuxAuthorClosedRequestFullWidth$",
+        "-count=1",
+        "-timeout=90s",
+        "-v"
+      ],
+      "pid": 342564,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 19.548688888549805
+    },
+    {
+      "name": "tagged-vet",
+      "source_commit": "38a6256ff005dcc26a6d52af84de25c089c196df",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "vet",
+        "-tags=phebs_t42_native",
+        "./spike/t421/...",
+        "./spike/t422/cmd/author/..."
+      ],
+      "pid": 342704,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 17.48009419441223
+    },
+    {
+      "name": "tagged-lint",
+      "source_commit": "38a6256ff005dcc26a6d52af84de25c089c196df",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/golangci-lint-2.12.2/golangci-lint",
+        "run",
+        "--new-from-rev=115d3f583dac5ab505187f0501753e7b869bf4bd",
+        "--build-tags=phebs_t42_native",
+        "--timeout=4m",
+        "./spike/t421/...",
+        "./spike/t422/cmd/author/..."
+      ],
+      "pid": 345664,
+      "actual_wait_exit_code": 1,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 15.051358461380005
+    }
+  ],
+  "affected_correction_and_static_gates_722c772b": [
+    {
+      "name": "focused-normal",
+      "source_commit": "722c772b1e230bb08fba74742ee97a03a440bae6",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "./spike/t421",
+        "-run",
+        "^TestLinuxAuthorCapture",
+        "-count=1",
+        "-timeout=180s",
+        "-v"
+      ],
+      "pid": 346150,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 19.580543994903564
+    },
+    {
+      "name": "focused-race",
+      "source_commit": "722c772b1e230bb08fba74742ee97a03a440bae6",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-race",
+        "./spike/t421",
+        "-run",
+        "^TestLinuxAuthorCapture",
+        "-count=1",
+        "-timeout=240s",
+        "-v"
+      ],
+      "pid": 346244,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 30.88442349433899
+    },
+    {
+      "name": "tagged-vet",
+      "source_commit": "722c772b1e230bb08fba74742ee97a03a440bae6",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "vet",
+        "-tags=phebs_t42_native",
+        "./spike/t421/...",
+        "./spike/t422/cmd/author/..."
+      ],
+      "pid": 346535,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 2.9140377044677734
+    },
+    {
+      "name": "tagged-lint",
+      "source_commit": "722c772b1e230bb08fba74742ee97a03a440bae6",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/golangci-lint-2.12.2/golangci-lint",
+        "run",
+        "--new-from-rev=115d3f583dac5ab505187f0501753e7b869bf4bd",
+        "--build-tags=phebs_t42_native",
+        "--timeout=4m",
+        "./spike/t421/...",
+        "./spike/t422/cmd/author/..."
+      ],
+      "pid": 346573,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 33.75062918663025
+    },
+    {
+      "name": "docs-glossary",
+      "source_commit": "722c772b1e230bb08fba74742ee97a03a440bae6",
+      "argv": [
+        "make",
+        "docs-check",
+        "verify-glossary"
+      ],
+      "pid": 346738,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 1.5252656936645508
+    }
+  ],
+  "cross_compile_only": [
+    {
+      "name": "t421",
+      "platform": "linux/arm64",
+      "source_commit": "722c772b1e230bb08fba74742ee97a03a440bae6",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-c",
+        "-tags=phebs_t42_native",
+        "./spike/t421",
+        "-o",
+        "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/t421-linux-arm64"
+      ],
+      "pid": 347021,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 117.99662685394287,
+      "executed": false,
+      "artifact_bytes": 81815395,
+      "artifact_sha256": "89e195cd6789fed8759782cae5a61366746005b80b03ee62c8c3a1d50e6a550b",
+      "artifact_removed_after_join": true
+    },
+    {
+      "name": "author",
+      "platform": "linux/arm64",
+      "source_commit": "722c772b1e230bb08fba74742ee97a03a440bae6",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "build",
+        "-o",
+        "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/author-linux-arm64",
+        "./spike/t422/cmd/author"
+      ],
+      "pid": 353702,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 10.686941623687744,
+      "executed": false,
+      "artifact_bytes": 37223185,
+      "artifact_sha256": "12d8ef57f682d02f9396a59b883fe02001de7e1930f48db976066658d8d0ceec",
+      "artifact_removed_after_join": true
+    },
+    {
+      "name": "t421",
+      "platform": "darwin/arm64",
+      "source_commit": "722c772b1e230bb08fba74742ee97a03a440bae6",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-c",
+        "-tags=phebs_t42_native",
+        "./spike/t421",
+        "-o",
+        "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/t421-darwin-arm64"
+      ],
+      "pid": 353779,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 115.88472747802734,
+      "executed": false,
+      "artifact_bytes": 89664194,
+      "artifact_sha256": "119bfa047889c77038c13f56c161af63929b002624f57bc6a163ec47d3199016",
+      "artifact_removed_after_join": true
+    },
+    {
+      "name": "author",
+      "platform": "darwin/arm64",
+      "source_commit": "722c772b1e230bb08fba74742ee97a03a440bae6",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "build",
+        "-o",
+        "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/author-darwin-arm64",
+        "./spike/t422/cmd/author"
+      ],
+      "pid": 360324,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 10.506824970245361,
+      "executed": false,
+      "artifact_bytes": 39855570,
+      "artifact_sha256": "f2dbc6a264dbf63ba6b9df94ea36353beae9bee023683f0007629cd2322966c0",
+      "artifact_removed_after_join": true
+    }
+  ],
+  "candidate_preparation": [
+    {
+      "name": "clone",
+      "source_commit": "722c772b1e230bb08fba74742ee97a03a440bae6",
+      "argv": [
+        "/usr/bin/git",
+        "clone",
+        "--no-local",
+        "--no-hardlinks",
+        "--no-checkout",
+        "/home/ben/phebs",
+        "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/clean-source"
+      ],
+      "pid": 360446,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 15.605739831924438
+    },
+    {
+      "name": "checkout",
+      "source_commit": "722c772b1e230bb08fba74742ee97a03a440bae6",
+      "argv": [
+        "/usr/bin/git",
+        "checkout",
+        "--detach",
+        "722c772b1e230bb08fba74742ee97a03a440bae6"
+      ],
+      "pid": 360532,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 0.926105260848999
+    },
+    {
+      "name": "reference-helper",
+      "source_commit": "722c772b1e230bb08fba74742ee97a03a440bae6",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "build",
+        "-trimpath",
+        "-pgo=off",
+        "-buildvcs=true",
+        "-p=1",
+        "-o",
+        "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/go-reference-helper",
+        "github.com/bmeddeb/phebs/spike/t421/cmd/go-reference-helper"
+      ],
+      "pid": 360586,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 140.12267589569092,
+      "closed_environment": {
+        "CGO_ENABLED": "0",
+        "GOENV": "off",
+        "GOWORK": "off",
+        "GOFLAGS": "-mod=readonly",
+        "GOTOOLCHAIN": "local",
+        "GOOS": "linux",
+        "GOARCH": "amd64",
+        "GOAMD64": "v1",
+        "GO386": "sse2",
+        "GOARM": "7",
+        "GOARM64": "v8.0",
+        "GOEXPERIMENT": "",
+        "GOFIPS140": "off",
+        "GOCACHEPROG": "",
+        "GOPROXY": "file:///home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/bootstrap/proxy",
+        "GOSUMDB": "off",
+        "GOTELEMETRY": "off",
+        "GOROOT": "/home/ben/.local/share/phebs-host/tools/go-1.26.5",
+        "GOMODCACHE": "/home/ben/go/pkg/mod",
+        "GOCACHE": "/home/ben/.cache/go-build",
+        "GOPATH": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/bootstrap/home/go",
+        "GOMAXPROCS": "2",
+        "HOME": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/bootstrap/home",
+        "TMPDIR": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/bootstrap/tmp",
+        "TMP": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/bootstrap/tmp",
+        "TEMP": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/bootstrap/tmp",
+        "PATH": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/bootstrap/bin",
+        "LANG": "C",
+        "LC_ALL": "C",
+        "TZ": "UTC",
+        "GIT_NO_REPLACE_OBJECTS": "1",
+        "GIT_NO_LAZY_FETCH": "1",
+        "GIT_TERMINAL_PROMPT": "0",
+        "GIT_OPTIONAL_LOCKS": "0",
+        "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_CONFIG_GLOBAL": "/dev/null",
+        "GIT_ATTR_NOSYSTEM": "1",
+        "GIT_CONFIG_COUNT": "4",
+        "GIT_CONFIG_KEY_0": "core.fsmonitor",
+        "GIT_CONFIG_VALUE_0": "false",
+        "GIT_CONFIG_KEY_1": "core.untrackedCache",
+        "GIT_CONFIG_VALUE_1": "false",
+        "GIT_CONFIG_KEY_2": "core.hooksPath",
+        "GIT_CONFIG_VALUE_2": "/dev/null",
+        "GIT_CONFIG_KEY_3": "core.commitGraph",
+        "GIT_CONFIG_VALUE_3": "false"
+      }
+    },
+    {
+      "name": "author-candidate",
+      "source_commit": "722c772b1e230bb08fba74742ee97a03a440bae6",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "build",
+        "-trimpath",
+        "-pgo=off",
+        "-buildvcs=true",
+        "-p=1",
+        "-o",
+        "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/t422-author",
+        "github.com/bmeddeb/phebs/spike/t422/cmd/author"
+      ],
+      "pid": 364060,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 2.791156530380249,
+      "closed_environment": {
+        "CGO_ENABLED": "0",
+        "GOENV": "off",
+        "GOWORK": "off",
+        "GOFLAGS": "-mod=readonly",
+        "GOTOOLCHAIN": "local",
+        "GOOS": "linux",
+        "GOARCH": "amd64",
+        "GOAMD64": "v1",
+        "GO386": "sse2",
+        "GOARM": "7",
+        "GOARM64": "v8.0",
+        "GOEXPERIMENT": "",
+        "GOFIPS140": "off",
+        "GOCACHEPROG": "",
+        "GOPROXY": "file:///home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/bootstrap/proxy",
+        "GOSUMDB": "off",
+        "GOTELEMETRY": "off",
+        "GOROOT": "/home/ben/.local/share/phebs-host/tools/go-1.26.5",
+        "GOMODCACHE": "/home/ben/go/pkg/mod",
+        "GOCACHE": "/home/ben/.cache/go-build",
+        "GOPATH": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/bootstrap/home/go",
+        "GOMAXPROCS": "2",
+        "HOME": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/bootstrap/home",
+        "TMPDIR": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/bootstrap/tmp",
+        "TMP": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/bootstrap/tmp",
+        "TEMP": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/bootstrap/tmp",
+        "PATH": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/bootstrap/bin",
+        "LANG": "C",
+        "LC_ALL": "C",
+        "TZ": "UTC",
+        "GIT_NO_REPLACE_OBJECTS": "1",
+        "GIT_NO_LAZY_FETCH": "1",
+        "GIT_TERMINAL_PROMPT": "0",
+        "GIT_OPTIONAL_LOCKS": "0",
+        "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_CONFIG_GLOBAL": "/dev/null",
+        "GIT_ATTR_NOSYSTEM": "1",
+        "GIT_CONFIG_COUNT": "4",
+        "GIT_CONFIG_KEY_0": "core.fsmonitor",
+        "GIT_CONFIG_VALUE_0": "false",
+        "GIT_CONFIG_KEY_1": "core.untrackedCache",
+        "GIT_CONFIG_VALUE_1": "false",
+        "GIT_CONFIG_KEY_2": "core.hooksPath",
+        "GIT_CONFIG_VALUE_2": "/dev/null",
+        "GIT_CONFIG_KEY_3": "core.commitGraph",
+        "GIT_CONFIG_VALUE_3": "false"
+      }
+    },
+    {
+      "name": "native-binary",
+      "source_commit": "722c772b1e230bb08fba74742ee97a03a440bae6",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-c",
+        "-tags=phebs_t42_native",
+        "-trimpath",
+        "-pgo=off",
+        "-p=1",
+        "./spike/t421",
+        "-o",
+        "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/t421-native.test"
+      ],
+      "pid": 364122,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 57.37792897224426,
+      "closed_environment": {
+        "CGO_ENABLED": "0",
+        "GOENV": "off",
+        "GOWORK": "off",
+        "GOFLAGS": "-mod=readonly",
+        "GOTOOLCHAIN": "local",
+        "GOOS": "linux",
+        "GOARCH": "amd64",
+        "GOAMD64": "v1",
+        "GO386": "sse2",
+        "GOARM": "7",
+        "GOARM64": "v8.0",
+        "GOEXPERIMENT": "",
+        "GOFIPS140": "off",
+        "GOCACHEPROG": "",
+        "GOPROXY": "file:///home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/bootstrap/proxy",
+        "GOSUMDB": "off",
+        "GOTELEMETRY": "off",
+        "GOROOT": "/home/ben/.local/share/phebs-host/tools/go-1.26.5",
+        "GOMODCACHE": "/home/ben/go/pkg/mod",
+        "GOCACHE": "/home/ben/.cache/go-build",
+        "GOPATH": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/bootstrap/home/go",
+        "GOMAXPROCS": "2",
+        "HOME": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/bootstrap/home",
+        "TMPDIR": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/bootstrap/tmp",
+        "TMP": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/bootstrap/tmp",
+        "TEMP": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/bootstrap/tmp",
+        "PATH": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/bootstrap/bin",
+        "LANG": "C",
+        "LC_ALL": "C",
+        "TZ": "UTC",
+        "GIT_NO_REPLACE_OBJECTS": "1",
+        "GIT_NO_LAZY_FETCH": "1",
+        "GIT_TERMINAL_PROMPT": "0",
+        "GIT_OPTIONAL_LOCKS": "0",
+        "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_CONFIG_GLOBAL": "/dev/null",
+        "GIT_ATTR_NOSYSTEM": "1",
+        "GIT_CONFIG_COUNT": "4",
+        "GIT_CONFIG_KEY_0": "core.fsmonitor",
+        "GIT_CONFIG_VALUE_0": "false",
+        "GIT_CONFIG_KEY_1": "core.untrackedCache",
+        "GIT_CONFIG_VALUE_1": "false",
+        "GIT_CONFIG_KEY_2": "core.hooksPath",
+        "GIT_CONFIG_VALUE_2": "/dev/null",
+        "GIT_CONFIG_KEY_3": "core.commitGraph",
+        "GIT_CONFIG_VALUE_3": "false"
+      }
+    }
+  ],
+  "native": {
+    "first_native_attempt": true,
+    "test": "TestLinuxAuthorRequiredNativeThreeLifetimes",
+    "skips": [],
+    "test_elapsed_seconds": 957.8,
+    "wrapper": {
+      "source_commit": "722c772b1e230bb08fba74742ee97a03a440bae6",
+      "pid": 367382,
+      "argv": [
+        "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/t421-native.test",
+        "-test.run",
+        "^TestLinuxAuthorRequiredNativeThreeLifetimes$",
+        "-test.count=1",
+        "-test.timeout=3h",
+        "-test.v"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 957.8903357982635,
+      "session_members_after_wait": [],
+      "available_disk_after_bytes": 132963725312
+    },
+    "author_source": "722c772b1e230bb08fba74742ee97a03a440bae6",
+    "author_sha256": "sha256:24807ea4647ed0245aaed6e0e94d02c4b8ecc47bccfb8f80f03ded0ded0d68ab",
+    "go_sha256": "sha256:8da5fd321795754b994c64e3eb8a5a14ff47bd285559a7e876f3c79abafc67f9",
+    "plan_sha256": "sha256:995a7b797e876db4299312e8ce6e02b3057d4559095d9ff24c55c30e1536f48f",
+    "reference_root_pid": 375209,
+    "input_inventory": {
+      "entries": 56404,
+      "files": 48976,
+      "bytes": 971515409
+    },
+    "regular_leaves_per_complete_inventory": 2031604,
+    "revisions": [
+      {
+        "revision": "a",
+        "pid": 379557,
+        "actual_root_joined": true,
+        "session_empty": true,
+        "direct_git_attempts": 4,
+        "changed_physical_files": 2031604,
+        "commit": "d84f49c0ea97f9c5d6ab6fcd796c1ae4253616a9",
+        "tree": "dedb9dc462f2ff294e8f135cc8b6b4846d8a60e5",
+        "joined_source_logical_bytes": 10779369,
+        "joined_source_allocated_bytes": 10821632
+      },
+      {
+        "revision": "b",
+        "pid": 379613,
+        "actual_root_joined": true,
+        "session_empty": true,
+        "direct_git_attempts": 3,
+        "changed_physical_files": 1,
+        "commit": "c11484fd6a566601cff0020ef795cf5553e2e730",
+        "tree": "5285a63c105b0725e20a9a06cfde4b0456100870",
+        "joined_source_logical_bytes": 10789168,
+        "joined_source_allocated_bytes": 10883072
+      },
+      {
+        "revision": "a-return",
+        "pid": 379660,
+        "actual_root_joined": true,
+        "session_empty": true,
+        "direct_git_attempts": 3,
+        "changed_physical_files": 1,
+        "commit": "67758255e398db5dc0e32804fc4b4828280091d7",
+        "tree": "dedb9dc462f2ff294e8f135cc8b6b4846d8a60e5",
+        "joined_source_logical_bytes": 10789350,
+        "joined_source_allocated_bytes": 10887168
+      }
+    ],
+    "source_owned_assertions_passed": [
+      "genuine freshly reference-issued current-source author with complete bytes and full BuildInfo equality",
+      "constructor input inventory reconciliation and mutable payload retirement",
+      "canonical sealed plan and full-width native mutable source root/lease identity",
+      "canonical actual responses and exact manifests/commits/trees for all three complete inventories",
+      "terminal Pause echo and natural DA close, actual root Wait/session drain, exact accounting",
+      "fourth-revision refusal, final source continuity, completed close barrier and closed-use refusal",
+      "original SDK/modules/clean-source root identity/metadata and availability; unchanged host root propagation",
+      "exact successful fixture cleanup after all prerequisite owners close"
+    ]
+  },
+  "post_native": {
+    "recorded_at_utc": "2026-10-20T09:47:14.962998+00:00",
+    "selected_recorded_root_pids_absent": [
+      367382,
+      375209,
+      379557,
+      379613,
+      379660
+    ],
+    "native_tmp_empty": true,
+    "native_test_binary": {
+      "bytes": 87850663,
+      "sha256": "c473c0da7ea36083b3324f9e9b9f65b5f236bb25ec21fb9d30185fbd873ea96a",
+      "removed_after_actual_wait": true
+    },
+    "helper_and_author_candidates_retained": "active dependent exact-source requests; no extra native authority",
+    "available_disk_bytes": 132868767744
+  },
+  "independent_source_reviews": [
+    {
+      "source_commit": "38a6256ff005dcc26a6d52af84de25c089c196df",
+      "reviewer": "/root/review_h2qb_build",
+      "counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "finding": "none",
+      "scope": "correction diff and connected Linux entry/custody/cost; prior independent full source reviews carried forward",
+      "limit": "tiny fixture duplicates umask; actual current-source CLI under inherited permissive mask remains required native gate",
+      "go_or_native_workloads_executed_by_reviewer": false,
+      "recorded_at_utc": "2026-10-20T09:15:35.600571+00:00"
+    },
+    {
+      "source_commit": "722c772b1e230bb08fba74742ee97a03a440bae6",
+      "reviewer": "/root/review_h2qb_build",
+      "counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "finding": "none",
+      "production_identical_to": "38a6256ff005dcc26a6d52af84de25c089c196df",
+      "scope": "tagged-switch correction and retained-gate record; connected earlier custody/cost review carried forward",
+      "qualification": "affected gates and full actual CLI native remain required",
+      "go_or_native_workloads_executed_by_reviewer": false
+    }
+  ],
+  "retained_failed_gates": [
+    {
+      "source": "42d4c040560d870e98785ce18eb30baa301a6c17",
+      "result": "compile failure: unused capture fixture context",
+      "raw_root": "/home/ben/phebs-rehearsals/t42h2rb-gates.jheejkb0"
+    },
+    {
+      "source": "219e6f0ab2aafddae0c7c4457bc1a06071eca3b0",
+      "result": "two fixtures required explicit private 0700 parent",
+      "raw_root": "/home/ben/phebs-rehearsals/t42h2rb-capture-corrected.mlnnvlu4"
+    },
+    {
+      "source": "c4f14757e29ef718dbe96d1be6d87ba558bcc8da",
+      "result": "tiny actual Git init passed then inherited umask002 config0664 failed unchanged ownership guard",
+      "raw_root": "/home/ben/phebs-rehearsals/t42h2rb-private-parents.1samw3_n"
+    },
+    {
+      "source": "38a6256ff005dcc26a6d52af84de25c089c196df",
+      "result": "functional/vet pass then scoped lint QF1003 in capture test; equivalent switch correction only",
+      "raw_root": "/home/ben/phebs-rehearsals/t42h2rb-private-mask.7rldko1p"
+    }
+  ],
+  "raw_file_sha256": [
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-gates.jheejkb0/focused-normal.json",
+      "bytes": 427,
+      "sha256": "ef2726a2c0fbf8336bd5d89b72349509f1431c08997dadf0326c92e6d650bc21"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-gates.jheejkb0/focused-normal.stderr",
+      "bytes": 154,
+      "sha256": "e441576f11696ce7ba05e8e94de6c3a96bd54ff73869caeffe4cf99b834461bd"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-gates.jheejkb0/focused-normal.stdout",
+      "bytes": 61,
+      "sha256": "060429523e4cf3e6eaadef6ddeec113bf0953329b0bd4933a308b464ff232529"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-gates.jheejkb0/gates.json",
+      "bytes": 467,
+      "sha256": "cedb329cc9565eea752e223b7a387748632290a7314305b98fef0b561b7de6b1"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-gates.jheejkb0/serial-gates.py",
+      "bytes": 2476,
+      "sha256": "ff7677cd24c7ffcf26e227aaca885bacf6a45cc5121dff329d1a9f90fdbcb460"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-capture-corrected.mlnnvlu4/focused-normal.json",
+      "bytes": 427,
+      "sha256": "d2f706f12e76bc43821f58f40a4b31243f4d7668c166bd3c6746ecedaa8c1a18"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-capture-corrected.mlnnvlu4/focused-normal.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-capture-corrected.mlnnvlu4/focused-normal.stdout",
+      "bytes": 9613,
+      "sha256": "54441bde45e90fc03bf2cbe7b0fa7deddd83665b210827df51a1f74b52b367a3"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-capture-corrected.mlnnvlu4/gates.json",
+      "bytes": 467,
+      "sha256": "0d6a9b3905ac0cf382d31f5d0d7ea156e7f406b857550af733e0a007d374626a"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-capture-corrected.mlnnvlu4/serial-gates.py",
+      "bytes": 2476,
+      "sha256": "8414c0f4542e4b169c440e4da77e4ac77be0add0bf3fd18db7b124f309a4140a"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-private-parents.1samw3_n/focused-normal.json",
+      "bytes": 428,
+      "sha256": "b73502ba88c6f047221567e62fcd57877e6931b0828fc03363fef84c20a0c346"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-private-parents.1samw3_n/focused-normal.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-private-parents.1samw3_n/focused-normal.stdout",
+      "bytes": 9653,
+      "sha256": "cc9f4437568dcbdb83b14103ee35255d091a7e561331e7767792a89cd7f59dca"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-private-parents.1samw3_n/gates.json",
+      "bytes": 468,
+      "sha256": "0753496f3bb3d6022e5c70c9282b7059147010eeaf3e3a2adb5f4c15c67d3cbd"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-private-parents.1samw3_n/serial-gates.py",
+      "bytes": 2476,
+      "sha256": "ef53cc8b3abe4c2974a43903698100f9a82ccfe0705d9ab635cab6738773ee4d"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-engine-diagnostic-1792487381099271955/result.json",
+      "bytes": 350,
+      "sha256": "726736d3df6ccb95bebd806e27fce99ce3e97903ee8461e06198be0c2cdd12b0"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-engine-diagnostic-1792487381099271955/stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-engine-diagnostic-1792487381099271955/stdout",
+      "bytes": 985,
+      "sha256": "10ad1f9a91b96b083a778eb61cbd42c3103142e34e88cbcbc40dd9dc19fa747a"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-engine-native-metadata-1792487440124323627/result.json",
+      "bytes": 350,
+      "sha256": "b345e8fc5eb502aefe138613a241250cbd3f88a65cba0067b96e67506a6ea8d6"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-engine-native-metadata-1792487440124323627/stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-engine-native-metadata-1792487440124323627/stdout",
+      "bytes": 1740,
+      "sha256": "61cc352762077fc546585187af7479a8f91cb70f1eb8ce326ade192021e4ab38"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-engine-private-mask-1792487572525451048/result.json",
+      "bytes": 350,
+      "sha256": "deb28071fb795c92ab575e5612853bc1a3312bde2d9d7ac06ec860779a696a62"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-engine-private-mask-1792487572525451048/stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-engine-private-mask-1792487572525451048/stdout",
+      "bytes": 786,
+      "sha256": "8c77d47e057e459c26411347cfc7f82c615b6f369ae3d38e5fdbc1ba4bbfad1f"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-private-mask.7rldko1p/author-command.json",
+      "bytes": 386,
+      "sha256": "302ba0ab581868a7da12293fbcdeff729264581acb8a6df4b2558d1747105ddb"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-private-mask.7rldko1p/author-command.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-private-mask.7rldko1p/author-command.stdout",
+      "bytes": 1486,
+      "sha256": "ea104004b1a18bdf35b1046ec7f469b87b77460c83247bd7e32ce08fba9799e1"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-private-mask.7rldko1p/focused-normal.json",
+      "bytes": 427,
+      "sha256": "f87fcac179960ff5ce8fb0fc495616f2b2b13d124005771f9027c947accb42a0"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-private-mask.7rldko1p/focused-normal.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-private-mask.7rldko1p/focused-normal.stdout",
+      "bytes": 10116,
+      "sha256": "e704862094e59264619c47eaa8157fe2a966ca8cccc648db7c53abfda3a82f47"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-private-mask.7rldko1p/focused-race.json",
+      "bytes": 438,
+      "sha256": "fe2a692dd452c96d0e3fa3781fae93ffea9c04dd9822413242eb9ee3b8490bb1"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-private-mask.7rldko1p/focused-race.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-private-mask.7rldko1p/focused-race.stdout",
+      "bytes": 10116,
+      "sha256": "49c0214cebc08e093f98a824d4825010715c059f91e224cbdf79c071aae9a1d4"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-private-mask.7rldko1p/gates.json",
+      "bytes": 2827,
+      "sha256": "cfdedc4599c9007bc94680bf4e58c9f527c680d270bef1f2a28a3a9954c303fa"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-private-mask.7rldko1p/independent-review.json",
+      "bytes": 580,
+      "sha256": "eb2eb1770356695c53d125c56d135d9905ba0377a34fe225911e84fe89b1d807"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-private-mask.7rldko1p/serial-gates.py",
+      "bytes": 2476,
+      "sha256": "dfef9615c3e704367a46c6fca5f9fb75238817b0852b74eb98178a0ace2ed644"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-private-mask.7rldko1p/tagged-lint.json",
+      "bytes": 503,
+      "sha256": "2c71f888df9ca8f2317601302ea023cc64129b439fbff872949499bd676428d3"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-private-mask.7rldko1p/tagged-lint.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-private-mask.7rldko1p/tagged-lint.stdout",
+      "bytes": 155,
+      "sha256": "4440a625559fb3ffe124ea2041f016a93bb64c424ac32c0f71c569c91098ad6f"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-private-mask.7rldko1p/tagged-shape.json",
+      "bytes": 463,
+      "sha256": "76ba03c836dd92c98d79fe004df4f3549ff21770b4ff71191572e82f4986b0c9"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-private-mask.7rldko1p/tagged-shape.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-private-mask.7rldko1p/tagged-shape.stdout",
+      "bytes": 1641,
+      "sha256": "abba75baddfcf10735f52619af30bff9ec0a156aa86d962bf950b3dc70ed1853"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-private-mask.7rldko1p/tagged-vet.json",
+      "bytes": 393,
+      "sha256": "85b556de0a7be5e3104c867ca0162e516151191b4c1ac57a1d2ec5b02973dfd4"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-private-mask.7rldko1p/tagged-vet.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-private-mask.7rldko1p/tagged-vet.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-lint-corrected.y2xfug97/docs-glossary.json",
+      "bytes": 286,
+      "sha256": "8c8410a4aa854ddbbb55a67b1f06c28baa033ea8b5e5d5e14fed5dfed8412711"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-lint-corrected.y2xfug97/docs-glossary.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-lint-corrected.y2xfug97/docs-glossary.stdout",
+      "bytes": 237,
+      "sha256": "a7714a6751136fb88f6e14370a0e20a7ef0fab672f16da4fa3ff4d684e51e554"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-lint-corrected.y2xfug97/focused-normal.json",
+      "bytes": 420,
+      "sha256": "886ac69f7461d8a2c22423bab97f0a2a3904009375f6ff0ae7149250b381506e"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-lint-corrected.y2xfug97/focused-normal.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-lint-corrected.y2xfug97/focused-normal.stdout",
+      "bytes": 573,
+      "sha256": "14130ef96f5cd358a55988c107687bfa29becac7fc92cb9364fdb7f1bee7d3e2"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-lint-corrected.y2xfug97/focused-race.json",
+      "bytes": 430,
+      "sha256": "ce030f4706531444c3eeb43fd4a15f0fe4b839d52752b142165b59d06a065be1"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-lint-corrected.y2xfug97/focused-race.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-lint-corrected.y2xfug97/focused-race.stdout",
+      "bytes": 573,
+      "sha256": "c30c3d80821a97d100a0363c9b812a69cea818765af5a901cce18bfe57a711b3"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-lint-corrected.y2xfug97/gates.json",
+      "bytes": 2204,
+      "sha256": "e7deaae046d3a0baf88d096b277ddc580268c89990297c911d1abe57414d1f6a"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-lint-corrected.y2xfug97/independent-review.json",
+      "bytes": 539,
+      "sha256": "53a84379e406922752f93103c83535a3a7491cc681e989647686e4ffa3152b7e"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-lint-corrected.y2xfug97/serial-gates.py",
+      "bytes": 2225,
+      "sha256": "4611323426dcb3de2c9d1d86fe4a9ac865a515b09da451af86e361d5d5d6e6b6"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-lint-corrected.y2xfug97/tagged-lint.json",
+      "bytes": 502,
+      "sha256": "b803c487318634e986baffb253c3ff1adb3af6d76ec610d63c2d09a84f8e2417"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-lint-corrected.y2xfug97/tagged-lint.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-lint-corrected.y2xfug97/tagged-lint.stdout",
+      "bytes": 10,
+      "sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-lint-corrected.y2xfug97/tagged-vet.json",
+      "bytes": 394,
+      "sha256": "5dcc619c97dd068da2673a0b5056451ee6b5d791549d25eee3dc84e08e8b66c3"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-lint-corrected.y2xfug97/tagged-vet.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-lint-corrected.y2xfug97/tagged-vet.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/author-candidate.json",
+      "bytes": 2363,
+      "sha256": "b2cc7906278cf9fb711db8d04680903388f0f4aa768dc17d5a20ccf0a1cd9255"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/author-candidate.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/author-candidate.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/author-darwin.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/author-darwin.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/author-linux.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/author-linux.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/author-request.json",
+      "bytes": 564,
+      "sha256": "26b194b70035864f94575a9428a7a0a6383620199279e36c764247179549fc23"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/build-candidates.py",
+      "bytes": 3105,
+      "sha256": "84e23fa18c65d52b36debddbaef56766b4c2765ed5216281936e3e3c0ae33557"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/candidate-gates.json",
+      "bytes": 8318,
+      "sha256": "e8dcbfdcf3935c488bdffa88e56007e4daac2582f2caaf0141b4212f9cf69448"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/checkout.json",
+      "bytes": 327,
+      "sha256": "7540a4f993d9467bba8ad0765ddd60a2daf7f53ed370540b2d05f905b886df49"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/checkout.stderr",
+      "bytes": 71,
+      "sha256": "7b2544df1e21341b4a91a97938cc9fa0becc7edb7eb35496193ffcbf43097ed0"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/checkout.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/clone.json",
+      "bytes": 421,
+      "sha256": "609f3a35b02ce1c509a849301f7c25508282c054c426b244ce85092f16f942af"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/clone.stderr",
+      "bytes": 90,
+      "sha256": "04e0184ef07734ed112b29425ebac2cceaa1db6187dfb394d757bdd71d2e9799"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/clone.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/cross.json",
+      "bytes": 2775,
+      "sha256": "5f2ff4e304eed0ff49994f23687748270eaf6d115a92d4eabf36da0111196d0b"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/cross.py",
+      "bytes": 2112,
+      "sha256": "31bc4443a26c3cd36472fbe77ab288666276b8aa57afcfa4ea019907f2146e11"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/go-build-cache-cleanup.json",
+      "bytes": 348,
+      "sha256": "d9a4220c7839613efe33a882d832d3b8a6b1b64e0820cb2dcbfafe1f2801bab9"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/go-reference-helper.identity.json",
+      "bytes": 104,
+      "sha256": "08b4c9047c71bb1ffd4c3b2822eb3e43212bde885fdf77721ac6bc9d98b944a8"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/native-author-run.py",
+      "bytes": 3831,
+      "sha256": "061172d41e6b7583eb64a96253fd75203ed1a67d18642aedf81bbe363da8709f"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/native-author-running.json",
+      "bytes": 284,
+      "sha256": "8e15fdb45a2a33a2f5da1c781a3efc366c29bbf43552a0183034f6147e7bc85f"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/native-author.json",
+      "bytes": 464,
+      "sha256": "f76a676fccdd668632d5044bbf2ac7adf7ba07ac1bad50958782ac6a57c73a0e"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/native-author.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/native-author.stdout",
+      "bytes": 1830,
+      "sha256": "c345d14ae7a48b7735d163e3f0d680e0505301e1bb4e043984529a9735454c2f"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/native-binary.json",
+      "bytes": 2348,
+      "sha256": "d6c0e616ce297a13a84199478fb5a0fd4c31cc9df0b5abac1ecd8a612710ea40"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/native-binary.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/native-binary.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/native-observation-1.json",
+      "bytes": 391,
+      "sha256": "82ba727186cc766c0d157a4b82bbb3f3a2d2d8a427081b15687d2e9b8abcb95e"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/native-observation-2.json",
+      "bytes": 482,
+      "sha256": "352e69e9019ff5bf3755f3c0244c040606410051fbb48832f6057def43f620a5"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/native-preflight.json",
+      "bytes": 5729,
+      "sha256": "5b329868cf998acf526fa5fedcd67060741a05bba4f1ee54cbb998f51332c710"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/post-native-cleanup.json",
+      "bytes": 520,
+      "sha256": "688b5772b5ebf7deadbc9d1cd0f5ab08ef00097f9abb0fbcb7ccd2a72ebaed0f"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/reference-helper-request.json",
+      "bytes": 615,
+      "sha256": "673c63ec05812a066a71a27240708941389e832dbfa14a094862ce262dee791b"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/reference-helper.json",
+      "bytes": 2385,
+      "sha256": "71b1540bb3753919b3e2aa0fc8e863cac35dff00a1c92d0d2dc2a7e1a7252e70"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/reference-helper.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/reference-helper.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/source-bindings.json",
+      "bytes": 1815,
+      "sha256": "2fbb8cfdebde4712d8a9c6c16374f85d36a0d10318739db983ae76b457a4eb0a"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/stale-go-temp-cleanup.json",
+      "bytes": 323,
+      "sha256": "500348964d229fbbb557a32a50cd622f1819d53a51ec4fd3fe1f4236116cce0e"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/t421-darwin.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/t421-darwin.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/t421-linux.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/t421-linux.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/t421-native.test.identity.json",
+      "bytes": 104,
+      "sha256": "ac2a7bbb5adaa7d4d3f9c8cb44405e38181d96c93d7c71e8c332abc1909bf340"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rb-current-native.axtpl0ng/t422-author.identity.json",
+      "bytes": 104,
+      "sha256": "6f1219faaf1a2e8566c8ae549c5aeb31e118063e27841f3f7c2ee1872e688465"
+    }
+  ],
+  "nonclaims": [
+    "Git metadata byte observations are joined serial snapshots, not phase peaks or unique physical allocation",
+    "no complete child PID census beyond exact Start/Wait accounting and session drain",
+    "no shared-controller/live-server/executor/profile/pressure/restore or source-owned aggregate admission closure",
+    "no complete H2/readiness/freeze, ceremony execution, production signing/activation or scale/SLO claim"
+  ]
+}

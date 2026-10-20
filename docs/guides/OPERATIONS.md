@@ -362,7 +362,7 @@ Trace2 exits are observed rows, not a complete history. Actual Linux author/
 source ownership and authenticated bootstrap remain separate work.
 
 
-H2r.b prospectively qualifies the standalone actual Linux author/source owner.
+H2r.b qualifies the standalone actual Linux author/source owner.
 Prepare fresh current-source `PHEBS_T42_GO_REFERENCE_REQUEST` and
 `PHEBS_T42_REFERENCE_CANDIDATE_REQUEST` for the helper and `t422-author`, plus
 qualified `PHEBS_T42_INPUT_TREE_REQUEST`. Helper/author must select the same clean
@@ -375,7 +375,7 @@ go test -tags phebs_t42_native ./spike/t421 -count=1 -timeout=3h \
   -run '^TestLinuxAuthorRequiredNativeThreeLifetimes$' -v
 ```
 
-This command is prospective and has not run. It performs a genuine protected
+This command performs a genuine protected
 reference build, seals a canonical full-population plan, and executes A, B and
 A-return through three actual authenticated CLI lifetimes. Require exact 4/3/3
 Git attempts, 2,031,604-leaf inventories, canonical observed response/EOF,
@@ -388,6 +388,18 @@ guard stay unchanged. Qualify with fresh actual disk/resource observations;
 <=2 GiB raw blob content does not bound Git allocation, protected inputs or peak
 build workspace. Three bounded joined-source metadata samples report observed
 logical/allocated bytes, without a phase-peak or unique-physical-byte claim.
+
+The first required native run at `722c772b` passed in 957.80s with zero skips:
+complete A/B/A-return inventories, exact 4/3/3 Git and terminal/root/session
+completion. The current-source protected author reference matched complete bytes
+and full BuildInfo; the actual inherited controller mask was 002. Exact fixture
+cleanup and original-root identity/availability/host-propagation brackets passed.
+The [receipt](../../spike/t42h2r/standalone-author-linux-20261020.json) preserves
+all failed pre-gates and joined metadata observations. These byte snapshots are
+not build/preparation totals, phase peaks or unique physical allocation. Final
+evidence review precedes integration; shared-controller/live-server H2r.c and all
+broader H2/readiness/freeze gates stay open. Do not repeat this passed standalone
+long workload merely for downstream source-identical evidence edits.
 
 A timeout's immediate mechanical result is unavailable while the worker is
 unfinished; it is not evidence that no child started. Retain the worker, complete

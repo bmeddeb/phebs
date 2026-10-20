@@ -15008,3 +15008,47 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   recheck affected capture normal/race and static/docs gates at the new source.
   Production bytes, creation-mask correction and earlier passing mechanisms
   remain unchanged; independent correction review and full native remain gates.
+
+- **2026-10-20 — T42.H2r.b first required native standalone author passes.**
+  Exact source `722c772b1e230bb08fba74742ee97a03a440bae6` passed its first
+  full-population native gate in 957.80s with zero skips as UID 1000 on this
+  Linux amd64 host. The wrapper actually joined with an empty session in
+  957.890s. Fresh preflight observed 15,991,848,960 physical bytes (no swap
+  credit), 133,019,910,144 available disk bytes and inherited controller umask
+  002; the actual CLI's private 077 creation policy therefore receives native
+  coverage. No disk or memory admission threshold changed.
+
+  The genuine protected reference build matched the current author image's
+  complete bytes and full BuildInfo. Its selected inventory reconciled 56,404
+  entries, 48,976 files and 971,515,409 bytes; mutable staging retired before use.
+  Three authenticated author lifetimes passed full 2,031,604-leaf inventories,
+  canonical responses and exact manifests/commits/trees, with direct Git 4/3/3,
+  measured changes 2,031,604/1/1, terminal Pause/natural DA close, actual root
+  Wait and empty sessions. Return restored A's exact tree while retaining its
+  distinct parent/commit. Final continuity, fourth-use refusal, close barrier,
+  closed use and exact successful fixture cleanup passed. Original SDK/module/
+  clean-source root identity/metadata and availability and host root propagation
+  matched the driver's baseline; no deep host-wide post-run census is claimed.
+
+  Joined Git metadata snapshots observed logical/allocated bytes respectively
+  10,779,369/10,821,632; 10,789,168/10,883,072; and 10,789,350/10,887,168.
+  These are serial source-store observations, not phase peaks, total build/
+  preparation storage or unique physical allocation. All five logged wrapper,
+  reference and author root PIDs were absent afterward, private TMP was empty
+  and the hashed native test binary retired after actual join. Active helper/
+  author candidates and their clean source remain for dependent requests.
+
+  Functional normal/race, command and tagged-shape gates passed at source-
+  identical production `38a6256f`; after its test-only lint correction, affected
+  capture normal/race, tagged vet/lint and docs/glossary passed at `722c772b`.
+  Both Linux/Darwin arm64 package and actual-command compile-only gates passed;
+  all four artifacts and private cross caches retired after join. Independent
+  source/custody/cost reviews report all severity counts zero. The
+  [source-free receipt](spike/t42h2r/standalone-author-linux-20261020.json)
+  binds 107 frozen raw hashes and 13 implementation/test hashes, preserving
+  four failed pre-gates and both diagnostic refusals. Source-identical evidence
+  review still precedes integration. This qualifies only standalone H2r.b;
+  H2r.c shared-controller/live-server binding and broader H2 executor/profile/
+  pressure/restore/aggregate admission, restored launch, readiness/freeze and
+  separately authorized execution remain open. No signing/activation, ceremony
+  or scale/SLO claim follows.

@@ -4433,7 +4433,7 @@ binding remains a later slice, with every parent H2r AC preserved.
 
 
 **T42.H2r.b · Standalone Linux serial author/source owner** *(after qualified
-H2r.a; implementation prospective, 2026-10-20).* ACs:
+H2r.a; required native passed, 2026-10-20).* ACs:
 
 - Accept only genuine Linux Git/Go owners, their reference-issued current-source
   author and bounded sealed V3/V4 plan with exact source ancestry. Preserve all
@@ -4463,6 +4463,24 @@ H2r.a; implementation prospective, 2026-10-20).* ACs:
   native driver has no skip and must rebuild the actual current-source author;
   the historical 71761b33 candidate cannot exercise this new entry. No gate is
   claimed passed by the implementation record.
+
+Exact source `722c772b` passed the first required full-population native gate
+in 957.80s with zero skips: three actual authenticated CLIs, complete
+2,031,604-leaf inventories, exact 4/3/3 Git, canonical response/manifests and
+terminal Pause/natural close, actual Wait and empty sessions. The genuine
+protected reference build matched complete author bytes/full BuildInfo and
+reconciled 56,404 entries / 48,976 files / 971,515,409 bytes. Native controller
+umask was 002; the CLI private-mask correction therefore receives actual
+coverage. Close/continuity/fourth-use refusal and exact fixture cleanup passed.
+Normal/race and affected-correction, command/tagged/static/docs/glossary gates
+and both Linux/Darwin arm64 package/command compile-only pass; no compile-only
+artifact was executed or retained. Independent custody/cost reviews report no
+findings. The [receipt](../spike/t42h2r/standalone-author-linux-20261020.json)
+binds 107 frozen raw hashes and preserves four failed pre-gates plus both
+explicit diagnostics. Source-identical evidence review precedes integration.
+This closes only b's stated standalone ACs, leaving parent H2r and H2r.c open.
+Joined source metadata bytes are observations, not total/peak allocation or an
+aggregate admission. No complete H2/readiness/freeze or ceremony claim follows.
 
 **T42.H2r.c · Shared-controller/live-server Linux author binding** *(after
 qualified H2r.b).* Own Linux AuthorNextOn producer 7/8/9 accounting, shared parent
