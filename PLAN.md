@@ -14777,3 +14777,10 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   its existing one pidfd syscall, buffered result channel and Wait goroutine.
   Once the shared helper owns Wait, test cleanup only receives that same result;
   it sends no further process signal after a concurrent reaper may have run.
+
+  The first exact source `d1f63117` passed the actual early-exit/pin-error normal,
+  race and tagged tests plus tagged vet; scoped lint refused ST1008 because the
+  helper returned its error before the result channel. Put the error last and
+  update every caller without changing acquisition, Wait, signal or cleanup
+  semantics. Preserve that first serial record; corrected-source gates remain
+  required before integration.

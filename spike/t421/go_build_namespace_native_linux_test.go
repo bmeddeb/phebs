@@ -394,7 +394,7 @@ func runNativeGoNamespaceAttempt(ctx context.Context, tree *LinuxExecutionInputT
 			return ErrLinuxInputTree
 		}
 		tree.pid = command.Process.Pid
-		pidfd, pidfdErr, waited := pinExecutionProcessRoot(command)
+		pidfd, waited, pidfdErr := pinExecutionProcessRoot(command)
 		if pidfdErr == nil {
 			defer func() { _ = unix.Close(pidfd) }()
 		}

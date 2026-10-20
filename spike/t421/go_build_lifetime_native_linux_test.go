@@ -153,7 +153,7 @@ func runNativeGoLifetimeAttempt(ctx context.Context, tree *LinuxExecutionInputTr
 			return ErrLinuxInputTree
 		}
 		tree.pid = command.Process.Pid
-		pidfd, pidfdErr, waited := pinExecutionProcessRoot(command)
+		pidfd, waited, pidfdErr := pinExecutionProcessRoot(command)
 		if pidfdErr == nil {
 			defer func() { _ = unix.Close(pidfd) }()
 		}

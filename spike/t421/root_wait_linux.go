@@ -12,7 +12,7 @@ import (
 // exclusively owned child. An unreaped exited child still reserves its PID;
 // pin it before the sole Wait can reap it and permit numeric PID reuse.
 // A pin error never substitutes for native Wait or permits a bare-PID fallback.
-func pinExecutionProcessRoot(command *exec.Cmd) (int, error, <-chan error) {
+func pinExecutionProcessRoot(command *exec.Cmd) (int, <-chan error, error) {
 	pidfd, pinErr := -1, error(unix.EINVAL)
 	if command != nil && command.Process != nil && command.Process.Pid > 0 {
 		pidfd, pinErr = unix.PidfdOpen(command.Process.Pid, 0)
@@ -25,5 +25,5 @@ func pinExecutionProcessRoot(command *exec.Cmd) (int, error, <-chan error) {
 		}
 		waited <- command.Wait()
 	}()
-	return pidfd, pinErr, waited
+	return pidfd, waited, pinErr
 }

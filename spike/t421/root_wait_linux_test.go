@@ -84,7 +84,7 @@ func TestLinuxRootWaitPinsExitedUnreapedChild(t *testing.T) {
 	if err := rootWaitObserveUnreaped(command); err != nil {
 		t.Fatal(err)
 	}
-	pidfd, pinErr, result := pinExecutionProcessRoot(command)
+	pidfd, result, pinErr := pinExecutionProcessRoot(command)
 	waited = result
 	if pinErr != nil {
 		t.Fatal("unreaped zombie could not be pinned", pinErr)
@@ -158,7 +158,7 @@ func rootWaitPinFailureChild() error {
 	if err := unix.Setrlimit(unix.RLIMIT_NOFILE, &limited); err != nil {
 		return err
 	}
-	pidfd, pinErr, result := pinExecutionProcessRoot(command)
+	pidfd, result, pinErr := pinExecutionProcessRoot(command)
 	waited = result
 	restoreErr := unix.Setrlimit(unix.RLIMIT_NOFILE, &previous)
 	if pidfd >= 0 {
