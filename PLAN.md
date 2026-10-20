@@ -14950,3 +14950,15 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   genuine newly reference-built current-source author and complete source/hash
   receipts. H2r.c owns all shared-controller/live-server/epoch binding ACs, without
   waiving any parent H2r or H2 gate.
+
+  The first immutable `42d4c040560d870e98785ce18eb30baa301a6c17` focused normal
+  gate stopped at compile time: the capture-refusal test declared its bounded
+  context without using it. Preserve raw
+  `/home/ben/phebs-rehearsals/t42h2rb-gates.jheejkb0`: wrapper actual Wait was
+  nonzero and its session empty; no tests or required native workload executed.
+  Correct the test by registering cancellation only after pin-before-Wait,
+  signaling only the owned pidfd, retaining the image loan through sole actual
+  Wait even on pin error, joining the cancellation callback before fd close,
+  and refusing a canceled context. Output-cap cancellation now reaches that
+  owned child through the same context. Corrected-source gates remain pending;
+  this records no native or acceptance pass.

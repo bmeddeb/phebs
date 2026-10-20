@@ -75,8 +75,18 @@ func TestLinuxAuthorCaptureRefusalPreservesUnprovenFDs(t *testing.T) {
 				if pinErr == nil {
 					defer func() { _ = unix.Close(fd) }()
 				}
+				canceled := make(chan struct{})
+				stop := context.AfterFunc(ctx, func() {
+					defer close(canceled)
+					if pinErr == nil {
+						_ = unix.PidfdSendSignal(fd, unix.SIGKILL, nil, 0)
+					}
+				})
 				waitErr := <-waited
-				if pinErr != nil || waitErr != nil || output.err != nil || output.buffer.String() != "unproven descriptors preserved; owned partial input released\n" {
+				if !stop() {
+					<-canceled
+				}
+				if pinErr != nil || waitErr != nil || ctx.Err() != nil || output.err != nil || output.buffer.String() != "unproven descriptors preserved; owned partial input released\n" {
 					return errors.New("capture refusal closed an unproven descriptor or leaked owned partial")
 				}
 				return nil
