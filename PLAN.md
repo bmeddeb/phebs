@@ -16059,3 +16059,72 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   exact documentation gates and final source-identical review still precede
   this checkpoint's commit. These checks qualify diagnostics only, not a
   memory optimization, new full native attempt or integration.
+
+
+- **2026-10-20 — T42.H2r.c.c prospective Linux serial HEAD indexing recipe.**
+  Select private operational resource policy v6 for the source-owned Linux
+  three-epoch flow. Preserve the full physical/logical workload, HEAD selection,
+  4-GiB RSS threshold, actual immutable payload charges, 1-GiB kernel/cache and
+  1-GiB host allowances, ongoing 2-GiB slack, process/TID bounds, cadence,
+  cooperative probe and phase deadlines. Pinned Zoekt defaults to four shard
+  builders; its supported `-parallelism=1` runs shard builds synchronously.
+  This is a concrete concurrency reduction, not attribution of the retained
+  e934 cold breach or proof that the complete workload fits. Repository-wide
+  maps, Phebs/controller/Surreal heaps and whole-process RSS remain charged.
+  The unchanged deadlines may refuse if serial execution takes too long.
+
+  After its existing genuine held-resource/current-policy Check, the private
+  Linux coordinator issues exact `t42-linux-head-serial-index-v1` as optional
+  `RuntimeRecipe` on its Zoekt binding. The existing canonical authenticated
+  bootstrap carries it; no caller config, environment knob, supplied memory
+  observation, admission boolean or exported policy issuer selects it. The
+  child validates the fixed token, Linux amd64, Zoekt role, Phebs semantic V3,
+  store endpoint and existing producer/initial-phase/control mappings
+  2/2/[2,3,4], 3/5/[5], 4/6/[6,7,8]. Unknown/foreign contexts refuse. Return-A's
+  existing third server has no Workspace; preserve that scope and add no FD6
+  or pressure authority. This recipe is authenticated scheduling data, not
+  resource/tool provenance, formal Linux plan admission or a freeze capability.
+
+  Before permission for an index child, validate the complete original
+  nine-argument HEAD-only whole-index command, ordered existing file/shard/
+  trigram limits and clean absolute stage/repository paths. Only then allocate
+  detached argv with one literal `-parallelism=1` immediately before the final
+  repository. Reject preexisting/duplicate/alternate parallelism, extra or
+  reordered flags, separators, branch overrides and malformed paths; refusal
+  latches the existing admission error before Start. Retain the same child,
+  attempt counts, actual original Handle.Wait and transport/session custody.
+  Parent ServeChecked reuses its existing fresh tool check but now compares
+  complete current bindings, including environment and required recipe, with
+  the captured bootstrap bindings before each permission. Missing or drifted
+  native recipe cannot fall back to the legacy default.
+
+  `RuntimeRecipe` is omitted when empty, preserving legacy canonical tool and
+  bootstrap bytes. Historical formal V1-V5 plan/profile/overlay recipes and
+  ordinary/Darwin behavior remain exact. Bootstrap text accounting includes
+  the new fixed token. Selected Linux index Start adds bounded nine-argument
+  validation and one ten-element argv slice. Existing per-Start fresh-tool
+  recomputation gains comparison of three bounded bindings/environments while
+  retaining its existing locks; no extra native check, content hash, child or
+  descriptor is added for comparison. Bootstrap role validation and existing
+  selected legacy child dispatch add an empty-token branch with no argv
+  allocation; selector-absent ordinary dispatch is unchanged. The private
+  resource-policy JSON/hash grows at its existing call sites. No persistent
+  cache or ordinary query, sync, retry/no-op or publication work is added.
+  Focused refusal/ordinary/canonical/continuity normal/race, existing package,
+  supported-platform, source/custody/cost and fresh full native gates remain
+  required. This implementation record claims no gate or composition pass.
+
+  Subsequent bounded qualification on 2026-10-20 passes all fourteen serial
+  gates: focused controls (56 normal and 56 race test nodes), the complete
+  dispatch package (581 per mode), affected Linux controls (129 per mode),
+  production launch inventory (four nodes), tagged vet/lint, three other
+  supported 64-bit compile targets, documentation/glossary and whitespace.
+  All roots genuinely returned zero, sampled sessions were empty and source
+  stayed fixed. Independent source/cost review found no open issue. Record
+  `spike/t42h2r/serial-index-v6-bounded-linux-20261020.json` binds the exact
+  source and raw prefix. These overlapping test-node counts are not unique
+  cases. Only owning qualification prose changes afterward, with fresh
+  documentation checks and final immutable source verification. The source-
+  derived private policy digest is metadata; the fresh actual native run must
+  emit the same digest. Full composition, memory fit and integration remain
+  unpassed; no unchanged rerun of e934 or historical-byte rewrite is authorized.

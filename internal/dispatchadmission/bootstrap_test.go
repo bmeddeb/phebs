@@ -4,6 +4,7 @@ package dispatchadmission
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/binary"
 	"encoding/json"
@@ -610,7 +611,7 @@ func TestProductionSemanticSnapshotOrdinaryOwnerFence(t *testing.T) {
 }
 
 func TestProductionBootstrapMalformedAndCanceled(t *testing.T) {
-	for _, mode := range []string{"magic", "oversize", "unknown-field", "duplicate-field", "digest", "other-endpoint", "other-program", "partial-canceled"} {
+	for _, mode := range []string{"magic", "oversize", "unknown-field", "duplicate-field", "empty-recipe", "duplicate-recipe", "digest", "other-endpoint", "other-program", "partial-canceled"} {
 		t.Run(mode, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
 			defer cancel()
@@ -639,6 +640,18 @@ func TestProductionBootstrapMalformedAndCanceled(t *testing.T) {
 			}
 			if mode == "duplicate-field" {
 				raw = append([]byte(`{"Phase":1,`), raw[1:]...)
+			}
+			if mode == "empty-recipe" || mode == "duplicate-recipe" {
+				tool, err := json.Marshal(record.Tools[0])
+				if err != nil {
+					t.Fatal(err)
+				}
+				fields := `,"RuntimeRecipe":""`
+				if mode == "duplicate-recipe" {
+					fields += fields
+				}
+				noncanonical := append(slices.Clone(tool[:len(tool)-1]), []byte(fields+"}")...)
+				raw = bytes.Replace(raw, tool, noncanonical, 1)
 			}
 			header := bootstrapHeader(raw, productionTestRecord().Producer.Binding)
 			switch mode {

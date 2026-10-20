@@ -38,6 +38,8 @@ type ProductionToolBinding struct {
 	Role        string
 	Path        string
 	Environment []string
+	// Authenticated recipe data, not tool or resource admission. Omission keeps legacy bytes.
+	RuntimeRecipe string `json:",omitempty"`
 }
 
 // ProductionBootstrap binds inherited endpoints to one producer lifetime.
@@ -139,10 +141,10 @@ func (record ProductionBootstrap) validate() error {
 	}
 	for index, role := range roles {
 		tool := record.Tools[index]
-		if tool.Role != role || !validProductionPath(tool.Path) || !validProductionToolEnvironment(tool.Environment, role, record.SemanticMode) {
+		if tool.Role != role || !validProductionPath(tool.Path) || !validProductionToolEnvironment(tool.Environment, role, record.SemanticMode) || !record.validIndexRuntimeRecipe(tool) {
 			return ErrProductionBootstrap
 		}
-		textBytes += len(tool.Role) + len(tool.Path)
+		textBytes += len(tool.Role) + len(tool.Path) + len(tool.RuntimeRecipe)
 		for _, entry := range tool.Environment {
 			textBytes += len(entry)
 		}

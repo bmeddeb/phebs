@@ -642,6 +642,23 @@ The focused saved-state and unjoined-state controls pass normally and with
 race, with tagged vet/lint and documentation checks. They qualify the failure
 reporting only; full composition and a memory correction remain open.
 
+The prospective private v6 flow uses one fixed serial Zoekt HEAD indexing
+recipe, carried by the authenticated resource-issued tool binding. It keeps
+the same source workload, file/shard/trigram limits, 4-GiB RSS guard and phase
+deadlines. No operator environment or config knob enables it; ordinary and
+Darwin execution keep their existing behavior. Return-A gains no Workspace or
+FD6 authority. Source/review gates and the unchanged full native gate must pass
+before this becomes a qualified memory correction; elapsed indexing may rise
+and a later safety stop remains possible. Historical formal V1-V5 bytes stay exact.
+
+The subsequent v6 bounded record
+[`serial-index-v6-bounded-linux-20261020.json`](../../spike/t42h2r/serial-index-v6-bounded-linux-20261020.json)
+passes the fourteen serial source/refusal/package/race/static/compile/docs gates
+with clean independent source/cost review. This qualifies the candidate recipe
+for fresh immutable preparation and the unchanged complete native gate. It
+does not establish memory fit, full composition, readiness, freeze or ceremony
+authority. Later qualification prose receives fresh documentation checks.
+
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
 It binds `c07bc930` and is preserved unchanged, so it no longer describes the

@@ -848,7 +848,10 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 						run.recordAdmissionFailure(checkCtx, site.ID, "epoch_config", err)
 						return ErrExecutionEpochOne
 					}
-					_, _, _, err := flow.checkEpochTools(checkCtx, number)
+					_, currentTools, _, err := flow.checkEpochTools(checkCtx, number)
+					if err == nil && flow.native != nil && !sameExecutionToolBindings(currentTools, tools) {
+						err = ErrExecutionEpochOne
+					}
 					if err != nil || checkCtx.Err() != nil {
 						run.recordAdmissionFailure(checkCtx, site.ID, "epoch_tools", err)
 					}
@@ -868,6 +871,15 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	}
 	go run.finish(runCtx, cancel, waited, served, epochLaunchError(number, launchStage, retErr))
 	return run, retErr
+}
+
+func sameExecutionToolBindings(current, expected []dispatchadmission.ProductionToolBinding) bool {
+	return len(current) == 3 && len(expected) == 3 &&
+		current[2].RuntimeRecipe == dispatchadmission.ProductionLinuxSerialIndexV1 &&
+		expected[2].RuntimeRecipe == dispatchadmission.ProductionLinuxSerialIndexV1 &&
+		slices.EqualFunc(current, expected, func(a, b dispatchadmission.ProductionToolBinding) bool {
+			return a.Role == b.Role && a.Path == b.Path && a.RuntimeRecipe == b.RuntimeRecipe && slices.Equal(a.Environment, b.Environment)
+		})
 }
 
 func epochLaunchError(number uint64, stage string, err error) error {

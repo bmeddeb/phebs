@@ -393,6 +393,11 @@ func startProductionCommandWithEnv(ctx context.Context, runtime *ProductionLifet
 		len(command.Args) == 0 || command.Args[0] != tool.Path || len(command.ExtraFiles) != 0 {
 		return Handle{}, runtime.client.fail(ErrProductionBootstrap)
 	}
+	args, err := productionIndexRuntimeArgs(site, tool, command.Args)
+	if err != nil {
+		return Handle{}, runtime.client.fail(err)
+	}
+	command.Args = args
 	command.Env = slices.Clone(tool.Environment)
 	if runtime.semanticMode == ProductionSemanticV3 && role == "zoekt-git-index" && !hasProductionIndexMode(command.Env) {
 		return Handle{}, runtime.client.fail(ErrProductionBootstrap)

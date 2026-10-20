@@ -363,6 +363,31 @@ The two focused diagnostic controls pass normally and with race; tagged vet/
 lint, docs/glossary and whitespace also pass, with clean independent review.
 These are diagnostic checks only; no memory or full-composition pass follows.
 
+
+Prospective private resource policy v6 now selects a source-owned serial Zoekt
+HEAD recipe. A fixed optional authenticated tool-binding token is issued only
+after the genuine Linux held-resource check; child bootstrap validates the
+existing three-server producer/phase contexts. The index boundary requires the
+complete original HEAD argv and inserts one `-parallelism=1` before the final
+repository. Current bindings, including the required token, are compared before
+every parent permission. No caller knob, new FD6/Workspace scope, ordinary/
+Darwin behavior change or historical formal V1-V5 recipe reinterpretation is
+introduced. The full workload, 4-GiB RSS envelope, payload charges, cadence and
+deadlines stay exact; longer indexing can still refuse. This reduces overlapping
+shard builders but does not identify the old culprit or prove memory fit.
+Refusal/canonical/continuity normal/race and broader source/review/native gates
+remain pending; neither private v6 nor diagnostic qualification closes c.c.
+
+Subsequent v6 bounded qualification (2026-10-20) passes all fourteen serial
+gates: focused normal/race controls, full dispatch normal/race, affected Linux
+normal/race, launch inventory, tagged vet/lint, supported other 64-bit compile
+targets, docs/glossary and whitespace. Actual roots return zero with empty
+sampled sessions and unchanged source; independent source/cost review is clean.
+[`serial-index-v6-bounded-linux-20261020.json`](../spike/t42h2r/serial-index-v6-bounded-linux-20261020.json)
+binds this bounded prefix. The later owning qualification prose receives fresh
+docs checks. Fresh immutable preparation and complete native composition remain
+the next gate; neither memory fit nor c.c completion follows from bounded tests.
+
 Production artifact/signature/publication closure for T47.5, T49.4, T50.3,
 T51.3, T52.3 and T54.3 remains pending the existing unavailable production key
 and the exact owning production decision. Scoped results and unsigned drafts

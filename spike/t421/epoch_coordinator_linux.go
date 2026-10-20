@@ -188,6 +188,8 @@ func (adapter *linuxEpochCoordinator) tools(ctx context.Context, epoch uint64) (
 	}
 	phebs, zoekt, surreal := linuxEpochFDRoute(held.controllerPID, held.images[1]), linuxEpochFDRoute(held.controllerPID, held.images[2]), linuxEpochFDRoute(held.controllerPID, held.images[3])
 	tools := []dispatchadmission.ProductionToolBinding{{Role: "git", Path: core + "/git", Environment: gitEnv}, {Role: "surreal", Path: surreal, Environment: environment}, {Role: "zoekt-git-index", Path: zoekt, Environment: append(slices.Clone(gitEnv), dispatchadmission.IndexOfferEnvironment+"=v1", "ZOEKT_DISABLE_CATFILE_BATCH=true")}}
+	// The successful genuine resource Check above issues this fixed narrowing.
+	tools[2].RuntimeRecipe = dispatchadmission.ProductionLinuxSerialIndexV1
 	binding := executionRuntimeEnvironmentBindings{Home: selected.Home, Temporary: selected.Temporary, GitDirectory: core, SurrealPath: surreal, SurrealSHA256: held.imageIdentities[3].SHA256, ZoektPath: zoekt, ZoektSHA256: held.imageIdentities[2].SHA256}
 	return phebs, tools, executionPhebsEnvironment(environment, binding), nil
 }

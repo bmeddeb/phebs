@@ -1,0 +1,870 @@
+{
+  "schema": "t42-linux-serial-index-v6-bounded-v1",
+  "date": "2026-10-20",
+  "base_commit": "7b3d3f093a2535bf2e9d0197ae6eb80d763c8226",
+  "scope": "Prospective source-owned authenticated serial Zoekt HEAD recipe and exact current/captured binding comparison. Bounded qualification only; full native not run.",
+  "raw_root": "/home/ben/phebs-rehearsals/t42h2rcc-v6-serial-tvvna7dd",
+  "actual_tool_session": {
+    "id": 90337,
+    "exit": 0,
+    "basis": "Root received terminal unified exec result with exit_code0 after all fourteen actual child roots; wrapper observations do not establish complete child history"
+  },
+  "gates": [
+    {
+      "name": "serial-core-normal",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-p=1",
+        "-json",
+        "./internal/dispatchadmission",
+        "./spike/t421",
+        "-count=1",
+        "-timeout=90s",
+        "-run",
+        "^Test(ProductionLinuxSerialIndex.*|ProductionIndexRecipeAbsent.*|ProductionBootstrapMalformedAndCanceled|LinuxEpochIndexRecipeBindingContinuity|LinuxEpochResourceInitialReservationAndLiveSlack)$"
+      ],
+      "environment_override": {},
+      "pid": 997589,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 57.59257922301185,
+      "available_before": 129093066752,
+      "available_after": 129092956160
+    },
+    {
+      "name": "serial-core-race",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-race",
+        "-p=1",
+        "-json",
+        "./internal/dispatchadmission",
+        "./spike/t421",
+        "-count=1",
+        "-timeout=90s",
+        "-run",
+        "^Test(ProductionLinuxSerialIndex.*|ProductionIndexRecipeAbsent.*|ProductionBootstrapMalformedAndCanceled|LinuxEpochIndexRecipeBindingContinuity|LinuxEpochResourceInitialReservationAndLiveSlack)$"
+      ],
+      "environment_override": {},
+      "pid": 998076,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 88.38306543900399,
+      "available_before": 129092952064,
+      "available_after": 129092657152
+    },
+    {
+      "name": "dispatch-package-normal",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-p=1",
+        "-json",
+        "./internal/dispatchadmission",
+        "-count=1",
+        "-timeout=5m"
+      ],
+      "environment_override": {},
+      "pid": 998699,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 8.930634642994846,
+      "available_before": 129092657152,
+      "available_after": 129092112384
+    },
+    {
+      "name": "dispatch-package-race",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-race",
+        "-p=1",
+        "-json",
+        "./internal/dispatchadmission",
+        "-count=1",
+        "-timeout=5m"
+      ],
+      "environment_override": {},
+      "pid": 999193,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 12.058524455002043,
+      "available_before": 129092112384,
+      "available_after": 129091244032
+    },
+    {
+      "name": "linux-affected-normal",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-p=1",
+        "-json",
+        "-tags=phebs_t42_native",
+        "./spike/t421",
+        "-count=1",
+        "-timeout=6m",
+        "-run",
+        "^Test(LinuxEpoch(Trace|Classifier|PreparationMemory|Joined|UnknownJoin|ControlSettlement|Resource|AuthorPrivate|FiniteExit|IndexRecipe)|LinuxAuthorShared|LinuxRootWait|ExecutionAuthorShared)"
+      ],
+      "environment_override": {},
+      "pid": 999691,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 30.63340223299747,
+      "available_before": 129091244032,
+      "available_after": 129091092480
+    },
+    {
+      "name": "linux-affected-race",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-race",
+        "-p=1",
+        "-json",
+        "-tags=phebs_t42_native",
+        "./spike/t421",
+        "-count=1",
+        "-timeout=6m",
+        "-run",
+        "^Test(LinuxEpoch(Trace|Classifier|PreparationMemory|Joined|UnknownJoin|ControlSettlement|Resource|AuthorPrivate|FiniteExit|IndexRecipe)|LinuxAuthorShared|LinuxRootWait|ExecutionAuthorShared)"
+      ],
+      "environment_override": {},
+      "pid": 1000036,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 62.33853164000902,
+      "available_before": 129091092480,
+      "available_after": 129083183104
+    },
+    {
+      "name": "production-inventory",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-p=1",
+        "-json",
+        "./spike/t421",
+        "-count=1",
+        "-timeout=5m",
+        "-run",
+        "^TestProductionDispatch(SitesMatchActualBoundaries|InventoryFindsUnlistedAndAliasedLaunches)$"
+      ],
+      "environment_override": {},
+      "pid": 1000895,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 128.8317291209969,
+      "available_before": 129083183104,
+      "available_after": 129077653504
+    },
+    {
+      "name": "tagged-vet",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "vet",
+        "-tags=phebs_t42_native",
+        "./internal/dispatchadmission",
+        "./spike/t421"
+      ],
+      "environment_override": {},
+      "pid": 1005954,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 5.981411478001974,
+      "available_before": 129077649408,
+      "available_after": 129077645312
+    },
+    {
+      "name": "tagged-lint",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/golangci-lint-2.12.2/golangci-lint",
+        "run",
+        "--new-from-rev=7b3d3f093a2535bf2e9d0197ae6eb80d763c8226",
+        "--build-tags=phebs_t42_native",
+        "--timeout=4m",
+        "./internal/dispatchadmission/...",
+        "./spike/t421/..."
+      ],
+      "environment_override": {},
+      "pid": 1006147,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 31.374515667994274,
+      "available_before": 129077645312,
+      "available_after": 129075871744
+    },
+    {
+      "name": "compile-linux-arm64",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-c",
+        "-tags=phebs_t42_native",
+        "-o",
+        "/dev/shm/t42h2rcc-cold-rss-diag-z17df6n5-tmp/serial-linux-arm64.test",
+        "./spike/t421"
+      ],
+      "environment_override": {
+        "GOOS": "linux",
+        "GOARCH": "arm64",
+        "CGO_ENABLED": "0"
+      },
+      "pid": 1006296,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 131.1861140510009,
+      "available_before": 129075871744,
+      "available_after": 129074470912
+    },
+    {
+      "name": "compile-darwin-amd64",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-c",
+        "-tags=phebs_t42_native",
+        "-o",
+        "/dev/shm/t42h2rcc-cold-rss-diag-z17df6n5-tmp/serial-darwin-amd64.test",
+        "./spike/t421"
+      ],
+      "environment_override": {
+        "GOOS": "darwin",
+        "GOARCH": "amd64",
+        "CGO_ENABLED": "0"
+      },
+      "pid": 1012714,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 131.21046421999927,
+      "available_before": 129074466816,
+      "available_after": 129074208768
+    },
+    {
+      "name": "compile-darwin-arm64",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-c",
+        "-tags=phebs_t42_native",
+        "-o",
+        "/dev/shm/t42h2rcc-cold-rss-diag-z17df6n5-tmp/serial-darwin-arm64.test",
+        "./spike/t421"
+      ],
+      "environment_override": {
+        "GOOS": "darwin",
+        "GOARCH": "arm64",
+        "CGO_ENABLED": "0"
+      },
+      "pid": 1019041,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 50.09023733399226,
+      "available_before": 129074204672,
+      "available_after": 132478881792
+    },
+    {
+      "name": "docs-glossary",
+      "argv": [
+        "make",
+        "docs-check",
+        "verify-glossary"
+      ],
+      "environment_override": {},
+      "pid": 1022258,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 1.8428567350056255,
+      "available_before": 132478877696,
+      "available_after": 132478873600
+    },
+    {
+      "name": "whitespace",
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "environment_override": {},
+      "pid": 1022328,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 0.3388441000133753,
+      "available_before": 132478873600,
+      "available_after": 132478873600
+    }
+  ],
+  "test_nodes": [
+    {
+      "gate": "serial-core-normal",
+      "test_nodes": {
+        "pass": 56,
+        "fail": 0,
+        "skip": 0
+      },
+      "package_passes": [
+        "github.com/bmeddeb/phebs/internal/dispatchadmission",
+        "github.com/bmeddeb/phebs/spike/t421"
+      ]
+    },
+    {
+      "gate": "serial-core-race",
+      "test_nodes": {
+        "pass": 56,
+        "fail": 0,
+        "skip": 0
+      },
+      "package_passes": [
+        "github.com/bmeddeb/phebs/internal/dispatchadmission",
+        "github.com/bmeddeb/phebs/spike/t421"
+      ]
+    },
+    {
+      "gate": "dispatch-package-normal",
+      "test_nodes": {
+        "pass": 581,
+        "fail": 0,
+        "skip": 0
+      },
+      "package_passes": [
+        "github.com/bmeddeb/phebs/internal/dispatchadmission"
+      ]
+    },
+    {
+      "gate": "dispatch-package-race",
+      "test_nodes": {
+        "pass": 581,
+        "fail": 0,
+        "skip": 0
+      },
+      "package_passes": [
+        "github.com/bmeddeb/phebs/internal/dispatchadmission"
+      ]
+    },
+    {
+      "gate": "linux-affected-normal",
+      "test_nodes": {
+        "pass": 129,
+        "fail": 0,
+        "skip": 0
+      },
+      "package_passes": [
+        "github.com/bmeddeb/phebs/spike/t421"
+      ]
+    },
+    {
+      "gate": "linux-affected-race",
+      "test_nodes": {
+        "pass": 129,
+        "fail": 0,
+        "skip": 0
+      },
+      "package_passes": [
+        "github.com/bmeddeb/phebs/spike/t421"
+      ]
+    },
+    {
+      "gate": "production-inventory",
+      "test_nodes": {
+        "pass": 4,
+        "fail": 0,
+        "skip": 0
+      },
+      "package_passes": [
+        "github.com/bmeddeb/phebs/spike/t421"
+      ]
+    }
+  ],
+  "counting_note": "Parent/subtest and cross-suite nodes overlap; counts are not unique independent cases. No failures or skips in these seven functional gates.",
+  "supported_other_64bit_compile_only": [
+    {
+      "path": "/dev/shm/t42h2rcc-cold-rss-diag-z17df6n5-tmp/serial-darwin-amd64.test",
+      "bytes": 94948624,
+      "sha256": "659dbbe0ad62c8bda7dcabec28eb327674b58aebe3952ba4d290e287fa0094bb",
+      "execution": "compile only; not run",
+      "retired_after_actual_wait": true
+    },
+    {
+      "path": "/dev/shm/t42h2rcc-cold-rss-diag-z17df6n5-tmp/serial-darwin-arm64.test",
+      "bytes": 89700626,
+      "sha256": "7df440b3b2bf09f82c4cf905b3084c92ad1513854ce5536e213c312bf37946e4",
+      "execution": "compile only; not run",
+      "retired_after_actual_wait": true
+    },
+    {
+      "path": "/dev/shm/t42h2rcc-cold-rss-diag-z17df6n5-tmp/serial-linux-arm64.test",
+      "bytes": 83593317,
+      "sha256": "007193145b6f142d2dde9569aba851819e4d0cc7474bfe675e5ebb52b241b8ad",
+      "execution": "compile only; not run",
+      "retired_after_actual_wait": true
+    }
+  ],
+  "private_policy": {
+    "schema": "t42-linux-epoch-operational-resources-v6",
+    "source_derived_sha256": "7c1c7db27018de54305f31d178360c3b4d8acaa0ff95296104d033700f4b6c98",
+    "bytes": 4313,
+    "authority": "Metadata only; actual next native runtime must log the same digest. All numeric RSS/payload/allowance/slack/process/TID/cadence/deadline gates remain exact."
+  },
+  "review": {
+    "source_record": "independent-v6-serial-source-review.json",
+    "sha256": "8f06d24840f5ac372188c1f042a2df5f24cac4a5fd689bcd74ce5d6ba8fd31ed",
+    "findings": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    },
+    "final_receipt_and_qualification_docs_review": "Recorded externally before immutable checkpoint; not self-referentially embedded"
+  },
+  "source_identical_carry": {
+    "all_go_and_non_doc_manifest_entries_unchanged": true,
+    "changed_after_gates": [
+      "PLAN.md",
+      "docs/BACKLOG.md",
+      "docs/ROADMAP.md",
+      "docs/guides/OPERATIONS.md"
+    ],
+    "initial_manifest_sha256": "674fbeddbd14674098164db281a79e1b8dec1b0cbfec9132966eb5fff2c8162b",
+    "final_manifest_sha256": "3f863887e01e762881977a698e9e2b3d4f4823f6450173f5c8abb27036cbef2b",
+    "reason": "Only owning bounded qualification prose added; fresh docs/glossary and whitespace are recorded separately before commit."
+  },
+  "cost": "Selected child checks nine original HEAD args and allocates a detached ten-element argv; one existing fresh three-tool check gains bounded binding/environment comparison under existing locks. Empty token preserves canonical legacy bytes and original argv; no new child/FD/native probe/payload read/hash/cache or ordinary query/sync/retry/publication work. Private policy JSON/hash grows at existing calls. Synchronous shard builders reduce overlap, may take longer within unchanged deadlines, and establish neither attribution nor memory fit.",
+  "source_binding": [
+    {
+      "path": "PLAN.md",
+      "bytes": 3038861,
+      "sha256": "a4029139c0cdd868111878d340216ddc199ab73390a4c96a861e7b526d192339"
+    },
+    {
+      "path": "docs/BACKLOG.md",
+      "bytes": 1599745,
+      "sha256": "2968b765c843783f1f41866eec58299844fa3d573f69588e9b3a811a41bb37b7"
+    },
+    {
+      "path": "docs/ROADMAP.md",
+      "bytes": 416429,
+      "sha256": "ddf9251a710c95454ec1fd88c4f27b35f967e9594114026e24439a1ef5ca2063"
+    },
+    {
+      "path": "docs/guides/OPERATIONS.md",
+      "bytes": 656775,
+      "sha256": "e55ab6c324bb90f7ea19a8912e903a69f0a40f8cb5f98b1f2957d30eca081a4e"
+    },
+    {
+      "path": "go.mod",
+      "bytes": 9366,
+      "sha256": "424c7e1038c71c10676fc3bad01e155ebc5f912a4eea65e90c284b30951a9275"
+    },
+    {
+      "path": "go.sum",
+      "bytes": 99030,
+      "sha256": "d7aa72d0c2c4283125d37d4377e74be0e87723735a27015900d23092798b1665"
+    },
+    {
+      "path": "internal/dispatchadmission/bootstrap.go",
+      "bytes": 23158,
+      "sha256": "b24e42c250f4ae14824e51c458629b008a933b30e504751db96b5d985c5d940e"
+    },
+    {
+      "path": "internal/dispatchadmission/bootstrap_test.go",
+      "bytes": 28882,
+      "sha256": "f6fe0bace0235d57fe28c8e826b33d1d9c84f4ab6bbcb91e97f588b817186ecd"
+    },
+    {
+      "path": "internal/dispatchadmission/production.go",
+      "bytes": 20066,
+      "sha256": "0d6a654e64ee149d7c2a0124b0cd1476aed97e81159ca5f71e09afdd04eff2cf"
+    },
+    {
+      "path": "internal/dispatchadmission/production_index_recipe.go",
+      "bytes": 2168,
+      "sha256": "c274ce9830a05f348d795581d801a153e0d0088d9b29aecca5c4e6956d395148"
+    },
+    {
+      "path": "internal/dispatchadmission/production_index_recipe_test.go",
+      "bytes": 7066,
+      "sha256": "b2307a5421ab187c3c9317264127b02b61a3193d7f7bcfafd594b3b58a46d4ad"
+    },
+    {
+      "path": "spike/t421/author_custody_run_linux.go",
+      "bytes": 18983,
+      "sha256": "27f8cec1f69c4b8415efcc066f457316726b47957a5dd1fb6bd14b5507f72231"
+    },
+    {
+      "path": "spike/t421/author_launch_linux.go",
+      "bytes": 2605,
+      "sha256": "3c66f100ef45b8f232f9ddf0a17371e32b63b82c894a360a748402506d644047"
+    },
+    {
+      "path": "spike/t421/epoch_classifier_linux.go",
+      "bytes": 9413,
+      "sha256": "76dd04ccd106fdeb08087b8f8730368a12b14644d3be12e3fdeeae5314dd4f4c"
+    },
+    {
+      "path": "spike/t421/epoch_classifier_linux_test.go",
+      "bytes": 9143,
+      "sha256": "735b1c780fc424c07242798dda519a6062f0493fc224a0bcd52b31d89e6e912a"
+    },
+    {
+      "path": "spike/t421/epoch_coordinator_linux.go",
+      "bytes": 9516,
+      "sha256": "357f5bf50a49d3525c411a563aed7e21f3d58ac3c9e7f60c68103d83255bacf3"
+    },
+    {
+      "path": "spike/t421/epoch_flow_linux.go",
+      "bytes": 16010,
+      "sha256": "7f4c4368575effb08fc67f643973d280f8766960a13798656adf7c1b1d84969e"
+    },
+    {
+      "path": "spike/t421/epoch_flow_native_linux_test.go",
+      "bytes": 21621,
+      "sha256": "520b9253c17602f1ca27fefa87e6915edf67ddc5f952b986e4eddacbca23f4b7"
+    },
+    {
+      "path": "spike/t421/epoch_index_recipe_linux_test.go",
+      "bytes": 1830,
+      "sha256": "2152997e9f4b2b26c69930ddb47246880db7133183e895d9b5067e6cd5ff3c8b"
+    },
+    {
+      "path": "spike/t421/epoch_launch.go",
+      "bytes": 65889,
+      "sha256": "6b9bbc58ed9b5b7488f9c047a60a59738152d008e1f1bbfc4e5809e009e602ac"
+    },
+    {
+      "path": "spike/t421/epoch_native_adapter.go",
+      "bytes": 1115,
+      "sha256": "e0c53cf4f54d8ad85d4238bfa9a6fa93bed98ba00b37d365aa9e4b94a25c7c07"
+    },
+    {
+      "path": "spike/t421/epoch_server_linux.go",
+      "bytes": 4313,
+      "sha256": "cc0219b294f409952b2de6df81db40c1f0152be8e322bee0b669c6e560649bc4"
+    },
+    {
+      "path": "spike/t421/epoch_trace_actor_linux.go",
+      "bytes": 11365,
+      "sha256": "aa0c31e669f4f30afd6ad1d12fefea7a2d2e09731949f4d2478d37371098cc03"
+    },
+    {
+      "path": "spike/t421/epoch_trace_census_linux.go",
+      "bytes": 1842,
+      "sha256": "7104d7b8f355a3722a55537347b1e276f9128491006bc7a6a10d8b77d88d9ce8"
+    },
+    {
+      "path": "spike/t421/epoch_trace_census_linux_test.go",
+      "bytes": 6735,
+      "sha256": "e1379610e3a2cb363dd3d9c3614d3be87c2a30b50a62997e77567b91f9c42ca8"
+    },
+    {
+      "path": "spike/t421/epoch_trace_descriptor_linux_test.go",
+      "bytes": 2020,
+      "sha256": "698b5a6fdc378df04831b7900de799ecbf73d655138491eaeb1583aa06e71fbe"
+    },
+    {
+      "path": "spike/t421/epoch_trace_events_linux.go",
+      "bytes": 18172,
+      "sha256": "566f7994f41d1dba77fa6d1a3f9ad8062f7f447bdbbb9997394facc8263009b5"
+    },
+    {
+      "path": "spike/t421/epoch_trace_fixture_linux_test.go",
+      "bytes": 7028,
+      "sha256": "f0372e8278d3260e678042d1df80369f7742e4fc8ace147e1944f4f79408bcf9"
+    },
+    {
+      "path": "spike/t421/epoch_trace_gate_linux_test.go",
+      "bytes": 5930,
+      "sha256": "13b78d8d60f6a72ef2f588e7884d660b5241e21ce57ec563ae356baa93793bf4"
+    },
+    {
+      "path": "spike/t421/epoch_trace_group_linux.go",
+      "bytes": 11778,
+      "sha256": "4c66bac6fc1a56737f6274cf6b7894bd026b462de7f3ae6e5013775c4e6a037d"
+    },
+    {
+      "path": "spike/t421/epoch_trace_group_linux_test.go",
+      "bytes": 14127,
+      "sha256": "5ce7257ebfc7e7d83c9ce3f3c7b0949a1f397fd90cca6ffec7f0aa8b92583117"
+    },
+    {
+      "path": "spike/t421/epoch_trace_initial_linux.go",
+      "bytes": 2480,
+      "sha256": "ad5e528eacc67dd85f52cdfb9cb10a766597aa6a06225add04a734f983c8b7a0"
+    },
+    {
+      "path": "spike/t421/epoch_trace_linux.go",
+      "bytes": 12799,
+      "sha256": "6cb9aa264eeca21225506764b510ab2d7d5002bd80b7035c102ac0cac3d3d883"
+    },
+    {
+      "path": "spike/t421/epoch_trace_linux_test.go",
+      "bytes": 16592,
+      "sha256": "3ed9194e3c0006f96a38eb9704b96a1c7575b47eab70f91e588f077703813e20"
+    },
+    {
+      "path": "spike/t421/epoch_trace_poll_linux_test.go",
+      "bytes": 7328,
+      "sha256": "7f6e3ce831e2bec62b6569116da93e66ff85d96b8c75a1066434227577701acc"
+    },
+    {
+      "path": "spike/t421/epoch_trace_proof_linux.go",
+      "bytes": 4502,
+      "sha256": "5e069b36e22dd0f0afe8351124b8531c85c5022fea76debf936dcd5443cbc144"
+    },
+    {
+      "path": "spike/t421/epoch_trace_signal_native_linux_test.go",
+      "bytes": 14914,
+      "sha256": "0963cb991a34abd13f7b5ab9390fbaebf083b91d0cbd8722e920e421167687e7"
+    },
+    {
+      "path": "spike/t421/linux_epoch_resource_policy.go",
+      "bytes": 19255,
+      "sha256": "fea022989f0164a7e5f59fb90eb12316c57204a26f1ea028db404441267e9f3e"
+    },
+    {
+      "path": "spike/t421/linux_epoch_resource_policy_test.go",
+      "bytes": 13085,
+      "sha256": "e7d33d28112ddf5522618e9863976570f6387d59d261e5678794aa69cd3432f6"
+    },
+    {
+      "path": "spike/t42h2r/live-borrow-cold-rss-failure-linux-20261020.json",
+      "bytes": 13100,
+      "sha256": "ec4dfeb2b18c61ddfd6df197e981274bbe014240c0e030b96c7f0442765ac5f8"
+    },
+    {
+      "path": "spike/t42h2r/saved-rss-diagnostic-linux-20261020.json",
+      "bytes": 11505,
+      "sha256": "72c866d1b61a4c8427b0b3b71cfb0a5209ccd412fd52282d73ea056302eaa4c9"
+    }
+  ],
+  "raw_bindings": [
+    {
+      "name": "run.py",
+      "bytes": 6011,
+      "sha256": "7b9f21a49785d888aed8b35101c73c8a67efe0bc6a3e1882d6202d9a6017b190"
+    },
+    {
+      "name": "source.json",
+      "bytes": 307923,
+      "sha256": "674fbeddbd14674098164db281a79e1b8dec1b0cbfec9132966eb5fff2c8162b"
+    },
+    {
+      "name": "source.diff",
+      "bytes": 25835,
+      "sha256": "45c61899fee577f1adae212ca6e67612d1d802af1e404db2722e3c7e2cf93ccb"
+    },
+    {
+      "name": "base.json",
+      "bytes": 282,
+      "sha256": "deb039838c1e0845ad807ec4f53f14f3906aae43c67c6ed184ac822368392f1d"
+    },
+    {
+      "name": "results.json",
+      "bytes": 8471,
+      "sha256": "8981067d9b5c5ae9b6796e70cb2fde4a1a43268ddba9f4ada5338127e4828a6c"
+    },
+    {
+      "name": "terminal.json",
+      "bytes": 153,
+      "sha256": "a6aa77b5247251f8862e60ef3825cef050d696ec721e5fa38cdc19539137014a"
+    },
+    {
+      "name": "post-qualification-source.json",
+      "bytes": 307923,
+      "sha256": "3f863887e01e762881977a698e9e2b3d4f4823f6450173f5c8abb27036cbef2b"
+    },
+    {
+      "name": "independent-v6-serial-source-review.json",
+      "bytes": 4931,
+      "sha256": "8f06d24840f5ac372188c1f042a2df5f24cac4a5fd689bcd74ce5d6ba8fd31ed"
+    },
+    {
+      "name": "prospective-policy-source-derived.json",
+      "bytes": 4313,
+      "sha256": "7c1c7db27018de54305f31d178360c3b4d8acaa0ff95296104d033700f4b6c98"
+    },
+    {
+      "name": "prospective-policy-source-audit.json",
+      "bytes": 993,
+      "sha256": "7fbcadd955edc27286383003b3c9300227f30178cfa9f82f53334bf53dc061de"
+    },
+    {
+      "name": "serial-core-normal.stdout",
+      "bytes": 54344,
+      "sha256": "92d4611c71c9c944337d9683d764e81bac9ffb0780cf298cfabc0fa9987ab728"
+    },
+    {
+      "name": "serial-core-normal.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "serial-core-race.stdout",
+      "bytes": 54351,
+      "sha256": "8eb3d7dcf8b6868d29837b2d4df6a2cc9891f4c6b2eb8e70a20d235efdcc428e"
+    },
+    {
+      "name": "serial-core-race.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "dispatch-package-normal.stdout",
+      "bytes": 535703,
+      "sha256": "f5c58971f6ea30be88c7d20bb88b9602a724b393c985319a16cf1cae261ab1ef"
+    },
+    {
+      "name": "dispatch-package-normal.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "dispatch-package-race.stdout",
+      "bytes": 535798,
+      "sha256": "d0c08962b79cd24648e55b425577986cc0836fc58224b8f0745cbee9e0953020"
+    },
+    {
+      "name": "dispatch-package-race.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "linux-affected-normal.stdout",
+      "bytes": 121734,
+      "sha256": "e8c6d6fddcf46ff782a35c11c0ce841bee2f10025d9132ad1252c388037cd05a"
+    },
+    {
+      "name": "linux-affected-normal.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "linux-affected-race.stdout",
+      "bytes": 121772,
+      "sha256": "6c915af6a30e016ec686c20b19faed692540c79d083caa40a0a037168fb86cde"
+    },
+    {
+      "name": "linux-affected-race.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "production-inventory.stdout",
+      "bytes": 4175,
+      "sha256": "5011b34c55d4d5565e20e33c3a238e9ea6952b467759bdeb2e6760277196ac69"
+    },
+    {
+      "name": "production-inventory.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "tagged-vet.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "tagged-vet.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "tagged-lint.stdout",
+      "bytes": 10,
+      "sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+    },
+    {
+      "name": "tagged-lint.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "compile-linux-arm64.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "compile-linux-arm64.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "compile-darwin-amd64.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "compile-darwin-amd64.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "compile-darwin-arm64.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "compile-darwin-arm64.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "docs-glossary.stdout",
+      "bytes": 237,
+      "sha256": "5fd3eab2e677f58920a75b972cef9c35a2270b0772ba06e4bfc98f26aab3948a"
+    },
+    {
+      "name": "docs-glossary.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "whitespace.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "whitespace.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "compile-darwin-amd64-artifact.json",
+      "bytes": 264,
+      "sha256": "33fc7964cca26d4d914b51fb5b5d299120791424e0b7591803ed8a3fe45b00a2"
+    },
+    {
+      "name": "compile-darwin-arm64-artifact.json",
+      "bytes": 264,
+      "sha256": "b11c9002aa4ae9695de6742f6d9ba04524ae47474af9ab81ac76bacc3d58354d"
+    },
+    {
+      "name": "compile-linux-arm64-artifact.json",
+      "bytes": 263,
+      "sha256": "3af1bb7fe341c6f2f7b98567b53c893230b75b0538698327065537c76d1ed141"
+    }
+  ],
+  "not_established": [
+    "Fresh full three-epoch native composition PASS",
+    "Memory fit or culprit attribution for e934 cold RSS breach",
+    "Integration or merge readiness",
+    "Hard-death successor / pressure / restore acceptance",
+    "Prospective formal admission / T42.2v / complete readiness / fresh freeze",
+    "Ceremony execution or new scale claims"
+  ]
+}
