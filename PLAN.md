@@ -14723,3 +14723,27 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   selected module directories exist, in addition to preparation/transfer hashes.
   All separate copies, compiler/cache/output and aggregate admission costs stay
   mandatory. Native qualification, H2/readiness/freeze and ceremony stay open.
+
+
+- **2026-10-20 — T42.H2q.b actual protected author qualification.**
+  Exact corrected source `71761b336924f9eb4367f4cab05574309c13ed67` passes the
+  required native plain-author reference driver with zero skips in 684.85s.
+  Its 56,370-entry / 48,943-file / 971,238,165-logical-byte tree fits the existing
+  combined input bound; separately charged preparation/H2k/execution copies,
+  H2p, images, page cache, compiler/output/cache and retained uncertainty costs
+  keep their original accounting. Selected originals were masked before Go use;
+  full reference/candidate bytes and BuildInfo matched. Constructor PIDs 265728
+  and 266218 and reference PID 266228 actually joined with empty sessions. Exact
+  cleanup, mutable-payload retirement, closed-owner refusals and host original
+  identity/propagation brackets passed. Preserve the first failure unchanged;
+  the new source-free `spike/t42h2q/protected-reference-linux-20261020.json`
+  binds exact source/tool/host/raw evidence without retrospective attribution.
+  Normal/race, tagged vet, scoped lint, Linux/Darwin arm64 compile-only and
+  documentation gates pass; independent source/custody/cost review has zero
+  findings. This closes H2q's stated component ACs for the plain implemented
+  author; optional V3 overlay receives no new native claim. It changes no
+  production per-request/tick/startup/retry/no-op/publication work. Linux author/
+  executor consumers, pressure/restore, source-owned aggregate admission,
+  restored-launch/full readiness and fresh freeze remain mandatory. Ben's
+  standing green-PR instruction authorizes qualified integration, with no
+  ceremony or production signing/activation authorization.

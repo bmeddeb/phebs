@@ -303,6 +303,17 @@ rerun unchanged source. The protected-source mode correction needs focused
 normal/race, static and independent review before one changed-source native
 confirmation. The stage-only failure supplies no successful author-build claim.
 
+The changed-source confirmation at `71761b33` passed in 684.85s with zero
+skips. Its
+[`protected-reference-linux-20261020.json`](../../spike/t42h2q/protected-reference-linux-20261020.json)
+records the actual plain-author reference build, 56,370 protected entries /
+971,238,165 logical bytes, original-path namespace masks, complete byte/BuildInfo
+equality, constructor/reference joins and empty sessions, exact fixture cleanup
+and unchanged host identities/propagation. Keep the first failed receipt exact;
+do not repeat this passed workload. H2q is a qualified component. Linux author/
+executor consumption, pressure/restore, aggregate admission and downstream
+readiness/freeze remain separate required work; no supplied author was executed.
+
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
 It binds `c07bc930` and is preserved unchanged, so it no longer describes the

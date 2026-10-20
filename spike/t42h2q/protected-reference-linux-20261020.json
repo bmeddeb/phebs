@@ -1,0 +1,651 @@
+{
+  "ticket": "T42.H2q.b",
+  "status": "PASS_REQUIRED_NATIVE_PROTECTED_ACTUAL_AUTHOR_REFERENCE",
+  "source_commit": "71761b336924f9eb4367f4cab05574309c13ed67",
+  "source_tree": "d81c51cb88c3cacdcb6ec81da8c19e3f92af478c",
+  "source_file_sha256": {
+    "spike/t421/checkout_admission.go": "77684dc5cfa650345e224bd920b1d9df006b1b9d506b6cced9898647e239fcdb",
+    "spike/t421/checkout_git_linux.go": "7b4b5f63a7aee4c21cfc185add69c6bea97a5537c81a62d80ebfc869b5cbfcff",
+    "spike/t421/checkout_git_linux_test.go": "4c3398a99f32742ba6765da1eb03066968c47119009370d7beb23ad31b8d0e30",
+    "spike/t421/checkout_transport_test.go": "03c9d2dcbdffe4eb29f28731aa73b8909df306c2b23b0f400b7c9958057c96b6",
+    "spike/t421/cmd/go-reference-helper/main.go": "841239cae3ef6d057e3463d3c91ba7ac58c84ab0f60d6c1bce114ab647e6a685",
+    "spike/t421/go_build_custody_linux.go": "3b7748ccda63f545d2a1b21cbde970fcf963a55f4b50b1c35f9cf33413f1593a",
+    "spike/t421/go_build_custody_linux_test.go": "200c006a875b26f948be7c5cac1e5194d5c6d8fe81e26dd67da678a6b4a82827",
+    "spike/t421/go_build_custody_modules.go": "792c3315b569d468a4c43226910043947b605939507bd245574bbfcf1441f274",
+    "spike/t421/go_build_git_linux.go": "31c22adc51433c152f4c378804bb3c027ce9ce316b5151207fdc2353e94f5d15",
+    "spike/t421/go_build_reference_linux.go": "4e744afda41bd04abfaa260b9ede4b245a80507d7b344efd6ee8773931fef92e",
+    "spike/t421/go_build_reference_linux_test.go": "95101b76f5afe28af1071e6c973054145548f3d7f129593adb41e6b27a76ee79",
+    "spike/t421/go_build_reference_stream_linux.go": "6915ba956e7d135eaa4b421a53a5fc395cc4083a10139c592e827c7ff0591470",
+    "spike/t421/go_build_reference_stream_linux_test.go": "d8a1763f989669f5337f14e9ab03e772f20e0907b4196ab164b1a25ce83fd06a",
+    "spike/t421/go_build_reference_worker_linux.go": "3c99e03cf2c841fb06bd9e4c9ac05b79940f6a86a2e5f03fb357f553d09c79c6",
+    "spike/t421/go_build_source_linux.go": "33144bfe8ab37003901d1b698e3fbf425150abacd274522f652bc813b1ab45e3",
+    "spike/t421/go_build_source_linux_test.go": "fd0ea8f82f7392781ed1d5d8d38ffc70b7eb079be86a86de1d0e226f0d5a2533",
+    "spike/t421/go_build_staging_linux.go": "5d59445b8a0b7677448edddf5bc05cb71288a129ecc4fd653482adb48561cbea",
+    "spike/t421/go_build_staging_linux_test.go": "d368f1f65fa0dc4981d56f8876013aa072a61a8a65b6016ac285959ee9787412",
+    "spike/t421/go_reference_build_linux.go": "10beda800dbf7c4f6f423aacf194c22477c6fc5461ba13f07b9928e5ad61d8bc",
+    "spike/t421/go_reference_build_linux_test.go": "4d80f7ddb84f25e2c6a3cdb50e8f9a30d726a00343d3777b24f9c2cb6e464e9b",
+    "spike/t421/go_reference_helper_linux.go": "75288243286927e9e9ffbd8f7c4038689b17603545dfeda8bb0770a713f08862",
+    "spike/t421/go_reference_helper_other.go": "4c5a50140ebfee5de30289bb3b5608f0c02a267e4310f2d25304dc1bdf440283",
+    "spike/t421/go_reference_inputs_linux.go": "54d794346b4486221e3b2e884539f4bde07f8a3872623922c29007b3e314f1e4",
+    "spike/t421/go_reference_inputs_linux_test.go": "b99429bc8eb2c244397715959a623f81bbe82da665db39bb3fe4d10b0666efdd",
+    "spike/t421/go_reference_native_linux_test.go": "d0c36f99129d97e275f778383d642d9baa167a142a60cf9a9e918429952a8f79",
+    "spike/t421/go_reference_plan_linux.go": "a41af21c18931a27e3ecdf81f3a6c81eb6ab9cf833c5059be1c2bcc39487662c",
+    "spike/t421/go_reference_plan_linux_test.go": "d6bdd8e23cba8972a073ea25caf3f8276688c5d87540b8991d8291eaef06198c",
+    "spike/t421/go_reference_recipe.go": "becb9dbb00a8018ba42eb56c663c79a9065e2204d94f339fe5f18de0dabf1c7d",
+    "spike/t421/go_reference_recipe_test.go": "cc50501b921d8939917656b0ee14ec8518deb0e8f1ff9e45beab489f98152673",
+    "spike/t421/reference_source.go": "cac08d98af06cb9f8d84f1fac6bb28b36b3eb5e754fe2a9e6f4baf4cd6fa2062",
+    "spike/t421/reference_tool.go": "4a73d117d3ce768d1f3c60b98a4ef53c60f8865877e32b1f0cfaf921592f6d1b",
+    "spike/t421/tool_custody_linux.go": "f1bf69ae78bcfa4ad6ff5730e6f714c560eacff7b2eb336780f45a00d7054c24"
+  },
+  "preflight": {
+    "at_utc": "2026-10-20T07:19:50.859529+00:00",
+    "source_commit": "71761b336924f9eb4367f4cab05574309c13ed67",
+    "source_tree": "d81c51cb88c3cacdcb6ec81da8c19e3f92af478c",
+    "uid": 1000,
+    "kernel": "7.0.0-38-generic",
+    "physical_memory_bytes": 15991848960,
+    "meminfo": "MemTotal:       15617040 kB\nMemFree:         3463612 kB\nMemAvailable:   10651048 kB\nBuffers:         1252220 kB\nCached:          7022968 kB\nSwapCached:        29024 kB\nActive:          3556804 kB\nInactive:        6617512 kB\nActive(anon):    2367828 kB\nInactive(anon):  1057584 kB\nActive(file):    1188976 kB\nInactive(file):  5559928 kB\nUnevictable:      617400 kB\nMlocked:              16 kB\nSwapTotal:       4194300 kB\nSwapFree:        2969876 kB\nZswap:                 0 kB\nZswapped:              0 kB\nDirty:              2648 kB\nWriteback:             0 kB\nAnonPages:       2504048 kB\nMapped:           897456 kB\nShmem:           1526572 kB\nKReclaimable:     774676 kB\nSlab:            1085148 kB\nSReclaimable:     774676 kB\nSUnreclaim:       310472 kB\nKernelStack:       22580 kB\nPageTables:        76992 kB\nSecPageTables:      3360 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:    12002820 kB\nCommitted_AS:   19648660 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:       63844 kB\nVmallocChunk:          0 kB\nPercpu:            12624 kB\nHardwareCorrupted:     0 kB\nAnonHugePages:         0 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:      4096 kB\nFilePmdMapped:         0 kB\nCmaTotal:              0 kB\nCmaFree:          611228 kB\nUnaccepted:            0 kB\nBalloon:               0 kB\nGPUActive:             0 kB\nGPUReclaim:            0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:      312928 kB\nDirectMap2M:     5748736 kB\nDirectMap1G:    10485760 kB\n",
+    "cgroup": "0::/user.slice/user-1000.slice/user@1000.service/app.slice/app-org.chromium.Chromium-5747.scope\n",
+    "visible_cgroup_ancestry": {
+      "/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/app.slice/app-org.chromium.Chromium-5747.scope": {
+        "memory.max": "max",
+        "memory.high": "max",
+        "memory.current": "7051042816",
+        "memory.swap.max": "max",
+        "memory.swap.current": "863150080",
+        "pids.max": "15107",
+        "pids.current": "441"
+      },
+      "/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/app.slice": {
+        "memory.max": "max",
+        "memory.high": "max",
+        "memory.current": "9122578432",
+        "memory.swap.max": "max",
+        "memory.swap.current": "1206419456",
+        "pids.max": "max",
+        "pids.current": "737"
+      },
+      "/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service": {
+        "memory.max": "max",
+        "memory.high": "max",
+        "memory.current": "10972921856",
+        "memory.swap.max": "max",
+        "memory.swap.current": "1246019584",
+        "pids.max": "max",
+        "pids.current": "1043"
+      },
+      "/sys/fs/cgroup/user.slice/user-1000.slice": {
+        "memory.max": "max",
+        "memory.high": "max",
+        "memory.current": "10975805440",
+        "memory.swap.max": "max",
+        "memory.swap.current": "1246019584",
+        "pids.max": "33236",
+        "pids.current": "1055"
+      },
+      "/sys/fs/cgroup/user.slice": {
+        "memory.max": "max",
+        "memory.high": "max",
+        "memory.current": "11041644544",
+        "memory.swap.max": "max",
+        "memory.swap.current": "1246347264",
+        "pids.max": "max",
+        "pids.current": "1055"
+      },
+      "/sys/fs/cgroup": {}
+    },
+    "available_disk_bytes": 132292575232,
+    "binary_sha256": {
+      "t421-native.test": "a3d940a07ac03463e9c6d703d55f1740311a415031a52df0f079da99de972e31",
+      "go-reference-helper": "a50f9e8c2f0c097fc9d7b58deff56650d3b4c6f5264beb2a2688a548f2faee8c",
+      "t422-author": "071b9f81eedef498671ff33622cd1c37043d311f3486db4ff454bcf2dd6d392b"
+    }
+  },
+  "native": {
+    "test": "TestLinuxGoReferenceRequiredNativeAuthor",
+    "test_elapsed_seconds": 684.85,
+    "wrapper": {
+      "source_commit": "71761b336924f9eb4367f4cab05574309c13ed67",
+      "pid": 258384,
+      "argv": [
+        "/home/ben/phebs-rehearsals/t42h2qb-mode-confirmed.tc8u08xk/t421-native.test",
+        "-test.run",
+        "^TestLinuxGoReferenceRequiredNativeAuthor$",
+        "-test.count=1",
+        "-test.timeout=45m",
+        "-test.v"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 684.9303658008575,
+      "session_members_after_wait": [],
+      "available_disk_after_bytes": 132275302400
+    },
+    "skips": [],
+    "helper_sha256": "sha256:a50f9e8c2f0c097fc9d7b58deff56650d3b4c6f5264beb2a2688a548f2faee8c",
+    "helper_source_commit": "71761b336924f9eb4367f4cab05574309c13ed67"
+  },
+  "observations": {
+    "constructor_pids": [
+      265728,
+      266218
+    ],
+    "constructor_actual_root_joins_and_empty_sessions": true,
+    "reference_pid": 266228,
+    "reference_actual_root_join_and_empty_session": true,
+    "protected_input_entries": 56370,
+    "protected_input_files": 48943,
+    "protected_input_logical_bytes": 971238165,
+    "actual_go_sha256": "sha256:8da5fd321795754b994c64e3eb8a5a14ff47bd285559a7e876f3c79abafc67f9",
+    "actual_author_sha256": "sha256:071b9f81eedef498671ff33622cd1c37043d311f3486db4ff454bcf2dd6d392b",
+    "exact_implemented_author_reference_and_complete_bytes_and_BuildInfo": "PASS required driver",
+    "original_sdk_module_source_namespace_masks_and_host_identity_propagation_brackets": "PASS required driver",
+    "mutable_payload_retired_before_reference": true,
+    "candidate_executed": false,
+    "typed_linux_tool_build_lineage_and_closed_owner_refusals": "PASS required driver",
+    "fixture_cleanup": "PASS required driver"
+  },
+  "post_run": {
+    "at_utc": "2026-10-20T07:32:44.247318+00:00",
+    "recorded_pid_paths_present": [],
+    "remaining_fixture_paths": [],
+    "available_bytes": 132265660416,
+    "host_root_mount_rows": [
+      "44 1 259:2 / / rw,relatime shared:1 - ext4 /dev/nvme0n1p2 rw"
+    ]
+  },
+  "focused_gates": [
+    {
+      "name": "focused-normal",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "./spike/t421",
+        "-run",
+        "Test(Linux(GoReference|GoBuild(Staging|Owner)|CheckoutGit)|Execution(ReferenceSource|CheckoutTransport|Checkout))",
+        "-count=1",
+        "-timeout=180s"
+      ],
+      "source_commit": "71761b336924f9eb4367f4cab05574309c13ed67",
+      "pid": 217367,
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 127.72771263122559,
+      "session_members_after_wait": []
+    },
+    {
+      "name": "focused-race",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-race",
+        "./spike/t421",
+        "-run",
+        "Test(Linux(GoReference|GoBuild(Staging|Owner)|CheckoutGit)|Execution(ReferenceSource|CheckoutTransport|Checkout))",
+        "-count=1",
+        "-timeout=240s"
+      ],
+      "source_commit": "71761b336924f9eb4367f4cab05574309c13ed67",
+      "pid": 226361,
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 171.5015003681183,
+      "session_members_after_wait": []
+    },
+    {
+      "name": "tagged-vet",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "vet",
+        "-tags=phebs_t42_native",
+        "./spike/t421/..."
+      ],
+      "source_commit": "71761b336924f9eb4367f4cab05574309c13ed67",
+      "pid": 235373,
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 21.118571043014526,
+      "session_members_after_wait": []
+    },
+    {
+      "name": "tagged-scoped-lint",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/golangci-lint-2.12.2/golangci-lint",
+        "run",
+        "--new-from-rev=6cbd764a2493ae0c91f2721fc14ac0debe0b2606",
+        "--build-tags=phebs_t42_native",
+        "--timeout=4m",
+        "./spike/t421/..."
+      ],
+      "source_commit": "71761b336924f9eb4367f4cab05574309c13ed67",
+      "pid": 238321,
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 30.550843954086304,
+      "session_members_after_wait": []
+    },
+    {
+      "name": "docs-glossary",
+      "argv": [
+        "make",
+        "docs-check",
+        "verify-glossary"
+      ],
+      "source_commit": "71761b336924f9eb4367f4cab05574309c13ed67",
+      "pid": 238598,
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 1.9260108470916748,
+      "session_members_after_wait": []
+    },
+    {
+      "name": "native-test-binary",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-c",
+        "-tags=phebs_t42_native",
+        "-trimpath",
+        "-pgo=off",
+        "-p=1",
+        "./spike/t421",
+        "-o",
+        "/home/ben/phebs-rehearsals/t42h2qb-mode-confirmed.tc8u08xk/t421-native.test"
+      ],
+      "source_commit": "71761b336924f9eb4367f4cab05574309c13ed67",
+      "pid": 238705,
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 187.45668077468872,
+      "session_members_after_wait": []
+    },
+    {
+      "name": "reference-helper-candidate",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "build",
+        "-trimpath",
+        "-pgo=off",
+        "-buildvcs=true",
+        "-p=1",
+        "-o",
+        "/home/ben/phebs-rehearsals/t42h2qb-mode-confirmed.tc8u08xk/go-reference-helper",
+        "github.com/bmeddeb/phebs/spike/t421/cmd/go-reference-helper"
+      ],
+      "source_commit": "71761b336924f9eb4367f4cab05574309c13ed67",
+      "pid": 245303,
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 9.658397197723389,
+      "session_members_after_wait": []
+    },
+    {
+      "name": "author-candidate",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "build",
+        "-trimpath",
+        "-pgo=off",
+        "-buildvcs=true",
+        "-p=1",
+        "-o",
+        "/home/ben/phebs-rehearsals/t42h2qb-mode-confirmed.tc8u08xk/t422-author",
+        "github.com/bmeddeb/phebs/spike/t422/cmd/author"
+      ],
+      "source_commit": "71761b336924f9eb4367f4cab05574309c13ed67",
+      "pid": 245355,
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 2.5392253398895264,
+      "session_members_after_wait": []
+    },
+    {
+      "name": "native-cache-clean",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "clean",
+        "-cache",
+        "-testcache"
+      ],
+      "source_commit": "71761b336924f9eb4367f4cab05574309c13ed67",
+      "pid": 245401,
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 0.5939018726348877,
+      "session_members_after_wait": []
+    },
+    {
+      "name": "cross-linux-arm64",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-c",
+        "-tags=phebs_t42_native",
+        "./spike/t421",
+        "-o",
+        "/home/ben/phebs-rehearsals/t42h2qb-mode-confirmed.tc8u08xk/t421-linux-arm64.test"
+      ],
+      "source_commit": "71761b336924f9eb4367f4cab05574309c13ed67",
+      "pid": 245406,
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 114.46517658233643,
+      "session_members_after_wait": []
+    },
+    {
+      "name": "cross-darwin-arm64",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-c",
+        "-tags=phebs_t42_native",
+        "./spike/t421",
+        "-o",
+        "/home/ben/phebs-rehearsals/t42h2qb-mode-confirmed.tc8u08xk/t421-darwin-arm64.test"
+      ],
+      "source_commit": "71761b336924f9eb4367f4cab05574309c13ed67",
+      "pid": 251809,
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 115.95756530761719,
+      "session_members_after_wait": []
+    }
+  ],
+  "independent_source_custody_cost_review": {
+    "source_commit": "71761b336924f9eb4367f4cab05574309c13ed67",
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0
+  },
+  "retained_failure_receipt": "reference-source-failure-linux-20261020.json",
+  "cost_and_limit": "Stable preparation/protected H2k tree and fresh execution copy each keep existing combined2GiB/100000entry/64MiBname/256MiBfile ceilings and are charged separately with H2p, sealed images, pagecache, compiler descendants and writable output/cache. Source/module read/hash work repeats; expanded modules receive2custom graph hash passes plus2Go mod verify directory hash passes when present. Work-output census2GiB/100000entries is a postjoin cleanup observation, not prospective compiler quota. One active attempt per owner/helper; loans and locks span actual joins; uncertainty retains custody. No production request/tick/startup/noop/publication change or aggregate resource allowance.",
+  "qualification_limits": [
+    "implemented t422-author plain role only; optional V3 overlay has no new native claim",
+    "historical Darwin contracts and H2k protocol preserved",
+    "remaining Linux consumer/executor ownership, pressure/restore and source-owned aggregate admission remain mandatory",
+    "no full H2/readiness/freeze/ceremony/scale/release result"
+  ],
+  "raw_evidence_directory": "/home/ben/phebs-rehearsals/t42h2qb-mode-confirmed.tc8u08xk",
+  "raw_file_census": [
+    {
+      "name": "author-candidate-environment.json",
+      "bytes": 1723,
+      "sha256": "b9dabcb1914b690bb0356d0e0353cfd0711e0762dfb5ff3436ed25504a3b4171"
+    },
+    {
+      "name": "author-candidate.json",
+      "bytes": 522,
+      "sha256": "889516e609160c432760879cf1aa5d3cc253e55c7a2ff320b2f233642383f22a"
+    },
+    {
+      "name": "author-candidate.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "author-candidate.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "author-request.json",
+      "bytes": 564,
+      "sha256": "2c4e5894f72ef29e426a9f7bd06b92725453f8e03a5c8d9c3e6e90ec2f2bdc40"
+    },
+    {
+      "name": "cross-darwin-arm64.json",
+      "bytes": 473,
+      "sha256": "c6a9dd880cb2fd7e84af0730cec6a8ad12cba99d68d553e4534487439b526ca8"
+    },
+    {
+      "name": "cross-darwin-arm64.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "cross-darwin-arm64.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "cross-darwin-artifact.json",
+      "bytes": 198,
+      "sha256": "a290208ca990162ed8753604157721333f3c9af898a6d940c00356dd2078ccee"
+    },
+    {
+      "name": "cross-linux-arm64.json",
+      "bytes": 471,
+      "sha256": "20282fa75ea2787355b20023602b6ce0d817da1a32fe5f4e7856296d12f870c9"
+    },
+    {
+      "name": "cross-linux-arm64.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "cross-linux-arm64.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "cross-linux-artifact.json",
+      "bytes": 198,
+      "sha256": "9cc273459f7135c3fed22079f934b5de612aae6848f28aef7588fec0a26026bb"
+    },
+    {
+      "name": "docs-glossary.json",
+      "bytes": 286,
+      "sha256": "b2caf1430618f4839bb8086a96ad32ccec786a88cdc3b7598b803bf12b8f2415"
+    },
+    {
+      "name": "docs-glossary.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "docs-glossary.stdout",
+      "bytes": 237,
+      "sha256": "1440ddcda4a61e85016ad6a617413559a3c438a3d7a03e050eff32620bbd11d0"
+    },
+    {
+      "name": "focused-normal.json",
+      "bytes": 500,
+      "sha256": "db1254b54c681e0174e8569ac9f0abaf2f8807634e56754a07af188aa3d2f2ae"
+    },
+    {
+      "name": "focused-normal.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "focused-normal.stdout",
+      "bytes": 49,
+      "sha256": "411041523b5fff012e4e870793f081ce1465b14f35b3fc7aa645d058d0381490"
+    },
+    {
+      "name": "focused-race.json",
+      "bytes": 510,
+      "sha256": "c1ec1a003ccc4d71113ec4b8de1c432113ecbd7069f039ae80dbaea14cf6fc8a"
+    },
+    {
+      "name": "focused-race.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "focused-race.stdout",
+      "bytes": 49,
+      "sha256": "1bb13c0e01d8bfe5aa8d9d64f0968bcea52f16ffb486fd19a4b877c26ba23e3b"
+    },
+    {
+      "name": "gates.json",
+      "bytes": 5389,
+      "sha256": "9e8ca4dbd6e547fa265be62e33b8cbc7618127d6aa7483661bbc47c160d7a5ea"
+    },
+    {
+      "name": "go-reference-helper",
+      "bytes": 36709547,
+      "sha256": "a50f9e8c2f0c097fc9d7b58deff56650d3b4c6f5264beb2a2688a548f2faee8c"
+    },
+    {
+      "name": "independent-correction-review.json",
+      "bytes": 773,
+      "sha256": "177f6dfe0569dc0a254fd17ac6b8146a8391a8a73972515f80dcdf8fee03593b"
+    },
+    {
+      "name": "independent-preflight-gate-review.json",
+      "bytes": 336,
+      "sha256": "d6dfc36f81ec082af63e1d76848aac5435b604b267d6d82c20c0d202f51488f0"
+    },
+    {
+      "name": "native-author-run.py",
+      "bytes": 3774,
+      "sha256": "a86abff0e9b1b48736d41a0b2ee9698a83c1f0fc965800d62ac386f940ca0c39"
+    },
+    {
+      "name": "native-author-running.json",
+      "bytes": 283,
+      "sha256": "2cf9c422541aa65b6d12b8a3599390cffb9d901de750c9d3274e5ed9d59e8538"
+    },
+    {
+      "name": "native-author.json",
+      "bytes": 462,
+      "sha256": "116b5e77ef7f635c8795eec561cee8f21fb7047d0dd77fc6e7a48b651927c2ef"
+    },
+    {
+      "name": "native-author.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "native-author.stdout",
+      "bytes": 839,
+      "sha256": "d54846740b314efcc89b6c0d99294b7ccae93feaf50290e43b61cbdeb2581e45"
+    },
+    {
+      "name": "native-cache-clean.json",
+      "bytes": 347,
+      "sha256": "3b2acf2049931307d6bdf412c6e9a6e64d39fcfb92361e9b02a346eef6ea7e1a"
+    },
+    {
+      "name": "native-cache-clean.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "native-cache-clean.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "native-post-run.json",
+      "bytes": 255,
+      "sha256": "6618e279978dc1062101e098b26fd45ae239aba702bba27f6f03bbbc5d21238d"
+    },
+    {
+      "name": "native-preflight.json",
+      "bytes": 4022,
+      "sha256": "c4712b74b4439e98d73bde88aade5e5144c0c662e962b7f8121a2c0ded50c491"
+    },
+    {
+      "name": "native-test-binary.json",
+      "bytes": 512,
+      "sha256": "bf43f7cf083000adfcf52e85488d3085df8b37205b9b7b736b7f409ef169929e"
+    },
+    {
+      "name": "native-test-binary.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "native-test-binary.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "pr-update.json",
+      "bytes": 1046,
+      "sha256": "37bab3da275ed756bb84432729ff828310c6d9d3a94d0e622863c088f7a23526"
+    },
+    {
+      "name": "qualified-source-census.json",
+      "bytes": 3815,
+      "sha256": "547cc73c8ba1b3664cf6bb36a5caf6ff6e9f49feaab3da18892dfb48fb220812"
+    },
+    {
+      "name": "reference-helper-candidate-environment.json",
+      "bytes": 1723,
+      "sha256": "b9dabcb1914b690bb0356d0e0353cfd0711e0762dfb5ff3436ed25504a3b4171"
+    },
+    {
+      "name": "reference-helper-candidate.json",
+      "bytes": 552,
+      "sha256": "f4e6c5fe9dcf8f0b0f9172e374594c446dde877572ee4785700992bfdec65493"
+    },
+    {
+      "name": "reference-helper-candidate.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "reference-helper-candidate.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "reference-helper-request.json",
+      "bytes": 615,
+      "sha256": "170b48f63bb25001f3ec476bcc04739cc27b8e1b6964f15a78e68976b0454465"
+    },
+    {
+      "name": "serial-gates.py",
+      "bytes": 3744,
+      "sha256": "346677530d33f69ae81f06e87e4bac547903f740c9f89a37f82272b590f51dc7"
+    },
+    {
+      "name": "source-clone.json",
+      "bytes": 365,
+      "sha256": "e0f45cbdb72b95e4260e3a88e4e3f64a947683f3638e1c6486c575d5e1709dfe"
+    },
+    {
+      "name": "source-clone.stderr",
+      "bytes": 96,
+      "sha256": "5560cc1b453038ac57a238cfb5a6d68d0a6e05df3395ace361880231c8590100"
+    },
+    {
+      "name": "source-clone.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "t421-native.test",
+      "bytes": 87397085,
+      "sha256": "a3d940a07ac03463e9c6d703d55f1740311a415031a52df0f079da99de972e31"
+    },
+    {
+      "name": "t422-author",
+      "bytes": 38734010,
+      "sha256": "071b9f81eedef498671ff33622cd1c37043d311f3486db4ff454bcf2dd6d392b"
+    },
+    {
+      "name": "tagged-scoped-lint.json",
+      "bytes": 475,
+      "sha256": "b56eb2b770fcf04e9f5fa161d46348ce77ff93d72cb12dbf14d2e8a80399136e"
+    },
+    {
+      "name": "tagged-scoped-lint.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "tagged-scoped-lint.stdout",
+      "bytes": 10,
+      "sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+    },
+    {
+      "name": "tagged-vet.json",
+      "bytes": 359,
+      "sha256": "5ea0511bfbcaf9353117ed614fa224875654d121ecc4a34e1b1432efba9cb4a3"
+    },
+    {
+      "name": "tagged-vet.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "tagged-vet.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "production_signing_and_activation": "PENDING"
+}

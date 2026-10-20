@@ -174,6 +174,16 @@ compile), preserved failed receipts and independent review with no findings.
 H2q.b follows with the complete protected SDK/module/
 source reference-build owner and all remaining parent acceptance criteria.
 Neither scope waives full H2, resource/readiness, freeze or execution gates.
+The corrected H2q.b actual-author confirmation at `71761b33` passed with zero
+skips in 684.85s, protecting 56,370 entries / 971,238,165 logical bytes with
+original-input namespace masks, complete byte/BuildInfo equality, actual joins,
+empty sessions and exact cleanup. Its retained first failure and source-free
+[receipt](../spike/t42h2q/protected-reference-linux-20261020.json) preserve the
+qualification boundary. Normal/race, static, supported arm64 compile-only and
+independent source/custody/cost review pass. Next is the distinct Linux author
+consumer/source owner, then executor/pressure/restore and aggregate admission;
+this component issues no complete H2/readiness/freeze authority.
+
 
 Next: [Linux office handoff #124](https://github.com/bmeddeb/phebs/issues/124)
 mechanism qualification → remaining T42.H2 consumer/executor/resource admission

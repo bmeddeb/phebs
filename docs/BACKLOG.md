@@ -4301,8 +4301,8 @@ source/custody/cost/hash review with no findings, as did focused normal/race,
 tagged vet, scoped lint and documentation gates. See the
 [completed record](./BACKLOG_COMPLETED.md#t42h2qa--reachable-protected-go-layout-and-lifetime-guard-2026-10-19).
 
-**T42.H2q.b · Protected Linux SDK/module/source reference-build owner** *(next;
-depends on H2q.a).* Own every remaining parent H2q AC: exact clean source and
+**T42.H2q.b · Protected Linux SDK/module/source reference-build owner** *(PR #150;
+qualified 2026-10-20; component complete; depends on H2q.a).* Own every remaining parent H2q AC: exact clean source and
 checksum-selected module/SDK inputs; hide private originals and selected original
 SDK/cache/source before use; actual implemented reference-tool build and complete
 candidate/build-info comparison; closed descriptor/namespace routing and offline
@@ -4345,6 +4345,22 @@ claiming a particular inner predicate. Source review found protected executable
 0400/0500 protected-source verifier and named substep diagnostics are required;
 historical checkout defaults and complete blob/index/control checks stay exact.
 Changed-source normal/race/static/review and native qualification remain open.
+
+Exact corrected source `71761b33` passed the required actual-author native
+confirmation with zero skips in 684.85s. It protected 56,370 entries / 48,943
+files / 971,238,165 logical bytes, masked the selected original SDK/cache/source
+inside the executing namespace, and matched complete reference/candidate bytes
+and BuildInfo. Both constructor roots and the reference root joined with empty
+sessions; mutable payload retirement, final original-identity/host-propagation
+brackets, exact fixture cleanup and closed-owner refusals passed. Normal/race,
+tagged vet, scoped lint, Linux/Darwin arm64 compile-only, docs/glossary and
+independent source/custody/cost review pass. The
+[receipt](../spike/t42h2q/protected-reference-linux-20261020.json) binds actual
+source/tool/host/raw facts and preserves the failed first attempt unchanged.
+This closes H2q.b and parent H2q's stated protected-reference ACs for the
+implemented plain author role; optional V3 overlay gets no new native claim.
+Linux author/executor consumers, pressure/restore, complete source-owned
+aggregate admission and all downstream readiness/freeze gates remain open.
 
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over

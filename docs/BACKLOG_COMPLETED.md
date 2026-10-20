@@ -11430,3 +11430,39 @@ the installed SDK available. Full SDK/module/source ownership, original hiding,
 implemented protected reference provenance and public joined capabilities remain
 H2q.b. Separate tree/staging/cache/compiler costs and aggregate H2 admission stay
 mandatory; no readiness/freeze/ceremony, scale or release result follows.
+
+
+## T42.H2q.b · Protected Linux SDK/module/source reference-build owner (2026-10-20)
+
+The typed Linux owner reconstructs exact source through protected Git, selects
+checksum-bound modules/SDK and constructs one H2k input tree. Its fixed helper
+streams a separately charged reachable read-only copy, masks selected original
+SDK/cache/source paths, verifies source/modules there and compares complete
+reference output, digest and BuildInfo against a never-executed sealed author.
+Loans survive cancellation and uncertainty until actual root Wait/session drain.
+Exact cleanup retains unknown/replaced prefixes. Historical Darwin defaults and
+H2k wire semantics stay exact; Linux source requires physical 0400/0500 while
+sharing complete blob/index/commit/control checks.
+
+The first `a48ba614` attempt failed before READY at `exact-source`, with actual
+joins and empty sessions; its sticky helper Close refusal retained an empty
+fixture. The failure receipt is unchanged and assigns no unobserved inner cause.
+A regression proves the raw/protected executable-mode mismatch and preserves
+mode, blob/index/control, untracked and cancellation refusals.
+
+Corrected source `71761b336924f9eb4367f4cab05574309c13ed67` passed required
+native actual-author reference qualification with zero skips in 684.85s:
+56,370 entries / 48,943 files / 971,238,165 logical bytes; complete byte/BuildInfo
+equality; original-input namespace masks; constructor/reference actual joins and
+empty sessions; final original-identity/propagation brackets; exact cleanup and
+closed-owner refusals. Focused normal/race, tagged vet, scoped lint, Linux and
+Darwin arm64 compile-only, docs/glossary and independent source/custody/cost
+review pass. The [receipt](../spike/t42h2q/protected-reference-linux-20261020.json)
+binds exact source, tools, host and raw hashes. Aggregate compiler/output/cache/
+page-cache/process/concurrency admission remains mandatory, with no swap credit.
+
+This closes the stated H2q component ACs for the plain implemented author role;
+optional V3 overlay has no new native claim. Remaining Linux author/executor
+consumers, pressure/restore, source-owned aggregate reservations, T42.2v,
+complete readiness and fresh freeze remain open. No ceremony, scale or production
+release/signing/activation result follows.
