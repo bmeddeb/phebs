@@ -289,6 +289,13 @@ all payload charges and limits remain. Per-component diagnostics are retained
 on future runs. Payload growth remains unattributed, and finite-child custody
 and full composed acceptance stay open.
 
+The finite-child research now has a positive fixed Go-tree result with genuine
+root/application DA waits and live-parent reaps, including a real no-exec
+lifetime matching the pinned SDK's pidfd-support helper shape. Its [receipt](../spike/t42h2r/finite-go-tree-mechanism-linux-20261020.json)
+retains the earlier failed attempts and exact limits. Production trace/census
+synchronization, generic missing-barrier refusal and full native composition
+remain open in #156; this bounded result does not advance H2/readiness/freeze.
+
 Production artifact/signature/publication closure for T47.5, T49.4, T50.3,
 T51.3, T52.3 and T54.3 remains pending the existing unavailable production key
 and the exact owning production decision. Scoped results and unsigned drafts

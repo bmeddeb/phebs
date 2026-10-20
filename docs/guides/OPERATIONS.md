@@ -536,6 +536,18 @@ Private logs retain saved component footprints and build inventory, including
 refusals, without rescanning. The old author cause and extra payload attribution
 remain unknown; finite-child custody still precedes another full native run.
 
+A [standalone finite-Go-tree mechanism](../../spike/t42h2r/finite-go-tree-mechanism-linux-20261020.json)
+now proves genuine root/application DA waits and two original-parent reaps
+while that parent is alive in its fixed fixture. It includes a real inherited-
+image no-exec lifetime matching the pinned SDK's pidfd-support helper shape and
+conservatively overlapping RSS;
+no universal helper count, SDK-private Wait result or executable-history claim
+follows. Both earlier failures remain retained. The source is saved as
+`.go.txt`, outside default Go test discovery. Production Start/trace/Wait and
+complete census/reap integration, actual helper chains, missing-barrier refusal,
+cancellation and unknown-prefix custody still precede a new full composed run.
+Do not use ptrace EXITKILL or an absent PID as a genuine Wait/session-join oracle.
+
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
 It binds `c07bc930` and is preserved unchanged, so it no longer describes the

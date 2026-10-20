@@ -4637,6 +4637,19 @@ make future attribution possible without rescanning. It promises no reclaim;
 finite-author/nested-Git lifecycle synchronization, full composed acceptance
 and every later H2/readiness/freeze gate remain open.
 
+The [bounded finite-Go-tree mechanism](../spike/t42h2r/finite-go-tree-mechanism-linux-20261020.json)
+now passes for exact standalone source `7a95224a` against project `afbe06f4`:
+fifteen tasks, fifteen available EXIT image/RSS checks, genuine application DA
+Wait 17 and root DA Wait 0 with settled counts. Both non-root process lifetimes
+are reaped by their still-live original parent. A real no-exec lifetime matches
+the pinned SDK's pidfd-support helper shape, with no universal child-count or
+SDK-private Wait-return claim. Earlier failed research prefixes remain retained.
+This is not production trace integration or generic all-task EXIT coverage; a missing
+required barrier must refuse qualification. Actual Git/helper chains, complete
+census/reap synchronization and safe cancellation/unknown custody still need
+source integration, bounded gates and independent review before the full native
+gate. PR #156 and parent H2 remain open.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

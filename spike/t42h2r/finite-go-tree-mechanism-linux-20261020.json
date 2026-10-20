@@ -1,0 +1,289 @@
+{
+  "schema": "t42-linux-finite-go-tree-mechanism-v1",
+  "date": "2026-10-20",
+  "qualification": "bounded-positive-own-Go-tree-mechanism-only",
+  "project_source_commit": "afbe06f4beddfabd62f79210e61f3c2fbb7d5acc",
+  "source_artifact": {
+    "path": "spike/t42h2r/finite-go-tree-mechanism-linux-20261020.go.txt",
+    "sha256": "7a95224a5c6b9bf66de57fbb11af0fd6cde4862693a38d5167c47493c6d7a56e",
+    "bytes": 34416,
+    "default_test_discovery": "not a .go file; no automatic ptrace test or authority"
+  },
+  "host": {
+    "kernel": "7.0.0-38-generic",
+    "architecture": "linux/amd64",
+    "effective_uid": 1000,
+    "new_entitlements": false
+  },
+  "sdk": {
+    "version": "go1.26.5",
+    "source_files": {
+      "src/os/pidfd_linux.go": {
+        "sha256": "f2a7c0e31bda943d4e2151a61f6a9eb2084815ed5c887cc8aa4fd7506805de33",
+        "bytes": 5986
+      },
+      "src/syscall/exec_linux.go": {
+        "sha256": "566314c12ef25bf80312c654b58648ce6f94cb427b8097b4b2f10993058d4366",
+        "bytes": 27725
+      }
+    }
+  },
+  "raw": {
+    "root": "/home/ben/phebs-rehearsals/t42h2rcc-preparation-memory-rgw7iw8c/trace-next/attempt-3",
+    "actual_tool_session": 38321,
+    "actual_tool_exit": 0,
+    "terminal_audit_sha256": "625ee1f0076648b6fcc5656fb832c652739618a192f1b762e09b69f1174e9633",
+    "files": {
+      "completed-cache-reuse.json": {
+        "sha256": "664cf4c7070da5ff29ad0d6ba2aa0503635b053503e1f4502adc5991622b8bf5",
+        "bytes": 178
+      },
+      "epoch_ptrace_go_tree_linux_test.go": {
+        "sha256": "7a95224a5c6b9bf66de57fbb11af0fd6cde4862693a38d5167c47493c6d7a56e",
+        "bytes": 34416
+      },
+      "build.stderr": {
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      "run.py": {
+        "sha256": "e07e57f8d2574229604af2a73bcd8201b4d7fdae174bb51ff0f44aac7dcf76ea",
+        "bytes": 5259
+      },
+      "binary.json": {
+        "sha256": "d417673eb643582d9fd4e2b812abdb6ea319147e80101d236f50a131da3e9a77",
+        "bytes": 244
+      },
+      "native.stdout": {
+        "sha256": "73d2cb7ffc20ac03c75272c9846cfdce8a8e812fa1b6447eaa11da501f6e1bbe",
+        "bytes": 5876
+      },
+      "module-preparation.json": {
+        "sha256": "59ccbd06764bb363203b632154952659a69a8541467ab778140e5111879c2428",
+        "bytes": 682
+      },
+      "review.json": {
+        "sha256": "1608a6a8e44e42255d82c6d59efaedb2cdf8c89e4cd1952167a0f4d21ee70380",
+        "bytes": 602
+      },
+      "traceprobe.test": {
+        "sha256": "b78ce1f032aff86f46ccf312bcbacf0d02eec2838e9250fa957b2fbe3778a6a6",
+        "bytes": 8205946
+      },
+      "results.json": {
+        "sha256": "a6d8b1629e097c920e5194ac01c183ae28d90556824420535c510c6c106aa66a",
+        "bytes": 1229
+      },
+      "inputs.json": {
+        "sha256": "d3d50f4eeeb1f208615f0cf83cda8946a1a6bad8b76ada10c3a8a6cd1ca6eb51",
+        "bytes": 545
+      },
+      "terminal.json": {
+        "sha256": "2a85e4fef3971183fc18f6044c6cb4e76f7a61ef9fbe975e6421fefb3fc5a5ac",
+        "bytes": 245
+      },
+      "progress.json": {
+        "sha256": "c2c5d1ba34aa167da981471b4cae01e876eaf02d6414ad6015b3e26501f21630",
+        "bytes": 54
+      },
+      "go.mod": {
+        "sha256": "ea1c95126a233ef4567c842475fc80e885ec0618e7d65db102c3381c05a61a17",
+        "bytes": 9482
+      },
+      "go.sum": {
+        "sha256": "d7aa72d0c2c4283125d37d4377e74be0e87723735a27015900d23092798b1665",
+        "bytes": 99030
+      },
+      "build.stdout": {
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      "native.stderr": {
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      "owned-tmp/trace-output-3453775962": {
+        "sha256": "3b3f1109946301213347b317f552ae772650c29e94bbe8beb25b9f2e96c54953",
+        "bytes": 123
+      }
+    }
+  },
+  "commands": [
+    {
+      "name": "build",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-c",
+        "-o",
+        "/home/ben/phebs-rehearsals/t42h2rcc-preparation-memory-rgw7iw8c/trace-next/attempt-3/traceprobe.test",
+        "."
+      ],
+      "pid": 769257,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 1.0137737910044962,
+      "available_before": 129449222144,
+      "available_after": 129441009664,
+      "scratch_source_changed": [],
+      "parent_source_changed": "",
+      "scope": "research only; SID census not complete child history"
+    },
+    {
+      "name": "native",
+      "argv": [
+        "/home/ben/phebs-rehearsals/t42h2rcc-preparation-memory-rgw7iw8c/trace-next/attempt-3/traceprobe.test",
+        "-test.run=^TestLinuxEpochPtraceGoTreeOriginalWaits$",
+        "-test.v",
+        "-test.timeout=40s"
+      ],
+      "pid": 769323,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 0.08026288000110071,
+      "available_before": 129441001472,
+      "available_after": 129440985088,
+      "scratch_source_changed": [],
+      "parent_source_changed": "",
+      "scope": "research only; SID census not complete child history"
+    }
+  ],
+  "native": {
+    "registered_tasks": 15,
+    "stops": 49,
+    "exit_image_checks": 15,
+    "exit_image_unavailable": 0,
+    "nonroot_tracer_terminal_copies": 2,
+    "nonleader_exit_detaches": 12,
+    "events": {
+      "vfork": 2,
+      "clone": 12,
+      "exec": 1,
+      "vfork_done": 2,
+      "exit": 15
+    },
+    "stop_scope": "49 event-loop stops after the separately consumed initial TRACEME exec-stop"
+  },
+  "leaders": [
+    {
+      "pid": 769330,
+      "role": "original-DA-root",
+      "initial_single_task_exec_stop": true,
+      "exit_image_checks": 1,
+      "exit_rss_bytes": 6451200,
+      "terminal_code": "CLD_EXITED",
+      "terminal_status": 0,
+      "raw_terminal_consumed": false,
+      "genuine_DA_Handle_Wait": true,
+      "original_pidfd_HUP_after_Wait": true
+    },
+    {
+      "pid": 769338,
+      "role": "fixed-SDK-probe-shape-corroborated",
+      "creator_tid": 769336,
+      "parent_tgid": 769330,
+      "creation": "PTRACE_EVENT_VFORK",
+      "exec_events": 0,
+      "exit_image_checks": 1,
+      "exit_rss_bytes": 6352896,
+      "terminal_code": "CLD_EXITED",
+      "terminal_status": 0,
+      "tracer_terminal_consumed": true,
+      "original_pidfd_HUP_while_original_parent_alive": true,
+      "SDK_private_Wait_return_code_instrumented": false
+    },
+    {
+      "pid": 769339,
+      "role": "application-DA-child",
+      "creator_tid": 769336,
+      "parent_tgid": 769330,
+      "creation": "PTRACE_EVENT_VFORK",
+      "exec_events": 1,
+      "exit_image_checks": 1,
+      "exit_rss_bytes": 6086656,
+      "terminal_code": "CLD_EXITED",
+      "terminal_status": 17,
+      "tracer_terminal_consumed": true,
+      "original_pidfd_HUP_while_original_parent_alive": true,
+      "genuine_application_DA_Handle_Wait": true
+    }
+  ],
+  "application_report": {
+    "ChildPID": 769339,
+    "Exit": 17,
+    "Ordinal": 1,
+    "Active": 0,
+    "Tasks": 5,
+    "DeliveredSignals": 2,
+    "AckConsumed": true
+  },
+  "root_DA_settlement": {
+    "ordinal": 1,
+    "active": 0,
+    "checked_by_actual_test": true
+  },
+  "real_signal_delivery": [
+    "SIGTRAP",
+    "SIGUSR1",
+    "original-pidfd-SIGUSR2-live-parent-ACK"
+  ],
+  "selector": {
+    "stop_only_ECHILD_fallbacks": 3,
+    "fallback_empty": 0,
+    "fallback_trapped": 0,
+    "rule": "ECHILD changes selector only; exact original identity/real parent/TracerPid and actual CLD terminal required; never infer death/retirement from ECHILD"
+  },
+  "earlier_failures": [
+    {
+      "raw_root": "/home/ben/phebs-rehearsals/t42h2rcc-preparation-memory-rgw7iw8c/trace-next",
+      "source_sha256": "4c664099b5b7f4009cbd7f9732e43998f07742d7c7b36d00f96c6121991d61f7",
+      "actual_tool": 11981,
+      "actual_tool_exit": 1,
+      "failure": "specific WSTOPPED ECHILD; original terminal state not retained",
+      "audit_sha256": "2580e0ad9a465f6692d19a65575530ade14f8a348f4ddb11f52deb0b725d99ce",
+      "genuine_root_Wait_proved": false
+    },
+    {
+      "raw_root": "/home/ben/phebs-rehearsals/t42h2rcc-preparation-memory-rgw7iw8c/trace-next/attempt-2",
+      "source_sha256": "3e3c336588fb4193a629d53c69d27c3812d446981e5140b888c8563be229811a",
+      "actual_tool": 68943,
+      "actual_tool_exit": 1,
+      "failure": "one application leader assumption refused second real process leader",
+      "audit_sha256": "58f0b12de31e05c408c279caacd65f47d951f650f28bee92a136e79ffa3340eb",
+      "genuine_root_Wait_proved": false
+    }
+  ],
+  "reviews": [
+    {
+      "reviewer": "/root/review_h2m_extent",
+      "source_sha256": "7a95224a5c6b9bf66de57fbb11af0fd6cde4862693a38d5167c47493c6d7a56e",
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    }
+  ],
+  "cost": {
+    "scope": "research only; no production code or steady-state changes",
+    "limits": "64 registered TIDs,3 leaders,1024 event-loop stops plus the separate initial exec-stop; separate1024 event-ledger cap;20-second operation plus bounded cleanup",
+    "per_turn": "sort at most64 current TIDs; targeted nonblocking wait selectors; no Wait4(-1)",
+    "per_exit": "bounded identity/executable metadata and at most64KiB smaps_rollup read",
+    "private_outputs": "one retained file per attempt; no SDK/module/corpus scan",
+    "RSS": "raw inherited CLONE_VM shared pages may overlap; no subtraction or tiny fixed allocation claim"
+  },
+  "remaining": [
+    "production source-owned Start/trace/Wait and full-census/probeGate integration",
+    "actual Git/helper chains and all selected Phebs/Surreal/Zoekt lifetimes",
+    "safe cancellation/SIGKILL, nonleader exec mapping or exact refusal, unknown-prefix custody",
+    "unchanged resource/ownership/cleanup bounds and exact affected gates/review",
+    "full combined native acceptance; parent H2,executor/pressure/restore/admission,restored launch/readiness/freeze"
+  ],
+  "nonclaims": [
+    "not independent tool admission or executable-history attestation",
+    "not all-event/missing-EXIT-image coverage",
+    "not universal exactly-one-SDK-child or firstStart trigger guarantee",
+    "does not attribute earlier author909 or native memory c92 failure",
+    "failed-prefix EXITKILL is not actual Wait/session proof",
+    "no ceremony, release, scale,SLO or existing-instance activation authority"
+  ]
+}

@@ -1,0 +1,960 @@
+//go:build linux
+
+package t421
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"os/exec"
+	"os/signal"
+	"runtime"
+	"sort"
+	"strconv"
+	"strings"
+	"syscall"
+	"testing"
+	"time"
+	"unsafe"
+
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
+	"golang.org/x/sys/unix"
+)
+
+// Research only: one own-image Go root, its own-image Go child, and the
+// observed no-exec SDK-shaped auxiliary lifetime in this fixed fixture.
+// Positive-path feasibility, not executable admission or all-event closure.
+const traceNextMarker = "PHEBS_PRIVATE_PTRACE_NEXT"
+const traceNextChildSelector = "^TestLinuxEpochPtraceGoTreeFixedChild$"
+const traceNextOptions = unix.PTRACE_O_TRACEFORK | unix.PTRACE_O_TRACEVFORK | unix.PTRACE_O_TRACEVFORKDONE | unix.PTRACE_O_TRACECLONE | unix.PTRACE_O_TRACEEXEC | unix.PTRACE_O_TRACEEXIT | unix.PTRACE_O_EXITKILL
+
+// Linux 64-bit SIGCHLD union prefix; x/sys hides its child fields.
+type traceNextInfo struct {
+	Signo  int32
+	_      int32
+	Code   int32
+	_      int32
+	PID    int32
+	UID    uint32
+	Status int32
+}
+
+func traceNextChildInfo(s *unix.Siginfo) traceNextInfo { return *(*traceNextInfo)(unsafe.Pointer(s)) }
+func traceNextTerminal(i traceNextInfo) bool {
+	return i.Signo == int32(unix.SIGCHLD) && i.Code >= 1 && i.Code <= 3
+}
+func traceNextWait(pid, flags int) (traceNextInfo, error) {
+	var s unix.Siginfo
+	err := unix.Waitid(unix.P_PID, pid, &s, flags|unix.WNOHANG|unix.WALL, nil)
+	return traceNextChildInfo(&s), err
+}
+
+type traceNextIdentity struct {
+	TID, TGID, PPID, Tracer int
+	Birth                   string
+}
+
+func traceNextRead(path string, capBytes int64) ([]byte, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	b, re := io.ReadAll(io.LimitReader(f, capBytes+1))
+	ce := f.Close()
+	if re != nil || ce != nil || int64(len(b)) > capBytes {
+		return nil, errors.Join(errors.New("bounded proc read refused"), re, ce)
+	}
+	return b, nil
+}
+func traceNextIdentityOf(tid int) (traceNextIdentity, error) {
+	var id traceNextIdentity
+	b, err := traceNextRead("/proc/"+strconv.Itoa(tid)+"/status", 64<<10)
+	if err != nil {
+		return id, err
+	}
+	found := 0
+	for _, line := range strings.Split(string(b), "\n") {
+		f := strings.Fields(line)
+		if len(f) != 2 {
+			continue
+		}
+		var dst *int
+		switch f[0] {
+		case "Pid:":
+			dst = &id.TID
+		case "Tgid:":
+			dst = &id.TGID
+		case "PPid:":
+			dst = &id.PPID
+		case "TracerPid:":
+			dst = &id.Tracer
+		}
+		if dst != nil {
+			n, e := strconv.Atoi(f[1])
+			if e != nil {
+				return id, e
+			}
+			*dst = n
+			found++
+		}
+	}
+	b, err = traceNextRead("/proc/"+strconv.Itoa(tid)+"/stat", 4096)
+	if err != nil {
+		return id, err
+	}
+	end := strings.LastIndexByte(string(b), ')')
+	if end < 0 {
+		return id, errors.New("missing stat name terminator")
+	}
+	fields := strings.Fields(string(b[end+1:]))
+	if len(fields) < 20 || found != 4 || id.TID != tid {
+		return id, errors.New("incomplete task identity")
+	}
+	id.Birth = fields[19]
+	return id, nil
+}
+func traceNextSame(a, b traceNextIdentity) bool { return a == b }
+func traceNextRSS(tid int) (uint64, error) {
+	b, e := traceNextRead("/proc/"+strconv.Itoa(tid)+"/smaps_rollup", 64<<10)
+	if e != nil {
+		return 0, e
+	}
+	for _, line := range strings.Split(string(b), "\n") {
+		f := strings.Fields(line)
+		if len(f) == 3 && f[0] == "Rss:" && f[2] == "kB" {
+			n, e := strconv.ParseUint(f[1], 10, 64)
+			if e != nil || n == 0 || n > ^uint64(0)/1024 {
+				return 0, errors.New("invalid RSS")
+			}
+			return n * 1024, nil
+		}
+	}
+	return 0, errors.New("missing RSS")
+}
+func traceNextParent(ctx context.Context) (*dispatchadmission.LocalProducer, error) {
+	c, e := dispatchadmission.New(ctx, dispatchadmission.Config{
+		Limits:    dispatchadmission.Limits{Producers: 1, Sites: 1, Roles: 1, Phases: 1, ActivePerProducer: 1, Attempts: 1, WireBytes: 16 << 10, AckTimeout: 2 * time.Second},
+		Producers: []dispatchadmission.Producer{{ID: 1, Binding: [32]byte{1}, Sites: []dispatchadmission.Site{{ID: 1, Role: 1}}}},
+		Phases:    []dispatchadmission.Phase{{ID: 1, Roles: []dispatchadmission.RoleBudget{{Role: 1, Attempts: 1}}}},
+	})
+	if e != nil {
+		return nil, e
+	}
+	return c.NewLocalProducer(ctx, 1)
+}
+
+type traceNextAppReport struct {
+	ChildPID, Exit, Ordinal, Active, Tasks, DeliveredSignals int
+	AckConsumed                                              bool
+}
+
+// The controller never calls this helper directly; the two fixed env values
+// select own-image processes. Each genuine process parent owns its DA Wait.
+func TestLinuxEpochPtraceGoTreeFixedChild(t *testing.T) {
+	mode := os.Getenv(traceNextMarker)
+	if mode == "" {
+		return
+	}
+	if mode != "root" && mode != "leaf" {
+		t.Fatal("unknown private child mode")
+	}
+	// Force a genuinely multithreaded Go process, with a bounded owned goroutine.
+	ready, release, joined := make(chan struct{}), make(chan struct{}), make(chan struct{})
+	go func() {
+		runtime.LockOSThread()
+		defer runtime.UnlockOSThread()
+		defer close(joined)
+		close(ready)
+		<-release
+	}()
+	<-ready
+	taskdir, e := os.Open("/proc/self/task")
+	if e != nil {
+		t.Fatal(e)
+	}
+	tasks, re := taskdir.Readdirnames(65)
+	ce := taskdir.Close()
+	if re != nil && !errors.Is(re, io.EOF) || ce != nil || len(tasks) < 2 || len(tasks) > 64 {
+		t.Fatal("bounded multithread task census refused")
+	}
+	if mode == "leaf" {
+		close(release)
+		<-joined
+		os.Exit(17)
+	}
+	signals := make(chan os.Signal, 4)
+	signal.Notify(signals, unix.SIGTRAP, unix.SIGUSR1, unix.SIGUSR2)
+	defer signal.Stop(signals)
+	for _, sig := range []unix.Signal{unix.SIGTRAP, unix.SIGUSR1} {
+		if e := unix.Kill(os.Getpid(), sig); e != nil {
+			t.Fatal(e)
+		}
+		select {
+		case got := <-signals:
+			if got != sig {
+				t.Fatal("wrong delivered signal")
+			}
+		case <-time.After(3 * time.Second):
+			t.Fatal("real signal not delivered")
+		}
+	}
+	settlement, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	parent, e := traceNextParent(settlement)
+	if e != nil {
+		t.Fatal(e)
+	}
+	image, e := os.Executable()
+	if e != nil {
+		t.Fatal(e)
+	}
+	cmd := exec.Command(image, "-test.run="+traceNextChildSelector, "-test.timeout=12s")
+	cmd.Env = []string{traceNextMarker + "=leaf", "GOMAXPROCS=2", "GORACE=atexit_sleep_ms=0"}
+	cmd.Stdout, cmd.Stderr = io.Discard, os.Stderr
+	handle, e := parent.StartInPhase(settlement, 1, dispatchadmission.Site{ID: 1, Role: 1}, cmd)
+	if e != nil {
+		t.Fatal(e)
+	}
+	waitErr := handle.Wait() // Actual app-owned OS Wait, pumps and DA settlement.
+	var exit *exec.ExitError
+	if !errors.As(waitErr, &exit) || exit.ExitCode() != 17 || cmd.ProcessState == nil || cmd.ProcessState.ExitCode() != 17 {
+		t.Fatalf("actual nested Wait: %v", waitErr)
+	}
+	count, e := parent.Count()
+	if e != nil || count.Ordinal != 1 || count.Active != 0 {
+		t.Fatal("nested DA settlement incomplete")
+	}
+	closeCtx, closeCancel := context.WithTimeout(context.Background(), 3*time.Second)
+	e = parent.Close(closeCtx)
+	closeCancel()
+	if e != nil {
+		t.Fatal(e)
+	}
+	close(release)
+	<-joined
+	// The controller proves both child pidfds HUP while this original
+	// application parent is still alive, then ACKs through its original pidfd.
+	// The app consumes ACK only after its actual Wait/DA settlement/Close.
+	select {
+	case got := <-signals:
+		if got != unix.SIGUSR2 {
+			t.Fatal("wrong parent-reap ACK signal")
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("controller parent-reap ACK absent")
+	}
+	report := traceNextAppReport{ChildPID: cmd.Process.Pid, Exit: 17, Ordinal: int(count.Ordinal), Active: int(count.Active), Tasks: len(tasks), DeliveredSignals: 2, AckConsumed: true}
+	b, e := json.Marshal(report)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if _, e = os.Stdout.Write(append(append([]byte("TRACE_NEXT_APP "), b...), '\n')); e != nil {
+		t.Fatal(e)
+	}
+}
+
+type traceNextTask struct {
+	ID                                     traceNextIdentity
+	Initial, Active                        bool
+	FD                                     int
+	CreatorTID, CreatorTGID, CreationEvent int
+}
+
+// This ledger labels only this fixed fixture. The inherited-image no-exec
+// leader is corroborated against the pinned SDK mechanism after true waits;
+// it is neither ignored nor granted a generic zero-exit exemption.
+type traceNextLeader struct {
+	ID                                                           traceNextIdentity
+	ParentTID, ParentTGID, CreationEvent                         int
+	InitialExecStop                                              bool
+	ExecEvents, ExitStops, ExitImageChecks, ExitImageUnavailable int
+	ExitRSSBytes                                                 uint64
+	TerminalObserved, TracerTerminalConsumed                     bool
+	TerminalCode, TerminalStatus                                 int
+	PidfdHUP, ParentLiveReapProof                                bool
+	ReapParentIdentity                                           traceNextIdentity
+	Role                                                         string
+}
+type traceNextEvent struct {
+	ParentTID, ParentTGID, ChildTID, ChildTGID, Event int
+	Birth                                             string
+	ExecSeenAtHandling                                bool
+}
+type traceNextResult struct {
+	Root, Registered, Stops, ExitImages, ExitImageUnavailable, NonrootTerminals, Detached, RootExit int
+	Events                                                                                          map[int]int
+	RootWaitReturned, Joined                                                                        bool
+	Output                                                                                          string
+	Leaders                                                                                         []traceNextLeader
+	EventLedger                                                                                     []traceNextEvent
+	AckSent                                                                                         bool
+	StopECHILDFallbacks                                                                             int
+	StopECHILDEmpty, StopECHILDTrapped                                                              int
+}
+
+func TestLinuxEpochPtraceGoTreeOriginalWaits(t *testing.T) {
+	// Failed-prefix thread ownership is contained: if bounded cleanup refuses,
+	// the locked tracing goroutine exits without UnlockOSThread. The Go runtime
+	// destroys that tracer task, invoking EXITKILL. No failed prefix claims joins.
+	type outcome struct {
+		r   traceNextResult
+		err error
+	}
+	done := make(chan outcome, 1)
+	go func() { r, e := traceNextProbe(t); done <- outcome{r, e} }()
+	select {
+	case out := <-done:
+		if out.err != nil {
+			t.Fatalf("bounded own-tree probe refused (joined=%t): %v; %+v", out.r.Joined, out.err, out.r)
+		}
+		t.Logf("positive own-Go-tree mechanism only: %+v", out.r)
+	case <-time.After(35 * time.Second):
+		t.Fatal("bounded tracing controller did not return; no joined proof")
+	}
+}
+
+func traceNextProbe(t *testing.T) (result traceNextResult, retErr error) {
+	runtime.LockOSThread()
+	cleanThread := true
+	defer func() {
+		if retErr != nil {
+			// An event/registration refusal may leave an unknown tracee. Never
+			// recycle its tracer task; goroutine exit triggers EXITKILL/unlink.
+			cleanThread = false
+			result.Joined = false
+		}
+		if cleanThread {
+			runtime.UnlockOSThread()
+		}
+	}()
+	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Second)
+	defer cancel()
+	settlement, cancelSettlement := context.WithCancel(context.Background())
+	defer cancelSettlement()
+	parent, e := traceNextParent(settlement)
+	if e != nil {
+		return result, e
+	}
+	defer func() {
+		c, cc := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cc()
+		retErr = errors.Join(retErr, parent.Close(c))
+	}()
+	image, e := os.Executable()
+	if e != nil {
+		return result, e
+	}
+	expected, e := os.Stat(image)
+	if e != nil {
+		return result, e
+	}
+	// Actual files avoid output-pump lifetimes and bound post-Wait reads.
+	output, e := os.CreateTemp("", "trace-output-")
+	if e != nil {
+		return result, e
+	}
+	// Deliberately retained under the wrapper-owned TMPDIR on both outcomes.
+	// The wrapper can preserve first-cause stdout/stderr before any retirement.
+	result.Output = output.Name()
+	t.Logf("retained private controller output=%s", result.Output)
+	defer func() { retErr = errors.Join(retErr, output.Close()) }()
+	cmd := exec.Command(image, "-test.run="+traceNextChildSelector, "-test.timeout=15s")
+	cmd.Env = []string{traceNextMarker + "=root", "GOMAXPROCS=2", "GORACE=atexit_sleep_ms=0"}
+	cmd.Stdout, cmd.Stderr = output, output
+	cmd.SysProcAttr = &syscall.SysProcAttr{Ptrace: true, Setsid: true}
+	handle, e := parent.StartInPhase(ctx, 1, dispatchadmission.Site{ID: 1, Role: 1}, cmd)
+	if e != nil {
+		return result, e
+	}
+	result.Root = cmd.Process.Pid
+	result.Events = make(map[int]int)
+	rootFD, pinErr := unix.PidfdOpen(result.Root, 0)
+	tasks := make(map[int]*traceNextTask)
+	defer func() {
+		// This loop never consumes the root terminal status. Nonroot terminal
+		// consumption still requires its registered genuine-parent relationship.
+		if !result.RootWaitReturned {
+			cleanupCtx, cc := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cc()
+			for _, task := range tasks {
+				if task.FD >= 0 && task.ID.TID != result.Root {
+					_ = unix.PidfdSendSignal(task.FD, unix.SIGKILL, nil, 0)
+				}
+			}
+			if rootFD >= 0 {
+				_ = unix.PidfdSendSignal(rootFD, unix.SIGKILL, nil, 0)
+			} else {
+				_ = cmd.Process.Kill()
+			} // Root is still unreaped.
+			for cleanupCtx.Err() == nil {
+				terminal, er := traceNextTurn(cleanupCtx, tasks, result.Root, expected, &result, true)
+				if er != nil {
+					retErr = errors.Join(retErr, fmt.Errorf("cleanup retained: %w", er))
+					break
+				}
+				if terminal {
+					retErr = errors.Join(retErr, handle.Wait())
+					result.RootWaitReturned = true
+					tasks[result.Root].Active = false
+					break
+				}
+				time.Sleep(time.Millisecond)
+			}
+			if !result.RootWaitReturned {
+				cleanThread = false
+				retErr = errors.Join(retErr, errors.New("bounded cleanup retained unknown original waits; tracer task will exit with EXITKILL"))
+			}
+		}
+		for _, task := range tasks {
+			if task.FD >= 0 {
+				retErr = errors.Join(retErr, unix.Close(task.FD))
+			}
+		}
+		if rootFD >= 0 {
+			retErr = errors.Join(retErr, unix.Close(rootFD))
+		}
+	}()
+	if pinErr != nil {
+		return result, fmt.Errorf("pin initial root: %w", pinErr)
+	}
+	// The exec-stop is before runtime thread creation. EPERM is a failure.
+	for {
+		if ctx.Err() != nil {
+			return result, ctx.Err()
+		}
+		stop, er := traceNextWait(result.Root, unix.WSTOPPED)
+		if errors.Is(er, unix.EINTR) {
+			continue
+		}
+		if er != nil {
+			return result, er
+		}
+		if stop.Signo == 0 {
+			time.Sleep(time.Millisecond)
+			continue
+		}
+		if stop.Code != 4 || stop.Status != int32(unix.SIGTRAP) {
+			return result, fmt.Errorf("unexpected initial exec-stop %+v", stop)
+		}
+		break
+	}
+	initial, e := traceNextIdentityOf(result.Root)
+	if e != nil {
+		return result, e
+	}
+	if initial.TGID != result.Root || initial.PPID != os.Getpid() || initial.Tracer != unix.Gettid() {
+		return result, errors.New("initial root relationship refused")
+	}
+	directory, e := os.Open("/proc/" + strconv.Itoa(result.Root) + "/task")
+	if e != nil {
+		return result, e
+	}
+	names, re := directory.Readdirnames(2)
+	ce := directory.Close()
+	if re != nil && !errors.Is(re, io.EOF) || ce != nil || len(names) != 1 || names[0] != strconv.Itoa(result.Root) {
+		return result, errors.New("initial exec-stop has runtime TIDs")
+	}
+	actualInitial, imageErr := os.Stat("/proc/" + strconv.Itoa(result.Root) + "/exe")
+	if imageErr != nil || !os.SameFile(expected, actualInitial) {
+		return result, errors.Join(errors.New("initial root exec image refused"), imageErr)
+	}
+	tasks[result.Root] = &traceNextTask{ID: initial, Active: true, FD: -1, CreatorTID: unix.Gettid(), CreatorTGID: os.Getpid()}
+	result.Leaders = append(result.Leaders, traceNextLeader{ID: initial, ParentTID: unix.Gettid(), ParentTGID: os.Getpid(), InitialExecStop: true, Role: "original-da-root"})
+	result.Registered = 1
+	if e := unix.PtraceSetOptions(result.Root, traceNextOptions); e != nil {
+		return result, e
+	}
+	if e := unix.PtraceCont(result.Root, 0); e != nil {
+		return result, e
+	}
+	for {
+		if ctx.Err() != nil {
+			return result, ctx.Err()
+		}
+		terminal, er := traceNextTurn(ctx, tasks, result.Root, expected, &result, false)
+		if er != nil {
+			return result, er
+		}
+		if !result.AckSent {
+			if er := traceNextObserveParentReaps(ctx, tasks, rootFD, &result); er != nil {
+				return result, er
+			}
+		}
+		if terminal {
+			break
+		}
+		time.Sleep(time.Millisecond)
+	}
+	if !result.AckSent {
+		return result, errors.New("root exited before parent-reap ACK")
+	}
+	if cmd.ProcessState != nil {
+		return result, errors.New("root was waited before terminal handoff")
+	}
+	// The original kernel pin must agree with terminal-but-unreaped status
+	// before the sole genuine root Wait can consume it on this owning thread.
+	ready := []unix.PollFd{{Fd: int32(rootFD), Events: unix.POLLIN | unix.POLLHUP}}
+	n, pollErr := unix.Poll(ready, 0)
+	if pollErr != nil || n != 1 || ready[0].Revents&unix.POLLIN == 0 || ready[0].Revents&unix.POLLHUP != 0 {
+		return result, errors.Join(errors.New("original root pidfd lacks terminal/unreaped proof"), pollErr)
+	}
+	waitErr := handle.Wait()
+	result.RootWaitReturned = true
+	tasks[result.Root].Active = false
+	if waitErr != nil {
+		return result, waitErr
+	}
+	if cmd.ProcessState == nil || cmd.ProcessState.ExitCode() != 0 {
+		return result, errors.New("original root genuine Wait not exit zero")
+	}
+	count, e := parent.Count()
+	if e != nil || count.Ordinal != 1 || count.Active != 0 {
+		return result, errors.New("root DA settlement incomplete")
+	}
+	raw, e := traceNextRead(output.Name(), 16<<10)
+	if e != nil {
+		return result, e
+	}
+	var report traceNextAppReport
+	found := false
+	for _, line := range strings.Split(string(raw), "\n") {
+		if strings.HasPrefix(line, "TRACE_NEXT_APP ") {
+			if found {
+				return result, errors.New("duplicate app report")
+			}
+			found = true
+			e = json.Unmarshal([]byte(strings.TrimPrefix(line, "TRACE_NEXT_APP ")), &report)
+			if e != nil {
+				return result, e
+			}
+		}
+	}
+	if !found || report.Exit != 17 || report.Ordinal != 1 || report.Active != 0 || report.Tasks < 2 || report.DeliveredSignals != 2 || !report.AckConsumed {
+		return result, fmt.Errorf("missing genuine app Wait/signal report: %s", raw)
+	}
+	leaf := tasks[report.ChildPID]
+	if leaf == nil || leaf.ID.TGID != report.ChildPID || leaf.ID.PPID != result.Root || leaf.FD < 0 {
+		return result, errors.New("app child lacks registered original leader")
+	}
+	if len(result.Leaders) != 3 {
+		return result, errors.New("fixed root/SDK-shape/app leader census incomplete")
+	}
+	rootLeader := traceNextFindLeader(&result, result.Root)
+	appLeader := traceNextFindLeader(&result, report.ChildPID)
+	if rootLeader == nil || appLeader == nil || !rootLeader.InitialExecStop || !rootLeader.TerminalObserved || rootLeader.TerminalCode != 1 || rootLeader.TerminalStatus != 0 || rootLeader.TracerTerminalConsumed {
+		return result, errors.New("root genuine-wait terminal ledger refused")
+	}
+	if appLeader.CreationEvent != unix.PTRACE_EVENT_VFORK || appLeader.ParentTGID != result.Root || appLeader.ExecEvents != 1 || !appLeader.TerminalObserved || !appLeader.TracerTerminalConsumed || appLeader.TerminalCode != 1 || appLeader.TerminalStatus != 17 || !appLeader.ParentLiveReapProof || !appLeader.PidfdHUP {
+		return result, errors.New("application leader terminal/real-parent ledger refused")
+	}
+	appLeader.Role = "app-da-child"
+	auxiliary := 0
+	for i := range result.Leaders {
+		leader := &result.Leaders[i]
+		if leader.ID.TID == result.Root || leader.ID.TID == report.ChildPID {
+			continue
+		}
+		auxiliary++
+		if leader.CreationEvent != unix.PTRACE_EVENT_VFORK || leader.ParentTGID != result.Root || leader.ID.PPID != result.Root || leader.ExecEvents != 0 || leader.InitialExecStop || !leader.TerminalObserved || !leader.TracerTerminalConsumed || leader.TerminalCode != 1 || leader.TerminalStatus != 0 || !leader.ParentLiveReapProof || !leader.PidfdHUP || leader.ExitImageChecks != 1 || leader.ExitRSSBytes == 0 {
+			return result, errors.New("fixed SDK-probe-shape real lifetime was not corroborated")
+		}
+		leader.Role = "fixed-sdk-probe-shape-corroborated"
+	}
+	if auxiliary != 1 {
+		return result, errors.New("fixed auxiliary leader census refused")
+	}
+	for i := range result.Leaders {
+		leader := &result.Leaders[i]
+		fd := rootFD
+		if leader.ID.TID != result.Root {
+			fd = tasks[leader.ID.TID].FD
+		}
+		mask, e := traceNextPoll(fd)
+		if e != nil || mask&unix.POLLHUP == 0 {
+			return result, errors.Join(errors.New("original leader pidfd lacks genuine parent reap"), e)
+		}
+		leader.PidfdHUP = true
+	}
+	if result.ExitImages == 0 || result.Events[unix.PTRACE_EVENT_EXEC] == 0 || result.Events[unix.PTRACE_EVENT_CLONE] == 0 || result.Registered < 4 {
+		return result, errors.New("required multithread/exec/EXIT-image events not demonstrated")
+	}
+	if err := ctx.Err(); err != nil {
+		return result, err
+	}
+	result.Joined = true
+	return result, nil
+}
+
+// One bounded scan, exact known TIDs only. No Wait(-1), terminal root consumption,
+// retry of a refused sample, process classifier exemption, or image inference.
+func traceNextTurn(ctx context.Context, tasks map[int]*traceNextTask, root int, expected os.FileInfo, result *traceNextResult, cleanup bool) (bool, error) {
+	ids := make([]int, 0, len(tasks))
+	for id, task := range tasks {
+		if task.Active {
+			ids = append(ids, id)
+		}
+	}
+	sort.Ints(ids)
+	rootTerminal := false
+	for _, tid := range ids {
+		if ctx.Err() != nil {
+			return false, ctx.Err()
+		}
+		task := tasks[tid]
+		stop, e := traceNextWait(tid, unix.WSTOPPED)
+		if errors.Is(e, unix.EINTR) {
+			continue
+		}
+		stopSelectorECHILD := errors.Is(e, unix.ECHILD)
+		if e != nil && !stopSelectorECHILD {
+			return false, fmt.Errorf("targeted stop %d: %w", tid, e)
+		}
+		// An eligible ptrace zombie can return ECHILD for WSTOPPED alone:
+		// wait_task_zombie requires WEXITED before clearing notask_error.
+		// This is another exact selector, never an inferred retirement.
+		if stopSelectorECHILD {
+			result.StopECHILDFallbacks++
+		}
+		if stop.Signo != 0 {
+			if stop.PID != int32(tid) || stop.UID != uint32(os.Getuid()) || stop.Code != 4 {
+				return false, errors.New("unexpected targeted stop identity")
+			}
+			result.Stops++
+			if result.Stops > 1024 {
+				return false, errors.New("event bound exceeded")
+			}
+			event := int(stop.Status) >> 8
+			sig := int(stop.Status) & 255
+			if event != 0 {
+				result.Events[event]++
+				switch event {
+				case unix.PTRACE_EVENT_FORK, unix.PTRACE_EVENT_VFORK, unix.PTRACE_EVENT_CLONE:
+					child, e := unix.PtraceGetEventMsg(tid)
+					if e != nil {
+						return false, e
+					}
+					n := int(child)
+					if n <= 0 || len(tasks) >= 64 || tasks[n] != nil {
+						return false, errors.New("trace task registry bound/duplicate refused")
+					}
+					id, e := traceNextIdentityOf(n)
+					if e != nil {
+						return false, e
+					}
+					knownGroup := id.TGID == root
+					for _, known := range tasks {
+						if known.ID.TID == known.ID.TGID && known.ID.TID == id.TGID {
+							knownGroup = true
+						}
+					}
+					if e := traceNextRecordEvent(result, tid, task.ID.TGID, id, event); e != nil {
+						return false, e
+					}
+					leader := id.TID == id.TGID
+					if leader && len(result.Leaders) >= 3 {
+						return false, errors.New("fixed three-leader registry bound exceeded")
+					}
+					if id.Tracer != unix.Gettid() || leader && id.PPID != root || !leader && !knownGroup {
+						return false, errors.New("new trace task relationship refused")
+					}
+					fd := -1
+					if leader {
+						fd, e = unix.PidfdOpen(n, 0)
+						if e != nil {
+							return false, e
+						}
+					}
+					tasks[n] = &traceNextTask{ID: id, Initial: true, Active: true, FD: fd, CreatorTID: tid, CreatorTGID: task.ID.TGID, CreationEvent: event}
+					if leader {
+						result.Leaders = append(result.Leaders, traceNextLeader{ID: id, ParentTID: tid, ParentTGID: task.ID.TGID, CreationEvent: event, Role: "unbound-app-parent-child"})
+					}
+					result.Registered++
+				case unix.PTRACE_EVENT_EXEC:
+					former, e := unix.PtraceGetEventMsg(tid)
+					if e != nil || int(former) != tid {
+						return false, errors.Join(errors.New("nonleader exec renumbering outside fixed probe"), e)
+					}
+					fresh, e := traceNextIdentityOf(tid)
+					if e != nil || !traceNextSame(task.ID, fresh) {
+						return false, errors.Join(errors.New("exec changed registered identity"), e)
+					}
+					process := traceNextFindLeader(result, task.ID.TGID)
+					if process == nil || tid != task.ID.TGID {
+						return false, errors.New("exec leader ledger missing")
+					}
+					process.ExecEvents++
+					if e := traceNextRecordEvent(result, task.CreatorTID, task.CreatorTGID, task.ID, event); e != nil {
+						return false, e
+					}
+				case unix.PTRACE_EVENT_VFORK_DONE:
+					child, e := unix.PtraceGetEventMsg(tid)
+					if e != nil {
+						return false, e
+					}
+					completed := tasks[int(child)]
+					if completed == nil {
+						return false, errors.New("vfork-done has no original registered child")
+					}
+					if e := traceNextRecordEvent(result, tid, task.ID.TGID, completed.ID, event); e != nil {
+						return false, e
+					}
+				case unix.PTRACE_EVENT_EXIT:
+					fresh, identityErr := traceNextIdentityOf(tid)
+					if identityErr != nil || !traceNextSame(task.ID, fresh) {
+						return false, errors.Join(errors.New("EXIT-stop identity changed; retained"), identityErr)
+					}
+					if e := traceNextRecordEvent(result, task.CreatorTID, task.CreatorTGID, task.ID, event); e != nil {
+						return false, e
+					}
+					process := traceNextFindLeader(result, tid)
+					if process != nil {
+						process.ExitStops++
+					}
+					actual, e := os.Stat("/proc/" + strconv.Itoa(tid) + "/exe")
+					if e == nil {
+						if !os.SameFile(expected, actual) {
+							return false, errors.New("EXIT image differs from own image")
+						}
+						rss, re := traceNextRSS(tid)
+						if re != nil {
+							return false, re
+						}
+						if rss == 0 {
+							return false, errors.New("EXIT RSS zero")
+						}
+						result.ExitImages++
+						if process != nil {
+							process.ExitImageChecks++
+							process.ExitRSSBytes = rss
+						}
+					} else {
+						result.ExitImageUnavailable++
+						if process != nil {
+							process.ExitImageUnavailable++
+						}
+					}
+					// Keep each app-parent-owned leader through tracer terminal
+					// bookkeeping; the genuine SDK/app parent must still reap it.
+					if tid != root && task.ID.TID != task.ID.TGID {
+						if e := unix.PtraceDetach(tid); e != nil {
+							return false, e
+						}
+						task.Active = false
+						result.Detached++
+						continue
+					}
+				default:
+					return false, errors.New("unexpected ptrace event")
+				}
+				if e := unix.PtraceCont(tid, 0); e != nil {
+					return false, e
+				}
+				continue
+			}
+			if task.Initial && sig == int(unix.SIGSTOP) {
+				task.Initial = false
+				if e := unix.PtraceCont(tid, 0); e != nil {
+					return false, e
+				}
+				continue
+			}
+			task.Initial = false
+			// GETSIGINFO distinguishes a real delivery stop. Forward SIGTRAP, SIGURG,
+			// SIGUSR1 and ordinary signals exactly; never swallow user/runtime signals.
+			var signalInfo unix.Siginfo
+			_, _, se := unix.Syscall6(unix.SYS_PTRACE, unix.PTRACE_GETSIGINFO, uintptr(tid), 0, uintptr(unsafe.Pointer(&signalInfo)), 0, 0)
+			if se != 0 || signalInfo.Signo != int32(sig) {
+				return false, errors.New("non-delivery/group stop outside fixed probe")
+			}
+			if e := unix.PtraceCont(tid, sig); e != nil {
+				return false, e
+			}
+			continue
+		}
+		// WNOWAIT may report CLD_TRAPPED despite WEXITED: only actual terminal
+		// CLD_* permits root handoff or nonroot tracer bookkeeping.
+		terminal, e := traceNextWait(tid, unix.WEXITED|unix.WNOWAIT)
+		if errors.Is(e, unix.EINTR) && !stopSelectorECHILD {
+			continue
+		}
+		if e != nil {
+			return false, fmt.Errorf("exact terminal selector %d (stop_echild=%t): %w", tid, stopSelectorECHILD, e)
+		}
+		if terminal.Signo == 0 || terminal.Code == 4 {
+			if stopSelectorECHILD {
+				// A delayed leader can remain in EXIT_ZOMBIE while other
+				// threads still need servicing. Empty/trapped is not death.
+				fresh, identityErr := traceNextIdentityOf(tid)
+				if identityErr != nil || !traceNextSame(task.ID, fresh) {
+					return false, errors.Join(errors.New("selector fallback identity changed; retained"), identityErr)
+				}
+				if terminal.Signo == 0 {
+					result.StopECHILDEmpty++
+				} else {
+					if terminal.Signo != int32(unix.SIGCHLD) || terminal.PID != int32(tid) || terminal.UID != uint32(os.Getuid()) {
+						return false, errors.New("selector fallback trapped identity refused")
+					}
+					result.StopECHILDTrapped++
+				}
+			}
+			continue
+		}
+		if !traceNextTerminal(terminal) || terminal.PID != int32(tid) || terminal.UID != uint32(os.Getuid()) {
+			return false, errors.New("unexpected terminal observation")
+		}
+		fresh, e := traceNextIdentityOf(tid)
+		if e != nil || !traceNextSame(task.ID, fresh) {
+			return false, errors.Join(errors.New("terminal relationship changed; retained"), e)
+		}
+		if tid == root {
+			process := traceNextFindLeader(result, root)
+			if process == nil {
+				return false, errors.New("root terminal leader ledger missing")
+			}
+			process.TerminalObserved = true
+			process.TerminalCode = int(terminal.Code)
+			process.TerminalStatus = int(terminal.Status)
+			rootTerminal = true
+			result.RootExit = int(terminal.Status)
+			continue
+		}
+		// A process leader must still be the traced app's child, never a direct
+		// controller/DA root. Threads have no separate app process Handle.
+		if fresh.Tracer != unix.Gettid() || fresh.TID == fresh.TGID && fresh.PPID != root {
+			return false, errors.New("nonroot terminal is not ptrace-reparented app child/thread")
+		}
+		var process *traceNextLeader
+		if fresh.TID == fresh.TGID {
+			process = traceNextFindLeader(result, tid)
+			if process == nil || process.TerminalObserved {
+				return false, errors.New("nonroot terminal leader slot missing/repeated")
+			}
+		}
+		consumed, e := traceNextWait(tid, unix.WEXITED)
+		if e != nil || consumed != terminal {
+			return false, errors.Join(errors.New("exact nonroot terminal bookkeeping refused"), e)
+		}
+		// Commit successful terminal consumption before any later proof check.
+		// A failed prefix must never poll an already-consumed registration.
+		task.Active = false
+		result.NonrootTerminals++
+		if process != nil {
+			process.TerminalObserved = true
+			process.TracerTerminalConsumed = true
+			process.TerminalCode = int(consumed.Code)
+			process.TerminalStatus = int(consumed.Status)
+		}
+	}
+	if rootTerminal {
+		for tid, task := range tasks {
+			if tid != root && task.Active {
+				return false, nil
+			}
+		}
+		// WNOWAIT is a handoff, not retirement. Keep the original root
+		// discoverable for cleanup until its sole genuine Handle.Wait returns.
+		return true, nil
+	}
+	_ = cleanup // Same authority checks apply to failure cleanup; no weaker path.
+	return false, nil
+}
+
+func traceNextFindLeader(result *traceNextResult, pid int) *traceNextLeader {
+	for i := range result.Leaders {
+		if result.Leaders[i].ID.TID == pid {
+			return &result.Leaders[i]
+		}
+	}
+	return nil
+}
+func traceNextRecordEvent(result *traceNextResult, parentTID, parentTGID int, child traceNextIdentity, event int) error {
+	if len(result.EventLedger) >= 1024 {
+		return errors.New("event ledger bound exceeded")
+	}
+	group := traceNextFindLeader(result, child.TGID)
+	seen := group != nil && (group.InitialExecStop || group.ExecEvents > 0)
+	result.EventLedger = append(result.EventLedger, traceNextEvent{ParentTID: parentTID, ParentTGID: parentTGID, ChildTID: child.TID, ChildTGID: child.TGID, Event: event, Birth: child.Birth, ExecSeenAtHandling: seen})
+	return nil
+}
+func traceNextPoll(fd int) (int16, error) {
+	polls := []unix.PollFd{{Fd: int32(fd), Events: unix.POLLIN | unix.POLLHUP}}
+	n, e := unix.Poll(polls, 0)
+	if e != nil {
+		return 0, e
+	}
+	if n < 0 || n > 1 || polls[0].Revents&(unix.POLLERR|unix.POLLNVAL) != 0 {
+		return 0, errors.New("original pidfd poll refused")
+	}
+	return polls[0].Revents, nil
+}
+
+// A successful positive path cannot let the original application parent exit
+// before this proof: its fixed source waits for our SIGUSR2 ACK. This observes
+// original pidfd HUP, not the SDK's private raw Wait return code. The source
+// kernel EXIT_TRACE handoff and the live original parent bracket corroborate
+// the genuine-parent reap without stealing that parent's terminal status.
+func traceNextObserveParentReaps(ctx context.Context, tasks map[int]*traceNextTask, rootFD int, result *traceNextResult) error {
+	root := tasks[result.Root]
+	if root == nil {
+		return errors.New("parent-reap root registration missing")
+	}
+	for i := range result.Leaders {
+		if e := ctx.Err(); e != nil {
+			return e
+		}
+		leader := &result.Leaders[i]
+		if leader.ID.TID == result.Root || !leader.TerminalObserved || leader.ParentLiveReapProof {
+			continue
+		}
+		child := tasks[leader.ID.TID]
+		if child == nil || child.FD < 0 {
+			return errors.New("parent-reap child pin missing")
+		}
+		before, e := traceNextIdentityOf(result.Root)
+		if e != nil || !traceNextSame(root.ID, before) {
+			return errors.Join(errors.New("live original parent before HUP refused"), e)
+		}
+		mask, e := traceNextPoll(rootFD)
+		if e != nil || mask != 0 {
+			return errors.Join(errors.New("original parent not live before HUP"), e)
+		}
+		childMask, e := traceNextPoll(child.FD)
+		if e != nil {
+			return e
+		}
+		if childMask&unix.POLLHUP == 0 {
+			continue
+		}
+		after, e := traceNextIdentityOf(result.Root)
+		if e != nil || !traceNextSame(root.ID, after) {
+			return errors.Join(errors.New("live original parent after HUP refused"), e)
+		}
+		mask, e = traceNextPoll(rootFD)
+		if e != nil || mask != 0 {
+			return errors.Join(errors.New("original parent not live after HUP"), e)
+		}
+		leader.PidfdHUP = true
+		leader.ParentLiveReapProof = true
+		leader.ReapParentIdentity = after
+	}
+	if len(result.Leaders) != 3 {
+		return nil
+	}
+	for i := range result.Leaders {
+		leader := &result.Leaders[i]
+		if leader.ID.TID != result.Root && (!leader.TerminalObserved || !leader.TracerTerminalConsumed || !leader.ParentLiveReapProof) {
+			return nil
+		}
+	}
+	if e := ctx.Err(); e != nil {
+		return e
+	}
+	if e := unix.PidfdSendSignal(rootFD, unix.SIGUSR2, nil, 0); e != nil {
+		return fmt.Errorf("original parent-reap ACK: %w", e)
+	}
+	result.AckSent = true
+	return nil
+}

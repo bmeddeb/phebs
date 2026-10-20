@@ -15658,3 +15658,49 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
 - **2026-10-20 — T52.3 signed experimental release, Linux #124.** Ben requests proactive closure and shipping. Publish Apache Thrift and thriftrw field references in [v0.2.1-experimental.20261020](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) from exact clean source `290e1518a4a192d0a3494c3ed9fa2eb39a450355`, bound to the existing production key, final binary and full 57-file artifact census. Retain original qualified scope/uncertainty and expiry; explicit signed selection governs installation and withdrawal. Current 194 bounded cases, real selected startup/restart/revocation and default-dark sync/index/search smoke pass. Release artifacts/docs add no runtime source, per-request/tick/no-op/publication work, lock, cache, process class or changed bound. Operator instance deployment and T42 native readiness remain separate.
 
 - **2026-10-20 — T54.3 signed experimental release, Linux #124.** Ben requests proactive closure and shipping. Publish direct-operation Impact in [v0.2.1-experimental.20261020](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) from exact clean source `290e1518a4a192d0a3494c3ed9fa2eb39a450355`, bound to the existing production key, final binary and full 57-file artifact census. Retain original qualified scope/uncertainty and expiry; explicit signed selection governs installation and withdrawal. Current 194 bounded cases, real selected startup/restart/revocation and default-dark sync/index/search smoke pass. Release artifacts/docs add no runtime source, per-request/tick/no-op/publication work, lock, cache, process class or changed bound. Operator instance deployment and T42 native readiness remain separate.
+
+
+- **2026-10-20 — T42.H2r.c.c bounded finite-Go-tree mechanism.**
+  Retain the standalone research source and source-free receipt under
+  `spike/t42h2r/finite-go-tree-mechanism-linux-20261020.*`. Exact research source
+  `7a95224a` passes once on this unprivileged Linux host against project source
+  `afbe06f4`: fifteen registered tasks, forty-nine event-loop stops after the
+  separate initial exec-stop and fifteen available EXIT image/RSS inspections.
+  Two non-root tracer terminal copies precede
+  original-parent reaps while that parent is still alive; the application
+  child's genuine DA Wait returns 17 and the root's sole genuine DA Wait
+  returns 0, with both admission counts settled. An original-pidfd signal ACK
+  brackets the live-parent proofs. The raw terminal copy of the direct DA root
+  is never consumed. Three stop-only ECHILD observations switch to an exact
+  terminal selector; ECHILD itself proves neither death nor retirement.
+
+  The pinned Go 1.26.5 SDK can create a real no-exec CLONE_VM/CLONE_VFORK/
+  CLONE_PIDFD process with exit signal zero to check pidfd support. Its parent
+  uses P_PIDFD/WEXITED/WCLONE. The successful fixture corroborates that shape;
+  it does not instrument the SDK's private Wait return or establish a universal
+  helper count or first-Start trigger. Include inherited-image processes and
+  conservatively overlapping RSS, without prewarming away the lifetime or
+  inventing a DA attempt. Earlier failed research prefixes remain immutable:
+  the first lacks terminal-state attribution; the second refused its incorrect
+  one-child assumption. Their EXITKILL cleanup is no genuine Wait/join proof.
+
+  This is a fixed mechanism result only. TRACEEXIT is not a generic all-task
+  image barrier: fatal group exit may bypass a sibling's ptrace stop. Missing
+  required image/leader evidence must remain a sticky qualification refusal
+  while actual cleanup continues. Production source-owned Start/trace/Wait,
+  complete-census synchronization, actual Git/helper chains, cancellation and
+  unknown-prefix custody remain open. Do not infer executable history from a
+  cached live image or arbitrary zombie. Another full composed native attempt
+  still requires the production correction, bounded gates and independent
+  review; parent H2, readiness and freeze remain open.
+
+  Research cost: one locked creator/trace worker; at most 64 registered TIDs,
+  three fixed leaders, 1,024 event-loop stops plus the separate initial
+  exec-stop, and a separate 1,024-entry event ledger, under a 20-second operation
+  plus bounded cleanup. Each turn sorts at most 64 TIDs and uses
+  targeted nonblocking waits, never a global wait. Each EXIT inspects bounded
+  current identity/image metadata and at most 64 KiB of smaps_rollup. One
+  private output file is retained per attempt; no corpus, module or SDK scan
+  is added. No runtime request, sync, retry/no-op, publication, cache/schema or
+  production lock/process behavior changes. The `.go.txt` artifact is excluded
+  from ordinary Go test discovery and grants no native admission authority.
