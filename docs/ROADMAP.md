@@ -5906,3 +5906,10 @@ keeps its narrower Search demo and unavailable service/relationship authority.
 The one20.344438s native integration passed exact readiness, scoped/whole search,
 relationship citation and graceful joined teardown. This adds no managed
 provider, Linux capacity, scale or production release claim.
+
+**T47.5 signed release (2026-10-20):** Caller Map is published in the
+[experimental Linux amd64 package](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) with exact-binary production
+signatures and verified ordinary selection. This supersedes the dated pending
+signature/publication hold for this ticket. Default startup stays dark;
+installation is explicit. Scoped evidence/expiry remain; Linux #124 readiness
+and managed-SCIP installation/target proof are separate.

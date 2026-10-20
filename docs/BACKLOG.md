@@ -19067,7 +19067,7 @@ binaries and were not re-run here.
 **Not established.** The released (ordinary-selection) path, which waits on
 T47.5's binding and therefore on Ben's T47.2 labels.*
 
-**T47.5 · Exact Caller Map promotion and supported product closure** *(needs
+**T47.5 ✅ · Exact Caller Map promotion and supported product closure** *(needs
 T47.2–T47.4; presentation-track handoff for any UI change)* — release only
 the validated Caller Map artifact and selected recipes through a
 caller-specific signed release record binding card, executable manifest,
@@ -19179,6 +19179,28 @@ integration of the preparation, not a production release or closure of T47.5.
 Next implementation: the remaining protobuf Atlas recipe/release binding in
 T49.3/T49.4, with bounded HTTP/MCP integration and optional labels; production
 signing remains a separate pending step.
+
+**T47.5 signed release closure (2026-10-20, Linux #124).** Ben's request to
+ship experimental/dark features authorizes the reviewed scoped release. The
+[experimental Linux amd64 package](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) publishes Caller Map with
+production signatures over exact clean source `290e1518a4a192d0a3494c3ed9fa2eb39a450355`,
+Go 1.26.5, executable/artifact/implementation bindings and the existing trust
+anchor. The [receipt](../spike/t475/release/linux-20261020/receipt.json) and signed
+records retain exact identities and expiry. This closes this ticket's final
+artifact/signature/publication hold; earlier dated pending-key statements remain
+historical. Default startup stays dark; installation/restart uses explicit
+verified selection. Existing instance deployment is operator-specific.
+
+The common final gate passed 194 bounded test cases without skips, all twelve
+record self-loads, real selected startup/restart/withdrawal, anonymous visibility
+and authorization, plus empty-state sync/index/search/pinned-browse/default-dark
+release smoke. All three selection servers waited with status0 and no observed
+survivor; descendant observation is sampled. Seven new records and five exact
+existing-release rebindings share the complete 57-file artifact directory.
+Historical quality/operating evidence and uncertainty remain exact; current
+registration smoke adds no independent accuracy, Linux capacity, scale, SLO or
+T42 readiness result. No production implementation, numerical bound, query,
+sync, retry/no-op, publication, lock, cache or child class changes.
 
 ## Epic 48 · Shared production-promotion machinery and execution plan *(Ben-directed, 2026-10-09)*
 

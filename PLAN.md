@@ -15319,3 +15319,5 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   executor/profile, pressure/restore, source-owned aggregate admission, restored
   launch/readiness/freeze, ceremony and production signing/activation remain
   open. Historical plan/receipt bytes and their memory contracts stay exact.
+
+- **2026-10-20 — T47.5 signed experimental release, Linux #124.** Ben requests proactive closure and shipping. Publish Caller Map in [v0.2.1-experimental.20261020](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) from exact clean source `290e1518a4a192d0a3494c3ed9fa2eb39a450355`, bound to the existing production key, final binary and full 57-file artifact census. Retain original qualified scope/uncertainty and expiry; explicit signed selection governs installation and withdrawal. Current 194 bounded cases, real selected startup/restart/revocation and default-dark sync/index/search smoke pass. Release artifacts/docs add no runtime source, per-request/tick/no-op/publication work, lock, cache, process class or changed bound. Operator instance deployment and T42 native readiness remain separate.

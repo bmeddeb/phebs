@@ -11515,3 +11515,7 @@ adding no production request/tick/retry/publication work. It issues no actual
 author, authenticated dispatch or mutable-source capability. H2r.b standalone
 author ownership, later shared-controller/live-server binding and broader
 executor/pressure/restore, aggregate admission/readiness/freeze remain open.
+
+## T47.5 · Caller Map signed release (2026-10-20)
+
+Published in the [experimental Linux package](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) under Ben's shipping authorization. [Exact signed-record/verification receipt](../spike/t475/release/linux-20261020/receipt.json). Final clean source `290e1518a4a192d0a3494c3ed9fa2eb39a450355`; existing production key; final binary, implementation and complete artifact census bound. Current bounded integration, real selected startup/restart/withdrawal and default-dark index/search smoke pass. Historical finite qualification remains scoped; no new accuracy, scale, Linux capacity or ceremony result. Installation into an existing user instance remains an operator step.
