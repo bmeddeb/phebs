@@ -200,6 +200,18 @@ is H2r.b standalone Linux serial author/source ownership, followed separately by
 shared-controller/live-server binding and the remaining H2 gates.
 
 
+H2r.b's standalone actual Linux author/source owner is integrated through
+PR #153 (`5e4cb0bd`). Its first required native run at `722c772b` passed in
+957.80s with zero skips: three complete 2,031,604-leaf inventories, exact 4/3/3
+Git, canonical responses, terminal completion, actual joins and empty sessions.
+Independent final review verified 107 raw hashes and 13 source hashes without
+findings. The [receipt](../spike/t42h2r/standalone-author-linux-20261020.json)
+retains failed pre-gates and narrow joined byte observations. Next is H2r.c.a's
+shared-controller author launch, then c.b protected epoch inputs and c.c actual
+live-server borrow composition. These PR-sized subgates retain every parent c
+AC and issue no complete H2/readiness/freeze or ceremony authority.
+
+
 Next: [Linux office handoff #124](https://github.com/bmeddeb/phebs/issues/124)
 mechanism qualification → remaining T42.H2 consumer/executor/resource admission
 → T42.2v restored launch → complete readiness → T42.2o fresh freeze → separately

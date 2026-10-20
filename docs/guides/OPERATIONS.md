@@ -401,6 +401,26 @@ evidence review precedes integration; shared-controller/live-server H2r.c and al
 broader H2/readiness/freeze gates stay open. Do not repeat this passed standalone
 long workload merely for downstream source-identical evidence edits.
 
+H2r.c.a adds a distinct shared-controller `LinuxExecutionAuthorCustody.AuthorNextOn`
+path. It accepts the genuine local root producer on that same controller and
+only the next author producer 7/8/9 in owning plan phase 2/4/6. The first accepted
+operation binds the source owner to standalone or that exact shared controller/
+root; mixed-mode or rebound use refuses. Parent launch uses the fixed author
+site through `StartInPhase`, and its sole genuine `Handle.Wait` settles admission
+after synchronous root pinning. Own-producer 4/3/3, terminal Pause/natural close,
+actual join and session drain stay mandatory. Successful shared completion leaves
+unrelated producers/controller live; the caller owns phase transitions and final
+fencing. A copied view or response supplies no launch or input authority.
+
+These are per-operation input loans. A live server already borrowing the same
+owners must not reenter this path for B; c.c supplies the separate internal held-
+loan composition and source-lease handoff. Bounded fixed/tiny real-process tests
+qualify c.a's launch/accounting layer only. The actual shared-author/live-server
+acceptance remains c.c; b's passed standalone long workload is retained without
+repetition. Shared snapshots include the caller's full configured producer and
+phase-role registry, not just this author. They do not issue aggregate resource
+reservations or complete H2/readiness/freeze authority.
+
 A timeout's immediate mechanical result is unavailable while the worker is
 unfinished; it is not evidence that no child started. Retain the worker, complete
 input loans, source lease and exact private prefix until actual joining; inspect

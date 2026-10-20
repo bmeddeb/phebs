@@ -4489,6 +4489,59 @@ composition. Preserve every remaining parent H2r AC; b's standalone completion
 cannot substitute for this binding or any executor/profile/pressure/restore,
 aggregate H2, readiness/freeze or ceremony gate.
 
+**T42.H2r.c.a · Shared-controller Linux author launch** *(next PR-sized
+prerequisite after qualified H2r.b).* Add the distinct Linux `AuthorNextOn`
+composition over the same genuine owners and full-width source state. ACs:
+
+- Bind the actual shared controller and genuine local root producer; use author
+  producers 7/8/9 and owning plan phases 2/4/6, exact producer-local 4/3/3 Git,
+  and the fixed parent author site through `StartInPhase`. Reject foreign
+  controller/root/phase/producer or source-owner reuse outside its bound mode.
+- Pin the unreaped outer root before the sole genuine parent `Handle.Wait`,
+  retaining both native Wait and parent admission settlement. Preserve pidfd-only
+  cancellation, callback joins, actual session drain, uncertain source/input loans
+  and sticky failed prefixes. A successful shared operation leaves unrelated
+  producers and the controller live; its own terminal Pause/natural close and
+  exact producer counts remain mandatory. No global-complete predicate replaces
+  producer-local completion.
+- Keep b's standalone path and native wire/image/plan/lease invariants. Share the
+  fixed private transport/loan implementation instead of copying it; introduce no
+  public arbitrary command, image, callback, phase or response authority.
+- Pass meaningful normal/race shared accounting, unrelated live-producer,
+  foreign/phase/mode refusal, real early-exit and actual pin-refusal settlement
+  controls, applicable tagged/static/docs/glossary, Linux arm64 compile-only and
+  independent custody/cost/evidence review. Bounded fixed/tiny fixtures prove
+  this new shared launch/transport layer only; preserve b's full-population native
+  receipt without rerunning its passed standalone long workload. Full composed
+  actual shared-author/live-server qualification remains c.c, so c stays open.
+
+This slice adds no live-server borrower or epoch-launch authority. Its public
+operation still borrows otherwise available inputs for one joined author; the
+following composed flow must supply an internal single held-loan scope to avoid
+reentering owner locks while a server is alive.
+
+**T42.H2r.c.b · Protected Linux epoch inputs** *(after c.a).* Own eight protected
+catalog/config inputs, four native writable roots and five ordered listener
+reservations, preserving canonical observed catalog/config validation and exact
+root/lease replacement refusal. Regular final-component readers keep their
+current checks: use genuine protected-tree routes rather than weakening loaders
+for raw sealed-FD aliases. Config-embedded catalog routes and their tree loans
+must share the complete server lifetime. Required bounded native ownership,
+normal/race/refusal and independent custody/cost/evidence gates qualify only this
+input owner; no server or aggregate admission is issued.
+
+**T42.H2r.c.c · Linux live-server author/epoch borrow composition** *(after c.a
+and c.b).* Complete the parent c ACs with one tracked joined loan scope across
+Build/Git/image/plan and server use; dispatch hooks consume already-held internal
+descriptors without owner reentry. Preserve exact controller/epoch/config/source
+binding, the physical pin before B, predecessor join before return, failure
+retention and source-lease handoff. Supply Linux session/stop/volume and actual
+executable-image classification instead of granting attestation from numeric FD
+names or `comm`. Actual composed native acceptance, complete costs and independent
+review remain mandatory. c and parent H2r close only when all three subgates and
+every original c AC pass; executor/profile/pressure/restore, source-owned aggregate
+admission and downstream readiness/freeze still follow.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

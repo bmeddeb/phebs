@@ -5,6 +5,7 @@ package t421
 import (
 	"os/exec"
 
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"golang.org/x/sys/unix"
 )
 
@@ -13,10 +14,7 @@ import (
 // pin it before the sole Wait can reap it and permit numeric PID reuse.
 // A pin error never substitutes for native Wait or permits a bare-PID fallback.
 func pinExecutionProcessRoot(command *exec.Cmd) (int, <-chan error, error) {
-	pidfd, pinErr := -1, error(unix.EINVAL)
-	if command != nil && command.Process != nil && command.Process.Pid > 0 {
-		pidfd, pinErr = unix.PidfdOpen(command.Process.Pid, 0)
-	}
+	pidfd, pinErr := pinExecutionRootDescriptor(command)
 	waited := make(chan error, 1)
 	go func() {
 		if command == nil {
@@ -26,4 +24,21 @@ func pinExecutionProcessRoot(command *exec.Cmd) (int, <-chan error, error) {
 		waited <- command.Wait()
 	}()
 	return pidfd, waited, pinErr
+}
+
+// Same pin-before-reap boundary, but the genuine admitted handle owns native
+// Wait and parent DA settlement. Never substitute Cmd.Wait for this path.
+func pinAdmittedExecutionProcessRoot(command *exec.Cmd, handle dispatchadmission.Handle) (int, <-chan error, error) {
+	pidfd, pinErr := pinExecutionRootDescriptor(command)
+	waited := make(chan error, 1)
+	go func() {
+		waited <- handle.Wait()
+	}()
+	return pidfd, waited, pinErr
+}
+func pinExecutionRootDescriptor(command *exec.Cmd) (int, error) {
+	if command == nil || command.Process == nil || command.Process.Pid <= 0 {
+		return -1, unix.EINVAL
+	}
+	return unix.PidfdOpen(command.Process.Pid, 0)
 }

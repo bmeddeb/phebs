@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 	"golang.org/x/sys/unix"
 )
 
@@ -37,10 +38,12 @@ type linuxAuthorAttempt struct {
 	pid    int
 	stderr []byte
 	step   string
+	launch linuxAuthorLaunch
 }
 
 // LinuxExecutionAuthorCustody owns one serial A/B/A-return source and native
-// mutation lease. It does not compose a live server or shared controller. Close
+// mutation lease, bound to standalone or one shared controller/root producer.
+// It does not compose a live server. Close
 // joins tracked use before releasing descriptors; source bytes remain retained.
 type LinuxExecutionAuthorCustody struct {
 	mu                sync.Mutex
@@ -54,6 +57,9 @@ type LinuxExecutionAuthorCustody struct {
 	previous          *ExecutionCorpusAuthorResponse
 	results           []ExecutionAuthorResult
 	next              int
+	mode              linuxAuthorMode
+	controller        *dispatchadmission.Controller
+	parent            *dispatchadmission.LocalProducer
 	active            *linuxAuthorAttempt
 	last              *linuxAuthorAttempt
 	closing, released bool

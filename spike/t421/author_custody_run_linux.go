@@ -25,6 +25,25 @@ import (
 // Until done, returned mechanical fields are unavailable, not proof of no Start;
 // Results publishes the actual prefix after the retained worker completes.
 func (owner *LinuxExecutionAuthorCustody) AuthorNext(ctx context.Context) (ExecutionAuthorResult, error) {
+	return owner.authorNext(ctx, linuxAuthorLaunch{})
+}
+
+// AuthorNextOn binds this source owner to one genuine shared controller/root
+// producer. Only fixed producers 7/8/9 in plan phases 2/4/6 can advance it.
+// Shared success completes its own producer, leaving unrelated work live.
+// This supplies no live-server borrow or full-flow admission.
+func (owner *LinuxExecutionAuthorCustody) AuthorNextOn(ctx context.Context, controller *dispatchadmission.Controller, parent *dispatchadmission.LocalProducer, producer uint32) (result ExecutionAuthorResult, err error) {
+	if !parent.OnController(controller) {
+		return result, ErrExecutionAuthorCustody
+	}
+	result, err = owner.authorNext(ctx, linuxAuthorLaunch{controller: controller, parent: parent, producer: producer})
+	if err != nil {
+		result.Accounting, _ = controller.Snapshot()
+	}
+	return result, err
+}
+
+func (owner *LinuxExecutionAuthorCustody) authorNext(ctx context.Context, launch linuxAuthorLaunch) (ExecutionAuthorResult, error) {
 	if owner == nil || ctx == nil || ctx.Err() != nil {
 		return ExecutionAuthorResult{}, ErrExecutionAuthorCustody
 	}
@@ -34,13 +53,17 @@ func (owner *LinuxExecutionAuthorCustody) AuthorNext(ctx context.Context) (Execu
 		return ExecutionAuthorResult{}, ErrExecutionAuthorCustody
 	}
 	index := owner.next
+	if owner.bindLaunchLocked(index, &launch) != nil {
+		owner.mu.Unlock()
+		return ExecutionAuthorResult{}, ErrExecutionAuthorCustody
+	}
 	if owner.checkRoots(ctx) != nil || owner.checkSource(ctx, owner.previous) != nil {
 		owner.err = ErrExecutionAuthorCustody
 		owner.mu.Unlock()
 		return ExecutionAuthorResult{}, owner.err
 	}
 	operation, cancel := context.WithTimeout(ctx, owner.projection.deadlines[index])
-	attempt := &linuxAuthorAttempt{done: make(chan struct{}), cancel: cancel, result: ExecutionAuthorResult{Revision: owner.projection.expected[index].Name, ProducerID: 1}}
+	attempt := &linuxAuthorAttempt{done: make(chan struct{}), cancel: cancel, result: ExecutionAuthorResult{Revision: owner.projection.expected[index].Name, ProducerID: launch.producer}, launch: launch}
 	owner.active = attempt
 	owner.mu.Unlock()
 	go owner.run(operation, attempt, index)
@@ -57,7 +80,7 @@ func (owner *LinuxExecutionAuthorCustody) AuthorNext(ctx context.Context) (Execu
 		}
 		owner.err = ErrExecutionAuthorCustody
 		owner.mu.Unlock()
-		return ExecutionAuthorResult{Revision: owner.projection.expected[index].Name, ProducerID: 1}, ErrExecutionAuthorCustody
+		return ExecutionAuthorResult{Revision: owner.projection.expected[index].Name, ProducerID: launch.producer}, ErrExecutionAuthorCustody
 	}
 }
 
@@ -95,6 +118,10 @@ func (owner *LinuxExecutionAuthorCustody) run(ctx context.Context, attempt *linu
 		owner.previous = &response
 		owner.next++
 		attempt.result.Completed = true
+	}
+	if attempt.err != nil && attempt.launch.parent != nil {
+		_ = attempt.launch.controller.Fence()
+		attempt.result.Accounting, _ = attempt.launch.controller.Snapshot()
 	}
 	owner.results = append(owner.results, cloneAuthorCustodyResult(attempt.result))
 	owner.last = attempt
@@ -136,21 +163,49 @@ func (owner *LinuxExecutionAuthorCustody) runBorrowed(ctx context.Context, attem
 		value := cloneCorpusAuthorResponse(*owner.previous)
 		request.Previous = &value
 	}
+	return owner.runTransport(ctx, attempt, index, image, plan, request, attempt.launch, check)
+}
+
+// Only the protected-owner path calls this fixed transport in production.
+// Tests use their own sealed fixed image/fixture to prove transport mechanics.
+func (owner *LinuxExecutionAuthorCustody) runTransport(ctx context.Context, attempt *linuxAuthorAttempt, index int, image, plan *os.File, request linuxCorpusAuthorRequest, launch linuxAuthorLaunch, check func(context.Context) error) (retErr error) {
 	raw, err := corpusAuthorCanonical(request, MaxExecutionCorpusAuthorRequestBytes)
 	if err != nil {
 		return ErrExecutionAuthorCustody
 	}
-	var binding [32]byte
-	if _, err := rand.Read(binding[:]); err != nil || binding == ([32]byte{}) {
-		return ErrExecutionAuthorCustody
-	}
-	config, controlConfig := linuxAuthorCustodyConfig(index, binding)
 	lifetime, release := context.WithCancel(context.Background())
 	defer release()
-	controller, err := dispatchadmission.New(lifetime, config)
-	if err != nil {
-		return ErrExecutionAuthorCustody
+	if launch.parent == nil {
+		var binding [32]byte
+		if _, err := rand.Read(binding[:]); err != nil || binding == ([32]byte{}) {
+			return ErrExecutionAuthorCustody
+		}
+		config, control := linuxAuthorCustodyConfig(index, binding)
+		launch.controller, err = dispatchadmission.New(lifetime, config)
+		if err != nil {
+			return ErrExecutionAuthorCustody
+		}
+		launch.view = dispatchadmission.ProducerLaunch{Producer: config.Producers[0], Phase: 1, Limits: config.Limits}
+		launch.control = control
+		launch.producer = 1
 	}
+	controller, view, controlConfig := launch.controller, launch.view, launch.control
+	if launch.parent != nil {
+		current, e := controller.ProducerLaunch(view.Producer.ID)
+		if e != nil || current.Phase != view.Phase || current.Limits != view.Limits || current.Producer.Binding != view.Producer.Binding || launch.validate(index, owner.projection.phases[index]) != nil {
+			return ErrExecutionAuthorCustody
+		}
+	}
+	defer func() {
+		if retErr != nil {
+			_ = controller.Fence()
+			attempt.result.Accounting, _ = controller.Snapshot()
+		}
+	}()
+	operation, cancel := context.WithCancel(ctx)
+	defer cancel()
+	stopController := context.AfterFunc(controller.Context(), cancel)
+	defer stopController()
 	var files [8]*os.File
 	defer func() {
 		for _, file := range files {
@@ -187,14 +242,12 @@ func (owner *LinuxExecutionAuthorCustody) runBorrowed(ctx context.Context, attem
 			retErr = ErrExecutionAuthorCustody
 		}
 	}()
-	core := linuxAuthorGitCore(os.Getpid(), int(gitRoot.Fd()))
+	core := linuxAuthorGitCore(request.Controller, request.GitFD)
 	environment := executionGitEnvironment(core, owner.roots[2].path, owner.roots[3].path)
 	command := exec.Command("/proc/self/fd/5")
 	command.Dir, command.Env = owner.roots[0].path, append(append([]string(nil), environment...), dispatchadmission.ProductionEnvironment+"="+dispatchadmission.ProductionSelector)
 	command.ExtraFiles = []*os.File{files[1], files[3], image, plan}
 	command.Stdin, command.Stdout = files[5], files[7]
-	operation, cancel := context.WithCancel(ctx)
-	defer cancel()
 	stderr := &checkoutCommandOutput{remaining: 8 << 10, cancel: cancel}
 	command.Stderr = stderr
 	command.WaitDelay = 0
@@ -202,13 +255,29 @@ func (owner *LinuxExecutionAuthorCustody) runBorrowed(ctx context.Context, attem
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	attempt.step = "start"
-	if command.Start() != nil {
-		_ = controller.CancelUnused(1)
+	var handle dispatchadmission.Handle
+	if launch.parent == nil {
+		err = command.Start()
+	} else {
+		err = check(operation)
+		if err == nil {
+			handle, err = launch.parent.StartInPhase(operation, view.Phase, ExecutionParentAuthorSite(), command)
+		}
+	}
+	if err != nil {
+		_ = controller.CancelUnused(view.Producer.ID)
 		return ErrExecutionAuthorCustody
 	}
 	attempt.pid = command.Process.Pid
 	attempt.result.RootStarted = true
-	pidfd, waited, pinErr := pinExecutionProcessRoot(command)
+	var pidfd int
+	var waited <-chan error
+	var pinErr error
+	if launch.parent == nil {
+		pidfd, waited, pinErr = pinExecutionProcessRoot(command)
+	} else {
+		pidfd, waited, pinErr = pinAdmittedExecutionProcessRoot(command, handle)
+	}
 	if pinErr == nil {
 		defer func() { _ = unix.Close(pidfd) }()
 	}
@@ -237,13 +306,13 @@ func (owner *LinuxExecutionAuthorCustody) runBorrowed(ctx context.Context, attem
 	if pinErr != nil {
 		retErr = ErrExecutionAuthorCustody
 	}
-	bootstrap := dispatchadmission.ProductionBootstrap{Program: dispatchadmission.ProgramCorpusAuthor, InputSHA256: sha256.Sum256(raw), Producer: config.Producers[0], Phase: 1, Limits: config.Limits, Control: controlConfig, Tools: []dispatchadmission.ProductionToolBinding{{Role: "git", Path: core + "/git", Environment: environment}}}
+	bootstrap := dispatchadmission.ProductionBootstrap{Program: dispatchadmission.ProgramCorpusAuthor, InputSHA256: sha256.Sum256(raw), Producer: view.Producer, Phase: view.Phase, Limits: view.Limits, Control: controlConfig, Tools: []dispatchadmission.ProductionToolBinding{{Role: "git", Path: core + "/git", Environment: environment}}}
 	attempt.step = "bootstrap"
 	if retErr == nil && dispatchadmission.SendProductionBootstrap(operation, files[0], files[2], bootstrap) != nil {
 		retErr = ErrExecutionAuthorCustody
 	}
 	if retErr == nil {
-		control, err = dispatchadmission.NewPhaseControl(lifetime, files[2], binding, controlConfig)
+		control, err = dispatchadmission.NewPhaseControl(lifetime, files[2], view.Producer.Binding, controlConfig)
 		files[2] = nil
 		if err != nil {
 			retErr = ErrExecutionAuthorCustody
@@ -252,8 +321,8 @@ func (owner *LinuxExecutionAuthorCustody) runBorrowed(ctx context.Context, attem
 			server := files[0]
 			files[0] = nil
 			go func() {
-				completion <- controller.ServeChecked(lifetime, 1, attempt.pid, server, func(hookCtx context.Context, site dispatchadmission.Site) error {
-					if site.ID != dispatchadmission.SiteCorpusAuthorGit || site.Role != dispatchadmission.RoleGit || site.Persistent || check(hookCtx) != nil || t4013.MatchLinuxProcessExecutableImage(hookCtx, attempt.pid, image) != nil {
+				completion <- controller.ServeChecked(lifetime, view.Producer.ID, attempt.pid, server, func(hookCtx context.Context, site dispatchadmission.Site) error {
+					if site.ID != dispatchadmission.SiteCorpusAuthorGit || site.Role != dispatchadmission.RoleGit || site.Persistent || launch.parent != nil && (!authorCustodyDispatchAllowed(controller, view.Producer.ID, index) || launch.validate(index, owner.projection.phases[index]) != nil) || check(hookCtx) != nil || t4013.MatchLinuxProcessExecutableImage(hookCtx, attempt.pid, image) != nil {
 						return ErrExecutionAuthorCustody
 					}
 					return nil
@@ -286,7 +355,7 @@ func (owner *LinuxExecutionAuthorCustody) runBorrowed(ctx context.Context, attem
 		_ = controller.Fence()
 		cancel()
 		if served == nil {
-			_ = controller.CancelUnused(1)
+			_ = controller.CancelUnused(view.Producer.ID)
 		}
 	}
 	if served == nil {
@@ -322,13 +391,13 @@ func (owner *LinuxExecutionAuthorCustody) runBorrowed(ctx context.Context, attem
 	if control != nil && control.Close() != nil {
 		retErr = ErrExecutionAuthorCustody
 	}
-	// Natural producer close precedes this final accounting fence.
-	if controller.Fence() != nil {
+	// Standalone completion owns its final fence; shared work leaves others live.
+	if launch.parent == nil && controller.Fence() != nil {
 		retErr = ErrExecutionAuthorCustody
 	}
 	attempt.result.Accounting, err = controller.Snapshot()
 	attempt.stderr = append([]byte(nil), stderr.buffer.Bytes()...)
-	if waitErr != nil || err != nil || stderr.err != nil || operation.Err() != nil || !attempt.result.Accounting.Complete || !authorCustodyProducerComplete(attempt.result.Accounting, 1, authorCustodyAttempts(index)) {
+	if waitErr != nil || err != nil || stderr.err != nil || operation.Err() != nil || launch.parent == nil && !attempt.result.Accounting.Complete || !authorCustodyProducerComplete(attempt.result.Accounting, view.Producer.ID, authorCustodyAttempts(index)) {
 		retErr = ErrExecutionAuthorCustody
 	}
 	if retErr == nil {

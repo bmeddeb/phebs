@@ -15052,3 +15052,86 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   pressure/restore/aggregate admission, restored launch, readiness/freeze and
   separately authorized execution remain open. No signing/activation, ceremony
   or scale/SLO claim follows.
+
+- **2026-10-20 — T42.H2r.c shared Linux flow proceeds through bounded subgates.**
+  Standalone b qualified and integrated through reviewed green PR #153 at
+  `5e4cb0bd`. Split c without waiving its shared/live-server ACs: c.a owns actual
+  shared parent/author accounting and transport, c.b owns protected Linux epoch
+  inputs, and c.c owns the actual joined live-server borrow composition. c.a
+  preserves producers 7/8/9, phases 2/4/6, exact 4/3/3 nested Git and the fixed
+  genuine parent StartInPhase site. Its outer root must pin before the sole
+  Handle.Wait, retaining parent settlement as well as native Wait; b's direct
+  Cmd.Wait helper alone cannot settle a shared admission. Shared success must
+  leave unrelated producers/controller live and validate only its own exact
+  terminal producer prefix. Bind one source owner to its selected standalone or
+  shared mode/controller; caller views issue no alternative recipe.
+
+  Available input loans remain per joined operation in c.a. A server already
+  holding Builds/Git/tree/image/plan locks cannot call that public path for B:
+  c.c needs one tracked flow loan scope and internal already-held descriptors,
+  with no public callback or recursive owner entry. c.b must preserve regular
+  final config/catalog path checks through protected-tree routes and keep their
+  embedded catalog aliases alive. c.c must replace unsuitable legacy Linux
+  session/stop/volume seams and classify observed sealed executables by image
+  binding rather than basename/comm. Preserve physical pin and predecessor-join
+  transitions and retain every unknown source/lease prefix.
+
+  Bounded fixed/tiny actual shared-launch and pin-refusal/early-exit controls,
+  normal/race/static/docs, supported compile-only and independent custody/cost
+  review qualify c.a's new mechanism only. Do not replay b's passed standalone
+  long workload for this slice; full actual shared-author/live-server acceptance
+  stays mandatory in c.c. No new live-server, full H2, aggregate memory/tmpfs/
+  cache/disk admission, restored launch, readiness/freeze or execution authority
+  follows. The implementation PR must append measured work and held-resource
+  costs before review. Production signing/activation and ceremony stay pending.
+
+  c.a implementation cost: ordinary query/request, sync tick, startup/restart,
+  retry/no-op and publication behavior is unchanged. Owner state adds one mode
+  and bound controller/root references; one accepted author remains active.
+  Preparation/source census and the whole Build/Git/tree/image/plan loan order
+  remain b's existing work. Shared preflight performs bounded constructor-view
+  and parent-row checks under the existing controller mutex; each Git hook also
+  checks the author ordinal/active row and root row without owner API reentry.
+  No SDK/module rehash or new corpus traversal is added. Parent Start and sole
+  Handle.Wait add the existing DA admission/settlement exchanges for the same
+  three outer author roots; no additional native process is created. Ten direct
+  Git roots, fixed input/socket bounds and per-author root/nested pidfds remain.
+
+  One controller-context cancellation registration is retained per operation;
+  existing callback/receiver/pump/thread and complete input loans remain through
+  actual root Wait and session drain, potentially indefinitely on uncertainty.
+  Shared completion copies the caller controller's full producer/phase/role
+  snapshot rather than b's single-producer snapshot. Work/allocation is bounded
+  by that already configured registry, not O(1) or an aggregate admission; failed
+  shared transport, final worker publication and immediate API error may each
+  take a snapshot, retaining truthful prefixes at their distinct boundaries.
+  At most three defensive result snapshots plus the previous response remain.
+  No new cache invalidation, schema, persistent job or production child is added.
+  Fixed/tiny tests add their own joined roots and sockets; no long standalone
+  workload or arbitrary-command public recipe is introduced.
+
+  c.a precommit checks retained two initial failures and one diagnostic refusal.
+  The first stopped at compilation
+  on an unused import left by the transport refactor; no test executed. After
+  removing it, the focused run passed mode/phase/controller refusal, genuine
+  early-exit and isolated EMFILE settlement, pending-timeout retention and the
+  existing standalone/corpus/root-wait controls, but refused the fixed shared
+  fixture. One changed test-only stage diagnostic located the refusal at the
+  plan read: its test held the same input loan across A/B/A-return, so A advanced
+  that shared open description to EOF for B. Production already borrows a fresh
+  input per joined operation. Correct the fixture to match that lifetime while
+  preserving exact plan bytes/hash checks. Both executed failure roots were
+  actually joined with empty sessions; the compiler failure started no author.
+  Preserve these raw/source censuses; no native long workload ran. Corrected
+  confirmation and immutable source gates remain pending.
+
+  The corrected fresh-loan tiny transport passed in 1.308s: actual producers
+  7/8/9 each joined an empty session with exact Git 4/3/3 and parent ordinals
+  1/2/3; an unrelated producer retained its active handle and successfully
+  started/joined more work after every author. The final focused normal selector
+  passed in 2.530s, including shared timeout/prefix retention, seven preflight
+  refusals, WNOWAIT pin-before-Handle.Wait and real isolated EMFILE settlement,
+  original root-wait, standalone/corpus and exact shared-budget controls. Both
+  command wrappers actually returned zero with empty sessions. These six-file
+  source censuses are identical; immutable normal/race/static/compile and
+  independent review remain the integration gates.
