@@ -1,0 +1,125 @@
+{
+  "ticket": "T42.H2q",
+  "status": "PASS_TRUSTED_HOST_NEUTRAL_METADATA_DIAGNOSTIC_ONLY",
+  "fixture_source_commit": "545a1527bb49c20abfb59b03b9adf87c68dcb5e1",
+  "observations": {
+    "scope": "trusted-host neutral metadata diagnostic only; no protected-input or helper admission",
+    "revision": "e31e82c03d98199ff6ee17ce00a5c5cc9c554a9f",
+    "build_info_text": "/home/ben/phebs-rehearsals/t42h2q-control.vgljy20l/metadata-host-control.bwt8ygqx/output: go1.26.5\n\tpath\tneutral.invalid/protected\n\tmod\tneutral.invalid/protected\tv0.0.0-20231114221320-e31e82c03d98\t\n\tbuild\t-buildmode=exe\n\tbuild\t-compiler=gc\n\tbuild\t-trimpath=true\n\tbuild\tCGO_ENABLED=0\n\tbuild\tGOARCH=amd64\n\tbuild\tGOOS=linux\n\tbuild\tGOAMD64=v1\n\tbuild\tvcs=git\n\tbuild\tvcs.revision=e31e82c03d98199ff6ee17ce00a5c5cc9c554a9f\n\tbuild\tvcs.time=2023-11-14T22:13:20Z\n\tbuild\tvcs.modified=false\n",
+    "finished_utc": "2026-10-20T05:06:35.498067+00:00"
+  },
+  "processes": [
+    {
+      "name": "metadata-git-init",
+      "pid": 110129,
+      "actual_wait_returncode": 0,
+      "session_members_after_wait": []
+    },
+    {
+      "name": "metadata-git-import",
+      "pid": 110130,
+      "actual_wait_returncode": 0,
+      "session_members_after_wait": []
+    },
+    {
+      "name": "metadata-git-reset",
+      "pid": 110132,
+      "actual_wait_returncode": 0,
+      "session_members_after_wait": []
+    },
+    {
+      "name": "metadata-git-revision",
+      "pid": 110133,
+      "actual_wait_returncode": 0,
+      "session_members_after_wait": []
+    },
+    {
+      "name": "metadata-go-build",
+      "pid": 110135,
+      "actual_wait_returncode": 0,
+      "session_members_after_wait": []
+    },
+    {
+      "name": "metadata-go-version",
+      "pid": 110174,
+      "actual_wait_returncode": 0,
+      "session_members_after_wait": []
+    }
+  ],
+  "scope": "Ordinary installed SDK/Git on trusted host only. No protected input/helper, original SDK hiding, descendant containment, full reference provenance or aggregate admission. Original8e failure cause remains unavailable.",
+  "source_contract_correction": "Require exact untagged v0 pseudo-version from fixed committerUnix1700000000 and first12 hex of independently prepared full revision, exact vcs.time2023-11-14T22:13:20Z, plus unchanged full revision/clean/native/CGO0/trimpath/no-deps predicates in parent and helper. Reject devel, dirty, wrong version and wrong time.",
+  "official_reference": "https://go.dev/doc/go1.24#tools",
+  "raw_evidence_directory": "/home/ben/phebs-rehearsals/t42h2q-control.vgljy20l",
+  "raw_file_census": [
+    {
+      "name": "host-metadata-diagnostic.json",
+      "bytes": 760,
+      "sha256": "7325ea9e8474b0c7cd647f9dacd21434b87a1910ea167f4ff06e3190b1e7acda"
+    },
+    {
+      "name": "host-metadata-processes.json",
+      "bytes": 798,
+      "sha256": "2fda1483b20090b33b712f6dd7bf7366ee2776e06300defa701b7b2423c7100f"
+    },
+    {
+      "name": "metadata-git-import.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "metadata-git-import.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "metadata-git-init.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "metadata-git-init.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "metadata-git-reset.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "metadata-git-reset.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "metadata-git-revision.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "metadata-git-revision.stdout",
+      "bytes": 41,
+      "sha256": "c2a1145980e734ecdf935ccfbabdb9b2f28d9f3adc7a8347d5204c0550290049"
+    },
+    {
+      "name": "metadata-go-build.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "metadata-go-build.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "metadata-go-version.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "metadata-go-version.stdout",
+      "bytes": 478,
+      "sha256": "8bfa4100d671ff230089ba4a9f48e27abc56edc4c677eeb313d00bb2f4f1f887"
+    }
+  ]
+}

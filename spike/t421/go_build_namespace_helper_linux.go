@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/mod/module"
 	"golang.org/x/sys/unix"
 )
 
@@ -261,7 +262,12 @@ func neutralGoBuildRevision(root *os.Root) (string, error) {
 
 func neutralGoBuildInfo(info *debug.BuildInfo, revision string) bool {
 	if !validCommit(revision) || info == nil || info.GoVersion != runtime.Version() || info.Path != "neutral.invalid/protected" ||
-		info.Main.Path != "neutral.invalid/protected" || info.Main.Version != "(devel)" || info.Main.Sum != "" || info.Main.Replace != nil || len(info.Deps) != 0 {
+		info.Main.Path != "neutral.invalid/protected" || info.Main.Sum != "" || info.Main.Replace != nil || len(info.Deps) != 0 {
+		return false
+	}
+	commitTime := time.Unix(linuxGoBuildCommitUnix, 0).UTC()
+	// Go 1.24+ stamps the fixed untagged module with its VCS pseudo-version.
+	if info.Main.Version != module.PseudoVersion("v0", "", commitTime, revision[:12]) {
 		return false
 	}
 	settings := map[string]string{}
@@ -272,7 +278,7 @@ func neutralGoBuildInfo(info *debug.BuildInfo, revision string) bool {
 		settings[setting.Key] = setting.Value
 	}
 	return settings["CGO_ENABLED"] == "0" && settings["-trimpath"] == "true" && settings["GOOS"] == "linux" && settings["GOARCH"] == "amd64" &&
-		settings["vcs"] == "git" && settings["vcs.revision"] == revision && settings["vcs.modified"] == "false"
+		settings["vcs"] == "git" && settings["vcs.revision"] == revision && settings["vcs.modified"] == "false" && settings["vcs.time"] == commitTime.Format(time.RFC3339)
 }
 
 func runNeutralGoNamespaceBuild(ctx context.Context, workspace, revision string) error {
@@ -318,7 +324,7 @@ func runNeutralGoNamespaceBuild(ctx context.Context, workspace, revision string)
 			_, _ = fmt.Fprintf(os.Stderr, "neutral output go_version=%q path=%q main_path=%q main_version=%q deps=%d\n", info.GoVersion, info.Path, info.Main.Path, info.Main.Version, len(info.Deps))
 			for _, setting := range info.Settings {
 				switch setting.Key {
-				case "CGO_ENABLED", "-trimpath", "GOOS", "GOARCH", "vcs", "vcs.revision", "vcs.modified":
+				case "CGO_ENABLED", "-trimpath", "GOOS", "GOARCH", "vcs", "vcs.revision", "vcs.time", "vcs.modified":
 					_, _ = fmt.Fprintf(os.Stderr, "neutral output setting %s=%q\n", setting.Key, setting.Value)
 				}
 			}

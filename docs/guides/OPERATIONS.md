@@ -236,6 +236,23 @@ worker, image, inputs and pidfd; a fallback leaf kill is failed evidence.
 This control is implemented but has no native qualification yet. Its nominal
 tmpfs ceiling remains 2 GiB; the tiny payload grants no aggregate allowance.
 
+The neutral metadata fence now expects Go's exact VCS-derived module version
+and fixed commit timestamp, alongside the full revision and clean-tree checks.
+[`neutral-metadata-host-control-linux-20261019.json`](../../spike/t42h2q/neutral-metadata-host-control-linux-20261019.json)
+is an ordinary trusted-host metadata diagnostic only. It corrects the obsolete
+`(devel)` expectation without admitting a protected compile or assigning the
+first run's missing cause. Use the corrected source for the next namespace
+composition; the lifetime control accepts no Go build and is unaffected.
+
+The first lifetime control failed; preserve
+[`lifetime-control-failure-linux-20261019.json`](../../spike/t42h2q/lifetime-control-failure-linux-20261019.json).
+Actual root SIGKILL Wait and empty session do not identify the generic refusing
+predicate or qualify detached cancellation. The corrected native controller
+names each existing common start/READY gate and leaf observation. Run only the
+changed source, with the same retained-custody rules and no relaxed check.
+The control also now owns a copy of its initial 48-byte nonce/header before
+reusing the wire receive buffer; a focused buffer-reuse regression pins it.
+
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
 It binds `c07bc930` and is preserved unchanged, so it no longer describes the

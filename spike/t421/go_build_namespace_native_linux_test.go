@@ -17,7 +17,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 	"syscall"
 	"testing"
@@ -38,7 +37,7 @@ func TestLinuxGoBuildRequiredNativeNamespaceComposition(t *testing.T) {
 			return
 		}
 		if helper.Close() != nil {
-			t.Error("build-helper image cleanup refused")
+			t.Error("build-helper Close returned custody error: sticky refusal or cleanup")
 		}
 	})
 	oldHelper := requireLinuxInputTreeHelper(t)
@@ -129,7 +128,7 @@ func TestLinuxGoBuildRequiredNativeNamespaceComposition(t *testing.T) {
 		}
 		fmt.Fprintf(&stream, "blob\nmark :%d\ndata %d\n%s\n", i+1, len(file.content), file.content)
 	}
-	stream.WriteString("commit refs/heads/main\ncommitter Neutral <neutral@example.invalid> 1700000000 +0000\ndata 7\nneutral\n")
+	fmt.Fprintf(&stream, "commit refs/heads/main\ncommitter Neutral <neutral@example.invalid> %d +0000\ndata 7\nneutral\n", linuxGoBuildCommitUnix)
 	for i, file := range files {
 		fmt.Fprintf(&stream, "M 100644 :%d %s\n", i+1, file.name)
 	}
@@ -298,6 +297,54 @@ func copyNativeGoSDK(t *testing.T, sdk, destination string, reserved int64) {
 	}
 }
 
+func checkNativeGoHelperNamespaces(ctx context.Context, pid int, image *os.File) (inputTreeNamespaces, error) {
+	namespaces, err := observeInputTreeNamespaces(pid)
+	if err != nil {
+		return namespaces, fmt.Errorf("initial user/mount namespaces: %w", err)
+	}
+	if err := t4013.MatchLinuxProcessExecutableImage(ctx, pid, image); err != nil {
+		return namespaces, fmt.Errorf("initial helper executable image: %w", err)
+	}
+	var self, child unix.Stat_t
+	if err := unix.Stat("/proc/self/ns/pid", &self); err != nil {
+		return namespaces, fmt.Errorf("controller PID namespace: %w", err)
+	}
+	if err := unix.Stat(fmt.Sprintf("/proc/%d/ns/pid", pid), &child); err != nil {
+		return namespaces, fmt.Errorf("helper PID namespace: %w", err)
+	}
+	if self.Ino == child.Ino && self.Dev == child.Dev {
+		return namespaces, errors.New("helper shares controller PID namespace")
+	}
+	return namespaces, nil
+}
+
+func checkNativeGoProtectedReady(ctx context.Context, tree *LinuxExecutionInputTree, image *os.File, before inputTreeNamespaces) error {
+	after, err := observeInputTreeNamespaces(tree.pid)
+	if err != nil {
+		return fmt.Errorf("READY user/mount namespaces: %w", err)
+	}
+	if after != before {
+		return errors.New("READY helper namespaces changed")
+	}
+	if err := tree.checkStage(); err != nil {
+		return fmt.Errorf("READY stage placeholder: %w", err)
+	}
+	if err := observeInputTreeDroppedPrivileges(tree.pid); err != nil {
+		return fmt.Errorf("READY all-thread dropped privileges: %w", err)
+	}
+	if err := t4013.MatchLinuxProcessExecutableImage(ctx, tree.pid, image); err != nil {
+		return fmt.Errorf("READY helper executable image: %w", err)
+	}
+	tree.kernel, err = observeInputTreeRoot(tree.root)
+	if err != nil {
+		return fmt.Errorf("READY protected-root kernel identity: %w", err)
+	}
+	if err := observeInputTreeHelperMount(tree.pid, tree.stagePath, tree.kernel.mount); err != nil {
+		return fmt.Errorf("READY helper mount identity: %w", err)
+	}
+	return nil
+}
+
 func runNativeGoNamespaceAttempt(ctx context.Context, tree *LinuxExecutionInputTree, helper *LinuxExecutionToolCustody, workspace, payload, revision string) {
 	defer completeInputTreeConstruction(tree.done, tree.cancel)
 	roots, rows, err := gatherInputTreeSources(ctx, tree.stagePath, []LinuxInputTreeSource{{Name: "inputs", Path: payload}})
@@ -356,12 +403,12 @@ func runNativeGoNamespaceAttempt(ctx context.Context, tree *LinuxExecutionInputT
 		useErr := func() error {
 			closeErr := child.Close()
 			child = nil
-			namespaces, nsErr := observeInputTreeNamespaces(tree.pid)
-			var selfPIDNS, childPIDNS unix.Stat_t
-			if closeErr != nil || pidfdErr != nil || nsErr != nil || t4013.MatchLinuxProcessExecutableImage(ctx, tree.pid, image) != nil ||
-				unix.Stat("/proc/self/ns/pid", &selfPIDNS) != nil || unix.Stat("/proc/"+strconv.Itoa(tree.pid)+"/ns/pid", &childPIDNS) != nil ||
-				selfPIDNS.Ino == childPIDNS.Ino && selfPIDNS.Dev == childPIDNS.Dev {
-				return ErrLinuxInputTree
+			if closeErr != nil || pidfdErr != nil {
+				return fmt.Errorf("initial child socket/pidfd: close=%v pidfd=%v", closeErr, pidfdErr)
+			}
+			namespaces, err := checkNativeGoHelperNamespaces(ctx, tree.pid, image)
+			if err != nil {
+				return err
 			}
 			wire := &inputTreeSocket{fd: pair[0], peer: &unix.Ucred{Pid: int32(tree.pid), Uid: uint32(os.Geteuid()), Gid: uint32(os.Getegid())}}
 			initial := make([]byte, 48)
@@ -379,17 +426,17 @@ func runNativeGoNamespaceAttempt(ctx context.Context, tree *LinuxExecutionInputT
 			ready, view, err := wire.receive(ctx, treeWireReady, true)
 			tree.root = view // Own every delivered descriptor before later checks.
 			expected := append(bytes.Clone(initial[16:]), inputTreeManifest(census)...)
-			readyNS, nsErr := observeInputTreeNamespaces(tree.pid)
-			if err != nil || !bytes.Equal(ready, expected) || nsErr != nil || namespaces != readyNS || tree.checkStage() != nil ||
-				observeInputTreeDroppedPrivileges(tree.pid) != nil || t4013.MatchLinuxProcessExecutableImage(ctx, tree.pid, image) != nil {
-				return ErrLinuxInputTree
+			if err != nil {
+				return fmt.Errorf("receive protected READY: %w", err)
 			}
-			tree.kernel, err = observeInputTreeRoot(tree.root)
-			if err != nil || observeInputTreeHelperMount(tree.pid, tree.stagePath, tree.kernel.mount) != nil {
-				return ErrLinuxInputTree
+			if !bytes.Equal(ready, expected) {
+				return errors.New("protected READY nonce/manifest mismatch")
 			}
-			if closeInputTreeSources(roots) != nil {
-				return ErrLinuxInputTree
+			if err := checkNativeGoProtectedReady(ctx, tree, image, namespaces); err != nil {
+				return err
+			}
+			if err := closeInputTreeSources(roots); err != nil {
+				return fmt.Errorf("close private source roots: %w", err)
 			}
 			roots = nil
 			if os.RemoveAll(payload) != nil {

@@ -85,8 +85,8 @@ func linuxGoLifetimeHelperMain(mode string) (status int) {
 		return status
 	}
 	wire := &inputTreeSocket{fd: 4}
-	initial, _, err := wire.receive(ctx, treeWireInit, false)
-	if err != nil || len(initial) != 48 || !inputTreeHelperMappings(initial) {
+	initial, err := receiveGoLifetimeInitial(ctx, wire)
+	if err != nil || !inputTreeHelperMappings(initial) {
 		return status
 	}
 	stage = "fresh-protected-tree"
@@ -135,6 +135,15 @@ func linuxGoLifetimeHelperMain(mode string) (status int) {
 	// closure and timeout refuse; neither is accepted as descendant drain.
 	_, _, _ = wire.receive(ctx, treeWireAck, false)
 	return status
+}
+
+func receiveGoLifetimeInitial(ctx context.Context, wire *inputTreeSocket) ([]byte, error) {
+	raw, _, err := wire.receive(ctx, treeWireInit, false)
+	if err != nil || len(raw) != 48 {
+		return nil, ErrLinuxInputTree
+	}
+	// The wire owns a reusable receive buffer; later tree frames overwrite it.
+	return bytes.Clone(raw), nil
 }
 
 func goLifetimeInputShape(census inputTreeCensus) bool {

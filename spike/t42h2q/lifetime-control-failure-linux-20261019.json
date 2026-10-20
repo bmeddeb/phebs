@@ -1,0 +1,120 @@
+{
+  "ticket": "T42.H2q",
+  "status": "FAILED_PID_NAMESPACE_CANCELLATION_CONTROL",
+  "source_commit": "545a1527bb49c20abfb59b03b9adf87c68dcb5e1",
+  "test_sha256": "0e745af2583471d31ff354a31ff34cdc032e3807786cabb82e0360d15c9d3c2e",
+  "native": {
+    "test": "TestLinuxGoBuildRequiredNativePIDNamespaceCancellation",
+    "elapsed_seconds": 211.68,
+    "exit_code": 1,
+    "passed_tests": 0,
+    "skips": [],
+    "helper_pid": 125328,
+    "helper_actual_wait_signal": "SIGKILL",
+    "helper_root_session_empty": true,
+    "wrapper_actual_wait": true,
+    "wrapper_session_members": []
+  },
+  "observations": [
+    "Controller reported generic Linux protected-input protocol refusal; helper stderr was empty. The log identifies no individual namespace/image/READY/mount/leaf predicate.",
+    "Root actual SIGKILL Wait and empty root session were observed. Those facts alone do not qualify detached-leaf cancellation or clean descendant custody.",
+    "Helper Close reported custody error; sticky refusal versus any additional close error is not distinguished.",
+    "Actual wrapper Wait1/empty session and absent final fixture prefix were observed."
+  ],
+  "correction": "Factor the existing common native start/READY checks into named diagnostic gates without weakening predicates; retain per-leaf validation labels and authorization/validation flags on refusal. No unchanged retry.",
+  "raw_evidence_directory": "/home/ben/phebs-rehearsals/t42h2q-control.vgljy20l",
+  "raw_file_census": [
+    {
+      "name": "bootstrap.json",
+      "bytes": 375,
+      "sha256": "a0f2afebde4a60f07ed39371978b16a9c13a4c87f773f4ebfbb3d22d67432180"
+    },
+    {
+      "name": "checkout.stderr",
+      "bytes": 89,
+      "sha256": "fc370daf3b074115b6a46f0c806013ea1103791c17fd9d410d2c5542a1f77910"
+    },
+    {
+      "name": "checkout.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "clone.stderr",
+      "bytes": 88,
+      "sha256": "bf5d4e9687089e6b8fc791ae2705a656a252ac8e0d6dbceb61047899b182ccd6"
+    },
+    {
+      "name": "clone.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "go-build-helper",
+      "bytes": 35376369,
+      "sha256": "6efd29b63dcfb731978e6a10675068ea89814f402538d944a4b2c9b91c729d30"
+    },
+    {
+      "name": "go-build-helper-bootstrap.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "go-build-helper-bootstrap.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "go-build-helper-request.json",
+      "bytes": 587,
+      "sha256": "1fa874ac421dddba8fafb1db4cd1580044a03425fed97ad095c1261a24d9fc0b"
+    },
+    {
+      "name": "input-tree-helper",
+      "bytes": 34303012,
+      "sha256": "99c9e44c1fb8812ac4cc8f12ffdf566eb8f64e816e02e7a6f29c7ac8259d8d6a"
+    },
+    {
+      "name": "input-tree-helper-bootstrap.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "input-tree-helper-bootstrap.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "input-tree-helper-request.json",
+      "bytes": 593,
+      "sha256": "a8dc24b4a5b06c1b64e692a5c4ef2705b49353903252eb6c2417b70389313ca2"
+    },
+    {
+      "name": "lifetime-native.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "lifetime-native.stdout.jsonl",
+      "bytes": 2358,
+      "sha256": "2dd5dd50b684572c2379dcc866eebd426bebc701b290a593232f99e751f286c2"
+    },
+    {
+      "name": "lifetime-process.json",
+      "bytes": 599,
+      "sha256": "56bcac72c8b7f2257d2859061b1f6fe381532b90e585d41eef6b8f07447db041"
+    },
+    {
+      "name": "post-run.json",
+      "bytes": 364,
+      "sha256": "0aa8ea5d4e339dbc33f97e0f1de426225c350ddd72b1f86ee4ef09f90301c57a"
+    },
+    {
+      "name": "preflight.json",
+      "bytes": 781,
+      "sha256": "e125fe323090ca6005259803a5df8b468fadbfefeaf74285d15f0a65789cadba"
+    }
+  ],
+  "scope": "No protected compile, detached-leaf containment, full reference/public Go owner, aggregate admission, H2/readiness/freeze/ceremony pass. Original8e and545 failures retained separately.",
+  "production_signing_and_activation": "PENDING"
+}

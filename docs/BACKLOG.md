@@ -4253,6 +4253,33 @@ and keepers, including after root Wait. A cleanup leaf-kill fallback invalidates
 the measurement. No arbitrary child command is accepted. Source review caught
 and corrected the missing-leaf failure prefix; native and full H2q ACs stay open.
 
+An independent source-contract correction replaces the obsolete neutral
+`Main.Version=(devel)` expectation with the exact untagged VCS pseudo-version
+and fixed commit time. Pinned Go source and the
+[trusted-host metadata diagnostic](../spike/t42h2q/neutral-metadata-host-control-linux-20261019.json)
+confirm `v0.0.0-20231114221320-<revision[:12]>` and
+`vcs.time=2023-11-14T22:13:20Z`; the full revision, clean/native/CGO/trimpath
+checks remain mandatory in both parent and helper. This is neither a protected
+compile result nor retrospective attribution of the first failure. Do not spend
+another native compile on the known obsolete predicate. The first lifetime
+control at `545a1527` is independent of this metadata gate.
+
+That first `545a1527` lifetime control **failed** in 211.68s with generic
+controller refusal and empty helper stderr. Its
+[failure receipt](../spike/t42h2q/lifetime-control-failure-linux-20261019.json)
+retains actual root SIGKILL Wait, empty root/wrapper sessions, absent fixture
+and sticky Close error without assigning an individual predicate or certifying
+detached cancellation. The next source names existing initial/READY namespace,
+image, stage, privilege and mount gates, and leaf checks, before changed-source
+confirmation. Authorization/validation retention and all predicates stay exact.
+
+Source inspection also found the lifetime helper kept its initial nonce/header
+in the socket's reusable receive buffer. Copy the closed 48-byte initial frame
+before receiving tree frames; a focused same-buffer regression checks later
+frames cannot change it and malformed lengths refuse. This is a concrete source
+defect, not an attribution recovered from the first generic native failure.
+The extra 48-byte copy occurs once per fixed control, within existing bounds.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

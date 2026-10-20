@@ -14548,3 +14548,52 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   No production query, tick, startup, retry/no-op, publication, locks, caches,
   schemas or persistent children change. Full SDK/reference provenance, public
   Go ownership and aggregate RAM/process reservations remain separate H2 gates.
+
+- **2026-10-19 — T42.H2q exact modern-Go neutral version fence.**
+  Pinned Go 1.26.5 `cmd/go/internal/load/pkg.go` stamps `Main.Version` from
+  local VCS metadata, as documented by the
+  [Go 1.24 release notes](https://go.dev/doc/go1.24#tools). The new neutral
+  fence's `(devel)` expectation is independently obsolete; the original `8e1f`
+  run did not record output metadata, so its exact cause remains unavailable.
+  One ordinary trusted-host control over the identical untagged two-file
+  fixture observed `v0.0.0-20231114221320-e31e82c03d98`, full revision
+  `e31e82c03d98199ff6ee17ce00a5c5cc9c554a9f`, exact fixed UTC commit time
+  and clean native metadata. Each of its six command roots actually joined
+  with empty sessions; its private fixture was removed. This is no protected
+  build or tool admission.
+
+  Share the unchanged fixed `1700000000` committer time between fast-import
+  and validation. Both parent and helper require the exact v0 pseudo-version
+  derived from that timestamp and the first twelve hex digits of the independently
+  prepared full revision, plus exact `vcs.time`, full revision, clean tree,
+  native toolchain, CGO disabled and trimpath. Validate the full revision before
+  slicing it. The closed fixture shape excludes tag refs and packed refs;
+  devel, dirty, wrong-version and wrong-time outputs refuse. Historical recipes
+  and reference-tool validation are unchanged. No further native compile uses
+  the known obsolete predicate; the independent `545a1527` lifetime control
+  has no Go command and remains unaffected. Cost is constant metadata comparison
+  at the existing two output checks, no extra production child or steady-state
+  work; the one trusted-host diagnostic adds four Git and two Go commands only.
+  Protected native composition and all full H2q/H2 gates remain pending.
+
+  The independent first lifetime control at exact `545a1527` failed in 211.68s:
+  generic controller refusal, empty helper stderr, actual root SIGKILL Wait,
+  empty root/wrapper sessions and no final fixture. Helper Close also returned
+  its custody error. The log assigns no specific refusing check and supplies
+  no detached-leaf admission. Retain the failed receipt. Factor only the two
+  native drivers' existing identical start/READY predicates into named diagnostic
+  checks, with separate leaf-observation labels and authorization/validation
+  flags. Keep every image/namespace/stage/privilege/mount/manifest predicate,
+  cancellation action and retained callback unchanged. These diagnostics add
+  no new child, copy or production work; accepted observations keep their same
+  bounds and cost. Only changed source may receive the next native attempts.
+
+  Source inspection separately found lifetime PID1's initial header/nonce
+  aliased the wire's reusable receive buffer. The fixed neutral-build and H2k
+  helpers already clone their initial frame; the control now also owns one
+  closed, validated 48-byte copy before any tree-frame receive. A regression
+  sends another frame through the same buffer and rejects changed nonce/header
+  bytes; 47/49-byte initial frames refuse. This fixes a concrete source defect
+  without retrospectively identifying the first generic native failure. Cost
+  is one 48-byte allocation/copy per fixed control, no additional child, wire
+  round trip or production work.

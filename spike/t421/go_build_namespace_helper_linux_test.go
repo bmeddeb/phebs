@@ -9,6 +9,9 @@ import (
 	"runtime/debug"
 	"slices"
 	"testing"
+	"time"
+
+	"golang.org/x/mod/module"
 )
 
 func TestLinuxGoBuildNeutralInputShape(t *testing.T) {
@@ -57,14 +60,16 @@ func TestLinuxGoBuildNeutralInputShape(t *testing.T) {
 
 func TestLinuxGoBuildNeutralVCSFence(t *testing.T) {
 	const revision = "0123456789012345678901234567890123456789"
-	base := debug.BuildInfo{GoVersion: runtime.Version(), Path: "neutral.invalid/protected", Main: debug.Module{Path: "neutral.invalid/protected", Version: "(devel)"}, Settings: []debug.BuildSetting{
+	commitTime := time.Unix(linuxGoBuildCommitUnix, 0).UTC()
+	base := debug.BuildInfo{GoVersion: runtime.Version(), Path: "neutral.invalid/protected", Main: debug.Module{Path: "neutral.invalid/protected", Version: module.PseudoVersion("v0", "", commitTime, revision[:12])}, Settings: []debug.BuildSetting{
 		{Key: "CGO_ENABLED", Value: "0"}, {Key: "-trimpath", Value: "true"}, {Key: "GOOS", Value: "linux"}, {Key: "GOARCH", Value: "amd64"},
 		{Key: "vcs", Value: "git"}, {Key: "vcs.revision", Value: revision}, {Key: "vcs.modified", Value: "false"},
+		{Key: "vcs.time", Value: commitTime.Format(time.RFC3339)},
 	}}
 	if !neutralGoBuildInfo(&base, revision) {
 		t.Fatal("clean exact neutral build refused")
 	}
-	for _, replacement := range []debug.BuildSetting{{Key: "vcs.modified", Value: "true"}, {Key: "vcs.revision", Value: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}, {Key: "vcs", Value: ""}, {Key: "CGO_ENABLED", Value: "1"}, {Key: "GOOS", Value: "darwin"}, {Key: "-trimpath", Value: "false"}} {
+	for _, replacement := range []debug.BuildSetting{{Key: "vcs.modified", Value: "true"}, {Key: "vcs.revision", Value: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}, {Key: "vcs", Value: ""}, {Key: "CGO_ENABLED", Value: "1"}, {Key: "GOOS", Value: "darwin"}, {Key: "-trimpath", Value: "false"}, {Key: "vcs.time", Value: "2023-11-14T22:13:21Z"}} {
 		t.Run(replacement.Key+"="+replacement.Value, func(t *testing.T) {
 			changed := base
 			changed.Settings = slices.Clone(base.Settings)
@@ -77,6 +82,13 @@ func TestLinuxGoBuildNeutralVCSFence(t *testing.T) {
 				t.Fatal("weakened neutral build accepted")
 			}
 		})
+	}
+	for _, version := range []string{"(devel)", base.Main.Version + "+dirty", "v0.0.0-20231114221320-aaaaaaaaaaaa"} {
+		changed := base
+		changed.Main.Version = version
+		if neutralGoBuildInfo(&changed, revision) {
+			t.Fatal("non-exact neutral module version admitted", version)
+		}
 	}
 	changed := base
 	changed.Settings = append(slices.Clone(base.Settings), base.Settings[0])

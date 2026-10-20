@@ -52,7 +52,7 @@ func TestLinuxGoBuildRequiredNativePIDNamespaceCancellation(t *testing.T) {
 			return
 		}
 		if helper.Close() != nil {
-			t.Error("lifetime helper cleanup refused")
+			t.Error("lifetime helper Close returned custody error: sticky refusal or cleanup")
 		}
 	})
 	baseline, err := goBuildImportHostRoot()
@@ -169,11 +169,12 @@ func runNativeGoLifetimeAttempt(ctx context.Context, tree *LinuxExecutionInputTr
 		useErr := func() error {
 			closeErr := child.Close()
 			child = nil
-			namespaces, nsErr := observeInputTreeNamespaces(tree.pid)
-			var selfPIDNS, childPIDNS unix.Stat_t
-			if closeErr != nil || pidfdErr != nil || nsErr != nil || t4013.MatchLinuxProcessExecutableImage(ctx, tree.pid, image) != nil ||
-				unix.Stat("/proc/self/ns/pid", &selfPIDNS) != nil || unix.Stat(fmt.Sprintf("/proc/%d/ns/pid", tree.pid), &childPIDNS) != nil || selfPIDNS.Ino == childPIDNS.Ino && selfPIDNS.Dev == childPIDNS.Dev {
-				return ErrLinuxInputTree
+			if closeErr != nil || pidfdErr != nil {
+				return fmt.Errorf("initial child socket/pidfd: close=%v pidfd=%v", closeErr, pidfdErr)
+			}
+			namespaces, err := checkNativeGoHelperNamespaces(ctx, tree.pid, image)
+			if err != nil {
+				return err
 			}
 			wire := &inputTreeSocket{fd: pair[0], peer: &unix.Ucred{Pid: int32(tree.pid), Uid: uint32(os.Geteuid()), Gid: uint32(os.Getegid())}}
 			initial := make([]byte, 48)
@@ -191,14 +192,17 @@ func runNativeGoLifetimeAttempt(ctx context.Context, tree *LinuxExecutionInputTr
 			ready, view, err := wire.receive(ctx, treeWireReady, true)
 			tree.root = view
 			expected := append(bytes.Clone(initial[16:]), inputTreeManifest(census)...)
-			readyNS, nsErr := observeInputTreeNamespaces(tree.pid)
-			if err != nil || !bytes.Equal(ready, expected) || nsErr != nil || namespaces != readyNS || tree.checkStage() != nil || observeInputTreeDroppedPrivileges(tree.pid) != nil ||
-				t4013.MatchLinuxProcessExecutableImage(ctx, tree.pid, image) != nil {
-				return ErrLinuxInputTree
+			if err != nil {
+				return fmt.Errorf("receive protected READY: %w", err)
 			}
-			tree.kernel, err = observeInputTreeRoot(tree.root)
-			if err != nil || observeInputTreeHelperMount(tree.pid, tree.stagePath, tree.kernel.mount) != nil || closeInputTreeSources(roots) != nil {
-				return ErrLinuxInputTree
+			if !bytes.Equal(ready, expected) {
+				return errors.New("protected READY nonce/manifest mismatch")
+			}
+			if err := checkNativeGoProtectedReady(ctx, tree, image, namespaces); err != nil {
+				return err
+			}
+			if err := closeInputTreeSources(roots); err != nil {
+				return fmt.Errorf("close private source roots: %w", err)
 			}
 			roots = nil
 			if os.RemoveAll(payload) != nil {
@@ -210,8 +214,14 @@ func runNativeGoLifetimeAttempt(ctx context.Context, tree *LinuxExecutionInputTr
 			}
 			result, fd, err := wire.receive(ctx, treeWireEnd, true)
 			leaf = fd // Own before every subsequent refusal.
-			if err != nil || !bytes.Equal(result, expected) || checkNativeStoppedLeaf(ctx, leaf, tree.pid, image) != nil {
-				return ErrLinuxInputTree
+			if err != nil {
+				return fmt.Errorf("receive stopped-leaf pidfd: %w", err)
+			}
+			if !bytes.Equal(result, expected) {
+				return errors.New("stopped-leaf nonce/manifest mismatch")
+			}
+			if err := checkNativeStoppedLeaf(ctx, leaf, tree.pid, image); err != nil {
+				return err
 			}
 			leafValidated = true
 			tree.identity = LinuxInputTreeIdentity{Entries: census.inventory.entries, Files: census.inventory.files, Bytes: census.inventory.bytes, PathBytes: census.inventory.pathBytes}
@@ -232,7 +242,7 @@ func runNativeGoLifetimeAttempt(ctx context.Context, tree *LinuxExecutionInputTr
 		var exited *exec.ExitError
 		expectedWait := errors.As(waitErr, &exited) && exited.Sys().(syscall.WaitStatus).Signaled() && exited.Sys().(syscall.WaitStatus).Signal() == syscall.SIGKILL
 		if leafAuthorized && !leafValidated {
-			_, _ = fmt.Fprintln(os.Stderr, "authorized leaf identity unavailable; retain worker/image/inputs")
+			_, _ = fmt.Fprintf(os.Stderr, "authorized leaf identity unavailable; retain worker/image/inputs protocol=%v\n", useErr)
 			select {} // Root Wait alone cannot qualify the unknown detached leaf.
 		}
 		if leafValidated {
@@ -254,7 +264,7 @@ func runNativeGoLifetimeAttempt(ctx context.Context, tree *LinuxExecutionInputTr
 		}
 		tree.joined, tree.empty = joined, t4013.WaitPrivateProcessSession(tree.pid, time.Now().Add(5*time.Second)) == nil
 		if useErr != nil || signalErr != nil || !expectedWait || !tree.empty || stderr.err != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "lifetime fixture pid=%d joined=%t empty=%t protocol=%v wait=%v stderr=%q\n", tree.pid, tree.joined, tree.empty, useErr, waitErr, stderr.buffer.String())
+			_, _ = fmt.Fprintf(os.Stderr, "lifetime fixture pid=%d joined=%t empty=%t leaf_authorized=%t leaf_validated=%t protocol=%v signal=%v wait=%v context=%v stderr=%q\n", tree.pid, tree.joined, tree.empty, leafAuthorized, leafValidated, useErr, signalErr, waitErr, ctx.Err(), stderr.buffer.String())
 			return ErrLinuxInputTree
 		}
 		return nil
@@ -286,8 +296,11 @@ func checkNativeStoppedLeaf(ctx context.Context, leaf *os.File, rootPID int, ima
 	flags, err := unix.FcntlInt(leaf.Fd(), unix.F_GETFD, 0)
 	link, linkErr := os.Readlink(fmt.Sprintf("/proc/self/fd/%d", leaf.Fd()))
 	ready, pollErr := nativeLeafExitReady(leaf, 0)
-	if err != nil || flags&unix.FD_CLOEXEC == 0 || linkErr != nil || link != "anon_inode:[pidfd]" || pollErr != nil || ready || unix.PidfdSendSignal(int(leaf.Fd()), 0, nil, 0) != nil {
-		return ErrLinuxInputTree
+	if err != nil || flags&unix.FD_CLOEXEC == 0 || linkErr != nil || link != "anon_inode:[pidfd]" || pollErr != nil || ready {
+		return fmt.Errorf("leaf pidfd flags/type/live poll: flags_error=%v cloexec=%t link=%q link_error=%v poll_error=%v exited=%t", err, flags&unix.FD_CLOEXEC != 0, link, linkErr, pollErr, ready)
+	}
+	if err := unix.PidfdSendSignal(int(leaf.Fd()), 0, nil, 0); err != nil {
+		return fmt.Errorf("leaf pidfd signal-zero: %w", err)
 	}
 	raw, err := os.ReadFile(fmt.Sprintf("/proc/self/fdinfo/%d", leaf.Fd()))
 	if err != nil || len(raw) > 4096 {
@@ -302,8 +315,14 @@ func checkNativeStoppedLeaf(ctx context.Context, leaf *os.File, rootPID int, ima
 			pid, _ = strconv.Atoi(value)
 		}
 	}
-	if pid <= 1 || pid == rootPID || t4013.MatchLinuxProcessExecutableImage(ctx, pid, image) != nil || observeInputTreeDroppedPrivileges(pid) != nil {
-		return ErrLinuxInputTree
+	if pid <= 1 || pid == rootPID {
+		return errors.New("leaf pidfd lacks a distinct live host PID")
+	}
+	if err := t4013.MatchLinuxProcessExecutableImage(ctx, pid, image); err != nil {
+		return fmt.Errorf("leaf executable image: %w", err)
+	}
+	if err := observeInputTreeDroppedPrivileges(pid); err != nil {
+		return fmt.Errorf("leaf all-thread dropped privileges: %w", err)
 	}
 	status, err := os.ReadFile(fmt.Sprintf("/proc/%d/status", pid))
 	if err != nil || len(status) > 16<<10 {
@@ -320,7 +339,7 @@ func checkNativeStoppedLeaf(ctx context.Context, leaf *os.File, rootPID int, ima
 	}
 	session, err := unix.Getsid(pid)
 	if !stateStopped || !parentMatches || err != nil || session != pid || session == rootPID {
-		return ErrLinuxInputTree
+		return fmt.Errorf("leaf stopped/adopted/session: stopped=%t parent_matches=%t session=%d pid=%d session_error=%v", stateStopped, parentMatches, session, pid, err)
 	}
 	return nil
 }
