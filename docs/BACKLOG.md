@@ -20479,7 +20479,7 @@ peer source/cost review pass. `spike/t522/outcome-cost.json` retains exact input
 result/checkpoint and cost scopes. No production registration, operating or
 signature is inferred; T52.3 remains the next independent selection boundary.
 
-**T52.3 · Independent stable registration and measured promotion** — split
+**T52.3 ✅ · Independent stable registration and measured promotion** — split
 the current shared experimental switch into explicitly selected admitted
 recipes; satisfy the common bar for each. Either generator may release alone.
 
@@ -20510,6 +20510,28 @@ all three clean server joins and private scratch removal pass. Exact receipt,
 reviewed binding, scoped outcome/cost and six unsigned artifacts are retained
 under `spike/t523/`. Root and independent peer artifact review pass; common-bar
 evidence reconciliation and existing production key/signatures remain separate.
+
+**T52.3 signed release closure (2026-10-20, Linux #124).** Ben's request to
+ship experimental/dark features authorizes the reviewed scoped release. The
+[experimental Linux amd64 package](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) publishes Apache Thrift and thriftrw field references with
+production signatures over exact clean source `290e1518a4a192d0a3494c3ed9fa2eb39a450355`,
+Go 1.26.5, executable/artifact/implementation bindings and the existing trust
+anchor. The [receipt](../spike/t523/release/linux-20261020/receipt.json) and signed
+records retain exact identities and expiry. This closes this ticket's final
+artifact/signature/publication hold; earlier dated pending-key statements remain
+historical. Default startup stays dark; installation/restart uses explicit
+verified selection. Existing instance deployment is operator-specific.
+
+The common final gate passed 194 bounded test cases without skips, all twelve
+record self-loads, real selected startup/restart/withdrawal, anonymous visibility
+and authorization, plus empty-state sync/index/search/pinned-browse/default-dark
+release smoke. All three selection servers waited with status0 and no observed
+survivor; descendant observation is sampled. Seven new records and five exact
+existing-release rebindings share the complete 57-file artifact directory.
+Historical quality/operating evidence and uncertainty remain exact; current
+registration smoke adds no independent accuracy, Linux capacity, scale, SLO or
+T42 readiness result. No production implementation, numerical bound, query,
+sync, retry/no-op, publication, lock, cache or child class changes.
 
 ## Epic 53 · Protobuf Buf WIRE compatibility production readiness
 

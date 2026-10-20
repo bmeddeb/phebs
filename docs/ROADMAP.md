@@ -5934,3 +5934,10 @@ signatures and verified ordinary selection. This supersedes the dated pending
 signature/publication hold for this ticket. Default startup stays dark;
 installation is explicit. Scoped evidence/expiry remain; Linux #124 readiness
 and managed-SCIP installation/target proof are separate.
+
+**T52.3 signed release (2026-10-20):** Apache Thrift and thriftrw field references is published in the
+[experimental Linux amd64 package](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) with exact-binary production
+signatures and verified ordinary selection. This supersedes the dated pending
+signature/publication hold for this ticket. Default startup stays dark;
+installation is explicit. Scoped evidence/expiry remain; Linux #124 readiness
+and managed-SCIP installation/target proof are separate.
