@@ -14962,3 +14962,12 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   and refusing a canceled context. Output-cap cancellation now reaches that
   owned child through the same context. Corrected-source gates remain pending;
   this records no native or acceptance pass.
+
+  The next immutable `219e6f0ab2aafddae0c7c4457bc1a06071eca3b0` normal gate
+  compiled and ran, then failed only the three-engine-lifetime and pending-
+  timeout fixtures at root setup: direct TempDir leaves did not satisfy the
+  required private 0700 parent. Preserve raw
+  `/home/ben/phebs-rehearsals/t42h2rb-capture-corrected.mlnnvlu4`, actual Wait 1
+  and empty session. Capture, cancellation, isolated EMFILE and corpus tests
+  passed; no required native workload ran. Give those two fixtures explicit
+  0700 child parents, preserving the production guard and all pending gates.

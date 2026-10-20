@@ -43,7 +43,10 @@ func linuxAuthorTestClient(ctx context.Context, attempts uint64) (*dispatchadmis
 // Tiny in-process fixtures exercise the shared engine and real metered Git,
 // not the public constructor/CLI or the full frozen population qualification.
 func TestLinuxAuthorThreeEngineLifetimesExactGit(t *testing.T) {
-	parent := t.TempDir()
+	parent := filepath.Join(t.TempDir(), "parent")
+	if os.Mkdir(parent, 0o700) != nil {
+		t.Fatal("private parent fixture")
+	}
 	owner := &LinuxExecutionAuthorCustody{}
 	if owner.createRoots(t.Context(), parent) != nil {
 		t.Fatal("native fixture roots")

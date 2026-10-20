@@ -181,7 +181,10 @@ func TestLinuxAuthorResultDefensiveCopies(t *testing.T) {
 }
 
 func TestLinuxAuthorPendingTimeoutKeepsRootsAndFinalPrefix(t *testing.T) {
-	parent := t.TempDir()
+	parent := filepath.Join(t.TempDir(), "parent")
+	if os.Mkdir(parent, 0o700) != nil {
+		t.Fatal("private parent fixture")
+	}
 	builds := &LinuxExecutionGoBuildCustody{}
 	owner := &LinuxExecutionAuthorCustody{request: LinuxExecutionAuthorRequest{Builds: builds}}
 	if owner.createRoots(t.Context(), parent) != nil {
