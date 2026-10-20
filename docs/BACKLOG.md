@@ -20043,7 +20043,7 @@ binary `75803641`** (Thrift protocol §14).
 - **Remaining for T49.4.** Protobuf Atlas, which waits on T49.1b's labels;
   the UI is the Mac track's.*
 
-**T49.4 · Measured Atlas promotion and product closure** — satisfy the common
+**T49.4 ✅ · Measured Atlas promotion and product closure** — satisfy the common
 promotion bar for each selected protocol and the declared UI/HTTP/MCP surface.
 One protocol may release while the other remains explicitly unavailable.
 
@@ -20141,6 +20141,28 @@ T43R.6, one mobile contrast incomplete over six offscreen cells. No global
 accessibility, extraction accuracy or scale PASS is invented. Production
 signature/activation remains PENDING the existing unavailable Linux key;
 implementation integration requires Ben's request, not optional labels.
+
+**T49.4 signed release closure (2026-10-20, Linux #124).** Ben's request to
+ship experimental/dark features authorizes the reviewed scoped release. The
+[experimental Linux amd64 package](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) publishes Protobuf Atlas with
+production signatures over exact clean source `290e1518a4a192d0a3494c3ed9fa2eb39a450355`,
+Go 1.26.5, executable/artifact/implementation bindings and the existing trust
+anchor. The [receipt](../spike/t494/release/linux-20261020/receipt.json) and signed
+records retain exact identities and expiry. This closes this ticket's final
+artifact/signature/publication hold; earlier dated pending-key statements remain
+historical. Default startup stays dark; installation/restart uses explicit
+verified selection. Existing instance deployment is operator-specific.
+
+The common final gate passed 194 bounded test cases without skips, all twelve
+record self-loads, real selected startup/restart/withdrawal, anonymous visibility
+and authorization, plus empty-state sync/index/search/pinned-browse/default-dark
+release smoke. All three selection servers waited with status0 and no observed
+survivor; descendant observation is sampled. Seven new records and five exact
+existing-release rebindings share the complete 57-file artifact directory.
+Historical quality/operating evidence and uncertainty remain exact; current
+registration smoke adds no independent accuracy, Linux capacity, scale, SLO or
+T42 readiness result. No production implementation, numerical bound, query,
+sync, retry/no-op, publication, lock, cache or child class changes.
 
 ## Epic 50 · Caller comparison production readiness
 
