@@ -15135,3 +15135,26 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   command wrappers actually returned zero with empty sessions. These six-file
   source censuses are identical; immutable normal/race/static/compile and
   independent review remain the integration gates.
+
+- **2026-10-20 — T42.H2r.c.a bounded shared Linux launch qualified.** Exact
+  source `d87fa724570ea46e88cb29a90a6dc6fbd5ac8b3b` passed focused normal
+  (2.538s) and race (10.653s), each with 95 passing rows and zero skips; command,
+  tagged shape/vet, pinned lint, docs/glossary and Linux arm64 package/actual
+  author compile-only gates also passed. All nine wrappers actually returned
+  zero with empty sessions. Both cross artifacts were hashed and removed only
+  after joins; neither was executed and their disposable cache is retired.
+  Normal and race each observed genuine shared PB/DA/PC A/B/A-return with own
+  producers 7/8/9, exact nested Git 4/3/3, settled parent ordinals 1/2/3 and
+  actual root joins/empty sessions. An unrelated producer kept one unsettled
+  handle and started/joined additional work after every author; final explicit
+  cleanup reconciled all 17 attempts. True early-exit/EMFILE and pending-worker
+  retention controls passed. Independent exact-source custody/cost review
+  reported critical/high/medium/low all zero. The source-free receipt at
+  `spike/t42h2r/shared-author-linux-20261020.json` binds six source hashes, all
+  nine gates, the prior failed/diagnostic censuses and b's unchanged full native
+  receipt; evidence-only final review precedes integration. This qualifies
+  c.a's bounded fixed shared transport, not a reference-issued actual author
+  or protected H2p Git fixture. The passed b full standalone workload was not
+  replayed. c.b protected epoch inputs and c.c actual shared live-server borrow
+  composition remain mandatory; no parent H2r/H2, pressure/restore, aggregate
+  admission, restored launch/readiness/freeze, signing or ceremony claim follows.

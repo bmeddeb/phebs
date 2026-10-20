@@ -212,6 +212,15 @@ live-server borrow composition. These PR-sized subgates retain every parent c
 AC and issue no complete H2/readiness/freeze or ceremony authority.
 
 
+H2r.c.a's shared Linux parent/author transport qualified at `d87fa724` with
+normal/race, real bounded shared PB/DA/PC transitions, exact 4/3/3, unrelated
+producer continuation, actual pin-refusal settlement, static/docs and Linux
+arm64 compile-only gates. Independent source/custody/cost review has zero
+findings; the [receipt](../spike/t42h2r/shared-author-linux-20261020.json)
+retains failures and joins. Evidence review/integration precedes c.b protected
+epoch inputs, then c.c actual live-server composition; parent H2r remains open.
+
+
 Next: [Linux office handoff #124](https://github.com/bmeddeb/phebs/issues/124)
 mechanism qualification → remaining T42.H2 consumer/executor/resource admission
 → T42.2v restored launch → complete readiness → T42.2o fresh freeze → separately

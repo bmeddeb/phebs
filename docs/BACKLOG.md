@@ -4520,6 +4520,15 @@ operation still borrows otherwise available inputs for one joined author; the
 following composed flow must supply an internal single held-loan scope to avoid
 reentering owner locks while a server is alive.
 
+Exact c.a source `d87fa724` passed focused normal/race (95 passing rows each,
+zero skips), actual tiny shared transport with exact 4/3/3 and unrelated
+producer continuation, WNOWAIT/real EMFILE settlement, timeout retention,
+command/tagged/static/docs/glossary and Linux arm64 compile-only gates.
+Independent source/custody/cost review found no findings. The
+[receipt](../spike/t42h2r/shared-author-linux-20261020.json) preserves failures,
+actual joins and the unchanged b native binding; evidence-only final review
+precedes integration. No full shared/live-server qualification is issued.
+
 **T42.H2r.c.b · Protected Linux epoch inputs** *(after c.a).* Own eight protected
 catalog/config inputs, four native writable roots and five ordered listener
 reservations, preserving canonical observed catalog/config validation and exact
