@@ -14286,3 +14286,20 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Bounded client/native integration proves these mechanics only, not live SCIP
   installation, backend security, extraction accuracy or scale. Linux #124,
   managed-SCIP installation proof and production signing/activation stay pending.
+
+- **2026-10-19 — T42.H2m explicit Linux extent allocation recipe (Linux #124).**
+  Bind `-O extent` in the distinct Linux pressure formatter's fixed arguments.
+  The closed `MKE2FS_CONFIG=/dev/null` environment otherwise removes the distro
+  ext4 feature defaults; the retained first native image had no extents and its
+  tiny allocation loan failed after ready geometry. Preserve that failure and
+  all historical source/receipt bytes. Ben authorizes disk cleanup and a fresh
+  attempt on corrected source with a separately bound root-private ext4 parent;
+  the existing tagged native test must prove allocation and exact nonforced
+  teardown. The formatter image digest and all ownership/capacity/session gates
+  remain exact. One formatter still initializes one fixed-size image; extent
+  metadata stays inside that image's existing reservation. No query/request,
+  sync tick, ordinary startup/restart, retry/no-op, publication, cache/store,
+  corpus/shard read, held-lock duration contract or child-count change is added.
+  Actual initialization/allocation costs remain native measurements rather than
+  a new latency or resource bound. This is no full pressure/restore, executor
+  drain, parent H2, readiness, freeze, ceremony or release admission.

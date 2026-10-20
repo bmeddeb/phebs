@@ -728,6 +728,13 @@ policy, capability grant, service or host installation is created. Actual Linux
 acceptance, measured filesystem geometry and full pressure/restore/plan binding
 remain pending; historical APFS geometry is unchanged.
 
+The Linux pressure formatter explicitly enables extents with `-O extent`.
+Its closed `MKE2FS_CONFIG=/dev/null` environment supplies no distro ext4
+feature defaults; the native tiny allocation/teardown test must pass on the
+exact corrected source. Preserve earlier failed images and receipts rather
+than reformatting them. A fresh successful mechanism check does not establish
+full pressure/restore or parent H2 admission.
+
 On this host, development tools are in `/home/ben/.local/bin`; native amd64
 tools are staged separately under
 `/home/ben/.local/share/phebs-host/native-amd64`. Load the development PATH and

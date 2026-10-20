@@ -4073,6 +4073,16 @@ combined K/M tree also compiles for Linux amd64 without execution.
 joined sequences. Actual Linux geometry, setup/teardown and full pressure/
 restore acceptance remain pending Ben's office return.
 
+2026-10-19 Linux pickup correction: the empty `MKE2FS_CONFIG` suppresses the
+ext4 feature defaults, and the retained 64-MiB image lacked extents. Its first
+tiny allocation failed after ready geometry. Explicitly select `-O extent`
+for this distinct Linux formatter recipe before the authorized fresh native
+attempt; retain both original failures and all historical recipe/receipt bytes.
+The existing tagged native test remains the allocation and exact-teardown gate.
+This changes no production caller, formatter-child count, image bound, lock,
+cache or corpus work; filesystem extent metadata is charged within the same
+fixed image. Native results and complete H2 acceptance remain separate.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

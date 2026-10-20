@@ -175,7 +175,8 @@ func (tool *linuxPressureFormatter) check(ctx context.Context) error {
 func linuxPressureFormatterArguments() []string {
 	// Never discard/punch the complete backing reservation, and leave no lazy
 	// initialization worker beyond the one joined formatter invocation.
-	return []string{"-q", "-F", "-t", "ext4", "-b", "4096", "-m", "0", "-E", "nodiscard,lazy_itable_init=0,lazy_journal_init=0", "/proc/self/fd/4"}
+	// The empty formatter configuration needs explicit extents for fallocate.
+	return []string{"-q", "-F", "-t", "ext4", "-b", "4096", "-m", "0", "-O", "extent", "-E", "nodiscard,lazy_itable_init=0,lazy_journal_init=0", "/proc/self/fd/4"}
 }
 
 type linuxPressureOutput struct {
