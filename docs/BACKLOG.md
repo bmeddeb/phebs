@@ -4529,6 +4529,10 @@ Independent source/custody/cost review found no findings. The
 actual joins and the unchanged b native binding; evidence-only final review
 precedes integration. No full shared/live-server qualification is issued.
 
+c.a integrated through reviewed green PR #154 at `a93fe4f3`; final evidence
+review verified 59 raw/six source hashes and all severity counts zero. Its
+topic branch and temporary integration worktree are retired. c.b is next.
+
 **T42.H2r.c.b · Protected Linux epoch inputs** *(after c.a).* Own eight protected
 catalog/config inputs, four native writable roots and five ordered listener
 reservations, preserving canonical observed catalog/config validation and exact

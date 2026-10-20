@@ -221,6 +221,12 @@ retains failures and joins. Evidence review/integration precedes c.b protected
 epoch inputs, then c.c actual live-server composition; parent H2r remains open.
 
 
+PR #154 integrated c.a at `a93fe4f3` after final zero-finding review of 59 raw
+and six source hashes. The topic branch and integration worktree are retired.
+Current Linux work is c.b protected epoch inputs; c.c actual live-server borrow
+composition and every broader H2/readiness/freeze gate remain pending.
+
+
 Next: [Linux office handoff #124](https://github.com/bmeddeb/phebs/issues/124)
 mechanism qualification → remaining T42.H2 consumer/executor/resource admission
 → T42.2v restored launch → complete readiness → T42.2o fresh freeze → separately

@@ -15158,3 +15158,113 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   replayed. c.b protected epoch inputs and c.c actual shared live-server borrow
   composition remain mandatory; no parent H2r/H2, pressure/restore, aggregate
   admission, restored launch/readiness/freeze, signing or ceremony claim follows.
+
+- **2026-10-20 — T42.H2r.c.a integrated; c.b owns protected Linux epoch inputs.**
+  Green reviewed PR #154 fast-forwarded main to
+  `a93fe4f3de63c5d692b8af32b671c92e22f5b0e2`; GitHub records it merged/closed.
+  Independent final review verified 59 raw and six source hashes with every
+  severity zero. Integration docs/glossary passed, topic branches are retired
+  and the temporary integration worktree is archived. Unrelated history/npm
+  bytes are unchanged. Parent c/H2r stays open.
+
+  c.b adds a distinct Linux epoch-input owner, reusing the existing observed
+  catalog/config semantic generators and already-admitted sealed author plan.
+  It does not call DecodePlan again or regenerate the physical corpus. Protect
+  the three catalogs first, then generate and protect five configs embedding
+  the stable exclusively owned catalog-tree keeper route. Two genuine H2k trees
+  retain regular final components through directory-FD aliases; current config
+  and selected-catalog loader checks remain unchanged. Mutable selections and
+  constructor parent must be disjoint fixed siblings. Preserve closed-writer
+  staging and any returned uncertain constructor until actual join. Native
+  full-width roots and source-lease checks replace Darwin volume assumptions;
+  four writable roots and five distinct ordered listener reservations remain.
+  Retain parsed configs, query catalog and logical-change observations only
+  after protected-copy checks.
+
+  No public arbitrary callback/tree/image/command is added. Close must refuse
+  active use and avoid holding the epoch mutex while waiting on constructors or
+  borrower hooks. A future actual c.c borrower must join before either private
+  tree can close; a returned or escaped WithRoot callback descriptor is not a
+  stable catalog route. Bounded c.b native qualification may use a fixed private
+  author-root/sealed-plan fixture with the actual H2k recipe; this establishes
+  input-owner kernel mechanics, not reference-issued actual-author authority.
+  Missing/forged public lineage refusals and independent custody/cost review
+  remain mandatory, and c.c retains the full genuine-author/live-server test.
+  Add small actual-loader regressions for positive directory-FD regular-file
+  routes and negative final symlink/sealed-file aliases, including byte-exact
+  embedded catalog routing. No H2r/H2, aggregate admission, pressure/restore,
+  restored launch, readiness/freeze, signing or ceremony claim follows.
+
+  c.b requires a separate canonical private epoch parent disjoint from the
+  borrowed author parent, on the same native device/mount/filesystem/FSID and
+  namespace. Catalog/config selections and the H2k constructor parent are
+  fixed siblings below its owned stage. Wrong-order or already-released listener
+  arguments refuse without changing reservations; correct-order observed input,
+  root or lease failures and actual listener-close errors latch the owner.
+  Borrowed sealed-plan/image keeper entries are captured under their genuine
+  callbacks and checked by seals/stat without escaping callback loan descriptors.
+  Closing a prerequisite refuses subsequent metadata checks. Actual Build/Git
+  execution and whole-run loan lifetime remain c.c's gate.
+
+  c.b cost: ordinary request/query, sync tick, startup/restart, retry/no-op and
+  publication work is unchanged. Explicit construction rereads at most 256 KiB
+  of already-admitted plan, performs fixed source-control/root/lease metadata
+  and lineage checks, then runs existing logical catalog generation and config
+  serialization. Eight generated payloads total at most 48 MiB + 320 KiB; this
+  bounds serialized bytes, not RSS or allocation. Separate mutable staging,
+  equal logical read-only tmpfs payload plus allocation/metadata, parsed/query
+  catalogs and existing logical-change observations coexist; one final byte
+  comparison reads each protected input, with a transient read up to 16 MiB.
+  Both H2k constructors perform their own source/copy inventories and protected
+  manifest work. These are distinct copies/costs, not a unique physical total
+  or allocated-disk bound. The exact helper's reference admission is separate
+  preparation, not an author/SDK or server run.
+
+  Construction starts two serial fixed H2k helper children, retaining actual
+  Wait/session/unknown-prefix rules and their helper gate; no retry or no-op
+  cache is added. The author mutex excludes concurrent author advancement during
+  public preparation. Later Check performs fixed native root/lease, two borrowed
+  image/plan seal-stat and two protected-tree metadata checks, no payload read or
+  hash and no child. Five parsed config snapshots, one query catalog and bounded
+  logical observations remain private. Listener release adds at most five actual
+  closes. Close holds the epoch mutex only to mark/refuse state, releases it
+  before constructor joins, and retires only the eight identified staging files;
+  writable roots/source bytes remain. Unknown preparation or active use retains
+  descriptors and paths, potentially indefinitely. No schema, cache invalidation,
+  production process, runtime profile or aggregate reservation is introduced.
+
+  c.b's first precommit normal gate compiled and ran, then stopped with three
+  unit failures: exact staging cleanup, joined-partial cleanup and lease-restore
+  expectation. Canonical catalog/config generation and semantic drift, unissued
+  lineage and remaining root/lease controls passed. The later command-loader
+  steps were not reached; no required native helper ran. The wrapper actually
+  returned one with an empty session. Preserve the raw logs and eight-file
+  source census. Static diagnosis found DirEntry.Info resolving against an
+  os.NewFile display label rather than the pinned stage directory. Inspect each
+  entry relative to its held directory descriptor, preserving type/owner/full
+  identity checks. Linux rename changes the original lease's ctime, so renaming
+  it back cannot honestly satisfy the original full metadata snapshot; keep
+  that refusal and use the restored directory-root case to prove the separate
+  error latch. No production identity or cleanup predicate may be weakened.
+  Corrected focused confirmation remains pending.
+
+  The cleanup correction uses directory-relative O_PATH/no-follow entry opens,
+  Fstat and full identity/owner/type comparisons in inventory and pre-unlink
+  passes. Across eight recognized files this adds at most 16 short entry
+  Openat/Fstat/Close inspections and one extra live entry descriptor beside the
+  cleanup directory descriptor. All eight original failed-source files are
+  preserved with hashes matching the initial census (two recovered from the
+  narrow correction and verified against those original hashes).
+
+  Corrected epoch normal checks passed; the next command-loader step stopped
+  before compilation because the offline cache lacked the already-locked
+  github.com/yuin/goldmark v1.4.13 archive. Accessible local caches were searched
+  first. A separate network preparation fetched only that exact version from
+  proxy.golang.org with checksum verification; its module/go.mod sums match
+  the committed go.sum and go.mod/go.sum bytes are unchanged. Subsequent config
+  and catalog loader checks passed with GOPROXY/GOSUMDB off. Every executed
+  wrapper actually joined with an empty session. This is dependency-cache
+  repair, not a source/dependency upgrade or protected-runtime admission.
+  No required native ran. Immutable normal/race/static/supported compile and
+  independent custody/cost review, then bounded actual input-owner native
+  acceptance, remain the integration gates.

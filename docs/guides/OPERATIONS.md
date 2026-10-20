@@ -431,6 +431,29 @@ source or close prerequisite helpers before dependent owners release. This gate
 qualifies standalone author ownership only; H2r.c shared-controller/live-server
 binding and all broader H2/readiness/freeze/ceremony gates remain open.
 
+H2r.c.b introduces `PrepareLinuxExecutionEpochConfigs` for Linux input ownership,
+using the idle genuine author's already-admitted sealed plan and source lease.
+Choose a separate private parent disjoint from the author parent on the same
+native volume; the owner creates its fixed sibling staging/constructor paths.
+The owner protects three catalogs and five configs through two H2k trees, keeps
+four native writable roots and reserves five loopback listeners. Configs embed
+stable private catalog-directory-FD routes with regular final components. The
+config/catalog loaders retain their regular-file and exact-byte checks; a raw
+sealed-file FD alias remains a final symlink and is refused. Keep the epoch owner
+and its author alive through every user of these routes.
+
+`Check` returns a copied private epoch selection without consuming its listener.
+`ReleaseListener` is one-shot and ordered, immediately before the future owning
+native Start; closing the reservation cannot guarantee that another process will
+not bind the address first. `Close(ctx)` refuses active use and retains uncertain
+constructor/staging custody until actual joins. It closes private input resources
+and retires only identified preparation files, preserving writable roots/source
+bytes and their cleanup record. Paths, API keys and parsed configs remain private.
+The actual live-server borrower and source handoff are still c.c; c.b issues no
+server, aggregate admission, readiness/freeze or ceremony authority. Its bounded
+native fixture proves the input owner's kernel mechanics, not reference-issued
+actual-author authority. Source gates and independent review remain required.
+
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
 It binds `c07bc930` and is preserved unchanged, so it no longer describes the
