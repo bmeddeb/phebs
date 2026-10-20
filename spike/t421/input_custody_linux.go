@@ -45,12 +45,11 @@ type linuxExecutionInput struct {
 // Anonymous payload memory must be reserved separately from process RSS; it
 // can reach 2 GiB and receives no swap credit in future resource admission.
 //
-// The custody lock is held for a whole loan, so at most one loan is
-// outstanding and one child can be handed exactly one lent input. Nested
-// WithInput calls deadlock rather than composing; dispatch that needs a tool
-// image and a fixed input in the same child requires a separate atomic
-// multi-loan API, which this slice deliberately does not provide. Close and
-// Check wait behind an in-progress loan and its joined child.
+// The custody lock is held for a whole loan or atomic bundle. WithInputs
+// lends multiple inputs from this one owner without nested locking. Nested
+// custody calls still deadlock; trusted consumers must borrow their complete
+// set in one call and join every use before returning. Close and Check wait
+// behind that complete use. Distinct owners require separate orchestration.
 type LinuxExecutionInputCustody struct {
 	mu     sync.Mutex
 	inputs map[string]linuxExecutionInput
@@ -260,48 +259,83 @@ func (custody *LinuxExecutionInputCustody) Check(ctx context.Context, name strin
 	return entry.identity, err
 }
 
-// WithInput lends one fresh read-only CLOEXEC descriptor while holding custody's
-// lock. The trusted callback must not retain/duplicate it, call custody methods,
-// or return before any child using it has joined. Because the lock is held for
-// the whole callback, exactly one loan is outstanding at a time and one child
-// can receive exactly one input; nested WithInput calls deadlock, so multi-input
-// dispatch needs a separate atomic multi-loan API rather than composition here.
-// This method cannot prove that caller contract, session/orphan teardown,
-// argv/environment safety or dispatch authority. Callback errors are returned
-// unchanged and do not latch; protection/close failures and cancellation latch
-// custody failure. Close and Check wait behind the callback.
+// WithInput is the single-input form of WithInputs, with the same sticky
+// protection/cancellation failures and unchanged callback-error propagation.
 func (custody *LinuxExecutionInputCustody) WithInput(ctx context.Context, name string, use func(*os.File) error) error {
+	if use == nil {
+		return custody.WithInputs(ctx, []string{name}, nil)
+	}
+	return custody.WithInputs(ctx, []string{name}, func(files []*os.File) error { return use(files[0]) })
+}
+
+// WithInputs lends 1..64 distinct named inputs from this owner, in request
+// order, under one custody lock. All selections are checked before any loan is
+// opened. Fresh read-only CLOEXEC descriptors share neither file offsets nor
+// the caller's slice storage. Every accepted loan closes on failure or panic.
+// The trusted callback must not retain/duplicate descriptors, reenter custody,
+// or return before every consumer has joined. This grants no tool provenance,
+// dispatch authority, cross-owner atomicity or descendant-drain certificate.
+// Callback errors alone do not latch; cancellation, panic/Goexit and descriptor
+// or protection failures poison the whole owner. No payload is reread/hashed.
+func (custody *LinuxExecutionInputCustody) WithInputs(ctx context.Context, names []string, use func([]*os.File) error) error {
+	if custody == nil {
+		return ErrExecutionInputCustody
+	}
 	custody.mu.Lock()
 	defer custody.mu.Unlock()
-	entry, err := custody.checkLocked(ctx, name)
-	if err != nil || use == nil {
+	if len(names) == 0 || len(names) > maxInputCustodyFiles || use == nil {
 		custody.err = ErrExecutionInputCustody
 		return custody.err
 	}
-	file, err := openLinuxInputReadOnly(entry.file)
-	if err != nil || !linuxInputProtected(file, entry) {
-		if file != nil {
-			_ = file.Close()
+	names = slices.Clone(names)
+	entries := make([]linuxExecutionInput, len(names))
+	seen := make(map[string]bool, len(names))
+	for i, name := range names {
+		entry, err := custody.checkLocked(ctx, name)
+		if err != nil || seen[name] {
+			custody.err = ErrExecutionInputCustody
+			return custody.err
 		}
-		custody.err = ErrExecutionInputCustody
-		return custody.err
+		seen[name], entries[i] = true, entry
 	}
-	// The deferred close serves only the panic/Goexit path. The normal path
-	// closes exactly once below, where closeErr is inspected instead of
-	// discarded, and released stops the defer from closing a second time.
+	loans := make([]*os.File, 0, len(names))
 	released := false
 	defer func() {
 		if !released {
-			_ = file.Close()
-			// A panic/Goexit cannot leave a usable custody certificate.
+			for _, loan := range loans {
+				_ = loan.Close()
+			}
 			custody.err = ErrExecutionInputCustody
 		}
 	}()
-	useErr := use(file)
-	protected := linuxInputProtected(file, entry)
-	closeErr := file.Close()
+	for _, entry := range entries {
+		if ctx.Err() != nil {
+			return ErrExecutionInputCustody
+		}
+		loan, err := openLinuxInputReadOnly(entry.file)
+		if loan != nil {
+			loans = append(loans, loan)
+		}
+		if err != nil || !linuxInputProtected(loan, entry) {
+			return ErrExecutionInputCustody
+		}
+	}
+	if ctx.Err() != nil {
+		return ErrExecutionInputCustody
+	}
+	// The private slice remains authoritative if the callback replaces a slot.
+	useErr := use(slices.Clone(loans))
+	valid := true
+	for i, loan := range loans {
+		protected := linuxInputProtected(loan, entries[i])
+		closeErr := loan.Close()
+		_, keeperErr := custody.checkLocked(ctx, names[i])
+		if !protected || closeErr != nil || keeperErr != nil {
+			valid = false
+		}
+	}
 	released = true
-	if _, err := custody.checkLocked(ctx, name); err != nil || !protected || closeErr != nil {
+	if !valid {
 		custody.err = ErrExecutionInputCustody
 		return custody.err
 	}

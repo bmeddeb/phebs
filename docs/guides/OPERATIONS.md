@@ -117,14 +117,26 @@ explicit `utimensat` timestamp drift, both deterministic, instead of a restored
 chmod whose detection depends on clock resolution.
 Checks inspect kernel metadata and seals without hashing the payload.
 Scoped use serializes Check/Close until the trusted callback joins all users,
-so at most one loan is outstanding and one child can be handed exactly one
-input; nested loans deadlock rather than compose, and multi-input dispatch
-needs a separate atomic multi-loan API.
-returned callback errors propagate, and protection/close/cancellation failures
+so at most one atomic bundle is outstanding per owner. T42.H2o adds
+`WithInputs` for 1–64 distinct inputs from that owner, in request order;
+`WithInput` is its single-input form. All selections are checked before loans
+open; accepted descriptors are independently reopened read-only/CLOEXEC and
+closed after use or on refusal, panic or Goexit. Nested loans still deadlock;
+borrow the complete set in one call. Atomicity across different owners,
+tool provenance, dispatch and executor drain remain separate obligations.
+Returned callback errors propagate, and protection/close/cancellation failures
 or callback panic invalidate custody. The caller must not escape descriptors
 or mappings. Close releases owned FDs and drops their retained stat snapshots,
 with no source removal or disk copies;
 it cannot certify orphan/descendant teardown.
+
+Each explicit bundle adds O(n), n ≤ 64, native metadata/seal checks, up to 64
+temporary descriptors, bounded selection/entry/loan vectors and a duplicate-name
+map under the existing mutex for the complete joined callback. No payload is
+rehashed, source reopened, child started, cache changed or disk written by the
+loan API. The single-input wrapper follows the same path at n=1. These are
+per-owner bounds; aggregate RSS, memfd/cache and concurrent-owner reservations
+remain required before Linux execution admission.
 
 The ELF header screen and joined neutral executable prove only this primitive;
 they do not admit tools, loader/library/helper closure, a signer, environment,

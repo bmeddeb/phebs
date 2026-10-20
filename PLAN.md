@@ -14321,3 +14321,23 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   The prior cost/authority boundaries remain: this is no full pressure/restore,
   executor-drain, aggregate reservation, parent H2, restored-launch/readiness,
   freeze, ceremony or release pass. Production signing/activation stays pending.
+
+- **2026-10-19 — T42.H2o atomic Linux direct-input loans (Linux #124).**
+  Use one bounded `WithInputs` call for 1–64 distinct named inputs from one
+  kernel-sealed owner. Existing `WithInput` delegates at n=1. Validate every
+  selection before opening any loan, snapshot caller slices, reopen independent
+  readonly/CLOEXEC descriptors in request order and keep private cleanup lists.
+  Hold the existing owner mutex through complete trusted joined use. Callback
+  errors alone remain unlatched; unsafe descriptor/protection/close failures,
+  cancellation, panic and Goexit invalidate the complete owner and release all
+  accepted loans. Nested calls remain forbidden, and different owners still
+  need orchestration. No tool provenance, child/session drain, argv/environment,
+  dispatch, aggregate reserve or plan permission is inferred from a bundle.
+  Cost is O(n), n ≤ 64, native metadata/seal checks, bounded private selection,
+  entry and loan vectors plus a duplicate-name map, and up to 64 transient FDs;
+  no payload is rehashed and no source read, disk write or child is introduced
+  by the API. The single-input path adds these bounded vectors/checks at n=1.
+  The held-lock duration remains the whole callback, not a hard time bound.
+  Ordinary query/request, sync tick, startup/restart, retry/no-op, publication,
+  schema/cache and corpus/shard work remain unchanged. Cross-owner concurrency,
+  memfd/tmpfs/cache and execution reservations remain subsequent H2 admission.

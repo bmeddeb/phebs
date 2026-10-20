@@ -4095,6 +4095,26 @@ This closes the bounded H2m native mechanism gap only; full pressure/restore,
 consumer/executor ownership, prospective plans and aggregate admission remain
 parent H2 work. The earlier failed receipts retain their original outcomes.
 
+**T42.H2o · Atomic Linux direct-input descriptor bundles** *(next H2 consumer
+prerequisite, 2026-10-19; needs H2b, independent of H2m).* Add one bounded
+`WithInputs` loan for 1–64 distinct selections from the same sealed-input
+owner, instead of nested `WithInput` locking. Preserve single-input semantics,
+request order, readonly/CLOEXEC/kernel seals, callback-error propagation,
+sticky unsafe refusal and deterministic descriptor cleanup. AC: native actual
+child use of executable plus data together; source drift and independent loan
+offsets; empty/oversized/duplicate/late-unknown/malformed/cancelled requests;
+closed descriptors, cancellation, panic/Goexit and mutable slice controls;
+maximum 64-descriptor loan and Close waiting for complete joined use; focused
+normal/race, static, documentation and independent cost/custody review. The
+callback still owns actual child joins and escaped-descriptor exclusion. This
+issues no tool provenance, cross-owner atomicity, dispatch or descendant-drain
+certificate, aggregate reservation, plan admission or ceremony authority.
+The existing mutex covers the complete bundle callback. Work is O(n), n ≤ 64,
+with bounded snapshots/maps and at most 64 additional temporary FDs, no payload
+rehash, source read, disk write, cache mutation or API-created child. Existing
+single-input callers use that same path at n=1; ordinary production query,
+sync, startup/restart, retry/no-op and publication gain no registered caller.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared
