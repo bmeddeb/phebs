@@ -39,6 +39,7 @@ type LinuxExecutionEpochConfigCustody struct {
 	queryCatalog              *servicecatalog.Catalog
 	logicalChanges            *epochPreparedLogicalChanges
 	released                  uint64
+	borrowedBy                *LinuxExecutionEpochFlow
 	active                    bool // Only a joined native owner may clear an actual use.
 	closing, cleaning, closed bool
 	preparationStep           string
@@ -55,7 +56,7 @@ func PrepareLinuxExecutionEpochConfigs(ctx context.Context, parent string, autho
 	}
 	author.mu.Lock()
 	defer author.mu.Unlock()
-	if author.closing || author.released || author.err != nil || author.active != nil || author.request.Builds == nil || author.request.Author == nil || author.request.Plan == nil || author.checkRoots(ctx) != nil || author.checkSource(ctx, author.previous) != nil {
+	if author.borrowedBy != nil || author.closing || author.released || author.err != nil || author.active != nil || author.request.Builds == nil || author.request.Author == nil || author.request.Plan == nil || author.checkRoots(ctx) != nil || author.checkSource(ctx, author.previous) != nil {
 		return nil, ErrExecutionEpochConfigs
 	}
 	var authorInputs linuxEpochAuthorInputs
@@ -293,7 +294,7 @@ func (owner *LinuxExecutionEpochConfigCustody) ReleaseListener(ctx context.Conte
 	defer owner.author.mu.Unlock()
 	owner.mu.Lock()
 	defer owner.mu.Unlock()
-	if epoch < 1 || epoch > uint64(len(owner.listeners)) || epoch != owner.released+1 {
+	if owner.borrowedBy != nil || epoch < 1 || epoch > uint64(len(owner.listeners)) || epoch != owner.released+1 {
 		return ErrExecutionEpochConfigs
 	}
 	if owner.checkLocked(ctx, epoch) != nil {

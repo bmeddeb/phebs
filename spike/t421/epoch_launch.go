@@ -39,6 +39,7 @@ type executionPhaseFailure struct {
 // fifteen-phase completion or a host/profile/ceremony admission.
 type ExecutionEpochOne struct {
 	executionEpochPlatform
+	native                 executionEpochNativeAdapter
 	mu                     sync.Mutex
 	epochs                 *ExecutionEpochConfigCustody
 	plan                   Plan // Privately decoded once by this constructor.
@@ -204,7 +205,7 @@ func (flow *ExecutionEpochOne) AuthorA(ctx context.Context) (ExecutionAuthorResu
 
 func (flow *ExecutionEpochOne) authorAReadyLocked(ctx context.Context) bool {
 	return ctx != nil && ctx.Err() == nil && flow.epochs != nil && flow.controller != nil && flow.parent != nil &&
-		!flow.closed && !flow.used && !flow.authored && (flow.workspace == nil || flow.authorStarted.IsZero()) &&
+		!flow.closed && !flow.used && !flow.authored && (!flow.hasWorkspace() || flow.authorStarted.IsZero()) &&
 		(flow.profileRuntime == nil || flow.profileRuntime.Complete && flow.profileRuntime.releasable() && flow.profileRuntime.err == nil)
 }
 
@@ -217,7 +218,7 @@ func (flow *ExecutionEpochOne) authorALockedAt(ctx context.Context, started time
 		return ExecutionAuthorResult{}, ErrExecutionEpochOne
 	}
 	flow.authorStarted = started
-	if flow.workspace != nil {
+	if flow.hasWorkspace() {
 		if !processAccountingPlanSemantics(flow.plan.Schema) || len(flow.plan.PhaseDeadlines) != 15 ||
 			flow.plan.PhaseDeadlines[1] != frozenPhaseDeadlines()[1] {
 			return ExecutionAuthorResult{}, ErrExecutionEpochOne
@@ -234,7 +235,7 @@ func (flow *ExecutionEpochOne) authorALockedAt(ctx context.Context, started time
 	if err != nil && flow.workspaceBytes != nil {
 		_ = flow.workspaceBytes.Fail()
 	}
-	if err == nil && flow.workspace != nil {
+	if err == nil && flow.hasWorkspace() {
 		err = flow.sampleAuthorWorkspaceLocked(ctx, 1)
 		if err != nil {
 			flow.authored = false
@@ -448,6 +449,9 @@ type ExecutionEpochOneRun struct {
 }
 
 func (flow *ExecutionEpochOne) checkEpochTools(ctx context.Context, number uint64) (string, []dispatchadmission.ProductionToolBinding, []string, error) {
+	if flow.native != nil {
+		return flow.native.tools(ctx, number)
+	}
 	author := flow.epochs.author
 	epoch := flow.epochs.epochs[number-1]
 	phebs, path, err := flow.phebs.Check(ctx, "phebs")
@@ -574,7 +578,9 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	if number == 3 {
 		epoch.ReturnSourceCommit = author.previous.Result.Commit
 	}
-	if err == nil && (epochs.released != number-1 || epochs.listeners[number-1].Close() != nil) {
+	if err == nil && epochs.native != nil {
+		err = epochs.native.release(launchCtx, number)
+	} else if err == nil && (epochs.released != number-1 || epochs.listeners[number-1].Close() != nil) {
 		err = ErrExecutionEpochOne
 	}
 	if err == nil {
@@ -615,7 +621,7 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	}
 	epoch.SearchWarm = epochSearchWarmOptIn(epoch.Epoch, flow.plan.Schema)
 	epoch.MarkerDeadlineUnixNano = 0
-	if number == 3 && flow.workspace != nil && run.checkpointAllowed {
+	if number == 3 && flow.hasWorkspace() && run.checkpointAllowed {
 		if !time.Now().Before(run.phaseDeadline) {
 			return nil, ErrExecutionEpochOne
 		}
@@ -673,15 +679,16 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	var workspaceBinding *dispatchadmission.ProductionWorkspaceBinding
 	// Only the closed full early profiles borrow FD6; shorter legacy rehearsal
 	// profiles keep omission. Descriptor custody is not byte-point coverage.
-	if flow.workspace != nil && (number == 4 || number == 5 || number == 1 && run.physicalAllowed || number == 2 || number == 3 && run.checkpointAllowed) {
-		binding, workspaceErr := dispatchadmission.DescribeProductionWorkspace(flow.workspace.file, flow.workspace.path)
-		if workspaceErr != nil || binding.FSID != flow.workspace.volume {
+	if flow.hasWorkspace() && (number == 4 || number == 5 || number == 1 && run.physicalAllowed || number == 2 || number == 3 && run.checkpointAllowed) {
+		workspaceFile, workspacePath, workspaceFSID := flow.workspaceDescriptor()
+		binding, workspaceErr := dispatchadmission.DescribeProductionWorkspace(workspaceFile, workspacePath)
+		if workspaceErr != nil || binding.FSID != workspaceFSID {
 			return nil, ErrExecutionEpochOne
 		}
 		workspaceBinding = &binding
 		// The volume retains its original descriptor through joined cleanup;
 		// exec creates the child-owned FD6 copy, not a transfer of that original.
-		command.ExtraFiles = append(command.ExtraFiles, flow.workspace.file)
+		command.ExtraFiles = append(command.ExtraFiles, workspaceFile)
 	}
 	if number == 1 && workspaceBinding != nil && run.physicalAllowed {
 		run.warmWorkspace = newEpochWarmWorkspaceOutput(output, flow.plan, sha256.Sum256(raw))
@@ -695,7 +702,10 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	prepareProductionSession(command)
 	run.command = command
 	launchStage = "process identity"
-	processNames, err := epochProcessNames(path, tools)
+	var processNames map[string]string
+	if flow.native == nil {
+		processNames, err = epochProcessNames(path, tools)
+	}
 	if err != nil {
 		return nil, ErrExecutionEpochOne
 	}
@@ -703,6 +713,9 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	// Arm only after an actual launch, before any bootstrap or stdin delivery.
 	launchStage = "start"
 	launchStarted := time.Now()
+	if flow.native != nil && flow.native.beforeStart(launchCtx, command) != nil {
+		return nil, ErrExecutionEpochOne
+	}
 	handle, err := flow.parent.StartInPhase(launchCtx, phase, dispatchadmission.Site{ID: executionSiteServe, Role: executionRolePhebs, Persistent: true}, command)
 	if err != nil {
 		cancel()
@@ -729,8 +742,13 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	run.mu.Unlock()
 	// Capture the actual native birth before the sole Wait can reap this PID.
 	// Even capture failure retains the owned Start and follows normal cleanup.
-	run.processObservation, err = startEpochProcessObservation(launchCtx, command.Process.Pid, phase, "phebs", processNames,
-		func() { run.stopOnce.Do(func() { close(run.stop) }) })
+	var nativeWaited <-chan error
+	if flow.native != nil {
+		nativeWaited, err = flow.native.startWait(runCtx, run, phase, handle)
+	} else {
+		run.processObservation, err = startEpochProcessObservation(launchCtx, command.Process.Pid, phase, "phebs", processNames,
+			func() { run.stopOnce.Do(func() { close(run.stop) }) })
+	}
 	if err != nil {
 		retErr = ErrExecutionEpochOne
 	}
@@ -748,12 +766,12 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 		run.processObservation.prefix = run.processPrior
 		run.processObservation.mu.Unlock()
 	}
-	waited := make(chan error, 1)
-	go func() {
-		waitErr := handle.Wait()
-		run.processObservation.exited()
-		waited <- waitErr
-	}()
+	waited := nativeWaited
+	if flow.native == nil {
+		completion := make(chan error, 1)
+		go func() { waitErr := handle.Wait(); run.processObservation.exited(); completion <- waitErr }()
+		waited = completion
+	}
 	for _, index := range []int{1, 3, 5} {
 		if files[index].Close() != nil {
 			retErr = ErrExecutionEpochOne
@@ -1183,7 +1201,7 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	if !joined {
 		run.processObservation.armStop()
 	}
-	if !terminal && !joined {
+	if !terminal && !joined && run.flow.native == nil {
 		if signalProductionStop(run.command.Process) != nil {
 			failure = ErrExecutionEpochOne
 		}
@@ -1192,7 +1210,9 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	var sessionEmpty bool
 	var nativeStopErr error
 	var death executionProcessDeath
-	if terminal && terminalRequested && !joined && failure == nil {
+	if run.flow.native != nil {
+		joined, sessionEmpty, nativeStopErr = run.flow.native.finish(run, waited, joined, waitErr, stopDeadline)
+	} else if terminal && terminalRequested && !joined && failure == nil {
 		death, nativeStopErr = killExecutionProcessSession(run.terminalContext, run.command, waited)
 		joined, sessionEmpty, waitErr = death.RootJoined, death.SessionEmpty, death.WaitErr
 		// Invalid/dead operation contexts refuse before Kill; still own cleanup.
@@ -1390,7 +1410,7 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 			result.PressureSamples.Unavailable = true
 		}
 	}
-	if failure != nil && run.epoch.Epoch == 1 && run.physicalAllowed && run.flow.workspace != nil {
+	if failure != nil && run.epoch.Epoch == 1 && run.physicalAllowed && run.flow.hasWorkspace() {
 		result.EarlyFinishSamples.failIncomplete()
 	}
 	if failure != nil && run.midphaseWorkspaceSelected() {

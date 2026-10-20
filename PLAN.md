@@ -15319,3 +15319,130 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   executor/profile, pressure/restore, source-owned aggregate admission, restored
   launch/readiness/freeze, ceremony and production signing/activation remain
   open. Historical plan/receipt bytes and their memory contracts stay exact.
+
+- **2026-10-20 — T42.H2r.c.b integrated; c.c owns actual Linux composition.**
+  Reviewed green PR #155 fast-forwarded main to
+  `290e1518a4a192d0a3494c3ed9fa2eb39a450355`; GitHub records it merged/closed.
+  Final independent evidence/custody/cost review verified all 126 raw and eight
+  source hashes with every severity zero. Integration docs/glossary passed;
+  topic branches are retired and the temporary integration worktree is archived.
+  Unrelated history/npm bytes remain unchanged. Parent c/H2r stays open.
+
+  c.c implements the actual shared-author/live-server flow through narrow closed
+  native adapters to the existing coordinator and reducers. Private coordinator
+  views hold logical state only; they carry no fabricated Darwin native volume,
+  provenance or admission. One tracked worker holds the genuine Build/Git/tree,
+  author/server/zoekt/Surreal image, sealed plan and catalog/config loans across
+  all three author revisions and server lifetimes. Public owner reentry refuses.
+  Native dispatch hooks consume already-held descriptors. Root pidfds precede
+  the sole genuine Wait. Cleanup first observes the original child with
+  `waitid(P_PIDFD, WEXITED|WNOWAIT)`, keeping it unreaped while draining its
+  anchored session; only a fresh empty non-zombie census permits genuine Wait.
+  [WNOWAIT retains a waitable child](https://man7.org/linux/man-pages/man2/waitid.2.html).
+  Numeric SID after reaping cannot prove the original session. Surviving
+  same-session descendants require bounded native candidate observation, exact
+  root/lifetime/SID/namespace/image brackets and their own pidfds before signals.
+  Failed session capture does not disable safe cancellation through a successful
+  root pidfd pin. Keeper-close errors and unsuccessful cleanup turns stay errors
+  even after eventual cleanup. Unknown or unjoined work retains the same loans and
+  source lease; cancellation never establishes joining. Physical A is pinned
+  before B, and the predecessor actually joins before A-return/source handoff.
+
+  Linux FD6 workspace adoption is a required connected prerequisite: implement
+  the existing mechanical wire with full-width device/inode and actual native
+  filesystem identity, canonical owned0700 directories and protected inheritance.
+  Preserve the three control descriptor positions and historical Darwin checks.
+  Describing or adopting FD6 grants no private workspace, pressure or execution
+  admission. FD6 and the linked-path gauge cover the complete private common
+  workspace, including author source/home/tmp, all four mutable constructor
+  stages and epoch roots; a data-only root cannot stand in for that workspace.
+  Read-only anonymous trees and sealed objects are charged separately below.
+  Linux executable classification matches the exact held objects and
+  brackets the same native births/parents/names; numeric FD names and comm alone
+  cannot attest an image. Native kernel names remain unchanged in observations.
+
+  Store and indexer resolution preserve one narrowly selected Linux image route
+  only inside a live authenticated semantic-v3 Phebs lifetime: the exact selected
+  Surreal/zoekt path must name the actual parent's canonical proc-FD route to an
+  owned anonymous regular0500 ELF64 amd64 image with complete executable seals.
+  Mandatory complete SHA verification remains at discovery and launch boundaries;
+  selected Surreal discovery bypasses the ordinary path/size/mtime cache. No
+  ordinary path or global strict non-symlink verifier is relaxed. This route
+  conveys the parent's already-held object, not provenance from a numeric name.
+  Its fixed metadata/seal/header checks and existing complete digest reads add
+  no query, sync, publication scan or child. Ordinary resolution adds only the
+  absent-binding branch; existing version probes and launch verification remain.
+
+  The c.c operational rehearsal has a distinct source-owned resource policy,
+  `t42-linux-epoch-operational-resources-v1`: reserve and sample-stop at 6 GiB
+  aggregate RSS for one actual controller lifetime and every descendant, including
+  controller heap, one live server and one serial author. B may overlap epoch one;
+  return follows predecessor join. Never sum narrower server gauges into that
+  whole-root RSS. Separately charge the actual stable allocated bytes of four
+  distinct read-only tmpfs trees (Build inputs, Git, catalogs, configs), plus
+  five selected sealed objects (author, phebs, zoekt, Surreal and plan), using
+  checked statfs block units and the greater of page-rounded size or st_blocks
+  in 512-byte units. Distinct copies count separately. Mapped payload may also
+  appear in RSS; this overlap is deliberately conservative, not a unique physical
+  total. Add 1 GiB for kernel metadata/page-cache allowance and an independent
+  1 GiB of host headroom. These prospective constraints are not measured peaks,
+  a proof of sufficiency, hard kernel reservations or continuous enforcement.
+
+  The private issuer obtains fresh native H2l facts and calls H2j with its own
+  closed scope/concurrency census. Initially the entire reservation plus headroom
+  must fit physical/effective-cgroup capacity and available slack, with no swap
+  credit and no credit for already-created owned payload. Preparation must have
+  actually joined and retired mutable/failed prefixes; helper owners close before
+  operational admission. A bounded initial open-FD census refuses additional
+  anonymous regular tmpfs/memfd objects or unbound tmpfs mounts. That census is
+  not mmap/object history: complete ownership comes from the genuine closed
+  recipe, which retains no mapped-only helper copies and creates no operational
+  memfd/mount or compiler/constructor work.
+
+  Keep that one private reservation through the operation. Subsequent Starts
+  and samples require unchanged native objects, allocation, controller birth,
+  physical capacity, complete ancestry/limits and pinned mnt/user/pid/cgroup
+  namespaces; the initial full required amount must still fit effective capacity.
+  Independently require fresh available slack of at least 2 GiB (kernel/cache
+  allowance plus host headroom). Do not reserve the full budget again or subtract
+  sampled RSS from MemAvailable/memory.current. Any unavailable/drift/limit/slack
+  or classification failure latches and cancels only that owned flow, blocking
+  later Starts. Genuine RSS overshoot stays available evidence. Callbacks request
+  cancellation only and never join or reenter sampler/input owners.
+
+  Cost: ordinary request/query, sync tick, publication and server retry/no-op
+  paths gain no work. Explicit c.c preparation adds fixed metadata/allocation
+  checks, at most 8,192 initial FD entries plus one overflow sentinel, and four
+  retained namespace pins. The two fixed whole/server gauges drop missed 250-ms
+  ticks; one bounded gate serializes their native process, memory and image
+  inspection, with a 2-second cooperative probe context (native syscalls are not
+  hard deadlines). Exact-row classification caches retain at most 129 entries per
+  gauge for one census; pure aggregation may overlap after native gate release.
+  Samples perform no source walk, payload hash or child launch. H2l retains its
+  bounded two-pass ancestor inspection and no swap credit. Checkpoints and every
+  direct or nested operational Start add fresh checks of the same bound resources,
+  including bounded H2l inspection. Cleanup retains one root-exit observer per
+  server and the unreaped original root through at-most-1,024-candidate session
+  passes; unknown roots may hold that observer and root indefinitely. Four
+  namespace pins and all loan descriptors remain until actual operational/cleanup joins, potentially
+  indefinitely after uncertainty. Full native composition, immutable normal/race,
+  connected static/compile gates and independent custody/cost/evidence review
+  remain mandatory; no gate has passed by this implementation decision.
+
+  Native qualification prepares supplied plain author/Phebs candidates and a
+  V3 Zoekt candidate using the existing checksum-verified private module/offer
+  overlay recipe. A fixed tagged preparation test reuses that private recipe
+  without a new public issuer, preserves build scratch on every outcome and
+  labels its output supplied-only. It adds one bounded Go build, fixed complete
+  digest/BuildInfo checks and scratch module-copy/cache work before operational
+  admission. The full driver must still independently reference-build and compare
+  all three candidates, construct all four protected trees and retire helpers
+  before issuing its scoped resource binding. No operational compiler or
+  constructor work is admitted by the supplied-candidate preparation.
+
+  Historical V1–V5 constructors, bytes and their 20-GiB meter remain unchanged.
+  The distinct private Linux meter consumes only the issued scoped policy;
+  c.c does not fabricate a production ExecutionProfileAdmissionBinding or give
+  V5 a Linux execution meaning. Prospective formal Linux plan/profile/freeze
+  versioning, full-H2 preparation/compiler/pressure/restore admission, restored
+  launch/readiness/freeze, ceremony and production signing/activation follow.

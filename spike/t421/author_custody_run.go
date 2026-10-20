@@ -89,6 +89,9 @@ func (custody *ExecutionAuthorCustody) AuthorNextOn(ctx context.Context, control
 }
 
 func (custody *ExecutionAuthorCustody) authorNext(ctx context.Context, controller *dispatchadmission.Controller, parent *dispatchadmission.LocalProducer, producerID uint32, borrower *ExecutionEpochOneRun) (result ExecutionAuthorResult, retErr error) {
+	if custody != nil && custody.native != nil {
+		return custody.native.next(ctx, controller, parent, producerID, borrower)
+	}
 	if custody == nil || ctx == nil || ctx.Err() != nil {
 		return result, ErrExecutionAuthorCustody
 	}

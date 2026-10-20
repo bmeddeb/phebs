@@ -464,6 +464,20 @@ cleanup. Its fixed private author-root/sealed-plan fixture grants no actual
 reference-author or live-server authority. Final evidence review precedes
 integration; full c.c and prospective source-owned memory admission remain open.
 
+PR #155 subsequently integrated c.b at `290e1518` after independent final review
+with no findings. c.c's Linux live-server composition is implemented with
+qualification pending. Its linked-workspace FD6 includes source and every mutable
+preparation/epoch root. Session cleanup retains the original root unreaped while
+draining pinned descendants, then performs the genuine Wait; a refused session
+anchor preserves safe cancellation through an already pinned root.
+Its source-owned rehearsal policy constrains whole-controller RSS to 6 GiB,
+separately charges protected payload, and keeps 1 GiB kernel/cache allowance plus
+1 GiB host headroom. These are prospective sampled constraints, not kernel memory
+enforcement or formal profile admission. Initial full reservation and subsequent
+independent 2-GiB slack checks use fresh native physical/cgroup observations;
+sampled owned RSS receives no slack credit. The owning PLAN decision retains the
+complete formula, uncertainty and joining rules. No actual c.c gate is passed.
+
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
 It binds `c07bc930` and is preserved unchanged, so it no longer describes the

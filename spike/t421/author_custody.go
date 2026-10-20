@@ -34,6 +34,7 @@ type ExecutionAuthorRequest struct {
 // joined author. Close releases descriptors only, never source or input bytes.
 // This is a serial author vertical, not full host/profile or executor admission.
 type ExecutionAuthorCustody struct {
+	native      executionAuthorNativeAdapter
 	mu          sync.Mutex
 	parent      string
 	request     ExecutionAuthorRequest
@@ -251,6 +252,9 @@ func (custody *ExecutionAuthorCustody) createRoots(ctx context.Context) error {
 }
 
 func (custody *ExecutionAuthorCustody) checkRoots(ctx context.Context) error {
+	if custody.native != nil {
+		return custody.native.check(ctx)
+	}
 	if ctx == nil || ctx.Err() != nil || custody.closed || custody.err != nil || len(custody.roots) != 4 || custody.lease == nil {
 		return ErrExecutionAuthorCustody
 	}
@@ -277,6 +281,9 @@ func (custody *ExecutionAuthorCustody) checkRoots(ctx context.Context) error {
 }
 
 func (custody *ExecutionAuthorCustody) check(ctx context.Context) error {
+	if custody.native != nil {
+		return custody.native.check(ctx)
+	}
 	if custody.checkRoots(ctx) != nil {
 		return ErrExecutionAuthorCustody
 	}
@@ -302,6 +309,9 @@ func (custody *ExecutionAuthorCustody) check(ctx context.Context) error {
 }
 
 func (custody *ExecutionAuthorCustody) checkSource(ctx context.Context, response *ExecutionCorpusAuthorResponse) error {
+	if custody.native != nil {
+		return custody.native.checkSource(ctx, response)
+	}
 	root := custody.roots[1]
 	author := ExecutionCorpusAuthor{directory: root.path, root: root.file, rootInfo: root.info, volume: root.volume}
 	if response != nil {

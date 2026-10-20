@@ -60,6 +60,7 @@ type LinuxExecutionAuthorCustody struct {
 	mode              linuxAuthorMode
 	controller        *dispatchadmission.Controller
 	parent            *dispatchadmission.LocalProducer
+	borrowedBy        *LinuxExecutionEpochFlow
 	active            *linuxAuthorAttempt
 	last              *linuxAuthorAttempt
 	closing, released bool
@@ -283,6 +284,10 @@ func (owner *LinuxExecutionAuthorCustody) Close(ctx context.Context) error {
 		return ErrExecutionAuthorCustody
 	}
 	owner.mu.Lock()
+	if owner.borrowedBy != nil {
+		owner.mu.Unlock()
+		return ErrExecutionAuthorCustody
+	}
 	owner.closing = true
 	attempt := owner.active
 	if attempt != nil {

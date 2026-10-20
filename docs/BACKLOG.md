@@ -4553,6 +4553,13 @@ literal-route checks, actual joins/empty sessions and exact cleanup. The
 evidence review precedes integration. This mechanical native fixture does not
 issue reference-author or live-server authority; c.c remains mandatory.
 
+c.b integrated through reviewed green PR #155 at `290e1518`; final independent
+review verified 126 raw/eight source hashes with every severity zero. Integration
+docs/glossary passed and temporary branches/worktree are retired. c.c now owns
+actual full live-server composition and its distinct prospective 6-GiB whole-root
+RSS constraint plus separately charged payload, kernel/cache and host headroom.
+Historical plan/meter semantics stay exact; no full H2 admission follows.
+
 **T42.H2r.c.c · Linux live-server author/epoch borrow composition** *(after c.a
 and c.b).* Complete the parent c ACs with one tracked joined loan scope across
 Build/Git/image/plan and server use; dispatch hooks consume already-held internal
@@ -4564,6 +4571,12 @@ names or `comm`. Actual composed native acceptance, complete costs and independe
 review remain mandatory. c and parent H2r close only when all three subgates and
 every original c AC pass; executor/profile/pressure/restore, source-owned aggregate
 admission and downstream readiness/freeze still follow.
+
+The owning 2026-10-20 PLAN decision supplies the closed Linux resource formula
+and actual FD6/session/image prerequisites. This is one actual composed gate,
+not a substitute tiny-fixture completion. The source implementation is present;
+immutable qualification and actual full native acceptance remain pending. No old
+20-GiB meter or observed H2l facts can admit the run.
 
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over

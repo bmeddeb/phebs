@@ -235,6 +235,13 @@ exact bindings; evidence review/integration precedes c.c. Full reference-author
 and live-server composition, prospective Linux memory reservations and all
 broader H2/readiness/freeze gates remain pending.
 
+PR #155 integrated c.b at `290e1518` after final zero-finding evidence review;
+branches and the integration worktree are retired. Current work is c.c's actual
+Linux live-server/author composition, including whole held-loan lifetime, native
+workspace/session/image binding and the source-owned prospective resource policy
+recorded in PLAN. Full c.c native acceptance and every broader H2/readiness/freeze
+gate remain pending; historical plan and meter contracts stay exact.
+
 
 Next: [Linux office handoff #124](https://github.com/bmeddeb/phebs/issues/124)
 mechanism qualification → remaining T42.H2 consumer/executor/resource admission

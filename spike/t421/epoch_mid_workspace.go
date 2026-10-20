@@ -23,12 +23,12 @@ type ExecutionMidphaseParentSamples struct {
 }
 
 func (run *ExecutionEpochOneRun) midphaseWorkspaceSelected() bool {
-	return run != nil && run.flow != nil && run.flow.workspace != nil &&
+	return run != nil && run.flow != nil && run.flow.hasWorkspace() &&
 		(run.epoch.Epoch == 1 && run.physicalAllowed || run.epoch.Epoch == 2 || run.epoch.Epoch == 3 && run.checkpointAllowed)
 }
 
 func (run *ExecutionEpochOneRun) failMidphaseParent() {
-	if run == nil || run.flow == nil || run.flow.workspace == nil {
+	if run == nil || run.flow == nil || !run.flow.hasWorkspace() {
 		return
 	}
 	if run.flow.workspaceBytes != nil {
@@ -44,7 +44,7 @@ func (run *ExecutionEpochOneRun) failMidphaseParent() {
 // The ctx is the already-created handoff phase clock, never a new walk budget.
 func (run *ExecutionEpochOneRun) sampleMidphaseParentLocked(ctx context.Context, point uint8) error {
 	flow := run.flow
-	if flow.workspace == nil {
+	if !flow.hasWorkspace() {
 		return nil
 	}
 	refuse := func() error { run.failMidphaseParent(); return ErrExecutionEpochOne }

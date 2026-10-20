@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
-	"github.com/bmeddeb/phebs/internal/executableidentity"
 	"github.com/bmeddeb/phebs/internal/storeaccounting"
 	"github.com/gofrs/flock"
 	surrealdb "github.com/surrealdb/surrealdb.go"
@@ -162,13 +161,27 @@ func inspectSurrealBinary(
 	if err != nil {
 		return SurrealIdentity{}, fmt.Errorf("inspect surreal binary path: %w", err)
 	}
-	resolved, err := filepath.EvalSymlinks(abs)
+	resolved := abs
+	info, selectedRoute, err := selectedSurrealBinaryInfo(abs)
 	if err != nil {
-		return SurrealIdentity{}, fmt.Errorf("resolve surreal binary: %w", err)
+		return SurrealIdentity{}, fmt.Errorf("inspect selected surreal binary: %w", err)
 	}
-	info, err := os.Stat(resolved)
-	if err != nil {
-		return SurrealIdentity{}, fmt.Errorf("stat surreal binary: %w", err)
+	if selectedRoute {
+		if expectedSHA256 == "" {
+			return SurrealIdentity{}, errors.New("selected surreal image requires an executable digest")
+		}
+		// The controller's held route is intentionally not a canonical host path.
+		// Always hash it; path/size/mtime caching cannot establish its identity.
+		useCache = false
+	} else {
+		resolved, err = filepath.EvalSymlinks(abs)
+		if err != nil {
+			return SurrealIdentity{}, fmt.Errorf("resolve surreal binary: %w", err)
+		}
+		info, err = os.Stat(resolved)
+		if err != nil {
+			return SurrealIdentity{}, fmt.Errorf("stat surreal binary: %w", err)
+		}
 	}
 	if !info.Mode().IsRegular() || info.Mode()&0o111 == 0 {
 		return SurrealIdentity{}, errors.New("inspect surreal binary: not an executable regular file")
@@ -785,7 +798,7 @@ func startOwnedEngine(ctx context.Context, engine string) (runtime LocalRuntime,
 	if err != nil {
 		return LocalRuntime{}, nil, err
 	}
-	if err := executableidentity.Verify(identity.Path, os.Getenv("PHEBS_SURREAL_SHA256")); err != nil {
+	if err := verifySurrealExecutable(identity.Path, os.Getenv("PHEBS_SURREAL_SHA256")); err != nil {
 		return LocalRuntime{}, nil, fmt.Errorf("verify surreal identity before start: %w", err)
 	}
 	l, err := net.Listen("tcp", "127.0.0.1:0")

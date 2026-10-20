@@ -126,15 +126,30 @@ func newEpochProcessObservation(ctx context.Context, pid int, phase uint32, root
 // The inner launcher uses the same bounded sampler across preflight through
 // cleanup. Server callers retain their narrower phase admission above.
 func newExecutionProcessPhaseObservation(ctx context.Context, pid int, phase uint32, rootName string, names map[string]string, fail func(), probe func(context.Context, int) ([]t4013.NativeProcessRecord, error)) (*epochProcessObservation, error) {
-	if ctx == nil || pid <= 0 || phase < 1 || phase > 15 || !validObservedProcessName(rootName) || names[rootName] == "" || fail == nil || probe == nil {
+	return newExecutionProcessPhaseObservationWithRSSLimit(ctx, pid, phase, rootName, names, fail, probe, frozenSafetyEnvelope().MaximumPeakRSSBytes)
+}
+
+// Only closed native bindings select a different threshold. Historical entry
+// points keep their original source-frozen envelope.
+func newExecutionProcessPhaseObservationWithRSSLimit(ctx context.Context, pid int, phase uint32, rootName string, names map[string]string, fail func(), probe func(context.Context, int) ([]t4013.NativeProcessRecord, error), rssLimit uint64) (*epochProcessObservation, error) {
+	if ctx == nil || pid <= 0 || phase < 1 || phase > 15 || !validObservedProcessName(rootName) || names[rootName] == "" || fail == nil || probe == nil || rssLimit == 0 {
 		return nil, ErrExecutionEpochOne
 	}
 	gauge, err := newProcessObservationGauge(pid, names)
 	if err != nil {
 		return nil, err
 	}
+	return newExecutionProcessObservationWithGauge(ctx, pid, phase, rootName, fail, probe, rssLimit, gauge)
+}
+
+// A native owner may supply its closed executable-object classifier on a fresh
+// gauge. Keep that classifier and any already-bound root birth intact.
+func newExecutionProcessObservationWithGauge(ctx context.Context, pid int, phase uint32, rootName string, fail func(), probe func(context.Context, int) ([]t4013.NativeProcessRecord, error), rssLimit uint64, gauge *ProcessObservationGauge) (*epochProcessObservation, error) {
+	if ctx == nil || pid <= 0 || phase < 1 || phase > 15 || !validObservedProcessName(rootName) || fail == nil || probe == nil || rssLimit == 0 || gauge == nil || gauge.rootPID != pid || gauge.observation.CompletedCensuses != 0 {
+		return nil, ErrExecutionEpochOne
+	}
 	gauge.rootObservedName = rootName // Known checked root basename, not learned from the first census.
-	meter := &epochProcessObservation{gauge: gauge, rssLimit: frozenSafetyEnvelope().MaximumPeakRSSBytes, phase: phase,
+	meter := &epochProcessObservation{gauge: gauge, rssLimit: rssLimit, phase: phase,
 		stop: make(chan struct{}), done: make(chan struct{}), fail: fail}
 	initialCtx, cancel := context.WithTimeout(ctx, epochProcessProbeTimeout)
 	var rows []t4013.NativeProcessRecord
@@ -146,23 +161,26 @@ func newExecutionProcessPhaseObservation(ctx context.Context, pid int, phase uin
 		if probeErr == nil {
 			probeErr = initialCtx.Err()
 		}
-		_, err = gauge.failProbe(probeErr)
-	} else if len(rows) == 0 || rows[0].PID != pid || rows[0].StartIdentity == "" {
-		_, err = gauge.fail("invalid_census")
+		_, probeErr = gauge.failProbe(probeErr)
+	} else if len(rows) == 0 || rows[0].PID != pid || rows[0].StartIdentity == "" || gauge.expectedRootStartIdentity != "" && gauge.expectedRootStartIdentity != rows[0].StartIdentity {
+		_, probeErr = gauge.fail("invalid_census")
 	} else {
 		gauge.expectedRootStartIdentity = rows[0].StartIdentity
-		_, err = gauge.acceptRows(rows)
+		_, probeErr = gauge.acceptRowsContext(initialCtx, rows)
+	}
+	if probeErr == nil && initialCtx.Err() != nil {
+		_, probeErr = gauge.failProbe(initialCtx.Err())
 	}
 	cancel()
 	gauge.probe = probe
-	if err == nil {
-		err = meter.checkRSSLocked(gauge.Observation())
+	if probeErr == nil {
+		probeErr = meter.checkRSSLocked(gauge.Observation())
 	}
-	if err != nil {
+	if probeErr != nil {
 		meter.closed, meter.result.Joined = true, true
 		_ = meter.saveLocked()
 		close(meter.done)
-		return meter, err
+		return meter, probeErr
 	}
 	go meter.run()
 	return meter, nil
@@ -264,7 +282,7 @@ func (meter *epochProcessObservation) sampleLocked(ctx context.Context) error {
 	return meter.checkRSSLocked(observation)
 }
 
-// A genuine completed census above the existing frozen 20-GiB threshold is
+// A genuine completed census above its source-bound threshold is
 // a safety refusal, not unavailable measurement. Preserve the whole overshoot,
 // stop immediately and never probe or reset it away during later cleanup.
 // The owned callback only requests stop; it does not re-enter this meter.

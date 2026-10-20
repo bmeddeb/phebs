@@ -55,6 +55,7 @@ type ProcessObservationGauge struct {
 	nameClasses               map[string]int
 	observation               ProcessObservation
 	probe                     func(context.Context, int) ([]t4013.NativeProcessRecord, error)
+	classify                  func(context.Context, t4013.NativeProcessRecord) (int, bool)
 	privateRefusalDetail      string // First bounded private failure only; never part of ProcessObservation or receipts.
 }
 
@@ -132,13 +133,22 @@ func (gauge *ProcessObservationGauge) Sample(ctx context.Context) (ProcessObserv
 		}
 		return gauge.failProbe(err)
 	}
-	return gauge.acceptRows(rows)
+	return gauge.acceptRowsContext(ctx, rows)
 }
 
 // The caller holds mu. Startup uses the same validator for its initial native
 // census, captured before the owned child can be reaped; no second scan or
 // unvalidated seed is needed.
 func (gauge *ProcessObservationGauge) acceptRows(rows []t4013.NativeProcessRecord) (ProcessObservation, error) {
+	return gauge.acceptRowsContext(context.Background(), rows)
+}
+func (gauge *ProcessObservationGauge) acceptRowsContext(ctx context.Context, rows []t4013.NativeProcessRecord) (ProcessObservation, error) {
+	if ctx == nil {
+		return gauge.fail("measurement_unavailable")
+	}
+	if ctx.Err() != nil {
+		return gauge.failProbe(ctx.Err())
+	}
 	if len(rows) == 0 || len(rows) > t4013.MaxNativeProcessRecords || rows[0].PID != gauge.rootPID {
 		return gauge.fail("invalid_census")
 	}
@@ -157,7 +167,10 @@ func (gauge *ProcessObservationGauge) acceptRows(rows []t4013.NativeProcessRecor
 			return gauge.failRow("invalid_census", row)
 		}
 		class, known := gauge.nameClasses[row.ObservedName]
-		if !known {
+		if gauge.classify != nil {
+			class, known = gauge.classify(ctx, row)
+		}
+		if !known || class < 0 || class >= len(counts) {
 			return gauge.failRow("unknown_classification", row)
 		}
 		if uint64(row.RSSBytes) > math.MaxUint64-rss {
@@ -168,6 +181,9 @@ func (gauge *ProcessObservationGauge) acceptRows(rows []t4013.NativeProcessRecor
 		if index != 0 {
 			counts[class]++
 		}
+	}
+	if ctx.Err() != nil {
+		return gauge.failProbe(ctx.Err())
 	}
 	if gauge.observation.CompletedCensuses == math.MaxUint64 {
 		return gauge.fail("counter_overflow")

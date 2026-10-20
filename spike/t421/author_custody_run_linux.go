@@ -48,7 +48,7 @@ func (owner *LinuxExecutionAuthorCustody) authorNext(ctx context.Context, launch
 		return ExecutionAuthorResult{}, ErrExecutionAuthorCustody
 	}
 	owner.mu.Lock()
-	if owner.closing || owner.released || owner.err != nil || owner.active != nil || owner.next >= 3 {
+	if owner.borrowedBy != nil || owner.closing || owner.released || owner.err != nil || owner.active != nil || owner.next >= 3 {
 		owner.mu.Unlock()
 		return ExecutionAuthorResult{}, ErrExecutionAuthorCustody
 	}

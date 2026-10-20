@@ -26,7 +26,6 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
-	"github.com/bmeddeb/phebs/internal/executableidentity"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/repositoryindex"
 	"github.com/bmeddeb/phebs/internal/repowork"
@@ -46,7 +45,7 @@ func FindBinary() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := executableidentity.Verify(candidate, os.Getenv("PHEBS_ZOEKT_GIT_INDEX_SHA256")); err != nil {
+	if err := verifyIndexExecutable(candidate, os.Getenv("PHEBS_ZOEKT_GIT_INDEX_SHA256")); err != nil {
 		return "", fmt.Errorf("verify zoekt-git-index identity: %w", err)
 	}
 	return candidate, nil
@@ -270,6 +269,9 @@ func executablePath(candidate string) (string, error) {
 	absolute, err := filepath.Abs(candidate)
 	if err != nil {
 		return "", fmt.Errorf("resolve zoekt-git-index path: %w", err)
+	}
+	if selected, err := selectedIndexExecutable(absolute); selected || err != nil {
+		return absolute, err
 	}
 	resolved, err := filepath.EvalSymlinks(absolute)
 	if err != nil {
@@ -546,7 +548,7 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 	} else if ix.BinSHA256 != "" {
 		expectedSHA256 = ix.BinSHA256
 	}
-	if err := executableidentity.Verify(cmd.Path, expectedSHA256); err != nil {
+	if err := verifyIndexExecutable(cmd.Path, expectedSHA256); err != nil {
 		return fmt.Errorf("index %s: verify %s identity before launch: %w", repo.Name, childName, err)
 	}
 	runErr := dispatchadmission.RunProduction(ctx, dispatchadmission.SiteIndexBuild, cmd)

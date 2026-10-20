@@ -55,6 +55,7 @@ type ExecutionEpochConfig struct {
 // Never copy it. The parent must retain it and Author through all joined uses;
 // this object neither owns a server nor proves that those uses have joined.
 type ExecutionEpochConfigCustody struct {
+	native   executionConfigNativeAdapter
 	mu       sync.Mutex
 	author   *ExecutionAuthorCustody
 	roots    []productionRoot
@@ -389,6 +390,9 @@ func (custody *ExecutionEpochConfigCustody) protectInputs(ctx context.Context, i
 }
 
 func (custody *ExecutionEpochConfigCustody) checkLocked(ctx context.Context, epoch uint64) error {
+	if custody.native != nil {
+		return custody.native.check(ctx, epoch)
+	}
 	if ctx == nil || ctx.Err() != nil || custody.closed || custody.err != nil || epoch < 1 || epoch > 5 ||
 		custody.catalogs == nil || custody.configs == nil || len(custody.roots) != 4 || len(custody.stages) != 0 || custody.author.check(ctx) != nil {
 		return ErrExecutionEpochConfigs

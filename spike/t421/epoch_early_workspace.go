@@ -35,7 +35,7 @@ func (flow *ExecutionEpochOne) sampleAuthorWorkspaceLocked(ctx context.Context, 
 		}
 		return ErrExecutionEpochOne
 	}
-	if ctx == nil || ctx.Err() != nil || flow.workspace == nil || flow.workspaceBytes == nil ||
+	if ctx == nil || ctx.Err() != nil || !flow.hasWorkspace() || flow.workspaceBytes == nil ||
 		flow.epochs == nil || flow.epochs.author == nil || flow.controller == nil || flow.store == nil ||
 		!processAccountingPlanSemantics(flow.plan.Schema) || len(flow.plan.PhaseDeadlines) != 15 || point > 1 {
 		return fail()
@@ -84,7 +84,7 @@ func (reader *executionEpochInspection) sampleEarlyFinish(ctx context.Context) (
 		return errEpochInspection
 	}
 	run := reader.run
-	if run.flow.workspace == nil || run.epoch.Epoch != 1 || !run.physicalAllowed {
+	if !run.flow.hasWorkspace() || run.epoch.Epoch != 1 || !run.physicalAllowed {
 		return nil // Legacy shorter profiles have no FD6 or new sample request.
 	}
 	defer func() {
