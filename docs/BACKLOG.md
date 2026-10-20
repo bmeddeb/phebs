@@ -4147,6 +4147,20 @@ paths and construct a fresh environment. Close joins probe/helper custody before
 exact nonrecursive scratch cleanup; unknown/replaced entries remain retained.
 No production request/tick/startup/retry/publication caller is registered.
 
+Exact implementation `74917ccb67217931a4683378c7e35c2ef8c4033f` and the
+native-oracle-only correction `ed63f30d900e9cfb25bf85f99e402c0a28619e4d`
+pass independent custody/cost review with no findings. The 23 normal/race
+cases/subtests pass without skips; the corrected required native test passes
+real protected local clone/fetch, exact neutral commit/content, sticky closed-loan
+refusal and exact cleanup as UID 1000. Its original trace-oracle failure remains
+retained. Tagged vet, pinned scoped lint, current dispatch inventories, docs/
+glossary and whitespace pass. The inventory’s original 90s package-analysis
+timeout and unmodified-source 240s-guard pass remain separate outcomes. The
+[receipt](../spike/t42h2p/protected-git-linux-20261019.json) binds source, host,
+actual image/helper digests and raw evidence; the independently rebuilt helper
+keeps its own `b7c19c79` source binding. This closes only the Git resource owner;
+protected Go build/executor composition and the remaining H2 gates stay pending.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

@@ -1,0 +1,397 @@
+{
+  "ticket": "T42.H2p",
+  "recorded_at_utc": "2026-10-20T03:39:38.515036+00:00",
+  "source_commit": "ed63f30d900e9cfb25bf85f99e402c0a28619e4d",
+  "at_utc": "2026-10-20T03:31:46.618368+00:00",
+  "host": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+  "uid": 1000,
+  "go_version": "go version go1.26.5 linux/amd64",
+  "files": {
+    "spike/t421/git_custody_linux.go": "6542066f802b7cd03f48295c4290ec12a51dc09f591e6245bfe1d3bfd6a50479",
+    "spike/t421/git_custody_linux_test.go": "a8c5f82aaa0f77ec7357b7e66c95b9fdece8b20928476afc084561134d731c3d",
+    "spike/t421/git_custody_native_linux_test.go": "2fadd82132b66371dc546dbdb1b9ef4d73ff340c70ccd56154b6898496a39142",
+    "spike/t421/tool_custody_linux.go": "a8e7f05207950e5c662b19e405945bb5717373bbe7b8f0601e29adc0be4fef14"
+  },
+  "helper_request": "/home/ben/phebs-rehearsals/issue-124-pickup-20261020T020039Z/native-checks/h2k-helper-request.json",
+  "helper_request_sha256": "64ca77d37415b0ea1695c5a927aceda1d69157e7cbec81dc89cfad47fd6230b9",
+  "helper_source_note": "Helper remains independently rebuilt from b7c19c7994545ab95fef47ab2264a4ccb57baf5e; the Git consumer source is the current commit.",
+  "previous_failed_directory": "/home/ben/phebs-rehearsals/t42h2p-validation.obtvt0rs",
+  "carried_normal_race": "74917ccb implementation and untagged test hashes are identical. Only native trace oracle/comment and success log changed.",
+  "environment": {
+    "GOTOOLCHAIN": "local",
+    "GOPROXY": "off",
+    "GOSUMDB": "off",
+    "GOMAXPROCS": "2"
+  },
+  "checks": [
+    {
+      "command": [
+        "go",
+        "test",
+        "-json",
+        "./spike/t421",
+        "-run",
+        "^TestLinuxGitCustody",
+        "-count=1",
+        "-timeout=90s"
+      ],
+      "source_commit": "74917ccb67217931a4683378c7e35c2ef8c4033f",
+      "exit_code": 0,
+      "elapsed_seconds": 18.687,
+      "skips": [],
+      "passed_tests": 23,
+      "carried_source_identical": "Implementation and untagged-test hashes unchanged at final source; only tagged native trace oracle/comment and evidence logging changed."
+    },
+    {
+      "command": [
+        "go",
+        "test",
+        "-race",
+        "-json",
+        "./spike/t421",
+        "-run",
+        "^TestLinuxGitCustody",
+        "-count=1",
+        "-timeout=90s"
+      ],
+      "source_commit": "74917ccb67217931a4683378c7e35c2ef8c4033f",
+      "exit_code": 0,
+      "elapsed_seconds": 27.955,
+      "skips": [],
+      "passed_tests": 23,
+      "carried_source_identical": "Implementation and untagged-test hashes unchanged at final source; only tagged native trace oracle/comment and evidence logging changed."
+    },
+    {
+      "command": [
+        "go",
+        "test",
+        "-json",
+        "-tags",
+        "phebs_t42_native",
+        "./spike/t421",
+        "-run",
+        "^TestLinuxGitCustodyRequiredNativeLocalTransport$",
+        "-count=1",
+        "-timeout=25m"
+      ],
+      "source_commit": "ed63f30d900e9cfb25bf85f99e402c0a28619e4d",
+      "exit_code": 0,
+      "elapsed_seconds": 179.139,
+      "skips": [],
+      "passed_tests": 1
+    },
+    {
+      "command": [
+        "go",
+        "vet",
+        "-tags",
+        "phebs_t42_native",
+        "./spike/t421"
+      ],
+      "source_commit": "ed63f30d900e9cfb25bf85f99e402c0a28619e4d",
+      "exit_code": 0,
+      "elapsed_seconds": 2.613,
+      "skips": [],
+      "passed_tests": 0
+    },
+    {
+      "command": [
+        "golangci-lint",
+        "run",
+        "--build-tags",
+        "phebs_t42_native",
+        "--new-from-rev",
+        "bf651494",
+        "./spike/t421"
+      ],
+      "source_commit": "ed63f30d900e9cfb25bf85f99e402c0a28619e4d",
+      "exit_code": 0,
+      "elapsed_seconds": 12.875,
+      "skips": [],
+      "passed_tests": 0
+    },
+    {
+      "command": [
+        "go",
+        "test",
+        "-json",
+        "./spike/t421",
+        "-run",
+        "^TestProductionDispatch(SitesMatchActualBoundaries|InventoryFindsUnlistedAndAliasedLaunches)$",
+        "-count=1",
+        "-timeout=240s"
+      ],
+      "source_commit": "ed63f30d900e9cfb25bf85f99e402c0a28619e4d",
+      "exit_code": 0,
+      "elapsed_seconds": 7.05,
+      "skips": [],
+      "passed_tests": 4,
+      "remaining_session_members": []
+    },
+    {
+      "command": [
+        "make",
+        "docs-check",
+        "verify-glossary"
+      ],
+      "source_commit": "ed63f30d900e9cfb25bf85f99e402c0a28619e4d",
+      "exit_code": 0,
+      "elapsed_seconds": 1.428,
+      "skips": [],
+      "passed_tests": 0,
+      "remaining_session_members": []
+    }
+  ],
+  "native_observation": {
+    "output": [
+      "git_custody_native_linux_test.go:203: native protected Git local clone/fetch passed: image=sha256:ed8b2df973b28c0fb773b9c0dc0816d3ee2b3835bb932d9153c21417bb51b362 version=\"git version 2.53.0\" helper=sha256:9ee7201c02724056cdd8e11f31be967b0c0e5fb80305fdbaaf44a1f75c3ac333 files=7 bytes=31834376; closed-loan sticky refusal and exact cleanup passed"
+    ],
+    "image_sha256": "ed8b2df973b28c0fb773b9c0dc0816d3ee2b3835bb932d9153c21417bb51b362",
+    "version": "git version 2.53.0",
+    "helper_sha256": "9ee7201c02724056cdd8e11f31be967b0c0e5fb80305fdbaaf44a1f75c3ac333",
+    "files": 7,
+    "protected_bytes": 31834376,
+    "scope": "Unprivileged actual clone/fetch, neutral commit/content and closed-loan sticky-refusal/exact-cleanup checks. Every operational runner returned actual joined/session-drained success before release. This supplies no general operational executor admission."
+  },
+  "review": "Independent exact implementation 74917ccb67217931a4683378c7e35c2ef8c4033f and native-only delta ed63f30d900e9cfb25bf85f99e402c0a28619e4d review: no findings, including custody, failed-prefix cleanup, descriptor routing and steady-state cost. Earlier pre-native review gaps were corrected before native execution. Reviewer ran no tests or privileged actions.",
+  "retained_failures": {
+    "native": "At 74917ccb, actual clone/fetch/commit/content passed, but a test trace oracle expected a resolved upload-pack pathname that Git routes through /bin/sh and the exact protected-only PATH. ed63f30d corrects only the oracle/comment and adds bounded digest/version logging. Original source/outcome/raw logs remain unchanged.",
+    "inventory": "An optional broader source inventory hit its first 90s test ceiling during Go package analysis. A remaining go list/compile was observed then completed naturally; no retrospective Wait claim is made and no signal was sent. Same exact source subsequently passed with a 240s guard in 7.05s under a separately owned session, observed empty after actual root Wait."
+  },
+  "cost": "Constructor: two sealed-core probes, three protected-tree probes and one H2k constructor helper; repeated bounded source/core/seven-alias reads, seven mutable copies+syncs, H2k transfer/verification and seven protected-alias digests. At most 256 MiB sealed core plus 1.75 GiB mutable files/page cache and 1.75 GiB protected tmpfs, separately charged; helper image and bounded metadata/transfer state additional. Success releases sealed core and mutable copies. Loan locks Git owner then tree through complete trusted callback, performs constant tree/descriptor and bounded workspace checks, constructs environment, and reads/hashes no payload. No registered production request/tick/startup/retry/publication/schema/cache work. No global concurrency or aggregate reservation claimed.",
+  "bounds": "Distinct Linux Git resource custody only. Historical Darwin constructor unchanged. No SDK/module/source protected-build closure, arbitrary helper/shell/library closure, command/repository admission, generic executor descendant-drain proof, full pressure/restore, prospective reservation/plan, parent H2, restored launch, complete readiness, freeze, ceremony, scale or release pass. Production signing/activation PENDING.",
+  "raw_evidence_directories": [
+    "/home/ben/phebs-rehearsals/t42h2p-validation.obtvt0rs",
+    "/home/ben/phebs-rehearsals/t42h2p-corrected.dii_wy3t"
+  ],
+  "raw_file_census": [
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-validation.obtvt0rs",
+      "name": "native-preflight.json",
+      "bytes": 175,
+      "sha256": "10523c37d461119eb61e30b152d1156505af5a5634436d033aee89041688a32b"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-validation.obtvt0rs",
+      "name": "native.json",
+      "bytes": 366,
+      "sha256": "f270084549ba51e45290aaa0e50c7759166b0b22ccb2b363cfc149a29bf96198"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-validation.obtvt0rs",
+      "name": "native.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-validation.obtvt0rs",
+      "name": "native.stdout",
+      "bytes": 16771,
+      "sha256": "ec2afdc4e88e25389015665150d8cedc35fffb53bffbc01e4042527d6deaa968"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-validation.obtvt0rs",
+      "name": "normal.json",
+      "bytes": 300,
+      "sha256": "61f9c1f8e8b3e6c462a694a5fd6ffb4e7160db7f9a0b7dfefda62dfd5d168807"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-validation.obtvt0rs",
+      "name": "normal.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-validation.obtvt0rs",
+      "name": "normal.stdout",
+      "bytes": 20282,
+      "sha256": "880c763871ab3ad11a480f9b747cf808547453ef61fad55e7e4befbcbd180571"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-validation.obtvt0rs",
+      "name": "race.json",
+      "bytes": 313,
+      "sha256": "08b0ac70a66cea1b550542cc16c3ae0d582b3e9d4ae3cb9ae03be756579234ff"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-validation.obtvt0rs",
+      "name": "race.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-validation.obtvt0rs",
+      "name": "race.stdout",
+      "bytes": 20284,
+      "sha256": "62d54cebc50c5683bc60cb91888cb228733fec19eb0a9e7572e4532e33469bb1"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-validation.obtvt0rs",
+      "name": "source.json",
+      "bytes": 1086,
+      "sha256": "50277e7efea0d126160454cf65a84200c2f91c1e182b6fb4a00d086d80cd74fc"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-validation.obtvt0rs",
+      "name": "tools-before-consumer.json",
+      "bytes": 1405,
+      "sha256": "c2f6e2fae70b9b2b731b7d070427e903ffea7a4835baa75180f06eea4d30e868"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-corrected.dii_wy3t",
+      "name": "dispatch-inventory-240s-owner.json",
+      "bytes": 266,
+      "sha256": "ae0aedcea9ef86a22c92dda5a531bd65a73c1add26f8539ae7e13884feb14106"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-corrected.dii_wy3t",
+      "name": "dispatch-inventory-240s.json",
+      "bytes": 406,
+      "sha256": "dc56b9211d6bc205f0c66bbb07826197be7b37af4fdb44790ad65b8c39035271"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-corrected.dii_wy3t",
+      "name": "dispatch-inventory-240s.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-corrected.dii_wy3t",
+      "name": "dispatch-inventory-240s.stdout",
+      "bytes": 4162,
+      "sha256": "18a71a4f96ce50bff84b840de671e01ee756481aa250af25e28a90e192b99fb6"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-corrected.dii_wy3t",
+      "name": "dispatch-inventory.json",
+      "bytes": 372,
+      "sha256": "e578bbb76e0526da297e7cf3c357adbf8da2bcd8c6506e14e8ebe6029b94898f"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-corrected.dii_wy3t",
+      "name": "dispatch-inventory.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-corrected.dii_wy3t",
+      "name": "dispatch-inventory.stdout",
+      "bytes": 47948,
+      "sha256": "c5fe23f681f2f7b237adc2044f31fc608a331478a9442a97e830a55a6010c706"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-corrected.dii_wy3t",
+      "name": "docs-owner.json",
+      "bytes": 114,
+      "sha256": "b987c75ba9dad91d86e4042c9f4a22232e4c05e148f55f532ed953d8812049b3"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-corrected.dii_wy3t",
+      "name": "docs.json",
+      "bytes": 255,
+      "sha256": "12ef4549b753c90c7f06d3ff20053cd4a571435f4b5935d98a7d22d1416a56c9"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-corrected.dii_wy3t",
+      "name": "docs.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-corrected.dii_wy3t",
+      "name": "docs.stdout",
+      "bytes": 237,
+      "sha256": "6815708253d03298e65117784531b5caff25ab648d5582d07b90dd2ae2f76315"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-corrected.dii_wy3t",
+      "name": "first-failure.json",
+      "bytes": 740,
+      "sha256": "61a0f27d85392e1e23009c8fddae6b6df12532926befcc43ce733ad2e1344ed8"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-corrected.dii_wy3t",
+      "name": "inventory-timeout-followup.json",
+      "bytes": 353,
+      "sha256": "1930b5824daf7ae5e33de55e189de47bf0a12f0e5291d148aa5d62ec13ec99df"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-corrected.dii_wy3t",
+      "name": "lint.json",
+      "bytes": 302,
+      "sha256": "869e196a92a64eb316288b809f9a55a117fbebf326dada6a380c296230b2f56a"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-corrected.dii_wy3t",
+      "name": "lint.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-corrected.dii_wy3t",
+      "name": "lint.stdout",
+      "bytes": 10,
+      "sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-corrected.dii_wy3t",
+      "name": "native-preflight.json",
+      "bytes": 175,
+      "sha256": "45314691abc7df5836fa808e3178495758474905417f42100bda2e73286778ed"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-corrected.dii_wy3t",
+      "name": "native.json",
+      "bytes": 366,
+      "sha256": "34b7544490fc09664041cb7dadc9b366de45db0d097388cdfcef5d88cd19b687"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-corrected.dii_wy3t",
+      "name": "native.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-corrected.dii_wy3t",
+      "name": "native.stdout",
+      "bytes": 1929,
+      "sha256": "12faa06a5c675c3240c72d70a260b007f57af013bd245bac51d12986a375182e"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-corrected.dii_wy3t",
+      "name": "post-run-observation.json",
+      "bytes": 423,
+      "sha256": "48b17a1b72f6684174adb3a2ad7dbc6145ffa951475b05d4b8c640716c98f8a5"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-corrected.dii_wy3t",
+      "name": "source.json",
+      "bytes": 1314,
+      "sha256": "1dad577fa32242b6eb8fe44c129eaa7a98255dd45b47be98e2eef9cea9a0dcf5"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-corrected.dii_wy3t",
+      "name": "tools-after-consumer.json",
+      "bytes": 1306,
+      "sha256": "a75d263bf25a47ce8acaa4088ea412d3b2bc69bd9e6f8a8860f609d4b9845069"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-corrected.dii_wy3t",
+      "name": "vet.json",
+      "bytes": 245,
+      "sha256": "2158f125eced70718623e44408248777448e8fa652739e20587c4690fcb14a11"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-corrected.dii_wy3t",
+      "name": "vet.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "directory": "/home/ben/phebs-rehearsals/t42h2p-corrected.dii_wy3t",
+      "name": "vet.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}
