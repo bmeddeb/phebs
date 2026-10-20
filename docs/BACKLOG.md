@@ -20207,7 +20207,7 @@ bounded dependency lookups, no worker/lock/cache/schema/child. This prepares
 admission only: T50.3's direct quality/operating result and production signature
 remain pending, and Caller Map/Atlas's bounded-test amendment does not waive them.
 
-**T50.3 · Measured comparison promotion** — satisfy the common bar on real
+**T50.3 ✅ · Measured comparison promotion** — satisfy the common bar on real
 old/replacement source, concurrent publication and bounded combined read cost;
 release requires its own result even when both Caller Maps are released.
 
@@ -20293,6 +20293,28 @@ Four neutral controls are byte-identical to main on the same renderer. Their
 0.399–0.412% differences from retained Noble baselines reproduce unchanged on
 main and are inherited baseline/environment drift; no baseline is replaced or
 Noble pass invented. T50.3's source-bound final native matrix stays separate.
+
+**T50.3 signed release closure (2026-10-20, Linux #124).** Ben's request to
+ship experimental/dark features authorizes the reviewed scoped release. The
+[experimental Linux amd64 package](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) publishes caller comparison with
+production signatures over exact clean source `290e1518a4a192d0a3494c3ed9fa2eb39a450355`,
+Go 1.26.5, executable/artifact/implementation bindings and the existing trust
+anchor. The [receipt](../spike/t503/release/linux-20261020/receipt.json) and signed
+records retain exact identities and expiry. This closes this ticket's final
+artifact/signature/publication hold; earlier dated pending-key statements remain
+historical. Default startup stays dark; installation/restart uses explicit
+verified selection. Existing instance deployment is operator-specific.
+
+The common final gate passed 194 bounded test cases without skips, all twelve
+record self-loads, real selected startup/restart/withdrawal, anonymous visibility
+and authorization, plus empty-state sync/index/search/pinned-browse/default-dark
+release smoke. All three selection servers waited with status0 and no observed
+survivor; descendant observation is sampled. Seven new records and five exact
+existing-release rebindings share the complete 57-file artifact directory.
+Historical quality/operating evidence and uncertainty remain exact; current
+registration smoke adds no independent accuracy, Linux capacity, scale, SLO or
+T42 readiness result. No production implementation, numerical bound, query,
+sync, retry/no-op, publication, lock, cache or child class changes.
 
 ## Epic 51 · Protobuf field-reference production readiness
 
