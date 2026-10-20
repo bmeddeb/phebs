@@ -4324,6 +4324,18 @@ H2q.b qualification: the actual reference transaction, hiding selected originals
 native proof and full acceptance/review gates remain pending. Separate copying,
 hashing, tree, worker-retention and cleanup costs are recorded in PLAN.
 
+The separate fixed reference helper/controller are implemented, awaiting exact
+qualification. They mask selected originals inside the new executing namespace,
+stream the stable H2k inputs into a fresh reachable read-only tree, validate
+source/modules there, and compare sealed candidate/full reference bytes and
+BuildInfo before issuing a distinct Linux lineage after actual helper joins.
+One retained active attempt owns every loan through cancellation/uncertainty.
+Independent implementation/custody/cost review found no source blocker; focused
+controls cover plan/shape/role fences, complete-byte mismatch, retained consumer
+state and sticky-error cleanup. The required real `t422-author` native driver
+still needs execution on the exact reviewed source. No native qualification,
+full H2q.b completion or aggregate resource allowance is implied by this source.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

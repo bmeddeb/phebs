@@ -273,6 +273,27 @@ symlink to a still-matching source inode. The prepared tree supplies no executab
 SDK path, reference-tool identity or aggregate allowance. Protected reference
 execution and original-input hiding still require their separate native proof.
 
+The distinct fixed reference transaction now has a required native author
+driver. Prepare independently rebuildable exact-source requests at
+`PHEBS_T42_GO_REFERENCE_REQUEST` (reference helper),
+`PHEBS_T42_REFERENCE_CANDIDATE_REQUEST` (actual `t422-author` candidate), and
+`PHEBS_T42_INPUT_TREE_REQUEST` (qualified H2k helper). The receiving agent builds
+these requests; no hand-authored authority is accepted. Source/SDK/cache/lineage
+must match between the first two requests. Run once on the exact reviewed tree:
+
+```bash
+go test -tags phebs_t42_native ./spike/t421 -count=1 -timeout=45m \
+  -run '^TestLinuxGoReferenceRequiredNativeAuthor$' -v
+```
+
+This verifies an implemented tool build with the original SDK/cache/source
+masked in the helper namespace and unchanged host root identities/propagation.
+It does not execute the supplied candidate. On refusal retain the exact active
+owner, joined-state diagnostics and private prefix; a deadline is not cleanup.
+Source-free receipts record hashes and outcomes without copying private command
+diagnostics. Native acceptance, aggregate H2 admission and all downstream
+readiness/freeze gates remain separate.
+
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
 It binds `c07bc930` and is preserved unchanged, so it no longer describes the

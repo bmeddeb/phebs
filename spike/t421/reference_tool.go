@@ -281,6 +281,14 @@ func referenceToolRoleForSchema(role, schema, sourceCommit string) (packagePath,
 		packagePath = "github.com/bmeddeb/phebs/spike/t421/cmd/go-build-helper"
 		return
 	}
+	if schema == linuxGoReferenceRecipe {
+		if role != linuxGoReferenceRole || !validCommit(sourceCommit) {
+			err = errors.New("reference protected-build helper recipe is invalid")
+			return
+		}
+		packagePath = "github.com/bmeddeb/phebs/spike/t421/cmd/go-reference-helper"
+		return
+	}
 	if schema != "" && !knownPlanSchema(schema) {
 		err = errors.New("reference build plan schema is unavailable")
 		return

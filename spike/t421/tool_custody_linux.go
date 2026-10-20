@@ -24,6 +24,8 @@ type LinuxExecutionToolCustody struct {
 	input    *LinuxExecutionInputCustody
 	identity ExecutionToolIdentity
 	probe    *linuxExecutionToolProbe
+	// Only the joined protected-input issuer sets this distinct Linux lineage.
+	referenceInputs *LinuxExecutionGoBuildCustody
 }
 
 type linuxExecutionToolProbe struct {

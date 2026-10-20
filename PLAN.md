@@ -14661,3 +14661,42 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   This implements preparation only. Full protected reference execution, original
   SDK/cache/source hiding, native integration and remaining H2q.b acceptance are
   still pending; the neutral helper and historical Darwin recipes stay exact.
+
+- **2026-10-19 — T42.H2q.b fixed protected reference transaction.**
+  Implement a separate `linux-go-reference-namespace-v1` helper recipe, not a
+  mode added to the neutral helper or a ceremony plan. Its second bounded INIT
+  carries a closed source-owned plan; historical frame kinds stay exact. A
+  fresh private PID/user/mount namespace receives the held H2k inputs by a new
+  sorted transfer whose complete census/manifest must match the stable tree.
+  Three empty mode-000 read-only tmpfs mounts mask the selected original SDK,
+  module cache and source paths before capabilities are dropped. READY binds
+  nonce/manifest and a protected-root FD; the controller independently checks
+  namespace/image/privilege/input-mount and original-mask kernel facts before
+  ACK permits Go use. The helper validates exact detached/shallow source with
+  protected Git and verifies module graph paths/checksums inside its reachable
+  namespace. It performs only the existing fixed implemented-tool reference
+  recipes with closed offline controls, including exact optional V3 overlay
+  checks. A sealed candidate FD is never executed. Full candidate/output bytes,
+  digest and BuildInfo must match inside the helper and again after actual
+  helper Wait/session drain before a distinct typed Linux lineage is issued.
+  One active attempt per owner and one borrowing gate per helper reject overlap;
+  the worker retains tree/helper/candidate loans, launching thread, workspace
+  and Wait through uncertainty. PIDfd termination cannot target a reused PID.
+  Close cancels and joins that same attempt before exact cleanup. A bounded
+  last-completion record retains actual PID/join/input/digest facts without
+  retaining completed workspaces or output buffers. Failed commands retain
+  bounded private diagnostics; public errors contain no private paths.
+  Each attempt adds another <=2-GiB protected input copy and full stream/hash,
+  three 4-KiB/one-inode mask filesystems, up-to-256-MiB sealed candidate,
+  native-image validation, repeated exact source/module reads, serial Go/Git
+  roots and compiler descendants, graph/output buffers and complete candidate
+  comparison. Tree/helper/candidate locks span actual joined use; owner cleanup
+  holds its state mutex through joined disposal. A post-join output census is
+  bounded by 100,000 entries/2 GiB for exact cleanup; that observation is not a
+  prospective compiler/output quota. Compiler RSS, writable cache/output disk,
+  page cache and cross-owner concurrency still need aggregate H2 admission.
+  Retrying fresh work repeats all copy/hash/build costs. No production request,
+  sync, startup, no-op, publication, schema or cache-invalidation caller changes.
+  Required actual-author native qualification and exact-source review/gates
+  remain pending. The qualified neutral lifetime guard and historical Darwin
+  behavior are preserved; no H2/readiness/freeze or ceremony result is claimed.
