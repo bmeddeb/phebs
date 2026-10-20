@@ -26,11 +26,11 @@ func linuxEpochResourceTestMemory() t4013.LinuxMemoryObservation {
 func TestLinuxEpochResourceInitialReservationAndLiveSlack(t *testing.T) {
 	initial := linuxEpochResourceTestMemory()
 	calculation, err := evaluateLinuxEpochResources(initial, 1<<30)
-	if err != nil || calculation.RequiredBytes != 9<<30 || calculation.ReservedBytes != 8<<30 || calculation.HostHeadroomBytes != 1<<30 {
+	if err != nil || calculation.RequiredBytes != 7<<30 || calculation.ReservedBytes != 6<<30 || calculation.HostHeadroomBytes != 1<<30 {
 		t.Fatal("closed full reservation", calculation, err)
 	}
 	exact := initial
-	exact.PhysicalBytes, exact.AvailableBytes = 9<<30, 9<<30
+	exact.PhysicalBytes, exact.AvailableBytes = 7<<30, 7<<30
 	if _, err := evaluateLinuxEpochResources(exact, 1<<30); err != nil {
 		t.Fatal("exact-fit refusal", err)
 	}
@@ -73,7 +73,7 @@ func TestLinuxEpochResourceInitialReservationAndLiveSlack(t *testing.T) {
 	if checkLinuxEpochLiveMemory(initial, 16<<30, initial) == nil {
 		t.Fatal("held reservation exceeded effective capacity")
 	}
-	if frozenSafetyEnvelope().MaximumPeakRSSBytes != 20<<30 || linuxEpochPolicy().RSSReservationBytes != 6<<30 || !validExecutionSHA256(linuxEpochPolicySHA256()) {
+	if frozenSafetyEnvelope().MaximumPeakRSSBytes != 20<<30 || linuxEpochPolicy().RSSReservationBytes != 4<<30 || linuxEpochPolicy().Schema != "t42-linux-epoch-operational-resources-v2" || !validExecutionSHA256(linuxEpochPolicySHA256()) {
 		t.Fatal("prospective constraint changed historical envelope")
 	}
 }
@@ -126,11 +126,45 @@ func TestLinuxEpochResourceRefusalCancelsOnce(t *testing.T) {
 		})
 	}
 	joined.Wait()
-	if calls.Load() != 1 || a.Close() == nil || a.RSSLimit() != 6<<30 {
+	if calls.Load() != 1 || a.Close() == nil || a.RSSLimit() != 4<<30 {
 		t.Fatal("failure lost its latch or cleanup prefix", calls.Load())
 	}
 	if a, err := admitLinuxEpochResources(t.Context(), nil, func() {}); err == nil || a != nil {
 		t.Fatal("missing genuine held scope issued authority")
+	}
+}
+
+func TestLinuxEpochResourceStricterProspectiveBudget(t *testing.T) {
+	// Retained v1 refusal facts exercise arithmetic only, never fresh admission.
+	observation := linuxEpochResourceTestMemory()
+	observation.PhysicalBytes = 15_991_848_960
+	observation.AvailableBytes = 8_633_675_776
+	got, err := evaluateLinuxEpochResources(observation, 1_914_691_584)
+	if err != nil || got.RequiredBytes != 8_357_142_528 || got.HostHeadroomBytes != 1<<30 {
+		t.Fatal("prospective stricter constraint", got, err)
+	}
+	observation.AvailableBytes = got.RequiredBytes - 1
+	if got, err := evaluateLinuxEpochResources(observation, 1_914_691_584); err == nil || got != (t4013.LinuxMemoryCalculation{}) {
+		t.Fatal("one-byte shortage lost its zero refusal", got, err)
+	}
+}
+
+func TestLinuxEpochResourceOperationFailureAndKeeperClose(t *testing.T) {
+	a := &linuxEpochResourceAdmission{err: errLinuxEpochResources}
+	if a.closeCustody() != nil || !a.closed || a.Close() == nil || a.Check(t.Context()) == nil {
+		t.Fatal("joined keeper retirement cleared the operational refusal")
+	}
+	file, err := os.Open("/dev/null")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if file.Close() != nil {
+		t.Fatal("fixture close")
+	}
+	b := &linuxEpochResourceAdmission{}
+	b.namespaces[0].file = file
+	if b.closeCustody() == nil || b.closeCustody() == nil || b.Close() == nil || !b.closed || b.namespaces[0].file != nil {
+		t.Fatal("actual keeper-close failure lost its sticky status")
 	}
 }
 

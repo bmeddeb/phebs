@@ -97,38 +97,54 @@ func TestLinuxEpochRequiredNativeLiveBorrow(t *testing.T) {
 			}
 		}
 		if epochs != nil {
-			_ = epochs.Close(ctx)
+			if epochs.Close(ctx) != nil {
+				t.Error("epoch cleanup refused", base)
+			}
 			if !epochs.closed {
 				t.Error("epoch owner retained", base)
 				return
 			}
 		}
 		if author != nil {
-			_ = author.Close(ctx)
+			if author.Close(ctx) != nil {
+				t.Error("author cleanup refused", base)
+			}
 			if !author.released {
 				t.Error("author retained", base)
 				return
 			}
 		}
 		for _, tool := range tools {
-			if tool != nil && tool.Close() != nil {
-				t.Error("tool cleanup refused", base)
-				return
+			if tool != nil {
+				if tool.Close() != nil {
+					t.Error("tool cleanup refused", base)
+				}
+				if tool.probe != nil || tool.input == nil || !tool.input.closed {
+					t.Error("tool owner retained", base)
+					return
+				}
 			}
 		}
 		if planInput != nil && planInput.Close() != nil {
-			t.Error("plan retained", base)
-			return
+			t.Error("plan cleanup refused", base)
+			if !planInput.closed {
+				t.Error("plan owner retained", base)
+				return
+			}
 		}
 		if builds != nil {
-			_ = builds.Close(ctx)
+			if builds.Close(ctx) != nil {
+				t.Error("Build cleanup refused", base)
+			}
 			if !builds.released {
 				t.Error("Build owner retained", base)
 				return
 			}
 		}
 		if git != nil {
-			_ = git.Close(ctx)
+			if git.Close(ctx) != nil {
+				t.Error("Git cleanup refused", base)
+			}
 			if !git.released {
 				t.Error("Git owner retained", base)
 				return
@@ -241,6 +257,10 @@ func TestLinuxEpochRequiredNativeLiveBorrow(t *testing.T) {
 	if err != nil {
 		t.Fatal("source-owned Linux resource/held-flow admission refused", base)
 	}
+	resources := flow.held.resources
+	resources.mu.Lock()
+	t.Logf("resource_policy=%s whole_rss_limit=%d physical_bytes=%d available_bytes=%d effective_capacity_bytes=%d payload_bytes=%d required_bytes=%d", resources.policySHA, resources.RSSLimit(), resources.initial.PhysicalBytes, resources.initial.AvailableBytes, resources.calculation.EffectiveCapacityBytes, resources.footprint.PayloadBytes, resources.calculation.RequiredBytes)
+	resources.mu.Unlock()
 	if author.Close(t.Context()) == nil || epochs.Close(t.Context()) == nil {
 		t.Fatal("whole-flow borrower lost owner barriers")
 	}
@@ -322,6 +342,13 @@ func TestLinuxEpochRequiredNativeLiveBorrow(t *testing.T) {
 		logLinuxEpochNativeFailure(t, flow, base)
 		t.Fatal("whole tracked flow join", base)
 	}
+	resources.mu.Lock()
+	resourceChecks, resourceClosed, resourceFailed, resourceCloseFailed := resources.checks, resources.closed, resources.err != nil, resources.closeErr != nil
+	resources.mu.Unlock()
+	if resourceChecks == 0 || !resourceClosed || resourceFailed || resourceCloseFailed {
+		t.Fatal("resource observation/keeper settlement")
+	}
+	t.Logf("resource_checks=%d keeper_closed=%t operation_refused=%t keeper_close_failed=%t", resourceChecks, resourceClosed, resourceFailed, resourceCloseFailed)
 	for i, pid := range flow.core.serverSessions[:3] {
 		members, e := t4013.PrivateProcessSessionMembers(pid)
 		if pid <= 0 || e != nil || members != 0 {

@@ -4578,6 +4578,26 @@ not a substitute tiny-fixture completion. The source implementation is present;
 immutable qualification and actual full native acceptance remain pending. No old
 20-GiB meter or observed H2l facts can admit the run.
 
+The first exact `2754d208` full-native attempt stopped before operations in
+1,186.14s: all three actual reference comparisons passed and joined, but policy
+v1 required 10,504,626,176 bytes against 8,633,675,776 observed available bytes.
+The [failure receipt](../spike/t42h2r/live-borrow-admission-failure-linux-20261020.json)
+retains the valid memory refusal, sticky cleanup prefix and unchanged source.
+Its hierarchy-root zero counters are valid, not an observer defect. No author
+revision or server started. A prospective v2 constrains whole-controller RSS to
+4 GiB while retaining the full workload, actual payload charges and separate
+1-GiB kernel/cache allowance plus 1-GiB host headroom. This stricter stop predicts
+no sufficient peak; fresh admission and the unchanged full native gate remain
+mandatory. Joined operation failures must remain flow errors without poisoning
+valid image loans; actual custody/cleanup errors stay sticky, and unknown joins
+still retain every loan. The driver continues cleanup past an error only when
+that owner is actually closed. Corrected-source qualification is pending.
+
+The same correction separates operational cancellation from DA/SA control
+settlement: keep accounting transports live through actual terminal exchanges,
+Wait/EOF/receiver joins and close, without suppressing canceled-control errors.
+Focused mechanical control tests do not replace full composed acceptance.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

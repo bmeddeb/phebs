@@ -15446,3 +15446,76 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   V5 a Linux execution meaning. Prospective formal Linux plan/profile/freeze
   versioning, full-H2 preparation/compiler/pressure/restore admission, restored
   launch/readiness/freeze, ceremony and production signing/activation follow.
+
+- **2026-10-20 — T42.H2r.c.c honest admission refusal and stricter v2 scope.**
+  Exact source `2754d208693ad2c3bf36915cbf03efd03f973376` passed all 22
+  pre-native gates and independent source review. Its first full required native
+  attempt returned failure after 1,186.14s (wrapper actual Wait1 after
+  1,186.726s, empty sampled wrapper SID). All three actual protected reference
+  comparisons matched and joined with empty sessions. Before any operational
+  author or server, v1 observed physical memory 15,991,848,960 bytes and
+  available memory 8,633,675,776 bytes. Actual separately charged payload was
+  1,914,691,584 bytes; 6-GiB RSS plus payload plus 1-GiB kernel/cache allowance
+  and 1-GiB host headroom required 10,504,626,176 bytes. The 1,870,950,400-byte
+  deficit correctly refused admission. H2l's ABI-exempt hierarchy-root row is
+  valid; H2j returns a zero calculation on refusal. No retained simultaneous
+  host census, controller RSS or preparation peak attributes that deficit to
+  external work, a leak or the eventual workload. The source-free
+  `spike/t42h2r/live-borrow-admission-failure-linux-20261020.json` binds the
+  exact failure and retained cleanup prefix without a composed pass.
+
+  Fresh source uses private operational policy
+  `t42-linux-epoch-operational-resources-v2`, tightening the whole-controller
+  RSS constraint to 4 GiB. The full 2,031,604-file / 10,000-service composition,
+  concurrency, measured immutable payload charges, separate 1-GiB kernel/cache
+  allowance and 1-GiB host headroom, initial complete reservation, native cgroup
+  ancestry, independent ongoing 2-GiB slack and sticky actual overshoot rules
+  are unchanged. No owned memory or swap is credited. At the failed attempt's
+  facts this stricter formula would require 8,357,142,528 bytes; that is arithmetic
+  over retained facts, not fresh authority or proof of sufficient memory. The
+  actual corrected run must obtain its own native facts/allocation and stop
+  honestly if fresh admission fails or whole-root RSS exceeds 4 GiB. Old v1
+  failure bytes and all historical V1–V5 plans/meters remain exact.
+
+  The admission refusal exposed a separate cleanup defect: returning a joined
+  operation error through `WithImage` labels every enclosing image loan failed.
+  A private marker from only the fixed worker now carries completed operation
+  failures outside callbacks after actual operational/sampler/receiver joins.
+  Loan postchecks still execute, and unclassified setup, actual keeper and
+  cleanup errors still return through callbacks and stay sticky. Namespace
+  retirement exposes a separate actual-close status while resource operation
+  failure stays latched; capture that operation status after sampler join so a
+  concurrent Close cannot erase it. The native driver retains every error and
+  failed fixture but proceeds through later cleanup owners when an earlier
+  owner actually closed; an unclosed or unknown owner still stops cleanup.
+  Unknown joins never return the callback or release its loan.
+
+  Source review also found that the operational lifetime canceled DA/SA controls
+  before graceful terminal exchanges and prefix inspection could complete.
+  Give the fixed worker one separate private settlement lifetime for the actual
+  controllers, local producer and receivers. Operation cancellation still blocks
+  Starts and signals owned roots immediately. Each operation links caller/flow
+  cancellation; successful or partial server-launch links remain held through
+  actual server joins. Only after genuine Wait/EOF/receiver settlement and
+  `core.Close` may the settlement lifetime end, before the loan callbacks return.
+  Keep real control failures; do not suppress `ErrCanceled` or call cancellation
+  a join. Real DA/SA/local-producer close and deliberately canceled-settlement
+  controls need no SDK/corpus/server replay and grant no execution admission.
+
+  Cost: no ordinary request/query, sync, retry/no-op, publication, source walk,
+  payload hash, child, cache or admission concurrency is added. One private
+  error marker and bounded error joins occur on flow failure; a separate sticky
+  close-error field and existing mutex distinguish operation from retirement.
+  One extra owner context and one joined cancellation link per active harness
+  operation are retained; at most three serial server-launch links survive
+  their method return until actual server settlement. No ordinary request or
+  process concurrency changes.
+  After the same actual joins, cleanup may now reach the remaining fixed owners
+  previously skipped by the defective early return. Two fixed native proof logs
+  expose already-held initial budget facts and terminal check/close counters
+  without another sample. New tests exercise real sealed loans, actual FD-close
+  refusal, unknown-join retention and exact budget/slack boundaries. Fresh
+  immutable normal/race/static gates, independent source/custody/cost review and
+  the unchanged full composed native acceptance remain mandatory. This change
+  closes no parent H2, full preparation/compiler resource admission, pressure/
+  restore, readiness/freeze, ceremony, scale/SLO or production release gate.

@@ -38,15 +38,37 @@ type linuxEpochHeldFlow struct {
 	servers                                     map[*ExecutionEpochOneRun]*linuxEpochServer
 	gitImages                                   [7]*os.File
 	workspace                                   linuxAuthorRoot
+	operationLinks                              []*linuxEpochOperationLink
+}
+
+// Only the fixed worker marks a completed operational refusal. Its original
+// cause remains the flow result, never an assertion that image bytes drifted.
+type linuxEpochOperationFailure struct{ cause error }
+
+func (failure *linuxEpochOperationFailure) Error() string { return "linux epoch operation failed" }
+func (failure *linuxEpochOperationFailure) Unwrap() error { return failure.cause }
+
+// Combine these results only after genuine loan post-use validation and
+// retirement. Unclassified failures and cleanup errors stay callback errors.
+type linuxEpochLoanOutcome struct{ operation error }
+
+func (outcome *linuxEpochLoanOutcome) afterJoin(useErr, cleanupErr, resourceErr error) error {
+	if failure, known := useErr.(*linuxEpochOperationFailure); known {
+		outcome.operation = errors.Join(outcome.operation, failure.cause)
+		useErr = nil
+	}
+	outcome.operation = errors.Join(outcome.operation, resourceErr)
+	return errors.Join(useErr, cleanupErr)
 }
 
 func (held *linuxEpochHeldFlow) withLoans(use func() error) error {
+	var outcome linuxEpochLoanOutcome
 	held.builds.mu.Lock()
 	defer held.builds.mu.Unlock()
 	if held.builds.active != nil || held.builds.closing || held.builds.released || held.builds.err != nil || held.builds.tree == nil || !linuxAuthorBuildBinding(held.author.request, held.author.authorIdentity, held.builds.request.PlanSourceCommit) {
 		return ErrExecutionEpochOne
 	}
-	return held.builds.tree.WithRoot(context.Background(), func(root *os.File) error {
+	loanErr := held.builds.tree.WithRoot(context.Background(), func(root *os.File) error {
 		held.buildRoot = root
 		held.git.mu.Lock()
 		defer held.git.mu.Unlock()
@@ -115,7 +137,11 @@ func (held *linuxEpochHeldFlow) withLoans(use func() error) error {
 							if cleanup != nil && held.flow.failureStep == "" {
 								held.flow.failureStep = "cleanup"
 							}
-							return errors.Join(err, cleanup)
+							var resourceErr error
+							if held.resources != nil {
+								resourceErr = held.resources.operationErr()
+							}
+							return outcome.afterJoin(err, cleanup, resourceErr)
 						})
 					})
 				})
@@ -123,6 +149,7 @@ func (held *linuxEpochHeldFlow) withLoans(use func() error) error {
 			return images(0)
 		})
 	})
+	return errors.Join(outcome.operation, loanErr)
 }
 func (held *linuxEpochHeldFlow) openClassifierImages() error {
 	var err error
@@ -214,15 +241,24 @@ func (held *linuxEpochHeldFlow) join() error {
 			time.Sleep(time.Second)
 		}
 	}
+	for _, link := range held.operationLinks {
+		link.close()
+	}
+	held.operationLinks = nil
 	if held.flow.core != nil {
 		result = errors.Join(result, held.flow.core.Close())
+	}
+	// Cancellation of work is not cancellation of settlement. Every real
+	// control receiver and local producer must close before this context ends.
+	if held.flow.settleCancel != nil {
+		held.flow.settleCancel()
 	}
 	if held.whole != nil {
 		_, err := held.whole.close()
 		result = errors.Join(result, err)
 	}
 	if held.resources != nil {
-		result = errors.Join(result, held.resources.Close())
+		result = errors.Join(result, held.resources.closeCustody())
 	}
 	return result
 }

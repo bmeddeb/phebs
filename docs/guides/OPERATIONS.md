@@ -470,13 +470,34 @@ qualification pending. Its linked-workspace FD6 includes source and every mutabl
 preparation/epoch root. Session cleanup retains the original root unreaped while
 draining pinned descendants, then performs the genuine Wait; a refused session
 anchor preserves safe cancellation through an already pinned root.
-Its source-owned rehearsal policy constrains whole-controller RSS to 6 GiB,
+Its source-owned v2 rehearsal policy constrains whole-controller RSS to 4 GiB,
 separately charges protected payload, and keeps 1 GiB kernel/cache allowance plus
 1 GiB host headroom. These are prospective sampled constraints, not kernel memory
 enforcement or formal profile admission. Initial full reservation and subsequent
 independent 2-GiB slack checks use fresh native physical/cgroup observations;
 sampled owned RSS receives no slack credit. The owning PLAN decision retains the
 complete formula, uncertainty and joining rules. No actual c.c gate is passed.
+
+The first exact `2754d208` full-native attempt completed its three actual
+reference comparisons, then correctly refused policy v1 before any author or
+server operation: 10,504,626,176 required bytes exceeded 8,633,675,776 observed
+available bytes. Its
+[failure receipt](../../spike/t42h2r/live-borrow-admission-failure-linux-20261020.json)
+and private fixture remain retained. The zero-counter hierarchy root is valid;
+this record identifies no workload peak or cause of host memory consumption.
+The v2 RSS stop is stricter; it grants no sufficiency claim or unchanged retry.
+After actual joins, operation/admission refusal remains a flow failure while
+successful keeper retirement permits explicit cleanup of the other owners.
+Actual custody/close errors stay errors; a driver may proceed to the next owner
+only after verifying the current one actually closed. Unknown joining still
+retains the full loan scope. Corrected-source review and full native acceptance
+remain required.
+
+Operational cancellation and control settlement have distinct private lifetimes.
+Cancellation stops work and forbids new Starts immediately; the accounting
+transports remain alive for genuine terminal exchanges, Wait/EOF and receiver
+joins. Their owner ends the settlement lifetime only after those controls close.
+Canceled or failed controls still refuse; cancellation never establishes a join.
 
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).

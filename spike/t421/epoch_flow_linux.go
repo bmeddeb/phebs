@@ -31,6 +31,8 @@ type LinuxExecutionEpochFlow struct {
 	request           LinuxExecutionEpochRequest
 	lifetime          context.Context
 	cancel            context.CancelFunc
+	settlement        context.Context
+	settleCancel      context.CancelFunc
 	ready             chan error
 	done              chan struct{}
 	requests          chan linuxEpochOperation
@@ -87,7 +89,8 @@ func PrepareLinuxExecutionEpochFlow(ctx context.Context, request LinuxExecutionE
 		return nil, ErrExecutionEpochOne
 	}
 	lifetime, cancel := context.WithCancel(context.Background())
-	flow := &LinuxExecutionEpochFlow{request: request, lifetime: lifetime, cancel: cancel, ready: make(chan error, 1), done: make(chan struct{}), requests: make(chan linuxEpochOperation)}
+	settlement, settleCancel := context.WithCancel(context.Background())
+	flow := &LinuxExecutionEpochFlow{request: request, lifetime: lifetime, cancel: cancel, settlement: settlement, settleCancel: settleCancel, ready: make(chan error, 1), done: make(chan struct{}), requests: make(chan linuxEpochOperation)}
 	author.borrowedBy = flow
 	epochs.active = true
 	epochs.borrowedBy = flow
@@ -105,6 +108,7 @@ func PrepareLinuxExecutionEpochFlow(ctx context.Context, request LinuxExecutionE
 
 func (flow *LinuxExecutionEpochFlow) work() {
 	defer close(flow.done)
+	defer flow.settleCancel() // Also covers refusal before any control was made.
 	flow.step = "loans"
 	author := flow.request.Epochs.author
 	held := &linuxEpochHeldFlow{builds: author.request.Builds, git: author.request.Git, epochs: flow.request.Epochs, author: author, flow: flow, controllerPID: os.Getpid(), tools: [4]*LinuxExecutionToolCustody{author.request.Author, flow.request.Phebs, flow.request.Zoekt, flow.request.Surreal}}
@@ -133,11 +137,11 @@ func (flow *LinuxExecutionEpochFlow) work() {
 		flow.step = "resource-admission"
 		held.resources, e = admitLinuxEpochResources(flow.lifetime, held, flow.cancel)
 		if e != nil {
-			return e
+			return &linuxEpochOperationFailure{e}
 		}
 		flow.step = "whole-observation"
 		if e = held.startWholeObservation(flow.lifetime); e != nil {
-			return e
+			return &linuxEpochOperationFailure{e}
 		}
 		flow.mu.Lock()
 		flow.admitted = true
@@ -154,7 +158,7 @@ func (flow *LinuxExecutionEpochFlow) work() {
 					flow.err = reply.err
 					flow.mu.Unlock()
 					held.resources.Fail()
-					return reply.err
+					return &linuxEpochOperationFailure{reply.err}
 				}
 			case <-flow.lifetime.Done():
 				flow.mu.Lock()
@@ -163,7 +167,7 @@ func (flow *LinuxExecutionEpochFlow) work() {
 				if closing {
 					return nil
 				}
-				return ErrExecutionEpochOne
+				return &linuxEpochOperationFailure{ErrExecutionEpochOne}
 			}
 		}
 	})
@@ -187,6 +191,9 @@ func (flow *LinuxExecutionEpochFlow) work() {
 }
 
 func newLinuxEpochCoordinator(owner *LinuxExecutionEpochFlow, held *linuxEpochHeldFlow, plan Plan) (_ *ExecutionEpochOne, retErr error) {
+	if owner == nil || owner.lifetime == nil || owner.lifetime.Err() != nil || owner.settlement == nil || owner.settlement.Err() != nil || owner.settleCancel == nil {
+		return nil, ErrExecutionEpochOne
+	}
 	adapter := &linuxEpochCoordinator{held: held}
 	author := &ExecutionAuthorCustody{native: adapter, parent: held.author.roots[0].path, planSHA256: held.author.planSHA256, expected: held.author.projection.expected, deadlines: held.author.projection.deadlines, phases: held.author.projection.phases}
 	epochs := &ExecutionEpochConfigCustody{native: &linuxEpochConfigAdapter{adapter}, author: author, epochs: held.epochs.epochs, listeners: held.epochs.listeners, queryCatalog: held.epochs.queryCatalog, parsedConfigs: held.epochs.parsedConfigs, logicalChanges: held.epochs.logicalChanges}
@@ -210,19 +217,19 @@ func newLinuxEpochCoordinator(owner *LinuxExecutionEpochFlow, held *linuxEpochHe
 	if e != nil || se != nil {
 		return nil, ErrExecutionEpochOne
 	}
-	core.controller, e = dispatchadmission.New(owner.lifetime, da)
+	core.controller, e = dispatchadmission.New(owner.settlement, da)
 	if e != nil {
 		return nil, ErrExecutionEpochOne
 	}
-	core.parent, e = core.controller.NewLocalProducer(owner.lifetime, executionRootProducer)
+	core.parent, e = core.controller.NewLocalProducer(owner.settlement, executionRootProducer)
 	if e != nil {
 		return nil, ErrExecutionEpochOne
 	}
-	store, e := storeaccounting.New(owner.lifetime, sa)
+	store, e := storeaccounting.New(owner.settlement, sa)
 	if e != nil {
 		return nil, ErrExecutionEpochOne
 	}
-	core.store, e = storeaccounting.NewTransport(owner.lifetime, store, wire)
+	core.store, e = storeaccounting.NewTransport(owner.settlement, store, wire)
 	if e != nil {
 		return nil, ErrExecutionEpochOne
 	}
@@ -242,6 +249,17 @@ func (flow *LinuxExecutionEpochFlow) execute(operation linuxEpochOperation) (rep
 		reply.err = ErrExecutionEpochOne
 		return
 	}
+	link := newLinuxEpochOperationLink(operation.ctx, flow.lifetime)
+	operation.ctx = link.ctx
+	defer func() {
+		if reply.run != nil {
+			// Persistent server contexts descend from this launch context. Keep
+			// its cancellation link until that real server has joined.
+			flow.held.operationLinks = append(flow.held.operationLinks, link)
+		} else {
+			link.close()
+		}
+	}()
 	switch operation.kind {
 	case linuxEpochAuthorA:
 		flow.step = "author-a"
@@ -283,6 +301,32 @@ func (flow *LinuxExecutionEpochFlow) execute(operation linuxEpochOperation) (rep
 		reply.err = ErrExecutionEpochOne
 	}
 	return
+}
+
+// An operation stops immediately on caller or flow cancellation while the
+// separate settlement lifetime remains available to genuine Wait/EOF owners.
+type linuxEpochOperationLink struct {
+	ctx    context.Context
+	cancel context.CancelFunc
+	stop   func() bool
+	done   chan struct{}
+	once   sync.Once
+}
+
+func newLinuxEpochOperationLink(ctx, lifetime context.Context) *linuxEpochOperationLink {
+	operation, cancel := context.WithCancel(ctx)
+	link := &linuxEpochOperationLink{ctx: operation, cancel: cancel, done: make(chan struct{})}
+	link.stop = context.AfterFunc(lifetime, func() { defer close(link.done); cancel() })
+	return link
+}
+
+func (link *linuxEpochOperationLink) close() {
+	link.once.Do(func() {
+		if !link.stop() {
+			<-link.done
+		}
+		link.cancel()
+	})
 }
 func (flow *LinuxExecutionEpochFlow) call(ctx context.Context, kind uint8, run *ExecutionEpochOneRun) linuxEpochReply {
 	failure := linuxEpochReply{err: ErrExecutionEpochOne}

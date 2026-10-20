@@ -242,6 +242,16 @@ workspace/session/image binding and the source-owned prospective resource policy
 recorded in PLAN. Full c.c native acceptance and every broader H2/readiness/freeze
 gate remain pending; historical plan and meter contracts stay exact.
 
+c.c's first exact `2754d208` native stopped at resource admission after all
+three actual reference comparisons joined successfully. Policy v1's complete
+10,504,626,176-byte requirement exceeded the observed 8,633,675,776 available
+bytes; no author/server operation started. The retained
+[failure receipt](../spike/t42h2r/live-borrow-admission-failure-linux-20261020.json)
+earns no composed pass. Prospective v2 tightens whole-root RSS to 4 GiB without
+reducing the workload, payload charges or kernel/cache/host slack. Joined-error
+propagation and actual-closed cleanup corrections still need exact source gates,
+independent review and the same full native acceptance.
+
 
 Next: [Linux office handoff #124](https://github.com/bmeddeb/phebs/issues/124)
 mechanism qualification → remaining T42.H2 consumer/executor/resource admission

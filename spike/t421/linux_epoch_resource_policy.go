@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	linuxEpochRSSReservation       = uint64(6 << 30)
+	linuxEpochRSSReservation       = uint64(4 << 30)
 	linuxEpochKernelCacheAllowance = uint64(1 << 30)
 	linuxEpochHostHeadroom         = uint64(1 << 30)
 )
@@ -39,7 +39,7 @@ type linuxEpochResourcePolicy struct {
 
 func linuxEpochPolicy() linuxEpochResourcePolicy {
 	return linuxEpochResourcePolicy{
-		Schema:              "t42-linux-epoch-operational-resources-v1",
+		Schema:              "t42-linux-epoch-operational-resources-v2",
 		RSSReservationBytes: linuxEpochRSSReservation, KernelCacheAllowanceBytes: linuxEpochKernelCacheAllowance, HostHeadroomBytes: linuxEpochHostHeadroom,
 		Scope:       "unprivileged-linux-amd64;one-bound-controller-lifetime-and-all-descendants;mnt-user-pid-cgroup-namespace-pins;controller-heap-included;server-subgauges-not-added",
 		Concurrency: "one-server-and-one-serial-author;return-after-predecessor-join;no-preparation-children-or-failed-prefixes",
@@ -73,6 +73,7 @@ type linuxEpochResourceAdmission struct {
 	issued      bool
 	closed      bool
 	err         error
+	closeErr    error
 }
 
 // The only production issuer receives the genuine complete held-loan scope.
@@ -303,11 +304,35 @@ func (a *linuxEpochResourceAdmission) Close() error {
 	}
 	a.mu.Lock()
 	defer a.mu.Unlock()
+	return errors.Join(a.err, a.closeCustodyLocked())
+}
+
+// The joined flow carries its operational refusal separately from actual
+// keeper retirement. A successful close cannot clear that refusal.
+func (a *linuxEpochResourceAdmission) closeCustody() error {
+	if a == nil {
+		return errLinuxEpochResources
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.closeCustodyLocked()
+}
+
+func (a *linuxEpochResourceAdmission) operationErr() error {
+	if a == nil {
+		return errLinuxEpochResources
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.err
+}
+
+func (a *linuxEpochResourceAdmission) closeCustodyLocked() error {
 	if !a.closed {
 		a.closed = true
 		if a.namespaces.close() != nil {
-			a.err = errLinuxEpochResources
+			a.closeErr = errLinuxEpochResources
 		}
 	}
-	return a.err
+	return a.closeErr
 }
