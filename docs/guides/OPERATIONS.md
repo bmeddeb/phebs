@@ -264,6 +264,15 @@ H2q.b still requires the full owner, hiding selected original SDK/cache/source
 paths and an implemented protected reference build. Parent H2q/H2 and aggregate
 resource/readiness/freeze/ceremony gates remain open.
 
+H2q.b's preparation owner returns retained cleanup custody after private-stage
+creation, including failed construction. Its `Close(ctx)` must join preparation
+Git and the H2k constructor before the caller disposes any private prefix. A
+deadline is not a join. Unknown entries, replaced owner/payload directories or
+incomplete reservations retain the prefix; cleanup never follows an internal
+symlink to a still-matching source inode. The prepared tree supplies no executable
+SDK path, reference-tool identity or aggregate allowance. Protected reference
+execution and original-input hiding still require their separate native proof.
+
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
 It binds `c07bc930` and is preserved unchanged, so it no longer describes the

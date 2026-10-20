@@ -4313,6 +4313,17 @@ copies/trees/output/compiler costs and historical Darwin behavior. Complete
 aggregate RAM/process/concurrency admission and all downstream H2/readiness/
 freeze gates remain mandatory. Splitting these scopes waives no parent AC.
 
+The Linux preparation owner now reconstructs exact source through retained H2p
+Git commands, shares checksum-selected module verification with the unchanged
+Darwin writer, and constructs one SDK/module/source/Git H2k tree. Its public
+surface exposes no SDK path or arbitrary runner. Preparation and constructor
+joins precede cleanup; unknown/replaced prefixes retain custody. Review found
+and corrected intermediate-prefix and outer-owner cleanup gaps, with explicit
+file-retention regressions. This is preparation implementation, not completed
+H2q.b qualification: the actual reference transaction, hiding selected originals,
+native proof and full acceptance/review gates remain pending. Separate copying,
+hashing, tree, worker-retention and cleanup costs are recorded in PLAN.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

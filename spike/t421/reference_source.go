@@ -106,7 +106,7 @@ func createExecutionReferenceSourceBounded(
 		index.WriteString(row)
 	}
 	reference := executionReferenceSource{
-		root:   executionCheckoutInspector{root: destination, git: origin.git, digest: origin.digest, custody: origin.custody},
+		root:   executionCheckoutInspector{root: destination, git: origin.git, digest: origin.digest, custody: origin.custody, transport: origin.transport},
 		source: source, tree: tree, entries: entries,
 	}
 	if _, err := reference.root.run(ctx, 4096, "init", "--quiet", "--template=", "--object-format=sha1"); err != nil {

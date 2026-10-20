@@ -14625,3 +14625,39 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   causes. H2q.a is complete as a qualified preparation mechanism; H2q.b retains
   full original hiding, reference provenance and public Go ownership. Every
   previously stated separate cost and aggregate H2/readiness/freeze gate remains.
+
+- **2026-10-19 — T42.H2q.b protected-input preparation owner.**
+  Use a distinct Linux Go owner rather than issuing a Darwin path or supplying
+  the historical `referenceInputs` lineage. Preparation reconstructs exact
+  clean source with the H2p Git loan, shares the existing checksum-selected
+  module algorithm through a private writer seam, copies the six existing SDK
+  selections and seven verified Git aliases, and publishes only an independently
+  constructed H2k root named `inputs`. No SDK path or arbitrary public runner is
+  exposed. The common checkout inspector preserves its transport when building
+  fresh source metadata; mixed executable/transport authority refuses. Each
+  preparation Git worker retains its loan, launching thread, input/output and
+  private workspace through actual Wait and observed session drain, including
+  after its caller deadline. Close must join preparation and the H2k constructor
+  before disposing their source prefixes. Exact cleanup pins recorded parent
+  directories and rechecks both outer-owner and payload identities; unknown,
+  replaced or incompletely recorded prefixes remain retained. Two review-found
+  prefix/outer-owner deletion gaps have explicit retention regressions.
+  Source reserves its worktree/loose-object/index/tree/control envelope before
+  writes and settles to actual inventory afterward. Mutable preparation and
+  protected trees each retain the existing combined 2-GiB/100,000-entry ceiling;
+  they coexist and are separately charged, alongside H2p, sealed helper, page
+  cache, source metadata and future build/output copies. Construction repeats
+  bounded source/checkout inventories and SHA-1 blob checks, selected SDK/module
+  copying with per-file sync, module h1 reads, seven Git copy/SHA-256 passes and
+  H2k transfer/protected-copy hashes. One preparation command per transport holds
+  a worker, Wait goroutine, locked OS thread, up-to-64-MiB stdout and 64-KiB
+  stderr; uncertainty can retain all of them beyond the cooperative deadline.
+  Cleanup performs a metadata inventory, reverse path sort, parent pinning and
+  ancestry checks, retaining at most two transient parent roots. Check/Inventory
+  add only kernel/state observations; cleanup holds the owner mutex through
+  joins and disposal. Failed fresh attempts repeat copying/hashing and retain
+  unknown residue. No production query, tick, startup, no-op or publication
+  caller, schema, cache invalidation or aggregate concurrency allowance is added.
+  This implements preparation only. Full protected reference execution, original
+  SDK/cache/source hiding, native integration and remaining H2q.b acceptance are
+  still pending; the neutral helper and historical Darwin recipes stay exact.

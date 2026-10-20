@@ -101,9 +101,23 @@ func inspectExecutionCheckout(ctx context.Context, inspection executionCheckoutI
 type executionCheckoutInspector struct {
 	root, git, digest string
 	custody           *ExecutionGitCustody
+	transport         executionCheckoutGit
+}
+
+// A protected platform transport owns only these existing checkout commands.
+// Legacy observers keep their original executable and environment path.
+type executionCheckoutGit interface {
+	checkGit(context.Context, string) error
+	runInput(context.Context, string, io.Reader, int64, ...string) ([]byte, error)
 }
 
 func (inspection executionCheckoutInspector) checkGit(ctx context.Context) error {
+	if inspection.transport != nil {
+		if inspection.custody != nil || inspection.git != "" {
+			return ErrExecutionGitCustody
+		}
+		return inspection.transport.checkGit(ctx, inspection.digest)
+	}
 	if inspection.custody != nil {
 		identity, path, err := inspection.custody.Check(ctx)
 		if err != nil || identity.SHA256 != inspection.digest || path != inspection.git {
@@ -129,6 +143,9 @@ func (inspection executionCheckoutInspector) runInput(ctx context.Context, input
 	}
 	if err := inspection.checkGit(ctx); err != nil {
 		return nil, errors.New("checkout admission Git executable changed")
+	}
+	if inspection.transport != nil {
+		return inspection.transport.runInput(ctx, inspection.root, input, limit, args...)
 	}
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()

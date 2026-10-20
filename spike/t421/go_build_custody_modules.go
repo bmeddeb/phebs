@@ -18,8 +18,20 @@ import (
 	"golang.org/x/mod/sumdb/dirhash"
 )
 
-func (custody *ExecutionGoBuildCustody) prepareModules(ctx context.Context, original string) (retErr error) {
-	if err := custody.makeDirectory("modules"); err != nil {
+// Both platform constructors use the same checksum selection. Each writer
+// retains its own protection and aggregate-budget rules; this grants no custody.
+type goBuildModuleStaging interface {
+	makeDirectory(string) error
+	copyTree(context.Context, string, string, string) error
+	writeControl(context.Context, string, []byte) error
+}
+
+func (custody *ExecutionGoBuildCustody) prepareModules(ctx context.Context, original string) error {
+	return prepareGoBuildModules(ctx, custody.tree, custody, original)
+}
+
+func prepareGoBuildModules(ctx context.Context, tree *os.Root, staging goBuildModuleStaging, original string) (retErr error) {
+	if err := staging.makeDirectory("modules"); err != nil {
 		return err
 	}
 	cache, err := os.OpenRoot(original)
@@ -32,7 +44,7 @@ func (custody *ExecutionGoBuildCustody) prepareModules(ctx context.Context, orig
 		}
 	}()
 	budget := referenceModuleBudget{}
-	rawMod, err := readReferenceModuleFile(ctx, custody.tree, "source/go.mod", maxReferenceGoSumBytes, &budget)
+	rawMod, err := readReferenceModuleFile(ctx, tree, "source/go.mod", maxReferenceGoSumBytes, &budget)
 	if err != nil {
 		return ErrExecutionGoBuildCustody
 	}
@@ -40,7 +52,7 @@ func (custody *ExecutionGoBuildCustody) prepareModules(ctx context.Context, orig
 	if err != nil || parsed.Module == nil || parsed.Module.Mod.Path != "github.com/bmeddeb/phebs" || len(parsed.Replace) != 0 {
 		return ErrExecutionGoBuildCustody
 	}
-	raw, err := readReferenceModuleFile(ctx, custody.tree, "source/go.sum", maxReferenceGoSumBytes, &budget)
+	raw, err := readReferenceModuleFile(ctx, tree, "source/go.sum", maxReferenceGoSumBytes, &budget)
 	if err != nil {
 		return ErrExecutionGoBuildCustody
 	}
@@ -76,10 +88,10 @@ func (custody *ExecutionGoBuildCustody) prepareModules(ctx context.Context, orig
 		} else if err != nil || !info.Mode().IsRegular() || info.Size() < 0 || info.Size() > maxReferenceGoSumBytes || sums[key+"/go.mod"] == "" {
 			return ErrExecutionGoBuildCustody
 		}
-		if err := custody.copyTree(ctx, original, modPath, filepath.Join("modules", modPath)); err != nil {
+		if err := staging.copyTree(ctx, original, modPath, filepath.Join("modules", modPath)); err != nil {
 			return err
 		}
-		modRaw, err := readReferenceModuleFile(ctx, custody.tree, filepath.Join("modules", modPath), maxReferenceGoSumBytes, &budget)
+		modRaw, err := readReferenceModuleFile(ctx, tree, filepath.Join("modules", modPath), maxReferenceGoSumBytes, &budget)
 		if err != nil {
 			return ErrExecutionGoBuildCustody
 		}
@@ -98,7 +110,7 @@ func (custody *ExecutionGoBuildCustody) prepareModules(ctx context.Context, orig
 				return ErrExecutionGoBuildCustody
 			}
 			normalized, err := normalizeGoBuildModuleInfo(infoRaw, version)
-			if err != nil || custody.writeControl(ctx, filepath.Join("modules", base+".info"), normalized) != nil {
+			if err != nil || staging.writeControl(ctx, filepath.Join("modules", base+".info"), normalized) != nil {
 				return ErrExecutionGoBuildCustody
 			}
 		}
@@ -114,16 +126,16 @@ func (custody *ExecutionGoBuildCustody) prepareModules(ctx context.Context, orig
 		} else if err != nil {
 			return ErrExecutionGoBuildCustody
 		}
-		if err := custody.copyTree(ctx, original, directory, filepath.Join("modules", directory)); err != nil {
+		if err := staging.copyTree(ctx, original, directory, filepath.Join("modules", directory)); err != nil {
 			return err
 		}
-		actual, err := hashReferenceModuleDirectory(ctx, custody.tree, filepath.Join("modules", directory), key, &budget)
+		actual, err := hashReferenceModuleDirectory(ctx, tree, filepath.Join("modules", directory), key, &budget)
 		if err != nil || actual != sums[key] {
 			return ErrExecutionGoBuildCustody
 		}
 		// DownloadDir requires this marker even with no zip. Never import the
 		// cache's claimed checksum: only the independently verified h1 is used.
-		if err := custody.writeControl(ctx, filepath.Join("modules", base+".ziphash"), []byte(actual)); err != nil {
+		if err := staging.writeControl(ctx, filepath.Join("modules", base+".ziphash"), []byte(actual)); err != nil {
 			return err
 		}
 	}
