@@ -4377,6 +4377,18 @@ small source-free receipt. No repeated passed long author/neutral workloads,
 new child/recipe authority or rewritten historical receipt. The pending H2r.a
 worker must consume the corrected ordering before qualification.
 
+Corrected exact source `a7d3963d` passed all seven serial gates: actual root-pin
+normal/race/tagged regressions, tagged vet, scoped lint (zero issues),
+docs/glossary and Linux arm64 compile-only. Gate roots actually joined with empty
+sessions; zero tests skipped. The real WNOWAIT/pinned-zombie/exit-17/ESRCH and
+isolated actual-EMFILE controls pass, and independent source/custody/cost review
+reports no findings. The first `d1f63117` record remains a scoped-lint ST1008
+failure, corrected only by returning error last. The source-free
+[receipt](../spike/t42h2q/root-pin-linux-20261020.json) binds both records, five
+source files and removed compile-only artifact. This qualifies the correction;
+final evidence-descendant review remains required before integration. H2r.a
+route qualification and all broader H2/readiness/freeze gates remain open.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

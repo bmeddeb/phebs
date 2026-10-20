@@ -322,6 +322,16 @@ The small early-exit regression qualifies this ordering correction; preserve
 passed long native receipts without rerunning their workloads. H2r.a remains
 pending until the shared correction and its focused/review gates pass.
 
+The correction at `a7d3963d` passed real normal/race/tagged early-exit and
+isolated-EMFILE regressions, tagged vet/scoped lint, docs/glossary and Linux arm64
+compile-only. Every gate actually joined with an empty session; no test skipped.
+The arm64 binary and its disposable cache were removed without execution.
+Independent source/custody/cost review reports no findings. Preserve the first
+`d1f63117` ST1008 lint refusal and corrected gates bound by
+[`root-pin-linux-20261020.json`](../../spike/t42h2q/root-pin-linux-20261020.json).
+Final evidence review precedes integration. Do not repeat passed long native
+workloads: H2r.a adopts the primitive and separately proves its proposed route.
+
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
 It binds `c07bc930` and is preserved unchanged, so it no longer describes the

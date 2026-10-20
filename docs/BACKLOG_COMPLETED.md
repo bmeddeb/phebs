@@ -11466,3 +11466,30 @@ optional V3 overlay has no new native claim. Remaining Linux author/executor
 consumers, pressure/restore, source-owned aggregate reservations, T42.2v,
 complete readiness and fresh freeze remain open. No ceremony, scale or production
 release/signing/activation result follows.
+
+
+## T42.H2q.c · Pin child identity before root reaping (2026-10-20)
+
+A shared private Linux helper pins each owned unreaped root before launching
+its sole Wait, covering the reference worker and both native namespace/lifetime
+controllers. Pin failure still joins that same root, with unchanged locked-thread,
+session-drain and uncertain-loan retention rules and no bare-PID fallback.
+
+Exact source `a7d3963dbc23bb3c5373063d51132250cbb033d9` passed normal/race/tagged
+actual-process regressions, tagged vet, scoped lint, docs/glossary and Linux arm64
+compile-only; all seven gate roots joined with empty sessions and zero skips.
+WNOWAIT zombie pinning, sole exit-17 Wait, exit readiness/post-join ESRCH and
+isolated actual EMFILE/no-fd/same-Wait assertions pass. The hashed arm64 binary
+and disposable cache were removed without execution. Independent exact-source
+custody/cost review reports critical/high/medium/low `0/0/0/0`. The first
+`d1f63117` scoped-lint ST1008 failure remains exact in the
+[receipt](../spike/t42h2q/root-pin-linux-20261020.json), alongside corrected
+gates and five source hashes. Final evidence-descendant review is required
+before integration.
+
+Only acquisition order changes: production keeps its existing pidfd syscall,
+descriptor, result channel and Wait goroutine. The regression alone adds three
+fixed small child Starts per suite. Passed long native receipts remain exact;
+H2r.a must adopt this primitive before route qualification. Linux author/executor,
+pressure/restore, aggregate resource/readiness/freeze and ceremony/signing/
+activation gates remain open.

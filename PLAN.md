@@ -14784,3 +14784,18 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   update every caller without changing acquisition, Wait, signal or cleanup
   semantics. Preserve that first serial record; corrected-source gates remain
   required before integration.
+
+  Corrected source `a7d3963dbc23bb3c5373063d51132250cbb033d9` passed all seven
+  serial gates: real root-pin normal/race/tagged regressions, tagged vet, scoped
+  lint (zero issues), docs/glossary and Linux arm64 compile-only. Every gate root
+  actually joined and its session was empty. The tests require WNOWAIT zombie
+  observation, successful pinning before the sole exit-17 Wait, exit readiness,
+  post-join pidfd signal-0/SIGKILL ESRCH, and actual isolated EMFILE with no
+  published fd but the same joined exit-17 result. The arm64 binary was hashed
+  and removed with its disposable cache; it was never executed. Exact independent
+  source/custody/cost review reports zero findings at every severity. The
+  [receipt](spike/t42h2q/root-pin-linux-20261020.json) binds all five Go files,
+  both raw serial records and the final host observation; first-source ST1008
+  remains failed evidence. Final source-identical receipt/documentation review
+  remains an integration gate. H2r.a must adopt this primitive and separately
+  qualify its route; complete H2/readiness/freeze and ceremony authority stay open.
