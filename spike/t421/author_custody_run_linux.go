@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"errors"
+	"io"
 	"os"
 	"os/exec"
 	"runtime"
@@ -280,9 +281,12 @@ func (owner *LinuxExecutionAuthorCustody) runTransport(ctx context.Context, atte
 	}
 	if pinErr == nil {
 		defer func() { _ = unix.Close(pidfd) }()
+	} else {
+		attempt.refuse("root-pin")
 	}
 	for _, i := range []int{1, 3, 5, 7} {
 		if files[i].Close() != nil {
+			attempt.refuse("child-endpoint-close")
 			retErr = ErrExecutionAuthorCustody
 		}
 		files[i] = nil
@@ -309,12 +313,14 @@ func (owner *LinuxExecutionAuthorCustody) runTransport(ctx context.Context, atte
 	bootstrap := dispatchadmission.ProductionBootstrap{Program: dispatchadmission.ProgramCorpusAuthor, InputSHA256: sha256.Sum256(raw), Producer: view.Producer, Phase: view.Phase, Limits: view.Limits, Control: controlConfig, Tools: []dispatchadmission.ProductionToolBinding{{Role: "git", Path: core + "/git", Environment: environment}}}
 	attempt.step = "bootstrap"
 	if retErr == nil && dispatchadmission.SendProductionBootstrap(operation, files[0], files[2], bootstrap) != nil {
+		attempt.refuse("bootstrap-send")
 		retErr = ErrExecutionAuthorCustody
 	}
 	if retErr == nil {
 		control, err = dispatchadmission.NewPhaseControl(lifetime, files[2], view.Producer.Binding, controlConfig)
 		files[2] = nil
 		if err != nil {
+			attempt.refuse("control-create")
 			retErr = ErrExecutionAuthorCustody
 		} else {
 			completion := make(chan error, 1)
@@ -335,11 +341,26 @@ func (owner *LinuxExecutionAuthorCustody) runTransport(ctx context.Context, atte
 	reader := bufio.NewReaderSize(output, MaxExecutionCorpusAuthorResponseBytes+1)
 	if retErr == nil {
 		retErr = writeAuthorCustodyRequest(operation, input, raw)
+		if retErr != nil {
+			attempt.refuse("request-write")
+		}
 	}
 	if retErr == nil {
 		responseRaw, e := reader.ReadSlice('\n')
 		response, responseErr := authorCustodyCanonicalResponseFor(responseRaw, owner.projection.expected[index], true)
 		if e != nil || responseErr != nil || operation.Err() != nil || owner.previous != nil && response.ConfigSHA256 != owner.previous.ConfigSHA256 {
+			switch {
+			case errors.Is(e, io.EOF):
+				attempt.refuse("response-read-eof")
+			case e != nil:
+				attempt.refuse("response-read-error")
+			case responseErr != nil:
+				attempt.refuse("response-canonical")
+			case operation.Err() != nil:
+				attempt.refuse("response-context")
+			default:
+				attempt.refuse("response-config-continuity")
+			}
 			retErr = ErrExecutionAuthorCustody
 		} else {
 			attempt.result.Response = &response
@@ -347,6 +368,7 @@ func (owner *LinuxExecutionAuthorCustody) runTransport(ctx context.Context, atte
 			// No checkpoint substitutes for terminal completion.
 			attempt.step = "terminal-pause"
 			if control.Pause(operation) != nil {
+				attempt.refuse("terminal-pause")
 				retErr = ErrExecutionAuthorCustody
 			}
 		}
@@ -372,6 +394,7 @@ func (owner *LinuxExecutionAuthorCustody) runTransport(ctx context.Context, atte
 		attempt.step = "actual-wait"
 	}
 	waitErr := <-waited
+	attempt.recordWait(command, waitErr)
 	attempt.result.RootJoined = true
 	if retErr == nil {
 		attempt.step = "session-drain"
@@ -385,25 +408,41 @@ func (owner *LinuxExecutionAuthorCustody) runTransport(ctx context.Context, atte
 	}
 	if served != nil {
 		if e := <-served; e != nil {
+			attempt.refuse("control-serve")
 			retErr = ErrExecutionAuthorCustody
 		}
 	}
 	if control != nil && control.Close() != nil {
+		attempt.refuse("control-close")
 		retErr = ErrExecutionAuthorCustody
 	}
 	// Standalone completion owns its final fence; shared work leaves others live.
 	if launch.parent == nil && controller.Fence() != nil {
+		attempt.refuse("controller-fence")
 		retErr = ErrExecutionAuthorCustody
 	}
 	attempt.result.Accounting, err = controller.Snapshot()
 	attempt.stderr = append([]byte(nil), stderr.buffer.Bytes()...)
 	if waitErr != nil || err != nil || stderr.err != nil || operation.Err() != nil || launch.parent == nil && !attempt.result.Accounting.Complete || !authorCustodyProducerComplete(attempt.result.Accounting, view.Producer.ID, authorCustodyAttempts(index)) {
+		switch {
+		case waitErr != nil:
+			attempt.refuse("actual-wait")
+		case err != nil:
+			attempt.refuse("accounting-snapshot")
+		case stderr.err != nil:
+			attempt.refuse("stderr-bound")
+		case operation.Err() != nil:
+			attempt.refuse("operation-context")
+		default:
+			attempt.refuse("producer-completion")
+		}
 		retErr = ErrExecutionAuthorCustody
 	}
 	if retErr == nil {
 		attempt.step = "continuity"
 	}
 	if retErr == nil && (readAuthorCustodyEOF(operation, output, reader) != nil || check(operation) != nil || owner.checkSource(operation, attempt.result.Response) != nil) {
+		attempt.refuse("continuity")
 		retErr = ErrExecutionAuthorCustody
 	}
 	if retErr == nil {
@@ -418,4 +457,27 @@ func linuxAuthorCustodyConfig(index int, binding [32]byte) (dispatchadmission.Co
 	control.TerminalAuthor = true
 	control.MaximumWireBytes = 4 * dispatchadmission.FrameBytes
 	return config, control
+}
+
+// Written by the one attempt worker and read only after its done join.
+func (attempt *linuxAuthorAttempt) refuse(stage string) {
+	if attempt.privateFailure == "" {
+		attempt.privateFailure = stage
+	}
+}
+
+func (attempt *linuxAuthorAttempt) recordWait(command *exec.Cmd, err error) {
+	attempt.waitObserved, attempt.waitFailed = true, err != nil
+	if err != nil {
+		attempt.refuse("actual-wait")
+	}
+	if command.ProcessState != nil {
+		if status, ok := command.ProcessState.Sys().(syscall.WaitStatus); ok {
+			attempt.waitStatusObserved = true
+			attempt.waitExitCode = status.ExitStatus()
+			if status.Signaled() {
+				attempt.waitSignal = int(status.Signal())
+			}
+		}
+	}
 }

@@ -51,6 +51,9 @@ type ExecutionEpochOne struct {
 	release                context.CancelFunc
 	used, authored, closed bool
 	closeErr               error
+	closeOperationErr      error // Joined work/control refusal, separate from keeper retirement.
+	closeCustodyErr        error
+	closeJoined            bool // Set only after the actual control Close calls return.
 	retained               *ExecutionEpochOneRun
 	logicalUsed            bool
 	returnUsed             bool
@@ -277,13 +280,18 @@ func (flow *ExecutionEpochOne) Close() error {
 	flow.closed = true
 	if flow.profileRuntime != nil {
 		flow.closeErr = errors.Join(flow.closeErr, flow.profileRuntime.err)
+		flow.closeOperationErr = errors.Join(flow.closeOperationErr, flow.profileRuntime.err)
 	}
 	if flow.profileSignerNamespace != nil {
-		flow.closeErr = errors.Join(flow.closeErr, flow.profileSignerNamespace.Close())
+		err := flow.profileSignerNamespace.Close()
+		flow.closeErr = errors.Join(flow.closeErr, err)
+		flow.closeCustodyErr = errors.Join(flow.closeCustodyErr, err)
 	}
 	if flow.parent != nil {
-		if flow.parent.Close(context.Background()) != nil {
+		// LocalProducer.Close joins its actual receiver even on a failed exchange.
+		if err := flow.parent.Close(context.Background()); err != nil {
 			flow.closeErr = ErrExecutionEpochOne
+			flow.closeOperationErr = errors.Join(flow.closeOperationErr, err)
 		}
 	}
 	if flow.store != nil {
@@ -294,13 +302,16 @@ func (flow *ExecutionEpochOne) Close() error {
 		closeErr := flow.store.Close()
 		if err != nil || prefix.Opened != prefix.TerminalEOF || closeErr != nil && closeErr != storeaccounting.ErrIncomplete {
 			flow.closeErr = ErrExecutionEpochOne
+			flow.closeOperationErr = errors.Join(flow.closeOperationErr, err, closeErr, ErrExecutionEpochOne)
 		}
 	}
 	if flow.release != nil {
 		flow.release()
 	} else {
 		flow.closeErr = ErrExecutionEpochOne
+		flow.closeCustodyErr = ErrExecutionEpochOne
 	}
+	flow.closeJoined = true
 	return flow.closeErr
 }
 

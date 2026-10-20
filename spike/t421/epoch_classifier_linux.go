@@ -4,6 +4,7 @@ package t421
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"slices"
@@ -42,12 +43,17 @@ func (held *linuxEpochHeldFlow) gauge(ctx context.Context, pid int, birth string
 		gauge.observation.Classes[i].Class = class
 	}
 	gauge.classify = func(checkCtx context.Context, observed t4013.NativeProcessRecord) (int, bool) {
-		class, ok := linuxEpochClassifyRow(checkCtx, observed, images)
-		if !ok {
+		class, refusal := linuxEpochClassifyRowDetail(checkCtx, observed, images)
+		if refusal != "" {
 			// The resource probe holds probeGate through this complete census.
 			// Startup's own live controller row never takes this branch.
 			if pid == held.controllerPID && observed.PID != pid && held.resources != nil {
-				return held.resources.ownedDefunctClass(checkCtx, gauge, observed)
+				if index, ok := held.resources.ownedDefunctClass(checkCtx, gauge, observed); ok {
+					return index, true
+				}
+			}
+			if held.resources != nil {
+				held.resources.failDetail(linuxEpochRowRefusal(refusal, observed))
 			}
 			return 0, false
 		}
@@ -59,13 +65,22 @@ func (held *linuxEpochHeldFlow) gauge(ctx context.Context, pid int, birth string
 	}
 	return gauge, row.ObservedName, nil
 }
+func linuxEpochRowRefusal(stage string, row t4013.NativeProcessRecord) string {
+	return fmt.Sprintf("classify/%s PID=%d parent=%d birth=%q name=%q RSS=%d", stage, row.PID, row.ParentPID, row.StartIdentity[:min(len(row.StartIdentity), 64)], row.ObservedName[:min(len(row.ObservedName), 16)], row.RSSBytes)
+}
+
 func linuxEpochClassifyRow(ctx context.Context, row t4013.NativeProcessRecord, images []linuxEpochClassImage) (string, bool) {
+	class, refusal := linuxEpochClassifyRowDetail(ctx, row, images)
+	return class, refusal == ""
+}
+
+func linuxEpochClassifyRowDetail(ctx context.Context, row t4013.NativeProcessRecord, images []linuxEpochClassImage) (string, string) {
 	if ctx == nil || ctx.Err() != nil || row.PID <= 0 {
-		return "", false
+		return "", "binding-or-context"
 	}
 	pidfd, err := unix.PidfdOpen(row.PID, 0)
 	if err != nil {
-		return "", false
+		return "", "pidfd-open"
 	}
 	defer func() { _ = unix.Close(pidfd) }()
 	live := func() bool {
@@ -74,39 +89,57 @@ func linuxEpochClassifyRow(ctx context.Context, row t4013.NativeProcessRecord, i
 		return e == nil && n == 0 && p[0].Revents == 0
 	}
 	before, err := linuxEpochProcessRow(row.PID)
-	if err != nil || !linuxEpochSameProcessRow(row, before) || !live() {
-		return "", false
+	if err != nil {
+		return "", "row-before"
+	}
+	if !linuxEpochSameProcessRow(row, before) {
+		return "", "binding-before"
+	}
+	if !live() {
+		return "", "live-before"
 	}
 	actual, err := os.Open("/proc/" + strconv.Itoa(row.PID) + "/exe")
 	if err != nil {
-		return "", false
+		return "", "image-open"
 	}
 	defer func() { _ = actual.Close() }()
 	info, err := actual.Stat()
 	if err != nil {
-		return "", false
+		return "", "image-stat"
 	}
 	class := ""
 	for _, image := range images {
 		if image.file == nil {
-			return "", false
+			return "", "held-image-missing"
 		}
 		expected, e := image.file.Stat()
 		if e != nil {
-			return "", false
+			return "", "held-image-stat"
 		}
 		if os.SameFile(info, expected) {
 			if class != "" && class != image.class {
-				return "", false
+				return "", "ambiguous-image"
 			}
 			class = image.class
 		}
 	}
 	after, err := linuxEpochProcessRow(row.PID)
-	if err != nil || class == "" || !linuxEpochSameProcessRow(row, after) || !live() || ctx.Err() != nil {
-		return "", false
+	if err != nil {
+		return "", "row-after"
 	}
-	return class, true
+	if class == "" {
+		return "", "unknown-image"
+	}
+	if !linuxEpochSameProcessRow(row, after) {
+		return "", "binding-after"
+	}
+	if !live() {
+		return "", "live-after"
+	}
+	if ctx.Err() != nil {
+		return "", "context-after"
+	}
+	return class, ""
 }
 func linuxEpochSameProcessRow(a, b t4013.NativeProcessRecord) bool {
 	return a.PID == b.PID && a.ParentPID == b.ParentPID && a.StartIdentity == b.StartIdentity && a.ObservedName == b.ObservedName

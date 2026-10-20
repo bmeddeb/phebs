@@ -4609,6 +4609,19 @@ cleanup sampling. Historical receipt validators remain unchanged. Focused
 real-child/race qualification, independent review and the full native gate are
 still required; these pre-native passes do not close c.c or parent H2.
 
+Exact `909abcea` then failed its full native attempt during author A before an
+accepted response, after three successful reference comparisons and successful
+v3 resource admission (8,357,285,888 required / 8,975,831,040 available bytes).
+No server launched. The
+[author failure receipt](../spike/t42h2r/live-borrow-author-failure-linux-20261020.json)
+binds 52 source hashes and five raw control files; its failed fixture remains.
+The first resource/census/classifier predicate is unknown. Source review
+confirmed joined sampler/control errors still poison valid image loans through
+cleanup; a separate finite author/nested-Git census-to-reap race also needs
+bounded qualification and source-owned lifecycle synchronization. Cleanup and
+private first-refusal/actual-Wait diagnostics are being corrected. No unchanged
+full-native retry or composed pass is authorized by the pre-native gates.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

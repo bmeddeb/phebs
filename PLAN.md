@@ -15559,3 +15559,56 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   tests, affected normal/race/static checks, exact-source independent review
   and full native composition remain open. Unchanged connected-package gates
   may carry only through exact source-blob binding, without claiming new runs.
+
+- **2026-10-20 — T42.H2r.c.c retains the failed author prefix and separates joined errors.**
+  Exact `909abcea` passed its focused normal/race/static and source review gates,
+  then the full native attempt stopped after 1,207.82 seconds in author A before
+  accepting its response. All three protected reference comparisons actually
+  joined successfully. Policy v3 initially admitted 8,357,285,888 required bytes
+  against 8,975,831,040 available bytes; 149 later resource checks succeeded.
+  No server launched. The retained
+  `spike/t42h2r/live-borrow-author-failure-linux-20261020.json` binds the exact
+  52 source hashes and five raw control files. Its failed fixture is retained.
+  The generic measurement refusal does not establish a memory shortage, RSS
+  excess, image mismatch, natural author exit or finite-child exit race as the
+  first cause. Root Wait/session observations do not establish complete child
+  history. Historical receipts remain unchanged.
+
+  Source review confirms joined sampler/control errors still escaped through
+  cleanup into all four image callbacks. Preserve public Close's sticky result,
+  but separately record actual control closure and its operational versus
+  keeper-retirement errors. Only returned LocalProducer/Transport Close calls
+  establish that control join; `closed` alone does not. Unknown early Close
+  retains the worker and all input loans. Joined sampler errors remain flow
+  failures; actual signer/resource/FD close and post-use image failures remain
+  custody failures. No global image-loan semantics change.
+
+  Retain a first bounded private refusal predicate before cancellation and the
+  author's actual joined Wait exit/signal status. Fixed resource/census/image
+  predicate labels and bounded row facts stay private, outside public errors,
+  ProcessObservation and receipt authority. Subsequent cleanup cannot replace
+  that first fact. Native failure logging reads already-joined saved state and
+  performs no new sample. This cannot retroactively attribute the retained run.
+
+  A separate source exposure remains: finite author and nested Git children
+  can be reaped between complete census and live-image classification. The
+  server-only expected-stop registry does not own these lifetimes. Bounded real
+  child/grandchild reproductions and source-owned Start/pin/registration through
+  genuine Wait/retirement synchronization are prerequisites to another full
+  composed attempt; a top-author-only exception, arbitrary zombie admission,
+  dropped row/RSS, cached executable claim, retry of a refused sample or meter
+  blackout is insufficient. No long operation may hold the two-second probe
+  gate. Full c.c native acceptance and every later H2/readiness/freeze gate
+  remain open.
+
+  Cost: no request/query, sync, ordinary startup/restart, retry/no-op,
+  publication, schema, cache or child work changes. The Linux held-flow join
+  adds bounded separate error fields and one actual-closure flag; uncertain
+  closure retries at one second with one retained error rather than growing
+  an error chain. Existing sampler/control close locks and order remain;
+  genuine closure is required before loans unwind. Failure-only diagnostic
+  formatting stores at most 512 bytes plus fixed author status fields, under
+  existing locks/worker ownership. Live samples retain the same native reads,
+  image checks, process bound, RSS/slack limits and deadlines. New tests must
+  exercise an actually failed and joined ticker/control under sealed loans,
+  actual keeper failure, first-refusal stickiness and genuine Wait status.

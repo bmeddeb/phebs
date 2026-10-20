@@ -396,9 +396,12 @@ func logLinuxEpochNativeFailure(t *testing.T, flow *LinuxExecutionEpochFlow, bas
 	if flow.held != nil && flow.held.resources != nil {
 		a := flow.held.resources
 		t.Logf("private resource policy=%s initial=%+v calculation=%+v payload_bytes=%d checks=%d", a.policySHA, a.initial, a.calculation, a.footprint.PayloadBytes, a.checks)
+		t.Logf("private first resource refusal=%q", a.privateRefusal())
 	}
 	if flow.held != nil && flow.held.whole != nil {
 		t.Logf("whole private process refusal=%q", flow.held.whole.gauge.privateRefusal())
+		prefix, err := flow.held.whole.snapshot() // Joined saved state only; no new sample.
+		t.Logf("whole private joined=%t RSS_limit_exceeded=%t saved_refusal=%t", prefix.Joined, prefix.RSSLimitExceeded, err != nil)
 	}
 	author := flow.request.Epochs.author
 	author.mu.Lock()
@@ -410,6 +413,7 @@ func logLinuxEpochNativeFailure(t *testing.T, flow *LinuxExecutionEpochFlow, bas
 		select {
 		case <-attempt.done:
 			t.Logf("private author stage=%s pid=%d started=%t joined=%t empty=%t stderr=%q", attempt.step, attempt.pid, attempt.result.RootStarted, attempt.result.RootJoined, attempt.result.SessionEmpty, attempt.stderr)
+			t.Logf("private author first_refusal=%s actual_wait_observed=%t actual_wait_failed=%t status_observed=%t exit_code=%d signal=%d", attempt.privateFailure, attempt.waitObserved, attempt.waitFailed, attempt.waitStatusObserved, attempt.waitExitCode, attempt.waitSignal)
 		default:
 			t.Log("private author done=false; mutable diagnostic fields unavailable")
 		}

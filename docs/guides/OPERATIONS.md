@@ -510,6 +510,20 @@ the unchanged two-second probe deadline and refuse. No timeout or memory bound
 is relaxed. Historical receipt validators are unchanged, and full native
 composition remains required before c.c can qualify.
 
+The subsequent exact `909abcea` full-native attempt passed all three protected
+reference comparisons and initial v3 resource admission, then failed during
+author A before an accepted response; no server launched. Its
+[retained failure receipt](../../spike/t42h2r/live-borrow-author-failure-linux-20261020.json)
+keeps the failed fixture and binds its source/raw control files. The first
+resource, census or classification failure is unknown. Corrected cleanup must
+carry genuinely joined sampler/control errors as flow errors while preserving
+actual keeper/postcheck failures. The next diagnostics retain the first bounded
+private predicate before cancellation plus the actual author Wait status; they
+cannot attribute the earlier run. A separate finite author/nested-Git sampling
+race must be reproduced and closed through source-owned lifecycle custody
+before another full composed attempt. Memory, deadline and refusal bounds stay
+unchanged; pre-native passes establish no composed qualification.
+
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
 It binds `c07bc930` and is preserved unchanged, so it no longer describes the

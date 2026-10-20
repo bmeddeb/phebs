@@ -3,10 +3,13 @@
 package t421
 
 import (
+	"context"
+	"errors"
 	"math"
 	"os"
 	"runtime"
 	"slices"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -217,5 +220,57 @@ func TestLinuxEpochResourceInitialFDInventoryRejectsExtraMemfd(t *testing.T) {
 	defer func() { _ = unix.Close(other) }()
 	if checkLinuxEpochInitialAnonymousObjects(footprint) == nil {
 		t.Fatal("distinct unbound copy was deduplicated")
+	}
+}
+
+func TestLinuxEpochResourceFirstPrivateRefusal(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	first := linuxEpochRowRefusal("row-before", t4013.NativeProcessRecord{PID: 42, ParentPID: 7, StartIdentity: "123", ObservedName: "fixed-child", RSSBytes: 4096})
+	a := &linuxEpochResourceAdmission{}
+	a.cancel = func() {
+		if a.privateRefusal() != first {
+			t.Error("cancellation ran before retaining first predicate")
+		}
+		cancel()
+	}
+	a.failDetail(first)
+	a.Fail()
+	if !errors.Is(a.Check(ctx), errLinuxEpochResources) || a.privateRefusal() != first || ctx.Err() == nil {
+		t.Fatal("later cancellation/cleanup replaced first refusal", a.privateRefusal())
+	}
+	b := &linuxEpochResourceAdmission{}
+	b.failDetail(strings.Repeat("x", maxPrivateProcessRefusalBytes+1))
+	if len(b.privateRefusal()) != maxPrivateProcessRefusalBytes || b.Close() == nil {
+		t.Fatal("private detail exceeded bound or changed sticky public refusal")
+	}
+}
+
+func TestLinuxEpochAuthorPrivateWaitDiagnostic(t *testing.T) {
+	fixture := linuxOwnedDefunctRoot(t)
+	fixture.stopUnreaped(t)
+	waitErr := fixture.handle.Wait()
+	fixture.joined = true
+	attempt := &linuxAuthorAttempt{}
+	attempt.refuse("response-read-error")
+	attempt.recordWait(fixture.authority.run.command, waitErr)
+	attempt.refuse("control-close")
+	if !attempt.waitObserved || !attempt.waitFailed || !attempt.waitStatusObserved || attempt.waitExitCode != -1 || attempt.waitSignal != int(unix.SIGKILL) || attempt.privateFailure != "response-read-error" {
+		t.Fatal("actual joined Wait diagnostic lost status or first predicate", attempt)
+	}
+	firstWait := &linuxAuthorAttempt{}
+	firstWait.recordWait(fixture.authority.run.command, waitErr)
+	firstWait.refuse("control-serve")
+	if firstWait.privateFailure != "actual-wait" {
+		t.Fatal("later control failure hid the earlier observed Wait refusal")
+	}
+	natural := linuxFiniteExitStart(t, "leaf")
+	if natural.receive(t) != "ready" {
+		t.Fatal("diagnostic natural child readiness")
+	}
+	natural.send(t, "exit")
+	cleanWait := &linuxAuthorAttempt{}
+	cleanWait.recordWait(natural.command, natural.wait())
+	if !cleanWait.waitObserved || cleanWait.waitFailed || !cleanWait.waitStatusObserved || cleanWait.waitExitCode != 0 || cleanWait.waitSignal != 0 || cleanWait.privateFailure != "" {
+		t.Fatal("natural successful Wait acquired an invented refusal", cleanWait)
 	}
 }

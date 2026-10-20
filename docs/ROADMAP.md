@@ -259,6 +259,19 @@ claiming their executable image. Prospective private policy v3 retains v2's
 4-GiB bound and complete workload. c.c/PR #156 remains unqualified until the
 correction's focused gates, independent review and full native acceptance pass.
 
+Exact `909abcea` then failed its full native attempt during author A before an
+accepted response, after three successful reference comparisons and successful
+v3 resource admission (8,357,285,888 required / 8,975,831,040 available bytes).
+No server launched. The
+[author failure receipt](../spike/t42h2r/live-borrow-author-failure-linux-20261020.json)
+binds 52 source hashes and five raw control files; its failed fixture remains.
+The first resource/census/classifier predicate is unknown. Source review
+confirmed joined sampler/control errors still poison valid image loans through
+cleanup; a separate finite author/nested-Git census-to-reap race also needs
+bounded qualification and source-owned lifecycle synchronization. Cleanup and
+private first-refusal/actual-Wait diagnostics are being corrected. No unchanged
+full-native retry or composed pass is authorized by the pre-native gates.
+
 
 Next: [Linux office handoff #124](https://github.com/bmeddeb/phebs/issues/124)
 mechanism qualification → remaining T42.H2 consumer/executor/resource admission

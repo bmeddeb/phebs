@@ -133,7 +133,7 @@ func (held *linuxEpochHeldFlow) withLoans(use func() error) error {
 							}
 							// No callback or input loan returns until every operational owner has
 							// actually joined, including error prefixes with no public result.
-							cleanup := held.join()
+							joinedOperation, cleanup := held.join()
 							if cleanup != nil && held.flow.failureStep == "" {
 								held.flow.failureStep = "cleanup"
 							}
@@ -141,7 +141,7 @@ func (held *linuxEpochHeldFlow) withLoans(use func() error) error {
 							if held.resources != nil {
 								resourceErr = held.resources.operationErr()
 							}
-							return outcome.afterJoin(err, cleanup, resourceErr)
+							return outcome.afterJoin(err, cleanup, errors.Join(joinedOperation, resourceErr))
 						})
 					})
 				})
@@ -229,9 +229,8 @@ func (held *linuxEpochHeldFlow) startWholeObservation(ctx context.Context) error
 	held.whole, err = held.resources.startProcessObservation(ctx, 2, name, gauge)
 	return err
 }
-func (held *linuxEpochHeldFlow) join() error {
+func (held *linuxEpochHeldFlow) join() (operationErr, custodyErr error) {
 	held.flow.cancel()
-	var result error
 	for run := range held.servers {
 		run.stopOnce.Do(func() { close(run.stop) })
 		// Context cancellation is not a join; keep this worker and every loan if
@@ -246,7 +245,26 @@ func (held *linuxEpochHeldFlow) join() error {
 	}
 	held.operationLinks = nil
 	if held.flow.core != nil {
-		result = errors.Join(result, held.flow.core.Close())
+		for {
+			core := held.flow.core
+			err := core.Close()
+			core.mu.Lock()
+			joined := core.closeJoined
+			if joined {
+				operationErr = errors.Join(operationErr, core.closeOperationErr)
+				custodyErr = errors.Join(custodyErr, core.closeCustodyErr)
+			}
+			core.mu.Unlock()
+			if joined {
+				break
+			}
+			// An early Close refusal is not a join. Retain this worker and all
+			// loans until the original prework/borrowers actually settle.
+			if operationErr == nil {
+				operationErr = err // One retained refusal, not an unbounded retry chain.
+			}
+			time.Sleep(time.Second)
+		}
 	}
 	// Cancellation of work is not cancellation of settlement. Every real
 	// control receiver and local producer must close before this context ends.
@@ -254,11 +272,13 @@ func (held *linuxEpochHeldFlow) join() error {
 		held.flow.settleCancel()
 	}
 	if held.whole != nil {
+		// close joins the ticker/in-flight probe before reporting its sticky
+		// measurement result. That result cannot invalidate immutable bytes.
 		_, err := held.whole.close()
-		result = errors.Join(result, err)
+		operationErr = errors.Join(operationErr, err)
 	}
 	if held.resources != nil {
-		result = errors.Join(result, held.resources.closeCustody())
+		custodyErr = errors.Join(custodyErr, held.resources.closeCustody())
 	}
-	return result
+	return operationErr, custodyErr
 }

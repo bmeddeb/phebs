@@ -1,0 +1,154 @@
+{
+  "ticket": "T42.H2r.c.c",
+  "status": "FAILED_AUTHOR_A_BEFORE_ACCEPTED_RESPONSE_FIRST_CAUSE_UNSUBSTANTIATED",
+  "source_commit": "909abcea1175c668ada7a2172df817b3048c738c",
+  "source_tree": "208a4f8c2d2286783eadd6a77137f149a9faed7d",
+  "source_file_sha256": {
+    "PLAN.md": "cd610b54a1e66a41ed7b2f090f43ab22ad0456638928577a19fd15533649794e",
+    "docs/BACKLOG.md": "689af86b2add4b30e37dc2ca9e857aa14f05cc9593a78bd6519e19a48d006332",
+    "docs/ROADMAP.md": "8027f93a1d07ffbf75410ca238d8a5b67750524bba95e666514e1de9ec484dee",
+    "docs/guides/OPERATIONS.md": "ee2f1125942c48a2cdbaa7a531891012b920fe97fdfde3c648bb9fecf4fe39d2",
+    "internal/dispatchadmission/bootstrap_workspace_linux.go": "0c40a3cbe4d7e7d8f01394c23eb54f0ebb407472e30255f088f071d1865bd8e0",
+    "internal/dispatchadmission/bootstrap_workspace_linux_test.go": "92ac159a9ae7db140456cf4f43903bae15fab39622e94b84f85ee3f4e449b3a3",
+    "internal/dispatchadmission/bootstrap_workspace_other.go": "81e8bb34e3700aebe7273e730bccf51e46182fe343d6afb52dca654c8a6873b0",
+    "internal/dispatchadmission/production_tool_image.go": "a53453a87fdb090c0b5ea96ad11dc2b1eb4b249e50e56d599e704a35a3619198",
+    "internal/dispatchadmission/production_tool_image_linux.go": "21a9afc3a9af0ddf5bc4a68838ce09989db77fef3ef0e469fc97bdd412c7c0ca",
+    "internal/dispatchadmission/production_tool_image_linux_test.go": "9c7afffeda12bff5acb41e4f25f8c6d744932d419a487ae2ee0c9872dd2dd481",
+    "internal/dispatchadmission/production_tool_image_other.go": "5faad4b29503584d00a89e0736b70a36061b04f6296697ecfc551ca4a2acd6bf",
+    "internal/executableidentity/file.go": "97b1c78498d5517151ea3d33f479c0d672c9eabd041c32d2d42246272018e2e8",
+    "internal/executableidentity/file_test.go": "ba777406f9b816b571673e6dd54b2bfb72f6dcfd07808419b621085dda873738",
+    "internal/indexer/indexer.go": "59f3e70ee26b770f1fb3f233650b467a49896c42e44c77277450f8d0df73bcae",
+    "internal/indexer/selected_tool_image.go": "88485a8e19fa9438f906aaca9415dc6fced9bf1f9da2c2e947ef098ca424002d",
+    "internal/indexer/selected_tool_image_test.go": "ec4213c1fd507d912ea6ed9e6c77babdde4b3a31dd2a63e08ee1c9d32b03fa47",
+    "internal/store/child.go": "10372fe49c3aa7d719acd5268e26395cdc98166e43692210a30c28e9302aeacd",
+    "internal/store/selected_tool_image.go": "df377cd6ee881111138cb5746f713427d66c9b84ab713aeeb9e97b579a53d813",
+    "internal/store/selected_tool_image_test.go": "27da3e30f2584509c08e10a702dbc6b043a1ab3ca79c1089d9e43eb4cce59f27",
+    "spike/t4013/process_session_candidates_linux.go": "eaf0616f0ef66d72bd4fb16d931d0e4fa7c4e225337a9272648c5a3e11f59690",
+    "spike/t421/author_custody.go": "74a5ea1a75f2b7155d6c44ec3f85bff5c03d7e77e02d50b9d15c0cf777134470",
+    "spike/t421/author_custody_linux.go": "86eea66b62a76c95267f50c73cc4735efa5316e05a1ab43b661913e054eea2b1",
+    "spike/t421/author_custody_run.go": "d63fd61cea1aade0da037e7b895f1d8df84462fad5b15a68d4ee4b70a1ce2614",
+    "spike/t421/author_custody_run_linux.go": "bd80c77ff5ae1994a0b89da5a9634486d0a067af19f39f9e18aaaae314ff864f",
+    "spike/t421/epoch_candidate_native_linux_test.go": "fd1f5569b6e138669add706c537fef39540782c246852bc70535d70246bff7fc",
+    "spike/t421/epoch_classifier_linux.go": "2f2765d7ced04e17addf4dbbaba06f4eb187d1c7f54fda7e09297723ae233636",
+    "spike/t421/epoch_config_custody.go": "99fcf63918a6ea3e34bec0b5d6a661c19e2317075dae1b08019740ce19144cef",
+    "spike/t421/epoch_config_linux.go": "81820f5f6aed99cd418b867e8b20965d801e93ed18701a81c327573fddaab75e",
+    "spike/t421/epoch_coordinator_linux.go": "6975a7d014f45b8c1aff0bfa8b5cb4bf6ffc646c99858698f2b3ea1f8dd6669a",
+    "spike/t421/epoch_early_workspace.go": "709698f65d159a7bf59d4e641c9a56cccce31b62e49e12a26e7e9bb3d3fc1882",
+    "spike/t421/epoch_flow_linux.go": "0c7a10052c57529f09d04000882a2ec45ef5a234271491ca81be0824ed995ee5",
+    "spike/t421/epoch_flow_linux_test.go": "43ff91a2ad899b0c18de07d587271af058f983b3248c3b50654c5626e4714734",
+    "spike/t421/epoch_flow_native_linux_test.go": "9dbd1c55c0cd84af97b280b155020813fe6c7937822edb7fe89e2720be6dc26f",
+    "spike/t421/epoch_held_linux.go": "f6f33e0e5da9e50d0e12008f3791771f2770ef2c1ab948366469fbf6cd4af655",
+    "spike/t421/epoch_launch.go": "14f5de57ee499d9112660e2635193019e3cef2731cac2cc1a8cc11910710a9a6",
+    "spike/t421/epoch_mid_workspace.go": "7d3e7a54073f9de8ca4de3c50804431e8fc03674e9a21f635ee8ac26342e0a1d",
+    "spike/t421/epoch_native_adapter.go": "32c0df93c43d94ff74410581da8ecf1e63b6bbb57337e9f8079625055e1090da",
+    "spike/t421/epoch_process_limit_test.go": "ec6dffa0da0c41dd1e296be891cb51259ca11f625487c082314195376642b389",
+    "spike/t421/epoch_process_observation.go": "68fc93cf61b4baec8be6f925aef74904fde1429d739ead607ad1ab0fb49b4086",
+    "spike/t421/epoch_server_linux.go": "4ffa30a7aa292c173eb575209aa04f650f77ea914dae45c58cf095d3834bcd6e",
+    "spike/t421/epoch_session_linux.go": "6dc5824238ab725088269e5bcb93b7ab67c4753f6aa624c62b7f5a3ef794e9d9",
+    "spike/t421/epoch_session_linux_test.go": "8da1ede0813e7a34cbd7938caa02636a057f6d506070c8c4010b28096ba33c8f",
+    "spike/t421/epoch_workspace_adapter.go": "9d53b64df2c137dd97570e034ee9308fcce78bcdca79b17806ca53726f9781e5",
+    "spike/t421/epoch_workspace_linux.go": "27471acf6615192bf98e1acace854065b20a73c900e97618e8c3f002a5b571fd",
+    "spike/t421/epoch_workspace_linux_test.go": "1d9554956cef4bcfc2ca756a942e3f5fc5c1dafb1ee81b959e86ba7ee890367f",
+    "spike/t421/linux_epoch_resource_objects_linux.go": "12100879cc8c21b4246dcc1d6b39538b9151f1c4f7b95f778af168dd97b6cece",
+    "spike/t421/linux_epoch_resource_policy.go": "39d63e2e0560b71fd8fd723bb3e68ba2610fd24779a47d5169b03670980824f5",
+    "spike/t421/linux_epoch_resource_policy_test.go": "c07a13ad3234250dd8066260a4f43c8992095e9fd59fc87627177d84f557d853",
+    "spike/t421/process_observation.go": "2be036d2ba1eaa3a357ad315f346b2fb39a6c347285222e0c6f449d1b2480d5b",
+    "spike/t42h2r/live-borrow-admission-failure-linux-20261020.json": "84eccc3c2404b575c119eb6d64819b4502a04ae6d29ea6abcebb4f4ddc60787b",
+    "spike/t421/epoch_owned_defunct_linux.go": "d3bcb264034aa15dfcd17b8a37cfe82de632f19ddb07de24b06a280e67806d89",
+    "spike/t421/epoch_owned_defunct_linux_test.go": "931f56f1622ee0880d89326e5d692a70eed9f00c1783ab0f439323c2d15ff36c"
+  },
+  "private_raw_directory": "/home/ben/phebs-rehearsals/t42h2rcc-v3-full-native.6vj7lo_y",
+  "selected_raw_files": {
+    "invocation.json": {
+      "bytes": 5099,
+      "sha256": "2039be18e1d6cb2d534b7f57d4ba1f4932c4b6024dd590910d3252580089e268"
+    },
+    "native.stderr": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "native.stdout": {
+      "bytes": 4955,
+      "sha256": "f36966335713f80052784d2959c11182491bceb6f41722d06cb9f3d1a10f0a0e"
+    },
+    "result.json": {
+      "bytes": 333,
+      "sha256": "64e29a8ec3cd1bd854babfd607c54e69a99ed432d6af6eb33bb566349d4068d7"
+    },
+    "run.py": {
+      "bytes": 4202,
+      "sha256": "4fdeb06ba657a9d1a8d987a306ecc4976a41f5b94618d34fda9919afb9090d13"
+    }
+  },
+  "source_manifest_sha256": "afef0119aec3195a868931523c66600912c1f34ea2d0fb73a07e60f654cb24cb",
+  "terminal_audit": {
+    "source_commit": "909abcea1175c668ada7a2172df817b3048c738c",
+    "actual_tool_exit_code": 1,
+    "wrapper_result": {
+      "source_commit": "909abcea1175c668ada7a2172df817b3048c738c",
+      "pid": 604958,
+      "actual_wait_exit_code": 1,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 1207.8970047969997,
+      "available_after": 131101491200,
+      "complete_child_history": "not established by wrapper SID census",
+      "status": "terminal joined wrapper"
+    },
+    "observed_logged_pids_absent_at_audit": {
+      "604958": false,
+      "612547": false,
+      "615860": false,
+      "619257": false,
+      "622627": false
+    },
+    "visible_fd_references_to_raw": [],
+    "source_manifest52_unchanged": true,
+    "foreign_files_unchanged": true,
+    "retained_failed_fixture": "/home/ben/phebs-rehearsals/t42h2rcc-v3-full-native.6vj7lo_y/tmp/phebs-linux-live-epochs-2046464304",
+    "observed_scope": "Three protected comparisons pass; initial resource admission passes; author-a fails after149checks; no server sessions",
+    "attribution": "First failing resource/classification predicate is not retained; do not infer RSS/slack/image/root-exit cause from generic refusal",
+    "complete_child_history": "not established by loggedPID absence, visible FD scan or wrapper SID census"
+  },
+  "observed": {
+    "protected_reference_comparisons": 3,
+    "references_joined_and_session_empty": true,
+    "initial_resource_admission": "passed",
+    "policy_schema": "t42-linux-epoch-operational-resources-v3",
+    "policy_sha256": "d1c5c1d178eadde5147fa7a4bb7bc485f3be7880dd03f1700ecb47da3008cb9d",
+    "rss_limit_bytes": 4294967296,
+    "payload_bytes": 1914834944,
+    "required_bytes": 8357285888,
+    "initial_available_bytes": 8975831040,
+    "successful_resource_checks": 149,
+    "author_stage": "response",
+    "accepted_author_response": false,
+    "author_started_joined_session_empty": true,
+    "author_pid": 622627,
+    "server_sessions": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "retained_fixture": {
+    "path": "/home/ben/phebs-rehearsals/t42h2rcc-v3-full-native.6vj7lo_y/tmp/phebs-linux-live-epochs-2046464304",
+    "device": 66306,
+    "inode": 1842655,
+    "mode": "0o700",
+    "recursive_contents_hashed": false
+  },
+  "source_review_findings": [
+    "Joined whole-sampler operational error propagates as cleanup error through valid image loans.",
+    "Core Close mixes joined control refusal with custody retirement failure.",
+    "Finite author and nested Git exit/reap can race live-only executable classification; exposure is not the attributed cause of this run."
+  ],
+  "limits": [
+    "No first resource, census, or classifier failure predicate retained.",
+    "No natural-exit, signal or response-read cause retained.",
+    "No composed operational, server, scale, readiness or ceremony pass.",
+    "Logged PID absence, visible FD scan and wrapper SID census do not establish complete child history.",
+    "Preserve failed fixture; no unchanged full-native retry."
+  ]
+}

@@ -6,9 +6,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math"
 	"os"
 	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/bmeddeb/phebs/spike/t4013"
@@ -59,22 +61,23 @@ func linuxEpochPolicySHA256() string {
 }
 
 type linuxEpochResourceAdmission struct {
-	mu          sync.Mutex
-	held        *linuxEpochHeldFlow
-	cancel      context.CancelFunc
-	probeGate   chan struct{}
-	ownedStops  map[int]*linuxEpochSessionAuthority // Only while probeGate is held.
-	namespaces  linuxEpochResourceNamespaces
-	footprint   linuxEpochResourceFootprint
-	initial     t4013.LinuxMemoryObservation
-	calculation t4013.LinuxMemoryCalculation
-	policySHA   string
-	checks      uint64
-	uid, euid   int
-	issued      bool
-	closed      bool
-	err         error
-	closeErr    error
+	mu             sync.Mutex
+	held           *linuxEpochHeldFlow
+	cancel         context.CancelFunc
+	probeGate      chan struct{}
+	ownedStops     map[int]*linuxEpochSessionAuthority // Only while probeGate is held.
+	namespaces     linuxEpochResourceNamespaces
+	footprint      linuxEpochResourceFootprint
+	initial        t4013.LinuxMemoryObservation
+	calculation    t4013.LinuxMemoryCalculation
+	policySHA      string
+	checks         uint64
+	uid, euid      int
+	issued         bool
+	closed         bool
+	err            error
+	closeErr       error
+	privateFailure string // First bounded private predicate, never public observation/receipt authority.
 }
 
 // The only production issuer receives the genuine complete held-loan scope.
@@ -87,17 +90,22 @@ func admitLinuxEpochResources(ctx context.Context, held *linuxEpochHeldFlow, can
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	var err error
+	stage := "initial-namespace-capture"
 	a.namespaces, err = captureLinuxEpochResourceNamespaces()
 	if err == nil {
+		stage = "initial-payload-observation"
 		a.footprint, err = collectLinuxEpochResourceFootprint(ctx, held)
 	}
 	if err == nil {
+		stage = "initial-prepared-directories"
 		err = checkLinuxEpochPreparedDirectories(held)
 	}
 	if err == nil {
+		stage = "initial-anonymous-inventory"
 		err = checkLinuxEpochInitialAnonymousObjects(a.footprint)
 	}
 	if err == nil {
+		stage = "initial-native-census"
 		var rows []t4013.NativeProcessRecord
 		rows, err = t4013.ObserveProcessTreeRecords(ctx, held.controllerPID)
 		if err == nil && (len(rows) != 1 || rows[0].PID != held.controllerPID || rows[0].StartIdentity != held.controllerStart || rows[0].RSSBytes <= 0 || uint64(rows[0].RSSBytes) > linuxEpochRSSReservation) {
@@ -105,16 +113,22 @@ func admitLinuxEpochResources(ctx context.Context, held *linuxEpochHeldFlow, can
 		}
 	}
 	if err == nil {
+		stage = "initial-native-memory"
 		a.initial, err = t4013.ObserveLinuxMemory(ctx)
 	}
 	if err == nil {
+		stage = "initial-memory-admission"
 		a.calculation, err = evaluateLinuxEpochResources(a.initial, a.footprint.PayloadBytes)
 	}
 	if err == nil {
+		stage = "initial-namespace-after"
 		err = a.namespaces.check()
 	}
 	if err != nil || ctx.Err() != nil {
-		a.Fail()
+		if err == nil {
+			stage = "initial-context-after"
+		}
+		a.failDetail(stage)
 		return a, errLinuxEpochResources
 	}
 	a.issued = true
@@ -186,20 +200,32 @@ func (a *linuxEpochResourceAdmission) Check(ctx context.Context) error {
 
 func (a *linuxEpochResourceAdmission) checkLocked(ctx context.Context) error {
 	if ctx == nil || ctx.Err() != nil || !a.issued || a.closed || a.err != nil || a.held == nil || a.held.controllerPID != os.Getpid() || a.uid != os.Getuid() || a.euid != os.Geteuid() || a.checks == math.MaxUint64 {
-		return errLinuxEpochResources
+		return a.refuseLocked("resource-binding-or-context")
 	}
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	if a.namespaces.check() != nil {
-		return errLinuxEpochResources
+		return a.refuseLocked("namespace-before")
 	}
 	current, err := collectLinuxEpochResourceFootprint(ctx, a.held)
-	if err != nil || current != a.footprint {
-		return errLinuxEpochResources
+	if err != nil {
+		return a.refuseLocked("payload-observation")
+	}
+	if current != a.footprint {
+		return a.refuseLocked("payload-binding")
 	}
 	observation, err := t4013.ObserveLinuxMemory(ctx)
-	if err != nil || checkLinuxEpochLiveMemory(a.initial, a.calculation.RequiredBytes, observation) != nil || a.namespaces.check() != nil || ctx.Err() != nil {
-		return errLinuxEpochResources
+	if err != nil {
+		return a.refuseLocked("native-memory-observation")
+	}
+	if checkLinuxEpochLiveMemory(a.initial, a.calculation.RequiredBytes, observation) != nil {
+		return a.refuseLocked(fmt.Sprintf("live-memory-rule physical=%d available=%d required=%d ancestors=%d same_binding=%t", observation.PhysicalBytes, observation.AvailableBytes, a.calculation.RequiredBytes, len(observation.CgroupAncestors), sameLinuxEpochMemoryBinding(a.initial, observation)))
+	}
+	if a.namespaces.check() != nil {
+		return a.refuseLocked("namespace-after")
+	}
+	if ctx.Err() != nil {
+		return a.refuseLocked("resource-context-after")
 	}
 	a.checks++
 	return nil
@@ -207,12 +233,30 @@ func (a *linuxEpochResourceAdmission) checkLocked(ctx context.Context) error {
 
 // Fail only latches and requests cancellation. It never joins children, closes
 // loans or calls back into the sampler whose lock may currently be held.
-func (a *linuxEpochResourceAdmission) Fail() {
+func (a *linuxEpochResourceAdmission) Fail() { a.failDetail("process-observation-notify") }
+
+// Diagnostic writes precede cancellation; later cleanup cannot replace the first
+// predicate. No arbitrary native error text or path enters this bounded field.
+func (a *linuxEpochResourceAdmission) refuseLocked(detail string) error {
+	if a.privateFailure == "" {
+		a.privateFailure = strings.Clone(detail[:min(len(detail), maxPrivateProcessRefusalBytes)])
+	}
+	return errLinuxEpochResources
+}
+
+func (a *linuxEpochResourceAdmission) privateRefusal() string {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.privateFailure
+}
+
+func (a *linuxEpochResourceAdmission) failDetail(detail string) {
 	if a == nil {
 		return
 	}
 	a.mu.Lock()
 	first := a.err == nil
+	_ = a.refuseLocked(detail)
 	a.err = errLinuxEpochResources
 	a.mu.Unlock()
 	if first && a.cancel != nil {
@@ -260,6 +304,7 @@ func (a *linuxEpochResourceAdmission) startServerObservation(ctx context.Context
 		case a.probeGate <- struct{}{}:
 			defer func() { <-a.probeGate }()
 		case <-ctx.Done():
+			a.failDetail("probe-gate-context")
 			notify()
 			return nil, ctx.Err()
 		}
@@ -271,10 +316,12 @@ func (a *linuxEpochResourceAdmission) startServerObservation(ctx context.Context
 		// widen the observed-row to executable-object classification window.
 		rows, err := t4013.ObserveProcessTreeRecords(ctx, root)
 		if err != nil {
+			a.failDetail("native-process-census")
 			notify()
 			return nil, err
 		}
 		if len(rows) == 0 || len(rows) > t4013.MaxNativeProcessRecords {
+			a.failDetail(fmt.Sprintf("native-census-count rows=%d", len(rows)))
 			notify()
 			return nil, errLinuxEpochResources
 		}
@@ -282,6 +329,7 @@ func (a *linuxEpochResourceAdmission) startServerObservation(ctx context.Context
 		for _, row := range rows {
 			class, ok := classify(ctx, row)
 			if !ok || class < 0 || class >= len(gauge.observation.Classes) || ctx.Err() != nil {
+				a.failDetail(linuxEpochRowRefusal("classification-or-context", row))
 				notify()
 				return nil, errLinuxEpochResources
 			}

@@ -31,14 +31,17 @@ type linuxAuthorRoot struct {
 	identity LinuxExecutionCorpusSourceIdentity
 }
 type linuxAuthorAttempt struct {
-	done   chan struct{}
-	cancel context.CancelFunc
-	result ExecutionAuthorResult
-	err    error
-	pid    int
-	stderr []byte
-	step   string
-	launch linuxAuthorLaunch
+	done                                         chan struct{}
+	cancel                                       context.CancelFunc
+	result                                       ExecutionAuthorResult
+	err                                          error
+	pid                                          int
+	stderr                                       []byte
+	step                                         string
+	privateFailure                               string // Fixed private first predicate; no response/input bytes.
+	waitObserved, waitFailed, waitStatusObserved bool
+	waitExitCode, waitSignal                     int
+	launch                                       linuxAuthorLaunch
 }
 
 // LinuxExecutionAuthorCustody owns one serial A/B/A-return source and native
