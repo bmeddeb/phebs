@@ -14453,3 +14453,60 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   drain, aggregate reservation or ceremony admission follows from kernel
   documentation or this bind experiment. See
   [PID namespace semantics](https://man7.org/linux/man-pages/man7/pid_namespaces.7.html).
+
+- **2026-10-19 — T42.H2 prerequisite integration and reachable Go build guard.**
+  Ben explicitly requests merging completed PRs and continuing, then delegates
+  future integration as soon as each PR's required checks/review pass. PRs
+  #146, #147 and #148 were independently rechecked as source-identical reviewed
+  descendants, passed documentation/glossary/whitespace at each exact head,
+  and fast-forwarded/pushed main through `a70dafdd`, `bf651494` and `3769ac49`.
+  GitHub reports all three merged/closed; their temporary branches were removed.
+  This integrates only the recorded H2m/H2o/H2p prerequisite scopes, not H2.
+
+  Add a distinct private `linux-go-build-namespace-v1` neutral guard/helper role,
+  independently rebuilt from exact source and sealed before use. The historical
+  H2k wrapper still sends READY, waits ACK and exits without starting a child;
+  only bounded receive/hash/read-only verification is shared. The new helper
+  must be PID1 in fresh user/mount/PID namespaces, with a fresh procfs. It copies
+  one `inputs` root containing SDK, empty modules, fixed neutral source and seven
+  matching Git images into its own bounded fresh tmpfs; closes writers; applies
+  recursive read-only/nosuid/nodev; and drops all-thread remount authority and
+  gains no new privileges. No host policy, capability grant or helper install
+  is provisioned. The caller must independently admit selected SDK/Git images;
+  copy construction alone supplies neither tool provenance nor permission.
+
+  Parent observations bind live image, user/mount/PID namespaces, mount and
+  all-thread dropped state before nonce ACK. Private mutable fixture SDK/source/
+  Git copies are retired before use; the helper independently refuses a surviving
+  fixed mutable fixture path. Installed SDK bytes remain available, so this is
+  not full SDK closure. The helper permits only the literal neutral module and
+  main, fixed fresh Git config and non-executing Git metadata; hooks, includes,
+  attributes, alternates and worktree redirects refuse. Fixed offline Go build
+  retains VCS stamping. Both helper and parent require exact clean revision,
+  native toolchain, CGO disabled and trimpath before terminal result/ACK. The
+  result binds nonce, complete input manifest and actual output digest. Each
+  direct Cmd.Wait joins its pumps before PID1 reaps adopted children to ECHILD;
+  a live, failed or unresolved adopted child refuses success. Parent timeout
+  retains the worker, image loan, launching thread and input/workspace custody
+  through actual helper Wait. pidfd cancellation cannot target a reused PID.
+  A final session-empty observation is additional evidence, not a substitute
+  for PID-namespace detached-descendant lifetime proof, which remains pending.
+
+  Cost: two independently rebuilt helper bootstraps in the native composition
+  fixture (new build helper and H2k helper), H2p construction and its existing
+  probes/tree, private SDK/seven-Git staging with per-file copy/sync and bounded
+  hashes, one new helper PID1, one Go command tree and fixed neutral output
+  execution. The combined new input copy is at most 2 GiB/100,000 entries/64 MiB
+  names, with existing 256-MiB/file bounds; H2p's separate protected tree, sealed
+  helper images, mutable staging/page cache, copy/census maps and buffers coexist.
+  Parent independently hashes output again up to 256 MiB. Writable cache/tmp/
+  output, compiler RSS and descendants remain additional unreserved costs;
+  GOMAXPROCS is not aggregate or kernel process admission. Command stdout/stderr
+  are each 64 KiB; parent helper diagnostics are capped at 1 MiB. Go's five-minute
+  and orphan-reap ten-second cooperative ceilings remain inside the common
+  deadline; test/compilation and kernel cleanup are distinct costs. Owner locks
+  span complete use/Wait; failure and a new attempt repeat construction work.
+  No production query, sync tick, startup/restart, retry/no-op, publication,
+  lock, cache, schema or persistent child work is registered. Native composition,
+  cancellation/detached-session controls, implemented reference-tool provenance,
+  full Go ownership and all remaining H2/readiness/freeze gates stay open.

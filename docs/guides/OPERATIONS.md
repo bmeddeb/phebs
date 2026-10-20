@@ -204,6 +204,20 @@ child-local tmpfs control. Use no sibling bind-import recipe from these facts.
 A new verified helper must construct its protected inputs inside the namespace
 where the Go commands will execute; its build and lifetime proof remains open.
 
+The fixed neutral namespace-build guard requires an independently rebuildable
+exact-source request for `t42-go-build-helper` at
+`PHEBS_T42_GO_BUILD_REQUEST`, the corresponding H2k request, and canonical
+`PHEBS_T42_GO_SDK` equal to the reference request's SDK. Its private schema is
+`linux-go-build-namespace-v1`, never a ceremony plan. Run the required tagged
+`TestLinuxGoBuildRequiredNativeNamespaceComposition` as the unprivileged
+consumer with a 50-minute test guard: each helper reference bootstrap retains
+its own 20-minute cap; compilation and cooperative kernel cleanup are separate.
+This composes only fixed neutral source with an empty module cache and exact
+clean VCS stamping. Private fixture originals disappear before use, while the
+installed SDK remains available. No full SDK/module/reference-tool provenance
+or execution/resource admission follows. Native composition and detached-child/
+cancellation qualification remain open; keep failed roots and diagnostics.
+
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
 It binds `c07bc930` and is preserved unchanged, so it no longer describes the

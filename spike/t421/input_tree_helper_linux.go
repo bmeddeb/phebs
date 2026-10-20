@@ -114,13 +114,56 @@ func setupInputTreeMount() (retErr error) {
 }
 
 func receiveInputTree(ctx context.Context, wire *inputTreeSocket, nonce []byte) (retErr error) {
-	root, err := os.OpenRoot(".")
+	copy, err := receiveProtectedInputTree(ctx, wire)
 	if err != nil {
-		return ErrLinuxInputTree
+		return err
 	}
 	defer func() {
-		if root.Close() != nil {
+		if copy.close() != nil {
 			retErr = ErrLinuxInputTree
+		}
+	}()
+	ready := append(bytes.Clone(nonce), copy.manifest...)
+	if wire.send(ctx, treeWireReady, ready, copy.view) != nil {
+		return ErrLinuxInputTree
+	}
+	ack, _, err := wire.receive(ctx, treeWireAck, false)
+	if err != nil || !bytes.Equal(ack, nonce) {
+		return ErrLinuxInputTree
+	}
+	return nil
+}
+
+// The historical helper owns its READY/ACK/exit wrapper; the build helper owns
+// a different lifetime. Both share only bounded reception and RO verification.
+type protectedInputTreeCopy struct {
+	root     *os.Root
+	view     *os.File
+	census   inputTreeCensus
+	manifest []byte
+}
+
+func (copy *protectedInputTreeCopy) close() error {
+	var failed bool
+	if copy.view != nil {
+		failed = copy.view.Close() != nil
+	}
+	returnErr := copy.root.Close()
+	if failed || returnErr != nil {
+		return ErrLinuxInputTree
+	}
+	return nil
+}
+
+func receiveProtectedInputTree(ctx context.Context, wire *inputTreeSocket) (_ *protectedInputTreeCopy, retErr error) {
+	root, err := os.OpenRoot(".")
+	if err != nil {
+		return nil, ErrLinuxInputTree
+	}
+	copy := &protectedInputTreeCopy{root: root}
+	defer func() {
+		if retErr != nil {
+			_ = copy.close()
 		}
 	}()
 	var census inputTreeCensus
@@ -129,76 +172,65 @@ func receiveInputTree(ctx context.Context, wire *inputTreeSocket, nonce []byte) 
 		// Peek only the fixed header to choose the next closed message kind.
 		var header [treeWireHeader]byte
 		if wire.wait(ctx, unix.POLLIN) != nil {
-			return ErrLinuxInputTree
+			return nil, ErrLinuxInputTree
 		}
 		count, _, _, _, err := unix.Recvmsg(wire.fd, header[:], nil, unix.MSG_PEEK|unix.MSG_DONTWAIT)
 		if err != nil || count < treeWireHeader {
-			return ErrLinuxInputTree
+			return nil, ErrLinuxInputTree
 		}
 		kind := header[4]
 		if kind != treeWireDirectory && kind != treeWireFile && kind != treeWireEnd {
-			return ErrLinuxInputTree
+			return nil, ErrLinuxInputTree
 		}
 		raw, _, err := wire.receive(ctx, kind, false)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if kind == treeWireEnd {
 			if len(census.rows) == 0 || len(raw) != 64 {
-				return ErrLinuxInputTree
+				return nil, ErrLinuxInputTree
 			}
 			expected = bytes.Clone(raw)
 			break
 		}
 		entry, err := decodeInputTreeEntry(raw)
 		if err != nil || (kind == treeWireDirectory) != (entry.mode == 0o700) || census.add(entry) != nil {
-			return ErrLinuxInputTree
+			return nil, ErrLinuxInputTree
 		}
 		if kind == treeWireDirectory {
 			if root.Mkdir(entry.name, 0o700) != nil {
-				return ErrLinuxInputTree
+				return nil, ErrLinuxInputTree
 			}
 			continue
 		}
 		file, err := root.OpenFile(entry.name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 		if err != nil {
-			return ErrLinuxInputTree
+			return nil, ErrLinuxInputTree
 		}
 		err = receiveInputTreeFile(ctx, wire, file, &entry)
 		closeErr := file.Close()
 		if err != nil || closeErr != nil {
-			return ErrLinuxInputTree
+			return nil, ErrLinuxInputTree
 		}
 		census.rows[len(census.rows)-1] = entry
 	}
 	if !bytes.Equal(inputTreeManifest(census), expected) {
-		return ErrLinuxInputTree
+		return nil, ErrLinuxInputTree
 	}
 	// No writing descriptor survives this transition. The mount is new and has
 	// never been bound anywhere else; neither source nor host alias is adopted.
 	view, err := os.Open(".")
 	if err != nil {
-		return ErrLinuxInputTree
+		return nil, ErrLinuxInputTree
 	}
-	defer func() {
-		if view.Close() != nil {
-			retErr = ErrLinuxInputTree
-		}
-	}()
+	copy.view = view
 	if view.Sync() != nil || unix.MountSetattr(int(view.Fd()), "", unix.AT_EMPTY_PATH|unix.AT_RECURSIVE,
 		&unix.MountAttr{Attr_set: unix.MOUNT_ATTR_RDONLY | unix.MOUNT_ATTR_NOSUID | unix.MOUNT_ATTR_NODEV}) != nil ||
 		dropInputTreeRemountAuthority() != nil || verifyProtectedInputTree(ctx, root, census) != nil {
-		return ErrLinuxInputTree
+		return nil, ErrLinuxInputTree
 	}
-	ready := append(bytes.Clone(nonce), expected...)
-	if wire.send(ctx, treeWireReady, ready, view) != nil {
-		return ErrLinuxInputTree
-	}
-	ack, _, err := wire.receive(ctx, treeWireAck, false)
-	if err != nil || !bytes.Equal(ack, nonce) {
-		return ErrLinuxInputTree
-	}
-	return nil
+	copy.census, copy.manifest = census, expected
+	return copy, nil
 }
 
 func receiveInputTreeFile(ctx context.Context, wire *inputTreeSocket, file *os.File, entry *inputTreeEntry) error {

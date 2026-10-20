@@ -4218,6 +4218,21 @@ helper which copies inputs into its own reachable read-only namespace tree.
 PID-namespace lifetime behavior, actual protected compile/reference provenance
 and every other H2q AC remain pending; this is no Go build or H2 admission.
 
+The distinct fixed neutral build helper and tracked native composition driver
+are implemented for qualification. They create reachable protected inputs inside
+the executing namespace, preserve exact clean VCS stamping and bind terminal
+output to nonce/input manifest/digest before actual helper Wait. H2k keeps its
+original protocol. Normal/race shape, metadata, helper-role and VCS-fence gates
+pass; independent preliminary source/custody/cost review found and corrected
+the missing exact-clean VCS fence, with no remaining first-attempt blocker.
+Required native composition and PID1 cancellation/detached-session controls are
+still pending. The guard uses fixed neutral source and empty module cache,
+keeps the installed SDK available, and issues no full SDK/reference provenance,
+public Go owner or aggregate allowance. Its distinct transient copies, helper
+images/trees, hashes, writable outputs and compiler costs are charged separately
+in PLAN. H2q remains open. Ben's subsequent merge instruction authorizes reviewed
+green PR integration; it does not waive these acceptance gates.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared
