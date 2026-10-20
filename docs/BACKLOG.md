@@ -4115,6 +4115,15 @@ rehash, source read, disk write, cache mutation or API-created child. Existing
 single-input callers use that same path at n=1; ordinary production query,
 sync, startup/restart, retry/no-op and publication gain no registered caller.
 
+Exact source `5a93b2dfee5815d772b365fa6a91c3b0df9d6571` passes independent
+custody/cost review with no findings. The complete direct-input selector passes
+81 cases/subtests normally and with race, zero skips; existing real SurrealDB,
+probe-drain and sticky-refusal callers also pass normally and with race. Vet,
+pinned scoped lint, documentation/glossary and whitespace pass. The
+[bounded receipt](../spike/t42h2o/atomic-loans-linux-20261019.json) records
+exact source/tool/host, outcomes and local raw-log hashes. This closes only
+the atomic same-owner primitive; the remaining H2 gates above stay pending.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

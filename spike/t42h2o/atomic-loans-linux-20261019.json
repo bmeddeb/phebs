@@ -1,0 +1,183 @@
+{
+  "ticket": "T42.H2o",
+  "recorded_at_utc": "2026-10-20T03:09:24.317543+00:00",
+  "source_commit": "5a93b2dfee5815d772b365fa6a91c3b0df9d6571",
+  "source_sha256": {
+    "spike/t421/input_custody_linux.go": "c9be608c40ed7b3a95166bb864030199a562494bcdf020fd19ef071413270cd5",
+    "spike/t421/input_custody_bundle_linux_test.go": "d61ab3072bfdd5b5b29b955cc99e895403a8b903174b1b0f446b47c46c572148"
+  },
+  "go_version": "go version go1.26.5 linux/amd64",
+  "host": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+  "uid": 1000,
+  "environment": {
+    "GOTOOLCHAIN": "local",
+    "GOPROXY": "off",
+    "GOSUMDB": "off",
+    "GOMAXPROCS": "2"
+  },
+  "checks": [
+    {
+      "command": [
+        "go",
+        "test",
+        "-json",
+        "./spike/t421",
+        "-run",
+        "^TestLinuxInputCustody",
+        "-count=1",
+        "-timeout=90s"
+      ],
+      "source_commit": "5a93b2dfee5815d772b365fa6a91c3b0df9d6571",
+      "exit_code": 0,
+      "elapsed_seconds": 3.699,
+      "skips": [],
+      "passed_tests": 81
+    },
+    {
+      "command": [
+        "go",
+        "test",
+        "-race",
+        "-json",
+        "./spike/t421",
+        "-run",
+        "^TestLinuxInputCustody",
+        "-count=1",
+        "-timeout=90s"
+      ],
+      "source_commit": "5a93b2dfee5815d772b365fa6a91c3b0df9d6571",
+      "exit_code": 0,
+      "elapsed_seconds": 7.75,
+      "skips": [],
+      "passed_tests": 81
+    },
+    {
+      "command": [
+        "go",
+        "test",
+        "-json",
+        "./spike/t421",
+        "-run",
+        "^TestLinuxToolCustody(RealSurreal|RetainsProbeUntilJoinedAndDrained|ExternalRefusalsAndCleanup|ClosedProbeRefusals|ScopedMatchAndStickyRefusal)$",
+        "-count=1",
+        "-timeout=120s"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 20.254,
+      "skips": [],
+      "source_note": "Precommit identical implementation/test bytes; exact source receipt hashes above. No code changed before 5a93b2df."
+    },
+    {
+      "command": [
+        "go",
+        "test",
+        "-race",
+        "-json",
+        "./spike/t421",
+        "-run",
+        "^TestLinuxToolCustody(RealSurreal|RetainsProbeUntilJoinedAndDrained|ExternalRefusalsAndCleanup|ClosedProbeRefusals|ScopedMatchAndStickyRefusal)$",
+        "-count=1",
+        "-timeout=120s"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 22.726,
+      "skips": [],
+      "source_note": "Precommit identical implementation/test bytes; exact source receipt hashes above. No code changed before 5a93b2df."
+    }
+  ],
+  "static_checks": [
+    {
+      "command": "go vet ./spike/t421",
+      "exit_code": 0
+    },
+    {
+      "command": "golangci-lint run --new-from-rev a70dafddeb5db1123b632e37d11f21f7f3cbe8c3 ./spike/t421",
+      "exit_code": 0,
+      "issues": 0
+    },
+    {
+      "command": "make docs-check verify-glossary",
+      "exit_code": 0
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0
+    }
+  ],
+  "review": "Independent read-only review of exact source 5a93b2dfee5815d772b365fa6a91c3b0df9d6571 against a70dafddeb5db1123b632e37d11f21f7f3cbe8c3: no findings, including correctness, custody, cleanup, legacy callers and steady-state cost. Reviewer ran no tests.",
+  "cost": "O(n), 1<=n<=64. Existing per-owner mutex spans complete callback; bounded selection/entry/loan snapshots and duplicate-name map; <=64 transient descriptors. Single-input callers use n=1 with bounded allocation/loop overhead. No payload hashing, source reads, disk writes, children, caches or new production request/tick/startup/retry/publication work. Cross-owner aggregate reservations remain separate.",
+  "bounds": "A same-owner loan primitive plus an actual joined neutral executable/data test. No tool provenance, generic child/session drain, cross-owner lock ordering, Git/Go recipe, dispatch, source-owned aggregate memory reservation, full pressure/restore, plan admission, parent H2, readiness, freeze, ceremony or release pass. Production signing/activation stays PENDING.",
+  "raw_evidence_directory": "/home/ben/phebs-rehearsals/t42h2o-validation.uswKEY",
+  "raw_file_census": [
+    {
+      "name": "exact-custody-normal.json",
+      "bytes": 301,
+      "sha256": "fcf58ac8bf3d2db2188a2e941841ab4268fcad7c27d89fcfe263d13a4fcc9e41"
+    },
+    {
+      "name": "exact-custody-normal.jsonl",
+      "bytes": 71561,
+      "sha256": "37789de715054b3864c78bcf5859dc7b67eabed5f908ee1512aa2fe0e3feb799"
+    },
+    {
+      "name": "exact-custody-normal.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "exact-custody-race.json",
+      "bytes": 313,
+      "sha256": "94d154b5b2c8585e671025f66883983845359aa7470a8a5f9aa5aceb7614116f"
+    },
+    {
+      "name": "exact-custody-race.jsonl",
+      "bytes": 71572,
+      "sha256": "c7e0dcd874d65bede06d6ee20d96c5ce1c3f0924937d5f956c24eccd104b843d"
+    },
+    {
+      "name": "exact-custody-race.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "exact-source.json",
+      "bytes": 445,
+      "sha256": "1a7dd6c648f1d4526ea85540eae285646eeda359139987ee3b540bb8253a6543"
+    },
+    {
+      "name": "fixture-diagnostic.json",
+      "bytes": 437,
+      "sha256": "3e4939ee8ff2f55b3bfd365d4ae48d01b27c03ea0fbeded0d41785138cbe1ac2"
+    },
+    {
+      "name": "tool-callers-normal.json",
+      "bytes": 340,
+      "sha256": "c92c5b6c454a54d8ef96813a0cf28b0dbfb525e32601b7e8c625bd844a06fc15"
+    },
+    {
+      "name": "tool-callers-normal.jsonl",
+      "bytes": 17809,
+      "sha256": "c906f32af8660929dcdcf131ad463b784224c603ae5fe1da7a18ea1954b19c72"
+    },
+    {
+      "name": "tool-callers-normal.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "tool-callers-race.json",
+      "bytes": 353,
+      "sha256": "3826fc0e1d692d6cb39cd446a8252f0327fe412c1e13294ff3fc8f95af9bb6e3"
+    },
+    {
+      "name": "tool-callers-race.jsonl",
+      "bytes": 17821,
+      "sha256": "3e98b6779386f027d294e60c3bb95423ceada5908069aff71ea17dc60fd979b0"
+    },
+    {
+      "name": "tool-callers-race.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}
