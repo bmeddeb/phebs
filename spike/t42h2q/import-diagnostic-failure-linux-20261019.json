@@ -1,0 +1,64 @@
+{
+  "ticket": "T42.H2q",
+  "status": "FAILED_IMPORT_DIAGNOSTIC_NO_SYSCALL_RESULT",
+  "source_commit": "ec327894dec6b06cf2866ac214a55ea87be52fa6",
+  "test_sha256": "c6cbd6caeb5e9958eb8e78b574c41f581fbbd4650d6c7d6f9841f2d1c4bc2f76",
+  "native": {
+    "command": [
+      "go",
+      "test",
+      "-json",
+      "-tags",
+      "phebs_t42_native",
+      "./spike/t421",
+      "-run",
+      "^TestLinuxGoBuildRequiredNativeNamespaceImportDiagnostic$",
+      "-count=1",
+      "-timeout=25m"
+    ],
+    "source_commit": "ec327894dec6b06cf2866ac214a55ea87be52fa6",
+    "exit_code": 1,
+    "elapsed_seconds": 165.836,
+    "root_waited": true,
+    "observed_session_members": [],
+    "observation_errors": [],
+    "skips": [],
+    "passed_tests": 0
+  },
+  "observation": "Test helper exited 125 before emitting any bind observation. Actual helper root Wait and zero session members logged; actual wrapper root Wait and empty session observed. No owner/fixture cleanup or host-propagation failure logged. No import success, EINVAL or particular syscall cause is established.",
+  "correction": "Add source-free staged failure diagnostics. Remove redundant child-side inspection of parent namespaces across a user-namespace boundary; distinct child self namespace identities remain compared against parent native baseline. Original exact cause unavailable. No unchanged retry.",
+  "raw_evidence_directory": "/home/ben/phebs-rehearsals/t42h2q-import.w94hbltj",
+  "raw_file_census": [
+    {
+      "name": "native-owner.json",
+      "bytes": 266,
+      "sha256": "f33ee462cf3fefb6add3faef053bb04968f1254454495cba1999c941cad91c25"
+    },
+    {
+      "name": "native.json",
+      "bytes": 459,
+      "sha256": "ba481ece588b04d6e0329df4f608a5a3cd5d2942f4d37bf6f00fd7bb40dac982"
+    },
+    {
+      "name": "native.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "native.stdout",
+      "bytes": 2052,
+      "sha256": "eefd02c9c6b47ea2f8024ee4ec910b7c3f119a122d3d6351bea76ec7e45bac2a"
+    },
+    {
+      "name": "post-run.json",
+      "bytes": 231,
+      "sha256": "fbe0e33c7128797d36cfbfe076ee25f33044e240586fa0f5e83ab4fdd9807bdf"
+    },
+    {
+      "name": "preflight.json",
+      "bytes": 670,
+      "sha256": "bf2397af9f0d1b1685fad53cb3133529b68a5ef6d0b8f60692699c9a30e3f422"
+    }
+  ],
+  "production_signing_and_activation": "PENDING"
+}

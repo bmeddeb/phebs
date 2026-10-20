@@ -14417,10 +14417,20 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   with successful import requiring a write/remove control. Each attempt gets a separate empty target and
   exact errno; successful imports must retain object/flag/content identity.
   The prediction is EINVAL for the two foreign FD-held trees, not an admitted
-  import recipe. Root Wait, empty session, nonforced control unmounts and
-  unchanged host-root propagation are required before fixture release.
+  import recipe. Root Wait, empty session and nonforced control unmounts are
+  required before fixture release. A final bracketing observation requires
+  unchanged host-root propagation, including on refusal paths.
   Costs are the independently rebuilt helper bootstrap, H2p construction,
   one tiny H2k construction, one fixed diagnostic child, a 32-KiB/eight-inode
   local tmpfs and bounded observations/output. H2p and H2k protections coexist;
   existing per-tree ceilings are not aggregate reservation. No production
   query, tick, startup, retry, publication, cache or schema work is added.
+
+  The first import diagnostic at `ec327894` exited 125 before any syscall
+  observation, so it establishes neither successful import nor EINVAL or an
+  exact refusal cause. Root Wait/session-empty observations and fixture cleanup
+  completed. Keep that failure. The correction adds bounded source-free stage
+  diagnostics and removes redundant child inspection of its parent across the
+  user-namespace boundary; child self namespace identities still compare with
+  the parent's native baseline. No original cause is retrospectively asserted.
+  This adds only bounded diagnostic error encoding, not another child or copy.

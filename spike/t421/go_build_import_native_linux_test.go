@@ -83,97 +83,129 @@ func TestLinuxGoBuildNamespaceImportProbeHelper(t *testing.T) {
 	if os.Getenv("PHEBS_T42_IMPORT_PROBE") != "1" {
 		return
 	}
-	if os.Geteuid() != 0 || os.Getegid() != 0 {
+	var result goBuildImportResult
+	stageName := "credentials"
+	fail := func(details ...error) {
+		_ = json.NewEncoder(os.Stderr).Encode(struct {
+			Stage        string
+			Error        string
+			Observations goBuildImportResult
+		}{stageName, fmt.Sprint(details), result})
 		os.Exit(125)
+	}
+	if os.Geteuid() != 0 || os.Getegid() != 0 {
+		fail()
 	}
 	runtime.LockOSThread() // Observe the capabilities on the mount-calling thread.
 	for _, fd := range []int{3, 4, 5} {
 		unix.CloseOnExec(fd)
 	}
+	stageName = "stage-descriptor-and-cwd"
 	var stage, current unix.Stat_t
 	if unix.Fstat(5, &stage) != nil || unix.Stat(".", &current) != nil || !sameLinuxInputStat(stage, current) ||
-		stage.Mode != unix.S_IFDIR|0o700 || stage.Uid != 0 || unix.Mount("", "/", "", unix.MS_PRIVATE|unix.MS_REC, "") != nil {
-		os.Exit(125)
+		stage.Mode != unix.S_IFDIR|0o700 || stage.Uid != 0 {
+		fail()
 	}
-	// These are actual namespace identities, compared with the parent's by the
-	// trusted test image. A caller-provided namespace boolean is not consulted.
-	if _, err := observeInputTreeNamespaces(os.Getppid()); err != nil {
-		os.Exit(125)
+	stageName = "private-propagation"
+	if err := unix.Mount("", "/", "", unix.MS_PRIVATE|unix.MS_REC, ""); err != nil {
+		fail(err)
 	}
-	var result goBuildImportResult
+	stageName = "calling-thread-capabilities"
 	var capabilities [2]unix.CapUserData
 	header := unix.CapUserHeader{Version: unix.LINUX_CAPABILITY_VERSION_3}
 	if unix.Capget(&header, &capabilities[0]) != nil {
-		os.Exit(125)
+		fail()
 	}
 	result.EffectiveCapabilities = uint64(capabilities[0].Effective) | uint64(capabilities[1].Effective)<<32
 	var err error
+	stageName = "self-user-namespace"
 	result.UserNamespace, err = os.Readlink("/proc/self/ns/user")
 	if err != nil {
-		os.Exit(125)
+		fail()
 	}
+	stageName = "self-mount-namespace"
 	result.MountNamespace, err = os.Readlink("/proc/self/ns/mnt")
 	if err != nil {
-		os.Exit(125)
+		fail()
 	}
 	// A fresh local tmpfs bind is a positive control for this exact namespace.
-	if os.Mkdir("local", 0o700) != nil || os.Mkdir("local-copy", 0o700) != nil ||
-		unix.Mount("tmpfs", "local", "tmpfs", unix.MS_NOSUID|unix.MS_NODEV, "size=32768,nr_inodes=8,mode=0700") != nil ||
-		unix.Mount("local", "local-copy", "", unix.MS_BIND, "") != nil ||
-		os.WriteFile("local-copy/control", []byte("local"), 0o600) != nil || os.Remove("local/control") != nil ||
-		unix.Unmount("local-copy", 0) != nil || unix.Unmount("local", 0) != nil {
-		os.Exit(125)
+	for _, step := range []struct {
+		name string
+		run  func() error
+	}{
+		{"local-directory", func() error { return os.Mkdir("local", 0o700) }},
+		{"local-copy-directory", func() error { return os.Mkdir("local-copy", 0o700) }},
+		{"local-tmpfs-mount", func() error {
+			return unix.Mount("tmpfs", "local", "tmpfs", unix.MS_NOSUID|unix.MS_NODEV, "size=32768,nr_inodes=8,mode=0700")
+		}},
+		{"local-bind", func() error { return unix.Mount("local", "local-copy", "", unix.MS_BIND, "") }},
+		{"local-write", func() error { return os.WriteFile("local-copy/control", []byte("local"), 0o600) }},
+		{"local-remove", func() error { return os.Remove("local/control") }},
+		{"local-copy-unmount", func() error { return unix.Unmount("local-copy", 0) }},
+		{"local-unmount", func() error { return unix.Unmount("local", 0) }},
+	} {
+		stageName = step.name
+		if err := step.run(); err != nil {
+			fail(err)
+		}
 	}
 	result.LocalControl = true
 	sentinels := []string{"core/git", "source/data", "sentinel"}
 	for i, name := range []string{"git", "inputs", "work"} {
+		stageName = "target-directory-" + name
 		if os.Mkdir(name, 0o700) != nil {
-			os.Exit(125)
+			fail()
 		}
+		stageName = "source-descriptor-" + name
 		source, err := observeGoBuildImportObject(i+3, sentinels[i])
 		if err != nil {
-			os.Exit(125)
+			fail(err)
 		}
+		stageName = "bind-" + name
 		err = unix.Mount(fmt.Sprintf("/proc/self/fd/%d", i+3), name, "", unix.MS_BIND, "")
 		row := goBuildImportObservation{Name: name, Source: source}
+		result.Rows = append(result.Rows, row)
 		if err != nil {
 			var errno syscall.Errno
 			if !errors.As(err, &errno) {
-				os.Exit(125)
+				fail()
 			}
 			row.MountErrno = int(errno)
 		} else {
+			stageName = "validate-import-" + name
 			var flags unix.Statfs_t
 			if unix.Statfs(name, &flags) != nil {
-				os.Exit(125)
+				fail()
 			}
 			row.Readonly = flags.Flags&unix.ST_RDONLY != 0
 			view, err := os.Open(name)
 			if err != nil {
-				os.Exit(125)
+				fail()
 			}
 			target, err := observeGoBuildImportObject(int(view.Fd()), sentinels[i])
 			closeErr := view.Close()
 			if err != nil || closeErr != nil || target.Device != source.Device || target.Inode != source.Inode ||
 				target.Filesystem != source.Filesystem || target.Flags != source.Flags || target.Sentinel != source.Sentinel {
-				os.Exit(125)
+				fail()
 			}
 			if name == "work" {
 				if os.WriteFile(filepath.Join(name, "control"), []byte("reachable work\n"), 0o600) != nil ||
 					os.Remove(filepath.Join(name, "control")) != nil {
-					os.Exit(125)
+					fail()
 				}
 			} else if !row.Readonly || !errors.Is(os.Mkdir(filepath.Join(name, "mutation-must-refuse"), 0o700), unix.EROFS) {
-				os.Exit(125)
+				fail()
 			}
+			stageName = "unmount-" + name
 			if unix.Unmount(name, 0) != nil { // Never force or lazily detach.
-				os.Exit(125)
+				fail()
 			}
 		}
-		result.Rows = append(result.Rows, row)
+		result.Rows[len(result.Rows)-1] = row
 	}
+	stageName = "result-output"
 	if json.NewEncoder(os.Stdout).Encode(result) != nil {
-		os.Exit(125)
+		fail()
 	}
 	os.Exit(0)
 }

@@ -4201,6 +4201,13 @@ its result is a layout diagnostic only, never a build/helper admission. This
 adds one tiny H2k construction alongside H2p, one diagnostic child and a
 32-KiB local control mount, with existing bootstrap and separate tree costs.
 Native qualification and the full H2q acceptance remain open.
+The first import probe at `ec327894` exited 125 before emitting observations;
+the [failure receipt](../spike/t42h2q/import-diagnostic-failure-linux-20261019.json)
+establishes neither bind success nor a particular syscall refusal. Its roots
+joined, sessions were empty and cleanup reported no failure. A source correction
+adds bounded stage diagnostics and removes redundant cross-user-namespace parent
+inspection while preserving native parent/child self-identity comparison. Only
+that changed source may receive one bounded diagnostic confirmation.
 
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
