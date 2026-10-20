@@ -167,7 +167,13 @@ func TestLinuxGitCustodyRequiredNativeLocalTransport(t *testing.T) {
 	if got := run("", "-C", mirror, "cat-file", "blob", "HEAD:file.txt"); got != "second\n" {
 		t.Fatal("protected content", got)
 	}
-	if !strings.Contains(trace.String(), linuxGitCore+"/git-upload-pack") || !strings.Contains(trace.String(), "pack-objects") {
+	// File transport runs its upload-pack command through /bin/sh and the
+	// exact protected-only PATH checked above; Git's trace reports that shell
+	// command rather than the shell's resolved executable pathname. The actual
+	// upload-pack builtin and its explicit protected pack-objects child prove
+	// the complete local transport chain without inventing a trace pathname.
+	if !strings.Contains(trace.String(), "trace: built-in: git upload-pack ") ||
+		!strings.Contains(trace.String(), "trace: start_command: "+linuxGitCore+"/git pack-objects ") {
 		t.Fatal("actual local transport/pack routing was not observed", trace.String())
 	}
 	for _, key := range []string{"gc.auto", "maintenance.auto"} {
@@ -194,5 +200,5 @@ func TestLinuxGitCustodyRequiredNativeLocalTransport(t *testing.T) {
 	if _, err := os.Lstat(git.PrivateDirectory()); !errors.Is(err, os.ErrNotExist) {
 		t.Fatal("owned scratch survived exact cleanup", err)
 	}
-	t.Logf("native protected Git local clone/fetch passed: files=%d bytes=%d; closed-loan sticky refusal and exact cleanup passed", treeIdentity.Files, treeIdentity.Bytes)
+	t.Logf("native protected Git local clone/fetch passed: image=%s version=%q helper=%s files=%d bytes=%d; closed-loan sticky refusal and exact cleanup passed", identity.SHA256, identity.Version, treeIdentity.HelperSHA256, treeIdentity.Files, treeIdentity.Bytes)
 }
