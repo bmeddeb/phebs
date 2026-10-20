@@ -186,6 +186,18 @@ since shipped; Git/Go SDK/helper location recipes,
 session teardown, pressure adapters, new plan versions and complete
 resource/readiness admission remain required. These commands launch no ceremony and establish no scale result.
 
+T42.H2q's first neutral Go compile through inherited descriptor paths refused
+Go self-execution and clean VCS stamping. The retained failed receipt is
+[`descriptor-feasibility-linux-20261019.json`](../../spike/t42h2q/descriptor-feasibility-linux-20261019.json).
+It does not admit a protected Go build. Keep the VCS and child-identity gates.
+The fixed `TestLinuxGoBuildRequiredNativeNamespaceImportDiagnostic` checks
+whether actual H2p/H2k FD-held roots can be bound into a sibling namespace;
+it requires the same independently rebuildable `PHEBS_T42_INPUT_TREE_REQUEST`
+and unprivileged native-test setup above. Expected foreign-mount refusal is a
+diagnostic result only. Its test image is not an admitted build helper. The
+protected Go SDK/module/source owner, reference builds and executor/resource
+admission remain pending.
+
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
 It binds `c07bc930` and is preserved unchanged, so it no longer describes the

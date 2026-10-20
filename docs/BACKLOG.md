@@ -4179,6 +4179,29 @@ H2k combined 2-GiB/100,000-entry bound, separate staging/page-cache/tmpfs/output
 costs and complete aggregate admission remain mandatory. Production work,
 complete readiness, freeze and execution stay pending.
 
+The first native feasibility run at `14f20570` **failed** after constructing
+16,722 entries / 15,039 files / 232,414,910 bytes of build inputs alongside
+H2p's protected Git tree. Go reported an unreachable `/sdk/bin/go` self-exec
+and a separate VCS exit 128; the exact private Git cause was not retained.
+Actual logged command roots joined with zero private-session members and
+cleanup completed without retained-owner errors. The local diagnostic and
+source-bound [receipt](../spike/t42h2q/descriptor-feasibility-linux-20261019.json)
+remain failed evidence. Vet and scoped lint pass; the initial deprecated
+`runtime.GOROOT` lint error was corrected before this source commit. The two
+helper launches, reference bootstrap and coexisting trees are separately
+charged, with no aggregate 2-GiB allowance. Fixed namespace execution with
+reachable paths, protected full-reference builds and all remaining ACs stay
+open; no reduced VCS/identity gate or bare-FD admission is selected.
+
+A separate fixed native import diagnostic now checks the actual post-helper
+Git/input FDs in a sibling namespace, with a fresh local-tmpfs positive
+control and a separate inherited-work-FD attempt, exact object/namespace/capability observations, actual join
+and unchanged host propagation. It predicts refusal of foreign FD-held trees;
+its result is a layout diagnostic only, never a build/helper admission. This
+adds one tiny H2k construction alongside H2p, one diagnostic child and a
+32-KiB local control mount, with existing bootstrap and separate tree costs.
+Native qualification and the full H2q acceptance remain open.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

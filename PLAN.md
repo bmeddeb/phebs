@@ -14385,9 +14385,42 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   owners unless actual root Wait and exact private-session drain are observed.
   Descriptor path/cwd semantics must be measured; no path alias, caller boolean
   or version/env probe substitutes for the compile. The mechanism test copies
-  at most H2k's existing 2-GiB/100,000-entry bound, runs one independently
-  verified helper plus Git preparation, and caps the Go command cooperatively
+  at most H2k's existing 2-GiB/100,000-entry bound per construction. The
+  protected Git tree coexists with the build tree and is separately charged;
+  this is no aggregate 2-GiB allowance. The same verified helper launches twice,
+  once per tree, in addition to its independent reference-build bootstrap and
+  Git preparation. The probe caps the Go command cooperatively
   at five minutes with bounded output. It changes no production caller, source
   authority, schema, cache, plan, admission or historical entry point. Full
   SDK/module/source provenance, source-owned command/executor ownership and
   aggregate memfd/tmpfs/page-cache reservations remain required before H2.
+
+  Native source `14f205708df1201ebeeef72ed66ea4ea5d342a90` refused the
+  first descriptor composition after actual protected input construction:
+  Go reported an unreachable `/sdk/bin/go` self-executable for its telemetry
+  child and separately VCS exit 128. No private Git cause was retained, so the
+  latter is not attributed to a specific Git syscall. Its five logged command
+  roots actually joined and had zero private-session members; cleanup reported
+  no retained owners/removal failure, and the post-run named-process and
+  fixture-prefix observations were empty. This is a failed feasibility result,
+  not a protected Go build or H2 pass. Keep VCS/child identity fences and select
+  no bare-FD recipe from this result. A fixed namespace recipe with reachable
+  paths remains to implement and qualify; foreign mount-FD import is also
+  unproven and must not be assumed. Historical H2k remains unchanged.
+
+  The next fixed native diagnostic independently attempts bind imports of the
+  actual post-helper H2p and H2k root FDs into a fresh sibling user/mount
+  namespace. It checks descriptor stat/filesystem/mount identity and bounded
+  sentinels, records the mount-calling thread's capabilities and distinct
+  namespaces, and uses a fresh local tmpfs bind as a positive control. The inherited
+  writable work FD is independently attempted; success or EINVAL is recorded,
+  with successful import requiring a write/remove control. Each attempt gets a separate empty target and
+  exact errno; successful imports must retain object/flag/content identity.
+  The prediction is EINVAL for the two foreign FD-held trees, not an admitted
+  import recipe. Root Wait, empty session, nonforced control unmounts and
+  unchanged host-root propagation are required before fixture release.
+  Costs are the independently rebuilt helper bootstrap, H2p construction,
+  one tiny H2k construction, one fixed diagnostic child, a 32-KiB/eight-inode
+  local tmpfs and bounded observations/output. H2p and H2k protections coexist;
+  existing per-tree ceilings are not aggregate reservation. No production
+  query, tick, startup, retry, publication, cache or schema work is added.

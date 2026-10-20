@@ -1,0 +1,163 @@
+{
+  "ticket": "T42.H2q",
+  "status": "FAILED_NATIVE_FEASIBILITY_NOT_ADMITTED",
+  "source_commit": "14f205708df1201ebeeef72ed66ea4ea5d342a90",
+  "test_sha256": "361ca1efaa6424539e4ac8458d9621559fc2f38df609f0f686940a3b9ff6e210",
+  "at_utc": "2026-10-20T03:51:41.186358+00:00",
+  "host": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+  "uid": 1000,
+  "go_version": "go version go1.26.5 linux/amd64",
+  "helper_request_sha256": "64ca77d37415b0ea1695c5a927aceda1d69157e7cbec81dc89cfad47fd6230b9",
+  "helper_source_commit": "b7c19c7994545ab95fef47ab2264a4ccb57baf5e",
+  "selected_sdk": "/home/ben/.local/share/phebs-host/tools/go-1.26.5",
+  "scope": "Neutral dependency-free SDK/source descriptor feasibility with buildvcs=true. Original installed SDK remains available. No reference-tool or full protected-build admission.",
+  "checks": [
+    {
+      "command": [
+        "go",
+        "vet",
+        "-tags",
+        "phebs_t42_native",
+        "./spike/t421"
+      ],
+      "source_commit": "14f205708df1201ebeeef72ed66ea4ea5d342a90",
+      "exit_code": 0,
+      "elapsed_seconds": 2.851,
+      "skips": [],
+      "passed_tests": 0
+    },
+    {
+      "command": [
+        "golangci-lint",
+        "run",
+        "--build-tags",
+        "phebs_t42_native",
+        "--new-from-rev",
+        "3769ac49",
+        "./spike/t421"
+      ],
+      "source_commit": "14f205708df1201ebeeef72ed66ea4ea5d342a90",
+      "exit_code": 0,
+      "elapsed_seconds": 17.241,
+      "skips": [],
+      "passed_tests": 0
+    },
+    {
+      "command": [
+        "go",
+        "test",
+        "-json",
+        "-tags",
+        "phebs_t42_native",
+        "./spike/t421",
+        "-run",
+        "^TestLinuxGoBuildRequiredNativeDescriptorComposition$",
+        "-count=1",
+        "-timeout=25m"
+      ],
+      "source_commit": "14f205708df1201ebeeef72ed66ea4ea5d342a90",
+      "exit_code": 1,
+      "elapsed_seconds": 168.977,
+      "skips": [],
+      "passed_tests": 0
+    }
+  ],
+  "native_observations": [
+    "go_build_descriptor_native_linux_test.go:92: preparation pid=61777 root_joined=true session_members=0 observation_error=<nil>",
+    "go_build_descriptor_native_linux_test.go:92: preparation pid=61778 root_joined=true session_members=0 observation_error=<nil>",
+    "go_build_descriptor_native_linux_test.go:92: preparation pid=61780 root_joined=true session_members=0 observation_error=<nil>",
+    "go_build_descriptor_native_linux_test.go:92: preparation pid=61781 root_joined=true session_members=0 observation_error=<nil>",
+    "go_build_descriptor_native_linux_test.go:150: protected build inputs entries=16722 files=15039 bytes=232414910 helper=sha256:9ee7201c02724056cdd8e11f31be967b0c0e5fb80305fdbaaf44a1f75c3ac333",
+    "go_build_descriptor_native_linux_test.go:92: preparation pid=61792 root_joined=true session_members=0 observation_error=<nil>",
+    "go_build_descriptor_native_linux_test.go:178: required descriptor compile/VCS feasibility refused protected descriptor build: exit status 1; stdout=\"\" stderr=\"can't start telemetry child process: fork/exec /sdk/bin/go: no such file or directory\\nerror obtaining VCS status: exit status 128\\n\\tUse -buildvcs=false to disable VCS stamping.\\n\""
+  ],
+  "interpretation": "Protected input construction succeeded, then Go refused the direct FD3/FD4 composition. It reported an unreachable /sdk/bin/go self-executable for a telemetry child plus a separate VCS exit128. The private Git cause is unavailable, so no specific Git syscall cause is asserted. Keep VCS=true and exact source/child identity gates. No direct-descriptor build layout is admitted.",
+  "lifecycle": "All five preparation command roots logged actual root join and zero private-session members; test cleanup reported neither retained-ownership nor fixture-removal failure. Subsequent named-process and fixture-prefix observations were empty. Helper/input construction uses its existing actual-join protocol. This remains a failed build result, not generic operational executor qualification.",
+  "review": "Independent exact 14f20570 review: no implementation/custody blocker; one low cost-record wording corrected afterward in owning PLAN docs. Reviewer ran no tests/children.",
+  "cost": "Two launches of the same independently verified helper image: one H2p Git tree and one SDK/modules/source tree; reference rebuilding/bootstrap is additional. Git protected 7-file tree (31,834,376 actual bytes here) coexists with build tree (232,414,910 actual bytes, 16,722 entries, 15,039 files). H2k 2-GiB/100,000-entry bound applies per construction, not aggregate. Git transient source/copy/hash/probe costs, original SDK page cache, helper image, transfer/census buffers and separate writable cache/tmp/output all remain additional. Five-minute cooperative Go command cap and 64-KiB-per-stream output cap; these are feasibility controls, not frozen admission or hard kernel IO/resource guarantees. No new production request/tick/startup/retry/publication work.",
+  "next_required": "Implement and qualify a source-owned namespace build recipe with reachable paths. Importing current foreign FD-held mounts is itself unproven; do not assume a sibling namespace can bind them. Full reference-tool provenance, original private SDK/cache/source unavailability, command/executor ownership, aggregate reservations, full pressure/restore, restored launch, complete readiness and freeze remain open.",
+  "raw_evidence_directory": "/home/ben/phebs-rehearsals/t42h2q-feasibility.lbefvvgu",
+  "raw_file_census": [
+    {
+      "name": "lint-owner.json",
+      "bytes": 195,
+      "sha256": "9550a28e091e6500fef821cc83c9238f8f4f10020539ed6c2d86bf66e402fa59"
+    },
+    {
+      "name": "lint.json",
+      "bytes": 302,
+      "sha256": "41199dbb209ae9cddb591da5cfab046bdc7f569fa472f468ea8cacfb9f3c4371"
+    },
+    {
+      "name": "lint.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "lint.stdout",
+      "bytes": 10,
+      "sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+    },
+    {
+      "name": "native-owner.json",
+      "bytes": 262,
+      "sha256": "7c40cc8f824dc7b34e655ab60268bb0ebb219199bba5375d39603533a7fec8cc"
+    },
+    {
+      "name": "native-preflight.json",
+      "bytes": 237,
+      "sha256": "3fb7f1a5f37f778424e97750ae86f907e5ed73ca425e9708b380fc068a1b5758"
+    },
+    {
+      "name": "native.json",
+      "bytes": 370,
+      "sha256": "3e3c7ffe5db3ac6a2b29c340e86dd128f2b193a77c551412d5b2daf8d35f441b"
+    },
+    {
+      "name": "native.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "native.stdout",
+      "bytes": 3969,
+      "sha256": "e08c754a3fa6dec7d9ffe50ce9cab0a1c41b189d0069c37d57e3912b31b056fc"
+    },
+    {
+      "name": "post-run-observation.json",
+      "bytes": 442,
+      "sha256": "7b862d0d3b704dd1a7ba7553b9ece172d2e15fc063b5cee594cbce1d92c6a379"
+    },
+    {
+      "name": "precommit-static-diagnostic.json",
+      "bytes": 284,
+      "sha256": "dafff451db5bf7ece454c551cdd80dd14f2fb4996bdf3eadeed5903671a4a558"
+    },
+    {
+      "name": "source.json",
+      "bytes": 746,
+      "sha256": "e08afeabc2a0e56c408d8cace9e26dcee9fcfc22151f98d0e8def3630bc03cea"
+    },
+    {
+      "name": "vet-owner.json",
+      "bytes": 139,
+      "sha256": "6efcb1622801e20d278af487369f5705819982b98551e64bdf01b1b5b53bcab3"
+    },
+    {
+      "name": "vet.json",
+      "bytes": 245,
+      "sha256": "92a78ab1ab4dc9c4a6e01096fbb8f731acbb471bd8f4a2f454191a41408651a3"
+    },
+    {
+      "name": "vet.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "vet.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "production_signing_and_activation": "PENDING"
+}
