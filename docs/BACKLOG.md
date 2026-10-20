@@ -20362,7 +20362,7 @@ joined real-store integrations, vet/pinned lint and source/cost review pass.
 Original T51.1 evidence stays exact. T51.3 still owns operating/production
 signature promotion; this implementation alone activates no unsigned pack.
 
-**T51.3 · Measured field-reference promotion** — satisfy the common bar and
+**T51.3 ✅ · Measured field-reference promotion** — satisfy the common bar and
 publish exact supported generators, input formats, operating bounds and expiry.
 
 *2026-10-18 preparation:* `spike/t513/operating-plan.json` prospectively binds
@@ -20398,6 +20398,28 @@ and strict nonempty-error behavior remain. Focused normal/race (including one
 real-store discovery transition), vet/pinned lint and independent source/cost
 review pass. This repairs discovery only; T51.3's fresh-binary operating result
 and production signature remain separate.
+
+**T51.3 signed release closure (2026-10-20, Linux #124).** Ben's request to
+ship experimental/dark features authorizes the reviewed scoped release. The
+[experimental Linux amd64 package](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) publishes Protobuf field references with
+production signatures over exact clean source `290e1518a4a192d0a3494c3ed9fa2eb39a450355`,
+Go 1.26.5, executable/artifact/implementation bindings and the existing trust
+anchor. The [receipt](../spike/t513/release-drafts/linux-20261020/receipt.json) and signed
+records retain exact identities and expiry. This closes this ticket's final
+artifact/signature/publication hold; earlier dated pending-key statements remain
+historical. Default startup stays dark; installation/restart uses explicit
+verified selection. Existing instance deployment is operator-specific.
+
+The common final gate passed 194 bounded test cases without skips, all twelve
+record self-loads, real selected startup/restart/withdrawal, anonymous visibility
+and authorization, plus empty-state sync/index/search/pinned-browse/default-dark
+release smoke. All three selection servers waited with status0 and no observed
+survivor; descendant observation is sampled. Seven new records and five exact
+existing-release rebindings share the complete 57-file artifact directory.
+Historical quality/operating evidence and uncertainty remain exact; current
+registration smoke adds no independent accuracy, Linux capacity, scale, SLO or
+T42 readiness result. No production implementation, numerical bound, query,
+sync, retry/no-op, publication, lock, cache or child class changes.
 
 ## Epic 52 · Thrift field-reference production readiness
 
