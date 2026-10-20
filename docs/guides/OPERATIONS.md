@@ -253,6 +253,17 @@ changed source, with the same retained-custody rules and no relaxed check.
 The control also now owns a copy of its initial 48-byte nonce/header before
 reusing the wire receive buffer; a focused buffer-reuse regression pins it.
 
+Exact corrected source `f9f8f314` passed both required guards with zero skips:
+160.27s for controlled cancellation and 344.20s for the protected neutral compile,
+including their independent reference bootstraps. The
+[`native-guards-linux-20261019.json`](../../spike/t42h2q/native-guards-linux-20261019.json)
+receipt records joins, 16,732 protected entries / 264,249,286 logical bytes,
+cleanup and unchanged host-propagation brackets; independent receipt/source/
+custody/cost review found no remaining issue. H2q.a is the qualified prerequisite.
+H2q.b still requires the full owner, hiding selected original SDK/cache/source
+paths and an implemented protected reference build. Parent H2q/H2 and aggregate
+resource/readiness/freeze/ceremony gates remain open.
+
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
 It binds `c07bc930` and is preserved unchanged, so it no longer describes the

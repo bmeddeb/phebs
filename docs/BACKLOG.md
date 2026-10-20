@@ -4280,6 +4280,39 @@ frames cannot change it and malformed lengths refuse. This is a concrete source
 defect, not an attribution recovered from the first generic native failure.
 The extra 48-byte copy occurs once per fixed control, within existing bounds.
 
+**T42.H2q.a · Reachable protected Go layout and lifetime guard** *(PR #149;
+qualified 2026-10-19; component complete).* This is the first
+PR-sized prerequisite under H2q, separated so reviewed green work can integrate
+under Ben's standing merge instruction. AC: preserve failed descriptor/import/
+namespace/lifetime receipts; independently rebuild the distinct fixed helper;
+qualify the reachable read-only neutral compile with exact modern-Go clean VCS
+metadata and nonce/manifest/output binding; qualify one fixed adopted stopped
+new-session leaf's PID1 cancellation with actual Wait/pidfd exit observations;
+preserve all uncertain ownership and historical recipes; pass focused normal/
+race, static/docs and independent source/custody/cost/receipt review. No installed
+SDK hiding, implemented reference provenance, public Go owner or aggregate
+admission is claimed by this prerequisite. It does not close parent H2q.
+Exact source `f9f8f314` passed required native lifetime (160.27s) and protected
+compile (344.20s), both with zero skips. The compile protected 16,732 entries /
+264,249,286 logical bytes; command roots joined, sessions were empty, fixtures
+were removed and host propagation brackets passed. The
+[receipt](../spike/t42h2q/native-guards-linux-20261019.json) passed independent
+source/custody/cost/hash review with no findings, as did focused normal/race,
+tagged vet, scoped lint and documentation gates. See the
+[completed record](./BACKLOG_COMPLETED.md#t42h2qa--reachable-protected-go-layout-and-lifetime-guard-2026-10-19).
+
+**T42.H2q.b · Protected Linux SDK/module/source reference-build owner** *(next;
+depends on H2q.a).* Own every remaining parent H2q AC: exact clean source and
+checksum-selected module/SDK inputs; hide private originals and selected original
+SDK/cache/source before use; actual implemented reference-tool build and complete
+candidate/build-info comparison; closed descriptor/namespace routing and offline
+controls; real compiler/Git delegation; public joined-consumer ownership and
+retention on uncertainty; focused normal/race/static/native and custody/cost
+review. Preserve the existing combined input ceilings, separately charged
+copies/trees/output/compiler costs and historical Darwin behavior. Complete
+aggregate RAM/process/concurrency admission and all downstream H2/readiness/
+freeze gates remain mandatory. Splitting these scopes waives no parent AC.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

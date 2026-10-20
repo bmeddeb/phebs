@@ -14597,3 +14597,31 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   without retrospectively identifying the first generic native failure. Cost
   is one 48-byte allocation/copy per fixed control, no additional child, wire
   round trip or production work.
+
+- **2026-10-19 — T42.H2q PR-sized prerequisite sequencing.**
+  Under Ben's explicit standing instruction to merge each reviewed green PR and
+  continue, split H2q into H2q.a's fixed reachable neutral layout/lifetime guard
+  (PR #149) and H2q.b's complete protected Linux SDK/module/source reference-build
+  owner. Parent H2q acceptance remains unchanged. H2q.a must pass its actual
+  protected compile and controlled detached-leaf cancellation, preserve failed
+  evidence, and clear focused/static/native/review gates before integration.
+  It grants no installed-SDK hiding, reference provenance, public Go owner,
+  aggregate allowance, H2/readiness/freeze, ceremony or release result. H2q.b
+  retains every remaining parent AC and its dependency on the qualified guard.
+  This is dependency/PR sequencing only, with no runtime or cost change.
+
+- **2026-10-19 — T42.H2q.a required native qualification.**
+  Exact source `f9f8f314bf369a3ec2538e3b567ecf2716f00093` passed both
+  required Linux guards with zero skips: 160.27s controlled PID1/detached-leaf
+  cancellation and 344.20s protected neutral compile, including independent
+  helper reference bootstraps. The compile protected 16,732 entries /
+  264,249,286 logical bytes. Actual helper/preparation/output roots joined,
+  private sessions were empty, fixtures were removed and final host propagation
+  brackets passed. The controlled stopped leaf's exact pidfd was live before
+  PID1 cancellation and exit-ready before release. The receipt's 22 raw census
+  hashes and eight exact source hashes passed independent review with no
+  findings, alongside focused normal/race, tagged vet, scoped lint and docs.
+  Retain all failed and diagnostic records without assigning their unavailable
+  causes. H2q.a is complete as a qualified preparation mechanism; H2q.b retains
+  full original hiding, reference provenance and public Go ownership. Every
+  previously stated separate cost and aggregate H2/readiness/freeze gate remains.

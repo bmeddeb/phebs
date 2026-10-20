@@ -1,0 +1,237 @@
+{
+  "ticket": "T42.H2q.a",
+  "status": "PASS_REQUIRED_NATIVE_LAYOUT_AND_CONTROLLED_LIFETIME_GUARDS",
+  "source_commit": "f9f8f314bf369a3ec2538e3b567ecf2716f00093",
+  "source_file_sha256": {
+    "spike/t421/go_build_namespace_helper_linux.go": "177e4b6e2169875a61c2c4e6a719f47d89b44fb6866a0799e1c44cb97d8f69d5",
+    "spike/t421/go_build_namespace_native_linux_test.go": "4e035a4b7fa3b1f90f4f10846544e11083b5aec8de4d6441b5bd5ffe10cc2d33",
+    "spike/t421/go_build_lifetime_helper_linux.go": "6b0ce9c963c0baf4b45cee1824a97afcedfed2a9a9ea4a003ca2af65f4c159eb",
+    "spike/t421/go_build_lifetime_helper_linux_test.go": "3f9b13c69ae7fc266946146608c713d5964a6df00c89856237bb2dcb405b3c84",
+    "spike/t421/go_build_lifetime_native_linux_test.go": "f323b0c79147ce6352a547a68fe8ec4a81f2d1837f5595a1908e08271aa75a24",
+    "spike/t421/go_build_namespace_recipe.go": "e75eebd713fb51a16937f1e4103dd9c6275c2e2537bf8d0ba5cb5db532e3bd9e",
+    "spike/t421/input_tree_helper_linux.go": "b0d6a56815246241d37c9260ed8ec9f2e8189995d3a23d312cd11a6c776357b6",
+    "spike/t421/reference_tool.go": "97801a68e4045eca901e0eebb7686b11625f9a9710190a410b2db4e173aece7a"
+  },
+  "helper_candidates": {
+    "go-build-helper": {
+      "bytes": 35383631,
+      "sha256": "8e28585d7e31c332c9e5cd008b42bc351881c2d4c7296cf648b5efdeaa38abad",
+      "exact_source_independent_rebuild_accepted_by_required_test": true
+    },
+    "input-tree-helper": {
+      "bytes": 34303540,
+      "sha256": "a548e2bffdae7a35d986199be572fe433f9d174c96e45bea3dff5838d8f2cfea",
+      "exact_source_independent_rebuild_accepted_by_required_test": true
+    }
+  },
+  "native": {
+    "lifetime-native": {
+      "test": "TestLinuxGoBuildRequiredNativePIDNamespaceCancellation",
+      "elapsed_seconds_including_reference_bootstrap": 160.27,
+      "actual_wrapper_wait_exit_code": 0,
+      "wrapper_session_members_after_wait": [],
+      "skips": [],
+      "required_native_status": "PASS"
+    },
+    "namespace-native": {
+      "test": "TestLinuxGoBuildRequiredNativeNamespaceComposition",
+      "elapsed_seconds_including_reference_bootstrap": 344.2,
+      "actual_wrapper_wait_exit_code": 0,
+      "wrapper_session_members_after_wait": [],
+      "skips": [],
+      "required_native_status": "PASS"
+    }
+  },
+  "lifetime_observations": {
+    "pid1": 135483,
+    "controlled_leaf": "fixed same-image descendant, adopted by PID1, new session, no parent-death signal, SIGSTOP barrier",
+    "live_leaf_pidfd_image_parent_session_stopped_allthread_privilege_checks": "required test passed",
+    "root_actual_wait_signal": "SIGKILL",
+    "leaf_pidfd_exit_ready_before_release": true,
+    "root_session_empty": true,
+    "scope": "one controlled detached leaf, not arbitrary-descendant or timely-kernel-cleanup qualification"
+  },
+  "compile_observations": {
+    "protected_input_entries": 16732,
+    "protected_input_logical_bytes": 264249286,
+    "root_pid": 143506,
+    "actual_helper_wait_success": true,
+    "helper_session_empty": true,
+    "source_preparation_roots": [
+      143498,
+      143499,
+      143501,
+      143502
+    ],
+    "source_preparation_actual_wait_and_zero_session_members": true,
+    "compiled_output_pid": 143992,
+    "compiled_output_actual_wait_and_zero_session_members": true,
+    "exact_literal_output": "neutral protected build\n",
+    "required_result_checks": "nonce + protected input manifest + output digest, exact native toolchain/CGO0/trimpath/full clean VCS revision/pseudo-version/fixed time, checked independently by parent and helper",
+    "fixture_originals_removed_before_ack_and_compile": true,
+    "installed_sdk_remains_available": true
+  },
+  "cleanup": {
+    "required_fixture_cleanup_and_final_host_propagation_brackets": "PASS in both native tests",
+    "post_run": {
+      "at_utc": "2026-10-20T05:31:04.073528+00:00",
+      "kernel": {
+        "system": "Linux",
+        "release": "7.0.0-38-generic",
+        "machine": "x86_64"
+      },
+      "uid": 1000,
+      "available_bytes": 130995331072,
+      "remaining_fixture_paths": [],
+      "recorded_pid_paths_present": [],
+      "host_root_mount_post_observation": {
+        "mount_id": "44",
+        "filesystem": "ext4",
+        "optional_fields": [
+          "shared:1"
+        ]
+      }
+    }
+  },
+  "focused_gates": {
+    "tagged_go_helper_normal": "PASS 0.050s",
+    "tagged_go_helper_race": "PASS 1.170s",
+    "broader_untagged_linux_go_input_tree_normal": "PASS 0.067s",
+    "broader_untagged_linux_go_input_tree_race": "PASS 1.207s",
+    "nonce_fault_injection": "returnraw overlay failed expected wire-buffer overwrite assertion; corrected source passed",
+    "tagged_vet": "PASS",
+    "scoped_lint_against_integrated_main3769ac49": "PASS 0 issues",
+    "docs_glossary_whitespace": "PASS before evidence-only descendants",
+    "independent_source_custody_cost_review": "no remaining findings at exact f9f8f314"
+  },
+  "retained_failed_and_diagnostic_receipts": [
+    "descriptor-feasibility-linux-20261019.json",
+    "import-diagnostic-failure-linux-20261019.json",
+    "import-refusal-linux-20261019.json",
+    "namespace-failure-linux-20261019.json",
+    "lifetime-control-failure-linux-20261019.json",
+    "neutral-metadata-host-control-linux-20261019.json"
+  ],
+  "cost_and_limit": "Each new input tree retains existing 2GiB/100000-entry/64MiB-name ceilings and256MiB/file bound. H2p tree, both verified helper images/bootstrap, SDK/Git staging/pagecache, protected namespace copy, source/census/hash maps, cache/tmp/output/compiler RSS and descendants are separately charged. Lifetime tree is2entries/1file/27bytes under nominal2GiB ceiling plus48byte initial copy and3fixed processes. No aggregate RAM/process/concurrency allowance. Ordinary runtime costs unchanged.",
+  "qualification_limits": [
+    "fixed neutral source and empty module cache only",
+    "installed SDK/cache/source hiding and real implemented protected reference build remain H2q.b",
+    "no public Go build-input owner or execution/resource admission",
+    "historical Darwin recipes/H2k READY-ACK-exit retained",
+    "no full H2/readiness/freeze/ceremony/scale/release result"
+  ],
+  "raw_evidence_directory": "/home/ben/phebs-rehearsals/t42h2q-confirmed.n0usmp_z",
+  "raw_file_census": [
+    {
+      "name": "checkout.stderr",
+      "bytes": 85,
+      "sha256": "5ee21494d903510fb70d9d53aaf299bec909119a6a6b6b765f1fef67da3d84b7"
+    },
+    {
+      "name": "checkout.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "clone.stderr",
+      "bytes": 90,
+      "sha256": "e9772a17a154b627d15be566319a964fa3560b741ddf9a13ca5d3de7b078949c"
+    },
+    {
+      "name": "clone.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "go-build-helper",
+      "bytes": 35383631,
+      "sha256": "8e28585d7e31c332c9e5cd008b42bc351881c2d4c7296cf648b5efdeaa38abad"
+    },
+    {
+      "name": "go-build-helper-bootstrap-process.json",
+      "bytes": 640,
+      "sha256": "387c474184af8468b52d85bad2867cdc16e95ae65abbfc6827e6635f8e264fdf"
+    },
+    {
+      "name": "go-build-helper-bootstrap.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "go-build-helper-bootstrap.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "go-build-helper-request.json",
+      "bytes": 591,
+      "sha256": "76713ae6ac450e60c1840821118206da2f162691d9f7e12e0480cf32e29d6f47"
+    },
+    {
+      "name": "input-tree-helper",
+      "bytes": 34303540,
+      "sha256": "a548e2bffdae7a35d986199be572fe433f9d174c96e45bea3dff5838d8f2cfea"
+    },
+    {
+      "name": "input-tree-helper-bootstrap-process.json",
+      "bytes": 646,
+      "sha256": "94ba88efa1d5d469d3a825e6e9554e5950622b73e7cea5af04edcbc59841d583"
+    },
+    {
+      "name": "input-tree-helper-bootstrap.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "input-tree-helper-bootstrap.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "input-tree-helper-request.json",
+      "bytes": 597,
+      "sha256": "6fc821dc8036c1806fdb9e3609f17525875fa8ce3c47efd7e905f08749e88f94"
+    },
+    {
+      "name": "lifetime-native-process.json",
+      "bytes": 595,
+      "sha256": "4e7ee7e56039c8d317bd52e616e2428e6776582bef32d7e1c8c962439b191d62"
+    },
+    {
+      "name": "lifetime-native.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "lifetime-native.stdout",
+      "bytes": 1785,
+      "sha256": "17cd4625638877310eac3f3b2318b9390ae54325786f89cea8a8cda2b233405d"
+    },
+    {
+      "name": "namespace-native-process.json",
+      "bytes": 592,
+      "sha256": "0708bd92a1d353f53eb5241e3e75ca43bdf7994ad9a3f806699badf646127bd1"
+    },
+    {
+      "name": "namespace-native.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "namespace-native.stdout",
+      "bytes": 3434,
+      "sha256": "3f9f05be188b03d16929f1e0743a9bb04c382378a4ab09f8482a703ea9e0f537"
+    },
+    {
+      "name": "post-run.json",
+      "bytes": 412,
+      "sha256": "36069938a25b7b06a959354843521ac44f11c534f17edb2fc332c264604205f2"
+    },
+    {
+      "name": "preflight.json",
+      "bytes": 684,
+      "sha256": "4ec79a37fa0ddf37257b5f2c6389f77ffd39813e9102a2fe49f168e4cc52f2ee"
+    }
+  ],
+  "production_signing_and_activation": "PENDING"
+}

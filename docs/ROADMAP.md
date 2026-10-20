@@ -166,6 +166,15 @@ independent Mac implementation and presentation leaves. The
 remaining-work and branch/integration statuses in earlier dated dispatch notes
 below, while retaining their historical facts and qualification scopes.
 
+T42.H2q is split into PR-sized prerequisites so qualified work can integrate
+under Ben's standing green-PR merge instruction. H2q.a owns the fixed reachable
+neutral Go layout and controlled PID1/detached-leaf lifetime proof; its native
+qualification passed at `f9f8f314` with zero skips (160.27s lifetime, 344.20s
+compile), preserved failed receipts and independent review with no findings.
+H2q.b follows with the complete protected SDK/module/
+source reference-build owner and all remaining parent acceptance criteria.
+Neither scope waives full H2, resource/readiness, freeze or execution gates.
+
 Next: [Linux office handoff #124](https://github.com/bmeddeb/phebs/issues/124)
 mechanism qualification → remaining T42.H2 consumer/executor/resource admission
 → T42.2v restored launch → complete readiness → T42.2o fresh freeze → separately

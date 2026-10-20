@@ -11402,3 +11402,31 @@ lookup; patch scrolling and repeated blame links retain keyboard accessibility.
 The owning backlog records bounded UI/native, screenshot, type/lint/build,
 documentation and charter/cost checks. Linux #124, managed-SCIP installation
 proof and production signing/activation remain pending.
+
+## T42.H2q.a · Reachable protected Go layout and lifetime guard (2026-10-19)
+
+The fixed neutral Linux build helper constructs its reachable read-only input
+tree inside its executing PID/user/mount namespace, preserves exact clean
+modern-Go VCS metadata and binds output to nonce, input manifest and digest
+before actual helper Wait. A separate same-image control observes one adopted
+SIGSTOP leaf in a new session, then actual PID1 SIGKILL Wait, leaf pidfd exit
+readiness and empty root session before custody release. Unknown authorization/
+leaf observations retain the worker and keepers. The init-frame buffer-reuse
+regression fails under a no-copy mutation and passes with the owned nonce.
+
+Exact source `f9f8f314bf369a3ec2538e3b567ecf2716f00093` passed both required
+native gates with zero skips: 160.27s lifetime and 344.20s protected compile,
+including independent helper bootstraps. The compile protected 16,732 entries /
+264,249,286 logical bytes. Actual roots joined, sessions were empty, fixtures
+were removed and final host-propagation brackets passed. Focused normal/race,
+tagged vet, scoped lint, docs/glossary/whitespace and independent source/custody/
+cost/receipt review passed with no remaining finding. The
+[receipt](../spike/t42h2q/native-guards-linux-20261019.json) binds raw/source
+hashes and retains every prior failed or narrow diagnostic result unchanged.
+
+This completes one PR-sized prerequisite under H2q, under Ben's standing reviewed
+green-PR integration instruction. Fixed neutral source and empty modules leave
+the installed SDK available. Full SDK/module/source ownership, original hiding,
+implemented protected reference provenance and public joined capabilities remain
+H2q.b. Separate tree/staging/cache/compiler costs and aggregate H2 admission stay
+mandatory; no readiness/freeze/ceremony, scale or release result follows.
