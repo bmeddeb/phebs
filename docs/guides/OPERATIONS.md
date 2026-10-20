@@ -294,6 +294,15 @@ Source-free receipts record hashes and outcomes without copying private command
 diagnostics. Native acceptance, aggregate H2 admission and all downstream
 readiness/freeze gates remain separate.
 
+The first actual-author native attempt at `a48ba614` failed at helper
+`exact-source` before READY. Preserve
+[`reference-source-failure-linux-20261020.json`](../../spike/t42h2q/reference-source-failure-linux-20261020.json)
+and its raw diagnostics; actual roots joined and sessions emptied, while a
+sticky helper Close refusal retained the empty private fixture parent. Do not
+rerun unchanged source. The protected-source mode correction needs focused
+normal/race, static and independent review before one changed-source native
+confirmation. The stage-only failure supplies no successful author-build claim.
+
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
 It binds `c07bc930` and is preserved unchanged, so it no longer describes the

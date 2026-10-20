@@ -4336,6 +4336,16 @@ state and sticky-error cleanup. The required real `t422-author` native driver
 still needs execution on the exact reviewed source. No native qualification,
 full H2q.b completion or aggregate resource allowance is implied by this source.
 
+The first actual-author native run at `a48ba614` **failed** before READY at
+helper `exact-source` in 541.47s, with actual root joins and empty sessions.
+The [failure receipt](../spike/t42h2q/reference-source-failure-linux-20261020.json)
+retains the sticky helper Close refusal and empty private fixture parent without
+claiming a particular inner predicate. Source review found protected executable
+0500 versus historical raw-checkout 0111 mode expectations. A distinct exact
+0400/0500 protected-source verifier and named substep diagnostics are required;
+historical checkout defaults and complete blob/index/control checks stay exact.
+Changed-source normal/race/static/review and native qualification remain open.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

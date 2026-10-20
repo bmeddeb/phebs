@@ -356,16 +356,23 @@ func inspectCheckoutFiles(ctx context.Context, path string, entries []executionC
 }
 
 func inspectCheckoutFile(root *os.Root, entry executionCheckoutEntry, remaining int64) (int64, error) {
+	wantExecutable := fs.FileMode(0)
+	if entry.mode == "100755" {
+		wantExecutable = 0o111
+	}
+	return inspectCheckoutFileMode(root, entry, remaining, 0o111, wantExecutable)
+}
+
+// Preserve the historical execute-bit comparison above. The protected Linux
+// copy instead checks its complete exact normalized mode with this same raw
+// blob hash, size bound and before/open/after/linked identity sequence.
+func inspectCheckoutFileMode(root *os.Root, entry executionCheckoutEntry, remaining int64, mask, expected fs.FileMode) (int64, error) {
 	before, err := root.Lstat(entry.path)
 	if err != nil || !before.Mode().IsRegular() || before.Size() < 0 ||
 		before.Size() > maxCheckoutFileBytes || before.Size() > remaining {
 		return 0, errors.New("checkout admission tracked file is unavailable, irregular, or over bound")
 	}
-	wantExecutable := fs.FileMode(0)
-	if entry.mode == "100755" {
-		wantExecutable = 0o111
-	}
-	if before.Mode().Perm()&0o111 != wantExecutable {
+	if before.Mode()&mask != expected {
 		return 0, errors.New("checkout admission tracked executable mode differs")
 	}
 	file, err := root.Open(entry.path)

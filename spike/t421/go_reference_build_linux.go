@@ -8,6 +8,7 @@ import (
 	"debug/buildinfo"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -41,26 +42,88 @@ func (git goReferenceCheckoutGit) runInput(ctx context.Context, root string, inp
 func inspectGoReferenceSource(ctx context.Context, plan linuxGoReferencePlan, gitDigest, workspace string) (executionReferenceSource, error) {
 	root, err := os.Getwd()
 	if err != nil {
-		return executionReferenceSource{}, ErrExecutionGoBuildCustody
+		return goReferenceSourceRefusal("source-root")
 	}
 	core := filepath.Join(root, "inputs", "git", "core")
 	for _, name := range executionGitImageNames() {
 		if validateExternalToolNativeImage(filepath.Join(core, name)) != nil {
-			return executionReferenceSource{}, ErrExecutionGoBuildCustody
+			return goReferenceSourceRefusal("git-image")
 		}
 	}
 	inspection := executionCheckoutInspector{root: filepath.Join(root, "inputs", "source"), digest: gitDigest,
 		transport: goReferenceCheckoutGit{core: core, digest: gitDigest, workspace: workspace}}
 	raw, err := inspection.run(ctx, maxCheckoutInventoryBytes, "ls-tree", "-rz", "--full-tree", plan.Source)
 	if err != nil {
-		return executionReferenceSource{}, ErrExecutionGoBuildCustody
+		return goReferenceSourceRefusal("ls-tree")
 	}
 	entries, err := executionCheckoutEntries(raw)
+	if err != nil {
+		return goReferenceSourceRefusal("ls-tree-parse")
+	}
 	reference := executionReferenceSource{root: inspection, source: plan.Source, tree: plan.Tree, entries: entries, configSHA256: plan.ConfigSHA256}
-	if err != nil || reference.verify(ctx) != nil {
+	if verifyGoReferenceSource(ctx, reference) != nil {
 		return executionReferenceSource{}, ErrExecutionGoBuildCustody
 	}
 	return reference, nil
+}
+
+func goReferenceSourceRefusal(step string) (executionReferenceSource, error) {
+	_, _ = fmt.Fprintf(os.Stderr, "reference source refused step=%s\n", step)
+	return executionReferenceSource{}, ErrExecutionGoBuildCustody
+}
+
+func verifyGoReferenceSource(ctx context.Context, reference executionReferenceSource) error {
+	step := "reference-controls"
+	err := reference.verifyFiles(ctx, func(ctx context.Context, path string, entries []executionCheckoutEntry) error {
+		step = "protected-files"
+		return inspectGoReferenceFiles(ctx, path, entries)
+	})
+	if err != nil {
+		_, _ = goReferenceSourceRefusal(step)
+		return ErrExecutionGoBuildCustody
+	}
+	return nil
+}
+
+// Git's index/tree retain 100644/100755. The bounded H2k wire deliberately
+// materializes only 0400/0500; require those complete physical modes while
+// reusing the historical raw blob hash and coherent file-identity checks.
+func inspectGoReferenceFiles(ctx context.Context, path string, entries []executionCheckoutEntry) (retErr error) {
+	root, err := os.OpenRoot(path)
+	if err != nil {
+		return ErrExecutionGoBuildCustody
+	}
+	defer func() {
+		if root.Close() != nil {
+			retErr = ErrExecutionGoBuildCustody
+		}
+	}()
+	var total int64
+	for _, entry := range entries {
+		if ctx.Err() != nil {
+			return ErrExecutionGoBuildCustody
+		}
+		for parent := filepath.Dir(entry.path); parent != "."; parent = filepath.Dir(parent) {
+			info, err := root.Lstat(parent)
+			if err != nil || !info.IsDir() {
+				return ErrExecutionGoBuildCustody
+			}
+		}
+		mode := fs.FileMode(0o400)
+		switch entry.mode {
+		case "100644":
+		case "100755":
+			mode = 0o500
+		default:
+			return ErrExecutionGoBuildCustody
+		}
+		size, err := inspectCheckoutFileMode(root, entry, maxCheckoutBytes-total, ^fs.FileMode(0), mode)
+		if err != nil {
+			return ErrExecutionGoBuildCustody
+		}
+		total += size
+	}
+	return nil
 }
 
 func checkGoReferenceCandidate(ctx context.Context, candidate *os.File, plan linuxGoReferencePlan) error {
@@ -96,7 +159,7 @@ func buildGoReference(ctx context.Context, plan linuxGoReferencePlan, workspace 
 	if checkGoReferenceCandidate(ctx, candidate, plan) != nil {
 		return goReferenceBuildRefusal("candidate-before")
 	}
-	if reference.verify(ctx) != nil {
+	if verifyGoReferenceSource(ctx, reference) != nil {
 		return goReferenceBuildRefusal("source-before")
 	}
 	inputs := filepath.Join(root, "inputs")
@@ -204,7 +267,7 @@ func buildGoReference(ctx context.Context, plan linuxGoReferencePlan, workspace 
 	if _, err := run("module-verify-after", 64<<10, "mod", "verify"); err != nil {
 		return goReferenceBuildRefusal("module-verify-after")
 	}
-	if reference.verify(ctx) != nil {
+	if verifyGoReferenceSource(ctx, reference) != nil {
 		return goReferenceBuildRefusal("source-after")
 	}
 	if checkGoReferenceCandidate(ctx, candidate, plan) != nil {

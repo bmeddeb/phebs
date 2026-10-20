@@ -215,6 +215,12 @@ func copyExecutionReferenceFile(ctx context.Context, input, output *os.Root, ent
 }
 
 func (reference executionReferenceSource) verify(ctx context.Context) error {
+	return reference.verifyFiles(ctx, inspectCheckoutFiles)
+}
+
+// Only the final physical-file check varies for the Linux protected copy.
+// Commit, tree, index and private Git-control verification stay identical.
+func (reference executionReferenceSource) verifyFiles(ctx context.Context, inspectFiles func(context.Context, string, []executionCheckoutEntry) error) error {
 	if !validCommit(reference.source) || !validCommit(reference.tree) || len(reference.entries) == 0 {
 		return errors.New("reference source authority is absent")
 	}
@@ -258,7 +264,7 @@ func (reference executionReferenceSource) verify(ctx context.Context) error {
 	if err := reference.root.inventory(ctx, reference.entries); err != nil {
 		return err
 	}
-	return inspectCheckoutFiles(ctx, reference.root.root, reference.entries)
+	return inspectFiles(ctx, reference.root.root, reference.entries)
 }
 
 func readReferenceControl(root *os.Root, path string, limit int64) ([]byte, error) {

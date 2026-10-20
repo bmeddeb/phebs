@@ -14700,3 +14700,26 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Required actual-author native qualification and exact-source review/gates
   remain pending. The qualified neutral lifetime guard and historical Darwin
   behavior are preserved; no H2/readiness/freeze or ceremony result is claimed.
+
+
+- **2026-10-20 — T42.H2q.b protected-source mode correction after native refusal.**
+  The first actual-author driver at exact `a48ba614` failed before READY at
+  helper stage `exact-source` in 541.47s. Its helper root actually joined with
+  exit 125 and an empty session; the wrapper joined with no session members.
+  The sticky helper Close refusal leaves the empty fixture parent retained.
+  Preserve `spike/t42h2q/reference-source-failure-linux-20261020.json` and its
+  raw evidence. No narrower native predicate or successful author build follows.
+  Source review found a deterministic representation mismatch: H2k protects Git
+  executables as physical 0500, while raw checkout inspection requires all 0111
+  bits for Git 100755. Add a distinct Linux protected-file verifier requiring
+  exact 0400/0500, retaining complete commit/tree/index/control/blob checks and
+  all historical raw-checkout defaults. Name bounded exact-source substeps
+  before any changed-source confirmation. This corrects a source defect without
+  claiming it was the sole cause of the retained generic stage refusal.
+  Mode selection adds constant work per already-inspected source file, with no
+  additional whole-tree pass, child, copy, persistent state or runtime caller.
+  Existing repeated module verification includes two custom expanded-directory
+  hash passes and two `go mod verify` expanded-directory hash passes when the
+  selected module directories exist, in addition to preparation/transfer hashes.
+  All separate copies, compiler/cache/output and aggregate admission costs stay
+  mandatory. Native qualification, H2/readiness/freeze and ceremony stay open.

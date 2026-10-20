@@ -8,8 +8,91 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 )
+
+func TestLinuxGoReferenceSourceRequiresExactProtectedModes(t *testing.T) {
+	reference := goReferenceProtectedSourceFixture(t)
+	// The source's tree/index are unchanged 100644/100755. Historical checkout
+	// inspection must continue to reject H2k's normalized executable 0500.
+	if reference.verify(t.Context()) == nil {
+		t.Fatal("historical execute-bit gate accepted protected 0500")
+	}
+	if err := verifyGoReferenceSource(t.Context(), reference); err != nil {
+		t.Fatal("exact protected raw source/tree/index refused", err)
+	}
+}
+
+func TestLinuxGoReferenceProtectedSourceRetainsEveryGate(t *testing.T) {
+	for _, test := range []string{"executable-0755", "executable-0555", "executable-0400", "data-0500", "data-0600", "blob", "index", "config", "shallow", "tree", "untracked", "canceled"} {
+		t.Run(test, func(t *testing.T) {
+			reference := goReferenceProtectedSourceFixture(t)
+			path := filepath.Join(reference.root.root, "tracked.txt")
+			ctx := t.Context()
+			var mutationErr error
+			switch test {
+			case "executable-0755":
+				mutationErr = os.Chmod(filepath.Join(reference.root.root, "executable"), 0o755)
+			case "executable-0555":
+				mutationErr = os.Chmod(filepath.Join(reference.root.root, "executable"), 0o555)
+			case "executable-0400":
+				mutationErr = os.Chmod(filepath.Join(reference.root.root, "executable"), 0o400)
+			case "data-0500":
+				mutationErr = os.Chmod(path, 0o500)
+			case "data-0600":
+				mutationErr = os.Chmod(path, 0o600)
+			case "blob":
+				if os.Chmod(path, 0o600) != nil || os.WriteFile(path, []byte("wrong raw blob\n"), 0o600) != nil {
+					t.Fatal("blob mutation fixture")
+				}
+				mutationErr = os.Chmod(path, 0o400)
+			case "index":
+				_, mutationErr = reference.root.run(t.Context(), 0, "update-index", "--assume-unchanged", "tracked.txt")
+			case "config":
+				mutationErr = os.WriteFile(filepath.Join(reference.root.root, ".git", "config"), []byte("[core]\n\tbare = true\n"), 0o600)
+			case "shallow":
+				mutationErr = os.WriteFile(filepath.Join(reference.root.root, ".git", "shallow"), []byte(strings.Repeat("0", 40)+"\n"), 0o600)
+			case "tree":
+				reference.tree = strings.Repeat("0", 40)
+			case "untracked":
+				mutationErr = os.WriteFile(filepath.Join(reference.root.root, "extra.go"), []byte("package extra\n"), 0o400)
+			case "canceled":
+				var cancel context.CancelFunc
+				ctx, cancel = context.WithCancel(ctx)
+				cancel()
+			}
+			if mutationErr != nil {
+				t.Fatal("source mutation fixture", mutationErr)
+			}
+			if verifyGoReferenceSource(ctx, reference) == nil {
+				t.Fatal("changed source mode/blob/index/control/tree admitted")
+			}
+		})
+	}
+}
+
+func goReferenceProtectedSourceFixture(t *testing.T) executionReferenceSource {
+	t.Helper()
+	fixture := newExecutionCheckoutFixture(t)
+	fixture.write(t, "executable", "#!/bin/sh\nexit 0\n")
+	if os.Chmod(filepath.Join(fixture.root, "executable"), 0o755) != nil {
+		t.Fatal("executable fixture")
+	}
+	fixture.command(t, "add", "executable")
+	fixture.source = fixture.commit(t, "protected source mode fixture")
+	reference := newExecutionReferenceSourceFixture(t, fixture)
+	for _, entry := range reference.entries {
+		mode := os.FileMode(0o400)
+		if entry.mode == "100755" {
+			mode = 0o500
+		}
+		if os.Chmod(filepath.Join(reference.root.root, entry.path), mode) != nil {
+			t.Fatal("H2k normalized fixture modes")
+		}
+	}
+	return reference
+}
 
 func TestLinuxGoReferenceOutputComparesCompleteBytes(t *testing.T) {
 	for _, test := range []string{"valid", "first-byte", "last-byte", "length", "nonexecutable", "canceled"} {
