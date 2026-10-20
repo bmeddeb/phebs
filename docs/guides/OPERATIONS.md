@@ -197,6 +197,12 @@ and unprivileged native-test setup above. Expected foreign-mount refusal is a
 diagnostic result only. Its test image is not an admitted build helper. The
 protected Go SDK/module/source owner, reference builds and executor/resource
 admission remain pending.
+The corrected import diagnostic's
+[`import-refusal-linux-20261019.json`](../../spike/t42h2q/import-refusal-linux-20261019.json)
+records EINVAL for all three inherited root/work FDs and success for a fresh
+child-local tmpfs control. Use no sibling bind-import recipe from these facts.
+A new verified helper must construct its protected inputs inside the namespace
+where the Go commands will execute; its build and lifetime proof remains open.
 
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).

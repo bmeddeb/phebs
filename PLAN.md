@@ -14434,3 +14434,22 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   user-namespace boundary; child self namespace identities still compare with
   the parent's native baseline. No original cause is retrospectively asserted.
   This adds only bounded diagnostic error encoding, not another child or copy.
+
+  Corrected source `814d977fa1bf435f7b972ac56e10548cee92e831` passed the
+  required native import-refusal diagnostic with no skips: the actual H2p root,
+  H2k root and inherited writable work FD each returned EINVAL (22), while the
+  fresh child-local tmpfs bind/write/remove/nonforced-unmount control passed.
+  Parent and child descriptor, namespace, filesystem, capability and sentinel
+  observations matched the fixed predicates. The root actually joined with an
+  empty session, fixture cleanup completed, and final host-root propagation
+  observation stayed unchanged. This confirms only this tested import refusal;
+  it does not identify a particular kernel branch or admit a Go build.
+  Select a distinct source-owned build helper which copies inputs into its own
+  fresh reachable read-only tree, rather than importing these foreign mounts.
+  Keep H2k's historical READY/ACK/exit protocol exact. A new PID-namespace
+  boundary may supply descendant containment, but needs actual PID1/orphan/
+  detached-session lifetime controls, fresh procfs, privilege-drop, image/wire,
+  actual-Wait and retained-custody qualification before reliance. No timely
+  drain, aggregate reservation or ceremony admission follows from kernel
+  documentation or this bind experiment. See
+  [PID namespace semantics](https://man7.org/linux/man-pages/man7/pid_namespaces.7.html).

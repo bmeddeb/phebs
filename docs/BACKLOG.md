@@ -4208,6 +4208,15 @@ joined, sessions were empty and cleanup reported no failure. A source correction
 adds bounded stage diagnostics and removes redundant cross-user-namespace parent
 inspection while preserving native parent/child self-identity comparison. Only
 that changed source may receive one bounded diagnostic confirmation.
+That changed-source confirmation at `814d977f` passed with zero skips in
+169.732s including bootstrap. Actual H2p/H2k/work FD imports each returned
+EINVAL (22), with a successful fresh local-tmpfs control. Root/session joins,
+fixture cleanup and final unchanged host propagation passed; the
+[receipt](../spike/t42h2q/import-refusal-linux-20261019.json) records the narrow
+result and retains both prior failures. Next implement a separate verified
+helper which copies inputs into its own reachable read-only namespace tree.
+PID-namespace lifetime behavior, actual protected compile/reference provenance
+and every other H2q AC remain pending; this is no Go build or H2 admission.
 
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over

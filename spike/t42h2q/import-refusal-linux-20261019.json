@@ -1,0 +1,251 @@
+{
+  "ticket": "T42.H2q",
+  "status": "PASSED_BOUNDED_IMPORT_REFUSAL_DIAGNOSTIC_NOT_A_GO_BUILD_ADMISSION",
+  "source_commit": "814d977fa1bf435f7b972ac56e10548cee92e831",
+  "test_sha256": "4962e4ca04f453272eef5b04677b7fb28d9a31f5cd43e8228496875b1fea7037",
+  "native": {
+    "command": [
+      "go",
+      "test",
+      "-json",
+      "-tags",
+      "phebs_t42_native",
+      "./spike/t421",
+      "-run",
+      "^TestLinuxGoBuildRequiredNativeNamespaceImportDiagnostic$",
+      "-count=1",
+      "-timeout=25m"
+    ],
+    "source_commit": "814d977fa1bf435f7b972ac56e10548cee92e831",
+    "exit_code": 0,
+    "elapsed_seconds": 169.732,
+    "root_waited": true,
+    "observed_session_members": [],
+    "observation_errors": [],
+    "skips": [],
+    "passed_tests": 1
+  },
+  "observed": {
+    "UserNamespace": "user:[4026532606]",
+    "MountNamespace": "mnt:[4026532608]",
+    "EffectiveCapabilities": 2199023255551,
+    "LocalControl": true,
+    "Rows": [
+      {
+        "Name": "git",
+        "MountErrno": 22,
+        "Readonly": false,
+        "Source": {
+          "Device": 77,
+          "Inode": 1,
+          "Mount": 6470,
+          "Filesystem": 16914836,
+          "Flags": 4135,
+          "Sentinel": "7f454c46"
+        }
+      },
+      {
+        "Name": "inputs",
+        "MountErrno": 22,
+        "Readonly": false,
+        "Source": {
+          "Device": 78,
+          "Inode": 1,
+          "Mount": 6471,
+          "Filesystem": 16914836,
+          "Flags": 4135,
+          "Sentinel": "6e657574"
+        }
+      },
+      {
+        "Name": "work",
+        "MountErrno": 22,
+        "Readonly": false,
+        "Source": {
+          "Device": 46,
+          "Inode": 145914,
+          "Mount": 232,
+          "Filesystem": 16914836,
+          "Flags": 38,
+          "Sentinel": "776f726b"
+        }
+      }
+    ]
+  },
+  "interpretation": "Actual post-helper H2p Git root, H2k input root and inherited work FD each refused a sibling-namespace bind with EINVAL (22). Received descriptor device/inode/mount/filesystem/flags and bounded sentinels matched native parent observations. Distinct actual user/mount namespaces and calling-thread CAP_SYS_ADMIN were observed. A fresh child-local tmpfs bind and write/remove/unmount positive control passed. This is a mount-import mechanism result, not a protected Go build/helper, original-source closure, kernel-branch attribution or full H2/readiness pass. The Readonly false fields on refused target rows are zero values: no target mount existed; protected source Flags 4135 include ST_RDONLY.",
+  "lifecycle": "Actual diagnostic child root Wait with zero session members logged; wrapper actual Wait and empty session observed. Fixture cleanup and final unchanged host-root bracketing observation reported no errors. Post-run named-process and fixture-prefix observations empty.",
+  "retained_failures": [
+    "descriptor-feasibility-linux-20261019.json",
+    "import-diagnostic-failure-linux-20261019.json"
+  ],
+  "review": "814d977fa1bf435f7b972ac56e10548cee92e831 source/custody/cost review: no findings. Independent native receipt review verified all 22 census entries and exact observations; one low 14-to-15-byte fixture cost typo corrected in source-identical evidence before commit. No custody/result finding.",
+  "cost": "Independent helper reference-build bootstrap; H2p construction and its protected Git tree; one two-entry/one-file/15-byte H2k input tree; two H2k helper launches total, plus H2p probes; one fixed diagnostic child; one 32-KiB/eight-inode local tmpfs. All trees, sealed helper, page cache, staging, buffers and writable outputs are separately charged. Diagnostic output capped at 16 KiB per stream and child context at 20 seconds; native syscalls remain cooperative. No production request/tick/startup/retry/publication or cache/schema work.",
+  "next_required": "Distinct exact-source helper/recipe which copies into a reachable private namespace-owned read-only tree. PID namespace lifetime containment and detached-descendant controls must qualify natively before being relied on. Preserve H2k historical protocol and all VCS/identity checks. Full reference-tool provenance, SDK/module/source closure, executor ownership, aggregate reservation, pressure/restore, restored launch, complete readiness and freeze remain open.",
+  "raw_evidence_directory": "/home/ben/phebs-rehearsals/t42h2q-import-corrected.n_30jfji",
+  "raw_file_census": [
+    {
+      "name": "docs-owner.json",
+      "bytes": 114,
+      "sha256": "eb25007421881198414987b17c910c73eb3a7741b9231edc6008f3a724f90de7"
+    },
+    {
+      "name": "docs.json",
+      "bytes": 207,
+      "sha256": "98fd6039c91bfe549c7619d0a94fa76595602084e3a6d47a277232ad822910d1"
+    },
+    {
+      "name": "docs.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "docs.stdout",
+      "bytes": 237,
+      "sha256": "e2f2f6e2d8f26ac67ab68f77af07970f522b6e095717e49bcaca260762b8c44b"
+    },
+    {
+      "name": "lint-owner.json",
+      "bytes": 195,
+      "sha256": "85634d50132855b1712510d646436ccdfe32f38d7988ce792ef5092f726fe400"
+    },
+    {
+      "name": "lint.json",
+      "bytes": 288,
+      "sha256": "7f0820e88840236458a2de0c89f836c99bb108fe9791d2c3a85f0fb0a59dea72"
+    },
+    {
+      "name": "lint.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "lint.stdout",
+      "bytes": 10,
+      "sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+    },
+    {
+      "name": "native-owner.json",
+      "bytes": 266,
+      "sha256": "fce55f53b66a561dad79662ce495fd22f18298e0985e10451e852ee45815a85d"
+    },
+    {
+      "name": "native.json",
+      "bytes": 459,
+      "sha256": "ed31869437b0b4c8dc749dc83907e41fddd6a862cf4cccaa5be814f88fbe81d9"
+    },
+    {
+      "name": "native.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "native.stdout",
+      "bytes": 3022,
+      "sha256": "488b004ce19e5de29c6cc8718d5f557428ff7f3cda63e0fbf61e73128d7f5f4b"
+    },
+    {
+      "name": "post-run.json",
+      "bytes": 231,
+      "sha256": "651d53c2886323e201890eb8899567da046f00428e0176e179b7d8917b0ac819"
+    },
+    {
+      "name": "preflight.json",
+      "bytes": 373,
+      "sha256": "89151d2a5ad334a44cfcca70c18904490329009222723dee20cecb43b261d1a4"
+    },
+    {
+      "name": "vet-owner.json",
+      "bytes": 139,
+      "sha256": "b7da105f865870fccb291efcbe15c620b37e8184f309dc324b4f2467deb324fe"
+    },
+    {
+      "name": "vet.json",
+      "bytes": 232,
+      "sha256": "0f58d807785d5f8e182676fbcf7779c4a76f648e7e607845a8fd73460808affe"
+    },
+    {
+      "name": "vet.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "vet.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "whitespace-owner.json",
+      "bytes": 99,
+      "sha256": "6a76a6ae0f91e3d70b12c66f7b42215d0979e8958f0eb54df8f4f3808c5957e6"
+    },
+    {
+      "name": "whitespace.json",
+      "bytes": 192,
+      "sha256": "a0566659d2c44096304d056843b364b0b754599016bc030ac1b9f3e200e9bb38"
+    },
+    {
+      "name": "whitespace.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "whitespace.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "production_signing_and_activation": "PENDING",
+  "checks": [
+    {
+      "command": [
+        "go",
+        "vet",
+        "-tags",
+        "phebs_t42_native",
+        "./spike/t421"
+      ],
+      "source_commit": "814d977fa1bf435f7b972ac56e10548cee92e831",
+      "exit_code": 0,
+      "elapsed_seconds": 0.654,
+      "root_waited": true
+    },
+    {
+      "command": [
+        "golangci-lint",
+        "run",
+        "--build-tags",
+        "phebs_t42_native",
+        "--new-from-rev",
+        "3769ac49",
+        "./spike/t421"
+      ],
+      "source_commit": "814d977fa1bf435f7b972ac56e10548cee92e831",
+      "exit_code": 0,
+      "elapsed_seconds": 1.651,
+      "root_waited": true
+    },
+    {
+      "command": [
+        "make",
+        "docs-check",
+        "verify-glossary"
+      ],
+      "source_commit": "814d977fa1bf435f7b972ac56e10548cee92e831",
+      "exit_code": 0,
+      "elapsed_seconds": 1.397,
+      "root_waited": true
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "source_commit": "814d977fa1bf435f7b972ac56e10548cee92e831",
+      "exit_code": 0,
+      "elapsed_seconds": 0.095,
+      "root_waited": true
+    }
+  ],
+  "checks_scope": "Exact committed 814d977f Go source; docs include source-identical pending evidence/ADR append. No-op helper compile (normal/race) was also observed but is not functional native coverage."
+}
