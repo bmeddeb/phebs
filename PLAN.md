@@ -14747,3 +14747,33 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   restored-launch/full readiness and fresh freeze remain mandatory. Ben's
   standing green-PR instruction authorizes qualified integration, with no
   ceremony or production signing/activation authorization.
+
+
+- **2026-10-20 — T42.H2q.c pin owned child identity before reaping.**
+  Independent H2r.a review found a high-severity race also present in three
+  merged Linux Go controllers: starting the sole Wait goroutine before
+  `pidfd_open` permits early child reaping/PID reuse before the signal handle is
+  acquired. Pin while the child is still owned and unreaped, then start exactly
+  one Wait goroutine. A shared private Linux primitive preserves this ordering
+  for the reference worker and both native namespace/lifetime controllers.
+  Even a pin refusal must retain/join that same root; it supplies no permission
+  to signal another numeric PID or dispose borrowed resources. Existing actual
+  Wait, session-drain, locked-thread and uncertainty rules remain exact.
+  A small real early-exit child test observes WNOWAIT without reaping, verifies
+  pinned exit readiness and the sole Wait, then requires post-join pidfd signal
+  refusal. Preserve the passed long workload receipts; this failure-path ordering
+  correction receives focused normal/race, tagged static and exact independent
+  review plus a small source-free receipt instead of repeating those workloads.
+  The acquisition order changes, with no new command, image, copy/hash pass,
+  held descriptor, goroutine, lock, cache or reservation. Production request,
+  sync tick, ordinary startup, retry/no-op and publication costs are unchanged.
+  H2r.a must use the corrected primitive before its native diagnostic. Complete
+  H2/readiness/freeze and ceremony/signing/activation remain open.
+
+  The pin-failure regression uses an isolated fixed test subprocess to lower
+  only its own soft RLIMIT_NOFILE temporarily, force actual EMFILE, restore it
+  immediately and require the same exit-17 Wait. Parent/host limits never change.
+  The three small test Starts add only fixed regression cost; production keeps
+  its existing one pidfd syscall, buffered result channel and Wait goroutine.
+  Once the shared helper owns Wait, test cleanup only receives that same result;
+  it sends no further process signal after a concurrent reaper may have run.

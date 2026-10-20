@@ -4362,6 +4362,21 @@ implemented plain author role; optional V3 overlay gets no new native claim.
 Linux author/executor consumers, pressure/restore, complete source-owned
 aggregate admission and all downstream readiness/freeze gates remain open.
 
+**T42.H2q.c · Pin child identity before root reaping** *(immediate safety
+prerequisite discovered during H2r.a review, 2026-10-20).* Three merged Linux
+Go root launchers start their Wait goroutine before `pidfd_open`. An early exit
+can therefore be reaped before pinning, permitting a reused PID to be pinned and
+later signaled. Pin the still-unreaped owned child before starting the sole
+Wait; retain existing cancellation, actual join/session-drain and unknown-loan
+rules. Apply one private shared ordering primitive to the reference worker and
+both native namespace/lifetime controllers. AC: actual fixed early-exit child
+observed with non-reaping WNOWAIT, successful pinned identity, sole actual Wait,
+exit readiness and post-join ESRCH signals; pin-refusal join behavior; focused
+normal/race, tagged compile/static, independent source/custody/cost review and
+small source-free receipt. No repeated passed long author/neutral workloads,
+new child/recipe authority or rewritten historical receipt. The pending H2r.a
+worker must consume the corrected ordering before qualification.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared
