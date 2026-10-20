@@ -14510,3 +14510,41 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   lock, cache, schema or persistent child work is registered. Native composition,
   cancellation/detached-session controls, implemented reference-tool provenance,
   full Go ownership and all remaining H2/readiness/freeze gates stay open.
+
+- **2026-10-19 — T42.H2q first namespace refusal and detached-leaf control.**
+  Exact source `8e1f006523ab6aa66b09e2d6bedbc343c584ae81` failed its first
+  native namespace composition in 340.32s after `neutral-compile`. The retained
+  stage alone distinguishes neither mutable retirement, launch nor output
+  metadata refusal. Root actual Wait/empty-session facts and absent final
+  fixture prefix remain narrow; helper Close also reported its sticky custody
+  error, which the log cannot distinguish from an additional close failure.
+  Keep this failure and add bounded distinct diagnostics before changed-source
+  confirmation. No VCS, identity, read-only or child gate is reduced.
+
+  Add three closed modes to the same exact-source verified helper for a separate
+  cancellation control, without an arbitrary executable or source selector.
+  PID1 protects one fixed sentinel tree, launches an intermediate using a new
+  private socket rather than the controller channel, actually waits it, then
+  observes its adopted leaf stopped by SIGSTOP in a different session. The leaf
+  has no parent-death signal; intermediate exit must leave it live. The outside
+  controller validates a CLOEXEC live process pidfd, exact image, host parent,
+  stopped state, distinct session and all-thread dropped privileges, then kills
+  PID1 through its owned pidfd. Actual root Wait with SIGKILL, leaf pidfd exit
+  readiness and empty root session precede input/image/fixture release. Leaf
+  cleanup fallback invalidates the measurement. Once ACK may authorize the
+  spawn, missing or unvalidated leaf identity retains the worker and keepers
+  even after root Wait; review found and corrected that failure-prefix gap.
+  Unknown native observation remains retained, not an invented successful join.
+  This controls one fixed detached leaf, not arbitrary-descendant or timely
+  kernel cleanup, and is not yet natively qualified.
+
+  Cost: one independent helper reference bootstrap per standalone control,
+  one fresh two-entry/one-file/27-byte protected tree under the existing nominal
+  2-GiB tmpfs ceiling, three fixed Go processes, a private socketpair and root/
+  leaf pidfds, and at most 64-KiB parent diagnostics. The helper's 30-second and
+  controller's one-minute contexts exclude bootstrap/compilation and retained
+  uncertainty cleanup. No SDK fixture copy or compiler run follows bootstrap.
+  Source metadata diagnostics remain within the existing bounded stderr cap.
+  No production query, tick, startup, retry/no-op, publication, locks, caches,
+  schemas or persistent children change. Full SDK/reference provenance, public
+  Go ownership and aggregate RAM/process reservations remain separate H2 gates.

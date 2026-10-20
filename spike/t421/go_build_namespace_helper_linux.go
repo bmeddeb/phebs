@@ -26,6 +26,9 @@ import (
 // reap. It accepts no arbitrary command, path, source program or role selector.
 // Its caller must separately admit SDK/Git images; copying grants no authority.
 func LinuxGoBuildHelperMain() (status int) {
+	if len(os.Args) == 2 && os.Args[1] != linuxGoBuildRecipe {
+		return linuxGoLifetimeHelperMain(os.Args[1])
+	}
 	status = 125
 	stage := "entry"
 	defer func() {
@@ -107,6 +110,7 @@ func LinuxGoBuildHelperMain() (status int) {
 	}
 	stage = "neutral-compile"
 	if _, err := os.Lstat(filepath.Join(filepath.Dir(workspace), "mutable")); !os.IsNotExist(err) {
+		_, _ = fmt.Fprintf(os.Stderr, "mutable fixture retirement refused error=%v\n", err)
 		return status
 	}
 	if err := runNeutralGoNamespaceBuild(ctx, workspace, revision); err != nil {
@@ -274,6 +278,7 @@ func neutralGoBuildInfo(info *debug.BuildInfo, revision string) bool {
 func runNeutralGoNamespaceBuild(ctx context.Context, workspace, revision string) error {
 	root, err := os.Getwd()
 	if err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "neutral cwd refused error=%v\n", err)
 		return ErrExecutionGoBuildCustody
 	}
 	inputs := filepath.Join(root, "inputs")
@@ -293,9 +298,11 @@ func runNeutralGoNamespaceBuild(ctx context.Context, workspace, revision string)
 	stdout, stderr := checkoutCommandOutput{remaining: 64 << 10, cancel: cancel}, checkoutCommandOutput{remaining: 64 << 10, cancel: cancel}
 	command.Stdout, command.Stderr, command.WaitDelay = &stdout, &stderr, time.Second
 	if prepareReferenceCommand(command) != nil { // Separate group; retain PID1's session.
+		_, _ = fmt.Fprintln(os.Stderr, "neutral process-group preparation refused")
 		return ErrExecutionGoBuildCustody
 	}
-	if command.Start() != nil {
+	if err := command.Start(); err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "neutral start refused error=%v\n", err)
 		return ErrExecutionGoBuildCustody
 	}
 	waitErr := command.Wait() // Sole direct-root Wait, including output pumps.
@@ -306,6 +313,16 @@ func runNeutralGoNamespaceBuild(ctx context.Context, workspace, revision string)
 	}
 	info, err := buildinfo.ReadFile(filepath.Join(workspace, "output"))
 	if err != nil || !neutralGoBuildInfo(info, revision) {
+		_, _ = fmt.Fprintf(os.Stderr, "neutral output metadata refused read_error=%v\n", err)
+		if info != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "neutral output go_version=%q path=%q main_path=%q main_version=%q deps=%d\n", info.GoVersion, info.Path, info.Main.Path, info.Main.Version, len(info.Deps))
+			for _, setting := range info.Settings {
+				switch setting.Key {
+				case "CGO_ENABLED", "-trimpath", "GOOS", "GOARCH", "vcs", "vcs.revision", "vcs.modified":
+					_, _ = fmt.Fprintf(os.Stderr, "neutral output setting %s=%q\n", setting.Key, setting.Value)
+				}
+			}
+		}
 		return ErrExecutionGoBuildCustody
 	}
 	return nil

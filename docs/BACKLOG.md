@@ -4233,6 +4233,26 @@ images/trees, hashes, writable outputs and compiler costs are charged separately
 in PLAN. H2q remains open. Ben's subsequent merge instruction authorizes reviewed
 green PR integration; it does not waive these acceptance gates.
 
+The first exact-source namespace composition at `8e1f0065` **failed** in
+340.32s after reaching `neutral-compile`; its diagnostic does not distinguish
+mutable-fixture retirement, launch, or output metadata refusal. Preserve the
+[failure receipt](../spike/t42h2q/namespace-failure-linux-20261019.json), exact
+root Wait/empty-session observations, and the sticky helper Close error without
+asserting a successful compile or detached-descendant drain. No fixture prefix
+remained. A source correction adds bounded distinct diagnostics with unchanged
+identity/VCS predicates before a changed-source confirmation.
+
+A separate fixed helper control and required native driver are implemented,
+not yet qualified: one protected 27-byte sentinel, PID1, a joined intermediate,
+and an adopted stopped leaf in a new session. The controller independently
+validates the leaf image/parent/session/stopped state and live pidfd before
+killing PID1 by pidfd; success needs actual root Wait with SIGKILL, leaf pidfd
+exit readiness and empty root session before releasing custody. Once spawning
+may be authorized, a missing/unvalidated leaf pidfd retains the complete worker
+and keepers, including after root Wait. A cleanup leaf-kill fallback invalidates
+the measurement. No arbitrary child command is accepted. Source review caught
+and corrected the missing-leaf failure prefix; native and full H2q ACs stay open.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

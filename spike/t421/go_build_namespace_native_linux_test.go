@@ -30,36 +30,7 @@ import (
 // This is a fixed neutral layout/lifetime qualification, not a public Go owner,
 // protected reference-tool provenance, aggregate admission or ceremony entry.
 func TestLinuxGoBuildRequiredNativeNamespaceComposition(t *testing.T) {
-	if os.Geteuid() == 0 || !executionGitAbsolutePath(os.Getenv("PHEBS_T42_GO_SDK")) {
-		t.Fatal("unprivileged consumer and explicit selected SDK required; no skip")
-	}
-	sdk := os.Getenv("PHEBS_T42_GO_SDK")
-	if canonical, err := filepath.EvalSymlinks(sdk); err != nil || canonical != sdk {
-		t.Fatal("canonical SDK required", err)
-	}
-	requestFile, err := os.Open(os.Getenv("PHEBS_T42_GO_BUILD_REQUEST"))
-	if err != nil {
-		t.Fatal("independently rebuildable Go-build helper request required; no skip", err)
-	}
-	raw, readErr := io.ReadAll(io.LimitReader(requestFile, 16<<10))
-	closeErr := requestFile.Close()
-	decoder := json.NewDecoder(bytes.NewReader(raw))
-	decoder.DisallowUnknownFields()
-	var request ReferenceToolRequest
-	if readErr != nil || closeErr != nil || len(raw) == 16<<10 || decoder.Decode(&request) != nil || decoder.Decode(&struct{}{}) != io.EOF {
-		t.Fatal("closed helper request required")
-	}
-	request.Role, request.PlanSchema = linuxGoBuildRole, linuxGoBuildRecipe
-	if request.GoRoot != sdk {
-		t.Fatal("selected fixture SDK differs from exact helper reference SDK")
-	}
-	helper, err := ProtectLinuxExecutionReferenceTool(t.Context(), request)
-	if err != nil {
-		if helper != nil {
-			_ = helper.Close()
-		}
-		t.Fatal("exact-source sealed build helper refused", err)
-	}
+	helper := requireLinuxGoBuildHelper(t)
 	var attempt *LinuxExecutionInputTree
 	t.Cleanup(func() {
 		if attempt != nil && !attempt.closed {
@@ -176,7 +147,7 @@ func TestLinuxGoBuildRequiredNativeNamespaceComposition(t *testing.T) {
 	if err != nil || gitTree.Bytes > maxGoBuildBytes-(8<<20) {
 		t.Fatal("Git/source staging reservation", err)
 	}
-	copyNativeGoSDK(t, sdk, payload, int64(gitTree.Bytes)+(8<<20))
+	copyNativeGoSDK(t, os.Getenv("PHEBS_T42_GO_SDK"), payload, int64(gitTree.Bytes)+(8<<20))
 	err = git.WithGit(t.Context(), work, work, func(identity ExecutionToolIdentity, root *os.File, _ []string) error {
 		for _, name := range executionGitImageNames() {
 			reader, err := os.Open(fmt.Sprintf("/proc/self/fd/%d/core/%s", root.Fd(), name))
@@ -251,6 +222,41 @@ func TestLinuxGoBuildRequiredNativeNamespaceComposition(t *testing.T) {
 	if runErr != nil || !preparationSafe || stdout.err != nil || stderr.err != nil || stdout.buffer.String() != "neutral protected build\n" {
 		t.Fatal("neutral compiled output", runErr, stdout.buffer.String(), stderr.buffer.String())
 	}
+}
+
+func requireLinuxGoBuildHelper(t *testing.T) *LinuxExecutionToolCustody {
+	t.Helper()
+	if os.Geteuid() == 0 || !executionGitAbsolutePath(os.Getenv("PHEBS_T42_GO_SDK")) {
+		t.Fatal("unprivileged consumer and explicit selected SDK required; no skip")
+	}
+	sdk := os.Getenv("PHEBS_T42_GO_SDK")
+	if canonical, err := filepath.EvalSymlinks(sdk); err != nil || canonical != sdk {
+		t.Fatal("canonical SDK required", err)
+	}
+	requestFile, err := os.Open(os.Getenv("PHEBS_T42_GO_BUILD_REQUEST"))
+	if err != nil {
+		t.Fatal("independently rebuildable Go-build helper request required; no skip", err)
+	}
+	raw, readErr := io.ReadAll(io.LimitReader(requestFile, 16<<10))
+	closeErr := requestFile.Close()
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.DisallowUnknownFields()
+	var request ReferenceToolRequest
+	if readErr != nil || closeErr != nil || len(raw) == 16<<10 || decoder.Decode(&request) != nil || decoder.Decode(&struct{}{}) != io.EOF {
+		t.Fatal("closed helper request required")
+	}
+	request.Role, request.PlanSchema = linuxGoBuildRole, linuxGoBuildRecipe
+	if request.GoRoot != sdk {
+		t.Fatal("selected fixture SDK differs from exact helper reference SDK")
+	}
+	helper, err := ProtectLinuxExecutionReferenceTool(t.Context(), request)
+	if err != nil {
+		if helper != nil {
+			_ = helper.Close()
+		}
+		t.Fatal("exact-source sealed build helper refused", err)
+	}
+	return helper
 }
 
 func copyNativeGoSDK(t *testing.T, sdk, destination string, reserved int64) {

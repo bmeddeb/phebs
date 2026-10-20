@@ -218,6 +218,24 @@ installed SDK remains available. No full SDK/module/reference-tool provenance
 or execution/resource admission follows. Native composition and detached-child/
 cancellation qualification remain open; keep failed roots and diagnostics.
 
+The first namespace composition at `8e1f0065` failed at `neutral-compile`;
+[`namespace-failure-linux-20261019.json`](../../spike/t42h2q/namespace-failure-linux-20261019.json)
+retains the undisambiguated cause, actual root/session observations and sticky
+Close error. Run no unchanged retry. Distinct bounded diagnostics preserve the
+original predicates for a changed-source confirmation.
+
+The separate required `TestLinuxGoBuildRequiredNativePIDNamespaceCancellation`
+uses the same independently rebuilt Go-helper request and explicit SDK, with a
+25-minute test guard for bootstrap plus the fixed one-minute control. It copies
+only a 27-byte sentinel; no SDK fixture or compiler workload follows bootstrap.
+The helper launches one intermediate and one fixed new-session leaf, observes
+adoption and SIGSTOP, and passes its pidfd. The controller must observe exact
+leaf identity/state, actual PID1 SIGKILL Wait, leaf exit readiness and empty
+root session before release. Unknown leaf identity or observation retains the
+worker, image, inputs and pidfd; a fallback leaf kill is failed evidence.
+This control is implemented but has no native qualification yet. Its nominal
+tmpfs ceiling remains 2 GiB; the tiny payload grants no aggregate allowance.
+
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
 It binds `c07bc930` and is preserved unchanged, so it no longer describes the

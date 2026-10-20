@@ -1,0 +1,113 @@
+{
+  "ticket": "T42.H2q",
+  "status": "FAILED_NAMESPACE_NEUTRAL_COMPILE_STAGE",
+  "source_commit": "8e1f006523ab6aa66b09e2d6bedbc343c584ae81",
+  "test_sha256": "012805750f54cfe94b919ab6d77b6c61d94f20eb27131c0c06e376229515133c",
+  "native": {
+    "test": "TestLinuxGoBuildRequiredNativeNamespaceComposition",
+    "elapsed_seconds": 340.32,
+    "exit_code": 1,
+    "passed_tests": 0,
+    "skips": [],
+    "wrapper_actual_wait": true,
+    "wrapper_session_members": [],
+    "helper_pid": 100836,
+    "helper_actual_wait_exit_code": 125,
+    "helper_session_empty": true,
+    "source_preparation_pids": [
+      100831,
+      100832,
+      100834,
+      100835
+    ],
+    "source_preparation_actual_wait_and_zero_session_members": true
+  },
+  "observations": [
+    "Independent verification accepted both helper candidates from exact source.",
+    "Helper reached neutral-compile stage after protected-copy/shape/READY predicates. It emitted no compiler-start/wait or output-metadata diagnostic, so the precise refusal is unavailable. No successful compile or clean VCS result is established.",
+    "Root actual Wait and empty root session were observed. No detached-leaf containment qualification follows from an empty session.",
+    "Build-helper Close returned a custody error. Its source returns the existing sticky refusal after attempting owned FD closure; the log alone does not distinguish a new close error.",
+    "Fixture prefix absent after test; wrapper joined and its session was empty."
+  ],
+  "correction": "Add bounded distinct mutable-retirement, cwd, process-group, launch and output-metadata diagnostics before any changed-source confirmation; preserve all validation predicates. No unchanged retry.",
+  "cost_and_scope": "Two independent helper bootstraps, H2p and new protected input trees, SDK/seven-Git staging plus hashes, bounded compile/output costs; no aggregate admission or full SDK/reference provenance. PID1 detached/cancellation control remains pending.",
+  "raw_evidence_directory": "/home/ben/phebs-rehearsals/t42h2q-namespace.v48i2ppn",
+  "raw_file_census": [
+    {
+      "name": "bootstrap.json",
+      "bytes": 373,
+      "sha256": "125cf038eb2de53c108d493d60a48695561dc566379d56622377ec989c76df5f"
+    },
+    {
+      "name": "go-build-helper",
+      "bytes": 35324413,
+      "sha256": "0464262827101f95744f88009b25a6779a25108cf56f54eb03e179cb09528fed"
+    },
+    {
+      "name": "go-build-helper-bootstrap.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "go-build-helper-bootstrap.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "go-build-helper-request.json",
+      "bytes": 591,
+      "sha256": "416e1ca0b9a5392c46ec3b24cdd034e3b9cb924472608456b9e1865522934816"
+    },
+    {
+      "name": "input-tree-helper",
+      "bytes": 34303036,
+      "sha256": "a79876ee06c5b172045bee929b7acc32a372db5b02a2d70c4b221faf7f686136"
+    },
+    {
+      "name": "input-tree-helper-bootstrap.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "input-tree-helper-bootstrap.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "input-tree-helper-request.json",
+      "bytes": 597,
+      "sha256": "af51fb51730be99f8fd493b414074898dbe8cae1ce8c23d35090de1546306768"
+    },
+    {
+      "name": "namespace-native.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "namespace-native.stdout.jsonl",
+      "bytes": 3758,
+      "sha256": "7c7a13571f7dc274bca3e4de87625a642e9a7ebcd81c46741ad5fa0d7e8cc29e"
+    },
+    {
+      "name": "native-process.json",
+      "bytes": 594,
+      "sha256": "1244ca6ff596b961a083219efcaab8a823ce53c8179776251e454d24b182a871"
+    },
+    {
+      "name": "post-run.json",
+      "bytes": 181,
+      "sha256": "8ea130c7006e283f524130e9adcf1d100c827a10504a466aa3e22517b8b51403"
+    },
+    {
+      "name": "pr149-update.json",
+      "bytes": 2060,
+      "sha256": "4d55556c722ceab71e5714daae18d989f8eae013052e4c35cb9a93c1225440dc"
+    },
+    {
+      "name": "preflight.json",
+      "bytes": 1096,
+      "sha256": "7a44b4e69b1a6637d1bfaa2e7101aa091453bc4f4ee80e1fd44adba80e224434"
+    }
+  ],
+  "production_signing_and_activation": "PENDING"
+}
