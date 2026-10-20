@@ -396,3 +396,12 @@ func TestLinuxEpochNativeRootAndLeaseDrift(t *testing.T) {
 		})
 	}
 }
+
+func TestLinuxEpochReleasePastFinalReservationIsPreflight(t *testing.T) {
+	owner := &LinuxExecutionEpochConfigCustody{author: &LinuxExecutionAuthorCustody{}, released: 5}
+	for _, epoch := range []uint64{0, 6, ^uint64(0)} {
+		if owner.ReleaseListener(t.Context(), epoch) == nil || owner.err != nil || owner.released != 5 || owner.closed || owner.closing {
+			t.Fatal("out-of-range reservation request poisoned completed prefix", epoch)
+		}
+	}
+}

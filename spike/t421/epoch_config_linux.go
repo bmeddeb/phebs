@@ -293,7 +293,7 @@ func (owner *LinuxExecutionEpochConfigCustody) ReleaseListener(ctx context.Conte
 	defer owner.author.mu.Unlock()
 	owner.mu.Lock()
 	defer owner.mu.Unlock()
-	if epoch != owner.released+1 {
+	if epoch < 1 || epoch > uint64(len(owner.listeners)) || epoch != owner.released+1 {
 		return ErrExecutionEpochConfigs
 	}
 	if owner.checkLocked(ctx, epoch) != nil {

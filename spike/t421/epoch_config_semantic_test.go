@@ -193,8 +193,3 @@ func epochConfigBytes(plan Plan, epoch ExecutionEpochConfig, source string) ([]b
 	raw, _, err := epochConfigBytesParsed(plan, epoch, source)
 	return raw, err
 }
-
-func validateEpochConfigBytes(plan Plan, epoch ExecutionEpochConfig, source string, raw []byte) error {
-	_, err := parseEpochConfigBytes(plan, epoch, source, raw)
-	return err
-}

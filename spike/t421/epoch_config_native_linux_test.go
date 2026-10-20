@@ -267,6 +267,12 @@ func TestLinuxEpochInputsRequiredNativeOwnership(t *testing.T) {
 		}
 		t.Logf("epoch=%d config_bytes=%d catalog_bytes=%d config_sha256=%s catalog_sha256=%s", index+1, len(content), len(catalog), epoch.ConfigSHA256, epoch.CatalogSHA256)
 	}
+	if owner.ReleaseListener(t.Context(), 6) == nil || owner.err != nil || owner.released != 5 {
+		t.Fatal("past-final reservation poisoned usable inputs")
+	}
+	if _, err := owner.Check(t.Context(), 5); err != nil {
+		t.Fatal("past-final refusal invalidated final protected config", err)
+	}
 	// This mechanical guard has no child: actual live borrower joining belongs
 	// to c.c. It proves Close cannot retire either embedded route while active.
 	owner.mu.Lock()

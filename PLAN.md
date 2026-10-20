@@ -15268,3 +15268,17 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   No required native ran. Immutable normal/race/static/supported compile and
   independent custody/cost review, then bounded actual input-owner native
   acceptance, remain the integration gates.
+
+  Exact c.b source `74c5c48ef344a697abdee38fda824e9edb380b97` passed all
+  three focused normal/race pairs, tagged shape and vet. Each wrapper returned
+  zero with an empty session. The serial pipeline stopped on pinned lint: the
+  factored validateEpochConfigBytes helper is used only by a Darwin rehearsal,
+  so its shared Linux declaration is unused. Move that unchanged helper back
+  to its Darwin test file. No cross/native gate ran. Independent exact review
+  recorded critical/high/medium zero and one low: epoch 6 after five valid
+  listener releases is numerically next and incorrectly enters the sticky
+  observation check. Reject epochs outside the fixed five before that check;
+  ordinary out-of-range arguments must not poison valid epoch-five inputs.
+  Add both bounded normal and actual five-release native regressions. The
+  remainder source/custody/cost review found no issues. Corrections, refreshed
+  immutable gates and re-review remain mandatory before integration.
