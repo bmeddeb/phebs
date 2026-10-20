@@ -161,7 +161,11 @@ helper image. These are separate costs for later aggregate reservation, not a
 host allowance. Success releases the sealed core and mutable files. Loans add
 constant kernel/tree checks and bounded workspace checks/environment allocation;
 they do no payload hashing or original-source reads. Every constructor probe executes a protected descriptor; uncertainty retains
-the actual session prefix and sealed/tree custody. Close observes it drained and H2k closed
+the actual session prefix and sealed/tree custody. Only this exclusive,
+unpublished constructor transfers unfinished work to an unusable cleanup owner;
+it publishes no identity, and Close keeps all inputs until drain is proven.
+Ordinary loan callbacks must still join every consumer before returning.
+Close observes the constructor prefix drained and H2k closed
 before releasing tree/scratch; it removes unchanged recorded entries and then
 empty directories. Unknown or replaced entries refuse cleanup and remain owned.
 No recursive/forced/lazy cleanup or production caller is added. Go build/SDK,
