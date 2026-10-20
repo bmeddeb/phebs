@@ -20,6 +20,7 @@ const (
 // Constructed only from the current genuine controller view, never supplied
 // as public command/input authority. Parent nil selects the fixed standalone recipe.
 type linuxAuthorLaunch struct {
+	trace      *linuxEpochTraceOwner // Only genuine complete held epoch scope sets this.
 	controller *dispatchadmission.Controller
 	parent     *dispatchadmission.LocalProducer
 	producer   uint32

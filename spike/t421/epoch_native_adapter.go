@@ -3,7 +3,6 @@ package t421
 import (
 	"context"
 	"os"
-	"os/exec"
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
@@ -22,8 +21,8 @@ type executionConfigNativeAdapter interface {
 }
 type executionEpochNativeAdapter interface {
 	tools(context.Context, uint64) (string, []dispatchadmission.ProductionToolBinding, []string, error)
-	beforeStart(context.Context, *exec.Cmd) error
-	startWait(context.Context, *ExecutionEpochOneRun, uint32, dispatchadmission.Handle) (<-chan error, error)
+	start(context.Context, context.Context, *ExecutionEpochOneRun, uint32) (bool, error)
+	startWait(context.Context, *ExecutionEpochOneRun, uint32) (<-chan error, error)
 	finish(*ExecutionEpochOneRun, <-chan error, bool, error, time.Time) (bool, bool, error)
 	workspace() (*os.File, string, [2]int32)
 }

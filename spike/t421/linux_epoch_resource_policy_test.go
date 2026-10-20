@@ -76,7 +76,7 @@ func TestLinuxEpochResourceInitialReservationAndLiveSlack(t *testing.T) {
 	if checkLinuxEpochLiveMemory(initial, 16<<30, initial) == nil {
 		t.Fatal("held reservation exceeded effective capacity")
 	}
-	if frozenSafetyEnvelope().MaximumPeakRSSBytes != 20<<30 || linuxEpochPolicy().RSSReservationBytes != 4<<30 || linuxEpochPolicy().Schema != "t42-linux-epoch-operational-resources-v3" || !validExecutionSHA256(linuxEpochPolicySHA256()) {
+	if frozenSafetyEnvelope().MaximumPeakRSSBytes != 20<<30 || linuxEpochPolicy().RSSReservationBytes != 4<<30 || linuxEpochPolicy().Schema != "t42-linux-epoch-operational-resources-v4" || !validExecutionSHA256(linuxEpochPolicySHA256()) {
 		t.Fatal("prospective constraint changed historical envelope")
 	}
 }
@@ -272,5 +272,64 @@ func TestLinuxEpochAuthorPrivateWaitDiagnostic(t *testing.T) {
 	cleanWait.recordWait(natural.command, natural.wait())
 	if !cleanWait.waitObserved || cleanWait.waitFailed || !cleanWait.waitStatusObserved || cleanWait.waitExitCode != 0 || cleanWait.waitSignal != 0 || cleanWait.privateFailure != "" {
 		t.Fatal("natural successful Wait acquired an invented refusal", cleanWait)
+	}
+}
+
+func TestLinuxEpochResourceTraceCloseRetainsPinsUntilNotifierJoin(t *testing.T) {
+	pins, err := captureLinuxEpochResourceNamespaces()
+	if err != nil {
+		_ = pins.close()
+		t.Fatal("actual namespace pins", err)
+	}
+	// This mechanical fixture owns real namespace FDs and a scoped notifier,
+	// never operational admission. Missing core/parent prevents a native Start.
+	held := &linuxEpochHeldFlow{flow: &LinuxExecutionEpochFlow{}}
+	a := &linuxEpochResourceAdmission{held: held, issued: true, probeGate: make(chan struct{}, 1), namespaces: pins}
+	held.resources = a
+	if owner, e := newLinuxEpochTraceOwner(a); e == nil || owner != nil {
+		_ = a.namespaces.close()
+		t.Fatal("missing-core fixture gained operational trace admission")
+	}
+	owner := allocateLinuxEpochTraceOwner(a)
+	a.trace = owner
+	gateHeld := false
+	defer func() {
+		if gateHeld {
+			<-a.probeGate
+		}
+		_ = a.closeCustody()
+	}()
+
+	// An actual occupied census gate is not permission to retire its pins.
+	a.probeGate <- struct{}{}
+	gateHeld = true
+	if a.closeCustody() == nil || a.closed || a.namespaces.check() != nil {
+		t.Fatal("refused trace close retired still-needed namespace pins")
+	}
+	select {
+	case <-owner.stopped:
+		t.Fatal("refused trace close manufactured notifier join")
+	default:
+	}
+	<-a.probeGate
+	gateHeld = false
+	if a.closeCustody() == nil || !a.closed {
+		t.Fatal("later actual retirement erased the first custody refusal")
+	}
+	select {
+	case <-owner.stopped: // Actual scoped notifier goroutine has returned.
+	default:
+		t.Fatal("namespace retirement preceded actual notifier join")
+	}
+	for index, pin := range pins {
+		if a.namespaces[index].file != nil {
+			t.Fatal("namespace pin not retired")
+		}
+		if _, err := pin.file.Stat(); !errors.Is(err, os.ErrClosed) {
+			t.Fatal("original namespace descriptor remained open", err)
+		}
+	}
+	if a.Close() == nil {
+		t.Fatal("repeated close cleared the sticky custody refusal")
 	}
 }

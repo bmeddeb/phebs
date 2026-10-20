@@ -4,10 +4,7 @@ package t421
 
 import (
 	"context"
-	"errors"
-	"os/exec"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
@@ -15,6 +12,7 @@ import (
 )
 
 type linuxEpochServer struct {
+	trace            *linuxEpochTraceRoot // Non-nil only for the bound v4 flow. Actor owns pidfd/Wait.
 	pidfd            int
 	pinErr           error
 	sessionErr       error
@@ -62,95 +60,60 @@ func (server *linuxEpochServer) closeRoot() error {
 	return server.closeErr
 }
 
-func (adapter *linuxEpochCoordinator) beforeStart(ctx context.Context, command *exec.Cmd) error {
-	if adapter.check(ctx) != nil || adapter.held.resources == nil || adapter.held.resources.Check(ctx) != nil || command == nil || command.SysProcAttr != nil {
-		return ErrExecutionEpochOne
+// Actual Start must run on the locked creating tracer task, not merely after
+// a beforeStart hook on the unrelated flow goroutine.
+func (adapter *linuxEpochCoordinator) start(ctx, lifetime context.Context, run *ExecutionEpochOneRun, phase uint32) (bool, error) {
+	if adapter.check(ctx) != nil || run == nil || run.command == nil || adapter.held.resources == nil || adapter.held.resources.trace == nil {
+		return false, ErrExecutionEpochOne
 	}
-	command.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
-	return nil
-}
-func (adapter *linuxEpochCoordinator) startWait(ctx context.Context, run *ExecutionEpochOneRun, phase uint32, handle dispatchadmission.Handle) (<-chan error, error) {
 	server := &linuxEpochServer{pidfd: -1}
-	server.pidfd, server.pinErr = pinExecutionRootDescriptor(run.command)
 	adapter.held.servers[run] = server
-	if server.pinErr == nil {
-		_, server.sessionErr = captureLinuxEpochSession(adapter.held, run, server)
+	root, err := adapter.held.resources.trace.start(ctx, lifetime, run.command, adapter.core.parent, phase, dispatchadmission.Site{ID: executionSiteServe, Role: executionRolePhebs, Persistent: true}, adapter.held.images[1], run)
+	if root == nil {
+		delete(adapter.held.servers, run)
+		return false, err
 	}
-	server.armCancellation(ctx, adapter.held.flow.lifetime)
-	var meterErr error
-	if server.pinErr == nil && server.sessionErr == nil {
-		gauge, name, err := adapter.held.gauge(ctx, run.command.Process.Pid, "")
+	server.trace = root
+	return true, err
+}
+
+func (adapter *linuxEpochCoordinator) startWait(ctx context.Context, run *ExecutionEpochOneRun, phase uint32) (<-chan error, error) {
+	if existing := adapter.held.servers[run]; existing != nil && existing.trace != nil {
+		root := existing.trace
+		// Publish the meter (including refusal/nil) before releasing attachment.
+		// The actor's separate observer performs exited() outside probeGate.
+		defer close(root.observerReady)
+		gauge, name, err := adapter.held.gauge(ctx, run.command.Process.Pid, root.original.birth)
 		if err == nil {
 			run.processObservation, err = adapter.held.resources.startServerObservation(ctx, run.command.Process.Pid, phase, name, gauge, func() { adapter.held.resources.Fail(); run.stopOnce.Do(func() { close(run.stop) }) })
 		}
-		meterErr = err
+		if err != nil {
+			root.requestStop()
+		}
+		return root.done, err
 	}
-	waited := make(chan error, 1)
-	go func() {
-		// No Wait may reap this root until its original SID is drained under the
-		// still-waitable root anchor. Unknown capture/exit retains every loan.
-		for server.pinErr != nil || server.sessionErr != nil {
-			time.Sleep(time.Second)
-		}
-		var information unix.Siginfo
-		for {
-			err := unix.Waitid(unix.P_PIDFD, server.pidfd, &information, unix.WEXITED|unix.WNOWAIT, nil)
-			if errors.Is(err, unix.EINTR) {
-				continue
-			}
-			if err == nil && information.Signo == int32(unix.SIGCHLD) {
-				break
-			}
-			// A refused exit observation cannot later become successful evidence.
-			// Keep the unreaped root and complete loan until external resolution.
-			for {
-				time.Sleep(time.Second)
-			}
-		}
-		server.session.exited = true
-		run.processObservation.exited()
-		var sessionErr error
-		for {
-			probe, cancel := context.WithTimeout(context.Background(), epochProcessProbeTimeout)
-			empty, err := adapter.held.stopSession(probe, server.session)
-			cancel()
-			if empty && err == nil {
-				break
-			}
-			// Later actual drain permits cleanup, never a clean qualification.
-			sessionErr = ErrExecutionEpochOne
-			time.Sleep(time.Second)
-		}
-		server.sessionEmpty = true
-		waited <- errors.Join(sessionErr, adapter.held.resources.waitOwnedRoot(server.session, handle))
-	}()
-	return waited, errors.Join(server.pinErr, server.sessionErr, meterErr)
+	return nil, ErrExecutionEpochOne
 }
+
 func (adapter *linuxEpochCoordinator) finish(run *ExecutionEpochOneRun, waited <-chan error, joined bool, waitErr error, deadline time.Time) (bool, bool, error) {
 	server := adapter.held.servers[run]
 	if server == nil {
 		return joined, false, ErrExecutionEpochOne
 	}
-	var result error
-	if !joined && server.pinErr == nil {
-		if adapter.held.resources.armOwnedStop(context.Background(), server.session) != nil {
-			result = ErrExecutionEpochOne
+	if server.trace != nil {
+		root := server.trace
+		if !joined {
+			root.requestFinish()
+			waitErr, joined = waitExecutionProcessRoot(waited, deadline)
 		}
-		if err := unix.PidfdSendSignal(server.pidfd, unix.SIGTERM, nil, 0); err != nil && !errors.Is(err, unix.ESRCH) {
-			result = ErrExecutionEpochOne
+		if !joined {
+			root.requestStop()
+			waitErr = <-waited
+			joined = true
 		}
+		// Receiving done proves actual Handle.Wait, original SID emptiness and
+		// all callback/pidfd ownership retirement, never a timeout substitute.
+		return joined, root.waitReturned, waitErr
 	}
-	if !joined {
-		waitErr, joined = waitExecutionProcessRoot(waited, deadline)
-	}
-	if !joined && server.pinErr == nil {
-		_ = unix.PidfdSendSignal(server.pidfd, unix.SIGKILL, nil, 0)
-		result = ErrExecutionEpochOne
-	}
-	// Keep every loan when a root is still unjoined; a timeout is never a Wait.
-	if !joined {
-		waitErr = <-waited
-		joined = true
-	}
-	return joined, server.sessionEmpty, errors.Join(result, waitErr, server.pinErr, server.sessionErr, server.closeRoot())
+	return joined, false, ErrExecutionEpochOne
 }

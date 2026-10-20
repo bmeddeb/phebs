@@ -724,14 +724,20 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	// Arm only after an actual launch, before any bootstrap or stdin delivery.
 	launchStage = "start"
 	launchStarted := time.Now()
-	if flow.native != nil && flow.native.beforeStart(launchCtx, command) != nil {
-		return nil, ErrExecutionEpochOne
+	var handle dispatchadmission.Handle
+	nativeStarted := false
+	if flow.native != nil {
+		nativeStarted, err = flow.native.start(launchCtx, runCtx, run, phase)
+	} else {
+		handle, err = flow.parent.StartInPhase(launchCtx, phase, dispatchadmission.Site{ID: executionSiteServe, Role: executionRolePhebs, Persistent: true}, command)
 	}
-	handle, err := flow.parent.StartInPhase(launchCtx, phase, dispatchadmission.Site{ID: executionSiteServe, Role: executionRolePhebs, Persistent: true}, command)
-	if err != nil {
+	if err != nil && !nativeStarted {
 		cancel()
 		return nil, ErrExecutionEpochOne
 	}
+	if err != nil {
+		retErr = ErrExecutionEpochOne
+	} // The real Start remains owned.
 	started, run.result.RootStarted = true, true
 	launchStage = "post-start"
 	flow.serverSessions[number-1] = command.Process.Pid // flow.mu is held; retain even if subsequent bootstrap fails.
@@ -755,7 +761,7 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	// Even capture failure retains the owned Start and follows normal cleanup.
 	var nativeWaited <-chan error
 	if flow.native != nil {
-		nativeWaited, err = flow.native.startWait(runCtx, run, phase, handle)
+		nativeWaited, err = flow.native.startWait(runCtx, run, phase)
 	} else {
 		run.processObservation, err = startEpochProcessObservation(launchCtx, command.Process.Pid, phase, "phebs", processNames,
 			func() { run.stopOnce.Do(func() { close(run.stop) }) })

@@ -1,0 +1,686 @@
+{
+  "schema": "t42-linux-event-trace-v4-bounded-qualification-v1",
+  "date": "2026-10-20",
+  "working_tree_base_commit": "2407786c5c5c4f03154432865a05b02001c329ed",
+  "scope": "Private Linux operational Start/trace/Wait integration; bounded own-image kernel mechanics only. No current-source full native composition pass.",
+  "source_binding": [
+    {
+      "path": "spike/t421/author_custody_run_linux.go",
+      "bytes": 18983,
+      "sha256": "27f8cec1f69c4b8415efcc066f457316726b47957a5dd1fb6bd14b5507f72231"
+    },
+    {
+      "path": "spike/t421/author_launch_linux.go",
+      "bytes": 2605,
+      "sha256": "3c66f100ef45b8f232f9ddf0a17371e32b63b82c894a360a748402506d644047"
+    },
+    {
+      "path": "spike/t421/epoch_classifier_linux.go",
+      "bytes": 6433,
+      "sha256": "bbb9ff3c0e1e3ec7fae2ab5011de3dea8450634d7ef042b47accc6c5f2575cd9"
+    },
+    {
+      "path": "spike/t421/epoch_coordinator_linux.go",
+      "bytes": 9366,
+      "sha256": "6ec6650c9b63360050be87e97760ff0b82ff1126c84d56958fc0eba229d951a6"
+    },
+    {
+      "path": "spike/t421/epoch_flow_linux.go",
+      "bytes": 16010,
+      "sha256": "7f4c4368575effb08fc67f643973d280f8766960a13798656adf7c1b1d84969e"
+    },
+    {
+      "path": "spike/t421/epoch_flow_native_linux_test.go",
+      "bytes": 19813,
+      "sha256": "bc44250a493a5acba55d6ef0d173f94650d78ca827c398e2bde6d6b269a0b5f6"
+    },
+    {
+      "path": "spike/t421/epoch_launch.go",
+      "bytes": 65198,
+      "sha256": "d5e360fbb3b6ab155aab82a87a7fcd5b1bea5d290e3dcc8daef63ce7317791b0"
+    },
+    {
+      "path": "spike/t421/epoch_native_adapter.go",
+      "bytes": 1115,
+      "sha256": "e0c53cf4f54d8ad85d4238bfa9a6fa93bed98ba00b37d365aa9e4b94a25c7c07"
+    },
+    {
+      "path": "spike/t421/epoch_server_linux.go",
+      "bytes": 4313,
+      "sha256": "b0a641adf4fd9c7ff7abc3d922a90c7ecc6f4da3879f7951d8146020e1a251e5"
+    },
+    {
+      "path": "spike/t421/linux_epoch_resource_policy.go",
+      "bytes": 17619,
+      "sha256": "b44d17fd367206b54303c72230d09bcd18017c31323fb3f40c6e03956987603c"
+    },
+    {
+      "path": "spike/t421/linux_epoch_resource_policy_test.go",
+      "bytes": 13014,
+      "sha256": "2b983fdb24026909ca534fafb5c868ed45b3c3c8c955f6f76ec98572b10cb2c9"
+    },
+    {
+      "path": "spike/t421/epoch_trace_actor_linux.go",
+      "bytes": 10314,
+      "sha256": "11990c9cee13f9a3f29d7a3810ada2c93ed8321d51df5e4c97c60eb83a4eaf90"
+    },
+    {
+      "path": "spike/t421/epoch_trace_census_linux.go",
+      "bytes": 1842,
+      "sha256": "7104d7b8f355a3722a55537347b1e276f9128491006bc7a6a10d8b77d88d9ce8"
+    },
+    {
+      "path": "spike/t421/epoch_trace_census_linux_test.go",
+      "bytes": 6725,
+      "sha256": "0ad5c2c7747e6991fd2419b64adeaa6d030c042cd3ed047ca990e11990371b60"
+    },
+    {
+      "path": "spike/t421/epoch_trace_events_linux.go",
+      "bytes": 16311,
+      "sha256": "8b75cda4d4131bf24d9abbbb168c7f4976a74ddffdce72873c9c89ff717a83e7"
+    },
+    {
+      "path": "spike/t421/epoch_trace_fixture_linux_test.go",
+      "bytes": 7028,
+      "sha256": "f0372e8278d3260e678042d1df80369f7742e4fc8ace147e1944f4f79408bcf9"
+    },
+    {
+      "path": "spike/t421/epoch_trace_initial_linux.go",
+      "bytes": 2293,
+      "sha256": "bde4b14ee7f46fbfda85759947b5c20a5900bcb90fd5589d6f9d84ab475a3eab"
+    },
+    {
+      "path": "spike/t421/epoch_trace_linux.go",
+      "bytes": 11799,
+      "sha256": "07081ba0b79391b2070a68bf2771de499b0503d18d17916f16343e60b358d5af"
+    },
+    {
+      "path": "spike/t421/epoch_trace_linux_test.go",
+      "bytes": 15939,
+      "sha256": "7ea18a1ff3130e47fffd246bfa0a2790bd1336d9a8bc105cdf71886226738a39"
+    },
+    {
+      "path": "spike/t421/epoch_trace_proof_linux.go",
+      "bytes": 4463,
+      "sha256": "0694c158306f5a6e4e30c8e77699f6bb790d7bb6519c6cf54910fd333baea8e9"
+    },
+    {
+      "path": "go.mod",
+      "bytes": 9366,
+      "sha256": "424c7e1038c71c10676fc3bad01e155ebc5f912a4eea65e90c284b30951a9275"
+    },
+    {
+      "path": "go.sum",
+      "bytes": 99030,
+      "sha256": "d7aa72d0c2c4283125d37d4377e74be0e87723735a27015900d23092798b1665"
+    }
+  ],
+  "normal_race_nodes": {
+    "normal": {
+      "passed_nodes": 84,
+      "skipped_nodes": 0,
+      "failed_nodes": 0
+    },
+    "race": {
+      "passed_nodes": 84,
+      "skipped_nodes": 0,
+      "failed_nodes": 0
+    }
+  },
+  "gates": [
+    {
+      "name": "focused-normal",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "./spike/t421",
+        "-run",
+        "^Test(LinuxEpoch(Trace|PreparationMemory|Joined|UnknownJoin|ControlSettlement|Resource|AuthorPrivate|FiniteExit)|LinuxAuthorShared|LinuxRootWait|ExecutionAuthorShared)",
+        "-count=1",
+        "-timeout=90s",
+        "-v"
+      ],
+      "base_commit": "2407786c5c5c4f03154432865a05b02001c329ed",
+      "pid": 798104,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 30.80559878799977,
+      "available_before": 129357877248,
+      "available_after": 129357651968,
+      "source_changed": [],
+      "scope": "bounded affected gates; sampled SID is not complete child history"
+    },
+    {
+      "name": "focused-race",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-race",
+        "./spike/t421",
+        "-run",
+        "^Test(LinuxEpoch(Trace|PreparationMemory|Joined|UnknownJoin|ControlSettlement|Resource|AuthorPrivate|FiniteExit)|LinuxAuthorShared|LinuxRootWait|ExecutionAuthorShared)",
+        "-count=1",
+        "-timeout=180s",
+        "-v"
+      ],
+      "base_commit": "2407786c5c5c4f03154432865a05b02001c329ed",
+      "pid": 798459,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 63.29021513299813,
+      "available_before": 129357647872,
+      "available_after": 129357471744,
+      "source_changed": [],
+      "scope": "bounded affected gates; sampled SID is not complete child history"
+    },
+    {
+      "name": "tagged-lint",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/golangci-lint-2.12.2/golangci-lint",
+        "run",
+        "--new-from-rev=290e1518a4a192d0a3494c3ed9fa2eb39a450355",
+        "--build-tags=phebs_t42_native",
+        "--timeout=4m",
+        "./spike/t421/..."
+      ],
+      "base_commit": "2407786c5c5c4f03154432865a05b02001c329ed",
+      "pid": 798865,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 36.117782852001255,
+      "available_before": 129357471744,
+      "available_after": 129357225984,
+      "source_changed": [],
+      "scope": "bounded affected gates; sampled SID is not complete child history"
+    },
+    {
+      "name": "tagged-vet",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "vet",
+        "-tags=phebs_t42_native",
+        "./spike/t421"
+      ],
+      "base_commit": "2407786c5c5c4f03154432865a05b02001c329ed",
+      "pid": 799033,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 18.454763749999984,
+      "available_before": 129357225984,
+      "available_after": 129357123584,
+      "source_changed": [],
+      "scope": "bounded affected gates; sampled SID is not complete child history"
+    },
+    {
+      "name": "docs-glossary",
+      "argv": [
+        "make",
+        "docs-check",
+        "verify-glossary"
+      ],
+      "base_commit": "2407786c5c5c4f03154432865a05b02001c329ed",
+      "pid": 802003,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 1.588543578000099,
+      "available_before": 129357123584,
+      "available_after": 129357119488,
+      "source_changed": [],
+      "scope": "bounded affected gates; sampled SID is not complete child history"
+    },
+    {
+      "name": "whitespace",
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "base_commit": "2407786c5c5c4f03154432865a05b02001c329ed",
+      "pid": 802075,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 0.2695859740051674,
+      "available_before": 129357119488,
+      "available_after": 129357119488,
+      "source_changed": [],
+      "scope": "bounded affected gates; sampled SID is not complete child history"
+    }
+  ],
+  "supplementary_tagged_diagnostic_gates": [
+    {
+      "name": "tagged-diagnostic-normal",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-tags=phebs_t42_native",
+        "./spike/t421",
+        "-run",
+        "^TestLinuxEpochTraceNativeFailureDiagnosticRetainsUnjoinedSnapshot$",
+        "-count=1",
+        "-timeout=30s",
+        "-v"
+      ],
+      "base_commit": "2407786c5c5c4f03154432865a05b02001c329ed",
+      "pid": 822456,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 21.535770053000306,
+      "available_before": 129744125952,
+      "available_after": 129743941632,
+      "source_changed": [],
+      "scope": "bounded affected gates; sampled SID is not complete child history"
+    },
+    {
+      "name": "tagged-diagnostic-race",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-race",
+        "-tags=phebs_t42_native",
+        "./spike/t421",
+        "-run",
+        "^TestLinuxEpochTraceNativeFailureDiagnosticRetainsUnjoinedSnapshot$",
+        "-count=1",
+        "-timeout=30s",
+        "-v"
+      ],
+      "base_commit": "2407786c5c5c4f03154432865a05b02001c329ed",
+      "pid": 822569,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 31.887420260005456,
+      "available_before": 129743937536,
+      "available_after": 129743687680,
+      "source_changed": [],
+      "scope": "bounded affected gates; sampled SID is not complete child history"
+    },
+    {
+      "name": "tagged-lint",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/golangci-lint-2.12.2/golangci-lint",
+        "run",
+        "--new-from-rev=290e1518a4a192d0a3494c3ed9fa2eb39a450355",
+        "--build-tags=phebs_t42_native",
+        "--timeout=4m",
+        "./spike/t421/..."
+      ],
+      "base_commit": "2407786c5c5c4f03154432865a05b02001c329ed",
+      "pid": 822704,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 15.953506152000045,
+      "available_before": 129743687680,
+      "available_after": 129743540224,
+      "source_changed": [],
+      "scope": "bounded affected gates; sampled SID is not complete child history"
+    },
+    {
+      "name": "tagged-vet",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "vet",
+        "-tags=phebs_t42_native",
+        "./spike/t421"
+      ],
+      "base_commit": "2407786c5c5c4f03154432865a05b02001c329ed",
+      "pid": 822815,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 3.4274005589977605,
+      "available_before": 129743540224,
+      "available_after": 129743540224,
+      "source_changed": [],
+      "scope": "bounded affected gates; sampled SID is not complete child history"
+    },
+    {
+      "name": "linux-arm64-tagged-compile",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-c",
+        "-tags=phebs_t42_native",
+        "-o",
+        "/home/ben/phebs-rehearsals/t42h2rcc-event-trace-v4-final-cgl5o1rs/native-diagnostics/linux-arm64.test",
+        "./spike/t421"
+      ],
+      "base_commit": "2407786c5c5c4f03154432865a05b02001c329ed",
+      "pid": 822848,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 104.32156324300013,
+      "available_before": 129743540224,
+      "available_after": 129659351040,
+      "source_changed": [],
+      "scope": "bounded affected gates; sampled SID is not complete child history"
+    }
+  ],
+  "supported_other_64bit_compile_only": [
+    {
+      "platform": "linux-arm64",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-c",
+        "-tags=phebs_t42_native",
+        "-o",
+        "/home/ben/phebs-rehearsals/t42h2rcc-event-trace-v4-final-cgl5o1rs/cross-compilation/linux-arm64/t421.test",
+        "./spike/t421"
+      ],
+      "pid": 802165,
+      "actual_wait_exit_code": 0,
+      "sampled_SID_members_after_wait": [],
+      "elapsed_seconds": 111.70602366700041,
+      "source_changed": [],
+      "native_execution": "NOT_RUN: compile only",
+      "output": {
+        "bytes": 83409822,
+        "sha256": "e0644ba588e5c96c5e27455c15797f5fc6361816577da12a1599a3fb0704a631"
+      },
+      "disposable_cache_retired_after_actual_wait": true,
+      "compile_only_output_retired_after_hash_and_actual_wait": true
+    },
+    {
+      "platform": "darwin-amd64",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-c",
+        "-tags=phebs_t42_native",
+        "-o",
+        "/home/ben/phebs-rehearsals/t42h2rcc-event-trace-v4-final-cgl5o1rs/cross-compilation/darwin-amd64/t421.test",
+        "./spike/t421"
+      ],
+      "pid": 809261,
+      "actual_wait_exit_code": 0,
+      "sampled_SID_members_after_wait": [],
+      "elapsed_seconds": 103.36963340900547,
+      "source_changed": [],
+      "native_execution": "NOT_RUN: compile only",
+      "output": {
+        "bytes": 94944416,
+        "sha256": "a6af57c276f407f154955f820ecf159529bd510817c7999eeaf6d87de89dfd73"
+      },
+      "disposable_cache_retired_after_actual_wait": true,
+      "compile_only_output_retired_after_hash_and_actual_wait": true
+    },
+    {
+      "platform": "darwin-arm64",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-c",
+        "-tags=phebs_t42_native",
+        "-o",
+        "/home/ben/phebs-rehearsals/t42h2rcc-event-trace-v4-final-cgl5o1rs/cross-compilation/darwin-arm64/t421.test",
+        "./spike/t421"
+      ],
+      "pid": 815694,
+      "actual_wait_exit_code": 0,
+      "sampled_SID_members_after_wait": [],
+      "elapsed_seconds": 104.54550313000072,
+      "source_changed": [],
+      "native_execution": "NOT_RUN: compile only",
+      "output": {
+        "bytes": 89700514,
+        "sha256": "1c39a442e30868519caafc334c09058a548faaf4323a1e305f427d75764868c8"
+      },
+      "disposable_cache_retired_after_actual_wait": true,
+      "compile_only_output_retired_after_hash_and_actual_wait": true
+    }
+  ],
+  "source_carry": {
+    "only_added_tagged_test_path": "spike/t421/epoch_flow_native_linux_test.go",
+    "untagged_runtime_tests": "same exact included Go sources",
+    "darwin_compile": "same exact included Go sources; changed file is linux && phebs_t42_native",
+    "linux_arm64_tagged_compile": "refreshed after tagged test logger delta; output hashed then retired after actual Wait"
+  },
+  "reviews": {
+    "peer": "review_h2m_extent",
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "fixture_authored_by_peer": "independently reviewed by lead; unchanged f0372e8278d3260e678042d1df80369f7742e4fc8ace147e1944f4f79408bcf9",
+    "native_tagged_logger_review": "bc44250a493a5acba55d6ef0d173f94650d78ca827c398e2bde6d6b269a0b5f6; clean"
+  },
+  "unchanged_limits": {
+    "whole_rss_reservation_bytes": 4294967296,
+    "actual_immutable_payload_charge": "required, no reclaim credit",
+    "kernel_cache_allowance_bytes": 1073741824,
+    "host_headroom_bytes": 1073741824,
+    "live_available_slack_bytes": 2147483648,
+    "cooperative_probe_timeout_ms": 2000,
+    "sample_cadence_ms": 250,
+    "trace_fallback_ms": 50,
+    "active_process_leaders": 128,
+    "active_TIDs": 1024,
+    "recent_events_per_root": 32,
+    "final_host_directory_bound": 8192,
+    "final_host_status_read_bound_bytes": 65536,
+    "available_disk_floor_bytes": 128849018880
+  },
+  "retained_failures": [
+    {
+      "raw_root": "/home/ben/phebs-rehearsals/t42h2rcc-event-trace-v4-dmt_c0id",
+      "actual_tool_session": 20648,
+      "actual_tool_exit": 1,
+      "outcome": "First focused normal failed; first Go constructor predicate unrecorded/unattributed; later Git contaminated by unknown first root; no genuine failed-root Wait claimed. Failed source archive retained."
+    },
+    {
+      "raw_root": "/home/ben/phebs-rehearsals/t42h2rcc-event-trace-v4-diagnostic-i_h2l1j5",
+      "actual_go_tool_session": 1966,
+      "actual_go_tool_exit": 0,
+      "actual_cancel_tool_session": 77933,
+      "actual_cancel_tool_exit": 1,
+      "outcome": "Isolated Go parent actual Wait17/root Wait0 passed; cancellation first owned-stop after EXIT events then45s timeout; no genuine root Wait. Source duplicate-signal liveness ordering corrected."
+    },
+    {
+      "raw_root": "/home/ben/phebs-rehearsals/t42h2rcc-event-trace-v4-corrected-x98i1ups",
+      "actual_tool_session": 11799,
+      "actual_tool_exit": 1,
+      "outcome": "84 normal/84 race passed; lint refused lostcancel final Wait path; one cancel added; subsequent exact source gates passed."
+    }
+  ],
+  "raw_root": "/home/ben/phebs-rehearsals/t42h2rcc-event-trace-v4-final-cgl5o1rs",
+  "raw_control_files": [
+    {
+      "name": "run.py",
+      "bytes": 4092,
+      "sha256": "f2dbb868773fb8060fb14462894ba09e93f4ae3b94d4daa14997a0e699d5e463"
+    },
+    {
+      "name": "source.json",
+      "bytes": 306730,
+      "sha256": "1e1d366aa0b8c394acf5890e8b39f536ad544d4e8acbf2441953605997af89ea"
+    },
+    {
+      "name": "source.tar.gz",
+      "bytes": 8540705,
+      "sha256": "fc247f28fcc7f65612327ae71e476bdfba6dc4be879fcd63e8092e064c4c1617"
+    },
+    {
+      "name": "results.json",
+      "bytes": 3793,
+      "sha256": "21701e1ea2a946d9cfcf86972bbbce663aa102d331b62998631701c309e5ff24"
+    },
+    {
+      "name": "terminal.json",
+      "bytes": 151,
+      "sha256": "0ca6d78376c387879cfa69647174c7d50c1462f76333a444fd81dffb044e85c7"
+    },
+    {
+      "name": "focused-normal.stdout",
+      "bytes": 13282,
+      "sha256": "67fed75c792ea648fe931b96b3eb698e586a4f642aff8ab0b2602723b16388d5"
+    },
+    {
+      "name": "focused-normal.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "focused-race.stdout",
+      "bytes": 13283,
+      "sha256": "3750dfc1b9588a1b74e9315ab7b3df46bfe0e738470dcb2425fff0a9b7d5b564"
+    },
+    {
+      "name": "focused-race.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "tagged-lint.stdout",
+      "bytes": 10,
+      "sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+    },
+    {
+      "name": "tagged-lint.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "tagged-vet.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "tagged-vet.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "docs-glossary.stdout",
+      "bytes": 237,
+      "sha256": "e2f2f6e2d8f26ac67ab68f77af07970f522b6e095717e49bcaca260762b8c44b"
+    },
+    {
+      "name": "docs-glossary.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "whitespace.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "whitespace.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "cross_compile.py",
+      "bytes": 3065,
+      "sha256": "e12c47a6b130790374fbd6d942a1190fea4a20f4dcc6afdeadb916bae4f98ae2"
+    },
+    {
+      "name": "cross-compilation/results.json",
+      "bytes": 2401,
+      "sha256": "81ff38059f92bbcd9b80b22e438b7d76c799c238fcf7fc1e0d043e044b316c2c"
+    },
+    {
+      "name": "cross-compilation/terminal.json",
+      "bytes": 104,
+      "sha256": "43fa85a59148c6d9f1b37bf696ed907fc09d75081c97c22ee7db08cadfe42570"
+    },
+    {
+      "name": "git_space.py",
+      "bytes": 2522,
+      "sha256": "aad651c7b682463627e323bebe4477a1959f0ac251e705b70d9b51bb02f88e1c"
+    },
+    {
+      "name": "git-object-maintenance/terminal.json",
+      "bytes": 395,
+      "sha256": "e8e119c4ebf54476b9deeac2c8e85f359b67a9cf7a39139f32a86579b67e9ac7"
+    },
+    {
+      "name": "native-diagnostics/run.py",
+      "bytes": 4679,
+      "sha256": "7a50f9ceb04cd2a15fc79df6923ce910a4fa99befe774d2eacd2c95e9273d11d"
+    },
+    {
+      "name": "native-diagnostics/source.json",
+      "bytes": 306730,
+      "sha256": "5db731a13ad8db56a840ca66e1596d087735a1a28c698307d24167eeb78073de"
+    },
+    {
+      "name": "native-diagnostics/source.tar.gz",
+      "bytes": 8541111,
+      "sha256": "94b3c0a462117775137db15aa4fcca3f47477ba7dba996f9ac6679d6d70bc684"
+    },
+    {
+      "name": "native-diagnostics/results.json",
+      "bytes": 3426,
+      "sha256": "468fcc692a6a46e77df43d8abf603fe354a57679d5aff413b847a0067befce35"
+    },
+    {
+      "name": "native-diagnostics/terminal.json",
+      "bytes": 180,
+      "sha256": "fa8f37234b6ddc4584da9cc86c1f54ec8df4231a6f888d8175c8868edccb739e"
+    },
+    {
+      "name": "native-diagnostics/compile-output.json",
+      "bytes": 235,
+      "sha256": "027833c42e213f12a2d6f02112a1cf8cd2af23afbc9ec1963a06763e4c23564c"
+    },
+    {
+      "name": "native-diagnostics/tagged-diagnostic-normal.stdout",
+      "bytes": 1622,
+      "sha256": "7508b4afc39ea1fca6d4bcd2c5b899a7e53fff250abc62ed84cbefe71657f4cd"
+    },
+    {
+      "name": "native-diagnostics/tagged-diagnostic-normal.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "native-diagnostics/tagged-diagnostic-race.stdout",
+      "bytes": 1622,
+      "sha256": "4679dabb8ef8bf912c730d2f5f2dad8a52956876374b5c8310f7cfdc6d9c3eca"
+    },
+    {
+      "name": "native-diagnostics/tagged-diagnostic-race.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "native-diagnostics/tagged-lint.stdout",
+      "bytes": 10,
+      "sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+    },
+    {
+      "name": "native-diagnostics/tagged-lint.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "native-diagnostics/tagged-vet.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "native-diagnostics/tagged-vet.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "native-diagnostics/linux-arm64-tagged-compile.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "native-diagnostics/linux-arm64-tagged-compile.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "interpretation": [
+    "Own-image Go/Git direct and nested genuine DA Wait, original-pidfd ACK/HUP, canceled capture-live SIGKILL and pre-CONT refusal controls passed.",
+    "Unknown actor-traced Z negative control refuses before either real DA root Wait.",
+    "Already-sent signal is a no-op before live probing; TERM-to-KILL escalation retains fresh original-live proof.",
+    "Native logging can retain synchronized bounded first-failure snapshots while unknown workers/loans stay held.",
+    "No all-task executable history, atomic image/RSS epoch, generic concurrent-cancel clean join or missing-birth authority is established.",
+    "Sampled empty SID after actual tool Wait is not complete descendant history.",
+    "Full native composition, H2 aggregate/pressure/restore, readiness and freeze remain open; no ceremony."
+  ]
+}

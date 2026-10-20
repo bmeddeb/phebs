@@ -548,6 +548,28 @@ complete census/reap integration, actual helper chains, missing-barrier refusal,
 cancellation and unknown-prefix custody still precede a new full composed run.
 Do not use ptrace EXITKILL or an absent PID as a genuine Wait/session-join oracle.
 
+Prospective private policy v4 makes the admitted held-flow owner create and
+retain each author/server tracer; operators supply no numeric PID or tracing
+assertion. Actual held executable checks precede root entry, inherited-process
+continuation and each exec continuation. An owned dead descendant requires
+current whole-process terminal evidence and the original identity/pidfd chain;
+a zombie leader with live threads does not qualify. Observed row RSS is kept.
+The sampler gate covers Start/capture and terminal-copy/reap transitions; a
+slow transition can still exceed the unchanged two-second probe limit and
+refuse qualification. DA waits, session drain, callbacks and notifier closure
+must actually finish before namespace/input retirement. Missing evidence keeps
+custody; cancellation does not turn it into a clean result. No additional host
+entitlement or manual ptrace setup is requested. Final retirement also checks
+bounded host status before/after observer join for unknown actor-traced leaders,
+including zombies; it grants no signal/reap authority from those observations.
+A missing trace birth cannot silently become a clean cancellation result. This
+implementation passed bounded own-image kernel and race controls with clean
+source/cost review, lint/vet, docs/glossary and supported 64-bit compilation;
+full current-source composed native acceptance remains open. Private native
+failure logging preserves locked first-cause snapshots while an unknown worker
+still holds its loans; it reads no unjoined mutable actor state. Neither a
+failure snapshot nor test completion substitutes for genuine native joins.
+
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
 It binds `c07bc930` and is preserved unchanged, so it no longer describes the

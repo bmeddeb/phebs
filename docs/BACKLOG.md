@@ -4650,6 +4650,25 @@ census/reap synchronization and safe cancellation/unknown custody still need
 source integration, bounded gates and independent review before the full native
 gate. PR #156 and parent H2 remain open.
 
+Prospective private resource policy v4 now integrates event-owned Start/trace/
+Wait actors with the complete census gate. Actual held-image checks precede
+root entry, inherited-child continuation and every exec continuation; exact
+current group-terminal evidence can classify an owned dead descendant without
+rewriting its sampled RSS or claiming an earlier executable image. Non-root
+terminal-copy/reap and direct-root Wait remain separate genuine kernel paths.
+Cancellation, original-SID drain, callbacks and control settlement retain their
+owners through actual joins. No all-syscall tracing or new host entitlement is
+introduced. The 4-GiB RSS plus actual payload plus 1+1-GiB formula, ongoing
+2-GiB slack and two-second probe deadline remain unchanged. This implementation
+has passed bounded own-image kernel mechanics: 84 normal and 84 race nodes,
+zero skips, plus a tagged unjoined-diagnostic normal/race control, tagged
+lint/vet, docs/glossary/whitespace and supported 64-bit compilation. Independent
+source/cost review is clean. The source-bound record is
+`spike/t42h2r/event-trace-v4-bounded-linux-20261020.json`; original failed prefixes
+remain retained, including the unattributed first constructor failure. This is
+not the full operational native qualification: actual current-source full
+composition still precedes merge/parent closure. PR #156 remains draft.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

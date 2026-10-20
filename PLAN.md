@@ -15704,3 +15704,79 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   is added. No runtime request, sync, retry/no-op, publication, cache/schema or
   production lock/process behavior changes. The `.go.txt` artifact is excluded
   from ordinary Go test discovery and grants no native admission authority.
+
+
+- **2026-10-20 — T42.H2r.c.c prospective v4 finite-process custody.**
+  Extend only the private Linux operational resource policy. A genuine admitted
+  held-flow scope issues the trace owner; each actual author/server Start runs
+  on its own locked tracer actor, with at most two operational roots alive.
+  Historical nil-native paths and V1–V3 policy/receipt bytes remain exact. A
+  post-Start capture refusal still retains and cleans the actually started root.
+  Actual allowed executable-object checks precede continuation at root entry,
+  inherited/no-exec process registration and every EXEC stop. Unsupported
+  nonleader exec, unknown images, relationship drift or missing kernel evidence
+  refuse qualification. No all-syscall tracing, retroactive zombie registration
+  or cached-live-image exemption is authorized.
+
+  A current owned-defunct category may describe an event-derived original
+  process leader only after fresh original-pidfd, actual terminal CLD WNOWAIT,
+  birth, real-parent, name, namespace and tracer proof. It preserves the native
+  census row and RSS and claims no executable image at census time. A Z leader
+  with live siblings is not group-terminal and cannot take this category. The
+  tracer must acquire the existing probe gate before consuming a non-root
+  terminal copy, and hold it through the original pidfd's actual HUP, while
+  servicing registered parent/vfork/thread events. Its application parent still
+  owns the real Wait, pumps and DA settlement; HUP alone does not prove them.
+  The direct DA root's raw terminal status is never consumed: anchored original
+  SID drain precedes its sole genuine Handle.Wait. Gate release at actual OS
+  reap cannot release loans before Wait, transports and callbacks truly join.
+  Root exit status and unexpected operational death remain independent failures.
+
+  Cancellation queues to the same owner; it cannot destroy the tracer thread
+  or use EXITKILL as completion. Unknown closure retains the worker and every
+  loan. Safe cleanup continues after a sticky operational refusal without
+  pretending its canceled admission passed. The existing two-second sampler
+  deadline, 250-ms cadence, complete native census and full memory constraints
+  remain; slow parent reaping or gate contention may honestly refuse. Current
+  image checks and sampled RSS remain sequential, without an atomic image/RSS
+  epoch or complete executable-history claim.
+
+  Bound live state across both actors to 128 process leaders and 1,024 TIDs;
+  retire identity/pidfd capabilities before reusing slots. Keep overflow-safe
+  counters and a fixed 32-event diagnostic ring per root, without cumulative
+  event history. On the first refusal, the actor copies its bounded ring,
+  task counts and at most 512 bytes of actual cause into a mutex-published
+  private diagnostic; no unjoined actor maps are read by observers. Error turns
+  may format bounded failure metadata again at the same targeted-wait cadence.
+  The three completed server roots retain their bounded ring and
+  map backing allocations until whole-flow cleanup, within controller RSS;
+  joined author roots become collectible. No immutable-payload credit follows.
+  At most 128 additional process pidfds are held; nonleader TIDs retain kernel
+  trace ownership. Event handling adds bounded targeted waits, current metadata
+  and executable-object checks, never Wait(-1), corpus walks or payload hashes.
+  Scoped SIGCHLD wakes and a 50-ms fallback each inspect active registered
+  TIDs: ordinarily two targeted waitid calls per TID when no stop is ready,
+  O(active TIDs), not constant work. Registration and EXEC add current native
+  identity/image metadata. Before and after the observer join, final retirement
+  scans a bounded 8,192-entry host directory and reads at most 64 KiB of status
+  per numeric leader, including Z. Unknown actor-traced leaders retain custody;
+  this scan grants no new signal/reap authority and adds no smaps/executable
+  inspection or hashes. Each pass keeps the same cooperative two-second probe
+  context and gate; this is final-retirement work, not per-tick host scanning.
+  A signal already sent to an original leader is a no-op before liveness
+  probing: a subsequent exit transition is not new signal authority and must
+  not create a custody failure merely because that process is dying. Fresh
+  signals still require the original live pin and existing leaf ordering.
+  Existing whole-loan locks remain held; census and reap share the existing
+  probe gate. There is no ordinary product query/request, sync tick, startup,
+  retry/no-op, publication, cache or schema change. Native failure-only logging
+  adds two short snapshot locks and a bounded ring copy; it reads no unjoined
+  actor maps, starts no child and performs no new census or image inspection.
+  The bounded own-image controls pass 84 normal and 84 race nodes without skips,
+  plus a tagged unjoined-diagnostic normal/race control, tagged lint/vet,
+  documentation/glossary/whitespace and affected supported 64-bit compilation.
+  Source/cost review is clean. The record is
+  `spike/t42h2r/event-trace-v4-bounded-linux-20261020.json`; earlier failed
+  prefixes and the unattributed first constructor refusal remain exact.
+  These tests grant no operational host/image admission. Full current-source
+  native composition still precedes merge, parent H2 closure and readiness.

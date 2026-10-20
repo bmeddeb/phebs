@@ -111,7 +111,7 @@ func (adapter *linuxEpochCoordinator) next(ctx context.Context, controller *disp
 		cancel()
 	}()
 	attempt := &linuxAuthorAttempt{done: make(chan struct{}), cancel: cancel, result: ExecutionAuthorResult{Revision: owner.projection.expected[index].Name, ProducerID: producer}}
-	launch := linuxAuthorLaunch{controller: controller, parent: parent, producer: producer}
+	launch := linuxAuthorLaunch{controller: controller, parent: parent, producer: producer, trace: adapter.held.resources.trace}
 	owner.mu.Lock()
 	if owner.borrowedBy != adapter.held.flow || owner.active != nil || owner.next != index || owner.bindLaunchLocked(index, &launch) != nil || owner.checkSource(operation, owner.previous) != nil {
 		owner.mu.Unlock()

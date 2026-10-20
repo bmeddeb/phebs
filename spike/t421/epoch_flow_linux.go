@@ -145,6 +145,11 @@ func (flow *LinuxExecutionEpochFlow) work() {
 		if e != nil {
 			return &linuxEpochOperationFailure{e}
 		}
+		flow.step = "trace-owner"
+		held.resources.trace, e = newLinuxEpochTraceOwner(held.resources)
+		if e != nil {
+			return &linuxEpochOperationFailure{e}
+		}
 		flow.step = "whole-observation"
 		if e = held.startWholeObservation(flow.lifetime); e != nil {
 			return &linuxEpochOperationFailure{e}

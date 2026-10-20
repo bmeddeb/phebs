@@ -296,6 +296,15 @@ retains the earlier failed attempts and exact limits. Production trace/census
 synchronization, generic missing-barrier refusal and full native composition
 remain open in #156; this bounded result does not advance H2/readiness/freeze.
 
+The prospective v4 implementation now binds actual Start/trace/Wait to held
+resource ownership and serializes current-death classification and real reaping
+with the complete sampler. Bounded own-image kernel controls passed 84 normal
+and 84 race nodes without skips, with the tagged diagnostic control, lint/vet,
+docs/glossary/whitespace, supported 64-bit compilation and clean source/cost
+review. The [bounded record](../spike/t42h2r/event-trace-v4-bounded-linux-20261020.json)
+retains earlier failures and the original memory/deadline gates. Full composed
+native acceptance remains open in draft #156; H2/readiness/freeze do not advance.
+
 Production artifact/signature/publication closure for T47.5, T49.4, T50.3,
 T51.3, T52.3 and T54.3 remains pending the existing unavailable production key
 and the exact owning production decision. Scoped results and unsigned drafts

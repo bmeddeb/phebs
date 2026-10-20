@@ -376,7 +376,17 @@ func logLinuxEpochNativeFailure(t *testing.T, flow *LinuxExecutionEpochFlow, bas
 		select {
 		case <-flow.done:
 		default:
-			t.Log("private flow done=false; mutable diagnostics unavailable; retained fixture", base)
+			// Ready publishes immutable resource/trace pointers under flow.mu.
+			// Their locked snapshots need no worker join; other fields still do.
+			flow.mu.Lock()
+			held, admitted := flow.held, flow.admitted
+			flow.mu.Unlock()
+			if admitted && held != nil && held.resources != nil {
+				a := held.resources
+				snapshot := a.trace.failure()
+				t.Logf("private unjoined first resource refusal=%q trace_failure_available=%t snapshot=%+v", a.privateRefusal(), snapshot.Stage != "", snapshot)
+			}
+			t.Log("private flow done=false; other mutable diagnostics unavailable; retained fixture", base)
 			return
 		}
 	}
@@ -400,6 +410,8 @@ func logLinuxEpochNativeFailure(t *testing.T, flow *LinuxExecutionEpochFlow, bas
 		t.Logf("private resource policy=%s initial=%+v calculation=%+v payload_bytes=%d checks=%d", a.policySHA, a.initial, a.calculation, a.footprint.PayloadBytes, a.checks)
 		t.Logf("private saved footprint=%+v", a.footprint)
 		t.Logf("private first resource refusal=%q", a.privateRefusal())
+		snapshot := a.trace.failure()
+		t.Logf("private trace_failure_available=%t snapshot=%+v", snapshot.Stage != "", snapshot)
 	}
 	if flow.held != nil && flow.held.whole != nil {
 		t.Logf("whole private process refusal=%q", flow.held.whole.gauge.privateRefusal())
@@ -440,5 +452,23 @@ func logLinuxEpochNativeFailure(t *testing.T, flow *LinuxExecutionEpochFlow, bas
 				t.Log("private server done=false; output unavailable")
 			}
 		}
+	}
+}
+
+// Mechanical diagnostics grant no Start, death or settlement authority.
+func TestLinuxEpochTraceNativeFailureDiagnosticRetainsUnjoinedSnapshot(t *testing.T) {
+	admission := &linuxEpochResourceAdmission{privateFailure: "fixed-diagnostic-control"}
+	owner := &linuxEpochTraceOwner{admission: admission, firstFailure: linuxEpochTraceFailure{Stage: "fixed-diagnostic-control", Events: 1}}
+	admission.trace = owner
+	flow := &LinuxExecutionEpochFlow{admitted: true, held: &linuxEpochHeldFlow{resources: admission}, done: make(chan struct{})}
+	before := owner.failure()
+	logLinuxEpochNativeFailure(t, flow, "fixed-diagnostic-control")
+	if owner.failure() != before || admission.privateRefusal() != "fixed-diagnostic-control" {
+		t.Fatal("private diagnostic changed retained failure")
+	}
+	select {
+	case <-flow.done:
+		t.Fatal("diagnostic fabricated worker join")
+	default:
 	}
 }

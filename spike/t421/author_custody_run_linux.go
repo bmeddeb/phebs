@@ -253,11 +253,16 @@ func (owner *LinuxExecutionAuthorCustody) runTransport(ctx context.Context, atte
 	command.Stderr = stderr
 	command.WaitDelay = 0
 	command.SysProcAttr = &syscall.SysProcAttr{Setsid: true, Pdeathsig: syscall.SIGKILL}
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
+	if launch.trace == nil {
+		runtime.LockOSThread()
+		defer runtime.UnlockOSThread()
+	}
 	attempt.step = "start"
 	var handle dispatchadmission.Handle
-	if launch.parent == nil {
+	var traced *linuxEpochTraceRoot
+	if launch.trace != nil {
+		traced, err = launch.trace.start(operation, operation, command, launch.parent, view.Phase, ExecutionParentAuthorSite(), image, nil)
+	} else if launch.parent == nil {
 		err = command.Start()
 	} else {
 		err = check(operation)
@@ -265,7 +270,7 @@ func (owner *LinuxExecutionAuthorCustody) runTransport(ctx context.Context, atte
 			handle, err = launch.parent.StartInPhase(operation, view.Phase, ExecutionParentAuthorSite(), command)
 		}
 	}
-	if err != nil {
+	if err != nil && traced == nil {
 		_ = controller.CancelUnused(view.Producer.ID)
 		return ErrExecutionAuthorCustody
 	}
@@ -274,13 +279,19 @@ func (owner *LinuxExecutionAuthorCustody) runTransport(ctx context.Context, atte
 	var pidfd int
 	var waited <-chan error
 	var pinErr error
-	if launch.parent == nil {
+	if traced != nil {
+		pidfd, waited, pinErr = -1, traced.done, err
+	} else if launch.parent == nil {
 		pidfd, waited, pinErr = pinExecutionProcessRoot(command)
 	} else {
 		pidfd, waited, pinErr = pinAdmittedExecutionProcessRoot(command, handle)
 	}
 	if pinErr == nil {
-		defer func() { _ = unix.Close(pidfd) }()
+		if traced == nil {
+			defer func() { _ = unix.Close(pidfd) }()
+		}
+	} else if traced != nil {
+		attempt.refuse("trace-start-capture")
 	} else {
 		attempt.refuse("root-pin")
 	}
@@ -296,7 +307,9 @@ func (owner *LinuxExecutionAuthorCustody) runTransport(ctx context.Context, atte
 		defer close(canceled)
 		_ = input.SetDeadline(time.Now())
 		_ = output.SetDeadline(time.Now())
-		if pinErr == nil {
+		if traced != nil {
+			traced.requestStop()
+		} else if pinErr == nil {
 			_ = unix.PidfdSendSignal(pidfd, unix.SIGKILL, nil, 0)
 		}
 	})
@@ -399,9 +412,11 @@ func (owner *LinuxExecutionAuthorCustody) runTransport(ctx context.Context, atte
 	if retErr == nil {
 		attempt.step = "session-drain"
 	}
-	for t4013.WaitPrivateProcessSession(attempt.pid, time.Now().Add(5*time.Second)) != nil {
-		time.Sleep(5 * time.Second)
-	}
+	if traced == nil {
+		for t4013.WaitPrivateProcessSession(attempt.pid, time.Now().Add(5*time.Second)) != nil {
+			time.Sleep(5 * time.Second)
+		}
+	} // Traced mode drained the original unreaped SID before its genuine Wait.
 	attempt.result.SessionEmpty = true
 	if retErr == nil {
 		attempt.step = "transport-close"

@@ -37,18 +37,20 @@ type linuxEpochResourcePolicy struct {
 	Initial                   string `json:"initial"`
 	Ongoing                   string `json:"ongoing"`
 	Sampling                  string `json:"sampling"`
+	Tracing                   string `json:"tracing"`
 }
 
 func linuxEpochPolicy() linuxEpochResourcePolicy {
 	return linuxEpochResourcePolicy{
-		Schema:              "t42-linux-epoch-operational-resources-v3",
+		Schema:              "t42-linux-epoch-operational-resources-v4",
 		RSSReservationBytes: linuxEpochRSSReservation, KernelCacheAllowanceBytes: linuxEpochKernelCacheAllowance, HostHeadroomBytes: linuxEpochHostHeadroom,
 		Scope:       "unprivileged-linux-amd64;one-bound-controller-lifetime-and-all-descendants;mnt-user-pid-cgroup-namespace-pins;controller-heap-included;server-subgauges-not-added",
 		Concurrency: "one-server-and-one-serial-author;return-after-predecessor-join;no-preparation-children-or-failed-prefixes",
 		Payload:     "tree-order=build-inputs,git,catalogs,configs;four-distinct-readonly-tmpfs-mounts:checked-(blocks-bfree)*bsize;image-order=t422-author,phebs,zoekt-git-index,surreal,plan;five-distinct-sealed-images-plan:max(page-rounded-size,512*st_blocks);metadata-in-kernel-cache-allowance;RSS-overlap-deliberately-conservative",
 		Initial:     "H2l-native-complete-ancestry;H2j-full-RSS-plus-payload-plus-kernel-cache-plus-host-headroom-fits-capacity-and-available;no-owned-memory-credit;bounded-8192-controller-FD-inventory-refuses-extra-memfd-or-tmpfs",
 		Ongoing:     "same-physical-ancestry-limits-namespaces-and-payloads;full-initial-required-fits-capacity;fresh-available-at-least-kernel-cache-plus-host-headroom;RSS-at-most-reservation;no-subtraction-or-re-reservation",
-		Sampling:    "serialized-whole-and-server-native-census-memory-image-inspections;bounded-exact-row-class-cache-per-census;whole-only-owned-defunct-at-classification:current-original-pidfd-WNOWAIT-birth-parent-name-SID-namespace-and-source-stop-arm:no-exec-claim;preserve-native-row-RSS;final-genuine-Wait-pumps-settlement-shares-probe-gate:over-2s-may-refuse;pure-aggregation-may-overlap;250ms-tickers-drop-missed-ticks;2s-cooperative-probe-context;native-H2l-cooperative;failure-sticky-cancellation-only;not-continuous-enforcement",
+		Sampling:    "serialized-whole-and-server-native-census-memory-image-inspections;bounded-exact-row-class-cache-per-census;event-owned-defunct-descendants-at-classification:current-original-group-pidfd-unconsumed-actual-terminal-CLD-birth-real-parent-name-SID-namespace-tracer:no-exec-claim;preserve-native-row-RSS;nonroot-tracer-terminal-copy-through-real-parent-pidfd-HUP-shares-probe-gate;direct-root-unconsumed-terminal-original-SID-drain-then-sole-genuine-Wait:gate-released-at-actual-OS-reap-not-DA-or-pump-completion;slow-reap-or-gate-contention-over-2s-may-refuse;pure-aggregation-may-overlap;250ms-tickers-drop-missed-ticks;2s-cooperative-probe-context;native-H2l-cooperative;failure-sticky-cancellation-only;not-continuous-enforcement",
+		Tracing:     fmt.Sprintf("held-resource-issued;two-root-actors;actual-DA-Start-and-sole-root-Wait-on-locked-creator;Start-and-initial-capture-share-probe-gate;process-leader-cap=%d;active-TID-cap=%d;original-process-pidfds-at-most-leader-cap;recent-event-ring-per-root=%d;completed-three-server-ring-and-map-backing-retained-in-controller-RSS;overflow-safe-counters-no-cumulative-history;SIGCHLD-wakes-plus-%dms-fallback;targeted-registered-waits-no-global-wait-no-syscall-tracing;actual-held-image-before-root-entry-inherited-registration-and-every-EXEC-continue;no-process-leader-detach-before-terminal-copy;queued-cancellation-serviced-through-real-joins;final-retirement-actor-TracerPid-status-census-before-and-after-observer-join:host-entry-cap=%d,status-read-cap=64KiB:no-new-signal-or-reap-authority;unknown-closure-retains-actor-and-loans", linuxEpochTraceMaxLeaders, linuxEpochTraceMaxTIDs, linuxEpochTraceRecentEvents, linuxEpochTraceFallback.Milliseconds(), linuxEpochTraceMaxHostEntries),
 	}
 }
 
@@ -65,6 +67,7 @@ type linuxEpochResourceAdmission struct {
 	held           *linuxEpochHeldFlow
 	cancel         context.CancelFunc
 	probeGate      chan struct{}
+	trace          *linuxEpochTraceOwner               // Issued before operations; retired before namespace pins.
 	ownedStops     map[int]*linuxEpochSessionAuthority // Only while probeGate is held.
 	namespaces     linuxEpochResourceNamespaces
 	footprint      linuxEpochResourceFootprint
@@ -199,7 +202,7 @@ func (a *linuxEpochResourceAdmission) Check(ctx context.Context) error {
 }
 
 func (a *linuxEpochResourceAdmission) checkLocked(ctx context.Context) error {
-	if ctx == nil || ctx.Err() != nil || !a.issued || a.closed || a.err != nil || a.held == nil || a.held.controllerPID != os.Getpid() || a.uid != os.Getuid() || a.euid != os.Geteuid() || a.checks == math.MaxUint64 {
+	if ctx == nil || ctx.Err() != nil || !a.issued || a.closed || a.closeErr != nil || a.err != nil || a.held == nil || a.held.controllerPID != os.Getpid() || a.uid != os.Getuid() || a.euid != os.Geteuid() || a.checks == math.MaxUint64 {
 		return a.refuseLocked("resource-binding-or-context")
 	}
 	runtime.LockOSThread()
@@ -351,9 +354,8 @@ func (a *linuxEpochResourceAdmission) Close() error {
 	if a == nil {
 		return errLinuxEpochResources
 	}
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	return errors.Join(a.err, a.closeCustodyLocked())
+	custodyErr := a.closeCustody()
+	return errors.Join(a.operationErr(), custodyErr)
 }
 
 // The joined flow carries its operational refusal separately from actual
@@ -362,8 +364,19 @@ func (a *linuxEpochResourceAdmission) closeCustody() error {
 	if a == nil {
 		return errLinuxEpochResources
 	}
+	// The actor may own probeGate while entering Check (which needs mu).
+	// Join its scoped notifier and registrations before holding mu or retiring
+	// namespace pins; a refused trace close leaves those pins available.
+	var traceErr error
+	if a.trace != nil {
+		traceErr = a.trace.close()
+	}
 	a.mu.Lock()
 	defer a.mu.Unlock()
+	if traceErr != nil {
+		a.closeErr = errLinuxEpochResources
+		return a.closeErr
+	}
 	return a.closeCustodyLocked()
 }
 

@@ -33,7 +33,7 @@ func (held *linuxEpochHeldFlow) gauge(ctx context.Context, pid int, birth string
 		images = append(images, linuxEpochClassImage{image, "git"})
 	}
 	classes := []string{"controller", "git", "phebs", "sh", "surreal", "t422-author", "zoekt-git-index"}
-	if pid == held.controllerPID {
+	if pid == held.controllerPID || held.resources != nil && held.resources.trace != nil {
 		// Private prospective Linux observation, never a V1-V5 exec class.
 		classes = append(classes, linuxEpochOwnedDefunctClass)
 		slices.Sort(classes)
@@ -47,9 +47,15 @@ func (held *linuxEpochHeldFlow) gauge(ctx context.Context, pid int, birth string
 		if refusal != "" {
 			// The resource probe holds probeGate through this complete census.
 			// Startup's own live controller row never takes this branch.
-			if pid == held.controllerPID && observed.PID != pid && held.resources != nil {
-				if index, ok := held.resources.ownedDefunctClass(checkCtx, gauge, observed); ok {
-					return index, true
+			if held.resources != nil && observed.PID != pid {
+				if held.resources.trace != nil {
+					if index, ok := held.resources.trace.defunctClass(checkCtx, gauge, observed); ok {
+						return index, true
+					}
+				} else if pid == held.controllerPID {
+					if index, ok := held.resources.ownedDefunctClass(checkCtx, gauge, observed); ok {
+						return index, true
+					}
 				}
 			}
 			if held.resources != nil {
