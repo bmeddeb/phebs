@@ -11493,3 +11493,25 @@ fixed small child Starts per suite. Passed long native receipts remain exact;
 H2r.a must adopt this primitive before route qualification. Linux author/executor,
 pressure/restore, aggregate resource/readiness/freeze and ceremony/signing/
 activation gates remain open.
+
+
+## T42.H2r.a · Controller-held protected Git route diagnostic (2026-10-20)
+
+Source `83bdc7a31a6ffd9e1001a120298d9e948396e519` passed its first required
+native diagnostic in 175.92s with zero skips. A sealed fixed test child used the
+controller-held H2p route with occupied CLOEXEC sockets 3/4 and no nested extra
+files. Actual image/digest/version/exec-path, neutral clone/content and observed
+upload-pack/protected pack-objects gates passed. Eight direct Git roots joined;
+the worker and outer wrapper joined with empty sessions. Five successful Trace2
+descendant exit rows are nonexhaustive. All 15 recorded PIDs were absent and
+private TMP was empty. Hashed native/cross binaries and disposable cross cache
+were retired; arm64 was compile-only. Eight pre-gates and independent exact-source
+custody/cost review passed without findings. The
+[receipt](../spike/t42h2r/controller-git-route-linux-20261020.json) binds 37 raw
+and three source hashes; final evidence review remains an integration gate.
+
+This qualifies a layout diagnostic, preserving public runtime contracts and
+adding no production request/tick/retry/publication work. It issues no actual
+author, authenticated dispatch or mutable-source capability. H2r.b standalone
+author ownership, later shared-controller/live-server binding and broader
+executor/pressure/restore, aggregate admission/readiness/freeze remain open.

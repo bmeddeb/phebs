@@ -351,6 +351,16 @@ contract and proves no actual author, mutable-source owner, bootstrap/loader
 closure, aggregate admission or readiness. Required native qualification is
 pending; preserve any first failure without an unchanged retry.
 
+The first native qualification at `83bdc7a3` passed in 175.92s with zero skips,
+actual joins/empty sessions, fixed clone/content and protected delegation gates.
+All 15 recorded wrapper/worker/direct/trace PIDs were absent, private TMP was
+empty and the hashed native binary was removed after join. Eight pre-gates and
+independent source/custody/cost review passed. Preserve
+[`controller-git-route-linux-20261020.json`](../../spike/t42h2r/controller-git-route-linux-20261020.json)
+and its frozen raw evidence; final evidence review precedes integration. Five
+Trace2 exits are observed rows, not a complete history. Actual Linux author/
+source ownership and authenticated bootstrap remain separate work.
+
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
 It binds `c07bc930` and is preserved unchanged, so it no longer describes the

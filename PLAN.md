@@ -14857,3 +14857,22 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   main and use its shared pin-before-Wait primitive in the diagnostic worker.
   The original route source remains an unexecuted lineage; this corrected
   source still requires its own focused/static/review and native qualification.
+
+  Exact source `83bdc7a31a6ffd9e1001a120298d9e948396e519` passed its first
+  required native diagnostic in 175.92s with zero skips; wrapper actual Wait
+  returned zero in 176.029619s with an empty session. The diagnostic root and
+  eight direct Git roots joined; five successful Trace2 child-exit rows were
+  observed, without claiming a complete descendant history. Seven protected
+  aliases totaled 31,834,376 bytes; Git 2.53.0 matched the selected image and
+  controller exec-path, neutral clone/content and upload-pack/pack-objects gates.
+  All 15 recorded wrapper/worker/direct/trace PIDs were absent afterward, private
+  TMP was empty and the hashed native binary was retired after join. Eight
+  pre-gates and independent source/custody/cost review passed without findings;
+  arm64 compilation was never executed and its artifact/cache were removed.
+  The [receipt](spike/t42h2r/controller-git-route-linux-20261020.json) binds 37
+  frozen raw hashes and both test files plus the unchanged H2q.c primitive.
+  Final evidence-descendant review remains required before integration. This
+  qualifies only the controller-held route diagnostic. H2r.b next owns standalone
+  Linux serial author/source custody with actual A/B/A-return and 4/3/3 Git;
+  shared-controller/live-server binding follows separately. No broader H2 or
+  authenticated author/dispatch, readiness/freeze or ceremony authority follows.

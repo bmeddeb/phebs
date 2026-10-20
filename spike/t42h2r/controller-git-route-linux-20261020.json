@@ -1,0 +1,249 @@
+{
+  "ticket": "T42.H2r.a",
+  "status": "PASS_REQUIRED_NATIVE_CONTROLLER_HELD_GIT_ROUTE_DIAGNOSTIC",
+  "source_commit": "83bdc7a31a6ffd9e1001a120298d9e948396e519",
+  "source_file_sha256": {
+    "spike/t421/author_git_route_linux_test.go": "ace2ee43bc76d1eb61ffcbb58f98ef9349aa8538cd932d14f7df71de78c5b31a",
+    "spike/t421/author_git_route_native_linux_test.go": "b16ef1fd8ca20c52d586a2bf90edf795cff6673b18f05e8c5bd6033395d2e2c7",
+    "spike/t421/root_wait_linux.go": "06c1fe04e08721eaf7f8bc715b82462544e7d226e2ab9df1e46a71a120c813e9"
+  },
+  "shared_pin_before_wait": "unchanged qualified H2q.c primitive",
+  "pre_gates": [
+    {
+      "name": "shape-normal",
+      "source_commit": "83bdc7a31a6ffd9e1001a120298d9e948396e519",
+      "pid": 304491,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 20.21196413040161
+    },
+    {
+      "name": "shape-race",
+      "source_commit": "83bdc7a31a6ffd9e1001a120298d9e948396e519",
+      "pid": 304596,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 29.405810832977295
+    },
+    {
+      "name": "tagged-shape",
+      "source_commit": "83bdc7a31a6ffd9e1001a120298d9e948396e519",
+      "pid": 304750,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 20.448615550994873
+    },
+    {
+      "name": "tagged-vet",
+      "source_commit": "83bdc7a31a6ffd9e1001a120298d9e948396e519",
+      "pid": 305345,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 2.8312718868255615
+    },
+    {
+      "name": "tagged-lint",
+      "source_commit": "83bdc7a31a6ffd9e1001a120298d9e948396e519",
+      "pid": 305382,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 15.819735527038574
+    },
+    {
+      "name": "docs-glossary",
+      "source_commit": "83bdc7a31a6ffd9e1001a120298d9e948396e519",
+      "pid": 305561,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 1.4878137111663818
+    },
+    {
+      "name": "native-test-build",
+      "source_commit": "83bdc7a31a6ffd9e1001a120298d9e948396e519",
+      "pid": 305640,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 4.39468789100647
+    },
+    {
+      "name": "cross-linux-arm64",
+      "source_commit": "83bdc7a31a6ffd9e1001a120298d9e948396e519",
+      "pid": 305704,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 117.99841594696045
+    }
+  ],
+  "native": {
+    "test": "TestLinuxAuthorGitRouteRequiredNativeControllerDescriptor",
+    "first_native_attempt": true,
+    "skips": [],
+    "test_elapsed_seconds": 175.92,
+    "wrapper": {
+      "source_commit": "83bdc7a31a6ffd9e1001a120298d9e948396e519",
+      "pid": 312350,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 176.02961921691895,
+      "native_tmp_entries": [],
+      "available_disk_bytes_after": 132087021568
+    },
+    "worker_pid": 316062,
+    "worker_actual_root_joined": true,
+    "worker_session_empty": true,
+    "worker_stderr_empty": true
+  },
+  "observations": {
+    "uid": 1000,
+    "kernel": "7.0.0-38-generic",
+    "physical_memory_bytes": 15991848960,
+    "available_disk_before_bytes": 132101206016,
+    "host_observation_not_aggregate_admission": true,
+    "input_tree_helper_request_sha256": "6fc821dc8036c1806fdb9e3609f17525875fa8ce3c47efd7e905f08749e88f94",
+    "protected_git_helper_sha256": "sha256:a548e2bffdae7a35d986199be572fe433f9d174c96e45bea3dff5838d8f2cfea",
+    "protected_git_files": 7,
+    "protected_git_logical_bytes": 31834376,
+    "diagnostic_image": {
+      "bytes": 87842036,
+      "sha256": "5e16ae2b6f78b1dc0f55b3958f1f5c65d4a81c4508329029d40e7b49da05df22",
+      "source_commit": "83bdc7a31a6ffd9e1001a120298d9e948396e519"
+    },
+    "git_sha256": "sha256:ed8b2df973b28c0fb773b9c0dc0816d3ee2b3835bb932d9153c21417bb51b362",
+    "git_version": "git version 2.53.0",
+    "controller_held_exec_path": "/proc/312350/fd/8/core",
+    "direct_git_actual_wait_pids": [
+      316069,
+      316070,
+      316071,
+      316072,
+      316074,
+      316075,
+      316082,
+      316083
+    ],
+    "trace_observed_successful_child_exit_pids": [
+      316073,
+      316079,
+      316080,
+      316076,
+      316081
+    ],
+    "trace_exit_rows_are_nonexhaustive": true,
+    "local_transport_shell_dependency": "/bin/sh",
+    "clone_commit": "c4afe39ad849c90350eae69a1708623b2f03d476",
+    "fixed_blob_bytes": 28,
+    "fixed_clone_content_and_actual_upload_pack_and_protected_pack_objects": "PASS required driver",
+    "child_fds_3_4_occupied_cloexec_sockets_and_fd_5_cloexec_image": "PASS required driver; collision controls only",
+    "nested_git_extra_files": 0,
+    "complete_H2p_config_controls": 3,
+    "fixed_argv_commitGraph_false": true,
+    "nonce_ready_actual_image_match_ack_before_routed_use": "PASS required driver",
+    "private_selected_git_copy_removed_before_use_and_host_original_hash_identity_and_mount_bracket_unchanged": "PASS required driver"
+  },
+  "post_native": {
+    "at_utc": "2026-10-20T08:24:20.416987+00:00",
+    "source_commit": "83bdc7a31a6ffd9e1001a120298d9e948396e519",
+    "recorded_pids_still_present": [],
+    "native_tmp_empty": true,
+    "unrelated_sha256": {
+      "history.txt": "cc78e9d70cd85599a3e978557ddb7056b08f22de42a3b6fb829c3ead926e1878",
+      "package-lock.json": "76aba7365f7eddc750fbbb908075fd04577b1b703cc15dde7686f6e2dec5b21b"
+    },
+    "available_disk_bytes": 132086702080
+  },
+  "recorded_wrapper_worker_direct_and_trace_pids": [
+    312350,
+    316062,
+    316069,
+    316070,
+    316071,
+    316072,
+    316074,
+    316075,
+    316082,
+    316083,
+    316073,
+    316079,
+    316080,
+    316076,
+    316081
+  ],
+  "binary_retirement": {
+    "native_test_binary_hashed_before_removal": true,
+    "native_test_binary_removed_after_actual_wait_and_empty_session": true,
+    "native_binary_absent_after_record_checked": true
+  },
+  "compile_only_linux_arm64": {
+    "bytes": 81552524,
+    "sha256": "c94b1425c42ec51ef144c4be6428ed2fe8a0cec2c1bf73fa22dde764970f8536",
+    "executed": false,
+    "disposable_binary_removed": true,
+    "disposable_cache_removed": true,
+    "binary_and_disposable_cache_absent_after_record_checked": true
+  },
+  "independent_source_custody_cost_review": {
+    "source_commit": "83bdc7a31a6ffd9e1001a120298d9e948396e519",
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0
+  },
+  "evidence_descendant_review": "receipt/documentation descendant review required before integration",
+  "raw_census": {
+    "directory": "t42h2ra-gates.nqlzsfw7",
+    "files": 37,
+    "sha256": {
+      "binary-retirement.json": "b97a98cdc78e8668b8b243f9523a383139ecd4f10b4b0944b4d4fed46467087c",
+      "cache-clean.json": "7678524f347ef688f5055dd766b47d14cfbbb47edeffd75a21c07ba43a762da0",
+      "cross-artifact.json": "e5fc3c7c7586c10cbdfe7922ef8188bf24c8d72a5671e1dab0cebb3106e6c1d5",
+      "cross-linux-arm64.json": "d72b34ef6db735cfff62d9daf8e67c72040c7fea3bad815881639f0f8710e698",
+      "cross-linux-arm64.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "cross-linux-arm64.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "docs-glossary.json": "1580a2e7c14c8efbb88efe621a6423cb17e87e7220324498f28bff4079f2cf37",
+      "docs-glossary.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "docs-glossary.stdout": "323358c237dd8701b9017e5931e5f85291d39ab037d77271debe11d72529bc81",
+      "gates.json": "873883ee3ee43b33b618be208f90b6a191f8d8fcf8706105415b951e011379fe",
+      "native-binary.json": "8cc69111e80eda912e5dc88aed915ad0c31fa3720cc43c61224e14f978060ca2",
+      "native-preflight.json": "b2c4b537962f8304843bd415d080fd46f7fc6ba589b2a937d90ec40c0d06e652",
+      "native-test-build.json": "0a697339f652064151c52b644fccbd38f3e8f9267c96ac185b8493e04b8e3c11",
+      "native-test-build.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "native-test-build.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "native-wrapper.py": "29e2ff538b701f39d36f30c305eb645df8159aca366a4f60c562a5c8622af477",
+      "native.json": "e68f12309b083d130fe3212a230c3796a290cbbee2541771fff0b7d5de0defba",
+      "native.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "native.stdout": "843d236cd48be2cb1a079a4624db8f3cead4f847edc18b68807de816dd35cdbf",
+      "post-native.json": "b8237a2318cb38499eeffd9f262e678514517dcc1a8523498f568b9d623e1688",
+      "pr-body.md": "058f58ec8823d11f57104ff35f4086e028d1f9810daad77d4ce9b7907ca12479",
+      "serial-gates.py": "56d33f8ed0f9533b8fdc5409935e2d4e87c16c1b0f36213ad56d65a7bca4ef9a",
+      "shape-normal.json": "0ccdca9d202176b6943bfc735386d65b54bc3da3f06f70e5d6a9a41a0f5b3231",
+      "shape-normal.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "shape-normal.stdout": "2246a4b7a69dbb160bb3239afdd6eb75c513ae64c88b3ecbed51bd160cdd5cf2",
+      "shape-race.json": "c8a182a19aab33b9706692517ee7d775b115d8b530e4d8167500d92054d56a9b",
+      "shape-race.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "shape-race.stdout": "724384927698d71aefb8bdec365b1fb857603a178d115a5a03e1e656ace90101",
+      "tagged-lint.json": "5cf955b94a5e910273c7b4b049f6e654b6eab27191aadc048dd617f0cd1db12d",
+      "tagged-lint.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tagged-lint.stdout": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47",
+      "tagged-shape.json": "b62400e0b54afc8890165ad8ad10fc5e2599c549d1f08ab42efaa5a88e04dbc4",
+      "tagged-shape.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tagged-shape.stdout": "a25bab3da28726f186a00e694951da8508a0efe910702f23be66bc03400e8cda",
+      "tagged-vet.json": "37cb9d978f3fd88ec01e443237ee3436666ea2bd2db8f7b612e99bc17f955f89",
+      "tagged-vet.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tagged-vet.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "steady_state_cost": {
+    "production_request_sync_startup_retry_noop_publication_work_added": false,
+    "roots": "one fixed diagnostic root plus eight serial direct Git roots; five successful Trace2 descendant exit rows observed, not a complete independent process history",
+    "copy_hash": "one private selected Git copy, two host-original full digest passes, seven routed alias full digest/header checks, one explicit whole-test-image SHA plus sealed memfd construction copy/hash; prerequisite H2k reference build and H2p staging/tree separately charged",
+    "bounds": "test image <=256MiB outside H2k tree ceiling; request<=4KiB; each Git stdout/stderr<=16/64KiB; aggregate trace<=128KiB; controller stdout/stderr<=16/512KiB; eight root PIDs and <=32 trace exit PIDs",
+    "ownership": "one worker and locked launching thread; Git/tree/image locks and borrowed descriptors retained through actual root Wait and entire session drain; unknown drain retains indefinitely",
+    "writable_fixture": "one neutral 28-byte blob/commit in source and mirror plus generated Git metadata/home/tmp; no new SDK/module copy"
+  },
+  "qualification_boundary": [
+    "Fixed sealed self-test child is diagnostic bytes, not reference-issued author authority; controls3/4 are not authenticated DA01/PC01.",
+    "Public WithGit FD3 contract and legacy bootstrap validation remain unchanged; no arbitrary command, mutable-source owner, complete helper/shell/loader/library closure or admitted dispatch is issued.",
+    "Standalone Linux serial author/source owner is next; shared-controller/live-server binding follows separately.",
+    "Executor/pressure/restore, aggregate resources/readiness/freeze, ceremony, scale, release/signing/activation remain open."
+  ]
+}

@@ -191,6 +191,14 @@ and independent source/custody/cost review without findings. Its
 failure and corrected evidence. Final evidence review precedes integration;
 the pending H2r.a route diagnostic must adopt this ordering before qualification.
 
+H2r.a adopted the correction and passed its first required native controller-FD
+route diagnostic at `83bdc7a3` in 175.92s with zero skips, joined roots/empty
+sessions, clean TMP and independent source/custody/cost review without findings.
+Its [receipt](../spike/t42h2r/controller-git-route-linux-20261020.json) keeps the
+diagnostic boundary explicit; final evidence review precedes integration. Next
+is H2r.b standalone Linux serial author/source ownership, followed separately by
+shared-controller/live-server binding and the remaining H2 gates.
+
 
 Next: [Linux office handoff #124](https://github.com/bmeddeb/phebs/issues/124)
 mechanism qualification → remaining T42.H2 consumer/executor/resource admission

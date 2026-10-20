@@ -4419,6 +4419,18 @@ Retain H2p's actual complete three-control environment and the fixed
 four-control environment with H2p's loan. Actual authenticated Linux author
 bootstrap/source semantics remain distinct downstream implementation work.
 
+Exact source `83bdc7a3` passed the first required native diagnostic in 175.92s
+with zero skips, actual root joins and empty sessions. Eight direct Git roots
+and five nonexhaustive successful Trace2 child exits were observed; all 15
+recorded PIDs were absent afterward, private TMP was empty and the hashed native
+binary was removed after wrapper Wait. Eight pre-gates and independent source/
+custody/cost review pass without findings; Linux arm64 remains compile-only.
+The [receipt](../spike/t42h2r/controller-git-route-linux-20261020.json) binds
+37 frozen raw hashes and three source hashes. Final evidence review precedes
+integration. The qualified diagnostic grants no author/bootstrap/source owner:
+H2r.b implements the standalone serial author; shared-controller/live-server
+binding remains a later slice, with every parent H2r AC preserved.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared
