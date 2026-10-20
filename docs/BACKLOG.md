@@ -4161,6 +4161,24 @@ actual image/helper digests and raw evidence; the independently rebuilt helper
 keeps its own `b7c19c79` source binding. This closes only the Git resource owner;
 protected Go build/executor composition and the remaining H2 gates stay pending.
 
+**T42.H2q · Protected Linux Go SDK/module/source builds** *(next H2 consumer
+prerequisite, 2026-10-19; needs H2p and H2k native facts).* First measure an
+actual protected descriptor-based compile with clean VCS stamping. Then supply
+a real implemented reference-tool build from exact source, checksum-selected
+modules and the protected SDK, with fixed descriptor/namespace routing, closed
+offline controls and candidate/build-info comparison. AC: hide private original
+SDK/cache/source inputs before use; prove actual compiler and Git delegation,
+read-only inputs, separate writable outputs, root/descendant joins and retained
+ownership on every uncertain failure; retain the historical Darwin recipes and
+entry-point refusals; focused normal/race/static/native and custody/cost review.
+The first neutral dependency-free feasibility probe keeps the installed SDK
+available and supplies no reference-tool or full SDK-closure admission. A bare
+FD layout is conditional on its actual source cwd/VCS behavior. Any required
+namespace recipe must remain source-owned and separately verified. The existing
+H2k combined 2-GiB/100,000-entry bound, separate staging/page-cache/tmpfs/output
+costs and complete aggregate admission remain mandatory. Production work,
+complete readiness, freeze and execution stay pending.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

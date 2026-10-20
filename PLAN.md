@@ -14373,3 +14373,21 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   sync, startup/restart, retry/no-op, publication, schema and caches gain no
   registered production work. Go SDK/build ownership, operational executor
   joining, full pressure/restore and prospective aggregate plans remain H2 work.
+
+- **2026-10-19 — T42.H2q protected Go build acceptance boundary (Linux #124).**
+  Require an actual protected Go compile with clean VCS stamping before
+  selecting a Linux SDK/module/source execution layout. The first bounded
+  native feasibility probe composes Git FD3 with an H2k SDK/modules/source
+  tree at FD4, keeps build cache/tmp/output separate, hides its private neutral
+  source, and checks exact VCS revision and compiled output. It neither
+  qualifies a real reference-tool recipe nor hides the original installed SDK;
+  those remain mandatory downstream controls. Failed commands retain all
+  owners unless actual root Wait and exact private-session drain are observed.
+  Descriptor path/cwd semantics must be measured; no path alias, caller boolean
+  or version/env probe substitutes for the compile. The mechanism test copies
+  at most H2k's existing 2-GiB/100,000-entry bound, runs one independently
+  verified helper plus Git preparation, and caps the Go command cooperatively
+  at five minutes with bounded output. It changes no production caller, source
+  authority, schema, cache, plan, admission or historical entry point. Full
+  SDK/module/source provenance, source-owned command/executor ownership and
+  aggregate memfd/tmpfs/page-cache reservations remain required before H2.
