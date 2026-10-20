@@ -1,0 +1,139 @@
+{
+  "ticket": "T42.H2m",
+  "date_local": "2026-10-19",
+  "recorded_at_utc": "2026-10-20T02:50:57.915728+00:00",
+  "source_commit": "43dbb9ea672eb1da98d92ef35373d525f544b36c",
+  "source_formatter_sha256": "ad56c650a0f838fa8580f98fed486da1d41479b1c19c21ddfd88dc878e9be40b",
+  "source_review": "Independent exact-commit read-only review: no findings, including correctness/custody/cost; reviewer executed no tests or privileged commands.",
+  "host": {
+    "platform": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+    "machine": "x86_64",
+    "go_version": "go version go1.26.5 linux/amd64",
+    "available_bytes_after_run": 129565442048
+  },
+  "test_binary_sha256": "ee2ec0378fb958aea10cec60884c26594b22ddc1f5e5f40cb62be55e4ef6bc71",
+  "formatter_sha256": "e42e49656dfc308efeed86f9bfad7746fc22ad1d4a3b0d508b5dba7a4b9a904f",
+  "command": [
+    "/var/lib/phebs-t42-h2m-extents-v1/t421-h2m.test",
+    "-test.run=^TestLinuxPressureVolumeOptionalNative$",
+    "-test.count=1",
+    "-test.timeout=120s",
+    "-test.v"
+  ],
+  "environment": {
+    "PATH": "/usr/sbin:/usr/bin:/bin",
+    "LANG": "C",
+    "LC_ALL": "C",
+    "TZ": "UTC",
+    "HOME": "/nonexistent",
+    "TMPDIR": "/var/lib/phebs-t42-h2m-extents-v1/tmp",
+    "GOMAXPROCS": "2",
+    "PHEBS_T42_H2M_NATIVE": "1",
+    "PHEBS_T42_H2M_PARENT": "/var/lib/phebs-t42-h2m-extents-v1/pressure",
+    "PHEBS_T42_H2M_FORMATTER_SHA256": "sha256:e42e49656dfc308efeed86f9bfad7746fc22ad1d4a3b0d508b5dba7a4b9a904f"
+  },
+  "native_result": {
+    "exit_code": 0,
+    "uid": 0,
+    "gid": 0,
+    "skips": 0,
+    "elapsed_seconds_wrapper_observation": 0.122,
+    "test_output": "=== RUN   TestLinuxPressureVolumeOptionalNative\n    linux_pressure_native_linux_test.go:73: tiny owned ext4 mechanism only: nominal=67108864 usable=66031616 block=4096; nonforced umount/exact loop detach and underlay passed\n--- PASS: TestLinuxPressureVolumeOptionalNative (0.06s)\nPASS\n",
+    "parent_entries_after": [
+      ".t42h2m.lock"
+    ],
+    "mounts_after": [],
+    "retained_loops": [],
+    "formatter_unchanged": true,
+    "private_backing_teardown": "nonforced unmount and exact original underlay verified; host-root propagation unchanged",
+    "test_formatter_processes_after": [],
+    "process_census_scope": "Named-process diagnostic only. Actual native test and formatter joins are proven by the native test; no general executor-descendant drain claim."
+  },
+  "focused_checks": [
+    {
+      "command": "go test ./spike/t421 -run ^Test(LinuxPressure|ExecutionPressureAllocation) -count=1 -timeout=90s",
+      "exit_code": 0,
+      "package_test_seconds": 0.052
+    },
+    {
+      "command": "go test -race ./spike/t421 -run ^Test(LinuxPressure|ExecutionPressureAllocation) -count=1 -timeout=90s",
+      "exit_code": 0,
+      "package_test_seconds": 1.155
+    },
+    {
+      "command": "go vet -tags phebs_t42_native ./spike/t421",
+      "exit_code": 0
+    },
+    {
+      "command": "golangci-lint run --build-tags phebs_t42_native --new-from-rev b7c19c7994545ab95fef47ab2264a4ccb57baf5e ./spike/t421",
+      "exit_code": 0,
+      "tool_version": "2.12.2",
+      "issues": 0
+    },
+    {
+      "command": "make docs-check verify-glossary",
+      "exit_code": 0
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0
+    }
+  ],
+  "prior_failures": "Both original local receipts remain under /home/ben/phebs-rehearsals/issue-124-pickup-20261020T020039Z/native-checks. The previous mount and loop attachment were already absent at this turn; that observation is not certified teardown. Failed source/receipt bytes were not changed.",
+  "prior_native_passes": "H2h/i/k/l source b7c19c7994545ab95fef47ab2264a4ccb57baf5e; not rerun or relabeled as exact corrected-source native results.",
+  "cleanup": "Cleared disposable Chrome disk cache only during this turn; profile, offline module archives, local history, prior failed evidence preserved. The clean temporary build checkout was removed after verification; its exact source remains on the ticket branch.",
+  "raw_evidence_directory": "/home/ben/phebs-rehearsals/issue-124-h2m-extents.cnzoLx",
+  "raw_file_census": [
+    {
+      "name": "native-build.json",
+      "bytes": 478,
+      "sha256": "67b7b9faf7d8546be69c35e32d459f6bf1923391ab1be174d00e026115b98353"
+    },
+    {
+      "name": "native-build.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "source-preparation.log",
+      "bytes": 170,
+      "sha256": "2bc922351828d5826b40b49f640bc7fe2d38f4bc8e86c3958cecd437dd3da4aa"
+    },
+    {
+      "name": "run-root.py",
+      "bytes": 7957,
+      "sha256": "507ece7c75a319b2615272ad2b74b4a5ff8542e2cb2102a2dc8d86926da86f85"
+    },
+    {
+      "name": "root-run.stdout",
+      "bytes": 9751,
+      "sha256": "ad02dce330d515350bc5a6a6f6032c795dad27c3c5fc026797c925128c532747"
+    },
+    {
+      "name": "root-run.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "root-launch.json",
+      "bytes": 190,
+      "sha256": "4256147c6a83fc510dc5b49b1b6ebdd28fb0368de55cad46c54fc91f455f638b"
+    },
+    {
+      "name": "native-result.json",
+      "bytes": 13349,
+      "sha256": "3ebc2ae26511d8de530a7c9d33a1a586a83b0afd7335cc73e63110bfca9d9500"
+    },
+    {
+      "name": "post-run-process-census.json",
+      "bytes": 386,
+      "sha256": "5e057b2de91df25930c7a544ea7dc02eb5114a72a0d16dfcce8dbd5947903612"
+    },
+    {
+      "name": "source-cleanup.json",
+      "bytes": 288,
+      "sha256": "627c53ce001d22bedca5d91e05f1d36121509c9f6d25609d8e4d76b86609b3b6"
+    }
+  ],
+  "bounds": "64-MiB native mechanism only. No full pressure/restore, descendant executor proof, aggregate memory reservation, parent H2, restored launch, complete readiness, freeze, ceremony, scale or release admission. Production signing/activation PENDING."
+}

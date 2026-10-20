@@ -735,6 +735,11 @@ exact corrected source. Preserve earlier failed images and receipts rather
 than reformatting them. A fresh successful mechanism check does not establish
 full pressure/restore or parent H2 admission.
 
+The corrected source's [Linux native receipt](../../spike/t42h2m/linux-native-20261019.json)
+records a passing 64-MiB allocation/truncation and exact nonforced teardown
+check on the designated host. It closes that mechanism proof only; use the
+owning H2 backlog for remaining executor, pressure/restore and admission work.
+
 On this host, development tools are in `/home/ben/.local/bin`; native amd64
 tools are staged separately under
 `/home/ben/.local/share/phebs-host/native-amd64`. Load the development PATH and

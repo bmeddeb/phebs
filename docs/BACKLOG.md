@@ -4083,6 +4083,18 @@ This changes no production caller, formatter-child count, image bound, lock,
 cache or corpus work; filesystem extent metadata is charged within the same
 fixed image. Native results and complete H2 acceptance remain separate.
 
+Corrected exact source `43dbb9ea672eb1da98d92ef35373d525f544b36c` passes
+independent source/cost review, focused normal/race, tagged vet, pinned scoped
+lint, docs/glossary and the real Linux tagged 64-MiB test with zero skips.
+Allocation/truncation, nonforced unmount, exact loop detach and underlay
+verification pass; the private backing bind is also unmounted without force.
+No test/formatter process, owned image mount or associated loop remains from
+this attempt. [Native receipt](../spike/t42h2m/linux-native-20261019.json)
+retains exact tool/source/host bindings and the local raw-evidence census.
+This closes the bounded H2m native mechanism gap only; full pressure/restore,
+consumer/executor ownership, prospective plans and aggregate admission remain
+parent H2 work. The earlier failed receipts retain their original outcomes.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

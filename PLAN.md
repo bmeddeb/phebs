@@ -14303,3 +14303,21 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Actual initialization/allocation costs remain native measurements rather than
   a new latency or resource bound. This is no full pressure/restore, executor
   drain, parent H2, readiness, freeze, ceremony or release admission.
+
+- **2026-10-19 — T42.H2m bounded Linux mechanism qualified after extent correction.**
+  Exact source `43dbb9ea672eb1da98d92ef35373d525f544b36c` passes independent
+  source/custody/cost review and the real root-consumer native test: 64-MiB
+  image, tiny allocation/truncation, actual formatter join, nonforced unmount,
+  exact loop detach and original-underlay verification. The separately
+  provisioned private backing bind also unmounts without force. Preserve the
+  original shared-backing and extent-less allocation failures. The receipt at
+  `spike/t42h2m/linux-native-20261019.json` binds commands, exact source/tool
+  images, actual geometry output and local raw-evidence hashes. Focused normal/
+  race, tagged vet, pinned scoped lint, docs/glossary and whitespace pass.
+  No test/formatter process, owned image mount or associated loop remains from
+  the corrected attempt. The prior attachment was already absent at pickup;
+  that fact is not certified retirement. Test staging adds explicit mount and
+  inventory tool calls outside production, not a new production child class.
+  The prior cost/authority boundaries remain: this is no full pressure/restore,
+  executor-drain, aggregate reservation, parent H2, restored-launch/readiness,
+  freeze, ceremony or release pass. Production signing/activation stays pending.
