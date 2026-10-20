@@ -4362,6 +4362,33 @@ implemented plain author role; optional V3 overlay gets no new native claim.
 Linux author/executor consumers, pressure/restore, complete source-owned
 aggregate admission and all downstream readiness/freeze gates remain open.
 
+**T42.H2q.c · Pin child identity before root reaping** *(immediate safety
+prerequisite discovered during H2r.a review, 2026-10-20).* Three merged Linux
+Go root launchers start their Wait goroutine before `pidfd_open`. An early exit
+can therefore be reaped before pinning, permitting a reused PID to be pinned and
+later signaled. Pin the still-unreaped owned child before starting the sole
+Wait; retain existing cancellation, actual join/session-drain and unknown-loan
+rules. Apply one private shared ordering primitive to the reference worker and
+both native namespace/lifetime controllers. AC: actual fixed early-exit child
+observed with non-reaping WNOWAIT, successful pinned identity, sole actual Wait,
+exit readiness and post-join ESRCH signals; pin-refusal join behavior; focused
+normal/race, tagged compile/static, independent source/custody/cost review and
+small source-free receipt. No repeated passed long author/neutral workloads,
+new child/recipe authority or rewritten historical receipt. The pending H2r.a
+worker must consume the corrected ordering before qualification.
+
+Corrected exact source `a7d3963d` passed all seven serial gates: actual root-pin
+normal/race/tagged regressions, tagged vet, scoped lint (zero issues),
+docs/glossary and Linux arm64 compile-only. Gate roots actually joined with empty
+sessions; zero tests skipped. The real WNOWAIT/pinned-zombie/exit-17/ESRCH and
+isolated actual-EMFILE controls pass, and independent source/custody/cost review
+reports no findings. The first `d1f63117` record remains a scoped-lint ST1008
+failure, corrected only by returning error last. The source-free
+[receipt](../spike/t42h2q/root-pin-linux-20261020.json) binds both records, five
+source files and removed compile-only artifact. This qualifies the correction;
+final evidence-descendant review remains required before integration. H2r.a
+route qualification and all broader H2/readiness/freeze gates remain open.
+
 **T42.H2r · Linux serial author consumer and mutable-source owner** *(next H2
 consumer after qualified H2q, 2026-10-20).* Consume genuine Linux Git, protected
 Go build lineage, its reference-issued author image and sealed plan. Own a fresh

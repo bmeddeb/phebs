@@ -184,6 +184,13 @@ independent source/custody/cost review pass. Next is the distinct Linux author
 consumer/source owner, then executor/pressure/restore and aggregate admission;
 this component issues no complete H2/readiness/freeze authority.
 
+H2q.c's root-pinning correction passed all seven focused/static/documentation/
+compile-only gates at `a7d3963d`, with actual joins, empty sessions, zero skips
+and independent source/custody/cost review without findings. Its
+[receipt](../spike/t42h2q/root-pin-linux-20261020.json) preserves the first lint
+failure and corrected evidence. Final evidence review precedes integration;
+the pending H2r.a route diagnostic must adopt this ordering before qualification.
+
 
 Next: [Linux office handoff #124](https://github.com/bmeddeb/phebs/issues/124)
 mechanism qualification → remaining T42.H2 consumer/executor/resource admission

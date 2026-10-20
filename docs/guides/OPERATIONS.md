@@ -314,6 +314,24 @@ do not repeat this passed workload. H2q is a qualified component. Linux author/
 executor consumption, pressure/restore, aggregate admission and downstream
 readiness/freeze remain separate required work; no supplied author was executed.
 
+H2q.c corrects the root launch ordering found during the next consumer review:
+acquire the pidfd while the owned child is unreaped, then start its sole Wait.
+An early exit is not permission to reopen a numeric PID after reaping. Keep the
+same actual Wait/session-drain and retained-loan barriers after any pin failure.
+The small early-exit regression qualifies this ordering correction; preserve
+passed long native receipts without rerunning their workloads. H2r.a remains
+pending until the shared correction and its focused/review gates pass.
+
+The correction at `a7d3963d` passed real normal/race/tagged early-exit and
+isolated-EMFILE regressions, tagged vet/scoped lint, docs/glossary and Linux arm64
+compile-only. Every gate actually joined with an empty session; no test skipped.
+The arm64 binary and its disposable cache were removed without execution.
+Independent source/custody/cost review reports no findings. Preserve the first
+`d1f63117` ST1008 lint refusal and corrected gates bound by
+[`root-pin-linux-20261020.json`](../../spike/t42h2q/root-pin-linux-20261020.json).
+Final evidence review precedes integration. Do not repeat passed long native
+workloads: H2r.a adopts the primitive and separately proves its proposed route.
+
 H2r.a next checks the prospective controller-held Git route using a fixed sealed
 test child. With the independently rebuildable `PHEBS_T42_INPUT_TREE_REQUEST`
 prepared, run only after focused/static and independent review gates pass:

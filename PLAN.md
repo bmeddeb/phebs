@@ -14749,6 +14749,57 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   ceremony or production signing/activation authorization.
 
 
+- **2026-10-20 — T42.H2q.c pin owned child identity before reaping.**
+  Independent H2r.a review found a high-severity race also present in three
+  merged Linux Go controllers: starting the sole Wait goroutine before
+  `pidfd_open` permits early child reaping/PID reuse before the signal handle is
+  acquired. Pin while the child is still owned and unreaped, then start exactly
+  one Wait goroutine. A shared private Linux primitive preserves this ordering
+  for the reference worker and both native namespace/lifetime controllers.
+  Even a pin refusal must retain/join that same root; it supplies no permission
+  to signal another numeric PID or dispose borrowed resources. Existing actual
+  Wait, session-drain, locked-thread and uncertainty rules remain exact.
+  A small real early-exit child test observes WNOWAIT without reaping, verifies
+  pinned exit readiness and the sole Wait, then requires post-join pidfd signal
+  refusal. Preserve the passed long workload receipts; this failure-path ordering
+  correction receives focused normal/race, tagged static and exact independent
+  review plus a small source-free receipt instead of repeating those workloads.
+  The acquisition order changes, with no new command, image, copy/hash pass,
+  held descriptor, goroutine, lock, cache or reservation. Production request,
+  sync tick, ordinary startup, retry/no-op and publication costs are unchanged.
+  H2r.a must use the corrected primitive before its native diagnostic. Complete
+  H2/readiness/freeze and ceremony/signing/activation remain open.
+
+  The pin-failure regression uses an isolated fixed test subprocess to lower
+  only its own soft RLIMIT_NOFILE temporarily, force actual EMFILE, restore it
+  immediately and require the same exit-17 Wait. Parent/host limits never change.
+  The three small test Starts add only fixed regression cost; production keeps
+  its existing one pidfd syscall, buffered result channel and Wait goroutine.
+  Once the shared helper owns Wait, test cleanup only receives that same result;
+  it sends no further process signal after a concurrent reaper may have run.
+
+  The first exact source `d1f63117` passed the actual early-exit/pin-error normal,
+  race and tagged tests plus tagged vet; scoped lint refused ST1008 because the
+  helper returned its error before the result channel. Put the error last and
+  update every caller without changing acquisition, Wait, signal or cleanup
+  semantics. Preserve that first serial record; corrected-source gates remain
+  required before integration.
+
+  Corrected source `a7d3963dbc23bb3c5373063d51132250cbb033d9` passed all seven
+  serial gates: real root-pin normal/race/tagged regressions, tagged vet, scoped
+  lint (zero issues), docs/glossary and Linux arm64 compile-only. Every gate root
+  actually joined and its session was empty. The tests require WNOWAIT zombie
+  observation, successful pinning before the sole exit-17 Wait, exit readiness,
+  post-join pidfd signal-0/SIGKILL ESRCH, and actual isolated EMFILE with no
+  published fd but the same joined exit-17 result. The arm64 binary was hashed
+  and removed with its disposable cache; it was never executed. Exact independent
+  source/custody/cost review reports zero findings at every severity. The
+  [receipt](spike/t42h2q/root-pin-linux-20261020.json) binds all five Go files,
+  both raw serial records and the final host observation; first-source ST1008
+  remains failed evidence. Final source-identical receipt/documentation review
+  remains an integration gate. H2r.a must adopt this primitive and separately
+  qualify its route; complete H2/readiness/freeze and ceremony authority stay open.
+
 - **2026-10-20 — T42.H2r.a prospective controller-held Git route diagnostic.**
   With H2q integrated through PR #150, first qualify the narrow descriptor route
   needed by the distinct Linux serial author consumer. A fixed unprivileged
@@ -14801,3 +14852,8 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Source/mirror contain one fixed 28-byte blob/commit plus generated metadata.
   No extra SDK/module copy or production caller is introduced by the diagnostic.
   Focused normal/race/static, exact review and required native gates remain open.
+
+  Before any H2r.a Go/native gate, merge the reviewed H2q.c correction from
+  main and use its shared pin-before-Wait primitive in the diagnostic worker.
+  The original route source remains an unexecuted lineage; this corrected
+  source still requires its own focused/static/review and native qualification.

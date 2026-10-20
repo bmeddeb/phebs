@@ -1,0 +1,265 @@
+{
+  "ticket": "T42.H2q.c",
+  "status": "PASS_FOCUSED_LINUX_PIN_BEFORE_WAIT_CORRECTION",
+  "source_commit": "a7d3963dbc23bb3c5373063d51132250cbb033d9",
+  "source_tree": "30df14b5d9c5232bc0d004a39829c975fc19fa7e",
+  "source_file_sha256": {
+    "spike/t421/go_build_lifetime_native_linux_test.go": "e8ccd43fffa9e0c4c7a51ac2014ae11cbf4ed3c08be18e70f1a458ae8ab3a268",
+    "spike/t421/go_build_namespace_native_linux_test.go": "eb12ed7fa38f59dae3617895f8071e2287fa46d70f76405528c444a364a6171e",
+    "spike/t421/go_build_reference_worker_linux.go": "23f782676ecb40f1dcbdc76522e4637a2d50c4d741d915d35447ec0ed105e724",
+    "spike/t421/root_wait_linux.go": "06c1fe04e08721eaf7f8bc715b82462544e7d226e2ab9df1e46a71a120c813e9",
+    "spike/t421/root_wait_linux_test.go": "9c259b7edfc471aa08105849ec68f40e5afbffb970923615b22be0422a5d4e42"
+  },
+  "correction": {
+    "own_child_pidfd_open_precedes_sole_Cmd_Wait": true,
+    "call_sites": [
+      "spike/t421/go_build_lifetime_native_linux_test.go",
+      "spike/t421/go_build_namespace_native_linux_test.go",
+      "spike/t421/go_build_reference_worker_linux.go"
+    ],
+    "pin_failure_still_delivers_actual_wait": true,
+    "bare_pid_fallback_added": false,
+    "existing_locked_thread_root_join_session_drain_and_uncertainty_retention": "unchanged"
+  },
+  "passing_regression_assertions": {
+    "tests": [
+      "TestLinuxRootWaitPinsExitedUnreapedChild",
+      "TestLinuxRootWaitPinFailureStillWaits"
+    ],
+    "waitid_WEXITED_WNOWAIT_observes_exited_child_without_reaping": true,
+    "pidfd_pins_exited_unreaped_child": true,
+    "sole_actual_wait_returns_fixed_exit_17": true,
+    "pidfd_poll_exit_ready_after_wait": true,
+    "post_join_pidfd_signal_0_and_SIGKILL_return_ESRCH": true,
+    "second_Cmd_Wait_refuses": true,
+    "isolated_subprocess_temporarily_lowers_own_soft_RLIMIT_NOFILE_to_zero": true,
+    "real_pidfd_open_EMFILE_no_published_fd_and_same_exit_17_wait": true,
+    "isolated_soft_limit_restored_immediately_before_assertions": true,
+    "parent_and_host_limits_changed": false,
+    "regression_process_starts_per_suite": 3,
+    "assertion_evidence": "exact source tests plus passing normal/race/tagged output; individual regression child PIDs are not separately recorded"
+  },
+  "prior_attempt": {
+    "source_commit": "d1f63117ec5c28779b737b87f8c53ccc55e3d3bc",
+    "source_tree": "e31c346c1ee6459488ed01af47f1678d5190bf58",
+    "status": "FAILED_SCOPED_LINT_ST1008",
+    "result": "normal/race/tagged regressions and tagged vet passed; tagged scoped lint refused error-before-channel return order; docs/cross gates were not reached",
+    "source_file_sha256": {
+      "spike/t421/go_build_lifetime_native_linux_test.go": "a6515c6ff9dc269dba3a8edfaf9ae15b55cf8d1a870dcc123fa910c62f567468",
+      "spike/t421/go_build_namespace_native_linux_test.go": "4f33b15023d396569f344bbfb4e2225ea193484e9e9d48370973a83bbb7739ac",
+      "spike/t421/go_build_reference_worker_linux.go": "8a1b9af4daacbde27ebbe2244a29cad6752fd6a0fdac6c7a90e687f893955097",
+      "spike/t421/root_wait_linux.go": "a170f639f82a6e8cad7fea34ed8dac09afe4e113723585185a1250dea2bd9dd6",
+      "spike/t421/root_wait_linux_test.go": "29aecaf334c0c15ac39cbe59f7b0e9d600938e76d7221025123845c63e04e6e2"
+    },
+    "gates": [
+      {
+        "name": "root-pin-normal",
+        "source_commit": "d1f63117ec5c28779b737b87f8c53ccc55e3d3bc",
+        "pid": 277723,
+        "actual_wait_exit_code": 0,
+        "session_members_after_wait": [],
+        "elapsed_seconds": 91.0708680152893
+      },
+      {
+        "name": "root-pin-race",
+        "source_commit": "d1f63117ec5c28779b737b87f8c53ccc55e3d3bc",
+        "pid": 283578,
+        "actual_wait_exit_code": 0,
+        "session_members_after_wait": [],
+        "elapsed_seconds": 141.12302565574646
+      },
+      {
+        "name": "tagged-root-pin",
+        "source_commit": "d1f63117ec5c28779b737b87f8c53ccc55e3d3bc",
+        "pid": 290390,
+        "actual_wait_exit_code": 0,
+        "session_members_after_wait": [],
+        "elapsed_seconds": 18.698971033096313
+      },
+      {
+        "name": "tagged-vet",
+        "source_commit": "d1f63117ec5c28779b737b87f8c53ccc55e3d3bc",
+        "pid": 290476,
+        "actual_wait_exit_code": 0,
+        "session_members_after_wait": [],
+        "elapsed_seconds": 21.514154195785522
+      },
+      {
+        "name": "tagged-lint",
+        "source_commit": "d1f63117ec5c28779b737b87f8c53ccc55e3d3bc",
+        "pid": 293440,
+        "actual_wait_exit_code": 1,
+        "session_members_after_wait": [],
+        "elapsed_seconds": 15.030288457870483
+      }
+    ],
+    "correction": "return error last and update all callers; acquisition/Wait/signal/cleanup semantics unchanged"
+  },
+  "corrected_gates": [
+    {
+      "name": "root-pin-normal",
+      "source_commit": "a7d3963dbc23bb3c5373063d51132250cbb033d9",
+      "pid": 293995,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 18.810892343521118
+    },
+    {
+      "name": "root-pin-race",
+      "source_commit": "a7d3963dbc23bb3c5373063d51132250cbb033d9",
+      "pid": 294210,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 29.767101526260376
+    },
+    {
+      "name": "tagged-root-pin",
+      "source_commit": "a7d3963dbc23bb3c5373063d51132250cbb033d9",
+      "pid": 294429,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 18.551241397857666
+    },
+    {
+      "name": "tagged-vet",
+      "source_commit": "a7d3963dbc23bb3c5373063d51132250cbb033d9",
+      "pid": 294513,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 8.446013689041138
+    },
+    {
+      "name": "tagged-lint",
+      "source_commit": "a7d3963dbc23bb3c5373063d51132250cbb033d9",
+      "pid": 294579,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 14.950521469116211
+    },
+    {
+      "name": "docs-glossary",
+      "source_commit": "a7d3963dbc23bb3c5373063d51132250cbb033d9",
+      "pid": 294712,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 1.3698968887329102
+    },
+    {
+      "name": "cross-linux-arm64",
+      "source_commit": "a7d3963dbc23bb3c5373063d51132250cbb033d9",
+      "pid": 294790,
+      "actual_wait_exit_code": 0,
+      "session_members_after_wait": [],
+      "elapsed_seconds": 114.77442455291748
+    }
+  ],
+  "package_test_elapsed_seconds": {
+    "root-pin-normal": 0.19,
+    "root-pin-race": 2.515,
+    "tagged-root-pin": 0.189
+  },
+  "skips": [],
+  "compile_only_linux_arm64": {
+    "bytes": 81467687,
+    "sha256": "b0ed338ab240f29cd948d1d6004c373384518aa1a41e22c20b1ecfc0d3d84b08",
+    "executed": false,
+    "disposable_binary_removed": true,
+    "disposable_cache_removed": true,
+    "binary_absent_after_record_checked": true,
+    "disposable_cache_absent_after_record_checked": true
+  },
+  "post_gate_host_observation": {
+    "at_utc": "2026-10-20T08:11:23.161517+00:00",
+    "source_commit": "a7d3963dbc23bb3c5373063d51132250cbb033d9",
+    "uid": 1000,
+    "kernel": "7.0.0-38-generic",
+    "gate_pids_still_present": [],
+    "available_disk_bytes": 130540879872,
+    "unrelated_sha256": {
+      "history.txt": "cc78e9d70cd85599a3e978557ddb7056b08f22de42a3b6fb829c3ead926e1878",
+      "package-lock.json": "76aba7365f7eddc750fbbb908075fd04577b1b703cc15dde7686f6e2dec5b21b"
+    }
+  },
+  "independent_source_custody_cost_review": {
+    "source_commit": "a7d3963dbc23bb3c5373063d51132250cbb033d9",
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "scope": "five Go paths; original high-severity ordering finding resolved; no Go/native workloads or edits by reviewer"
+  },
+  "evidence_descendant_review": "receipt/documentation descendant review required before integration",
+  "raw_census": {
+    "t42h2qc-root-pin.vh9mq2na": {
+      "files": 18,
+      "sha256": {
+        "gates.json": "3dfd28e937d734aea38eedceef1de52b7e551d71a588d770528af6d58fee2e09",
+        "pr-body.md": "faecc99184909b3c4585eb28f076f73c44c355bf8314e32a90adf2568130b69c",
+        "root-pin-normal.json": "2c8afeefddd33bef4e206fa4febb72d58c9030a14b273268e7dbd7099272fdd2",
+        "root-pin-normal.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "root-pin-normal.stdout": "2db949331c0155f8921cfece7cc2e60e857a6c36e5e9761f25ec1fab2d4da4c7",
+        "root-pin-race.json": "4d43c1575abed94cc7337ad093b3f8435d700b9fc0737266e66285d33ad79819",
+        "root-pin-race.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "root-pin-race.stdout": "7b424246385b96ee972826adafb93f6424d9f429330959c649bda1e00878622f",
+        "serial-gates.py": "202aba918a47d7bd8b24bda3150654aaf3cbbac25acfcedb479b046514d1a723",
+        "tagged-lint.json": "7265c4358be3352b3e10dae46d450373d8f6c1b3b81eac7d9d6ac0a45df6a33f",
+        "tagged-lint.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "tagged-lint.stdout": "1c67f52300d8bcfeaefce6fb00010b98266b0593c498c62edfefab89549734fe",
+        "tagged-root-pin.json": "2a3147f45421f8842ab99a5969b388bb2d6d3dfb28c0a807d46143c6ee1af236",
+        "tagged-root-pin.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "tagged-root-pin.stdout": "c8c39d92e83e56d97ca218c2d196fcdf983f9064038054d734f290616f9b87cb",
+        "tagged-vet.json": "482eaedc6b7614d2b79b0fec18fb997007b1ff884b404f91c8701a6b432d29f4",
+        "tagged-vet.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "tagged-vet.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    "t42h2qc-confirmed.od1igzo4": {
+      "files": 24,
+      "sha256": {
+        "cross-artifact.json": "122d6fe0eb59fdbc7ca3b2c46d209575a5833e971db853c0030a83fbeed8984b",
+        "cross-linux-arm64.json": "aca91c3b7879aa317e6eb0fce56966675633f772307a3aa237cc00d28847bb95",
+        "cross-linux-arm64.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "cross-linux-arm64.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "docs-glossary.json": "2f577baeb6ab89b602f9526d71ed7cb93226edbb1cb116f5819e9727576c3127",
+        "docs-glossary.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "docs-glossary.stdout": "90c54253b9229aca6fc3c490ed04078e028834234f311b3533d20b5b062c0e41",
+        "gates.json": "bde14469f9259a687e48902cb568865f588aa3819e4d539c1eab522f308fd3f7",
+        "root-pin-normal.json": "db7a1651e58c91c826b878873659ade8f712d93164110a6b5a9d11397fbaf1db",
+        "root-pin-normal.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "root-pin-normal.stdout": "aedfa3afa3cd7602c82e60d0e4e6a9147abb829ba6df9e7ae69796527772fd8a",
+        "root-pin-race.json": "abb6a846d58dcc19c7814645df62d7911a5d10caf01e0a4c126388aa83af5e4d",
+        "root-pin-race.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "root-pin-race.stdout": "f19023f09c9e7adaa5fc249649abb39fa9e377f83cd7e3748a1ffc276efe36bc",
+        "serial-gates.py": "9869e767aca57bf53101a2ddb0c85afb6d64c402aab7ff56c55b15cd683c99d5",
+        "tagged-lint.json": "ac9d8b08c50c90481b195b44dfad21e3d222831f6915e3cf11495b4f589617ed",
+        "tagged-lint.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "tagged-lint.stdout": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47",
+        "tagged-root-pin.json": "64efb4c90fd52f7ab8663f11902c69b8f7ad3a96cc3577a86491f9d61880f77c",
+        "tagged-root-pin.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "tagged-root-pin.stdout": "01e88ccfaadda65a552b9dd62d9e3873018714bb728e45d6c667dfc6edda6245",
+        "tagged-vet.json": "7da2d3cb76351cb0db9d854ccfe628212e118fe4ee99517c7298561498533941",
+        "tagged-vet.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "tagged-vet.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    "t42h2qc-final.r2e9v_qj": {
+      "files": 1,
+      "sha256": {
+        "pre-final.json": "39bebb2ad23b1731255b70dfa6dffc57d33b7cbb38129560abf1cd4793231176"
+      }
+    }
+  },
+  "steady_state_cost": {
+    "production": "same one pidfd_open, one owned pidfd, one buffered result channel and one Cmd.Wait goroutine per existing root Start; only acquisition order changes",
+    "request_sync_startup_retry_noop_publication_work_added": false,
+    "new_commands_hashes_census_reads_locks_caches_reservations": false,
+    "regression_only": "three fixed tiny process Starts per suite, one non-reaping exit observation per tested root; 10-second outer and 5-second isolated-child cooperative contexts, actual Wait cleanup"
+  },
+  "qualification_boundary": [
+    "Focused ordinary Linux process/syscall correction with real early-exit and EMFILE regressions; no repeated long namespace/author workload.",
+    "Prior passed native receipts and original failed lint evidence remain exact; Linux arm64 result is compilation only, never executed.",
+    "H2r.a controller-FD route diagnostic remains unqualified and must consume this corrected primitive.",
+    "No new command/recipe authority, complete Linux author/executor, pressure/restore, aggregate resource/readiness/freeze, ceremony, scale, signing or activation claim."
+  ],
+  "gate_command_evidence": "Complete argv/environment selection remains in raw gate JSON and serial scripts bound by the census."
+}

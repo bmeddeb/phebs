@@ -403,11 +403,9 @@ func runAuthorGitRouteAttempt(ctx context.Context, attempt *authorGitRouteAttemp
 				return ErrExecutionGitCustody
 			}
 			attempt.pid = command.Process.Pid
+			pidfd, waited, pidfdErr := pinExecutionProcessRoot(command)
 			controlCloseErr, collisionCloseErr := sockets[1].Close(), sockets[3].Close()
 			sockets[1], sockets[3] = nil, nil
-			waited := make(chan error, 1)
-			go func() { waited <- command.Wait() }()
-			pidfd, pidfdErr := unix.PidfdOpen(attempt.pid, 0)
 			if pidfdErr == nil {
 				defer func() { _ = unix.Close(pidfd) }()
 			}
