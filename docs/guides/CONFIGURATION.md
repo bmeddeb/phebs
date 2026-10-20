@@ -1641,3 +1641,81 @@ a different next key name typed while its request was pending. **Retry API keys*
 removes the matching newly-created key's displayed token; revoking another key
 does not remove it. These UI checks do not admit a managed indexing installation
 or complete production signing.
+
+### T47.5 signed Caller Map package (2026-10-20)
+
+The [experimental Linux amd64 release](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) now includes this ticket's
+production-signed selection. Follow `INSTALL.md` in that archive: use its
+matching `runtime/phebs`, complete unchanged `packs/artifacts` and explicit
+`release_selection` trust anchor/record directory, then restart. The
+[receipt](../../spike/t475/release/linux-20261020/receipt.json) names exact records and
+expiry. Revoke the governing release ID and restart to withdraw it. The
+package retains existing source/generation/citation authorization, bounds,
+qualified scope and gaps. It leaves startup dark when selection is absent.
+Published artifacts do not deploy into an existing instance or establish new
+accuracy, runtime-use, absence, scale, Linux capacity or T42 readiness claims.
+
+### T49.4 signed Protobuf Atlas package (2026-10-20)
+
+The [experimental Linux amd64 release](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) now includes this ticket's
+production-signed selection. Follow `INSTALL.md` in that archive: use its
+matching `runtime/phebs`, complete unchanged `packs/artifacts` and explicit
+`release_selection` trust anchor/record directory, then restart. The
+[receipt](../../spike/t494/release/linux-20261020/receipt.json) names exact records and
+expiry. Revoke the governing release ID and restart to withdraw it. The
+package retains existing source/generation/citation authorization, bounds,
+qualified scope and gaps. It leaves startup dark when selection is absent.
+Published artifacts do not deploy into an existing instance or establish new
+accuracy, runtime-use, absence, scale, Linux capacity or T42 readiness claims.
+
+### T50.3 signed caller comparison package (2026-10-20)
+
+The [experimental Linux amd64 release](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) now includes this ticket's
+production-signed selection. Follow `INSTALL.md` in that archive: use its
+matching `runtime/phebs`, complete unchanged `packs/artifacts` and explicit
+`release_selection` trust anchor/record directory, then restart. The
+[receipt](../../spike/t503/release/linux-20261020/receipt.json) names exact records and
+expiry. Revoke the governing release ID and restart to withdraw it. The
+package retains existing source/generation/citation authorization, bounds,
+qualified scope and gaps. It leaves startup dark when selection is absent.
+Published artifacts do not deploy into an existing instance or establish new
+accuracy, runtime-use, absence, scale, Linux capacity or T42 readiness claims.
+
+### T51.3 signed Protobuf field references package (2026-10-20)
+
+The [experimental Linux amd64 release](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) now includes this ticket's
+production-signed selection. Follow `INSTALL.md` in that archive: use its
+matching `runtime/phebs`, complete unchanged `packs/artifacts` and explicit
+`release_selection` trust anchor/record directory, then restart. The
+[receipt](../../spike/t513/release-drafts/linux-20261020/receipt.json) names exact records and
+expiry. Revoke the governing release ID and restart to withdraw it. The
+package retains existing source/generation/citation authorization, bounds,
+qualified scope and gaps. It leaves startup dark when selection is absent.
+Published artifacts do not deploy into an existing instance or establish new
+accuracy, runtime-use, absence, scale, Linux capacity or T42 readiness claims.
+
+### T52.3 signed Apache Thrift and thriftrw field references package (2026-10-20)
+
+The [experimental Linux amd64 release](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) now includes this ticket's
+production-signed selection. Follow `INSTALL.md` in that archive: use its
+matching `runtime/phebs`, complete unchanged `packs/artifacts` and explicit
+`release_selection` trust anchor/record directory, then restart. The
+[receipt](../../spike/t523/release/linux-20261020/receipt.json) names exact records and
+expiry. Revoke the governing release ID and restart to withdraw it. The
+package retains existing source/generation/citation authorization, bounds,
+qualified scope and gaps. It leaves startup dark when selection is absent.
+Published artifacts do not deploy into an existing instance or establish new
+accuracy, runtime-use, absence, scale, Linux capacity or T42 readiness claims.
+
+### T54.3 signed direct-operation Impact package (2026-10-20)
+
+The [experimental Linux amd64 release](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) now includes this ticket's
+production-signed selection. Follow `INSTALL.md` in that archive: use its
+matching `runtime/phebs`, complete unchanged `packs/artifacts` and explicit
+`release_selection` trust anchor/record directory, then restart. The
+[receipt](../../spike/t543/release/linux-20261020/receipt.json) names exact records and
+expiry. Revoke the governing release ID and restart to withdraw it. The
+package retains existing source/generation/citation authorization, bounds,
+qualified scope and gaps. It leaves startup dark when selection is absent.
+Published artifacts do not deploy into an existing instance or establish new
+accuracy, runtime-use, absence, scale, Linux capacity or T42 readiness claims.

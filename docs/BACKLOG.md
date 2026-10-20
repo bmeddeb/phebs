@@ -19139,7 +19139,7 @@ binaries and were not re-run here.
 **Not established.** The released (ordinary-selection) path, which waits on
 T47.5's binding and therefore on Ben's T47.2 labels.*
 
-**T47.5 · Exact Caller Map promotion and supported product closure** *(needs
+**T47.5 ✅ · Exact Caller Map promotion and supported product closure** *(needs
 T47.2–T47.4; presentation-track handoff for any UI change)* — release only
 the validated Caller Map artifact and selected recipes through a
 caller-specific signed release record binding card, executable manifest,
@@ -19251,6 +19251,28 @@ integration of the preparation, not a production release or closure of T47.5.
 Next implementation: the remaining protobuf Atlas recipe/release binding in
 T49.3/T49.4, with bounded HTTP/MCP integration and optional labels; production
 signing remains a separate pending step.
+
+**T47.5 signed release closure (2026-10-20, Linux #124).** Ben's request to
+ship experimental/dark features authorizes the reviewed scoped release. The
+[experimental Linux amd64 package](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) publishes Caller Map with
+production signatures over exact clean source `290e1518a4a192d0a3494c3ed9fa2eb39a450355`,
+Go 1.26.5, executable/artifact/implementation bindings and the existing trust
+anchor. The [receipt](../spike/t475/release/linux-20261020/receipt.json) and signed
+records retain exact identities and expiry. This closes this ticket's final
+artifact/signature/publication hold; earlier dated pending-key statements remain
+historical. Default startup stays dark; installation/restart uses explicit
+verified selection. Existing instance deployment is operator-specific.
+
+The common final gate passed 194 bounded test cases without skips, all twelve
+record self-loads, real selected startup/restart/withdrawal, anonymous visibility
+and authorization, plus empty-state sync/index/search/pinned-browse/default-dark
+release smoke. All three selection servers waited with status0 and no observed
+survivor; descendant observation is sampled. Seven new records and five exact
+existing-release rebindings share the complete 57-file artifact directory.
+Historical quality/operating evidence and uncertainty remain exact; current
+registration smoke adds no independent accuracy, Linux capacity, scale, SLO or
+T42 readiness result. No production implementation, numerical bound, query,
+sync, retry/no-op, publication, lock, cache or child class changes.
 
 ## Epic 48 · Shared production-promotion machinery and execution plan *(Ben-directed, 2026-10-09)*
 
@@ -20093,7 +20115,7 @@ binary `75803641`** (Thrift protocol §14).
 - **Remaining for T49.4.** Protobuf Atlas, which waits on T49.1b's labels;
   the UI is the Mac track's.*
 
-**T49.4 · Measured Atlas promotion and product closure** — satisfy the common
+**T49.4 ✅ · Measured Atlas promotion and product closure** — satisfy the common
 promotion bar for each selected protocol and the declared UI/HTTP/MCP surface.
 One protocol may release while the other remains explicitly unavailable.
 
@@ -20192,6 +20214,28 @@ accessibility, extraction accuracy or scale PASS is invented. Production
 signature/activation remains PENDING the existing unavailable Linux key;
 implementation integration requires Ben's request, not optional labels.
 
+**T49.4 signed release closure (2026-10-20, Linux #124).** Ben's request to
+ship experimental/dark features authorizes the reviewed scoped release. The
+[experimental Linux amd64 package](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) publishes Protobuf Atlas with
+production signatures over exact clean source `290e1518a4a192d0a3494c3ed9fa2eb39a450355`,
+Go 1.26.5, executable/artifact/implementation bindings and the existing trust
+anchor. The [receipt](../spike/t494/release/linux-20261020/receipt.json) and signed
+records retain exact identities and expiry. This closes this ticket's final
+artifact/signature/publication hold; earlier dated pending-key statements remain
+historical. Default startup stays dark; installation/restart uses explicit
+verified selection. Existing instance deployment is operator-specific.
+
+The common final gate passed 194 bounded test cases without skips, all twelve
+record self-loads, real selected startup/restart/withdrawal, anonymous visibility
+and authorization, plus empty-state sync/index/search/pinned-browse/default-dark
+release smoke. All three selection servers waited with status0 and no observed
+survivor; descendant observation is sampled. Seven new records and five exact
+existing-release rebindings share the complete 57-file artifact directory.
+Historical quality/operating evidence and uncertainty remain exact; current
+registration smoke adds no independent accuracy, Linux capacity, scale, SLO or
+T42 readiness result. No production implementation, numerical bound, query,
+sync, retry/no-op, publication, lock, cache or child class changes.
+
 ## Epic 50 · Caller comparison production readiness
 
 **T50.1 · Exact old/replacement comparison contract and gold cases** — depends
@@ -20235,7 +20279,7 @@ bounded dependency lookups, no worker/lock/cache/schema/child. This prepares
 admission only: T50.3's direct quality/operating result and production signature
 remain pending, and Caller Map/Atlas's bounded-test amendment does not waive them.
 
-**T50.3 · Measured comparison promotion** — satisfy the common bar on real
+**T50.3 ✅ · Measured comparison promotion** — satisfy the common bar on real
 old/replacement source, concurrent publication and bounded combined read cost;
 release requires its own result even when both Caller Maps are released.
 
@@ -20322,6 +20366,28 @@ Four neutral controls are byte-identical to main on the same renderer. Their
 main and are inherited baseline/environment drift; no baseline is replaced or
 Noble pass invented. T50.3's source-bound final native matrix stays separate.
 
+**T50.3 signed release closure (2026-10-20, Linux #124).** Ben's request to
+ship experimental/dark features authorizes the reviewed scoped release. The
+[experimental Linux amd64 package](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) publishes caller comparison with
+production signatures over exact clean source `290e1518a4a192d0a3494c3ed9fa2eb39a450355`,
+Go 1.26.5, executable/artifact/implementation bindings and the existing trust
+anchor. The [receipt](../spike/t503/release/linux-20261020/receipt.json) and signed
+records retain exact identities and expiry. This closes this ticket's final
+artifact/signature/publication hold; earlier dated pending-key statements remain
+historical. Default startup stays dark; installation/restart uses explicit
+verified selection. Existing instance deployment is operator-specific.
+
+The common final gate passed 194 bounded test cases without skips, all twelve
+record self-loads, real selected startup/restart/withdrawal, anonymous visibility
+and authorization, plus empty-state sync/index/search/pinned-browse/default-dark
+release smoke. All three selection servers waited with status0 and no observed
+survivor; descendant observation is sampled. Seven new records and five exact
+existing-release rebindings share the complete 57-file artifact directory.
+Historical quality/operating evidence and uncertainty remain exact; current
+registration smoke adds no independent accuracy, Linux capacity, scale, SLO or
+T42 readiness result. No production implementation, numerical bound, query,
+sync, retry/no-op, publication, lock, cache or child class changes.
+
 ## Epic 51 · Protobuf field-reference production readiness
 
 **T51.1 · Exact field/SCIP identity and independent quality** — depend on
@@ -20368,7 +20434,7 @@ joined real-store integrations, vet/pinned lint and source/cost review pass.
 Original T51.1 evidence stays exact. T51.3 still owns operating/production
 signature promotion; this implementation alone activates no unsigned pack.
 
-**T51.3 · Measured field-reference promotion** — satisfy the common bar and
+**T51.3 ✅ · Measured field-reference promotion** — satisfy the common bar and
 publish exact supported generators, input formats, operating bounds and expiry.
 
 *2026-10-18 preparation:* `spike/t513/operating-plan.json` prospectively binds
@@ -20404,6 +20470,28 @@ and strict nonempty-error behavior remain. Focused normal/race (including one
 real-store discovery transition), vet/pinned lint and independent source/cost
 review pass. This repairs discovery only; T51.3's fresh-binary operating result
 and production signature remain separate.
+
+**T51.3 signed release closure (2026-10-20, Linux #124).** Ben's request to
+ship experimental/dark features authorizes the reviewed scoped release. The
+[experimental Linux amd64 package](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) publishes Protobuf field references with
+production signatures over exact clean source `290e1518a4a192d0a3494c3ed9fa2eb39a450355`,
+Go 1.26.5, executable/artifact/implementation bindings and the existing trust
+anchor. The [receipt](../spike/t513/release-drafts/linux-20261020/receipt.json) and signed
+records retain exact identities and expiry. This closes this ticket's final
+artifact/signature/publication hold; earlier dated pending-key statements remain
+historical. Default startup stays dark; installation/restart uses explicit
+verified selection. Existing instance deployment is operator-specific.
+
+The common final gate passed 194 bounded test cases without skips, all twelve
+record self-loads, real selected startup/restart/withdrawal, anonymous visibility
+and authorization, plus empty-state sync/index/search/pinned-browse/default-dark
+release smoke. All three selection servers waited with status0 and no observed
+survivor; descendant observation is sampled. Seven new records and five exact
+existing-release rebindings share the complete 57-file artifact directory.
+Historical quality/operating evidence and uncertainty remain exact; current
+registration smoke adds no independent accuracy, Linux capacity, scale, SLO or
+T42 readiness result. No production implementation, numerical bound, query,
+sync, retry/no-op, publication, lock, cache or child class changes.
 
 ## Epic 52 · Thrift field-reference production readiness
 
@@ -20463,7 +20551,7 @@ peer source/cost review pass. `spike/t522/outcome-cost.json` retains exact input
 result/checkpoint and cost scopes. No production registration, operating or
 signature is inferred; T52.3 remains the next independent selection boundary.
 
-**T52.3 · Independent stable registration and measured promotion** — split
+**T52.3 ✅ · Independent stable registration and measured promotion** — split
 the current shared experimental switch into explicitly selected admitted
 recipes; satisfy the common bar for each. Either generator may release alone.
 
@@ -20494,6 +20582,28 @@ all three clean server joins and private scratch removal pass. Exact receipt,
 reviewed binding, scoped outcome/cost and six unsigned artifacts are retained
 under `spike/t523/`. Root and independent peer artifact review pass; common-bar
 evidence reconciliation and existing production key/signatures remain separate.
+
+**T52.3 signed release closure (2026-10-20, Linux #124).** Ben's request to
+ship experimental/dark features authorizes the reviewed scoped release. The
+[experimental Linux amd64 package](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) publishes Apache Thrift and thriftrw field references with
+production signatures over exact clean source `290e1518a4a192d0a3494c3ed9fa2eb39a450355`,
+Go 1.26.5, executable/artifact/implementation bindings and the existing trust
+anchor. The [receipt](../spike/t523/release/linux-20261020/receipt.json) and signed
+records retain exact identities and expiry. This closes this ticket's final
+artifact/signature/publication hold; earlier dated pending-key statements remain
+historical. Default startup stays dark; installation/restart uses explicit
+verified selection. Existing instance deployment is operator-specific.
+
+The common final gate passed 194 bounded test cases without skips, all twelve
+record self-loads, real selected startup/restart/withdrawal, anonymous visibility
+and authorization, plus empty-state sync/index/search/pinned-browse/default-dark
+release smoke. All three selection servers waited with status0 and no observed
+survivor; descendant observation is sampled. Seven new records and five exact
+existing-release rebindings share the complete 57-file artifact directory.
+Historical quality/operating evidence and uncertainty remain exact; current
+registration smoke adds no independent accuracy, Linux capacity, scale, SLO or
+T42 readiness result. No production implementation, numerical bound, query,
+sync, retry/no-op, publication, lock, cache or child class changes.
 
 ## Epic 53 · Protobuf Buf WIRE compatibility production readiness
 
@@ -20779,7 +20889,7 @@ Actual Caller Map→HTTP transition controls, strict mismatches, rendered UI,
 validator normal/race/type/lint and bounded mocked checks pass. Cost is constant
 metadata comparison only. Fresh exact UI/binary qualification remains T54.3.
 
-**T54.3 · Measured Impact promotion** — satisfy the common bar per report
+**T54.3 ✅ · Measured Impact promotion** — satisfy the common bar per report
 shape; one shape may release without claiming the others. Dependencies are
 the specific inputs it actually consumes, not every experimental pack.
 
@@ -20806,6 +20916,28 @@ CSP remains unchanged. `spike/t543/success/` and `release/` retain exact result,
 bindings, root-reviewed unsigned artifacts/census and scoped common-bar reuse.
 No Noble/globalaccuracy/scale/other-shape claim follows. Existing production
 key/signature and final production artifact/publication decision remain pending.
+
+**T54.3 signed release closure (2026-10-20, Linux #124).** Ben's request to
+ship experimental/dark features authorizes the reviewed scoped release. The
+[experimental Linux amd64 package](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) publishes direct-operation Impact with
+production signatures over exact clean source `290e1518a4a192d0a3494c3ed9fa2eb39a450355`,
+Go 1.26.5, executable/artifact/implementation bindings and the existing trust
+anchor. The [receipt](../spike/t543/release/linux-20261020/receipt.json) and signed
+records retain exact identities and expiry. This closes this ticket's final
+artifact/signature/publication hold; earlier dated pending-key statements remain
+historical. Default startup stays dark; installation/restart uses explicit
+verified selection. Existing instance deployment is operator-specific.
+
+The common final gate passed 194 bounded test cases without skips, all twelve
+record self-loads, real selected startup/restart/withdrawal, anonymous visibility
+and authorization, plus empty-state sync/index/search/pinned-browse/default-dark
+release smoke. All three selection servers waited with status0 and no observed
+survivor; descendant observation is sampled. Seven new records and five exact
+existing-release rebindings share the complete 57-file artifact directory.
+Historical quality/operating evidence and uncertainty remain exact; current
+registration smoke adds no independent accuracy, Linux capacity, scale, SLO or
+T42 readiness result. No production implementation, numerical bound, query,
+sync, retry/no-op, publication, lock, cache or child class changes.
 
 ## Epic 55 · Kafka producer-evidence production readiness
 

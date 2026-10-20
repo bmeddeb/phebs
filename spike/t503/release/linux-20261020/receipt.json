@@ -1,0 +1,53 @@
+{
+  "schema": "phebs-linux-experimental-release-closure-v1",
+  "ticket": "T50.3",
+  "product": "caller comparison",
+  "date": "2026-10-20",
+  "owner": "Ben Meddeb",
+  "authorization": "Ben requested proactive closure and shipping experimental/dark features; standing authorization merges green PRs into main.",
+  "release_url": "https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020",
+  "source_commit": "290e1518a4a192d0a3494c3ed9fa2eb39a450355",
+  "binary_digest": "sha256:7993fa98493b6a5e6e5f5dc1d7762dcee7be7a65c0f8246d7524a8064b50e582",
+  "archive_sha256": "sha256:c27c2370741106309f676b717a32ba39138eeecbad9c1d0be20cd601d9a356ed",
+  "github_asset_id": 659819878,
+  "github_asset_digest_verified": true,
+  "artifact_root_digest": "sha256:5d95ee9fcc1f8e53330e4eb26f1fb291b5583db841033530d410920240a365f8",
+  "artifact_files": 57,
+  "key_id": "ben-phebs-release-2026-10",
+  "key_matches_prior_published_anchor": true,
+  "packs": [
+    {
+      "pack_id": "phebs.grpc.caller.comparison",
+      "expires_at": "2027-01-15T23:59:59Z",
+      "record": "caller-comparison.json",
+      "record_sha256": "sha256:1c4d1bb4fb7ab5a47a43885c7b0e8dbba5eeade57fa6b23a29b3b01512000f27"
+    }
+  ],
+  "checks": {
+    "bounded_current_test_cases": 194,
+    "skips": 0,
+    "self_verified_production_records": 12,
+    "selected_startup": "passed",
+    "restart": "passed",
+    "new_pack_withdrawal_existing_five_survive": "passed",
+    "anonymous_capabilities": "hidden",
+    "anonymous_catalog_http_status": 401,
+    "three_actual_server_wait_statuses": [
+      0,
+      0,
+      0
+    ],
+    "observed_server_survivors": [],
+    "process_history_limit": "100ms descendant samples; no complete short-lived history claim",
+    "release_bundle_manifest": "verified",
+    "empty_state_sync_index_search_pinned_browse_default_dark": "passed"
+  },
+  "qualification": "Preserve each original bounded integration/finite historical public-source claim, exact source/generation/citation authorization and signed selection. Current smoke verifies registration/startup/withdrawal, not a new truth population.",
+  "cost": "Release/documentation artifacts only. No production source change; existing selected recipe/worker/read costs and bounds remain. One existing bounded artifact census and image hash at selected startup; no new per-query scans, locks, cache, child class or widened concurrency.",
+  "not_established": [
+    "Deployment into an existing user instance",
+    "New generalized accuracy, runtime use, absence or removal safety",
+    "Linux capacity, scale, SLO or T42 readiness/ceremony"
+  ],
+  "retained_preflight_corrections": "Earlier healthy starts stopped on harness expectations for WIRE capability/public version; retained actual status0 teardown. Final version prefix matches releasebundle and every published record binds the final binary."
+}

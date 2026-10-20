@@ -11515,3 +11515,27 @@ adding no production request/tick/retry/publication work. It issues no actual
 author, authenticated dispatch or mutable-source capability. H2r.b standalone
 author ownership, later shared-controller/live-server binding and broader
 executor/pressure/restore, aggregate admission/readiness/freeze remain open.
+
+## T47.5 · Caller Map signed release (2026-10-20)
+
+Published in the [experimental Linux package](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) under Ben's shipping authorization. [Exact signed-record/verification receipt](../spike/t475/release/linux-20261020/receipt.json). Final clean source `290e1518a4a192d0a3494c3ed9fa2eb39a450355`; existing production key; final binary, implementation and complete artifact census bound. Current bounded integration, real selected startup/restart/withdrawal and default-dark index/search smoke pass. Historical finite qualification remains scoped; no new accuracy, scale, Linux capacity or ceremony result. Installation into an existing user instance remains an operator step.
+
+## T49.4 · Protobuf Atlas signed release (2026-10-20)
+
+Published in the [experimental Linux package](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) under Ben's shipping authorization. [Exact signed-record/verification receipt](../spike/t494/release/linux-20261020/receipt.json). Final clean source `290e1518a4a192d0a3494c3ed9fa2eb39a450355`; existing production key; final binary, implementation and complete artifact census bound. Current bounded integration, real selected startup/restart/withdrawal and default-dark index/search smoke pass. Historical finite qualification remains scoped; no new accuracy, scale, Linux capacity or ceremony result. Installation into an existing user instance remains an operator step.
+
+## T50.3 · caller comparison signed release (2026-10-20)
+
+Published in the [experimental Linux package](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) under Ben's shipping authorization. [Exact signed-record/verification receipt](../spike/t503/release/linux-20261020/receipt.json). Final clean source `290e1518a4a192d0a3494c3ed9fa2eb39a450355`; existing production key; final binary, implementation and complete artifact census bound. Current bounded integration, real selected startup/restart/withdrawal and default-dark index/search smoke pass. Historical finite qualification remains scoped; no new accuracy, scale, Linux capacity or ceremony result. Installation into an existing user instance remains an operator step.
+
+## T51.3 · Protobuf field references signed release (2026-10-20)
+
+Published in the [experimental Linux package](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) under Ben's shipping authorization. [Exact signed-record/verification receipt](../spike/t513/release-drafts/linux-20261020/receipt.json). Final clean source `290e1518a4a192d0a3494c3ed9fa2eb39a450355`; existing production key; final binary, implementation and complete artifact census bound. Current bounded integration, real selected startup/restart/withdrawal and default-dark index/search smoke pass. Historical finite qualification remains scoped; no new accuracy, scale, Linux capacity or ceremony result. Installation into an existing user instance remains an operator step.
+
+## T52.3 · Apache Thrift and thriftrw field references signed release (2026-10-20)
+
+Published in the [experimental Linux package](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) under Ben's shipping authorization. [Exact signed-record/verification receipt](../spike/t523/release/linux-20261020/receipt.json). Final clean source `290e1518a4a192d0a3494c3ed9fa2eb39a450355`; existing production key; final binary, implementation and complete artifact census bound. Current bounded integration, real selected startup/restart/withdrawal and default-dark index/search smoke pass. Historical finite qualification remains scoped; no new accuracy, scale, Linux capacity or ceremony result. Installation into an existing user instance remains an operator step.
+
+## T54.3 · direct-operation Impact signed release (2026-10-20)
+
+Published in the [experimental Linux package](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) under Ben's shipping authorization. [Exact signed-record/verification receipt](../spike/t543/release/linux-20261020/receipt.json). Final clean source `290e1518a4a192d0a3494c3ed9fa2eb39a450355`; existing production key; final binary, implementation and complete artifact census bound. Current bounded integration, real selected startup/restart/withdrawal and default-dark index/search smoke pass. Historical finite qualification remains scoped; no new accuracy, scale, Linux capacity or ceremony result. Installation into an existing user instance remains an operator step.
