@@ -14971,3 +14971,29 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   and empty session. Capture, cancellation, isolated EMFILE and corpus tests
   passed; no required native workload ran. Give those two fixtures explicit
   0700 child parents, preserving the production guard and all pending gates.
+
+  Immutable `c4f14757e29ef718dbe96d1be6d87ba558bcc8da` passed every other
+  focused normal control, including pending-timeout retention, but the tiny
+  three-engine-lifetime test failed A immediately. Preserve
+  `/home/ben/phebs-rehearsals/t42h2rb-private-parents.1samw3_n`, actual Wait 1
+  and empty session; no required native ran. Two changed-diagnostic focused
+  runs retained under `t42h2rb-engine-diagnostic-1792487381099271955` and
+  `t42h2rb-engine-native-metadata-1792487440124323627` observed one actual
+  Git init, exit zero, naturally closed error-free controller, then a UID-1000,
+  one-link config mode 0664 rejected by the unchanged no-group-write guard.
+  Inherited umask 002 caused this source-mode refusal; it was not missing
+  bootstrap. Both diagnostic wrappers actually joined with empty sessions.
+
+  Set creation mask 077 only in the fixed Linux author CLI, after proven input
+  capture and before bootstrap/source writes. Do not relax ownership checks or
+  chmod controls after creation, and never alter the controller's process mask.
+  Isolate the tiny engine fixture in one fixed test child with that same mask;
+  verify the controller's observed native mask remains unchanged. The changed
+  focused engine test passed in 0.128s with actual 4/3/3 Git, measured changed
+  leaves 3/1/1 for its three-leaf unit fixture, actual child Wait and empty
+  session. Preserve `t42h2rb-engine-private-mask-1792487572525451048`. This is
+  tiny mechanism evidence only; the full 2,031,604-leaf native gate remains
+  unrun. Cost adds one process-local umask syscall per actual Linux CLI and one
+  isolated test child per tiny-engine unit gate; no parent/host policy, runtime
+  query/tick/publication or corpus/accounting bound changes. Fresh immutable
+  normal/race/static/review and required native gates remain mandatory.

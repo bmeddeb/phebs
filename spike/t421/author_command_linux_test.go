@@ -9,11 +9,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
+	"github.com/bmeddeb/phebs/spike/t4013"
 	"golang.org/x/sys/unix"
 )
 
@@ -43,6 +45,12 @@ func linuxAuthorTestClient(ctx context.Context, attempts uint64) (*dispatchadmis
 // Tiny in-process fixtures exercise the shared engine and real metered Git,
 // not the public constructor/CLI or the full frozen population qualification.
 func TestLinuxAuthorThreeEngineLifetimesExactGit(t *testing.T) {
+	if os.Getenv("PHEBS_T42_AUTHOR_ENGINE_CHILD") != "1" {
+		linuxAuthorRunEngineChild(t)
+		return
+	}
+	// Only this fixed child changes its process-wide mask, matching the real CLI.
+	unix.Umask(0o077)
 	parent := filepath.Join(t.TempDir(), "parent")
 	if os.Mkdir(parent, 0o700) != nil {
 		t.Fatal("private parent fixture")
@@ -66,7 +74,9 @@ func TestLinuxAuthorThreeEngineLifetimesExactGit(t *testing.T) {
 			cancel()
 			t.Fatal(err)
 		}
+		var commands []*exec.Cmd
 		start := func(ctx context.Context, cmd *exec.Cmd) (dispatchadmission.Handle, error) {
+			commands = append(commands, cmd)
 			cmd.Env = executionGitEnvironment("/usr/bin", owner.roots[2].path, owner.roots[3].path)
 			return client.Start(ctx, dispatchadmission.SiteCorpusAuthorGit, cmd)
 		}
@@ -76,6 +86,14 @@ func TestLinuxAuthorThreeEngineLifetimesExactGit(t *testing.T) {
 			t.Fatal("resume current revision", name, err)
 		}
 		raw, err := author.AuthorRequested(ctx)
+		if err != nil {
+			rootInfo, rootErr := os.Lstat(author.directory)
+			configInfo, configErr := os.Lstat(filepath.Join(author.directory, "config"))
+			t.Logf("root=%v root_err=%v config=%v config_err=%v", rootInfo, rootErr, configInfo, configErr)
+			if configInfo != nil {
+				t.Logf("config native=%+v owned=%t", configInfo.Sys(), author.owned(configInfo))
+			}
+		}
 		if closeErr := author.Close(); err == nil {
 			err = closeErr
 		}
@@ -85,6 +103,10 @@ func TestLinuxAuthorThreeEngineLifetimesExactGit(t *testing.T) {
 		snapshot, snapshotErr := controller.Snapshot()
 		cancel()
 		if err != nil || closeErr != nil || fenceErr != nil || serveErr != nil || snapshotErr != nil || !snapshot.Complete || !authorCustodyProducerComplete(snapshot, 1, authorCustodyAttempts(index)) {
+			for _, command := range commands {
+				t.Logf("fixed Git argv=%q wait=%v stderr=%q", command.Args, command.ProcessState, command.Stderr.(*checkoutCommandOutput).buffer.String())
+			}
+			t.Logf("actual Git starts=%d accounting=%+v", len(commands), snapshot)
 			t.Fatal("actual Git progression/accounting", name, err, closeErr, fenceErr, serveErr, snapshotErr)
 		}
 		physical := source.revisions[index]
@@ -101,11 +123,64 @@ func TestLinuxAuthorThreeEngineLifetimesExactGit(t *testing.T) {
 		if e != nil {
 			t.Fatal("canonical actual response", name, e)
 		}
+		t.Logf("revision=%s actual_git_attempts=%d changed_files=%d", name, snapshot.Attempts, response.ChangedPhysicalFiles.Count)
 		previous = &response
 	}
 	if owner.checkSource(t.Context(), previous) != nil {
 		t.Fatal("final native continuity")
 	}
+}
+
+func linuxAuthorRunEngineChild(t *testing.T) {
+	t.Helper()
+	mask := func() string {
+		raw, err := os.ReadFile("/proc/self/status")
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, line := range strings.Split(string(raw), "\n") {
+			if strings.HasPrefix(line, "Umask:") {
+				return line
+			}
+		}
+		t.Fatal("native process creation mask unavailable")
+		return ""
+	}
+	before := mask()
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+	command := exec.Command(os.Args[0], "-test.run=^TestLinuxAuthorThreeEngineLifetimesExactGit$", "-test.v")
+	command.Env = []string{"PHEBS_T42_AUTHOR_ENGINE_CHILD=1", "GOMAXPROCS=2", "GORACE=atexit_sleep_ms=0"}
+	command.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	output := &checkoutCommandOutput{remaining: 16 << 10, cancel: cancel}
+	command.Stdout, command.Stderr = output, output
+	if err := command.Start(); err != nil {
+		t.Fatal(err)
+	}
+	fd, waited, pinErr := pinExecutionProcessRoot(command)
+	if pinErr == nil {
+		defer func() { _ = unix.Close(fd) }()
+	}
+	canceled := make(chan struct{})
+	stop := context.AfterFunc(ctx, func() {
+		defer close(canceled)
+		if pinErr == nil {
+			_ = unix.PidfdSendSignal(fd, unix.SIGKILL, nil, 0)
+		}
+	})
+	waitErr := <-waited
+	if !stop() {
+		<-canceled
+	}
+	members, sessionErr := t4013.PrivateProcessSessionMembers(command.Process.Pid)
+	if pinErr != nil || waitErr != nil || ctx.Err() != nil || output.err != nil || sessionErr != nil || members != 0 {
+		t.Fatal("isolated private-mask author engine", pinErr, waitErr, sessionErr, output.buffer.String())
+	}
+	if mask() != before {
+		t.Fatal("child engine changed controller process mask")
+	}
+	t.Logf("isolated engine child pid=%d actual_wait_zero=true session_empty=true controller_mask_unchanged=true", command.Process.Pid)
+	t.Log(output.buffer.String())
 }
 
 func TestLinuxAuthorGitCancellationBeforePin(t *testing.T) {

@@ -382,7 +382,9 @@ Git attempts, 2,031,604-leaf inventories, canonical observed response/EOF,
 terminal Pause/natural close, actual root Wait and empty sessions. Controls remain
 3/4, sealed image/plan 5/6 are CLOEXEC, and nested Git uses the literal protected
 controller route with no extra files. Original SDK/modules/source stay available
-and unchanged on the host. Qualify with fresh actual disk/resource observations;
+and unchanged on the host. The fixed Linux author sets only its own process
+creation mask to 077 before source writes; the controller mask and ownership
+guard stay unchanged. Qualify with fresh actual disk/resource observations;
 <=2 GiB raw blob content does not bound Git allocation, protected inputs or peak
 build workspace. Three bounded joined-source metadata samples report observed
 logical/allocated bytes, without a phase-peak or unique-physical-byte claim.
