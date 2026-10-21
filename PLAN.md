@@ -16516,3 +16516,46 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   refuse its own late creation/exit race; neither the fixture nor the probe
   establishes universal tracer shutdown. Fresh complete native acceptance is
   still mandatory.
+
+- **2026-10-21 — T42.H2r.c.c RAM-review corrections before further work
+  (Ben-directed).** Keep this follow-up on the existing Linux ticket branch:
+  implement, test, review, commit and push both findings, then stop. No full
+  native retry, provisioning, merge or ceremony is authorized by this step.
+  The application's V2 observation inventory cache keeps at most eight idle
+  roots in last-release order. Active/provisional leases are never evicted;
+  the current/recent working set remains warm within that idle bound, while a
+  cold miss still fully validates the exact root. A lifecycle retirement guard
+  checks all live/provisional entries, evicts the selected idle generation and
+  excludes reacquisition until the same-parent rename returns. It is released
+  on rename failure too; existing current/prior/marker/durable-pin and deletion
+  predicates remain unchanged. This preexisting application metadata retention
+  defect cannot explain a refusal before any Phebs server started.
+
+  Private operational policy v9 preserves exact v7/v8 bytes and formal V1–V6
+  defaults. It retains the already-read, identity-bound initial controller RSS
+  with availability and census start/wall timing. One subsequent fixed
+  runtime/metrics read records heap objects, unused space in live spans, free
+  unreleased spans, released spans and heap stacks, with its own availability
+  and start/wall timing. The existing preparation GC remains exactly once;
+  there is no extra native census, GC, owned-memory credit, changed numerical
+  reservation or zero-calculation refusal rule. These sequential samples are
+  private diagnostics, not a coherent physical-memory decomposition, RSS fit
+  proof or capacity authority. Failed runs/fixtures/receipts stay untouched.
+
+  Cost: each V2 cache acquire/release uses its existing mutex and scans at most
+  eight idle keys; release adds no filesystem work. At most eight unleased
+  root objects remain, in addition to genuinely active/provisional roots.
+  Pin checks and retirement scans cost O(active/provisional roots + eight),
+  rather than all historical generations. Retirement adds a short in-memory
+  exclusion record and two existing-cache-mutex acquisitions around the
+  unchanged rename, without holding the mutex over filesystem I/O. Evicted
+  idle roots repeat existing cold validation on a later miss; warm retained
+  roots perform no segment/member reread. No query, sync tick, job concurrency,
+  publication authority, schema, disk policy or child-process bound changes.
+  The private harness adds fixed-size fields, two clock intervals and one
+  five-value runtime metrics read at initial admission only. That runtime read
+  can synchronize with runtime accounting but requests no stop-the-world GC;
+  it adds no timer, background goroutine, corpus walk or persistent hot-path
+  allocation. Focused lifecycle/concurrent-lease/history-bound and diagnostic
+  tests plus relevant race/static/docs checks precede the authorized push.
+  These corrections do not close H2, native acceptance, readiness or freeze.

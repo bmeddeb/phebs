@@ -3,8 +3,11 @@ package observationpublication
 import (
 	"context"
 	"errors"
+	"slices"
 	"sync"
 )
+
+const maxIdleInventoryRootsV2 = 8
 
 type inventoryCacheEntryV2 struct {
 	publication *InventoryPublicationV2
@@ -18,9 +21,13 @@ type inventoryCacheEntryV2 struct {
 // InventoryCacheV2 validates an immutable stage once per exact root digest.
 // Warm leases perform no segment, member, or observation reread; T40.6 may use
 // Pinned when it gives these non-authoritative stages lifecycle ownership.
+// The eight most recently released roots stay warm; live/provisional leases
+// are never evicted and do not count toward that idle bound.
 type InventoryCacheV2 struct {
-	mu      sync.Mutex
-	entries map[string]*inventoryCacheEntryV2
+	mu       sync.Mutex
+	entries  map[string]*inventoryCacheEntryV2
+	idle     []string // Oldest first; at most maxIdleInventoryRootsV2.
+	retiring map[string]bool
 }
 
 type InventoryLeaseV2 struct {
@@ -38,10 +45,15 @@ func (cache *InventoryCacheV2) Acquire(
 	}
 	key := directory + "\x00" + expected.Digest
 	cache.mu.Lock()
+	if cache.retiring[expected.Repository+"\x00"+expected.GenerationDigest] {
+		cache.mu.Unlock()
+		return nil, ErrStale
+	}
 	if cache.entries == nil {
 		cache.entries = make(map[string]*inventoryCacheEntryV2)
 	}
 	if entry := cache.entries[key]; entry != nil {
+		cache.removeIdleLocked(key)
 		entry.leases++
 		lease := &InventoryLeaseV2{cache: cache, key: key, entry: entry}
 		ready := entry.ready
@@ -99,8 +111,54 @@ func (lease *InventoryLeaseV2) Release() {
 		if lease.entry.leases > 0 {
 			lease.entry.leases--
 		}
+		if lease.entry.leases == 0 && lease.entry.ready == nil &&
+			lease.entry.err == nil && lease.entry.publication != nil &&
+			lease.cache.entries[lease.key] == lease.entry {
+			if len(lease.cache.idle) == maxIdleInventoryRootsV2 {
+				delete(lease.cache.entries, lease.cache.idle[0])
+				lease.cache.idle = slices.Delete(lease.cache.idle, 0, 1)
+			}
+			lease.cache.idle = append(lease.cache.idle, lease.key)
+		}
 		lease.cache.mu.Unlock()
 	})
+}
+
+func (cache *InventoryCacheV2) removeIdleLocked(key string) {
+	if index := slices.Index(cache.idle, key); index >= 0 {
+		cache.idle = slices.Delete(cache.idle, index, index+1)
+	}
+}
+
+// Exclude new leases through the retirement rename without holding mu over I/O.
+func (cache *InventoryCacheV2) beginRetireGeneration(repository, generation string) (func(), bool) {
+	cache.mu.Lock()
+	defer cache.mu.Unlock()
+	identity := repository + "\x00" + generation
+	if cache.retiring[identity] {
+		return nil, false
+	}
+	for _, entry := range cache.entries {
+		if entry.repository == repository && entry.generation == generation &&
+			(entry.leases > 0 || entry.ready != nil) {
+			return nil, false
+		}
+	}
+	for key, entry := range cache.entries {
+		if entry.repository == repository && entry.generation == generation {
+			delete(cache.entries, key)
+			cache.removeIdleLocked(key)
+		}
+	}
+	if cache.retiring == nil {
+		cache.retiring = make(map[string]bool)
+	}
+	cache.retiring[identity] = true
+	return func() {
+		cache.mu.Lock()
+		delete(cache.retiring, identity)
+		cache.mu.Unlock()
+	}, true
 }
 
 func (cache *InventoryCacheV2) Pinned(directory, digestValue string) bool {

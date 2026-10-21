@@ -40,6 +40,13 @@ type InventoryPinsV2 struct {
 	Durable InventoryDurablePinCheckerV2
 }
 
+func (pins InventoryPinsV2) beginRetireInventoryV2(repository, generation string) (func(), bool) {
+	if pins.Cache == nil {
+		return func() {}, true
+	}
+	return pins.Cache.beginRetireGeneration(repository, generation)
+}
+
 func (pins InventoryPinsV2) PinnedInventoryV2(
 	ctx context.Context, repository, generation string,
 ) (bool, error) {
@@ -292,8 +299,13 @@ func sweepInventoryLifecycleV2(
 			return result, err
 		}
 		destination := filepath.Join(directory, "collecting-"+generation.name)
-		if err := os.Rename(filepath.Join(directory, generation.name), destination); err != nil {
+		renamed, err := renameInventoryGenerationV2(pins, repository, generation.generation,
+			filepath.Join(directory, generation.name), destination)
+		if err != nil {
 			return result, err
+		}
+		if !renamed {
+			continue
 		}
 		if err := syncDirectory(directory); err != nil {
 			return result, err
@@ -304,6 +316,19 @@ func sweepInventoryLifecycleV2(
 		return result, err
 	}
 	return result, nil
+}
+
+func renameInventoryGenerationV2(pins InventoryPinCheckerV2, repository, generation, source, destination string) (bool, error) {
+	if guard, ok := pins.(interface {
+		beginRetireInventoryV2(string, string) (func(), bool)
+	}); ok {
+		release, allowed := guard.beginRetireInventoryV2(repository, generation)
+		if !allowed {
+			return false, nil
+		}
+		defer release()
+	}
+	return true, os.Rename(source, destination)
 }
 
 func readInventoryLifecycleMarkerV2(

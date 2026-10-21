@@ -410,6 +410,7 @@ func logLinuxEpochNativeFailure(t *testing.T, flow *LinuxExecutionEpochFlow, bas
 	if flow.held != nil && flow.held.resources != nil {
 		a := flow.held.resources
 		t.Logf("private resource policy=%s initial=%+v calculation=%+v payload_bytes=%d checks=%d", a.policySHA, a.initial, a.calculation, a.footprint.PayloadBytes, a.checks)
+		t.Logf("private initial memory diagnostic=%+v", a.initialMemory)
 		t.Logf("private saved footprint=%+v", a.footprint)
 		t.Logf("private first resource refusal=%q", a.privateRefusal())
 		snapshot := a.trace.failure()

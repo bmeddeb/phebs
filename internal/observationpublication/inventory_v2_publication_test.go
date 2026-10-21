@@ -410,6 +410,12 @@ func TestInventoryV2LifecyclePreservesAllRootsAndResumesDrain(t *testing.T) {
 	if _, err := os.Lstat(oldDirectory); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("old generation remains after bounded drain: %v", err)
 	}
+	if len(cache.entries) != 0 || len(cache.idle) != 0 || len(cache.retiring) != 0 {
+		t.Fatal("collected generation remained in the idle cache or retirement fence")
+	}
+	if _, err := cache.Acquire(t.Context(), filepath.Join(oldDirectory, InventoryPublicationInventoryNameV2), oldRoot); err == nil {
+		t.Fatal("collected generation was served from the cache")
+	}
 	current, err := ReadInventoryPublicationRootV2(root, repository)
 	if err != nil || current.Current != published[2].Current || current.Prior == nil ||
 		current.Prior.GenerationDigest != published[1].Current.GenerationDigest {

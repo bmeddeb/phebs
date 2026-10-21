@@ -81,7 +81,11 @@ func TestLinuxEpochResourceInitialReservationAndLiveSlack(t *testing.T) {
 	if err != nil || SHA256(legacy) != "sha256:0cc51a0133e9386d9d056995cd5aa57d2652059a189eb770ed066efa442c68a6" || linuxEpochPolicy().EngineMeasurement == "" {
 		t.Fatal("historical private v7 bytes changed or current guard omitted", err)
 	}
-	if frozenSafetyEnvelope().MaximumPeakRSSBytes != 20<<30 || linuxEpochPolicy().RSSReservationBytes != 4<<30 || linuxEpochPolicy().Schema != "t42-linux-epoch-operational-resources-v8" || !strings.Contains(linuxEpochPolicy().IndexRuntime, "parallelism=1") || !strings.Contains(linuxEpochPolicy().GitRuntime, "maintenance.autoDetach=false") || !validExecutionSHA256(linuxEpochPolicySHA256()) {
+	legacy, err = json.Marshal(linuxEpochPolicyV8())
+	if err != nil || SHA256(legacy) != "sha256:1b755e4b6b0e72166483c767107bbc3714b2750f4eb01999068486a95bf1a5f6" || linuxEpochPolicy().InitialDiagnostics == "" {
+		t.Fatal("historical private v8 bytes changed or current diagnostic omitted", err)
+	}
+	if frozenSafetyEnvelope().MaximumPeakRSSBytes != 20<<30 || linuxEpochPolicy().RSSReservationBytes != 4<<30 || linuxEpochPolicy().Schema != "t42-linux-epoch-operational-resources-v9" || !strings.Contains(linuxEpochPolicy().IndexRuntime, "parallelism=1") || !strings.Contains(linuxEpochPolicy().GitRuntime, "maintenance.autoDetach=false") || !validExecutionSHA256(linuxEpochPolicySHA256()) {
 		t.Fatal("prospective constraint changed historical envelope")
 	}
 }

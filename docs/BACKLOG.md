@@ -4935,6 +4935,20 @@ still refuses, and earlier Go-stress failures retain unknown inner closure.
 Neither bounded controls nor that diagnostic replaces the fresh complete
 native pass required before PR #156 integration.
 
+Ben's 2026-10-21 RAM-review follow-up authorizes two focused corrections on
+this existing branch, including tests, commit and push, then a stop. The V2
+observation cache now retains at most eight idle roots, preserves every live
+or provisional lease, and guards the lifecycle rename against reacquisition.
+This application retention defect predates c.c and is not the cause of the
+latest pre-server RAM refusal. Prospective private policy v9 retains the
+initial controller RSS sample and one five-scalar post-cleanup heap snapshot
+with availability and timing; no memory credit, numeric bound, formal default,
+extra census or GC changes. Historical v7/v8 policy bytes and all evidence
+remain exact. Focused normal/race, lifecycle and diagnostic controls are the
+correction gate; this follow-up authorizes no full native retry, provisioning,
+merge, readiness/freeze advance or ceremony. Full native acceptance remains
+the separate integration bar.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

@@ -800,6 +800,25 @@ history still refuses; never guess its child identity or infer clean custody.
 The independent fixed own-child kernel reproduction does not repair the older
 generic failure or qualify the full run.
 
+The RAM-review correction retains at most eight idle V2 observation inventory
+roots across the server, in order of last release. Active and provisional
+leases remain pinned independently of that idle bound. Recent roots stay warm;
+an evicted root is fully validated on its next cold open. Collection evicts
+the selected unleased root and excludes new leases through its retirement
+rename. This bounds historical cache retention, not active application RSS.
+
+Prospective private resource policy v9 preserves v7/v8 and every numeric
+admission limit. After the existing preparation cleanup, it saves the already
+read controller census RSS with start/wall timing, then reads five fixed Go
+runtime metrics once: heap objects, unused space within live heap spans, free
+but unreleased heap spans, released heap spans, and heap stacks. The native
+failure log includes explicit availability and separate timing for this heap
+snapshot. These are sequential diagnostic observations, not an atomic host
+memory decomposition or admission credit. There is no extra census or GC,
+periodic sampler, child or workload preparation. A failed admission still
+returns the exact zero calculation; old failures and fixtures stay unchanged.
+Full native acceptance remains pending; no retry is implied by this correction.
+
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
 It binds `c07bc930` and is preserved unchanged, so it no longer describes the

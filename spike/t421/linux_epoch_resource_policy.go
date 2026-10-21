@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/bmeddeb/phebs/spike/t4013"
 )
@@ -42,6 +43,7 @@ type linuxEpochResourcePolicy struct {
 	IndexRuntime              string `json:"index_runtime"`
 	GitRuntime                string `json:"git_runtime"`
 	EngineMeasurement         string `json:"engine_measurement,omitempty"`
+	InitialDiagnostics        string `json:"initial_diagnostics,omitempty"`
 }
 
 func linuxEpochPolicyV7() linuxEpochResourcePolicy {
@@ -61,10 +63,17 @@ func linuxEpochPolicyV7() linuxEpochResourcePolicy {
 	}
 }
 
-func linuxEpochPolicy() linuxEpochResourcePolicy {
+func linuxEpochPolicyV8() linuxEpochResourcePolicy {
 	policy := linuxEpochPolicyV7()
 	policy.Schema = "t42-linux-epoch-operational-resources-v8"
 	policy.EngineMeasurement = "authenticated-EM01-FD7-only-with-existing-FD6;server-producers=2,3,4;maximum-points=6,1,2;existing-phases=2-3-4,5,6;original-producer-binding-and-input-SHA;no-request-PID-path-image-or-action;unique-already-registered-held-Surreal-direct-child-original-pidfd-parent-birth-SID-namespace-TracerPid-and-mm;SIGSTOP-forwarded-to-actual-owned-groupstop-every-current-source-registered-TID;two-bounded-equal-task-censuses-under-existing-global-1024-cap;hold-ACK-only-after-all-actual-groupstop-witnesses;probe-gate-released-through-walk-and-whole-meter-continues;SIGCONT-then-CONT-only-original-owned-held-slots;release-ACK-after-real-all-thread-resume;existing-2s-cooperative-actor-turn-and-original-operation-deadline;existing-5s-cleanup-only;incomplete-stop-abort-original-pidfd-kill-retains-genuine-Wait-and-custody;one-extra-socket-pair-one-endpoint-goroutine-one-lease-per-live-server;finite-152+80*points-wire-bytes-subtracted-from-existing-output-stream-ceiling;no-query-sync-retry-publication-work-no-new-child-or-corpus-hash;historical-v7-bytes-and-formal-V1-V6-unchanged"
+	return policy
+}
+
+func linuxEpochPolicy() linuxEpochResourcePolicy {
+	policy := linuxEpochPolicyV8()
+	policy.Schema = "t42-linux-epoch-operational-resources-v9"
+	policy.InitialDiagnostics = "private-only-post-cleanup;retain-existing-controller-census-RSS-with-start-and-wall-time;one-five-value-runtime-metrics-heap-objects-unused-free-released-stacks-snapshot-with-start-and-wall-time;explicit-availability;no-extra-census-GC-credit-or-admission-input;no-periodic-request-job-or-publication-work;historical-v7-v8-bytes-and-formal-V1-V6-unchanged"
 	return policy
 }
 
@@ -86,6 +95,7 @@ type linuxEpochResourceAdmission struct {
 	namespaces     linuxEpochResourceNamespaces
 	footprint      linuxEpochResourceFootprint
 	initial        t4013.LinuxMemoryObservation
+	initialMemory  linuxEpochInitialMemoryDiagnostic // Private, immutable after admission; no admission credit.
 	calculation    t4013.LinuxMemoryCalculation
 	policySHA      string
 	checks         uint64
@@ -124,9 +134,16 @@ func admitLinuxEpochResources(ctx context.Context, held *linuxEpochHeldFlow, can
 	if err == nil {
 		stage = "initial-native-census"
 		var rows []t4013.NativeProcessRecord
+		started := time.Now()
+		a.initialMemory.ControllerCensusStartedUTC = started.UTC()
 		rows, err = t4013.ObserveProcessTreeRecords(ctx, held.controllerPID)
-		if err == nil && (len(rows) != 1 || rows[0].PID != held.controllerPID || rows[0].StartIdentity != held.controllerStart || rows[0].RSSBytes <= 0 || uint64(rows[0].RSSBytes) > linuxEpochRSSReservation) {
-			err = errLinuxEpochResources
+		a.initialMemory.ControllerCensusWallNS = time.Since(started).Nanoseconds()
+		if err == nil {
+			valid := a.initialMemory.recordController(rows, held.controllerPID, held.controllerStart)
+			a.initialMemory.Heap = readLinuxEpochHeapSnapshot()
+			if !valid {
+				err = errLinuxEpochResources
+			}
 		}
 	}
 	if err == nil {
