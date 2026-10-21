@@ -16276,3 +16276,32 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   is claimed. Restored bytes grant no old inode, pin, lease or admission.
   Full composed native acceptance, integration, readiness and freeze remain
   unpassed; this bounded record authorizes no ceremony.
+
+- **2026-10-21 — T42.H2r.c.c retains the extraction-contract refusal.** Exact
+  `a45536f7` passed three fresh protected comparisons, initial resource admission
+  and author A's genuine Wait0/join/empty-session, then failed cold-to-warm in
+  2,743.814s. The joined HTTP200 inspection at ordinal285 retained one failed
+  partition; its saved server log records a grpc-caller evidence-staging limit
+  refusal at the third attempted fact against a reservation of two. That is
+  a refusal-point count, not complete emission. Unavailable sampler prefixes,
+  cancellation and transport failures remain separately retained; their saved
+  boundaries do not establish a global first-cause order or complete RSS fit.
+  Preserve exact source, raw controls and the failed fixture before changes.
+
+  Read-only bounded replay over those validated candidate controls and Git
+  objects rebuilt all nine historical plans exactly and reproduced the same
+  typed ordinal8 facts3/2 refusal. The existing corrected typed-scope policy
+  then staged all 56 applicable partitions with production extractors into
+  the strict in-memory evidence/accounting/conflict model, validating each
+  partition result. Current grpc-caller emits 10,999 facts in its typed
+  partition and zero in its eight member partitions. The historical oracle
+  instead expects 165 facts in member6 and none in typed8. This is a measured
+  contract mismatch; merely enabling the configuration switch cannot satisfy
+  that oracle. Prospectively version configuration, extraction-policy identity,
+  reservations and the independently checked semantic oracle together before
+  another full run. Keep historical V1–V5 constructors/validators exact and
+  retain all aggregate, per-partition, process, RSS and deadline bounds.
+  Replay is neither real-store publication nor full native acceptance or
+  independent accuracy qualification. No ordinary runtime/source behavior
+  changes in this diagnostic record; request, sync, startup, retry/no-op,
+  publication, lock, cache and production resource costs remain unchanged.

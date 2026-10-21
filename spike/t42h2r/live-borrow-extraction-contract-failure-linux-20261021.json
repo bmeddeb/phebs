@@ -1,0 +1,148 @@
+{
+  "schema": "t42-linux-live-borrow-extraction-contract-diagnostic-v1",
+  "source_commit": "a45536f7bb956c64bc196032bd4b78dbc758702d",
+  "full_native": {
+    "tool_session": 79995,
+    "actual_exit": 1,
+    "elapsed_seconds": 2743.81356208901,
+    "initial_admission_passed": true,
+    "first_resource_label": "operation-return/cold-to-warm",
+    "inspection": {
+      "status": 200,
+      "ordinal": 285,
+      "failed_partitions": 1
+    },
+    "terminal_refusal": {
+      "domain": "grpc-caller",
+      "stage": "evidence_staging",
+      "classification": "limit",
+      "dimension": "facts",
+      "observed": 3,
+      "limit": 2,
+      "observed_scope": "third attempted fact, not complete emission"
+    },
+    "whole_meter": {
+      "available": false,
+      "private_error": "context deadline exceeded",
+      "sample_origin": "periodic",
+      "sample_stage": "probe-returned",
+      "completed_censuses": 5967,
+      "sampled_high_bytes": 3395276800
+    },
+    "server_meter": {
+      "available": false,
+      "sample_origin": "close",
+      "sample_stage": "probe-returned",
+      "completed_censuses": 5701,
+      "sampled_high_bytes": 3395944448
+    },
+    "scope": "No full RSS fit, full process custody, clean teardown, epoch or ceremony pass. Global first-cause ordering beyond saved boundaries is not established."
+  },
+  "read_only_measurement": {
+    "tool_session": 11943,
+    "go_pid": 1232199,
+    "actual_wait_exit_code": 0,
+    "test_seconds": 19.32,
+    "wrapper_seconds": 43.38921011101047,
+    "source_overlay_only": true,
+    "historical_plans_rebuilt_exactly": 9,
+    "historical_typed_refusal_reproduced": true,
+    "corrected_partitions": 56,
+    "corrected_result_control_validation": true,
+    "strict_in_memory_evidence": true,
+    "grpc_caller_typed_facts": 10999,
+    "grpc_caller_member_facts": 0,
+    "scope": "Production extractors and GitSparseSource over preserved validated inputs into existing in-memory staging/accounting/conflict model; no native composition, real-store publication, independent accuracy oracle, cleanup or ceremony claim.",
+    "limitations": [
+      "Each partition result validated; assembled domain roots and publication not tested.",
+      "No claim-level identities, independent accuracy oracle, coverage or read-count report.",
+      "GitSparseSource release discards reader.Close errors. Successful Go Wait does not establish every nested Git exit or native session/custody history.",
+      "Cache restore is developer acceleration only and grants no native admission."
+    ]
+  },
+  "next": "Prospectively version Linux extraction config, corrected existing policy and independently checked per-partition semantic oracle together; preserve all historical V1-V5 plan/receipt/validator bytes. New PlanV6 is the preferred clean boundary; active formal execution defaults must not advance merely from this diagnostic. Merely enabling YAML or raising2 cannot satisfy old oracle. All native bounds and full gate remain mandatory. No unchanged full retry.",
+  "raw_bindings": [
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-native-templates-3honvozt/full-native/terminal-failure/preservation.json",
+      "bytes": 3180,
+      "sha256": "502599b152bb2b149d5e4cd858dcc24fc77a4acf4608872ba4f0f9dda5ff7f7a"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-native-templates-3honvozt/full-native/terminal-failure/independent-extraction-contract-analysis.json",
+      "bytes": 10215,
+      "sha256": "c0c6ed06ffb4322a667cb06cbfb91db053234ec1ab429b7259913a1464e77ad5"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-native-templates-3honvozt/full-native/terminal-failure/extraction-refusal-excerpts.json",
+      "bytes": 1561,
+      "sha256": "bd2a493ba96352bb9d008d15df001f2cfebb24f1cf9a32e4600a1c0c5cdc9936"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-typed-reservation-lcd5ikq_/measurement_test.go",
+      "bytes": 5202,
+      "sha256": "9bd9a37fd28b03922ae5733c28c86b9e128299c93e456797d8c122abe8af6c4c"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-typed-reservation-lcd5ikq_/overlay.json",
+      "bytes": 170,
+      "sha256": "0edd7d99e8a0e2b28b0144ebb0ffdd908d58ca84d2b82bd31f366180899785c1"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-typed-reservation-lcd5ikq_/run.py",
+      "bytes": 1727,
+      "sha256": "2399b697ee3019b09be0402da2485363b3dfc8f3c6325d61513597ada5fa9b9b"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-typed-reservation-lcd5ikq_/invocation.json",
+      "bytes": 608,
+      "sha256": "c22d953ac16da6cf225b5a734acd0bedcdd82480741812c4f77169d77cdd92b6"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-typed-reservation-lcd5ikq_/stdout",
+      "bytes": 5860,
+      "sha256": "4f959060821e1d04b34e8d5ca59e1b0e299bceeda16edc7f777e60844a34673c"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-typed-reservation-lcd5ikq_/stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-typed-reservation-lcd5ikq_/result.json",
+      "bytes": 154,
+      "sha256": "2113f79b793266d592d4cca6ff0257efa203f72c95d73a4f5b83f2c9bc9a831f"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-typed-reservation-lcd5ikq_/measurement.json",
+      "bytes": 46271,
+      "sha256": "39ccdd4cdd4ba853080c1e08a3985a90affb7681ec3a7250589bddf3990afdff"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-typed-reservation-lcd5ikq_/independent-measurement-review.json",
+      "bytes": 21095,
+      "sha256": "58d8fe92bc1b291b9dfcfd8912036e2a93a00ea97f476b238876bde7b9e6e62d"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-typed-reservation-lcd5ikq_/docs-gates.json",
+      "bytes": 461,
+      "sha256": "984698de2818f5ad4154391b29b22c20a5f3fb1dba1b6852eaf1155eeefba13e"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-typed-reservation-lcd5ikq_/preservation-postcheck.json",
+      "bytes": 317,
+      "sha256": "0b151f09a8681401084e66efc65900100045eb9b311a6dd620fa8b9dd7bd113c"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-typed-reservation-lcd5ikq_/developer-cache-retirement.json",
+      "bytes": 224,
+      "sha256": "8f9f3d7c9d3a1cfc9a9c0eb3c0a1afd482493d0b4735199c320e91be2fbd1202"
+    }
+  ],
+  "independent_review": {
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "scope": "Scoped failed-native and retained-input measurement claims; prospective implementation remains open."
+  }
+}

@@ -730,6 +730,18 @@ facts and unchanged outside raw/source controls; this grants no restored inode,
 lease, original Wait or cleanup authority. Fresh full composed native acceptance
 remains required before integration; H2/readiness/freeze remain open.
 
+The next exact `a45536f7` full attempt passed initial memory admission and
+author A, then stopped at a retained grpc-caller staging refusal: the third
+attempted fact exceeded typed partition8's reservation of two. Read-only
+production extraction replay reproduces that refusal and stages all 56
+applicable partitions under the already-versioned corrected typed-scope
+allocation. The current typed partition emits 10,999 facts; the historical
+oracle expects 165 in a member partition and none there. Configuration, policy
+and semantic oracle therefore need one prospective contract correction before
+the next full attempt. Keep the failed fixture and historical contracts exact;
+this diagnostic is no real-store publication, memory-fit, cleanup or native
+acceptance pass. No process/RSS/deadline or aggregate extraction bound changes.
+
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
 It binds `c07bc930` and is preserved unchanged, so it no longer describes the

@@ -273,6 +273,14 @@ private first-refusal/actual-Wait diagnostics are being corrected. No unchanged
 full-native retry or composed pass is authorized by the pre-native gates.
 
 
+Current full native acceptance remains open: exact `a45536f7` passed initial
+memory admission, then retained a grpc-caller typed-partition facts3/2 refusal.
+A 19.32-second read-only production extraction replay reproduces it and stages
+all 56 applicable partitions under the existing corrected typed-scope policy.
+The historical per-partition semantic oracle also needs a prospective correction;
+a configuration-only change cannot close the gate. PR #156 stays draft, with
+all historical evidence and runtime bounds preserved.
+
 Next: [Linux office handoff #124](https://github.com/bmeddeb/phebs/issues/124)
 mechanism qualification → remaining T42.H2 consumer/executor/resource admission
 → T42.2v restored launch → complete readiness → T42.2o fresh freeze → separately

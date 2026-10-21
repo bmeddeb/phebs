@@ -4852,6 +4852,23 @@ facts and unchanged outside raw/source controls; this grants no restored inode,
 lease, original Wait or cleanup authority. Fresh full composed native acceptance
 remains required before integration; H2/readiness/freeze remain open.
 
+Exact `a45536f7` then passed fresh protected comparisons, initial memory
+admission and author A's genuine Wait0/join/empty-session, but failed cold-to-warm
+after 2,743.814s. Joined HTTP200 inspection285 retained one failed partition;
+the server log records grpc-caller evidence-staging facts3/2. Read-only bounded
+replay rebuilt all nine historical plans exactly and reproduced that typed
+ordinal8 refusal. Under the existing corrected typed-scope policy, all 56
+applicable partitions stage and validate in the strict in-memory model;
+grpc-caller now emits 10,999 facts in typed8 and zero in its eight members,
+whereas the frozen oracle expects 165 in member6 and none in typed8. The
+diagnostic receipt is
+`spike/t42h2r/live-borrow-extraction-contract-failure-linux-20261021.json`.
+Prospectively version configuration, policy and semantic oracle together before
+another full native gate; changing only the switch or raising the limit cannot
+repair that authority mismatch. Historical V1–V5 and all resource bounds remain
+exact. No full native, real-store publication, cleanup, readiness or freeze pass
+follows from this bounded replay; PR #156 remains draft.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared
