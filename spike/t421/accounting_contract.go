@@ -17,9 +17,11 @@ const (
 	ReceiptV3Schema               = "t422-combined-convergence-receipt-v3"
 	ReceiptV4Schema               = "t422-combined-convergence-receipt-v4"
 	ReceiptV5Schema               = "t422-combined-convergence-receipt-v5"
+	ReceiptV6Schema               = "t422-combined-convergence-receipt-v6"
 	ExecutionFreezeV3Schema       = "t422-combined-execution-freeze-v3"
 	ExecutionFreezeV4Schema       = "t422-combined-execution-freeze-v4"
 	ExecutionFreezeV5Schema       = "t422-combined-execution-freeze-v5"
+	ExecutionFreezeV6Schema       = "t422-combined-execution-freeze-v6"
 	ExecutionProfileV3Schema      = "t422-production-execution-profile-v3"
 	PhaseRuntimeBindingV3Schema   = "t422-phase-runtime-binding-v3"
 	InterphaseDriftToleranceBytes = uint64(65_536)
@@ -108,7 +110,7 @@ func buildActiveExecutionPlan(sourceCommit string) (Plan, error) {
 
 func knownPlanSchema(schema string) bool {
 	switch schema {
-	case PlanSchema, PlanV2Schema, PlanV3Schema, PlanV4Schema, PlanV5Schema:
+	case PlanSchema, PlanV2Schema, PlanV3Schema, PlanV4Schema, PlanV5Schema, PlanV6Schema:
 		return true
 	default:
 		return false
@@ -122,11 +124,11 @@ func correctedPlanSemantics(schema string) bool {
 }
 
 func processAccountingPlanSemantics(schema string) bool {
-	return schema == PlanV3Schema || schema == PlanV4Schema || schema == PlanV5Schema
+	return schema == PlanV3Schema || schema == PlanV4Schema || callerRestorePlanSemantics(schema)
 }
 
 func pressureContinuityPlanSemantics(schema string) bool {
-	return schema == PlanV4Schema || schema == PlanV5Schema
+	return schema == PlanV4Schema || callerRestorePlanSemantics(schema)
 }
 
 func processAccountingFreezeSchema(schema string) string {
@@ -137,6 +139,8 @@ func processAccountingFreezeSchema(schema string) string {
 		return ExecutionFreezeV4Schema
 	case PlanV5Schema:
 		return ExecutionFreezeV5Schema
+	case PlanV6Schema:
+		return ExecutionFreezeV6Schema
 	default:
 		return ""
 	}

@@ -705,7 +705,7 @@ func correctedInspectionInventory(profile CombinedProfile) ([]phaseInspectionInv
 // Retained inventories keep their original bytes and costs.
 func planInspectionInventory(plan Plan) ([]phaseInspectionInventory, []epochInspectionInventory, error) {
 	rows, epochs, err := correctedInspectionInventory(plan.Profile)
-	if err != nil || plan.Schema != PlanV5Schema {
+	if err != nil || !callerRestorePlanSemantics(plan.Schema) {
 		return rows, epochs, err
 	}
 	if len(rows) != 15 || rows[11].Phase != "archive_restore" || len(epochs) != 5 || epochs[4].ServerEpoch != 5 {

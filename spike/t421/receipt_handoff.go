@@ -14,7 +14,7 @@ func validatePhaseSelectorCleanup(measurement PhaseMeasurement, outcome string, 
 	case "cold", "physical_delta_b", "logical_delta_b", "return_a":
 		handoff = true
 	}
-	if plan.Schema != PlanV5Schema || outcome != "passed" || !handoff {
+	if !callerRestorePlanSemantics(plan.Schema) || outcome != "passed" || !handoff {
 		if measurement.SelectorCleanup != nil {
 			return errReceiptSelectorCleanup
 		}
@@ -52,7 +52,7 @@ func readerTransitionMetrics(measurement PhaseMeasurement, plan Plan) (ReceiptMe
 		return ReceiptMetrics{}, err
 	}
 	metrics := measurement.Metrics
-	if plan.Schema != PlanV5Schema {
+	if !callerRestorePlanSemantics(plan.Schema) {
 		return metrics, nil
 	}
 	if measurement.Phase != "physical_delta_b" || measurement.SelectorCleanup == nil {

@@ -74,7 +74,7 @@ func composeExecutionStoppedMetricPrefix(plan Plan, stoppedPhase string, work ex
 			}
 			// V5 cleanup reads share the scoped control-read metric but come
 			// from this native prefix, not the independent HTTP read ledger.
-			if plan.Schema == PlanV5Schema {
+			if callerRestorePlanSemantics(plan.Schema) {
 				if bound, applies := SelectorHandoffCleanupForPhase(plan, plan.PhaseOrder[index]); applies &&
 					uint64(producer) == bound.ServerEpoch+1 && !executionHandoffPhaseClosed(plan, record, index) {
 					out.unavailable(index, "control_reads")

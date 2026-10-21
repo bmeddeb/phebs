@@ -132,6 +132,8 @@ func ValidateFrozenPlan(plan Plan) error {
 		build = BuildPlanV4
 	case PlanV5Schema:
 		build = BuildPlanV5
+	case PlanV6Schema:
+		build = BuildPlanV6
 	default:
 		return errors.New("T42.1 plan schema is unknown")
 	}
@@ -335,6 +337,9 @@ func validateCombinedProfile(profile CombinedProfile, schema string) error {
 	}
 	if processAccountingPlanSemantics(schema) {
 		wantPipeline.ExtractionDomains = storeBoundExtractionDomains()
+	}
+	if schema == PlanV6Schema {
+		wantPipeline.ExtractionDomains = typedScopeExtractionDomains()
 	}
 	if !reflect.DeepEqual(pipeline, wantPipeline) {
 		return errors.New("T42.1 pipeline profile differs from the frozen shape")

@@ -339,11 +339,11 @@ func (reader *executionEpochInspection) readRequest(ctx context.Context, path st
 	request.Header.Set(dispatchadmission.ProductionRequestHeader, token)
 	request.Header.Set("X-Phebs-T421-Exact-Reads", "source-free-v1")
 	request.Header.Set("X-Phebs-T421-Exact-Read-Ordinal", strconv.FormatUint(ordinal, 10))
-	if path == "/api/t421/tail-readiness" && reader.plan.Schema == PlanV5Schema &&
+	if path == "/api/t421/tail-readiness" && callerRestorePlanSemantics(reader.plan.Schema) &&
 		run.epoch.Epoch == 5 && reader.projection.Phase == "archive_restore" {
 		request.Header.Set("X-Phebs-T422-Archive-Tail", "settled-v1")
 	}
-	if path == "/api/t421/final-authority" && reader.plan.Schema == PlanV5Schema {
+	if path == "/api/t421/final-authority" && callerRestorePlanSemantics(reader.plan.Schema) {
 		request.Header.Set("X-Phebs-T422-Caller-Continuity", "manifest-v1")
 	}
 	if repositories || path == "/api/t421/final-authority" && processAccountingPlanSemantics(reader.plan.Schema) && run.epoch.Epoch == 5 && reader.projection.Phase == "product_queries" {
@@ -493,7 +493,7 @@ func (reader *executionEpochInspection) Tail(ctx context.Context) (result epochT
 		return result, report, errEpochInspection
 	}
 	reader.tailCalls++
-	archiveV5 := reader.plan.Schema == PlanV5Schema && reader.run.epoch.Epoch == 5 && reader.projection.Phase == "archive_restore"
+	archiveV5 := callerRestorePlanSemantics(reader.plan.Schema) && reader.run.epoch.Epoch == 5 && reader.projection.Phase == "archive_restore"
 	maximum := epochInspectionReport{ControlFileReads: correctedTailControlReads, StoreReadAttempts: correctedTailStoreReads}
 	if archiveV5 {
 		maximum = epochInspectionReport{ControlFileReads: v5ArchiveTailControlReads, StoreReadAttempts: v5ArchiveTailStoreReadsMaximum}

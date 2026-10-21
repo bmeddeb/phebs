@@ -79,6 +79,7 @@ type ExecutionConfigProfile struct {
 	ProvisionalThriftExtraction      bool   `json:"provisional_thrift_extraction"`
 	ProvisionalThriftFieldExtraction bool   `json:"provisional_thrift_field_extraction"`
 	ProvisionalKafkaExtraction       bool   `json:"provisional_kafka_extraction"`
+	TypedScopeReservations           bool   `json:"typed_scope_reservations,omitempty"`
 	// Retained V1/V2 profile byte: always false; current config rejects this flag.
 	ProvisionalWorkbench        bool     `json:"provisional_workbench"`
 	EnabledExtractorDomains     []string `json:"enabled_extractor_domains"`
@@ -206,7 +207,7 @@ func phaseRuntimeBindingSchema(plan Plan) string {
 		return PhaseRuntimeBindingSchema
 	case PlanV2Schema:
 		return PhaseRuntimeBindingV2Schema
-	case PlanV3Schema, PlanV4Schema, PlanV5Schema:
+	case PlanV3Schema, PlanV4Schema, PlanV5Schema, PlanV6Schema:
 		return PhaseRuntimeBindingV3Schema
 	default:
 		return ""
@@ -423,6 +424,11 @@ func frozenExecutionConfig(plan Plan, bytesSHA256 string) ExecutionConfigProfile
 	}
 	if processAccountingPlanSemantics(plan.Schema) {
 		value.CompatibilityPosture = "unavailable-no-validation-zero-budget-v1"
+	}
+	if plan.Schema == PlanV6Schema {
+		value.Schema = "t422-execution-config-projection-v3"
+		value.Policy = "ordered-epoch-config-bytes-set-and-typed-scope-reservation-projection-v3"
+		value.TypedScopeReservations = true
 	}
 	return value
 }

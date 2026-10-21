@@ -16305,3 +16305,74 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   independent accuracy qualification. No ordinary runtime/source behavior
   changes in this diagnostic record; request, sync, startup, retry/no-op,
   publication, lock, cache and production resource costs remain unchanged.
+
+
+- **2026-10-21 — T42.H2r.c.c prospective V6 typed-extraction contract.**
+  The corrected allocation and the current extractor's ownership/output belong
+  to one new unsealed plan version, not a mutation of V1–V5. `BuildPlanV6`
+  inherits the complete V5 functional, pressure, handoff and restore contract;
+  the formal default remains V5. Only the genuine Linux live-borrow driver
+  selects V6 here. The retained native author/epoch constructors explicitly
+  refuse V6, and the formal host validator refuses it pending the remaining H2
+  Linux admission work. No Darwin native implementation or receipt tool changes.
+  V6 selects the existing typed-scope reservation policy in all five generated
+  configs and includes that true value in a new semantic config projection.
+  Omission preserves historical config bytes and profile JSON. The existing
+  authenticated semantic launch still selects 169-fact chunks. Corrected policy
+  identity flows through the existing plan/generation/executor/reuse fences;
+  historical weight-one plans cannot be reused as corrected authority.
+
+  The closed combined-corpus table preserves every aggregate and partition cap
+  and freezes the corrected allocator's explicit shares. Its grpc-caller typed
+  partition owns 10,999 `UNRESOLVED_CALLER` facts; all eight member partitions
+  remain read-only with no emission. Every expected source edge retains
+  `no_attribution_snapshot` and unavailable unit attribution. The independent
+  graph/source oracle checks subject, operation, detail and supporting source
+  citation; this proves the bounded fixture's explicit gaps, not resolved
+  declaration lineage or general caller accuracy. All 56 applicable partitions
+  and all nine assembled roots remain mandatory in the bounded integration
+  replay, followed by the unchanged full physical/logical native composition.
+
+  Cost: current output is 72,049 facts in 440 chunks rather than the historical
+  61,215 facts in 375 chunks. The existing append envelope remains 100,000
+  transactions / 51,200,000 submitted operands per full pass, with at most 512
+  operands per transaction; no cap is raised. Successful completion now admits
+  the current extractor's existing work rather than truncating at fact3.
+  Native source accounting charges every content offer, including rereads of
+  the same immutable object. The old formula omitted current typed sweeps and
+  the second Thrift-consumer pass. For the exact metadata-only `0a00` SCIP
+  control, closed per-domain extraction offers are 53,205 grpc-caller,
+  21,601 each grpc-consumer/Kafka-consumer/Kafka-producer, 10,000 proto-contract,
+  one scip-proto-field, 64,806 thrift-caller, 43,202 thrift-consumer and zero
+  thrift-contract: 236,017 per complete attempt. With unchanged five generation
+  attempts, three resolver/base-caller attempts and optional Go observation,
+  prospective V6 freezes 1,352,899 offers for full passes and 1,244,894 for
+  restore. Exact frozen inventories and the two-byte SCIP identity are required;
+  this is no allowance for arbitrary indexes or additional attempts. Historical
+  formulas remain exact. Source logical/unique bytes, child/partition counts,
+  process/RSS/cadence/deadline and transaction/lifecycle bounds do not change.
+  Known compact-family subtotals must still fit the existing 64-MiB stream cap;
+  census bodies and ordinary logs are outside that subtotal and remain bounded
+  by the actual cap, without a claim all simultaneous maxima fit.
+
+  The V6 constructor performs bounded arithmetic/hash derivation over the
+  existing 56-partition metadata, clones its phase/correction slices and adds
+  one config boolean/schema branch. It adds no product query/request, sync
+  tick, ordinary startup, retry/no-op or publication work, lock, cache,
+  concurrency, child or production store schema. V6 plan/profile preparation
+  alone performs this metadata work; actual fresh-generation extraction costs above are retained,
+  and unchanged-generation reuse still follows the existing policy fences.
+  Historical V1–V5 serializations and default formal selection stay exact.
+  Bounded qualification passed 178 normal and 178 race nodes with no skips,
+  module verification, tagged vet/lint, all three supported cross-compiles,
+  docs/glossary and whitespace gates. Independent source/cost review and its
+  test-only delta review have zero findings. The first race attempt retained
+  an honest three-minute test-context stop; the new bounded replay test alone
+  now permits six minutes for instrumentation. Production deadlines stay exact.
+  The source-bound record is
+  `spike/t42h2r/live-borrow-typed-extraction-v6-bounded-linux-20261021.json`.
+  The failed 79995 fixture was separately archived after full byte/metadata/
+  hardlink verification and review, with its two internal evidence files also
+  copied outside the retired paths; original failure and unknown custody stay
+  exact. Fresh full native acceptance remains the merge bar. No freeze, host
+  admission or ceremony follows from source implementation or bounded replay.

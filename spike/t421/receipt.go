@@ -4612,7 +4612,7 @@ func validateAuthorityContinuity(values map[string]AuthorityPhaseResult, plan Pl
 // The native archive reader and final receipt use the same comparison; neither
 // can replace actual prior authority with a regenerated expected result.
 func validateArchiveAuthorityContinuity(current, prior AuthorityPhaseResult, plan Plan) error {
-	if plan.Schema == PlanV5Schema && (!current.Current || !prior.Current ||
+	if callerRestorePlanSemantics(plan.Schema) && (!current.Current || !prior.Current ||
 		!validDigest(current.CallerContinuitySHA256) || current.CallerContinuitySHA256 != prior.CallerContinuitySHA256) {
 		return errors.New("archive restore changed caller manifest semantic content")
 	}
@@ -4623,7 +4623,7 @@ func validateArchiveAuthorityContinuity(current, prior AuthorityPhaseResult, pla
 		(current.ResolverCatalogGenerationSHA256 != prior.ResolverCatalogGenerationSHA256 ||
 			current.ResolverCatalogRootSHA256 != prior.ResolverCatalogRootSHA256 ||
 			current.CallerGenerationSHA256 != prior.CallerGenerationSHA256 ||
-			plan.Schema != PlanV5Schema && current.CallerRootSHA256 != prior.CallerRootSHA256) {
+			!callerRestorePlanSemantics(plan.Schema) && current.CallerRootSHA256 != prior.CallerRootSHA256) {
 		return errors.New("archive restore changed immutable resolver or caller authority")
 	}
 	if correctedPlanSemantics(plan.Schema) {

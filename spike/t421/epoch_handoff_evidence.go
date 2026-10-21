@@ -10,7 +10,7 @@ func composeExecutionHandoffEvidence(plan Plan, work executionJoinedWork, rows [
 	var seen [15]bool
 	for _, row := range rows {
 		bound, applies := SelectorHandoffCleanupForPhase(plan, row.Phase)
-		if plan.Schema != PlanV5Schema || !applies {
+		if !callerRestorePlanSemantics(plan.Schema) || !applies {
 			if row.SelectorCleanup != nil {
 				return errExecutionReceiptMetrics
 			}
@@ -59,7 +59,7 @@ func composeExecutionHandoffEvidence(plan Plan, work executionJoinedWork, rows [
 		}
 		out.SelectorCleanup[index] = &value
 	}
-	if complete && plan.Schema == PlanV5Schema {
+	if complete && callerRestorePlanSemantics(plan.Schema) {
 		for index, phase := range plan.PhaseOrder {
 			if _, applies := SelectorHandoffCleanupForPhase(plan, phase); applies && (index >= len(seen) || !seen[index] || out.SelectorCleanup[index] == nil) {
 				return errExecutionReceiptMetrics

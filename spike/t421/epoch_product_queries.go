@@ -70,7 +70,7 @@ func (run *ExecutionEpochOneRun) QueryRestored(ctx context.Context) (retErr erro
 	}
 	// V5 completes the cache-owned whole-repository fills a cold first
 	// all-code or selected service query would otherwise hit inside its wall.
-	if reader.plan.Schema == PlanV5Schema {
+	if callerRestorePlanSemantics(reader.plan.Schema) {
 		if err := reader.searchWarm(op, authority); err != nil {
 			return err
 		}

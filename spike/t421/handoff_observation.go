@@ -41,7 +41,7 @@ func reservedHandoffEvent(line []byte) bool {
 
 func observeHandoffEvent(line []byte, plan Plan, producer uint32, input string, sourceBound bool, out *ExecutionHandoffObservation) (bool, error) {
 	// Historical plans retain their existing interpretation of these logs.
-	if plan.Schema != PlanV5Schema || !reservedHandoffEvent(line) {
+	if !callerRestorePlanSemantics(plan.Schema) || !reservedHandoffEvent(line) {
 		return false, nil
 	}
 	if !sourceBound || len(line) <= len(handoffLogTimestamp) || len(line) > maxHandoffEventBytes || line[len(line)-1] != '\n' {
@@ -127,7 +127,7 @@ func decodeCanonicalHandoff(raw []byte, value any) bool {
 
 func executionHandoffPhaseClosed(plan Plan, record executionJoinedWorkRecord, index int) bool {
 	value := record.Attempts.Handoff
-	if plan.Schema != PlanV5Schema {
+	if !callerRestorePlanSemantics(plan.Schema) {
 		return value == (ExecutionHandoffObservation{})
 	}
 	if index < 0 || index >= len(value.Cleanup) || !value.ScanComplete || len(plan.PhaseOrder) != len(value.Cleanup) {
@@ -152,7 +152,7 @@ func executionHandoffPhaseClosed(plan Plan, record executionJoinedWorkRecord, in
 
 func validExecutionHandoffRecord(plan Plan, record executionJoinedWorkRecord) bool {
 	value := record.Attempts.Handoff
-	if plan.Schema != PlanV5Schema {
+	if !callerRestorePlanSemantics(plan.Schema) {
 		return value == (ExecutionHandoffObservation{})
 	}
 	if !value.ScanComplete || executionWorkProducerByte(record.Producer) == 0 || record.Producer != 2 && value.Retention != ([2]epochRetentionSweep{}) {

@@ -56,7 +56,7 @@ func applyCallerRestoreContinuityCorrection(plan *Plan) error {
 
 func planTailReadinessTransitions(schema string) []tailReadinessTransition {
 	rows := correctedTailReadinessTransitions()
-	if schema == PlanV5Schema {
+	if callerRestorePlanSemantics(schema) {
 		for index := range rows {
 			if rows[index].Phase == "archive_restore" {
 				// T only waits for current native authority. F proves complete
@@ -84,7 +84,7 @@ func callerRestoreIdentityDerivations() []IdentityDerivation {
 }
 
 func validCallerContinuityObservation(schema, digest string, required bool) bool {
-	if schema != PlanV5Schema {
+	if !callerRestorePlanSemantics(schema) {
 		return digest == ""
 	}
 	return validDigest(digest) || !required && digest == ""

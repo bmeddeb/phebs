@@ -88,7 +88,7 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 		consumed += len(line)
 		if len(line) == 0 && errors.Is(readErr, io.EOF) {
 			out.ScanComplete = true
-			if plan.Schema == PlanV5Schema {
+			if callerRestorePlanSemantics(plan.Schema) {
 				out.Handoff.ScanComplete = true
 			}
 			if !out.SourceBound || producer <= 6 && (!out.AttemptBound || !out.Reuse.Bound || !out.UnsupportedSource.Bound) || !out.ObservationBound || !out.PublicationBound || !out.ResolverBound || !out.RelationshipBound {
@@ -225,7 +225,7 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 		}
 		// Scan the original immutable line without copying: markers split
 		// across reader fragments must not turn into unrelated output.
-		if long && (plan.Schema == PlanV5Schema && reservedHandoffEvent(raw[start:consumed]) || reservedBlobEvent(raw[start:consumed], "SR") || reservedBlobEvent(raw[start:consumed], "OP") || reservedBlobEvent(raw[start:consumed], "EP") || reservedCompactAttempt(raw[start:consumed]) || reservedLifecycleEvent(raw[start:consumed]) || reservedCacheEvent(raw[start:consumed]) || reservedResolverEvent(raw[start:consumed]) || reservedRelationshipEvent(raw[start:consumed]) || reservedCensusEvent(raw[start:consumed]) || reservedCatalogCensusEvent(raw[start:consumed]) || reservedWorkspaceByteEvent(raw[start:consumed]) || reservedReuseEvent(raw[start:consumed]) || reservedUnsupportedSourceEvent(raw[start:consumed]) || reservedArchiveArtifactEvent(raw[start:consumed])) {
+		if long && (callerRestorePlanSemantics(plan.Schema) && reservedHandoffEvent(raw[start:consumed]) || reservedBlobEvent(raw[start:consumed], "SR") || reservedBlobEvent(raw[start:consumed], "OP") || reservedBlobEvent(raw[start:consumed], "EP") || reservedCompactAttempt(raw[start:consumed]) || reservedLifecycleEvent(raw[start:consumed]) || reservedCacheEvent(raw[start:consumed]) || reservedResolverEvent(raw[start:consumed]) || reservedRelationshipEvent(raw[start:consumed]) || reservedCensusEvent(raw[start:consumed]) || reservedCatalogCensusEvent(raw[start:consumed]) || reservedWorkspaceByteEvent(raw[start:consumed]) || reservedReuseEvent(raw[start:consumed]) || reservedUnsupportedSourceEvent(raw[start:consumed]) || reservedArchiveArtifactEvent(raw[start:consumed])) {
 			return out, errExecutionAttempts
 		}
 		if readErr != nil {
@@ -333,7 +333,7 @@ func executionTerminalFooterForPlan(raw []byte, input [32]byte, schema string) (
 			continue
 		}
 		index := reservedTerminalIndex(line)
-		if seen && (schema == PlanV5Schema && reservedHandoffEvent(line) || reservedBlobEvent(line, "SR") || reservedCompactAttempt(line) || index ||
+		if seen && (callerRestorePlanSemantics(schema) && reservedHandoffEvent(line) || reservedBlobEvent(line, "SR") || reservedCompactAttempt(line) || index ||
 			bytes.Contains(line, []byte("OPB")) || reservedBlobEvent(line, "OP") || reservedBlobEvent(line, "EP") || reservedLifecycleEvent(line) || reservedCacheEvent(line) || reservedResolverEvent(line) || reservedRelationshipEvent(line) || reservedCensusEvent(line) || reservedCatalogCensusEvent(line) || reservedWorkspaceByteEvent(line) || reservedReuseEvent(line) || reservedUnsupportedSourceEvent(line) || reservedArchiveArtifactEvent(line)) ||
 			index && line[0] != 'I' && !bytes.HasPrefix(line, []byte("ZI")) {
 			return seen, errExecutionAttempts

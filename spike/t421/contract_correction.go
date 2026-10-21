@@ -257,10 +257,15 @@ func validatePlanExecutionContract(plan Plan) error {
 				return err
 			}
 		}
-		if plan.Schema == PlanV5Schema {
+		if callerRestorePlanSemantics(plan.Schema) {
 			if err := applyCallerRestoreContinuityCorrection(&want); err != nil {
 				return err
 			}
+		}
+	}
+	if plan.Schema == PlanV6Schema {
+		if err := applyTypedExtractionCorrection(&want); err != nil {
+			return err
 		}
 	}
 	if !reflect.DeepEqual(plan.PhaseOrder, want.PhaseOrder) || !reflect.DeepEqual(plan.PhaseStates, want.PhaseStates) ||

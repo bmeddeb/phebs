@@ -281,6 +281,15 @@ The historical per-partition semantic oracle also needs a prospective correction
 a configuration-only change cannot close the gate. PR #156 stays draft, with
 all historical evidence and runtime bounds preserved.
 
+Prospective V6 implementation now binds allocation/config/policy and the
+current partition oracle, preserving historical V1–V5 and the formal V5
+default. The
+[bounded record](../spike/t42h2r/live-borrow-typed-extraction-v6-bounded-linux-20261021.json)
+passes 178 normal and 178 race nodes, static/cross-compile/docs gates and clean
+source/cost review. It explicitly retains unresolved caller attribution and
+accounts for repeated source reads. Fresh full native acceptance remains open;
+no H2/freeze completion is inferred.
+
 Next: [Linux office handoff #124](https://github.com/bmeddeb/phebs/issues/124)
 mechanism qualification → remaining T42.H2 consumer/executor/resource admission
 → T42.2v restored launch → complete readiness → T42.2o fresh freeze → separately

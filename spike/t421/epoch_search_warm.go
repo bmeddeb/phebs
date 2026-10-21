@@ -21,7 +21,7 @@ const searchWarmMaximum = 10 * time.Minute
 
 // epochSearchWarmOptIn is the only place a launch opts in: V5 restored epoch five.
 func epochSearchWarmOptIn(epoch uint64, schema string) string {
-	if epoch == 5 && schema == PlanV5Schema {
+	if epoch == 5 && callerRestorePlanSemantics(schema) {
 		return SearchWarmSchema
 	}
 	return ""
@@ -70,7 +70,7 @@ func (reader *executionEpochInspection) searchWarm(ctx context.Context, final Au
 	defer reader.mu.Unlock()
 	defer func() { reader.fail(retErr) }()
 	if ctx == nil || ctx.Err() != nil || reader.err != nil || reader.run == nil || reader.run.control == nil ||
-		reader.run.epoch.Epoch != 5 || reader.run.epoch.SearchWarm != SearchWarmSchema || reader.plan.Schema != PlanV5Schema ||
+		reader.run.epoch.Epoch != 5 || reader.run.epoch.SearchWarm != SearchWarmSchema || !callerRestorePlanSemantics(reader.plan.Schema) ||
 		reader.projection.Phase != "product_queries" || !reader.finalUsed || reader.searchWarmed ||
 		len(reader.productQueries) != 0 {
 		return errEpochInspection

@@ -276,15 +276,19 @@ func epochConfigBytesParsed(plan Plan, epoch ExecutionEpochConfig, source string
 		epoch.LogicalRevision != []string{"a", "b", "a-return", "a-return", "a-return"}[epoch.Epoch-1] {
 		return nil, nil, ErrExecutionEpochConfigs
 	}
+	experimental := map[string]bool{"provisional_proto_extraction": true, "provisional_thrift_extraction": true,
+		"provisional_thrift_field_extraction": false, "provisional_kafka_extraction": true}
+	if plan.Schema == PlanV6Schema {
+		experimental["typed_scope_reservations"] = true
+	}
 	raw, err := yaml.Marshal(map[string]any{
-		"server":      map[string]string{"addr": epoch.Listen, "data_dir": epoch.DataRoot},
-		"auth":        map[string]any{"api_key": epoch.APIKey, "cookie_secure": false},
-		"sync":        map[string]string{"poll_interval": "250ms", "resync_interval": "0"},
-		"lifecycle":   map[string]bool{"enabled": true},
-		"diagnostics": map[string]bool{"jobs": true, "candidates": true, "extraction": true, "extractor_details": false},
-		"experimental": map[string]bool{"provisional_proto_extraction": true, "provisional_thrift_extraction": true,
-			"provisional_thrift_field_extraction": false, "provisional_kafka_extraction": true},
-		"connections": []map[string]any{{"name": "t422-local", "type": "git", "url": source, "watch": true}},
+		"server":       map[string]string{"addr": epoch.Listen, "data_dir": epoch.DataRoot},
+		"auth":         map[string]any{"api_key": epoch.APIKey, "cookie_secure": false},
+		"sync":         map[string]string{"poll_interval": "250ms", "resync_interval": "0"},
+		"lifecycle":    map[string]bool{"enabled": true},
+		"diagnostics":  map[string]bool{"jobs": true, "candidates": true, "extraction": true, "extractor_details": false},
+		"experimental": experimental,
+		"connections":  []map[string]any{{"name": "t422-local", "type": "git", "url": source, "watch": true}},
 		"service_catalogs": map[string]config.ServiceCatalog{epoch.Repository: {
 			Kind: servicecatalog.AuthorityOperator, ID: combinedAuthorityID, Version: versions[logical],
 			Path: epoch.CatalogPath, Runtime: config.ServiceCatalogRuntimeV3}},
@@ -331,7 +335,7 @@ func parseEpochConfigBytes(plan Plan, epoch ExecutionEpochConfig, source string,
 		cfg.Diagnostics != (config.Diagnostics{Jobs: want.DiagnosticsJobs, Candidates: want.DiagnosticsCandidates, Extraction: want.DiagnosticsExtraction, ExtractorDetails: want.DiagnosticsExtractorDetails}) ||
 		cfg.Experimental != (config.Experimental{ProvisionalProtoExtraction: want.ProvisionalProtoExtraction,
 			ProvisionalThriftExtraction: want.ProvisionalThriftExtraction, ProvisionalThriftFieldExtraction: want.ProvisionalThriftFieldExtraction,
-			ProvisionalKafkaExtraction: want.ProvisionalKafkaExtraction}) ||
+			ProvisionalKafkaExtraction: want.ProvisionalKafkaExtraction, TypedScopeReservations: want.TypedScopeReservations}) ||
 		len(cfg.Connections) != 1 || !reflect.DeepEqual(cfg.Connections[0], config.Connection{Name: "t422-local", Type: "git", URL: source, Watch: true}) ||
 		len(cfg.ServiceCatalogs) != 1 || cfg.ServiceCatalogs[epoch.Repository] != (config.ServiceCatalog{
 		Kind: servicecatalog.AuthorityOperator, ID: combinedAuthorityID, Version: versions[logical], Path: epoch.CatalogPath, Runtime: config.ServiceCatalogRuntimeV3}) ||

@@ -87,7 +87,8 @@ func PrepareExecutionAuthor(ctx context.Context, parent string, request Executio
 		return nil, ErrExecutionAuthorCustody
 	}
 	plan, err := DecodePlan(raw)
-	if err != nil || !processAccountingPlanSemantics(plan.Schema) || !authorCustodyBuildBinding(request.Builds, plan.SourceCommit) || ctx.Err() != nil {
+	// V6 uses the separate Linux-owned issuer; the retained native route stays exact.
+	if err != nil || plan.Schema == PlanV6Schema || !processAccountingPlanSemantics(plan.Schema) || !authorCustodyBuildBinding(request.Builds, plan.SourceCommit) || ctx.Err() != nil {
 		return nil, ErrExecutionAuthorCustody
 	}
 	identity, authorPath, err := request.Author.Check(ctx, "t422-author")

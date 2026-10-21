@@ -742,6 +742,20 @@ the next full attempt. Keep the failed fixture and historical contracts exact;
 this diagnostic is no real-store publication, memory-fit, cleanup or native
 acceptance pass. No process/RSS/deadline or aggregate extraction bound changes.
 
+The prospective V6 source correction selects the existing
+`experimental.typed_scope_reservations` policy through the genuine Linux
+live-borrow owner, with matching config, plan/generation and per-partition
+semantic bindings. Historical plans and the formal V5 executor remain exact;
+V6 has no formal host admission yet. Its expected caller facts remain explicit
+unresolved gaps, with source citations checked independently in the bounded
+replay. Repeated immutable-content offers are charged, including typed-source
+and Thrift rereads; attempt, memory, deadline, extraction and transaction caps
+remain unchanged. Bounded normal/race and static qualification now pass with
+clean source/cost review; the
+[record](../../spike/t42h2r/live-borrow-typed-extraction-v6-bounded-linux-20261021.json)
+retains the earlier test-only race timeout. Full native acceptance remains
+pending; no production option is enabled by constructing this plan.
+
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
 It binds `c07bc930` and is preserved unchanged, so it no longer describes the

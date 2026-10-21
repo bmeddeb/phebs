@@ -96,7 +96,8 @@ func PrepareExecutionEpochOne(ctx context.Context, epochs *ExecutionEpochConfigC
 	}
 	_, raw, err := readAuthorCustodyPlan(ctx, author.request.Plan)
 	var plan Plan
-	if err != nil || SHA256(raw) != author.planSHA256 || json.Unmarshal(raw, &plan) != nil {
+	// The V6 Linux flow has its own genuine owners and constructor.
+	if err != nil || SHA256(raw) != author.planSHA256 || json.Unmarshal(raw, &plan) != nil || plan.Schema == PlanV6Schema {
 		return nil, ErrExecutionEpochOne
 	}
 	var bindings [executionProducerCount][32]byte
@@ -818,7 +819,7 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 		}
 	case 5:
 		controlConfig.Phases, controlConfig.InitialPhase, controlConfig.MaximumPhases = []uint32{12, 13, 14}, 12, 3
-		if flow.plan.Schema == PlanV5Schema {
+		if callerRestorePlanSemantics(flow.plan.Schema) {
 			controlConfig.OwnerDrainDeadlineUnixNano = run.phaseDeadline.UnixNano()
 		}
 	}

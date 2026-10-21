@@ -50,7 +50,7 @@ func (reader *executionEpochInspection) cleanupSelectorHandoff(ctx context.Conte
 	}
 	reader.selectorCleanupPhase = reader.projection.Phase
 	var evidence *ExecutionPhaseInspection
-	if reader.plan.Schema == PlanV5Schema {
+	if callerRestorePlanSemantics(reader.plan.Schema) {
 		if len(reader.evidence.rows) == 0 {
 			return errEpochInspection
 		}

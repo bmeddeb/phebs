@@ -4869,6 +4869,24 @@ repair that authority mismatch. Historical V1–V5 and all resource bounds remai
 exact. No full native, real-store publication, cleanup, readiness or freeze pass
 follows from this bounded replay; PR #156 remains draft.
 
+A prospective V6 implementation now binds the existing corrected typed-scope
+allocation, config projection, extraction-policy identity and current exact
+partition oracle together while inheriting the complete V5 contract. Historical
+V1–V5 and the formal V5 default remain exact; legacy native/host issuers refuse
+V6 pending its Linux admission. The Linux live-borrow driver selects the new
+unsealed constructor. Its bounded production replay assembles all nine roots
+and checks 56 partitions, the explicit 10,999 caller gaps against independently
+generated source edges/citations, and per-domain content-offer counts. The
+source-derived V6 offer maxima include repeated typed/Thrift reads under the
+unchanged retry limits; no RSS, deadline, transaction or extraction cap changes.
+The source-bound
+[bounded record](../spike/t42h2r/live-borrow-typed-extraction-v6-bounded-linux-20261021.json)
+now reports 178 normal and 178 race nodes with no skips, module/tagged static,
+supported cross-compile and docs gates, plus clean source/cost review. Its
+initial race test-context stop remains retained; only the new test's bound was
+adjusted for instrumentation. Fresh full native composition remains the merge
+bar. H2/readiness/freeze do not advance yet.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

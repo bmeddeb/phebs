@@ -66,7 +66,7 @@ type ScopedTeardownEvidence struct {
 // representation.
 func (value Receipt) MarshalJSON() ([]byte, error) {
 	type plain Receipt
-	if value.Schema != ReceiptV3Schema && value.Schema != ReceiptV4Schema && value.Schema != ReceiptV5Schema {
+	if value.Schema != ReceiptV3Schema && value.Schema != ReceiptV4Schema && value.Schema != ReceiptV5Schema && value.Schema != ReceiptV6Schema {
 		return json.Marshal(plain(value))
 	}
 	measurements := make([]json.RawMessage, len(value.Measurements))
@@ -127,11 +127,11 @@ func validateReceiptAccountingVersion(value Receipt, plan Plan) error {
 	wantSchema := map[string]string{
 		PlanSchema: ReceiptSchema, PlanV2Schema: "t422-combined-convergence-receipt-v2",
 		PlanV3Schema: ReceiptV3Schema, PlanV4Schema: ReceiptV4Schema,
-		PlanV5Schema: ReceiptV5Schema,
+		PlanV5Schema: ReceiptV5Schema, PlanV6Schema: ReceiptV6Schema,
 	}[plan.Schema]
 	if wantSchema == "" || value.Schema != wantSchema || value.Schema != plan.ReceiptContract.Schema ||
 		processAccountingPlanSemantics(plan.Schema) && (plan.ProcessAccounting == nil || plan.WorkEnvelope.Schema != WorkEnvelopeV3Schema) ||
-		!processAccountingPlanSemantics(plan.Schema) && (value.Schema == ReceiptV3Schema || value.Schema == ReceiptV4Schema || value.Schema == ReceiptV5Schema) {
+		!processAccountingPlanSemantics(plan.Schema) && (value.Schema == ReceiptV3Schema || value.Schema == ReceiptV4Schema || value.Schema == ReceiptV5Schema || value.Schema == ReceiptV6Schema) {
 		return errors.New("receipt process-accounting version is invalid")
 	}
 	for _, measurement := range value.Measurements {
