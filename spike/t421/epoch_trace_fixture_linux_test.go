@@ -11,7 +11,10 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"runtime"
+	"slices"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -28,14 +31,15 @@ const linuxEpochTraceFixturePreACK = "TRACE_FIXTURE_PRE_ACK "
 const linuxEpochTraceFixtureFinal = "TRACE_FIXTURE "
 
 type linuxEpochTraceFixtureReport struct {
-	Mode        string
-	PID         int
-	ChildPID    int
-	WaitCode    int
-	Ordinal     uint64
-	Active      uint32
-	Tasks       int
-	AckConsumed bool
+	Mode              string
+	PID               int
+	ChildPID          int
+	WaitCode          int
+	Ordinal           uint64
+	Active            uint32
+	Tasks             int
+	AckConsumed       bool
+	MaintenancePacked bool
 }
 
 func TestLinuxEpochTraceFixtureChild(t *testing.T) {
@@ -52,7 +56,7 @@ func TestLinuxEpochTraceFixtureChild(t *testing.T) {
 }
 
 func runLinuxEpochTraceFixture(mode string) (int, error) {
-	if mode != "go-parent" && mode != "go-leaf" && mode != "git-parent" && mode != "capture-live" {
+	if mode != "go-parent" && mode != "go-leaf" && mode != "git-parent" && mode != "git-maintenance-parent" && mode != "capture-live" {
 		return 125, errors.New("unknown fixed mode")
 	}
 	tasks, release, err := linuxEpochTraceFixtureTasks()
@@ -110,6 +114,16 @@ func runLinuxEpochTraceFixture(mode string) (int, error) {
 		command.Env = []string{"LC_ALL=C", "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=/dev/null"}
 		wantCode = 0
 	}
+	if mode == "git-maintenance-parent" {
+		repository := os.Getenv("PHEBS_PRIVATE_EPOCH_TRACE_GIT_REPO")
+		if !executionGitAbsolutePath(repository) {
+			return 125, errors.New("fixed maintenance repository unavailable")
+		}
+		command = exec.Command("/usr/lib/git-core/git", "-C", repository, "-c", "maintenance.loose-objects.enabled=true", "-c", "maintenance.loose-objects.auto=1", "fetch", "--prune", "origin")
+		command.Env = linuxEpochForegroundGitEnvironment("/usr/lib/git-core", repository, repository)
+		command.Env = append(command.Env, "GIT_TRACE2_EVENT="+filepath.Join(repository, "maintenance-trace.jsonl"))
+		wantCode = 0
+	}
 	command.Dir = "/"
 	command.Stdout, command.Stderr = io.Discard, os.Stderr
 	handle, err := parent.StartInPhase(settlement, 1, dispatchadmission.Site{ID: 1, Role: 1}, command)
@@ -138,6 +152,33 @@ func runLinuxEpochTraceFixture(mode string) (int, error) {
 	}
 	closed = true
 	report := linuxEpochTraceFixtureReport{Mode: mode, PID: os.Getpid(), ChildPID: command.Process.Pid, WaitCode: wantCode, Ordinal: count.Ordinal, Active: uint32(count.Active), Tasks: tasks}
+	if mode == "git-maintenance-parent" {
+		packs, err := filepath.Glob(filepath.Join(os.Getenv("PHEBS_PRIVATE_EPOCH_TRACE_GIT_REPO"), "objects", "pack", "loose-*.pack"))
+		if err != nil || len(packs) != 1 {
+			return 125, errors.New("automatic maintenance produced no exact loose-object pack")
+		}
+		report.MaintenancePacked = true
+		raw, err := linuxEpochTraceRead(filepath.Join(os.Getenv("PHEBS_PRIVATE_EPOCH_TRACE_GIT_REPO"), "maintenance-trace.jsonl"), 64<<10)
+		if err != nil {
+			return 125, errors.New("bounded automatic maintenance trace unavailable")
+		}
+		foreground := false
+		for _, line := range strings.Split(strings.TrimSpace(string(raw)), "\n") {
+			var event struct {
+				Event string
+				Argv  []string
+			}
+			if json.Unmarshal([]byte(line), &event) != nil {
+				return 125, errors.New("malformed fixed Git trace")
+			}
+			if event.Event == "child_start" && slices.Equal(event.Argv, []string{"git", "maintenance", "run", "--auto", "--no-quiet", "--no-detach"}) {
+				foreground = true
+			}
+		}
+		if !foreground {
+			return 125, errors.New("fetch did not select foreground automatic maintenance")
+		}
+	}
 	return 0, linuxEpochTraceFixtureACK(signals, report)
 }
 

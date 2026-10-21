@@ -16128,3 +16128,75 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   derived private policy digest is metadata; the fresh actual native run must
   emit the same digest. Full composition, memory fit and integration remain
   unpassed; no unchanged rerun of e934 or historical-byte rewrite is authorized.
+
+
+- **2026-10-20 — T42.H2r.c.c prospective foreground automatic Git maintenance.**
+  Preserve exact failed source `f365c9b8` and its 3,001.3825-second full native
+  refusal. Three protected comparisons and fresh v6 initial admission passed;
+  the first `event/identity` refusal retained Git leader1065407 at EXIT event6,
+  fresh SID1065407 and PPid3870 instead of its required original session1059268.
+  The failed child's original parent/argv were not printed. The flow did not
+  join: no saved whole-RSS conclusion, complete native cleanup or composition
+  follows. Keep every failed fixture and raw byte. Source review and Git's
+  installed 2.53.0 primary manuals identify automatic background maintenance as
+  a plausible mechanism, not attribution of this child's missing argv.
+
+  Select prospective private resource policy v7. Only the resource-checked
+  Linux server coordinator issues `t42-linux-foreground-git-serial-index-v1`
+  on both Git and Zoekt bindings. Retain the closed Phebs semanticV3/store/
+  owner-control producer/phase mappings and serial HEAD index argv. Authenticate
+  the original three Git config pairs plus exact `gc.autoDetach=false` and
+  `maintenance.autoDetach=false`, with COUNT5. Validate both tokens together;
+  missing/foreign tokens, wrong keys/values/counts, duplicates, unsupported
+  platform/context and scheduling drift refuse. Normalize only this closed
+  selection to the unchanged legacy COUNT3 validation. A child cannot override
+  foreground execution with higher-priority `-c`, `--config-env`, direct
+  maintenance/GC or detach commands: accept only existing source-owned global
+  prefixes and Git command forms before Start, retaining sticky refusal.
+  Automatic GC/maintenance remains enabled with its existing eligibility;
+  fetch/source/workload limits and every original-parent, SID, namespace,
+  pidfd, image, RSS, session and genuine Wait gate remain. No orphan adoption,
+  parent rewriting, sampler omission or new host entitlement is introduced.
+  Historical Git custody, formal versions and ordinary/Darwin paths remain
+  exact; a new full native result is still mandatory.
+
+  Foreground maintenance holds the existing Git child/DA slot and mirror lock
+  through any eligible work and its actual Wait, extending fetch latency rather
+  than leaving overlapping background work. No additional operational child is
+  requested; existing maintenance children remain counted by the unchanged
+  tracer and whole meter. Eligibility, attempt/workload/RSS/child/TID/disk bounds,
+  probe cadence and deadlines do not increase; synchronous work may still
+  refuse. Bootstrap COUNT5 validation adds one bounded environment slice and
+  map, and selected per-Start validation repeats that bounded work plus an argv
+  scan; no content hash, native probe, descriptor or persistent cache is added.
+  Existing legacy selected starts gain a bounded marker scan; selector-absent
+  ordinary requests, sync, startup, retry/no-op and publication gain no work.
+  The parent keeps its existing per-Start current-binding comparison and locks.
+  Test-only preparation finishes under a ten-second joined context before a
+  trace owner/notifier exists. A real fetch must trigger automatic foreground
+  maintenance, emit its exact no-detach child command, pack real loose objects,
+  and pass unchanged strict trace/census, original-parent Wait, HUP and accounting
+  closure. Direct manual maintenance is insufficient because it bypasses the
+  automatic caller's detach selection. These are prospective implementation
+  and cost decisions, not passed qualification, memory fit or ceremony authority.
+
+
+  Subsequent exact-candidate bounded qualification passes fourteen serial
+  roots with genuine Wait0, empty sampled sessions and unchanged source:
+  focused93/93, complete dispatch613/613, affected Linux131/131, launch
+  inventory4, tagged vet/lint, three supported other-platform compile targets,
+  docs/glossary and whitespace; no functional failure or skip remains. Four
+  real fetches prove enabled foreground automatic work, strict concurrent
+  census and original root/accounting closure. These test-node counts overlap.
+  Both earlier failed fixture prefixes retain source/raw bytes and no invented
+  closure. The first was an ambiguous shell placeholder. The later generic
+  EXEC refusal remains unattributed because its executable was unavailable;
+  equal-content host Git/core objects have different inodes. The corrected
+  maintenance fixture alone adds one held empty0600 file/FD for unexecuted
+  roles and selects/holds the exact core image; legacy modes stay exact, and
+  production classifiers/actors are unchanged. This test-only FD/file adds no
+  operational cost or resource authority. Independent correction/evidence/cost
+  reviews are clean. `spike/t42h2r/foreground-git-v7-bounded-linux-20261020.json`
+  records this bounded prefix. Only owning qualification prose is added after
+  functional gates; fresh docs checks and immutable review follow. Full native
+  composition, memory fit, integration, readiness and freeze remain unpassed.

@@ -388,6 +388,39 @@ binds this bounded prefix. The later owning qualification prose receives fresh
 docs checks. Fresh immutable preparation and complete native composition remain
 the next gate; neither memory fit nor c.c completion follows from bounded tests.
 
+Exact `f365c9b8` then failed the full native gate after 3,001.3825s.
+Three protected comparisons and fresh v6 initial admission passed; the first
+refusal was `event/identity` at a registered Git leader's EXIT event, with
+fresh SID1065407 differing from required SID1059268. Its exact command and
+original parent were not retained. The flow stayed unjoined, so neither a
+joined RSS conclusion nor complete cleanup is available. The
+[session-identity failure record](../spike/t42h2r/live-borrow-session-identity-failure-linux-20261020.json)
+preserves source/raw/fixture bindings. A prospective private v7 keeps automatic
+Git maintenance enabled but requires foreground execution, authenticating exact
+`gc.autoDetach=false` and `maintenance.autoDetach=false` controls for the closed
+Linux server contexts. Historical COUNT3 recipes and strict identity/image/RSS
+checks remain exact. The selected child rejects command-line policy overrides
+before Start; serial HEAD indexing continues. Bounded real fetch/automatic-task
+and refusal/race/source gates are being qualified before any fresh full run.
+Background maintenance is a mechanism hypothesis, not the failed Git command's
+attribution. Full composition and all later H2/readiness/freeze gates remain open.
+
+Subsequent v7 bounded qualification passes all fourteen serial gates:
+93 focused normal and 93 race nodes, 613 complete-dispatch nodes per mode,
+131 affected Linux nodes per mode, launch inventory, tagged vet/lint, the
+three other supported 64-bit compile targets, docs/glossary and whitespace.
+No functional failure or skip remains. Four real-fetch controls prove
+foreground automatic work with genuine Wait0, strict concurrent census and
+root/accounting closure; counts overlap rather than naming unique cases.
+Both earlier fixture failures are retained. The first was an ambiguous shell
+placeholder. The later generic EXEC refusal remains unattributed because its
+executable was unavailable. Equal-content host Git/core objects have different
+inodes; the fixture now selects its exact core. Only test image selection
+changed; production matching stayed strict. The
+[bounded foreground record](../spike/t42h2r/foreground-git-v7-bounded-linux-20261020.json)
+binds exact source and raw evidence. Fresh immutable preparation and complete
+native composition remain mandatory; no memory fit, readiness or freeze follows.
+
 Production artifact/signature/publication closure for T47.5, T49.4, T50.3,
 T51.3, T52.3 and T54.3 remains pending the existing unavailable production key
 and the exact owning production decision. Scoped results and unsigned drafts

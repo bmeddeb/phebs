@@ -76,7 +76,7 @@ func TestLinuxEpochResourceInitialReservationAndLiveSlack(t *testing.T) {
 	if checkLinuxEpochLiveMemory(initial, 16<<30, initial) == nil {
 		t.Fatal("held reservation exceeded effective capacity")
 	}
-	if frozenSafetyEnvelope().MaximumPeakRSSBytes != 20<<30 || linuxEpochPolicy().RSSReservationBytes != 4<<30 || linuxEpochPolicy().Schema != "t42-linux-epoch-operational-resources-v6" || !strings.Contains(linuxEpochPolicy().IndexRuntime, "parallelism=1") || !validExecutionSHA256(linuxEpochPolicySHA256()) {
+	if frozenSafetyEnvelope().MaximumPeakRSSBytes != 20<<30 || linuxEpochPolicy().RSSReservationBytes != 4<<30 || linuxEpochPolicy().Schema != "t42-linux-epoch-operational-resources-v7" || !strings.Contains(linuxEpochPolicy().IndexRuntime, "parallelism=1") || !strings.Contains(linuxEpochPolicy().GitRuntime, "maintenance.autoDetach=false") || !validExecutionSHA256(linuxEpochPolicySHA256()) {
 		t.Fatal("prospective constraint changed historical envelope")
 	}
 }

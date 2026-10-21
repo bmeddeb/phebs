@@ -5,9 +5,11 @@ package t421
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"syscall"
@@ -31,6 +33,10 @@ type linuxEpochTraceMechanical struct {
 
 func linuxEpochTraceMechanicalStart(t *testing.T, mode string, refuseImage bool) *linuxEpochTraceMechanical {
 	t.Helper()
+	repository := ""
+	if mode == "git-maintenance-parent" {
+		repository = linuxEpochMaintenanceRepository(t)
+	}
 	settlement, settleCancel := context.WithCancel(context.Background())
 	t.Cleanup(settleCancel)
 	controller, err := dispatchadmission.New(settlement, dispatchadmission.Config{
@@ -62,11 +68,25 @@ func linuxEpochTraceMechanicalStart(t *testing.T, mode string, refuseImage bool)
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = shell.Close() })
-	git, err := os.Open("/usr/bin/git")
+	gitPath := "/usr/bin/git"
+	if mode == "git-maintenance-parent" {
+		gitPath = "/usr/lib/git-core/git"
+	}
+	git, err := os.Open(gitPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = git.Close() })
+	unused := shell
+	if mode == "git-maintenance-parent" {
+		// This mode really executes sh; unexecuted application roles must not
+		// alias its image and manufacture an ambiguous classification.
+		unused, err = os.CreateTemp("", "epoch-trace-unused-image-")
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = unused.Close() })
+	}
 	namespace, err := os.Stat("/proc/self/ns/pid")
 	if err != nil {
 		t.Fatal(err)
@@ -77,7 +97,7 @@ func linuxEpochTraceMechanicalStart(t *testing.T, mode string, refuseImage bool)
 	}
 	held := &linuxEpochHeldFlow{controllerPID: os.Getpid(), controllerStart: controllerRow.StartIdentity, controllerImage: image, shellImage: shell, pidNamespace: namespace}
 	for index := range held.images {
-		held.images[index] = shell
+		held.images[index] = unused
 	}
 	for index := range held.gitImages {
 		held.gitImages[index] = git
@@ -96,6 +116,9 @@ func linuxEpochTraceMechanicalStart(t *testing.T, mode string, refuseImage bool)
 	t.Cleanup(func() { _ = output.Close() })
 	command := exec.Command(os.Args[0], "-test.run="+linuxEpochTraceFixtureSelector, "-test.timeout=15s")
 	command.Env = []string{linuxEpochTraceFixtureEnvironment + "=" + mode, "GOMAXPROCS=2", "GORACE=atexit_sleep_ms=0"}
+	if mode == "git-maintenance-parent" {
+		command.Env = append(command.Env, "PHEBS_PRIVATE_EPOCH_TRACE_GIT_REPO="+repository)
+	}
 	command.Stdout, command.Stderr = output, output
 	command.SysProcAttr = &syscall.SysProcAttr{Setsid: true, Pdeathsig: syscall.SIGKILL}
 	expected := image
@@ -153,6 +176,37 @@ func linuxEpochTraceMechanicalStart(t *testing.T, mode string, refuseImage bool)
 	return fixture
 }
 
+// Preparation finishes before any trace owner/notifier exists, including failure.
+func linuxEpochMaintenanceRepository(t *testing.T) string {
+	t.Helper()
+	root := t.TempDir()
+	repository, origin := filepath.Join(root, "repo.git"), filepath.Join(root, "origin.git")
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+	run := func(input string, args ...string) {
+		t.Helper()
+		cmd := exec.CommandContext(ctx, "/usr/bin/git", args...)
+		cmd.Env = []string{"PATH=/usr/bin:/bin", "LANG=C", "LC_ALL=C", "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=/dev/null"}
+		cmd.Stdin = strings.NewReader(input)
+		if out, err := cmd.CombinedOutput(); err != nil || cmd.ProcessState == nil || cmd.ProcessState.ExitCode() != 0 {
+			t.Fatal("maintenance fixture preparation genuine Wait", err, string(out))
+		}
+	}
+	run("", "init", "--bare", origin)
+	run("blob\nmark :1\ndata 8\nneutral\n\ncommit refs/heads/main\ncommitter Neutral <neutral@example.invalid> 1700000000 +0000\ndata 7\nneutral\nM 100644 :1 file.txt\n\ndone\n", "-C", origin, "fast-import", "--quiet")
+	run("", "-C", origin, "symbolic-ref", "HEAD", "refs/heads/main")
+	run("", "init", "--bare", repository)
+	run("", "-C", repository, "remote", "add", "origin", origin)
+	for i := 0; i < 8; i++ {
+		run(fmt.Sprintf("neutral-%d\n", i), "-C", repository, "hash-object", "-w", "--stdin")
+	}
+	before, err := filepath.Glob(filepath.Join(repository, "objects", "pack", "*.pack"))
+	if err != nil || len(before) != 0 {
+		t.Fatal("fixture already packed", before, err)
+	}
+	return repository
+}
+
 func (fixture *linuxEpochTraceMechanical) report(t *testing.T, prefix string) (linuxEpochTraceFixtureReport, bool) {
 	t.Helper()
 	raw, err := linuxEpochTraceRead(fixture.output.Name(), 16<<10)
@@ -182,7 +236,7 @@ func (fixture *linuxEpochTraceMechanical) report(t *testing.T, prefix string) (l
 }
 
 func TestLinuxEpochTraceGoAndGitGenuineWaits(t *testing.T) {
-	for _, mode := range []string{"go-parent", "git-parent"} {
+	for _, mode := range []string{"go-parent", "git-parent", "git-maintenance-parent"} {
 		t.Run(mode, func(t *testing.T) {
 			fixture := linuxEpochTraceMechanicalStart(t, mode, false)
 			root := fixture.root
@@ -228,11 +282,14 @@ func TestLinuxEpochTraceGoAndGitGenuineWaits(t *testing.T) {
 				}
 			}
 			want := 17
-			if mode == "git-parent" {
+			if mode == "git-parent" || mode == "git-maintenance-parent" {
 				want = 0
 			}
 			if report.PID != root.original.pid || report.WaitCode != want || report.ChildPID <= 0 || report.Ordinal != 1 || report.Active != 0 || report.Tasks < 2 || report.AckConsumed || samples == 0 {
 				t.Fatal("actual app/DA report", report, samples)
+			}
+			if report.MaintenancePacked != (mode == "git-maintenance-parent") {
+				t.Fatal("actual automatic maintenance work missing", report)
 			}
 			// The fixture holds its real parent alive after actual nested Wait. Verify
 			// retirement and unregistered/foreign/invalid-pin refusal without touching actor fds.

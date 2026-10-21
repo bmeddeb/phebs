@@ -176,7 +176,7 @@ func (adapter *linuxEpochCoordinator) tools(ctx context.Context, epoch uint64) (
 		return "", nil, nil, ErrExecutionEpochOne
 	}
 	core := linuxEpochFDRoute(held.controllerPID, held.gitRoot) + "/core"
-	gitEnv := executionGitEnvironment(core, selected.Home, selected.Temporary)
+	gitEnv := linuxEpochForegroundGitEnvironment(core, selected.Home, selected.Temporary)
 	environment := externalToolEnvironment(selected.Temporary)
 	for i, value := range environment {
 		if strings.HasPrefix(value, "HOME=") {
@@ -189,9 +189,23 @@ func (adapter *linuxEpochCoordinator) tools(ctx context.Context, epoch uint64) (
 	phebs, zoekt, surreal := linuxEpochFDRoute(held.controllerPID, held.images[1]), linuxEpochFDRoute(held.controllerPID, held.images[2]), linuxEpochFDRoute(held.controllerPID, held.images[3])
 	tools := []dispatchadmission.ProductionToolBinding{{Role: "git", Path: core + "/git", Environment: gitEnv}, {Role: "surreal", Path: surreal, Environment: environment}, {Role: "zoekt-git-index", Path: zoekt, Environment: append(slices.Clone(gitEnv), dispatchadmission.IndexOfferEnvironment+"=v1", "ZOEKT_DISABLE_CATFILE_BATCH=true")}}
 	// The successful genuine resource Check above issues this fixed narrowing.
-	tools[2].RuntimeRecipe = dispatchadmission.ProductionLinuxSerialIndexV1
+	tools[0].RuntimeRecipe = dispatchadmission.ProductionLinuxForegroundGitV1
+	tools[2].RuntimeRecipe = dispatchadmission.ProductionLinuxForegroundGitV1
 	binding := executionRuntimeEnvironmentBindings{Home: selected.Home, Temporary: selected.Temporary, GitDirectory: core, SurrealPath: surreal, SurrealSHA256: held.imageIdentities[3].SHA256, ZoektPath: zoekt, ZoektSHA256: held.imageIdentities[2].SHA256}
 	return phebs, tools, executionPhebsEnvironment(environment, binding), nil
+}
+
+// Only this resource-checked Linux server recipe narrows background maintenance.
+// Keep the historical Git owner and ordinary application policy byte-exact.
+func linuxEpochForegroundGitEnvironment(core, home, temporary string) []string {
+	environment := executionGitEnvironment(core, home, temporary)
+	for i, entry := range environment {
+		if entry == "GIT_CONFIG_COUNT=3" {
+			environment[i] = "GIT_CONFIG_COUNT=5"
+		}
+	}
+	return append(environment, "GIT_CONFIG_KEY_3=gc.autoDetach", "GIT_CONFIG_VALUE_3=false",
+		"GIT_CONFIG_KEY_4=maintenance.autoDetach", "GIT_CONFIG_VALUE_4=false")
 }
 func (adapter *linuxEpochCoordinator) workspace() (*os.File, string, [2]int32) {
 	root := adapter.held.workspace

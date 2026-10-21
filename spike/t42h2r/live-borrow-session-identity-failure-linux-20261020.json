@@ -1,0 +1,81 @@
+{
+  "schema": "t42-linux-live-borrow-session-identity-failure-v1",
+  "source_commit": "f365c9b8754493486d4d4e6093da0e03f042a0f3",
+  "source_tree": "4bcc5b297a491d922523baff11d83c620132a3f3",
+  "status": "FAILED_NO_COMPOSED_ACCEPTANCE",
+  "test": "TestLinuxEpochRequiredNativeLiveBorrow",
+  "actual_tool_session": 14544,
+  "actual_tool_exit": 1,
+  "actual_native_root_pid": 1037875,
+  "elapsed_seconds": 3001.382497997998,
+  "first_retained_refusal": {
+    "stage": "trace/event-turn",
+    "predicate": "event/identity",
+    "tid": 1065407,
+    "event": 6,
+    "root_pid": 1059268,
+    "fresh": {
+      "pid": 1065407,
+      "tgid": 1065407,
+      "parent": 3870,
+      "tracer": 1037877,
+      "sid": 1065407,
+      "birth_ticks": "7838341",
+      "name": "git",
+      "state": "t"
+    },
+    "tasks": 55,
+    "pending": 1,
+    "active_tids": 55,
+    "events": 560547
+  },
+  "direct_conclusion": "Registration required original SID1059268; fresh SID1065407 differs. Original failed-child parent and exact Git argv were not retained.",
+  "flow_joined": false,
+  "whole_rss_conclusion": "Unavailable from unjoined flow; neither breach nor fit inferred.",
+  "successful_prefix": {
+    "protected_reference_comparisons": 3,
+    "runtime_policy_sha256": "7c1c7db27018de54305f31d178360c3b4d8acaa0ff95296104d033700f4b6c98",
+    "initial_available_bytes": 8672661504,
+    "initial_required_bytes": 8499179520,
+    "charged_payload_bytes": 2056728576,
+    "whole_rss_limit_bytes": 4294967296
+  },
+  "post_terminal_observation": {
+    "matching_known_rows": [],
+    "scope": "Bounded sequential post-terminal observation; absence is not original child Wait, complete history, safe cleanup or native pass. Failed raw fixture retained unchanged."
+  },
+  "raw_bindings": [
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-v6-native-templates-he_62ghg/terminal-failure/exact-source.tar.gz",
+      "bytes": 67572885,
+      "sha256": "5a32fc4fbe8d69cc682003352f18a53b5da6aee238d5537000323ddf45bf2388"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-v6-native-templates-he_62ghg/full-native/native.stdout",
+      "bytes": 6285,
+      "sha256": "b36c35c73e2cb1027595bf42906dfe8ccc70dfad2ca8dd770fc197f8ce10e743"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-v6-native-templates-he_62ghg/full-native/native.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-v6-native-templates-he_62ghg/full-native/result.json",
+      "bytes": 441,
+      "sha256": "f4df164dc712c0dd39ebe5f2653d550f82710b3c947dc04a2384a47674cff788"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-v6-native-templates-he_62ghg/full-native/invocation.json",
+      "bytes": 6075,
+      "sha256": "5dc881baf453efebf0213f9d450f4f97f317be1dd812dd94cc96a4501f06bff3"
+    }
+  ],
+  "retained_fixture": "/home/ben/phebs-rehearsals/t42h2rcc-v6-native-templates-he_62ghg/full-native/tmp/phebs-linux-live-epochs-2494616029",
+  "preservation_record": {
+    "path": "/home/ben/phebs-rehearsals/t42h2rcc-v6-native-templates-he_62ghg/terminal-failure/preservation-and-post-terminal-observation.json",
+    "sha256": "5ecb1c5a7bed8a67a05ccefb1dd997bab193350d58457f44aee69ebd66866f02"
+  },
+  "prospective_correction": "Private Linux v7 foreground-only automatic Git maintenance with exact authenticated scheduling controls; original PPid/SID/image/RSS/custody and enabled GC/fetch work retained. Automatic maintenance is a mechanism hypothesis, not attribution of this failed child. Focused genuine automatic-caller validation, independent review and new full native acceptance remain required.",
+  "limits": "No unchanged retry, merge, readiness, freeze, ceremony, scale or completed-cleanup claim."
+}

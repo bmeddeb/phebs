@@ -40,15 +40,17 @@ type linuxEpochResourcePolicy struct {
 	Tracing                   string `json:"tracing"`
 	DyingGroups               string `json:"dying_groups"`
 	IndexRuntime              string `json:"index_runtime"`
+	GitRuntime                string `json:"git_runtime"`
 }
 
 func linuxEpochPolicy() linuxEpochResourcePolicy {
 	return linuxEpochResourcePolicy{
-		Schema:              "t42-linux-epoch-operational-resources-v6",
+		Schema:              "t42-linux-epoch-operational-resources-v7",
 		RSSReservationBytes: linuxEpochRSSReservation, KernelCacheAllowanceBytes: linuxEpochKernelCacheAllowance, HostHeadroomBytes: linuxEpochHostHeadroom,
 		Scope:        "unprivileged-linux-amd64;one-bound-controller-lifetime-and-all-descendants;mnt-user-pid-cgroup-namespace-pins;controller-heap-included;server-subgauges-not-added",
 		Concurrency:  "one-server-and-one-serial-author;return-after-predecessor-join;no-preparation-children-or-failed-prefixes",
-		IndexRuntime: "resource-issued-authenticated-zoekt-binding=t42-linux-head-serial-index-v1;server-producers=2,3,4;exact-existing-HEAD-index-argv-then-one-parallelism=1-before-final-repository;one-child-and-synchronous-shard-builds;current-bindings-compared-before-every-DA-Start;no-new-workspace-authority-or-fit-promise",
+		IndexRuntime: "resource-issued-authenticated-git-and-zoekt-binding=t42-linux-foreground-git-serial-index-v1;server-producers=2,3,4;exact-existing-HEAD-index-argv-then-one-parallelism=1-before-final-repository;one-child-and-synchronous-shard-builds;current-bindings-compared-before-every-DA-Start;no-new-workspace-authority-or-fit-promise",
+		GitRuntime:   "resource-checked-server-git-and-zoekt-environments;gc.autoDetach=false;maintenance.autoDetach=false;automatic-maintenance-remains-enabled-and-foreground;exact-five-config-pairs-authenticated-and-compared-before-every-DA-Start;original-parent-birth-SID-namespace-pidfd-image-RSS-and-genuine-Wait-gates-unchanged;no-orphan-adoption",
 		Payload:      "tree-order=build-inputs,git,catalogs,configs;four-distinct-readonly-tmpfs-mounts:checked-(blocks-bfree)*bsize;image-order=t422-author,phebs,zoekt-git-index,surreal,plan;five-distinct-sealed-images-plan:max(page-rounded-size,512*st_blocks);metadata-in-kernel-cache-allowance;RSS-overlap-deliberately-conservative",
 		Initial:      "H2l-native-complete-ancestry;H2j-full-RSS-plus-payload-plus-kernel-cache-plus-host-headroom-fits-capacity-and-available;no-owned-memory-credit;bounded-8192-controller-FD-inventory-refuses-extra-memfd-or-tmpfs",
 		Ongoing:      "same-physical-ancestry-limits-namespaces-and-payloads;full-initial-required-fits-capacity;fresh-available-at-least-kernel-cache-plus-host-headroom;RSS-at-most-reservation;no-subtraction-or-re-reservation",

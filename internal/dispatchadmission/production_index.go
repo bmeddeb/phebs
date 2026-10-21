@@ -1,10 +1,23 @@
 package dispatchadmission
 
-import "strings"
+import (
+	"runtime"
+	"strings"
+)
 
 const IndexOfferEnvironment = "PHEBS_T422_INDEX_OFFERS"
 
 func validProductionToolEnvironment(environment []string, role, semantic string) bool {
+	if foregroundGitSelected(environment) {
+		if runtime.GOOS != "linux" || runtime.GOARCH != "amd64" || semantic != ProductionSemanticV3 || (role != "git" && role != "zoekt-git-index") {
+			return false
+		}
+		var ok bool
+		environment, ok = legacyForegroundGitEnvironment(environment)
+		if !ok {
+			return false
+		}
+	}
 	var selected []string
 	var mask uint8
 	for _, entry := range environment {
@@ -36,6 +49,64 @@ func validProductionToolEnvironment(environment []string, role, semantic string)
 		}
 	}
 	return validProductionEnvironment(selected, true)
+}
+
+func foregroundGitSelected(environment []string) bool {
+	for _, entry := range environment {
+		if entry == "GIT_CONFIG_COUNT=5" || strings.HasPrefix(entry, "GIT_CONFIG_KEY_3=") || strings.HasPrefix(entry, "GIT_CONFIG_KEY_4=") || strings.HasPrefix(entry, "GIT_CONFIG_VALUE_3=") || strings.HasPrefix(entry, "GIT_CONFIG_VALUE_4=") {
+			return true
+		}
+	}
+	return false
+}
+
+// Normalize only the closed foreground recipe for the unchanged legacy checks.
+// Automatic maintenance stays enabled; its original parent must retain its Wait.
+func legacyForegroundGitEnvironment(environment []string) ([]string, bool) {
+	if len(environment) > 64 {
+		return nil, false
+	}
+	selected := make([]string, 0, len(environment))
+	var mask uint8
+	for _, entry := range environment {
+		key, value, _ := strings.Cut(entry, "=")
+		var bit uint8
+		switch key {
+		case "GIT_CONFIG_COUNT":
+			bit = 1
+			if value != "5" {
+				return nil, false
+			}
+			selected = append(selected, "GIT_CONFIG_COUNT=3")
+		case "GIT_CONFIG_KEY_3":
+			bit = 2
+			if value != "gc.autoDetach" {
+				return nil, false
+			}
+		case "GIT_CONFIG_VALUE_3":
+			bit = 4
+			if value != "false" {
+				return nil, false
+			}
+		case "GIT_CONFIG_KEY_4":
+			bit = 8
+			if value != "maintenance.autoDetach" {
+				return nil, false
+			}
+		case "GIT_CONFIG_VALUE_4":
+			bit = 16
+			if value != "false" {
+				return nil, false
+			}
+		default:
+			selected = append(selected, entry)
+		}
+		if bit&mask != 0 {
+			return nil, false
+		}
+		mask |= bit
+	}
+	return selected, mask == 31
 }
 
 func hasProductionIndexMode(environment []string) bool {
