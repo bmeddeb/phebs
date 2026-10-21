@@ -38,6 +38,10 @@ func (root *linuxEpochTraceRoot) serve() {
 			root.refuse("probe-gate-acquire", err)
 			root.stopping = true
 		} else {
+			if err := root.receiveEngineMeasurement(ctx); err != nil {
+				root.refuse("engine-measurement-request", err)
+				root.stopping = true
+			}
 			terminal, err := root.turn(ctx)
 			if err != nil {
 				root.refuse("event-turn", err)
@@ -51,6 +55,10 @@ func (root *linuxEpochTraceRoot) serve() {
 			if err = root.reconcileExitingGroups(ctx); err != nil {
 				root.refuse("group-reconciliation", err)
 				root.unknown = true
+			}
+			if err = root.progressEngineMeasurement(ctx); err != nil {
+				root.refuse("engine-measurement-progress", err)
+				root.stopping = true
 			}
 			if err = root.signalLeaves(ctx); err != nil {
 				root.refuse("owned-stop", err)
@@ -76,6 +84,19 @@ func (root *linuxEpochTraceRoot) serve() {
 					}
 				}
 				if root.observerJoined {
+					if root.serverRun != nil && root.serverRun.engineMeasurementFinished != nil {
+						select {
+						case <-root.serverRun.engineMeasurementFinished:
+						default:
+							root.releaseGate()
+							cancel()
+							select {
+							case <-root.wake:
+							case <-ticker.C:
+							}
+							continue // Endpoint cleanup may still need this actor, never root.done.
+						}
+					}
 					empty, e := root.sessionEmpty(ctx)
 					if empty && e == nil {
 						cancel()
@@ -132,10 +153,10 @@ func (root *linuxEpochTraceRoot) turn(ctx context.Context) (bool, error) {
 		}
 		if stop.signo != 0 {
 			if stop.code != 4 || stop.pid != int32(tid) || stop.uid != uint32(os.Getuid()) {
-				return false, ErrExecutionEpochOne
+				return false, fmt.Errorf("turn/stop-record tid=%d code=%d pid=%d: %w", tid, stop.code, stop.pid, ErrExecutionEpochOne)
 			}
 			if err = root.stopped(ctx, tid, task, stop); err != nil {
-				return false, err
+				return false, fmt.Errorf("turn/stopped tid=%d status=%d: %w", tid, stop.status, err)
 			}
 			continue
 		}
@@ -151,7 +172,7 @@ func (root *linuxEpochTraceRoot) turn(ctx context.Context) (bool, error) {
 			if fallback {
 				fresh, e := linuxEpochTraceIdentityOf(tid)
 				if e != nil || !task.original.sameLifetime(fresh) {
-					return false, ErrExecutionEpochOne
+					return false, fmt.Errorf("turn/fallback-lifetime tid=%d: %w", tid, errors.Join(ErrExecutionEpochOne, e))
 				}
 				if fresh.state == "Z" && task.leader != nil {
 					root.markExiting(task.leader)
@@ -235,8 +256,19 @@ func (root *linuxEpochTraceRoot) stopped(ctx context.Context, tid int, task *lin
 	task.initial = false
 	var information unix.Siginfo
 	_, _, errno := unix.Syscall6(unix.SYS_PTRACE, unix.PTRACE_GETSIGINFO, uintptr(tid), 0, uintptr(unsafe.Pointer(&information)), 0, 0)
+	if errno == unix.EINVAL && signal == int(unix.SIGSTOP) && root.engineLease != nil && task.original.tgid == root.engineLease.leader.original.pid {
+		fresh, err := linuxEpochTraceIdentityOf(tid)
+		if task.engineHeld || err != nil || ctx.Err() != nil || !task.original.sameLifetime(fresh) || fresh.state != "t" {
+			return fmt.Errorf("stop/engine-group-witness tid=%d held=%t state=%s: %w", tid, task.engineHeld, fresh.state, errors.Join(ErrExecutionEpochOne, err, ctx.Err()))
+		}
+		if root.engineLease.aborted {
+			return unix.PtraceCont(tid, 0) // Owned kill already sent; no measurement may commit.
+		}
+		task.engineHeld = true
+		return nil // Classic group-stop is held until our owned SIGCONT + CONT.
+	}
 	if errno != 0 || information.Signo != int32(signal) {
-		return ErrExecutionEpochOne
+		return fmt.Errorf("stop/siginfo tid=%d signal=%d errno=%d signo=%d initial=%t lease=%t held=%t: %w", tid, signal, errno, information.Signo, task.initial, root.engineLease != nil, task.engineHeld, ErrExecutionEpochOne)
 	}
 	// Genuine application/runtime delivery stops are forwarded, including
 	// SIGTRAP. An auto-child SIGSTOP is suppressed only in its initial slot.
@@ -252,10 +284,10 @@ func (root *linuxEpochTraceRoot) event(ctx context.Context, tid int, task *linux
 	case unix.PTRACE_EVENT_FORK, unix.PTRACE_EVENT_VFORK, unix.PTRACE_EVENT_CLONE:
 		child, e := unix.PtraceGetEventMsg(tid)
 		if e != nil || child == 0 || child > uint(^uint(0)>>1) {
-			return ErrExecutionEpochOne
+			return fmt.Errorf("event/creation-message creator=%d child=%d: %w", tid, child, errors.Join(ErrExecutionEpochOne, e))
 		}
 		if e = root.register(ctx, int(child), task); e != nil {
-			return e
+			return fmt.Errorf("event/creation-register creator=%d child=%d: %w", tid, child, e)
 		}
 	case unix.PTRACE_EVENT_EXEC:
 		former, e := unix.PtraceGetEventMsg(tid)
@@ -302,28 +334,31 @@ func (root *linuxEpochTraceRoot) event(ctx context.Context, tid int, task *linux
 	default:
 		return ErrExecutionEpochOne
 	}
-	return unix.PtraceCont(tid, 0)
+	if err := unix.PtraceCont(tid, 0); err != nil {
+		return fmt.Errorf("event/continue tid=%d event=%d: %w", tid, event, err)
+	}
+	return nil
 }
 
 func (root *linuxEpochTraceRoot) register(ctx context.Context, tid int, creator *linuxEpochTraceTask) error {
 	if !root.gateOwned || root.tasks[tid] != nil || root.owner.leaders[tid] != nil {
-		return ErrExecutionEpochOne
+		return fmt.Errorf("register/existing tid=%d gate=%t task=%t leader=%t: %w", tid, root.gateOwned, root.tasks[tid] != nil, root.owner.leaders[tid] != nil, ErrExecutionEpochOne)
 	}
 	fresh, err := linuxEpochTraceIdentityOf(tid)
 	if err != nil || fresh.tracer != root.tid || fresh.namespace == nil || !os.SameFile(fresh.namespace, root.owner.held.pidNamespace) || fresh.sid != root.original.sid {
-		return ErrExecutionEpochOne
+		return fmt.Errorf("register/identity tid=%d tgid=%d parent=%d tracer=%d expected-tracer=%d sid=%d expected-sid=%d state=%s: %w", tid, fresh.tgid, fresh.parent, fresh.tracer, root.tid, fresh.sid, root.original.sid, fresh.state, errors.Join(ErrExecutionEpochOne, err))
 	}
 	root.owner.mu.Lock()
 	full := root.owner.tids >= linuxEpochTraceMaxTIDs
 	root.owner.mu.Unlock()
 	if full {
-		return ErrExecutionEpochOne
+		return fmt.Errorf("register/TID-cap tid=%d: %w", tid, ErrExecutionEpochOne)
 	}
 	var leader *linuxEpochTraceLeader
 	if fresh.pid == fresh.tgid {
 		parent := root.owner.leaders[fresh.parent]
 		if fresh.parent != creator.original.tgid || parent == nil || parent.root != root || len(root.owner.leaders) >= linuxEpochTraceMaxLeaders {
-			return ErrExecutionEpochOne
+			return fmt.Errorf("register/leader-parent tid=%d parent=%d creator-group=%d parent-known=%t: %w", tid, fresh.parent, creator.original.tgid, parent != nil, ErrExecutionEpochOne)
 		}
 		if err = root.liveLeader(ctx, parent); err != nil {
 			return err
@@ -338,7 +373,7 @@ func (root *linuxEpochTraceRoot) register(ctx context.Context, tid int, creator 
 	} else {
 		group := root.owner.leaders[fresh.tgid]
 		if group == nil || group.root != root {
-			return ErrExecutionEpochOne
+			return fmt.Errorf("register/thread-group tid=%d tgid=%d known=%t: %w", tid, fresh.tgid, group != nil, ErrExecutionEpochOne)
 		}
 	}
 	root.tasks[tid] = &linuxEpochTraceTask{original: fresh, initial: true, leader: leader}

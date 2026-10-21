@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"os/exec"
@@ -32,6 +33,12 @@ type linuxEpochTraceMechanical struct {
 }
 
 func linuxEpochTraceMechanicalStart(t *testing.T, mode string, refuseImage bool) *linuxEpochTraceMechanical {
+	return linuxEpochTraceMechanicalStartEngine(t, mode, refuseImage, "")
+}
+
+// A native measurement control may supply its own already-built engine image.
+// This is test-only held-image selection, never production tool admission.
+func linuxEpochTraceMechanicalStartEngine(t *testing.T, mode string, refuseImage bool, engineImage string) *linuxEpochTraceMechanical {
 	t.Helper()
 	repository := ""
 	if mode == "git-maintenance-parent" {
@@ -102,6 +109,38 @@ func linuxEpochTraceMechanicalStart(t *testing.T, mode string, refuseImage bool)
 	for index := range held.gitImages {
 		held.gitImages[index] = git
 	}
+	createdEngineCopy := false
+	if mode == "engine-parent" || mode == "engine-exit-parent" || mode == "engine-burst-parent" {
+		if engineImage == "" {
+			copyFile, copyErr := os.CreateTemp("", "epoch-engine-image-")
+			if copyErr != nil {
+				t.Fatal(copyErr)
+			}
+			engineImage = copyFile.Name()
+			createdEngineCopy = true
+			if _, copyErr = image.Seek(0, 0); copyErr == nil {
+				_, copyErr = io.Copy(copyFile, image)
+			}
+			if copyErr != nil {
+				t.Fatal(copyErr)
+			}
+			if copyErr = copyFile.Chmod(0o500); copyErr != nil {
+				t.Fatal(copyErr)
+			}
+			if copyErr = copyFile.Close(); copyErr != nil {
+				t.Fatal(copyErr)
+			}
+		}
+		held.images[3], err = os.Open(engineImage)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = held.images[3].Close() })
+		// The supplied native image belongs to its enclosing test's TempDir.
+		if createdEngineCopy {
+			t.Cleanup(func() { _ = os.Remove(engineImage) })
+		}
+	}
 	operation, cancel := context.WithTimeout(t.Context(), 20*time.Second)
 	admission := &linuxEpochResourceAdmission{held: held, probeGate: make(chan struct{}, 1), cancel: cancel}
 	held.resources = admission
@@ -116,6 +155,9 @@ func linuxEpochTraceMechanicalStart(t *testing.T, mode string, refuseImage bool)
 	t.Cleanup(func() { _ = output.Close() })
 	command := exec.Command(os.Args[0], "-test.run="+linuxEpochTraceFixtureSelector, "-test.timeout=15s")
 	command.Env = []string{linuxEpochTraceFixtureEnvironment + "=" + mode, "GOMAXPROCS=2", "GORACE=atexit_sleep_ms=0"}
+	if engineImage != "" {
+		command.Env = append(command.Env, "PHEBS_PRIVATE_EPOCH_ENGINE_IMAGE="+engineImage)
+	}
 	if mode == "git-maintenance-parent" {
 		command.Env = append(command.Env, "PHEBS_PRIVATE_EPOCH_TRACE_GIT_REPO="+repository)
 	}

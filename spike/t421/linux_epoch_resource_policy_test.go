@@ -4,6 +4,7 @@ package t421
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"math"
 	"os"
@@ -76,7 +77,11 @@ func TestLinuxEpochResourceInitialReservationAndLiveSlack(t *testing.T) {
 	if checkLinuxEpochLiveMemory(initial, 16<<30, initial) == nil {
 		t.Fatal("held reservation exceeded effective capacity")
 	}
-	if frozenSafetyEnvelope().MaximumPeakRSSBytes != 20<<30 || linuxEpochPolicy().RSSReservationBytes != 4<<30 || linuxEpochPolicy().Schema != "t42-linux-epoch-operational-resources-v7" || !strings.Contains(linuxEpochPolicy().IndexRuntime, "parallelism=1") || !strings.Contains(linuxEpochPolicy().GitRuntime, "maintenance.autoDetach=false") || !validExecutionSHA256(linuxEpochPolicySHA256()) {
+	legacy, err := json.Marshal(linuxEpochPolicyV7())
+	if err != nil || SHA256(legacy) != "sha256:0cc51a0133e9386d9d056995cd5aa57d2652059a189eb770ed066efa442c68a6" || linuxEpochPolicy().EngineMeasurement == "" {
+		t.Fatal("historical private v7 bytes changed or current guard omitted", err)
+	}
+	if frozenSafetyEnvelope().MaximumPeakRSSBytes != 20<<30 || linuxEpochPolicy().RSSReservationBytes != 4<<30 || linuxEpochPolicy().Schema != "t42-linux-epoch-operational-resources-v8" || !strings.Contains(linuxEpochPolicy().IndexRuntime, "parallelism=1") || !strings.Contains(linuxEpochPolicy().GitRuntime, "maintenance.autoDetach=false") || !validExecutionSHA256(linuxEpochPolicySHA256()) {
 		t.Fatal("prospective constraint changed historical envelope")
 	}
 }

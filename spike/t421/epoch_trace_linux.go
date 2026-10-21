@@ -186,6 +186,7 @@ type linuxEpochTraceTask struct {
 	initial    bool
 	reconciled bool // Current dying-group stop; no recovered creation history.
 	leader     *linuxEpochTraceLeader
+	engineHeld bool // An actually consumed group-stop in the one measurement lease.
 }
 type linuxEpochTraceEvent struct {
 	tid, group, event int
@@ -221,6 +222,9 @@ type linuxEpochTraceRoot struct {
 	stopCallback                           func() bool
 	callbackDone                           chan struct{}
 	grace                                  chan struct{}
+	engineRequests                         chan *linuxEpochEngineRequest
+	engineDone                             chan struct{}
+	engineLease                            *linuxEpochEngineLease // Creating actor only.
 }
 
 func newLinuxEpochTraceOwner(admission *linuxEpochResourceAdmission) (*linuxEpochTraceOwner, error) {

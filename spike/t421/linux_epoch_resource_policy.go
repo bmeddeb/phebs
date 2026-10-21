@@ -41,9 +41,10 @@ type linuxEpochResourcePolicy struct {
 	DyingGroups               string `json:"dying_groups"`
 	IndexRuntime              string `json:"index_runtime"`
 	GitRuntime                string `json:"git_runtime"`
+	EngineMeasurement         string `json:"engine_measurement,omitempty"`
 }
 
-func linuxEpochPolicy() linuxEpochResourcePolicy {
+func linuxEpochPolicyV7() linuxEpochResourcePolicy {
 	return linuxEpochResourcePolicy{
 		Schema:              "t42-linux-epoch-operational-resources-v7",
 		RSSReservationBytes: linuxEpochRSSReservation, KernelCacheAllowanceBytes: linuxEpochKernelCacheAllowance, HostHeadroomBytes: linuxEpochHostHeadroom,
@@ -58,6 +59,13 @@ func linuxEpochPolicy() linuxEpochResourcePolicy {
 		Tracing:      fmt.Sprintf("held-resource-issued;two-root-actors;queued-probe-gate-acquisition-within-existing-2s-turn-including-native-work:no-scheduler-latency-guarantee;stop-and-grace-wakes-may-buffer-during-that-budget;pidfd-poll-EINTR-only-same-fd-existing-context-retry;unbounded-cleanup-loops-one-real-poll-per-existing-wake-or-tick:EINTR-grants-no-readiness;actual-DA-Start-and-sole-root-Wait-on-locked-creator;Start-and-initial-capture-share-probe-gate;process-leader-cap=%d;active-plus-witnessed-EXIT-TID-cap=%d;original-process-pidfds-at-most-leader-cap;recent-event-ring-per-root=%d;completed-three-server-ring-and-map-backing-retained-in-controller-RSS;overflow-safe-counters-no-cumulative-history;SIGCHLD-wakes-plus-%dms-fallback;targeted-registered-waits-no-global-wait-no-syscall-tracing;actual-held-image-before-root-entry-inherited-registration-and-every-EXEC-continue;no-process-leader-detach-before-terminal-copy;queued-cancellation-serviced-through-real-joins;final-retirement-actor-TracerPid-status-census-before-and-after-observer-join:host-entry-cap=%d,status-read-cap=64KiB:no-new-signal-or-reap-authority;unknown-closure-retains-actor-and-loans", linuxEpochTraceMaxLeaders, linuxEpochTraceMaxTIDs, linuxEpochTraceRecentEvents, linuxEpochTraceFallback.Milliseconds(), linuxEpochTraceMaxHostEntries),
 		DyingGroups:  "late-current-nonleader-custody-only;original-registered-unreaped-process-pidfd-and-TGID;original-parent-birth-SID-pid-namespace-own-TracerPid;fresh-bracketed-task-birth-name-and-actual-held-mm-before-owned-stop-continuation;no-recovered-creation-event-or-history;no-process-leader-adoption;bounded-known-group-task-directory-under-global-active-TID-cap-and-overflow-sentinel;only-after-registered-siblings-drain;witnessed-nonleader-EXIT-detach-keeps-existing-global-TID-reservation-until-current-absence-new-birth-or-actual-group-CLD:no-signal-or-reattach-authority;dying-group-cleanup-only;leader-exit-through-actual-group-terminal-CLD-shares-existing-probe-gate;Z-leader-with-live-siblings-grants-no-zero-RSS-category;same-existing-2s-cooperative-probe-and-always-live-whole-sampler-no-new-group-duration-bound;actual-sole-root-Wait-status-preserved",
 	}
+}
+
+func linuxEpochPolicy() linuxEpochResourcePolicy {
+	policy := linuxEpochPolicyV7()
+	policy.Schema = "t42-linux-epoch-operational-resources-v8"
+	policy.EngineMeasurement = "authenticated-EM01-FD7-only-with-existing-FD6;server-producers=2,3,4;maximum-points=6,1,2;existing-phases=2-3-4,5,6;original-producer-binding-and-input-SHA;no-request-PID-path-image-or-action;unique-already-registered-held-Surreal-direct-child-original-pidfd-parent-birth-SID-namespace-TracerPid-and-mm;SIGSTOP-forwarded-to-actual-owned-groupstop-every-current-source-registered-TID;two-bounded-equal-task-censuses-under-existing-global-1024-cap;hold-ACK-only-after-all-actual-groupstop-witnesses;probe-gate-released-through-walk-and-whole-meter-continues;SIGCONT-then-CONT-only-original-owned-held-slots;release-ACK-after-real-all-thread-resume;existing-2s-cooperative-actor-turn-and-original-operation-deadline;existing-5s-cleanup-only;incomplete-stop-abort-original-pidfd-kill-retains-genuine-Wait-and-custody;one-extra-socket-pair-one-endpoint-goroutine-one-lease-per-live-server;finite-152+80*points-wire-bytes-subtracted-from-existing-output-stream-ceiling;no-query-sync-retry-publication-work-no-new-child-or-corpus-hash;historical-v7-bytes-and-formal-V1-V6-unchanged"
+	return policy
 }
 
 func linuxEpochPolicySHA256() string {

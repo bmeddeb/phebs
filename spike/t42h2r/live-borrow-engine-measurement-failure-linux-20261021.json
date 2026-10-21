@@ -1,0 +1,119 @@
+{
+  "schema": "t42-linux-live-borrow-engine-measurement-failure-v1",
+  "source_commit": "304b2b8ddda48d2ccbe168a931e2e133b5ecc852",
+  "source_tree": "90bcd739b6aa9535b1369bd62a6f6186e19377e2",
+  "status": "FAILED_NO_COMPOSED_ACCEPTANCE",
+  "test": "TestLinuxEpochRequiredNativeLiveBorrow",
+  "actual_tool_session": 75430,
+  "actual_tool_exit": 1,
+  "actual_native_root_pid": 1295469,
+  "elapsed_seconds": 3448.922722368996,
+  "failed_phase": "cold",
+  "fixed_failure_step": "cold-to-warm",
+  "first_retained_refusal": "operation-return/cold-to-warm",
+  "trace_failure_available": false,
+  "http": {
+    "status": 409,
+    "body_bytes": 25,
+    "body": "workspace sample refused\n"
+  },
+  "successful_prefix": {
+    "protected_reference_comparisons": 3,
+    "initial_memory_admission_passed": true,
+    "initial_available_bytes": 9585045504,
+    "initial_required_bytes": 8499585024,
+    "payload_bytes": 2057134080,
+    "whole_rss_limit_bytes": 4294967296,
+    "authorA_actual_wait_exit": 0,
+    "authorA_joined": true,
+    "authorA_session_empty": true,
+    "first_server_health_passed": true
+  },
+  "whole_rss_conclusion": "Unavailable sampled prefix has RSSLimitExceeded=false; neither complete RSS fit nor breach is established. Later process-only unavailable reports are secondary after the first operation refusal.",
+  "runtime_custody": "Initial flow done=false; later joined/read-safe diagnostic retains sticky cleanup error. Neither eventual joins nor sampled absence proves globally clean teardown or complete custody. Exact failed fixture retained at failure; its subsequent forensic archival disposition is recorded below.",
+  "source_diagnosis": "The non-Darwin store implementation is an unconditional quiescence refusal on Linux. This is a definite source blocker. WB begin then failure does not prove the exact earlier SDK/context branch or any actual SIGSTOP/walk/SIGCONT occurred. Classic ptrace GETSIGINFO/EINVAL group-stop handling separately needs explicit coordination; no generic EINVAL suppression or detach is selected.",
+  "prospective_correction": "Native Linux original-pidfd/identity/SDKidle/soleWait guard plus distinct authenticated EM01 FD7 to existing tracer actor, all-current-TID actual group-stop witnesses and held mm, gate-free walk with live whole meter, actual SIGCONT+owned-slot CONT+resumed proof before release ACK. Existing guarded points6/1/2, phase/probe/cleanup/numeric bounds; prospective privatev8 only, formalV1-V6 and privatev7 preserved.",
+  "raw_bindings": [
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/t42h2rcc-v7-native-templates-apzfxa7g/full-native/terminal-cold-failure/native.stdout",
+      "bytes": 15517,
+      "sha256": "5a7d5f13a594b83684e1ea111c066436bcbaa148d1132d3cb9a3410b20463af3"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/t42h2rcc-v7-native-templates-apzfxa7g/full-native/terminal-cold-failure/native.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/t42h2rcc-v7-native-templates-apzfxa7g/full-native/terminal-cold-failure/result.json",
+      "bytes": 441,
+      "sha256": "7c34b933eb71dc4d2076e2dee8662fa6bc8f46d240d10f511b302bf1dd49af80"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/t42h2rcc-v7-native-templates-apzfxa7g/full-native/terminal-cold-failure/invocation.json",
+      "bytes": 6638,
+      "sha256": "502388a6858ac0f36173932c4a4f08cf2b528eda6c6a801e21f82492fd0e0b3a"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/t42h2rcc-v7-native-templates-apzfxa7g/full-native/terminal-cold-failure/prelaunch-invocation.json",
+      "bytes": 1370,
+      "sha256": "7ae351a6ff204b44f004a1f40bc24fb0182aaded3772ef4cb7fef117db4c06d3"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/t42h2rcc-v7-native-templates-apzfxa7g/full-native/terminal-cold-failure/joined-inspection-1.body",
+      "bytes": 25,
+      "sha256": "0059ac93ff66c28eecf70a8312160ab235f7fab8430dc6d52a69d97f28a71aff"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/t42h2rcc-v7-native-templates-apzfxa7g/full-native/terminal-cold-failure/joined-server-1.log",
+      "bytes": 9321079,
+      "sha256": "d6253351157657f98607c1acfec76de0bcbd65bb6261e4cbabe73c13ca32c3f8"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/t42h2rcc-v7-native-templates-apzfxa7g/full-native/terminal-cold-failure/exact-source.tar.gz",
+      "bytes": 67623464,
+      "sha256": "f48a50bb66e0759689e4c0d9494df4c1c090d659cdb69ba6a228ce0aa0c44d50"
+    }
+  ],
+  "exact_source_bindings": [
+    {
+      "path": "internal/store/engine_quiescence_other.go",
+      "bytes": 267,
+      "sha256": "e0ca3bed2f0b4380cef93949935e21c7532c00a76495cf0aadee7a7293495f97"
+    },
+    {
+      "path": "internal/store/engine_quiescence.go",
+      "bytes": 4076,
+      "sha256": "e358b9006d5288c700f2ba155c63bade5fed03f0cc41e6277558960245141c33"
+    },
+    {
+      "path": "cmd/phebs/t422_workspace_bytes.go",
+      "bytes": 9580,
+      "sha256": "fd2a90e9ea638161898efac0eb37fb479ed1317887d3ea241b604338699c31b7"
+    },
+    {
+      "path": "cmd/phebs/t422_workspace_command.go",
+      "bytes": 5417,
+      "sha256": "43b1a4f377cb8cb0bdbfc4fb5b2c6026a6effa946594d7eba9fdca6ceeadc68e"
+    },
+    {
+      "path": "spike/t421/epoch_trace_events_linux.go",
+      "bytes": 18172,
+      "sha256": "566f7994f41d1dba77fa6d1a3f9ad8062f7f447bdbbb9997394facc8263009b5"
+    }
+  ],
+  "fixture_preserved": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/t42h2rcc-v7-native-templates-apzfxa7g/full-native/tmp/phebs-linux-live-epochs-414839267",
+  "scope": "No complete native/three-epoch/H2/readiness/freeze/merge/ceremony/clean teardown claim; no unchanged full retry or bound relaxation.",
+  "fixture_archival_disposition": {
+    "status": "FAILED_FIXTURE_FORENSICALLY_ARCHIVED_AND_ABANDONED_PATH_RETIRED",
+    "archive": "/home/ben/phebs-rehearsals/t42-failed-304b-forensic-archive-mdrr7pfh/failed-fixtures.tar.gz",
+    "archive_sha256": "16b0a3d9285f60c635543fa0f5be60db0d6c77599ed2542f4daa632e0be72aa9",
+    "archive_bytes": 311325654,
+    "manifest_sha256": "0912b90103182be73f819e5089909ba5daafbd1e12dd67ff9ecf432cdfbf18b1",
+    "entries": 34067,
+    "hardlink_groups": 588,
+    "retirement_handoff": "/home/ben/phebs-rehearsals/t42-failed-304b-forensic-archive-mdrr7pfh/retirement-handoff.json",
+    "retirement_handoff_sha256": "6333fe66cb9693b988464ea1ac6976f84f0ff843f5c8357e627ba36dac09afe5",
+    "scope": "Historical failure/unknown runtime custody unchanged. Byte/metadata/pathset/hardlink-verified forensic archive; outside raw/source and two internal recovery copies preserved. Restored inodes grant no admission or native history."
+  }
+}

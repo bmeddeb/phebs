@@ -2,6 +2,7 @@ package t421
 
 import (
 	"context"
+	"net"
 	"os"
 	"time"
 
@@ -25,4 +26,6 @@ type executionEpochNativeAdapter interface {
 	startWait(context.Context, *ExecutionEpochOneRun, uint32) (<-chan error, error)
 	finish(*ExecutionEpochOneRun, <-chan error, bool, error, time.Time) (bool, bool, error)
 	workspace() (*os.File, string, [2]int32)
+	engineMeasurements(uint64) uint32
+	serveEngineMeasurement(context.Context, *ExecutionEpochOneRun, *net.UnixConn, dispatchadmission.EngineMeasurementBinding, uint32) <-chan error
 }

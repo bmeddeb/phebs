@@ -1,0 +1,409 @@
+{
+  "schema": "t42-linux-live-borrow-engine-measurement-bounded-v1",
+  "source_base": "304b2b8ddda48d2ccbe168a931e2e133b5ecc852",
+  "status": "BOUNDED_ENGINE_COORDINATION_PASS_FULL_NATIVE_PENDING",
+  "private_resource_policy": {
+    "schema": "t42-linux-epoch-operational-resources-v8",
+    "sha256": "1b755e4b6b0e72166483c767107bbc3714b2750f4eb01999068486a95bf1a5f6",
+    "historical_v7_sha256": "0cc51a0133e9386d9d056995cd5aa57d2652059a189eb770ed066efa442c68a6",
+    "guarded_point_maxima": [
+      6,
+      1,
+      2
+    ],
+    "formal_V1_V6_unchanged": true
+  },
+  "tests": {
+    "native_actor": [
+      {
+        "mode": "normal",
+        "actual_tool": 16884,
+        "actual_exit": 0,
+        "seconds": 7.097844528994756,
+        "nodes": {
+          "pass": 98,
+          "fail": 0,
+          "skip": 0
+        },
+        "source_unchanged": true
+      },
+      {
+        "mode": "race",
+        "actual_tool": 80317,
+        "actual_exit": 0,
+        "seconds": 11.457652944009169,
+        "nodes": {
+          "pass": 98,
+          "fail": 0,
+          "skip": 0
+        },
+        "source_unchanged": true
+      }
+    ],
+    "em01": {
+      "normal_nodes": 80,
+      "race_nodes": 80,
+      "failed": 0,
+      "skipped": 0,
+      "source_all_match": true
+    },
+    "store_guard": {
+      "normal_nodes": 25,
+      "race_nodes": 25,
+      "failed": 0,
+      "skipped": 0,
+      "source_all_match": true,
+      "actual_untraced_Surreal_and_SDK_stop_resume": true,
+      "Surreal_Wait0_not_asserted": true
+    }
+  },
+  "static": {
+    "actual_tool": 32597,
+    "actual_exit": 0,
+    "steps": [
+      {
+        "step": "vet",
+        "actual_exit": 0,
+        "elapsed_seconds": 4.083468744007405,
+        "source_unchanged": true
+      },
+      {
+        "step": "lint",
+        "actual_exit": 0,
+        "elapsed_seconds": 17.607728137998492,
+        "source_unchanged": true
+      },
+      {
+        "step": "linux-arm64",
+        "actual_exit": 0,
+        "elapsed_seconds": 23.927023280004505,
+        "source_unchanged": true,
+        "artifact": {
+          "bytes": 83950838,
+          "sha256": "381cedc2d2c9e8b40bd48710d03fe2f356a160532b92c1eb8317d0d833dd352d",
+          "executed": false
+        }
+      },
+      {
+        "step": "docs",
+        "actual_exit": 0,
+        "elapsed_seconds": 1.5825029349944089,
+        "source_unchanged": true
+      },
+      {
+        "step": "whitespace",
+        "actual_exit": 0,
+        "elapsed_seconds": 0.05393282500153873,
+        "source_unchanged": true
+      }
+    ],
+    "darwin_compile_only": {
+      "path": "/home/ben/phebs-rehearsals/t42h2-engine-supported-cross-c75x914a/terminal-audit.json",
+      "bytes": 8997,
+      "sha256": "22341d2dc56960e129d63f4cd3cf98c97d88581a3c18e5f9eff21d69ff7bc3ea"
+    },
+    "darwin_scope": "Both supported Darwin compile results cover unchanged applicable Go sources; subsequent changes are Linux-tagged tests and docs. No Darwin native execution. Linux arm64 freshly recompiled after fixture change.",
+    "module_and_workspace_checks": [
+      {
+        "path": "/home/ben/phebs-rehearsals/t42h2-engine-static-current/module-result.json",
+        "bytes": 84,
+        "sha256": "16d31b8f89b6d073cc2826deccad56307ff6b8d28cc14f3bdb0758716787b73d"
+      },
+      {
+        "path": "/home/ben/phebs-rehearsals/t42h2-engine-static-current/cmd-workspace-result.json",
+        "bytes": 91,
+        "sha256": "1a11494f515fdec687f066b5bd1d9980b89a2c9e78959f2f3518f8a372b0a7ed"
+      }
+    ],
+    "lint_scope": "Existing new-from-base differential lint passes. Earlier full scoped lint retained50 inherited Linux-unused findings, not repaired or called green."
+  },
+  "reviews": [
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2-engine-em01-design-agd8zupq/independent-store-tracer-source-review.json",
+      "bytes": 10112,
+      "sha256": "b275a39db8473fb83c46a3433dae01602f14daa407f913fda441d37135f84ab6"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2-engine-em01-independent-review-y2wexr0e/source-review-final.json",
+      "bytes": 15702,
+      "sha256": "b055fa8f6862d2bf5e336ec57999a67a89d1d88ff6390e6b3ad8fd2f437d7794"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2-engine-native-fixture-review-fxcob5fq/source-review.json",
+      "bytes": 7091,
+      "sha256": "439585daeaa59a09f2041d22ed5a6da0f90320e4c3604d7156e5b68756d37d54"
+    }
+  ],
+  "review_scope": "Independent implementation/cost and native-fixture delta reviews report zero actionable findings in assigned scope; runtime gates not waived.",
+  "carried_typed_extraction": {
+    "receipt": {
+      "path": "spike/t42h2r/live-borrow-typed-extraction-v6-bounded-linux-20261021.json",
+      "bytes": 19659,
+      "sha256": "15871e30acff118ec83144180242502228261ec0d96de6d19f25b159c7d2c585"
+    },
+    "unchanged_typed_source_bindings_match": true,
+    "changed_cross_cutting_bindings": [
+      "spike/t421/epoch_launch.go",
+      "spike/t421/linux_epoch_resource_policy.go"
+    ],
+    "scope": "Historical178/178 bounded extraction assertions on unchanged typed extraction sources only. Current engine FD7 launch/private policy replace these two old bindings and need fresh composed native acceptance; old complete integration qualification is not replayed."
+  },
+  "retained_failed_diagnostics": [
+    {
+      "actual_tool": 23432,
+      "actual_exit": 1,
+      "scope": "Generic event-turn after CLONE remains unattributed; no missing identity inferred."
+    },
+    {
+      "actual_tool": 31093,
+      "actual_exit": 1,
+      "result": {
+        "path": "/home/ben/phebs-rehearsals/t42h2-engine-actor-current/actor-current-allmode-diagnostic-result.json",
+        "bytes": 2899,
+        "sha256": "b97da881f4e7eda83875363d07574159d82729efe063c8432fa5e794218ccf96"
+      },
+      "scope": "Consumed CLONE773/message4352; unknown inner closure retained."
+    },
+    {
+      "actual_tool": 42042,
+      "actual_exit": 1,
+      "result": {
+        "path": "/home/ben/phebs-rehearsals/t42h2-engine-actor-current/actor-controlled-exit-normal-2-result.json",
+        "bytes": 2899,
+        "sha256": "0943bfae6e676e7cb326b22896342815ca04a3e3ea6875fc80e0bbf84d699d0c"
+      },
+      "scope": "Direct-exit experiment also lost creation message; rejected/reverted as a fix, unknown inner closure retained."
+    }
+  ],
+  "kernel_counterexample": {
+    "proof": {
+      "path": "/home/ben/phebs-rehearsals/t42h2-clone-exit-pair-repro-20261021/proof.json",
+      "bytes": 918,
+      "sha256": "069c579dd6db55253496160fd938447386450e21d36e122650ba8882f787b5b7"
+    },
+    "compile": {
+      "path": "/home/ben/phebs-rehearsals/t42h2-clone-exit-pair-repro-20261021/compile-result.json",
+      "bytes": 1433,
+      "sha256": "c1f7e3f3f09175940015a842c902bd777ec3ffe0df74cb1f404323a09c5fcf8d"
+    },
+    "run": {
+      "path": "/home/ben/phebs-rehearsals/t42h2-clone-exit-pair-repro-20261021/native-result.json",
+      "bytes": 1231,
+      "sha256": "a011ec3a439b91b5b3f6c442f46c7470f9262a23eac57c74ff3d90f599181e19"
+    },
+    "scope": "Own host probe privately retained actual child before independent main exit17. Same creator advanced CLONE773 to EXIT1541/message4352 without tracer CONT. Actual original parent Wait17 and three known TID retirement proved; no DA/admission, old missing-child identity, universal closure or full native qualification."
+  },
+  "positive_fixture_scope": "Native-tag-only fixed own pthread engine; explicit compiler Wait/source/image hashes logged before owner. All workers created at READY/CONT boundaries and joined before successful exit. Eight genuinely new actor-registered TIDs required after resume. Unchanged Go parent still subject to strict unknown refusal. No production identity retry, guessed history or terminal waiver.",
+  "forensic_cleanup": {
+    "path": "/home/ben/phebs-rehearsals/t42-failed-304b-forensic-archive-mdrr7pfh/retirement-handoff.json",
+    "bytes": 6819,
+    "sha256": "6333fe66cb9693b988464ea1ac6976f84f0ff843f5c8357e627ba36dac09afe5"
+  },
+  "cost": "Only explicitly requested measurements add original-pidfd/identity/all-TID stop and resume checks under engine/SDK locks; probe gate released during walk, whole meter stays live. One socket pair/endpoint/lease per live server, two small channels per traced root. Finite152+80*points wire bytes deducted from existing output ceiling. Original phase/probe/cleanup/1024TID/numeric bounds. Compiler/pthread fixture only opt-in test preparation. No new production query, sync, retry/no-op, publication, child, schema, cache or corpus hash work.",
+  "limits": [
+    "Full composed native pass pending; no H2/readiness/freeze/merge/ceremony completion.",
+    "Lost creation history under fatal group exit still refuses; mechanism proof does not repair old unknown identity.",
+    "Wrapper Wait/SID absence never proves unobserved inner joins or custody.",
+    "Failed304b full run and unknown custody remain unchanged after verified forensic archive.",
+    "No ceremony execution or production signing/activation authority."
+  ],
+  "source_binding": [
+    {
+      "path": "cmd/phebs/t422_workspace_bytes.go",
+      "bytes": 9580,
+      "sha256": "fd2a90e9ea638161898efac0eb37fb479ed1317887d3ea241b604338699c31b7"
+    },
+    {
+      "path": "cmd/phebs/t422_workspace_command.go",
+      "bytes": 5417,
+      "sha256": "43b1a4f377cb8cb0bdbfc4fb5b2c6026a6effa946594d7eba9fdca6ceeadc68e"
+    },
+    {
+      "path": "go.mod",
+      "bytes": 9366,
+      "sha256": "424c7e1038c71c10676fc3bad01e155ebc5f912a4eea65e90c284b30951a9275"
+    },
+    {
+      "path": "go.sum",
+      "bytes": 99030,
+      "sha256": "d7aa72d0c2c4283125d37d4377e74be0e87723735a27015900d23092798b1665"
+    },
+    {
+      "path": "internal/dispatchadmission/bootstrap.go",
+      "bytes": 24991,
+      "sha256": "947b6ea0c0dfb8bbaeaa04c93338d332fa7c4fbaaed460fe63744e1edfe9bbb6"
+    },
+    {
+      "path": "internal/dispatchadmission/engine_measurement.go",
+      "bytes": 14758,
+      "sha256": "030ba7d40527ea03d9aac2d64b31ad3fe3271580b4f2c44e4c3618059c9bebfc"
+    },
+    {
+      "path": "internal/dispatchadmission/engine_measurement_linux_test.go",
+      "bytes": 3551,
+      "sha256": "2cd668f1591259f6135425ad5bc717456d7c17a2bbee8e1451e0f0d7db3cf0af"
+    },
+    {
+      "path": "internal/dispatchadmission/engine_measurement_test.go",
+      "bytes": 17462,
+      "sha256": "058fd0b82886150843624fee8fed12d0714291e5e93c72a475e5e3a61e2c2997"
+    },
+    {
+      "path": "internal/dispatchadmission/production.go",
+      "bytes": 20587,
+      "sha256": "5e6c76655b39764d86af99d270b8a76cac5471fa4cf6ebf63c0dae15e94d1a27"
+    },
+    {
+      "path": "internal/store/engine_quiescence.go",
+      "bytes": 4076,
+      "sha256": "e358b9006d5288c700f2ba155c63bade5fed03f0cc41e6277558960245141c33"
+    },
+    {
+      "path": "internal/store/engine_quiescence_linux.go",
+      "bytes": 14546,
+      "sha256": "c2cd465693daa09014b2f333078c230eb8bb7631c28af110ade0d8842419100a"
+    },
+    {
+      "path": "internal/store/engine_quiescence_linux_test.go",
+      "bytes": 17205,
+      "sha256": "232b52ecb8e1ad36bd867376656d802b5793f3a55cced52e0a07543e3685854c"
+    },
+    {
+      "path": "internal/store/engine_quiescence_other.go",
+      "bytes": 277,
+      "sha256": "ecf63e43d0ea686159f89e1b5188e372e7193920defd5633ed3c5a53770d85dc"
+    },
+    {
+      "path": "spike/t421/epoch_engine_endpoint_linux.go",
+      "bytes": 1628,
+      "sha256": "0d669e5617a7f5a82a513e11bb0f069a47b284343d58ecc51f235b1900e6a4c4"
+    },
+    {
+      "path": "spike/t421/epoch_engine_fixture_native_linux_test.go",
+      "bytes": 3652,
+      "sha256": "a7876e5d76237be25ab6fe2ddc39c8dcb90d2eb7836498f66d83dfbb3106c3c6"
+    },
+    {
+      "path": "spike/t421/epoch_engine_measurement_linux.go",
+      "bytes": 10883,
+      "sha256": "41570ad4d4e484714bfc99e3cc7a83f351a1287c6d8ea81225dba7a40c0672f1"
+    },
+    {
+      "path": "spike/t421/epoch_engine_measurement_linux_test.go",
+      "bytes": 9855,
+      "sha256": "7a6e2fbae195eb0b54da3540f9b392ec891a3294b933c009b628a60a5317d758"
+    },
+    {
+      "path": "spike/t421/epoch_engine_measurement_unit_linux_test.go",
+      "bytes": 534,
+      "sha256": "73dcb2db2ffb365d63cfa73a60fb8050d3f263eabca4b4614301f75eecaf6d6b"
+    },
+    {
+      "path": "spike/t421/epoch_launch.go",
+      "bytes": 68496,
+      "sha256": "8497fe686fbac0395ceb8d1820f05457671b40f98f3e826dc9c79407c720b548"
+    },
+    {
+      "path": "spike/t421/epoch_native_adapter.go",
+      "bytes": 1301,
+      "sha256": "a3e30e5e603b96e0978cfe7e3286d504e63c2f504661226448ea7887e4b4b2df"
+    },
+    {
+      "path": "spike/t421/epoch_trace_actor_linux.go",
+      "bytes": 11520,
+      "sha256": "c94932897ebe1e22a57f89cb64a58f81798b200ce306da2fda1d35b9f61f1208"
+    },
+    {
+      "path": "spike/t421/epoch_trace_events_linux.go",
+      "bytes": 20907,
+      "sha256": "85554e4053bdadebdd3d79ba38c5886efd2a5fe6c95ea290c023140639bdd853"
+    },
+    {
+      "path": "spike/t421/epoch_trace_fixture_linux_test.go",
+      "bytes": 11435,
+      "sha256": "4cde94901c5f600f17c079808e171e4d0074a4d55d071eff140638d22c939b14"
+    },
+    {
+      "path": "spike/t421/epoch_trace_linux.go",
+      "bytes": 13092,
+      "sha256": "cc6a24446f93f36234680e0bf5dd20020289d50c3f3a1d11c7c7d7309438185d"
+    },
+    {
+      "path": "spike/t421/epoch_trace_linux_test.go",
+      "bytes": 20462,
+      "sha256": "e86fab53330340ea28c4fc52b660796c6a2fafcac94bff2a6d1f7dd3c5dba758"
+    },
+    {
+      "path": "spike/t421/linux_epoch_resource_policy.go",
+      "bytes": 21178,
+      "sha256": "8d96ac043502f6a3b1f5c111fdc62de63e627c891f6d1829fa32be227b043531"
+    },
+    {
+      "path": "spike/t421/linux_epoch_resource_policy_test.go",
+      "bytes": 13477,
+      "sha256": "f8eeeb86a9f79736d2fdfcde0580d1b6a19f59ffa1b9d7efcb58cc778079d6e8"
+    }
+  ],
+  "raw_bindings": [
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2-em01-six-points-55wys3li/terminal-audit.json",
+      "bytes": 3669,
+      "sha256": "160a2039ff16f0b60a4de0b3bc5c6cb33b446f1f1763beacb887efb9aa509434"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2-linux-engine-guard-2n3bey9p/author-handoff-release-await.json",
+      "bytes": 12080,
+      "sha256": "b265e5421a36f6796e5e0c2e14597b7d34321762c026c2d0a4394147c1a3eda3"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2-engine-final-static-674d08gi/policy-derivation.json",
+      "bytes": 792,
+      "sha256": "679af74b080aafc699f8a944964413e42bc657c3d835b1c34477961985f501ad"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2-engine-actor-current/actor-pthread-native-broad-normal-invocation.json",
+      "bytes": 1899,
+      "sha256": "15396b5fbe99db894efc6fa8c63175d52c6b90be91eeb2a42e66880252a77f6c"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2-engine-actor-current/actor-pthread-native-broad-normal-result.json",
+      "bytes": 3414,
+      "sha256": "15812022883dfc765c0bfc1571347357be89c2cf4de1128dd26a58d168b53c33"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2-engine-actor-current/actor-pthread-native-broad-normal.stdout",
+      "bytes": 21083,
+      "sha256": "f7bc6e81b48fee75fec776c54ca12d5f75179d3baee7422fc1c234e0887e82a0"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2-engine-actor-current/actor-pthread-native-broad-normal.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2-engine-actor-current/actor-pthread-native-broad-race-invocation.json",
+      "bytes": 1912,
+      "sha256": "512bed60f9c6452526ccdac6a70fbcf45c71218a5c9c45ebb1c9415a1ea6d1d7"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2-engine-actor-current/actor-pthread-native-broad-race-result.json",
+      "bytes": 3415,
+      "sha256": "bd718e8a37343d3ab444990b7f1458de8d38e52dff32b78d2d5e9fd137bdf3b5"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2-engine-actor-current/actor-pthread-native-broad-race.stdout",
+      "bytes": 21083,
+      "sha256": "1027a110b4215bfa5243b05159728c6c5465941c126f9fa45711b53bfad3c76a"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2-engine-actor-current/actor-pthread-native-broad-race.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2-engine-final-static-674d08gi/results.json",
+      "bytes": 32863,
+      "sha256": "f7e35d5032c9791dc8ed6812c149c96d6a3df39900fc6296e7eb40c8320e5707"
+    }
+  ]
+}

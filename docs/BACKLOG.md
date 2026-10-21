@@ -4909,6 +4909,32 @@ by genuine root Wait0/HUP/DA closure. Independent source/cost review is clean.
 The unchanged V6 extraction qualification carries forward by exact source
 bindings; full native acceptance is still pending.
 
+
+The next exact `304b2b8d` full native attempt returned outer Wait1 after
+3,448.923s at cold workspace measurement (HTTP409, retained 25-byte refusal),
+after protected comparisons, initial RAM admission and author A Wait0/join/empty
+session. The first refusal is `operation-return/cold-to-warm`; later unavailable
+samplers prove no RSS fit/breach or clean custody. Exact raw/source/HTTP/log
+bytes remain preserved in the [failure record](../spike/t42h2r/live-borrow-engine-measurement-failure-linux-20261021.json).
+The unsupported Linux store guard and classic ptrace
+measurement coordination are now being corrected under prospective private v8.
+Separate authenticated EM01 FD7 retains FD6 scope and existing guarded point
+counts six/one/two for producers two/three/four. Every owned thread must actually
+stop before measurement and resume before acknowledgment; the whole meter stays
+live during the walk. Original phase, probe, cleanup and numeric bounds remain.
+Bounded controls/review and a fresh full native pass remain the merge bar.
+
+The [engine coordination bounded record](../spike/t42h2r/live-borrow-engine-measurement-bounded-linux-20261021.json)
+passes 98 native tracer, 80 EM01 and 25 store-guard nodes per normal/race mode,
+with no skips, plus tagged vet, differential lint, supported compilation and
+docs gates. Independent source/cost and native-fixture reviews are clear.
+The positive pthread fixture admits eight actual new post-resume TIDs and
+joins its workers before exit; an independent own-child kernel probe confirms
+that fatal group exit can replace a pending creation message. Lost history
+still refuses, and earlier Go-stress failures retain unknown inner closure.
+Neither bounded controls nor that diagnostic replaces the fresh complete
+native pass required before PR #156 integration.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

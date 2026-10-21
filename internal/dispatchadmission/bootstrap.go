@@ -63,13 +63,14 @@ type ProductionBootstrap struct {
 	// already-started phase deadline. Omission preserves legacy bytes.
 	ArchiveDeadlineUnixNano int64  `json:",omitempty"`
 	ArchiveMeasurements     uint32 `json:",omitempty"`
+	EngineMeasurements      uint32 `json:",omitempty"`
 }
 
 func (record ProductionBootstrap) validate() error {
 	if (record.Control.WarmStartWorkspace || record.Control.PhysicalPostAuthorWorkspace) && (record.Program != ProgramPhebs || record.SemanticMode != ProductionSemanticV3 || record.Producer.ID != 2 || record.Phase != 2 || record.Store == nil || record.Workspace == nil) {
 		return ErrProductionBootstrap
 	}
-	if record.validateWorkspace() != nil || record.validateArchiveMeasurements() != nil {
+	if record.validateWorkspace() != nil || record.validateArchiveMeasurements() != nil || record.validateEngineMeasurements() != nil {
 		return ErrProductionBootstrap
 	}
 	if record.Control.BackupEndpointCarry && (record.Program != ProgramPhebs || record.SemanticMode != ProductionSemanticV3 || record.Producer.ID != 5 || record.Phase != 8 || record.Store == nil) {
@@ -368,7 +369,9 @@ func bootstrapSelectedProgram(ctx context.Context, program string, required bool
 	// Observe the original FD6 before socket adoption can allocate a duplicate
 	// at that number. Merely observing never adopts/closes an omitted handle.
 	workspace := captureInheritedProductionWorkspace()
-	archive := captureInheritedArchiveMeasurement()
+	// FD7 has one original identity. The authenticated record chooses AM01 or
+	// EM01; an omitted or originally absent descriptor is never retried/adopted.
+	measurement := captureInheritedArchiveMeasurement()
 	if !inheritedProductionSocket(3) || !inheritedProductionSocket(4) || storeSelected && !inheritedProductionSocket(5) {
 		return nil, ErrProductionBootstrap
 	}
@@ -376,7 +379,7 @@ func bootstrapSelectedProgram(ctx context.Context, program string, required bool
 	if storeSelected {
 		storeFile = os.NewFile(5, "production-store")
 	}
-	return bootstrapProgramWithArchive(ctx, os.NewFile(3, "production-admission"), os.NewFile(4, "production-phase"), storeFile, program, nil, workspace, nil, archive)
+	return bootstrapProgramWithArchive(ctx, os.NewFile(3, "production-admission"), os.NewFile(4, "production-phase"), storeFile, program, nil, workspace, nil, measurement)
 }
 
 func bootstrapProduction(ctx context.Context, admissionFile, controlFile *os.File) (_ *ProductionLifetime, retErr error) {
@@ -398,21 +401,26 @@ func bootstrapProgramWithWorkspace(ctx context.Context, admissionFile, controlFi
 }
 
 func bootstrapProgramWithArchive(ctx context.Context, admissionFile, controlFile, storeFile *os.File, program string, workspaceFile *os.File, inheritedWorkspace *ProductionWorkspaceBinding, archiveFile *os.File, inheritedArchive *archiveMeasurementIdentity) (_ *ProductionLifetime, retErr error) {
+	return bootstrapProgramWithMeasurement(ctx, admissionFile, controlFile, storeFile, program, workspaceFile, inheritedWorkspace, archiveFile, inheritedArchive)
+}
+
+// AM01 and EM01 share one original FD7 capture, never a socket or wire lifetime.
+func bootstrapProgramWithMeasurement(ctx context.Context, admissionFile, controlFile, storeFile *os.File, program string, workspaceFile *os.File, inheritedWorkspace *ProductionWorkspaceBinding, measurementFile *os.File, inheritedMeasurement *archiveMeasurementIdentity) (_ *ProductionLifetime, retErr error) {
 	workspaceTransferred := false
-	archiveTransferred := false
-	var archiveConn *net.UnixConn
+	measurementTransferred := false
+	var measurementConn *net.UnixConn
 	defer func() {
 		if workspaceFile != nil && !workspaceTransferred {
 			_ = workspaceFile.Close()
 		}
-		if archiveFile != nil {
-			_ = archiveFile.Close()
+		if measurementFile != nil {
+			_ = measurementFile.Close()
 		}
-		if archiveConn != nil && !archiveTransferred {
-			_ = archiveConn.Close()
+		if measurementConn != nil && !measurementTransferred {
+			_ = measurementConn.Close()
 		}
 	}()
-	if workspaceFile != nil && inheritedWorkspace != nil || archiveFile != nil && inheritedArchive != nil {
+	if workspaceFile != nil && inheritedWorkspace != nil || measurementFile != nil && inheritedMeasurement != nil {
 		return nil, ErrProductionBootstrap
 	}
 	// Protect all selected inherited handles before any can be handed to a
@@ -498,20 +506,13 @@ func bootstrapProgramWithArchive(ctx context.Context, admissionFile, controlFile
 			cancelOperation()
 		}
 	}()
-	if record.ArchiveMeasurements != 0 && record.Producer.ID == 10 {
-		if inheritedArchive != nil {
-			current := captureInheritedArchiveMeasurement()
-			if current == nil || *current != *inheritedArchive {
-				return nil, ErrProductionBootstrap
-			}
-			archiveFile = os.NewFile(7, "production-archive-measurement")
-		}
-		archiveConn, err = adopt(archiveFile)
-		archiveFile = nil // adopt consumes it on every path
+	if record.ArchiveMeasurements != 0 && record.Producer.ID == 10 || record.EngineMeasurements != 0 {
+		measurementConn, err = adoptProductionMeasurement(measurementFile, inheritedMeasurement)
+		measurementFile = nil // adopt consumes it on every path
 		if err != nil {
 			return nil, ErrProductionBootstrap
 		}
-	} else if archiveFile != nil {
+	} else if measurementFile != nil {
 		return nil, ErrProductionBootstrap
 	}
 	// Stdlib File duplicates once during transfer to the existing constructors;
@@ -551,11 +552,19 @@ func bootstrapProgramWithArchive(ctx context.Context, admissionFile, controlFile
 	lifetime = &ProductionLifetime{program: program, semanticMode: record.SemanticMode, producerID: record.Producer.ID,
 		inputSHA256: record.InputSHA256, client: client, tools: make(map[string]ProductionToolBinding, len(record.Tools)),
 		storeClient: storeClient, cancelStore: cancelStore, workspace: workspace, cancelArchive: cancelOperation,
-		archiveMeasurements: record.ArchiveMeasurements}
-	if archiveConn != nil {
-		lifetime.archiveMeasurement, err = newArchiveMeasurementClient(opCtx, client.Context(), archiveConn, ArchiveMeasurementBinding{
+		archiveMeasurements: record.ArchiveMeasurements, engineMeasurements: record.EngineMeasurements}
+	if measurementConn != nil && record.ArchiveMeasurements != 0 {
+		lifetime.archiveMeasurement, err = newArchiveMeasurementClient(opCtx, client.Context(), measurementConn, ArchiveMeasurementBinding{
 			ProducerID: record.Producer.ID, ProducerBinding: record.Producer.Binding, InputSHA256: record.InputSHA256,
 		}, record.ArchiveMeasurements)
+		if err != nil {
+			return nil, ErrProductionBootstrap
+		}
+	}
+	if measurementConn != nil && record.EngineMeasurements != 0 {
+		lifetime.engineMeasurement, err = newEngineMeasurementClient(opCtx, client.Context(), measurementConn, EngineMeasurementBinding{
+			ProducerID: record.Producer.ID, ProducerBinding: record.Producer.Binding, InputSHA256: record.InputSHA256,
+		}, record.EngineMeasurements)
 		if err != nil {
 			return nil, ErrProductionBootstrap
 		}
@@ -588,6 +597,23 @@ func bootstrapProgramWithArchive(ctx context.Context, admissionFile, controlFile
 		return nil, ErrProductionBootstrap
 	}
 	workspaceTransferred = true
-	archiveTransferred = true
+	measurementTransferred = true
 	return lifetime, nil
+}
+
+// An absent original FD7 is a refusal even if adoption of other endpoints has
+// since allocated a socket at that number. Only a matching original capture or
+// an explicitly transferred in-process file can be adopted.
+func adoptProductionMeasurement(file *os.File, inherited *archiveMeasurementIdentity) (*net.UnixConn, error) {
+	if file != nil && inherited != nil {
+		return nil, ErrProductionBootstrap
+	}
+	if inherited != nil {
+		current := captureInheritedArchiveMeasurement()
+		if current == nil || *current != *inherited {
+			return nil, ErrProductionBootstrap
+		}
+		file = os.NewFile(7, "production-measurement")
+	}
+	return adopt(file)
 }

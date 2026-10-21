@@ -485,6 +485,24 @@ facts and unchanged outside raw/source controls; this grants no restored inode,
 lease, original Wait or cleanup authority. Fresh full composed native acceptance
 remains required before integration; H2/readiness/freeze remain open.
 
+
+The later `304b2b8d` full native attempt failed after 3,448.923s at cold workspace
+measurement (HTTP409), after three protected comparisons, initial RAM admission
+and author A's genuine Wait0/join/empty session. Its exact diagnostics are
+preserved; later unavailable samplers establish neither RSS fit/breach nor clean
+custody. The missing Linux engine guard and explicit traced stop/measure/resume
+coordination are being implemented under prospective private v8, with existing
+points, clocks and numeric bounds retained. Bounded controls and independent
+review precede fresh full native acceptance; PR #156 remains draft.
+
+The engine correction's bounded record now passes 98 native tracer, 80 EM01
+and 25 store-guard nodes in each normal/race mode without skips. Static gates
+and independent source/cost reviews pass. Native positive tests use fixed
+pthread creation/join boundaries; fatal-exit lost creation history still
+refuses. The failed fixture is verified-forensically archived, recovering
+20.27 GB while preserving raw/source evidence and unknown runtime custody.
+Fresh complete native acceptance remains required before merging PR #156.
+
 Production artifact/signature/publication closure for T47.5, T49.4, T50.3,
 T51.3, T52.3 and T54.3 remains pending the existing unavailable production key
 and the exact owning production decision. Scoped results and unsigned drafts

@@ -453,6 +453,10 @@ type ExecutionEpochOneRun struct {
 	archivePrior          *AuthorityPhaseResult
 	backupOutput          *epochBackupOutput
 
+	engineMeasurementCancel   context.CancelFunc
+	engineMeasurementDone     <-chan error
+	engineMeasurementFinished chan struct{} // Initialized before native Start; actor joins before root Wait.
+
 	restoredExecutionCancel context.CancelFunc
 	restoredExecutionDone   chan struct{}
 	archiveExecutionUsed    bool
@@ -706,6 +710,42 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 		run.warmWorkspace = newEpochWarmWorkspaceOutput(output, flow.plan, sha256.Sum256(raw))
 		command.Stdout, command.Stderr = run.warmWorkspace, run.warmWorkspace
 	}
+	// This Linux-only optional socket follows a real FD6 workspace; historical
+	// launches retain their exact descriptor layout and omitted bootstrap bytes.
+	var engineMaximum uint32
+	var engineConn *net.UnixConn
+	var engineChild *os.File
+	if flow.native != nil && workspaceBinding != nil {
+		engineMaximum = flow.native.engineMeasurements(number)
+		if engineMaximum != 0 {
+			var engineParent *os.File
+			engineParent, engineChild, err = dispatchadmission.NewPipe()
+			if err != nil {
+				return nil, ErrExecutionEpochOne
+			}
+			defer func() {
+				if engineChild != nil {
+					_ = engineChild.Close()
+				}
+			}()
+			engineConn, err = adoptAuthorCustodySocket(engineParent)
+			if err != nil {
+				return nil, ErrExecutionEpochOne
+			}
+			defer func() {
+				if !started {
+					_ = engineConn.Close()
+				}
+			}()
+			wire, wireErr := dispatchadmission.EngineMeasurementWireBytes(engineMaximum)
+			if wireErr != nil || uint64(output.remaining) < wire || len(command.ExtraFiles) != 4 {
+				return nil, ErrExecutionEpochOne
+			}
+			output.remaining -= int64(wire) // Keep EM traffic inside the existing combined stream ceiling.
+			command.ExtraFiles = append(command.ExtraFiles, engineChild)
+			run.engineMeasurementFinished = make(chan struct{})
+		}
+	}
 	if number == 3 && workspaceBinding != nil && run.checkpointAllowed {
 		run.markerWorkspace = newEpochMarkerWorkspaceOutput(output, flow.plan, sha256.Sum256(raw))
 		command.Stdout, command.Stderr = run.markerWorkspace, run.markerWorkspace
@@ -799,6 +839,16 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	if storeFile.Close() != nil {
 		retErr = ErrExecutionEpochOne
 	}
+	if engineChild != nil {
+		if engineChild.Close() != nil {
+			retErr = ErrExecutionEpochOne
+		}
+		engineChild = nil
+		engineCtx, engineCancel := context.WithCancel(runCtx)
+		run.engineMeasurementCancel = engineCancel
+		run.engineMeasurementDone = flow.native.serveEngineMeasurement(engineCtx, run, engineConn,
+			dispatchadmission.EngineMeasurementBinding{ProducerID: producer, ProducerBinding: view.Producer.Binding, InputSHA256: sha256.Sum256(raw)}, engineMaximum)
+	}
 	controlConfig := dispatchadmission.PhaseControlConfig{OwnerControl: true, Phases: []uint32{2, 3, 4}, InitialPhase: 2, MaximumPhases: 3, MaximumWireBytes: bounds.controlPairs * 2 * dispatchadmission.FrameBytes, Timeout: 30 * time.Second}
 	controlConfig.WarmStartWorkspace = run.warmWorkspace != nil
 	controlConfig.PhysicalPostAuthorWorkspace = run.warmWorkspace != nil
@@ -825,6 +875,7 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	}
 	bootstrap := dispatchadmission.ProductionBootstrap{Program: dispatchadmission.ProgramPhebs, SemanticMode: dispatchadmission.ProductionSemanticV3,
 		InputSHA256: sha256.Sum256(raw), Producer: view.Producer, Phase: phase, Limits: view.Limits, Control: controlConfig, Tools: tools, Store: &storeConfig, Workspace: workspaceBinding}
+	bootstrap.EngineMeasurements = engineMaximum
 	run.attemptInput = bootstrap.InputSHA256
 	var served <-chan error
 	if retErr == nil && dispatchadmission.SendProductionBootstrap(launchCtx, files[0], files[2], bootstrap) != nil {
@@ -1152,6 +1203,9 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 			cause = waitErr
 		}
 		failure = epochFinishFailure(run, terminal, failure, stage, cause)
+		if run.engineMeasurementCancel != nil {
+			run.engineMeasurementCancel()
+		}
 	}
 	if restoredCancel != nil {
 		restoredCancel()
@@ -1263,6 +1317,15 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	}
 	if nativeStopErr != nil {
 		failure = epochFinishFailure(run, terminal, failure, "native stop", nativeStopErr)
+	}
+	if run.engineMeasurementDone != nil {
+		engineErr := <-run.engineMeasurementDone
+		if run.engineMeasurementCancel != nil {
+			run.engineMeasurementCancel()
+		}
+		if engineErr != nil {
+			failure = epochFinishFailure(run, terminal, failure, "engine measurement endpoint", engineErr)
+		}
 	}
 	if served != nil {
 		joinCtx, joinCancel := context.WithTimeout(stopParent, 5*time.Second)

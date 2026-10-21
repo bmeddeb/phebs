@@ -106,6 +106,8 @@ type ProductionLifetime struct {
 	cancelArchive            context.CancelFunc
 	archiveMeasurements      uint32
 	archiveMeasurement       *archiveMeasurementClient
+	engineMeasurements       uint32
+	engineMeasurement        *engineMeasurementClient
 	backupMeasurementMu      sync.Mutex
 	backupMeasurementMaximum uint32
 	backupMeasurementGuard   func(context.Context, func(context.Context) error) error
@@ -282,6 +284,17 @@ func (lifetime *ProductionLifetime) Close(ctx context.Context) error {
 		}
 		closeCtx, cancel := context.WithTimeout(ctx, lifetime.client.limits.AckTimeout)
 		defer cancel()
+		var engineErr error
+		if lifetime.engineMeasurement != nil {
+			engineErr = lifetime.engineMeasurement.close(closeCtx)
+			lifetime.closeErr = errors.Join(lifetime.closeErr, engineErr)
+			if errors.Is(engineErr, ErrBusy) {
+				// A synchronous measurement still owns SDK/FD6 and its socket.
+				// Retain them rather than retire beneath that callback.
+				_ = lifetime.client.fail(ErrIncomplete)
+				return
+			}
+		}
 		if err := lifetime.closePhysicalPostAuthorWorkspace(closeCtx); err != nil {
 			lifetime.closeErr = errors.Join(lifetime.closeErr, lifetime.client.fail(err))
 			return
@@ -301,7 +314,7 @@ func (lifetime *ProductionLifetime) Close(ctx context.Context) error {
 		// descriptor close as clean dispatch completion.
 		workspaceErr := lifetime.closeWorkspace()
 		lifetime.closeErr = errors.Join(lifetime.closeErr, workspaceErr)
-		if storeErr != nil || workspaceErr != nil || archiveErr != nil {
+		if storeErr != nil || workspaceErr != nil || archiveErr != nil || engineErr != nil {
 			// A failed SDK/SA close cannot acknowledge clean dispatch closure.
 			_ = lifetime.client.fail(ErrIncomplete)
 		}

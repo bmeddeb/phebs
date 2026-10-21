@@ -208,6 +208,8 @@ func (root *linuxEpochTraceRoot) run(operation context.Context) {
 // own-image tests exercise this kernel layer without manufacturing admission.
 // Entry requires the creating task locked and the complete census gate owned.
 func (root *linuxEpochTraceRoot) startOnThread(operation context.Context) {
+	root.engineRequests = make(chan *linuxEpochEngineRequest)
+	root.engineDone = make(chan struct{})
 	if !linuxEpochTraceAttributes(root.command, root.serverRun == nil) || len(root.owner.leaders) >= linuxEpochTraceMaxLeaders {
 		root.releaseGate()
 		root.started <- ErrExecutionEpochOne
@@ -285,6 +287,9 @@ func (root *linuxEpochTraceRoot) completeNoStart() {
 // Last actor action, after actual native/pump/DA/callback/pidfd joins and after
 // unlocking the creating kernel task. Caller cleanup cannot outrun retirement.
 func (root *linuxEpochTraceRoot) publishDone() {
+	if root.engineDone != nil {
+		close(root.engineDone)
+	}
 	root.owner.mu.Lock()
 	delete(root.owner.roots, root)
 	root.owner.mu.Unlock()

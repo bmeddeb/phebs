@@ -16430,3 +16430,89 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   `spike/t42h2r/live-borrow-detached-read-bounded-linux-20261021.json` binds
   these results and carries the unchanged V6 extraction source qualification.
   Fresh full native acceptance remains pending.
+
+- **2026-10-21 — T42.H2r.c.c Linux engine measurement coordination.**
+  Exact `304b2b8ddda48d2ccbe168a931e2e133b5ecc852` returned actual outer
+  Wait1 after 3,448.923s at cold final workspace measurement: HTTP409,
+  `workspace sample refused` (25 retained bytes), after all three protected
+  comparisons and initial RAM admission. Author A had genuine Wait0, joined
+  and empty session. The first retained refusal is
+  `operation-return/cold-to-warm`; later unavailable samplers establish neither
+  an initiating memory/trace failure nor full RSS fit/breach or clean custody.
+  Exact source, raw output, HTTP body and server log remain preserved outside
+  the failed fixture. The source-bound failure record is
+  `spike/t42h2r/live-borrow-engine-measurement-failure-linux-20261021.json`.
+  Linux's selected store guard was an unsupported stub;
+  that establishes a source blocker without proving which earlier substep
+  produced the observed HTTP refusal.
+
+  The prospective private operational policy advances to v8, preserving exact
+  v7 bytes and formal V1–V6 contracts. Ordinary Linux measurements idle-lock
+  the actual SDK owner and sole-Wait engine mutex, pin the original process
+  with a pidfd, validate UID, parent, birth, executable and PID/user namespaces,
+  stop the whole bounded thread group, perform the synchronous walk, and prove
+  resume. Traced measurements instead use separate authenticated EM01 FD7,
+  only alongside an already selected FD6 workspace. It is mutually exclusive
+  with AM01, retains original descriptor capture before adoption and adds no
+  PID, path, image or action supplied by a request. Existing guarded points
+  derive exact maxima six/one/two for producers two/three/four in phases
+  2–4/5/6 respectively; no required point is removed or later phase admitted.
+
+  The creating tracer actor selects the unique already registered held-image
+  Surreal direct child and retains every actual classic group-stop slot. HOLD
+  ACK requires every current thread's original history/identity, held mm and
+  real group-stop witness, with two equal bounded censuses. The actor releases
+  the shared probe gate during the walk; whole-tree sampling and event/cancel
+  processing continue. RELEASE sends original-pidfd SIGCONT, continues only
+  retained owned slots, and acknowledges only after actual group resume.
+  Incomplete-stop abort retains genuine Wait/custody obligations through the
+  original owned kill path. Endpoint cleanup never waits for root.done; the
+  actor services pending cleanup before sole root Wait. Callback/cancellation,
+  transport and resume failures prevent measurement maxima from committing.
+
+  Cost: ordinary query/request, sync, retry/no-op and publication work is
+  unchanged; only explicitly requested measurements do new work. One selected
+  live server adds one socket pair, one endpoint goroutine, a serialized client
+  mutex and one actor-private lease plus a flag per already bounded task. Each
+  created tracer root also allocates two small request/completion channels,
+  including author roots that never use an engine endpoint. Wire
+  bytes are finite `152 + 80 * points`, deducted from the existing output stream
+  ceiling; FD6/held inputs are not widened. Each stop/resume convergence turn
+  performs two task-directory reads bounded by the existing global 1,024-TID
+  cap plus overflow sentinel, and bounded identity/image/live-parent reads per
+  current member, under the existing two-second cooperative actor probe. The
+  native walk holds engine/SDK locks but not the probe gate. The original phase
+  clock and existing five-second cleanup-only bound remain; no new workload,
+  child, corpus hash, numeric reservation or capacity claim is introduced.
+  The source-bound engine coordination record
+  `spike/t42h2r/live-borrow-engine-measurement-bounded-linux-20261021.json`
+  passes 98 native tracer nodes in each normal/race mode, 80 EM01 nodes in
+  each mode and 25 store-guard nodes in each mode, with no skips. Tagged vet,
+  differential lint, supported compilation and documentation checks pass;
+  independent implementation/cost and fixture delta reviews are clear.
+  Fresh complete exact-source native acceptance remains pending; this closes
+  no H2, readiness, freeze, merge or ceremony gate.
+
+  Supplemental bounded diagnosis reproduced a consumed CLONE status followed
+  by an exit-status-shaped event message (4,352), and separately an unavailable
+  message. A fixed own-child host-kernel probe retained the actual new child
+  before triggering another thread's exit17: without any creator CONT, that
+  same creator advanced from CLONE773 to EXIT1541/message4352. Thus separate
+  wait and event-message syscalls cannot guarantee a stable pair across fatal
+  group exit. This proves the mechanism, not the missing identity or exact
+  cause of the older generic refusal. Production still refuses lost creation
+  history; no guessed child, identity retry or terminal-history waiver is added.
+  The Go stress failures remain failed diagnostics with unknown inner closure.
+
+  Positive engine controls therefore live under `phebs_t42_native` and use a
+  fixed own pthread fixture: create workers only before READY or after actual
+  CONT, then join all before natural exit17. The burst checks eight genuinely
+  new actor-registered TIDs absent at HOLD, in addition to readiness. An explicit
+  `/usr/bin/cc` invocation compiles this small test fixture under a ten-second
+  context and genuinely joins before a trace owner exists; source/image hashes
+  and compiler Wait are logged. Ordinary tests retain compiler-free refusal
+  controls. This adds only opt-in test preparation, no runtime request, lock,
+  schema, cache, publication or child cost. The unchanged Go parent can still
+  refuse its own late creation/exit race; neither the fixture nor the probe
+  establishes universal tracer shutdown. Fresh complete native acceptance is
+  still mandatory.

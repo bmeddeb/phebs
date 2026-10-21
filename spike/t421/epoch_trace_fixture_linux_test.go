@@ -16,6 +16,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
@@ -56,9 +57,10 @@ func TestLinuxEpochTraceFixtureChild(t *testing.T) {
 }
 
 func runLinuxEpochTraceFixture(mode string) (int, error) {
-	if mode != "go-parent" && mode != "go-leaf" && mode != "git-parent" && mode != "git-maintenance-parent" && mode != "capture-live" {
+	if mode != "go-parent" && mode != "go-leaf" && mode != "git-parent" && mode != "git-maintenance-parent" && mode != "capture-live" && mode != "engine-parent" && mode != "engine-exit-parent" && mode != "engine-burst-parent" && mode != "engine-leaf" {
 		return 125, errors.New("unknown fixed mode")
 	}
+	engineParent := mode == "engine-parent" || mode == "engine-exit-parent" || mode == "engine-burst-parent"
 	tasks, release, err := linuxEpochTraceFixtureTasks()
 	if err != nil {
 		return 125, err
@@ -70,6 +72,45 @@ func runLinuxEpochTraceFixture(mode string) (int, error) {
 	signals := make(chan os.Signal, 4)
 	signal.Notify(signals, unix.SIGTRAP, unix.SIGUSR1, unix.SIGUSR2)
 	defer signal.Stop(signals)
+	if mode == "engine-leaf" {
+		var continued chan os.Signal
+		if os.Getenv("PHEBS_PRIVATE_EPOCH_ENGINE_BURST") == "1" {
+			continued = make(chan os.Signal, 1)
+			signal.Notify(continued, unix.SIGCONT)
+			defer signal.Stop(continued)
+		}
+		if err := linuxEpochTraceFixtureWrite("TRACE_ENGINE_CHILD_READY ", linuxEpochTraceFixtureReport{Mode: mode, PID: os.Getpid(), Tasks: tasks}); err != nil {
+			return 125, err
+		}
+		if continued != nil {
+			if err := linuxEpochTraceFixtureSignal(continued, unix.SIGCONT); err != nil {
+				return 125, err
+			}
+			ready, release := make(chan struct{}, 8), make(chan struct{})
+			var joined sync.WaitGroup
+			for range 8 {
+				joined.Add(1)
+				go func() {
+					defer joined.Done()
+					runtime.LockOSThread()
+					defer runtime.UnlockOSThread()
+					ready <- struct{}{}
+					<-release
+				}()
+			}
+			defer func() { close(release); joined.Wait() }()
+			for range 8 {
+				<-ready
+			}
+			if err := linuxEpochTraceFixtureWrite("TRACE_ENGINE_BURST_READY ", linuxEpochTraceFixtureReport{Mode: mode, PID: os.Getpid(), Tasks: 8}); err != nil {
+				return 125, err
+			}
+		}
+		if err := linuxEpochTraceFixtureSignal(signals, unix.SIGUSR2); err != nil {
+			return 125, err
+		}
+		return 17, nil
+	}
 	for _, expected := range []unix.Signal{unix.SIGTRAP, unix.SIGUSR1} {
 		if err := unix.Kill(os.Getpid(), expected); err != nil {
 			return 125, errors.New("self signal failed")
@@ -108,7 +149,17 @@ func runLinuxEpochTraceFixture(mode string) (int, error) {
 	}()
 	command := exec.Command(os.Args[0], "-test.run="+linuxEpochTraceFixtureSelector, "-test.timeout=15s")
 	command.Env = []string{linuxEpochTraceFixtureEnvironment + "=go-leaf", "GOMAXPROCS=2", "GORACE=atexit_sleep_ms=0"}
+	if engineParent {
+		command = exec.Command(os.Getenv("PHEBS_PRIVATE_EPOCH_ENGINE_IMAGE"), "-test.run="+linuxEpochTraceFixtureSelector, "-test.timeout=15s")
+		command.Env = []string{linuxEpochTraceFixtureEnvironment + "=engine-leaf", "GOMAXPROCS=2", "GORACE=atexit_sleep_ms=0"}
+		if mode == "engine-burst-parent" {
+			command.Env = append(command.Env, "PHEBS_PRIVATE_EPOCH_ENGINE_BURST=1")
+		}
+	}
 	wantCode := 17
+	if mode == "engine-exit-parent" {
+		wantCode = -1
+	}
 	if mode == "git-parent" {
 		command = exec.Command("/usr/bin/git", "--version")
 		command.Env = []string{"LC_ALL=C", "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=/dev/null"}
@@ -126,9 +177,18 @@ func runLinuxEpochTraceFixture(mode string) (int, error) {
 	}
 	command.Dir = "/"
 	command.Stdout, command.Stderr = io.Discard, os.Stderr
+	if engineParent {
+		command.Stdout = os.Stdout
+	}
 	handle, err := parent.StartInPhase(settlement, 1, dispatchadmission.Site{ID: 1, Role: 1}, command)
 	if err != nil {
 		return 125, errors.New("fixed child start refused")
+	}
+	if engineParent {
+		raw, encodeErr := json.Marshal(linuxEpochTraceFixtureReport{Mode: mode, PID: os.Getpid(), ChildPID: command.Process.Pid, Tasks: tasks})
+		if encodeErr == nil {
+			_, _ = fmt.Fprintln(os.Stdout, "TRACE_ENGINE_READY "+string(raw))
+		}
 	}
 	// Nothing fallible intervenes after successful Start: this actual parent
 	// always invokes its one genuine Handle.Wait, including nonzero exit17.
@@ -139,6 +199,13 @@ func runLinuxEpochTraceFixture(mode string) (int, error) {
 	var exit *exec.ExitError
 	if wantCode == 0 && waitErr != nil || wantCode == 17 && (!errors.As(waitErr, &exit) || exit.ExitCode() != 17) {
 		return 125, errors.New("fixed child genuine wait mismatch")
+	}
+	if wantCode == -1 {
+		status, ok := command.ProcessState.Sys().(syscall.WaitStatus)
+		var killed *exec.ExitError
+		if !errors.As(waitErr, &killed) || !ok || !status.Signaled() || status.Signal() != unix.SIGKILL {
+			return 125, errors.New("fixed child genuine killed Wait mismatch")
+		}
 	}
 	count, err := parent.Count()
 	if err != nil || count.Ordinal != 1 || count.Active != 0 {

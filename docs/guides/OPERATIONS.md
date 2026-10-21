@@ -768,6 +768,38 @@ group-terminal and genuine Wait checks stay exact. No retry or new admission
 is authorized by this classifier correction alone; qualify its bounded real
 EXIT-detach control and reviewed source before fresh full native acceptance.
 
+
+Exact `304b2b8d` subsequently failed cold final workspace measurement after
+3,448.923s with HTTP409 `workspace sample refused`. Its first resource refusal
+is `operation-return/cold-to-warm`; do not attribute the later unavailable
+samplers to RAM or infer clean custody from eventual joins. Exact source, raw,
+HTTP body and server log are preserved in the
+[failure record](../../spike/t42h2r/live-borrow-engine-measurement-failure-linux-20261021.json).
+Initial RAM admission and all three
+protected comparisons passed, but complete native acceptance remains open.
+
+Prospective private policy v8 supplies the missing Linux engine guard and a
+separate authenticated EM01 FD7 lease for selected traced servers. Preserve the
+real FD6 workspace, SDK-idle/sole-Wait locks, every actual owned thread stop,
+whole-tree sampling during the walk, and actual resume before release ACK.
+The source-derived existing point maxima are six/one/two for producers
+two/three/four; later checkpoint/pressure/restore points are not admitted.
+Original phase clocks, two-second probes, five-second cleanup-only bound and
+numeric reservations remain exact. A callback, transport, identity or resume
+failure cannot commit a byte maximum. Bounded controls and review must pass
+before a fresh complete full run; do not retry the failed source unchanged.
+
+The positive Linux engine coordination controls require `phebs_t42_native`
+and `/usr/bin/cc`; they compile a fixed own pthread fixture before starting any
+trace owner, and log source/image hashes plus actual compiler Wait. Workers
+are created at explicit readiness boundaries and joined before exit. These
+controls prove measurement mechanics, including post-resume thread admission,
+not universal shutdown. A fatal group exit can replace another thread's
+pending creation-event message between native inspection calls. Lost creation
+history still refuses; never guess its child identity or infer clean custody.
+The independent fixed own-child kernel reproduction does not repair the older
+generic failure or qualify the full run.
+
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
 It binds `c07bc930` and is preserved unchanged, so it no longer describes the
