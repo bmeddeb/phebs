@@ -109,7 +109,7 @@ func (a *linuxEpochResourceAdmission) waitOwnedRoot(authority *linuxEpochSession
 		retainedErr = ErrExecutionEpochOne
 		// Unknown gate/anchor cannot authorize a reap or release a loan.
 		if a != nil {
-			a.Fail()
+			a.failDetail("owned-root-wait-anchor")
 		}
 		time.Sleep(time.Second)
 	}

@@ -298,7 +298,7 @@ func TestEpochProcessUnexpectedExitAndRequiredFailureKeepPositivePrefix(t *testi
 				rows[0].StartIdentity = "reused-pid"
 			case "refusal-then-exit":
 				rows[1].ObservedName = "unknown"
-				if meter.sampleLocked(t.Context()) == nil {
+				if meter.sampleLocked(t.Context(), "test") == nil {
 					t.Fatal("unknown classification accepted")
 				}
 				meter.exited()
@@ -404,7 +404,7 @@ func TestEpochProcessProductionWiring(t *testing.T) {
 		t.Fatal(err)
 	}
 	text := string(raw)
-	ordered := []string{"handle, err := flow.parent.StartInPhase", "run.processObservation, err = startEpochProcessObservation", "waitErr := handle.Wait()", "run.processObservation.exited()", "go run.finish"}
+	ordered := []string{"handle, err = flow.parent.StartInPhase", "run.processObservation, err = startEpochProcessObservation", "waitErr := handle.Wait()", "run.processObservation.exited()", "go run.finish"}
 	previous := -1
 	for _, needle := range ordered {
 		index := strings.Index(text, needle)
@@ -419,5 +419,41 @@ func TestEpochProcessProductionWiring(t *testing.T) {
 	}
 	if !reflect.DeepEqual([]time.Duration{epochProcessCadence, epochProcessProbeTimeout}, []time.Duration{250 * time.Millisecond, 2 * time.Second}) {
 		t.Fatal("server-only fixed sampling recipe changed")
+	}
+}
+
+func TestEpochProcessDeadlineOriginSurvivesClose(t *testing.T) {
+	for _, origin := range []string{"periodic", "close"} {
+		t.Run(origin, func(t *testing.T) {
+			calls := 0
+			failed := make(chan struct{}, 1)
+			meter, err := newEpochProcessObservation(t.Context(), 41, 2, "phebs", map[string]string{"phebs": "phebs", "git": "git"}, func() { failed <- struct{}{} },
+				func(ctx context.Context, _ int) ([]t4013.NativeProcessRecord, error) {
+					calls++
+					if calls > 1 {
+						<-ctx.Done()
+						return nil, ctx.Err()
+					}
+					return epochProcessFixtureRows(), nil
+				})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if origin == "close" {
+				pauseEpochProcessTicker(meter)
+			} else {
+				select {
+				case <-failed:
+				case <-time.After(5 * time.Second):
+					t.Fatal("periodic deadline failed to notify")
+				}
+			}
+			result, err := meter.close()
+			if err == nil || !result.Joined || result.RSSLimitExceeded || meter.privateRefusalOrigin() != origin ||
+				meter.gauge.privateRefusalStage() != "probe-returned" || calls != 2 || len(result.Phases) != 1 ||
+				result.Phases[0].Observation.CompletedCensuses != 1 || result.Phases[0].Observation.Available {
+				t.Fatal("deadline origin/prefix changed or probe retried", origin, result, err, calls, meter.privateRefusalOrigin())
+			}
+		})
 	}
 }

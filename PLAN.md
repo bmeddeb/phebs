@@ -16200,3 +16200,79 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   records this bounded prefix. Only owning qualification prose is added after
   functional gates; fresh docs checks and immutable review follow. Full native
   composition, memory fit, integration, readiness and freeze remain unpassed.
+
+
+- **2026-10-20 — T42.H2r.c.c private failure-origin preservation.**
+  Exact `d0f8469b`'s host-capacity-corrected full run passed three fresh
+  protected comparisons, v7 resource admission and author A's actual Wait0,
+  then failed cold-to-warm after 3,042.842s. Whole/server sampler joins retain
+  unavailable positive prefixes without a positive sampled RSS breach; this
+  proves neither full RSS fit nor complete process custody or cleanup. The
+  whole private deadline error concerns a two-second sample budget; the cold
+  deadline remains four hours. The generic resource notification also labels
+  any failed operation, so it cannot establish the initiating cause. Keep the
+  raw/source/failure records exact and introduce diagnostic-only fixed labels
+  for operation-return, whole/server observation and owned-root Wait anchors.
+  Preserve first refused sample origin (initial, periodic, advance or close)
+  and substage privately beside the unchanged public observation. Read joined
+  saved inspection failure, HTTP status/ordinal, prefix and already-bounded
+  response body on Linux using the existing Darwin pattern. Do not re-probe,
+  inspect an unjoined mutable reader, or serialize private facts in receipts.
+  No deadline/cadence/RSS/workload/classifier/history or cleanup rule changes.
+
+  Steady-state cost: the common ceremony gauge gains two fixed string headers
+  (32 bytes on supported 64-bit hosts) and fixed substage assignments per
+  existing census; the epoch meter gains one fixed string header (16 bytes)
+  and one error-only origin assignment through its existing sample return.
+  Existing gauge/meter locks and census/classification work remain unchanged;
+  no additional read, hash, native probe, child or persistent cache is added.
+  Origin/substage access acquires existing locks only for private failure
+  logging. Linux sampler notification selects one fixed scope label at meter
+  construction; operation-return and owned-root-anchor failures preserve their
+  fixed first label before their own resource cancellation. The operation
+  label does not assert ordering before a nested operation's local stop.
+  Joined failure-only logging adds a saved inspection lock/read and at most
+  one existing bounded-response body write per server, mode0600, plus saved
+  server gauge detail. It never walks corpus data or samples again. Ordinary
+  product requests, sync, startup/restart, retry/no-op and publication gain no
+  work; no production schema, admission bound or release claim changes.
+  Qualification and full composed acceptance remain required.
+
+
+  A later required native signal control exposed a test-only ordering race:
+  its preflight can see a not-yet-Z leader, then the unconditional wrapper can
+  see Z and reconcile/continue the held worker before the test records its
+  before-state. A later turn can detach that worker's actual EXIT, making the
+  stale pre-state assertion demand a tracer/stopped row from already-advanced
+  work. The retained R/Tracer0 row is consistent with that sequence, but does
+  not prove it without saved event/detached state. Require the actual existing
+  partial-Z/live-mm/held SIGUSR1 and terminal-refusal witnesses before the first
+  wrapper call. The test retains its same eight-second context and one-ms
+  cadence and must still prove the real event0 signal-kill branch plus exact
+  original SIGKILL Handle.Wait, HUP, session and DA closure. No production
+  reconciling, tracing or resource rule changes. Test cost adds one branch per
+  existing loop and withholds wrapper probes until the required pre-state;
+  no new child, probe, deadline, memory or production work is introduced.
+  Failed actual93200 retains uncertain original joins and its raw fixture;
+  its outer six-minute test timer and sampled SID absence prove no cleanup.
+
+
+  Corrected bounded qualification passes 215 normal/215 race nodes plus three
+  actual native signal controls per mode, zero skips; tagged vet/lint, three
+  supported other-platform compiles, docs/glossary and whitespace pass. Source
+  and cost reviews are clear. An extra complete historical t421 package run
+  remains incomplete at its selected eight-minute codec-test timer after 409
+  passes, not a package pass or attributed baseline regression; owning H2r
+  ACs require affected gates and the separate actual full native composition.
+  No native deadline is extended. The failed required signal control retains
+  its original unknown joins and raw bytes. Under Ben's existing cleanup
+  authorization, a separate explicit abandonment disposition preserves both
+  earlier failed full-run fixtures in a verified forensic archive: all 24,235
+  entries, bytes, modes, owners, mtime and exact hardlink topology match
+  stable originals before linked paths retire. Original device/inode facts
+  stay in the manifest and outside raw/source controls are verified unchanged.
+  Inaccessible process records narrow current-reference checks explicitly;
+  neither present global borrower absence nor original Wait/history/cleanup
+  is claimed. Restored bytes grant no old inode, pin, lease or admission.
+  Full composed native acceptance, integration, readiness and freeze remain
+  unpassed; this bounded record authorizes no ceremony.

@@ -1,0 +1,1038 @@
+{
+  "schema": "t42-linux-failure-origin-bounded-v1",
+  "date": "2026-10-20",
+  "base_commit": "d0f8469b9a6507ea3a770f6d77285da819759494",
+  "status": "BOUNDED_AFFECTED_PASS_FULL_NATIVE_PENDING",
+  "scope": "Private first-refusal diagnostics and required native mechanical control ordering; no production probe/deadline/cadence/resource/history relaxation.",
+  "raw_root": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_",
+  "actual_tool_sessions": {
+    "signal_ordering": {
+      "id": 66137,
+      "exit": 0
+    },
+    "affected_and_static": {
+      "id": 10165,
+      "exit": 0
+    }
+  },
+  "gates": [
+    {
+      "name": "signal-ordering-normal",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-p=1",
+        "-json",
+        "-tags=phebs_t42_native",
+        "./spike/t421",
+        "-count=3",
+        "-timeout=90s",
+        "-run",
+        "^TestLinuxEpochTraceNativeReconcilesOwnedSignalStop$"
+      ],
+      "environment_override": {},
+      "pid": 1194662,
+      "actual_wait_exit_code": 0,
+      "sampled_session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 25.259692438005004,
+      "available_before": 148479008768,
+      "available_after": 148479455232,
+      "scope": "Wrapper Wait is genuine for this root; sequential SID absence does not establish complete child history."
+    },
+    {
+      "name": "signal-ordering-race",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-race",
+        "-p=1",
+        "-json",
+        "-tags=phebs_t42_native",
+        "./spike/t421",
+        "-count=3",
+        "-timeout=90s",
+        "-run",
+        "^TestLinuxEpochTraceNativeReconcilesOwnedSignalStop$"
+      ],
+      "environment_override": {},
+      "pid": 1194762,
+      "actual_wait_exit_code": 0,
+      "sampled_session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 36.050131277006585,
+      "available_before": 148479451136,
+      "available_after": 148478574592,
+      "scope": "Wrapper Wait is genuine for this root; sequential SID absence does not establish complete child history."
+    },
+    {
+      "name": "complete-affected-normal",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-p=1",
+        "-json",
+        "-tags=phebs_t42_native",
+        "./spike/t421",
+        "-count=1",
+        "-timeout=6m",
+        "-run",
+        "^Test(ProcessObservation.*|EpochProcess.*|LinuxEpoch(Trace.*|Classifier.*|PreparationMemory.*|Joined.*|UnknownJoin.*|ControlSettlement.*|Resource.*|AuthorPrivate.*|FiniteExit.*|IndexRecipe.*|NativeFailure.*)|LinuxAuthorShared.*|LinuxRootWait.*|ExecutionAuthorShared.*)$"
+      ],
+      "environment_override": {},
+      "pid": 1194913,
+      "actual_wait_exit_code": 0,
+      "sampled_session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 16.552122004999546,
+      "available_before": 148478144512,
+      "available_after": 148477771776,
+      "scope": "Wrapper Wait is genuine for this root; sequential SID absence does not establish complete child history."
+    },
+    {
+      "name": "complete-affected-race",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-race",
+        "-p=1",
+        "-json",
+        "-tags=phebs_t42_native",
+        "./spike/t421",
+        "-count=1",
+        "-timeout=6m",
+        "-run",
+        "^Test(ProcessObservation.*|EpochProcess.*|LinuxEpoch(Trace.*|Classifier.*|PreparationMemory.*|Joined.*|UnknownJoin.*|ControlSettlement.*|Resource.*|AuthorPrivate.*|FiniteExit.*|IndexRecipe.*|NativeFailure.*)|LinuxAuthorShared.*|LinuxRootWait.*|ExecutionAuthorShared.*)$"
+      ],
+      "environment_override": {},
+      "pid": 1195209,
+      "actual_wait_exit_code": 0,
+      "sampled_session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 36.772077428002376,
+      "available_before": 148477767680,
+      "available_after": 148477263872,
+      "scope": "Wrapper Wait is genuine for this root; sequential SID absence does not establish complete child history."
+    },
+    {
+      "name": "tagged-vet",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "vet",
+        "-tags=phebs_t42_native",
+        "./spike/t421"
+      ],
+      "environment_override": {},
+      "pid": 1195519,
+      "actual_wait_exit_code": 0,
+      "sampled_session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 3.3094708540011197,
+      "available_before": 148477263872,
+      "available_after": 148477263872,
+      "scope": "Wrapper Wait is genuine for this root; sequential SID absence does not establish complete child history."
+    },
+    {
+      "name": "tagged-lint",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/golangci-lint-2.12.2/golangci-lint",
+        "run",
+        "--new-from-rev=d0f8469b9a6507ea3a770f6d77285da819759494",
+        "--build-tags=phebs_t42_native",
+        "--timeout=4m",
+        "./spike/t421/..."
+      ],
+      "environment_override": {},
+      "pid": 1195553,
+      "actual_wait_exit_code": 0,
+      "sampled_session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 66.25867741800903,
+      "available_before": 148477263872,
+      "available_after": 148449726464,
+      "scope": "Wrapper Wait is genuine for this root; sequential SID absence does not establish complete child history."
+    },
+    {
+      "name": "compile-linux-arm64",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-c",
+        "-tags=phebs_t42_native",
+        "-o",
+        "/dev/shm/t42h2rcc-failure-origin-yovdsi9_-tmp/diagnostic-linux-arm64.test",
+        "./spike/t421"
+      ],
+      "environment_override": {
+        "GOOS": "linux",
+        "GOARCH": "arm64",
+        "CGO_ENABLED": "0"
+      },
+      "pid": 1195678,
+      "actual_wait_exit_code": 0,
+      "sampled_session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 23.49280871199153,
+      "available_before": 148449726464,
+      "available_after": 148448305152,
+      "scope": "Wrapper Wait is genuine for this root; sequential SID absence does not establish complete child history."
+    },
+    {
+      "name": "compile-darwin-amd64",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-c",
+        "-tags=phebs_t42_native",
+        "-o",
+        "/dev/shm/t42h2rcc-failure-origin-yovdsi9_-tmp/diagnostic-darwin-amd64.test",
+        "./spike/t421"
+      ],
+      "environment_override": {
+        "GOOS": "darwin",
+        "GOARCH": "amd64",
+        "CGO_ENABLED": "0"
+      },
+      "pid": 1195732,
+      "actual_wait_exit_code": 0,
+      "sampled_session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 23.227442289004102,
+      "available_before": 148448301056,
+      "available_after": 148448284672,
+      "scope": "Wrapper Wait is genuine for this root; sequential SID absence does not establish complete child history."
+    },
+    {
+      "name": "compile-darwin-arm64",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-c",
+        "-tags=phebs_t42_native",
+        "-o",
+        "/dev/shm/t42h2rcc-failure-origin-yovdsi9_-tmp/diagnostic-darwin-arm64.test",
+        "./spike/t421"
+      ],
+      "environment_override": {
+        "GOOS": "darwin",
+        "GOARCH": "arm64",
+        "CGO_ENABLED": "0"
+      },
+      "pid": 1195775,
+      "actual_wait_exit_code": 0,
+      "sampled_session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 22.98818091400608,
+      "available_before": 148448276480,
+      "available_after": 148452507648,
+      "scope": "Wrapper Wait is genuine for this root; sequential SID absence does not establish complete child history."
+    },
+    {
+      "name": "docs-glossary",
+      "argv": [
+        "make",
+        "docs-check",
+        "verify-glossary"
+      ],
+      "environment_override": {},
+      "pid": 1195826,
+      "actual_wait_exit_code": 0,
+      "sampled_session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 1.651767943010782,
+      "available_before": 148452503552,
+      "available_after": 148452495360,
+      "scope": "Wrapper Wait is genuine for this root; sequential SID absence does not establish complete child history."
+    },
+    {
+      "name": "whitespace",
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "environment_override": {},
+      "pid": 1195897,
+      "actual_wait_exit_code": 0,
+      "sampled_session_members_after_wait": [],
+      "source_changed": [],
+      "elapsed_seconds": 0.26811660498788115,
+      "available_before": 148452495360,
+      "available_after": 148452495360,
+      "scope": "Wrapper Wait is genuine for this root; sequential SID absence does not establish complete child history."
+    }
+  ],
+  "test_nodes": {
+    "signal-ordering-normal": {
+      "pass": 3
+    },
+    "signal-ordering-race": {
+      "pass": 3
+    },
+    "complete-affected-normal": {
+      "pass": 215
+    },
+    "complete-affected-race": {
+      "pass": 215
+    }
+  },
+  "counting_note": "Node counts include parent/subtests and overlap; three actual signal cases per mode prove original SIGKILL Wait/HUP/session/DA, not composition.",
+  "source_binding": [
+    {
+      "path": "PLAN.md",
+      "bytes": 3049194,
+      "sha256": "c9b19064d8c86add7c3d2620fcb468ddc3e8d8730cf1026efa6d32838972ad5a"
+    },
+    {
+      "path": "docs/BACKLOG.md",
+      "bytes": 1604818,
+      "sha256": "74bb127daa750aa232b6d7e1a7831d916ed9c9fb97f0b4aae526725c549f36d8"
+    },
+    {
+      "path": "docs/ROADMAP.md",
+      "bytes": 421502,
+      "sha256": "c0e8dcaa6ac88db5cfed2be41531f880852e2eed55d13629a04cc6f5829068ba"
+    },
+    {
+      "path": "docs/guides/OPERATIONS.md",
+      "bytes": 661854,
+      "sha256": "9b50f33b39c3b23c16d14d9235fa66d5f12ee24534dbf528940a3763c0df345e"
+    },
+    {
+      "path": "go.mod",
+      "bytes": 9366,
+      "sha256": "424c7e1038c71c10676fc3bad01e155ebc5f912a4eea65e90c284b30951a9275"
+    },
+    {
+      "path": "go.sum",
+      "bytes": 99030,
+      "sha256": "d7aa72d0c2c4283125d37d4377e74be0e87723735a27015900d23092798b1665"
+    },
+    {
+      "path": "internal/dispatchadmission/bootstrap.go",
+      "bytes": 23158,
+      "sha256": "b24e42c250f4ae14824e51c458629b008a933b30e504751db96b5d985c5d940e"
+    },
+    {
+      "path": "internal/dispatchadmission/bootstrap_test.go",
+      "bytes": 28882,
+      "sha256": "f6fe0bace0235d57fe28c8e826b33d1d9c84f4ab6bbcb91e97f588b817186ecd"
+    },
+    {
+      "path": "internal/dispatchadmission/production.go",
+      "bytes": 20066,
+      "sha256": "0d6a654e64ee149d7c2a0124b0cd1476aed97e81159ca5f71e09afdd04eff2cf"
+    },
+    {
+      "path": "internal/dispatchadmission/production_foreground_git_test.go",
+      "bytes": 6657,
+      "sha256": "94197609ba5a9bd80ce71ab9845bae487cac28d0bedc35212271e8932e0b778c"
+    },
+    {
+      "path": "internal/dispatchadmission/production_index_recipe.go",
+      "bytes": 4717,
+      "sha256": "489299cffeae52c2dba7675223fe75e30caf8a03d13754366cdaae8f4eab8204"
+    },
+    {
+      "path": "internal/dispatchadmission/production_index_recipe_test.go",
+      "bytes": 7066,
+      "sha256": "b2307a5421ab187c3c9317264127b02b61a3193d7f7bcfafd594b3b58a46d4ad"
+    },
+    {
+      "path": "spike/t421/author_custody_run_linux.go",
+      "bytes": 18983,
+      "sha256": "27f8cec1f69c4b8415efcc066f457316726b47957a5dd1fb6bd14b5507f72231"
+    },
+    {
+      "path": "spike/t421/author_launch_linux.go",
+      "bytes": 2605,
+      "sha256": "3c66f100ef45b8f232f9ddf0a17371e32b63b82c894a360a748402506d644047"
+    },
+    {
+      "path": "spike/t421/epoch_classifier_linux.go",
+      "bytes": 9413,
+      "sha256": "76dd04ccd106fdeb08087b8f8730368a12b14644d3be12e3fdeeae5314dd4f4c"
+    },
+    {
+      "path": "spike/t421/epoch_classifier_linux_test.go",
+      "bytes": 9143,
+      "sha256": "735b1c780fc424c07242798dda519a6062f0493fc224a0bcd52b31d89e6e912a"
+    },
+    {
+      "path": "spike/t421/epoch_coordinator_linux.go",
+      "bytes": 10195,
+      "sha256": "b40e74225ad99a3db1ef17f4ff6326d2113a521c5247ffe6ce2c45a9edb1cc4f"
+    },
+    {
+      "path": "spike/t421/epoch_flow_linux.go",
+      "bytes": 16047,
+      "sha256": "62cf8c38330e84cec6420fff572b2ddde9acb2423adc4401dbed36939be659d7"
+    },
+    {
+      "path": "spike/t421/epoch_flow_native_linux_test.go",
+      "bytes": 24011,
+      "sha256": "b1232335f95fe9103b287f73edc0e400cecfc7f00360cd2f80dc1de96f2e9912"
+    },
+    {
+      "path": "spike/t421/epoch_index_recipe_linux_test.go",
+      "bytes": 2002,
+      "sha256": "e4d7b00ecd443364e4a976b2bc9c8f5c2542fc0b9852d9a5b53d86e69c90dbb8"
+    },
+    {
+      "path": "spike/t421/epoch_launch.go",
+      "bytes": 66058,
+      "sha256": "f08eaed630ec9da1217849655c15e91eaee4768a4113213c7e61fac4416283e6"
+    },
+    {
+      "path": "spike/t421/epoch_native_adapter.go",
+      "bytes": 1115,
+      "sha256": "e0c53cf4f54d8ad85d4238bfa9a6fa93bed98ba00b37d365aa9e4b94a25c7c07"
+    },
+    {
+      "path": "spike/t421/epoch_owned_defunct_linux.go",
+      "bytes": 4382,
+      "sha256": "88992c729938196dc575af5921c0cbf9cb1b4c233667d4100f748b3f33651435"
+    },
+    {
+      "path": "spike/t421/epoch_process_observation.go",
+      "bytes": 19488,
+      "sha256": "b0efb5be64fc085fa3a9457a9f7cfcbcbb1388e774fa6a7286599a370742408f"
+    },
+    {
+      "path": "spike/t421/epoch_process_observation_test.go",
+      "bytes": 17279,
+      "sha256": "79fe063ac40f09a87fbc115f91b9e1a5cff472274294472ab8f02c49b7891f4f"
+    },
+    {
+      "path": "spike/t421/epoch_server_linux.go",
+      "bytes": 4282,
+      "sha256": "6b7d977c57241714b69ce12480d818a4020aab2ab81f5f3da76014d026da3b47"
+    },
+    {
+      "path": "spike/t421/epoch_trace_actor_linux.go",
+      "bytes": 11365,
+      "sha256": "aa0c31e669f4f30afd6ad1d12fefea7a2d2e09731949f4d2478d37371098cc03"
+    },
+    {
+      "path": "spike/t421/epoch_trace_census_linux.go",
+      "bytes": 1842,
+      "sha256": "7104d7b8f355a3722a55537347b1e276f9128491006bc7a6a10d8b77d88d9ce8"
+    },
+    {
+      "path": "spike/t421/epoch_trace_census_linux_test.go",
+      "bytes": 6735,
+      "sha256": "e1379610e3a2cb363dd3d9c3614d3be87c2a30b50a62997e77567b91f9c42ca8"
+    },
+    {
+      "path": "spike/t421/epoch_trace_descriptor_linux_test.go",
+      "bytes": 2020,
+      "sha256": "698b5a6fdc378df04831b7900de799ecbf73d655138491eaeb1583aa06e71fbe"
+    },
+    {
+      "path": "spike/t421/epoch_trace_events_linux.go",
+      "bytes": 18172,
+      "sha256": "566f7994f41d1dba77fa6d1a3f9ad8062f7f447bdbbb9997394facc8263009b5"
+    },
+    {
+      "path": "spike/t421/epoch_trace_fixture_linux_test.go",
+      "bytes": 8928,
+      "sha256": "0780f259846fa6a653c8344f142043d753d67bf890cbc839f5f2fbe58817649a"
+    },
+    {
+      "path": "spike/t421/epoch_trace_gate_linux_test.go",
+      "bytes": 5930,
+      "sha256": "13b78d8d60f6a72ef2f588e7884d660b5241e21ce57ec563ae356baa93793bf4"
+    },
+    {
+      "path": "spike/t421/epoch_trace_group_linux.go",
+      "bytes": 11778,
+      "sha256": "4c66bac6fc1a56737f6274cf6b7894bd026b462de7f3ae6e5013775c4e6a037d"
+    },
+    {
+      "path": "spike/t421/epoch_trace_group_linux_test.go",
+      "bytes": 14127,
+      "sha256": "5ce7257ebfc7e7d83c9ce3f3c7b0949a1f397fd90cca6ffec7f0aa8b92583117"
+    },
+    {
+      "path": "spike/t421/epoch_trace_initial_linux.go",
+      "bytes": 2480,
+      "sha256": "ad5e528eacc67dd85f52cdfb9cb10a766597aa6a06225add04a734f983c8b7a0"
+    },
+    {
+      "path": "spike/t421/epoch_trace_linux.go",
+      "bytes": 12799,
+      "sha256": "6cb9aa264eeca21225506764b510ab2d7d5002bd80b7035c102ac0cac3d3d883"
+    },
+    {
+      "path": "spike/t421/epoch_trace_linux_test.go",
+      "bytes": 19053,
+      "sha256": "3d519ebbe6d18933dd69700171892fa2016ad22960a0c52eb01e1fb44adfe8d1"
+    },
+    {
+      "path": "spike/t421/epoch_trace_poll_linux_test.go",
+      "bytes": 7328,
+      "sha256": "7f6e3ce831e2bec62b6569116da93e66ff85d96b8c75a1066434227577701acc"
+    },
+    {
+      "path": "spike/t421/epoch_trace_proof_linux.go",
+      "bytes": 4502,
+      "sha256": "5e069b36e22dd0f0afe8351124b8531c85c5022fea76debf936dcd5443cbc144"
+    },
+    {
+      "path": "spike/t421/epoch_trace_signal_native_linux_test.go",
+      "bytes": 15052,
+      "sha256": "be3dda84dd680588cc55d274a2ddf051faf724f165e850e0ed719c7fda523f52"
+    },
+    {
+      "path": "spike/t421/execution_resources_darwin.go",
+      "bytes": 6597,
+      "sha256": "1ade1f57f54d5ae6e0af923e8922e5e095cd9d31ad14bfee5e299ec939f66d45"
+    },
+    {
+      "path": "spike/t421/linux_epoch_resource_policy.go",
+      "bytes": 19838,
+      "sha256": "81543bd39f6474769bf41952d3abbd41f54e52b8fa8fe876104412d6f335f707"
+    },
+    {
+      "path": "spike/t421/linux_epoch_resource_policy_test.go",
+      "bytes": 13169,
+      "sha256": "4bc03e4da7657405914fb63a28509c8cd8dbc5b6d1045d635df2fa86cd1cec00"
+    },
+    {
+      "path": "spike/t421/process_observation.go",
+      "bytes": 11514,
+      "sha256": "f78f56bcc853990e67a925be7c20fd697036f18b3fb22544b9c381968e1e3cfc"
+    },
+    {
+      "path": "spike/t421/process_observation_test.go",
+      "bytes": 15173,
+      "sha256": "8f0256afacba6862d5547ad09e3728264a69125a1dd52bbbf046f37eadaf718d"
+    },
+    {
+      "path": "spike/t42h2r/live-borrow-cold-rss-failure-linux-20261020.json",
+      "bytes": 13100,
+      "sha256": "ec4dfeb2b18c61ddfd6df197e981274bbe014240c0e030b96c7f0442765ac5f8"
+    },
+    {
+      "path": "spike/t42h2r/live-borrow-session-identity-failure-linux-20261020.json",
+      "bytes": 3812,
+      "sha256": "0f13fce6a9fe8d0be9d1c1b8ff74369703eed57f79d6f3c54e8ad375dcb272c7"
+    },
+    {
+      "path": "spike/t42h2r/saved-rss-diagnostic-linux-20261020.json",
+      "bytes": 11505,
+      "sha256": "72c866d1b61a4c8427b0b3b71cfb0a5209ccd412fd52282d73ea056302eaa4c9"
+    }
+  ],
+  "post_qualification_source_manifest": {
+    "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/post-qualification-source.json",
+    "bytes": 308332,
+    "sha256": "7c22f03ffeed937bb473a8acfb0a9dd7dcecb2c7f95c257bb81505c3912be463"
+  },
+  "post_qualification_delta": {
+    "paths": [
+      "PLAN.md",
+      "docs/BACKLOG.md",
+      "docs/ROADMAP.md",
+      "docs/guides/OPERATIONS.md"
+    ],
+    "scope": "Owning qualification/forensic disposition prose only; no Go changes. Fresh docs/whitespace and final evidence review follow."
+  },
+  "independent_review_chain": [
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/independent-source-review.json",
+      "bytes": 6998,
+      "sha256": "ceab3a63edaa38c81e9dbfa5400387e98b0cddc805cd2e69258846a582031f8c"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/corrected-source-review.json",
+      "bytes": 6107,
+      "sha256": "4daa3cb3eda4d2f1d7c3a5d86703c29258202ee0f0c88c44f658cfa6da539a52"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/independent-broad-timeout-disposition.json",
+      "bytes": 4821,
+      "sha256": "93b8f3875898209f0a2d0bd0224d947defc0c8c77ab4da4f05e1a03df7650b9b"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42-failed-forensic-archive-3wcg9kaf/independent-retirement-review.json",
+      "bytes": 7042,
+      "sha256": "22fac03f20d743bc7053a0b537fb3ff74f05fc7e95ef5f6109bab24bc6e2147e"
+    }
+  ],
+  "previous_full_native": {
+    "schema": "t42-linux-v7-cold-process-probe-refusal-v1",
+    "source_commit": "d0f8469b9a6507ea3a770f6d77285da819759494",
+    "source_tree": "6f8c32f11e67bb222c30c42e28df62e414a17263",
+    "actual_tool_session": 30990,
+    "actual_tool_exit": 1,
+    "elapsed_seconds": 3042.842308995998,
+    "failed_step": "cold-to-warm",
+    "first_resource_refusal": "process-observation-notify",
+    "whole_private_refusal": "context deadline exceeded",
+    "trace_failure_available": false,
+    "fresh_protected_comparisons": [
+      {
+        "role": "t422-author",
+        "pid": 1179452,
+        "matched": true,
+        "joined": true,
+        "empty": true
+      },
+      {
+        "role": "phebs",
+        "pid": 1182754,
+        "matched": true,
+        "joined": true,
+        "empty": true
+      },
+      {
+        "role": "zoekt-git-index",
+        "pid": 1186136,
+        "matched": true,
+        "joined": true,
+        "empty": true
+      }
+    ],
+    "actual_initial_admission": {
+      "whole_rss_limit": 4294967296,
+      "physical_bytes": 15991848960,
+      "available_bytes": 8900177920,
+      "effective_capacity_bytes": 15991848960,
+      "payload_bytes": 2056843264,
+      "required_bytes": 8499294208
+    },
+    "runtime_policy_digest_observed": true,
+    "author_a": {
+      "pid": 1189496,
+      "stage": "complete",
+      "started": true,
+      "joined": true,
+      "empty": true,
+      "actual_wait_observed": true,
+      "actual_wait_failed": false,
+      "exit_code": 0,
+      "signal": 0
+    },
+    "server_sessions": [
+      1189541,
+      0,
+      0,
+      0,
+      0
+    ],
+    "whole_meter": {
+      "joined": true,
+      "available": false,
+      "completed_censuses": 7217,
+      "sampled_rss_high_water_bytes": 3514605568,
+      "rss_limit_exceeded": false
+    },
+    "server_meter": {
+      "joined": true,
+      "available": false,
+      "completed_censuses": 6948,
+      "sampled_rss_high_water_bytes": 3435810816,
+      "rss_limit_exceeded": false
+    },
+    "meter_scope": "Joined refers to sampler goroutines, not complete process-session history or whole custody closure. Missing required measurement prevents full RSS-fit claim; false exceed flag records no positive sampled breach.",
+    "diagnostic_sequence": "Initial unjoined report had flow.done=false; later cleanup emitted saved cold/author/meter diagnostics and sticky DA/SA/native-stop errors. This does not establish successful full cleanup.",
+    "deadline_attribution": "Saved whole error alone does not identify first meter, initial vs periodic vs final sample, syscall, lock/gate delay or acceptance window. Source analysis must distinguish two-second sample budget from phase cancellation; no deadline extension or unchanged rerun.",
+    "failed_fixture": {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-host-capacity-correction-g55edgau/tmp/phebs-linux-live-epochs-2102114492",
+      "device": 66306,
+      "inode": 1852956,
+      "preserved": true
+    },
+    "exact_source_archive": {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-native-templates-1fe2ihpg/full-native/terminal-failure/exact-source.tar.gz",
+      "bytes": 71980755,
+      "sha256": "d34818fbdb2a7b17ccaccf71981f01f79367f84a69d4569ba4018cf27224c652"
+    },
+    "raw_bindings": [
+      {
+        "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-host-capacity-correction-g55edgau/native.stdout",
+        "bytes": 14707,
+        "sha256": "14ff8db9736df32e905a16729bc17e7af5d5a6c4fda5492ada2187f10c969b9c"
+      },
+      {
+        "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-host-capacity-correction-g55edgau/native.stderr",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-host-capacity-correction-g55edgau/result.json",
+        "bytes": 441,
+        "sha256": "d571092edfe668e4a55e4ee738b15b6a09750de8e67a54afef2b5ba7b523017a"
+      },
+      {
+        "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-host-capacity-correction-g55edgau/invocation.json",
+        "bytes": 6516,
+        "sha256": "83df155a50aa2c8d647ef7b381acc194b8c1b2f24d3607cee99b297b01263883"
+      },
+      {
+        "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-host-capacity-correction-g55edgau/admitted-prefix.stdout",
+        "bytes": 3516,
+        "sha256": "32812590410945fc02561ab77981e9000f147802e33af27cb26df487d1262f6b"
+      },
+      {
+        "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-host-capacity-correction-g55edgau/admitted-prefix.json",
+        "bytes": 724,
+        "sha256": "a025f36b562734d5185178f32be7406b1a7b6474a1daf19ff193038976faf3f7"
+      },
+      {
+        "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-host-capacity-correction-g55edgau/user-confirmed-host-change.json",
+        "bytes": 449,
+        "sha256": "bdcb068d01472083f7b6b2bf190e1b52fb491f84ba2d6129b0ba1d231d0f4647"
+      },
+      {
+        "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-host-capacity-correction-g55edgau/fresh-metadata-audit.json",
+        "bytes": 1784,
+        "sha256": "b00ae0dc469a9df0360917181db1e2898d79dd9fff0a98d5ea2953f7cf621aab"
+      },
+      {
+        "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-host-capacity-correction-g55edgau/runtime-selected-controls-observation.json",
+        "bytes": 1207,
+        "sha256": "d33b1e5adc673fab34a20ebdaccb23630e1d9fa99f12be40eb3188be6af08dea"
+      }
+    ],
+    "known_pid_observation": {
+      "known": [
+        1170126,
+        1179452,
+        1182754,
+        1186136,
+        1189496,
+        1189541,
+        1189573,
+        1189653
+      ],
+      "currently_present": [],
+      "scope": "Current observation only; not original Wait or complete child history."
+    },
+    "not_established": [
+      "Full three-epoch composition",
+      "Cold/warm/physical/logical/return authority prefix",
+      "Complete resource fit or process history",
+      "Complete successful custody cleanup",
+      "Attribution of older Git failure",
+      "Parent H2/readiness/freeze/ceremony"
+    ],
+    "next": "Source-owned probe/cost/diagnostic investigation; no unchanged full retry and no bound relaxation. Disk currently below120GiB prerequisite; existing failed fixtures remain preserved."
+  },
+  "previous_full_native_causal_scope": "Whole2s sample error does not identify initiating meter/operation or prove cold4h deadline expiry; generic label was shared by operation failure. No whole RSS fit or complete cleanup follows. New source must pass a fresh full composed gate.",
+  "retained_failed_prefixes": [
+    {
+      "root": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_",
+      "status": "Initial focused actual74684exit1 on stale := static assertion; exact HEAD source-only reproduction retained, not actual baseline Go run."
+    },
+    {
+      "root": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/remaining-gates",
+      "status": "Actual35452exit1:409pass before selected8m package timer in unchanged authorV4 catalog validation. Incomplete package, not pass or attributed baseline regression. No broad race ran."
+    },
+    {
+      "root": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/affected-and-static",
+      "status": "Actual93200exit1: required signal control refused pre-state. Original child Wait/custody unknown; outer6m timer/SID[] grants no cleanup. Preserved source/raw; only later test ordering changed."
+    }
+  ],
+  "forensic_archival": {
+    "status": "FAILED_FIXTURES_FORENSICALLY_ARCHIVED_AND_ABANDONED_PATHS_RETIRED",
+    "retired_roots": [
+      "/home/ben/phebs-rehearsals/t42h2rcc-v6-native-templates-he_62ghg/full-native/tmp/phebs-linux-live-epochs-2494616029",
+      "/home/ben/phebs-rehearsals/t42h2rcc-v7-host-capacity-correction-g55edgau/tmp/phebs-linux-live-epochs-2102114492"
+    ],
+    "archive": "/home/ben/phebs-rehearsals/t42-failed-forensic-archive-3wcg9kaf/failed-fixtures.tar.gz",
+    "archive_sha256": "2809a09471c244506fb608bcebdd4bd0b20de52a6323d3f2272d0f71505274c1",
+    "archive_bytes": 422597541,
+    "manifest_sha256": "5991497724ecac3682a36ef74ec58f3275f441397f2bb8389d487a50dccabf2f",
+    "entries": 24235,
+    "available_before": 109241987072,
+    "available_after": 148484276224,
+    "scope": "Every selected failed-fixture byte preserved by verified archive; original identity facts retained in manifest. Native failures/unknown joins/history remain failed or unknown, restored inodes grant no authority. Raw controls/source archives outside fixtures verified unchanged.",
+    "net_free_bytes": 39242289152
+  },
+  "archival_limits": "Two abandoned failed derived representations retired only after verified forensic snapshot and explicit independent-reviewed disposition. Original identity facts in manifest; no original joins/history/custody or reusable restored inode/lease authority. Old raw/source outside preserved and checked unchanged.",
+  "source_identical_carry": {
+    "receipt": {
+      "path": "/home/ben/phebs/spike/t42h2r/foreground-git-v7-bounded-linux-20261020.json",
+      "bytes": 38935,
+      "sha256": "8435d5dbfcbe3c6d25536da15b7fa86b1d1456121d248e3f304a9b8d46b751f0"
+    },
+    "scope": "Historical bounded foreground/dispatch qualification remains its exact original evidence. No internal/dispatchadmission or other production Go file changes in this diagnostic correction. Current affected gates are rerun; historical full native failures remain failures."
+  },
+  "cost": "48B fixed string headers per gauge/meter pair, fixed assignments/error branch in existing samples; no extra probe/read/hash/child/cache or changed locks/cadence. Failure-only saved inspection lock and at most existing bounded body write per joined server. Native fixture adds one branch and uses existing1ms cadence within8s to establish before-state before wrapper. Ordinary product request/sync/startup/no-op/publication work unchanged.",
+  "raw_bindings": [
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/signal-ordering-corrected/results.json",
+      "bytes": 1496,
+      "sha256": "9da75059fcdf804e7309d05385f949b75399c7f8ebdf2977e1d8386806ecb216"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/signal-ordering-corrected/signal-ordering-normal.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/signal-ordering-corrected/signal-ordering-normal.stdout",
+      "bytes": 5913,
+      "sha256": "9fbbb6a1551e2d298cc5466b05243a466e1eea35ff7c3ac9ebd04b1e906e1919"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/signal-ordering-corrected/signal-ordering-race.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/signal-ordering-corrected/signal-ordering-race.stdout",
+      "bytes": 5927,
+      "sha256": "3d59299d7c9ba98d484884561270c597f4a2dae7463c0ee4e13a5e28411361bf"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/signal-ordering-corrected/source.diff",
+      "bytes": 35624,
+      "sha256": "28db5d75d3f578e2401d8be38a8e2c0ae611e51bf540107a9870f3c69bc70c90"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/signal-ordering-corrected/source.json",
+      "bytes": 308200,
+      "sha256": "47b93b65516188bf859f7ee92a15c723f33c746470210ad9ff379253b8218ad2"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/signal-ordering-corrected/terminal.json",
+      "bytes": 161,
+      "sha256": "296c213d64b8483f54b19349a5c1af7f7206a7bb0421806c96bd99da31e7d9f2"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/corrected-affected-and-static/compile-darwin-amd64-artifact.json",
+      "bytes": 269,
+      "sha256": "abd80a33b00d702cfdb725ab209ec3ed36dc9e70bdbf98f5ed81ac97bbfbf213"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/corrected-affected-and-static/compile-darwin-amd64.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/corrected-affected-and-static/compile-darwin-amd64.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/corrected-affected-and-static/compile-darwin-arm64-artifact.json",
+      "bytes": 269,
+      "sha256": "25577a74ac54afd8b5a7c81b047f15d4b6f16d6b4a2b61879ffa032bf66b001f"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/corrected-affected-and-static/compile-darwin-arm64.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/corrected-affected-and-static/compile-darwin-arm64.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/corrected-affected-and-static/compile-linux-arm64-artifact.json",
+      "bytes": 268,
+      "sha256": "b21a13337f3a5d3300f5d0eb29b9f48285432a6858d04bb76b361572cd94ce83"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/corrected-affected-and-static/compile-linux-arm64.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/corrected-affected-and-static/compile-linux-arm64.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/corrected-affected-and-static/complete-affected-normal.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/corrected-affected-and-static/complete-affected-normal.stdout",
+      "bytes": 205609,
+      "sha256": "1459702da972d037444dd885637b805210eadd302ec72b10e4c2862b0c278ea0"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/corrected-affected-and-static/complete-affected-race.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/corrected-affected-and-static/complete-affected-race.stdout",
+      "bytes": 205605,
+      "sha256": "b9e4ddde608eacd1c239fe42b8e4773cc31df00b01a7fa029d357a96bffc13eb"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/corrected-affected-and-static/docs-glossary.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/corrected-affected-and-static/docs-glossary.stdout",
+      "bytes": 237,
+      "sha256": "60e3ae902ed7ccd905917bc93184fe0c1ade2b6c2ba3f12910b82ed4e0eadc67"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/corrected-affected-and-static/results.json",
+      "bytes": 6551,
+      "sha256": "799df571170893ae9c7020d9d4c67c15ead0eb177b2a8ae9c8b14be5d37cce26"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/corrected-affected-and-static/source.diff",
+      "bytes": 35624,
+      "sha256": "28db5d75d3f578e2401d8be38a8e2c0ae611e51bf540107a9870f3c69bc70c90"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/corrected-affected-and-static/source.json",
+      "bytes": 308200,
+      "sha256": "47b93b65516188bf859f7ee92a15c723f33c746470210ad9ff379253b8218ad2"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/corrected-affected-and-static/tagged-lint.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/corrected-affected-and-static/tagged-lint.stdout",
+      "bytes": 10,
+      "sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/corrected-affected-and-static/tagged-vet.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/corrected-affected-and-static/tagged-vet.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/corrected-affected-and-static/terminal.json",
+      "bytes": 165,
+      "sha256": "8f8217bf8e4b335438db91b3336894efca1a32a489a2c7cfe9a4700389937b18"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/corrected-affected-and-static/whitespace.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/corrected-affected-and-static/whitespace.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/signal-control-failure-preservation.json",
+      "bytes": 2911,
+      "sha256": "887bc40763e63bc883bb1d35a1853ff9b448daad6697cc7cf5fcd767689348a1"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-failure-origin-yovdsi9_/inherited-wiring-assertion.json",
+      "bytes": 463,
+      "sha256": "a0b2e0c4a80a1b4f9fc3b8d994288622437ad2196125fe269a0dc3bb8e5d63af"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42-failed-forensic-archive-3wcg9kaf/decision.json",
+      "bytes": 1386,
+      "sha256": "4e12fa4a960b8aae6311e695a8808a0fef00af47bf4cb3f851ca4e1b0c212ee3"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42-failed-forensic-archive-3wcg9kaf/verified-before-retirement.json",
+      "bytes": 959,
+      "sha256": "dbc85b79c0bd1b1ef5e86ea028e7cec59a59e275fa74cace907714ad2b6fc8a6"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42-failed-forensic-archive-3wcg9kaf/hardlink-topology.json",
+      "bytes": 570,
+      "sha256": "e25a0150c49aa2b879d8e124defd13e19afaf8c663ac120bef5f8d1c88a2399b"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42-failed-forensic-archive-3wcg9kaf/retirement-intent.json",
+      "bytes": 4429,
+      "sha256": "a202ab5a3010418f22d6fd078e7fd6b8b2aca31f8aa22f8c44c406e2c706a5b3"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42-failed-forensic-archive-3wcg9kaf/terminal.json",
+      "bytes": 1077,
+      "sha256": "2e7768c36ca826b60ef6de8f400a71cd290c8a3d4dddbe92784bd6984dc7ccce"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-host-capacity-correction-g55edgau/terminal-failure/preservation.json",
+      "bytes": 5933,
+      "sha256": "687f72a6331e9181858430f72aa3c42510402bfdff473456fe7fad58f0e1f037"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-host-capacity-correction-g55edgau/terminal-failure/independent-context-causal-analysis.json",
+      "bytes": 8876,
+      "sha256": "977a6a1269065274a0280cdf06890210eca33ca5469add20ac584e604092e285"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-host-capacity-correction-g55edgau/terminal-failure/joined-server-log-binding.json",
+      "bytes": 489,
+      "sha256": "ccc0fb068e140becf22e0102b883f8fa2d8df6a9fec757b75ee63ebd2195fd64"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-host-capacity-correction-g55edgau/native.stdout",
+      "bytes": 14707,
+      "sha256": "14ff8db9736df32e905a16729bc17e7af5d5a6c4fda5492ada2187f10c969b9c"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-host-capacity-correction-g55edgau/native.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-host-capacity-correction-g55edgau/result.json",
+      "bytes": 441,
+      "sha256": "d571092edfe668e4a55e4ee738b15b6a09750de8e67a54afef2b5ba7b523017a"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-host-capacity-correction-g55edgau/invocation.json",
+      "bytes": 6516,
+      "sha256": "83df155a50aa2c8d647ef7b381acc194b8c1b2f24d3607cee99b297b01263883"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-host-capacity-correction-g55edgau/admitted-prefix.stdout",
+      "bytes": 3516,
+      "sha256": "32812590410945fc02561ab77981e9000f147802e33af27cb26df487d1262f6b"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-host-capacity-correction-g55edgau/admitted-prefix.json",
+      "bytes": 724,
+      "sha256": "a025f36b562734d5185178f32be7406b1a7b6474a1daf19ff193038976faf3f7"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-host-capacity-correction-g55edgau/user-confirmed-host-change.json",
+      "bytes": 449,
+      "sha256": "bdcb068d01472083f7b6b2bf190e1b52fb491f84ba2d6129b0ba1d231d0f4647"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-host-capacity-correction-g55edgau/fresh-metadata-audit.json",
+      "bytes": 1784,
+      "sha256": "b00ae0dc469a9df0360917181db1e2898d79dd9fff0a98d5ea2953f7cf621aab"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-host-capacity-correction-g55edgau/runtime-selected-controls-observation.json",
+      "bytes": 1207,
+      "sha256": "d33b1e5adc673fab34a20ebdaccb23630e1d9fa99f12be40eb3188be6af08dea"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-native-templates-1fe2ihpg/full-native/terminal-failure/exact-source.tar.gz",
+      "bytes": 71980755,
+      "sha256": "d34818fbdb2a7b17ccaccf71981f01f79367f84a69d4569ba4018cf27224c652"
+    }
+  ],
+  "not_established": [
+    "Fresh full three-epoch composition",
+    "Complete RSS fit or process history",
+    "Complete successful cleanup of prior failures",
+    "Integration/main merge",
+    "Parent H2/readiness/freeze/ceremony"
+  ]
+}

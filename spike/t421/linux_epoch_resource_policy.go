@@ -242,7 +242,7 @@ func (a *linuxEpochResourceAdmission) checkLocked(ctx context.Context) error {
 
 // Fail only latches and requests cancellation. It never joins children, closes
 // loans or calls back into the sampler whose lock may currently be held.
-func (a *linuxEpochResourceAdmission) Fail() { a.failDetail("process-observation-notify") }
+func (a *linuxEpochResourceAdmission) Fail() { a.failDetail("resource-cancellation-notify") }
 
 // Diagnostic writes precede cancellation; later cleanup cannot replace the first
 // predicate. No arbitrary native error text or path enters this bounded field.
@@ -293,8 +293,12 @@ func (a *linuxEpochResourceAdmission) startServerObservation(ctx context.Context
 	if a == nil || gauge == nil || gauge.classify == nil || gauge.expectedRootStartIdentity == "" || fail == nil || a.Check(ctx) != nil {
 		return nil, errLinuxEpochResources
 	}
+	detail := "server-process-observation-notify"
+	if a.held != nil && pid == a.held.controllerPID {
+		detail = "whole-process-observation-notify"
+	}
 	var failed sync.Once
-	notify := func() { failed.Do(func() { a.Fail(); fail() }) }
+	notify := func() { failed.Do(func() { a.failDetail(detail); fail() }) }
 	classify := gauge.classify
 	var accepted map[t4013.NativeProcessRecord]int
 	// The gauge owns this cache under its existing sampling mutex. The initial

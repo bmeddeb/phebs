@@ -111,7 +111,7 @@ func (r *executionWholeResources) begin(phase string) error {
 		meter.gauge.observation.Classes[i].Class = class.Class
 	}
 	meter.gauge.mu.Unlock()
-	err := meter.sampleLocked(context.Background())
+	err := meter.sampleLocked(context.Background(), "whole-advance")
 	r.mu.Lock()
 	r.phase = next
 	r.mu.Unlock()
@@ -136,7 +136,7 @@ func (r *executionWholeResources) finish() error {
 	if meter.phaseFinished {
 		return ErrExecutionEpochOne
 	}
-	err := meter.sampleLocked(context.Background())
+	err := meter.sampleLocked(context.Background(), "whole-finish")
 	err = errors.Join(err, meter.saveLocked())
 	meter.phaseFinished = true
 	if err != nil {

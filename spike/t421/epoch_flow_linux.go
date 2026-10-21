@@ -168,7 +168,7 @@ func (flow *LinuxExecutionEpochFlow) work() {
 					flow.mu.Lock()
 					flow.err = reply.err
 					flow.mu.Unlock()
-					held.resources.Fail()
+					held.resources.failDetail("operation-return/" + flow.step)
 					return &linuxEpochOperationFailure{reply.err}
 				}
 			case <-flow.lifetime.Done():

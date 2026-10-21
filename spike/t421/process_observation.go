@@ -57,6 +57,8 @@ type ProcessObservationGauge struct {
 	probe                     func(context.Context, int) ([]t4013.NativeProcessRecord, error)
 	classify                  func(context.Context, t4013.NativeProcessRecord) (int, bool)
 	privateRefusalDetail      string // First bounded private failure only; never part of ProcessObservation or receipts.
+	privateSampleStage        string // Fixed current substage under mu; no history.
+	privateRefusalSubstage    string // First refused sample only; not public evidence.
 }
 
 // NewProcessObservationGauge binds a private root lifetime and a bounded table
@@ -120,13 +122,16 @@ func (gauge *ProcessObservationGauge) Sample(ctx context.Context) (ProcessObserv
 	if gauge.observation.FailureClass != "" {
 		return gauge.copyObservation(), errors.New("native observation is unavailable")
 	}
+	gauge.privateSampleStage = "sample-entry"
 	if ctx == nil || gauge.probe == nil || ctx.Err() != nil {
 		if ctx != nil && ctx.Err() != nil {
 			return gauge.failProbe(ctx.Err())
 		}
 		return gauge.fail("measurement_unavailable")
 	}
+	gauge.privateSampleStage = "probe"
 	rows, err := gauge.probe(ctx, gauge.rootPID)
+	gauge.privateSampleStage = "probe-returned"
 	if err != nil || ctx.Err() != nil {
 		if err == nil {
 			err = ctx.Err()
@@ -143,6 +148,7 @@ func (gauge *ProcessObservationGauge) acceptRows(rows []t4013.NativeProcessRecor
 	return gauge.acceptRowsContext(context.Background(), rows)
 }
 func (gauge *ProcessObservationGauge) acceptRowsContext(ctx context.Context, rows []t4013.NativeProcessRecord) (ProcessObservation, error) {
+	gauge.privateSampleStage = "accept-entry"
 	if ctx == nil {
 		return gauge.fail("measurement_unavailable")
 	}
@@ -159,6 +165,7 @@ func (gauge *ProcessObservationGauge) acceptRowsContext(ctx context.Context, row
 	seen := make(map[int]bool, len(rows))
 	counts := make([]uint64, len(gauge.observation.Classes))
 	var rss uint64
+	gauge.privateSampleStage = "accept-rows"
 	for index, row := range rows {
 		if row.PID <= 0 || seen[row.PID] || row.ParentPID < 0 || row.ParentPID == row.PID ||
 			row.RSSBytes < 0 || row.StartIdentity == "" || len(row.StartIdentity) > 64 ||
@@ -182,6 +189,7 @@ func (gauge *ProcessObservationGauge) acceptRowsContext(ctx context.Context, row
 			counts[class]++
 		}
 	}
+	gauge.privateSampleStage = "accept-end"
 	if ctx.Err() != nil {
 		return gauge.failProbe(ctx.Err())
 	}
@@ -199,6 +207,7 @@ func (gauge *ProcessObservationGauge) acceptRowsContext(ctx context.Context, row
 		gauge.observation.Classes[index].ObservedRows = count
 		gauge.observation.Classes[index].ObservedHighWater = max(gauge.observation.Classes[index].ObservedHighWater, count)
 	}
+	gauge.privateSampleStage = "complete"
 	return gauge.copyObservation(), nil
 }
 
@@ -231,6 +240,7 @@ func (gauge *ProcessObservationGauge) failDetail(class, detail string) (ProcessO
 	if gauge.observation.FailureClass == "" {
 		gauge.observation.FailureClass = class
 		gauge.privateRefusalDetail = strings.Clone(detail[:min(len(detail), maxPrivateProcessRefusalBytes)])
+		gauge.privateRefusalSubstage = gauge.privateSampleStage
 	}
 	return gauge.copyObservation(), errors.New("native observation is unavailable")
 }
@@ -239,6 +249,12 @@ func (gauge *ProcessObservationGauge) privateRefusal() string {
 	gauge.mu.Lock()
 	defer gauge.mu.Unlock()
 	return gauge.privateRefusalDetail
+}
+
+func (gauge *ProcessObservationGauge) privateRefusalStage() string {
+	gauge.mu.Lock()
+	defer gauge.mu.Unlock()
+	return gauge.privateRefusalSubstage
 }
 
 func (gauge *ProcessObservationGauge) copyObservation() ProcessObservation {

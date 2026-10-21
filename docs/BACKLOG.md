@@ -4814,6 +4814,44 @@ changed; production matching stayed strict. The
 binds exact source and raw evidence. Fresh immutable preparation and complete
 native composition remain mandatory; no memory fit, readiness or freeze follows.
 
+Exact `d0f8469b` passed fresh protected comparisons and, after Ben freed host
+RAM, actual v7 admission (8,900,177,920 available / 8,499,294,208 required
+bytes). Author A genuinely joined with Wait0. The full run nevertheless failed
+in cold-to-warm after 3,042.842s. Both joined sampler prefixes became unavailable;
+no positive sampled RSS breach was recorded, which is not a complete RSS-fit
+claim. The whole gauge retained `context deadline exceeded`; that sample uses a
+two-second budget while the cold phase deadline is four hours. The generic
+notification label also covered failed operations, so the initiating failure is
+unattributed. Saved raw controls and exact source remain retained. Prospective
+private diagnostics distinguish operation-return, whole and server notification,
+first refused sample boundary/substage, and the already-captured joined
+inspection failure/body. These diagnostics add no probe, retry or deadline.
+Bounded qualification, independent review and fresh complete native acceptance
+remain mandatory; c.c, H2, readiness and freeze remain open.
+
+A later required mechanical signal control refused its pre-reconciliation
+worker witness. Source inspection found that its wrapper could reconcile the
+worker after an earlier non-Z preflight but before the test recorded that
+witness. The observed running/untraced worker is consistent with this source
+race; the exact failed event order was not retained. The fixture now requires
+its actual partial-Z/live-mm/held SIGUSR1 and terminal-refusal witnesses before
+its first reconciliation call. The existing eight-second context, one-ms
+cadence, exact tracer/image predicates and real SIGKILL Wait/HUP/DA closure stay
+mandatory. Failed prefixes remain retained; fresh affected gates are required.
+
+Corrected bounded qualification passes 215 normal and 215 race nodes, plus
+three actual signal controls per mode, with zero skips. Tagged vet/lint, the
+three other supported 64-bit compile targets, docs/glossary and whitespace
+pass. Independent source/cost reviews are clear. The extra complete historical
+package command remains incomplete at its eight-minute codec-test timer after
+409 passing nodes; it is neither a package pass nor an attributed baseline
+regression. The earlier required signal-control failure and its unknown joins
+remain retained. Two abandoned failed full-run fixtures are now preserved by a
+fully byte/metadata/hardlink-verified forensic archive, with original identity
+facts and unchanged outside raw/source controls; this grants no restored inode,
+lease, original Wait or cleanup authority. Fresh full composed native acceptance
+remains required before integration; H2/readiness/freeze remain open.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

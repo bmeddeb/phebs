@@ -51,18 +51,19 @@ type ExecutionServerProcessPhase struct {
 // per-PID history survives a sample. A ticker drops missed ticks, never queues
 // overlapping probes or catch-up work. The probe context is cooperative.
 type epochProcessObservation struct {
-	mu            sync.Mutex
-	gauge         *ProcessObservationGauge
-	rssLimit      uint64 // Source-frozen once at startup; not a caller-controlled policy.
-	phase         uint32
-	result        ExecutionServerProcessObservation
-	prefix        *ProcessObservation // The earlier root's actual phase-eight prefix.
-	stop, done    chan struct{}
-	stopOnce      sync.Once
-	closed        bool
-	phaseFinished bool // Whole-inner scope only: completed phase samples cannot change.
-	expectedExit  bool
-	fail          func()
+	mu                  sync.Mutex
+	gauge               *ProcessObservationGauge
+	rssLimit            uint64 // Source-frozen once at startup; not a caller-controlled policy.
+	phase               uint32
+	result              ExecutionServerProcessObservation
+	prefix              *ProcessObservation // The earlier root's actual phase-eight prefix.
+	stop, done          chan struct{}
+	stopOnce            sync.Once
+	closed              bool
+	phaseFinished       bool // Whole-inner scope only: completed phase samples cannot change.
+	expectedExit        bool
+	privateSampleOrigin string // First refused sample boundary, never receipt evidence.
+	fail                func()
 }
 
 // Names derive from the checked tool paths and closed native Git/shell names.
@@ -153,9 +154,12 @@ func newExecutionProcessObservationWithGauge(ctx context.Context, pid int, phase
 		stop: make(chan struct{}), done: make(chan struct{}), fail: fail}
 	initialCtx, cancel := context.WithTimeout(ctx, epochProcessProbeTimeout)
 	var rows []t4013.NativeProcessRecord
+	gauge.privateSampleStage = "initial-probe-entry"
 	probeErr := initialCtx.Err()
 	if probeErr == nil {
+		gauge.privateSampleStage = "initial-probe"
 		rows, probeErr = probe(initialCtx, pid)
+		gauge.privateSampleStage = "initial-probe-returned"
 	}
 	if probeErr != nil || initialCtx.Err() != nil {
 		if probeErr == nil {
@@ -169,6 +173,7 @@ func newExecutionProcessObservationWithGauge(ctx context.Context, pid int, phase
 		_, probeErr = gauge.acceptRowsContext(initialCtx, rows)
 	}
 	if probeErr == nil && initialCtx.Err() != nil {
+		gauge.privateSampleStage = "initial-accept-returned"
 		_, probeErr = gauge.failProbe(initialCtx.Err())
 	}
 	cancel()
@@ -177,6 +182,7 @@ func newExecutionProcessObservationWithGauge(ctx context.Context, pid int, phase
 		probeErr = meter.checkRSSLocked(gauge.Observation())
 	}
 	if probeErr != nil {
+		meter.privateSampleOrigin = "initial"
 		meter.closed, meter.result.Joined = true, true
 		_ = meter.saveLocked()
 		close(meter.done)
@@ -257,7 +263,7 @@ func (meter *epochProcessObservation) run() {
 			meter.mu.Unlock()
 			continue
 		}
-		err := meter.sampleLocked(context.Background())
+		err := meter.sampleLocked(context.Background(), "periodic")
 		notify := err != nil && !meter.result.RSSLimitExceeded
 		meter.mu.Unlock()
 		if err != nil {
@@ -269,7 +275,12 @@ func (meter *epochProcessObservation) run() {
 	}
 }
 
-func (meter *epochProcessObservation) sampleLocked(ctx context.Context) error {
+func (meter *epochProcessObservation) sampleLocked(ctx context.Context, origin string) (retErr error) {
+	defer func() {
+		if retErr != nil && meter.privateSampleOrigin == "" {
+			meter.privateSampleOrigin = origin
+		}
+	}()
 	if meter.result.RSSLimitExceeded {
 		return errEpochProcessRSS
 	}
@@ -306,7 +317,7 @@ func (meter *epochProcessObservation) advance(ctx context.Context, phase uint32,
 	}
 	meter.mu.Lock()
 	defer meter.mu.Unlock()
-	if meter.closed || phase != meter.phase+1 || phase > 14 || meter.sampleLocked(ctx) != nil {
+	if meter.closed || phase != meter.phase+1 || phase > 14 || meter.sampleLocked(ctx, "advance-before") != nil {
 		return ErrExecutionEpochOne
 	}
 	if meter.saveLocked() != nil {
@@ -326,7 +337,7 @@ func (meter *epochProcessObservation) advance(ctx context.Context, phase uint32,
 		meter.gauge.observation.Classes[index].Class = class.Class
 	}
 	meter.gauge.mu.Unlock()
-	return meter.sampleLocked(ctx)
+	return meter.sampleLocked(ctx, "advance-after")
 }
 
 // Called by the sole owned Wait. An observed exit before the logical stop arm
@@ -338,7 +349,11 @@ func (meter *epochProcessObservation) exited() {
 	meter.mu.Lock()
 	unexpected := !meter.expectedExit && !meter.result.RSSLimitExceeded
 	if unexpected {
+		if meter.privateSampleOrigin == "" {
+			meter.privateSampleOrigin = "unexpected-exit"
+		}
 		meter.gauge.mu.Lock()
+		meter.gauge.privateSampleStage = "unexpected-exit"
 		_, _ = meter.gauge.fail("measurement_unavailable")
 		meter.gauge.mu.Unlock()
 		if meter.closed {
@@ -390,13 +405,19 @@ func (meter *epochProcessObservation) close() (ExecutionServerProcessObservation
 	defer meter.mu.Unlock()
 	if !meter.closed {
 		if !meter.phaseFinished {
-			_ = meter.sampleLocked(context.Background())
+			_ = meter.sampleLocked(context.Background(), "close")
 		}
 		meter.closed = true
 	}
 	meter.result.Joined = true
 	err := meter.saveLocked()
 	return cloneServerProcessObservation(meter.result), err
+}
+
+func (meter *epochProcessObservation) privateRefusalOrigin() string {
+	meter.mu.Lock()
+	defer meter.mu.Unlock()
+	return meter.privateSampleOrigin
 }
 
 func (meter *epochProcessObservation) saveLocked() error {

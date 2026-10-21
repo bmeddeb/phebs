@@ -85,7 +85,7 @@ func (adapter *linuxEpochCoordinator) startWait(ctx context.Context, run *Execut
 		defer close(root.observerReady)
 		gauge, name, err := adapter.held.gauge(ctx, run.command.Process.Pid, root.original.birth)
 		if err == nil {
-			run.processObservation, err = adapter.held.resources.startServerObservation(ctx, run.command.Process.Pid, phase, name, gauge, func() { adapter.held.resources.Fail(); run.stopOnce.Do(func() { close(run.stop) }) })
+			run.processObservation, err = adapter.held.resources.startServerObservation(ctx, run.command.Process.Pid, phase, name, gauge, func() { run.stopOnce.Do(func() { close(run.stop) }) })
 		}
 		if err != nil {
 			root.requestStop()

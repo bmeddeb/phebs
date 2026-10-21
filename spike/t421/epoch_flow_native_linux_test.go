@@ -416,7 +416,7 @@ func logLinuxEpochNativeFailure(t *testing.T, flow *LinuxExecutionEpochFlow, bas
 		t.Logf("private trace_failure_available=%t snapshot=%+v", snapshot.Stage != "", snapshot)
 	}
 	if flow.held != nil && flow.held.whole != nil {
-		t.Logf("whole private process refusal=%q", flow.held.whole.gauge.privateRefusal())
+		t.Logf("whole private process refusal=%q sample_stage=%q sample_origin=%q", flow.held.whole.gauge.privateRefusal(), flow.held.whole.gauge.privateRefusalStage(), flow.held.whole.privateRefusalOrigin())
 		prefix, err := flow.held.whole.snapshot() // Joined saved state only; no new sample.
 		t.Logf("whole private joined=%t RSS_limit_exceeded=%t saved_refusal=%t phase_observations=%+v", prefix.Joined, prefix.RSSLimitExceeded, err != nil, prefix.Phases)
 	}
@@ -444,8 +444,22 @@ func logLinuxEpochNativeFailure(t *testing.T, flow *LinuxExecutionEpochFlow, bas
 				t.Logf("private epoch=%d failure=%v native_stop=%v admission=%+v", run.epoch.Epoch, run.err, run.nativeStopErr, run.stopDiagnostic)
 				run.mu.Unlock()
 				if run.processObservation != nil {
+					t.Logf("private epoch=%d process refusal=%q sample_stage=%q sample_origin=%q", run.epoch.Epoch, run.processObservation.gauge.privateRefusal(), run.processObservation.gauge.privateRefusalStage(), run.processObservation.privateRefusalOrigin())
 					prefix, err := run.processObservation.snapshot() // Joined saved state only; no new sample.
 					t.Logf("private epoch=%d saved_process_observation=%+v saved_error=%v", run.epoch.Epoch, prefix, err)
+				}
+				if reader := run.inspection; reader != nil {
+					reader.mu.Lock()
+					t.Logf("private epoch=%d first inspection refusal=%+v", run.epoch.Epoch, reader.readFailure)
+					t.Logf("private inspection prefix: X=%d T=%d F_used=%t accepted_reports=%d reads=%+v failed_HTTP=%d failed_ordinal=%d failed_body_bytes=%d",
+						reader.progressCalls, reader.tailCalls, reader.finalUsed, reader.reports, reader.totals, reader.failureStatus, reader.failureOrdinal, len(reader.failureBody))
+					if reader.failureBody != nil {
+						path := filepath.Join(base, fmt.Sprintf("joined-inspection-%d.body", run.epoch.Epoch))
+						if os.WriteFile(path, reader.failureBody, 0o600) != nil {
+							t.Error("private joined inspection retention refused")
+						}
+					}
+					reader.mu.Unlock()
 				}
 				if run.output != nil {
 					raw := run.output.buffer.Bytes()
@@ -505,5 +519,25 @@ func TestLinuxEpochNativeFailureDiagnosticReadsOnlyJoinedSavedRSS(t *testing.T) 
 		!prefix.Joined || !prefix.RSSLimitExceeded || len(prefix.Phases) != 1 ||
 		prefix.Phases[0].Observation.ObservedRSSBytes != linuxEpochRSSReservation+4096 {
 		t.Fatal("joined diagnostic changed or re-probed the retained overshoot", prefix, err, probes)
+	}
+}
+
+func TestLinuxEpochJoinedDiagnosticRetainsInspectionWithoutProbe(t *testing.T) {
+	base := t.TempDir()
+	done := make(chan struct{})
+	close(done)
+	reader := &executionEpochInspection{readFailure: epochReadFailure{Stage: "inspection_state_or_semantics", Ordinal: 17, Cause: errors.New("saved original failure")},
+		failureStatus: 503, failureOrdinal: 17, failureBody: []byte("saved private response")}
+	run := &ExecutionEpochOneRun{epoch: ExecutionEpochConfig{Epoch: 1}, done: done, inspection: reader}
+	flow := &LinuxExecutionEpochFlow{done: done, core: &ExecutionEpochOne{},
+		request: LinuxExecutionEpochRequest{Epochs: &LinuxExecutionEpochConfigCustody{author: &LinuxExecutionAuthorCustody{}}},
+		held:    &linuxEpochHeldFlow{servers: map[*ExecutionEpochOneRun]*linuxEpochServer{run: {}}}}
+	before := reader.readFailure
+	logLinuxEpochNativeFailure(t, flow, base)
+	path := filepath.Join(base, "joined-inspection-1.body")
+	raw, err := os.ReadFile(path)
+	info, statErr := os.Stat(path)
+	if err != nil || statErr != nil || string(raw) != string(reader.failureBody) || info.Mode().Perm() != 0o600 || reader.readFailure != before || reader.failureOrdinal != 17 {
+		t.Fatal("joined diagnostic lost or changed original inspection", err, statErr)
 	}
 }

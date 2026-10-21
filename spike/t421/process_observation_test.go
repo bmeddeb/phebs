@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/bmeddeb/phebs/spike/t4013"
 )
@@ -307,5 +308,51 @@ func TestProcessObservationRealNativeRoot(t *testing.T) {
 	got, err := gauge.Sample(t.Context())
 	if err != nil || !got.Available || got.CompletedCensuses != 1 || got.ObservedRSSHighWaterBytes == 0 {
 		t.Fatalf("real native observation = %+v, %v", got, err)
+	}
+}
+
+func TestProcessObservationDeadlineSubstageAndStickyPrefix(t *testing.T) {
+	for _, stage := range []string{"sample-entry", "probe-returned", "accept-end"} {
+		t.Run(stage, func(t *testing.T) {
+			gauge, rows := observationFixture(t)
+			gauge.probe = func(context.Context, int) ([]t4013.NativeProcessRecord, error) { return rows, nil }
+			if _, err := gauge.Sample(t.Context()); err != nil {
+				t.Fatal(err)
+			}
+			before := gauge.Observation()
+			ctx, cancel := context.WithTimeout(t.Context(), 20*time.Millisecond)
+			defer cancel()
+			switch stage {
+			case "sample-entry":
+				<-ctx.Done()
+			case "probe-returned":
+				gauge.probe = func(ctx context.Context, _ int) ([]t4013.NativeProcessRecord, error) {
+					<-ctx.Done()
+					return rows, nil
+				}
+			case "accept-end":
+				gauge.classify = func(ctx context.Context, row t4013.NativeProcessRecord) (int, bool) {
+					<-ctx.Done()
+					class, ok := gauge.nameClasses[row.ObservedName]
+					return class, ok
+				}
+			}
+			value, err := gauge.Sample(ctx)
+			if err == nil || gauge.privateRefusal() != context.DeadlineExceeded.Error() || gauge.privateRefusalStage() != stage || value.Available ||
+				value.CompletedCensuses != before.CompletedCensuses || value.ObservedRSSHighWaterBytes != before.ObservedRSSHighWaterBytes {
+				t.Fatal("deadline lost first substage or positive prefix", value, err, gauge.privateRefusal(), gauge.privateRefusalStage())
+			}
+			gauge.probe = func(context.Context, int) ([]t4013.NativeProcessRecord, error) {
+				t.Error("refused probe retried")
+				return rows, nil
+			}
+			if _, err := gauge.Sample(t.Context()); err == nil || gauge.privateRefusalStage() != stage {
+				t.Fatal("sticky refusal changed")
+			}
+			raw, err := json.Marshal(value)
+			if err != nil || strings.Contains(string(raw), stage) || strings.Contains(string(raw), context.DeadlineExceeded.Error()) {
+				t.Fatal("private deadline facts leaked", string(raw), err)
+			}
+		})
 	}
 }

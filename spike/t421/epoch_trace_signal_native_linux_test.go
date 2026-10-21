@@ -295,6 +295,11 @@ func TestLinuxEpochTraceNativeReconcilesOwnedSignalStop(t *testing.T) {
 				partial = true
 			}
 		}
+		// Preserve the before-state witness before the wrapper can advance it.
+		if !partial {
+			time.Sleep(time.Millisecond)
+			continue
+		}
 		before := root.events
 		if err = root.reconcileExitingGroups(ctx); err != nil {
 			t.Fatal("production current-group reconciliation wrapper", err)
