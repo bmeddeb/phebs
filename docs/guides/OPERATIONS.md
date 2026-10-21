@@ -756,6 +756,18 @@ clean source/cost review; the
 retains the earlier test-only race timeout. Full native acceptance remains
 pending; no production option is enabled by constructing this plan.
 
+The next full run at `9bc9e426` passed protected comparisons and initial memory
+admission, then failed first-server `health-a` on a proc-stat read disappearance.
+Its [record](../../spike/t42h2r/live-borrow-detached-read-failure-linux-20261021.json)
+retains actual outer Wait1 and unknown inner custody. Preserve the fixture;
+neither initial admission nor absent sampled session members closes ownership.
+Only already witnessed nonleader EXIT metadata may retire on open/read ENOENT
+or ESRCH, with a successful close and no overflow. Other errors and current
+binding mismatches still refuse. Live-process identity, image, parent/namespace,
+group-terminal and genuine Wait checks stay exact. No retry or new admission
+is authorized by this classifier correction alone; qualify its bounded real
+EXIT-detach control and reviewed source before fresh full native acceptance.
+
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
 It binds `c07bc930` and is preserved unchanged, so it no longer describes the

@@ -16376,3 +16376,57 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   copied outside the retired paths; original failure and unknown custody stay
   exact. Fresh full native acceptance remains the merge bar. No freeze, host
   admission or ceremony follows from source implementation or bounded replay.
+
+- **2026-10-21 — T42.H2r.c.c detached EXIT proc-read retirement.** Exact
+  `9bc9e426` passed three fresh protected comparisons and initial memory
+  admission, then failed first-server `health-a` after 1,394.960s with actual
+  outer Wait1. Its first resource refusal is `trace/event-turn`, with raw
+  `read /proc/1278406/stat: no such process`; the ring retains that TID's EXIT.
+  Detached retirement runs before currentTID refresh, so the saved currentTID
+  may be stale. No exact private map membership, executable identity, complete
+  history or initiating-order attribution is recovered. Preserve the raw/source
+  archive, failed fixture and unknown inner custody. Initial memory admission
+  is no full RSS fit, and cold V6 extraction was not reached. The record is
+  `spike/t42h2r/live-borrow-detached-read-failure-linux-20261021.json`.
+
+  Source inspection identifies a narrow classifier gap consistent with the
+  prefix: `os.IsNotExist` neither recognizes ESRCH nor traverses errors.Join.
+  Only already witnessed nonleader EXIT metadata uses a dedicated bounded
+  stat reader. Open/read ENOENT or ESRCH may retire that metadata after a
+  successful actual close and no overflow; close failures, oversized records,
+  other I/O errors, malformed successful bytes and same-birth parent/SID/name
+  drift still refuse. The shared live identity reader and all image, parent,
+  namespace, leader CLD/pidfd, sole genuine Wait and unknown-custody predicates
+  stay exact. This realizes existing disappearance retirement, without a new
+  policy version, admission, signal or task-history claim.
+
+  The real group control holds the original omitted nonleader's proc-stat FD
+  before its actual traced EXIT-detach, requires actual kernel read-time ESRCH,
+  then exercises the production checked-close reader and metadata retirement.
+  Task/leader/event/exitSeen/Wait state cannot change through retirement; the
+  original unreaped leader remains owned. This is the existing dying-group
+  control, not a claim its Z leader is running or supplies zero RSS. It still
+  requires partial-Z terminal refusal, genuine natural root Wait0, original HUP,
+  session drain, DA settlement and owner closure. Synthetic negative I/O controls
+  pin close-error priority, overflow, permission errors and binding drift.
+
+  Cost: each retained-witness check still performs one bounded open/read/close
+  of at most 4 KiB plus one sentinel, under the existing global 1,024-TID bound
+  and probe gate. Only error classification and a private reader call change;
+  no new read, scan, retry, timer, pidfd, signal, goroutine, lock, cache, corpus
+  hash or persistent state is added. Query/request, sync, ordinary startup,
+  retry/no-op and publication costs stay unchanged, as do RSS/process/deadline
+  bounds. The regression alone holds one additional proc FD and polls its own
+  known path under the existing eight-second fixture context. Bounded normal,
+  race, static/platform/docs gates and independent source/cost review precede
+  another full exact-source native attempt. No native qualification, merge,
+  H2/readiness/freeze completion or ceremony execution follows from this fix.
+
+  Bounded qualification now passes 25 focused and 63 complete tracer nodes in
+  both normal/race builds, with zero skips; module, tagged vet/lint, supported
+  cross-compilation and documentation/glossary gates pass. All four real group
+  executions observed actual held-FD read-time ESRCH and original natural
+  Wait0/HUP/DA closure. Independent source/cost review has zero findings.
+  `spike/t42h2r/live-borrow-detached-read-bounded-linux-20261021.json` binds
+  these results and carries the unchanged V6 extraction source qualification.
+  Fresh full native acceptance remains pending.

@@ -177,6 +177,12 @@ func TestLinuxEpochTraceReconcilesOwnedDyingGroup(t *testing.T) {
 	root.continued = true
 	omitted := 0
 	omittedBirth := ""
+	var detachedStat *os.File
+	defer func() {
+		if detachedStat != nil && (!started || released) {
+			_ = detachedStat.Close()
+		}
+	}()
 	// Before withholding exactly one real CLONE child, share the production
 	// stop dispatcher. No fake event, current image, or terminal row is supplied.
 	for omitted == 0 {
@@ -212,6 +218,10 @@ func TestLinuxEpochTraceReconcilesOwnedDyingGroup(t *testing.T) {
 					t.Fatal("real omitted same-group child", child, identity, ce, ie)
 				}
 				omitted, omittedBirth = identity.pid, identity.birth
+				detachedStat, e = os.Open(fmt.Sprintf("/proc/%d/stat", omitted))
+				if e != nil {
+					t.Fatal(e)
+				}
 				if e = unix.PtraceCont(tid, 0); e != nil {
 					t.Fatal(e)
 				}
@@ -224,6 +234,42 @@ func TestLinuxEpochTraceReconcilesOwnedDyingGroup(t *testing.T) {
 		time.Sleep(time.Millisecond)
 	}
 	sawPartial, reconciled, terminal := false, false, false
+	sawDetachedRead := false
+	checkDetachedRead := func() {
+		if sawDetachedRead || root.detached[omitted].birth != omittedBirth {
+			return
+		}
+		// The actual EXIT dispatcher detached this original nonleader. Hold its
+		// previously opened stat through disappearance, before any root Wait.
+		for {
+			_, e := os.Stat(fmt.Sprintf("/proc/%d/stat", omitted))
+			if errors.Is(e, os.ErrNotExist) {
+				break
+			}
+			if e != nil || ctx.Err() != nil {
+				t.Fatal("witnessed thread did not disappear", e, ctx.Err())
+			}
+			time.Sleep(time.Millisecond)
+		}
+		var one [1]byte
+		if _, e := detachedStat.Read(one[:]); !errors.Is(e, unix.ESRCH) {
+			t.Fatal("held real proc stat must return read-time ESRCH", e)
+		}
+		if _, gone, e := linuxEpochTraceDetachedRead(detachedStat); e != nil || !gone {
+			t.Fatal("real read-time disappearance must retire only metadata", gone, e)
+		}
+		detachedStat = nil // Production reader closed this actual descriptor.
+		beforeTIDs, beforeWitnesses := owner.tids, len(root.detached)
+		beforeTasks, beforeLeaders, beforeEvents := len(root.tasks), len(owner.leaders), root.events
+		leader, exitSeen := owner.leaders[root.original.pid], root.exitSeen
+		if e := root.retireDetached(ctx); e != nil {
+			t.Fatal(e)
+		}
+		if _, present := root.detached[omitted]; present || owner.tids != beforeTIDs-(beforeWitnesses-len(root.detached)) || len(root.tasks) != beforeTasks || len(owner.leaders) != beforeLeaders || root.events != beforeEvents || owner.leaders[root.original.pid] != leader || leader == nil || root.exitSeen != exitSeen || joined {
+			t.Fatal("metadata retirement changed live ownership or terminal authority")
+		}
+		sawDetachedRead = true
+	}
 	consumedEvent := -1
 	reconciliationBranch := "not-observed"
 	for !terminal {
@@ -234,6 +280,7 @@ func TestLinuxEpochTraceReconcilesOwnedDyingGroup(t *testing.T) {
 		if err != nil {
 			t.Fatal("actual group turn", err)
 		}
+		checkDetachedRead()
 		if !sawPartial {
 			leader := owner.leaders[root.original.pid]
 			if leader != nil && leader.exiting && len(root.tasks) == 1 {
@@ -292,15 +339,16 @@ func TestLinuxEpochTraceReconcilesOwnedDyingGroup(t *testing.T) {
 				}
 			}
 		}
+		checkDetachedRead()
 		time.Sleep(time.Millisecond)
 	}
 	if !root.exitSeen || len(root.tasks) != 1 || len(root.pending) != 0 {
 		t.Fatal("actual original terminal ownership unavailable", root.exitSeen, len(root.tasks), len(root.pending))
 	}
-	if !sawPartial || !reconciled {
+	if !sawPartial || !reconciled || !sawDetachedRead {
 		// Actual terminal ownership is already known: a coverage assertion
 		// must not prevent the one genuine Wait and all actual custody joins.
-		t.Error("required real partial-group branch not proven", sawPartial, reconciled)
+		t.Error("required real partial-group and detached-read branches not proven", sawPartial, reconciled, sawDetachedRead)
 	}
 	if empty, e := root.sessionEmpty(ctx); e != nil || !empty {
 		t.Fatal("anchored actual session completion", empty, e)
@@ -333,7 +381,7 @@ func TestLinuxEpochTraceReconcilesOwnedDyingGroup(t *testing.T) {
 	if err != nil || count.Ordinal != 1 || count.Active != 0 {
 		t.Fatal("genuine original DA settlement", count, err)
 	}
-	t.Logf("original=%d omittedNonleader=%d omittedBirth=%s partialZRefused=%t reconciled=%t consumedEvent=%d reconciliationBranch=%s genuineWait=%d waitError=%v originalHUP=true DAOrdinal=%d DAActive=%d", root.original.pid, omitted, omittedBirth, sawPartial, reconciled, consumedEvent, reconciliationBranch, exitCode, waitErr, count.Ordinal, count.Active)
+	t.Logf("original=%d omittedNonleader=%d omittedBirth=%s partialZRefused=%t reconciled=%t detachedReadESRCH=%t consumedEvent=%d reconciliationBranch=%s genuineWait=%d waitError=%v originalHUP=true DAOrdinal=%d DAActive=%d", root.original.pid, omitted, omittedBirth, sawPartial, reconciled, sawDetachedRead, consumedEvent, reconciliationBranch, exitCode, waitErr, count.Ordinal, count.Active)
 }
 
 func linuxEpochTraceGroupNegativeBindings(t *testing.T, root *linuxEpochTraceRoot, leader *linuxEpochTraceLeader, anchor, child linuxEpochTraceIdentity) {

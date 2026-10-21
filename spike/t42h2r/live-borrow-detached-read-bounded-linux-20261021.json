@@ -1,0 +1,647 @@
+{
+  "schema": "t42-linux-live-borrow-detached-read-bounded-v1",
+  "source_base": "9bc9e426695be1dbea5f9d3eb46bac042c03a74c",
+  "status": "BOUNDED_CORRECTION_PASS_FULL_NATIVE_PENDING",
+  "correction": "Witnessed EXIT metadata only: open/read ENOENT or ESRCH after independent successful close and no overflow; other errors and binding checks remain strict. Shared live identity reader unchanged.",
+  "plan": "prospective V6 unchanged",
+  "private_resource_policy": "v7 unchanged",
+  "tests": [
+    {
+      "name": "focused-normal",
+      "actual_tool_session": 62533,
+      "pid": 1279281,
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 23.78547163499752,
+      "source_changed": [],
+      "nodes": {
+        "pass": 25,
+        "fail": 0,
+        "skip": 0
+      },
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "./spike/t421",
+        "-run",
+        "^TestLinuxEpochTrace(Detached.*|ReconcilesOwnedDyingGroup)$",
+        "-count=1",
+        "-timeout=90s",
+        "-json"
+      ],
+      "real_kernel_control": "epoch_trace_group_linux_test.go:384: original=1279349 omittedNonleader=1279358 omittedBirth=10193003 partialZRefused=true reconciled=true detachedReadESRCH=true consumedEvent=6 reconciliationBranch=exit-detach genuineWait=0 waitError=<nil> originalHUP=true DAOrdinal=1 DAActive=0"
+    },
+    {
+      "name": "focused-race",
+      "actual_tool_session": 21718,
+      "pid": 1279531,
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 34.55666235499666,
+      "source_changed": [],
+      "nodes": {
+        "pass": 25,
+        "fail": 0,
+        "skip": 0
+      },
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-race",
+        "./spike/t421",
+        "-run",
+        "^TestLinuxEpochTrace(Detached.*|ReconcilesOwnedDyingGroup)$",
+        "-count=1",
+        "-timeout=90s",
+        "-json"
+      ],
+      "real_kernel_control": "epoch_trace_group_linux_test.go:384: original=1279636 omittedNonleader=1279645 omittedBirth=10197589 partialZRefused=true reconciled=true detachedReadESRCH=true consumedEvent=6 reconciliationBranch=exit-detach genuineWait=0 waitError=<nil> originalHUP=true DAOrdinal=1 DAActive=0"
+    },
+    {
+      "name": "tracer-normal",
+      "actual_tool_session": 78564,
+      "pid": 1279876,
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 23.810870416011312,
+      "source_changed": [],
+      "nodes": {
+        "pass": 63,
+        "fail": 0,
+        "skip": 0
+      },
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-tags=phebs_t42_native",
+        "./spike/t421",
+        "-run",
+        "^TestLinuxEpochTrace",
+        "-count=1",
+        "-timeout=90s",
+        "-json"
+      ],
+      "real_kernel_control": "epoch_trace_group_linux_test.go:384: original=1279948 omittedNonleader=1279957 omittedBirth=10208990 partialZRefused=true reconciled=true detachedReadESRCH=true consumedEvent=6 reconciliationBranch=exit-detach genuineWait=0 waitError=<nil> originalHUP=true DAOrdinal=1 DAActive=0"
+    },
+    {
+      "name": "tracer-race",
+      "actual_tool_session": 83975,
+      "pid": 1280053,
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 37.257028798005194,
+      "source_changed": [],
+      "nodes": {
+        "pass": 63,
+        "fail": 0,
+        "skip": 0
+      },
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+        "test",
+        "-race",
+        "-tags=phebs_t42_native",
+        "./spike/t421",
+        "-run",
+        "^TestLinuxEpochTrace",
+        "-count=1",
+        "-timeout=90s",
+        "-json"
+      ],
+      "real_kernel_control": "epoch_trace_group_linux_test.go:384: original=1280142 omittedNonleader=1280152 omittedBirth=10213365 partialZRefused=true reconciled=true detachedReadESRCH=true consumedEvent=6 reconciliationBranch=exit-detach genuineWait=0 waitError=<nil> originalHUP=true DAOrdinal=1 DAActive=0"
+    }
+  ],
+  "static": {
+    "actual_tool_session": 46857,
+    "actual_tool_exit": 0,
+    "steps": [
+      {
+        "name": "module-verify",
+        "argv": [
+          "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+          "mod",
+          "verify"
+        ],
+        "environment_override": {},
+        "pid": 1280298,
+        "actual_wait_exit_code": 0,
+        "sampled_session_members_after_wait": [],
+        "source_changed": [],
+        "elapsed_seconds": 8.711694769008318,
+        "available_before": 142684311552,
+        "available_after": 142684299264,
+        "scope": "Wrapper Wait is genuine for this root; sequential SID absence does not establish complete child history."
+      },
+      {
+        "name": "tagged-vet",
+        "argv": [
+          "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+          "vet",
+          "-tags=phebs_t42_native",
+          "./spike/t421"
+        ],
+        "environment_override": {},
+        "pid": 1280415,
+        "actual_wait_exit_code": 0,
+        "sampled_session_members_after_wait": [],
+        "source_changed": [],
+        "elapsed_seconds": 3.8108648549969075,
+        "available_before": 142684295168,
+        "available_after": 142665723904,
+        "scope": "Wrapper Wait is genuine for this root; sequential SID absence does not establish complete child history."
+      },
+      {
+        "name": "tagged-lint",
+        "argv": [
+          "/home/ben/.local/share/phebs-host/tools/golangci-lint-2.12.2/golangci-lint",
+          "run",
+          "--new-from-rev=9bc9e426695be1dbea5f9d3eb46bac042c03a74c",
+          "--build-tags=phebs_t42_native",
+          "--timeout=4m",
+          "./spike/t421/..."
+        ],
+        "environment_override": {},
+        "pid": 1280451,
+        "actual_wait_exit_code": 0,
+        "sampled_session_members_after_wait": [],
+        "source_changed": [],
+        "elapsed_seconds": 40.54845732499962,
+        "available_before": 142665723904,
+        "available_after": 142653829120,
+        "scope": "Wrapper Wait is genuine for this root; sequential SID absence does not establish complete child history."
+      },
+      {
+        "name": "compile-linux-arm64",
+        "argv": [
+          "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+          "test",
+          "-c",
+          "-tags=phebs_t42_native",
+          "-o",
+          "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/static/compiler-tmp/diagnostic-linux-arm64.test",
+          "./spike/t421"
+        ],
+        "environment_override": {
+          "GOOS": "linux",
+          "GOARCH": "arm64",
+          "CGO_ENABLED": "0"
+        },
+        "pid": 1280589,
+        "actual_wait_exit_code": 0,
+        "sampled_session_members_after_wait": [],
+        "source_changed": [],
+        "elapsed_seconds": 24.592890176994842,
+        "available_before": 142653829120,
+        "available_after": 142455947264,
+        "scope": "Wrapper Wait is genuine for this root; sequential SID absence does not establish complete child history."
+      },
+      {
+        "name": "compile-darwin-amd64",
+        "argv": [
+          "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+          "test",
+          "-c",
+          "-tags=phebs_t42_native",
+          "-o",
+          "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/static/compiler-tmp/diagnostic-darwin-amd64.test",
+          "./spike/t421"
+        ],
+        "environment_override": {
+          "GOOS": "darwin",
+          "GOARCH": "amd64",
+          "CGO_ENABLED": "0"
+        },
+        "pid": 1280642,
+        "actual_wait_exit_code": 0,
+        "sampled_session_members_after_wait": [],
+        "source_changed": [],
+        "elapsed_seconds": 24.389271402003942,
+        "available_before": 142539714560,
+        "available_after": 142445199360,
+        "scope": "Wrapper Wait is genuine for this root; sequential SID absence does not establish complete child history."
+      },
+      {
+        "name": "compile-darwin-arm64",
+        "argv": [
+          "/home/ben/.local/share/phebs-host/tools/go-1.26.5/bin/go",
+          "test",
+          "-c",
+          "-tags=phebs_t42_native",
+          "-o",
+          "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/static/compiler-tmp/diagnostic-darwin-arm64.test",
+          "./spike/t421"
+        ],
+        "environment_override": {
+          "GOOS": "darwin",
+          "GOARCH": "arm64",
+          "CGO_ENABLED": "0"
+        },
+        "pid": 1280697,
+        "actual_wait_exit_code": 0,
+        "sampled_session_members_after_wait": [],
+        "source_changed": [],
+        "elapsed_seconds": 24.04735678000725,
+        "available_before": 142540337152,
+        "available_after": 142389911552,
+        "scope": "Wrapper Wait is genuine for this root; sequential SID absence does not establish complete child history."
+      },
+      {
+        "name": "docs-glossary",
+        "argv": [
+          "make",
+          "docs-check",
+          "verify-glossary"
+        ],
+        "environment_override": {},
+        "pid": 1280779,
+        "actual_wait_exit_code": 0,
+        "sampled_session_members_after_wait": [],
+        "source_changed": [],
+        "elapsed_seconds": 1.7351713229872985,
+        "available_before": 142479777792,
+        "available_after": 142479773696,
+        "scope": "Wrapper Wait is genuine for this root; sequential SID absence does not establish complete child history."
+      },
+      {
+        "name": "whitespace",
+        "argv": [
+          "git",
+          "diff",
+          "--check"
+        ],
+        "environment_override": {},
+        "pid": 1280850,
+        "actual_wait_exit_code": 0,
+        "sampled_session_members_after_wait": [],
+        "source_changed": [],
+        "elapsed_seconds": 0.20010310399811715,
+        "available_before": 142479773696,
+        "available_after": 142479773696,
+        "scope": "Wrapper Wait is genuine for this root; sequential SID absence does not establish complete child history."
+      }
+    ]
+  },
+  "review": {
+    "path": "/home/ben/phebs-rehearsals/t42h2-detached-read-review-mv1efibn/source-review.json",
+    "sha256": "1b544bae600d0d3247644ec1d242459be4eb6a0b4e774ab1f883d52493b069a4",
+    "severity_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    },
+    "scope": "Independent source/cost review of exact three Go files; final evidence/docs review follows."
+  },
+  "carried_v6_qualification": {
+    "path": "spike/t42h2r/live-borrow-typed-extraction-v6-bounded-linux-20261021.json",
+    "sha256": "15871e30acff118ec83144180242502228261ec0d96de6d19f25b159c7d2c585",
+    "source_bindings_all_match": true,
+    "scope": "Historical 178 normal/178 race bounded extraction qualification; unchanged V6 source only, not repeated/full native."
+  },
+  "cost": "Same one open/read/close per retained witness, maximum 4096 bytes plus sentinel and global1024TID bound; private classification call only. No new production scan/retry/timer/lock/goroutine/signal/cache/state or request/sync/startup/publication cost. Regression holds one additional proc FD and polls its known task path under existing8s fixture context.",
+  "retained_failure": "spike/t42h2r/live-borrow-detached-read-failure-linux-20261021.json",
+  "limits": "All live identity/image/parent/namespace, leaderCLD/pidfd, genuineWait, unknown-custody, RSS/process/deadline gates unchanged. No merge, full native, cold V6, H2/readiness/freeze/ceremony claim.",
+  "source_binding": [
+    {
+      "path": "spike/t421/accounting_contract.go",
+      "sha256": "82d57e742ebcfa691775e941b26db9043bf40bbbc8c2c8da75040435f1e4f735"
+    },
+    {
+      "path": "spike/t421/accounting_receipt.go",
+      "sha256": "978b6316e93651c679e2af80bdf1b64ac7f901cc6ce13e5b70a46908cfa7b3e3"
+    },
+    {
+      "path": "spike/t421/attempt_observation.go",
+      "sha256": "8e584d2591e7b982df7b0172066d48760967eec3388836810dd5d51e2314f89d"
+    },
+    {
+      "path": "spike/t421/author_custody.go",
+      "sha256": "75ec56eaec73f42e7c0d0dbe8cb70c2e3b038124fd045c6a35fc75b0fea73806"
+    },
+    {
+      "path": "spike/t421/contract_correction.go",
+      "sha256": "86f798bb17eccd4276a3ca29632ae82147ea4d199910e7e38b47f91427e5a72e"
+    },
+    {
+      "path": "spike/t421/epoch_config_custody.go",
+      "sha256": "c89bcadedeab4ab3b35c0404f555b0fe2a72cfb8b2b1b6a968b43b67257c8368"
+    },
+    {
+      "path": "spike/t421/epoch_flow_native_linux_test.go",
+      "sha256": "abfb790f21924332fa13ba97fde62ea632b9c4b7917b6a88822ed1b08fee6dc8"
+    },
+    {
+      "path": "spike/t421/epoch_handoff_evidence.go",
+      "sha256": "a82a4f55ddc83479883f6d0db409c085c885ef382bed1e7a68d22555504dd768"
+    },
+    {
+      "path": "spike/t421/epoch_inspection.go",
+      "sha256": "c569487e4acbe3d41baddb1264ba55f737e4f88a3ae86bde2198a53b27e8763f"
+    },
+    {
+      "path": "spike/t421/epoch_launch.go",
+      "sha256": "f5b198ddc479262f3ec4fa1cce460a48b4ebe6a451d2485c660e3a853e77c21d"
+    },
+    {
+      "path": "spike/t421/epoch_product_queries.go",
+      "sha256": "b6ee371500775b93759cf322b4cc94d1e68d13f3ac74ac865d33f478418e45bc"
+    },
+    {
+      "path": "spike/t421/epoch_search_warm.go",
+      "sha256": "e7e2e99c4c885527f7bc68faf4bbe3fe212374dd2559c8e2d1552a56f6052e2a"
+    },
+    {
+      "path": "spike/t421/epoch_selector_cleanup.go",
+      "sha256": "a2330d7807d09950eb9316e7e45214e645620587bf57fa6278cd99a73a600465"
+    },
+    {
+      "path": "spike/t421/epoch_trace_detached_linux_test.go",
+      "bytes": 3382,
+      "sha256": "5fdc92d702d7b288c082263fcee84e3833e88182458eceb097bcdc0e98a41333"
+    },
+    {
+      "path": "spike/t421/epoch_trace_events_linux.go",
+      "bytes": 18172,
+      "sha256": "566f7994f41d1dba77fa6d1a3f9ad8062f7f447bdbbb9997394facc8263009b5"
+    },
+    {
+      "path": "spike/t421/epoch_trace_group_linux.go",
+      "bytes": 12481,
+      "sha256": "f5c64b2d0472fcee694efed7f84400d821216f7c4f37980701ce0309a3c64358"
+    },
+    {
+      "path": "spike/t421/epoch_trace_group_linux_test.go",
+      "bytes": 16179,
+      "sha256": "d1393947639aef5a1df355cbaeb7413bd4d311c2a57ca81f3d592cb3a6e3d21d"
+    },
+    {
+      "path": "spike/t421/epoch_trace_linux.go",
+      "bytes": 12799,
+      "sha256": "6cb9aa264eeca21225506764b510ab2d7d5002bd80b7035c102ac0cac3d3d883"
+    },
+    {
+      "path": "spike/t421/execution_profile.go",
+      "sha256": "428e2c90a84915c3414bd7cf8e934916f5a291eb52376415c76c32f988b2a37d"
+    },
+    {
+      "path": "spike/t421/execution_receipt_transition_results.go",
+      "sha256": "59d7bf49ac198ac3e996899693187118fcbe04354f76b3db590b156fa73ceaa7"
+    },
+    {
+      "path": "spike/t421/execution_stopped_metrics.go",
+      "sha256": "fcff6530a16956479f53c33726e5b9f7b6d82baf1afb9d62a6b2fe02c0bec6b1"
+    },
+    {
+      "path": "spike/t421/freeze.go",
+      "sha256": "5a963e194f601e29ad8e7d5a972c23514a05092232026c3161eac1c3b56926e5"
+    },
+    {
+      "path": "spike/t421/handoff_observation.go",
+      "sha256": "d951dc75fd66798848413536246824713c65d96ef9a0a20bf2025bbb0283c1bc"
+    },
+    {
+      "path": "spike/t421/inspection_inventory.go",
+      "sha256": "85bb140098b904899015d3415313512a81a72e0f6caa87b6c4e3e43abfe24182"
+    },
+    {
+      "path": "spike/t421/linux_epoch_resource_policy.go",
+      "sha256": "81543bd39f6474769bf41952d3abbd41f54e52b8fa8fe876104412d6f335f707"
+    },
+    {
+      "path": "spike/t421/model.go",
+      "sha256": "e48cd8e15267f6cf13192275cfa9a63c60e3687787904dcacf31938f27d232bf"
+    },
+    {
+      "path": "spike/t421/plan.go",
+      "sha256": "0d6c1b61c206de025398e5b785e454612cce9b90f46f0efaaa5efb5bcdec6055"
+    },
+    {
+      "path": "spike/t421/receipt.go",
+      "sha256": "a7da02c0942fdb3b6318c54bf3e19f75a47d6d6c83f4f7fb83a7ba5ca4e081f1"
+    },
+    {
+      "path": "spike/t421/receipt_handoff.go",
+      "sha256": "ce876181de805c6db6279f445b2b8ffe1d8392436918cab96d7503e27b2c988c"
+    },
+    {
+      "path": "spike/t421/restore_continuity_contract.go",
+      "sha256": "d48c21e4ff3c5b6a616ad03c7371c6ce52b7d2f0c3fbf2ea02a9a40d6709a60c"
+    },
+    {
+      "path": "spike/t421/typed_extraction_contract.go",
+      "sha256": "b4fa13320c10071df822d083fe82bed2d17cd89585e22e4901005b646b6e2632"
+    },
+    {
+      "path": "spike/t421/typed_extraction_contract_test.go",
+      "sha256": "b9baa2c614d788891e18f57976a82d9d4fa1470c480041e8d89cf343286ac29b"
+    }
+  ],
+  "raw_bindings": [
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/focused-normal-invocation.json",
+      "bytes": 313869,
+      "sha256": "c321973fb8fb6f9d4c924dbfd627fc11db14dcbb4f2afa7cc7a44fd293f5a24b"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/focused-normal-result.json",
+      "bytes": 115,
+      "sha256": "48546d8762981e63aff2df357f69eb381603214d278712af01d6967de4dc9877"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/focused-normal.stdout",
+      "bytes": 23460,
+      "sha256": "96c6bd7c35be805e504431bf383a2354ba6ebc329a6b8ebf7f87b6206c60743f"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/focused-normal.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/focused-race-invocation.json",
+      "bytes": 313882,
+      "sha256": "4d2c68a5b638ed2929db2263f249891f85a0b5d0a10d9905d89666b7d3e4b782"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/focused-race-result.json",
+      "bytes": 115,
+      "sha256": "dd563e7148730bfbdb7e0334a46e348e4353f351cbe86c7a22ff36e4483c1b94"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/focused-race.stdout",
+      "bytes": 23465,
+      "sha256": "a11e47819b1ac799496ffdf36eabcaabe881210f62aec37337d8c5ec11000e4f"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/focused-race.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/tracer-normal-invocation.json",
+      "bytes": 313860,
+      "sha256": "a85c5656bd6a48c7d72b786488d78a24269bbc40375ebbe747e56eab1162d8a3"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/tracer-normal-result.json",
+      "bytes": 116,
+      "sha256": "d480eac8331532972e781aa1a1eabf0a1899fbcc3453f4eb72c131e02c883926"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/tracer-normal.stdout",
+      "bytes": 62649,
+      "sha256": "af3a103460e085f4c4ec00fe6b84a684b675200682410b71df7affdc7b7bca95"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/tracer-normal.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/tracer-race-invocation.json",
+      "bytes": 313873,
+      "sha256": "49580bea9015b742b22dae2265d708dcd71225db41edbded676b772d5910fb2e"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/tracer-race-result.json",
+      "bytes": 116,
+      "sha256": "85135e43df4e6a81a43f1c729f638df8c3728130c4b947c10462a743a77d87bb"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/tracer-race.stdout",
+      "bytes": 62658,
+      "sha256": "162c01cce656fa37cf68346bb4ca8ad1e85cd17ece4c2659856c0dd595a288e1"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/tracer-race.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/static/base.json",
+      "bytes": 286,
+      "sha256": "706c722c3e2379853458dabc9789e0556e5dc8ace10e1729bdb95dece6043bb6"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/static/compile-darwin-amd64-artifact.json",
+      "bytes": 302,
+      "sha256": "8df67d90a6af1135f07edfe22f1f363a68574bac2a3a7533a605e7fd382f986d"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/static/compile-darwin-amd64.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/static/compile-darwin-amd64.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/static/compile-darwin-arm64-artifact.json",
+      "bytes": 302,
+      "sha256": "6eaf60860ac1094620eb99b915025347d5cef85b8c3e21a7bf61c4abf82bbea3"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/static/compile-darwin-arm64.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/static/compile-darwin-arm64.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/static/compile-linux-arm64-artifact.json",
+      "bytes": 301,
+      "sha256": "265526c8825e354e33a6caf4e849636a230a6484003fe901e98ce09ee0422c97"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/static/compile-linux-arm64.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/static/compile-linux-arm64.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/static/docs-glossary.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/static/docs-glossary.stdout",
+      "bytes": 237,
+      "sha256": "2c18be5c014d62ac653ccaf9458c977d8bfad22d22fc00c296db7a6d8c5a1cdc"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/static/module-verify.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/static/module-verify.stdout",
+      "bytes": 21,
+      "sha256": "b4537ed75f533f993f371954de47e42a793b8e5b0587577de7e27fb3e50696bd"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/static/progress.json",
+      "bytes": 118,
+      "sha256": "4a4409d014725b61b400a7f4db7c2bdecb780750178de025b0a2adfda0e41091"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/static/results.json",
+      "bytes": 5269,
+      "sha256": "6a3877458ecdf707942baac0fbd9e7abe60954758ce4b312f00fd2c815da233e"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/static/source.json",
+      "bytes": 308547,
+      "sha256": "50b0397b0c237978302b86f891f215d8905bb45d278b90fdb22298a397b3c4dd"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/static/tagged-lint.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/static/tagged-lint.stdout",
+      "bytes": 10,
+      "sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/static/tagged-vet.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/static/tagged-vet.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/static/terminal.json",
+      "bytes": 155,
+      "sha256": "722742f4c3181e54e87ee0c8e15b1d65d3e0da715220f4514372eaaae8202194"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/static/whitespace.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-detached-read-apzfxa7g/static/whitespace.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2-detached-read-review-mv1efibn/source-review.json",
+      "bytes": 6582,
+      "sha256": "1b544bae600d0d3247644ec1d242459be4eb6a0b4e774ab1f883d52493b069a4"
+    },
+    {
+      "path": "/home/ben/phebs/spike/t42h2r/live-borrow-typed-extraction-v6-bounded-linux-20261021.json",
+      "bytes": 19659,
+      "sha256": "15871e30acff118ec83144180242502228261ec0d96de6d19f25b159c7d2c585"
+    }
+  ]
+}

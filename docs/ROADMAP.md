@@ -290,6 +290,15 @@ source/cost review. It explicitly retains unresolved caller attribution and
 accounts for repeated source reads. Fresh full native acceptance remains open;
 no H2/freeze completion is inferred.
 
+The subsequent exact `9bc9e426` full native attempt failed first-server
+`health-a` after 1,394.960s, following three protected comparisons and initial
+memory admission. Its
+[retained failure](../spike/t42h2r/live-borrow-detached-read-failure-linux-20261021.json)
+records a read-time proc disappearance and unknown inner custody. The narrow
+detached EXIT-metadata classifier correction requires bounded real-kernel
+qualification before another full run. PR #156 remains draft and unmerged;
+the V6 cold-extraction path was not reached.
+
 Next: [Linux office handoff #124](https://github.com/bmeddeb/phebs/issues/124)
 mechanism qualification → remaining T42.H2 consumer/executor/resource admission
 → T42.2v restored launch → complete readiness → T42.2o fresh freeze → separately

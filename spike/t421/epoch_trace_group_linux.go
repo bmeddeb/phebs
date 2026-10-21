@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -286,11 +287,15 @@ func (root *linuxEpochTraceRoot) retireDetached(ctx context.Context) error {
 	return nil
 }
 func linuxEpochTraceDetachedCurrent(original linuxEpochTraceIdentity) (bool, error) {
-	raw, err := linuxEpochTraceRead("/proc/"+strconv.Itoa(original.pid)+"/stat", 4096)
-	if os.IsNotExist(err) {
+	file, err := os.Open("/proc/" + strconv.Itoa(original.pid) + "/stat")
+	if errors.Is(err, os.ErrNotExist) || errors.Is(err, unix.ESRCH) {
 		return false, nil
 	}
 	if err != nil {
+		return false, err
+	}
+	raw, gone, err := linuxEpochTraceDetachedRead(file)
+	if err != nil || gone {
 		return false, err
 	}
 	start, end := strings.IndexByte(string(raw), '('), strings.LastIndex(string(raw), ") ")
@@ -308,4 +313,20 @@ func linuxEpochTraceDetachedCurrent(original linuxEpochTraceIdentity) (bool, err
 		return false, ErrExecutionEpochOne
 	}
 	return true, nil
+}
+
+// Only witnessed EXIT metadata may retire on a read-time disappearance.
+func linuxEpochTraceDetachedRead(file io.ReadCloser) ([]byte, bool, error) {
+	raw, readErr := io.ReadAll(io.LimitReader(file, 4097))
+	closeErr := file.Close()
+	if closeErr != nil || len(raw) > 4096 {
+		return nil, false, errors.Join(ErrExecutionEpochOne, readErr, closeErr)
+	}
+	if errors.Is(readErr, os.ErrNotExist) || errors.Is(readErr, unix.ESRCH) {
+		return nil, true, nil
+	}
+	if readErr != nil {
+		return nil, false, errors.Join(ErrExecutionEpochOne, readErr)
+	}
+	return raw, false, nil
 }

@@ -1,0 +1,83 @@
+{
+  "schema": "t42-linux-live-borrow-detached-read-failure-v1",
+  "source_commit": "9bc9e426695be1dbea5f9d3eb46bac042c03a74c",
+  "source_tree": "cacbc6709ff1f2717e337e3b84adf19f512e0e9c",
+  "status": "FAILED_NO_COMPOSED_ACCEPTANCE",
+  "test": "TestLinuxEpochRequiredNativeLiveBorrow",
+  "actual_tool_session": 20529,
+  "actual_tool_exit": 1,
+  "actual_native_root_pid": 1259104,
+  "elapsed_seconds": 1394.9599705120054,
+  "failed_phase": "health-a",
+  "first_retained_refusal": {
+    "stage": "trace/event-turn",
+    "cause": "execution epoch-one launch unavailable or incomplete; read /proc/1278406/stat: no such process",
+    "root_pid": 1278375,
+    "current_tid": 1278406,
+    "reported_group": 1278391,
+    "tasks": 16,
+    "active_tids": 23,
+    "events": 145,
+    "current_tid_scope": "May be the preceding event: detached retirement runs before currentTID refresh; no active-map or executable identity inferred."
+  },
+  "successful_prefix": {
+    "protected_reference_comparisons": 3,
+    "initial_memory_admission_passed": true,
+    "policy_sha256": "0cc51a0133e9386d9d056995cd5aa57d2652059a189eb770ed066efa442c68a6",
+    "initial_available_bytes": 8913682432,
+    "initial_required_bytes": 8499511296,
+    "charged_payload_bytes": 2057060352,
+    "whole_rss_limit_bytes": 4294967296,
+    "first_author": "StartPhysicalB source guard requires Completed/RootJoined/SessionEmpty. No additional author trace/history inferred."
+  },
+  "flow_joined": false,
+  "runtime_custody": "unknown flow retains all owners and exact fixture; outer Wait1 and sampled SID absence do not establish inner cleanup",
+  "typed_cold_extraction": "not reached",
+  "whole_rss_conclusion": "Neither full-run fit nor breach established by initial admission or unjoined prefix.",
+  "source_diagnosis": "The detached-only metadata reader uses os.IsNotExist on errors.Join and fails to classify read-time ESRCH. The retained raw read error and prior EXIT ring entry are consistent with this gap; the precise private detached-map state and initiating order were not captured.",
+  "prospective_correction": "Only already witnessed EXIT metadata may retire on open/read ENOENT or ESRCH, after independent close and overflow gates. Shared live identity/image/parent/namespace, group CLD/pidfd, sole genuine Wait and unknown-custody gates remain exact. No unchanged retry, higher bound or new admission.",
+  "raw_bindings": [
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-native-templates-nte66_9i/full-native/native.stdout",
+      "bytes": 6205,
+      "sha256": "4570eed7cbc118e9720f73694ae5fd4ee006b80b5f8a8d995314f376d58ebd31"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-native-templates-nte66_9i/full-native/native.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-native-templates-nte66_9i/full-native/result.json",
+      "bytes": 442,
+      "sha256": "c72dbcd27c0461dca44c137a85f2d50ffed7f89b7667474fda39c6c818492517"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-native-templates-nte66_9i/full-native/invocation.json",
+      "bytes": 6091,
+      "sha256": "ac410f1101d0b0f51f5d8ef3402f7e0c57d92e81764e771761be4f0e82796a98"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-native-templates-nte66_9i/full-native/early-refusal/observation.json",
+      "bytes": 1455,
+      "sha256": "8fd923c0ef2950da8d179c713f95cb1fd36632fe19895dc8411fbf97f513133e"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-native-templates-nte66_9i/full-native/early-refusal/observed-prefix.stdout",
+      "bytes": 6205,
+      "sha256": "4570eed7cbc118e9720f73694ae5fd4ee006b80b5f8a8d995314f376d58ebd31"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-native-templates-nte66_9i/full-native/terminal-failure/exact-source.tar.gz",
+      "bytes": 67618360,
+      "sha256": "94f9893852eb3cee77a5c9dd1d18f204f6269ddbb07020d56b02fd70c283248b"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/t42h2rcc-v7-native-templates-nte66_9i/full-native/terminal-failure/preservation.json",
+      "bytes": 2874,
+      "sha256": "56cdd862d9200f75d69a196c2c4719094b55d0cd21f18bdb5eea11ce5f83f2fb"
+    }
+  ],
+  "fixture_preserved": "/home/ben/phebs-rehearsals/t42h2rcc-v7-native-templates-nte66_9i/full-native/tmp/phebs-linux-live-epochs-3135685060",
+  "scope": "No full native pass, three-epoch qualification, cold V6 validation, H2/readiness/freeze, successful teardown or ceremony execution."
+}

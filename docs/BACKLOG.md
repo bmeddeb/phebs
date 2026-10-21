@@ -4887,6 +4887,28 @@ initial race test-context stop remains retained; only the new test's bound was
 adjusted for instrumentation. Fresh full native composition remains the merge
 bar. H2/readiness/freeze do not advance yet.
 
+Exact `9bc9e426` subsequently passed all three fresh protected comparisons and
+initial memory admission, then failed `health-a` after 1,394.960s with actual
+outer Wait1 and `trace/event-turn`: `read /proc/1278406/stat: no such process`.
+The [retained failure](../spike/t42h2r/live-borrow-detached-read-failure-linux-20261021.json)
+keeps the unknown inner custody and exact fixture; it establishes no cold V6,
+full RSS, cleanup or composed pass. Source inspection identifies a detached
+EXIT-metadata classifier gap consistent with that prefix: read-time ESRCH and
+joined ENOENT are not covered by `os.IsNotExist`. CurrentTID can be stale here;
+neither the private map state nor executable identity is inferred from it.
+Correct only witnessed metadata retirement after independent close/overflow
+checks, with a real held-proc-FD/EXIT-detach regression and unchanged live
+identity, group-terminal, Wait and resource gates. Fresh full native acceptance
+still precedes merging PR #156.
+
+The [bounded correction record](../spike/t42h2r/live-borrow-detached-read-bounded-linux-20261021.json)
+passes 25 focused and 63 complete tracer nodes in both normal/race builds,
+with no skips, plus module, tagged vet/lint, supported compilation and docs
+gates. The real held-proc-FD control requires actual read-time ESRCH followed
+by genuine root Wait0/HUP/DA closure. Independent source/cost review is clean.
+The unchanged V6 extraction qualification carries forward by exact source
+bindings; full native acceptance is still pending.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared
