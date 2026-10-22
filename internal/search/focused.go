@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"path/filepath"
@@ -910,6 +911,9 @@ func materializeStaticShards(
 		return nil, err
 	}
 	shards := make([]staticFocusedShard, 0, len(members))
+	// Reuse bounded buffered reads instead of touching every page of each
+	// retained mmap merely to validate its digest.
+	var hashBuffer []byte
 	closeShards := func() {
 		for _, shard := range shards {
 			shard.searcher.Close()
@@ -947,43 +951,48 @@ func materializeStaticShards(
 		opened, statErr := file.Stat()
 		current, lstatErr := os.Lstat(source)
 		if statErr != nil || lstatErr != nil ||
-			!opened.Mode().IsRegular() ||
-			!current.Mode().IsRegular() ||
-			!os.SameFile(sourceBefore, opened) ||
-			!os.SameFile(opened, current) ||
-			opened.Size() != sourceBefore.Size() ||
-			current.Size() != sourceBefore.Size() ||
-			!opened.ModTime().Equal(sourceBefore.ModTime()) ||
-			!current.ModTime().Equal(sourceBefore.ModTime()) {
+			!sameStaticShardIdentity(sourceBefore, opened) ||
+			!sameStaticShardIdentity(sourceBefore, current) {
 			_ = file.Close()
 			closeShards()
 			return nil, fmt.Errorf(
 				"%s member %q changed before mmap", kind, member.name,
 			)
 		}
+		if member.contentDigest != "" {
+			if hashBuffer == nil {
+				hashBuffer = make([]byte, 128<<10)
+			}
+			digest, err := digestShardFileContext(ctx, file, opened.Size(), hashBuffer)
+			if err != nil || digest != member.contentDigest {
+				_ = file.Close()
+				closeShards()
+				if err != nil {
+					return nil, fmt.Errorf(
+						"hash %s member %q before mmap: %w",
+						kind, member.name, err,
+					)
+				}
+				return nil, fmt.Errorf(
+					"%s member %q differs before mmap",
+					kind, member.name,
+				)
+			}
+		}
+		hashed, statErr := file.Stat()
+		if statErr != nil || !sameStaticShardIdentity(sourceBefore, hashed) {
+			_ = file.Close()
+			closeShards()
+			return nil, fmt.Errorf("%s member %q changed during hashing", kind, member.name)
+		}
+		// NewIndexFile takes ownership of this same descriptor and closes it on
+		// success or failure. Never reopen the validated pathname for mmap.
 		indexFile, err := index.NewIndexFile(file)
 		if err != nil {
 			closeShards()
 			return nil, fmt.Errorf(
 				"mmap %s member %q: %w", kind, member.name, err,
 			)
-		}
-		if member.contentDigest != "" {
-			digest, err := digestIndexFileContext(ctx, indexFile)
-			if err != nil || digest != member.contentDigest {
-				indexFile.Close()
-				closeShards()
-				if err != nil {
-					return nil, fmt.Errorf(
-						"hash %s member %q after mmap: %w",
-						kind, member.name, err,
-					)
-				}
-				return nil, fmt.Errorf(
-					"%s member %q differs after private mmap",
-					kind, member.name,
-				)
-			}
 		}
 		shard, err := index.NewSearcher(indexFile)
 		if err != nil {
@@ -1005,10 +1014,7 @@ func materializeStaticShards(
 		}
 		sourceAfter, err := os.Lstat(source)
 		if err != nil ||
-			!sourceAfter.Mode().IsRegular() ||
-			!os.SameFile(sourceBefore, sourceAfter) ||
-			sourceAfter.Size() != sourceBefore.Size() ||
-			!sourceAfter.ModTime().Equal(sourceBefore.ModTime()) {
+			!sameStaticShardIdentity(sourceBefore, sourceAfter) {
 			shard.Close()
 			closeShards()
 			return nil, fmt.Errorf(
@@ -1064,27 +1070,36 @@ func focusedShardPriority(
 	return priority, nil
 }
 
-func digestIndexFileContext(
+func sameStaticShardIdentity(before, after os.FileInfo) bool {
+	return before.Mode().IsRegular() && after.Mode().IsRegular() &&
+		before.Mode() == after.Mode() && os.SameFile(before, after) &&
+		before.Size() == after.Size() && before.ModTime().Equal(after.ModTime()) &&
+		fileInfoChangeTime(before) == fileInfoChangeTime(after)
+}
+
+func digestShardFileContext(
 	ctx context.Context,
-	file index.IndexFile,
+	file *os.File,
+	size int64,
+	buffer []byte,
 ) (string, error) {
-	size, err := file.Size()
-	if err != nil {
-		return "", err
+	// Match the upstream mmap size limit before performing any full-file read.
+	if size <= 0 || size >= math.MaxUint32 || len(buffer) == 0 {
+		return "", errors.New("invalid shard size or hash buffer")
 	}
 	hash := sha256.New()
-	const chunkSize = uint32(128 << 10)
-	for offset := uint32(0); offset < size; {
+	for offset := int64(0); offset < size; {
 		if err := ctx.Err(); err != nil {
 			return "", err
 		}
-		count := chunkSize
+		count := int64(len(buffer))
 		if remaining := size - offset; remaining < count {
 			count = remaining
 		}
-		content, err := file.Read(offset, count)
-		if err != nil {
-			return "", err
+		content := buffer[:count]
+		n, err := file.ReadAt(content, offset)
+		if err != nil || n != len(content) {
+			return "", errors.Join(err, io.ErrUnexpectedEOF)
 		}
 		if _, err := hash.Write(content); err != nil {
 			return "", err

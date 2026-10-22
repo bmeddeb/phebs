@@ -16825,3 +16825,50 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   integrity/hash verification and one transfer, followed by deletion only
   after local archive verification. It adds no product query, sync, startup,
   retry, publication, cache, resource-bound or child-process policy change.
+
+- **2026-10-22 — T42.H2r.c.c bounded shard validation before mmap (MED-495).**
+  Maria v10 genuinely returned native Wait1 after 5,576.522s. Physical-B final
+  authority completed before the current/prior retention observation refused:
+  aggregate sampled RSS reached 4,345,257,984 bytes against the unchanged
+  4,294,967,296-byte bound. Only Phebs and Surreal remained in the server
+  cohort; retained evidence does not attribute that aggregate to either process,
+  heap or mapped pages. Preserve the archived failed fixture and terminal facts.
+
+  The shared focused/whole static shard loader hashed all bytes through every
+  retained mmap, populating its resident pages before a query needed them.
+  Hash the same opened descriptor with a reused 128-KiB buffer before passing
+  that descriptor to upstream mmap ownership. Keep full digest validation,
+  current/prior reader overlap and source/generation/accounting gates. Compare
+  regular-file identity, full mode, size, mtime and ctime before hashing, after
+  hashing and after reader construction. Refuse partial reads, cancellation,
+  empty/oversized members and replacement or restored-mtime writes. This adds
+  no page-discard operation or identity substitution.
+
+  A bounded local mechanism diagnostic holds three actual Zoekt readers of one
+  retained 214,374,281-byte shard. All three hashes match in both modes; final
+  RSS is 683,496 KiB for mapped hashing and 68,964 KiB for buffered hashing.
+  These same-shard aliases demonstrate residency cost, not full-workload fit,
+  original aggregate attribution, independent storage or a timing benchmark.
+  Bounded package/race/static gates and independent review precede integration;
+  exact new-source driver/tool admission and one fresh complete qualification
+  remain required. Historical policies and every numerical bound stay exact.
+
+  Cost: a cold load, restart, changed publication or refused-load retry still
+  hashes the same full member bytes; it now issues bounded ReadAt calls rather
+  than touching all mapped pages. One 128-KiB scratch buffer is reused per
+  loader and one extra descriptor stat occurs per shard. Existing limits remain
+  two loads per focused cache, two per whole cache and two globally held exact
+  readers, not two loads globally. Metadata parsing/query accesses can still
+  populate mappings and the kernel can retain file cache; physical/cgroup,
+  available-memory and whole-process RSS gates receive no credit or exemption.
+  Cache-hit queries, sync scheduling and no-op reuse add no hash/read work.
+  Publication writes, locks, cache invalidation, child count and held-reader
+  lifetime are unchanged; no descriptor, goroutine or persistent state is added.
+
+  Exact implementation `f831038e` passes 155 search nodes per normal/race
+  mode, 85 generation regressions, zero skips, vet, pinned package lint, all
+  other supported 64-bit compile targets, docs, glossary and whitespace. Its
+  independent source/cost review has zero findings. The
+  `spike/t42h2r/retention-reader-rss-bounded-linux-20261022.json` record binds
+  those controls and the diagnostic. Fresh complete native acceptance remains
+  open and is not replaced by these bounded results.

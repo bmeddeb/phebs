@@ -5056,6 +5056,24 @@ the actual Wait1/RSS failure; verified operator cleanup is not a measured
 custody/accounting or teardown PASS. Disposable remote run/diagnostic trees
 retire only after archive integrity and local-transfer verification.
 
+**2026-10-22 — MED-495 retention-reader RSS correction.** The v10 full run
+returned actual Wait1 during current/prior retention observation after
+physical-B final authority, at 4,345,257,984 bytes under the unchanged 4-GiB
+limit. The shared focused/whole loader now validates all shard bytes through
+bounded reads from the same descriptor before mmap, retaining full digest,
+identity/mode/size/mtime/ctime fences and both held generations. One real-shard
+three-reader diagnostic lowers final observed RSS from 683,496 to 68,964 KiB
+with exact hashes; it establishes the residency mechanism, not full native fit
+or attribution of v10's aggregate. Package/race/static controls, independent
+review, exact-source driver/tool admission and one fresh full qualification
+remain separate gates. No bound, historical policy, corpus or custody rule is
+weakened. MED-496 checkpoint/successor acceptance remains open.
+
+The [bounded retention-reader correction](../spike/t42h2r/retention-reader-rss-bounded-linux-20261022.json)
+passes full search normal/race, generation regressions, zero skips, static,
+supported 64-bit compile and docs gates, with independent source/cost review
+clear. Exact-source admission and fresh full maria acceptance remain pending.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

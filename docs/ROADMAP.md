@@ -334,6 +334,15 @@ transfer. It supersedes their full-native integration hold only. V10 remains a
 failed full qualification; MED-495 and MED-496 acceptance remain open, native
 checkpoint entry stays closed, and no readiness/freeze/scale gate advances.
 
+MED-495's next correction replaces full-shard hashing through retained mmaps
+with bounded reads from the same descriptor before mmap. Full byte validation,
+held current/prior readers and source/generation/accounting fences remain;
+ctime and full-mode checks strengthen mutation refusal. A bounded real-shard
+diagnostic confirms substantially lower mapped residency, without establishing
+whole-workload fit. Review and source gates precede exact new-source admission
+and one fresh maria qualification under the unchanged 4-GiB bound. MED-496
+checkpoint/successor composition continues independently while that run executes.
+
 Next: [Linux office handoff #124](https://github.com/bmeddeb/phebs/issues/124)
 mechanism qualification → remaining T42.H2 consumer/executor/resource admission
 → T42.2v restored launch → complete readiness → T42.2o fresh freeze → separately
