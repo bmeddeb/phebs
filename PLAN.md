@@ -16785,13 +16785,14 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Cost: one additional retained error reference per trace root, no copied
   output, inventory, new child or sampler. Ordinary finish adds the existing
   terminal-intent branch and fixed field checks. Selected terminal finish adds
-  one short core-mutex acquisition, the existing complete held-owner/resource
+  one short core-mutex acquisition, the existing complete held-custody/issuance
   check, and one bounded actor request/decision and original-pidfd kill. The
   join reuses the existing timer/wait helper, capped by the earlier operation
   deadline or thirty seconds, then retains real cleanup on expiry. Validation
   performs fixed ProcessState/error-shape checks after actual done publication;
-  no second Wait, census, hash or error-tree search is added. No lock spans
-  signaling/waiting. Existing probeGate, leader/TID caps, survivor RSS charging,
+  no second Wait, census, hash or error-tree search is added. The added
+  core-mutex acquisition ends before signaling/waiting. Existing probeGate,
+  leader/TID caps, survivor RSS charging,
   kernel proof and retirement costs remain unchanged. Product query/request,
   sync tick, retry/no-op, publication, cache, disk and persistent-state costs
   remain unchanged. The controls reuse existing one-root and root/engine Go
