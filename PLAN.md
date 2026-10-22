@@ -16912,3 +16912,10 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   mutex, phase deadlines and cleanup bound. This component creates no new
   runtime child, lock, cache, corpus/hash read, periodic request, query, sync,
   retry/no-op or publication work and widens no RSS, disk or task bound.
+
+  Exact `1eb55904` passes all 706 dispatch nodes per normal/race mode, zero
+  skips, vet, pinned package lint, all four supported tagged native compile
+  targets, docs, glossary and whitespace. Independent connected source/cost
+  review has zero findings. The bounded
+  `spike/t42h2r/checkpoint-engine-recipe-bounded-linux-20261022.json` record
+  binds those controls; actual native composition and acceptance remain open.
