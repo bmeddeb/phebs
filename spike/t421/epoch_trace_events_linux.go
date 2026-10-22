@@ -38,6 +38,10 @@ func (root *linuxEpochTraceRoot) serve() {
 			root.refuse("probe-gate-acquire", err)
 			root.stopping = true
 		} else {
+			if err := root.receiveHardDeath(ctx); err != nil {
+				root.refuse("hard-death-request", err)
+				root.stopping = true
+			}
 			if err := root.receiveEngineMeasurement(ctx); err != nil {
 				root.refuse("engine-measurement-request", err)
 				root.stopping = true
@@ -171,7 +175,7 @@ func (root *linuxEpochTraceRoot) turn(ctx context.Context) (bool, error) {
 		if terminal.signo == 0 || terminal.code == 4 {
 			if fallback {
 				fresh, e := linuxEpochTraceIdentityOf(tid)
-				if e != nil || !task.original.sameLifetime(fresh) {
+				if e != nil || !root.sameOwnedLifetime(ctx, task.original, fresh) {
 					return false, fmt.Errorf("turn/fallback-lifetime tid=%d: %w", tid, errors.Join(ErrExecutionEpochOne, e))
 				}
 				if fresh.state == "Z" && task.leader != nil {
@@ -187,7 +191,7 @@ func (root *linuxEpochTraceRoot) turn(ctx context.Context) (bool, error) {
 			return false, ErrExecutionEpochOne
 		}
 		fresh, err := linuxEpochTraceIdentityOf(tid)
-		if err != nil || !task.original.sameLifetime(fresh) {
+		if err != nil || !root.sameOwnedLifetime(ctx, task.original, fresh) {
 			return false, fmt.Errorf("turn/terminal-identity tid=%d fresh=%+v: %w", tid, fresh, errors.Join(ErrExecutionEpochOne, err))
 		}
 		if tid == root.original.pid {
@@ -204,7 +208,7 @@ func (root *linuxEpochTraceRoot) turn(ctx context.Context) (bool, error) {
 			continue // WNOWAIT is not retirement; sole genuine Handle.Wait remains.
 		}
 		if fresh.pid == fresh.tgid {
-			if task.leader == nil || fresh.parent == root.owner.held.controllerPID {
+			if task.leader == nil || task.leader.original.parent == root.owner.held.controllerPID {
 				return false, ErrExecutionEpochOne
 			}
 			if _, err = root.terminalProof(ctx, task.leader); err != nil {
@@ -258,7 +262,7 @@ func (root *linuxEpochTraceRoot) stopped(ctx context.Context, tid int, task *lin
 	_, _, errno := unix.Syscall6(unix.SYS_PTRACE, unix.PTRACE_GETSIGINFO, uintptr(tid), 0, uintptr(unsafe.Pointer(&information)), 0, 0)
 	if errno == unix.EINVAL && signal == int(unix.SIGSTOP) && root.engineLease != nil && task.original.tgid == root.engineLease.leader.original.pid {
 		fresh, err := linuxEpochTraceIdentityOf(tid)
-		if task.engineHeld || err != nil || ctx.Err() != nil || !task.original.sameLifetime(fresh) || fresh.state != "t" {
+		if task.engineHeld || err != nil || ctx.Err() != nil || !root.sameOwnedLifetime(ctx, task.original, fresh) || fresh.state != "t" {
 			return fmt.Errorf("stop/engine-group-witness tid=%d held=%t state=%s: %w", tid, task.engineHeld, fresh.state, errors.Join(ErrExecutionEpochOne, err, ctx.Err()))
 		}
 		if root.engineLease.aborted {
@@ -277,7 +281,7 @@ func (root *linuxEpochTraceRoot) stopped(ctx context.Context, tid int, task *lin
 
 func (root *linuxEpochTraceRoot) event(ctx context.Context, tid int, task *linuxEpochTraceTask, event int) error {
 	fresh, err := linuxEpochTraceIdentityOf(tid)
-	if err != nil || !task.original.sameLifetime(fresh) {
+	if err != nil || !root.sameOwnedLifetime(ctx, task.original, fresh) {
 		return fmt.Errorf("event/identity tid=%d event=%d fresh=%+v: %w", tid, event, fresh, errors.Join(ErrExecutionEpochOne, err))
 	}
 	switch event {
@@ -412,7 +416,7 @@ func (root *linuxEpochTraceRoot) liveLeader(ctx context.Context, leader *linuxEp
 		return ErrExecutionEpochOne
 	}
 	before, err := linuxEpochTraceIdentityOf(leader.original.pid)
-	if err != nil || !leader.original.sameLifetime(before) || before.state == "Z" {
+	if err != nil || !root.sameOwnedLifetime(ctx, leader.original, before) || before.state == "Z" {
 		return fmt.Errorf("leader/live-before pid=%d fresh=%+v: %w", leader.original.pid, before, errors.Join(ErrExecutionEpochOne, err))
 	}
 	mask, err := linuxEpochTracePoll(ctx, leader.fd)
@@ -426,6 +430,9 @@ func (root *linuxEpochTraceRoot) liveLeader(ctx context.Context, leader *linuxEp
 	return ctx.Err()
 }
 func (root *linuxEpochTraceRoot) liveParent(ctx context.Context, leader *linuxEpochTraceLeader) error {
+	if leader != nil && leader.root == root && root.owner.leaders[leader.original.pid] == leader && leader.original.pid != root.original.pid && root.hardDeathIssued {
+		return root.hardDeathAnchor(ctx)
+	}
 	parent := root.owner.leaders[leader.original.parent]
 	if parent == nil || parent.original.birth != leader.parentBirth {
 		return ErrExecutionEpochOne
@@ -475,6 +482,9 @@ func (leader *linuxEpochTraceLeader) closeFD() error {
 func (root *linuxEpochTraceRoot) signalLeaves(ctx context.Context) error {
 	if !root.stopping && !root.graceful {
 		return nil
+	}
+	if root.hardDeathIssued && root.hardDeathAnchor(ctx) != nil {
+		return nil // The selected root must actually die before survivor signals.
 	}
 	for pid, leader := range root.owner.leaders {
 		if ctx.Err() != nil {
@@ -587,6 +597,9 @@ func (root *linuxEpochTraceRoot) waitRoot(initial bool) {
 			}
 			if mask&unix.POLLHUP != 0 {
 				delete(root.owner.leaders, root.command.Process.Pid)
+				if root.owner.hardRoot == root {
+					root.owner.hardRoot = nil
+				}
 				<-root.owner.admission.probeGate
 				released <- nil
 				return

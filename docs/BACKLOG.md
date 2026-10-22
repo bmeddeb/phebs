@@ -5009,6 +5009,25 @@ terminal/checkpoint regressions, static/docs checks and independent review.
 Survivor-cohort admission/charging, EM/control retirement and actual successor
 composition remain open; c.c acceptance remains the integration dependency.
 
+**T42.H2s.c · Survivor accounting and measurement retirement (MED-496
+prerequisite, 2026-10-21).** Admit changed current parent only for exact
+source-created tasks under the selected original root's issued pidfd SIGKILL
+and unreaped actual terminal anchor. One existing host census unions the
+controller tree and selected SID candidates; every candidate needs original
+custody/current lifetime plus held-image or owned-terminal proof. Preserve
+raw ParentPID, measured RSS, deduplication, caps and ordinary strict ancestry.
+Unknown candidates and missing owned leaders refuse. The actual phase-eight
+terminal callback must settle accepted engine HOLD/RELEASE and join its
+client EOF before dispatch Pause/PC echo. Add an external test-only adopter
+so the live orphan is genuinely outside the controller tree; require positive
+RSS counted once, exact proof mutation refusals and actual separate reaps.
+Require normal/race controls, affected package/terminal/checkpoint gates,
+supported compilation, static/docs gates and independent source/cost review.
+Private policy v11 is prospective; historical v7–v10/formal V1–V6 remain exact.
+Native checkpoint entry stays closed pending runtime finish, native SIGKILL,
+successor recipe and checkpoint/recovery composition. c.c acceptance remains
+the integration dependency; this is neither full qualification nor readiness.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

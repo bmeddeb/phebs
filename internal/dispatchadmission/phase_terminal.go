@@ -72,5 +72,12 @@ func (client *Client) quiesceTerminal(ctx context.Context, phase uint32) error {
 	if err := quiesce(ctx); err != nil {
 		return err
 	}
+	// The selected Linux measurement client must retire its real HOLD/RELEASE
+	// owner and authenticated EOF before a later root-first checkpoint kill.
+	if lifetime := client.storeLifetime; lifetime != nil && lifetime.engineMeasurement != nil {
+		if err := lifetime.engineMeasurement.close(ctx); err != nil {
+			return err
+		}
+	}
 	return client.Pause(ctx)
 }

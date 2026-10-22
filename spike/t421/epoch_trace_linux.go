@@ -168,6 +168,7 @@ type linuxEpochTraceOwner struct {
 	firstFailure  linuxEpochTraceFailure
 	tids          int
 	leaders       map[int]*linuxEpochTraceLeader // probeGate protects publication/retirement.
+	hardRoot      *linuxEpochTraceRoot           // Same gate; at most one selected root-first cohort.
 	notify        chan os.Signal
 	stop, stopped chan struct{}
 	stopOnce      sync.Once
@@ -226,6 +227,9 @@ type linuxEpochTraceRoot struct {
 	engineRequests                         chan *linuxEpochEngineRequest
 	engineDone                             chan struct{}
 	engineLease                            *linuxEpochEngineLease // Creating actor only.
+	hardRequests                           chan *linuxEpochHardDeathRequest
+	hardDeathIssued                        bool // Only after this actor's original-root pidfd SIGKILL succeeds.
+	hardAnchorProven                       bool // Actual terminal CLD; original pidfd must remain IN without HUP.
 }
 
 func newLinuxEpochTraceOwner(admission *linuxEpochResourceAdmission) (*linuxEpochTraceOwner, error) {

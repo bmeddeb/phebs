@@ -44,6 +44,7 @@ type linuxEpochResourcePolicy struct {
 	GitRuntime                string `json:"git_runtime"`
 	EngineMeasurement         string `json:"engine_measurement,omitempty"`
 	InitialDiagnostics        string `json:"initial_diagnostics,omitempty"`
+	RootFirst                 string `json:"root_first,omitempty"`
 }
 
 func linuxEpochPolicyV7() linuxEpochResourcePolicy {
@@ -77,10 +78,17 @@ func linuxEpochPolicyV9() linuxEpochResourcePolicy {
 	return policy
 }
 
-func linuxEpochPolicy() linuxEpochResourcePolicy {
+func linuxEpochPolicyV10() linuxEpochResourcePolicy {
 	policy := linuxEpochPolicyV9()
 	policy.Schema = "t42-linux-epoch-operational-resources-v10"
 	policy.IndexRuntime = "resource-issued-authenticated-git-and-zoekt-binding=t42-linux-foreground-git-serial-index-v2;server-producers=2,3,4;exact-existing-HEAD-index-argv-then-one-parallelism=1-before-final-repository;index-child-only-GOGC=50;one-child-and-synchronous-shard-builds;current-bindings-compared-before-every-DA-Start;GC-slack-reduction-not-a-hard-memory-limit-or-fit-promise;unchanged-whole-RSS-and-workload-deadlines;historical-v7-v8-v9-and-formal-V1-V6-unchanged"
+	return policy
+}
+
+func linuxEpochPolicy() linuxEpochResourcePolicy {
+	policy := linuxEpochPolicyV10()
+	policy.Schema = "t42-linux-epoch-operational-resources-v11"
+	policy.RootFirst = "source-selected-original-root-pidfd-SIGKILL-only-after-accepted-measurement-endpoint-EOF-and-lease-retirement;original-unreaped-root-birth-SID-namespace-TracerPid-and-actual-terminal-CLD-anchor;creation-parent-immutable-current-parent-separately-observed;one-existing-bounded-host-census-for-controller-tree-union-selected-SID-candidates;every-candidate-source-created-original-pidfd-birth-TGID-SID-namespace-tracer-and-current-held-image-or-owned-terminal-proof;unknown-current-session-member-refuses;raw-parent-and-positive-RSS-preserved-exact-row-cache-no-duplicates;whole-ObservedDescendants-includes-source-owned-adopted-cohort-not-current-ancestry-claim;original-leader-TID-row-4GiB-cadence-2s-and-operation-bounds-unchanged;event-complete-survivor-creation-and-exec-tracking;tracer-terminal-copy-is-not-adopter-reap-or-application-Wait;original-HUP-before-retirement;no-production-subreaper-or-parent-death-safeguard-exception;historical-v7-v10-and-formal-V1-V6-unchanged;checkpoint-entry-remains-closed-pending-successor-qualification"
 	return policy
 }
 
@@ -333,6 +341,8 @@ func (a *linuxEpochResourceAdmission) startServerObservation(ctx context.Context
 	notify := func() { failed.Do(func() { a.failDetail(detail); fail() }) }
 	classify := gauge.classify
 	var accepted map[t4013.NativeProcessRecord]int
+	var acceptedCohort map[t4013.NativeProcessRecord]bool
+	gauge.cohortRow = func(row t4013.NativeProcessRecord) bool { return acceptedCohort[row] }
 	// The gauge owns this cache under its existing sampling mutex. The initial
 	// constructor uses it before starting that ticker. Only exact census rows
 	// can consume classifications; kernel names and birth identities stay intact.
@@ -345,6 +355,7 @@ func (a *linuxEpochResourceAdmission) startServerObservation(ctx context.Context
 	}
 	probe := func(ctx context.Context, root int) ([]t4013.NativeProcessRecord, error) {
 		accepted = nil
+		acceptedCohort = nil
 		select {
 		case a.probeGate <- struct{}{}:
 			defer func() { <-a.probeGate }()
@@ -359,7 +370,14 @@ func (a *linuxEpochResourceAdmission) startServerObservation(ctx context.Context
 		}
 		// Check resources before the census so bounded H2l inspection does not
 		// widen the observed-row to executable-object classification window.
-		rows, err := t4013.ObserveProcessTreeRecords(ctx, root)
+		var rows []t4013.NativeProcessRecord
+		var cohort map[t4013.NativeProcessRecord]bool
+		var err error
+		if a.trace != nil && root == a.held.controllerPID {
+			rows, cohort, err = a.trace.observeWholeCohort(ctx, root)
+		} else {
+			rows, err = t4013.ObserveProcessTreeRecords(ctx, root)
+		}
 		if err != nil {
 			a.failDetail("native-process-census")
 			notify()
@@ -381,6 +399,7 @@ func (a *linuxEpochResourceAdmission) startServerObservation(ctx context.Context
 			classes[row] = class
 		}
 		accepted = classes
+		acceptedCohort = cohort
 		return rows, nil
 	}
 	meter, err := newExecutionProcessObservationWithGauge(ctx, pid, phase, rootName, notify, probe, a.RSSLimit(), gauge)

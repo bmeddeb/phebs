@@ -313,6 +313,14 @@ Its test-only subreaper changes no runtime host setting or admission. Runtime
 survivor charging, EM/control retirement and successor implementation remain
 open under MED-496; maria's separate c.c run remains unchanged.
 
+T42.H2s.c implements source-owned survivor-cohort sampling and terminal
+measurement retirement. A real external-adopter control charges the orphan's
+positive RSS once while retaining its actual parent and strict source proof.
+The whole meter unions current ancestry with authenticated cohort candidates;
+ordinary tree validation stays strict. Native checkpoint entry remains closed
+pending actual finish, successor recipe and recovery composition. These bounded
+controls do not close MED-496 or its separate c.c integration dependency.
+
 Next: [Linux office handoff #124](https://github.com/bmeddeb/phebs/issues/124)
 mechanism qualification → remaining T42.H2 consumer/executor/resource admission
 → T42.2v restored launch → complete readiness → T42.2o fresh freeze → separately

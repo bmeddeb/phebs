@@ -56,9 +56,10 @@ type ProcessObservationGauge struct {
 	observation               ProcessObservation
 	probe                     func(context.Context, int) ([]t4013.NativeProcessRecord, error)
 	classify                  func(context.Context, t4013.NativeProcessRecord) (int, bool)
-	privateRefusalDetail      string // First bounded private failure only; never part of ProcessObservation or receipts.
-	privateSampleStage        string // Fixed current substage under mu; no history.
-	privateRefusalSubstage    string // First refused sample only; not public evidence.
+	cohortRow                 func(t4013.NativeProcessRecord) bool // Private exact-row proof, never a current-parent rewrite.
+	privateRefusalDetail      string                               // First bounded private failure only; never part of ProcessObservation or receipts.
+	privateSampleStage        string                               // Fixed current substage under mu; no history.
+	privateRefusalSubstage    string                               // First refused sample only; not public evidence.
 }
 
 // NewProcessObservationGauge binds a private root lifetime and a bounded table
@@ -170,7 +171,7 @@ func (gauge *ProcessObservationGauge) acceptRowsContext(ctx context.Context, row
 		if row.PID <= 0 || seen[row.PID] || row.ParentPID < 0 || row.ParentPID == row.PID ||
 			row.RSSBytes < 0 || row.StartIdentity == "" || len(row.StartIdentity) > 64 ||
 			!validObservedProcessName(row.ObservedName) || index == 0 && row.RSSBytes == 0 ||
-			index != 0 && !seen[row.ParentPID] {
+			index != 0 && !seen[row.ParentPID] && (gauge.cohortRow == nil || !gauge.cohortRow(row)) {
 			return gauge.failRow("invalid_census", row)
 		}
 		class, known := gauge.nameClasses[row.ObservedName]

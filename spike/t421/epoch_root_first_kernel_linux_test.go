@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strconv"
 	"syscall"
 	"testing"
 	"time"
@@ -21,18 +22,31 @@ import (
 func TestLinuxEpochRootFirstKernelControl(t *testing.T) {
 	const selector = "^TestLinuxEpochRootFirstKernelControl$"
 	const environment = "PHEBS_PRIVATE_ROOT_FIRST_KERNEL_CONTROL"
-	if os.Getenv(environment) != "1" {
-		command := exec.Command(os.Args[0], "-test.run="+selector, "-test.timeout=20s", "-test.v")
-		command.Env = []string{environment + "=1", "GOMAXPROCS=2", "GORACE=atexit_sleep_ms=0"}
-		output, err := command.CombinedOutput()
-		t.Logf("isolated kernel control:\n%s", output)
-		if err != nil || command.ProcessState == nil || !command.ProcessState.Success() {
-			t.Fatal("isolated kernel control genuine Wait", err)
+	mode := os.Getenv(environment)
+	if mode == "" {
+		for _, childMode := range []string{"strict", "adopter"} {
+			command := exec.Command(os.Args[0], "-test.run="+selector, "-test.timeout=20s", "-test.v")
+			command.Env = []string{environment + "=" + childMode, "GOMAXPROCS=2", "GORACE=atexit_sleep_ms=0"}
+			output, err := command.CombinedOutput()
+			t.Logf("isolated kernel control:\n%s", output)
+			if err != nil || command.ProcessState == nil || !command.ProcessState.Success() {
+				t.Fatal("isolated kernel control genuine Wait", err)
+			}
 		}
 		return
 	}
-	if err := unix.Prctl(unix.PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0); err != nil {
-		t.Fatal("isolated adopter", err)
+	if mode == "adopter" {
+		runLinuxEpochSurvivorAdopter(t, selector, environment)
+		return
+	}
+	selected := mode == "controller"
+	if !selected && mode != "strict" {
+		t.Fatal("unknown isolated control mode")
+	}
+	if !selected {
+		if err := unix.Prctl(unix.PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0); err != nil {
+			t.Fatal("isolated adopter", err)
+		}
 	}
 	runtime.LockOSThread()
 	started, rootJoined, childReaped := false, false, false
@@ -126,14 +140,6 @@ func TestLinuxEpochRootFirstKernelControl(t *testing.T) {
 	if err = unix.PtraceCont(root.original.pid, 0); err != nil {
 		t.Fatal(err)
 	}
-	if err = unix.PidfdSendSignal(rootFD, unix.SIGKILL, nil, 0); err != nil {
-		t.Fatal(err)
-	}
-	rootFirstKernelTerminal(t, ctx, root.original.pid)
-	current, err := linuxEpochTraceIdentityOf(creation.pid)
-	if err != nil || current.parent != os.Getpid() || current.parent == creation.parent || current.pid != creation.pid || current.tgid != creation.tgid || current.birth != creation.birth || current.sid != creation.sid || current.tracer != creation.tracer || !os.SameFile(current.namespace, creation.namespace) || creation.sameLifetime(current) {
-		t.Fatal("creation identity must stay distinct from current adoption", creation, current, err)
-	}
 	controller, err := linuxEpochProcessRow(os.Getpid())
 	if err != nil {
 		t.Fatal(err)
@@ -142,10 +148,38 @@ func TestLinuxEpochRootFirstKernelControl(t *testing.T) {
 	parent := &linuxEpochTraceLeader{root: root, original: root.original, fd: rootFD, parentBirth: controller.StartIdentity, verified: true}
 	child := &linuxEpochTraceLeader{root: root, original: creation, fd: childFD, parentBirth: root.original.birth, verified: true}
 	root.owner.leaders[root.original.pid], root.owner.leaders[creation.pid] = parent, child
+	root.tasks = map[int]*linuxEpochTraceTask{root.original.pid: {original: root.original, leader: parent}, creation.pid: {original: creation, leader: child}}
+	if selected {
+		report := os.NewFile(3, "isolated-adopter-candidate")
+		if report == nil {
+			t.Fatal("missing private adopter pipe")
+		}
+		if _, err = report.WriteString(strconv.Itoa(creation.pid) + "\n"); err != nil {
+			t.Fatal(err)
+		}
+		if err = report.Close(); err != nil {
+			t.Fatal(err)
+		}
+		err = root.killOriginalRoot(ctx, ctx)
+	} else {
+		err = unix.PidfdSendSignal(rootFD, unix.SIGKILL, nil, 0)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	rootFirstKernelTerminal(t, ctx, root.original.pid)
+	current, err := linuxEpochTraceIdentityOf(creation.pid)
+	adopter := os.Getpid()
+	if selected {
+		adopter = os.Getppid()
+	}
+	if err != nil || current.parent != adopter || current.parent == creation.parent || current.pid != creation.pid || current.tgid != creation.tgid || current.birth != creation.birth || current.sid != creation.sid || current.tracer != creation.tracer || !os.SameFile(current.namespace, creation.namespace) || creation.sameLifetime(current) {
+		t.Fatal("creation identity must stay distinct from current adoption", creation, current, err)
+	}
 	if _, err = root.terminalProof(ctx, parent); err != nil {
 		t.Fatal("actual dead original root", err)
 	}
-	if root.liveParent(ctx, child) == nil {
+	if (root.liveParent(ctx, child) == nil) != selected {
 		t.Fatal("dead creation parent accepted as live")
 	}
 	root.exitSeen = true
@@ -153,12 +187,16 @@ func TestLinuxEpochRootFirstKernelControl(t *testing.T) {
 	if root.finalTracerCensus(ctx) == nil {
 		t.Fatal("live traced survivor disappeared from final census")
 	}
+	root.tasks[creation.pid] = &linuxEpochTraceTask{original: creation, leader: child}
 	rows, err := t4013.ObserveProcessTreeRecords(ctx, creation.pid)
 	if err != nil || len(rows) != 1 || rows[0].PID != creation.pid || rows[0].ParentPID != current.parent || rows[0].StartIdentity != creation.birth || rows[0].RSSBytes <= 0 {
 		t.Fatal("real survivor RSS/current-parent row", rows, err)
 	}
 	if _, matched := linuxEpochClassifyRow(ctx, rows[0], []linuxEpochClassImage{{class: "shell", file: shell}}); !matched {
 		t.Fatal("current held image lost after reparenting")
+	}
+	if selected {
+		assertLinuxEpochSurvivorAccounting(t, ctx, root, child, shell)
 	}
 	waitErr := command.Wait() // Sole genuine exec.Cmd Wait for this direct root.
 	rootJoined = true
@@ -181,12 +219,19 @@ func TestLinuxEpochRootFirstKernelControl(t *testing.T) {
 	if err != nil || !terminal.terminal(creation.pid) || terminal.status != int32(unix.SIGKILL) {
 		t.Fatal("isolated adopter's actual reap", terminal, err)
 	}
-	childReaped = true
 	for _, fd := range []int{rootFD, childFD} {
-		if mask, e := linuxEpochTracePoll(ctx, fd); e != nil || mask&unix.POLLHUP == 0 {
-			t.Fatal("original pidfd reap closure", mask, e)
+		for {
+			mask, e := linuxEpochTracePoll(ctx, fd)
+			if e != nil {
+				t.Fatal("original pidfd reap closure", mask, e)
+			}
+			if mask&unix.POLLHUP != 0 {
+				break
+			}
+			time.Sleep(time.Millisecond)
 		}
 	}
+	childReaped = true
 	t.Logf("creation_parent=%d current_parent=%d survivor_RSS=%d actual_root_SIGKILL_Wait=true survivor_live_after_Wait=true adopter_reap=true original_pidfds_HUP=true", creation.parent, current.parent, rows[0].RSSBytes)
 }
 

@@ -16684,3 +16684,64 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   wait/pidfd operations with one-ms test waits, not a production sampler.
   No product query/request, sync tick, startup/restart, retry/no-op,
   publication, lock, cache, persistent state or production resource cost changes.
+
+
+- **2026-10-21 — T42.H2s.c survivor-cohort accounting and measurement
+  retirement (MED-496 prerequisite).** Preserve immutable source-created
+  identities while separately observing a current adopter parent after an
+  actor-issued SIGKILL to the original root pidfd. The selected original root
+  remains unreaped and must first prove actual terminal CLD, original
+  birth/SID/namespace/tracer and pidfd readiness. Later checks retain that
+  terminal anchor through original-fd HUP. Only previously registered tasks
+  may differ in current parent; every other lifetime field stays exact.
+  No production subreaper or parent-death-signal exception is added. A whole
+  controller sample uses one bounded host census for the union of its current
+  tree and the selected SID candidates. Every candidate needs original
+  source-created leader/pidfd and current lifetime proof plus existing held-mm
+  or owned-terminal classification. Unknown session members and vanished
+  owned leaders refuse. Raw current ParentPID and all measured RSS remain
+  intact and each row is charged once; ObservedDescendants in this selected
+  private mode counts the owned cohort, not current ancestry. Ordinary
+  tree validators remain strict. Actual tracer terminal consumption still
+  grants neither adopter reap nor application-parent Wait; original pidfd HUP
+  remains necessary for retirement.
+
+  The actual phase-eight terminal quiescence callback now closes the selected
+  authenticated engine-measurement client before dispatch Pause/PC echo.
+  A transferred HOLD/RELEASE owner refuses premature retirement and must
+  genuinely settle; EOF joins the endpoint before a selected root kill.
+  Prospective private policy v11 names these rules. V7–V10 and formal V1–V6
+  bytes remain exact. This prerequisite leaves native checkpoint entry closed:
+  runtime finish, strict native SIGKILL qualification, successor recipe and
+  checkpoint/recovery composition remain subsequent MED-496 gates. A real
+  external-adopter control proves the orphan is omitted by ordinary current
+  ancestry, included once with positive RSS by the selected cohort, and
+  refused when its source-owned leader record is removed. Its test-only
+  subreaper is outside the controller. These controls establish no full
+  native qualification, c.c acceptance, readiness or freeze advance.
+
+  Cost: ordinary product query/request, sync tick, retry/no-op, publication,
+  persistent state, hashes and child counts are unchanged. Ordinary Linux
+  census adds one retained raw SID string per existing host stat record and
+  one closed-mode branch, without another read or numeric SID parse. Selected
+  whole sampling uses that same at-most-8,192-entry census plus overflow
+  sentinel, bounded SID selection/sort, and a deduplicated at-most-129-row
+  union. Each row keeps existing bracketed stat/rollup work; selected rows
+  additionally bind SID across that bracket. Every selected candidate adds
+  one current lifetime/namespace inspection; the existing held-image/terminal
+  classifier still runs. Up to 129 exact raw-row proofs and one selected-root
+  pointer are retained beside the existing class cache. The original root's
+  first terminal anchor uses existing bounded stat/namespace, pidfd and
+  WNOWAIT proof; subsequent changed-parent checks poll that original pidfd
+  without repeating the full proof. Actor turns and all collection/proof work
+  share existing probeGate and the unchanged two-second cooperative budget,
+  250-ms sampling, 4-GiB ceiling and leader/TID caps. There is no latency or
+  fit promise. A selected kill adds one unbuffered actor request/reply and
+  original-pidfd signal, no child, goroutine or timer; successful transfer
+  waits for the actual decision even after cancellation. The already-existing
+  terminal callback adds one engine-client mutex try-lock and existing
+  authenticated EOF close; a busy owner fails rather than being abandoned.
+  The external-adopter fixture adds an isolated adopter and controller helper,
+  one private bounded PID pipe and their genuine Waits to the existing fixed
+  shell/child control, within its fixed test deadlines. It changes no host
+  setting outside that isolated test process.

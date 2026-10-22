@@ -42,7 +42,7 @@ func (root *linuxEpochTraceRoot) exitingGroupAnchor(ctx context.Context, leader 
 		return zero, false, ErrExecutionEpochOne
 	}
 	before, err := linuxEpochTraceIdentityOf(leader.original.pid)
-	if err != nil || !leader.original.sameLifetime(before) || before.tracer != root.tid || before.sid != root.original.sid || before.namespace == nil || !os.SameFile(before.namespace, root.owner.held.pidNamespace) {
+	if err != nil || !root.sameOwnedLifetime(ctx, leader.original, before) || before.tracer != root.tid || before.sid != root.original.sid || before.namespace == nil || !os.SameFile(before.namespace, root.owner.held.pidNamespace) {
 		return zero, false, errors.Join(ErrExecutionEpochOne, err)
 	}
 	mask, err := linuxEpochTracePoll(ctx, leader.fd)
@@ -54,7 +54,7 @@ func (root *linuxEpochTraceRoot) exitingGroupAnchor(ctx context.Context, leader 
 	if mask&unix.POLLIN != 0 {
 		return zero, false, nil
 	}
-	if before.parent == root.owner.held.controllerPID {
+	if before.pid == root.original.pid {
 		controller, e := linuxEpochProcessRow(before.parent)
 		if before.pid != root.original.pid || leader.parentBirth != root.owner.held.controllerStart || e != nil || controller.StartIdentity != leader.parentBirth {
 			return zero, false, errors.Join(ErrExecutionEpochOne, e)
@@ -112,7 +112,7 @@ func (root *linuxEpochTraceRoot) reconcileExitingGroups(ctx context.Context) err
 				continue
 			}
 			if witness, found := root.detached[tid]; found {
-				present, e := linuxEpochTraceDetachedCurrent(witness)
+				present, e := root.detachedCurrent(ctx, witness)
 				if e != nil {
 					return e
 				}
@@ -212,7 +212,7 @@ func (root *linuxEpochTraceRoot) continueReconciled(ctx context.Context, tid int
 		return errors.Join(ErrExecutionEpochOne, err)
 	}
 	before, err := linuxEpochTraceIdentityOf(tid)
-	if err != nil || !task.original.sameLifetime(before) || task.original.name != before.name || !root.reconcilableThread(leader, anchor, before) {
+	if err != nil || !root.sameOwnedLifetime(ctx, task.original, before) || task.original.name != before.name || !root.reconcilableThread(leader, anchor, before) {
 		return errors.Join(ErrExecutionEpochOne, err)
 	}
 	if err = root.allowedImage(ctx, tid, nil); err != nil {
@@ -276,7 +276,7 @@ func (root *linuxEpochTraceRoot) retireDetached(ctx context.Context) error {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		present, err := linuxEpochTraceDetachedCurrent(identity)
+		present, err := root.detachedCurrent(ctx, identity)
 		if err != nil {
 			return err
 		}
@@ -287,6 +287,17 @@ func (root *linuxEpochTraceRoot) retireDetached(ctx context.Context) error {
 	return nil
 }
 func linuxEpochTraceDetachedCurrent(original linuxEpochTraceIdentity) (bool, error) {
+	return linuxEpochTraceDetachedCurrentParent(original, nil)
+}
+
+func (root *linuxEpochTraceRoot) detachedCurrent(ctx context.Context, original linuxEpochTraceIdentity) (bool, error) {
+	return linuxEpochTraceDetachedCurrentParent(original, func() bool {
+		witness, found := root.detached[original.pid]
+		return found && witness.sameLifetime(original) && root.hardDeathAnchor(ctx) == nil
+	})
+}
+
+func linuxEpochTraceDetachedCurrentParent(original linuxEpochTraceIdentity, parentChanged func() bool) (bool, error) {
 	file, err := os.Open("/proc/" + strconv.Itoa(original.pid) + "/stat")
 	if errors.Is(err, os.ErrNotExist) || errors.Is(err, unix.ESRCH) {
 		return false, nil
@@ -309,7 +320,7 @@ func linuxEpochTraceDetachedCurrent(original linuxEpochTraceIdentity) (bool, err
 	if fields[19] != original.birth {
 		return false, nil // Metadata retirement only, never adoption/Wait proof.
 	}
-	if fields[1] != strconv.Itoa(original.parent) || fields[3] != strconv.Itoa(original.sid) || string(raw[start+1:end]) != original.name {
+	if fields[1] != strconv.Itoa(original.parent) && (parentChanged == nil || !parentChanged()) || fields[3] != strconv.Itoa(original.sid) || string(raw[start+1:end]) != original.name {
 		return false, ErrExecutionEpochOne
 	}
 	return true, nil

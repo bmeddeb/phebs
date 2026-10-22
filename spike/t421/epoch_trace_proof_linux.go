@@ -24,7 +24,7 @@ func (root *linuxEpochTraceRoot) terminalProof(ctx context.Context, leader *linu
 	if err != nil {
 		return zero, fmt.Errorf("terminal/identity-before: %w", err)
 	}
-	if !leader.original.sameLifetime(before) || before.state != "Z" || before.tracer != root.tid || before.namespace == nil || !os.SameFile(before.namespace, root.owner.held.pidNamespace) {
+	if !root.sameOwnedLifetime(ctx, leader.original, before) || before.state != "Z" || before.tracer != root.tid || before.namespace == nil || !os.SameFile(before.namespace, root.owner.held.pidNamespace) {
 		return zero, fmt.Errorf("terminal/binding-before pid=%d group=%d parent=%d tracer=%d sid=%d state=%s birth=%s expected-parent=%d expected-tracer=%d expected-sid=%d expected-birth=%s: %w", before.pid, before.tgid, before.parent, before.tracer, before.sid, before.state, before.birth, leader.original.parent, root.tid, leader.original.sid, leader.original.birth, ErrExecutionEpochOne)
 	}
 	mask, err := linuxEpochTracePoll(ctx, leader.fd)
@@ -49,7 +49,7 @@ func (root *linuxEpochTraceRoot) terminalProof(ctx context.Context, leader *linu
 	if err != nil || !before.sameLifetime(after) || before.name != after.name || after.state != "Z" || ctx.Err() != nil {
 		return zero, fmt.Errorf("terminal/identity-after: %w", errors.Join(ErrExecutionEpochOne, err))
 	}
-	if before.parent == root.owner.held.controllerPID {
+	if before.pid == root.original.pid {
 		if before.pid != root.original.pid || leader.parentBirth != root.owner.held.controllerStart {
 			return zero, fmt.Errorf("terminal/controller-binding: %w", ErrExecutionEpochOne)
 		}
@@ -75,11 +75,11 @@ func (owner *linuxEpochTraceOwner) defunctClass(ctx context.Context, gauge *Proc
 		return 0, false
 	}
 	leader := owner.leaders[row.PID]
-	if leader == nil || leader.root == nil || row.ParentPID != leader.original.parent || row.StartIdentity != leader.original.birth {
+	if leader == nil || leader.root == nil || !leader.root.hardDeathIssued && row.ParentPID != leader.original.parent || row.StartIdentity != leader.original.birth {
 		return 0, false
 	}
 	current, err := leader.root.terminalProof(ctx, leader)
-	if err != nil || current.name != row.ObservedName {
+	if err != nil || current.parent != row.ParentPID || current.name != row.ObservedName {
 		return 0, false
 	}
 	if gauge.rootPID != owner.held.controllerPID {

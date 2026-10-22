@@ -210,6 +210,7 @@ func (root *linuxEpochTraceRoot) run(operation context.Context) {
 func (root *linuxEpochTraceRoot) startOnThread(operation context.Context) {
 	root.engineRequests = make(chan *linuxEpochEngineRequest)
 	root.engineDone = make(chan struct{})
+	root.hardRequests = make(chan *linuxEpochHardDeathRequest)
 	if !linuxEpochTraceAttributes(root.command, root.serverRun == nil) || len(root.owner.leaders) >= linuxEpochTraceMaxLeaders {
 		root.releaseGate()
 		root.started <- ErrExecutionEpochOne

@@ -495,6 +495,21 @@ the isolated adopter's later child reap. Its test-only subreaper, positive RSS
 and held-image observations qualify that mechanism only. They enable no runtime
 survivor exception, checkpoint or successor; the existing refusal remains.
 
+T42.H2s.c's private v11 policy retains the source-created parent as history
+and the actual adopter parent as a separate current observation. After an
+issued original-root pidfd kill and actual terminal proof, the whole meter
+charges the union of current controller ancestry and exact source-owned
+survivors. Current SID membership alone grants no authority. Unknown members,
+missing leaders, changed lifetime or incomplete classification refuse; measured
+RSS is never rewritten or subtracted. The original root stays unreaped until
+its survivors retire through actual original-pidfd HUP. Production subreaper
+and parent-death settings are unchanged. Phase-eight terminal quiescence joins
+the selected engine-measurement EOF before dispatch Pause/PC echo; an accepted
+HOLD/RELEASE must settle rather than be discarded. The external-adopter kernel
+control qualifies these mechanisms only. Native checkpoint entry remains
+closed until finish/successor/recovery composition passes its separate gates.
+Do not retry maria or change its limits on the strength of these controls.
+
 The first exact `2754d208` full-native attempt completed its three actual
 reference comparisons, then correctly refused policy v1 before any author or
 server operation: 10,504,626,176 required bytes exceeded 8,633,675,776 observed

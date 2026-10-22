@@ -23,6 +23,7 @@ var errLinuxProcessNameTransition = errors.New("linux process command changed du
 type linuxProcessStat struct {
 	snapshot processSnapshot
 	state    string
+	session  string
 }
 
 func readLinuxProcessFile(path string) ([]byte, error) {
@@ -60,7 +61,7 @@ func parseLinuxProcessStat(pid int, raw []byte) (linuxProcessStat, error) {
 		return linuxProcessStat{}, errors.New("linux process stat identity is invalid")
 	}
 	return linuxProcessStat{snapshot: processSnapshot{parent: parent, name: name,
-		identityToken: strconv.FormatUint(token, 10)}, state: fields[0]}, nil
+		identityToken: strconv.FormatUint(token, 10)}, state: fields[0], session: fields[3]}, nil
 }
 
 func linuxProcessStatAt(procRoot string, pid int) (linuxProcessStat, error) {
@@ -77,6 +78,10 @@ func linuxProcessStatAt(procRoot string, pid int) (linuxProcessStat, error) {
 // stat/statm RSS is asynchronous on Linux. Use the kernel page-table rollup,
 // bracketed by lifetime, parent and command observations, instead.
 func linuxProcessResidentBytes(procRoot string, pid int, before linuxProcessStat) (processSnapshot, error) {
+	return linuxProcessResidentBytesWithSession(procRoot, pid, before, false)
+}
+
+func linuxProcessResidentBytesWithSession(procRoot string, pid int, before linuxProcessStat, bindSession bool) (processSnapshot, error) {
 	rss := int64(0)
 	if !linuxProcessDefunct(before.state) {
 		raw, err := readLinuxProcessFile(filepath.Join(procRoot, strconv.Itoa(pid), "smaps_rollup"))
@@ -87,7 +92,7 @@ func linuxProcessResidentBytes(procRoot string, pid int, before linuxProcessStat
 					return processSnapshot{}, identityErr
 				}
 				if identityErr == nil && fresh.snapshot.identityToken == before.snapshot.identityToken &&
-					fresh.snapshot.parent == before.snapshot.parent && linuxProcessDefunct(fresh.state) {
+					fresh.snapshot.parent == before.snapshot.parent && (!bindSession || fresh.session == before.session) && linuxProcessDefunct(fresh.state) {
 					return linuxResidentProcessRow(fresh, 0)
 				}
 			}
@@ -102,7 +107,7 @@ func linuxProcessResidentBytes(procRoot string, pid int, before linuxProcessStat
 	if err != nil {
 		return processSnapshot{}, err
 	}
-	if before.snapshot.identityToken != after.snapshot.identityToken || before.snapshot.parent != after.snapshot.parent ||
+	if before.snapshot.identityToken != after.snapshot.identityToken || before.snapshot.parent != after.snapshot.parent || bindSession && before.session != after.session ||
 		linuxProcessDefunct(before.state) && !linuxProcessDefunct(after.state) {
 		return processSnapshot{}, errors.New("linux process changed during resident memory observation")
 	}
@@ -188,21 +193,26 @@ func nativeProcessSnapshotProbe() func(context.Context, int) ([]int, map[int]pro
 // One bounded host PID census, followed by root-first traversal. Sequential
 // reads do not establish an atomic tree or a complete history of short children.
 func linuxProcessSnapshotAt(ctx context.Context, procRoot string, root int) ([]int, map[int]processSnapshot, error) {
+	pids, rows, _, err := linuxProcessSnapshotWithSessionAt(ctx, procRoot, root, 0)
+	return pids, rows, err
+}
+
+func linuxProcessSnapshotWithSessionAt(ctx context.Context, procRoot string, root, session int) ([]int, map[int]processSnapshot, []int, error) {
 	if ctx == nil || root <= 0 {
-		return nil, nil, errors.New("linux process snapshot scope is invalid")
+		return nil, nil, nil, errors.New("linux process snapshot scope is invalid")
 	}
 	if err := ctx.Err(); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	entries, err := readLinuxProcessCensus(procRoot)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	stats := make(map[int]linuxProcessStat)
 	children := make(map[int][]int)
 	for _, entry := range entries {
 		if err := ctx.Err(); err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		pid, parseErr := strconv.Atoi(entry.Name())
 		if parseErr != nil || pid <= 0 {
@@ -213,7 +223,7 @@ func linuxProcessSnapshotAt(ctx context.Context, procRoot string, root int) ([]i
 			continue
 		}
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		stats[pid] = stat
 		children[stat.snapshot.parent] = append(children[stat.snapshot.parent], pid)
@@ -223,27 +233,72 @@ func linuxProcessSnapshotAt(ctx context.Context, procRoot string, root int) ([]i
 	pids := []int{root}
 	rows := make(map[int]processSnapshot)
 	if _, present := stats[root]; !present {
-		return pids, rows, nil
+		return pids, rows, nil, nil
 	}
 	seen := map[int]bool{root: true}
-	for index := 0; index < len(queue); index++ {
+	var cohort []int
+	var cohortIDs map[int]bool
+	if session > 0 {
+		cohortIDs = make(map[int]bool)
+		sessionToken := strconv.Itoa(session)
+		for pid, stat := range stats {
+			if stat.session == sessionToken {
+				cohort = append(cohort, pid)
+				cohortIDs[pid] = true
+			}
+		}
+		sort.Ints(cohort)
+		if len(cohort) > MaxNativeProcessRecords {
+			return nil, nil, nil, errors.New("linux process cohort exceeds its bound")
+		}
+	}
+	next := 0
+	extra := false
+	for index := 0; index < len(queue) || next < len(cohort); {
+		if index == len(queue) {
+			pid := cohort[next]
+			next++
+			if seen[pid] {
+				continue
+			}
+			if len(queue) >= MaxNativeProcessRecords {
+				return nil, nil, nil, errors.New("linux process union exceeds its bound")
+			}
+			seen[pid] = true
+			queue = append(queue, pid)
+			extra = true
+		}
 		if err := ctx.Err(); err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		pid := queue[index]
+		if extra && !cohortIDs[pid] {
+			cohortIDs[pid] = true
+			cohort = append(cohort, pid)
+		}
 		observed, err := collectLinuxResidentObservation(ctx, stats[pid],
 			func(before linuxProcessStat) (processSnapshot, error) {
-				return linuxProcessResidentBytes(procRoot, pid, before)
+				return linuxProcessResidentBytesWithSession(procRoot, pid, before, session > 0)
 			},
-			func() (linuxProcessStat, error) { return linuxProcessStatAt(procRoot, pid) })
+			func() (linuxProcessStat, error) {
+				fresh, e := linuxProcessStatAt(procRoot, pid)
+				if e == nil && session > 0 && fresh.session != stats[pid].session {
+					return linuxProcessStat{}, errors.New("linux process cohort session changed")
+				}
+				return fresh, e
+			})
 		if errors.Is(err, errProcessIdentityMissing) {
-			if pid == root {
-				return []int{root}, map[int]processSnapshot{}, nil
+			if session > 0 && stats[pid].session == strconv.Itoa(session) {
+				return nil, nil, nil, err // No cohort disappearance is an owned retirement.
 			}
+			if pid == root {
+				return []int{root}, map[int]processSnapshot{}, nil, nil
+			}
+			index++
 			continue
 		}
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		if pid != root {
 			pids = append(pids, pid)
@@ -251,17 +306,22 @@ func linuxProcessSnapshotAt(ctx context.Context, procRoot string, root int) ([]i
 		rows[pid] = observed
 		sort.Ints(children[pid])
 		for _, child := range children[pid] {
+			if seen[child] && cohortIDs[child] {
+				continue // A wrapped PID may select an orphan before its current parent.
+			}
 			if seen[child] || len(queue) >= MaxNativeProcessRecords {
-				return nil, nil, errors.New("linux descendant census is duplicate or exceeds its bound")
+				return nil, nil, nil, errors.New("linux descendant census is duplicate or exceeds its bound")
 			}
 			seen[child] = true
 			queue = append(queue, child)
 		}
+		index++
 	}
 	if err := ctx.Err(); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	return pids, rows, nil
+	sort.Ints(cohort)
+	return pids, rows, cohort, nil
 }
 
 // readLinuxProcessCensus reads one bounded host PID directory without opening a
