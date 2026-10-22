@@ -503,6 +503,17 @@ refuses. The failed fixture is verified-forensically archived, recovering
 20.27 GB while preserving raw/source evidence and unknown runtime custody.
 Fresh complete native acceptance remains required before merging PR #156.
 
+
+Maria's subsequent `f8f00f40` full run passed source/tool comparisons, held-input
+admission and author completion, then failed physical-B at sampled aggregate
+RSS 4,422,742,016 bytes against the unchanged 4-GiB constraint. Raw/source and
+failed fixture remain preserved. Ben directs its correction: private v10 uses
+an authenticated index-child-only `GOGC=50` recipe to reduce GC slack while
+preserving historical policies, complete workload and all bounds. Initial
+isolated index windows show a 560.85-MiB RSS reduction but deliberately time
+out; complete index comparisons, bounded gates, independent review and fresh
+full composition remain required. PR #156 remains unqualified for integration.
+
 Production artifact/signature/publication closure for T47.5, T49.4, T50.3,
 T51.3, T52.3 and T54.3 remains pending the existing unavailable production key
 and the exact owning production decision. Scoped results and unsigned drafts

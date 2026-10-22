@@ -4949,6 +4949,22 @@ correction gate; this follow-up authorizes no full native retry, provisioning,
 merge, readiness/freeze advance or ceremony. Full native acceptance remains
 the separate integration bar.
 
+
+The later maria run at `f8f00f40` passed protected comparisons, held-input
+admission and author completion, then returned genuine native Wait1 during
+physical-B after 2,941.656s. Its joined whole sampler recorded 4,422,742,016
+bytes against the unchanged 4-GiB bound; terminal accounting settlement failed
+and the exact fixture remains retained. The [failure record](../spike/t42h2r/live-borrow-maria-physical-rss-failure-linux-20261021.json)
+binds raw/source evidence without claiming clean teardown or a culprit process.
+Ben authorizes investigating and fixing this failure. Isolated copied-repository
+index diagnostics show lower RSS with `GOGC=50`; both initial 150s windows are
+explicit timeouts, not completed indexes. Prospective private v10 selects that
+fixed index-child-only GC setting via authenticated runtime v2. Historical
+policies and ordinary behavior, the complete workload and every resource,
+custody and deadline gate stay exact. Complete output/time comparisons, bounded
+normal/race/static gates, independent review and a fresh full native pass remain
+the acceptance bar. No readiness, freeze, merge or scale result follows.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

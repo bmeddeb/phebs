@@ -819,6 +819,20 @@ periodic sampler, child or workload preparation. A failed admission still
 returns the exact zero calculation; old failures and fixtures stay unchanged.
 Full native acceptance remains pending; no retry is implied by this correction.
 
+
+The maria run later passed protected comparisons, held-input admission and
+author completion, then failed physical-B when sampled whole-process RSS
+exceeded the unchanged 4-GiB constraint. Preserve its failed fixture and
+terminal accounting errors; initial admission is not a full memory-fit pass.
+Prospective private v10 selects `GOGC=50` only in the authenticated Linux index
+child environment, alongside the existing serial HEAD recipe and foreground
+Git maintenance. It reduces allocation slack through more frequent garbage
+collection; it is not a hard memory limit or permission to relax the aggregate
+RSS stop. The index workload, checks and deadlines stay exact; extra GC CPU
+can still cause a deadline failure. Ordinary configuration and Darwin retain
+their existing environment. Bounded comparisons and review do not replace a
+fresh complete qualification result.
+
 The first source-free normal/race and twenty-repetition record is
 [`sealed-input-rehearsal-1.json`](../../spike/t42h2b/sealed-input-rehearsal-1.json).
 It binds `c07bc930` and is preserved unchanged, so it no longer describes the

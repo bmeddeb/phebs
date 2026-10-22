@@ -927,10 +927,10 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 
 func sameExecutionToolBindings(current, expected []dispatchadmission.ProductionToolBinding) bool {
 	return len(current) == 3 && len(expected) == 3 &&
-		current[0].RuntimeRecipe == dispatchadmission.ProductionLinuxForegroundGitV1 &&
-		expected[0].RuntimeRecipe == dispatchadmission.ProductionLinuxForegroundGitV1 &&
-		current[2].RuntimeRecipe == dispatchadmission.ProductionLinuxForegroundGitV1 &&
-		expected[2].RuntimeRecipe == dispatchadmission.ProductionLinuxForegroundGitV1 &&
+		current[0].RuntimeRecipe == dispatchadmission.ProductionLinuxForegroundGitV2 &&
+		expected[0].RuntimeRecipe == dispatchadmission.ProductionLinuxForegroundGitV2 &&
+		current[2].RuntimeRecipe == dispatchadmission.ProductionLinuxForegroundGitV2 &&
+		expected[2].RuntimeRecipe == dispatchadmission.ProductionLinuxForegroundGitV2 &&
 		slices.EqualFunc(current, expected, func(a, b dispatchadmission.ProductionToolBinding) bool {
 			return a.Role == b.Role && a.Path == b.Path && a.RuntimeRecipe == b.RuntimeRecipe && slices.Equal(a.Environment, b.Environment)
 		})

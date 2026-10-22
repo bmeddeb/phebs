@@ -65,7 +65,7 @@ func (record ProductionBootstrap) validateEngineMeasurements() error {
 		record.Program != ProgramPhebs || record.SemanticMode != ProductionSemanticV3 || record.Store == nil || record.Workspace == nil ||
 		record.InputSHA256 == ([32]byte{}) || record.EngineMeasurements != engineMeasurementMaximum(record.Producer.ID) || len(phases) == 0 ||
 		record.Phase != phases[0] || !slices.Equal(record.Control.Phases, phases) || len(record.Tools) != 3 ||
-		record.Tools[0].RuntimeRecipe != ProductionLinuxForegroundGitV1 || record.Tools[2].RuntimeRecipe != ProductionLinuxForegroundGitV1 {
+		!foregroundGitRuntimeRecipe(record.Tools[0].RuntimeRecipe) || record.Tools[2].RuntimeRecipe != record.Tools[0].RuntimeRecipe {
 		return ErrProductionBootstrap
 	}
 	return nil

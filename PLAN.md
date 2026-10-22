@@ -16559,3 +16559,46 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   allocation. Focused lifecycle/concurrent-lease/history-bound and diagnostic
   tests plus relevant race/static/docs checks precede the authorized push.
   These corrections do not close H2, native acceptance, readiness or freeze.
+
+
+- **2026-10-21 — T42.H2r.c.c maria physical reindex RSS correction.** The
+  exact `f8f00f40` maria execution returned genuine native Wait1 after
+  2,941.656 seconds. Three protected comparisons, held-input admission and
+  author completion passed; physical-B stopped at sampled aggregate RSS
+  4,422,742,016 bytes against the unchanged 4,294,967,296-byte limit. The
+  whole observer joined; terminal dispatch/store settlement failed. Retained
+  failure, source and fixture remain exact. Neither an empty sampled SID nor
+  absence of additional cleanup assertions establishes clean qualification.
+  See `spike/t42h2r/live-borrow-maria-physical-rss-failure-linux-20261021.json`.
+
+  An isolated copy of the failed bare repository and the exact supplied Zoekt
+  image reproduce substantial index memory: the two 150-second diagnostic
+  windows peak at 2,793,189,376 bytes with default GC and 2,205,093,888 bytes
+  with `GOGC=50`. Both deliberately time out and genuinely join, rather than
+  claim index completion. A sampled live heap of 918.50 MiB is dominated by
+  repository-wide path/file maps. This supports reducing GC allocation slack;
+  it neither attributes the original aggregate breach exclusively to Zoekt nor
+  proves whole-composition fit. Complete index output/time comparisons follow.
+
+  Prospective private policy v10 selects authenticated foreground/serial index
+  runtime v2, with exactly one `GOGC=50` entry only for the selected Linux
+  amd64 Zoekt child. Bootstrap and pre-Start checks reject missing, duplicate,
+  alternate, foreign-role and mismatched recipes; current-binding comparison
+  still precedes each permission. Engine measurement accepts the same matched
+  recipe pair without adding a point, phase, FD or stop authority. Historical
+  v7/v8/v9 policy bytes, formal V1–V6 and ordinary/Darwin behavior remain exact.
+  All files, HEAD selection, serial shard builds, numerical RSS/payload/slack
+  bounds, sampling, actual Wait/custody and phase deadlines remain unchanged.
+  GC tuning is no hard memory limit, subtraction, capacity credit or fit claim.
+
+  Cost: the index child's more frequent collections trade CPU and possible
+  elapsed time for less allocation slack under the same phase deadline. Its
+  per-file work and global live maps remain. Selected environment validation
+  adds bounded scans over at most 64 entries and one temporary filtered slice;
+  the index binding retains one fixed environment string. Pair selection and
+  continuity remain bounded comparisons under existing locks, released before
+  child execution. No new lock, cache, sampler, child, filesystem/corpus read,
+  hashing, persistent state or memory-accounting exemption is added. Ordinary
+  query/request, sync, startup/restart, retry/no-op and publication work stays
+  unchanged. Bounded normal/race/static gates, independent source/cost review
+  and fresh full native acceptance remain separate before integration.

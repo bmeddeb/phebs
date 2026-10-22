@@ -1,0 +1,104 @@
+{
+  "schema": "t42-linux-live-borrow-maria-physical-rss-refusal-v1",
+  "source_commit": "f8f00f40fa09d1d0abd1e40638ca1d4ecada188e",
+  "remote_host": "maria",
+  "raw_root": "/home/ben/phebs-rehearsals/med495-maria-memory-20261021",
+  "remote_run_directory": "/home/ben/phebs-qualification/runs/t42h2rcc-v9-maria-um1ui38x",
+  "actual_native_wait": {
+    "schema": "phebs-maria-native-terminal-v1",
+    "source_commit": "f8f00f40fa09d1d0abd1e40638ca1d4ecada188e",
+    "pid": 35728,
+    "actual_wait_exit_code": 1,
+    "elapsed_seconds": 2941.655632911,
+    "sampled_session_members_after_wait": [],
+    "complete_child_history": "not established by wrapper SID observation; requires internal test custody evidence",
+    "stdout_sha256": "c2c4f4ed0e4ea09ab4b90c1aab97857246d59c07fb9f207ed633f2a95e702199",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "ended_at": "2026-10-22T01:45:38.460751+00:00"
+  },
+  "private_policy_sha256": "sha256:1ea40f204629410a2c2636471451cb826126c1d66380cd8720cc8bde4d5e9d27",
+  "fixed_failure_step": "physical-b",
+  "first_resource_refusal": "whole-process-observation-notify",
+  "whole_meter": {
+    "joined": true,
+    "rss_limit_exceeded": true,
+    "completed_censuses": 7585,
+    "sampled_rss_bytes": 4422742016,
+    "limit_bytes": 4294967296,
+    "measurement_kind": "sampled_observation",
+    "simultaneous_bounds": "not_established",
+    "culprit_pid_or_class": "not retained"
+  },
+  "author": {
+    "stage": "complete",
+    "pid": 81959,
+    "actual_wait_exit_code": 0,
+    "joined": true,
+    "session_empty": true
+  },
+  "cleanup": {
+    "flow_done_observed": true,
+    "sticky_flow_failure": true,
+    "failed_exact_fixture_retained": true,
+    "additional_owner_retained_assertions_emitted": false,
+    "successful_terminal_accounting_protocol": false,
+    "full_clean_teardown_proved": false,
+    "observer_namespace_run_path_mounts": [],
+    "run_path_matching_processes_at_bounded_post_result_check": [],
+    "absence_is_complete_child_history": false
+  },
+  "fixture": "/home/ben/phebs-qualification/runs/t42h2rcc-v9-maria-um1ui38x/tmp/phebs-linux-live-epochs-3316170229",
+  "isolated_diagnostic": {
+    "remote_directory": "/home/ben/phebs-qualification/med495-memory-mnts24ax",
+    "scope": "copied retained bare repository, exact supplied Zoekt image, unchanged HEAD indexing limits, parallelism=1; no qualification or custody claim",
+    "binary_sha256": "002edf2036ad86011376b86d8f82fc5ab4e9ec918f3f05766f42646761219793",
+    "bounded_seconds": 150,
+    "baseline_peak_sampled_rss_bytes": 2793189376,
+    "gc50_peak_sampled_rss_bytes": 2205093888,
+    "actual_wait_exit_code_both": -15,
+    "deliberate_diagnostic_timeout_both": true,
+    "complete_index_comparisons": "pending",
+    "heap_profile_sampled_live_mib": 918.5,
+    "heap_profile_scope": "isolated index process; not attribution of original aggregate breach"
+  },
+  "prospective_correction": "new authenticated Linux foreground/serial index runtime v2 and private resource policy v10 select index-child-only GOGC=50; no hard-memory-limit or full-fit promise",
+  "nonclaims": [
+    "No full native qualification PASS",
+    "No unique physical-memory decomposition or OOM attribution",
+    "No unchanged retry or mutated failed fixture",
+    "No relaxation of RSS, workload, concurrency, custody, or deadlines",
+    "No H2/readiness/freeze/merge/scale/ceremony advance"
+  ],
+  "raw_files": [
+    {
+      "name": "failed-server.log",
+      "bytes": 9553878,
+      "sha256": "3d5128f7c5980d3002bb0c39ae135f426a88d64a88d7299c26a05d776ad9a75f"
+    },
+    {
+      "name": "failed-source.tar",
+      "bytes": 171458560,
+      "sha256": "e8db4fef8156a3ed5cb96482f989d4f4d1aa8a0e74543397539faffdad446372"
+    },
+    {
+      "name": "invocation.json",
+      "bytes": 6647,
+      "sha256": "968b6f84f4a3d9d90f3fe8ed8e16e4a3ae7d1a70c702b94c5822077aa8a998da"
+    },
+    {
+      "name": "native.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "native.stdout",
+      "bytes": 16573,
+      "sha256": "c2c4f4ed0e4ea09ab4b90c1aab97857246d59c07fb9f207ed633f2a95e702199"
+    },
+    {
+      "name": "result.json",
+      "bytes": 578,
+      "sha256": "41a69e2371d26febaba88fd99589f90580ac3f9e15d260139d43c16ab1e14fef"
+    }
+  ]
+}

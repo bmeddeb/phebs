@@ -85,7 +85,11 @@ func TestLinuxEpochResourceInitialReservationAndLiveSlack(t *testing.T) {
 	if err != nil || SHA256(legacy) != "sha256:1b755e4b6b0e72166483c767107bbc3714b2750f4eb01999068486a95bf1a5f6" || linuxEpochPolicy().InitialDiagnostics == "" {
 		t.Fatal("historical private v8 bytes changed or current diagnostic omitted", err)
 	}
-	if frozenSafetyEnvelope().MaximumPeakRSSBytes != 20<<30 || linuxEpochPolicy().RSSReservationBytes != 4<<30 || linuxEpochPolicy().Schema != "t42-linux-epoch-operational-resources-v9" || !strings.Contains(linuxEpochPolicy().IndexRuntime, "parallelism=1") || !strings.Contains(linuxEpochPolicy().GitRuntime, "maintenance.autoDetach=false") || !validExecutionSHA256(linuxEpochPolicySHA256()) {
+	legacy, err = json.Marshal(linuxEpochPolicyV9())
+	if err != nil || SHA256(legacy) != "sha256:1ea40f204629410a2c2636471451cb826126c1d66380cd8720cc8bde4d5e9d27" {
+		t.Fatal("historical private v9 bytes changed", err)
+	}
+	if frozenSafetyEnvelope().MaximumPeakRSSBytes != 20<<30 || linuxEpochPolicy().RSSReservationBytes != 4<<30 || linuxEpochPolicy().Schema != "t42-linux-epoch-operational-resources-v10" || !strings.Contains(linuxEpochPolicy().IndexRuntime, "index-child-only-GOGC=50") || !strings.Contains(linuxEpochPolicy().IndexRuntime, "parallelism=1") || !strings.Contains(linuxEpochPolicy().GitRuntime, "maintenance.autoDetach=false") || !validExecutionSHA256(linuxEpochPolicySHA256()) {
 		t.Fatal("prospective constraint changed historical envelope")
 	}
 }

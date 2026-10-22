@@ -14,14 +14,24 @@ const ProductionLinuxSerialIndexV1 = "t42-linux-head-serial-index-v1"
 // and retains the serial HEAD index recipe in the same selected server scope.
 const ProductionLinuxForegroundGitV1 = "t42-linux-foreground-git-serial-index-v1"
 
+// ProductionLinuxForegroundGitV2 also narrows the index child's GC target.
+const ProductionLinuxForegroundGitV2 = "t42-linux-foreground-git-serial-index-v2"
+
+func foregroundGitRuntimeRecipe(recipe string) bool {
+	return recipe == ProductionLinuxForegroundGitV1 || recipe == ProductionLinuxForegroundGitV2
+}
+
 func (record ProductionBootstrap) validIndexRuntimeRecipe(tool ProductionToolBinding) bool {
 	if tool.RuntimeRecipe == "" {
-		return !foregroundGitSelected(tool.Environment)
+		return !foregroundGitSelected(tool.Environment) && !indexGCSelected(tool.Environment)
+	}
+	if indexGCSelected(tool.Environment) != (tool.RuntimeRecipe == ProductionLinuxForegroundGitV2 && tool.Role == "zoekt-git-index") {
+		return false
 	}
 	foreground := foregroundGitSelected(tool.Environment)
-	if tool.RuntimeRecipe == ProductionLinuxForegroundGitV1 {
+	if foregroundGitRuntimeRecipe(tool.RuntimeRecipe) {
 		if !foreground || tool.Role != "git" && tool.Role != "zoekt-git-index" || len(record.Tools) != 3 ||
-			record.Tools[0].RuntimeRecipe != ProductionLinuxForegroundGitV1 || record.Tools[2].RuntimeRecipe != ProductionLinuxForegroundGitV1 {
+			record.Tools[0].RuntimeRecipe != tool.RuntimeRecipe || record.Tools[2].RuntimeRecipe != tool.RuntimeRecipe {
 			return false
 		}
 	} else if tool.RuntimeRecipe != ProductionLinuxSerialIndexV1 || foreground || tool.Role != "zoekt-git-index" {
@@ -50,15 +60,18 @@ func (record ProductionBootstrap) validIndexRuntimeRecipe(tool ProductionToolBin
 
 func productionIndexRuntimeArgs(site uint32, tool ProductionToolBinding, args []string) ([]string, error) {
 	if tool.RuntimeRecipe == "" {
-		if foregroundGitSelected(tool.Environment) {
+		if foregroundGitSelected(tool.Environment) || indexGCSelected(tool.Environment) {
 			return nil, ErrProductionBootstrap
 		}
 		return args, nil
 	}
+	if indexGCSelected(tool.Environment) != (tool.RuntimeRecipe == ProductionLinuxForegroundGitV2 && tool.Role == "zoekt-git-index") {
+		return nil, ErrProductionBootstrap
+	}
 	if tool.RuntimeRecipe == ProductionLinuxSerialIndexV1 && foregroundGitSelected(tool.Environment) {
 		return nil, ErrProductionBootstrap
 	}
-	if tool.RuntimeRecipe == ProductionLinuxForegroundGitV1 {
+	if foregroundGitRuntimeRecipe(tool.RuntimeRecipe) {
 		if !foregroundGitSelected(tool.Environment) || !validProductionToolEnvironment(tool.Environment, tool.Role, ProductionSemanticV3) {
 			return nil, ErrProductionBootstrap
 		}
@@ -69,7 +82,7 @@ func productionIndexRuntimeArgs(site uint32, tool ProductionToolBinding, args []
 			return args, nil
 		}
 	}
-	if runtime.GOOS != "linux" || runtime.GOARCH != "amd64" || tool.RuntimeRecipe != ProductionLinuxSerialIndexV1 && tool.RuntimeRecipe != ProductionLinuxForegroundGitV1 ||
+	if runtime.GOOS != "linux" || runtime.GOARCH != "amd64" || tool.RuntimeRecipe != ProductionLinuxSerialIndexV1 && !foregroundGitRuntimeRecipe(tool.RuntimeRecipe) ||
 		tool.Role != "zoekt-git-index" || !validProductionPath(tool.Path) || site != SiteIndexBuild || len(args) != 9 || args[0] != tool.Path ||
 		args[1] != "-index" || !validProductionPath(args[2]) || !validProductionPath(args[8]) ||
 		args[3] != "-incremental=false" || args[4] != "-submodules=false" ||

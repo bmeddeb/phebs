@@ -8,6 +8,24 @@ import (
 const IndexOfferEnvironment = "PHEBS_T422_INDEX_OFFERS"
 
 func validProductionToolEnvironment(environment []string, role, semantic string) bool {
+	if indexGCSelected(environment) {
+		if runtime.GOOS != "linux" || runtime.GOARCH != "amd64" || semantic != ProductionSemanticV3 || role != "zoekt-git-index" || !foregroundGitSelected(environment) || len(environment) > 64 {
+			return false
+		}
+		selected := make([]string, 0, len(environment)-1)
+		var seen bool
+		for _, entry := range environment {
+			if strings.HasPrefix(entry, "GOGC=") {
+				if seen || entry != "GOGC=50" {
+					return false
+				}
+				seen = true
+				continue
+			}
+			selected = append(selected, entry)
+		}
+		environment = selected
+	}
 	if foregroundGitSelected(environment) {
 		if runtime.GOOS != "linux" || runtime.GOARCH != "amd64" || semantic != ProductionSemanticV3 || (role != "git" && role != "zoekt-git-index") {
 			return false
@@ -49,6 +67,15 @@ func validProductionToolEnvironment(environment []string, role, semantic string)
 		}
 	}
 	return validProductionEnvironment(selected, true)
+}
+
+func indexGCSelected(environment []string) bool {
+	for _, entry := range environment {
+		if strings.HasPrefix(entry, "GOGC=") {
+			return true
+		}
+	}
+	return false
 }
 
 func foregroundGitSelected(environment []string) bool {

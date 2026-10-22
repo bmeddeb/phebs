@@ -70,10 +70,17 @@ func linuxEpochPolicyV8() linuxEpochResourcePolicy {
 	return policy
 }
 
-func linuxEpochPolicy() linuxEpochResourcePolicy {
+func linuxEpochPolicyV9() linuxEpochResourcePolicy {
 	policy := linuxEpochPolicyV8()
 	policy.Schema = "t42-linux-epoch-operational-resources-v9"
 	policy.InitialDiagnostics = "private-only-post-cleanup;retain-existing-controller-census-RSS-with-start-and-wall-time;one-five-value-runtime-metrics-heap-objects-unused-free-released-stacks-snapshot-with-start-and-wall-time;explicit-availability;no-extra-census-GC-credit-or-admission-input;no-periodic-request-job-or-publication-work;historical-v7-v8-bytes-and-formal-V1-V6-unchanged"
+	return policy
+}
+
+func linuxEpochPolicy() linuxEpochResourcePolicy {
+	policy := linuxEpochPolicyV9()
+	policy.Schema = "t42-linux-epoch-operational-resources-v10"
+	policy.IndexRuntime = "resource-issued-authenticated-git-and-zoekt-binding=t42-linux-foreground-git-serial-index-v2;server-producers=2,3,4;exact-existing-HEAD-index-argv-then-one-parallelism=1-before-final-repository;index-child-only-GOGC=50;one-child-and-synchronous-shard-builds;current-bindings-compared-before-every-DA-Start;GC-slack-reduction-not-a-hard-memory-limit-or-fit-promise;unchanged-whole-RSS-and-workload-deadlines;historical-v7-v8-v9-and-formal-V1-V6-unchanged"
 	return policy
 }
 
