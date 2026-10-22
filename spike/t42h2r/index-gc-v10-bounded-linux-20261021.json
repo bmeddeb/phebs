@@ -1,0 +1,324 @@
+{
+  "schema": "t42-linux-index-gc-v10-bounded-v1",
+  "implementation_commit": "600df9fb8a842f52ca00cdea6ee856f1f9073667",
+  "full_native_acceptance": "pending; original maria failure remains exact",
+  "isolated_index": {
+    "scope": "Two concurrently executed same-host copied-repository builds, exact original supplied Zoekt image, no full qualification or custody claim",
+    "file_count_each": 2031604,
+    "shard_count_each": 89,
+    "actual_wait_exit_codes": [
+      0,
+      0
+    ],
+    "baseline_peak_sampled_rss_bytes": 2921914368,
+    "gc50_peak_sampled_rss_bytes": 2444419072,
+    "rss_reduction_bytes": 477495296,
+    "rss_reduction_percent": 16.341864814020447,
+    "diagnostic_wall_seconds_including_output_hashing": [
+      328.03291086900026,
+      340.1883103530017
+    ],
+    "last_live_process_sample_seconds": [
+      271.032,
+      283.341
+    ],
+    "timing_limit": "Concurrent CPU/disk/cache contention and post-Wait output hashing; not uncontended performance or exact child duration",
+    "all_89_shards_content_and_repository_metadata_equal": true,
+    "only_excluded_per_build_metadata_fields": [
+      "metaData.IndexTime",
+      "metaData.ID"
+    ],
+    "normalization_basis": "Pinned Zoekt builder.go generates ID with xid.NewWithTime; write.go writes that ID and IndexTime. All 28 other TOC sections per shard are byte-equal and all other metadata fields are equal. Native generation/source authority remains exact; this comparator grants no identity equivalence there.",
+    "original_timestamp_only_comparator": "retained and false on generated build ID; subsequent explicit ID/time comparison retained separately"
+  },
+  "gates": [
+    {
+      "name": "darwin-amd64",
+      "argv": [
+        "go",
+        "test",
+        "-c",
+        "-tags=phebs_t42_native",
+        "-o",
+        "/home/ben/phebs-rehearsals/med495-maria-memory-20261021/darwin-amd64.test",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 134.54554723300316
+    },
+    {
+      "name": "darwin-arm64",
+      "argv": [
+        "go",
+        "test",
+        "-c",
+        "-tags=phebs_t42_native",
+        "-o",
+        "/home/ben/phebs-rehearsals/med495-maria-memory-20261021/darwin-arm64.test",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 61.96263937600088
+    },
+    {
+      "name": "dispatch-normal",
+      "argv": [
+        "go",
+        "test",
+        "./internal/dispatchadmission",
+        "-count=1",
+        "-timeout=10m",
+        "-json"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 9.168758061998233
+    },
+    {
+      "name": "dispatch-race",
+      "argv": [
+        "go",
+        "test",
+        "-race",
+        "./internal/dispatchadmission",
+        "-count=1",
+        "-timeout=10m",
+        "-json"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 16.965771103998122
+    },
+    {
+      "name": "docs",
+      "argv": [
+        "make",
+        "docs-check"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 1.575212007999653
+    },
+    {
+      "name": "focused-dispatch",
+      "argv": [
+        "go",
+        "test",
+        "./internal/dispatchadmission",
+        "-run",
+        "TestProductionLinux(IndexGC|ForegroundGit|SerialIndex)|TestProductionIndexRecipeAbsent|TestEngineMeasurementBootstrap",
+        "-count=1",
+        "-json"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 4.362193010998453
+    },
+    {
+      "name": "focused-native",
+      "argv": [
+        "go",
+        "test",
+        "./spike/t421",
+        "-run",
+        "TestLinuxEpoch(IndexRecipe|ResourceInitialReservationAndLiveSlack)",
+        "-count=1",
+        "-json"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 60.908182275998115
+    },
+    {
+      "name": "glossary",
+      "argv": [
+        "make",
+        "verify-glossary"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 0.14037188200018136
+    },
+    {
+      "name": "lint",
+      "argv": [
+        "/home/ben/.local/share/phebs-host/tools/golangci-lint-2.12.2/golangci-lint",
+        "run",
+        "--build-tags=phebs_t42_native",
+        "--new-from-rev=f8f00f40fa09d1d0abd1e40638ca1d4ecada188e",
+        "./internal/dispatchadmission",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 82.15178025700152
+    },
+    {
+      "name": "linux-arm64",
+      "argv": [
+        "go",
+        "test",
+        "-c",
+        "-tags=phebs_t42_native",
+        "-o",
+        "/home/ben/phebs-rehearsals/med495-maria-memory-20261021/linux-arm64.test",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 61.15937204099828
+    },
+    {
+      "name": "native-normal",
+      "argv": [
+        "go",
+        "test",
+        "-tags=phebs_t42_native",
+        "./spike/t421",
+        "-run",
+        "TestLinuxEpoch(IndexRecipe|Resource|InitialMemory|EngineMeasurement)|TestEpochProcessRSS|TestProductionDispatchInventory",
+        "-count=1",
+        "-timeout=8m",
+        "-json"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 39.48249292000037
+    },
+    {
+      "name": "native-race",
+      "argv": [
+        "go",
+        "test",
+        "-race",
+        "-tags=phebs_t42_native",
+        "./spike/t421",
+        "-run",
+        "TestLinuxEpoch(IndexRecipe|Resource|InitialMemory|EngineMeasurement)|TestEpochProcessRSS|TestProductionDispatchInventory",
+        "-count=1",
+        "-timeout=8m",
+        "-json"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 86.69681371399929
+    },
+    {
+      "name": "vet",
+      "argv": [
+        "go",
+        "vet",
+        "-tags=phebs_t42_native",
+        "./internal/dispatchadmission",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 20.57186994299991
+    }
+  ],
+  "independent_review": {
+    "implementation_commit": "600df9fb8a842f52ca00cdea6ee856f1f9073667",
+    "reviewer": "review_maria_ram_fix",
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "scope": "source, callers, historical-byte continuity, closure/engine admission and steady-state cost; not full native acceptance"
+  },
+  "tested_source_files": [
+    {
+      "path": "internal/dispatchadmission/engine_measurement.go",
+      "sha256": "1acee6187027a34ced2ef31f634887733b244a2fb3adc64bd8147619dfdf4ebc"
+    },
+    {
+      "path": "internal/dispatchadmission/production_index.go",
+      "sha256": "2f33c98a2e0aca4120d89b605c98cf08549958855aff1577c5698badc22a7004"
+    },
+    {
+      "path": "internal/dispatchadmission/production_index_recipe.go",
+      "sha256": "b210639c3648e54a06a696ae3f04c3bbb9e831c0196d85748041bd46c5ed60d0"
+    },
+    {
+      "path": "internal/dispatchadmission/production_index_gc_test.go",
+      "sha256": "8c17834add355eb12f827207e7fa248ebbee39cc886c95d753612f223fd5dea5"
+    },
+    {
+      "path": "spike/t421/epoch_coordinator_linux.go",
+      "sha256": "c08403ced8c57e01a38c8b89a1e3cf1af6af7c2101472a49827b2d4084933811"
+    },
+    {
+      "path": "spike/t421/epoch_index_recipe_linux_test.go",
+      "sha256": "a825c8e98a421ed7f2914c65edc2daa26521296b8a36826131798c3bc421d638"
+    },
+    {
+      "path": "spike/t421/epoch_launch.go",
+      "sha256": "d8ab0245888d42eee966511c24d7db6dfcdae152de544bce6d7296a40c6d0484"
+    },
+    {
+      "path": "spike/t421/linux_epoch_resource_policy.go",
+      "sha256": "6667fbf4a3947e0a92e5c16a4af0a9175d2fc83d0bc226ef7b5eaa5837a2e9d1"
+    },
+    {
+      "path": "spike/t421/linux_epoch_resource_policy_test.go",
+      "sha256": "0a1f28f4320a3544c5a01a9382cebd23a357c7dfbacc296d5d682a5470f1c4ec"
+    }
+  ],
+  "raw_control_files": [
+    {
+      "path": "/home/ben/phebs-rehearsals/med495-maria-memory-20261021/isolated-index/baseline-full.json",
+      "bytes": 73891,
+      "sha256": "bad836e80ac57f1f3987089a82ce1a3b7edf80d5e23eb249ce5df8740eeaeda7"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/med495-maria-memory-20261021/isolated-index/baseline-full.stderr",
+      "bytes": 30447,
+      "sha256": "acda09ee59851448506466ddf7035ec2a11c852dfacdef6146eba8d1618733c0"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/med495-maria-memory-20261021/isolated-index/baseline.json",
+      "bytes": 86604,
+      "sha256": "9c17cb853d3327c40f448c9472700e83ac0fa84b79b0836f69b20b66a43eec2d"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/med495-maria-memory-20261021/isolated-index/baseline.stderr",
+      "bytes": 22657,
+      "sha256": "d0cbf168c3f1e22d320953bab30572a1b8c11ec524525819a46cd7429a40e928"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/med495-maria-memory-20261021/isolated-index/complete-comparison.json",
+      "bytes": 405,
+      "sha256": "f22d1e294e09f62538a57a6a466af5eb3a591f10e2a842cbb73524d7bc2977fe"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/med495-maria-memory-20261021/isolated-index/final-section-comparison.json",
+      "bytes": 29523,
+      "sha256": "bd9273e3639636a22abcc0dabc8ad2b8197220f279ad6f21e3ac219a2d79b951"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/med495-maria-memory-20261021/isolated-index/gc50-full.json",
+      "bytes": 76499,
+      "sha256": "b210e9fb24aece4f005976ed330558e24231dc499b84907fdadefd34eb93edce"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/med495-maria-memory-20261021/isolated-index/gc50-full.stderr",
+      "bytes": 30091,
+      "sha256": "c8bf8c7d41fbaba9681f29dba5af14affb5556b5b2a08f1e5ff6c7ed09c28ef1"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/med495-maria-memory-20261021/isolated-index/gc50.json",
+      "bytes": 87054,
+      "sha256": "fba51af0af285231c1cdd4761a9f2ee5f50f4bf26b54441dde85b9531e13b75d"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/med495-maria-memory-20261021/isolated-index/gc50.stderr",
+      "bytes": 29274,
+      "sha256": "319c89ea9d29658f02e9495c634d3e2c849236e1a4e19fa1bc6b11d489d4f575"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/med495-maria-memory-20261021/isolated-index/section-comparison.json",
+      "bytes": 35422,
+      "sha256": "996f6467dab0e45cd6ad317aa4b6fdb2730b6eaa62a2b9849d2ee0546fe70c35"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/med495-maria-memory-20261021/isolated-index/summary.json",
+      "bytes": 1396,
+      "sha256": "4b90cb0d243892a091eb1beed005022939bd2231a655e060fdff4e91f1b5e096"
+    }
+  ],
+  "nonclaims": [
+    "No 4-GiB whole-composition fit",
+    "No complete native custody or terminal accounting pass",
+    "No merge, readiness, freeze, ceremony or scale advance",
+    "No benchmark-derived memory credit or resource bound change"
+  ]
+}

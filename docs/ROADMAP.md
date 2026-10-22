@@ -514,6 +514,14 @@ isolated index windows show a 560.85-MiB RSS reduction but deliberately time
 out; complete index comparisons, bounded gates, independent review and fresh
 full composition remain required. PR #156 remains unqualified for integration.
 
+
+The v10 correction's complete isolated index builds now both Wait0 over all
+2,031,604 files and 89 shards, with a 455.38-MiB (16.34%) lower sampled peak
+index RSS and equal sections except generated build ID/time metadata. Bounded
+normal/race, static, supported compile and docs gates pass; independent source
+and cost review is clear. This is still not whole-composition fit: a fresh full
+native execution and its actual custody/terminal accounting remain mandatory.
+
 Production artifact/signature/publication closure for T47.5, T49.4, T50.3,
 T51.3, T52.3 and T54.3 remains pending the existing unavailable production key
 and the exact owning production decision. Scoped results and unsigned drafts

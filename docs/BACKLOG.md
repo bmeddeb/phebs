@@ -4965,6 +4965,16 @@ custody and deadline gate stay exact. Complete output/time comparisons, bounded
 normal/race/static gates, independent review and a fresh full native pass remain
 the acceptance bar. No readiness, freeze, merge or scale result follows.
 
+
+The [bounded v10 correction](../spike/t42h2r/index-gc-v10-bounded-linux-20261021.json)
+passes 681 complete dispatch and 62 tagged native test nodes per normal/race
+mode, zero skips, static/docs/glossary and supported compile gates, with
+independent review clear. Complete isolated indexes both genuinely Wait0 over
+all 2,031,604 files and 89 shards. Peak sampled index RSS is 455.38 MiB lower;
+all index sections/repository metadata match apart from generated build ID and
+time. These comparisons establish no whole-composition fit or native identity
+substitution. Final complete native qualification remains required.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

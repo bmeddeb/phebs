@@ -16602,3 +16602,20 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   query/request, sync, startup/restart, retry/no-op and publication work stays
   unchanged. Bounded normal/race/static gates, independent source/cost review
   and fresh full native acceptance remain separate before integration.
+
+  Subsequent bounded qualification of exact source `600df9fb` passes the complete
+  dispatch package (681 normal and 681 race nodes), tagged native resource,
+  index-binding, engine and RSS controls (62 per mode), zero skips, tagged vet,
+  differential pinned lint, all three other supported 64-bit compile targets,
+  documentation, glossary and whitespace. Independent source/cost review has
+  zero findings. Both full isolated index diagnostics genuinely Wait0 over all
+  2,031,604 files and 89 shards: sampled peak RSS falls from 2,921,914,368 to
+  2,444,419,072 bytes (455.38 MiB / 16.34%). Diagnostic wall including output
+  hashing is 328.033s versus 340.188s under concurrent same-host contention;
+  this is not an uncontended speed measurement. All 28 non-metadata sections
+  per shard and remaining metadata are exact; only the separately generated
+  build ID and IndexTime differ. The original timestamp-only comparison stays
+  retained with its truthful ID mismatch. This isolated comparison changes no
+  native source/generation fence. Record
+  `spike/t42h2r/index-gc-v10-bounded-linux-20261021.json` binds the evidence;
+  fresh complete native composition and actual final custody remain open.
