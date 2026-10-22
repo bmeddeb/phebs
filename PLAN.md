@@ -16717,7 +16717,12 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   external-adopter control proves the orphan is omitted by ordinary current
   ancestry, included once with positive RSS by the selected cohort, and
   refused when its source-owned leader record is removed. Its test-only
-  subreaper is outside the controller. These controls establish no full
+  subreaper is outside the controller. A separate actual multi-threaded Go
+  actor control transfers the bounded hard-death request through serve(),
+  refuses expired/unbounded requests, and requires genuine root SIGKILL Wait
+  plus task/pidfd/observer/callback retirement. Post-kill child creation/exec
+  dispatch and native finish/successor still require separate controls.
+  These controls establish no full
   native qualification, c.c acceptance, readiness or freeze advance.
 
   Cost: ordinary product query/request, sync tick, retry/no-op, publication,
@@ -16744,4 +16749,6 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   The external-adopter fixture adds an isolated adopter and controller helper,
   one private bounded PID pipe and their genuine Waits to the existing fixed
   shell/child control, within its fixed test deadlines. It changes no host
-  setting outside that isolated test process.
+  setting outside that isolated test process. The actor-queue control reuses
+  the existing one-root Go fixture, notifier, DA producer and twenty-second
+  operation bound; it adds no child beyond that fixture or production cost.

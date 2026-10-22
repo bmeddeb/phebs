@@ -169,3 +169,53 @@ func TestProcessObservationCohortProofIsExactAndPrivate(t *testing.T) {
 		})
 	}
 }
+
+// Exercise the actual actor request/decision and multi-threaded fatal exit,
+// without issuing production resource, checkpoint or successor admission.
+func TestLinuxEpochTraceRootFirstActor(t *testing.T) {
+	fixture := linuxEpochTraceMechanicalStart(t, "capture-live", false)
+	root := fixture.root
+	ctx, cancel := context.WithTimeout(t.Context(), 8*time.Second)
+	defer cancel()
+	for {
+		if report, ready := fixture.report(t, linuxEpochTraceFixturePreACK); ready {
+			if report.Tasks < 2 {
+				t.Fatal("fixture lacks actual native threads", report)
+			}
+			break
+		}
+		if ctx.Err() != nil {
+			t.Fatal("actual actor ready boundary", ctx.Err())
+		}
+		time.Sleep(time.Millisecond)
+	}
+	if err := root.requestHardDeath(context.Background()); err == nil {
+		t.Fatal("unbounded hard death request accepted")
+	}
+	expired, expire := context.WithCancel(ctx)
+	expire()
+	if err := root.requestHardDeath(expired); err == nil {
+		t.Fatal("expired hard death request accepted")
+	}
+	if err := root.requestHardDeath(ctx); err != nil {
+		t.Fatal("actual actor hard-death decision", err)
+	}
+	select {
+	case completion := <-root.done:
+		fixture.joined = true
+		death := root.death
+		if death.ProcessState == nil {
+			t.Fatal("genuine ProcessState absent")
+		}
+		status, ok := death.ProcessState.Sys().(syscall.WaitStatus)
+		if completion == nil || !root.hardDeathIssued || root.err != nil || root.unknown || !root.waitReturned || !death.RootJoined || !death.SessionEmpty || death.ProcessState != root.command.ProcessState || !ok || !status.Signaled() || status.Signal() != syscall.SIGKILL {
+			t.Fatalf("actual actor root-first closure: completion=%v death=%+v root=%+v", completion, death, root)
+		}
+		if len(root.tasks) != 0 || len(root.pending) != 0 || root.owner.hardRoot != nil || len(root.owner.leaders) != 0 {
+			t.Fatal("actor task/pidfd retirement incomplete")
+		}
+		t.Log("actual actor request, multi-threaded fatal exit, sole SIGKILL Wait and anchored retirement joined")
+	case <-ctx.Done():
+		t.Fatal("actual actor hard-death join", ctx.Err())
+	}
+}

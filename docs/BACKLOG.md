@@ -5021,7 +5021,9 @@ terminal callback must settle accepted engine HOLD/RELEASE and join its
 client EOF before dispatch Pause/PC echo. Add an external test-only adopter
 so the live orphan is genuinely outside the controller tree; require positive
 RSS counted once, exact proof mutation refusals and actual separate reaps.
-Require normal/race controls, affected package/terminal/checkpoint gates,
+Also qualify a genuine multi-threaded actor queue/kill/Wait/retirement control,
+including expired/unbounded request refusal; it proves no post-kill child
+creation/exec or successor. Require normal/race controls, affected package/terminal/checkpoint gates,
 supported compilation, static/docs gates and independent source/cost review.
 Private policy v11 is prospective; historical v7–v10/formal V1–V6 remain exact.
 Native checkpoint entry stays closed pending runtime finish, native SIGKILL,
