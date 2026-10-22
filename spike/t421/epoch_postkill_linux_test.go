@@ -131,12 +131,13 @@ func assertLinuxEpochPostKillEvents(t *testing.T, ctx context.Context, root *lin
 	}
 	// The real surviving shell must receive SIGCHLD and perform wait itself.
 	// A tracer's terminal copy is not the original parent's reap or pidfd HUP.
+	sigchldForwarded := false
 	for {
 		mask, err := linuxEpochTracePoll(ctx, executed.fd)
 		if err != nil || ctx.Err() != nil {
 			t.Fatal("post-death original-parent reap deadline", mask, err, ctx.Err())
 		}
-		if mask&unix.POLLHUP != 0 {
+		if mask&unix.POLLHUP != 0 && sigchldForwarded {
 			break
 		}
 		stop, err := linuxEpochTraceWait(survivor.original.pid, unix.WSTOPPED)
@@ -144,8 +145,14 @@ func assertLinuxEpochPostKillEvents(t *testing.T, ctx context.Context, root *lin
 			t.Fatal("targeted original parent delivery", err)
 		}
 		if stop.signo != 0 {
+			if stop.code != 4 || stop.pid != int32(survivor.original.pid) || stop.uid != uint32(os.Getuid()) {
+				t.Fatal("original parent stop identity", stop)
+			}
 			if err := root.stopped(ctx, survivor.original.pid, root.tasks[survivor.original.pid], stop); err != nil {
 				t.Fatal("actual original parent delivery", err)
+			}
+			if int(stop.status)>>8 == 0 && int(stop.status)&255 == int(unix.SIGCHLD) {
+				sigchldForwarded = true
 			}
 		}
 		time.Sleep(time.Millisecond)
@@ -158,5 +165,5 @@ func assertLinuxEpochPostKillEvents(t *testing.T, ctx context.Context, root *lin
 	if root.owner.tids != 2 || len(root.tasks) != 2 || len(root.owner.leaders) != 2 {
 		t.Fatal("post-death descendant slot or pidfd ownership retained")
 	}
-	t.Log("postkill descendant actual parent reap and original pidfd HUP joined before owned-slot retirement")
+	t.Log("postkill descendant actual parent reap and original pidfd HUP joined before owned-slot retirement SIGCHLD_forwarded=true")
 }
