@@ -16952,3 +16952,11 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Cache-hit queries, sync scheduling and no-op reuse add no hash/read work.
   Publication writes, locks, cache invalidation, child count and held-reader
   lifetime are unchanged; no descriptor, goroutine or persistent state is added.
+
+  Exact implementation `f831038e` passes 155 search nodes per normal/race
+  mode, 85 generation regressions, zero skips, vet, pinned package lint, all
+  other supported 64-bit compile targets, docs, glossary and whitespace. Its
+  independent source/cost review has zero findings. The
+  `spike/t42h2r/retention-reader-rss-bounded-linux-20261022.json` record binds
+  those controls and the diagnostic. Fresh complete native acceptance remains
+  open and is not replaced by these bounded results.
