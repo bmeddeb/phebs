@@ -5059,6 +5059,11 @@ protocol preparation: launcher debit, private policy and actual native successor
 binding follow separately. Native checkpoint entry remains closed and MED-496
 acceptance remains open; no full native or readiness result follows.
 
+The [bounded checkpoint engine recipe](../spike/t42h2r/checkpoint-engine-recipe-bounded-linux-20261022.json)
+passes 706 dispatch nodes per normal/race mode with zero skips, supported
+native compile/static/docs gates and independent source/cost review clear.
+Its protocol controls do not select or qualify the native successor path.
+
 **2026-10-22 — Ben-directed implementation checkpoint integration.** Ben
 explicitly requests maria cleanup and PR merges after the v10 native failure
 was disclosed. PR156 and T42.H2s.a–d / PR164–167 may integrate as reviewed
