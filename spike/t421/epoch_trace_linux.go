@@ -211,6 +211,7 @@ type linuxEpochTraceRoot struct {
 	recent                                 [linuxEpochTraceRecentEvents]linuxEpochTraceEvent
 	err                                    error
 	completionErr                          error
+	death                                  executionProcessDeath // Published only through done after the creating actor's sole Wait.
 	startedNative, waitReturned, gateOwned bool
 	continued                              bool
 	serverRun                              *ExecutionEpochOneRun

@@ -16619,3 +16619,33 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   native source/generation fence. Record
   `spike/t42h2r/index-gc-v10-bounded-linux-20261021.json` binds the evidence;
   fresh complete native composition and actual final custody remain open.
+
+- **2026-10-21 — T42.H2s.a genuine Linux terminal-result ownership
+  (MED-496 prerequisite).** Ben directs the next backlog ticket while the exact
+  `f8f00f40` c.c qualification runs on maria. The creating Linux tracer actor
+  retains its sole actual `Handle.Wait` ProcessState and raw Wait error; its
+  composite operation failure remains separate. Native finish carries those
+  facts only across the original command/done-channel binding after the
+  existing session proof, genuine Wait, observer/callback joins and pidfd
+  retirement. Ordinary exit, canceled execution and pre-CONT capture refusal
+  keep their actual native status without turning failure into success.
+  Returning ProcessState must not accidentally enable checkpoint restart:
+  native checkpoint/pressure/backup entry refuses before any terminal protocol
+  mutation, and native finish independently refuses terminal admission. The
+  current tracer's original-parent predicates remain strict. Authenticated
+  root-first survivor-cohort sampling/charging, EM/control retirement and the
+  actual successor remain subsequent MED-496 work. No historical Darwin
+  route, plan/policy/receipt wire, resource bound or admission claim changes.
+  c.c acceptance and independent review remain integration prerequisites.
+
+  Cost: one fixed-size result per existing trace root retains pointers to the
+  already-owned ProcessState/error; it copies no payload or process inventory
+  and extends no process lifetime. The existing done receive publishes it;
+  there is no second Wait, syscall, scan, hash, child, timer or goroutine.
+  Native finish adds one short existing run-mutex acquisition to read terminal
+  intent, released before signaling or waiting. Checkpoint entry adds one
+  native-adapter branch and refuses before locks/control I/O. Ordinary product
+  query/request, sync tick, startup/restart, retry/no-op, publication, cache,
+  memory/disk and child costs are unchanged. Focused genuine Go/Git/maintenance
+  and canceled/capture-refused root tests, race controls, shared checkpoint
+  regressions and static/docs gates qualify this transport slice only.

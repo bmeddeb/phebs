@@ -386,6 +386,7 @@ func TestLinuxEpochTraceGoAndGitGenuineWaits(t *testing.T) {
 			if e != nil || pe != nil || ce != nil || mask&unix.POLLHUP == 0 || !root.waitReturned || root.command.ProcessState == nil || root.command.ProcessState.ExitCode() != 0 {
 				t.Fatal("actual root Wait/HUP", e, pe, ce, mask)
 			}
+			assertLinuxEpochNativeWaitFacts(t, fixture, e)
 			final, ok := fixture.report(t, linuxEpochTraceFixtureFinal)
 			if !ok || !final.AckConsumed || final.ChildPID != report.ChildPID {
 				t.Fatal("final app report", final, ok)
@@ -401,8 +402,10 @@ func TestLinuxEpochTraceGoAndGitGenuineWaits(t *testing.T) {
 
 func TestLinuxEpochTraceInitialRefusalStillGenuinelyWaits(t *testing.T) {
 	fixture := linuxEpochTraceMechanicalStart(t, "capture-live", true)
+	var completionErr error
 	select {
 	case err := <-fixture.root.done:
+		completionErr = err
 		fixture.joined = true
 		if err == nil {
 			t.Fatal("capture refusal disappeared")
@@ -417,6 +420,7 @@ func TestLinuxEpochTraceInitialRefusalStillGenuinelyWaits(t *testing.T) {
 	if !ok || !status.Signaled() || status.Signal() != syscall.SIGKILL || fixture.root.continued {
 		t.Fatal("pre-CONT original kill was not observed", status)
 	}
+	assertLinuxEpochNativeWaitFacts(t, fixture, completionErr)
 	count, err := fixture.parent.Count()
 	if err != nil || count.Ordinal != 1 || count.Active != 0 {
 		t.Fatal("failed capture DA settlement", count, err)
@@ -436,8 +440,10 @@ func TestLinuxEpochTraceCanceledLiveRootRetainsRealWait(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 	}
 	fixture.cancel()
+	var completionErr error
 	select {
 	case err := <-fixture.root.done:
+		completionErr = err
 		fixture.joined = true
 		if err == nil {
 			t.Fatal("owned SIGKILL status disappeared")
@@ -452,6 +458,7 @@ func TestLinuxEpochTraceCanceledLiveRootRetainsRealWait(t *testing.T) {
 	if !ok || !status.Signaled() || status.Signal() != syscall.SIGKILL {
 		t.Fatal("cancellation did not produce owned SIGKILL", status)
 	}
+	assertLinuxEpochNativeWaitFacts(t, fixture, completionErr)
 	count, err := fixture.parent.Count()
 	if err != nil || count.Ordinal != 1 || count.Active != 0 {
 		t.Fatal("canceled root DA settlement", count, err)

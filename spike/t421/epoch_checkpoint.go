@@ -130,6 +130,11 @@ func (run *ExecutionEpochOneRun) checkpointRestart(ctx context.Context, pressure
 		return nil, checkpointRestartError("input", nil)
 	}
 	flow := run.flow
+	// The Linux tracer still requires live original parents. Retaining its
+	// genuine Wait result does not admit root-first death or a successor.
+	if flow.native != nil {
+		return nil, checkpointRestartError("native root-first ownership unavailable", nil)
+	}
 	flow.mu.Lock()
 	run.mu.Lock()
 	valid := !flow.closed && flow.retained == nil && !run.returnStarting && !run.stopping && run.err == nil &&

@@ -299,6 +299,13 @@ detached EXIT-metadata classifier correction requires bounded real-kernel
 qualification before another full run. PR #156 remains draft and unmerged;
 the V6 cold-extraction path was not reached.
 
+T42.H2s.a (MED-496's first prerequisite) retains the actual Linux tracer root
+Wait facts separately from composite operation errors. Native checkpoint restart
+refuses before terminal mutation while root-first survivor, EM/control retirement
+and successor ownership remain unimplemented. This source preparation is
+isolated from the running `f8f00f40` c.c qualification on maria. c.c acceptance
+and independent review still precede integration; no readiness/freeze advances.
+
 Next: [Linux office handoff #124](https://github.com/bmeddeb/phebs/issues/124)
 mechanism qualification → remaining T42.H2 consumer/executor/resource admission
 → T42.2v restored launch → complete readiness → T42.2o fresh freeze → separately

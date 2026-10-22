@@ -4,6 +4,7 @@ package t421
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
@@ -95,25 +96,42 @@ func (adapter *linuxEpochCoordinator) startWait(ctx context.Context, run *Execut
 	return nil, ErrExecutionEpochOne
 }
 
-func (adapter *linuxEpochCoordinator) finish(run *ExecutionEpochOneRun, waited <-chan error, joined bool, waitErr error, deadline time.Time) (bool, bool, error) {
+func (adapter *linuxEpochCoordinator) finish(run *ExecutionEpochOneRun, waited <-chan error, joined bool, waitErr error, deadline time.Time) (executionProcessDeath, error) {
+	if adapter == nil || adapter.held == nil || run == nil {
+		return executionProcessDeath{}, ErrExecutionEpochOne
+	}
 	server := adapter.held.servers[run]
-	if server == nil {
-		return joined, false, ErrExecutionEpochOne
+	if server == nil || server.trace == nil || server.trace.owner == nil || server.trace.owner.held != adapter.held || waited == nil || waited != server.trace.done || run.command != server.trace.command {
+		return executionProcessDeath{}, ErrExecutionEpochOne
 	}
-	if server.trace != nil {
-		root := server.trace
-		if !joined {
+	root := server.trace
+	run.mu.Lock()
+	terminal := run.terminalEntered
+	run.mu.Unlock()
+	// Genuine Wait evidence is necessary but cannot qualify root-first death.
+	// Until survivor/measurement ownership exists, terminal requests clean up
+	// through the existing leaf-first actor and remain a refused operation.
+	if terminal {
+		root.requestStop()
+	}
+	if !joined {
+		if !terminal {
 			root.requestFinish()
-			waitErr, joined = waitExecutionProcessRoot(waited, deadline)
 		}
-		if !joined {
-			root.requestStop()
-			waitErr = <-waited
-			joined = true
-		}
-		// Receiving done proves actual Handle.Wait, original SID emptiness and
-		// all callback/pidfd ownership retirement, never a timeout substitute.
-		return joined, root.waitReturned, waitErr
+		waitErr, joined = waitExecutionProcessRoot(waited, deadline)
 	}
-	return joined, false, ErrExecutionEpochOne
+	if !joined {
+		root.requestStop()
+		waitErr = <-waited
+	}
+	// done joins publication of the exact native result separately from the
+	// actor's composite error; a failed operation must not replace WaitErr.
+	death := root.death
+	if !root.waitReturned || !death.RootJoined || death.ProcessState == nil || run.command == nil || run.command.Process == nil || death.ProcessState != run.command.ProcessState || death.ProcessState.Pid() != run.command.Process.Pid {
+		return executionProcessDeath{}, errors.Join(ErrExecutionEpochOne, waitErr)
+	}
+	if terminal || !death.SessionEmpty {
+		return death, errors.Join(ErrExecutionEpochOne, waitErr)
+	}
+	return death, waitErr
 }

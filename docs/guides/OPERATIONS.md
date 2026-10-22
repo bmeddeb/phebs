@@ -478,6 +478,17 @@ independent 2-GiB slack checks use fresh native physical/cgroup observations;
 sampled owned RSS receives no slack credit. The owning PLAN decision retains the
 complete formula, uncertainty and joining rules. No actual c.c gate is passed.
 
+T42.H2s.a retains the creating Linux tracer actor's genuine root Wait result
+separately from its aggregate operation error. A returned native ProcessState
+records actual root status; session emptiness still requires the existing
+pre-reap session proof and joined callback/descriptor retirement. A canceled or
+capture-refused operation keeps its error even when its native root actually
+joined and drained. No second Wait, PID-only inference or timeout substitutes
+for that result. Native checkpoint restart, including its pressure and backup
+variants, refuses before terminal mutation until root-first survivor and
+measurement/control ownership is implemented. Do not treat this transport
+prerequisite as checkpoint/successor qualification or as c.c acceptance.
+
 The first exact `2754d208` full-native attempt completed its three actual
 reference comparisons, then correctly refused policy v1 before any author or
 server operation: 10,504,626,176 required bytes exceeded 8,633,675,776 observed

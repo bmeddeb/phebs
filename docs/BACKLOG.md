@@ -4975,6 +4975,25 @@ all index sections/repository metadata match apart from generated build ID and
 time. These comparisons establish no whole-composition fit or native identity
 substitution. Final complete native qualification remains required.
 
+**T42.H2s.a · Genuine Linux terminal-result ownership (MED-496 prerequisite,
+2026-10-21).** Ben directs taking the next backlog ticket while the isolated
+`f8f00f40` c.c run executes on maria. Retain the creating tracer actor's actual
+`Handle.Wait` ProcessState and raw Wait error separately from its composite
+operation error. Native finish transports those facts only for the original
+command and done channel after the actor's existing session/callback/descriptor
+retirement. A boolean or foreign channel cannot issue the result. Normal exit,
+pre-CONT capture refusal and canceled live roots must retain their actual status
+without converting an operation failure to success. Checkpoint,
+pressure-checkpoint and backup-checkpoint requests on the Linux adapter refuse
+before terminal protocol mutation: the existing tracer still requires live
+original parents. Root-first survivor-cohort observation/charging, EM/control
+retirement and actual checkpoint/successor composition remain the rest of
+MED-496, not a consequence of returning ProcessState. Require focused native
+normal/race, shared checkpoint regressions, supported compilation, static/docs
+gates and independent review. c.c acceptance remains the integration dependency;
+this preparation changes neither maria's running inputs nor any historical plan,
+policy, receipt, readiness or ceremony claim.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared
