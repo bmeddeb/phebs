@@ -64,6 +64,7 @@ type ProductionBootstrap struct {
 	ArchiveDeadlineUnixNano int64  `json:",omitempty"`
 	ArchiveMeasurements     uint32 `json:",omitempty"`
 	EngineMeasurements      uint32 `json:",omitempty"`
+	EngineMeasurementRecipe string `json:",omitempty"`
 }
 
 func (record ProductionBootstrap) validate() error {
@@ -563,7 +564,7 @@ func bootstrapProgramWithMeasurement(ctx context.Context, admissionFile, control
 	}
 	if measurementConn != nil && record.EngineMeasurements != 0 {
 		lifetime.engineMeasurement, err = newEngineMeasurementClient(opCtx, client.Context(), measurementConn, EngineMeasurementBinding{
-			ProducerID: record.Producer.ID, ProducerBinding: record.Producer.Binding, InputSHA256: record.InputSHA256,
+			Recipe: record.EngineMeasurementRecipe, ProducerID: record.Producer.ID, ProducerBinding: record.Producer.Binding, InputSHA256: record.InputSHA256,
 		}, record.EngineMeasurements)
 		if err != nil {
 			return nil, ErrProductionBootstrap

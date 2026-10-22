@@ -540,6 +540,16 @@ Its quiet scheduled monitor observes at most every 30 minutes, reporting phase
 transitions, completion/failure or required action; unchanged artifacts need no
 notification. Monitoring never launches a duplicate or retries qualification.
 
+MED-496's T42.H2s.e protocol preparation adds a separate EM02 recipe for the
+seven existing return/stale/checkpoint engine observations and one recovery
+observation. It requires paired foreground/index V3 bindings and preserves
+legacy EM01/V2. Recovery's control envelope includes phases 8–11, while this
+recipe permits an engine observation only in phase eight; backup carry refuses.
+No native constructor selects this recipe yet. Source selection, output debit,
+policy and actual successor/recovery qualification remain separate prerequisites
+before native checkpoint entry can open. This work does not alter Maria's
+independently prepared RSS-correction source or its qualification inputs.
+
 The first exact `2754d208` full-native attempt completed its three actual
 reference comparisons, then correctly refused policy v1 before any author or
 server operation: 10,504,626,176 required bytes exceeded 8,633,675,776 observed
