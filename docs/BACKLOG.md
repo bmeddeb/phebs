@@ -5045,6 +5045,20 @@ bytes. Native checkpoint entry stays closed pending post-kill creation/exec,
 successor recipe and actual checkpoint/recovery composition. No full native
 qualification or integration follows; c.c remains the dependency.
 
+**T42.H2s.e · Closed checkpoint engine/runtime contract (MED-496
+prerequisite, 2026-10-22).** Prepare explicitly bound EM02 producer-four seven
+and producer-five one measurement points, preserving EM01/default bytes and
+budgets. Bind optional recipe through bootstrap/client/server; reject legacy
+frames, wrong recipes/maximums/phases and mismatched paired foreground/index
+V3 tokens. Producer-four terminal phase eight is required; recovery retains
+control phases 8–11 but measures only phase eight and permits no backup carry.
+Keep GC50, serial HEAD, foreground maintenance and exact tool/argument fences.
+Require actual socket sequences/refusals, full package normal/race, static,
+supported compile/docs and independent source/cost review. This is unselected
+protocol preparation: launcher debit, private policy and actual native successor
+binding follow separately. Native checkpoint entry remains closed and MED-496
+acceptance remains open; no full native or readiness result follows.
+
 **2026-10-22 — Ben-directed implementation checkpoint integration.** Ben
 explicitly requests maria cleanup and PR merges after the v10 native failure
 was disclosed. PR156 and T42.H2s.a–d / PR164–167 may integrate as reviewed

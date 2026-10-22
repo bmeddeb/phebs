@@ -14,6 +14,10 @@ import (
 )
 
 const (
+	// EngineMeasurementCheckpointV2 selects new checkpoint/recovery points;
+	// omission retains every historical EM01 budget and wire byte.
+	EngineMeasurementCheckpointV2 = "t42-linux-checkpoint-engine-v2"
+
 	engineMeasurementHeaderBytes        = 76
 	engineMeasurementFrameBytes         = 16
 	engineMeasurementIdentityBytes      = 32
@@ -34,9 +38,33 @@ type EngineMeasurementIdentity struct {
 // EngineMeasurementBinding copies the authenticated producer/input binding.
 // It does not issue native process, image or measurement authority.
 type EngineMeasurementBinding struct {
+	Recipe          string
 	ProducerID      uint32
 	ProducerBinding [32]byte
 	InputSHA256     [32]byte
+}
+
+func (binding EngineMeasurementBinding) maximum() uint32 {
+	switch binding.Recipe {
+	case "":
+		return engineMeasurementMaximum(binding.ProducerID)
+	case EngineMeasurementCheckpointV2:
+		switch binding.ProducerID {
+		case 4:
+			return 7
+		case 5:
+			return 1
+		}
+	}
+	return 0
+}
+
+func (binding EngineMeasurementBinding) phaseAllowed(phase uint32) bool {
+	if binding.Recipe == "" {
+		return engineMeasurementPhase(binding.ProducerID, phase)
+	}
+	return binding.Recipe == EngineMeasurementCheckpointV2 &&
+		(binding.ProducerID == 4 && phase >= 6 && phase <= 8 || binding.ProducerID == 5 && phase == 8)
 }
 
 func engineMeasurementMaximum(producer uint32) uint32 {
@@ -58,14 +86,25 @@ func engineMeasurementPhase(producer, phase uint32) bool {
 
 func (record ProductionBootstrap) validateEngineMeasurements() error {
 	if record.EngineMeasurements == 0 {
-		return nil
+		if record.EngineMeasurementRecipe == "" {
+			return nil
+		}
+		return ErrProductionBootstrap
 	}
 	phases := map[uint32][]uint32{2: {2, 3, 4}, 3: {5}, 4: {6, 7, 8}}[record.Producer.ID]
+	binding := EngineMeasurementBinding{Recipe: record.EngineMeasurementRecipe, ProducerID: record.Producer.ID}
+	if binding.Recipe == EngineMeasurementCheckpointV2 {
+		phases = map[uint32][]uint32{4: {6, 7, 8}, 5: {8, 9, 10, 11}}[binding.ProducerID]
+		if record.Control.BackupEndpointCarry || record.Producer.ID == 4 && record.Control.TerminalPhase != 8 || record.Producer.ID == 5 && record.Control.TerminalPhase != 0 {
+			return ErrProductionBootstrap
+		}
+	}
 	if runtime.GOOS != "linux" || runtime.GOARCH != "amd64" || record.ArchiveMeasurements != 0 ||
 		record.Program != ProgramPhebs || record.SemanticMode != ProductionSemanticV3 || record.Store == nil || record.Workspace == nil ||
-		record.InputSHA256 == ([32]byte{}) || record.EngineMeasurements != engineMeasurementMaximum(record.Producer.ID) || len(phases) == 0 ||
+		record.InputSHA256 == ([32]byte{}) || record.EngineMeasurements != binding.maximum() || len(phases) == 0 ||
 		record.Phase != phases[0] || !slices.Equal(record.Control.Phases, phases) || len(record.Tools) != 3 ||
-		!foregroundGitRuntimeRecipe(record.Tools[0].RuntimeRecipe) || record.Tools[2].RuntimeRecipe != record.Tools[0].RuntimeRecipe {
+		!foregroundGitRuntimeRecipe(record.Tools[0].RuntimeRecipe) || record.Tools[2].RuntimeRecipe != record.Tools[0].RuntimeRecipe ||
+		(binding.Recipe == EngineMeasurementCheckpointV2) != (record.Tools[0].RuntimeRecipe == ProductionLinuxForegroundGitV3) {
 		return ErrProductionBootstrap
 	}
 	return nil
@@ -74,7 +113,13 @@ func (record ProductionBootstrap) validateEngineMeasurements() error {
 // EngineMeasurementPhase reads only the current controller phase and the
 // already-attached producer. A pause/checkpoint does not manufacture a phase.
 func (c *Controller) EngineMeasurementPhase(producer uint32) (uint32, error) {
-	if c == nil || engineMeasurementMaximum(producer) == 0 {
+	return c.EngineMeasurementPhaseForRecipe(producer, "")
+}
+
+// EngineMeasurementPhaseForRecipe retains the actual attached producer/current
+// phase check for the separately authenticated checkpoint measurement recipe.
+func (c *Controller) EngineMeasurementPhaseForRecipe(producer uint32, recipe string) (uint32, error) {
+	if c == nil || (EngineMeasurementBinding{Recipe: recipe, ProducerID: producer}).maximum() == 0 {
 		return 0, ErrConfig
 	}
 	c.mu.Lock()
@@ -100,15 +145,35 @@ func EngineMeasurementWireBytes(maximum uint32) (uint64, error) {
 
 func (binding EngineMeasurementBinding) header(maximum uint32) ([engineMeasurementHeaderBytes]byte, error) {
 	var out [engineMeasurementHeaderBytes]byte
-	if maximum == 0 || maximum != engineMeasurementMaximum(binding.ProducerID) || binding.ProducerBinding == ([32]byte{}) || binding.InputSHA256 == ([32]byte{}) {
+	if maximum == 0 || maximum != binding.maximum() || binding.ProducerBinding == ([32]byte{}) || binding.InputSHA256 == ([32]byte{}) {
 		return out, ErrProductionBootstrap
 	}
 	copy(out[:4], "EM01")
+	if binding.Recipe == EngineMeasurementCheckpointV2 {
+		out[3] = '2'
+	}
 	binary.BigEndian.PutUint32(out[4:8], binding.ProducerID)
 	binary.BigEndian.PutUint32(out[8:12], maximum)
 	copy(out[12:44], binding.ProducerBinding[:])
 	copy(out[44:], binding.InputSHA256[:])
 	return out, nil
+}
+
+// WireBytes validates the complete selected binding before reserving its
+// header/echo and bounded HOLD/RELEASE exchanges within existing output limits.
+func (binding EngineMeasurementBinding) WireBytes(maximum uint32) (uint64, error) {
+	if _, err := binding.header(maximum); err != nil {
+		return 0, err
+	}
+	return 2*engineMeasurementHeaderBytes + uint64(maximum)*(3*engineMeasurementFrameBytes+engineMeasurementIdentityBytes), nil
+}
+
+func (binding EngineMeasurementBinding) frame(op byte, sequence, phase uint32) [engineMeasurementFrameBytes]byte {
+	frame := engineMeasurementFrame(op, sequence, phase)
+	if binding.Recipe == EngineMeasurementCheckpointV2 {
+		frame[3] = '2'
+	}
+	return frame
 }
 
 func engineMeasurementFrame(op byte, sequence, phase uint32) [engineMeasurementFrameBytes]byte {
@@ -192,7 +257,7 @@ func ServeEngineMeasurement(ctx context.Context, conn *net.UnixConn, binding Eng
 			return errors.Join(ErrTransport, e)
 		}
 		phase := binary.BigEndian.Uint32(frame[8:12])
-		if sequence > maximum || !engineMeasurementPhase(binding.ProducerID, phase) || frame != engineMeasurementFrame(engineMeasurementHold, sequence, phase) {
+		if sequence > maximum || !binding.phaseAllowed(phase) || frame != binding.frame(engineMeasurementHold, sequence, phase) {
 			return ErrProtocol
 		}
 		var mu sync.Mutex
@@ -238,7 +303,7 @@ func ServeEngineMeasurement(ctx context.Context, conn *net.UnixConn, binding Eng
 					return ErrTransport
 				}
 				var release [engineMeasurementFrameBytes]byte
-				if _, e := io.ReadFull(conn, release[:]); e != nil || release != engineMeasurementFrame(engineMeasurementRelease, sequence, phase) {
+				if _, e := io.ReadFull(conn, release[:]); e != nil || release != binding.frame(engineMeasurementRelease, sequence, phase) {
 					return errors.Join(ErrProtocol, e)
 				}
 				return errors.Join(ctx.Err(), guardCtx.Err())
@@ -250,7 +315,7 @@ func ServeEngineMeasurement(ctx context.Context, conn *net.UnixConn, binding Eng
 		if archiveMeasurementDeadline(ctx, conn) != nil {
 			return ErrTransport
 		}
-		ack := engineMeasurementFrame(engineMeasurementRelease, sequence, phase)
+		ack := binding.frame(engineMeasurementRelease, sequence, phase)
 		if n, e := conn.Write(ack[:]); e != nil || n != len(ack) {
 			return ErrTransport
 		}
@@ -287,7 +352,7 @@ func newEngineMeasurementClient(bootstrap, operation context.Context, conn *net.
 func (client *engineMeasurementClient) measure(ctx context.Context, phase uint32, expected EngineMeasurementIdentity, measure func(context.Context) error) (retErr error) {
 	client.mu.Lock()
 	defer client.mu.Unlock()
-	if client.closed || client.err != nil || client.ctx.Err() != nil || measure == nil || !validEngineMeasurementIdentity(expected) || !engineMeasurementPhase(client.binding.ProducerID, phase) || archiveMeasurementDeadline(ctx, client.conn) != nil {
+	if client.closed || client.err != nil || client.ctx.Err() != nil || measure == nil || !validEngineMeasurementIdentity(expected) || !client.binding.phaseAllowed(phase) || archiveMeasurementDeadline(ctx, client.conn) != nil {
 		return ErrProductionBootstrap
 	}
 	if deadline, ok := client.ctx.Deadline(); ok {
@@ -314,7 +379,7 @@ func (client *engineMeasurementClient) measure(ctx context.Context, phase uint32
 		}
 	}()
 	client.sequence++
-	frame := engineMeasurementFrame(engineMeasurementHold, client.sequence, phase)
+	frame := client.binding.frame(engineMeasurementHold, client.sequence, phase)
 	if n, e := client.conn.Write(frame[:]); e != nil || n != len(frame) {
 		return ErrTransport
 	}
@@ -335,7 +400,7 @@ func (client *engineMeasurementClient) measure(ctx context.Context, phase uint32
 		}
 		joinCleanup := engineMeasurementCancellation(cleanup, client.conn)
 		defer joinCleanup()
-		release := engineMeasurementFrame(engineMeasurementRelease, client.sequence, phase)
+		release := client.binding.frame(engineMeasurementRelease, client.sequence, phase)
 		if n, e := client.conn.Write(release[:]); e != nil || n != len(release) {
 			retErr = errors.Join(retErr, ErrTransport, e)
 			return

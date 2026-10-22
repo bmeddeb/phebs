@@ -16960,3 +16960,43 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   `spike/t42h2r/retention-reader-rss-bounded-linux-20261022.json` record binds
   those controls and the diagnostic. Fresh complete native acceptance remains
   open and is not replaced by these bounded results.
+
+- **2026-10-22 — T42.H2s.e closed checkpoint engine/runtime contract
+  (MED-496 prerequisite).** Prepare a separately selected authenticated
+  `t42-linux-checkpoint-engine-v2` binding with EM02 header and every
+  HOLD/identity/RELEASE frame. Preserve EM01 magic, maximums, phase predicates,
+  wire-budget helper and omitted canonical bootstrap bytes. The optional recipe
+  travels from bootstrap into the actual client binding; server and client
+  compare the same recipe, producer binding and semantic input hash.
+
+  Producer four's complete return/stale/checkpoint path has seven existing
+  engine points: phase six marker/finish two, phase seven start/preparation/
+  finish three, phase eight start/preparation two. Producer five's recovery
+  finish has one at phase eight. The parent's joined-hard-death workspace
+  observation consumes no live-engine point. The existing producer-five control
+  envelope remains phases 8–11, but EM02 permits only phase eight there; this
+  contract grants no pressure/backup measurement recipe. Producer four requires
+  its actual terminal-phase-eight configuration, and backup carry refuses.
+
+  Pair this selection with a separate foreground Git/serial HEAD index runtime
+  v3 for producers four/five only. Preserve exact GC50, foreground automatic
+  maintenance, serial argv, tool identity and pre-Start environment fences.
+  Reject mismatched/missing/unknown recipes, zero or altered maximums, foreign
+  roles/platforms/producers/control shapes, and V3 with EM01 or EM02 with V2.
+  The existing FD6/FD7 bootstrap requirement remains. Native source selection,
+  launcher wire debit, resource policy and successor/retained-source adapter
+  composition remain subsequent work; no native constructor emits this recipe
+  yet. Historical private policies and the prepared Maria candidate stay exact.
+  Native checkpoint entry remains closed pending actual creation/exec,
+  checkpoint/recovery and complete custody/accounting qualification.
+
+  Cost: selection and validation add bounded constant string/phase comparisons
+  at launch; the new optional bootstrap value is fixed text. EM02 uses the same
+  76-byte header, 16-byte control frame and 32-byte identity ACK. Its future
+  selected wire reservations are 712 bytes for producer four and 232 for five;
+  EM01 producer four stays 312. These bytes must be debited from the existing
+  combined output ceiling when the launcher is bound. The shared protocol keeps
+  its single endpoint, serialized lease, existing cancellation/join lifetimes,
+  mutex, phase deadlines and cleanup bound. This component creates no new
+  runtime child, lock, cache, corpus/hash read, periodic request, query, sync,
+  retry/no-op or publication work and widens no RSS, disk or task bound.

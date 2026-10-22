@@ -328,6 +328,13 @@ mechanism. Native checkpoint entry remains closed pending successor recipe,
 post-kill creation/exec and full checkpoint/recovery qualification; the parent
 c.c dependency remains open.
 
+T42.H2s.e prepares the explicitly authenticated EM02 checkpoint/recovery
+measurement contract and paired foreground/index runtime V3. Its seven/one
+points match existing source workspace boundaries; historical EM01/V2 remain
+exact. This protocol component is not yet selected by native constructors.
+Launcher debit, policy and actual successor/source-transfer composition remain
+next, with native checkpoint entry closed and MED-496 acceptance still open.
+
 Ben's 2026-10-22 instruction authorizes integrating PR156 and PR164–167 as
 reviewed implementation checkpoints while cleaning maria after verified archival
 transfer. It supersedes their full-native integration hold only. V10 remains a
