@@ -62,7 +62,7 @@ func TestLinuxEpochRootFirstKernelControl(t *testing.T) {
 	// No descendant executes application code before the original root dies.
 	command := exec.Command("/bin/sh", "-c", "sleep 30 & wait")
 	command.Env = []string{"PATH=/usr/bin:/bin", "LC_ALL=C"}
-	command.SysProcAttr = &syscall.SysProcAttr{Ptrace: true, Setsid: true}
+	command.SysProcAttr = &syscall.SysProcAttr{Ptrace: true, Setsid: true, Pdeathsig: syscall.SIGKILL}
 	if err := command.Start(); err != nil {
 		t.Fatal(err)
 	}

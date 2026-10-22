@@ -16669,8 +16669,9 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   enablement, production subreaper, EM/control retirement or successor claim.
   Maria's exact running source and all historical contracts remain unchanged.
 
-  Cost: test-only two child lifetimes, two original pidfds, fixed-size identity
-  records, one existing bounded process/RSS census and one held-image
+  Cost: one isolated helper plus its two child lifetimes, two original pidfds
+  and the classifier's one transient pidfd, fixed-size identity records,
+  one existing bounded process/RSS census and one held-image
   classification, within one eight-second operation and a twenty-second
   isolated helper deadline. The shell creates one child; that child never
   executes application instructions. Polling uses the existing nonblocking
