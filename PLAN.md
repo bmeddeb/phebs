@@ -16799,3 +16799,29 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   fixtures, including their held images, notifier, local DA producer and
   genuine joins under existing test deadlines; no production subreaper or
   parent-death-signal exception is added.
+
+
+- **2026-10-22 — Ben-directed Linux implementation checkpoint integration
+  and maria archival cleanup.** After disclosure of v10's actual native Wait1
+  and unchanged 4-GiB RSS breach during retention observation after physical-B
+  final authority, Ben explicitly directs cleaning maria and starting PR
+  merges. Integrate reviewed PR156 and the reviewed T42.H2s.a–d prerequisites
+  (PR164–167) as implementation checkpoints. For this requested integration
+  only, the earlier full-native-pass integration hold is superseded; the full
+  MED-495 qualification gate and MED-496 checkpoint/successor acceptance are
+  unchanged and remain open. Component normal/race/static/platform gates and
+  independent review are retained; no hosted CI status, complete native pass,
+  clean measured teardown, readiness, freeze, release or scale claim is added.
+  Native checkpoint entry remains closed. Preserve historical plans, policies,
+  receipts, failures and their exact source lineages. Confirm no task process
+  or mount remains, archive the finished run fixtures and index diagnostics,
+  verify the archives after transfer to local custody, then retire only those
+  task-owned remote trees and disposable build caches. This operator cleanup
+  is not the failed run's internal custody/accounting or teardown PASS.
+
+  Cost: integration changes no runtime behavior beyond the reviewed stack.
+  Archival cleanup is one operator action over the exact finished task trees,
+  with two bounded-worker compression streams performed serially, archive
+  integrity/hash verification and one transfer, followed by deletion only
+  after local archive verification. It adds no product query, sync, startup,
+  retry, publication, cache, resource-bound or child-process policy change.

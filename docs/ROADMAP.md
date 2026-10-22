@@ -328,6 +328,12 @@ mechanism. Native checkpoint entry remains closed pending successor recipe,
 post-kill creation/exec and full checkpoint/recovery qualification; the parent
 c.c dependency remains open.
 
+Ben's 2026-10-22 instruction authorizes integrating PR156 and PR164–167 as
+reviewed implementation checkpoints while cleaning maria after verified archival
+transfer. It supersedes their full-native integration hold only. V10 remains a
+failed full qualification; MED-495 and MED-496 acceptance remain open, native
+checkpoint entry stays closed, and no readiness/freeze/scale gate advances.
+
 Next: [Linux office handoff #124](https://github.com/bmeddeb/phebs/issues/124)
 mechanism qualification → remaining T42.H2 consumer/executor/resource admission
 → T42.2v restored launch → complete readiness → T42.2o fresh freeze → separately

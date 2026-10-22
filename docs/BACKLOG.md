@@ -5045,6 +5045,17 @@ bytes. Native checkpoint entry stays closed pending post-kill creation/exec,
 successor recipe and actual checkpoint/recovery composition. No full native
 qualification or integration follows; c.c remains the dependency.
 
+**2026-10-22 — Ben-directed implementation checkpoint integration.** Ben
+explicitly requests maria cleanup and PR merges after the v10 native failure
+was disclosed. PR156 and T42.H2s.a–d / PR164–167 may integrate as reviewed
+implementation checkpoints; this supersedes only their earlier full-native
+integration hold. MED-495 full qualification and MED-496 checkpoint/successor
+acceptance remain open, as do all readiness/freeze/scale gates. Native
+checkpoint entry stays closed. Archived failed fixtures/raw evidence retain
+the actual Wait1/RSS failure; verified operator cleanup is not a measured
+custody/accounting or teardown PASS. Disposable remote run/diagnostic trees
+retire only after archive integrity and local-transfer verification.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

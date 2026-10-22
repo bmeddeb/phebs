@@ -520,6 +520,14 @@ multi-threaded actor root/child controls establish these mechanics only; they
 are not production PC/SA checkpoint or successor proof. Native checkpoint entry
 remains closed pending those composition gates and the c.c dependency.
 
+Ben's 2026-10-22 cleanup/integration instruction permits a reviewed code
+checkpoint despite v10's failed full qualification. Before deleting finished
+remote fixtures, preserve their complete private archives and verify integrity
+after local transfer. Verify task processes/mounts are absent and retire only
+exact task-owned trees/caches. Keep the actual failure and outstanding native
+acceptance visible; operator cleanup cannot establish the run's internal
+custody, accounting or measured teardown PASS. Checkpoint entry stays closed.
+
 The first exact `2754d208` full-native attempt completed its three actual
 reference comparisons, then correctly refused policy v1 before any author or
 server operation: 10,504,626,176 required bytes exceeded 8,633,675,776 observed
