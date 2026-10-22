@@ -16654,7 +16654,9 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   prerequisite).** Before accepting a reparented survivor, qualify the actual
   kernel boundary independently of runtime admission. One isolated test
   process becomes a subreaper only for its own fixed shell/child fixture. A
-  witnessed fork supplies the original creation identity and original pidfds;
+  creator-thread SIGKILL death signal is armed before Start, followed by the
+  existing ptrace EXITKILL options. A witnessed fork supplies the original
+  creation identity and original pidfds;
   the child stays at its consumed initial ptrace stop while the root receives
   SIGKILL. The terminal root must pass the existing exact proof, while its
   live survivor keeps its original birth/session/tracer/namespace and a
@@ -16671,8 +16673,12 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
 
   Cost: one isolated helper plus its two child lifetimes, two original pidfds
   and the classifier's one transient pidfd, fixed-size identity records,
-  one existing bounded process/RSS census and one held-image
-  classification, within one eight-second operation and a twenty-second
+  one existing bounded process/RSS census and one separate final tracer-status
+  census (each at most 8,192 host entries plus an overflow sentinel), and one
+  held-image classification with its existing bounded stat/executable reads.
+  The fixture holds one shell image FD; each collector opens transient read
+  FDs using its existing bounds. Work stays within one eight-second operation
+  and a twenty-second
   isolated helper deadline. The shell creates one child; that child never
   executes application instructions. Polling uses the existing nonblocking
   wait/pidfd operations with one-ms test waits, not a production sampler.
