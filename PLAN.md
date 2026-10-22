@@ -16946,8 +16946,9 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   independent exact-source full qualification remains untouched. Actual native
   successor/retained-source composition and complete acceptance remain open.
 
-  Cost: each new isolated control runs serially and adds one held sleep image
-  and controller images plus one unused fixture file; the fork variant adds one bounded task/process and
+  Cost: each new isolated control runs serially and adds one held sleep image,
+  one held controller image and one unused fixture file; the fork variant adds
+  one bounded task/process and
   pidfd, targeted stop/terminal records and original-parent HUP polling within
   the existing eight-second control deadline and twenty-second outer bound.
   No global wait, production subreaper, new signal authority, corpus read or
