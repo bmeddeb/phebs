@@ -5064,6 +5064,28 @@ passes 706 dispatch nodes per normal/race mode with zero skips, supported
 native compile/static/docs gates and independent source/cost review clear.
 Its protocol controls do not select or qualify the native successor path.
 
+**T42.H2s.f · Post-root-death creation/exec controls (MED-496 prerequisite,
+2026-10-22).** After actual original-root terminal CLD, continue an owned
+stopped survivor and prove actual EXEC, plus a separate source-created
+descendant FORK/initial stop/EXEC through production dispatchers. Keep the root
+unreaped, verify inherited/executed held images separately and charge the new
+task's positive RSS once; missing source ownership refuses. Separate tracer
+terminal copy from genuine parent reap and require original pidfd HUP before
+slot close. Require repeated normal/race kernel controls, connected epoch
+regressions, supported compile/static/docs gates and independent source/cost
+review. These isolated shell/sleep mechanics grant no production actor/Surreal
+or native successor acceptance; checkpoint entry and historical policies stay
+unchanged. The source-owned launcher/policy/successor composition is next.
+
+Exact source `bca646e4` passes twenty normal and twenty race repetitions of
+both new kernel boundaries, each with witnessed genuine SIGCHLD forwarding
+and parent reap/HUP; no kernel control skips. Connected epoch suites pass 311
+nodes per mode, with one expected Darwin-only inherited-terminal skip. Vet,
+pinned differential lint, all four supported tagged-native compiles, docs,
+glossary and whitespace pass. Independent source/cost re-review reports all
+severity counts zero. The source-bound record is
+`spike/t42h2r/postkill-events-bounded-linux-20261022.json`.
+
 **2026-10-22 — Ben-directed implementation checkpoint integration.** Ben
 explicitly requests maria cleanup and PR merges after the v10 native failure
 was disclosed. PR156 and T42.H2s.a–d / PR164–167 may integrate as reviewed

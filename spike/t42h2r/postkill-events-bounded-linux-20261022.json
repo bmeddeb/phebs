@@ -1,0 +1,281 @@
+{
+  "schema": "t42-linux-postkill-events-bounded-v1",
+  "implementation_commit": "bca646e484442062dcf9607a50ab7e60501ddcd9",
+  "base_commit": "cf2f8817e7e1b111071c4663c1a3c6261d2ca514",
+  "scope": "Isolated actual Linux kernel mechanism controls through production event dispatchers; no production actor scheduling or native successor activation",
+  "controls": [
+    "Owned stopped survivor executes held sleep image after original root terminal CLD and before genuine root Wait.",
+    "Surviving shell creates descendant after original root terminal CLD; production FORK/initial SIGSTOP/EXEC dispatch registers exact source ownership and separately verifies inherited and executed images.",
+    "Whole-cohort observation retains actual parent, positive executed RSS and unique rows; removing source-owned leader refuses despite current SID membership.",
+    "Descendant tracer terminal copy remains separate from real parent reap: observe identity-bound actual SIGCHLD, forward through production dispatcher, require original pidfd HUP, then close descriptor and retire owned slot.",
+    "Existing strict/adopter controls preserve sole original root Wait, surviving-child kill/reap and original pidfd HUP joins; unknown closure retains custody."
+  ],
+  "gates": [
+    {
+      "name": "kernel-normal",
+      "argv": [
+        "go",
+        "test",
+        "./spike/t421",
+        "-run",
+        "^TestLinuxEpochRootFirstKernelControl$",
+        "-count=20",
+        "-timeout=5m",
+        "-json"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 48.19181584499893,
+      "log_sha256": "669427284bfb933330b0e5fc8dbcffe590959748814bc4737c4b74b613a9a374",
+      "pass_nodes": 20,
+      "skipped_tests": [],
+      "postkill_exec_controls": 20,
+      "postkill_fork_exec_controls": 20,
+      "sigchld_forwarded_controls": 20
+    },
+    {
+      "name": "kernel-race",
+      "argv": [
+        "go",
+        "test",
+        "-race",
+        "./spike/t421",
+        "-run",
+        "^TestLinuxEpochRootFirstKernelControl$",
+        "-count=20",
+        "-timeout=5m",
+        "-json"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 78.99289422600123,
+      "log_sha256": "4eb210364482c885ca25e94baaa971be5064ad3df5ea872d396f27185efcb097",
+      "pass_nodes": 20,
+      "skipped_tests": [],
+      "postkill_exec_controls": 20,
+      "postkill_fork_exec_controls": 20,
+      "sigchld_forwarded_controls": 20
+    },
+    {
+      "name": "epoch-normal",
+      "argv": [
+        "go",
+        "test",
+        "./spike/t421",
+        "-run",
+        "^Test(LinuxEpoch|LinuxCheckpoint|ProcessObservation|ExecutionEpochCheckpoint|EpochFinishFailure)",
+        "-count=1",
+        "-timeout=5m",
+        "-json"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 14.288978265001788,
+      "log_sha256": "ff3a6bd28881f98742e57df42b695074403c8644a17fda2d35a54cb5d1686a4f",
+      "pass_nodes": 311,
+      "skipped_tests": [
+        "TestExecutionEpochCheckpointInheritedTerminal"
+      ],
+      "postkill_exec_controls": 1,
+      "postkill_fork_exec_controls": 1,
+      "sigchld_forwarded_controls": 1
+    },
+    {
+      "name": "epoch-race",
+      "argv": [
+        "go",
+        "test",
+        "-race",
+        "./spike/t421",
+        "-run",
+        "^Test(LinuxEpoch|LinuxCheckpoint|ProcessObservation|ExecutionEpochCheckpoint|EpochFinishFailure)",
+        "-count=1",
+        "-timeout=5m",
+        "-json"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 35.1041360310046,
+      "log_sha256": "c655b30486d9b622ad5403fabfae9edaf4d9a1750bcd6e54e0a1d79248dc8a9d",
+      "pass_nodes": 311,
+      "skipped_tests": [
+        "TestExecutionEpochCheckpointInheritedTerminal"
+      ],
+      "postkill_exec_controls": 1,
+      "postkill_fork_exec_controls": 1,
+      "sigchld_forwarded_controls": 1
+    },
+    {
+      "name": "vet",
+      "argv": [
+        "go",
+        "vet",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 4.148755891001201,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "lint",
+      "argv": [
+        "golangci-lint",
+        "run",
+        "--new-from-rev=cf2f8817e7e1b111071c4663c1a3c6261d2ca514",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 19.608053998003015,
+      "log_sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+    },
+    {
+      "name": "docs",
+      "argv": [
+        "make",
+        "docs-check"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 1.5324432810011785,
+      "log_sha256": "5e0616c4dbddb29b4a7683788b8024e373e39a4545df6f95216930579d4598b8"
+    },
+    {
+      "name": "glossary",
+      "argv": [
+        "make",
+        "verify-glossary"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 0.14797548099886626,
+      "log_sha256": "f128ad7aef2b6215c4414d1e00b2650f9c42011b1705707b624be1c70d92f095"
+    },
+    {
+      "name": "whitespace",
+      "argv": [
+        "git",
+        "diff",
+        "cf2f8817e7e1b111071c4663c1a3c6261d2ca514",
+        "--check"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 0.052801515004830435,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "supported_64_bit_native_compiles": [
+    {
+      "target": "linux/amd64",
+      "argv": [
+        "go",
+        "test",
+        "-c",
+        "-tags=phebs_t42_native",
+        "-o",
+        "/home/ben/phebs-rehearsals/med496-postkill-events-20261022/linux-amd64.test",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 68.80930977300159,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "target": "linux/arm64",
+      "argv": [
+        "go",
+        "test",
+        "-c",
+        "-tags=phebs_t42_native",
+        "-o",
+        "/home/ben/phebs-rehearsals/med496-postkill-events-20261022/linux-arm64.test",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 31.336056854997878,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "target": "darwin/amd64",
+      "argv": [
+        "go",
+        "test",
+        "-c",
+        "-tags=phebs_t42_native",
+        "-o",
+        "/home/ben/phebs-rehearsals/med496-postkill-events-20261022/darwin-amd64.test",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 5.580557466004393,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "target": "darwin/arm64",
+      "argv": [
+        "go",
+        "test",
+        "-c",
+        "-tags=phebs_t42_native",
+        "-o",
+        "/home/ben/phebs-rehearsals/med496-postkill-events-20261022/darwin-arm64.test",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 6.621453975996701,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "independent_review": {
+    "source_commit": "bca646e484442062dcf9607a50ab7e60501ddcd9",
+    "reviewer": "review_maria_ram_fix",
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "closed_prior_finding": "Require identity-bound genuine parent SIGCHLD stop, successful production dispatcher forwarding, and original pidfd HUP before descendant slot retirement.",
+    "scope": "Independent source, custody, cleanup and cost review; reviewer ran no tests/builds and made no edits."
+  },
+  "source_files": [
+    {
+      "path": "spike/t421/epoch_postkill_linux_test.go",
+      "bytes": 6556,
+      "sha256": "bcff031cc395a6e8750c42e8a2b49d7850a076ba15cdda942318cf38e7392ac4"
+    },
+    {
+      "path": "spike/t421/epoch_root_first_kernel_linux_test.go",
+      "bytes": 10800,
+      "sha256": "66eef945cc71872aeba4a8eb34154645b949618e685d308df20496621b521166"
+    }
+  ],
+  "unchanged_source_files": [
+    "spike/t421/epoch_checkpoint.go",
+    "spike/t421/linux_epoch_resource_policy.go",
+    "spike/t421/epoch_trace_events_linux.go",
+    "spike/t421/epoch_survivor_linux.go"
+  ],
+  "raw_controls": [
+    {
+      "path": "/home/ben/phebs-rehearsals/med496-postkill-events-20261022/gates.json",
+      "bytes": 3808,
+      "sha256": "5a23f966468724e9427529c3c26a28efe94ec0790783c5e3b9f4e9d35a6c3b95"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/med496-postkill-events-20261022/supported-compile.json",
+      "bytes": 1632,
+      "sha256": "0b6f9ac8166825cf27321d69ecac39a5102393773d86b64ae09f3f882ff1bdfd"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/med496-postkill-events-20261022/review.json",
+      "bytes": 461,
+      "sha256": "9cd0103f26279cd3f9e120a89406399e9c15ca7ae151a8ed64c5079780fb2e20"
+    }
+  ],
+  "remaining": [
+    "Native source-owned launcher recipe selection and exact wire debit",
+    "Prospective policy preserving historical policy bytes",
+    "Actual epoch-four successor and retained-source transfer with full PC/SA/checkpoint recovery composition",
+    "MED-495 full native qualification dependency"
+  ],
+  "nonclaims": [
+    "No Surreal survival or parent-death safeguard exception",
+    "No production actor scheduling qualification",
+    "No full MED-496 acceptance",
+    "No native checkpoint entry activation",
+    "No Maria source, run, input or resource-bound mutation",
+    "No readiness, freeze, release or scale advance"
+  ]
+}
