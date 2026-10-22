@@ -528,6 +528,18 @@ exact task-owned trees/caches. Keep the actual failure and outstanding native
 acceptance visible; operator cleanup cannot establish the run's internal
 custody, accounting or measured teardown PASS. Checkpoint entry stays closed.
 
+For MED-495's retention-reader correction, cold focused/whole reader creation
+hashes every shard through bounded reads from its original descriptor before
+mmap. Digest and identity/mode/size/mtime/ctime checks remain mandatory; old and
+current exact readers can remain held together. This avoids making every mapped
+page resident merely for digest validation. It neither caps subsequent query
+residency nor exempts file cache from physical/cgroup admission. Cache hits do
+not repeat full hashes. Keep the 4-GiB whole-process bound and all corpus,
+accounting and actual terminal custody/cleanup checks for the fresh maria run.
+Its quiet scheduled monitor observes at most every 30 minutes, reporting phase
+transitions, completion/failure or required action; unchanged artifacts need no
+notification. Monitoring never launches a duplicate or retries qualification.
+
 The first exact `2754d208` full-native attempt completed its three actual
 reference comparisons, then correctly refused policy v1 before any author or
 server operation: 10,504,626,176 required bytes exceeded 8,633,675,776 observed
