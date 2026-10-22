@@ -321,6 +321,13 @@ ordinary tree validation stays strict. Native checkpoint entry remains closed
 pending actual finish, successor recipe and recovery composition. These bounded
 controls do not close MED-496 or its separate c.c integration dependency.
 
+T42.H2s.d prepares strict Linux native terminal finish: original SIGKILL
+Wait plus actual cleanup joins, without hiding accounting/transport siblings
+or expiry. Actual multi-threaded root/child actor controls qualify the lower
+mechanism. Native checkpoint entry remains closed pending successor recipe,
+post-kill creation/exec and full checkpoint/recovery qualification; the parent
+c.c dependency remains open.
+
 Next: [Linux office handoff #124](https://github.com/bmeddeb/phebs/issues/124)
 mechanism qualification → remaining T42.H2 consumer/executor/resource admission
 → T42.2v restored launch → complete readiness → T42.2o fresh freeze → separately

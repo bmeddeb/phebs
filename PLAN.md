@@ -16752,3 +16752,49 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   setting outside that isolated test process. The actor-queue control reuses
   the existing one-root Go fixture, notifier, DA producer and twenty-second
   operation bound; it adds no child beyond that fixture or production cost.
+
+
+- **2026-10-21 — T42.H2s.d strict Linux native terminal finish (MED-496
+  prerequisite).** Separate actor event/retirement failure from the creating
+  actor's actual Handle.Wait error. A selected finish may normalize only the
+  genuine original ProcessState with SIGKILL and its exact native ExitError,
+  directly or through Handle.Wait's single-child join. Accounting, transport,
+  cancellation, duplicate, nested and wrapped siblings refuse. No errors.As
+  traversal authorizes runtime acceptance. Native finish additionally requires
+  its exact issued adapter/trace/run, retained epoch-three checkpoint, live
+  bounded terminal context, accepted measurement retirement and the caller's
+  already-settled failure-free terminal intent. That intent alone issues no
+  authority. Partial/unissued setup keeps existing owned cleanup and refuses.
+  The actor request remains source-issued original-pidfd-only; complete native
+  Wait, original session/pidfd, observer, callback and task retirement must
+  genuinely join. Deadline expiry stays a failure even if later owned cleanup
+  completes. Ordinary Wait and cleanup facts remain separate from operation
+  success. A Linux implementation of the strict status predicate preserves the
+  Darwin implementation byte-for-byte; no Darwin-native handoff is crossed.
+
+  Real actor controls cover a multi-threaded Go root alone and one with a live
+  multi-threaded source-created child. Both require actual root-first SIGKILL,
+  separate survivor retirement, genuine root Wait and strict refusal of error
+  siblings/foreign states. These are mechanical kernel/DA controls, not issued
+  production-resource or PC/SA checkpoint qualification. Native checkpoint
+  entry remains closed. Post-kill creation/exec, successor recipe and actual
+  checkpoint/recovery composition remain the next gates; c.c acceptance remains
+  the integration dependency. No private policy bytes, historical contract,
+  resource limit, host setting, readiness or freeze claim changes.
+
+  Cost: one additional retained error reference per trace root, no copied
+  output, inventory, new child or sampler. Ordinary finish adds the existing
+  terminal-intent branch and fixed field checks. Selected terminal finish adds
+  one short core-mutex acquisition, the existing complete held-owner/resource
+  check, and one bounded actor request/decision and original-pidfd kill. The
+  join reuses the existing timer/wait helper, capped by the earlier operation
+  deadline or thirty seconds, then retains real cleanup on expiry. Validation
+  performs fixed ProcessState/error-shape checks after actual done publication;
+  no second Wait, census, hash or error-tree search is added. No lock spans
+  signaling/waiting. Existing probeGate, leader/TID caps, survivor RSS charging,
+  kernel proof and retirement costs remain unchanged. Product query/request,
+  sync tick, retry/no-op, publication, cache, disk and persistent-state costs
+  remain unchanged. The controls reuse existing one-root and root/engine Go
+  fixtures, including their held images, notifier, local DA producer and
+  genuine joins under existing test deadlines; no production subreaper or
+  parent-death-signal exception is added.

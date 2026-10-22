@@ -5030,6 +5030,21 @@ Native checkpoint entry stays closed pending runtime finish, native SIGKILL,
 successor recipe and checkpoint/recovery composition. c.c acceptance remains
 the integration dependency; this is neither full qualification nor readiness.
 
+**T42.H2s.d · Strict native terminal finish (MED-496 prerequisite,
+2026-10-21).** Preserve actor cleanup errors separately from genuine Wait.
+Require the original SIGKILL ProcessState and exact direct/single-child native
+ExitError shape; accounting/transport/cancellation siblings and wrapped/nested
+errors refuse. Only the exact issued native adapter, retained epoch-three
+checkpoint, actual trace run, bounded terminal operation and already-settled
+failure-free terminal intent can request hard death. Partial setup owns cleanup
+and refuses; late actual cleanup cannot clear deadline failure. Require genuine
+multi-threaded actor root/child controls, strict error-shape/foreign-owner
+refusals, normal/race and supported compile/static/docs gates plus independent
+source/cost review. Preserve Darwin-native implementation and private policy
+bytes. Native checkpoint entry stays closed pending post-kill creation/exec,
+successor recipe and actual checkpoint/recovery composition. No full native
+qualification or integration follows; c.c remains the dependency.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

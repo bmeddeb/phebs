@@ -96,7 +96,7 @@ func (adapter *linuxEpochCoordinator) startWait(ctx context.Context, run *Execut
 	return nil, ErrExecutionEpochOne
 }
 
-func (adapter *linuxEpochCoordinator) finish(run *ExecutionEpochOneRun, waited <-chan error, joined bool, waitErr error, deadline time.Time) (executionProcessDeath, error) {
+func (adapter *linuxEpochCoordinator) finish(run *ExecutionEpochOneRun, waited <-chan error, joined bool, waitErr error, deadline time.Time, terminalOK bool) (executionProcessDeath, error) {
 	if adapter == nil || adapter.held == nil || run == nil {
 		return executionProcessDeath{}, ErrExecutionEpochOne
 	}
@@ -106,11 +106,25 @@ func (adapter *linuxEpochCoordinator) finish(run *ExecutionEpochOneRun, waited <
 	}
 	root := server.trace
 	run.mu.Lock()
-	terminal := run.terminalEntered
+	terminal, requested, operation := run.terminalEntered, run.terminalRequested, run.terminalContext
+	selected := run.epoch.Epoch == 3 && run.checkpointAllowed && run.checkpointUsed && run.retainParent && run.err == nil
 	run.mu.Unlock()
-	// Genuine Wait evidence is necessary but cannot qualify root-first death.
-	// Until survivor/measurement ownership exists, terminal requests clean up
-	// through the existing leaf-first actor and remain a refused operation.
+	// The caller's settled terminal intent is necessary, never sufficient:
+	// require the exact issued adapter, retained checkpoint and actual actor run.
+	var hardErr error
+	if terminal && terminalOK && requested && selected && !joined && operation != nil && operation.Err() == nil && adapter.issued() && run.flow == adapter.core && root.serverRun == run && adapter.held.resources != nil && root.owner == adapter.held.resources.trace {
+		adapter.core.mu.Lock()
+		retained := !adapter.core.closed && adapter.core.retained == run
+		adapter.core.mu.Unlock()
+		if retained && adapter.check(operation) == nil {
+			death, err := root.finishHardDeath(operation, deadline)
+			if death.RootJoined {
+				return death, err
+			}
+			hardErr = err
+		}
+	}
+	// Partial/unissued terminal entry still owns leaf-first cleanup and refuses.
 	if terminal {
 		root.requestStop()
 	}
@@ -131,7 +145,7 @@ func (adapter *linuxEpochCoordinator) finish(run *ExecutionEpochOneRun, waited <
 		return executionProcessDeath{}, errors.Join(ErrExecutionEpochOne, waitErr)
 	}
 	if terminal || !death.SessionEmpty {
-		return death, errors.Join(ErrExecutionEpochOne, waitErr)
+		return death, errors.Join(ErrExecutionEpochOne, hardErr, waitErr)
 	}
 	return death, waitErr
 }

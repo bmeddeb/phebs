@@ -21,7 +21,7 @@ func assertLinuxEpochNativeWaitFacts(t *testing.T, fixture *linuxEpochTraceMecha
 	held := root.owner.held
 	held.servers = map[*ExecutionEpochOneRun]*linuxEpochServer{run: {trace: root}}
 	adapter := &linuxEpochCoordinator{held: held}
-	death, err := adapter.finish(run, root.done, true, completionErr, time.Now())
+	death, err := adapter.finish(run, root.done, true, completionErr, time.Now(), false)
 	if !death.RootJoined || !death.SessionEmpty || death.ProcessState == nil || death.ProcessState != root.command.ProcessState || death.ProcessState.Pid() != root.command.Process.Pid || err != completionErr {
 		t.Fatalf("native terminal facts differ from the creating actor: %+v, %v", death, err)
 	}
@@ -38,7 +38,7 @@ func assertLinuxEpochNativeWaitFacts(t *testing.T, fixture *linuxEpochTraceMecha
 	// Even a completed original Wait cannot turn the ordinary leaf-first route
 	// into an accepted root-first checkpoint. No second Wait is consumed here.
 	run.terminalEntered = true
-	terminal, err := adapter.finish(run, root.done, true, completionErr, time.Now())
+	terminal, err := adapter.finish(run, root.done, true, completionErr, time.Now(), false)
 	if !errors.Is(err, ErrExecutionEpochOne) || terminal != death {
 		t.Fatalf("unqualified hard death accepted or native facts lost: %+v, %v", terminal, err)
 	}
@@ -77,7 +77,7 @@ func TestLinuxEpochFinishRefusesUnownedWaitResults(t *testing.T) {
 			case "foreign-command":
 				run.command = &exec.Cmd{}
 			}
-			death, err := adapter.finish(run, waited, true, nil, time.Now())
+			death, err := adapter.finish(run, waited, true, nil, time.Now(), true)
 			if !errors.Is(err, ErrExecutionEpochOne) || death != (executionProcessDeath{}) {
 				t.Fatalf("unowned channel/boolean manufactured native facts: %+v, %v", death, err)
 			}
@@ -107,7 +107,7 @@ func TestLinuxEpochFinishJoinsOriginalActor(t *testing.T) {
 			run := &ExecutionEpochOneRun{command: root.command, terminalEntered: terminal}
 			held := root.owner.held
 			held.servers = map[*ExecutionEpochOneRun]*linuxEpochServer{run: {trace: root}}
-			death, err := (&linuxEpochCoordinator{held: held}).finish(run, root.done, false, nil, deadline)
+			death, err := (&linuxEpochCoordinator{held: held}).finish(run, root.done, false, nil, deadline, terminal)
 			fixture.joined = death.RootJoined
 			if !death.RootJoined || !death.SessionEmpty || death.ProcessState == nil || death.ProcessState != root.command.ProcessState || err == nil || death.WaitErr == nil {
 				t.Fatalf("actual signaled native Wait lost: %+v, %v", death, err)

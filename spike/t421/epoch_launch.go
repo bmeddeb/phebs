@@ -1297,7 +1297,7 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	var nativeStopErr error
 	var death executionProcessDeath
 	if run.flow.native != nil {
-		death, nativeStopErr = run.flow.native.finish(run, waited, joined, waitErr, stopDeadline)
+		death, nativeStopErr = run.flow.native.finish(run, waited, joined, waitErr, stopDeadline, terminal && terminalRequested && !joined && failure == nil)
 		joined, sessionEmpty = death.RootJoined, death.SessionEmpty
 	} else if terminal && terminalRequested && !joined && failure == nil {
 		death, nativeStopErr = killExecutionProcessSession(run.terminalContext, run.command, waited)

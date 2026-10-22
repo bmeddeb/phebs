@@ -510,6 +510,16 @@ control qualifies these mechanisms only. Native checkpoint entry remains
 closed until finish/successor/recovery composition passes its separate gates.
 Do not retry maria or change its limits on the strength of these controls.
 
+T42.H2s.d retains actual root Wait separately from actor cleanup failure.
+A selected terminal finish accepts only the original SIGKILL ProcessState and
+its native error or exact single-child Handle.Wait join; accounting, transport,
+cancellation and nested/wrapped error shapes remain failures. It also requires
+issued checkpoint/trace ownership, a live bounded operation and all actual
+retirement joins. Expiry remains failure after later successful cleanup. The
+multi-threaded actor root/child controls establish these mechanics only; they
+are not production PC/SA checkpoint or successor proof. Native checkpoint entry
+remains closed pending those composition gates and the c.c dependency.
+
 The first exact `2754d208` full-native attempt completed its three actual
 reference comparisons, then correctly refused policy v1 before any author or
 server operation: 10,504,626,176 required bytes exceeded 8,633,675,776 observed

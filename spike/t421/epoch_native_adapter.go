@@ -24,7 +24,7 @@ type executionEpochNativeAdapter interface {
 	tools(context.Context, uint64) (string, []dispatchadmission.ProductionToolBinding, []string, error)
 	start(context.Context, context.Context, *ExecutionEpochOneRun, uint32) (bool, error)
 	startWait(context.Context, *ExecutionEpochOneRun, uint32) (<-chan error, error)
-	finish(*ExecutionEpochOneRun, <-chan error, bool, error, time.Time) (executionProcessDeath, error)
+	finish(*ExecutionEpochOneRun, <-chan error, bool, error, time.Time, bool) (executionProcessDeath, error)
 	workspace() (*os.File, string, [2]int32)
 	engineMeasurements(uint64) uint32
 	serveEngineMeasurement(context.Context, *ExecutionEpochOneRun, *net.UnixConn, dispatchadmission.EngineMeasurementBinding, uint32) <-chan error

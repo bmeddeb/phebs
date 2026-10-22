@@ -632,5 +632,6 @@ func (root *linuxEpochTraceRoot) waitRoot(initial bool) {
 	// The ordinary path proved the original session empty before Wait. Initial
 	// capture cleanup never continued application code or admitted descendants.
 	root.death.SessionEmpty = true
-	root.completionErr = errors.Join(root.err, waitErr, reapErr, closeErr)
+	root.cleanupErr = errors.Join(root.err, reapErr, closeErr)
+	root.completionErr = errors.Join(root.cleanupErr, waitErr)
 }

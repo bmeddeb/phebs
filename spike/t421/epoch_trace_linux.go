@@ -212,6 +212,7 @@ type linuxEpochTraceRoot struct {
 	recent                                 [linuxEpochTraceRecentEvents]linuxEpochTraceEvent
 	err                                    error
 	completionErr                          error
+	cleanupErr                             error                 // Separate native Wait status from event/retirement failure.
 	death                                  executionProcessDeath // Published only through done after the creating actor's sole Wait.
 	startedNative, waitReturned, gateOwned bool
 	continued                              bool
