@@ -35,7 +35,7 @@ func TestShardFileHashBoundaries(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer file.Close()
+			defer func() { _ = file.Close() }()
 			ctx := t.Context()
 			size := int64(len(content))
 			var want error
