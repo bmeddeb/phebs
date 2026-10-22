@@ -17,15 +17,23 @@ const ProductionLinuxForegroundGitV1 = "t42-linux-foreground-git-serial-index-v1
 // ProductionLinuxForegroundGitV2 also narrows the index child's GC target.
 const ProductionLinuxForegroundGitV2 = "t42-linux-foreground-git-serial-index-v2"
 
+// ProductionLinuxForegroundGitV3 keeps V2's exact execution constraints for
+// the separately authenticated checkpoint/recovery producers, including five.
+const ProductionLinuxForegroundGitV3 = "t42-linux-foreground-git-serial-index-v3"
+
 func foregroundGitRuntimeRecipe(recipe string) bool {
-	return recipe == ProductionLinuxForegroundGitV1 || recipe == ProductionLinuxForegroundGitV2
+	return recipe == ProductionLinuxForegroundGitV1 || recipe == ProductionLinuxForegroundGitV2 || recipe == ProductionLinuxForegroundGitV3
+}
+
+func indexGCRuntimeRecipe(recipe string) bool {
+	return recipe == ProductionLinuxForegroundGitV2 || recipe == ProductionLinuxForegroundGitV3
 }
 
 func (record ProductionBootstrap) validIndexRuntimeRecipe(tool ProductionToolBinding) bool {
 	if tool.RuntimeRecipe == "" {
 		return !foregroundGitSelected(tool.Environment) && !indexGCSelected(tool.Environment)
 	}
-	if indexGCSelected(tool.Environment) != (tool.RuntimeRecipe == ProductionLinuxForegroundGitV2 && tool.Role == "zoekt-git-index") {
+	if indexGCSelected(tool.Environment) != (indexGCRuntimeRecipe(tool.RuntimeRecipe) && tool.Role == "zoekt-git-index") {
 		return false
 	}
 	foreground := foregroundGitSelected(tool.Environment)
@@ -43,6 +51,10 @@ func (record ProductionBootstrap) validIndexRuntimeRecipe(tool ProductionToolBin
 		return false
 	}
 	var phases []uint32
+	if tool.RuntimeRecipe == ProductionLinuxForegroundGitV3 &&
+		(record.EngineMeasurementRecipe != EngineMeasurementCheckpointV2 || record.EngineMeasurements == 0 || record.Producer.ID != 4 && record.Producer.ID != 5) {
+		return false
+	}
 	switch record.Producer.ID {
 	case 2:
 		phases = []uint32{2, 3, 4}
@@ -50,6 +62,11 @@ func (record ProductionBootstrap) validIndexRuntimeRecipe(tool ProductionToolBin
 		phases = []uint32{5}
 	case 4:
 		phases = []uint32{6, 7, 8}
+	case 5:
+		if tool.RuntimeRecipe != ProductionLinuxForegroundGitV3 {
+			return false
+		}
+		phases = []uint32{8, 9, 10, 11}
 	default:
 		return false
 	}
@@ -65,7 +82,7 @@ func productionIndexRuntimeArgs(site uint32, tool ProductionToolBinding, args []
 		}
 		return args, nil
 	}
-	if indexGCSelected(tool.Environment) != (tool.RuntimeRecipe == ProductionLinuxForegroundGitV2 && tool.Role == "zoekt-git-index") {
+	if indexGCSelected(tool.Environment) != (indexGCRuntimeRecipe(tool.RuntimeRecipe) && tool.Role == "zoekt-git-index") {
 		return nil, ErrProductionBootstrap
 	}
 	if tool.RuntimeRecipe == ProductionLinuxSerialIndexV1 && foregroundGitSelected(tool.Environment) {

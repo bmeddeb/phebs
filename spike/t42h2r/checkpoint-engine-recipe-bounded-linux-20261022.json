@@ -1,0 +1,210 @@
+{
+  "schema": "t42-linux-checkpoint-engine-recipe-bounded-v1",
+  "implementation_commit": "1eb55904fe9ecad7f07e18eb952e65dd42a43c90",
+  "scope": "Unselected authenticated protocol/runtime preparation only; no native constructor, launcher debit, policy or successor activation",
+  "recipe": "t42-linux-checkpoint-engine-v2",
+  "magic": "EM02",
+  "producer_points": {
+    "4": {
+      "maximum": 7,
+      "engine_phases": [
+        6,
+        7,
+        8
+      ],
+      "source_counts": [
+        2,
+        3,
+        2
+      ],
+      "control_phases": [
+        6,
+        7,
+        8
+      ],
+      "wire_bytes": 712
+    },
+    "5": {
+      "maximum": 1,
+      "engine_phases": [
+        8
+      ],
+      "source_counts": [
+        1
+      ],
+      "control_phases": [
+        8,
+        9,
+        10,
+        11
+      ],
+      "wire_bytes": 232
+    }
+  },
+  "unchanged_legacy": {
+    "magic": "EM01",
+    "producer4_maximum": 2,
+    "producer4_wire_bytes": 312,
+    "wire_helper_maximum": 6,
+    "optional_recipe_omitted": true,
+    "private_resource_policy_source_byte_identical": true,
+    "native_checkpoint_entry_closed": true
+  },
+  "gates": [
+    {
+      "name": "dispatch-normal",
+      "command": [
+        "go",
+        "test",
+        "-json",
+        "./internal/dispatchadmission",
+        "-count=1"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 8.958404728997266,
+      "test_pass_nodes": 706,
+      "test_skip_nodes": 0
+    },
+    {
+      "name": "dispatch-race",
+      "command": [
+        "go",
+        "test",
+        "-race",
+        "-json",
+        "./internal/dispatchadmission",
+        "-count=1"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 17.63423532700108,
+      "test_pass_nodes": 706,
+      "test_skip_nodes": 0
+    },
+    {
+      "name": "vet",
+      "command": [
+        "go",
+        "vet",
+        "./internal/dispatchadmission"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 0.7542090589995496
+    },
+    {
+      "name": "lint",
+      "command": [
+        "golangci-lint",
+        "run",
+        "./internal/dispatchadmission/..."
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 3.1320709950014134
+    },
+    {
+      "name": "docs",
+      "command": [
+        "make",
+        "docs-check"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 1.6003824600047665
+    },
+    {
+      "name": "glossary",
+      "command": [
+        "make",
+        "verify-glossary"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 0.6076140380027937
+    },
+    {
+      "name": "whitespace",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 0.008909896001568995
+    }
+  ],
+  "supported_64_bit_native_compiles": [
+    {
+      "target": "linux-amd64",
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 53.98064643699763
+    },
+    {
+      "target": "linux-arm64",
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 53.81020513099793
+    },
+    {
+      "target": "darwin-amd64",
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 52.93437883799925
+    },
+    {
+      "target": "darwin-arm64",
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 53.37300397299987
+    }
+  ],
+  "independent_review": {
+    "source_commit": "1eb55904fe9ecad7f07e18eb952e65dd42a43c90",
+    "reviewer": "review_maria_ram_fix",
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0
+  },
+  "source_files": [
+    {
+      "path": "internal/dispatchadmission/bootstrap.go",
+      "bytes": 25083,
+      "sha256": "6acea6da5a09030a9f149309f21bb7eda78ade8f0ffa85ebcd8298d0dfa74079"
+    },
+    {
+      "path": "internal/dispatchadmission/engine_measurement.go",
+      "bytes": 17247,
+      "sha256": "31041a212ce2fd472a7a3dd10d4d375cfe6d0862790f290a8ba4a46d8790b18f"
+    },
+    {
+      "path": "internal/dispatchadmission/production_index_recipe.go",
+      "bytes": 6144,
+      "sha256": "bae29f8b8c1843cee068e969aa0a05e453502981bd00d646c6c13947c2c04a92"
+    },
+    {
+      "path": "internal/dispatchadmission/engine_checkpoint_recipe_test.go",
+      "bytes": 8324,
+      "sha256": "da4cd42a331850fb11f8e0c4f7e04df79ab67e701d43dacf36c5e0ec928b0687"
+    }
+  ],
+  "raw_controls": [
+    {
+      "path": "/home/ben/phebs-rehearsals/med496-checkpoint-recipe-20261022/gates.json",
+      "bytes": 1489,
+      "sha256": "70393ffc5033a2d744c74c6c603238b1dfafa7495bf20f7e8c9de2e0cd0b4023"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/med496-checkpoint-recipe-20261022/supported-compile.json",
+      "bytes": 449,
+      "sha256": "c8ffe796cbc779c25bd23b73963f2943a4b4159dfc70e2a162f41ea9ae9b61fe"
+    }
+  ],
+  "remaining": [
+    "native launcher recipe selection and output debit",
+    "prospective private policy preserving historical bytes",
+    "actual epoch-four successor and retained-source transfer",
+    "post-kill creation/exec and full checkpoint/recovery custody/accounting qualification",
+    "MED-495 full native dependency acceptance"
+  ],
+  "nonclaims": [
+    "No native EM02 composition pass",
+    "No completed MED-496 acceptance",
+    "No Maria qualification-input mutation",
+    "No resource/corpus/custody bound change",
+    "No readiness, freeze, release or scale advance"
+  ]
+}
