@@ -4994,6 +4994,21 @@ gates and independent review. c.c acceptance remains the integration dependency;
 this preparation changes neither maria's running inputs nor any historical plan,
 policy, receipt, readiness or ceremony claim.
 
+**T42.H2s.b · Root-first kernel custody control (MED-496 prerequisite,
+2026-10-21).** Establish the actual reparenting boundary before implementing a
+runtime survivor exception. An isolated own-child subreaper control witnesses a
+fork, holds its original child at the initial ptrace stop, kills the original
+root through its pidfd and distinguishes immutable creation-parent identity
+from the current adopter parent. Require positive native survivor RSS, exact
+held-image classification, existing live-parent/final-census refusal, genuine
+root SIGKILL Wait while the survivor remains live, and actual adopter reap plus
+both original pidfds' HUP. A test-only adopter's raw child reap grants no
+application-parent Wait authority. No runtime subreaper or parent-predicate
+relaxation is introduced. Require repeated normal/race kernel controls, existing
+terminal/checkpoint regressions, static/docs checks and independent review.
+Survivor-cohort admission/charging, EM/control retirement and actual successor
+composition remain open; c.c acceptance remains the integration dependency.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

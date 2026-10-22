@@ -306,6 +306,13 @@ and successor ownership remain unimplemented. This source preparation is
 isolated from the running `f8f00f40` c.c qualification on maria. c.c acceptance
 and independent review still precede integration; no readiness/freeze advances.
 
+T42.H2s.b adds an isolated real-kernel root-first custody control: original
+creation identity, current adopter parent, positive survivor RSS and held image,
+strict incomplete-census refusal, genuine root Wait and separate adopter reap.
+Its test-only subreaper changes no runtime host setting or admission. Runtime
+survivor charging, EM/control retirement and successor implementation remain
+open under MED-496; maria's separate c.c run remains unchanged.
+
 Next: [Linux office handoff #124](https://github.com/bmeddeb/phebs/issues/124)
 mechanism qualification → remaining T42.H2 consumer/executor/resource admission
 → T42.2v restored launch → complete readiness → T42.2o fresh freeze → separately

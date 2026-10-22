@@ -489,6 +489,12 @@ variants, refuses before terminal mutation until root-first survivor and
 measurement/control ownership is implemented. Do not treat this transport
 prerequisite as checkpoint/successor qualification or as c.c acceptance.
 
+T42.H2s.b's bounded root-first kernel control distinguishes a survivor's
+original creation parent from its current adopter, and actual root Wait from
+the isolated adopter's later child reap. Its test-only subreaper, positive RSS
+and held-image observations qualify that mechanism only. They enable no runtime
+survivor exception, checkpoint or successor; the existing refusal remains.
+
 The first exact `2754d208` full-native attempt completed its three actual
 reference comparisons, then correctly refused policy v1 before any author or
 server operation: 10,504,626,176 required bytes exceeded 8,633,675,776 observed

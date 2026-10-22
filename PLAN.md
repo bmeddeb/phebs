@@ -16649,3 +16649,31 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   memory/disk and child costs are unchanged. Focused genuine Go/Git/maintenance
   and canceled/capture-refused root tests, race controls, shared checkpoint
   regressions and static/docs gates qualify this transport slice only.
+
+- **2026-10-21 — T42.H2s.b root-first kernel custody control (MED-496
+  prerequisite).** Before accepting a reparented survivor, qualify the actual
+  kernel boundary independently of runtime admission. One isolated test
+  process becomes a subreaper only for its own fixed shell/child fixture. A
+  witnessed fork supplies the original creation identity and original pidfds;
+  the child stays at its consumed initial ptrace stop while the root receives
+  SIGKILL. The terminal root must pass the existing exact proof, while its
+  live survivor keeps its original birth/session/tracer/namespace and a
+  separately observed current adopter parent, positive measured RSS and held
+  shell image. Existing live-parent and final tracer-census predicates must
+  refuse the incomplete view. The direct root's sole genuine exec.Cmd Wait
+  must return SIGKILL while the survivor's original pidfd remains live. Only
+  subsequent actual child death and the isolated adopter's raw reap may
+  produce that child's HUP; this is never an application-parent Handle.Wait.
+  Unknown closure retains the creating task until the test deadline and
+  fails the control. This test adds no runtime survivor exception, checkpoint
+  enablement, production subreaper, EM/control retirement or successor claim.
+  Maria's exact running source and all historical contracts remain unchanged.
+
+  Cost: test-only two child lifetimes, two original pidfds, fixed-size identity
+  records, one existing bounded process/RSS census and one held-image
+  classification, within one eight-second operation and a twenty-second
+  isolated helper deadline. The shell creates one child; that child never
+  executes application instructions. Polling uses the existing nonblocking
+  wait/pidfd operations with one-ms test waits, not a production sampler.
+  No product query/request, sync tick, startup/restart, retry/no-op,
+  publication, lock, cache, persistent state or production resource cost changes.
