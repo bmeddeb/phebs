@@ -5069,6 +5069,11 @@ review, exact-source driver/tool admission and one fresh full qualification
 remain separate gates. No bound, historical policy, corpus or custody rule is
 weakened. MED-496 checkpoint/successor acceptance remains open.
 
+The [bounded retention-reader correction](../spike/t42h2r/retention-reader-rss-bounded-linux-20261022.json)
+passes full search normal/race, generation regressions, zero skips, static,
+supported 64-bit compile and docs gates, with independent source/cost review
+clear. Exact-source admission and fresh full maria acceptance remain pending.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

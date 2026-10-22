@@ -1,0 +1,311 @@
+{
+  "schema": "t42-linux-retention-reader-rss-bounded-v1",
+  "implementation_commit": "f831038e6c6e94bd66d18efa72de5984c27ed61d",
+  "full_native_acceptance": "pending; v10 actual native Wait1 and failed internal settlement remain exact",
+  "original_failure": {
+    "actual_wait_exit_code": 1,
+    "elapsed_seconds": 5576.521818,
+    "whole_rss_bytes": 4345257984,
+    "unchanged_limit_bytes": 4294967296,
+    "boundary": "current/prior retention observation after physical-B final authority",
+    "attribution": "aggregate only; Phebs versus Surreal and heap versus file residency not established"
+  },
+  "mechanism_diagnostic": {
+    "fixture_bytes": 214374281,
+    "fixture_sha256": "sha256:b5d9be29965d67160518fdadc4356ced5d629cce714df2dfbdacf5e4730d65ae",
+    "actual_zoekt_readers": 3,
+    "same_shard_aliases": true,
+    "repository_list_count_each": 1,
+    "all_six_full_hashes_equal": true,
+    "mapped": {
+      "digests": [
+        "sha256:b5d9be29965d67160518fdadc4356ced5d629cce714df2dfbdacf5e4730d65ae",
+        "sha256:b5d9be29965d67160518fdadc4356ced5d629cce714df2dfbdacf5e4730d65ae",
+        "sha256:b5d9be29965d67160518fdadc4356ced5d629cce714df2dfbdacf5e4730d65ae"
+      ],
+      "full_qualification": false,
+      "mode": "mapped",
+      "same_shard_aliases": 3,
+      "stages": [
+        {
+          "Private_Clean_KiB": "0",
+          "Private_Dirty_KiB": "36812",
+          "Pss_KiB": "36823",
+          "Rss_KiB": "38608",
+          "Shared_Clean_KiB": "1796",
+          "elapsed_seconds": 0.002715332,
+          "stage": "before"
+        },
+        {
+          "Private_Clean_KiB": "12288",
+          "Private_Dirty_KiB": "239848",
+          "Pss_KiB": "252147",
+          "Rss_KiB": "253932",
+          "Shared_Clean_KiB": "1796",
+          "elapsed_seconds": 0.74796881,
+          "stage": "retained_reader_1"
+        },
+        {
+          "Private_Clean_KiB": "0",
+          "Private_Dirty_KiB": "48244",
+          "Pss_KiB": "257607",
+          "Rss_KiB": "468744",
+          "Shared_Clean_KiB": "26372",
+          "elapsed_seconds": 1.514215975,
+          "stage": "retained_reader_2"
+        },
+        {
+          "Private_Clean_KiB": "0",
+          "Private_Dirty_KiB": "53644",
+          "Pss_KiB": "263007",
+          "Rss_KiB": "683496",
+          "Shared_Clean_KiB": "38660",
+          "elapsed_seconds": 2.242657643,
+          "stage": "retained_reader_3"
+        },
+        {
+          "Private_Clean_KiB": "0",
+          "Private_Dirty_KiB": "53708",
+          "Pss_KiB": "53719",
+          "Rss_KiB": "55504",
+          "Shared_Clean_KiB": "1796",
+          "elapsed_seconds": 2.251523324,
+          "stage": "closed"
+        }
+      ]
+    },
+    "buffered": {
+      "digests": [
+        "sha256:b5d9be29965d67160518fdadc4356ced5d629cce714df2dfbdacf5e4730d65ae",
+        "sha256:b5d9be29965d67160518fdadc4356ced5d629cce714df2dfbdacf5e4730d65ae",
+        "sha256:b5d9be29965d67160518fdadc4356ced5d629cce714df2dfbdacf5e4730d65ae"
+      ],
+      "full_qualification": false,
+      "mode": "buffered",
+      "same_shard_aliases": 3,
+      "stages": [
+        {
+          "Private_Clean_KiB": "0",
+          "Private_Dirty_KiB": "36808",
+          "Pss_KiB": "36819",
+          "Rss_KiB": "38600",
+          "Shared_Clean_KiB": "1792",
+          "elapsed_seconds": 0.00146396,
+          "stage": "before"
+        },
+        {
+          "Private_Clean_KiB": "0",
+          "Private_Dirty_KiB": "47244",
+          "Pss_KiB": "47255",
+          "Rss_KiB": "49036",
+          "Shared_Clean_KiB": "1792",
+          "elapsed_seconds": 0.65092799,
+          "stage": "retained_reader_1"
+        },
+        {
+          "Private_Clean_KiB": "0",
+          "Private_Dirty_KiB": "48684",
+          "Pss_KiB": "53055",
+          "Rss_KiB": "59196",
+          "Shared_Clean_KiB": "1792",
+          "elapsed_seconds": 1.288996058,
+          "stage": "retained_reader_2"
+        },
+        {
+          "Private_Clean_KiB": "0",
+          "Private_Dirty_KiB": "54092",
+          "Pss_KiB": "58463",
+          "Rss_KiB": "68964",
+          "Shared_Clean_KiB": "1792",
+          "elapsed_seconds": 1.939178274,
+          "stage": "retained_reader_3"
+        },
+        {
+          "Private_Clean_KiB": "0",
+          "Private_Dirty_KiB": "54096",
+          "Pss_KiB": "54107",
+          "Rss_KiB": "55888",
+          "Shared_Clean_KiB": "1792",
+          "elapsed_seconds": 1.94167353,
+          "stage": "closed"
+        }
+      ]
+    },
+    "scope": "same retained shard aliases with actual Zoekt mappings/searcher metadata; not full-corpus, independent-storage, uncontended timing or native custody qualification"
+  },
+  "gates": [
+    {
+      "name": "search-normal",
+      "command": [
+        "go",
+        "test",
+        "-json",
+        "./internal/search",
+        "-count=1"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 24.264242607998312,
+      "test_pass_nodes": 155,
+      "test_skip_nodes": 0
+    },
+    {
+      "name": "search-race",
+      "command": [
+        "go",
+        "test",
+        "-race",
+        "-json",
+        "./internal/search",
+        "-count=1"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 35.61020866800391,
+      "test_pass_nodes": 155,
+      "test_skip_nodes": 0
+    },
+    {
+      "name": "generation-regression",
+      "command": [
+        "go",
+        "test",
+        "-json",
+        "./internal/focusedindex",
+        "./internal/repositoryindex",
+        "-count=1"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 4.717578739997407,
+      "test_pass_nodes": 85,
+      "test_skip_nodes": 0
+    },
+    {
+      "name": "vet",
+      "command": [
+        "go",
+        "vet",
+        "./internal/search"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 0.7204498779974529
+    },
+    {
+      "name": "lint",
+      "command": [
+        "golangci-lint",
+        "run",
+        "./internal/search/..."
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 2.367212559998734
+    },
+    {
+      "name": "docs",
+      "command": [
+        "make",
+        "docs-check"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 1.4482412169963936
+    },
+    {
+      "name": "glossary",
+      "command": [
+        "make",
+        "verify-glossary"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 0.14941658099996857
+    },
+    {
+      "name": "whitespace",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 0.004624868000973947
+    }
+  ],
+  "supported_other_64_bit_compiles": [
+    {
+      "target": "linux-arm64",
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 5.5748597429992515
+    },
+    {
+      "target": "darwin-amd64",
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 6.065228997002123
+    },
+    {
+      "target": "darwin-arm64",
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 6.118431535003765
+    }
+  ],
+  "independent_review": {
+    "source_commit": "f831038e6c6e94bd66d18efa72de5984c27ed61d",
+    "reviewer": "review_v10_memory",
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0
+  },
+  "source_files": [
+    {
+      "path": "internal/search/focused.go",
+      "bytes": 34482,
+      "sha256": "b1272807c8219b7a53f2f6539bb92dac43eb0c702ad0c3759007da7ffc1e6785"
+    },
+    {
+      "path": "internal/search/static_shard_hash_test.go",
+      "bytes": 4756,
+      "sha256": "f8c2448c6b4d0266c8a853c2ea677debe0a2930cd293d8778feb43ca2a0b7a31"
+    }
+  ],
+  "raw_controls": [
+    {
+      "path": "/home/ben/phebs-rehearsals/med495-retention-rss-20261022/fixture.json",
+      "bytes": 451,
+      "sha256": "38b22fbb62e4f6f79d1acffd33fd9571883c7edd03cc97cefa966ecdde479a5f"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/med495-retention-rss-20261022/residency.go",
+      "bytes": 2125,
+      "sha256": "a48428ccdee04c2fb798488082d392c3e9b5b7340275d0bdbb06f4d87545079f"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/med495-retention-rss-20261022/mapped.json",
+      "bytes": 1173,
+      "sha256": "f53b6dc235cbbc32916c21375572d370aaef9700dd928a60081d75cf0827ec6e"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/med495-retention-rss-20261022/buffered.json",
+      "bytes": 1160,
+      "sha256": "142fc2cb0d683b7a368778a8fc2de6283d1a647ce2e104dcffd974387229acc6"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/med495-retention-rss-20261022/gates.json",
+      "bytes": 1765,
+      "sha256": "152698f969909d3aa62dc9f3d927b2959a1edd898bd0bba719f9e650ce24a132"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/med495-retention-rss-20261022/supported-compile.json",
+      "bytes": 339,
+      "sha256": "39636d72a2b7989fa8e4559c93daf4a7fad80eea25f95d0aa179ac46f2516306"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/med495-retention-rss-20261022/lint-initial-failure.log",
+      "bytes": 177,
+      "sha256": "7d3f692ec5904dca57a32467ac9d8505fda6ff0a01db4571e8d50cd41829a40f"
+    }
+  ],
+  "nonclaims": [
+    "No full 4-GiB composition fit",
+    "No attribution of original aggregate breach to a single process or memory kind",
+    "No changed resource/corpus/custody/accounting bound",
+    "No clean internal terminal custody or teardown PASS",
+    "No checkpoint successor, readiness, freeze, release or scale advance"
+  ]
+}
