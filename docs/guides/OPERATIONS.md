@@ -550,6 +550,14 @@ policy and actual successor/recovery qualification remain separate prerequisites
 before native checkpoint entry can open. This work does not alter Maria's
 independently prepared RSS-correction source or its qualification inputs.
 
+T42.H2s.f adds bounded isolated shell/sleep controls for a source-owned
+survivor's actual creation and exec after the original root becomes terminal.
+The original root remains unreaped during event/image/RSS checks. A descendant's
+tracer terminal copy is followed by its real parent's reap and original pidfd
+HUP before slot retirement. These are kernel mechanism controls, not a Surreal
+parent-death exception or full checkpoint/successor proof. Native checkpoint
+entry and Maria's independently running qualification remain unchanged.
+
 The first exact `2754d208` full-native attempt completed its three actual
 reference comparisons, then correctly refused policy v1 before any author or
 server operation: 10,504,626,176 required bytes exceeded 8,633,675,776 observed

@@ -16919,3 +16919,37 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   review has zero findings. The bounded
   `spike/t42h2r/checkpoint-engine-recipe-bounded-linux-20261022.json` record
   binds those controls; actual native composition and acceptance remain open.
+
+- **2026-10-22 — T42.H2s.f post-root-death creation and exec controls
+  (MED-496 prerequisite).** Extend the isolated Linux kernel control with two
+  deterministic boundaries after the original root has genuine terminal CLD
+  and before its sole actual Wait: an already-created stopped survivor execs a
+  held sleep image, or a stopped shell survivor first creates a new descendant
+  and that descendant execs the held image. The creator thread feeds actual
+  FORK/initial SIGSTOP/EXEC records through production stopped/event/register
+  dispatch, checks the inherited shell and executed sleep images separately,
+  and preserves original parent/birth/pidfd plus separately observed adoption.
+
+  The new task appears once with positive RSS in the same whole-cohort union;
+  removing its source-owned leader refuses despite current SID membership.
+  Keep the original root unreaped throughout those checks. Kill only the pinned
+  descendant, consume its tracer terminal copy, service the surviving parent's
+  genuine SIGCHLD delivery, and require that real parent's reap/pidfd HUP before
+  closing the new slot. The parent stays alive without another fork, then the
+  existing outer control proves original root Wait, surviving-child kill/reap
+  and both original pidfd HUPs. Preserve unknown-custody retention and EXITKILL.
+
+  These are manual shell/sleep kernel mechanics under a separate test-only
+  subreaper, not production actor scheduling, Surreal behavior or a relaxation
+  of its parent-death safeguard. No native constructor, private policy, runtime
+  implementation, source admission or checkpoint-entry gate changes. Maria's
+  independent exact-source full qualification remains untouched. Actual native
+  successor/retained-source composition and complete acceptance remain open.
+
+  Cost: each new isolated control runs serially and adds one held sleep image
+  and controller images plus one unused fixture file; the fork variant adds one bounded task/process and
+  pidfd, targeted stop/terminal records and original-parent HUP polling within
+  the existing eight-second control deadline and twenty-second outer bound.
+  No global wait, production subreaper, new signal authority, corpus read or
+  hash is added. Production query/request, sync, startup/restart, retry/no-op,
+  publication, locks, caches, memory/disk and child bounds remain unchanged.

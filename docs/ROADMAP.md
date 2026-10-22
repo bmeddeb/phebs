@@ -335,6 +335,12 @@ exact. This protocol component is not yet selected by native constructors.
 Launcher debit, policy and actual successor/source-transfer composition remain
 next, with native checkpoint entry closed and MED-496 acceptance still open.
 
+T42.H2s.f adds isolated real-kernel post-root-death FORK/initial-stop/EXEC
+controls through production dispatchers, including exact held images, positive
+RSS once and actual parent reap/HUP before descendant retirement. These manual
+shell/sleep mechanics change no runtime policy, Surreal safeguard, Maria input
+or checkpoint gate. Actual source-owned successor composition remains next.
+
 Ben's 2026-10-22 instruction authorizes integrating PR156 and PR164–167 as
 reviewed implementation checkpoints while cleaning maria after verified archival
 transfer. It supersedes their full-native integration hold only. V10 remains a

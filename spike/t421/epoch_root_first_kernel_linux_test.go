@@ -24,7 +24,7 @@ func TestLinuxEpochRootFirstKernelControl(t *testing.T) {
 	const environment = "PHEBS_PRIVATE_ROOT_FIRST_KERNEL_CONTROL"
 	mode := os.Getenv(environment)
 	if mode == "" {
-		for _, childMode := range []string{"strict", "adopter"} {
+		for _, childMode := range []string{"strict", "adopter", "postkill-exec", "postkill-fork-exec"} {
 			command := exec.Command(os.Args[0], "-test.run="+selector, "-test.timeout=20s", "-test.v")
 			command.Env = []string{environment + "=" + childMode, "GOMAXPROCS=2", "GORACE=atexit_sleep_ms=0"}
 			output, err := command.CombinedOutput()
@@ -39,11 +39,13 @@ func TestLinuxEpochRootFirstKernelControl(t *testing.T) {
 		runLinuxEpochSurvivorAdopter(t, selector, environment)
 		return
 	}
-	selected := mode == "controller"
+	external := mode == "controller"
+	postkill := mode == "postkill-exec" || mode == "postkill-fork-exec"
+	selected := external || postkill
 	if !selected && mode != "strict" {
 		t.Fatal("unknown isolated control mode")
 	}
-	if !selected {
+	if !external {
 		if err := unix.Prctl(unix.PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0); err != nil {
 			t.Fatal("isolated adopter", err)
 		}
@@ -72,9 +74,15 @@ func TestLinuxEpochRootFirstKernelControl(t *testing.T) {
 			}
 		}
 	}()
-	// One fork, with the inherited shell image held at its actual initial stop.
+	// Initial fork, with the inherited shell image held at its actual initial stop.
 	// No descendant executes application code before the original root dies.
-	command := exec.Command("/bin/sh", "-c", "sleep 30 & wait")
+	script := "sleep 30 & wait"
+	if mode == "postkill-fork-exec" {
+		// After the root dies, this still-stopped survivor creates one child,
+		// genuinely reaps it later, then remains alive without another fork.
+		script = "(sleep 30 & wait; while :; do :; done) & wait"
+	}
+	command := exec.Command("/bin/sh", "-c", script)
 	command.Env = []string{"PATH=/usr/bin:/bin", "LC_ALL=C"}
 	command.SysProcAttr = &syscall.SysProcAttr{Ptrace: true, Setsid: true, Pdeathsig: syscall.SIGKILL}
 	if err := command.Start(); err != nil {
@@ -149,7 +157,7 @@ func TestLinuxEpochRootFirstKernelControl(t *testing.T) {
 	child := &linuxEpochTraceLeader{root: root, original: creation, fd: childFD, parentBirth: root.original.birth, verified: true}
 	root.owner.leaders[root.original.pid], root.owner.leaders[creation.pid] = parent, child
 	root.tasks = map[int]*linuxEpochTraceTask{root.original.pid: {original: root.original, leader: parent}, creation.pid: {original: creation, leader: child}}
-	if selected {
+	if external {
 		report := os.NewFile(3, "isolated-adopter-candidate")
 		if report == nil {
 			t.Fatal("missing private adopter pipe")
@@ -160,6 +168,8 @@ func TestLinuxEpochRootFirstKernelControl(t *testing.T) {
 		if err = report.Close(); err != nil {
 			t.Fatal(err)
 		}
+	}
+	if selected {
 		err = root.killOriginalRoot(ctx, ctx)
 	} else {
 		err = unix.PidfdSendSignal(rootFD, unix.SIGKILL, nil, 0)
@@ -170,7 +180,7 @@ func TestLinuxEpochRootFirstKernelControl(t *testing.T) {
 	rootFirstKernelTerminal(t, ctx, root.original.pid)
 	current, err := linuxEpochTraceIdentityOf(creation.pid)
 	adopter := os.Getpid()
-	if selected {
+	if external {
 		adopter = os.Getppid()
 	}
 	if err != nil || current.parent != adopter || current.parent == creation.parent || current.pid != creation.pid || current.tgid != creation.tgid || current.birth != creation.birth || current.sid != creation.sid || current.tracer != creation.tracer || !os.SameFile(current.namespace, creation.namespace) || creation.sameLifetime(current) {
@@ -195,8 +205,11 @@ func TestLinuxEpochRootFirstKernelControl(t *testing.T) {
 	if _, matched := linuxEpochClassifyRow(ctx, rows[0], []linuxEpochClassImage{{class: "shell", file: shell}}); !matched {
 		t.Fatal("current held image lost after reparenting")
 	}
-	if selected {
+	if external {
 		assertLinuxEpochSurvivorAccounting(t, ctx, root, child, shell)
+	}
+	if postkill {
+		assertLinuxEpochPostKillEvents(t, ctx, root, child, shell, mode)
 	}
 	waitErr := command.Wait() // Sole genuine exec.Cmd Wait for this direct root.
 	rootJoined = true
