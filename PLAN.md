@@ -17029,11 +17029,14 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
 
   Preserve the exact failed fixture and raw evidence. Read-only native controls
   on a separate stopped-database copy using the identical SurrealDB image
-  show that object-field lookup operands select a `TableScan` instead of the
-  existing unique `(repository, snapshot_revision, service_key)` index.
-  A 255-lookup mechanism control took 35.564 seconds; the actual nested-field
+  show that object-field lookup operands prevent a full three-key point lookup.
+  The exact production shape uses the repository-only prefix of the existing
+  unique index without its physical two-row limit, scanning retained rows for
+  each service. An initial control that also dereferenced the repository used
+  a `TableScan` and took 35.564 seconds for 255 lookups; the exact nested-field
   predicate control exceeded its separate 75-second diagnostic bound. Binding
-  the same snapshot revision and service key to scalars selects `IndexScan`;
+  the same snapshot revision and service key to scalars selects the complete
+  `(repository, snapshot_revision, service_key)` `IndexScan` with physical limit2;
   the corresponding nested-input 255-lookup control completes in 1.867 seconds.
   Those controls isolate lookup work, not a complete production transaction or
   full qualification. Their local source-free records remain under
@@ -17050,7 +17053,9 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   existing native late-fence and accounting controls remain required.
 
   Cost: each changed-row validation adds two scalar bindings and replaces a
-  repeated retained-preimage table scan with one existing unique-index lookup.
+  repeated repository-wide preimage scan with one full unique-index lookup.
+  The emitted SQL text grows by 91 bytes per target transaction, charged by the
+  existing accounting path; no byte limit or accounting unit is changed.
   The statement's repository-wide preimage ownership census remains unchanged;
   this is not a claim that every statement read is constant-cost. Native query,
   row and transaction counts, submitted writes, locks and lock duration bounds,
