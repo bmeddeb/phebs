@@ -16913,8 +16913,9 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
 
   Cost: each changed-row validation adds two scalar bindings and replaces a
   repeated repository-wide preimage scan with one full unique-index lookup.
-  The emitted SQL text grows by 91 bytes per target transaction, charged by the
-  existing accounting path; no byte limit or accounting unit is changed.
+  Native SQL text grows by 91 bytes per target transaction. Existing logical
+  transaction/row charges and transport accounting units remain unchanged;
+  those accounting counters do not claim to meter native SQL bytes.
   The statement's repository-wide preimage ownership census remains unchanged;
   this is not a claim that every statement read is constant-cost. Native query,
   row and transaction counts, submitted writes, locks and lock duration bounds,
