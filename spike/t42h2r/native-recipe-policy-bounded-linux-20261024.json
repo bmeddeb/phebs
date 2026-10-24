@@ -1,0 +1,655 @@
+{
+  "schema": "phebs-linux-native-recipe-policy-bounded-v1",
+  "base_commit": "e7563be3a0141cde969ad50a68c70ad2b35a071b",
+  "implementation_commit": "ab32072abd69b68fd88ad08812df2ed4f1290b10",
+  "go_source_sha256": {
+    "spike/t421/epoch_recipe_linux.go": "bdc08f41b9c33088f8acd5aabf16cd2daa6a7cf8fda83a43f3de91e9f47fb54a",
+    "spike/t421/epoch_recipe_linux_test.go": "b74c31418a195d80fb105eedb78a1a8d86fcbfad68663aad587313edac0458ea",
+    "spike/t421/linux_epoch_resource_policy.go": "5fed8fd1d9d35460e2459039a61de03065dca622b5e81dc3ee6d381922a69495",
+    "spike/t421/epoch_coordinator_linux.go": "574ac4dadbea0a7112112faaeb029cfaa97e7283b2d7f5d2e2de8390ac344ab9",
+    "spike/t421/epoch_flow_linux.go": "222ee9209cb5accdce94878e2a234ddea0609c96155bf1b9c484378d3bbc32c6",
+    "spike/t421/epoch_engine_endpoint_linux.go": "1bcdbe63c5fb1db93d534708348a75f806146ccfd5efbe3199e5ee0e2a16e978",
+    "spike/t421/epoch_trace_linux.go": "39fd3e4094c5fc145d56026df4eee20479d2bc2adf6e40e292b624458cfd53cd",
+    "spike/t421/epoch_engine_launch_linux_test.go": "03112db8532183214580836041075011516487c9e0ff40dc3cadd38e4f5cd200"
+  },
+  "immutable_binding": {
+    "committed_source_binding_sha256": "18e05775b3e02e07a0362ec3d1f0ec62ba5b26f3bf7d5b8e8cbc047f0809f0ed",
+    "author_handoff_sha256": "5d1ba3bf4d36f7f8800357a290d841d25a604b0c44b1b44697da654931d8f268",
+    "all_eight_go_hashes_match_commit": true,
+    "combined_base_preservation_audit_sha256": "1a8d5cc5225d55bf3761daff611ba02ad95ee770876fbf9cdade51a08b5edbca"
+  },
+  "final_gate_roots": 14,
+  "final_gates": {
+    "focused-normal-review-corrected": {
+      "argv": [
+        "go",
+        "test",
+        "-p=2",
+        "-parallel=1",
+        "./spike/t421",
+        "-run",
+        "^Test(LinuxEpochRecipe|EpochEngineLaunch)",
+        "-count=1",
+        "-timeout=3m",
+        "-json"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 30.173572055005934,
+      "nodes": {
+        "pass": 47,
+        "fail": 0,
+        "skip": 0
+      },
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "848862428eacb7b744dac6e9dc1b7b99fd771b3c95b72ac0721117d50449c7ef",
+          "bytes": 41911
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "focused-race-review-corrected": {
+      "argv": [
+        "go",
+        "test",
+        "-race",
+        "-p=2",
+        "-parallel=1",
+        "./spike/t421",
+        "-run",
+        "^Test(LinuxEpochRecipe|EpochEngineLaunch)",
+        "-count=1",
+        "-timeout=3m",
+        "-json"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 70.32375268399483,
+      "nodes": {
+        "pass": 47,
+        "fail": 0,
+        "skip": 0
+      },
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "85799f35ad6727a5714b21529c8fc077fc9a80366a269a19da622f3c9c00d1f5",
+          "bytes": 41915
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "connected-normal": {
+      "argv": [
+        "go",
+        "test",
+        "-p=2",
+        "-parallel=1",
+        "./spike/t421",
+        "-run",
+        "^(TestLinuxEpochRecipe|TestLinuxEpochResource|TestLinuxEpochCoordinator|TestLinuxEpochControlSettlement|TestLinuxEpochJoinedSampler|TestEpochEngineLaunch|TestEpochEngineWireDebit|TestLinuxEpoch.*RecipeBindingContinuity|TestExecutionEpochCheckpoint|TestLinuxCheckpointRefusesBeforeTerminalMutation|TestLinuxEpochRecovery|TestEpochRecoveryWorkspace|TestEpochMidphase|TestLinuxEpochTrace)",
+        "-count=1",
+        "-timeout=8m",
+        "-json"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 15.735154871013947,
+      "nodes": {
+        "pass": 363,
+        "fail": 0,
+        "skip": 1
+      },
+      "skipped": [
+        "TestExecutionEpochCheckpointInheritedTerminal"
+      ],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "22f2d094b0911c74d134a1e47996ea2906e1845fbfec17af98b5389d7b2a739c",
+          "bytes": 318925
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "connected-race": {
+      "argv": [
+        "go",
+        "test",
+        "-race",
+        "-p=2",
+        "-parallel=1",
+        "./spike/t421",
+        "-run",
+        "^(TestLinuxEpochRecipe|TestLinuxEpochResource|TestLinuxEpochCoordinator|TestLinuxEpochControlSettlement|TestLinuxEpochJoinedSampler|TestEpochEngineLaunch|TestEpochEngineWireDebit|TestLinuxEpoch.*RecipeBindingContinuity|TestExecutionEpochCheckpoint|TestLinuxCheckpointRefusesBeforeTerminalMutation|TestLinuxEpochRecovery|TestEpochRecoveryWorkspace|TestEpochMidphase|TestLinuxEpochTrace)",
+        "-count=1",
+        "-timeout=8m",
+        "-json"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 83.94854691100772,
+      "nodes": {
+        "pass": 363,
+        "fail": 0,
+        "skip": 1
+      },
+      "skipped": [
+        "TestExecutionEpochCheckpointInheritedTerminal"
+      ],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "00b5149253a66e74bcf3caefdd18d9905ffc1c223c674b66169b5c18b25d1019",
+          "bytes": 318906
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "vet": {
+      "argv": [
+        "go",
+        "vet",
+        "-p=2",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 7.096132938982919,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "pinned-lint-version": {
+      "argv": [
+        "make",
+        "verify-golangci-lint"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 0.16663317300844938,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "pinned-lint": {
+      "argv": [
+        "golangci-lint",
+        "run",
+        "--concurrency=2",
+        "--new-from-patch=/home/ben/phebs-rehearsals/med496-native-policy-recipes-20261024/author/lint-owned.patch",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 36.65859565100982,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47",
+          "bytes": 10
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "docs": {
+      "argv": [
+        "make",
+        "docs-check"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 1.704638404014986,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "5748c654fcf0f28de4b00d7810671c1d023002b098b4b3f1131d15d8a9293dcd",
+          "bytes": 177
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "glossary": {
+      "argv": [
+        "make",
+        "verify-glossary"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 0.5865642909775488,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "f128ad7aef2b6215c4414d1e00b2650f9c42011b1705707b624be1c70d92f095",
+          "bytes": 60
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "whitespace": {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 0.09621042100479826,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "compile-linux-amd64": {
+      "argv": [
+        "env",
+        "GOOS=linux",
+        "GOARCH=amd64",
+        "CGO_ENABLED=0",
+        "go",
+        "test",
+        "-c",
+        "-p=2",
+        "-tags=phebs_t42_native",
+        "-o",
+        "/home/ben/phebs-rehearsals/med496-native-policy-recipes-20261024/author/compile-linux-amd64.test",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 56.71350856902427,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "compile-linux-arm64": {
+      "argv": [
+        "env",
+        "GOOS=linux",
+        "GOARCH=arm64",
+        "CGO_ENABLED=0",
+        "go",
+        "test",
+        "-c",
+        "-p=2",
+        "-tags=phebs_t42_native",
+        "-o",
+        "/home/ben/phebs-rehearsals/med496-native-policy-recipes-20261024/author/compile-linux-arm64.test",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 57.413447141996585,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "compile-darwin-arm64": {
+      "argv": [
+        "env",
+        "GOOS=darwin",
+        "GOARCH=arm64",
+        "CGO_ENABLED=0",
+        "go",
+        "test",
+        "-c",
+        "-p=2",
+        "-tags=phebs_t42_native",
+        "-o",
+        "/home/ben/phebs-rehearsals/med496-native-policy-recipes-20261024/author/compile-darwin-arm64.test",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 57.78086800899473,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "compile-darwin-amd64": {
+      "argv": [
+        "env",
+        "GOOS=darwin",
+        "GOARCH=amd64",
+        "CGO_ENABLED=0",
+        "go",
+        "test",
+        "-c",
+        "-p=2",
+        "-tags=phebs_t42_native",
+        "-o",
+        "/home/ben/phebs-rehearsals/med496-native-policy-recipes-20261024/author/compile-darwin-amd64.test",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 56.59213915900909,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    }
+  },
+  "scopes": {
+    "normal": {
+      "connected_pass_nodes": 363,
+      "new_pass_nodes": 26,
+      "new_names": [
+        "TestLinuxEpochRecipeHistoricalPolicyAndPreparedDescriptor",
+        "TestLinuxEpochRecipeEngineRuntimeAndWireRelationships/legacy-cold",
+        "TestLinuxEpochRecipeEngineRuntimeAndWireRelationships/legacy-logical",
+        "TestLinuxEpochRecipeEngineRuntimeAndWireRelationships/legacy-return",
+        "TestLinuxEpochRecipeEngineRuntimeAndWireRelationships/prepared-cold",
+        "TestLinuxEpochRecipeEngineRuntimeAndWireRelationships/prepared-logical",
+        "TestLinuxEpochRecipeEngineRuntimeAndWireRelationships/prepared-checkpoint",
+        "TestLinuxEpochRecipeEngineRuntimeAndWireRelationships/prepared-recovery",
+        "TestLinuxEpochRecipeEngineRuntimeAndWireRelationships",
+        "TestLinuxEpochRecipeConstructorKeepsLegacySelection",
+        "TestLinuxEpochRecipeIdentityRefusals/missing",
+        "TestLinuxEpochRecipeIdentityRefusals/cloned",
+        "TestLinuxEpochRecipeIdentityRefusals/foreign-coordinator",
+        "TestLinuxEpochRecipeIdentityRefusals/coordinator-copy",
+        "TestLinuxEpochRecipeIdentityRefusals/resource-digest",
+        "TestLinuxEpochRecipeIdentityRefusals/identity-digest",
+        "TestLinuxEpochRecipeIdentityRefusals/prepared-recipe",
+        "TestLinuxEpochRecipeIdentityRefusals/unknown-recipe",
+        "TestLinuxEpochRecipeIdentityRefusals/foreign-held",
+        "TestLinuxEpochRecipeIdentityRefusals/missing-core",
+        "TestLinuxEpochRecipeIdentityRefusals/typed-nil-adapter",
+        "TestLinuxEpochRecipeIdentityRefusals/missing-config",
+        "TestLinuxEpochRecipeIdentityRefusals/typed-nil-config",
+        "TestLinuxEpochRecipeIdentityRefusals/foreign-author",
+        "TestLinuxEpochRecipeIdentityRefusals",
+        "TestLinuxEpochRecipeLegacyBootstrapBytes"
+      ],
+      "new_skips": [],
+      "adapted_pass_nodes": 7,
+      "adapted_names": [
+        "TestEpochEngineLaunchActualBootstrapAndEndpointBinding/legacy-cold",
+        "TestEpochEngineLaunchActualBootstrapAndEndpointBinding/legacy-logical",
+        "TestEpochEngineLaunchActualBootstrapAndEndpointBinding/legacy-return",
+        "TestEpochEngineLaunchActualBootstrapAndEndpointBinding/checkpoint",
+        "TestEpochEngineLaunchActualBootstrapAndEndpointBinding/recovery",
+        "TestEpochEngineLaunchActualBootstrapAndEndpointBinding",
+        "TestEpochEngineWireDebitRefusesWithoutMutation"
+      ],
+      "adapted_skips": [],
+      "inherited_pass_nodes": 330,
+      "inherited_skips": [
+        "TestExecutionEpochCheckpointInheritedTerminal"
+      ],
+      "counts_overlap_focused_suites": true
+    },
+    "race": {
+      "connected_pass_nodes": 363,
+      "new_pass_nodes": 26,
+      "new_names": [
+        "TestLinuxEpochRecipeHistoricalPolicyAndPreparedDescriptor",
+        "TestLinuxEpochRecipeEngineRuntimeAndWireRelationships/legacy-cold",
+        "TestLinuxEpochRecipeEngineRuntimeAndWireRelationships/legacy-logical",
+        "TestLinuxEpochRecipeEngineRuntimeAndWireRelationships/legacy-return",
+        "TestLinuxEpochRecipeEngineRuntimeAndWireRelationships/prepared-cold",
+        "TestLinuxEpochRecipeEngineRuntimeAndWireRelationships/prepared-logical",
+        "TestLinuxEpochRecipeEngineRuntimeAndWireRelationships/prepared-checkpoint",
+        "TestLinuxEpochRecipeEngineRuntimeAndWireRelationships/prepared-recovery",
+        "TestLinuxEpochRecipeEngineRuntimeAndWireRelationships",
+        "TestLinuxEpochRecipeConstructorKeepsLegacySelection",
+        "TestLinuxEpochRecipeIdentityRefusals/missing",
+        "TestLinuxEpochRecipeIdentityRefusals/cloned",
+        "TestLinuxEpochRecipeIdentityRefusals/foreign-coordinator",
+        "TestLinuxEpochRecipeIdentityRefusals/coordinator-copy",
+        "TestLinuxEpochRecipeIdentityRefusals/resource-digest",
+        "TestLinuxEpochRecipeIdentityRefusals/identity-digest",
+        "TestLinuxEpochRecipeIdentityRefusals/prepared-recipe",
+        "TestLinuxEpochRecipeIdentityRefusals/unknown-recipe",
+        "TestLinuxEpochRecipeIdentityRefusals/foreign-held",
+        "TestLinuxEpochRecipeIdentityRefusals/missing-core",
+        "TestLinuxEpochRecipeIdentityRefusals/typed-nil-adapter",
+        "TestLinuxEpochRecipeIdentityRefusals/missing-config",
+        "TestLinuxEpochRecipeIdentityRefusals/typed-nil-config",
+        "TestLinuxEpochRecipeIdentityRefusals/foreign-author",
+        "TestLinuxEpochRecipeIdentityRefusals",
+        "TestLinuxEpochRecipeLegacyBootstrapBytes"
+      ],
+      "new_skips": [],
+      "adapted_pass_nodes": 7,
+      "adapted_names": [
+        "TestEpochEngineLaunchActualBootstrapAndEndpointBinding/legacy-cold",
+        "TestEpochEngineLaunchActualBootstrapAndEndpointBinding/legacy-logical",
+        "TestEpochEngineLaunchActualBootstrapAndEndpointBinding/legacy-return",
+        "TestEpochEngineLaunchActualBootstrapAndEndpointBinding/checkpoint",
+        "TestEpochEngineLaunchActualBootstrapAndEndpointBinding/recovery",
+        "TestEpochEngineLaunchActualBootstrapAndEndpointBinding",
+        "TestEpochEngineWireDebitRefusesWithoutMutation"
+      ],
+      "adapted_skips": [],
+      "inherited_pass_nodes": 330,
+      "inherited_skips": [
+        "TestExecutionEpochCheckpointInheritedTerminal"
+      ],
+      "counts_overlap_focused_suites": true
+    }
+  },
+  "counts_overlap": true,
+  "supported_tagged_compilation": {
+    "compile_only": true,
+    "CGO_ENABLED": "0",
+    "outputs": {
+      "linux/amd64": {
+        "path": "/home/ben/phebs-rehearsals/med496-native-policy-recipes-20261024/author/compile-linux-amd64.test",
+        "bytes": 90798497,
+        "sha256": "35bae9ec90fe3d1343d61d5381d17d0400fcc35ba07bb87f38709ad4c45b6b00",
+        "execution_performed": false
+      },
+      "linux/arm64": {
+        "path": "/home/ben/phebs-rehearsals/med496-native-policy-recipes-20261024/author/compile-linux-arm64.test",
+        "bytes": 84363195,
+        "sha256": "000c9a97563fd5c85506be1d81bcde51077b0f9eec2a7cadef2bcc827154b13d",
+        "execution_performed": false
+      },
+      "darwin/arm64": {
+        "path": "/home/ben/phebs-rehearsals/med496-native-policy-recipes-20261024/author/compile-darwin-arm64.test",
+        "bytes": 89981090,
+        "sha256": "766cb121d6abca481191398aa2bd15503e968aa129af87c8f35d84262e6f5270",
+        "execution_performed": false
+      },
+      "darwin/amd64": {
+        "path": "/home/ben/phebs-rehearsals/med496-native-policy-recipes-20261024/author/compile-darwin-amd64.test",
+        "bytes": 95239200,
+        "sha256": "2b0adc97ef1204cfbde078d157b5db4e4ed093b0832196e58340d9b205736d56",
+        "execution_performed": false
+      }
+    },
+    "binaries_executed": false
+  },
+  "lint_scope": "Repository-pinned differential lint against retained owned patch, including all six changed tracked Go files and both new Go files. This is not a full repository lint-clean claim.",
+  "independent_source_cost_review": {
+    "implementation_commit": "ab32072abd69b68fd88ad08812df2ed4f1290b10",
+    "review_sha256": "5c26e742bae656e3f4e6774ccad7ab384ee83162a65a9ca9dffde9a3d6cc9759",
+    "severity_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    },
+    "final_immutable_evidence_carry": "Recorded separately after this evidence/status-only amendment and final documentation gates."
+  },
+  "historical_policy": {
+    "current_factory": "linuxEpochPolicyV11",
+    "current_sha256": "sha256:0300a26c359a9f4526cf9542617682d2c51152a8e51bd2995d81ab1b18b850e5",
+    "default_recipe": "EM01 with omitted bootstrap recipe, maxima 6/1/2 and paired runtime V2",
+    "prepared_only": "V12 descriptor relates checkpoint/recovery EM02 maxima 7/1 and paired runtime V3. No operational constructor selects it."
+  },
+  "preserved_prefixes": [
+    {
+      "name": "focused-normal",
+      "actual_wait": 1,
+      "pass_test_nodes": 30,
+      "failed_test_nodes": 16,
+      "package_failure_row_is_separate": true,
+      "cause": "New test fixture settlement inherited t.Context, which is canceled before t.Cleanup; real DA/SA Close correctly refused. Corrected to explicit independent contexts retained through actual Close; cleanup assertions preserved."
+    },
+    {
+      "name": "focused-normal-corrected",
+      "actual_wait": 0,
+      "pass_test_nodes": 46,
+      "fail_test_nodes": 0,
+      "skip_test_nodes": 0,
+      "scope": "Before comment-only correction; exact old source bytes reconstructed and independently hash-verified by supporting carry receipt."
+    },
+    {
+      "name": "focused-race",
+      "actual_wait": 0,
+      "pass_test_nodes": 46,
+      "fail_test_nodes": 0,
+      "skip_test_nodes": 0,
+      "scope": "Comment-corrected source before independent typed-nil config finding."
+    }
+  ],
+  "review_correction": "Minimal value!=nil guard in configIssued plus typed-nil-config identity refusal case; focused final normal/race and connected final normal/race passed afterward. Original source/review prefixes retained.",
+  "comment_only_source_carry_sha256": "5a8a04325ed95408fb3adf038444948e01bbfddfff19f5f1e9cbff186178664e",
+  "comment_only_carry_independent_audit_sha256": "80e22506c1e10a005d739981bfea0d4310871742e9d633d35862b4394bda5411",
+  "cost": "One identity allocation and one existing policy encoding/hash per new native coordinator, before DA/SA setup, including failed/new-constructor attempts. Existing-coordinator reuse does not repeat it. Trace issuance eliminates its former second policy hash. Existing issued/live checks add bounded pointer/type/enum/digest comparisons without new I/O, locks or live hashing. Unselected descriptor inspection alone performs bounded string replacements. All fixed RSS, SDK/phase deadlines, custody/accounting/unknown-state and child bounds remain exact.",
+  "scope": {
+    "real_bounded_operations": [
+      "Existing DA/SA coordinator construction and actual cleanup",
+      "Authenticated bootstrap and endpoint socket exchanges",
+      "Existing launcher wire binding/debit paths"
+    ],
+    "modeled": "Resource-issued flag and malformed identity fixtures, explicitly unable to issue native tool/image/resource authority.",
+    "native_checkpoint_entry": "closed",
+    "issued_native_epoch_four": false,
+    "actual_engine_checkpoint_retained_source_PC_SA_successor_acceptance": false,
+    "full_med495_qualification": false,
+    "full_med496_acceptance": false,
+    "readiness_or_scale": false,
+    "merge_or_deployment": false
+  },
+  "private_evidence_directory": "/home/ben/phebs-rehearsals/med496-native-policy-recipes-20261024",
+  "documentation_gates": "Final evidence-only amendment and its committed carry are recorded separately; Go bytes remain identical to implementation_commit."
+}

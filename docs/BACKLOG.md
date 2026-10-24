@@ -5181,8 +5181,17 @@ invalid, cloned, foreign and digest-drift identity refusals before inspection;
 closed legacy and prepared checkpoint recipe/runtime matrix; unchanged native
 epoch/checkpoint refusals; focused normal/race, connected regressions, supported
 compilation, static/docs gates, steady-state cost pass and independent review.
-Implementation and verification are in progress. MED-495 full qualification,
-actual retained-source PC/SA and checkpoint/successor composition remain open.
+The [bounded recipe/policy record](../spike/t42h2r/native-recipe-policy-bounded-linux-20261024.json)
+binds implementation `ab32072a`. All 14 final command roots pass: focused
+normal/race each pass 47 nodes; connected normal/race each pass 363 nodes,
+including 26 new and seven adapted nodes with zero new skips. One inherited
+Darwin-only control skips per connected mode; counts overlap. Vet, pinned
+differential lint including both new files, all four supported tagged compiles,
+docs, glossary and whitespace pass. Corrected independent source/cost review
+has zero findings. Initial fixture and review failures remain preserved; final
+immutable evidence/documentation carry is recorded separately. MED-495 full
+qualification, actual retained-source PC/SA and checkpoint/successor composition
+remain open.
 
 **2026-10-22 — Ben-directed implementation checkpoint integration.** Ben
 explicitly requests maria cleanup and PR merges after the v10 native failure
