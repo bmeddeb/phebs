@@ -625,6 +625,28 @@ passes connected normal/race, static/docs and all four supported tagged
 compile-only targets. Both required actual Linux compositions remain unexecuted;
 these checks do not admit an image or establish full qualification.
 
+T42.H2t.c's next source recipe places the real author in a new target-private
+namespace through an authenticated workspace descriptor and tracked root-to-
+target bootstrap. Its new reachable view does not change the original H2m root
+or public canonical-path checks. New helper `/tmp` layouts retain host runtime
+libraries and exact original-input masks; they are not chroot isolation. The
+same original PID/Wait, exact credentials and actual borrower retirement remain
+mandatory. Existing installed images do not admit this new composition.
+
+Only creation-time designated new healthy-ephemeral outputs may use its new
+bounded physical retirement policy. Full inventory and all real borrower joins
+precede removal. Failed work remains retained; a failure during otherwise
+eligible disposal retains the truthful remaining partial root. Do not adopt an
+existing fixture, invoke recursive host cleanup or infer teardown from a
+retirement record. The selected limits charge up to 1,025 MiB of explicit
+row/name backing plus below 1 MiB of fixed journal tables; no separate
+temporary backing is allocated and they prove no aggregate RSS fit. Git 100755
+blobs admit 0755 only in the protected reference-source checkout under
+`preparation/<reference-workspace>/source/`; no other preparation path and no
+payload or author role admits group/other access bits. Source implementation is
+staged on the ticket branch; independent review precedes this checkpoint, and
+fresh native admission and all native acceptance remain pending.
+
 The v11 Maria attempt stopped during physical B on a service-state SDK reply
 timeout. The 2026-10-23 correction makes selected preimage lookups use the
 existing unique index; it preserves the 30-second RPC deadline, 512-record

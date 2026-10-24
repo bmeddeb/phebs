@@ -76,6 +76,8 @@ func RunExecutionCommand(ctx context.Context, args, environment []string) error 
 		return runExecutionAuthorizationClient(ctx, entered, args)
 	case executionLinuxPreworkOuterMode, executionLinuxPreworkInnerMode:
 		return runLinuxExecutionPreworkCommand(ctx, entered, args, environment)
+	case executionLinuxPressureAuthorBrokerMode, executionLinuxPressureAuthorBootstrapMode, executionLinuxPressureAuthorTargetMode:
+		return runLinuxPressureAuthorCommand(ctx, entered, args, environment)
 	case executionLinuxPressureBrokerMode, executionLinuxPressureChildMode:
 		return runLinuxPressureBorrowCommand(ctx, entered, args, environment)
 	default:

@@ -407,6 +407,18 @@ normal/race each passing 566 nodes and one inherited frozen-Darwin/arm64 skip.
 Static/docs and four supported tagged compiles pass; genuine native composition
 and full MED-495/496/497 acceptance remain open.
 
+T42.H2t.c now selects the source contract for the actual author inside the
+descriptor-bound pressure workspace. A new target bootstrap/private namespace
+must preserve exact credentials, source/image ownership and the original Wait;
+private helpers retain host runtime access and original input masking. The
+genuine producer-7/phase-2 author operation retains its enclosing live graph.
+A separate prospective healthy-derived-root retirement policy bounds physical
+inventory, backing and work before removal, preserving failed or unknown roots.
+Source implementation and source gates are staged on the ticket branch; fresh
+native admission, the full positive and full MED-495/496/497 acceptance remain
+pending. The new capacity arithmetic establishes no 4-GiB fit, complete
+formal profile or MED-495/496/497 acceptance.
+
 Ben's 2026-10-22 instruction authorizes integrating PR156 and PR164–167 as
 reviewed implementation checkpoints while cleaning maria after verified archival
 transfer. It supersedes their full-native integration hold only. V10 remains a

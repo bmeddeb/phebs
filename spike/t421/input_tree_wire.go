@@ -11,6 +11,10 @@ import (
 	"unicode/utf8"
 )
 
+func inputTreePathsOverlap(a, b string) bool {
+	return a == b || strings.HasPrefix(a, b+"/") || strings.HasPrefix(b, a+"/")
+}
+
 // These are copy-construction ceilings, not host resource or command admission.
 const (
 	linuxInputTreeRecipe = "linux-input-tree-namespace-v1"

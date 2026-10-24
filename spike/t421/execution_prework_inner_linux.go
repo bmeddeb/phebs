@@ -45,11 +45,18 @@ func (inner *linuxExecutorInnerPrework) prepare(ctx context.Context, value linux
 // Both finite recipes construct their own complete protected reference graph;
 // their distinct live-consumer checks follow this common construction.
 func (inner *linuxExecutorInnerPrework) prepareReference(ctx context.Context, value linuxExecutorPreworkSelection, image *os.File) error {
+	return inner.prepareReferenceLayout(ctx, value, image, nil)
+}
+func (inner *linuxExecutorInnerPrework) prepareReferenceLayout(ctx context.Context, value linuxExecutorPreworkSelection, image *os.File, layout *linuxPressureAuthorView) error {
 	request := ReferenceToolRequest{RepositoryRoot: value.RepositoryRoot, GitBinary: value.GitBinary, GoRoot: value.GoRoot,
 		ModuleCache: value.ModuleCache, PlanSourceCommit: value.PlanSourceCommit, IntegratedMainCommit: value.IntegratedMainCommit,
 		SourceCommit: value.SourceCommit, Binary: value.InputHelperBinary}
 	var err error
-	inner.inputHelper, err = protectLinuxInputTreeHelperObserved(ctx, request, inner.observation)
+	if layout == nil {
+		inner.inputHelper, err = protectLinuxInputTreeHelperObserved(ctx, request, inner.observation)
+	} else {
+		inner.inputHelper, err = protectLinuxPressureAuthorInputHelper(ctx, request, layout, inner.observation)
+	}
 	if err != nil {
 		return ErrExecutionLauncher
 	}
@@ -64,7 +71,11 @@ func (inner *linuxExecutorInnerPrework) prepareReference(ctx context.Context, va
 		return ErrExecutionLauncher
 	}
 	request.Binary = value.ReferenceHelperBinary
-	inner.referenceHelper, err = protectLinuxGoReferenceHelperObserved(ctx, request, inner.observation)
+	if layout == nil {
+		inner.referenceHelper, err = protectLinuxGoReferenceHelperObserved(ctx, request, inner.observation)
+	} else {
+		inner.referenceHelper, err = protectLinuxPressureAuthorReferenceHelper(ctx, request, layout, inner.observation)
+	}
 	if err != nil {
 		return ErrExecutionLauncher
 	}
