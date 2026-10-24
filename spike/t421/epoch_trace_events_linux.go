@@ -126,8 +126,9 @@ func (root *linuxEpochTraceRoot) serve() {
 }
 
 func (root *linuxEpochTraceRoot) turn(ctx context.Context) (bool, error) {
+	root.currentTID = 0 // Detached retirement can refuse before a task is selected.
 	if !root.gateOwned {
-		return false, ErrExecutionEpochOne
+		return false, fmt.Errorf("turn/gate: %w", ErrExecutionEpochOne)
 	}
 	ids := make([]int, 0, len(root.tasks))
 	for tid := range root.tasks {
@@ -136,7 +137,7 @@ func (root *linuxEpochTraceRoot) turn(ctx context.Context) (bool, error) {
 	sort.Ints(ids)
 	terminalRoot := false
 	if err := root.retireDetached(ctx); err != nil {
-		return false, err
+		return false, fmt.Errorf("turn/detached: %w", err)
 	}
 	for _, tid := range ids {
 		if ctx.Err() != nil {
@@ -153,7 +154,7 @@ func (root *linuxEpochTraceRoot) turn(ctx context.Context) (bool, error) {
 		}
 		fallback := errors.Is(err, unix.ECHILD)
 		if err != nil && !fallback {
-			return false, err
+			return false, fmt.Errorf("turn/wait-stop tid=%d: %w", tid, err)
 		}
 		if stop.signo != 0 {
 			if stop.code != 4 || stop.pid != int32(tid) || stop.uid != uint32(os.Getuid()) {
@@ -170,7 +171,7 @@ func (root *linuxEpochTraceRoot) turn(ctx context.Context) (bool, error) {
 			continue
 		}
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("turn/wait-terminal tid=%d: %w", tid, err)
 		}
 		if terminal.signo == 0 || terminal.code == 4 {
 			if fallback {
@@ -182,13 +183,13 @@ func (root *linuxEpochTraceRoot) turn(ctx context.Context) (bool, error) {
 					root.markExiting(task.leader)
 				}
 				if terminal.signo != 0 && (terminal.signo != int32(unix.SIGCHLD) || terminal.pid != int32(tid) || terminal.uid != uint32(os.Getuid())) {
-					return false, ErrExecutionEpochOne
+					return false, fmt.Errorf("turn/fallback-record tid=%d info=%+v: %w", tid, terminal, ErrExecutionEpochOne)
 				}
 			}
 			continue
 		}
 		if !terminal.terminal(tid) {
-			return false, ErrExecutionEpochOne
+			return false, fmt.Errorf("turn/terminal-record tid=%d info=%+v: %w", tid, terminal, ErrExecutionEpochOne)
 		}
 		fresh, err := linuxEpochTraceIdentityOf(tid)
 		if err != nil || !root.sameOwnedLifetime(ctx, task.original, fresh) {
@@ -209,13 +210,13 @@ func (root *linuxEpochTraceRoot) turn(ctx context.Context) (bool, error) {
 		}
 		if fresh.pid == fresh.tgid {
 			if task.leader == nil || task.leader.original.parent == root.owner.held.controllerPID {
-				return false, ErrExecutionEpochOne
+				return false, fmt.Errorf("turn/leader-binding tid=%d leader-present=%t: %w", tid, task.leader != nil, ErrExecutionEpochOne)
 			}
 			if _, err = root.terminalProof(ctx, task.leader); err != nil {
 				return false, err
 			}
 			if err = root.liveParent(ctx, task.leader); err != nil {
-				return false, err
+				return false, fmt.Errorf("turn/parent-live tid=%d: %w", tid, err)
 			}
 		}
 		if ctx.Err() != nil {
@@ -223,7 +224,7 @@ func (root *linuxEpochTraceRoot) turn(ctx context.Context) (bool, error) {
 		}
 		consumed, err := linuxEpochTraceWait(tid, unix.WEXITED)
 		if err != nil || consumed != terminal {
-			return false, ErrExecutionEpochOne
+			return false, fmt.Errorf("turn/terminal-consume tid=%d peek=%+v consumed=%+v: %w", tid, terminal, consumed, errors.Join(ErrExecutionEpochOne, err))
 		}
 		// Commit the actual bookkeeping immediately. A later failed proof must not
 		// target a status that has already been consumed.

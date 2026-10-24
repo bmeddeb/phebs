@@ -18,7 +18,7 @@ import (
 func (root *linuxEpochTraceRoot) terminalProof(ctx context.Context, leader *linuxEpochTraceLeader) (linuxEpochTraceIdentity, error) {
 	var zero linuxEpochTraceIdentity
 	if ctx == nil || ctx.Err() != nil || root == nil || root.owner == nil || leader == nil || leader.root != root || !leader.verified || leader.fd < 0 || root.owner.leaders[leader.original.pid] != leader || leader.original.pid != leader.original.tgid {
-		return zero, ErrExecutionEpochOne
+		return zero, fmt.Errorf("terminal/shape: %w", ErrExecutionEpochOne)
 	}
 	before, err := linuxEpochTraceIdentityOf(leader.original.pid)
 	if err != nil {
