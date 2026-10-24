@@ -581,6 +581,16 @@ payload cap and all mutation fences. A bounded lookup replay is not full
 qualification. Retain the failed fixture and actual terminal accounting/cleanup
 errors; report new exact-source readiness before starting a fresh admitted run.
 
+The v12 attempt reached logical handoff before joined-output parsing exposed
+an earlier cold-phase resolver-byte excess. Each successful retry read remains
+charged; the frozen ceiling and five-minute materialization deadline stay exact.
+Default resolver builds now lease the existing bounded Git batch reader and
+join it before publication; explicit readers retain their behavior. Private
+first-observed refusal stages and saved joined-prefix summaries distinguish
+handoff failures without new probes or changed error/acceptance semantics.
+Preserve failed fixtures and report missing full qualification explicitly;
+this correction starts no rerun and grants no new driver/profile installation.
+
 The first exact `2754d208` full-native attempt completed its three actual
 reference comparisons, then correctly refused policy v1 before any author or
 server operation: 10,504,626,176 required bytes exceeded 8,633,675,776 observed

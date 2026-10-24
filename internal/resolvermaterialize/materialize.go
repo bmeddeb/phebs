@@ -161,11 +161,25 @@ func (budget *blobBudget) load(
 // only for go.mod, the three fixed attribution inputs, and mapped
 // generated base-lane Go sources retained by the v1.1 symbol projection.
 func Build(ctx context.Context, request BuildRequest) (*resolvercatalog.Prepared, error) {
+	return buildWithBlobSession(ctx, request, openResolverBlobSession)
+}
+
+func buildWithBlobSession(ctx context.Context, request BuildRequest, open resolverBlobSessionOpener) (prepared *resolvercatalog.Prepared, retErr error) {
 	if err := validateBuildRequest(request); err != nil {
 		return nil, err
 	}
 	if request.ReadBlob == nil {
-		request.ReadBlob = gitobj.ReadBlob
+		lease := &resolverBlobLease{ctx: ctx, directory: request.RepositoryDir, open: open}
+		request.ReadBlob = lease.read
+		defer func() {
+			if err := lease.close(); err != nil {
+				if prepared != nil {
+					err = errors.Join(err, prepared.Discard())
+					prepared = nil
+				}
+				retErr = errors.Join(retErr, fmt.Errorf("close resolver blob reader: %w", err))
+			}
+		}()
 	}
 	stage, err := resolvercatalog.NewStage(request.Root, request.Identity)
 	if err != nil {
@@ -243,7 +257,7 @@ func Build(ctx context.Context, request BuildRequest) (*resolvercatalog.Prepared
 			return nil, fmt.Errorf("materialize %s: %w", current.pack.Name, err)
 		}
 	}
-	prepared, err := stage.Seal(ctx)
+	prepared, err = stage.Seal(ctx)
 	if err != nil {
 		return nil, err
 	}

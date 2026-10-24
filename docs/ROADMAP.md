@@ -375,6 +375,13 @@ whole-workload fit. Review and source gates precede exact new-source admission
 and one fresh maria qualification under the unchanged 4-GiB bound. MED-496
 checkpoint/successor composition continues independently while that run executes.
 
+MED-495's v12 attempt passed the physical-B prefix, then failed at logical
+handoff. Offline replay identifies earlier repeated materialization exceeding
+the unchanged resolver-byte ceiling; its first cancellation cause is unknown.
+The correction reuses the admitted bounded Git batch reader per actual build
+and retains private failure stages. Bounded review/tests and commit/push do not
+replace fresh full qualification or enable MED-496 checkpoint entry.
+
 Next: [Linux office handoff #124](https://github.com/bmeddeb/phebs/issues/124)
 mechanism qualification → remaining T42.H2 consumer/executor/resource admission
 → T42.2v restored launch → complete readiness → T42.2o fresh freeze → separately
