@@ -357,6 +357,14 @@ The correction reuses the admitted bounded Git batch reader per actual build
 and retains private failure stages. Bounded review/tests and commit/push do not
 replace fresh full qualification or enable MED-496 checkpoint entry.
 
+The subsequent v13 source `bfcfb559` failed at return Health/ReturnA after the
+physical and logical calls returned nil. Its generic unjoined trace refusal
+does not establish a causal defect; retained owners and absent recorded PIDs
+do not prove clean teardown. A diagnostic-only follow-up labels private refusal
+branches, clears stale current-task context and separates return assertions.
+No predicate, admission bound or public error changes. Focused review/gates and
+scoped commit/push grant neither a rerun nor full MED-495/MED-496 acceptance.
+
 Next: [Linux office handoff #124](https://github.com/bmeddeb/phebs/issues/124)
 mechanism qualification → remaining T42.H2 consumer/executor/resource admission
 → T42.2v restored launch → complete readiness → T42.2o fresh freeze → separately

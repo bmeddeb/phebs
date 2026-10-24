@@ -278,7 +278,7 @@ func (root *linuxEpochTraceRoot) retireDetached(ctx context.Context) error {
 		}
 		present, err := root.detachedCurrent(ctx, identity)
 		if err != nil {
-			return err
+			return fmt.Errorf("detached/current tid=%d: %w", tid, err)
 		}
 		if !present {
 			root.forgetDetached(tid)
@@ -311,17 +311,23 @@ func linuxEpochTraceDetachedCurrentParent(original linuxEpochTraceIdentity, pare
 	}
 	start, end := strings.IndexByte(string(raw), '('), strings.LastIndex(string(raw), ") ")
 	if start < 1 || end <= start+1 {
-		return false, ErrExecutionEpochOne
+		return false, fmt.Errorf("detached/stat-layout: %w", ErrExecutionEpochOne)
 	}
 	fields := strings.Fields(string(raw[end+2:]))
 	if len(fields) < 22 || strings.TrimSpace(string(raw[:start])) != strconv.Itoa(original.pid) {
-		return false, ErrExecutionEpochOne
+		return false, fmt.Errorf("detached/stat-fields: %w", ErrExecutionEpochOne)
 	}
 	if fields[19] != original.birth {
 		return false, nil // Metadata retirement only, never adoption/Wait proof.
 	}
-	if fields[1] != strconv.Itoa(original.parent) && (parentChanged == nil || !parentChanged()) || fields[3] != strconv.Itoa(original.sid) || string(raw[start+1:end]) != original.name {
-		return false, ErrExecutionEpochOne
+	if fields[1] != strconv.Itoa(original.parent) && (parentChanged == nil || !parentChanged()) {
+		return false, fmt.Errorf("detached/parent: %w", ErrExecutionEpochOne)
+	}
+	if fields[3] != strconv.Itoa(original.sid) {
+		return false, fmt.Errorf("detached/session: %w", ErrExecutionEpochOne)
+	}
+	if string(raw[start+1:end]) != original.name {
+		return false, fmt.Errorf("detached/name: %w", ErrExecutionEpochOne)
 	}
 	return true, nil
 }
