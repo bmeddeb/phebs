@@ -567,6 +567,13 @@ shape mismatches refuse before launch. This plumbing does not select a new
 policy or enable native checkpoint entry. Actual successor, retained-source,
 PC/SA, custody, accounting and full qualification remain separate gates.
 
+T42.H2s.h makes recovery workspace selection recognize Linux's native adapter.
+The prepared stale/checkpoint/recovery path must retain all seven existing
+sample points; a missing required response, observer or authority is a refusal,
+not zero bytes. A later boundary failure preserves the accepted traversal prefix.
+This correction does not enable native checkpoint entry or select a new policy.
+Actual engine, successor, PC/SA and custody/accounting acceptance remain open.
+
 The first exact `2754d208` full-native attempt completed its three actual
 reference comparisons, then correctly refused policy v1 before any author or
 server operation: 10,504,626,176 required bytes exceeded 8,633,675,776 observed

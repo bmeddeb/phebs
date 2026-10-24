@@ -347,6 +347,12 @@ controls preserve EM01 selection and prepare EM02's exact reservations inside
 the unchanged ceiling. Native EM02 selection, prospective policy and actual
 checkpoint/successor composition remain open; no native entry is enabled.
 
+T42.H2s.h fixes two recovery workspace checks that silently omitted Linux's
+native-owned workspace. Prepared native recovery now selects its required
+existing samples and fails closed on missing evidence. Bounded HTTP/native-walk
+controls do not select a checkpoint policy or prove a successor; actual native
+composition and MED-495 qualification remain open.
+
 Ben's 2026-10-22 instruction authorizes integrating PR156 and PR164–167 as
 reviewed implementation checkpoints while cleaning maria after verified archival
 transfer. It supersedes their full-native integration hold only. V10 remains a
