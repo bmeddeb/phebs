@@ -29,3 +29,13 @@ type executionEpochNativeAdapter interface {
 	engineMeasurements(uint64) (string, uint32)
 	serveEngineMeasurement(context.Context, *ExecutionEpochOneRun, *net.UnixConn, dispatchadmission.EngineMeasurementBinding, uint32) <-chan error
 }
+
+// Optional native successor authority is issued by a source-selected coordinator,
+// separately from the historical adapter and the shared logical state.
+type executionEpochCheckpointNativeAdapter interface {
+	checkpointReturn(context.Context, *ExecutionEpochOneRun, bool, bool) error
+	checkpointEntry(context.Context, *ExecutionEpochOneRun, bool, bool) error
+	checkpointSuccessor(context.Context, context.Context, *ExecutionEpochOneRun, *ExecutionEpochOneRun) error
+	checkpointLaunch(context.Context, *ExecutionEpochOneRun, uint64) error
+	checkpointRun(context.Context, *ExecutionEpochOneRun, uint64) error
+}

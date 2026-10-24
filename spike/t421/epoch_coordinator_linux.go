@@ -13,9 +13,10 @@ import (
 )
 
 type linuxEpochCoordinator struct {
-	held   *linuxEpochHeldFlow
-	core   *ExecutionEpochOne
-	recipe *linuxEpochRecipeIdentity
+	held       *linuxEpochHeldFlow
+	core       *ExecutionEpochOne
+	recipe     *linuxEpochRecipeIdentity
+	checkpoint *linuxEpochCheckpointSuccessor
 }
 
 func (adapter *linuxEpochCoordinator) issued() bool {
@@ -41,7 +42,7 @@ func (adapter *linuxEpochCoordinator) checkSource(ctx context.Context, response 
 	return owner.checkSource(ctx, response)
 }
 func (adapter *linuxEpochCoordinator) checkEpoch(ctx context.Context, epoch uint64) error {
-	if adapter.check(ctx) != nil || epoch < 1 || epoch > 3 {
+	if adapter.check(ctx) != nil || !adapter.checkpointEpoch(epoch) {
 		return ErrExecutionEpochConfigs
 	}
 	owner := adapter.held.epochs
@@ -79,12 +80,15 @@ func (adapter *linuxEpochCoordinator) release(ctx context.Context, epoch uint64)
 	defer owner.author.mu.Unlock()
 	owner.mu.Lock()
 	defer owner.mu.Unlock()
-	if epoch != owner.released+1 || epoch > 3 || owner.listeners[epoch-1] == nil || owner.listeners[epoch-1].Close() != nil {
+	if epoch != owner.released+1 || !adapter.checkpointEpoch(epoch) || owner.listeners[epoch-1] == nil || owner.listeners[epoch-1].Close() != nil {
 		owner.err = ErrExecutionEpochConfigs
 		return owner.err
 	}
 	owner.listeners[epoch-1] = nil
 	owner.released++
+	if epoch == 4 {
+		adapter.checkpoint.released.Store(true)
+	}
 	return nil
 }
 func (adapter *linuxEpochCoordinator) next(ctx context.Context, controller *dispatchadmission.Controller, parent *dispatchadmission.LocalProducer, producer uint32, borrower *ExecutionEpochOneRun) (result ExecutionAuthorResult, retErr error) {

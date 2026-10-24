@@ -581,6 +581,16 @@ checkpoint descriptor selects no workload and grants no resource, measurement
 or successor authority. Epoch-four entry remains unavailable; actual retained-
 source PC/SA, custody, accounting and full native acceptance are still required.
 
+T42.H2s.j's in-progress Linux checkpoint qualification path is separate from
+the ordinary v11 flow. Its source-selected policy must retain exact predecessor
+Wait, custody, endpoint retirement, terminal PC/DA/SA and retained-source cutover
+before issuing a fourth-run context or releasing its ordered listener. A clean
+measurement EOF is not proof that all seven checkpoint and one recovery points
+completed successfully. Protocol facts and actual sample results are separate
+requirements. The new native composition test remains opt-in and requires its
+own exact image/profile and resource admission; no installed or qualified
+checkpoint behavior is claimed.
+
 The v11 Maria attempt stopped during physical B on a service-state SDK reply
 timeout. The 2026-10-23 correction makes selected preimage lookups use the
 existing unique index; it preserves the 30-second RPC deadline, 512-record

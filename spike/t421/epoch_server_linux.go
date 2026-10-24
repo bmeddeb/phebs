@@ -27,6 +27,7 @@ type linuxEpochServer struct {
 	sessionEmpty     bool
 	owner            *linuxEpochHeldFlow // Immutable after successful capture.
 	run              *ExecutionEpochOneRun
+	measurements     linuxEpochEngineCompletion
 }
 
 // Root cancellation depends only on the successfully pinned owned Start.
@@ -64,7 +65,7 @@ func (server *linuxEpochServer) closeRoot() error {
 // Actual Start must run on the locked creating tracer task, not merely after
 // a beforeStart hook on the unrelated flow goroutine.
 func (adapter *linuxEpochCoordinator) start(ctx, lifetime context.Context, run *ExecutionEpochOneRun, phase uint32) (bool, error) {
-	if adapter.check(ctx) != nil || run == nil || run.command == nil || adapter.held.resources == nil || adapter.held.resources.trace == nil {
+	if adapter.check(ctx) != nil || run == nil || adapter.checkpointRun(ctx, run, run.epoch.Epoch) != nil || run.epoch.Epoch == 4 && !adapter.checkpoint.released.Load() || run.command == nil || adapter.held.resources == nil || adapter.held.resources.trace == nil {
 		return false, ErrExecutionEpochOne
 	}
 	server := &linuxEpochServer{pidfd: -1}
@@ -113,10 +114,13 @@ func (adapter *linuxEpochCoordinator) finish(run *ExecutionEpochOneRun, waited <
 	// require the exact issued adapter, retained checkpoint and actual actor run.
 	var hardErr error
 	if terminal && terminalOK && requested && selected && !joined && operation != nil && operation.Err() == nil && adapter.issued() && run.flow == adapter.core && root.serverRun == run && adapter.held.resources != nil && root.owner == adapter.held.resources.trace {
+		if adapter.recipe.recipe == linuxEpochCheckpointV13 {
+			hardErr = server.waitEngineCompletion(operation, run, 3, deadline)
+		}
 		adapter.core.mu.Lock()
 		retained := !adapter.core.closed && adapter.core.retained == run
 		adapter.core.mu.Unlock()
-		if retained && adapter.check(operation) == nil {
+		if hardErr == nil && retained && adapter.check(operation) == nil {
 			death, err := root.finishHardDeath(operation, deadline)
 			if death.RootJoined {
 				return death, err

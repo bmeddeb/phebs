@@ -563,6 +563,9 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	if number < 1 || number > 5 || number == 4 && (run.checkpointRecovery == nil || run.checkpointPrior == nil) {
 		return nil, ErrExecutionEpochOne
 	}
+	if native, ok := flow.native.(executionEpochCheckpointNativeAdapter); ok && native.checkpointLaunch(launchCtx, run, number) != nil {
+		return nil, ErrExecutionEpochOne
+	}
 	producer, phase := uint32(number+1), uint32(2)
 	switch number {
 	case 2:
@@ -906,6 +909,9 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 					defer epochs.mu.Unlock()
 					if err := epochs.checkLocked(checkCtx, number); err != nil {
 						run.recordAdmissionFailure(checkCtx, site.ID, "epoch_config", err)
+						return ErrExecutionEpochOne
+					}
+					if native, ok := flow.native.(executionEpochCheckpointNativeAdapter); ok && native.checkpointRun(checkCtx, run, number) != nil {
 						return ErrExecutionEpochOne
 					}
 					_, currentTools, _, err := flow.checkEpochTools(checkCtx, number)

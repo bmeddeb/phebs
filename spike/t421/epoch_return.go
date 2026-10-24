@@ -36,6 +36,9 @@ func (run *ExecutionEpochOneRun) startReturnA(ctx context.Context, stale, checkp
 		return nil, ErrExecutionEpochOne
 	}
 	flow := run.flow
+	if native, ok := flow.native.(executionEpochCheckpointNativeAdapter); ok && native.checkpointReturn(ctx, run, stale, checkpoint) != nil {
+		return nil, ErrExecutionEpochOne
+	}
 	flow.mu.Lock()
 	bounds, err := returnEpochBounds(flow.plan)
 	phaseDuration := bounds.lifetime
