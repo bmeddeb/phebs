@@ -32,9 +32,19 @@ func prepareLinuxPressureReference(ctx context.Context, value linuxExecutorPrewo
 }
 
 func runLinuxPressureBroker(ctx context.Context, value linuxPressureBorrowSelection, parent *linuxExecutorParent, image *os.File, namespace *linuxPressureBorrowNamespace, failureAttempted *bool) (retired, retained bool, retErr error) {
+	return runLinuxPressureBrokerRecipe(ctx, value, parent, image, namespace, failureAttempted, nil)
+}
+func runLinuxPressureBrokerRecipe(ctx context.Context, value linuxPressureBorrowSelection, parent *linuxExecutorParent, image *os.File, namespace *linuxPressureBorrowNamespace, failureAttempted *bool, author *linuxPressureAuthorSelection) (retired, retained bool, retErr error) {
 	inner := &linuxExecutorInnerPrework{observation: parent.observation}
 	var volume *LinuxPressureVolume
-	workErr := prepareLinuxPressureReference(ctx, value.Broker, image, inner)
+	var workErr error
+	if author == nil {
+		workErr = prepareLinuxPressureReference(ctx, value.Broker, image, inner)
+	} else {
+		if !inner.attempted.CompareAndSwap(false, true) || inner.prepareReference(ctx, value.Broker, image) != nil || !inner.tool.executorClaim.bindAuthorInner(inner) || !inner.tool.executorClaim.consumeAuthorInner(inner) || inner.measuredInputs(ctx, value.Broker, inner.tool.identity) != nil {
+			workErr = ErrLinuxPressure
+		}
+	}
 	if workErr == nil {
 		builds := inner.builds
 		// Source -> protected tree -> tool -> pressure volume. No volume method
@@ -53,11 +63,16 @@ func runLinuxPressureBroker(ctx context.Context, value linuxPressureBorrowSelect
 				if err != nil {
 					return err
 				}
-				if _, err = volume.Geometry(ctx); err != nil {
-					return err
+				geometry, geometryErr := volume.Geometry(ctx)
+				if geometryErr != nil {
+					return geometryErr
+				}
+				if author != nil {
+					author.ImageBytes = geometry.ImageBytes
 				}
 				return volume.WithRoot(ctx, func(workspace *os.File) error {
 					issuer := &linuxPressureBorrowIssuer{inner: inner, volume: volume, image: candidate, namespace: namespace, parent: parent, value: value}
+					issuer.author = author
 					issuer.self = issuer
 					return issuer.child(ctx, workspace, failureAttempted)
 				})
@@ -155,6 +170,9 @@ func (volume *LinuxPressureVolume) retireOriginalPressureFormatter(ctx context.C
 }
 
 func (issuer *linuxPressureBorrowIssuer) child(ctx context.Context, workspace *os.File, failureAttempted *bool) (retErr error) {
+	if issuer != nil && issuer.author != nil {
+		return issuer.authorChild(ctx, workspace, failureAttempted)
+	}
 	if issuer == nil || !issuer.used.CompareAndSwap(false, true) || issuer.self != issuer || issuer.volume == nil || issuer.inner == nil ||
 		issuer.inner.tool == nil || issuer.inner.tool.referenceInputs != issuer.inner.builds || issuer.namespace.check() != nil || issuer.parent.check(ctx) != nil ||
 		issuer.volume.observation != issuer.parent.observation || issuer.volume.workspace.file == nil || workspace == nil || os.Getuid() != 0 || os.Geteuid() != 0 || !linuxPressureBorrowBounding() {

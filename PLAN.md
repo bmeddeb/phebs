@@ -17574,3 +17574,132 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   The final plan's inherited descriptive manifest digest is explicitly corrected
   by an immutable clarification; the actual runner uses the verified per-file
   source26 map and never reads that descriptive key. No gate record was rewritten.
+
+- **2026-10-24 — T42.H2t.c descriptor-bound workspace and real author
+  composition (MED-497, prospective source contract).** Choose one connected
+  private recipe that places the actual Git, Go-build, protected input,
+  independent reference and mutable author graph inside the authenticated H2m
+  target leaf, then invokes genuine shared-controller producer 7 in phase 2
+  through `AuthorNextOn`. Retain the enclosing original graph after Author A;
+  completing one operation releases neither later borrowers nor profile custody.
+  No request, modeled producer or serialized result issues that custody.
+
+  The root broker retains its genuine source/image/volume loans while a new
+  closed bootstrap establishes the target's private mount namespace. Track the
+  same actual PID, birth, executable and sole Wait across the root bootstrap,
+  exact credential transition and sealed-image target exec. No privileged
+  runtime thread may survive into target work. Preserve fixed target IDs,
+  cleared groups, zero usable capabilities, exact inherited bounding mask and
+  no-new-privileges. Authenticate the actual before/after credentials, image,
+  namespace and control phases; preserve historical H2t.a and H2t.b predicates.
+  A copied owner, namespace name or empty wrapper session is insufficient.
+  The target keeps the original host PID domain, real parent and SID; only
+  nested construction/build helpers create a new PID namespace and its procfs.
+  Authenticate kernel SCM_CREDENTIALS at each closed phase: a root-bootstrap
+  message cannot satisfy the target's post-drop message or credential check.
+
+  Use a separately versioned private `/tmp` scaffold and the fixed
+  `/tmp/phebs-h2tc-v1/work` view of the actual held leaf. Create only in the new
+  private namespace after proving the fresh tmpfs mount, never in its covered
+  host directory. The new tmpfs root and scaffold directories must be target-
+  owned exact 0700 before credential drop. Bind from the authenticated descriptor
+  with native mount operations, and reopen the new mount before cwd adoption. Its inode, device
+  and FSID must match the original while its new mount ID is explicitly bound.
+  A private typed namespace owner supplies this genuinely reachable new view
+  to the shared constructor cores; a string alias cannot supply original-root
+  or pressure authority. Public canonical-path/UID and historical helpers stay
+  exact. New helper recipes repeat the descriptor-bound layout for their actual
+  work and independently copied read-only inputs. Private scaffold tmpfs has a
+  4-MiB/16-inode ceiling; writes, home, cache, tmp and outputs belong to the
+  separate held work mount, not that scaffold. H2k's 2-GiB/100,000-entry copy
+  bounds remain exact. Denied native construction or observation refuses.
+
+  The new recipe requires canonical original SDK/module/source selections
+  disjoint from `/tmp`, `/proc`, `/dev`, `/sys` and its work/stage. Keep the
+  three existing exact read-only mode-000 original masks, own PID-namespace
+  procfs, read-only protected copies, capability retirement and NNP. Independent
+  parent observation must bind the actual original process, new mounts,
+  propagation, held objects and masks in that child's namespace. Host runtime
+  loader/libraries remain reachable as in the existing recipe: this is not a
+  chroot or a newly verified runtime-dependency bundle. Apply umask 0077 only
+  inside the dedicated target/helper before its writers. Do not change caller
+  or broker cwd, mask, credentials, security settings or original roots.
+
+  Before writers, classify only this recipe's new attempt-exclusive derived
+  subtree as healthy ephemeral and issue its private retirement owner. This
+  cannot adopt existing source inputs, corpora, failed fixtures, backups or
+  archives; public `Author.Close` retains its bytes. All actual author, helper,
+  control, accounting and future borrower uses must retire before disposal.
+  Unknown native Close or actor/cwd use retains the original graph. Return the
+  target cwd to its held leaf; only descendants may be removed before target
+  Wait. Final leaf removal and unchanged nonforced H2m teardown still belong
+  to the original broker after actual target retirement. Every newly pinned
+  target namespace and work-mount alias must also genuinely retire before
+  nonforced unmount and loop detach; an open namespace pin can retain the bind.
+
+  Choose NEW physical capacity ceilings, independent of logical corpus counts
+  and staging limits: 4,194,304 total entries including the derived root,
+  1,048,576 directories, 65,536 immediate children, depth 64, 255-byte
+  components, 4,096-byte relative paths, 512 MiB of stored basenames including
+  NULs and 4 GiB cumulative reconstructed path bytes. Individual regular files
+  admit at most 8 GiB, all regular logical bytes at most 96 GiB, and checked
+  allocated bytes at most the original admitted H2m image size. These are
+  conservative refusal ceilings, not proof the complete population fits.
+  Use at most 128 rows per directory batch and eight additional remover FDs.
+  Directories require exact 0700 and target UID/GID; singly-linked regular
+  files require role-specific 0400/0500/0600/0700, except Git 100755 blobs in
+  the protected reference-source checkout under
+  `preparation/<reference-workspace>/source/`, which admit 0755; no other
+  preparation path and no payload or author role admits group/other bits.
+  Reject links, special files,
+  unexpected modes/controls, foreign ownership and any different device,
+  FSID or mount before removal. Protected foreign mounts retire through their
+  actual owners; no cleanup chmod, remount or recursive host-path deletion.
+
+  Complete one read-only physical inventory before the first unlink. Use
+  fixed chunks of at most 128-byte nonpointer records and bounded basename
+  slabs: maximum record backing 512 MiB, name backing 512 MiB and fixed
+  journal/table overhead below 1 MiB; no separate temporary backing is
+  allocated.
+  Retain no per-entry map, interface, full-path string or growth-copy backing.
+  Parent-before-child discovery and reverse records avoid a global sort or
+  separate postorder array. Check ancestry and original object identities
+  before basename-only removal; account for this remover's own directory
+  changes rather than comparing stale directory timestamps. Sync each emptied
+  directory before rmdir and the final empty root. Failed preflight preserves
+  the whole root; a native removal/sync/Close failure preserves the truthful
+  remaining partial prefix and first facts. No work retry or late PASS.
+
+  Enumerate and charge every actual scan/open/stat/mount-observation/close/
+  unlink/sync attempt, including interruptions. With maximum entries E,
+  directories D and depth H above, the new fixed policy admits at most
+  `64*E*(H+1)+32*D+1024` such operations over inventory and disposal; actual
+  source must prove its traversal fits that conservative bound and reserve
+  the full remaining deletion work before unlink. Space is O(E+name bytes),
+  traversal O(E*H), removals at most E-1 and directory syncs at most D+1.
+  Disposal receives only remaining original caller-clipped, at-most-sixty-
+  minute c work time; all existing per-operation deadlines remain exact.
+  Native calls stay cooperative. The at-most-1,025-MiB explicit backing (512
+  MiB records, 512 MiB names, below 1 MiB fixed tables) is material and
+  excludes allocator/GC/kernel/other retained owners: no aggregate
+  4-GiB RSS, cgroup capacity or performance fit follows from this arithmetic.
+
+  Source implementation, exact allocation/work accounting, normal/race,
+  kernel mechanics and all four supported compile-only targets are staged on
+  this branch with source gates green; independent source/oracle/cost review
+  precedes the checkpoint. The opt-in positive must perform
+  the full selected actual author operation and genuine healthy retirement,
+  not a tiny root or always-hanging success substitute. New bootstrap, target,
+  helper, namespace, image, input, UID, host and aggregate-resource admission
+  precedes execution. Full MED-495/496/497, later epoch/profile integration
+  and ceremony acceptance remain open. This decision grants source engineering
+  only: no security installation, privileged run, destructive host cleanup,
+  merge, deployment or qualification restart.
+
+  Correction (same date): Git 100755 blobs admit 0755 only in the protected
+  reference-source checkout at
+  `preparation/<reference-workspace>/source/`; no other preparation path and
+  no payload or author role admits group/other access bits. The prior 64-MiB
+  temporary-backing and measured-overhead phrasings were corrected to
+  below-1-MiB fixed tables, and the explicit backing total to at most
+  1,025 MiB.

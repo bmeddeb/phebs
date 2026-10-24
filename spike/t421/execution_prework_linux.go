@@ -231,7 +231,7 @@ func (owner *linuxExecutorPrework) run(ctx context.Context, cancel context.Cance
 			success := stdout.buffer.String() == linuxExecutorPreworkReceipt(value.Attempt, false)
 			if owner.pressure != nil {
 				owner.retired = readErr == nil && stdout.err == nil && owner.pressure.accept(stdout.buffer.String(), value.Attempt)
-				success = stdout.buffer.String() == linuxPressureBorrowReceipt(value.Attempt, false)
+				success = stdout.buffer.String() == owner.pressure.receipt(value.Attempt, false)
 			}
 			err = nil
 			if waitErr != nil || command.ProcessState == nil || !command.ProcessState.Success() || ctx.Err() != nil ||

@@ -68,11 +68,15 @@ type LinuxExecutionAuthorCustody struct {
 	last              *linuxAuthorAttempt
 	closing, released bool
 	err               error
+	observation       *executionPreworkObservation
 }
 
 const linuxAuthorLeaseName = ".t422-linux-source.lock"
 
 func openLinuxAuthorOwnedRoot(path string) (linuxAuthorRoot, error) {
+	return openLinuxAuthorOwnedRootObserved(path, nil)
+}
+func openLinuxAuthorOwnedRootObserved(path string, observation *executionPreworkObservation) (linuxAuthorRoot, error) {
 	root := linuxAuthorRoot{path: path}
 	if !linuxGitPrivateDirectory(path) {
 		return root, ErrExecutionAuthorCustody
@@ -87,7 +91,7 @@ func openLinuxAuthorOwnedRoot(path string) (linuxAuthorRoot, error) {
 	}
 	if err != nil {
 		if root.file != nil {
-			_ = root.file.Close()
+			_ = observation.close(root.file.Close())
 			root.file = nil
 		}
 		return root, ErrExecutionAuthorCustody
@@ -112,6 +116,9 @@ func (root linuxAuthorRoot) check() error {
 // Partial construction returns retained custody. DecodePlan remains synchronous
 // bounded work, with cancellation checked before and after.
 func PrepareLinuxExecutionAuthor(ctx context.Context, parent string, request LinuxExecutionAuthorRequest) (*LinuxExecutionAuthorCustody, error) {
+	return prepareLinuxExecutionAuthorObserved(ctx, parent, request, nil)
+}
+func prepareLinuxExecutionAuthorObserved(ctx context.Context, parent string, request LinuxExecutionAuthorRequest, observation *executionPreworkObservation) (*LinuxExecutionAuthorCustody, error) {
 	if ctx == nil || ctx.Err() != nil || !linuxGitPrivateDirectory(parent) || request.Git == nil || request.Builds == nil || request.Author == nil || request.Plan == nil || request.Author.input == nil || request.Author.input == request.Plan || request.Author.referenceInputs != request.Builds || request.Builds.request.Git != request.Git {
 		return nil, ErrExecutionAuthorCustody
 	}
@@ -146,7 +153,7 @@ func PrepareLinuxExecutionAuthor(ctx context.Context, parent string, request Lin
 	if !bound {
 		return nil, ErrExecutionAuthorCustody
 	}
-	owner := &LinuxExecutionAuthorCustody{request: request, planSHA256: SHA256(raw), authorIdentity: identity}
+	owner := &LinuxExecutionAuthorCustody{observation: observation, request: request, planSHA256: SHA256(raw), authorIdentity: identity}
 	fail := func() (*LinuxExecutionAuthorCustody, error) {
 		owner.err = ErrExecutionAuthorCustody
 		return owner, owner.err
@@ -165,7 +172,7 @@ func PrepareLinuxExecutionAuthor(ctx context.Context, parent string, request Lin
 }
 
 func (owner *LinuxExecutionAuthorCustody) createRoots(ctx context.Context, parent string) error {
-	root, err := openLinuxAuthorOwnedRoot(parent)
+	root, err := openLinuxAuthorOwnedRootObserved(parent, owner.observation)
 	if err != nil {
 		return ErrExecutionAuthorCustody
 	}
@@ -188,7 +195,7 @@ func (owner *LinuxExecutionAuthorCustody) createRoots(ctx context.Context, paren
 			return ErrExecutionAuthorCustody
 		}
 		owner.roots = append(owner.roots, linuxAuthorRoot{path: path})
-		root, e := openLinuxAuthorOwnedRoot(path)
+		root, e := openLinuxAuthorOwnedRootObserved(path, owner.observation)
 		if e != nil {
 			return ErrExecutionAuthorCustody
 		}
@@ -308,11 +315,11 @@ func (owner *LinuxExecutionAuthorCustody) Close(ctx context.Context) error {
 	defer owner.mu.Unlock()
 	if !owner.released {
 		for _, root := range owner.roots {
-			if root.file != nil && root.file.Close() != nil {
+			if root.file != nil && owner.observation.close(root.file.Close()) != nil {
 				owner.err = ErrExecutionAuthorCustody
 			}
 		}
-		if owner.lease != nil && owner.lease.Close() != nil {
+		if owner.lease != nil && owner.observation.close(owner.lease.Close()) != nil {
 			owner.err = ErrExecutionAuthorCustody
 		}
 		owner.released = true

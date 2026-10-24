@@ -32,7 +32,7 @@ func (custody *LinuxExecutionGoBuildCustody) runGoReferenceAttempt(ctx context.C
 				if err != nil || attempt.checkStage(custody) != nil {
 					return ErrExecutionGoBuildCustody
 				}
-				return runGoReferenceNamespace(ctx, attempt, root, image, candidate)
+				return runGoReferenceNamespace(ctx, attempt, root, image, candidate, helper.layout)
 			})
 		})
 	})
@@ -41,7 +41,7 @@ func (custody *LinuxExecutionGoBuildCustody) runGoReferenceAttempt(ctx context.C
 	}
 }
 
-func runGoReferenceNamespace(ctx context.Context, attempt *linuxGoReferenceAttempt, root, image, candidate *os.File) (retErr error) {
+func runGoReferenceNamespace(ctx context.Context, attempt *linuxGoReferenceAttempt, root, image, candidate *os.File, layout *linuxPressureAuthorView) (retErr error) {
 	attempt.step = "original-snapshot"
 	originals, err := snapshotGoReferenceOriginals(attempt.plan)
 	if err != nil {
@@ -71,8 +71,28 @@ func runGoReferenceNamespace(ctx context.Context, attempt *linuxGoReferenceAttem
 		return ErrExecutionGoBuildCustody
 	}
 	tree := attempt.tree
-	command := exec.Command("/proc/self/fd/3", linuxGoReferenceRecipe)
+	recipe := linuxGoReferenceRecipe
+	var layoutNamespace *os.File
+	if layout != nil {
+		if layout.check(ctx) != nil {
+			return ErrExecutionGoBuildCustody
+		}
+		recipe = linuxPressureAuthorReferenceRecipe
+		layoutNamespace, err = os.Open("/proc/self/ns/mnt")
+		if err != nil {
+			return ErrExecutionGoBuildCustody
+		}
+		defer func() {
+			if attempt.observation.close(layoutNamespace.Close()) != nil {
+				retErr = ErrExecutionGoBuildCustody
+			}
+		}()
+	}
+	command := exec.Command("/proc/self/fd/3", recipe)
 	command.ExtraFiles, command.Dir, command.Env = []*os.File{image, child, tree.stage, work, candidate}, tree.stagePath, []string{"GOMAXPROCS=2"}
+	if layout != nil {
+		command.ExtraFiles = append(command.ExtraFiles, layoutNamespace)
+	}
 	command.SysProcAttr = &syscall.SysProcAttr{Cloneflags: unix.CLONE_NEWUSER | unix.CLONE_NEWNS | unix.CLONE_NEWPID,
 		Setsid: true, Pdeathsig: syscall.SIGKILL, UidMappings: []syscall.SysProcIDMap{{ContainerID: 0, HostID: os.Geteuid(), Size: 1}},
 		GidMappings: []syscall.SysProcIDMap{{ContainerID: 0, HostID: os.Getegid(), Size: 1}}, GidMappingsEnableSetgroups: false}
@@ -129,7 +149,7 @@ func runGoReferenceNamespace(ctx context.Context, attempt *linuxGoReferenceAttem
 			return ErrExecutionGoBuildCustody
 		}
 		attempt.step = "ready-kernel-masks"
-		if observeGoReferenceReady(ctx, attempt, image, namespaces, originals) != nil || wire.send(ctx, treeWireAck, initial[16:], nil) != nil {
+		if observeGoReferenceReady(ctx, attempt, image, namespaces, originals, layout, work) != nil || wire.send(ctx, treeWireAck, initial[16:], nil) != nil {
 			return ErrExecutionGoBuildCustody
 		}
 		attempt.step = "build-result"
@@ -205,7 +225,7 @@ func observeGoReferenceStart(ctx context.Context, pid int, image *os.File) (inpu
 	return namespaces, nil
 }
 
-func observeGoReferenceReady(ctx context.Context, attempt *linuxGoReferenceAttempt, image *os.File, before inputTreeNamespaces, originals []goReferenceOriginal) error {
+func observeGoReferenceReady(ctx context.Context, attempt *linuxGoReferenceAttempt, image *os.File, before inputTreeNamespaces, originals []goReferenceOriginal, layout *linuxPressureAuthorView, work *os.File) error {
 	tree := attempt.tree
 	attempt.step = "ready-namespaces"
 	after, err := observeInputTreeNamespaces(tree.pid)
@@ -230,7 +250,14 @@ func observeGoReferenceReady(ctx context.Context, attempt *linuxGoReferenceAttem
 		return ErrExecutionGoBuildCustody
 	}
 	attempt.step = "ready-mount"
-	if observeInputTreeHelperMount(tree.pid, tree.stagePath, tree.kernel.mount) != nil {
+	mountPath := tree.stagePath
+	if layout != nil {
+		mountPath = linuxPressureAuthorInputs
+		if observeLinuxPressureAuthorHelperLayout(tree.pid, work) != nil {
+			return ErrExecutionGoBuildCustody
+		}
+	}
+	if observeInputTreeHelperMount(tree.pid, mountPath, tree.kernel.mount) != nil {
 		return ErrExecutionGoBuildCustody
 	}
 	for index, original := range originals {

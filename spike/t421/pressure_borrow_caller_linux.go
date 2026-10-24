@@ -16,6 +16,7 @@ import (
 
 type linuxPressureExecutorPrework struct {
 	value     linuxPressureBorrowSelection
+	author    *linuxPressureAuthorSelection
 	namespace *linuxPressureBorrowNamespace
 	retained  bool
 	hold      chan struct{}
@@ -48,10 +49,20 @@ func (owner *linuxPressureExecutorPrework) command(ctx context.Context, image, r
 	}
 	owner.value.NamespaceDev, owner.value.NamespaceIno = owner.namespace.device, owner.namespace.ino
 	encoded, err := encodeLinuxPressureBorrow(owner.value)
+	mode := executionLinuxPressureBrokerMode
+	if owner.author != nil {
+		owner.author.Schema = executionLinuxPressureAuthorSchema
+		owner.author.Borrow = owner.value
+		if !validLinuxPressureAuthorSelection(*owner.author, time.Now()) {
+			return nil, ErrLinuxPressure
+		}
+		encoded, err = encodeLinuxPressureAuthor(*owner.author)
+		mode = executionLinuxPressureAuthorBrokerMode
+	}
 	if err != nil {
 		return nil, err
 	}
-	command := exec.CommandContext(ctx, "/proc/self/fd/3", executionLinuxPressureBrokerMode, "--selection-base64url", encoded)
+	command := exec.CommandContext(ctx, "/proc/self/fd/3", mode, "--selection-base64url", encoded)
 	command.ExtraFiles = []*os.File{image, read, owner.namespace.file}
 	command.Env = []string{"LANG=C", "LC_ALL=C", "TZ=UTC"}
 	command.Dir = broker.PreparationRoot
@@ -59,12 +70,19 @@ func (owner *linuxPressureExecutorPrework) command(ctx context.Context, image, r
 	return command, nil
 }
 
+func (owner *linuxPressureExecutorPrework) receipt(attempt string, retained bool) string {
+	if owner.author != nil {
+		return linuxPressureAuthorReceipt(attempt, retained)
+	}
+	return linuxPressureBorrowReceipt(attempt, retained)
+}
+
 func (owner *linuxPressureExecutorPrework) accept(raw, attempt string) bool {
 	if !validLinuxExecutorAttempt(attempt) || owner.namespace == nil || owner.namespace.check() != nil {
 		return false
 	}
-	owner.retained = raw == linuxPressureBorrowReceipt(attempt, true)
-	return owner.retained || raw == linuxPressureBorrowReceipt(attempt, false)
+	owner.retained = raw == owner.receipt(attempt, true)
+	return owner.retained || raw == owner.receipt(attempt, false)
 }
 
 func (owner *linuxPressureExecutorPrework) closeNamespace() error {
@@ -128,4 +146,5 @@ type linuxPressureBorrowIssuer struct {
 	namespace *linuxPressureBorrowNamespace
 	parent    *linuxExecutorParent
 	value     linuxPressureBorrowSelection
+	author    *linuxPressureAuthorSelection
 }
