@@ -299,6 +299,13 @@ detached EXIT-metadata classifier correction requires bounded real-kernel
 qualification before another full run. PR #156 remains draft and unmerged;
 the V6 cold-extraction path was not reached.
 
+The 2026-10-23 MED-495 physical-B follow-up binds native preimage lookup
+operands to scalars so the existing unique index replaces repeated table scans.
+V11 remains a failed full qualification with retained raw evidence. Native
+planner/result, fence/accounting and source review gates precede any new exact
+admission; no deadline, payload, RSS or custody gate changes. MED-496's full
+checkpoint/successor acceptance remains open.
+
 T42.H2s.a (MED-496's first prerequisite) retains the actual Linux tracer root
 Wait facts separately from composite operation errors. Native checkpoint restart
 refuses before terminal mutation while root-first survivor, EM/control retirement

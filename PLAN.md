@@ -17013,3 +17013,49 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   presence behavior is equivalent. Current native public flow, product query,
   sync, startup/restart, retry/no-op and publication work is unchanged; RSS,
   transaction, RPC, disk and accounting bounds receive no exemption.
+
+- **2026-10-23 — MED-495 physical-B preimage point-lookup correction.**
+  The exact Maria v11 source `4812c3cf` returned actual native Wait1 after
+  4,473.347 seconds during physical B. Its retained joined server log first
+  records an active-context SDK `no_native_reply/deadline_exceeded` at
+  `commitServiceStateV3TargetChunk`; the pinned WebSocket SDK's 30-second RPC
+  deadline is independent of those still-active contexts. Subsequent transport,
+  measurement and cleanup errors are not independent root causes. Its stopped
+  database retains reconcile member 17 of 21, 8,704 state writes and 8,704
+  selected preimages. Full qualification did not pass. The recorded sampled
+  RSS high-water was 3,566,215,168 bytes with `RSSLimitExceeded=false`, but the
+  terminal observation became unavailable; this establishes no full memory-fit
+  or complete custody/accounting/cleanup result.
+
+  Preserve the exact failed fixture and raw evidence. Read-only native controls
+  on a separate stopped-database copy using the identical SurrealDB image
+  show that object-field lookup operands select a `TableScan` instead of the
+  existing unique `(repository, snapshot_revision, service_key)` index.
+  A 255-lookup mechanism control took 35.564 seconds; the actual nested-field
+  predicate control exceeded its separate 75-second diagnostic bound. Binding
+  the same snapshot revision and service key to scalars selects `IndexScan`;
+  the corresponding nested-input 255-lookup control completes in 1.867 seconds.
+  Those controls isolate lookup work, not a complete production transaction or
+  full qualification. Their local source-free records remain under
+  `~/phebs-rehearsals/med495-physical-b-20261023/`; the copied database and raw
+  server log are private and are not public evidence.
+
+  Bind both scalar values inside the existing per-update validation loop.
+  Keep the selected snapshot, exact two-row sentinel, existence/count and
+  digest/revision checks, all row CAS, preimage ownership, lease, selector,
+  candidate, schedule and progress fences, and the exact submitted mutation
+  vectors. The 512-record payload cap, catalog members, durable prefix/cursor
+  rules, RPC deadline, 4-GiB RSS limit and historical policy bytes are unchanged.
+  Share the fixed SQL fragment with a real native planner/result regression;
+  existing native late-fence and accounting controls remain required.
+
+  Cost: each changed-row validation adds two scalar bindings and replaces a
+  repeated retained-preimage table scan with one existing unique-index lookup.
+  The statement's repository-wide preimage ownership census remains unchanged;
+  this is not a claim that every statement read is constant-cost. Native query,
+  row and transaction counts, submitted writes, locks and lock duration bounds,
+  caches, startup/idle/retry scheduling, publication transitions, disk/child and
+  concurrency bounds do not grow. No new worker, helper, hash or persistent
+  state is introduced. The diagnostic copies and native test children are
+  separate bounded preparation, not operational admission. Exact-source review
+  and regression gates precede any fresh driver/tool admission and full run.
