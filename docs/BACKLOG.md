@@ -5102,7 +5102,8 @@ qualification and MED-496 composition remain open.
 
 The [bounded launcher record](../spike/t42h2r/launcher-engine-debit-bounded-linux-20261024.json)
 binds corrected source `dd5b64c8`: 184 connected pass nodes per normal/race
-mode, including 36 new controls with zero skips; one historical Darwin-only
+mode, including 36 scoped launcher controls with zero skips (23 new, nine
+adapted and four inherited nodes); one historical Darwin-only
 control skips per connected mode. Unchanged dispatch coverage carries 149
 pass nodes per mode. Vet, pinned lint and all four supported tagged compiles
 pass; exact source/cost re-review has zero findings. These counts overlap.
