@@ -1,0 +1,222 @@
+{
+  "schema": "phebs-linux-native-recovery-workspace-bounded-v1",
+  "base_commit": "940e15a8cb4004fffb09e6047f8b151ff1dd8017",
+  "implementation_commit": "e24f39b3cdd825cf2fc13024e07ace85cf5e5d68",
+  "go_source_sha256": {
+    "spike/t421/epoch_recovery_workspace.go": "ea39cbb9ab54e850e51bea47b25b897e490b24ba6e50c01533d7e48afb4e455e",
+    "spike/t421/epoch_recovery_workspace_linux_test.go": "008520ed626696465419ddbe6d12bf34c07426df7087dc214b2ea0dc387983de"
+  },
+  "precommit_gate_binding": {
+    "immutable_commit": "e24f39b3cdd825cf2fc13024e07ace85cf5e5d68",
+    "verified_go_hashes": {
+      "spike/t421/epoch_recovery_workspace.go": "ea39cbb9ab54e850e51bea47b25b897e490b24ba6e50c01533d7e48afb4e455e",
+      "spike/t421/epoch_recovery_workspace_linux_test.go": "008520ed626696465419ddbe6d12bf34c07426df7087dc214b2ea0dc387983de"
+    },
+    "prior_connected_record_sha256": "294ab0b16e0bd2aa009e942b37a86a864733c5721162adb1701520593cc4e515",
+    "executed_before_commit_with_same_current_go_bytes": true,
+    "both_go_hashes_match_immutable_commit": true
+  },
+  "connected_and_static_gates": [
+    {
+      "name": "connected-normal",
+      "argv": [
+        "go",
+        "test",
+        "-p=2",
+        "./spike/t421",
+        "-run",
+        "^(TestLinuxEpochRecovery|TestEpochRecoveryWorkspace|TestExecutionEpochCheckpoint|TestLinuxCheckpointRefusesBeforeTerminalMutation|TestEpochEngineLaunch|TestEpochEngineWireDebit|TestLinuxEpoch.*RecipeBindingContinuity|TestEpochMidphase)",
+        "-count=1",
+        "-timeout=8m",
+        "-json"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 6.70480489730835,
+      "log_sha256": "194296cb746a7d5d32ab07a5c1df9f343dc3b409748f130d206635beba14a2b7",
+      "pass_nodes": 232,
+      "skip_nodes": 1,
+      "skips": [
+        "TestExecutionEpochCheckpointInheritedTerminal"
+      ],
+      "failed_nodes": [],
+      "new_control_pass_nodes": 49,
+      "new_control_skip_nodes": 0
+    },
+    {
+      "name": "connected-race",
+      "argv": [
+        "go",
+        "test",
+        "-race",
+        "-p=2",
+        "./spike/t421",
+        "-run",
+        "^(TestLinuxEpochRecovery|TestEpochRecoveryWorkspace|TestExecutionEpochCheckpoint|TestLinuxCheckpointRefusesBeforeTerminalMutation|TestEpochEngineLaunch|TestEpochEngineWireDebit|TestLinuxEpoch.*RecipeBindingContinuity|TestEpochMidphase)",
+        "-count=1",
+        "-timeout=8m",
+        "-json"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 33.64554691314697,
+      "log_sha256": "e69b425b60d6f1b3d402a42f4c698405273bc54f5aeb89ef9db2a30c302225de",
+      "pass_nodes": 232,
+      "skip_nodes": 1,
+      "skips": [
+        "TestExecutionEpochCheckpointInheritedTerminal"
+      ],
+      "failed_nodes": [],
+      "new_control_pass_nodes": 49,
+      "new_control_skip_nodes": 0
+    },
+    {
+      "name": "vet",
+      "argv": [
+        "go",
+        "vet",
+        "-p=2",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 3.3570356369018555,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "lint",
+      "argv": [
+        "golangci-lint",
+        "run",
+        "--concurrency=2",
+        "--new-from-rev=940e15a8cb4004fffb09e6047f8b151ff1dd8017",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 28.327703714370728,
+      "log_sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+    }
+  ],
+  "new_controls_per_mode": 49,
+  "new_control_skips_per_mode": 0,
+  "new_test_functions": [
+    "TestLinuxEpochRecoveryWorkspaceSelection",
+    "TestLinuxEpochRecoveryPreparationRequiresNativeSample",
+    "TestLinuxEpochRecoveryWorkspaceHTTP",
+    "TestLinuxEpochRecoveryParentRequiresObserver",
+    "TestLinuxEpochRecoveryParentRefusalRetainsActualWalk",
+    "TestLinuxEpochRecoveryParentInputRefusals"
+  ],
+  "counts_overlap": true,
+  "connected_historical_skip_per_mode": [
+    "TestExecutionEpochCheckpointInheritedTerminal"
+  ],
+  "old_source_counterexample": {
+    "old_production_commit": "940e15a8cb4004fffb09e6047f8b151ff1dd8017",
+    "old_production_sha256": "c3407302b160bcfbfcce8b2030b830131ee49c70f2199ba43192421da794edc2",
+    "new_test_sha256": "008520ed626696465419ddbe6d12bf34c07426df7087dc214b2ea0dc387983de",
+    "argv": [
+      "go",
+      "test",
+      "-overlay",
+      "/home/ben/phebs-rehearsals/med496-native-recovery-workspace-20261024/old-source-overlay.json",
+      "-p=2",
+      "./spike/t421",
+      "-run",
+      "^(TestLinuxEpochRecoveryWorkspaceSelection|TestLinuxEpochRecoveryParentRequiresObserver)$",
+      "-count=1",
+      "-timeout=5m",
+      "-json"
+    ],
+    "actual_wait_exit_code": 1,
+    "failed_nodes": [
+      "TestLinuxEpochRecoveryWorkspaceSelection/native-stale",
+      "TestLinuxEpochRecoveryWorkspaceSelection/native-recovery",
+      "TestLinuxEpochRecoveryWorkspaceSelection",
+      "TestLinuxEpochRecoveryParentRequiresObserver"
+    ],
+    "expected_failure_established": true,
+    "elapsed_seconds": 3.432356119155884,
+    "log_sha256": "ba1fe3f3277d7ac4409b14ba05516ec89d182f50160dd2c205492f8b2ac51602",
+    "current_production_sha256": "ea39cbb9ab54e850e51bea47b25b897e490b24ba6e50c01533d7e48afb4e455e",
+    "current_production_unchanged": true,
+    "prefix_assessment": "The earlier slash selector established only parent missing-observer refusal failure; it did not execute the selection subtest. This corrected overlay controls both old source checks without resetting current files."
+  },
+  "supported_tagged_compilation": {
+    "compile_only": true,
+    "go_version": "go version go1.26.5 linux/amd64",
+    "CGO_ENABLED": "0",
+    "flags": [
+      "go",
+      "test",
+      "-c",
+      "-work",
+      "-p=2",
+      "-tags=phebs_t42_native",
+      "./spike/t421"
+    ],
+    "gates": [
+      {
+        "platform": "linux-amd64",
+        "actual_wait_exit_code": 0,
+        "elapsed_seconds": 27.908645629882812,
+        "log_sha256": "eb43193c4faf827cf636dc8a3fa2318ec2415b9199820e095d031bc838fcb7ea",
+        "output_bytes": 90716725,
+        "output_sha256": "268fb2c79e903030e43eca7f0815f4563b7640abb6152f9d92bf1e01fbbc60f3"
+      },
+      {
+        "platform": "linux-arm64",
+        "actual_wait_exit_code": 0,
+        "elapsed_seconds": 26.458454370498657,
+        "log_sha256": "cd1e036ea2a6cd394e7d9d3cbe4a55e90949745f87ee2fb0b5d17c412bfe788b",
+        "output_bytes": 84274478,
+        "output_sha256": "d8d55a3ce962182afecb7dcb8657037f1915cb17d1fc1d49991b385cec30269c"
+      },
+      {
+        "platform": "darwin-amd64",
+        "actual_wait_exit_code": 0,
+        "elapsed_seconds": 28.66109609603882,
+        "log_sha256": "751dfcd68d389c470856f1cd9220e9c31be7fd4af84660eb130ca8ade553ab35",
+        "output_bytes": 95225936,
+        "output_sha256": "e11b9226b67b5507e296566701b558201fb96b048b40880fcbfced4cc7d73a85"
+      },
+      {
+        "platform": "darwin-arm64",
+        "actual_wait_exit_code": 0,
+        "elapsed_seconds": 26.610437154769897,
+        "log_sha256": "2b276771ecce69696f9e95fd098f8986194e91c670aef66f98f9875aa2dc3297",
+        "output_bytes": 89959474,
+        "output_sha256": "fdc2dd4390b5fcaa3983bbe1fc4ea26a4385546f28ac205957fddab3cb00d2ad"
+      }
+    ]
+  },
+  "independent_source_and_cost_review": {
+    "source_commit": "e24f39b3cdd825cf2fc13024e07ace85cf5e5d68",
+    "reviewer": "/root/med505_scip",
+    "severity_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    },
+    "review_scope": "Source, connected normal/race gates and test-scope hashes, old-source controls and steady-state cost; no tests repeated. At this review only linux/amd64 tagged compile was complete; other three compile outputs require final evidence carry review.",
+    "full_qualification": false,
+    "successor_acceptance": false
+  },
+  "cost": "Two constant native-aware workspace-presence checks plus one nil-run/flow guard. Future separately selected native recovery performs existing four HTTP samples, two preparation-response samples and one joined-parent traversal under unchanged locks, limits and deadlines. No new request point, child, goroutine, lock, cache, schema or persistent state; current public native and product paths unchanged.",
+  "scope": {
+    "modeled": "Response and ownership facts",
+    "real_bounded_operations": [
+      "HTTP exchanges",
+      "tiny Linux filesystem parent traversal, retaining completed prefix on later refusal"
+    ],
+    "private_policy_changed": false,
+    "native_checkpoint_entry": "closed",
+    "full_native_engine_checkpoint_or_successor_proof": false,
+    "full_med495_qualification": false,
+    "full_med496_acceptance": false,
+    "merge_or_deployment": false
+  },
+  "preserved_prefixes": [
+    "The earlier slash selector established only parent missing-observer refusal failure; it did not execute the selection subtest. This corrected overlay controls both old source checks without resetting current files."
+  ],
+  "private_evidence_directory": "/home/ben/phebs-rehearsals/med496-native-recovery-workspace-20261024",
+  "documentation_gates": "Recorded separately after this evidence-only addition; Go bytes remain identical to implementation_commit."
+}
