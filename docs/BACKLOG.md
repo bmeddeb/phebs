@@ -5175,6 +5175,19 @@ acceptance. Preserve the failed fixture; fresh qualification remains unstarted
 until exact-source readiness and remaining admission prerequisites are reported.
 MED-496's native checkpoint entry and dependency remain open.
 
+The local correction passes 189 service-state nodes per normal/race mode
+(one explicit opt-in logical-phase cost skip), 348 SDK nodes per mode with no
+skips, all four supported tagged-native compiles and static/docs gates. The
+final native existing/missing/existing loop guard passes both modes. Reverting
+the lookup through a private overlay makes the native planner regression fail
+on the repository-only index prefix without physical limit2. Independent
+source/cost review of `34941371` reports every severity count zero. The
+[source-bound record](../spike/t42h2r/service-state-preimage-index-bounded-linux-20261023.json)
+keeps initial diagnostic/fixture errors separate from passing controls.
+Exact-source admission and full qualification remain unstarted; no old-head
+execution validates this fix, and no host-security change or integration is
+selected here.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared
