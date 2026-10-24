@@ -5194,7 +5194,7 @@ qualification, actual retained-source PC/SA and checkpoint/successor composition
 remain open.
 
 **T42.H2s.j · Source-issued Linux checkpoint/successor flow (MED-496
-implementation, 2026-10-24; in progress).** Compose the real fourth-epoch
+implementation checkpoint, 2026-10-24; actual native acceptance pending).** Compose the real fourth-epoch
 context, ordered listener release and serialized checkpoint/stale/restart/recover
 operations with the existing retained-source PC/DA/SA and genuine terminal
 ownership machinery. Use an unexported, source-selected qualification constructor
@@ -5218,6 +5218,16 @@ safeguards, all numeric limits and deadlines, and unknown-state retention. Model
 controls cannot satisfy the actual engine/retained-source PC/SA/successor gate.
 MED-495 full qualification, ordinary native checkpoint entry and full MED-496
 acceptance remain open; this ticket adds no security or execution authorization.
+
+The [source-bound bounded record](../spike/t42h2r/native-checkpoint-flow-bounded-linux-20261024.json)
+binds implementation `c90f6814` to all fourteen Go source hashes. All fifteen
+final gates pass: connected normal/race each have 711 passing test nodes and one
+inherited Darwin-only skip; protocol dependency normal/race each have 162 passing
+nodes and no skips. Counts include gated fixture-entry nodes and are not
+independent native proofs. Default/dual-tag vet, pinned differential lint,
+docs/glossary/whitespace and all four supported dual-tag compiles pass; binaries
+were not executed. Source/cost, native oracle and raw-evidence reviews are clear.
+The actual opt-in composition, full MED-495/MED-496 and readiness remain open.
 
 **2026-10-22 — Ben-directed implementation checkpoint integration.** Ben
 explicitly requests maria cleanup and PR merges after the v10 native failure

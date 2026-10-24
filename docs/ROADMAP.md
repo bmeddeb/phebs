@@ -367,13 +367,16 @@ compile gates pass with source/cost review clear; a closed checkpoint descriptor
 is preparation only. Epoch four and native checkpoint entry remain unavailable.
 Actual successor composition and MED-495/MED-496 acceptance remain open.
 
-T42.H2s.j is implementing the actual source-selected Linux checkpoint and
+T42.H2s.j implements the source-selected Linux checkpoint and
 fourth-epoch path through an unexported qualification constructor. Ordinary v11
 and historical prepared v12 remain exact. Real terminal/cutover ownership,
 ordered listener release, repeatable run-bound checks and completed endpoint
 points must compose with actual successful samples. Bounded controls cannot
 replace the opt-in native composition run, which requires a newly admitted exact
-image/profile. Full MED-495/MED-496 acceptance stays open.
+image/profile. Its source-bound bounded record passes normal/race, real protocol,
+static/docs and four supported dual-tag compile gates with independent review
+clear; the full composition was not executed. Full MED-495/MED-496 acceptance
+stays open.
 
 Ben's 2026-10-22 instruction authorizes integrating PR156 and PR164–167 as
 reviewed implementation checkpoints while cleaning maria after verified archival

@@ -581,7 +581,7 @@ checkpoint descriptor selects no workload and grants no resource, measurement
 or successor authority. Epoch-four entry remains unavailable; actual retained-
 source PC/SA, custody, accounting and full native acceptance are still required.
 
-T42.H2s.j's in-progress Linux checkpoint qualification path is separate from
+T42.H2s.j's Linux checkpoint qualification path is separate from
 the ordinary v11 flow. Its source-selected policy must retain exact predecessor
 Wait, custody, endpoint retirement, terminal PC/DA/SA and retained-source cutover
 before issuing a fourth-run context or releasing its ordered listener. A clean
