@@ -9,16 +9,16 @@ import (
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 )
 
-func (*linuxEpochCoordinator) engineMeasurements(epoch uint64) uint32 {
+func (*linuxEpochCoordinator) engineMeasurements(epoch uint64) (string, uint32) {
 	switch epoch {
 	case 1:
-		return 6
+		return "", 6
 	case 2:
-		return 1
+		return "", 1
 	case 3:
-		return 2
+		return "", 2
 	default:
-		return 0
+		return "", 0
 	}
 }
 
@@ -28,12 +28,13 @@ func (adapter *linuxEpochCoordinator) serveEngineMeasurement(ctx context.Context
 	go func() {
 		defer close(run.engineMeasurementFinished)
 		defer func() { _ = conn.Close() }()
-		if server == nil || server.trace == nil || adapter.engineMeasurements(run.epoch.Epoch) != maximum || binding.ProducerID != uint32(run.epoch.Epoch+1) {
+		recipe, selectedMaximum := adapter.engineMeasurements(run.epoch.Epoch)
+		if server == nil || server.trace == nil || selectedMaximum != maximum || binding.Recipe != recipe || binding.ProducerID != uint32(run.epoch.Epoch+1) {
 			done <- ErrExecutionEpochOne
 			return
 		}
 		err := dispatchadmission.ServeEngineMeasurement(ctx, conn, binding, maximum, func(operation context.Context, phase uint32, measure func(context.Context, dispatchadmission.EngineMeasurementIdentity) error) error {
-			actual, err := adapter.core.controller.EngineMeasurementPhase(binding.ProducerID)
+			actual, err := adapter.core.controller.EngineMeasurementPhaseForRecipe(binding.ProducerID, binding.Recipe)
 			if err != nil || actual != phase {
 				return ErrExecutionEpochOne
 			}

@@ -713,11 +713,20 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	// This Linux-only optional socket follows a real FD6 workspace; historical
 	// launches retain their exact descriptor layout and omitted bootstrap bytes.
 	var engineMaximum uint32
+	var engineBinding dispatchadmission.EngineMeasurementBinding
 	var engineConn *net.UnixConn
 	var engineChild *os.File
 	if flow.native != nil && workspaceBinding != nil {
-		engineMaximum = flow.native.engineMeasurements(number)
+		recipe, maximum := flow.native.engineMeasurements(number)
+		engineMaximum = maximum
+		if maximum == 0 && recipe != "" {
+			return nil, ErrExecutionEpochOne
+		}
 		if engineMaximum != 0 {
+			engineBinding, err = epochEngineLaunchBinding(recipe, maximum, run, view.Producer, sha256.Sum256(raw), tools)
+			if err != nil {
+				return nil, ErrExecutionEpochOne
+			}
 			var engineParent *os.File
 			engineParent, engineChild, err = dispatchadmission.NewPipe()
 			if err != nil {
@@ -737,11 +746,9 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 					_ = engineConn.Close()
 				}
 			}()
-			wire, wireErr := dispatchadmission.EngineMeasurementWireBytes(engineMaximum)
-			if wireErr != nil || uint64(output.remaining) < wire || len(command.ExtraFiles) != 4 {
+			if len(command.ExtraFiles) != 4 || reserveEpochEngineWire(output, engineBinding, engineMaximum) != nil {
 				return nil, ErrExecutionEpochOne
 			}
-			output.remaining -= int64(wire) // Keep EM traffic inside the existing combined stream ceiling.
 			command.ExtraFiles = append(command.ExtraFiles, engineChild)
 			run.engineMeasurementFinished = make(chan struct{})
 		}
@@ -847,7 +854,7 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 		engineCtx, engineCancel := context.WithCancel(runCtx)
 		run.engineMeasurementCancel = engineCancel
 		run.engineMeasurementDone = flow.native.serveEngineMeasurement(engineCtx, run, engineConn,
-			dispatchadmission.EngineMeasurementBinding{ProducerID: producer, ProducerBinding: view.Producer.Binding, InputSHA256: sha256.Sum256(raw)}, engineMaximum)
+			engineBinding, engineMaximum)
 	}
 	controlConfig := dispatchadmission.PhaseControlConfig{OwnerControl: true, Phases: []uint32{2, 3, 4}, InitialPhase: 2, MaximumPhases: 3, MaximumWireBytes: bounds.controlPairs * 2 * dispatchadmission.FrameBytes, Timeout: 30 * time.Second}
 	controlConfig.WarmStartWorkspace = run.warmWorkspace != nil
@@ -875,7 +882,7 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	}
 	bootstrap := dispatchadmission.ProductionBootstrap{Program: dispatchadmission.ProgramPhebs, SemanticMode: dispatchadmission.ProductionSemanticV3,
 		InputSHA256: sha256.Sum256(raw), Producer: view.Producer, Phase: phase, Limits: view.Limits, Control: controlConfig, Tools: tools, Store: &storeConfig, Workspace: workspaceBinding}
-	bootstrap.EngineMeasurements = engineMaximum
+	bootstrap.EngineMeasurements, bootstrap.EngineMeasurementRecipe = engineMaximum, engineBinding.Recipe
 	run.attemptInput = bootstrap.InputSHA256
 	var served <-chan error
 	if retErr == nil && dispatchadmission.SendProductionBootstrap(launchCtx, files[0], files[2], bootstrap) != nil {
@@ -901,7 +908,7 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 						return ErrExecutionEpochOne
 					}
 					_, currentTools, _, err := flow.checkEpochTools(checkCtx, number)
-					if err == nil && flow.native != nil && !sameExecutionToolBindings(currentTools, tools) {
+					if err == nil && flow.native != nil && !sameExecutionToolBindings(currentTools, tools, engineBinding.Recipe) {
 						err = ErrExecutionEpochOne
 					}
 					if err != nil || checkCtx.Err() != nil {
@@ -925,12 +932,13 @@ func (flow *ExecutionEpochOne) launchEpoch(runCtx, launchCtx context.Context, ca
 	return run, retErr
 }
 
-func sameExecutionToolBindings(current, expected []dispatchadmission.ProductionToolBinding) bool {
-	return len(current) == 3 && len(expected) == 3 &&
-		current[0].RuntimeRecipe == dispatchadmission.ProductionLinuxForegroundGitV2 &&
-		expected[0].RuntimeRecipe == dispatchadmission.ProductionLinuxForegroundGitV2 &&
-		current[2].RuntimeRecipe == dispatchadmission.ProductionLinuxForegroundGitV2 &&
-		expected[2].RuntimeRecipe == dispatchadmission.ProductionLinuxForegroundGitV2 &&
+func sameExecutionToolBindings(current, expected []dispatchadmission.ProductionToolBinding, engineRecipe string) bool {
+	runtimeRecipe := epochEngineRuntimeRecipe(engineRecipe)
+	return runtimeRecipe != "" && len(current) == 3 && len(expected) == 3 &&
+		current[0].RuntimeRecipe == runtimeRecipe &&
+		expected[0].RuntimeRecipe == runtimeRecipe &&
+		current[2].RuntimeRecipe == runtimeRecipe &&
+		expected[2].RuntimeRecipe == runtimeRecipe &&
 		slices.EqualFunc(current, expected, func(a, b dispatchadmission.ProductionToolBinding) bool {
 			return a.Role == b.Role && a.Path == b.Path && a.RuntimeRecipe == b.RuntimeRecipe && slices.Equal(a.Environment, b.Environment)
 		})

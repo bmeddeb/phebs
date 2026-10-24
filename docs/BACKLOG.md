@@ -5086,6 +5086,20 @@ glossary and whitespace pass. Independent source/cost re-review reports all
 severity counts zero. The source-bound record is
 `spike/t42h2r/postkill-events-bounded-linux-20261022.json`.
 
+**T42.H2s.g · Shared launcher engine binding and wire debit (MED-496
+prerequisite, 2026-10-23).** Compute one authenticated recipe/producer/input
+binding for the existing engine socket, output debit and bootstrap. Require
+recipe-aware paired-runtime continuity, exact maximums, existing checkpoint/
+recovery prerequisites and no backup/archive carry. Preserve EM01 selection,
+historical policies and the closed native checkpoint entry. AC: actual validated
+bootstrap challenge/ACK and matching endpoint header/EOF; legacy and prepared
+EM02 wire reservations within the unchanged combined ceiling; wrong binding,
+recipe, maximum, runtime, successor shape and signed-capacity refusals; focused
+normal/race, connected regressions, supported compilation, static/docs gates,
+cost pass and independent review. These are bounded launcher/wire controls,
+not native HOLD, selected policy or actual successor acceptance. MED-495 full
+qualification and MED-496 composition remain open.
+
 **2026-10-22 — Ben-directed implementation checkpoint integration.** Ben
 explicitly requests maria cleanup and PR merges after the v10 native failure
 was disclosed. PR156 and T42.H2s.a–d / PR164–167 may integrate as reviewed
