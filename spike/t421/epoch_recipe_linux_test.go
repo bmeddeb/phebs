@@ -18,9 +18,14 @@ import (
 // cannot issue native resource/image authority or start an operational child.
 func linuxEpochRecipeTestCoordinator(t *testing.T) *linuxEpochCoordinator {
 	t.Helper()
+	return linuxEpochRecipeTestCoordinatorForRecipe(t, linuxEpochLegacyV11)
+}
+
+func linuxEpochRecipeTestCoordinatorForRecipe(t *testing.T, recipe linuxEpochRecipe) *linuxEpochCoordinator {
+	t.Helper()
 	operation, cancel := context.WithCancel(context.Background())
 	settlement, settleCancel := context.WithCancel(context.Background())
-	flow := &LinuxExecutionEpochFlow{lifetime: operation, cancel: cancel, settlement: settlement, settleCancel: settleCancel}
+	flow := &LinuxExecutionEpochFlow{recipe: recipe, lifetime: operation, cancel: cancel, settlement: settlement, settleCancel: settleCancel}
 	held := linuxEpochWorkspaceFixture(t)
 	held.flow = flow
 	core, err := newLinuxEpochCoordinator(flow, held, accountingTestPlan(t))

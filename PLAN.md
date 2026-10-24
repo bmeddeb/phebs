@@ -17691,3 +17691,71 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   exact. Product query, sync, startup/restart, retry/no-op and publication work
   are unchanged. Bounded component controls do not establish native engine,
   checkpoint, successor, full qualification, readiness or scale acceptance.
+
+
+- **2026-10-24 — T42.H2s.j source-issued Linux checkpoint/successor flow
+  (MED-496, implementation in progress).** Compose the existing real checkpoint
+  machinery through an unexported source-selected qualification constructor.
+  Ordinary Linux preparation remains v11; preserve v12's historical prepared
+  bytes and give the selected checkpoint policy its own prospective version.
+  This introduces no user configuration selector, global epoch-range exception,
+  pressure/backup/archive path or Surreal parent-death safeguard exception.
+
+  Issue a run-specific completion capability only after genuine predecessor
+  Wait, successful terminal PC/DA/SA closed-prefix checks, both same-phase
+  DA/SA successor cutovers and the retained-parent sample. Bind exact predecessor, successor,
+  coordinator, selected recipe and completed evidence. Separate its one-shot
+  launch transition from repeatable immutable Start/tool/dispatch validation.
+  Retain that proof when the shared launch path transfers the borrowed source
+  and clears the prior retained pointer. Later validation uses the successor's
+  independent live lifetime rather than the already completed checkpoint
+  operation context. Preserve the existing operation-done publication before
+  waiting for finish, actual post-Start run ownership on failure, and sticky
+  refusal/unknown-state retention.
+
+  Shared launch already holds the flow and shared author/epoch view locks when
+  native tool/config callbacks run; admission callbacks likewise hold the
+  shared view locks. New proof checks must not reacquire them. Existing Linux
+  held-owner locks remain separate and retain their author-before-epochs order.
+  Release listener four only for the exact issued successor transition.
+
+  Endpoint EOF accepts an early sequence and maximum point counts are upper
+  bounds. Retain bounded source-owned completed phase/point protocol facts for
+  the seven checkpoint and one recovery points, joined to the existing actual
+  successful measurement/sample result predicates. Protocol completion alone
+  is not a successful sample. Add no sampler, measurement point or public wire
+  field. Keep the native composition test opt-in and unexecuted until its new
+  exact image/profile and all source/tool/input/resource admission gates pass.
+  Bounded controls and a prepared constructor establish no actual native,
+  retained-source PC/SA, successor, full MED-495/MED-496, readiness or scale pass.
+
+  The selected v13 policy performs the two inherited v12 and five additional
+  bounded string replacements before the existing JSON/SHA calculation. Each
+  native coordinator, including a failed constructor, computes one closed recipe
+  identity/hash. Each Linux server embeds 48 bytes of fixed completion backing
+  on supported 64-bit targets: 192 bytes across four selected servers or 144
+  across three legacy servers, excluding containing allocation overhead. The
+  eight occupied selected protocol points do not bound that backing to eight
+  slots. One successor capability retains exact run/evidence pointers, copied
+  configuration headers, its live context, separate actual and planned deadlines
+  and two atomic one-shot flags. It copies no configuration string bytes.
+  The actual context may inherit an earlier caller deadline; require it no later
+  than the planned deadline and bind both independently thereafter.
+
+  Ordinary v11 also performs optional native-adapter checks. Selected launch,
+  Start, tool/config and existing dispatch checks compare fixed identities,
+  context/deadlines and configuration; launch/release use separate one-shot
+  atomics. A selected terminal finish waits outside the run mutex for completed
+  endpoint publication, within the minimum original operation, phase and stop
+  deadlines. This adds one child context and at most one timer, without a new
+  goroutine, sampler or measurement. The shared finish remains the sole receiver
+  of the endpoint result. Failed reservations are not reset; partial listener
+  release or cutovers are not rolled back, and post-Start ownership remains
+  retained through actual cleanup/Wait. The serial fourth lifetime retains its
+  existing actor, maps, ring and output within the unchanged whole-process RSS
+  accounting; this gives no memory-fit promise. Existing ordered listeners,
+  retained-parent walk, sampling, children and PC/DA/SA transitions are reused.
+  No product query, sync, ordinary publication, corpus read/hash, cache or
+  persistent schema work is added. All numeric limits, deadlines, RSS/disk,
+  custody and accounting predicates remain exact. Bounded gates and independent
+  review remain in progress; actual native composition is unexecuted.

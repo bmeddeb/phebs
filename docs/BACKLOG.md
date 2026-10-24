@@ -5193,6 +5193,32 @@ immutable evidence/documentation carry is recorded separately. MED-495 full
 qualification, actual retained-source PC/SA and checkpoint/successor composition
 remain open.
 
+**T42.H2s.j · Source-issued Linux checkpoint/successor flow (MED-496
+implementation, 2026-10-24; in progress).** Compose the real fourth-epoch
+context, ordered listener release and serialized checkpoint/stale/restart/recover
+operations with the existing retained-source PC/DA/SA and genuine terminal
+ownership machinery. Use an unexported, source-selected qualification constructor
+and a separately versioned selected policy; preserve ordinary v11 selection and
+historical prepared v12 bytes. Bind a run-specific completion capability to the
+exact predecessor/successor and actual closed/cutover evidence, retaining it
+across the borrowed-owner transfer. Do not widen generic epoch guards or
+reacquire the flow mutex from a launch-time tool/config check.
+
+AC: source-issued context/listener and operation ordering; missing, cloned,
+foreign, stale, partial, duplicate, failed and canceled transition refusals;
+actual endpoint EOF and completed seven/one phase/point protocol facts joined
+to successful source-bound measurement/sample results, root Wait/custody,
+survivor accounting, terminal PC/DA/SA and retained-source cutover predicates;
+bounded normal/race and connected
+regressions, supported tagged compilation, static/docs gates, complete cost pass
+and independent review. Prepare the actual Linux checkpoint/successor composition
+test, keeping execution opt-in and blocked until its exact image/profile, source,
+tools, inputs and resource admission pass. Preserve Surreal parent-death
+safeguards, all numeric limits and deadlines, and unknown-state retention. Modeled
+controls cannot satisfy the actual engine/retained-source PC/SA/successor gate.
+MED-495 full qualification, ordinary native checkpoint entry and full MED-496
+acceptance remain open; this ticket adds no security or execution authorization.
+
 **2026-10-22 — Ben-directed implementation checkpoint integration.** Ben
 explicitly requests maria cleanup and PR merges after the v10 native failure
 was disclosed. PR156 and T42.H2s.a–d / PR164–167 may integrate as reviewed

@@ -20,6 +20,10 @@ import (
 // Required full composition: no reduced corpus, fake issuer, skipped tool,
 // substituted server, old memory ceiling or observation-only admission.
 func TestLinuxEpochRequiredNativeLiveBorrow(t *testing.T) {
+	runLinuxEpochRequiredNativeLiveBorrow(t, false)
+}
+
+func runLinuxEpochRequiredNativeLiveBorrow(t *testing.T, checkpoint bool) {
 	if os.Getuid() == 0 || os.Geteuid() == 0 || runtime.GOARCH != "amd64" || runtime.Version() != "go1.26.5" {
 		t.Fatal("required unprivileged Linux amd64 Go1.26.5; no skip")
 	}
@@ -256,7 +260,12 @@ func TestLinuxEpochRequiredNativeLiveBorrow(t *testing.T) {
 			t.Fatal("constructor actual join/session")
 		}
 	}
-	flow, err = PrepareLinuxExecutionEpochFlow(t.Context(), LinuxExecutionEpochRequest{Epochs: epochs, Phebs: tools[1], Zoekt: tools[2], Surreal: tools[3]})
+	request := LinuxExecutionEpochRequest{Epochs: epochs, Phebs: tools[1], Zoekt: tools[2], Surreal: tools[3]}
+	if checkpoint {
+		flow, err = prepareLinuxCheckpointExecutionEpochFlow(t.Context(), request)
+	} else {
+		flow, err = PrepareLinuxExecutionEpochFlow(t.Context(), request)
+	}
 	if err != nil {
 		t.Fatal("source-owned Linux resource/held-flow admission refused", base)
 	}
@@ -302,7 +311,12 @@ func TestLinuxEpochRequiredNativeLiveBorrow(t *testing.T) {
 		logLinuxEpochNativeFailure(t, flow, base)
 		t.Fatal("actual canonical logical catalog", base)
 	}
-	returned, err := logical.StartReturnA(t.Context())
+	var returned *LinuxExecutionEpochRun
+	if checkpoint {
+		returned, err = logical.StartReturnACheckpoint(t.Context())
+	} else {
+		returned, err = logical.StartReturnA(t.Context())
+	}
 	if err != nil {
 		logLinuxEpochNativeFailure(t, flow, base)
 		t.Fatal("joined return author/server handoff", base)
@@ -318,7 +332,40 @@ func TestLinuxEpochRequiredNativeLiveBorrow(t *testing.T) {
 		logLinuxEpochNativeFailure(t, flow, base)
 		t.Fatal("actual return authority", base)
 	}
-	final, err := returned.Stop(t.Context())
+	last := returned
+	if checkpoint {
+		if err := returned.StaleLease(t.Context()); err != nil {
+			logLinuxEpochNativeFailure(t, flow, base)
+			t.Fatal("actual held stale hit/recovery", base)
+		}
+		recovered, err := returned.CheckpointRestart(t.Context())
+		if err != nil || recovered == nil {
+			logLinuxEpochNativeFailure(t, flow, base)
+			t.Fatal("actual terminal cutover and epoch-four Start", base)
+		}
+		prior, err := returned.Wait(t.Context())
+		if err != nil || epochCheckpointClosedPrefixError(t.Context(), prior, true, 8) != nil {
+			t.Fatal("actual terminal closed prefix", base)
+		}
+		adapter := flow.core.native.(*linuxEpochCoordinator)
+		proof := adapter.checkpoint
+		flow.core.mu.Lock()
+		retained := flow.core.retained
+		flow.core.mu.Unlock()
+		server := flow.held.servers[returned.run]
+		if proof == nil || proof.prior != returned.run || proof.next != recovered.run || !proof.reserved.Load() || !proof.released.Load() || retained != nil || server == nil || server.trace == nil || !server.measurements.completed(returned.run, 3) || server.trace.unknown || !server.trace.hardDeathIssued || !server.trace.waitReturned || server.trace.cleanupErr != nil || !server.trace.observerJoined || !executionProcessSIGKILL(server.trace.death.WaitErr, server.trace.death.ProcessState, returned.run.command.Process.Pid) {
+			t.Fatal("actual source-owned checkpoint capability and native hard-death", base)
+		}
+		if prior.MarkerWorkspace.Unavailable || prior.MarkerWorkspace.LimitExceeded || !prior.MarkerWorkspace.Ready || prior.MarkerWorkspace.Sample.Completed != 1 || prior.MidphaseSamples.Unavailable || prior.MidphaseSamples.LimitExceeded || prior.MidphaseSamples.Points[3].Attempts != 1 || prior.MidphaseSamples.Points[3].Completed != 1 {
+			t.Fatal("actual phase-six successful marker/return samples", base)
+		}
+		if recovered.Health(t.Context()) != nil || recovered.RecoverCheckpoint(t.Context()) != nil {
+			logLinuxEpochNativeFailure(t, flow, base)
+			t.Fatal("actual recovered R before exact authority convergence", base)
+		}
+		last = recovered
+	}
+	final, err := last.Stop(t.Context())
 	if err != nil || !final.RootJoined || !final.SessionEmpty {
 		logLinuxEpochNativeFailure(t, flow, base)
 		t.Fatal("terminal actual server/receiver/session join", base)
@@ -337,10 +384,43 @@ func TestLinuxEpochRequiredNativeLiveBorrow(t *testing.T) {
 		}
 		t.Logf("revision=%s producer=%d actual_git=%d joined=%t empty=%t commit=%s", result.Revision, result.ProducerID, authorCustodyAttempts(i), result.RootJoined, result.SessionEmpty, result.Response.Result.Commit)
 	}
-	if len(final.Authorities) != 5 {
-		t.Fatal("full cold/warm/physical/logical/return authority prefix", len(final.Authorities))
+	phaseNames := []string{"cold", "warm_noop", "physical_delta_b", "logical_delta_b", "return_a"}
+	if checkpoint {
+		phaseNames = append(phaseNames, "stale_lease", "process_restart")
+		adapter := flow.core.native.(*linuxEpochCoordinator)
+		proof := adapter.checkpoint
+		old, current := flow.held.servers[returned.run], flow.held.servers[last.run]
+		if old == nil || old.trace == nil || current == nil || current.trace == nil || proof == nil || proof.prior != returned.run || proof.next != last.run {
+			t.Fatal("actual native fourth context is unavailable", base)
+		}
+		root, previous := current.trace, old.trace
+		config := epochs.epochs[3]
+		if root == previous || root.original.pid == previous.original.pid && root.original.birth == previous.original.birth || root.serverRun != last.run || root.command != last.run.command || root.owner != resources.trace || root.image != flow.held.images[1] || root.parent != flow.core.parent || root.phase != 8 || root.tid <= 0 || root.original.birth == "" || root.original.pid != root.command.Process.Pid || root.original.pid != root.original.tgid || root.original.sid != root.original.pid || root.original.parent != flow.held.controllerPID || root.original.tracer != root.tid || root.original.namespace == nil || !os.SameFile(root.original.namespace, flow.held.pidNamespace) {
+			t.Fatal("actual successor PID/birth/creating-actor/image/parent/namespace binding differs", base)
+		}
+		if !root.startedNative || !root.waitReturned || !root.observerJoined || root.unknown || root.cleanupErr != nil || root.completionErr != nil || !root.death.RootJoined || !root.death.SessionEmpty || root.death.ProcessState == nil || root.death.ProcessState != last.run.command.ProcessState || root.death.ProcessState.Pid() != root.original.pid || root.death.WaitErr != nil {
+			t.Fatal("actual fourth native Wait and observer/session closure differs", base)
+		}
+		if proof.config != config || last.run.epoch.ConfigPath != config.ConfigPath || last.run.epoch.ConfigSHA256 != config.ConfigSHA256 || last.run.epoch.Listen != config.Listen || config.Epoch != 4 || len(root.command.Args) != 4 || root.command.Args[1] != "serve" || root.command.Args[2] != "-config" || root.command.Args[3] != config.ConfigPath {
+			t.Fatal("actual original config-four/listener/command identity differs", base)
+		}
+		t.Logf("private checkpoint_success prior_pid=%d prior_birth=%s successor_pid=%d successor_birth=%s successor_actor_tid=%d successor_parent=%d config_sha256=%s listener=%s engine_prior_phases=%v engine_next_phases=%v actual_prior_hard_death_wait=true actual_next_wait=true", previous.original.pid, previous.original.birth, root.original.pid, root.original.birth, root.tid, root.original.parent, config.ConfigSHA256, config.Listen, old.measurements.phases[:old.measurements.count], current.measurements.phases[:current.measurements.count])
+		if epochCheckpointClosedPrefixError(t.Context(), final, false, 8) != nil || !flow.held.servers[last.run].measurements.completed(last.run, 4) || final.RecoverySamples.Unavailable || final.RecoverySamples.LimitExceeded {
+			t.Fatal("actual fourth closed prefix and completed recovery measurement", base)
+		}
+		for _, point := range final.RecoverySamples.Points {
+			if point.Attempts != 1 || point.Completed != 1 {
+				t.Fatal("actual seven recovery workspace points", base)
+			}
+		}
+		if flow.core.epochs.released != 4 || epochs.released != 4 || epochs.listeners[3] != nil || epochs.listeners[4] == nil {
+			t.Fatal("actual fourth original listener release, fifth remains reserved", base)
+		}
 	}
-	for i, name := range []string{"cold", "warm_noop", "physical_delta_b", "logical_delta_b", "return_a"} {
+	if len(final.Authorities) != len(phaseNames) {
+		t.Fatal("full actual authority prefix", len(final.Authorities))
+	}
+	for i, name := range phaseNames {
 		if final.Authorities[i].Phase != name {
 			t.Fatal("ordered actual authority prefix", i)
 		}
@@ -357,7 +437,11 @@ func TestLinuxEpochRequiredNativeLiveBorrow(t *testing.T) {
 		t.Fatal("resource observation/keeper settlement")
 	}
 	t.Logf("resource_checks=%d keeper_closed=%t operation_refused=%t keeper_close_failed=%t", resourceChecks, resourceClosed, resourceFailed, resourceCloseFailed)
-	for i, pid := range flow.core.serverSessions[:3] {
+	servers := 3
+	if checkpoint {
+		servers = 4
+	}
+	for i, pid := range flow.core.serverSessions[:servers] {
 		members, e := t4013.PrivateProcessSessionMembers(pid)
 		if pid <= 0 || e != nil || members != 0 {
 			t.Fatal("actual server SID proof", i, pid, e)

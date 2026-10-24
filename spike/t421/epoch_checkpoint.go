@@ -130,10 +130,11 @@ func (run *ExecutionEpochOneRun) checkpointRestart(ctx context.Context, pressure
 		return nil, checkpointRestartError("input", nil)
 	}
 	flow := run.flow
-	// The Linux tracer still requires live original parents. Retaining its
-	// genuine Wait result does not admit root-first death or a successor.
 	if flow.native != nil {
-		return nil, checkpointRestartError("native root-first ownership unavailable", nil)
+		native, ok := flow.native.(executionEpochCheckpointNativeAdapter)
+		if !ok || native.checkpointEntry(ctx, run, pressure, backup) != nil {
+			return nil, checkpointRestartError("native root-first ownership unavailable", nil)
+		}
 	}
 	flow.mu.Lock()
 	run.mu.Lock()
@@ -301,6 +302,11 @@ func (run *ExecutionEpochOneRun) checkpointRestart(ctx context.Context, pressure
 		}
 		return nil, checkpointRestartError("prior wait", err)
 	}
+	if flow.native != nil {
+		if err := epochCheckpointClosedPrefixError(operation, stopped, true, 8); err != nil {
+			return nil, checkpointRestartError("prior terminal prefix", err)
+		}
+	}
 	if _, err := flow.recordOptionalNamedExecutionEvent("process_restart", "injection:process_restart:process-stop"); err != nil {
 		return nil, checkpointRestartError("process-stop event", err)
 	}
@@ -340,6 +346,12 @@ func (run *ExecutionEpochOneRun) checkpointRestart(ctx context.Context, pressure
 	bounds := epochOneLimits{health: run.healthLimit, outputBytes: 64 << 20, controlPairs: 5}
 	if pressure {
 		bounds = pressureBounds
+	}
+	if native, ok := flow.native.(executionEpochCheckpointNativeAdapter); ok {
+		if err := native.checkpointSuccessor(operation, lifetime, run, next); err != nil {
+			next.stopPhaseDeadline()
+			return nil, checkpointRestartError("native successor issuance", err)
+		}
 	}
 	result, err := flow.launchEpoch(lifetime, operation, cancel, next, bounds, 4)
 	if result == nil {
@@ -491,6 +503,9 @@ func (reader *executionEpochInspection) validateCheckpoint(value extractionpubli
 // F must equal all prior authority fields and detailed partition results.
 func (run *ExecutionEpochOneRun) RecoverCheckpoint(ctx context.Context) (retErr error) {
 	if run == nil || ctx == nil || ctx.Err() != nil || run.flow == nil || run.epoch.Epoch != 4 || run.checkpointRecovery == nil || run.checkpointPrior == nil {
+		return ErrExecutionEpochOne
+	}
+	if native, ok := run.flow.native.(executionEpochCheckpointNativeAdapter); ok && native.checkpointRun(ctx, run, 4) != nil {
 		return ErrExecutionEpochOne
 	}
 	run.mu.Lock()

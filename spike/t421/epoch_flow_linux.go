@@ -27,10 +27,12 @@ type LinuxExecutionEpochRequest struct {
 
 // LinuxExecutionEpochFlow retains one whole loan until all execution and cleanup
 // join. A deadline returns unavailable state; Close must still join this owner.
-// Never copy this owner. This scope supplies the implemented three-epoch path, not ceremony admission.
+// Never copy this owner. Ordinary preparation supplies the three-epoch path;
+// the private qualifier also composes checkpoint recovery. Neither is ceremony admission.
 type LinuxExecutionEpochFlow struct {
 	mu                sync.Mutex
 	request           LinuxExecutionEpochRequest
+	recipe            linuxEpochRecipe
 	lifetime          context.Context
 	cancel            context.CancelFunc
 	settlement        context.Context
@@ -75,10 +77,23 @@ const (
 	linuxEpochReturn
 	linuxEpochStop
 	linuxEpochWait
+	linuxEpochCheckpointReturnStart
+	linuxEpochStale
+	linuxEpochCheckpointRestart
+	linuxEpochCheckpointRecover
 )
 
 func PrepareLinuxExecutionEpochFlow(ctx context.Context, request LinuxExecutionEpochRequest) (*LinuxExecutionEpochFlow, error) {
-	if ctx == nil || ctx.Err() != nil || request.Epochs == nil || request.Epochs.author == nil || request.Phebs == nil || request.Zoekt == nil || request.Surreal == nil {
+	return prepareLinuxExecutionEpochFlow(ctx, request, linuxEpochLegacyV11)
+}
+
+// Source-only qualification entry; ordinary preparation never selects this path.
+func prepareLinuxCheckpointExecutionEpochFlow(ctx context.Context, request LinuxExecutionEpochRequest) (*LinuxExecutionEpochFlow, error) {
+	return prepareLinuxExecutionEpochFlow(ctx, request, linuxEpochCheckpointV13)
+}
+
+func prepareLinuxExecutionEpochFlow(ctx context.Context, request LinuxExecutionEpochRequest, recipe linuxEpochRecipe) (*LinuxExecutionEpochFlow, error) {
+	if recipe != linuxEpochLegacyV11 && recipe != linuxEpochCheckpointV13 || ctx == nil || ctx.Err() != nil || request.Epochs == nil || request.Epochs.author == nil || request.Phebs == nil || request.Zoekt == nil || request.Surreal == nil {
 		return nil, ErrExecutionEpochOne
 	}
 	author, epochs := request.Epochs.author, request.Epochs
@@ -92,7 +107,7 @@ func PrepareLinuxExecutionEpochFlow(ctx context.Context, request LinuxExecutionE
 	}
 	lifetime, cancel := context.WithCancel(context.Background())
 	settlement, settleCancel := context.WithCancel(context.Background())
-	flow := &LinuxExecutionEpochFlow{request: request, lifetime: lifetime, cancel: cancel, settlement: settlement, settleCancel: settleCancel, ready: make(chan error, 1), done: make(chan struct{}), requests: make(chan linuxEpochOperation)}
+	flow := &LinuxExecutionEpochFlow{request: request, recipe: recipe, lifetime: lifetime, cancel: cancel, settlement: settlement, settleCancel: settleCancel, ready: make(chan error, 1), done: make(chan struct{}), requests: make(chan linuxEpochOperation)}
 	author.borrowedBy = flow
 	epochs.active = true
 	epochs.borrowedBy = flow
@@ -224,7 +239,11 @@ func newLinuxEpochCoordinator(owner *LinuxExecutionEpochFlow, held *linuxEpochHe
 	epochs := &ExecutionEpochConfigCustody{native: &linuxEpochConfigAdapter{adapter}, author: author, epochs: held.epochs.epochs, listeners: held.epochs.listeners, queryCatalog: held.epochs.queryCatalog, parsedConfigs: held.epochs.parsedConfigs, logicalChanges: held.epochs.logicalChanges}
 	core := &ExecutionEpochOne{native: adapter, epochs: epochs, plan: plan, release: owner.cancel}
 	adapter.core = core
-	adapter.recipe = issueLinuxEpochLegacyRecipe(adapter)
+	if owner.recipe == linuxEpochCheckpointV13 {
+		adapter.recipe = issueLinuxEpochCheckpointRecipe(adapter)
+	} else {
+		adapter.recipe = issueLinuxEpochLegacyRecipe(adapter)
+	}
 	defer func() {
 		if retErr != nil {
 			_ = core.Close()
@@ -314,6 +333,18 @@ func (flow *LinuxExecutionEpochFlow) execute(operation linuxEpochOperation) (rep
 	case linuxEpochReturnStart:
 		flow.step = "return-start"
 		reply.run, reply.err = run.StartReturnA(operation.ctx)
+	case linuxEpochCheckpointReturnStart:
+		flow.step = "checkpoint-return-start"
+		reply.run, reply.err = run.StartReturnACheckpoint(operation.ctx)
+	case linuxEpochStale:
+		flow.step = "stale-lease"
+		reply.err = run.StaleLease(operation.ctx)
+	case linuxEpochCheckpointRestart:
+		flow.step = "checkpoint-restart"
+		reply.run, reply.err = run.CheckpointRestart(operation.ctx)
+	case linuxEpochCheckpointRecover:
+		flow.step = "checkpoint-recover"
+		reply.err = run.RecoverCheckpoint(operation.ctx)
 	case linuxEpochReturn:
 		flow.step = "return"
 		reply.err = run.ReturnA(operation.ctx)
@@ -441,6 +472,28 @@ func (run *LinuxExecutionEpochRun) StartReturnA(ctx context.Context) (*LinuxExec
 		return nil, r.err
 	}
 	return &LinuxExecutionEpochRun{run.flow, r.run}, r.err
+}
+
+// These operations remain unavailable on the ordinary v11 constructor.
+func (run *LinuxExecutionEpochRun) StartReturnACheckpoint(ctx context.Context) (*LinuxExecutionEpochRun, error) {
+	r := run.operation(ctx, linuxEpochCheckpointReturnStart)
+	if r.run == nil {
+		return nil, r.err
+	}
+	return &LinuxExecutionEpochRun{run.flow, r.run}, r.err
+}
+func (run *LinuxExecutionEpochRun) StaleLease(ctx context.Context) error {
+	return run.operation(ctx, linuxEpochStale).err
+}
+func (run *LinuxExecutionEpochRun) CheckpointRestart(ctx context.Context) (*LinuxExecutionEpochRun, error) {
+	r := run.operation(ctx, linuxEpochCheckpointRestart)
+	if r.run == nil {
+		return nil, r.err
+	}
+	return &LinuxExecutionEpochRun{run.flow, r.run}, r.err
+}
+func (run *LinuxExecutionEpochRun) RecoverCheckpoint(ctx context.Context) error {
+	return run.operation(ctx, linuxEpochCheckpointRecover).err
 }
 func (run *LinuxExecutionEpochRun) Stop(ctx context.Context) (ExecutionEpochOneResult, error) {
 	r := run.operation(ctx, linuxEpochStop)
