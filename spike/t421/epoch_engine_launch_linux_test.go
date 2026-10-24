@@ -8,6 +8,8 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"io"
+	"net"
+	"os"
 	"slices"
 	"testing"
 	"time"
@@ -50,6 +52,21 @@ func epochEngineLaunchTestRecord(epoch uint64, recipe string) (*ExecutionEpochOn
 	return run, record, maximum
 }
 
+func epochEngineLaunchTestPipe(t *testing.T) (*os.File, *net.UnixConn) {
+	t.Helper()
+	parent, child, err := dispatchadmission.NewPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = parent.Close(); _ = child.Close() })
+	conn, err := adoptAuthorCustodySocket(child)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = conn.Close() })
+	return parent, conn
+}
+
 func TestEpochEngineLaunchActualBootstrapAndEndpointBinding(t *testing.T) {
 	for _, test := range []struct {
 		name, recipe string
@@ -76,32 +93,25 @@ func TestEpochEngineLaunchActualBootstrapAndEndpointBinding(t *testing.T) {
 			if err != nil || test.recipe == "" && bytes.Contains(raw, []byte("EngineMeasurementRecipe")) {
 				t.Fatal("legacy omitted bootstrap bytes changed", err)
 			}
-			daParent, daChild, err := dispatchadmission.NewPipe()
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer func() { _ = daParent.Close() }()
-			pcParent, pcChild, err := dispatchadmission.NewPipe()
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer func() { _ = pcParent.Close() }()
-			da, err := adoptAuthorCustodySocket(daChild)
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer func() { _ = da.Close() }()
-			pc, err := adoptAuthorCustodySocket(pcChild)
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer func() { _ = pc.Close() }()
+			daParent, da := epochEngineLaunchTestPipe(t)
+			pcParent, pc := epochEngineLaunchTestPipe(t)
 			deadline, _ := ctx.Deadline()
 			if da.SetDeadline(deadline) != nil || pc.SetDeadline(deadline) != nil {
 				t.Fatal("bootstrap deadline")
 			}
 			sent := make(chan error, 1)
-			go func() { sent <- dispatchadmission.SendProductionBootstrap(ctx, daParent, pcParent, record) }()
+			go func() {
+				defer close(sent)
+				sent <- dispatchadmission.SendProductionBootstrap(ctx, daParent, pcParent, record)
+			}()
+			t.Cleanup(func() {
+				cancel()
+				_ = daParent.Close()
+				_ = pcParent.Close()
+				_ = da.Close()
+				_ = pc.Close()
+				<-sent
+			})
 			var daHeader, pcHeader [72]byte
 			if _, err := io.ReadFull(pc, pcHeader[:]); err != nil {
 				t.Fatal(err)
@@ -122,28 +132,28 @@ func TestEpochEngineLaunchActualBootstrapAndEndpointBinding(t *testing.T) {
 			if err := <-sent; err != nil {
 				t.Fatal("production bootstrap validation/ACK", err)
 			}
-			engineParent, engineChild, err := dispatchadmission.NewPipe()
-			if err != nil {
-				t.Fatal(err)
-			}
+			engineParent, child := epochEngineLaunchTestPipe(t)
 			engine, err := adoptAuthorCustodySocket(engineParent)
 			if err != nil {
 				t.Fatal(err)
 			}
-			child, err := adoptAuthorCustodySocket(engineChild)
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer func() { _ = child.Close() }()
+			t.Cleanup(func() { _ = engine.Close() })
 			if child.SetDeadline(deadline) != nil {
 				t.Fatal("engine deadline")
 			}
 			served := make(chan error, 1)
 			go func() {
+				defer close(served)
 				served <- dispatchadmission.ServeEngineMeasurement(ctx, engine, binding, maximum, func(context.Context, uint32, func(context.Context, dispatchadmission.EngineMeasurementIdentity) error) error {
 					return ErrExecutionEpochOne // This wire-only control never grants a native HOLD.
 				})
 			}()
+			t.Cleanup(func() {
+				cancel()
+				_ = engine.Close()
+				_ = child.Close()
+				<-served
+			})
 			var header [76]byte
 			if _, err := io.ReadFull(child, header[:]); err != nil || binary.BigEndian.Uint32(header[4:8]) != record.Producer.ID ||
 				binary.BigEndian.Uint32(header[8:12]) != record.EngineMeasurements || !bytes.Equal(header[12:44], record.Producer.Binding[:]) || !bytes.Equal(header[44:], record.InputSHA256[:]) {

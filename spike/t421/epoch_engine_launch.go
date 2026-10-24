@@ -21,10 +21,11 @@ func epochEngineLaunchBinding(recipe string, maximum uint32, run *ExecutionEpoch
 		!sameExecutionToolBindings(tools, tools, recipe) {
 		return zero, ErrExecutionEpochOne
 	}
-	if recipe == dispatchadmission.EngineMeasurementCheckpointV2 &&
-		(run.backupAllowed || run.archiveInput != nil ||
-			!(run.epoch.Epoch == 3 && run.checkpointAllowed || run.epoch.Epoch == 4 && run.checkpointRecovery != nil && run.checkpointPrior != nil)) {
-		return zero, ErrExecutionEpochOne
+	if recipe == dispatchadmission.EngineMeasurementCheckpointV2 {
+		checkpointShape := run.epoch.Epoch == 3 && run.checkpointAllowed || run.epoch.Epoch == 4 && run.checkpointRecovery != nil && run.checkpointPrior != nil
+		if run.backupAllowed || run.archiveInput != nil || !checkpointShape {
+			return zero, ErrExecutionEpochOne
+		}
 	}
 	binding := dispatchadmission.EngineMeasurementBinding{Recipe: recipe, ProducerID: producer.ID, ProducerBinding: producer.Binding, InputSHA256: input}
 	if _, err := binding.WireBytes(maximum); err != nil {
