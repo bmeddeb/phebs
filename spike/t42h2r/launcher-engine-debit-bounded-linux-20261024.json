@@ -46,16 +46,6 @@
   "connected_suite_skips": [
     "TestExecutionEpochCheckpointInheritedTerminal"
   ],
-  "new_controls_per_mode": {
-    "normal": {
-      "pass_nodes": 36,
-      "skips": []
-    },
-    "race": {
-      "pass_nodes": 36,
-      "skips": []
-    }
-  },
   "dispatch_gate_carry": {
     "source_record": "gates.json",
     "reason": "internal/dispatchadmission, go.mod and go.sum bytes unchanged from40733699 throughdd5b64c8; launcher boolean correction equivalent and test cleanup does not change dispatch code",
@@ -165,5 +155,22 @@
     "merge_or_deployment": false
   },
   "private_evidence_directory": "/home/ben/phebs-rehearsals/med496-launcher-debits-20261024",
-  "documentation_gates": "Recorded separately after this evidence-only addition; Go bytes stay identical to reviewed_code_commit."
+  "documentation_gates": "Recorded separately after this evidence-only addition; Go bytes stay identical to reviewed_code_commit.",
+  "scoped_controls_per_mode": {
+    "normal": {
+      "pass_nodes": 36,
+      "skips": []
+    },
+    "race": {
+      "pass_nodes": 36,
+      "skips": []
+    }
+  },
+  "scoped_controls_composition": {
+    "new_pass_nodes": 23,
+    "adapted_existing_continuity_pass_nodes": 9,
+    "unchanged_native_refusal_pass_nodes": 4,
+    "scope_total_pass_nodes": 36,
+    "skips": []
+  }
 }
