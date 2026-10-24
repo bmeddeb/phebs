@@ -574,6 +574,13 @@ not zero bytes. A later boundary failure preserves the accepted traversal prefix
 This correction does not enable native checkpoint entry or select a new policy.
 Actual engine, successor, PC/SA and custody/accounting acceptance remain open.
 
+The v11 Maria attempt stopped during physical B on a service-state SDK reply
+timeout. The 2026-10-23 correction makes selected preimage lookups use the
+existing unique index; it preserves the 30-second RPC deadline, 512-record
+payload cap and all mutation fences. A bounded lookup replay is not full
+qualification. Retain the failed fixture and actual terminal accounting/cleanup
+errors; report new exact-source readiness before starting a fresh admitted run.
+
 The first exact `2754d208` full-native attempt completed its three actual
 reference comparisons, then correctly refused policy v1 before any author or
 server operation: 10,504,626,176 required bytes exceeded 8,633,675,776 observed

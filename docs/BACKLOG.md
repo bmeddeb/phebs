@@ -5161,6 +5161,20 @@ passes full search normal/race, generation regressions, zero skips, static,
 supported 64-bit compile and docs gates, with independent source/cost review
 clear. Exact-source admission and fresh full maria acceptance remain pending.
 
+**2026-10-23 — MED-495 physical-B preimage lookup follow-up.** V11 source
+`4812c3cf` stopped with actual Wait1 during physical B. Retained server evidence
+names an active-context 30-second SDK reply timeout in the service-state
+transaction; copied-database native controls substantiate repeated full
+preimage scans from object-field lookup operands. Scalar bindings select the
+existing unique index, preserving every predicate, mutation vector, 512-record
+cap, RPC deadline and 4-GiB RSS bound. Require native exact-fragment index/result
+checks, existing preimage/CAS/lease/accounting regressions, normal/race,
+static/supported-compile/docs gates and independent source/cost review. This
+lookup mechanism correction is not complete-transaction or full native
+acceptance. Preserve the failed fixture; fresh qualification remains unstarted
+until exact-source readiness and remaining admission prerequisites are reported.
+MED-496's native checkpoint entry and dependency remain open.
+
 Compose the independently proven physical and logical dimensions. A system
 that handles two million files with no service catalog, or 10,000 services over
 a tiny fixture, has not met the product target. Epic 42 proves that one shared

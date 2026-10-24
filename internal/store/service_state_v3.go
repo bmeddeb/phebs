@@ -2308,6 +2308,20 @@ func (s *Surreal) commitServiceStateV3Chunk(
 		expectedSummary, nextSummary, requireRemovalDrain, targets, targets.preimages, createSummary, payloadRecords)
 }
 
+// Bind scalar operands so the native planner can use the existing unique index;
+// object field expressions here otherwise scan every retained preimage per row.
+const serviceStateV3PreimagePointSQL = `
+LET $preimage_revision = $selector.state_control_revision;
+LET $preimage_service_key = $update.content.service_key;
+LET $prior_rows = IF $preserve THEN (
+	SELECT state_digest, control_revision, snapshot_digest
+		FROM service_state_v3_preimage
+		WHERE repository = $repository
+			AND snapshot_revision = $preimage_revision
+			AND service_key = $preimage_service_key LIMIT 2
+) ELSE [] END;
+`
+
 func (s *Surreal) commitServiceStateV3TargetChunk(
 	ctx context.Context,
 	chunk GenerationChunk,
@@ -2552,13 +2566,7 @@ FOR $update IN $updates {
 	LET $preserve = $existing != NONE AND $selector != NONE
 		AND $selector.backend = 'v3'
 		AND ($existing.visible_from ?? 1) <= $selector.state_control_revision;
-	LET $prior_rows = IF $preserve THEN (
-		SELECT state_digest, control_revision, snapshot_digest
-			FROM service_state_v3_preimage
-			WHERE repository = $repository
-				AND snapshot_revision = $selector.state_control_revision
-				AND service_key = $update.content.service_key LIMIT 2
-	) ELSE [] END;
+`+serviceStateV3PreimagePointSQL+`
 	IF array::len($prior_rows) > 1 OR
 		($preserve AND array::len($prior_rows) = 0) != $update.create_preimage {
 		THROW 'phebs-permanent: service state v3 preimage target changed';
