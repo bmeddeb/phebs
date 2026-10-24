@@ -21,7 +21,7 @@ type epochRecoveryWorkspaceSample struct {
 }
 
 func (run *ExecutionEpochOneRun) recoveryWorkspaceSelected() bool {
-	return run != nil && run.flow != nil && run.flow.workspace != nil &&
+	return run != nil && run.flow != nil && run.flow.hasWorkspace() &&
 		(run.epoch.Epoch == 3 && run.staleAllowed || run.epoch.Epoch == 4)
 }
 
@@ -122,8 +122,11 @@ func (reader *executionEpochInspection) sampleRecoveryWorkspace(ctx context.Cont
 // excludes a successor/release through the walk. Author/epoch/run locks are
 // held only during confirmation; no engine exists after the actual native join.
 func (run *ExecutionEpochOneRun) sampleRecoveryParentLocked(ctx context.Context) error {
+	if run == nil || run.flow == nil {
+		return ErrExecutionEpochOne
+	}
 	flow := run.flow
-	if flow.workspace == nil {
+	if !flow.hasWorkspace() {
 		return nil
 	}
 	refuse := func() error {

@@ -5110,6 +5110,19 @@ pass; exact source/cost re-review has zero findings. These counts overlap.
 Original failed lint/review prefixes remain retained; native selection and
 full successor/qualification acceptance stay open.
 
+**T42.H2s.h · Native recovery workspace selection (MED-496 prerequisite,
+2026-10-23).** Replace two legacy-only workspace-presence checks with existing
+`hasWorkspace()` so prepared Linux recovery cannot silently omit required
+samples or the joined-parent walk. Missing run/flow must refuse. AC: native-only
+stale/recovery selection; required/missing/duplicate/excess preparation samples;
+actual bounded HTTP samples and refusals; missing parent observation/accounting
+authority and canceled boundary refusal preserving a completed tiny native walk;
+old-source omission counterexamples; focused normal/race, connected regressions,
+supported compilation, static/docs gates and independent source/cost review.
+Model owner/response facts explicitly; these controls do not supply actual
+engine, hard-death, PC/SA or successor authority. Keep native entry/policy and
+all limits exact. MED-495 full qualification and MED-496 acceptance stay open.
+
 **2026-10-22 — Ben-directed implementation checkpoint integration.** Ben
 explicitly requests maria cleanup and PR merges after the v10 native failure
 was disclosed. PR156 and T42.H2s.a–d / PR164–167 may integrate as reviewed

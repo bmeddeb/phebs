@@ -17502,3 +17502,34 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Product query, sync, retry/no-op and publication work is unchanged. Wire tests
   use three socket pairs serially per case under a three-second deadline and
   bounded bootstrap JSON; they grant no native HOLD or successor proof.
+
+- **2026-10-23 — T42.H2s.h native recovery workspace selection (MED-496
+  prerequisite).** Recovery sampling must use the existing native-aware
+  `hasWorkspace()` predicate, as the early and midphase paths already do.
+  Linux holds its workspace through the native adapter and leaves the legacy
+  `workspace` pointer nil; testing only that pointer silently omitted stale/
+  recovery samples and the joined parent walk. Replace both presence checks.
+  Refuse a missing run/flow explicitly rather than allowing the nil-safe
+  predicate to turn malformed input into unselected success. Keep missing
+  preparation responses, prior-point ordering, duplicate points, HTTP failures,
+  limit excess and absent parent observation/accounting authority fail-closed.
+  Retain an already completed traversal prefix when a later parent boundary
+  refuses; absence is not bound zero.
+
+  This fixes a prepared path only. Native checkpoint entry, actual epoch-four
+  selection, private policies, custody, PC/SA and successor composition remain
+  unchanged and open. The separate Maria qualification uses immutable source
+  `45c2d252`; it does not validate this source. Linux controls distinguish modeled
+  owner/response facts from real bounded HTTP exchanges and a tiny native
+  filesystem traversal; they prove no engine measurement or successor join.
+
+  Cost: two constant workspace-presence checks and one malformed-input guard.
+  A future separately selected Linux recovery must perform the existing seven
+  points: four bounded HTTP samples, two preparation-response samples and one
+  joined-parent traversal. Reuse existing reader-mutex coverage, the flow-mutex
+  hold through the bounded serial parent walk, brief ownership confirmations,
+  traversal limits and phase deadlines. No new request point, child, goroutine,
+  lock, cache, schema or persistent state is added. Already selected Darwin
+  presence behavior is equivalent. Current native public flow, product query,
+  sync, startup/restart, retry/no-op and publication work is unchanged; RSS,
+  transaction, RPC, disk and accounting bounds receive no exemption.
