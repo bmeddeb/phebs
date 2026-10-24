@@ -51,6 +51,10 @@ func VerifyExecutionReferenceTool(ctx context.Context, request ReferenceToolRequ
 // inspected directly, never resolved through a deleted memfd pathname. The
 // public path verifier retains its original observations and build recipe.
 func verifyExecutionReferenceTool(ctx context.Context, request ReferenceToolRequest, suppliedImage *os.File) (identity ExecutionToolIdentity, retErr error) {
+	return verifyExecutionReferenceToolObserved(ctx, request, suppliedImage, nil)
+}
+
+func verifyExecutionReferenceToolObserved(ctx context.Context, request ReferenceToolRequest, suppliedImage *os.File, observation *executionPreworkObservation) (identity ExecutionToolIdentity, retErr error) {
 	packagePath, modulePath, moduleVersion, moduleSum, recipe, err := referenceToolRoleForSchema(request.Role, request.PlanSchema, request.SourceCommit)
 	if err != nil {
 		return identity, err
@@ -70,8 +74,8 @@ func verifyExecutionReferenceTool(ctx context.Context, request ReferenceToolRequ
 			return identity, errors.New("reference build input cannot be resolved")
 		}
 	}
-	commits, err := InspectExecutionCheckout(ctx, request.RepositoryRoot, request.GitBinary,
-		request.PlanSourceCommit, request.IntegratedMainCommit, request.SourceCommit)
+	commits, err := inspectExecutionCheckoutObserved(ctx, request.RepositoryRoot, request.GitBinary,
+		request.PlanSourceCommit, request.IntegratedMainCommit, request.SourceCommit, observation)
 	if err != nil {
 		return identity, err
 	}
@@ -79,7 +83,7 @@ func verifyExecutionReferenceTool(ctx context.Context, request ReferenceToolRequ
 	if err != nil {
 		return identity, errors.New("reference build Git image is unavailable")
 	}
-	origin := executionCheckoutInspector{root: request.RepositoryRoot, git: request.GitBinary, digest: gitDigest}
+	origin := executionCheckoutInspector{root: request.RepositoryRoot, git: request.GitBinary, digest: gitDigest, observation: observation}
 	gitExec, err := origin.run(ctx, 4096, "--exec-path")
 	if err != nil {
 		return identity, err
@@ -133,7 +137,14 @@ func verifyExecutionReferenceTool(ctx context.Context, request ReferenceToolRequ
 		return identity, errors.New("reference build cannot create private custody")
 	}
 	defer func() {
+		if observation.unknown() {
+			observation.retainWorkspace(workspace)
+			retErr = errors.New("reference build retains unknown native helper custody")
+			identity = ExecutionToolIdentity{}
+			return
+		}
 		if err := os.RemoveAll(workspace); err != nil {
+			observation.retainWorkspace(workspace)
 			retErr = errors.Join(retErr, errors.New("reference build private custody cleanup failed"))
 		}
 		if retErr != nil {
@@ -162,7 +173,7 @@ func verifyExecutionReferenceTool(ctx context.Context, request ReferenceToolRequ
 		if executableidentity.Verify(goBinary, goDigest) != nil || executableidentity.Verify(request.GitBinary, gitDigest) != nil {
 			return nil, errors.New("reference build tool image changed before launch")
 		}
-		return runReferenceGo(ctx, root, goBinary, environment, limit, args...)
+		return runReferenceGoObserved(ctx, root, goBinary, environment, limit, observation, args...)
 	}
 	run := func(limit int64, args ...string) ([]byte, error) { return runFrom(reference.root.root, limit, args...) }
 	version, err := run(256, "version")
@@ -225,8 +236,8 @@ func verifyExecutionReferenceTool(ctx context.Context, request ReferenceToolRequ
 	if err := reference.verify(ctx); err != nil {
 		return identity, err
 	}
-	after, err := InspectExecutionCheckout(ctx, request.RepositoryRoot, request.GitBinary,
-		request.PlanSourceCommit, request.IntegratedMainCommit, request.SourceCommit)
+	after, err := inspectExecutionCheckoutObserved(ctx, request.RepositoryRoot, request.GitBinary,
+		request.PlanSourceCommit, request.IntegratedMainCommit, request.SourceCommit, observation)
 	if err != nil || after != commits {
 		return identity, errors.New("reference build original checkout changed")
 	}
@@ -411,6 +422,10 @@ func referenceBuildEnvironment(request ReferenceToolRequest, workspace string) [
 }
 
 func runReferenceGo(ctx context.Context, root, binary string, environment []string, limit int64, args ...string) ([]byte, error) {
+	return runReferenceGoObserved(ctx, root, binary, environment, limit, nil, args...)
+}
+
+func runReferenceGoObserved(ctx context.Context, root, binary string, environment []string, limit int64, observation *executionPreworkObservation, args ...string) ([]byte, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, fmt.Errorf("reference build canceled: %w", err)
 	}
@@ -421,7 +436,7 @@ func runReferenceGo(ctx context.Context, root, binary string, environment []stri
 	command.Dir, command.Env = root, environment
 	command.Stdout, command.Stderr = &stdout, &stderr
 	command.WaitDelay = time.Second
-	if err := runReferenceCommand(ctx, command); err != nil || ctx.Err() != nil || stdout.err != nil || stderr.err != nil {
+	if err := runReferenceCommandObserved(ctx, command, observation); err != nil || ctx.Err() != nil || stdout.err != nil || stderr.err != nil {
 		return stderr.buffer.Bytes(), errors.New("reference build Go command failed, expired, or exceeded output bound")
 	}
 	return stdout.buffer.Bytes(), nil

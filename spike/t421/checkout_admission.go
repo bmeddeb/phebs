@@ -34,6 +34,10 @@ func InspectExecutionCheckout(
 	ctx context.Context,
 	repositoryRoot, gitBinary, planSource, integratedMain, source string,
 ) (ExecutionCommits, error) {
+	return inspectExecutionCheckoutObserved(ctx, repositoryRoot, gitBinary, planSource, integratedMain, source, nil)
+}
+
+func inspectExecutionCheckoutObserved(ctx context.Context, repositoryRoot, gitBinary, planSource, integratedMain, source string, observation *executionPreworkObservation) (ExecutionCommits, error) {
 	if err := ctx.Err(); err != nil {
 		return ExecutionCommits{}, fmt.Errorf("checkout admission canceled: %w", err)
 	}
@@ -59,7 +63,7 @@ func InspectExecutionCheckout(
 	}
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
-	inspection := executionCheckoutInspector{root: root, git: gitBinary, digest: digest}
+	inspection := executionCheckoutInspector{root: root, git: gitBinary, digest: digest, observation: observation}
 	return inspectExecutionCheckout(ctx, inspection, planSource, integratedMain, source)
 }
 
@@ -102,6 +106,7 @@ type executionCheckoutInspector struct {
 	root, git, digest string
 	custody           *ExecutionGitCustody
 	transport         executionCheckoutGit
+	observation       *executionPreworkObservation
 }
 
 // A protected platform transport owns only these existing checkout commands.
@@ -173,7 +178,7 @@ func (inspection executionCheckoutInspector) runInput(ctx context.Context, input
 	command.WaitDelay = time.Second
 	output := checkoutCommandOutput{remaining: limit, cancel: cancel}
 	command.Stdout = &output
-	runErr := runReferenceCommand(ctx, command)
+	runErr := runReferenceCommandObserved(ctx, command, inspection.observation)
 	if err := ctx.Err(); err != nil {
 		return nil, fmt.Errorf("checkout admission Git deadline: %w", err)
 	}

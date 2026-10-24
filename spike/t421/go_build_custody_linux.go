@@ -46,6 +46,8 @@ type LinuxExecutionGoBuildCustody struct {
 	closing         bool
 	released        bool
 	err             error
+	closeErr        error // Propagated native close failure before child owner release.
+	observation     *executionPreworkObservation
 }
 
 // ProtectLinuxExecutionGoBuildInputs reconstructs exact clean source with H2p
@@ -58,6 +60,10 @@ type LinuxExecutionGoBuildCustody struct {
 // creation every failure returns retained custody. Close must join preparation
 // and the H2k constructor before callers may dispose any retained private prefix.
 func ProtectLinuxExecutionGoBuildInputs(ctx context.Context, parent string, request LinuxExecutionGoBuildRequest, helper *LinuxInputTreeHelper) (*LinuxExecutionGoBuildCustody, error) {
+	return protectLinuxExecutionGoBuildInputsObserved(ctx, parent, request, helper, nil)
+}
+
+func protectLinuxExecutionGoBuildInputsObserved(ctx context.Context, parent string, request LinuxExecutionGoBuildRequest, helper *LinuxInputTreeHelper, observation *executionPreworkObservation) (*LinuxExecutionGoBuildCustody, error) {
 	if runtime.GOARCH != "amd64" || ctx == nil || ctx.Err() != nil || !linuxGitPrivateDirectory(parent) || request.Git == nil || helper == nil || helper.tool == nil {
 		return nil, ErrExecutionGoBuildCustody
 	}
@@ -78,7 +84,7 @@ func ProtectLinuxExecutionGoBuildInputs(ctx context.Context, parent string, requ
 	if err != nil {
 		return nil, ErrExecutionGoBuildCustody
 	}
-	custody := &LinuxExecutionGoBuildCustody{directory: directory, children: make(map[string]os.FileInfo), request: request, preparationStep: "stage"}
+	custody := &LinuxExecutionGoBuildCustody{directory: directory, children: make(map[string]os.FileInfo), request: request, preparationStep: "stage", observation: observation}
 	fail := func() (*LinuxExecutionGoBuildCustody, error) {
 		if custody.staging != nil {
 			custody.inventory = custody.staging.inventory
@@ -103,7 +109,7 @@ func ProtectLinuxExecutionGoBuildInputs(ctx context.Context, parent string, requ
 		}
 	}
 	custody.preparationStep = "mutable-inputs"
-	custody.staging, err = newLinuxGoBuildStaging(filepath.Join(directory, "payload"))
+	custody.staging, err = newLinuxGoBuildStagingObserved(filepath.Join(directory, "payload"), observation)
 	if err != nil {
 		return fail()
 	}
@@ -151,8 +157,8 @@ func ProtectLinuxExecutionGoBuildInputs(ctx context.Context, parent string, requ
 		return fail()
 	}
 	custody.preparationStep = "protected-tree"
-	custody.tree, err = ProtectLinuxExecutionInputTree(ctx, filepath.Join(directory, "scratch"),
-		[]LinuxInputTreeSource{{Name: "inputs", Path: filepath.Join(directory, "payload")}}, helper)
+	custody.tree, err = protectLinuxExecutionInputTreeObserved(ctx, filepath.Join(directory, "scratch"),
+		[]LinuxInputTreeSource{{Name: "inputs", Path: filepath.Join(directory, "payload")}}, helper, observation)
 	if err != nil {
 		return fail()
 	}
@@ -161,7 +167,7 @@ func ProtectLinuxExecutionGoBuildInputs(ctx context.Context, parent string, requ
 	custody.inventory = custody.staging.inventory
 	if err != nil || identity.Entries != uint64(custody.inventory.Entries) || identity.Files != uint64(custody.inventory.Files) ||
 		identity.Bytes != uint64(custody.inventory.Bytes) || identity.PathBytes != uint64(custody.staging.pathBytes) ||
-		custody.checkStage() != nil || custody.staging.removeContents(ctx) != nil || custody.staging.tree.Close() != nil {
+		custody.checkStage() != nil || custody.staging.removeContents(ctx) != nil || observation.close(custody.staging.tree.Close()) != nil {
 		return fail()
 	}
 	custody.staging = nil
@@ -267,12 +273,17 @@ func (custody *LinuxExecutionGoBuildCustody) Close(ctx context.Context) error {
 		if custody.tree.Close(ctx) != nil {
 			custody.err = ErrExecutionGoBuildCustody
 		}
+		custody.tree.mu.Lock()
+		if custody.tree.closeErr != nil {
+			custody.closeErr = ErrExecutionGoBuildCustody
+		}
+		custody.tree.mu.Unlock()
 		if !custody.tree.closed {
 			return ErrExecutionGoBuildCustody
 		}
 	}
 	if custody.staging != nil {
-		if custody.checkStage() != nil || custody.staging.removeContents(ctx) != nil || custody.staging.tree.Close() != nil {
+		if custody.checkStage() != nil || custody.staging.removeContents(ctx) != nil || custody.observation.close(custody.staging.tree.Close()) != nil {
 			custody.err = ErrExecutionGoBuildCustody
 			return custody.err
 		}
@@ -284,7 +295,7 @@ func (custody *LinuxExecutionGoBuildCustody) Close(ctx context.Context) error {
 			return custody.err
 		}
 	}
-	if ctx.Err() != nil || custody.checkStage() != nil || os.Remove(custody.directory) != nil || custody.stage.Close() != nil {
+	if ctx.Err() != nil || custody.checkStage() != nil || os.Remove(custody.directory) != nil || custody.observation.close(custody.stage.Close()) != nil {
 		custody.err = ErrExecutionGoBuildCustody
 		return custody.err
 	}

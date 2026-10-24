@@ -36,8 +36,12 @@ type LinuxInputTreeHelper struct {
 }
 
 func ProtectLinuxInputTreeHelper(ctx context.Context, request ReferenceToolRequest) (*LinuxInputTreeHelper, error) {
+	return protectLinuxInputTreeHelperObserved(ctx, request, nil)
+}
+
+func protectLinuxInputTreeHelperObserved(ctx context.Context, request ReferenceToolRequest, observation *executionPreworkObservation) (*LinuxInputTreeHelper, error) {
 	request.Role, request.PlanSchema = linuxInputTreeRole, linuxInputTreeRecipe
-	tool, err := ProtectLinuxExecutionReferenceTool(ctx, request)
+	tool, err := protectLinuxExecutionReferenceToolObserved(ctx, request, observation)
 	if tool == nil {
 		return nil, ErrLinuxInputTree
 	}
@@ -73,10 +77,11 @@ type LinuxInputTreeIdentity struct {
 }
 
 type inputTreeSourceRoot struct {
-	selection LinuxInputTreeSource
-	file      *os.File
-	tree      *os.Root
-	info      os.FileInfo
+	selection   LinuxInputTreeSource
+	file        *os.File
+	tree        *os.Root
+	info        os.FileInfo
+	observation *executionPreworkObservation
 }
 
 type inputTreeSourceEntry struct {
@@ -97,14 +102,16 @@ type inputTreeKernelIdentity struct {
 // no host Directory/path or supplied readiness boolean. It grants neither a
 // command permission, provenance for selected source bytes nor a ceremony plan.
 type LinuxExecutionInputTree struct {
-	mu       sync.Mutex // Entire loan including trusted joined callback use.
-	done     chan struct{}
-	cancel   context.CancelFunc
-	root     *os.File
-	kernel   inputTreeKernelIdentity
-	identity LinuxInputTreeIdentity
-	err      error
-	closed   bool
+	mu          sync.Mutex // Entire loan including trusted joined callback use.
+	done        chan struct{}
+	cancel      context.CancelFunc
+	root        *os.File
+	kernel      inputTreeKernelIdentity
+	identity    LinuxInputTreeIdentity
+	err         error
+	closeErr    error // Native descriptor-close failure, never a cleanup waiver.
+	observation *executionPreworkObservation
+	closed      bool
 
 	stagePath string
 	stage     *os.File
@@ -127,6 +134,10 @@ type LinuxExecutionInputTree struct {
 // until a kernel-blocked helper joins. No success/cleanup is inferred from a
 // timeout. Native syscalls remain cooperative, not hard syscall deadlines.
 func ProtectLinuxExecutionInputTree(ctx context.Context, parent string, sources []LinuxInputTreeSource, helper *LinuxInputTreeHelper) (*LinuxExecutionInputTree, error) {
+	return protectLinuxExecutionInputTreeObserved(ctx, parent, sources, helper, nil)
+}
+
+func protectLinuxExecutionInputTreeObserved(ctx context.Context, parent string, sources []LinuxInputTreeSource, helper *LinuxInputTreeHelper, observation *executionPreworkObservation) (*LinuxExecutionInputTree, error) {
 	if runtime.GOARCH != "amd64" || ctx == nil || ctx.Err() != nil || helper == nil || helper.tool == nil ||
 		!executionGitAbsolutePath(parent) || strings.ContainsAny(parent, " \t\\") || len(sources) == 0 || len(sources) > 3 {
 		return nil, ErrLinuxInputTree
@@ -155,7 +166,7 @@ func ProtectLinuxExecutionInputTree(ctx context.Context, parent string, sources 
 			cancel()
 		}
 	}()
-	roots, rows, err := gatherInputTreeSources(ctx, parent, slices.Clone(sources))
+	roots, rows, err := gatherInputTreeSourcesObserved(ctx, parent, slices.Clone(sources), observation)
 	if err != nil {
 		return nil, ErrLinuxInputTree
 	}
@@ -164,7 +175,7 @@ func ProtectLinuxExecutionInputTree(ctx context.Context, parent string, sources 
 		_ = closeInputTreeSources(roots)
 		return nil, ErrLinuxInputTree
 	}
-	tree := &LinuxExecutionInputTree{stagePath: stagePath, done: make(chan struct{}), cancel: cancel}
+	tree := &LinuxExecutionInputTree{stagePath: stagePath, done: make(chan struct{}), cancel: cancel, observation: observation}
 	transferred = true
 	tree.stage, err = t4013.OpenHostImage(stagePath)
 	if err == nil {
@@ -201,6 +212,10 @@ func ProtectLinuxExecutionInputTree(ctx context.Context, parent string, sources 
 }
 
 func gatherInputTreeSources(ctx context.Context, parent string, selections []LinuxInputTreeSource) (_ []*inputTreeSourceRoot, _ []inputTreeSourceEntry, retErr error) {
+	return gatherInputTreeSourcesObserved(ctx, parent, selections, nil)
+}
+
+func gatherInputTreeSourcesObserved(ctx context.Context, parent string, selections []LinuxInputTreeSource, observation *executionPreworkObservation) (_ []*inputTreeSourceRoot, _ []inputTreeSourceEntry, retErr error) {
 	var roots []*inputTreeSourceRoot
 	defer func() {
 		if retErr != nil {
@@ -225,7 +240,7 @@ func gatherInputTreeSources(ctx context.Context, parent string, selections []Lin
 		if err != nil || canonical != selection.Path {
 			return nil, nil, ErrLinuxInputTree
 		}
-		root := &inputTreeSourceRoot{selection: selection}
+		root := &inputTreeSourceRoot{selection: selection, observation: observation}
 		roots = append(roots, root)
 		root.file, err = t4013.OpenHostImage(selection.Path)
 		if err == nil {
@@ -290,10 +305,10 @@ func inputTreePathsOverlap(a, b string) bool {
 func closeInputTreeSources(roots []*inputTreeSourceRoot) error {
 	var failed bool
 	for _, root := range roots {
-		if root.tree != nil && root.tree.Close() != nil {
+		if root.tree != nil && root.observation.close(root.tree.Close()) != nil {
 			failed = true
 		}
-		if root.file != nil && root.file.Close() != nil {
+		if root.file != nil && root.observation.close(root.file.Close()) != nil {
 			failed = true
 		}
 	}
@@ -318,10 +333,10 @@ func (tree *LinuxExecutionInputTree) construct(ctx context.Context, roots []*inp
 		}
 		parent, child := os.NewFile(uintptr(pair[0]), "input-tree-controller"), os.NewFile(uintptr(pair[1]), "input-tree-helper")
 		defer func() {
-			if parent.Close() != nil {
+			if tree.observation.close(parent.Close()) != nil {
 				retErr = ErrLinuxInputTree
 			}
-			if child != nil && child.Close() != nil {
+			if child != nil && tree.observation.close(child.Close()) != nil {
 				retErr = ErrLinuxInputTree
 			}
 		}()
@@ -348,7 +363,7 @@ func (tree *LinuxExecutionInputTree) construct(ctx context.Context, roots []*inp
 		waited := make(chan error, 1)
 		go func() { waited <- command.Wait() }()
 		useErr := func() error {
-			closeErr := child.Close()
+			closeErr := tree.observation.close(child.Close())
 			child = nil
 			namespaces, namespaceErr := observeInputTreeNamespaces(tree.pid)
 			if closeErr != nil || t4013.MatchLinuxProcessExecutableImage(ctx, tree.pid, image) != nil || namespaceErr != nil {
@@ -459,7 +474,7 @@ func sendInputTreeSourceFile(ctx context.Context, wire *inputTreeSocket, row inp
 		return inputTreeEntry{}, ErrLinuxInputTree
 	}
 	defer func() {
-		if file.Close() != nil {
+		if row.root.observation.close(file.Close()) != nil {
 			retErr = ErrLinuxInputTree
 		}
 	}()

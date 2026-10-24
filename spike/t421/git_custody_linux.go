@@ -26,19 +26,21 @@ const linuxGitCore = "/proc/self/fd/3/core"
 // This grants no command/repository admission, shell/library/helper closure,
 // executor descendant-drain proof or ceremony permission.
 type LinuxExecutionGitCustody struct {
-	mu        sync.Mutex // Lock order: Git owner, then tree; entire joined use.
-	tree      *LinuxExecutionInputTree
-	sealed    *LinuxExecutionInputCustody // Retained until all construction probes drain.
-	identity  ExecutionToolIdentity
-	directory string
-	stage     *os.Root
-	stageInfo os.FileInfo
-	children  map[string]os.FileInfo
-	aliases   map[string]os.FileInfo
-	probe     *linuxExecutionToolProbe // At most one uncertain joined-probe prefix.
-	closing   bool
-	released  bool
-	err       error
+	mu          sync.Mutex // Lock order: Git owner, then tree; entire joined use.
+	tree        *LinuxExecutionInputTree
+	sealed      *LinuxExecutionInputCustody // Retained until all construction probes drain.
+	identity    ExecutionToolIdentity
+	directory   string
+	stage       *os.Root
+	stageInfo   os.FileInfo
+	children    map[string]os.FileInfo
+	aliases     map[string]os.FileInfo
+	probe       *linuxExecutionToolProbe // At most one uncertain joined-probe prefix.
+	closing     bool
+	released    bool
+	err         error
+	closeErr    error // Native close failure, separate from sticky operation refusal.
+	observation *executionPreworkObservation
 }
 
 // ProtectLinuxExecutionGit verifies the selected actual core and six matching
@@ -52,6 +54,10 @@ type LinuxExecutionGitCustody struct {
 // scratch creation return retained cleanup custody, never a usable identity.
 // Close must complete before the caller disposes any retained private prefix.
 func ProtectLinuxExecutionGit(ctx context.Context, parent, binary string, helper *LinuxInputTreeHelper) (*LinuxExecutionGitCustody, error) {
+	return protectLinuxExecutionGitObserved(ctx, parent, binary, helper, nil)
+}
+
+func protectLinuxExecutionGitObserved(ctx context.Context, parent, binary string, helper *LinuxInputTreeHelper, observation *executionPreworkObservation) (*LinuxExecutionGitCustody, error) {
 	if ctx == nil || ctx.Err() != nil || helper == nil || helper.tool == nil ||
 		!linuxGitPrivateDirectory(parent) || !executionGitAbsolutePath(binary) {
 		return nil, ErrExecutionGitCustody
@@ -62,7 +68,7 @@ func ProtectLinuxExecutionGit(ctx context.Context, parent, binary string, helper
 	if err != nil {
 		return nil, ErrExecutionGitCustody
 	}
-	sealed, err := ProtectLinuxExecutionInputs(ctx, []ExecutionInputCopy{{Name: "git", Path: binary, SHA256: digest, Executable: true}})
+	sealed, err := protectLinuxExecutionInputsObserved(ctx, []ExecutionInputCopy{{Name: "git", Path: binary, SHA256: digest, Executable: true}}, observation)
 	if err != nil {
 		return nil, ErrExecutionGitCustody
 	}
@@ -71,7 +77,7 @@ func ProtectLinuxExecutionGit(ctx context.Context, parent, binary string, helper
 		_ = sealed.Close() // No child has started.
 		return nil, ErrExecutionGitCustody
 	}
-	git := &LinuxExecutionGitCustody{sealed: sealed, directory: directory, aliases: make(map[string]os.FileInfo), children: make(map[string]os.FileInfo)}
+	git := &LinuxExecutionGitCustody{sealed: sealed, directory: directory, aliases: make(map[string]os.FileInfo), children: make(map[string]os.FileInfo), observation: observation}
 	fail := func() (*LinuxExecutionGitCustody, error) { git.err = ErrExecutionGitCustody; return git, git.err }
 	git.stage, err = os.OpenRoot(directory)
 	if err == nil {
@@ -117,14 +123,14 @@ func ProtectLinuxExecutionGit(ctx context.Context, parent, binary string, helper
 			return fail()
 		}
 	}
-	git.tree, err = ProtectLinuxExecutionInputTree(ctx, filepath.Join(directory, "scratch"),
-		[]LinuxInputTreeSource{{Name: "core", Path: filepath.Join(directory, "core")}}, helper)
+	git.tree, err = protectLinuxExecutionInputTreeObserved(ctx, filepath.Join(directory, "scratch"),
+		[]LinuxInputTreeSource{{Name: "core", Path: filepath.Join(directory, "core")}}, helper, observation)
 	if err != nil {
 		return fail()
 	}
 	err = git.tree.WithRoot(ctx, func(root *os.File) error {
 		for _, name := range executionGitImageNames() {
-			if verifyLinuxGitAlias(ctx, root, name, identity.SHA256) != nil {
+			if verifyLinuxGitAliasObserved(ctx, root, name, identity.SHA256, observation) != nil {
 				return ErrExecutionGitCustody
 			}
 		}
@@ -173,7 +179,7 @@ func (git *LinuxExecutionGitCustody) copyAlias(ctx context.Context, name string,
 	written, copyErr := io.Copy(file, executionInputReader{ctx, io.LimitReader(image, maxInputCustodyFileBytes+1)})
 	chmodErr, syncErr := file.Chmod(0o500), file.Sync()
 	git.aliases[name], err = file.Stat()
-	closeErr := file.Close()
+	closeErr := git.observation.close(file.Close())
 	if statErr != nil || copyErr != nil || err != nil || closeErr != nil || chmodErr != nil || syncErr != nil ||
 		written <= 0 || written > maxInputCustodyFileBytes || source == nil || written != source.Size() || ctx.Err() != nil {
 		return ErrExecutionGitCustody
@@ -182,6 +188,10 @@ func (git *LinuxExecutionGitCustody) copyAlias(ctx context.Context, name string,
 }
 
 func verifyLinuxGitAlias(ctx context.Context, root *os.File, name, digest string) error {
+	return verifyLinuxGitAliasObserved(ctx, root, name, digest, nil)
+}
+
+func verifyLinuxGitAliasObserved(ctx context.Context, root *os.File, name, digest string, observation *executionPreworkObservation) error {
 	fd, err := unix.Openat(int(root.Fd()), "core/"+name, unix.O_RDONLY|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
 	if err != nil {
 		return ErrExecutionGitCustody
@@ -190,7 +200,7 @@ func verifyLinuxGitAlias(ctx context.Context, root *os.File, name, digest string
 	info, statErr := file.Stat()
 	hash := sha256.New()
 	written, readErr := io.Copy(hash, executionInputReader{ctx, io.LimitReader(file, maxInputCustodyFileBytes+1)})
-	closeErr := file.Close()
+	closeErr := observation.close(file.Close())
 	if statErr != nil || info == nil || !info.Mode().IsRegular() || info.Mode().Perm() != 0o500 ||
 		written <= 0 || written > maxInputCustodyFileBytes || written != info.Size() || readErr != nil || closeErr != nil ||
 		"sha256:"+hex.EncodeToString(hash.Sum(nil)) != digest || ctx.Err() != nil {
@@ -309,7 +319,7 @@ func (git *LinuxExecutionGitCustody) removeAliases() (retErr error) {
 		return ErrExecutionGitCustody
 	}
 	defer func() {
-		if core.Close() != nil {
+		if git.observation.close(core.Close()) != nil {
 			retErr = ErrExecutionGitCustody
 		}
 	}()
@@ -361,6 +371,11 @@ func (git *LinuxExecutionGitCustody) Close(ctx context.Context) error {
 		if git.tree.Close(ctx) != nil {
 			git.err = ErrExecutionGitCustody
 		}
+		git.tree.mu.Lock()
+		if git.tree.closeErr != nil {
+			git.closeErr = ErrExecutionGitCustody
+		}
+		git.tree.mu.Unlock()
 		if !git.tree.closed {
 			return ErrExecutionGitCustody
 		}
@@ -369,6 +384,11 @@ func (git *LinuxExecutionGitCustody) Close(ctx context.Context) error {
 		if git.sealed.Close() != nil {
 			git.err = ErrExecutionGitCustody
 		}
+		git.sealed.mu.Lock()
+		if git.sealed.closeErr != nil {
+			git.closeErr = ErrExecutionGitCustody
+		}
+		git.sealed.mu.Unlock()
 		git.sealed = nil
 	}
 	if ctx.Err() != nil || git.removeAliases() != nil {
@@ -390,7 +410,7 @@ func (git *LinuxExecutionGitCustody) Close(ctx context.Context) error {
 		git.err = ErrExecutionGitCustody
 		return git.err
 	}
-	if git.stage.Close() != nil {
+	if git.observation.close(git.stage.Close()) != nil {
 		git.err = ErrExecutionGitCustody
 	}
 	git.released = true
