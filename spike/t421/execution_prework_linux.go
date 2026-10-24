@@ -102,6 +102,7 @@ type linuxExecutorPrework struct {
 	self                    *linuxExecutorPrework
 	claim                   *linuxExecutorPreworkClaim
 	observation             *executionPreworkObservation
+	pressure                *linuxPressureExecutorPrework
 }
 
 func newLinuxExecutorPrework(builds *LinuxExecutionGoBuildCustody, tool *LinuxExecutionToolCustody, value linuxExecutorPreworkSelection) *linuxExecutorPrework {
@@ -129,6 +130,12 @@ func (owner *linuxExecutorPrework) Run(ctx context.Context) error {
 		return ErrExecutionLauncher
 	}
 	if ctx == nil || ctx.Err() != nil || runtime.GOARCH != "amd64" || owner.builds == nil || owner.tool == nil {
+		owner.resultErr = ErrExecutionLauncher
+		close(owner.result)
+		close(owner.joined)
+		return ErrExecutionLauncher
+	}
+	if owner.pressure != nil && (os.Getuid() != 0 || os.Geteuid() != 0 || os.Getgid() != 0 || os.Getegid() != 0 || !linuxPressureBorrowBounding()) {
 		owner.resultErr = ErrExecutionLauncher
 		close(owner.result)
 		close(owner.joined)
@@ -203,6 +210,9 @@ func (owner *linuxExecutorPrework) run(ctx context.Context, cancel context.Cance
 				return ErrExecutionLauncher
 			}
 			command, err := linuxExecutorPreworkCommand(ctx, image, read, executionLinuxPreworkOuterMode, value)
+			if owner.pressure != nil {
+				command, err = owner.pressure.command(ctx, image, read, value, owner.observation)
+			}
 			if err != nil {
 				return err
 			}
@@ -218,9 +228,14 @@ func (owner *linuxExecutorPrework) run(ctx context.Context, cancel context.Cance
 			readOpen = false
 			waitErr := command.Wait()
 			owner.retired = readErr == nil && stdout.err == nil && linuxExecutorPreworkRetired(stdout.buffer.String(), value.Attempt)
+			success := stdout.buffer.String() == linuxExecutorPreworkReceipt(value.Attempt, false)
+			if owner.pressure != nil {
+				owner.retired = readErr == nil && stdout.err == nil && owner.pressure.accept(stdout.buffer.String(), value.Attempt)
+				success = stdout.buffer.String() == linuxPressureBorrowReceipt(value.Attempt, false)
+			}
 			err = nil
 			if waitErr != nil || command.ProcessState == nil || !command.ProcessState.Success() || ctx.Err() != nil ||
-				stdout.err != nil || stderr.err != nil || stderr.buffer.Len() != 0 || stdout.buffer.String() != linuxExecutorPreworkReceipt(value.Attempt, false) {
+				stdout.err != nil || stderr.err != nil || stderr.buffer.Len() != 0 || !success {
 				err = ErrExecutionLauncher
 			}
 			publish(err)
@@ -256,6 +271,9 @@ func (owner *linuxExecutorPrework) Close(ctx context.Context) error {
 			if err != nil || len(members) != 0 {
 				return ErrExecutionLauncher
 			}
+		}
+		if owner.pressure != nil && owner.pressure.closeNamespace() != nil {
+			return ErrExecutionLauncher
 		}
 		if owner.writer != nil && owner.observation.close(owner.writer.Close()) != nil {
 			return ErrExecutionLauncher
@@ -320,12 +338,14 @@ func runLinuxExecutionPreworkCommand(ctx context.Context, entered time.Time, arg
 	ctx, cancel := context.WithDeadline(ctx, time.Unix(0, value.DeadlineUnixNano))
 	defer cancel()
 	observation := &executionPreworkObservation{}
+	failureAttempted := false
 	unix.CloseOnExec(3)
 	unix.CloseOnExec(4)
 	// NewFile registers the pipe with Go's poller only when it is already
 	// nonblocking; setting the flag afterward cannot enable read deadlines.
 	if unix.SetNonblock(4, true) != nil {
 		readErr, imageErr := observation.close(unix.Close(4)), observation.close(unix.Close(3))
+		_ = writeLinuxExecutorPreworkFailureOnce(&failureAttempted, value, observation, nil)
 		if readErr == nil && imageErr == nil {
 			_, _ = os.Stdout.WriteString(linuxExecutorPreworkReceipt(value.Attempt, true))
 		}
@@ -335,6 +355,7 @@ func runLinuxExecutionPreworkCommand(ctx context.Context, entered time.Time, arg
 	parent, err := adoptLinuxExecutorParentObserved(ctx, value, image, read, args[1] == executionLinuxPreworkInnerMode, observation)
 	if err != nil {
 		readErr, imageErr := observation.close(read.Close()), observation.close(image.Close())
+		_ = writeLinuxExecutorPreworkFailureOnce(&failureAttempted, value, observation, nil)
 		if readErr == nil && imageErr == nil && observation.settle(context.Background()) {
 			_, _ = os.Stdout.WriteString(linuxExecutorPreworkReceipt(value.Attempt, true))
 		}
@@ -345,10 +366,16 @@ func runLinuxExecutionPreworkCommand(ctx context.Context, entered time.Time, arg
 	if args[1] == executionLinuxPreworkOuterMode {
 		retired, workErr = runLinuxExecutorPreworkOuter(parent.alive, value, parent, image)
 	} else {
-		retired, workErr = runLinuxExecutorPreworkInner(parent.alive, value, parent, image)
+		retired, workErr = runLinuxExecutorPreworkInner(parent.alive, value, parent, image, &failureAttempted)
+	}
+	if recordErr := writeLinuxExecutorPreworkFailureOnce(&failureAttempted, value, observation, nil); recordErr != nil {
+		workErr = errors.Join(workErr, recordErr)
 	}
 	watchErr := parent.Close()
 	imageErr := observation.close(image.Close())
+	if recordErr := writeLinuxExecutorPreworkFailureOnce(&failureAttempted, value, observation, nil); recordErr != nil {
+		workErr = errors.Join(workErr, recordErr)
+	}
 	if !retired || !parent.retired || imageErr != nil || !observation.settle(context.Background()) {
 		return ErrExecutionLauncher
 	}

@@ -94,7 +94,7 @@ func linuxPressureFormatterChain(ctx context.Context) (string, []linuxPressureFo
 	return current, paths, nil
 }
 
-func holdLinuxPressureFormatter(ctx context.Context, expected string) (_ *linuxPressureFormatter, retErr error) {
+func holdLinuxPressureFormatterObserved(ctx context.Context, expected string, observation *executionPreworkObservation) (_ *linuxPressureFormatter, retErr error) {
 	if ctx == nil || ctx.Err() != nil || runtime.GOARCH != "amd64" || !validExecutionSHA256(expected) {
 		return nil, ErrLinuxPressure
 	}
@@ -109,7 +109,7 @@ func holdLinuxPressureFormatter(ctx context.Context, expected string) (_ *linuxP
 	file := os.NewFile(uintptr(fd), "linux-pressure-formatter")
 	defer func() {
 		if retErr != nil {
-			_ = file.Close()
+			_ = observation.close(file.Close())
 		}
 	}()
 	info, err := file.Stat()
@@ -226,10 +226,14 @@ func (owner *LinuxPressureVolume) format(ctx context.Context) error {
 		return errors.Join(ErrLinuxPressure, err)
 	}
 	owner.formatterSession = command.Process.Pid
+	if owner.observation != nil {
+		owner.formatterCommand = command
+	}
 	waitErr := command.Wait()
 	deadline, _ := operation.Deadline()
 	joined, empty, finishErr := finishExecutionProcessSession(command.Process.Pid, nil, true, waitErr, deadline)
 	owner.formatterJoined, owner.formatterEmpty = joined, empty
+	owner.observation.process(command, joined, empty)
 	output.mu.Lock()
 	failed := output.failed
 	output.mu.Unlock()

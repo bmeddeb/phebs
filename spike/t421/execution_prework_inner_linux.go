@@ -33,6 +33,18 @@ func (inner *linuxExecutorInnerPrework) prepare(ctx context.Context, value linux
 	if ctx == nil || ctx.Err() != nil || parent == nil || parent.check(ctx) != nil || !parent.inner || image == nil {
 		return ErrExecutionLauncher
 	}
+	if inner.prepareReference(ctx, value, image) != nil {
+		return ErrExecutionLauncher
+	}
+	if !inner.tool.executorClaim.bindInner(inner) {
+		return ErrExecutionLauncher
+	}
+	return inner.consume(ctx, value, parent, image)
+}
+
+// Both finite recipes construct their own complete protected reference graph;
+// their distinct live-consumer checks follow this common construction.
+func (inner *linuxExecutorInnerPrework) prepareReference(ctx context.Context, value linuxExecutorPreworkSelection, image *os.File) error {
 	request := ReferenceToolRequest{RepositoryRoot: value.RepositoryRoot, GitBinary: value.GitBinary, GoRoot: value.GoRoot,
 		ModuleCache: value.ModuleCache, PlanSourceCommit: value.PlanSourceCommit, IntegratedMainCommit: value.IntegratedMainCommit,
 		SourceCommit: value.SourceCommit, Binary: value.InputHelperBinary}
@@ -60,10 +72,7 @@ func (inner *linuxExecutorInnerPrework) prepare(ctx context.Context, value linux
 	if err != nil {
 		return ErrExecutionLauncher
 	}
-	if !inner.tool.executorClaim.bindInner(inner) {
-		return ErrExecutionLauncher
-	}
-	return inner.consume(ctx, value, parent, image)
+	return nil
 }
 
 func (inner *linuxExecutorInnerPrework) consume(ctx context.Context, value linuxExecutorPreworkSelection, parent *linuxExecutorParent, image *os.File) error {
@@ -201,20 +210,26 @@ func (inner *linuxExecutorInnerPrework) retired() bool {
 	return inner.tool == nil && inner.builds == nil && inner.git == nil && inner.referenceHelper == nil && inner.inputHelper == nil
 }
 
-func runLinuxExecutorPreworkInner(ctx context.Context, value linuxExecutorPreworkSelection, parent *linuxExecutorParent, image *os.File) (bool, error) {
+func runLinuxExecutorPreworkInner(ctx context.Context, value linuxExecutorPreworkSelection, parent *linuxExecutorParent, image *os.File, failureAttempted *bool) (bool, error) {
 	inner := &linuxExecutorInnerPrework{observation: parent.observation}
 	workErr := inner.prepare(ctx, value, parent, image)
-	if recordErr := writeLinuxExecutorPreworkFailure(value, inner.observation); recordErr != nil {
+	if recordErr := writeLinuxExecutorPreworkFailureOnce(failureAttempted, value, inner.observation, nil); recordErr != nil {
 		workErr = errors.Join(ErrExecutionLauncher, workErr, recordErr)
 	}
 	// Work remains bounded. Unknown original owners retain this process through
 	// settlement without extending the work deadline or allowing later success.
 	closeErr := inner.Close(context.Background())
+	if recordErr := writeLinuxExecutorPreworkFailureOnce(failureAttempted, value, inner.observation, nil); recordErr != nil {
+		workErr = errors.Join(workErr, recordErr)
+	}
 	for !inner.retired() || !inner.observation.settle(context.Background()) {
 		// Retire only the original recorded owners. Never restart preparation,
 		// release unknown borrowers, or grant additional operational time.
 		time.Sleep(time.Second)
 		closeErr = errors.Join(ErrExecutionLauncher, inner.Close(context.Background()))
+		if recordErr := writeLinuxExecutorPreworkFailureOnce(failureAttempted, value, inner.observation, nil); recordErr != nil {
+			workErr = errors.Join(workErr, recordErr)
+		}
 	}
 	liveErr := parent.check(ctx)
 	if workErr != nil || closeErr != nil || liveErr != nil {

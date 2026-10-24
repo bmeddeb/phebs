@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"sync"
@@ -43,6 +44,10 @@ type LinuxPressureVolume struct {
 	ready, failed, closed, removalUsed, removed bool
 	formatterSession                            int
 	formatterJoined, formatterEmpty             bool
+	observation                                 *executionPreworkObservation
+	closeResults                                map[*os.File]error
+	formatterCommand                            *exec.Cmd
+	formatterRetiredLater                       bool
 }
 
 // PrepareLinuxPressureVolume creates no supplied image or mount. Obvious
@@ -51,12 +56,19 @@ type LinuxPressureVolume struct {
 // user-namespace privilege; the kernel mount still enforces that boundary.
 // A nonnil owner on error retains its actual prefix. Close only releases safe
 // descriptors; failed construction never retries or deletes partial custody.
-func PrepareLinuxPressureVolume(ctx context.Context, request LinuxPressureRequest) (_ *LinuxPressureVolume, retErr error) {
+func PrepareLinuxPressureVolume(ctx context.Context, request LinuxPressureRequest) (*LinuxPressureVolume, error) {
+	return prepareLinuxPressureVolumeObserved(ctx, request, nil)
+}
+
+func prepareLinuxPressureVolumeObserved(ctx context.Context, request LinuxPressureRequest, observation *executionPreworkObservation) (_ *LinuxPressureVolume, retErr error) {
 	if linuxPressureContext(ctx) != nil || !validLinuxPressureRequest(request) || runtime.GOARCH != "amd64" ||
 		os.Geteuid() != 0 || os.Getegid() != 0 || !linuxPressureEffectiveMountCapability() {
 		return nil, ErrLinuxPressure
 	}
-	owner := &LinuxPressureVolume{request: request, loopNumber: -1}
+	owner := &LinuxPressureVolume{request: request, loopNumber: -1, observation: observation}
+	if observation != nil {
+		owner.closeResults = make(map[*os.File]error, 9)
+	}
 	defer func() {
 		if retErr != nil {
 			owner.failed = true
@@ -66,11 +78,11 @@ func PrepareLinuxPressureVolume(ctx context.Context, request LinuxPressureReques
 		}
 	}()
 	var err error
-	owner.parent, err = openLinuxPressureDirectory(ctx, request.Parent, false)
+	owner.parent, err = openLinuxPressureDirectoryObserved(ctx, request.Parent, false, observation)
 	if err != nil {
 		return owner, ErrLinuxPressure
 	}
-	owner.formatter, err = holdLinuxPressureFormatter(ctx, request.FormatterSHA256)
+	owner.formatter, err = holdLinuxPressureFormatterObserved(ctx, request.FormatterSHA256, observation)
 	if err != nil {
 		return owner, err
 	}
@@ -88,7 +100,7 @@ func PrepareLinuxPressureVolume(ctx context.Context, request LinuxPressureReques
 	owner.rootCreated = true
 	owner.token = hex.EncodeToString(token[:])
 	owner.root.path = filepath.Join(request.Parent, name)
-	owner.root, err = openLinuxPressureDirectory(ctx, owner.root.path, false)
+	owner.root, err = openLinuxPressureDirectoryObserved(ctx, owner.root.path, false, observation)
 	if err != nil || owner.root.node.Device != owner.parent.node.Device || owner.parent.file.Sync() != nil {
 		return owner, ErrLinuxPressure
 	}
@@ -97,7 +109,7 @@ func PrepareLinuxPressureVolume(ctx context.Context, request LinuxPressureReques
 	if owner.writeRecord(ctx, owner.record, true) != nil || unix.Mkdirat(int(owner.root.file.Fd()), "mount", 0o700) != nil {
 		return owner, ErrLinuxPressure
 	}
-	owner.underlay, err = openLinuxPressureDirectory(ctx, filepath.Join(owner.root.path, "mount"), false)
+	owner.underlay, err = openLinuxPressureDirectoryObserved(ctx, filepath.Join(owner.root.path, "mount"), false, observation)
 	if err != nil || owner.underlay.node.Device != owner.parent.node.Device || owner.root.file.Sync() != nil {
 		return owner, ErrLinuxPressure
 	}
@@ -142,14 +154,14 @@ func PrepareLinuxPressureVolume(ctx context.Context, request LinuxPressureReques
 		unix.Mount("", owner.underlay.path, "", unix.MS_PRIVATE|unix.MS_REC, "") != nil || owner.advance(ctx, "mounted") != nil {
 		return owner, ErrLinuxPressure
 	}
-	owner.mount, err = openLinuxPressureDirectory(ctx, owner.underlay.path, true)
+	owner.mount, err = openLinuxPressureDirectoryObserved(ctx, owner.underlay.path, true, observation)
 	if err != nil {
 		return owner, ErrLinuxPressure
 	}
 	if owner.removeFreshLostFound(ctx) != nil || unix.Mkdirat(int(owner.mount.file.Fd()), "workspace", 0o700) != nil || owner.mount.file.Sync() != nil {
 		return owner, ErrLinuxPressure
 	}
-	owner.workspace, err = openLinuxPressureDirectory(ctx, filepath.Join(owner.mount.path, "workspace"), false)
+	owner.workspace, err = openLinuxPressureDirectoryObserved(ctx, filepath.Join(owner.mount.path, "workspace"), false, observation)
 	if err != nil {
 		return owner, ErrLinuxPressure
 	}
@@ -221,7 +233,7 @@ func (owner *LinuxPressureVolume) WithRoot(ctx context.Context, callback func(*o
 	loan := os.NewFile(uintptr(fd), "linux-pressure-workspace-loan")
 	completed := false
 	defer func() {
-		retErr = errors.Join(retErr, loan.Close())
+		retErr = errors.Join(retErr, owner.observation.close(loan.Close()))
 		if !completed || retErr != nil {
 			owner.failed = true
 		}
@@ -276,7 +288,7 @@ func (owner *LinuxPressureVolume) Remove(ctx context.Context) (retErr error) {
 		return ErrLinuxPressure
 	}
 	owner.ready = false
-	if errors.Join(owner.workspace.file.Close(), owner.mount.file.Close()) != nil {
+	if errors.Join(owner.closeFile(owner.workspace.file), owner.closeFile(owner.mount.file)) != nil {
 		return ErrLinuxPressure
 	}
 	owner.workspace.file, owner.mount.file = nil, nil
@@ -294,7 +306,7 @@ func (owner *LinuxPressureVolume) Remove(ctx context.Context) (retErr error) {
 	if t4013.WaitPrivateProcessSession(owner.formatterSession, deadline) != nil || owner.checkImage(ctx) != nil || owner.checkRoots(ctx) != nil {
 		return ErrLinuxPressure
 	}
-	if owner.image.Close() != nil {
+	if owner.closeFile(owner.image) != nil {
 		return ErrLinuxPressure
 	}
 	owner.image = nil
@@ -325,7 +337,7 @@ func (owner *LinuxPressureVolume) Close() error {
 	if owner.closed {
 		return nil
 	}
-	if owner.formatterSession > 0 && (!owner.formatterJoined || !owner.formatterEmpty) {
+	if owner.formatterSession > 0 && (!owner.formatterJoined || !owner.formatterEmpty) && (owner.observation == nil || !owner.formatterRetiredLater) {
 		return ErrLinuxPressure
 	}
 	owner.closed = true
@@ -336,7 +348,7 @@ func (owner *LinuxPressureVolume) Close() error {
 	}
 	for _, file := range files {
 		if file != nil {
-			err = errors.Join(err, file.Close())
+			err = errors.Join(err, owner.closeFile(file))
 		}
 	}
 	return err
@@ -357,4 +369,18 @@ func linuxPressureEffectiveMountCapability() bool {
 	var data [2]unix.CapUserData
 	header := unix.CapUserHeader{Version: unix.LINUX_CAPABILITY_VERSION_3}
 	return unix.Capget(&header, &data[0]) == nil && data[0].Effective&(1<<unix.CAP_SYS_ADMIN) != 0
+}
+
+// Only the private observed recipe suppresses known repeated closes of its fixed
+// keeper set. A first actual failure stays failed; public Close semantics remain.
+func (owner *LinuxPressureVolume) closeFile(file *os.File) error {
+	if owner.observation == nil {
+		return file.Close()
+	}
+	if err, exists := owner.closeResults[file]; exists {
+		return err
+	}
+	err := owner.observation.close(file.Close())
+	owner.closeResults[file] = err
+	return err
 }

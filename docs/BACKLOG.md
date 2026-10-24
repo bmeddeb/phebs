@@ -5278,6 +5278,39 @@ protected-executor composition remains unexecuted. Full MED-497, MED-496 and
 MED-495 acceptance, the pressure UID/descriptor bridge and formal profiles
 remain open.
 
+**T42.H2t.b · Pressure workspace credential/descriptor handoff (MED-497
+implementation, 2026-10-24; bounded checkpoint, native acceptance pending).**
+Connect an actual protected root
+`t422-execute` broker and its in-process H2m volume to one authenticated fixed
+unprivileged executor. The root broker reconstructs its own protected inputs,
+Go/reference lineage and same-inode current image; neither a test-driver image
+nor serialized owners substitute. Keep actual volume/source/image loans live
+through child/helper/control/cwd retirement and the broker's actual Wait.
+
+AC: independently protected root/target input counterparts with measured
+content/Go/source equality; a new target-owned sealed image and leaf, preserving
+all original root0700 and canonical/UID checks; actual post-drop peer/lifetime/
+credential and held-object fences; one descriptor-rooted write/sync/readback;
+spent/foreign/cloned/canceled/closed/drifted/partial/unjoined refusals; unknown
+prefixes retain their original owners; genuine positive nonforced H2m teardown.
+Cover real unprivileged kernel mechanisms separately from the opt-in genuine
+privileged composition, plus normal/race, cost/static/docs and independent
+review. No pre-fork peer-credential shortcut, proc-FD path alias or independent
+child root-exe observation is claimed. Keep historical formal/H2t.a predicates
+exact. Full typed profile consumers and MED-495/496/497 acceptance remain open;
+changed source requires fresh exact image/input/UID/host/security/resource
+admission before any privileged run. This slice grants source work only.
+
+The corrected source10 passed all thirteen final commands. Connected
+normal/race each pass 566 nodes, including 74 new pressure-borrow nodes, 75
+executor nodes and 417 other connected nodes; one inherited frozen-Darwin/arm64
+external-tool control skips per mode. Counts include helper/model entries.
+Both vet modes, pinned differential lint over all 26 changed Go files,
+docs/glossary/whitespace and all four supported triple-tag compile-only targets
+pass. Source/cost/oracle review is clear. The two required actual Linux native
+bodies remain unexecuted; full MED-495/496/497 and formal profiles remain open.
+Failed lint/review prefixes and original corrected-label evidence are retained.
+
 **2026-10-22 — Ben-directed implementation checkpoint integration.** Ben
 explicitly requests maria cleanup and PR merges after the v10 native failure
 was disclosed. PR156 and T42.H2s.a–d / PR164–167 may integrate as reviewed
