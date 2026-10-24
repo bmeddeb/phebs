@@ -558,6 +558,15 @@ HUP before slot retirement. These are kernel mechanism controls, not a Surreal
 parent-death exception or full checkpoint/successor proof. Native checkpoint
 entry and Maria's independently running qualification remain unchanged.
 
+T42.H2s.g uses one engine binding for the launcher's existing output reservation,
+endpoint and bootstrap. Current Linux constructors still omit the recipe and
+select EM01's six/one/two points. Prepared EM02 reservations are 712 bytes for
+checkpoint and 232 for recovery, charged within the existing combined output
+ceiling; they are not extra headroom. Recipe/runtime and checkpoint/recovery
+shape mismatches refuse before launch. This plumbing does not select a new
+policy or enable native checkpoint entry. Actual successor, retained-source,
+PC/SA, custody, accounting and full qualification remain separate gates.
+
 The first exact `2754d208` full-native attempt completed its three actual
 reference comparisons, then correctly refused policy v1 before any author or
 server operation: 10,504,626,176 required bytes exceeded 8,633,675,776 observed

@@ -17474,3 +17474,31 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   to pass, and a failing `ci-go` package or test is red.
 
   Cost: none; this changes the merge bar only.
+
+- **2026-10-23 — T42.H2s.g shared launcher engine binding and wire debit
+  (MED-496 prerequisite).** Derive one closed engine binding before the existing
+  Linux FD7 socket, then pass that value to the endpoint and bootstrap and
+  reserve its recipe-specific wire bytes from the existing combined output
+  ceiling. Refuse unknown recipe/maximum, producer/input drift, unpaired runtime
+  recipes, backup/archive carry and absent checkpoint/recovery prerequisites.
+  Continuity compares the existing three tools against the runtime recipe
+  selected by the engine binding; matching V3 strings alone supply no selection.
+  Preserve the actual native adapter's omitted EM01 recipe and six/one/two
+  maximums. No constructor selects EM02, epoch four remains unselected and native
+  checkpoint entry stays closed. Prospective policy, source-owned successor and
+  actual PC/SA/custody/accounting composition remain subsequent gates. Maria's
+  separate exact-source preparation is unaffected; no full acceptance follows.
+
+  Cost: each existing engine-enabled launch adds one fixed-shape validation of
+  three tool values and their already-bounded environments. The existing input
+  hash moves before Start without adding a hash. Binding validation and output
+  reservation each validate fixed recipe/producer/input fields. EM01 keeps
+  632/232/312 bytes; unselected EM02 prepares 712/232 bytes, all inside the same
+  64-MiB ceiling. Signed negative or insufficient remaining capacity refuses
+  without mutation. Each existing child admission adds a fixed recipe-to-runtime
+  comparison beside its unchanged tool/environment equality scan. No new I/O,
+  child, socket, descriptor, endpoint goroutine, mutex, cache or persistent state
+  is added; phase/cleanup deadlines, DA/SA limits, RSS and disk bounds stay exact.
+  Product query, sync, retry/no-op and publication work is unchanged. Wire tests
+  use three socket pairs serially per case under a three-second deadline and
+  bounded bootstrap JSON; they grant no native HOLD or successor proof.

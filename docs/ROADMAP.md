@@ -341,6 +341,12 @@ RSS once and actual parent reap/HUP before descendant retirement. These manual
 shell/sleep mechanics change no runtime policy, Surreal safeguard, Maria input
 or checkpoint gate. Actual source-owned successor composition remains next.
 
+T42.H2s.g prepares one launcher engine binding for the existing output debit,
+endpoint and bootstrap, plus recipe-aware runtime continuity. Bounded wire
+controls preserve EM01 selection and prepare EM02's exact reservations inside
+the unchanged ceiling. Native EM02 selection, prospective policy and actual
+checkpoint/successor composition remain open; no native entry is enabled.
+
 Ben's 2026-10-22 instruction authorizes integrating PR156 and PR164–167 as
 reviewed implementation checkpoints while cleaning maria after verified archival
 transfer. It supersedes their full-native integration hold only. V10 remains a
