@@ -5100,6 +5100,15 @@ cost pass and independent review. These are bounded launcher/wire controls,
 not native HOLD, selected policy or actual successor acceptance. MED-495 full
 qualification and MED-496 composition remain open.
 
+The [bounded launcher record](../spike/t42h2r/launcher-engine-debit-bounded-linux-20261024.json)
+binds corrected source `dd5b64c8`: 184 connected pass nodes per normal/race
+mode, including 36 new controls with zero skips; one historical Darwin-only
+control skips per connected mode. Unchanged dispatch coverage carries 149
+pass nodes per mode. Vet, pinned lint and all four supported tagged compiles
+pass; exact source/cost re-review has zero findings. These counts overlap.
+Original failed lint/review prefixes remain retained; native selection and
+full successor/qualification acceptance stay open.
+
 **2026-10-22 — Ben-directed implementation checkpoint integration.** Ben
 explicitly requests maria cleanup and PR merges after the v10 native failure
 was disclosed. PR156 and T42.H2s.a–d / PR164–167 may integrate as reviewed

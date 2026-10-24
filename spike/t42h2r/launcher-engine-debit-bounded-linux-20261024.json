@@ -1,0 +1,169 @@
+{
+  "schema": "phebs-linux-launcher-engine-debit-bounded-v1",
+  "base_commit": "407336996bb00f668096245236544fc98d9096fc",
+  "implementation_commit": "564ed649b1083ad80f081352f88c744d5b8e2afe",
+  "reviewed_code_commit": "dd5b64c86b2c08c5083b37c8437e9fe52d42280f",
+  "go_source_sha256": {
+    "spike/t421/epoch_engine_launch.go": "86efff4ad0dfe0be32eb75328c1d42c2077aa747e7949e04d8fa0c730f962b6b",
+    "spike/t421/epoch_engine_launch_linux_test.go": "4f336d58f816f88a347754f0b3775e9ceb1fcaaa5c91747f881c64bdbb1dd9ee",
+    "spike/t421/epoch_engine_endpoint_linux.go": "355c30dd83d6949a6b162090fb6170d249846ab89149e872465b3ee161cdbfee",
+    "spike/t421/epoch_launch.go": "3b0f5a6e295d638ecc0962ebd380421098449496dd48922fed22fd3da1a57c44",
+    "spike/t421/epoch_native_adapter.go": "ab3c5450a542039c7812ee59fd452579773d03690c4ad6ac5b68b338418dddc5",
+    "spike/t421/epoch_index_recipe_linux_test.go": "540305cf0830bf2f831b26c1c34c19f10f318c5b8e7cef0df447f848661d3096"
+  },
+  "final_connected_and_static_gates": [
+    {
+      "name": "connected-normal",
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 28.020344495773315,
+      "sha256": "82d5e259132dfbcfbe8858b7341b3b1faea8871d4e2e7a5259db48ef65b66d58",
+      "pass_nodes": 184,
+      "skip_nodes": 1,
+      "failed_nodes": []
+    },
+    {
+      "name": "connected-race",
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 57.29300594329834,
+      "sha256": "027df64b0ee31ab2779d873b634f7dab8baab34044a8c9c6cf7c3f49cae5a4eb",
+      "pass_nodes": 184,
+      "skip_nodes": 1,
+      "failed_nodes": []
+    },
+    {
+      "name": "vet",
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 3.6948561668395996,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "lint",
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 18.685245513916016,
+      "sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+    }
+  ],
+  "connected_suite_skips": [
+    "TestExecutionEpochCheckpointInheritedTerminal"
+  ],
+  "new_controls_per_mode": {
+    "normal": {
+      "pass_nodes": 36,
+      "skips": []
+    },
+    "race": {
+      "pass_nodes": 36,
+      "skips": []
+    }
+  },
+  "dispatch_gate_carry": {
+    "source_record": "gates.json",
+    "reason": "internal/dispatchadmission, go.mod and go.sum bytes unchanged from40733699 throughdd5b64c8; launcher boolean correction equivalent and test cleanup does not change dispatch code",
+    "gates": [
+      {
+        "name": "dispatch-normal",
+        "actual_wait_exit_code": 0,
+        "elapsed_seconds": 1.0193514823913574,
+        "sha256": "931f961ab11851ddf61272c7bfbb51a17909a173260b423e75f22855fd0a286a",
+        "pass_nodes": 149,
+        "skip_nodes": 0,
+        "failed_nodes": []
+      },
+      {
+        "name": "dispatch-race",
+        "actual_wait_exit_code": 0,
+        "elapsed_seconds": 2.356675386428833,
+        "sha256": "21ee994a895bb42ce00c73406a5acead7736b52197209558f1ba983ae99cd619",
+        "pass_nodes": 149,
+        "skip_nodes": 0,
+        "failed_nodes": []
+      }
+    ]
+  },
+  "supported_tagged_compilation": {
+    "compile_only": true,
+    "go_version": "go version go1.26.5 linux/amd64",
+    "flags": [
+      "go",
+      "test",
+      "-c",
+      "-work",
+      "-p=2",
+      "-tags=phebs_t42_native",
+      "./spike/t421"
+    ],
+    "CGO_ENABLED": "0",
+    "gates": [
+      {
+        "platform": "linux-amd64",
+        "actual_wait_exit_code": 0,
+        "elapsed_seconds": 27.802951097488403,
+        "log_sha256": "b171cbf0a6fabd0997fad140e78d3571e462f684a351b6a48f558edd3b739eaa",
+        "output_bytes": 90680740,
+        "output_sha256": "417d7ad6e5ac49c7a97e9ca508bac7e982891df0be831a196fdbaee17accc2f1"
+      },
+      {
+        "platform": "linux-arm64",
+        "actual_wait_exit_code": 0,
+        "elapsed_seconds": 28.784290075302124,
+        "log_sha256": "bdcecd6983cbb2a6c3f7e2bec55b177dbfc123c402bcbb3defeff98858354328",
+        "output_bytes": 84267061,
+        "output_sha256": "332a949a8c2df37d9a2dcfa6dc2b9bbd57dff85513f6d85ded377ea4e5ed42c9"
+      },
+      {
+        "platform": "darwin-amd64",
+        "actual_wait_exit_code": 0,
+        "elapsed_seconds": 27.190022230148315,
+        "log_sha256": "b72ff29ddb6df86defc4797afcd3a4f1d80c9e8519f2ec4fba816bbd6d6f8540",
+        "output_bytes": 95225936,
+        "output_sha256": "379fcc36bd3650d24c846a86cd2f13c3236ef9b3a8f0394649115d1dc2d45126"
+      },
+      {
+        "platform": "darwin-arm64",
+        "actual_wait_exit_code": 0,
+        "elapsed_seconds": 27.56544804573059,
+        "log_sha256": "35dd1ebf76d232f5d170be82ef595b4986a044f7ef495c2794656f272f79010f",
+        "output_bytes": 89959474,
+        "output_sha256": "3a80c87f11cb2f7f139d4df9b408447b7c9c930059d11f25d557ad28e9a8f45f"
+      }
+    ]
+  },
+  "independent_review": {
+    "source_commit": "dd5b64c86b2c08c5083b37c8437e9fe52d42280f",
+    "reviewer": "/root/med505_scip",
+    "severity_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0
+    },
+    "initial_low_test_fd_join_finding": "corrected; all pipe ends/connections own failure cleanup; every started test goroutine is canceled, peer-closed and synchronously joined"
+  },
+  "preserved_prefixes": [
+    "initial lint QF1001 failure in gates.json; boolean-equivalent correction passed",
+    "initial low independent-review test FD/join finding and correction",
+    "intermediate corrected-gates.json, original gate-lineage.json and corrected per-scope lineage; all raw logs retained"
+  ],
+  "scope": {
+    "legacy_selection": "EM01 omitted recipe; six/one/two maximums unchanged",
+    "prepared_recipe": "EM02 checkpoint/recovery remains unselected; one binding owns wire debit, endpoint and bootstrap",
+    "wire_bytes": {
+      "legacy": [
+        632,
+        232,
+        312
+      ],
+      "prepared_checkpoint": 712,
+      "prepared_recovery": 232
+    },
+    "combined_output_ceiling_bytes": 67108864,
+    "native_checkpoint_entry": "closed",
+    "historical_policies": "unchanged",
+    "full_qualification": false,
+    "successor_composition": false,
+    "readiness_or_freeze": false,
+    "merge_or_deployment": false
+  },
+  "private_evidence_directory": "/home/ben/phebs-rehearsals/med496-launcher-debits-20261024",
+  "documentation_gates": "Recorded separately after this evidence-only addition; Go bytes stay identical to reviewed_code_commit."
+}
