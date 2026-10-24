@@ -74,6 +74,8 @@ func RunExecutionCommand(ctx context.Context, args, environment []string) error 
 		return runExecutionInner(ctx, entered, args[0], args[3], environment)
 	case executionAuthorizationMode:
 		return runExecutionAuthorizationClient(ctx, entered, args)
+	case executionLinuxPreworkOuterMode, executionLinuxPreworkInnerMode:
+		return runLinuxExecutionPreworkCommand(ctx, entered, args, environment)
 	default:
 		return ErrExecutionLauncher
 	}

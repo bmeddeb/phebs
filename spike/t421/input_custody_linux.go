@@ -51,10 +51,12 @@ type linuxExecutionInput struct {
 // set in one call and join every use before returning. Close and Check wait
 // behind that complete use. Distinct owners require separate orchestration.
 type LinuxExecutionInputCustody struct {
-	mu     sync.Mutex
-	inputs map[string]linuxExecutionInput
-	closed bool
-	err    error
+	mu          sync.Mutex
+	inputs      map[string]linuxExecutionInput
+	closed      bool
+	err         error
+	closeErr    error // Native descriptor-close failure, separate from sticky use errors.
+	observation *executionPreworkObservation
 }
 
 // ProtectLinuxExecutionInputs owns at most 64 files, each <=256 MiB and together
@@ -76,6 +78,10 @@ type LinuxExecutionInputCustody struct {
 // do not bind anonymous images. Failure closes all owned descriptors and
 // returns nil; no disk copies remain.
 func ProtectLinuxExecutionInputs(ctx context.Context, copies []ExecutionInputCopy) (_ *LinuxExecutionInputCustody, retErr error) {
+	return protectLinuxExecutionInputsObserved(ctx, copies, nil)
+}
+
+func protectLinuxExecutionInputsObserved(ctx context.Context, copies []ExecutionInputCopy, observation *executionPreworkObservation) (_ *LinuxExecutionInputCustody, retErr error) {
 	if runtime.GOARCH != "amd64" || ctx == nil || ctx.Err() != nil || len(copies) == 0 || len(copies) > maxInputCustodyFiles {
 		return nil, ErrExecutionInputCustody
 	}
@@ -88,7 +94,7 @@ func ProtectLinuxExecutionInputs(ctx context.Context, copies []ExecutionInputCop
 		}
 		names[input.Name] = true
 	}
-	custody := &LinuxExecutionInputCustody{inputs: make(map[string]linuxExecutionInput, len(copies))}
+	custody := &LinuxExecutionInputCustody{inputs: make(map[string]linuxExecutionInput, len(copies)), observation: observation}
 	defer func() {
 		if retErr != nil {
 			_ = custody.Close()
@@ -98,7 +104,7 @@ func ProtectLinuxExecutionInputs(ctx context.Context, copies []ExecutionInputCop
 	var total int64
 	buffer := make([]byte, 32<<10)
 	for _, input := range copies {
-		entry, err := copyLinuxExecutionInput(ctx, input, maxInputCustodyBytes-total, buffer)
+		entry, err := copyLinuxExecutionInputObserved(ctx, input, maxInputCustodyBytes-total, buffer, observation)
 		if err != nil {
 			return nil, ErrExecutionInputCustody
 		}
@@ -112,6 +118,10 @@ func ProtectLinuxExecutionInputs(ctx context.Context, copies []ExecutionInputCop
 }
 
 func copyLinuxExecutionInput(ctx context.Context, input ExecutionInputCopy, remaining int64, buffer []byte) (_ linuxExecutionInput, retErr error) {
+	return copyLinuxExecutionInputObserved(ctx, input, remaining, buffer, nil)
+}
+
+func copyLinuxExecutionInputObserved(ctx context.Context, input ExecutionInputCopy, remaining int64, buffer []byte, observation *executionPreworkObservation) (_ linuxExecutionInput, retErr error) {
 	var entry linuxExecutionInput
 	canonical, err := filepath.EvalSymlinks(input.Path)
 	if err != nil || canonical != input.Path || ctx.Err() != nil {
@@ -122,11 +132,11 @@ func copyLinuxExecutionInput(ctx context.Context, input ExecutionInputCopy, rema
 		return entry, ErrExecutionInputCustody
 	}
 	defer func() {
-		if source.Close() != nil {
+		if observation.close(source.Close()) != nil {
 			retErr = ErrExecutionInputCustody
 		}
 		if retErr != nil && entry.file != nil {
-			_ = entry.file.Close()
+			_ = observation.close(entry.file.Close())
 		}
 	}()
 	var before, after, pathStat unix.Stat_t
@@ -146,7 +156,12 @@ func copyLinuxExecutionInput(ctx context.Context, input ExecutionInputCopy, rema
 		return entry, ErrExecutionInputCustody
 	}
 	writer := os.NewFile(uintptr(fd), "sealed-input-writer")
-	defer func() { _ = writer.Close() }()
+	writerClosed := false
+	defer func() {
+		if !writerClosed {
+			_ = observation.close(writer.Close())
+		}
+	}()
 	written, copyErr := io.CopyBuffer(struct{ io.Writer }{writer}, executionInputReader{ctx, io.LimitReader(source, before.Size)}, buffer)
 	var sentinel [1]byte
 	_, tailErr := io.ReadFull(executionInputReader{ctx, source}, sentinel[:])
@@ -162,7 +177,12 @@ func copyLinuxExecutionInput(ctx context.Context, input ExecutionInputCopy, rema
 		return entry, ErrExecutionInputCustody
 	}
 	entry.file, err = openLinuxInputReadOnly(writer)
-	if err != nil || writer.Close() != nil {
+	if err != nil {
+		return entry, ErrExecutionInputCustody
+	}
+	closeErr := observation.close(writer.Close())
+	writerClosed = true
+	if closeErr != nil {
 		return entry, ErrExecutionInputCustody
 	}
 	entry.identity = LinuxExecutionInputIdentity{input.Name, input.SHA256, written, input.Executable}
@@ -303,7 +323,9 @@ func (custody *LinuxExecutionInputCustody) WithInputs(ctx context.Context, names
 	defer func() {
 		if !released {
 			for _, loan := range loans {
-				_ = loan.Close()
+				if custody.observation.close(loan.Close()) != nil {
+					custody.closeErr = ErrExecutionInputCustody
+				}
 			}
 			custody.err = ErrExecutionInputCustody
 		}
@@ -329,6 +351,9 @@ func (custody *LinuxExecutionInputCustody) WithInputs(ctx context.Context, names
 	for i, loan := range loans {
 		protected := linuxInputProtected(loan, entries[i])
 		closeErr := loan.Close()
+		if custody.observation.close(closeErr) != nil {
+			custody.closeErr = ErrExecutionInputCustody
+		}
 		_, keeperErr := custody.checkLocked(ctx, names[i])
 		if !protected || closeErr != nil || keeperErr != nil {
 			valid = false
@@ -354,6 +379,8 @@ func (custody *LinuxExecutionInputCustody) Close() error {
 		for _, entry := range custody.inputs {
 			if entry.file.Close() != nil {
 				custody.err = ErrExecutionInputCustody
+				custody.closeErr = ErrExecutionInputCustody
+				_ = custody.observation.close(ErrExecutionInputCustody)
 			}
 		}
 		// Retention hygiene only: checkLocked refuses on closed before it

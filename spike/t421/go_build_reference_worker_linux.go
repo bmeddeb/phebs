@@ -54,16 +54,16 @@ func runGoReferenceNamespace(ctx context.Context, attempt *linuxGoReferenceAttem
 	parent, child := os.NewFile(uintptr(pair[0]), "go-reference-controller"), os.NewFile(uintptr(pair[1]), "go-reference-helper")
 	work, err := attempt.stage.Open("work")
 	if err != nil {
-		_ = parent.Close()
-		_ = child.Close()
+		_ = attempt.observation.close(parent.Close())
+		_ = attempt.observation.close(child.Close())
 		return ErrExecutionGoBuildCustody
 	}
 	defer func() {
-		parentErr, workErr := parent.Close(), work.Close()
+		parentErr, workErr := attempt.observation.close(parent.Close()), attempt.observation.close(work.Close())
 		if parentErr != nil || workErr != nil {
 			retErr = ErrExecutionGoBuildCustody
 		}
-		if child != nil && child.Close() != nil {
+		if child != nil && attempt.observation.close(child.Close()) != nil {
 			retErr = ErrExecutionGoBuildCustody
 		}
 	}()
@@ -88,14 +88,14 @@ func runGoReferenceNamespace(ctx context.Context, attempt *linuxGoReferenceAttem
 	pidfd, waited, pidfdErr := pinExecutionProcessRoot(command)
 	if pidfdErr == nil {
 		defer func() {
-			if unix.Close(pidfd) != nil {
+			if attempt.observation.close(unix.Close(pidfd)) != nil {
 				retErr = ErrExecutionGoBuildCustody
 			}
 		}()
 	}
 	useErr := func() error {
 		attempt.step = "child-control"
-		closeErr := child.Close()
+		closeErr := attempt.observation.close(child.Close())
 		child = nil
 		if closeErr != nil || pidfdErr != nil {
 			return ErrExecutionGoBuildCustody
@@ -116,7 +116,7 @@ func runGoReferenceNamespace(ctx context.Context, attempt *linuxGoReferenceAttem
 			return ErrExecutionGoBuildCustody
 		}
 		attempt.step = "input-transfer"
-		census, err := sendGoReferenceHeldInputs(ctx, wire, root, attempt.input)
+		census, err := sendGoReferenceHeldInputsObserved(ctx, wire, root, attempt.input, attempt.observation)
 		if err != nil {
 			return ErrExecutionGoBuildCustody
 		}

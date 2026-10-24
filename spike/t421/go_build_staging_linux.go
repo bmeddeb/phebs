@@ -15,15 +15,20 @@ import (
 // a protected path or tool identity; H2k construction must independently copy
 // these bytes into its read-only tree before any Go command may use them.
 type linuxGoBuildStaging struct {
-	directory string
-	tree      *os.Root
-	names     map[string]os.FileInfo
-	pathBytes int
-	inventory ExecutionGoBuildInventory
-	err       error
+	directory   string
+	tree        *os.Root
+	names       map[string]os.FileInfo
+	pathBytes   int
+	inventory   ExecutionGoBuildInventory
+	err         error
+	observation *executionPreworkObservation
 }
 
 func newLinuxGoBuildStaging(directory string) (*linuxGoBuildStaging, error) {
+	return newLinuxGoBuildStagingObserved(directory, nil)
+}
+
+func newLinuxGoBuildStagingObserved(directory string, observation *executionPreworkObservation) (*linuxGoBuildStaging, error) {
 	if !linuxGitPrivateDirectory(directory) {
 		return nil, ErrExecutionGoBuildCustody
 	}
@@ -33,7 +38,7 @@ func newLinuxGoBuildStaging(directory string) (*linuxGoBuildStaging, error) {
 	}
 	file, err := tree.Open(".")
 	if err != nil {
-		_ = tree.Close()
+		_ = observation.close(tree.Close())
 		return nil, ErrExecutionGoBuildCustody
 	}
 	rows, readErr := file.ReadDir(1)
@@ -41,11 +46,11 @@ func newLinuxGoBuildStaging(directory string) (*linuxGoBuildStaging, error) {
 	current, pathErr := os.Lstat(directory)
 	closeErr := file.Close()
 	if readErr != io.EOF || len(rows) != 0 || statErr != nil || pathErr != nil || closeErr != nil || !os.SameFile(held, current) {
-		_ = tree.Close()
+		_ = observation.close(tree.Close())
 		return nil, ErrExecutionGoBuildCustody
 	}
 	return &linuxGoBuildStaging{directory: directory, tree: tree, names: map[string]os.FileInfo{".": held},
-		pathBytes: len("inputs"), inventory: ExecutionGoBuildInventory{Entries: 1}}, nil
+		pathBytes: len("inputs"), inventory: ExecutionGoBuildInventory{Entries: 1}, observation: observation}, nil
 }
 
 func (staging *linuxGoBuildStaging) refuse() error {
@@ -239,7 +244,7 @@ func (staging *linuxGoBuildStaging) removeEntry(ctx context.Context, path string
 		return ErrExecutionGoBuildCustody
 	}
 	defer func() {
-		if parent.Close() != nil {
+		if staging.observation.close(parent.Close()) != nil {
 			retErr = ErrExecutionGoBuildCustody
 		}
 	}()
@@ -257,7 +262,7 @@ func (staging *linuxGoBuildStaging) removeEntry(ctx context.Context, path string
 				return ErrExecutionGoBuildCustody
 			}
 			held, statErr := next.Stat(".")
-			if closeErr := parent.Close(); closeErr != nil || statErr != nil || !os.SameFile(expected, held) {
+			if closeErr := staging.observation.close(parent.Close()); closeErr != nil || statErr != nil || !os.SameFile(expected, held) {
 				parent = next
 				return ErrExecutionGoBuildCustody
 			}

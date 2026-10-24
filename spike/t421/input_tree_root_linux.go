@@ -250,19 +250,26 @@ func (tree *LinuxExecutionInputTree) WithRoot(ctx context.Context, use func(*os.
 	released := false
 	defer func() {
 		if !released {
-			_ = loan.Close()
+			if tree.observation.close(loan.Close()) != nil {
+				tree.closeErr = ErrLinuxInputTree
+			}
 			tree.err = ErrLinuxInputTree
 		}
 	}()
 	before, err := observeInputTreeRoot(loan)
 	if err != nil || !sameLinuxInputStat(before.stat, tree.kernel.stat) || before.mount != tree.kernel.mount || before.fsid != tree.kernel.fsid {
-		_ = loan.Close()
+		if tree.observation.close(loan.Close()) != nil {
+			tree.closeErr = ErrLinuxInputTree
+		}
 		released, tree.err = true, ErrLinuxInputTree
 		return tree.err
 	}
 	useErr := use(loan)
 	after, observeErr := observeInputTreeRoot(loan)
 	closeErr := loan.Close()
+	if tree.observation.close(closeErr) != nil {
+		tree.closeErr = ErrLinuxInputTree
+	}
 	released = true
 	if ctx.Err() != nil || observeErr != nil || closeErr != nil || !sameLinuxInputStat(before.stat, after.stat) ||
 		before.mount != after.mount || before.fsid != after.fsid || tree.checkRoot() != nil {
@@ -310,9 +317,13 @@ func (tree *LinuxExecutionInputTree) Close(ctx context.Context) error {
 	}
 	if tree.root != nil && tree.root.Close() != nil {
 		tree.err = ErrLinuxInputTree
+		tree.closeErr = ErrLinuxInputTree
+		_ = tree.observation.close(ErrLinuxInputTree)
 	}
 	if tree.stage.Close() != nil {
 		tree.err = ErrLinuxInputTree
+		tree.closeErr = ErrLinuxInputTree
+		_ = tree.observation.close(ErrLinuxInputTree)
 	}
 	tree.closed = true
 	return tree.err

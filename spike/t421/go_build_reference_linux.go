@@ -23,8 +23,12 @@ type LinuxGoReferenceHelper struct {
 }
 
 func ProtectLinuxGoReferenceHelper(ctx context.Context, request ReferenceToolRequest) (*LinuxGoReferenceHelper, error) {
+	return protectLinuxGoReferenceHelperObserved(ctx, request, nil)
+}
+
+func protectLinuxGoReferenceHelperObserved(ctx context.Context, request ReferenceToolRequest, observation *executionPreworkObservation) (*LinuxGoReferenceHelper, error) {
 	request.Role, request.PlanSchema = linuxGoReferenceRole, linuxGoReferenceRecipe
-	tool, err := ProtectLinuxExecutionReferenceTool(ctx, request)
+	tool, err := protectLinuxExecutionReferenceToolObserved(ctx, request, observation)
 	if tool == nil {
 		return nil, ErrExecutionGoBuildCustody
 	}
@@ -68,6 +72,7 @@ type linuxGoReferenceAttempt struct {
 	waitError     string
 	err           error
 	released      bool
+	observation   *executionPreworkObservation
 }
 
 // Retain one bounded completed join record after its private workspace is gone.
@@ -92,6 +97,20 @@ func (custody *LinuxExecutionGoBuildCustody) ProtectReferenceToolV3(ctx context.
 }
 
 func (custody *LinuxExecutionGoBuildCustody) protectReferenceTool(ctx context.Context, parent, role, binary, schema string, helper *LinuxGoReferenceHelper) (*LinuxExecutionToolCustody, error) {
+	return custody.protectReferenceCandidate(ctx, parent, role, schema, helper, func() (*LinuxExecutionToolCustody, error) {
+		return protectLinuxExecutionToolObserved(ctx, role, binary, custody.observation)
+	})
+}
+
+// Only the finite executor prework consumer admits an inherited candidate. The
+// public path constructors keep their canonical-path contract unchanged.
+func (custody *LinuxExecutionGoBuildCustody) protectExecutorReferenceFD(ctx context.Context, parent string, image *os.File, helper *LinuxGoReferenceHelper) (*LinuxExecutionToolCustody, error) {
+	return custody.protectReferenceCandidate(ctx, parent, "t422-execute", "", helper, func() (*LinuxExecutionToolCustody, error) {
+		return protectLinuxExecutorCandidateFDObserved(ctx, image, custody.observation)
+	})
+}
+
+func (custody *LinuxExecutionGoBuildCustody) protectReferenceCandidate(ctx context.Context, parent, role, schema string, helper *LinuxGoReferenceHelper, candidate func() (*LinuxExecutionToolCustody, error)) (*LinuxExecutionToolCustody, error) {
 	if custody == nil || ctx == nil || ctx.Err() != nil || helper == nil || helper.tool == nil || parent != filepath.Dir(custody.directory) {
 		return nil, ErrExecutionGoBuildCustody
 	}
@@ -113,14 +132,14 @@ func (custody *LinuxExecutionGoBuildCustody) protectReferenceTool(ctx context.Co
 		custody.mu.Unlock()
 		return nil, ErrExecutionGoBuildCustody
 	}
-	tool, err := protectLinuxExecutionTool(ctx, role, binary)
+	tool, err := candidate()
 	if err != nil {
 		helper.mu.Unlock()
 		custody.mu.Unlock()
 		return nil, ErrExecutionGoBuildCustody
 	}
 	buildCtx, cancel := context.WithTimeout(ctx, 20*time.Minute)
-	attempt := &linuxGoReferenceAttempt{done: make(chan struct{}), cancel: cancel, tool: tool, input: input,
+	attempt := &linuxGoReferenceAttempt{done: make(chan struct{}), cancel: cancel, tool: tool, input: input, observation: custody.observation,
 		plan: linuxGoReferencePlan{Role: role, Schema: schema, Source: custody.reference.source, Tree: custody.reference.tree,
 			ConfigSHA256: custody.reference.configSHA256, OriginalSDK: custody.request.GoRoot,
 			OriginalModules: custody.request.ModuleCache, OriginalSource: custody.request.RepositoryRoot}}
@@ -161,6 +180,9 @@ func (custody *LinuxExecutionGoBuildCustody) protectReferenceTool(ctx context.Co
 	tool = attempt.tool
 	tool.identity = identity
 	tool.referenceInputs = custody
+	if role == "t422-execute" {
+		tool.executorClaim = &linuxExecutorPreworkClaim{tool: tool, builds: custody}
+	}
 	custody.goIdentity = goIdentity
 	custody.last = linuxGoReferenceCompletion{pid: attempt.tree.pid, joined: attempt.tree.joined, empty: attempt.tree.empty,
 		input: attempt.input, goDigest: attempt.goDigest, toolDigest: attempt.digest}
@@ -181,7 +203,7 @@ func (custody *LinuxExecutionGoBuildCustody) compareGoReference(ctx context.Cont
 			return ErrExecutionGoBuildCustody
 		}
 		defer func() {
-			if output.Close() != nil {
+			if custody.observation.close(output.Close()) != nil {
 				retErr = ErrExecutionGoBuildCustody
 			}
 		}()
@@ -248,7 +270,7 @@ func (custody *LinuxExecutionGoBuildCustody) prepareGoReferenceAttempt(attempt *
 	if err != nil {
 		return ErrExecutionGoBuildCustody
 	}
-	tree := &LinuxExecutionInputTree{stagePath: filepath.Join(attempt.directory, "mount"), done: attempt.done, cancel: attempt.cancel}
+	tree := &LinuxExecutionInputTree{stagePath: filepath.Join(attempt.directory, "mount"), done: attempt.done, cancel: attempt.cancel, observation: custody.observation}
 	attempt.tree = tree
 	tree.stage, err = os.Open(tree.stagePath)
 	if err == nil {
@@ -301,6 +323,13 @@ func (custody *LinuxExecutionGoBuildCustody) closeGoReferenceAttempt(ctx context
 		if attempt.tool.Close() != nil {
 			custody.err = ErrExecutionGoBuildCustody
 		}
+		if attempt.tool.input != nil {
+			attempt.tool.input.mu.Lock()
+			if attempt.tool.input.closeErr != nil {
+				custody.closeErr = ErrExecutionGoBuildCustody
+			}
+			attempt.tool.input.mu.Unlock()
+		}
 		if attempt.tool.input == nil || !attempt.tool.input.closed {
 			return ErrExecutionGoBuildCustody
 		}
@@ -316,24 +345,29 @@ func (custody *LinuxExecutionGoBuildCustody) closeGoReferenceAttempt(ctx context
 		if attempt.tree.Close(ctx) != nil {
 			custody.err = ErrExecutionGoBuildCustody
 		}
+		attempt.tree.mu.Lock()
+		if attempt.tree.closeErr != nil {
+			custody.closeErr = ErrExecutionGoBuildCustody
+		}
+		attempt.tree.mu.Unlock()
 		if !attempt.tree.closed {
 			return ErrExecutionGoBuildCustody
 		}
 	}
 	if attempt.outputs == nil {
 		var err error
-		attempt.outputs, err = observeGoReferenceOutputs(ctx, filepath.Join(attempt.directory, "work"), attempt.workInfo)
+		attempt.outputs, err = observeGoReferenceOutputsObserved(ctx, filepath.Join(attempt.directory, "work"), attempt.workInfo, custody.observation)
 		if err != nil {
 			return ErrExecutionGoBuildCustody
 		}
 	}
-	if attempt.checkStage(custody) != nil || attempt.outputs.removeContents(ctx) != nil || attempt.outputs.tree.Close() != nil {
+	if attempt.checkStage(custody) != nil || attempt.outputs.removeContents(ctx) != nil || custody.observation.close(attempt.outputs.tree.Close()) != nil {
 		return ErrExecutionGoBuildCustody
 	}
 	attempt.outputs = nil
 	work, err := attempt.stage.Lstat("work")
 	if err != nil || !os.SameFile(attempt.workInfo, work) || work.Mode().Perm() != 0o700 || attempt.stage.Remove("work") != nil ||
-		attempt.checkStage(custody) != nil || custody.removeChild(filepath.Base(attempt.directory)) != nil || attempt.stage.Close() != nil {
+		attempt.checkStage(custody) != nil || custody.removeChild(filepath.Base(attempt.directory)) != nil || custody.observation.close(attempt.stage.Close()) != nil {
 		return ErrExecutionGoBuildCustody
 	}
 	attempt.released = true
@@ -346,6 +380,10 @@ func (custody *LinuxExecutionGoBuildCustody) closeGoReferenceAttempt(ctx context
 // Output accounting is observed only after actual helper/descendant joins. This
 // bounded cleanup census is not a quota or prospective execution allowance.
 func observeGoReferenceOutputs(ctx context.Context, directory string, expected os.FileInfo) (*linuxGoBuildStaging, error) {
+	return observeGoReferenceOutputsObserved(ctx, directory, expected, nil)
+}
+
+func observeGoReferenceOutputsObserved(ctx context.Context, directory string, expected os.FileInfo, observation *executionPreworkObservation) (*linuxGoBuildStaging, error) {
 	if ctx == nil || ctx.Err() != nil || expected == nil || !linuxGitPrivateDirectory(directory) {
 		return nil, ErrExecutionGoBuildCustody
 	}
@@ -355,11 +393,11 @@ func observeGoReferenceOutputs(ctx context.Context, directory string, expected o
 	}
 	info, err := tree.Stat(".")
 	if err != nil || !os.SameFile(expected, info) {
-		_ = tree.Close()
+		_ = observation.close(tree.Close())
 		return nil, ErrExecutionGoBuildCustody
 	}
 	staging := &linuxGoBuildStaging{directory: directory, tree: tree, names: map[string]os.FileInfo{".": info},
-		pathBytes: len("inputs"), inventory: ExecutionGoBuildInventory{Entries: 1}}
+		pathBytes: len("inputs"), inventory: ExecutionGoBuildInventory{Entries: 1}, observation: observation}
 	err = walkGoBuildTree(ctx, tree, ".", func(path string, current os.FileInfo) error {
 		if path == "." {
 			return nil

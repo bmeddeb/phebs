@@ -12,6 +12,10 @@ func runReferenceCommand(context.Context, *exec.Cmd) error {
 	return errors.New("reference preparation session control is unsupported on this host")
 }
 
+func runReferenceCommandObserved(context.Context, *exec.Cmd, *executionPreworkObservation) error {
+	return errors.New("reference preparation session control is unsupported on this host")
+}
+
 func prepareReferenceCommand(*exec.Cmd) error {
 	return errors.New("reference build child-group control is unsupported on this host")
 }

@@ -17785,3 +17785,166 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   publication-transition work. The existing 64-MiB output cap and lifetimes
   remain exact. Fresh exact-source review and driver/profile approval precede
   any new bounded full qualification; prior V14 approval is not transferable.
+
+- **2026-10-24 — T42.H2t.a Linux executor prework custody (MED-497,
+  source implementation).** Preserve the full formal Linux executor/profile
+  acceptance criteria while implementing its independent live-image and
+  original-parent boundary. A finite prework bootstrap must use the genuine
+  protected `t422-execute` image, retain its sealed image loan across actual
+  Start/Wait and authenticate the original parent, current inner image and
+  inherited liveness/control descriptors. Use distinct bounded Linux prework
+  facts; retained Darwin/profile/plan versions keep their original semantics.
+  Ordinary Linux formal outer/inner execution remains refused until its complete
+  prospective profile, plan and live custody issuers exist.
+
+  The inner executor must derive its own protected reference-build binding.
+  Add only a private sealed-FD candidate verification path through the existing
+  Linux Go reference comparison and joined cleanup; do not relax canonical path
+  constructors, trust a serialized identity, accept a supplied ready/drained
+  flag or substitute the calling controller's proof for the inner profile owner.
+  Preserve direct-file/total payload bounds, sealed bytes, actual source/SDK/
+  module lineage and existing build/helper deadlines. Consume an attempted
+  executor binding once, including failure and cancellation, and retain actual
+  owned children, descriptors and watcher state through genuine retirement.
+
+  Equal commits and executable bytes alone do not bind equal protected inputs.
+  Before Start, require the calling owner's canonical repository/SDK/module
+  request and actual joined input identity. After the inner's independent
+  protected construction and reference join, compare its deterministic input
+  manifest, helper identity, counts and Go digest against that measured caller
+  identity. Serialized expectations are equality fences only. Reuse existing
+  content manifests; add no corpus scan, and do not mistake the reconstructed
+  Git configuration digest for complete input lineage.
+
+  The new finite prework has a separate sixty-minute overall ceiling clipped
+  to the caller's earlier deadline. Existing Git/build preparation and each
+  reference/helper stage keep their unchanged individual bounds; their sum is
+  not a fit or completion promise, and no stage receives renewed time credit.
+  The calling source owner retains its issued image loan through the outer's
+  actual Wait. The outer owns the same-image inner's sole Wait and the sole
+  liveness writer; inner verification brackets its own genuine helper cleanup.
+  A separate caller-to-outer pipe retains the calling controller's sole writer,
+  with original-parent identity and live pidfd checks at each receiving layer.
+  These are two liveness pipes and two endpoint watchers, without controller
+  liveness inferred from the outer-to-inner pipe. The source caller retains its
+  protected build/source-root loan as well as its image loan through actual
+  child and control retirement, in the existing lock order. Reopen/adopt only the
+  same sealed candidate inode through a private read-only CLOEXEC descriptor,
+  validate existing ELF/size/seal/metadata predicates and derive its digest
+  once before the existing independent reference comparison. The liveness
+  watchers block on their pipes without periodic image hashing or process
+  census. Failed-prefix settlement may recheck only its original retained
+  owners; record that cleanup cadence and per-turn work separately, without
+  starting another preparation/reference attempt. Unknown settlement has no
+  finite total-duration/work promise: an original Close may wait for its actual
+  worker, and another turn may repeat the existing bounded stage inventory and
+  metadata checks. The sixty-minute work ceiling does not authorize releasing
+  those resources. The private proof grants only finite
+  prework; a later full inner profile issuer must retain its own live owner.
+
+  A failed wrapper Wait and empty outer session do not establish cleanup of
+  separately sessioned reference helpers. Require an affirmative private
+  terminal-retirement receipt from the exact inner image after its actual
+  recorded owners, watcher and descriptors join, then from the outer after its
+  own actual child Wait and retirement. Retired failure and retired success are
+  distinct; missing, partial or unsubstantiated terminal evidence retains the
+  caller's source/image loans. Before-Start failures may release only their
+  actually unstarted prefix. Later cleanup cannot convert failed or expired work
+  into success. Preserve the original deadline independently of the expected
+  cancellation caused by closing the liveness watcher.
+
+  Keep native descriptor-close uncertainty distinct from sticky operational
+  failure and propagate it before nested owner pointers are dropped. A failed
+  operation may retire safely; an unproven native close cannot issue a terminal
+  retirement receipt. These observation fields affect existing Linux owners
+  even when finite prework is unused, so include their backing and propagation
+  in the ordinary-path cost record without changing public cleanup or retries.
+  Factory-local protected custody and preparation-child failures need the same
+  observation before a nil return discards their owner. Carry only source-owned
+  actual native close/Wait/session facts through private constructor cores;
+  public wrappers preserve their existing results. Generic operation errors and
+  nil owners are neither cleanup failure nor cleanup proof. Bind each attempted
+  finite executor to a shared claim issued with its exact protected tool/build
+  owner and canonical wrapper, so cloning or rewrapping cannot reset one-shot
+  consumption. The first presented attempt spends the claim before validation,
+  including a clone, foreign or canceled presentation; refusal does not promise
+  that the original wrapper remains usable. This issues no formal profile capability.
+
+  The receipt covers recorded protected/control/helper owners, not a universal
+  proof of every transient library reader's Close. It is usable only together
+  with the actual inner and outer native Wait: process-local transient readers
+  end with that process, while separately sessioned helpers still require their
+  own actual join and empty-session evidence. Preserve every operation and
+  protocol error as failure. This boundary grants no live-process profile or
+  pre-Wait output-consumption authority.
+
+  Preserve a failed verifier's retained workspace and original helper facts in
+  one bounded private record under the selected preparation root before unknown
+  settlement can wait indefinitely. Use a source/attempt-bound exclusive 0600
+  file with no overwrite or symlink fallback. Record only the source-owned path
+  and actual helper/native-close observations, without command environment or raw errors;
+  these initial failure facts grant no terminal cleanup authority. Keep any
+  partial record and retained workspace on failure. Healthy execution adds no
+  record I/O, and ordinary record-write failure cannot turn proven helper drain
+  into invented process uncertainty. Native close uncertainty still vetoes the
+  retirement receipt. Include failed-record publication/sync/close costs.
+
+  The source04 cost overlay measured Linux amd64 shallow backing against the
+  exact base: input/tree/Git owners each grow 24 bytes, Linux Go-build custody
+  grows 32 (including its embedded reference inspector), and tool custody grows
+  8. Source-root, staging, reference-attempt, inspector and reference-source
+  values each grow 8; the embedded inspector also grows generic legacy/Darwin
+  Go-build custody by 8. Ordinary nil-observer paths retain these fields and
+  fixed close/command branches. A new claim is 48 bytes and an observation is
+  56; selection/caller/inner/parent shallow backing is 320/504/72/392 bytes.
+  These exclude referenced payloads, strings, channels, maps and allocations;
+  no other-platform measured layout or aggregate RSS fit is asserted. The
+  controller and inner retain separate protected payloads and preparation
+  workspaces. Existing candidate/reference digest work remains, with one new
+  bounded candidate-FD digest. Product requests, sync ticks, startup/restart,
+  retry/no-op and publication invoke no finite prework and gain no cache.
+  Original unknown-helper settlement holds its observation mutex
+  through the existing five-second session waiter, whose ten-millisecond native
+  census cadence can cost about 500 polls plus its boundary scan per waiter
+  call. One cleanup turn may contain several serial owner waits and repeat
+  remaining-entry metadata traversal/sort, ancestry checks and the seven Git
+  alias checks; completed owners and entries drop out. It repeats no content
+  hashing, source/reference build or immutable construction. Retries wait one
+  second and have no finite aggregate bound. Failure records
+  add at most 8 KiB plus file and directory sync/observed-close work per attempt.
+
+  The genuine tagged test's controller must use the same private observed
+  constructors and retain its original helper/workspace owners through cleanup.
+  Its cleanup owner and observation add 72 and 56 bytes of shallow backing,
+  plus a 16-byte nonce and 320-byte failure selection before referenced data.
+  Disable the Go test hard timeout for this admitted custodian; its unchanged
+  sixty-minute work context still cancels preparation, while unknown settlement
+  may retain the process indefinitely. Compilation does not execute this body.
+
+  H2m's root-owned private directories cannot become unprivileged linked roots
+  merely by passing an FD. Chmod/chown of the original roots, unchecked proc-FD
+  aliases and mount aliases would violate current checks. The required pressure
+  privilege/UID/descriptor-root handoff remains a distinct implementation and
+  admission boundary. Formal profiles need preparation identity, geometry,
+  zero ballast and exact recipes; they do not require MED-498's later operational
+  pressure/backup/restore PASS. This preserves the dependency order without
+  treating pressure preparation or executor prework as full MED-497 acceptance.
+
+  Qualify real unprivileged kernel/image/pipe/parent and cancellation/refusal
+  controls separately from the exact protected-executor/reference composition.
+  That composition requires its own admitted images, tools, inputs and host
+  context; no old Maria driver/profile approval covers changed source. Perform
+  a complete cost pass for copied or retained sealed payloads, reference builds,
+  process/FD/watcher counts, hashing, checks, locks, failed attempts and cleanup
+  before commit. Add no product query/sync/publication work, relax no existing
+  workload/resource/custody/accounting bound and claim no full native/profile,
+  readiness, freeze or ceremony authorization from this source preparation.
+
+  The source08 bounded implementation passed all thirteen final command roots:
+  connected normal/race each recorded 425 passing nodes and one inherited
+  Darwin-only skip, both vet modes passed, repository-pinned differential lint
+  reported zero issues, and docs/glossary/whitespace plus all four supported
+  dual-tag compilations passed. Counts include inherited and modeled controls,
+  not 425 native proofs. Independent source, cost and oracle review is clear;
+  actual protected-executor composition remains unexecuted. Earlier failed
+  fixture/lint prefixes and the pre-dispatch stop retain their original evidence.
