@@ -17405,3 +17405,172 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   not 425 native proofs. Independent source, cost and oracle review is clear;
   actual protected-executor composition remains unexecuted. Earlier failed
   fixture/lint prefixes and the pre-dispatch stop retain their original evidence.
+
+- **2026-10-24 — T42.H2t.b pressure workspace credential and descriptor
+  handoff (MED-497, source implementation).** Implement a connected trusted-host
+  preparation broker in a genuine root `t422-execute` actor, distinct from the
+  historical formal executor pair and H2t.a's same-image parent checks. The
+  broker must reconstruct its own root-owned protected input, Git, Go-build and
+  same-inode reference-FD owners, prove its actual current image, lifetime and
+  namespace, and construct and retain the actual H2m volume in that process.
+  A root test driver has a different image role; live Go owners cannot cross
+  exec as serialized facts. The root source caller retains its original loans
+  through the broker's actual sole Wait and genuine nested retirement.
+
+  Mint only a private one-shot capability inside the actual source/image/volume
+  loans. Bind its exact target credentials, child lifetime, new leaf, image and
+  control descriptors. First presentation spends the claim before validation.
+  One original protected executor tool owner must not gain independently
+  spendable H2t.a and H2t.b claims; cloning or selecting another mode cannot
+  reset its binding. A separately constructed genuine reference owner retains
+  its own independent preparation and provenance costs.
+  Root UID, an image FD, a callback result or a serialized self-check is not an
+  issuer. The child independently verifies its own protected image/reference
+  lineage and kernel-authenticated root-peer identity and leaf. It does not
+  claim an independent nonroot observation of the root parent's executable;
+  Linux may deny that proc read. The source-owned broker proves its own image.
+  No historical formal outer/inner or H2t.a image predicate changes.
+
+  Root-owned and target-owned input selections must be explicit, independently
+  protected counterparts with actual measured content, Go and source equality.
+  Do not relabel an inaccessible root-owned path, reuse another process's owner
+  pointer or relax public canonical-path/UID checks. Derive one new target-owned
+  0500 sealed executor image, copying at most 256 MiB from its retained admitted
+  candidate, with exact byte/reference and native object checks. Change ownership
+  only on that new object before final seals; retain the original unchanged.
+  Create and transfer only a new target-owned 0700 leaf under the held H2m
+  workspace. Original volume/workspace ownership and root0700 protection stay
+  exact. A descriptor is not a path alias or a sandbox.
+
+  The dedicated unprivileged child may adopt its authenticated held leaf with
+  File.Chdir and OpenRoot("."), then perform one fixed bounded descriptor-rooted
+  write/sync/readback/removal. Never change the broker's process-wide cwd. Cwd
+  and inherited helper aliases survive descriptor Close, so actual child/helper
+  Wait and control/owner retirement remain necessary before returning the volume
+  loan. Failed work stays failed; unknown protection retains original actors,
+  images, inputs, volume and failure facts indefinitely. No cleanup deadline,
+  receipt or empty wrapper SID can replace genuine retirement. Positive teardown
+  uses unchanged nonforced unmount and exact loop detach.
+
+  Preserve H2m's existing safe-Close failure semantics: after every actual
+  borrower/helper/cwd/control use retires, a first observed successful volume
+  Close may release safe descriptors while its mounted disk/journal remains.
+  Report only actor-retired failure with a retained pressure prefix, combined
+  with actual broker Wait and the caller's genuine admitted namespace owner.
+  That locator grants neither volume reuse nor adoption, and proves no unmount,
+  detach, complete cleanup or PASS. Do not add a permanent broker requirement
+  solely because failed disk custody remains. Unknown borrowers, native Close
+  or namespace lifetime retain their original owners; latch the first actual
+  native descriptor Close error rather than trusting a later idempotent nil.
+  Cost namespace and retained mount/image custody separately from executor
+  actor/image retirement.
+
+  Authenticate actual peer credentials after the credential transition; a
+  pre-fork socketpair's creation-time SO_PEERCRED is not evidence of the child's
+  post-drop identity. Use fixed 32-byte packets, at most 256 bytes of ancillary
+  backing, exactly one kernel SCM_CREDENTIALS record, zero accepted passed FDs
+  and four closed phases. Truncated messages/ancillary data refuse; observe
+  Close of every unexpected actually delivered FD. One protocol reader and a
+  separate liveness channel must not compete for bytes. The target has fixed
+  nonzero real/effective/saved UID/GID, cleared supplemental groups, zero
+  effective/permitted/inheritable/ambient capabilities and its own no-new-
+  privileges boundary. This prospective recipe requires exact inherited
+  bounding mask 0x1ffffffffff (capabilities 0 through 40) in both root and child.
+  That is an inherited ceiling, not usable child capabilities or a grant; other
+  masks refuse. No observed-value fallback admits a host, and no parent/global
+  security configuration changes. Preserve original caller/stage deadlines
+  without renewed time credit and separate work expiry from unknown settlement.
+
+  Cost the added root actor and its genuine source/reference preparation, new
+  image copy/hash, counterpart payloads, leaf metadata/allocation/sync, control
+  messages, pidfds/watchers, child cwd and retained failures. Existing volume.mu
+  remains held throughout the complete WithRoot callback and actual child,
+  helper, control and cwd retirement. Do not reenter Geometry, Remove or Close,
+  or issue a reverse IPC callback that needs the same volume lock. Record the
+  actual nested source/image/volume lock order with the implementation.
+  Add no product request/sync/publication/cache work and assert no aggregate
+  memory or disk fit from local limits. Full typed author/Go-build/epoch/profile
+  integration and actual MED-496/497 acceptance remain required. Default-safe
+  kernel/refusal tests and independent source/cost review precede any source
+  checkpoint; the genuine root/ext4 composition remains opt-in and unexecuted
+  until its new root and target images, inputs, UID, formatter, namespace, host
+  and aggregate resources are prospectively admitted. No security installation,
+  privileged execution, qualification retry or ceremony is granted here.
+
+  The actual nested lock order is caller Go-build mutex → caller protected-tree
+  loan → caller tool/image loan across root-broker Start and sole Wait; the root
+  broker separately holds its Go-build mutex → protected-tree loan → tool/image
+  loan → volume.mu through target Start, sole Wait and all control/cwd/helper
+  retirement. Its original source loans may remain held indefinitely on unknown
+  retirement. These are distinct processes' independently built graphs, not
+  shared in-memory owners. There is no reverse callback or volume-lock reentry.
+
+  The additional target image costs at most 256 MiB of sealed object payload and
+  one bounded copy/hash with a 32-KiB buffer. Caller, root broker and target
+  protected source/SDK/module/reference graphs can coexist, repeating their
+  existing full protection work; no cross-process deduplication or aggregate
+  4-GiB fit is claimed. The new leaf performs one fixed 4-KiB file write, sync,
+  readback and removal plus directory sync and metadata fences. Each credential
+  observation reads 64 bounding slots and 41 ambient slots, plus IDs, groups and
+  capget; it runs before and after the child's own no-new-privileges setter and
+  again after independent reference preparation. The protocol uses one PollFd
+  per wait with a 50-ms cancellation interval, rather than constructing the
+  input-tree protocol's larger backing. No product request, sync tick, startup,
+  publication, cache invalidation, schema or server child is added.
+
+  Private observed H2m preparation records first Close outcomes for at most nine
+  original keeper objects and observes transient directory/record/loop-control
+  closes. Only the exact original formatter command, actual ProcessState and
+  settled original session may establish a later protection-only retirement;
+  initial negative flags and failed work remain unchanged. No reWait, new helper,
+  signal, forced detach or retry of work is introduced. Settlement may repeat
+  existing bounded session/remaining-entry metadata checks with no finite
+  aggregate limit; it does not rehash corpus contents. A known retired failure
+  may release source/image actors while the actual original caller blocks,
+  strongly retaining its mount namespace and locatable failed pressure prefix.
+  An empty durable phase is truthful before the first journal publication and
+  grants no recovery or adoption permission. A first actual native descriptor
+  Close error remains unknown even if a later idempotent Close returns nil; a
+  formatter-live method refusal may later settle protection through its original
+  command and session, while its failed work remains sticky.
+
+  A private Go1.26.5 linux/amd64 layout probe against the exact pre-change
+  declarations measured volume backing 760→792 bytes, executor owner 504→512,
+  shared claim 48→56 and first-failure record 88→128. New pressure caller,
+  issuer, image/leaf owner, namespace owner and protocol state are respectively
+  776, 808, 208 each, 56 and 64 bytes, excluding pointed-to payloads and runtime
+  objects. A separately escaping nine-entry first-Close map measured four
+  allocations in that runtime. Only the private observed constructor allocates
+  that map; public nil-observer H2m paths add forwarding/nil checks and backing,
+  without map allocation. This layout probe is not an aggregate RSS measurement
+  or admission result and adds no tracked test or production instrumentation.
+  Finite executor, broker and target cleanup and the opt-in native caller
+  attempt existing failure publication before a potentially blocking owner Close.
+  A private local attempt result is false
+  only for a healthy zero-I/O observation; only that outcome permits a later
+  first close-only record. A failed or partial attempt is not retried or
+  overwritten. Healthy finite cleanup takes five bounded observation snapshots
+  in the broker, three in its target, two in the existing outer executor and
+  four in its inner; native controllers check the original cleanup boundaries.
+  After a nonhealthy attempt, later calls only inspect the local spent flag.
+  Publication errors join only when nonnil, at most once per actor. Repeated
+  broker/target Close calls still execute, retaining the first actual nonnil
+  error in a fixed slot rather than growing an error chain. The existing inner
+  executor replaces its bounded error pair without retaining prior wrappers.
+  Unknown settlement may remain unbounded; every healthy snapshot still does
+  no filesystem I/O. No owner backing, publication or retirement authority is
+  added by this local attempt state.
+
+  Corrected source10 passed all thirteen final commands: connected normal/race
+  each recorded 566 passing test nodes and one inherited frozen-Darwin/arm64
+  external-tool skip; both vet modes, pinned differential lint covering all
+  twenty-six changed Go files, docs/glossary/whitespace and all four supported
+  triple-tag compile-only targets passed. The counts include seventy-four new
+  pressure-borrow nodes, seventy-five executor nodes and 417 other connected
+  nodes, including helper/model controls; they are not 566 native proofs.
+  Independent source/cost/oracle review is clear. Both required Linux native
+  bodies are compiled and unexecuted; full MED-495/496/497 and formal profile
+  acceptance remain open. Earlier failed lint/review prefixes are retained.
+  The final plan's inherited descriptive manifest digest is explicitly corrected
+  by an immutable clarification; the actual runner uses the verified per-file
+  source26 map and never reads that descriptive key. No gate record was rewritten.

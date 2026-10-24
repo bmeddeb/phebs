@@ -613,6 +613,18 @@ all four supported compile-only targets. This does not admit or execute its
 protected reference/bootstrap composition; fresh exact prerequisites remain
 required before that run.
 
+T42.H2t.b's pressure-borrow source work requires a separate genuine root
+executor actor and root-owned protected inputs, plus independently protected
+target-UID inputs and a new target-owned image/leaf. Existing installed test
+drivers and previous image approvals do not admit this composition. Its source
+work changes no root ownership, global security or running Maria fixture.
+Any future privileged run requires the exact broker/target/UID/namespace/tool
+and aggregate resource admission; actual nested Wait and unchanged nonforced
+pressure-volume teardown remain separate gates. The bounded source checkpoint
+passes connected normal/race, static/docs and all four supported tagged
+compile-only targets. Both required actual Linux compositions remain unexecuted;
+these checks do not admit an image or establish full qualification.
+
 The v11 Maria attempt stopped during physical B on a service-state SDK reply
 timeout. The 2026-10-23 correction makes selected preimage lookups use the
 existing unique index; it preserves the 30-second RPC deadline, 512-record
