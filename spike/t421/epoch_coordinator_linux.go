@@ -13,16 +13,17 @@ import (
 )
 
 type linuxEpochCoordinator struct {
-	held *linuxEpochHeldFlow
-	core *ExecutionEpochOne
+	held   *linuxEpochHeldFlow
+	core   *ExecutionEpochOne
+	recipe *linuxEpochRecipeIdentity
 }
 
 func (adapter *linuxEpochCoordinator) issued() bool {
-	return adapter != nil && adapter.held != nil && adapter.core != nil && adapter.held.flow != nil && adapter.held.flow.core == adapter.core && adapter.core.native == adapter && adapter.core.epochs != nil && adapter.configIssued() && adapter.core.epochs.author != nil && adapter.core.epochs.author.native == adapter
+	return adapter != nil && adapter.recipe.matches(adapter) && adapter.held != nil && adapter.core != nil && adapter.held.flow != nil && adapter.held.flow.core == adapter.core && adapter.core.native == adapter && adapter.core.epochs != nil && adapter.configIssued() && adapter.core.epochs.author != nil && adapter.core.epochs.author.native == adapter
 }
 func (adapter *linuxEpochCoordinator) configIssued() bool {
 	value, ok := adapter.core.epochs.native.(*linuxEpochConfigAdapter)
-	return ok && value.coordinator == adapter
+	return ok && value != nil && value.coordinator == adapter
 }
 func (adapter *linuxEpochCoordinator) check(ctx context.Context) error {
 	if !adapter.issued() || adapter.held.flow.lifetime == nil || adapter.held.flow.lifetime.Err() != nil || adapter.held.check(ctx) != nil {
@@ -189,8 +190,8 @@ func (adapter *linuxEpochCoordinator) tools(ctx context.Context, epoch uint64) (
 	phebs, zoekt, surreal := linuxEpochFDRoute(held.controllerPID, held.images[1]), linuxEpochFDRoute(held.controllerPID, held.images[2]), linuxEpochFDRoute(held.controllerPID, held.images[3])
 	tools := []dispatchadmission.ProductionToolBinding{{Role: "git", Path: core + "/git", Environment: gitEnv}, {Role: "surreal", Path: surreal, Environment: environment}, {Role: "zoekt-git-index", Path: zoekt, Environment: append(slices.Clone(gitEnv), dispatchadmission.IndexOfferEnvironment+"=v1", "ZOEKT_DISABLE_CATFILE_BATCH=true", "GOGC=50")}}
 	// The successful genuine resource Check above issues this fixed narrowing.
-	tools[0].RuntimeRecipe = dispatchadmission.ProductionLinuxForegroundGitV2
-	tools[2].RuntimeRecipe = dispatchadmission.ProductionLinuxForegroundGitV2
+	tools[0].RuntimeRecipe = adapter.recipe.recipe.runtime(epoch)
+	tools[2].RuntimeRecipe = tools[0].RuntimeRecipe
 	binding := executionRuntimeEnvironmentBindings{Home: selected.Home, Temporary: selected.Temporary, GitDirectory: core, SurrealPath: surreal, SurrealSHA256: held.imageIdentities[3].SHA256, ZoektPath: zoekt, ZoektSHA256: held.imageIdentities[2].SHA256}
 	return phebs, tools, executionPhebsEnvironment(environment, binding), nil
 }

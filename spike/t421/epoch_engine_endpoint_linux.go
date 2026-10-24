@@ -9,17 +9,11 @@ import (
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
 )
 
-func (*linuxEpochCoordinator) engineMeasurements(epoch uint64) (string, uint32) {
-	switch epoch {
-	case 1:
-		return "", 6
-	case 2:
-		return "", 1
-	case 3:
-		return "", 2
-	default:
+func (adapter *linuxEpochCoordinator) engineMeasurements(epoch uint64) (string, uint32) {
+	if !adapter.issued() {
 		return "", 0
 	}
+	return adapter.recipe.recipe.engine(epoch)
 }
 
 func (adapter *linuxEpochCoordinator) serveEngineMeasurement(ctx context.Context, run *ExecutionEpochOneRun, conn *net.UnixConn, binding dispatchadmission.EngineMeasurementBinding, maximum uint32) <-chan error {

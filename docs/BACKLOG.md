@@ -5170,6 +5170,20 @@ findings; final evidence carry and documentation gates are recorded separately.
 Real HTTP exchanges and a tiny native parent walk retain modeled ownership/
 response facts; they establish no actual engine, checkpoint or successor pass.
 
+**T42.H2s.i · Closed native recipe and policy identity (MED-496
+prerequisite, 2026-10-24).** Bind the native coordinator, resource admission,
+trace issuance, engine recipe/maximum and paired runtime to one source-issued
+identity. Preserve a named byte-exact historical v11 policy factory and current
+v11/EM01/V2 selection. Prepare a closed v12/EM02/V3 descriptor without issuing
+it; no issued epoch-four context, listener release, checkpoint entry or
+successor authority is created. AC: exact historical policy digest and default-selection controls;
+invalid, cloned, foreign and digest-drift identity refusals before inspection;
+closed legacy and prepared checkpoint recipe/runtime matrix; unchanged native
+epoch/checkpoint refusals; focused normal/race, connected regressions, supported
+compilation, static/docs gates, steady-state cost pass and independent review.
+Implementation and verification are in progress. MED-495 full qualification,
+actual retained-source PC/SA and checkpoint/successor composition remain open.
+
 **2026-10-22 — Ben-directed implementation checkpoint integration.** Ben
 explicitly requests maria cleanup and PR merges after the v10 native failure
 was disclosed. PR156 and T42.H2s.a–d / PR164–167 may integrate as reviewed

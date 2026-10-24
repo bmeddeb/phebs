@@ -574,6 +574,13 @@ not zero bytes. A later boundary failure preserves the accepted traversal prefix
 This correction does not enable native checkpoint entry or select a new policy.
 Actual engine, successor, PC/SA and custody/accounting acceptance remain open.
 
+T42.H2s.i binds Linux's existing policy, engine points and runtime to one
+coordinator-issued identity shared with resource admission and trace issuance.
+Current constructors retain historical v11, EM01 and runtime V2. The prepared
+checkpoint descriptor selects no workload and grants no resource, measurement
+or successor authority. Epoch-four entry remains unavailable; actual retained-
+source PC/SA, custody, accounting and full native acceptance are still required.
+
 The v11 Maria attempt stopped during physical B on a service-state SDK reply
 timeout. The 2026-10-23 correction makes selected preimage lookups use the
 existing unique index; it preserves the 30-second RPC deadline, 512-record

@@ -224,6 +224,7 @@ func newLinuxEpochCoordinator(owner *LinuxExecutionEpochFlow, held *linuxEpochHe
 	epochs := &ExecutionEpochConfigCustody{native: &linuxEpochConfigAdapter{adapter}, author: author, epochs: held.epochs.epochs, listeners: held.epochs.listeners, queryCatalog: held.epochs.queryCatalog, parsedConfigs: held.epochs.parsedConfigs, logicalChanges: held.epochs.logicalChanges}
 	core := &ExecutionEpochOne{native: adapter, epochs: epochs, plan: plan, release: owner.cancel}
 	adapter.core = core
+	adapter.recipe = issueLinuxEpochLegacyRecipe(adapter)
 	defer func() {
 		if retErr != nil {
 			_ = core.Close()

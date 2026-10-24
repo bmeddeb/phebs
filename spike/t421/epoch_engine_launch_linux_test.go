@@ -79,8 +79,16 @@ func TestEpochEngineLaunchActualBootstrapAndEndpointBinding(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
 			defer cancel()
-			run, record, maximum := epochEngineLaunchTestRecord(test.epoch, test.recipe)
-			binding, err := epochEngineLaunchBinding(test.recipe, maximum, run, record.Producer, record.InputSHA256, record.Tools)
+			descriptor := linuxEpochLegacyV11
+			if test.recipe == dispatchadmission.EngineMeasurementCheckpointV2 {
+				descriptor = linuxEpochCheckpointV12
+			}
+			recipe, maximum := descriptor.engine(test.epoch)
+			run, record, expectedMaximum := epochEngineLaunchTestRecord(test.epoch, test.recipe)
+			if recipe != test.recipe || maximum != expectedMaximum {
+				t.Fatal("descriptor changed authenticated bootstrap selection")
+			}
+			binding, err := epochEngineLaunchBinding(recipe, maximum, run, record.Producer, record.InputSHA256, record.Tools)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -242,8 +250,9 @@ func TestEpochEngineWireDebitRefusesWithoutMutation(t *testing.T) {
 	if reserveEpochEngineWire(nil, binding, maximum) == nil {
 		t.Fatal("nil output admitted")
 	}
+	adapter := linuxEpochRecipeTestCoordinator(t)
 	for _, epoch := range []uint64{1, 2, 3, 4, 5} {
-		recipe, selected := (&linuxEpochCoordinator{}).engineMeasurements(epoch)
+		recipe, selected := adapter.engineMeasurements(epoch)
 		if recipe != "" || selected != map[uint64]uint32{1: 6, 2: 1, 3: 2}[epoch] {
 			t.Fatal("legacy constructor selection changed", epoch)
 		}
