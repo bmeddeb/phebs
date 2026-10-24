@@ -53,7 +53,7 @@ type Worker struct {
 	store     Store
 	manifests ManifestProvider
 	registry  *Registry
-	readBlob  BlobReader
+	readBlob  BlobReader // A non-nil private override replaces Build's owned Git lease.
 	// OnPublished runs only after an exact current resolver publication is
 	// strict-open. A failure keeps the durable resolver job retryable while
 	// leaving the already-complete resolver generation intact.
@@ -82,8 +82,7 @@ func NewWorker(
 		dataDir: dataDir,
 		root:    filepath.Join(dataDir, "resolver-catalogs"),
 		store:   state, manifests: manifests, registry: registry,
-		readBlob: gitobj.ReadBlob,
-		cache:    make(map[string]*resolvercatalog.Publication),
+		cache: make(map[string]*resolvercatalog.Publication),
 	}, nil
 }
 
@@ -105,7 +104,7 @@ func (worker *Worker) Handle(ctx context.Context, job store.Job) error {
 
 func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 	if worker == nil || worker.store == nil || worker.manifests == nil ||
-		worker.registry == nil || worker.readBlob == nil || worker.cache == nil {
+		worker.registry == nil || worker.cache == nil {
 		return errors.New("resolver worker is not initialized")
 	}
 	if err := ctx.Err(); err != nil {

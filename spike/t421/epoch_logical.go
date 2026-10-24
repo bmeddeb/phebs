@@ -52,12 +52,14 @@ func logicalEpochBounds(plan Plan) (epochOneLimits, error) {
 // producer one. Its phase-five deadline includes the old server's handoff.
 func (run *ExecutionEpochOneRun) StartLogicalB(ctx context.Context) (_ *ExecutionEpochOneRun, retErr error) {
 	if run == nil || ctx == nil || ctx.Err() != nil || run.flow == nil {
+		run.recordObservedFailure("logical/admission", nil)
 		return nil, ErrExecutionEpochOne
 	}
 	flow := run.flow
 	flow.mu.Lock()
 	bounds, err := logicalEpochBounds(flow.plan)
 	if err != nil || flow.closed || flow.logicalUsed || flow.retained != nil {
+		run.recordObservedFailure("logical/admission", err)
 		flow.mu.Unlock()
 		return nil, ErrExecutionEpochOne
 	}
@@ -76,6 +78,7 @@ func (run *ExecutionEpochOneRun) StartLogicalB(ctx context.Context) (_ *Executio
 	default:
 	}
 	if !valid {
+		run.recordObservedFailure("logical/admission", nil)
 		run.mu.Unlock()
 		flow.mu.Unlock()
 		return nil, ErrExecutionEpochOne
@@ -94,22 +97,30 @@ func (run *ExecutionEpochOneRun) StartLogicalB(ctx context.Context) (_ *Executio
 		}
 	}()
 	if _, err := run.Stop(lifetime); err != nil {
+		run.recordObservedFailure("logical/predecessor stop", err)
 		return nil, ErrExecutionEpochOne
 	}
 	prior := run.inspection
 	if prior.err != nil || !prior.finalUsed || !prior.retentionUsed || prior.physicalAuthority.Phase != "physical_delta_b" {
+		run.recordObservedFailure("logical/prior prefix", prior.err)
 		return nil, ErrExecutionEpochOne
 	}
 	catalogPrior, err := prior.acceptedCatalogPrefix(lifetime, "physical_delta_b")
 	if err != nil {
+		run.recordObservedFailure("logical/prior catalog", err)
 		return nil, ErrExecutionEpochOne
 	}
 	flow.mu.Lock()
 	defer flow.mu.Unlock()
-	if flow.closed || flow.retained != run || lifetime.Err() != nil || run.advanceLogical(lifetime) != nil {
+	if flow.closed || flow.retained != run || lifetime.Err() != nil {
+		run.recordObservedFailure("logical/retained binding", context.Cause(lifetime))
 		return nil, ErrExecutionEpochOne
 	}
-	if run.sampleMidphaseParentLocked(lifetime, 0) != nil {
+	if run.advanceLogical(lifetime) != nil {
+		return nil, ErrExecutionEpochOne
+	}
+	if err := run.sampleMidphaseParentLocked(lifetime, 0); err != nil {
+		run.recordObservedFailure("logical/parent sample", err)
 		return nil, ErrExecutionEpochOne
 	}
 	next := &ExecutionEpochOneRun{flow: flow, stop: make(chan struct{}), done: make(chan struct{}),
@@ -118,6 +129,9 @@ func (run *ExecutionEpochOneRun) StartLogicalB(ctx context.Context) (_ *Executio
 	next.result.ParentMidphaseSamples = run.midphaseParentPrefix()
 	next.setPhaseDeadlineLocked(deadline)
 	result, err := flow.launchEpoch(lifetime, lifetime, cancel, next, bounds, 2)
+	if err != nil {
+		run.recordObservedFailure("logical/launch", err)
+	}
 	if result == nil {
 		next.stopPhaseDeadline()
 	}
@@ -128,7 +142,24 @@ func (run *ExecutionEpochOneRun) StartLogicalB(ctx context.Context) (_ *Executio
 // needs a phase-four checkpoint. There is no child resume past its last phase.
 func (run *ExecutionEpochOneRun) advanceLogical(ctx context.Context) error {
 	flow := run.flow
-	if flow.parent.Checkpoint(ctx) != nil || flow.store.Fence() != nil || flow.controller.Advance() != nil || flow.store.Advance() != nil || flow.parent.Resume(5) != nil {
+	if err := flow.parent.Checkpoint(ctx); err != nil {
+		run.recordObservedFailure("logical/parent checkpoint", err)
+		return ErrExecutionEpochOne
+	}
+	if err := flow.store.Fence(); err != nil {
+		run.recordObservedFailure("logical/store fence", err)
+		return ErrExecutionEpochOne
+	}
+	if err := flow.controller.Advance(); err != nil {
+		run.recordObservedFailure("logical/dispatch advance", err)
+		return ErrExecutionEpochOne
+	}
+	if err := flow.store.Advance(); err != nil {
+		run.recordObservedFailure("logical/store advance", err)
+		return ErrExecutionEpochOne
+	}
+	if err := flow.parent.Resume(5); err != nil {
+		run.recordObservedFailure("logical/parent resume", err)
 		return ErrExecutionEpochOne
 	}
 	return nil

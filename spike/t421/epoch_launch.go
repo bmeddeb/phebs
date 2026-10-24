@@ -399,6 +399,7 @@ type ExecutionEpochOneRun struct {
 	nativeStopErr         error               // Private diagnostic, never a public evidence classification.
 	stopDiagnostic        epochStopDiagnostic // Written only by finish; read after done.
 	admissionFailure      atomic.Pointer[epochAdmissionFailure]
+	observedFailure       atomic.Pointer[epochObservedFailure]
 	retainParent          bool
 	logicalUsed           bool
 	logicalCancel         context.CancelFunc
@@ -953,6 +954,7 @@ func epochLaunchError(number uint64, stage string, err error) error {
 }
 
 func epochFinishFailure(run *ExecutionEpochOneRun, terminal bool, current error, stage string, cause error) error {
+	run.recordObservedFailure("finish/"+stage, cause)
 	if cause == ErrExecutionEpochOne {
 		cause = nil
 	}
@@ -1269,14 +1271,29 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 	}
 	stopCtx, stopCancel := context.WithTimeout(stopParent, 30*time.Second)
 	defer stopCancel()
-	if !terminal && !joined && failure == nil && !run.backupRetired && (!warm && run.control.DrainOwners(stopCtx) != nil || run.control.Pause(stopCtx) != nil) {
-		failure = ErrExecutionEpochOne
+	if !terminal && !joined && failure == nil && !run.backupRetired {
+		if !warm {
+			if err := run.control.DrainOwners(stopCtx); err != nil {
+				failure = epochFinishFailure(run, terminal, failure, "owner drain", err)
+			}
+		}
+		if failure == nil {
+			if err := run.control.Pause(stopCtx); err != nil {
+				failure = epochFinishFailure(run, terminal, failure, "owner pause", err)
+			}
+		}
 	}
 	// A successful backup already joined producer ten while the retired server
 	// cannot admit work. Keep the parent active in twelve: same-phase Resume is
 	// forbidden, and a later restore may start only after this server join.
-	if !terminal && (!run.backupRetired || !run.backupComplete || failure != nil) && (run.flow.parent.Pause(stopCtx) != nil || run.flow.controller.Fence() != nil) {
-		failure = ErrExecutionEpochOne
+	if !terminal && (!run.backupRetired || !run.backupComplete || failure != nil) {
+		if err := run.flow.parent.Pause(stopCtx); err != nil {
+			run.recordObservedFailure("finish/parent pause", err)
+			failure = ErrExecutionEpochOne
+		} else if err := run.flow.controller.Fence(); err != nil {
+			run.recordObservedFailure("finish/dispatch fence", err)
+			failure = ErrExecutionEpochOne
+		}
 	}
 	// No sampler survives the owned signal/kill. Its last required live census
 	// closes before intentional death, not after Wait has removed the root.
@@ -1557,6 +1574,7 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 		Producer: run.producer(), Input: run.attemptInput, Joined: result.RootJoined, SessionEmpty: sessionEmpty,
 		Attempts: result.Attempts, IndexOffers: result.IndexOffers,
 	}); err != nil {
+		run.recordObservedFailure("finish/joined work", err)
 		run.mu.Lock()
 		run.err = errors.Join(run.err, err)
 		run.mu.Unlock()
