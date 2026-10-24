@@ -5123,6 +5123,15 @@ Model owner/response facts explicitly; these controls do not supply actual
 engine, hard-death, PC/SA or successor authority. Keep native entry/policy and
 all limits exact. MED-495 full qualification and MED-496 acceptance stay open.
 
+The [bounded native recovery record](../spike/t42h2r/native-recovery-workspace-bounded-linux-20261024.json)
+binds source `e24f39b3`: 232 connected pass nodes per normal/race mode,
+including 49 newly added nodes with zero skips; one historical Darwin-only
+control skips per connected mode. Counts overlap. Vet, pinned lint and all
+four supported tagged compiles pass. Independent source/cost review has zero
+findings; final evidence carry and documentation gates are recorded separately.
+Real HTTP exchanges and a tiny native parent walk retain modeled ownership/
+response facts; they establish no actual engine, checkpoint or successor pass.
+
 **2026-10-22 — Ben-directed implementation checkpoint integration.** Ben
 explicitly requests maria cleanup and PR merges after the v10 native failure
 was disclosed. PR156 and T42.H2s.a–d / PR164–167 may integrate as reviewed
