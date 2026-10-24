@@ -1,0 +1,688 @@
+{
+  "schema": "phebs-linux-executor-prework-bounded-v1",
+  "base_commit": "0806182d75b54b1d85fd5ccd86ef68fd0839e70c",
+  "implementation_commit": "5cecd17d8150cdfd350e239080594deb78e57ddd",
+  "source_manifest_sha256": "545ad0e82844750d80a285e1b9466726b477092613dbca35b44d26187c76abc4",
+  "go_source_sha256": {
+    "spike/t421/checkout_admission.go": "da4616450045c3222841423df853a1c592972762142482f4caf0c05a422ca9fe",
+    "spike/t421/execution_candidate_linux.go": "b9176959e7faf467afe65731583965b270395760219a14e90cb39bfeb307f051",
+    "spike/t421/execution_candidate_linux_test.go": "3777ce0494787bf12c7901643e815dcc64cfabb4bfeb1b6d52d390749a938096",
+    "spike/t421/execution_launcher.go": "a22d5eb434e80f4882558cabedfa21e49949247e3f88c985f44447f719f4153d",
+    "spike/t421/execution_prework.go": "85429c3346f38405568c963974ad8da9aaf526a7a6fa961cdd293c55a6623107",
+    "spike/t421/execution_prework_claim_linux.go": "550ba6fa89c3dd560a34df45d0b08d2a33c7882344d67d68b62a5240f30c8b3a",
+    "spike/t421/execution_prework_failure_linux.go": "364230601d022a1a68f8c58cbc8a96a5771f43a83706c56fa3b0817d52f27579",
+    "spike/t421/execution_prework_failure_linux_test.go": "3a8217331edb86bd10835d07e08a2b4313b6b990ff930e7fbc6595cbd9973875",
+    "spike/t421/execution_prework_inner_linux.go": "dd1602beb36cdf183a119e3e392c159135accbd136bfb3a0a70e36e5ec6918b3",
+    "spike/t421/execution_prework_linux.go": "bd4a8c8711e4d77e8f0a22678c455789ee3163e9a38a5e7244971ec7c35b54d4",
+    "spike/t421/execution_prework_linux_test.go": "a9cde6eb6e71b6f9c4b7213edd9e883c662187e6159244a9e918cc0c89aa83d3",
+    "spike/t421/execution_prework_liveness_linux.go": "2d45799cc357d8ec47c3bf9f1e603ab56a71401067f950e1ab0e56ab935e1b9f",
+    "spike/t421/execution_prework_native_linux_test.go": "3280624096eb1f9f6083ce20c222d975dde241d3a0a97cddd5726ffde1312941",
+    "spike/t421/execution_prework_observation.go": "1e21362aa683d64168ab38bc982006a65e2e7b119927a9538518d23f3af44c43",
+    "spike/t421/execution_prework_observation_linux_test.go": "6bc3e6cc667e424d03ae7ae9cfb855658bb58f4a3c74938eb5409d8a490e6922",
+    "spike/t421/execution_prework_other.go": "14b5b8ef5b83aa0de84a6e96ffc8b91af82bf11e0c5904b8d26701b443fb6186",
+    "spike/t421/git_custody_linux.go": "037d17bcf9fdaf80b8323e8413d87d4c97cdbe25df3e35ec8f661231271d72bd",
+    "spike/t421/go_build_custody_linux.go": "f160cb9e7aa4e66506b5ec2c252ecac80009b9a14ab5631992c522fbec56225f",
+    "spike/t421/go_build_reference_linux.go": "a0163bc5de7d52fa8ed8e5ca1300bac4b5a18b8f7b9fa5085f17f7360a205e9b",
+    "spike/t421/go_build_reference_stream_linux.go": "bafa50667b5fe5775049388a2ac632137b9a91c77eb59135e83b8de96eeb9bbc",
+    "spike/t421/go_build_reference_worker_linux.go": "3ad9c70512f78735bad0b4f44d1ea3340c791052085b351d1b0f26cad101d557",
+    "spike/t421/go_build_staging_linux.go": "53563ab06ef6c700da921dccaeaaa5fad1ddfd054eef1a71fac0e89eb3042977",
+    "spike/t421/input_custody_linux.go": "e65ec96aa821e167054423324867eee903978e2a13477ca2c3fdda4d79b573df",
+    "spike/t421/input_tree_linux.go": "8efc4095fed82b49e7fe9cd09a00820a04fcaa0c69ee2a8cb5ee04afd0c07c95",
+    "spike/t421/input_tree_root_linux.go": "64359b3835a233c9b6cb38621563c805335f6860733d1622cbe8d1d4741e4b21",
+    "spike/t421/reference_process_other.go": "ccf499a0983147d42c3ca5668ac27359ad99afb37912e746073ad8cfd50c9e46",
+    "spike/t421/reference_process_unix.go": "e3d14f7417b49d21699074d5e5938230fe5a823d66d7e0a07fb107f24392d274",
+    "spike/t421/reference_source.go": "9767a636fcbb983db07a359f27b8a3e24616cf30d8bc71281d437186a04a0f70",
+    "spike/t421/reference_tool.go": "42443bc2dfdf9aa8bdbf18d1622874b6bc13c7d4710e87a52b5c36294c2f4e2b",
+    "spike/t421/tool_custody_linux.go": "fb0ae82fc3d6f53f74caf102a060e4582243495c6db9b0a9a6f7177739986c1a"
+  },
+  "final_gate_roots": 13,
+  "final_gates": {
+    "final08-lint-version": {
+      "argv": [
+        "golangci-lint",
+        "version"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 0.117743820999749,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "failed": [],
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "5b619b0289b864edd3ec910d3120e8b194d84e8084cbcc658c5f800dea6cacbd",
+          "bytes": 91
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "final08-lint-differential": {
+      "argv": [
+        "golangci-lint",
+        "run",
+        "--concurrency=2",
+        "--timeout=4m",
+        "--build-tags=phebs_t42_native,phebs_t42_executor_native",
+        "--new-from-patch=/home/ben/phebs-rehearsals/med497-executor-custody-20261024/author/final08-all-owned.patch",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 45.98585997198825,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "failed": [],
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47",
+          "bytes": 10
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "final08-connected-normal": {
+      "argv": [
+        "go",
+        "test",
+        "-p",
+        "2",
+        "./spike/t421",
+        "-run",
+        "^(TestLinuxExecutor(Candidate|Prework|Kernel)|TestLinux(InputCustody|InputTree|ToolCustody|GitCustody|GoBuildOwner|GoReference|CheckoutGit)|TestInspectExecutionCheckout|TestExecution(Checkout|ReferenceSource)|TestInspectCheckoutFile|TestVerifyExecutionReferenceTool|TestReference(BuildInfo|T422|PreparationSession)|TestRunReferenceGoCancellation|TestExternalProbePreparationParent)",
+        "-count=1",
+        "-timeout=4m",
+        "-json"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 160.05922477101558,
+      "nodes": {
+        "pass": 425,
+        "fail": 0,
+        "skip": 1
+      },
+      "failed": [],
+      "skipped": [
+        "TestExternalProbePreparationParentRetainsScratch"
+      ],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "211328237754fa7ed32011b13898b86dacc6d69a404b1068a5b0fa497f1285ff",
+          "bytes": 386175
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "final08-connected-race": {
+      "argv": [
+        "go",
+        "test",
+        "-p",
+        "2",
+        "-race",
+        "./spike/t421",
+        "-run",
+        "^(TestLinuxExecutor(Candidate|Prework|Kernel)|TestLinux(InputCustody|InputTree|ToolCustody|GitCustody|GoBuildOwner|GoReference|CheckoutGit)|TestInspectExecutionCheckout|TestExecution(Checkout|ReferenceSource)|TestInspectCheckoutFile|TestVerifyExecutionReferenceTool|TestReference(BuildInfo|T422|PreparationSession)|TestRunReferenceGoCancellation|TestExternalProbePreparationParent)",
+        "-count=1",
+        "-timeout=4m",
+        "-json"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 184.96758094601682,
+      "nodes": {
+        "pass": 425,
+        "fail": 0,
+        "skip": 1
+      },
+      "failed": [],
+      "skipped": [
+        "TestExternalProbePreparationParentRetainsScratch"
+      ],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "abf25abae39689de029b85472f1f2b144c4cd594e17d0878df58d7ad69979a0b",
+          "bytes": 386195
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "final08-vet-default": {
+      "argv": [
+        "go",
+        "vet",
+        "-p",
+        "2",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 4.403399671020452,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "failed": [],
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "final08-vet-native": {
+      "argv": [
+        "go",
+        "vet",
+        "-p",
+        "2",
+        "-tags",
+        "phebs_t42_native,phebs_t42_executor_native",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 3.970923501008656,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "failed": [],
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "final08-docs": {
+      "argv": [
+        "go",
+        "test",
+        "-p",
+        "2",
+        "./scripts",
+        "-run",
+        "^Test(TrackedMarkdownLinksResolve|DocumentationMapReachesTrackedDocs|SealedT111TreeDigest)$",
+        "-count=1",
+        "-timeout=2m",
+        "-json"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 1.5681833119888324,
+      "nodes": {
+        "pass": 3,
+        "fail": 0,
+        "skip": 0
+      },
+      "failed": [],
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "20736b9d19aaa9fd8cc4ad49a968258f659dc2876ee94a8643ad95afe2ac2b15",
+          "bytes": 2726
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "final08-glossary": {
+      "argv": [
+        "go",
+        "run",
+        "-p",
+        "2",
+        "./internal/glossary/cmd/glossary-gen",
+        "-verify",
+        "-root",
+        "."
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 0.12617049799882807,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "failed": [],
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "final08-whitespace": {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 0.10757047400693409,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "failed": [],
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "final08-compile-linux-amd64": {
+      "argv": [
+        "env",
+        "GOOS=linux",
+        "GOARCH=amd64",
+        "CGO_ENABLED=0",
+        "go",
+        "test",
+        "-p",
+        "2",
+        "-tags",
+        "phebs_t42_native,phebs_t42_executor_native",
+        "-c",
+        "-o",
+        "/home/ben/phebs-rehearsals/med497-executor-custody-20261024/author/final08-t421-linux-amd64.test",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 27.317369273980148,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "failed": [],
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "final08-compile-linux-arm64": {
+      "argv": [
+        "env",
+        "GOOS=linux",
+        "GOARCH=arm64",
+        "CGO_ENABLED=0",
+        "go",
+        "test",
+        "-p",
+        "2",
+        "-tags",
+        "phebs_t42_native,phebs_t42_executor_native",
+        "-c",
+        "-o",
+        "/home/ben/phebs-rehearsals/med497-executor-custody-20261024/author/final08-t421-linux-arm64.test",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 27.606921236991184,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "failed": [],
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "final08-compile-darwin-arm64": {
+      "argv": [
+        "env",
+        "GOOS=darwin",
+        "GOARCH=arm64",
+        "CGO_ENABLED=0",
+        "go",
+        "test",
+        "-p",
+        "2",
+        "-tags",
+        "phebs_t42_native,phebs_t42_executor_native",
+        "-c",
+        "-o",
+        "/home/ben/phebs-rehearsals/med497-executor-custody-20261024/author/final08-t421-darwin-arm64.test",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 27.46021927698166,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "failed": [],
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "final08-compile-darwin-amd64": {
+      "argv": [
+        "env",
+        "GOOS=darwin",
+        "GOARCH=amd64",
+        "CGO_ENABLED=0",
+        "go",
+        "test",
+        "-p",
+        "2",
+        "-tags",
+        "phebs_t42_native,phebs_t42_executor_native",
+        "-c",
+        "-o",
+        "/home/ben/phebs-rehearsals/med497-executor-custody-20261024/author/final08-t421-darwin-amd64.test",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 26.09372192999581,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "failed": [],
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    }
+  },
+  "test_scope": {
+    "connected_normal_and_race_each": {
+      "pass": 425,
+      "fail": 0,
+      "skip": 1,
+      "new_scope_pass_nodes": 75,
+      "inherited_pass_nodes": 350
+    },
+    "skip": "TestExternalProbePreparationParentRetainsScratch: inherited frozen Darwin/arm64 public external-tool observation requirement",
+    "count_qualification": "Counts include a standalone environment-gated helper and overlapping inherited controls; not 425 independent native proofs. Focused earlier counts overlap and are not additive.",
+    "actual_scope": "Real unprivileged Linux sealed-image/parent/pipe/kernel/cancellation controls and explicitly modeled source-shape/claim/retirement predicates. Modeled fixtures issue no protected native provenance."
+  },
+  "lint_scope": "Pinned golangci-lint 2.12.2 differential lint with phebs_t42_native,phebs_t42_executor_native and retained patch over all 30 owned files including 14 new files; not full-repository lint-clean.",
+  "reviews": {
+    "independent-source04-combined-assessment.json": "029e08747d83f8d98bb530f51520210f54aa7d2ad0551646e9e5310798e27086",
+    "independent-source04-cost-layout-audit.json": "c167e9a906e28d00195509badfff1eaf8bb9b26607b2d936e712146ba315139e",
+    "independent-source05-production-carry.json": "55033b34b22bd33c731fe4668253e2354d78513afc9ed64da7c6a27ec337f00f",
+    "independent-source06-protocol-cost-carry.json": "ac9b08c6354afb0464a5cc37d9b110d75aebe64d85a44b8b99e0b7a0239f0bdf",
+    "independent-source06-native-oracle-carry.json": "ec7441ff0cd015b566e6f7babc4b937618dd10e29319b86ebd0fc301755cef95",
+    "independent-source07-semantic-carry.json": "d0fc94b378097be72181a183d719d1e62661d9813cc8734a819a1445d20735cd",
+    "independent-source08-semantic-carry.json": "fb65f6c050e5513f2f14ecaa0a02e78808442c1c528c9cb5c0f0bd423a0d0524",
+    "independent-source07-docs-carry.json": "46878f3dd9a021d65024012936d1ec18cbd85df20a75305a090fcd433d544940",
+    "independent-final08-gate-audit.json": "af16eb10b7b7ca3a96a5c63e67763bfb03a5c26d0f1959dfd4a195bf295a30c0",
+    "independent-final-docs09-status-audit.json": "2d460f70be1b1a867fe50e43289f9220d3ea77095fe62d9032193a2e12803a56",
+    "independent-implementation-commit-carry.json": "2faf6eafbfc95467d52aae43851151a747efc5128ad837d93ee9a3c79cb19f83"
+  },
+  "all_review_severity_counts_zero": true,
+  "cost": {
+    "record_sha256": "39a26794ce69ebba82074ae0c57b886dcdc59e50a6f0a667fba7f8e85af31ede",
+    "measured_layout_sha256": "de3e984959f09710a393c0265097dcd7b414066b231df6cd4da03a9a8353e48c",
+    "scope": "Source04 actual Linuxamd64 shallow layout with independently reviewed source05-08 carries; referenced allocations excluded. New failure flag fills prior trailing padding by derived arithmetic, not remeasurement. No other-platform ABI or aggregate 4-GiB fit claim.",
+    "ordinary": "Input/tree/Git each+24B, LinuxGoBuild+32B, tool+8B; sourceRoot/staging/referenceAttempt/inspector/referenceSource/generic legacy-Darwin GoBuild each+8B. Ordinary nil-observer branches/backing remain, product request/sync/startup/restart/retry/noop/publication invokes no finite prework.",
+    "prework": "Caller original build/tree/image loans held across actual outer Start/sole Wait/controls. Two liveness pipes/watchers/pidfds block without healthy polling. Inner independently constructs protected inputs/reference-builds and compares lineage. Same readonly sealed candidate inode adopted; one digest pass with a 32-KiB buffer, at most 256 MiB, no payload recopy. Controller/inner source/SDK/module/staging coexist; no RSS-fit assertion.",
+    "failure": "Original unknown owners retained, no new preparation/helper/refbuild attempt. Existing Close may block; retry interval 1 second, no finite total work/duration. Each five-second native session waiter may perform about 500 ten-millisecond census polls plus a boundary scan, several per cleanup turn. Repeated remaining-entry metadata/sort/ancestry/7aliases, no content rehash/rebuild. Mutex held through existingwait. At most 8 KiB private initial-failure record+file/dirsync/observedClose, exclusive0600/no overwrite/deletion/upload.",
+    "native_harness": "Cleanup owner 72 B, observation 56 B, nonce 16 B and failure selection 320 B shallow, referenced data excluded; admitted binary must use -test.timeout=0 while original sixty-minute work ceiling remains. Actual body unexecuted."
+  },
+  "implementation": "Genuine protected one-shot t422-execute finite prework; source-owned actual parent/image/pipe/FD identity and input/helper/Go lineage; independently verified inner candidate; nonce-bound retired-success/failure only with actual outer+inner Wait and recorded helper/owner/control retirement; unknown prefixes retain original loans. Formal Linux profiles/outer/inner stay refused.",
+  "corrections": [
+    "Inherited FD nonblocking/CLOEXEC set before os.NewFile; blocking watchers, actual EOF/parent exit cancellation.",
+    "Empty outer SID/failed Wait cannot replace nested separately-sessioned helper retirement; require exact nonce retirement receipt and actual Wait.",
+    "Compare canonical caller request and independently measured joined inner protected input/helper/count/Go facts; commit/executable equality alone insufficient.",
+    "Private shared claim spent on first presentation before validation, including cloned/foreign/canceled; no retry/reset promise.",
+    "Source-created protected constructor/owner close/command observations survive nil returns and pointer drops; operational failure distinct from native close or missing actual Wait/session.",
+    "Native test retains observed original controller owners, writes initial private failure facts and rejects finite Go hard timeout; no actual native execution."
+  ],
+  "preserved_failed_prefixes": {
+    "source03": "Normal actualWait1/61pass/2failed nodes/0skip: ambiguous cancel fixture; raw preserved, corrected04.",
+    "source06": "Normal/race each Wait 0, 425 pass and one inherited skip; then lint Wait 1 with six findings (four errcheck, S1016 and QF1003); later seven commands not started. Complete raw preserved.",
+    "source07": "Normal Wait 0, 425 pass and one inherited skip; pre-Popen dispatch stopped with wrapper status 75. No race/test exit 75; later commands not started. All evidence preserved."
+  },
+  "native_execution": {
+    "test": "TestLinuxExecutorRequiredNativePreworkComposition",
+    "tags": [
+      "phebs_t42_native",
+      "phebs_t42_executor_native"
+    ],
+    "compiled_only": true,
+    "executed": false,
+    "requires": "Exact source/image/profile/helper/input/host+aggregate resource admission. Neither old Maria profile nor pending V14 diagnostic installer covers changed source."
+  },
+  "limits": "Whole-process RSS 4 GiB, SDK 30 seconds and materialization 5 minutes,all original operation/stage/resource/custody/accounting/cleanup predicates unchanged. Finite prework sixty minutes clipped caller; existing individualstagebounds unchanged, no summed fit/completion promise.",
+  "acceptance": {
+    "full_MED495": false,
+    "full_MED496": false,
+    "actual_protected_executor_native_composition": false,
+    "formal_executor_profile": false,
+    "full_MED497": false,
+    "pressure_backup_restore": false,
+    "readiness_scale": false,
+    "merge_deploy_security_install": false
+  },
+  "private_evidence_directory": "/home/ben/phebs-rehearsals/med497-executor-custody-20261024",
+  "compile_only": {
+    "tags": [
+      "phebs_t42_native",
+      "phebs_t42_executor_native"
+    ],
+    "artifacts": [
+      {
+        "name": "final08-compile-linux-amd64",
+        "bytes": 91281044,
+        "sha256": "74baa599aa239cd695f3b55ed7b3dd38aecd16b64c481f7f8756a6866ba90503",
+        "format": "ELF64 little-endian",
+        "machine": 62,
+        "native_test_name_bytes_present": true,
+        "compile_only_not_executed": true
+      },
+      {
+        "name": "final08-compile-linux-arm64",
+        "bytes": 84718869,
+        "sha256": "4fc1b2c8feb36a767357a05a280ffb32f047b922e6d61abffecd6899ecb5acae",
+        "format": "ELF64 little-endian",
+        "machine": 183,
+        "native_test_name_bytes_present": true,
+        "compile_only_not_executed": true
+      },
+      {
+        "name": "final08-compile-darwin-arm64",
+        "bytes": 89999474,
+        "sha256": "964b283f8d29ad4d3c8dc2cff378302086324d12252896e616fb4a822a658bdc",
+        "format": "Mach-O64 little-endian",
+        "machine": 16777228,
+        "native_test_name_bytes_present": false,
+        "compile_only_not_executed": true
+      },
+      {
+        "name": "final08-compile-darwin-amd64",
+        "bytes": 95265600,
+        "sha256": "ffab7b1a50fb3aa4e5164d56afcd48b44a9097877d8c25bb4f43edd929dbdade",
+        "format": "Mach-O64 little-endian",
+        "machine": 16777223,
+        "native_test_name_bytes_present": false,
+        "compile_only_not_executed": true
+      }
+    ],
+    "executed": false
+  },
+  "author_handoff_sha256": "90cbeb87ada71abe2dba902205de85c24299d9b0a3131126b704502a5fd818c7",
+  "final_documentation_status_gates": {
+    "lead-docs-final09": {
+      "argv": [
+        "go",
+        "test",
+        "-p",
+        "2",
+        "./scripts",
+        "-run",
+        "^Test(TrackedMarkdownLinksResolve|DocumentationMapReachesTrackedDocs|SealedT111TreeDigest)$",
+        "-count=1",
+        "-timeout=2m",
+        "-json"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 1.5866496230009943,
+      "nodes": {
+        "pass": 3,
+        "fail": 0,
+        "skip": 0
+      },
+      "logs": {
+        ".stdout": {
+          "sha256": "89de54395453eb8457f702ddd5654048c808bd49f7ac800856210e7c7711b195",
+          "bytes": 2725
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "lead-glossary-final09": {
+      "argv": [
+        "go",
+        "run",
+        "-p",
+        "2",
+        "./internal/glossary/cmd/glossary-gen",
+        "-verify",
+        "-root",
+        "."
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 0.11551646099542268,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "logs": {
+        ".stdout": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "lead-whitespace-final09": {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 0.11599036099505611,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "logs": {
+        ".stdout": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    }
+  },
+  "final_documentation_status_sha256": {
+    "PLAN.md": "7e608b8c5ec6423f7b2cb6c14049500a2c563a03834f693ad8b7de068030dffe",
+    "docs/BACKLOG.md": "d7057e01dc2842aca61ed0d5c54d7a5319f7bb27149134aacc6b4a607b6aa58d",
+    "docs/ROADMAP.md": "0dd9deb0155a533561121d985405bbae396e394bf6009a9019388d4a5b016474",
+    "docs/guides/OPERATIONS.md": "b3a332bf7f929ae681166e3fc660293b1549a7452ffb6288aae3d7d79e6d99df"
+  },
+  "gofmt_list_empty": true,
+  "staging_receipt_sha256": "5b0c1f593687036ff701083304d721d0ffbcdf65d451ffcefbf00d275f214cb0"
+}
