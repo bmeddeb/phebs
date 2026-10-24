@@ -52,9 +52,10 @@ func TestLinuxExecutorRequiredNativePreworkComposition(t *testing.T) {
 	failureSelection := linuxExecutorPreworkSelection{PreparationRoot: controllerRoot, SourceCommit: request.SourceCommit, Attempt: hex.EncodeToString(nonce[:])}
 	var prework *linuxExecutorPrework
 	t.Cleanup(func() {
+		failureAttempted := false
 		// Preserve first-observed helper/workspace facts before settlement can
 		// retain this process indefinitely; no failed root/record is deleted.
-		if err := writeLinuxExecutorPreworkFailure(failureSelection, controller.observation); err != nil {
+		if err := writeLinuxExecutorPreworkFailureOnce(&failureAttempted, failureSelection, controller.observation, nil); err != nil {
 			t.Error("controller private failure publication refused; retain", base)
 		}
 		if t.Failed() || controller.observation.nativeCloseFailed.Load() || controller.observation.unknown() {
@@ -78,6 +79,9 @@ func TestLinuxExecutorRequiredNativePreworkComposition(t *testing.T) {
 		reported := false
 		for {
 			err := controller.Close(context.Background())
+			if recordErr := writeLinuxExecutorPreworkFailureOnce(&failureAttempted, failureSelection, controller.observation, nil); recordErr != nil {
+				t.Error("controller first close-only failure publication refused; preserve partial record", base)
+			}
 			if err != nil && !reported {
 				t.Error("controller native custody cleanup refused; no PASS", base)
 				reported = true

@@ -48,7 +48,7 @@ func linuxPressureDirectoryFacts(file *os.File) (linuxPressureDirectory, error) 
 		fsid: filesystem.Fsid.Val, mountID: extended.Mnt_id}, nil
 }
 
-func openLinuxPressureDirectory(ctx context.Context, path string, freshMount bool) (_ linuxPressureDirectory, retErr error) {
+func openLinuxPressureDirectoryObserved(ctx context.Context, path string, freshMount bool, observation *executionPreworkObservation) (_ linuxPressureDirectory, retErr error) {
 	if linuxPressureContext(ctx) != nil {
 		return linuxPressureDirectory{}, ErrLinuxPressure
 	}
@@ -63,7 +63,7 @@ func openLinuxPressureDirectory(ctx context.Context, path string, freshMount boo
 	file := os.NewFile(uintptr(fd), "linux-pressure-owned-directory")
 	defer func() {
 		if retErr != nil {
-			_ = file.Close()
+			_ = observation.close(file.Close())
 		}
 	}()
 	if freshMount {
@@ -215,7 +215,7 @@ func (owner *LinuxPressureVolume) selectLoop(ctx context.Context) (retErr error)
 	if err != nil {
 		return ErrLinuxPressure
 	}
-	defer func() { retErr = errors.Join(retErr, unix.Close(fd)) }()
+	defer func() { retErr = errors.Join(retErr, owner.observation.close(unix.Close(fd))) }()
 	if _, err = linuxPressureDevice(fd, "/dev/loop-control", unix.S_IFCHR, 10, 237); err != nil {
 		return err
 	}
@@ -354,7 +354,7 @@ func (owner *LinuxPressureVolume) closedRootEntries(ctx context.Context) (retErr
 		return ErrLinuxPressure
 	}
 	file := os.NewFile(uintptr(fd), "linux-pressure-root-inventory")
-	defer func() { retErr = errors.Join(retErr, file.Close()) }()
+	defer func() { retErr = errors.Join(retErr, owner.observation.close(file.Close())) }()
 	entries, readErr := file.ReadDir(4)
 	if readErr != nil && !errors.Is(readErr, io.EOF) || len(entries) != 3 {
 		return ErrLinuxPressure
@@ -378,11 +378,11 @@ func (owner *LinuxPressureVolume) removeFreshLostFound(ctx context.Context) (ret
 	}
 	path := filepath.Join(owner.mount.path, "lost+found")
 	// mke2fs's freshly created recovery directory is the only admitted extra.
-	directory, err := openLinuxPressureDirectory(ctx, path, false)
+	directory, err := openLinuxPressureDirectoryObserved(ctx, path, false, owner.observation)
 	if err != nil {
 		return err
 	}
-	defer func() { retErr = errors.Join(retErr, directory.file.Close()) }()
+	defer func() { retErr = errors.Join(retErr, owner.observation.close(directory.file.Close())) }()
 	entries, readErr := directory.file.ReadDir(1)
 	if !errors.Is(readErr, io.EOF) || len(entries) != 0 || directory.node.Device != owner.mount.node.Device ||
 		directory.fsid != owner.mount.fsid || directory.mountID != owner.mount.mountID || directory.check(ctx) != nil ||

@@ -21,7 +21,7 @@ func (owner *LinuxPressureVolume) checkRecord(ctx context.Context) (retErr error
 		return ErrLinuxPressure
 	}
 	file := os.NewFile(uintptr(fd), "linux-pressure-retained-record")
-	defer func() { retErr = errors.Join(retErr, file.Close()) }()
+	defer func() { retErr = errors.Join(retErr, owner.observation.close(file.Close())) }()
 	var before, after, linked unix.Stat_t
 	if unix.Fstat(fd, &before) != nil || !linuxPressurePrivateFile(before) || before.Size < 1 || before.Size > linuxPressureRecordLimit ||
 		uint64(before.Dev) != owner.root.node.Device {
@@ -59,7 +59,7 @@ func (owner *LinuxPressureVolume) writeRecord(ctx context.Context, next linuxPre
 		return ErrLinuxPressure
 	}
 	file := os.NewFile(uintptr(fd), "linux-pressure-record-writer")
-	defer func() { retErr = errors.Join(retErr, file.Close()) }()
+	defer func() { retErr = errors.Join(retErr, owner.observation.close(file.Close())) }()
 	var before, after, linked unix.Stat_t
 	if unix.Fstat(fd, &before) != nil || !linuxPressurePrivateFile(before) || before.Size != 0 || uint64(before.Dev) != owner.root.node.Device {
 		return ErrLinuxPressure

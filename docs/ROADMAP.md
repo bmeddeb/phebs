@@ -397,6 +397,16 @@ Its thirteen final bounded gates passed with independent source/cost/oracle
 review clear. The exact protected-executor native body was compiled only;
 actual composition and complete profile acceptance remain open.
 
+T42.H2t.b now implements the required root-pressure-owner to unprivileged
+workspace descriptor handoff. It needs a genuine root executor actor with its
+own protected source/image owners, independently verified target inputs and
+actual child/helper/cwd/control retirement. Source preparation does not install
+or admit that broker, execute privileged composition or close formal profiles.
+Its corrected bounded checkpoint passes thirteen final commands, with connected
+normal/race each passing 566 nodes and one inherited frozen-Darwin/arm64 skip.
+Static/docs and four supported tagged compiles pass; genuine native composition
+and full MED-495/496/497 acceptance remain open.
+
 Ben's 2026-10-22 instruction authorizes integrating PR156 and PR164–167 as
 reviewed implementation checkpoints while cleaning maria after verified archival
 transfer. It supersedes their full-native integration hold only. V10 remains a
