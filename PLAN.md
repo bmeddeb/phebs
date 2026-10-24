@@ -17106,3 +17106,35 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   transactions add no work. Private diagnostics add bounded failure-only state
   and copy already joined fixed fields; they add no probe, parser pass, corpus
   scan, timer, worker, persistent state or successful-path allocation.
+
+- **2026-10-24 — MED-495 private trace refusal attribution.** Maria v13 at
+  `bfcfb559` returned actual native Wait1 after 4,773.559 seconds at the return
+  Health/ReturnA assertion, after the physical and logical calls returned nil.
+  Its first unjoined resource refusal is `trace/event-turn` with a generic
+  error. The underlying predicate/syscall is not retained. Different actor and
+  tracee TIDs are normal; owner-wide active TIDs include detached witnesses and
+  cannot be compared directly with one root's task-map size. Detached retirement
+  precedes task selection, so the saved current TID may describe an older turn.
+  All seven recorded PIDs/TIDs were absent in one later same-boot observation;
+  that does not establish complete descendant custody or accounting teardown.
+  Preserve the exact failed fixture, all retained owners and raw evidence.
+
+  Correct only the demonstrated diagnostic ambiguity: clear the current-task
+  field before a turn, label previously generic gate, detached-current,
+  terminal-shape/record, parent and wait/consume refusals, and preserve any
+  actual consume errno. Retain only fixed labels and existing bounded scalar
+  facts; never include raw proc records, command arguments or application logs.
+  Distinguish return Health from ReturnA in the required native test. Private
+  context still reaches the existing first locked snapshot; public trace errors,
+  all predicates, unknown-state retention and sole genuine Wait stay unchanged.
+  This is not a causal fix for v13 and grants no retry or new driver/profile.
+
+  Cost: one scalar reset per existing native trace turn and bounded formatting
+  only on a refusal. There is no new probe, scan, syscall, retry, timer, child,
+  goroutine, lock, cache, persistent state or ordinary query/sync/startup/no-op/
+  publication work. Existing probe-gate holds, concurrency and memory/disk
+  bounds remain exact. Whole RSS stays 4 GiB, SDK RPCs 30 seconds and resolver
+  materialization five minutes; all numeric/default-policy/custody gates stay
+  unchanged. Pure-state/self-proc regressions can prove attribution and retained
+  witnesses without reproducing Maria's unknown native failure. Full native,
+  successor, memory-fit, accounting/cleanup, readiness and scale remain open.

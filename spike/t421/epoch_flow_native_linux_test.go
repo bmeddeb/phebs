@@ -310,7 +310,11 @@ func TestLinuxEpochRequiredNativeLiveBorrow(t *testing.T) {
 	if !logical.run.joinedEmpty() {
 		t.Fatal("return author preceded actual logical join")
 	}
-	if returned.Health(t.Context()) != nil || returned.ReturnA(t.Context()) != nil {
+	if returned.Health(t.Context()) != nil {
+		logLinuxEpochNativeFailure(t, flow, base)
+		t.Fatal("actual return health", base)
+	}
+	if returned.ReturnA(t.Context()) != nil {
 		logLinuxEpochNativeFailure(t, flow, base)
 		t.Fatal("actual return authority", base)
 	}

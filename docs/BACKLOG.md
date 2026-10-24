@@ -4995,6 +4995,24 @@ independent source/cost review. Preserve original failures and private replay
 records. Full MED-495/MED-496 acceptance remains open; this follow-up authorizes
 commit/push of reviewed corrections, not a new qualification or driver/profile.
 
+**2026-10-24 — MED-495 v13 trace attribution follow-up.** Exact `bfcfb559`
+failed the return Health/ReturnA assertion with actual Wait1 after 4,773.559s.
+The first unjoined `trace/event-turn` cause is generic; no underlying syscall,
+RSS-overrun or materialization-retry cause is established. Different actor and
+tracee TIDs and owner-wide versus root-local counts do not identify a defect.
+Unknown tracing deliberately retains owners; empty sampled wrapper SID and
+later absence of seven recorded PIDs do not prove complete teardown.
+
+Add only substantiated private attribution: reset current-task context before
+preloop detached retirement, fixed branch labels with existing bounded scalars
+and actual errno, and separate return Health/ReturnA assertions. Preserve every
+public error, predicate, first-snapshot fence, unknown-state/loan retention and
+numeric/default-policy gate. Require old-source diagnostic-ambiguity controls,
+focused normal/race and connected tracing regressions, static/docs/supported
+compilation and independent exact-head review before scoped commit/push.
+This does not resolve the v13 cause or authorize a driver/profile change,
+qualification retry, cleanup, merge or full acceptance.
+
 **T42.H2s.a · Genuine Linux terminal-result ownership (MED-496 prerequisite,
 2026-10-21).** Ben directs taking the next backlog ticket while the isolated
 `f8f00f40` c.c run executes on maria. Retain the creating tracer actor's actual

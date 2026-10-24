@@ -591,6 +591,17 @@ handoff failures without new probes or changed error/acceptance semantics.
 Preserve failed fixtures and report missing full qualification explicitly;
 this correction starts no rerun and grants no new driver/profile installation.
 
+The v13 run later failed its return Health/ReturnA assertion with an unjoined
+`trace/event-turn` refusal. Its underlying cause remains unknown. Private trace
+diagnostics now distinguish previously generic branch refusals and clear stale
+current-task context before detached retirement; the native test distinguishes
+return Health from ReturnA. These diagnostics add no probe or acceptance credit.
+Actor and tracee TIDs normally differ, and owner-wide TID counts include retained
+detached witnesses. Preserve an unknown flow's owners and failed fixture; process
+absence or an empty sampled wrapper session does not prove complete internal
+custody, accounting, RSS fit or cleanup. No retry or security change follows
+from these diagnostic-only corrections.
+
 The first exact `2754d208` full-native attempt completed its three actual
 reference comparisons, then correctly refused policy v1 before any author or
 server operation: 10,504,626,176 required bytes exceeded 8,633,675,776 observed
