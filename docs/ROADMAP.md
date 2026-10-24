@@ -378,6 +378,17 @@ static/docs and four supported dual-tag compile gates with independent review
 clear; the full composition was not executed. Full MED-495/MED-496 acceptance
 stays open.
 
+T42.H2t.a implements MED-497's bounded Linux executor prework and original-parent
+custody. The inner must independently derive its protected reference lineage;
+serialized identity and controller-only proofs cannot issue its profile. Full
+formal Linux entry remains closed. H2m pressure preparation's root0700 versus
+unprivileged linked-root handoff remains a separate required boundary, followed
+by prospective Linux profile/plan admission and MED-498's operational pressure
+composition. No bounded prework control closes MED-495/MED-496/MED-497.
+Its thirteen final bounded gates passed with independent source/cost/oracle
+review clear. The exact protected-executor native body was compiled only;
+actual composition and complete profile acceptance remain open.
+
 Ben's 2026-10-22 instruction authorizes integrating PR156 and PR164–167 as
 reviewed implementation checkpoints while cleaning maria after verified archival
 transfer. It supersedes their full-native integration hold only. V10 remains a

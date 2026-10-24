@@ -15,8 +15,15 @@ import (
 // nested Git dispatches. A successful root exit is insufficient: every recorded
 // session must be empty before the caller may release its preparation custody.
 func runReferenceCommand(ctx context.Context, command *exec.Cmd) error {
+	return runReferenceCommandObserved(ctx, command, nil)
+}
+
+func runReferenceCommandObserved(ctx context.Context, command *exec.Cmd, observation *executionPreworkObservation) error {
 	if ctx == nil || ctx.Err() != nil || command == nil {
 		return errors.New("reference preparation context unavailable")
+	}
+	if !observation.canStart() {
+		return errors.New("reference preparation has retained native uncertainty")
 	}
 	if err := prepareReferenceCommand(command); err != nil {
 		return err
@@ -26,7 +33,8 @@ func runReferenceCommand(ctx context.Context, command *exec.Cmd) error {
 		return err
 	}
 	waitErr := command.Wait() // Sole native Wait also joins the existing output pumps.
-	_, _, err := finishExecutionProcessSession(command.Process.Pid, nil, true, waitErr, time.Now().Add(5*time.Second))
+	joined, empty, err := finishExecutionProcessSession(command.Process.Pid, nil, true, waitErr, time.Now().Add(5*time.Second))
+	observation.process(command, joined, empty)
 	return errors.Join(err, ctx.Err())
 }
 

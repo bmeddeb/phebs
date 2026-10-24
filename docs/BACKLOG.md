@@ -5229,6 +5229,41 @@ docs/glossary/whitespace and all four supported dual-tag compiles pass; binaries
 were not executed. Source/cost, native oracle and raw-evidence reviews are clear.
 The actual opt-in composition, full MED-495/MED-496 and readiness remain open.
 
+**T42.H2t.a · Live Linux executor prework custody (MED-497 implementation,
+2026-10-24; bounded implementation).** Connect a genuine protected `t422-execute` finite
+prework bootstrap to live original-parent, inner-image and inherited control/
+liveness ownership. Retain the sealed tool loan through genuine Start/Wait.
+The inner executor independently verifies its sealed candidate through the
+existing protected Go reference build/compare path; a controller-owned proof or
+serialized identity cannot issue inner profile authority. Use private,
+separately versioned Linux facts and sticky one-shot binding. Ordinary formal
+Linux outer/inner entry remains refused.
+
+AC: exact source/tool/held-FD and original-parent binding; independently verified
+inner reference lineage and equality with the caller's actual protected input
+manifest/helper/counts and Go digest; repeated, cloned, foreign, missing, drifted, canceled,
+closed, partial and unjoined refusals; genuine child/control/watcher retirement
+with unknown prefixes retained; explicit retired-failure evidence before loan
+release, never an empty-session substitute for separate helper joins; retain
+native close uncertainty before nested owner pointer drops; bounded
+normal/race, real kernel controls,
+supported compilation, static/docs gates, complete cost pass and independent
+review. Keep actual protected-executor composition opt-in until exact image,
+tool, input and host prerequisites are admitted. Do not loosen H2m's root0700
+checks or unprivileged linked-root checks to bridge the separate pressure UID/
+descriptor boundary. Full profile custody, prospective Linux plan/admission,
+MED-496's actual prerequisite and full MED-497 acceptance remain open. This
+component grants no security installation, operational execution or ceremony.
+
+The exact source08 bounded checkpoint passed all thirteen final commands:
+normal/race each 425 passing nodes with one inherited Darwin-only skip, both
+vet modes, pinned differential lint with zero issues, docs/glossary/whitespace
+and four supported dual-tag compile-only targets. Source/cost and test-oracle
+review is clear. Counts include inherited/model/helper controls; the genuine
+protected-executor composition remains unexecuted. Full MED-497, MED-496 and
+MED-495 acceptance, the pressure UID/descriptor bridge and formal profiles
+remain open.
+
 **2026-10-22 — Ben-directed implementation checkpoint integration.** Ben
 explicitly requests maria cleanup and PR merges after the v10 native failure
 was disclosed. PR156 and T42.H2s.a–d / PR164–167 may integrate as reviewed

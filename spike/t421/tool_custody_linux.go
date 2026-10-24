@@ -26,6 +26,7 @@ type LinuxExecutionToolCustody struct {
 	probe    *linuxExecutionToolProbe
 	// Only the joined protected-input issuer sets this distinct Linux lineage.
 	referenceInputs *LinuxExecutionGoBuildCustody
+	executorClaim   *linuxExecutorPreworkClaim
 }
 
 type linuxExecutionToolProbe struct {
@@ -39,17 +40,21 @@ type linuxExecutionToolProbe struct {
 // roles/recipes qualify; source/build-input custody remains repeated observation
 // on the trusted host, not immutability. Failure releases all anonymous custody.
 func ProtectLinuxExecutionReferenceTool(ctx context.Context, request ReferenceToolRequest) (*LinuxExecutionToolCustody, error) {
+	return protectLinuxExecutionReferenceToolObserved(ctx, request, nil)
+}
+
+func protectLinuxExecutionReferenceToolObserved(ctx context.Context, request ReferenceToolRequest, observation *executionPreworkObservation) (*LinuxExecutionToolCustody, error) {
 	if _, _, _, _, _, err := referenceToolRoleForSchema(request.Role, request.PlanSchema, request.SourceCommit); err != nil {
 		return nil, ErrExecutionToolCustody
 	}
-	tool, err := protectLinuxExecutionTool(ctx, request.Role, request.Binary)
+	tool, err := protectLinuxExecutionToolObserved(ctx, request.Role, request.Binary, observation)
 	if err != nil {
 		return nil, err
 	}
 	var identity ExecutionToolIdentity
 	err = tool.input.WithInput(ctx, request.Role, func(file *os.File) error {
 		var err error
-		identity, err = verifyExecutionReferenceTool(ctx, request, file)
+		identity, err = verifyExecutionReferenceToolObserved(ctx, request, file, observation)
 		return err
 	})
 	return finishLinuxExecutionTool(ctx, tool, request.Role, identity, err)
@@ -86,6 +91,10 @@ func ProtectLinuxExecutionExternalTool(ctx context.Context, role, binary string)
 }
 
 func protectLinuxExecutionTool(ctx context.Context, role, binary string) (*LinuxExecutionToolCustody, error) {
+	return protectLinuxExecutionToolObserved(ctx, role, binary, nil)
+}
+
+func protectLinuxExecutionToolObserved(ctx context.Context, role, binary string, observation *executionPreworkObservation) (*LinuxExecutionToolCustody, error) {
 	if runtime.GOARCH != "amd64" || ctx == nil || ctx.Err() != nil || len(binary) > maxInputCustodyPathBytes ||
 		!filepath.IsAbs(binary) || filepath.Clean(binary) != binary || strings.TrimSpace(binary) != binary {
 		return nil, ErrExecutionToolCustody
@@ -104,7 +113,7 @@ func protectLinuxExecutionTool(ctx context.Context, role, binary string) (*Linux
 	if err != nil {
 		return nil, ErrExecutionToolCustody
 	}
-	input, err := ProtectLinuxExecutionInputs(ctx, []ExecutionInputCopy{{Name: role, Path: canonical, SHA256: digest, Executable: true}})
+	input, err := protectLinuxExecutionInputsObserved(ctx, []ExecutionInputCopy{{Name: role, Path: canonical, SHA256: digest, Executable: true}}, observation)
 	if err != nil {
 		return nil, ErrExecutionToolCustody
 	}

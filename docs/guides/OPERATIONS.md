@@ -591,6 +591,28 @@ requirements. The new native composition test remains opt-in and requires its
 own exact image/profile and resource admission; no installed or qualified
 checkpoint behavior is claimed.
 
+T42.H2t.a prepares the Linux formal executor's image, original-parent and
+control/liveness custody. It does not enable formal Linux outer/inner execution
+or issue a complete profile. Actual protected reference/bootstrap composition
+needs exact fresh admission. H2m pressure roots remain root-owned and private;
+passing a directory FD does not make them valid unprivileged workspace paths.
+Do not change their ownership/modes or substitute proc-FD aliases to bypass that
+separate handoff requirement. Full MED-497 acceptance stays pending.
+
+The required executor test uses both `phebs_t42_native` and
+`phebs_t42_executor_native`. It needs its own admitted image, helpers, inputs and
+aggregate resources before execution. Its admitted test binary must use
+`-test.timeout=0`: the work context still expires after sixty minutes, while
+uncertain cleanup retains the original process and helpers until actual
+retirement. A hard test timeout could discard that owner. Private failure
+records identify retained verifier workspaces; they grant no cleanup authority
+and must remain beside failed fixtures. Tagged compilation alone proves none of
+this native execution.
+The bounded checkpoint passed normal/race and static/documentation gates plus
+all four supported compile-only targets. This does not admit or execute its
+protected reference/bootstrap composition; fresh exact prerequisites remain
+required before that run.
+
 The v11 Maria attempt stopped during physical B on a service-state SDK reply
 timeout. The 2026-10-23 correction makes selected preimage lookups use the
 existing unique index; it preserves the 30-second RPC deadline, 512-record

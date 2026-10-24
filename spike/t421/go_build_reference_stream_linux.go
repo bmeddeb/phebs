@@ -15,6 +15,10 @@ import (
 // The source is a borrowed H2k root, not an ambient pathname or a foreign bind
 // mount. Its owner keeps the read-only loan through transfer and helper join.
 func gatherGoReferenceHeldInputs(ctx context.Context, root *os.File) (_ *os.Root, _ []inputTreeSourceEntry, retErr error) {
+	return gatherGoReferenceHeldInputsObserved(ctx, root, nil)
+}
+
+func gatherGoReferenceHeldInputsObserved(ctx context.Context, root *os.File, observation *executionPreworkObservation) (_ *os.Root, _ []inputTreeSourceEntry, retErr error) {
 	if ctx == nil || ctx.Err() != nil || root == nil {
 		return nil, nil, ErrExecutionGoBuildCustody
 	}
@@ -24,7 +28,7 @@ func gatherGoReferenceHeldInputs(ctx context.Context, root *os.File) (_ *os.Root
 	}
 	defer func() {
 		if retErr != nil {
-			_ = tree.Close()
+			_ = observation.close(tree.Close())
 		}
 	}()
 	held, err := root.Stat()
@@ -32,7 +36,7 @@ func gatherGoReferenceHeldInputs(ctx context.Context, root *os.File) (_ *os.Root
 	if err != nil || treeErr != nil || !os.SameFile(held, opened) {
 		return nil, nil, ErrExecutionGoBuildCustody
 	}
-	source := &inputTreeSourceRoot{file: root, tree: tree, info: held}
+	source := &inputTreeSourceRoot{file: root, tree: tree, info: held, observation: observation}
 	var rows []inputTreeSourceEntry
 	var paths, bytes uint64
 	err = walkGoBuildTree(ctx, tree, "inputs", func(path string, info os.FileInfo) error {
@@ -63,12 +67,16 @@ func gatherGoReferenceHeldInputs(ctx context.Context, root *os.File) (_ *os.Root
 }
 
 func sendGoReferenceHeldInputs(ctx context.Context, wire *inputTreeSocket, root *os.File, expected LinuxInputTreeIdentity) (_ inputTreeCensus, retErr error) {
-	tree, rows, err := gatherGoReferenceHeldInputs(ctx, root)
+	return sendGoReferenceHeldInputsObserved(ctx, wire, root, expected, nil)
+}
+
+func sendGoReferenceHeldInputsObserved(ctx context.Context, wire *inputTreeSocket, root *os.File, expected LinuxInputTreeIdentity, observation *executionPreworkObservation) (_ inputTreeCensus, retErr error) {
+	tree, rows, err := gatherGoReferenceHeldInputsObserved(ctx, root, observation)
 	if err != nil {
 		return inputTreeCensus{}, ErrExecutionGoBuildCustody
 	}
 	defer func() {
-		if tree.Close() != nil {
+		if observation.close(tree.Close()) != nil {
 			retErr = ErrExecutionGoBuildCustody
 		}
 	}()
