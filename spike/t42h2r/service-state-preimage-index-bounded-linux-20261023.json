@@ -1,0 +1,543 @@
+{
+  "schema": "t42-linux-service-state-preimage-lookup-bounded-v1",
+  "implementation_commit": "c70062bad29010a168914e449c38f6a1830f631f",
+  "checked_test_commit": "5a9920b0ccbee0ecb042a159396e159877623ff5",
+  "reviewed_source_commit": "34941371f0da778a853d8da5c4c1168b896213aa",
+  "base_commit": "4812c3cf3f03370bf88e491f0b7db827d1a50331",
+  "failure": {
+    "actual_native_wait_exit_code": 1,
+    "elapsed_seconds": 4473.347334345992,
+    "stage": "physical-b",
+    "first_sdk_refusal": "active caller/owner contexts; no_native_reply; deadline_exceeded; commitServiceStateV3TargetChunk",
+    "stopped_database": {
+      "next_member": 17,
+      "total_members": 21,
+      "rows_written": 8704,
+      "selected_preimages": 8704
+    },
+    "whole_sampled_rss_high_water_bytes": 3566215168,
+    "rss_limit_exceeded_flag": false,
+    "terminal_measurement": "unavailable",
+    "complete_terminal_custody_accounting_cleanup_pass": false,
+    "raw_server_log_sha256": "09970d9515fcd859bcfb2591e4b9804154d94681071848c2670f2218069f1ef7"
+  },
+  "native_lookup_controls": {
+    "engine_sha256": "9d631086ebc74fbfd3914b1acdbad0fa8b1655d02acc93f9208455038ee394c1",
+    "engine_matches_maria": true,
+    "initial_probe": {
+      "repository_operand": "object field",
+      "plan": "TableScan",
+      "lookups": 255,
+      "elapsed_seconds": 35.56371246202616,
+      "is_exact_production_predicate_shape": false
+    },
+    "exact_dotted_probe": {
+      "repository_operand": "scalar",
+      "snapshot_and_service_key_operands": "object fields",
+      "plan_from_native_negative_control": "repository-prefix IndexScan without physical two-row limit",
+      "lookups": 255,
+      "outcome": "separate75-second diagnostic timeout",
+      "actual_exit_code": "not retained by subprocess.run timeout exception"
+    },
+    "scalar_probe": {
+      "input_service_key": "nested update.content.service_key bound to scalar inside FOR",
+      "snapshot_revision": "selector.state_control_revision bound to scalar",
+      "plan": "full unique three-key IndexScan with physical limit2",
+      "lookups": 255,
+      "elapsed_seconds": 1.8665324090106878,
+      "actual_wait_exit_code": 0
+    },
+    "scope": "Read-only lookup mechanism controls on an isolated stopped-database copy; elapsed times include native CLI startup. No full production transaction latency or full qualification claim."
+  },
+  "negative_regression_control": {
+    "actual_wait_exit_code": 1,
+    "elapsed_seconds": 30.081002668011934,
+    "expected_failure": "native planner repository-only prefix IndexScan lacks physically pushed limit2",
+    "failed_as_expected": true,
+    "source_tree_mutated": false,
+    "initial_wrapper_expected_wrong_TableScan_message": true,
+    "raw_initial_record": "negative-control.json"
+  },
+  "bounded_gates": [
+    {
+      "name": "state-normal",
+      "source_commit": "c70062bad29010a168914e449c38f6a1830f631f",
+      "argv": [
+        "go",
+        "test",
+        "./internal/store",
+        "-run",
+        "^TestServiceStateV3",
+        "-count=1",
+        "-timeout=12m",
+        "-json"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 107.73343220897368,
+      "log_sha256": "17c79351ca5e2f6294fda8f0cc37507cef460608a3cc77174ac59f29881424f4",
+      "pass_nodes": 189,
+      "skipped_tests": [
+        "TestServiceStateV3LogicalPhaseAccountingNative"
+      ],
+      "failed_tests": []
+    },
+    {
+      "name": "state-race",
+      "source_commit": "c70062bad29010a168914e449c38f6a1830f631f",
+      "argv": [
+        "go",
+        "test",
+        "-race",
+        "./internal/store",
+        "-run",
+        "^TestServiceStateV3",
+        "-count=1",
+        "-timeout=12m",
+        "-json"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 362.9370039270143,
+      "log_sha256": "ccfd2c3b80c3b3a08dcad84675ce706c57dd8893a53eefbc0a8139eef876fb92",
+      "pass_nodes": 189,
+      "skipped_tests": [
+        "TestServiceStateV3LogicalPhaseAccountingNative"
+      ],
+      "failed_tests": []
+    },
+    {
+      "name": "sdk-normal",
+      "source_commit": "c70062bad29010a168914e449c38f6a1830f631f",
+      "argv": [
+        "go",
+        "test",
+        "./internal/storeaccounting",
+        "-run",
+        ".",
+        "-count=1",
+        "-timeout=12m",
+        "-json"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 2.3289159019768704,
+      "log_sha256": "ec4bbcbc4fb75ff9e20198bd0480358ca7472aaf9ec7594ae9e493b377b54a54",
+      "pass_nodes": 348,
+      "skipped_tests": [],
+      "failed_tests": []
+    },
+    {
+      "name": "sdk-race",
+      "source_commit": "c70062bad29010a168914e449c38f6a1830f631f",
+      "argv": [
+        "go",
+        "test",
+        "-race",
+        "./internal/storeaccounting",
+        "-run",
+        ".",
+        "-count=1",
+        "-timeout=12m",
+        "-json"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 4.873159487004159,
+      "log_sha256": "060d35eab71f01df09f48d2c7799f3fe2ec4fa4bec0960b9b6dce0a02fa71373",
+      "pass_nodes": 348,
+      "skipped_tests": [],
+      "failed_tests": []
+    },
+    {
+      "name": "vet",
+      "source_commit": "c70062bad29010a168914e449c38f6a1830f631f",
+      "argv": [
+        "go",
+        "vet",
+        "./internal/store"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 4.4222597219923045,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "lint",
+      "source_commit": "c70062bad29010a168914e449c38f6a1830f631f",
+      "argv": [
+        "golangci-lint",
+        "run",
+        "--new-from-rev=4812c3cf",
+        "./internal/store"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 20.375686185987433,
+      "log_sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+    },
+    {
+      "name": "docs",
+      "source_commit": "c70062bad29010a168914e449c38f6a1830f631f",
+      "argv": [
+        "make",
+        "docs-check"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 1.5634895010152832,
+      "log_sha256": "288fa62ba60a2097154d3460d5600eb9e2329ec686991d1b26097a27699204df"
+    },
+    {
+      "name": "glossary",
+      "source_commit": "c70062bad29010a168914e449c38f6a1830f631f",
+      "argv": [
+        "make",
+        "verify-glossary"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 0.1503227020148188,
+      "log_sha256": "f128ad7aef2b6215c4414d1e00b2650f9c42011b1705707b624be1c70d92f095"
+    },
+    {
+      "name": "whitespace",
+      "source_commit": "c70062bad29010a168914e449c38f6a1830f631f",
+      "argv": [
+        "git",
+        "diff",
+        "4812c3cf",
+        "--check"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 0.08421543301665224,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "loop_and_final_gates": [
+    {
+      "name": "index-loop-normal",
+      "source_commit": "5a9920b0ccbee0ecb042a159396e159877623ff5",
+      "argv": [
+        "go",
+        "test",
+        "./internal/store",
+        "-run",
+        "^TestServiceStateV3PreimagePointNativeIndex$",
+        "-count=1",
+        "-timeout=90s",
+        "-json"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 28.184536560002016,
+      "log_sha256": "4650adfcf43eec9830a19207052890d790c2af22f622def8c079fd3ea8cb7089",
+      "pass_nodes": 5,
+      "skipped_tests": [],
+      "failed_tests": []
+    },
+    {
+      "name": "index-loop-race",
+      "source_commit": "5a9920b0ccbee0ecb042a159396e159877623ff5",
+      "argv": [
+        "go",
+        "test",
+        "-race",
+        "./internal/store",
+        "-run",
+        "^TestServiceStateV3PreimagePointNativeIndex$",
+        "-count=1",
+        "-timeout=90s",
+        "-json"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 42.639712361997226,
+      "log_sha256": "528e42d6c93d9aa650a9ba1477901fb9ffc1da26c094e94287c3b5a6e96e8e4d",
+      "pass_nodes": 5,
+      "skipped_tests": [],
+      "failed_tests": []
+    },
+    {
+      "name": "final-vet",
+      "source_commit": "5a9920b0ccbee0ecb042a159396e159877623ff5",
+      "argv": [
+        "go",
+        "vet",
+        "./internal/store"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 3.415639950981131,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "final-lint",
+      "source_commit": "5a9920b0ccbee0ecb042a159396e159877623ff5",
+      "argv": [
+        "golangci-lint",
+        "run",
+        "--new-from-rev=4812c3cf",
+        "./internal/store"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 13.7056304430007,
+      "log_sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+    },
+    {
+      "name": "final-docs",
+      "source_commit": "5a9920b0ccbee0ecb042a159396e159877623ff5",
+      "argv": [
+        "make",
+        "docs-check"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 1.4760378939972725,
+      "log_sha256": "39013f4668f78484a1cce16524623148d002223e7da4e4e131e4fe31ae261a26"
+    },
+    {
+      "name": "final-glossary",
+      "source_commit": "5a9920b0ccbee0ecb042a159396e159877623ff5",
+      "argv": [
+        "make",
+        "verify-glossary"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 0.1250561659981031,
+      "log_sha256": "f128ad7aef2b6215c4414d1e00b2650f9c42011b1705707b624be1c70d92f095"
+    },
+    {
+      "name": "final-whitespace",
+      "source_commit": "5a9920b0ccbee0ecb042a159396e159877623ff5",
+      "argv": [
+        "git",
+        "diff",
+        "4812c3cf",
+        "--check"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 0.07402907698997296,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "supported_64_bit_tagged_compiles": [
+    {
+      "target": "linux/amd64",
+      "source_commit": "c70062bad29010a168914e449c38f6a1830f631f",
+      "scope": "compile-only; not an admitted executable or native execution result",
+      "argv": [
+        "go",
+        "test",
+        "-c",
+        "-tags=phebs_t42_native",
+        "-o",
+        "/home/ben/phebs-rehearsals/med495-physical-b-20261023/linux-amd64.compile.test",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 60.103006452001864,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "target": "linux/arm64",
+      "source_commit": "c70062bad29010a168914e449c38f6a1830f631f",
+      "scope": "compile-only; not an admitted executable or native execution result",
+      "argv": [
+        "go",
+        "test",
+        "-c",
+        "-tags=phebs_t42_native",
+        "-o",
+        "/home/ben/phebs-rehearsals/med495-physical-b-20261023/linux-arm64.compile.test",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 59.617825102002826,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "target": "darwin/amd64",
+      "source_commit": "c70062bad29010a168914e449c38f6a1830f631f",
+      "scope": "compile-only; not an admitted executable or native execution result",
+      "argv": [
+        "go",
+        "test",
+        "-c",
+        "-tags=phebs_t42_native",
+        "-o",
+        "/home/ben/phebs-rehearsals/med495-physical-b-20261023/darwin-amd64.compile.test",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 59.55357498800731,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "target": "darwin/arm64",
+      "source_commit": "c70062bad29010a168914e449c38f6a1830f631f",
+      "scope": "compile-only; not an admitted executable or native execution result",
+      "argv": [
+        "go",
+        "test",
+        "-c",
+        "-tags=phebs_t42_native",
+        "-o",
+        "/home/ben/phebs-rehearsals/med495-physical-b-20261023/darwin-arm64.compile.test",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "elapsed_seconds": 57.268965722003486,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "independent_review": {
+    "source_commit": "34941371f0da778a853d8da5c4c1168b896213aa",
+    "reviewer": "review_maria_ram_fix",
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "runtime_equal_to": "c70062bad29010a168914e449c38f6a1830f631f",
+    "test_equal_to": "5a9920b0ccbee0ecb042a159396e159877623ff5",
+    "scope": "Independent source/cost/custody/accounting and evidence review; no reviewer edits, tests, builds or remote actions."
+  },
+  "reviewed_docs_gates": [
+    {
+      "name": "docs",
+      "source_commit": "34941371f0da778a853d8da5c4c1168b896213aa",
+      "argv": [
+        "make",
+        "docs-check"
+      ],
+      "actual_wait_exit_code": 0,
+      "log_sha256": "a50258d307cd1e01448cc9023a95f761a7e9cc6afbdaf8ede998e48bc3db8633"
+    },
+    {
+      "name": "glossary",
+      "source_commit": "34941371f0da778a853d8da5c4c1168b896213aa",
+      "argv": [
+        "make",
+        "verify-glossary"
+      ],
+      "actual_wait_exit_code": 0,
+      "log_sha256": "f128ad7aef2b6215c4414d1e00b2650f9c42011b1705707b624be1c70d92f095"
+    },
+    {
+      "name": "whitespace",
+      "source_commit": "34941371f0da778a853d8da5c4c1168b896213aa",
+      "argv": [
+        "git",
+        "diff",
+        "4812c3cf",
+        "--check"
+      ],
+      "actual_wait_exit_code": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "source_files": [
+    {
+      "path": "internal/store/service_state_v3.go",
+      "bytes": 149970,
+      "sha256": "938dcdacac1f5e67d6e63f658f60c7a208a54d9d3aed569fd8714cd29f3d4f16"
+    },
+    {
+      "path": "internal/store/service_state_v3_preimage_index_test.go",
+      "bytes": 4270,
+      "sha256": "41f12e126c371623a0dee85c941997d7281a26f4e82f5be00bc3d095e5d67e5e"
+    }
+  ],
+  "unchanged_boundaries": [
+    {
+      "path": "spike/t421/linux_epoch_resource_policy.go",
+      "sha256": "d2a980343d406b8f73dfdd5313b5c78f0a0d8a2956b3bcc0ad4ada38fe0d8b01",
+      "same_as_v11": true
+    },
+    {
+      "path": "spike/t421/epoch_checkpoint.go",
+      "sha256": "a6b6fb030ff399411cc66702feffdb0616aa502dd04ec473692abd27e5500256",
+      "same_as_v11": true
+    },
+    {
+      "path": "internal/storeaccounting/sdk.go",
+      "sha256": "0072aeb5eb0937bae9b50184a7d70c3631bc2e82bc91dfb8fc8dbb67a16e149c",
+      "same_as_v11": true
+    },
+    {
+      "path": "go.mod",
+      "sha256": "424c7e1038c71c10676fc3bad01e155ebc5f912a4eea65e90c284b30951a9275",
+      "same_as_v11": true
+    },
+    {
+      "path": "go.sum",
+      "sha256": "d7aa72d0c2c4283125d37d4377e74be0e87723735a27015900d23092798b1665",
+      "same_as_v11": true
+    }
+  ],
+  "native_sql_text_delta_bytes_per_target_transaction": 91,
+  "accounting": "Logical transaction/row charges and transport units unchanged; those counters do not meter native SQL text bytes. Exact mutation vectors and512-record cap unchanged.",
+  "private_control_records": [
+    {
+      "path": "/home/ben/phebs-rehearsals/med495-physical-b-20261023/joined-server-copy.json",
+      "bytes": 121,
+      "sha256": "28658986f715488ad1ec3a44d587d3014088c41a0ab66e00815d021109691385"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/med495-physical-b-20261023/db-copy.json",
+      "bytes": 217,
+      "sha256": "b97234ec74f07eafb134d06b6cfa304c38ed673d272acfec7f3643ba73123ee4"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/med495-physical-b-20261023/preimage-read-comparison.json",
+      "bytes": 9886,
+      "sha256": "b5d25822578700745c86c39de32d6b76228789d1226642883956da596f245270"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/med495-physical-b-20261023/scalar-preimage-comparison.json",
+      "bytes": 2300,
+      "sha256": "c30028213ee1af6d2bacc9a38fcdbae484b7506db1364f76a4bb7811097c7f46"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/med495-physical-b-20261023/exact-dotted-timeout-context.json",
+      "bytes": 1429,
+      "sha256": "c5092292270a644f5807dc01306c0d0c3921728b2649e47f0d1b6fce643dc32e"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/med495-physical-b-20261023/exact-scalar-comparison.json",
+      "bytes": 894,
+      "sha256": "0934b1f8ab38f011703f961411c4faf014c77640802695397b5e1eb08434191d"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/med495-physical-b-20261023/negative-control-assessment.json",
+      "bytes": 349,
+      "sha256": "d5dba435957834d4413eb0d0c9dfb5972b03d05876de7b803b0f9b5632b89c38"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/med495-physical-b-20261023/gates.json",
+      "bytes": 3804,
+      "sha256": "0905d1a8132ed5b7008f524b3b550de633286acd8606bb6f3b96102457d5c5c7"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/med495-physical-b-20261023/corrected-gates.json",
+      "bytes": 2768,
+      "sha256": "5266196fa95ce9d1d477346f3e892e4dff96366b2140216c0282719844dc361b"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/med495-physical-b-20261023/supported-compile.json",
+      "bytes": 2242,
+      "sha256": "545ed8bf3b9d009cc5c0a42d0f2e63941b8778ddc748fbf3b1e65209f84ce52a"
+    },
+    {
+      "path": "/home/ben/phebs-rehearsals/med495-physical-b-20261023/review.json",
+      "bytes": 420,
+      "sha256": "b97c0d3806b3ddab4544eecee6618ec3f17a5af31c990f5a2e6bc909430da163"
+    }
+  ],
+  "preservation": {
+    "original_failed_fixture_and_raw_evidence_retained": true,
+    "remote_host_security_ssh_apparmor_changes": false,
+    "full_qualification_launched": false,
+    "push_pr_publication_merge_deploy": false
+  },
+  "remaining": [
+    "Clean exact-source driver and protected tool builds/admission; existing4812c3cf driver cannot validate changed source.",
+    "Any required root-owned exact-executable driver/profile installation is outside latest no-AppArmor/security-change scope.",
+    "Finite namespace prerequisite and one newly admitted same-corpus full qualification with unchanged4GiB and complete actual Wait/custody/accounting/cleanup gates.",
+    "Full MED-495 acceptance and dependent MED-496 native checkpoint/successor acceptance."
+  ],
+  "nonclaims": [
+    "No complete production transaction latency result",
+    "No full native memory-fit or qualification PASS",
+    "No RSS/RPC/payload/corpus/custody bound change",
+    "No readiness, freeze, release or scale advance"
+  ]
+}
