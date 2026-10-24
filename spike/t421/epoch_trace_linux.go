@@ -239,7 +239,7 @@ func newLinuxEpochTraceOwner(admission *linuxEpochResourceAdmission) (*linuxEpoc
 	}
 	admission.mu.Lock()
 	defer admission.mu.Unlock()
-	if !admission.issued || admission.closed || admission.err != nil || admission.closeErr != nil || admission.trace != nil || admission.policySHA != linuxEpochPolicySHA256() || admission.held == nil || admission.held.resources != admission || admission.held.flow == nil || admission.held.flow.held != admission.held || admission.held.flow.core == nil || admission.held.flow.core.parent == nil || !admission.held.flow.core.parent.OnController(admission.held.flow.core.controller) {
+	if !admission.issued || admission.closed || admission.err != nil || admission.closeErr != nil || admission.trace != nil || !admission.recipeBound() || admission.held == nil || admission.held.resources != admission || admission.held.flow == nil || admission.held.flow.held != admission.held || admission.held.flow.core == nil || admission.held.flow.core.parent == nil || !admission.held.flow.core.parent.OnController(admission.held.flow.core.controller) {
 		return nil, ErrExecutionEpochOne
 	}
 	return allocateLinuxEpochTraceOwner(admission), nil

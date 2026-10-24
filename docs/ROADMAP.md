@@ -360,6 +360,12 @@ existing samples and fails closed on missing evidence. Bounded HTTP/native-walk
 controls do not select a checkpoint policy or prove a successor; actual native
 composition and MED-495 qualification remain open.
 
+T42.H2s.i is implementing one source-issued native recipe/policy identity across
+coordinator, admission, trace and launch choices. Historical v11 bytes and
+EM01/V2 selection stay exact. A closed checkpoint descriptor is preparation
+only; epoch four and native checkpoint entry remain unavailable. Component
+verification, actual successor composition and MED-495 acceptance remain open.
+
 Ben's 2026-10-22 instruction authorizes integrating PR156 and PR164–167 as
 reviewed implementation checkpoints while cleaning maria after verified archival
 transfer. It supersedes their full-native integration hold only. V10 remains a

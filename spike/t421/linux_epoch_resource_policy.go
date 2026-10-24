@@ -85,12 +85,14 @@ func linuxEpochPolicyV10() linuxEpochResourcePolicy {
 	return policy
 }
 
-func linuxEpochPolicy() linuxEpochResourcePolicy {
+func linuxEpochPolicyV11() linuxEpochResourcePolicy {
 	policy := linuxEpochPolicyV10()
 	policy.Schema = "t42-linux-epoch-operational-resources-v11"
 	policy.RootFirst = "source-selected-original-root-pidfd-SIGKILL-only-after-accepted-measurement-endpoint-EOF-and-lease-retirement;original-unreaped-root-birth-SID-namespace-TracerPid-and-actual-terminal-CLD-anchor;creation-parent-immutable-current-parent-separately-observed;one-existing-bounded-host-census-for-controller-tree-union-selected-SID-candidates;every-candidate-source-created-original-pidfd-birth-TGID-SID-namespace-tracer-and-current-held-image-or-owned-terminal-proof;unknown-current-session-member-refuses;raw-parent-and-positive-RSS-preserved-exact-row-cache-no-duplicates;whole-ObservedDescendants-includes-source-owned-adopted-cohort-not-current-ancestry-claim;original-leader-TID-row-4GiB-cadence-2s-and-operation-bounds-unchanged;event-complete-survivor-creation-and-exec-tracking;tracer-terminal-copy-is-not-adopter-reap-or-application-Wait;original-HUP-before-retirement;no-production-subreaper-or-parent-death-safeguard-exception;historical-v7-v10-and-formal-V1-V6-unchanged;checkpoint-entry-remains-closed-pending-successor-qualification"
 	return policy
 }
+
+func linuxEpochPolicy() linuxEpochResourcePolicy { return linuxEpochPolicyV11() }
 
 func linuxEpochPolicySHA256() string {
 	raw, err := json.Marshal(linuxEpochPolicy())
@@ -112,6 +114,7 @@ type linuxEpochResourceAdmission struct {
 	initial        t4013.LinuxMemoryObservation
 	initialMemory  linuxEpochInitialMemoryDiagnostic // Private, immutable after admission; no admission credit.
 	calculation    t4013.LinuxMemoryCalculation
+	recipe         *linuxEpochRecipeIdentity
 	policySHA      string
 	checks         uint64
 	uid, euid      int
@@ -128,7 +131,11 @@ func admitLinuxEpochResources(ctx context.Context, held *linuxEpochHeldFlow, can
 	if ctx == nil || ctx.Err() != nil || runtime.GOARCH != "amd64" || os.Getuid() == 0 || os.Geteuid() == 0 || os.Getuid() != os.Geteuid() || held == nil || cancel == nil || held.controllerPID <= 1 || held.controllerPID != os.Getpid() || held.controllerStart == "" {
 		return nil, errLinuxEpochResources
 	}
-	a := &linuxEpochResourceAdmission{held: held, cancel: cancel, probeGate: make(chan struct{}, 1), policySHA: linuxEpochPolicySHA256(), uid: os.Getuid(), euid: os.Geteuid()}
+	recipe := linuxEpochRecipeForHeld(held)
+	if recipe == nil {
+		return nil, errLinuxEpochResources
+	}
+	a := &linuxEpochResourceAdmission{held: held, cancel: cancel, probeGate: make(chan struct{}, 1), recipe: recipe, policySHA: recipe.policySHA, uid: os.Getuid(), euid: os.Geteuid()}
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	var err error
@@ -250,6 +257,9 @@ func (a *linuxEpochResourceAdmission) Check(ctx context.Context) error {
 func (a *linuxEpochResourceAdmission) checkLocked(ctx context.Context) error {
 	if ctx == nil || ctx.Err() != nil || !a.issued || a.closed || a.closeErr != nil || a.err != nil || a.held == nil || a.held.controllerPID != os.Getpid() || a.uid != os.Getuid() || a.euid != os.Geteuid() || a.checks == math.MaxUint64 {
 		return a.refuseLocked("resource-binding-or-context")
+	}
+	if !a.recipeBound() {
+		return a.refuseLocked("resource-recipe-binding")
 	}
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()

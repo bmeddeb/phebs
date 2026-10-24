@@ -17138,3 +17138,36 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   unchanged. Pure-state/self-proc regressions can prove attribution and retained
   witnesses without reproducing Maria's unknown native failure. Full native,
   successor, memory-fit, accounting/cleanup, readiness and scale remain open.
+
+
+- **2026-10-24 — T42.H2s.i closed native recipe/policy identity (MED-496
+  prerequisite).** Use one private coordinator-issued identity for the native
+  policy digest, resource admission, trace issuance, engine recipe/maximum and
+  paired runtime. Keep the exact historical policy in a named v11 factory and
+  preserve its default selection. The closed prospective v12 descriptor relates
+  checkpoint EM02 producer four/seven points and producer five/one point to
+  runtime V3; earlier producers retain EM01/V2. No current constructor issues
+  that descriptor. A descriptor is neither measured resource admission nor
+  checkpoint, retained-source or successor authority. Existing epoch-one-to-
+  three guards and native checkpoint refusal remain exact. Refuse invalid,
+  cloned, foreign or digest-drift identity bindings before native inspection.
+  This component does not diagnose Maria v13 or pass MED-495/MED-496 acceptance.
+
+  Cost: one private identity allocation per existing native coordinator, with
+  references retained by its existing admission owner. Move the existing policy
+  encoding/hash from admission construction to identity issuance before DA/SA
+  construction. A failed constructor prefix, and each new coordinator retry,
+  now also pays that bounded encoding/hash and allocation; reuse of an existing
+  coordinator does not. Inspecting the unselected v12 policy descriptor adds two
+  bounded string replacements; no operational constructor calls that branch.
+  Trace issuance compares the pinned digest rather than encoding/hashing it
+  again. Existing
+  coordinator and live resource checks add fixed pointer, recipe and digest
+  comparisons. Engine/runtime selection adds a bounded switch over four
+  described producers, with only the existing first three issuable. No new
+  probe, corpus/shard read, hash on a live check, child, socket, descriptor,
+  goroutine, lock, cache, schema or persistent state is added. Existing locks,
+  concurrency, workload/deadline limits, RSS, disk, custody and accounting stay
+  exact. Product query, sync, startup/restart, retry/no-op and publication work
+  are unchanged. Bounded component controls do not establish native engine,
+  checkpoint, successor, full qualification, readiness or scale acceptance.
