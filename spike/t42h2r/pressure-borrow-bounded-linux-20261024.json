@@ -1,0 +1,848 @@
+{
+  "schema": "phebs-linux-pressure-borrow-bounded-v1",
+  "component": "T42.H2t.b",
+  "ticket": "MED-497",
+  "base_commit": "f9dc16ddaa1f63d56437e61c1d7f1bf1e47bbf72",
+  "implementation_commit": "6dbdaf9ae7922e759a691e3cc8ca7a75fbafb436",
+  "implementation_commit_status": "Immutable implementation commit; 26 Go source hashes and four final owning-document hashes match the reviewed gate and final-docs snapshots.",
+  "source_manifest_sha256": "d6e12a77571ad4811e64484bd7833638ec9e581a7e0e1a0d8839dfc476935348",
+  "go_source_sha256": {
+    "spike/t421/execution_launcher.go": "5404f04e70c8619df92b1b43f19ec637d96d71c4e5332d20e3f2a48d0d6b696f",
+    "spike/t421/execution_prework_claim_linux.go": "f3da990544c1f6f69e315ae7577dbb76bfebdc4caad1164c83c451b1c8947900",
+    "spike/t421/execution_prework_failure_linux.go": "0fdbcf1fdf309ab4650b82176ff3e11592215defb67aaccea1351fc7856740fc",
+    "spike/t421/execution_prework_inner_linux.go": "966fb6e0e4e11eef7fc9bec387a25a559a7ece9351c64ee1b42349794aba08ad",
+    "spike/t421/execution_prework_linux.go": "24ed57b61c5a85bc2f169ae9157f29ed4f395e7e6df27ebf1fdb3edb9dd7e710",
+    "spike/t421/execution_prework_native_linux_test.go": "8e2a481e67340c05462cec976e7c035496b8a815390a57120534fd02e21edef7",
+    "spike/t421/linux_pressure_formatter_linux.go": "04b29edbeb1ec754e3a0c9c57cf89011361be5d0df2839e060f76563e140da67",
+    "spike/t421/linux_pressure_identity_linux.go": "cd96847b62c0d94b7fc909969c2aa6591d921232f23d000ea36da1bf8a45c424",
+    "spike/t421/linux_pressure_linux.go": "a2147982cdf4a5fbe7f13347b9d83478f591d5a7b9cdaf6ce9bc039f69f04070",
+    "spike/t421/linux_pressure_record_linux.go": "05aff989dd30e12b7f00ac12883765f59190bbcb6914d17be737fe1a96b27e99",
+    "spike/t421/pressure_borrow.go": "bae00957844a02421860d8153f4f9aae8fd8c3818b4b57d49f206e0f6d5739c3",
+    "spike/t421/pressure_borrow_broker_linux.go": "d696fe3568b26c1d0a6dee2441cdb3235c8be002a1b1e33326d35d2897d8c9f6",
+    "spike/t421/pressure_borrow_caller_linux.go": "72bcd8188f9c7927fa3bd1bce3689c2d3eb2b932a0d1bdb9e03808b8b30a3c33",
+    "spike/t421/pressure_borrow_dispatch_linux.go": "caad42537e90525a5ccfef94e76a58b9b9d74f85fb3d1bada5db947cba761b7b",
+    "spike/t421/pressure_borrow_h2m_linux_test.go": "73cf0012e64ce8cef336d36d6ac1e1d36206a13902df51e5ba55ec2e172cd82e",
+    "spike/t421/pressure_borrow_image_leaf_linux_test.go": "c2b50c12221bd54fad98e106ec843eed3bff304c3085599b4867df6e6328a8ce",
+    "spike/t421/pressure_borrow_image_linux.go": "d8290a54266e25755c8a001305c27b2bdde518488626ab6d138be143caf79e41",
+    "spike/t421/pressure_borrow_leaf_linux.go": "6f0f4c4e0d5947c386f138f436ce44c730bcdb0bb073854324a1a0ff92afaf3b",
+    "spike/t421/pressure_borrow_native_linux_test.go": "6933cd1bd657a74d7987b85fd22cd415fa824c8c853d3453d7fdcb2c627a3e66",
+    "spike/t421/pressure_borrow_other.go": "edaba5fbf27ecba8d23414b005953925e8fa801892e7fff2ca3eace759a42aad",
+    "spike/t421/pressure_borrow_parent_linux.go": "65cbe32fe03fe304aaae92931e8db4e132dd39051d76467b5649fad14e339a72",
+    "spike/t421/pressure_borrow_policy_linux.go": "8bc10751bf959ff1e527ad523b765e0a8ebb0413a2e41146cb89325c7b57b333",
+    "spike/t421/pressure_borrow_policy_linux_test.go": "e596733917e1cc811183af65016727ede5b38eb823419593478ae9721e35d539",
+    "spike/t421/pressure_borrow_retirement_linux_test.go": "6a0217fce3c99f35639f8929b5c825cee0325ba1171c7c2d0e4837c17a1917bf",
+    "spike/t421/pressure_borrow_socket_linux.go": "39fef72bf6ceee808173674f17887c39c0a715843108ae0f65883e129e256917",
+    "spike/t421/pressure_borrow_socket_linux_test.go": "148d10210d4c261fa8c714e064ab0515bd0336e7b1551f4289bec9105e5d5d8f"
+  },
+  "final_gate_roots": 13,
+  "final_gates": {
+    "lint-version": {
+      "argv": [
+        "golangci-lint",
+        "version"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 0.16419047600356862,
+      "source_and_docs_unchanged": true,
+      "logs": {
+        "stdout.log": {
+          "bytes": 91,
+          "sha256": "5b619b0289b864edd3ec910d3120e8b194d84e8084cbcc658c5f800dea6cacbd"
+        },
+        "stderr.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      }
+    },
+    "lint-differential": {
+      "argv": [
+        "golangci-lint",
+        "run",
+        "--concurrency=2",
+        "--timeout=4m",
+        "--build-tags=phebs_t42_native,phebs_t42_executor_native,phebs_t42_pressure_borrow_native",
+        "--new-from-patch=<private-all-owned.patch>",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 46.001479311002186,
+      "source_and_docs_unchanged": true,
+      "logs": {
+        "stdout.log": {
+          "bytes": 10,
+          "sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+        },
+        "stderr.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      }
+    },
+    "connected-normal": {
+      "argv": [
+        "go",
+        "test",
+        "-p",
+        "2",
+        "./spike/t421",
+        "-run",
+        "^(TestLinuxPressure|TestLinuxExecutor(Candidate|Prework|Kernel)|TestLinux(InputCustody|InputTree|ToolCustody|GitCustody|GoBuildOwner|GoReference|CheckoutGit)|TestInspectExecutionCheckout|TestExecution(Checkout|ReferenceSource|Selection)|TestInspectCheckoutFile|TestVerifyExecutionReferenceTool|TestReference(BuildInfo|T422|PreparationSession)|TestRunReferenceGoCancellation|TestExternalProbePreparationParent)",
+        "-count=1",
+        "-timeout=4m",
+        "-json"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 157.15444139300962,
+      "source_and_docs_unchanged": true,
+      "logs": {
+        "stdout.log": {
+          "bytes": 504172,
+          "sha256": "8b49f028ad819c5fb187c343e24e5d6af4267976c87910fa94ece66ec84dea02"
+        },
+        "stderr.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      },
+      "test_scope": {
+        "test_nodes": {
+          "pass": 566,
+          "fail": 0,
+          "skip": 1
+        },
+        "top_level": {
+          "pass": 139,
+          "fail": 0,
+          "skip": 1
+        },
+        "scopes_nonoverlapping": {
+          "new_pressure_borrow": {
+            "pass": 74,
+            "fail": 0,
+            "skip": 0
+          },
+          "executor_custody": {
+            "pass": 75,
+            "fail": 0,
+            "skip": 0
+          },
+          "other_connected": {
+            "pass": 417,
+            "fail": 0,
+            "skip": 1
+          }
+        },
+        "failed": [],
+        "skipped": [
+          "TestExternalProbePreparationParentRetainsScratch"
+        ],
+        "named_helper_entries": [
+          {
+            "name": "TestLinuxExecutorPreworkKernelHelper",
+            "action": "pass"
+          },
+          {
+            "name": "TestLinuxInputCustodyAtomicChild",
+            "action": "pass"
+          },
+          {
+            "name": "TestLinuxPressureBorrowLeafKernelHelper",
+            "action": "pass"
+          },
+          {
+            "name": "TestLinuxPressureBorrowPolicyChild",
+            "action": "pass"
+          },
+          {
+            "name": "TestLinuxPressureBorrowHandshakeHelper",
+            "action": "pass"
+          },
+          {
+            "name": "TestLinuxPressureBorrowPacketChild",
+            "action": "pass"
+          }
+        ]
+      }
+    },
+    "connected-race": {
+      "argv": [
+        "go",
+        "test",
+        "-race",
+        "-p",
+        "2",
+        "./spike/t421",
+        "-run",
+        "^(TestLinuxPressure|TestLinuxExecutor(Candidate|Prework|Kernel)|TestLinux(InputCustody|InputTree|ToolCustody|GitCustody|GoBuildOwner|GoReference|CheckoutGit)|TestInspectExecutionCheckout|TestExecution(Checkout|ReferenceSource|Selection)|TestInspectCheckoutFile|TestVerifyExecutionReferenceTool|TestReference(BuildInfo|T422|PreparationSession)|TestRunReferenceGoCancellation|TestExternalProbePreparationParent)",
+        "-count=1",
+        "-timeout=4m",
+        "-json"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 189.48199275200022,
+      "source_and_docs_unchanged": true,
+      "logs": {
+        "stdout.log": {
+          "bytes": 504226,
+          "sha256": "d1a6682272a14e3394652c52e6793367db4d082a3462223d2cf798cf64e7c519"
+        },
+        "stderr.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      },
+      "test_scope": {
+        "test_nodes": {
+          "pass": 566,
+          "fail": 0,
+          "skip": 1
+        },
+        "top_level": {
+          "pass": 139,
+          "fail": 0,
+          "skip": 1
+        },
+        "scopes_nonoverlapping": {
+          "new_pressure_borrow": {
+            "pass": 74,
+            "fail": 0,
+            "skip": 0
+          },
+          "executor_custody": {
+            "pass": 75,
+            "fail": 0,
+            "skip": 0
+          },
+          "other_connected": {
+            "pass": 417,
+            "fail": 0,
+            "skip": 1
+          }
+        },
+        "failed": [],
+        "skipped": [
+          "TestExternalProbePreparationParentRetainsScratch"
+        ],
+        "named_helper_entries": [
+          {
+            "name": "TestLinuxExecutorPreworkKernelHelper",
+            "action": "pass"
+          },
+          {
+            "name": "TestLinuxInputCustodyAtomicChild",
+            "action": "pass"
+          },
+          {
+            "name": "TestLinuxPressureBorrowLeafKernelHelper",
+            "action": "pass"
+          },
+          {
+            "name": "TestLinuxPressureBorrowPolicyChild",
+            "action": "pass"
+          },
+          {
+            "name": "TestLinuxPressureBorrowHandshakeHelper",
+            "action": "pass"
+          },
+          {
+            "name": "TestLinuxPressureBorrowPacketChild",
+            "action": "pass"
+          }
+        ]
+      }
+    },
+    "vet-default": {
+      "argv": [
+        "go",
+        "vet",
+        "-p",
+        "2",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 3.7745563390199095,
+      "source_and_docs_unchanged": true,
+      "logs": {
+        "stdout.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stderr.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      }
+    },
+    "vet-native": {
+      "argv": [
+        "go",
+        "vet",
+        "-p",
+        "2",
+        "-tags",
+        "phebs_t42_native,phebs_t42_executor_native,phebs_t42_pressure_borrow_native",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 20.701093823008705,
+      "source_and_docs_unchanged": true,
+      "logs": {
+        "stdout.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stderr.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      }
+    },
+    "docs": {
+      "argv": [
+        "go",
+        "test",
+        "-p",
+        "2",
+        "./scripts",
+        "-run",
+        "^Test(TrackedMarkdownLinksResolve|DocumentationMapReachesTrackedDocs|SealedT111TreeDigest)$",
+        "-count=1",
+        "-timeout=2m",
+        "-json"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 1.5919655690086074,
+      "source_and_docs_unchanged": true,
+      "logs": {
+        "stdout.log": {
+          "bytes": 2724,
+          "sha256": "a2c407c035321cdd2e071840ed31fe85382c0230e658ac77657184c6756ad8d3"
+        },
+        "stderr.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      },
+      "test_scope": {
+        "test_nodes": {
+          "pass": 3,
+          "fail": 0,
+          "skip": 0
+        },
+        "top_level": {
+          "pass": 3,
+          "fail": 0,
+          "skip": 0
+        },
+        "scopes_nonoverlapping": {
+          "new_pressure_borrow": {
+            "pass": 0,
+            "fail": 0,
+            "skip": 0
+          },
+          "executor_custody": {
+            "pass": 0,
+            "fail": 0,
+            "skip": 0
+          },
+          "other_connected": {
+            "pass": 3,
+            "fail": 0,
+            "skip": 0
+          }
+        },
+        "failed": [],
+        "skipped": [],
+        "named_helper_entries": []
+      }
+    },
+    "glossary": {
+      "argv": [
+        "go",
+        "run",
+        "-p",
+        "2",
+        "./internal/glossary/cmd/glossary-gen",
+        "-verify",
+        "-root",
+        "."
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 0.1293803000007756,
+      "source_and_docs_unchanged": true,
+      "logs": {
+        "stdout.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stderr.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      }
+    },
+    "whitespace": {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 0.10788538001361303,
+      "source_and_docs_unchanged": true,
+      "logs": {
+        "stdout.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stderr.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      }
+    },
+    "compile-linux-amd64": {
+      "argv": [
+        "go",
+        "test",
+        "-p",
+        "2",
+        "-tags",
+        "phebs_t42_native,phebs_t42_executor_native,phebs_t42_pressure_borrow_native",
+        "-c",
+        "-o",
+        "<private-t421-linux-amd64.test>",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 27.815419480000855,
+      "source_and_docs_unchanged": true,
+      "logs": {
+        "stdout.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stderr.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      }
+    },
+    "compile-linux-arm64": {
+      "argv": [
+        "go",
+        "test",
+        "-p",
+        "2",
+        "-tags",
+        "phebs_t42_native,phebs_t42_executor_native,phebs_t42_pressure_borrow_native",
+        "-c",
+        "-o",
+        "<private-t421-linux-arm64.test>",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 28.97774877701886,
+      "source_and_docs_unchanged": true,
+      "logs": {
+        "stdout.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stderr.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      }
+    },
+    "compile-darwin-arm64": {
+      "argv": [
+        "go",
+        "test",
+        "-p",
+        "2",
+        "-tags",
+        "phebs_t42_native,phebs_t42_executor_native,phebs_t42_pressure_borrow_native",
+        "-c",
+        "-o",
+        "<private-t421-darwin-arm64.test>",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 25.895389667974086,
+      "source_and_docs_unchanged": true,
+      "logs": {
+        "stdout.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stderr.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      }
+    },
+    "compile-darwin-amd64": {
+      "argv": [
+        "go",
+        "test",
+        "-p",
+        "2",
+        "-tags",
+        "phebs_t42_native,phebs_t42_executor_native,phebs_t42_pressure_borrow_native",
+        "-c",
+        "-o",
+        "<private-t421-darwin-amd64.test>",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 26.14945534200524,
+      "source_and_docs_unchanged": true,
+      "logs": {
+        "stdout.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stderr.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      }
+    }
+  },
+  "final_docs_gate_roots": 3,
+  "final_docs_gates": {
+    "docs": {
+      "argv": [
+        "go",
+        "test",
+        "-p",
+        "2",
+        "./scripts",
+        "-run",
+        "^Test(TrackedMarkdownLinksResolve|DocumentationMapReachesTrackedDocs|SealedT111TreeDigest)$",
+        "-count=1",
+        "-timeout=2m",
+        "-json"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 1.5543839130259585,
+      "source_and_docs_unchanged": true,
+      "logs": {
+        "stdout.log": {
+          "bytes": 2725,
+          "sha256": "da92c9647562b24c803a2c9757a24b2569202ef846c3c69193b8e0d1bbb151a3"
+        },
+        "stderr.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      }
+    },
+    "glossary": {
+      "argv": [
+        "go",
+        "run",
+        "-p",
+        "2",
+        "./internal/glossary/cmd/glossary-gen",
+        "-verify",
+        "-root",
+        "."
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 0.13779074299964122,
+      "source_and_docs_unchanged": true,
+      "logs": {
+        "stdout.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stderr.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      }
+    },
+    "whitespace": {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 0.13520420200075023,
+      "source_and_docs_unchanged": true,
+      "logs": {
+        "stdout.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stderr.log": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      }
+    }
+  },
+  "scope_counts": {
+    "normal_and_race_each": {
+      "pass_test_nodes": 566,
+      "failed_test_nodes": 0,
+      "skipped_test_nodes": 1,
+      "passing_top_level_tests": 139,
+      "skipped_top_level_tests": 1,
+      "nonoverlapping_pass_scopes": {
+        "new_pressure_borrow_including_helpers_and_modeled_controls": 74,
+        "executor_custody": 75,
+        "other_connected": 417
+      }
+    },
+    "inherited_skip": [
+      "TestExternalProbePreparationParentRetainsScratch"
+    ],
+    "interpretation": "Counts overlap parent/subtest nodes; normal and race are separate executions of the same scope. Named helper entries are not independent native composition proofs. Modeled authority predicates are distinct from real bounded owned kernel/FD/child/credential/cwd/Wait mechanics.",
+    "named_helper_entries": [
+      {
+        "name": "TestLinuxExecutorPreworkKernelHelper",
+        "action": "pass"
+      },
+      {
+        "name": "TestLinuxInputCustodyAtomicChild",
+        "action": "pass"
+      },
+      {
+        "name": "TestLinuxPressureBorrowLeafKernelHelper",
+        "action": "pass"
+      },
+      {
+        "name": "TestLinuxPressureBorrowPolicyChild",
+        "action": "pass"
+      },
+      {
+        "name": "TestLinuxPressureBorrowHandshakeHelper",
+        "action": "pass"
+      },
+      {
+        "name": "TestLinuxPressureBorrowPacketChild",
+        "action": "pass"
+      }
+    ]
+  },
+  "compile_artifacts": [
+    {
+      "target": "linux-amd64",
+      "bytes": 91605517,
+      "sha256": "a2cd81592393a28495f3f15052c96f20f04be62bd7f8ecbaf6f23444f4a4dc8e",
+      "format": "ELF64-LE",
+      "machine": 62,
+      "header64_hex": "7f454c4602010100000000000000000002003e00010000006081490000000000400000000000000090010000000000000000000040003800060040001a001900",
+      "native_test_name_bytes": {
+        "TestLinuxPressureBorrowRequiredNativeComposition": true,
+        "TestLinuxExecutorRequiredNativePreworkComposition": true
+      },
+      "executed": false
+    },
+    {
+      "target": "linux-arm64",
+      "bytes": 84968901,
+      "sha256": "49d8e160d96fa46c1cd2a6eb2fbc398268b19dd4d579f7197d1611cf4a6fc5d7",
+      "format": "ELF64-LE",
+      "machine": 183,
+      "header64_hex": "7f454c460201010000000000000000000200b7000100000050050a0000000000400000000000000090010000000000000000000040003800060040001a001900",
+      "native_test_name_bytes": {
+        "TestLinuxPressureBorrowRequiredNativeComposition": true,
+        "TestLinuxExecutorRequiredNativePreworkComposition": true
+      },
+      "executed": false
+    },
+    {
+      "target": "darwin-arm64",
+      "bytes": 89999474,
+      "sha256": "12d8e973955ca037b1e5004a821527cb6b28b781c8e504d8189c06a5a5bab2b4",
+      "format": "Mach-O64-LE",
+      "machine": 16777228,
+      "header64_hex": "cffaedfe0c000001000000000200000012000000d80a0000040020000000000019000000480000005f5f504147455a45524f0000000000000000000000000000",
+      "native_test_name_bytes": {
+        "TestLinuxPressureBorrowRequiredNativeComposition": false,
+        "TestLinuxExecutorRequiredNativePreworkComposition": false
+      },
+      "executed": false
+    },
+    {
+      "target": "darwin-amd64",
+      "bytes": 95265600,
+      "sha256": "766f91dd77e8966fd61c4714026f3da82517c6e6931286aaeafa6cf30ddbd7ee",
+      "format": "Mach-O64-LE",
+      "machine": 16777223,
+      "header64_hex": "cffaedfe07000001030000000200000011000000680b0000040020000000000019000000480000005f5f504147455a45524f0000000000000000000000000000",
+      "native_test_name_bytes": {
+        "TestLinuxPressureBorrowRequiredNativeComposition": false,
+        "TestLinuxExecutorRequiredNativePreworkComposition": false
+      },
+      "executed": false
+    }
+  ],
+  "native_composition": {
+    "executed": false,
+    "skipped_as_acceptance": false,
+    "linux_test_bodies_compiled": [
+      "TestLinuxPressureBorrowRequiredNativeComposition",
+      "TestLinuxExecutorRequiredNativePreworkComposition"
+    ],
+    "requirements": "Fresh exact protected root broker, target and helper images, independently admitted root/target source/SDK/module/Git counterparts, fixed UID/GID/groups/caps, original namespace owner, privileged H2m root/formatter/filesystem geometry, actual headroom and unchanged whole-process resource bounds; native test hard timeout disabled while original bounded work deadline remains.",
+    "claims": "Source preparation component only. No full MED-495/496/497/498 native acceptance, formal profile/plan authority, freeze/operational execution, pressure/backup/restore PASS, release, merge, or 4GiB-fit claim."
+  },
+  "review_receipts": {
+    "independent-connected-prefix10-source-cost-review.json": {
+      "sha256": "46e709fc32ece78c4ffd02a3d7e3a888d744aeb55c90fc4228075390e9de386b",
+      "reported_findings": 0
+    },
+    "independent-connected-prefix10-owner-oracle-cost-carry.json": {
+      "sha256": "c448f6745b22983aefc0dfc5084527ab46cbd65b981e39312c6174541614d06b",
+      "reported_findings": 0
+    },
+    "independent-final10-complete-raw-gate-audit.json": {
+      "sha256": "6713d2335750edba36c76ab56b9853e547f98238d5fcaf0df6224da2d18beb23",
+      "reported_findings": 0
+    },
+    "independent-final11-owning-docs-source-cost-review.json": "9bbefae564facb8938205d5121fb563ac5c37ae84f957b26ae496bf4ad233a61",
+    "independent-immutable-6dbdaf9a-carry-review.json": "f13226efab304dbec0b5a29d1435c30750012a0cbb9c99f446824769cd6875c3",
+    "independent-source-free-bound-draft-review.json": "e7554b8257a1549f305537b4521d1be15218c3ab590afd0eeaf4d21d34281670"
+  },
+  "metadata_clarifications_sha256": {
+    "final10/source-manifest-key-clarification.json": "a42b901ef93ee5eb13628f57ee84541af8610489a07b6508887ea4824389ef4b",
+    "final10/metadata-only-key-source-binding-proof.json": "c848e245832fb4643072b2362b96d97c662ba913b650e12cc1aea025274f03cb",
+    "cost-layout-prefix05/overlay-hash-key-clarification.json": "77db9f9a5c6a842dacf6bd7180ff23b01c159f6dcc3327bc8fb9437a1e412109"
+  },
+  "metadata_clarification_meaning": {
+    "final10_plan_descriptive_source_manifest_key": "Inherited prefix06 descriptive key preserved; actual gate source26 maps exactly source10 and runner has zero references to the descriptive key. Active plan/invocations were not rewritten.",
+    "cost_overlay_key": "Original invocation overlay_sha256 hashes layout test-source bytes, not overlay JSON; both exact hashes preserved in clarification.",
+    "docs11_wrapper": "Author omitted initial wrapper session handle; no tool-level docs-wrapper exit claim. Each of the three original gate subprocess.wait results is actual0 and terminal marker preserved."
+  },
+  "failed_and_prefix_evidence": {
+    "final06": {
+      "lint_version_actual_wait": 0,
+      "differential_lint_actual_wait": 1,
+      "lint_issue_count": 5,
+      "issue_classes": {
+        "govet_copylocks": 1,
+        "staticcheck": 2,
+        "unused_private_forwarders": 2
+      },
+      "following_11_commands": "not launched",
+      "raw_audit_sha256": "97e24fa9cb488afe17af958d391bfcddb2c112f08c6e1260b113a97d7790b41a",
+      "policy": "Full failed raw prefix preserved, no suppression or erasure."
+    },
+    "earlier_default_controls": {
+      "production_build_prefix01_actual_wait": 0,
+      "packet_policy_prefix02_actual_wait": 0,
+      "packet_policy_passing_nodes": 44,
+      "focused_prefix04_actual_wait": 0,
+      "focused_prefix04_passing_nodes": 72,
+      "scope": "Earlier source-bound prefixes, not substituted for exact final10."
+    },
+    "planned_unlaunched": [
+      "final07",
+      "final08"
+    ],
+    "source_review_prefixes": "Immutable01-through10 snapshots/diffs retained; medium source/test/cost findings corrected and superseded, not erased."
+  },
+  "cost": {
+    "measurement": {
+      "go": "go1.26.5",
+      "goarch": "amd64",
+      "nine_entry_close_map_allocs": 4,
+      "offsets": {
+        "claim_pressure": 48,
+        "executor_pressure": 504,
+        "volume_close_results": 768,
+        "volume_formatter_command": 776,
+        "volume_formatter_later": 784,
+        "volume_observation": 760
+      },
+      "scope": "current Linux runtime layouts only; no native execution or aggregate fit",
+      "sizes": {
+        "claim": 56,
+        "executor_owner": 512,
+        "executor_selection": 320,
+        "failure_record": 128,
+        "image_owner": 208,
+        "inner_owner": 72,
+        "issuer": 808,
+        "leaf_owner": 208,
+        "namespace_owner": 56,
+        "observation": 56,
+        "old_claim": 48,
+        "old_executor_owner": 504,
+        "old_failure_record": 88,
+        "old_pressure_volume": 760,
+        "policy": 8,
+        "pressure_caller": 776,
+        "pressure_volume": 792,
+        "selection": 752,
+        "socket": 64
+      }
+    },
+    "measurement_scope": "Go1.26.5 Linuxamd64 runtime layouts only; no other-target runtime size/aggregate fit or full native performance claim. Final once/error-slot amendments add no owner fields; compiler escape/transient allocation was not measured.",
+    "bounded_protocol": {
+      "payload_bytes": 32,
+      "oob_bytes": 256,
+      "accepted_credentials_messages": 1,
+      "accepted_rights": 0,
+      "unexpected_rights_closed": true,
+      "poll_milliseconds": 50,
+      "source_capability_bounding_mask": "0x1ffffffffff",
+      "child_usable_caps": "zero effective/permitted/inheritable/ambient; nonzero fixed UID/GID, empty groups, NNP, exact inherited bounding ceiling"
+    },
+    "fixed_work": "Only source-selected typed FD/cwd four-KiB work; genuine full author/profile remains later. New sealed target image is at most256MiB, copied/hashed once with32KiB buffer; original image unchanged. Root/target independent protected preparation graphs and original stage limits remain real cost; no dedup/fit promise.",
+    "locks": "Original source/builds -> protected tree -> tool -> volume; volume.mu spans complete loan and child/helper/control/cwd/actual Wait retirement. No reentrant volume methods or reverse IPC needing that lock.",
+    "healthy_and_failure_paths": "First facts snapshot observes existing bounded owner fields; healthy snapshots do no filesystem I/O. One nonhealthy first attempt is immutable (including failed/partial writes), <=8KiB private exclusive file; no publication retry. Actor-local attempted boolean is neither authority nor published/retired evidence.",
+    "error_retention": "First actual nonnil b Close error held in a fixed slot, every required original Close still evaluated. Publisher joins only one possible nonnil attempt error, never a perturn retained chain. Existing a retry creates a fresh bounded pair each turn; aggregate allocation/work over indefinite settlement is unbounded.",
+    "retention": "Unknown original helpers/control/FD/Wait retains original actors/loans; existing WaitPrivateProcessSession may poll about500+boundary per5s call, multiple calls serial plus1s retry cadence. Metadata/alias/session work can repeat; no new preparation/reference retry/hash/repeated command.Wait/signal. Known failed mounted pressure can outlive retired actors only after actual successful native descriptor closure/protection settlement and with original namespace custody; a first native descriptor Close error remains sticky; failed leaf/journal/image preserved, locator is no adoption capability."
+  },
+  "remaining_work": [
+    "Genuinely admitted root-to-target full native preparation composition and exact successor prerequisite acceptance.",
+    "Typed FD-relative actual Git/Go/reference/author/epoch consumers and complete live Linux formal profile/plan/launcher custody.",
+    "Separate MED-498 operational pressure/backup/restore acceptance."
+  ],
+  "private_evidence_bindings": {
+    "final10_summary_sha256": "621584d8089a17df4e2237bbe8d43481feaa61ba4e2d4a580832af132f8c9539",
+    "final10_plan_sha256": "0133d8525c357c9f4f6015f39fae3a8402225dea0cdca5789ff5a5aef2c87ecf",
+    "actual_runner_join_sha256": "d042290bb135f42e7f5bfd285eb79642281b2b9eaeb6e1284257a6a1542c5a49",
+    "final_docs11_summary_sha256": "393b6ab046462c6996e3f67f036f7a1abc0df351cf709ec6ab62731d3c0dff44",
+    "final_docs11_plan_sha256": "3bfd7e2e536e2cb82596909aa61f7de42a6420385bcc616ed4fb308dee90e4b2",
+    "cost_layout_result_sha256": "07684a3b4203dff1b8445dcb8adb01a8c142f58167d9c7ee2e9a8d709529334f"
+  },
+  "publication_status": "Source-free bounded component evidence only; publication readback is recorded separately. No merge, installation, deployment or native acceptance follows.",
+  "go26_identical_across_final13_and_finaldocs3": true,
+  "each_gate_own_document_bookends_unchanged": true,
+  "final13_gate_owning_docs_sha256": {
+    "PLAN.md": "2c04230033946f2de3670c91bad5c0db5e99b8eae3eb0140bdb83a33ef8549dc",
+    "docs/BACKLOG.md": "6984a242c4381d5c5f746f2f8f3c5e39b95c7236b4f8c4aba6636162e07eb92e",
+    "docs/ROADMAP.md": "a1714b22cd378128d2312eaaab685baca42e47c33ca89b822704606c4deb7fe2",
+    "docs/guides/OPERATIONS.md": "085860b50bfbbb442c5d80c4ad604535176a9dc60408d0e9847bb89b1d753a5c"
+  },
+  "finaldocs3_owning_docs_sha256": {
+    "PLAN.md": "51f25d0222d8e7cd688819e5991ff4ebbbb6a39301b4395eda92b55af8a0cfcd",
+    "docs/BACKLOG.md": "bba4f61b535e7e468a38b2155a5f0456824a4f7bf76df7401edc21d4849f9530",
+    "docs/ROADMAP.md": "70073af4792231cbeb5851d2b7341ae52751a667b664c9f5fdd2177266b73a0b",
+    "docs/guides/OPERATIONS.md": "3661c4f6dff80e479d2f04469aa502980688860147d28d99658e2c8833b4ae56"
+  },
+  "lint_patch_coverage": {
+    "tracked_modified": 10,
+    "new_untracked": 16,
+    "all26_paths_included": true,
+    "patch_sha256": "ba339848388add3566d4c0ef0b762394d7646d921c6dc8b6bc1e7bd5f2270fe6"
+  },
+  "command_path_normalization": "Only private output/patch path arguments use named placeholders; exact original argv and logs remain privately retained and hash-bound.",
+  "evidence_derivation": {
+    "private_author_candidate_sha256": "062c89893aaa83b6c373c612a2a13bff57ac687c80555cf6478b66d32944422d",
+    "reviewed_bound_draft_sha256": "172e3b5a817cb261329b7794f5e95fe266ccbac2708597845c9361d0576b816a",
+    "final_additions": "Only independently verified review receipt bindings, immutable implementation binding and exact preserved active-plan name; source/gates/cost/claims unchanged from reviewed draft."
+  },
+  "private_evidence_binding_names": {
+    "final10_plan_sha256": "final10/plan-v2.json"
+  }
+}
