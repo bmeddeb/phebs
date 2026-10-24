@@ -55,6 +55,13 @@ func verifyExecutionReferenceTool(ctx context.Context, request ReferenceToolRequ
 }
 
 func verifyExecutionReferenceToolObserved(ctx context.Context, request ReferenceToolRequest, suppliedImage *os.File, observation *executionPreworkObservation) (identity ExecutionToolIdentity, retErr error) {
+	return verifyExecutionReferenceToolWorkspace(ctx, request, suppliedImage, observation, "")
+}
+
+// The private pressure recipe places verifier output under its actual held view.
+// A nonempty parent keeps all output for its separate bounded retirement owner;
+// it changes neither source comparison nor provenance publication.
+func verifyExecutionReferenceToolWorkspace(ctx context.Context, request ReferenceToolRequest, suppliedImage *os.File, observation *executionPreworkObservation, workspaceParent string) (identity ExecutionToolIdentity, retErr error) {
 	packagePath, modulePath, moduleVersion, moduleSum, recipe, err := referenceToolRoleForSchema(request.Role, request.PlanSchema, request.SourceCommit)
 	if err != nil {
 		return identity, err
@@ -132,7 +139,19 @@ func verifyExecutionReferenceToolObserved(ctx context.Context, request Reference
 	if err != nil {
 		return identity, err
 	}
-	workspace, err := os.MkdirTemp("", "phebs-t422-reference-")
+	if workspaceParent != "" {
+		canonical, e := filepath.EvalSymlinks(workspaceParent)
+		info, s := os.Lstat(workspaceParent)
+		if e != nil || canonical != workspaceParent || s != nil || !info.IsDir() || info.Mode().Perm() != 0o700 || !inputCustodyCopyOwned(info) {
+			return identity, errors.New("reference workspace parent is unavailable")
+		}
+		for _, original := range []string{request.RepositoryRoot, request.GoRoot, request.ModuleCache} {
+			if inputTreePathsOverlap(workspaceParent, original) {
+				return identity, errors.New("reference workspace overlaps input")
+			}
+		}
+	}
+	workspace, err := os.MkdirTemp(workspaceParent, "phebs-t422-reference-")
 	if err != nil {
 		return identity, errors.New("reference build cannot create private custody")
 	}
@@ -141,6 +160,13 @@ func verifyExecutionReferenceToolObserved(ctx context.Context, request Reference
 			observation.retainWorkspace(workspace)
 			retErr = errors.New("reference build retains unknown native helper custody")
 			identity = ExecutionToolIdentity{}
+			return
+		}
+		if workspaceParent != "" {
+			if retErr != nil {
+				observation.retainWorkspace(workspace)
+				identity = ExecutionToolIdentity{}
+			}
 			return
 		}
 		if err := os.RemoveAll(workspace); err != nil {
@@ -161,8 +187,24 @@ func verifyExecutionReferenceToolObserved(ctx context.Context, request Reference
 			return identity, errors.New("reference build private directories are unavailable")
 		}
 	}
-	if err := os.Symlink(request.GitBinary, filepath.Join(workspace, "bin", "git")); err != nil {
-		return identity, errors.New("reference build cannot bind private Git path")
+	if workspaceParent == "" {
+		if err := os.Symlink(request.GitBinary, filepath.Join(workspace, "bin", "git")); err != nil {
+			return identity, errors.New("reference build cannot bind private Git path")
+		}
+	} else {
+		bin, openErr := os.OpenRoot(filepath.Join(workspace, "bin"))
+		if openErr != nil {
+			return identity, errors.New("reference build cannot open private Git output")
+		}
+		file, _, copyErr := copyExecutionInput(ctx, bin, ExecutionInputCopy{Name: "git", Path: request.GitBinary, SHA256: gitDigest, Executable: true}, maxInputCustodyFileBytes)
+		var closeErr error
+		if file != nil {
+			closeErr = file.Close()
+		}
+		rootErr := bin.Close()
+		if copyErr != nil || closeErr != nil || rootErr != nil || executableidentity.Verify(filepath.Join(workspace, "bin", "git"), gitDigest) != nil {
+			return identity, errors.New("reference build private Git image differs")
+		}
 	}
 	reference, err := createExecutionReferenceSource(ctx, origin, request.SourceCommit, filepath.Join(workspace, "source"))
 	if err != nil {
@@ -276,7 +318,7 @@ func digestExecutionReferenceFD(ctx context.Context, file *os.File) (string, err
 func referenceToolRoleForSchema(role, schema, sourceCommit string) (packagePath, modulePath, version, sum, recipe string, err error) {
 	// This private helper recipe is not a historical or active ceremony plan.
 	// Neither the helper role in a plan nor another role with this recipe is valid.
-	if schema == linuxInputTreeRecipe {
+	if schema == linuxInputTreeRecipe || schema == linuxPressureAuthorInputRecipe {
 		if role != linuxInputTreeRole || !validCommit(sourceCommit) {
 			err = errors.New("reference input-tree helper recipe is invalid")
 			return
@@ -292,7 +334,7 @@ func referenceToolRoleForSchema(role, schema, sourceCommit string) (packagePath,
 		packagePath = "github.com/bmeddeb/phebs/spike/t421/cmd/go-build-helper"
 		return
 	}
-	if schema == linuxGoReferenceRecipe {
+	if schema == linuxGoReferenceRecipe || schema == linuxPressureAuthorReferenceRecipe {
 		if role != linuxGoReferenceRole || !validCommit(sourceCommit) {
 			err = errors.New("reference protected-build helper recipe is invalid")
 			return

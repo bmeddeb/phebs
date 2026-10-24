@@ -33,6 +33,7 @@ type LinuxInputTreeHelper struct {
 	mu     sync.Mutex // One construction, with no pending constructor queue.
 	tool   *LinuxExecutionToolCustody
 	closed bool
+	layout *linuxPressureAuthorView
 }
 
 func ProtectLinuxInputTreeHelper(ctx context.Context, request ReferenceToolRequest) (*LinuxInputTreeHelper, error) {
@@ -298,10 +299,6 @@ func gatherInputTreeSourcesObserved(ctx context.Context, parent string, selectio
 	return roots, rows, nil
 }
 
-func inputTreePathsOverlap(a, b string) bool {
-	return a == b || strings.HasPrefix(a, b+"/") || strings.HasPrefix(b, a+"/")
-}
-
 func closeInputTreeSources(roots []*inputTreeSourceRoot) error {
 	var failed bool
 	for _, root := range roots {
@@ -343,8 +340,28 @@ func (tree *LinuxExecutionInputTree) construct(ctx context.Context, roots []*inp
 		if unix.SetsockoptInt(pair[0], unix.SOL_SOCKET, unix.SO_PASSCRED, 1) != nil {
 			return ErrLinuxInputTree
 		}
-		command := exec.Command("/proc/self/fd/3", linuxInputTreeRecipe)
+		recipe := linuxInputTreeRecipe
+		if helper.layout != nil {
+			recipe = linuxPressureAuthorInputRecipe
+			if helper.layout.check(ctx) != nil {
+				return ErrLinuxInputTree
+			}
+		}
+		command := exec.Command("/proc/self/fd/3", recipe)
 		command.ExtraFiles = []*os.File{image, child, tree.stage}
+		var layoutNamespace *os.File
+		if helper.layout != nil {
+			layoutNamespace, err = os.Open("/proc/self/ns/mnt")
+			if err != nil {
+				return ErrLinuxInputTree
+			}
+			defer func() {
+				if tree.observation.close(layoutNamespace.Close()) != nil {
+					retErr = ErrLinuxInputTree
+				}
+			}()
+			command.ExtraFiles = append(command.ExtraFiles, tree.stage, layoutNamespace)
+		}
 		command.Dir, command.Env = tree.stagePath, []string{"GOMAXPROCS=2"}
 		command.SysProcAttr = &syscall.SysProcAttr{
 			Cloneflags: unix.CLONE_NEWUSER | unix.CLONE_NEWNS, Setsid: true, Pdeathsig: syscall.SIGKILL,
@@ -394,7 +411,14 @@ func (tree *LinuxExecutionInputTree) construct(ctx context.Context, roots []*inp
 				return ErrLinuxInputTree
 			}
 			tree.kernel, err = observeInputTreeRoot(tree.root)
-			if err != nil || observeInputTreeHelperMount(tree.pid, tree.stagePath, tree.kernel.mount) != nil ||
+			mountPath := tree.stagePath
+			if helper.layout != nil {
+				mountPath = linuxPressureAuthorInputs
+				if observeLinuxPressureAuthorHelperLayout(tree.pid, tree.stage) != nil {
+					return ErrLinuxInputTree
+				}
+			}
+			if err != nil || observeInputTreeHelperMount(tree.pid, mountPath, tree.kernel.mount) != nil ||
 				wire.send(ctx, treeWireAck, initial[16:], nil) != nil {
 				return ErrLinuxInputTree
 			}

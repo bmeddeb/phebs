@@ -21,6 +21,7 @@ const (
 // consumes protocol messages. No descriptor transfer is part of this protocol.
 type linuxPressureBorrowSocket struct {
 	fd          int
+	author      bool // Closed c recipe; false preserves PB01 bytes and phase bounds.
 	peer        unix.Ucred
 	attempt     [16]byte
 	birth       uint64
@@ -61,11 +62,11 @@ func newLinuxPressureBorrowSockets() ([2]int, error) {
 }
 
 func (wire *linuxPressureBorrowSocket) send(ctx context.Context, phase byte) error {
-	if wire == nil || phase < linuxPressureBorrowHello || phase > linuxPressureBorrowFailure || phase <= wire.sent {
+	if wire == nil || phase < linuxPressureBorrowHello || phase > wire.maximumPhase() || phase <= wire.sent {
 		return ErrLinuxPressure
 	}
 	var raw [32]byte
-	copy(raw[:4], "PB01")
+	copy(raw[:4], wire.magic())
 	raw[4] = phase
 	copy(raw[8:24], wire.attempt[:])
 	binary.BigEndian.PutUint64(raw[24:], wire.birth)
@@ -92,7 +93,7 @@ func (wire *linuxPressureBorrowSocket) receive(ctx context.Context, phase byte) 
 }
 
 func (wire *linuxPressureBorrowSocket) receiveChoice(ctx context.Context, first, second byte) (byte, error) {
-	if wire == nil || wire.peer.Pid <= 0 || first < linuxPressureBorrowHello || first > linuxPressureBorrowFailure || second < first || second > linuxPressureBorrowFailure || first <= wire.read {
+	if wire == nil || wire.peer.Pid <= 0 || first < linuxPressureBorrowHello || first > wire.maximumPhase() || second < first || second > wire.maximumPhase() || first <= wire.read {
 		return 0, ErrLinuxPressure
 	}
 	var raw [32]byte
@@ -110,11 +111,24 @@ func (wire *linuxPressureBorrowSocket) receiveChoice(ctx context.Context, first,
 			_ = wire.observation.close(unix.Close(fd))
 		}
 		if err != nil || !valid || len(rights) != 0 || flags&(unix.MSG_TRUNC|unix.MSG_CTRUNC) != 0 || n != len(raw) ||
-			string(raw[:4]) != "PB01" || raw[4] != first && raw[4] != second || raw[5] != 0 || raw[6] != 0 || raw[7] != 0 ||
+			string(raw[:4]) != wire.magic() || raw[4] != first && raw[4] != second || raw[5] != 0 || raw[6] != 0 || raw[7] != 0 ||
 			[16]byte(raw[8:24]) != wire.attempt || binary.BigEndian.Uint64(raw[24:]) != wire.birth {
 			return 0, ErrLinuxPressure
 		}
 		wire.read = raw[4]
 		return raw[4], nil
 	}
+}
+
+func (wire *linuxPressureBorrowSocket) magic() string {
+	if wire.author {
+		return "PA01"
+	}
+	return "PB01"
+}
+func (wire *linuxPressureBorrowSocket) maximumPhase() byte {
+	if wire.author {
+		return 8
+	}
+	return linuxPressureBorrowFailure
 }

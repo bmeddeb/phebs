@@ -23,7 +23,7 @@ import (
 // accepts no paths/commands/flags and starts no child. Its caller immediately
 // exits with this status; mount/namespace failures reveal no native diagnostic.
 func LinuxInputTreeHelperMain() int {
-	if runtime.GOARCH != "amd64" || len(os.Args) != 2 || os.Args[1] != linuxInputTreeRecipe ||
+	if runtime.GOARCH != "amd64" || len(os.Args) != 2 || (os.Args[1] != linuxInputTreeRecipe && os.Args[1] != linuxPressureAuthorInputRecipe) ||
 		os.Geteuid() != 0 || os.Getegid() != 0 || os.Getuid() != 0 || os.Getgid() != 0 {
 		return 125
 	}
@@ -48,7 +48,18 @@ func LinuxInputTreeHelperMain() int {
 		return 125
 	}
 	defer cancel()
-	if !inputTreeHelperMappings(initial) || setupInputTreeMount() != nil {
+	if !inputTreeHelperMappings(initial) {
+		return 126
+	}
+	var mountErr error
+	if os.Args[1] == linuxPressureAuthorInputRecipe {
+		unix.CloseOnExec(6)
+		unix.CloseOnExec(7)
+		mountErr = setupLinuxPressureAuthorHelperMount(ctx, 6, 7)
+	} else {
+		mountErr = setupInputTreeMount()
+	}
+	if mountErr != nil {
 		return 126
 	}
 	if receiveInputTree(ctx, wire, initial[16:]) != nil {

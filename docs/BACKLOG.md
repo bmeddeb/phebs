@@ -5311,6 +5311,38 @@ pass. Source/cost/oracle review is clear. The two required actual Linux native
 bodies remain unexecuted; full MED-495/496/497 and formal profiles remain open.
 Failed lint/review prefixes and original corrected-label evidence are retained.
 
+**T42.H2t.c · Descriptor-bound workspace and real author composition (MED-497
+implementation, 2026-10-24; source contract chosen, implementation staged;
+native acceptance open).**
+Connect a genuine root bootstrap and exact target credential/exec transition
+through the same original PID/birth/sole Wait to a new descriptor-bound private
+mount namespace. Its typed reachable workspace view must hold the actual H2m
+leaf and original source/image/volume loans. Build the real Git/Go/protected
+reference/author graph there and call actual shared-controller producer 7,
+phase 2 `AuthorNextOn`; retain the enclosing owner after Author A. Keep
+historical/public predicates exact. New private helper `/tmp` layouts preserve
+dynamic host runtime access and all three original input masks; original
+selections must be disjoint from the new layout. A canonical string or modeled
+controller is not pressure or profile authority.
+
+AC: actual bootstrap/target/helper image, namespace, credential, FD/link/mount
+and source binding; single cross-mode executor claim; genuine source-bound
+reference and producer transitions; actual author/control/accounting/Wait and
+later borrower lifetime; no process-wide caller changes. Before writers,
+classify only new healthy-ephemeral derived roots and bind the dated PLAN's
+separate physical retirement capacities. Fully inventory before unlink;
+bounded chunked backing, ancestry checks, role-specific types/modes, exact
+mount/device/UID fences and truthful partial-failure retention are mandatory.
+Preserve failed work and unknown owners; public Author.Close and unchanged
+H2m nonforced teardown remain exact. Existing logical/staging counts cannot
+substitute for physical inventory. Normal/race, real default-safe mechanics,
+cost/allocation/work accounting, static/docs, supported compilation and
+independent review precede a source checkpoint. Full selected actual author
+and healthy teardown remain opt-in until fresh exact native admission; no
+tiny or permanently blocked fixture supplies that positive. No MED-495/496/497
+or complete epoch/profile acceptance is implied. Source engineering grants no
+security installation, privileged execution, host cleanup or ceremony.
+
 **2026-10-22 — Ben-directed implementation checkpoint integration.** Ben
 explicitly requests maria cleanup and PR merges after the v10 native failure
 was disclosed. PR156 and T42.H2s.a–d / PR164–167 may integrate as reviewed

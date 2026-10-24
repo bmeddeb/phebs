@@ -20,6 +20,7 @@ type LinuxGoReferenceHelper struct {
 	mu     sync.Mutex
 	tool   *LinuxExecutionToolCustody
 	closed bool
+	layout *linuxPressureAuthorView
 }
 
 func ProtectLinuxGoReferenceHelper(ctx context.Context, request ReferenceToolRequest) (*LinuxGoReferenceHelper, error) {

@@ -10,3 +10,7 @@ import (
 func runLinuxPressureBorrowCommand(context.Context, time.Time, []string, []string) error {
 	return ErrExecutionLauncher
 }
+
+func runLinuxPressureAuthorCommand(context.Context, time.Time, []string, []string) error {
+	return ErrExecutionLauncher
+}

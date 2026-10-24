@@ -26,7 +26,7 @@ func LinuxGoReferenceHelperMain() (status int) {
 			_, _ = fmt.Fprintf(os.Stderr, "go-reference-helper refused stage=%s\n", stage)
 		}
 	}()
-	if runtime.GOARCH != "amd64" || len(os.Args) != 2 || os.Args[1] != linuxGoReferenceRecipe || os.Getpid() != 1 || os.Getppid() != 0 ||
+	if runtime.GOARCH != "amd64" || len(os.Args) != 2 || (os.Args[1] != linuxGoReferenceRecipe && os.Args[1] != linuxPressureAuthorReferenceRecipe) || os.Getpid() != 1 || os.Getppid() != 0 ||
 		os.Getuid() != 0 || os.Geteuid() != 0 || os.Getgid() != 0 || os.Getegid() != 0 {
 		return status
 	}
@@ -58,13 +58,26 @@ func LinuxGoReferenceHelperMain() (status int) {
 		return status
 	}
 	stage = "private-mounts"
-	if setupInputTreeMount() != nil || unix.Mount("proc", "/proc", "proc", unix.MS_NOSUID|unix.MS_NODEV|unix.MS_NOEXEC, "") != nil {
+	var mountErr error
+	pressureLayout := os.Args[1] == linuxPressureAuthorReferenceRecipe
+	if pressureLayout {
+		unix.CloseOnExec(8)
+		mountErr = setupLinuxPressureAuthorHelperMount(ctx, 6, 8)
+	} else {
+		mountErr = setupInputTreeMount()
+	}
+	if mountErr != nil || unix.Mount("proc", "/proc", "proc", unix.MS_NOSUID|unix.MS_NODEV|unix.MS_NOEXEC, "") != nil {
 		return status
 	}
 	if self, err := os.Readlink("/proc/self"); err != nil || self != "1" {
 		return status
 	}
-	workspace, err := goBuildHelperWorkspace()
+	var workspace string
+	if pressureLayout {
+		workspace, err = linuxPressureAuthorHelperWorkspace()
+	} else {
+		workspace, err = goBuildHelperWorkspace()
+	}
 	if err != nil {
 		return status
 	}
