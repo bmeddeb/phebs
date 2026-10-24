@@ -84,4 +84,29 @@ func TestServiceStateV3PreimagePointNativeIndex(t *testing.T) {
 			}
 		})
 	}
+	// Execute the production fragment repeatedly in one native FOR scope so
+	// index planning cannot accidentally reuse the first iteration's key.
+	vars := map[string]any{
+		"repository": plan.Repository, "preserve": true,
+		"selector": map[string]any{"state_control_revision": plan.SummaryControlRevision},
+		"updates": []map[string]any{
+			{"content": map[string]any{"service_key": prior.ServiceKey}, "want": 1},
+			{"content": map[string]any{"service_key": prior.ServiceKey + "-missing"}, "want": 0},
+			{"content": map[string]any{"service_key": prior.ServiceKey}, "want": 1},
+		},
+	}
+	results, err := surrealdb.Query[any](ctx, s.db,
+		"FOR $update IN $updates {"+serviceStateV3PreimagePointSQL+`
+			IF array::len($prior_rows) != $update.want {
+				THROW 'preimage lookup reused another iteration key';
+			};
+		}; RETURN true;`, vars)
+	if err != nil || results == nil {
+		t.Fatal("native loop bindings", err)
+	}
+	for _, result := range *results {
+		if result.Status != "OK" || result.Error != nil {
+			t.Fatalf("native loop binding statement: %+v", result)
+		}
+	}
 }

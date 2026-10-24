@@ -300,7 +300,7 @@ qualification before another full run. PR #156 remains draft and unmerged;
 the V6 cold-extraction path was not reached.
 
 The 2026-10-23 MED-495 physical-B follow-up binds native preimage lookup
-operands to scalars so the existing unique index replaces repeated table scans.
+operands to scalars so the existing full unique-index lookup replaces repeated repository-wide scans.
 V11 remains a failed full qualification with retained raw evidence. Native
 planner/result, fence/accounting and source review gates precede any new exact
 admission; no deadline, payload, RSS or custody gate changes. MED-496's full
