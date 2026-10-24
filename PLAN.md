@@ -17694,7 +17694,7 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
 
 
 - **2026-10-24 — T42.H2s.j source-issued Linux checkpoint/successor flow
-  (MED-496, implementation in progress).** Compose the existing real checkpoint
+  (MED-496, bounded source implementation).** Compose the existing real checkpoint
   machinery through an unexported source-selected qualification constructor.
   Ordinary Linux preparation remains v11; preserve v12's historical prepared
   bytes and give the selected checkpoint policy its own prospective version.
@@ -17757,5 +17757,8 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   retained-parent walk, sampling, children and PC/DA/SA transitions are reused.
   No product query, sync, ordinary publication, corpus read/hash, cache or
   persistent schema work is added. All numeric limits, deadlines, RSS/disk,
-  custody and accounting predicates remain exact. Bounded gates and independent
-  review remain in progress; actual native composition is unexecuted.
+  custody and accounting predicates remain exact. The source-bound bounded
+  [record](spike/t42h2r/native-checkpoint-flow-bounded-linux-20261024.json)
+  retains passing normal/race, protocol, static/docs and supported dual-tag
+  compilation gates with clear independent review. Actual native composition
+  remains unexecuted and full acceptance stays open.

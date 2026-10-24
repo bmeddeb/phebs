@@ -1,0 +1,667 @@
+{
+  "schema": "phebs-linux-native-checkpoint-flow-bounded-v1",
+  "base_commit": "cfe84d6d0002d560520f906547b876581aa8c54d",
+  "implementation_commit": "c90f6814da6738c8922bd456490b1991602a02c1",
+  "go_source_sha256": {
+    "spike/t421/epoch_native_adapter.go": "b47e368f2625aeffbf60cf06fc5d3fa2ca3815afaa15fca4d470ca758282fed2",
+    "spike/t421/epoch_flow_linux.go": "05bb3d827c48226ef8060888992cdbde1f4ae27ef0fa3492bcba382d50615566",
+    "spike/t421/epoch_recipe_linux.go": "b7ba2a9baee85e92f9ef479e48f685ae877e14a2669a7a3271cbc946ff93e81d",
+    "spike/t421/epoch_checkpoint_linux.go": "507d91229ecea8e24d80abcf918e8caa31472ddf5a30f825e729164e2a182e7e",
+    "spike/t421/epoch_checkpoint_linux_test.go": "d00eab8e292b8226f6c446626e28cebb93fa38a72ed8b04680dc891727faca53",
+    "spike/t421/epoch_coordinator_linux.go": "2aead92979782500a22afa6e34edfb16982753fc551df575c1b061221730ae01",
+    "spike/t421/epoch_server_linux.go": "2d5c93ec3e34891a85e78746578472ee0535b47e54cc657d903c72ac7da635c6",
+    "spike/t421/epoch_engine_endpoint_linux.go": "89dc6f30af914c2c41cc522e927fa32dad6837d5fdb4aff03bacba4175b69b92",
+    "spike/t421/epoch_return.go": "14e40be88e512b21dc6e38b9ee5b249a9e2df1a8bf77cd6439de3d139d701f6a",
+    "spike/t421/epoch_checkpoint.go": "0a888db7defcfa23746e5aa8cf63e9182c327c673c41cb6860e5fb564697ec99",
+    "spike/t421/epoch_launch.go": "47f24785a7e05f57b5c77895ecf49e1039d5575d31dacc5cec28f1869f2e6cd7",
+    "spike/t421/epoch_recipe_linux_test.go": "db09cf24416f73e72a850ad4dc6158104287bdeea07ae8473a5c14eea1350dbd",
+    "spike/t421/epoch_flow_native_linux_test.go": "064296dac3302280cac5e3605baf4d990d1011b3e6de66f15d1f4a3c09256fa2",
+    "spike/t421/epoch_checkpoint_native_linux_test.go": "8703575f6255de7cc5f184edbde0d702540cf9dd362fa05d2ae86a486783006b"
+  },
+  "committed_source_binding_sha256": "d40bbf529e265ec1a88916a895f06bddec0a35b53e1e1dbc910827176837f3f3",
+  "author_handoff_sha256": "d1560c1b7fa850dce0e95009e0101b8d94ca87fb668a63c1856bb18c102a2db8",
+  "final_gate_roots": 15,
+  "final_gates": {
+    "compile-darwin-amd64-dual-final06": {
+      "argv": [
+        "env",
+        "GOOS=darwin",
+        "GOARCH=amd64",
+        "CGO_ENABLED=0",
+        "go",
+        "test",
+        "-c",
+        "-p=2",
+        "-tags=phebs_t42_native,phebs_t42_checkpoint_native",
+        "-o",
+        "/home/ben/phebs-rehearsals/med496-native-checkpoint-flow-20261024/author/compile-darwin-amd64-dual-final06.test",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 27.517363557999488,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "failed": [],
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "compile-darwin-arm64-dual-final06": {
+      "argv": [
+        "env",
+        "GOOS=darwin",
+        "GOARCH=arm64",
+        "CGO_ENABLED=0",
+        "go",
+        "test",
+        "-c",
+        "-p=2",
+        "-tags=phebs_t42_native,phebs_t42_checkpoint_native",
+        "-o",
+        "/home/ben/phebs-rehearsals/med496-native-checkpoint-flow-20261024/author/compile-darwin-arm64-dual-final06.test",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 26.50441048500943,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "failed": [],
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "compile-linux-amd64-dual-final06": {
+      "argv": [
+        "env",
+        "GOOS=linux",
+        "GOARCH=amd64",
+        "CGO_ENABLED=0",
+        "go",
+        "test",
+        "-c",
+        "-p=2",
+        "-tags=phebs_t42_native,phebs_t42_checkpoint_native",
+        "-o",
+        "/home/ben/phebs-rehearsals/med496-native-checkpoint-flow-20261024/author/compile-linux-amd64-dual-final06.test",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 28.789484681998147,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "failed": [],
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "compile-linux-arm64-dual-final06": {
+      "argv": [
+        "env",
+        "GOOS=linux",
+        "GOARCH=arm64",
+        "CGO_ENABLED=0",
+        "go",
+        "test",
+        "-c",
+        "-p=2",
+        "-tags=phebs_t42_native,phebs_t42_checkpoint_native",
+        "-o",
+        "/home/ben/phebs-rehearsals/med496-native-checkpoint-flow-20261024/author/compile-linux-arm64-dual-final06.test",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 28.071496095013572,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "failed": [],
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "connected-normal-final06": {
+      "argv": [
+        "go",
+        "test",
+        "-p=2",
+        "-parallel=1",
+        "-count=1",
+        "-timeout=8m",
+        "-json",
+        "-run",
+        "^(TestLinuxEpoch|TestLinuxCheckpointRefuses|TestExecutionEpoch(Logical|Return|Stale|Checkpoint)|TestExecutionAuthorReturn|TestEpoch(Engine|RecoveryWorkspace|Midphase|Return|Stale|LaunchError|FinishFailure|InspectionEvidence))",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 55.92529894202016,
+      "nodes": {
+        "pass": 711,
+        "fail": 0,
+        "skip": 1
+      },
+      "failed": [],
+      "skipped": [
+        "TestExecutionEpochCheckpointInheritedTerminal"
+      ],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "ba751e0d21fa9a840c3ba8294ab638b958e0029de0b6f72d22b367006fbdaa7d",
+          "bytes": 632300
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "connected-race-final06": {
+      "argv": [
+        "go",
+        "test",
+        "-race",
+        "-p=2",
+        "-parallel=1",
+        "-count=1",
+        "-timeout=8m",
+        "-json",
+        "-run",
+        "^(TestLinuxEpoch|TestLinuxCheckpointRefuses|TestExecutionEpoch(Logical|Return|Stale|Checkpoint)|TestExecutionAuthorReturn|TestEpoch(Engine|RecoveryWorkspace|Midphase|Return|Stale|LaunchError|FinishFailure|InspectionEvidence))",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 202.30237442298676,
+      "nodes": {
+        "pass": 711,
+        "fail": 0,
+        "skip": 1
+      },
+      "failed": [],
+      "skipped": [
+        "TestExecutionEpochCheckpointInheritedTerminal"
+      ],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "2aa2171b2e9ab0f1ed8d3f593fabd6869a236736e696145db691a4b11a40bcf9",
+          "bytes": 632340
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "dependency-normal-final06": {
+      "argv": [
+        "go",
+        "test",
+        "-p=2",
+        "-parallel=1",
+        "-count=1",
+        "-timeout=4m",
+        "-json",
+        "-run",
+        "^(TestLocalSuccessor|TestTerminalSuccessor(Preserves|Refusals)|TestTerminalPhase|TestCheckpointEngine|TestTerminalQuiescenceRetiresActualEngineEndpoint$|TestEngineMeasurement|TestTransportTerminalEOF)",
+        "./internal/dispatchadmission",
+        "./internal/storeaccounting"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 4.521586024027783,
+      "nodes": {
+        "pass": 162,
+        "fail": 0,
+        "skip": 0
+      },
+      "failed": [],
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "58180c0ac39fc3b699aaa117499cc326a3ad5b1eee9cc85a2ec0d20e7cfb6417",
+          "bytes": 152291
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "dependency-race-final06": {
+      "argv": [
+        "go",
+        "test",
+        "-race",
+        "-p=2",
+        "-parallel=1",
+        "-count=1",
+        "-timeout=4m",
+        "-json",
+        "-run",
+        "^(TestLocalSuccessor|TestTerminalSuccessor(Preserves|Refusals)|TestTerminalPhase|TestCheckpointEngine|TestTerminalQuiescenceRetiresActualEngineEndpoint$|TestEngineMeasurement|TestTransportTerminalEOF)",
+        "./internal/dispatchadmission",
+        "./internal/storeaccounting"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 7.133991859009257,
+      "nodes": {
+        "pass": 162,
+        "fail": 0,
+        "skip": 0
+      },
+      "failed": [],
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "1dde4a9d7e7fa7fcd7e2db2636f26cd2c753d3083362b1e04e8f8870468ba4e1",
+          "bytes": 152315
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "docs-final06": {
+      "argv": [
+        "make",
+        "docs-check"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 1.580512632994214,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "failed": [],
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "12022e4de295a5ebcaeb1705825416bff0a1cb4afa04017162c4d2f63005e898",
+          "bytes": 177
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "glossary-final06": {
+      "argv": [
+        "make",
+        "verify-glossary"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 0.14300579301198013,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "failed": [],
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "f128ad7aef2b6215c4414d1e00b2650f9c42011b1705707b624be1c70d92f095",
+          "bytes": 60
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "pinned-lint-dual-native-final06": {
+      "argv": [
+        "golangci-lint",
+        "run",
+        "--concurrency=2",
+        "--build-tags=phebs_t42_native,phebs_t42_checkpoint_native",
+        "--new-from-patch=/home/ben/phebs-rehearsals/med496-native-checkpoint-flow-20261024/author/lint-owned-final06.patch",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 89.22588723100489,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "failed": [],
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47",
+          "bytes": 10
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "pinned-lint-version-final06": {
+      "argv": [
+        "make",
+        "verify-golangci-lint"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 0.1769862519868184,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "failed": [],
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "vet-default-final06": {
+      "argv": [
+        "go",
+        "vet",
+        "-p=2",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 3.817625053023221,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "failed": [],
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "vet-dual-native-final06": {
+      "argv": [
+        "go",
+        "vet",
+        "-p=2",
+        "-tags=phebs_t42_native,phebs_t42_checkpoint_native",
+        "./spike/t421"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 20.207637260988122,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "failed": [],
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    },
+    "whitespace-final06": {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "actual_wait_exit_code": 0,
+      "seconds": 0.09846603800542653,
+      "nodes": {
+        "pass": 0,
+        "fail": 0,
+        "skip": 0
+      },
+      "failed": [],
+      "skipped": [],
+      "unchanged_after": true,
+      "logs": {
+        ".stdout": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        },
+        ".stderr": {
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "bytes": 0
+        }
+      }
+    }
+  },
+  "test_scope": {
+    "connected_normal_and_race_each": {
+      "pass": 711,
+      "fail": 0,
+      "skip": 1,
+      "new_j_pass_nodes": 54,
+      "adapted_fixture_pass_nodes": 17,
+      "inherited_pass_nodes": 640
+    },
+    "connected_skips": [
+      "TestExecutionEpochCheckpointInheritedTerminal (inherited Darwin-only)"
+    ],
+    "focused_pass_nodes_overlapping_not_additive": 103,
+    "counts_include": "Six standalone argv/environment-gated fixture-entry passing nodes; these are not 711 independent native proofs. Dependency counts also include one child helper.",
+    "protocol_dependency_normal_and_race_each": {
+      "pass": 162,
+      "fail": 0,
+      "skip": 0
+    },
+    "actual_bounded_scope": "Real existing controller/socket/terminal/producer-cutover and Linux actor controls plus explicitly modeled malformed/shape capability fixtures. Modeled fixtures issue no native authority."
+  },
+  "compile_only": {
+    "compile_only": true,
+    "artifacts": [
+      {
+        "target": "linux/amd64",
+        "path": "/home/ben/phebs-rehearsals/med496-native-checkpoint-flow-20261024/author/compile-linux-amd64-dual-final06.test",
+        "bytes": 90959934,
+        "sha256": "a46a595f586434c67849efad6daf63d15d7313b55c2ac177729db58f83bc5bd0",
+        "format": "ELF64",
+        "machine": 62,
+        "new_linux_checkpoint_test_symbol_present": true,
+        "executed": false,
+        "tags": [
+          "phebs_t42_native",
+          "phebs_t42_checkpoint_native"
+        ]
+      },
+      {
+        "target": "linux/arm64",
+        "path": "/home/ben/phebs-rehearsals/med496-native-checkpoint-flow-20261024/author/compile-linux-arm64-dual-final06.test",
+        "bytes": 84518064,
+        "sha256": "98df8db4688f4bd6e3fa4f11e1053a1bce4c23c0b009eff7988f23061e3056cb",
+        "format": "ELF64",
+        "machine": 183,
+        "new_linux_checkpoint_test_symbol_present": true,
+        "executed": false,
+        "tags": [
+          "phebs_t42_native",
+          "phebs_t42_checkpoint_native"
+        ]
+      },
+      {
+        "target": "darwin/arm64",
+        "path": "/home/ben/phebs-rehearsals/med496-native-checkpoint-flow-20261024/author/compile-darwin-arm64-dual-final06.test",
+        "bytes": 89998242,
+        "sha256": "cda3a36815ab6e2fd70ba7a4cd3cebb88cace49e1d16ea0b99e8babf1f3c6509",
+        "format": "Mach-O64",
+        "machine": 16777228,
+        "new_linux_checkpoint_test_symbol_present": false,
+        "executed": false,
+        "tags": [
+          "phebs_t42_native",
+          "phebs_t42_checkpoint_native"
+        ]
+      },
+      {
+        "target": "darwin/amd64",
+        "path": "/home/ben/phebs-rehearsals/med496-native-checkpoint-flow-20261024/author/compile-darwin-amd64-dual-final06.test",
+        "bytes": 95252128,
+        "sha256": "5198c4b14d51c03736baede9a320949300743f13c988ecab825ecf91d078122d",
+        "format": "Mach-O64",
+        "machine": 16777223,
+        "new_linux_checkpoint_test_symbol_present": false,
+        "executed": false,
+        "tags": [
+          "phebs_t42_native",
+          "phebs_t42_checkpoint_native"
+        ]
+      }
+    ]
+  },
+  "lint_scope": "Repository-pinned v2.12.2 differential lint with both native tags and exact retained patch covering all14 owned Go paths including3 new files. Not a full repository lint-clean claim.",
+  "reviews": {
+    "independent-review-source-06-corrected.json": "59ef8f43b1c9a4ff9706950470ab3ad5255b7ef81316952bebfbb2b3fb1ae50d",
+    "test-oracle-carry-source06.json": "14f722259147f59eada67339656f628acb3029a6e0b8731897b44b3a5b170961",
+    "independent-review-owning-docs-source-06.json": "1af3c1b8f545a04c7e7b622aa48c9c8652f8bac59b07ad3fb5f59e2d4b69c5f0",
+    "independent-final06-gate-audit.json": "5d0edbbe2d0ce17c44b39c0da0e201eab3922ad86b38c743fe533761dc1be8c5"
+  },
+  "all_review_severity_counts_zero": true,
+  "corrections": [
+    "J-ENDPOINT-JOIN: child EOF/PC acknowledgement can precede parent completion publication; wait on existing finished channel within original operation/phase/stop bounds, leaving shared finish the sole result receiver.",
+    "J-SHORTER-CALLER-LIFETIME: preserve exact actual and planned deadlines separately, require actual no later than planned, and use actual expiration/cancellation.",
+    "O1: opt-in actual native witness directly binds distinct fourth PID/birth/creating actor/held image/original config4 and actual Wait/observer/session, alongside existing recovered/protected authority predicates."
+  ],
+  "expected_negative": {
+    "classification": "Expected negative control; equivalent old nonblocking completion predicate, not a product gate failure or full native reproducer.",
+    "actual_wait_exit_code": 1,
+    "test_nodes_failed": 1,
+    "discriminator": "child EOF substituted for parent publication",
+    "corrected_positive_prefix": "focused-normal-03",
+    "source_unchanged": true,
+    "overlay_sha256": "92b86448d993390d64d987396e3cfad2981d338c3b56a35a9757f82247c8a8d3",
+    "overlay_mapping_sha256": "74447c94e5c949beddf457827b3937d595434d98d1af1f3e5f7cfa56484a640c",
+    "receipt": "endpoint-nonblocking-negative-01.result.json"
+  },
+  "policy": {
+    "ordinary_constructor": "v11 unchanged",
+    "ordinary_sha256": "sha256:0300a26c359a9f4526cf9542617682d2c51152a8e51bd2995d81ab1b18b850e5",
+    "historical_prepared_v12": "Bytes preserved; not selected by ordinary entry",
+    "private_selected_v13_sha256": "sha256:8e863962e2a5ddab6e6f8ec847eb595a58defd1a27bb7b5827d82e28f8d6ccc5"
+  },
+  "cost": {
+    "record_sha256": "8af42bb5ff6cff10aba15b38ba59b985b522d44c70efbace8cc441faa28b713f",
+    "record": {
+      "source_manifest": "frozen-source-06.json",
+      "scope": "T42.H2s.j private source-selected qualifier; not MED-495/MED-496 native acceptance",
+      "query_sync_publication": "No product query/sync/ordinary publication code changes. Qualification-only transitions reuse the real existing checkpoint/inspection/transport/source-borrow/native-actor machinery.",
+      "constructor": "One closed recipe identity/hash per native coordinator; ordinary default v11 unchanged. Selected v13 preserves v12 bytes, applies inherited two v12 plus five v13 bounded string replacements then existing JSON/SHA. No caller policy or digest accepted.",
+      "backing": {
+        "completion_each_server_bytes_64bit": 48,
+        "completion_selected_four_servers_bytes": 192,
+        "completion_legacy_three_servers_bytes": 144,
+        "nonzero_selected_protocol_points": 8,
+        "completion_backing": "Seven fixed phase uint32 slots, count uint32 and error interface embedded in every Linux server; no history growth. This is greater than eight occupied records across the selected epoch3/4 endpoints.",
+        "capability": "One immutable successor capability stores coordinator/recipe/prior/next pointers, copied ExecutionEpochConfig headers (no string-byte recopy), actual recovery/authority/process-prefix pointers, successor context plus exact actual and planned run deadlines, and two atomic.Bool one-shot states; retained until whole flow cleanup.",
+        "flow_and_coordinator": "One private recipe scalar on Linux flow and one capability pointer on Linux coordinator; layout padding and retained four-server actor/maps/output remain charged to whole4GiB."
+      },
+      "checks_locks": "Optional native adapter checks occur in v11 too. Selected return/entry checks and fixed exact identity/config/context/deadline comparisons at launch, native Start, tools/config and each existing DA dispatch; no shared flow/author/epoch reentry. Native held-owner author->epoch lock order unchanged; launch/release one-shot CAS/Store separated from repeatable reads.",
+      "endpoint": "On selected epoch3/4 only, append one phase after actual guard RELEASE/resume success. Check exact7/1 sequence at endpoint EOF; protocol success alone is not successful workspace sampling. No extra sampler or measurement. Fixed completion backing is also present on legacy servers.",
+      "terminal_join": "Selected epoch3 terminal finish adds one bounded publication wait outside run.mu, within min(original terminal operation, existing phase deadline, existing stop deadline). WithDeadline allocates one child context and at most one timer; shared finish remains sole receiver of engineMeasurementDone. Timeout/error stays refusal and actual cleanup/Wait/retention still runs.",
+      "successor": "Issue one token only after actual joined native SIGKILL/Wait/session closure, successful terminal PC/DA/SA prefix, source-shared same-phase SA then DA reopen and successful parent workspace sample. No added OS census or corpus read/hash. Existing parent walk and all shared transition I/O/children are retained.",
+      "failure_retry": "No token reset/reissue/retry. Early selector refusal precedes source authoring. Failed launch reservation stays consumed; closed listener and partial cutovers are not rolled back. Nonnil post-Start run stays cleanup owner, and operation links live through genuine join. Unknown/cancellation keeps existing retention semantics.",
+      "memory_disk_children": "No blob/cache/shard/corpus copy, extra persistent schema or new child category. Selected composition adds the real fourth server lifetime serially and retains its existing root/ring/maps/output in charged whole RSS. Process/pack/cache consumption has no fit promise. Pdeathsig,4GiB/1GiB/1GiB,SDK30s/resolver5min/all original caps/deadlines remain unchanged.",
+      "remaining_gate": "New opt-in actual native composition is unexecuted; operational full run requires new exact-image/profile/source/tool/input/resource admission. Bounded shape/transport tests cannot prove genuine positive fourth-context issuance.",
+      "deadline_clipping": "Issued successor context may be earlier than the source-planned run deadline. Exact actual context deadline is retained separately; actual<=planned grants no later time credit, and per-run validation preserves the planned field while expiration uses actual."
+    }
+  },
+  "limits": "All original caps, whole4GiB RSS, SDK30s, materialization5min, operation/phase/stop deadlines, custody/accounting/unknown retention and Surreal Pdeathsig unchanged.",
+  "native_execution": {
+    "test": "TestLinuxEpochRequiredNativeCheckpointLiveBorrow",
+    "tags": [
+      "phebs_t42_native",
+      "phebs_t42_checkpoint_native"
+    ],
+    "compiled_only": true,
+    "executed": false,
+    "requires": "New exact image/profile/source/tool/input/resource admission; neither V14 diagnostic image nor old profile grants this changed source execution."
+  },
+  "acceptance": {
+    "full_MED495": false,
+    "actual_native_checkpoint_retained_source_PC_SA_successor": false,
+    "full_MED496": false,
+    "formal_executor_profile": false,
+    "pressure_backup_restore": false,
+    "readiness_scale": false,
+    "merge_deploy_security_install": false
+  },
+  "preserved": "All frozen01\u201306 snapshots, initial test prefixes, expected-negative overlay/raw records and superseded reviews retained. No full native execution occurred.",
+  "private_evidence_directory": "/home/ben/phebs-rehearsals/med496-native-checkpoint-flow-20261024",
+  "final_evidence_carry": "Final documentation checks and immutable evidence-only commit carry recorded separately."
+}
