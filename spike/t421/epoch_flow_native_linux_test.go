@@ -441,6 +441,9 @@ func logLinuxEpochNativeFailure(t *testing.T, flow *LinuxExecutionEpochFlow, bas
 		for run := range held.servers {
 			select {
 			case <-run.done:
+				if prefix, ok := run.joinedFailurePrefix(); ok {
+					t.Logf("private epoch=%d first-observed and saved prefix=%+v", run.epoch.Epoch, prefix)
+				}
 				run.mu.Lock()
 				t.Logf("private epoch=%d failure=%v native_stop=%v admission=%+v", run.epoch.Epoch, run.err, run.nativeStopErr, run.stopDiagnostic)
 				run.mu.Unlock()

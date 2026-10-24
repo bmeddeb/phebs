@@ -4975,6 +4975,26 @@ all index sections/repository metadata match apart from generated build ID and
 time. These comparisons establish no whole-composition fit or native identity
 substitution. Final complete native qualification remains required.
 
+**2026-10-23 — MED-495 v12 resolver work and logical-handoff diagnostics.**
+The exact `45c2d252` run returned native Wait1 at logical start. Joined-output
+replay reproduces a correct cold-phase resolver-byte refusal at 9,776,409 bytes
+against the frozen 9,776,093 ceiling. Both cold and physical phases contain a
+partial materialization followed by a complete build. The completed build
+matches the existing 10,002-read/byte allowance; failed attempts remain charged.
+The earlier attempts' exact cancellation causes remain unavailable.
+
+Replace per-blob Git launches with one lazy existing hardened batch reader per
+default materialization Build; preserve explicit readers, all source/resolver
+charges, deadlines, limits and existing batch admission. Actual Close/Wait must
+precede publication and repository-lock release, including errors. Add bounded
+private first-observed finish/handoff stages and saved joined-prefix summaries
+without changing errors, public evidence or gates. Require real-Git exact-read/
+accounting/child-count controls, failure/cancellation/join controls, focused
+normal/race and connected regressions, static/docs/supported compilation and
+independent source/cost review. Preserve original failures and private replay
+records. Full MED-495/MED-496 acceptance remains open; this follow-up authorizes
+commit/push of reviewed corrections, not a new qualification or driver/profile.
+
 **T42.H2s.a · Genuine Linux terminal-result ownership (MED-496 prerequisite,
 2026-10-21).** Ben directs taking the next backlog ticket while the isolated
 `f8f00f40` c.c run executes on maria. Retain the creating tracer actor's actual

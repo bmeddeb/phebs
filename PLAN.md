@@ -17065,3 +17065,44 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   state is introduced. The diagnostic copies and native test children are
   separate bounded preparation, not operational admission. Exact-source review
   and regression gates precede any fresh driver/tool admission and full run.
+
+- **2026-10-23 — MED-495 resolver materialization lease and handoff diagnostics.**
+  Maria v12 at `45c2d252` returned actual Wait1 during the joined logical-B
+  handoff after health/cold/warm/physical-B returned successfully. Offline
+  production-parser replay of its joined output, with only the recognized
+  setup-token payload redacted, reproduces a cold-phase resolver-byte refusal:
+  read 7,487 reaches 9,776,409 bytes against the unchanged 9,776,093 ceiling.
+  The limit is correct. Each phase contains a partial materialization followed
+  by a complete 10,002-read build; the latter exactly matches the frozen byte
+  allowance. The first attempts' cancellation causes were not retained. Their
+  timing is consistent with the five-minute materialization deadline, not proof
+  of that cause. Later whole-meter close refusal is not a causal attribution.
+
+  The default materializer currently starts and joins a Git child per blob.
+  Reuse the existing hardened exact-OID/size-fenced batch reader lazily for one
+  actual Build and join it before returning prepared output for publication.
+  Preserve explicit readers, every successful resolver-byte/read charge and
+  source-read attempt, cancellation, poisoned-stream refusal and close errors.
+  Current/no-op paths and builds without blob reads start no child. Preserve
+  every deadline, frozen contract, numerical bound and command admission; the
+  batch site/command already belongs to the admitted production inventory.
+
+  Retain a private first-observed ordinary finish/handoff refusal stage and
+  fixed saved joined-prefix diagnostics without changing public error identity,
+  terminal wrapping, result/wire schemas or acceptance. An observed stage is
+  not a globally ordered causal proof. The failed fixture, originals and raw
+  evidence remain retained. This correction establishes no new full native,
+  memory-fit, custody/accounting/cleanup, successor, readiness or scale result.
+
+  Cost: an actual default materialization holds one serial Git child and its
+  existing bounded pipe buffers through Build, inside the same repository lock
+  and five-minute context, instead of one child lifetime per blob. It retains
+  no Phebs object cache and performs the same successful native reads/bytes.
+  Git may retain its native pack/index cache through that lease; all of its RSS
+  remains charged, with no prediction of full-workload fit. Each
+  retry owns a fresh lease and remains fully charged. Close/Wait precedes
+  publication and lock release, including refusal paths. Product queries,
+  current-generation reuse, sync ticks, idle/startup scheduling and publication
+  transactions add no work. Private diagnostics add bounded failure-only state
+  and copy already joined fixed fields; they add no probe, parser pass, corpus
+  scan, timer, worker, persistent state or successful-path allocation.
