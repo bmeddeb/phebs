@@ -113,7 +113,10 @@ func newLinuxPressureAuthorWorkspace(ctx context.Context, value linuxPressureAut
 	}
 	target := value.Borrow.Target
 	target.PreparationRoot = filepath.Join(owner.path, "preparation")
-	if !owner.inner.attempted.CompareAndSwap(false, true) || owner.inner.prepareReferenceLayout(ctx, target, image, view) != nil || !owner.inner.tool.executorClaim.bindAuthorInner(owner.inner) || !owner.inner.tool.executorClaim.consumeAuthorInner(owner.inner) || owner.inner.measuredInputs(ctx, target, owner.inner.tool.identity) != nil {
+	// The target consumes its author purpose before the same explicit tool
+	// identity, provenance, referenceInputs, measured-input and image gates as
+	// the broker; construction just proved this identity from exact inputs.
+	if !owner.inner.attempted.CompareAndSwap(false, true) || owner.inner.prepareReferenceLayout(ctx, target, image, view) != nil || !owner.inner.tool.executorClaim.bindAuthorInner(owner.inner) || !owner.inner.tool.executorClaim.consumeAuthorInner(owner.inner) || verifyLinuxPressureTool(ctx, target, image, owner.inner) != nil {
 		return fail()
 	}
 	owner.authorTool, err = owner.inner.builds.ProtectReferenceToolV3(ctx, target.PreparationRoot, "t422-author", value.AuthorBinary, owner.inner.referenceHelper)
