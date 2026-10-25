@@ -304,3 +304,151 @@ func TestLinuxPressureAuthorGateArgumentWiring(t *testing.T) {
 		}
 	}
 }
+
+// The author target constructor requires a genuine root-created,
+// target-UID-owned private view to execute, so no unprivileged test reaches its
+// gate chain. Pin the exact ordered condition: the CAS, construction with the
+// private author view, the author purpose on owner.inner, then the shared
+// verifier, with the whole condition returning fail(). A branch that keeps both
+// consuming claims but drops, short-circuits or reorders the verifier, or swaps
+// any pinned argument, would otherwise leave every behavioral test green.
+// Resolution is name-based; a same-name local shadow is outside this oracle.
+func TestLinuxPressureAuthorTargetGateWiring(t *testing.T) {
+	file, err := parser.ParseFile(token.NewFileSet(), "pressure_author_workspace_linux.go", nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var constructor *ast.FuncDecl
+	for _, decl := range file.Decls {
+		if fn, ok := decl.(*ast.FuncDecl); ok && fn.Name.Name == "newLinuxPressureAuthorWorkspace" {
+			constructor = fn
+		}
+	}
+	if constructor == nil {
+		t.Fatal("author target constructor missing")
+	}
+	var orChain func(ast.Expr) []ast.Expr
+	orChain = func(expr ast.Expr) (predicates []ast.Expr) {
+		if binary, ok := expr.(*ast.BinaryExpr); ok && binary.Op == token.LOR {
+			return append(orChain(binary.X), orChain(binary.Y)...)
+		}
+		return []ast.Expr{expr}
+	}
+	var name func(ast.Expr) string
+	name = func(expr ast.Expr) string {
+		switch value := expr.(type) {
+		case *ast.Ident:
+			return value.Name
+		case *ast.SelectorExpr:
+			if prefix := name(value.X); prefix != "" {
+				return prefix + "." + value.Sel.Name
+			}
+		case *ast.CallExpr:
+			if callee := name(value.Fun); callee != "" {
+				return callee + "()"
+			}
+		}
+		return ""
+	}
+	predicate := func(expr ast.Expr) (string, bool, *ast.CallExpr) {
+		switch value := expr.(type) {
+		case *ast.UnaryExpr:
+			if value.Op != token.NOT {
+				return "", false, nil
+			}
+			call, ok := value.X.(*ast.CallExpr)
+			if !ok {
+				return "", false, nil
+			}
+			return name(call.Fun), true, call
+		case *ast.BinaryExpr:
+			if value.Op != token.NEQ {
+				return "", false, nil
+			}
+			if nilValue, ok := value.Y.(*ast.Ident); !ok || nilValue.Name != "nil" {
+				return "", false, nil
+			}
+			call, ok := value.X.(*ast.CallExpr)
+			if !ok {
+				return "", false, nil
+			}
+			return name(call.Fun), false, call
+		}
+		return "", false, nil
+	}
+	var gate *ast.IfStmt
+	ast.Inspect(constructor.Body, func(node ast.Node) bool {
+		stmt, ok := node.(*ast.IfStmt)
+		if !ok || gate != nil {
+			return true
+		}
+		predicates := orChain(stmt.Cond)
+		if callee, negated, _ := predicate(predicates[0]); callee == "owner.inner.attempted.CompareAndSwap" && negated {
+			gate = stmt
+		}
+		return true
+	})
+	if gate == nil {
+		t.Fatal("author target gate missing")
+	}
+	predicates := orChain(gate.Cond)
+	want := []struct {
+		callee  string
+		negated bool
+	}{
+		{"owner.inner.attempted.CompareAndSwap", true},
+		{"owner.inner.prepareReferenceLayout", false},
+		{"owner.inner.tool.executorClaim.bindAuthorInner", true},
+		{"owner.inner.tool.executorClaim.consumeAuthorInner", true},
+		{"verifyLinuxPressureTool", false},
+	}
+	if len(predicates) != len(want) {
+		t.Fatalf("author target gate has %d predicates, want %d", len(predicates), len(want))
+	}
+	for index, expected := range want {
+		callee, negated, _ := predicate(predicates[index])
+		if callee != expected.callee || negated != expected.negated {
+			t.Fatalf("author target gate predicate %d calls %q negated=%t, want %q negated=%t", index, callee, negated, expected.callee, expected.negated)
+		}
+	}
+	arguments := [][]string{
+		{"false", "true"},
+		{"ctx", "target", "image", "view"},
+		{"owner.inner"},
+		{"owner.inner"},
+		{"ctx", "target", "image", "owner.inner"},
+	}
+	for index, expected := range arguments {
+		_, _, call := predicate(predicates[index])
+		if len(call.Args) != len(expected) {
+			t.Fatalf("author target gate predicate %d has %d arguments, want %d", index, len(call.Args), len(expected))
+		}
+		for position, argument := range call.Args {
+			if got := name(argument); got != expected[position] {
+				t.Fatalf("author target gate predicate %d argument %d is %q, want %q", index, position, got, expected[position])
+			}
+		}
+	}
+	if len(gate.Body.List) != 1 {
+		t.Fatalf("author target gate has %d statements, want one fail return", len(gate.Body.List))
+	}
+	returned, ok := gate.Body.List[0].(*ast.ReturnStmt)
+	if !ok || len(returned.Results) != 1 {
+		t.Fatal("author target gate does not return fail()")
+	}
+	failCall, ok := returned.Results[0].(*ast.CallExpr)
+	if !ok || len(failCall.Args) != 0 || name(failCall.Fun) != "fail" {
+		t.Fatal("author target gate does not return fail()")
+	}
+	ast.Inspect(constructor.Body, func(node ast.Node) bool {
+		call, ok := node.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		callee := name(call.Fun)
+		if strings.HasSuffix(callee, ".bindPressureInner") || strings.HasSuffix(callee, ".consumePressureInner") {
+			t.Fatalf("author target workspace consumes ordinary pressure via %s", callee)
+		}
+		return true
+	})
+}
