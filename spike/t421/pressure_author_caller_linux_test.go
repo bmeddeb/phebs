@@ -3,6 +3,11 @@
 package t421
 
 import (
+	"context"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"os"
 	"strings"
 	"testing"
 )
@@ -72,5 +77,230 @@ func TestLinuxPressureAuthorCallerClaimAndSelection(t *testing.T) {
 	if ordinary.pressure.receipt("a", false) != linuxPressureBorrowReceipt("a", false) ||
 		ordinary.pressure.receipt("a", true) != linuxPressureBorrowReceipt("a", true) {
 		t.Fatal("ordinary pressure prework receipt")
+	}
+}
+
+// The author broker must apply the same explicit tool-identity, provenance,
+// referenceInputs and image gates as the ordinary pressure broker.
+func TestLinuxPressureAuthorToolParityGates(t *testing.T) {
+	value := linuxExecutorPreworkSelection{SourceCommit: strings.Repeat("a", 40)}
+	builds := &LinuxExecutionGoBuildCustody{}
+	tool := &LinuxExecutionToolCustody{referenceInputs: builds}
+	inner := &linuxExecutorInnerPrework{tool: tool, builds: builds}
+	good := ExecutionToolIdentity{Role: "t422-execute", BuildVCSRevision: value.SourceCommit, Provenance: "go-build-info-vcs-v1"}
+	if !linuxPressureToolIdentity(value, inner, good) {
+		t.Fatal("exact author tool identity refused")
+	}
+	for name, identity := range map[string]ExecutionToolIdentity{
+		"wrong-vcs":        {Role: "t422-execute", BuildVCSRevision: strings.Repeat("b", 40), Provenance: "go-build-info-vcs-v1"},
+		"wrong-provenance": {Role: "t422-execute", BuildVCSRevision: value.SourceCommit, Provenance: "go-module-build-v1"},
+		"empty":            {},
+	} {
+		if linuxPressureToolIdentity(value, inner, identity) {
+			t.Fatal("wrong author tool identity admitted", name)
+		}
+	}
+	unbound := &LinuxExecutionToolCustody{referenceInputs: &LinuxExecutionGoBuildCustody{}}
+	if linuxPressureToolIdentity(value, &linuxExecutorInnerPrework{tool: unbound, builds: builds}, good) ||
+		linuxPressureToolIdentity(value, &linuxExecutorInnerPrework{tool: tool}, good) ||
+		linuxPressureToolIdentity(value, &linuxExecutorInnerPrework{builds: builds}, good) ||
+		linuxPressureToolIdentity(value, nil, good) {
+		t.Fatal("unbound author referenceInputs admitted")
+	}
+	if verifyLinuxPressureTool(context.Background(), value, nil, &linuxExecutorInnerPrework{builds: builds}) != ErrLinuxPressure ||
+		verifyLinuxPressureTool(context.Background(), value, nil, nil) != ErrLinuxPressure {
+		t.Fatal("nil author verifier admitted")
+	}
+}
+
+// The author gate must refuse before root or volume work when its bound tool
+// cannot produce a checked identity. This is the callable gate the broker uses;
+// executing the broker branch itself still requires genuine native preparation.
+func TestLinuxPressureAuthorGateRefusal(t *testing.T) {
+	ctx := context.Background()
+	value := linuxExecutorPreworkSelection{SourceCommit: strings.Repeat("a", 40)}
+	image, err := os.CreateTemp(t.TempDir(), "sealed-image")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = image.Close() }()
+
+	builds := &LinuxExecutionGoBuildCustody{}
+	tool := &LinuxExecutionToolCustody{referenceInputs: builds}
+	claim := &linuxExecutorPreworkClaim{tool: tool, builds: builds}
+	tool.executorClaim = claim
+	inner := &linuxExecutorInnerPrework{tool: tool, builds: builds}
+	if err := prepareLinuxPressureAuthorGate(ctx, value, image, inner); err != ErrLinuxPressure {
+		t.Fatal("author gate admitted an unchecked tool", err)
+	}
+	if !claim.used.Load() || claim.purpose != 2 || claim.inner != inner {
+		t.Fatal("author gate did not consume its claim")
+	}
+	if err := prepareLinuxPressureAuthorGate(ctx, value, image, inner); err != ErrLinuxPressure {
+		t.Fatal("spent author claim admitted")
+	}
+
+	pressureBuilds := &LinuxExecutionGoBuildCustody{}
+	pressureTool := &LinuxExecutionToolCustody{referenceInputs: pressureBuilds}
+	pressureClaim := &linuxExecutorPreworkClaim{tool: pressureTool, builds: pressureBuilds}
+	pressureTool.executorClaim = pressureClaim
+	pressureInner := &linuxExecutorInnerPrework{tool: pressureTool, builds: pressureBuilds}
+	if !pressureClaim.bindPressureInner(pressureInner) || prepareLinuxPressureAuthorGate(ctx, value, image, pressureInner) != ErrLinuxPressure || pressureClaim.used.Load() {
+		t.Fatal("author gate admitted a pressure-purpose claim")
+	}
+
+	if prepareLinuxPressureAuthorGate(ctx, value, image, nil) != ErrLinuxPressure ||
+		prepareLinuxPressureAuthorGate(ctx, value, image, &linuxExecutorInnerPrework{builds: builds}) != ErrLinuxPressure ||
+		prepareLinuxPressureAuthorGate(ctx, value, image, &linuxExecutorInnerPrework{tool: &LinuxExecutionToolCustody{referenceInputs: builds}, builds: builds}) != ErrLinuxPressure {
+		t.Fatal("incomplete author gate admitted")
+	}
+}
+
+// The author broker branch requires genuine native preparation to execute, so
+// no behavioral test reaches its gate call. This wiring oracle fails if the
+// branch stops calling the author gate first, which would otherwise leave every
+// behavioral test green while bypassing the author purpose and identity gates.
+func TestLinuxPressureAuthorBrokerGateWiring(t *testing.T) {
+	file, err := parser.ParseFile(token.NewFileSet(), "pressure_borrow_broker_linux.go", nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var body *ast.BlockStmt
+	for _, decl := range file.Decls {
+		if fn, ok := decl.(*ast.FuncDecl); ok && fn.Name.Name == "runLinuxPressureBrokerRecipe" {
+			body = fn.Body
+			break
+		}
+	}
+	if body == nil {
+		t.Fatal("author broker recipe missing")
+	}
+	checked := false
+	ast.Inspect(body, func(node ast.Node) bool {
+		stmt, ok := node.(*ast.IfStmt)
+		if !ok || stmt.Else == nil {
+			return true
+		}
+		cond, ok := stmt.Cond.(*ast.BinaryExpr)
+		if !ok || cond.Op != token.EQL {
+			return true
+		}
+		left, leftOK := cond.X.(*ast.Ident)
+		right, rightOK := cond.Y.(*ast.Ident)
+		if !leftOK || !rightOK || left.Name != "author" || right.Name != "nil" {
+			return true
+		}
+		block, ok := stmt.Else.(*ast.BlockStmt)
+		if !ok || len(block.List) == 0 {
+			t.Fatal("author broker branch missing")
+		}
+		assign, ok := block.List[0].(*ast.AssignStmt)
+		if !ok || len(assign.Lhs) != 1 || len(assign.Rhs) != 1 {
+			t.Fatal("author broker branch does not start with the author gate")
+		}
+		lhs, lhsOK := assign.Lhs[0].(*ast.Ident)
+		call, callOK := assign.Rhs[0].(*ast.CallExpr)
+		if !lhsOK || !callOK {
+			t.Fatal("author broker branch does not call prepareLinuxPressureAuthorReference")
+		}
+		fn, fnOK := call.Fun.(*ast.Ident)
+		if !fnOK || lhs.Name != "workErr" || fn.Name != "prepareLinuxPressureAuthorReference" {
+			t.Fatal("author broker branch does not call prepareLinuxPressureAuthorReference")
+		}
+		checked = true
+		return false
+	})
+	if !checked {
+		t.Fatal("author broker branch not found")
+	}
+}
+
+// The broker wiring oracle above pins the branch call, but not the gate the
+// author wrapper hands to the shared constructor. Pin both wrapper arguments
+// and each gate's purpose/verifier calls so a swapped or omitted gate cannot
+// leave the suite green while the author purpose is consumed as ordinary
+// pressure.
+func TestLinuxPressureAuthorGateArgumentWiring(t *testing.T) {
+	file, err := parser.ParseFile(token.NewFileSet(), "pressure_borrow_broker_linux.go", nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := func(name string) *ast.BlockStmt {
+		for _, decl := range file.Decls {
+			if fn, ok := decl.(*ast.FuncDecl); ok && fn.Name.Name == name {
+				return fn.Body
+			}
+		}
+		t.Fatalf("%s missing", name)
+		return nil
+	}
+	called := func(body *ast.BlockStmt) map[string]bool {
+		names := map[string]bool{}
+		ast.Inspect(body, func(node ast.Node) bool {
+			call, ok := node.(*ast.CallExpr)
+			if !ok {
+				return true
+			}
+			switch fn := call.Fun.(type) {
+			case *ast.Ident:
+				names[fn.Name] = true
+			case *ast.SelectorExpr:
+				names[fn.Sel.Name] = true
+			}
+			return true
+		})
+		return names
+	}
+	for _, wrapper := range []struct {
+		entry string
+		gate  string
+	}{
+		{"prepareLinuxPressureReference", "prepareLinuxPressureBorrowGate"},
+		{"prepareLinuxPressureAuthorReference", "prepareLinuxPressureAuthorGate"},
+	} {
+		var returns []*ast.ReturnStmt
+		ast.Inspect(body(wrapper.entry), func(node ast.Node) bool {
+			if stmt, ok := node.(*ast.ReturnStmt); ok {
+				returns = append(returns, stmt)
+			}
+			return true
+		})
+		if len(returns) != 1 || len(returns[0].Results) != 1 {
+			t.Fatalf("%s does not have one shared-constructor return", wrapper.entry)
+		}
+		call, callOK := returns[0].Results[0].(*ast.CallExpr)
+		if !callOK || len(call.Args) != 5 {
+			t.Fatalf("%s does not call the shared constructor with a gate", wrapper.entry)
+		}
+		fn, fnOK := call.Fun.(*ast.Ident)
+		if !fnOK || fn.Name != "prepareLinuxPressureReferenceFor" {
+			t.Fatalf("%s does not call the shared constructor", wrapper.entry)
+		}
+		argument, argumentOK := call.Args[4].(*ast.Ident)
+		if !argumentOK || argument.Name != wrapper.gate {
+			t.Fatalf("%s does not pass %s", wrapper.entry, wrapper.gate)
+		}
+	}
+	borrow := called(body("prepareLinuxPressureBorrowGate"))
+	author := called(body("prepareLinuxPressureAuthorGate"))
+	for _, name := range []string{"bindPressureInner", "consumePressureInner", "verifyLinuxPressureTool"} {
+		if !borrow[name] {
+			t.Fatalf("ordinary pressure gate omits %s", name)
+		}
+	}
+	for _, name := range []string{"bindAuthorInner", "consumeAuthorInner", "verifyLinuxPressureTool"} {
+		if !author[name] {
+			t.Fatalf("author pressure gate omits %s", name)
+		}
+	}
+	for _, name := range []string{"bindPressureInner", "consumePressureInner"} {
+		if author[name] {
+			t.Fatalf("author pressure gate consumes ordinary pressure via %s", name)
+		}
+	}
+	for _, name := range []string{"bindAuthorInner", "consumeAuthorInner"} {
+		if borrow[name] {
+			t.Fatalf("ordinary pressure gate consumes the author purpose via %s", name)
+		}
 	}
 }
