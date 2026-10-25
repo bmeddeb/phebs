@@ -17,18 +17,62 @@ import (
 )
 
 func prepareLinuxPressureReference(ctx context.Context, value linuxExecutorPreworkSelection, image *os.File, inner *linuxExecutorInnerPrework) error {
-	if inner == nil || !inner.attempted.CompareAndSwap(false, true) || ctx == nil || ctx.Err() != nil || image == nil {
+	return prepareLinuxPressureReferenceFor(ctx, value, image, inner, prepareLinuxPressureBorrowGate)
+}
+
+func prepareLinuxPressureAuthorReference(ctx context.Context, value linuxExecutorPreworkSelection, image *os.File, inner *linuxExecutorInnerPrework) error {
+	return prepareLinuxPressureReferenceFor(ctx, value, image, inner, prepareLinuxPressureAuthorGate)
+}
+
+// Both pressure branches share the finite prework construction and differ only
+// in the purpose-bound claim gate that follows it.
+func prepareLinuxPressureReferenceFor(ctx context.Context, value linuxExecutorPreworkSelection, image *os.File, inner *linuxExecutorInnerPrework, gate func(context.Context, linuxExecutorPreworkSelection, *os.File, *linuxExecutorInnerPrework) error) error {
+	if inner == nil || gate == nil || !inner.attempted.CompareAndSwap(false, true) || ctx == nil || ctx.Err() != nil || image == nil {
 		return ErrLinuxPressure
 	}
-	if inner.prepareReference(ctx, value, image) != nil || !inner.tool.executorClaim.bindPressureInner(inner) || !inner.tool.executorClaim.consumePressureInner(inner) {
+	if inner.prepareReference(ctx, value, image) != nil {
+		return ErrLinuxPressure
+	}
+	return gate(ctx, value, image, inner)
+}
+
+func prepareLinuxPressureBorrowGate(ctx context.Context, value linuxExecutorPreworkSelection, image *os.File, inner *linuxExecutorInnerPrework) error {
+	if inner == nil || inner.tool == nil || !inner.tool.executorClaim.bindPressureInner(inner) || !inner.tool.executorClaim.consumePressureInner(inner) {
+		return ErrLinuxPressure
+	}
+	return verifyLinuxPressureTool(ctx, value, image, inner)
+}
+
+// prepareLinuxPressureAuthorGate consumes the author purpose before running the
+// same explicit tool-identity, provenance, referenceInputs, measured-input and
+// image checks as the ordinary pressure branch. A pressure-purpose claim and a
+// spent claim both refuse here.
+func prepareLinuxPressureAuthorGate(ctx context.Context, value linuxExecutorPreworkSelection, image *os.File, inner *linuxExecutorInnerPrework) error {
+	if inner == nil || inner.tool == nil || !inner.tool.executorClaim.bindAuthorInner(inner) || !inner.tool.executorClaim.consumeAuthorInner(inner) {
+		return ErrLinuxPressure
+	}
+	return verifyLinuxPressureTool(ctx, value, image, inner)
+}
+
+// Both pressure branches must establish the same reference-tool parity before
+// any root work. Author mode previously relied on later image and namespace
+// observations instead of these explicit gates; keep one implementation so a
+// future branch cannot silently omit them.
+func verifyLinuxPressureTool(ctx context.Context, value linuxExecutorPreworkSelection, image *os.File, inner *linuxExecutorInnerPrework) error {
+	if inner == nil || inner.tool == nil {
 		return ErrLinuxPressure
 	}
 	identity, err := inner.tool.Check(ctx, "t422-execute")
-	if err != nil || inner.tool.referenceInputs != inner.builds || identity.BuildVCSRevision != value.SourceCommit || identity.Provenance != "go-build-info-vcs-v1" ||
+	if err != nil || !linuxPressureToolIdentity(value, inner, identity) ||
 		inner.measuredInputs(ctx, value, identity) != nil || linuxExecutorImage(ctx, image) != nil {
 		return ErrLinuxPressure
 	}
 	return nil
+}
+
+func linuxPressureToolIdentity(value linuxExecutorPreworkSelection, inner *linuxExecutorInnerPrework, identity ExecutionToolIdentity) bool {
+	return inner != nil && inner.tool != nil && inner.builds != nil && inner.tool.referenceInputs == inner.builds &&
+		identity.BuildVCSRevision == value.SourceCommit && identity.Provenance == "go-build-info-vcs-v1"
 }
 
 func runLinuxPressureBroker(ctx context.Context, value linuxPressureBorrowSelection, parent *linuxExecutorParent, image *os.File, namespace *linuxPressureBorrowNamespace, failureAttempted *bool) (retired, retained bool, retErr error) {
@@ -41,9 +85,7 @@ func runLinuxPressureBrokerRecipe(ctx context.Context, value linuxPressureBorrow
 	if author == nil {
 		workErr = prepareLinuxPressureReference(ctx, value.Broker, image, inner)
 	} else {
-		if !inner.attempted.CompareAndSwap(false, true) || inner.prepareReference(ctx, value.Broker, image) != nil || !inner.tool.executorClaim.bindAuthorInner(inner) || !inner.tool.executorClaim.consumeAuthorInner(inner) || inner.measuredInputs(ctx, value.Broker, inner.tool.identity) != nil {
-			workErr = ErrLinuxPressure
-		}
+		workErr = prepareLinuxPressureAuthorReference(ctx, value.Broker, image, inner)
 	}
 	if workErr == nil {
 		builds := inner.builds
