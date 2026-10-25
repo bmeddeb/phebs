@@ -59,6 +59,16 @@ type ExecutionAttemptObservation struct {
 // goroutines and its independently retained bootstrap input identity. Never
 // inspect a live checkoutCommandOutput or infer pipe EOF from a PC01 ACK.
 func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]byte, joined bool) (out ExecutionAttemptObservation, err error) {
+	return observeExecutionAttemptsForClose(raw, plan, producer, input, joined, false)
+}
+
+// The source-owned ordinary V6 return close ends after phase 6. It may retain
+// that joined prefix without inventing final-authority terminals for phases 7
+// and 8. Full producer/receipt completeness remains false in this mode.
+func observeExecutionAttemptsForClose(raw []byte, plan Plan, producer uint32, input [32]byte, joined, ordinaryReturn bool) (out ExecutionAttemptObservation, err error) {
+	if ordinaryReturn && (plan.Schema != PlanV6Schema || producer != 4) {
+		return out, errExecutionAttempts
+	}
 	defer func() {
 		if err != nil {
 			out.ArchiveArtifacts.Complete = false
@@ -101,6 +111,12 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 			}
 			if producer <= 6 {
 				for _, phase := range executionProducerPhases(producer) {
+					if ordinaryReturn && phase != 6 {
+						if out.Reuse.Phases[phase-1] != (ExecutionReusePhase{}) {
+							return out, errExecutionAttempts
+						}
+						continue
+					}
 					if !out.Reuse.Phases[phase-1].Complete {
 						return out, errExecutionAttempts
 					}
@@ -109,9 +125,9 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 			if !validExecutionHandoffRecord(plan, executionJoinedWorkRecord{Producer: producer, Input: input, Attempts: out}) {
 				return out, errExecutionAttempts
 			}
-			out.Complete = true
+			out.Complete = !ordinaryReturn
 			out.ArchiveArtifacts.Complete = out.ArchiveArtifacts.complete(producer)
-			out.Reuse.Complete = producer <= 6 && out.Reuse.Bound
+			out.Reuse.Complete = producer <= 6 && out.Reuse.Bound && !ordinaryReturn
 			out.Lifecycle.Complete = out.Lifecycle.Bound
 			out.Cache.Complete = out.Cache.complete()
 			out.SourceCensus.Complete = out.SourceCensus.complete()
@@ -242,7 +258,8 @@ func (run *ExecutionEpochOneRun) finishAttemptObservation(ctx context.Context, r
 		return ErrExecutionEpochOne // Do not inspect a possibly live buffer.
 	}
 	var err error
-	result.Attempts, err = observeExecutionAttempts(run.output.buffer.Bytes(), run.flow.plan, run.producer(), run.attemptInput, true)
+	ordinaryReturn := run.flow.plan.Schema == PlanV6Schema && run.epoch.Epoch == 3 && !run.checkpointAllowed
+	result.Attempts, err = observeExecutionAttemptsForClose(run.output.buffer.Bytes(), run.flow.plan, run.producer(), run.attemptInput, true, ordinaryReturn)
 	var indexErr error
 	result.IndexOffers, indexErr = observeExecutionIndexOffers(run.output.buffer.Bytes(), run.flow.plan, run.producer(), run.attemptInput, true, err == nil && failure == nil)
 	footer, footerErr := executionTerminalFooterForPlan(run.output.buffer.Bytes(), run.attemptInput, run.flow.plan.Schema)
