@@ -5013,6 +5013,20 @@ compilation and independent exact-head review before scoped commit/push.
 This does not resolve the v13 cause or authorize a driver/profile change,
 qualification retry, cleanup, merge or full acceptance.
 
+**2026-10-25 — MED-495 ordinary V6 return-close correction.** The retained
+`7429d441` V14 run reached ReturnA then failed final Stop because its joined
+producer-four log has only the executed phase-six reuse terminal; the parser
+also demanded future phases seven/eight. An ordinary V6 non-checkpoint finish
+now validates that executed prefix without inventing future zero-work records.
+Producer and reuse completeness remain false, so full receipt/checkpoint
+requirements stay strict. Preserve the original failed fixture, all sticky
+refusals, 4-GiB RSS, full corpus and existing deadlines. Namespace/workspace,
+custody, security and formal plan/receipt behavior remain unchanged. Require
+old-source failing regression, affected normal/race controls, exact retained-log
+replay, static/docs checks and independent review. Fresh driver/profile action
+approval and unchanged full native gates remain prerequisites to retry and
+acceptance; the former V14 installation approval cannot admit a changed image.
+
 **T42.H2s.a · Genuine Linux terminal-result ownership (MED-496 prerequisite,
 2026-10-21).** Ben directs taking the next backlog ticket while the isolated
 `f8f00f40` c.c run executes on maria. Retain the creating tracer actor's actual

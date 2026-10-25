@@ -16997,3 +16997,26 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   unchanged. Pure-state/self-proc regressions can prove attribution and retained
   witnesses without reproducing Maria's unknown native failure. Full native,
   successor, memory-fit, accounting/cleanup, readiness and scale remain open.
+
+- **2026-10-25 — MED-495 ordinary return joined-report coverage.** The exact
+  `7429d441` V14 run returned native Wait1 at final Stop after ReturnA succeeded.
+  Its retained producer-four joined log contains the phase-six reuse terminal
+  and no phase-seven/eight terminals. The full producer parser requires all
+  three, while the ordinary V6 diagnostic intentionally ends after phase six.
+  Synthetic fixture zero terminals had hidden this mismatch. Only a genuine
+  V6 epoch-three non-checkpoint finish selects ordinary-prefix validation.
+  Require the executed phase-six terminal, refuse unexpected future terminals,
+  and retain unknown future phases with producer and reuse completeness false.
+  Default full/checkpoint parsing and full receipt validation remain strict;
+  other family validation, actual joins, sticky refusal and every bound remain.
+  No namespace/workspace implementation or security setting changes. Preserve
+  the failed fixture and original source; isolated regression/replay success
+  grants no full native, RSS, custody/accounting/cleanup or readiness acceptance.
+
+  Cost: one private mode decision at the existing joined finish and at most
+  three fixed reuse-slot checks in the existing EOF pass. No extra scan, raw
+  output copy, corpus/shard read, hashing, child, timer, goroutine, lock, cache,
+  persistent state or query/request, sync, startup/restart, retry/no-op or
+  publication-transition work. The existing 64-MiB output cap and lifetimes
+  remain exact. Fresh exact-source review and driver/profile approval precede
+  any new bounded full qualification; prior V14 approval is not transferable.
