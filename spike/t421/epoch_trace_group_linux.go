@@ -74,12 +74,23 @@ func (root *linuxEpochTraceRoot) exitingGroupAnchor(ctx context.Context, leader 
 // narrower than discovering live work. Across groups one turn reads at most
 // the global TID cap plus one overflow sentinel, with no recursive/host scan.
 func (root *linuxEpochTraceRoot) reconcileExitingGroups(ctx context.Context) error {
-	if !root.gateOwned {
+	if !root.gateOwned || ctx == nil {
 		return ErrExecutionEpochOne
+	}
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 	remaining := linuxEpochTraceMaxTIDs
 	for _, leader := range root.owner.leaders {
 		if leader.root != root || !leader.exiting {
+			continue
+		}
+		// SIGKILL issue is not process-group terminal proof. A Z original
+		// root can still have stopped mm siblings and an unreadable pidfd.
+		// Keep its own group progressing, but do not ask a dying descendant
+		// to prove that root as terminal until the actual CLD path did so.
+		// No task, ownership, RSS or terminal authority is retired here.
+		if root.hardDeathIssued && !root.exitSeen && leader.original.pid != root.original.pid {
 			continue
 		}
 		sibling := false

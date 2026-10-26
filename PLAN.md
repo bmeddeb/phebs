@@ -17811,3 +17811,27 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   acceptance. A changed-source native image/profile still needs exact admission
   and specific installation approval; preserve qualified V15 and failed V14.
   This slice does not resume the safeguarded namespace/workspace implementation.
+
+- **2026-10-26 — MED-496 pending root-death reconciliation.** The retained V16
+  failure reached the selected checkpoint cutover, then asked a dying child
+  group for its parent's terminal anchor while the original root was Z but its
+  process pidfd still reported no readiness. Source-issued SIGKILL is not
+  process-group terminal proof. Defer only nonroot exiting-group reconciliation
+  until the existing actual CLD/terminal-proof path publishes `exitSeen`; keep
+  the original root group's reconciliation enabled. Cancellation still refuses.
+  This grants no continuation, adoption, zero-RSS, terminal, custody, accounting
+  or cleanup credit. Existing image, birth, parent, namespace, pidfd and genuine
+  Wait requirements remain independent and unchanged.
+
+  The cost is fixed comparisons per already-owned leader in the existing turn.
+  There is no new scan, query, lock, timer, goroutine, child, hash or allocation
+  in the runtime path. Existing census bounds, sampling cadence, resource limits
+  and deadlines remain exact. A test-only isolated adopter, real registered
+  child group and withheld actual root-sibling EXIT/child-CLONE stops exercise
+  pending root Z/pidfd0, negative bindings, later genuine SIGKILL Wait and joined
+  session/DA settlement. Its old-source counterfactual and corrected normal/race
+  gates must stand on retained raw evidence; compilation alone is not proof.
+  Preserve the V16 fixture and source. This tracer scheduling correction changes
+  no namespace creation, workspace ownership, policy, security setting or Surreal
+  parent-death safeguard. It authorizes no driver/profile installation, full
+  qualification retry, integration or acceptance.
