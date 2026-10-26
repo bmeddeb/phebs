@@ -38,6 +38,7 @@ type t422CheckpointBridge struct {
 	Input       t422CheckpointRecoveryInput `json:"input"`
 	RuntimeRoot string                      `json:"runtime_root"`
 	Schedule    store.GenerationSchedule    `json:"schedule"`
+	DataDir     string                      `json:"data_dir,omitempty"`
 }
 
 func loadT422CheckpointBridge(t *testing.T, path string) t422CheckpointBridge {
@@ -51,8 +52,13 @@ func loadT422CheckpointBridge(t *testing.T, path string) t422CheckpointBridge {
 }
 
 // Test-only producer/recovery/HTTP bridge. No source exports, production hook,
-// privileged driver, real credential or native fixture is introduced.
+// privileged driver, existing credential or retained native fixture is used.
 func TestT422CheckpointRecoveryHTTPBridge(t *testing.T) {
+	runT422CheckpointHTTPBridgeCases(t, false)
+}
+
+func runT422CheckpointHTTPBridgeCases(t *testing.T, realStore bool) {
+	t.Helper()
 	root, err := filepath.Abs("../..")
 	if err != nil {
 		t.Fatal(err)
@@ -80,7 +86,11 @@ func TestT422CheckpointRecoveryHTTPBridge(t *testing.T) {
 	if err != nil || json.Unmarshal(raw, &metadata) != nil {
 		t.Fatal("read generated fixture", err)
 	}
-	for _, mode := range []string{"http_complete", "http_recovered_first", "http_wrong_chunk", "http_same_lease", "http_report_failure", "http_wrong_trailer", "http_wrong_plan"} {
+	modes := []string{"http_complete", "http_recovered_first", "http_wrong_chunk", "http_same_lease", "http_report_failure", "http_wrong_trailer", "http_wrong_plan"}
+	if realStore {
+		modes = modes[:5]
+	}
+	for _, mode := range modes {
 		t.Run(mode, func(t *testing.T) {
 			private := t.TempDir()
 			copyRoot := filepath.Join(private, "runtime")
@@ -111,7 +121,10 @@ func TestT422CheckpointRecoveryHTTPBridge(t *testing.T) {
 			if mode == "http_wrong_plan" {
 				input.Hit.PlanDigest, input.Roots[4].PlanDigest = t422CheckpointTestDigest, t422CheckpointTestDigest
 			}
-			bridge := t422CheckpointBridge{input, copyRoot, metadata.Schedule}
+			bridge := t422CheckpointBridge{Input: input, RuntimeRoot: copyRoot, Schedule: metadata.Schedule}
+			if realStore {
+				prepareT422RealStoreBridge(t, &bridge, private)
+			}
 			raw, err := json.Marshal(bridge)
 			path := filepath.Join(private, "input.json")
 			if err != nil || os.WriteFile(path, raw, 0o600) != nil {
@@ -219,7 +232,10 @@ func (fence t422BridgeFence) FenceDomain(_ context.Context, request extractionpu
 func testT422CheckpointHTTPBridge(t *testing.T, ctx context.Context, mode string, launch *t422SemanticLaunch, owners *dispatchadmission.Owners, lifetime *dispatchadmission.ProductionLifetime, bridge t422CheckpointBridge, failures *atomic.Int32) {
 	t.Helper()
 	seq := &t422RecoverySchedulerStore{available: make(chan struct{}), recoveredEntered: make(chan struct{}), reaperContext: make(chan context.Context, 1), beforeRequeue: mode == "http_recovered_first"}
-	state := &t422BridgeStore{t422RecoverySchedulerStore: seq, schedule: bridge.Schedule}
+	var state t422HTTPBridgeStore = &t422BridgeStore{t422RecoverySchedulerStore: seq, schedule: bridge.Schedule}
+	if bridge.DataDir != "" {
+		state = openT422RealStoreBridge(t, ctx, bridge.DataDir, seq)
+	}
 	runtime := &extractionpublication.Runtime{Root: bridge.RuntimeRoot, Store: state, Source: t422BridgeUnused{}, Executor: t422BridgeUnused{}, Publisher: t422BridgePublisher{}, Fence: t422BridgeFence{launch.request.Repository, bridge.Input.Hit.SourceGenerationDigest}}
 	control, err := newT422CheckpointRecoveryControl(ctx, launch, &extractionpublication.Reconciler{StoreAccounting: true, Runtime: runtime, Root: bridge.RuntimeRoot})
 	if err != nil {
@@ -259,6 +275,9 @@ func testT422CheckpointHTTPBridge(t *testing.T, ctx context.Context, mode string
 				}
 				return err
 			}}}}
+	if bridge.DataDir != "" {
+		scheduler.PollEvery, scheduler.HeartbeatEvery, scheduler.StaleAfter = time.Second, 5*time.Second, 20*time.Second
+	}
 	go func() {
 		if err := control.waitForReader(runCtx); err != nil {
 			joined <- err
