@@ -146,6 +146,29 @@ func (control *t422CheckpointRecoveryControl) eventTarget(event store.Generation
 		event.ChunkIdentity == hit.ChunkIdentity && event.Offset == int64(control.input.Offset) && event.Length == 1 && event.Attempt == 0
 }
 
+// The scheduler also emits Recovered for ordinary released/deferred chunks:
+// stale priority is not proof that a chunk is this checkpoint's selected lease.
+// Ignore only a well-formed completion of another exact chunk in this schedule.
+// It supplies no selected barrier, read, report or final-authority credit. An
+// event naming either selected coordinate, or any malformed/foreign event,
+// still reaches all existing strict transition checks.
+func (control *t422CheckpointRecoveryControl) observeTransition(ctx context.Context, event store.GenerationStaleLeaseTransition) error {
+	hit := control.input.Hit
+	if event.Point == store.GenerationStaleLeaseTransitionRecovered &&
+		event.Repository == control.launch.request.Repository && event.Stage == extractionpublication.ScheduleStage &&
+		event.ResourceClass == store.GenerationResourceExtraction && event.Generation == hit.ScheduleGeneration && event.ScheduleDigest == hit.ScheduleDigest &&
+		event.ChunkIdentity != hit.ChunkIdentity && event.Offset != int64(control.input.Offset) && event.Length == 1 && event.Attempt == 0 &&
+		event.Priority == store.GenerationPriorityStale && event.ChunkStatus == store.GenerationChunkDone && !event.Leased && event.StaleBefore.IsZero() &&
+		event.ScheduleStatus == "" && event.ChunkStateDigest == "" && event.CheckpointStateDigest == "" &&
+		t422SemanticDigest(event.PrivateLeaseTokenDigest) {
+		identity, err := store.GenerationChunkIdentity(event.ScheduleDigest, event.Offset, event.Attempt)
+		if err == nil && identity == event.ChunkIdentity {
+			return nil
+		}
+	}
+	return control.transition(ctx, event)
+}
+
 // Native Hit/Requeued are private synchronization only. Recovery may race the
 // post-COMMIT Requeued callback, so rendezvous on that callback, never infer it.
 func (control *t422CheckpointRecoveryControl) transition(ctx context.Context, event store.GenerationStaleLeaseTransition) error {

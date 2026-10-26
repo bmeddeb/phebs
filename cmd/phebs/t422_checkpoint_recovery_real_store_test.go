@@ -63,6 +63,12 @@ func prepareT422RealStoreBridge(t *testing.T, bridge *t422CheckpointBridge, priv
 			t.Fatal("actual bridge checkpoint claim refused")
 		}
 		if offset != 2 {
+			if bridge.DeferredSibling && offset == 1 {
+				if err := state.DeferGenerationChunk(ctx, *chunk, "bounded unrelated runtime deferral", time.Millisecond); err != nil {
+					t.Fatal("actual sibling deferral refused", err)
+				}
+				continue
+			}
 			// The exported immutable image already contains these two results.
 			// Seed their actual completion rows; do not claim their production run.
 			if err := state.CompleteGenerationChunk(ctx, *chunk); err != nil {
@@ -92,8 +98,12 @@ func prepareT422RealStoreBridge(t *testing.T, bridge *t422CheckpointBridge, priv
 		counts, finishErr := ledger.Finish()
 		cancel()
 		inventory, available := projection.Observation()
+		wantSuccesses := uint64(2)
+		if bridge.DeferredSibling {
+			wantSuccesses = 1
+		}
 		if readErr != nil || finishErr != nil || counts != (readaccounting.Counts{ControlFileReads: 7, StoreReadAttempts: 4}) ||
-			!available || inventory.Chunks != 3 || inventory.Successes != 2 || inventory.ScheduleSHA256 != s.Digest {
+			!available || inventory.Chunks != 3 || inventory.Successes != wantSuccesses || inventory.ScheduleSHA256 != s.Digest {
 			t.Fatalf("actual bridge checkpoint read refused: read_error=%t finish_error=%t counts=%+v inventory=%t", readErr != nil, finishErr != nil, counts, available)
 		}
 		value.ObservedScheduleChunks, value.ObservedScheduleSuccesses = inventory.Chunks, inventory.Successes
@@ -189,10 +199,15 @@ func (state *t422RealBridgeStore) ClaimGenerationChunk(ctx context.Context, clas
 		return nil, ctx.Err()
 	case <-seq.available:
 	}
-	if seq.claimed.Swap(true) {
+	if seq.claimed.Swap(true) && !seq.deferredSibling {
 		return nil, store.ErrNotFound
 	}
-	if !seq.beforeRequeue {
+	// This bounded bridge owns only the deferred sibling and selected claim.
+	// Do not start an unrelated third SDK query while the helper joins.
+	if seq.deferredSibling && seq.claimTurns.Add(1) > 2 {
+		return nil, store.ErrNotFound
+	}
+	if !seq.beforeRequeue && !seq.reaperJoined.Swap(true) {
 		reaper := <-seq.reaperContext
 		select {
 		case <-ctx.Done():

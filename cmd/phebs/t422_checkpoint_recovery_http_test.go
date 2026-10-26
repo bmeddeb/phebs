@@ -35,10 +35,11 @@ import (
 const t422CheckpointBridgeEnvironment = "PHEBS_TEST_CHECKPOINT_BRIDGE_INPUT"
 
 type t422CheckpointBridge struct {
-	Input       t422CheckpointRecoveryInput `json:"input"`
-	RuntimeRoot string                      `json:"runtime_root"`
-	Schedule    store.GenerationSchedule    `json:"schedule"`
-	DataDir     string                      `json:"data_dir,omitempty"`
+	Input           t422CheckpointRecoveryInput `json:"input"`
+	RuntimeRoot     string                      `json:"runtime_root"`
+	Schedule        store.GenerationSchedule    `json:"schedule"`
+	DataDir         string                      `json:"data_dir,omitempty"`
+	DeferredSibling bool                        `json:"deferred_sibling,omitempty"`
 }
 
 func loadT422CheckpointBridge(t *testing.T, path string) t422CheckpointBridge {
@@ -86,9 +87,9 @@ func runT422CheckpointHTTPBridgeCases(t *testing.T, realStore bool) {
 	if err != nil || json.Unmarshal(raw, &metadata) != nil {
 		t.Fatal("read generated fixture", err)
 	}
-	modes := []string{"http_complete", "http_recovered_first", "http_wrong_chunk", "http_same_lease", "http_report_failure", "http_wrong_trailer", "http_wrong_plan"}
+	modes := []string{"http_complete", "http_recovered_first", "http_wrong_chunk", "http_same_lease", "http_report_failure", "http_wrong_trailer", "http_wrong_plan", "http_wrong_offset"}
 	if realStore {
-		modes = modes[:5]
+		modes = append(modes[:5], "http_deferred_sibling")
 	}
 	for _, mode := range modes {
 		t.Run(mode, func(t *testing.T) {
@@ -121,7 +122,7 @@ func runT422CheckpointHTTPBridgeCases(t *testing.T, realStore bool) {
 			if mode == "http_wrong_plan" {
 				input.Hit.PlanDigest, input.Roots[4].PlanDigest = t422CheckpointTestDigest, t422CheckpointTestDigest
 			}
-			bridge := t422CheckpointBridge{Input: input, RuntimeRoot: copyRoot, Schedule: metadata.Schedule}
+			bridge := t422CheckpointBridge{Input: input, RuntimeRoot: copyRoot, Schedule: metadata.Schedule, DeferredSibling: mode == "http_deferred_sibling"}
 			if realStore {
 				prepareT422RealStoreBridge(t, &bridge, private)
 			}
@@ -231,7 +232,7 @@ func (fence t422BridgeFence) FenceDomain(_ context.Context, request extractionpu
 
 func testT422CheckpointHTTPBridge(t *testing.T, ctx context.Context, mode string, launch *t422SemanticLaunch, owners *dispatchadmission.Owners, lifetime *dispatchadmission.ProductionLifetime, bridge t422CheckpointBridge, failures *atomic.Int32) {
 	t.Helper()
-	seq := &t422RecoverySchedulerStore{available: make(chan struct{}), recoveredEntered: make(chan struct{}), reaperContext: make(chan context.Context, 1), beforeRequeue: mode == "http_recovered_first"}
+	seq := &t422RecoverySchedulerStore{available: make(chan struct{}), recoveredEntered: make(chan struct{}), reaperContext: make(chan context.Context, 1), beforeRequeue: mode == "http_recovered_first", deferredSibling: bridge.DeferredSibling}
 	var state t422HTTPBridgeStore = &t422BridgeStore{t422RecoverySchedulerStore: seq, schedule: bridge.Schedule}
 	if bridge.DataDir != "" {
 		state = openT422RealStoreBridge(t, ctx, bridge.DataDir, seq)
@@ -251,6 +252,7 @@ func testT422CheckpointHTTPBridge(t *testing.T, ctx context.Context, mode string
 		PrivateLeaseTokenDigest: store.GenerationLeaseTokenDigest("killed-native-fixture-lease")}
 	seq.requeued = seq.hit
 	seq.requeued.Point, seq.requeued.Priority, seq.requeued.ChunkStatus, seq.requeued.Leased, seq.requeued.StaleBefore = store.GenerationStaleLeaseTransitionRequeued, store.GenerationPriorityStale, store.GenerationChunkPending, false, time.Time{}
+	var siblingCallbacks atomic.Int32
 	finished, joined := make(chan error, 1), make(chan error, 1)
 	runCtx, stop := context.WithCancel(ctx)
 	defer stop()
@@ -260,18 +262,32 @@ func testT422CheckpointHTTPBridge(t *testing.T, ctx context.Context, mode string
 				return runtime.Handle(ctx, chunk)
 			},
 			OnStaleLeaseTransition: func(ctx context.Context, event store.GenerationStaleLeaseTransition) error {
-				if event.Point == store.GenerationStaleLeaseTransitionRecovered {
+				selected := event.ChunkIdentity == hit.ChunkIdentity || event.Offset == int64(bridge.Input.Offset)
+				if event.Point == store.GenerationStaleLeaseTransitionRecovered && selected {
 					close(seq.recoveredEntered)
 					if mode == "http_wrong_chunk" {
 						event.ChunkIdentity = t422CheckpointTestDigest
+					}
+					if mode == "http_wrong_offset" {
+						event.Offset++
 					}
 					if mode == "http_same_lease" {
 						event.PrivateLeaseTokenDigest = seq.hit.PrivateLeaseTokenDigest
 					}
 				}
-				err := control.transition(ctx, event)
+				err := control.observeTransition(ctx, event)
 				if event.Point == store.GenerationStaleLeaseTransitionRecovered {
-					finished <- err
+					if selected || err != nil {
+						finished <- err
+					} else {
+						control.mu.Lock()
+						credited := control.failure != nil || control.recovered.observer != nil || control.recovered.reported
+						control.mu.Unlock()
+						if credited {
+							t.Error("unrelated completion supplied selected recovery credit")
+						}
+						siblingCallbacks.Add(1)
+					}
 				}
 				return err
 			}}}}
@@ -362,14 +378,17 @@ func testT422CheckpointHTTPBridge(t *testing.T, ctx context.Context, mode string
 	expected.ObservedScheduleChunks, expected.ObservedScheduleSuccesses = 3, 3
 	validBody := json.Unmarshal(body, &value) == nil && value == expected
 	accepted := response.StatusCode == http.StatusOK && report.Schema == t421ExactReadReportSchema && report.RequestOrdinal == 1 && report.Status == "complete" && report.ControlFileReads == 7 && report.StoreReadAttempts == 4 && report.MemberVisits == 0 && report.StoreWriteAttempts == 0 && validBody && callbackErr == nil && !sinkFailed.Load() && control.recovered.reported
-	want := mode == "http_complete" || mode == "http_recovered_first"
+	want := mode == "http_complete" || mode == "http_recovered_first" || mode == "http_deferred_sibling"
 	if accepted != want || control.finalSeen || sinkCalls.Load() != 1 {
 		t.Fatal("bridge acceptance differs", mode, response.StatusCode, report, callbackErr, control.failure, string(body))
+	}
+	if bridge.DeferredSibling && siblingCallbacks.Load() != 1 {
+		t.Fatal("actual deferred sibling did not complete before selected recovery", siblingCallbacks.Load())
 	}
 	if want && (failures.Load() != 0 || control.failure != nil) {
 		t.Fatal("valid bridge refused", control.failure)
 	}
-	if mode == "http_wrong_chunk" || mode == "http_same_lease" {
+	if mode == "http_wrong_chunk" || mode == "http_wrong_offset" || mode == "http_same_lease" {
 		if response.StatusCode != 409 || string(body) != "exact read request refused\n" || report.ControlFileReads != 0 || report.StoreReadAttempts != 0 || control.failure == nil {
 			t.Fatal("refusal envelope differs", report, control.failure)
 		}
@@ -377,6 +396,9 @@ func testT422CheckpointHTTPBridge(t *testing.T, ctx context.Context, mode string
 	if mode == "http_wrong_chunk" && (control.failure.Stage != t422RecoveryTransitionTarget || !control.failure.Event.Identity) ||
 		mode == "http_same_lease" && (control.failure.Stage != t422RecoveryTransitionState || !control.failure.Event.Token) {
 		t.Fatal("callback refusal not disambiguated", control.failure)
+	}
+	if mode == "http_wrong_offset" && (control.failure.Stage != t422RecoveryTransitionTarget || !control.failure.Event.Offset) {
+		t.Fatal("selected offset mismatch bypassed strict control", control.failure)
 	}
 	if mode == "http_report_failure" && (!validBody || report.Status != "complete" || report.ControlFileReads != 7 || report.StoreReadAttempts != 4 || callbackErr == nil || control.recovered.reported || control.failure == nil || control.failure.Stage != t422RecoveryReadReport) {
 		t.Fatal("report-sink failure gained acceptance", report, control.failure)

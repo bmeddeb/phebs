@@ -17872,3 +17872,38 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   all failed/qualified evidence. This command-layer slice changes no
   namespace/workspace implementation or security policy and authorizes no
   changed-driver installation, native retry, push, merge or acceptance.
+
+- **2026-10-26 — MED-496 selected recovery callback routing.** V18's first
+  retained refusal is `transition_target/stale_control`, recovered identity
+  and offset mismatch only, live caller/lifetime and an unexpired callback.
+  Its selected global offset29 is `proto-contract`; the immediately preceding
+  completed offset33 is `scip-proto-field`. The actual failed event identity
+  was not logged, so that particular origin remains an inference, and V17's
+  earlier cause is unproven. Ordinary release/deferral uses stale priority too;
+  the scheduler emits Recovered for every completed chunk at that priority.
+  Wiring the entire class directly to one checkpoint target can therefore
+  poison it with a legitimate unrelated completion. A tiny actual-store
+  deferral/reclaim plus real scheduler/runtime/ordinal-one HTTP bridge
+  reproduces the exact first-refusal and zero-read409 on original forwarding.
+
+  Add only a command-layer routing adapter: a well-formed completed stale
+  chunk in the same repository/stage/resource/generation/schedule may be
+  unrelated only when both coordinates differ and its identity re-derives
+  from that offset and attempt. It earns no selected barrier, read, report or
+  final-authority credit. Malformed/foreign callbacks and events naming
+  either selected coordinate still enter every original strict check.
+  Hit/Requeued, five-second callbacks, deadlines, exact ledgers, leases,
+  schema/epoch, final projection and all native limits stay unchanged.
+
+  Per unrelated successful Recovered callback, bounded scalar/digest checks
+  and one scheduler identity SHA-256 over fixed-sized fields are added; other
+  callbacks short-circuit before that hash. No query/store charge, corpus or
+  shard read, new lock, goroutine, child, cache, timer, API or authority bytes
+  are added. Ordinary product paths without this selected control gain no
+  work. Preserve failed fixtures/receipts and prove the original counterfactual,
+  real sibling-before-selected completion without credit, malformed selected
+  negatives, normal/race/static/docs gates and independent exact review.
+  V18's selected handler `other` error and incomplete accounting remain
+  unexplained by this routing proof; no full-native success is claimed.
+  This slice does not touch namespace/workspace implementation and grants no
+  installation, security change, native retry, cleanup, publication or merge.

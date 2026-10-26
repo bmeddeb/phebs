@@ -5300,6 +5300,22 @@ slice crosses no safeguarded namespace/workspace boundary and grants no new
 driver/profile installation, security change, full qualification retry,
 publishing or acceptance.
 
+**2026-10-26 — MED-496 V18 callback routing follow-up.** Preserve V18's
+Wait1 and exact `transition_target/stale_control` identity/offset mismatch.
+Ordinary deferred chunks share stale priority and generate Recovered callbacks;
+route a well-formed unrelated same-schedule completion away from the selected
+checkpoint control without granting barrier, read/report or final credit. Keep
+strict checks for malformed/foreign callbacks and either selected coordinate.
+AC: actual-store deferred sibling completed before selected recovery, original
+forwarding reproduces the exact zero-read409, selected recovery retains real
+runtime/read/ordinal-one trailer/report-release completion, malformed selected
+identity/offset/lease negatives remain refused, normal/race/static/docs gates
+and independent review. The native event's actual identity was not retained;
+offset33 origin is inferred, V17 cause remains unproven, and the separate
+selected handler error/accounting failure still prevents native acceptance.
+No namespace/workspace change, install, security change, native retry, cleanup,
+publishing or merge is authorized by this slice.
+
 **2026-10-22 — Ben-directed implementation checkpoint integration.** Ben
 explicitly requests maria cleanup and PR merges after the v10 native failure
 was disclosed. PR156 and T42.H2s.a–d / PR164–167 may integrate as reviewed
