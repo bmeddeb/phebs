@@ -17907,3 +17907,43 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   unexplained by this routing proof; no full-native success is claimed.
   This slice does not touch namespace/workspace implementation and grants no
   installation, security change, native retry, cleanup, publication or merge.
+
+- **2026-10-26 — MED-496 selected post-result publication diagnostics.**
+  V18's selected offset29 handler reported reused/other at16:54:47, before
+  the16:54:52 unrelated-completion refusal. Its valid root/completion were
+  written at16:54:46 and publication entry was counted, but no current
+  pointer remained. Original logs did not retain its returned native error.
+  Preserve that uncertainty; pure copied-control validation and bounded
+  passing fixtures are not the missing native cause or acceptance.
+
+  Bind one optional failure observer only around the exact selected epoch4
+  handler's existing context. At existing error exits, distinguish assembly,
+  fence, publication observation/authority/encoding, native input/query/result
+  count/tuple identity, publisher return, pointer write and settlement. Copy
+  only a typed stage, closed cause/caller labels and result-presence/single-row
+  booleans into one first record under the existing selected-control mutex.
+  Never retain errors, payloads, identities, paths or credentials. Parent
+  errors, SQL, validation, write order, original5s callbacks and all accounting,
+  deadline/custody/RSS/cleanup/routing rules stay exact. The record issues no
+  failure latch, cancellation, barrier, ledger or completion authority.
+
+  Format/log once after the original handler returns and its existing locks
+  and defers unwind, with the logged bit set before I/O; destination panic
+  is contained and later failed callers never wait for that log. The first
+  failed caller may wait for synchronous advisory output, before its existing
+  scheduler error handling; no deadline is extended and it cannot create a
+  pass. Successful unselected publication adds only the return/error checks;
+  unselected errors add a nil context-observer lookup. Exact selected attempts
+  add one context value/closure and a brief post-return control-lock check.
+  First failure allocates one fixed record; later nested/later failures use
+  the existing mutex without replacing it. No new query, SQL result field,
+  ledger charge, corpus/shard read, hash, scan, cache, timer, child or goroutine.
+
+  Require original-source missing-diagnostic counterfactual, actual tiny-store
+  input/query/empty-result/tuple controls, unchanged pointer/settlement order,
+  original error identity, no-ledger/authority credit, first-record retention,
+  blocked/panicking logger controls, affected normal/race/static/docs and
+  supported Linux compilation plus independent exact-source review. Preserve
+  reviewed3fd462d9 and all native evidence. No safeguarded namespace/workspace
+  implementation, retained-state replay, install/security change, native run,
+  cleanup, publication or merge is authorized by these diagnostics.

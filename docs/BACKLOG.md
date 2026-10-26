@@ -5316,6 +5316,23 @@ selected handler error/accounting failure still prevents native acceptance.
 No namespace/workspace change, install, security change, native retry, cleanup,
 publishing or merge is authorized by this slice.
 
+**2026-10-26 — MED-496 V18 selected-handler diagnostic follow-up.** The
+selected reused handler's `other` error predates the callback-routing refusal;
+valid retained controls do not reveal its returned native error. Add only a
+first post-result failure diagnostic on the exact selected epoch4 handler:
+closed stage/cause/caller labels and safe native-result booleans, no raw
+errors/payloads/paths/credentials. Distinguish native publisher validation,
+query/count/tuple failure, pointer write and settlement; log once after the
+handler's existing locks/defers, without altering its error, acceptance,
+side-effect order, accounting, routing fix or deadlines. AC: original-source
+missing-diagnostic counterfactual; real tiny-store error stages; original
+error and pointer/settlement/no-ledger parity; first-record concurrency and
+blocked/panicking logging; focused normal/race/static/docs/Linux compile and
+independent review. First failed caller can wait on advisory logging; this
+adds no new native authority or proof that V18 will pass. Preserve3fd462d9 and
+failed fixtures; no namespace/workspace change, retained-store replay,
+install/security, native execution, cleanup, publishing or merge.
+
 **2026-10-22 — Ben-directed implementation checkpoint integration.** Ben
 explicitly requests maria cleanup and PR merges after the v10 native failure
 was disclosed. PR156 and T42.H2s.a–d / PR164–167 may integrate as reviewed

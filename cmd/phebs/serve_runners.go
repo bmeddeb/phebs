@@ -1065,6 +1065,7 @@ func startServeExtractionPipeline(d *serveDeps) error {
 	if d.checkpointRecovery != nil {
 		class := partitionScheduler.Classes[store.GenerationResourceExtraction]
 		class.OnStaleLeaseTransition = d.checkpointRecovery.observeTransition
+		class.Handle = d.checkpointRecovery.publicationHandler(class.Handle)
 		partitionScheduler.Classes[store.GenerationResourceExtraction] = class
 	}
 	d.exact.attempts.bindChunk(partitionScheduler)

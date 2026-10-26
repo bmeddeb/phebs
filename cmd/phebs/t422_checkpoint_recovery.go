@@ -75,12 +75,13 @@ func validT422CheckpointRecoveryInput(input t422CheckpointRecoveryInput) bool {
 }
 
 type t422CheckpointRecoveryControl struct {
-	*t422StaleControl // Reuse bounded lifetime/barrier coordination, not phase-seven methods.
-	input             t422CheckpointRecoveryInput
-	killed            store.GenerationStaleLeaseTransition
-	finalSeen         bool
-	readerReady       chan context.Context
-	failure           *t422CheckpointRecoveryFailure // Protected by the embedded mu; selected recovery only.
+	*t422StaleControl  // Reuse bounded lifetime/barrier coordination, not phase-seven methods.
+	input              t422CheckpointRecoveryInput
+	killed             store.GenerationStaleLeaseTransition
+	finalSeen          bool
+	readerReady        chan context.Context
+	publicationFailure *t422PublicationFailure        // Advisory only; protected by embedded mu.
+	failure            *t422CheckpointRecoveryFailure // Protected by the embedded mu; selected recovery only.
 }
 
 func newT422CheckpointRecoveryControl(ctx context.Context, launch *t422SemanticLaunch, reconciler *extractionpublication.Reconciler) (*t422CheckpointRecoveryControl, error) {

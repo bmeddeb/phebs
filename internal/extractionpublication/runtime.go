@@ -963,6 +963,7 @@ func (runtime *Runtime) Handle(ctx context.Context, chunk store.GenerationChunk)
 		phaseStarted = time.Now()
 	}
 	if err := runtime.tryAssemble(ctx, chunk, directory, descriptor, domain, localOrdinal); err != nil {
+		readaccounting.NotePublicationFailure(ctx, readaccounting.PublicationFailureAssembly, err, readaccounting.PublicationFailureFlags{})
 		return err
 	}
 	if timingEnabled {
@@ -1256,18 +1257,27 @@ func (runtime *Runtime) publishRoot(
 			return err
 		}
 		if runtime.OnSettled != nil {
-			return runtime.OnSettled(ctx, domain.Plan.Repository)
+			err := runtime.OnSettled(ctx, domain.Plan.Repository)
+			if err != nil {
+				readaccounting.NotePublicationFailure(ctx, readaccounting.PublicationFailureSettlement, err, readaccounting.PublicationFailureFlags{})
+			}
+			return err
 		}
 		return nil
 	}
 	if root.Disposition == candidate.PartitionResultRetryable {
 		if runtime.OnSettled != nil {
-			return runtime.OnSettled(ctx, domain.Plan.Repository)
+			err := runtime.OnSettled(ctx, domain.Plan.Repository)
+			if err != nil {
+				readaccounting.NotePublicationFailure(ctx, readaccounting.PublicationFailureSettlement, err, readaccounting.PublicationFailureFlags{})
+			}
+			return err
 		}
 		return nil
 	}
 	releaseFence, err := runtime.Fence.FenceDomain(ctx, FenceRequest{Chunk: chunk, Plan: domain.Plan})
 	if err != nil {
+		readaccounting.NotePublicationFailure(ctx, readaccounting.PublicationFailureFence, err, readaccounting.PublicationFailureFlags{})
 		return classifyAuthorityFenceError(ctx, err)
 	}
 	if releaseFence == nil {
@@ -1280,6 +1290,7 @@ func (runtime *Runtime) publishRoot(
 		}
 	}()
 	if err := runtime.Publisher.PublishDomain(ctx, domain.Plan, root, domain.RunID); err != nil {
+		readaccounting.NotePublicationFailure(ctx, readaccounting.PublicationFailurePublisher, err, readaccounting.PublicationFailureFlags{})
 		return err
 	}
 	pointer := Pointer{
@@ -1291,6 +1302,7 @@ func (runtime *Runtime) publishRoot(
 		RootName:         filepath.Join(domainKey(domain.Plan.Domain), rootName()),
 	}
 	if err := writeAtomicCanonical(runtime.currentPath(domain.Plan.Repository, domain.Plan.Domain), pointer); err != nil {
+		readaccounting.NotePublicationFailure(ctx, readaccounting.PublicationFailurePointer, err, readaccounting.PublicationFailureFlags{})
 		return err
 	}
 	// Downstream reconciliation acquires the shared side of the same mutation
@@ -1298,7 +1310,11 @@ func (runtime *Runtime) publishRoot(
 	releaseFence()
 	released = true
 	if runtime.OnSettled != nil {
-		return runtime.OnSettled(ctx, domain.Plan.Repository)
+		err := runtime.OnSettled(ctx, domain.Plan.Repository)
+		if err != nil {
+			readaccounting.NotePublicationFailure(ctx, readaccounting.PublicationFailureSettlement, err, readaccounting.PublicationFailureFlags{})
+		}
+		return err
 	}
 	return nil
 }

@@ -459,7 +459,9 @@ func (s *Surreal) PublishPartitionedExtractionDomain(
 	publication PartitionedExtractionDomain,
 ) error {
 	if err := publication.Validate(); err != nil {
-		return fmt.Errorf("publish partitioned extraction domain: %w", err)
+		failure := fmt.Errorf("publish partitioned extraction domain: %w", err)
+		readaccounting.NotePublicationFailure(ctx, readaccounting.PublicationFailureStoreInput, failure, readaccounting.PublicationFailureFlags{})
+		return failure
 	}
 	variables := map[string]any{
 		"root_rid": partitionedDomainID(publication.Repository, publication.Domain),
@@ -477,15 +479,21 @@ func (s *Surreal) PublishPartitionedExtractionDomain(
 	}
 	results, err := storeQuery[[]partitionedDomainRec](ctx, s.accounting, s.db, publishPartitionedExtractionDomainSQL, variables, storeWrite(2))
 	if err != nil {
-		return fmt.Errorf("publish partitioned extraction domain: %w", err)
+		failure := fmt.Errorf("publish partitioned extraction domain: %w", err)
+		readaccounting.NotePublicationFailure(ctx, readaccounting.PublicationFailureStoreQuery, failure, readaccounting.PublicationFailureFlags{})
+		return failure
 	}
 	rows := firstPartitionedDomainRows(results)
 	if len(rows) != 1 {
-		return fmt.Errorf("publish partitioned extraction domain: run, counters, or candidate authority changed: %w", ErrConflict)
+		failure := fmt.Errorf("publish partitioned extraction domain: run, counters, or candidate authority changed: %w", ErrConflict)
+		readaccounting.NotePublicationFailure(ctx, readaccounting.PublicationFailureStoreCount, failure, readaccounting.PublicationFailureFlags{ResultsPresent: results != nil, SingleResult: len(rows) == 1})
+		return failure
 	}
 	stored := rows[0].publication()
 	if !samePartitionedDomain(stored, publication) {
-		return fmt.Errorf("publish partitioned extraction domain: immutable collision: %w", ErrConflict)
+		failure := fmt.Errorf("publish partitioned extraction domain: immutable collision: %w", ErrConflict)
+		readaccounting.NotePublicationFailure(ctx, readaccounting.PublicationFailureStoreIdentity, failure, readaccounting.PublicationFailureFlags{ResultsPresent: results != nil, SingleResult: true})
+		return failure
 	}
 	return nil
 }
