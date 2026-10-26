@@ -78,6 +78,11 @@ func newRecoveryPreparationFixture(t *testing.T, mode string) recoveryPreparatio
 func newRecoveryPreparationFixtureForRepository(t *testing.T, mode, repository string) recoveryPreparationFixture {
 	t.Helper()
 	candidateFixture := buildCandidateFixtureAt(t, repository, filepath.Join(t.TempDir(), "repository"), t.TempDir())
+	return newRecoveryPreparationFixtureFromCandidate(t, mode, repository, candidateFixture)
+}
+
+func newRecoveryPreparationFixtureFromCandidate(t *testing.T, mode, repository string, candidateFixture candidateFixture) recoveryPreparationFixture {
+	t.Helper()
 	const source = "sha256:1111111111111111111111111111111111111111111111111111111111111111"
 	const observation = "sha256:2222222222222222222222222222222222222222222222222222222222222222"
 	schedules := &recoveryPreparationSchedules{testScheduleStore: &testScheduleStore{}}

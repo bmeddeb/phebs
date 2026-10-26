@@ -13,6 +13,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"os/exec"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"testing/synctest"
@@ -28,6 +29,13 @@ const t422CheckpointRecoveryHelperMode = "PHEBS_T422_CHECKPOINT_RECOVERY_TEST"
 
 func t422CheckpointRecoveryRecord(t *testing.T) (dispatchadmission.ProductionBootstrap, []byte) {
 	input := t422CheckpointRecoveryFixture()
+	if path := os.Getenv(t422CheckpointBridgeEnvironment); path != "" {
+		input = loadT422CheckpointBridge(t, path).Input
+	}
+	return t422CheckpointRecoveryRecordForInput(t, input)
+}
+
+func t422CheckpointRecoveryRecordForInput(t *testing.T, input t422CheckpointRecoveryInput) (dispatchadmission.ProductionBootstrap, []byte) {
 	raw, _ := t422CheckpointRecoveryEnvelope(t, &input)
 	record := t422ServeFlagsRecord()
 	record.Producer.ID, record.Phase = 5, 8
@@ -42,103 +50,132 @@ func t422CheckpointRecoveryRecord(t *testing.T) (dispatchadmission.ProductionBoo
 func TestT422CheckpointRecoveryInheritedCallbacks(t *testing.T) {
 	for _, mode := range []string{"complete", "completed_reaper", "scheduler_completed_reaper", "scheduler_recovered_before_requeue", "reader_start", "diagnostic_guards", "recovered_before_requeue", "recovered_before_requeue_completed_reaper", "canceled_before_requeue", "same_lease", "foreign_chunk", "report_failure", "wrong_final"} {
 		t.Run(mode, func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
-			defer cancel()
-			record, _ := t422CheckpointRecoveryRecord(t)
-			controller, err := dispatchadmission.New(ctx, dispatchadmission.Config{Limits: record.Limits, Producers: []dispatchadmission.Producer{record.Producer},
-				Phases: []dispatchadmission.Phase{{ID: 8, Roles: []dispatchadmission.RoleBudget{{Role: dispatchadmission.RoleGit}, {Role: dispatchadmission.RoleSurreal}, {Role: dispatchadmission.RoleZoekt}, {Role: dispatchadmission.RoleCompatibility}}}}})
-			if err != nil {
-				t.Fatal(err)
-			}
-			parent, child, err := dispatchadmission.NewPipe()
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer func() { _ = parent.Close(); _ = child.Close() }()
-			controlParent, controlChild, err := dispatchadmission.NewPipe()
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer func() { _ = controlParent.Close(); _ = controlChild.Close() }()
-			command := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestT422CheckpointRecoveryBootstrapHelper$")
-			command.Env = []string{t422CheckpointRecoveryHelperMode + "=" + mode, dispatchadmission.ProductionEnvironment + "=" + dispatchadmission.ProductionSelector, "GORACE=atexit_sleep_ms=0"}
-			command.ExtraFiles, command.WaitDelay = []*os.File{child, controlChild}, time.Second
-			input, err := command.StdinPipe()
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer func() { _ = input.Close() }()
-			output, err := command.StdoutPipe()
-			if err != nil {
-				t.Fatal(err)
-			}
-			var diagnostic bytes.Buffer
-			command.Stderr = &diagnostic
-			if err := command.Start(); err != nil {
-				t.Fatal(err)
-			}
-			defer func() {
-				if command.ProcessState == nil {
-					_ = command.Process.Kill()
-					_ = command.Wait()
-				}
-			}()
-			_ = child.Close()
-			_ = controlChild.Close()
-			if err := dispatchadmission.SendProductionBootstrap(ctx, parent, controlParent, record); err != nil {
-				t.Fatal(err)
-			}
-			served := make(chan error, 1)
-			go func() { served <- controller.Serve(ctx, 5, command.Process.Pid, parent) }()
-			defer func() { cancel(); <-served }()
-			phase, err := dispatchadmission.NewPhaseControl(ctx, controlParent, record.Producer.Binding, record.Control)
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer func() { _ = phase.Close() }()
-			scanner := bufio.NewScanner(output)
-			read := func(want string) {
-				t.Helper()
-				if !scanner.Scan() || scanner.Text() != want {
-					// Retain bounded failing-helper assertions, not just its first
-					// FAIL header. The original command context bounds this drain.
-					var failure bytes.Buffer
-					first := scanner.Bytes()
-					failure.Write(first[:min(len(first), 16<<10)])
-					for scanner.Scan() {
-						if failure.Len() < 16<<10 {
-							failure.WriteByte('\n')
-							line := scanner.Bytes()
-							failure.Write(line[:min(len(line), (16<<10)-failure.Len())])
-						}
-					}
-					_ = command.Wait()
-					t.Fatal("helper", failure.String(), diagnostic.String())
-				}
-			}
-			read("callback_joined")
-			for _, op := range []func() error{func() error { return phase.DrainOwners(ctx) }, func() error { return phase.OpenRequests(ctx) }} {
-				if err := op(); err != nil {
-					t.Fatal(err)
-				}
-			}
-			if _, err := input.Write([]byte{'f'}); err != nil {
-				t.Fatal(err)
-			}
-			read("final_checked")
-			for _, op := range []func() error{func() error { return phase.FenceRequests(ctx) }, func() error { return phase.Pause(ctx) }, controller.Fence, func() error { return phase.Checkpoint(ctx) }} {
-				if err := op(); err != nil {
-					t.Fatal(err)
-				}
-			}
-			if _, err := input.Write([]byte{'c'}); err != nil {
-				t.Fatal(err)
-			}
-			read("closed")
-			if err := command.Wait(); err != nil {
-				t.Fatal(err, diagnostic.String())
-			}
+			runT422CheckpointRecoveryInherited(t, mode, "")
 		})
+	}
+}
+
+func runT422CheckpointRecoveryInherited(t *testing.T, mode, bridgePath string) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
+	defer cancel()
+	record, _ := t422CheckpointRecoveryRecord(t)
+	if bridgePath != "" {
+		record, _ = t422CheckpointRecoveryRecordForInput(t, loadT422CheckpointBridge(t, bridgePath).Input)
+	}
+	controller, err := dispatchadmission.New(ctx, dispatchadmission.Config{Limits: record.Limits, Producers: []dispatchadmission.Producer{record.Producer},
+		Phases: []dispatchadmission.Phase{{ID: 8, Roles: []dispatchadmission.RoleBudget{{Role: dispatchadmission.RoleGit}, {Role: dispatchadmission.RoleSurreal}, {Role: dispatchadmission.RoleZoekt}, {Role: dispatchadmission.RoleCompatibility}}}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	parent, child, err := dispatchadmission.NewPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = parent.Close(); _ = child.Close() }()
+	controlParent, controlChild, err := dispatchadmission.NewPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = controlParent.Close(); _ = controlChild.Close() }()
+	command := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestT422CheckpointRecoveryBootstrapHelper$")
+	command.Env = []string{t422CheckpointRecoveryHelperMode + "=" + mode, dispatchadmission.ProductionEnvironment + "=" + dispatchadmission.ProductionSelector, "GORACE=atexit_sleep_ms=0"}
+	if bridgePath != "" {
+		command.Env = append(command.Env, t422CheckpointBridgeEnvironment+"="+bridgePath)
+	}
+	command.ExtraFiles, command.WaitDelay = []*os.File{child, controlChild}, time.Second
+	input, err := command.StdinPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = input.Close() }()
+	output, err := command.StdoutPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var diagnostic bytes.Buffer
+	command.Stderr = &diagnostic
+	if err := command.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if command.ProcessState == nil {
+			_ = command.Process.Kill()
+			_ = command.Wait()
+		}
+	}()
+	_ = child.Close()
+	_ = controlChild.Close()
+	if err := dispatchadmission.SendProductionBootstrap(ctx, parent, controlParent, record); err != nil {
+		t.Fatal(err)
+	}
+	served := make(chan error, 1)
+	go func() { served <- controller.Serve(ctx, 5, command.Process.Pid, parent) }()
+	defer func() { cancel(); <-served }()
+	phase, err := dispatchadmission.NewPhaseControl(ctx, controlParent, record.Producer.Binding, record.Control)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = phase.Close() }()
+	if bridgePath != "" {
+		if _, err := input.Write([]byte(phase.RequestToken() + "\n")); err != nil {
+			t.Fatal(err)
+		}
+	}
+	scanner := bufio.NewScanner(output)
+	read := func(want string) {
+		t.Helper()
+		scanned := scanner.Scan()
+		matches := scanner.Text() == want
+		if bridgePath != "" && want == "bridge_observation " {
+			matches = strings.HasPrefix(scanner.Text(), want)
+		}
+		if !scanned || !matches {
+			// Retain bounded failing-helper assertions, not just its first
+			// FAIL header. The original command context bounds this drain.
+			var failure bytes.Buffer
+			first := scanner.Bytes()
+			failure.Write(first[:min(len(first), 16<<10)])
+			for scanner.Scan() {
+				if failure.Len() < 16<<10 {
+					failure.WriteByte('\n')
+					line := scanner.Bytes()
+					failure.Write(line[:min(len(line), (16<<10)-failure.Len())])
+				}
+			}
+			_ = command.Wait()
+			t.Fatal("helper", failure.String(), diagnostic.String())
+		}
+	}
+	if bridgePath != "" {
+		read("bridge_observation ")
+		t.Log(scanner.Text())
+	}
+	read("callback_joined")
+	for _, op := range []func() error{func() error { return phase.DrainOwners(ctx) }, func() error { return phase.OpenRequests(ctx) }} {
+		if err := op(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := input.Write([]byte{'f'}); err != nil {
+		t.Fatal(err)
+	}
+	if bridgePath != "" {
+		read("bridge_checked")
+	} else {
+		read("final_checked")
+	}
+	for _, op := range []func() error{func() error { return phase.FenceRequests(ctx) }, func() error { return phase.Pause(ctx) }, controller.Fence, func() error { return phase.Checkpoint(ctx) }} {
+		if err := op(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := input.Write([]byte{'c'}); err != nil {
+		t.Fatal(err)
+	}
+	read("closed")
+	if err := command.Wait(); err != nil {
+		t.Fatal(err, diagnostic.String())
 	}
 }
 
@@ -257,6 +294,10 @@ func TestT422CheckpointRecoveryBootstrapHelper(t *testing.T) {
 	owners, err := dispatchadmission.NewProductionOwners(ctx, dispatchadmission.OwnerLimits{Owners: 3, Requests: 1})
 	if err != nil || dispatchadmission.BindProductionOwners(owners) != nil {
 		t.Fatal("owners", err)
+	}
+	if path := os.Getenv(t422CheckpointBridgeEnvironment); path != "" {
+		testT422CheckpointHTTPBridge(t, ctx, mode, launch, owners, lifetime, loadT422CheckpointBridge(t, path), &failures)
+		return
 	}
 	if mode == "reader_start" {
 		testT422CheckpointReaderStart(t, launch)
