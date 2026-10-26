@@ -17292,3 +17292,40 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   no namespace creation, workspace ownership, policy, security setting or Surreal
   parent-death safeguard. It authorizes no driver/profile installation, full
   qualification retry, integration or acceptance.
+
+- **2026-10-26 — MED-496 selected-recovery first-refusal diagnostics.** V17
+  retained an ordinal-one HTTP 409 `checkpoint_recovery_refused` with zero
+  reads and a shared stale-control error; it did not retain which selected
+  recovery guard first refused. The completed-reaper-context hypothesis did
+  not reproduce on unchanged production source, including both callback
+  orderings under the actual scheduler. Preserve that negative result. Add
+  only a selected-recovery, component-local first-refusal record at the
+  existing error latch, before its cancellation. Closed branch/cause/context/
+  deadline labels and failed-event booleans distinguish binding, callback
+  deadline/state, rendezvous, native read/match/projection and report release.
+  Retain no raw error, payload, context, identity, path, timestamp or token.
+  Later concurrent failures cannot replace the record. Existing failure
+  delivery precedes the one advisory log, and a blocked/panicking log
+  destination cannot create acceptance or delay later refusals.
+
+  Keep every current/request/event/lease/schema/epoch predicate, original
+  five-second callback and phase/run deadlines, exact ledger, report release
+  and final-authority comparison. Shared stale and predecessor checkpoint
+  controls, HTTP bodies/trailers, public receipts and native custody/RSS/
+  cleanup rules remain unchanged. The record is not a globally ordered server
+  cause or proof that V17 has a particular runtime bug. A bounded fixture
+  reproducing the same refusal envelope is not native qualification.
+
+  Successful selected recovery adds one pointer-sized record slot; the
+  existing checks, report-release lock and continuation stay in place. On
+  its first refusal only, one fixed-size snapshot and closed-label formatting
+  use the existing component lock and logger. No query, corpus read/hash,
+  timer, goroutine, child, scan, sampler or cache is added. Failure-only
+  scalar/digest-shape checks are bounded by the existing event fields. Other
+  product queries, sync ticks, startup and publication paths gain no work.
+  Require first-record/concurrency/log-failure controls, inherited positive
+  and negative guards, unchanged report-release parity, normal/race/static/
+  docs and supported compile validation plus exact-source review. Preserve
+  all failed/qualified evidence. This command-layer slice changes no
+  namespace/workspace implementation or security policy and authorizes no
+  changed-driver installation, native retry, push, merge or acceptance.

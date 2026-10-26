@@ -40,7 +40,7 @@ func t422CheckpointRecoveryRecord(t *testing.T) (dispatchadmission.ProductionBoo
 // controls, reaper/completion events and native R values are supplied fixtures,
 // not a native requeue, hard kill, all-success schedule or phase-eight proof.
 func TestT422CheckpointRecoveryInheritedCallbacks(t *testing.T) {
-	for _, mode := range []string{"complete", "reader_start", "recovered_before_requeue", "canceled_before_requeue", "same_lease", "report_failure", "wrong_final"} {
+	for _, mode := range []string{"complete", "completed_reaper", "scheduler_completed_reaper", "scheduler_recovered_before_requeue", "reader_start", "diagnostic_guards", "recovered_before_requeue", "recovered_before_requeue_completed_reaper", "canceled_before_requeue", "same_lease", "foreign_chunk", "report_failure", "wrong_final"} {
 		t.Run(mode, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
 			defer cancel()
@@ -100,7 +100,20 @@ func TestT422CheckpointRecoveryInheritedCallbacks(t *testing.T) {
 			read := func(want string) {
 				t.Helper()
 				if !scanner.Scan() || scanner.Text() != want {
-					t.Fatal("helper", scanner.Text(), diagnostic.String())
+					// Retain bounded failing-helper assertions, not just its first
+					// FAIL header. The original command context bounds this drain.
+					var failure bytes.Buffer
+					first := scanner.Bytes()
+					failure.Write(first[:min(len(first), 16<<10)])
+					for scanner.Scan() {
+						if failure.Len() < 16<<10 {
+							failure.WriteByte('\n')
+							line := scanner.Bytes()
+							failure.Write(line[:min(len(line), (16<<10)-failure.Len())])
+						}
+					}
+					_ = command.Wait()
+					t.Fatal("helper", failure.String(), diagnostic.String())
 				}
 			}
 			read("callback_joined")
@@ -249,6 +262,10 @@ func TestT422CheckpointRecoveryBootstrapHelper(t *testing.T) {
 		testT422CheckpointReaderStart(t, launch)
 		mode = "complete" // Also retain the existing callback/report/close proof.
 	}
+	if mode == "diagnostic_guards" {
+		testT422CheckpointRecoveryDiagnosticGuards(t, launch)
+		mode = "complete"
+	}
 	reconciler := &extractionpublication.Reconciler{StoreAccounting: true, Runtime: &extractionpublication.Runtime{Fence: &extractionpublication.AuthorityFence{}}}
 	control, err := newT422CheckpointRecoveryControl(ctx, launch, reconciler)
 	if err != nil {
@@ -263,8 +280,10 @@ func TestT422CheckpointRecoveryBootstrapHelper(t *testing.T) {
 		PrivateLeaseTokenDigest: store.GenerationLeaseTokenDigest("killed-native-fixture-lease"), ChunkStateDigest: t422CheckpointTestDigest, CheckpointStateDigest: t422CheckpointTestDigest}
 	reaper, reaperCancel := context.WithTimeout(ctx, 5*time.Second)
 	defer reaperCancel()
-	if err := control.transition(reaper, event); err != nil {
-		t.Fatal(err)
+	if mode != "scheduler_completed_reaper" && mode != "scheduler_recovered_before_requeue" {
+		if err := control.transition(reaper, event); err != nil {
+			t.Fatal(err)
+		}
 	}
 	requeued := event
 	requeued.Point, requeued.Priority, requeued.ChunkStatus, requeued.Leased = store.GenerationStaleLeaseTransitionRequeued, 2, store.GenerationChunkPending, false
@@ -274,51 +293,76 @@ func TestT422CheckpointRecoveryBootstrapHelper(t *testing.T) {
 	if mode != "same_lease" {
 		event.PrivateLeaseTokenDigest = store.GenerationLeaseTokenDigest("new-native-fixture-lease")
 	}
+	if mode == "foreign_chunk" {
+		event.ChunkIdentity, _ = store.GenerationChunkIdentity(event.ScheduleDigest, event.Offset+1, 0)
+	}
 	observer, observerCancel := context.WithTimeout(ctx, 5*time.Second)
 	defer observerCancel()
-	owner, err := owners.Enter(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	finished := make(chan error, 1)
-	if mode != "recovered_before_requeue" && mode != "canceled_before_requeue" {
-		if err := control.transition(reaper, requeued); err != nil {
+	var finished <-chan error
+	joinScheduler := func() {}
+	if mode == "scheduler_completed_reaper" || mode == "scheduler_recovered_before_requeue" {
+		hitEvent := event
+		hitEvent.Point, hitEvent.ScheduleStatus = store.GenerationStaleLeaseTransitionHit, store.GenerationScheduleActive
+		hitEvent.Priority, hitEvent.ChunkStatus, hitEvent.Leased = store.GenerationPriorityNeverRun, store.GenerationChunkRunning, true
+		hitEvent.StaleBefore = time.Now().Add(-20 * time.Second)
+		hitEvent.PrivateLeaseTokenDigest = store.GenerationLeaseTokenDigest("killed-native-fixture-lease")
+		hitEvent.ChunkStateDigest, hitEvent.CheckpointStateDigest = t422CheckpointTestDigest, t422CheckpointTestDigest
+		finished, joinScheduler = startT422RecoveryScheduler(t, ctx, owners, control, hitEvent, requeued, mode == "scheduler_recovered_before_requeue")
+	} else {
+		owner, err := owners.Enter(ctx)
+		if err != nil {
 			t.Fatal(err)
 		}
-	}
-	go func() { defer owner.End(); finished <- control.transition(observer, event) }()
-	if mode == "recovered_before_requeue" || mode == "canceled_before_requeue" {
-		// Test-only observation of the callback-entry latch, not production polling.
-		ticker := time.NewTicker(time.Millisecond)
-		for {
-			control.mu.Lock()
-			entered := control.recovered.observer != nil
-			control.mu.Unlock()
-			if entered {
-				break
-			}
-			select {
-			case <-ticker.C:
-			case <-ctx.Done():
-				t.Fatal(ctx.Err())
-			}
-		}
-		ticker.Stop()
-		select {
-		case <-control.recovered.ready:
-			t.Fatal("inferred requeue before actual callback")
-		default:
-		}
-		if mode == "canceled_before_requeue" {
-			observerCancel()
-		} else {
+		directFinished := make(chan error, 1)
+		finished = directFinished
+		beforeRequeue := mode == "recovered_before_requeue" || mode == "recovered_before_requeue_completed_reaper" || mode == "canceled_before_requeue"
+		if !beforeRequeue {
 			if err := control.transition(reaper, requeued); err != nil {
 				t.Fatal(err)
 			}
 		}
+		if mode == "completed_reaper" {
+			// The real scheduler cancels the completed reaper call before a
+			// later worker supplies its fresh, separately bounded callback.
+			reaperCancel()
+		}
+		go func() { defer owner.End(); directFinished <- control.transition(observer, event) }()
+		if beforeRequeue {
+			// Test-only observation of the callback-entry latch, not production polling.
+			ticker := time.NewTicker(time.Millisecond)
+			for {
+				control.mu.Lock()
+				entered := control.recovered.observer != nil
+				control.mu.Unlock()
+				if entered {
+					break
+				}
+				select {
+				case <-ticker.C:
+				case <-ctx.Done():
+					t.Fatal(ctx.Err())
+				}
+			}
+			ticker.Stop()
+			select {
+			case <-control.recovered.ready:
+				t.Fatal("inferred requeue before actual callback")
+			default:
+			}
+			if mode == "canceled_before_requeue" {
+				observerCancel()
+			} else {
+				if err := control.transition(reaper, requeued); err != nil {
+					t.Fatal(err)
+				}
+				if mode == "recovered_before_requeue_completed_reaper" {
+					reaperCancel()
+				}
+			}
+		}
 	}
-	failed := mode == "same_lease" || mode == "canceled_before_requeue" || mode == "report_failure"
-	if mode != "same_lease" && mode != "canceled_before_requeue" {
+	failed := mode == "same_lease" || mode == "foreign_chunk" || mode == "canceled_before_requeue" || mode == "report_failure"
+	if mode != "same_lease" && mode != "foreign_chunk" && mode != "canceled_before_requeue" {
 		select {
 		case <-control.recovered.ready:
 		case <-ctx.Done():
@@ -342,17 +386,29 @@ func TestT422CheckpointRecoveryBootstrapHelper(t *testing.T) {
 		state.active = true
 		state.finishRead(httptest.NewRecorder(), ledger, 1, true, "complete", nil, nil, func(cause error) {
 			if cause != nil {
-				_ = control.stop(cause)
+				_ = control.refuse(ctx, t422RecoveryReadReport, cause, nil)
 				return
 			}
-			_ = control.finishReport(&control.recovered)
+			_ = control.finishRecoveryReport(ctx, &control.recovered)
 		})
 	}
 	if err := <-finished; (err != nil) != failed {
 		t.Fatal("recovery callback", err)
 	}
+	joinScheduler()
 	if failed && (failures.Load() != 1 || control.recovered.reported) {
 		t.Fatal("failed callback prefix advanced")
+	}
+	if failed {
+		want := map[string]t422RecoveryFailureStage{"same_lease": t422RecoveryTransitionState, "foreign_chunk": t422RecoveryTransitionTarget,
+			"canceled_before_requeue": t422RecoveryRendezvous, "report_failure": t422RecoveryReadReport}[mode]
+		control.mu.Lock()
+		failure := control.failure
+		control.mu.Unlock()
+		if failure == nil || failure.Stage != want || failure.Lifetime != "live" ||
+			mode == "same_lease" && !failure.Event.Token || mode == "foreign_chunk" && !failure.Event.Identity {
+			t.Fatal("actual callback first diagnostic missing or incorrect", failure)
+		}
 	}
 	fmt.Println("callback_joined")
 	var signal [1]byte
@@ -379,6 +435,9 @@ func TestT422CheckpointRecoveryBootstrapHelper(t *testing.T) {
 		}
 		if mode != "wrong_final" && !control.finalSeen {
 			t.Fatal("final not compared")
+		}
+		if mode == "wrong_final" && (control.failure == nil || control.failure.Stage != t422RecoveryFinalState) || mode != "wrong_final" && control.failure != nil {
+			t.Fatal("final diagnostic fabricated or missing", control.failure)
 		}
 	}
 	fmt.Println("final_checked")
