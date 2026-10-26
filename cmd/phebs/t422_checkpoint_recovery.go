@@ -80,6 +80,7 @@ type t422CheckpointRecoveryControl struct {
 	killed            store.GenerationStaleLeaseTransition
 	finalSeen         bool
 	readerReady       chan context.Context
+	failure           *t422CheckpointRecoveryFailure // Protected by the embedded mu; selected recovery only.
 }
 
 func newT422CheckpointRecoveryControl(ctx context.Context, launch *t422SemanticLaunch, reconciler *extractionpublication.Reconciler) (*t422CheckpointRecoveryControl, error) {
@@ -104,21 +105,21 @@ func newT422CheckpointRecoveryControl(ctx context.Context, launch *t422SemanticL
 // can complete and start the unchanged five-second report callback deadline.
 func (control *t422CheckpointRecoveryControl) waitForReader(ctx context.Context) error {
 	if !control.current(ctx, false, false) {
-		return control.stop(errT422StaleControl)
+		return control.refuse(ctx, t422RecoveryReaderBinding, errT422StaleControl, nil)
 	}
 	operation, finish := control.operationContext(ctx, nil)
 	defer finish()
 	var reader context.Context
 	select {
 	case <-operation.Done():
-		return control.stop(operation.Err())
+		return control.refuse(ctx, t422RecoveryReaderWait, operation.Err(), nil)
 	case reader = <-control.readerReady:
 	}
 	control.mu.Lock()
 	valid := control.err == nil && control.recovered.reading
 	control.mu.Unlock()
 	if !valid || reader == nil || reader.Err() != nil || operation.Err() != nil || !control.current(ctx, false, false) {
-		return control.stop(errT422StaleControl)
+		return control.refuse(ctx, t422RecoveryReaderState, errT422StaleControl, nil)
 	}
 	return nil
 }
@@ -148,12 +149,15 @@ func (control *t422CheckpointRecoveryControl) eventTarget(event store.Generation
 // Native Hit/Requeued are private synchronization only. Recovery may race the
 // post-COMMIT Requeued callback, so rendezvous on that callback, never infer it.
 func (control *t422CheckpointRecoveryControl) transition(ctx context.Context, event store.GenerationStaleLeaseTransition) error {
-	if !control.current(ctx, false, false) || !control.eventTarget(event) {
-		return control.stop(errT422StaleControl)
+	if !control.current(ctx, false, false) {
+		return control.refuse(ctx, t422RecoveryTransitionBinding, errT422StaleControl, &event)
+	}
+	if !control.eventTarget(event) {
+		return control.refuse(ctx, t422RecoveryTransitionTarget, errT422StaleControl, &event)
 	}
 	deadline, bounded := ctx.Deadline()
 	if !bounded || time.Until(deadline) <= 0 || time.Until(deadline) > 5*time.Second {
-		return control.stop(errT422StaleControl)
+		return control.refuse(ctx, t422RecoveryTransitionDeadline, errT422StaleControl, &event)
 	}
 	control.mu.Lock()
 	valid := control.err == nil
@@ -186,7 +190,7 @@ func (control *t422CheckpointRecoveryControl) transition(ctx context.Context, ev
 	observer, requeued := control.hit.observer, control.requeueSeen
 	control.mu.Unlock()
 	if !valid {
-		return control.stop(errT422StaleControl)
+		return control.refuse(ctx, t422RecoveryTransitionState, errT422StaleControl, &event)
 	}
 	if event.Point != store.GenerationStaleLeaseTransitionRecovered {
 		return nil
@@ -205,21 +209,24 @@ func (control *t422CheckpointRecoveryControl) transition(ctx context.Context, ev
 		close(control.recovered.ready)
 	}
 	control.mu.Unlock()
-	if !valid || !control.current(ctx, false, false) {
-		return control.stop(errT422StaleControl)
+	if !valid {
+		return control.refuse(ctx, t422RecoveryRendezvous, errT422StaleControl, &event)
+	}
+	if !control.current(ctx, false, false) {
+		return control.refuse(ctx, t422RecoveryRendezvousBinding, errT422StaleControl, &event)
 	}
 	operation, finish := control.operationContext(ctx, nil)
 	defer finish()
 	select {
 	case <-operation.Done():
-		return control.stop(operation.Err())
+		return control.refuse(ctx, t422RecoveryReleaseWait, operation.Err(), &event)
 	case <-control.recovered.release:
 	}
 	control.mu.Lock()
 	valid = control.err == nil && control.recovered.reported
 	control.mu.Unlock()
 	if !valid || operation.Err() != nil || !control.current(ctx, false, false) {
-		return control.stop(errT422StaleControl)
+		return control.refuse(ctx, t422RecoveryReleaseState, errT422StaleControl, &event)
 	}
 	return nil
 }
@@ -245,7 +252,7 @@ func (control *t422CheckpointRecoveryControl) matchesRecovered(value extractionp
 
 func (control *t422CheckpointRecoveryControl) read(ctx context.Context) ([]byte, func(error), error) {
 	if !control.current(ctx, true, false) {
-		return nil, nil, control.stop(errT422StaleControl)
+		return nil, nil, control.refuse(ctx, t422RecoveryReadBinding, errT422StaleControl, nil)
 	}
 	control.mu.Lock()
 	valid := control.err == nil && !control.recovered.reading
@@ -255,13 +262,13 @@ func (control *t422CheckpointRecoveryControl) read(ctx context.Context) ([]byte,
 	}
 	control.mu.Unlock()
 	if !valid {
-		return nil, nil, control.stop(errT422StaleControl)
+		return nil, nil, control.refuse(ctx, t422RecoveryReadState, errT422StaleControl, nil)
 	}
 	wait, finishWait := control.operationContext(ctx, nil)
 	select {
 	case <-wait.Done():
 		finishWait()
-		return nil, nil, control.stop(wait.Err())
+		return nil, nil, control.refuse(ctx, t422RecoveryReadWait, wait.Err(), nil)
 	case <-control.recovered.ready:
 	}
 	finishWait()
@@ -273,14 +280,18 @@ func (control *t422CheckpointRecoveryControl) read(ctx context.Context) ([]byte,
 	value, err := control.reconciler.Runtime.ReadCheckpointRestartTransition(observedContext, extractionpublication.CheckpointRestartTransitionRequest{
 		Transition: event, TargetGeneration: hit.TargetGeneration, PriorScheduleDigest: hit.PriorScheduleDigest,
 		Domain: hit.Domain, Ordinal: hit.Ordinal, PlanDigest: hit.PlanDigest, ResultIdentity: hit.ResultIdentity})
-	if err != nil || !control.matchesRecovered(value, event) {
+	if err != nil {
 		finish()
-		return nil, nil, control.stop(errors.Join(err, errT422StaleControl))
+		return nil, nil, control.refuse(ctx, t422RecoveryRuntimeRead, errors.Join(err, errT422StaleControl), &event)
+	}
+	if !control.matchesRecovered(value, event) {
+		finish()
+		return nil, nil, control.refuse(ctx, t422RecoveryRuntimeMatch, errors.Join(err, errT422StaleControl), &event)
 	}
 	schedule, observed := scheduleObservation.Observation()
 	if !observed || schedule.ScheduleSHA256 != value.ScheduleDigest {
 		finish()
-		return nil, nil, control.stop(errT422StaleControl)
+		return nil, nil, control.refuse(ctx, t422RecoveryScheduleProjection, errT422StaleControl, &event)
 	}
 	value.ObservedScheduleChunks, value.ObservedScheduleSuccesses = schedule.Chunks, schedule.Successes
 	// transition and matchesRecovered already proved the reclaimed lease
@@ -289,28 +300,28 @@ func (control *t422CheckpointRecoveryControl) read(ctx context.Context) ([]byte,
 	body, err := json.Marshal(value)
 	if err != nil {
 		finish()
-		return nil, nil, control.stop(err)
+		return nil, nil, control.refuse(ctx, t422RecoveryEncoding, err, &event)
 	}
 	return append(body, '\n'), func(cause error) {
 		defer finish()
 		if cause != nil || operation.Err() != nil || !control.current(ctx, true, false) {
-			_ = control.stop(errors.Join(cause, operation.Err(), errT422StaleControl))
+			_ = control.refuse(ctx, t422RecoveryReadReport, errors.Join(cause, operation.Err(), errT422StaleControl), &event)
 			return
 		}
-		_ = control.finishReport(&control.recovered)
+		_ = control.finishRecoveryReport(ctx, &control.recovered)
 	}, nil
 }
 
 func (control *t422CheckpointRecoveryControl) captureFinal(ctx context.Context, state candidate.State, response t421FinalAuthorityResponse) error {
 	current, err := dispatchadmission.ProductionSemanticState()
 	if err != nil {
-		return control.stop(err)
+		return control.refuse(ctx, t422RecoveryFinalSnapshot, err, nil)
 	}
 	if current.Phase != 8 {
 		return nil
 	}
 	if !control.current(ctx, true, true) {
-		return control.stop(errT422StaleControl)
+		return control.refuse(ctx, t422RecoveryFinalBinding, errT422StaleControl, nil)
 	}
 	value, err := t422StaleFinalSnapshot(state, response, control.typedScopeReservations)
 	control.mu.Lock()
@@ -321,7 +332,7 @@ func (control *t422CheckpointRecoveryControl) captureFinal(ctx context.Context, 
 	}
 	control.mu.Unlock()
 	if !valid {
-		return control.stop(errors.Join(err, errT422StaleControl))
+		return control.refuse(ctx, t422RecoveryFinalState, errors.Join(err, errT422StaleControl), nil)
 	}
 	return nil
 }

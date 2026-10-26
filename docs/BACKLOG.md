@@ -5281,6 +5281,25 @@ slice changes no namespace/workspace implementation or parent-death safeguard.
 Full checkpoint/successor acceptance and any changed-image installation/retry
 remain separately gated; no acceptance or retry follows from bounded controls.
 
+**2026-10-26 — MED-496 V17 selected-recovery diagnosis.** Preserve V17's exact
+Wait1, ordinal-one `checkpoint_recovery_refused`/HTTP409 and zero-read failure
+evidence. Completed reaper-context cancellation did not reproduce the failure,
+including both orderings under the actual scheduler; do not describe those
+passing probes as a behavior fix or native acceptance. Add a selected-control
+first-refusal record at its existing error latch: bounded closed branch,
+cause/context/deadline classes and failed-event booleans only, no raw payload,
+error text, identity, path or credentials. Preserve every binding/lease/epoch,
+deadline, ledger, report and final predicate; keep shared/historical controls
+and public evidence unchanged. AC: original-behavior missing-diagnostic
+counterfactual, first-record retention under concurrent later failures,
+blocked/panicking logger controls, inherited positive/refusal guards, unchanged
+report-release acceptance, normal/race/static/docs/supported compilation and
+independent exact-source review. No native root cause is inferred from a
+supplied fixture's matching refusal envelope. This command-layer diagnostic
+slice crosses no safeguarded namespace/workspace boundary and grants no new
+driver/profile installation, security change, full qualification retry,
+publishing or acceptance.
+
 **2026-10-22 — Ben-directed implementation checkpoint integration.** Ben
 explicitly requests maria cleanup and PR merges after the v10 native failure
 was disclosed. PR156 and T42.H2s.a–d / PR164–167 may integrate as reviewed
