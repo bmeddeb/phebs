@@ -17246,11 +17246,12 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
 - **2026-10-26 — MED-496 selected-close parser correction.** Carry the reviewed
   ordinary V6 return-prefix correction from `e433ad57` onto isolated H2s.j
   source `0806182d`. Ordinary return has final-authority reuse evidence through
-  phase six. The selected checkpoint predecessor completes phases six/seven
-  before its phase-eight held interruption; its recovered fourth context
-  completes phase eight, not future pressure/backup phases nine through eleven.
-  Bind these two additional close boundaries to the existing selected native
-  recipe/run checks and completed source operations. Do not widen the default
+  phase six. The checkpoint predecessor
+  emits its phase-eight reuse terminal before the terminal footer and retains
+  strict full-lifetime parsing. Its recovered fourth context completes phase
+  eight, not future pressure/backup phases nine through eleven. Bind only this
+  additional close boundary to the existing selected native recipe/run checks
+  and completed source operations. Do not widen the default
   full parser or historical schemas. Require every executed final terminal,
   refuse unexpected future terminals and keep future slots unknown and whole
   attempt/reuse completeness false, so partial qualification cannot issue full

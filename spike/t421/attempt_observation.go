@@ -63,11 +63,12 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 }
 
 // Source-owned V6 closes retain only completed final-authority reuse reports:
-// ordinary return through 6, interrupted checkpoint through 7, successor through
-// 8. Future terminals stay unknown; no prefix is a complete lifetime/receipt.
+// ordinary return through 6, selected successor through 8. The interrupted
+// predecessor emits its phase-8 terminal before TFE and keeps full parsing.
+// Future terminals stay unknown; no prefix is a complete lifetime/receipt.
 func observeExecutionAttemptsForClose(raw []byte, plan Plan, producer uint32, input [32]byte, joined bool, reuseThrough uint32) (out ExecutionAttemptObservation, err error) {
 	prefix := reuseThrough != 0
-	selected := producer == 4 && (reuseThrough == 6 || reuseThrough == 7) || producer == 5 && reuseThrough == 8
+	selected := producer == 4 && reuseThrough == 6 || producer == 5 && reuseThrough == 8
 	if prefix && (plan.Schema != PlanV6Schema || !selected) {
 		return out, errExecutionAttempts
 	}
@@ -326,20 +327,14 @@ func (run *ExecutionEpochOneRun) attemptObservationReuseThrough(ctx context.Cont
 	if run.epoch.Epoch == 3 && !run.checkpointAllowed {
 		return 6
 	}
-	if !run.checkpointUsed || run.pressureAllowed || run.backupAllowed || run.pressureUsed || run.backupStarted {
+	if run.epoch.Epoch != 4 || run.checkpointAllowed || !run.checkpointUsed || !run.warm || run.pressureAllowed || run.backupAllowed || run.pressureUsed || run.backupStarted {
 		return 0
 	}
 	native, ok := run.flow.native.(executionEpochCheckpointNativeAdapter)
-	if !ok || native.checkpointReturn(ctx, run, true, true) != nil || native.checkpointRun(ctx, run, run.epoch.Epoch) != nil {
+	if !ok || native.checkpointReturn(ctx, run, true, true) != nil || native.checkpointRun(ctx, run, 4) != nil {
 		return 0
 	}
-	if run.epoch.Epoch == 3 && run.checkpointAllowed && run.terminalEntered && run.terminalRequested {
-		return 7
-	}
-	if run.epoch.Epoch == 4 && !run.checkpointAllowed && run.warm {
-		return 8
-	}
-	return 0
+	return 8
 }
 
 // One bounded line pass after Wait, in addition to the existing two metric
