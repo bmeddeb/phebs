@@ -5251,6 +5251,22 @@ transferred. Preserve all original evidence and numeric bounds. No safeguarded
 namespace/workspace work, publishing, security action or native run is authorized
 by this parser slice.
 
+**2026-10-26 — MED-496 V16 pending-root reconciliation follow-up.** Preserve
+failed exact V16 `b94d3da5` and its fixture. The selected root-first signal can
+leave the original leader Z while stopped siblings keep its process pidfd
+unready. Nonroot dying-group reconciliation must remain pending until the
+existing actual terminal-proof path observes the root; it must not poison
+custody or invent terminal/zero-RSS authority. Keep root-group progress enabled,
+cancellation refusing, and all image/birth/parent/namespace/census/Wait gates,
+limits, deadlines and unknown retention exact. AC: a real-kernel pending root
+and registered dying child group, old-source counterfactual, no premature
+terminal credit, wrong-birth/missing-leader refusals, released-stop genuine
+SIGKILL Wait/session/DA closure, focused normal/race and relevant static/docs/
+supported compile gates plus independent exact-source review. This scheduling
+slice changes no namespace/workspace implementation or parent-death safeguard.
+Full checkpoint/successor acceptance and any changed-image installation/retry
+remain separately gated; no acceptance or retry follows from bounded controls.
+
 **2026-10-22 — Ben-directed implementation checkpoint integration.** Ben
 explicitly requests maria cleanup and PR merges after the v10 native failure
 was disclosed. PR156 and T42.H2s.a–d / PR164–167 may integrate as reviewed
