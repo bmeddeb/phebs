@@ -5246,9 +5246,10 @@ The actual opt-in composition, full MED-495/MED-496 and readiness remain open.
 **2026-10-26 — MED-496 selected-close parser follow-up.** On an isolated branch
 from H2s.j `0806182d`, carry the reviewed ordinary-return prefix correction
 `e433ad57` and correct the selected predecessor/successor close boundaries.
-The real predecessor interrupts phase eight after final authorities six/seven;
-the recovered successor ends after final authority eight. A parser must not
-require or invent future reuse terminals. Select these boundaries only through
+The predecessor emits its phase-eight reuse terminal before the terminal footer
+and retains strict full-lifetime parsing; the recovered successor ends after
+final authority eight. A parser must not require or invent future reuse
+terminals. Select the additional successor boundary only through
 the existing native selected-recipe/run proof and completed-operation guards;
 leave ordinary six, the default full parser and historical schema fences exact.
 Require executed terminals, refuse future/duplicate/partial reports, retain

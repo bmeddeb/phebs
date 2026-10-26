@@ -6,8 +6,8 @@ import (
 	"testing"
 )
 
-// Model the real report shape, not a completed lifetime: interrupted producer
-// four has final authorities 6/7; its recovered successor has only authority 8.
+// Producer four emits RU8 before TFE in quiesceAndReport. Its recovered
+// successor emits only RU8; future pressure/backup terminals are absent.
 func selectedCloseTestOutput(t *testing.T, producer uint32) string {
 	t.Helper()
 	var raw strings.Builder
@@ -17,8 +17,9 @@ func selectedCloseTestOutput(t *testing.T, producer uint32) string {
 		}
 	}
 	if producer == 4 {
-		raw.WriteString("RU1:4:6:ccccc\nRU1:4:7:ccccc\n")
+		raw.WriteString("RU1:4:6:ccccc\n")
 		raw.WriteString(handoffTestCleanupRows(t, 6, 0))
+		raw.WriteString("RU1:4:7:ccccc\nRU1:4:8:00000\nTFE1:4:8:sha256:01" + strings.Repeat("00", 31) + "\n")
 	} else {
 		raw.WriteString("RU1:5:8:ccccc\n")
 	}
@@ -30,7 +31,7 @@ func TestExecutionSelectedCloseJoinedObservation(t *testing.T) {
 	if err := applyTypedExtractionCorrection(&plan); err != nil {
 		t.Fatal(err)
 	}
-	for _, producer := range []uint32{4, 5} {
+	for _, producer := range []uint32{5} {
 		through := producer + 3
 		raw := selectedCloseTestOutput(t, producer)
 		for _, test := range []struct {
@@ -81,10 +82,39 @@ func TestExecutionSelectedCloseJoinedObservation(t *testing.T) {
 				t.Fatal("selected close widened historical schema", schema)
 			}
 		}
-		for _, wrong := range []uint32{1, 5, 9, 15} {
+		for _, wrong := range []uint32{1, 5, 6, 7, 9, 15} {
 			if _, err := observeExecutionAttemptsForClose([]byte(raw), plan, producer, [32]byte{1}, true, wrong); err == nil {
 				t.Fatal("unselected boundary accepted", wrong)
 			}
+		}
+	}
+}
+
+func TestExecutionCheckpointPredecessorReuseTerminal(t *testing.T) {
+	plan := typedExtractionTestPlan(t)
+	if err := applyTypedExtractionCorrection(&plan); err != nil {
+		t.Fatal(err)
+	}
+	raw := selectedCloseTestOutput(t, 4)
+	for _, mode := range []string{"terminal present", "missing terminal", "duplicate terminal"} {
+		t.Run(mode, func(t *testing.T) {
+			observed := raw
+			if mode == "missing terminal" {
+				observed = strings.ReplaceAll(raw, "RU1:4:8:00000\n", "")
+			}
+			if mode == "duplicate terminal" {
+				observed = strings.ReplaceAll(raw, "RU1:4:8:00000\n", "RU1:4:8:00000\nRU1:4:8:00000\n")
+			}
+			got, err := observeExecutionAttempts([]byte(observed), plan, 4, [32]byte{1}, true)
+			want := mode == "terminal present"
+			if (err == nil) != want || got.Complete != want || got.Reuse.Complete != want {
+				t.Fatal("checkpoint predecessor terminal strictness changed", mode, err)
+			}
+		})
+	}
+	for _, invalid := range []uint32{6, 7, 8} {
+		if _, err := observeExecutionAttemptsForClose([]byte(raw), plan, 4, [32]byte{1}, true, invalid); err == nil {
+			t.Fatal("checkpoint predecessor was weakened into prefix close", invalid)
 		}
 	}
 }
