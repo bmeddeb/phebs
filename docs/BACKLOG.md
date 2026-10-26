@@ -5243,6 +5243,27 @@ docs/glossary/whitespace and all four supported dual-tag compiles pass; binaries
 were not executed. Source/cost, native oracle and raw-evidence reviews are clear.
 The actual opt-in composition, full MED-495/MED-496 and readiness remain open.
 
+**2026-10-26 — MED-496 selected-close parser follow-up.** On an isolated branch
+from H2s.j `0806182d`, carry the reviewed ordinary-return prefix correction
+`e433ad57` and correct the selected predecessor/successor close boundaries.
+The real predecessor interrupts phase eight after final authorities six/seven;
+the recovered successor ends after final authority eight. A parser must not
+require or invent future reuse terminals. Select these boundaries only through
+the existing native selected-recipe/run proof and completed-operation guards;
+leave ordinary six, the default full parser and historical schema fences exact.
+Require executed terminals, refuse future/duplicate/partial reports, retain
+unknown future slots and false whole attempt/reuse completeness, and prove full
+receipt consumers still refuse the prefix. Existing native/terminal/custody,
+accounting, workspace, measurement and cleanup gates remain unchanged.
+Faithful report-shape regressions must fail before correction; relevant normal,
+race, vet/lint/docs and supported 64-bit compilation plus independent exact-source
+review precede new image/profile admission. These are bounded controls, not
+actual native checkpoint qualification. The ordinary V15 pass is separately
+recorded in MED-495/MED-517; neither its driver/profile nor its acceptance is
+transferred. Preserve all original evidence and numeric bounds. No safeguarded
+namespace/workspace work, publishing, security action or native run is authorized
+by this parser slice.
+
 **2026-10-22 — Ben-directed implementation checkpoint integration.** Ben
 explicitly requests maria cleanup and PR merges after the v10 native failure
 was disclosed. PR156 and T42.H2s.a–d / PR164–167 may integrate as reviewed

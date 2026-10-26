@@ -59,14 +59,16 @@ type ExecutionAttemptObservation struct {
 // goroutines and its independently retained bootstrap input identity. Never
 // inspect a live checkoutCommandOutput or infer pipe EOF from a PC01 ACK.
 func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]byte, joined bool) (out ExecutionAttemptObservation, err error) {
-	return observeExecutionAttemptsForClose(raw, plan, producer, input, joined, false)
+	return observeExecutionAttemptsForClose(raw, plan, producer, input, joined, 0)
 }
 
-// The source-owned ordinary V6 return close ends after phase 6. It may retain
-// that joined prefix without inventing final-authority terminals for phases 7
-// and 8. Full producer/receipt completeness remains false in this mode.
-func observeExecutionAttemptsForClose(raw []byte, plan Plan, producer uint32, input [32]byte, joined, ordinaryReturn bool) (out ExecutionAttemptObservation, err error) {
-	if ordinaryReturn && (plan.Schema != PlanV6Schema || producer != 4) {
+// Source-owned V6 closes retain only completed final-authority reuse reports:
+// ordinary return through 6, interrupted checkpoint through 7, successor through
+// 8. Future terminals stay unknown; no prefix is a complete lifetime/receipt.
+func observeExecutionAttemptsForClose(raw []byte, plan Plan, producer uint32, input [32]byte, joined bool, reuseThrough uint32) (out ExecutionAttemptObservation, err error) {
+	prefix := reuseThrough != 0
+	selected := producer == 4 && (reuseThrough == 6 || reuseThrough == 7) || producer == 5 && reuseThrough == 8
+	if prefix && (plan.Schema != PlanV6Schema || !selected) {
 		return out, errExecutionAttempts
 	}
 	defer func() {
@@ -111,7 +113,7 @@ func observeExecutionAttemptsForClose(raw []byte, plan Plan, producer uint32, in
 			}
 			if producer <= 6 {
 				for _, phase := range executionProducerPhases(producer) {
-					if ordinaryReturn && phase != 6 {
+					if prefix && phase > reuseThrough {
 						if out.Reuse.Phases[phase-1] != (ExecutionReusePhase{}) {
 							return out, errExecutionAttempts
 						}
@@ -125,9 +127,9 @@ func observeExecutionAttemptsForClose(raw []byte, plan Plan, producer uint32, in
 			if !validExecutionHandoffRecord(plan, executionJoinedWorkRecord{Producer: producer, Input: input, Attempts: out}) {
 				return out, errExecutionAttempts
 			}
-			out.Complete = !ordinaryReturn
+			out.Complete = !prefix
 			out.ArchiveArtifacts.Complete = out.ArchiveArtifacts.complete(producer)
-			out.Reuse.Complete = producer <= 6 && out.Reuse.Bound && !ordinaryReturn
+			out.Reuse.Complete = producer <= 6 && out.Reuse.Bound && !prefix
 			out.Lifecycle.Complete = out.Lifecycle.Bound
 			out.Cache.Complete = out.Cache.complete()
 			out.SourceCensus.Complete = out.SourceCensus.complete()
@@ -258,8 +260,7 @@ func (run *ExecutionEpochOneRun) finishAttemptObservation(ctx context.Context, r
 		return ErrExecutionEpochOne // Do not inspect a possibly live buffer.
 	}
 	var err error
-	ordinaryReturn := run.flow.plan.Schema == PlanV6Schema && run.epoch.Epoch == 3 && !run.checkpointAllowed
-	result.Attempts, err = observeExecutionAttemptsForClose(run.output.buffer.Bytes(), run.flow.plan, run.producer(), run.attemptInput, true, ordinaryReturn)
+	result.Attempts, err = observeExecutionAttemptsForClose(run.output.buffer.Bytes(), run.flow.plan, run.producer(), run.attemptInput, true, run.attemptObservationReuseThrough(ctx))
 	var indexErr error
 	result.IndexOffers, indexErr = observeExecutionIndexOffers(run.output.buffer.Bytes(), run.flow.plan, run.producer(), run.attemptInput, true, err == nil && failure == nil)
 	footer, footerErr := executionTerminalFooterForPlan(run.output.buffer.Bytes(), run.attemptInput, run.flow.plan.Schema)
@@ -314,6 +315,31 @@ func (run *ExecutionEpochOneRun) finishAttemptObservation(ctx context.Context, r
 		return ErrExecutionEpochOne
 	}
 	return nil
+}
+
+// Finish owns run.mu. Existing native checks bind selected v13 and the exact
+// successor capability without taking shared locks or granting new authority.
+func (run *ExecutionEpochOneRun) attemptObservationReuseThrough(ctx context.Context) uint32 {
+	if run.flow.plan.Schema != PlanV6Schema {
+		return 0
+	}
+	if run.epoch.Epoch == 3 && !run.checkpointAllowed {
+		return 6
+	}
+	if !run.checkpointUsed || run.pressureAllowed || run.backupAllowed || run.pressureUsed || run.backupStarted {
+		return 0
+	}
+	native, ok := run.flow.native.(executionEpochCheckpointNativeAdapter)
+	if !ok || native.checkpointReturn(ctx, run, true, true) != nil || native.checkpointRun(ctx, run, run.epoch.Epoch) != nil {
+		return 0
+	}
+	if run.epoch.Epoch == 3 && run.checkpointAllowed && run.terminalEntered && run.terminalRequested {
+		return 7
+	}
+	if run.epoch.Epoch == 4 && !run.checkpointAllowed && run.warm {
+		return 8
+	}
+	return 0
 }
 
 // One bounded line pass after Wait, in addition to the existing two metric

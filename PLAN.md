@@ -17785,3 +17785,28 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   publication-transition work. The existing 64-MiB output cap and lifetimes
   remain exact. Fresh exact-source review and driver/profile approval precede
   any new bounded full qualification; prior V14 approval is not transferable.
+
+- **2026-10-26 — MED-496 selected-close parser correction.** Carry the reviewed
+  ordinary V6 return-prefix correction from `e433ad57` onto isolated H2s.j
+  source `0806182d`. Ordinary return has final-authority reuse evidence through
+  phase six. The selected checkpoint predecessor completes phases six/seven
+  before its phase-eight held interruption; its recovered fourth context
+  completes phase eight, not future pressure/backup phases nine through eleven.
+  Bind these two additional close boundaries to the existing selected native
+  recipe/run checks and completed source operations. Do not widen the default
+  full parser or historical schemas. Require every executed final terminal,
+  refuse unexpected future terminals and keep future slots unknown and whole
+  attempt/reuse completeness false, so partial qualification cannot issue full
+  receipt work. Existing native Wait, terminal footer, PC/DA/SA, measurement,
+  workspace and cleanup predicates remain independent and unchanged.
+
+  The cost is fixed recipe/run/context comparisons once after joined output,
+  plus comparisons in the existing at-most-four producer-phase loop. There is
+  no new query/sync/publication work, lock, scan, hash, cache, goroutine, timer,
+  child or retained allocation. Preserve all resource limits and deadlines.
+  Parser fixtures and modeled native source-binding controls require fresh
+  normal/race/static/docs/platform validation and independent exact-source
+  review. They establish no actual checkpoint/successor or formal-profile
+  acceptance. A changed-source native image/profile still needs exact admission
+  and specific installation approval; preserve qualified V15 and failed V14.
+  This slice does not resume the safeguarded namespace/workspace implementation.
