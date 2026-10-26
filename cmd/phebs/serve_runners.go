@@ -1064,7 +1064,7 @@ func startServeExtractionPipeline(d *serveDeps) error {
 	bindT422ExactChunkReports(d.exactReads, d.exact.failRead, partitionScheduler)
 	if d.checkpointRecovery != nil {
 		class := partitionScheduler.Classes[store.GenerationResourceExtraction]
-		class.OnStaleLeaseTransition = d.checkpointRecovery.transition
+		class.OnStaleLeaseTransition = d.checkpointRecovery.observeTransition
 		partitionScheduler.Classes[store.GenerationResourceExtraction] = class
 	}
 	d.exact.attempts.bindChunk(partitionScheduler)

@@ -24,6 +24,9 @@ type t422RecoverySchedulerStore struct {
 	recoveredEntered chan struct{}
 	reaperContext    chan context.Context
 	beforeRequeue    bool
+	deferredSibling  bool
+	reaperJoined     atomic.Bool
+	claimTurns       atomic.Int32
 	reaped, claimed  atomic.Bool
 	completed        atomic.Bool
 }
