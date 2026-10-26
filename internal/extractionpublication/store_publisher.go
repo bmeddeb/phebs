@@ -6,6 +6,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -26,18 +27,26 @@ func (publisher StorePublisher) PublishDomain(
 	// Count this invocation, including exact-current recounts and later
 	// validation/native failures, not only a changed authority or success.
 	if err := dispatchadmission.ObserveProductionPublication(ctx); err != nil {
+		readaccounting.NotePublicationFailure(ctx, readaccounting.PublicationFailureObservation, err, readaccounting.PublicationFailureFlags{})
 		return err
 	}
 	if publisher.Store == nil || runID == "" ||
 		candidate.ValidateDomainResultPlanControl(plan) != nil ||
 		candidate.ValidateDomainResultRoot(root, plan) != nil {
-		return errors.New("partition store publisher received invalid authority")
+		err := errors.New("partition store publisher received invalid authority")
+		readaccounting.NotePublicationFailure(ctx, readaccounting.PublicationFailureAuthority, err, readaccounting.PublicationFailureFlags{})
+		return err
 	}
 	publication, err := partitionPublication(plan, root, runID)
 	if err != nil {
+		readaccounting.NotePublicationFailure(ctx, readaccounting.PublicationFailureEncoding, err, readaccounting.PublicationFailureFlags{})
 		return err
 	}
-	return publisher.Store.PublishPartitionedExtractionDomain(ctx, publication)
+	err = publisher.Store.PublishPartitionedExtractionDomain(ctx, publication)
+	if err != nil {
+		readaccounting.NotePublicationFailure(ctx, readaccounting.PublicationFailurePublisher, err, readaccounting.PublicationFailureFlags{})
+	}
+	return err
 }
 
 // PublishRefusal settles one terminally refused domain under the same exact
