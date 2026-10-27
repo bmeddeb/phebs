@@ -17326,3 +17326,25 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   the retained MED-505 admission record and arm64 to keep Go 1.25.0. No
   historical receipt is relabeled, and no native, installed or scale claim
   follows. Cost: tests only; one retained JSON read.
+
+- **2026-10-27 — MED-695 installed host-preparation test diagnostics.**
+  The two held installed attempts identify `host_prepare` but did not retain
+  its context state or original error classes. The opt-in native acceptance
+  child now observes its existing allowance and at most two preparation calls:
+  entry time, elapsed monotonic duration, existing context deadline/state and
+  returned refusal/custody/cancellation/deadline/errno classes. Extra calls set
+  an overflow marker without changing their execution. No raw error, path or
+  credential enters the new fields. The original context, options, gate,
+  receipt, allowance and error are forwarded unchanged; no new allowance,
+  cancellation, retry or acceptance predicate is introduced. These private
+  diagnostics are not formatter child Wait, descendant custody, cleanup or
+  completion evidence. Those unavailable facts and the installed-only cause
+  remain open; no identical full qualification retry is justified by this
+  observability change alone.
+
+  Cost:only the opt-in test child adds one bounded allowance copy, two clock
+  observations and context/error classification per existing preparation call,
+  and at most two small rows in its existing final private receipt. No I/O,
+  child, signal, lock or hashing is added inside preparation. Ordinary runtime,
+  query/request, sync, retry/no-op and publication behavior is unchanged. The
+  namespace, formatter, process and shutdown implementations are untouched.
