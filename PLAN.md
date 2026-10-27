@@ -16893,3 +16893,21 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   loading concurrency do not increase. New functional/static gates and actual
   cold-path measurements remain required; prior arm64/legacy and failed native
   records keep their original identities and outcomes.
+
+  MED-505 operating-profile closure also carries `GOMAXPROCS=2` through the
+  amd64 native caller, driver and Bazel environments, and fixed repository/action
+  environments. The prior complete environment explicitly selected one Go
+  processor, so changing the JVM alone left Go SDK compilation/typechecking
+  restricted. The legacy/arm64 Go environment remains one processor. Both
+  environment construction and returned-call verification use the same fixed
+  vectors; no ambient value is inherited. This adds one bounded environment pass
+  and two fixed native argv elements, no additional invocation. Go subprocesses
+  may use two processors and additional internal compiler threads under the same
+  two-CPU, memory, task and descriptor ceilings. Serial Bazel actions/loading
+  remain exact. The JVM-only preparation passed in129.334s, but its full run
+  refused before native phases on actual projected filesystem pressure; no
+  success or causal timing improvement is inferred from that preparation.
+  Retained fixture copies are preserved. The task-owned KVM disk was expanded
+  from32 to64GiB (online filesystem growth), with unchanged CPU/RAM/kernel and
+  security settings, before a fresh deployment/capacity binding; no pressure
+  threshold or latch was edited. Host and other-machine filesystems are untouched.

@@ -1404,7 +1404,8 @@ SDK/sysroot bytes in new inventory/profile digests; the normal source-bound
 profile/epoch transition still applies. See
 [`med505_amd64_admission_v2.json`](../../spike/t457/med505_amd64_admission_v2.json)
 for material provenance and pending installed-qualification status. Native
-amd64 Bazel uses a fixed512MiB JVM heap and two active JVM processors within
+amd64 Bazel uses a fixed512MiB JVM heap and two active JVM processors, with
+Go callers and repository/action execution fixed to `GOMAXPROCS=2`, within
 the unchanged two-CPU/container-memory limits. Build actions and loading remain
 serial, and the shared five-minute attempt deadline is unchanged. Legacy/arm64
 startup keeps its256MiB/one-processor JVM profile. Historical

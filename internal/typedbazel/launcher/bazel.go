@@ -156,10 +156,10 @@ func RunBazel(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-	return runBazelCommand(ctx, output, argv)
+	return runBazelCommand(ctx, output, argv, BazelEnvironment())
 }
 
-func runBazelCommand(ctx context.Context, output []byte, argv []string) error {
+func runBazelCommand(ctx context.Context, output []byte, argv, env []string) error {
 	if argv == nil {
 		_, err := os.Stdout.Write(output)
 		return err
@@ -179,7 +179,7 @@ func runBazelCommand(ctx context.Context, output []byte, argv []string) error {
 	defer cancel()
 	command := exec.CommandContext(ctx, "/inputs/tools/bin/bazel", argv...)
 	command.Dir = Workspace
-	command.Env = BazelEnvironment()
+	command.Env = env
 	command.Stdout = os.Stdout
 	command.Stderr = os.Stderr
 	return command.Run()

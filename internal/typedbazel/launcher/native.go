@@ -80,6 +80,7 @@ func NativeBazelCommon() []string {
 	args = append(args, "--lockfile_mode=error", "--downloader_config=/inputs/tools/cache/downloader.cfg", "--repository_disable_download", "--repo_contents_cache=", "--experimental_repository_cache_hardlinks=false")
 	if runtime.GOARCH == "amd64" {
 		args = append(args, "--override_repository=rules_go++go_sdk+go_default_sdk=/inputs/tools/go")
+		args = append(args, "--repo_env=GOMAXPROCS=2", "--action_env=GOMAXPROCS=2")
 	}
 	return args
 }
@@ -101,6 +102,20 @@ func nativeBazelStartup(arch string) []string {
 		}
 	}
 	return args
+}
+
+func NativeBazelEnvironment() []string { return nativeBazelEnvironment(runtime.GOARCH) }
+
+func nativeBazelEnvironment(arch string) []string {
+	env := BazelEnvironment()
+	if arch == "amd64" {
+		for i, value := range env {
+			if value == "GOMAXPROCS=1" {
+				env[i] = "GOMAXPROCS=2"
+			}
+		}
+	}
+	return env
 }
 
 func nativeCommandPrefix(command string) []string {
@@ -249,6 +264,8 @@ func PrepareNativeCompatibility(plan planner.Plan, roots []planner.Configured, s
 	}
 	for i, value := range p.environment {
 		switch {
+		case value == "GOMAXPROCS=1" && runtime.GOARCH == "amd64":
+			p.environment[i] = "GOMAXPROCS=2"
 		case strings.HasPrefix(value, "GOPACKAGESDRIVER_BAZEL="):
 			p.environment[i] = "GOPACKAGESDRIVER_BAZEL=" + wrapper
 		case strings.HasPrefix(value, "GOPACKAGESDRIVER_BAZEL_FLAGS="):
@@ -367,7 +384,7 @@ func RunNativeCompatibilityBazel(ctx context.Context, slot string, args []string
 	if err != nil {
 		return err
 	}
-	return runBazelCommand(ctx, output, argv)
+	return runBazelCommand(ctx, output, argv, NativeBazelEnvironment())
 }
 
 func verifyNativeGoFiles(ctx context.Context, p Prepared, plan planner.Plan, matches NativeGoFiles) error {
