@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"runtime"
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/typedbazel/launcher"
@@ -19,8 +20,8 @@ type LegEvidence struct {
 	Call            CallEvidence `json:"call"`
 }
 
-func scipArguments(s Selection, patterns []string) []string {
-	return append([]string{"index", "--module-root=" + launcher.Workspace, "--module-path=" + s.Module, "--module-version=" + s.Source.Commit, "--repository-remote=" + s.Remote, "--go-version=go1.25.0", "--skip-tests", "--skip-implementations", "--output=/scratch/t451b-native-index.scip"}, patterns...)
+func scipArguments(s Selection, patterns []string, arch string) []string {
+	return append([]string{"index", "--module-root=" + launcher.Workspace, "--module-path=" + s.Module, "--module-version=" + s.Source.Commit, "--repository-remote=" + s.Remote, "--go-version=go" + typedindex.NativeSDKVersion(arch), "--skip-tests", "--skip-implementations", "--output=/scratch/t451b-native-index.scip"}, patterns...)
 }
 func runLeg(ctx context.Context, plan planner.Plan, roots []planner.Configured, matches launcher.NativeGoFiles, s Selection, slot string) (LegEvidence, error) {
 	var leg LegEvidence
@@ -45,7 +46,7 @@ func runLeg(ctx context.Context, plan planner.Plan, roots []planner.Configured, 
 	}
 	exe, args := NativeProbePath, p.Invocation().Arguments
 	if slot == "scip" {
-		exe, args = SCIPPath, scipArguments(s, args)
+		exe, args = SCIPPath, scipArguments(s, args, runtime.GOARCH)
 	}
 	started := time.Now()
 	stdout, stderr, clientErr := runClient(ctx, exe, args, env)

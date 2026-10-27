@@ -18136,6 +18136,19 @@ failures reproduced on main are repaired by explicit private TempDir ancestry,
 the existing exact /dev/shm recipe oracle, and launching-parent loss under a
 Linux subreaper; production custody/resource rules remain exact.
 
+T45.10 MED-505 material refresh (2026-10-26): the prospective amd64 SDK is
+exactly Go1.25.7, matching the frozen public corpus minimum, while the
+Go1.25.0-built driver/indexer and historical arm64 SDK remain pinned. The new
+compiler ZIP and image have passed actual archive expansion and read-only
+image preflight; offline module download passed with automatic toolchain
+selection disabled and unchanged source controls. The exact material record is
+`spike/t457/med505_amd64_admission_v2.json`. These are prerequisite passes, not
+installed qualification. Current-host installed generation/navigation/restart,
+operator parity, custody/accounting/teardown, implementation review and normal
+integration gates remain required. Existing host daemons/workloads are retained;
+a fresh private KVM guest supplies the dedicated native daemon. No scale,
+release or Epic42 gate is advanced.
+
 **T45.10a · Admit both native resource profiles in Settings** *(follows the
 T45.10 review; presentation handoff)* — an available amd64 installation reports
 `native-amd64-bounded-v1`, which the existing Settings validators reject, so the

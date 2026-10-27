@@ -127,7 +127,7 @@ func finalizeInput(ctx context.Context, i Invocation, b inputBinding, members []
 				return typedindex.Bundle{}, typedindex.Invalid
 			}
 			prefix = b.selection.Module.Roots[root].Path
-			if m.ProjectRoot != "file://"+path.Join("/scratch/workspace", prefix) || !slices.Equal(m.ToolInfo.Arguments, inputSCIPArguments(b, root)) {
+			if m.ProjectRoot != "file://"+path.Join("/scratch/workspace", prefix) || !slices.Equal(m.ToolInfo.Arguments, inputSCIPArguments(b, root, i.Profile.Definition().Config.GOARCH)) {
 				return typedindex.Bundle{}, typedindex.Stale
 			}
 		} else {

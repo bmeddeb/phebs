@@ -125,7 +125,7 @@ func neutralOperations(t *testing.T, s Selection, p planner.Plan, m launcher.Nat
 		},
 		read: func(_ string, _ int64) ([]byte, error) {
 			add("scip-read")
-			return proto.Marshal(&scip.Index{Metadata: &scip.Metadata{ProjectRoot: "file:///scratch/workspace", TextDocumentEncoding: scip.TextEncoding_UTF8, ToolInfo: &scip.ToolInfo{Name: "scip-go", Version: "0.2.7", Arguments: scipArguments(s, []string{"example.test/lib"})}}, Documents: []*scip.Document{{Language: "go", RelativePath: "lib/lib.go"}}})
+			return proto.Marshal(&scip.Index{Metadata: &scip.Metadata{ProjectRoot: "file:///scratch/workspace", TextDocumentEncoding: scip.TextEncoding_UTF8, ToolInfo: &scip.ToolInfo{Name: "scip-go", Version: "0.2.7", Arguments: scipArguments(s, []string{"example.test/lib"}, "arm64")}}, Documents: []*scip.Document{{Language: "go", RelativePath: "lib/lib.go"}}})
 		}, quiesce: func() error { add("quiesce"); return nil },
 	}
 }

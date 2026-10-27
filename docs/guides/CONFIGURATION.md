@@ -1392,6 +1392,20 @@ binary identities and scoped cleanup are recorded in
 `spike/t457/native_inputs_1.json`; these results do not enable a provider or
 establish a target-corpus performance envelope.
 
+The MED-505 amd64 admission candidate uses the exact Go1.25.7 SDK to satisfy
+the frozen reference repository's minimum version. Arm64 retains Go1.25.0;
+the driver and scip-go executables retain their independent Go1.25.0 build
+pins. SDK selection remains offline and exact: no automatic Go download or
+ambient host toolchain is used. Bazel's canonical rules_go SDK repository is
+fixed to `/inputs/tools/go`; its generated BUILD/version/root metadata must
+match the worker's embedded copies. Repository MODULE and lock bytes are not
+rewritten, and no user-selectable override path is accepted. Refreshed amd64 bundles must bind the new
+SDK/sysroot bytes in new inventory/profile digests; the normal source-bound
+profile/epoch transition still applies. See
+[`med505_amd64_admission_v2.json`](../../spike/t457/med505_amd64_admission_v2.json)
+for material provenance and pending installed-qualification status. Historical
+rehearsal records below describe their original tool identities.
+
 Module and import profiles target Linux `arm64` or `amd64`. The architecture is
 sealed in the profile configuration and must match the worker host; module
 commands use `GOARM64=v8.0` or `GOAMD64=v1` accordingly. Each architecture has

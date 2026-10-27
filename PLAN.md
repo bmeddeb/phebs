@@ -16825,3 +16825,41 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   integrity/hash verification and one transfer, followed by deletion only
   after local archive verification. It adds no product query, sync, startup,
   retry, publication, cache, resource-bound or child-process policy change.
+
+- **2026-10-26 — MED-505 prospective amd64 SDK/sysroot refresh.** The frozen
+  public corpus declares Go1.25.7; Go1.25.0 with `GOTOOLCHAIN=local` correctly
+  refuses it. Admit exactly the official linux/amd64 Go1.25.7 SDK
+  (`76ac600b…f5a8` executable), align profile/planner/result/SCIP SDK-version
+  fences, and retain the independent Go1.25.0-built driver/indexer pins.
+  Bazel's rules_go default SDK is independently selected, so amd64 native
+  invocations add exactly one fixed override of its canonical SDK repository to
+  the read-only `/inputs/tools/go` tree. Generated rules_go0.59.0 BUILD/version/
+  root metadata are embedded and compared byte-for-byte before execution;
+  canonical dependency labels and its Apache license are retained. Target
+  MODULE/lock bytes are unchanged. Arm64 keeps its original argv/SDK/compiler.
+  No automatic SDK selection,
+  host-PATH override, version range or network fallback is introduced. The new
+  amd64 compiler ZIP is `61882670…764a`,4238 regular entries,193026579 archive
+  bytes and505499865 expanded bytes; the historical ZIP/receipts stay exact
+  records, while a refreshed installation requires new inventory/profile
+  digests and its source-bound epoch CAS. The frozen compiler rootfs is copied
+  into a new image without build-only environment metadata; production image
+  admission retains its exact architecture/config/environment predicates.
+  The source-free material record is `spike/t457/med505_amd64_admission_v2.json`.
+  Read-only image preflight, compiler archive expansion and an offline
+  Go1.25.7 module download passed. Installed generation/navigation/restart,
+  custody/accounting/teardown and source review remain separate gates. Existing
+  workloads on Rose/Maria are preserved; native qualification uses a fresh
+  dedicated personal KVM guest and exact guest daemon/image admission.
+
+  Cost: SDK/version selection adds fixed string comparisons at existing
+  profile, SDK projection and returned-result boundaries, plus one fixed argv
+  element per existing amd64 Bazel child and about15KiB of exact SDK metadata
+  reads per Bazel plan/execute attempt, with no new corpus
+  scan, lock, cache or child. The driver and indexer are not rebuilt. Each
+  existing compiler setup reads/hashes193026579 ZIP bytes and expands505499865
+  bytes instead of72352400/197366737; count/file/expanded caps stay12000/128MiB/
+  512MiB. Plan/execute repeats that existing private setup, without retaining a
+  production cache. The fixture's fixed artifact probes are opt-in and add no
+  ordinary startup I/O. Requests/queries, sync, retries/no-op, publication,
+  concurrency and all memory/disk/child-process ceilings are unchanged.

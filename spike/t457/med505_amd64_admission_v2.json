@@ -1,0 +1,70 @@
+{
+  "schema": "phebs-med505-amd64-material-admission-v2",
+  "status": "prospective; installed qualification pending",
+  "go_sdk": {
+    "url": "https://go.dev/dl/go1.25.7.linux-amd64.tar.gz",
+    "archive_bytes": 59768749,
+    "archive_sha256": "12e6d6a191091ae27dc31f6efc630e3a3b8ba409baf3573d955b196fdf086005",
+    "go_sha256": "76ac600b41ad2eceee5d39d02af78009516f8b2a29f30bcc80f765c3e4b4f5a8",
+    "go_version": "go version go1.25.7 linux/amd64",
+    "GOTOOLCHAIN": "local",
+    "initial_version_probe_note": "Initial bare go version inherited repository auto-toolchain selection and failed expected version assertion. Acquisition preserved; corrected probe explicitly disables selection without redownload."
+  },
+  "sysroot": {
+    "sha256": "618826703a8b5db1775200b955bdd354ddcf40e4459e08ba4d8e8b893705764a",
+    "archive_bytes": 193026579,
+    "regular_entries": 4238,
+    "expanded_bytes": 505499865,
+    "compiler": "GCC 13.3.0-6ubuntu2~24.04.1",
+    "archive_admission_actual_wait": 0,
+    "wrapper_compile_execute_actual_wait": 0,
+    "serialization_reproduced_from_same_image": true
+  },
+  "runtime_image": {
+    "local_id": "sha256:f8e8e602219c4ec8dc820850d50c572efc3a87b2ad198c526c4244bcbbb6916a",
+    "compiler_rootfs_source_id": "sha256:499c7d116640b691c0b6038e8b6c9dd00fb0d00b34358b217cfeb39032e48541",
+    "environment_keys": [
+      "PATH"
+    ],
+    "volumes": [],
+    "production_read_only_preflight_actual_wait": 0,
+    "target_daemon_id_binding": "required after exact image transfer"
+  },
+  "unchanged": {
+    "arm64_sdk": "1.25.0",
+    "driver_build_sdk": "1.25.0",
+    "indexer_build_sdk": "1.25.0",
+    "bazel": "9.0.0",
+    "rules_go": "0.59.0",
+    "scip_go": "0.2.7",
+    "resource_and_custody_limits": true,
+    "historical_receipt_bytes": true
+  },
+  "sdk_compatibility": {
+    "exact_frozen_public_source": "d5824b1a2286806b07efd030aa3a139c4f540157",
+    "go_mod_minimum": "1.25.7",
+    "offline_go_mod_download_actual_wait": 0,
+    "fresh_module_cache": true,
+    "network_disabled": true,
+    "automatic_toolchain_selection_disabled": true,
+    "source_controls_unchanged": true,
+    "native_typecheck_generation_navigation": "pending",
+    "bazel_sdk_binding": {
+      "amd64_fixed_argument": "--override_repository=rules_go++go_sdk+go_default_sdk=/inputs/tools/go",
+      "metadata": "rules_go 0.59.0 generated SDK metadata, canonical repository labels and Go1.25.7; embedded exact byte verification",
+      "arm64_argv": "unchanged",
+      "target_MODULE_and_lock": "unchanged",
+      "actual_offline_selected_sdk_probe": {
+        "source_files_verified": 128,
+        "source_unchanged": true,
+        "selected_sdk_root": "/inputs/tools/go",
+        "selected_sdk_version": "1.25.7",
+        "selected_go_sha256": "76ac600b41ad2eceee5d39d02af78009516f8b2a29f30bcc80f765c3e4b4f5a8",
+        "offline_fetch_actual_wait": 0,
+        "seconds": 89.20332627400057
+      }
+    }
+  },
+  "installed_qualification": "NOT_ESTABLISHED",
+  "scale_or_release_acceptance": "NOT_ESTABLISHED"
+}

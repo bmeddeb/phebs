@@ -92,7 +92,7 @@ func newInstallationFixture(t *testing.T) installationFixture {
 		t.Fatal(err)
 	}
 	helper := typedindex.Tool{Version: "installed", Digest: h}
-	profile := installationTestJSON(t, typedindex.ProfileDefinition{Schema: typedindex.InputProfileSchema, Provider: typedindex.ModuleProviderID, Name: "installed", Tools: typedindex.Tools{Go: typedindex.Tool{Version: "1.25.0", Digest: h}, Indexer: typedindex.SCIPGoIndexer(runtime.GOARCH), Planner: helper, Launcher: helper}, Config: configuration, Policy: typedindex.MeasuredPolicy(), BundleDigest: typedNavigationBytes(inventory), ImageDigest: h})
+	profile := installationTestJSON(t, typedindex.ProfileDefinition{Schema: typedindex.InputProfileSchema, Provider: typedindex.ModuleProviderID, Name: "installed", Tools: typedindex.Tools{Go: typedindex.Tool{Version: typedindex.NativeSDKVersion(runtime.GOARCH), Digest: h}, Indexer: typedindex.SCIPGoIndexer(runtime.GOARCH), Planner: helper, Launcher: helper}, Config: configuration, Policy: typedindex.MeasuredPolicy(), BundleDigest: typedNavigationBytes(inventory), ImageDigest: h})
 	directory := filepath.Join(base, "repo")
 	writeInstallationControl(t, filepath.Join(directory, "inventory.json"), inventory)
 	writeInstallationControl(t, filepath.Join(directory, "profile.json"), profile)

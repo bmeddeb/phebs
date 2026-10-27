@@ -131,7 +131,7 @@ func runInput(ctx context.Context, i Invocation, o inputOperations) (raw []byte,
 				if len(patterns) == 0 {
 					continue
 				}
-				argv := inputSCIPArguments(b, n)
+				argv := inputSCIPArguments(b, n, i.Profile.Definition().Config.GOARCH)
 				if _, _, e = o.command(ctx, SCIPPath, argv, env, budget, path.Join(launcher.Workspace, m.Roots[n].Path)); e != nil {
 					return nil, e
 				}
@@ -248,9 +248,9 @@ func inputPatterns(b inputBinding, n int) []string {
 	return out
 }
 
-func inputSCIPArguments(b inputBinding, n int) []string {
+func inputSCIPArguments(b inputBinding, n int, arch string) []string {
 	r := b.selection.Module.Roots[n]
-	return append([]string{"index", "--module-root=" + path.Join(launcher.Workspace, r.Path), "--module-path=" + r.Module, "--module-version=" + b.selection.Source.Commit, "--repository-remote=https://" + b.selection.Source.Repository, "--go-version=go1.25.0", "--skip-tests", "--skip-implementations", "--output=" + inputOutput(n)}, inputPatterns(b, n)...)
+	return append([]string{"index", "--module-root=" + path.Join(launcher.Workspace, r.Path), "--module-path=" + r.Module, "--module-version=" + b.selection.Source.Commit, "--repository-remote=https://" + b.selection.Source.Repository, "--go-version=go" + typedindex.NativeSDKVersion(arch), "--skip-tests", "--skip-implementations", "--output=" + inputOutput(n)}, inputPatterns(b, n)...)
 }
 
 func decodeInputPackages(ctx context.Context, raw []byte) ([]loadedInputPackage, error) {

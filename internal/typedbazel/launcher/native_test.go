@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"sort"
 	"strings"
@@ -280,7 +281,11 @@ func testNativeScope(t *testing.T) {
 func testNativeCacheProfile(t *testing.T) {
 	old := BazelCommon()
 	native := NativeBazelCommon()
-	if len(native) != len(old)+5 || native[0] != "--repository_cache=/inputs/tools/cache/repository" || native[2] != "--registry=https://bcr.bazel.build" || !slices.Equal(native[len(old):], []string{"--lockfile_mode=error", "--downloader_config=/inputs/tools/cache/downloader.cfg", "--repository_disable_download", "--repo_contents_cache=", "--experimental_repository_cache_hardlinks=false"}) {
+	extra := []string{"--lockfile_mode=error", "--downloader_config=/inputs/tools/cache/downloader.cfg", "--repository_disable_download", "--repo_contents_cache=", "--experimental_repository_cache_hardlinks=false"}
+	if runtime.GOARCH == "amd64" {
+		extra = append(extra, "--override_repository=rules_go++go_sdk+go_default_sdk=/inputs/tools/go")
+	}
+	if len(native) != len(old)+len(extra) || native[0] != "--repository_cache=/inputs/tools/cache/repository" || native[2] != "--registry=https://bcr.bazel.build" || !slices.Equal(native[len(old):], extra) {
 		t.Fatal("native cache/registry/lock/downloader profile differs")
 	}
 	for i, arg := range old {
@@ -296,6 +301,23 @@ func testNativeCacheProfile(t *testing.T) {
 	for _, command := range [][]string{nativeCommandPrefix("info"), nativeQueryArgs(s), nativeBuildArgs(s, "/scratch/tmp/gopackagesdriver_bep_1234")} {
 		if _, _, err := inspectNativeBazel(s, command); err != nil {
 			t.Fatal("exact native invocation is not a positive control:", err)
+		}
+		if runtime.GOARCH == "amd64" {
+			for _, replacement := range []string{"", "--override_repository=rules_go++go_sdk+go_default_sdk=/scratch/foreign-sdk"} {
+				changed := slices.Clone(command)
+				index := slices.Index(changed, "--override_repository=rules_go++go_sdk+go_default_sdk=/inputs/tools/go")
+				if index < 0 {
+					t.Fatal("fixed SDK override missing")
+				}
+				if replacement == "" {
+					changed = append(changed[:index], changed[index+1:]...)
+				} else {
+					changed[index] = replacement
+				}
+				if _, _, err := inspectNativeBazel(s, changed); err == nil {
+					t.Fatal("changed SDK override accepted")
+				}
+			}
 		}
 		for _, tc := range []struct{ name, old, replacement string }{
 			{"local registry", "--registry=https://bcr.bazel.build", "--registry=file:///inputs/tools/cache/registry"},

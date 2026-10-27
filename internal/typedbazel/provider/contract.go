@@ -27,8 +27,8 @@ const (
 	GoDigest          = "sha256:4b4667aec6954798f54de64a96addb757ecf4472e566ed397ef36ff01464c389" // linux/arm64
 	SCIPDigest        = typedindex.SCIPGoIndexerDigest
 	BazelDigest       = "sha256:cab23c59d3d39c5e5382f12cd116b47445afdff9813516c18ae3ee8836b3037f"
-	// Official go1.25.0 and Bazel 9.0.0 linux/amd64 releases (spike/t457/native_tool_pins_amd64.json).
-	GoDigestAmd64    = "sha256:b93cdfdbc72f1afc3f21498c80bf3d155a44a9b95e2d690c940511051574bc25"
+	// Official Go 1.25.7 and Bazel 9.0.0 linux/amd64 releases; MED-505 prospective admission.
+	GoDigestAmd64    = "sha256:76ac600b41ad2eceee5d39d02af78009516f8b2a29f30bcc80f765c3e4b4f5a8"
 	BazelDigestAmd64 = "sha256:c44a93f25398c68f904fa1d19b61d321de6c0d2f09dca375d7bc0dc9b9428403"
 	nativeSDKRoot    = "external/rules_go++go_sdk+go_default_sdk"
 	maxClientBytes   = 1 << 20
@@ -166,7 +166,7 @@ func NativeToolDigests(arch string) (goSDK, scip, bazel string, ok bool) {
 func pinnedProfile(profile typedindex.Profile) bool {
 	p := profile.Definition()
 	goSDK, scip, bazel, ok := NativeToolDigests(p.Config.GOARCH)
-	return ok && p.RCDigest == "" && p.Tools.Bazel.Digest == bazel && p.Tools.Bazel.Version == "9.0.0" && p.Tools.Go.Digest == goSDK && p.Tools.Go.Version == "1.25.0" && p.Tools.Driver.Digest == "sha256:"+launcher.NativeDriverDigest(p.Config.GOARCH) && p.Tools.RulesGo.Version == "0.59.0" && p.Tools.Indexer.Digest == scip && p.Tools.Indexer.Version == "0.2.7"
+	return ok && p.RCDigest == "" && p.Tools.Bazel.Digest == bazel && p.Tools.Bazel.Version == "9.0.0" && p.Tools.Go.Digest == goSDK && p.Tools.Go.Version == typedindex.NativeSDKVersion(p.Config.GOARCH) && p.Tools.Driver.Digest == "sha256:"+launcher.NativeDriverDigest(p.Config.GOARCH) && p.Tools.RulesGo.Version == "0.59.0" && p.Tools.Indexer.Digest == scip && p.Tools.Indexer.Version == "0.2.7"
 }
 
 func classify(err error) error {

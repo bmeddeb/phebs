@@ -222,7 +222,7 @@ func RunHelper(args []string) error {
 	return nil
 }
 
-// MatchGoFile applies the fixed Go 1.25.0 admitted Linux constraint context to
+// MatchGoFile applies the fixed Go 1.25 language constraint context to
 // supplied declared-source bytes. It performs no discovery or filesystem read.
 // Matching import "C" is deliberately separate from cgo compilation selection.
 func MatchGoFile(name string, data []byte, mode GoMode) (bool, error) {

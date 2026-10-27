@@ -164,7 +164,7 @@ func nativeInputBundle(t *testing.T, s *store.Surreal, repo, dir, mode string) (
 	if mode == "import" {
 		tools.Indexer.Digest = selection.Import.Producer.Digest
 	} else {
-		tools.Go = typedindex.Tool{Version: "1.25.0", Digest: goSDK}
+		tools.Go = typedindex.Tool{Version: typedindex.NativeSDKVersion(runtime.GOARCH), Digest: goSDK}
 		for _, prefix := range []string{"go", "bin"} {
 			root := filepath.Join(*inputNativeTools, prefix)
 			if e = filepath.WalkDir(root, func(name string, d fs.DirEntry, err error) error {

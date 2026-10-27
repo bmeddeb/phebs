@@ -112,8 +112,8 @@ func PrepareCompatibility(plan planner.Plan, roots []planner.Configured, slot st
 		seen[id] = true
 		unit := units[id] // Prepare has already validated this exact closure.
 		sdk, ok := sdks[unit.SDK]
-		if !ok || sdk.Version != "1.25.0" || jsonHash(sdk.Mode) != jsonHash(unit.Mode) {
-			return Prepared{}, fmt.Errorf("%w: compatibility requires uniform Go 1.25.0 SDK authority", ErrUnrepresentable)
+		if !ok || sdk.Version != typedindex.NativeSDKVersion(unit.Mode.GOARCH) || jsonHash(sdk.Mode) != jsonHash(unit.Mode) {
+			return Prepared{}, fmt.Errorf("%w: compatibility requires the exact architecture SDK authority", ErrUnrepresentable)
 		}
 		for _, im := range unit.Imports {
 			pending = append(pending, im.Unit)

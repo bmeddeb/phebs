@@ -212,7 +212,7 @@ func runValidated(ctx context.Context, i Invocation, o workerOperations) (raw []
 		if e != nil {
 			return nil, e
 		}
-		if e = verifySCIP(result.SCIP, documents, selection, result.Legs[1].Call.Launcher.Arguments); e != nil {
+		if e = verifySCIP(result.SCIP, documents, selection, result.Legs[1].Call.Launcher.Arguments, i.Profile.Definition().Config.GOARCH); e != nil {
 			return nil, e
 		}
 		result.SCIPSHA256 = hash(result.SCIP)

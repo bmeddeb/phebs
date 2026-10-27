@@ -37,7 +37,7 @@ func validateInputProfile(d ProfileDefinition) error {
 		return Unsupported
 	}
 	if d.Provider == ModuleProviderID {
-		if d.Tools.Go.Version != "1.25.0" || !digest(d.Tools.Go.Digest) || d.Tools.Indexer != SCIPGoIndexer(d.Config.GOARCH) {
+		if d.Tools.Go.Version != NativeSDKVersion(d.Config.GOARCH) || !digest(d.Tools.Go.Digest) || d.Tools.Indexer != SCIPGoIndexer(d.Config.GOARCH) {
 			return Unsupported
 		}
 	} else if d.Tools.Go != (Tool{}) {
