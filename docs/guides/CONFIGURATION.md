@@ -1394,8 +1394,12 @@ establish a target-corpus performance envelope.
 
 The MED-505 amd64 admission candidate includes two digest-pinned static rules_go
 bootstrap tools built reproducibly from its pinned SDK and dependency sources.
-They replace repeated tool bootstrap during execution; source selection, standard
-library builds and typechecking still run under the same limits.
+They replace repeated tool bootstrap during execution. A refreshed SDK can also
+carry reproducibly built standard-library archives for the exact default
+linux/amd64 cgo mode, with empty tags and normal linking. Other modes refuse
+that library set. Standard-library source listing, package typechecking and SCIP
+still run under the same limits; the source-build SDK path remains available
+without precompiled archives.
 
 The MED-505 amd64 admission candidate uses the exact Go1.25.7 SDK to satisfy
 the frozen reference repository's minimum version. Arm64 retains Go1.25.0;

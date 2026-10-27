@@ -117,6 +117,24 @@
       "stopped_stage": "package-load/typecheck",
       "memory_peak_bytes": 2743115776,
       "selected": false
+    },
+    "bazel_bootstrap_followup": {
+      "source": "f6bf332fd282bfd9a130a6200a143ac57f767e6d",
+      "actual_wait": 1,
+      "seconds": 535.3770109350007,
+      "planning_exit": 0,
+      "execution_exit": 124,
+      "stop_reason": "wall_limit",
+      "stopped_stage": "package-load/typecheck",
+      "stage_age_seconds": 69.723767575,
+      "execution_planning_seconds": 83.619410288,
+      "memory_peak_bytes": 2704162816,
+      "containers_removed": true,
+      "limits_verified": true,
+      "no_oom_or_task_limit_events": true,
+      "engine_joined": true,
+      "emergency": "completed",
+      "full_custody_accounting_and_teardown_pass": false
     }
   },
   "scale_or_release_acceptance": "NOT_ESTABLISHED",
@@ -259,6 +277,1821 @@
       },
       "cold_independent_cache_per_round": true
     },
-    "native_cost_improvement": "not established; fresh native preparation and installed qualification required"
+    "native_cost_improvement": "not established; fresh native preparation and installed qualification required",
+    "native_preparation": {
+      "source": "f6bf332fd282bfd9a130a6200a143ac57f767e6d",
+      "actual_wait": 0,
+      "seconds": 108.0614707349996,
+      "postrun_actual_wait": 0,
+      "postrun_seconds": 2.8234134590002213,
+      "command_millis": {
+        "aquery": 22273,
+        "build": 30330,
+        "compiler": 6793,
+        "cquery": 26234,
+        "final": 374,
+        "materialize": 376,
+        "plan": 79094,
+        "tools": 1431,
+        "verify": 506,
+        "wall": 88575
+      },
+      "independent_controls_match": true
+    }
+  },
+  "source_gates": {
+    "source": "f6bf332fd282bfd9a130a6200a143ac57f767e6d",
+    "normal_race_vet_lint_docs": "pass",
+    "frozen_binary_count": 6,
+    "root_executor_actual_wait": 0,
+    "root_executor_seconds": 46.46913757799848,
+    "installed_command_actual_wait": 0,
+    "source_cas_actual_wait": 0,
+    "image_preflight_actual_wait": 0,
+    "independent_review": "pending"
+  },
+  "steady_state_cost_review": {
+    "per_request_query_sync_tick_retry_noop_publication": "no new work",
+    "startup": "unchanged except existing source-bound admission to refreshed inventory",
+    "per_bazel_plan_or_execute": "verify two fixed executable sizes/digests/static build metadata and exact SDK label metadata; no extra child",
+    "read_bounds_bytes": [
+      6679171,
+      3016842
+    ],
+    "locks_and_concurrency": "existing worker/workspace scope; no new lock or action concurrency",
+    "cache": "no new cache; removes cold bootstrap tool Go build/cache cleanup",
+    "disk": "input copies add 9696013 tool bytes plus exact label metadata; scratch adds two symlinks and omits the old generated tools/cache",
+    "memory_and_descriptors": "sequential bounded file reads/buildinfo inspection under unchanged memory and 128-FD bounds"
+  },
+  "sdk_standard_libraries": {
+    "schema": "phebs-med505-sdk-stdlib-v1",
+    "sdk_go_sha256": "76ac600b41ad2eceee5d39d02af78009516f8b2a29f30bcc80f765c3e4b4f5a8",
+    "compiler_archive_sha256": "618826703a8b5db1775200b955bdd354ddcf40e4459e08ba4d8e8b893705764a",
+    "image": "sha256:f8e8e602219c4ec8dc820850d50c572efc3a87b2ad198c526c4244bcbbb6916a",
+    "reproduced": true,
+    "builds": [
+      {
+        "round": 1,
+        "actual_wait_exit": 0,
+        "seconds": 42.773680552996666
+      },
+      {
+        "round": 2,
+        "actual_wait_exit": 0,
+        "seconds": 42.49811201299963
+      }
+    ],
+    "environment": {
+      "PATH": "/inputs/tools/go/bin:/scratch/toolchain/usr/bin:/usr/bin:/bin",
+      "HOME": "/scratch/cache",
+      "GOMAXPROCS": "2",
+      "GOTOOLCHAIN": "local",
+      "GOENV": "off",
+      "GOTELEMETRY": "off",
+      "GO111MODULE": "off",
+      "GOPROXY": "off",
+      "GOSUMDB": "off",
+      "GOOS": "linux",
+      "GOARCH": "amd64",
+      "GOAMD64": "v1",
+      "CGO_ENABLED": "1",
+      "CC": "/scratch/toolchain/cc",
+      "GOROOT": "/inputs/tools/go",
+      "GOCACHE": "/scratch/cache/go-build",
+      "GOPATH": "/scratch/cache/gopath",
+      "GODEBUG": "installgoroot=all",
+      "TMPDIR": "/tmp"
+    },
+    "go_arguments": [
+      "install",
+      "-p",
+      "2",
+      "-trimpath",
+      "std"
+    ],
+    "archives": [
+      {
+        "path": "pkg/linux_amd64/archive/tar.a",
+        "bytes": 1578388,
+        "digest": "sha256:86b786f4f5ac51a9f432ecaa5284eedacd3ab48f38fd934cc92c5c858e2cc3b0"
+      },
+      {
+        "path": "pkg/linux_amd64/archive/zip.a",
+        "bytes": 1592840,
+        "digest": "sha256:822ef214f2ba4fc795084b579405e8e2fc1703e0ad1bec18b047aeccb055acb9"
+      },
+      {
+        "path": "pkg/linux_amd64/bufio.a",
+        "bytes": 356664,
+        "digest": "sha256:9ddd71331c46f795c7ee04c411738c9a51c443371a739e3b11fe4f9faf0e10a9"
+      },
+      {
+        "path": "pkg/linux_amd64/bytes.a",
+        "bytes": 448890,
+        "digest": "sha256:73048ba1f1cc9ce63dd0ef679d4181af1e019b4f0f5dc3e5f3fb1c57df7dd774"
+      },
+      {
+        "path": "pkg/linux_amd64/cmp.a",
+        "bytes": 2486,
+        "digest": "sha256:8ad6a7c5fde289aea328f9722822775bc52221509ddd43de60586d54fbfbc1f9"
+      },
+      {
+        "path": "pkg/linux_amd64/compress/bzip2.a",
+        "bytes": 332730,
+        "digest": "sha256:4809afc4c4b13a58e2442351c2144279be7b5743bd8865fcc7ed9be23728f38c"
+      },
+      {
+        "path": "pkg/linux_amd64/compress/flate.a",
+        "bytes": 579408,
+        "digest": "sha256:f36aa56c0c7ab8a3b23b0fd31c0e155049c0b9f72abcab24eac8cb3ab48b6219"
+      },
+      {
+        "path": "pkg/linux_amd64/compress/gzip.a",
+        "bytes": 146364,
+        "digest": "sha256:04d0488e9c540c4f39b74202987427cae497e7418bf46eb2b7dc2763a85a4b26"
+      },
+      {
+        "path": "pkg/linux_amd64/compress/lzw.a",
+        "bytes": 116050,
+        "digest": "sha256:4b7a88df1ba412e19154b5e47bcf92424babed058f11d496226c1260bd72826d"
+      },
+      {
+        "path": "pkg/linux_amd64/compress/zlib.a",
+        "bytes": 104626,
+        "digest": "sha256:95b16ca328712dd06b609dd5014da2c9097ae6d14f154b1d712edb3329a9366b"
+      },
+      {
+        "path": "pkg/linux_amd64/container/heap.a",
+        "bytes": 30090,
+        "digest": "sha256:0e89160d7ab00ee35051118aa01c05698b75be94a0a22974992d814be26401fd"
+      },
+      {
+        "path": "pkg/linux_amd64/container/list.a",
+        "bytes": 90450,
+        "digest": "sha256:e05faaa874aa713f829890e812939e79703285921ef14f9e18d7f7cba9b9d800"
+      },
+      {
+        "path": "pkg/linux_amd64/container/ring.a",
+        "bytes": 38134,
+        "digest": "sha256:9d8f8f8694656a3230631fbad95c490b639ee92fe49ae9a410cd7697af08581a"
+      },
+      {
+        "path": "pkg/linux_amd64/context.a",
+        "bytes": 382100,
+        "digest": "sha256:02fc1749658dd4795101cc7a548a88cc9741b27568e5d46dd2f7160a35eca5fb"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/aes.a",
+        "bytes": 18966,
+        "digest": "sha256:13c9c0c0ab07720ea02df00a5d5ddcc18e670a0d8d7a323871ba23a071af7768"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/cipher.a",
+        "bytes": 308514,
+        "digest": "sha256:6d48da82fc7b227ba58ad2b36b1d84198774b1297c4767f68d56e361f576f3f5"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/des.a",
+        "bytes": 91278,
+        "digest": "sha256:775749e5c4a4d35075834fcfa13c2df0a43b1c133ad80893f304a6f20de565f4"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/dsa.a",
+        "bytes": 78956,
+        "digest": "sha256:11753fde9225080cbb0492821097c106e5ef2157b23eb3c7100712bf5bdcf52e"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/ecdh.a",
+        "bytes": 297044,
+        "digest": "sha256:8c567b783d907d21e85ab020c5f2ce0ea5197441bffad166484887a55b537764"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/ecdsa.a",
+        "bytes": 1814182,
+        "digest": "sha256:f4f7b01abcbd56ccf3b391b3fa0f333ed4844c4998af11a91e4d1c5df42648c0"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/ed25519.a",
+        "bytes": 758610,
+        "digest": "sha256:24bc2353afc1c465f8baecdb846517c736cdf871920147de06c1f157a37b0528"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/elliptic.a",
+        "bytes": 473902,
+        "digest": "sha256:2dd1fe37766b571c0eeb8893cdab0d2806e73a8e4e6afd138e90f5ceef434e16"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/fips140.a",
+        "bytes": 6574,
+        "digest": "sha256:15645fe1eb32fd3989bd19d0147cee5cd5ce9f04d75230e41fbf1a976fd73c34"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/hkdf.a",
+        "bytes": 16486,
+        "digest": "sha256:1c70fb600a45a37ce64883f67aedc97bcd18b811a7785be6a13f6c2e811ec5c5"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/hmac.a",
+        "bytes": 80106,
+        "digest": "sha256:b5c2fe86027c4e8fd358c6400b2a00dffca407bed8b32f5d06422bbbbd2e8f40"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/boring/bbig.a",
+        "bytes": 32562,
+        "digest": "sha256:a1420cf6bb9e87a58712309612f07bb8944fbb7888ac0a855e20643ded039c60"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/boring/bcache.a",
+        "bytes": 8086,
+        "digest": "sha256:f02de9c79940b6add79dc1d2160acb9007b49993c88942786b8d27c64f1fbff8"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/boring/sig.a",
+        "bytes": 7476,
+        "digest": "sha256:17499d3fa30a68bfdd05e9a3d4d159963fa930ca1a28ae5e080ddcfcb2cfdfd9"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/boring.a",
+        "bytes": 113816,
+        "digest": "sha256:5653b9f33ea93780dd6cf295a0f302d978d1b412bb5c863a0712ce3d47c37971"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/cryptotest.a",
+        "bytes": 632164,
+        "digest": "sha256:ad6fa27183e2b863834c465e569947cf28ff4d4cd0a28ee52a36e83f0b015e8a"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/entropy.a",
+        "bytes": 7668,
+        "digest": "sha256:d3ac512cec36def5539a7a6ccff5a44d788b7fe2f43706abb8d970422c18918f"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140/aes/gcm.a",
+        "bytes": 261762,
+        "digest": "sha256:6a708126208c2b52f05ff7cf932badaf4ac29731906cddba471356b206492e16"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140/aes.a",
+        "bytes": 221200,
+        "digest": "sha256:9efabfbeeda8eab574955041a7d0aada4294fb3cb7ff72e024e48ce519167801"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140/alias.a",
+        "bytes": 6434,
+        "digest": "sha256:bcc5cbcab1fd81f7beeb1c4c846378d4d9ed4a46c11150c806a043778439c1a4"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140/bigmod.a",
+        "bytes": 329304,
+        "digest": "sha256:498faf55d6332d8a541eab88e68350765066b3f948155d9116c8b56df860f457"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140/check/checktest.a",
+        "bytes": 29598,
+        "digest": "sha256:b97bce27bb35efea2540422c84c1acb87b76c1a6501c9bcba71684dd94ef4ef7"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140/check.a",
+        "bytes": 61884,
+        "digest": "sha256:82276dfa18d9ac46d015babb5a1e8758b307628555e6192ef89df2eed7244565"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140/drbg.a",
+        "bytes": 139050,
+        "digest": "sha256:f3fe8892acdfb434db0007be5aa3cc9004be1b5104f389cca71e35cf48f81420"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140/ecdh.a",
+        "bytes": 96864,
+        "digest": "sha256:95691015f15abc391730da259840d723318d154a27ef20a2286febba8506e239"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140/ecdsa.a",
+        "bytes": 388802,
+        "digest": "sha256:a1a0c0077754c68dae4a6d11a0a55f1277314bb8467b7f522305bd61057fb33d"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140/ed25519.a",
+        "bytes": 143650,
+        "digest": "sha256:ac572d2ef5caf577a77dc9de55bc208cb1bd9e0d734ebdd3b1407cc4febe0b3f"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140/edwards25519/field.a",
+        "bytes": 185062,
+        "digest": "sha256:1943b41274a37331d0a3a28eb53c20fbcff3550783b83afcd1a6bb7d05b996c9"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140/edwards25519.a",
+        "bytes": 403068,
+        "digest": "sha256:049e1e83b6b1667d6da1910cfe0cedb6a092e48822a92f9c7f29196d6fa3018f"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140/hkdf.a",
+        "bytes": 50044,
+        "digest": "sha256:b5b6d176e47147db29ac0d86e6a1b3d91d8b8ad8c5c054cd90707fa8f1182cd0"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140/hmac.a",
+        "bytes": 96678,
+        "digest": "sha256:55e9081d53a9d8ab48b8eb5461d90366297e08d01825aaa6441eccb531edef4d"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140/mlkem.a",
+        "bytes": 378684,
+        "digest": "sha256:c0c0fbb484c029a451256556a735b529ba83f7f049537abd886fe3ed71a9dc18"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140/nistec/fiat.a",
+        "bytes": 855970,
+        "digest": "sha256:42aacbd0b5021cf7d25d1dd071d95cd17c406bcc52e821cc9ced585a966cb57f"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140/nistec.a",
+        "bytes": 828194,
+        "digest": "sha256:8f81e95fe02085141034c4eac29c7079eb82b10ff387ac689068d5c10325c3e7"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140/pbkdf2.a",
+        "bytes": 51650,
+        "digest": "sha256:07e270d41b2f6342ac0892970861fa97a698d9da669f7fa07b3e3d78e531268e"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140/rsa.a",
+        "bytes": 361422,
+        "digest": "sha256:738b1ad9efe6f303e22fa06684dd08dc975cad9f07d93f519641acbec9d88077"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140/sha256.a",
+        "bytes": 114232,
+        "digest": "sha256:cb6c70d65be906bceee9609b42b0305e9642e9ada516b9736b1c8920f19f9a0f"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140/sha3.a",
+        "bytes": 191724,
+        "digest": "sha256:14ae6f16ae892e8478e7aacf618425d9223edcaaa3c3a3ceaf2c89e57cbc0756"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140/sha512.a",
+        "bytes": 107294,
+        "digest": "sha256:716c989693645e934d207331b3b00950f0e8531143fca4cf57028d2d063a31d2"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140/ssh.a",
+        "bytes": 11774,
+        "digest": "sha256:a6afb2330258313820598caacc7710799b82067e751ef14b127b2c342a1a4969"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140/subtle.a",
+        "bytes": 30618,
+        "digest": "sha256:25a1f9aea58b7545d263aef13655642ee194046a7cf6b86970dd2cd6f45550c4"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140/tls12.a",
+        "bytes": 51818,
+        "digest": "sha256:b2b0b636dc598900aa8770688e931b04691cb4fa7542df26f5fc78277e250b2d"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140/tls13.a",
+        "bytes": 178564,
+        "digest": "sha256:93ed3cd1917244b74b6a47e9298f2667246889833aaaf051ea28d58672db7b98"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140.a",
+        "bytes": 50978,
+        "digest": "sha256:0d5b3846e309b155495c9fe58f4713a87be6225215979cb3bb48c5a81b4ca991"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140cache.a",
+        "bytes": 123008,
+        "digest": "sha256:d31748c038fed0887bcb3226c3f24b56da13e9ead2f6d4af658fb78a7b13faa2"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140deps/byteorder.a",
+        "bytes": 34478,
+        "digest": "sha256:5c73bc3a1591d727eaf7dda4f5e2a802df1be1da93dc20aca775ff8ca80e3e00"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140deps/cpu.a",
+        "bytes": 11752,
+        "digest": "sha256:68cae148ce428f38a529ae8ce999a0969a82c6ee4c1f1769eb49da853893e0e8"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140deps/godebug.a",
+        "bytes": 103808,
+        "digest": "sha256:3e3eb13261c700333e480096db09287038e5d1bf7d678512f2591d84874fe74e"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140deps.a",
+        "bytes": 934,
+        "digest": "sha256:622fc297632d70df0fdc4501426404dd27272a56ef23406ca99c0f9309645e19"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140hash.a",
+        "bytes": 11924,
+        "digest": "sha256:7b79da8440389ad0f70ffd6234977a3e9a96da50619eddbed1476c80d5fbf478"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/fips140only.a",
+        "bytes": 118340,
+        "digest": "sha256:4faa37444f4da16688dcf8ccdf79bcb646eddf5eaae53bac00699af6c3f91c98"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/hpke.a",
+        "bytes": 271618,
+        "digest": "sha256:91641376af77e54042120b492ac6a83a10667b14ce4c29da3a337910f90dc525"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/impl.a",
+        "bytes": 33944,
+        "digest": "sha256:afe8f0c95c16fc2c511ae07d57b43685545770db75097934cd89974ff01d8876"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/randutil.a",
+        "bytes": 7618,
+        "digest": "sha256:39371d686b711caa98282eedfe36acca4f005c3355feeb415c1be90026381229"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/sysrand/internal/seccomp.a",
+        "bytes": 25934,
+        "digest": "sha256:76ca96eb99d1a21e994eda1511b2306bb3b812ab7e7c837103b21b8602287da3"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/internal/sysrand.a",
+        "bytes": 64494,
+        "digest": "sha256:c54ee2f6a7949fe4926d3f0c011b57dcb2e56c1e6f6f676cf52662a1494f78f3"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/md5.a",
+        "bytes": 89412,
+        "digest": "sha256:da72caada843beade80dfe5f47a19b32aabb4a26e58d495f030bb977b15833b7"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/mlkem.a",
+        "bytes": 75330,
+        "digest": "sha256:069e875c547bbff53191c8f81559ae72deb90800f54e012c8c2fd770108c0778"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/pbkdf2.a",
+        "bytes": 14956,
+        "digest": "sha256:c4f1ace85ef1aa91ad49f1c29751b08ed4c4a33b0b5a315fed960249b3193d1d"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/rand.a",
+        "bytes": 60624,
+        "digest": "sha256:2a0e54aa1c241554024b6b1ccc0c2ad03ba0bbbf185465fc24a43d16b1282490"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/rc4.a",
+        "bytes": 31250,
+        "digest": "sha256:49a0bd1d00502e60dfdddcb0155afd34f731fb8a890e314b30d7ab5223efea40"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/rsa.a",
+        "bytes": 386762,
+        "digest": "sha256:35ddbf51a06f46301f08fbbd8f85a9d1a2eb39ce110188c6b361b07ef96474ab"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/sha1.a",
+        "bytes": 118302,
+        "digest": "sha256:b60bc27fa2c2d744f83c0121a4dbb2e49d11e3ffab8c0e1268ddc7f3399e0450"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/sha256.a",
+        "bytes": 24190,
+        "digest": "sha256:e0f8d18414b8e50e5823ad78b67d8337b972ee0e10b44008b0583913f312b218"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/sha3.a",
+        "bytes": 124548,
+        "digest": "sha256:5e0500283df5c7cc53c2cb163545309aadba60046aacfb74d7dc86a7689faf92"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/sha512.a",
+        "bytes": 36738,
+        "digest": "sha256:e810b88081069ac14c60739d69c912c5764211cfd1e85072a8a2c60e80106ddd"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/subtle.a",
+        "bytes": 29874,
+        "digest": "sha256:30cd4a0cf3e7f34cedd8d6388ac31ddcaf76e97eb2b73a1095998e9dccc51536"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/tls/internal/fips140tls.a",
+        "bytes": 12924,
+        "digest": "sha256:864ed7253531cf60f7a3293b9103af5ee336358e73b6ba32d180c06dfe16385d"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/tls.a",
+        "bytes": 4789272,
+        "digest": "sha256:0fb9f827a2d7e2d3f89096427728f3fe3d048dbe7d058c4262334675097b1066"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/x509/pkix.a",
+        "bytes": 132444,
+        "digest": "sha256:e772dc0c2e1ae3472c6145d1c62bfe3bc9c1c0454ea323e8e455512e47dbd281"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto/x509.a",
+        "bytes": 1945652,
+        "digest": "sha256:e7c945809bfea4f45be1ab390d6065ecf1674fa2e49d6ac7693414774544290b"
+      },
+      {
+        "path": "pkg/linux_amd64/crypto.a",
+        "bytes": 88420,
+        "digest": "sha256:aff6e2c7296d6fd2dfb8ad17613595b8e021ccd521035ac987277afb3e209e0a"
+      },
+      {
+        "path": "pkg/linux_amd64/database/sql/driver.a",
+        "bytes": 407450,
+        "digest": "sha256:ea5639c4d3c1248d59bcaf7780dc3347cc11a6594c902d00dcc087d34ec812f3"
+      },
+      {
+        "path": "pkg/linux_amd64/database/sql.a",
+        "bytes": 1548814,
+        "digest": "sha256:499fcf93a632a4b07ae92e017a7f3630c582f0c4a2c8fd9bed951391a5b78c0c"
+      },
+      {
+        "path": "pkg/linux_amd64/debug/buildinfo.a",
+        "bytes": 169046,
+        "digest": "sha256:e17d262999763952f4faab18b423ce109abb97f6a17cc1f181d62971f274cadc"
+      },
+      {
+        "path": "pkg/linux_amd64/debug/dwarf.a",
+        "bytes": 1131936,
+        "digest": "sha256:226a81881e2370a90547bd70b7d080c2b93f3d12fb835296a9dcc6bfdca703cf"
+      },
+      {
+        "path": "pkg/linux_amd64/debug/elf.a",
+        "bytes": 1285376,
+        "digest": "sha256:23cda3d8828a9b1579ee8213c60e106b19d25a5bd7229be2d5da06e136ac67e3"
+      },
+      {
+        "path": "pkg/linux_amd64/debug/gosym.a",
+        "bytes": 502134,
+        "digest": "sha256:e25b5860179f391b509f834b54962782411f96d59280f7428f0039534b8e748f"
+      },
+      {
+        "path": "pkg/linux_amd64/debug/macho.a",
+        "bytes": 567266,
+        "digest": "sha256:3f4aec71f77d47bb4646b6aa0e2a00402e46ac60a77e87fe5bb9a10823e960e6"
+      },
+      {
+        "path": "pkg/linux_amd64/debug/pe.a",
+        "bytes": 360926,
+        "digest": "sha256:5b53b0a323ea7626fbecc672d8a4a043adc9f075b4f766c6f3245b87f120305f"
+      },
+      {
+        "path": "pkg/linux_amd64/debug/plan9obj.a",
+        "bytes": 146900,
+        "digest": "sha256:19e59eb6c1da9b87fb53178532c87c1932b9ad25b2ee18f881b3552099b6a16e"
+      },
+      {
+        "path": "pkg/linux_amd64/embed.a",
+        "bytes": 130220,
+        "digest": "sha256:f832a39994dc5d9d81c9f6a95625c12cf9dda0e0f4570ecaa245f2881b17b320"
+      },
+      {
+        "path": "pkg/linux_amd64/encoding/ascii85.a",
+        "bytes": 48088,
+        "digest": "sha256:b972039c22440c997b24cd2d71106a49954577f27ceabee07380469901fafc06"
+      },
+      {
+        "path": "pkg/linux_amd64/encoding/asn1.a",
+        "bytes": 636726,
+        "digest": "sha256:bb57440f8abb9865b224e0959ab8900d523ed454da66be253cfada162a7f9ea8"
+      },
+      {
+        "path": "pkg/linux_amd64/encoding/base32.a",
+        "bytes": 133348,
+        "digest": "sha256:0de2513d1c1c9982999b537b4dd6c42f189349ab5a5b2c6acd0452696a3997c7"
+      },
+      {
+        "path": "pkg/linux_amd64/encoding/base64.a",
+        "bytes": 146806,
+        "digest": "sha256:d081df261593e798be32a164053d666edbec70339070d5f1b46d1d46b59c1ea0"
+      },
+      {
+        "path": "pkg/linux_amd64/encoding/binary.a",
+        "bytes": 1050078,
+        "digest": "sha256:a02b74e626de916c9dc86cd3ea2b6eaf23ffd9814942a90172da6c3f411a21f6"
+      },
+      {
+        "path": "pkg/linux_amd64/encoding/csv.a",
+        "bytes": 127616,
+        "digest": "sha256:5a20557ba33a48b996505611ee144c0b0a83cd0ea2bc8e580b4ead735fe240d4"
+      },
+      {
+        "path": "pkg/linux_amd64/encoding/gob.a",
+        "bytes": 2461890,
+        "digest": "sha256:aba0fce1262d79135eca1afab491161779661868ccc1d8c8e73da8818b8f65bd"
+      },
+      {
+        "path": "pkg/linux_amd64/encoding/hex.a",
+        "bytes": 93066,
+        "digest": "sha256:eb0d39fcedbaaf1712cdcd0546eed717bce67d31f851b6152e1a14a6d6f6cb50"
+      },
+      {
+        "path": "pkg/linux_amd64/encoding/json.a",
+        "bytes": 2013586,
+        "digest": "sha256:6543fdeb3ea8a8ee33353d18807bdc89659ab1da4b4d471f84944af04edd5df3"
+      },
+      {
+        "path": "pkg/linux_amd64/encoding/pem.a",
+        "bytes": 141588,
+        "digest": "sha256:d5d79f06037038a4ebde06e04e5d0652130908660f4989a8ee8d888b7987d053"
+      },
+      {
+        "path": "pkg/linux_amd64/encoding/xml.a",
+        "bytes": 1559918,
+        "digest": "sha256:a9a93c43b14452ec0718840b2786a2739b82991de5f76bcd59f33ecbda79e436"
+      },
+      {
+        "path": "pkg/linux_amd64/encoding.a",
+        "bytes": 19458,
+        "digest": "sha256:3b9fb50f85debb5cf321d35271eff35d9efbd5d8cdc03188074b2abe2f03ef36"
+      },
+      {
+        "path": "pkg/linux_amd64/errors.a",
+        "bytes": 89352,
+        "digest": "sha256:b3bc1d4ed96cd438fd8f5cee0e3f09440115cd8af8c7e3c7302f715ff9d32641"
+      },
+      {
+        "path": "pkg/linux_amd64/expvar.a",
+        "bytes": 1062292,
+        "digest": "sha256:5d4519abea93329340e90737ee9760adc7270b9541e273dafc50f6f6a00eb05d"
+      },
+      {
+        "path": "pkg/linux_amd64/flag.a",
+        "bytes": 689160,
+        "digest": "sha256:57452d26ff2bfc1a88f114c0b7bba92bf3e7de767bad446668da7fdddcb796a9"
+      },
+      {
+        "path": "pkg/linux_amd64/fmt.a",
+        "bytes": 948408,
+        "digest": "sha256:4b4b8a67c2aeeee0b2a38f4391c0b4a338bbfcc64983d6410b13a26ac246ff76"
+      },
+      {
+        "path": "pkg/linux_amd64/go/ast.a",
+        "bytes": 1588258,
+        "digest": "sha256:18b8d2c4e263fbc65c1562a9ccf05ed7552445ba7770db08c46a50de449a1649"
+      },
+      {
+        "path": "pkg/linux_amd64/go/build/constraint.a",
+        "bytes": 171466,
+        "digest": "sha256:894721a051b276c5b61271d05d83e66103b34c8ffab9b269b1081c34d9bfdbb5"
+      },
+      {
+        "path": "pkg/linux_amd64/go/build.a",
+        "bytes": 841136,
+        "digest": "sha256:c3432d3679ff439d1657ed96397baf5b67a8552c920dc12dcc9d95c88fa1103a"
+      },
+      {
+        "path": "pkg/linux_amd64/go/constant.a",
+        "bytes": 481184,
+        "digest": "sha256:db6007af66397bc477ad38cb1171b303ec3799a8eaf97ff8c45e1dfb879c06f9"
+      },
+      {
+        "path": "pkg/linux_amd64/go/doc/comment.a",
+        "bytes": 596554,
+        "digest": "sha256:538ce4cc9dcce529b94e45568a7b2753d3d4e370573f04ae9122ee03c33c0813"
+      },
+      {
+        "path": "pkg/linux_amd64/go/doc.a",
+        "bytes": 988948,
+        "digest": "sha256:65354775eea9da6223b03136ec39642167869e866cf5f0050f35d3c9449f5aa9"
+      },
+      {
+        "path": "pkg/linux_amd64/go/format.a",
+        "bytes": 102090,
+        "digest": "sha256:aacaebc1781b88dd057571b43717768c8d548577cf13c3b5e9b6dde55cf4247d"
+      },
+      {
+        "path": "pkg/linux_amd64/go/importer.a",
+        "bytes": 112078,
+        "digest": "sha256:0882ccf27eca6666c458a8b8bee167b35249b816ffe1cdcad08d73724d0e5677"
+      },
+      {
+        "path": "pkg/linux_amd64/go/internal/gccgoimporter.a",
+        "bytes": 724854,
+        "digest": "sha256:75facc363b719a6923dc0d072376e35bea32652dc2c18ef55a748ef871bd4e2e"
+      },
+      {
+        "path": "pkg/linux_amd64/go/internal/gcimporter.a",
+        "bytes": 665034,
+        "digest": "sha256:9ed9e510ed6b17d075c752b3db9d3ac3016f9a7d4921d2b36765cb3f4c505bfa"
+      },
+      {
+        "path": "pkg/linux_amd64/go/internal/srcimporter.a",
+        "bytes": 243460,
+        "digest": "sha256:c8e0c35a57a29a94f0a2c2f2c0ee2bfe5fa802e0ad0ab499a572b99e85ad6019"
+      },
+      {
+        "path": "pkg/linux_amd64/go/parser.a",
+        "bytes": 1121532,
+        "digest": "sha256:50e759851c0474cba3ac93d99f2a997e8674c1363513c1542ffea585aedb52dd"
+      },
+      {
+        "path": "pkg/linux_amd64/go/printer.a",
+        "bytes": 1002990,
+        "digest": "sha256:08482f3c4a4b2330794d441add65fb450e13517f3f12db4cc5a3fe7ca164893b"
+      },
+      {
+        "path": "pkg/linux_amd64/go/scanner.a",
+        "bytes": 228830,
+        "digest": "sha256:5748a5cc218df2c26a9c84dfc6d72b7a6d973641b93a25d8c44935825c8f3c47"
+      },
+      {
+        "path": "pkg/linux_amd64/go/token.a",
+        "bytes": 446984,
+        "digest": "sha256:e95797b9bc91eb790d423c93d41af76142e68a445ce099634bbdd4625448f314"
+      },
+      {
+        "path": "pkg/linux_amd64/go/types.a",
+        "bytes": 6299852,
+        "digest": "sha256:a0734a4e0d7136b6c2f98c516150f9ccda78ab077df62bf744e0678337ec5e30"
+      },
+      {
+        "path": "pkg/linux_amd64/go/version.a",
+        "bytes": 16788,
+        "digest": "sha256:5008d4d6d31b101590f24951ab142d74f55a55ff5d7329be0ceabec96f09ef7d"
+      },
+      {
+        "path": "pkg/linux_amd64/hash/adler32.a",
+        "bytes": 49522,
+        "digest": "sha256:66d404f937176616b9a2d3c90e3732bb0109865d15d288b07f06171b94d1418b"
+      },
+      {
+        "path": "pkg/linux_amd64/hash/crc32.a",
+        "bytes": 135974,
+        "digest": "sha256:25ee26a964041c8b3e2c819ad55aa10445f6a1261beebfab2602b19dd0b4604e"
+      },
+      {
+        "path": "pkg/linux_amd64/hash/crc64.a",
+        "bytes": 84090,
+        "digest": "sha256:cfb2421214051e665c1c042fb5353b3f3e73d9836f8c4843a8f40e3d6bfb6834"
+      },
+      {
+        "path": "pkg/linux_amd64/hash/fnv.a",
+        "bytes": 202796,
+        "digest": "sha256:e8d1372a8cbb2351c5757272b1ba599c9ab4d5b088d6f84c859dc38fccdb9a1b"
+      },
+      {
+        "path": "pkg/linux_amd64/hash/maphash.a",
+        "bytes": 72994,
+        "digest": "sha256:4ff1a19b6e1b7069a73bccfc0091c0f13095260670c43cc2deeb71ad4352cc12"
+      },
+      {
+        "path": "pkg/linux_amd64/hash.a",
+        "bytes": 53034,
+        "digest": "sha256:713002d98f939ca1aeb810a21e6f2b83487030d8f3adb7d2de8f16fd43efc8df"
+      },
+      {
+        "path": "pkg/linux_amd64/html/template.a",
+        "bytes": 1161402,
+        "digest": "sha256:167644dd8738403d48c81de863e037cfec3db024eef76d7fb0bc205a49b4963b"
+      },
+      {
+        "path": "pkg/linux_amd64/html.a",
+        "bytes": 339566,
+        "digest": "sha256:0a8c4d11141191bb536005d8b007384fea5732592e1d096464b4f75cae5fc655"
+      },
+      {
+        "path": "pkg/linux_amd64/image/color/palette.a",
+        "bytes": 80818,
+        "digest": "sha256:e81ae2b4f90f21809d2abdfa6c706a2de6710b6d3cb21aaa34a8688d2a6e6407"
+      },
+      {
+        "path": "pkg/linux_amd64/image/color.a",
+        "bytes": 153914,
+        "digest": "sha256:4cdb49b1abc2d9d2c87e9101b9d0fd2a488f6f840f4535ca5483f4630ccd7530"
+      },
+      {
+        "path": "pkg/linux_amd64/image/draw.a",
+        "bytes": 254216,
+        "digest": "sha256:b94153b08aa1f0a688720caded7ea5480bcc3dda0530b2b0af56d159f4e1d58a"
+      },
+      {
+        "path": "pkg/linux_amd64/image/gif.a",
+        "bytes": 260840,
+        "digest": "sha256:1734dd424409bbbcabdb3010a33ea03d6b60ba230fdec4605dffcfbd6e5bee20"
+      },
+      {
+        "path": "pkg/linux_amd64/image/internal/imageutil.a",
+        "bytes": 21836,
+        "digest": "sha256:d37e8ff9a6ed37a44836a271c4544db30c24936dcfb6d8155fbcb5e97c05077e"
+      },
+      {
+        "path": "pkg/linux_amd64/image/jpeg.a",
+        "bytes": 378068,
+        "digest": "sha256:a93fdb0fe2125079794403a1279384a7cb1199a009e9f822ab1505de47093550"
+      },
+      {
+        "path": "pkg/linux_amd64/image/png.a",
+        "bytes": 346888,
+        "digest": "sha256:a2cd72d10da384db59620866fd7eda82b7fa465bd29da66104d27d3edeaac41e"
+      },
+      {
+        "path": "pkg/linux_amd64/image.a",
+        "bytes": 767000,
+        "digest": "sha256:0696588622fd30c81fd9fd9788772ec0e3ad65d4ff3905a1939c0b9a2b23f537"
+      },
+      {
+        "path": "pkg/linux_amd64/index/suffixarray.a",
+        "bytes": 422282,
+        "digest": "sha256:e607664f4a687c0c2f206c30620e74319111e26eea29d11797dff0430f080983"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/abi.a",
+        "bytes": 1128884,
+        "digest": "sha256:2e80bc883ce05cf6bb41dce54651ced3fe1eedb27abf23e64c0dea710cb24719"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/asan.a",
+        "bytes": 4206,
+        "digest": "sha256:e8185ee42aa7c1cd9e11c8ec3f94b60cc9a035165a37479e1b774de243a1964a"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/bisect.a",
+        "bytes": 181730,
+        "digest": "sha256:ccf9b8d877842112d27ed5b4847ace2e757d5e8af7e20616ec92a1e5c248c548"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/buildcfg.a",
+        "bytes": 248986,
+        "digest": "sha256:fb86298e2b0027e1addf1779399f463826dd98aaed2dec7dee0737cb8a338613"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/bytealg.a",
+        "bytes": 56484,
+        "digest": "sha256:cf0c050a6a5bc0e91b78a048d2b4ee9f0bb6bf4c2accf8a891df3a35f9740d65"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/byteorder.a",
+        "bytes": 37864,
+        "digest": "sha256:69b352c774eb9e46a09033466d22c0f949f2faebda19babf4b50c34ace08569d"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/cfg.a",
+        "bytes": 1718,
+        "digest": "sha256:0365bbe2698388d5b08e9871d75df0459852ac0f799924a8fb8588443de8e1e2"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/cgrouptest.a",
+        "bytes": 143972,
+        "digest": "sha256:12847321c8a5c28a27e67d8fa6b23fe95b0e5bb95b0ca05b10342acfee1546f7"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/chacha8rand.a",
+        "bytes": 61546,
+        "digest": "sha256:1cbb8aeee1d761f583e558bd741e038a3ccec70f6f15780a0fc1c9af8d0cbc11"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/coverage/calloc.a",
+        "bytes": 7516,
+        "digest": "sha256:86983e485463425135396605056b7aefb36205f47565180438d773fd30bc49c0"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/coverage/cfile.a",
+        "bytes": 320332,
+        "digest": "sha256:ea553ead0dd25ab38153956d964e5b903739d7300ab3882715258a3844e9f44c"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/coverage/cformat.a",
+        "bytes": 316254,
+        "digest": "sha256:9c8b34d83db30c1a3b35676715adeded39d3c6a50743edbd0b350a71969c89dc"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/coverage/cmerge.a",
+        "bytes": 48912,
+        "digest": "sha256:edeb392bc976fc1416aac261d10903346dac5cbb7f7278891ec6a5cc1d7eb971"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/coverage/decodecounter.a",
+        "bytes": 153794,
+        "digest": "sha256:12312ffd8bc2000ac3420decffc8aff169950d51114ad53f1216b61f73838ba9"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/coverage/decodemeta.a",
+        "bytes": 192030,
+        "digest": "sha256:abbd9bae80662e5909209a4f9e3ed4ccae9a65a147586cbdda3cbe9398f3d6d5"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/coverage/encodecounter.a",
+        "bytes": 263606,
+        "digest": "sha256:f8a5394f39c6240aea9da877500dfd023bc8bfe3577305073e406552d9f2fdd7"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/coverage/encodemeta.a",
+        "bytes": 187346,
+        "digest": "sha256:446f452c1ce2552e73177fb87123f57cb78efcb1d8d3692b771c4100c043f7a0"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/coverage/pods.a",
+        "bytes": 268086,
+        "digest": "sha256:7f5fbf13ca2b3aee127d75f72e8eaa159135d0f4af32b6d3e3c88523a9f36b3e"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/coverage/rtcov.a",
+        "bytes": 18752,
+        "digest": "sha256:a2e9e8d83aa20820f3c9ab053c704974c5ad6f40efae12f47bf1d76e619c47c6"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/coverage/slicereader.a",
+        "bytes": 48066,
+        "digest": "sha256:e4ba620179a6c2cf19928cbd366fd7cf5493c4f32774c2d597a074af56c9b6c9"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/coverage/slicewriter.a",
+        "bytes": 27126,
+        "digest": "sha256:42a8d13127db6c3ce070bfb1b54efa8b41e03327b51732205261ee608dbaea51"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/coverage/stringtab.a",
+        "bytes": 59252,
+        "digest": "sha256:812bd82079fa3f58a32033c922852e49616e4f5e93845a3963d83656b0888594"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/coverage/uleb128.a",
+        "bytes": 4034,
+        "digest": "sha256:b0e6b1342d5b0ca95d8323fd4c1140a27d5b521a82c9b9119bbdc7c94c99850a"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/coverage.a",
+        "bytes": 57192,
+        "digest": "sha256:51954362c6f4bc4e97b70bbb72560c670b07b7ad48532754b08d30f437525d5c"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/cpu.a",
+        "bytes": 107248,
+        "digest": "sha256:c672ea6a32e3b46fec8498384729abafde82c8b38784640c3e0781b6067734e7"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/dag.a",
+        "bytes": 205504,
+        "digest": "sha256:bbe57be0511fb7ce6e240c548ada76898c00ab884e2da1870a14bb28fd11802c"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/diff.a",
+        "bytes": 56706,
+        "digest": "sha256:69baf7ee4043d233610a5d684f4ccf0b92a9eb9d3556f07f50d576766fc62e8e"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/exportdata.a",
+        "bytes": 693834,
+        "digest": "sha256:23006812f44f037bc0ea8a27deb96bcd2d7e0b8495e20c3db8f2b647b39da1d1"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/filepathlite.a",
+        "bytes": 93376,
+        "digest": "sha256:89ebe3ecf8d474224f61d85e47747f9d35fb577ee214deef5f2f932812a00079"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/fmtsort.a",
+        "bytes": 197278,
+        "digest": "sha256:2f308c9a270cee1cb922ec8855e6ff6ddd9c5b3aac8771f14166bf52fb92d791"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/fuzz.a",
+        "bytes": 1124672,
+        "digest": "sha256:83e8ff499db9bb8b84b03e834134b0667274e315621cbdf70425083284bcd5b6"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/goarch.a",
+        "bytes": 7552,
+        "digest": "sha256:f177cd970d13da3325dc40588468220c09bf9631a94f48c41859ab7d4a8b640b"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/godebug.a",
+        "bytes": 703070,
+        "digest": "sha256:4a0d543aa5f802ae5a71ba5a58d17c5677a16ab770a2d085440e880511e1a749"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/godebugs.a",
+        "bytes": 23612,
+        "digest": "sha256:4fc5e2d2f17f57333bb9c0277efff77e9ec7cd2b07ea1a85a0e45612e29d04e2"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/goexperiment.a",
+        "bytes": 11848,
+        "digest": "sha256:14403fe92d561ceafb7d2bed35d31f7c6c33b3d757340378c665fd4ee937d109"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/goos.a",
+        "bytes": 3316,
+        "digest": "sha256:79a88e817123f8ee96da561411d6f471e2de00b8befa28b9d7d9770a86a26810"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/goroot.a",
+        "bytes": 84692,
+        "digest": "sha256:6fbcbef8ece06d9534eb28b3babec9a65f07c767afe5868aba4ca5afcac152f1"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/gover.a",
+        "bytes": 45836,
+        "digest": "sha256:e74df03eb772246f60616d8e5bb9bcbbd4942b79028ef5d5d3c1af5ef788a489"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/goversion.a",
+        "bytes": 1212,
+        "digest": "sha256:2aacc8220e9452a45b1a78e8e5c3eb1e78f7b38d6ade3259c7269da176454b6c"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/itoa.a",
+        "bytes": 12492,
+        "digest": "sha256:d594f578f83623ce065d4f5272073b806c7094f3ae9a739618e165f189cfab71"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/lazyregexp.a",
+        "bytes": 80970,
+        "digest": "sha256:0e4fa206af1a5b0897e6087668befdd40155b3f3bc38c9a8212f348c53d02566"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/lazytemplate.a",
+        "bytes": 147578,
+        "digest": "sha256:5a255af6afc9dc2e680f63b5f3620cb98994ac8fdbb342ca0f650dcba02081a5"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/msan.a",
+        "bytes": 8674,
+        "digest": "sha256:90faed200ad84c2460e40a55ed41c74932fa2b58bf6604a011f20e907f92307c"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/nettrace.a",
+        "bytes": 7022,
+        "digest": "sha256:7df7ff34db44cf8f1eb25ffb92c4e97b5546eec51e2d45a6ef93b733a487533d"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/obscuretestdata.a",
+        "bytes": 65902,
+        "digest": "sha256:ce0399073acc79bda95ef72ee40707e98ffd9ab6e7f6691ccf897098423691d4"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/oserror.a",
+        "bytes": 6786,
+        "digest": "sha256:9cdd3de1e85f2c49766eaeb7423a6b2380e2e7fcf366b9975fd4904d1e751c79"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/pkgbits.a",
+        "bytes": 480958,
+        "digest": "sha256:64ae954128de7b4cf62ff7e517223c78386c6edd48a52e9dfa827c5be3bd1b15"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/platform.a",
+        "bytes": 73540,
+        "digest": "sha256:cec95e7b4b8e4a4292ed2a05b7747ca48f403e886ab328d5e68fad17e4a0c2a7"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/poll.a",
+        "bytes": 793316,
+        "digest": "sha256:2b6f6b9f461b12bf5805a82d03dab8e3622c2b3bbcc8fb905fe38f2641945395"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/profile.a",
+        "bytes": 944542,
+        "digest": "sha256:b51ff5bee2c3b1ce8b0626191ca245e0528748e311baa8aba5d662a675747b55"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/profilerecord.a",
+        "bytes": 10276,
+        "digest": "sha256:904ebdfe3072eb58a3759eafce2027e12257fa1f8249ee220a86fc65f349365b"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/race.a",
+        "bytes": 26440,
+        "digest": "sha256:90fc27928f4ed81a41da093314a1762fe63ad757305e709635944efcf3a4b686"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/reflectlite.a",
+        "bytes": 539906,
+        "digest": "sha256:944ebc468f635253089503db6c48d282f4c93f4242635fe4ff2b62205cf26efc"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/runtime/atomic.a",
+        "bytes": 272586,
+        "digest": "sha256:e9b47d70e9b8d56c7afb69fe910486d4720c79653d8dea625efff9535daa7765"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/runtime/cgroup.a",
+        "bytes": 98434,
+        "digest": "sha256:e88e416ed0fe125ea7729428c0ad28dea5751f3db987319843be870fd9b6edd1"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/runtime/exithook.a",
+        "bytes": 27134,
+        "digest": "sha256:db3af77fbb3565d7281e7a0effa697e13f59039f602c882789a27e8601f05ba0"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/runtime/gc.a",
+        "bytes": 11334,
+        "digest": "sha256:a80449421168d4ae2e490d8921496941e34b3d93ed2759d27ec8bc950cdb7022"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/runtime/maps.a",
+        "bytes": 677302,
+        "digest": "sha256:c976ceca321c10ed1e8ea838464c453e96871b306c0c7af4ee5c3110e8f9d982"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/runtime/math.a",
+        "bytes": 8392,
+        "digest": "sha256:bae9770145b2268225ad87aa6b88ad64c786ed9ab20b49bea02a33bdd7b764c3"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/runtime/startlinetest.a",
+        "bytes": 3548,
+        "digest": "sha256:973f7d372992ef6c67997df114b286a389007fdaad04fa2202849d208d579b3c"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/runtime/strconv.a",
+        "bytes": 8722,
+        "digest": "sha256:b62c732f910459b1a4b9115046fce7b5d76f9a5ac3d15b2eece9b6629215ec83"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/runtime/sys.a",
+        "bytes": 35430,
+        "digest": "sha256:4d741cd26486561cdafd92b8399fb306c4b7064ced1fb44156723ae1bb43b46e"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/runtime/syscall.a",
+        "bytes": 29130,
+        "digest": "sha256:9fa05379a373ac8e738226ffc5c563fedbe0cffdbb4bb2b5e12fa4451e495d4b"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/saferio.a",
+        "bytes": 17924,
+        "digest": "sha256:9ccf897e201bcca62f94fd07d7402aecd8827a4b038fc889aec5a5679e7a5587"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/singleflight.a",
+        "bytes": 53832,
+        "digest": "sha256:1a49d328710d95da5d6f858958461ddfa620e7b653a99235b230baa3506aa991"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/stringslite.a",
+        "bytes": 44074,
+        "digest": "sha256:4898461ed7999ad98f2021125ec8d3ed97052dcfe63dea074006ebac671a65e3"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/sync.a",
+        "bytes": 66208,
+        "digest": "sha256:2dee62b891db11a587d5c6c3bed65823162c894e945a750bd949fa109472381f"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/synctest.a",
+        "bytes": 14424,
+        "digest": "sha256:78bd84b3be65898d9c945c453c5c9bf2578d77ae4513ca6bb82cccbc3c47a02e"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/syscall/execenv.a",
+        "bytes": 6972,
+        "digest": "sha256:3dda4ec8ddb6b3c2e6acaf1471bb1634ff308ed9984f1921ce51f1935eed1ba9"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/syscall/unix.a",
+        "bytes": 95580,
+        "digest": "sha256:29041fe22573702bc7d4961272f6cde5b23e512d1ae086741a0d83c8263db9ca"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/sysinfo.a",
+        "bytes": 95326,
+        "digest": "sha256:c31cffa02f6afa58ff6bf104a070c6cc340c0b4758326d61081d9d84ea3b1755"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/syslist.a",
+        "bytes": 19348,
+        "digest": "sha256:d07c2fb4f9e8621094c85dc83c10bdedf83be8fedae91431bd0fdf8b19ff3cfe"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/testenv.a",
+        "bytes": 1076156,
+        "digest": "sha256:74321353a578db1d688908b69028f3ffb6fc7f48ceff58ea7bc65be5dd159c81"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/testhash.a",
+        "bytes": 131196,
+        "digest": "sha256:8acc44e8d37804a76a92db7ccef447b813b172e1f177057586a099e30576c14d"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/testlog.a",
+        "bytes": 84014,
+        "digest": "sha256:55e97b5a209f6e3c6945e97209a525986759a7386bbed57ee68044f2231c23d3"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/testpty.a",
+        "bytes": 153764,
+        "digest": "sha256:4f8e4576845e61d6bdb625bbc7d2f32b982719cc89c2fe4e84b3c4bbe72bef7c"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/trace/internal/testgen.a",
+        "bytes": 246964,
+        "digest": "sha256:fe041e7ca53a16fc8f3eed8df7773dc739332f834e58f067f2a0a90544fdb9d9"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/trace/internal/tracev1.a",
+        "bytes": 520648,
+        "digest": "sha256:6c41692b5069302dd5f3cd40169a97ed7aeacbf0704537c9c20a74adbff8695c"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/trace/raw.a",
+        "bytes": 159174,
+        "digest": "sha256:34d4c8e280d09c31311d5ba042889502d0d3dd2fb112313de12a7ff88774ad6a"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/trace/testtrace.a",
+        "bytes": 434822,
+        "digest": "sha256:49eb576577ed355bed99d8332532e536cf5e7eb570435e5244c0d7b5243266e5"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/trace/tracev2.a",
+        "bytes": 96064,
+        "digest": "sha256:2057014f2a7b13d514d17aac1b49b759dfd907c626988ed7089a381e9d93b0ea"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/trace/traceviewer/format.a",
+        "bytes": 25598,
+        "digest": "sha256:79a08b1f3c0621a58255c2c54c5ee998610fa536246a7f89dd1aaa360f16ed0a"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/trace/traceviewer.a",
+        "bytes": 3558748,
+        "digest": "sha256:331b791cc555f0e6665a25025aff9343a305d55e6c80da781166f114e047cea1"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/trace/version.a",
+        "bytes": 43734,
+        "digest": "sha256:1a480beec16fb4fd599f65862ae77c43b375ef04b207fae5ff397b2e0b747553"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/trace.a",
+        "bytes": 2055210,
+        "digest": "sha256:d127b0c6d37b93ff5e02d299ced352779e87c0ad3e5ced5e1cde267db8791167"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/txtar.a",
+        "bytes": 35970,
+        "digest": "sha256:805bcb68b6e1c7c5369066e6d3e339659d8414d2d38c5c94e3f7c81e0d16a96f"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/types/errors.a",
+        "bytes": 39826,
+        "digest": "sha256:7dbc80fcad1aa71071fc010284793b9cb8cce512db2d446b71f8a00b8f9c42e4"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/unsafeheader.a",
+        "bytes": 3626,
+        "digest": "sha256:42326693e22817f055c495b962ac3f37f0a31d6b3be754aadc23ad3e6b6f9d86"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/xcoff.a",
+        "bytes": 329694,
+        "digest": "sha256:e5f8fa5c79dfa6b32c3c185ba5a527a88a4b6b2600091b9c5ec691abc99e93d2"
+      },
+      {
+        "path": "pkg/linux_amd64/internal/zstd.a",
+        "bytes": 469072,
+        "digest": "sha256:5fe14c159e1b4a0e48e37a3a68b23893a53759f206a75467a9c25647eabeab16"
+      },
+      {
+        "path": "pkg/linux_amd64/io/fs.a",
+        "bytes": 392460,
+        "digest": "sha256:830ec76de9570e52a777bed3334a3aaf08919f10ca2a3752812ca71d20bd534c"
+      },
+      {
+        "path": "pkg/linux_amd64/io/ioutil.a",
+        "bytes": 207710,
+        "digest": "sha256:5e4dd487377da747c9cbc7e6591f2e14112092f498e8ee31441b10c3cf272934"
+      },
+      {
+        "path": "pkg/linux_amd64/io.a",
+        "bytes": 415654,
+        "digest": "sha256:36b299ee605be5dcc83be005dee43e22e396f8920984fc165620914f599610f0"
+      },
+      {
+        "path": "pkg/linux_amd64/iter.a",
+        "bytes": 13952,
+        "digest": "sha256:e2a7e8b4da49fcd505502e5470dae0468ced668358c2a441b25b4c6799117bd0"
+      },
+      {
+        "path": "pkg/linux_amd64/log/internal.a",
+        "bytes": 2316,
+        "digest": "sha256:0034efa532e4bafd288ee629c96e8979348e74ec0b590351581e9ab8691fc18d"
+      },
+      {
+        "path": "pkg/linux_amd64/log/slog/internal/benchmarks.a",
+        "bytes": 156846,
+        "digest": "sha256:dc352cddc0072f57cd5a98d66738ce1bb58216bf20da7a8f43dcf382215316a5"
+      },
+      {
+        "path": "pkg/linux_amd64/log/slog/internal/buffer.a",
+        "bytes": 90240,
+        "digest": "sha256:f87f176203e350be4b05b1b00707ac0deb35188bb9ee12a901fa783813307c49"
+      },
+      {
+        "path": "pkg/linux_amd64/log/slog/internal.a",
+        "bytes": 2006,
+        "digest": "sha256:0814c551386137a4da43b68915825ed463880e4228ebd8a86f08e0464e49fa5f"
+      },
+      {
+        "path": "pkg/linux_amd64/log/slog.a",
+        "bytes": 1175210,
+        "digest": "sha256:6683d5ad65cc1fec7216d58c8ed7c89d64afee233e6b04f1b9e45a601335629e"
+      },
+      {
+        "path": "pkg/linux_amd64/log/syslog.a",
+        "bytes": 163824,
+        "digest": "sha256:7dd09d9a8f27b56b1d3a6796d71432606e951e8bb9d48139e295a04c3dc2a18f"
+      },
+      {
+        "path": "pkg/linux_amd64/log.a",
+        "bytes": 314712,
+        "digest": "sha256:b73f0cd042568b118dbf9929852cb5d835a32dd4e7dd3e728fbd959e9fefe998"
+      },
+      {
+        "path": "pkg/linux_amd64/maps.a",
+        "bytes": 8572,
+        "digest": "sha256:201d31cde76e3e6c315497053ade7ec96a8d8fafbabf839732e2dbb228529ebf"
+      },
+      {
+        "path": "pkg/linux_amd64/math/big/internal/asmgen.a",
+        "bytes": 761520,
+        "digest": "sha256:c4d6544382cda53ea63ef0e2bb1509f80dc0490faca45d8997fbd538c7919f33"
+      },
+      {
+        "path": "pkg/linux_amd64/math/big.a",
+        "bytes": 1840786,
+        "digest": "sha256:0b3bc44d63e89222c03ab5cf81da4cf9138c151dee17dc083c098970fb8afbff"
+      },
+      {
+        "path": "pkg/linux_amd64/math/bits.a",
+        "bytes": 98700,
+        "digest": "sha256:526a741800c886b749278c4a24b958cc0ba51e7040c0d6c04df176f37c203863"
+      },
+      {
+        "path": "pkg/linux_amd64/math/cmplx.a",
+        "bytes": 130836,
+        "digest": "sha256:3f3eab7e773ce49699f4e5c83d5a7b34dcaf5b93b69b09de53ade90367d60d4d"
+      },
+      {
+        "path": "pkg/linux_amd64/math/rand/v2.a",
+        "bytes": 233248,
+        "digest": "sha256:500fd114d0919277a92ef7eedf93a772e2d2058a1484a46b17a420a152989eed"
+      },
+      {
+        "path": "pkg/linux_amd64/math/rand.a",
+        "bytes": 357576,
+        "digest": "sha256:df23902660da57675551a0d61bdbc7b5aa023d82d4b3f01b7d87606d42446996"
+      },
+      {
+        "path": "pkg/linux_amd64/math.a",
+        "bytes": 530186,
+        "digest": "sha256:bbc814f2bb5dcd6b7f68b56acbf14888e1584fa886708f39daebf931068e1844"
+      },
+      {
+        "path": "pkg/linux_amd64/mime/multipart.a",
+        "bytes": 526114,
+        "digest": "sha256:37d3ea02770753aa9f9a36a08f38e04d95a207edda4f595254916a4d25f54b0e"
+      },
+      {
+        "path": "pkg/linux_amd64/mime/quotedprintable.a",
+        "bytes": 72424,
+        "digest": "sha256:38802ec27c43346f395d9363fc092137d264644b0dcbc28c7fe5e56b0d524bd7"
+      },
+      {
+        "path": "pkg/linux_amd64/mime.a",
+        "bytes": 1012124,
+        "digest": "sha256:6781aaf10af8926b840ede906252f907189f2a6ad766f672e262d724968fc268"
+      },
+      {
+        "path": "pkg/linux_amd64/net/http/cgi.a",
+        "bytes": 567174,
+        "digest": "sha256:c9e07d03edb63f16474e369d964569ab11c7162fb10895cd866dbea7aebcc188"
+      },
+      {
+        "path": "pkg/linux_amd64/net/http/cookiejar.a",
+        "bytes": 295212,
+        "digest": "sha256:ad8a67fa6a5e5f24639c37849b83fd75aae5e0083bb9896210fc5bb2b381d891"
+      },
+      {
+        "path": "pkg/linux_amd64/net/http/fcgi.a",
+        "bytes": 465916,
+        "digest": "sha256:d509100b2cf860daecf932186ed77352563b38cc12aac2d1015a46d484d1b300"
+      },
+      {
+        "path": "pkg/linux_amd64/net/http/httptest.a",
+        "bytes": 527138,
+        "digest": "sha256:1c9cbedaf315f3cd954227ab8a60c61f7729c3c5d8c4a8a9c9090a9c943561e2"
+      },
+      {
+        "path": "pkg/linux_amd64/net/http/httptrace.a",
+        "bytes": 155886,
+        "digest": "sha256:b08ef73517618c1e6823fcc067a03f8ff2c14c2cf708dc0d150eaadc7866e6c4"
+      },
+      {
+        "path": "pkg/linux_amd64/net/http/httputil.a",
+        "bytes": 702448,
+        "digest": "sha256:9192a953578367e3d40cf9ac104216c9e8fc62260d6a2abefc6bd9ddb0f14c3d"
+      },
+      {
+        "path": "pkg/linux_amd64/net/http/internal/ascii.a",
+        "bytes": 14546,
+        "digest": "sha256:323ae98879c558b12daa29700210951bc08581a629a674bcc87119d2cd2cb649"
+      },
+      {
+        "path": "pkg/linux_amd64/net/http/internal/httpcommon.a",
+        "bytes": 163728,
+        "digest": "sha256:3e386a728292efb28365b57d5af5d471ec08ce18b0f4820728cacaa594b80c1d"
+      },
+      {
+        "path": "pkg/linux_amd64/net/http/internal/testcert.a",
+        "bytes": 11640,
+        "digest": "sha256:8706cc19aa8e304e6bade24c0b58ad99f992cb41a6f93da15ef509f98453b210"
+      },
+      {
+        "path": "pkg/linux_amd64/net/http/internal.a",
+        "bytes": 127920,
+        "digest": "sha256:fb4e05f0ac596a10dd95c2ae36d740a5220f56dfbe4ff6e3ff76b32239501212"
+      },
+      {
+        "path": "pkg/linux_amd64/net/http/pprof.a",
+        "bytes": 494994,
+        "digest": "sha256:1462430cc8d209f2771dbfb5090d0976b9aa2d16762f2f9ceca2a4fb258b2645"
+      },
+      {
+        "path": "pkg/linux_amd64/net/http.a",
+        "bytes": 8427312,
+        "digest": "sha256:0d1835ec40b3ecf82be02e8938f1f5f2007797618fab597b399ae910775003ff"
+      },
+      {
+        "path": "pkg/linux_amd64/net/internal/socktest.a",
+        "bytes": 229002,
+        "digest": "sha256:410319821278a08a0068a96a724e1714875f36ccece9a4f31e133ce4d015536a"
+      },
+      {
+        "path": "pkg/linux_amd64/net/mail.a",
+        "bytes": 327464,
+        "digest": "sha256:15d5b7c81ec1efd8a80d3fbad79d1bfbbe0cf3237ad2e7ede97ed3edd66376e4"
+      },
+      {
+        "path": "pkg/linux_amd64/net/netip.a",
+        "bytes": 1676978,
+        "digest": "sha256:a2adfa3d3c62a16c65ea762b00736423904bf67f0f784f8e9a337e276b3bd1a2"
+      },
+      {
+        "path": "pkg/linux_amd64/net/rpc/jsonrpc.a",
+        "bytes": 403062,
+        "digest": "sha256:b0777caea9c5b64d2fdacf754e7d6f77791fa6d676a863614cda8f32c43e3413"
+      },
+      {
+        "path": "pkg/linux_amd64/net/rpc.a",
+        "bytes": 1419758,
+        "digest": "sha256:b4bcb2687ece6f8945d0795e504aa8f4caa74438308ee2fb07da5927c4fa5fdc"
+      },
+      {
+        "path": "pkg/linux_amd64/net/smtp.a",
+        "bytes": 289140,
+        "digest": "sha256:f042a812261a712399ae6071b3e0aa7134506cfb3405533097a104ce8c2362cd"
+      },
+      {
+        "path": "pkg/linux_amd64/net/textproto.a",
+        "bytes": 356452,
+        "digest": "sha256:0716a1c2f78597ed598711cec1fbe054c330254277fda1ba43a8f1e5020c6bbf"
+      },
+      {
+        "path": "pkg/linux_amd64/net/url.a",
+        "bytes": 524740,
+        "digest": "sha256:ac120dedde0679c731bc02b7dd58c27435053ccbde9f7a3ebf98755e3d83fd04"
+      },
+      {
+        "path": "pkg/linux_amd64/net.a",
+        "bytes": 4094856,
+        "digest": "sha256:50d129d10c4ac3dad9ef9e42c40317e73a98345dabbeef419b78f503af51e0e0"
+      },
+      {
+        "path": "pkg/linux_amd64/os/exec/internal/fdtest.a",
+        "bytes": 7736,
+        "digest": "sha256:0e61a143856b3303ae37dc969116743fb5e8ba384bab5b29cd1792748a9409f9"
+      },
+      {
+        "path": "pkg/linux_amd64/os/exec.a",
+        "bytes": 504242,
+        "digest": "sha256:4c873ddf5952ac367aa53d06a76d1197faa6c04e9be76912cbc7d44af6f7ec4c"
+      },
+      {
+        "path": "pkg/linux_amd64/os/signal.a",
+        "bytes": 174760,
+        "digest": "sha256:af9d7651f071b523b11aeccaeda990f468d73bddc1cce966550e8092a08da9e0"
+      },
+      {
+        "path": "pkg/linux_amd64/os/user.a",
+        "bytes": 235192,
+        "digest": "sha256:dec2d1bd60322b219f37d4f9735f2ac53af7411ccc0faeb60d3d3652d34ad458"
+      },
+      {
+        "path": "pkg/linux_amd64/os.a",
+        "bytes": 2202476,
+        "digest": "sha256:1d7a243e85a73277da449c0778061080ac6297f64b98719c47845b822522e7c3"
+      },
+      {
+        "path": "pkg/linux_amd64/path/filepath.a",
+        "bytes": 266796,
+        "digest": "sha256:39e808a738687fbf3dc7c0382b544fb7f516deb8ef901c118aebc47dda3f5cc6"
+      },
+      {
+        "path": "pkg/linux_amd64/path.a",
+        "bytes": 56282,
+        "digest": "sha256:9ba241c58c449c3daa78d420ac103c503091093898401faca621d3ef0bd785af"
+      },
+      {
+        "path": "pkg/linux_amd64/plugin.a",
+        "bytes": 87286,
+        "digest": "sha256:cab0251c040e2e2d095edfd49e2be7089f02e270a3d1eb045ae7e81b4ed72061"
+      },
+      {
+        "path": "pkg/linux_amd64/reflect/internal/example1.a",
+        "bytes": 2998,
+        "digest": "sha256:595ecae5f6821033c693c798ba556d03b4f3f545e82ebad1568da237ae9a7f29"
+      },
+      {
+        "path": "pkg/linux_amd64/reflect/internal/example2.a",
+        "bytes": 2998,
+        "digest": "sha256:66f64ed7ef05577c7c0a5bf824ca45c8970bc531c1fcf34aec204978c01f5bfa"
+      },
+      {
+        "path": "pkg/linux_amd64/reflect.a",
+        "bytes": 3205064,
+        "digest": "sha256:6ad341029503d647f26fdcd9bf438653f971183348144f1da1a3839c9e582954"
+      },
+      {
+        "path": "pkg/linux_amd64/regexp/syntax.a",
+        "bytes": 743640,
+        "digest": "sha256:885b1b10809a7adc96557a2c8b1cf5ea5f84621b62f0d01edc25bea8875d3f41"
+      },
+      {
+        "path": "pkg/linux_amd64/regexp.a",
+        "bytes": 754222,
+        "digest": "sha256:67c1b96e0f550ff81230f78320c40a88641415d2a7a380921507808a5a736452"
+      },
+      {
+        "path": "pkg/linux_amd64/runtime/cgo.a",
+        "bytes": 693242,
+        "digest": "sha256:a97dcb7eda4c08bbe0c34b7a2b12d0af2d8a71ed6c7d90eb88be8522fdb44874"
+      },
+      {
+        "path": "pkg/linux_amd64/runtime/coverage.a",
+        "bytes": 16970,
+        "digest": "sha256:fd805b2c92363c5dad9d766c12024ae0448e0f5316f4bdd42833595238eb49d0"
+      },
+      {
+        "path": "pkg/linux_amd64/runtime/debug.a",
+        "bytes": 246826,
+        "digest": "sha256:ee9a710c1e0fd6ea80099c311f27fd6fc0506c495594a5664788f5526255a8f0"
+      },
+      {
+        "path": "pkg/linux_amd64/runtime/metrics.a",
+        "bytes": 81770,
+        "digest": "sha256:aa8459e4e2cfe02ef5d91a3f9e23dec2cf47835ef605c7d7d8331033a58c495a"
+      },
+      {
+        "path": "pkg/linux_amd64/runtime/pprof.a",
+        "bytes": 1137840,
+        "digest": "sha256:5c50d1c816356eb9dadca9f139ec5e55d6a17e6fe4efa0e86d96a4043e1a4ef2"
+      },
+      {
+        "path": "pkg/linux_amd64/runtime/race/internal/amd64v1.a",
+        "bytes": 572884,
+        "digest": "sha256:5c6a5fb2fa4c90789bde395d61531446d65d3c9959833938c0f8eb96f7c0f524"
+      },
+      {
+        "path": "pkg/linux_amd64/runtime/race.a",
+        "bytes": 986,
+        "digest": "sha256:29d221c278bc944b183ff27e286f9f97eaf2ac05d76f00c92445b0d42093769e"
+      },
+      {
+        "path": "pkg/linux_amd64/runtime/trace.a",
+        "bytes": 221858,
+        "digest": "sha256:25ec272529780124988bb773b27025b653192271cecc9c4ef1010c323e0e8ec3"
+      },
+      {
+        "path": "pkg/linux_amd64/runtime.a",
+        "bytes": 12001084,
+        "digest": "sha256:8a75d695160fcb879496570902adebfb0c99174abbe4880ca0e5653499c9af02"
+      },
+      {
+        "path": "pkg/linux_amd64/slices.a",
+        "bytes": 70368,
+        "digest": "sha256:413cc6b71b42b42d1b84a72f7a0a617cd48a4d38177bc9a341c95bf44f9e48b2"
+      },
+      {
+        "path": "pkg/linux_amd64/sort.a",
+        "bytes": 485274,
+        "digest": "sha256:817b8c34d1bf1f8d5ce54e7a8c6a94589dd7b78dad5459c3707f26b0187245ac"
+      },
+      {
+        "path": "pkg/linux_amd64/strconv.a",
+        "bytes": 470160,
+        "digest": "sha256:e51fa3e975e4676553fc8925e1ee9e335553f5cabd4c8ad1b6a7e98897f8f0d9"
+      },
+      {
+        "path": "pkg/linux_amd64/strings.a",
+        "bytes": 545000,
+        "digest": "sha256:fd0e08c0987d5c79cecee3cd6dc1e0798b922e84755851cff967e38a2beeaf14"
+      },
+      {
+        "path": "pkg/linux_amd64/structs.a",
+        "bytes": 4616,
+        "digest": "sha256:d3db53ebaa35f0cbc4fd8cdff7801e8ba288d4e3944c96b91363c0e473c9a3b4"
+      },
+      {
+        "path": "pkg/linux_amd64/sync/atomic.a",
+        "bytes": 266778,
+        "digest": "sha256:6ee7e714a58b3ad035f1e90c42f3a362803ff9ceff8503ee387393ac1af3c579"
+      },
+      {
+        "path": "pkg/linux_amd64/sync.a",
+        "bytes": 905186,
+        "digest": "sha256:79318c65f2fe4fa4fd419e24759920659bddf3a66326bbe996b43e452dd7c6c9"
+      },
+      {
+        "path": "pkg/linux_amd64/syscall.a",
+        "bytes": 1672856,
+        "digest": "sha256:4eae7c46df244b9291b755524ca20440042d065a688bcb36574ea97331cdb3f9"
+      },
+      {
+        "path": "pkg/linux_amd64/testing/fstest.a",
+        "bytes": 773912,
+        "digest": "sha256:fa7296078658b512792f8f98e130753f6fe205ba3a527f9045e197b2a5dd6b0c"
+      },
+      {
+        "path": "pkg/linux_amd64/testing/internal/testdeps.a",
+        "bytes": 298426,
+        "digest": "sha256:80fff4a2153ed5bf44eadbb941dc62411688f5d472fe9e4b23e8304bdf086402"
+      },
+      {
+        "path": "pkg/linux_amd64/testing/iotest.a",
+        "bytes": 158032,
+        "digest": "sha256:ae850a683e0b64b6b9c6f7c15e5c384c59d1f692f8d3486936fa9cddf7c2c6df"
+      },
+      {
+        "path": "pkg/linux_amd64/testing/quick.a",
+        "bytes": 204338,
+        "digest": "sha256:0a15d4a59a10a28604079cdf4dc1f5b78b2fb643e05875b0089a0c0bdaac7529"
+      },
+      {
+        "path": "pkg/linux_amd64/testing/slogtest.a",
+        "bytes": 438306,
+        "digest": "sha256:894cbcbb7a215b782cb523184ac01967262c85e72888fdf7825dd8a9de01b96d"
+      },
+      {
+        "path": "pkg/linux_amd64/testing/synctest.a",
+        "bytes": 47192,
+        "digest": "sha256:7fc6408544690251c8fb8afd550a503e0003133b6c356b7a01ecb5e2a10f6a44"
+      },
+      {
+        "path": "pkg/linux_amd64/testing.a",
+        "bytes": 2263676,
+        "digest": "sha256:c12fcfe2247009280048cefb958184fce1df9c6d2bd74acdb7dabb78e479b62e"
+      },
+      {
+        "path": "pkg/linux_amd64/text/scanner.a",
+        "bytes": 179162,
+        "digest": "sha256:3960dd9378f4caf6b7a6fcacd163914ecfa14794e00269e6fe339ae25218d047"
+      },
+      {
+        "path": "pkg/linux_amd64/text/tabwriter.a",
+        "bytes": 113082,
+        "digest": "sha256:20581dd93412a06abe4126e3335bd2aea6adf04b065e6f654ae842043a3234cf"
+      },
+      {
+        "path": "pkg/linux_amd64/text/template/parse.a",
+        "bytes": 1227622,
+        "digest": "sha256:9d977d272421d88da5ac5eb603d7889029f1898484d5e9eec7871307825d9fe6"
+      },
+      {
+        "path": "pkg/linux_amd64/text/template.a",
+        "bytes": 1401232,
+        "digest": "sha256:97bc207dc82d5fa62bfa6819419a0479090c8a622a83e46b79dfe07a7d8150a3"
+      },
+      {
+        "path": "pkg/linux_amd64/time/tzdata.a",
+        "bytes": 425676,
+        "digest": "sha256:5e5ea3ccd571217f077917ffb95fd776b63e0633208449b6bd2a5ec5d71a6846"
+      },
+      {
+        "path": "pkg/linux_amd64/time.a",
+        "bytes": 1172306,
+        "digest": "sha256:460531dc8c2ad517c70aa7a2495dcafdd73a4bde96f1febf6362f87859cf4892"
+      },
+      {
+        "path": "pkg/linux_amd64/unicode/utf16.a",
+        "bytes": 21872,
+        "digest": "sha256:f548d6c5257f5da0bbfba3a7af600d0179106f256f7bebb0c18aa3eac54be4de"
+      },
+      {
+        "path": "pkg/linux_amd64/unicode/utf8.a",
+        "bytes": 52288,
+        "digest": "sha256:085fa37afc54a6721ae40e34105458902bc5c34031ed79a40c689ad4f36f553a"
+      },
+      {
+        "path": "pkg/linux_amd64/unicode.a",
+        "bytes": 479910,
+        "digest": "sha256:e63156f1eff451d284891a2160f1d0888ee847db5b5802cd06ec6ce2f4cb7a97"
+      },
+      {
+        "path": "pkg/linux_amd64/unique.a",
+        "bytes": 693988,
+        "digest": "sha256:73d0300a00503d3c50f9ae773cfc715e59a0c79a6ad86e31bcb02fca66b3bcaa"
+      },
+      {
+        "path": "pkg/linux_amd64/vendor/golang.org/x/crypto/chacha20.a",
+        "bytes": 91496,
+        "digest": "sha256:cd62d40c377450c21488a222d2b8bc5bf0ab27c0907606fd9f6925040f820a58"
+      },
+      {
+        "path": "pkg/linux_amd64/vendor/golang.org/x/crypto/chacha20poly1305.a",
+        "bytes": 193712,
+        "digest": "sha256:6a797000cc2309a583273f25ffa2f802b524ff0114160b4597b5ac3138003bf2"
+      },
+      {
+        "path": "pkg/linux_amd64/vendor/golang.org/x/crypto/cryptobyte/asn1.a",
+        "bytes": 15128,
+        "digest": "sha256:043e7493079a3890ca4973b126a32371fc2d585354dc89349c0654f1f9b40efd"
+      },
+      {
+        "path": "pkg/linux_amd64/vendor/golang.org/x/crypto/cryptobyte.a",
+        "bytes": 537350,
+        "digest": "sha256:46f32463505dfcdd8f860cd66ce9a5b0af4cd164eb56b0e39666927ccf5b1a0d"
+      },
+      {
+        "path": "pkg/linux_amd64/vendor/golang.org/x/crypto/internal/alias.a",
+        "bytes": 6602,
+        "digest": "sha256:aac8b8055f7c040b24bbee6238676b3ff8df0211d2fca8028be51157a0a2e351"
+      },
+      {
+        "path": "pkg/linux_amd64/vendor/golang.org/x/crypto/internal/poly1305.a",
+        "bytes": 97412,
+        "digest": "sha256:b6d007f7280e2bcb7b8cafeda1d56e5ed8a650b7e0e2812995fec138f5725c02"
+      },
+      {
+        "path": "pkg/linux_amd64/vendor/golang.org/x/net/dns/dnsmessage.a",
+        "bytes": 899482,
+        "digest": "sha256:25c735d01e972da7125d8e04ca07eda06fc51486b13131587914866a876b4254"
+      },
+      {
+        "path": "pkg/linux_amd64/vendor/golang.org/x/net/http/httpguts.a",
+        "bytes": 62606,
+        "digest": "sha256:c88408681a5acbcf8354ecc88d46820a4a091711407a792e99da9e8a08b3cf79"
+      },
+      {
+        "path": "pkg/linux_amd64/vendor/golang.org/x/net/http/httpproxy.a",
+        "bytes": 148010,
+        "digest": "sha256:d82062a9dead816bfea65c60978a968aec33eae0d6b0729a162c69b36bdd2640"
+      },
+      {
+        "path": "pkg/linux_amd64/vendor/golang.org/x/net/http2/hpack.a",
+        "bytes": 395292,
+        "digest": "sha256:29ad37632793a3a50e53e39730fd155a78a55ac8c723b407f8ce09070bb97cea"
+      },
+      {
+        "path": "pkg/linux_amd64/vendor/golang.org/x/net/idna.a",
+        "bytes": 359782,
+        "digest": "sha256:d091e778c838d5e3d6b60363e11f5d4df251d88d7890d96060b52b29671b2eab"
+      },
+      {
+        "path": "pkg/linux_amd64/vendor/golang.org/x/net/nettest.a",
+        "bytes": 418210,
+        "digest": "sha256:e1655c8f25416512c12371fac714b66f35eda773dae93dba749cd1a3bbd416f9"
+      },
+      {
+        "path": "pkg/linux_amd64/vendor/golang.org/x/sys/cpu.a",
+        "bytes": 178498,
+        "digest": "sha256:281964b99a1e5b01839d0d4a038d2a6f69698861b4327b41d2348c7f0d16532c"
+      },
+      {
+        "path": "pkg/linux_amd64/vendor/golang.org/x/text/secure/bidirule.a",
+        "bytes": 66404,
+        "digest": "sha256:3893212fb67b87b2a21848d3a6867d6c56ee8fb9d91ddf913f8ab4f60cd433b3"
+      },
+      {
+        "path": "pkg/linux_amd64/vendor/golang.org/x/text/transform.a",
+        "bytes": 166588,
+        "digest": "sha256:bf69a7fc05e0ea097721b13e807455d26b61a3e958f53c7c94e2c902e9db17f7"
+      },
+      {
+        "path": "pkg/linux_amd64/vendor/golang.org/x/text/unicode/bidi.a",
+        "bytes": 456786,
+        "digest": "sha256:2eecabe77a663a6cf5f9c8fd4607b8f04a277265863eaf2e2ee8dde5f8144ba3"
+      },
+      {
+        "path": "pkg/linux_amd64/vendor/golang.org/x/text/unicode/norm.a",
+        "bytes": 796598,
+        "digest": "sha256:dd341e54914cc44999d5d398924ca0fbfbcd86c0c1281dc19ef54036596483ad"
+      },
+      {
+        "path": "pkg/linux_amd64/weak.a",
+        "bytes": 4384,
+        "digest": "sha256:a398f1df4c4376038c21332187dd092a2bcc590151f722f18808dd1d992df630"
+      }
+    ],
+    "archive_manifest_sha256": "46a6a81dc515cdc997e535e7d5d48ca2d43ae0ceb048de1da53aa25ed2d35040",
+    "qualification": "pending; only default linux/amd64 cgo mode, empty tags, normal link mode admitted with these archives"
   }
 }
