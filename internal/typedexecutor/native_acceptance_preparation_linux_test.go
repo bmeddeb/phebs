@@ -16,20 +16,21 @@ import (
 	"github.com/bmeddeb/phebs/internal/typedsandbox"
 )
 
-// These bounded private test observations are not formatter Wait, descendant
-// custody or native completion evidence. Keep those unavailable facts explicit.
+// These bounded private observations may include the direct formatter's wait
+// result. They supply neither descendant custody nor native completion authority.
 type acceptanceHostPreparation struct {
-	EnteredUTC    time.Time `json:"entered_utc"`
-	ElapsedNanos  int64     `json:"elapsed_nanos"`
-	DeadlineUTC   time.Time `json:"deadline_utc"`
-	ContextBefore string    `json:"context_before"`
-	ContextAfter  string    `json:"context_after"`
-	ReturnedError bool      `json:"returned_error"`
-	Refused       bool      `json:"refused"`
-	Custody       bool      `json:"custody"`
-	Canceled      bool      `json:"canceled"`
-	Deadline      bool      `json:"deadline"`
-	Errno         uint64    `json:"errno"`
+	EnteredUTC    time.Time                          `json:"entered_utc"`
+	ElapsedNanos  int64                              `json:"elapsed_nanos"`
+	DeadlineUTC   time.Time                          `json:"deadline_utc"`
+	ContextBefore string                             `json:"context_before"`
+	ContextAfter  string                             `json:"context_after"`
+	ReturnedError bool                               `json:"returned_error"`
+	Refused       bool                               `json:"refused"`
+	Custody       bool                               `json:"custody"`
+	Canceled      bool                               `json:"canceled"`
+	Deadline      bool                               `json:"deadline"`
+	Errno         uint64                             `json:"errno"`
+	Formatter     *typedsandbox.HostFormatterFailure `json:"formatter,omitempty"`
 }
 
 func acceptanceContextState(ctx context.Context) string {
@@ -69,6 +70,9 @@ func acceptanceObserveHostPreparation(c *Controller, result *acceptanceChildResu
 		var errno syscall.Errno
 		if errors.As(err, &errno) {
 			row.Errno = uint64(errno)
+		}
+		if formatter, ok := typedsandbox.HostFormatterFailureOf(err); ok {
+			row.Formatter = &formatter
 		}
 		if len(result.HostPreparation) < 2 {
 			result.HostPreparation = append(result.HostPreparation, row)

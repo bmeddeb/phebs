@@ -18248,6 +18248,16 @@ umask as the baseline ownership refusal. Make only this test's fresh base0700;
 retain the strict checker and all native/formatter/custody gates. This is a
 test-setup correction, not the installed host-preparation root cause.
 
+MED-695 prospective formatter evidence (2026-10-27): retain closed actual
+Start/Wait/exit/signal/errno and existing process-group-probe results on failure,
+without changing the formatter recipe, timeouts, signals, error classification
+or cleanup rules. The private acceptance diagnostic consumes a copy. Missing
+Wait remains unknown and absent process group does not prove descendant custody.
+Safe subprocess regressions must cover unstarted/nonzero/signaled commands,
+residual-group refusal, bounded privacy and unchanged public error classes.
+The historical cause, finite admitted causal probe and full installed acceptance
+are still open; no blind full retry or held-custody cleanup follows.
+
 **T45.10a · Admit both native resource profiles in Settings** *(follows the
 T45.10 review; presentation handoff)* — an available amd64 installation reports
 `native-amd64-bounded-v1`, which the existing Settings validators reject, so the

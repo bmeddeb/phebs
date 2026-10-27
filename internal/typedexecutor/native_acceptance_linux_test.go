@@ -1803,6 +1803,20 @@ func TestNativeAcceptanceSafeFiles(t *testing.T) {
 	if _, e := acceptanceRead(good, 1); e != nil {
 		t.Fatal(e)
 	}
+	writable := filepath.Join(base, "writable-ancestor")
+	if err := os.Mkdir(writable, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(writable, 0770); err != nil {
+		t.Fatal(err)
+	}
+	unsafe := filepath.Join(writable, "good")
+	if err := os.WriteFile(unsafe, []byte("x"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := acceptanceRead(unsafe, 1); err == nil {
+		t.Fatal("group-writable nonsticky ancestor accepted")
+	}
 	if _, e := acceptanceRead(good, 0); e == nil {
 		t.Fatal("bound")
 	}
