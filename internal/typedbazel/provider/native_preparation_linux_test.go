@@ -332,6 +332,7 @@ type preparationCapture struct {
 	ceiling       int64
 	retained      int64
 	index         int
+	commandMillis [3]int64
 	exe           [3]string
 	args          [3][]string
 	stdout        [2][]byte
@@ -354,6 +355,7 @@ func (c *preparationCapture) close() {
 }
 
 func (c *preparationCapture) command(ctx context.Context, executable string, args, env []string, budget *outputBudget) ([]byte, []byte, error) {
+	started := time.Now()
 	stdout, stderr, err := runCommand(ctx, executable, args, env, budget)
 	if err != nil {
 		c.commandFailed = true
@@ -370,6 +372,7 @@ func (c *preparationCapture) command(ctx context.Context, executable string, arg
 	if i >= 3 {
 		return nil, nil, errors.New("neutral preparation command count")
 	}
+	c.commandMillis[i] = time.Since(started).Milliseconds()
 	c.exe[i], c.args[i] = executable, args
 	if i == 2 {
 		c.buildOut.sha, c.buildOut.bytes = preparationDigest(stdout), int64(len(stdout))
@@ -421,6 +424,9 @@ func (c *preparationCapture) result(cfg nativePreparationConfig, allowance typed
 		return nativePreparationResult{}, errors.New("neutral preparation incomplete capture")
 	}
 	stages["wall"] = wall.Milliseconds()
+	for i, name := range []string{"cquery", "aquery", "build"} {
+		stages[name] = c.commandMillis[i]
+	}
 	r := nativePreparationResult{
 		Schema: cfg.resultSchema(), ID: cfg.ID,
 		PlanningDigest: allowance.PlanningDigest, AttemptDigest: allowance.AttemptDigest,
