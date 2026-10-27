@@ -353,6 +353,11 @@ func TestExecutionInputCustodyRejectsSourceTypeModeAndSize(t *testing.T) {
 				}
 				input.Executable = true
 			case "setuid", "setgid":
+				// Darwin silently clears setgid for a group the caller does not
+				// belong to (e.g. a temp parent inheriting wheel).
+				if err := os.Chown(source, -1, os.Getgid()); err != nil {
+					t.Fatal(err)
+				}
 				mode := os.FileMode(0o600) | os.ModeSetuid
 				if name == "setgid" {
 					mode = 0o600 | os.ModeSetgid

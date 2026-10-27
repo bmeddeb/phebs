@@ -1771,18 +1771,16 @@ func completeTestAuthorities(
 	operational := plan.PhaseOrder[1 : len(plan.PhaseOrder)-1]
 	results := make([]AuthorityPhaseResult, len(operational))
 	statesByGroup := make(map[string]AuthorityPhaseResult)
-	if correctedPlanSemantics(plan.Schema) {
-		statesByGroup = productionAuthorityFixture(t, productionFixtureInputPlan(t, plan))
-	}
+	// These are historical receipt-shape fixtures, not native execution
+	// witnesses. Current extractors implement V6 ownership; its constructors
+	// are exercised separately without relabeling their roots as V2-V5.
+
 	for index, phase := range operational {
 		stateIndex := slices.IndexFunc(plan.PhaseStates, func(value PhaseState) bool { return value.Phase == phase })
 		phaseState := plan.PhaseStates[stateIndex]
 		group := testAuthorityGroup(phase)
 		template, ok := statesByGroup[group]
 		if !ok {
-			if correctedPlanSemantics(plan.Schema) {
-				t.Fatalf("native constructor fixture omitted authority group %q", group)
-			}
 			physical, _ := namedPhysicalRevision(plan.Revisions.Physical, phaseState.PhysicalRevision)
 			revision, _ := namedRevisionResult(revisions, phaseState.PhysicalRevision)
 			state := AuthorityState{
@@ -1803,6 +1801,9 @@ func completeTestAuthorities(
 				SearchInventory:              physical.ExpectedTreeInventory,
 				ObservationInputInventory:    physical.ExpectedObservationInputInventory, Current: true,
 			}
+			if correctedPlanSemantics(plan.Schema) {
+				state.RelationshipProvenanceSHA256 = testDigest(group, "modeled-relationship-provenance")
+			}
 			var roots []ExtractionRootResult
 			switch group {
 			case "archive":
@@ -1816,6 +1817,9 @@ func completeTestAuthorities(
 				}
 				state.RelationshipGenerationSHA256 = testDigest(group, "relationship-generation")
 				state.RelationshipRootSHA256 = testDigest(group, "relationship-root")
+				if correctedPlanSemantics(plan.Schema) {
+					state.RelationshipProvenanceSHA256 = testDigest(group, "modeled-relationship-provenance")
+				}
 			case "b-logical":
 				base := statesByGroup["b-physical"]
 				state, roots = base.AuthorityState, base.ExtractionRoots
@@ -1938,6 +1942,16 @@ func testExtractionRoots(
 			Candidates: physical.ExpectedCandidateInventories[index].Candidates,
 			Members:    SetIdentity{Records: expected.ApplicablePartitions, FramedBytes: 1, SHA256: testDigest(group, expected.Domain, "members")},
 			Reserved:   expected.Reserved, Totals: expected.Expected, PartitionResults: partitions,
+		}
+		if correctedPlanSemantics(plan.Schema) {
+			// Corrected receipts keep schedule authority separate from immutable
+			// roots and bind the result-member inventory by its canonical recipe.
+			root.ScheduleSHA256 = ""
+			var err error
+			root.Members, err = extractionResultMembers(partitions)
+			if err != nil {
+				t.Fatal(err)
+			}
 		}
 		if typedOK {
 			root.TypedScopeSHA256, root.TypedScopeContentSHA256 = typed.SHA256, typed.DescriptorContentSHA256
@@ -2488,7 +2502,15 @@ func testInjectionTransition(
 		value.TargetGenerationBefore, value.TargetGenerationAfter = root.GenerationSHA256, root.GenerationSHA256
 		value.RequeueCount, value.SuccessCount = 1, 1
 		if correctedPlanSemantics(plan.Schema) {
-			recovery := productionRecoveryScheduleFixture(t, productionFixtureInputPlan(t, plan), point.Phase)
+			// Schema fixture only. The V6 constructor test separately exercises
+			// real recovery, while historical wire fixtures retain their own
+			// versioned roots and explicit modeled schedule identities.
+			prior := testDigest(point.Phase, "modeled-prior-schedule")
+			recovery := productionRecoverySchedule{
+				Target: root.GenerationSHA256, Prior: prior,
+				RecoveryGeneration: SHA256([]byte("phebs-extraction-recovery-schedule-v1\x00" + root.GenerationSHA256 + "\x00" + prior)),
+				RecoverySchedule:   testDigest(point.Phase, "modeled-recovery-schedule"),
+			}
 			preparationIndex := slices.IndexFunc(plan.Correction.RecoveryPreparations, func(row RecoveryPreparation) bool { return row.Phase == point.Phase })
 			preparation := plan.Correction.RecoveryPreparations[preparationIndex]
 			if recovery.Target != root.GenerationSHA256 {
@@ -2510,7 +2532,7 @@ func testInjectionTransition(
 				RecoveryCompletionWrites: preparation.RecoveryCompletionWrites, RecoveryRootInstalls: preparation.RecoveryRootInstalls,
 				PublicationCalls: preparation.PublicationCalls.Minimum,
 				// Read/resource measurements remain a labeled receipt model; the
-				// native constructor witness above supplies identities, not a
+				// historical schedule model above supplies identities, not a
 				// production event ledger or an executable injection protocol.
 				ControlFileReads:        files.Minimum,
 				StoreReadAttempts:       queries.Minimum,
@@ -2846,6 +2868,7 @@ func testCallerPublication(
 		}
 	}
 	rootIndex := slices.IndexFunc(authority.ExtractionRoots, func(root ExtractionRootResult) bool { return root.Domain == "grpc-caller" })
+	canonical, encoded := callerProfileByteTotals(expected.CallerLeaves)
 	value := CallerPublicationResult{
 		Schema: "t422-global-caller-publication-v1", ExecutionPolicy: expected.GlobalCallerPolicy,
 		CandidateInventory:              authority.ExtractionRoots[rootIndex].Candidates,
@@ -2855,7 +2878,7 @@ func testCallerPublication(
 		GenerationSHA256: authority.CallerGenerationSHA256, RootSHA256: authority.CallerRootSHA256,
 		ManifestSHA256: testDigest("caller", "manifest"), Current: true, Leaves: leaves,
 		ResolvedPostings: expected.RPCProjections, Abstentions: 11_603, Records: 22_602,
-		CanonicalBytes: 21_656_043, EncodedBytes: 21_656_043,
+		CanonicalBytes: canonical, EncodedBytes: encoded,
 		Projection:                   expected.ExpectedRPCProjections,
 		RelationshipGenerationSHA256: authority.RelationshipGenerationSHA256,
 		RelationshipRootSHA256:       authority.RelationshipRootSHA256,

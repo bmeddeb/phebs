@@ -367,7 +367,7 @@ func t421ProductionReplayCompareAssertionCursor(
 	)
 }
 
-func TestFrozenProductionCandidateExtractionResolverAndCallerReplay(t *testing.T) {
+func TestCurrentV6ProductionCandidateExtractionResolverAndCallerReplay(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 15*time.Minute)
 	defer cancel()
 	combined, err := BuildCombinedCorpus()
@@ -378,11 +378,13 @@ func TestFrozenProductionCandidateExtractionResolverAndCallerReplay(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
+	combined.Profile.Pipeline.ExtractionDomains = typedScopeExtractionDomains()
 	dataDir := t.TempDir()
 	repositoryDir, commit := t421ProductionReplayRepositoryFixture(t, ctx, dataDir)
 	runProductionIdentityPipeline(t, ctx, combined, oracle, productionPipelineInput{
 		DataDir: dataDir, RepositoryDir: repositoryDir, Repository: t421ProductionReplayRepository, Commit: commit,
 		SourceDigest: SHA256([]byte("t421-production-source")), ObservationDigest: SHA256([]byte("t421-production-observation")),
+		StoreAccounting: true, TypedScopeReservations: true,
 	})
 }
 
@@ -394,6 +396,7 @@ type productionPipelineInput struct {
 	SourceDirectory, ObservationDirectory      string
 	Runtime                                    *productionRuntimeIdentity
 	StoreAccounting                            bool
+	TypedScopeReservations                     bool
 }
 
 type productionPipelineResult struct {
@@ -491,7 +494,7 @@ func runProductionIdentityPipeline(
 		// The separately labeled standalone replay retains its strict model;
 		// the full constructor route above never consults that evidence store.
 		evidence = newT421ProductionReplayEvidence()
-		executor = &extract.EvidencePartitionExecutor{Evidence: evidence, Extractors: extractors, StoreAccounting: input.StoreAccounting}
+		executor = &extract.EvidencePartitionExecutor{Evidence: evidence, Extractors: extractors, StoreAccounting: input.StoreAccounting, TypedScopeReservations: input.TypedScopeReservations}
 		assertions = evidence
 	}
 	versions := make(map[string]string, len(identities))
@@ -500,7 +503,7 @@ func runProductionIdentityPipeline(
 	}
 	roots := make(map[string]candidate.DomainResultRoot, len(combined.Profile.Pipeline.ExtractionDomains))
 	plans := make(map[string]candidate.DomainResultPlan, len(combined.Profile.Pipeline.ExtractionDomains))
-	extractionPolicy, err := candidate.ExtractionPolicyDigest(sparseRoot.PolicyDigest, input.StoreAccounting, false)
+	extractionPolicy, err := candidate.ExtractionPolicyDigest(sparseRoot.PolicyDigest, input.StoreAccounting, input.TypedScopeReservations)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -514,7 +517,7 @@ func runProductionIdentityPipeline(
 			ObservationGenerationDigest: input.ObservationDigest,
 			ExtractorVersion:            versions[expectedDomain.Domain],
 			ExtractionPolicyDigest:      extractionPolicy,
-		}, false)
+		}, input.TypedScopeReservations)
 		if planErr != nil {
 			t.Fatalf("build reserved plan %s: %v", expectedDomain.Domain, planErr)
 		}
@@ -771,6 +774,10 @@ func runProductionIdentityPipeline(
 	if err != nil {
 		t.Fatal(err)
 	}
+	if input.TypedScopeReservations {
+		oracle.ProductRelationships.CallerLeaves = typedScopeCallerLeafProfiles()
+	}
+	wantedCanonical, _ := callerProfileByteTotals(oracle.ProductRelationships.CallerLeaves)
 	wantedLeaves := make(map[string]CallerLeafProfile, len(oracle.ProductRelationships.CallerLeaves))
 	for _, leaf := range oracle.ProductRelationships.CallerLeaves {
 		wantedLeaves[leaf.Prefix] = leaf
@@ -864,7 +871,7 @@ func runProductionIdentityPipeline(
 	}
 	if len(seenPairs) != len(wantedPairs) || actualLeaves != len(wantedLeaves) ||
 		callerSourceReads != 11_601 || resolved != oracle.ProductRelationships.RPCProjections || abstentions != 11_603 ||
-		records != 22_602 || canonicalBytes != 21_656_043 {
+		records != 22_602 || canonicalBytes != wantedCanonical {
 		t.Fatalf("production grpc caller totals = leaves %d source reads %d resolved %d abstentions %d records %d bytes %d", actualLeaves, callerSourceReads, resolved, abstentions, records, canonicalBytes)
 	}
 	completeManifest, err := callerpublication.BuildManifest(generation, pairReceipts)
@@ -1161,4 +1168,9 @@ func t421ProductionReplayGit(ctx context.Context, arguments ...string) *exec.Cmd
 		"GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=/dev/null", "LC_ALL=C",
 	)
 	return command
+}
+
+func (corpus *t421ProductionReplayCountingCorpus) SCIPTypedDomain() bool {
+	typed, ok := corpus.Corpus.(sdk.SCIPTypedDomain)
+	return ok && typed.SCIPTypedDomain()
 }

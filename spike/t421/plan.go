@@ -548,6 +548,10 @@ func validateOracle(oracle Oracle, profile CombinedProfile, schema string) error
 	if err != nil {
 		return err
 	}
+	callerLeaves := frozenCallerLeafProfiles()
+	if schema == PlanV6Schema {
+		callerLeaves = typedScopeCallerLeafProfiles()
+	}
 	if oracle.ProductRelationships.RPCProjections != 10_999 ||
 		oracle.ProductRelationships.KafkaProducerProjections != 500 ||
 		oracle.ProductRelationships.KafkaConsumerProjections != 9_500 ||
@@ -557,7 +561,7 @@ func validateOracle(oracle Oracle, profile CombinedProfile, schema string) error
 		oracle.ProductRelationships.Canonicalization != "family_order=chain,layered_dag,bounded_fanout,hotspot;provider,slot,consumer;hotspot_producer_before_consumers;runtime_generation_ids_excluded" ||
 		oracle.ProductRelationships.GlobalCallerPolicy != "callerexecute-catalog-wide-direct-resolver-v1" ||
 		oracle.ProductRelationships.CallerCandidateRecords != 21_603 ||
-		!reflect.DeepEqual(oracle.ProductRelationships.CallerLeaves, frozenCallerLeafProfiles()) ||
+		!reflect.DeepEqual(oracle.ProductRelationships.CallerLeaves, callerLeaves) ||
 		oracle.ProductRelationships.ExpectedRPCProjections != rpcIdentity ||
 		oracle.ProductRelationships.ExpectedProjections != productIdentity {
 		return errors.New("T42.1 product relationship oracle differs from the frozen shape")

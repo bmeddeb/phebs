@@ -10,8 +10,8 @@ import (
 	"testing"
 )
 
-// Full V5 receipt acceptance over the existing source-bound constructor fixture.
-// Measurements, signatures and the provenance-only caller rebuild are modeled;
+// Full V5 receipt schema acceptance over explicitly modeled historical inputs.
+// Roots, recovery schedules, measurements, signatures and the caller rebuild are modeled;
 // this is neither a native restored run nor cryptographic package verification.
 func TestAssembleExecutionReceiptV5RestoredContinuity(t *testing.T) {
 	plan := completeV5ReceiptTestPlan(t)

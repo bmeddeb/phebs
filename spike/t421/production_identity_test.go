@@ -42,6 +42,7 @@ type productionIdentityCache struct {
 var productionIdentityCaches = map[string]*productionIdentityCache{
 	PlanV2Schema: {},
 	PlanV3Schema: {},
+	PlanV6Schema: {},
 }
 
 func productionIdentityCacheFor(t *testing.T, plan Plan) *productionIdentityCache {
@@ -127,10 +128,10 @@ func productionAuthorityFixture(t *testing.T, plan Plan) map[string]AuthorityPha
 	return cache.authorities
 }
 
-// The accept side must admit identities constructed by the production graph.
-// Measurements/signatures and the search leaf remain explicit test models;
-// this proves contract satisfiability, never a live ordinary-worker scale pass.
-func TestContractAdmitsProductionDerivedOrdinaryPass(t *testing.T) {
+// Historical receipt acceptance uses modeled identities, measurements and
+// signatures. It proves schema satisfiability, not current native construction.
+// TestProductionV6Constructors exercises the current production graph separately.
+func TestContractAdmitsModeledHistoricalPass(t *testing.T) {
 	plan := correctedTestPlan(t)
 	commits := executionFreezeTestCommits()
 	binding := admittedExecutionFreezeTestBinding(t, plan, commits)
@@ -143,7 +144,7 @@ func TestContractAdmitsProductionDerivedOrdinaryPass(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("production-derived constructor fixture bytes=%d (modeled measurements/search leaf; not ceremony evidence)", len(raw))
+	t.Logf("modeled historical receipt fixture bytes=%d (not native or ceremony evidence)", len(raw))
 }
 
 func TestContractRejectsImpossibleReaderRetentionEvidence(t *testing.T) {
@@ -630,7 +631,7 @@ func productionPhysicalIdentities(t *testing.T, plan Plan) (map[string]productio
 	defer cancel()
 	dataDir := t.TempDir()
 	repository := productionIdentityRepository(t, ctx, plan, dataDir)
-	native := newProductionRuntimeIdentity(t, ctx, dataDir, plan.Schema == PlanV3Schema)
+	native := newProductionRuntimeIdentity(t, ctx, dataDir, processAccountingPlanSemantics(plan.Schema), plan.Schema == PlanV6Schema)
 	defer native.close(t)
 	combined, err := BuildCombinedCorpus()
 	if err != nil {
@@ -720,7 +721,7 @@ func productionPhysicalIdentities(t *testing.T, plan Plan) (map[string]productio
 			ControlSuffix: "-" + physical.Name, SourceDigest: source.Digest,
 			ObservationDigest: observations.GenerationDigest, ReadBlob: readBlob,
 			SourceDirectory: sourceDir, ObservationDirectory: observationDir, Runtime: native,
-			StoreAccounting: plan.Schema == PlanV3Schema,
+			StoreAccounting: processAccountingPlanSemantics(plan.Schema), TypedScopeReservations: plan.Schema == PlanV6Schema,
 		})
 		value := productionIdentityState{
 			Authority: AuthorityState{
@@ -1209,5 +1210,31 @@ func TestAuthorityContinuityPreservesV1AndRejectsImpossibleV2Changes(t *testing.
 				t.Fatal("contradictory identity transition was accepted")
 			}
 		})
+	}
+}
+
+// Native source/observation/candidate/extraction/resolver/caller and two genuine
+// recovery schedules use the existing prospective V6 contract. Search shard
+// bytes remain a model; this is neither host admission nor a ceremony receipt.
+func TestProductionV6Constructors(t *testing.T) {
+	plan, err := BuildPlanV6(testSourceCommit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	authorities := productionAuthorityFixture(t, plan)
+	if len(authorities) != 5 {
+		t.Fatalf("incomplete current authority graph: %d", len(authorities))
+	}
+	for _, name := range []string{"a", "b-physical", "b-logical", "a-return", "archive"} {
+		state, ok := authorities[name]
+		if !ok || len(state.ExtractionRoots) != len(plan.Profile.Pipeline.ExtractionDomains) {
+			t.Fatalf("missing V6 roots for %s", name)
+		}
+	}
+	for _, phase := range []string{"stale_lease", "process_restart"} {
+		recovery := productionRecoveryScheduleFixture(t, plan, phase)
+		if recovery.Target == "" || recovery.RecoverySchedule == "" {
+			t.Fatalf("missing native recovery %s", phase)
+		}
 	}
 }

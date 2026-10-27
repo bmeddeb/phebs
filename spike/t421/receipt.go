@@ -3989,6 +3989,7 @@ func validateCallerPublication(
 	rootIndex := slices.IndexFunc(authority.ExtractionRoots, func(root ExtractionRootResult) bool {
 		return root.Domain == "grpc-caller"
 	})
+	canonical, encoded := callerProfileByteTotals(expected.CallerLeaves)
 	leavesSHA256, leavesErr := receiptSHA256(value.Leaves)
 	binding := value
 	binding.ComponentBindingSHA256 = ""
@@ -4004,7 +4005,7 @@ func validateCallerPublication(
 		len(value.Leaves) != len(expected.CallerLeaves) ||
 		value.ResolvedPostings != expected.RPCProjections || value.UnresolvedPostings != 0 ||
 		value.Abstentions != 11_603 || value.Records != 22_602 ||
-		value.CanonicalBytes != 21_656_043 || value.EncodedBytes != 21_656_043 ||
+		value.CanonicalBytes != canonical || value.EncodedBytes != encoded ||
 		value.Projection != expected.ExpectedRPCProjections ||
 		value.RelationshipGenerationSHA256 != authority.RelationshipGenerationSHA256 ||
 		value.RelationshipRootSHA256 != authority.RelationshipRootSHA256 ||

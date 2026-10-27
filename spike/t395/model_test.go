@@ -12,7 +12,7 @@ import (
 
 func TestRetainedReceiptIsDeterministicClosedAndSourceFree(t *testing.T) {
 	root := repositoryRoot(t)
-	firstReceipt, err := Build(root)
+	firstReceipt, err := retainedReceipt(t)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -20,7 +20,7 @@ func TestRetainedReceiptIsDeterministicClosedAndSourceFree(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	secondReceipt, err := Build(root)
+	secondReceipt, err := retainedReceipt(t)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +55,7 @@ func TestRetainedReceiptIsDeterministicClosedAndSourceFree(t *testing.T) {
 }
 
 func TestStoppedGatesCannotAuthorizeReleaseOrContinuation(t *testing.T) {
-	receipt, err := Build(repositoryRoot(t))
+	receipt, err := retainedReceipt(t)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,7 +74,7 @@ func TestStoppedGatesCannotAuthorizeReleaseOrContinuation(t *testing.T) {
 }
 
 func TestEveryPackRemainsExperimentalDark(t *testing.T) {
-	receipt, err := Build(repositoryRoot(t))
+	receipt, err := retainedReceipt(t)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +93,7 @@ func TestEveryPackRemainsExperimentalDark(t *testing.T) {
 }
 
 func TestSuspensionRollbackExpiryAndRevalidationAreClosed(t *testing.T) {
-	receipt, err := Build(repositoryRoot(t))
+	receipt, err := retainedReceipt(t)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -159,4 +159,24 @@ func repositoryRoot(t *testing.T) string {
 		t.Fatal(err)
 	}
 	return root
+}
+
+// Historical input documents have evolved. Rebuilding against today's documents
+// must still fail closed, while the retained receipt's exact bytes remain valid.
+func TestHistoricalAuthorRejectsCurrentDocumentDrift(t *testing.T) {
+	if _, err := Build(repositoryRoot(t)); err == nil || !strings.Contains(err.Error(), "input docs/PROTO_GRPC_PACK_CARDS.md digest changed") {
+		t.Fatal("historical author accepted changed current input documents")
+	}
+}
+
+func retainedReceipt(t *testing.T) (Receipt, error) {
+	t.Helper()
+	raw, err := os.ReadFile(filepath.Join(repositoryRoot(t), "spike/t395/results.json"))
+	if err != nil {
+		return Receipt{}, err
+	}
+	if Digest(raw) != RetainedReceiptSHA256 {
+		t.Fatal("retained receipt bytes changed")
+	}
+	return Decode(raw)
 }

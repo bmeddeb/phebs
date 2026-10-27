@@ -2,6 +2,7 @@ package t421
 
 import (
 	"encoding/binary"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -150,6 +151,43 @@ func TestValidateExternalToolImageRejectsLinkedOrNonExecutableFiles(t *testing.T
 	for _, invalid := range []string{link, root, filepath.Join(root, "missing")} {
 		if err := validateExternalToolImage(invalid); err == nil {
 			t.Fatal("linked, directory, or absent image was accepted")
+		}
+	}
+}
+
+func TestExternalToolImageDistinctArm64Subtypes(t *testing.T) {
+	for _, wide := range []bool{false, true} {
+		for _, mode := range []string{"valid", "duplicate", "header mismatch", "library"} {
+			t.Run(fmt.Sprintf("wide=%t/%s", wide, mode), func(t *testing.T) {
+				raw := externalTestFatImage(binary.BigEndian, wide, externalArm64CPU, externalArm64CPU)
+				stride := 20
+				if wide {
+					stride = 32
+				}
+				offset := 8 + 2*stride + externalMachOHeader
+				binary.BigEndian.PutUint32(raw[12:16], 0x80000002)
+				binary.LittleEndian.PutUint32(raw[8+2*stride+8:], 0x80000002)
+				subtype := uint32(0x8000000c)
+				if mode == "duplicate" {
+					subtype = 0x80000002
+				}
+				binary.BigEndian.PutUint32(raw[8+stride+4:], subtype)
+				binary.LittleEndian.PutUint32(raw[offset+8:], subtype)
+				if mode == "header mismatch" {
+					binary.LittleEndian.PutUint32(raw[offset+8:], 0)
+				}
+				if mode == "library" {
+					binary.LittleEndian.PutUint32(raw[offset+12:], 6)
+				}
+				path := filepath.Join(t.TempDir(), "abi-images")
+				if err := os.WriteFile(path, raw, 0o700); err != nil {
+					t.Fatal(err)
+				}
+				err := validateExternalToolImage(path)
+				if (err == nil) != (mode == "valid") {
+					t.Fatalf("%s: %v", mode, err)
+				}
+			})
 		}
 	}
 }

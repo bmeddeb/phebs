@@ -26,7 +26,7 @@ import (
 )
 
 // Actual inherited FD6, selected command, real engine quiescence and whole-root
-// byte walks. The fifteen sweep callbacks and bearer auth backend are modeled;
+// byte walks. Capacity, the fifteen sweep callbacks and bearer auth backend are modeled;
 // the cursor store, filesystem capacity and SDK reads are real. This proves no
 // corpus deletion, pressure transition, frozen-volume capacity or whole phase.
 func TestT422WorkspaceNativeComposition(t *testing.T) {
@@ -187,7 +187,12 @@ func TestT422WorkspaceNativeHelper(t *testing.T) {
 	runnerDone := make(chan struct{})
 	go func() {
 		defer close(runnerDone)
-		lifecycle.RunWithControl(runnerCtx, controller, lifecycle.NewGate(filepath.Join(root, "data")),
+		lifecycle.RunWithControl(runnerCtx, controller, lifecycle.NewGateWithProbe(filepath.Join(root, "data"), func(ctx context.Context, _ string) (lifecycle.Capacity, error) {
+			// These composition tests exercise native quiescence, walks and
+			// owner cleanup. Host disk occupancy is not a fixture input or
+			// a pressure qualification; model normal capacity explicitly.
+			return lifecycle.Capacity{TotalBytes: 1000, UsedBytes: 100, AvailableBytes: 900}, ctx.Err()
+		}),
 			lifecycle.DefaultIdleInterval, lifecycle.DefaultBacklogDelay, control.ObserveOwner, nil, owners, control.runner)
 	}()
 	defer func() { stopRunner(); <-runnerDone }()

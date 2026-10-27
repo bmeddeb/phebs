@@ -403,7 +403,7 @@ func TestCurrentExtractionBaseline(t *testing.T) {
 		{Domain: "thrift-consumer", Version: "1.2.0", Facts: 25, UnresolvedCount: 25, Predicates: map[string]int{
 			"THRIFT_EXTRACTION_GAP": 1, "UNRESOLVED_THRIFT_CALL": 24,
 		}},
-		{Domain: "thrift-contract", Version: "1.0.0", Facts: 20, Predicates: map[string]int{
+		{Domain: "thrift-contract", Version: "1.1.2", Facts: 20, Predicates: map[string]int{
 			"DECLARES_FIELD": 8, "DECLARES_MESSAGE": 8, "DECLARES_OPERATION": 2, "DECLARES_SERVICE": 2,
 		}},
 	}

@@ -17,8 +17,12 @@ func TestSelectedIndexRoutePreservesOrdinaryResolutionAndDigest(t *testing.T) {
 	if err := os.Symlink(path, link); err != nil {
 		t.Fatal(err)
 	}
+	canonical, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		t.Fatal(err)
+	}
 	resolved, err := executablePath(link)
-	if err != nil || resolved != path {
+	if err != nil || resolved != canonical {
 		t.Fatal("ordinary resolution changed", resolved, err)
 	}
 	digest, err := executableidentity.Digest(path)

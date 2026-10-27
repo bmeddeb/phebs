@@ -16850,3 +16850,52 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   loses only those two fixture packages and every previously tracked corpus
   byte remains exact. The evaluator, its own reader modules, frozen manifests,
   receipts and product test packages are unchanged.
+
+- **2026-10-27 — MED-386, repair the inherited full-CI gate.** Ben explicitly
+  routes the remaining backend/native CI blockers on Phebs PR173 to this Mac
+  task, with integration conditional on complete green pinned local CI.
+  Preserve retained contracts and receipts. Historical receipt tests decode,
+  validate and canonically round-trip their exact retained bytes; the original
+  author still refuses changed present-day documents. T21's frozen scenario
+  keeps its digest while checking the exact T46.1 removed paths are absent.
+  T30.4 pins its original candidate-policy versions as well as enumeration
+  bounds; it performs no extraction and does not relabel new extractor results.
+
+  Historical V2-V5 receipt-shape fixtures use explicitly modeled roots and
+  recovery schedules. They no longer claim current native production acceptance.
+  Current native source/observation/candidate/extraction/resolver/caller and
+  recovery construction runs against the existing prospective V6 typed-scope
+  correction, with independent exact totals and unchanged aggregate caps.
+  This changes neither sealed plans nor the formal executor's active version;
+  it grants no ceremony, host admission, release or scale claim. Both positive
+  V6 extraction and historical-version fences remain mandatory CI coverage.
+
+  Darwin executable screening validates every distinct arm64 ABI subtype
+  against its own bounded Mach-O header and refuses duplicate subtype entries,
+  bad headers and overlapping slices. The engine-measurement server completes
+  clean peer EOF by closing its endpoint, avoiding a redundant half-close after
+  a peer's full close. Protocol/release and truncated-frame refusals stay exact.
+  Native workspace composition fixtures supply normal capacity explicitly:
+  quiescence, byte walks, cleanup and joins remain real, while these tests make
+  no claim about the developer volume's pressure. Production pressure probes
+  and watermarks are unchanged. Test file group setup and canonical temp paths
+  make their negative assertions independent of inherited Darwin directory
+  metadata; Git fixture maintenance is synchronous-disabled to avoid detached
+  writes during cleanup. CI primes module graph metadata before its offline
+  reference graph check, without loosening that check's hermetic environment.
+
+  Cost: executable inspection remains bounded by eight fat slices and headers,
+  with at most eight subtype comparisons per selected slice, at admission only.
+  EOF handling removes one terminal socket syscall. Normal query, sync, retry,
+  publication, locks, caches, disk and child-process bounds are unchanged.
+  Module metadata priming is CI-only; modeled fixtures add no product work.
+
+  The current caller leaf wire check also accounts for the already shipped
+  T50.3a empty consumer-unit projection: its reason is `no_unit_mapping`
+  (15 ASCII bytes), replacing the missing-callback reason
+  `consumer_unit_projection_unavailable` (36). Each of the independent 10,999
+  resolved postings therefore serializes 21 fewer bytes. Apply that derivation
+  only to the unsealed V6 caller byte oracle (21,425,064 total); preserve all
+  counts, projections, safety caps and V1-V5 expectations. A real direct-scanner
+  regression compares the absent callback with an actual empty projection and
+  verifies that reason substitution alone explains the exact serialized delta.

@@ -2,6 +2,8 @@ package gocaller_test
 
 import (
 	"context"
+	"encoding/json"
+	"github.com/bmeddeb/phebs/internal/extract"
 	"testing"
 
 	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
@@ -92,6 +94,36 @@ func invoke() {
 		facts[0].Assertion.Object != "/demo.Greeter/SayHello" ||
 		facts[0].Assertion.Lineage != "lineage-a" {
 		t.Fatalf("result = %+v, facts = %+v", result, facts)
+	}
+	projection, err := extract.OpenConsumerUnitProjection(context.Background(), []extract.ConsumerUnitMapping{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var projected sdk.Fact
+	_, err = gocaller.ScanDirectSyntaxFile(context.Background(), gocaller.DirectScanRequest{
+		Protocol: "grpc", Path: "src/caller.go", Blob: sdk.Blob{Content: source, Digest: "sha256:source"}, Resolver: resolver,
+		ConsumerUnits: projection.ConsumerUnits, ResolverCatalogDigest: "sha256:catalog",
+	}, func(f sdk.Fact) error { projected = f; return nil })
+	if err != nil {
+		t.Fatal(err)
+	}
+	var originalDetail, projectedDetail map[string]any
+	if json.Unmarshal([]byte(facts[0].Assertion.Detail), &originalDetail) != nil || json.Unmarshal([]byte(projected.Assertion.Detail), &projectedDetail) != nil {
+		t.Fatal("invalid caller detail")
+	}
+	if originalDetail["unit_reason"] != "consumer_unit_projection_unavailable" || projectedDetail["unit_reason"] != "no_unit_mapping" {
+		t.Fatal("unexpected missing unit reasons", originalDetail, projectedDetail)
+	}
+	original, _ := json.Marshal(facts[0])
+	changed, _ := json.Marshal(projected)
+	if len(original)-len(changed) != 21 {
+		t.Fatalf("consumer unit reason wire delta=%d", len(original)-len(changed))
+	}
+	projectedDetail["unit_reason"] = originalDetail["unit_reason"]
+	restored, _ := json.Marshal(projectedDetail)
+	originalJSON, _ := json.Marshal(originalDetail)
+	if string(restored) != string(originalJSON) {
+		t.Fatal("empty projection changed more than the reason")
 	}
 }
 

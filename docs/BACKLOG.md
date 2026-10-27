@@ -23475,6 +23475,20 @@ Acceptance:
   application discovery and all retained input bytes remain exact; add no
   third-party fixture dependencies to the application module.
 
+CI repair follow-up, explicitly routed by Ben on 2026-10-27:
+
+- Fix inherited Darwin EOF and distinct-arm64-subtype admission defects with
+  regressions; retain malformed-header, protocol and release refusals.
+- Preserve historical receipt/plan bytes, decode and round-trip their own
+  schemas, and require historical authors to reject present-day input drift.
+- Keep receipt-shape models explicit; exercise current native constructors
+  and recovery against the existing unsealed V6 correction without relabeling
+  their outputs as V2-V5 or changing formal execution defaults.
+- Use explicit normal-capacity fixtures for workspace composition and preserve
+  real quiescence, whole-root measurements, cleanup, joins and pressure tests.
+- Verify pinned full local CI, including global race and UI stages, before
+  integration; record the exact result in PR173 and MED-386/MED-381.
+
 Owning decision: PLAN.md, 2026-10-27 MED-386. Implementation branch:
 `mac/med386-mcp-readonly`. Companion consumer normalizer is already merged in
 [Stratus PR84](https://github.com/bmeddeb/stratus/pull/84); Slack remains postponed.

@@ -184,7 +184,9 @@ func ServeEngineMeasurement(ctx context.Context, conn *net.UnixConn, binding Eng
 		var frame [engineMeasurementFrameBytes]byte
 		n, e := io.ReadFull(conn, frame[:])
 		if n == 0 && e == io.EOF && ctx.Err() == nil {
-			return conn.CloseWrite()
+			// EOF is the peer's terminal boundary. Closing our endpoint below
+			// delivers EOF too, including when the peer already fully closed.
+			return nil
 		}
 		if e != nil {
 			return errors.Join(ErrTransport, e)

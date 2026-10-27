@@ -133,9 +133,10 @@ func (f *topicFixture) store() *proofAPIStore {
 func topicService(st *proofAPIStore, planes []string) *api.ProofService {
 	return api.NewProofService(api.Options{
 		Version: "test", Store: st, Evidence: st, ProofBundles: st,
-		KafkaReleasedPlanes:   planes,
-		Principal:             func(context.Context) string { return "user:member" },
-		AuthorizationProvider: "test-permissions-v1",
+		KafkaReleasedPlanes:         planes,
+		KafkaTopicInventoryReleased: len(planes) > 0,
+		Principal:                   func(context.Context) string { return "user:member" },
+		AuthorizationProvider:       "test-permissions-v1",
 	})
 }
 

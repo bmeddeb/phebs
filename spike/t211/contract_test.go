@@ -205,7 +205,7 @@ func TestGlossaryLanguageProjections(t *testing.T) {
 	}
 }
 
-func TestServiceInventoryAnchorsCurrentImplementation(t *testing.T) {
+func TestServiceInventoryAnchorsAndExplicitRetirements(t *testing.T) {
 	scenarios, _, _, err := LoadScenarioContract(readFixture(t, "scenarios.json"))
 	if err != nil {
 		t.Fatalf("load scenarios: %v", err)
@@ -213,6 +213,20 @@ func TestServiceInventoryAnchorsCurrentImplementation(t *testing.T) {
 	repositoryRoot := filepath.Clean(filepath.Join("..", ".."))
 	for _, service := range scenarios.Services {
 		for _, anchor := range service.SourceAnchors {
+			// T46.1 removed these exact product surfaces. Preserve the frozen
+			// scenario bytes and check their absence rather than resurrecting them.
+			retired := map[string]bool{
+				"internal/store/investigation_authz.go":     true,
+				"internal/store/investigation.go":           true,
+				"internal/store/investigation_retention.go": true,
+				"internal/store/investigation_dossier.go":   true,
+			}
+			if retired[anchor.Path] {
+				if _, err := os.Stat(filepath.Join(repositoryRoot, filepath.FromSlash(anchor.Path))); !os.IsNotExist(err) {
+					t.Fatalf("retired surface %s unexpectedly exists or cannot be inspected: %v", anchor.Path, err)
+				}
+				continue
+			}
 			content, err := os.ReadFile(filepath.Join(repositoryRoot, filepath.FromSlash(anchor.Path)))
 			if err != nil {
 				t.Fatalf("read %s anchor %s: %v", service.ID, anchor.Path, err)

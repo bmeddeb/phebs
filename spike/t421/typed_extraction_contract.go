@@ -43,9 +43,10 @@ func applyTypedExtractionCorrection(plan *Plan) error {
 	plan.ToolPolicy.ExecutionFreezeSchema = ExecutionFreezeV6Schema
 	plan.ReceiptContract.Schema = ReceiptV6Schema
 	plan.Profile.Pipeline.ExtractionDomains = typedScopeExtractionDomains()
+	plan.Oracle.ProductRelationships.CallerLeaves = typedScopeCallerLeafProfiles()
 	correction := *plan.Correction
 	correction.EvidenceGroupingPolicy = typedScopeEvidenceGroupingPolicy
-	correction.RequiredReadiness = append(slices.Clone(correction.RequiredReadiness), typedScopeEvidenceGroupingPolicy, typedSourceReadPolicy)
+	correction.RequiredReadiness = append(slices.Clone(correction.RequiredReadiness), typedScopeEvidenceGroupingPolicy, typedSourceReadPolicy, typedScopeCallerUnitPolicy)
 	plan.Correction = &correction
 	plan.WorkEnvelope.Phases = slices.Clone(plan.WorkEnvelope.Phases)
 	for index := range plan.WorkEnvelope.Phases {
@@ -158,4 +159,28 @@ func typedExtractionSourceReadMaximum(profile CombinedProfile, observation bool)
 		maximum += goFiles * 5
 	}
 	return maximum, nil
+}
+
+// T50.3a supplies an empty-but-valid consumer-unit projection for this corpus.
+// It replaces the absent-callback reason (36 ASCII bytes) with no_unit_mapping
+// (15 bytes) in each resolved posting's Detail. Counts, other fields and safety
+// caps stay exact. V1-V5 retain their original wire oracle; V6 is unsealed.
+const typedScopeCallerUnitPolicy = "caller-unit-reason-v6:consumer_unit_projection_unavailable(36)->no_unit_mapping(15);21-fewer-ASCII-bytes-per-resolved-posting;10999-postings;historical-V1-V5-exact"
+const typedScopeCallerCanonicalBytes = 21_425_064
+
+func typedScopeCallerLeafProfiles() []CallerLeafProfile {
+	leaves := frozenCallerLeafProfiles()
+	delta := uint64(len("consumer_unit_projection_unavailable") - len("no_unit_mapping"))
+	for index := range leaves {
+		leaves[index].CanonicalBytes -= delta * leaves[index].ResolvedPostings
+		leaves[index].EncodedBytes -= delta * leaves[index].ResolvedPostings
+	}
+	return leaves
+}
+func callerProfileByteTotals(leaves []CallerLeafProfile) (canonical, encoded uint64) {
+	for _, leaf := range leaves {
+		canonical += leaf.CanonicalBytes
+		encoded += leaf.EncodedBytes
+	}
+	return canonical, encoded
 }

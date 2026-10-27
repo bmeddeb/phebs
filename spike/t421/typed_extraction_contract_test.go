@@ -438,3 +438,25 @@ func TestTypedExtractionV6ReadAndWireBounds(t *testing.T) {
 		t.Fatal("read recipe admitted arbitrary SCIP input")
 	}
 }
+
+func TestTypedV6CallerWireOraclePreservesHistoricalBytes(t *testing.T) {
+	old, current := frozenCallerLeafProfiles(), typedScopeCallerLeafProfiles()
+	before := append([]CallerLeafProfile(nil), old...)
+	for i := range current {
+		if current[i].CanonicalBytes != old[i].CanonicalBytes-21*old[i].ResolvedPostings || current[i].EncodedBytes != current[i].CanonicalBytes {
+			t.Fatal("incorrect caller reason byte derivation")
+		}
+		restored := current[i]
+		restored.CanonicalBytes, restored.EncodedBytes = old[i].CanonicalBytes, old[i].EncodedBytes
+		if restored != old[i] {
+			t.Fatal("caller byte correction changed record/count identity")
+		}
+	}
+	if !reflect.DeepEqual(old, before) {
+		t.Fatal("historical caller oracle mutated")
+	}
+	canonical, encoded := callerProfileByteTotals(current)
+	if canonical != typedScopeCallerCanonicalBytes || encoded != canonical {
+		t.Fatalf("V6 caller bytes %d/%d", canonical, encoded)
+	}
+}

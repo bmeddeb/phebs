@@ -92,12 +92,12 @@ func TestZoektOfferNativePinnedGraph(t *testing.T) {
 	environment := referenceBuildEnvironment(ReferenceToolRequest{GoRoot: goRoot, ModuleCache: cache}, workspace)
 	baseline, err := runReferenceGo(ctx, source, driver, environment, maxReferenceModuleGraphBytes, "list", "-m", "-json", "all")
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("baseline module graph: %v: %s", err, baseline)
 	}
 	args := []string{"list", "-modfile=v3.mod", "-overlay=" + overlay, "-m", "-json", "all"}
 	actual, err := runReferenceGo(ctx, root, driver, environment, maxReferenceModuleGraphBytes, args...)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("private module graph: %v: %s", err, actual)
 	}
 	if err := verifyZoektOfferGraph(baseline, actual, source, root); err != nil {
 		t.Fatal(err)

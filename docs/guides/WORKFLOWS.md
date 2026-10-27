@@ -1739,3 +1739,13 @@ shape, binding or group decoration is omitted while exact supporting source
 citations remain visible. The unresolved census still leads, and plane zeros
 retain their measured/unmeasured distinction. These navigation repairs add no
 runtime, accuracy, completeness or release claim.
+
+### Local CI prerequisites
+
+Run `make ci` with the versions pinned in the Makefile and a populated Go module
+cache. The Go stage resolves module graph metadata before running the hermetic
+offline reference-build tests. Those tests continue to deny network fallback.
+Historical receipt tests validate retained bytes against their original schemas;
+current V6 constructor coverage is an unsealed engineering fixture, not a
+ceremony or host-admission result. Native workspace composition uses supplied
+normal capacity while its quiescence, byte measurements and cleanup remain real.

@@ -79,8 +79,7 @@ func validateExternalToolImage(path string) (retErr error) {
 	}
 	type slice struct{ offset, size uint64 }
 	var intervals [externalFatSliceCap]slice
-	var selected slice
-	var subtype uint32
+	var subtypes [externalFatSliceCap]uint32
 	selectedCount := 0
 	for index := uint32(0); index < count; index++ {
 		var raw [32]byte
@@ -108,17 +107,25 @@ func validateExternalToolImage(path string) (retErr error) {
 		}
 		intervals[index] = current
 		if cpu == externalArm64CPU {
-			selectedCount++
-			if selectedCount > 1 {
-				return errors.New("external tool fat-image repeats its arm64 slice")
+			// Apple system images may contain multiple arm64 ABI subtypes.
+			// Validate each header against its own table entry; duplicate ABI
+			// entries remain ambiguous and are refused.
+			for _, prior := range subtypes[:selectedCount] {
+				if prior == currentSubtype {
+					return errors.New("external tool fat-image repeats its arm64 subtype")
+				}
 			}
-			selected, subtype = current, currentSubtype
+			subtypes[selectedCount] = currentSubtype
+			selectedCount++
+			if err := validateExternalMachOSlice(file, current.offset, current.size, &currentSubtype); err != nil {
+				return err
+			}
 		}
 	}
-	if selectedCount != 1 {
+	if selectedCount == 0 {
 		return errors.New("external tool fat-image has no arm64 slice")
 	}
-	return validateExternalMachOSlice(file, selected.offset, selected.size, &subtype)
+	return nil
 }
 
 func validateExternalMachOSlice(file *os.File, offset, size uint64, subtype *uint32) error {

@@ -44,7 +44,7 @@ type productionRuntimeResult struct {
 	Domains      []candidate.DownstreamDomainAuthority
 }
 
-func newProductionRuntimeIdentity(t *testing.T, ctx context.Context, dataDir string, storeAccounting bool) *productionRuntimeIdentity {
+func newProductionRuntimeIdentity(t *testing.T, ctx context.Context, dataDir string, storeAccounting, typedScope bool) *productionRuntimeIdentity {
 	t.Helper()
 	stateDir := filepath.Join(dataDir, "extraction-state")
 	if err := os.Mkdir(stateDir, 0o700); err != nil {
@@ -71,7 +71,7 @@ func newProductionRuntimeIdentity(t *testing.T, ctx context.Context, dataDir str
 	fixture.evidence = &productionIdentityEvidence{Surreal: state}
 	fixture.runtime = &extractionpublication.Runtime{
 		Root: filepath.Join(dataDir, "extraction-publications"), Store: state,
-		Executor:  &extract.EvidencePartitionExecutor{Evidence: fixture.evidence, Extractors: extractors, StoreAccounting: storeAccounting},
+		Executor:  &extract.EvidencePartitionExecutor{Evidence: fixture.evidence, Extractors: extractors, StoreAccounting: storeAccounting, TypedScopeReservations: typedScope},
 		Publisher: extractionpublication.StorePublisher{Store: state},
 	}
 	fixture.reconciler = &extractionpublication.Reconciler{
@@ -87,6 +87,7 @@ func newProductionRuntimeIdentity(t *testing.T, ctx context.Context, dataDir str
 		// Configure the explicit test-only owner before any worker invocation.
 		RecoveryPreparationEnabled: true,
 		StoreAccounting:            storeAccounting,
+		TypedScopeReservations:     typedScope,
 	}
 	fixture.source = &productionIdentitySource{Source: extractionpublication.GitSparseSource{
 		DataDir: dataDir, OpenDomain: fixture.reconciler.OpenDomain,
@@ -103,7 +104,7 @@ func newProductionRuntimeIdentity(t *testing.T, ctx context.Context, dataDir str
 				return err
 			}
 			current := publication.State()
-			policy, policyErr := candidate.ExtractionPolicyDigest(current.PolicyDigest, storeAccounting, false)
+			policy, policyErr := candidate.ExtractionPolicyDigest(current.PolicyDigest, storeAccounting, typedScope)
 			if policyErr != nil || plan.ExtractionPolicyDigest != policy {
 				return errors.Join(policyErr, extractionpublication.ErrStale)
 			}
@@ -169,7 +170,7 @@ func (fixture *productionRuntimeIdentity) readAuthority(ctx context.Context, rep
 
 func (fixture *productionRuntimeIdentity) publishCandidate(t *testing.T, ctx context.Context, input productionPipelineInput, selected candidate.State) {
 	t.Helper()
-	if input.StoreAccounting != fixture.reconciler.StoreAccounting {
+	if input.StoreAccounting != fixture.reconciler.StoreAccounting || input.TypedScopeReservations != fixture.reconciler.TypedScopeReservations {
 		t.Fatal("pipeline input and configured runtime disagree on extraction policy")
 	}
 	if err := fixture.state.SetRepoIndexed(ctx, input.Repository, input.Commit, time.Now().UTC()); err != nil {

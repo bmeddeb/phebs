@@ -111,6 +111,7 @@ func git(t *testing.T, directory string, args ...string) string {
 	t.Helper()
 	commandArgs := []string{
 		"-c", "user.name=T34.1", "-c", "user.email=t341@example.invalid",
+		"-c", "maintenance.auto=false", "-c", "gc.auto=0",
 		"-C", directory,
 	}
 	commandArgs = append(commandArgs, args...)

@@ -257,6 +257,8 @@ ci-static: verify-go verify-golangci-lint verify-glossary
 	go test ./... -run '^$$'
 
 ci-go: verify-go verify-surreal
+	# Populate module metadata used by the hermetic offline graph test.
+	go list -mod=readonly -m -json all >/dev/null
 	go test ./... -count=1 -timeout=60m
 
 # Race coverage starts with the most concurrent packages: dispatchadmission

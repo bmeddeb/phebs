@@ -299,7 +299,21 @@ func measurementPolicies(t *testing.T) []candidate.Policy {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// This is a candidate-planner replay, not extractor execution. Pin the
+	// historical policy identities as well as its original enumeration bounds;
+	// newer extractor versions must not rewrite retained measurement bytes.
+	versions := map[string]string{
+		"grpc-caller": "1.5.0", "grpc-consumer": "1.2.0",
+		"kafka-consumer": "1.2.0", "kafka-producer": "1.2.0",
+		"proto-contract": "3.0.0", "scip-proto-field": "1.4.0",
+		"scip-thrift-field": "1.4.0", "thrift-caller": "1.5.0",
+		"thrift-consumer": "1.2.0", "thrift-contract": "1.0.0",
+	}
 	for index := range policies {
+		policies[index].Version = versions[policies[index].Domain]
+		if policies[index].Version == "" {
+			t.Fatal("unbound historical planner policy")
+		}
 		if policies[index].Domain == "proto-contract" || policies[index].Domain == "thrift-contract" {
 			policies[index].MaxRecords = 0
 			policies[index].ExecutionPartitionPolicy = ""
