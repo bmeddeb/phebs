@@ -17131,3 +17131,26 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   receipt carries that bounded record. No new I/O, child, cache, lock or ordinary
   request/sync/publication work is introduced. SafeFiles additionally tests a
   fresh explicit0770 non-sticky ancestor refusal, independent of global umask.
+
+- **2026-10-27 — MED-695 finite installed-preparation diagnostic identity.**
+  Add the separate root-admitted test schema
+  `phebs-typed-host-preparation-diagnostic-v1`, restricted to the existing neutral
+  source, exact tools/profile/seed/deployment, unchanged policy and one `success`
+  case path. That historical case name does not denote a passing diagnostic:
+  the test child replaces only its native-run callback with a closed refusal,
+  records `native_launch_blocked=true` if reached, and launches no container.
+  Real controller input preparation, allowance, host formatting/verification,
+  control construction, scheduler settlement and existing cleanup still run.
+  Original acceptance schemas keep their actual native runner unchanged. The
+  parent's unchanged two-observed-phase oracle necessarily refuses this schema;
+  preserve its actual nonzero outer Wait and private causal receipts. A formatter
+  refusal and the deliberate pre-launch stop are different outcomes; neither is
+  installed qualification, publication, no-replay, cleanup or resource PASS.
+  This diagnostic enables a finite causal probe after fresh exact admission;
+  it authorizes no installation, execution, held-custody mutation or full retry.
+
+  Cost:one exact test-schema comparison during child composition; only this
+  diagnostic replaces its native-run callback and sets one boolean. Preparation
+  retains all existing costs and deadlines; no measured container is launched.
+  Ordinary runtime/query/sync/publication, locks, caches, limits and all existing
+  native acceptance predicates are unchanged.

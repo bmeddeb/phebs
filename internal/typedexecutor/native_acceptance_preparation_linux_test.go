@@ -16,6 +16,18 @@ import (
 	"github.com/bmeddeb/phebs/internal/typedsandbox"
 )
 
+// A distinct root-admitted diagnostic cannot launch a container or satisfy the
+// parent's unchanged two-phase acceptance oracle. Its outer Wait stays nonzero.
+func acceptancePreparationOnly(c nativeAcceptanceConfig, controller *Controller, result *acceptanceChildResult) {
+	if c.Schema != acceptanceHostPreparationSchema {
+		return
+	}
+	controller.native.run = func(context.Context, typedsandbox.Options, typedsandbox.ScratchAuthority) (typedsandbox.Result, error) {
+		result.NativeLaunchBlocked = true
+		return typedsandbox.Result{ExitCode: -1}, typedsandbox.ErrRefused
+	}
+}
+
 // These bounded private observations may include the direct formatter's wait
 // result. They supply neither descendant custody nor native completion authority.
 type acceptanceHostPreparation struct {
@@ -199,5 +211,28 @@ func TestNativeAcceptanceFirstHostAllowanceObservation(t *testing.T) {
 		if n == 1 && result.HostAllowance != nil || n > 1 && (result.HostAllowance == nil || result.HostAllowance.Start != 2) {
 			t.Fatal("first successful allowance not retained", result.HostAllowance)
 		}
+	}
+}
+
+func TestNativeAcceptancePreparationOnly(t *testing.T) {
+	for _, schema := range []string{acceptanceSchema, acceptanceCorpusSchema, acceptanceWorkspaceFaultSchema, acceptanceHostPreparationSchema} {
+		t.Run(schema, func(t *testing.T) {
+			called := false
+			originalErr := errors.New("original runner")
+			controller := &Controller{native: nativeOperations{run: func(context.Context, typedsandbox.Options, typedsandbox.ScratchAuthority) (typedsandbox.Result, error) {
+				called = true
+				return typedsandbox.Result{ExitCode: 17}, originalErr
+			}}}
+			var result acceptanceChildResult
+			acceptancePreparationOnly(nativeAcceptanceConfig{Schema: schema}, controller, &result)
+			out, err := controller.native.run(t.Context(), typedsandbox.Options{}, typedsandbox.ScratchAuthority{})
+			if schema == acceptanceHostPreparationSchema {
+				if called || !result.NativeLaunchBlocked || out.ExitCode != -1 || err != typedsandbox.ErrRefused || out.Removed {
+					t.Fatal("diagnostic launched or manufactured native completion")
+				}
+			} else if !called || result.NativeLaunchBlocked || out.ExitCode != 17 || err != originalErr {
+				t.Fatal("ordinary acceptance runner changed")
+			}
+		})
 	}
 }

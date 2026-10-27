@@ -71,6 +71,7 @@ type acceptanceChildResult struct {
 	HostAllowance           *typedsandbox.Allowance     `json:"host_allowance,omitempty"`
 	HostPreparation         []acceptanceHostPreparation `json:"host_preparation,omitempty"`
 	HostPreparationOverflow bool                        `json:"host_preparation_overflow,omitempty"`
+	NativeLaunchBlocked     bool                        `json:"native_launch_blocked,omitempty"`
 }
 type acceptanceObservation struct {
 	ID            string                          `json:"id"`
@@ -593,6 +594,7 @@ func acceptanceRunChild(ctx context.Context, c nativeAcceptanceConfig, p typedin
 	}
 	result := acceptanceChildResult{Schema: c.Schema, Config: acceptanceDigest(acceptanceJSON(c)), Case: *acceptanceCase, Recovery: recovery}
 	acceptanceObserveHostPreparation(controller, &result)
+	acceptancePreparationOnly(c, controller, &result)
 	var costs []acceptanceCorpusPhaseCost
 	if c.Schema == acceptanceCorpusSchema && !recovery {
 		run := controller.native.run

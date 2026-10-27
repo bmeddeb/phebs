@@ -20,6 +20,7 @@ import (
 const acceptanceSchema = "phebs-typed-native-acceptance-v1"
 const acceptanceCorpusSchema = "phebs-typed-native-corpus-acceptance-v1"
 const acceptanceWorkspaceFaultSchema = "phebs-typed-workspace-fault-acceptance-v1"
+const acceptanceHostPreparationSchema = "phebs-typed-host-preparation-diagnostic-v1"
 const acceptanceRepo = "example.invalid/phebs-native-neutral"
 const acceptanceMaxConfig = 16384
 const acceptanceMaxReceipt = 128 << 10
@@ -89,7 +90,7 @@ func parseAcceptance(raw []byte) (nativeAcceptanceConfig, error) {
 		return c, errors.New("acceptance contract")
 	}
 	switch c.Schema {
-	case acceptanceSchema, acceptanceWorkspaceFaultSchema:
+	case acceptanceSchema, acceptanceWorkspaceFaultSchema, acceptanceHostPreparationSchema:
 		if c.Source.Repository != acceptanceRepo || c.Cohort != "" || c.SourceGitSHA256 != "" {
 			return c, errors.New("neutral acceptance contract")
 		}
@@ -120,6 +121,9 @@ func acceptanceCaseValid(name string) bool {
 	return false
 }
 func (c nativeAcceptanceConfig) caseValid(name string) bool {
+	if c.Schema == acceptanceHostPreparationSchema {
+		return name == "success"
+	}
 	if c.Schema == acceptanceWorkspaceFaultSchema {
 		return acceptanceFaultCase(name)
 	}
@@ -199,6 +203,16 @@ func TestNativeAcceptanceConfig(t *testing.T) {
 	if _, e := parseAcceptance(acceptanceJSON(c)); e != nil {
 		t.Fatal(e)
 	}
+	diagnostic := c
+	diagnostic.Schema = acceptanceHostPreparationSchema
+	if _, err := parseAcceptance(acceptanceJSON(diagnostic)); err != nil {
+		t.Fatal("closed neutral diagnostic contract", err)
+	}
+	for _, name := range append([]string{"", "target"}, acceptanceCases...) {
+		if diagnostic.caseValid(name) != (name == "success") {
+			t.Fatal("preparation diagnostic escaped its single case")
+		}
+	}
 	for _, tc := range []struct {
 		name   string
 		change func(*nativeAcceptanceConfig)
@@ -208,6 +222,10 @@ func TestNativeAcceptanceConfig(t *testing.T) {
 			tc.change(&v)
 			if _, e := parseAcceptance(acceptanceJSON(v)); e == nil {
 				t.Fatal("accepted")
+			}
+			v.Schema = acceptanceHostPreparationSchema
+			if _, err := parseAcceptance(acceptanceJSON(v)); err == nil {
+				t.Fatal("diagnostic relaxed original configuration predicate")
 			}
 		})
 	}
