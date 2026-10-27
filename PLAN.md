@@ -17947,3 +17947,50 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   reviewed3fd462d9 and all native evidence. No safeguarded namespace/workspace
   implementation, retained-state replay, install/security change, native run,
   cleanup, publication or merge is authorized by these diagnostics.
+
+- **2026-10-27 — MED-496 same-transaction publication predicate diagnostics.**
+  V19's original Wait returned1 at03:16:27 UTC. Its retained joined epoch-four
+  log first records selected `store_result_count/store_conflict` at23:24:26 UTC
+  with a live caller, followed by `read_wait/canceled` at03:16:26 UTC without a
+  recovered event. Preserve that chronology and the exact failed fixture;
+  measurement-unavailable and false RSS-limit flags do not attribute memory
+  pressure. The result-count label does not identify the failed SQL predicate.
+  Tiny real-engine graceful and hard-death sealed-publication replay both pass
+  unchanged production source, so they are negative controls, not a native fix.
+
+  A real three-part persistent-store composition additionally binds ordinal2,
+  actual evidence/publication, checkpoint interruption, a new engine lifetime,
+  stale reaping and scheduler callbacks. Ordinary and observed publication both
+  retain the original R reader's7/4 charge. A supplied one-shot native count
+  refusal followed by successful attempt1 completes publication and the schedule,
+  but retry priority supplies no Recovered callback and the original attempt0
+  point reader refuses. This is a bounded consequence of a known supplied
+  refusal, not the unknown native SQL predicate or authenticated HTTP/custody/RSS
+  acceptance. Retained V19 timing identities independently match offset29,
+  attempts0–4, all failed; final committed exhaustion counts were not retained.
+
+  For the existing optional selected publication observer only, return the
+  already-computed run-eligibility, current-candidate, exact-count, run-ownership
+  and single-marked-row booleans beside the original publication rows from the
+  same transaction. Keep the original query byte-for-byte for ordinary calls;
+  the observed variant changes only RETURN shape. Every guard, SELECT, mutation,
+  write charge, error, pointer/settlement order and acceptance comparison stays
+  unchanged. Record one available bit plus these closed booleans in the existing
+  first-failure slot; never export rows, identities, paths, query text or secrets.
+  Interpret run-ineligible as upstream of current/count/ownership false, and
+  marked-row false as generally downstream. The conflict label classifies a
+  returned count; it does not establish engine serialization contention.
+  This repairs diagnostic ambiguity and does not establish V19's failed predicate
+  or a behavior correction. No retained database replay or credential access.
+
+  One context observer lookup is added per publication. Selected observations
+  add one fixed result envelope and boolean decoding, with no new database
+  query, scan, write, ledger charge, lock, timer, goroutine, child, corpus read or
+  hash. The existing first-record mutex and synchronous advisory logger retain
+  their previous behavior. Require real-store predicate/refusal parity, the
+  original-query missing-diagnostic counterfactual, error/ledger/no-authority
+  parity, ordinary replay and fresh-database restart controls, normal/race/static/
+  docs gates and exact-source review before preparing a candidate. Ben's current
+  investigate/fix/rerun instruction permits serialized task-local work and fresh
+  qualification under unchanged gates; a new privileged driver/profile install
+  still requires exact action-time approval. No fixture cleanup or acceptance.

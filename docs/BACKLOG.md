@@ -5333,6 +5333,31 @@ adds no new native authority or proof that V18 will pass. Preserve3fd462d9 and
 failed fixtures; no namespace/workspace change, retained-store replay,
 install/security, native execution, cleanup, publishing or merge.
 
+**2026-10-27 — MED-496 V19 native publication predicate diagnosis.** V19's
+retained epoch-four log records selected `store_result_count/store_conflict`
+with a live caller before the later recovered-read cancellation. Its original
+Wait is1; preserve all receipts and the failed fixture. Generic graceful and
+hard-death sealed-publication replay pass unchanged source and establish no
+native cause. Retain only the existing SQL predicate outcomes from the same
+selected-observer transaction, with an explicit availability bit. Ordinary SQL,
+all guards and mutations, write/accounting charges, original errors, pointer/
+settlement order, exact acceptance and custody/RSS/deadline gates stay unchanged.
+AC: real-store run/candidate/count/ownership and immutable-collision refusal
+vectors, original-query diagnostic counterfactual, positive replay, no-ledger/
+authority and first-record/log-failure parity, fresh test-owned engine restart
+controls, normal/race/static/docs gates and exact-source review. This diagnostic
+repair is not a substantiated native behavior fix. The current user-directed
+serialized fix/rerun cycle does not authorize a new privileged driver/profile
+installation without exact action-time approval, credential access or deletion.
+
+The bounded combined probe uses three real evidence partitions, ordinal2,
+persistent-engine restart, actual reaping/scheduler callbacks and the Runtime R
+reader. Healthy ordinary/observed paths retain7/4 reads and the same evidence.
+A known one-shot native count refusal followed by successful attempt1 completes
+the publication/schedule but supplies no Recovered callback, and the original
+attempt0 point reader refuses. Preserve that consequence without attributing
+V19's unknown predicate or changing the original-attempt acceptance contract.
+
 **2026-10-22 — Ben-directed implementation checkpoint integration.** Ben
 explicitly requests maria cleanup and PR merges after the v10 native failure
 was disclosed. PR156 and T42.H2s.a–d / PR164–167 may integrate as reviewed

@@ -6,6 +6,20 @@ import (
 	"testing"
 )
 
+func TestPublicationFailureObserverPresenceIsAdvisory(t *testing.T) {
+	var absent context.Context
+	if HasPublicationFailureObserver(absent) || HasPublicationFailureObserver(t.Context()) {
+		t.Fatal("unobserved context gained a diagnostic sink")
+	}
+	called := false
+	ctx, cancel := context.WithCancel(t.Context())
+	observed := WithPublicationFailureObserver(ctx, func(PublicationFailureStage, error, PublicationFailureFlags) { called = true })
+	cancel()
+	if !HasPublicationFailureObserver(observed) || called {
+		t.Fatal("presence check invoked a sink or lost canceled-context diagnostics")
+	}
+}
+
 func TestPublicationFailureObserverIsAdvisory(t *testing.T) {
 	original := errors.New("private failure payload")
 	for _, mode := range []string{"absent", "bound", "panic", "nested", "healthy"} {

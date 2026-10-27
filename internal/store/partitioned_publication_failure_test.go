@@ -12,7 +12,7 @@ import (
 )
 
 func TestPartitionedPublicationFailureDiagnostics(t *testing.T) {
-	for _, mode := range []string{"input", "query", "count", "identity", "success"} {
+	for _, mode := range []string{"input", "query", "count", "identity", "run", "candidate", "ownership", "success"} {
 		t.Run(mode, func(t *testing.T) {
 			s := newRetentionTestStore(t)
 			ctx := t.Context()
@@ -53,6 +53,22 @@ func TestPartitionedPublicationFailureDiagnostics(t *testing.T) {
 				if _, err := surrealdb.Query[any](ctx, s.db, "UPDATE $rid SET source_digest = $digest RETURN NONE", map[string]any{"rid": partitionedDomainID(repo, pub.Domain), "digest": digest("8")}); err != nil {
 					t.Fatal(err)
 				}
+			case "run":
+				want = readaccounting.PublicationFailureStoreCount
+				if err := s.AbortExtractionRun(ctx, run.ID); err != nil {
+					t.Fatal(err)
+				}
+			case "candidate":
+				want = readaccounting.PublicationFailureStoreCount
+				if err := s.PublishPartitionedExtractionDomain(ctx, pub); err != nil {
+					t.Fatal(err)
+				}
+				if err := s.PublishCandidateManifest(ctx, CandidateManifestPublication{Repository: repo, HeadCommit: commit, PolicyDigest: digest("8"), ManifestDigest: digest("9"), GenerationDigest: digest("0"), ManifestPath: candidateid.ManifestName(repo)}); err != nil {
+					t.Fatal(err)
+				}
+			case "ownership":
+				want = readaccounting.PublicationFailureStoreCount
+				pub.PlanDigest = digest("8")
 			}
 			var stages []readaccounting.PublicationFailureStage
 			var recorded error
@@ -72,14 +88,27 @@ func TestPartitionedPublicationFailureDiagnostics(t *testing.T) {
 			if err == nil || len(stages) != 1 || stages[0] != want || err != recorded {
 				t.Fatal("missing native publication failure diagnostic", stages, want, err)
 			}
-			if (mode == "count" || mode == "identity") && !errors.Is(err, ErrConflict) {
+			if (mode == "count" || mode == "identity" || mode == "run" || mode == "candidate" || mode == "ownership") && !errors.Is(err, ErrConflict) {
 				t.Fatal("conflict taxonomy changed", err)
 			}
-			if mode == "count" && flags != (readaccounting.PublicationFailureFlags{ResultsPresent: true}) {
-				t.Fatal("wrong empty native result flags", flags)
-			}
-			if mode == "identity" && flags != (readaccounting.PublicationFailureFlags{ResultsPresent: true, SingleResult: true}) {
-				t.Fatal("wrong native identity flags", flags)
+			if want == readaccounting.PublicationFailureStoreCount || want == readaccounting.PublicationFailureStoreIdentity {
+				expected := readaccounting.PublicationFailureFlags{ResultsPresent: true, StorePredicatesAvailable: true,
+					RunEligible: true, CandidateCurrent: true, CountsExact: true, RunOwned: true}
+				switch mode {
+				case "count":
+					expected.CountsExact = false
+				case "identity":
+					expected.SingleResult, expected.MarkedSingle = true, true
+				case "run":
+					expected.RunEligible, expected.CandidateCurrent, expected.CountsExact, expected.RunOwned = false, false, false, false
+				case "candidate":
+					expected.CandidateCurrent = false
+				case "ownership":
+					expected.RunOwned = false
+				}
+				if flags != expected {
+					t.Fatalf("missing or incorrect same-transaction predicate diagnostic: got=%+v want=%+v", flags, expected)
+				}
 			}
 		})
 	}

@@ -51,8 +51,9 @@ func (control *t422CheckpointRecoveryControl) logPublicationFailure() {
 	saved.logged = true
 	value := *saved
 	control.mu.Unlock()
-	diagnostics.Logf("private selected checkpoint publication first failure: stage=%s cause=%s caller=%s results_present=%t single_result=%t",
-		value.Stage.String(), value.Cause, value.Caller, value.Flags.ResultsPresent, value.Flags.SingleResult)
+	diagnostics.Logf("private selected checkpoint publication first failure: stage=%s cause=%s caller=%s results_present=%t single_result=%t store_predicates_available=%t run_eligible=%t candidate_current=%t counts_exact=%t run_owned=%t marked_single=%t",
+		value.Stage.String(), value.Cause, value.Caller, value.Flags.ResultsPresent, value.Flags.SingleResult,
+		value.Flags.StorePredicatesAvailable, value.Flags.RunEligible, value.Flags.CandidateCurrent, value.Flags.CountsExact, value.Flags.RunOwned, value.Flags.MarkedSingle)
 }
 func (control *t422CheckpointRecoveryControl) publicationHandler(next generationscheduler.Handler) generationscheduler.Handler {
 	if next == nil {
