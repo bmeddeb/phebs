@@ -18258,6 +18258,14 @@ residual-group refusal, bounded privacy and unchanged public error classes.
 The historical cause, finite admitted causal probe and full installed acceptance
 are still open; no blind full retry or held-custody cleanup follows.
 
+MED-695 finite-probe preparation (2026-10-27): a distinct neutral-only
+root-admitted diagnostic schema runs the real installed preparation prefix but
+always refuses before native container launch. It retains all source/tool/seed/
+host/policy fences and the parent's original full acceptance oracle, so its
+outer Wait remains nonzero and its result cannot become installed PASS.
+Fresh exact admission and a reviewed bounded execution plan remain prerequisites;
+neither held namespace is changed by this source work.
+
 **T45.10a · Admit both native resource profiles in Settings** *(follows the
 T45.10 review; presentation handoff)* — an available amd64 installation reports
 `native-amd64-bounded-v1`, which the existing Settings validators reject, so the
