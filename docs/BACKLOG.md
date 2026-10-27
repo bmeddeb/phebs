@@ -18168,6 +18168,12 @@ its manifest explicitly records installed qualification NOT PASSED. Review and
 the mode-negative native regression also remain open. Exact source-free facts
 are in `spike/t457/med505_amd64_admission_v2.json`.
 
+MED-505 review correction (2026-10-27): reject nondefault amd64 CPU variants
+when selecting the v1 precompiled SDK archives. The exact Starlark guard passes
+15 behavioral cases, including v2/v3/v4 refusals and an old-source v3
+counterexample. Native configured-platform negatives and the MED-695 installed
+host-preparation blocker remain open; no installed or cleanup PASS follows.
+
 **T45.10a · Admit both native resource profiles in Settings** *(follows the
 T45.10 review; presentation handoff)* — an available amd64 installation reports
 `native-amd64-bounded-v1`, which the existing Settings validators reject, so the

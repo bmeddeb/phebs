@@ -137,7 +137,7 @@ def _impl(target, ctx):
         if mode.goarch == "amd64" and sdk.libs.to_list():
             if (mode.goos != "linux" or mode.pure or mode.tags or mode.race or
                 mode.msan or mode.gc_goopts or mode.linkmode != "normal" or
-                mode.static or mode.pgoprofile):
+                mode.static or mode.pgoprofile or mode.amd64):
                 fail("T45.1b precompiled SDK libraries require the admitted default mode")
         for f in ctx.files._sdk_helper_srcs:
             if not f.path.startswith(sdk.root_file.dirname + "/src/"):
