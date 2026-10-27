@@ -1573,6 +1573,19 @@ records a passing 64-MiB allocation/truncation and exact nonforced teardown
 check on the designated host. It closes that mechanism proof only; use the
 owning H2 backlog for remaining executor, pressure/restore and admission work.
 
+Selected MED-496 checkpoint qualification failures retain joined child output in
+the exact failed fixture's `joined-server-4.log`. Read that log's closed-label
+first-publication diagnostic before attributing later cancellation or cleanup
+errors. `store_result_count` alone does not identify a failed store predicate.
+When `store_predicates_available=true`, the run-eligibility, candidate-current,
+exact-count, run-ownership and marked-row booleans describe the original SQL
+transaction; they grant no publication or qualification credit. An ineligible
+run cascades into the other guard booleans; a false marked-row bit is generally
+downstream. `store_conflict` is not evidence of engine serialization contention.
+An unavailable measurement or `RSSLimitExceeded:false` does not establish memory
+pressure or successful RSS settlement. Preserve failed fixtures and receipts; these private
+diagnostics do not authorize credential access, cleanup or a changed host policy.
+
 On this host, development tools are in `/home/ben/.local/bin`; native amd64
 tools are staged separately under
 `/home/ben/.local/share/phebs-host/native-amd64`. Load the development PATH and

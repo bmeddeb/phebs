@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"net/http"
@@ -301,6 +302,7 @@ func TestCurrentRecoveryPreparationRealStoreReadCounts(t *testing.T) {
 
 type recoveryPreparationFixture struct {
 	repository string
+	dataDir    string
 	state      *store.Surreal
 	runtime    *extractionpublication.Runtime
 	reconciler *extractionpublication.Reconciler
@@ -311,17 +313,29 @@ type recoveryPreparationFixture struct {
 }
 
 func newRecoveryPreparationFixture(t *testing.T, ctx context.Context) *recoveryPreparationFixture {
+	return newRecoveryPreparationFixtureOptions(t, ctx, 1, false)
+}
+
+func newRecoveryPreparationFixtureOptions(t *testing.T, ctx context.Context, parts int, persistent bool) *recoveryPreparationFixture {
 	t.Helper()
+	if parts < 1 || parts > 3 {
+		t.Fatal("bounded fixture requires one to three parts")
+	}
 	const repository = "example.invalid/recovery-preparation"
 	dataDir := t.TempDir()
-	state, err := store.OpenLocalMemory(ctx, dataDir)
+	open := store.OpenLocalMemory
+	if persistent {
+		open = store.OpenLocal
+	}
+	state, err := open(ctx, dataDir)
 	if err != nil {
 		t.Fatal(err)
 	}
+	fixture := &recoveryPreparationFixture{repository: repository, state: state, dataDir: dataDir}
 	t.Cleanup(func() {
 		cleanup, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		if err := state.Close(cleanup); err != nil {
+		if err := fixture.state.Close(cleanup); err != nil {
 			t.Errorf("close recovery preparation store: %v", err)
 		}
 	})
@@ -333,11 +347,23 @@ func newRecoveryPreparationFixture(t *testing.T, ctx context.Context) *recoveryP
 		t.Fatal(err)
 	}
 	recoveryPreparationGit(t, ctx, repositoryDir, "init", "-q")
-	const proto = "syntax = \"proto3\";\npackage neutral;\nmessage Request {}\nmessage Response {}\nservice Orders { rpc Get(Request) returns (Response); }\n"
-	if err := os.WriteFile(filepath.Join(repositoryDir, "orders.proto"), []byte(proto), 0o600); err != nil {
-		t.Fatal(err)
+	paths := make([]string, 0, parts)
+	for index := range parts {
+		path := "orders.proto"
+		if parts != 1 {
+			path = fmt.Sprintf("orders%d.proto", index)
+		}
+		namespace := "neutral"
+		if parts != 1 {
+			namespace = fmt.Sprintf("neutral%d", index)
+		}
+		proto := fmt.Sprintf("syntax = \"proto3\";\npackage %s;\nmessage Request {}\nmessage Response {}\nservice Orders { rpc Get(Request) returns (Response); }\n", namespace)
+		if err := os.WriteFile(filepath.Join(repositoryDir, path), []byte(proto), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		paths = append(paths, path)
 	}
-	recoveryPreparationGit(t, ctx, repositoryDir, "add", "--", "orders.proto")
+	recoveryPreparationGit(t, ctx, repositoryDir, append([]string{"add", "--"}, paths...)...)
 	recoveryPreparationGit(t, ctx, repositoryDir, "-c", "user.name=Neutral", "-c", "user.email=neutral@example.invalid", "commit", "-q", "-m", "neutral recovery fixture")
 	commit := strings.TrimSpace(recoveryPreparationGit(t, ctx, repositoryDir, "rev-parse", "HEAD"))
 	extractor := protodecl.New()
@@ -345,6 +371,11 @@ func newRecoveryPreparationFixture(t *testing.T, ctx context.Context) *recoveryP
 		Domain: extractor.Domain(), Version: extractor.Version(), Plane: candidate.PlaneRepository,
 		EnumerationPolicy: "proto-contract-paths-v1", Enumerate: extractor.Candidate, Required: extractor.Candidate,
 	}}
+	if parts > 1 {
+		policies[0].Plane = candidate.PlaneLocal
+		policies[0].ExecutionPartitionPolicy = candidate.WholeRepositoryExecutionSubrangePolicy
+		policies[0].ExecutionMaxRecords = 1
+	}
 	identities, err := candidate.PolicyIdentities(policies)
 	if err != nil {
 		t.Fatal(err)
@@ -384,7 +415,7 @@ func newRecoveryPreparationFixture(t *testing.T, ctx context.Context) *recoveryP
 	}); err != nil {
 		t.Fatal(err)
 	}
-	fixture := &recoveryPreparationFixture{repository: repository, state: state, commit: commit}
+	fixture.commit = commit
 	fixture.authority = extractionpublication.PlanningAuthority{
 		Repository: repository, CandidateManifestDigest: selected.ManifestDigest,
 		CandidateGenerationDigest: selected.GenerationDigest, CandidatePolicyDigest: selected.PolicyDigest,
@@ -401,7 +432,7 @@ func newRecoveryPreparationFixture(t *testing.T, ctx context.Context) *recoveryP
 		return fixture.authority.SourceGenerationDigest, fixture.authority.ObservationGenerationDigest, nil
 	}
 	readCandidate := func(ctx context.Context, repository string) (candidate.State, error) {
-		current, err := state.GetCandidateManifestPublication(ctx, repository)
+		current, err := fixture.state.GetCandidateManifestPublication(ctx, repository)
 		if err != nil {
 			return candidate.State{}, err
 		}

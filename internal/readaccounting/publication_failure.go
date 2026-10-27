@@ -29,9 +29,26 @@ func (stage PublicationFailureStage) String() string {
 	return names[stage]
 }
 
-type PublicationFailureFlags struct{ ResultsPresent, SingleResult bool }
+type PublicationFailureFlags struct {
+	ResultsPresent, SingleResult bool
+	// Store predicates describe the existing transaction, never a second query
+	// or permission to publish. False is meaningful only when available is true.
+	StorePredicatesAvailable                             bool
+	RunEligible, CandidateCurrent, CountsExact, RunOwned bool
+	MarkedSingle                                         bool
+}
 type PublicationFailureObserver func(PublicationFailureStage, error, PublicationFailureFlags)
 type publicationFailureKey struct{}
+
+// HasPublicationFailureObserver selects private diagnostic result fields only.
+// It supplies no store/read-accounting authority and does not invoke the sink.
+func HasPublicationFailureObserver(ctx context.Context) bool {
+	if ctx == nil {
+		return false
+	}
+	observe, _ := ctx.Value(publicationFailureKey{}).(PublicationFailureObserver)
+	return observe != nil
+}
 
 // Optional observer carries only the original error to its synchronous sink;
 // no error is retained here, no ledger charged, and no acceptance is issued.

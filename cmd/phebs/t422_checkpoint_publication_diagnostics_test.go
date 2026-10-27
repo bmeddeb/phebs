@@ -43,11 +43,13 @@ func TestT422CheckpointPublicationDiagnosticParity(t *testing.T) {
 			if mode == "wrong_attempt" {
 				chunk.Attempt++
 			}
+			firstFlags := readaccounting.PublicationFailureFlags{ResultsPresent: true, StorePredicatesAvailable: true,
+				RunEligible: true, CandidateCurrent: true, RunOwned: true}
 			next := func(ctx context.Context, _ store.GenerationChunk, _ generationscheduler.Budget) error {
 				if mode == "healthy" {
 					return nil
 				}
-				readaccounting.NotePublicationFailure(ctx, readaccounting.PublicationFailureStoreCount, sentinel, readaccounting.PublicationFailureFlags{ResultsPresent: true})
+				readaccounting.NotePublicationFailure(ctx, readaccounting.PublicationFailureStoreCount, sentinel, firstFlags)
 				readaccounting.NotePublicationFailure(ctx, readaccounting.PublicationFailureAssembly, context.Canceled, readaccounting.PublicationFailureFlags{})
 				return sentinel
 			}
@@ -73,7 +75,7 @@ func TestT422CheckpointPublicationDiagnosticParity(t *testing.T) {
 			selected := mode == "selected" || mode == "panic_observer"
 			if selected {
 				f := control.publicationFailure
-				if f == nil || f.Stage != readaccounting.PublicationFailureStoreCount || f.Cause != "other" || !f.Flags.ResultsPresent || f.Flags.SingleResult || !f.logged {
+				if f == nil || f.Stage != readaccounting.PublicationFailureStoreCount || f.Cause != "other" || f.Flags != firstFlags || !f.logged {
 					t.Fatal("missing first selected publication diagnostic", f)
 				}
 			} else if control.publicationFailure != nil || output.Len() != 0 {
@@ -81,6 +83,9 @@ func TestT422CheckpointPublicationDiagnosticParity(t *testing.T) {
 			}
 			if mode == "selected" && (strings.Contains(output.String(), "private /credential") || strings.Count(output.String(), "first failure:") != 1) {
 				t.Fatal("unsafe or duplicate diagnostic output")
+			}
+			if mode == "selected" && !strings.Contains(output.String(), "store_predicates_available=true run_eligible=true candidate_current=true counts_exact=false run_owned=true marked_single=false") {
+				t.Fatal("selected diagnostic omitted closed predicate labels")
 			}
 			if control.err != nil || control.failure != nil || control.recovered.reported || control.finalSeen {
 				t.Fatal("diagnostic granted authority or changed failure state")

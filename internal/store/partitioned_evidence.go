@@ -379,6 +379,17 @@ LET $published = IF array::len($marked) = 1 AND !$same THEN
 RETURN $published;
 COMMIT;`
 
+// Only an explicitly observed selected publication requests these closed
+// predicate booleans. Every SELECT, guard and mutation remains the original
+// transaction; ordinary publication keeps its original query and result shape.
+var publishPartitionedExtractionDomainDiagnosticSQL = strings.Replace(
+	publishPartitionedExtractionDomainSQL,
+	"RETURN $published;\nCOMMIT;",
+	`RETURN [{published: $published, run_eligible: $run != NONE,
+	candidate_current: $current_ok = true, counts_exact: $counts_ok = true,
+	run_owned: $run_owned = true, marked_single: array::len($marked) = 1}];
+COMMIT;`, 1)
+
 // The refusal sibling keeps every success predicate except the accounting:
 // a terminally refused domain may leave staged evidence while its root
 // totals cover only the partitions that succeeded, so the row must prove the
@@ -477,25 +488,63 @@ func (s *Surreal) PublishPartitionedExtractionDomain(
 		"evidence_format_version":    evidenceFormatVersion,
 		"evidence_migration_version": evidenceMigrationVersion,
 	}
-	results, err := storeQuery[[]partitionedDomainRec](ctx, s.accounting, s.db, publishPartitionedExtractionDomainSQL, variables, storeWrite(2))
+	rows, flags, err := s.partitionedPublicationRows(ctx, variables)
 	if err != nil {
 		failure := fmt.Errorf("publish partitioned extraction domain: %w", err)
 		readaccounting.NotePublicationFailure(ctx, readaccounting.PublicationFailureStoreQuery, failure, readaccounting.PublicationFailureFlags{})
 		return failure
 	}
-	rows := firstPartitionedDomainRows(results)
 	if len(rows) != 1 {
 		failure := fmt.Errorf("publish partitioned extraction domain: run, counters, or candidate authority changed: %w", ErrConflict)
-		readaccounting.NotePublicationFailure(ctx, readaccounting.PublicationFailureStoreCount, failure, readaccounting.PublicationFailureFlags{ResultsPresent: results != nil, SingleResult: len(rows) == 1})
+		readaccounting.NotePublicationFailure(ctx, readaccounting.PublicationFailureStoreCount, failure, flags)
 		return failure
 	}
 	stored := rows[0].publication()
 	if !samePartitionedDomain(stored, publication) {
 		failure := fmt.Errorf("publish partitioned extraction domain: immutable collision: %w", ErrConflict)
-		readaccounting.NotePublicationFailure(ctx, readaccounting.PublicationFailureStoreIdentity, failure, readaccounting.PublicationFailureFlags{ResultsPresent: results != nil, SingleResult: true})
+		readaccounting.NotePublicationFailure(ctx, readaccounting.PublicationFailureStoreIdentity, failure, flags)
 		return failure
 	}
 	return nil
+}
+
+type partitionedPublicationDiagnostic struct {
+	Published        []partitionedDomainRec `json:"published"`
+	RunEligible      bool                   `json:"run_eligible"`
+	CandidateCurrent bool                   `json:"candidate_current"`
+	CountsExact      bool                   `json:"counts_exact"`
+	RunOwned         bool                   `json:"run_owned"`
+	MarkedSingle     bool                   `json:"marked_single"`
+}
+
+func (s *Surreal) partitionedPublicationRows(ctx context.Context, variables map[string]any) ([]partitionedDomainRec, readaccounting.PublicationFailureFlags, error) {
+	if !readaccounting.HasPublicationFailureObserver(ctx) {
+		results, err := storeQuery[[]partitionedDomainRec](ctx, s.accounting, s.db, publishPartitionedExtractionDomainSQL, variables, storeWrite(2))
+		if err != nil {
+			return nil, readaccounting.PublicationFailureFlags{}, err
+		}
+		rows := firstPartitionedDomainRows(results)
+		return rows, readaccounting.PublicationFailureFlags{ResultsPresent: results != nil, SingleResult: len(rows) == 1}, nil
+	}
+	results, err := storeQuery[[]partitionedPublicationDiagnostic](ctx, s.accounting, s.db, publishPartitionedExtractionDomainDiagnosticSQL, variables, storeWrite(2))
+	if err != nil {
+		return nil, readaccounting.PublicationFailureFlags{}, err
+	}
+	flags := readaccounting.PublicationFailureFlags{ResultsPresent: results != nil}
+	if results != nil {
+		for _, result := range *results {
+			if len(result.Result) != 1 {
+				continue
+			}
+			diagnostic := result.Result[0]
+			flags.SingleResult = len(diagnostic.Published) == 1
+			flags.StorePredicatesAvailable = true
+			flags.RunEligible, flags.CandidateCurrent = diagnostic.RunEligible, diagnostic.CandidateCurrent
+			flags.CountsExact, flags.RunOwned, flags.MarkedSingle = diagnostic.CountsExact, diagnostic.RunOwned, diagnostic.MarkedSingle
+			return diagnostic.Published, flags, nil
+		}
+	}
+	return nil, flags, nil
 }
 
 // PublishPartitionedExtractionDomainRefusal installs the same latest-only
