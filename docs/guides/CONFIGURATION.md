@@ -1409,14 +1409,15 @@ rehearsal records below describe their original tool identities.
 Module and import profiles target Linux `arm64` or `amd64`. The architecture is
 sealed in the profile configuration and must match the worker host; module
 commands use `GOARM64=v8.0` or `GOAMD64=v1` accordingly. Each architecture has
-its own pinned Go 1.25.0 and scip-go 0.2.7 images, recorded in
-`spike/t457/native_tool_pins_amd64.json`, and a profile carrying the other
+its own pinned Go SDK (amd64 1.25.7, arm64 1.25.0) and scip-go 0.2.7
+executables; the historical amd64 pins remain recorded in
+`spike/t457/native_tool_pins_amd64.json`. A profile carrying the other
 architecture's tools is refused. Bazel tool pins are also per architecture, but
-its C toolchain sysroot is sealed per architecture. `amd64` uses the host
-gcc-13 archive recorded in `spike/t457/amd64_sysroot_1.json`. A C compile
-through that wrapper passed on this x86_64 host. The admitted tool inventory
-is `spike/t457/amd64_tool_inventory.json`. Single, workspace, and import
-native rehearsals passed on this x86_64 host; the receipt is
+its C toolchain sysroot is sealed per architecture. Historical amd64 gcc-13
+archive and tool-inventory identities are recorded in
+`spike/t457/amd64_sysroot_1.json` and `spike/t457/amd64_tool_inventory.json`.
+Their original wrapper compile and single, workspace, and import native
+rehearsals passed on this x86_64 host; the receipt is
 `spike/t457/amd64_native_rehearsal_1.json`. The arm64-locked Bazel cohort
 stops before launch; the receipt is `spike/t457/amd64_bazel_rehearsal_1.json`.
 A separate `native-linux-amd64-rules-go-059-v1` profile admits the measured

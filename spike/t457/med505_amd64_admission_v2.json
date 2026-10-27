@@ -63,8 +63,36 @@
         "offline_fetch_actual_wait": 0,
         "seconds": 89.20332627400057
       }
+    },
+    "native_aspect_mapping": {
+      "amd64": "1.25.7",
+      "arm64": "1.25.0",
+      "unknown_architecture": "refused",
+      "discovery": "Actual neutral Bazel analysis stopped at the remaining historical aspect pin before build actions; corrected prospectively."
     }
   },
-  "installed_qualification": "NOT_ESTABLISHED",
+  "installed_qualification": {
+    "workspace": {
+      "source": "31ddaa2b11ef7af504438b8a814341ddfe04cfc3",
+      "actual_wait": 0,
+      "seconds": 401.146572181,
+      "runtime_joined": true,
+      "scratch_workspace_growth_drained": true,
+      "rendered_browser_acceptance": false
+    },
+    "backup_restore": {
+      "source": "31ddaa2b11ef7af504438b8a814341ddfe04cfc3",
+      "actual_wait": 0,
+      "seconds": 808.1186818299998,
+      "native_launches": 4,
+      "profile_epochs": [
+        1,
+        2
+      ],
+      "source_and_content_preserved": true,
+      "workspace_native_and_engines_drained": true
+    },
+    "bazel": "PENDING after aspect correction"
+  },
   "scale_or_release_acceptance": "NOT_ESTABLISHED"
 }
