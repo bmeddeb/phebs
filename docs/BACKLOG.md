@@ -18174,6 +18174,15 @@ when selecting the v1 precompiled SDK archives. The exact Starlark guard passes
 counterexample. Native configured-platform negatives and the MED-695 installed
 host-preparation blocker remain open; no installed or cleanup PASS follows.
 
+MED-695 diagnostic preparation (2026-10-27): the opt-in native acceptance
+child retains the unchanged allowance and bounded host-preparation timing,
+context state and original error classes. Unit regressions must prove exact
+context/deadline/options/gate/receipt/error forwarding, bounded observations and
+no private-error leakage. Original formatter Wait/descendant evidence, a
+demonstrated cause/fix, fresh exact admission, native mode negatives and full
+installed qualification remain required. No namespace/process policy or held
+journal is changed.
+
 **T45.10a · Admit both native resource profiles in Settings** *(follows the
 T45.10 review; presentation handoff)* — an available amd64 installation reports
 `native-amd64-bounded-v1`, which the existing Settings validators reject, so the

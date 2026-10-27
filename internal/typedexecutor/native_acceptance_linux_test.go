@@ -54,20 +54,23 @@ type acceptanceSelected struct {
 	Attempt string                `json:"attempt"`
 }
 type acceptanceChildResult struct {
-	Schema              string                     `json:"schema"`
-	Config              string                     `json:"config"`
-	Case                string                     `json:"case"`
-	Recovery            bool                       `json:"recovery"`
-	Outcome             Outcome                    `json:"outcome"`
-	ExecutionError      bool                       `json:"execution_error"`
-	Settled             bool                       `json:"settled"`
-	NoReplay            bool                       `json:"no_replay"`
-	PublicationVerified bool                       `json:"publication_verified"`
-	GrowthReleased      bool                       `json:"growth_released"`
-	FailureSite         string                     `json:"failure_site,omitempty"`
-	Corpus              *acceptanceCorpusResult    `json:"corpus,omitempty"`
-	CostStop            *acceptanceCorpusPhaseStop `json:"cost_stop,omitempty"`
-	HostCostStop        *acceptanceCorpusHostStop  `json:"host_cost_stop,omitempty"`
+	Schema                  string                      `json:"schema"`
+	Config                  string                      `json:"config"`
+	Case                    string                      `json:"case"`
+	Recovery                bool                        `json:"recovery"`
+	Outcome                 Outcome                     `json:"outcome"`
+	ExecutionError          bool                        `json:"execution_error"`
+	Settled                 bool                        `json:"settled"`
+	NoReplay                bool                        `json:"no_replay"`
+	PublicationVerified     bool                        `json:"publication_verified"`
+	GrowthReleased          bool                        `json:"growth_released"`
+	FailureSite             string                      `json:"failure_site,omitempty"`
+	Corpus                  *acceptanceCorpusResult     `json:"corpus,omitempty"`
+	CostStop                *acceptanceCorpusPhaseStop  `json:"cost_stop,omitempty"`
+	HostCostStop            *acceptanceCorpusHostStop   `json:"host_cost_stop,omitempty"`
+	HostAllowance           *typedsandbox.Allowance     `json:"host_allowance,omitempty"`
+	HostPreparation         []acceptanceHostPreparation `json:"host_preparation,omitempty"`
+	HostPreparationOverflow bool                        `json:"host_preparation_overflow,omitempty"`
 }
 type acceptanceObservation struct {
 	ID            string                          `json:"id"`
@@ -589,6 +592,7 @@ func acceptanceRunChild(ctx context.Context, c nativeAcceptanceConfig, p typedin
 		return e
 	}
 	result := acceptanceChildResult{Schema: c.Schema, Config: acceptanceDigest(acceptanceJSON(c)), Case: *acceptanceCase, Recovery: recovery}
+	acceptanceObserveHostPreparation(controller, &result)
 	var costs []acceptanceCorpusPhaseCost
 	if c.Schema == acceptanceCorpusSchema && !recovery {
 		run := controller.native.run
