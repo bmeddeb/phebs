@@ -25,6 +25,16 @@ var rulesFiles = [...]struct {
 	{"f0ea14c601a983d77cd58e400d38ce4188af94e948b2bd8c37a633b913487030", 400},
 }
 
+// These static bootstrap tools are reproduced from the pinned SDK/rules_go
+// sources; mutable build caches are never admitted as tool substitutes.
+var amd64BootstrapTools = [...]struct {
+	path, digest, main string
+	bytes              int64
+}{
+	{"tools/go/pkg/tool/linux_amd64/phebs-rules-go-builder", "sha256:b59577e0095185f9d7646d081d2c782712a1d0da89b72b83c3f120f600f7c993", "command-line-arguments", 6679171},
+	{"tools/go/pkg/tool/linux_amd64/phebs-pack", "sha256:b9a2b8c53589745883c8c9dbf26a3546ee1ee05969146fd012cccaa89e5061a3", "cmd/pack", 3016842},
+}
+
 // productionHelperMain is the fixed expected main identity for the managed
 // helper and native driver. Production verification never accepts a caller-
 // supplied value; only the package-local preparation test overrides it through
@@ -73,6 +83,7 @@ func verifyToolsWithHelperMain(ctx context.Context, i Invocation, helperMain str
 			{"tools/go/version.bzl", "bootstrap/sdk-amd64.version.bzl"},
 			{"tools/go/ROOT", "bootstrap/sdk-amd64.ROOT"},
 			{"tools/go/REPO.bazel", "bootstrap/sdk-amd64.REPO.bazel"},
+			{"tools/go/phebs_tools.bzl", "bootstrap/sdk-amd64.phebs_tools.bzl"},
 			{"tools/metadata/typed-bazel/rules-go-sdk-LICENSE", "bootstrap/sdk-amd64.LICENSE"},
 		} {
 			want, err := bootstrap.ReadFile(x.embedded)
@@ -82,6 +93,19 @@ func verifyToolsWithHelperMain(ctx context.Context, i Invocation, helperMain str
 			got, err := readInventory(i.Inventory, x.path, int64(len(want)))
 			if err != nil || !bytes.Equal(got, want) {
 				return typedindex.Unprepared
+			}
+		}
+		for _, tool := range amd64BootstrapTools {
+			f, err := inventoryFile(i.Inventory, tool.path)
+			if err != nil || !f.Executable || f.Digest != tool.digest || f.Bytes != tool.bytes {
+				return typedindex.Unprepared
+			}
+			if _, err = readInventory(i.Inventory, tool.path, tool.bytes); err != nil {
+				return err
+			}
+			info, err := buildinfo.ReadFile("/inputs/" + tool.path)
+			if err != nil || checkBootstrapBuild(info, tool.main) != nil {
+				return typedindex.Unsupported
 			}
 		}
 	}
@@ -125,6 +149,20 @@ func verifyToolsWithHelperMain(ctx context.Context, i Invocation, helperMain str
 	}
 	return nil
 }
+func checkBootstrapBuild(info *debug.BuildInfo, main string) error {
+	if checkBuild(info, main, false) != nil || info.GoVersion != "go1.25.7" {
+		return typedindex.Unsupported
+	}
+	settings := make(map[string]string, len(info.Settings))
+	for _, setting := range info.Settings {
+		settings[setting.Key] = setting.Value
+	}
+	if settings["GOARCH"] != "amd64" || settings["GOAMD64"] != "v1" || settings["CGO_ENABLED"] != "0" {
+		return typedindex.Unsupported
+	}
+	return nil
+}
+
 func checkBuild(info *debug.BuildInfo, main string, typed bool) error {
 	if info == nil || info.Path != main {
 		return typedindex.Unsupported

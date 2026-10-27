@@ -1392,6 +1392,11 @@ binary identities and scoped cleanup are recorded in
 `spike/t457/native_inputs_1.json`; these results do not enable a provider or
 establish a target-corpus performance envelope.
 
+The MED-505 amd64 admission candidate includes two digest-pinned static rules_go
+bootstrap tools built reproducibly from its pinned SDK and dependency sources.
+They replace repeated tool bootstrap during execution; source selection, standard
+library builds and typechecking still run under the same limits.
+
 The MED-505 amd64 admission candidate uses the exact Go1.25.7 SDK to satisfy
 the frozen reference repository's minimum version. Arm64 retains Go1.25.0;
 the driver and scip-go executables retain their independent Go1.25.0 build

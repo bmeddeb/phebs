@@ -17170,3 +17170,33 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   duration. This test-only capture adds three clock reads and three fixed map
   entries, changes no production path, schema, limit, authority or native command,
   and permits choosing the next cost correction from actual command evidence.
+
+- **2026-10-26 — MED-505 prospective offline rules_go bootstrap tools.**
+  Exact native preparation `88a7eead` measured cquery30.292s, aquery20.680s
+  and build60.385s, whole planning111.620s. Plan and execute repeat cold planning
+  under their unchanged shared300-second allowance. The pinned rules_go0.59
+  SDK rule bootstraps its builder and Go1.25 pack tool in a private cold Go cache
+  before standard-library projection; its wrapper deletes that cache. For amd64,
+  move only those fixed tool builds to offline material preparation. Two clean
+  Go1.25.7 builds from the exact upstream builder source list and SDK cmd/pack
+  reproduce identical static binaries (`b59577e0…c993`, `b9a2b8c5…61a3`).
+  Retain the upstream Apache license, exact recipe/source digests and independent
+  build receipts in the source-free material record. The exact SDK BUILD and
+  new executable-label metadata are embedded and compared byte-for-byte; workers
+  require both fixed executable sizes/digests plus Go1.25.7/linux/amd64/v1/static
+  build metadata. Inventory/profile/source/epoch bindings must be regenerated.
+  Arm64 keeps its historical bootstrap. SDK source selection, standard-library
+  compilation/listing, package-load/typecheck and SCIP still execute and retain
+  their existing evidence checks. No mutable host cache or target output is
+  admitted. Native improvement and complete installed acceptance remain unproved
+  until fresh measurements pass; failed experiments stay retained.
+
+  Cost: each existing amd64 verification additionally reads/hashes9,696,013
+  fixed tool bytes and their build metadata, plus the small embedded executable
+  label file. Each native Bazel graph replaces one cold GoToolchainBinaryBuild
+  action (two Go builds and cache cleanup) with two bounded symlink actions.
+  No new process, lock, source scan, cache, query/request, sync, retry/no-op or
+  publication work is added. Private SDK input and scratch copies grow by the
+  same9,696,013 bytes under unchanged inventory/scratch bounds. The shared wall,
+  output, memory, CPU, task and descriptor ceilings, serial Bazel execution and
+  original JVM/Go operating vectors remain exact.
