@@ -1947,6 +1947,7 @@ func testExtractionRoots(
 			// Corrected receipts keep schedule authority separate from immutable
 			// roots and bind the result-member inventory by its canonical recipe.
 			root.ScheduleSHA256 = ""
+			root.GenerationSHA256 = testDigest(group, "modeled-extraction-generation")
 			var err error
 			root.Members, err = extractionResultMembers(partitions)
 			if err != nil {
@@ -2505,7 +2506,14 @@ func testInjectionTransition(
 			// Schema fixture only. The V6 constructor test separately exercises
 			// real recovery, while historical wire fixtures retain their own
 			// versioned roots and explicit modeled schedule identities.
-			prior := testDigest(point.Phase, "modeled-prior-schedule")
+			_, prior, chunks, err := ordinaryReturnASchedule(authority)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if point.Phase == "process_restart" {
+				generation := SHA256([]byte("phebs-extraction-recovery-schedule-v1\x00" + root.GenerationSHA256 + "\x00" + prior))
+				prior = testExtractionScheduleDigest(t, generation, chunks)
+			}
 			recovery := productionRecoverySchedule{
 				Target: root.GenerationSHA256, Prior: prior,
 				RecoveryGeneration: SHA256([]byte("phebs-extraction-recovery-schedule-v1\x00" + root.GenerationSHA256 + "\x00" + prior)),
