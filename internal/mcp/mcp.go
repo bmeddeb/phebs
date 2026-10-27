@@ -132,6 +132,7 @@ func NewServer(opts Options) *sdk.Server {
 	sdk.AddTool(s, &sdk.Tool{
 		Name:        "search_code",
 		Description: "Search All code or one exact service scope. Returns matched files, line-numbered chunks, and a digest-bound scope receipt; service scope includes accepted shared paths and excludes unowned paths.",
+		Annotations: &sdk.ToolAnnotations{ReadOnlyHint: true, DestructiveHint: new(bool)},
 	}, func(ctx context.Context, _ *sdk.CallToolRequest, in searchIn) (*sdk.CallToolResult, search.Result, error) {
 		if scopedSearch == nil {
 			return nil, search.Result{}, errors.New("search unavailable: no index open")
@@ -156,6 +157,7 @@ func NewServer(opts Options) *sdk.Server {
 	sdk.AddTool(s, &sdk.Tool{
 		Name:        "read_file",
 		Description: "Read a file (or a line range of it) from an indexed repository at its indexed revision.",
+		Annotations: &sdk.ToolAnnotations{ReadOnlyHint: true, DestructiveHint: new(bool)},
 	}, func(ctx context.Context, _ *sdk.CallToolRequest, in readIn) (*sdk.CallToolResult, readOut, error) {
 		ref, err := indexedRevision(ctx, opts, in.Repo, in.Ref)
 		if err != nil {

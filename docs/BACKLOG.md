@@ -23454,6 +23454,27 @@ joined cleanup and separate lint-only correction. Manifest design and object
 mapping stay deferred; unsupported native versions do not meet the frozen
 correct-adapter criterion. No production pack/schema/dependency/reader is added.
 
+## MED-386 · Read-only MCP discovery compatibility
+
+Ben-directed backend/Mac handoff, 2026-10-27. This narrowly scoped compatibility
+repair is routed explicitly in chat; unrelated Linux backend work is unchanged.
+The consumer's discovery gate refuses `search_code` and `read_file` because
+their tool registrations omit the protocol's read-only hint.
+
+Acceptance:
+
+- Publish `readOnlyHint: true` and explicit `destructiveHint: false` for both
+  tools over the actual stateless HTTP `tools/list` path.
+- Add a regression that fails with either registration's hints removed.
+- Preserve the existing tool names, schemas, indexed search, immutable Git read,
+  visibility checks and output bounds; run handler and permission regressions.
+- Pass pinned-tool local CI, documentation checks and source/cost review before
+  the requested merge. A deployed provider connection and release stay separate.
+
+Owning decision: PLAN.md, 2026-10-27 MED-386. Implementation branch:
+`mac/med386-mcp-readonly`. Companion consumer normalizer is already merged in
+[Stratus PR84](https://github.com/bmeddeb/stratus/pull/84); Slack remains postponed.
+
 ## Deliberate non-goals
 
 SCIM provisioning, multi-org RBAC / seats, and a built-in chat app —

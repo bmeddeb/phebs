@@ -1555,6 +1555,10 @@ config key remains accepted only while it is configured.
 
 PHEBS MCP exposes read-only evidence tools. It has no Change Workbench
 preview, read, creation, or disposition tools. Named API keys are read-only.
+`search_code` and `read_file` explicitly advertise `readOnlyHint: true` and
+`destructiveHint: false` in `tools/list`, allowing clients with read-only
+discovery admission to select them. These hints do not bypass authentication,
+repository visibility, indexed-revision checks or output limits.
 The ten core tools are always present; the
 complete service-directory/relationship configuration adds five read tools.
 Observation progress can add one independently. Provisional proof packs add

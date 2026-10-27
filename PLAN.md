@@ -16825,3 +16825,19 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   integrity/hash verification and one transfer, followed by deletion only
   after local archive verification. It adds no product query, sync, startup,
   retry, publication, cache, resource-bound or child-process policy change.
+
+- **2026-10-27 — MED-386, read-only discovery for code search and file reads.**
+  Ben explicitly routes this narrow backend fix to the Mac checkout and
+  authorizes integration after green CI. Advertise `readOnlyHint: true` and
+  `destructiveHint: false` on `search_code` and `read_file`, whose existing
+  handlers already perform read-only indexed search and immutable Git reads.
+  Verify both annotations through the official SDK's stateless Streamable HTTP
+  `tools/list` boundary. Hints describe effects; they grant no authentication,
+  repository visibility, revision or transport authority. Existing handlers,
+  input/output schemas, access checks and result limits stay authoritative.
+  This resolves discovery admission for clients that require an explicit
+  read-only hint; it establishes no deployed-connection acceptance or release.
+
+  Cost: two constant annotation objects per server construction and constant
+  metadata per discovery response. No additional query/read, sync, retry,
+  publication, corpus scan, lock, cache, disk or child-process work is added.
