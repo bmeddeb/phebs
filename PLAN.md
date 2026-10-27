@@ -17007,8 +17007,55 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
 
   Cost:344 immutable input files add156,540,166 bytes to each existing complete
   input inventory verification/copy; the existing SDK `libs` glob and Bazel
-  input declaration select them. One constant mode guard runs at each existing
-  SDK projection. The existing GoStdlib build action is replaced by admitted SDK
+  input declaration select them. Each existing SDK projection materializes its library depset for the mode
+  guard (344 references in this candidate, bounded by the existing admitted
+  input-file count); the fixed mode comparisons then add no further scan. The existing GoStdlib build action is replaced by admitted SDK
   inputs in this mode; GoStdlibList still runs. No new query/request, sync tick,
   publication transition, lock, concurrency, child or cache is introduced; all
   memory, scratch, descriptor, task, CPU, output and wall bounds remain exact.
+
+- **2026-10-27 — MED-505 held host-formatting stop and task VM cold reset.**
+  The SDK-library candidate passed native preparation (Wait0/115.095s) and
+  post-run sealing (Wait0/2.813s), but its installed attempt stopped before any
+  native phase: Wait1/302.870s, `host_prepare`/`native_cleanup`, journal phase
+  `formatting`, loop-1. The formatter cause is not retained; no SDK execution,
+  resource-limit or clean-custody result follows. Preserve that failed receipt,
+  unchanged owner journal (`c0ab66be…02a`) and4,573,401,088-byte image.
+
+  The task's exact private QEMU process was gracefully stopped and its exit
+  verified, ending the old guest kernel/writers. After a fresh boot, the entire
+  old scratch base was preserved under a held sibling and a new root-owned0700
+  base/0600 lock provisioned; no old journal or cleanup predicate was rewritten.
+  The old failure stays held. Only explicitly task-owned rebuildable Go caches
+  were cleared. Restart enabled discard/unmap on the task's virtual drive, and
+  guest free-block trim reclaimed25,704,431,616 bytes while retaining allocated
+  evidence files. Host available space rose from about10 to37GB. Existing host
+  workloads/Codex helpers and CPU/RAM/kernel/security/native limits were untouched.
+  This is a new boot/base/deployment admission, not retrospective cleanup PASS
+  or proof that storage caused the formatter stop. Fresh namespace preparation
+  must pass before one installed retry.
+
+- **2026-10-27 — MED-505 restarted-host installed stop reproduced.**
+  The new base's finite preparation passed actual Wait0/121.738s, post-run
+  Wait0/2.803s and seed-store join. Its installed attempt then returned
+  Wait1/305.904s before native observation, again `host_prepare`/`native_cleanup`
+  with formatting custody held and loop-1. The admitted/current formatter
+  digests match, and bounded kernel logs show no OOM or storage error event.
+  This reproduces an installed-only host-preparation refusal; its precise
+  formatter cause remains unavailable. Preserve both failed images/journals
+  and all raw evidence. No further identical installed retry or namespace
+  policy change follows. SDK/image/sysroot/offline preparation admission is
+  established separately; installed publication/accounting/teardown remains
+  blocked. The SDK mode-negative regression is also pending because the current
+  scratch namespace is held. Keep the PR draft and retain every acceptance gate.
+
+  The verified material-only package is1,701,918,720 bytes, SHA256
+  `922208f071053f9a87241b6423bd3da03934ad0413297436fccc803539bcdcd0`.
+  Every one of15,682 declared inputs and all five outer components verified;
+  its manifest explicitly records installed qualification NOT PASSED and omits
+  credentials, databases/runtime descriptors and SSH material. MED-695 tracks
+  the installed-only failure. The task VM was gracefully stopped after terminal
+  evidence collection; its exact QEMU exit ends guest kernel writers, while both
+  formatting journals/images and the QCOW2 remain preserved as held evidence.
+  The task seed HTTP server is stopped. This establishes no cleanup PASS for
+  either failed attempt and changes no existing host workload or Codex helper.

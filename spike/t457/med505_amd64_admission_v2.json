@@ -1,6 +1,6 @@
 {
   "schema": "phebs-med505-amd64-material-admission-v2",
-  "status": "prospective; installed qualification pending",
+  "status": "SDK/image/sysroot/offline material admission passed; installed Bazel qualification blocked by reproduced host-preparation failure",
   "go_sdk": {
     "url": "https://go.dev/dl/go1.25.7.linux-amd64.tar.gz",
     "archive_bytes": 59768749,
@@ -135,6 +135,34 @@
       "engine_joined": true,
       "emergency": "completed",
       "full_custody_accounting_and_teardown_pass": false
+    },
+    "bazel_sdk_libraries_host_stop": {
+      "source": "50292db1b2eb3e897dfabc3e4ab4e02bc54528a4",
+      "actual_wait": 1,
+      "seconds": 302.8700021050008,
+      "native_phase_count": 0,
+      "failure_operation": "host_prepare",
+      "cleanup_operation": "native_cleanup",
+      "held_phase": "formatting",
+      "loop": -1,
+      "old_cleanup_pass": false,
+      "sdk_execution_result": "not established"
+    },
+    "bazel_cold_host_stop": {
+      "source": "50292db1b2eb3e897dfabc3e4ab4e02bc54528a4",
+      "actual_wait": 1,
+      "seconds": 305.90449899800007,
+      "native_phase_count": 0,
+      "failure_operation": "host_prepare",
+      "cleanup_operation": "native_cleanup",
+      "held_phase": "formatting",
+      "loop": -1,
+      "engine_joined": true,
+      "emergency": "held",
+      "full_custody_accounting_and_teardown_pass": false,
+      "formatter_digest_matches_current": true,
+      "kernel_oom_or_storage_error_events": false,
+      "cause": "unresolved; no SDK execution conclusion"
     }
   },
   "scale_or_release_acceptance": "NOT_ESTABLISHED",
@@ -2092,6 +2120,74 @@
       }
     ],
     "archive_manifest_sha256": "46a6a81dc515cdc997e535e7d5d48ca2d43ae0ceb048de1da53aa25ed2d35040",
-    "qualification": "pending; only default linux/amd64 cgo mode, empty tags, normal link mode admitted with these archives"
+    "qualification": "pending; only default linux/amd64 cgo mode, empty tags, normal link mode admitted with these archives",
+    "native_preparation": {
+      "source": "50292db1b2eb3e897dfabc3e4ab4e02bc54528a4",
+      "actual_wait": 0,
+      "seconds": 115.09472355300022,
+      "postrun_actual_wait": 0,
+      "postrun_seconds": 2.813291467999079,
+      "command_millis": {
+        "aquery": 19995,
+        "build": 30190,
+        "compiler": 6825,
+        "cquery": 25942,
+        "final": 426,
+        "materialize": 386,
+        "plan": 76408,
+        "tools": 1491,
+        "verify": 524,
+        "wall": 86063
+      }
+    }
+  },
+  "task_vm_cold_reset": {
+    "old_boot_id": "d496c651-e861-4f02-8a1c-6f66e27599ab",
+    "new_boot_id": "1650c272-7e69-4c18-be37-52d6494686d7",
+    "old_qemu_exit_verified": true,
+    "old_guest_kernel_writers_ended": true,
+    "held_namespace_preserved": true,
+    "held_owner_sha256": "c0ab66bee90fde7da06c59f1293ee1d00b6de61333b40184001021a1b7ede02a",
+    "held_image_bytes": 4573401088,
+    "fresh_private_base": true,
+    "cpu_ram_kernel_security_and_native_limits_unchanged": true,
+    "discard_unmap_for_guest_free_blocks": true,
+    "free_blocks_trimmed_bytes": 25704431616,
+    "rebuildable_task_go_caches_cleared": true,
+    "host_available_bytes_after": 37088968704,
+    "formatter_failure_cause": "not established; do not infer SDK failure or cleanup pass",
+    "new_binding_required": true,
+    "fresh_preparation": {
+      "actual_wait": 0,
+      "seconds": 121.73765018699999,
+      "postrun_actual_wait": 0,
+      "postrun_seconds": 2.8032637529999533,
+      "seed_store_joined": true
+    }
+  },
+  "offline_package": {
+    "bytes": 1701918720,
+    "sha256": "922208f071053f9a87241b6423bd3da03934ad0413297436fccc803539bcdcd0",
+    "components": 5,
+    "files_verified": 15682,
+    "qualification": "NOT PASSED: installed host_prepare/native_cleanup refusal; preserved held custody",
+    "name": "med505-offline-materials-v3.tar"
+  },
+  "remaining_blocker": {
+    "linear": "MED-695",
+    "url": "https://linear.app/meddeb/issue/MED-695/diagnose-installed-managed-scip-host-formatting-refusal-after",
+    "installed_qualification": "not passed",
+    "independent_review": "pending",
+    "mode_negative_test": "pending; held scratch namespace"
+  },
+  "task_vm_terminal": {
+    "exact_qemu_exit_verified": true,
+    "guest_kernel_writers_ended": true,
+    "native_containers_before_shutdown": 0,
+    "held_failed_namespaces": 2,
+    "failed_images_and_qcow2_preserved": true,
+    "old_failures_not_relabelled_clean": true,
+    "task_seed_http_server_stopped": true,
+    "source_inputs_archives_other_workloads_and_codex_helpers_preserved": true
   }
 }
