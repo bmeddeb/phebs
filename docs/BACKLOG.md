@@ -18208,6 +18208,25 @@ integration gates remain required. Existing host daemons/workloads are retained;
 a fresh private KVM guest supplies the dedicated native daemon. No scale,
 release or Epic42 gate is advanced.
 
+T45.10 MED-505 admission/qualification checkpoint (2026-10-27): the Go1.25.7
+compatibility correction, exact image/sysroot/tool admission, reproducible
+bootstrap tools/default-mode SDK archives and offline package are prepared in
+[draft PR #171](https://github.com/bmeddeb/phebs/pull/171). Source-bound native
+preparation and independent post-run sealing pass. Actual workspace/operator
+and backup/restore qualification retain their earlier exact source identities;
+the installed Bazel qualification remains **not passed**. Three attempts reached
+native execution and stopped at its unchanged wall bound. Two later attempts
+stopped before native phases in host preparation with formatting custody held,
+including after a task-only cold VM reset and fresh admitted scratch base.
+[MED-695](https://linear.app/meddeb/issue/MED-695/diagnose-installed-managed-scip-host-formatting-refusal-after)
+tracks the reproduced installed-only formatter/custody blocker. Preserve every
+failed fixture/journal/image and all limits; no blind identical retry, old-custody
+cleanup claim, merge, release or scale result follows. The verified material-only
+package is1,701,918,720 bytes (`922208f0…cdcd0`), with15,682 declared inputs;
+its manifest explicitly records installed qualification NOT PASSED. Review and
+the mode-negative native regression also remain open. Exact source-free facts
+are in `spike/t457/med505_amd64_admission_v2.json`.
+
 **T45.10a · Admit both native resource profiles in Settings** *(follows the
 T45.10 review; presentation handoff)* — an available amd64 installation reports
 `native-amd64-bounded-v1`, which the existing Settings validators reject, so the
