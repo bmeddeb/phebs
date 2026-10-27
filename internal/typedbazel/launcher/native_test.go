@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/bmeddeb/phebs/internal/typedbazel/planner"
+	"github.com/bmeddeb/phebs/internal/typedindex"
 )
 
 func nativeRows(p Prepared, plan planner.Plan) NativeGoFiles {
@@ -45,6 +46,9 @@ func TestNativeCompatibilityBoundary(t *testing.T) {
 		}
 		if !slices.Contains(p.environment, "GOPACKAGESDRIVER_BAZEL_COMMON_FLAGS="+strings.Join(NativeBazelCommon(), " ")) || !slices.Contains(old.environment, "GOPACKAGESDRIVER_BAZEL_COMMON_FLAGS="+strings.Join(BazelCommon(), " ")) {
 			t.Fatal("native and legacy common flags not independently bound")
+		}
+		if !slices.Contains(p.environment, "GOPACKAGESDRIVER_BAZEL_FLAGS="+strings.Join(NativeBazelStartup(), " ")) || !slices.Contains(old.environment, "GOPACKAGESDRIVER_BAZEL_FLAGS="+strings.Join(BazelStartup(), " ")) {
+			t.Fatal("native and legacy startup flags not independently bound")
 		}
 		other, err := PrepareNativeCompatibility(plan, roots, "scip", matches)
 		if err != nil || other.Digest() == p.Digest() {
@@ -349,6 +353,49 @@ func testNativeCacheProfile(t *testing.T) {
 		for _, override := range []string{"--registry=file:///outside", "--repository_cache=/scratch/other", "--lockfile_mode=update", "--downloader_config=", "--repository_disable_download=false", "--norepository_disable_download", "--experimental_repository_disable_download=false", "--repo_contents_cache=/scratch/other", "--experimental_repository_cache_hardlinks=true"} {
 			if _, _, err := inspectNativeBazel(s, append(slices.Clone(command), override)); err == nil {
 				t.Fatal("native duplicate flag override admitted")
+			}
+		}
+	}
+}
+
+func TestNativeBazelStartupBudget(t *testing.T) {
+	legacy := BazelStartup()
+	for _, arch := range []string{"arm64", "amd64"} {
+		args := nativeBazelStartup(arch)
+		if len(args) != len(legacy) {
+			t.Fatal("startup controls added or removed")
+		}
+		for i, arg := range legacy {
+			if arch == "amd64" && (arg == "--host_jvm_args=-Xmx256m" || arg == "--host_jvm_args=-XX:ActiveProcessorCount=1") {
+				continue
+			}
+			if args[i] != arg {
+				t.Fatalf("%s changed another startup control", arch)
+			}
+		}
+		if arch == "amd64" {
+			policy := typedindex.MeasuredPolicy()
+			if !slices.Contains(args, "--host_jvm_args=-Xmx512m") || !slices.Contains(args, "--host_jvm_args=-XX:ActiveProcessorCount=2") || policy.MemoryBytes < 512<<20 || policy.CPUQuotaMicros < 2*policy.CPUPeriodMicros {
+				t.Fatal("JVM exceeds its admitted resource budget")
+			}
+		}
+		args[0] = "mutated"
+		if !slices.Equal(BazelStartup(), legacy) || nativeBazelStartup(arch)[0] == "mutated" {
+			t.Fatal("mutable or shared startup controls")
+		}
+	}
+	if runtime.GOARCH == "amd64" {
+		s := scope{Roots: []string{"@@//lib:lib"}, Patterns: []string{"example.test/lib"}}
+		args := nativeBuildArgs(s, "/scratch/tmp/gopackagesdriver_bep_1234")
+		for _, key := range []string{"--host_jvm_args=-Xmx512m", "--host_jvm_args=-XX:ActiveProcessorCount=2"} {
+			changed := slices.Clone(args)
+			i := slices.Index(changed, key)
+			if i < 0 {
+				t.Fatal("native startup control missing")
+			}
+			changed[i] = "--host_jvm_args=-Xmx256m"
+			if _, _, err := inspectNativeBazel(s, changed); err == nil {
+				t.Fatal("foreign JVM profile accepted")
 			}
 		}
 	}

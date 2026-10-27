@@ -17111,3 +17111,28 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   production cache. The fixture's fixed artifact probes are opt-in and add no
   ordinary startup I/O. Requests/queries, sync, retries/no-op, publication,
   concurrency and all memory/disk/child-process ceilings are unchanged.
+
+- **2026-10-26 — MED-505 amd64 JVM operating profile within unchanged native limits.**
+  The exact `6a5469b9` installed neutral Bazel attempt passed planning but stopped
+  during package-load/typecheck at its shared300-second native allowance:
+  execute exit124, fresh watchdog evidence, verified limits and no OOM/task-limit
+  events. Its failed receipt and custody remain retained; it is not a PASS.
+  Native amd64 Bazel startup now fixes a512MiB JVM heap and two active JVM
+  processors, using the existing two-CPU cgroup budget. The legacy/arm64 startup
+  remains256MiB/one processor. Planner commands, the driver environment and
+  returned-call validation share the same architecture-selected startup vector;
+  foreign vectors refuse. Serial action execution (`--jobs=1`), one loading
+  thread, the4,533,092,352-byte container memory limit, CPU
+  quota200000/100000,294 tasks,128 descriptors, all output/scratch bounds and
+  the shared300-second allowance remain unchanged. The exact refreshed helper
+  and inventory/profile/source/epoch bindings require fresh qualification.
+
+  Cost: one fixed nine-element startup-vector pass per existing native Bazel
+  invocation or environment construction. No new child, query, corpus scan,
+  lock, persistent cache or ordinary serve/request/sync work is added. At most
+  one existing serial Bazel JVM may use256MiB more heap and up to two active JVM
+  processors under the unchanged cgroup ceilings; JVM background work may use
+  more internal threads, still bounded by the unchanged task limit. Action and
+  loading concurrency do not increase. New functional/static gates and actual
+  cold-path measurements remain required; prior arm64/legacy and failed native
+  records keep their original identities and outcomes.

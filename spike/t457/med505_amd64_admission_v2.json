@@ -92,7 +92,32 @@
       "source_and_content_preserved": true,
       "workspace_native_and_engines_drained": true
     },
-    "bazel": "PENDING after aspect correction"
+    "bazel": {
+      "source": "6a5469b9961c13a41120e91a5897d16b9575ee5d",
+      "actual_wait": 1,
+      "seconds": 513.1835543760008,
+      "planning_exit": 0,
+      "execution_exit": 124,
+      "execution_stop_reason": "wall_limit",
+      "stopped_stage": "package-load/typecheck",
+      "container_memory_peak_bytes": 2235437056,
+      "no_oom_or_task_limit_events": true,
+      "engine_joined": true,
+      "full_custody_accounting_and_teardown_pass": false,
+      "next": "fresh native qualification of the amd64 JVM operating profile"
+    }
   },
-  "scale_or_release_acceptance": "NOT_ESTABLISHED"
+  "scale_or_release_acceptance": "NOT_ESTABLISHED",
+  "amd64_jvm_operating_profile": {
+    "heap_mib": 512,
+    "active_processors": 2,
+    "bazel_jobs": 1,
+    "loading_threads": 1,
+    "container_memory_bytes": 4533092352,
+    "cpu_quota_micros": 200000,
+    "cpu_period_micros": 100000,
+    "shared_wall_seconds": 300,
+    "legacy_arm64_unchanged": true,
+    "qualification": "pending"
+  }
 }

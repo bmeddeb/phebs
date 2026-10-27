@@ -1403,7 +1403,11 @@ rewritten, and no user-selectable override path is accepted. Refreshed amd64 bun
 SDK/sysroot bytes in new inventory/profile digests; the normal source-bound
 profile/epoch transition still applies. See
 [`med505_amd64_admission_v2.json`](../../spike/t457/med505_amd64_admission_v2.json)
-for material provenance and pending installed-qualification status. Historical
+for material provenance and pending installed-qualification status. Native
+amd64 Bazel uses a fixed512MiB JVM heap and two active JVM processors within
+the unchanged two-CPU/container-memory limits. Build actions and loading remain
+serial, and the shared five-minute attempt deadline is unchanged. Legacy/arm64
+startup keeps its256MiB/one-processor JVM profile. Historical
 rehearsal records below describe their original tool identities.
 
 Module and import profiles target Linux `arm64` or `amd64`. The architecture is
