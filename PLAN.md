@@ -17105,3 +17105,29 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   This closes the demonstrated test setup difference; it does not explain the
   installed formatter failure or reclaim either held scratch image. Cost is
   one chmod in this test only, with no runtime or native-policy change.
+
+- **2026-10-27 — MED-695 preserve formatter failure results.**
+  Prospective host formatting failures now retain a closed diagnostic of the
+  existing command Start/Wait result, numeric errno, observed exit/signal and
+  existing process-group probe. An unstarted command has no wait evidence;
+  unavailable wait status remains unknown, with exit-1. The existing formatter
+  context contributes only live/canceled/deadline classification. The private
+  native acceptance row may carry this copy. No path, argv, raw command error
+  or formatter output enters the diagnostic, and an absent group is explicitly
+  not proof against escaped descendants or authority to reclaim formatting
+  custody. The old raw command cause is not added to the public unwrap chain:
+  public Error/ErrRefused/ErrCustody and controller refusal classification remain
+  unchanged, even when a command reports cancellation. This does not repair or
+  retrospectively diagnose either historical failed attempt.
+
+  Command arguments/environment, exact executable/image handles, thread hold,
+  Start/Wait order, all process-group probes/signals, formatter60-second timeout,
+  native300-second allowance and formatting cleanup refusal are unchanged. The
+  change observes their existing results; it adds no process-control operation,
+  namespace mechanism, security installation, native launch or retry.
+  Cost:success adds one post-call branch, with no diagnostic allocation or extra
+  syscall. Failure adds one fixed record using the already returned ProcessState
+  and group-probe result plus existing context state; the existing final private
+  receipt carries that bounded record. No new I/O, child, cache, lock or ordinary
+  request/sync/publication work is introduced. SafeFiles additionally tests a
+  fresh explicit0770 non-sticky ancestor refusal, independent of global umask.

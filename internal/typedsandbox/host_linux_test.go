@@ -62,8 +62,13 @@ func TestHostFormatterResidualGroupRefuses(t *testing.T) {
 	cmd := exec.Command(os.Args[0], "-test.run=^TestHostFormatterProcessHelper$")
 	cmd.Env = append(os.Environ(), "PHEBS_HOST_FORMATTER_TEST=residual", "PHEBS_HOST_FORMATTER_READY="+ready)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true, Pdeathsig: syscall.SIGKILL}
-	if err := runHostFormatter(cmd); !errors.Is(err, ErrCustody) {
+	err := runHostFormatter(cmd)
+	if !errors.Is(err, ErrCustody) {
 		t.Fatal("residual formatter group not retained", err)
+	}
+	observation, ok := HostFormatterFailureOf(err)
+	if !ok || observation.Stage != "process_group" || !observation.WaitReturned || !observation.WaitStatusKnown || observation.ExitCode != 23 || observation.ProcessGroupProbe != "present" {
+		t.Fatal("original residual-group result lost", observation)
 	}
 	pid := hostTestPID(t, ready)
 	t.Cleanup(func() { _ = syscall.Kill(pid, syscall.SIGKILL) })

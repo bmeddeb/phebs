@@ -781,7 +781,21 @@ func runHostMkfs(ctx context.Context, o HostScratchOptions, image *os.File) erro
 	output := &hostOutput{cancel: cancel}
 	cmd.Stdout = output
 	cmd.Stderr = output
-	return runHostFormatter(cmd)
+	err = runHostFormatter(cmd)
+	if err != nil {
+		var failure *hostFormatterFailure
+		if errors.As(err, &failure) {
+			switch {
+			case errors.Is(ctx.Err(), context.DeadlineExceeded):
+				failure.observation.FormatterContext = "deadline"
+			case errors.Is(ctx.Err(), context.Canceled):
+				failure.observation.FormatterContext = "canceled"
+			default:
+				failure.observation.FormatterContext = "live"
+			}
+		}
+	}
+	return err
 }
 
 func runHostFormatter(cmd *exec.Cmd) error {
@@ -790,11 +804,12 @@ func runHostFormatter(cmd *exec.Cmd) error {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	if err := cmd.Start(); err != nil {
-		return ErrRefused
+		return formatterFailure(ErrRefused, "start", cmd, err, nil)
 	}
 	runErr := cmd.Wait()
 	group := -cmd.Process.Pid
-	if err := syscall.Kill(group, 0); !errors.Is(err, syscall.ESRCH) {
+	probeErr := syscall.Kill(group, 0)
+	if err := probeErr; !errors.Is(err, syscall.ESRCH) {
 		_ = syscall.Kill(group, syscall.SIGKILL)
 		deadline := time.Now().Add(time.Second)
 		for time.Now().Before(deadline) {
@@ -805,10 +820,10 @@ func runHostFormatter(cmd *exec.Cmd) error {
 		}
 		// Even if killed group members disappear, retain formatting custody: an
 		// unexpected descendant means the reviewed formatter recipe did not hold.
-		return ErrCustody
+		return formatterFailure(ErrCustody, "process_group", cmd, runErr, probeErr)
 	}
 	if runErr != nil {
-		return ErrRefused
+		return formatterFailure(ErrRefused, "wait", cmd, runErr, probeErr)
 	}
 	return nil
 }
