@@ -2509,10 +2509,10 @@ func testInjectionTransition(
 			recovery := productionRecoverySchedule{
 				Target: root.GenerationSHA256, Prior: prior,
 				RecoveryGeneration: SHA256([]byte("phebs-extraction-recovery-schedule-v1\x00" + root.GenerationSHA256 + "\x00" + prior)),
-				RecoverySchedule:   testDigest(point.Phase, "modeled-recovery-schedule"),
 			}
 			preparationIndex := slices.IndexFunc(plan.Correction.RecoveryPreparations, func(row RecoveryPreparation) bool { return row.Phase == point.Phase })
 			preparation := plan.Correction.RecoveryPreparations[preparationIndex]
+			recovery.RecoverySchedule = testExtractionScheduleDigest(t, recovery.RecoveryGeneration, preparation.Chunks)
 			if recovery.Target != root.GenerationSHA256 {
 				t.Fatal("native recovery schedule targets a different immutable generation")
 			}
