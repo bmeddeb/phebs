@@ -16835,8 +16835,12 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   invocations add exactly one fixed override of its canonical SDK repository to
   the read-only `/inputs/tools/go` tree. Generated rules_go0.59.0 BUILD/version/
   root metadata are embedded and compared byte-for-byte before execution;
-  canonical dependency labels and its Apache license are retained. Target
-  MODULE/lock bytes are unchanged. Arm64 keeps its original argv/SDK/compiler.
+  canonical dependency labels and its Apache license are retained.
+  SDK-provider checks in the embedded Starlark aspect use the same closed
+  architecture/version mapping; the actual amd64 native analysis exposed its
+  remaining historical 1.25.0 check before any build action. Its refreshed
+  metadata requires new inventory digests while historical records stay exact.
+  Target MODULE/lock bytes are unchanged. Arm64 keeps its original argv/SDK/compiler.
   No automatic SDK selection,
   host-PATH override, version range or network fallback is introduced. The new
   amd64 compiler ZIP is `61882670…764a`,4238 regular entries,193026579 archive
@@ -16853,7 +16857,8 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   dedicated personal KVM guest and exact guest daemon/image admission.
 
   Cost: SDK/version selection adds fixed string comparisons at existing
-  profile, SDK projection and returned-result boundaries, plus one fixed argv
+  profile, SDK projection and returned-result boundaries, one constant map lookup
+  per existing SDK aspect projection, plus one fixed argv
   element per existing amd64 Bazel child and about15KiB of exact SDK metadata
   reads per Bazel plan/execute attempt, with no new corpus
   scan, lock, cache or child. The driver and indexer are not rebuilt. Each

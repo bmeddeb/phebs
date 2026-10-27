@@ -130,7 +130,8 @@ def _impl(target, ctx):
         stdlib = target[GoStdLib]
         sdk = ctx.toolchains[GO_TOOLCHAIN_LABEL].sdk
         mode = target[GoInfo].mode
-        if sdk.version != "1.25.0" or sdk.root_file.dirname != "external/rules_go++go_sdk+go_default_sdk":
+        sdk_version = {"arm64": "1.25.0", "amd64": "1.25.7"}.get(mode.goarch)
+        if sdk.version != sdk_version or sdk.root_file.dirname != "external/rules_go++go_sdk+go_default_sdk":
             fail("T45.1b selected SDK provider differs from frozen native profile")
         for f in ctx.files._sdk_helper_srcs:
             if not f.path.startswith(sdk.root_file.dirname + "/src/"):
