@@ -105,6 +105,18 @@
       "engine_joined": true,
       "full_custody_accounting_and_teardown_pass": false,
       "next": "fresh native qualification of the amd64 JVM operating profile"
+    },
+    "bazel_followup": {
+      "source": "2c94aef6924a37da354b323f97eb2368fc33ad8d",
+      "actual_source_note": "see retained source-freeze-env-final.json for full exact commit",
+      "actual_wait": 1,
+      "seconds": 514.7254542360006,
+      "planning_exit": 0,
+      "execution_exit": 124,
+      "stop_reason": "wall_limit",
+      "stopped_stage": "package-load/typecheck",
+      "memory_peak_bytes": 2743115776,
+      "selected": false
     }
   },
   "scale_or_release_acceptance": "NOT_ESTABLISHED",
@@ -118,7 +130,7 @@
     "cpu_period_micros": 100000,
     "shared_wall_seconds": 300,
     "legacy_arm64_unchanged": true,
-    "qualification": "pending",
+    "qualification": "NOT_SELECTED: no complete native pass; original operating vectors restored",
     "go_max_procs": 2,
     "repository_and_action_go_max_procs": 2
   },

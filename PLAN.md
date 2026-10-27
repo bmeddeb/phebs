@@ -16911,3 +16911,19 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   from32 to64GiB (online filesystem growth), with unchanged CPU/RAM/kernel and
   security settings, before a fresh deployment/capacity binding; no pressure
   threshold or latch was edited. Host and other-machine filesystems are untouched.
+
+
+- **2026-10-26 — MED-505 operating experiment not selected; measure command cost.**
+  The expanded-disk, exact `2c94aef6` run again stopped at the unchanged shared
+  native deadline during package-load/typecheck (both container removals and
+  verified limits, no OOM/task-limit event). Its actual Wait1/514.725s and raw
+  watchdog/custody records remain retained. The JVM/Go two-processor experiments
+  above do not establish a pass or a causal improvement and are removed from the
+  implementation; production source returns to the `6a5469b9` SDK/aspect fix.
+  Keep the source-bound workspace/restore passes and native preparation passes
+  separate from the still-open installed Bazel gate. The existing opt-in
+  preparation's `stage_millis` map now retains three monotonic command durations
+  (cquery, aquery, build) beside the unchanged raw buffers, digests and whole-plan
+  duration. This test-only capture adds three clock reads and three fixed map
+  entries, changes no production path, schema, limit, authority or native command,
+  and permits choosing the next cost correction from actual command evidence.

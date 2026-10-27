@@ -31,7 +31,7 @@ type CallEvidence struct {
 }
 
 func callerEnvironment(p launcher.Prepared, slot, hash string) []string {
-	env := launcher.NativeBazelEnvironment()
+	env := launcher.BazelEnvironment()
 	env[0] = "PATH=/inputs/tools/go/bin:/inputs/tools/bin"
 	// Only these two sealed mode values cross from the driver profile to callers.
 	for _, item := range p.Invocation().Environment {

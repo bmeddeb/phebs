@@ -226,7 +226,7 @@ func RunCompatibilityBazel(ctx context.Context, slot string, args []string) erro
 	if err != nil {
 		return err
 	}
-	return runBazelCommand(ctx, output, argv, BazelEnvironment())
+	return runBazelCommand(ctx, output, argv)
 }
 
 // RunCompatibility runs only the fixed typed request inside the admitted
