@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bmeddeb/phebs/internal/typedbazel/launcher"
 	"github.com/bmeddeb/phebs/internal/typedbazel/provider"
 	"github.com/bmeddeb/phebs/internal/typedindex"
 	"github.com/bmeddeb/phebs/internal/typedmodule"
@@ -91,7 +92,7 @@ func acceptanceWorkspaceProfile(ctx context.Context, c nativeAcceptanceConfig, p
 		return typedindex.Unsupported
 	}
 	helper := typedindex.Tool{Version: "neutral-t45.7", Digest: c.HelperSHA256}
-	tools := typedindex.Tools{Planner: helper, Launcher: helper, Go: typedindex.Tool{Version: "1.25.0", Digest: goSDK}, Indexer: typedindex.Tool{Version: "0.2.7", Digest: scip}}
+	tools := typedindex.Tools{Planner: helper, Launcher: helper, Go: typedindex.Tool{Version: typedindex.NativeSDKVersion(runtime.GOARCH), Digest: goSDK}, Indexer: typedindex.Tool{Version: "0.2.7", Digest: scip}}
 	d := profile.Definition()
 	if acceptanceDigest(raw) != c.ProfileSHA256 || d.Schema != typedindex.InputProfileSchema || d.Name != "neutral-input" || d.Provider != typedindex.ModuleProviderID || d.Config != config || d.Policy != c.Policy || d.BundleDigest != c.InventorySHA256 || d.ImageDigest != c.ImageSHA256 || d.Tools != tools || d.RCDigest != "" {
 		return errors.New("workspace profile differs from approved tools/policy")
@@ -151,7 +152,7 @@ func TestNativeWorkspaceFaultProfile(t *testing.T) {
 	}
 	goSDK, scip, _, _ := provider.NativeToolDigests(runtime.GOARCH)
 	helper := typedindex.Tool{Version: "neutral-t45.7", Digest: h}
-	definition := typedindex.ProfileDefinition{Schema: typedindex.InputProfileSchema, Name: "neutral-input", Provider: typedindex.ModuleProviderID, Tools: typedindex.Tools{Planner: helper, Launcher: helper, Go: typedindex.Tool{Version: "1.25.0", Digest: goSDK}, Indexer: typedindex.Tool{Version: "0.2.7", Digest: scip}}, Config: config, Policy: typedindex.MeasuredPolicy(), BundleDigest: h, ImageDigest: h}
+	definition := typedindex.ProfileDefinition{Schema: typedindex.InputProfileSchema, Name: "neutral-input", Provider: typedindex.ModuleProviderID, Tools: typedindex.Tools{Planner: helper, Launcher: helper, Go: typedindex.Tool{Version: typedindex.NativeSDKVersion(runtime.GOARCH), Digest: goSDK}, Indexer: typedindex.Tool{Version: "0.2.7", Digest: scip}}, Config: config, Policy: typedindex.MeasuredPolicy(), BundleDigest: h, ImageDigest: h}
 	for _, tc := range []struct {
 		name   string
 		change func(*nativeAcceptanceConfig, *typedindex.ProfileDefinition, *provider.InputSelection)
@@ -203,6 +204,47 @@ func TestNativeWorkspaceFaultProfile(t *testing.T) {
 			_, err = acceptanceProfile(t.Context(), c, raw, selectionRaw)
 			if (err == nil) != tc.want {
 				t.Fatal("workspace profile contract", err)
+			}
+		})
+	}
+}
+
+func TestNativeBazelProfileArchitecturePins(t *testing.T) {
+	h := acceptanceDigest([]byte("admission"))
+	source := typedindex.Source{Repository: acceptanceRepo, Incarnation: "native", Generation: h, Commit: strings.Repeat("a", 40)}
+	s := provider.Selection{Schema: provider.SelectionSchema, Source: source, Module: source.Repository, Remote: "https://" + source.Repository, Roots: []string{"//lib:lib"}, Targets: []typedindex.PlannedTarget{{ID: h}}}
+	selection := acceptanceJSON(s)
+	schema, config := typedindex.HostReducedIdentity()
+	goSDK, scip, bazel, _ := provider.NativeToolDigests(runtime.GOARCH)
+	helper := typedindex.Tool{Version: "cmd", Digest: h}
+	base := typedindex.ProfileDefinition{Schema: schema, Name: "neutral", Provider: typedindex.ProviderID, Config: config, Policy: typedindex.MeasuredPolicy(), BundleDigest: h, ImageDigest: h, Tools: typedindex.Tools{
+		Planner: helper, Launcher: helper,
+		Go:      typedindex.Tool{Version: typedindex.NativeSDKVersion(runtime.GOARCH), Digest: goSDK},
+		Bazel:   typedindex.Tool{Version: "9.0.0", Digest: bazel},
+		RulesGo: typedindex.Tool{Version: "0.59.0", Digest: "sha256:68af54cb97fbdee5e5e8fe8d210d15a518f9d62abfd71620c3eaff3b26a5ff86"},
+		Driver:  typedindex.Tool{Version: "0.59.0", Digest: "sha256:" + launcher.NativeDriverDigest(runtime.GOARCH)},
+		Indexer: typedindex.Tool{Version: "0.2.7", Digest: scip},
+	}}
+	other := "arm64"
+	if runtime.GOARCH == "arm64" {
+		other = "amd64"
+	}
+	for _, mode := range []string{"exact", "foreign-sdk", "foreign-driver", "other-sdk-version"} {
+		t.Run(mode, func(t *testing.T) {
+			d := base
+			switch mode {
+			case "foreign-sdk":
+				d.Tools.Go.Digest, _, _, _ = provider.NativeToolDigests(other)
+			case "foreign-driver":
+				d.Tools.Driver.Digest = "sha256:" + launcher.NativeDriverDigest(other)
+			case "other-sdk-version":
+				d.Tools.Go.Version = typedindex.NativeSDKVersion(other)
+			}
+			raw := acceptanceJSON(d)
+			c := nativeAcceptanceConfig{Schema: acceptanceSchema, Source: source, Policy: d.Policy, ProfileSHA256: acceptanceDigest(raw), InventorySHA256: h, ImageSHA256: h, HelperSHA256: h, SelectionSHA256: acceptanceDigest(selection), UniverseSHA256: acceptanceDigest(acceptanceJSON(s.Targets))}
+			_, err := acceptanceProfile(t.Context(), c, raw, selection)
+			if (err == nil) != (mode == "exact") {
+				t.Fatalf("%s: %v", mode, err)
 			}
 		})
 	}

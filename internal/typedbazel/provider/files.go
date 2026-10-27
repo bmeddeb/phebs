@@ -196,7 +196,7 @@ exec /scratch/toolchain/usr/bin/x86_64-linux-gnu-gcc-13 --sysroot=/scratch/toolc
 `
 
 const compilerDigestArm64 = "sha256:b5bc6148e85dc7f96e9a756f407aac10893cf8327668e4e22f5f4263454cb5c4"
-const compilerDigestAmd64 = "sha256:2f2ec79d40bb602c2c957ffa2f4be62ec2709a53e28060c57e5d5664a7f8dcde"
+const compilerDigestAmd64 = "sha256:618826703a8b5db1775200b955bdd354ddcf40e4459e08ba4d8e8b893705764a"
 
 func compilerScriptFor(arch string) (string, bool) {
 	switch arch {

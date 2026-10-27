@@ -22,7 +22,7 @@ func TestInputProfileAuthorityAndIsolation(t *testing.T) {
 			helper := Tool{Version: "worker", Digest: hash([]byte("worker"))}
 			d.Tools = Tools{Planner: helper, Launcher: helper, Indexer: SCIPGoIndexer(tc.arch)}
 			if provider == ModuleProviderID {
-				d.Tools.Go = Tool{Version: "1.25.0", Digest: hash([]byte("SDK"))}
+				d.Tools.Go = Tool{Version: NativeSDKVersion(tc.arch), Digest: hash([]byte("SDK"))}
 			}
 			p, err := DecodeProfile(t.Context(), wire(t, d))
 			if err != nil {
@@ -43,7 +43,7 @@ func TestInputProfileAuthorityAndIsolation(t *testing.T) {
 			}
 			modes := []string{"old-schema", "foreign-provider", "bazel-tools", "rc", "resource", "helper", "generated", "go-tool", "foreign-arch"}
 			if provider == ModuleProviderID {
-				modes = append(modes, "cross-arch-indexer")
+				modes = append(modes, "cross-arch-indexer", "cross-arch-sdk")
 			}
 			for _, mode := range modes {
 				t.Run(mode, func(t *testing.T) {
@@ -55,6 +55,8 @@ func TestInputProfileAuthorityAndIsolation(t *testing.T) {
 						bad.Config.GOARCH = "riscv64"
 					case "cross-arch-indexer":
 						bad.Tools.Indexer = SCIPGoIndexer(tc.other)
+					case "cross-arch-sdk":
+						bad.Tools.Go.Version = NativeSDKVersion(tc.other)
 					case "foreign-provider":
 						bad.Provider = "shell"
 					case "bazel-tools":

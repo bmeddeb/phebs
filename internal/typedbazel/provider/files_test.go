@@ -4,11 +4,32 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"flag"
 	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
 )
+
+var admittedCompilerArchive = flag.String("typed-compiler-archive", "", "explicit candidate archive for native compiler admission")
+
+func TestNativeCompilerArchiveAdmission(t *testing.T) {
+	if *admittedCompilerArchive == "" {
+		t.Skip("explicit compiler archive required")
+	}
+	raw, err := readBounded(*admittedCompilerArchive, 256<<20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	z, err := compilerZIP(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := unpackCompiler(t.Context(), z, t.TempDir()); err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("admitted compiler %s, %d entries, %d archive bytes", hash(raw), len(z.File), len(raw))
+}
 
 func TestCompilerIdentityStaysArchSpecific(t *testing.T) {
 	arm, ok := compilerScriptFor("arm64")

@@ -106,7 +106,7 @@ func TestGeneratedPayloadAndReducedOmission(t *testing.T) {
 				if name == launcher.ExecRoot+"/bazel-out/cfg/bin/lib/generated.go" {
 					return generated, nil
 				}
-				return proto.Marshal(&scip.Index{Metadata: &scip.Metadata{ProjectRoot: "file:///scratch/workspace", TextDocumentEncoding: scip.TextEncoding_UTF8, ToolInfo: &scip.ToolInfo{Name: "scip-go", Version: "0.2.7", Arguments: scipArguments(s, []string{"example.test/lib"})}}, Documents: []*scip.Document{{Language: "go", RelativePath: "lib/lib.go"}, {Language: "go", RelativePath: "../bazel-output/execroot/_main/bazel-out/cfg/bin/lib/generated.go"}}})
+				return proto.Marshal(&scip.Index{Metadata: &scip.Metadata{ProjectRoot: "file:///scratch/workspace", TextDocumentEncoding: scip.TextEncoding_UTF8, ToolInfo: &scip.ToolInfo{Name: "scip-go", Version: "0.2.7", Arguments: scipArguments(s, []string{"example.test/lib"}, "arm64")}}, Documents: []*scip.Document{{Language: "go", RelativePath: "lib/lib.go"}, {Language: "go", RelativePath: "../bazel-output/execroot/_main/bazel-out/cfg/bin/lib/generated.go"}}})
 			}
 			b, e := run(context.Background(), i, o)
 			if e != nil {

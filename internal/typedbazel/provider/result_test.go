@@ -85,7 +85,7 @@ func verifiedNeutralLeg(t *testing.T, p planner.Plan, roots []planner.Configured
 	argv := append([]string{NativeProbePath}, prepared.Invocation().Arguments...)
 	stdout := []byte{}
 	if slot == "scip" {
-		argv = append([]string{SCIPPath}, scipArguments(s, prepared.Invocation().Arguments)...)
+		argv = append([]string{SCIPPath}, scipArguments(s, prepared.Invocation().Arguments, p.SDKs[0].Mode.GOARCH)...)
 	} else {
 		stdout, e = json.Marshal(probe)
 		if e != nil {

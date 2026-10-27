@@ -4,10 +4,22 @@ import (
 	"context"
 	"runtime"
 	"runtime/debug"
+	"slices"
 	"testing"
 
 	"github.com/bmeddeb/phebs/internal/typedindex"
 )
+
+func TestSCIPArgumentsUseSelectedSDK(t *testing.T) {
+	for _, tc := range []struct{ arch, flag string }{
+		{"arm64", "--go-version=go1.25.0"},
+		{"amd64", "--go-version=go1.25.7"},
+	} {
+		if args := scipArguments(Selection{}, nil, tc.arch); !slices.Contains(args, tc.flag) {
+			t.Fatalf("%s arguments lack %s: %v", tc.arch, tc.flag, args)
+		}
+	}
+}
 
 func buildInfo(path, goVersion string, settings map[string]string, deps ...*debug.Module) *debug.BuildInfo {
 	info := &debug.BuildInfo{Path: path, GoVersion: goVersion, Deps: deps}
@@ -64,7 +76,7 @@ func TestCheckBuildRejectsIncorrectCmdMetadata(t *testing.T) {
 
 func TestCheckBuildAcceptsExactIdentities(t *testing.T) {
 	host := map[string]string{"GOOS": "linux", "GOARCH": runtime.GOARCH}
-	if err := checkBuild(buildInfo("cmd/go", "go1.25.0", host), "cmd/go", false); err != nil {
+	if err := checkBuild(buildInfo("cmd/go", "go"+typedindex.NativeSDKVersion(runtime.GOARCH), host), "cmd/go", false); err != nil {
 		t.Fatalf("cmd/go rejected: %v", err)
 	}
 	if err := checkBuild(buildInfo(productionHelperMain, "go1.25.0", host), productionHelperMain, false); err != nil {
@@ -86,6 +98,17 @@ func TestCheckBuildAcceptsExactIdentities(t *testing.T) {
 	if err := checkBuild(buildInfo("github.com/scip-code/scip-go/cmd/scip-go", "go1.25.0", other,
 		&debug.Module{Path: "golang.org/x/tools", Version: "v0.45.0", Sum: "h1:18qN3FAooORvApf5XjCXgsuayZOEtXf6JK18I3+ONa8="}), "github.com/scip-code/scip-go/cmd/scip-go", true); err == nil {
 		t.Fatal("other admitted architecture accepted on this host")
+	}
+}
+
+func TestCheckBuildRejectsOtherSDKPatch(t *testing.T) {
+	other := "go1.25.7"
+	if runtime.GOARCH == "amd64" {
+		other = "go1.25.0"
+	}
+	settings := map[string]string{"GOOS": "linux", "GOARCH": runtime.GOARCH}
+	if err := checkBuild(buildInfo("cmd/go", other, settings), "cmd/go", false); err != typedindex.Unsupported {
+		t.Fatalf("other SDK patch accepted: %v", err)
 	}
 }
 

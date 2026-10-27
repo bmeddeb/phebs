@@ -1,9 +1,21 @@
 package typedsandbox
 
 import (
+	"flag"
 	"runtime"
 	"testing"
 )
+
+var nativePreflightImage = flag.String("typed-installation-preflight-image", "", "explicit local native image for read-only installation preflight")
+
+func TestNativeInstallationPreflight(t *testing.T) {
+	if *nativePreflightImage == "" {
+		t.Skip("explicit native image required")
+	}
+	if err := ValidateInstallation(t.Context(), "/var/run/docker.sock", *nativePreflightImage); err != nil {
+		t.Fatal(err)
+	}
+}
 
 func TestInstallationPreflightCreatesNoContainer(t *testing.T) {
 	if runtime.GOOS != "linux" {

@@ -87,7 +87,7 @@ func preparationFinalTools(helperDigest string) typedindex.Tools {
 	return typedindex.Tools{
 		Bazel:    typedindex.Tool{Version: "9.0.0", Digest: bazel},
 		RulesGo:  typedindex.Tool{Version: "0.59.0", Digest: "sha256:" + rulesArchive},
-		Go:       typedindex.Tool{Version: "1.25.0", Digest: goSDK},
+		Go:       typedindex.Tool{Version: typedindex.NativeSDKVersion(runtime.GOARCH), Digest: goSDK},
 		Driver:   typedindex.Tool{Version: "0.59.0", Digest: "sha256:" + launcher.NativeDriverDigest(runtime.GOARCH)},
 		Indexer:  typedindex.Tool{Version: "0.2.7", Digest: scip},
 		Planner:  helper,

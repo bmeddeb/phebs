@@ -95,6 +95,31 @@ func TestSDKProjectionUsesOnlyDeclaredArtifacts(t *testing.T) {
 	}
 }
 
+func TestSDKProjectionArchitecturePatch(t *testing.T) {
+	for _, tc := range []struct {
+		arch, version string
+		accepted      bool
+	}{
+		{"arm64", "1.25.0", true}, {"arm64", "1.25.7", false},
+		{"amd64", "1.25.7", true}, {"amd64", "1.25.0", false},
+	} {
+		t.Run(tc.arch+"/"+tc.version, func(t *testing.T) {
+			in, files := sdkFixture(t)
+			in.Mode.GOARCH, in.Version = tc.arch, tc.version
+			_, err := projectSDK(in, func(name string, limit int) ([]byte, error) {
+				b, ok := files[name]
+				if !ok || len(b) > limit {
+					return nil, errors.New("undeclared read")
+				}
+				return b, nil
+			})
+			if (err == nil) != tc.accepted {
+				t.Fatalf("acceptance = %v, error %v", tc.accepted, err)
+			}
+		})
+	}
+}
+
 func TestStrictStructFieldsPreserveImportCase(t *testing.T) {
 	var value struct{ Imports map[string]string }
 	data := []byte(`{"Imports":{"example.test/Pkg":"upper","example.test/pkg":"lower"}}`)

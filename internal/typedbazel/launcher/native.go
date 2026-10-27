@@ -77,7 +77,11 @@ func NativeBazelCommon() []string {
 			args[i] = "--registry=https://bcr.bazel.build"
 		}
 	}
-	return append(args, "--lockfile_mode=error", "--downloader_config=/inputs/tools/cache/downloader.cfg", "--repository_disable_download", "--repo_contents_cache=", "--experimental_repository_cache_hardlinks=false")
+	args = append(args, "--lockfile_mode=error", "--downloader_config=/inputs/tools/cache/downloader.cfg", "--repository_disable_download", "--repo_contents_cache=", "--experimental_repository_cache_hardlinks=false")
+	if runtime.GOARCH == "amd64" {
+		args = append(args, "--override_repository=rules_go++go_sdk+go_default_sdk=/inputs/tools/go")
+	}
+	return args
 }
 
 func nativeCommandPrefix(command string) []string {

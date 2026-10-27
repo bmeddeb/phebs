@@ -36,6 +36,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/generationscheduler"
 	"github.com/bmeddeb/phebs/internal/lifecycle"
 	"github.com/bmeddeb/phebs/internal/store"
+	"github.com/bmeddeb/phebs/internal/typedbazel/launcher"
 	"github.com/bmeddeb/phebs/internal/typedbazel/provider"
 	"github.com/bmeddeb/phebs/internal/typedindex"
 	"github.com/bmeddeb/phebs/internal/typedsandbox"
@@ -2115,7 +2116,8 @@ func acceptanceProfile(ctx context.Context, c nativeAcceptanceConfig, raw, selec
 		return p, errors.New("frozen corpus profile name")
 	}
 	schema, config := typedindex.HostReducedIdentity()
-	if acceptanceDigest(raw) != c.ProfileSHA256 || d.Schema != schema || d.Config != config || d.Policy != c.Policy || d.BundleDigest != c.InventorySHA256 || d.ImageDigest != c.ImageSHA256 || d.Tools.Planner.Digest != c.HelperSHA256 || d.Tools.Launcher.Digest != c.HelperSHA256 || d.Tools.Go.Digest != provider.GoDigest || d.Tools.Bazel.Digest != provider.BazelDigest || d.Tools.Indexer.Digest != provider.SCIPDigest || d.Tools.Driver.Digest != "sha256:f49a0ff4339e32cc699c6fbb5a80b9d8f936b3bfe6b08a924fa19495e35b2bfd" || d.Tools.RulesGo.Digest != "sha256:68af54cb97fbdee5e5e8fe8d210d15a518f9d62abfd71620c3eaff3b26a5ff86" || d.RCDigest != "" {
+	goSDK, scip, bazel, nativePins := provider.NativeToolDigests(runtime.GOARCH)
+	if acceptanceDigest(raw) != c.ProfileSHA256 || d.Schema != schema || d.Config != config || d.Policy != c.Policy || d.BundleDigest != c.InventorySHA256 || d.ImageDigest != c.ImageSHA256 || d.Tools.Planner.Digest != c.HelperSHA256 || d.Tools.Launcher.Digest != c.HelperSHA256 || !nativePins || d.Tools.Go.Digest != goSDK || d.Tools.Go.Version != typedindex.NativeSDKVersion(runtime.GOARCH) || d.Tools.Bazel.Digest != bazel || d.Tools.Indexer.Digest != scip || d.Tools.Driver.Digest != "sha256:"+launcher.NativeDriverDigest(runtime.GOARCH) || d.Tools.RulesGo.Digest != "sha256:68af54cb97fbdee5e5e8fe8d210d15a518f9d62abfd71620c3eaff3b26a5ff86" || d.RCDigest != "" {
 		return p, errors.New("profile differs from approved tools/policy")
 	}
 	var s provider.Selection

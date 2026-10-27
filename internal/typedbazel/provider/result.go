@@ -104,7 +104,7 @@ func decodeResult(ctx context.Context, i Invocation, selection, raw []byte) (Dec
 		return empty, err
 	}
 	for _, sdk := range r.RawPlan.SDKs {
-		if sdk.Root != nativeSDKRoot || sdk.Version != "1.25.0" {
+		if sdk.Root != nativeSDKRoot || sdk.Version != typedindex.NativeSDKVersion(i.Profile.Definition().Config.GOARCH) {
 			return empty, typedindex.Unsupported
 		}
 	}
@@ -149,7 +149,7 @@ func decodeResult(ctx context.Context, i Invocation, selection, raw []byte) (Dec
 			env := callerEnvironment(prepared, slot, hash(control))
 			argv := append([]string{NativeProbePath}, prepared.Invocation().Arguments...)
 			if slot == "scip" {
-				argv = append([]string{SCIPPath}, scipArguments(s, prepared.Invocation().Arguments)...)
+				argv = append([]string{SCIPPath}, scipArguments(s, prepared.Invocation().Arguments, i.Profile.Definition().Config.GOARCH)...)
 			}
 			if leg.Slot != slot || !slices.Equal(leg.ClientArgv, argv) || !slices.Equal(leg.Environment, env) || leg.WallNanoseconds < 0 || leg.WallNanoseconds > int64(typedsandbox.WallLimit)-legWall || len(leg.Stdout) > maxClientBytes || len(leg.Stderr) > maxClientBytes-len(leg.Stdout) {
 				return empty, typedindex.Invalid
@@ -186,7 +186,7 @@ func decodeResult(ctx context.Context, i Invocation, selection, raw []byte) (Dec
 		if r.SCIPSHA256 != hash(r.SCIP) {
 			return empty, typedindex.Stale
 		}
-		if err = verifySCIP(r.SCIP, docs, s, r.Legs[1].Call.Launcher.Arguments); err != nil {
+		if err = verifySCIP(r.SCIP, docs, s, r.Legs[1].Call.Launcher.Arguments, i.Profile.Definition().Config.GOARCH); err != nil {
 			return empty, err
 		}
 		for _, b := range r.Generated {

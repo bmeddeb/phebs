@@ -58,7 +58,7 @@ func inputFixtureFor(t *testing.T, kind string, mutate ...func(*scip.Index)) inp
 	index := &scip.Index{Metadata: &scip.Metadata{ProjectRoot: "file:///capture", TextDocumentEncoding: scip.TextEncoding_UTF8, ToolInfo: &scip.ToolInfo{Name: "scip-go", Version: "0.2.7"}}, Documents: []*scip.Document{{RelativePath: "pkg/a.go", Language: "go", Occurrences: []*scip.Occurrence{{Range: []int32{1, 4, 7}, Symbol: "scip-go gomod example.test/root " + source.Commit + " Foo.", SymbolRoles: int32(scip.SymbolRole_Definition)}}, Symbols: []*scip.SymbolInformation{{Symbol: "scip-go gomod example.test/root " + source.Commit + " Foo."}}}}}
 	if f.selection.Module != nil {
 		index.Metadata.ProjectRoot = "file://" + launcher.Workspace
-		index.Metadata.ToolInfo.Arguments = inputSCIPArguments(inputBinding{selection: f.selection, packages: []inputPackage{{importPath: "example.test/root/pkg", root: 0}}}, 0)
+		index.Metadata.ToolInfo.Arguments = inputSCIPArguments(inputBinding{selection: f.selection, packages: []inputPackage{{importPath: "example.test/root/pkg", root: 0}}}, 0, runtime.GOARCH)
 	}
 	for _, change := range mutate {
 		change(index)
@@ -94,7 +94,7 @@ func inputFixtureFor(t *testing.T, kind string, mutate ...func(*scip.Index)) inp
 	goSDK, scip, _, _ := NativeToolDigests(runtime.GOARCH)
 	tools := typedindex.Tools{Planner: helper, Launcher: helper, Indexer: typedindex.Tool{Version: "0.2.7", Digest: scip}}
 	if f.selection.Module != nil {
-		tools.Go = typedindex.Tool{Version: "1.25.0", Digest: goSDK}
+		tools.Go = typedindex.Tool{Version: typedindex.NativeSDKVersion(runtime.GOARCH), Digest: goSDK}
 	} else {
 		tools.Indexer.Digest = f.selection.Import.Producer.Digest
 	}
@@ -162,7 +162,7 @@ func inputFixtureOperations(t *testing.T, f inputFixture, commands *int, joined 
 			if err != nil {
 				t.Fatal(err)
 			}
-			if executable != SCIPPath || !slices.Equal(args, inputSCIPArguments(b, 0)) {
+			if executable != SCIPPath || !slices.Equal(args, inputSCIPArguments(b, 0, f.i.Profile.Definition().Config.GOARCH)) {
 				t.Fatal("unexpected indexer command")
 			}
 			return nil, nil, nil
@@ -251,6 +251,7 @@ func TestAdditionalInputArchitecture(t *testing.T) {
 	d := f.i.Profile.Definition()
 	d.Config, _ = typedindex.InputConfig(d.Provider, other)
 	d.Tools.Go.Digest, d.Tools.Indexer.Digest, _, _ = NativeToolDigests(other)
+	d.Tools.Go.Version = typedindex.NativeSDKVersion(other)
 	raw, _ := json.Marshal(d)
 	p, err := typedindex.DecodeProfile(t.Context(), raw)
 	if err != nil {

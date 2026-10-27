@@ -12,7 +12,7 @@ import (
 // This preserves raw producer identity/ranges and checks exact root membership.
 // Canonicalization, blank metadata and generated localization are a separate
 // reviewed adapter, never an implicit mutation of this evidence.
-func verifySCIP(raw []byte, documents []DocumentOutcome, s Selection, patterns []string) error {
+func verifySCIP(raw []byte, documents []DocumentOutcome, s Selection, patterns []string, arch string) error {
 	if len(raw) == 0 || len(raw) > typedindex.MaxSCIPMemberBytes {
 		return typedindex.Capacity
 	}
@@ -21,7 +21,7 @@ func verifySCIP(raw []byte, documents []DocumentOutcome, s Selection, patterns [
 		return typedindex.Invalid
 	}
 	m := index.Metadata
-	if m == nil || m.ProjectRoot != "file://"+launcher.Workspace || m.TextDocumentEncoding != scip.TextEncoding_UTF8 || m.ToolInfo == nil || m.ToolInfo.Name != "scip-go" || m.ToolInfo.Version != "0.2.7" || !slices.Equal(m.ToolInfo.Arguments, scipArguments(s, patterns)) {
+	if m == nil || m.ProjectRoot != "file://"+launcher.Workspace || m.TextDocumentEncoding != scip.TextEncoding_UTF8 || m.ToolInfo == nil || m.ToolInfo.Name != "scip-go" || m.ToolInfo.Version != "0.2.7" || !slices.Equal(m.ToolInfo.Arguments, scipArguments(s, patterns, arch)) {
 		return typedindex.Invalid
 	}
 	want := map[string]bool{}

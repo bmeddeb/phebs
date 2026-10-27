@@ -2,6 +2,19 @@ package typedindex
 
 import "runtime"
 
+// NativeSDKVersion is the exact indexed SDK, independent of the Go version
+// used to build the pinned driver/indexer. arm64 keeps its historical SDK.
+func NativeSDKVersion(arch string) string {
+	switch arch {
+	case "arm64":
+		return "1.25.0"
+	case "amd64":
+		return "1.25.7"
+	default:
+		return ""
+	}
+}
+
 // AdmittedNativeArch is the ceremony host set. arm64 remains valid. amd64 is
 // the same closed Linux contract on a host that is not arm64.
 func AdmittedNativeArch(arch string) bool {

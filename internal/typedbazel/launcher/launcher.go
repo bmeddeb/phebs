@@ -274,7 +274,7 @@ func Prepare(plan planner.Plan, roots []planner.Configured) (Prepared, error) {
 				continue
 			}
 			sdk, ok := sdks[u.SDK]
-			if !ok || sdk.Version != "1.25.0" {
+			if !ok || sdk.Version != typedindex.NativeSDKVersion(u.Mode.GOARCH) {
 				return Prepared{}, fmt.Errorf("%w: unplanned SDK import", ErrUnrepresentable)
 			}
 			id := sdk.Prefix + name

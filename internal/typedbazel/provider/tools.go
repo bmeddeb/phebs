@@ -67,6 +67,24 @@ func verifyToolsWithHelperMain(ctx context.Context, i Invocation, helperMain str
 			return typedindex.Unprepared
 		}
 	}
+	if runtime.GOARCH == "amd64" {
+		for _, x := range []struct{ path, embedded string }{
+			{"tools/go/BUILD.bazel", "bootstrap/sdk-amd64.BUILD.bazel"},
+			{"tools/go/version.bzl", "bootstrap/sdk-amd64.version.bzl"},
+			{"tools/go/ROOT", "bootstrap/sdk-amd64.ROOT"},
+			{"tools/go/REPO.bazel", "bootstrap/sdk-amd64.REPO.bazel"},
+			{"tools/metadata/typed-bazel/rules-go-sdk-LICENSE", "bootstrap/sdk-amd64.LICENSE"},
+		} {
+			want, err := bootstrap.ReadFile(x.embedded)
+			if err != nil {
+				return typedindex.Unprepared
+			}
+			got, err := readInventory(i.Inventory, x.path, int64(len(want)))
+			if err != nil || !bytes.Equal(got, want) {
+				return typedindex.Unprepared
+			}
+		}
+	}
 	b, e = readInventory(i.Inventory, "tools/cache/downloader.cfg", int64(len(launcher.NativeDownloaderConfig)))
 	if e != nil || string(b) != launcher.NativeDownloaderConfig {
 		return typedindex.Unprepared
@@ -121,7 +139,7 @@ func checkBuild(info *debug.BuildInfo, main string, typed bool) error {
 	if settings["GOOS"] != "linux" || settings["GOARCH"] != runtime.GOARCH || !typedindex.AdmittedNativeArch(settings["GOARCH"]) {
 		return typedindex.Unsupported
 	}
-	if main == "cmd/go" && info.GoVersion != "go1.25.0" {
+	if main == "cmd/go" && info.GoVersion != "go"+typedindex.NativeSDKVersion(settings["GOARCH"]) {
 		return typedindex.Unsupported
 	}
 	if typed {
@@ -151,7 +169,7 @@ func verifySDK(p planner.Plan) error {
 		return typedindex.Unsupported
 	}
 	for _, s := range p.SDKs {
-		if s.Root != nativeSDKRoot || s.Version != "1.25.0" {
+		if s.Root != nativeSDKRoot || s.Version != typedindex.NativeSDKVersion(s.Mode.GOARCH) {
 			return typedindex.Unsupported
 		}
 	}
