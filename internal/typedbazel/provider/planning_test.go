@@ -43,7 +43,7 @@ func TestPlannerThreeCommandSequence(t *testing.T) {
 	projection, _ := json.Marshal(map[string]any{"version": planner.ProjectionV2, "owner": owner, "roots": []string{"bazel-out/cfg/bin/lib/lib.x"}, "embeds": []string{}, "archives": []any{map[string]any{"name": "lib", "label": owner, "export": "bazel-out/cfg/bin/lib/lib.x", "import_path": "example.test/lib", "import_map": "example.test/lib", "go_files": []any{f}, "compiled_go_files": []any{f}, "other_files": []any{}, "imports": []any{}, "package_name": "lib", "source_imports": []string{}, "mode": planner.GoMode{GOOS: "linux", GOARCH: "arm64"}}}})
 	events := []string{}
 	command := func(_ context.Context, exe string, args, env []string, b *outputBudget) ([]byte, []byte, error) {
-		if exe != "/inputs/tools/bin/bazel" || !slices.Equal(env, launcher.BazelEnvironment()) || !slices.Contains(args, "--repository_disable_download") || !slices.Contains(args, "--lockfile_mode=error") || !slices.Contains(args, "--ignore_all_rc_files") || !slices.Contains(args, "--experimental_proto_descriptor_sets_include_source_info") {
+		if exe != "/inputs/tools/bin/bazel" || !slices.Equal(env, launcher.NativeBazelEnvironment()) || !slices.Contains(args, "--repository_disable_download") || !slices.Contains(args, "--lockfile_mode=error") || !slices.Contains(args, "--ignore_all_rc_files") || !slices.Contains(args, "--experimental_proto_descriptor_sets_include_source_info") {
 			t.Fatal("unclosed recipe", args)
 		}
 		switch {

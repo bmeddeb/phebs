@@ -85,7 +85,7 @@ func buildPlan(ctx context.Context, roots []string, command func(context.Context
 			return planner.Plan{}, e
 		}
 		args := append(append(append([]string{}, launcher.NativeBazelStartup()...), suffix...), launcher.NativeBazelCommon()...)
-		stdout, _, err := command(ctx, "/inputs/tools/bin/bazel", args, launcher.BazelEnvironment(), &budget)
+		stdout, _, err := command(ctx, "/inputs/tools/bin/bazel", args, launcher.NativeBazelEnvironment(), &budget)
 		if err != nil {
 			return planner.Plan{}, planningFailure(err)
 		}

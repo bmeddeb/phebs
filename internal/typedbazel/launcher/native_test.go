@@ -287,7 +287,7 @@ func testNativeCacheProfile(t *testing.T) {
 	native := NativeBazelCommon()
 	extra := []string{"--lockfile_mode=error", "--downloader_config=/inputs/tools/cache/downloader.cfg", "--repository_disable_download", "--repo_contents_cache=", "--experimental_repository_cache_hardlinks=false"}
 	if runtime.GOARCH == "amd64" {
-		extra = append(extra, "--override_repository=rules_go++go_sdk+go_default_sdk=/inputs/tools/go")
+		extra = append(extra, "--override_repository=rules_go++go_sdk+go_default_sdk=/inputs/tools/go", "--repo_env=GOMAXPROCS=2", "--action_env=GOMAXPROCS=2")
 	}
 	if len(native) != len(old)+len(extra) || native[0] != "--repository_cache=/inputs/tools/cache/repository" || native[2] != "--registry=https://bcr.bazel.build" || !slices.Equal(native[len(old):], extra) {
 		t.Fatal("native cache/registry/lock/downloader profile differs")
@@ -397,6 +397,26 @@ func TestNativeBazelStartupBudget(t *testing.T) {
 			if _, _, err := inspectNativeBazel(s, changed); err == nil {
 				t.Fatal("foreign JVM profile accepted")
 			}
+		}
+	}
+}
+
+func TestNativeBazelEnvironmentBudget(t *testing.T) {
+	legacy := BazelEnvironment()
+	for _, arch := range []string{"arm64", "amd64"} {
+		env := nativeBazelEnvironment(arch)
+		for i, value := range legacy {
+			want := value
+			if arch == "amd64" && value == "GOMAXPROCS=1" {
+				want = "GOMAXPROCS=2"
+			}
+			if env[i] != want {
+				t.Fatalf("%s changed another environment control", arch)
+			}
+		}
+		env[0] = "mutated"
+		if !slices.Equal(BazelEnvironment(), legacy) || nativeBazelEnvironment(arch)[0] == "mutated" {
+			t.Fatal("mutable or shared environment")
 		}
 	}
 }

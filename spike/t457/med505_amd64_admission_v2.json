@@ -118,6 +118,15 @@
     "cpu_period_micros": 100000,
     "shared_wall_seconds": 300,
     "legacy_arm64_unchanged": true,
-    "qualification": "pending"
+    "qualification": "pending",
+    "go_max_procs": 2,
+    "repository_and_action_go_max_procs": 2
+  },
+  "task_vm_disk": {
+    "original_virtual_gib": 32,
+    "new_virtual_gib": 64,
+    "reason": "preserve failed fixtures and satisfy actual unchanged capacity gates",
+    "cpu_ram_kernel_security_unchanged": true,
+    "deployment_rebinding_required": true
   }
 }
