@@ -104,7 +104,7 @@
       "no_oom_or_task_limit_events": true,
       "engine_joined": true,
       "full_custody_accounting_and_teardown_pass": false,
-      "next": "fresh native qualification of the amd64 JVM operating profile"
+      "next": "measure and qualify digest-pinned offline bootstrap tools"
     },
     "bazel_followup": {
       "source": "2c94aef6924a37da354b323f97eb2368fc33ad8d",
@@ -140,5 +140,125 @@
     "reason": "preserve failed fixtures and satisfy actual unchanged capacity gates",
     "cpu_ram_kernel_security_unchanged": true,
     "deployment_rebinding_required": true
+  },
+  "cold_planning_diagnostic": {
+    "source": "88a7eead1aef3f0cd0bb0fae3e32553efdca0ad8",
+    "actual_wait": 0,
+    "seconds": 137.92184199799885,
+    "command_millis": {
+      "aquery": 20680,
+      "build": 60385,
+      "compiler": 6996,
+      "cquery": 30292,
+      "final": 450,
+      "materialize": 369,
+      "plan": 111620,
+      "tools": 1511,
+      "verify": 494,
+      "wall": 121443
+    },
+    "postrun_actual_wait": 0
+  },
+  "amd64_bootstrap_tools": {
+    "rules_go_archive_sha256": "68af54cb97fbdee5e5e8fe8d210d15a518f9d62abfd71620c3eaff3b26a5ff86",
+    "sdk_go_sha256": "76ac600b41ad2eceee5d39d02af78009516f8b2a29f30bcc80f765c3e4b4f5a8",
+    "go_version": "1.25.7",
+    "goos": "linux",
+    "goarch": "amd64",
+    "cgo_enabled": false,
+    "rules_go_stdlib_prefix": "@@rules_go+//stdlib:",
+    "sources": {
+      "ar.go": "accd1829fadb1b746a7d542da1959bc7c6a25f82abedfc74737ccd9e7b20e6ff",
+      "asm.go": "8e05d2f012aa8e126a73ee4afe6ccbcc31acb332de75d163279736c76831e269",
+      "builder.go": "f45115c5dcee310e142c84ed974cd1814bc457cc0e656bc0aa252fab6c310a86",
+      "cc.go": "7efa3f2dceab0e59549d836806ce4d6bdf09d23b96ad6aea3adec00057b57996",
+      "cgo2.go": "dee514492df601aeaa373df3baee74209d96989444a4446837d511f73e436129",
+      "compilepkg.go": "b2b6ebd6c02b616df083e945838090b10658f4dbbb83641ee67774b09de79686",
+      "constants.go": "63669cc9caf133710b29a2a1be6b4d0cebef98a342c31a5bba4c360777ea30b4",
+      "cover.go": "9c3da228f7c65aca2afb67e09db4c7e472631b72cf5c67837b89d54a65ddd99a",
+      "edit.go": "a68b1d372b90a494eb7aa45a4721c469664905cb83bd11fb2471cd5abe28e6ef",
+      "embedcfg.go": "9a824b3403129836fb89747c2116d85cc4edddc4dcfac4b420d45f40482efc3c",
+      "env.go": "b2edae108d843d153c139789c61af5ad12fd20cd9e9682ee58dc38ae779336eb",
+      "filter.go": "d11e8883925420f05612f238fc18c2baf2d7c4c182680d3365ee12fc26df6f32",
+      "filter_buildid.go": "0048b7379675662a07b4fde7673cfcc14f0d642feb5f0a93d7a09a3444966ade",
+      "flags.go": "1ee3db0027897f6c1a090d78585813e5881805e2117f7e1eec1e6f8d495828d6",
+      "generate_nogo_main.go": "046d42c93b30923f6a45035fed6a36dce8d7ec640991f3d96afe164ef7f85356",
+      "generate_test_main.go": "dcf9557fd8b1d188d1da2233dd7c87b7a76f85d388d1319c8352c8d3666faa07",
+      "importcfg.go": "4c991425c30ad662e8438b3e641132084677745b8a3e08b1cdb160ce961b4ab3",
+      "link.go": "474cb6887355b8485ba54f1ab044b4d2b07d39920827891f19236b0d248c31e1",
+      "nogo.go": "fb79a9dd29c649b060bd2e5ec3b28a2de03db47da29890ff7016c015d10c8158",
+      "nogo_validation.go": "c25426adb342641d020f89689c8d0d2a04ece834efaabbb0a0637c44975e109f",
+      "path.go": "58e9c058a180451dc07f224cd91825b2934d32f03d226dfda953aa3685a25e13",
+      "read.go": "586e8426c9385ec703ab87261db452b9ee50b3e01a329fe6debcd4cc32a1487d",
+      "replicate.go": "d1ebba9df7bb792bfd43683fe0a8843a241b947e82aac6da0ce220770b3eb64c",
+      "stdlib.go": "68630884785d0c091a682a6ac53cd4dd4ed7aacddd6fb51b0384e62f0241f2f7",
+      "stdliblist.go": "4f0afbc3c23d94ea6a25de6fb2d4aa9879c00511af303f49f51ec1544a1d0dcc"
+    },
+    "reproduced": true,
+    "tools": {
+      "builder": {
+        "sha256": "b59577e0095185f9d7646d081d2c782712a1d0da89b72b83c3f120f600f7c993",
+        "bytes": 6679171
+      },
+      "pack.exe": {
+        "sha256": "b9a2b8c53589745883c8c9dbf26a3546ee1ee05969146fd012cccaa89e5061a3",
+        "bytes": 3016842
+      }
+    },
+    "builds": [
+      {
+        "round": 1,
+        "name": "pack.exe",
+        "actual_wait_exit": 0,
+        "seconds": 9.41801830500117
+      },
+      {
+        "round": 1,
+        "name": "builder",
+        "actual_wait_exit": 0,
+        "seconds": 4.779838323000149
+      },
+      {
+        "round": 2,
+        "name": "pack.exe",
+        "actual_wait_exit": 0,
+        "seconds": 10.421352356999705
+      },
+      {
+        "round": 2,
+        "name": "builder",
+        "actual_wait_exit": 0,
+        "seconds": 4.5290267240015964
+      }
+    ],
+    "recipe": {
+      "pack": [
+        "go",
+        "build",
+        "-p",
+        "2",
+        "-trimpath",
+        "-ldflags=-buildid= -X main.rulesGoStdlibPrefix=@@rules_go+//stdlib:",
+        "-o",
+        "pack.exe",
+        "cmd/pack"
+      ],
+      "builder": "same flags, output builder, exact sorted builder_srcs for Linux from rules_go/go/tools/builders/BUILD.bazel (25 files)",
+      "environment": {
+        "GO111MODULE": "off",
+        "CGO_ENABLED": "0",
+        "GOOS": "linux",
+        "GOARCH": "amd64",
+        "GOAMD64": "v1",
+        "GOTOOLCHAIN": "local",
+        "GOENV": "off",
+        "GOTELEMETRY": "off",
+        "GOPROXY": "off",
+        "GOSUMDB": "off",
+        "GOMAXPROCS": "2"
+      },
+      "cold_independent_cache_per_round": true
+    },
+    "native_cost_improvement": "not established; fresh native preparation and installed qualification required"
   }
 }

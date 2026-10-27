@@ -1,10 +1,9 @@
 # Generated from Apache-2.0 rules_go v0.59.0 go/private/BUILD.sdk.bazel.
-# Changes: canonical pinned repository labels and amd64 Go 1.25.7.
+# Changes: canonical pinned labels, amd64 Go 1.25.7 and admitted offline builders.
 # License: tools/metadata/typed-bazel/rules-go-sdk-LICENSE.
 load("@@rules_go+//go:def.bzl", "go_sdk")
-load("@@rules_go+//go/private:common.bzl", "RULES_GO_STDLIB_PREFIX")
 load("@@rules_go+//go/private:go_toolchain.bzl", "declare_go_toolchains")
-load("@@rules_go+//go/private/rules:binary.bzl", "go_tool_binary")
+load(":phebs_tools.bzl", "pinned_tool")
 load("@@rules_go+//go/private/rules:sdk.bzl", "package_list")
 load("@@rules_go+//go/private/rules:transition.bzl", "non_go_reset_target")
 
@@ -79,15 +78,15 @@ go_sdk(
     version = "1.25.7",
 )
 
-go_tool_binary(
+# Bootstrap binaries are built reproducibly from the pinned SDK/rules_go inputs.
+pinned_tool(
     name = "builder",
-    srcs = ["@@rules_go+//go/tools/builders:builder_srcs"],
-    exec_compatible_with = ["@@platforms//cpu:x86_64", "@@platforms//os:linux"],
-    ldflags = "-X main.rulesGoStdlibPrefix={}".format(RULES_GO_STDLIB_PREFIX),
-    # The .exe suffix is required on Windows and harmless on other platforms.
-    # Output attributes are not configurable, so we use it everywhere.
-    out_pack = "pack.exe",
-    sdk = ":go_sdk",
+    src = "pkg/tool/linux_amd64/phebs-rules-go-builder",
+)
+
+pinned_tool(
+    name = "pack.exe",
+    src = "pkg/tool/linux_amd64/phebs-pack",
 )
 
 non_go_reset_target(

@@ -118,3 +118,27 @@ func TestVerifyToolsSignatureUnchanged(t *testing.T) {
 	requireSignature := func(func(context.Context, Invocation) error) {}
 	requireSignature(verifyTools)
 }
+
+func TestBootstrapBuildAdmission(t *testing.T) {
+	for _, tc := range []struct {
+		name, main, version, arch, variant, cgo string
+		want                                    bool
+	}{
+		{"builder", "command-line-arguments", "go1.25.7", "amd64", "v1", "0", true},
+		{"pack", "cmd/pack", "go1.25.7", "amd64", "v1", "0", true},
+		{"old-sdk", "cmd/pack", "go1.25.0", "amd64", "v1", "0", false},
+		{"foreign-arch", "cmd/pack", "go1.25.7", "arm64", "v1", "0", false},
+		{"foreign-variant", "cmd/pack", "go1.25.7", "amd64", "v2", "0", false},
+		{"dynamic", "cmd/pack", "go1.25.7", "amd64", "v1", "1", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			info := buildInfo(tc.main, tc.version, map[string]string{"GOOS": "linux", "GOARCH": tc.arch, "GOAMD64": tc.variant, "CGO_ENABLED": tc.cgo})
+			if got := checkBootstrapBuild(info, tc.main) == nil; got != (tc.want && runtime.GOARCH == "amd64") {
+				t.Fatalf("bootstrap admission = %v, want %v on %s", got, tc.want, runtime.GOARCH)
+			}
+		})
+	}
+	if checkBootstrapBuild(nil, "cmd/pack") == nil {
+		t.Fatal("missing build metadata admitted")
+	}
+}
