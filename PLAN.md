@@ -16841,3 +16841,12 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Cost: two constant annotation objects per server construction and constant
   metadata per discovery response. No additional query/read, sync, retry,
   publication, corpus scan, lock, cache, disk or child-process work is added.
+
+  The requested full CI exposed the same missing `pgx/v5` imports on clean
+  main: application `./...` discovery included two source-only T26.1 corpus
+  packages. Add a nested module boundary at `spike/t261/corpus/go.mod`, outside
+  every recorded corpus input, so application CI does not compile external
+  fixture sources or acquire their dependencies. Verify the package inventory
+  loses only those two fixture packages and every previously tracked corpus
+  byte remains exact. The evaluator, its own reader modules, frozen manifests,
+  receipts and product test packages are unchanged.

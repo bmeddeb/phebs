@@ -23470,6 +23470,10 @@ Acceptance:
   visibility checks and output bounds; run handler and permission regressions.
 - Pass pinned-tool local CI, documentation checks and source/cost review before
   the requested merge. A deployed provider connection and release stay separate.
+- Repair the clean-main CI package-discovery leak with a module boundary around
+  the source-only T26.1 corpus. Verify that only its two fixture packages leave
+  application discovery and all retained input bytes remain exact; add no
+  third-party fixture dependencies to the application module.
 
 Owning decision: PLAN.md, 2026-10-27 MED-386. Implementation branch:
 `mac/med386-mcp-readonly`. Companion consumer normalizer is already merged in
