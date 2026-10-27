@@ -17302,3 +17302,16 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   formatting journals/images and the QCOW2 remain preserved as held evidence.
   The task seed HTTP server is stopped. This establishes no cleanup PASS for
   either failed attempt and changes no existing host workload or Codex helper.
+
+- **2026-10-27 — MED-505 precompiled SDK CPU-mode admission correction.**
+  Independent review found that the default-mode guard omitted rules_go's
+  amd64 CPU variant. The admitted archives are v1; the pinned rules_go API
+  represents that default with `mode.amd64=None`. Reject any nondefault variant
+  when selecting these precompiled amd64 libraries. An offline Starlark
+  interpreter evaluated the exact guard:15 positive/negative cases pass,
+  including v2/v3/v4 refusals, and removing the correction reproduces the v3
+  counterexample. This is a behavioral source regression, not the still-pending
+  native configured-platform negative control or installed qualification.
+  Cost:one scalar comparison per existing precompiled-SDK projection; no new
+  I/O, child, lock, cache, request, sync or publication work. All limits and
+  held-custody predicates remain unchanged.

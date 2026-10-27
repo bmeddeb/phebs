@@ -2189,5 +2189,18 @@
     "old_failures_not_relabelled_clean": true,
     "task_seed_http_server_stopped": true,
     "source_inputs_archives_other_workloads_and_codex_helpers_preserved": true
+  },
+  "sdk_cpu_mode_review_correction": {
+    "finding": "Independent medium: mode.amd64 omitted from admitted v1 SDK guard",
+    "fix": "Reject nondefault amd64 mode when SDK archives selected; pinned rules_go default is None",
+    "behavioral_regression": {
+      "scope": "Exact extracted Starlark predicate; not Bazel native or installed qualification",
+      "actual_wait_exit": 0,
+      "cases": 15,
+      "old_source_v3_counterexample_reproduced": true,
+      "receipt_sha256": "d91ec954c6fd12124f6243b077e0d95d3dd953e7fd04491ecfebbc1420add7d8"
+    },
+    "native_negative_controls": "pending clean admitted scratch custody",
+    "cost": "one scalar comparison per existing SDK projection; no new I/O/child/lock/cache or ordinary request/sync/publication work"
   }
 }

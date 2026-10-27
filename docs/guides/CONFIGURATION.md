@@ -1396,7 +1396,8 @@ The MED-505 amd64 admission candidate includes two digest-pinned static rules_go
 bootstrap tools built reproducibly from its pinned SDK and dependency sources.
 They replace repeated tool bootstrap during execution. A refreshed SDK can also
 carry reproducibly built standard-library archives for the exact default
-linux/amd64 cgo mode, with empty tags and normal linking. Other modes refuse
+linux/amd64 v1 cgo mode, with empty tags and normal linking. Other CPU variants
+and modes refuse
 that library set. Standard-library source listing, package typechecking and SCIP
 still run under the same limits; the source-build SDK path remains available
 without precompiled archives.
