@@ -85,6 +85,7 @@ func TestNativeAcceptanceHostPreparationObservation(t *testing.T) {
 		name    string
 		err     error
 		cancel  bool
+		expired bool
 		refused bool
 		custody bool
 		errno   uint64
@@ -95,9 +96,14 @@ func TestNativeAcceptanceHostPreparationObservation(t *testing.T) {
 		{name: "custody", err: typedsandbox.ErrCustody, custody: true},
 		{name: "caller-canceled", err: context.Canceled, cancel: true},
 		{name: "deadline", err: context.DeadlineExceeded},
+		{name: "expired-context", err: context.DeadlineExceeded, expired: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx, cancel := context.WithDeadline(t.Context(), time.Now().Add(time.Minute))
+			until := time.Now().Add(time.Minute)
+			if tc.expired {
+				until = time.Now().Add(-time.Second)
+			}
+			ctx, cancel := context.WithDeadline(t.Context(), until)
 			defer cancel()
 			deadline, _ := ctx.Deadline()
 			options := typedsandbox.HostScratchOptions{RequestDigest: "planning", AttemptDigest: "attempt", Socket: "/private/socket"}
@@ -137,11 +143,18 @@ func TestNativeAcceptanceHostPreparationObservation(t *testing.T) {
 				t.Fatal("original preparation result changed")
 			}
 			row := result.HostPreparation[0]
-			if row.ElapsedNanos < 0 || row.EnteredUTC.IsZero() || !row.DeadlineUTC.Equal(deadline) || row.ContextBefore != "live" || row.Refused != tc.refused || row.Custody != tc.custody || row.Errno != tc.errno || row.ReturnedError != (tc.err != nil) || row.Canceled != errors.Is(tc.err, context.Canceled) || row.Deadline != errors.Is(tc.err, context.DeadlineExceeded) {
+			before := "live"
+			if tc.expired {
+				before = "deadline"
+			}
+			if row.ElapsedNanos < 0 || row.EnteredUTC.IsZero() || !row.DeadlineUTC.Equal(deadline) || row.ContextBefore != before || row.Refused != tc.refused || row.Custody != tc.custody || row.Errno != tc.errno || row.ReturnedError != (tc.err != nil) || row.Canceled != errors.Is(tc.err, context.Canceled) || row.Deadline != errors.Is(tc.err, context.DeadlineExceeded) {
 				t.Fatal("original error/deadline observation lost", row)
 			}
 			if (row.ContextAfter == "canceled") != tc.cancel {
 				t.Fatal("context state changed", row)
+			}
+			if (row.ContextAfter == "deadline") != tc.expired {
+				t.Fatal("expired context state changed", row)
 			}
 			for range 2 {
 				_, _ = controller.native.prepare(ctx, options, gate)
@@ -154,5 +167,33 @@ func TestNativeAcceptanceHostPreparationObservation(t *testing.T) {
 				t.Fatal("private error/path leaked or observation overflowed")
 			}
 		})
+	}
+}
+
+func TestNativeAcceptanceFirstHostAllowanceObservation(t *testing.T) {
+	ctx := t.Context()
+	wantErr := errors.New("unchanged begin error")
+	calls := 0
+	controller := &Controller{native: nativeOperations{begin: func(got context.Context, planning, attempt string) (typedsandbox.Allowance, error) {
+		calls++
+		if got != ctx || planning != "planning" || attempt != "attempt" {
+			t.Fatal("begin inputs changed")
+		}
+		a := typedsandbox.Allowance{Start: int64(calls), Deadline: 300}
+		if calls == 1 {
+			return a, wantErr
+		}
+		return a, nil
+	}}}
+	var result acceptanceChildResult
+	acceptanceObserveHostPreparation(controller, &result)
+	for n := 1; n <= 3; n++ {
+		a, err := controller.native.begin(ctx, "planning", "attempt")
+		if a.Start != int64(n) || a.Deadline != 300 || (n == 1 && err != wantErr) || (n > 1 && err != nil) {
+			t.Fatal("original begin result changed", a, err)
+		}
+		if n == 1 && result.HostAllowance != nil || n > 1 && (result.HostAllowance == nil || result.HostAllowance.Start != 2) {
+			t.Fatal("first successful allowance not retained", result.HostAllowance)
+		}
 	}
 }
