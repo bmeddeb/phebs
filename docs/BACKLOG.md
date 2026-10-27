@@ -18183,6 +18183,12 @@ demonstrated cause/fix, fresh exact admission, native mode negatives and full
 installed qualification remain required. No namespace/process policy or held
 journal is changed.
 
+MED-695 SafeFiles setup correction (2026-10-27): an independent bounded
+diagnostic identifies Go1.26.5's numbered TempDir mode under inherited0002
+umask as the baseline ownership refusal. Make only this test's fresh base0700;
+retain the strict checker and all native/formatter/custody gates. This is a
+test-setup correction, not the installed host-preparation root cause.
+
 **T45.10a · Admit both native resource profiles in Settings** *(follows the
 T45.10 review; presentation handoff)* — an available amd64 installation reports
 `native-amd64-bounded-v1`, which the existing Settings validators reject, so the

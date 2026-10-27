@@ -17094,3 +17094,14 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   child, signal, lock or hashing is added inside preparation. Ordinary runtime,
   query/request, sync, retry/no-op and publication behavior is unchanged. The
   namespace, formatter, process and shutdown implementations are untouched.
+
+- **2026-10-27 — MED-695 private file-check fixture ancestry.**
+  The independent unprivileged diagnostic reproduced the SafeFiles baseline
+  refusal: Go1.26.5 requests0777 for the numbered `t.TempDir` child, producing
+  0775 under this shell's inherited0002 umask. The unchanged native ownership
+  checker correctly rejects that non-sticky group-writable ancestor. Make only
+  the SafeFiles test's newly created base0700 before creating its0600 fixture.
+  Keep the checker, global umask and actual native host admission unchanged.
+  This closes the demonstrated test setup difference; it does not explain the
+  installed formatter failure or reclaim either held scratch image. Cost is
+  one chmod in this test only, with no runtime or native-policy change.

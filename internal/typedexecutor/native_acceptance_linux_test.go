@@ -1793,6 +1793,9 @@ func acceptanceDrain(ctx context.Context, c nativeAcceptanceConfig, s *store.Sur
 
 func TestNativeAcceptanceSafeFiles(t *testing.T) {
 	base := t.TempDir()
+	if err := os.Chmod(base, 0700); err != nil {
+		t.Fatal(err)
+	}
 	good := filepath.Join(base, "good")
 	if e := os.WriteFile(good, []byte("x"), 0600); e != nil {
 		t.Fatal(e)
