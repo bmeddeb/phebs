@@ -133,6 +133,12 @@ def _impl(target, ctx):
         sdk_version = {"arm64": "1.25.0", "amd64": "1.25.7"}.get(mode.goarch)
         if sdk.version != sdk_version or sdk.root_file.dirname != "external/rules_go++go_sdk+go_default_sdk":
             fail("T45.1b selected SDK provider differs from frozen native profile")
+        # Offline amd64 archives cover exactly the admitted default cgo mode.
+        if mode.goarch == "amd64" and sdk.libs.to_list():
+            if (mode.goos != "linux" or mode.pure or mode.tags or mode.race or
+                mode.msan or mode.gc_goopts or mode.linkmode != "normal" or
+                mode.static or mode.pgoprofile):
+                fail("T45.1b precompiled SDK libraries require the admitted default mode")
         for f in ctx.files._sdk_helper_srcs:
             if not f.path.startswith(sdk.root_file.dirname + "/src/"):
                 fail("T45.1b helper File belongs to another SDK")

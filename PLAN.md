@@ -17167,7 +17167,7 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   separate from the still-open installed Bazel gate. The existing opt-in
   preparation's `stage_millis` map now retains three monotonic command durations
   (cquery, aquery, build) beside the unchanged raw buffers, digests and whole-plan
-  duration. This test-only capture adds three clock reads and three fixed map
+  duration. This test-only capture adds six clock reads and three fixed map
   entries, changes no production path, schema, limit, authority or native command,
   and permits choosing the next cost correction from actual command evidence.
 
@@ -17196,7 +17196,62 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   label file. Each native Bazel graph replaces one cold GoToolchainBinaryBuild
   action (two Go builds and cache cleanup) with two bounded symlink actions.
   No new process, lock, source scan, cache, query/request, sync, retry/no-op or
-  publication work is added. Private SDK input and scratch copies grow by the
-  same9,696,013 bytes under unchanged inventory/scratch bounds. The shared wall,
+  publication work is added. Private SDK input copies grow by9,696,013 bytes plus exact label metadata;
+  scratch adds two symlinks and omits the old compiled bootstrap tools/cache.
+  Verification reads the tools sequentially under their individual6,679,171
+  and3,016,842-byte bounds, then reads their build metadata with closed FDs.
+  Existing worker/workspace lock scope and128-FD bounds remain unchanged. The shared wall,
   output, memory, CPU, task and descriptor ceilings, serial Bazel execution and
   original JVM/Go operating vectors remain exact.
+
+- **2026-10-27 — MED-505 bootstrap admission and measured preparation.**
+  Exact `f6bf332fd282bfd9a130a6200a143ac57f767e6d` passes changed normal/race,
+  vet/pinned lint, docs/glossary and six frozen builds. Its root executor suite
+  passed46.469s, installed-command/source-CAS/image preflight also passed.
+  Native preparation returned actual Wait0/108.061s, post-run sealing
+  Wait0/2.823s, with the isolated seed store joined. Cquery26.234s,
+  aquery22.273s and build30.330s total79.094s, compared with the prior
+  measured111.620s planning. Independent raw-result control reassembly matches
+  inventory/profile/selection/universe. A fresh source/epoch and current VM
+  binding authorize one installed neutral Bazel acceptance attempt. This
+  preparation establishes neither its publication/accounting/teardown PASS
+  nor arbitrary repository, waived-corpus, scale or release acceptance.
+
+- **2026-10-27 — MED-505 installed bootstrap attempt remains a wall STOP.**
+  The fresh exact `f6bf332f` attempt returned actual Wait1/535.377s. Planning
+  exited0 and execution exited124 at the unchanged shared300-second deadline,
+  still in package-load/typecheck after69.724s there. Execution planning took
+  83.619s. Both containers were removed with verified limits and no OOM/task-limit
+  events (peak2,704,162,816 bytes); engine join and emergency handling completed.
+  Publication, no-replay, growth release and full native/workspace cleanup did
+  not pass. Preserve the failed fixture and raw evidence. The reduced tool
+  bootstrap cost is measured, but does not establish installed availability.
+  Next inspect the existing rules_go precompiled SDK-library material path;
+  source listing, package typechecking and SCIP stay required under the same
+  limits. No policy or acceptance bound is relaxed.
+
+- **2026-10-27 — MED-505 prospective precompiled SDK libraries.**
+  The existing rules_go SDK contract already admits standard-library archives;
+  its ordinary native package-export build otherwise recompiles them in every
+  cold execution. Two independent network-disabled builds with the admitted
+  Go1.25.7 SDK, GCC sysroot and runtime image reproduce344 archives totaling
+  156,540,166 bytes via `GODEBUG=installgoroot=all go install -p 2 -trimpath std`.
+  The source-free material record binds every archive's size/digest, complete
+  build environment and actual exits. They are immutable SDK inputs in the new
+  source-bound inventory/profile, rather than a mutable build cache. The exact
+  owned aspect additionally refuses precompiled amd64 libraries outside the
+  admitted linux/default-cgo/empty-tags/normal-link mode (including race, msan,
+  custom compiler options, static mode and PGO); such modes need an independently
+  admitted library set or the existing source-build SDK without these archives.
+  The upstream GoStdlibList/source-sealing, package typecheck, SCIP and returned
+  evidence checks remain required. No target source or public frozen controls
+  are rewritten, and no resource bound changes. Native preparation and full
+  installed acceptance remain separate pending gates.
+
+  Cost:344 immutable input files add156,540,166 bytes to each existing complete
+  input inventory verification/copy; the existing SDK `libs` glob and Bazel
+  input declaration select them. One constant mode guard runs at each existing
+  SDK projection. The existing GoStdlib build action is replaced by admitted SDK
+  inputs in this mode; GoStdlibList still runs. No new query/request, sync tick,
+  publication transition, lock, concurrency, child or cache is introduced; all
+  memory, scratch, descriptor, task, CPU, output and wall bounds remain exact.
