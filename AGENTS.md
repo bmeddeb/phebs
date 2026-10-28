@@ -69,6 +69,25 @@ bare repos · Vite + React + TS + CodeMirror 6 in `ui/`, embedded in the binary.
 - **Agents never merge into `main` without Ben's explicit request** (2026-07-22).
  Passing the merge bar authorizes a merge *request*, not the merge itself;
  completed ticket work stays on its ticket branch until Ben says to integrate.
+- **Standing merge-on-green permission (2026-10-27, Ben-directed; amends the
+  2026-07-22 rule and the machine-track merge sentence).** An agent may merge
+  an open PR into `main` without a separate request once it is green locally:
+  rebased on current `main`, its diff unchanged in substance, and `make
+  ci-static`, `make ci-go` and `make ci-race` run on that exact head commit on
+  a Linux amd64 host (e.g. `rose`) with the pinned Go, golangci-lint and
+  SurrealDB and a private `GOLANGCI_LINT_CACHE`, since a shared lint cache can
+  replay another checkout's results. GitHub Actions is not part of the bar
+  (Ben, 2026-10-28); Darwin runs are extra coverage only. `ci-static` and
+  `ci-race` must pass. Until MED-701 restores a passing Linux `ci-go` on
+  `main`, `ci-go` is green when its failing packages and tests are a subset
+  of `main`'s recorded Linux baseline on the same host (MED-701 lists it);
+  any new failing package or test is red. This baseline rule is weaker than a
+  pass (it cannot see regressions inside already-failing tests), so it ends
+  when MED-701 closes. Merge by verified fast-forward, stacked PRs
+  base-first, each head green on its own. A red, partial or unrun gate keeps
+  the old rule. This grants no ceremony, release, host admission or scale
+  claim, and the second merger still reruns `make docs-check` and
+  `make verify-glossary` after resolving spine conflicts.
 - **Task-scoped freeze delegation (2026-09-05).** Ben explicitly delegates
   decisions and agent orchestration through the next T42.2 ceremony freeze,
   including reviewed prerequisite integration/push and V3 author/seal after

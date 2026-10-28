@@ -17042,3 +17042,29 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   No global wait, production subreaper, new signal authority, corpus read or
   hash is added. Production query/request, sync, startup/restart, retry/no-op,
   publication, locks, caches, memory/disk and child bounds remain unchanged.
+
+- **2026-10-27 — Standing merge-on-green permission.** Ben grants agents
+  standing permission to merge green PRs into `main`, amending the 2026-07-22
+  explicit-request rule; AGENTS.md records the exact bar. GitHub shows Actions
+  disabled for the repository, and Ben decided (2026-10-28) to skip GitHub
+  Actions: green is local, the pinned `ci-static`, `ci-go` and `ci-race`
+  targets on the exact rebased head on a Linux amd64 host with a private lint
+  cache. The first such run of `main` (`df5c21d0`, rose) passed `ci-static`
+  and `ci-race` but failed `ci-go` in `internal/dispatchadmission`,
+  `internal/typedexecutor`, `spike/t323`, `spike/t4013` and `spike/t421`, a
+  Linux debt hidden while no full Linux run gated merges. Ben chose
+  (2026-10-28) a baseline-relative `ci-go` bar: no failing package or test
+  outside that recorded set, tracked to removal by MED-701, rather than
+  holding all merges. Merges stay verified fast-forwards, base-first for
+  stacks. First use (2026-10-28): #171 was held red (three `spike` pin
+  tests it breaks); Ben merged the #168-#170 stack on #170's within-baseline
+  gate after #168 and #169 each showed one host-caused failure (a SurrealDB
+  port collision from concurrent gate stacks; rose's `/tmp` tmpfs filled by
+  timed-out runs), with solo reruns as after-the-fact confirmation. Gate
+  stacks on one host run serially under `umask 022`, each gate with a private
+  0700 `TMPDIR` on `/tmp` removed afterwards (a group-writable or on-disk
+  `TMPDIR` fails custody and disk-watermark tests on rose). No ceremony,
+  release, host admission or scale authority changes.
+
+  Cost: process only; no product query, sync, startup, retry, publication,
+  lock, cache, disk or child-process work changes.
