@@ -1483,6 +1483,7 @@ func frozenReceiptTestBinding(t *testing.T, plan Plan) ExecutionFreezeBinding {
 	return admittedExecutionFreezeTestBinding(t, plan, executionFreezeTestCommits())
 }
 
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 func completeV5ReceiptTestPlan(t *testing.T) Plan {
 	t.Helper()
 	plan := clonePlan(t, correctedTestPlan(t))

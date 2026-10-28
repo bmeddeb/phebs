@@ -51,8 +51,8 @@ type epochPressureObservations struct {
 	sampleOrdinal                uint8
 	samples                      ExecutionPressureSamples
 	ballast                      [4]executionPressureBallastObservation
-	quiet                        executionPressureBallastSettlement
-	quietComplete                bool
+	quiet                        executionPressureBallastSettlement //nolint:unused // Darwin execution flow only; unused in Linux builds.
+	quietComplete                bool                               //nolint:unused // Darwin execution flow only; unused in Linux builds.
 	prePressureWorkspace         custodybytes.Sample
 	prePressureWorkspaceObserved bool
 }
@@ -293,6 +293,7 @@ func (reader *executionEpochInspection) retainPressureBallast(index uint32, muta
 	}
 }
 
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 func (reader *executionEpochInspection) retainPressureQuiet(observation executionPressureBallastSettlement, err error) {
 	reader.mu.Lock()
 	defer reader.mu.Unlock()

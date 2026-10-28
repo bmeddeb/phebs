@@ -7,6 +7,8 @@ import (
 
 // Every state identity is independently inventoried by the native archive
 // owner. The manifest describes component transport bytes, not restored state.
+//
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 type executionArchiveReceiptObservation struct {
 	Manifest                                                       recovery.ArchiveTransitionManifest
 	StateInventories                                               [3]SetIdentity
@@ -19,6 +21,7 @@ type executionArchiveSemanticObservation struct {
 	CallerProjection SetIdentity
 }
 
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 func composeExecutionArchiveTransition(plan Plan, measurement PhaseMeasurement, authority map[string]AuthorityPhaseResult,
 	observed executionArchiveReceiptObservation, events map[string]uint64,
 ) (ArchiveTransition, error) {

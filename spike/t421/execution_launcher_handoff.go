@@ -12,6 +12,7 @@ import (
 	"time"
 )
 
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 const (
 	executionPreclaimFailureSchema   = "t422-source-free-preclaim-failure-v1"
 	maxExecutionPreclaimFailureBytes = 256
@@ -48,14 +49,17 @@ const (
 	executionPreclaimStageCeremonyClaim       executionPreclaimStage = "ceremony_claim"
 )
 
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 type executionPreclaimStage string
 
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 type executionPreclaimFailureV1 struct {
 	Schema  string                 `json:"schema"`
 	Stage   executionPreclaimStage `json:"stage"`
 	Cleanup string                 `json:"cleanup"`
 }
 
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 func validExecutionPreclaimStage(stage executionPreclaimStage) bool {
 	switch stage {
 	case executionPreclaimStagePreflight,
@@ -94,6 +98,7 @@ func validExecutionPreclaimStage(stage executionPreclaimStage) bool {
 	}
 }
 
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 func canonicalExecutionPreclaimFailure(value executionPreclaimFailureV1) ([]byte, error) {
 	if value.Schema != executionPreclaimFailureSchema || !validExecutionPreclaimStage(value.Stage) ||
 		(value.Cleanup != "clean" && value.Cleanup != "retained_or_unavailable") {
@@ -106,6 +111,7 @@ func canonicalExecutionPreclaimFailure(value executionPreclaimFailureV1) ([]byte
 	return append(raw, '\n'), nil
 }
 
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 func decodeExecutionPreclaimFailure(raw []byte) (executionPreclaimFailureV1, error) {
 	var value executionPreclaimFailureV1
 	if len(raw) < 2 || len(raw) > maxExecutionPreclaimFailureBytes || raw[len(raw)-1] != '\n' || bytes.Count(raw, []byte{'\n'}) != 1 {
@@ -123,6 +129,7 @@ func decodeExecutionPreclaimFailure(raw []byte) (executionPreclaimFailureV1, err
 	return value, nil
 }
 
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 type executionAuthorizationHandoffFrame struct {
 	value    executionAuthorizationHandoffV1
 	preclaim executionPreclaimFailureV1
@@ -131,6 +138,8 @@ type executionAuthorizationHandoffFrame struct {
 }
 
 // Both message types share one buffered reader, preserving coalesced bytes.
+//
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 func readExecutionAuthorizationHandoff(buffered *bufio.Reader) executionAuthorizationHandoffFrame {
 	raw, err := buffered.ReadSlice('\n')
 	if err != nil || len(raw) < 2 || len(raw) > maxExecutionAuthorizationHandoffFrameBytes {
@@ -148,11 +157,13 @@ func readExecutionAuthorizationHandoff(buffered *bufio.Reader) executionAuthoriz
 	return executionAuthorizationHandoffFrame{preclaim: preclaim, raw: raw}
 }
 
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 type executionReturnedOutput struct {
 	raw []byte
 	err error
 }
 
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 func captureExecutionReturnedOutput(reader io.Reader, frame chan<- executionAuthorizationHandoffFrame, returned chan<- executionReturnedOutput) {
 	buffered := bufio.NewReaderSize(reader, maxExecutionAuthorizationHandoffFrameBytes)
 	captured := readExecutionAuthorizationHandoff(buffered)
@@ -174,6 +185,7 @@ func captureExecutionReturnedOutput(reader io.Reader, frame chan<- executionAuth
 	returned <- executionReturnedOutput{raw: raw, err: err}
 }
 
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 func emitExecutionPreclaimFailure(ctx context.Context, output *executionAuthorizationOutput, value executionPreclaimFailureV1) error {
 	if ctx == nil || ctx.Err() != nil || output == nil || output.used {
 		return errExecutionAuthorization

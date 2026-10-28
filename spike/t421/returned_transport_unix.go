@@ -23,6 +23,8 @@ func emitExecutionReturnedPackage(ctx context.Context, output *executionAuthoriz
 }
 
 // Outer publication consumes only the independent verifier's output capability.
+//
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 func emitExecutionVerifiedReturnedPackage(ctx context.Context, output *executionAuthorizationOutput, value *executionVerifiedReturnedPackage) error {
 	if output == nil || !output.used || output.packageUsed || value == nil || value.used ||
 		len(value.raw) == 0 || uint64(len(value.raw)) > frozenSealPolicy().MaximumPackageBytes || SHA256(value.raw) != value.digest {

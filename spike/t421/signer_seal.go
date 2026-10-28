@@ -38,7 +38,7 @@ type executionSignerSealCustody struct {
 	freeze            ExecutionFreeze
 	firstVerifiedAt   time.Time
 	admissionUsed     bool
-	packageUsed       bool
+	packageUsed       bool //nolint:unused // Darwin execution flow only; unused in Linux builds.
 	sourceSignature   *executionSignerHeldFile
 	returnedSignature *executionSignerHeldFile
 	closed            bool

@@ -11,6 +11,8 @@ import (
 
 // executionVerifiedReturnedPackage is only an output capability. It grants no
 // checkout, profile or operational admission and cannot resume an execution.
+//
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 type executionVerifiedReturnedPackage struct {
 	raw     []byte
 	receipt Receipt
@@ -21,6 +23,8 @@ type executionVerifiedReturnedPackage struct {
 // verifyExecutionReturnedPackage authenticates child output against the exact
 // freeze already handed to the operator by the held inner image. It never
 // reconstructs the inner's private admission bindings from returned JSON.
+//
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 func verifyExecutionReturnedPackage(ctx context.Context, raw []byte, selection executionSelectionV1, freezeSHA256 string) (*executionVerifiedReturnedPackage, error) {
 	if ctx == nil || ctx.Err() != nil || !validExecutionSelection(selection) || !validExecutionHexSHA256(freezeSHA256) {
 		return nil, ErrExecutionLauncher
@@ -83,6 +87,7 @@ func verifyExecutionReturnedPackage(ctx context.Context, raw []byte, selection e
 	return &executionVerifiedReturnedPackage{raw: bytes.Clone(raw), receipt: receipt, digest: SHA256(raw)}, nil
 }
 
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 func decodeExecutionReturnedCanonical(raw []byte, value any) error {
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.DisallowUnknownFields()

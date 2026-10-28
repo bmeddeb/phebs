@@ -16899,3 +16899,17 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   counts, projections, safety caps and V1-V5 expectations. A real direct-scanner
   regression compares the absent callback with an actual empty projection and
   verifies that reason substitution alone explains the exact serialized delta.
+
+- **2026-10-27 — Linux lint gate for Darwin-only T42.1 spike declarations.**
+  The `ci.yml` static gate runs on Linux, where `golangci-lint` reports 72
+  `unused` declarations in `spike/t421` across two rounds: they live in files
+  built on both `darwin` and `linux`, but every caller is a `_darwin` file.
+  GitHub Actions is disabled for the repository, so main's recent CI repairs
+  were verified only on Darwin and this Linux finding went unseen. Ben directs
+  fixing main first, from the Mac checkout, before integrating the open Linux
+  stacks; this is a recorded Linux-track crossing. Mark exactly the reported
+  declarations with `//nolint:unused` and a Darwin-only reason. No code, build
+  tag, receipt, fixture or linter configuration changes, so Darwin lint keeps
+  full `unused` coverage for this package and Linux keeps it everywhere else.
+
+  Cost: none at runtime; comment directives only.

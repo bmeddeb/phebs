@@ -28,6 +28,8 @@ var ErrExecutionEpochOne = errors.New("execution epoch-one launch unavailable or
 
 // executionPhaseFailure is private failed-run troubleshooting state. It is not
 // receipt evidence and is populated only after the phase operation returns.
+//
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 type executionPhaseFailure struct {
 	phase     string
 	operation error
@@ -74,7 +76,7 @@ type ExecutionEpochOne struct {
 	executionPhaseEvents    *executionPhaseEventRecorder
 	executionEvidenceEvents map[string]uint64
 	executionEvidenceTimes  map[string]time.Time
-	executionPhaseFailures  map[string]executionPhaseFailure
+	executionPhaseFailures  map[string]executionPhaseFailure //nolint:unused // Darwin execution flow only; unused in Linux builds.
 }
 
 // PrepareExecutionEpochOne starts no child. It rechecks the author's admitted

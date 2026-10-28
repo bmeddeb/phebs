@@ -18,6 +18,7 @@ import (
 	"time"
 )
 
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 func createExecutionReturnedPackage(
 	ctx context.Context,
 	plan Plan,
@@ -128,6 +129,7 @@ func createExecutionReturnedPackage(
 	return packageRaw, packageBinding, nil
 }
 
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 func signExecutionReturnedPayloadLocked(
 	ctx context.Context,
 	key *executionSignerKeyCustody,
@@ -153,6 +155,7 @@ func signExecutionReturnedPayloadLocked(
 	return stage, nil
 }
 
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 type executionSourceVerificationV1 struct {
 	Schema                string                                `json:"schema"`
 	PlanSHA256            string                                `json:"plan_sha256"`
@@ -163,6 +166,7 @@ type executionSourceVerificationV1 struct {
 	SourceFree            bool                                  `json:"source_free"`
 }
 
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 type executionSourceVerificationRevision struct {
 	Name                      string               `json:"name"`
 	BaseCommit                string               `json:"base_commit"`
@@ -181,6 +185,7 @@ type executionSourceVerificationRevision struct {
 	CommitOID                 string               `json:"commit_oid"`
 }
 
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 type executionReturnedManifestV1 struct {
 	Schema                string `json:"schema"`
 	PlanSHA256            string `json:"plan_sha256"`
@@ -193,6 +198,8 @@ type executionReturnedManifestV1 struct {
 // buildExecutionReturnedPackage spends the sealed freeze's sole package
 // attempt. It returns bytes only after the complete archive and Receipt have
 // been independently decoded and authenticated.
+//
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 func buildExecutionReturnedPackage(
 	ctx context.Context,
 	plan Plan,
@@ -212,12 +219,15 @@ func buildExecutionReturnedPackage(
 	return createExecutionReturnedPackage(ctx, plan, receipt, binding, seal)
 }
 
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 func executionSourceVerificationBytes(plan Plan, binding ExecutionFreezeBinding, revisions []RevisionResult) ([]byte, error) {
 	return executionSourceVerificationBytesForFreeze(plan, binding.planSHA256, binding.freezeSHA256, revisions)
 }
 
 // This serializer consumes digests, not an operational admission capability.
 // Both the admitted signer and the outer authenticated-byte verifier use it.
+//
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 func executionSourceVerificationBytesForFreeze(plan Plan, expectedPlanSHA256, freezeSHA256 string, revisions []RevisionResult) ([]byte, error) {
 	if !processAccountingPlanSemantics(plan.Schema) || len(revisions) != len(plan.Revisions.Physical) {
 		return nil, ErrExecutionEpochOne
@@ -263,6 +273,7 @@ func executionSourceVerificationBytesForFreeze(plan Plan, expectedPlanSHA256, fr
 	return raw, nil
 }
 
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 func validateExecutionSourceVerification(raw []byte, plan Plan, receipt Receipt, binding ExecutionFreezeBinding) error {
 	want, err := executionSourceVerificationBytes(plan, binding, receipt.RevisionResults)
 	if err != nil || !bytes.Equal(raw, want) || receipt.Authority.SourceVerificationSHA256 != SHA256(raw) {
@@ -277,6 +288,7 @@ func validateExecutionSourceVerification(raw []byte, plan Plan, receipt Receipt,
 	return nil
 }
 
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 func executionReturnedChecksums(files map[string][]byte, coverage []string) ([]byte, error) {
 	var result strings.Builder
 	for _, name := range coverage {
@@ -290,6 +302,7 @@ func executionReturnedChecksums(files map[string][]byte, coverage []string) ([]b
 	return []byte(result.String()), nil
 }
 
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 func marshalExecutionReturnedPackage(files map[string][]byte, plan Plan) ([]byte, error) {
 	var compressed bytes.Buffer
 	gzipWriter := gzip.NewWriter(&compressed)
@@ -326,6 +339,7 @@ func marshalExecutionReturnedPackage(files map[string][]byte, plan Plan) ([]byte
 	return slices.Clone(compressed.Bytes()), nil
 }
 
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 func executionReturnedBinding(plan Plan, receipt Receipt, binding ExecutionFreezeBinding, packageRaw, checksums, source []byte, signer string) (ReturnedPackageBinding, error) {
 	receiptDigest, err := receiptSHA256(receipt)
 	if err != nil {
@@ -351,6 +365,7 @@ func executionReturnedBinding(plan Plan, receipt Receipt, binding ExecutionFreez
 	}, nil
 }
 
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 func validExecutionReturnedChecksum(raw []byte, files map[string][]byte, coverage []string) bool {
 	want, err := executionReturnedChecksums(files, coverage)
 	if err != nil || !bytes.Equal(raw, want) {

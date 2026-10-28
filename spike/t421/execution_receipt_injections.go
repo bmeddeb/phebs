@@ -9,6 +9,8 @@ import (
 // hit/recovered control states. The paired accepted responses and four unique
 // controller events prove one arm/hit/recovery/clear corridor. Frozen selector
 // fields describe the installed injection; native digests identify its target.
+//
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 func composeExecutionPublicationInjection(plan Plan, measurement PhaseMeasurement,
 	authority map[string]AuthorityPhaseResult, observed executionTransitionObservations,
 	events map[string]uint64, times map[string]time.Time,
@@ -93,6 +95,7 @@ func composeExecutionPublicationInjection(plan Plan, measurement PhaseMeasuremen
 	return value, nil
 }
 
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 func finishExecutionInjectionDigests(value *InjectionTransition, point FailurePoint) error {
 	selector, err := injectionSelectorSHA256(value.Target)
 	if err != nil {
@@ -117,6 +120,8 @@ func finishExecutionInjectionDigests(value *InjectionTransition, point FailurePo
 // composeExecutionRecoveryInjection joins the native prepared schedule and its
 // accepted hit/recovery snapshots. The caller supplies only actual joined roots;
 // their image/birth identities cannot be derived from epoch permissions.
+//
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 func composeExecutionRecoveryInjection(plan Plan, freeze ExecutionFreeze, measurement PhaseMeasurement,
 	authority map[string]AuthorityPhaseResult, observed executionTransitionObservations,
 	events map[string]uint64, times map[string]time.Time, beforeRoot, afterRoot ExecutionEpochOneResult,

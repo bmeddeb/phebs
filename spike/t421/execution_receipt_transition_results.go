@@ -5,6 +5,8 @@ import "time"
 // Each passed row is projected from its owning native epoch. Unrun and generic
 // stopped rows carry only their observed outcome/events, as the v3 contract
 // explicitly forbids passing transition payloads on an incomplete phase.
+//
+//nolint:unused // Darwin execution flow only; unused in Linux builds.
 func composeExecutionReceiptTransitions(plan Plan, freeze ExecutionFreeze, phases []PhaseResult,
 	measurements []PhaseMeasurement, authorities []AuthorityPhaseResult, servers []ExecutionEpochOneResult,
 	events map[string]uint64, times map[string]time.Time, archive *ArchiveTransition,
