@@ -81,7 +81,9 @@ func (t *hostPreparationTrace) failure(ctx context.Context, err error) error {
 func HostPreparationFailureOf(err error) (HostPreparationFailure, bool) {
 	var failure *hostPreparationFailure
 	if errors.As(err, &failure) {
-		return failure.observation, true
+		d := failure.observation
+		d.Stages = append([]HostPreparationStage(nil), d.Stages...)
+		return d, true
 	}
 	return HostPreparationFailure{}, false
 }
