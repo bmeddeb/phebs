@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/bmeddeb/phebs/internal/typedindex"
 )
 
 func TestClosureReceiptIsStable(t *testing.T) {
@@ -79,12 +81,17 @@ func TestTargetBindingMatchesFrozenCorpus(t *testing.T) {
 	for _, needle := range []string{
 		`p.Tools.Bazel.Version == "9.0.0"`,
 		`p.Tools.RulesGo.Version == "0.59.0"`,
-		`p.Tools.Go.Version == "1.25.0"`,
+		`p.Tools.Go.Version == typedindex.NativeSDKVersion(p.Config.GOARCH)`,
 		`p.Tools.Indexer.Version == "0.2.7"`,
 	} {
 		if !bytes.Contains(profile, []byte(needle)) {
 			t.Errorf("tool profile missing %s", needle)
 		}
+	}
+	// The closure's retained "go 1.25.0" tool line is the arm64 SDK; MED-505
+	// moved only amd64 to the frozen corpus's declared Go 1.25.7.
+	if typedindex.NativeSDKVersion("arm64") != "1.25.0" || typedindex.NativeSDKVersion("amd64") != "1.25.7" {
+		t.Error("native SDK versions are not the reviewed MED-505 split")
 	}
 }
 

@@ -17315,3 +17315,14 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   Cost:one scalar comparison per existing precompiled-SDK projection; no new
   I/O, child, lock, cache, request, sync or publication work. All limits and
   held-custody predicates remain unchanged.
+
+- **2026-10-28 — MED-505 historical spike pins keep their measured SDK.**
+  On current `main`, three retained spike cross-checks (T45.1b native cohort,
+  T45.7 amd64 tool inventory, T45.9 closure profile) compared their measured
+  Go 1.25.0 SDK and `2f2ec79d…` sysroot with the live provider and so refused
+  the reviewed Go 1.25.7 / `61882670…` amd64 binding. Each keeps its retained
+  pins and bytes unchanged. Bazel, driver and indexer pins still track the
+  provider; the SDK and sysroot checks now require the provider to seal exactly
+  the retained MED-505 admission record and arm64 to keep Go 1.25.0. No
+  historical receipt is relabeled, and no native, installed or scale claim
+  follows. Cost: tests only; one retained JSON read.

@@ -84,8 +84,13 @@ func amd64NativeRequest(t *testing.T) NativeRequest {
 }
 
 func TestAmd64NativeProfileAdmitsMeasuredPins(t *testing.T) {
-	if goDigestAmd64 != provider.GoDigestAmd64 || bazelDigestAmd64 != provider.BazelDigestAmd64 || driverDigestAmd64 != "sha256:"+internallauncher.NativeDriverSHA256Amd64 || scipDigestAmd64 != typedindex.SCIPGoIndexerDigestAmd64 {
+	if bazelDigestAmd64 != provider.BazelDigestAmd64 || driverDigestAmd64 != "sha256:"+internallauncher.NativeDriverSHA256Amd64 || scipDigestAmd64 != typedindex.SCIPGoIndexerDigestAmd64 {
 		t.Fatal("amd64 admission pins diverged from the measured seals")
+	}
+	// The cohort retains its measured Go 1.25.0 SDK. MED-505 moved the
+	// production amd64 SDK to Go 1.25.7 without relabeling this evidence.
+	if goDigestAmd64 != "sha256:b93cdfdbc72f1afc3f21498c80bf3d155a44a9b95e2d690c940511051574bc25" || provider.GoDigestAmd64 != "sha256:76ac600b41ad2eceee5d39d02af78009516f8b2a29f30bcc80f765c3e4b4f5a8" || typedindex.NativeSDKVersion("amd64") != "1.25.7" {
+		t.Fatal("amd64 Go SDK supersession is not the reviewed MED-505 transition")
 	}
 	if NativeProfile != "native-linux-arm64-rules-go-059-v2" || Amd64RulesCCVersion != "0.2.14" || Amd64ProtobufVersion != "33.4" {
 		t.Fatal("amd64 offline CC pin is ambiguous or the arm64 profile changed")
