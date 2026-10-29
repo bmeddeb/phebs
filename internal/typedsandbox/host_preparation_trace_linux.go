@@ -8,7 +8,8 @@ import (
 	"time"
 )
 
-// hostPreparationStages bounds the trace to the fixed PrepareHostScratch order.
+// hostPreparationStages bounds the trace. PrepareHostScratch names seventeen
+// stages, but resume_verify and capacity are exclusive, so a call enters at most sixteen.
 const hostPreparationStages = 16
 
 // HostPreparationStage is one entered PrepareHostScratch stage. OffsetNanos is

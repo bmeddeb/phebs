@@ -17411,10 +17411,12 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
 
 - **2026-10-29 — MED-695 host-preparation stage timings.**
   On refusal, `PrepareHostScratch` wraps the unchanged error with one bounded
-  record: the last entered stage, monotonic offsets for at most sixteen fixed
-  stages (lock, resume verify, capacity, journal, image, fallocate, initialize,
-  allocated sync, formatting, mkfs, formatted sync, loop select/attach, mount,
-  scratch finalize, ready verify) and the caller context at return. Every error
+  record: the last entered stage, monotonic offsets for the fixed stages
+  (admission/lock, root probe, resume verify or capacity, journal, image,
+  fallocate, initialize, allocated sync, formatting, mkfs, formatted sync, loop
+  select/attach, mount, scratch finalize, ready verify; at most sixteen entered
+  on any path) and the caller context at return, read after the call's own
+  deferred closes. Every error
   still unwraps to its original class, so `ErrRefused`, `ErrCustody`, context
   errors, errno and the formatter observation classify exactly as before; the
   public error text is unchanged. The opt-in acceptance child copies the record
@@ -17429,7 +17431,8 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
 
   Commands, deadlines, signals, allocation and cleanup predicates, journal
   phases and limits are unchanged; no stage adds I/O, a child, a lock or a retry.
-  Cost: success adds sixteen monotonic clock reads into a fixed stack array and
-  no allocation; failure adds one copied slice of at most sixteen entries.
+  Cost: success adds at most seventeen monotonic clock reads into a fixed stack
+  array and no allocation; failure adds the wrapper and one copied slice of at
+  most sixteen entries, and each accessor read copies that slice again.
   Ordinary runtime/query/sync/publication work is unaffected because only native
   host preparation calls this function.
