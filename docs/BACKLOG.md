@@ -18266,6 +18266,16 @@ outer Wait remains nonzero and its result cannot become installed PASS.
 Fresh exact admission and a reviewed bounded execution plan remain prerequisites;
 neither held namespace is changed by this source work.
 
+MED-695 preparation stage timings (2026-10-29): host-preparation refusals now
+carry the last entered stage, bounded monotonic stage offsets and the caller
+context at return, without changing any error class, text, deadline, command or
+custody rule. Regressions cover every class through the wrapper, formatter
+forwarding, the allowance-versus-formatter-timeout split, the sixteen-stage
+bound, privacy and real unprivileged refusal stages. The p02 package predates
+this record and its reviewed VM lifetime has ended; the next finite probe needs
+a rebuilt driver, a bound reboot record, fresh check-only admission and Ben's
+explicit approval. The historical cause and full installed acceptance remain open.
+
 **T45.10a · Admit both native resource profiles in Settings** *(follows the
 T45.10 review; presentation handoff)* — an available amd64 installation reports
 `native-amd64-bounded-v1`, which the existing Settings validators reject, so the

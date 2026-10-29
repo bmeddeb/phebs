@@ -17408,3 +17408,28 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   retains all existing costs and deadlines; no measured container is launched.
   Ordinary runtime/query/sync/publication, locks, caches, limits and all existing
   native acceptance predicates are unchanged.
+
+- **2026-10-29 — MED-695 host-preparation stage timings.**
+  On refusal, `PrepareHostScratch` wraps the unchanged error with one bounded
+  record: the last entered stage, monotonic offsets for at most sixteen fixed
+  stages (lock, resume verify, capacity, journal, image, fallocate, initialize,
+  allocated sync, formatting, mkfs, formatted sync, loop select/attach, mount,
+  scratch finalize, ready verify) and the caller context at return. Every error
+  still unwraps to its original class, so `ErrRefused`, `ErrCustody`, context
+  errors, errno and the formatter observation classify exactly as before; the
+  public error text is unchanged. The opt-in acceptance child copies the record
+  beside the formatter result. With the caller context, the record separates the
+  five-minute allowance deadline (caller `deadline`) from the formatter's own
+  60-second timeout (caller `live`, formatter `deadline`) and names refusals that
+  carry no formatter result, such as pre-start digest checks or post-mkfs sync
+  and allocation custody. A 2026-10-29 bare-ext4 probe on `rose` refuted
+  mke2fs hole punching (`FALLOC_FL_ZERO_RANGE` kept the allocation) and measured
+  the full sequence at about 19 seconds, so the historical cause stays open
+  until an admitted run captures this record.
+
+  Commands, deadlines, signals, allocation and cleanup predicates, journal
+  phases and limits are unchanged; no stage adds I/O, a child, a lock or a retry.
+  Cost: success adds sixteen monotonic clock reads into a fixed stack array and
+  no allocation; failure adds one copied slice of at most sixteen entries.
+  Ordinary runtime/query/sync/publication work is unaffected because only native
+  host preparation calls this function.
