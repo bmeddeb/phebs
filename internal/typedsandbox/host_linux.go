@@ -27,9 +27,21 @@ import (
 // privileges, tools or a VM. A ready exact journal may resume only while empty;
 // interrupted setup must first pass CleanupHostScratch, or retain ambiguous custody.
 func PrepareHostScratch(ctx context.Context, o HostScratchOptions, gate *lifecycle.Gate) (HostScratchReceipt, error) {
+	trace := hostPreparationTrace{started: time.Now()}
+	receipt, err := prepareHostScratch(ctx, o, gate, &trace)
+	if err != nil {
+		return receipt, trace.failure(ctx, err)
+	}
+	return receipt, nil
+}
+
+// prepareHostScratch enters each stage before its first operation, so a
+// refusal's last entered stage names the operation that returned it.
+func prepareHostScratch(ctx context.Context, o HostScratchOptions, gate *lifecycle.Gate, trace *hostPreparationTrace) (HostScratchReceipt, error) {
 	if gate == nil {
 		return HostScratchReceipt{}, ErrRefused
 	}
+	trace.enter("lock")
 	lock, err := hostLock(ctx, o)
 	if err != nil {
 		return HostScratchReceipt{}, err
@@ -37,6 +49,7 @@ func PrepareHostScratch(ctx context.Context, o HostScratchOptions, gate *lifecyc
 	defer func() { _ = lock.Close() }()
 	root := o.root()
 	if _, err = os.Lstat(root); err == nil {
+		trace.enter("resume_verify")
 		j, e := loadHostOwner(root, o)
 		if e != nil || j.Phase != "ready" {
 			return HostScratchReceipt{}, ErrCustody
@@ -49,6 +62,7 @@ func PrepareHostScratch(ctx context.Context, o HostScratchOptions, gate *lifecyc
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return HostScratchReceipt{}, ErrCustody
 	}
+	trace.enter("capacity")
 	base, observed, e := hostBoundBase(ctx, HostScratchBase, o.Base, 0, 0)
 	if e != nil {
 		return HostScratchReceipt{}, e
@@ -61,6 +75,7 @@ func PrepareHostScratch(ctx context.Context, o HostScratchOptions, gate *lifecyc
 	if e != nil {
 		return HostScratchReceipt{}, e
 	}
+	trace.enter("journal")
 	if err = os.Mkdir(root, 0700); err != nil {
 		return HostScratchReceipt{}, ErrCustody
 	}
@@ -71,6 +86,7 @@ func PrepareHostScratch(ctx context.Context, o HostScratchOptions, gate *lifecyc
 	if err = writeHostOwner(root, j, true); err != nil {
 		return HostScratchReceipt{}, err
 	}
+	trace.enter("image")
 	image, err := os.OpenFile(root+"/image.ext4", os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {
 		return HostScratchReceipt{}, ErrCustody
@@ -88,15 +104,18 @@ func PrepareHostScratch(ctx context.Context, o HostScratchOptions, gate *lifecyc
 	if err = ctx.Err(); err != nil {
 		return HostScratchReceipt{}, err
 	}
+	trace.enter("fallocate")
 	if unix.Fallocate(int(image.Fd()), 0, 0, hostImageBytes) != nil {
 		return HostScratchReceipt{}, ErrCustody
 	}
 	if !hostImageMatches(image, j, true) {
 		return HostScratchReceipt{}, ErrCustody
 	}
+	trace.enter("initialize")
 	if err = initializeHostImage(ctx, image, hostImageBytes); err != nil {
 		return HostScratchReceipt{}, err
 	}
+	trace.enter("allocated_sync")
 	if image.Sync() != nil {
 		return HostScratchReceipt{}, ErrCustody
 	}
@@ -109,13 +128,16 @@ func PrepareHostScratch(ctx context.Context, o HostScratchOptions, gate *lifecyc
 	}
 	// A lost formatter owner is not automatically reclaimable: a direct-child
 	// parent-death signal cannot prove the lifetime of escaped descendants.
+	trace.enter("formatting")
 	j.Phase = "formatting"
 	if err = writeHostOwner(root, j, false); err != nil {
 		return HostScratchReceipt{}, err
 	}
+	trace.enter("mkfs")
 	if err = runHostMkfs(ctx, o, image); err != nil {
 		return HostScratchReceipt{}, err
 	}
+	trace.enter("formatted_sync")
 	if image.Sync() != nil || !hostImageMatches(image, j, true) {
 		return HostScratchReceipt{}, ErrCustody
 	}
@@ -123,6 +145,7 @@ func PrepareHostScratch(ctx context.Context, o HostScratchOptions, gate *lifecyc
 	if err = writeHostOwner(root, j, false); err != nil {
 		return HostScratchReceipt{}, err
 	}
+	trace.enter("loop_select")
 	control, err := unix.Open("/dev/loop-control", unix.O_RDWR|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
 	if err != nil {
 		return HostScratchReceipt{}, ErrRefused
@@ -138,6 +161,7 @@ func PrepareHostScratch(ctx context.Context, o HostScratchOptions, gate *lifecyc
 	if err = writeHostOwner(root, j, false); err != nil {
 		return HostScratchReceipt{}, err
 	}
+	trace.enter("loop_attach")
 	loop, err := openHostLoop(number)
 	if err != nil {
 		return HostScratchReceipt{}, err
@@ -156,6 +180,7 @@ func PrepareHostScratch(ctx context.Context, o HostScratchOptions, gate *lifecyc
 	if err = verifyHostLoop(loop, j); err != nil {
 		return HostScratchReceipt{}, err
 	}
+	trace.enter("mount")
 	mount := root + "/scratch"
 	if os.Mkdir(mount, 0700) != nil || syncParent(mount) != nil {
 		return HostScratchReceipt{}, ErrCustody
@@ -172,6 +197,7 @@ func PrepareHostScratch(ctx context.Context, o HostScratchOptions, gate *lifecyc
 	if unix.Mount("", mount, "", unix.MS_PRIVATE|unix.MS_REC, "") != nil {
 		return HostScratchReceipt{}, ErrCustody
 	}
+	trace.enter("scratch_finalize")
 	j.Authority, err = observeHostScratch(j)
 	if err != nil {
 		return HostScratchReceipt{}, err
@@ -208,6 +234,7 @@ func PrepareHostScratch(ctx context.Context, o HostScratchOptions, gate *lifecyc
 	if e != nil {
 		return HostScratchReceipt{}, ErrCustody
 	}
+	trace.enter("ready_verify")
 	j.Phase = "ready"
 	if err = writeHostOwner(root, j, false); err != nil {
 		return HostScratchReceipt{}, err
