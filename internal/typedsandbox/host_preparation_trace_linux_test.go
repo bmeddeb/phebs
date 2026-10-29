@@ -33,13 +33,13 @@ func TestHostPreparationTraceFailure(t *testing.T) {
 		is      []error
 	}{
 		{name: "unentered", ctx: live, err: ErrRefused, stage: "unentered", context: "live", is: []error{ErrRefused}},
-		{name: "custody", ctx: live, err: ErrCustody, stages: []string{"lock", "capacity", "journal"}, stage: "journal", context: "live", is: []error{ErrCustody}},
-		{name: "joined-custody", ctx: live, err: errors.Join(ErrCustody, fmt.Errorf("private /secret: %w", syscall.EIO)), stages: []string{"lock", "mount", "scratch_finalize"}, stage: "scratch_finalize", context: "live", is: []error{ErrCustody, syscall.EIO}},
+		{name: "custody", ctx: live, err: ErrCustody, stages: []string{"admission_lock", "capacity", "journal"}, stage: "journal", context: "live", is: []error{ErrCustody}},
+		{name: "joined-custody", ctx: live, err: errors.Join(ErrCustody, fmt.Errorf("private /secret: %w", syscall.EIO)), stages: []string{"admission_lock", "mount", "scratch_finalize"}, stage: "scratch_finalize", context: "live", is: []error{ErrCustody, syscall.EIO}},
 		// A live caller with an expired formatter context is the formatter's own timeout.
-		{name: "formatter-timeout", ctx: live, err: formatter, stages: []string{"lock", "initialize", "formatting", "mkfs"}, stage: "mkfs", context: "live", is: []error{ErrRefused}},
-		{name: "allowance-deadline", ctx: expired, err: context.DeadlineExceeded, stages: []string{"lock", "fallocate", "initialize"}, stage: "initialize", context: "deadline", is: []error{context.DeadlineExceeded}},
-		{name: "caller-canceled", ctx: canceled, err: context.Canceled, stages: []string{"lock"}, stage: "lock", context: "canceled", is: []error{context.Canceled}},
-		{name: "nil-context", ctx: nil, err: ErrRefused, stages: []string{"lock"}, stage: "lock", context: "live", is: []error{ErrRefused}},
+		{name: "formatter-timeout", ctx: live, err: formatter, stages: []string{"admission_lock", "initialize", "formatting", "mkfs"}, stage: "mkfs", context: "live", is: []error{ErrRefused}},
+		{name: "allowance-deadline", ctx: expired, err: context.DeadlineExceeded, stages: []string{"admission_lock", "fallocate", "initialize"}, stage: "initialize", context: "deadline", is: []error{context.DeadlineExceeded}},
+		{name: "caller-canceled", ctx: canceled, err: context.Canceled, stages: []string{"admission_lock"}, stage: "admission_lock", context: "canceled", is: []error{context.Canceled}},
+		{name: "nil-context", ctx: nil, err: ErrRefused, stages: []string{"admission_lock"}, stage: "admission_lock", context: "live", is: []error{ErrRefused}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			trace := hostPreparationTrace{started: time.Now()}
@@ -108,7 +108,7 @@ func TestPrepareHostScratchRefusalStage(t *testing.T) {
 	}
 	t.Setenv(dispatchadmission.ProductionEnvironment, "")
 	_, err = PrepareHostScratch(t.Context(), o, lifecycle.NewGate(HostScratchBase))
-	if d, ok := HostPreparationFailureOf(err); err == nil || !ok || d.Stage != "lock" || len(d.Stages) != 1 {
+	if d, ok := HostPreparationFailureOf(err); err == nil || !ok || d.Stage != "admission_lock" || len(d.Stages) != 1 {
 		t.Fatal("selected prepare", err, d)
 	}
 }

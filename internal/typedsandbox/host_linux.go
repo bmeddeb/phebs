@@ -41,13 +41,15 @@ func prepareHostScratch(ctx context.Context, o HostScratchOptions, gate *lifecyc
 	if gate == nil {
 		return HostScratchReceipt{}, ErrRefused
 	}
-	trace.enter("lock")
+	// hostLock also performs selection, root and ancestor admission.
+	trace.enter("admission_lock")
 	lock, err := hostLock(ctx, o)
 	if err != nil {
 		return HostScratchReceipt{}, err
 	}
 	defer func() { _ = lock.Close() }()
 	root := o.root()
+	trace.enter("probe")
 	if _, err = os.Lstat(root); err == nil {
 		trace.enter("resume_verify")
 		j, e := loadHostOwner(root, o)
