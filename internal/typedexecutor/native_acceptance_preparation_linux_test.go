@@ -43,6 +43,8 @@ type acceptanceHostPreparation struct {
 	Deadline      bool                               `json:"deadline"`
 	Errno         uint64                             `json:"errno"`
 	Formatter     *typedsandbox.HostFormatterFailure `json:"formatter,omitempty"`
+	// Preparation names the stage that refused and each entered stage's offset.
+	Preparation *typedsandbox.HostPreparationFailure `json:"preparation,omitempty"`
 }
 
 func acceptanceContextState(ctx context.Context) string {
@@ -86,6 +88,9 @@ func acceptanceObserveHostPreparation(c *Controller, result *acceptanceChildResu
 		if formatter, ok := typedsandbox.HostFormatterFailureOf(err); ok {
 			row.Formatter = &formatter
 		}
+		if preparation, ok := typedsandbox.HostPreparationFailureOf(err); ok {
+			row.Preparation = &preparation
+		}
 		if len(result.HostPreparation) < 2 {
 			result.HostPreparation = append(result.HostPreparation, row)
 		} else {
@@ -97,6 +102,8 @@ func acceptanceObserveHostPreparation(c *Controller, result *acceptanceChildResu
 
 func TestNativeAcceptanceHostPreparationObservation(t *testing.T) {
 	private := errors.New("private /secret/fixture must not enter a diagnostic")
+	// The real nil-gate refusal carries an unentered stage record.
+	_, staged := typedsandbox.PrepareHostScratch(t.Context(), typedsandbox.HostScratchOptions{}, nil)
 	for _, tc := range []struct {
 		name    string
 		err     error
@@ -105,6 +112,7 @@ func TestNativeAcceptanceHostPreparationObservation(t *testing.T) {
 		refused bool
 		custody bool
 		errno   uint64
+		stage   bool
 	}{
 		{name: "success"},
 		{name: "unknown", err: private},
@@ -113,6 +121,7 @@ func TestNativeAcceptanceHostPreparationObservation(t *testing.T) {
 		{name: "caller-canceled", err: context.Canceled, cancel: true},
 		{name: "deadline", err: context.DeadlineExceeded},
 		{name: "expired-context", err: context.DeadlineExceeded, expired: true},
+		{name: "stage-trace", err: staged, refused: true, stage: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			until := time.Now().Add(time.Minute)
@@ -165,6 +174,9 @@ func TestNativeAcceptanceHostPreparationObservation(t *testing.T) {
 			}
 			if row.ElapsedNanos < 0 || row.EnteredUTC.IsZero() || !row.DeadlineUTC.Equal(deadline) || row.ContextBefore != before || row.Refused != tc.refused || row.Custody != tc.custody || row.Errno != tc.errno || row.ReturnedError != (tc.err != nil) || row.Canceled != errors.Is(tc.err, context.Canceled) || row.Deadline != errors.Is(tc.err, context.DeadlineExceeded) {
 				t.Fatal("original error/deadline observation lost", row)
+			}
+			if (row.Preparation != nil) != tc.stage || tc.stage && row.Preparation.Stage != "unentered" {
+				t.Fatal("stage record not forwarded", row.Preparation)
 			}
 			if (row.ContextAfter == "canceled") != tc.cancel {
 				t.Fatal("context state changed", row)
