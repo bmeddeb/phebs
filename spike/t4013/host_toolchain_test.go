@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -241,6 +242,12 @@ func TestClosedHostToolchainIgnoresAmbientSurrealOverride(t *testing.T) {
 		{closed: false, want: "3.1.0"},
 		{closed: true, want: "3.0.0"},
 	} {
+		// The closed inventory binds the Darwin ceremony tools
+		// (/usr/bin/sandbox-exec, /usr/sbin/sysctl); its Linux adapter is
+		// T42.H2 work, so only the ambient leg is meaningful elsewhere.
+		if test.closed && runtime.GOOS != "darwin" {
+			continue
+		}
 		var observed []HostToolObservation
 		var err error
 		if test.closed {

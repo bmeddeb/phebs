@@ -23633,6 +23633,36 @@ Owning decision: PLAN.md, 2026-10-27 MED-386. Implementation branch:
 `mac/med386-mcp-readonly`. Companion consumer normalizer is already merged in
 [Stratus PR84](https://github.com/bmeddeb/stratus/pull/84); Slack remains postponed.
 
+## MED-701 · Linux `ci-go` baseline restoration
+
+Linux track, 2026-10-30. `make ci-go` failed on `main` on rose (2026-10-28) in
+`internal/dispatchadmission`, `internal/typedexecutor`, `spike/t323`,
+`spike/t4013` and `spike/t421`; merge-on-green has used that set as a
+baseline since.
+
+Acceptance:
+
+- Fix each failure or skip it with a documented host-specific reason; do not
+  weaken a custody checker, watermark, deadline or retained-evidence check.
+- Pin any `ci-go` recipe change in the CI contract test.
+- Pass `ci-static`, `ci-go` and `ci-race` on one Linux amd64 head with the
+  pinned tools, a private lint cache and `TMPDIR` on a filesystem with
+  watermark headroom.
+
+Findings (2026-10-30): `dispatchadmission` passes on current `main` (8 s).
+The other failures were a 0002-umask TempDir in typed executor fixtures, rose
+disk headroom, ext4 inode reuse in a typed-workspace test, multithreaded
+bundle packing in t323, a Darwin-only closed leg and a nohup-ignored SIGHUP in
+t4013, and t421's 68-minute runtime. A `/private/tmp` dependency in
+`spike/t451a/sandbox` surfaced on the fresh host `dave`, and with `TMPDIR` on a
+shared disk a typed-workspace capacity test compared two free-count reads
+that other writers moved; it now compares inside a window where two direct
+reads agree. Recorded limit, not
+changed here: an equal-byte control replacement that reuses the inode number
+on ext4 matches its `{digest,size,device,inode}` reference.
+
+Owning decision: PLAN.md, 2026-10-30 MED-701. Branch: `hp/med701-linux-ci-go`.
+
 ## Deliberate non-goals
 
 SCIM provisioning, multi-org RBAC / seats, and a built-in chat app —

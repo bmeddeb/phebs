@@ -3,6 +3,7 @@ VERSION_PATTERN_BODY := (0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(0|[1
 VERSION_PATTERN := ^v?$(VERSION_PATTERN_BODY)$$
 RELEASE_VERSION_PATTERN := ^v$(VERSION_PATTERN_BODY)$$
 GO_VERSION := $(shell tr -d '[:space:]' < .go-version)
+T421_PACKAGE := github.com/bmeddeb/phebs/spike/t421
 NODE_VERSION := $(shell tr -d '[:space:]' < .node-version)
 GOLANGCI_LINT_VERSION := $(patsubst v%,%,$(shell tr -d '[:space:]' < .golangci-lint-version))
 SURREALDB_VERSION := $(shell tr -d '[:space:]' < .surrealdb-version)
@@ -259,7 +260,14 @@ ci-static: verify-go verify-golangci-lint verify-glossary
 ci-go: verify-go verify-surreal
 	# Populate module metadata used by the hermetic offline graph test.
 	go list -mod=readonly -m -json all >/dev/null
-	go test ./... -count=1 -timeout=60m
+	# spike/t421 rebuilds every frozen plan from its generators and needs about
+	# 70 minutes on the Linux baseline host, so it runs beside the rest of the
+	# suite under its own allowance (MED-701).
+	pkgs=$$(go list ./...) || exit 1; \
+	go test $(T421_PACKAGE) -count=1 -timeout=120m & frozen_pid=$$!; \
+	go test $$(printf '%s\n' $$pkgs | grep -vx '$(T421_PACKAGE)') -count=1 -timeout=60m; rest=$$?; \
+	wait $$frozen_pid; frozen=$$?; \
+	test $$rest -eq 0 && test $$frozen -eq 0
 
 # Race coverage starts with the most concurrent packages: dispatchadmission
 # spawns the most goroutines in the tree, then cmd/phebs, the store, and the

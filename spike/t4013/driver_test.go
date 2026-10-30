@@ -8,6 +8,7 @@ import (
 	"errors"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -1605,6 +1606,12 @@ func TestCeremonyDriverForwardsSignalsAndRetainsOperationState(t *testing.T) {
 		{name: "HUP", signal: syscall.SIGHUP, status: 129},
 	} {
 		t.Run(test.name, func(t *testing.T) {
+			// A parent started under nohup passes SIGHUP down as ignored,
+			// and Bash cannot trap a signal ignored at entry. While
+			// notified, Go starts children with the default disposition.
+			notified := make(chan os.Signal, 1)
+			signal.Notify(notified, test.signal)
+			defer signal.Stop(notified)
 			root := t.TempDir()
 			runRoot := filepath.Join(root, "run")
 			cache := filepath.Join(root, "go-cache")

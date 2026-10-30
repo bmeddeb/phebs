@@ -17436,3 +17436,33 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   most sixteen entries, and each accessor read copies that slice again.
   Ordinary runtime/query/sync/publication work is unaffected because only native
   host preparation calls this function.
+
+- **2026-10-30 — MED-701 Linux `ci-go` baseline restoration.** The
+  2026-10-28 recorded failure set had host and test causes, none a product
+  defect. Typed executor fixtures now make their `t.TempDir` base 0700, as the
+  MED-695 SafeFiles correction did, so a 0002 umask no longer trips the
+  unchanged custody checker. The typed-workspace substitution test holds the
+  old receipt inode open, because ext4 reuses a freed inode number and the
+  `{digest,size,device,inode}` control reference cannot see an equal-byte
+  replacement that receives the same number; that reference limit is
+  recorded, not changed. `spike/t323` authors its bundle with
+  `pack.threads=1`. `spike/t4013` runs the Darwin-only closed toolchain leg
+  only on Darwin (Linux is T42.H2) and notifies the sent signal around the
+  ceremony driver child, since a parent started under `nohup` passes SIGHUP
+  down ignored and Bash cannot trap it. `spike/t451a/sandbox` uses `/tmp` off
+  Darwin. `spike/t421` needs about 68 minutes alone on rose because it
+  rebuilds every frozen plan, so `ci-go` runs it beside the rest under 120
+  minutes and fails when either invocation fails; every other package keeps
+  60, and the CI contract pins both. The typed executor's disk watermark is
+  real statfs by design: a gate host needs `TMPDIR` on a filesystem with
+  room for the reduced profile's growth below the 80% soft watermark, which
+  rose's 7.5 GiB `/tmp` tmpfs and 86%-full root could not give. This replaces
+  the 2026-10-27 `umask 022` and `/tmp` `TMPDIR` gate workaround; `dave`
+  (Linux amd64, Ubuntu 26.04.1, 1.9 TB root) is the interim gate host until
+  rose is cleaned. When `ci-go` passes on `main`, MED-701 closes and the
+  baseline-relative `ci-go` bar ends.
+
+  Cost: test fixtures add one chmod, one held descriptor or one signal
+  registration per case; `ci-go` adds one `go list` and one concurrent
+  `go test` process. No product query, sync, startup, retry, publication,
+  lock, cache or child-process work changes.

@@ -101,7 +101,12 @@ func preparationFixture(t *testing.T, endpoint, database string, corpus ...func(
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = s.Close(context.Background()) })
+	// Go's numbered TempDir honors the inherited umask, so a 0002 host
+	// leaves it group-writable and the strict custody checker refuses it.
 	base := t.TempDir()
+	if err = os.Chmod(base, 0700); err != nil {
+		t.Fatal(err)
+	}
 	t.Cleanup(func() {
 		_ = filepath.WalkDir(base, func(path string, d os.DirEntry, err error) error {
 			if err == nil && d.IsDir() {

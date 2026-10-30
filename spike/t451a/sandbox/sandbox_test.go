@@ -59,7 +59,11 @@ type daemon struct {
 func fakeDaemon(t *testing.T, fault string) (*daemon, Options) {
 	t.Helper()
 	// Unix socket paths are shorter than the testing package's per-case paths.
-	root, err := os.MkdirTemp("/private/tmp", "t451a-sandbox-")
+	short := "/tmp"
+	if runtime.GOOS == "darwin" {
+		short = "/private/tmp"
+	}
+	root, err := os.MkdirTemp(short, "t451a-sandbox-")
 	if err != nil {
 		t.Fatal(err)
 	}
