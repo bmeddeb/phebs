@@ -82,7 +82,8 @@ func Author(root string) (Receipt, error) {
 	}
 
 	bundlePath := filepath.Join(temporary, bundleName)
-	if _, err := runGit(repository, nil, "bundle", "create", bundlePath, "HEAD", "main"); err != nil {
+	// Multithreaded delta search makes pack bytes depend on scheduling.
+	if _, err := runGit(repository, nil, "-c", "pack.threads=1", "bundle", "create", bundlePath, "HEAD", "main"); err != nil {
 		return Receipt{}, err
 	}
 	bundle, err := os.ReadFile(bundlePath)
