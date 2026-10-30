@@ -163,12 +163,19 @@ func TestOwnerCompletePersistenceAndPin(t *testing.T) {
 	if err != nil || len(entries) != 1 || entries[0].Held {
 		t.Fatal(entries, err)
 	}
-	// An equal-byte inode replacement is still refused.
+	// An equal-byte inode replacement is still refused. Holding the old
+	// inode open keeps ext4 from handing its number to the replacement;
+	// the control reference cannot see an equal-byte reuse of the number.
 	path := filepath.Join(attempt, "input-receipt.json")
 	bytes, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
+	held, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = held.Close() }()
 	if err = os.Remove(path); err != nil {
 		t.Fatal(err)
 	}
