@@ -23654,7 +23654,10 @@ The other failures were a 0002-umask TempDir in typed executor fixtures, rose
 disk headroom, ext4 inode reuse in a typed-workspace test, multithreaded
 bundle packing in t323, a Darwin-only closed leg and a nohup-ignored SIGHUP in
 t4013, and t421's 68-minute runtime. A `/private/tmp` dependency in
-`spike/t451a/sandbox` surfaced on the fresh host `dave`. Recorded limit, not
+`spike/t451a/sandbox` surfaced on the fresh host `dave`, and with `TMPDIR` on a
+shared disk a typed-workspace capacity test compared two free-count reads
+that other writers moved; it now compares inside a window where two direct
+reads agree. Recorded limit, not
 changed here: an equal-byte control replacement that reuses the inode number
 on ext4 matches its `{digest,size,device,inode}` reference.
 

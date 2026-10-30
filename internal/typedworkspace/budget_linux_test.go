@@ -21,15 +21,31 @@ func TestObserveCapacityUsesActualPrivateDescriptorWithoutGrowth(t *testing.T) {
 	if err := unix.Stat(base, &before); err != nil {
 		t.Fatal(err)
 	}
-	observed, err := ObserveCapacity(t.Context(), base)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Free counts move with every other writer on a shared filesystem, so
+	// compare inside a window where two direct reads agree.
+	var observed CapacityObservation
 	var actual unix.Statfs_t
-	if err = unix.Statfs(base, &actual); err != nil {
-		t.Fatal(err)
+	quiet := false
+	for range 50 {
+		var first unix.Statfs_t
+		if err := unix.Statfs(base, &first); err != nil {
+			t.Fatal(err)
+		}
+		var err error
+		if observed, err = ObserveCapacity(t.Context(), base); err != nil {
+			t.Fatal(err)
+		}
+		if err = unix.Statfs(base, &actual); err != nil {
+			t.Fatal(err)
+		}
+		if quiet = first == actual; quiet {
+			break
+		}
 	}
-	if err = unix.Stat(base, &after); err != nil {
+	if !quiet {
+		t.Fatal("filesystem free counts never held still across one observation")
+	}
+	if err := unix.Stat(base, &after); err != nil {
 		t.Fatal(err)
 	}
 	if observed.Device != uint64(before.Dev) || observed.Inode != before.Ino || observed.BlockSize != uint64(actual.Bsize) || observed.TotalBytes != actual.Blocks*uint64(actual.Bsize) || observed.FreeBytes != actual.Bfree*uint64(actual.Bsize) || observed.AvailableBytes != actual.Bavail*uint64(actual.Bsize) || observed.TotalInodes != actual.Files || observed.FreeInodes != actual.Ffree {
