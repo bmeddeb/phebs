@@ -41,8 +41,8 @@ func TestCIContractPinsToolsAndNamedGates(t *testing.T) {
 		t.Fatal(err)
 	}
 	workflow := string(workflowBytes)
-	if !strings.Contains(workflow, "  go-test:\n    name: Go full test\n    runs-on: ubuntu-latest\n    timeout-minutes: 90\n") {
-		t.Error("full Go job must retain setup and scheduling headroom beyond its 60-minute package allowance")
+	if !strings.Contains(workflow, "  go-test:\n    name: Go full test\n    runs-on: ubuntu-latest\n    timeout-minutes: 150\n") {
+		t.Error("full Go job must retain setup and scheduling headroom beyond its 120-minute spike/t421 allowance")
 	}
 	makefile, err := os.ReadFile(filepath.Join(root, "Makefile"))
 	if err != nil {
@@ -54,7 +54,6 @@ func TestCIContractPinsToolsAndNamedGates(t *testing.T) {
 		command       string
 	}{
 		{"test", "verify-test-surreal verify-glossary", "\tgo test ./... -timeout=60m"},
-		{"ci-go", "verify-go verify-surreal", "\tgo test ./... -count=1 -timeout=60m"},
 	} {
 		// Match only this target's recipe, allowing its comment and engine
 		// guard without accidentally accepting a command in another target.
@@ -62,6 +61,21 @@ func TestCIContractPinsToolsAndNamedGates(t *testing.T) {
 		if !strings.Contains(recipe, gate.command+"\n") {
 			t.Errorf("Makefile target %s is missing full-suite allowance %q", gate.target, gate.command)
 		}
+	}
+	// ci-go gives spike/t421 its own allowance and the rest of the suite the
+	// general one, failing when either invocation fails.
+	ciGo := regexp.MustCompile(`(?m)^ci-go: verify-go verify-surreal\n(?:\t[^\n]*\n)*`).FindString(string(makefile))
+	for _, want := range []string{
+		"\tgo test $(T421_PACKAGE) -count=1 -timeout=120m & frozen_pid=$$!; \\\n",
+		"grep -vx '$(T421_PACKAGE)') -count=1 -timeout=60m; rest=$$?; \\\n",
+		"\ttest $$rest -eq 0 && test $$frozen -eq 0\n",
+	} {
+		if !strings.Contains(ciGo, want) {
+			t.Errorf("Makefile target ci-go is missing %q", want)
+		}
+	}
+	if !strings.Contains(string(makefile), "\nT421_PACKAGE := github.com/bmeddeb/phebs/spike/t421\n") {
+		t.Error("Makefile must name the spike/t421 package it gives a separate allowance")
 	}
 	if !strings.Contains(string(makefile), `[ -n "$${PHEBS_SKIP_SURREAL_TESTS:-}" ] && [ "$$PHEBS_SKIP_SURREAL_TESTS" != 1 ]`) {
 		t.Error("make test must reject misspelled SurrealDB skip values")
