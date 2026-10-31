@@ -23663,6 +23663,10 @@ on ext4 matches its `{digest,size,device,inode}` reference.
 
 Owning decision: PLAN.md, 2026-10-30 MED-701. Branch: `hp/med701-linux-ci-go`.
 
+Closed 2026-10-31: PR #177 fast-forwarded `main` to `ca9c8024`, whose
+`ci-static`, `ci-go` (144 packages, 0 failures) and `ci-race` passed on
+`dave`. The baseline-relative `ci-go` bar ends with it (PLAN.md, 2026-10-31).
+
 ## Deliberate non-goals
 
 SCIM provisioning, multi-org RBAC / seats, and a built-in chat app —

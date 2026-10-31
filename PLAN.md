@@ -17466,3 +17466,11 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   registration per case; `ci-go` adds one `go list` and one concurrent
   `go test` process. No product query, sync, startup, retry, publication,
   lock, cache or child-process work changes.
+
+- **2026-10-31 — MED-701 closed; `ci-go` must pass.** PR #177 fast-forwarded
+  `main` to `ca9c8024`, the head whose `ci-static`, `ci-go` and `ci-race`
+  passed on `dave`. As the 2026-10-30 entry provided, the baseline-relative
+  `ci-go` bar ends: merge-on-green in AGENTS.md now requires all three gates
+  to pass, and a failing `ci-go` package or test is red.
+
+  Cost: none; this changes the merge bar only.

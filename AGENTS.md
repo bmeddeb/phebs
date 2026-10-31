@@ -78,12 +78,9 @@ bare repos · Vite + React + TS + CodeMirror 6 in `ui/`, embedded in the binary.
   SurrealDB and a private `GOLANGCI_LINT_CACHE`, since a shared lint cache can
   replay another checkout's results. GitHub Actions is not part of the bar
   (Ben, 2026-10-28); Darwin runs are extra coverage only. `ci-static` and
-  `ci-race` must pass. Until MED-701 restores a passing Linux `ci-go` on
-  `main`, `ci-go` is green when its failing packages and tests are a subset
-  of `main`'s recorded Linux baseline on the same host (MED-701 lists it);
-  any new failing package or test is red. This baseline rule is weaker than a
-  pass (it cannot see regressions inside already-failing tests), so it ends
-  when MED-701 closes. Merge by verified fast-forward, stacked PRs
+  `ci-race` must pass, and so must `ci-go`: the interim MED-701
+  baseline-relative `ci-go` bar ended when MED-701 restored a passing Linux
+  `ci-go` on `main` (2026-10-31). Merge by verified fast-forward, stacked PRs
   base-first, each head green on its own. A red, partial or unrun gate keeps
   the old rule. This grants no ceremony, release, host admission or scale
   claim, and the second merger still reruns `make docs-check` and
