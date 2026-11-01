@@ -66,10 +66,6 @@ func gatherGoReferenceHeldInputsObserved(ctx context.Context, root *os.File, obs
 	return tree, rows, nil
 }
 
-func sendGoReferenceHeldInputs(ctx context.Context, wire *inputTreeSocket, root *os.File, expected LinuxInputTreeIdentity) (_ inputTreeCensus, retErr error) {
-	return sendGoReferenceHeldInputsObserved(ctx, wire, root, expected, nil)
-}
-
 func sendGoReferenceHeldInputsObserved(ctx context.Context, wire *inputTreeSocket, root *os.File, expected LinuxInputTreeIdentity, observation *executionPreworkObservation) (_ inputTreeCensus, retErr error) {
 	tree, rows, err := gatherGoReferenceHeldInputsObserved(ctx, root, observation)
 	if err != nil {
