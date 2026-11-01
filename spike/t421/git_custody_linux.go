@@ -187,10 +187,6 @@ func (git *LinuxExecutionGitCustody) copyAlias(ctx context.Context, name string,
 	return nil
 }
 
-func verifyLinuxGitAlias(ctx context.Context, root *os.File, name, digest string) error {
-	return verifyLinuxGitAliasObserved(ctx, root, name, digest, nil)
-}
-
 func verifyLinuxGitAliasObserved(ctx context.Context, root *os.File, name, digest string, observation *executionPreworkObservation) error {
 	fd, err := unix.Openat(int(root.Fd()), "core/"+name, unix.O_RDONLY|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
 	if err != nil {

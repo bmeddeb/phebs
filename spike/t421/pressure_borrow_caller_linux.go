@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"sync/atomic"
 	"time"
 
@@ -98,17 +97,6 @@ func (owner *linuxPressureExecutorPrework) closeNamespace() error {
 		return nil
 	}
 	return owner.namespace.Close()
-}
-
-// The original admitted caller must not exit while its failed fixture depends
-// on this namespace. This never waits for an invented recovery/adoption token.
-// The native harness calls it after actual executor/source retirement and uses
-// timeout=0. Strong reachability keeps the original pin, not merely its inode.
-func (owner *linuxExecutorPrework) holdRetainedPressure() {
-	if owner != nil && owner.pressure != nil && owner.pressure.retained && owner.released {
-		<-owner.pressure.hold
-		runtime.KeepAlive(owner)
-	}
 }
 
 func validLinuxPressureBrokerSelection(value linuxPressureBorrowSelection, entered time.Time) bool {
