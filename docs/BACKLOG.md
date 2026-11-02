@@ -5358,6 +5358,24 @@ the publication/schedule but supplies no Recovered callback, and the original
 attempt0 point reader refuses. Preserve that consequence without attributing
 V19's unknown predicate or changing the original-attempt acceptance contract.
 
+**2026-10-27 — MED-496 V20 recovered reader diagnostics.** Retained V20
+`runtime_read/store_lease` includes nil decoded record ID after its outer
+current-pointer fence, with two store reads and zero control reads. Tuple/recovered shape checks
+were not reached; SQL absence, projection and decode loss remain distinct
+unknowns. Preserve the exact failed database unopened. Source GC excludes and
+rechecks the current digest; same-schedule single-token priority 0 trailing work
+precedes priority 2 stale recovery. Pin actual immediate callback timing, nested/
+direct/index/scan equality and current-safe collection on fresh fixtures before
+claiming a behavioral fix. Add only optional same-transaction RETURN booleans,
+closed before/after/stage/cardinality/ID-kind diagnostics in the existing first
+refusal. Ordinary SQL, every predicate, error, query/accounting/write count,
+retry and original-attempt acceptance fence remain unchanged. AC: real-store
+parity and original-projection counterfactual, pinned SDK missing/omitted/null/
+valid envelopes, graceful/hard-death query views, SDK Runtime callback controls,
+first-record/no-data/log-failure controls, normal/race/static/docs gates and
+independent exact-source review. This diagnostic candidate authorizes no new
+privileged installation, metadata invocation, approval window or full run.
+
 **2026-10-22 — Ben-directed implementation checkpoint integration.** Ben
 explicitly requests maria cleanup and PR merges after the v10 native failure
 was disclosed. PR156 and T42.H2s.a–d / PR164–167 may integrate as reviewed

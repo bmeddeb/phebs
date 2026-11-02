@@ -17994,3 +17994,56 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   investigate/fix/rerun instruction permits serialized task-local work and fresh
   qualification under unchanged gates; a new privileged driver/profile install
   still requires exact action-time approval. No fixture cleanup or acceptance.
+
+
+- **2026-10-27 — MED-496 checkpoint reader refusal discrimination.** V20's
+  retained epoch-four log first records `runtime_read/store_lease` at 20:52:14 UTC,
+  with the selected original-attempt recovered callback live. Its joined cause
+  includes `generation chunk has no record id`; two store reads and zero controls
+  place this in the first mutable snapshot. The outer current-digest fence
+  passed, but decoded `RecID` was nil; tuple and recovered-state checks were not
+  reached. This does not establish persisted-row absence, literal lease expiry
+  or memory pressure. Preserve original Wait1, fixture and receipts; do not open
+  the original database to infer the missing reply.
+
+  Fresh 56-part, offset29/local-ordinal2, single-token SDK/store/runtime tests
+  retain strict original-attempt proof and 7/4 successful reads. Source ordering
+  gives never-run priority 0 before stale priority 2, so an all-success single-token
+  schedule drains its trailing work before the selected stale completion. Test
+  its actual immediate callback as well as the earlier settled-barrier control;
+  never manufacture earlier recovery by changing queue priority or tokens.
+  Nested/direct-record/index/table views, real current-safe lifecycle collection,
+  graceful/hard-death fresh-store controls and pinned SDK malformed-envelope
+  vectors are discriminators, not attribution of V20 or native acceptance.
+
+  Bind an optional private reader observer only to the existing selected
+  recovered read. Keep ordinary SQL byte-identical; the observed sibling changes
+  only RETURN projection in the same transaction to add availability, nested
+  chunk/ID presence and record-type booleans. Label before/after, query/fence/
+  record-ID/tuple/shape failure, zero/one/many cardinalities, current-fence status
+  and decoded ID kind. Unreached or wholly undecodable fields remain unavailable.
+  No new predicate, SELECT, mutation, RPC, retry, write row, file read, deadline,
+  acceptance comparison or authority is introduced. Retain closed scalars in
+  the existing first-refusal mutex before cancellation; append them to its
+  existing log after the original failure propagation. Never retain a raw row,
+  ID, error payload, context, lease, token or query variable in that slot.
+
+  Startup forms one fixed diagnostic query string. Ordinary recovery adds
+  fixed observer lookups, scalar bookkeeping and four
+  boolean slots in the existing bounded typed result; no ordinary reply bytes
+  change. Selected recovery adds three context bindings and four fixed SQL
+  booleans across its existing two chunk replies. There is no new query, scan,
+  hash, write, held I/O lock, goroutine, child or success log. Failure adds one
+  bounded first-record copy under the existing control lock and fields in its
+  existing log. Require source/query/error/accounting parity, real query-view/
+  lifecycle and callback-timing controls, original-projection counterfactual,
+  codec vectors, normal/race/static/docs gates and independent exact-source
+  review. This improves observability only; no substantiated native behavior
+  fix, install/security change, timed approval window or full run follows.
+
+  The exact43c7a129 baseline independently fails its source-coverage assertion
+  (`partitioned_evidence.go`13call sites versus expected12); that file is
+  byte-identical in this candidate. Correct the stale test expectation to13
+  while continuing to check every call's owner and recipe. This pins the
+  already-existing ordinary/observed publication branches; it does not permit
+  an additional runtime query or change a production gate.

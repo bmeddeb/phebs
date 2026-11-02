@@ -298,6 +298,10 @@ type GenerationStaleLeaseTransition struct {
 type generationStaleLeaseChunkFenceRec struct {
 	Chunk                 generationChunkRec `json:"chunk"`
 	CurrentScheduleDigest string             `json:"current_schedule_digest"`
+	ReaderDiagnostics     bool               `json:"reader_diagnostics"`
+	ChunkPresent          bool               `json:"chunk_present"`
+	RecordIDPresent       bool               `json:"record_id_present"`
+	RecordIDIsRecord      bool               `json:"record_id_is_record"`
 }
 
 // GenerationStaleLeaseTransitionObserver runs synchronously at the exact
@@ -1194,7 +1198,12 @@ RETURN SELECT * FROM generation_schedule WHERE digest = $digest LIMIT 1;`, map[s
 func (s *Surreal) ReadGenerationStaleLeaseTransition(
 	ctx context.Context,
 	request GenerationStaleLeaseTransitionRequest,
-) (GenerationStaleLeaseTransition, error) {
+) (value GenerationStaleLeaseTransition, failure error) {
+	stage := readaccounting.TransitionReadInput
+	flags := readaccounting.TransitionReadFailureFlags{}
+	if readaccounting.HasTransitionReadFailureObserver(ctx) {
+		defer func() { readaccounting.NoteTransitionReadFailure(ctx, stage, failure, flags) }()
+	}
 	if ctx == nil {
 		return GenerationStaleLeaseTransition{}, errors.New(
 			"read generation stale lease transition: context is required",
@@ -1203,12 +1212,14 @@ func (s *Surreal) ReadGenerationStaleLeaseTransition(
 	if err := validateGenerationStaleLeaseTransitionRequest(request); err != nil {
 		return GenerationStaleLeaseTransition{}, err
 	}
+	stage = readaccounting.TransitionReadScheduleQuery
 	schedule, err := s.GetGenerationSchedule(ctx, request.Repository, request.Stage)
 	if err != nil {
 		return GenerationStaleLeaseTransition{}, fmt.Errorf(
 			"read generation stale lease transition schedule: %w", err,
 		)
 	}
+	stage = readaccounting.TransitionReadScheduleFence
 	if ValidateGenerationSchedule(*schedule) != nil ||
 		schedule.Digest != request.ScheduleDigest ||
 		schedule.Repository != request.Repository || schedule.Stage != request.Stage ||
@@ -1218,18 +1229,14 @@ func (s *Surreal) ReadGenerationStaleLeaseTransition(
 		schedule.Materialized != schedule.TotalChunks {
 		return GenerationStaleLeaseTransition{}, ErrGenerationStale
 	}
+	stage = readaccounting.TransitionReadChunkCharge
 	if err := readaccounting.Charge(ctx, readaccounting.StoreReadAttempt, 1); err != nil {
 		return GenerationStaleLeaseTransition{}, fmt.Errorf(
 			"read generation stale lease transition chunk: %w", err,
 		)
 	}
-	chunkResults, err := storeQuery[[]generationStaleLeaseChunkFenceRec](ctx, s.accounting, s.db, `
-BEGIN;
-LET $chunk = (SELECT * FROM generation_schedule_chunk
-	WHERE identity = $identity LIMIT 1)[0];
-LET $current_digest = (SELECT VALUE schedule_digest FROM $current LIMIT 1)[0];
-RETURN [{ chunk: $chunk, current_schedule_digest: $current_digest }];
-COMMIT;`, map[string]any{
+	stage = readaccounting.TransitionReadChunkQuery
+	chunkResults, err := storeQuery[[]generationStaleLeaseChunkFenceRec](ctx, s.accounting, s.db, generationTransitionReadQuery(ctx), map[string]any{
 		"identity": request.ChunkIdentity,
 		"current": models.NewRecordID(
 			"generation_schedule_current",
@@ -1244,6 +1251,10 @@ COMMIT;`, map[string]any{
 			"read generation stale lease transition chunk: %w", err,
 		)
 	}
+	stage = readaccounting.TransitionReadChunkFence
+	if chunkResults != nil {
+		flags.Envelope = readaccounting.TransitionReadCount(len(*chunkResults))
+	}
 	var fenced []generationStaleLeaseChunkFenceRec
 	for _, result := range *chunkResults {
 		if len(result.Result) > 0 {
@@ -1251,13 +1262,21 @@ COMMIT;`, map[string]any{
 			break
 		}
 	}
+	flags.Fence = readaccounting.TransitionReadCount(len(fenced))
+	if len(fenced) == 1 {
+		flags.CurrentChecked, flags.CurrentMatches = true, fenced[0].CurrentScheduleDigest == request.ScheduleDigest
+		flags.SQLAvailable, flags.SQLChunkPresent, flags.SQLRecordIDPresent, flags.SQLRecordIDIsRecord = fenced[0].ReaderDiagnostics, fenced[0].ChunkPresent, fenced[0].RecordIDPresent, fenced[0].RecordIDIsRecord
+	}
 	if len(fenced) != 1 || fenced[0].CurrentScheduleDigest != request.ScheduleDigest {
 		return GenerationStaleLeaseTransition{}, ErrGenerationLeaseLost
 	}
+	stage = readaccounting.TransitionReadRecordID
+	flags.DecodedID = generationTransitionDecodedID(fenced[0].Chunk)
 	chunk, err := fenced[0].Chunk.chunk()
 	if err != nil {
 		return GenerationStaleLeaseTransition{}, errors.Join(err, ErrGenerationLeaseLost)
 	}
+	stage = readaccounting.TransitionReadTuple
 	if chunk.Identity != request.ChunkIdentity ||
 		chunk.Identity != generationChunkID(request.ScheduleDigest, request.Offset, request.Attempt) ||
 		chunk.ScheduleDigest != request.ScheduleDigest ||
@@ -1267,6 +1286,7 @@ COMMIT;`, map[string]any{
 		chunk.Attempt != request.Attempt {
 		return GenerationStaleLeaseTransition{}, ErrGenerationLeaseLost
 	}
+	stage = readaccounting.TransitionReadShape
 	if !validGenerationStaleLeaseTransitionShape(request, *schedule, chunk) {
 		return GenerationStaleLeaseTransition{}, ErrGenerationStale
 	}

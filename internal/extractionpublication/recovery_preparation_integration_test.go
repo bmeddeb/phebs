@@ -24,7 +24,9 @@ import (
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/candidateid"
 	"github.com/bmeddeb/phebs/internal/extract"
+	"github.com/bmeddeb/phebs/internal/extract/extractors/grpcgo"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/protodecl"
+	"github.com/bmeddeb/phebs/internal/extract/extractors/thriftdecl"
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/readaccounting"
@@ -317,6 +319,10 @@ func newRecoveryPreparationFixture(t *testing.T, ctx context.Context) *recoveryP
 }
 
 func newRecoveryPreparationFixtureOptions(t *testing.T, ctx context.Context, parts int, persistent bool) *recoveryPreparationFixture {
+	return newRecoveryPreparationFixtureDomainOptions(t, ctx, parts, persistent, 0, 0)
+}
+
+func newRecoveryPreparationFixtureDomainOptions(t *testing.T, ctx context.Context, parts int, persistent bool, prefixParts, suffixParts int) *recoveryPreparationFixture {
 	t.Helper()
 	if parts < 1 || parts > 3 {
 		t.Fatal("bounded fixture requires one to three parts")
@@ -363,6 +369,26 @@ func newRecoveryPreparationFixtureOptions(t *testing.T, ctx context.Context, par
 		}
 		paths = append(paths, path)
 	}
+	if prefixParts != 0 && prefixParts != 27 {
+		t.Fatal("bounded fixture prefix differs")
+	}
+	for index := range prefixParts {
+		path := fmt.Sprintf("prefix%02d.go", index)
+		if err := os.WriteFile(filepath.Join(repositoryDir, path), []byte("package neutral\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		paths = append(paths, path)
+	}
+	if suffixParts != 0 && (suffixParts != 26 || prefixParts != 27) {
+		t.Fatal("bounded fixture suffix differs")
+	}
+	for index := range suffixParts {
+		path := fmt.Sprintf("suffix%02d.thrift", index)
+		if err := os.WriteFile(filepath.Join(repositoryDir, path), []byte(fmt.Sprintf("namespace go neutral%d\nstruct Request { 1: string value }\n", index)), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		paths = append(paths, path)
+	}
 	recoveryPreparationGit(t, ctx, repositoryDir, append([]string{"add", "--"}, paths...)...)
 	recoveryPreparationGit(t, ctx, repositoryDir, "-c", "user.name=Neutral", "-c", "user.email=neutral@example.invalid", "commit", "-q", "-m", "neutral recovery fixture")
 	commit := strings.TrimSpace(recoveryPreparationGit(t, ctx, repositoryDir, "rev-parse", "HEAD"))
@@ -375,6 +401,21 @@ func newRecoveryPreparationFixtureOptions(t *testing.T, ctx context.Context, par
 		policies[0].Plane = candidate.PlaneLocal
 		policies[0].ExecutionPartitionPolicy = candidate.WholeRepositoryExecutionSubrangePolicy
 		policies[0].ExecutionMaxRecords = 1
+	}
+	extractors := []extract.Extractor{extractor}
+	if prefixParts != 0 {
+		prefix := grpcgo.New()
+		extractors = append(extractors, prefix)
+		policies = append(policies, candidate.Policy{Domain: prefix.Domain(), Version: prefix.Version(),
+			Plane: candidate.PlaneLocal, EnumerationPolicy: "grpc-consumer-paths-v1", Enumerate: prefix.Candidate, Required: prefix.Candidate,
+			ExecutionPartitionPolicy: candidate.WholeRepositoryExecutionSubrangePolicy, ExecutionMaxRecords: 1})
+	}
+	if suffixParts != 0 {
+		suffix := thriftdecl.New()
+		extractors = append(extractors, suffix)
+		policies = append(policies, candidate.Policy{Domain: suffix.Domain(), Version: suffix.Version(), Plane: candidate.PlaneLocal,
+			EnumerationPolicy: "thrift-contract-paths-v1", Enumerate: suffix.Candidate, Required: suffix.Candidate,
+			ExecutionPartitionPolicy: candidate.WholeRepositoryExecutionSubrangePolicy, ExecutionMaxRecords: 1})
 	}
 	identities, err := candidate.PolicyIdentities(policies)
 	if err != nil {
@@ -425,7 +466,7 @@ func newRecoveryPreparationFixtureOptions(t *testing.T, ctx context.Context, par
 	fixture.evidence = &recoveryPreparationEvidence{Surreal: state}
 	fixture.runtime = &extractionpublication.Runtime{
 		Root: filepath.Join(dataDir, "extraction-publications"), Store: state,
-		Executor:  &extract.EvidencePartitionExecutor{Evidence: fixture.evidence, Extractors: []extract.Extractor{extractor}},
+		Executor:  &extract.EvidencePartitionExecutor{Evidence: fixture.evidence, Extractors: extractors},
 		Publisher: extractionpublication.StorePublisher{Store: state},
 	}
 	readAuthority := func(context.Context, candidate.State) (string, string, error) {

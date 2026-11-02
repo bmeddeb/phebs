@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -97,7 +98,7 @@ func (runtime *Runtime) ReadCheckpointRestartTransition(
 		ChunkIdentity: transition.ChunkIdentity, Offset: transition.Offset,
 		Length: transition.Length, Attempt: transition.Attempt,
 	}
-	before, err := reader.ReadGenerationStaleLeaseTransition(ctx, storeRequest)
+	before, err := reader.ReadGenerationStaleLeaseTransition(readaccounting.WithTransitionReadSide(ctx, readaccounting.TransitionReadBefore), storeRequest)
 	if err != nil {
 		return CheckpointRestartTransition{}, err
 	}
@@ -172,7 +173,7 @@ func (runtime *Runtime) ReadCheckpointRestartTransition(
 	if err != nil {
 		return CheckpointRestartTransition{}, err
 	}
-	after, err := reader.ReadGenerationStaleLeaseTransition(ctx, storeRequest)
+	after, err := reader.ReadGenerationStaleLeaseTransition(readaccounting.WithTransitionReadSide(ctx, readaccounting.TransitionReadAfter), storeRequest)
 	if err != nil {
 		return CheckpointRestartTransition{}, err
 	}
