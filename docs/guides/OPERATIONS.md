@@ -1586,6 +1586,30 @@ An unavailable measurement or `RSSLimitExceeded:false` does not establish memory
 pressure or successful RSS settlement. Preserve failed fixtures and receipts; these private
 diagnostics do not authorize credential access, cleanup or a changed host policy.
 
+For selected checkpoint recovery, the same first-refusal line can also include
+`reader_present`, `reader_side` (before/after), `reader_stage`, closed cause and
+`reader_flags`. Envelope/fence cardinality is zero/one/many or unknown. Read
+SQL chunk/ID presence and record-type flags only when `SQLAvailable=true`; an
+unavailable flag is not false evidence. `DecodedID=missing` means the typed reply
+had no record ID, not proof that persisted data was absent. NONE, omitted and
+empty nested chunks or omitted/null IDs can share that decoded signature.
+`DecodedID=valid` describes the existing ID table/scalar-type check only; tuple
+and recovered-state acceptance still follow. A complete SDK decode failure
+leaves SQL flags unavailable and preserves the original error.
+
+The ordinary query and successful public read are unchanged. A selected
+observer adds only scalar RETURN fields to the existing read transaction and
+emits no success log. Before/after labels do not add reads or reopen controls.
+A refusal with two store reads and zero control reads precedes immutable
+controls; a supplied pointer change
+between complete snapshots can instead refuse after seven controls and three store attempts.
+Do not replace original attempt 0 proof with retry publication or interpret a
+closed `store_lease` label as literal expiry. Under one repository token,
+never-run priority 0 precedes stale priority 2; preserve this queue ordering when
+reproducing callback timing. Retained failed databases remain unopened during
+these fresh-fixture diagnostics. Installation and native execution require
+separate exact-candidate review and their existing approvals.
+
 On this host, development tools are in `/home/ben/.local/bin`; native amd64
 tools are staged separately under
 `/home/ben/.local/share/phebs-host/native-amd64`. Load the development PATH and

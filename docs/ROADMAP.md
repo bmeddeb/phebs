@@ -378,6 +378,14 @@ static/docs and four supported dual-tag compile gates with independent review
 clear; the full composition was not executed. Full MED-495/MED-496 acceptance
 stays open.
 
+**2026-10-27 MED-496 diagnosis:** V20's first retained recovered-read failure
+has nil decoded record ID after the outer current-digest fence, not established
+persisted-row absence. Fresh strict single-token SDK Runtime, callback timing,
+query-view, lifecycle and codec controls precede any behavior attribution. The
+next scoped candidate adds only optional same-query closed reader diagnostics;
+full qualification, original-attempt proof and all custody/accounting/RSS gates
+remain open. No new installation or full run is implied.
+
 Ben's 2026-10-22 instruction authorizes integrating PR156 and PR164–167 as
 reviewed implementation checkpoints while cleaning maria after verified archival
 transfer. It supersedes their full-native integration hold only. V10 remains a

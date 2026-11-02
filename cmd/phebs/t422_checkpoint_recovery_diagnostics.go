@@ -55,6 +55,7 @@ func (stage t422RecoveryFailureStage) String() string {
 // acceptance evidence. Only closed labels and booleans survive: no raw error,
 // context, event, payload, identity, path, deadline value or token is retained.
 type t422CheckpointRecoveryFailure struct {
+	Reader                                              t422CheckpointReaderFailure
 	Stage                                               t422RecoveryFailureStage
 	Cause, Caller, Lifetime, Hit, Recovered, Deadline   string
 	PhaseExpired                                        bool
@@ -167,6 +168,9 @@ func (control *t422CheckpointRecoveryControl) refuse(ctx context.Context, stage 
 			Deadline: t422RecoveryDeadline(ctx), PhaseExpired: !control.phaseEnd.IsZero() && !time.Now().Before(control.phaseEnd),
 			HitSeen: control.hit.observer != nil, Requeued: control.requeueSeen, RecoveredSeen: control.recovered.observer != nil,
 			Reading: control.recovered.reading, Reported: control.recovered.reported, Event: control.failedEvent(event)}
+		if control.readerFailure != nil {
+			failure.Reader = *control.readerFailure
+		}
 		control.failure = failure
 	}
 	err := control.err
@@ -176,9 +180,9 @@ func (control *t422CheckpointRecoveryControl) refuse(ctx context.Context, stage 
 		control.launch.fail(err)
 		// Do not format cause.Error(), events or contexts here. Logf contains a
 		// failed destination; failure propagation already happened above.
-		diagnostics.Logf("private selected checkpoint recovery first refusal: stage=%s cause=%s caller=%s lifetime=%s hit=%s recovered=%s deadline=%s phase_expired=%t hit_seen=%t requeued=%t recovered_seen=%t reading=%t reported=%t event=%+v",
+		diagnostics.Logf("private selected checkpoint recovery first refusal: stage=%s cause=%s caller=%s lifetime=%s hit=%s recovered=%s deadline=%s phase_expired=%t hit_seen=%t requeued=%t recovered_seen=%t reading=%t reported=%t event=%+v reader_present=%t reader_side=%s reader_stage=%s reader_cause=%s reader_flags=%+v",
 			failure.Stage, failure.Cause, failure.Caller, failure.Lifetime, failure.Hit, failure.Recovered, failure.Deadline,
-			failure.PhaseExpired, failure.HitSeen, failure.Requeued, failure.RecoveredSeen, failure.Reading, failure.Reported, failure.Event)
+			failure.PhaseExpired, failure.HitSeen, failure.Requeued, failure.RecoveredSeen, failure.Reading, failure.Reported, failure.Event, failure.Reader.Present, failure.Reader.Side, failure.Reader.Stage, failure.Reader.Cause, failure.Reader.Flags)
 	}
 	return err
 }
