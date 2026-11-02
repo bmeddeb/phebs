@@ -80,6 +80,7 @@ type t422CheckpointRecoveryControl struct {
 	killed             store.GenerationStaleLeaseTransition
 	finalSeen          bool
 	readerReady        chan context.Context
+	readerFailure      *t422CheckpointReaderFailure   // Advisory only; protected by embedded mu.
 	publicationFailure *t422PublicationFailure        // Advisory only; protected by embedded mu.
 	failure            *t422CheckpointRecoveryFailure // Protected by the embedded mu; selected recovery only.
 }
@@ -300,7 +301,7 @@ func (control *t422CheckpointRecoveryControl) read(ctx context.Context) ([]byte,
 	observer, event, hit := control.recovered.observer, control.recovered.transition, control.input.Hit
 	control.mu.Unlock()
 	operation, finish := control.operationContext(ctx, observer)
-	observedContext, scheduleObservation := readaccounting.CaptureRecoverySchedule(operation)
+	observedContext, scheduleObservation := readaccounting.CaptureRecoverySchedule(control.observeReaderFailure(operation))
 	value, err := control.reconciler.Runtime.ReadCheckpointRestartTransition(observedContext, extractionpublication.CheckpointRestartTransitionRequest{
 		Transition: event, TargetGeneration: hit.TargetGeneration, PriorScheduleDigest: hit.PriorScheduleDigest,
 		Domain: hit.Domain, Ordinal: hit.Ordinal, PlanDigest: hit.PlanDigest, ResultIdentity: hit.ResultIdentity})
