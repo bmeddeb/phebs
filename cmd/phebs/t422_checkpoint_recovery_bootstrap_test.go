@@ -57,7 +57,7 @@ func TestT422CheckpointRecoveryInheritedCallbacks(t *testing.T) {
 
 func runT422CheckpointRecoveryInherited(t *testing.T, mode, bridgePath string) {
 	t.Helper()
-	ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), t422BridgeDeadline(mode)+5*time.Second)
 	defer cancel()
 	record, _ := t422CheckpointRecoveryRecord(t)
 	if bridgePath != "" {
@@ -274,7 +274,7 @@ func TestT422CheckpointRecoveryBootstrapHelper(t *testing.T) {
 	if mode == "" {
 		return
 	}
-	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), t422BridgeDeadline(mode))
 	defer cancel()
 	lifetime, err := dispatchadmission.BootstrapProduction(ctx)
 	if err != nil || lifetime == nil {
@@ -487,4 +487,12 @@ func TestT422CheckpointRecoveryBootstrapHelper(t *testing.T) {
 		t.Fatal(err)
 	}
 	fmt.Println("closed")
+}
+
+// V7 pending-sibling bridges wait for the deferred sibling inside the child.
+func t422BridgeDeadline(mode string) time.Duration {
+	if t422PendingSiblingModes[mode] != "" {
+		return 20 * time.Second
+	}
+	return 10 * time.Second
 }

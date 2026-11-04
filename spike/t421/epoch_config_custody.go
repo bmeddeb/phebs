@@ -278,7 +278,7 @@ func epochConfigBytesParsed(plan Plan, epoch ExecutionEpochConfig, source string
 	}
 	experimental := map[string]bool{"provisional_proto_extraction": true, "provisional_thrift_extraction": true,
 		"provisional_thrift_field_extraction": false, "provisional_kafka_extraction": true}
-	if plan.Schema == PlanV6Schema {
+	if linuxTypedPlanSemantics(plan.Schema) {
 		experimental["typed_scope_reservations"] = true
 	}
 	raw, err := yaml.Marshal(map[string]any{

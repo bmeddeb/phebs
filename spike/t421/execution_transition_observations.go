@@ -6,6 +6,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/extractionpublication"
 	"github.com/bmeddeb/phebs/internal/lifecycle"
 	"github.com/bmeddeb/phebs/internal/recovery"
+	"github.com/bmeddeb/phebs/internal/store"
 )
 
 type executionTransitionObservations struct {
@@ -20,6 +21,7 @@ type executionTransitionObservations struct {
 	checkpointPreparation epochStalePreparation
 	checkpointHit         extractionpublication.CheckpointRestartTransition
 	checkpointRecovered   extractionpublication.CheckpointRestartTransition
+	checkpointSettlement  store.GenerationScheduleSettlement
 	pressure              epochPressureObservations
 	archiveManifest       *recovery.ArchiveTransitionManifest
 	collectionCycle       lifecycle.CycleObservation

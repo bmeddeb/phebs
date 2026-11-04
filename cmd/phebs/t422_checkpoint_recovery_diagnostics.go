@@ -38,13 +38,19 @@ const (
 	t422RecoveryFinalSnapshot
 	t422RecoveryFinalBinding
 	t422RecoveryFinalState
+	t422RecoverySettlementBinding
+	t422RecoverySettlementState
+	t422RecoverySettlementRead
+	t422RecoverySettlementEncoding
+	t422RecoveryFinalSettlement
 )
 
 func (stage t422RecoveryFailureStage) String() string {
 	names := [...]string{"unknown", "reader_binding", "reader_wait", "reader_state", "transition_binding", "transition_target",
 		"transition_deadline", "transition_state", "rendezvous", "rendezvous_binding", "release_wait", "release_state",
 		"read_binding", "read_state", "read_wait", "runtime_read", "runtime_match", "schedule_projection", "encoding",
-		"read_report", "report_release", "final_snapshot", "final_binding", "final_state"}
+		"read_report", "report_release", "final_snapshot", "final_binding", "final_state",
+		"settlement_binding", "settlement_state", "settlement_read", "settlement_encoding", "final_settlement"}
 	if int(stage) >= len(names) {
 		return names[0]
 	}

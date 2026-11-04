@@ -137,6 +137,17 @@ func TestCheckpointRestartTransitionHookAndExactReader(t *testing.T) {
 		recoveredResult.ResultDigest != hitResult.ResultDigest {
 		t.Fatalf("recovered checkpoint = %+v", recoveredResult)
 	}
+	// V7: deferred siblings may keep the schedule active at R; the selected
+	// chunk fence and the result/authority controls are unchanged.
+	activeStore := recoveredStore
+	activeStore.ScheduleStatus = store.GenerationScheduleActive
+	state.set(activeStore, false)
+	activeResult := readCheckpointRestartTransition(t, runtime, request)
+	if activeResult.ScheduleStatus != store.GenerationScheduleActive || !activeResult.RootExists ||
+		activeResult.ChunkStatus != store.GenerationChunkDone || activeResult.RootDigest != recoveredResult.RootDigest {
+		t.Fatalf("active recovered checkpoint = %+v", activeResult)
+	}
+	state.set(recoveredStore, false)
 	rawRecovered, err := json.Marshal(recoveredResult)
 	if err != nil || strings.Contains(string(rawRecovered), recoveredResult.PrivateLeaseTokenDigest) {
 		t.Fatalf("private lease digest escaped recovery JSON: %s, %v", rawRecovered, err)
@@ -217,4 +228,39 @@ func checkpointRestartTransitionFixture(
 		ClaimedBy: "checkpoint-worker", LeaseToken: privateLease,
 	}
 	return runtime, state, request, hit, chunk
+}
+
+func TestSameRecoveredStoreStateAdvancesOnlyToSettled(t *testing.T) {
+	before := store.GenerationStaleLeaseTransition{
+		Point: store.GenerationStaleLeaseTransitionRecovered, ScheduleStatus: store.GenerationScheduleActive,
+		ChunkStatus: store.GenerationChunkDone, Priority: store.GenerationPriorityStale,
+		ChunkStateDigest: digest("row", nil), CheckpointStateDigest: digest("stable", nil),
+	}
+	for name, test := range map[string]struct {
+		mutate func(*store.GenerationStaleLeaseTransition, *store.GenerationStaleLeaseTransition)
+		want   bool
+	}{
+		"unchanged active":  {want: true},
+		"active to settled": {mutate: func(_, a *store.GenerationStaleLeaseTransition) { a.ScheduleStatus = store.GenerationScheduleSettled }, want: true},
+		"settled unchanged": {mutate: func(b, a *store.GenerationStaleLeaseTransition) {
+			b.ScheduleStatus, a.ScheduleStatus = store.GenerationScheduleSettled, store.GenerationScheduleSettled
+		}, want: true},
+		"settled to active": {mutate: func(b, _ *store.GenerationStaleLeaseTransition) { b.ScheduleStatus = store.GenerationScheduleSettled }},
+		"active to superseded": {mutate: func(_, a *store.GenerationStaleLeaseTransition) {
+			a.ScheduleStatus = store.GenerationScheduleSuperseded
+		}},
+		"selected row changed": {mutate: func(_, a *store.GenerationStaleLeaseTransition) {
+			a.ScheduleStatus, a.ChunkStateDigest = store.GenerationScheduleSettled, digest("other-row", nil)
+		}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			b, a := before, before
+			if test.mutate != nil {
+				test.mutate(&b, &a)
+			}
+			if got := sameRecoveredStoreState(b, a); got != test.want {
+				t.Fatalf("sameRecoveredStoreState = %t, want %t", got, test.want)
+			}
+		})
+	}
 }

@@ -201,7 +201,7 @@ func composeExecutionRecoveryInjection(plan Plan, freeze ExecutionFreeze, measur
 		hit, recovered := observed.checkpointHit, observed.checkpointRecovered
 		if hit.Point != "checkpoint_hit" || recovered.Point != "recovered" || hit.ObservedScheduleChunks == 0 ||
 			hit.ObservedScheduleChunks != recovered.ObservedScheduleChunks || recovered.ObservedScheduleChunks != p.Chunks ||
-			recovered.ObservedScheduleSuccesses != recovered.ObservedScheduleChunks ||
+			recovered.ObservedScheduleSuccesses != recovered.ObservedScheduleChunks && !recoverySettlementPlanSemantics(plan.Schema) ||
 			recovered.TargetGeneration != prepared.TargetGeneration || recovered.PriorScheduleDigest != prepared.PriorSchedule ||
 			recovered.ScheduleGeneration != prepared.RecoveryGeneration || recovered.ScheduleDigest != prepared.RecoverySchedule ||
 			recovered.Domain != prepared.Domain || recovered.Ordinal != prepared.Ordinal || recovered.PlanDigest != prepared.PlanDigest ||
@@ -216,13 +216,29 @@ func composeExecutionRecoveryInjection(plan Plan, freeze ExecutionFreeze, measur
 			return InjectionTransition{}, errExecutionReceiptTransition
 		}
 		p.Successes = recovered.ObservedScheduleSuccesses
+		if recoverySettlementPlanSemantics(plan.Schema) {
+			// V7 successes are the Z proof, not the R snapshot.
+			p.Successes = uint64(observed.checkpointSettlement.Succeeded)
+		}
 		// The prepared checkpoint has one clear completion bit and no root.
 		// Its immutable recovered snapshot proves the one idempotent completion
 		// and root install for this exact result, with no result rewrite.
 		if hit.CompletionFileExists && !hit.CompletionBitSet && recovered.CompletionBitSet {
 			p.RecoveryCompletionWrites = 1
 		}
-		if !hit.RootExists && recovered.RootExists {
+		// V7: Recovered may precede deferred siblings, so the selected domain
+		// root can be installed after R. The Z settlement proof plus the
+		// accepted F (every root equal to the prior authority) prove the root
+		// install, the current pointer and the settled schedule afterwards.
+		rootAfter, currentAfter, statusAfter := recovered.RootExists, recovered.Current, recovered.ScheduleStatus
+		if recoverySettlementPlanSemantics(plan.Schema) {
+			settlement := observed.checkpointSettlement
+			if !settlement.Complete() || settlement.ScheduleDigest != prepared.RecoverySchedule || settlement.TotalChunks != int(p.Chunks) {
+				return InjectionTransition{}, errExecutionReceiptTransition
+			}
+			rootAfter, currentAfter, statusAfter = true, true, settlement.Status
+		}
+		if !hit.RootExists && rootAfter {
 			p.RecoveryRootInstalls = 1
 		}
 		value.ObservedRecoveryBranch = "hard_restart_reap_and_reuse_checkpoint"
@@ -239,8 +255,8 @@ func composeExecutionRecoveryInjection(plan Plan, freeze ExecutionFreeze, measur
 			CanonicalResultExistsAtHit: hit.CanonicalResultExists, ResultDirectorySyncedAtHit: prepared.Operations.DirectoriesSynced,
 			CompletionFileExistsAtHit: hit.CompletionFileExists, CompletionBitClearAtHit: !hit.CompletionBitSet,
 			RootAbsentAtHit: !hit.RootExists, CurrentAbsentAtHit: !hit.Current, SameResultBytesReused: hit.ResultDigest == recovered.ResultDigest,
-			CompletionExistsAfter: recovered.CompletionFileExists && recovered.CompletionBitSet, RootExistsAfter: recovered.RootExists,
-			CurrentAfter: recovered.Current, ScheduleStatusAfter: recovered.ScheduleStatus, ChunkStatusAfter: recovered.ChunkStatus, UnleasedAfter: !recovered.Leased,
+			CompletionExistsAfter: recovered.CompletionFileExists && recovered.CompletionBitSet, RootExistsAfter: rootAfter,
+			CurrentAfter: currentAfter, ScheduleStatusAfter: statusAfter, ChunkStatusAfter: recovered.ChunkStatus, UnleasedAfter: !recovered.Leased,
 			StartCount: 2, CompletionCount: p.RecoveryCompletionWrites, PriorityBefore: uint64(hit.Priority), PriorityAfter: uint64(recovered.Priority),
 			AttemptBefore: uint64(hit.Attempt), AttemptAfter: uint64(recovered.Attempt), PrivateLeaseTokenChanged: recovered.PrivateLeaseChanged, HardDeath: beforeRoot.CheckpointHardDeath}
 	}

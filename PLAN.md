@@ -18048,6 +18048,85 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   already-existing ordinary/observed publication branches; it does not permit
   an additional runtime query or change a production gate.
 
+- **2026-11-04 — MED-496 selected recovery and schedule settlement are separate
+  barriers (prospective V7 contract correction).** V23 (patched SurrealDB
+  `6a953d59`) refused epoch four at `runtime_read/store_stale`, before-side
+  `shape`: three higher-offset chunks (32, 34, 36) were deferred after 5 s
+  extraction-authority fence waits, and `deferGenerationChunkSQL` gives deferrals
+  the same priority 2 as reaped stale chunks. The selected stale chunk 29 sorted
+  first, completed at 04:28:34 and emitted Recovered while the schedule was
+  active at 53/56. The store shape and both consumers required a settled
+  schedule at that point, so the control assumed the selected chunk completes
+  last. Deferral is ordinary production behavior. The census found no lost
+  commit. V23's retained run, plan, wrappers, receipts and census stay unchanged
+  as historical evidence; this correction does not reinterpret them.
+
+  Recovered (R) proves only the exact selected chunk. It must be done, unleased
+  and at stale priority, with reaper provenance, a changed lease, the unchanged
+  canonical result and the existing result and authority fences. The schedule
+  may be a valid active one (consistent counters, at least one success) or a
+  settled one with every chunk succeeded. Between the before and after snapshots
+  the selected row must not change, and the schedule may only advance from
+  active to settled. R reports the after status, matching its observed schedule
+  projection. The store shape relaxation is unversioned and also shared with the
+  epoch-three stale flow, whose parent still requires every chunk to have
+  succeeded. Server and parent R acceptance relax only for V7 inputs; without
+  the opt-in they keep the exact settled, published recipe. The selected
+  domain is either complete, with its current pointer matching the prior root,
+  or (only while the schedule is still active) exactly unpublished: completion count below expected, the selected bit set,
+  no root and no current pointer. A deferred sibling in the same domain can
+  cause the unpublished case. Control and store read counts are unchanged
+  (C7/S4 per read, p2C7S4).
+
+  Schedule settlement (Z) is a separate later barrier. After the selected report
+  and before X, the parent polls `GET /api/t422/recovery-schedule/settled` at the
+  5 s inspection cadence within the existing process_restart phase deadline.
+  Each call reads the exact current schedule once (C0, S between 1 and the
+  store's 64-attempt retry ceiling, M0, W0). The barrier passes only when the
+  schedule has the hit's exact digest, generation, repository, stage and class,
+  is settled, has no pending, running or failed chunks, and every chunk
+  succeeded. An active schedule with the same digest is incomplete and is polled
+  again. A failed, replaced or superseded schedule, or the phase deadline,
+  refuses, and the first refusal is retained. Final authority (F) on the server
+  requires the Z proof when the request opts in, and the parent's F match
+  requires it too. Progress `current`, tail readiness and product readiness never
+  substitute for Z. F still proves that every domain root equals the prior
+  authority. The path is outside `/api/t422/checkpoint/`, so the exact R
+  transition subtotal is unchanged.
+
+  V7 (`t421-combined-gate-plan-v7`, receipt and freeze v7) derives from V6 and
+  inherits all V6 typed-extraction Linux semantics. It adds the
+  `recovery-settlement-v7` readiness policy, replaces
+  `phase-K=prep+X+T+F+L+R+Q` with `Z=[1,1+floor(deadline/5s)]xC0S[1,64]M0W0;
+  phase-K=prep+X+T+F+L+R+Z+Q`, and adds omit-zero Z rows to the process_restart
+  inspection row and epoch four. Retained V1–V6 inventory digests, plans and
+  checks are byte-identical. That includes V6's settled-at-R acceptance.
+  Process_restart phase K grows by Z's store maximum (2,881 calls × 64 =
+  184,384 attempts). A Z request on a flow that has not opted in gets a plain
+  refusal and does not poison it.
+  Epoch-four accounted requests rise from 6,261 to 9,142, still under the
+  retained 11,531 report-ordinal ceiling. The opt-in recovery input flag
+  `schedule_settlement` is omitted for V6, so V6 request bytes are unchanged.
+  For V7 receipts, after-state, root install and successes come from the Z
+  proof and the accepted F, not from the R snapshot. The native checkpoint
+  driver builds V7.
+
+  Steady-state cost: ordinary scheduling, claims, deferral priority, store SQL
+  and runtime publication are unchanged. The only new production work is a
+  closed epoch-four inspection route. Each Z call runs one bounded schedule
+  query with no file, member or write work, and no new goroutine, lock, child
+  process or cache. Z runs only after R and stops at the first complete proof.
+  A tighter claim order (Option B) or removing the fence contention (Option C)
+  were rejected as the fix. B changes production scheduling and still races a
+  deferral that lands after the selected chunk becomes eligible. C reduces how
+  often the order occurs but keeps the assumption. Tests cover: store order
+  (deferred higher offsets pending at R, then settling; failure; replacement);
+  the runtime active-R and drift fence; a real-store HTTP bridge for a pending
+  sibling that then completes, fails or is replaced; and parent V7 versus V6
+  acceptance with deadline, call-bound and refusal cases. A fresh native V24 run
+  under Ben's approval remains the acceptance bar; this correction grants no
+  install, approval window or run.
+
 - **2026-10-24 — T42.H2t.a Linux executor prework custody (MED-497,
   source implementation).** Preserve the full formal Linux executor/profile
   acceptance criteria while implementing its independent live-image and

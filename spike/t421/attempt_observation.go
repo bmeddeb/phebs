@@ -69,7 +69,7 @@ func observeExecutionAttempts(raw []byte, plan Plan, producer uint32, input [32]
 func observeExecutionAttemptsForClose(raw []byte, plan Plan, producer uint32, input [32]byte, joined bool, reuseThrough uint32) (out ExecutionAttemptObservation, err error) {
 	prefix := reuseThrough != 0
 	selected := producer == 4 && reuseThrough == 6 || producer == 5 && reuseThrough == 8
-	if prefix && (plan.Schema != PlanV6Schema || !selected) {
+	if prefix && (!linuxTypedPlanSemantics(plan.Schema) || !selected) {
 		return out, errExecutionAttempts
 	}
 	defer func() {
@@ -321,7 +321,7 @@ func (run *ExecutionEpochOneRun) finishAttemptObservation(ctx context.Context, r
 // Finish owns run.mu. Existing native checks bind selected v13 and the exact
 // successor capability without taking shared locks or granting new authority.
 func (run *ExecutionEpochOneRun) attemptObservationReuseThrough(ctx context.Context) uint32 {
-	if run.flow.plan.Schema != PlanV6Schema {
+	if !linuxTypedPlanSemantics(run.flow.plan.Schema) {
 		return 0
 	}
 	if run.epoch.Epoch == 3 && !run.checkpointAllowed {

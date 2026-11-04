@@ -18,10 +18,12 @@ const (
 	ReceiptV4Schema               = "t422-combined-convergence-receipt-v4"
 	ReceiptV5Schema               = "t422-combined-convergence-receipt-v5"
 	ReceiptV6Schema               = "t422-combined-convergence-receipt-v6"
+	ReceiptV7Schema               = "t422-combined-convergence-receipt-v7"
 	ExecutionFreezeV3Schema       = "t422-combined-execution-freeze-v3"
 	ExecutionFreezeV4Schema       = "t422-combined-execution-freeze-v4"
 	ExecutionFreezeV5Schema       = "t422-combined-execution-freeze-v5"
 	ExecutionFreezeV6Schema       = "t422-combined-execution-freeze-v6"
+	ExecutionFreezeV7Schema       = "t422-combined-execution-freeze-v7"
 	ExecutionProfileV3Schema      = "t422-production-execution-profile-v3"
 	PhaseRuntimeBindingV3Schema   = "t422-phase-runtime-binding-v3"
 	InterphaseDriftToleranceBytes = uint64(65_536)
@@ -110,7 +112,7 @@ func buildActiveExecutionPlan(sourceCommit string) (Plan, error) {
 
 func knownPlanSchema(schema string) bool {
 	switch schema {
-	case PlanSchema, PlanV2Schema, PlanV3Schema, PlanV4Schema, PlanV5Schema, PlanV6Schema:
+	case PlanSchema, PlanV2Schema, PlanV3Schema, PlanV4Schema, PlanV5Schema, PlanV6Schema, PlanV7Schema:
 		return true
 	default:
 		return false
@@ -141,6 +143,8 @@ func processAccountingFreezeSchema(schema string) string {
 		return ExecutionFreezeV5Schema
 	case PlanV6Schema:
 		return ExecutionFreezeV6Schema
+	case PlanV7Schema:
+		return ExecutionFreezeV7Schema
 	default:
 		return ""
 	}

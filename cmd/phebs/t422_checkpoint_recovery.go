@@ -18,6 +18,10 @@ import (
 
 const t422CheckpointRecoveredPath = "/api/t422/checkpoint/recovered"
 
+// The settlement barrier is deliberately outside /api/t422/checkpoint/ so the
+// exact two-call checkpoint transition subtotal is unchanged.
+const t422RecoveryScheduleSettledPath = "/api/t422/recovery-schedule/settled"
+
 // Only the genuine parent's previously observed scalar identities are carried.
 // This input grants no authority to assert a kill, lease change or recovery.
 type t422CheckpointRecoveryInput struct {
@@ -25,6 +29,11 @@ type t422CheckpointRecoveryInput struct {
 	Roots  [9]extractionpublication.RecoveryPreparationRoot  `json:"roots"`
 	Offset int                                               `json:"offset"`
 	Hit    extractionpublication.CheckpointRestartTransition `json:"hit"`
+	// ScheduleSettlement opts into the V7 barrier: after the selected
+	// recovery is reported, final authority additionally requires a proof that
+	// the exact recovery schedule settled with every chunk succeeded. Retained
+	// V6 requests omit it and keep their exact bytes.
+	ScheduleSettlement bool `json:"schedule_settlement,omitempty"`
 }
 
 func validT422CheckpointRecoveryInput(input t422CheckpointRecoveryInput) bool {
@@ -79,6 +88,7 @@ type t422CheckpointRecoveryControl struct {
 	input              t422CheckpointRecoveryInput
 	killed             store.GenerationStaleLeaseTransition
 	finalSeen          bool
+	settled            bool // Protected by the embedded mu; V7 settlement proof.
 	readerReady        chan context.Context
 	readerFailure      *t422CheckpointReaderFailure   // Advisory only; protected by embedded mu.
 	publicationFailure *t422PublicationFailure        // Advisory only; protected by embedded mu.
@@ -259,11 +269,24 @@ func (control *t422CheckpointRecoveryControl) transition(ctx context.Context, ev
 func (control *t422CheckpointRecoveryControl) matchesRecovered(value extractionpublication.CheckpointRestartTransition, event store.GenerationStaleLeaseTransition) bool {
 	want := control.input.Hit
 	want.Point, want.Priority, want.ChunkStatus, want.Leased = store.GenerationStaleLeaseTransitionRecovered, store.GenerationPriorityStale, store.GenerationChunkDone, false
-	want.ScheduleStatus = store.GenerationScheduleSettled
-	want.CompletionBitSet, want.RootExists, want.Current = true, true, true
-	for _, root := range control.input.Roots {
-		if root.Domain == want.Domain {
-			want.RootDigest = root.RootDigest
+	// Recovered proves the selected chunk only: deferred siblings may keep the
+	// schedule active and, in the same domain, its root unpublished. The
+	// separate settlement barrier and final authority prove the remainder.
+	// Inputs without the V7 opt-in keep the exact settled, published recipe.
+	if value.ScheduleStatus != store.GenerationScheduleSettled &&
+		(!control.input.ScheduleSettlement || value.ScheduleStatus != store.GenerationScheduleActive) {
+		return false
+	}
+	want.ScheduleStatus = value.ScheduleStatus
+	want.CompletionBitSet = true
+	// An unpublished selected domain is possible only while siblings remain.
+	if value.RootExists || value.Current || value.RootDigest != "" || !control.input.ScheduleSettlement ||
+		value.ScheduleStatus != store.GenerationScheduleActive {
+		want.RootExists, want.Current = true, true
+		for _, root := range control.input.Roots {
+			if root.Domain == want.Domain {
+				want.RootDigest = root.RootDigest
+			}
 		}
 	}
 	want.PrivateLeaseTokenDigest, want.CheckpointStateDigest = event.PrivateLeaseTokenDigest, value.CheckpointStateDigest
@@ -349,6 +372,14 @@ func (control *t422CheckpointRecoveryControl) captureFinal(ctx context.Context, 
 		return control.refuse(ctx, t422RecoveryFinalBinding, errT422StaleControl, nil)
 	}
 	value, err := t422StaleFinalSnapshot(state, response, control.typedScopeReservations)
+	if control.input.ScheduleSettlement {
+		control.mu.Lock()
+		settled := control.settled
+		control.mu.Unlock()
+		if !settled {
+			return control.refuse(ctx, t422RecoveryFinalSettlement, errT422StaleControl, nil)
+		}
+	}
 	control.mu.Lock()
 	valid := err == nil && control.err == nil && control.recovered.reported && !control.finalSeen &&
 		value.final == control.input.Prior && value.generation == control.input.Hit.TargetGeneration && value.roots == control.input.Roots
@@ -369,4 +400,69 @@ func (state *t421ExactReadAccountingState) checkpointRecoveredRead(request *http
 		return nil
 	}
 	return state.checkpointRecovery.read
+}
+
+type t422ScheduleSettlementStore interface {
+	ReadGenerationScheduleSettlement(context.Context, store.GenerationScheduleSettlementRequest) (store.GenerationScheduleSettlement, error)
+}
+
+// settledRead is the V7 schedule-settlement barrier. It is repeatable until the
+// first complete observation, opens only after the selected recovery report,
+// and reads exactly the recovery schedule named by the parent's hit. An
+// incomplete active observation is returned for the parent to poll again
+// within its phase deadline; a failed, replaced or superseded schedule is a
+// terminal refusal. Progress or product readiness never sets the proof.
+func (control *t422CheckpointRecoveryControl) settledRead(ctx context.Context) ([]byte, func(error), error) {
+	if !control.input.ScheduleSettlement {
+		// Not opted in: a plain refusal that never poisons a retained flow.
+		return nil, nil, errT422StaleControl
+	}
+	if !control.current(ctx, true, false) {
+		return nil, nil, control.refuse(ctx, t422RecoverySettlementBinding, errT422StaleControl, nil)
+	}
+	control.mu.Lock()
+	valid := control.err == nil && control.recovered.reported && !control.settled && !control.finalSeen
+	control.mu.Unlock()
+	if !valid {
+		return nil, nil, control.refuse(ctx, t422RecoverySettlementState, errT422StaleControl, nil)
+	}
+	reader, ok := control.reconciler.Runtime.Store.(t422ScheduleSettlementStore)
+	if !ok {
+		return nil, nil, control.refuse(ctx, t422RecoverySettlementBinding, errT422StaleControl, nil)
+	}
+	hit := control.input.Hit
+	value, err := reader.ReadGenerationScheduleSettlement(ctx, store.GenerationScheduleSettlementRequest{
+		Repository: control.launch.request.Repository, Stage: extractionpublication.ScheduleStage,
+		Generation: hit.ScheduleGeneration, ResourceClass: store.GenerationResourceExtraction,
+		ScheduleDigest: hit.ScheduleDigest,
+	})
+	if err != nil || value.ScheduleDigest != hit.ScheduleDigest {
+		return nil, nil, control.refuse(ctx, t422RecoverySettlementRead, errors.Join(err, errT422StaleControl), nil)
+	}
+	body, err := json.Marshal(value)
+	if err != nil {
+		return nil, nil, control.refuse(ctx, t422RecoverySettlementEncoding, err, nil)
+	}
+	return append(body, '\n'), func(cause error) {
+		if cause != nil || !control.current(ctx, true, false) {
+			_ = control.refuse(ctx, t422RecoverySettlementRead, errors.Join(cause, errT422StaleControl), nil)
+			return
+		}
+		if value.Complete() {
+			control.mu.Lock()
+			if control.err == nil {
+				control.settled = true
+			}
+			control.mu.Unlock()
+		}
+	}, nil
+}
+
+func (state *t421ExactReadAccountingState) recoveryScheduleSettledRead(request *http.Request) func(context.Context) ([]byte, func(error), error) {
+	if state.checkpointRecovery == nil || state.semantic == nil || state.checkpointRecovery.launch != state.semantic || request == nil || request.URL == nil ||
+		request.URL.Path != t422RecoveryScheduleSettledPath || request.URL.EscapedPath() != t422RecoveryScheduleSettledPath ||
+		request.Method != http.MethodGet || request.URL.RawQuery != "" || request.URL.ForceQuery || request.ContentLength != 0 || len(request.TransferEncoding) != 0 {
+		return nil
+	}
+	return state.checkpointRecovery.settledRead
 }

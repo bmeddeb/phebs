@@ -157,6 +157,16 @@ func (runtime *Runtime) ReadCheckpointRestartTransition(
 			}
 			return completionBitSet, rootExists, current, "", nil
 		case store.GenerationStaleLeaseTransitionRecovered:
+			// The selected result is complete, but deferred siblings in the same
+			// domain may still be pending. That domain is then exactly
+			// incomplete: no root and no current pointer. Final authority later
+			// proves every root; the schedule-settlement barrier proves the rest.
+			if completionBitSet && completion.Count < completion.Expected && !rootExists && !current {
+				if !errors.Is(pointerErr, os.ErrNotExist) {
+					return false, false, false, "", errors.Join(pointerErr, ErrStale)
+				}
+				return completionBitSet, rootExists, current, "", nil
+			}
 			if completion.Count != completion.Expected || !completionBitSet || !rootExists ||
 				pointerErr != nil || target.ordinal >= len(root.Results) ||
 				root.Results[target.ordinal] != target.result ||
@@ -181,7 +191,7 @@ func (runtime *Runtime) ReadCheckpointRestartTransition(
 		if !sameCheckpointRestartStoreState(after, before) {
 			return CheckpointRestartTransition{}, ErrStale
 		}
-	} else if after != before {
+	} else if !sameRecoveredStoreState(before, after) {
 		return CheckpointRestartTransition{}, ErrStale
 	}
 	return CheckpointRestartTransition{
@@ -198,7 +208,8 @@ func (runtime *Runtime) ReadCheckpointRestartTransition(
 		ObservationGenerationDigest: target.result.ObservationGenerationDigest,
 		ExtractorVersion:            target.result.ExtractorVersion,
 		ExtractionPolicyDigest:      target.result.ExtractionPolicyDigest,
-		ScheduleStatus:              before.ScheduleStatus, Priority: before.Priority,
+		// The after snapshot also supplies the observed schedule projection.
+		ScheduleStatus: after.ScheduleStatus, Priority: before.Priority,
 		Attempt: before.Attempt, ChunkStatus: before.ChunkStatus, Leased: before.Leased,
 		CheckpointStateDigest:   before.CheckpointStateDigest,
 		PrivateLeaseTokenDigest: transition.PrivateLeaseTokenDigest,
@@ -232,4 +243,16 @@ func sameCheckpointRestartStoreState(
 		left.ChunkStatus == right.ChunkStatus && left.Leased == right.Leased &&
 		left.CheckpointStateDigest == right.CheckpointStateDigest &&
 		left.PrivateLeaseTokenDigest == right.PrivateLeaseTokenDigest
+}
+
+// sameRecoveredStoreState fences the selected chunk exactly across a
+// recovered snapshot. Other chunks of the schedule may finish meanwhile, so the
+// schedule may advance from active to settled, but never in any other way.
+func sameRecoveredStoreState(before, after store.GenerationStaleLeaseTransition) bool {
+	advanced := after
+	if before.ScheduleStatus == store.GenerationScheduleActive &&
+		after.ScheduleStatus == store.GenerationScheduleSettled {
+		advanced.ScheduleStatus = before.ScheduleStatus
+	}
+	return advanced == before
 }

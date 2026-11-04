@@ -13,7 +13,13 @@ const typedSourceReadPolicy = "typed-source-offers-v6:metadata-only-index-0a00;g
 const typedScopeEvidenceGroupingPolicy = "typed-extraction-v6:policy=sha256(utf8(phebs-extraction-typed-scope-reservations-v1)+NUL+169-fact-policy);typed-weight=max(1,validated-scope-records);member-weight=max(1,admitted-records);unchanged-aggregate-and-partition-caps;grpc-caller-1.6.0-typed-owns-fallback;10999-source-edge-gaps-no-attribution-snapshot;members-read-without-emission;historical-V1-V5-exact"
 
 func callerRestorePlanSemantics(schema string) bool {
-	return schema == PlanV5Schema || schema == PlanV6Schema
+	return schema == PlanV5Schema || linuxTypedPlanSemantics(schema)
+}
+
+// linuxTypedPlanSemantics selects the V6 typed-extraction Linux semantics
+// that every later prospective correction inherits.
+func linuxTypedPlanSemantics(schema string) bool {
+	return schema == PlanV6Schema || recoverySettlementPlanSemantics(schema)
 }
 
 // BuildPlanV6 constructs an unsealed plan; construction grants no execution.

@@ -79,6 +79,7 @@ func composeExecutionReceiptTransitions(plan Plan, freeze ExecutionFreeze, phase
 			observed := epochs[3].transitionObservations
 			if phase == "process_restart" {
 				observed.checkpointRecovered = epochs[4].transitionObservations.checkpointRecovered
+				observed.checkpointSettlement = epochs[4].transitionObservations.checkpointSettlement
 			}
 			injection, e := composeExecutionRecoveryInjection(plan, freeze, measurement, authority, observed, events, times, epochs[3], epochs[4])
 			err = e

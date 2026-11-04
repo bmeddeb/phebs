@@ -99,7 +99,7 @@ func PrepareExecutionEpochOne(ctx context.Context, epochs *ExecutionEpochConfigC
 	_, raw, err := readAuthorCustodyPlan(ctx, author.request.Plan)
 	var plan Plan
 	// The V6 Linux flow has its own genuine owners and constructor.
-	if err != nil || SHA256(raw) != author.planSHA256 || json.Unmarshal(raw, &plan) != nil || plan.Schema == PlanV6Schema {
+	if err != nil || SHA256(raw) != author.planSHA256 || json.Unmarshal(raw, &plan) != nil || linuxTypedPlanSemantics(plan.Schema) {
 		return nil, ErrExecutionEpochOne
 	}
 	var bindings [executionProducerCount][32]byte
@@ -1458,6 +1458,7 @@ func (run *ExecutionEpochOneRun) finish(ctx context.Context, cancel context.Canc
 			stalePreparation:      run.inspection.stalePreparation,
 			checkpointPreparation: run.inspection.checkpointPreparation,
 			checkpointHit:         run.inspection.checkpointHit, checkpointRecovered: run.inspection.checkpointRecovered,
+			checkpointSettlement: run.inspection.checkpointSettlement,
 			pressure: run.inspection.pressure, archiveManifest: run.inspection.archiveManifest,
 			collectionCycle: run.inspection.collectionCycle,
 		})

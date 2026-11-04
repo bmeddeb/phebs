@@ -263,8 +263,13 @@ func validatePlanExecutionContract(plan Plan) error {
 			}
 		}
 	}
-	if plan.Schema == PlanV6Schema {
+	if linuxTypedPlanSemantics(plan.Schema) {
 		if err := applyTypedExtractionCorrection(&want); err != nil {
+			return err
+		}
+	}
+	if recoverySettlementPlanSemantics(plan.Schema) {
+		if err := applyRecoverySettlementCorrection(&want); err != nil {
 			return err
 		}
 	}

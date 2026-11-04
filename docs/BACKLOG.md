@@ -5376,6 +5376,23 @@ first-record/no-data/log-failure controls, normal/race/static/docs gates and
 independent exact-source review. This diagnostic candidate authorizes no new
 privileged installation, metadata invocation, approval window or full run.
 
+**T42.H2s.p · Selected recovery / schedule settlement barriers (MED-496,
+2026-11-04; prospective V7 contract correction).** V23 refused epoch four
+because the selected stale chunk recovered while deferred higher-offset siblings
+(same priority 2) kept the schedule active at 53/56; R required a settled
+schedule. Split R from a separate schedule-settlement barrier Z. R accepts a
+valid active or settled schedule and a complete-current or exactly unpublished
+selected domain, keeping every chunk, lease, result and authority fence. Z polls
+the exact recovery schedule after R and before X, within the existing phase
+deadline, and proves it settled with every chunk succeeded. Failure,
+replacement, supersession or the deadline refuses. Progress and readiness never
+substitute, and F requires Z. Bind Z into prospective V7 accounting (C0, S up to
+64 per call, at most 2,881 calls); V1–V6 and V23 evidence stay exact. AC:
+deterministic store, runtime, real-store HTTP and parent tests for
+deferred-sibling order, timeout, failure and replacement; unchanged V1–V6
+inventory digests; normal, race, static and docs gates; independent
+exact-source review. A native V24 run needs Ben's separate approval.
+
 **T42.H2t.a · Live Linux executor prework custody (MED-497 implementation,
 2026-10-24; bounded implementation).** Connect a genuine protected `t422-execute` finite
 prework bootstrap to live original-parent, inner-image and inherited control/

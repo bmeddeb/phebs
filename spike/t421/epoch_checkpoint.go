@@ -41,6 +41,8 @@ type epochCheckpointRecoveryInput struct {
 	Roots  [9]extractionpublication.RecoveryPreparationRoot  `json:"roots"`
 	Offset int                                               `json:"offset"`
 	Hit    extractionpublication.CheckpointRestartTransition `json:"hit"`
+	// V7 only: the server requires the separate settlement proof before F.
+	ScheduleSettlement bool `json:"schedule_settlement,omitempty"`
 }
 
 func epochSemanticInput(planSHA string, epoch ExecutionEpochConfig, recovery *epochCheckpointRecoveryInput, archive ...*epochArchiveInput) ([]byte, error) {
@@ -403,7 +405,8 @@ func (reader *executionEpochInspection) checkpointHandoff() (*epochCheckpointRec
 		reader.staleAuthority.Phase != "stale_lease" || len(reader.staleAuthority.ExtractionRoots) != 9 {
 		return nil, errEpochInspection
 	}
-	value := &epochCheckpointRecoveryInput{Prior: reader.checkpointPreparation.Authority, Offset: reader.checkpointPreparation.Offset, Hit: reader.checkpointHit}
+	value := &epochCheckpointRecoveryInput{Prior: reader.checkpointPreparation.Authority, Offset: reader.checkpointPreparation.Offset, Hit: reader.checkpointHit,
+		ScheduleSettlement: recoverySettlementPlanSemantics(reader.plan.Schema)}
 	for i, root := range reader.staleAuthority.ExtractionRoots {
 		value.Roots[i] = extractionpublication.RecoveryPreparationRoot{Domain: root.Domain, PlanDigest: root.PlanSHA256, RootDigest: root.RootSHA256}
 	}
@@ -453,20 +456,40 @@ func (reader *executionEpochInspection) validateCheckpoint(value extractionpubli
 	}
 	if recovered {
 		want := reader.checkpointHit
-		if value.ObservedScheduleChunks != want.ObservedScheduleChunks || value.ObservedScheduleSuccesses != value.ObservedScheduleChunks ||
+		// V7: an active schedule at R may still have deferred siblings; Z later
+		// proves every chunk succeeded. Retained V1-V6 stay exact.
+		allSucceeded := value.ObservedScheduleSuccesses == value.ObservedScheduleChunks
+		if recoverySettlementPlanSemantics(reader.plan.Schema) && value.ScheduleStatus == store.GenerationScheduleActive {
+			allSucceeded = value.ObservedScheduleSuccesses >= 1 && value.ObservedScheduleSuccesses < value.ObservedScheduleChunks
+		}
+		if value.ObservedScheduleChunks != want.ObservedScheduleChunks || !allSucceeded ||
 			value.ObservedScheduleChunks != 0 && !value.PrivateLeaseChanged {
 			return errEpochInspection
 		}
 		want.ObservedScheduleSuccesses, want.PrivateLeaseChanged = value.ObservedScheduleSuccesses, value.PrivateLeaseChanged
 		want.Point, want.Priority, want.ChunkStatus, want.Leased = store.GenerationStaleLeaseTransitionRecovered, store.GenerationPriorityStale, store.GenerationChunkDone, false
-		want.CompletionBitSet, want.RootExists, want.Current = true, true, true
-		want.ScheduleStatus = store.GenerationScheduleSettled
-		for _, root := range reader.staleAuthority.ExtractionRoots {
-			if root.Domain == value.Domain {
-				want.RootDigest = root.RootSHA256
+		// Recovered proves the selected chunk only. The schedule may still be
+		// active and the selected domain unpublished while deferred siblings
+		// finish; the settlement barrier and final authority prove those later.
+		// Retained V1-V6 keep their exact settled-at-recovered recipe.
+		if value.ScheduleStatus != store.GenerationScheduleSettled &&
+			(!recoverySettlementPlanSemantics(reader.plan.Schema) || value.ScheduleStatus != store.GenerationScheduleActive) {
+			return errEpochInspection
+		}
+		want.ScheduleStatus, want.CompletionBitSet = value.ScheduleStatus, true
+		if value.RootExists || value.Current || value.RootDigest != "" || !recoverySettlementPlanSemantics(reader.plan.Schema) ||
+			value.ScheduleStatus != store.GenerationScheduleActive {
+			want.RootExists, want.Current = true, true
+			for _, root := range reader.staleAuthority.ExtractionRoots {
+				if root.Domain == value.Domain {
+					want.RootDigest = root.RootSHA256
+				}
+			}
+			if want.RootDigest == "" {
+				return errEpochInspection
 			}
 		}
-		if want.RootDigest == "" || value != want {
+		if value != want {
 			return errEpochInspection
 		}
 		return nil
@@ -538,6 +561,9 @@ func (run *ExecutionEpochOneRun) RecoverCheckpoint(ctx context.Context) (retErr 
 		return ErrExecutionEpochOne
 	}
 	if _, err := run.flow.recordOptionalNamedExecutionEvent("process_restart", "injection:process_restart:recovered"); err != nil {
+		return ErrExecutionEpochOne
+	}
+	if recoverySettlementPlanSemantics(run.flow.plan.Schema) && reader.awaitScheduleSettlement(ctx) != nil {
 		return ErrExecutionEpochOne
 	}
 	for {
@@ -673,5 +699,61 @@ func epochCheckpointClosedPrefixError(ctx context.Context, result ExecutionEpoch
 func (reader *executionEpochInspection) checkpointFinalMatches(authority AuthorityPhaseResult) bool {
 	prior := reader.staleAuthority
 	prior.Phase = "process_restart"
+	if recoverySettlementPlanSemantics(reader.plan.Schema) && !reader.checkpointSettlement.Complete() {
+		return false
+	}
 	return reader.staleAuthority.Phase == "stale_lease" && reader.checkpointRecovered.Point == store.GenerationStaleLeaseTransitionRecovered && reflect.DeepEqual(authority, prior)
+}
+
+// awaitScheduleSettlement is the V7 Z barrier. Recovered proved only the
+// selected chunk; this proves the exact recovery schedule settled with every
+// chunk succeeded, polling at the inspection cadence within the caller's
+// phase deadline. Progress or readiness never substitutes for it.
+func (reader *executionEpochInspection) awaitScheduleSettlement(ctx context.Context) error {
+	for {
+		settled, err := reader.scheduleSettlement(ctx)
+		if err != nil {
+			return err
+		}
+		if settled {
+			return nil
+		}
+		if err := epochInspectionDelay(ctx); err != nil {
+			reader.mu.Lock()
+			reader.fail(errEpochInspection)
+			reader.mu.Unlock()
+			return err
+		}
+	}
+}
+
+// scheduleSettlement performs one accounted Z call. It returns true only for
+// the exact recovery schedule settled with every chunk succeeded. An active
+// observation is incomplete; the server refuses failure, replacement and
+// supersession, which the parent observes as a failed read.
+func (reader *executionEpochInspection) scheduleSettlement(ctx context.Context) (settled bool, retErr error) {
+	reader.mu.Lock()
+	defer reader.mu.Unlock()
+	defer func() { reader.fail(retErr) }()
+	if reader.err != nil || !recoverySettlementPlanSemantics(reader.plan.Schema) || reader.run.epoch.Epoch != 4 ||
+		reader.projection.Phase != "process_restart" || reader.checkpointRecovered.Point != store.GenerationStaleLeaseTransitionRecovered ||
+		reader.checkpointSettlement.Complete() || reader.progressCalls != 0 ||
+		reader.settlementCalls >= reader.bounds.ScheduleSettlementCalls.Maximum {
+		return false, errEpochInspection
+	}
+	reader.settlementCalls++
+	maximum := epochInspectionReport{StoreReadAttempts: store.GenerationScheduleSettlementStoreReadAttempts * store.MaxGenerationScheduleReadAttempts}
+	raw, status, report, err := reader.read(ctx, recoverySettlementPath, 1<<10, maximum)
+	var value store.GenerationScheduleSettlement
+	if err != nil || status != http.StatusOK || report.ControlFileReads != 0 || report.StoreReadAttempts < store.GenerationScheduleSettlementStoreReadAttempts ||
+		decodeEpochJSON(raw, &value, false) != nil || value.ScheduleDigest != reader.checkpointPreparation.RecoverySchedule ||
+		value.TotalChunks <= 0 || value.Failed != 0 || value.Pending < 0 || value.Running < 0 || value.Succeeded < 1 ||
+		value.Pending+value.Running+value.Succeeded != value.TotalChunks ||
+		value.Status != store.GenerationScheduleActive && !value.Complete() {
+		return false, errEpochInspection
+	}
+	if value.Complete() {
+		reader.checkpointSettlement = value
+	}
+	return value.Complete(), nil
 }

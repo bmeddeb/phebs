@@ -67,6 +67,9 @@ type phaseInspectionInventory struct {
 	ProductControlFileReads   CounterBound
 	ProductStoreReadAttempts  CounterBound
 	ImmutableMemberReusePhase string
+	// V7 only; zero and omitted for every retained V1-V6 inventory digest.
+	ScheduleSettlementCalls             CounterBound `json:",omitzero"`
+	ScheduleSettlementStoreReadAttempts CounterBound `json:",omitzero"`
 }
 
 type inspectionReadBound struct {
@@ -231,6 +234,7 @@ func correctedScopedPhaseReadMaximum(
 	}
 	controls, err := checkedInspectionReadSum(
 		xReads, tailReads, finalReads, transitionReads, queryReads, preparationReads, cleanupReads,
+		row.ScheduleSettlementStoreReadAttempts.Maximum,
 	)
 	if err != nil {
 		return 0, 0, errors.New("corrected scoped phase control read maximum overflows")
@@ -405,6 +409,9 @@ type epochInspectionInventory struct {
 	ProductStoreReadAttemptsMaximum     uint64
 	// Includes exact operation reports sharing the server-report ordinal.
 	AccountedServerRequestsMaximum uint64
+	// V7 only; zero and omitted for every retained V1-V6 inventory digest.
+	ScheduleSettlementCallsMaximum             uint64 `json:",omitzero"`
+	ScheduleSettlementStoreReadAttemptsMaximum uint64 `json:",omitzero"`
 }
 
 type tailReadinessTransition struct {
@@ -707,6 +714,11 @@ func planInspectionInventory(plan Plan) ([]phaseInspectionInventory, []epochInsp
 	rows, epochs, err := correctedInspectionInventory(plan.Profile)
 	if err != nil || !callerRestorePlanSemantics(plan.Schema) {
 		return rows, epochs, err
+	}
+	if recoverySettlementPlanSemantics(plan.Schema) {
+		if err := applyRecoverySettlementInventory(rows, epochs); err != nil {
+			return nil, nil, err
+		}
 	}
 	if len(rows) != 15 || rows[11].Phase != "archive_restore" || len(epochs) != 5 || epochs[4].ServerEpoch != 5 {
 		return nil, nil, errors.New("V5 archive inspection inventory is incomplete")

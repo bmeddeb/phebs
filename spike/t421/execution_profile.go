@@ -207,7 +207,7 @@ func phaseRuntimeBindingSchema(plan Plan) string {
 		return PhaseRuntimeBindingSchema
 	case PlanV2Schema:
 		return PhaseRuntimeBindingV2Schema
-	case PlanV3Schema, PlanV4Schema, PlanV5Schema, PlanV6Schema:
+	case PlanV3Schema, PlanV4Schema, PlanV5Schema, PlanV6Schema, PlanV7Schema:
 		return PhaseRuntimeBindingV3Schema
 	default:
 		return ""
@@ -425,7 +425,7 @@ func frozenExecutionConfig(plan Plan, bytesSHA256 string) ExecutionConfigProfile
 	if processAccountingPlanSemantics(plan.Schema) {
 		value.CompatibilityPosture = "unavailable-no-validation-zero-budget-v1"
 	}
-	if plan.Schema == PlanV6Schema {
+	if linuxTypedPlanSemantics(plan.Schema) {
 		value.Schema = "t422-execution-config-projection-v3"
 		value.Policy = "ordered-epoch-config-bytes-set-and-typed-scope-reservation-projection-v3"
 		value.TypedScopeReservations = true

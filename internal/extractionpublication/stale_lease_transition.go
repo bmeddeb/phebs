@@ -110,7 +110,8 @@ func (runtime *Runtime) ReadStaleLeaseTransition(
 	if err != nil {
 		return StaleLeaseTransition{}, err
 	}
-	if after != before {
+	if transition.Point == store.GenerationStaleLeaseTransitionRecovered && !sameRecoveredStoreState(before, after) ||
+		transition.Point != store.GenerationStaleLeaseTransitionRecovered && after != before {
 		return StaleLeaseTransition{}, ErrStale
 	}
 	return StaleLeaseTransition{

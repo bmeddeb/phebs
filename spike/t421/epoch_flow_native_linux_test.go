@@ -219,7 +219,7 @@ func runLinuxEpochRequiredNativeLiveBorrow(t *testing.T, checkpoint bool) {
 	if err != nil {
 		t.Fatal("actual sealed Surreal", base)
 	}
-	plan, err := BuildPlanV6(source.PlanSourceCommit)
+	plan, err := BuildPlanV7(source.PlanSourceCommit)
 	if err != nil || plan.Profile.Physical.CombinedRegularFiles != 2_031_604 {
 		t.Fatal("full frozen physical plan")
 	}

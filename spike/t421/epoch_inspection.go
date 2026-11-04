@@ -95,6 +95,8 @@ type executionEpochInspection struct {
 	checkpointPreparation              epochStalePreparation
 	checkpointPrepared                 bool
 	checkpointHit, checkpointRecovered extractionpublication.CheckpointRestartTransition
+	checkpointSettlement               store.GenerationScheduleSettlement // V7 Z proof
+	settlementCalls                    uint64
 	earlyFinishSamples                 ExecutionEarlyFinishSamples
 	midphaseSamples                    ExecutionMidphaseSamples
 	recoverySamples                    ExecutionRecoveryWorkspaceSamples
@@ -281,7 +283,7 @@ func (reader *executionEpochInspection) readRequest(ctx context.Context, path st
 			reader.readFailure = epochReadFailure{Stage: stage, Ordinal: ordinal, Cause: cause}
 		}
 	}()
-	if ctx == nil || ctx.Err() != nil || reader.err != nil || reader.run == nil || reader.run.control == nil || reader.next == 0 || reader.next > 11531 {
+	if ctx == nil || ctx.Err() != nil || reader.err != nil || reader.run == nil || reader.run.control == nil || reader.next == 0 || reader.next > epochFourInspectionOrdinalMaximum {
 		return nil, 0, "", epochInspectionReport{}, errEpochInspection
 	}
 	if payload != nil && (path != "/api/mcp" || len(payload) == 0 || len(payload) > 64<<10 || !fence.IsZero() ||

@@ -40,10 +40,17 @@ const (
 	MaxGenerationErrorBytes                                = 2_048
 )
 
+// GenerationScheduleSettlementStoreReadAttempts is the complete store cost of
+// one settlement-barrier observation: one current schedule read.
+const GenerationScheduleSettlementStoreReadAttempts uint64 = 1
+
 var (
 	ErrGenerationStale     = errors.New("generation schedule is stale")
 	ErrGenerationLeaseLost = errors.New("generation chunk lease lost")
 	ErrGenerationExhausted = errors.New("generation chunk attempts exhausted")
+	// ErrGenerationScheduleFailed is terminal for a settlement barrier: the
+	// exact schedule settled, but at least one chunk exhausted its attempts.
+	ErrGenerationScheduleFailed = errors.New("generation schedule settled with failures")
 )
 
 const generationResourceClassMigrationVersion = "t45.4-generation-resource-class-v2"
@@ -1305,6 +1312,90 @@ func (s *Surreal) ReadGenerationStaleLeaseTransition(
 	}, nil
 }
 
+// GenerationScheduleSettlementRequest names the exact schedule whose
+// whole-schedule settlement a caller must prove after a selected recovery.
+type GenerationScheduleSettlementRequest struct {
+	Repository     string
+	Stage          string
+	Generation     string
+	ResourceClass  GenerationResourceClass
+	ScheduleDigest string
+}
+
+// GenerationScheduleSettlement is one source-free observation of the exact
+// current schedule. Complete reports the only passing barrier state.
+type GenerationScheduleSettlement struct {
+	ScheduleDigest string                   `json:"schedule_digest"`
+	Status         GenerationScheduleStatus `json:"status"`
+	TotalChunks    int                      `json:"total_chunks"`
+	Pending        int                      `json:"pending"`
+	Running        int                      `json:"running"`
+	Succeeded      int                      `json:"succeeded"`
+	Failed         int                      `json:"failed"`
+}
+
+// Complete reports a settled schedule in which every chunk succeeded.
+func (value GenerationScheduleSettlement) Complete() bool {
+	return value.Status == GenerationScheduleSettled && value.TotalChunks > 0 &&
+		value.Pending == 0 && value.Running == 0 && value.Failed == 0 &&
+		value.Succeeded == value.TotalChunks
+}
+
+// ReadGenerationScheduleSettlement observes the exact current schedule once
+// and charges GenerationScheduleSettlementStoreReadAttempts. A valid active
+// schedule of the same digest returns an incomplete observation the caller may
+// poll again within its own deadline. A settled schedule with any failure
+// returns ErrGenerationScheduleFailed. A replaced, superseded or mismatched
+// schedule returns ErrGenerationStale. Neither error is retryable.
+func (s *Surreal) ReadGenerationScheduleSettlement(
+	ctx context.Context,
+	request GenerationScheduleSettlementRequest,
+) (GenerationScheduleSettlement, error) {
+	if ctx == nil {
+		return GenerationScheduleSettlement{}, errors.New(
+			"read generation schedule settlement: context is required",
+		)
+	}
+	if strings.TrimSpace(request.Repository) != request.Repository || request.Repository == "" ||
+		len(request.Repository) > MaxJobHistoryTargetCharacters || !utf8.ValidString(request.Repository) ||
+		!validGenerationToken(request.Stage) || request.Stage == "" ||
+		!validSHA256(request.Generation) || !validGenerationResourceClass(request.ResourceClass) ||
+		!validSHA256(request.ScheduleDigest) {
+		return GenerationScheduleSettlement{}, errors.New(
+			"read generation schedule settlement: request is invalid",
+		)
+	}
+	schedule, err := s.GetGenerationSchedule(ctx, request.Repository, request.Stage)
+	if err != nil {
+		return GenerationScheduleSettlement{}, fmt.Errorf(
+			"read generation schedule settlement: %w", err,
+		)
+	}
+	return generationScheduleSettlement(request, *schedule)
+}
+
+func generationScheduleSettlement(
+	request GenerationScheduleSettlementRequest,
+	schedule GenerationSchedule,
+) (GenerationScheduleSettlement, error) {
+	if ValidateGenerationSchedule(schedule) != nil || schedule.Digest != request.ScheduleDigest ||
+		schedule.Repository != request.Repository || schedule.Stage != request.Stage ||
+		schedule.Generation != request.Generation || schedule.ResourceClass != request.ResourceClass ||
+		schedule.NextOffset != schedule.TotalItems || schedule.Materialized < schedule.TotalChunks ||
+		schedule.Status != GenerationScheduleActive && schedule.Status != GenerationScheduleSettled {
+		return GenerationScheduleSettlement{}, ErrGenerationStale
+	}
+	value := GenerationScheduleSettlement{
+		ScheduleDigest: schedule.Digest, Status: schedule.Status,
+		TotalChunks: schedule.TotalChunks, Pending: schedule.Pending,
+		Running: schedule.Running, Succeeded: schedule.Succeeded, Failed: schedule.Failed,
+	}
+	if schedule.Status == GenerationScheduleSettled && !value.Complete() {
+		return value, ErrGenerationScheduleFailed
+	}
+	return value, nil
+}
+
 func validateGenerationStaleLeaseTransitionRequest(
 	request GenerationStaleLeaseTransitionRequest,
 ) error {
@@ -1367,9 +1458,16 @@ func validGenerationStaleLeaseTransitionShape(
 			chunk.ClaimedAt == nil && chunk.HeartbeatAt == nil && chunk.FinishedAt == nil &&
 			chunk.LeaseToken == "" && chunk.Error == "stale worker lease reaped"
 	case GenerationStaleLeaseTransitionRecovered:
-		return schedule.Status == GenerationScheduleSettled && schedule.Pending == 0 &&
-			schedule.Running == 0 && schedule.Succeeded == schedule.TotalChunks &&
-			schedule.Failed == 0 && chunk.Priority == GenerationPriorityStale &&
+		// Recovered proves only the selected chunk. Other chunks of the same
+		// schedule may still be pending (for example deferred behind a busy
+		// authority fence), so a consistent active schedule is accepted here;
+		// whole-schedule settlement is a separate later barrier
+		// (ReadGenerationScheduleSettlement).
+		validSchedule := schedule.Succeeded >= 1 &&
+			(schedule.Status == GenerationScheduleActive && validActiveCounters ||
+				schedule.Status == GenerationScheduleSettled && schedule.Pending == 0 &&
+					schedule.Running == 0 && schedule.Failed == 0 && schedule.Succeeded == schedule.TotalChunks)
+		return validSchedule && chunk.Priority == GenerationPriorityStale &&
 			chunk.Status == GenerationChunkDone && chunk.NotBefore == nil &&
 			validWorker && chunk.ClaimedAt != nil && !chunk.ClaimedAt.IsZero() &&
 			chunk.HeartbeatAt == nil && chunk.FinishedAt != nil && !chunk.FinishedAt.IsZero() &&

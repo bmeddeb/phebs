@@ -274,6 +274,11 @@ func (handler *t421ExactReadAccountingHandler) ServeHTTP(
 			StoreReadAttempts: store.GenerationStaleLeaseTransitionStoreReadAttempts}, true
 		nativeFailureStatus, nativeFailure = "checkpoint_recovery_refused", errT422StaleControl
 	}
+	if settledRead := handler.state.recoveryScheduleSettledRead(request); settledRead != nil {
+		nativeRead = settledRead
+		limits, target = readaccounting.Counts{StoreReadAttempts: store.GenerationScheduleSettlementStoreReadAttempts * store.MaxGenerationScheduleReadAttempts}, true
+		nativeFailureStatus, nativeFailure = "recovery_settlement_refused", errT422StaleControl
+	}
 	if archiveRead := handler.state.archiveRead(request); archiveRead != nil {
 		nativeRead = archiveRead
 		limits, target = readaccounting.Counts{ControlFileReads: 1}, true

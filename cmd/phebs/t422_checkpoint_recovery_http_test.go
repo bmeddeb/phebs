@@ -40,6 +40,13 @@ type t422CheckpointBridge struct {
 	Schedule        store.GenerationSchedule    `json:"schedule"`
 	DataDir         string                      `json:"data_dir,omitempty"`
 	DeferredSibling bool                        `json:"deferred_sibling,omitempty"`
+	// PendingSibling (V7) keeps offset 1 deferred while the selected chunk
+	// recovers, then completes, fails or replaces the schedule before Z.
+	PendingSibling string `json:"pending_sibling,omitempty"`
+}
+
+var t422PendingSiblingModes = map[string]string{
+	"http_pending_sibling": "complete", "http_settlement_failed": "failed", "http_settlement_replaced": "replaced",
 }
 
 func loadT422CheckpointBridge(t *testing.T, path string) t422CheckpointBridge {
@@ -89,7 +96,7 @@ func runT422CheckpointHTTPBridgeCases(t *testing.T, realStore bool) {
 	}
 	modes := []string{"http_complete", "http_recovered_first", "http_wrong_chunk", "http_same_lease", "http_report_failure", "http_wrong_trailer", "http_wrong_plan", "http_wrong_offset"}
 	if realStore {
-		modes = append(modes[:5], "http_deferred_sibling")
+		modes = append(modes[:5], "http_deferred_sibling", "http_pending_sibling", "http_settlement_failed", "http_settlement_replaced")
 	}
 	for _, mode := range modes {
 		t.Run(mode, func(t *testing.T) {
@@ -122,7 +129,9 @@ func runT422CheckpointHTTPBridgeCases(t *testing.T, realStore bool) {
 			if mode == "http_wrong_plan" {
 				input.Hit.PlanDigest, input.Roots[4].PlanDigest = t422CheckpointTestDigest, t422CheckpointTestDigest
 			}
-			bridge := t422CheckpointBridge{Input: input, RuntimeRoot: copyRoot, Schedule: metadata.Schedule, DeferredSibling: mode == "http_deferred_sibling"}
+			pending := t422PendingSiblingModes[mode]
+			input.ScheduleSettlement = pending != ""
+			bridge := t422CheckpointBridge{Input: input, RuntimeRoot: copyRoot, Schedule: metadata.Schedule, DeferredSibling: mode == "http_deferred_sibling", PendingSibling: pending}
 			if realStore {
 				prepareT422RealStoreBridge(t, &bridge, private)
 			}
@@ -354,6 +363,10 @@ func testT422CheckpointHTTPBridge(t *testing.T, ctx context.Context, mode string
 	case <-ctx.Done():
 		t.Fatal("callback did not join", ctx.Err(), response.StatusCode, string(body), control.failure)
 	}
+	if bridge.PendingSibling != "" && callbackErr == nil && response.StatusCode == http.StatusOK {
+		// Z runs after the selected report, while the server is still live.
+		testT422ScheduleSettlementBarrier(t, ctx, server, strings.TrimSuffix(token, "\n"), bridge, state, control)
+	}
 	stop()
 	if err := <-joined; err != nil {
 		t.Fatal(err)
@@ -376,16 +389,27 @@ func testT422CheckpointHTTPBridge(t *testing.T, ctx context.Context, mode string
 	expected.ScheduleStatus, expected.RootDigest = store.GenerationScheduleSettled, bridge.Input.Roots[4].RootDigest
 	expected.CompletionBitSet, expected.RootExists, expected.Current, expected.PrivateLeaseChanged = true, true, true, true
 	expected.ObservedScheduleChunks, expected.ObservedScheduleSuccesses = 3, 3
+	if bridge.PendingSibling != "" {
+		// V7 R: the deferred sibling keeps the schedule active; R proves only
+		// the selected chunk. The exported immutable image already holds the
+		// sibling's result, so the selected domain root is complete here.
+		expected.ScheduleStatus, expected.ObservedScheduleSuccesses = store.GenerationScheduleActive, 2
+	}
 	validBody := json.Unmarshal(body, &value) == nil && value == expected
 	accepted := response.StatusCode == http.StatusOK && report.Schema == t421ExactReadReportSchema && report.RequestOrdinal == 1 && report.Status == "complete" && report.ControlFileReads == 7 && report.StoreReadAttempts == 4 && report.MemberVisits == 0 && report.StoreWriteAttempts == 0 && validBody && callbackErr == nil && !sinkFailed.Load() && control.recovered.reported
-	want := mode == "http_complete" || mode == "http_recovered_first" || mode == "http_deferred_sibling"
-	if accepted != want || control.finalSeen || sinkCalls.Load() != 1 {
+	want := mode == "http_complete" || mode == "http_recovered_first" || mode == "http_deferred_sibling" || bridge.PendingSibling != ""
+	wantSinkCalls := int32(1)
+	if bridge.PendingSibling != "" {
+		wantSinkCalls = 3
+	}
+	if accepted != want || control.finalSeen || sinkCalls.Load() != wantSinkCalls {
 		t.Fatal("bridge acceptance differs", mode, response.StatusCode, report, callbackErr, control.failure, string(body))
 	}
 	if bridge.DeferredSibling && siblingCallbacks.Load() != 1 {
 		t.Fatal("actual deferred sibling did not complete before selected recovery", siblingCallbacks.Load())
 	}
-	if want && (failures.Load() != 0 || control.failure != nil) {
+	settlementRefusal := bridge.PendingSibling == "failed" || bridge.PendingSibling == "replaced"
+	if want && !settlementRefusal && (failures.Load() != 0 || control.failure != nil) {
 		t.Fatal("valid bridge refused", control.failure)
 	}
 	if mode == "http_wrong_chunk" || mode == "http_wrong_offset" || mode == "http_same_lease" {
@@ -423,4 +447,100 @@ func testT422CheckpointHTTPBridge(t *testing.T, ctx context.Context, mode string
 		t.Fatal(err)
 	}
 	fmt.Println("closed")
+}
+
+func t422SettlementGet(t *testing.T, ctx context.Context, server *httptest.Server, token string, ordinal uint64) (int, store.GenerationScheduleSettlement, t421ExactReadReport) {
+	t.Helper()
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, server.URL+t422RecoveryScheduleSettledPath, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	request.Header = exactT421ReadRequest(http.MethodGet, t422RecoveryScheduleSettledPath, ordinal).Header
+	request.Header.Set(dispatchadmission.ProductionRequestHeader, token)
+	response, err := server.Client().Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, err := io.ReadAll(io.LimitReader(response.Body, 4<<10))
+	if closeErr := response.Body.Close(); err != nil || closeErr != nil {
+		t.Fatal(err, closeErr)
+	}
+	var report t421ExactReadReport
+	encoded := response.Trailer.Values(t421ExactReadTrailer)
+	if len(encoded) != 1 {
+		t.Fatal("missing settlement trailer", response.StatusCode, string(body))
+	}
+	raw, err := base64.RawURLEncoding.DecodeString(encoded[0])
+	if err != nil || json.Unmarshal(raw, &report) != nil || report.RequestOrdinal != ordinal || report.ControlFileReads != 0 || report.MemberVisits != 0 || report.StoreWriteAttempts != 0 {
+		t.Fatal("invalid settlement trailer", err, report)
+	}
+	var value store.GenerationScheduleSettlement
+	if response.StatusCode == http.StatusOK && json.Unmarshal(body, &value) != nil {
+		t.Fatal("invalid settlement body", string(body))
+	}
+	return response.StatusCode, value, report
+}
+
+// testT422ScheduleSettlementBarrier is the V7 Z barrier over the real store,
+// HTTP route, ledger and control: incomplete while the deferred sibling is
+// pending, then complete, failed or replaced.
+func testT422ScheduleSettlementBarrier(t *testing.T, ctx context.Context, server *httptest.Server, token string, bridge t422CheckpointBridge, state t422HTTPBridgeStore, control *t422CheckpointRecoveryControl) {
+	t.Helper()
+	real, ok := state.(*t422RealBridgeStore)
+	if !ok {
+		t.Fatal("settlement barrier requires the real store bridge")
+	}
+	status, first, report := t422SettlementGet(t, ctx, server, token, 2)
+	if status != http.StatusOK || first.Complete() || first.Status != store.GenerationScheduleActive || first.Pending != 1 ||
+		first.Running != 0 || first.Succeeded != 2 || first.Failed != 0 || first.ScheduleDigest != bridge.Input.Hit.ScheduleDigest ||
+		report.StoreReadAttempts < store.GenerationScheduleSettlementStoreReadAttempts || control.settled || control.failure != nil {
+		t.Fatal("pending settlement differs", status, first, report, control.failure)
+	}
+	s := bridge.Schedule
+	if bridge.PendingSibling == "replaced" {
+		replacement, err := real.EnqueueGenerationSchedule(ctx, store.GenerationScheduleSpec{Repository: s.Repository, Stage: s.Stage,
+			Generation: t422CheckpointTestDigest, ResourceClass: s.ResourceClass, TotalItems: s.TotalItems, ChunkItems: s.ChunkItems,
+			MaxAttempts: s.MaxAttempts, RepositoryTokens: s.RepositoryTokens})
+		if err != nil || replacement.Digest == s.Digest {
+			t.Fatal("replacement schedule refused", err)
+		}
+	} else {
+		// The bridge gate refuses the sibling to the scheduler; claim it here
+		// once eligible, through the store beneath that gate.
+		var sibling *store.GenerationChunk
+		for sibling == nil {
+			chunk, err := real.Surreal.ClaimGenerationChunk(ctx, s.ResourceClass, "pending-sibling")
+			if err != nil && !errors.Is(err, store.ErrNotFound) || ctx.Err() != nil {
+				t.Fatal("pending sibling claim refused", err)
+			}
+			if chunk == nil {
+				time.Sleep(250 * time.Millisecond)
+			}
+			sibling = chunk
+		}
+		if sibling.Offset != 1 {
+			t.Fatal("unexpected sibling claim", sibling.Offset)
+		}
+		var err error
+		if bridge.PendingSibling == "complete" {
+			err = real.Surreal.CompleteGenerationChunk(ctx, *sibling)
+		} else {
+			// FailGenerationChunk is terminal: the schedule settles with Failed=1.
+			err = real.FailGenerationChunk(ctx, *sibling, "bounded sibling failure")
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	status, second, report := t422SettlementGet(t, ctx, server, token, 3)
+	switch bridge.PendingSibling {
+	case "complete":
+		if status != http.StatusOK || !second.Complete() || second.Succeeded != 3 || !control.settled || control.failure != nil {
+			t.Fatal("complete settlement differs", status, second, report, control.failure)
+		}
+	default:
+		if status != http.StatusConflict || control.settled || control.failure == nil || control.failure.Stage != t422RecoverySettlementRead {
+			t.Fatal("settlement refusal differs", bridge.PendingSibling, status, report, control.failure)
+		}
+	}
 }

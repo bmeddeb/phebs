@@ -507,7 +507,7 @@ func canonicalSHA256(value any) (string, error) {
 }
 
 func validateExecutionHost(host ExecutionHost, plan Plan) error {
-	if plan.Schema == PlanV6Schema {
+	if linuxTypedPlanSemantics(plan.Schema) {
 		return errors.New("V6 Linux execution host admission remains an H2 prerequisite")
 	}
 	if host.GOOS != "darwin" || host.GOARCH != "arm64" ||

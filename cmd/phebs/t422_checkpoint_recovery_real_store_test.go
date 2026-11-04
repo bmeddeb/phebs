@@ -63,8 +63,16 @@ func prepareT422RealStoreBridge(t *testing.T, bridge *t422CheckpointBridge, priv
 			t.Fatal("actual bridge checkpoint claim refused")
 		}
 		if offset != 2 {
-			if bridge.DeferredSibling && offset == 1 {
-				if err := state.DeferGenerationChunk(ctx, *chunk, "bounded unrelated runtime deferral", time.Millisecond); err != nil {
+			if (bridge.DeferredSibling || bridge.PendingSibling != "") && offset == 1 {
+				delay := time.Millisecond
+				if bridge.PendingSibling != "" {
+					// Eligible ten seconds into the twenty-second pending-sibling
+					// bridge child: well after the selected claim, well before
+					// its deadline. The bridge claim gate refuses it to the
+					// scheduler; only the settlement test claims it after R.
+					delay = 21*time.Second + 100*time.Millisecond + 10*time.Second
+				}
+				if err := state.DeferGenerationChunk(ctx, *chunk, "bounded unrelated runtime deferral", delay); err != nil {
 					t.Fatal("actual sibling deferral refused", err)
 				}
 				continue
@@ -99,7 +107,7 @@ func prepareT422RealStoreBridge(t *testing.T, bridge *t422CheckpointBridge, priv
 		cancel()
 		inventory, available := projection.Observation()
 		wantSuccesses := uint64(2)
-		if bridge.DeferredSibling {
+		if bridge.DeferredSibling || bridge.PendingSibling != "" {
 			wantSuccesses = 1
 		}
 		if readErr != nil || finishErr != nil || counts != (readaccounting.Counts{ControlFileReads: 7, StoreReadAttempts: 4}) ||
