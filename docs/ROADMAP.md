@@ -386,6 +386,17 @@ next scoped candidate adds only optional same-query closed reader diagnostics;
 full qualification, original-attempt proof and all custody/accounting/RSS gates
 remain open. No new installation or full run is implied.
 
+**2026-11-04 MED-496 native checkpoint pass:** V24 at exact source
+`0493be25` (T42.H2s.p, plan V7) passed
+`TestLinuxEpochRequiredNativeCheckpointLiveBorrow` on dave in 6,595.77 s. All
+four server epochs and three author revisions ended with actual Wait and
+empty sessions. The epoch-three-to-four checkpoint succeeded with an actual
+prior hard-death Wait and successor Wait. V23's epoch-four Recovered refusal
+does not recur. The engine is the surrealkv#428-patched SurrealDB 3.2.0, not a
+stock release. One host and one run grant no scale, readiness, freeze,
+MED-497 executor/profile or ceremony claim. See the
+[source-bound record](../spike/t42h2r/native-checkpoint-pass-v24-dave-linux-20261104.json).
+
 T42.H2t.a implements MED-497's bounded Linux executor prework and original-parent
 custody. The inner must independently derive its protected reference lineage;
 serialized identity and controller-only proofs cannot issue its profile. Full

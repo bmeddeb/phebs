@@ -5393,6 +5393,27 @@ deferred-sibling order, timeout, failure and replacement; unchanged V1–V6
 inventory digests; normal, race, static and docs gates; independent
 exact-source review. A native V24 run needs Ben's separate approval.
 
+**2026-11-04 — V24 native checkpoint qualification PASS.** With Ben's
+approval, exact source `0493be25` (tree `e6d0f5da`) ran on dave with driver
+`cdd3e94b`, AppArmor profile `f80c4176`, metadata helper `c8112db0`, wrapper
+plan `5399ef19` and the surrealkv#428-patched SurrealDB 3.2.0 `6a953d59`. The
+finite prerequisite passed in 126 s. The full
+`TestLinuxEpochRequiredNativeCheckpointLiveBorrow` passed in 6,595.77 s with
+actual Wait 0:
+- All four server epochs and author revisions 0–2 had actual Wait and empty
+  sessions.
+- The checkpoint from prior 501297 to successor 514561 succeeded with an
+  actual hard-death Wait and an actual next Wait.
+- Revisions a, b and a-return joined empty.
+- 83,079 resource checks ran without refusal under the 4-GiB whole-RSS limit.
+
+The wrapper's identity, competition, closure and lock checks are clean. The
+[source-bound record](../spike/t42h2r/native-checkpoint-pass-v24-dave-linux-20261104.json)
+binds every pin and receipt. Nonclaims: wrapper SID observation is not
+complete child history; the engine is a patched build, not a stock release;
+one run on one host is not a scale, readiness, freeze, MED-497 or ceremony
+result. MED-497's native run may now be prepared under its own admission.
+
 **T42.H2t.a · Live Linux executor prework custody (MED-497 implementation,
 2026-10-24; bounded implementation).** Connect a genuine protected `t422-execute` finite
 prework bootstrap to live original-parent, inner-image and inherited control/

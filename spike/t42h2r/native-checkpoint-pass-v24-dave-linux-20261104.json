@@ -1,0 +1,175 @@
+{
+  "schema": "t42-linux-live-borrow-checkpoint-pass-v1",
+  "ticket": "MED-496",
+  "component": "T42.H2s.p",
+  "source_commit": "0493be25414e3324b46bcd7c759a46a578a1326a",
+  "source_tree": "e6d0f5dae3713473ec2d59fcecc8b848446cce17",
+  "plan_schema": "t421-combined-gate-plan-v7",
+  "remote_host": "dave",
+  "boot_id": "b2ba5078-e6ba-4fe3-b7d6-cab5f41397d9",
+  "remote_run_directory": "/home/ben/phebs-qualification/runs/t42h2sp-v24-dave-0493be25-skv428",
+  "preparation_directory": "/home/ben/phebs-qualification/coordination/med496-v24-preparation",
+  "test": "TestLinuxEpochRequiredNativeCheckpointLiveBorrow",
+  "test_result": "PASS",
+  "test_elapsed_seconds": 6595.77,
+  "supersedes_failure": "V23 (source 3d9ca61f) refused epoch four at the selected Recovered read while deferred siblings kept the schedule active at 53/56; T42.H2s.p splits Recovered (R) from the schedule-settlement barrier (Z).",
+  "pins": {
+    "wrapper_plan_sha256": "5399ef19dc3bde7b8e66c939f2f99eca3a93ac6f59540befb6e8147b2f2c4976",
+    "driver_sha256": "cdd3e94b586e69055596303864773c3cb3eda701a644ca111da71dcc1e6f5722",
+    "apparmor_profile_sha256": "f80c417681d262ece581cc70dde3a29cdae33cb064bec1cc1d46decf552ff8e8",
+    "metadata_helper_sha256": "c8112db08f3744818effa2fb7e2c72287948aa277fb7efac8d60178b00eb1b95",
+    "installer_sha256": "75c3ac094dfaa7d51f5013aeb8eb7171d4c3cf91475dd25ac03bef043d9bfbd1",
+    "interpreter_sha256": "52e0a13e60a981d8c4b6478be2ba5176f69da07948a056bf49cf6f077e30cb41",
+    "surreal_sha256": "6a953d5913fb0b9a260c87c48da7b7e9717fbe92366b23ce52faea1c64b776e4",
+    "surreal_note": "SurrealDB 3.2.0 rebuilt with the surrealkv#428 backport, as in V23; not the official release binary",
+    "install_receipt_sha256": "3dfdc48d8aa5e2287e18bf998fdf216326c4dc11bc732e718bf0124e3ea15c01",
+    "candidate_build_summary_sha256": "9b95f5b0ce86ec3e968dfa0b9dcb1abd0433c45fa196f58bf223cb6b6ea00509"
+  },
+  "finite_prerequisite": {
+    "test": "TestLinuxInputTreeRequiredNativeReadonlyPersistence",
+    "actual_native_wait_exit_code": 0,
+    "identity_verified": true,
+    "elapsed_seconds": 125.94475398299983,
+    "session_members_after_wait": [],
+    "closure_scan_complete": true,
+    "admission_receipt_sha256": "556e3bbc65dd6406fc52c492558436ba7c0189449ebe34d1168f9024e9f79475"
+  },
+  "actual_native_wait": {
+    "schema": "phebs-dave-native-terminal-v2",
+    "pid": 458310,
+    "actual_wait_exit_code": 0,
+    "elapsed_seconds": 6595.847537765003,
+    "native_identity_verified": true,
+    "metadata_error": null,
+    "sampled_session_members_after_wait": [],
+    "session_scan_errors": [],
+    "closure_scan_complete": true,
+    "complete_child_history": "Not established by wrapper SID observation; requires actual internal test custody, terminal accounting and cleanup evidence separately.",
+    "stdout_sha256": "28ed8bf682a22b470eb7839d1babd42fff369bf88907f85cb6b77089b7242dcb",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "ended_at": "2026-11-04T18:37:40.376615+00:00"
+  },
+  "full_admission_receipt_sha256": "35e10345f5214adbc71161a64d78264e75587c4757145cd80ec0701954e8ff2e",
+  "competition_snapshot": {
+    "schema": "dave-competition-metadata-v1",
+    "numeric_entries": 239,
+    "matches": [],
+    "errors": [],
+    "vanished": 0,
+    "stable_kernel_tasks": 200,
+    "complete": true
+  },
+  "lock_after_wait_clear": true,
+  "lock_after_closure_clear": true,
+  "resource_policy": "sha256:8e863962e2a5ddab6e6f8ec847eb595a58defd1a27bb7b5827d82e28f8d6ccc5",
+  "whole_rss_limit_bytes": 4294967296,
+  "revisions": [
+    {
+      "revision": "a",
+      "producer": 7,
+      "actual_git": 4,
+      "joined": true,
+      "empty": true,
+      "commit": "d84f49c0ea97f9c5d6ab6fcd796c1ae4253616a9"
+    },
+    {
+      "revision": "b",
+      "producer": 8,
+      "actual_git": 3,
+      "joined": true,
+      "empty": true,
+      "commit": "c11484fd6a566601cff0020ef795cf5553e2e730"
+    },
+    {
+      "revision": "a-return",
+      "producer": 9,
+      "actual_git": 3,
+      "joined": true,
+      "empty": true,
+      "commit": "67758255e398db5dc0e32804fc4b4828280091d7"
+    }
+  ],
+  "checkpoint": {
+    "success": true,
+    "prior_pid": 501297,
+    "successor_pid": 514561,
+    "engine_prior_phases": [
+      6,
+      6,
+      7,
+      7,
+      7,
+      8,
+      8
+    ],
+    "engine_next_phases": [
+      8
+    ],
+    "actual_prior_hard_death_wait": true,
+    "actual_next_wait": true
+  },
+  "population": {
+    "actual_full_population": 2031604,
+    "final_authorities": 7,
+    "root_joined": true,
+    "session_empty": true
+  },
+  "resource_checks": {
+    "count": 83079,
+    "keeper_closed": true,
+    "operation_refused": false,
+    "keeper_close_failed": false
+  },
+  "server_epochs": [
+    {
+      "epoch": 1,
+      "actual_pid": 475698,
+      "actual_wait": true,
+      "session_empty": true
+    },
+    {
+      "epoch": 2,
+      "actual_pid": 501027,
+      "actual_wait": true,
+      "session_empty": true
+    },
+    {
+      "epoch": 3,
+      "actual_pid": 501297,
+      "actual_wait": true,
+      "session_empty": true
+    },
+    {
+      "epoch": 4,
+      "actual_pid": 514561,
+      "actual_wait": true,
+      "session_empty": true
+    }
+  ],
+  "author_revisions": [
+    {
+      "revision": 0,
+      "actual_pid": 475657,
+      "actual_wait": true,
+      "session_empty": true
+    },
+    {
+      "revision": 1,
+      "actual_pid": 488293,
+      "actual_wait": true,
+      "session_empty": true
+    },
+    {
+      "revision": 2,
+      "actual_pid": 501263,
+      "actual_wait": true,
+      "session_empty": true
+    }
+  ],
+  "nonclaims": [
+    "Wrapper SID observation does not establish complete child history; that rests on the test's internal custody assertions, which passed.",
+    "The engine is the surrealkv#428-patched SurrealDB 3.2.0 build, not an official release; a stock-release rerun waits on an upstream release with the fix.",
+    "One run on one host (dave). No scale, readiness, freeze, formal executor/profile (MED-497) or ceremony claim.",
+    "No security installation, deployment or release beyond the approved V24 qualification install."
+  ]
+}
