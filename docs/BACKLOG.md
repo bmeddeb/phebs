@@ -5449,6 +5449,25 @@ protected-executor composition remains unexecuted. Full MED-497, MED-496 and
 MED-495 acceptance, the pressure UID/descriptor bridge and formal profiles
 remain open.
 
+**2026-11-04 — V25 native prework refusal and bounded refusal
+diagnostic (MED-497).** With Ben's approval, V25 ran
+`TestLinuxExecutorRequiredNativePreworkComposition` on dave at exact source
+`464bc506` (driver `d421fdbf`, plan `33cadb7f`). It returned actual Wait 1
+after 898 s at the inner prework. Every controller step before it passed:
+protected input tree, Git, source/SDK/module inputs, reference helper and the
+joined source-built `t422-execute` check. The kernel log shows no AppArmor or
+user-namespace denial, and the run used 15 of its 60 minutes. The cause is
+unrecoverable: the outer prework refused with one opaque error for a nonzero
+exit, any stderr byte or a receipt mismatch, and it kept the child's bounded
+output only in memory. The correction records a private refusal diagnostic
+on refusal only: actual Wait facts, context error, receipt match and the
+already-captured stdout/stderr within their unchanged 128-byte and 1-KiB
+bounds. The two native harnesses log it before their existing fatal
+refusals. It changes no refusal, bound, authority or retirement rule. AC:
+real-child exit, signal and over-bound stderr controls; publication-ordered
+access; normal/race, static and docs gates. A fresh V26 native run needs new
+exact admission and Ben's approval.
+
 **T42.H2t.b · Pressure workspace credential/descriptor handoff (MED-497
 implementation, 2026-10-24; bounded checkpoint, native acceptance pending).**
 Connect an actual protected root

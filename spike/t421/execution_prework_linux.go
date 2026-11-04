@@ -103,6 +103,7 @@ type linuxExecutorPrework struct {
 	claim                   *linuxExecutorPreworkClaim
 	observation             *executionPreworkObservation
 	pressure                *linuxPressureExecutorPrework
+	diagnostic              *linuxExecutorPreworkDiagnostic // Private refusal evidence; written before publish.
 }
 
 func newLinuxExecutorPrework(builds *LinuxExecutionGoBuildCustody, tool *LinuxExecutionToolCustody, value linuxExecutorPreworkSelection) *linuxExecutorPrework {
@@ -237,6 +238,8 @@ func (owner *linuxExecutorPrework) run(ctx context.Context, cancel context.Cance
 			if waitErr != nil || command.ProcessState == nil || !command.ProcessState.Success() || ctx.Err() != nil ||
 				stdout.err != nil || stderr.err != nil || stderr.buffer.Len() != 0 || !success {
 				err = ErrExecutionLauncher
+				diagnostic := linuxExecutorPreworkRefusal(command, waitErr, ctx.Err(), &stdout, &stderr, success)
+				owner.diagnostic = &diagnostic
 			}
 			publish(err)
 			<-owner.release

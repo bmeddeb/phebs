@@ -166,6 +166,9 @@ func TestLinuxPressureBorrowRequiredNativeComposition(t *testing.T) {
 		Broker: linuxExecutorPreworkSelection{PreparationRoot: brokerRoot, RepositoryRoot: request.RepositoryRoot, PlanSourceCommit: request.PlanSourceCommit, IntegratedMainCommit: request.IntegratedMainCommit, SourceCommit: request.SourceCommit, GoRoot: request.GoRoot, ModuleCache: request.ModuleCache, GitBinary: request.GitBinary, InputHelperBinary: treeRequest.Binary, ReferenceHelperBinary: helperRequest.Binary}}
 	prework = newLinuxPressureExecutorPrework(controller.builds, controller.tool, value)
 	if prework.Run(ctx) != nil {
+		if diagnostic, ok := prework.refusalDiagnostic(); ok {
+			t.Logf("inner prework refusal (bounded captured facts): %#v", diagnostic)
+		}
 		t.Fatal("actual root broker/target/volume composition refused; preserve fixture and original custody", base)
 	}
 	if prework.command == nil || prework.command.Process == nil || prework.command.ProcessState == nil || !prework.command.ProcessState.Success() || prework.command.ProcessState.ExitCode() != 0 || !prework.retired || prework.pressure.retained {

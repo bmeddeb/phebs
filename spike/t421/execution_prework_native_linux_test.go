@@ -139,6 +139,9 @@ func TestLinuxExecutorRequiredNativePreworkComposition(t *testing.T) {
 		SourceCommit: request.SourceCommit, GoRoot: request.GoRoot, ModuleCache: request.ModuleCache, GitBinary: request.GitBinary,
 		InputHelperBinary: treeRequest.Binary, ReferenceHelperBinary: helperRequest.Binary})
 	if err := prework.Run(ctx); err != nil {
+		if diagnostic, ok := prework.refusalDiagnostic(); ok {
+			t.Logf("inner prework refusal (bounded captured facts): %#v", diagnostic)
+		}
 		t.Fatal("actual finite executor prework refused; retain original evidence", base)
 	}
 	if prework.command == nil || prework.command.Process == nil || prework.command.ProcessState == nil || !prework.command.ProcessState.Success() ||
