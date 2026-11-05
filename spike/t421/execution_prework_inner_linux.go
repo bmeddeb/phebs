@@ -28,16 +28,16 @@ type linuxExecutorInnerPrework struct {
 
 func (inner *linuxExecutorInnerPrework) prepare(ctx context.Context, value linuxExecutorPreworkSelection, parent *linuxExecutorParent, image *os.File) error {
 	if inner == nil || !inner.attempted.CompareAndSwap(false, true) {
-		return ErrExecutionLauncher
+		return preworkStage("inner-reentry")
 	}
 	if ctx == nil || ctx.Err() != nil || parent == nil || parent.check(ctx) != nil || !parent.inner || image == nil {
-		return ErrExecutionLauncher
+		return preworkStage("inner-entry")
 	}
-	if inner.prepareReference(ctx, value, image) != nil {
-		return ErrExecutionLauncher
+	if err := inner.prepareReference(ctx, value, image); err != nil {
+		return err
 	}
 	if !inner.tool.executorClaim.bindInner(inner) {
-		return ErrExecutionLauncher
+		return preworkStage("inner-bind-claim")
 	}
 	return inner.consume(ctx, value, parent, image)
 }
@@ -58,17 +58,17 @@ func (inner *linuxExecutorInnerPrework) prepareReferenceLayout(ctx context.Conte
 		inner.inputHelper, err = protectLinuxPressureAuthorInputHelper(ctx, request, layout, inner.observation)
 	}
 	if err != nil {
-		return ErrExecutionLauncher
+		return preworkStage("input-helper")
 	}
 	inner.git, err = protectLinuxExecutionGitObserved(ctx, value.PreparationRoot, value.GitBinary, inner.inputHelper, inner.observation)
 	if err != nil {
-		return ErrExecutionLauncher
+		return preworkStage("git")
 	}
 	inner.builds, err = protectLinuxExecutionGoBuildInputsObserved(ctx, value.PreparationRoot, LinuxExecutionGoBuildRequest{Git: inner.git,
 		RepositoryRoot: value.RepositoryRoot, PlanSourceCommit: value.PlanSourceCommit, IntegratedMainCommit: value.IntegratedMainCommit,
 		SourceCommit: value.SourceCommit, GoRoot: value.GoRoot, ModuleCache: value.ModuleCache}, inner.inputHelper, inner.observation)
 	if err != nil {
-		return ErrExecutionLauncher
+		return preworkStage("go-build-inputs")
 	}
 	request.Binary = value.ReferenceHelperBinary
 	if layout == nil {
@@ -77,29 +77,32 @@ func (inner *linuxExecutorInnerPrework) prepareReferenceLayout(ctx context.Conte
 		inner.referenceHelper, err = protectLinuxPressureAuthorReferenceHelper(ctx, request, layout, inner.observation)
 	}
 	if err != nil {
-		return ErrExecutionLauncher
+		return preworkStage("reference-helper")
 	}
 	inner.tool, err = inner.builds.protectExecutorReferenceFD(ctx, value.PreparationRoot, image, inner.referenceHelper)
 	if err != nil {
-		return ErrExecutionLauncher
+		return preworkStage("reference-build")
 	}
 	return nil
 }
 
 func (inner *linuxExecutorInnerPrework) consume(ctx context.Context, value linuxExecutorPreworkSelection, parent *linuxExecutorParent, image *os.File) error {
 	if inner == nil || !inner.consumed.CompareAndSwap(false, true) {
-		return ErrExecutionLauncher
+		return preworkStage("consume-reentry")
 	}
 	if inner.tool == nil || !inner.tool.executorClaim.consumeInner(inner) {
-		return ErrExecutionLauncher
+		return preworkStage("consume-claim")
 	}
 	if !inner.attempted.Load() || ctx == nil || ctx.Err() != nil || inner.builds == nil || inner.tool == nil ||
 		inner.tool.referenceInputs != inner.builds || parent == nil || !parent.inner || parent.check(ctx) != nil {
-		return ErrExecutionLauncher
+		return preworkStage("consume-preconditions")
 	}
 	identity, err := inner.tool.Check(ctx, "t422-execute")
-	if err != nil || identity.BuildVCSRevision != value.SourceCommit || identity.Provenance != "go-build-info-vcs-v1" || inner.measuredInputs(ctx, value, identity) != nil {
-		return ErrExecutionLauncher
+	if err != nil || identity.BuildVCSRevision != value.SourceCommit || identity.Provenance != "go-build-info-vcs-v1" {
+		return preworkStage("tool-identity")
+	}
+	if err := inner.measuredInputs(ctx, value, identity); err != nil {
+		return err
 	}
 	return inner.tool.WithImage(ctx, "t422-execute", func(_ ExecutionToolIdentity, candidate *os.File) error {
 		left, leftErr := image.Stat()
@@ -107,7 +110,7 @@ func (inner *linuxExecutorInnerPrework) consume(ctx context.Context, value linux
 		if leftErr != nil || rightErr != nil || !os.SameFile(left, right) ||
 			t4013.MatchLinuxProcessExecutableImage(ctx, os.Getpid(), candidate) != nil ||
 			t4013.MatchLinuxProcessExecutableImage(ctx, os.Getppid(), candidate) != nil || parent.check(ctx) != nil {
-			return ErrExecutionLauncher
+			return preworkStage("image-match")
 		}
 		return nil
 	})
@@ -120,11 +123,11 @@ func (inner *linuxExecutorInnerPrework) measuredInputs(ctx context.Context, valu
 	if builds.closing || builds.released || builds.err != nil || builds.active != nil || builds.tree == nil || !builds.last.joined || !builds.last.empty ||
 		builds.last.pid <= 0 || builds.last.toolDigest != identity.SHA256 || builds.request.SourceCommit != value.SourceCommit ||
 		builds.last.goDigest != value.ExpectedGoSHA256 || builds.goIdentity.SHA256 != value.ExpectedGoSHA256 {
-		return ErrExecutionLauncher
+		return preworkStage("measured-build-state")
 	}
 	input, err := builds.tree.Check(ctx)
 	if err != nil || input != builds.last.input || linuxExecutorPreworkInputFacts(input) != value.ExpectedInput {
-		return ErrExecutionLauncher
+		return preworkStage("measured-input-tree")
 	}
 	return nil
 }
@@ -244,7 +247,13 @@ func runLinuxExecutorPreworkInner(ctx context.Context, value linuxExecutorPrewor
 	}
 	liveErr := parent.check(ctx)
 	if workErr != nil || closeErr != nil || liveErr != nil {
-		return true, errors.Join(ErrExecutionLauncher, workErr, closeErr, liveErr)
+		var stage error // workErr carries its own first stage when it has one.
+		if workErr == nil && closeErr != nil {
+			stage = preworkStage("inner-close")
+		} else if workErr == nil {
+			stage = preworkStage("inner-parent-liveness")
+		}
+		return true, errors.Join(ErrExecutionLauncher, workErr, stage, closeErr, liveErr)
 	}
 	return true, nil
 }

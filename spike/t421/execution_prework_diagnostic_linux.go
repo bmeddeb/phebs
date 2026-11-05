@@ -65,11 +65,14 @@ func linuxExecutorPreworkRefusal(command *exec.Cmd, waitErr, contextErr error, s
 // refusalDiagnostic is valid only after Run returned; the result channel close
 // orders it after the run goroutine's write.
 func (owner *linuxExecutorPrework) refusalDiagnostic() (linuxExecutorPreworkDiagnostic, bool) {
-	if owner == nil || owner.diagnostic == nil {
+	if owner == nil {
 		return linuxExecutorPreworkDiagnostic{}, false
 	}
 	select {
-	case <-owner.result:
+	case <-owner.result: // Every diagnostic access, including the nil check, follows publication.
+		if owner.diagnostic == nil {
+			return linuxExecutorPreworkDiagnostic{}, false
+		}
 		return *owner.diagnostic, true
 	default:
 		return linuxExecutorPreworkDiagnostic{}, false

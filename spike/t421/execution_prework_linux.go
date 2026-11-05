@@ -235,10 +235,11 @@ func (owner *linuxExecutorPrework) run(ctx context.Context, cancel context.Cance
 				success = stdout.buffer.String() == owner.pressure.receipt(value.Attempt, false)
 			}
 			err = nil
-			if waitErr != nil || command.ProcessState == nil || !command.ProcessState.Success() || ctx.Err() != nil ||
+			ctxErr := ctx.Err() // One observation for both the decision and its diagnostic.
+			if waitErr != nil || command.ProcessState == nil || !command.ProcessState.Success() || ctxErr != nil ||
 				stdout.err != nil || stderr.err != nil || stderr.buffer.Len() != 0 || !success {
 				err = ErrExecutionLauncher
-				diagnostic := linuxExecutorPreworkRefusal(command, waitErr, ctx.Err(), &stdout, &stderr, success)
+				diagnostic := linuxExecutorPreworkRefusal(command, waitErr, ctxErr, &stdout, &stderr, success)
 				owner.diagnostic = &diagnostic
 			}
 			publish(err)
@@ -321,22 +322,41 @@ func (owner *linuxExecutorPrework) Close(ctx context.Context) error {
 	return owner.finalErr
 }
 
+// outerInnerRefusal relays only the inner child's validated stage token and
+// actual exit code from output the outer already captured within its bounds.
+func outerInnerRefusal(stage string, command *exec.Cmd, stderr *checkoutCommandOutput) error {
+	refusal := &preworkRefusal{stage: stage, exit: -1, inner: relayedPreworkStage(stderr.buffer.String())}
+	if command != nil && command.ProcessState != nil {
+		refusal.exit = command.ProcessState.ExitCode()
+	}
+	return refusal
+}
+
 func linuxExecutorPreworkInputFacts(input LinuxInputTreeIdentity) linuxExecutorPreworkInput {
 	return linuxExecutorPreworkInput(input)
 }
 
 func runLinuxExecutionPreworkCommand(ctx context.Context, entered time.Time, args, environment []string) error {
+	err := runLinuxExecutionPreworkStaged(ctx, entered, args, environment)
+	if err != nil && len(args) > 1 {
+		// One bounded fixed-token line; the refusal and receipts are unchanged.
+		writePreworkRefusal(os.Stderr, args[1], err)
+	}
+	return err
+}
+
+func runLinuxExecutionPreworkStaged(ctx context.Context, entered time.Time, args, environment []string) error {
 	if runtime.GOARCH != "amd64" || ctx == nil || ctx.Err() != nil || len(args) != 4 || args[2] != "--selection-base64url" {
-		return ErrExecutionLauncher
+		return preworkStage("entry-args")
 	}
 	for _, value := range environment {
 		if strings.HasPrefix(value, executionLivenessEnvironment+"=") {
-			return ErrExecutionLauncher
+			return preworkStage("entry-environment")
 		}
 	}
 	value, err := decodeLinuxExecutorPrework(args[3])
 	if err != nil || !validLinuxExecutorPrework(value, entered) {
-		return ErrExecutionLauncher
+		return preworkStage("entry-selection")
 	}
 	ctx, cancel := context.WithDeadline(ctx, time.Unix(0, value.DeadlineUnixNano))
 	defer cancel()
@@ -352,7 +372,7 @@ func runLinuxExecutionPreworkCommand(ctx context.Context, entered time.Time, arg
 		if readErr == nil && imageErr == nil {
 			_, _ = os.Stdout.WriteString(linuxExecutorPreworkReceipt(value.Attempt, true))
 		}
-		return ErrExecutionLauncher
+		return preworkStage("entry-nonblock")
 	}
 	image, read := os.NewFile(3, "executor-image"), os.NewFile(4, "executor-parent")
 	parent, err := adoptLinuxExecutorParentObserved(ctx, value, image, read, args[1] == executionLinuxPreworkInnerMode, observation)
@@ -362,7 +382,7 @@ func runLinuxExecutionPreworkCommand(ctx context.Context, entered time.Time, arg
 		if readErr == nil && imageErr == nil && observation.settle(context.Background()) {
 			_, _ = os.Stdout.WriteString(linuxExecutorPreworkReceipt(value.Attempt, true))
 		}
-		return ErrExecutionLauncher
+		return preworkStage("adopt-parent")
 	}
 	var retired bool
 	var workErr error
@@ -380,13 +400,13 @@ func runLinuxExecutionPreworkCommand(ctx context.Context, entered time.Time, arg
 		workErr = errors.Join(workErr, recordErr)
 	}
 	if !retired || !parent.retired || imageErr != nil || !observation.settle(context.Background()) {
-		return ErrExecutionLauncher
+		return errors.Join(workErr, preworkStage("settle-unretired"))
 	}
 	// This original context is distinct from parent.alive, which Close cancels.
 	// Cleanup cannot turn expiry, cancellation or a sticky failure into success.
 	if workErr != nil || watchErr != nil || ctx.Err() != nil || !time.Now().Before(time.Unix(0, value.DeadlineUnixNano)) {
 		_, _ = os.Stdout.WriteString(linuxExecutorPreworkReceipt(value.Attempt, true))
-		return ErrExecutionLauncher
+		return errors.Join(workErr, preworkStage("post-work"))
 	}
 	_, err = os.Stdout.WriteString(linuxExecutorPreworkReceipt(value.Attempt, false))
 	return err
@@ -395,31 +415,31 @@ func runLinuxExecutionPreworkCommand(ctx context.Context, entered time.Time, arg
 func runLinuxExecutorPreworkOuter(ctx context.Context, value linuxExecutorPreworkSelection, parent *linuxExecutorParent, image *os.File) (retired bool, retErr error) {
 	read, writer, err := os.Pipe()
 	if err != nil {
-		return true, ErrExecutionLauncher
+		return true, preworkStage("outer-pipe")
 	}
 	defer func() {
 		if read != nil {
 			if err := parent.observation.close(read.Close()); err != nil {
-				retired, retErr = false, ErrExecutionLauncher
+				retired, retErr = false, errors.Join(retErr, preworkStage("outer-pipe-close"))
 			}
 		}
 		if err := parent.observation.close(writer.Close()); err != nil {
-			retired, retErr = false, ErrExecutionLauncher
+			retired, retErr = false, errors.Join(retErr, preworkStage("outer-pipe-close"))
 		}
 	}()
 	value, err = bindLinuxExecutorPrework(ctx, value, read)
 	if err != nil || parent.check(ctx) != nil {
-		return true, ErrExecutionLauncher
+		return true, preworkStage("outer-bind")
 	}
 	command, err := linuxExecutorPreworkCommand(ctx, image, read, executionLinuxPreworkInnerMode, value)
 	if err != nil {
-		return true, err
+		return true, errors.Join(preworkStage("outer-command"), err)
 	}
 	stdout := checkoutCommandOutput{remaining: 128, cancel: parent.cancel}
 	stderr := checkoutCommandOutput{remaining: 1024, cancel: parent.cancel}
 	command.Stdout, command.Stderr = &stdout, &stderr
 	if command.Start() != nil {
-		return true, ErrExecutionLauncher
+		return true, preworkStage("outer-start")
 	}
 	readErr := parent.observation.close(read.Close())
 	read = nil
@@ -427,13 +447,16 @@ func runLinuxExecutorPreworkOuter(ctx context.Context, value linuxExecutorPrewor
 	members, membershipErr := t4013.PrivateProcessSessionMembership(os.Getpid())
 	retired = stdout.err == nil && linuxExecutorPreworkRetired(stdout.buffer.String(), value.Attempt)
 	if command.ProcessState == nil || !retired || membershipErr != nil || len(members) != 1 || members[0].PID != os.Getpid() {
-		return false, ErrExecutionLauncher
+		return false, outerInnerRefusal("outer-inner-unretired", command, &stderr)
 	}
 	if readErr != nil {
-		return false, ErrExecutionLauncher
+		return false, preworkStage("outer-read-close")
 	}
-	if waitErr != nil || !command.ProcessState.Success() || stdout.buffer.String() != linuxExecutorPreworkReceipt(value.Attempt, false) || stderr.err != nil || stderr.buffer.Len() != 0 || parent.check(ctx) != nil {
-		return true, ErrExecutionLauncher
+	if waitErr != nil || !command.ProcessState.Success() || stdout.buffer.String() != linuxExecutorPreworkReceipt(value.Attempt, false) || stderr.err != nil || stderr.buffer.Len() != 0 {
+		return true, outerInnerRefusal("outer-inner-refused", command, &stderr)
+	}
+	if parent.check(ctx) != nil {
+		return true, preworkStage("outer-parent-liveness")
 	}
 	return true, nil
 }

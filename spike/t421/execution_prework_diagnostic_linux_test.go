@@ -36,7 +36,8 @@ func TestLinuxExecutorPreworkRefusalDiagnostic(t *testing.T) {
 		t.Fatalf("signal facts not retained: %#v", signaled)
 	}
 	// Over-bound stderr keeps only what was admitted before the refusal and the refusal itself.
-	flooded := runPreworkDiagnosticChild(t, "head -c 600 /dev/zero | tr '\\0' a >&2; head -c 600 /dev/zero | tr '\\0' b >&2; sleep 5")
+	// The pause keeps the two writes in separate pipe reads, so the first is admitted.
+	flooded := runPreworkDiagnosticChild(t, "head -c 600 /dev/zero | tr '\\0' a >&2; sleep 0.2; head -c 600 /dev/zero | tr '\\0' b >&2; exec sleep 5")
 	if !flooded.Started || flooded.StderrRefused == "" || len(flooded.Stderr) > 1024 || !strings.HasPrefix(flooded.Stderr, strings.Repeat("a", 600)) {
 		t.Fatalf("bounded stderr refusal not retained: started=%v refused=%q len=%d", flooded.Started, flooded.StderrRefused, len(flooded.Stderr))
 	}
