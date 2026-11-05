@@ -5461,8 +5461,10 @@ unrecoverable: the outer prework refused with one opaque error for a nonzero
 exit, any stderr byte or a receipt mismatch, and it kept the child's bounded
 output only in memory. The outer `t422-execute` likewise discarded its inner
 child's output, so relaying output alone would show only the generic
-unavailable line. The correction tags each prework refusal with one fixed
-stage token while keeping the same `ErrExecutionLauncher` identity. On
+unavailable line. The correction tags the entry, outer and inner prework
+refusals with fixed stage tokens while keeping the same
+`ErrExecutionLauncher` identity. That covers the image check that
+`WithImage` would otherwise mask, and failure-record writes. On
 refusal only, the inner and outer prework write one bounded stderr line
 (`t422-prework-refusal: mode=… stage=…`, at most 160 bytes). The outer
 relays the inner's validated stage and actual exit code. The driver keeps a
@@ -5472,11 +5474,14 @@ the already-captured stdout/stderr within their unchanged 128-byte and
 refusals. Success writes nothing new, and no refusal, bound, authority or
 retirement rule changes. V26 can name the first refusing stage, for example
 `reference-build` or `measured-input-tree`, but not the error text inside
-it. AC: stage identity and join order, line bound, relay parsing, actual
-entry and inner staged refusals; real-child exit, signal and over-bound
-stderr controls; publication-ordered access; normal/race, static and docs
-gates. The driver-side recording in `run` is covered only through the native
-harness. A fresh V26 native run needs new exact admission and Ben's approval.
+it. Close-loop retirement failures and pressure broker or author refusals
+still report `stage=unrecorded` or no line. AC: stage identity and join
+order, line bound, relay parsing, an actual inner stand-in relayed by
+`outerInnerRefusal`, the command wrapper writing exactly one line only on
+refusal, actual entry and inner staged refusals; real-child exit, signal and
+over-bound stderr controls; publication-ordered access; normal/race, static
+and docs gates. The driver-side recording in `run` is covered only through
+the native harness. A fresh V26 native run needs new exact admission and Ben's approval.
 
 **T42.H2t.b · Pressure workspace credential/descriptor handoff (MED-497
 implementation, 2026-10-24; bounded checkpoint, native acceptance pending).**

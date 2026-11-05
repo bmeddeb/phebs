@@ -392,12 +392,12 @@ func runLinuxExecutionPreworkStaged(ctx context.Context, entered time.Time, args
 		retired, workErr = runLinuxExecutorPreworkInner(parent.alive, value, parent, image, &failureAttempted)
 	}
 	if recordErr := writeLinuxExecutorPreworkFailureOnce(&failureAttempted, value, observation, nil); recordErr != nil {
-		workErr = errors.Join(workErr, recordErr)
+		workErr = errors.Join(workErr, preworkStage("failure-record"), recordErr)
 	}
 	watchErr := parent.Close()
 	imageErr := observation.close(image.Close())
 	if recordErr := writeLinuxExecutorPreworkFailureOnce(&failureAttempted, value, observation, nil); recordErr != nil {
-		workErr = errors.Join(workErr, recordErr)
+		workErr = errors.Join(workErr, preworkStage("failure-record"), recordErr)
 	}
 	if !retired || !parent.retired || imageErr != nil || !observation.settle(context.Background()) {
 		return errors.Join(workErr, preworkStage("settle-unretired"))
@@ -406,7 +406,13 @@ func runLinuxExecutionPreworkStaged(ctx context.Context, entered time.Time, args
 	// Cleanup cannot turn expiry, cancellation or a sticky failure into success.
 	if workErr != nil || watchErr != nil || ctx.Err() != nil || !time.Now().Before(time.Unix(0, value.DeadlineUnixNano)) {
 		_, _ = os.Stdout.WriteString(linuxExecutorPreworkReceipt(value.Attempt, true))
-		return errors.Join(workErr, preworkStage("post-work"))
+		stage := "post-work-deadline"
+		if watchErr != nil {
+			stage = "post-work-watch"
+		} else if ctx.Err() != nil {
+			stage = "post-work-context"
+		}
+		return errors.Join(workErr, preworkStage(stage))
 	}
 	_, err = os.Stdout.WriteString(linuxExecutorPreworkReceipt(value.Attempt, false))
 	return err

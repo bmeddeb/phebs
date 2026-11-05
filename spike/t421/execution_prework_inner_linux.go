@@ -104,16 +104,26 @@ func (inner *linuxExecutorInnerPrework) consume(ctx context.Context, value linux
 	if err := inner.measuredInputs(ctx, value, identity); err != nil {
 		return err
 	}
-	return inner.tool.WithImage(ctx, "t422-execute", func(_ ExecutionToolIdentity, candidate *os.File) error {
+	// WithImage reports its own custody refusal, not the callback's, so the
+	// callback's stage is kept here; the refusal itself is unchanged.
+	var imageRefusal error
+	if err := inner.tool.WithImage(ctx, "t422-execute", func(_ ExecutionToolIdentity, candidate *os.File) error {
 		left, leftErr := image.Stat()
 		right, rightErr := candidate.Stat()
 		if leftErr != nil || rightErr != nil || !os.SameFile(left, right) ||
 			t4013.MatchLinuxProcessExecutableImage(ctx, os.Getpid(), candidate) != nil ||
 			t4013.MatchLinuxProcessExecutableImage(ctx, os.Getppid(), candidate) != nil || parent.check(ctx) != nil {
-			return preworkStage("image-match")
+			imageRefusal = preworkStage("image-match")
+			return imageRefusal
 		}
 		return nil
-	})
+	}); err != nil {
+		if imageRefusal == nil {
+			imageRefusal = preworkStage("image-custody")
+		}
+		return errors.Join(imageRefusal, err)
+	}
+	return nil
 }
 
 func (inner *linuxExecutorInnerPrework) measuredInputs(ctx context.Context, value linuxExecutorPreworkSelection, identity ExecutionToolIdentity) error {
@@ -228,13 +238,13 @@ func runLinuxExecutorPreworkInner(ctx context.Context, value linuxExecutorPrewor
 	inner := &linuxExecutorInnerPrework{observation: parent.observation}
 	workErr := inner.prepare(ctx, value, parent, image)
 	if recordErr := writeLinuxExecutorPreworkFailureOnce(failureAttempted, value, inner.observation, nil); recordErr != nil {
-		workErr = errors.Join(ErrExecutionLauncher, workErr, recordErr)
+		workErr = errors.Join(ErrExecutionLauncher, workErr, preworkStage("failure-record"), recordErr)
 	}
 	// Work remains bounded. Unknown original owners retain this process through
 	// settlement without extending the work deadline or allowing later success.
 	closeErr := inner.Close(context.Background())
 	if recordErr := writeLinuxExecutorPreworkFailureOnce(failureAttempted, value, inner.observation, nil); recordErr != nil {
-		workErr = errors.Join(workErr, recordErr)
+		workErr = errors.Join(workErr, preworkStage("failure-record"), recordErr)
 	}
 	for !inner.retired() || !inner.observation.settle(context.Background()) {
 		// Retire only the original recorded owners. Never restart preparation,
@@ -242,7 +252,7 @@ func runLinuxExecutorPreworkInner(ctx context.Context, value linuxExecutorPrewor
 		time.Sleep(time.Second)
 		closeErr = errors.Join(ErrExecutionLauncher, inner.Close(context.Background()))
 		if recordErr := writeLinuxExecutorPreworkFailureOnce(failureAttempted, value, inner.observation, nil); recordErr != nil {
-			workErr = errors.Join(workErr, recordErr)
+			workErr = errors.Join(workErr, preworkStage("failure-record"), recordErr)
 		}
 	}
 	liveErr := parent.check(ctx)
