@@ -87,7 +87,9 @@ func TestLinuxExecutorPreworkActualRefusalsCarryStages(t *testing.T) {
 		t.Fatal("selection refusal lost its stage")
 	}
 	inner := &linuxExecutorInnerPrework{observation: &executionPreworkObservation{}}
-	if refusal, ok := firstPreworkRefusal(inner.prepare(nil, linuxExecutorPreworkSelection{}, nil, nil)); !ok || refusal.stage != "inner-entry" {
+	cancelled, cancel := context.WithCancel(t.Context())
+	cancel()
+	if refusal, ok := firstPreworkRefusal(inner.prepare(cancelled, linuxExecutorPreworkSelection{}, nil, nil)); !ok || refusal.stage != "inner-entry" {
 		t.Fatal("inner entry refusal lost its stage")
 	}
 	if refusal, ok := firstPreworkRefusal(inner.prepare(t.Context(), linuxExecutorPreworkSelection{}, nil, nil)); !ok || refusal.stage != "inner-reentry" {
