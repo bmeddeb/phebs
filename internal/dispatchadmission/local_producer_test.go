@@ -191,7 +191,9 @@ func TestLocalProducerRetainedOwnersCloseDescriptorsWithoutGC(t *testing.T) {
 		createAndClose()
 	}
 	after := countFDs()
-	if after != before {
+	// Only growth is a leak. An earlier test's asynchronous cleanup may close
+	// one of its own descriptors inside this window and lower the count.
+	if after > before {
 		t.Fatalf("retained local owners leaked descriptors: before %d after %d", before, after)
 	}
 	runtime.KeepAlive(retained) // No GC/finalizer can close these reachable owners.
