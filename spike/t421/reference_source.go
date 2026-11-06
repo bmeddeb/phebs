@@ -145,7 +145,9 @@ func createExecutionReferenceSourceBounded(
 	if closeErr := shallow.Close(); writeErr != nil || closeErr != nil {
 		return executionReferenceSource{}, errors.New("reference source cannot write shallow boundary")
 	}
-	if _, err := reference.root.run(ctx, 0, "update-ref", "--no-deref", "HEAD", source); err != nil {
+	// No reflog: its wall-clock line would make two otherwise identical
+	// reference sources differ, and the outer and inner stage minutes apart.
+	if _, err := reference.root.run(ctx, 0, "-c", "core.logAllRefUpdates=false", "update-ref", "--no-deref", "HEAD", source); err != nil {
 		return executionReferenceSource{}, err
 	}
 	config, err := readReferenceControl(output, ".git/config", 64<<10)

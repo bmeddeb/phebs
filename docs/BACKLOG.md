@@ -5501,6 +5501,23 @@ outcomes are unchanged. AC: mask table and token validity, relay of the
 longest mask; normal/race, static and docs gates. V27 needs new exact
 admission and Ben's approval.
 
+**2026-11-06 — V27 names the manifest; the reference source's reflog
+carried the wall clock (MED-497).** V27 (`4bf6e400`, dave) refused at
+890.5 s with `inner=measured-input-expected-m`: the inner's tree matched
+the outer's `ExpectedInput` in helper, entries, files, bytes and path bytes,
+and differed only in the manifest digest. Staging the same Go build payload
+twice through the real staging code, 47 s apart, differed in exactly one of
+76,474 entries: `source/.git/logs/HEAD`. `update-ref --no-deref HEAD` in a
+fresh non-bare reference source appends a reflog line with the current Unix
+time, which keeps a fixed size and changes the content. The outer and inner
+stage minutes apart, so every attempt from V25 on had to refuse. That
+`update-ref` now runs with `core.logAllRefUpdates=false`, and the reference
+source has no `.git/logs`; the same double staging then differs in no
+entry. AC: two reference sources created more than one second apart are
+byte- and mode-identical and both verify, and the test fails without the
+change; normal/race, static and docs gates. V28 needs new exact admission
+and Ben's approval.
+
 **T42.H2t.b · Pressure workspace credential/descriptor handoff (MED-497
 implementation, 2026-10-24; bounded checkpoint, native acceptance pending).**
 Connect an actual protected root

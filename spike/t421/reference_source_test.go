@@ -5,10 +5,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bmeddeb/phebs/internal/executableidentity"
 )
@@ -51,6 +53,61 @@ func TestExecutionReferenceSourceRetainsOnlyExactSelectedCommitAndTree(t *testin
 	}
 	if err := reference.verify(t.Context()); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// The outer and inner each create their own reference source minutes apart;
+// the measured input tree must not depend on when. Git's reflog is the one
+// wall-clock fact a fresh checkout would otherwise record (MED-497 V27).
+func TestExecutionReferenceSourceIsIndependentOfCreationTime(t *testing.T) {
+	fixture := newExecutionCheckoutFixture(t)
+	first := newExecutionReferenceSourceFixture(t, fixture)
+	time.Sleep(1100 * time.Millisecond) // Reflog timestamps have one-second resolution.
+	second := newExecutionReferenceSourceFixture(t, fixture)
+	read := func(root string) map[string]string {
+		t.Helper()
+		files := make(map[string]string)
+		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			relative, _ := filepath.Rel(root, path)
+			info, err := entry.Info()
+			if err != nil {
+				return err
+			}
+			value := info.Mode().String()
+			if !entry.IsDir() {
+				raw, err := os.ReadFile(path)
+				if err != nil {
+					return err
+				}
+				value += "\x00" + string(raw)
+			}
+			files[relative] = value
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return files
+	}
+	left, right := read(first.root.root), read(second.root.root)
+	for _, logs := range []string{filepath.Join(".git", "logs"), filepath.Join(".git", "logs", "HEAD")} {
+		if _, ok := left[logs]; ok {
+			t.Fatalf("reference source recorded %s", logs)
+		}
+	}
+	if len(left) != len(right) {
+		t.Fatalf("reference sources have %d and %d entries", len(left), len(right))
+	}
+	for name, value := range left {
+		if right[name] != value {
+			t.Fatalf("reference source entry %s depends on creation time", name)
+		}
+	}
+	if first.verify(t.Context()) != nil || second.verify(t.Context()) != nil {
+		t.Fatal("time-independent reference sources no longer verify")
 	}
 }
 
