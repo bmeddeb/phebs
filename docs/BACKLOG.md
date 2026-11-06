@@ -5483,6 +5483,24 @@ over-bound stderr controls; publication-ordered access; normal/race, static
 and docs gates. The driver-side recording in `run` is covered only through
 the native harness. A fresh V26 native run needs new exact admission and Ben's approval.
 
+**2026-11-06 — V26 names the inner input-tree refusal; split into its
+three causes (MED-497).** V26 (`2760f328`, dave) refused like V25, at
+902.5 s, and the stage line read `outer-inner-refused
+inner=measured-input-tree inner-exit=1`. The inner child passed every
+reference-construction stage and the tool identity check, then refused in
+`measuredInputs`. That one condition bundled three causes, and the retained
+evidence directory was empty. They are now separate stages:
+`measured-input-check` when re-measurement errors,
+`measured-input-changed-<mask>` when the tree differs from the inner's last
+build, and `measured-input-expected-<mask>` when it differs from the
+`ExpectedInput` the outer measured. The mask lists the differing fields
+by one fixed letter each (`m` manifest, `h` helper, `e` entries, `f`
+files, `b` bytes, `p` path bytes), never their values. The longest token
+still fits the 40-byte stage bound and the outer relay. The refusal
+outcomes are unchanged. AC: mask table and token validity, relay of the
+longest mask; normal/race, static and docs gates. V27 needs new exact
+admission and Ben's approval.
+
 **T42.H2t.b · Pressure workspace credential/descriptor handoff (MED-497
 implementation, 2026-10-24; bounded checkpoint, native acceptance pending).**
 Connect an actual protected root

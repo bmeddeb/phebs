@@ -124,6 +124,36 @@ func TestLinuxExecutorPreworkOuterRelaysActualInnerChild(t *testing.T) {
 	}
 }
 
+func TestLinuxExecutorPreworkInputMismatchStage(t *testing.T) {
+	base := linuxExecutorPreworkInput{ManifestSHA256: strings.Repeat("a", 64), HelperSHA256: strings.Repeat("b", 64), Entries: 9, Files: 7, Bytes: 100, PathBytes: 80}
+	paths := base
+	paths.PathBytes, paths.Entries = 81, 10
+	all := linuxExecutorPreworkInput{ManifestSHA256: strings.Repeat("c", 64), HelperSHA256: strings.Repeat("d", 64), Entries: 1, Files: 1, Bytes: 1, PathBytes: 1}
+	for _, test := range []struct {
+		prefix    string
+		got       linuxExecutorPreworkInput
+		wantStage string
+	}{
+		{"measured-input-expected-", paths, "measured-input-expected-ep"},
+		{"measured-input-changed-", all, "measured-input-changed-mhefbp"},
+		{"measured-input-expected-", base, "measured-input-expected-"},
+	} {
+		stage := preworkInputMismatchStage(test.prefix, base, test.got)
+		if stage != test.wantStage {
+			t.Fatalf("stage %q, want %q", stage, test.wantStage)
+		}
+		if test.got != base && !validPreworkRefusalToken(stage) {
+			t.Fatalf("stage %q not a valid bounded token", stage)
+		}
+	}
+	// The longest mask still relays through the outer line intact.
+	line := preworkRefusalLine(executionLinuxPreworkOuterMode, &preworkRefusal{stage: "outer-inner-refused", inner: "measured-input-changed-mhefbp", exit: 1})
+	if relayed := relayedPreworkStage("t422-prework-refusal: mode=inner stage=measured-input-changed-mhefbp\n"); relayed != "measured-input-changed-mhefbp" ||
+		!strings.Contains(line, " inner=measured-input-changed-mhefbp ") || len(line) > maxPreworkRefusalLine {
+		t.Fatalf("mask not relayed: %q %q", relayed, line)
+	}
+}
+
 // Not parallel: the wrapper writes to the process stderr, redirected here.
 func TestLinuxExecutorPreworkCommandWritesOneLineOnlyOnRefusal(t *testing.T) {
 	read, write, err := os.Pipe()

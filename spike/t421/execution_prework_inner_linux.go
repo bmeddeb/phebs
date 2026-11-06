@@ -136,10 +136,36 @@ func (inner *linuxExecutorInnerPrework) measuredInputs(ctx context.Context, valu
 		return preworkStage("measured-build-state")
 	}
 	input, err := builds.tree.Check(ctx)
-	if err != nil || input != builds.last.input || linuxExecutorPreworkInputFacts(input) != value.ExpectedInput {
-		return preworkStage("measured-input-tree")
+	if err != nil {
+		return preworkStage("measured-input-check")
+	}
+	if input != builds.last.input {
+		return preworkStage(preworkInputMismatchStage("measured-input-changed-", linuxExecutorPreworkInputFacts(builds.last.input), linuxExecutorPreworkInputFacts(input)))
+	}
+	if facts := linuxExecutorPreworkInputFacts(input); facts != value.ExpectedInput {
+		return preworkStage(preworkInputMismatchStage("measured-input-expected-", value.ExpectedInput, facts))
 	}
 	return nil
+}
+
+// preworkInputMismatchStage names which input facts differ with one fixed
+// letter each (manifest, helper, entries, files, bytes, path-bytes), never
+// their values, so the stage stays a bounded constant-alphabet token.
+func preworkInputMismatchStage(prefix string, want, got linuxExecutorPreworkInput) string {
+	stage := prefix
+	for _, field := range []struct {
+		letter string
+		differ bool
+	}{
+		{"m", want.ManifestSHA256 != got.ManifestSHA256}, {"h", want.HelperSHA256 != got.HelperSHA256},
+		{"e", want.Entries != got.Entries}, {"f", want.Files != got.Files},
+		{"b", want.Bytes != got.Bytes}, {"p", want.PathBytes != got.PathBytes},
+	} {
+		if field.differ {
+			stage += field.letter
+		}
+	}
+	return stage
 }
 
 // Close returns only after the actual source-owned constructors/attempts have
