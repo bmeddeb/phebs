@@ -320,6 +320,10 @@ func linuxEpochTraceDetachedCurrentParent(original linuxEpochTraceIdentity, pare
 	if err != nil || gone {
 		return false, err
 	}
+	return linuxEpochTraceDetachedRow(raw, original, parentChanged)
+}
+
+func linuxEpochTraceDetachedRow(raw []byte, original linuxEpochTraceIdentity, parentChanged func() bool) (bool, error) {
 	start, end := strings.IndexByte(string(raw), '('), strings.LastIndex(string(raw), ") ")
 	if start < 1 || end <= start+1 {
 		return false, fmt.Errorf("detached/stat-layout: %w", ErrExecutionEpochOne)
@@ -330,6 +334,12 @@ func linuxEpochTraceDetachedCurrentParent(original linuxEpochTraceIdentity, pare
 	}
 	if fields[19] != original.birth {
 		return false, nil // Metadata retirement only, never adoption/Wait proof.
+	}
+	// Once the kernel unhashes a dying task (pid_alive false) its stat still
+	// opens but reports ppid, pgrp and session all 0: the same retirement as a
+	// vanished entry, read a moment earlier. A live member never shows that.
+	if fields[1] == "0" && fields[2] == "0" && fields[3] == "0" && original.sid != 0 {
+		return false, nil
 	}
 	if fields[1] != strconv.Itoa(original.parent) && (parentChanged == nil || !parentChanged()) {
 		return false, fmt.Errorf("detached/parent: %w", ErrExecutionEpochOne)

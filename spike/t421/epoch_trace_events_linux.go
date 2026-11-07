@@ -287,9 +287,17 @@ func (root *linuxEpochTraceRoot) event(ctx context.Context, tid int, task *linux
 	}
 	switch event {
 	case unix.PTRACE_EVENT_FORK, unix.PTRACE_EVENT_VFORK, unix.PTRACE_EVENT_CLONE:
-		child, e := unix.PtraceGetEventMsg(tid)
-		if e != nil || child == 0 || child > uint(^uint(0)>>1) {
-			return fmt.Errorf("event/creation-message creator=%d child=%d: %w", tid, child, errors.Join(ErrExecutionEpochOne, e))
+		child, left, e := linuxEpochTraceCreationMessage(tid, event)
+		if e == nil && left && event == unix.PTRACE_EVENT_CLONE {
+			// The creator left this consumed stop without our restart, which only
+			// SIGKILL does: its group is dying and the message may already be its
+			// EXIT code. Nothing is registered or continued. A lost thread is
+			// reached only by exiting-group reconciliation of its real stop; the
+			// creator's own next stop arrives through the ordinary wait.
+			return nil
+		}
+		if e != nil || left || child == 0 || child > uint(^uint(0)>>1) {
+			return fmt.Errorf("event/creation-message creator=%d child=%d left=%t: %w", tid, child, left, errors.Join(ErrExecutionEpochOne, e))
 		}
 		if e = root.register(ctx, int(child), task); e != nil {
 			return fmt.Errorf("event/creation-register creator=%d child=%d: %w", tid, child, e)
@@ -339,7 +347,16 @@ func (root *linuxEpochTraceRoot) event(ctx context.Context, tid int, task *linux
 	default:
 		return ErrExecutionEpochOne
 	}
-	if err := unix.PtraceCont(tid, 0); err != nil {
+	err = unix.PtraceCont(tid, 0)
+	if errors.Is(err, unix.ESRCH) && event == unix.PTRACE_EVENT_CLONE {
+		// Registered from a proven message, but SIGKILL released the creator
+		// from its CLONE stop before this restart: nothing is left to grant,
+		// and its next stop arrives through the ordinary wait.
+		if inStop, e := linuxEpochTraceInEventStop(tid, event); e == nil && !inStop {
+			return nil
+		}
+	}
+	if err != nil {
 		return fmt.Errorf("event/continue tid=%d event=%d: %w", tid, event, err)
 	}
 	return nil
@@ -635,4 +652,39 @@ func (root *linuxEpochTraceRoot) waitRoot(initial bool) {
 	root.death.SessionEmpty = true
 	root.cleanupErr = errors.Join(root.err, reapErr, closeErr)
 	root.completionErr = errors.Join(root.cleanupErr, waitErr)
+}
+
+// A creation message is trusted only while the creator is provably still in
+// the creation stop this actor consumed: the kernel stamps that stop's siginfo
+// SIGTRAP|event<<8, and only a later stop rewrites the message. left reports
+// that the creator is no longer in that stop (or no longer stopped at all).
+func linuxEpochTraceCreationMessage(tid, event int) (child uint, left bool, err error) {
+	before, err := linuxEpochTraceInEventStop(tid, event)
+	if err != nil || !before {
+		return 0, true, err
+	}
+	child, err = unix.PtraceGetEventMsg(tid)
+	if errors.Is(err, unix.ESRCH) {
+		return 0, true, nil
+	}
+	if err != nil {
+		return 0, false, err
+	}
+	after, err := linuxEpochTraceInEventStop(tid, event)
+	if err != nil || !after {
+		return 0, true, err
+	}
+	return child, false, nil
+}
+
+func linuxEpochTraceInEventStop(tid, event int) (bool, error) {
+	var information unix.Siginfo
+	_, _, errno := unix.Syscall6(unix.SYS_PTRACE, unix.PTRACE_GETSIGINFO, uintptr(tid), 0, uintptr(unsafe.Pointer(&information)), 0, 0)
+	if errno == unix.ESRCH {
+		return false, nil
+	}
+	if errno != 0 {
+		return false, errno
+	}
+	return information.Signo == int32(unix.SIGTRAP) && information.Code == int32(unix.SIGTRAP)|int32(event)<<8, nil
 }

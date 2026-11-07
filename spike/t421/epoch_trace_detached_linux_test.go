@@ -94,3 +94,36 @@ func TestLinuxEpochTraceDetachedCurrentBindings(t *testing.T) {
 		})
 	}
 }
+
+// An unhashed dying task keeps its start time but reads ppid/pgrp/session 0;
+// that is retirement, while any other session change still refuses.
+func TestLinuxEpochTraceDetachedRowUnhashedRetires(t *testing.T) {
+	original := linuxEpochTraceIdentity{pid: 4242, parent: 4000, sid: 3900, birth: "777", name: "t421.test"}
+	row := func(ppid, pgrp, sid, birth string) []byte {
+		fields := []string{"X", ppid, pgrp, sid}
+		for len(fields) < 19 {
+			fields = append(fields, "0")
+		}
+		fields = append(fields, birth, "0", "0", "0")
+		return []byte("4242 (t421.test) " + strings.Join(fields, " ") + "\n")
+	}
+	never := func() bool { return false }
+	for _, test := range []struct {
+		name    string
+		raw     []byte
+		present bool
+		refused bool
+	}{
+		{"live", row("4000", "3900", "3900", "777"), true, false},
+		{"unhashed", row("0", "0", "0", "777"), false, false},
+		{"reused", row("1", "1", "1", "778"), false, false},
+		{"session-only zero", row("4000", "3900", "0", "777"), false, true},
+		{"other session", row("4000", "3900", "3901", "777"), false, true},
+		{"orphaned", row("0", "3900", "3900", "777"), false, true},
+	} {
+		present, err := linuxEpochTraceDetachedRow(test.raw, original, never)
+		if present != test.present || (err != nil) != test.refused || err != nil && !errors.Is(err, ErrExecutionEpochOne) {
+			t.Errorf("%s: present=%t err=%v", test.name, present, err)
+		}
+	}
+}

@@ -5530,6 +5530,35 @@ then retains every owner until its 25 s timeout. A creator that dies during
 its CLONE stop should be an expected terminal outcome. Not yet fixed; a
 ci-go failure in this test on an unrelated change is this race.
 
+**2026-11-07 — Resolved: the dying-group ptrace race (MED-497 gates, MED-496
+code).** Three separate kernel windows made
+`TestLinuxEpochRootFirstDyingGroupPending` fail under load:
+
+1. SIGKILL releases a creator from its consumed CLONE stop, so its event
+   message is already the EXIT code (`child=9`). A creation message is now
+   trusted only while `PTRACE_GETSIGINFO`, read before and after it, still
+   shows `SIGTRAP|CLONE<<8`. A creator that left the stop registers and
+   continues nothing. Its lost thread is reached only by exiting-group
+   reconciliation of its real stop. FORK and VFORK still refuse.
+2. The same release can happen after a proven registration and before the
+   restart. ESRCH there, with the creator no longer in the stop, grants
+   nothing further.
+3. A detached thread that the kernel has unhashed still opens
+   `/proc/<tid>/stat` with its start time, but its ppid, pgrp and session read
+   0. That is now retirement, like a vanished entry, instead of a session
+   refusal.
+
+Separately, the fixture's held sibling could land on the main thread (TID
+equal to the root PID); it now hands off until it does not.
+
+`TestLinuxEpochTraceCreationMessageLeavesOnSIGKILL` drives case 1 on a real
+tracee. `TestLinuxEpochTraceDetachedRowUnhashedRetires` pins case 3.
+
+Measured at 12 concurrent copies: unchanged `main` failed 4 of 120 runs (all
+case 1). With fix 1 alone, 2 of 360 failed (cases 2 and the fixture flake).
+With all fixes, 1 of 360 failed (case 3) before its fix, and 0 of 480 after
+it.
+
 **T42.H2t.b · Pressure workspace credential/descriptor handoff (MED-497
 implementation, 2026-10-24; bounded checkpoint, native acceptance pending).**
 Connect an actual protected root

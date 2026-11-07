@@ -50,7 +50,19 @@ func TestLinuxEpochRootFirstDyingGroupFixture(t *testing.T) {
 		t.Fatal("unknown fixed fixture mode")
 	}
 	held := make(chan int, 1)
-	go func() { runtime.LockOSThread(); held <- unix.Gettid(); select {} }()
+	// The held sibling must not be the main thread (its TID is the root PID).
+	// A goroutine that lands there keeps it locked and hands off to another.
+	var holdSibling func()
+	holdSibling = func() {
+		runtime.LockOSThread()
+		if unix.Gettid() == unix.Getpid() {
+			go holdSibling()
+		} else {
+			held <- unix.Gettid()
+		}
+		select {}
+	}
+	go holdSibling()
 	report := rootFirstGroupReport{Creator: unix.Gettid(), Held: <-held}
 	child := exec.Command(os.Args[0], "-test.run=^TestLinuxEpochRootFirstDyingGroupFixture$", "-test.timeout=20s")
 	child.Env = []string{rootFirstGroupFixtureEnv + "=child", "GOMAXPROCS=2", "GORACE=atexit_sleep_ms=0"}
