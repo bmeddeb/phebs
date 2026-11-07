@@ -72,8 +72,14 @@ func TestHostObservationEmptyCapacityAndNoCreation(t *testing.T) {
 		t.Fatal("stat")
 	}
 	want, err := hostObservationCapacity(st, fs)
-	if err != nil || want != out.Capacity {
-		t.Fatal(want, out.Capacity, err)
+	got := out.Capacity
+	// Free and available counts are live on a shared filesystem: parallel
+	// writers may move them between the two snapshots. Identity and totals
+	// must match exactly; the live counts must stay within the totals.
+	if err != nil || got.Device != want.Device || got.Inode != want.Inode || got.BlockSize != want.BlockSize ||
+		got.TotalBytes != want.TotalBytes || got.TotalInodes != want.TotalInodes ||
+		got.FreeBytes > got.TotalBytes || got.AvailableBytes > got.FreeBytes || got.FreeInodes > got.TotalInodes {
+		t.Fatal(want, got, err)
 	}
 	if err = os.Remove(filepath.Join(base, ".lock")); err != nil {
 		t.Fatal(err)

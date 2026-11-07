@@ -5518,6 +5518,18 @@ byte- and mode-identical and both verify, and the test fails without the
 change; normal/race, static and docs gates. V28 needs new exact admission
 and Ben's approval.
 
+**2026-11-07 — Open: the dying-group ptrace test races under load
+(MED-497 gates, MED-496 code).** `TestLinuxEpochRootFirstDyingGroupPending`
+failed one ci-go run on `74c1df8c`. Alone it always passes; under twelve
+concurrent copies it failed 7 of 120 runs on that commit and 12 of 120 on
+`4bf6e400`, so it predates the reflog change. While a CLONE stop is being
+handled, a thread of the dying group exits: the event message then reads 0
+or a stale value (`child=9`), or the continue fails with ESRCH. The
+creation-event path reports that as an unknown launch failure, and the test
+then retains every owner until its 25 s timeout. A creator that dies during
+its CLONE stop should be an expected terminal outcome. Not yet fixed; a
+ci-go failure in this test on an unrelated change is this race.
+
 **T42.H2t.b · Pressure workspace credential/descriptor handoff (MED-497
 implementation, 2026-10-24; bounded checkpoint, native acceptance pending).**
 Connect an actual protected root
