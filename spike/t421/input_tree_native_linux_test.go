@@ -138,8 +138,16 @@ func TestLinuxInputTreeRequiredNativeReadonlyPersistence(t *testing.T) {
 				t.Fatal("read-only mount mutation was not refused", err)
 			}
 		}
-		if err := unix.MountSetattr(int(root.Fd()), "", unix.AT_EMPTY_PATH, &unix.MountAttr{Attr_clr: unix.MOUNT_ATTR_RDONLY}); !errors.Is(err, unix.EPERM) {
+		// An unprivileged outside owner fails may_mount (EPERM). Real root passes
+		// that, but the loaned mount belongs to the helper's private mount
+		// namespace, so the kernel refuses it as foreign (EINVAL). Either way
+		// the mount must stay read-only.
+		err = unix.MountSetattr(int(root.Fd()), "", unix.AT_EMPTY_PATH, &unix.MountAttr{Attr_clr: unix.MOUNT_ATTR_RDONLY})
+		if !errors.Is(err, unix.EPERM) && !(os.Geteuid() == 0 && errors.Is(err, unix.EINVAL)) {
 			t.Fatal("outside owner regained remount authority", err)
+		}
+		if err := unix.Mkdirat(int(root.Fd()), "after-remount", 0o700); !errors.Is(err, unix.EROFS) {
+			t.Fatal("refused remount still left the loan writable", err)
 		}
 		return nil
 	}); err != nil {

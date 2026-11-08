@@ -5559,6 +5559,17 @@ case 1). With fix 1 alone, 2 of 360 failed (cases 2 and the fixture flake).
 With all fixes, 1 of 360 failed (case 3) before its fix, and 0 of 480 after
 it.
 
+**2026-11-08 — Input-tree remount refusal under real root (MED-497 P2
+finite).** `TestLinuxInputTreeRequiredNativeReadonlyPersistence` required
+`mount_setattr` clearing read-only on the loaned tree to fail with `EPERM`.
+That holds for an unprivileged outside owner, which fails `may_mount`. The
+pressure-borrow qualification also runs it as real root, which passes that
+check. The loaned mount is still foreign to root's mount namespace, so the
+kernel refuses it with `EINVAL`. The P2 finite root leg failed on that errno
+alone, and every write still returned `EROFS`. The test now accepts `EINVAL`
+only when the effective UID is 0. After either refusal it also checks that the
+loan still refuses writes with `EROFS`.
+
 **T42.H2t.b · Pressure workspace credential/descriptor handoff (MED-497
 implementation, 2026-10-24; bounded checkpoint, native acceptance pending).**
 Connect an actual protected root
