@@ -139,6 +139,22 @@ bare repos · Vite + React + TS + CodeMirror 6 in `ui/`, embedded in the binary.
   verification; describe qualification as integration-tested, without inventing
   independent accuracy or scale results. The owning acceptance amendment in
   `docs/BACKLOG.md` supersedes older conflicting requirements for this scope.
+- **Integration tests replace rehearsals and ceremonies (2026-11-08,
+  Ben-directed).** For every track, bounded integration tests suffice to
+  integrate, qualify and release. That includes tagged native tests run
+  directly on this host when a kernel facility needs root. Do not plan, require
+  or run rehearsals, freeze/seal ceremonies, prepared qualification chains
+  (wrapper reviews, approval records, install receipts, once-claims, finite or
+  full attempt plans, reproducible-rebuild witnesses) or repeated operating
+  runs as gates. Keep the `ci-static`/`ci-go`/`ci-race` gates, authentication,
+  the correctness, custody, accounting and teardown checks inside the tests
+  themselves, and signed-release verification. Describe qualification as
+  integration-tested, and claim no scale, SLO or independent accuracy result
+  that was not measured. Historical plans, receipts and run evidence keep their
+  bytes and are not reopened. This supersedes the 2026-10-06 rehearsal and
+  ceremony host baseline and every older conflicting ceremony requirement,
+  including the T42.H1/H2 and T42.2 qualification steps. The owning amendment
+  is "Integration-test acceptance" in `docs/BACKLOG.md`.
 - Table-driven tests. Every epic ends demoable via `make dev` — an epic that
   can't be shown end-to-end is not done.
 - Every implementation review includes a steady-state-cost pass: enumerate work

@@ -18587,3 +18587,24 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   temporary-backing and measured-overhead phrasings were corrected to
   below-1-MiB fixed tables, and the explicit backing total to at most
   1,025 MiB.
+
+- **2026-11-08 — Integration tests replace rehearsals and ceremonies
+  (Ben-directed).** Ben: "I am done with rehearsals and ceremonies. integration
+  tests would suffice."
+  - **Scope:** the 2026-10-17 Caller Map/Atlas integration-test acceptance now
+    covers every track.
+  - **Gates that remain:** the `ci-static`/`ci-go`/`ci-race` gates, focused
+    integration tests, and tagged native tests run directly on `dave` where root
+    or a kernel facility is needed. The assertions inside those tests are the
+    evidence.
+  - **No longer gates:** rehearsals, freeze/seal ceremonies, prepared
+    qualification chains (wrapper reviews, approval records, install receipts,
+    once-claims, finite/full attempt plans, rebuild witnesses) and repeated
+    operating runs.
+  - **Superseded:** the 2026-10-06 rehearsal/ceremony host baseline and the
+    older ceremony requirements of T42.H1/H2, T42.2 and the T40 neutral
+    phases. Historical evidence keeps its bytes.
+  - **MED-497:** closes on V29, A1 and pressure-borrow P5 (`7915f807`).
+  - **Owning amendment:** "Integration-test acceptance" in `docs/BACKLOG.md`.
+    `AGENTS.md` carries the matching convention.
+  - **Cost:** documentation-only steady-state cost is zero.

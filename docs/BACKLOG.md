@@ -24243,6 +24243,42 @@ Closed 2026-10-31: PR #177 fast-forwarded `main` to `ca9c8024`, whose
 `ci-static`, `ci-go` (144 packages, 0 failures) and `ci-race` passed on
 `dave`. The baseline-relative `ci-go` bar ends with it (PLAN.md, 2026-10-31).
 
+## Integration-test acceptance (2026-11-08, Ben-directed)
+
+Ben: "I am done with rehearsals and ceremonies. integration tests would
+suffice." This generalises the 2026-10-17 Caller Map and Atlas acceptance
+amendment to every track.
+
+**Gates that remain:**
+- `ci-static`, `ci-go` and `ci-race` on the exact head, then merge on green.
+- Focused integration tests for the changed behaviour. Where the behaviour
+  needs a kernel facility or root, the gate is the tagged native test itself,
+  run directly on `dave` (for example `sudo go test -tags phebs_t42_native …`
+  or the built test binary). Its own correctness, custody, accounting and
+  teardown assertions are the evidence.
+- Authentication, and exact source, generation and citation fencing, where
+  they apply.
+- Signed-release verification.
+
+**No longer required, planned or run:**
+- rehearsals and freeze/seal ceremonies;
+- prepared qualification chains: wrapper reviews, approval records, install
+  receipts, once-claims, finite and full attempt plans, and
+  reproducible-rebuild witnesses;
+- blind-label rounds and repeated operating-envelope runs.
+
+This supersedes the 2026-10-06 rehearsal and ceremony host baseline and the
+older ceremony requirements in T42.H1/H2, T42.2 and the T40 neutral ceremony
+phases. Their historical bytes, receipts and outcomes stay as they are and are
+not reopened. MED-497 closes on its passing native runs: V29, the A1 author
+run, and pressure-borrow P5 at `7915f807`.
+
+Qualification is described as integration-tested. No scale, SLO or
+independent accuracy result is claimed unless it was measured.
+
+Documentation-only steady-state cost is zero across requests, startup, sync,
+retry, publication, locks, caches, storage and children.
+
 ## Deliberate non-goals
 
 SCIM provisioning, multi-org RBAC / seats, and a built-in chat app —
