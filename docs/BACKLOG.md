@@ -4193,6 +4193,13 @@ charged, with no aggregate 2-GiB allowance. Fixed namespace execution with
 reachable paths, protected full-reference builds and all remaining ACs stay
 open; no reduced VCS/identity gate or bare-FD admission is selected.
 
+*Retired 2026-11-09 (integration-test acceptance).* The probe
+`TestLinuxGoBuildRequiredNativeDescriptorComposition` tested only this rejected
+direct-descriptor layout and could never pass. The 731615d8 native suite on dave
+reproduced the same refusal byte for byte, so the test was removed. Its failed
+receipt keeps its bytes. The admitted reachable layout stays covered by
+`TestLinuxGoBuildRequiredNativeNamespaceComposition`, which passed in that run.
+
 A separate fixed native import diagnostic now checks the actual post-helper
 Git/input FDs in a sibling namespace, with a fresh local-tmpfs positive
 control and a separate inherited-work-FD attempt, exact object/namespace/capability observations, actual join
