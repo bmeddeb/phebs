@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"os"
@@ -18,6 +19,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/focusedindex"
+	"github.com/bmeddeb/phebs/internal/loopbackowner"
 	"github.com/bmeddeb/phebs/internal/store"
 	"github.com/bmeddeb/phebs/internal/typedindex"
 	"github.com/bmeddeb/phebs/internal/typedsandbox"
@@ -27,15 +29,38 @@ import (
 // This explicit server-mode fixture does not exercise OpenLocal's executable
 // version admission. The installed engine is started only on container loopback;
 // its direct child is killed and joined even when a test fails.
+//
+// The port comes from a closed probe listener, so another process can take it
+// before the engine binds; the engine then exits and the other process answers
+// the readiness dial (seen under full-gate load as a reset, then refused,
+// connection). Readiness therefore requires the listener to be this child's.
+// Only that proven loss starts a fresh engine on a fresh port, a bounded number
+// of times.
 func testServer(t *testing.T) string {
 	t.Helper()
 	binary, err := exec.LookPath("surreal")
 	if err != nil {
 		t.Fatal("required real SurrealDB fixture:", err)
 	}
+	const attempts = 3
+	for attempt := 1; ; attempt++ {
+		address, err := startTestServer(t, binary)
+		if err == nil {
+			return "ws://" + address
+		}
+		if !errors.Is(err, loopbackowner.ErrForeign) || attempt == attempts {
+			t.Fatal(err)
+		}
+	}
+}
+
+// startTestServer starts one engine and returns its address once that engine
+// holds the listener. Its cleanup always kills and joins the child.
+func startTestServer(t *testing.T, binary string) (string, error) {
+	t.Helper()
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
-		t.Fatal(err)
+		return "", err
 	}
 	address := listener.Addr().String()
 	_ = listener.Close()
@@ -43,19 +68,20 @@ func testServer(t *testing.T) string {
 	cmd.Stdout = io.Discard
 	cmd.Stderr = io.Discard
 	if err = cmd.Start(); err != nil {
-		t.Fatal(err)
+		return "", err
 	}
 	done := make(chan struct{})
 	var waitErr error
 	go func() { waitErr = cmd.Wait(); close(done) }()
-	t.Cleanup(func() {
+	stop := func() {
 		_ = cmd.Process.Kill()
 		select {
 		case <-done:
 		case <-time.After(10 * time.Second):
 			t.Error("test engine failed to join")
 		}
-	})
+	}
+	t.Cleanup(stop)
 	deadline := time.NewTimer(15 * time.Second)
 	defer deadline.Stop()
 	ticker := time.NewTicker(25 * time.Millisecond)
@@ -64,14 +90,23 @@ func testServer(t *testing.T) string {
 		connection, e := net.DialTimeout("tcp", address, 100*time.Millisecond)
 		if e == nil {
 			_ = connection.Close()
-			return "ws://" + address
+			switch e = loopbackowner.Check(cmd.Process.Pid, address); {
+			case e == nil:
+				return address, nil
+			case errors.Is(e, loopbackowner.ErrForeign):
+				stop()
+				return "", fmt.Errorf("test engine on %s: %w", address, e)
+			case !errors.Is(e, loopbackowner.ErrNotListening):
+				return "", e
+			}
+			// The answering listener closed before attribution; poll again.
 		}
 		select {
 		case <-ticker.C:
 		case <-deadline.C:
-			t.Fatal("engine readiness timeout")
+			return "", errors.New("engine readiness timeout")
 		case <-done:
-			t.Fatalf("engine exited: %v", waitErr)
+			return "", fmt.Errorf("engine exited: %v", waitErr)
 		}
 	}
 }
