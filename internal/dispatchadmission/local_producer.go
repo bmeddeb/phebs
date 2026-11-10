@@ -148,7 +148,12 @@ func (p *LocalProducer) Close(ctx context.Context) error {
 		}
 		p.closeErr = p.client.Close(closeCtx)
 		p.cancel()
-		p.closeErr = errors.Join(p.closeErr, <-p.done)
+		// Drain to closure, not just the first value: the receiver sends
+		// its result and then closes done, so only the closed channel
+		// proves the owned goroutine has fully exited before Close returns.
+		for err := range p.done {
+			p.closeErr = errors.Join(p.closeErr, err)
+		}
 	})
 	return p.closeErr
 }
