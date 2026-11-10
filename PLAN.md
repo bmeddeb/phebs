@@ -18608,3 +18608,16 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   - **Owning amendment:** "Integration-test acceptance" in `docs/BACKLOG.md`.
     `AGENTS.md` carries the matching convention.
   - **Cost:** documentation-only steady-state cost is zero.
+
+- **2026-11-10 — Supervised SurrealDB readiness proves listener ownership.**
+  The local child's port still comes from closing a `127.0.0.1:0` probe
+  listener. Under full-gate load another process took that port before the
+  child bound it, answered `/health`, and the store then failed sign-in
+  (gate flake on `6d6804df`). `waitHealthy` now accepts a healthy answer
+  only after `internal/loopbackowner` matches the port's LISTEN socket inode
+  to the child's `/proc/<pid>/fd`. A proven foreign listener stops that child
+  and restarts on a fresh port, at most three attempts. Every other failure
+  returns as before. Darwin has no `/proc` and keeps the unverified probe.
+  - **Cost:** one read of `net/tcp`, `net/tcp6` and the child's fd table per
+    healthy answer, at engine start only. Nothing is added per query, sync
+    tick or request.

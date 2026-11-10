@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/dispatchadmission"
+	"github.com/bmeddeb/phebs/internal/loopbackowner"
 	"github.com/bmeddeb/phebs/internal/storeaccounting"
 	"github.com/gofrs/flock"
 	surrealdb "github.com/surrealdb/surrealdb.go"
@@ -801,15 +802,6 @@ func startOwnedEngine(ctx context.Context, engine string) (runtime LocalRuntime,
 	if err := verifySurrealExecutable(identity.Path, os.Getenv("PHEBS_SURREAL_SHA256")); err != nil {
 		return LocalRuntime{}, nil, fmt.Errorf("verify surreal identity before start: %w", err)
 	}
-	l, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		return LocalRuntime{}, nil, fmt.Errorf("pick port: %w", err)
-	}
-	addr := l.Addr().String()
-	// ponytail: close-then-reuse leaves a tiny port race; fine for a local
-	// child. Revisit only if flaky in CI.
-	_ = l.Close()
-
 	// Detach the child command from the caller's (signal) context: on Ctrl-C
 	// the DB must outlive the HTTP drain and in-flight terminal job writes.
 	//
@@ -842,33 +834,50 @@ func startOwnedEngine(ctx context.Context, engine string) (runtime LocalRuntime,
 			return LocalRuntime{}, nil, errLegacyVerifySelectedOwner
 		}
 	}
-	cmdCtx := context.WithoutCancel(ctx)
-	cmd := exec.CommandContext(cmdCtx, identity.Path, surrealChildArgs(addr, engine)...)
-	cmd.Env = append(os.Environ(), dispatchadmission.SurrealPassEnvKey+"="+pass)
-	extraEnv := []string{dispatchadmission.SurrealPassEnvKey + "=" + pass}
-	if legacyVerify {
-		cmd = legacyChildCommand(cmdCtx, identity.Path, addr, engine)
-		extraEnv = nil
-		// Ordinary dispatch accepts the already-sanitized command. Every
-		// installed exact runtime refuses a credential-free engine start,
-		// even if it has no SDK owner; its admission contract is unchanged.
-	}
-	cmd.Stderr = os.Stderr
-	cmd.Cancel = func() error { return cmd.Process.Signal(os.Interrupt) }
-	handle, release, err := startBoundToParent(cmd, func() (dispatchadmission.Handle, error) {
-		return dispatchadmission.StartProductionWithEnv(
-			ctx, dispatchadmission.SiteSurrealEngine, cmd,
-			extraEnv,
-		)
-	})
-	if err != nil {
-		return LocalRuntime{}, nil, fmt.Errorf("start surreal child: %w", err)
-	}
-	owned = &localEngine{process: cmd.Process, handle: handle, release: release}
-
-	if err := waitHealthy(ctx, addr); err != nil {
+	// The port is chosen by closing a probe listener before the child binds
+	// it, so another process can take it in between; the child then cannot
+	// bind and the other process answers readiness. waitHealthy proves the
+	// listener is the child's. Only that proven loss moves startup to a
+	// fresh port, a bounded number of times; every other failure returns.
+	var cmd *exec.Cmd
+	var addr string
+	for attempt := 1; ; attempt++ {
+		addr, err = pickLoopbackAddr()
+		if err != nil {
+			return LocalRuntime{}, nil, fmt.Errorf("pick port: %w", err)
+		}
+		cmdCtx := context.WithoutCancel(ctx)
+		cmd = exec.CommandContext(cmdCtx, identity.Path, surrealChildArgs(addr, engine)...)
+		cmd.Env = append(os.Environ(), dispatchadmission.SurrealPassEnvKey+"="+pass)
+		extraEnv := []string{dispatchadmission.SurrealPassEnvKey + "=" + pass}
+		if legacyVerify {
+			cmd = legacyChildCommand(cmdCtx, identity.Path, addr, engine)
+			extraEnv = nil
+			// Ordinary dispatch accepts the already-sanitized command. Every
+			// installed exact runtime refuses a credential-free engine start,
+			// even if it has no SDK owner; its admission contract is unchanged.
+		}
+		cmd.Stderr = os.Stderr
+		started := cmd
+		cmd.Cancel = func() error { return started.Process.Signal(os.Interrupt) }
+		handle, release, startErr := startBoundToParent(cmd, func() (dispatchadmission.Handle, error) {
+			return dispatchadmission.StartProductionWithEnv(
+				ctx, dispatchadmission.SiteSurrealEngine, started,
+				extraEnv,
+			)
+		})
+		if startErr != nil {
+			return LocalRuntime{}, nil, fmt.Errorf("start surreal child: %w", startErr)
+		}
+		owned = &localEngine{process: cmd.Process, handle: handle, release: release}
+		err = waitHealthy(ctx, addr, cmd.Process.Pid)
+		if err == nil {
+			break
+		}
 		owned.stop()
-		return LocalRuntime{}, nil, err
+		if !errors.Is(err, errLoopbackPortLost) || attempt == localPortAttempts {
+			return LocalRuntime{}, nil, err
+		}
 	}
 	if legacyVerify {
 		// Prove the database genuinely predates the password binding before
@@ -1124,7 +1133,30 @@ func (reader contextBoundReader) Read(value []byte) (int, error) {
 	return reader.Reader.Read(value)
 }
 
-func waitHealthy(ctx context.Context, addr string) error {
+// localPortAttempts bounds how many fresh ports startup tries after proving
+// that another process took the chosen one.
+const localPortAttempts = 3
+
+// errLoopbackPortLost reports that a process other than the started child
+// answered on the child's address: the child lost the port before binding it.
+var errLoopbackPortLost = errors.New("surreal child lost its loopback port to another process")
+
+// pickLoopbackAddr is a test seam; production closes a probe listener on an
+// ephemeral loopback port and hands its address to the child.
+var pickLoopbackAddr = func() (string, error) {
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		return "", err
+	}
+	addr := l.Addr().String()
+	return addr, l.Close()
+}
+
+// waitHealthy waits for the child pid to serve /health on addr. A healthy
+// answer is accepted only once the listener is proven to be pid's; where the
+// platform cannot attribute listeners (loopbackowner.ErrUnsupported) the
+// answer is accepted unverified, as before.
+func waitHealthy(ctx context.Context, addr string, pid int) error {
 	deadline := time.Now().Add(15 * time.Second)
 	url := "http://" + addr + "/health"
 	for time.Now().Before(deadline) {
@@ -1135,7 +1167,15 @@ func waitHealthy(ctx context.Context, addr string) error {
 		if err == nil {
 			_ = resp.Body.Close()
 			if resp.StatusCode == http.StatusOK {
-				return nil
+				switch err := loopbackowner.Check(pid, addr); {
+				case err == nil, errors.Is(err, loopbackowner.ErrUnsupported):
+					return nil
+				case errors.Is(err, loopbackowner.ErrForeign):
+					return fmt.Errorf("%w: %s", errLoopbackPortLost, addr)
+				case !errors.Is(err, loopbackowner.ErrNotListening):
+					return fmt.Errorf("verify surreal child listener on %s: %w", addr, err)
+				}
+				// The answering listener closed before attribution; poll again.
 			}
 		}
 		time.Sleep(50 * time.Millisecond)
