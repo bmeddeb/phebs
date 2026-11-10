@@ -9,6 +9,7 @@ import (
 	"errors"
 	"io"
 	"os/exec"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -76,24 +77,45 @@ func TestAuthorCheckpointWaitsForCompleteControlACK(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			// Fill the actual socket's outbound buffer before the checkpoint.
-			// Its 64-byte ACK then cannot complete until this parent drains it.
-			if child.SetWriteBuffer(1024) != nil || child.SetWriteDeadline(time.Now().Add(20*time.Millisecond)) != nil {
+			// Fill the actual socket's outbound buffer before the checkpoint
+			// until the kernel refuses more. Its 64-byte ACK then cannot
+			// complete until this parent drains it. Each write is one
+			// non-waiting attempt, not a deadline-bounded write: a receiver
+			// already serving clears the connection's deadlines when it
+			// returns to its idle read, which can land after a fixture
+			// deadline and leave a blocking fill stuck forever.
+			if child.SetWriteBuffer(1024) != nil {
 				t.Fatal("cannot bound ACK-delay fixture")
 			}
-			filled := 0
+			rawChild, err := child.SyscallConn()
+			if err != nil {
+				t.Fatal(err)
+			}
+			filled, chunk := 0, make([]byte, 4096)
 			for filled < 1<<20 {
-				n, err := child.Write(make([]byte, 4096))
-				filled += n
-				if err != nil {
+				var n int
+				var writeErr error
+				if err := rawChild.Write(func(fd uintptr) bool {
+					n, writeErr = syscall.Write(int(fd), chunk)
+					return true // Never wait for writability.
+				}); err != nil {
+					t.Fatal(err)
+				}
+				if errors.Is(writeErr, syscall.EINTR) {
+					continue
+				}
+				if writeErr != nil {
+					if !errors.Is(writeErr, syscall.EAGAIN) {
+						t.Fatal(writeErr)
+					}
 					break
 				}
+				filled += n
 			}
-			if filled == 0 || filled >= 1<<20 || child.SetWriteDeadline(time.Time{}) != nil {
+			if filled == 0 || filled >= 1<<20 {
 				t.Fatal("ACK fixture did not establish bounded backpressure")
 			}
-			// Fill before this receiver starts: its initial idle SetDeadline(0)
-			// must not overwrite the fixture's bounded fill deadline.
+			// The terminal receiver starts only once the backpressure exists.
 			if terminal {
 				startControl()
 			}
