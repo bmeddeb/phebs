@@ -7,7 +7,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
-	"net"
 	"os"
 	"os/exec"
 	"testing"
@@ -75,24 +74,14 @@ func TestStartOwnedEngineRejectsForeignListenerOnPickedPort(t *testing.T) {
 // root password and returns the address it serves.
 func startForeignSurrealForTest(t *testing.T, binary string) string {
 	t.Helper()
-	var listener net.Listener
-	var err error
-	if listener, err = net.Listen("tcp", "127.0.0.1:0"); err != nil {
-		t.Fatal(err)
-	}
-	addr := listener.Addr().String()
-	_ = listener.Close()
 	secret := make([]byte, 16)
 	_, _ = rand.Read(secret)
-	cmd := exec.Command(binary, "start", "--bind", addr, "--user", "root", "--log", "warn", "memory")
-	cmd.Env = append(os.Environ(), "SURREAL_PASS="+hex.EncodeToString(secret))
-	child := startRawSurrealChildForTest(t, cmd, 30*time.Second)
-	healthCtx, cancel := context.WithTimeout(t.Context(), childPassTestTimeout)
+	ctx, cancel := context.WithTimeout(t.Context(), childPassTestTimeout)
 	defer cancel()
-	if !waitRawSurrealChildHealthy(healthCtx, "http://"+addr+"/health") {
-		child.stop()
-		output, _ := child.waitResult()
-		t.Fatalf("foreign surreal never became healthy: %s", output)
-	}
+	addr, _ := startRawSurrealOnLoopbackForTest(t, ctx, 30*time.Second, func(addr string) *exec.Cmd {
+		cmd := exec.Command(binary, "start", "--bind", addr, "--user", "root", "--log", "warn", "memory")
+		cmd.Env = append(os.Environ(), "SURREAL_PASS="+hex.EncodeToString(secret))
+		return cmd
+	})
 	return addr
 }

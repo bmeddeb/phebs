@@ -18,6 +18,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/codenav"
 	"github.com/bmeddeb/phebs/internal/lifecycle"
+	"github.com/bmeddeb/phebs/internal/loopbackowner"
 	"github.com/bmeddeb/phebs/internal/readaccounting"
 	"github.com/bmeddeb/phebs/internal/store"
 	"github.com/bmeddeb/phebs/internal/typedindex"
@@ -34,9 +35,28 @@ func typedNavigationServer(t *testing.T) string {
 	if e != nil {
 		t.Fatal(e)
 	}
+	const attempts = 3
+	for attempt := 1; ; attempt++ {
+		address, e := startTypedNavigationEngine(t, binary)
+		if e == nil {
+			return "ws://" + address
+		}
+		if !errors.Is(e, loopbackowner.ErrForeign) || attempt == attempts {
+			t.Fatal(e)
+		}
+	}
+}
+
+// startTypedNavigationEngine starts one engine on a freshly reserved loopback
+// port and returns its address once that engine holds the listener. Another
+// process can take the port before the engine binds it; that loss is
+// reported as loopbackowner.ErrForeign. Its cleanup always kills and joins
+// the child.
+func startTypedNavigationEngine(t *testing.T, binary string) (string, error) {
+	t.Helper()
 	listener, e := net.Listen("tcp", "127.0.0.1:0")
 	if e != nil {
-		t.Fatal(e)
+		return "", e
 	}
 	address := listener.Addr().String()
 	_ = listener.Close()
@@ -44,37 +64,35 @@ func typedNavigationServer(t *testing.T) string {
 	cmd.Stdout = io.Discard
 	cmd.Stderr = io.Discard
 	if e = cmd.Start(); e != nil {
-		t.Fatal(e)
+		return "", e
 	}
 	done := make(chan struct{})
 	var waitErr error
 	go func() { waitErr = cmd.Wait(); close(done) }()
-	t.Cleanup(func() {
+	stop := func() {
 		_ = cmd.Process.Kill()
 		select {
 		case <-done:
 		case <-time.After(10 * time.Second):
 			t.Error("engine failed to join")
 		}
-	})
-	deadline := time.NewTimer(15 * time.Second)
-	defer deadline.Stop()
-	tick := time.NewTicker(25 * time.Millisecond)
-	defer tick.Stop()
-	for {
-		connection, e := net.DialTimeout("tcp", address, 100*time.Millisecond)
-		if e == nil {
-			_ = connection.Close()
-			return "ws://" + address
-		}
-		select {
-		case <-tick.C:
-		case <-deadline.C:
-			t.Fatal("engine readiness timeout")
-		case <-done:
-			t.Fatal("engine exited", waitErr)
-		}
 	}
+	t.Cleanup(stop)
+	ready, cancel := context.WithTimeout(t.Context(), 15*time.Second)
+	defer cancel()
+	// The engine's own listener, not merely an answer on the address.
+	if e = loopbackowner.Await(ready, cmd.Process.Pid, address); e != nil {
+		select {
+		case <-done:
+			e = fmt.Errorf("%w (engine exited: %v)", e, waitErr)
+		default:
+		}
+		if errors.Is(e, loopbackowner.ErrForeign) {
+			stop()
+		}
+		return "", fmt.Errorf("navigation engine on %s: %w", address, e)
+	}
+	return address, nil
 }
 func typedNavigationBytes(raw []byte) string { return fmt.Sprintf("sha256:%x", sha256.Sum256(raw)) }
 

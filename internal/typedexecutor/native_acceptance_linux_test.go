@@ -35,6 +35,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/generationscheduler"
 	"github.com/bmeddeb/phebs/internal/lifecycle"
+	"github.com/bmeddeb/phebs/internal/loopbackowner"
 	"github.com/bmeddeb/phebs/internal/store"
 	"github.com/bmeddeb/phebs/internal/typedbazel/launcher"
 	"github.com/bmeddeb/phebs/internal/typedbazel/provider"
@@ -382,53 +383,19 @@ func acceptanceEngine(ctx context.Context, c nativeAcceptanceConfig) (endpoint s
 	if err = os.WriteFile(filepath.Join(base, "credential"), []byte(password), 0600); err != nil {
 		return "", nil, err
 	}
-	l, e := net.Listen("tcp", "127.0.0.1:0")
-	if e != nil {
-		return "", nil, e
-	}
-	address := l.Addr().String()
-	_ = l.Close()
-	deadline, ok := ctx.Deadline()
-	if !ok {
-		return "", nil, errors.New("missing outer deadline")
-	}
-	engineCtx, cancelEngine := context.WithDeadline(context.Background(), deadline.Add(50*time.Second))
-	cmd := exec.CommandContext(engineCtx, filepath.Join(c.root(), "surreal"), "start", "--bind", address, "--user", "root", "--pass", password, "surrealkv://"+filepath.Join(base, "db", "data"))
-	cmd.SysProcAttr = &syscall.SysProcAttr{Pdeathsig: syscall.SIGKILL}
-	cmd.Env = []string{"PATH=/usr/bin:/bin", "HOME=" + base}
-	cmd.Stdout = io.Discard
-	cmd.Stderr = io.Discard
-	if err = cmd.Start(); err != nil {
-		cancelEngine()
-		return "", nil, err
-	}
-	done := make(chan error, 1)
-	go func() { done <- cmd.Wait() }()
-	stop = func() error {
-		defer cancelEngine()
-		_ = cmd.Process.Kill()
-		select {
-		case <-done:
-			return nil
-		case <-time.After(10 * time.Second):
-			return errors.New("engine join timeout")
-		}
-	}
-	ready, ca := context.WithTimeout(ctx, 15*time.Second)
-	defer ca()
-	tick := time.NewTicker(50 * time.Millisecond)
-	defer tick.Stop()
-	for {
-		conn, e := net.DialTimeout("tcp", address, 100*time.Millisecond)
-		if e == nil {
-			_ = conn.Close()
+	var address string
+	for attempt := 1; ; attempt++ {
+		address, stop, err = acceptanceStartEngine(ctx, c, base, password)
+		if !errors.Is(err, loopbackowner.ErrForeign) || attempt == acceptanceEnginePortAttempts {
 			break
 		}
-		select {
-		case <-ready.Done():
-			return "", stop, ready.Err()
-		case <-tick.C:
+		// The engine lost its reserved port; join it before a fresh one.
+		if err = stop(); err != nil {
+			return "", stop, err
 		}
+	}
+	if err != nil {
+		return "", stop, err
 	}
 	seed, e := acceptanceRead(filepath.Join(c.root(), "seed.surql"), 4<<20)
 	if e != nil || acceptanceDigest(seed) != c.SeedSHA256 {
@@ -460,6 +427,57 @@ func acceptanceEngine(ctx context.Context, c nativeAcceptanceConfig) (endpoint s
 		return "", stop, e
 	}
 	return "ws://" + address, stop, nil
+}
+
+// acceptanceEnginePortAttempts bounds how often the engine moves to a fresh
+// port after another process is proven to hold its reserved one.
+const acceptanceEnginePortAttempts = 3
+
+// acceptanceStartEngine starts the engine on a freshly reserved loopback port
+// and returns once that engine holds the listener. Another process can take
+// the port before the engine binds it; that loss is reported as
+// loopbackowner.ErrForeign so the caller can retry. stop is non-nil whenever
+// the engine started, and always kills and joins it.
+func acceptanceStartEngine(ctx context.Context, c nativeAcceptanceConfig, base, password string) (address string, stop func() error, err error) {
+	l, e := net.Listen("tcp", "127.0.0.1:0")
+	if e != nil {
+		return "", nil, e
+	}
+	address = l.Addr().String()
+	_ = l.Close()
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		return "", nil, errors.New("missing outer deadline")
+	}
+	engineCtx, cancelEngine := context.WithDeadline(context.Background(), deadline.Add(50*time.Second))
+	cmd := exec.CommandContext(engineCtx, filepath.Join(c.root(), "surreal"), "start", "--bind", address, "--user", "root", "--pass", password, "surrealkv://"+filepath.Join(base, "db", "data"))
+	cmd.SysProcAttr = &syscall.SysProcAttr{Pdeathsig: syscall.SIGKILL}
+	cmd.Env = []string{"PATH=/usr/bin:/bin", "HOME=" + base}
+	cmd.Stdout = io.Discard
+	cmd.Stderr = io.Discard
+	if err = cmd.Start(); err != nil {
+		cancelEngine()
+		return "", nil, err
+	}
+	done := make(chan error, 1)
+	go func() { done <- cmd.Wait() }()
+	stop = func() error {
+		defer cancelEngine()
+		_ = cmd.Process.Kill()
+		select {
+		case <-done:
+			return nil
+		case <-time.After(10 * time.Second):
+			return errors.New("engine join timeout")
+		}
+	}
+	ready, ca := context.WithTimeout(ctx, 15*time.Second)
+	defer ca()
+	// The engine's own listener, not merely an answer on the address.
+	if err = loopbackowner.Await(ready, cmd.Process.Pid, address); err != nil {
+		return "", stop, err
+	}
+	return address, stop, nil
 }
 
 // OPTION IMPORT suppresses result rows; the empty array is valid, null is not.

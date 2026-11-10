@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -15,6 +14,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/bmeddeb/phebs/internal/loopbackowner"
 )
 
 // childPassTestTimeout bounds lock waits and child startups in these tests.
@@ -543,42 +544,66 @@ func waitRawSurrealChildHealthy(ctx context.Context, url string) bool {
 	}
 }
 
-// startRawSurrealForTest initializes a database with the given root password
-// by running the real binary directly and waits until it is healthy. It
-// returns a stop func that fully stops the child; callers must stop it before
-// opening the same database through startOwnedEngine, since SurrealKV holds
-// an exclusive lock on the database directory. The child has exactly one
-// unconditional cleanup owner, registered inside startRawSurrealChildForTest
-// before the health check runs: whatever fails below, the child is asked to
-// stop, killed after a bounded grace if it ignores the request, and its Wait
-// goroutine is joined before the test — and the temporary data directory —
-// goes away.
-func startRawSurrealForTest(t *testing.T, binary, dbPath, pass string) (stop func()) {
+// startRawSurrealOnLoopbackForTest starts the raw child that command builds
+// for a freshly reserved loopback address and returns that address once the
+// child serves /health on it. Another process can take the reserved port
+// before the child binds it; where listeners can be attributed, the health
+// answer is trusted only from the child's own listener, and a port proven
+// lost moves the start to a fresh port, at most localPortAttempts times. The
+// child has exactly one unconditional cleanup owner, registered inside
+// startRawSurrealChildForTest before readiness is awaited: whatever fails
+// below, the child is asked to stop, killed after a bounded grace if it
+// ignores the request, and its Wait goroutine is joined before the test — and
+// the temporary data directory — goes away.
+func startRawSurrealOnLoopbackForTest(
+	t *testing.T, ctx context.Context, grace time.Duration, command func(addr string) *exec.Cmd,
+) (string, *rawSurrealChildForTest) {
 	t.Helper()
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	addr := listener.Addr().String()
-	_ = listener.Close()
-	cmd := exec.Command(binary, "start",
-		"--bind", addr,
-		"--user", "root",
-		"--log", "warn",
-		"surrealkv:"+dbPath,
-	)
-	// The root password travels via SURREAL_PASS, never on argv.
-	cmd.Env = append(os.Environ(), "SURREAL_USER=root", "SURREAL_PASS="+pass)
-	child := startRawSurrealChildForTest(t, cmd, 30*time.Second)
-	healthCtx, cancel := context.WithTimeout(context.Background(), childPassTestTimeout)
-	defer cancel()
-	if !waitRawSurrealChildHealthy(healthCtx, "http://"+addr+"/health") {
+	for attempt := 1; ; attempt++ {
+		addr, err := reserveLoopbackAddr()
+		if err != nil {
+			t.Fatal(err)
+		}
+		child := startRawSurrealChildForTest(t, command(addr), grace)
+		err = loopbackowner.Await(ctx, child.cmd.Process.Pid, addr)
+		if errors.Is(err, loopbackowner.ErrForeign) && attempt < localPortAttempts {
+			child.stop()
+			continue
+		}
+		if err == nil || errors.Is(err, loopbackowner.ErrUnsupported) {
+			if waitRawSurrealChildHealthy(ctx, "http://"+addr+"/health") {
+				return addr, child
+			}
+			err = errors.New("never became healthy")
+		}
 		child.stop()
 		// Output is read only after the Wait goroutine is joined: exec's
 		// output-copying goroutines finish before Wait returns.
 		output, _ := child.waitResult()
-		t.Fatalf("raw surreal child never became healthy: %s", output)
+		t.Fatalf("raw surreal child on %s: %v\n%s", addr, err, output)
 	}
+}
+
+// startRawSurrealForTest initializes a database with the given root password
+// by running the real binary directly and waits until it is healthy. It
+// returns a stop func that fully stops the child; callers must stop it before
+// opening the same database through startOwnedEngine, since SurrealKV holds
+// an exclusive lock on the database directory.
+func startRawSurrealForTest(t *testing.T, binary, dbPath, pass string) (stop func()) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), childPassTestTimeout)
+	defer cancel()
+	_, child := startRawSurrealOnLoopbackForTest(t, ctx, 30*time.Second, func(addr string) *exec.Cmd {
+		cmd := exec.Command(binary, "start",
+			"--bind", addr,
+			"--user", "root",
+			"--log", "warn",
+			"surrealkv:"+dbPath,
+		)
+		// The root password travels via SURREAL_PASS, never on argv.
+		cmd.Env = append(os.Environ(), "SURREAL_USER=root", "SURREAL_PASS="+pass)
+		return cmd
+	})
 	return child.stop
 }
 

@@ -3,8 +3,8 @@ package store
 import (
 	"context"
 	"errors"
-	"net"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -74,17 +74,9 @@ func TestLegacyProbeDoesNotInitializeUnknownRoot(t *testing.T) {
 					t.Fatal(err)
 				}
 			} else {
-				listener, err := net.Listen("tcp", "127.0.0.1:0")
-				if err != nil {
-					t.Fatal(err)
-				}
-				addr := listener.Addr().String()
-				_ = listener.Close()
-				cmd := legacyChildCommand(ctx, binary, addr, "surrealkv:"+dbPath)
-				child := startRawSurrealChildForTest(t, cmd, time.Second)
-				if !waitRawSurrealChildHealthy(ctx, "http://"+addr+"/health") {
-					t.Fatal("rootless engine did not become healthy")
-				}
+				_, child := startRawSurrealOnLoopbackForTest(t, ctx, time.Second, func(addr string) *exec.Cmd {
+					return legacyChildCommand(ctx, binary, addr, "surrealkv:"+dbPath)
+				})
 				child.stop()
 			}
 			for range 2 {

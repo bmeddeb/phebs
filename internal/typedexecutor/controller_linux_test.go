@@ -82,33 +82,21 @@ func startTestServer(t *testing.T, binary string) (string, error) {
 		}
 	}
 	t.Cleanup(stop)
-	deadline := time.NewTimer(15 * time.Second)
-	defer deadline.Stop()
-	ticker := time.NewTicker(25 * time.Millisecond)
-	defer ticker.Stop()
-	for {
-		connection, e := net.DialTimeout("tcp", address, 100*time.Millisecond)
-		if e == nil {
-			_ = connection.Close()
-			switch e = loopbackowner.Check(cmd.Process.Pid, address); {
-			case e == nil:
-				return address, nil
-			case errors.Is(e, loopbackowner.ErrForeign):
-				stop()
-				return "", fmt.Errorf("test engine on %s: %w", address, e)
-			case !errors.Is(e, loopbackowner.ErrNotListening):
-				return "", e
-			}
-			// The answering listener closed before attribution; poll again.
-		}
+	ready, cancel := context.WithTimeout(t.Context(), 15*time.Second)
+	defer cancel()
+	// The engine's own listener, not merely an answer on the address.
+	if err = loopbackowner.Await(ready, cmd.Process.Pid, address); err != nil {
 		select {
-		case <-ticker.C:
-		case <-deadline.C:
-			return "", errors.New("engine readiness timeout")
 		case <-done:
-			return "", fmt.Errorf("engine exited: %v", waitErr)
+			err = fmt.Errorf("%w (engine exited: %v)", err, waitErr)
+		default:
 		}
+		if errors.Is(err, loopbackowner.ErrForeign) {
+			stop()
+		}
+		return "", fmt.Errorf("test engine on %s: %w", address, err)
 	}
+	return address, nil
 }
 func testHash(b []byte) string { h := sha256.Sum256(b); return "sha256:" + hex.EncodeToString(h[:]) }
 func encode(t *testing.T, v any) []byte {

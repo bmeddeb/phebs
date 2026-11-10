@@ -1141,9 +1141,12 @@ const localPortAttempts = 3
 // answered on the child's address: the child lost the port before binding it.
 var errLoopbackPortLost = errors.New("surreal child lost its loopback port to another process")
 
-// pickLoopbackAddr is a test seam; production closes a probe listener on an
-// ephemeral loopback port and hands its address to the child.
-var pickLoopbackAddr = func() (string, error) {
+// pickLoopbackAddr is a test seam over reserveLoopbackAddr.
+var pickLoopbackAddr = reserveLoopbackAddr
+
+// reserveLoopbackAddr closes a probe listener on an ephemeral loopback port
+// and returns its address for a child to bind.
+func reserveLoopbackAddr() (string, error) {
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		return "", err

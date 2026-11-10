@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
+	"github.com/bmeddeb/phebs/internal/loopbackowner"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -134,17 +135,43 @@ func waitTestChildHealthy(url string, timeout time.Duration) bool {
 	return false
 }
 
-// pickLoopbackAddr reserves an ephemeral loopback port and returns its addr.
-// The close-then-reuse race is acceptable for a local test child.
-func pickLoopbackAddr(t *testing.T) string {
+// testChildPortAttempts bounds how often a legacy child moves to a fresh port
+// after another process is proven to hold its reserved one.
+const testChildPortAttempts = 3
+
+// startLegacyTestChild starts the legacy bootstrap child on a freshly
+// reserved loopback port and returns once the child itself holds the
+// listener there. Another process can take the reserved port before the
+// child binds it; a port proven lost (loopbackowner.ErrForeign) moves the
+// start to a fresh port, a bounded number of times. Where listeners cannot be
+// attributed (ErrUnsupported) it returns at once and the caller's own probe
+// stays unverified, as before. The child's single cleanup owner is
+// registered by startRawTestChild before readiness is awaited.
+func startLegacyTestChild(t *testing.T, ctx context.Context, binary, dir string) (string, *rawTestChild) {
 	t.Helper()
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("pick port: %v", err)
+	for attempt := 1; ; attempt++ {
+		listener, err := net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatalf("pick port: %v", err)
+		}
+		addr := listener.Addr().String()
+		_ = listener.Close()
+		child := startRawTestChild(t, legacyChildCmd(ctx, binary, addr, dir), 10*time.Second)
+		bound, cancel := context.WithTimeout(ctx, 30*time.Second)
+		err = loopbackowner.Await(bound, child.cmd.Process.Pid, addr)
+		cancel()
+		switch {
+		case err == nil, errors.Is(err, loopbackowner.ErrUnsupported):
+			return addr, child
+		case errors.Is(err, loopbackowner.ErrForeign) && attempt < testChildPortAttempts:
+			child.stop()
+			continue
+		}
+		child.stop()
+		// Output is read only after the Wait goroutine is joined.
+		output, _ := child.waitResult()
+		t.Fatalf("legacy child on %s: %v\n%s", addr, err, output)
 	}
-	addr := listener.Addr().String()
-	_ = listener.Close()
-	return addr
 }
 
 // legacyChildCmd builds the pre-credential-binding database bootstrap: the
@@ -276,8 +303,7 @@ func TestOpenLocalUpgradesLegacyRootDatabase(t *testing.T) {
 	// below, the child is asked to stop, killed after a bounded grace if it
 	// ignores the request, and its Wait goroutine is joined before the test
 	// — and the temporary data directory — goes away.
-	addr := pickLoopbackAddr(t)
-	child := startRawTestChild(t, legacyChildCmd(ctx, identity.Path, addr, dir), 10*time.Second)
+	addr, child := startLegacyTestChild(t, ctx, identity.Path, dir)
 	if !waitTestChildHealthy("http://"+addr+"/health", 30*time.Second) {
 		child.stop()
 		// Output is read only after the Wait goroutine is joined: exec's
@@ -363,9 +389,8 @@ func TestRawChildUnhealthyBootstrapStopsChild(t *testing.T) {
 	if err != nil {
 		t.Fatalf("FindSurrealBinary: %v", err)
 	}
-	addr := pickLoopbackAddr(t)
 	engineArg := "surrealkv:" + filepath.Join(dir, "db")
-	child := startRawTestChild(t, legacyChildCmd(ctx, identity.Path, addr, dir), 10*time.Second)
+	_, child := startLegacyTestChild(t, ctx, identity.Path, dir)
 	// The child is genuinely alive (positive control); only the bootstrap's
 	// health view of it is broken.
 	assertChildMatching(t, engineArg)
