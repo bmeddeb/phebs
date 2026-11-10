@@ -30,11 +30,21 @@ func check(pid int, addr string) error {
 	}
 	// The pid's own view names the network namespace it actually binds in.
 	root := filepath.Join("/proc", strconv.Itoa(pid))
-	listeners := map[string]bool{}
-	for _, table := range []string{"tcp", "tcp6"} {
-		if err := listenInodes(filepath.Join(root, "net", table), uint16(port), listeners); err != nil {
+	listeners, err := portListeners(root, uint16(port))
+	if errors.Is(err, os.ErrNotExist) {
+		// The pid has exited (a zombie has no net view either) and holds no
+		// sockets. Seen from this process's namespace, which its children
+		// share, any listener left on the port belongs to another process.
+		if listeners, err = portListeners("/proc/self", uint16(port)); err != nil {
 			return err
 		}
+		if len(listeners) != 0 {
+			return fmt.Errorf("%w (pid %d exited)", ErrForeign, pid)
+		}
+		return fmt.Errorf("%w: pid %d", ErrExited, pid)
+	}
+	if err != nil {
+		return err
 	}
 	if len(listeners) == 0 {
 		return ErrNotListening
@@ -57,6 +67,18 @@ func check(pid int, addr string) error {
 		return ErrForeign
 	}
 	return nil
+}
+
+// portListeners returns the socket inodes of every TCP listener on port in
+// the network namespace seen through the /proc entry root.
+func portListeners(root string, port uint16) (map[string]bool, error) {
+	listeners := map[string]bool{}
+	for _, table := range []string{"tcp", "tcp6"} {
+		if err := listenInodes(filepath.Join(root, "net", table), port, listeners); err != nil {
+			return nil, err
+		}
+	}
+	return listeners, nil
 }
 
 // listenInodes adds the socket inode of every LISTEN entry on port in one

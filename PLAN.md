@@ -18621,3 +18621,19 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   - **Cost:** one read of `net/tcp`, `net/tcp6` and the child's fd table per
     healthy answer, at engine start only. Nothing is added per query, sync
     tick or request.
+- **2026-11-10 — Test SurrealDB fixtures prove listener ownership too.**
+  An exited child holds no sockets. `loopbackowner.Check` now reports a
+  listener left on an exited pid's port as `ErrForeign`, and no listener as
+  `ErrExited`, instead of an unreadable-`/proc` error. A child that dies on
+  the bind conflict before attribution therefore still counts as a lost port
+  and is retried. `loopbackowner.Await` polls until the child holds its
+  listener. It returns at once on a foreign listener or an exit. The store
+  raw-child and legacy-bootstrap fixtures, the typedexecutor controller and
+  native-acceptance engines, and the `cmd/phebs` typed-navigation engine now
+  await their own listener. Each retries a proven-lost port on a fresh one,
+  at most three attempts. Servers that bind their own configured address
+  (`cmd/phebs` T42.1 black-box server, `spike/t4013` profiles,
+  `scripts/release-smoke`) keep the close-then-reuse pick, because a retry
+  there means rewriting configuration.
+  - **Cost:** test fixtures only, plus one fallback read of this process's
+    `net/tcp` tables when a starting child has already exited.
