@@ -35,7 +35,7 @@ retrieved verbatim). Everything else carries the session's substance.
   many logical services first-class views over shared repository generations;
   it must not multiply a repository census, physical index, or source parse by
   the service count.
-- **Status snapshot (2026-11-22, main `0ca4e6f9`):**
+- **Status snapshot (2026-11-22, main `0ca4e6f9`; releases updated for v0.3.0 at `6b4f52da`):**
   - **Acceptance:** since the 2026-11-08 integration-test acceptance, every
     track is accepted by `ci-static`/`ci-go`/`ci-race` on the exact head,
     focused integration tests, and tagged native tests on `dave`. Rehearsals,
@@ -50,9 +50,13 @@ retrieved verbatim). Everything else carries the session's substance.
     integration-test work. The T42.2o freeze and the separately authorized
     T42.2 ceremony are retired. T42.3 claims no scale or SLO result unless it
     is measured.
-  - **Releases:** the six experimental evidence packs were published, signed,
-    in `v0.2.1-experimental.20261020` (2026-10-20). Default startup stays dark;
-    installation in a selected user instance (MED-513) is a separate step.
+  - **Releases:** [`v0.3.0`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.0)
+    (2026-11-22, `6b4f52da`) ships the twelve signed pack records on by
+    default (T48.6), rebound under `phebs-release-2026-11`. The packaged
+    runtime admits them with no `release_selection` block;
+    `package_default: off` keeps an install dark. The packs were first
+    published opt-in in `v0.2.1-experimental.20261020` (2026-10-20).
+    Installation in a selected user instance (MED-513) is a separate step.
   - **Other open lanes:** installed managed SCIP (T45.7/T45.10, MED-505), the
     authorized 5,000-service/12-GB target (T45.9, MED-506), and the
     two-million-owner × 10,000-service convergence program in
@@ -18705,3 +18709,12 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
     - **Smoke:** the package smoke inverts the dark assertions; the unpackaged
       smoke stays dark.
     - **Cost:** build time only. The runtime cost is unchanged from slice 1.
+  - **Slice 3, publication (2026-11-22).** [`v0.3.0`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.0)
+    was cut from `6b4f52da` as a full (non-pre-release) GitHub release, with
+    Ben's choice of version. `ci-static`, `ci-go` and `ci-race` passed on that
+    head. All twelve records were signed with `phebs-release-2026-11` for
+    runtime `sha256:503efa96…`. The package smoke, the bare-runtime dark
+    smoke, and a smoke of the re-extracted archive all passed. The archive
+    carries `INSTALL.md` and `receipts/`. No claim, approval or expiry
+    changed. The earliest expiry is Buf WIRE on 2027-01-10, and renewal means a
+    new signed release.

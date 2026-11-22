@@ -20564,7 +20564,8 @@ signatures stay visibly pending. No main merge or production release is implied.
 
 ### Current inventory (2026-11-22)
 
-Snapshot: main `0ca4e6f9`, after the
+Snapshot: main `0ca4e6f9` (production-artifacts row updated for v0.3.0 at
+`6b4f52da`), after the
 [integration-test acceptance](#integration-test-acceptance-2026-11-08-ben-directed).
 This table supersedes the remaining-lane table in the
 [T48.1a current inventory](#t481a-current-inventory) for current sequencing.
@@ -20577,7 +20578,7 @@ numbers are the Kite PHEBS tracker items that mirror each lane.
 | Linux readiness and posture | T42.2v restored launch (MED-500) and T42.2n readiness (MED-501), both reduced to integration-test acceptance. T42.3 posture review (MED-504) follows. T42.2o freeze (MED-502) and separately authorized T42.2 execution (MED-503) are retired. | A restored-launch integration test on the exact head. T42.3 states posture without a scale or SLO claim unless one is measured. |
 | Installed managed SCIP | T45.7 / T45.10 (MED-505). The host-formatting refusal diagnosis (MED-695) is closed. | Admitted compiler/sysroot/offline bundle, then installed generation, navigation, restart and teardown proof on this host. T45.10a presentation stays complete. |
 | Managed target qualification | T45.9 (MED-506). | Needs an eligible authorized 5,000-service/12-GB target and host. The T45.6 waiver and the generated-evidence STOP stay unpassed. |
-| Production artifacts | T47.5, T49.4, T50.3, T51.3, T52.3 and T54.3 are published, signed, in [`v0.2.1-experimental.20261020`](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) (2026-10-20). | Installing and verifying that package in a selected user instance (MED-513) needs its own target, window and authorization. Default startup stays dark. |
+| Production artifacts | T47.5, T49.4, T50.3, T51.3, T52.3 and T54.3 were published, signed, in [`v0.2.1-experimental.20261020`](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) (2026-10-20). T48.6 ships them on by default in [`v0.3.0`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.0) (2026-11-22, `6b4f52da`), signed with `phebs-release-2026-11`. | Installing and verifying v0.3.0 in a selected user instance (MED-513) needs its own target, window and authorization. `package_default: off` keeps an install dark. The earliest record expiry is 2027-01-10. |
 | Reported limits (tracker only) | MED-487–493 from GitHub issue #163 (now closed). | Needs the affected production instance, repository and generation plus real publication and SCIP diagnostics. |
 | Next product program | Two-million-owner × 10,000-service convergence in [ROADMAP](./ROADMAP.md#next-two-million-owner-and-10000-service-convergence). Epics 25–28 stay unscheduled drafts. | Ticket-level scheduling is not yet selected. |
 
@@ -21042,6 +21043,25 @@ census, so the signed-release verification gate stays intact.
   bundle; it now depends on `verify-release`.
 - **Repository hygiene.** The docs link check skips the immutable artifact
   copies, and `.gitignore` refuses release keys and `*.pem`.
+
+*Slice 3 publication (2026-11-22):*
+[`v0.3.0`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.0) is a full
+GitHub release cut from main `6b4f52da` after `ci-static`, `ci-go` and
+`ci-race` passed on that head.
+- **Signing.** `make release-package` signed all 12 templates with
+  `phebs-release-2026-11` for runtime `sha256:503efa96…`. Each record
+  self-verified through the startup loader.
+- **Smokes.** `make smoke-release-package` admitted the packs from an empty
+  config and served Contract Atlas, and `make smoke-release` stayed dark. The
+  published archive was re-extracted and smoked again with `-expect-packs`.
+- **Archive.** `phebs-v0.3.0-linux-amd64.tar.gz` holds `runtime/`, `packs/`,
+  `INSTALL.md` and `receipts/`, and `SHA256SUMS` sits beside it. The
+  downloaded asset verified against `SHA256SUMS`.
+- **Gate host note.** On `dave`, `ci-go` must run with `TMPDIR` on disk. With
+  the 7.5 GB `/tmp` tmpfs, `internal/typedexecutor` hits the lifecycle 90%
+  watermark during a full run.
+- **Remaining.** Installing it in a selected user instance stays MED-513. The
+  slice 3 AC is met.
 
 ## Epic 49 · Contract Atlas and declaration production readiness
 
