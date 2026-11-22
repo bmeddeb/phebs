@@ -18,6 +18,9 @@ RELEASE_ROOT ?= dist
 RELEASE_COMMIT ?= $(shell git rev-parse HEAD)
 RELEASE_STAGE = $(RELEASE_ROOT)/.build-$(VERSION)-$(TARGET_GOOS)-$(TARGET_GOARCH)
 RELEASE_BUNDLE = $(RELEASE_ROOT)/phebs-$(VERSION)-$(TARGET_GOOS)-$(TARGET_GOARCH)
+RELEASE_PACKAGE = $(RELEASE_ROOT)/phebs-$(VERSION)-$(TARGET_GOOS)-$(TARGET_GOARCH)-package
+RELEASE_KEY ?=
+RELEASE_KEY_ID ?= phebs-release-2026-11
 T2014_RESULTS_PATH ?= /private/tmp/phebs-t20.14-results.json
 PHEBS_DEV_COHORT ?= whole
 ifneq (,$(filter dev dev-api,$(MAKECMDGOALS)))
@@ -29,7 +32,7 @@ endif
 endif
 
 .PHONY: dev dev-api build release-binary clean validate-version validate-release-version validate-release-target \
-	release verify-release smoke-release test ui-test ui-receipts ui-receipts-update lint ui db-server \
+	release verify-release smoke-release release-package smoke-release-package test ui-test ui-receipts ui-receipts-update lint ui db-server \
 	verify-go verify-node verify-golangci-lint verify-surreal verify-test-surreal verify-glossary t20-closure \
 	docs-check ci ci-static ci-go ci-race ci-ui
 
@@ -174,6 +177,15 @@ verify-release: ## verify RELEASE_BUNDLE bytes, modes, and canonical manifest
 
 smoke-release: verify-release verify-surreal ## empty-data sync/index/search and default-dark smoke
 	go run ./scripts/release-smoke -bundle "$(RELEASE_BUNDLE)" -timeout 2m
+
+release-package: release ## T48.6 signed default-on package: runtime/ plus packs/ (needs RELEASE_KEY)
+	@test -n "$(RELEASE_KEY)" || { printf 'release-package: set RELEASE_KEY to the PKCS#8 ed25519 release key\n' >&2; exit 1; }
+	go run ./scripts/release package -bundle "$(RELEASE_BUNDLE)" -output "$(RELEASE_PACKAGE)" \
+		-templates release/packs/templates -artifacts release/packs/artifacts \
+		-key "$(RELEASE_KEY)" -key-id "$(RELEASE_KEY_ID)"
+
+smoke-release-package: verify-surreal ## packaged default-on smoke: empty config admits the signed packs
+	go run ./scripts/release-smoke -bundle "$(RELEASE_PACKAGE)/runtime" -expect-packs -timeout 3m
 
 # PHEBS_SKIP_SURREAL_TESTS=1 runs the suite without a SurrealDB binary; the
 # SurrealDB-backed tests keep their existing skip instead of failing this gate.

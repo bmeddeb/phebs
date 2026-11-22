@@ -1,0 +1,59 @@
+{
+  "schema": "phebs-final-release-validation-v1",
+  "pack_id": "phebs.grpc.caller.comparison",
+  "pack_claim_version": "1.0.0",
+  "source_commit": "290e1518a4a192d0a3494c3ed9fa2eb39a450355",
+  "binary_digest": "sha256:7993fa98493b6a5e6e5f5dc1d7762dcee7be7a65c0f8246d7524a8064b50e582",
+  "qualification_artifact_id": "qualified-caller-comparison-validation-1.0.0.json",
+  "historical_measurement_scope": "Exact historical qualified artifacts are retained unchanged. Current bounded tests do not repeat or extend their quality/operating samples.",
+  "current_checks": [
+    {
+      "command": [
+        "go",
+        "test",
+        "-json",
+        "./cmd/phebs",
+        "-count=1",
+        "-timeout=120s",
+        "-run",
+        "^Test(CallerMapReleased.*|ProtobufAtlasReleasedAdmission|(CallerMap|ProtobufAtlas)ReleaseArtifactsSignAndLoad|CallerComparisonReleasedAdmission|ReleasedProtobufFieldRegistration|ReleasedThriftFieldRegistration|OperationImpactReleasedAdmission|SignReleaseDerivesBindingsAndSelfVerifies|ReleasedExtractors.*|StartupAdmissionAndDiscoveryMatrix|MergeExtractorsReleasedGovernsDomain|RevokedReleaseIDsKeepsTheDarkDefaultAllocationFree)$"
+      ],
+      "pid": 654318,
+      "actual_wait": 0,
+      "seconds": 48.738978147506714,
+      "tests_passed": 88,
+      "tests_skipped": 0,
+      "log_sha256": "5a3cb99bc992ddab7250912c83b9a5f3e6b83d6e80d0ff6cf0c81e0d65dda56d"
+    },
+    {
+      "command": [
+        "go",
+        "test",
+        "-json",
+        "./internal/packrelease",
+        "-count=1",
+        "-timeout=90s"
+      ],
+      "pid": 655662,
+      "actual_wait": 0,
+      "seconds": 0.9260544776916504,
+      "tests_passed": 106,
+      "tests_skipped": 0,
+      "log_sha256": "65701ca2a67abfdde0aa8844fadd6d199a566fe7eaa66e9504449d871320a173"
+    }
+  ],
+  "build_receipt": "receipts/final-build-result.json; receipts/build-metadata.txt",
+  "review": {
+    "source": "Release recipe/extractor/claim registries unchanged from qualified source; later ordinary runtime source changes are neutral demo configuration and custody bytes. Current bounded assembly/authorization/version/signing tests passed.",
+    "evidence": "Final card only supersedes historical draft readiness/key availability wording; source facts, limits, gaps, tiers, uncertainty and expiry triggers are unchanged.",
+    "security": "Existing authenticated visibility/source/generation/citation fences, signed binary/artifact bindings and no experimental fallback retained.",
+    "steady_state_cost": "No implementation change. Selected products use existing bounded workers/shared extraction passes and readers. Selection adds one bounded artifact census plus running-image hash at startup; no per-request artifact hashing, new cache, lock, child class or changed ceiling. First stable admission replaces incompatible generations using existing reconciliation."
+  },
+  "not_established": [
+    "New extraction accuracy or truth population",
+    "Linux capacity, scale or latency/throughput SLO",
+    "Live source deployment or corpus migration",
+    "Managed SCIP installation or T42 ceremony readiness"
+  ],
+  "expires_at": "2027-01-15T23:59:59Z"
+}

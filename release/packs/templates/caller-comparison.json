@@ -1,0 +1,34 @@
+{
+  "release_schema_version": "1.0",
+  "release_id": "rel-phebs.grpc.caller.comparison-1.0.1",
+  "release_version": "1.0.1",
+  "pack_id": "phebs.grpc.caller.comparison",
+  "pack_claim_version": "1.0.0",
+  "card": {
+    "artifact_id": "caller-comparison-card-1.0.0.md",
+    "digest": ""
+  },
+  "manifest": {
+    "artifact_id": "caller-comparison-manifest-1.0.0.json",
+    "digest": ""
+  },
+  "implementation": {
+    "phebs_source_commit": "",
+    "phebs_binary_digest": "",
+    "pack_implementation_digest": "",
+    "toolchain_digest": ""
+  },
+  "referenced_artifacts_root_digest": "",
+  "validation": {
+    "artifact_id": "caller-comparison-validation-1.0.0.json",
+    "digest": "",
+    "applies": true,
+    "expires_at": "2027-01-15T23:59:59Z",
+    "expiry_trigger": null
+  },
+  "derived_status": "released",
+  "approved_at": "2026-10-20T00:00:00Z",
+  "approval_records": [
+    "ben-meddeb-2026-10-20-ship-experimental-dark-features"
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "schema": "phebs-extractor-pack-manifest-v1",
+  "pack_id": "phebs.grpc.caller.go",
+  "pack_claim_version": "1.0.0",
+  "qualification": "bounded-integration-tests",
+  "recipe": {
+    "registry": "cmd/phebs packRecipes",
+    "extractors": [
+      "proto-contract@4.0.0",
+      "grpc-caller@1.6.0-released.1"
+    ],
+    "caller_algorithm": "grpc-caller@1.6.0"
+  },
+  "admission": "The released caller version is admitted only through a verified signed selection; candidate and caller identity fences refuse experimental generations.",
+  "surfaces": {
+    "capability": "contract-caller-map",
+    "ui": "/contracts (Caller Map)",
+    "mcp_tools": [
+      "search_contract_operations",
+      "get_contract_operation",
+      "list_operation_callers",
+      "read_operation_caller_citation"
+    ],
+    "http": "Existing authenticated declaration discovery, exact Caller Map, progress and citation routes"
+  },
+  "excluded": [
+    "caller comparison",
+    "Contract Impact",
+    "field references",
+    "Kafka",
+    "WIRE verdicts",
+    "Thrift callers",
+    "independent extraction accuracy",
+    "logical-service completeness",
+    "runtime use and retirement safety"
+  ],
+  "limits": "Existing candidate, publication, reader, request and citation bounds; no ceiling widened; no new measured capacity or SLO."
+}

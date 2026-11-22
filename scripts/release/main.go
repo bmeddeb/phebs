@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 
 	"github.com/bmeddeb/phebs/internal/releasebundle"
 )
@@ -18,13 +20,15 @@ func main() {
 
 func run(args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: go run ./scripts/release <bundle|verify> [flags]")
+		return errors.New("usage: go run ./scripts/release <bundle|verify|package> [flags]")
 	}
 	switch args[0] {
 	case "bundle":
 		return bundle(args[1:])
 	case "verify":
 		return verify(args[1:])
+	case "package":
+		return packageRelease(args[1:])
 	default:
 		return fmt.Errorf("unknown release command %q", args[0])
 	}
@@ -85,5 +89,37 @@ func verify(args []string) error {
 	}
 	fmt.Printf("verified %s %s %s/%s (%d files)\n",
 		manifest.Version, manifest.Commit, manifest.GOOS, manifest.GOARCH, len(manifest.Files))
+	return nil
+}
+
+// packageRelease assembles the T48.6 default-on package: the verified bundle as
+// runtime/ and one record per template signed by `runtime/phebs release-sign`,
+// so every binding is derived and self-verified by the binary being released.
+func packageRelease(args []string) error {
+	flags := flag.NewFlagSet("package", flag.ContinueOnError)
+	var opts releasebundle.PackageOptions
+	var key, keyID string
+	flags.StringVar(&opts.BundleDir, "bundle", "", "verified release directory")
+	flags.StringVar(&opts.OutputDir, "output", "", "new package directory")
+	flags.StringVar(&opts.TemplatesDir, "templates", "release/packs/templates", "PackRelease templates")
+	flags.StringVar(&opts.ArtifactsDir, "artifacts", "release/packs/artifacts", "flat pack artifact directory")
+	flags.StringVar(&key, "key", "", "PKCS#8 PEM ed25519 release key")
+	flags.StringVar(&keyID, "key-id", "", "release key identifier in the in-tree trust anchor")
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+	if flags.NArg() != 0 || opts.BundleDir == "" || opts.OutputDir == "" || key == "" || keyID == "" {
+		return errors.New("usage: go run ./scripts/release package -bundle DIR -output DIR -key PEM -key-id ID [-templates DIR] [-artifacts DIR]")
+	}
+	opts.Sign = func(ctx context.Context, phebs, template, artifacts, out string) error {
+		cmd := exec.CommandContext(ctx, phebs, "release-sign",
+			"-template", template, "-key", key, "-key-id", keyID, "-artifacts", artifacts, "-out", out)
+		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+		return cmd.Run()
+	}
+	if err := releasebundle.Package(context.Background(), opts); err != nil {
+		return err
+	}
+	fmt.Printf("packaged %s\n", opts.OutputDir)
 	return nil
 }

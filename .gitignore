@@ -65,3 +65,7 @@ ui/receipts/.auth/
 # Local agent scratch and diagnostics.
 .cowork-reverted/
 Claude outputs/
+
+# T48.6 release signing keys stay outside the repository.
+phebs-release-ed25519*
+*.pem

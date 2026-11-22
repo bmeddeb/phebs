@@ -39,6 +39,10 @@ type options struct {
 	bundle  string
 	surreal string
 	timeout time.Duration
+	// expectPacks inverts the dark assertions for a T48.6 package runtime:
+	// from an empty configuration the signed packs beside runtime/ must be
+	// admitted, so Contract Atlas is advertised and served.
+	expectPacks bool
 }
 
 func main() {
@@ -54,11 +58,12 @@ func run(args []string) error {
 	flags.StringVar(&opts.bundle, "bundle", "", "verified release directory")
 	flags.StringVar(&opts.surreal, "surreal", "", "SurrealDB executable (default: PATH)")
 	flags.DurationVar(&opts.timeout, "timeout", 2*time.Minute, "end-to-end deadline")
+	flags.BoolVar(&opts.expectPacks, "expect-packs", false, "require the package default to admit the signed packs")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
 	if flags.NArg() != 0 || strings.TrimSpace(opts.bundle) == "" {
-		return errors.New("usage: go run ./scripts/release-smoke -bundle DIR [-surreal PATH]")
+		return errors.New("usage: go run ./scripts/release-smoke -bundle DIR [-surreal PATH] [-expect-packs]")
 	}
 	if opts.timeout <= 0 {
 		return errors.New("timeout must be positive")
@@ -145,7 +150,7 @@ func smoke(opts options) error {
 	if err := login(ctx, client, baseURL); err != nil {
 		return smokeError(err, logs)
 	}
-	if err := verifyVersion(ctx, client, baseURL, manifest.Version); err != nil {
+	if err := verifyVersion(ctx, client, baseURL, manifest.Version, opts.expectPacks); err != nil {
 		return smokeError(err, logs)
 	}
 	if err := waitForIndex(ctx, client, baseURL, repoName, commit); err != nil {
@@ -154,7 +159,7 @@ func smoke(opts options) error {
 	if err := verifySearchAndBrowse(ctx, client, baseURL, repoName, commit); err != nil {
 		return smokeError(err, logs)
 	}
-	if err := verifyAtlasDark(ctx, client, baseURL); err != nil {
+	if err := verifyAtlas(ctx, client, baseURL, opts.expectPacks); err != nil {
 		return smokeError(err, logs)
 	}
 	waitConsumed, err := stopServer(server, waited)
@@ -164,8 +169,12 @@ func smoke(opts options) error {
 	if err != nil {
 		return smokeError(err, logs)
 	}
-	fmt.Printf("release smoke passed: %s %s sync->index->search, pinned browse, Contract Atlas dark\n",
-		manifest.Version, manifest.Commit)
+	atlas := "Contract Atlas dark"
+	if opts.expectPacks {
+		atlas = "signed packs admitted from the package default"
+	}
+	fmt.Printf("release smoke passed: %s %s sync->index->search, pinned browse, %s\n",
+		manifest.Version, manifest.Commit, atlas)
 	return nil
 }
 
@@ -377,7 +386,7 @@ func login(ctx context.Context, client *http.Client, baseURL string) error {
 	return nil
 }
 
-func verifyVersion(ctx context.Context, client *http.Client, baseURL, want string) error {
+func verifyVersion(ctx context.Context, client *http.Client, baseURL, want string, expectPacks bool) error {
 	status, body, err := request(ctx, client, http.MethodGet, baseURL+"/api/version", nil)
 	if err != nil {
 		return fmt.Errorf("read authenticated version: %w", err)
@@ -395,10 +404,15 @@ func verifyVersion(ctx context.Context, client *http.Client, baseURL, want strin
 	if result.Version != want {
 		return fmt.Errorf("running version %q does not match manifest %q", result.Version, want)
 	}
+	atlas := false
 	for _, capability := range result.Capabilities {
-		if capability == "contract-atlas" {
-			return errors.New("default-dark smoke exposed the Contract Atlas capability")
-		}
+		atlas = atlas || capability == "contract-atlas"
+	}
+	switch {
+	case atlas && !expectPacks:
+		return errors.New("default-dark smoke exposed the Contract Atlas capability")
+	case !atlas && expectPacks:
+		return fmt.Errorf("package smoke did not admit Contract Atlas; capabilities = %v", result.Capabilities)
 	}
 	return nil
 }
@@ -518,10 +532,16 @@ func searchFixture(ctx context.Context, client *http.Client, baseURL, repoName, 
 		search.Files[0].Ref == commit, nil
 }
 
-func verifyAtlasDark(ctx context.Context, client *http.Client, baseURL string) error {
+func verifyAtlas(ctx context.Context, client *http.Client, baseURL string, expectPacks bool) error {
 	status, body, err := request(ctx, client, http.MethodGet, baseURL+"/api/contract_atlas", nil)
 	if err != nil {
-		return fmt.Errorf("probe default-dark Contract Atlas: %w", err)
+		return fmt.Errorf("probe Contract Atlas: %w", err)
+	}
+	if expectPacks {
+		if status != http.StatusOK {
+			return fmt.Errorf("packaged Contract Atlas status %d, want 200: %s", status, body)
+		}
+		return nil
 	}
 	if status != http.StatusNotFound {
 		return fmt.Errorf("default-dark Contract Atlas status %d, want 404: %s", status, body)

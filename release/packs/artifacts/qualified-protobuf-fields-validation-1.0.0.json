@@ -1,0 +1,176 @@
+{
+  "schema": "phebs-extractor-pack-validation-v1",
+  "artifact_status": "DRAFT_UNSIGNED_NOT_ACTIVE",
+  "pack_id": "phebs.protobuf.field.go",
+  "pack_claim_version": "1.0.0",
+  "production_release_signed": false,
+  "date": "2026-10-18",
+  "owner": "Ben Meddeb",
+  "implementation": {
+    "source_commit": "bbb41b2ccfb3f9b23653aabf41607185aec3efbe",
+    "source_tree": "ade4527a61c06801888eb6fa667b1ad075e5d826",
+    "binary_digest": "sha256:121c1d07999344166d8631e65a99b06476c1fa0251f8590d2c42dd7da6393481",
+    "harness_commit": "7d931eb4f73c146cb4e8ec74c2cad5b5c57337e8",
+    "plan_digest": "sha256:71f2d2df416332ed19cbeb8d337327e1e5d7f72593eaeed0e70f15fd169b3268",
+    "binding_digest": "sha256:64db281be4ae9ca7edb46ff531049d5db18960f640ca83ef60a206feba600c79"
+  },
+  "native_result": {
+    "path": "spike/t513/result-after-discovery-fix.json",
+    "digest": "sha256:184a8ac1a3a20e269161e6db094fcaec2784d475f2bd64efa390687d9173ad61",
+    "outcome": "passed_finite_field_composition_darwin_only_production_signing_pending",
+    "seconds": 23.872118833,
+    "attempts_for_reviewed_binding": 1,
+    "retry": false
+  },
+  "execution_binding": {
+    "path": "spike/t513/after-discovery-execution-binding.json",
+    "digest": "sha256:64db281be4ae9ca7edb46ff531049d5db18960f640ca83ef60a206feba600c79"
+  },
+  "outcome_cost": {
+    "path": "spike/t513/outcome-cost-after-discovery-fix.json",
+    "digest": "sha256:743f48be5a8d9ec9125caa89d72d620785101efd605a45adff3ed3eaf2c10f98"
+  },
+  "quality": {
+    "native_queried_identities": 11,
+    "native_consumer_spans_expected": 14,
+    "native_consumer_spans_matched": 14,
+    "native_extra_wrong_duplicate_consumer_facts_within_queried_identities": 0,
+    "native_global_negative_field_recall": "NOT_MEASURED; only the11 preregistered positive field identities were queried. The56 negative source labels are prior T511 direct full-stream quality context, not a fresh native global negative census.",
+    "original_receipt_wording": "The immutable receipt retains quality.frozen_negative_sites=56 and false_positives=0. Read these through this narrower interpretation; no original receipt bytes are changed.",
+    "generated_unique_spans": 11,
+    "generated_quality_denominator": "Separate; exact source/version/span/role and duplicate checks only, no complete generated oracle or recall claim.",
+    "prior_T511_quality": {
+      "artifact": "spike/t511/result.json",
+      "digest": "sha256:e848bf4098fb4d3282dac6e88dea567ebd37a89a03aa35886f01cdb44db6d955",
+      "public": {
+        "positive": 14,
+        "matched": 14,
+        "negative": 56
+      },
+      "authored": {
+        "positive": 17,
+        "matched": 17,
+        "negative": 7,
+        "unsupported": 12
+      },
+      "qualification": "Prior direct extractor full-stream evaluation with independently reviewed source labels. The authored1.36.12/7.36.2 population does not expand the stable1.36.11/5.27.1 recipe. This native run is composition over reused public source, not a fresh independent population."
+    }
+  },
+  "surface_checks": {
+    "http_and_mcp_field_endpoints": [
+      "find_proto_field_references",
+      "find_field_references"
+    ],
+    "object_endpoint_pairs": 22,
+    "warm_reads_per_object_endpoint": 5,
+    "immutable_http_proof_ids_verified": 22,
+    "anonymous_field_request": 401,
+    "withdrawn_field_http_statuses": [
+      404,
+      404
+    ],
+    "discovery_withdrawn": true,
+    "current_source_transports": [
+      "GET /api/source full immutable blob",
+      "MCP read_file full immutable blob"
+    ],
+    "blob_read_caveat": "One complete immutable blob per transport request by source-code contract; no instrumented source-open counter. Client hashes and slices exact atom ranges. No field range-citation endpoint is claimed.",
+    "mcp_semantics": "Exact fact projection, partial/withheld processing and absence eligibility false retained. No MCP proof-by-ID tool."
+  },
+  "transition": {
+    "old_immutable_byte_identical": true,
+    "new_authority": {
+      "repository": "evaluation.local/t511-public",
+      "domain": "scip-proto-field",
+      "run_id": "b1056832a8fa16d43f5329277693759f",
+      "commit": "cd72bf6914988aed1974bd8bfcc744f4d08ccfd2",
+      "plan_digest": "sha256:de56f30dd4f4cf7e449ef33ba7d6274fe73bda9055f00bcd277f62c2d447150d",
+      "root_digest": "sha256:94ec176b13e509796db8dc2a24d7c7b7a02da12d010da343a90ecf004c7eb186"
+    },
+    "unchanged_consumer_truth": 14,
+    "additional_quality_denominator": 0,
+    "new_consumer_source_digest": "sha256:331805b0a45eabfd1206a7fac5e1d256a15a2a39da34577d3162fa2a12d971df",
+    "new_source_atom_slices": 2,
+    "qualification": "One prebound79-byte comment append, one ordinary authenticated webhook/fetch and current publication. No source/ref/index mutation during measurement; no semantic migration claim."
+  },
+  "operating": {
+    "host": {
+      "sysname": "Darwin",
+      "machine": "arm64",
+      "cpu_count": 10,
+      "physical_memory_bytes": 25769803776
+    },
+    "bounds": {
+      "complete_native_seconds": 180,
+      "startup_seconds": 30,
+      "publication_seconds": 90,
+      "cold_request_seconds": 2,
+      "warm_request_seconds": 1,
+      "parallel_requests": 8,
+      "http_response_bytes": 1048576,
+      "process_tree_sampled_max_rss_bytes": 2147483648,
+      "minimum_available_physical_headroom_bytes": 4294967296,
+      "minimum_free_disk_bytes": 2147483648,
+      "derived_allocated_disk_bytes": 536870912,
+      "source_blobs_read_per_citation": 1,
+      "repositories": 1
+    },
+    "observations": "Sequential native observations after healthy HTTP only, every0.2s RSS and1s physical/disk. Startup and teardown included in global wall but not RSS sampling. Available physical=page_size*(free+inactive+speculative), no compressor/swap credit. Peaks are observed samples, not atomic/transient maxima or hard enforcement. CPU and parent/client memory unmeasured. Fixed1/4/8 batches are descriptive observations, not sustained rates/SLO. Cold means first successful object/endpoint response after publication probes; shared/process caches may already be warm.",
+    "matrix_seconds": 23.872118833,
+    "peak_sampled_tree_rss_bytes": 236716032,
+    "peak_sampled_derived_allocated_bytes": 3362816,
+    "minimum_sampled_available_physical_bytes": 7385595904,
+    "finite_batch_wall_seconds": {
+      "1": 0.017108,
+      "4": 0.033511,
+      "8": 0.058885
+    },
+    "CPU": "not measured"
+  },
+  "prior_checks": {
+    "T511": "spike/t511/measurement-record.json; direct full-stream public14/56 and separate authored17/7/12 source quality, focused normal/race/vet/lint; exact historical scope only.",
+    "T512": "Existing isolated stable reader admission/version/auth/raw/proof/HTTP/MCP/archive normal/race and joined real-store checks documented in owning BACKLOG/OPERATIONS; not re-run or generalized by this artifact.",
+    "T513_harness": "16 finite source/mock controls retained in spike/t513/post-discovery-amendment-controls.log; accepted source review in post-discovery-amendment-review.json.",
+    "T513a": "Prior bounded unindexed-discovery normal/race/store/source-fence repair gates; no unchanged historical result relabelled.",
+    "lifecycle_pressure_backup_hard_death": "Not re-measured by this finite native matrix; existing shared gates apply only to exact affected implementation/scope and require final common-bar reuse review. No new success invented."
+  },
+  "cleanup": {
+    "native_attempts_this_binding": 1,
+    "retries": 0,
+    "all_owned_children_joined": true,
+    "all_forced_flags": false,
+    "server_groups_drained": true,
+    "independent_post_join_group_absence": "os.killpg(pgid,0) returned ProcessLookupError for70893 and71003 after harness join.",
+    "private_scratch_removed_after_join": true,
+    "disposable_integration_key": "Removed before serving; no production key accessed or production signature produced."
+  },
+  "review": {
+    "source_labels": "Lead independently source-reviewed T511 before first extractor result; no label changes.",
+    "harness": "Root and receipt_portability source/authority/cleanup/cost reviews; root prospective amendment accepted.",
+    "native_first_result": "Root accepted exact success receipt. New card/manifest/validation draft review pending.",
+    "independent_human_or_statistics": "Not claimed"
+  },
+  "proposed_expires_at": "2027-01-16T23:59:59Z",
+  "suspension_and_rollback": {
+    "proposed_expires_at": "2027-01-16T23:59:59Z",
+    "triggers": [
+      "source/extractor/recipe/schema/version or supported construct change",
+      "SCIP/generator input/authority change",
+      "authorization/source/proof regression",
+      "operating bound failure or confirmed evidence error"
+    ],
+    "withdrawal": "Governing signed suspension/revocation/expiry withdraws recipe on existing admission/restart path; no provisional fallback satisfies stable version. Historical bytes are not rewritten."
+  },
+  "not_established": [
+    "Production signature, production release or installed selection",
+    "Generalized extraction precision/recall or a new global negative field census",
+    "Semantic read/write, runtime use, complete inventory, safe removal, compatibility or migration completion",
+    "Automatic declaration-lineage to SCIP-package-family bridge",
+    "Managed/generated-at-runtime SCIP extraction authority",
+    "Thrift, Caller Map, caller comparison, consumer, Atlas, Impact, Kafka or WIRE admission",
+    "Dedicated field UI/browser claim",
+    "Sustained throughput, latency SLO, Linux capacity or scale",
+    "Cold process/cache benchmark, transient RSS peak, hard heap/physical-memory cap or CPU measurement"
+  ],
+  "release_decision": "PENDING final artifact/common-bar/owner review and exact production signature/verification/installation. No production record or selection authored or activated."
+}

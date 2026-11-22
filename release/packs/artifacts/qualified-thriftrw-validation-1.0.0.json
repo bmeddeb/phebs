@@ -1,0 +1,253 @@
+{
+  "schema": "phebs-extractor-pack-validation-v1",
+  "pack_id": "phebs.thrift.field.thriftrw",
+  "pack_claim_version": "1.0.0",
+  "artifact_status": "unsigned measured draft; no production signature/activation",
+  "production_release_signed": false,
+  "qualification": "Finite independently source-reviewed public identity/span conformance + one bounded Darwin-local ordinary-runtime HTTP/MCP selected-set/withdrawal measurement; no generalized accuracy or scale.",
+  "implementation_measured": {
+    "phebs_source_commit": "bbb41b2ccfb3f9b23653aabf41607185aec3efbe",
+    "phebs_binary_digest": "sha256:121c1d07999344166d8631e65a99b06476c1fa0251f8590d2c42dd7da6393481",
+    "pack_implementation_digest": "sha256:bb2dcc25ff017afb98aeba3adbf2596f5bcd64efaf6a4602b7e937c66413c4ea",
+    "toolchain_digest": "sha256:c6652a655b5c51d1ce66b001a3f82f118b97fecfca54705e3b7313d6c8b82dba"
+  },
+  "evidence": {
+    "direct_public_result": {
+      "path": "spike/t522/first-result.json",
+      "bytes": 9494,
+      "sha256": "sha256:fb56ce29a3a1c38a4bf999f328669f068b6245d4635152b35f8c15b08f3dd4c4"
+    },
+    "direct_public_labels": {
+      "path": "spike/t522/source-labels.jsonl",
+      "bytes": 46182,
+      "sha256": "sha256:e1d795ca436c432b46a084ebfaf0703da0ea046321f59376fc66ba2c88643eeb"
+    },
+    "native_first_result": {
+      "path": "spike/t523/release/receipts/finite-operating-first.json",
+      "bytes": 211611,
+      "sha256": "sha256:4414404b8bd0d36a6231cfee38da8819f613cd62c8781999251c32a6de9675a4"
+    },
+    "native_execution_binding": {
+      "path": "spike/t523/release/receipts/execution-binding-first-reviewed.json",
+      "bytes": 7325,
+      "sha256": "sha256:102cbcf74dc3815fbc2e6325af4973d7d20998604724baf612a25161dd586f41"
+    },
+    "operating_outcome_cost": {
+      "path": "spike/t523/operating-outcome-cost.json",
+      "bytes": 36336,
+      "sha256": "sha256:d290f59a3ec79246319385943154966f2ad628ac8b90d20678312eb09599b05a"
+    },
+    "registration_validation": {
+      "path": "spike/t523/validation.json",
+      "bytes": 1641,
+      "sha256": "sha256:b41a12eb64d047009907aa4199db319d37bfe30e4aa00fc45c40e41e9376fa45"
+    }
+  },
+  "frozen_direct_public_quality": {
+    "positive_sites": 4,
+    "matched": 4,
+    "negative_sites": 31,
+    "negative_false_positives": 0,
+    "scope": "Original independently source-reviewed T522 direct full-stream selected public population only; no new native full-stream negative score, pooled repeats or generalized accuracy."
+  },
+  "native_selected_phase_names": [
+    "both",
+    "rw-survivor"
+  ],
+  "native_fixed_query_scope": "Fixed nine Apache positive field identities, two thriftrw positive identities plus existing public generated-only field0. Require all frozen positive spans and no extra consumer span in those whole-proof responses. These queries do not inventory unqueried field identities; original full-stream direct T521/T522 negative-site evidence remains separately scoped, not rerun or pooled.",
+  "native_phase_results": [
+    {
+      "phase": "both",
+      "selected_generators": [
+        "apache",
+        "thriftrw"
+      ],
+      "selected_set_version": "1.4.0-released.apache-thriftrw.1",
+      "all_selected_native_positive_opportunities": 37,
+      "all_selected_native_verified_consumer_spans": 37,
+      "extra_consumer_facts_within_fixed_queries": 0,
+      "scope": "Counts include every selected generator in that phase, not independent new samples for this pack."
+    },
+    {
+      "phase": "rw-survivor",
+      "selected_generators": [
+        "thriftrw"
+      ],
+      "selected_set_version": "1.4.0-released.thriftrw.1",
+      "all_selected_native_positive_opportunities": 4,
+      "all_selected_native_verified_consumer_spans": 4,
+      "extra_consumer_facts_within_fixed_queries": 0,
+      "scope": "Counts include every selected generator in that phase, not independent new samples for this pack."
+    }
+  ],
+  "native_full_operating_receipt": {
+    "wall_seconds": 34.816796958000005,
+    "host": {
+      "sysname": "Darwin",
+      "machine": "arm64",
+      "cpu_count": 10,
+      "physical_memory_bytes": 25769803776
+    },
+    "phases": [
+      {
+        "phase": "apache-only",
+        "ready_seconds": 7.202,
+        "measurements": {
+          "rss_samples": 50,
+          "sampled_max_tree_rss_bytes": 261750784,
+          "sampled_max_descendants": 2,
+          "minimum_available_physical_bytes": 7571243008,
+          "physical_samples": 10,
+          "physical_formula": "page_size*(free+inactive+speculative); compressor and swap excluded",
+          "sampled_max_data_allocated_bytes": 8298496,
+          "rss_cadence_seconds": 0.2,
+          "host_disk_cadence_seconds": 1,
+          "qualification": "Sequential native samples after HTTP readiness; not an atomic tree snapshot, transient peak or hard enforcement. Startup before HTTP readiness and teardown are not RSS-sampled. No swap credit."
+        },
+        "joined": {
+          "server_terminal": {
+            "outcome": "success",
+            "exit_code": 0,
+            "teardown": "clean",
+            "wall_seconds": 17.986
+          },
+          "server_group_drained": true,
+          "sampling_thread_joined": true,
+          "observer": {
+            "exit_code": 0,
+            "joined": true,
+            "forced": false
+          },
+          "host_children": 10,
+          "all_host_children_joined_exit0_unforced": true,
+          "forced_sampling_cancellation": false
+        }
+      },
+      {
+        "phase": "both",
+        "ready_seconds": 1.031,
+        "measurements": {
+          "rss_samples": 41,
+          "sampled_max_tree_rss_bytes": 240173056,
+          "sampled_max_descendants": 2,
+          "minimum_available_physical_bytes": 7674478592,
+          "physical_samples": 9,
+          "physical_formula": "page_size*(free+inactive+speculative); compressor and swap excluded",
+          "sampled_max_data_allocated_bytes": 13328384,
+          "rss_cadence_seconds": 0.2,
+          "host_disk_cadence_seconds": 1,
+          "qualification": "Sequential native samples after HTTP readiness; not an atomic tree snapshot, transient peak or hard enforcement. Startup before HTTP readiness and teardown are not RSS-sampled. No swap credit."
+        },
+        "joined": {
+          "server_terminal": {
+            "outcome": "success",
+            "exit_code": 0,
+            "teardown": "clean",
+            "wall_seconds": 9.902
+          },
+          "server_group_drained": true,
+          "sampling_thread_joined": true,
+          "observer": {
+            "exit_code": 0,
+            "joined": true,
+            "forced": false
+          },
+          "host_children": 9,
+          "all_host_children_joined_exit0_unforced": true,
+          "forced_sampling_cancellation": false
+        }
+      },
+      {
+        "phase": "rw-survivor",
+        "ready_seconds": 1.035,
+        "measurements": {
+          "rss_samples": 26,
+          "sampled_max_tree_rss_bytes": 225017856,
+          "sampled_max_descendants": 2,
+          "minimum_available_physical_bytes": 7903920128,
+          "physical_samples": 6,
+          "physical_formula": "page_size*(free+inactive+speculative); compressor and swap excluded",
+          "sampled_max_data_allocated_bytes": 15704064,
+          "rss_cadence_seconds": 0.2,
+          "host_disk_cadence_seconds": 1,
+          "qualification": "Sequential native samples after HTTP readiness; not an atomic tree snapshot, transient peak or hard enforcement. Startup before HTTP readiness and teardown are not RSS-sampled. No swap credit."
+        },
+        "joined": {
+          "server_terminal": {
+            "outcome": "success",
+            "exit_code": 0,
+            "teardown": "clean",
+            "wall_seconds": 6.675
+          },
+          "server_group_drained": true,
+          "sampling_thread_joined": true,
+          "observer": {
+            "exit_code": 0,
+            "joined": true,
+            "forced": false
+          },
+          "host_children": 6,
+          "all_host_children_joined_exit0_unforced": true,
+          "forced_sampling_cancellation": false
+        }
+      }
+    ],
+    "scope": "One shared complete Apache-only/both/RW-survivor run; these resources/latencies are not isolated per-generator costs."
+  },
+  "field0": {
+    "scope": "Numeric-zero transport admission mechanics only; no generated-reference recall or consumer opportunity.",
+    "observed": [
+      {
+        "phase": "apache-only",
+        "scope": "numeric_zero_transport_admission_only; no generated-reference recall denominator",
+        "returned_generated_references": 0,
+        "live_reference_claim": false,
+        "reference_scope": "zero returned facts establish no live reference or source/runtime absence"
+      },
+      {
+        "phase": "both",
+        "scope": "numeric_zero_transport_admission_only; no generated-reference recall denominator",
+        "returned_generated_references": 25,
+        "live_reference_claim": true,
+        "reference_scope": "only returned exact source/span facts were validated"
+      },
+      {
+        "phase": "rw-survivor",
+        "scope": "numeric_zero_transport_admission_only; no generated-reference recall denominator",
+        "returned_generated_references": 25,
+        "live_reference_claim": true,
+        "reference_scope": "only returned exact source/span facts were validated"
+      }
+    ],
+    "zero_case": "Zero returned facts when unselected claims no live reference or source/runtime absence; selected25facts are only individually validated source references."
+  },
+  "withdrawal": {
+    "withdrawn": "phebs.thrift.field.apache",
+    "survivor": "phebs.thrift.field.thriftrw",
+    "old_both_proof": "pb_331f09c8bad608f545fe5e57115fba35f29de2bf014a726346b400121a567ddd",
+    "old_proof_current_serving": "404",
+    "historical_bytes": "custody remains a separate retained registration regression; not mutated or newly claimed here"
+  },
+  "registration_tests": {
+    "record": {
+      "path": "spike/t523/validation.json",
+      "bytes": 1641,
+      "sha256": "sha256:b41a12eb64d047009907aa4199db319d37bfe30e4aa00fc45c40e41e9376fa45"
+    },
+    "scope": "Actual retained registration normal/race/vet/lint checks only. No new tests or lifecycle/restore measurement ran during outcome drafting."
+  },
+  "read_write_and_generated": "Raw SCIP read roles are not semantic read/write truth. Generated spans have no recall denominator. Apache thrift-gen role may remain production when SCIP omits Generated; generated-source paths are explicitly excluded from consumer truth.",
+  "remaining_release_gates": [
+    "Independent review of these exact measured drafts",
+    "Production-key availability, final exact card/manifest/binary/tool/validation/artifact-root binding and approved signature; no new signing action here"
+  ],
+  "expires_at_proposal": "2027-01-16T23:59:59Z",
+  "not_established": [
+    "No production signature, approval record, activation or deployment. Retained signed records use only disposable integration authority and bind their original prospective artifacts, not these later drafts.",
+    "No Linux capacity, generalized accuracy, scale, service-count ceiling or latency/throughput SLO.",
+    "No source-semantic read/write accuracy: the admitted SCIP observations carry raw read roles.",
+    "No generated-reference recall denominator or completeness; generated facts remain separately source/span validated.",
+    "No runtime use, source/runtime absence, deployment inventory, migration completion, compatibility or removal safety.",
+    "No managed generation, new source/indexing, declaration-family bridge, independent Caller Map/Atlas/Impact/WIRE/Kafka admission or dedicated field UI."
+  ]
+}

@@ -21022,6 +21022,21 @@ census, so the signed-release verification gate stays intact.
 `release_selection.package_default`, 13 focused tests in
 `cmd/phebs/release_package_test.go` and `internal/config`, and a guide section.
 
+*Slice 2 implementation (2026-11-22):*
+- **Inputs.** `release/packs/artifacts/` holds the 57 published v0.2.1
+  artifacts, byte for byte. `release/packs/templates/` holds 12 templates
+  derived from the v0.2.1 records, with patch versions bumped for the rebind.
+- **Assembly.** `internal/releasebundle.Package` verifies the bundle, copies it
+  to `runtime/`, copies the artifacts and runs `runtime/phebs release-sign` for
+  each template. It re-verifies the runtime and renames the staged package into
+  place only after everything succeeds; on any failure nothing is left behind.
+- **Targets.** `make release-package RELEASE_KEY=… [RELEASE_KEY_ID=…]` builds
+  the package. `make smoke-release-package` runs the release smoke against
+  `runtime/` with `-expect-packs`: an empty config must advertise and serve
+  Contract Atlas. The unpackaged `make smoke-release` still asserts dark.
+- **Repository hygiene.** The docs link check skips the immutable artifact
+  copies, and `.gitignore` refuses release keys and `*.pem`.
+
 ## Epic 49 · Contract Atlas and declaration production readiness
 
 **Current acceptance (2026-10-17):** use the integration-test amendment at the

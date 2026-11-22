@@ -1,0 +1,13 @@
+{
+  "schema": "phebs-final-qualified-pack-manifest-v1",
+  "pack_id": "phebs.protobuf.contract",
+  "pack_claim_version": "1.0.0",
+  "distribution": "experimental-opt-in",
+  "owner": "Ben Meddeb",
+  "qualified_manifest_artifact_id": "qualified-protobuf-atlas-manifest-1.0.0.json",
+  "qualified_card_artifact_id": "qualified-protobuf-atlas-card-1.0.0.md",
+  "qualified_validation_artifact_id": "qualified-protobuf-atlas-validation-1.0.0.json",
+  "scope_change": "No technical claim or recipe expansion; final release bindings supplied only by the verified signed PackRelease.",
+  "source_commit": "290e1518a4a192d0a3494c3ed9fa2eb39a450355",
+  "expiry": "2027-01-15T23:59:59Z"
+}

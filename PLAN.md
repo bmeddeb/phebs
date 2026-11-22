@@ -18694,3 +18694,14 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
     empty and the default is on. When the layout is present, the existing
     selection load runs once. Nothing is added per request, sync, query or
     tick.
+  - **Slice 2, release automation (2026-11-22).** `make release-package` wraps
+    the verified bundle as `runtime/` and signs the in-repo templates in
+    `release/packs/templates`. The signing runs through `runtime/phebs
+    release-sign`, so the binary being released derives every binding. The
+    templates sit beside the 57 published v0.2.1 artifacts in
+    `release/packs/artifacts`.
+    - **Rebind policy:** a new binary means a new record identity, so the
+      patch version is bumped. Claims, approvals and expiries stay unchanged.
+    - **Smoke:** the package smoke inverts the dark assertions; the unpackaged
+      smoke stays dark.
+    - **Cost:** build time only. The runtime cost is unchanged from slice 1.

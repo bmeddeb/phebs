@@ -21,12 +21,22 @@ var (
 	schemePattern       = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9+.-]*:`)
 )
 
+// signedPackArtifactsDir holds the immutable signed pack artifacts that
+// `make release-package` copies into a release package (T48.6).
+const signedPackArtifactsDir = "release/packs/artifacts/"
+
 func TestTrackedMarkdownLinksResolve(t *testing.T) {
 	root := repositoryRoot(t)
 	files := trackedFiles(t, root, "*.md")
 
 	var failures []string
 	for _, name := range files {
+		// T48.6 release inputs are byte-exact copies of published, signed pack
+		// artifacts. Their relative links resolve at their spike/ sources, and
+		// any edit would break the digests their release records bind.
+		if strings.HasPrefix(name, signedPackArtifactsDir) {
+			continue
+		}
 		data, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(name)))
 		if err != nil {
 			t.Fatalf("read %s: %v", name, err)
