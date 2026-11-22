@@ -1,6 +1,7 @@
 # Release pack inputs (T48.6)
 
-`make release-package RELEASE_KEY=/path/to/key.pem` signs every template here
+After `make release VERSION=…`, `make release-package VERSION=… RELEASE_KEY=/path/to/key.pem`
+signs every template here
 for the exact `runtime/phebs` of the release it builds. It then lays out the
 default-on package:
 

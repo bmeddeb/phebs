@@ -178,7 +178,7 @@ verify-release: ## verify RELEASE_BUNDLE bytes, modes, and canonical manifest
 smoke-release: verify-release verify-surreal ## empty-data sync/index/search and default-dark smoke
 	go run ./scripts/release-smoke -bundle "$(RELEASE_BUNDLE)" -timeout 2m
 
-release-package: release ## T48.6 signed default-on package: runtime/ plus packs/ (needs RELEASE_KEY)
+release-package: verify-release ## T48.6 signed default-on package from the built bundle: runtime/ plus packs/ (needs RELEASE_KEY)
 	@test -n "$(RELEASE_KEY)" || { printf 'release-package: set RELEASE_KEY to the PKCS#8 ed25519 release key\n' >&2; exit 1; }
 	go run ./scripts/release package -bundle "$(RELEASE_BUNDLE)" -output "$(RELEASE_PACKAGE)" \
 		-templates release/packs/templates -artifacts release/packs/artifacts \

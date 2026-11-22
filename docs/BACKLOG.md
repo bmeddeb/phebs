@@ -21030,10 +21030,16 @@ census, so the signed-release verification gate stays intact.
   to `runtime/`, copies the artifacts and runs `runtime/phebs release-sign` for
   each template. It re-verifies the runtime and renames the staged package into
   place only after everything succeeds; on any failure nothing is left behind.
-- **Targets.** `make release-package RELEASE_KEY=… [RELEASE_KEY_ID=…]` builds
-  the package. `make smoke-release-package` runs the release smoke against
+- **Targets.** After `make release`, `make release-package RELEASE_KEY=…
+  [RELEASE_KEY_ID=…]` verifies that bundle and builds the package from it. `make smoke-release-package` runs the release smoke against
   `runtime/` with `-expect-packs`: an empty config must advertise and serve
   Contract Atlas. The unpackaged `make smoke-release` still asserts dark.
+- **Dry run on `dave` (2026-11-22, `v0.3.0-dryrun.1` at `cd353f63`, not
+  published).** All 12 templates signed with `phebs-release-2026-11` for
+  binary `sha256:fe2e5c2f…`. The package smoke admitted the packs from an
+  empty config and served Contract Atlas. The unpackaged smoke stayed dark.
+  The run found that `release-package` re-ran `release` against an existing
+  bundle; it now depends on `verify-release`.
 - **Repository hygiene.** The docs link check skips the immutable artifact
   copies, and `.gitignore` refuses release keys and `*.pem`.
 
