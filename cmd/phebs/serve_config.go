@@ -273,8 +273,13 @@ var releaseLoadBindings = deriveReleaseLoadBindings
 // sole path into that set and is read once at this admitted startup boundary,
 // never on a request, sync, or per-query path:
 //
-//   - An empty Path admits nothing, performs no read, and adds no pack work.
-//   - A configured Path whose records fail verification refuses startup, and a
+//   - The effective selection comes from resolveReleaseSelection: a
+//     configured Path, else the release package layout beside the running
+//     executable verified against the in-tree anchor (T48.6), else none. No
+//     selection admits nothing and adds no pack work; a build without a
+//     package layout costs one directory stat, and package_default: off
+//     performs no read at all.
+//   - A selected Path whose records fail verification refuses startup, and a
 //     governing released record refuses it unless releaseLoadBindings actually
 //     binds it to this binary and its artifacts.
 //   - A pack whose governing record is suspended, retired, design, shadow or
@@ -287,17 +292,22 @@ var releaseLoadBindings = deriveReleaseLoadBindings
 //     release inconsistency and refuses startup rather than silently admitting
 //     nothing, so a released authorization can never outrun its implementation.
 func releasedExtractors(ctx context.Context, cfg *config.Config) ([]extract.Extractor, map[string]bool, error) {
-	if cfg.ReleaseSelection.Path == "" {
+	source, ok, err := resolveReleaseSelection(cfg)
+	if err != nil {
+		return nil, nil, fmt.Errorf("pack release selection: %w", err)
+	}
+	if !ok {
 		return nil, nil, nil
 	}
-	keys, err := releaseKeyRing(cfg.ReleaseSelection.Keys)
+	logPackageSelection(source)
+	keys, err := releaseKeyRing(source.keys)
 	if err != nil {
 		return nil, nil, err
 	}
-	opts := packrelease.Options{Keys: keys, Revoked: revokedReleaseIDs(cfg.ReleaseSelection.Revoked)}
-	selection, err := packrelease.LoadSelectionWithBindings(ctx, cfg.ReleaseSelection.Path, opts,
+	opts := packrelease.Options{Keys: keys, Revoked: revokedReleaseIDs(source.revoked)}
+	selection, err := packrelease.LoadSelectionWithBindings(ctx, source.path, opts,
 		func(ctx context.Context) (packrelease.Options, error) {
-			return releaseLoadBindings(ctx, cfg.ReleaseSelection.ArtifactsPath)
+			return releaseLoadBindings(ctx, source.artifactsPath)
 		})
 	if err != nil {
 		return nil, nil, fmt.Errorf("pack release selection: %w", err)

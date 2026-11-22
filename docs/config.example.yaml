@@ -289,11 +289,18 @@ service_catalogs: {}
 # selection. Each entry must match a release_id's grammar and be unique. The
 # list is inert while `path` is empty, so a revocation can be staged before the
 # selection directory is configured.
+#
+# `package_default` (T48.6) applies while `path` is empty. "auto" (the default)
+# admits the signed records a release package ships beside its runtime
+# (<package>/packs/selection and <package>/packs/artifacts), verified against
+# the in-tree release trust anchor. A build without that layout stays dark.
+# "off" keeps every install dark and reads nothing.
 release_selection:
   path: ""
   artifacts_path: ""
   keys: []
   revoked: []
+  package_default: auto
 # release_selection:
 #   path: /etc/phebs/pack-releases
 #   artifacts_path: /etc/phebs/pack-artifacts

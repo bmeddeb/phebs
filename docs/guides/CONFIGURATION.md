@@ -119,7 +119,7 @@ service_catalogs:
 | `revisions`                                 | `{}`             | repo name → `rev:` selector → full `refs/heads/*` or `refs/tags/*`; at most 7 additional refs per repo (8 including implicit HEAD)                              |
 | `analysis_units`                            | `{}`             | repo name → one strict service scope; omitted repositories keep whole-repository behavior; restart after changing it                                           |
 | `service_catalogs`                          | `{}`             | repo name → one explicit normalized `committed` or `operator` catalog file; exact replacement is reconciled at startup and after indexing; see [Service catalogs](#service-catalogs) |
-| `release_selection`                         | *(empty)*        | directory of signed `PackRelease` records plus their ed25519 trust anchor, the artifact directory they reference, and operator revocations; the only path into the ordinary/released admission set, read once at startup; see [Signed pack-release selection](#signed-pack-release-selection-t482-t484) |
+| `release_selection`                         | *(package default)* | directory of signed `PackRelease` records (empty: the release package's own `packs/`, see T48.6) plus their ed25519 trust anchor, the artifact directory they reference, and operator revocations; the only path into the ordinary/released admission set, read once at startup; see [Signed pack-release selection](#signed-pack-release-selection-t482-t484) |
 
 ### Historical publication retention
 
@@ -509,9 +509,12 @@ GC.
 
 ### Signed pack-release selection (T48.2, T48.4)
 
-`release_selection` is the only path into the ordinary/released admission set,
-and it ships dark. Omit the block, or leave `path` empty, and phebs admits no
-released pack, performs no release read, and adds no pack work. Toggling a
+`release_selection` is the only path into the ordinary/released admission set.
+Omit the block, or leave `path` empty, and phebs uses the signed records shipped
+in its own release package, if there are any (see
+[Release package default](#release-package-default-t486)). A development build or
+any binary without that layout admits no released pack and adds no pack work.
+`package_default: off` keeps every install dark without reading anything. Toggling a
 provisional `experimental:` extraction switch is never a route into this set:
 those switches register experimental-dark extractors, which a released record
 later governs and replaces rather than joins.
@@ -547,6 +550,41 @@ release records arrive. The directory must be flat and non-symlink; each regular
 as its single-segment name, with no spaces, newlines or path separators.
 Binding derivation is skipped for a wholly withdrawn selection; an unavailable
 artifact directory cannot defeat suspension or revocation.
+
+#### Release package default (T48.6)
+
+A published release package lays out its runtime beside its signed records:
+
+```text
+<package>/runtime/phebs
+<package>/packs/selection/*.json
+<package>/packs/artifacts/*
+```
+
+When `path` is empty, startup resolves the running executable, following
+symlinks, so a link such as `/usr/local/bin/phebs` still finds its package. It
+then looks for `packs/selection` in the parent of the executable's directory.
+If that directory is present, the records load exactly as a configured `path`
+would. `packs/artifacts` is the artifact census, and the trust anchor is the
+in-tree release key ring, not a configured `keys` list. Startup logs one line
+naming the package directory. `revoked` still withdraws packs.
+
+```yaml
+release_selection:
+  package_default: off   # "auto" (the default) or "off"
+```
+
+| Case | Result |
+| --- | --- |
+| `path` configured | the configured selection and `keys` govern; the package is ignored |
+| no `packs/selection` beside the executable | dark; one directory stat, no other read |
+| `packs/selection` present, `packs/artifacts` missing | startup refuses |
+| either directory is a symlink or not a directory | startup refuses |
+| a record signed by a key outside the in-tree ring, or a tampered record or artifact | startup refuses |
+| `package_default: off` | dark; no executable lookup and no read |
+
+Every record still binds the exact running executable and the complete artifact
+census. A package therefore admits only packs signed for the binary it ships.
 
 Strict parsing refuses an unstable or half-configured gate before startup ever
 reaches it:

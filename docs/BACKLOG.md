@@ -20981,6 +20981,47 @@ row bound and unchanged steady-state work. Enabled-schema assertions cover the
 additive fields; there is no raw UI/MCP/generated client to regenerate. Ready on
 its ticket branch; integration still requires Ben's request.
 
+**T48.6 · Default-on released selection from the release package** *(Linux
+track, Ben-directed 2026-11-22).* Every experimental pack is signed and
+published in `v0.2.1-experimental.20261020`, but startup stays dark until an
+operator hand-writes a `release_selection` block. Ben selected the embedded
+design: the binary carries an in-tree release trust anchor (public keys only),
+and an empty `release_selection.path` falls back to the signed records the
+release package ships beside its runtime (`<package>/packs/selection`,
+`<package>/packs/artifacts`). A new key, `phebs-release-2026-11`, was generated
+on `dave` for later packages. Its private key stays outside the repository,
+mode 0600. Records keep binding the exact executable and the complete artifact
+census, so the signed-release verification gate stays intact.
+
+- **Slice 1 (runtime default).**
+  - AC: with no configured path, a release package layout beside the running
+    executable admits its signed records through the existing verifier, using
+    only the in-tree anchor. Installed symlinks resolve to their package.
+  - AC: a build without the layout stays dark at the cost of one directory
+    stat. `package_default: off` stays dark without reading anything.
+  - AC: a configured `path` governs over the package. `revoked` withdraws
+    packs.
+  - AC: startup refuses on selection without artifacts, a symlinked or
+    non-directory layout, an untrusted signer, a tampered record or an altered
+    artifact.
+  - AC: an end-to-end test signs through `release-sign` into a fixture package
+    and admits from an empty configuration.
+  - AC: the configuration guide and example document the default.
+  - Gates: focused tests, `ci-static`/`ci-go`/`ci-race`. No `ui/` change; the
+    UI is capability-driven.
+- **Slice 2 (release automation).** `make release` signs each pack template
+  with the release binary and the selected key, and the bundle and manifest
+  carry `packs/`. The release smoke asserts the packaged default is on and an
+  unpackaged build stays dark. This replaces the hand assembly used for v0.2.1.
+- **Slice 3 (publication).** Cut a signed release with
+  `phebs-release-2026-11` and verify default-on startup from the published
+  archive. Installing it in a selected user instance stays MED-513.
+
+*Slice 1 implementation (2026-11-22):* `cmd/phebs/release_package.go`
+(`resolveReleaseSelection`, in-tree `releaseAnchors`),
+`release_selection.package_default`, 13 focused tests in
+`cmd/phebs/release_package_test.go` and `internal/config`, and a guide section.
+
 ## Epic 49 · Contract Atlas and declaration production readiness
 
 **Current acceptance (2026-10-17):** use the integration-test amendment at the

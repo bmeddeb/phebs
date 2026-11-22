@@ -61,9 +61,11 @@ type Config struct {
 	// When absent, T33.2 imports the committed analysis-unit-v1 state instead.
 	ServiceCatalogs map[string]ServiceCatalog `yaml:"service_catalogs"`
 	// ReleaseSelection names the signed PackRelease records admitted at startup
-	// (T48.2). It ships dark and empty: an absent Path admits no released pack
-	// and adds no pack work. A provisional extraction switch is never a path to
-	// this ordinary/released admission set.
+	// (T48.2). An absent Path falls back to the signed records shipped in a
+	// release package beside the executable (T48.6, PackageDefault); a build
+	// without that layout admits no released pack and adds no pack work. A
+	// provisional extraction switch is never a path to this ordinary/released
+	// admission set.
 	ReleaseSelection ReleaseSelection `yaml:"release_selection"`
 }
 
@@ -100,7 +102,20 @@ type ReleaseSelection struct {
 	// inert while Path is empty, so a revocation can be staged before the
 	// selection directory is configured.
 	Revoked []string `yaml:"revoked"`
+	// PackageDefault governs the T48.6 package default used when Path is
+	// empty: "" or "auto" admits the signed records shipped in the release
+	// package beside the running executable (packs/selection and
+	// packs/artifacts), verified against the in-tree release trust anchor;
+	// "off" keeps startup dark without reading anything. A build with no
+	// package layout stays dark either way. Revoked still applies.
+	PackageDefault string `yaml:"package_default"`
 }
+
+// Release package default modes for ReleaseSelection.PackageDefault.
+const (
+	ReleasePackageDefaultAuto = "auto"
+	ReleasePackageDefaultOff  = "off"
+)
 
 // ReleaseKey binds an approved key identifier to its base64-encoded ed25519
 // public key.
@@ -1070,6 +1085,13 @@ func (c *Config) validate(lines []int) error {
 	if c.ReleaseSelection.Path != "" && c.ReleaseSelection.ArtifactsPath == "" {
 		errs = append(errs, errors.New(
 			"release_selection: path is set but artifacts_path is empty, so no load could ever be bound"))
+	}
+	switch c.ReleaseSelection.PackageDefault {
+	case "", ReleasePackageDefaultAuto, ReleasePackageDefaultOff:
+	default:
+		errs = append(errs, fmt.Errorf(
+			"release_selection: package_default must be %q or %q, got %q",
+			ReleasePackageDefaultAuto, ReleasePackageDefaultOff, c.ReleaseSelection.PackageDefault))
 	}
 
 	seenReleaseIDs := map[string]bool{}

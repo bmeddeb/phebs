@@ -18674,3 +18674,23 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   production-artifact lane. T48.1a keeps its history. The Kite PHEBS board
   mirrors the new inventory.
   - **Cost:** documentation only; zero steady-state cost.
+- **2026-11-22 — T48.6 default-on released selection (Ben-directed).** Signed
+  experimental packs stay dark only because startup needs an operator-written
+  `release_selection`. Ben chose embedded selection over recipe-bound records
+  and over promoting the packs to core.
+  - **Design:** the binary carries an in-tree trust anchor holding public keys
+    only (`ben-phebs-release-2026-10` and the new `phebs-release-2026-11`,
+    generated on `dave`). An empty `release_selection.path` resolves the
+    running executable, following symlinks, and loads
+    `<package>/packs/selection` against `<package>/packs/artifacts`.
+  - **Unchanged guarantees:** records still bind the exact executable and the
+    complete census, so signed-release verification stays the gate.
+  - **Precedence:** a configured `path` keeps its configured keys.
+  - **Opt-out:** `release_selection.package_default: off` keeps any install
+    dark. A build without the layout stays dark.
+  - **Records cannot sit inside the binary:** a record binds the binary's own
+    digest, so "embedded" means the anchor plus a package-relative default.
+  - **Cost:** at startup only, one `Lstat` of `packs/selection` when `path` is
+    empty and the default is on. When the layout is present, the existing
+    selection load runs once. Nothing is added per request, sync, query or
+    tick.

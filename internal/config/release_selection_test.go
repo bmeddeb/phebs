@@ -200,3 +200,21 @@ func TestReleaseSelectionDocumentedExampleParses(t *testing.T) {
 		t.Fatalf("Parse() unexpected error: %v", err)
 	}
 }
+
+// TestReleaseSelectionPackageDefault pins the T48.6 package_default grammar:
+// absent, auto and off parse; anything else refuses.
+func TestReleaseSelectionPackageDefault(t *testing.T) {
+	for _, mode := range []string{"auto", "off"} {
+		cfg, err := Parse([]byte("release_selection:\n  package_default: " + mode + "\n"))
+		if err != nil {
+			t.Fatalf("package_default %q: %v", mode, err)
+		}
+		if cfg.ReleaseSelection.PackageDefault != mode {
+			t.Fatalf("package_default = %q, want %q", cfg.ReleaseSelection.PackageDefault, mode)
+		}
+	}
+	if _, err := Parse([]byte("release_selection:\n  package_default: on\n")); err == nil ||
+		!strings.Contains(err.Error(), "package_default") {
+		t.Fatalf("an unknown package_default must refuse, got %v", err)
+	}
+}
