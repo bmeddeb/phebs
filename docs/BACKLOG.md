@@ -20578,7 +20578,7 @@ numbers are the Kite PHEBS tracker items that mirror each lane.
 | Linux readiness and posture | T42.2v restored launch (MED-500) and T42.2n readiness (MED-501), both reduced to integration-test acceptance. T42.3 posture review (MED-504) follows. T42.2o freeze (MED-502) and separately authorized T42.2 execution (MED-503) are retired. | A restored-launch integration test on the exact head. T42.3 states posture without a scale or SLO claim unless one is measured. |
 | Installed managed SCIP | T45.7 / T45.10 (MED-505). The host-formatting refusal diagnosis (MED-695) is closed. | Admitted compiler/sysroot/offline bundle, then installed generation, navigation, restart and teardown proof on this host. T45.10a presentation stays complete. |
 | Managed target qualification | T45.9 (MED-506). | Needs an eligible authorized 5,000-service/12-GB target and host. The T45.6 waiver and the generated-evidence STOP stay unpassed. |
-| Production artifacts | T47.5, T49.4, T50.3, T51.3, T52.3 and T54.3 were published, signed, in [`v0.2.1-experimental.20261020`](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) (2026-10-20). T48.6 ships them on by default in [`v0.3.0`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.0) (2026-11-22, `6b4f52da`), signed with `phebs-release-2026-11`. | Installing and verifying v0.3.0 in a selected user instance (MED-513) needs its own target, window and authorization. `package_default: off` keeps an install dark. The earliest record expiry is 2027-01-10. |
+| Production artifacts | T47.5, T49.4, T50.3, T51.3, T52.3 and T54.3 were published, signed, in [`v0.2.1-experimental.20261020`](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) (2026-10-20). T48.6 ships them on by default in [`v0.3.0`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.0) (2026-11-22, `6b4f52da`), signed with `phebs-release-2026-11`. | MED-513 installed and verified v0.3.0 on `dave` (2026-11-22). Atlas, Caller Map, caller comparison, operation impact, Kafka and WIRE all serve, and rollback by revocation and by `package_default: off` both work. Open: Thrift field references are refused on thriftrw + YARPC repositories (header-prefix defect; the fix needs a new signed release). `package_default: off` keeps an install dark. The earliest record expiry is 2027-01-10. |
 | Reported limits (tracker only) | MED-487–493 from GitHub issue #163 (now closed). | Needs the affected production instance, repository and generation plus real publication and SCIP diagnostics. |
 | Next product program | Two-million-owner × 10,000-service convergence in [ROADMAP](./ROADMAP.md#next-two-million-owner-and-10000-service-convergence). Epics 25–28 stay unscheduled drafts. | Ticket-level scheduling is not yet selected. |
 
@@ -21062,6 +21062,71 @@ GitHub release cut from main `6b4f52da` after `ci-static`, `ci-go` and
   watermark during a full run.
 - **Remaining.** Installing it in a selected user instance stays MED-513. The
   slice 3 AC is met.
+
+*MED-513 install verification (2026-11-22):* `v0.3.0` runs on `dave` as a
+systemd user service bound to `127.0.0.1:3070`, with SurrealDB 3.2.0, a
+config that has no `release_selection` block, and an API key plus a bootstrap
+admin. The startup log names the packaged selection, and `/api/version`
+reports all 11 pack capabilities.
+- **Corpus.** Four public repositories: `grpc/grpc-go`,
+  `GoogleCloudPlatform/microservices-demo`, `uber/cadence` and
+  `bmeddeb/phebs`. Four local fixtures: the T30.7, T21.14 and T22.5 bundles
+  and the T22.2 real-index tree. One derived cadence clone with a committed
+  scip-go 0.2.7 index over `.gen/go/indexer`, `.gen/go/replicator` and
+  `common/types/mapper/thrift`. Every repository indexed and extracted to
+  exact states. A restart recovered them as current without rework.
+- **Auth.** Anonymous and wrong-key requests get 401. The API key and the
+  bootstrap login succeed. `/api/health` and `/api/version` are public by
+  design.
+- **Served end to end.**
+  - Contract Atlas: 106 entries for microservices-demo, 63 for cadence, 26
+    for grpc-go, 9 for phebs, and Thrift entries from the workbench fixture.
+  - Caller Map: callers resolved for `Search`, `SearchV2` and `Orders/Create`
+    on the fixtures, which commit resolver inputs.
+  - Caller comparison: `Search` → `SearchV2` returns 2 rows.
+  - Operation impact (`operation_callers`): `evidence_present`.
+  - Kafka: the inventory has 5 topics at 8 sites, and `orders.created.v1`
+    has 2 producer and 2 consumer assertions.
+  - WIRE (buf 1.72.0): an additive change is compatible, a field type change
+    fails `FIELD_WIRE_COMPATIBLE_TYPE`, and an unchanged schema is
+    compatible.
+- **Expected empties.**
+  - The public repositories commit no `generated-from-snapshot.json` or
+    `unit-snapshot.json`. Their resolver catalogs record
+    `generated_snapshot_missing`, and Caller Map rightly returns no rows.
+  - The released field recipes need committed scip-go 0.2.7 indexes. The
+    T22.5 authored needle and the header-less T22.2 tree are refused.
+  - No local repository pairs protoc-gen-go v1.36.11 output with such an
+    index (cadence uses gogo), so protobuf field references were not
+    exercised.
+- **Rollback.**
+  - Revoking `rel-phebs.kafka.topics-1.0.4` withdrew only that pack: 10
+    capabilities, a startup line naming `phebs.kafka.topics=revoked`,
+    `list_kafka_topics` 404, and topic usage still 200.
+  - `package_default: off` went dark: only `service-catalog-v2` remained,
+    the pack routes returned 404, and health and Search kept serving.
+  - Restoring the config brought back all 11 capabilities.
+- **Defect found: Thrift field references are refused on the standard
+  thriftrw + YARPC layout.** `admission.go` matches any header that starts
+  with `// Code generated by thriftrw`. That catches
+  `// Code generated by thriftrw-plugin-yarpc` in every `types_yarpc.go`,
+  which then fails the exact `thriftrw v1.34.0` check. The released pack
+  refuses the whole partition, so cadence served no field references. A local
+  probe that relabelled only that plugin header produced 2,006 exact
+  `REFERENCES_THRIFT_FIELD` facts with no failures. The fix needs a new
+  signed release, tracked as a follow-up.
+- **Diagnosability gaps.**
+  - Partition refusals persist as
+    `deterministic_refusal:…:classification=unknown:dimension=unknown`, so
+    the cause above was found only by re-running the extractor. One phebs
+    `evidence_staging` refusal stays unexplained.
+  - Proof coverage certificates still list the legacy per-domain runs as
+    `unpublished`/`staged` with zero counts while partitioned authority
+    serves the results.
+- **Remaining.** Fix and re-release the thriftrw header admission. Make
+  partition refusals keep their cause. Exercise protobuf field references on
+  a repository with protoc-gen-go v1.36.11 output and a committed scip-go
+  index.
 
 ## Epic 49 · Contract Atlas and declaration production readiness
 

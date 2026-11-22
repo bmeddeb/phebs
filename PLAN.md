@@ -56,7 +56,9 @@ retrieved verbatim). Everything else carries the session's substance.
     runtime admits them with no `release_selection` block;
     `package_default: off` keeps an install dark. The packs were first
     published opt-in in `v0.2.1-experimental.20261020` (2026-10-20).
-    Installation in a selected user instance (MED-513) is a separate step.
+    MED-513 installed and verified it on `dave` (2026-11-22). Thrift field
+    references on thriftrw + YARPC repositories await a header-admission fix
+    and a new signed release.
   - **Other open lanes:** installed managed SCIP (T45.7/T45.10, MED-505), the
     authorized 5,000-service/12-GB target (T45.9, MED-506), and the
     two-million-owner × 10,000-service convergence program in
@@ -18718,3 +18720,23 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
     carries `INSTALL.md` and `receipts/`. No claim, approval or expiry
     changed. The earliest expiry is Buf WIRE on 2027-01-10, and renewal means a
     new signed release.
+  - **MED-513, install verification (2026-11-22).** `v0.3.0` was installed
+    unchanged on `dave` as a loopback systemd user service. The packaged
+    selection admitted all 11 capabilities with no `release_selection` block.
+    - **Corpus:** four public repositories, four retained fixtures, and a
+      cadence clone carrying a committed scip-go 0.2.7 index.
+    - **Served:** Contract Atlas, Caller Map (on repositories that commit
+      resolver inputs), caller comparison, operation impact, Kafka inventory
+      and usage, and WIRE verdicts.
+    - **Rollback:** revoking one `release_id` withdrew exactly that pack.
+      `package_default: off` went dark, and restoring the config brought back
+      all 11 capabilities.
+    - **Decision:** the install stands. The released Thrift field recipe's
+      thriftrw header check is a prefix match, so
+      `thriftrw-plugin-yarpc` files refuse the whole partition on the
+      standard YARPC layout. That is a defect, fixed only by a new signed
+      release, not by local configuration. A probe that relabelled only that
+      header yielded 2,006 exact cadence facts.
+    - **Follow-ups:** a header-admission fix and release; keeping partition
+      refusal causes, which today persist as `classification=unknown`; and
+      a protobuf field run on protoc-gen-go v1.36.11 output.
