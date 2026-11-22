@@ -35,7 +35,32 @@ retrieved verbatim). Everything else carries the session's substance.
   many logical services first-class views over shared repository generations;
   it must not multiply a repository census, physical index, or source parse by
   the service count.
-- **Current work:** Epic 30's single-node service-scope program is complete
+- **Status snapshot (2026-11-22, main `0ca4e6f9`):**
+  - **Acceptance:** since the 2026-11-08 integration-test acceptance, every
+    track is accepted by `ci-static`/`ci-go`/`ci-race` on the exact head,
+    focused integration tests, and tagged native tests on `dave`. Rehearsals,
+    freeze/seal ceremonies and prepared qualification chains are retired.
+  - **Linux mechanisms (T42.H2):** H2r.c.c (MED-495), checkpoint/successor
+    (MED-496, V24 at `0493be25`, 2026-11-04) and executor/profile ownership
+    (MED-497, V29/A1/P5 at `7915f807`) pass natively on `dave`. Pressure,
+    backup and restore composition (MED-498) and source-owned aggregate
+    admission (MED-499) remain. The T42.H2q direct-descriptor probe was retired
+    on 2026-11-09.
+  - **Linux readiness:** T42.2v restored launch and T42.2n readiness remain as
+    integration-test work. The T42.2o freeze and the separately authorized
+    T42.2 ceremony are retired. T42.3 claims no scale or SLO result unless it
+    is measured.
+  - **Releases:** the six experimental evidence packs were published, signed,
+    in `v0.2.1-experimental.20261020` (2026-10-20). Default startup stays dark;
+    installation in a selected user instance (MED-513) is a separate step.
+  - **Other open lanes:** installed managed SCIP (T45.7/T45.10, MED-505), the
+    authorized 5,000-service/12-GB target (T45.9, MED-506), and the
+    two-million-owner × 10,000-service convergence program in
+    [docs/ROADMAP.md](./docs/ROADMAP.md). Epics 25–28 remain unscheduled
+    drafts.
+  - The [current inventory](./docs/BACKLOG.md#current-inventory-2026-11-22)
+    holds the lane table; the Kite PHEBS board mirrors it.
+- **Work log (through 2026-09-04):** Epic 30's single-node service-scope program is complete
   (2026-08-02). T30.1–T30.5 and the two post-T30.5 repairs shipped the strict
   analysis-unit contract, focused indexing, reusable candidate planning, and
   focused evidence. T30.6a–T30.6r shipped the independently bounded
@@ -18637,3 +18662,15 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
   there means rewriting configuration.
   - **Cost:** test fixtures only, plus one fallback read of this process's
     `net/tcp` tables when a starting child has already exited.
+- **2026-11-22 — Status sections reconciled with integration-test acceptance.**
+  PLAN's status snapshot and a new `docs/BACKLOG.md` current inventory replace
+  the stale September–October sequencing. MED-496 counts as closed: its V24
+  tagged native test passed on `dave` at `0493be25`. Under the 2026-11-08 rule,
+  that test is the acceptance. The record keeps its caveats: a patched
+  SurrealDB 3.2.0 build and no scale or readiness claim. MED-497 closes on
+  V29, A1 and P5. The T42.2o freeze and the separately authorized T42.2
+  ceremony are retired. T42.2v and T42.2n are reduced to integration tests.
+  The six signed experimental releases of 2026-10-20 close the T48.1a
+  production-artifact lane. T48.1a keeps its history. The Kite PHEBS board
+  mirrors the new inventory.
+  - **Cost:** documentation only; zero steady-state cost.

@@ -20562,7 +20562,34 @@ remains a separate T45.8 diagnostic, not a screenshot-baseline defect. Each
 leaf is complete only against its own ACs; external inputs and missing release
 signatures stay visibly pending. No main merge or production release is implied.
 
+### Current inventory (2026-11-22)
+
+Snapshot: main `0ca4e6f9`, after the
+[integration-test acceptance](#integration-test-acceptance-2026-11-08-ben-directed).
+This table supersedes the remaining-lane table in the
+[T48.1a current inventory](#t481a-current-inventory) for current sequencing.
+T48.1a keeps its 2026-10-18 history, merge witnesses and dispositions. MED
+numbers are the Kite PHEBS tracker items that mirror each lane.
+
+| Lane | State and remaining tickets | Next observable result / hold |
+|---|---|---|
+| Linux mechanisms (T42.H2, MED-494) | Native passes on `dave`: H2r.c.c (MED-495), checkpoint/successor V24 at `0493be25` (MED-496), executor/profile V29, A1 and P5 at `7915f807` (MED-497). Open: pressure/backup/restore composition (MED-498), then prospective plans and source-owned aggregate admission (MED-499). | Focused integration tests and tagged native tests on `dave` that exercise pressure, backup and restore. [Linux handoff #124](https://github.com/bmeddeb/phebs/issues/124) remains open for any of its commands that still apply. |
+| Linux readiness and posture | T42.2v restored launch (MED-500) and T42.2n readiness (MED-501), both reduced to integration-test acceptance. T42.3 posture review (MED-504) follows. T42.2o freeze (MED-502) and separately authorized T42.2 execution (MED-503) are retired. | A restored-launch integration test on the exact head. T42.3 states posture without a scale or SLO claim unless one is measured. |
+| Installed managed SCIP | T45.7 / T45.10 (MED-505). The host-formatting refusal diagnosis (MED-695) is closed. | Admitted compiler/sysroot/offline bundle, then installed generation, navigation, restart and teardown proof on this host. T45.10a presentation stays complete. |
+| Managed target qualification | T45.9 (MED-506). | Needs an eligible authorized 5,000-service/12-GB target and host. The T45.6 waiver and the generated-evidence STOP stay unpassed. |
+| Production artifacts | T47.5, T49.4, T50.3, T51.3, T52.3 and T54.3 are published, signed, in [`v0.2.1-experimental.20261020`](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) (2026-10-20). | Installing and verifying that package in a selected user instance (MED-513) needs its own target, window and authorization. Default startup stays dark. |
+| Reported limits (tracker only) | MED-487–493 from GitHub issue #163 (now closed). | Needs the affected production instance, repository and generation plus real publication and SCIP diagnostics. |
+| Next product program | Two-million-owner × 10,000-service convergence in [ROADMAP](./ROADMAP.md#next-two-million-owner-and-10000-service-convergence). Epics 25–28 stay unscheduled drafts. | Ticket-level scheduling is not yet selected. |
+
+T47.2b and T49.1b label rounds (MED-514/515) stay optional research. Retired
+ceremony items keep their historical bytes and are not reopened. This snapshot
+changes no runtime, UI, receipt, release artifact or acceptance threshold.
+
 ### T48.1a current inventory
+
+*Its remaining-lane table is superseded for current sequencing by the
+[2026-11-22 current inventory](#current-inventory-2026-11-22); retained as the
+2026-10-18 snapshot.*
 
 **T48.1a ✅ · Reconcile integrated work and remaining dependencies** *(completed 2026-10-18,
 Mac documentation follow-up; independent of #124).* Snapshot: merged main
