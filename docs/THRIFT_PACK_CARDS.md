@@ -50,7 +50,13 @@ recorded in service detail).
 field identifiers produce exactly one tier-`unresolved`
 `THRIFT_EXTRACTION_GAP` assertion (`implicit_field_id` / `invalid_field_id`)
 and no shape claims — Thrift assigns negative wire identifiers implicitly,
-and emitting a guess would fabricate identity. Parse, read, complexity-bound,
+and emitting a guess would fabricate identity. Since PHEBS-39, a file that
+declares one identity twice with different attributes gaps the same way.
+The gap names the first conflicting identity: `duplicate_field_id` when it
+is a field (a field identifier repeated in one message or parameter list),
+otherwise `conflicting_declaration` (a type, service or function declared
+twice differently). The reference compiler rejects such a file, so it is not
+inside the claim; identical repeats are still declared. Parse, read, complexity-bound,
 and publication failures abort the whole staged run, leaving prior published
 facts intact. Same-file typedef chains are chased at most 16 hops; nested
 containers beyond one level abstain (`NESTED_CONTAINER_SHAPE`).

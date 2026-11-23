@@ -19024,3 +19024,44 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
       fixtures are configured. The first gate run failed on the pure-reader
       import allowlist and was fixed before merge (see Pure-reader boundary).
       PHEBS-38 is closed.
+  - **PHEBS-39, a conflicting Thrift file no longer refuses the repository (2026-11-23).**
+    Found while verifying PHEBS-38 on `dave`. In every recent generation of
+    `github.com/bmeddeb/phebs`, the `thrift-contract` partition refused with
+    `stage=evidence_staging:generation=extraction_domain:classification=unknown:dimension=unknown`,
+    so Contract Atlas lost every Thrift declaration in that repository.
+    - **Cause.** `spike/t522/testdata/neutral/idl/packet.thrift` declares
+      field ID `1` twice in `struct Ambiguous` (`left` and `right`).
+      `thriftdecl` emitted two `DECLARES_FIELD packet.Ambiguous#1` assertions
+      with different details, and the evidence store refuses a duplicate
+      semantic assertion with conflicting attributes. One file outside the
+      claim therefore withdrew the whole repository's run. A worker test
+      reproduces `dave`'s exact receipt with the old extractor.
+    - **Decision.** `thriftdecl` holds one file's declarations until the file
+      is complete. If two share an identity (predicate and object) but differ
+      in tier, role or detail, the file becomes one tier-`unresolved`
+      `THRIFT_EXTRACTION_GAP`, cited at the second declaration:
+      `duplicate_field_id` when the first conflict is a field, otherwise
+      `conflicting_declaration`. This is the D2 posture that already gaps
+      implicit and out-of-range field IDs. Identical repeats are still
+      declared, and the store still merges their evidence.
+    - **Claim and revalidation.** The signed card claims only files the Apache
+      Thrift compiler accepts, and that compiler rejects every file this gap
+      catches, so no in-claim fact changes. Revalidated offline: the T49.2
+      export over every locked file of rounds 1, 2 and 3 (30 repositories,
+      342 files, 23,333 facts) is byte-identical before and after, with no new
+      gap. The reader version (`thriftdecl` 1.1.2), card, claim, approval and
+      expiry stay, as in PHEBS-35.
+    - **Implementation revision 1.** `thriftdecl` declares revision 1, so the
+      next start re-extracts each repository once and the refused partitions
+      re-run at their current head (the PHEBS-37 mechanism).
+    - **Not decided here.** `protodecl` has the same hole: it emits duplicate
+      declarations by design, so two conflicting declarations of one
+      identity would refuse the run the same way. It has no gap vocabulary,
+      and no instance has shown the case; it stays open.
+    - **Steady-state cost.** One map entry per declaration of the file being
+      read, held only until that file's facts are emitted; the file's facts
+      are already bounded by the complexity preflight. No new read, write,
+      lock, cache, child, timer or schema change.
+    - **Release.** Ships as `v0.3.5`. All twelve pack templates take a patch
+      bump for the rebind. No claim, card, reader version, approval or expiry
+      changes.
