@@ -59,9 +59,11 @@ retrieved verbatim). Everything else carries the session's substance.
     MED-513 installed and verified it on `dave` (2026-11-22).
     [`v0.3.1`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.1)
     (2026-11-23, `6797ad14`) fixes the thriftrw plugin-header refusal
-    (PHEBS-35), verified on `dave`. Thrift field references on cadence-sized
-    SCIP indexes still need the experimental typed-scope reservation policy
-    (PHEBS-36).
+    (PHEBS-35), verified on `dave`.
+    [`v0.3.2`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.2)
+    (2026-11-23, `d4ee8078`) makes typed-scope reservations the default
+    (PHEBS-36). On `dave`, with the default config, it serves cadence's Thrift
+    field references.
   - **Other open lanes:** installed managed SCIP (T45.7/T45.10, MED-505), the
     authorized 5,000-service/12-GB target (T45.9, MED-506), and the
     two-million-owner × 10,000-service convergence program in
@@ -18821,3 +18823,15 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
     - **Not decided here.** A general retry of terminal refusals across
       binary upgrades, and the coverage certificate that reports a serving
       run as `unpublished`, stay open as their own ticket.
+    - **Verified (2026-11-23).** `v0.3.2` was published from `d4ee8078`
+      (runtime sha256 `49190ad1…`) and installed on `dave`. The PHEBS-35
+      probe lines were removed, so the instance runs the default config, with
+      all 11 capabilities lit. The generation that `v0.3.1` built under the
+      experimental switch was reused without re-extraction, which shows the
+      new default computes the same policy identity. At a new
+      `fixture-cadence-scip` head (`13e15653`), all twelve partitions
+      completed under the default policy, and `find_field_references` serves
+      17 exact assertions for `replicator.ReplicationTaskInfo#70` and 21 for
+      `replicator.DomainTaskAttributes#20`. PHEBS-36 is closed. A new commit
+      on a local connection is fetched only at startup or on
+      `sync.resync_interval` (default 1h), not by `/api/reindex`.
