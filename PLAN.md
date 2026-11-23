@@ -68,6 +68,9 @@ retrieved verbatim). Everything else carries the session's substance.
     (2026-11-23, `932d49b1`) re-extracts when an extractor's behaviour
     changes at an unchanged head, and reports partition-served domains as
     served coverage (PHEBS-37), verified on `dave`.
+    [`v0.3.4`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.4)
+    (2026-11-23, `fb0b1265`) records why a released field recipe refused its
+    input instead of `unknown` (PHEBS-38), verified on `dave`.
   - **Other open lanes:** installed managed SCIP (T45.7/T45.10, MED-505), the
     authorized 5,000-service/12-GB target (T45.9, MED-506), and the
     two-million-owner × 10,000-service convergence program in
@@ -19007,3 +19010,17 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
     - **Release.** Ships as `v0.3.4`. All twelve pack templates take a patch
       bump for the rebind. No claim, card, reader version, approval or expiry
       changes.
+    - **Verified (2026-11-23).** `v0.3.4` was published from `fb0b1265`
+      (runtime sha256 `c87e3394…`) and installed on `dave` with an unchanged
+      default config; the same 11 capabilities are lit. The restart re-extracted
+      nothing, as decided. An empty commit on the `t222-realindex` fixture
+      (`e84938c0`) built generation `7ba389d0`: 9 partitions done and the
+      thrift-field partition refused with
+      `stage=extractor_execution:generation=extraction_domain:classification=unsupported_input:dimension=generator_provenance`,
+      where the `v0.3.3` generation `a1c8dd68` recorded `unknown`. The
+      `t225-thrift-field-demo` bundle fixture was not re-headed, so its two
+      refusals keep `unknown`; its `scip_producer` marking is covered by a test
+      on the same fixture bytes. Freshness stays `stale` while the synthetic
+      fixtures are configured. The first gate run failed on the pure-reader
+      import allowlist and was fixed before merge (see Pure-reader boundary).
+      PHEBS-38 is closed.

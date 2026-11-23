@@ -20578,7 +20578,7 @@ numbers are the Kite PHEBS tracker items that mirror each lane.
 | Linux readiness and posture | T42.2v restored launch (MED-500) and T42.2n readiness (MED-501), both reduced to integration-test acceptance. T42.3 posture review (MED-504) follows. T42.2o freeze (MED-502) and separately authorized T42.2 execution (MED-503) are retired. | A restored-launch integration test on the exact head. T42.3 states posture without a scale or SLO claim unless one is measured. |
 | Installed managed SCIP | T45.7 / T45.10 (MED-505). The host-formatting refusal diagnosis (MED-695) is closed. | Admitted compiler/sysroot/offline bundle, then installed generation, navigation, restart and teardown proof on this host. T45.10a presentation stays complete. |
 | Managed target qualification | T45.9 (MED-506). | Needs an eligible authorized 5,000-service/12-GB target and host. The T45.6 waiver and the generated-evidence STOP stay unpassed. |
-| Production artifacts | T47.5, T49.4, T50.3, T51.3, T52.3 and T54.3 were published, signed, in [`v0.2.1-experimental.20261020`](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) (2026-10-20). T48.6 ships them on by default in [`v0.3.0`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.0) (2026-11-22, `6b4f52da`), signed with `phebs-release-2026-11`. | MED-513 installed and verified v0.3.0 on `dave` (2026-11-22). Atlas, Caller Map, caller comparison, operation impact, Kafka and WIRE all serve, and rollback by revocation and by `package_default: off` both work. [`v0.3.1`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.1) (2026-11-23, `6797ad14`) fixes the thriftrw plugin-header refusal (PHEBS-35), verified on `dave`. [`v0.3.2`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.2) (2026-11-23, `d4ee8078`) makes typed-scope reservations the default (PHEBS-36), and with the default config `dave` serves cadence's Thrift field references. [`v0.3.3`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.3) (2026-11-23, `932d49b1`) re-extracts after a same-version extractor fix and reports partition-served domains as served coverage (PHEBS-37), verified on `dave`. `package_default: off` keeps an install dark. The earliest record expiry is 2027-01-10. |
+| Production artifacts | T47.5, T49.4, T50.3, T51.3, T52.3 and T54.3 were published, signed, in [`v0.2.1-experimental.20261020`](https://github.com/bmeddeb/phebs/releases/tag/v0.2.1-experimental.20261020) (2026-10-20). T48.6 ships them on by default in [`v0.3.0`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.0) (2026-11-22, `6b4f52da`), signed with `phebs-release-2026-11`. | MED-513 installed and verified v0.3.0 on `dave` (2026-11-22). Atlas, Caller Map, caller comparison, operation impact, Kafka and WIRE all serve, and rollback by revocation and by `package_default: off` both work. [`v0.3.1`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.1) (2026-11-23, `6797ad14`) fixes the thriftrw plugin-header refusal (PHEBS-35), verified on `dave`. [`v0.3.2`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.2) (2026-11-23, `d4ee8078`) makes typed-scope reservations the default (PHEBS-36), and with the default config `dave` serves cadence's Thrift field references. [`v0.3.3`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.3) (2026-11-23, `932d49b1`) re-extracts after a same-version extractor fix and reports partition-served domains as served coverage (PHEBS-37), verified on `dave`. [`v0.3.4`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.4) (2026-11-23, `fb0b1265`) records why a released field recipe refused its input (PHEBS-38), verified on `dave`. `package_default: off` keeps an install dark. The earliest record expiry is 2027-01-10. |
 | Reported limits (tracker only) | MED-487–493 from GitHub issue #163 (now closed). | Needs the affected production instance, repository and generation plus real publication and SCIP diagnostics. |
 | Next product program | Two-million-owner × 10,000-service convergence in [ROADMAP](./ROADMAP.md#next-two-million-owner-and-10000-service-convergence). Epics 25–28 stay unscheduled drafts. | Ticket-level scheduling is not yet selected. |
 
@@ -21210,6 +21210,17 @@ Those refusals (`t222-realindex` and `t225-thrift-field-demo`) predate this
 release and recur identically in every generation; the certificate now
 discloses them. Receipts are in `~/phebs-instance/receipts/phebs37-2026-11-23/`
 on `dave`, including a v0.3.2 baseline from the same probe.
+
+*PHEBS-38 closed (2026-11-23):* [`v0.3.4`](https://github.com/bmeddeb/phebs/releases/tag/v0.3.4)
+was published from `fb0b1265` and installed on `dave`. The three fixture
+refusals behind `stale` freshness are correct refusals of synthetic input:
+`t222-realindex` has no thriftrw generator header, and
+`t225-thrift-field-demo`'s index is not scip-go 0.2.7 output. Their receipts
+now say so. After a new `t222-realindex` head, the thrift-field partition
+records `classification=unsupported_input:dimension=generator_provenance`
+where `v0.3.3` recorded `unknown`. Freshness stays `stale` while those
+fixtures are configured; removing them is an operator choice. Receipts are in
+`~/phebs-instance/receipts/phebs38-2026-11-23/` on `dave`.
 
 ## Epic 49 · Contract Atlas and declaration production readiness
 
