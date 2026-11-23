@@ -56,6 +56,13 @@ func (thriftDecl) Domain() string                 { return domain }
 func (thriftDecl) Version() string                { return version }
 func (thriftDecl) Candidate(filePath string) bool { return strings.HasSuffix(filePath, ".thrift") }
 
+// ImplementationRevision records behaviour changes that keep the signed
+// reader version (PHEBS-37). Revision 1 is PHEBS-39: a file that declares one
+// identity twice with different attributes becomes one structured gap instead
+// of refusing the repository's whole run, so a refusal recorded at an
+// unchanged head is re-extracted once.
+func (thriftDecl) ImplementationRevision() uint32 { return 1 }
+
 type serviceDetail struct {
 	Schema  string `json:"schema"`
 	Name    string `json:"name"`
@@ -240,6 +247,16 @@ func fileFacts(ctx context.Context, corpus sdk.Corpus, relPath string, blob sdk.
 		return 1, nil
 	}
 
+	// Declarations are held until the whole file is known (PHEBS-39). Two
+	// declarations with one identity but different attributes cannot both be
+	// stated, and the evidence store would refuse the repository's whole run.
+	// The reference compiler rejects such a file, so it is outside the claim
+	// and becomes one structured gap like an inadmissible field ID.
+	var pending []sdk.Fact
+	state.emit = func(fact sdk.Fact) error {
+		pending = append(pending, fact)
+		return nil
+	}
 	for _, definition := range program.Definitions {
 		if err := ctx.Err(); err != nil {
 			return 0, err
@@ -255,7 +272,52 @@ func fileFacts(ctx context.Context, corpus sdk.Corpus, relPath string, blob sdk.
 			}
 		}
 	}
+	state.emit = emit
+	if gap := findDeclarationConflict(state, pending); gap != nil {
+		if err := emitFileGap(state, gap.reason, gap.line, gap.column); err != nil {
+			return 0, err
+		}
+		return 1, nil
+	}
+	for _, fact := range pending {
+		if err := emit(fact); err != nil {
+			return 0, err
+		}
+	}
 	return 0, nil
+}
+
+// findDeclarationConflict returns the first declaration whose identity
+// (predicate and object within this file) was already declared with different
+// attributes. Identical repeats are kept, as before: the store merges their
+// evidence. The gap names the first conflict in emission order:
+// duplicate_field_id when it is a field, otherwise conflicting_declaration
+// (a type, service or function declared twice differently).
+func findDeclarationConflict(state *fileState, facts []sdk.Fact) *fieldIDGap {
+	seen := make(map[string]string, len(facts))
+	for _, fact := range facts {
+		key := fact.Assertion.Predicate + "\x00" + fact.Assertion.Object
+		attributes := fact.Assertion.Tier + "\x00" + fact.Assertion.CodeRole + "\x00" +
+			fact.Assertion.Detail
+		previous, ok := seen[key]
+		if !ok {
+			seen[key] = attributes
+			continue
+		}
+		if previous == attributes {
+			continue
+		}
+		reason := "conflicting_declaration"
+		if fact.Assertion.Predicate == "DECLARES_FIELD" {
+			reason = "duplicate_field_id"
+		}
+		return &fieldIDGap{
+			reason: reason,
+			line:   fact.StartLine,
+			column: fact.Atom.StartByte - state.lines[fact.StartLine-1] + 1,
+		}
+	}
+	return nil
 }
 
 // scopeFor is decision D1: the last dot-segment of `namespace go` when
