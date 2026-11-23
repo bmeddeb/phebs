@@ -34,6 +34,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/extract/scipsource"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal"
 )
 
 const (
@@ -192,7 +193,10 @@ func parseIndexAdmitted(ctx context.Context, content string, corpus sdk.Corpus, 
 			}
 			metadataSeen = true
 			if released && (metadata.GetToolInfo().GetName() != "scip-go" || metadata.GetToolInfo().GetVersion() != "0.2.7" || metadata.GetTextDocumentEncoding() != scip.TextEncoding_UTF8) {
-				return errors.New("committed protobuf field recipe requires scip-go 0.2.7 UTF8 input")
+				return pipelinerefusal.UnsupportedInput(
+					errors.New("committed protobuf field recipe requires scip-go 0.2.7 UTF8 input"),
+					pipelinerefusal.DimensionSCIPProducer,
+				)
 			}
 			switch metadata.GetTextDocumentEncoding() {
 			case scip.TextEncoding_UnspecifiedTextEncoding:
@@ -234,7 +238,10 @@ func parseIndexAdmitted(ctx context.Context, content string, corpus sdk.Corpus, 
 				encoding = metadataEncoding
 			}
 			if released && encoding != scip.PositionEncoding_UTF8CodeUnitOffsetFromLineStart {
-				return fmt.Errorf("committed protobuf field recipe requires UTF8 document %q", doc.GetRelativePath())
+				return pipelinerefusal.UnsupportedInput(
+					fmt.Errorf("committed protobuf field recipe requires UTF8 document %q", doc.GetRelativePath()),
+					pipelinerefusal.DimensionSCIPProducer,
+				)
 			}
 			if !validEncoding(encoding) {
 				return fmt.Errorf("document %q has unspecified position encoding", doc.GetRelativePath())

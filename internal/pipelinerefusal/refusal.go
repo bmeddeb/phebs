@@ -55,6 +55,10 @@ const (
 	ClassificationLimit   Classification = "limit"
 	ClassificationInvalid Classification = "invalid"
 	ClassificationUnknown Classification = "unknown"
+	// ClassificationUnsupportedInput is a released extractor recipe declining
+	// input outside its admitted producer or generator (PHEBS-38). It names
+	// which admission check refused, never the file or the producer it found.
+	ClassificationUnsupportedInput Classification = "unsupported_input"
 )
 
 type Dimension string
@@ -109,6 +113,10 @@ const (
 	DimensionCallerGenerationCanonicalBytes Dimension = "caller_generation_canonical_bytes"
 	DimensionCallerGenerationStagingBytes   Dimension = "caller_generation_staging_bytes"
 	DimensionResidentBytes                  Dimension = "resident_bytes"
+
+	// Admission dimensions for ClassificationUnsupportedInput.
+	DimensionSCIPProducer        Dimension = "scip_producer"
+	DimensionGeneratorProvenance Dimension = "generator_provenance"
 )
 
 // Receipt is the complete durable projection of one refusal. Observed and
@@ -164,6 +172,41 @@ func (measurement *Measurement) Error() string {
 }
 
 func (measurement *Measurement) Unwrap() error { return measurement.cause }
+
+// Unsupported is an internal, stage-free admission cause: a released
+// extractor recipe declined input it does not admit. Like Measurement, the
+// owning job boundary promotes it with At, so the extractor never picks the
+// stage. Its rendered text is the cause's own, which stays in-process.
+type Unsupported struct {
+	Dimension Dimension
+	cause     error
+}
+
+// UnsupportedInput marks cause as a recipe admission refusal on dimension.
+// An invalid dimension leaves the cause unmarked, so At classifies it as
+// unknown rather than as a guessed admission check.
+func UnsupportedInput(cause error, dimension Dimension) error {
+	if cause == nil {
+		return nil
+	}
+	if !validUnsupportedDimension(dimension) {
+		return cause
+	}
+	return &Unsupported{Dimension: dimension, cause: cause}
+}
+
+func (unsupported *Unsupported) Error() string { return unsupported.cause.Error() }
+
+func (unsupported *Unsupported) Unwrap() error { return unsupported.cause }
+
+func validUnsupportedDimension(dimension Dimension) bool {
+	switch dimension {
+	case DimensionSCIPProducer, DimensionGeneratorProvenance:
+		return true
+	default:
+		return false
+	}
+}
 
 func (failure *Error) Error() string {
 	encoded, err := json.Marshal(failure.receipt)
@@ -271,7 +314,9 @@ func Measure(cause error, dimension Dimension, observed, limit int64) error {
 }
 
 // At closes any error at an owning stage. A measured limit retains its exact
-// scalar; all other causes become an honest unknown with zero scalar fields.
+// scalar, and a recipe admission refusal at extractor execution keeps its
+// admission dimension; all other causes become an honest unknown with zero
+// scalar fields.
 func At(cause error, stage Stage, generation GenerationKind) error {
 	if cause == nil {
 		return nil
@@ -287,6 +332,14 @@ func At(cause error, stage Stage, generation GenerationKind) error {
 		return Limit(
 			cause, stage, generation, measurement.Dimension,
 			measurement.Observed, measurement.Limit,
+		)
+	}
+	var unsupported *Unsupported
+	if errors.As(cause, &unsupported) && unsupported != nil &&
+		validStageUnsupported(stage, generation, unsupported.Dimension) {
+		return Classified(
+			cause, stage, generation,
+			ClassificationUnsupportedInput, unsupported.Dimension,
 		)
 	}
 	return Unknown(cause, stage, generation)
@@ -337,6 +390,12 @@ func Validate(receipt Receipt) error {
 	if receipt.Observed != 0 || receipt.Limit != 0 {
 		return fmt.Errorf("%w: non-limit scalar", ErrInvalid)
 	}
+	if receipt.Classification == ClassificationUnsupportedInput {
+		if !validStageUnsupported(receipt.Stage, receipt.GenerationKind, receipt.Dimension) {
+			return fmt.Errorf("%w: unsupported-input shape", ErrInvalid)
+		}
+		return nil
+	}
 	if receipt.Dimension != DimensionUnknown {
 		return fmt.Errorf("%w: non-limit dimension", ErrInvalid)
 	}
@@ -365,6 +424,14 @@ func validStageGeneration(stage Stage, generation GenerationKind) bool {
 	default:
 		return false
 	}
+}
+
+// validStageUnsupported admits recipe admission refusals only where an
+// extractor runs.
+func validStageUnsupported(stage Stage, generation GenerationKind, dimension Dimension) bool {
+	return stage == StageExtractorExecution &&
+		generation == GenerationExtractionDomain &&
+		validUnsupportedDimension(dimension)
 }
 
 func validStageDimension(stage Stage, dimension Dimension) bool {
@@ -481,7 +548,8 @@ func validGeneration(generation GenerationKind) bool {
 
 func validClassification(classification Classification) bool {
 	switch classification {
-	case ClassificationLimit, ClassificationInvalid, ClassificationUnknown:
+	case ClassificationLimit, ClassificationInvalid, ClassificationUnknown,
+		ClassificationUnsupportedInput:
 		return true
 	default:
 		return false
@@ -516,7 +584,8 @@ func validDimension(dimension Dimension) bool {
 		DimensionCallerGenerationAbstentions,
 		DimensionCallerGenerationCanonicalBytes,
 		DimensionCallerGenerationStagingBytes,
-		DimensionResidentBytes:
+		DimensionResidentBytes,
+		DimensionSCIPProducer, DimensionGeneratorProvenance:
 		return true
 	default:
 		return false

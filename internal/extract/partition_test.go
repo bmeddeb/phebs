@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -346,6 +347,31 @@ func TestPartitionRefusalReasonComposesValidatedReceipts(t *testing.T) {
 				pipelinerefusal.StageEvidenceStaging,
 			),
 			want: "deterministic_refusal:stage=evidence_staging:generation=extraction_domain:classification=limit:dimension=staged_rows:observed=1859:limit=1858",
+		},
+		{
+			name: "recipe admission refusal keeps its admission check",
+			err: partitionBoundaryFailure(
+				t.Context(),
+				fmt.Errorf("generated document %q: %w", "private/path.go",
+					pipelinerefusal.UnsupportedInput(
+						errors.New("private generator header"),
+						pipelinerefusal.DimensionGeneratorProvenance,
+					)),
+				pipelinerefusal.StageExtractorExecution,
+			),
+			want: "deterministic_refusal:stage=extractor_execution:generation=extraction_domain:classification=unsupported_input:dimension=generator_provenance",
+		},
+		{
+			name: "recipe admission refusal outside extractor execution stays unknown",
+			err: partitionBoundaryFailure(
+				t.Context(),
+				pipelinerefusal.UnsupportedInput(
+					errors.New("private producer"),
+					pipelinerefusal.DimensionSCIPProducer,
+				),
+				pipelinerefusal.StageEvidenceStaging,
+			),
+			want: "deterministic_refusal:stage=evidence_staging:generation=extraction_domain:classification=unknown:dimension=unknown",
 		},
 	}
 	for _, test := range tests {

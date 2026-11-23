@@ -3306,7 +3306,14 @@ The closed stage/generation pairs are:
 A `limit` refusal names the owning dimension and records the exact nonnegative
 `observed` and `limit` scalars with `observed > limit`. An `invalid` or
 `unknown` refusal uses `dimension: unknown` with both scalars zero; phebs does
-not infer a measurement it did not obtain. Crossed stage/generation or
+not infer a measurement it did not obtain. An `unsupported_input` refusal is a
+released extractor recipe declining input outside its admitted producer or
+generator (PHEBS-38). It occurs only at `extractor_execution` with both scalars
+zero, and its dimension names the admission check: `scip_producer` (the index
+is not scip-go 0.2.7 UTF-8 output) or `generator_provenance` (a generated
+file's header is not an admitted generator). It never names the file or what
+was found; rerun with `PHEBS_PARTITION_FAILURE_DIAGNOSTICS=1` on a new head for
+the full chain. Crossed stage/generation or
 stage/dimension authority is invalid and is resealed as a closed `unknown`
 failure rather than rendered with private context.
 

@@ -327,3 +327,75 @@ func TestInvalidBoundaryPairFallsBackToFullyUnknownAuthority(t *testing.T) {
 		t.Fatalf("crossed fallback = %+v, present=%t, error=%v", receipt, ok, err)
 	}
 }
+
+func TestUnsupportedInputIsPromotedOnlyAtExtractorExecution(t *testing.T) {
+	private := errors.New("generated document private/path.go: private header")
+	for _, dimension := range []Dimension{DimensionSCIPProducer, DimensionGeneratorProvenance} {
+		marked := UnsupportedInput(private, dimension)
+		if marked.Error() != private.Error() || !errors.Is(marked, private) {
+			t.Fatalf("UnsupportedInput changed the in-process cause: %v", marked)
+		}
+		closed := At(
+			fmt.Errorf("outer %s: %w", "private/repo", marked),
+			StageExtractorExecution, GenerationExtractionDomain,
+		)
+		receipt, ok := From(closed)
+		if !ok || receipt.Classification != ClassificationUnsupportedInput ||
+			receipt.Dimension != dimension || receipt.Observed != 0 || receipt.Limit != 0 {
+			t.Fatalf("At(%s) = %+v, %v", dimension, receipt, ok)
+		}
+		if strings.Contains(closed.Error(), "private") || !errors.Is(closed, private) {
+			t.Fatalf("closed admission refusal leaked or lost its cause: %v", closed)
+		}
+		parsed, ok := ParseDurableErrorText(closed.Error())
+		if !ok || parsed != receipt {
+			t.Fatalf("durable admission refusal did not round-trip: %+v, %v", parsed, ok)
+		}
+		other, _ := From(At(marked, StageEvidenceStaging, GenerationExtractionDomain))
+		if other.Classification != ClassificationUnknown || other.Dimension != DimensionUnknown {
+			t.Fatalf("admission refusal outside extractor execution = %+v", other)
+		}
+	}
+	if unmarked := UnsupportedInput(private, DimensionStagedRows); unmarked != private {
+		t.Fatalf("UnsupportedInput accepted a non-admission dimension: %v", unmarked)
+	}
+	if UnsupportedInput(nil, DimensionSCIPProducer) != nil {
+		t.Fatal("UnsupportedInput(nil) is not nil")
+	}
+}
+
+func TestUnsupportedInputReceiptShape(t *testing.T) {
+	valid := Receipt{
+		Schema: Schema, Stage: StageExtractorExecution,
+		GenerationKind: GenerationExtractionDomain,
+		Classification: ClassificationUnsupportedInput,
+		Dimension:      DimensionGeneratorProvenance,
+	}
+	if err := Validate(valid); err != nil {
+		t.Fatalf("valid admission receipt: %v", err)
+	}
+	for name, mutate := range map[string]func(*Receipt){
+		"unknown dimension":  func(r *Receipt) { r.Dimension = DimensionUnknown },
+		"limit dimension":    func(r *Receipt) { r.Dimension = DimensionStagedRows },
+		"other stage":        func(r *Receipt) { r.Stage = StageEvidenceStaging },
+		"invented scalar":    func(r *Receipt) { r.Observed, r.Limit = 2, 1 },
+		"crossed generation": func(r *Receipt) { r.GenerationKind = GenerationCaller },
+	} {
+		receipt := valid
+		mutate(&receipt)
+		if Validate(receipt) == nil {
+			t.Fatalf("%s: admission receipt validated: %+v", name, receipt)
+		}
+	}
+	for _, dimension := range []Dimension{DimensionSCIPProducer, DimensionGeneratorProvenance} {
+		limit := Receipt{
+			Schema: Schema, Stage: StageExtractorExecution,
+			GenerationKind: GenerationExtractionDomain,
+			Classification: ClassificationLimit, Dimension: dimension,
+			Observed: 2, Limit: 1,
+		}
+		if Validate(limit) == nil {
+			t.Fatalf("admission dimension %q validated as a limit", dimension)
+		}
+	}
+}
