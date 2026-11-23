@@ -144,7 +144,7 @@ func t422StaleFinalSnapshot(
 	typedScopeReservations bool,
 ) (t422StaleFinal, error) {
 	var value t422StaleFinal
-	policy, err := candidate.ExtractionPolicyDigest(state.PolicyDigest, true, typedScopeReservations)
+	policy, err := candidate.ExtractionPolicyDigest(state.PolicyDigest, true, typedScopeReservations, "")
 	if err != nil || response.Schema != t421FinalAuthoritySchema || !response.Authority.Current || len(response.ExtractionRoots) != len(value.roots) ||
 		state.GenerationDigest != response.Authority.CandidateGenerationSHA256 || state.Commit != response.Authority.PhysicalCommit ||
 		!t422SemanticDigest(state.ManifestDigest) || !t422SemanticDigest(response.Authority.SourceGenerationSHA256) ||

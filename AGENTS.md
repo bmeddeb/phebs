@@ -163,6 +163,14 @@ bare repos · Vite + React + TS + CodeMirror 6 in `ui/`, embedded in the binary.
   reads or hashing, cache invalidation, concurrency bounds, and worst-case
   memory/disk/child-process cost. Green functional gates do not replace this
   pass.
+- **Extractor behaviour fixes raise an implementation revision (PHEBS-37,
+  2026-11-23).** A change that can alter a released extractor's facts or
+  refusals for some input while its signed `Version()` stays the same must
+  raise that extractor's `ImplementationRevision()`
+  (`sdk.ImplementationRevisioner`). The revision enters the extraction policy
+  identity, so upgrading re-extracts each repository once; without it, an
+  upgrade keeps serving what the old code produced at an unchanged head. A
+  `Version()` change needs no revision.
 - golangci-lint clean. `context.Context` first param. Errors wrapped with `%w`,
   classified at boundaries (T3.3 taxonomy).
 - HEAD is the default and authoritative revision. T10.4 may add at most seven

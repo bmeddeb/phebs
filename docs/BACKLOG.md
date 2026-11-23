@@ -21174,6 +21174,19 @@ assertions for the two probe fields. Receipts are in
 `~/phebs-instance/receipts/phebs36-2026-11-23/` on `dave`. The upgrade-retry
 and coverage-certificate observations are tracked as PHEBS-37.
 
+*PHEBS-37 upgrade retry (2026-11-23):* fixed in code (PLAN decision of the
+same date). An extractor whose behaviour changes while its signed version
+stays the same declares an implementation revision. The admitted revisions
+enter the extraction policy identity, so the first start after such an
+upgrade re-extracts each repository once and retries same-head refusals.
+`thriftfield` declares revision 1 for its thriftrw selections (PHEBS-35). The
+`internal/store` accounting fixture no longer fails or panics when a stray
+non-websocket request reaches its port.
+- **Remaining.** The coverage certificate reports partition-served domains
+  as `unpublished`, which also makes proof freshness `unavailable` and impact
+  coverage `processing`. Proof bundles do not pin the partitioned runs they
+  cite.
+
 ## Epic 49 · Contract Atlas and declaration production readiness
 
 **Current acceptance (2026-10-17):** use the integration-test amendment at the

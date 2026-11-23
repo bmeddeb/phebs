@@ -41,6 +41,9 @@ type EvidencePartitionExecutor struct {
 	// typed-scope reservation policy identity; adjusted Reservation shares
 	// alone never satisfy the gate.
 	TypedScopeReservations bool
+	// ImplementationRevisions selects only plans carrying the admitted
+	// extractors' implementation-revision layer (PHEBS-37); empty when none.
+	ImplementationRevisions string
 	// SourceOutcomeRoot opts grpc-caller into private, non-authoritative receipts.
 	SourceOutcomeRoot string
 }
@@ -82,6 +85,7 @@ func (executor *EvidencePartitionExecutor) ExecutePartition(
 	}
 	policy, err := candidate.ExtractionPolicyDigest(
 		plan.CandidatePolicyDigest, executor.StoreAccounting, executor.TypedScopeReservations,
+		executor.ImplementationRevisions,
 	)
 	if err != nil || policy != plan.ExtractionPolicyDigest {
 		return candidate.PartitionResultSpec{}, errors.Join(err, extractionpublication.ErrStale)

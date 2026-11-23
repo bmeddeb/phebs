@@ -102,7 +102,7 @@ func TestEvidencePartitionVersionedGrouping(t *testing.T) {
 
 func TestVersionedPartialChunkIdentity(t *testing.T) {
 	policy := "sha256:" + strings.Repeat("a", 64)
-	selected, err := candidate.ExtractionPolicyDigest(policy, true, false)
+	selected, err := candidate.ExtractionPolicyDigest(policy, true, false, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,7 +117,7 @@ func TestVersionedPartialChunkIdentity(t *testing.T) {
 func TestEvidencePartitionTypedScopeReservationFence(t *testing.T) {
 	const content = "message Fixture {}\n"
 	plan, path, commit := partitionExecutorPlanForModes(t, "proto-contract", "partition-test-v1", ".proto", content, false, true)
-	historical, err := candidate.ExtractionPolicyDigest(plan.CandidatePolicyDigest, false, false)
+	historical, err := candidate.ExtractionPolicyDigest(plan.CandidatePolicyDigest, false, false, "")
 	if err != nil || plan.ExtractionPolicyDigest == historical || plan.ExtractionPolicyDigest == plan.CandidatePolicyDigest {
 		t.Fatalf("typed-scope plan identity not separated: %s vs %s, %v", plan.ExtractionPolicyDigest, historical, err)
 	}

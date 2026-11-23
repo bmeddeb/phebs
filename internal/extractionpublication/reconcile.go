@@ -53,6 +53,9 @@ type Reconciler struct {
 	// weight-one sliver are never silently reused. Ordinary servers leave it
 	// false and reconstruct historical identities byte-exactly.
 	TypedScopeReservations bool
+	// ImplementationRevisions is the admitted extractors' implementation-
+	// revision digest (PHEBS-37), or empty when none declares one.
+	ImplementationRevisions string
 
 	mu [64]sync.Mutex
 }
@@ -82,6 +85,7 @@ func (reconciler *Reconciler) Reconcile(ctx context.Context, repository string) 
 	}
 	extractionPolicy, err := candidate.ExtractionPolicyDigest(
 		state.PolicyDigest, reconciler.StoreAccounting, reconciler.TypedScopeReservations,
+		reconciler.ImplementationRevisions,
 	)
 	if err != nil {
 		return "", err
@@ -128,6 +132,7 @@ func (reconciler *Reconciler) Reconcile(ctx context.Context, repository string) 
 	root := sparse.Root()
 	extractionPolicy, err = candidate.ExtractionPolicyDigest(
 		root.PolicyDigest, reconciler.StoreAccounting, reconciler.TypedScopeReservations,
+		reconciler.ImplementationRevisions,
 	)
 	if err != nil {
 		return "", err

@@ -80,6 +80,17 @@ func (reader extractor) Version() string {
 }
 func (extractor) Candidate(string) bool { return false }
 
+// ImplementationRevision records behaviour changes that keep the signed
+// reader versions (PHEBS-37). Revision 1 is PHEBS-35: a thriftrw-plugin file
+// is skipped instead of refusing the partition, so results the earlier
+// implementation recorded at an unchanged head are re-extracted once.
+func (reader extractor) ImplementationRevision() uint32 {
+	if reader.selected&thriftRWGenerator != 0 {
+		return 1
+	}
+	return 0
+}
+
 type indexedOccurrence struct {
 	rangeValue scip.Range
 	symbol     string

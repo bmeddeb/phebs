@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -127,8 +128,17 @@ func storeAccountingDB(t *testing.T, ctx context.Context, owner *storeCallOwner)
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	native := &storeSDKTestConnection{codec: surrealcbor.New(), ctx: ctx, replies: make(chan []byte, 1)}
 	joined := make(chan struct{})
+	var joinOnce sync.Once
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		defer close(joined)
+		// Under parallel packages a stray connection can reach this port
+		// after another test's listener closed. Refuse anything that is not
+		// a websocket upgrade without failing the test, and close joined at
+		// most once; the cleanup still reports a fixture that never joined.
+		if !websocket.IsWebSocketUpgrade(r) {
+			http.Error(w, "store accounting fixture accepts only websocket upgrades", http.StatusBadRequest)
+			return
+		}
+		defer joinOnce.Do(func() { close(joined) })
 		upgrader := websocket.Upgrader{Subprotocols: []string{"cbor"}}
 		ws, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {

@@ -378,6 +378,7 @@ func (reconciler *Reconciler) confirmRecoveryReferences(ctx context.Context, aut
 	}
 	policy, err := candidate.ExtractionPolicyDigest(
 		state.PolicyDigest, reconciler.StoreAccounting, reconciler.TypedScopeReservations,
+		reconciler.ImplementationRevisions,
 	)
 	if err != nil {
 		return err

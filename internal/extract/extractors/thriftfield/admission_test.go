@@ -256,3 +256,21 @@ func TestCommittedThriftRWPluginHeaderIsNotThriftRWInput(t *testing.T) {
 		}
 	}
 }
+
+func TestCommittedThriftImplementationRevision(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		extractor sdk.Extractor
+		revision  uint32
+	}{
+		{"apache", NewCommittedApache(), 0},
+		{"thriftrw", NewCommittedThriftRW(), 1},
+		{"apache-thriftrw", NewCommittedApacheThriftRW(), 1},
+		{"unselected", New(), 0},
+	} {
+		revisioned, ok := test.extractor.(sdk.ImplementationRevisioner)
+		if !ok || revisioned.ImplementationRevision() != test.revision {
+			t.Fatalf("%s implementation revision = %v, want %d", test.name, ok, test.revision)
+		}
+	}
+}

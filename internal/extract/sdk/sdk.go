@@ -202,6 +202,18 @@ type DiagnosticCounter struct {
 // extractor.
 type Emit func(Fact) error
 
+// ImplementationRevisioner is implemented by an extractor whose observable
+// behaviour changed without a change to Version, which signed pack claims and
+// qualified artifacts bind. A positive revision enters the production
+// extraction policy identity (PHEBS-37), so the next start re-extracts each
+// repository once instead of reusing a result, or a terminal refusal, that
+// the previous implementation produced at an unchanged head. Raise it with
+// any change that can alter facts or refusals for some input; zero (or not
+// implementing the method) declares no revision and keeps identities exact.
+type ImplementationRevisioner interface {
+	ImplementationRevision() uint32
+}
+
 // Extractor is one evidence domain. Extract must be a pure function of the
 // immutable Corpus and must return every Emit error to its caller.
 type Extractor interface {

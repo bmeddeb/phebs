@@ -274,7 +274,7 @@ func buildTypedOwnershipFixture(
 	if err != nil {
 		t.Fatal(err)
 	}
-	extractionPolicyDigest, err := candidate.ExtractionPolicyDigest(policyDigest, false, true)
+	extractionPolicyDigest, err := candidate.ExtractionPolicyDigest(policyDigest, false, true, "")
 	if err != nil {
 		t.Fatal(err)
 	}

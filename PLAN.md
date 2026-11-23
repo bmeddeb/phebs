@@ -18835,3 +18835,42 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
       `replicator.DomainTaskAttributes#20`. PHEBS-36 is closed. A new commit
       on a local connection is fetched only at startup or on
       `sync.resync_interval` (default 1h), not by `/api/reindex`.
+  - **PHEBS-37, extractor implementation revisions (2026-11-23).** An
+    upgrade now re-extracts at an unchanged head when an admitted extractor's
+    behaviour changed, without changing any signed reader version.
+    - **Why.** The extraction generation is keyed by the repository and its
+      plan digests. The only extractor identity in a plan is `Version()`,
+      which signed claims and qualified artifacts bind, so PHEBS-35 fixed the
+      thriftrw reader without changing it. `v0.3.1` therefore reused the
+      `v0.3.0` terminal refusal on restart and on a forced reindex (`force`
+      never reaches the partitioned reconciler), until the repository's next
+      commit. The binary digest and `release_id` reach only pack
+      verification, not extraction identity.
+    - **What changes.** Extractors may implement
+      `sdk.ImplementationRevisioner`. Serve hashes the admitted extractors'
+      positive revisions (`domain@version revision`, sorted) and layers that
+      digest last onto the extraction policy
+      (`phebs-extraction-implementation-revisions-v1`), through the same
+      plan, binding, reuse, executor and fence paths as the typed-scope
+      layer. No positive revision means no layer, so existing identities stay
+      byte-exact. The pinned T422 semantic launch never takes the layer.
+      `thriftfield` declares revision 1 for every selection that includes
+      thriftrw, recording PHEBS-35.
+    - **Rule.** AGENTS.md now requires a revision bump with any change that
+      can alter a released extractor's facts or refusals while `Version()`
+      stays the same.
+    - **Rejected.** Keying on the binary digest would re-extract every
+      repository on every release, including releases that change no
+      extractor. Wiring `force` into the partitioned path would need a
+      non-content-addressed generation and leaves the fix to an operator.
+    - **Upgrade cost.** The first start of a release that raises any
+      admitted revision builds a new generation for every repository: a
+      one-time re-extraction, as with PHEBS-36. That is the case for the next
+      release, because of the thriftrw revision. Steady state adds one
+      digest over at most the admitted extractors at startup. There is no
+      per-query, sync, retry or publication work, and no lock, cache, child
+      process, timer or schema change.
+    - **Still open in PHEBS-37.** The coverage certificate reads only legacy
+      published runs, so partition-served domains report `unpublished`, and
+      proof bundles do not pin the partitioned runs they cite. That is a
+      separate change.

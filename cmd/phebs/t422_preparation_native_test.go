@@ -176,7 +176,7 @@ func seedT422PreparationNative(t *testing.T, ctx context.Context, data string, s
 				return err
 			}
 			source, observation, err := readAuthority(operation, state)
-			policy, policyErr := candidate.ExtractionPolicyDigest(state.PolicyDigest, true, false)
+			policy, policyErr := candidate.ExtractionPolicyDigest(state.PolicyDigest, true, false, "")
 			if err != nil {
 				return err
 			}

@@ -206,11 +206,11 @@ func TestReservedPlanTypedScopeWeightsAndPolicyIdentity(t *testing.T) {
 			ExtractionPolicyDigest:      policy,
 		}
 	}
-	historicalPolicy, err := candidate.ExtractionPolicyDigest(policyDigest, false, false)
+	historicalPolicy, err := candidate.ExtractionPolicyDigest(policyDigest, false, false, "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	correctedPolicy, err := candidate.ExtractionPolicyDigest(policyDigest, false, true)
+	correctedPolicy, err := candidate.ExtractionPolicyDigest(policyDigest, false, true, "")
 	if err != nil || historicalPolicy == correctedPolicy {
 		t.Fatalf("policy identities not separated: %v", err)
 	}

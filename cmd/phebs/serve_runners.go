@@ -653,6 +653,10 @@ func startServeExtractionPipeline(d *serveDeps) error {
 	analysisUnits := d.analysisUnits
 
 	typedScopeReservations := serveTypedScopeReservations(cfg, semanticLaunch)
+	implementationRevisions, err := serveImplementationRevisions(d.exs, semanticLaunch)
+	if err != nil {
+		return err
+	}
 
 	var evidenceView store.EvidenceStore
 	var proofBundles store.ProofBundleStore
@@ -748,8 +752,9 @@ func startServeExtractionPipeline(d *serveDeps) error {
 		Root: d.partitionPublicationRoot, Store: st,
 		Executor: &extract.EvidencePartitionExecutor{
 			Evidence: st, Extractors: d.exs, StoreAccounting: semanticLaunch != nil,
-			TypedScopeReservations: typedScopeReservations,
-			SourceOutcomeRoot:      os.Getenv("PHEBS_T472_SOURCE_OUTCOME_ROOT"),
+			TypedScopeReservations:  typedScopeReservations,
+			ImplementationRevisions: implementationRevisions,
+			SourceOutcomeRoot:       os.Getenv("PHEBS_T472_SOURCE_OUTCOME_ROOT"),
 		},
 		Publisher:   extractionpublication.StorePublisher{Store: st},
 		Diagnostics: cfg.Diagnostics.Extraction,
@@ -776,7 +781,7 @@ func startServeExtractionPipeline(d *serveDeps) error {
 		}
 		extractionPolicy, policyErr := candidate.ExtractionPolicyDigest(
 			candidateState.PolicyDigest, semanticLaunch != nil,
-			typedScopeReservations,
+			typedScopeReservations, implementationRevisions,
 		)
 		if policyErr != nil {
 			return false
@@ -833,10 +838,11 @@ func startServeExtractionPipeline(d *serveDeps) error {
 		Root: d.partitionPublicationRoot, CandidateRoot: candidatejob.CandidateRoot(cfg.Server.DataDir),
 		Runtime: partitionRuntime, Evidence: st,
 		OpenCandidate: openPartitionCandidate, Authority: readPartitionAuthority,
-		CandidateReference:     readPartitionCandidateReference,
-		AuthorityReference:     readPartitionFenceAuthority,
-		StoreAccounting:        semanticLaunch != nil,
-		TypedScopeReservations: typedScopeReservations,
+		CandidateReference:      readPartitionCandidateReference,
+		AuthorityReference:      readPartitionFenceAuthority,
+		StoreAccounting:         semanticLaunch != nil,
+		TypedScopeReservations:  typedScopeReservations,
+		ImplementationRevisions: implementationRevisions,
 	}
 	openPartitionDomain = partitionReconciler.OpenDomain
 	partitionRuntime.Source = extractionpublication.GitSparseSource{
@@ -852,7 +858,7 @@ func startServeExtractionPipeline(d *serveDeps) error {
 			state := publication.State()
 			policy, policyErr := candidate.ExtractionPolicyDigest(
 				state.PolicyDigest, semanticLaunch != nil,
-				typedScopeReservations,
+				typedScopeReservations, implementationRevisions,
 			)
 			if policyErr != nil || policy != plan.ExtractionPolicyDigest {
 				return errors.Join(policyErr, extractionpublication.ErrStale)
@@ -1185,4 +1191,14 @@ func serveTypedScopeReservations(cfg *config.Config, semanticLaunch *t422Semanti
 		return cfg.Experimental.TypedScopeReservations
 	}
 	return cfg.TypedScopeReservations()
+}
+
+// serveImplementationRevisions selects the implementation-revision policy
+// layer (PHEBS-37) from the admitted extractors. The pinned T422 semantic
+// launch keeps its custodied identities, so it never takes the layer.
+func serveImplementationRevisions(extractors []extract.Extractor, semanticLaunch *t422SemanticLaunch) (string, error) {
+	if semanticLaunch != nil {
+		return "", nil
+	}
+	return extract.ImplementationRevisionDigest(extractors)
 }

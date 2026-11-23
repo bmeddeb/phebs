@@ -523,7 +523,7 @@ func partitionExecutorPlanForModes(
 	if err != nil {
 		t.Fatal(err)
 	}
-	extractionPolicy, err := candidate.ExtractionPolicyDigest(policyDigest, storeAccounting, typedScopeReservations)
+	extractionPolicy, err := candidate.ExtractionPolicyDigest(policyDigest, storeAccounting, typedScopeReservations, "")
 	if err != nil {
 		t.Fatal(err)
 	}

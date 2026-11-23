@@ -45,7 +45,7 @@ func TestT422StaleFinalSnapshot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	policy, _ := candidate.ExtractionPolicyDigest(state.PolicyDigest, true, false)
+	policy, _ := candidate.ExtractionPolicyDigest(state.PolicyDigest, true, false, "")
 	if got.authority.ExtractionPolicyDigest != policy || got.authority.CandidateManifestDigest != state.ManifestDigest ||
 		got.final != response.Authority || got.roots[0].Domain != "grpc-caller" || got.generation != response.ExtractionRoots[0].GenerationSHA256 {
 		t.Fatal("native scalar authority lost", got)
