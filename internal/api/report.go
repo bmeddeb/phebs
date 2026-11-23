@@ -532,7 +532,7 @@ func impactCoverageRows(certificate extract.CoverageCertificate) []ImpactCoverag
 }
 
 func impactCoverageState(repo extract.CertificateRepository, run extract.CertificateRun) (state, reason string) {
-	if run.Status != "published" {
+	if !run.Served() {
 		if run.LatestAttempt != nil {
 			switch run.LatestAttempt.Status {
 			case "staged":

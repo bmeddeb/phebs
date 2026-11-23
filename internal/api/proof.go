@@ -537,7 +537,7 @@ func buildProofBundleValue(
 		return nil, err
 	}
 	for attempt := 0; attempt < proofBuildAttempts; attempt++ {
-		certificate, err := extract.BuildCoverageCertificate(ctx, opts.Evidence, visible, query.Domains)
+		certificate, err := extract.BuildCoverageCertificateForVersions(ctx, opts.Evidence, visible, query.Domains, opts.EvidenceExtractorVersions)
 		if err != nil {
 			return nil, huma.Error500InternalServerError("build extraction coverage", err)
 		}
@@ -581,8 +581,8 @@ func buildProofBundleValue(
 				return nil, huma.Error500InternalServerError("build unresolved census", err)
 			}
 		}
-		confirmed, err := extract.BuildCoverageCertificate(
-			ctx, opts.Evidence, visible, query.Domains,
+		confirmed, err := extract.BuildCoverageCertificateForVersions(
+			ctx, opts.Evidence, visible, query.Domains, opts.EvidenceExtractorVersions,
 		)
 		if err != nil {
 			return nil, huma.Error500InternalServerError("confirm extraction coverage", err)
@@ -695,11 +695,12 @@ func buildAndPersistProofBundle(
 		}
 		envelope, err := persistProofBundle(ctx, opts, *bundle)
 		if err == nil {
-			confirmed, confirmErr := extract.BuildCoverageCertificate(
+			confirmed, confirmErr := extract.BuildCoverageCertificateForVersions(
 				ctx,
 				opts.Evidence,
 				envelope.Bundle.visibilityReceipt,
 				envelope.Bundle.Coverage.Domains,
+				opts.EvidenceExtractorVersions,
 			)
 			if confirmErr != nil {
 				return nil, huma.Error500InternalServerError(
@@ -956,7 +957,9 @@ func certificateScopes(certificate *extract.CoverageCertificate) ([]string, []st
 	for _, repository := range certificate.Repositories {
 		repositories = append(repositories, repository.Repository)
 		for _, run := range repository.Runs {
-			if run.Status == "published" {
+			// A partitioned run is pinned too (PHEBS-37), so retention keeps
+			// the evidence a stored bundle cites after newer generations.
+			if run.Served() {
 				runSet[run.RunID] = struct{}{}
 			}
 		}

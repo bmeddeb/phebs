@@ -9,6 +9,7 @@ import type {
   CoverageDomainOutcomeReceipt,
   CoverageRun,
 } from '../api'
+import { runServed } from '../coverageRun'
 import { SectionHelp } from './SectionHelp'
 import { RefusalCard, StatusChip } from './kit'
 import { FONTS, TYPE, type PhebsTokens, usePhebsTokens } from '../theme'
@@ -120,7 +121,7 @@ export function AnalysisScopePanel({
     (candidate) => candidate.posture === 'focused',
   ).length
   const staleCount = runs.filter(
-    (run) => run.status === 'published' && !run.fresh,
+    (run) => runServed(run) && !run.fresh,
   ).length
   const refusalCount = runs.filter((run) =>
     run.outcome?.disposition === 'terminal_generation_refusal').length
@@ -642,7 +643,7 @@ function DomainStatus({ run }: { run: CoverageRun }) {
   const tok = usePhebsTokens()
   const disposition = run.outcome?.disposition
   const recordedFailureCount = run.failures?.length ?? 0
-  const baseLabel = disposition ?? (run.status === 'published'
+  const baseLabel = disposition ?? (runServed(run)
     ? run.fresh ? 'published' : 'stale publication'
     : run.latest_attempt?.failure ? 'failed replacement' : 'unpublished')
   const label = recordedFailureCount > 0
@@ -977,7 +978,7 @@ function domainTone(
   if ((run.failures?.length ?? 0) > 0) return 'amber'
   if (disposition === 'published' && run.fresh) return 'green'
   if (disposition || !run.fresh) return 'amber'
-  return run.status === 'published' ? 'green' : 'neutral'
+  return runServed(run) ? 'green' : 'neutral'
 }
 
 function gapTone(state: string): 'amber' | 'red' | 'blue' {

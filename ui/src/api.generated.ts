@@ -719,6 +719,7 @@ export interface components {
             commit?: string;
             /** Format: int64 */
             corpus_file_count: number;
+            disposition?: string;
             domain: string;
             evidence_scope_posture?: string;
             extractor?: string;
@@ -732,11 +733,13 @@ export interface components {
             inventory_policy?: string;
             latest_attempt?: components["schemas"]["CertificateAttempt"];
             outcome?: components["schemas"]["CertificateDomainOutcome"];
+            plan_digest?: string;
             protocols?: string[] | null;
             /** Format: int64 */
             read_bytes: number;
             /** Format: int64 */
             read_file_count: number;
+            root_digest?: string;
             run_id?: string;
             source_scope_digest?: string;
             status: string;

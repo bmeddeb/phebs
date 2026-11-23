@@ -668,6 +668,11 @@ export interface CoverageRun {
   candidate_scope?: CoverageCandidateScope
   latest_attempt?: CoverageAttempt
   outcome?: CoverageDomainOutcome
+  // A domain served from its current partitioned root (status
+  // 'partitioned'); its legacy counts are not measured.
+  plan_digest?: string
+  root_digest?: string
+  disposition?: string
 }
 
 export interface CoverageAnalysisUnit {

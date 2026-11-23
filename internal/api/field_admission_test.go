@@ -253,6 +253,14 @@ func TestReleasedFieldNativeVersionFence(t *testing.T) {
 			if want == 1 && (len(result.Bundle.ExtractorVersions) != 1 || result.Bundle.ExtractorVersions[0].Extractor != fieldAdmissionVersion) {
 				t.Fatal("native version witness absent")
 			}
+			// PHEBS-37: the admitted root is reported as the served coverage.
+			if want == 1 {
+				run := result.Bundle.Coverage.Repositories[0].Runs[0]
+				if run.Status != "partitioned" || !run.Fresh || run.RunID != native.root.RunID ||
+					run.Extractor != fieldAdmissionVersion || run.RootDigest != native.root.RootDigest {
+					t.Fatalf("admitted partitioned root not reported as served: %+v", run)
+				}
+			}
 		})
 	}
 }

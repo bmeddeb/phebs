@@ -18874,3 +18874,58 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
       published runs, so partition-served domains report `unpublished`, and
       proof bundles do not pin the partitioned runs they cite. That is a
       separate change.
+  - **PHEBS-37, partitioned coverage in the certificate (2026-11-23).** This
+    supersedes the T49.3 rule that the coverage certificate describes legacy
+    published runs only, and closes the open item above. A domain served from
+    its current partitioned root is now reported as served.
+    - **Why.** Since `v0.3.0` every signed pack publishes through partitioned
+      roots, which leave the run `staged`. The certificate read only legacy
+      `extraction_run.status = 'published'`. Every pack answer therefore
+      reported its domains as `unpublished`, proof freshness as
+      `unavailable`, impact coverage as `processing`, and the Atlas showed
+      `unpublished` chips, while `find_field_references` served exact
+      assertions from the same roots (cadence on `dave`). Proof bundles
+      pinned only legacy run IDs, so retention could collect a partitioned
+      run a stored bundle cites once it fell behind the rollback floor.
+    - **What changes.**
+      - The certificate admits a root through the same three bounded reads
+        the exact selector makes: the root reference, the candidate pointer
+        (whose manifest, head and unit must be the certificate's exact
+        scope), and a one-row probe under the store's partitioned fence (run
+        sealed and not quarantined, store versions, repository head, and the
+        reader's admitted extractor version). It therefore never reports a
+        root that the exact reader would refuse. A match is reported with
+        the new status `partitioned`, `fresh: true`, the run, plan and root
+        digests, the admitted extractor, and the root's disposition. A legacy
+        published run still wins.
+      - Proof answers build their certificate with the same per-domain
+        extractor versions their selector uses
+        (`BuildCoverageCertificateForVersions`); every other surface passes
+        none, as its selector does.
+      - `partitioned` is not `published`: its legacy corpus, read and
+        assertion counts are not measured and stay zero. Consumers that read
+        evidence by legacy run ID keep skipping it; they already read the
+        fenced partitioned view when exact sources are selected.
+      - Proof freshness, impact coverage, bundle run scopes and the UI treat
+        `partitioned` as served. A `terminal_refusal` root carries the
+        failure `partition_terminal_refusal`, and a root published before
+        its disposition was recorded carries `partition_disposition_unknown`,
+        so neither reads as complete: freshness is `stale`, impact `failed`.
+      - Root rows record `disposition`, copied from the canonical root at
+        publication (schemaless table, no migration). The bounded reference
+        read returns it, defaulting to empty for older rows, so the
+        certificate never transfers the root.
+      - `PutProofBundle` also accepts sealed partitioned runs, so bundles pin
+        the partitioned runs they cite. The partitioned retention sweep
+        already excludes pinned runs.
+    - **Compatibility.** Certificates and bundles for affected answers get
+      new digests; stored bundles keep their bytes and their recorded run
+      scopes. Old rows read as disposition unknown until republished. The
+      thriftrw implementation revision (above) republishes every root on the
+      first start of the next release.
+    - **Steady-state cost.** Per certificate build, at most three bounded
+      point reads per repository and domain without a legacy published run:
+      the reads the exact selector already makes for the same answer. At
+      publication, one JSON decode of the root already in memory. Pin rows
+      grow by the partitioned runs a bundle cites. No lock, cache, child
+      process, timer or schema change.

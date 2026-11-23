@@ -21187,6 +21187,17 @@ non-websocket request reaches its port.
   coverage `processing`. Proof bundles do not pin the partitioned runs they
   cite.
 
+*PHEBS-37 partitioned coverage (2026-11-23):* fixed in code (PLAN decision
+of the same date). The coverage certificate reports a domain served from its
+current partitioned root as `partitioned`, admitted through the exact
+selector's reads and version fence, with the root's disposition; a refused
+or undisclosed root carries a failure. Proof freshness, impact coverage, the
+Atlas and the scope panel treat it as served, and proof bundles pin the
+partitioned runs they cite.
+- **Remaining.** Release, then verify on `dave`: the one-time re-extraction,
+  `partitioned` coverage with dispositions, `current` freshness, and the
+  cadence field references.
+
 ## Epic 49 · Contract Atlas and declaration production readiness
 
 **Current acceptance (2026-10-17):** use the integration-test amendment at the

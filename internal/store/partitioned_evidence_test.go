@@ -199,7 +199,7 @@ func TestPartitionedEvidencePublicationSealsExactAccountedRun(t *testing.T) {
 		CandidateDigest:   candidateDigest,
 		SourceDigest:      "sha256:" + strings.Repeat("5", 64),
 		ObservationDigest: "sha256:" + strings.Repeat("6", 64),
-		Facts:             1, Rows: 2, References: 1, Plan: `{}`, Root: `{}`,
+		Facts:             1, Rows: 2, References: 1, Plan: `{}`, Root: `{"disposition":"success"}`,
 	}
 	if err := s.PublishPartitionedExtractionDomain(ctx, publication); err != nil {
 		t.Fatal(err)
@@ -226,9 +226,28 @@ func TestPartitionedEvidencePublicationSealsExactAccountedRun(t *testing.T) {
 			Schema: publication.Schema, Repository: repository, Domain: domain, RunID: run.ID,
 			PlanDigest: publication.PlanDigest, RootDigest: publication.RootDigest,
 			CandidateDigest: publication.CandidateDigest, SourceDigest: publication.SourceDigest,
-			ObservationDigest: publication.ObservationDigest,
+			ObservationDigest: publication.ObservationDigest, Disposition: "success",
 		}) {
 		t.Fatalf("scalar current reference = %+v, counts=%+v, errors=%v/%v", reference, counts, err, finishErr)
+	}
+	// PHEBS-37: a proof bundle citing the sealed partitioned run pins it.
+	bundleContent := `{"schema_version":"proof-bundle-v1","value":"partitioned"}`
+	if err := s.PutProofBundle(ctx, ProofBundleRecord{
+		ID: ComputeProofBundleID(bundleContent), Content: bundleContent,
+		Repositories: []string{repository}, RunIDs: []string{run.ID},
+		RetainedAt: time.Now().UTC().Truncate(time.Second),
+	}); err != nil {
+		t.Fatalf("proof bundle citing a sealed partitioned run: %v", err)
+	}
+	// A root row published before its disposition was recorded reads as
+	// unknown, never as an invalid row.
+	if _, err := surrealdb.Query[any](ctx, s.db, "UPDATE $rid UNSET disposition",
+		map[string]any{"rid": partitionedDomainID(repository, domain)}); err != nil {
+		t.Fatal(err)
+	}
+	legacyRow, err := s.GetPartitionedExtractionDomainReference(ctx, repository, domain)
+	if err != nil || legacyRow.RunID != run.ID || legacyRow.Disposition != "" {
+		t.Fatalf("pre-disposition root reference = %+v, %v", legacyRow, err)
 	}
 	secondChunk := "sha256:" + strings.Repeat("7", 64)
 	if err := s.AddEvidenceChunk(ctx, run.ID, secondChunk, 1, atoms, associations, assertions); !errors.Is(err, ErrConflict) {
@@ -636,7 +655,7 @@ func (fixture *partitionedRefusalFixture) refusal(
 		SourceDigest:      "sha256:" + strings.Repeat("5", 64),
 		ObservationDigest: "sha256:" + strings.Repeat("6", 64),
 		Facts:             facts, Rows: rows, References: references,
-		Plan: `{"refusal":"` + planFill + `"}`, Root: `{"refusal":"` + rootFill + `"}`,
+		Plan: `{"refusal":"` + planFill + `"}`, Root: `{"disposition":"terminal_refusal","refusal":"` + rootFill + `"}`,
 	}
 }
 
@@ -645,7 +664,7 @@ func (fixture *partitionedRefusalFixture) success(
 ) PartitionedExtractionDomain {
 	publication := fixture.refusal(run, planFill, rootFill, facts, rows, references)
 	publication.Plan = `{"success":"` + planFill + `"}`
-	publication.Root = `{"success":"` + rootFill + `"}`
+	publication.Root = `{"disposition":"success","success":"` + rootFill + `"}`
 	return publication
 }
 
@@ -689,7 +708,8 @@ func TestPartitionedEvidenceRefusalBindsStagedAccounting(t *testing.T) {
 		t.Fatalf("stored refusal = %+v, %v", stored, err)
 	}
 	reference, err := fixture.store.GetPartitionedExtractionDomainReference(ctx, fixture.repository, fixture.domain)
-	if err != nil || reference.RunID != run.ID || reference.RootDigest != publication.RootDigest {
+	if err != nil || reference.RunID != run.ID || reference.RootDigest != publication.RootDigest ||
+		reference.Disposition != "terminal_refusal" {
 		t.Fatalf("refusal reference = %+v, %v", reference, err)
 	}
 	if err := fixture.store.PublishPartitionedExtractionDomainRefusal(ctx, publication); err != nil {
@@ -746,7 +766,8 @@ func TestPartitionedEvidenceRefusalConvergesToSuccess(t *testing.T) {
 		t.Fatalf("corrected row = %+v, %v", stored, err)
 	}
 	reference, err := fixture.store.GetPartitionedExtractionDomainReference(ctx, fixture.repository, fixture.domain)
-	if err != nil || reference.RunID != runB.ID || reference.RootDigest != corrected.RootDigest {
+	if err != nil || reference.RunID != runB.ID || reference.RootDigest != corrected.RootDigest ||
+		reference.Disposition != "success" {
 		t.Fatalf("corrected reference = %+v, %v", reference, err)
 	}
 	if released, err := fixture.store.ReleaseOneUnrootedPartitionRun(ctx); err != nil || released {

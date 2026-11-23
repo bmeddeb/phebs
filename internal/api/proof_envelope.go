@@ -433,7 +433,7 @@ func proofFreshness(bundle ProofBundle) string {
 	status := "current"
 	for _, repository := range bundle.Coverage.Repositories {
 		for _, run := range repository.Runs {
-			if run.Status != "published" {
+			if !run.Served() {
 				return "unavailable"
 			}
 			if !run.Fresh || len(run.Failures) != 0 ||

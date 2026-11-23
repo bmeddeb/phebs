@@ -109,7 +109,9 @@ LET $eligible = SELECT VALUE run_id FROM extraction_run
 	  AND run_id = record::id(id)
 	  AND ` + evidenceRunHasNoAmbiguousClaimantSQL + `
 	  AND ((status = 'published' AND published_key != NONE)
-	    OR (status = 'superseded' AND published_key = NONE));
+	    OR (status = 'superseded' AND published_key = NONE)
+	    OR (status = 'staged' AND published_key = NONE
+	      AND (partition_sealed ?? false) = true));
 LET $existing = SELECT bundle_id, content, repositories, run_ids FROM $rid LIMIT 1;
 LET $immutable = array::len($existing) = 0 OR
 	($existing[0].bundle_id = $bundle_id AND $existing[0].content = $content
@@ -131,7 +133,9 @@ RETURN $saved;
 COMMIT;`
 
 // PutProofBundle atomically persists immutable canonical content and pins all
-// referenced compatible runs. Exact retries are idempotent.
+// referenced compatible runs: legacy published or superseded runs, and sealed
+// partitioned runs (PHEBS-37), whose retention sweep already honours pins.
+// Exact retries are idempotent.
 func (s *Surreal) PutProofBundle(ctx context.Context, bundle ProofBundleRecord) error {
 	if err := validateProofBundle(bundle); err != nil {
 		return fmt.Errorf("put proof bundle: %w", err)

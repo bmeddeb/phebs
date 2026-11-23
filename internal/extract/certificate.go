@@ -41,6 +41,18 @@ type RunSource interface {
 	LatestExtractionDomainOutcome(ctx context.Context, scope store.ExtractionScope) (*store.ExtractionDomainOutcome, error)
 }
 
+// PartitionedRunSource is the optional bounded read of a domain's current
+// partitioned root (PHEBS-37). A source that implements it lets the
+// certificate report a domain served from that root instead of reporting it
+// unpublished. The certificate admits a root only through the same reads the
+// exact selector makes: the root reference, the candidate pointer, and one
+// fenced one-row probe, so it never reports a root the readers would refuse.
+type PartitionedRunSource interface {
+	GetPartitionedExtractionDomainReference(ctx context.Context, repository, domain string) (store.PartitionedExtractionDomainReference, error)
+	GetCandidateManifestPublication(ctx context.Context, repository string) (*store.CandidateManifestPublication, error)
+	ListPartitionedAssertions(ctx context.Context, query store.AssertionQuery, authority store.PartitionedAssertionAuthority) ([]store.Assertion, error)
+}
+
 // CoverageCertificate is the per-answer honesty record: the caller's entire
 // visible repository universe and the exact published evidence state an answer
 // was computed from. Equal store state yields byte-equal certificates — there
@@ -161,6 +173,20 @@ type CertificateRun struct {
 	CandidateScope         *CertificateCandidateScope `json:"candidate_scope,omitempty"`
 	LatestAttempt          *CertificateAttempt        `json:"latest_attempt,omitempty"`
 	Outcome                *CertificateDomainOutcome  `json:"outcome,omitempty"`
+	// PlanDigest, RootDigest and Disposition describe a domain served from
+	// its current partitioned root (Status "partitioned", PHEBS-37). Such a
+	// run has no legacy coverage record, so its corpus, read and assertion
+	// counts are not measured and stay zero; consumers must not read them.
+	// An empty Disposition is a root published before it was recorded.
+	PlanDigest  string `json:"plan_digest,omitempty"`
+	RootDigest  string `json:"root_digest,omitempty"`
+	Disposition string `json:"disposition,omitempty"`
+}
+
+// Served reports whether the run is current publication authority: a legacy
+// published run or a domain served from its fenced partitioned root.
+func (run CertificateRun) Served() bool {
+	return run.Status == "published" || run.Status == "partitioned"
 }
 
 // CertificateDomainOutcome is the time-free public projection of one durable
@@ -569,6 +595,19 @@ func BuildCoverageCertificate(
 	visible []store.Repo,
 	domains []string,
 ) (*CoverageCertificate, error) {
+	return BuildCoverageCertificateForVersions(ctx, source, visible, domains, nil)
+}
+
+// BuildCoverageCertificateForVersions is BuildCoverageCertificate for a reader
+// that admits one extractor version per domain. A partitioned root is reported
+// served only under that version fence, the one its exact selector applies.
+func BuildCoverageCertificateForVersions(
+	ctx context.Context,
+	source RunSource,
+	visible []store.Repo,
+	domains []string,
+	versions map[string]string,
+) (*CoverageCertificate, error) {
 	if source == nil {
 		return nil, errors.New("coverage certificate requires a run source")
 	}
@@ -709,6 +748,16 @@ func BuildCoverageCertificate(
 				}
 			}
 			if !published {
+				partitioned, ok, err := certificatePartitionedRun(ctx, source, repo, scope, domain, versions[domain])
+				if err != nil {
+					return nil, err
+				}
+				if ok {
+					partitioned.LatestAttempt = certificateAttempt
+					partitioned.Outcome = certificateOutcome
+					entry.Runs = append(entry.Runs, partitioned)
+					continue
+				}
 				entry.Runs = append(entry.Runs, CertificateRun{
 					Domain: domain, Status: "unpublished", UnitDigest: scope.UnitDigest,
 					LatestAttempt: certificateAttempt, Outcome: certificateOutcome,
@@ -1201,4 +1250,84 @@ func certificateDigest(certificate *CoverageCertificate) (string, error) {
 	}
 	sum := sha256.Sum256(data)
 	return "sha256:" + hex.EncodeToString(sum[:]), nil
+}
+
+// certificatePartitionedRun reports a domain served from its current
+// partitioned root (PHEBS-37). The root is current only under the fence the
+// exact readers use: it names the repository's current candidate manifest,
+// whose head and unit are this certificate's exact scope, and a one-row probe
+// passes the store's run, seal, quarantine and extractor-version fence. A
+// terminally refused root, or one published before its disposition was
+// recorded, is reported with a failure, so a consumer never reads it as
+// complete.
+func certificatePartitionedRun(
+	ctx context.Context,
+	source RunSource,
+	repo store.Repo,
+	scope store.ExtractionScope,
+	domain string,
+	expectedExtractor string,
+) (CertificateRun, bool, error) {
+	native, ok := source.(PartitionedRunSource)
+	if !ok {
+		return CertificateRun{}, false, nil
+	}
+	root, err := native.GetPartitionedExtractionDomainReference(ctx, repo.Name, domain)
+	if errors.Is(err, store.ErrNotFound) {
+		return CertificateRun{}, false, nil
+	}
+	if err != nil {
+		return CertificateRun{}, false, fmt.Errorf(
+			"partitioned root for %q/%q: %w", repo.Name, domain, err,
+		)
+	}
+	manifest, err := native.GetCandidateManifestPublication(ctx, repo.Name)
+	if errors.Is(err, store.ErrNotFound) {
+		return CertificateRun{}, false, nil
+	}
+	if err != nil {
+		return CertificateRun{}, false, fmt.Errorf(
+			"candidate manifest for %q: %w", repo.Name, err,
+		)
+	}
+	if manifest == nil || manifest.Repository != repo.Name ||
+		manifest.ManifestDigest != root.CandidateDigest ||
+		manifest.HeadCommit != scope.Commit || manifest.UnitDigest != scope.UnitDigest {
+		// The root belongs to another candidate generation: not current here.
+		return CertificateRun{}, false, nil
+	}
+	_, err = native.ListPartitionedAssertions(ctx, store.AssertionQuery{
+		Repo: repo.Name, RunID: root.RunID, Limit: 1, AllowTruncate: true,
+	}, store.PartitionedAssertionAuthority{
+		Repository: repo.Name, Domain: domain, RunID: root.RunID,
+		PlanDigest: root.PlanDigest, RootDigest: root.RootDigest,
+		Commit: scope.Commit, UnitDigest: scope.UnitDigest,
+		CandidateManifestDigest: root.CandidateDigest, CandidatePolicyDigest: manifest.PolicyDigest,
+		ExpectedExtractor: expectedExtractor,
+	})
+	if errors.Is(err, store.ErrNotFound) || errors.Is(err, store.ErrConflict) {
+		// Not current under the store fence, or it moved during the probe;
+		// the caller's confirming rebuild sees the settled state.
+		return CertificateRun{}, false, nil
+	}
+	if err != nil {
+		return CertificateRun{}, false, fmt.Errorf(
+			"partitioned root probe for %q/%q: %w", repo.Name, domain, err,
+		)
+	}
+	run := CertificateRun{
+		Domain: domain, Status: "partitioned", RunID: root.RunID, Extractor: expectedExtractor,
+		Commit: scope.Commit, UnitDigest: scope.UnitDigest, Fresh: true,
+		PlanDigest: root.PlanDigest, RootDigest: root.RootDigest,
+		Disposition: root.Disposition,
+	}
+	switch root.Disposition {
+	case candidatepkg.PartitionResultSuccess, candidatepkg.PartitionResultEmpty,
+		candidatepkg.PartitionResultUnavailablePrerequisite:
+	case candidatepkg.PartitionResultTerminalRefusal:
+		run.Failures = []string{"partition_terminal_refusal"}
+	default:
+		run.Failures = []string{"partition_disposition_unknown"}
+	}
+	return run, true, nil
 }

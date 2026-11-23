@@ -19,6 +19,7 @@ import {
   type CoverageCertificate,
   type CoverageRun,
 } from '../api'
+import { runServed } from '../coverageRun'
 import {
   ChevronDown,
   ContractIcon,
@@ -1125,7 +1126,7 @@ function CoverageStrip({
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const runs = certificate.repositories.flatMap((repository) => repository.runs)
-  const published = runs.filter((run) => run.status === 'published')
+  const published = runs.filter((run) => runServed(run))
   const fresh = published.filter((run) => run.fresh).length
   const stale = published.length - fresh
   const unavailable = runs.length - published.length
@@ -1208,8 +1209,8 @@ function CoverageDetails({ certificate }: { certificate: CoverageCertificate }) 
               <tr key={`${repository.repository}:${run.domain}`} className={css({ borderBottom: `1px solid ${tok.innerSep}` })}>
                 <Cell>{repository.repository}<br /><span className={css({ color: tok.textTertiary })}>{run.domain}</span></Cell>
                 <Cell>
-                  <StatusChip tone={run.status === 'published' ? run.fresh ? 'green' : 'amber' : 'neutral'}>
-                    {run.status === 'published' ? run.fresh ? 'current' : 'stale' : 'unpublished'}
+                  <StatusChip tone={runServed(run) ? run.fresh ? 'green' : 'amber' : 'neutral'}>
+                    {runServed(run) ? run.fresh ? 'current' : 'stale' : 'unpublished'}
                   </StatusChip>
                 </Cell>
                 <Cell mono>{shortID(repository.indexed_commit)} / {shortID(run.commit)}</Cell>

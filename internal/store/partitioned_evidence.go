@@ -82,6 +82,23 @@ type PartitionedExtractionDomainReference struct {
 	CandidateDigest   string `json:"candidate_digest"`
 	SourceDigest      string `json:"source_digest"`
 	ObservationDigest string `json:"observation_digest"`
+	// Disposition is the published root's disposition (PHEBS-37), so exact
+	// readers can tell a terminally refused domain from a complete one
+	// without transferring the root. Rows published before it was recorded
+	// read as empty: unknown, never complete.
+	Disposition string `json:"disposition,omitempty"`
+}
+
+// partitionedRootDisposition copies the canonical root's disposition onto its
+// row at publication. Validate has already proven the root is bounded JSON.
+func partitionedRootDisposition(root string) string {
+	var value struct {
+		Disposition string `json:"disposition"`
+	}
+	if json.Unmarshal([]byte(root), &value) != nil {
+		return ""
+	}
+	return value.Disposition
 }
 
 type PartitionedEvidenceStore interface {
@@ -369,7 +386,7 @@ LET $published = IF array::len($marked) = 1 AND !$same THEN
 		run_id: $run_id, plan_digest: $plan_digest, root_digest: $root_digest,
 		candidate_digest: $candidate_digest, source_digest: $source_digest,
 		observation_digest: $observation_digest, facts: $facts, rows: $rows,
-		references: $references, plan: $plan, root: $root,
+		references: $references, plan: $plan, root: $root, disposition: $disposition,
 		prior_run_id: IF $existing != NONE AND $existing.run_id != $run_id THEN $existing.run_id ELSE $existing.prior_run_id ?? NONE END,
 		prior_plan_digest: IF $existing != NONE AND $existing.run_id != $run_id THEN $existing.plan_digest ELSE $existing.prior_plan_digest ?? NONE END,
 		prior_root_digest: IF $existing != NONE AND $existing.run_id != $run_id THEN $existing.root_digest ELSE $existing.prior_root_digest ?? NONE END,
@@ -455,7 +472,7 @@ LET $published = IF array::len($marked) = 1 AND !$same THEN
 		run_id: $run_id, plan_digest: $plan_digest, root_digest: $root_digest,
 		candidate_digest: $candidate_digest, source_digest: $source_digest,
 		observation_digest: $observation_digest, facts: $facts, rows: $rows,
-		references: $references, plan: $plan, root: $root,
+		references: $references, plan: $plan, root: $root, disposition: $disposition,
 		prior_run_id: IF $existing != NONE AND $existing.run_id != $run_id THEN $existing.run_id ELSE $existing.prior_run_id ?? NONE END,
 		prior_plan_digest: IF $existing != NONE AND $existing.run_id != $run_id THEN $existing.plan_digest ELSE $existing.prior_plan_digest ?? NONE END,
 		prior_root_digest: IF $existing != NONE AND $existing.run_id != $run_id THEN $existing.root_digest ELSE $existing.prior_root_digest ?? NONE END,
@@ -483,7 +500,8 @@ func (s *Surreal) PublishPartitionedExtractionDomain(
 		"root_digest": publication.RootDigest, "candidate_digest": publication.CandidateDigest,
 		"source_digest": publication.SourceDigest, "observation_digest": publication.ObservationDigest,
 		"facts": publication.Facts, "rows": publication.Rows, "references": publication.References,
-		"plan": publication.Plan, "root": publication.Root,
+		"disposition": partitionedRootDisposition(publication.Root),
+		"plan":        publication.Plan, "root": publication.Root,
 		"store_schema_version":       evidenceStoreSchemaVersion,
 		"evidence_format_version":    evidenceFormatVersion,
 		"evidence_migration_version": evidenceMigrationVersion,
@@ -569,7 +587,8 @@ func (s *Surreal) PublishPartitionedExtractionDomainRefusal(
 		"root_digest": publication.RootDigest, "candidate_digest": publication.CandidateDigest,
 		"source_digest": publication.SourceDigest, "observation_digest": publication.ObservationDigest,
 		"facts": publication.Facts, "rows": publication.Rows, "references": publication.References,
-		"plan": publication.Plan, "root": publication.Root,
+		"disposition": partitionedRootDisposition(publication.Root),
+		"plan":        publication.Plan, "root": publication.Root,
 		"store_schema_version":       evidenceStoreSchemaVersion,
 		"evidence_format_version":    evidenceFormatVersion,
 		"evidence_migration_version": evidenceMigrationVersion,
@@ -659,7 +678,8 @@ func (s *Surreal) GetPartitionedExtractionDomainReference(
 	}
 	results, err := storeQuery[[]PartitionedExtractionDomainReference](ctx, s.accounting, s.db,
 		`SELECT schema, repository, domain, run_id, plan_digest, root_digest,
-		candidate_digest, source_digest, observation_digest FROM $rid LIMIT 1`,
+		candidate_digest, source_digest, observation_digest,
+		(disposition ?? '') AS disposition FROM $rid LIMIT 1`,
 		map[string]any{"rid": partitionedDomainID(repository, domain)}, storeRead())
 	if err != nil {
 		return PartitionedExtractionDomainReference{}, fmt.Errorf("get partitioned extraction domain reference: %w", err)
@@ -674,7 +694,7 @@ func (s *Surreal) GetPartitionedExtractionDomainReference(
 			value.Domain != domain || value.RunID == "" || len(value.RunID) > maxEvidenceIdentityBytes ||
 			!validSHA256Digest(value.PlanDigest) || !validSHA256Digest(value.RootDigest) ||
 			!validSHA256Digest(value.CandidateDigest) || !validSHA256Digest(value.SourceDigest) ||
-			!validSHA256Digest(value.ObservationDigest) {
+			!validSHA256Digest(value.ObservationDigest) || len(value.Disposition) > 64 {
 			return PartitionedExtractionDomainReference{}, errors.New("get partitioned extraction domain reference: invalid current row")
 		}
 		return value, nil
