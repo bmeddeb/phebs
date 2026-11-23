@@ -175,7 +175,7 @@ func TestTypedExtractionV6ProductionReplay(t *testing.T) {
 	}
 	evidence := &typedReplayEvidence{t421ProductionReplayEvidence: newT421ProductionReplayEvidence(), atoms: map[string]store.EvidenceAtom{}, placements: map[string]store.SnapshotEvidence{}}
 	executor := &extract.EvidencePartitionExecutor{Evidence: evidence, Extractors: extractors, StoreAccounting: true, TypedScopeReservations: true}
-	policy, err := candidate.ExtractionPolicyDigest(manifest.PolicyDigest, true, true)
+	policy, err := candidate.ExtractionPolicyDigest(manifest.PolicyDigest, true, true, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -253,7 +253,7 @@ func TestTypedExtractionV6ProductionReplay(t *testing.T) {
 		reads += domainReads
 		t.Logf("%s native content offers=%d", expected.Domain, domainReads)
 		if expected.Domain == "grpc-caller" {
-			authority.ExtractionPolicyDigest, err = candidate.ExtractionPolicyDigest(manifest.PolicyDigest, true, false)
+			authority.ExtractionPolicyDigest, err = candidate.ExtractionPolicyDigest(manifest.PolicyDigest, true, false, "")
 			if err != nil {
 				t.Fatal(err)
 			}

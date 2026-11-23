@@ -503,7 +503,7 @@ func runProductionIdentityPipeline(
 	}
 	roots := make(map[string]candidate.DomainResultRoot, len(combined.Profile.Pipeline.ExtractionDomains))
 	plans := make(map[string]candidate.DomainResultPlan, len(combined.Profile.Pipeline.ExtractionDomains))
-	extractionPolicy, err := candidate.ExtractionPolicyDigest(sparseRoot.PolicyDigest, input.StoreAccounting, input.TypedScopeReservations)
+	extractionPolicy, err := candidate.ExtractionPolicyDigest(sparseRoot.PolicyDigest, input.StoreAccounting, input.TypedScopeReservations, "")
 	if err != nil {
 		t.Fatal(err)
 	}
