@@ -163,8 +163,10 @@ func TestTopicInventoryToolRegistration(t *testing.T) {
 // composed answer depends on.
 func TestTopicInventoryToolSchemas(t *testing.T) {
 	digests := map[string]string{
-		"list_kafka_topics":    "sha256:ca8961d780943fac6a06f5c1a91675b10281eb61358fd59b31a1819f334c42ab",
-		"read_topic_inventory": "sha256:6b206548e78f618116fe52a057666f29df5105f0304ddbf0a3e043e6ee5b6fbd",
+		// PHEBS-37: the coverage run gained plan_digest, root_digest and
+		// disposition for partitioned roots, which both tools embed.
+		"list_kafka_topics":    "sha256:7db71e774afdd37d5b257da48fdd2d63408f2563b8b5f545547289862d0af3bf",
+		"read_topic_inventory": "sha256:02115857d9f78a5865220819faf24d62774a86f8f1ce9a59c114f028a7d9d60f",
 	}
 	_, found := topicToolSession(t, Options{Version: "test", TopicInventory: &stubTopicInventory{}})
 	for name, want := range digests {

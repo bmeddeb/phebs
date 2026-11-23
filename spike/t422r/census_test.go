@@ -111,8 +111,11 @@ func TestCensusCrossesCallerWrapperIntoExactImplementation(t *testing.T) {
 	if records[0].ID == recordID("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", records[0]) {
 		t.Fatal("site ID is not bound to the source commit")
 	}
+	// PHEBS-37 (2026-11-23): 37 -> 40. certificateScopes calls
+	// extract.CertificateRun.Served, an infallible accessor the census
+	// cannot enter, on the three progress roots that reach it.
 	if !bytes.Contains(first.Bytes(), []byte(`"error_sites":50`)) ||
-		!bytes.Contains(first.Bytes(), []byte(`"unresolved_boundaries":37`)) {
+		!bytes.Contains(first.Bytes(), []byte(`"unresolved_boundaries":40`)) {
 		header := bytes.SplitN(first.Bytes(), []byte{'\n'}, 2)[0]
 		t.Fatalf("metadata header omitted exact census counts: %s", header)
 	}
