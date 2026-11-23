@@ -1,7 +1,7 @@
 {
   "release_schema_version": "1.0",
-  "release_id": "rel-phebs.grpc.caller.comparison-1.0.3",
-  "release_version": "1.0.3",
+  "release_id": "rel-phebs.grpc.caller.comparison-1.0.4",
+  "release_version": "1.0.4",
   "pack_id": "phebs.grpc.caller.comparison",
   "pack_claim_version": "1.0.0",
   "card": {

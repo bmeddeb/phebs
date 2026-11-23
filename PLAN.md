@@ -18929,3 +18929,6 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
       publication, one JSON decode of the root already in memory. Pin rows
       grow by the partitioned runs a bundle cites. No lock, cache, child
       process, timer or schema change.
+    - **Release.** Both PHEBS-37 changes ship as `v0.3.3`. All twelve pack
+      templates take a patch bump for the rebind, as in `v0.3.2`. No claim,
+      card, reader version, approval or expiry changes.
