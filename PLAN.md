@@ -18985,6 +18985,12 @@ in [docs/ROADMAP.md](./docs/ROADMAP.md).
       (`generator_provenance`). Descriptor, symbol-package and field-shape
       refusals, and a missing repository-root `index.scip`, stay `unknown`;
       this change does not claim them.
+    - **Pure-reader boundary.** The released recipes are pure readers, so
+      `internal/pipelinerefusal` joins the extractor import allowlist the way
+      `idlpreflight` and `resolverinput` did. A recursive check pins its own
+      imports to `encoding/json`, `errors`, `fmt`, `io` and `strings`, so the
+      envelope cannot become a filesystem, network, process or goroutine
+      escape hatch for extractors.
     - **No implementation revision.** Facts and dispositions are unchanged,
       so the reader versions and the PHEBS-37 implementation revisions stay
       as they are. Bumping a revision would re-extract every repository on

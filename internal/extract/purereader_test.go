@@ -58,6 +58,10 @@ var extractorImportAllowlist = map[string]bool{
 	"github.com/bmeddeb/phebs/internal/extract/sdk":        true,
 	"github.com/bmeddeb/phebs/internal/idlpreflight":       true,
 	"github.com/bmeddeb/phebs/internal/resolverinput":      true,
+	// PHEBS-38: released recipes mark admission refusals with a closed
+	// receipt dimension. The envelope is pure value construction, recursively
+	// constrained by TestPipelineRefusalImports.
+	"github.com/bmeddeb/phebs/internal/pipelinerefusal": true,
 }
 
 var sdkImportAllowlist = map[string]bool{"context": true}
@@ -67,6 +71,14 @@ var idlPreflightImportAllowlist = map[string]bool{
 	"context": true,
 	"errors":  true,
 	"fmt":     true,
+}
+
+var pipelineRefusalImportAllowlist = map[string]bool{
+	"encoding/json": true,
+	"errors":        true,
+	"fmt":           true,
+	"io":            true,
+	"strings":       true,
 }
 
 var resolverInputImportAllowlist = map[string]bool{
@@ -132,6 +144,26 @@ func TestResolverInputImports(t *testing.T) {
 	)
 	if err != nil {
 		t.Fatalf("scan resolver inputs: %v", err)
+	}
+	for _, violation := range violations {
+		t.Error(violation)
+	}
+}
+
+// The refusal envelope is shared with every pipeline boundary, but extractors
+// only construct marked errors with it. Recursively constrain the package so
+// it cannot become a filesystem, network, process, or asynchronous-work
+// escape hatch for pure readers.
+func TestPipelineRefusalImports(t *testing.T) {
+	violations, err := scanPureTargets(
+		os.DirFS(".."),
+		[]pureSourceTarget{{
+			dir:     "pipelinerefusal",
+			allowed: pipelineRefusalImportAllowlist,
+		}},
+	)
+	if err != nil {
+		t.Fatalf("scan pipeline refusal envelope: %v", err)
 	}
 	for _, violation := range violations {
 		t.Error(violation)
